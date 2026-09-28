@@ -110,3 +110,4 @@
 | D27-106 | Where the salesperson sees the hotel's answer (settles D27-102) | **The CRS's Register screen is enough**: the new n8n workflow writes Confirmed/Cancelled and the hotel's confirmation number into the register; no CRS app or rules change |
 | D27-107 | 5 Elements' availability in the market-to-revenue app | **Yes, fed one-way by the PMS after the other bridges** (PMS wins; 18 rooms; room types matched first) |
 | D27-108 | A guest erased in the market-to-revenue app | **Erased from the PMS's view of leads and conversations too**; their stays and bills stay, as tax law requires |
+| D27-109 | The local Postgres as a Windows service (after it died twice when sessions stopped, MEMORY 339) | **No: keep starting it by hand** through WMI; the master checks `pg_isready` after every stop and restarts it |
