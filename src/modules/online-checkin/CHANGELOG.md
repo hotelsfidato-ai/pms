@@ -12,6 +12,12 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-09-29 · Fix round F (QA leftovers, D27-149), part C: GP-2 and FI-16 checked after round A
+
+**Checked, nothing changed:** the guest's page reads round A's `BillPrint`, so its interim bill now prints the exact total (D27-126): Total ₹7,084.69, Paid ₹10.00, Outstanding ₹7,074.69, no round-off line (FH-2608-4858, 375 wide). The place prints once: "Akkalkot, Solapur District, Maharashtra 413216 · GSTIN …" (FI-16).
+
+---
+
 ## 2026-09-28 · Fix round F (QA leftovers, D27-149): the guest's page says Arrived, Change has a Cancel, Confirm says so (QA GP-3, GP-4, GP-6)
 
 **Asked for:** QA GP-3, GP-4, GP-6. Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.

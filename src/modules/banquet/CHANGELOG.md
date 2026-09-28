@@ -11,6 +11,14 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-29 · Fix round F (QA leftovers, D27-149), part C: reopen a billed function while no tax invoice stands (D27-150, D27-154)
+
+**Asked for:** the owner's D27-154 (round E's question a). Branch `fix/leftovers-28sep` (cp6 6686af1, round A, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** `POST /banquet/events/:id/reopen` (FUNCTION_MONEY: owner, admin, GM). Refused before any write when the function is not billed, a tax invoice stands ("Tax invoice … stands on this bill. Only a credit note corrects it now."), no reason is given, or the bill was posted on a day the night audit closed. It reverses the hall and course lines through finance's `reverseFolioCharge`, the reason on each; advances, payments and restaurant orders stay; the function goes back to confirmed. `FunctionBill.tsx`: "Reopen the bill" for the same roles while no invoice stands, asking first with a required Why.
+**Proved:** `bill.test.ts` "is refused while the tax invoice stands, and takes nothing off the bill" (failed without the route: 404); `roleGate.test.ts` pins the rule. On screen (QA test function, fidato_s30): billed at ₹25,000 + ₹4,500; Reopen disabled until a reason; reopened ("Bill reopened"), the ledger shows the hall line and its reversal "(why: Hall price agreed at 20,000, not 25,000)"; re-priced ₹20,000, billed, invoiced 5EL/2026-27/00001 (taxable ₹20,000); Reopen then gone, and the route refused it.
+
+---
+
 ## 2026-09-28 · Fix round F (QA leftovers, D27-149): more guests than the hall holds, a plate count below one, Catering with nothing served (QA BQ-5)
 
 **Asked for:** QA BQ-5. Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
