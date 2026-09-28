@@ -62,15 +62,15 @@ begin
   perform test.ok('pricing','the base answers for the room it is set on',
     app.rate_for(dlx, 'EP', date '2026-12-14') = 2000);
 
-  perform test.ok('pricing','a type with no difference set sells at the base',
-    app.rate_for(std, 'EP', date '2026-12-14') = 2000);
-
-  select p2.source, p2.covers into s, c
-    from app.price_for(std, 'EP', date '2026-12-14') p2;
-  perform test.ok('pricing','a derived price says it is derived',
-    s = 'derived', coalesce(s, '<null>'));
-  perform test.ok('pricing','and that it covers one person',
-    c = 1, c || ' covered');
+  -- RT-3 (the owner, 28 September): a type that has NEVER had a difference
+  -- is not priced - a dash - rather than selling at the base.
+  perform test.ok('pricing','a type with no difference ever set is not priced (RT-3)',
+    app.rate_for(std, 'EP', date '2026-12-14') is null);
+  select p2.source into s from app.price_for(std, 'EP', date '2026-12-14') p2;
+  perform test.ok('pricing','and names no source, not even its rack',
+    s is null, coalesce(s, '<null>'));
+  perform test.ok('pricing','nor the base type on a meal plan never priced (RT-3)',
+    app.rate_for(dlx, 'CP', date '2026-12-14') is null);
 
   -- ---------- 4 · a difference is added, in rupees ----------
   insert into rate_offsets (hotel_id, kind, room_type_id, amount,
@@ -79,6 +79,13 @@ begin
 
   perform test.ok('pricing','a room-type difference is added to the base',
     app.rate_for(std, 'EP', date '2026-12-14') = 2500);
+
+  select p2.source, p2.covers into s, c
+    from app.price_for(std, 'EP', date '2026-12-14') p2;
+  perform test.ok('pricing','a derived price says it is derived',
+    s = 'derived', coalesce(s, '<null>'));
+  perform test.ok('pricing','and that it covers one person',
+    c = 1, c || ' covered');
 
   insert into rate_offsets (hotel_id, kind, meal_plan, amount,
                             valid_from, label, created_by)

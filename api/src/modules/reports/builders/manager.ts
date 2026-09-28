@@ -368,11 +368,10 @@ export async function managerReport(
       line("Total Available Room nights", of((x) => x.available), { unit: "count" }),
       line("Sold Room", of((x) => x.sold), { unit: "count" }),
       line("Day Use Room", of((x) => x.dayUse), { unit: "count" }),
-      line("Complimentary Room | Complimentary Day Use", {
-        today: `${t.today.complimentary} | ${compDayUse.today}`,
-        ptd: `${t.ptd.complimentary} | ${compDayUse.ptd}`,
-        ytd: `${t.ytd.complimentary} | ${compDayUse.ytd}`,
-      }, { unit: "text" }),
+      /* Two rows (QA RP-5): eZee's "Complimentary Room | Complimentary Day
+         Use" as one row read "1 | 0 1 | 0" once wrapped. */
+      line("Complimentary Room", of((x) => x.complimentary), { unit: "count" }),
+      line("Complimentary Day Use", compDayUse, { unit: "count" }),
       line("No Show Rooms", counted("no_show"), { unit: "count" }),
       line("Average Guest Per Room", { today: perRoom(t.today), ptd: perRoom(t.ptd), ytd: perRoom(t.ytd) }, { unit: "text" }),
       line("No of Reservations (Confirm)", counted("confirmed"), { unit: "count" }),
@@ -411,11 +410,13 @@ export async function managerReport(
     footnotes: [
       "Guest Ledger Closing Balance = Opening Balance - Carry forwarded Advance Deposit + Charge Posted to Guest Ledger - Settlement by Guest",
       "Transfer From Advance Deposit = Balance Transfer To Guest Ledger",
+      "Transfer Charges to Guest Ledger is the day's revenue with tax: each night's room charge on its own night, tonight's at the booking's rate until it is posted. Charge Posted to Guest Ledger is what was posted to the bills that day: a stay posted on arrival counts all its nights that day, and a refund counts too. So the two differ whenever a room is posted for more than one night, or tonight's room is not posted yet.",
       "PMS Revenue = Total PMS Revenue without Tax",
       "POS Revenue = All Outlet's Total Revenue without Tax",
       "Total Revenue = PMS Revenue + POS Revenue",
       "Sold Room, occupancy and the average rate count complimentary rooms, as the owner's eZee reports do. A night's room charge is shown on that night.",
       "City Ledger: Charges Raised is the bills transferred to a company or booking site. The other rows show \"-\": this system does not record a company's payment, or commission paid, yet.",
+      "Opening, Payment received and Closing need a company's payment, which this system does not record yet.",
       countedFrom(opened),
       "A \"-\" means the figure is not held in this system. It is not a zero.",
     ],

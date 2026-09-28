@@ -145,7 +145,7 @@ const SELECT = `
         join rooms rm2 on rm2.id = ra2.room_id
        where ra2.reservation_id = r.id
          and (ra2.released_at is null or r.status <> 'confirmed')
-       order by ra2.released_at nulls first, ra2.from_date desc
+       order by ra2.released_at desc nulls first, ra2.from_date desc
        limit 1
     ) rm on true
    where r.hotel_id = $1

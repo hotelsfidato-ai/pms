@@ -4,8 +4,11 @@ import type { Client } from "../../db.ts";
 import { resolveDate, businessDateFor } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
 import {
-  formIIIRefusal, isForeign, saveIdentity, saveVisit, type Identity, type Visit,
+  formIIIRefusal, identityProblem, isForeign, saveIdentity, saveVisit, type Identity, type Visit,
 } from "../guests/index.ts";
+import {
+  countProblem, dateProblem, emailProblem, MAX_NIGHTS, phoneProblem,
+} from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE FLOWS THAT WRITE
@@ -208,6 +211,12 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       if (stay.status === "no_show") return refuse("This booking was marked a no-show.");
       if (stay.status !== "confirmed") return refuse("Only a confirmed booking can be checked in.");
 
+      /* FD-8 (QA, 28 September): adults 0 reached the database's own check
+         and came back "Something went wrong". Refused in words. */
+      const count = (body.adults === undefined ? null : countProblem(body.adults, "Adults", 1))
+        ?? (body.children === undefined ? null : countProblem(body.children, "Children", 0));
+      if (count) return refuse(count);
+
       /* THE PROPERTY'S DATE, NOT THE BOOKING'S. This read
          `body.businessDate ?? stay.check_in`, so when the client sent
          no date it fell back to the booking's OWN arrival — and
@@ -252,31 +261,6 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
           + "to today.",
         );
       }
-
-      /* A document is captured when a TYPE and a NUMBER arrive together.
-         Either alone is a half-filled form, and the database refuses it
-         anyway (gd_number_present, 026) — better to say so in a sentence
-         than to let a check constraint surface as an error code. */
-      const identity = body.identity;
-      const captured = Boolean(
-        identity?.idType && identity.idNumber?.trim(),
-      );
-
-      if (!captured && !body.idSkipReason?.trim()) {
-        return refuse(
-          "Record the guest's ID document - type and number - or give a " +
-            "reason for skipping it.",
-        );
-      }
-      if (identity?.idType && !identity.idNumber?.trim()) {
-        return refuse(`A ${identity.idType} needs its number.`);
-      }
-      /* Form III's own fields, before the first write (MEMORY 243). The
-         nationality typed, else the one on file: leaving the field out must
-         not be a way past the rule. */
-      const nationality = identity?.nationality?.trim() || stay.nationality;
-      const formIII = formIIIRefusal({ ...identity, nationality }, body.visit, captured);
-      if (formIII) return refuse(formIII);
 
       /* ── ARRIVING EARLY ───────────────────────────────────────
          The property sells the night from its check-in time. Before
@@ -373,6 +357,39 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       if (clash[0]) {
         return refuse(`Room ${roomNumber} is held by ${clash[0].reference} for part of that stay.`);
       }
+
+      /* THE DOCUMENT, BELOW THE ROOM'S CHECKS (the master, 28 September):
+         a check-in into an occupied or unready room is refused for the
+         room, whatever the form holds. Still above the first write.
+
+         A document is captured when a TYPE and a NUMBER arrive together.
+         Either alone is a half-filled form, and the database refuses it
+         anyway (gd_number_present, 026) — better to say so in a sentence
+         than to let a check constraint surface as an error code. */
+      const identity = body.identity;
+      const captured = Boolean(
+        identity?.idType && identity.idNumber?.trim(),
+      );
+
+      if (!captured && !body.idSkipReason?.trim()) {
+        return refuse(
+          "Record the guest's ID document - type and number - or give a " +
+            "reason for skipping it.",
+        );
+      }
+      if (identity?.idType && !identity.idNumber?.trim()) {
+        return refuse(`A ${identity.idType} needs its number.`);
+      }
+      /* FD-2, GU-2, BK-4, X-2 (round D): an Aadhaar "12ab", a birth in the
+         future, nationality "ZZ", a phone "abc" - refused in a sentence. */
+      const wrong = identityProblem(identity, body.visit, businessDate);
+      if (wrong) return refuse(wrong);
+      /* Form III's own fields, before the first write (MEMORY 243). The
+         nationality typed, else the one on file: leaving the field out must
+         not be a way past the rule. */
+      const nationality = identity?.nationality?.trim() || stay.nationality;
+      const formIII = formIIIRefusal({ ...identity, nationality }, body.visit, captured);
+      if (formIII) return refuse(formIII);
 
       const notes = captured
         ? stay.notes
@@ -857,28 +874,41 @@ operations.post("/:code/walk-ins", async (c) => {
     const email = body.email?.trim() || null;
 
     const nights = body.nights ?? 1;
-    if (nights < 1) return refuse("A stay is at least one night.");
+    /* FD-6, FD-7 (QA, 28 September): -2 nights became 1, 400 nights were
+       taken (₹17,21,580), children -1, a phone "abc". The owner: at most
+       90 nights; the phone and email rules are validate.ts's. */
+    const typed = countProblem(nights, "Nights", 1, MAX_NIGHTS)
+      ?? countProblem(body.adults ?? 1, "Adults", 1)
+      ?? countProblem(body.children ?? 0, "Children", 0)
+      ?? phoneProblem(phone) ?? emailProblem(email);
+    if (typed) return refuse(typed);
 
     /* The nationality typed; for a returning guest typed as Indian, the one
        on file - the form's default must not take a foreigner off the
        register. Refused here, above the first write (MEMORY 243). */
-    const typed = body.nationality?.trim().toUpperCase();
-    const onFile = body.guestId && (!typed || typed === "IN")
+    const typedNationality = body.nationality?.trim().toUpperCase();
+    const onFile = body.guestId && (!typedNationality || typedNationality === "IN")
       ? (await client.query<{ n: string }>(
           "select nationality as n from guests where id = $1::uuid", [body.guestId])).rows[0]?.n
       : undefined;
-    const nationality = onFile ?? typed ?? "IN";
+    const nationality = onFile ?? typedNationality ?? "IN";
     const identity: Identity = { ...body.identity, nationality };
     const idCaptured = Boolean(identity.idType && identity.idNumber?.trim());
+    /* FD-1 (QA, 28 September): the walk-in asked an Indian guest for no ID
+       at all, while the Arrivals check-in insists on one or a reason. The
+       same step now, for every guest. */
+    if (!idCaptured && !body.idSkipReason?.trim()) {
+      return refuse(
+        "Record the guest's ID document - type and number - or give a "
+        + "reason for skipping it.");
+    }
+    if (identity.idType && !identity.idNumber?.trim()) {
+      return refuse(`A ${identity.idType} needs its number.`);
+    }
+    const wrong = identityProblem(identity, body.visit,
+      await resolveDate(client, hotelId, body.businessDate));
+    if (wrong) return refuse(wrong);
     if (isForeign(nationality)) {
-      if (!idCaptured && !body.idSkipReason?.trim()) {
-        return refuse(
-          "Record a foreign guest's ID document - type and number - or give a "
-          + "reason for skipping it.");
-      }
-      if (identity.idType && !identity.idNumber?.trim()) {
-        return refuse(`A ${identity.idType} needs its number.`);
-      }
       const formIII = formIIIRefusal(identity, body.visit, idCaptured);
       if (formIII) return refuse(formIII);
     }
@@ -983,11 +1013,10 @@ operations.post("/:code/walk-ins", async (c) => {
         `for the room type first.`,
       );
     }
-    /* A foreign walk-in's skipped ID is kept in the note, as check-in keeps it. */
+    /* A skipped ID is kept in the note, as check-in keeps it (FD-1). */
     const notes = [
       body.overrideReason?.trim() ? `Rate override - ${body.overrideReason.trim()}` : null,
-      isForeign(nationality) && !idCaptured
-        ? `ID not captured - ${body.idSkipReason!.trim()}` : null,
+      !idCaptured ? `ID not captured - ${body.idSkipReason!.trim()}` : null,
     ].filter(Boolean).join(" · ") || null;
 
     /* ⚠ THE CHANNEL. The booking form has required one since 082 and
@@ -1080,13 +1109,14 @@ operations.post("/:code/walk-ins", async (c) => {
     );
     const stayId = made[0]!.id;
 
-    /* Form III: the guest's nationality, document and visit, in the same
-       transaction as the stay. */
+    /* The document for every guest who showed one (FD-1), and Form III's
+       nationality and visit for a foreigner, in the same transaction as
+       the stay. */
+    if (idCaptured) await saveIdentity(client, guestId!, identity);
     if (isForeign(nationality)) {
       await client.query(
         "update guests set nationality = $2 where id = $1 and nationality <> $2",
         [guestId, nationality]);
-      if (idCaptured) await saveIdentity(client, guestId!, identity);
       await saveVisit(client, hotelId, stayId, body.visit ?? {});
     }
 
@@ -1431,6 +1461,17 @@ operations.patch("/:code/stays/:id", async (c) => {
     const checkOut = input.checkOut ?? now[0].check_out;
     const adults   = input.adults   ?? now[0].adults;
     const children = input.children ?? now[0].children;
+
+    /* FD-4, FD-6, FD-9 (QA, 28 September): children -1 was saved (055
+       checks only adults), a cleared arrival reached the database as NaN
+       nights, and nothing capped the length. The owner: 90 nights at most. */
+    const typed = dateProblem(checkIn) ?? dateProblem(checkOut)
+      ?? countProblem(adults, "Adults", 1) ?? countProblem(children, "Children", 0);
+    if (typed) return refuse(typed);
+    const nights = Math.round((Date.parse(checkOut) - Date.parse(checkIn)) / 86_400_000);
+    if (nights > MAX_NIGHTS) {
+      return refuse(`A stay is at most ${MAX_NIGHTS} nights. Split a longer one into two bookings.`);
+    }
 
     try {
       const { rows } = await client.query<{

@@ -153,7 +153,8 @@ export async function raiseRequest(
   input: {
     storeId: string;
     reason: string;
-    lines: { itemId: string; quantity: number; unitPrice?: number | null }[];
+    /* unitPriceFree: 0 only when ticked Free (X-1, D27-120). */
+    lines: { itemId: string; quantity: number; unitPrice?: number | null; unitPriceFree?: boolean }[];
   },
 ): Promise<Result<{ request: PurchaseRequest }>> {
   return call(`/api/hotels/${hotelId}/purchasing/requests`, "POST", input);
@@ -162,11 +163,11 @@ export async function raiseRequest(
 /** The agreed price for one line. Null takes it back to "not agreed" — a
     dash, and an order that cannot be sent. */
 export async function priceLine(
-  hotelId: string, requestId: string, lineId: string, unitPrice: number | null,
+  hotelId: string, requestId: string, lineId: string, unitPrice: number | null, free = false,
 ): Promise<Result<unknown>> {
   return call(
     `/api/hotels/${hotelId}/purchasing/requests/${requestId}/lines/${lineId}`,
-    "PUT", { unitPrice });
+    "PUT", { unitPrice, ...(free ? { free } : {}) });
 }
 
 export async function sendOrder(

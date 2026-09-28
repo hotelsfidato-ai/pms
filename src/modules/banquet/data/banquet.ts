@@ -363,6 +363,12 @@ export async function billBanquetEvent(hotelCode: string, id: string): Promise<R
   return call(`/api/hotels/${hotelCode}/banquet/events/${id}/bill`, "POST");
 }
 
+/** Takes the billed hall and courses off again, with a reason, while no tax
+    invoice stands (the owner's D27-154). */
+export async function reopenBanquetEvent(hotelCode: string, id: string, reason: string): Promise<Result> {
+  return call(`/api/hotels/${hotelCode}/banquet/events/${id}/reopen`, "POST", { reason });
+}
+
 /** An advance before the function is billed, or a payment after. One
     `pressKey` per press, kept until it lands: a repeat takes it once. */
 export async function payBanquetEvent(

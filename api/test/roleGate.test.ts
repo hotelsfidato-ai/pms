@@ -192,11 +192,16 @@ describe("who reads what (D27-140 to D27-147)", () => {
   });
 
   it("round E's function money writes keep their rules: the owner, an administrator and the GM; the invoice adds the accountant", () => {
-    for (const key of [`POST ${H}/banquet/events/:id/bill`, `POST ${H}/banquet/events/:id/payments`]) {
+    for (const key of [`POST ${H}/banquet/events/:id/bill`, `POST ${H}/banquet/events/:id/payments`,
+      /* D27-154 */ `POST ${H}/banquet/events/:id/reopen`]) {
       expect(whoMay(rule(key)), key).toEqual(["owner", "admin", "gm"]);
     }
     expect(whoMay(rule(`POST ${H}/banquet/events/:id/invoice`)))
       .toEqual(["owner", "admin", "gm", "finance"]);
+  });
+
+  it("QA AD-1: what the server has set up is the owner's and an administrator's", () => {
+    expect(who(`GET ${H}/integrations`)).toEqual(["owner", "admin"]);
   });
 
   it("D27-146: the Viewer keeps reading what its row allows, and still no ID details", () => {
@@ -556,6 +561,16 @@ describe("the owner's answers of 22 September, through the real server", () => {
 });
 
 /* ── D25-38: guests' ID and Form C details, read by the check-in roles only ── */
+
+/* ── GU-1 (round D): correcting a guest, read and write ── */
+
+describe("Edit guest (GU-1)", () => {
+  it("is read and changed by exactly the roles holding customer:edit", () => {
+    const EDITORS = ["owner", "admin", "gm", "hotel_manager", "front_desk"];
+    expect(whoMay(READ_RULES[`GET ${H}/guests/:id/record`]!)).toEqual(EDITORS);
+    expect(whoMay(WRITE_RULES[`PATCH ${H}/guests/:id`]!)).toEqual(EDITORS);
+  });
+});
 
 describe("the reads that hand out a guest's passport or ID number (D25-38)", () => {
   const CHECK_IN_ROLES = ["owner", "admin", "gm", "hotel_manager", "front_desk"];

@@ -3,6 +3,7 @@ import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
 import { setsRates, RATE_SETTER_REFUSED } from "./rateSetters.ts";
+import { priceProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    RATES — what a room costs
@@ -82,7 +83,8 @@ rates.get("/:code/rate-plans", async (c) => {
 
     const { rows: plans } = await client.query<{
       code: string; name: string; includes: string;
-    }>("select code, name, includes from meal_plans order by code");
+    /* D27-164: RO is EP, so it is not offered; old RO bookings read as before. */
+    }>("select code, name, includes from meal_plans where code <> 'RO' order by code");
 
     const { rows: rows } = await client.query<{
       id: string; room_type_id: string; room_type: string;
@@ -142,7 +144,7 @@ rates.get("/:code/rate-plans", async (c) => {
 /* ── The rack rate ────────────────────────────────────────────────── */
 
 rates.put("/:code/room-types/:id/rate", async (c) => {
-  type Body = { rate?: number | null };
+  type Body = { rate?: number | null; free?: boolean };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   /* null CLEARS it, which is a legitimate thing to want: a type nobody
@@ -154,6 +156,9 @@ rates.put("/:code/room-types/:id/rate", async (c) => {
   if (!clearing && (!Number.isFinite(rate) || (rate as number) < 0)) {
     return c.json(refuse("A rate must be zero or more, or blank to clear it."), 409);
   }
+  /* RT-1, X-1 (D27-120): "Superior is ₹0.00" was saved without a word. */
+  const zeroRate = priceProblem(rate, input.free === true);
+  if (zeroRate) return c.json(refuse(zeroRate), 409);
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -179,7 +184,7 @@ rates.put("/:code/room-types/:id/rate", async (c) => {
 rates.post("/:code/rate-plans", async (c) => {
   type Body = {
     roomTypeId?: string; mealPlan?: string; price?: number;
-    from?: string; to?: string | null; label?: string;
+    from?: string; to?: string | null; label?: string; free?: boolean;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
@@ -191,6 +196,8 @@ rates.post("/:code/rate-plans", async (c) => {
   if (!Number.isFinite(price) || price < 0) {
     return c.json(refuse("A price must be zero or more."), 409);
   }
+  const zeroSeason = priceProblem(price, input.free === true);   /* X-1 */
+  if (zeroSeason) return c.json(refuse(zeroSeason), 409);
   if (input.to && input.to <= input.from) {
     return c.json(refuse(
       "The end of a season has to be after its start. The last day is not "
@@ -601,6 +608,8 @@ rates.put("/:code/rate-grid", async (c) => {
     /* An extra bed costs more in Diwali week than in June, so these travel
        with the season rather than living on a settings page. */
     extraAdult?: number | null; extraChild?: number | null;
+    /* X-1 (D27-120): each figure's own "Free" tick. */
+    free?: boolean; extraAdultFree?: boolean; extraChildFree?: boolean;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
@@ -616,6 +625,10 @@ rates.put("/:code/rate-grid", async (c) => {
   if (!clearing && (!Number.isFinite(price) || (price as number) < 0)) {
     return c.json(refuse("A price is zero or more, or empty to clear it."), 409);
   }
+  const zeroCell = priceProblem(price, input.free === true)
+    ?? priceProblem(input.extraAdult, input.extraAdultFree === true)
+    ?? priceProblem(input.extraChild, input.extraChildFree === true);
+  if (zeroCell) return c.json(refuse(zeroCell), 409);
 
   if (input.to && input.to <= input.from) {
     return c.json(refuse(

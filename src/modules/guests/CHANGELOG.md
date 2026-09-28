@@ -8,6 +8,27 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-28 · Fix round D: Edit guest, the ID rules, Form III (QA of 28 Sep)
+
+**Asked for:** D27-116 - the QA's Guests, CRM and Form III table; GP-1.
+**Shipped:** QA GU-1 (BLOCKS WORK) - GET/PATCH /api/hotels/:code/guests/:id and
+EditGuestFlow, on the stay panel and Guest 360, for customer:edit; audited by
+the existing triggers. identityProblem (formIII.ts, from api/src/validate.ts):
+an Aadhaar is 12 digits with UIDAI's check digit (QA FD-2, GP-1 - the guest's
+own page too, guestDoor.ts), a passport 6-15, impossible dates refused and an
+expired passport or visa warned (QA GU-2), a real country, real phones. QA GU-3
+- a portal number is 6-30 letters/digits with a digit. QA GU-4 - the card's
+stay line reads "N nights (booked), expected to leave <date>".
+**Proved:** api guests/editGuest.test.ts 8 (7 fail without the routes),
+formIII.test.ts 15 (GU-3 fails on the old formC.ts), guestDoorBehindTheCode.test.ts
+30 (GP-1 fails on the old door); web editGuest.test.tsx, formIII.test.tsx (GU-4).
+On screen: Edit guest refused "abc", saved a phone and a city (one audit row).
+**Found:** QA's Aadhaar 234567890123 is not a real number (wrong check digit);
+fixtures now use 234567890124 and UIDAI's sandbox numbers.
+**Commits:** a6d510e, 750c2c1.
+
+---
+
 ## 2026-09-27 · Form III: the law's fields, both 24-hour clocks, the card (D27-25)
 
 **Asked for:** D27-25 - Form C replaced by Form III (Immigration and

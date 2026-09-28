@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Client } from "../../db.ts";
+import { countProblem, countryProblem, dateProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    MAKING A BOOKING - the one place a reservation is created
@@ -346,9 +347,9 @@ async function deskTerms(
     return refuse(`A title is ${TITLES.join(", ")} or none.`);
   }
   const nationality = text(request.nationality)?.toUpperCase() ?? null;
-  if (nationality !== null && !/^[A-Z]{2}$/.test(nationality)) {
-    return refuse("Nationality is the country's two-letter code - IN for India.");
-  }
+  /* BK-4: a real country, not only two letters - "ZZ" fed Form III. */
+  const noCountry = countryProblem(nationality);
+  if (noCountry) return refuse(noCountry);
 
   return { discount, companyId, title, nationality };
 }
@@ -371,6 +372,8 @@ export async function makeBooking(
      channel, or four hundred rooms from a typed quantity. */
   if (!request.guestName?.trim()) return refuse("Whose booking is it?");
   if (!request.checkIn || !request.checkOut) return refuse("Which nights?");
+  const badDate = dateProblem(request.checkIn) ?? dateProblem(request.checkOut);
+  if (badDate) return refuse(badDate);
   if (request.checkOut <= request.checkIn) {
     return refuse(
       "A stay ends after it starts. The night of departure is not charged, "
@@ -408,6 +411,20 @@ export async function makeBooking(
     if (externalRef && fingerprint) {
       const earlier = await alreadyReceived(client, hotelId, sourceId, externalRef);
       if (earlier.length > 0) return answerRepeat(earlier, externalRef, fingerprint);
+    }
+
+    /* BK-3 (the owner, 28 September): nothing arrives before the hotel's
+       business date - the QA confirmed a booking that "arrived" five days
+       ago. A booking site's late message is refused too, so it lands on
+       Channel bookings as needing attention, not lost. Below the repeat
+       check: a retry of a booking already made is answered, not refused,
+       after the night audit has moved the date. */
+    const { rows: today } = await client.query<{ d: string }>(
+      "select app.business_date($1)::text as d", [hotelId]);
+    if (request.checkIn < today[0]!.d) {
+      return refuse(
+        `The arrival, ${request.checkIn}, is before the hotel's business date, `
+        + `${today[0]!.d}. A booking starts on the business date or later.`);
     }
 
     /* ⚠ EVERY REFUSAL GOES ABOVE THE FIRST WRITE (RES-1). `withSession`
@@ -463,6 +480,10 @@ export async function makeBooking(
 
       const adults = line.adults ?? 1;
       const children = line.children ?? 0;
+      /* X-3 (round D): 0 adults or -1 children reached the database's own
+         check and came back as "Something went wrong". */
+      const count = countProblem(adults, "Adults", 1) ?? countProblem(children, "Children", 0);
+      if (count) return refuse(count);
       if (adults + children > rt[0].max) {
         return refuse(
           `${adults + children} people will not fit a ${rt[0].name} - it `

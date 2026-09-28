@@ -495,9 +495,9 @@ function RoomDialog({
       >
         <div className="space-y-3">
           {!room && (
-            <Field label="Number" required>
+            <Field label="Number" required hint="At most 10 letters and digits.">
               {(f) => (
-                <Input {...fieldProps(f)} value={number} placeholder="308"
+                <Input {...fieldProps(f)} value={number} placeholder="308" maxLength={10}
                        onChange={(e) => setNumber(e.target.value)} />
               )}
             </Field>
@@ -513,7 +513,7 @@ function RoomDialog({
               </NativeSelect>
             )}
           </Field>
-          <Field label="Floor" hint="Leave blank if the property has one floor.">
+          <Field label="Floor" hint="0 (the ground floor) to 99. Leave blank if the property has one floor.">
             {(f) => (
               <Input {...fieldProps(f)} value={floor} inputMode="numeric"
                      placeholder="-"

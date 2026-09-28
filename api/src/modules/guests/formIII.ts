@@ -1,4 +1,7 @@
 import type { Client } from "../../db.ts";
+import {
+  countryProblem, documentDatesProblem, idNumberProblem, phoneProblem,
+} from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    FORM III — what the desk records about a foreign guest (D27-25)
@@ -93,6 +96,24 @@ export function formIIIRefusal(
   return missing.length
     ? `Form III needs a foreign guest's ${missing.join(", ")}.`
     : null;
+}
+
+/** What a typed document or visit may NOT be (round D, the owner's answers
+    of 28 September), for every guest, Indian or foreign: the number by its
+    type (an Aadhaar is 12 digits with UIDAI's check digit, FD-2; a passport
+    6 to 15 letters and digits), an impossible date (GU-2), a country that
+    is not one (BK-4), a phone that is not one (X-2). `today` is the
+    business date. An EXPIRED passport or visa is not refused: the screen
+    warns, and it is recorded as typed. One rule for check-in, walk-in and
+    the register, as formIIIRefusal is. */
+export function identityProblem(
+  identity: Identity | undefined, visit: Visit | undefined, today: string,
+): string | null {
+  return idNumberProblem(identity?.idType, identity?.idNumber)
+    ?? documentDatesProblem(identity ?? {}, today)
+    ?? countryProblem(identity?.nationality)
+    ?? phoneProblem(visit?.phoneInIndia) ?? phoneProblem(visit?.mobileInIndia)
+    ?? phoneProblem(visit?.phoneAbroad) ?? phoneProblem(visit?.mobileAbroad);
 }
 
 const text = (v?: string | null) => v?.trim() || null;

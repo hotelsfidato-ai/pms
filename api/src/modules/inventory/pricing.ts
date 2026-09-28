@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
+import { priceProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    PRICING — one base, and everything else a difference from it
@@ -98,8 +99,11 @@ pricing.get("/:code/pricing", async (c) => {
     /* `meal_plans` has no sort order (011) — four rows, ordered by how much
        they include, which is the order a person reads them in. Written out
        rather than alphabetical, where AP would come before EP. */
+    /* The owner's D27-164: the code with its words ("CP · Room + breakfast"),
+       and RO is not offered - it is EP; old RO bookings read as before. */
     const { rows: planRows } = await client.query<{ code: string; name: string }>(
-      `select code, name from meal_plans
+      `select code, code || ' · ' || includes as name from meal_plans
+        where code <> 'RO'
         order by case code when 'EP' then 1 when 'CP' then 2
                            when 'MAP' then 3 when 'AP' then 4 when 'AI' then 5 else 6 end, code`,
     );
@@ -244,7 +248,7 @@ pricing.put("/:code/pricing/basis", async (c) => {
    call that could name a different one could reprice the wrong room by a
    typo — app.set_basis_price refuses to take one for the same reason. */
 pricing.put("/:code/pricing/base", async (c) => {
-  type Body = { from?: string; to?: string | null; price?: number | null; label?: string };
+  type Body = { from?: string; to?: string | null; price?: number | null; label?: string; free?: boolean };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   if (!input.from) return c.json(refuse("From which date?"), 409);
@@ -257,6 +261,9 @@ pricing.put("/:code/pricing/base", async (c) => {
   if (!clearing && (!Number.isFinite(price) || (price as number) < 0)) {
     return c.json(refuse("A base price is zero or more, or empty to clear it."), 409);
   }
+  /* RT-2, X-1 (D27-120): a base of 0 put every room and plan that day at ₹0. */
+  const zeroBase = priceProblem(price, input.free === true);
+  if (zeroBase) return c.json(refuse(zeroBase), 409);
   if (input.to && input.to <= input.from) {
     return c.json(refuse(
       "The end of a range has to be after its start. The last day is not "

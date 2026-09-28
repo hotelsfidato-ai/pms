@@ -56,6 +56,18 @@ moved out of, not for a check-out.
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-19 · The QA's front-desk wrong results of 28 September - FIXED 28 September (QA FD-1..FD-9)
+
+The walk-in skipped the ID step for an Indian guest (QA FD-1); an Aadhaar "12ab"
+was taken and the whole number shown on the summary (FD-2, FD-3); children -1,
+-2 or 400 nights, a cleared date, adults 0 went through or hit a database
+constraint (FD-4, FD-6, FD-8, FD-9); phone "abc" (FD-7); a checked-out stay
+showed the room given ahead (FD-5: both assignments released on one date, a tie
+- migration 154 orders by the release). The check-in's ID checks now sit below
+the room checks, so an occupied room is refused for the room. The rules are
+api/src/validate.ts's. Tests: deskChecks.test.ts, dayAndRoom.test.ts,
+checkInChecks.test.tsx, walkInReturning.test.tsx.
+
 ### FD-7 · On a phone, after paging a week, "Today" ends past the screen's edge - FIXED 17 September, held by a test 26 September
 
 **Found** — 16 September, measuring FD-6's strip at 375×812. Not caused by it.

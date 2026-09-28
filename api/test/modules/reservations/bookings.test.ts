@@ -466,12 +466,14 @@ describe("RES-2 · one booking reference, from app.next_reference", () => {
      a 500. 092's own file (api/test/bookingReference.test.ts) proves the
      function; these prove THIS DOOR uses it, inside its own transaction. */
 
-  it("is FH, the hotel's code, the month on the hotel's clock, and a running number - every room", async () => {
+  /* The month is the hotel's BUSINESS date since D27-123 (BK-12, migration
+     153), not the clock's. */
+  it("is FH, the hotel's code, the month of the business date, and a running number - every room", async () => {
     const db = await admin();
     let yymm: string;
     try {
       const { rows } = await db.query<{ yymm: string }>(
-        `select to_char(now() at time zone coalesce(timezone, 'Asia/Kolkata'), 'YYMM') as yymm
+        `select to_char(app.business_date(id), 'YYMM') as yymm
            from hotels where code = '5EL'`);
       yymm = rows[0]!.yymm;
     } finally { await db.end(); }

@@ -6,7 +6,7 @@ import { moneyPrecise, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, Button, StatusPill, EmptyState, IconChip,
-  Input, NativeSelect, toast,
+  Input, NativeSelect, Checkbox, toast,
 } from "@/components/ui";
 import { getRates, setRackRate, addRate, removeRate, type RateRoomType, type RateRule } from "@/modules/inventory/data/rateSetup";
 
@@ -153,9 +153,12 @@ function RackRow({ hotelId, type, onDone }: {
   const [value, setValue] = useState(
     type.rackRate === null ? "" : String(type.rackRate),
   );
+  /* X-1 (D27-120): 0 only when ticked Free; blank is not priced yet. */
+  const [free, setFree] = useState(type.rackRate === 0);
   const [busy, setBusy] = useState(false);
 
-  const dirty = (type.rackRate === null ? "" : String(type.rackRate)) !== value;
+  const dirty = (type.rackRate === null ? "" : String(type.rackRate)) !== value
+    || (type.rackRate === 0) !== free;
 
   const save = async () => {
     const trimmed = value.trim();
@@ -167,7 +170,7 @@ function RackRow({ hotelId, type, onDone }: {
     }
 
     setBusy(true);
-    const res = await setRackRate(hotelId, type.id, rate);
+    const res = await setRackRate(hotelId, type.id, rate, free);
     setBusy(false);
     if (!res.ok) return toast.error("Not saved", res.reason);
 
@@ -204,8 +207,11 @@ function RackRow({ hotelId, type, onDone }: {
           placeholder="-"
           aria-label={`Rack rate for ${type.name}`}
           numeric
+          disabled={free}
           className="w-28 text-right"
         />
+        <Checkbox label="Free" checked={free}
+          onCheckedChange={(v) => { setFree(v); setValue(v ? "0" : ""); }} />
         <Button
           variant={dirty ? "primary" : "secondary"}
           disabled={!dirty}
@@ -233,12 +239,13 @@ function NewSeason({ hotelId, types, plans, onDone }: {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [label, setLabel] = useState("");
+  const [free, setFree] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const ready = typeId && plan && price.trim() && from;
+  const ready = typeId && plan && (price.trim() || free) && from;
 
   const submit = async () => {
-    const amount = Number(price);
+    const amount = free ? 0 : Number(price);
     if (!Number.isFinite(amount) || amount < 0) {
       return toast.error("Not added", "A price must be zero or more.");
     }
@@ -246,13 +253,13 @@ function NewSeason({ hotelId, types, plans, onDone }: {
     setBusy(true);
     const res = await addRate(hotelId, {
       roomTypeId: typeId, mealPlan: plan, price: amount,
-      from, to: to || null, label: label.trim() || undefined,
+      from, to: to || null, label: label.trim() || undefined, free,
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
 
     toast.success(`${res.roomType} priced`, `${plan} · ${moneyPrecise(amount)}`);
-    setPrice(""); setFrom(""); setTo(""); setLabel("");
+    setPrice(""); setFrom(""); setTo(""); setLabel(""); setFree(false);
     onDone();
   };
 
@@ -277,16 +284,20 @@ function NewSeason({ hotelId, types, plans, onDone }: {
             <NativeSelect value={plan} onChange={(e) => setPlan(e.target.value)}>
               {plans.map((p) => (
                 <option key={p.code} value={p.code}>
-                  {p.code} · {p.name}
+                  {p.code} · {p.includes}
                 </option>
               ))}
             </NativeSelect>
           </Labelled>
 
-          <Labelled label="Price per night">
-            <Input value={price} onChange={(e) => setPrice(e.target.value)}
-              inputMode="decimal" placeholder="-" numeric />
+          <Labelled label="Price per night" hint="0 only when ticked Free.">
+            <Input value={free ? "0" : price} onChange={(e) => setPrice(e.target.value)}
+              inputMode="decimal" placeholder="-" numeric disabled={free} />
           </Labelled>
+          {/* X-1 (D27-120). Its own cell: a label may not hold another. */}
+          <div className="flex items-center sm:pt-7">
+            <Checkbox label="Free" checked={free} onCheckedChange={setFree} />
+          </div>
 
           <Labelled label="From">
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />

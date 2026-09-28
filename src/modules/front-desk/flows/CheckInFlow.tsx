@@ -7,12 +7,13 @@ import {
   Button, Field, Input, NativeSelect, StatusPill, Switch, Tooltip, toast,
   Dialog, DialogContent, DialogTrigger, Term,
 } from "@/components/ui";
-import { checkIn, assignableRooms, checkInAllowed, earlyArrival } from "@/modules/front-desk/data/operations";
+import { checkIn, assignableRooms, checkInAllowed, earlyArrival, mealPlanChoices } from "@/modules/front-desk/data/operations";
 import { type Stay } from "@/data/repositories";
 import {
   BookingSiteBlacklist, ForeignGuestFields, formIIIMissing, particularsPayload,
-  NO_PARTICULARS, type Particulars,
+  NO_PARTICULARS, idProblem, idExpired, type Particulars,
 } from "@/modules/guests";
+import { countProblem } from "../../../../api/src/validate.ts";
 import { WaitingDetailsLink } from "@/modules/online-checkin";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -40,8 +41,13 @@ export function CheckInFlow({
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
 
-  const [adults, setAdults] = useState(stay.adults);
-  const [children, setChildren] = useState(stay.children);
+  /* As typed (FD-8): "abc" used to become 0 adults, and 0 reached the
+     database's own check as "Something went wrong". */
+  const [adultsText, setAdults] = useState(String(stay.adults));
+  const [childrenText, setChildren] = useState(String(stay.children));
+  const adults = Number(adultsText);
+  const children = Number(childrenText);
+  const partyWrong = countProblem(adults, "Adults", 1) ?? countProblem(children, "Children", 0);
   const [roomNumber, setRoomNumber] = useState(stay.roomNumber);
   /* The document itself. This was `idCaptured: boolean` — a toggle that
      said a passport had been looked at and stored nothing. */
@@ -65,6 +71,12 @@ export function CheckInFlow({
   const idCaptured = Boolean(idType && idNumber.trim());
   const isForeign = nationality.trim().toUpperCase() !== "IN";
   const formIIINeeds = formIIIMissing(particulars, nationality, idCaptured);
+  /* FD-2, GU-2 (round D): the server's rules, said on the ID step - an
+     Aadhaar is 12 digits with its check digit, no birth in the future; an
+     expired passport or visa is warned of and recorded as typed. */
+  const idWrong = idProblem(particulars, idType, idNumber, nationality, businessDate);
+  const expired = isForeign ? idExpired(particulars, businessDate) : [];
+  const [expiredOk, setExpiredOk] = useState(false);
   const [ratePlan, setRatePlan] = useState(stay.ratePlan);
 
   const permitted = useQuery({
@@ -167,20 +179,23 @@ export function CheckInFlow({
                 <Field label="Adults">
                   {({ id }) => (
                     <Input
-                      id={id} numeric value={String(adults)}
-                      onChange={(e) => setAdults(Number(e.target.value) || 0)}
+                      id={id} numeric value={adultsText}
+                      onChange={(e) => setAdults(e.target.value)}
                     />
                   )}
                 </Field>
                 <Field label="Children">
                   {({ id }) => (
                     <Input
-                      id={id} numeric value={String(children)}
-                      onChange={(e) => setChildren(Number(e.target.value) || 0)}
+                      id={id} numeric value={childrenText}
+                      onChange={(e) => setChildren(e.target.value)}
                     />
                   )}
                 </Field>
               </div>
+              {partyWrong && (
+                <p className="text-sm text-brand-red-700" data-party-wrong>{partyWrong}</p>
+              )}
             </div>
           )}
 
@@ -212,13 +227,14 @@ export function CheckInFlow({
                       <span className="ml-auto">
                         <StatusPill
                           tone={
-                            room.housekeeping === "inspected" ? "success"
+                            room.label ? "warning"
+                              : room.housekeeping === "inspected" ? "success"
                               : room.housekeeping === "clean" ? "info"
                               : room.housekeeping === "dirty" ? "warning"
                               : "neutral"
                           }
                         >
-                          {room.housekeeping}
+                          {room.label ?? room.housekeeping}
                         </StatusPill>
                       </span>
                     </button>
@@ -303,6 +319,14 @@ export function CheckInFlow({
                   Form III still needs: {formIIINeeds.join(", ")}.
                 </p>
               )}
+              {idWrong && (
+                <p className="text-sm text-brand-red-700" data-id-wrong>{idWrong}</p>
+              )}
+              {expired.length > 0 && (
+                <Switch checked={expiredOk} onCheckedChange={setExpiredOk}
+                  label="Check in anyway"
+                  description={`${expired.join(" ")} It is recorded as typed.`} />
+              )}
 
                 {!idCaptured && (
                   <Field label="Reason for skipping" required>
@@ -328,7 +352,7 @@ export function CheckInFlow({
                     value={ratePlan}
                     onChange={(e) => setRatePlan(e.target.value)}
                   >
-                    {["CP", "Room Only", "EP", "MAP"].map((p) => <option key={p}>{p}</option>)}
+                    {mealPlanChoices(ratePlan).map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                   </NativeSelect>
                 )}
               </Field>
@@ -428,7 +452,12 @@ export function CheckInFlow({
                     {idType === "driving_licence"
                       ? "Driving licence"
                       : idType.charAt(0).toUpperCase() + idType.slice(1)}
-                    {" "}{idNumber}
+                    {" "}
+                    {/* FD-3, D21-18: an Aadhaar is its last four digits on
+                        every screen; the full number is not read back here. */}
+                    {idType === "aadhaar"
+                      ? `ending ${idNumber.replace(/\s/g, "").slice(-4)}`
+                      : idNumber}
                     {isForeign ? " · " + nationality : ""}
                   </p>
                 ) : (
@@ -461,8 +490,10 @@ export function CheckInFlow({
           {step < 4 ? (
             <Button
               disabled={
-                (step === 2 && !idCaptured && !idSkipReason.trim())
+                (step === 0 && partyWrong !== null)
+                || (step === 2 && !idCaptured && !idSkipReason.trim())
                 || (step === 2 && formIIINeeds.length > 0)
+                || (step === 2 && (idWrong !== null || (expired.length > 0 && !expiredOk)))
                 /* The server refuses without it anyway. Disabling here
                    too means the clerk finds out on the step that asks,
                    not on the one that finishes. */

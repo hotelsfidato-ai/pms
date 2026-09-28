@@ -4,6 +4,7 @@ import { withSession } from "../auth.ts";
 import { pool } from "../db.ts";
 import { env } from "../env.ts";
 import { canSend, send } from "../sending.ts";
+import { idNumberProblem } from "../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S OWN DOOR — one private page per booking (D18-9, D18-10, D18-13)
@@ -384,6 +385,9 @@ guestDoor.post("/:token/details", async (c) => {
   if (typeof b.idNumber !== "string" || b.idNumber.trim() === "" || !text(b.idNumber, 40)) {
     return c.json({ error: "Type the number on the ID." }, 400);
   }
+  /* GP-1 (round D): an Aadhaar "12ab" was taken here. The desk's rule. */
+  const wrongId = idNumberProblem(b.idType, b.idNumber);
+  if (wrongId) return c.json({ error: wrongId }, 400);
   if (!isDate(b.passportExpiry) || !isDate(b.visaExpiry)) {
     return c.json({ error: "A date is not a date - check the expiry dates." }, 400);
   }

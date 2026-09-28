@@ -11,6 +11,14 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-28 · Fix round F (QA leftovers, D27-149), part B: the till's menu entries follow who may ring up (QA RO-4)
+
+**Asked for:** QA RO-4's POS part. Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** `nav.ts` `mayRingUp` - the server's own rule for ringing up (roleGate.ts `TILL`: `payment` create, and the till operator). Tables, Till, Terminal and Close restaurant day (plus the kitchen manager) are offered only to them, not to every role that may read the orders; the Kitchen's "Console" link to the till likewise. The Viewer loses the four; the chef loses Console.
+**Proved:** web pos + src/test 13 files, 79 passed; navigation + boundaries 22 passed; the sidebars printed per role (read_only: Kitchen only of the four; finance, front desk, pos: all).
+
+---
+
 ## 2026-09-28 · Fix round C: the kitchen keeps paid food, a reason to strike sent food, whole-rupee cash, a closed day stays closed
 
 **Asked for:** the owner's D27-116 (every BLOCKS WORK and WRONG RESULT in QA's restaurant and night-audit tables), D27-117 (ask before charging a bill to a room), D27-118 (on the till: the owner's answer 5), D27-119 (who strikes food the kitchen has). Branch `fix/restaurant-audit-28sep` from cp6 `631ce1f`; migration 151 (the master's number).

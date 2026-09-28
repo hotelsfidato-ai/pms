@@ -210,3 +210,29 @@ describe("settling it, and the tax invoice", () => {
     expect((await theBill()).invoice).toBe(number);
   });
 });
+
+describe("reopening it (the owner's D27-154)", () => {
+  it("is refused while the tax invoice stands, and takes nothing off the bill", async () => {
+    const before = await lines();
+    const r = await owner("POST", `/banquet/events/${eventId}/reopen`, { reason: "hall price was wrong" });
+    expect(r.status).toBe(409);
+    expect(await reason(r)).toContain("Only a credit note corrects it now");
+    expect(await lines()).toEqual(before);
+    expect((await theBill()).status).toBe("completed");
+  });
+});
+
+describe("a billed function still holds its hall (migration 156)", () => {
+  it("refuses to confirm another function over it", async () => {
+    expect((await theBill()).status).toBe("completed");
+    const venueId = (await sql("select venue_id::text as v from banquet_events where id = $1", [eventId])).rows[0].v;
+    const made = await owner("POST", "/banquet/events", {
+      venueId, title: `Clash ${TAG}`, hostName: "Mr Joshi", agreedAmount: 1000,
+      startsAt: "2027-01-20T19:00", endsAt: "2027-01-20T22:00",
+    });
+    const clash = ((await made.json()) as { id: string }).id;
+    const r = await owner("POST", `/banquet/events/${clash}/confirm`);
+    expect(r.status).toBe(409);
+    expect(await reason(r)).toContain("The hall is taken");
+  });
+});

@@ -265,6 +265,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
 
   /* guests */
   [`POST ${H}/guests/:id/vip`]: GUEST,
+  /* GU-1 (round D): correcting a guest's name, phone, email, address, nationality. */
+  [`PATCH ${H}/guests/:id`]: GUEST,
   [`POST ${H}/form-c/:reservationId`]: FORM_C,
   [`PUT ${H}/form-c/:reservationId/details`]: FORM_C,
   [`POST ${H}/booking-sources`]: own("guests/bookingSources.ts: the database, app.is_manager"),
@@ -392,6 +394,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`DELETE ${H}/banquet/events/:id/catering/:lineId`]: FUNCTION_CHANGE,
   /* Round E (BQ-1): a function's bill. */
   [`POST ${H}/banquet/events/:id/bill`]: FUNCTION_MONEY,
+  /* D27-154: reopening the bill is the same people as billing it. */
+  [`POST ${H}/banquet/events/:id/reopen`]: FUNCTION_MONEY,
   [`POST ${H}/banquet/events/:id/payments`]: FUNCTION_MONEY,
   [`POST ${H}/banquet/events/:id/invoice`]: FUNCTION_INVOICE,
   [`POST ${H}/banquet/venues`]: HALLS,
@@ -558,6 +562,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/crm/not-same`]: GUESTS,
   [`GET ${H}/crm/offers-yes`]: GUESTS,
   [`GET ${H}/crm/no-offers`]: GUESTS,
+  /* GU-1 (round D): the record Edit guest shows, for those who may correct it
+     (customer:edit, as the change itself). */
+  [`GET ${H}/guests/:id/record`]: GUEST,
   [`GET ${H}/form-c`]: GUEST_ID,
   [`GET ${H}/reports/c-form`]: GUEST_ID,
   /* The details guests sent from their own page: asked in the route. */
@@ -678,6 +685,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/staff`]: see("user", "the staff list"),
   [`GET ${H}/audit-log`]: own("admin/adminLists.ts: mayRead"),
   [`GET ${H}/settings`]: own("admin/adminLists.ts: mayRead"),
+  /* QA AD-1: what this server has set up, for whoever holds `integration`. */
+  [`GET ${H}/integrations`]: see("integration", "the integrations"),
   /* D27-91: the server's health, for the owner and an administrator. */
   [`GET ${H}/system-health`]: SYSTEM_HEALTH,
 };

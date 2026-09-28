@@ -15,6 +15,7 @@ import { getTodaySnapshot, getPeriodStatistics } from "@/modules/reports";
 import { getHouseNow } from "@/modules/front-desk";
 import { HOME_SCREENS, homeScreenLabel } from "@/lib/homeScreen";
 import { ConfirmRemoveAccess } from "@/modules/admin/flows/ConfirmRemoveAccess";
+import { placeLine } from "@/modules/finance";
 
 /* The GM setting where somebody starts after sign-in (087). */
 async function startOn(
@@ -133,8 +134,7 @@ export default function PropertyPage() {
       <PageHeader
         title={property.name}
         description={
-          [property.addressLine, property.city, property.state]
-            .filter(Boolean).join(", ") || property.code
+          placeLine(property.addressLine, property.city, property.state) || property.code
         }
         badge={
           property.isActive

@@ -7,6 +7,7 @@ import { orderDocument, type OrderLine } from "./orderDocument.ts";
 import {
   VIEW_ROLES, SETTING_KEEPERS, PURCHASING_REFUSED, hasRoleAt, mayRaise,
 } from "./purchasingGrants.ts";
+import { priceProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    PURCHASING — a request, an approval, an order, a delivery
@@ -349,7 +350,8 @@ purchasing.put("/:code/purchasing/requesters/:role", async (c) => {
 /* ── Raising one ───────────────────────────────────────────────────── */
 
 purchasing.post("/:code/purchasing/requests", async (c) => {
-  type Line = { itemId?: string; quantity?: number; unitPrice?: number | null; note?: string };
+  type Line = { itemId?: string; quantity?: number; unitPrice?: number | null;
+                 unitPriceFree?: boolean; note?: string };
   type Body = { storeId?: string; reason?: string; lines?: Line[] };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
@@ -373,6 +375,10 @@ purchasing.post("/:code/purchasing/requests", async (c) => {
         && (!Number.isFinite(Number(l.unitPrice)) || Number(l.unitPrice) < 0)) {
       return c.json(refuse("A price is zero or more, or nothing at all."), 409);
     }
+    /* ST-2, X-1 (D27-120): a ₹0 line went to the GM and was approved. */
+    const zeroLine = priceProblem(l.unitPrice === null || l.unitPrice === undefined
+      ? null : Number(l.unitPrice), l.unitPriceFree === true);
+    if (zeroLine) return c.json(refuse(zeroLine), 409);
   }
   if (new Set(lines.map((l) => l.itemId)).size !== lines.length) {
     return c.json(refuse(
@@ -456,12 +462,14 @@ purchasing.post("/:code/purchasing/requests", async (c) => {
    ═══════════════════════════════════════════════════════════════════ */
 
 purchasing.put("/:code/purchasing/requests/:id/lines/:lineId", async (c) => {
-  type Body = { unitPrice?: number | null };
+  type Body = { unitPrice?: number | null; free?: boolean };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
   const price = input.unitPrice;
   if (price !== null && (price === undefined || !Number.isFinite(Number(price)) || Number(price) < 0)) {
     return c.json(refuse("A price is zero or more, or nothing at all."), 409);
   }
+  const zero = priceProblem(price === null ? null : Number(price), input.free === true);  /* X-1 */
+  if (zero) return c.json(refuse(zero), 409);
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));

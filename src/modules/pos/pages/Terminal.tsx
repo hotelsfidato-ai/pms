@@ -19,6 +19,7 @@ import { ReadFailed, ReadStale } from "@/components/ui";
 import { SlipNotice, openSlip, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { AskDialog, SENT_STRIKE, type Ask } from "@/modules/pos/components/AskDialog";
+import { useDocumentTitle } from "@/lib/documentTitle";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TERMINAL
@@ -72,6 +73,9 @@ const STEP = "press size-11 grid place-items-center rounded-full border border-g
 export default function TerminalPage() {
   const hotelId = useHotel();
   const qc = useQueryClient();
+  /* The menu's word, in the heading and the tab (QA X-4, POS-10): the tab
+     kept the last page's title, and the heading was the question. */
+  useDocumentTitle("Terminal");
 
   /* The outlet is remembered on THIS DEVICE. A terminal bolted to a
      counter in the restaurant should not ask again every morning, and
@@ -357,10 +361,10 @@ export default function TerminalPage() {
             Terminal setup
           </p>
           <h1 className="page-title text-ink-900 mb-2">
-            Which outlet is this terminal in?
+            Terminal
           </h1>
           <p className="text-base text-grey-600 mb-8 leading-relaxed">
-            Asked once. This screen is meant to stay open on a fixed
+            Which outlet is this terminal in? Asked once. This screen is meant to stay open on a fixed
             terminal, so the answer is remembered on this device rather
             than on the person signed into it.
           </p>

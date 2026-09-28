@@ -155,6 +155,8 @@ export async function setRate(
     /* An extra bed costs more in Diwali week than in June, so these
        travel with the season rather than living on a settings page. */
     extraAdult?: number | null; extraChild?: number | null;
+    /* X-1 (D27-120): each figure's own "Free" tick; 0 only when ticked. */
+    free?: boolean; extraAdultFree?: boolean; extraChildFree?: boolean;
   },
 ): Promise<Refusal> {
   return write(hotelId, "rate-grid", "PUT", input);

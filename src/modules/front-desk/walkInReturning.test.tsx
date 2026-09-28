@@ -96,6 +96,7 @@ describe("the walk-in and a returning guest", () => {
     fireEvent.click(screen.getByRole("switch", { name: /Guest agreed to WhatsApp/ }));
     fireEvent.click(screen.getByRole("switch", { name: /Guest agreed to offers/ }));
     type("Rate per night", "3200");
+    type("Reason for skipping", "Scanner offline");
     fireEvent.click(screen.getByRole("button", { name: /Confirm and check in/ }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
@@ -116,6 +117,7 @@ describe("the walk-in and a returning guest", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Not them" }));
     type("Phone", "98765 43210");
     type("Rate per night", "3200");
+    type("Reason for skipping", "Scanner offline");
     fireEvent.click(screen.getByRole("button", { name: /Confirm and check in/ }));
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]!.body).not.toHaveProperty("guestId");
@@ -131,6 +133,7 @@ describe("the walk-in and a returning guest", () => {
     expect(alert.textContent).toMatch(/blacklisted/);
     expect(alert.textContent).toMatch(/Left without paying/);
     type("Rate per night", "3200");
+    type("Reason for skipping", "Scanner offline");
     const confirm = screen.getByRole("button", { name: /Confirm and check in/ }) as HTMLButtonElement;
     expect(confirm.disabled).toBe(false);
   });
@@ -141,5 +144,33 @@ describe("the walk-in and a returning guest", () => {
     await new Promise((r) => setTimeout(r, 50));
     const asked = vi.mocked(apiModule.api).mock.calls.some(([p]) => String(p).includes("/returning"));
     expect(asked).toBe(false);
+  });
+
+  /* FD-1, FD-2, FD-6 (round D, 28 September): the walk-in asks every guest
+     for an ID or a reason, as the Arrivals check-in does; a number that is
+     not an Aadhaar is said on the form; -2 nights is not quietly 1. */
+  it("holds the button for an ID or a reason, and says what is wrong", async () => {
+    open();
+    type("Guest", "Asha K");
+    type("Rate per night", "3200");
+    const confirm = () => screen.getByRole("button", { name: /Confirm and check in/ }) as HTMLButtonElement;
+    expect(confirm().disabled).toBe(true);
+    expect(screen.getByText(/Record the ID document - type and number - or give a reason/)).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Document", { selector: "select" }), { target: { value: "aadhaar" } });
+    type("Number", "12ab");
+    expect(document.querySelector("[data-walkin-wrong]")?.textContent).toMatch(/12 digits/);
+    expect(confirm().disabled).toBe(true);
+
+    type("Number", "2345 6789 0124");
+    type("Nights", "-2");
+    expect(document.querySelector("[data-walkin-wrong]")?.textContent)
+      .toBe("Nights is a whole number from 1 to 90.");
+    type("Nights", "2");
+    expect(confirm().disabled).toBe(false);
+    fireEvent.click(confirm());
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]!.body).toMatchObject({
+      nights: 2, identity: { idType: "aadhaar", idNumber: "2345 6789 0124" } });
   });
 });

@@ -59,13 +59,14 @@ function useHotel(): string {
   return params["code"] ?? fallback;
 }
 
+/* The code with its words, as every screen says it (the owner's D27-164). */
 const PLANS = [
-  { code: "EP", name: "Room only" },
-  { code: "CP", name: "With breakfast" },
-  { code: "MAP", name: "Breakfast and one meal" },
-  { code: "AP", name: "All meals" },
+  { code: "EP", name: "EP · Room only" },
+  { code: "CP", name: "CP · Room + breakfast" },
+  { code: "MAP", name: "MAP · Room + breakfast + one meal" },
+  { code: "AP", name: "AP · Room + all meals" },
   /* D17-50, 17 September (migration 105). */
-  { code: "AI", name: "All inclusive" },
+  { code: "AI", name: "AI · Everything charged to the room" },
 ];
 
 interface Line {

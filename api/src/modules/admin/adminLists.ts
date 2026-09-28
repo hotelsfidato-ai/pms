@@ -1,7 +1,10 @@
 import { Hono } from "hono";
-import { withSession } from "../../auth.ts";
+import { getAuth } from "firebase-admin/auth";
+import { firebaseApp, withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { mayRead, ADMIN_READ_REFUSED, type AdminRead } from "./grants.ts";
+import { env } from "../../env.ts";
+import { canSend, NOT_CONNECTED } from "../../sending.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    STAFF, THE AUDIT LOG AND SETTINGS
@@ -33,6 +36,24 @@ const forbidden = (what: AdminRead) =>
 
 /* ── Staff and access ────────────────────────────────────────────── */
 
+/* LAST SEEN (QA AD-2): Firebase's own record of when each sign-in was last
+   active (its token refreshed), else last signed in. Nothing in the
+   database records it. Empty where this server has no Firebase or the
+   read fails: the list still loads, with a dash.
+   ponytail: one getUsers call, which takes at most 100 people. */
+async function lastSeenOf(uids: string[]): Promise<Map<string, string>> {
+  if (!env.firebaseServiceAccount || uids.length === 0) return new Map();
+  try {
+    const { users } = await getAuth(firebaseApp()).getUsers(uids.slice(0, 100).map((uid) => ({ uid })));
+    return new Map(users.flatMap((u) => {
+      const at = u.metadata.lastRefreshTime ?? u.metadata.lastSignInTime;
+      return at ? [[u.uid, new Date(at).toISOString()] as [string, string]] : [];
+    }));
+  } catch {
+    return new Map();
+  }
+}
+
 
 /**
  * The real staff list.
@@ -56,11 +77,11 @@ directory.get("/:code/staff", async (c) => {
     if (!hotelId) return null;
 
     const { rows } = await client.query<{
-      id: string; full_name: string; email: string;
+      id: string; full_name: string; email: string; firebase_uid: string | null;
       is_group_admin: boolean; is_active: boolean;
       roles: string | null; properties: string | null;
     }>(
-      `select s.id::text, s.full_name, s.email::text,
+      `select s.id::text, s.full_name, s.email::text, s.firebase_uid,
               s.is_group_admin, s.is_active,
               (select string_agg(distinct sh.role, ',' order by sh.role)
                  from staff_hotels sh where sh.staff_id = s.id) as roles,
@@ -72,10 +93,12 @@ directory.get("/:code/staff", async (c) => {
         order by s.is_group_admin desc, s.full_name`,
     );
 
+    const seen = await lastSeenOf(rows.flatMap((r) => (r.firebase_uid ? [r.firebase_uid] : [])));
     return rows.map((r) => ({
       id: r.id,
       name: r.full_name,
       email: r.email,
+      lastSeen: (r.firebase_uid && seen.get(r.firebase_uid)) || null,
       /* A group admin holds NO staff_hotels rows and reaches everything
          — app.auth_hotel_ids() accounts for that. Reporting an empty
          role list beside the flag would read as "no access" when the
@@ -96,6 +119,17 @@ directory.get("/:code/staff", async (c) => {
 /* ── Audit log ───────────────────────────────────────────────────── */
 
 directory.get("/:code/audit-log", async (c) => {
+  /* A person (part of the name), a business-date range, and a page (QA
+     AD-4). With none of them, the newest 500, as before. */
+  const who = c.req.query("who")?.trim() || null;
+  const from = c.req.query("from") || null;
+  const to = c.req.query("to") || null;
+  if ([from, to].some((d) => d !== null && !/^\d{4}-\d{2}-\d{2}$/.test(d))) {
+    return c.json({ ok: false, reason: "A date is written YYYY-MM-DD." }, 400);
+  }
+  const limit = Math.min(500, Math.max(1, Math.floor(Number(c.req.query("limit"))) || 500));
+  const offset = Math.max(0, Math.floor(Number(c.req.query("offset"))) || 0);
+
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
@@ -122,7 +156,7 @@ directory.get("/:code/audit-log", async (c) => {
               (select rm.number from room_assignments ra
                  join rooms rm on rm.id = ra.room_id
                 where ra.reservation_id = r.id
-                order by ra.released_at nulls first, ra.from_date desc
+                order by ra.released_at desc nulls first, ra.from_date desc
                 limit 1) as room,
               fp.reverses_id::text
          from folio_postings fp
@@ -130,9 +164,12 @@ directory.get("/:code/audit-log", async (c) => {
          join reservations r on r.id = f.reservation_id
          join guests g       on g.id = r.guest_id
         where fp.hotel_id = $1
+          and ($2::text is null or app.posted_by_name(fp.id) ilike '%' || $2 || '%')
+          and ($3::date is null or fp.business_date >= $3::date)
+          and ($4::date is null or fp.business_date <= $4::date)
         order by fp.created_at desc, fp.id desc
-        limit 500`,
-      [hotelId],
+        limit $5 offset $6`,
+      [hotelId, who, from, to, limit, offset],
     );
 
     return rows.map((r) => ({
@@ -154,6 +191,21 @@ directory.get("/:code/audit-log", async (c) => {
   if (!body) return c.json({ error: "No such property." }, 404);
   if ("forbidden" in body) return c.json(forbidden(body.forbidden), 403);
   return c.json(body);
+});
+
+/* ── Integrations (QA AD-1) ────────────────────────────────────────
+   Only what this server knows about itself: whether it holds a Firebase
+   service account, and whether sending is set up. The screen was fixed
+   text ("Firebase - Connected", a POS figure, "32 properties"). The
+   channel manager answers for itself at /api/channel-manager/su. */
+directory.get("/:code/integrations", async (c) => {
+  const here = await withSession(c.get("subject"), (client) => hotelIdFor(client, c.req.param("code")));
+  if (!here) return c.json({ error: "No such property." }, 404);
+  return c.json({
+    signIn: Boolean(env.firebaseServiceAccount),
+    sending: canSend(),
+    sendingNote: canSend() ? null : NOT_CONNECTED,
+  });
 });
 
 /* ── Settings ────────────────────────────────────────────────────── */

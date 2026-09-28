@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { businessDateFor } from "../../businessDate.ts";
-import { blockersFor } from "./nightAudit.ts";
+import { blockersFor, POSTS_TONIGHT } from "./nightAudit.ts";
 
 /* Split out of api/src/routes/billing.ts on 15 September in the
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service: night audit.
@@ -56,9 +56,12 @@ checklist.get("/:code/night-audit", async (c) => {
            where r.hotel_id = $1 and r.status = 'checked_in'
              and (select coalesce(sum(amount + tax_amount), 0) from live
                    where reservation_id = r.id) > 0.5)::text           as owing,
+         /* What the run posts (QA NA-5). A stay due out today is left out:
+            the run is refused until it has left (blockersFor), so its room
+            is never charged tonight. */
          (select count(*) from reservations r
-           where r.hotel_id = $1 and r.status = 'checked_in'
-             and not r.is_day_use)::text                               as to_post,
+           where ${POSTS_TONIGHT} and not r.is_complimentary
+             and r.check_out <> $2::date)::text                      as to_post,
          (select count(*) from rooms rm
            where rm.hotel_id = $1 and rm.housekeeping_status = 'dirty')::text as dirty,
          (select count(*) from folio_postings fp
@@ -127,7 +130,7 @@ checklist.get("/:code/night-audit", async (c) => {
         {
           id: "room-charges",
           label: "Room charges to post",
-          detail: "One night's tariff and tax per occupied room. Day-use stays are excluded - they have already been charged.",
+          detail: "One night's tariff and tax for each room the run will charge. A stay charged for tonight already (a walk-in's whole stay is charged at check-in), a day-use stay and a complimentary room are not counted.",
           state: "ok",
           count: n(r.to_post),
         },

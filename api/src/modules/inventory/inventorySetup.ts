@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { PoolClient as Client } from "pg";
+import { floorProblem, roomNumberProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    SETTING UP WHAT THE PROPERTY SELLS
@@ -168,6 +169,10 @@ inventorySetup.post("/:code/rooms", async (c) => {
   const number = input.number?.trim();
   if (!number) return c.json(refuse("What is the room number?"), 409);
   if (!input.roomTypeId) return c.json(refuse("Which type is it?"), 409);
+  /* RT-4 (the owner, 28 September): a 60-character number and floor -5 were
+     added, sellable at once, and a room cannot be deleted afterwards. */
+  const typed = roomNumberProblem(number) ?? floorProblem(input.floor);
+  if (typed) return c.json(refuse(typed), 409);
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -210,6 +215,8 @@ inventorySetup.patch("/:code/rooms/:number", async (c) => {
     isActive?: boolean;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
+  const badFloor = floorProblem(input.floor);   /* RT-4 */
+  if (badFloor) return c.json(refuse(badFloor), 409);
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -424,6 +431,12 @@ inventorySetup.post("/:code/room-types/import", async (c) => {
           || (extraChild !== null && Number.isNaN(extraChild))) {
         return reject("An extra-person rate must be a number, or blank.");
       }
+      /* X-1 (D27-120): 0 only when ticked Free, and a file has no tick.
+         Leave it blank, and mark a free one on Rate plans or the calendar. */
+      if (rate === 0 || extraAdult === 0 || extraChild === 0) {
+        return reject("0 is not taken from a file. Leave it blank if nobody has priced it; "
+          + "tick Free on the screen for one that costs nothing.");
+      }
 
       if (seen.has(code)) return reject(`"${code}" appears twice in this file.`);
       seen.add(code);
@@ -517,6 +530,8 @@ inventorySetup.post("/:code/rooms/import", async (c) => {
       if (!number && !typeCode) return;
       if (!number) return reject("No room number.");
       if (!typeCode) return reject("No type code.");
+      const badNumber = roomNumberProblem(number);   /* RT-4 */
+      if (badNumber) return reject(badNumber);
 
       /* THE TYPE MUST ALREADY EXIST. Creating one implicitly from a
          three-letter code is how a typo becomes a room type called
@@ -534,6 +549,8 @@ inventorySetup.post("/:code/rooms/import", async (c) => {
       if (floor !== null && Number.isNaN(floor)) {
         return reject(`"${raw.floor}" is not a floor.`);
       }
+      const badFloor = floorProblem(floor);   /* RT-4 */
+      if (badFloor) return reject(badFloor);
 
       const smokingRaw = String(raw.smoking ?? "").trim().toLowerCase();
       let smoking = false;

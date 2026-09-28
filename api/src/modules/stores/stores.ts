@@ -5,6 +5,7 @@ import type { Client } from "../../db.ts";
 import {
   mayStock, actionForKind, isInventoryManagerAt, STOCK_REFUSED, type StockAction,
 } from "./stockGrants.ts";
+import { priceProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STORE
@@ -536,6 +537,8 @@ stores.post("/:code/stores/movements", async (c) => {
         day send 5 and quietly double the stock. */
     quantity?: number;
     unitCost?: number | null;
+    /** X-1 (D27-120): a cost of 0 only when ticked Free. */
+    unitCostFree?: boolean;
     supplier?: string;
     reference?: string;
     note?: string;
@@ -587,6 +590,9 @@ stores.post("/:code/stores/movements", async (c) => {
     if (!Number.isFinite(input.unitCost) || input.unitCost < 0) {
       return c.json(refuse("A unit cost is zero or more."), 409);
     }
+    /* ST-1: 5 kg at 0 dragged the average down for every later receipt. */
+    const zeroCost = priceProblem(input.unitCost, input.unitCostFree === true);
+    if (zeroCost) return c.json(refuse(zeroCost), 409);
   }
 
   const result = await withSession(c.get("subject"), async (client, session) => {

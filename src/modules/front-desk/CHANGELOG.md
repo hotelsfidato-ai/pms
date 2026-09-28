@@ -8,6 +8,30 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-28 · Fix round D: the ID step, the counts, the room slept in (QA of 28 Sep)
+
+**Asked for:** D27-116 - the QA's Front desk table; the owner's answers of 28 Sep.
+**Shipped:** QA FD-1 - the walk-in asks every guest for an ID or a reason, keeps
+an Indian guest's document, notes a skipped one. QA FD-2/FD-3 - the ID rules
+(guests' identityProblem) at check-in and walk-in; the summary shows an Aadhaar as
+"ending 0124" (D21-18). QA FD-4/FD-6/FD-9 - Change dates and the walk-in refuse
+children -1, a cleared date, -2 or 400 nights (at most 90). QA FD-5 - migration
+154 and the ORDER BY in stays.ts (and five other services' copies): the room left
+last. QA FD-7 - the walk-in's phone and email. QA FD-8 - adults 0 stopped at step
+1 and refused in words. The check-in's ID checks sit below the room checks (the
+master's report). "Edit guest" in the stay panel (GU-1), "Cancel this booking"
+beside Void (BK-1).
+**Proved:** api front-desk/deskChecks.test.ts 15 (all fail on the old
+operations.ts), dayAndRoom.test.ts FD-5 (105 without, 106 with); web
+checkInChecks.test.tsx 2, walkInReturning.test.tsx 6. On screen: the walk-in's ID
+step, "12ab" and -2 nights refused, checked in FH-5EL-2608-5032 with its Aadhaar
+kept; the wizard's adults 0, "12ab", "Aadhaar ending 0124".
+**Left open:** check-out's "Are you sure?" (D27-117) is round A's (FolioPanel).
+Cosmetic rows wait for the pilot.
+**Commits:** 0a1eaab, a6d510e, 750c2c1, 8919792.
+
+---
+
 ## 2026-09-27 · Touched by the reservations session: Cancel a waiting booking (D27-64)
 
 `StayActions` shows "Cancel this booking" (reservations' `CancelWaitingFlow`)

@@ -11,6 +11,14 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-28 · Fix round F (QA leftovers, D27-149), part B: a guest's message rings the bell (QA GP-5, D27-153)
+
+**Asked for:** QA GP-5 and the owner's D27-153, in the core's notifications (delegated by the master for these two only). Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** `api/src/routes/notifications.ts`: "{n} guest message(s) waiting", linking to Guest messages, while a guest's message to the desk is open, for the roles holding `customer` view (D27-144); and the bell's guest names only with `customer`, amounts only with `invoice` (other roles get the alert without them).
+**Proved:** `api/test/notifications.test.ts` 2 passed; both failed with the old route. On screen: Reception's bell "1 guest message waiting"; Housekeeping's rooms only, no amounts.
+
+---
+
 ## 2026-09-27 · Touched by Phase 1, New booking (reservations session)
 
 `POST /:code/stays/:id/confirmation` (`voucher.ts`): Send voucher from New booking's Booked card, the sweep's own confirmation now, with the clerk's name. `claimTurn` / `sendIfOwed` in `jobs.ts`: the sweep's sender takes the same per-booking turn and asks again, so a voucher never goes twice (D27-35). `getGuestMessages` on the web front door.

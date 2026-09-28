@@ -297,7 +297,7 @@ export default function LaundryDocketPage() {
           )
           : undefined}
         breadcrumbs={[
-          { label: "Laundry", to: `/h/${code}/laundry` },
+          { label: "Dockets", to: `/h/${code}/laundry` },
           { label: d?.number ?? "Docket" },
         ]}
         actions={d && (

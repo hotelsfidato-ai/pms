@@ -5,6 +5,13 @@ import {
   ensureAccount, setAccountPassword, passwordProblem,
 } from "../../identity.ts";
 import type { PoolClient as Client } from "pg";
+import { env } from "../../env.ts";
+import { phoneProblem } from "../../validate.ts";
+
+/* No Firebase service account on this server (QA AD-5): the account calls
+   throw, and the person read "Something went wrong". */
+const NO_SIGN_IN =
+  "Sign-in accounts cannot be made on this server: it has no Firebase service account.";
 
 /* ══════════════════════════════════════════════════════════════════
    ADMINISTRATION — the writes
@@ -541,6 +548,9 @@ admin.patch("/admin/staff/:id", async (c) => {
   if (fullName !== undefined && !fullName) {
     return c.json(refuse("A person needs a name."), 409);
   }
+  /* X-2, AD-3 (round D): a phone "abc" was saved. */
+  const badPhone = phoneProblem(input.phone);
+  if (badPhone) return c.json(refuse(badPhone), 409);
 
   const result = await withSession(c.get("subject"), async (client) => {
     /* A GM too, for somebody at their hotel (D22-3). */
@@ -856,7 +866,13 @@ admin.post("/admin/staff", async (c) => {
          Row then account: a failed account leaves exactly the defect
          this endpoint exists to fix — a person on the People screen
          who cannot sign in. */
-      const account = await ensureAccount(email, name, password);
+      let account;
+      try {
+        account = await ensureAccount(email, name, password);
+      } catch (e) {
+        if (!env.firebaseServiceAccount) return refuse(NO_SIGN_IN);
+        throw e;
+      }
 
       /* Somebody already here is brought back, because a person re-invited
          is the common case and an error there teaches an admin to avoid
@@ -960,16 +976,21 @@ admin.post("/admin/staff/:id/password", async (c) => {
        would use to fix that. `ensureAccount` creates or adopts, and the
        uid is written back — without that last step the account exists
        and resolves to nobody. */
-    if (!rows[0].uid) {
-      const account = await ensureAccount(
-        rows[0].email, rows[0].full_name, password);
-      await client.query("update staff set firebase_uid = $2 where id = $1",
-        [c.req.param("id"), account.uid]);
-      return { ok: true as const, linked: true };
-    }
+    try {
+      if (!rows[0].uid) {
+        const account = await ensureAccount(
+          rows[0].email, rows[0].full_name, password);
+        await client.query("update staff set firebase_uid = $2 where id = $1",
+          [c.req.param("id"), account.uid]);
+        return { ok: true as const, linked: true };
+      }
 
-    await setAccountPassword(rows[0].uid, password);
-    return { ok: true as const, linked: false };
+      await setAccountPassword(rows[0].uid, password);
+      return { ok: true as const, linked: false };
+    } catch (e) {
+      if (!env.firebaseServiceAccount) return refuse(NO_SIGN_IN);
+      throw e;
+    }
   });
 
   return c.json(result!, "ok" in result! && result!.ok ? 200 : 409);
