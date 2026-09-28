@@ -11,6 +11,12 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-28 · Fix round F (QA leftovers, D27-149), part B: the owner's answers to RP-1 and RP-2 (D27-151, D27-152)
+
+**Shipped:** `DocumentReport.tsx`: the Manager report is read afresh each time it opens (staleTime 0, refetch on mount), as the Dashboard's copy is - kept for the session it showed a booking voided since as still sold (D27-151; the Calendar and rate screens follow in part D). `builders/manager.ts`: under the City ledger, "Opening, Payment received and Closing need a company's payment, which this system does not record yet." (D27-152; the dashes stay, D17-74).
+
+---
+
 ## 2026-09-28 · Fix round F (QA leftovers, D27-149): the Manager report's two ledger figures, its complimentary rows, the cashier's name, the lodging tax line
 
 **Asked for:** QA RP-3 to RP-6 (`docs/qa/qa-2026-09-28.md`). Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.

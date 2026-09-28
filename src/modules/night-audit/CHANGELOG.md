@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-28 · Fix round F (QA leftovers, D27-149), part B: the screen guarded by its menu entry
+
+**Shipped:** `routes.tsx`: `RequireAccess` (resource `report`), as round B guarded the reports: the server refuses its reads to a role without `report` (D27-141). On screen, Housekeeping: "This page is not part of your role". Web night-audit tests passed.
+
+---
+
 ## 2026-09-28 · Fix round F (QA leftovers, D27-149): "Room charges to post" counts what the run posts (QA NA-5)
 
 **Asked for:** QA NA-5: the checklist said 6, the run posted 0. Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
