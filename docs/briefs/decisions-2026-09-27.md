@@ -141,3 +141,10 @@
 | D27-137 | Function bills on the Folios screen | **Not for now**; they live on the function's page |
 | D27-138 | When a function can be billed, and its advance | **"Bill the function" any time after Confirm; refused while unpriced, while Banquet tax is unset, or while a restaurant order is open.** An advance is a payment on the function's bill, with no GST receipt voucher until the CA answers (B5), said on screen |
 | D27-139 | The till and "no cash without a drawer" (round C; D27-118 on the till) | **No new "open the drawer" step** (the till's drawer is the outlet's business day); **once Close restaurant day has run, the till refuses new bills and cash until the night audit moves the date** |
+| D27-140 | Who makes an Admin (round B; CORRECTS D27-121) | **Only the owner (and a group administrator).** A hotel's Admin makes none, and the GM still makes none (D22-2 stands); D27-121's "owner or GM" was not meant |
+| D27-141 | Dashboards and reports for the working roles (RO-2, the 15 Sep rule enforced) | **No Dashboard for housekeeping, kitchen manager, chef, Inventory Manager or the till**; housekeeping, kitchen manager and Inventory Manager also lose `report` (All reports, the 12 reports, the Night audit screen) |
+| D27-142 | Rooms for the Chef and the Inventory Manager | **They lose Rooms and the Housekeeping board** (they hold no `reservation`) |
+| D27-143 | Roles that read bookings but not bills or guests (revenue manager, housekeeping, kitchen manager, till) | **Bills, balances and payments refused, the Bill tab and balances hidden; guest phone and email come back blank** from /stays, /stays/:id and /groups |
+| D27-144 | Guest messages (RO-3) | **Follow `customer` view**; the revenue manager, housekeeping, kitchen manager and till lose them |
+| D27-145 | The revenue manager | **Loses Company accounts (money owed); keeps Booking sources (commission)** |
+| D27-146 | The Viewer | **Keeps reading everything its row allows** |
