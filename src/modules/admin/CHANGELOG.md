@@ -33,7 +33,7 @@ roleGate READ_RULES (`role` view: owner, admin). The screen: server, database,
 disk, last backup tiles; requests, errors and 95% time for hour/day/week with
 sparklines; hotels' days; slowest routes; errors and slow queries. System
 section, order 25.
-**Found:** ADM-11 (the default privileges); `pg_database_size` takes 0.77 s on
+**Found:** ADM-11 (the default privileges), ADM-12 (phone header), ADM-13 (query names); `pg_database_size` takes 0.77 s on
 this Windows Postgres (walks every file), fine for a screen opened now and then.
 **Proved:** see the root report to the master (gates, build, screens).
 **Left open:** the owner sets up UptimeRobot on `/health`; the live server's

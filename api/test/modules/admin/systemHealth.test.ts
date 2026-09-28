@@ -94,6 +94,9 @@ describe("telemetry", () => {
     expect(slow.map((s) => s.what)).toContain("select pg_sleep(?), ? as who");
     expect(slow[0]!.max_ms).toBeGreaterThanOrEqual(1000);
     expect(queryName("where name = 'O''Brien' and n = 42")).toBe("where name = ? and n = ?");
+    /* An apostrophe in a comment opens no string (seen on the screen, 28 Sep). */
+    expect(queryName("select r.id, /* a member's room */ r.ref -- the guest's\nfrom r where x = 'Mr X'"))
+      .toBe("select r.id, r.ref from r where x = ?");
   });
 });
 

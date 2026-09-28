@@ -65,9 +65,13 @@ export function errorKind(error: unknown): string {
   return e && typeof e.name === "string" ? e.name : "Error";
 }
 
-/** A query's name: its SQL with every literal out, spaces collapsed, cut short. */
+/** A query's name: its SQL with comments and every literal out, spaces
+    collapsed, cut short. Comments first: an apostrophe in one ("member's")
+    would otherwise open a string and swallow the query up to the next. */
 export function queryName(text: string): string {
   return text
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/--[^\n]*/g, " ")
     .replace(/'(?:[^']|'')*'/g, "?")
     .replace(/\b\d+(?:\.\d+)?\b/g, "?")
     .replace(/\s+/g, " ")

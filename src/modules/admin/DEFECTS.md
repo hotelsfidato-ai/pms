@@ -33,6 +33,29 @@ the demo's shortest.
 
 ## Fixed — the solution is here; do not work it out again
 
+### ADM-13 · A slow query's name was mangled by an apostrophe in a SQL comment - FIXED 28 September, before merge
+
+**Found** — 28 September, opening System health with real traffic. A query
+commented "A group member's plus its room" showed as "member?s plus its room.
+The guest was quoted the GROUP?S NAME...": the `'` in the comment opened a
+"string", and the strip ran to the next `'`. Nothing leaked (it over-strips),
+but the name was unreadable.
+
+**Fixed** — `queryName` takes out `/* */` and `--` comments before literals;
+a test in api/test/modules/admin/systemHealth.test.ts holds it.
+
+**The rule** — strip comments before literals when naming SQL.
+
+### ADM-12 · System health's period switch crushed the Requests heading at phone width - FIXED 28 September, before merge
+
+**Found** — 28 September, the screen at 390 px: the switch sat in the card
+header's actions, and the title and description wrapped one word per line.
+
+**Fixed** — the switch sits in the card's body, above the tiles.
+
+**The rule** — a card header's actions take only a button; a control as wide
+as a segmented switch goes in the body.
+
 ### ADM-11 · The telemetry tables were writable by the API although the migration "revoked" it - FIXED 28 September, before merge
 
 **Found** — 28 September, by the database test's "nobody through the

@@ -155,9 +155,10 @@ export default function SystemHealthPage() {
         </FigureRow>
 
         <Card>
-          <CardHeader title="Requests" description="Every request to the server, its result and how quickly it was answered."
-            actions={<Segmented value={period} onChange={setPeriod} options={[...PERIODS]} />} />
+          <CardHeader title="Requests" description="Every request to the server, its result and how quickly it was answered." />
           <CardBody>
+            {/* In the body, not the header's actions: at phone width it crushed the title. */}
+            <Segmented className="mb-3" value={period} onChange={setPeriod} options={[...PERIODS]} />
             <TrafficTiles t={data.traffic[period]} />
           </CardBody>
         </Card>
