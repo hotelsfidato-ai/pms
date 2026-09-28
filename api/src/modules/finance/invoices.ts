@@ -127,156 +127,226 @@ async function totalsFor(client: Client, folioId: string): Promise<Totals> {
 
 /* ── Issue ────────────────────────────────────────────────────────── */
 
+/** Who a tax invoice is addressed to: printed as they are, never made up. */
+export interface InvoiceRecipient {
+  name: string;
+  gstin: string | null;
+  address: string | null;
+}
+
+/* WHO ONE BILL OF A STAY IS ADDRESSED TO (QA FI-1, 28 September).
+   A company's bill: that company. A guest's bill: the booking's company only
+   while the stay has no company bill of its own - a corporate booking with
+   one bill is invoiced to the company, as before; once the bill is split,
+   the guest's own lines are the guest's. It read the booking's company for
+   whichever bill it met first, so a split stay's invoice went to Agoda
+   carrying the guest's coffee.
+   Aliases: f (folios), r (reservations). The Invoices list reads the same
+   expression, so the row and the document name the same party. */
+export const RECIPIENT_COMPANY = `
+  case when f.bill_to = 'company' then f.company_id
+       when not exists (select 1 from folios o
+                         where o.reservation_id = f.reservation_id
+                           and o.bill_to = 'company') then r.company_id
+  end`;
+
+/* ══════════════════════════════════════════════════════════════════
+   THE DOOR A TAX INVOICE IS ISSUED THROUGH (28 September)
+
+   One invoice per BILL (folio). The stay's route below chooses the bill and
+   its recipient; a banquet function (round E) calls this with its own, and
+   with its own SAC (996334 or 997212 - banquet's choice). Everything else is
+   here once: the per-bill turn, "already invoiced", nothing under GST, the
+   hotel's GSTIN, the number, the VAT bill. A refusal is returned, never
+   thrown, and every refusal is above the number (MEMORY 243).
+   ══════════════════════════════════════════════════════════════════ */
+export async function issueFolioInvoice(
+  client: Client, hotelId: string, folioId: string,
+  recipient: InvoiceRecipient, sac?: string,
+) {
+  const { rows: known } = await client.query(
+    "select 1 from folios where id = $1::uuid and hotel_id = $2", [folioId, hotelId]);
+  if (!known.length) return refuse("No such bill.");
+
+  /* Serialise issuing for THIS folio, for the length of this
+     transaction. Two clicks a hundred milliseconds apart would
+     otherwise both find no invoice and both insert one, producing two
+     consecutive numbers for the same money — which breaks the series
+     as surely as skipping a number does and is far harder to spot.
+
+     A unique index on folio_id was the first attempt and was too
+     strict: once an invoice is credited, GST requires a corrected one
+     to be issued, and an index predicate cannot see other rows to
+     express "one invoice that has not been credited".
+
+     xact-scoped, so it releases on commit or rollback with no
+     unlock to forget. */
+  await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))",
+    [folioId]);
+
+  /* Already invoiced? Answer with the invoice rather than an error.
+     A retried request and a second click want the same thing, and a
+     unique index below is what actually guarantees it. */
+  const { rows: existing } = await client.query<{ number: string }>(
+    `select i.number from invoices i
+      where i.folio_id = $1
+        and i.credits_id is null
+        -- ...and has not been credited. A credited invoice is spent:
+        -- the money came off, and the guest is owed a correct
+        -- document, so the folio may be invoiced again.
+        and not exists (
+          select 1 from invoices c where c.credits_id = i.id
+        )`,
+    [folioId],
+  );
+  if (existing[0]) {
+    return { ok: true as const, duplicate: true, number: existing[0].number };
+  }
+
+  const totals = await totalsFor(client, folioId);
+  if (totals.total <= 0) {
+    return refuse(
+      "There is nothing to invoice - the folio carries no charges under GST. "
+      + "Alcohol is billed under VAT and is not on a GST invoice.",
+    );
+  }
+
+  const businessDate = await businessDateFor(client, hotelId);
+
+  /* Only the state, now. This also selected `cgst_rate` and
+     `sgst_rate` and did nothing with them — the split below is
+     computed from the tax the postings actually carry, and has been
+     since it was written. Two dead columns that looked like the
+     source of the numbers under them. */
+  const { rows: hotel } = await client.query<{ state: string | null; gstin: string | null }>(
+    "select state, gstin from hotels where id = $1",
+    [hotelId],
+  );
+  /* NO GSTIN, NO TAX INVOICE (CGST Rule 46(a); 28 September, the release
+     review): it printed "-" as the supplier's GSTIN. Above the number,
+     which is the first write (MEMORY 243). */
+  if (!hotel[0]?.gstin?.trim()) return refuse(noGstin("a tax invoice", "the invoice"));
+
+  /* CGST and SGST are half the total tax each, by statute — they are
+     levied at the same rate on the same value. Split from the tax
+     ALREADY POSTED rather than recomputed from the rate, so the
+     invoice and the ledger cannot disagree by a rounding paisa.
+
+     The odd paisa goes to CGST. Somewhere has to take it, and saying
+     which, once, is better than letting the two halves round
+     independently and produce a total that is not the total. */
+  const sgst = Math.round(totals.tax * 50) / 100;
+  const cgst = Math.round((totals.tax - sgst) * 100) / 100;
+
+  const finYear = await client.query<{ y: string }>(
+    "select app.current_fin_year($1) as y", [hotelId],
+  );
+
+  const number = await client.query<{ n: string }>(
+    "select app.next_invoice_number($1, $2) as n",
+    [hotelId, finYear.rows[0]!.y],
+  );
+
+  /* The SAC only when the caller names one: otherwise the column's own
+     default (996311, accommodation) stands, written in one place. */
+  const { rows: made } = await client.query<{ id: string }>(
+    `insert into invoices
+       (hotel_id, folio_id, fin_year, number, gstin, fssai_number,
+        recipient_name, recipient_gstin, recipient_address,
+        place_of_supply, taxable_value, cgst_total, sgst_total,
+        tax_total, total, business_date, issued_by${sac ? ", sac_code" : ""})
+     values ($1,$2,$3,$4,
+             (select gstin from hotels where id = $1),
+             (select fssai_number from hotels where id = $1),
+             $5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
+             app.current_user_id()${sac ? ", $15" : ""})
+     returning id::text`,
+    [hotelId, folioId, finYear.rows[0]!.y, number.rows[0]!.n,
+     recipient.name, recipient.gstin, recipient.address,
+     hotel[0]?.state, totals.taxable, cgst, sgst, totals.tax,
+     totals.total, businessDate, ...(sac ? [sac] : [])],
+  );
+
+  /* D22-44: the folio's alcohol gets its own VAT bill, in this same
+     transaction - both documents exist, or neither does. Null when the
+     folio carries no VAT. */
+  const { rows: vat } = await client.query<{ n: string | null }>(
+    "select app.issue_vat_bill($1, null) as n", [made[0]!.id],
+  );
+
+  return {
+    ok: true as const,
+    id: made[0]!.id,
+    number: number.rows[0]!.n,
+    vatBill: vat[0]!.n,
+    taxableValue: totals.taxable,
+    cgst, sgst,
+    taxTotal: totals.tax,
+    total: totals.total,
+    placeOfSupply: hotel[0]?.state,
+    recipient: recipient.name,
+    businessDate,
+  };
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 invoices.post("/:code/stays/:id/invoice", async (c) => {
+  /* WHICH BILL (QA FI-1): a split stay has one invoice per bill. It took
+     the stay's first folio in no order, so a stay with two bills was
+     invoiced from either (FIN-10). */
+  const body = await c.req.json<{ folioId?: string }>().catch(() => ({} as { folioId?: string }));
+
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
-    const { rows: folio } = await client.query<{
-      id: string; guest: string; company: string | null;
-      company_gstin: string | null; guest_address: string | null;
-      company_address: string | null; status: string;
+    if (body.folioId !== undefined && !UUID.test(String(body.folioId))) {
+      return refuse("That bill is not on this stay.");
+    }
+
+    const { rows: bills } = await client.query<{
+      id: string; name: string; gstin: string | null; address: string | null;
+      charged: boolean;
     }>(
-      `select f.id, g.full_name as guest, co.name as company,
-              co.gstin as company_gstin, gd.address_line as guest_address,
-              nullif(concat_ws(', ', nullif(co.address_line, ''),
-                                     nullif(co.city, '')), '') as company_address,
-              f.status
+      `select f.id::text,
+              coalesce(co.name, g.full_name) as name,
+              nullif(co.gstin, '') as gstin,
+              /* The recipient's name and address come from the same party
+                 (CGST Rule 46(e)): a company's line and city, never the
+                 guest's home under the company's name. */
+              case when co.id is not null
+                   then nullif(concat_ws(', ', nullif(co.address_line, ''),
+                                               nullif(co.city, '')), '')
+                   else gd.address_line end as address,
+              exists (select 1 from folio_postings fp
+                       where fp.folio_id = f.id
+                         and fp.category not in ('payment', 'refund')
+                         and fp.reverses_id is null
+                         and not exists (select 1 from folio_postings rev
+                                          where rev.reverses_id = fp.id)) as charged
          from folios f
          join reservations r on r.id = f.reservation_id
          join guests g on g.id = r.guest_id
-         left join companies co on co.id = r.company_id
+         left join companies co on co.id = ${RECIPIENT_COMPANY}
          left join guest_documents gd on gd.guest_id = g.id
-        where f.hotel_id = $1 and f.reservation_id = $2`,
-      [hotelId, c.req.param("id")],
+        where f.hotel_id = $1 and f.reservation_id = $2
+          and ($3::uuid is null or f.id = $3::uuid)
+        order by f.opened_at, f.id`,
+      [hotelId, c.req.param("id"), body.folioId ?? null],
     );
 
-    if (!folio[0]) return refuse("No folio for that reservation.");
-    const f = folio[0];
-
-    /* Serialise issuing for THIS folio, for the length of this
-       transaction. Two clicks a hundred milliseconds apart would
-       otherwise both find no invoice and both insert one, producing two
-       consecutive numbers for the same money — which breaks the series
-       as surely as skipping a number does and is far harder to spot.
-
-       A unique index on folio_id was the first attempt and was too
-       strict: once an invoice is credited, GST requires a corrected one
-       to be issued, and an index predicate cannot see other rows to
-       express "one invoice that has not been credited".
-
-       xact-scoped, so it releases on commit or rollback with no
-       unlock to forget. */
-    await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))",
-      [f.id]);
-
-    /* Already invoiced? Answer with the invoice rather than an error.
-       A retried request and a second click want the same thing, and a
-       unique index below is what actually guarantees it. */
-    const { rows: existing } = await client.query<{ number: string }>(
-      `select i.number from invoices i
-        where i.folio_id = $1
-          and i.credits_id is null
-          -- ...and has not been credited. A credited invoice is spent:
-          -- the money came off, and the guest is owed a correct
-          -- document, so the folio may be invoiced again.
-          and not exists (
-            select 1 from invoices c where c.credits_id = i.id
-          )`,
-      [f.id],
-    );
-    if (existing[0]) {
-      return { ok: true, duplicate: true, number: existing[0].number };
+    if (!bills[0]) {
+      return refuse(body.folioId ? "That bill is not on this stay." : "No folio for that reservation.");
     }
-
-    const totals = await totalsFor(client, f.id);
-    if (totals.total <= 0) {
-      return refuse(
-        "There is nothing to invoice - the folio carries no charges under GST. "
-        + "Alcohol is billed under VAT and is not on a GST invoice.",
-      );
+    /* Unnamed, an empty second bill is not a choice (FIN-10): only the bills
+       that carry a charge are. Two of those is a split stay - say which. */
+    const charged = bills.filter((b) => b.charged);
+    if (!body.folioId && charged.length > 1) {
+      return refuse("This stay's bill is split: each bill is its own tax invoice. Say which bill to invoice.");
     }
-
-    const businessDate = await businessDateFor(client, hotelId);
-
-    /* Only the state, now. This also selected `cgst_rate` and
-       `sgst_rate` and did nothing with them — the split below is
-       computed from the tax the postings actually carry, and has been
-       since it was written. Two dead columns that looked like the
-       source of the numbers under them. */
-    const { rows: hotel } = await client.query<{ state: string | null; gstin: string | null }>(
-      "select state, gstin from hotels where id = $1",
-      [hotelId],
-    );
-    /* NO GSTIN, NO TAX INVOICE (CGST Rule 46(a); 28 September, the release
-       review): it printed "-" as the supplier's GSTIN. Above the number,
-       which is the first write (MEMORY 243). */
-    if (!hotel[0]?.gstin?.trim()) return refuse(noGstin("a tax invoice", "the invoice"));
-
-    /* CGST and SGST are half the total tax each, by statute — they are
-       levied at the same rate on the same value. Split from the tax
-       ALREADY POSTED rather than recomputed from the rate, so the
-       invoice and the ledger cannot disagree by a rounding paisa.
-
-       The odd paisa goes to CGST. Somewhere has to take it, and saying
-       which, once, is better than letting the two halves round
-       independently and produce a total that is not the total. */
-    const sgst = Math.round(totals.tax * 50) / 100;
-    const cgst = Math.round((totals.tax - sgst) * 100) / 100;
-
-    const finYear = await client.query<{ y: string }>(
-      "select app.current_fin_year($1) as y", [hotelId],
-    );
-
-    const number = await client.query<{ n: string }>(
-      "select app.next_invoice_number($1, $2) as n",
-      [hotelId, finYear.rows[0]!.y],
-    );
-
-    const { rows: made } = await client.query<{ id: string }>(
-      `insert into invoices
-         (hotel_id, folio_id, fin_year, number, gstin, fssai_number,
-          recipient_name, recipient_gstin, recipient_address,
-          place_of_supply, taxable_value, cgst_total, sgst_total,
-          tax_total, total, business_date, issued_by)
-       values ($1,$2,$3,$4,
-               (select gstin from hotels where id = $1),
-               (select fssai_number from hotels where id = $1),
-               $5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
-               app.current_user_id())
-       returning id::text`,
-      [hotelId, f.id, finYear.rows[0]!.y, number.rows[0]!.n,
-       /* The COMPANY is the recipient when there is one — a corporate
-          booking's invoice is addressed to the company, and only the
-          company can claim the input credit. And the company's ADDRESS
-          with it (CGST Rule 46(e)): this printed the guest's home address
-          under the company's name (28 September, the release review). */
-       f.company ?? f.guest, f.company_gstin,
-       f.company ? f.company_address : f.guest_address,
-       hotel[0]?.state, totals.taxable, cgst, sgst, totals.tax,
-       totals.total, businessDate],
-    );
-
-    /* D22-44: the folio's alcohol gets its own VAT bill, in this same
-       transaction - both documents exist, or neither does. Null when the
-       folio carries no VAT. */
-    const { rows: vat } = await client.query<{ n: string | null }>(
-      "select app.issue_vat_bill($1, null) as n", [made[0]!.id],
-    );
-
-    return {
-      ok: true,
-      id: made[0]!.id,
-      number: number.rows[0]!.n,
-      vatBill: vat[0]!.n,
-      taxableValue: totals.taxable,
-      cgst, sgst,
-      taxTotal: totals.tax,
-      total: totals.total,
-      placeOfSupply: hotel[0]?.state,
-      recipient: f.company ?? f.guest,
-      businessDate,
-    };
+    const { id, charged: _, ...recipient } = (body.folioId ? bills[0] : charged[0] ?? bills[0])!;
+    return issueFolioInvoice(client, hotelId, id, recipient);
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
