@@ -15,3 +15,7 @@ export const mounts: readonly Mount[] = [
    and scripts/pos-outlet.ts issues keys and makes outlets. Both come through
    this door. */
 export { outletFor, hashKey, issueKey, addOutlet, type Outlet } from "./pos.ts";
+
+/* The night audit's restaurant figures name the dishes struck after the
+   kitchen had them, from the same list Close restaurant day shows (D27-119). */
+export { struckAfterKitchen } from "./till.ts";

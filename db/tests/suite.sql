@@ -1430,7 +1430,8 @@ begin
   -- Cancelling a dish nobody started is free. Cancelling one on the fire
   -- costs food, and the pass must be told rather than have it vanish.
   update pos_order_lines
-     set voided=true, voided_by=v_staff, voided_at=now()
+     set voided=true, voided_by=v_staff, voided_at=now(),
+         void_reason='the guest changed their mind'   -- required since 151
    where order_id = v_order;
 
   perform test.ok('kot','a strike after the kitchen had it is marked',

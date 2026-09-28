@@ -76,6 +76,9 @@ in flight (28 Sep)   release/fixes-28sep: ten fixes (GM takeover of a two-hotel 
                      a fix round is needed before the pilot.
                      ops/health-telemetry: System health screen + telemetry kept on our
                      server (D27-91, D27-92), migration 150.
+                     fix/restaurant-audit-28sep (fix round C): QA POS-1..4, NA-1..4,
+                     D27-117/118/119 on the till, migration 151; six owner answers
+                     (CHANGELOG 28 Sep, round C) for the master to number.
 planned, not started The one face plan (https://claude.ai/artifact/EzrcpNGQudWLYVV7zMtZLH,
                      D27-98..108): the CRS and the market-to-revenue app stay unchanged;
                      the PMS reads them; vouchers and email through the CRS's n8n, other

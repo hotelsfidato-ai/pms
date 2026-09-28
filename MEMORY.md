@@ -6539,6 +6539,35 @@ copy will see of theirs.**
 
 ---
 
+### 341 · Two copies migrating at once collide on the shared roles ("tuple concurrently updated")
+
+28 September, fix round C. `DB=fidato_s27 bash db/migrate.sh` failed twice at
+`029_provisioning_key.sql` with `ERROR: tuple concurrently updated` on `alter role
+pms_provisioner nologin bypassrls`, and rolled back. Roles belong to the whole Postgres
+server, not to one database, so every copy's migrations (and every gate run's scratch
+database) alter the same role rows; two at the same moment collide. Nothing was wrong
+with the file; the third try, a minute later, went through.
+
+**The rule:** "tuple concurrently updated" on `alter role` during a migration is another
+copy migrating at the same time. Wait and run it again; do not edit the migration.
+
+---
+
+### 340 · A read widened to show what it hid found a second guard in the write
+
+28 September, fix round C (QA POS-1). The Kitchen screen read only OPEN orders, so food
+paid or charged to a room before it was cooked vanished. Widening the read to settled
+orders would have put those dishes back on the pass where the chef could never move
+them: 028's `pos_order_lines_frozen` refused every change to a settled order's lines,
+the kitchen status included. The filter had been hiding the freeze. Migration 151 now
+lets the kitchen status, and nothing else, change on a settled order.
+
+**The rule:** when a screen starts showing rows it used to hide, try every button that
+screen has on one of the new rows before calling it fixed. A guard behind the filter
+only shows up then.
+
+---
+
 ### 339 · The local Postgres dies when sessions are stopped
 
 Twice in two days a Postgres server process was "terminated by exception 0xC000013A"

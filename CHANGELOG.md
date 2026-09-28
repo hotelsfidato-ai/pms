@@ -50,6 +50,20 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-28 · Fix round C: the restaurant, the kitchen and the night audit (QA of 28 September)
+
+**Asked for:** D27-116 - every BLOCKS WORK and WRONG RESULT in QA's "Point of sale and kitchen" and "Night audit and closing the restaurant day" tables; D27-117 (ask before running the night audit and before charging a restaurant bill to a room), D27-118 on the till, D27-119 (who may strike food the kitchen has, with a reason). Branch `fix/restaurant-audit-28sep` from cp6 `631ce1f`.
+
+**The owner's answers (28 September, in the round C chat; the master numbers them):** (1) existing roles strike sent food - owner, administrator, GM, hotel manager, kitchen manager - no new Captain role; (2) a bill paid wholly in cash is rounded to the rupee; (3) the same people and a reason for fewer of a sent dish and for Close unpaid once anything was sent; (4) the reason on the docket, the Kitchen screen, Close restaurant day and the night audit; (5) a closed restaurant day refuses new bills and payments until the night audit, no new drawer step; (6) fix now the extra plate that never reached the kitchen.
+
+**Shipped:** QA POS-1, POS-2, POS-3, POS-4, NA-1, NA-2, NA-3, NA-4, the order's phone (X-2), D27-117 on the Till and Terminal, D27-118 on the till, and the extra-plate fault - `src/modules/pos/DEFECTS.md` POS-22, `src/modules/night-audit/DEFECTS.md` NA-10. Migration 151 (a strike's reason; the kitchen may move a paid dish). Shared files touched: `src/lib/freshness.ts` (+ "day-end", the master's yes), `db/tests/suite.sql` (one strike fixture given a reason), `api/scripts/demo-history.ts` (demo bills on their tables).
+
+**Proved:** the tests named in POS-22 and NA-10, each seen failing on cp6's code; the screens used on fidato_s27 (API 8861, web 5261). Gates: see the master's merge.
+
+**Left open:** POS-5 (menu ₹0) is round D's; the cosmetic rows wait (D27-116).
+
+---
+
 ## 2026-09-25/28 · The master: Phase 1, Form III, the logo, the whole redesign, the audits, and the release held for ten fixes
 
 **Asked for:** start Phase 1 of the platform plan; bring Form C up to Form III;
