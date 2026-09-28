@@ -104,6 +104,10 @@ export interface BookingRequest {
   /** Two letters, IN for India - the check-in's own shape. */
   nationality?: string;
   address?: BookingAddress;
+  /** The desk's note on the booking (D27-163), kept on reservations.notes. */
+  notes?: string;
+  /** "Woman travelling alone" (D27-163): the walk-in's tick, now the booking's. */
+  isSingleLady?: boolean;
 }
 
 export interface BookingMade {
@@ -619,11 +623,13 @@ export async function makeBooking(
               expected_arrival, booking_source_id, commission_pct,
               ota_reference, ota_line, ota_fingerprint, whatsapp_agreed,
               is_complimentary, expected_departure, sales_person, company_id,
-              discount_percent, discount_reason, room_promotion_id)
+              discount_percent, discount_reason, room_promotion_id,
+              notes, is_single_lady)
            values ($1,$2,$3,$4,$5::date,$6::date,$7,$8,$9,$10,$30,$11,
                    $12,$13,$14,$15,$16::time,$17,$18::numeric,
                    $19,$20,$21,$22,
-                   $23,$24::time,$25,$26,$27::numeric,$28,$29)
+                   $23,$24::time,$25,$26,$27::numeric,$28,$29,
+                   $31,$32)
            returning id::text`,
           [hotelId, ref[0]!.reference, guestId, line.roomTypeId,
            request.checkIn, request.checkOut, adults, children, adults + children,
@@ -656,7 +662,8 @@ export async function makeBooking(
            line.complimentary === true || rate === 0 ? null : terms.discount?.percent ?? null,
            line.complimentary === true || rate === 0 ? null : terms.discount?.reason ?? null,
            line.complimentary === true || rate === 0 ? null : terms.discount?.promotionId ?? null,
-           request.tentative === true ? "tentative" : "confirmed"],
+           request.tentative === true ? "tentative" : "confirmed",
+           text(request.notes), request.isSingleLady === true],
         );
 
         /* A BOOKING NEEDS SOMEWHERE TO PUT MONEY, from the moment it

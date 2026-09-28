@@ -29,6 +29,9 @@ export const SWITCHABLE = [
      It opens the Alcohol heading on the tax card - VAT, not GST (D21-91) -
      and lets the till sell a dish in a section taxed as alcohol. */
   "alcohol",
+  /* D27-163, 29 September: New booking's fold-open sections, per property,
+     ON until turned off (161). */
+  "booking_company", "booking_gst", "booking_extras", "booking_notes",
 ] as const;
 
 

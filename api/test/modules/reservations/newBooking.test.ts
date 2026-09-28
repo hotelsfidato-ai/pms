@@ -97,6 +97,7 @@ const row = async (id: string) => (await sql(
   `select r.status, r.agreed_rate::text, r.is_complimentary, r.discount_percent::text,
           r.discount_reason, r.room_promotion_id::text, r.company_id::text,
           r.expected_departure::text, r.sales_person, r.market_segment,
+          r.notes, r.is_single_lady,
           g.title, g.nationality, gd.address_line, gd.city, gd.state, gd.pincode, gd.country
      from reservations r join guests g on g.id = r.guest_id
      left join guest_documents gd on gd.guest_id = g.id
@@ -330,10 +331,12 @@ describe("the two lists (the owner, 27 September)", () => {
 });
 
 describe("what else New booking records", () => {
-  it("title, nationality, address, the company billed, the hour they leave, sales person and segment", async () => {
+  it("title, nationality, address, the company billed, the hour they leave, sales person, segment, the note and the single-lady tick", async () => {
     const res = await call(staff.get("front_desk")!, "POST", "/bookings", booking("Everything", {
       title: "Mrs", nationality: "gb", companyId, expectedDeparture: "09:30",
       salesPerson: `${TAG} Asha`, marketSegment: "Leisure",
+      /* D27-163: the one page's Notes box and the walk-in's tick. */
+      notes: "  Late train, keep the room  ", isSingleLady: true,
       address: { addressLine: "12 High St", city: "Leeds", state: "West Yorkshire",
                  pincode: "LS1 4AP", country: "United Kingdom" },
     }));
@@ -346,6 +349,7 @@ describe("what else New booking records", () => {
       sales_person: `${TAG} Asha`, market_segment: "Leisure", title: "Mrs", nationality: "GB",
       address_line: "12 High St", city: "Leeds", state: "West Yorkshire",
       pincode: "LS1 4AP", country: "United Kingdom",
+      notes: "Late train, keep the room", is_single_lady: true,
     });
   });
 
