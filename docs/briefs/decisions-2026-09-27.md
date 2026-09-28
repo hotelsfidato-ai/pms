@@ -133,3 +133,10 @@
 | D27-129 | A drawer counted exactly showing "Over by 0.30" (round C, NA-2) | **A bill paid entirely in cash is rounded to the nearest rupee at settle, with a "Round off" line**; card, UPI and room charges stay exact to the paisa |
 | D27-130 | Other changes to dishes already sent (round C) | **The same people and a reason** to lower a sent dish's quantity, or to close a bill unpaid when any of its dishes were sent |
 | D27-131 | Where a void's reason shows (round C) | **On the KOT, the Kitchen screen, Close restaurant day's summary and the night audit's restaurant figures** |
+| D27-132 | Who bills a banquet function (round E) | **Owner, Admin and GM take an advance, bill and settle** (no banquet-manager role exists); **the Accountant also issues its tax invoice**; credit notes unchanged |
+| D27-133 | Restaurant orders settled to a function | **Post onto the function's bill like a room charge**, so they are on its invoice |
+| D27-134 | SAC on a function's invoice | **996334 with food, 997212 hall only** (the CA to confirm, and whether one Banquet GST rate covers both) |
+| D27-135 | Cancelling a function with an advance | **Allowed; the advance stays as the host's credit** (refunds wait for the CA, C2/B5); a billed function can't be cancelled |
+| D27-136 | Spa and laundry for guests (BQ-2) | **Spa: book only on a day of the stay; Charge to room only once checked in. Laundry: collect only from a checked-in guest** |
+| D27-137 | Function bills on the Folios screen | **Not for now**; they live on the function's page |
+| D27-138 | When a function can be billed, and its advance | **"Bill the function" any time after Confirm; refused while unpriced, while Banquet tax is unset, or while a restaurant order is open.** An advance is a payment on the function's bill, with no GST receipt voucher until the CA answers (B5), said on screen |
