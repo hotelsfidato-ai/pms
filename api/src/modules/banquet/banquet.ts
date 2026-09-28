@@ -4,6 +4,10 @@ import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { PoolClient as Client } from "pg";
 import { attachableFunctions } from "./attach.ts";
+import { emailProblem, phoneProblem, priceProblem } from "../../validate.ts";
+import {
+  folioBalance, issueFolioInvoice, postFolioCharge, takeFolioPayment,
+} from "../finance/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BANQUET HALL
@@ -30,6 +34,24 @@ import { attachableFunctions } from "./attach.ts";
 export const banquet = new Hono<{ Variables: { subject: string } }>();
 
 const refuse = (reason: string) => ({ ok: false as const, reason });
+
+/* Once "Bill the function" has put it on its bill (status 'completed',
+   D27-138), what was billed is fixed: a correction is a credit note. */
+const BILLED =
+  "This function is on its bill, so its price, courses and times are fixed.";
+
+/* THE OWNER'S D27-124: a function may be set up while the property has no
+   banquet GST rule, and it is told so; its bill is refused until the rule
+   is set (the bill's own check). Asked with finance's own question,
+   app.gst_rate_or_null - null is "not set", never a rate of zero. */
+export const BANQUET_TAX_NOT_SET =
+  "Banquet tax is not set: ask the GM to set it before the bill.";
+
+async function banquetTaxWarning(client: Client, hotelId: string): Promise<string | null> {
+  const { rows } = await client.query<{ rate: string | null }>(
+    "select app.gst_rate_or_null($1, 'banquet', 1)::text as rate", [hotelId]);
+  return rows[0]?.rate == null ? BANQUET_TAX_NOT_SET : null;
+}
 
 async function hotelFor(client: Client, code: string): Promise<string | null> {
   const { rows } = await client.query<{ id: string }>(
@@ -273,6 +295,11 @@ banquet.get("/:code/banquet/events/:id", async (c) => {
       registeredBy: e.registered_by, registeredAt: e.registered_at,
       confirmedBy: e.confirmed_by,
       folioId: e.folio_id,
+      /* BQ-1: the bill as finance adds it up, and its standing invoice. */
+      bill: e.folio_id ? await folioBalance(client, e.folio_id) : null,
+      invoice: e.folio_id ? await standingInvoice(client, e.folio_id) : null,
+      /* D27-124: said on the function while the banquet GST rule is unset. */
+      taxWarning: await banquetTaxWarning(client, hotelId),
       catering: food.map((f) => ({
         id: f.id, name: f.name, pax: f.pax,
         ratePerHead: num(f.rate), notes: f.notes, addedBy: f.added_by,
@@ -307,9 +334,15 @@ banquet.post("/:code/banquet/events", async (c) => {
     startsAt?: string; endsAt?: string;
     hostName?: string; hostPhone?: string; hostEmail?: string;
     guestId?: string; companyId?: string;
-    pax?: number; agreedAmount?: number | null; notes?: string;
+    pax?: number; agreedAmount?: number | null; free?: boolean; notes?: string;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  /* Round D's rules (X-1, X-2, D27-120): an impossible telephone or email
+     is refused, and a hall price of 0 only when ticked Free. */
+  const typed = phoneProblem(input.hostPhone) ?? emailProblem(input.hostEmail)
+    ?? priceProblem(input.agreedAmount, input.free === true);
+  if (typed) return c.json(refuse(typed), 409);
 
   if (!input.venueId) return c.json(refuse("Which hall?"), 409);
   if (!input.title?.trim()) return c.json(refuse("What is the function?"), 409);
@@ -353,11 +386,18 @@ banquet.post("/:code/banquet/events", async (c) => {
       [venueId, startsAt, endsAt, hotelId],
     );
 
+    /* BQ-6: two registrations in one moment read the same maximum, and
+       `lpad` CUTS a number longer than its width (root MEMORY 280), so the
+       10,000th was refused as a duplicate. One at a time per property, for
+       this transaction, and a number is only padded when it is short. */
+    await client.query(
+      "select pg_advisory_xact_lock(hashtextextended('banquet-reference:' || $1, 0))",
+      [hotelId]);
     const { rows: refRows } = await client.query<{ reference: string }>(
-      `select 'BQ-' || to_char($2::date, 'YYMM') || '-' ||
-              lpad((coalesce(max(substring(reference from '[0-9]+$')::int), 1000) + 1)::text, 4, '0')
+      `select 'BQ-' || to_char($2::date, 'YYMM') || '-' || lpad(n, greatest(length(n), 4), '0')
               as reference
-         from banquet_events where hotel_id = $1`,
+         from (select (coalesce(max(substring(reference from '[0-9]+$')::bigint), 1000) + 1)::text as n
+                 from banquet_events where hotel_id = $1) m`,
       [hotelId, businessDate],
     );
 
@@ -399,13 +439,17 @@ banquet.post("/:code/banquet/events", async (c) => {
          input.agreedAmount ?? null,
          input.notes ?? null, session.staffId, idem],
       );
-      return {
-        ok: true as const, id: rows[0]!.id, reference: rows[0]!.reference,
-        warning: clash[0]
+      const warnings = [
+        clash[0]
           ? `Registered as an enquiry. Note the hall is already confirmed for `
             + `${clash[0].title} (${clash[0].reference}), `
             + `${clash[0].starts_at} to ${clash[0].ends_at}.`
           : null,
+        await banquetTaxWarning(client, hotelId),
+      ].filter(Boolean);
+      return {
+        ok: true as const, id: rows[0]!.id, reference: rows[0]!.reference,
+        warning: warnings.length ? warnings.join(" ") : null,
       };
     } catch (error) {
       const e = error as { message?: string } | undefined;
@@ -463,14 +507,22 @@ banquet.post("/:code/banquet/events/:id/cancel", async (c) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
+    /* A billed function is not cancelled (D27-135): its bill is corrected
+       with a credit note. An advance on a confirmed one stays on its bill
+       as the host's credit. */
     const { rows } = await client.query<{ id: string }>(
       `update banquet_events
           set status = 'cancelled', cancel_reason = $3,
               cancelled_by = $4, cancelled_at = now()
-        where id = $1 and hotel_id = $2 and status <> 'cancelled'
+        where id = $1 and hotel_id = $2 and status in ('enquiry', 'confirmed')
         returning id::text`,
       [c.req.param("id"), hotelId, reason, session.staffId]);
-    if (!rows[0]) return "missing" as const;
+    if (!rows[0]) {
+      const { rows: now } = await client.query<{ status: string }>(
+        "select status from banquet_events where id = $1 and hotel_id = $2",
+        [c.req.param("id"), hotelId]);
+      return now[0]?.status === "completed" ? refuse(BILLED) : "missing" as const;
+    }
     return { ok: true as const };
   });
 
@@ -478,7 +530,7 @@ banquet.post("/:code/banquet/events/:id/cancel", async (c) => {
   if (result === "missing") {
     return c.json(refuse("That function is not open to cancel."), 409);
   }
-  return c.json(result);
+  return c.json(result, result.ok ? 200 : 409);
 });
 
 
@@ -487,9 +539,12 @@ banquet.patch("/:code/banquet/events/:id", async (c) => {
   type Body = {
     agreedAmount?: number | null; pax?: number | null;
     paxGuaranteed?: number | null; startsAt?: string; endsAt?: string;
-    notes?: string; title?: string;
+    notes?: string; title?: string; free?: boolean;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const badPrice = priceProblem(input.agreedAmount, input.free === true);
+  if (badPrice) return c.json(refuse(badPrice), 409);
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -508,6 +563,7 @@ banquet.patch("/:code/banquet/events/:id", async (c) => {
          from banquet_events where id = $1 and hotel_id = $2`,
       [c.req.param("id"), hotelId]);
     if (!cur[0]) return "missing" as const;
+    if (cur[0].status === "completed") return refuse(BILLED);
 
     const startsAt = input.startsAt ?? cur[0].starts_at;
     const endsAt = input.endsAt ?? cur[0].ends_at;
@@ -575,10 +631,12 @@ banquet.patch("/:code/banquet/events/:id", async (c) => {
 banquet.post("/:code/banquet/events/:id/catering", async (c) => {
   type Body = {
     packageId?: string; name?: string; pax?: number;
-    ratePerHead?: number | null; notes?: string;
+    ratePerHead?: number | null; free?: boolean; notes?: string;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
+  const badRate = priceProblem(input.ratePerHead, input.free === true);
+  if (badRate) return c.json(refuse(badRate), 409);
   if (!input.name?.trim()) return c.json(refuse("What is being served?"), 409);
   if (!Number.isInteger(input.pax) || (input.pax ?? 0) <= 0) {
     return c.json(refuse(
@@ -592,10 +650,11 @@ banquet.post("/:code/banquet/events/:id/catering", async (c) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
-    const { rows: owned } = await client.query<{ id: string }>(
-      `select id::text from banquet_events where id = $1 and hotel_id = $2`,
+    const { rows: owned } = await client.query<{ id: string; status: string }>(
+      `select id::text, status from banquet_events where id = $1 and hotel_id = $2`,
       [c.req.param("id"), hotelId]);
     if (!owned[0]) return "missing" as const;
+    if (owned[0].status === "completed") return refuse(BILLED);
 
     try {
       await client.query(
@@ -626,6 +685,10 @@ banquet.delete("/:code/banquet/events/:id/catering/:lineId", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const { rows: billed } = await client.query(
+      `select 1 from banquet_events where id = $1 and hotel_id = $2 and status = 'completed'`,
+      [c.req.param("id"), hotelId]);
+    if (billed[0]) return refuse(BILLED);
     const { rows } = await client.query<{ id: string }>(
       `delete from banquet_event_packages
         where id = $1 and event_id = $2 and hotel_id = $3 returning id::text`,
@@ -636,7 +699,211 @@ banquet.delete("/:code/banquet/events/:id/catering/:lineId", async (c) => {
 
   if (result === null) return c.json({ error: "No such property." }, 404);
   if (result === "missing") return c.json({ error: "No such course." }, 404);
-  return c.json(result);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+
+/* ══════════════════════════════════════════════════════════════════
+   THE FUNCTION'S BILL (BQ-1, QA 28 September; the owner's D27-132 to
+   D27-138)
+
+   Confirming opened a bill (a folio with event_id). These three put money
+   on it and take it off, through FINANCE's doors - the same charge, the
+   same payment and the same tax invoice a stay's bill goes through
+   (round A's per-bill exports). Nothing here adds tax up itself.
+
+     bill       the hall and every course, under the Banquet GST rule;
+                refused while anything is unpriced, while the rule is not
+                set (D27-124), or while a restaurant order on it is open.
+                The function becomes 'completed': its price is fixed.
+     payments   an advance before that (a payment on the bill, as a
+                room's is - no GST receipt voucher until the CA answers,
+                B5), or a payment after; the cash limit counts this
+                function's bill, s.186's "one event"
+     invoice    finance's tax invoice for the bill, to the company or the
+                host, SAC 996334 with food and 997212 for a hall alone
+                (D27-134, CA to confirm)
+   Who: api/src/roleGate.ts (owner, admin and GM; the invoice also the
+   accountant).
+   ══════════════════════════════════════════════════════════════════ */
+
+/** The tax invoice standing for a bill: issued and not credited. */
+async function standingInvoice(client: Client, folioId: string): Promise<string | null> {
+  const { rows } = await client.query<{ number: string }>(
+    `select i.number from invoices i
+      where i.folio_id = $1 and i.credits_id is null
+        and not exists (select 1 from invoices c where c.credits_id = i.id)
+      order by i.issued_at desc limit 1`, [folioId]);
+  return rows[0]?.number ?? null;
+}
+
+type BillRow = {
+  id: string; status: string; title: string; reference: string;
+  agreed_amount: string | null; venue: string; folio_id: string | null;
+};
+
+/** The function, LOCKED for this transaction, with its open bill. */
+async function functionForBill(client: Client, hotelId: string, id: string) {
+  const { rows } = await client.query<BillRow>(
+    `select e.id::text, e.status, e.title, e.reference, e.agreed_amount::text,
+            v.name as venue,
+            (select f.id::text from folios f
+              where f.event_id = e.id and f.status = 'open') as folio_id
+       from banquet_events e
+       join banquet_venues v on v.id = e.venue_id
+      where e.id = $1 and e.hotel_id = $2
+        for update of e`, [id, hotelId]);
+  return rows[0];
+}
+
+banquet.post("/:code/banquet/events/:id/bill", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const e = await functionForBill(client, hotelId, c.req.param("id"));
+    if (!e) return "missing" as const;
+
+    /* Every refusal above the first posting (MEMORY 243). */
+    if (e.status === "completed") return refuse("This function is already on its bill.");
+    if (e.status !== "confirmed") {
+      return refuse("Only a confirmed function is billed. Confirm it first: that opens its bill.");
+    }
+    if (!e.folio_id) return refuse(`The bill for ${e.title} is closed.`);
+    const folioId = e.folio_id;
+
+    const { rows: total } = await client.query<{ total: string | null; unpriced: string | null }>(
+      "select total::text, unpriced from app.banquet_event_total($1)", [e.id]);
+    if (total[0]!.total === null) {
+      return refuse(`${total[0]!.unpriced} Price it before the function is billed.`);
+    }
+    /* D27-124: the bill is refused until the GM sets the banquet rule. */
+    const noTax = await banquetTaxWarning(client, hotelId);
+    if (noTax) return refuse(noTax);
+
+    const { rows: open } = await client.query<{ n: number }>(
+      `select count(*)::int as n from pos_orders
+        where event_id = $1 and hotel_id = $2 and status = 'open'`, [e.id, hotelId]);
+    if (open[0]!.n > 0) {
+      return refuse(open[0]!.n === 1
+        ? "A restaurant order on this function is still open. Settle it to the function first."
+        : `${open[0]!.n} restaurant orders on this function are still open. Settle them to the function first.`);
+    }
+
+    const { rows: courses } = await client.query<{ name: string; pax: number; rate: string }>(
+      `select name, pax, rate_per_head::text as rate from banquet_event_packages
+        where event_id = $1 order by created_at`, [e.id]);
+
+    /* The hall and each course, at their agreed figures; a Free one (0)
+       is not a charge and is left off. Restaurant orders are on the bill
+       already - the till posts them as it settles (D27-133). */
+    const lines = [
+      { description: `Hall: ${e.venue} - ${e.title} (${e.reference})`,
+        amount: Number(e.agreed_amount), category: "Miscellaneous" },
+      ...courses.map((k) => ({
+        description: `${k.name}: ${k.pax} plates at ₹${Number(k.rate)}`.slice(0, 240),
+        amount: Math.round(k.pax * Number(k.rate) * 100) / 100, category: "Food",
+      })),
+    ].filter((l) => l.amount > 0);
+
+    for (const line of lines) {
+      const posted = await postFolioCharge(client, hotelId, folioId, {
+        ...line, taxKind: "banquet",
+      });
+      /* Every refusal postFolioCharge has was asked above, so this cannot
+         happen - and if it did, a throw rolls back the lines before it
+         rather than committing half a bill (MEMORY 243). */
+      if (!posted.ok) throw new Error(posted.reason);
+    }
+
+    await client.query(
+      "update banquet_events set status = 'completed' where id = $1", [e.id]);
+    return { ok: true as const };
+  });
+
+  if (result === null) return c.json({ error: "No such property." }, 404);
+  if (result === "missing") return c.json({ error: "No such function." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+banquet.post("/:code/banquet/events/:id/payments", async (c) => {
+  type Body = {
+    method?: string; amount?: number; pan?: string; form97?: boolean; heldAsCredit?: boolean;
+  };
+  const body = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const e = await functionForBill(client, hotelId, c.req.param("id"));
+    if (!e) return "missing" as const;
+    if (e.status !== "confirmed" && e.status !== "completed") {
+      return refuse("Money is taken on a confirmed function's bill. Confirm it first.");
+    }
+    if (!e.folio_id) return refuse(`The bill for ${e.title} is closed.`);
+    const folioId = e.folio_id;
+
+    return takeFolioPayment(client, hotelId, folioId, {
+      method: body.method, amount: body.amount, pan: body.pan, form97: body.form97,
+      /* Before the bill, everything paid is an advance held on it (D27-137);
+         after, more than the bill waits for the desk's tick (D27-4). */
+      heldAsCredit: e.status === "confirmed" ? true : body.heldAsCredit,
+      idempotencyKey: c.req.header("idempotency-key") ?? null,
+    }, {
+      locks: [`payment-event:${e.id}`],
+      /* Cash already received on this function's bill: s.186's one event. */
+      cashTaken: async () => Number((await client.query<{ n: string }>(
+        `select coalesce(sum(p.amount), 0)::text as n
+           from payments p join folio_postings fp on fp.id = p.posting_id
+          where fp.folio_id = $1 and p.method = 'cash'
+            and not exists (select 1 from folio_postings x where x.reverses_id = fp.id)`,
+        [folioId])).rows[0]!.n),
+      foreign: false,
+    });
+  });
+
+  if (result === null) return c.json({ error: "No such property." }, 404);
+  if (result === "missing") return c.json({ error: "No such function." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+banquet.post("/:code/banquet/events/:id/invoice", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{
+      status: string; host_name: string; company: string | null;
+      company_gstin: string | null; company_address: string | null;
+      folio_id: string | null; food: boolean;
+    }>(
+      `select e.status, e.host_name, co.name as company, co.gstin as company_gstin,
+              nullif(concat_ws(', ', nullif(co.address_line, ''), nullif(co.city, '')), '')
+                as company_address,
+              f.id::text as folio_id,
+              exists (select 1 from banquet_event_packages p where p.event_id = e.id)
+              or exists (select 1 from folio_postings fp
+                          where fp.folio_id = f.id and fp.source_type = 'pos') as food
+         from banquet_events e
+         left join companies co on co.id = e.company_id
+         left join lateral (select id from folios where event_id = e.id
+                             order by opened_at desc limit 1) f on true
+        where e.id = $1 and e.hotel_id = $2`, [c.req.param("id"), hotelId]);
+    const e = rows[0];
+    if (!e) return "missing" as const;
+    if (e.status !== "completed" || !e.folio_id) {
+      return refuse("Bill the function first: the tax invoice is made from its bill.");
+    }
+    /* D27-134: catering at a function 996334; a hall with no food 997212
+       (CA to confirm). */
+    return issueFolioInvoice(client, hotelId, e.folio_id,
+      e.company
+        ? { name: e.company, gstin: e.company_gstin, address: e.company_address }
+        : { name: e.host_name, gstin: null, address: null },
+      e.food ? "996334" : "997212");
+  });
+
+  if (result === null) return c.json({ error: "No such property." }, 404);
+  if (result === "missing") return c.json({ error: "No such function." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
 
@@ -686,9 +953,11 @@ banquet.get("/:code/banquet/setup", async (c) => {
 banquet.post("/:code/banquet/venues", async (c) => {
   type Body = {
     name?: string; seated?: number | null; floating?: number | null;
-    defaultRate?: number | null; notes?: string;
+    defaultRate?: number | null; free?: boolean; notes?: string;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
+  const badRate = priceProblem(input.defaultRate, input.free === true);
+  if (badRate) return c.json(refuse(badRate), 409);
   if (!input.name?.trim()) return c.json(refuse("What is the hall called?"), 409);
   const venueName = input.name.trim();
 
@@ -721,9 +990,11 @@ banquet.post("/:code/banquet/venues", async (c) => {
 banquet.patch("/:code/banquet/venues/:id", async (c) => {
   type Body = {
     name?: string; seated?: number | null; floating?: number | null;
-    defaultRate?: number | null; isActive?: boolean; notes?: string;
+    defaultRate?: number | null; free?: boolean; isActive?: boolean; notes?: string;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
+  const badRate = priceProblem(input.defaultRate, input.free === true);
+  if (badRate) return c.json(refuse(badRate), 409);
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -756,9 +1027,11 @@ banquet.patch("/:code/banquet/venues/:id", async (c) => {
 banquet.post("/:code/banquet/packages", async (c) => {
   type Body = {
     name?: string; description?: string; ratePerHead?: number | null;
-    mealType?: string;
+    free?: boolean; mealType?: string;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
+  const badRate = priceProblem(input.ratePerHead, input.free === true);
+  if (badRate) return c.json(refuse(badRate), 409);
   if (!input.name?.trim()) {
     return c.json(refuse("What is the package called?"), 409);
   }

@@ -11,6 +11,44 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-28 · Fix round E: the function's bill, the banquet tax warning, Free prices, BQ-6, laundry and spa (QA 28 September)
+
+**Asked for:** the master's round E (D27-116, D27-120, D27-124; the QA's
+"Banquet, laundry and spa" table): reach and close a function's bill with the
+smallest change, reusing finance; warn while the banquet tax is unset; a 0 only
+when ticked Free; the other BLOCKS WORK and WRONG RESULT rows (laundry and spa).
+Branch `fix/banquet-bill-28sep`, copy `.claude\worktrees\jovial-heisenberg-b447a6`,
+database `fidato_s29`, API 8865, web 5265.
+
+**Decided by the owner, 28 September** (asked here, each with a
+recommendation; every recommendation taken; recorded D27-132 to D27-138):
+Owner, Admin and GM take an advance, bill and settle, the Accountant also
+issues the invoice; restaurant orders settled to a function reach its bill
+like a room charge; SAC 996334 with food, 997212 for a hall alone (CA to
+confirm, with whether one banquet rate covers both); a function with an
+advance may be cancelled, a billed one may not; spa booked on a day of the
+stay and charged once checked in, laundry from a checked-in guest; function
+bills not on Folios; "Bill the function" any time after Confirm.
+
+**Shipped** - DEFECTS BQ-9, BQ-10, BQ-11, BQ-6; laundry LAU-4; spa SPA-3.
+Built on round A's per-bill door (cp6 8b171d5) and round D's
+`api/src/validate.ts`. Outside banquet, with the master's yes: `pos/till.ts`
+(a function's order onto its bill), `reports/figures.ts` (the day book counts
+it once), `laundry`, `spa`, `api/src/roleGate.ts` (three write rules).
+
+**Proved** - each new test seen to fail with the server files put back to
+cp6's, and pass with them (numbers in the root CHANGELOG entry). On screen, as
+the GM in the copy: the Free refusal, the telephone refusal, the tax warning,
+advance, bill refused while the tax was unset, bill, settle, invoice, credit
+note; laundry's stay list; the spa's refusal.
+
+**Left open** - DEFECTS BQ-9: correcting a billed function's figures after a
+credit note; refunding a cancelled function's advance; the invoice's
+place-of-supply sentence (round A). Cosmetic rows BQ-4 to BQ-7 of the QA table
+are not this round's.
+
+---
+
 ## 2026-09-17 · The Diary's heading, restaurant food on a function's bill, and four more
 
 **Asked for:** the owner's answers of 17 September

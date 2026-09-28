@@ -70,6 +70,18 @@ September.
 
 ---
 
+## LAU-4 · A bag was collected from a guest still to arrive, and charged to their bill — FIXED 28 September (round E)
+
+**Found** — the QA of 28 September (QA BQ-2, WRONG RESULT): "Collect a bag" offered a booking arriving on 30 August, and ₹80 went onto that future guest's bill; the Manager report counted it as the day's revenue.
+
+**Fixed** — the owner's D27-136: only a guest in the house. The server refuses a guest's docket unless the stay is checked in ("That guest has not checked in yet. Collect a bag only from a guest in the house."), and Charge refuses a docket whose stay has not checked in; "Which stay" lists in-house and due-out guests only. A price of 0 on the price list is kept only when ticked Free (D27-120, round D's `priceProblem`).
+
+**Proved** — `api/test/modules/laundry/laundry.test.ts` "only a guest in the house", and the price list's 0 test; the screen checked in the copy (8 stays offered, all checked in). Seen to fail on the old route.
+
+**The rule** — a charge to a room belongs to a guest who is in it.
+
+---
+
 ## LAU-3 · The Settings switch for laundry draws, and refuses — FIXED 19 September
 
 **The entry is admin's now** - `src/modules/admin/DEFECTS.md`, under Fixed,

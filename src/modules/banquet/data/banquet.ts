@@ -124,9 +124,26 @@ export interface BanquetEvent {
   registeredAt: string;
   confirmedBy: string | null;
   folioId: string | null;
+  /** D27-124: "Banquet tax is not set: ..." while the property has no
+      banquet GST rule, else null. */
+  taxWarning: string | null;
+  /** The function's bill as finance adds it up (folioBalance), or null
+      while nothing is on it. */
+  bill: FunctionBill | null;
+  /** The tax invoice standing for this bill (not credited), or null. */
+  invoice: string | null;
   catering: BanquetCourse[];
   restaurantOrders: BanquetRestaurantOrder[];
   money: BanquetMoney;
+}
+
+export interface FunctionBill {
+  /** Before tax. */
+  charges: number;
+  tax: number;
+  paid: number;
+  /** Negative when more has been paid than billed - an advance. */
+  balance: number;
 }
 
 export interface BanquetVenue {
@@ -244,6 +261,8 @@ export interface RegisterEventInput {
   /** Only ever what a person typed. The screen may OFFER the venue's
       default rate; leaving it out means UNPRICED, not free. */
   agreedAmount?: number | null;
+  /** D27-120: a 0 is kept only when this is true. */
+  free?: boolean;
   notes?: string;
 }
 
@@ -277,7 +296,7 @@ export async function cancelBanquetEvent(
 export async function amendBanquetEvent(
   hotelCode: string, id: string,
   input: {
-    agreedAmount?: number | null; pax?: number | null;
+    agreedAmount?: number | null; free?: boolean; pax?: number | null;
     paxGuaranteed?: number | null; startsAt?: string; endsAt?: string;
     notes?: string; title?: string;
   },
@@ -289,7 +308,7 @@ export async function addBanquetCourse(
   hotelCode: string, eventId: string,
   input: {
     packageId?: string; name: string; pax: number;
-    ratePerHead?: number | null; notes?: string;
+    ratePerHead?: number | null; free?: boolean; notes?: string;
   },
 ): Promise<Result> {
   return call(
@@ -308,7 +327,7 @@ export async function addBanquetVenue(
   hotelCode: string,
   input: {
     name: string; seated?: number | null; floating?: number | null;
-    defaultRate?: number | null; notes?: string;
+    defaultRate?: number | null; free?: boolean; notes?: string;
   },
 ): Promise<Result<{ id: string }>> {
   return call(`/api/hotels/${hotelCode}/banquet/venues`, "POST", input);
@@ -318,7 +337,7 @@ export async function amendBanquetVenue(
   hotelCode: string, id: string,
   input: {
     name?: string; seated?: number | null; floating?: number | null;
-    defaultRate?: number | null; isActive?: boolean; notes?: string;
+    defaultRate?: number | null; free?: boolean; isActive?: boolean; notes?: string;
   },
 ): Promise<Result> {
   return call(`/api/hotels/${hotelCode}/banquet/venues/${id}`, "PATCH", input);
@@ -328,19 +347,47 @@ export async function addBanquetPackage(
   hotelCode: string,
   input: {
     name: string; description?: string; ratePerHead?: number | null;
-    mealType?: string;
+    free?: boolean; mealType?: string;
   },
 ): Promise<Result<{ id: string }>> {
   return call(`/api/hotels/${hotelCode}/banquet/packages`, "POST", input);
 }
 
+/* ── The function's bill (BQ-1, D27-132 to D27-138) ────────────────
+   Owner, Admin and GM take money and bill it; the tax invoice as well by
+   the Accountant. Finance does the sums, the payment and the invoice. */
+
+/** Puts the hall and the courses on the function's bill under the
+    Banquet GST rule; after it the price and courses are fixed. */
+export async function billBanquetEvent(hotelCode: string, id: string): Promise<Result> {
+  return call(`/api/hotels/${hotelCode}/banquet/events/${id}/bill`, "POST");
+}
+
+/** An advance before the function is billed, or a payment after. One
+    `pressKey` per press, kept until it lands: a repeat takes it once. */
+export async function payBanquetEvent(
+  hotelCode: string, id: string,
+  input: { method: string; amount: number; pan?: string; form97?: boolean; heldAsCredit?: boolean },
+  pressKey: string,
+): Promise<Result> {
+  return call(`/api/hotels/${hotelCode}/banquet/events/${id}/payments`, "POST", input,
+    { "idempotency-key": pressKey });
+}
+
+export async function invoiceBanquetEvent(
+  hotelCode: string, id: string,
+): Promise<Result<{ number: string }>> {
+  return call(`/api/hotels/${hotelCode}/banquet/events/${id}/invoice`, "POST");
+}
+
 async function call<T>(
-  path: string, method: string, body?: unknown,
+  path: string, method: string, body?: unknown, headers?: Record<string, string>,
 ): Promise<Result<T>> {
   try {
     const out = await api<T & { ok?: boolean }>(path, {
       method,
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(headers ? { headers } : {}),
     });
     return { ...(out as T), ok: true };
   } catch (error) {

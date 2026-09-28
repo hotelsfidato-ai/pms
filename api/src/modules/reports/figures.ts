@@ -356,6 +356,10 @@ export async function posSales(
           -- dailyFigures counts it, and the day book - this function's one
           -- reader - added it twice. Only what never reaches a folio here.
           and o.payment_method is distinct from 'room'
+          -- ...nor one settled to a banquet function: since D27-133 (28
+          -- September) the till posts it onto the function's folio the same
+          -- way, so it too is counted from the folio.
+          and o.payment_method is distinct from 'function'
           and o.business_date between $2::date and $3::date
      ),
      lines as (

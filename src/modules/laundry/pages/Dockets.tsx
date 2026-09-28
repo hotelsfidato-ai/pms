@@ -391,7 +391,7 @@ function CollectDialog({
             <Field
               label="Which stay"
               required
-              hint="Only stays this bag could be charged to are listed. A cancelled or checked-out booking is refused by the server as well."
+              hint="Only guests in the house are listed. A booking still to arrive, cancelled or checked out is refused by the server as well."
             >
               {(p) => (
                 <NativeSelect

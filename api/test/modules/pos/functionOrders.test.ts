@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
-import { closePool } from "../../../src/db.ts";
+import { closePool, withUser } from "../../../src/db.ts";
+import { posSales } from "../../../src/modules/reports/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    A RESTAURANT ORDER ON A BANQUET FUNCTION'S BILL — D17-21, the till's half
@@ -166,6 +167,13 @@ afterAll(async () => {
       await db.query("set session_replication_role = origin");
     }
     const mine = `select id from banquet_events where hotel_id = $1 and id <> all($2::uuid[])`;
+    /* Since D27-133 a settled order reaches its function's folio: the lines
+       and tickets on THIS file's functions' folios go first. */
+    const bills = `select id from folios where event_id in (${mine})`;
+    await db.query("set session_replication_role = replica");
+    await db.query(`delete from pos_tickets where folio_id in (${bills})`, [hotelId, eventsBefore]);
+    await db.query(`delete from folio_postings where folio_id in (${bills})`, [hotelId, eventsBefore]);
+    await db.query("set session_replication_role = origin");
     await db.query(`delete from banquet_event_packages where event_id in (${mine})`,
       [hotelId, eventsBefore]);
     await db.query(`delete from folios where event_id in (${mine})`, [hotelId, eventsBefore]);
@@ -258,7 +266,7 @@ describe("paying for an order on a function - on the function's bill only", () =
     expect(split.status).toBe(409);
   });
 
-  it("settles it to the function, where the function's bill counts it once", async () => {
+  it("settles it to the function, onto the function's bill as a room is charged (D27-133)", async () => {
     const { body: order } = await newOrder({ eventId: ids["Lunch"] });
 
     const db = await admin();
@@ -267,6 +275,11 @@ describe("paying for an order on a function - on the function's bill only", () =
       [ids["Lunch"]])).rows[0]!.pos);
     try {
       expect(await posOnBill(), "an open order is not yet on the bill").toBe(0);
+      /* The day book's restaurant side, before: the order must not be
+         added there as well, once it is on the folio. */
+      const tillSide = () => withUser(staffId, async (client) =>
+        (await posSales(client, hotelId, businessDate, businessDate))[0]?.net ?? 0);
+      const tillBefore = await tillSide();
 
       const res = await send("POST", `/5EL/till/orders/${order.id}/settle`, { method: "function" });
       expect(res.status).toBe(200);
@@ -276,11 +289,20 @@ describe("paying for an order on a function - on the function's bill only", () =
       expect(body.tenders.map((t) => t.method)).toEqual(["function"]);
 
       expect(await posOnBill()).toBeCloseTo(body.payable, 2);
-      /* Nothing reached a folio: the function's bill is banquet's sum. */
-      const { rows } = await db.query<{ n: string }>(
-        `select count(*)::text as n from folio_postings p
-           join folios f on f.id = p.folio_id where f.event_id = $1`, [ids["Lunch"]]);
-      expect(rows[0]!.n).toBe("0");
+      /* ...and it reached the function's folio, with the till's own tax,
+         one line per rate, each with its ticket - as a room is charged. */
+      const { rows } = await db.query<{ n: string; net: string; tax: string; tickets: string }>(
+        `select count(*)::text as n, sum(p.amount)::text as net, sum(p.tax_amount)::text as tax,
+                count(t.id)::text as tickets
+           from folio_postings p
+           join folios f on f.id = p.folio_id
+           left join pos_tickets t on t.posting_id = p.id
+          where f.event_id = $1 and p.source_type = 'pos'`, [ids["Lunch"]]);
+      expect(Number(rows[0]!.n)).toBeGreaterThan(0);
+      expect(rows[0]!.tickets).toBe(rows[0]!.n);
+      /* What the guest's bill came to, give or take the till's round-off. */
+      expect(Math.abs(Number(rows[0]!.net) + Number(rows[0]!.tax) - body.payable)).toBeLessThan(1);
+      expect(await tillSide(), "counted once: from the folio, not again from the till").toBe(tillBefore);
     } finally {
       await db.end();
     }
