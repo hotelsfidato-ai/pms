@@ -149,3 +149,4 @@
 | D27-145 | The revenue manager | **Loses Company accounts (money owed); keeps Booking sources (commission)** |
 | D27-146 | The Viewer | **Keeps reading everything its row allows** |
 | D27-147 | The revenue manager and the money reports (round B) | **Loses the City ledger, Guest ledger and Cashier shift reports; keeps the Manager report**, occupancy, ADR, pickup and the statistics reports |
+| D27-148 | More of a dish the kitchen already has (round C) | **Fix now: tapping a sent dish again adds a new line for the next KOT**, instead of silently adding to the sent line the kitchen never sees |
