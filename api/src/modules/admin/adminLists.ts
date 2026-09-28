@@ -119,6 +119,17 @@ directory.get("/:code/staff", async (c) => {
 /* ── Audit log ───────────────────────────────────────────────────── */
 
 directory.get("/:code/audit-log", async (c) => {
+  /* A person (part of the name), a business-date range, and a page (QA
+     AD-4). With none of them, the newest 500, as before. */
+  const who = c.req.query("who")?.trim() || null;
+  const from = c.req.query("from") || null;
+  const to = c.req.query("to") || null;
+  if ([from, to].some((d) => d !== null && !/^\d{4}-\d{2}-\d{2}$/.test(d))) {
+    return c.json({ ok: false, reason: "A date is written YYYY-MM-DD." }, 400);
+  }
+  const limit = Math.min(500, Math.max(1, Math.floor(Number(c.req.query("limit"))) || 500));
+  const offset = Math.max(0, Math.floor(Number(c.req.query("offset"))) || 0);
+
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
@@ -153,9 +164,12 @@ directory.get("/:code/audit-log", async (c) => {
          join reservations r on r.id = f.reservation_id
          join guests g       on g.id = r.guest_id
         where fp.hotel_id = $1
+          and ($2::text is null or app.posted_by_name(fp.id) ilike '%' || $2 || '%')
+          and ($3::date is null or fp.business_date >= $3::date)
+          and ($4::date is null or fp.business_date <= $4::date)
         order by fp.created_at desc, fp.id desc
-        limit 500`,
-      [hotelId],
+        limit $5 offset $6`,
+      [hotelId, who, from, to, limit, offset],
     );
 
     return rows.map((r) => ({

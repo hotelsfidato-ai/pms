@@ -10,7 +10,7 @@ import {
 } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, DataTable, StatusPill,
-  Skeleton, Avatar, Tooltip, ErrorState, Switch, toast, EmptyState,
+  Skeleton, Avatar, Tooltip, ErrorState, Switch, toast, EmptyState, Input, Button,
   type Column, type Tone,
 } from "@/components/ui";
 import { listStaff, listAuditLog, listIntegrations, getSettings, roleDescription, type StaffRecord, type AuditEntry, type Integration } from "@/modules/admin/data/adminLists";
@@ -288,23 +288,50 @@ const AUDIT_COLUMNS: Column<AuditEntry>[] = [
   },
 ];
 
+/* A page of the log (QA AD-4): one more is asked for, to know if there is an older page. */
+const AUDIT_PAGE = 100;
+
 export function AuditLogPage() {
   const hotelId = useHotel();
+  const [who, setWho] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [page, setPage] = useState(0);
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["audit-log", hotelId],
-    queryFn: () => listAuditLog(hotelId),
+    queryKey: ["audit-log", hotelId, who, from, to, page],
+    queryFn: () => listAuditLog(hotelId, { who, from, to, offset: page * AUDIT_PAGE, limit: AUDIT_PAGE + 1 }),
   });
+  const rows = (data ?? []).slice(0, AUDIT_PAGE);
+  const older = (data?.length ?? 0) > AUDIT_PAGE;
 
   return (
     <Page>
       <PageHeader
         title="Audit log"
         description="Append-only. Nothing here is edited or deleted - a wrong posting is reversed, and the reversal is its own entry."
-        badge={data ? <StatusPill tone="neutral">{data.length} entries</StatusPill> : undefined}
+        badge={data ? <StatusPill tone="neutral">{rows.length === 0 ? "No entries" : `Entries ${page * AUDIT_PAGE + 1}-${page * AUDIT_PAGE + rows.length}`}</StatusPill> : undefined}
       />
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <label className="text-sm text-grey-600 flex flex-col gap-1">
+          By
+          <Input value={who} placeholder="Part of a name" onChange={(e) => { setWho(e.target.value); setPage(0); }} />
+        </label>
+        <label className="text-sm text-grey-600 flex flex-col gap-1">
+          From
+          <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(0); }} />
+        </label>
+        <label className="text-sm text-grey-600 flex flex-col gap-1">
+          To
+          <Input type="date" value={to} min={from || undefined} onChange={(e) => { setTo(e.target.value); setPage(0); }} />
+        </label>
+        <div className="ml-auto flex gap-2">
+          <Button variant="secondary" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Newer</Button>
+          <Button variant="secondary" disabled={!older} onClick={() => setPage((p) => p + 1)}>Older</Button>
+        </div>
+      </div>
       <Card>
         <DataTable<AuditEntry>
-          rows={data ?? []}
+          rows={rows}
           columns={AUDIT_COLUMNS}
           rowKey={(e) => e.id}
           loading={isLoading}

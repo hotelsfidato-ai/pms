@@ -116,9 +116,15 @@ export interface AuditEntry {
  * posting and every reversal is already a permanent record. Nothing is
  * stored twice to produce this.
  */
-export async function listAuditLog(hotelId: string): Promise<AuditEntry[]> {
+export async function listAuditLog(
+  hotelId: string,
+  q: { who?: string; from?: string; to?: string; offset?: number; limit?: number } = {},
+): Promise<AuditEntry[]> {
   if (!hotelId) return [];
-  return fetchOr<AuditEntry[]>(`/api/hotels/${hotelId}/audit-log`, []);
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "") params.set(k, String(v));
+  const qs = params.toString();
+  return fetchOr<AuditEntry[]>(`/api/hotels/${hotelId}/audit-log${qs ? `?${qs}` : ""}`, []);
 }
 
 /* ── Integrations ────────────────────────────────────────────────── */
