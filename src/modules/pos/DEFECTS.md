@@ -182,7 +182,7 @@ Nine reads in `data/till.ts` ended in `catch { return [] }` (or `null`): the men
 
 **The rule** — A value kept for offline use must never be overwritten by a read that failed. A `catch` that returns a default turns a failure into a fact, and a cache believes facts.
 
-### POS-22 · An order settled to a banquet function reached no bill and no tax invoice — FIXED 28 September (round E; renumber at merge if taken)
+### POS-23 · An order settled to a banquet function reached no bill and no tax invoice — FIXED 28 September (round E)
 
 **Found** — round E, planning the function's bill (QA BQ-1): since 099 an order settled "to the function" touched no folio; the function's quotation counted it, but its bill, its payments and its tax invoice could not.
 
