@@ -58,7 +58,7 @@ async function add(id: string, qty = 1, itemId = tikka) {
 async function send(id: string) {
   const res = await post(owner, `/till/orders/${id}/kot`);
   expect(res.status, await res.clone().text()).toBe(200);
-  return (await res.json()) as Order & { kotNo: number };
+  return (await res.json()) as Order & { kotNo: number; sent: number };
 }
 const lines = (orderId: string) => sql<{
   id: string; qty: string; kot_status: string; voided: boolean; void_reason: string | null;
