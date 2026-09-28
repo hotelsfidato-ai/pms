@@ -693,6 +693,9 @@ export const WITHHELD: Readonly<Record<string, { keys: readonly string[]; unless
   [`GET ${H}/stays/:id`]: { keys: ["phone", "email"], unless: "customer" },
   [`GET ${H}/groups`]: { keys: ["masterBalance", "guestBalance"], unless: "invoice" },
   [`GET ${H}/groups/:id`]: { keys: ["balance", "guestBalance", "master"], unless: "invoice" },
+  /* A function's bill (round E, BQ-1): with no folioId the page draws no
+     Bill card at all (banquet/pages/BanquetEvent.tsx). */
+  [`GET ${H}/banquet/events/:id`]: { keys: ["folioId", "bill", "invoice"], unless: "invoice" },
 };
 
 const blank = (value: unknown, keys: readonly string[]): unknown =>

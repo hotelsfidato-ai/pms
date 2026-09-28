@@ -284,7 +284,7 @@ select set_config('app.user_id',
 -- hotel, including giving Admin there". What a GM may do since D22-3, plus
 -- Admin, at their own hotel and nowhere else. Each guard is asked on its own
 -- (MEMORY 318). And what it does NOT reach: a closed day is still the GM's.
--- 28 September (D27-140, 157): only the owner makes an Admin - the hotel's
+-- 28 September (D27-140, 152): only the owner makes an Admin - the hotel's
 -- Admin no longer does, and so no longer runs the hotel's other Admins.
 -- =============================================================================
 do $$

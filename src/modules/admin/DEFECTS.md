@@ -47,7 +47,7 @@ the demo's shortest.
 
 **Found** — QA RO-6 (Q-9). 133 (D23-2) let an Admin at a hotel hand out Admin there; D27-121 was written "only the owner or the GM", which would have reversed D22-2 and let a GM make an Admin whose password the GM could then reset. The owner corrected it: only the owner (and a group administrator).
 
-**Fixed** — migration 157, `app.grantable_roles`: `admin` is given only by the hotel's `owner` (and a group administrator). A hotel's Admin therefore also leaves the hotel's other Admins alone (133's "nobody runs somebody above them").
+**Fixed** — migration 152, `app.grantable_roles`: `admin` is given only by the hotel's `owner` (and a group administrator). A hotel's Admin therefore also leaves the hotel's other Admins alone (133's "nobody runs somebody above them").
 
 **Proved** — `db/tests/modules/admin.sql`: the Admin makes no Admin, the Admin row is refused as `pms_app`, the other Admin is not theirs to edit, switch off or reset, the hotel's owner still makes one; 1,250 assertions green.
 

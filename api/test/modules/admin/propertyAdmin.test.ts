@@ -487,7 +487,7 @@ describe("D22-3 - People works for the GM, at their own hotel only", () => {
 /* D23-2, the owner, 23 September: "a hotel-level Admin manages staff at their
    own hotel, including giving Admin there" - a GM's People, plus Admin. */
 /* D27-140, the owner, 28 September: "Admin included" is taken back - only
-   the owner makes an Admin (migration 157). */
+   the owner makes an Admin (migration 152). */
 describe("D23-2 - a hotel's Admin runs their hotel's people, but makes no Admin (D27-140)", () => {
   let admId: string;
 

@@ -30,12 +30,13 @@ for an unmapped read, grants over several resources, an `anyone` rule for the
 shell's harmless reads, and `WITHHELD` (fields blanked by role). The matrix
 (`api/src/permissions.ts`), guest messages' `VIEW_ROLES`, the Accounting
 export's `MAY_EXPORT` (+finance), the report files (City ledger asks
-`invoice`). Migration 157 (`app.grantable_roles`). The website: the menus and
+`invoice`). Migration 152 (`app.grantable_roles`). The website: the menus and
 route guards for Rooms, Housekeeping, the Dashboard, the reports, Company
 accounts, guest messages and the Accounting export; the stay panel hides the
 Bill tab and totals, the Rooms board and group screens show a dash where a
 balance is withheld, `getFolio` treats a refusal as no figure; People and the
 property page ask "Remove X from 5EL?" first.
+After round E merged (af8acbf) the function page carries its bill (BQ-1): `WITHHELD` drops its `folioId`, `bill` and `invoice` for the same roles, so no Bill card is drawn for them.
 **Found:** cp6 631ce1f's own roleGate test was red: System health added a
 READ_RULES line and the D25-38 test listed READ_RULES whole (fixed here).
 **Proved:** see DEFECTS ADM-15 and ADM-16 and the round's report.

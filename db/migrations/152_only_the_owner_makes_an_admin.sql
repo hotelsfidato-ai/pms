@@ -1,5 +1,5 @@
 -- =============================================================================
--- 157 · Only the owner makes an Admin (D27-140, correcting D27-121)
+-- 152 · Only the owner makes an Admin (D27-140, correcting D27-121)
 -- =============================================================================
 -- The owner, 28 September (QA RO-6, Q-9): a hotel's Admin may NOT make other
 -- people Admin - only the owner (and a group administrator). The GM still

@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { app } from "../src/server.ts";
 import { closePool } from "../src/db.ts";
 import {
-  WRITE_RULES, READ_RULES, isDoor, allows, whoMay, refusalFor, roleGate, UNMAPPED, type Rule,
+  WRITE_RULES, READ_RULES, WITHHELD, isDoor, allows, whoMay, refusalFor, roleGate, UNMAPPED, type Rule,
 } from "../src/roleGate.ts";
 import * as serverMatrix from "../src/permissions.ts";
 import * as websiteMatrix from "../../src/lib/permissions.ts";
@@ -184,6 +184,19 @@ describe("who reads what (D27-140 to D27-147)", () => {
     expect(who(`GET ${H}/stays`)).not.toContain("chef");
     expect(who(`GET ${H}/stays`)).not.toContain("stores");
     expect(who(`GET ${H}/stays`)).toContain("housekeeping");
+  });
+
+  it("D27-143: a function's bill is withheld from the roles that read bookings only (round E's BQ-1)", () => {
+    expect(WITHHELD[`GET ${H}/banquet/events/:id`]).toEqual(
+      { keys: ["folioId", "bill", "invoice"], unless: "invoice" });
+  });
+
+  it("round E's function money writes keep their rules: the owner, an administrator and the GM; the invoice adds the accountant", () => {
+    for (const key of [`POST ${H}/banquet/events/:id/bill`, `POST ${H}/banquet/events/:id/payments`]) {
+      expect(whoMay(rule(key)), key).toEqual(["owner", "admin", "gm"]);
+    }
+    expect(whoMay(rule(`POST ${H}/banquet/events/:id/invoice`)))
+      .toEqual(["owner", "admin", "gm", "finance"]);
   });
 
   it("D27-146: the Viewer keeps reading what its row allows, and still no ID details", () => {
