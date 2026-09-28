@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/cn";
 import { CreditNoteFlow } from "@/modules/finance/flows/CreditNoteFlow";
 import { getVatBill } from "@/modules/finance/data/billing";
+import { placeLine } from "@/modules/finance/place";
 import { useDocumentTitle } from "@/lib/documentTitle";
 import { useGroupSettings } from "@/modules/admin";
 
@@ -54,8 +55,9 @@ export default function VatBillPage() {
 
   const isCancellation = data.cancelsNumber !== null;
   const sign = (n: number) => (isCancellation ? -n : n);
-  const place = [data.supplier.address, data.supplier.city, data.supplier.state]
-    .filter(Boolean).join(", ");
+  /* The place once: this printed "…Maharashtra 413216, Akkalkot, MH" (the
+     print samples, 28 September). */
+  const place = placeLine(data.supplier.address, data.supplier.city, data.supplier.state);
 
   return (
     <DocPage

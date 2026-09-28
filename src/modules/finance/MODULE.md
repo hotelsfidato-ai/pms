@@ -43,6 +43,7 @@ a screen (Ctrl K).
 | Invoices (Finance) | `/h/:code/invoices` | `pages/Invoices.tsx` | none |
 | (no menu entry) one invoice or credit note | `/h/:code/invoices/doc/*` | `pages/Invoice.tsx` | — |
 | (no menu entry) one VAT bill for alcohol, or its credit note (D22-44) | `/h/:code/invoices/vat/*` | `pages/VatBill.tsx` | — |
+| (no menu entry) the interim bill, to print (QA FI-8) | `/h/:code/stays/:id/bill` | `pages/InterimBill.tsx` | — |
 | Payments (Finance) | `/h/:code/payments` | `pages/Billing.tsx` (`PaymentsPage`) | none |
 | Cashiering (Finance) | `/h/:code/cashiering` | `pages/Cashiering.tsx` | Reception |
 | Company accounts (Finance) | `/h/:code/city-ledger` | `pages/Billing.tsx` (`PropertyCityLedgerPage`) | none |
@@ -94,8 +95,8 @@ of the old `inventorySetup.ts` (`3ca215d`).
 | Method | Path | What it does |
 |---|---|---|
 | POST | `/:code/stays/:id/charges` | post a charge; everything the desk posts carries the room rate of GST (`app.gst_rate`), unless the clerk marks it not taxable |
-| POST | `/:code/stays/:id/charges/:postingId/reverse` | reverse a charge — once (021) |
-| POST | `/:code/stays/:id/payments` | take a payment: a posting and its receipt; one guest's (and group's) payments take turns (D27-2); more than the bill only with `heldAsCredit: true`, else refused with `needs: "credit"` (D27-4) |
+| POST | `/:code/stays/:id/charges/:postingId/reverse` | reverse a charge — once (021), with a required `reason` kept on the reversal line (D27-117); a payment only by the owner, an administrator, the GM or the accountant (D27-125) |
+| POST | `/:code/stays/:id/payments` | take a payment: a posting and its receipt; one guest's (and group's) payments take turns (D27-2); more than the bill only with `heldAsCredit: true`, else refused with `needs: "credit"` (D27-4); `folioId` names the bill of a split stay (QA FI-2); cash only by someone holding an open drawer (D27-118) |
 
 **`api/src/modules/finance/cashier.ts`** (cut from the old `api/src/routes/operations.ts`)
 
@@ -118,7 +119,7 @@ of the old `inventorySetup.ts` (`3ca215d`).
 
 | Method | Path | What it does |
 |---|---|---|
-| POST | `/:code/stays/:id/invoice` | issue the tax invoice for a stay (`app.next_invoice_number`) — and, in the same transaction, the VAT bill for its alcohol (`app.issue_vat_bill`, D22-44) |
+| POST | `/:code/stays/:id/invoice` | issue the tax invoice for one BILL of a stay (`folioId`; a split stay without one is refused - QA FI-1) (`app.next_invoice_number`) — and, in the same transaction, the VAT bill for its alcohol (`app.issue_vat_bill`, D22-44) |
 | GET | `/:code/invoices/:number{.+}` | one invoice or credit note, with the lines it was made from |
 | GET | `/:code/invoices` | every number issued here |
 | GET | `/:code/invoice-series` | the series itself |
@@ -194,6 +195,8 @@ What `index.ts` exports, and who uses each (grep of `@/modules/finance`,
 | `FolioPanel` | front desk (`flows/StayDrawer.tsx`) — the Bill tab |
 | `TaxRulesCard` | inventory (`pages/RoomSetup.tsx`) |
 
+On the server (`api/src/modules/finance/index.ts`): `postCharge` (laundry, spa), and since 28 September the per-bill door for a banquet function's bill - `takeFolioPayment`, `postFolioCharge`, `issueFolioInvoice`, `folioBalance` (round E).
+
 ## Leans on
 
 Other services, through their doors only:
@@ -202,8 +205,8 @@ Other services, through their doors only:
   `Posting` (`data/postings.ts`), `checkOut`, `checkOutAllowed`,
   `earlyArrival` and `LateCheckOutFlow` (`flows/FolioPanel.tsx`), `StayTable`
   (`pages/Folios.tsx`).
-- **reports** — `getCityLedger` and type `CityLedgerRow`
-  (`pages/Billing.tsx`): Company accounts reads reports' city-ledger endpoint.
+- **reports** — `getReport` (`pages/Billing.tsx`): Company accounts shows the
+  City ledger report's own figures (D27-127, 28 September).
 
 And the core: `src/lib/rules.ts` (charge categories, payment methods,
 `taxOn`, `splitTax`, `roundOff`, `canPostCharge`, `canReverse`), the shared

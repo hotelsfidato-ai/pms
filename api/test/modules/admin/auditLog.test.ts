@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
+import { withDrawer } from "../../drawer.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE AUDIT LOG NAMES THE PERSON — ADM-1, D17-14
@@ -27,7 +28,7 @@ const sql = async (text: string, params: unknown[] = []) => {
 };
 
 const HOTEL = "5EL";
-const CLERK_NAME = "ADM1TEST Reception Clerk";
+const CLERK_NAME = "ADM1TEST Accountant";
 
 let ownerId: string;
 let clerkId: string;
@@ -75,7 +76,10 @@ const person = async (key: string, name: string, role: string) => {
 beforeAll(async () => {
   ownerId = (await sql(
     "select id::text from staff where email = 'owner@fidato.in'")).rows[0].id as string;
-  clerkId = await person("clerk", CLERK_NAME, "front_desk");
+  /* The accountant: the one role that may post all four acts below itself -
+     since D27-125 a payment is reversed only by the owner, an administrator,
+     the GM or the accountant (finance's round A, 28 September). */
+  clerkId = await person("clerk", CLERK_NAME, "finance");
   gmId = await person("gm", "ADM1TEST General Manager", "gm");
   adminId = await person("admin", "ADM1TEST Administrator", "admin");
 
@@ -89,7 +93,7 @@ beforeAll(async () => {
   /* The desk's three acts, as the clerk, through finance's own routes. */
   const charge = await post(clerkId, "/charges",
     { category: "Laundry", description: "ADM1TEST laundry", amount: 150, taxable: false });
-  const payment = await post(clerkId, "/payments", { method: "Cash", amount: 150 });
+  const payment = await withDrawer(HOTEL, clerkId, () => post(clerkId, "/payments", { method: "Cash", amount: 150 }));
   const chargeBack = await post(clerkId, `/charges/${charge}/reverse`, { reason: "ADM1TEST" });
   const paymentBack = await post(clerkId, `/charges/${payment}/reverse`, { reason: "ADM1TEST" });
   made.push(charge, payment, chargeBack, paymentBack);

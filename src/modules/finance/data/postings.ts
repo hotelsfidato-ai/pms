@@ -62,9 +62,13 @@ export async function postCharge(
   if (!permitted.allowed) return refuse(permitted.reason!);
   if (!input.description.trim()) return refuse("A charge needs a description.");
   if (input.amount === 0) return refuse("A charge of zero is not a charge.");
+  if (!(input.amount > 0)) {
+    return refuse("A charge is more than zero. To take money off a bill, reverse the charge it corrects.");
+  }
 
+  let made: { data?: { id?: string } };
   try {
-    await api(`/api/hotels/${hotelId}/stays/${stayId}/charges`, {
+    made = await api(`/api/hotels/${hotelId}/stays/${stayId}/charges`, {
       method: "POST",
       body: JSON.stringify(input),
       ...(idempotencyKey ? { headers: { "idempotency-key": idempotencyKey } } : {}),
@@ -74,7 +78,9 @@ export async function postCharge(
     throw error;
   }
 
-  const posting = (await getFolioPostings(hotelId, stayId)).at(-1);
+  /* THE LINE THAT WAS STORED, by its id - what the toast names (QA FI-11).
+     The last line of the list is another bill's on a split stay. */
+  const posting = (await getFolioPostings(hotelId, stayId)).find((p) => p.id === made.data?.id);
   return posting ? { ok: true, data: posting } : { ok: true };
 }
 
@@ -91,6 +97,8 @@ export async function reverseChargeAllowed(
 
 export async function reverseCharge(
   hotelId: string, stayId: string, postingId: string,
+  /** D27-117: required - the server refuses a reversal without one. */
+  reason: string,
 ): Promise<OperationResult<Posting>> {
   /* The reversal is a NEW row. Nothing is edited and nothing is
      deleted, so the posting count goes UP when something is undone —
@@ -99,7 +107,7 @@ export async function reverseCharge(
   try {
     await api(
       `/api/hotels/${hotelId}/stays/${stayId}/charges/${postingId}/reverse`,
-      { method: "POST" },
+      { method: "POST", body: JSON.stringify({ reason }) },
     );
   } catch (error) {
     if (error instanceof ApiError) return refuse(error.message);
@@ -119,6 +127,8 @@ export async function settle(
     pan?: string; form97?: boolean;
     /** D27-4: the desk confirmed a payment larger than the bill. */
     heldAsCredit?: boolean;
+    /** Which bill, when the stay's is split (QA FI-2). */
+    folioId?: string;
   },
   /** One per press of Take payment, kept until it lands. */
   idempotencyKey?: string,

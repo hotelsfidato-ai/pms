@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../src/server.ts";
 import { withUser, closePool } from "../src/db.ts";
 import { monthStart, monthEnd, businessDateFor } from "../src/businessDate.ts";
+import { withDrawer } from "./drawer.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BUSINESS DATE — CP11
@@ -179,7 +180,7 @@ describe("WRITES take the property's day - the 00:40 receipt", () => {
       await admin.end();
     }
 
-    const res = await app.request(`/api/hotels/5EL/stays/${stayId}/payments`, {
+    const res = await withDrawer("5EL", ownerStaffId, () => app.request(`/api/hotels/5EL/stays/${stayId}/payments`, {
       method: "POST",
       headers: {
         "x-dev-staff-id": ownerStaffId,
@@ -188,7 +189,7 @@ describe("WRITES take the property's day - the 00:40 receipt", () => {
       /* No businessDate. This is the 00:40 clerk. */
       /* Held as credit if the bill is paid already (D27-4): the date is the question. */
       body: JSON.stringify({ method: "Cash", amount: 100, heldAsCredit: true }),
-    });
+    }));
 
     /* Read once. The first version passed `await res.text()` as the
        assertion message, which consumed the body, and the `res.json()`

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
+import { RECIPIENT_COMPANY } from "./invoices.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    BILLING — receipts, and the stays ready to invoice
@@ -114,28 +115,36 @@ billing.get("/:code/payments", async (c) => {
 
 /* ── Billable folios ─────────────────────────────────────────────── */
 
+/* ONE ROW PER BILL (QA FI-1, 28 September). A split stay is two tax
+   invoices - the guest's bill to the guest, the company's to the company -
+   so the list is by folio, each with its own figures, its own invoice and
+   the party it will be addressed to (RECIPIENT_COMPANY, the issuing route's
+   own rule). It was one row per stay, with the stay's figures and whichever
+   invoice it met first. A folio shows once it carries a line, or when it is
+   the stay's only one. */
 billing.get("/:code/billable", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
     const { rows } = await client.query<{
-      stay_id: string; reference: string; guest: string; room: string | null;
-      room_type: string; source: string; arrival: string; departure: string;
-      nights: number; charges: string; tax: string; paid: string; balance: string;
+      folio_id: string; stay_id: string; reference: string; guest: string;
+      room: string | null; room_type: string; source: string; arrival: string;
+      departure: string; nights: number; bill_to: string; bills: number;
+      charges: string; tax: string; paid: string; balance: string;
       invoice: string | null;
     }>(
       `with live as (
          select fp.*
            from folio_postings fp
-           join folios f on f.id = fp.folio_id
           where fp.hotel_id = $1
             and fp.reverses_id is null
             and not exists (
               select 1 from folio_postings rev where rev.reverses_id = fp.id
             )
        )
-       select r.id::text as stay_id, r.reference, g.full_name as guest,
+       select f.id::text as folio_id, r.id::text as stay_id, r.reference,
+              g.full_name as guest,
               (select rm.number from room_assignments ra
                  join rooms rm on rm.id = ra.room_id
                 where ra.reservation_id = r.id
@@ -145,38 +154,45 @@ billing.get("/:code/billable", async (c) => {
               app.booking_source_label(bs.name, co.name, r.source) as source,
               r.check_in::text as arrival, r.check_out::text as departure,
               greatest(r.check_out - r.check_in, 0) as nights,
+              coalesce(rc.name, g.full_name) as bill_to,
+              (select count(*)::int from folios o where o.reservation_id = r.id) as bills,
               coalesce((select sum(amount) from live
-                         where reservation_id = r.id and category <> 'payment'), 0)::text as charges,
+                         where folio_id = f.id and category <> 'payment'), 0)::text as charges,
               coalesce((select sum(tax_amount) from live
-                         where reservation_id = r.id), 0)::text                            as tax,
+                         where folio_id = f.id), 0)::text                            as tax,
               coalesce((select -sum(amount) from live
-                         where reservation_id = r.id and category = 'payment'), 0)::text   as paid,
+                         where folio_id = f.id and category = 'payment'), 0)::text   as paid,
               coalesce((select sum(amount + tax_amount) from live
-                         where reservation_id = r.id), 0)::text                            as balance,
-              -- The invoice already issued against this stay, if any.
-              -- A departed folio that has been billed is not "ready to
-              -- bill", and showing it as such invites a clerk to press a
-              -- button that can only tell them off. Reported rather than
-              -- filtered out, so the stay keeps its link to the number.
+                         where folio_id = f.id), 0)::text                            as balance,
+              -- The invoice standing against this bill, if any: not one a
+              -- credit note has cancelled, which leaves the bill to be
+              -- invoiced again (FI-7). Reported rather than filtered out,
+              -- so the bill keeps its link to the number.
               (select i.number from invoices i
-                 join folios f2 on f2.id = i.folio_id
-                where f2.reservation_id = r.id and i.credits_id is null
+                where i.folio_id = f.id and i.credits_id is null
                   and not exists (select 1 from invoices cn
                                    where cn.credits_id = i.id)
+                order by i.issued_at desc
                 limit 1) as invoice
-         from reservations r
+         from folios f
+         join reservations r on r.id = f.reservation_id
          join guests g      on g.id  = r.guest_id
          join room_types rt on rt.id = r.room_type_id
          left join booking_sources bs on bs.id = r.booking_source_id
-              left join companies co on co.id = r.company_id
+         left join companies co on co.id = r.company_id
+         left join companies rc on rc.id = ${RECIPIENT_COMPANY}
         where r.hotel_id = $1 and r.status = 'checked_out'
-        order by r.check_out desc`,
+          and (exists (select 1 from live where folio_id = f.id)
+               or not exists (select 1 from folios o
+                               where o.reservation_id = r.id and o.id <> f.id))
+        order by r.check_out desc, r.id, f.opened_at, f.id`,
       [hotelId],
     );
 
     return rows.map((b) => {
       const balance = round(Number(b.balance));
       return {
+        folioId: b.folio_id,
         stayId: b.stay_id,
         reference: b.reference,
         guest: b.guest,
@@ -186,13 +202,17 @@ billing.get("/:code/billable", async (c) => {
         arrival: b.arrival,
         departure: b.departure,
         nights: b.nights,
+        /* Who the invoice will be addressed to, and how many bills the
+           stay has - a split stay's rows say whose each one is. */
+        billTo: b.bill_to,
+        bills: b.bills,
         charges: round(Number(b.charges)),
         tax: round(Number(b.tax)),
         paid: round(Number(b.paid)),
         balance,
         status:
           balance > 0.5 ? "outstanding" : balance < -0.5 ? "overpaid" : "settled",
-        /* Null until a tax invoice has been issued against this stay. */
+        /* Null until a tax invoice has been issued against this bill. */
         invoice: b.invoice,
       };
     });

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
 import type { ReportDoc } from "../../../src/modules/reports/index.ts";
+import { withDrawer } from "../../drawer.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    CORRECTING A CLOSED DAY (D22-18; the owner's D24-1 to D24-9)
@@ -139,7 +140,8 @@ beforeAll(async () => {
   const back = await as(ownerId, `/stays/${stay.stayId}/charges`,
     { category: "Refund", description: `${tag} refund`, amount: 50, taxable: false });
   expect(back.status, await back.clone().text()).toBe(200);
-  const paid = await as(ownerId, `/stays/${stay.stayId}/payments`, { method: "Cash", amount: 100 });
+  const paid = await withDrawer("PUN", ownerId, () =>
+    as(ownerId, `/stays/${stay.stayId}/payments`, { method: "Cash", amount: 100 }));
   expect(paid.status, await paid.clone().text()).toBe(200);
   /* A restaurant bill charged to the room: its food under GST and its drinks
      under VAT, as the till writes them (till.ts; alcoholVat.test.ts rings
