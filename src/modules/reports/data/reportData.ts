@@ -1,4 +1,3 @@
-import { BUSINESS_DATE, PTD_FROM } from "@/data/repositories/businessDate";
 import { fetchOr } from "@/data/repositories/http";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -15,41 +14,12 @@ import { fetchOr } from "@/data/repositories/http";
    arrive, which is worth printing.
    ══════════════════════════════════════════════════════════════════ */
 
-const range = (from: string, to: string) =>
-  `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 
 
-/* ── City ledger ─────────────────────────────────────────────────── */
-
-export interface CityLedgerRow {
-  account: string;
-  /** The company's contact on file; null for a channel or a walk-in. */
-  contact: string | null;
-  phone: string | null;
-  opening: number | null;
-  debit: number;
-  credit: number;
-  closing: number | null;
-}
-
-/**
- * Balances by booking source: every stay's charges less its payments,
- * grouped by where it came from. For finance's "Company accounts" screen
- * only. It is NOT the City ledger report, which counts bills transferred
- * to a company (the owner's decision of 17 September); whether that
- * screen should move to the transfers is finance's question.
- */
-export async function getCityLedger(
-  hotelId: string,
-  from = PTD_FROM,
-  to = BUSINESS_DATE,
-): Promise<CityLedgerRow[]> {
-  if (!hotelId) return [];
-  return fetchOr<CityLedgerRow[]>(
-    `/api/hotels/${hotelId}/reports/balances-by-source?${range(from, to)}`,
-    [],
-  );
-}
+/* ── City ledger ─────────────────────────────────────────────────
+   getCityLedger (balances by booking source) went on 28 September: finance's
+   Company accounts reads the City ledger report itself (D27-127), and it had
+   no other caller. The server's /reports/balances-by-source is reports'. */
 
 /** The name printed at the head of every report. */
 /* `REPORT_PROPERTY = property.name` lived here and had no callers.
