@@ -6539,6 +6539,23 @@ copy will see of theirs.**
 
 ---
 
+### 339 · The local Postgres dies when sessions are stopped
+
+Twice in two days a Postgres server process was "terminated by exception 0xC000013A"
+(Windows' Ctrl+C / console-close code) and the postmaster then took a fast shutdown:
+27 Sep 19:32, when the app closed every session, and 28 Sep 03:05, minutes after the
+master stopped the sessions with stop_session for the owner's credit limit. Each time
+every session found the database gone, and the restart replayed the log for up to 30
+minutes (the scratch databases make the sync long).
+
+**The rule until it is fixed:** after stopping sessions, or after the app restarts, run
+`pg_isready -h 127.0.0.1 -p 55432`; if it's down, start it through WMI (MEMORY 325) and
+tell the sessions. Keep scratch databases few; drop leftovers with no connections.
+**The fix to ask the owner for:** run it as a Windows service (`pg_ctl register`), so no
+console signal reaches it and it also comes back after a reboot.
+
+---
+
 ### 338 · MINE: I tried to recycle a copy a new session had just moved into
 
 28 September. After archiving the redesign session I tried twice to send its folder
