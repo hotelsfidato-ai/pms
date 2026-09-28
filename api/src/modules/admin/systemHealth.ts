@@ -13,7 +13,7 @@ import { STEPS_MS } from "../../telemetry.ts";
    What is going on on the server, from our own data - nothing leaves it:
    the API's version and uptime, the database's size and the pool, the
    disk, the requests of the last hour, day and week (api/src/telemetry.ts,
-   migration 149), each hotel's business date and last night audit, and
+   the telemetry migration), each hotel's business date and last night audit, and
    the last nightly backup.
 
    WHO is the role gate's (roleGate.ts READ_RULES, SYSTEM_HEALTH) before

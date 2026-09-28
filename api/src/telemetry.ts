@@ -8,7 +8,7 @@ import { env } from "./env.ts";
 
    Every request's time and result, server errors and slow queries,
    counted in memory and written ONE MINUTE AT A TIME to two small tables
-   (migration 149) through app.record_telemetry(), which also deletes
+   (the telemetry migration) through app.record_telemetry(), which also deletes
    anything older than 180 days. Read on System health (D27-91).
 
    ⚠ NO GUEST DATA, EVER. What is kept is built here, from nothing that

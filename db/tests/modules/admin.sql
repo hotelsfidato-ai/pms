@@ -587,7 +587,7 @@ begin
 end $$;
 
 -- =============================================================================
--- TELEMETRY (D27-91, D27-92) - migration 149, without the route in front of it
+-- TELEMETRY (D27-91, D27-92) - the telemetry migration, without the route in front of it
 -- =============================================================================
 -- The role gate refuses everybody but the owner and an administrator before
 -- GET /system-health runs (api/test/modules/admin/systemHealth.test.ts). This
