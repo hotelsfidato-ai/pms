@@ -73,6 +73,8 @@ Form C was cut out of the old `invoices.ts` (`1dcf9b7`).
 |---|---|---|
 | GET | `/:code/guests` | everyone who has stayed here, grouped by name; overlapping stays flagged as possible duplicates |
 | POST | `/:code/guests/:id/vip` | set or clear the VIP mark — it travels with the guest, not the booking (043) |
+| GET | `/:code/guests/:id` | one guest's record for Edit guest: title, name, phone, email, nationality, address (GU-1; customer:edit, READ_RULES) |
+| PATCH | `/:code/guests/:id` | correct it: absent unchanged, blank clears (never name or nationality); refuses an impossible phone, email, country, title (GU-1) |
 | GET | `/:code/companies` | each account bookings came through — bookings, room nights, revenue, open balance — grouped by name |
 
 **`api/src/modules/guests/bookingSources.ts`** (was `api/src/routes/bookingSources.ts`)
