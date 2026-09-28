@@ -39,9 +39,11 @@ rateGrid.get("/:code/rates", async (c) => {
        something a person negotiated on the day, which is exactly what
        a revenue manager wants to see.
 
-       Sold counts PAYING rooms. A complimentary room is occupied and
-       sold for nothing; counting it would disagree with the rate beside
-       it and with Sold Room on the Manager Report. */
+       Sold counts PAYING rooms: a complimentary room is sold for nothing,
+       and counting it would pull down the rate beside it. The Manager
+       report's Sold Room DOES count it (D17-62), so the screen names this
+       "paying rooms sold" (the owner's D27-151). A day use is not a night
+       sold here either, as on the Rate calendar. */
     const { rows } = await client.query<{
       room_type: string; base_rate: string | null; date: string;
       sold: string; sellable: string; sold_adr: string | null;
@@ -83,7 +85,7 @@ rateGrid.get("/:code/rates", async (c) => {
                 on r.room_type_id = t.id
                and r.status in ('confirmed','checked_in','checked_out')
                and dates.date >= r.check_in
-               and dates.date <  greatest(r.check_out, r.check_in + 1)
+               and dates.date <  r.check_out
         group by t.id, t.name, t.base_rate, t.sort_order, dates.date
         order by t.sort_order, dates.date`,
       [hotelId, from, days],

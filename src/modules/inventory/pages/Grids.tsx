@@ -360,8 +360,9 @@ function Legend() {
         <LogOut className="size-3.5 text-warning-dark" /> Closed to departure
       </span>
       <span className="text-grey-500">
-        The small figures are <b>sold / sellable</b>. Complimentary and
-        tentative rooms hold inventory but are not sold.
+        The small figures are <b>paying rooms sold / sellable</b>. Complimentary
+        and tentative rooms hold a room but are left out; occupancy on the reports
+        counts complimentary rooms.
       </span>
     </div>
   );

@@ -118,7 +118,7 @@ export default function RatesPage() {
                             </Tooltip>
                           ) : (
                             <Tooltip
-                              content={`${c.sold} of ${c.sellable} sold · rack ${
+                              content={`${c.sold} of ${c.sellable} paying rooms sold · rack ${
                                 c.rackRate === null ? "-" : money(c.rackRate)}`}
                             >
                               <span
@@ -146,9 +146,10 @@ export default function RatesPage() {
       )}
 
       <p className="text-xs text-grey-500 mt-3 leading-relaxed max-w-2xl">
-        A tangerine figure sold below rack. The line beneath each rate is rooms sold
-        against rooms sellable - a rate held at rack against an empty house is worth
-        as much attention as a discounted one.
+        A tangerine figure sold below rack. The line beneath each rate is paying rooms
+        sold against rooms sellable - a rate held at rack against an empty house is worth
+        as much attention as a discounted one. Complimentary rooms and day use are left
+        out; occupancy on the reports counts complimentary rooms.
       </p>
     </Page>
   );
