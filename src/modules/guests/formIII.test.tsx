@@ -124,5 +124,9 @@ describe("the Form III register", () => {
     expect(card.getByText("Next destination").nextSibling?.textContent).toBe("-");
     expect(card.getByText("Guest's signature on arrival, and date")).toBeTruthy();
     expect(card.getByText("Guest's signature on departure, and date")).toBeTruthy();
+    /* GU-4 (the owner, 28 September): the booking's length, worded so it
+       cannot read as a second arrival date beside the real clock above. */
+    expect(card.getByText("Length of stay").nextSibling?.textContent)
+      .toBe("2 nights (booked), expected to leave 27 Sep 2026");
   });
 });

@@ -26,6 +26,10 @@ const SUPER =
   process.env["SUPER_DATABASE_URL"] ??
   "postgres://postgres:pw@127.0.0.1:55432/fidato";
 
+/* A passport number is 6 to 15 letters and digits (round D, validate.ts):
+   the process id padded, so a short one still makes a real number. */
+const PID = String(process.pid).padStart(6, "0");
+
 const admin = async () =>
   new (await import("pg")).default.Pool({ connectionString: SUPER });
 
@@ -54,7 +58,7 @@ const VISIT = {
 };
 
 const passport = (n: string, extra: Record<string, string> = {}) => ({
-  idType: "passport", idNumber: `P${process.pid}${n}`, nationality: "GB",
+  idType: "passport", idNumber: `P${PID}${n}`, nationality: "GB",
   visaNumber: `V${process.pid}${n}`, visaType: "e-Tourist", ...extra,
 });
 
@@ -184,7 +188,7 @@ describe("a foreign guest's check-in", () => {
     const a = await arrival("GB");
     const res = await call(`/PUN/stays/${a.stay}/check-in`, "POST", {
       roomNumber: a.room, ...CLOCK,
-      identity: { idType: "passport", idNumber: `P${process.pid}X`, nationality: "GB" },
+      identity: { idType: "passport", idNumber: `P${PID}X`, nationality: "GB" },
     });
     expect(res.status).toBe(409);
     const { reason } = (await res.json()) as { reason: string };
@@ -227,7 +231,7 @@ describe("a foreign guest's check-in", () => {
     const a = await arrival("NP");
     const res = await call(`/PUN/stays/${a.stay}/check-in`, "POST", {
       roomNumber: a.room, ...CLOCK,
-      identity: { idType: "other", idNumber: `NP${process.pid}`, nationality: "NP" },
+      identity: { idType: "other", idNumber: `NP${PID}`, nationality: "NP" },
       visit: VISIT,
     });
     await release(a.stay);
@@ -252,7 +256,7 @@ describe("a foreign guest's check-in", () => {
     const a = await arrival("GB");
     const res = await call(`/PUN/stays/${a.stay}/check-in`, "POST", {
       roomNumber: a.room, ...CLOCK,
-      identity: { idType: "passport", idNumber: `P${process.pid}F` },
+      identity: { idType: "passport", idNumber: `P${PID}F` },
     });
     expect(res.status).toBe(409);
     expect(((await res.json()) as { reason: string }).reason).toMatch(/Form III/);
@@ -290,7 +294,7 @@ describe("a foreign walk-in", () => {
     const mine = (await register()).find((r) => r.reservationId === data.id);
     expect(mine, "a foreign walk-in is missing from the register").toBeTruthy();
     expect(mine).toMatchObject({
-      nationality: "US", passport: `P${process.pid}W2`, arrivedFrom: "Delhi",
+      nationality: "US", passport: `P${PID}W2`, arrivedFrom: "Delhi",
     });
   });
 
@@ -370,6 +374,18 @@ describe("a foreign guest's departure", () => {
     });
   });
 
+  /* GU-3 (QA, 28 September): "!" was filed and the register said everyone
+     was filed. And Complete details asks the desk's own rules (round D). */
+  it("refuses a portal number that is not one, and an impossible date later", async () => {
+    const bang = await call(`/PUN/form-c/${stay}`, "POST", { reference: "!" });
+    expect(bang.status).toBe(409);
+    expect(((await bang.json()) as { reason: string }).reason).toMatch(/6 to 30 letters and digits/);
+    const born = await call(`/PUN/form-c/${stay}/details`, "PUT",
+      { identity: { dateOfBirth: "2999-01-01" } });
+    expect(born.status).toBe(409);
+    expect(((await born.json()) as { reason: string }).reason).toBe("The date of birth is in the future.");
+  });
+
   it("completes the portal's other boxes later, and the report reads them", async () => {
     const res = await call(`/PUN/form-c/${stay}/details`, "PUT", {
       identity: { gender: "male", passportIssuePlace: "London" },
@@ -386,7 +402,7 @@ describe("a foreign guest's departure", () => {
 
     const report = (await (await call("/PUN/reports/c-form?from=2020-01-01&to=2099-12-31"))
       .json()) as { rows: Array<Record<string, unknown>> };
-    expect(report.rows.find((r) => r["passport"] === `P${process.pid}D`)).toMatchObject({
+    expect(report.rows.find((r) => r["passport"] === `P${PID}D`)).toMatchObject({
       arrivedFrom: "Delhi", purpose: "Tourism", nextDestination: "Jaipur",
       reference: `A1-${tag}, A2-${tag}`, departureReference: `DEP-${tag}`,
     });

@@ -8,9 +8,9 @@ import type { PoolClient as Client } from "pg";
    (D17-21) — through its front door, never its files. */
 import { whyNotAttachable } from "../banquet/index.ts";
 import { overCashLimit, panFor } from "../finance/index.ts";
-import { phoneProblem } from "../../validate.ts";
 /* The one way an outlet row is made (Restaurant setup, D22-6). */
 import { addOutlet } from "./pos.ts";
+import { phoneProblem, priceProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL — the POS built into the PMS
@@ -368,6 +368,7 @@ till.post("/:code/till/menu/categories", async (c) => {
 till.post("/:code/till/menu/items", async (c) => {
   type ItemBody = {
     categoryId?: string; name?: string; price?: unknown; taxRate?: number;
+    free?: boolean;
   };
   const input = await c.req.json<ItemBody>().catch(() => ({}) as ItemBody);
 
@@ -383,6 +384,9 @@ till.post("/:code/till/menu/items", async (c) => {
      blank or a null is 0 to Number (POS-14). */
   const price = typedPrice(input.price);
   if (price === null) return c.json(refuse(NO_PRICE), 409);
+  /* POS-5, X-1 (D27-120): a dish at ₹0.00 went on sale without a word. */
+  const zeroDish = priceProblem(price, input.free === true);
+  if (zeroDish) return c.json(refuse(zeroDish), 409);
 
   /* ⚠ THIS WAS `Number(input.taxRate ?? 5)`.
      A shipped tax rate, in a project whose first rule is that nothing
@@ -584,6 +588,10 @@ till.post("/:code/till/menu/import", async (c) => {
       const price = Number(rawPrice.replace(/[,\s₹]/g, ""));
       if (!Number.isFinite(price) || price < 0) {
         return reject(`"${rawPrice}" is not a price.`);
+      }
+      /* X-1 (D27-120): a file cannot tick Free. */
+      if (price === 0) {
+        return reject("0 is not taken from a file. Add a free dish on the menu screen, ticked Free.");
       }
 
       const kindRaw = String(raw.taxKind ?? "").trim().toLowerCase();

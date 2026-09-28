@@ -7,7 +7,7 @@ import { money, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, Button, StatusPill, Skeleton, EmptyState, toast,
-  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
+  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, Checkbox,
 } from "@/components/ui";
 import { getModules } from "@/data/repositories";
 import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, importAddons, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, setCategoryTaxKind, type SectionHeading, listPromotions, addPromotion, amendPromotion, addVariation, editVariation, removeVariation, listAddonGroups, addAddonGroup, editAddonGroup, setGroupDishes, addAddonOption, editAddonOption, removeAddonOption, type OffFor, type Promotion, type MenuCategory, type MenuItem, type MenuVariation, type Addon, type AddonGroupSetup } from "@/modules/pos/data/till";
@@ -663,6 +663,7 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
 }) {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+  const [free, setFree] = useState(false);
   const [tax, setTax] = useState("5");
   const [busy, setBusy] = useState(false);
   /* The variation dialog: adding one to a dish, or changing one. */
@@ -686,12 +687,13 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
     if (!trimmed) return;
 
     /* POS-14: `Number("")` is 0, so an empty price box added the dish at
-       ₹0.00. A blank is not zero; a typed 0 still is (the owner, 21 Sep). */
-    if (price.trim() === "") {
+       ₹0.00. A blank is not zero; and since D27-120 (POS-5) 0 is only a
+       dish ticked Free. */
+    if (price.trim() === "" && !free) {
       return toast.error("Not added",
-        "Type a price. A blank is not zero - type 0 for something that is free.");
+        "Type a price. A blank is not zero - tick Free for a dish that costs nothing.");
     }
-    const rupees = Number(price);
+    const rupees = free ? 0 : Number(price);
     if (!Number.isFinite(rupees) || rupees < 0) {
       return toast.error("Not added", "A price must be zero or more.");
     }
@@ -701,11 +703,12 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
     }
 
     setBusy(true);
-    const res = await addItem(hotelId, category.id, trimmed, rupees, rate);
+    const res = await addItem(hotelId, category.id, trimmed, rupees, rate, free);
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason ?? "Refused.");
     setName("");
     setPrice("");
+    setFree(false);
     onChanged();
   };
 
@@ -961,12 +964,15 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
             className="flex-1 min-w-36 h-11 px-3 rounded-md border border-grey-300 text-base"
           />
           <input
-            value={price}
+            value={free ? "0" : price}
             onChange={(e) => setPrice(e.target.value)}
             inputMode="decimal"
             placeholder="Price"
+            aria-label={`Price of a new dish in ${category.name}`}
+            disabled={free}
             className="w-24 h-11 px-3 rounded-md border border-grey-300 text-base tabular"
           />
+          <Checkbox label="Free" checked={free} onCheckedChange={setFree} />
           <select
             value={tax}
             onChange={(e) => setTax(e.target.value)}

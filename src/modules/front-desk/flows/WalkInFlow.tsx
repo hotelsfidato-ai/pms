@@ -13,8 +13,11 @@ import { getRoom } from "@/data/repositories";
 import { MARKET_SEGMENTS } from "@/modules/reservations";
 import {
   ReturningGuest, ConsentTicks, ForeignGuestFields, formIIIMissing,
-  particularsPayload, NO_PARTICULARS, ID_TYPES, type Particulars,
+  particularsPayload, NO_PARTICULARS, ID_TYPES, idProblem, idExpired, type Particulars,
 } from "@/modules/guests";
+import {
+  countProblem, emailProblem, MAX_NIGHTS, phoneProblem,
+} from "../../../../api/src/validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW D — the walk-in at 23:40
@@ -51,7 +54,8 @@ export function WalkInFlow({
   const [returning, setReturning] = useState<{ id: string; name: string } | null>(null);
   const [whatsapp, setWhatsapp] = useState(false);
   const [offersAgreed, setOffersAgreed] = useState(false);
-  const [nights, setNights] = useState(1);
+  /* As typed (FD-6): "-2" used to become 1 night without a word. */
+  const [nights, setNights] = useState("1");
   /* NO GUARD MEANT A DOUBLE PRESS BOOKED TWICE. The button stayed live
      through the request, so two taps sent two walk-ins: the first put
      a guest in the room and the second came back "Somebody is already
@@ -61,8 +65,8 @@ export function WalkInFlow({
      A room is a scarce resource and this flow takes it in one act, so
      it is exactly the button that must not be pressable twice. */
   const [busy, setBusy] = useState(false);
-  const [adults, setAdults] = useState(2);
-  const [children, setChildren] = useState(0);
+  const [adults, setAdults] = useState("2");
+  const [children, setChildren] = useState("0");
   const [ratePlan, setRatePlan] = useState("CP");
   const [rate, setRate] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
@@ -87,15 +91,24 @@ export function WalkInFlow({
   const [particulars, setParticulars] = useState<Particulars>(NO_PARTICULARS);
   const isForeign = (nationality.trim().toUpperCase() || "IN") !== "IN";
   const idCaptured = Boolean(idType && idNumber.trim());
-  const formIIINeeds = isForeign
-    ? [...(!idCaptured && !idSkipReason.trim() ? ["the ID document or a reason for skipping it"] : []),
-       ...formIIIMissing(particulars, nationality, idCaptured)]
-    : [];
+  const formIIINeeds = isForeign ? formIIIMissing(particulars, nationality, idCaptured) : [];
+  /* FD-1 (QA, 28 September): the ID step is every guest's, as on the
+     Arrivals check-in - a document, or a reason for skipping it. */
+  const idNeeded = !idCaptured && !idSkipReason.trim();
+  /* The server's own rules (validate.ts), said here first (round D). */
+  const typedWrong = countProblem(Number(nights), "Nights", 1, MAX_NIGHTS)
+    ?? countProblem(Number(adults), "Adults", 1) ?? countProblem(Number(children), "Children", 0)
+    ?? phoneProblem(phone) ?? emailProblem(email)
+    ?? idProblem(particulars, idType, idNumber, nationality, date);
+  /* GU-2: an expired passport or visa is warned of, then recorded as typed. */
+  const expired = isForeign ? idExpired(particulars, date) : [];
+  const [expiredOk, setExpiredOk] = useState(false);
+  const nightsN = Number(nights) || 0;
 
   /* Derived, never stored. The party is what the two counters say and
      the capacity is what the room type says — neither is a third
      number anybody can set, which is how the two would drift. */
-  const party = Math.max(1, adults) + Math.max(0, children);
+  const party = Math.max(1, Number(adults) || 0) + Math.max(0, Number(children) || 0);
 
   const room = useQuery({
     queryKey: ["room", hotelId, roomNumber],
@@ -126,12 +139,12 @@ export function WalkInFlow({
     rack === null ? false : rateOverrideNeedsReason(rack, offered);
 
   const permitted = canConfirmWalkIn({
-    guestName, nights, offeredTariff: offered, rackTariff: rack ?? offered,
+    guestName, nights: nightsN, offeredTariff: offered, rackTariff: rack ?? offered,
     overrideReason,
   });
 
   const reset = () => {
-    setGuestName(""); setNights(1); setAdults(2); setChildren(0);
+    setGuestName(""); setNights("1"); setAdults("2"); setChildren("0");
     setPhone(""); setEmail(""); setReturning(null);
     setWhatsapp(false); setOffersAgreed(false);
     setRatePlan("CP"); setRate(""); setOverrideReason("");
@@ -140,7 +153,7 @@ export function WalkInFlow({
     setSegment(""); setBusinessSource(""); setSalesPerson("");
     setSingleLady(false);
     setNationality("IN"); setIdType(""); setIdNumber(""); setIdSkipReason("");
-    setParticulars(NO_PARTICULARS);
+    setParticulars(NO_PARTICULARS); setExpiredOk(false);
   };
 
   return (
@@ -188,36 +201,39 @@ export function WalkInFlow({
                 onChange={(e) => setNationality(e.target.value.toUpperCase())} />
             )}
           </Field>
-          {isForeign && (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Document">
-                  {({ id }) => (
-                    <NativeSelect id={id} value={idType}
-                      onChange={(e) => setIdType(e.target.value)}>
-                      <option value="">Not recorded</option>
-                      {ID_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                    </NativeSelect>
-                  )}
-                </Field>
-                <Field label="Number" required={Boolean(idType)}>
-                  {({ id }) => (
-                    <Input id={id} value={idNumber} disabled={!idType}
-                      onChange={(e) => setIdNumber(e.target.value)} />
-                  )}
-                </Field>
-              </div>
-              {!idCaptured && (
-                <Field label="Reason for skipping" required>
-                  {({ id }) => (
-                    <Input id={id} value={idSkipReason}
-                      onChange={(e) => setIdSkipReason(e.target.value)} />
-                  )}
-                </Field>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Document">
+              {({ id }) => (
+                <NativeSelect id={id} value={idType}
+                  onChange={(e) => setIdType(e.target.value)}>
+                  <option value="">Not recorded</option>
+                  {ID_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </NativeSelect>
               )}
-              <ForeignGuestFields value={particulars} onChange={setParticulars}
-                nationality={nationality} idCaptured={idCaptured} />
-            </>
+            </Field>
+            <Field label="Number" required={Boolean(idType)}>
+              {({ id }) => (
+                <Input id={id} value={idNumber} disabled={!idType}
+                  onChange={(e) => setIdNumber(e.target.value)} />
+              )}
+            </Field>
+          </div>
+          {!idCaptured && (
+            <Field label="Reason for skipping" required>
+              {({ id }) => (
+                <Input id={id} value={idSkipReason}
+                  onChange={(e) => setIdSkipReason(e.target.value)} />
+              )}
+            </Field>
+          )}
+          {isForeign && (
+            <ForeignGuestFields value={particulars} onChange={setParticulars}
+              nationality={nationality} idCaptured={idCaptured} />
+          )}
+          {expired.length > 0 && (
+            <Switch checked={expiredOk} onCheckedChange={setExpiredOk}
+              label="Check in anyway"
+              description={`${expired.join(" ")} It is recorded as typed.`} />
           )}
 
           {/* ── WILL THEY FIT ───────────────────────────────────────
@@ -263,24 +279,24 @@ export function WalkInFlow({
             <Field label="Nights">
               {({ id }) => (
                 <Input
-                  id={id} numeric value={String(nights)}
-                  onChange={(e) => setNights(Math.max(1, Number(e.target.value) || 1))}
+                  id={id} numeric value={nights}
+                  onChange={(e) => setNights(e.target.value)}
                 />
               )}
             </Field>
             <Field label="Adults">
               {({ id }) => (
                 <Input
-                  id={id} numeric value={String(adults)}
-                  onChange={(e) => setAdults(Number(e.target.value) || 0)}
+                  id={id} numeric value={adults}
+                  onChange={(e) => setAdults(e.target.value)}
                 />
               )}
             </Field>
             <Field label="Children">
               {({ id }) => (
                 <Input
-                  id={id} numeric value={String(children)}
-                  onChange={(e) => setChildren(Number(e.target.value) || 0)}
+                  id={id} numeric value={children}
+                  onChange={(e) => setChildren(e.target.value)}
                 />
               )}
             </Field>
@@ -388,15 +404,23 @@ export function WalkInFlow({
           )}
 
           <div className="rounded-lg bg-grey-50 border border-grey-200 p-3 space-y-1">
-            <Row label={`${nights} night${nights === 1 ? "" : "s"} × ${money(offered)}`} value={money(offered * nights)} />
-            <Row label="Tax 5%" value={money(Math.round(offered * nights * 0.05 * 100) / 100)} muted />
+            <Row label={`${nightsN} night${nightsN === 1 ? "" : "s"} × ${money(offered)}`} value={money(offered * nightsN)} />
+            <Row label="Tax 5%" value={money(Math.round(offered * nightsN * 0.05 * 100) / 100)} muted />
             <div className="pt-1 border-t border-grey-200">
-              <Row label="Total" value={money(Math.round(offered * nights * 1.05 * 100) / 100)} bold />
+              <Row label="Total" value={money(Math.round(offered * nightsN * 1.05 * 100) / 100)} bold />
             </div>
           </div>
 
           {!permitted.allowed && permitted.reason && (
             <p className="text-xs text-brand-red-700">{permitted.reason}</p>
+          )}
+          {typedWrong && (
+            <p className="text-xs text-brand-red-700" data-walkin-wrong>{typedWrong}</p>
+          )}
+          {idNeeded && (
+            <p className="text-xs text-grey-600">
+              Record the ID document - type and number - or give a reason for skipping it.
+            </p>
           )}
           {/* Rule 6: the button says why it is blocked. */}
           {formIIINeeds.length > 0 && (
@@ -413,13 +437,15 @@ export function WalkInFlow({
                family is still standing there and a bigger room can be
                chosen -- not after pressing the one button. */
             disabled={!permitted.allowed || overCapacity || busy
-                      || formIIINeeds.length > 0}
+                      || formIIINeeds.length > 0 || idNeeded || typedWrong !== null
+                      || (expired.length > 0 && !expiredOk)}
             data-walkin-confirm
             onClick={async () => {
               if (busy) return;
               setBusy(true);
               const res = await createWalkIn(hotelId, {
-                guestName, roomNumber, nights, adults, children, ratePlan,
+                guestName, roomNumber, nights: nightsN, adults: Number(adults),
+                children: Number(children), ratePlan,
                 rackTariff: rack ?? offered, offeredTariff: offered,
                 overrideReason, businessDate: date,
                 businessSource, marketSegment: segment, salesPerson,
@@ -428,15 +454,13 @@ export function WalkInFlow({
                 ...(returning ? { guestId: returning.id } : {}),
                 whatsappAgreed: whatsapp, offersAgreed,
                 nationality,
-                ...(isForeign
-                  ? {
-                      ...(idCaptured
-                        ? { identity: { idType, idNumber: idNumber.trim(),
-                                        ...particularsPayload(particulars).identity } }
-                        : { idSkipReason }),
-                      visit: particularsPayload(particulars).visit,
-                    }
-                  : {}),
+                /* The document for every guest (FD-1); Form III's particulars
+                   and visit for a foreigner. */
+                ...(idCaptured
+                  ? { identity: { idType, idNumber: idNumber.trim(),
+                                  ...(isForeign ? particularsPayload(particulars).identity : {}) } }
+                  : { idSkipReason }),
+                ...(isForeign ? { visit: particularsPayload(particulars).visit } : {}),
               });
               setBusy(false);
               if (res.ok) {
@@ -444,7 +468,7 @@ export function WalkInFlow({
                   /* The name as it stands on file - the returning guest's,
                      when the clerk said "same person". */
                   `${res.data?.guest ?? guestName} is in house`,
-                  `Room ${roomNumber} · ${nights} night${nights === 1 ? "" : "s"}`,
+                  `Room ${roomNumber} · ${nightsN} night${nightsN === 1 ? "" : "s"}`,
                 );
                 onOpenChange(false);
                 reset();

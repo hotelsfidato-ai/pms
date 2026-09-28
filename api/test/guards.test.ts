@@ -335,6 +335,7 @@ describe("a walk-in records where it came from", () => {
       roomNumber: room, nights: 1, adults: 1, children: 0,
       ratePlan: "CP", rackTariff: 4000, offeredTariff: 4000,
       overrideReason: "", businessDate: "2026-08-25", user: "test",
+      idSkipReason: "Test fixture - FD-1 asks every walk-in for an ID or a reason",
       businessSource: "Sharma Travels",
       marketSegment: "Corporate",
       salesPerson: "R Patil",
@@ -454,6 +455,7 @@ describe("a walk-in records where it came from", () => {
         roomNumber: room, nights: 1, adults: 1, children: 0,
         ratePlan: "CP", rackTariff: 4000, offeredTariff: 4000,
         overrideReason: "", businessDate: "2026-08-25", user: "test",
+        idSkipReason: "Test fixture - FD-1 asks every walk-in for an ID or a reason",
       });
       expect(res.status).toBe(409);
       expect(((await res.json()) as { reason: string }).reason)
@@ -478,6 +480,7 @@ describe("a walk-in records where it came from", () => {
       roomNumber: room, nights: 1, adults: 1, children: 0,
       ratePlan: "CP", rackTariff: 4000, offeredTariff: "not a number",
       overrideReason: "", businessDate: "2026-08-25", user: "test",
+      idSkipReason: "Test fixture - FD-1 asks every walk-in for an ID or a reason",
     });
     expect(res.status).toBe(409);
     expect(((await res.json()) as { reason: string }).reason)

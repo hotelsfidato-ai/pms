@@ -50,12 +50,13 @@ export async function getRates(hotelId: string): Promise<RatesBoard | null> {
 }
 
 export async function setRackRate(
-  hotelId: string, roomTypeId: string, rate: number | null,
+  hotelId: string, roomTypeId: string, rate: number | null, free = false,
 ): Promise<AdminResult<{ roomType: string }>> {
   try {
     return await api(`/api/hotels/${hotelId}/room-types/${roomTypeId}/rate`, {
       method: "PUT",
-      body: JSON.stringify({ rate }),
+      /* free: 0 is kept only when ticked Free (X-1, D27-120). */
+      body: JSON.stringify({ rate, ...(free ? { free } : {}) }),
     });
   } catch (error) {
     if (error instanceof ApiError) {
@@ -70,7 +71,7 @@ export function addRate(
   hotelId: string,
   input: {
     roomTypeId: string; mealPlan: string; price: number;
-    from: string; to?: string | null; label?: string;
+    from: string; to?: string | null; label?: string; free?: boolean;
   },
 ): Promise<AdminResult<{ roomType: string }>> {
   return write(`/api/hotels/${hotelId}/rate-plans`, input);

@@ -11,6 +11,29 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-28 · Fix round D: 0 only ticked Free, the unset difference, rooms (QA of 28 Sep)
+
+**Asked for:** D27-120 and the QA's Rooms, rates and setup table.
+**Shipped:** QA X-1/RT-1/RT-2 - a price of 0 only with a "Free" tick (validate.ts
+priceProblem): the rack rate, a season, the rate calendar's price and extra adult
+and child (each its own tick), the pricing base; the same at the menu's dish,
+the store's receipt cost, a purchase line and the laundry price list; 0 in a
+room-types or menu file is refused. QA RT-3 - migration 155: a room type or meal
+plan with no difference ever set is not priced (a dash, no rack fallback); set
+for some dates, the base applies on others (16 Sep); a typed 0 is "the same".
+QA RT-4 - a room number at most 10, a floor 0-99.
+**Proved:** api inventory/zeroPrices.test.ts 6 (all fail on the old routes),
+pricing.test.ts 11, roomLimits.test.ts 2 (both fail on the old code);
+db/tests/modules/inventory.sql (three RT-3 assertions false on 090's function);
+web freeTick.test.tsx. On screen: 0 unticked refused on Rate plans; Pricing with
+only a base shows "Not priced" for every other room and plan.
+**Left open:** RT-5 (GST outside the slabs) is with the CA. A dish variation's and
+an add-on's price, a banquet hall (round E) and a received cost against an order
+are outside the owner's list for the tick.
+**Commits:** 221084e, 40b75ed, ee4eccb.
+
+---
+
 ## 2026-09-26 · INV-2 held by tests; the Rate calendar is headed "Rate calendar" (D25-28)
 
 **Asked for:** the owner's D25-27 (a test for each fix built but held by none, then close it; no behaviour changed), in the five-tests session, branch `tests/five-25sep`. And D25-28: the Rate calendar screen is headed "Rate calendar", its menu name. **Shipped:** `pages/Grids.tsx`'s three headings; `inventory.test.tsx` reads the Rate calendar's heading from `nav.ts`, and "Room types is headed with its menu name (INV-2)" reads Room types' in its three states. **Proved:** seen failing with "The house" and "Inventory and rates" put back; pass on the fix. INV-2 moved to Fixed. **Left open:** nothing here. **Commits:** `689f837`.

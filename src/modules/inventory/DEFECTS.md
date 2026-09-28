@@ -20,6 +20,15 @@ Nothing open (26 September).
 
 ## Fixed — the solution is here; do not work it out again
 
+### INV-8 · A price of 0 was saved without a word, and an unset difference sold at the base - FIXED 28 September (QA RT-1..RT-4, X-1)
+
+D27-120: 0 only with a "Free" tick, at every typed price here (rack rate, season,
+rate calendar and its extras, pricing base) and at the menu, the store, purchasing
+and laundry; 0 in a file is refused. RT-3: migration 155, app.price_for gives
+NULL where a needed difference was never set, with no rack in its place. RT-4:
+room number at most 10, floor 0-99. Tests: zeroPrices.test.ts, pricing.test.ts,
+roomLimits.test.ts, db/tests/modules/inventory.sql, freeTick.test.tsx.
+
 ### INV-2 · Room types opens a screen headed "The house" (and the Rate calendar "Inventory and rates") - FIXED 17 and 26 September, held by tests 26 September
 
 **Found** — 15 September, writing the brief; confirmed on screen 16 September.

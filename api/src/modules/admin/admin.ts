@@ -6,6 +6,7 @@ import {
 } from "../../identity.ts";
 import type { PoolClient as Client } from "pg";
 import { env } from "../../env.ts";
+import { phoneProblem } from "../../validate.ts";
 
 /* No Firebase service account on this server (QA AD-5): the account calls
    throw, and the person read "Something went wrong". */
@@ -547,6 +548,9 @@ admin.patch("/admin/staff/:id", async (c) => {
   if (fullName !== undefined && !fullName) {
     return c.json(refuse("A person needs a name."), 409);
   }
+  /* X-2, AD-3 (round D): a phone "abc" was saved. */
+  const badPhone = phoneProblem(input.phone);
+  if (badPhone) return c.json(refuse(badPhone), 409);
 
   const result = await withSession(c.get("subject"), async (client) => {
     /* A GM too, for somebody at their hotel (D22-3). */

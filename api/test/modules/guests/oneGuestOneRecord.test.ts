@@ -335,6 +335,7 @@ describe("a returning guest is suggested, and a clerk decides", () => {
       guestName: "Priya D", phone: spaced(phone(2)), guestId: priya,
       roomNumber: room.number, nights: 1, adults: 1, children: 0,
       ratePlan: "CP", offeredTariff: 3200, whatsappAgreed: true, offersAgreed: true,
+      idSkipReason: "Test fixture - FD-1 asks every walk-in for an ID or a reason",
     });
     expect(res.status, await res.clone().text()).toBe(200);
     const id = ((await res.json()) as { data: { id: string } }).data.id;

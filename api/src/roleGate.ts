@@ -265,6 +265,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
 
   /* guests */
   [`POST ${H}/guests/:id/vip`]: GUEST,
+  /* GU-1 (round D): correcting a guest's name, phone, email, address, nationality. */
+  [`PATCH ${H}/guests/:id`]: GUEST,
   [`POST ${H}/form-c/:reservationId`]: FORM_C,
   [`PUT ${H}/form-c/:reservationId/details`]: FORM_C,
   [`POST ${H}/booking-sources`]: own("guests/bookingSources.ts: the database, app.is_manager"),
@@ -560,6 +562,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/crm/not-same`]: GUESTS,
   [`GET ${H}/crm/offers-yes`]: GUESTS,
   [`GET ${H}/crm/no-offers`]: GUESTS,
+  /* GU-1 (round D): the record Edit guest shows, for those who may correct it
+     (customer:edit, as the change itself). */
+  [`GET ${H}/guests/:id/record`]: GUEST,
   [`GET ${H}/form-c`]: GUEST_ID,
   [`GET ${H}/reports/c-form`]: GUEST_ID,
   /* The details guests sent from their own page: asked in the route. */

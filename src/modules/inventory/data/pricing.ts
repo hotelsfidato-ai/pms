@@ -108,7 +108,7 @@ export async function setBasis(
  */
 export async function setBasePrice(
   hotelId: string,
-  input: { from: string; to?: string | null; price: number | null; label?: string },
+  input: { from: string; to?: string | null; price: number | null; label?: string; free?: boolean },
 ): Promise<Refusal> {
   return write(hotelId, "pricing/base", input);
 }

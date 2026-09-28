@@ -12,7 +12,7 @@ import {
   searchGuests, getGuest360, blacklistGuest, clearBlacklist, recordNoOffers,
   clearNoOffers, getOffersYes, recordOffersYes, type Guest360,
 } from "@/modules/crm/data/crm";
-import { agreedToOffers, stayedWords } from "@/modules/guests";
+import { agreedToOffers, stayedWords, EditGuestFlow } from "@/modules/guests";
 
 /* ══════════════════════════════════════════════════════════════════
    GUEST 360 — one person, across the whole group (D21-3, D21-4)
@@ -113,6 +113,8 @@ export function Guest360Page() {
     queryFn: () => getGuest360(hotelId, id),
   });
   const g = whole.data;
+  /* GU-1 (the owner, 28 September): correct the record here too. */
+  const [editing, setEditing] = useState(false);
 
   if (whole.isLoading) {
     return <Page><PageHeader title="Guest 360" /><Skeleton className="h-80" /></Page>;
@@ -140,7 +142,9 @@ export function Guest360Page() {
       <div className="space-y-3">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <Card>
-            <CardHeader title="Who they are" />
+            <CardHeader title="Who they are"
+              actions={<Button variant="secondary" size="sm" onClick={() => setEditing(true)}>Edit guest</Button>} />
+            {editing && <EditGuestFlow hotelId={hotelId} guestId={id} open onOpenChange={setEditing} />}
             <CardBody className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-lg font-semibold text-ink-900">{g.name}</span>

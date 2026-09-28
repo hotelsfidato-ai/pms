@@ -187,7 +187,7 @@ reports.get("/:code/reports/guest-ledger", async (c) => {
               (select rm.number from room_assignments ra
                  join rooms rm on rm.id = ra.room_id
                 where ra.reservation_id = r.id
-                order by ra.released_at nulls first, ra.from_date desc
+                order by ra.released_at desc nulls first, ra.from_date desc
                 limit 1) as room,
               r.status,
               coalesce((select sum(movement) from live l

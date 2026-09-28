@@ -128,11 +128,11 @@ describe("the pricing screen's data", () => {
     expect(base.price).toBe(2000);
     expect(base.covers, "the base covers one person").toBe(1);
 
-    /* No difference is set for the other type, so it sells at the base —
-       the owner's rule: where nothing is set for a date, the base applies. */
+    /* RT-3 (the owner, 28 September): no difference has EVER been set for
+       the other type, so it is not priced - a dash - not the base. */
     const derived = cell(after, other.id, "EP");
-    expect(derived.price).toBe(2000);
-    expect(derived.source).toBe("derived");
+    expect(derived.price).toBeNull();
+    expect(derived.source).toBeNull();
   });
 
   it("adds a difference in rupees, and takes it away again", async () => {
@@ -153,14 +153,21 @@ describe("the pricing screen's data", () => {
       from: FROM, to: LATER, amount: null,
     })).status).toBe(200);
 
+    /* Cleared, it has no difference on file at all again: a dash (RT-3). */
     const cleared = await read();
     expect(cleared.offsets.filter((o) => o.roomTypeId === other.id)).toHaveLength(0);
-    expect(cell(cleared, other.id, "EP").price).toBe(2000);
+    expect(cell(cleared, other.id, "EP").price).toBeNull();
   });
 
   it("prices a meal plan per person, on top of the room", async () => {
     const body = await read();
     const other = body.roomTypes.find((t) => t.code !== "DLX")!;
+
+    /* A typed 0 is an answer: "the same as the base" (RT-3). */
+    expect((await put("/5EL/pricing/offset", {
+      kind: "room_type", roomTypeId: other.id,
+      from: FROM, to: LATER, amount: 0, label: "Same as the base",
+    })).status).toBe(200);
 
     expect((await put("/5EL/pricing/offset", {
       kind: "meal_plan", mealPlan: "CP",

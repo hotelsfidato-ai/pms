@@ -7,6 +7,7 @@ import {
 import { money } from "@/lib/format";
 import { amendStay } from "@/modules/front-desk/data/operations";
 import type { Stay } from "@/data/repositories";
+import { countProblem, dateProblem, MAX_NIGHTS } from "../../../../api/src/validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    AMENDING A STAY
@@ -74,6 +75,14 @@ export function AmendStayFlow({
   const changed = checkIn !== stay.arrival || checkOut !== stay.departure
     || Number(adults) !== stay.adults || Number(children) !== stay.children;
 
+  /* FD-4, FD-6, FD-9 (QA, 28 September): children -1 was saved, a cleared
+     arrival read "NaN nights", and nothing capped the length. The server's
+     own rules (validate.ts), said here before Save. */
+  const wrong = dateProblem(checkIn) ?? dateProblem(checkOut)
+    ?? countProblem(Number(adults), "Adults", 1) ?? countProblem(Number(children), "Children", 0)
+    ?? (nights > MAX_NIGHTS
+      ? `A stay is at most ${MAX_NIGHTS} nights. Split a longer one into two bookings.` : null);
+
   const submit = async () => {
     setBusy(true);
     const result = await amendStay(hotelId, stay.id, {
@@ -124,7 +133,7 @@ export function AmendStayFlow({
               </Button>
               <Button variant="primary"
                 size="lg" loading={busy}
-                disabled={!changed || nights < 1}
+                disabled={!changed || wrong !== null || nights < 1}
                 onClick={() => void submit()}
               >
                 Save
@@ -184,8 +193,10 @@ export function AmendStayFlow({
 
             {/* The arithmetic said out loud, because "6 nights" and a pair
                 of dates are not the same thing to read in a hurry. */}
-            <p className="text-base">
-              {nights < 1 ? (
+            <p className="text-base" data-amend-summary>
+              {wrong ? (
+                <span className="text-danger">{wrong}</span>
+              ) : nights < 1 ? (
                 <span className="text-danger">
                   Departure has to be after arrival. The night of departure is
                   not charged, so a guest leaving on the 5th has their last

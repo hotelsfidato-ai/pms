@@ -27,6 +27,22 @@ confirms the whole group, so it cannot happen from the desk today.
 
 ## Fixed
 
+### RES-9 · A confirmed booking could only be voided, and the guest page link always said "No link" - FIXED 28 September (QA BK-1, BK-2)
+
+BK-1: StayActions offered Cancel only on a booking waiting for the hotel, so a
+guest's cancellation and its fee had nowhere to go. Now `POST /stays/:id/cancel`
+takes a confirmed one too - this room only, under its frozen terms (036/037),
+the retention on its bill, waivable by owner/admin/GM. BK-2: the guest-link door
+answers `{ status: 200, link }` with no `ok`; `send` read that as a refusal.
+Every 2xx is the yes now. Tests: api cancelConfirmed.test.ts, web guestLink.test.ts.
+
+### RES-10 · A booking could arrive in the past, from "ZZ", and its month was the clock's - FIXED 28 September (QA BK-3, BK-4, BK-12)
+
+makeBooking refuses an arrival before app.business_date (below the repeat check,
+so a channel's retry is still answered); nationality must be an ISO country
+(validate.ts); migration 153 makes app.next_reference take the business month.
+Tests: newBooking.test.ts, bookingReference.test.ts.
+
 ### RES-5 · A booking waiting for the hotel could not be cancelled until it was confirmed — FIXED 27 September
 
 **Found** 27 September, opening a waiting booking's panel (Phase 1): "Void

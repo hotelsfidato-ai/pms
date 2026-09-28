@@ -484,7 +484,9 @@ describe("one fixed card per room", () => {
 /* ── The details, as a submission (D21-8, D21-17 to D21-19) ────────── */
 
 describe("the check-in details wait for a clerk", () => {
-  const AADHAAR = "123456789012";
+  /* A real Aadhaar shape: 12 digits, not starting 0 or 1, with UIDAI's
+     check digit (round D, GP-1). */
+  const AADHAAR = "234567890124";
 
   it("are refused before the code, and nothing is kept", async () => {
     const res = await asGuest(`/${link}/details`, "POST", { idType: "aadhaar", idNumber: AADHAAR });
@@ -498,6 +500,11 @@ describe("the check-in details wait for a clerk", () => {
     const before = (await sql(
       "select to_jsonb(d) as row from guest_documents d where guest_id = $1", [guestId])).rows[0]?.row ?? null;
     const unlock = await unlockWith(link);
+
+    /* GP-1 (QA, 28 September): "Aadhaar ending 12ab" was accepted here. */
+    const bad = await asGuest(`/${link}/details`, "POST", { idType: "aadhaar", idNumber: "12ab" }, unlock);
+    expect(bad.status).toBe(400);
+    expect(((await bad.json()) as { error: string }).error).toMatch(/12 digits/);
 
     const res = await asGuest(`/${link}/details`, "POST", {
       idType: "aadhaar", idNumber: AADHAAR, addressLine: "12 Temple Road", city: "Akkalkot",
@@ -517,7 +524,7 @@ describe("the check-in details wait for a clerk", () => {
       sent: { status: string; idLastFour: string };
     };
     expect(state.sent.status).toBe("waiting");
-    expect(state.sent.idLastFour).toBe("9012");
+    expect(state.sent.idLastFour).toBe("0124");
   });
 
   it("show the desk the last four digits of an Aadhaar, and never the whole", async () => {
@@ -526,7 +533,7 @@ describe("the check-in details wait for a clerk", () => {
     const text = await res.clone().text();
     const body = (await res.json()) as { waiting: { reference: string; idNumber: string }[] };
     expect(body.waiting.length).toBeGreaterThan(0);
-    expect(body.waiting[0]!.idNumber).toBe("…9012");
+    expect(body.waiting[0]!.idNumber).toBe("…0124");
     expect(text, "the whole number never leaves for a screen (D21-18)").not.toContain(AADHAAR);
   });
 

@@ -43,6 +43,17 @@ is a bigger change across bookings and check-in.
 
 ## Fixed
 
+### GUE-7 · No screen could correct a guest, and the ID rules let nonsense through - FIXED 28 September (QA GU-1..GU-4, GP-1)
+
+GU-1: GET/PATCH /guests/:id and Edit guest (stay panel, Guest 360). GU-2, GP-1:
+identityProblem in formIII.ts for check-in, walk-in and the register, and the
+guest page's door - Aadhaar with its check digit, passport 6-15, no impossible
+date, a real country and phone; an expired passport or visa is warned, not
+refused (the owner). GU-3: a portal number is 6-30 characters with a digit.
+GU-4: the card's stay line no longer reads as a second arrival date.
+Tests: editGuest.test.ts, formIII.test.ts, guestDoorBehindTheCode.test.ts,
+editGuest.test.tsx, formIII.test.tsx.
+
 ### GUE-4 · A foreign walk-in never reached the register
 
 **Found** - 27 September (D27-25). The walk-in form had no nationality, and
