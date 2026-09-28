@@ -14,20 +14,42 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FIN-10 · An invoice test passes or fails by the order the test files run in — OPEN
-
-**Found** — 25 September, the Bill tab session's full API run on `3d5fa8e`:
-`invoices.test.ts` "refuses a folio with nothing on it" got 200 for 409. It
-passed in the next full run (`bd1bca9`). The test takes any 5EL stay with an
-empty bill (`limit 1`, no order); `POST /stays/:id/invoice` takes the stay's
-first bill (`folio[0]`, no order). A stay another test file left with two
-bills, one of them empty, is picked and invoiced on the other one.
-
-**Not fixed** — the test should pick a stay whose only bill is empty, and
-whether the route should say which bill it invoices when a stay has two is
-a question for the owner. Seen once; not reproduced on demand.
+Nothing open.
 
 ## Fixed
+
+### FIN-15 · A split bill was invoiced, settled and listed as one stay — FIXED 28 September (QA FI-1, FI-2, FI-3, FI-7; round A)
+
+**Found** — the QA of 28 September. A split stay's tax invoice went to the booking's company (Agoda) with the guest's coffee on it, and the room was on no invoice: `POST /stays/:id/invoice` took the stay's first folio in no order and read the booking's company for it. Settle on Agoda's tab paid the guest's bill (`folioFor` = the first folio) and asked for the whole stay. Invoices had one row per stay. FI-7 (no re-issue after a credit note) did not reproduce on a one-bill stay; it lived in the same stay-for-bill confusion.
+
+**Fixed** — the payment and the invoice take a `folioId`; one Invoices row per bill with "Billed to"; Settle works on the open tab's bill. The recipient rule is one SQL expression (`RECIPIENT_COMPANY`, invoices.ts), read by the issuing route and the list: a company's bill → that company; a guest's bill → the booking's company only while the stay has no company bill. The per-bill cores are exported for the banquet's function bill (round E).
+
+**Proved** — `api/test/modules/finance/perBill.test.ts` (9 of 10 failed on the old routes), `src/modules/finance/perBill.test.tsx` (both failed on the old screens). Seen in fidato_s25.
+
+**The rule** — money is per BILL, not per stay: a stay can carry two.
+
+### FIN-16 · Money came off a bill by a minus sign, or on one click with no reason — FIXED 28 September (QA FI-4, FI-5, FI-6; D27-117, D27-125)
+
+**Found** — the QA: a −₹50 "charge" was posted; ↺ reversed any charge or payment at once; the running "bal" left a reversed original out and added its reversal.
+
+**Fixed** — the charge door refuses less than nothing; a reversal needs a reason (server and dialog), kept on the reversal's own line; a payment is reversed only by the owner, an administrator, the GM or the accountant; the running balance counts every line.
+
+**Proved** — `api/test/modules/finance/billControls.test.ts` and `src/modules/finance/billControls.test.tsx`, each failed on the old code.
+
+**The rule** — the only way money comes off a bill is a reversal, and a reversal says why.
+
+### FIN-17 · Cash with no drawer, a negative count, a number too large — FIXED 28 September (D27-118, QA FI-10, FI-12)
+
+Cash is refused while the person taking it holds no open drawer (`takeFolioPayment`); a drawer count refuses negatives whole, before it replaces anything (the screen had dropped a −3 and saved nothing); Postgres 22003 is a 400 "That number is too large" in `server.ts` for every route. `billControls.test.ts`; `api/test/drawer.ts` opens a drawer for tests that take cash. **The rule** — refuse the person's figure plainly; a 500 is for the server's faults.
+
+### FIN-18 · The interim bill could not be printed, and printed two totals — FIXED 28 September (QA FI-8, FI-9, FI-16; D27-126)
+
+A Print opening `/h/:code/stays/:id/bill`; Total is the exact figure, no round-off (the owner's D27-126); the town and state print once (`place.ts`, the tax invoice's rule, now shared with the VAT bill). `printedBills.test.tsx`.
+
+### FIN-10 · An invoice test passed or failed by the order the test files ran in — FIXED 28 September
+
+The route took the stay's first bill in no order. Now an unnamed bill is the stay's only CHARGED bill (an empty second bill does not count), and two charged bills are refused ("Say which bill to invoice") - FIN-15.
+
 
 ### FIN-14 · A tax invoice or credit note went out with no hotel GSTIN — FIXED 28 September (release fixes)
 
