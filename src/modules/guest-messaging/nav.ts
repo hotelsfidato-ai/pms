@@ -21,10 +21,12 @@ import type { ServiceNavEntry } from "@/components/app/navigation";
 /* 21 September: moved from Bookings to Guests & CRM with the guest list
    (the owner's decision). Same resource, same people.
    24 September: in reception's working menu too (the owner), because a
-   guest's message to the front desk (D23-14) waits here, unread. */
+   guest's message to the front desk (D23-14) waits here, unread.
+   28 September (D27-144, QA RO-3): `customer`, as the server asks - a
+   message is a guest's details, not only their booking. */
 export const nav: ServiceNavEntry[] = [
   { section: "guests-crm", order: 30, workingMenus: ["front_desk"],
     label: "Guest messages", to: "/h/:code/guest-messages", icon: MessageSquare,
-    resource: "reservation",
+    resource: "customer",
     keywords: ["whatsapp", "email", "confirmation", "pre-arrival", "sent", "message", "sms"] },
 ];

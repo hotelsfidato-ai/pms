@@ -92,8 +92,9 @@ export async function getFolio(hotelId: string, stayId: string): Promise<Folio |
   } catch (error) {
     /* An unknown stay is null, not a folio of zeros — a zeroed folio
        reads as "settled", which is the wrong answer to "does this
-       guest owe anything". */
-    if (error instanceof ApiError && error.status === 404) return null;
+       guest owe anything". Refused (403: a role that reads bookings but not
+       bills, D27-143) is no figure too - the same dash, never an error. */
+    if (error instanceof ApiError && (error.status === 404 || error.status === 403)) return null;
     throw error;
   }
 }

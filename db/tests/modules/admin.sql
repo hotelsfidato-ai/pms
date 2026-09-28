@@ -278,17 +278,19 @@ select set_config('app.user_id',
 
 
 -- =============================================================================
--- A HOTEL'S ADMIN RUNS THAT HOTEL'S PEOPLE, AND MAY MAKE AN ADMIN THERE (D23-2)
+-- A HOTEL'S ADMIN RUNS THAT HOTEL'S PEOPLE (D23-2) - BUT MAKES NO ADMIN (D27-140)
 -- =============================================================================
 -- The owner, 23 September: "a hotel-level Admin manages staff at their own
 -- hotel, including giving Admin there". What a GM may do since D22-3, plus
 -- Admin, at their own hotel and nowhere else. Each guard is asked on its own
 -- (MEMORY 318). And what it does NOT reach: a closed day is still the GM's.
+-- 28 September (D27-140, 157): only the owner makes an Admin - the hotel's
+-- Admin no longer does, and so no longer runs the hotel's other Admins.
 -- =============================================================================
 do $$
 declare
   h uuid; other uuid; owner uuid;
-  adm uuid; clerk uuid; two uuid; newbie uuid;
+  adm uuid; clerk uuid; two uuid; newbie uuid; adm2 uuid; hotelowner uuid;
   roles text[]; failed boolean;
 begin
   h     := app.provision_property_unchecked('ADR', 'Hotel Admin Test', 'Nowhere');
@@ -301,17 +303,25 @@ begin
   on conflict (email) do update set is_active = true returning id into clerk;
   insert into staff (email, full_name) values ('d23-both@fidato.in', 'D23 Two Hotels')
   on conflict (email) do update set is_active = true returning id into two;
-  delete from staff_hotels where staff_id in (adm, clerk, two);
+  insert into staff (email, full_name) values ('d27-admin2@fidato.in', 'D27 Other Admin')
+  on conflict (email) do update set is_active = true returning id into adm2;
+  insert into staff (email, full_name) values ('d27-owner@fidato.in', 'D27 Hotel Owner')
+  on conflict (email) do update set is_active = true returning id into hotelowner;
+  delete from staff_hotels where staff_id in (adm, clerk, two, adm2, hotelowner);
   insert into staff_hotels (staff_id, hotel_id, role) values
     (adm, h, 'admin'), (clerk, h, 'front_desk'),
+    (adm2, h, 'admin'), (hotelowner, h, 'owner'),
     (two, h, 'housekeeping'), (two, other, 'housekeeping');
 
   -- ---------- as the hotel's Admin ----------
   perform set_config('app.user_id', adm::text, true);
   roles := app.grantable_roles(h);
-  perform test.ok('hotel admin', 'an Admin at a hotel may make an Admin there (D23-2)',
-    'admin' = any (roles), array_to_string(roles, ','));
-  perform test.ok('hotel admin', 'and every other role but Owner',
+  perform test.ok('hotel admin', 'an Admin at a hotel makes no Admin there (D27-140)',
+    not ('admin' = any (roles)), array_to_string(roles, ','));
+  perform test.ok('hotel admin', 'and so leaves the hotel''s other Admins alone (D27-140)',
+    not app.manages_person(adm2) and not app.may_set_password(adm2)
+    and not app.may_switch_person(adm2));
+  perform test.ok('hotel admin', 'and gives every other role but Owner and Admin',
     not ('owner' = any (roles))
     and roles @> array['gm', 'hotel_manager', 'front_desk', 'housekeeping', 'finance', 'read_only']);
   perform test.ok('hotel admin', 'and nothing at a hotel where they are not Admin',
@@ -347,9 +357,20 @@ begin
   exception when others then failed := true;
   end;
   reset role;
-  perform test.ok('hotel admin', 'and their Admin row at the hotel, whatever the route',
-    not failed and exists (select 1 from staff_hotels
+  perform test.ok('hotel admin', 'but refuses them an Admin row, whatever the route (D27-140)',
+    failed and not exists (select 1 from staff_hotels
                             where staff_id = newbie and hotel_id = h and role = 'admin'));
+
+  set local role pms_app;
+  failed := false;
+  begin
+    insert into staff_hotels (staff_id, hotel_id, role) values (newbie, h, 'front_desk');
+  exception when others then failed := true;
+  end;
+  reset role;
+  perform test.ok('hotel admin', 'and takes their other rows at the hotel',
+    not failed and exists (select 1 from staff_hotels
+                            where staff_id = newbie and hotel_id = h and role = 'front_desk'));
 
   set local role pms_app;
   failed := false;
@@ -368,11 +389,17 @@ begin
     format($q$update night_audit_runs set rooms_posted = 9
                where hotel_id = %L and business_date = date '2028-04-01'$q$, h), '42501');
 
+  -- ---------- the hotel's owner still makes an Admin (D27-140) ----------
+  perform set_config('app.user_id', hotelowner::text, true);
+  roles := app.grantable_roles(h);
+  perform test.ok('hotel admin', 'the owner at a hotel makes an Admin there, never an Owner (D27-140)',
+    'admin' = any (roles) and not ('owner' = any (roles)), array_to_string(roles, ','));
+
   -- ---------- and the fixtures go ----------
   perform set_config('app.user_id', '', true);
   delete from night_audit_runs where hotel_id = h;
-  delete from staff_hotels where staff_id in (adm, clerk, two, newbie);
-  update staff set is_active = false where id in (adm, clerk, two, newbie);
+  delete from staff_hotels where staff_id in (adm, clerk, two, newbie, adm2, hotelowner);
+  update staff set is_active = false where id in (adm, clerk, two, newbie, adm2, hotelowner);
   alter table hotels disable trigger hotels_no_delete;
   delete from hotels where id in (h, other);
   alter table hotels enable trigger hotels_no_delete;

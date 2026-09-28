@@ -267,8 +267,8 @@ describe("the export screen", () => {
 /* ── Who may open it ───────────────────────────────────────────────── */
 
 describe("who may open the export", () => {
-  it("lets the owner, an administrator and the GM in", () => {
-    for (const role of ["owner", "admin", "gm"] as const) {
+  it("lets the owner, an administrator, the GM and the accountant in (D27-122)", () => {
+    for (const role of ["owner", "admin", "gm", "finance"] as const) {
       expect(mayReach(role, "/reports/accounting"), role).toBe(true);
     }
   });
@@ -277,7 +277,7 @@ describe("who may open the export", () => {
     /* A hotel manager, a revenue manager and finance all hold `report`
        in the matrix and are still not the three the brief names.
        Widening that is the owner's, in permissions.ts. */
-    for (const role of ["hotel_manager", "revenue_manager", "finance", "front_desk", "housekeeping"] as const) {
+    for (const role of ["hotel_manager", "revenue_manager", "front_desk", "housekeeping"] as const) {
       expect(mayReach(role, "/reports/accounting"), role).toBe(false);
     }
   });

@@ -11,6 +11,39 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-28 · Who may read what: every read asks the role (fix round B)
+
+**Asked for:** QA RO-1 to RO-3 and A7 (the owner's D27-116: fix every wrong
+result on roles before the release); D27-121/D27-140 (who makes an Admin);
+D27-122 (the Accountant's Accounting export); D27-117 on People (ask before
+removing a person's access). Branch `fix/read-roles-28sep` from cp6 631ce1f.
+**The owner decided (28 Sep, D27-140 to D27-147):** only the owner makes an
+Admin; no Dashboard for housekeeping, kitchen manager, chef, Inventory Manager
+or the till, and no reports for the first three; the chef and the Inventory
+Manager lose Rooms and the Housekeeping board; bills, balances, payments and
+the guest's phone and email are not for the roles that read bookings only;
+guest messages follow `customer`; the revenue manager loses Company accounts
+and the City ledger, Guest ledger and Cashier shift reports and keeps the
+Manager report; the Viewer is unchanged.
+**Shipped:** `api/src/roleGate.ts` - a rule for every GET (148), default-deny
+for an unmapped read, grants over several resources, an `anyone` rule for the
+shell's harmless reads, and `WITHHELD` (fields blanked by role). The matrix
+(`api/src/permissions.ts`), guest messages' `VIEW_ROLES`, the Accounting
+export's `MAY_EXPORT` (+finance), the report files (City ledger asks
+`invoice`). Migration 157 (`app.grantable_roles`). The website: the menus and
+route guards for Rooms, Housekeeping, the Dashboard, the reports, Company
+accounts, guest messages and the Accounting export; the stay panel hides the
+Bill tab and totals, the Rooms board and group screens show a dash where a
+balance is withheld, `getFolio` treats a refusal as no figure; People and the
+property page ask "Remove X from 5EL?" first.
+**Found:** cp6 631ce1f's own roleGate test was red: System health added a
+READ_RULES line and the D25-38 test listed READ_RULES whole (fixed here).
+**Proved:** see DEFECTS ADM-15 and ADM-16 and the round's report.
+**Left open:** notifications still carry guest names and balances to every
+role that holds `notification` (not in RO-1; a question for the owner). The
+Night audit screen (round C's) has no route guard, so housekeeping typing its
+address sees the server's refusal rather than "not part of your role".
+
 ## 2026-09-28 · System health and telemetry on our own server (D27-91, D27-92)
 
 **Asked for:** the owner's "a GUI for the server so that I understand what is

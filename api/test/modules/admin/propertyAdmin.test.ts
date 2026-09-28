@@ -311,7 +311,7 @@ describe("adding somebody", () => {
           switch off and back on - never at another hotel.
    ══════════════════════════════════════════════════════════════════ */
 describe("D22-2 - a GM makes no Admin", () => {
-  const ADMIN_REFUSED = /^Only the owner or an administrator can make somebody an Admin\./;
+  const ADMIN_REFUSED = /^Only the owner can make somebody an Admin\./;
 
   it("refuses giving Admin to somebody, in a sentence, and writes nothing", async () => {
     const res = await as(gmId, `/admin/staff/${strangerId}/access`, "POST",
@@ -486,7 +486,9 @@ describe("D22-3 - People works for the GM, at their own hotel only", () => {
 
 /* D23-2, the owner, 23 September: "a hotel-level Admin manages staff at their
    own hotel, including giving Admin there" - a GM's People, plus Admin. */
-describe("D23-2 - a hotel's Admin runs their hotel's people, Admin included", () => {
+/* D27-140, the owner, 28 September: "Admin included" is taken back - only
+   the owner makes an Admin (migration 157). */
+describe("D23-2 - a hotel's Admin runs their hotel's people, but makes no Admin (D27-140)", () => {
   let admId: string;
 
   beforeAll(async () => {
@@ -512,28 +514,28 @@ describe("D23-2 - a hotel's Admin runs their hotel's people, Admin included", ()
     } finally { await db.end(); }
   });
 
-  it("offers them Admin at their hotel, and never Owner", async () => {
+  it("offers them neither Admin nor Owner at their hotel (D27-140)", async () => {
     const people = (await (await as(admId, "/admin/staff")).json()) as {
       rosterAt: { code: string; roles: string[] }[];
     };
     expect(people.rosterAt.map((p) => p.code)).toEqual(["AGR"]);
-    expect(people.rosterAt[0]!.roles).toContain("admin");
+    expect(people.rosterAt[0]!.roles).not.toContain("admin");
     expect(people.rosterAt[0]!.roles).not.toContain("owner");
+    expect(people.rosterAt[0]!.roles).toContain("gm");
   });
 
-  it("lets them give Admin at their hotel, and the row is written", async () => {
+  it("refuses them giving Admin at their hotel, in its own words, and writes nothing (D27-140)", async () => {
     const res = await as(admId, `/admin/staff/${strangerId}/access`, "POST",
       { code: "AGR", role: "admin" });
-    expect(res.status, await res.clone().text()).toBe(200);
+    expect(res.status, await res.clone().text()).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toMatch(/^Only the owner can make somebody an Admin\./);
     const db = await admin();
     try {
       const { rows } = await db.query(
         `select 1 from staff_hotels sh join hotels h on h.id = sh.hotel_id
           where sh.staff_id = $1 and h.code = 'AGR' and sh.role = 'admin'`, [strangerId]);
-      expect(rows.length).toBe(1);
+      expect(rows.length).toBe(0);
     } finally { await db.end(); }
-    const gone = await as(admId, `/admin/staff/${strangerId}/access/AGR`, "DELETE");
-    expect(gone.status, await gone.clone().text()).toBe(200);
   });
 
   it("⚠ REFUSES them another hotel, and writes nothing there", async () => {

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../auth.ts";
 import { businessDateFor } from "../businessDate.ts";
+import { can, type Role } from "../permissions.ts";
 import {
   buildReport, BUILT_KEYS, REPORT_KEYS, type ReportParams,
 } from "../modules/reports/index.ts";
@@ -29,6 +30,11 @@ export const reportFiles = new Hono<{ Variables: { subject: string } }>();
 export const REPORT_EXPORTERS: readonly string[] = [
   "owner", "admin", "gm", "hotel_manager", "revenue_manager", "finance",
 ];
+
+/* Money owed, which the screen's own read asks `invoice` view of (roleGate
+   MONEY_REPORT; the owner's D27-147: not the revenue manager). The file
+   asks the same, so the download is no way round the screen. */
+const MONEY_REPORTS: readonly string[] = ["city-ledger"];
 
 const TYPES = {
   pdf: "application/pdf",
@@ -81,12 +87,17 @@ reportFiles.get("/:code/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}", async (c)
                   where sh.staff_id = s.id and sh.hotel_id = $1 and sh.role = any($2::text[])
               )) as may
          from staff s where s.id = app.current_user_id() and s.is_active`,
-      [hotel.id, REPORT_EXPORTERS]);
+      [hotel.id, MONEY_REPORTS.includes(key)
+        ? REPORT_EXPORTERS.filter((r) => can(r as Role, "view", "invoice"))
+        : REPORT_EXPORTERS]);
     if (!me[0]?.may) {
       return {
         status: 403 as const,
-        error: "Downloading reports is for the owner, an administrator, the general manager, "
-          + "the hotel manager, the revenue manager or the accountant. Ask one of them.",
+        error: MONEY_REPORTS.includes(key)
+          ? "Downloading this report is for the owner, an administrator, the general manager, "
+            + "the hotel manager or the accountant. Ask one of them."
+          : "Downloading reports is for the owner, an administrator, the general manager, "
+            + "the hotel manager, the revenue manager or the accountant. Ask one of them.",
       };
     }
 

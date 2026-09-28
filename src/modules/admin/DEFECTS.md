@@ -33,6 +33,26 @@ the demo's shortest.
 
 ## Fixed — the solution is here; do not work it out again
 
+### ADM-15 · The server asked the role on writes and almost never on reads - FIXED 28 September (fix round B)
+
+**Found** — QA RO-1 to RO-3 (docs/qa/qa-2026-09-28.md), and SELLING-IN-INDIA A7. `roleGate.ts` asked the role for three reads (Form III, online check-in, System health); every other read was answered by row security alone. The chef, the till, housekeeping, the kitchen manager, the Inventory Manager and the revenue manager got the Manager report, every stay with the guest's phone and email, bills, payments and the cash drawer by address; the revenue manager read guest messages. The owner's rules on money and guests held only because the menu hid the screens.
+
+**Fixed** — every GET the server mounts has a rule in `READ_RULES`, from the matrix the screens use, and a read with no rule is refused for everybody, as a write is. `WITHHELD` blanks the guest's phone and email (`/stays`, `/stays/:id`) and a group's balances (`/groups`, `/groups/:id`) for a role without `customer` / `invoice` view. The owner's answers D27-140 to D27-147 are in the matrix (no Dashboard or reports for the working roles, no bookings for the chef and the Inventory Manager), the menus and the route guards. The website hides the Bill tab and balances where the server now refuses them, and treats a refused bill as no figure (a dash, never ₹0).
+
+**Proved** — `api/test/roleGate.test.ts` "every read the server mounts" FAILED on cp6 631ce1f (137 reads with no rule) and passes now; the sweep of the QA's reads as all thirteen roles through the real server; the withholding tests. The full sweep of every read as every role is in the round's report.
+
+**The rule** — A read is a door too. Default-deny it, from the same matrix as the write, and test that no route is unmapped.
+
+### ADM-16 · A hotel's Admin could make other Admins - FIXED 28 September (fix round B, D27-140)
+
+**Found** — QA RO-6 (Q-9). 133 (D23-2) let an Admin at a hotel hand out Admin there; D27-121 was written "only the owner or the GM", which would have reversed D22-2 and let a GM make an Admin whose password the GM could then reset. The owner corrected it: only the owner (and a group administrator).
+
+**Fixed** — migration 157, `app.grantable_roles`: `admin` is given only by the hotel's `owner` (and a group administrator). A hotel's Admin therefore also leaves the hotel's other Admins alone (133's "nobody runs somebody above them").
+
+**Proved** — `db/tests/modules/admin.sql`: the Admin makes no Admin, the Admin row is refused as `pms_app`, the other Admin is not theirs to edit, switch off or reset, the hotel's owner still makes one; 1,250 assertions green.
+
+**The rule** — A power to grant a role is a power to become it. Read "who may make X" against who may then reset X's password.
+
 ### ADM-13 · A slow query's name was mangled by an apostrophe in a SQL comment - FIXED 28 September, before merge
 
 **Found** — 28 September, opening System health with real traffic. A query

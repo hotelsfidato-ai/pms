@@ -309,7 +309,7 @@ describe("D22-3 and D22-2 - People, for a GM", () => {
     expect(offered).not.toContain("Admin");
     expect(offered).not.toContain("Owner");
     expect(offered).toContain("Reception");
-    expect(within(dialog).getByText(/Only the owner or an administrator can make somebody an Admin/))
+    expect(within(dialog).getByText(/Only the owner can make somebody an Admin/))
       .toBeDefined();
 
     fireEvent.change(within(dialog).getByLabelText(/Their name/), { target: { value: "Sunita K" } });
@@ -353,6 +353,31 @@ describe("D22-3 and D22-2 - People, for a GM", () => {
     for (const name of ["Edit", "Deactivate", "Password", /Give a property/]) {
       expect(owner.queryByRole("button", { name })).toBeNull();
     }
+  });
+
+  it("asks before taking somebody off a property, and takes nothing until Remove (D27-117)", async () => {
+    as("gm");
+    const deleted: string[] = [];
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
+      if ((init?.method ?? "GET") === "GET" && url === "/api/admin/staff") {
+        return { staff: [person({ id: "p-1", name: "Asha" })],
+                 rosterAt: [{ code: "5EL", name: "5 Elements Akkalkot", roles: GM_ROLES }] } as never;
+      }
+      if (init?.method === "DELETE") { deleted.push(url); return {} as never; }
+      throw new ApiError(500, "Request failed (500).");
+    });
+    renderAt("/people", <PeoplePage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Remove 5EL from Asha" }));
+    const ask = await screen.findByRole("dialog");
+    expect(within(ask).getByText("Remove Asha from 5EL?")).toBeDefined();
+    fireEvent.click(within(ask).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(deleted).toEqual([]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove 5EL from Asha" }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }));
+    await waitFor(() => expect(deleted).toEqual(["/api/admin/staff/p-1/access/5EL"]));
   });
 
   it("takes nobody off the hotel whose role there the GM could not give (24 September)", async () => {
