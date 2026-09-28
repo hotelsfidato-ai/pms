@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import {
-  ArrowLeft, Check, Plus, Trash2, Users, Clock, AlertTriangle, Receipt,
+  ArrowLeft, Check, Plus, Trash2, Users, Clock, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateTime } from "@/lib/format";
@@ -13,8 +13,9 @@ import {
   NativeSelect, StatusPill,
 } from "@/components/ui";
 import { getBanquetEvent, getBanquetSetup, confirmBanquetEvent, cancelBanquetEvent, amendBanquetEvent, addBanquetCourse, removeBanquetCourse, type BanquetEvent } from "@/modules/banquet/data/banquet";
-import { ReadFailed, ReadStale, readError } from "@/components/ui";
+import { Checkbox, ReadFailed, ReadStale, readError } from "@/components/ui";
 import { queryKeys } from "@/data/repositories";
+import { FunctionBill } from "@/modules/banquet/components/FunctionBill";
 
 /* ══════════════════════════════════════════════════════════════════
    ONE FUNCTION
@@ -163,6 +164,17 @@ export default function BanquetEventPage() {
           </Card>
         )}
 
+        {/* D27-124: while the banquet GST rule is unset the function can be
+            set up, and its bill is refused until the GM sets it. */}
+        {e.taxWarning && e.status !== "cancelled" && (
+          <Card>
+            <CardBody className="flex items-start gap-3">
+              <AlertTriangle className="size-4 mt-0.5 shrink-0 text-warning-dark" />
+              <p className="text-sm text-ink-900" data-tax-warning>{e.taxWarning}</p>
+            </CardBody>
+          </Card>
+        )}
+
         {/* Each card as tall as what it holds (No Dead Space): the money
             card is not stretched to the details beside it. */}
         <div className="grid gap-3 lg:grid-cols-3 lg:items-start">
@@ -222,6 +234,7 @@ export default function BanquetEventPage() {
             </CardBody>
           </Card>
 
+          <div className="space-y-3">
           {/* ── The money ─────────────────────────────────────────────
               The Figure Rule's rows: label left, value right; the total on
               the ladder's figure step under a hairline. */}
@@ -252,19 +265,16 @@ export default function BanquetEventPage() {
                 )}
               </div>
 
-              <Button variant="secondary" className="w-full"
+              {e.status !== "completed" && <Button variant="secondary" className="w-full"
                       onClick={() => setPricing(true)}>
                 {e.agreedAmount === null ? "Set the hall price" : "Change the hall price"}
-              </Button>
+              </Button>}
 
-              {e.folioId && (
-                <p className="flex items-center gap-1.5 text-sm text-grey-600">
-                  <Receipt className="size-3.5 shrink-0 text-grey-400" />
-                  A bill is open for this function.
-                </p>
-              )}
             </CardBody>
           </Card>
+          {/* BQ-1: the function's bill - advance, bill, settle, invoice. */}
+          {e.folioId && <FunctionBill hotelId={hotelId} event={e} onDone={refresh} />}
+          </div>
         </div>
 
         {/* ── Catering ──────────────────────────────────────────────
@@ -428,6 +438,8 @@ function PriceDialog({
 }) {
   const [amount, setAmount] = useState(
     event.agreedAmount === null ? "" : String(event.agreedAmount));
+  /* D27-120: 0 is kept only when ticked Free. */
+  const [free, setFree] = useState(event.agreedAmount === 0);
   const [busy, setBusy] = useState(false);
 
   const save = async () => {
@@ -435,7 +447,7 @@ function PriceDialog({
     const res = await amendBanquetEvent(hotelId, event.id, {
       /* An empty box CLEARS the price — a quote withdrawn is a real act,
          and it must not be confused with "leave it alone". */
-      agreedAmount: amount.trim() === "" ? null : Number(amount),
+      agreedAmount: amount.trim() === "" ? null : Number(amount), free,
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not changed", res.reason);
@@ -471,9 +483,11 @@ function PriceDialog({
             {(f) => (
               <div className="flex gap-2">
                 <Input {...fieldProps(f)} value={amount} inputMode="decimal"
-                       placeholder="-"
+                       placeholder="-" disabled={free}
                        onChange={(ev) => setAmount(ev.target.value)} />
-                {event.venue.defaultRate != null && (
+                <Checkbox label="Free" checked={free}
+                          onCheckedChange={(on) => { setFree(on); setAmount(on ? "0" : ""); }} />
+                {event.venue.defaultRate != null && !free && (
                   <Button type="button" variant="secondary" className="shrink-0"
                           onClick={() => setAmount(String(event.venue.defaultRate))}>
                     Use usual
@@ -503,6 +517,7 @@ function CourseDialog({
   const [name, setName] = useState("");
   const [heads, setHeads] = useState(pax === null ? "" : String(pax));
   const [rate, setRate] = useState("");
+  const [free, setFree] = useState(false);
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -516,7 +531,7 @@ function CourseDialog({
     const p = packages.find((x) => x.id === id);
     if (!p) return;
     setName(p.name);
-    if (p.ratePerHead != null) setRate(String(p.ratePerHead));
+    if (p.ratePerHead != null) { setRate(String(p.ratePerHead)); setFree(p.ratePerHead === 0); }
   };
 
   const submit = async () => {
@@ -524,7 +539,7 @@ function CourseDialog({
     const res = await addBanquetCourse(hotelId, eventId, {
       packageId: packageId || undefined,
       name, pax: Number(heads),
-      ratePerHead: rate.trim() === "" ? null : Number(rate),
+      ratePerHead: rate.trim() === "" ? null : Number(rate), free,
       notes: notes || undefined,
     });
     setBusy(false);
@@ -588,9 +603,13 @@ function CourseDialog({
             <Field label="Rate a head"
                    hint="Leave blank if it is not agreed yet.">
               {(f) => (
-                <Input {...fieldProps(f)} value={rate} inputMode="decimal"
-                       placeholder="-"
-                       onChange={(e) => setRate(e.target.value)} />
+                <div className="flex items-center gap-3">
+                  <Input {...fieldProps(f)} value={rate} inputMode="decimal"
+                         placeholder="-" disabled={free}
+                         onChange={(e) => setRate(e.target.value)} />
+                  <Checkbox label="Free" checked={free}
+                          onCheckedChange={(on) => { setFree(on); setRate(on ? "0" : ""); }} />
+                </div>
               )}
             </Field>
           </div>
