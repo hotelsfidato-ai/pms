@@ -6539,6 +6539,37 @@ copy will see of theirs.**
 
 ---
 
+### 347 · A bare `GET /x/:id` mounted first swallows a sibling's `/x/returning` (fix round D)
+
+29 September. Round D added `GET /guests/:id` in guests/directory.ts, which is mounted before
+people.ts. It would have answered `/guests/returning` and `/guests/blacklist-warnings` with 404
+"No such guest here", silently breaking returning-guest suggestions and blacklist warnings. It
+became `GET /guests/:id/record`. **The rule:** a new `/:id` route under a shared prefix gets a
+suffix, or a test that the sibling's fixed paths still answer 200.
+
+### 346 · MINE: "0 junctions" was wrong, and a copy with junctions nearly went to the Recycle Bin
+
+28-29 September. My check (`Get-ChildItem <copy> -Recurse -Depth 2 | ReparsePoint`) reported no
+junctions in round B's copy; the Recycle Bin then refused the copy twice ("not supported"), and on
+29 Sep the same check listed `node_modules` and `api\node_modules` as links into the SHARED
+node_modules. Recycling through a junction can take the target's files with it. **The rule:**
+before recycling a copy, test the two link paths directly (`(Get-Item <copy>\node_modules
+-Force).Attributes`), remove each link with `cmd /c rmdir "<link>"` (never /s), and check the
+shared folders are intact.
+
+### 345 · MINE: five Postgres deaths in one night were drive D: dropping out, not our processes
+
+28-29 September. Postgres died at 19:40, 19:53, 22:41, 00:02, 00:12 and 00:50. I blamed a console
+close, then PID-reuse tree-kills, and restarted it under a "keeper" twice. Windows' own logs had
+the answer all along: System log `disk` id 157, "Disk 0 has been surprise removed" (23:54, 00:02,
+00:12, 00:50, 00:54), Ntfs id 50 "Delayed Write Failed" (lost writes, including D:\$Mft), and
+Application Error id 1000/1005 for postgres.exe with 0xc0000006 (in-page error: its program file
+could not be read). The drive is a SATA laptop HDD (ST1000LM035) with 0 read errors, so the
+connection or power is the likelier fault. The owner chose a GitHub backup push (D27-155) and to
+carry on (D27-156). **The rule:** when a process dies without a trace, read the Windows event
+logs (System: disk 7/51/153/157, Ntfs 50/55/98/140; Application: 1000/1001/1005) BEFORE
+theorising, and when the disk that holds the only copy misbehaves, back it up first.
+
 ### 344 · A role test green on its own run, red in the full suite (fix round B)
 
 28 September. Round B added a READ_RULES entry for every GET and a test that walks them all.
