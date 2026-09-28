@@ -56,7 +56,7 @@ export const routes = (
     <Route
       path="/h/:code/city-ledger"
       /* Guarded since it is money owed (D27-145). */
-      element={<RequireAccess path="/h/:code/city-ledger" resource="commission"><PropertyScope /><PropertyCityLedgerPage /></RequireAccess>}
+      element={<RequireAccess path="/h/:code/city-ledger" resource="invoice"><PropertyScope /><PropertyCityLedgerPage /></RequireAccess>}
     />
   </>
 );
