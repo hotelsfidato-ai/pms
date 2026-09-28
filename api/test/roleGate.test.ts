@@ -461,8 +461,12 @@ describe("the reads that hand out a guest's passport or ID number (D25-38)", () 
   it("are every mounted read that returns an ID field, and each is mounted", () => {
     /* The reads that select guest_documents' or a submission's numbers
        (grep id_number, passport, visa in api/src). A new one goes here. */
+    /* Plus two that are not about ID numbers: the record Edit guest shows
+       (GU-1, customer: edit) and System health (D27-91, which cp6 had
+       added without listing it here). */
     expect(Object.keys(READ_RULES).sort()).toEqual([
-      `GET ${H}/form-c`, `GET ${H}/online-checkin`, `GET ${H}/reports/c-form`,
+      `GET ${H}/form-c`, `GET ${H}/guests/:id`, `GET ${H}/online-checkin`,
+      `GET ${H}/reports/c-form`, `GET ${H}/system-health`,
     ]);
     const mounted = new Set(app.routes.map((r) => `${r.method} ${r.path}`));
     for (const key of Object.keys(READ_RULES)) expect(mounted.has(key), key).toBe(true);

@@ -98,3 +98,31 @@ export async function setGuestVip(
     throw error;
   }
 }
+
+/** What Edit guest shows and changes (GU-1): the person and their address. */
+export interface GuestContact {
+  id: string; title: string | null; fullName: string; phone: string | null;
+  email: string | null; nationality: string; addressLine: string | null;
+  city: string | null; state: string | null; pincode: string | null; country: string | null;
+}
+
+export const getGuestContact = (hotelId: string, guestId: string): Promise<GuestContact> =>
+  api<GuestContact>(`/api/hotels/${hotelId}/guests/${guestId}`);
+
+/** Only what changed is sent; blank clears (the server keeps the name and
+    nationality). The server's sentence on a refusal. */
+export async function saveGuestContact(
+  hotelId: string, guestId: string, changes: Partial<Omit<GuestContact, "id">>,
+): Promise<{ ok: true; guest: GuestContact } | { ok: false; reason: string }> {
+  try {
+    return await api(`/api/hotels/${hotelId}/guests/${guestId}`, {
+      method: "PATCH", body: JSON.stringify(changes),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}

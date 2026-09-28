@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { businessDateFor } from "../../businessDate.ts";
+import { countryProblem, emailProblem, phoneProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    DIRECTORY — guests and companies
@@ -183,6 +184,87 @@ directory.post("/:code/guests/:id/vip", async (c) => {
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── One guest's record, to correct it (GU-1; the owner, 28 September) ──
+   No screen could correct a guest's name, phone, email, address or
+   nationality. Read and changed here by the roles that hold customer:edit
+   (the gate, roleGate.ts), from the stay panel and Guest 360. Every change
+   is in the audit log already: guests and guest_documents carry 011's and
+   016's triggers, before and after. A guest belongs to the group, so the
+   scope is "has stayed here", which RLS answers through reservations. */
+
+/** The owner's titles (146, D27-58); none is blank. */
+const TITLES = ["Mr", "Ms", "Mrs", "Dr"];
+const ADDRESS = ["addressLine", "city", "state", "pincode", "country"] as const;
+
+const RECORD = `
+  select g.id::text, g.title, g.full_name as "fullName", g.phone,
+         g.email::text as email, g.nationality,
+         d.address_line as "addressLine", d.city, d.state, d.pincode, d.country
+    from guests g
+    left join guest_documents d on d.guest_id = g.id
+   where g.id = $1::uuid
+     and exists (select 1 from reservations r where r.guest_id = g.id and r.hotel_id = $2)`;
+
+const A_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+directory.get("/:code/guests/:id", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId || !A_UUID.test(c.req.param("id"))) return null;
+    return (await client.query(RECORD, [c.req.param("id"), hotelId])).rows[0] ?? null;
+  });
+  return body ? c.json(body) : c.json({ error: "No such guest here." }, 404);
+});
+
+directory.patch("/:code/guests/:id", async (c) => {
+  type Body = { title?: string | null; fullName?: string; phone?: string | null;
+                email?: string | null; nationality?: string } & Partial<Record<typeof ADDRESS[number], string | null>>;
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+  const text = (v: string | null | undefined) => (v === undefined ? undefined : v?.trim() || null);
+
+  /* Absent is UNCHANGED; blank clears - except the name and nationality,
+     which every guest has. Refused in words, before anything is written. */
+  const fullName = text(input.fullName);
+  if (fullName === null) return c.json({ ok: false, reason: "A guest has a name." }, 409);
+  const title = text(input.title);
+  if (title && !TITLES.includes(title)) {
+    return c.json({ ok: false, reason: `A title is ${TITLES.join(", ")} or none.` }, 409);
+  }
+  const nationality = text(input.nationality)?.toUpperCase();
+  const wrong = (input.nationality !== undefined && !nationality ? "Nationality is a two-letter country code, e.g. IN." : null)
+    ?? countryProblem(nationality) ?? phoneProblem(input.phone) ?? emailProblem(input.email);
+  if (wrong) return c.json({ ok: false, reason: wrong }, 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId || !A_UUID.test(c.req.param("id"))) return null;
+    const { rows: here } = await client.query(RECORD, [c.req.param("id"), hotelId]);
+    if (!here[0]) return null;
+
+    const person = { title, full_name: fullName, phone: text(input.phone),
+                     email: text(input.email), nationality };
+    const sets = Object.entries(person).filter(([, v]) => v !== undefined);
+    if (sets.length) {
+      await client.query(
+        `update guests set ${sets.map(([k], i) => `${k} = $${i + 2}`).join(", ")} where id = $1`,
+        [c.req.param("id"), ...sets.map(([, v]) => v)]);
+    }
+    const address = ADDRESS.filter((k) => input[k] !== undefined);
+    if (address.length) {
+      const column = { addressLine: "address_line", city: "city", state: "state",
+                       pincode: "pincode", country: "country" } as const;
+      await client.query(
+        `insert into guest_documents (guest_id, ${address.map((k) => column[k]).join(", ")})
+         values ($1, ${address.map((_, i) => `$${i + 2}`).join(", ")})
+         on conflict (guest_id) do update set
+           ${address.map((k) => `${column[k]} = excluded.${column[k]}`).join(", ")}`,
+        [c.req.param("id"), ...address.map((k) => text(input[k]))]);
+    }
+    return { ok: true as const, guest: (await client.query(RECORD, [c.req.param("id"), hotelId])).rows[0] };
+  });
+  return result ? c.json(result) : c.json({ error: "No such guest here." }, 404);
 });
 
 directory.get("/:code/companies", async (c) => {

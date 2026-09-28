@@ -248,6 +248,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
 
   /* guests */
   [`POST ${H}/guests/:id/vip`]: GUEST,
+  /* GU-1 (round D): correcting a guest's name, phone, email, address, nationality. */
+  [`PATCH ${H}/guests/:id`]: GUEST,
   [`POST ${H}/form-c/:reservationId`]: FORM_C,
   [`PUT ${H}/form-c/:reservationId/details`]: FORM_C,
   [`POST ${H}/booking-sources`]: own("guests/bookingSources.ts: the database, app.is_manager"),
@@ -454,6 +456,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
    ones listed are gated, and api/test/roleGate.test.ts names every read that
    returns an ID field so a new one cannot slip in unlisted. */
 export const READ_RULES: Readonly<Record<string, Rule>> = {
+  /* GU-1 (round D): the record Edit guest shows, for those who may correct it. */
+  [`GET ${H}/guests/:id`]: GUEST,
   [`GET ${H}/form-c`]: GUEST_ID,
   [`GET ${H}/reports/c-form`]: GUEST_ID,
   /* The details guests sent from their own page: asked in the route. */
