@@ -141,6 +141,8 @@ export function FolioPanel({
             hotelId={hotelId}
             stay={stay}
             balance={due}
+            folios={folios}
+            active={only}
             businessDate={businessDate}
             onDone={refresh}
           />
@@ -550,15 +552,27 @@ function AddChargeDialog({
 }
 
 function SettleDialog({
-  hotelId, stay, balance, businessDate, onDone,
+  hotelId, stay, balance, folios, active, businessDate, onDone,
 }: {
   hotelId: string;
   stay: Stay;
   balance: number;
+  /** The stay's bills, and the one whose tab is open (null: Everything). */
+  folios: StayFolio[];
+  active: string | null;
   businessDate: string;
   onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  /* A SPLIT BILL IS SETTLED ONE BILL AT A TIME (QA FI-2, FI-3): the dialog
+     asked for the whole stay and the payment landed on the guest's bill
+     whichever tab was open. Now it works on the bill whose tab is open -
+     or, on Everything, the first that owes - and says which. */
+  const split = folios.length > 1;
+  const [folioId, setFolioId] = useState<string | null>(null);
+  const owedOn = (id: string | null) =>
+    Math.max(split ? folios.find((f) => f.id === id)?.balance ?? 0 : balance, 0);
+  const pick = () => (split ? active ?? folios.find((f) => f.balance > 0)?.id ?? folios[0]!.id : null);
   const [method, setMethod] = useState<PaymentMethod>("Cash");
   const [amount, setAmount] = useState("");
   const [pan, setPan] = useState("");
@@ -568,7 +582,7 @@ function SettleDialog({
   const [saving, setSaving] = useState(false);
   const [pressKey, setPressKey] = useState(() => crypto.randomUUID());
 
-  const outstanding = Math.max(balance, 0);
+  const outstanding = owedOn(folioId);
   const value = Number(amount) || 0;
   /* D27-4: more than the bill is held as the guest's credit, once the desk
      ticks that it is. The server asks the same (needs "credit"). */
@@ -580,7 +594,10 @@ function SettleDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={(o) => { setOpen(o); if (o) setAmount(String(outstanding)); }}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) { const id = pick(); setFolioId(id); setAmount(String(owedOn(id))); }
+      }}
     >
       <DialogTrigger asChild>
         {/* THE BILL'S ONE MAIN ACTION is the next step: settle while money
@@ -590,7 +607,7 @@ function SettleDialog({
         <Button
           variant={balance > 0 && stay.status !== "due-in" ? "primary" : "secondary"}
           size="sm"
-          disabled={balance <= 0}
+          disabled={split ? !folios.some((f) => f.balance > 0) : balance <= 0}
         >
           <Receipt className="size-4" />
           Settle
@@ -598,9 +615,29 @@ function SettleDialog({
       </DialogTrigger>
       <DialogContent
         title="Settle bill"
-        description={`${money(outstanding)} outstanding · ${stay.guest}`}
+        description={`${money(outstanding)} outstanding · ${
+          split ? billName(folios.find((f) => f.id === folioId)) : stay.guest}`}
       >
         <div className="space-y-4">
+          {split && (
+            <Field label="Which bill">
+              {({ id }) => (
+                <NativeSelect
+                  id={id}
+                  value={folioId ?? ""}
+                  onChange={(e) => {
+                    setFolioId(e.target.value);
+                    setAmount(String(owedOn(e.target.value)));
+                    setAsCredit(false);
+                  }}
+                >
+                  {folios.map((f) => (
+                    <option key={f.id} value={f.id}>{billName(f)} - {money(f.balance)}</option>
+                  ))}
+                </NativeSelect>
+              )}
+            </Field>
+          )}
           <Field label="Method">
             {({ id }) => (
               <NativeSelect
@@ -685,6 +722,7 @@ function SettleDialog({
                     method, amount: value, businessDate,
                     ...(asksPan ? (form97 ? { form97 } : { pan }) : {}),
                     ...(extra > 0 ? { heldAsCredit: true } : {}),
+                    ...(split && folioId ? { folioId } : {}),
                   }, pressKey);
                   if (res.ok) {
                     setPressKey(crypto.randomUUID());
@@ -826,6 +864,11 @@ function Row({
    so the strip appears when a second folio exists and the button that
    creates one sits with the other actions.
    ══════════════════════════════════════════════════════════════════ */
+/** A bill's name at the desk: its company, or "Guest" - a guest's bill has
+    no company and that is not a gap. */
+const billName = (f: StayFolio | undefined) =>
+  !f ? "-" : f.billTo === "company" ? f.company ?? "Company" : "Guest";
+
 function FolioStrip({
   folios, active, onPick,
 }: {

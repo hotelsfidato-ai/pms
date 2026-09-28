@@ -119,6 +119,8 @@ export async function settle(
     pan?: string; form97?: boolean;
     /** D27-4: the desk confirmed a payment larger than the bill. */
     heldAsCredit?: boolean;
+    /** Which bill, when the stay's is split (QA FI-2). */
+    folioId?: string;
   },
   /** One per press of Take payment, kept until it lands. */
   idempotencyKey?: string,

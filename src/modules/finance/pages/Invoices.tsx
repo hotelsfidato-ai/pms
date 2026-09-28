@@ -9,7 +9,7 @@ import { useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardBody, DataTable, StatusPill,
-  Button, Tooltip, IconChip, type Column,
+  Button, Tooltip, IconChip, Dialog, DialogContent, type Column,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
 import { listBillable, getInvoiceSeries, listInvoices, issueInvoice, listVatBills, type BillableRow, type IssuedInvoice, type IssuedVatBill } from "@/modules/finance/data/billing";
@@ -54,6 +54,12 @@ const BILLABLE_COLUMNS: Column<BillableRow>[] = [
         </p>
       </div>
     ),
+  },
+  {
+    /* A split stay is one row per bill, each invoiced to its own party
+       (QA FI-1). */
+    key: "billTo", header: "Billed to",
+    cell: (b) => <span className="truncate" data-bill-to>{b.billTo}</span>,
   },
   {
     key: "nights", header: "Nights", numeric: true, hideBelow: "sm",
@@ -211,9 +217,13 @@ export default function InvoicesPage() {
     queryFn: () => listVatBills(hotelId),
   });
 
+  /* D27-117: a legal number is taken only after "are you sure", naming who
+     the invoice is to and the number it takes (QA FI-15). */
+  const [confirming, setConfirming] = useState<BillableRow | null>(null);
   const issue = useMutation({
-    mutationFn: (stayId: string) => issueInvoice(hotelId, stayId),
+    mutationFn: (b: BillableRow) => issueInvoice(hotelId, b.stayId, b.folioId),
     onSuccess: async (r) => {
+      setConfirming(null);
       if (r.number) setIssued({ number: r.number, vatBill: r.vatBill });
       /* The series advanced and the issued list gained a row. */
       await queryClient.invalidateQueries();
@@ -257,7 +267,7 @@ export default function InvoicesPage() {
                 size="sm"
                 variant="secondary"
                 disabled={b.status !== "settled" || issue.isPending}
-                onClick={() => issue.mutate(b.stayId)}
+                onClick={() => { issue.reset(); setConfirming(b); }}
               >
                 Issue
               </Button>
@@ -378,7 +388,7 @@ export default function InvoicesPage() {
         <DataTable<BillableRow>
           rows={rows.data ?? []}
           columns={columns}
-          rowKey={(b) => b.stayId}
+          rowKey={(b) => b.folioId}
           loading={rows.isLoading}
           error={rows.error}
           onRetry={() => rows.refetch()}
@@ -395,6 +405,37 @@ export default function InvoicesPage() {
           }
         />
       </Card>
+
+      <Dialog open={confirming !== null} onOpenChange={(o) => { if (!o) setConfirming(null); }}>
+        {confirming && (
+          <DialogContent
+            title="Issue this tax invoice?"
+            description={`${confirming.guest} · room ${confirming.roomNumber} · ${confirming.reference}`}
+            size="sm"
+            footer={
+              <div className="flex gap-2 w-full justify-end">
+                <Button variant="secondary" onClick={() => setConfirming(null)}>Keep it</Button>
+                <Button variant="primary" loading={issue.isPending}
+                  onClick={() => issue.mutate(confirming)} data-issue-confirm>
+                  Issue the invoice
+                </Button>
+              </div>
+            }
+          >
+            <p className="text-sm text-grey-700 leading-relaxed" data-issue-to>
+              Billed to <span className="font-medium text-ink-900">{confirming.billTo}</span>.
+              It takes the next number in the GST series
+              {series.data?.[0] ? <> - <span className="tabular font-medium text-ink-900">{series.data[0].next}</span></> : null}.
+              An issued invoice is never edited: a wrong one needs a credit note.
+            </p>
+            {issue.isError && (
+              <p className="text-sm text-brand-red-700 mt-3">
+                {describeError(issue.error).message ?? "The invoice was not issued. Nothing was changed."}
+              </p>
+            )}
+          </DialogContent>
+        )}
+      </Dialog>
 
       {/* A section, not a second page title: a PageHeader here named the
           browser tab "Issued" (the owner, 27 September: each tab its

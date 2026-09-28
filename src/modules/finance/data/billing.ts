@@ -70,7 +70,9 @@ export async function paymentsByMethod(hotelId: string): Promise<PaymentsByMetho
 
 /* ── Billable folios ─────────────────────────────────────────────── */
 
+/** One BILL of a departed stay (QA FI-1): a split stay has one row per bill. */
 export interface BillableRow {
+  folioId: string;
   stayId: string;
   reference: string;
   guest: string;
@@ -80,6 +82,10 @@ export interface BillableRow {
   arrival: string;
   departure: string;
   nights: number;
+  /** Who its tax invoice is addressed to: the company, or the guest. */
+  billTo: string;
+  /** How many bills the stay has; more than one is a split stay. */
+  bills: number;
   charges: number;
   tax: number;
   paid: number;
@@ -257,11 +263,14 @@ export async function getInvoice(
   );
 }
 
-/** Issue a tax invoice for a stay. The number comes from the database. */
+/** Issue the tax invoice for one bill of a stay. The number comes from the
+    database. */
 export async function issueInvoice(
-  hotelId: string, stayId: string,
+  hotelId: string, stayId: string, folioId: string,
 ): Promise<{ ok: boolean; number?: string; vatBill?: string | null; reason?: string; duplicate?: boolean }> {
-  return api(`/api/hotels/${hotelId}/stays/${stayId}/invoice`, { method: "POST" });
+  return api(`/api/hotels/${hotelId}/stays/${stayId}/invoice`, {
+    method: "POST", body: JSON.stringify({ folioId }),
+  });
 }
 
 /**
