@@ -37,3 +37,14 @@ export { postCharge } from "./postings.ts";
 /* D25-40: the cash limit and the PAN, for the till's settle as for the desk. */
 export { overCashLimit, panFor } from "./cashLimit.ts";
 export type { ChargeToPost } from "./postings.ts";
+
+/* PER BILL (28 September; the master's yes for round E): a payment on one
+   folio, a tax invoice for one folio, and one folio's figures. The desk's
+   routes call the same three, so a banquet function's bill - a folio with
+   no stay - goes through the same checks and the same insert. Each answers
+   a refusal as {ok:false, reason} (MEMORY 243). */
+export { takeFolioPayment, postFolioCharge } from "./postings.ts";
+export type { PaymentToTake, Payer } from "./postings.ts";
+export { issueFolioInvoice } from "./invoices.ts";
+export type { InvoiceRecipient } from "./invoices.ts";
+export { folioBalance } from "./folios.ts";
