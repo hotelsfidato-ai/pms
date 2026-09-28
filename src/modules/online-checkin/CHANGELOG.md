@@ -12,6 +12,15 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-09-28 · Fix round F (QA leftovers, D27-149): the guest's page says Arrived, Change has a Cancel, Confirm says so (QA GP-3, GP-4, GP-6)
+
+**Asked for:** QA GP-3, GP-4, GP-6. Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** `GuestPage.tsx`: the top card reads "Arrived" once the stay is checked in or out (GP-3); "Change what I sent" has a Cancel back to what was sent (GP-4). `Desk.tsx`: "Confirm against the ID" says "Confirmed" with the guest's name (GP-6). Wording only, no test.
+**Proved:** web `onlineCheckin.test.tsx` 25 passed. On screen: a link for FH-2608-4858 (the code went to a local receiver on 127.0.0.1:8899, nothing left the machine) read "Arrived Tuesday, 25 August 2026"; Change then Cancel went back to "Aadhaar ending 0123"; as Reception, Confirm showed "Confirmed - Tanvi Bhide".
+**Left open:** GP-2 (Total ₹7,085.00 against Outstanding ₹7,074.69, still on cp6) waits for round A (FI-9, D27-126). GP-5 (the bell) is a core change, asked.
+
+---
+
 ## 2026-09-25 · Room cards: the QR code, four to a page; the check-in's line here (D21-62, D21-95, D25-1 to D25-4)
 
 **Asked for:** the master, 25 September - finish the room cards as the brief
