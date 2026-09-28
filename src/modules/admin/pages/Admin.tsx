@@ -180,7 +180,7 @@ export function RolesPage() {
     <Page>
       <PageHeader
         title="Roles and permissions"
-        description="The live matrix, read from src/lib/permissions.ts. This is the same source the navigation filters on and every disabled button reads from - it cannot drift from what the product enforces."
+        description="The live matrix. The menus, every disabled button and the server read this same source, so it cannot drift from what the product enforces."
         badge={<StatusPill tone="info">{data.length} roles</StatusPill>}
       />
 
@@ -220,13 +220,11 @@ export function RolesPage() {
                             <Check className="size-4 text-success mx-auto" />
                           </Tooltip>
                         ) : (
-                          <Tooltip
-                            content={grants.map((a) => ACTION_LABELS[a]).join(" · ")}
-                          >
-                            <span className="text-2xs tabular text-grey-600">
-                              {grants.length}
-                            </span>
-                          </Tooltip>
+                          /* The actions by name (QA AD-8): a bare count
+                             said nothing without a hover. */
+                          <span className="text-2xs text-grey-600 whitespace-nowrap">
+                            {grants.map((a) => ACTION_LABELS[a]).join(", ")}
+                          </span>
                         )}
                       </td>
                     );
@@ -241,9 +239,9 @@ export function RolesPage() {
       <p className="flex items-start gap-2 text-xs text-grey-500 mt-4 leading-relaxed">
         <ShieldCheck className="size-3.5 shrink-0 mt-0.5" />
         <span>
-          A tick is every action; a number is a partial grant - hover it to see
-          which. A blocked action is never hidden in the product: it is shown
-          disabled, with the reason this matrix produces.
+          A tick is every action; otherwise the actions granted are named. A
+          blocked action is never hidden in the product: it is shown disabled,
+          with the reason this matrix produces.
         </span>
       </p>
     </Page>
