@@ -27,7 +27,7 @@ const sql = async (text: string, params: unknown[] = []) => {
 };
 
 const HOTEL = "5EL";
-const CLERK_NAME = "ADM1TEST Reception Clerk";
+const CLERK_NAME = "ADM1TEST Accountant";
 
 let ownerId: string;
 let clerkId: string;
@@ -75,7 +75,10 @@ const person = async (key: string, name: string, role: string) => {
 beforeAll(async () => {
   ownerId = (await sql(
     "select id::text from staff where email = 'owner@fidato.in'")).rows[0].id as string;
-  clerkId = await person("clerk", CLERK_NAME, "front_desk");
+  /* The accountant: the one role that may post all four acts below itself -
+     since D27-125 a payment is reversed only by the owner, an administrator,
+     the GM or the accountant (finance's round A, 28 September). */
+  clerkId = await person("clerk", CLERK_NAME, "finance");
   gmId = await person("gm", "ADM1TEST General Manager", "gm");
   adminId = await person("admin", "ADM1TEST Administrator", "admin");
 

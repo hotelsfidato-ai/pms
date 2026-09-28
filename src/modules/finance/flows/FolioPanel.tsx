@@ -14,7 +14,7 @@ import {
 } from "@/lib/rules";
 import { getTaxRate } from "@/modules/finance/data/tax";
 import {
-  Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast,
+  Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast, Textarea, fieldProps,
   Dialog, DialogContent, DialogTrigger,
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuLabel,
@@ -283,7 +283,10 @@ function LedgerList({
       </div>
       <ul className="divide-y divide-grey-100">
         {lines.map((p) => {
-          if (!p.reversed) running += p.amount + p.tax;
+          /* EVERY LINE COUNTS (QA FI-6): an original and its reversal cancel
+             each other. It left the reversed original out and added its
+             reversal, so the last "bal" read ₹1,000 over the Balance. */
+          running += p.amount + p.tax;
           const isReversal = p.kind === "reversal";
           return (
             <li
@@ -363,21 +366,39 @@ function ReverseButton({
     queryKey: ["reverse-allowed", hotelId, stayId, posting.id, posting.reversed],
     queryFn: () => reverseChargeAllowed(hotelId, stayId, posting.id),
   });
-  const allowed = permitted.data?.allowed ?? false;
+  /* D27-125: a payment is reversed by the owner, an administrator, the GM or
+     the accountant - `approve` on an invoice, the server's own question. */
+  const role = useRole();
+  const payment = posting.kind === "payment";
+  const managerOnly = payment && !can(role, "approve", "invoice")
+    ? "Reversing a payment is for the owner, an administrator, the general manager or the accountant."
+    : null;
+  const allowed = (permitted.data?.allowed ?? false) && !managerOnly;
+  const why = managerOnly ?? permitted.data?.reason;
+
+  /* D27-117: "Are you sure?", with a required reason (QA FI-5). It went at
+     once on one click. */
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const reverse = async () => {
+    setBusy(true);
+    const res = await reverseCharge(hotelId, stayId, posting.id, reason.trim());
+    setBusy(false);
+    if (res.ok) {
+      toast.success("Posting reversed", "The reversal is its own line - nothing was edited.");
+      setOpen(false); setReason("");
+      onDone();
+    } else {
+      toast.error("Could not reverse", res.reason);
+    }
+  };
 
   const button = (
     <button
       type="button"
       disabled={!allowed}
-      onClick={async () => {
-        const res = await reverseCharge(hotelId, stayId, posting.id);
-        if (res.ok) {
-          toast.success("Posting reversed", "The reversal is its own line - nothing was edited.");
-          onDone();
-        } else {
-          toast.error("Could not reverse", res.reason);
-        }
-      }}
+      onClick={() => setOpen(true)}
       aria-label={`Reverse ${posting.description}`}
       className={cn(
         "shrink-0 grid place-items-center size-9 pointer-coarse:size-11 rounded-full transition-colors duration-150",
@@ -391,10 +412,42 @@ function ReverseButton({
   );
 
   /* Disabled WITH a reason, never hidden. */
-  return permitted.data?.reason ? (
-    <Tooltip content={permitted.data.reason}>{button}</Tooltip>
-  ) : (
-    button
+  return (
+    <>
+      {why ? <Tooltip content={why}>{button}</Tooltip> : button}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          title={payment ? "Reverse this payment?" : "Reverse this charge?"}
+          description={`${posting.description} · ${moneyPrecise(Math.abs(posting.amount + posting.tax))}`}
+          size="sm"
+          footer={
+            <div className="flex gap-2 w-full justify-end">
+              <Button variant="secondary" onClick={() => setOpen(false)}>Keep it</Button>
+              <Button variant="danger" loading={busy} disabled={!reason.trim()}
+                onClick={() => void reverse()}>
+                Reverse
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-grey-700 leading-relaxed">
+              {payment
+                ? "The receipt stays on the bill, struck through, and the money is owed again."
+                : "The charge stays on the bill, struck through, and comes off the balance."}
+              {" "}Nothing is deleted - the reversal is its own line.
+            </p>
+            <Field label="Why" required hint="Kept on the reversal's line. The guest's bill never shows it.">
+              {(f) => (
+                <Textarea {...fieldProps(f)} rows={2} value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Posted to the wrong room" />
+              )}
+            </Field>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -430,7 +483,10 @@ function AddChargeDialog({
     enabled: open && taxable && !!hotelId,
     placeholderData: keepPreviousData,
   });
-  const rate = rateQuery.data ? rateQuery.data.rate : undefined;
+  /* The previous amount's rate is not this amount's (QA FI-11): ₹8,000 then
+     ₹150 pasted kept 18% on screen while 5% was stored. While it asks,
+     "…", and Post waits. */
+  const rate = rateQuery.data && !rateQuery.isPlaceholderData ? rateQuery.data.rate : undefined;
   const rateText = rateQuery.isError ? "not loaded"
     : rate === undefined ? "…"
     : rate === null ? "-" : `${rate}%`;
@@ -520,7 +576,8 @@ function AddChargeDialog({
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
             <Button variant="primary"
-              disabled={!description.trim() || value === 0}
+              /* More than zero (QA FI-4, FI-20). */
+              disabled={!description.trim() || !(value > 0)}
               loading={saving}
               onClick={async () => {
                 setSaving(true);
@@ -530,7 +587,9 @@ function AddChargeDialog({
                   }, pressKey);
                   if (res.ok) {
                     setPressKey(crypto.randomUUID());
-                    toast.success("Charge posted", `${money(value + (tax ?? 0))} on room ${stay.roomNumber}`);
+                    /* What was STORED, not the preview (FI-11). */
+                    toast.success("Charge posted", `${res.data
+                      ? money(res.data.amount + res.data.tax) : money(value + (tax ?? 0))} on room ${stay.roomNumber}`);
                     setDescription(""); setAmount("");
                     setOpen(false);
                     onDone();
