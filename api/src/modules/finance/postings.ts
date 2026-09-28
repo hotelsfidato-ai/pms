@@ -5,7 +5,7 @@ import { resolveDate } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
 import { inr } from "../../reportRender.ts";
 import { overCashLimit, panFor } from "./cashLimit.ts";
-import { FOLIO_SELECT } from "./folios.ts";
+import { FOLIO_SELECT, folioBalance } from "./folios.ts";
 
 /* Split out of api/src/routes/operations.ts on 15 September in the
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service: finance.
@@ -116,10 +116,6 @@ export interface ChargeToPost {
 export async function postCharge(
   client: Client, hotelId: string, stayId: string, input: ChargeToPost,
 ): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
-  const description = input.description?.trim();
-  if (!description) return { ok: false, reason: "A charge needs a description." };
-  if (!input.amount) return { ok: false, reason: "A charge of zero is not a charge." };
-
   const { rows } = await client.query<{ status: string }>(
     "select status from reservations where hotel_id = $1 and id = $2",
     [hotelId, stayId],
@@ -131,6 +127,43 @@ export async function postCharge(
     return { ok: false, reason: "This folio is closed. Reopen the stay to post to it." };
   }
 
+  const refused = await chargeRefused(client, hotelId, input);
+  if (refused) return { ok: false, reason: refused };
+
+  /* The FIRST WRITE: `folioFor` opens a folio where the stay has none. It
+     sat above the rate check, so a charge refused for a missing rate left
+     an empty folio behind, committed (MEMORY 243) - through this route, the
+     laundry's and the spa's alike. Every refusal is above it now. */
+  const folioId = await folioFor(client, hotelId, stayId);
+  if (!folioId) return { ok: false, reason: "Could not open a folio for this stay." };
+
+  return { ok: true, id: await insertCharge(client, hotelId, folioId, input) };
+}
+
+/** THE SAME DOOR, BY THE BILL (round E, 28 September): a banquet
+    function's bill is a folio with no stay, so its hall and courses are
+    posted by the folio's own id - the same checks and the same insert as a
+    stay's charge. Whether that folio may take a charge (open, the
+    function not cancelled) is the caller's to ask first. */
+export async function postFolioCharge(
+  client: Client, hotelId: string, folioId: string, input: ChargeToPost,
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  const { rows } = await client.query(
+    "select 1 from folios where id = $1::uuid and hotel_id = $2", [folioId, hotelId]);
+  if (!rows.length) return { ok: false, reason: "No such bill." };
+  const refused = await chargeRefused(client, hotelId, input);
+  if (refused) return { ok: false, reason: refused };
+  return { ok: true, id: await insertCharge(client, hotelId, folioId, input) };
+}
+
+/** Why a charge may not be posted, or null. Reads only - it sits above
+    every write (MEMORY 243). */
+async function chargeRefused(
+  client: Client, hotelId: string, input: ChargeToPost,
+): Promise<string | null> {
+  const description = input.description?.trim();
+  if (!description) return "A charge needs a description.";
+  if (!input.amount) return "A charge of zero is not a charge.";
   /* THE RATE COMES FROM THE RULE, AND ZERO IS STILL A DECISION.
      This read `(cgst_rate + sgst_rate) ?? 5` — a property rate with a
      hardcoded 5% behind it, which is a shipped price in a project
@@ -167,21 +200,20 @@ export async function postCharge(
       [hotelId, taxKind, amount],
     );
     if (rate[0]?.rate === null || rate[0]?.rate === undefined) {
-      return {
-        ok: false,
-        reason: `This property has no GST rule for ${taxKind}. Set it in the GST card, under Rooms and rates → Room types or Finance → Invoices. `
-              + "A missing rate is not zero - nothing is billed until somebody sets it.",
-      };
+      return `This property has no GST rule for ${taxKind}. Set it in the GST card, under Rooms and rates → Room types or Finance → Invoices. `
+           + "A missing rate is not zero - nothing is billed until somebody sets it.";
     }
   }
+  return null;
+}
 
-  /* The FIRST WRITE: `folioFor` opens a folio where the stay has none. It
-     sat above the rate check, so a charge refused for a missing rate left
-     an empty folio behind, committed (MEMORY 243) - through this route, the
-     laundry's and the spa's alike. Every refusal is above it now. */
-  const folioId = await folioFor(client, hotelId, stayId);
-  if (!folioId) return { ok: false, reason: "Could not open a folio for this stay." };
-
+/** The one insert of a charge. Only after chargeRefused has said nothing. */
+async function insertCharge(
+  client: Client, hotelId: string, folioId: string, input: ChargeToPost,
+): Promise<string> {
+  const amount = Math.round(input.amount * 100) / 100;
+  const taxKind = input.taxKind ?? "room";
+  const taxable = input.taxable ?? true;
   const { rows: made } = await client.query<{ id: string }>(
     `insert into folio_postings
        (hotel_id, folio_id, business_date, category, description,
@@ -194,10 +226,10 @@ export async function postCharge(
      returning id::text`,
     [hotelId, folioId, await resolveDate(client, hotelId, input.businessDate),
      CATEGORY[input.category ?? "Miscellaneous"] ?? "misc",
-     description, amount, taxable, taxKind, input.idempotencyKey ?? null],
+     input.description.trim(), amount, taxable, taxKind, input.idempotencyKey ?? null],
   );
 
-  return { ok: true, id: made[0]!.id };
+  return made[0]!.id;
 }
 
 /** The line already posted under this key, if any: asked before anything is
@@ -323,26 +355,144 @@ postings.post("/:code/stays/:id/charges/:postingId/reverse", async (c) => {
 
 /* ── Take a payment ──────────────────────────────────────────────── */
 
+/** What is paid, as the desk (or a service) hands it over. */
+export interface PaymentToTake {
+  method?: string | undefined;
+  amount?: number | undefined;
+  businessDate?: string | undefined;
+  /* D25-40: asked when more than ₹1,00,000 is paid in cash at once. */
+  pan?: string | undefined;
+  form97?: boolean | undefined;
+  /* D27-4: the desk confirmed a payment larger than the bill. */
+  heldAsCredit?: boolean | undefined;
+  /* One press, one payment (28 September). */
+  idempotencyKey?: string | null | undefined;
+}
+
+/** WHO IS PAYING - the caller's part. The stay route: the guest's and the
+    group's turns, the cash this guest has already paid (app.cash_taken), the
+    guest's nationality. A banquet function (round E): its own turn and the
+    cash taken on that function's bill (s.269ST's "one event"). */
+export interface Payer {
+  /** Advisory locks, taken in this order, before anything is counted. */
+  locks: string[];
+  /** Cash already received from this payer, read AFTER the locks. */
+  cashTaken: () => Promise<number>;
+  /** A payer from abroad is not asked for a PAN (D25-40). */
+  foreign: boolean;
+  /** What the bill owes, for D27-4. Default: the folio's own balance. */
+  owed?: () => Promise<number>;
+  /** Only where `folioId` is null: open the bill the payment goes on. It is a
+      write, so it runs after every refusal (MEMORY 243, FIN-7). */
+  openFolio?: () => Promise<string | null>;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   THE DOOR A PAYMENT REACHES A BILL THROUGH (28 September)
+
+   Keyed by the FOLIO, not the stay. A split bill's Settle paid the stay's
+   first folio whichever bill was open (QA FI-2), and a banquet function's
+   bill has no stay at all. So the route below and the banquet both call
+   this, and there is still one insert for a payment, with the same checks
+   in front of it. Every refusal is above the first write (MEMORY 243);
+   a refusal is returned, never thrown.
+   ══════════════════════════════════════════════════════════════════ */
+export async function takeFolioPayment(
+  client: Client, hotelId: string, folioId: string | null,
+  input: PaymentToTake, payer: Payer,
+): Promise<{ ok: true; id: string } | { ok: false; reason: string; needs?: Needs }> {
+  if (!input.amount || input.amount <= 0) {
+    return { ok: false, reason: "A payment must be greater than zero." };
+  }
+  const method = PAYMENT_METHOD[input.method ?? "Cash"];
+  if (!method) return { ok: false, reason: `"${input.method}" is not a payment method.` };
+  const amount = Math.round(input.amount * 100) / 100;
+
+  if (folioId) {
+    const { rows } = await client.query(
+      "select 1 from folios where id = $1::uuid and hotel_id = $2", [folioId, hotelId]);
+    if (!rows.length) return { ok: false, reason: "No such bill." };
+  }
+  const businessDate = await resolveDate(client, hotelId, input.businessDate);
+
+  /* ONE PAYER'S PAYMENTS TAKE TURNS (the owner's D27-2): two clerks taking
+     cash for one guest in the same second both read the cash already taken
+     before either wrote, and both passed. Held to the end of this
+     transaction; the counts below are read after it. Every payment waits,
+     not only cash: the bill read for D27-4 has the same race. */
+  for (const key of payer.locks) {
+    await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [key]);
+  }
+
+  /* ONE PRESS, ONE PAYMENT (28 September): after the payer's turn, so two
+     presses cannot both miss it, and before the cash counts, which would
+     otherwise count the first press against the repeat. */
+  const done = await postedWith(client, hotelId, input.idempotencyKey ?? null);
+  if (done) return { ok: true, id: done };
+
+  /* D25-40 - asked BEFORE any folio is opened (MEMORY 243). */
+  let pan: string | null = null;
+  let form97 = false;
+  if (method === "cash") {
+    const over = overCashLimit(await payer.cashTaken(), amount,
+      "card, UPI, cheque or bank transfer");
+    if (over) return { ok: false, reason: over };
+    const kept = panFor(amount, { pan: input.pan, form97: input.form97, foreign: payer.foreign });
+    if (!kept.ok) return { ok: false, reason: kept.reason, needs: "pan" };
+    ({ pan, form97 } = kept);
+  }
+
+  /* MORE THAN THE BILL (the owner's D27-4): taken only once the desk has
+     confirmed it is held as the guest's credit. */
+  const owed = payer.owed ? await payer.owed()
+    : folioId ? (await folioBalance(client, folioId))?.balance ?? 0 : 0;
+  const extra = Math.round((amount - Math.max(owed, 0)) * 100) / 100;
+  if (extra > 0 && input.heldAsCredit !== true) {
+    return {
+      ok: false, needs: "credit",
+      reason: `This is ₹${inr(extra)} more than the bill; it will be held as the guest's credit.`,
+    };
+  }
+
+  const folio = folioId ?? (await payer.openFolio?.()) ?? null;
+  if (!folio) return { ok: false, reason: "There is no bill to take this payment on." };
+
+  /* A payment is a NEGATIVE posting. The balance is the sum of the
+     ledger, so money received reduces it by being part of the sum —
+     there is no separate "paid" column to keep in step. */
+  const { rows: made } = await client.query<{ id: string }>(
+    `insert into folio_postings
+       (hotel_id, folio_id, business_date, category, description,
+        amount, tax_rate, tax_amount, idempotency_key)
+     values ($1,$2,$3,'payment',$4,$5,0,0,$6)
+     returning id::text`,
+    [hotelId, folio, businessDate,
+     method === "city_ledger" ? "Transferred to city ledger" : `Received - ${input.method ?? "Cash"}`,
+     -amount, input.idempotencyKey ?? null],
+  );
+
+  await client.query(
+    `insert into payments (hotel_id, posting_id, method, amount, pan, form_97)
+     values ($1, $2::bigint, $3, $4, $5, $6)`,
+    [hotelId, made[0]!.id, method, amount, pan, form97],
+  );
+
+  return { ok: true, id: made[0]!.id };
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 postings.post("/:code/stays/:id/payments", async (c) => {
-  const body = (await c.req.json().catch(() => ({}))) as {
-    method?: string; amount?: number; businessDate?: string;
-    /* D25-40: asked when more than ₹1,00,000 is paid in cash at once. */
-    pan?: string; form97?: boolean;
-    /* D27-4: the desk confirmed a payment larger than the bill. */
-    heldAsCredit?: boolean;
+  const body = (await c.req.json().catch(() => ({}))) as PaymentToTake & {
+    /* Which bill, when the stay's is split (QA FI-2). Without it, the
+       stay's first bill, as before. */
+    folioId?: string;
   };
 
   const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
-
-    if (!body.amount || body.amount <= 0) {
-      return refuse("A payment must be greater than zero.");
-    }
-    const method = PAYMENT_METHOD[body.method ?? "Cash"];
-    if (!method) return refuse(`"${body.method}" is not a payment method.`);
-    const amount = Math.round(body.amount * 100) / 100;
-    const businessDate = await resolveDate(client, hotelId, body.businessDate);
+    const stayId = c.req.param("id");
 
     const { rows: stay } = await client.query<{
       guest_id: string; group_id: string | null; foreign: boolean;
@@ -350,80 +500,46 @@ postings.post("/:code/stays/:id/payments", async (c) => {
       `select r.guest_id::text, r.group_id::text, g.nationality <> 'IN' as foreign
          from reservations r join guests g on g.id = r.guest_id
         where r.hotel_id = $1 and r.id = $2`,
-      [hotelId, c.req.param("id")]);
+      [hotelId, stayId]);
     if (!stay[0]) return refuse("Reservation not found.");
 
-    /* ONE GUEST'S PAYMENTS TAKE TURNS (the owner's D27-2): two clerks taking
-       cash for one guest in the same second both read the cash already taken
-       before either wrote, and both passed. The guest's turn, then the
-       group's (always in that order, so two payments never wait on each
-       other), held to the end of this transaction; the counts below are read
-       after it. Every payment waits, not only cash: the bill read for D27-4
-       has the same race. */
-    for (const key of [`payment-guest:${stay[0].guest_id}`,
-                       stay[0].group_id && `payment-group:${stay[0].group_id}`]) {
-      if (key) await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [key]);
+    if (body.folioId !== undefined && !UUID.test(String(body.folioId))) {
+      return refuse("That bill is not on this stay.");
     }
+    const { rows: bills } = await client.query<{ id: string }>(
+      `select id::text from folios
+        where hotel_id = $1 and reservation_id = $2 and ($3::uuid is null or id = $3::uuid)
+        order by opened_at, id limit 1`,
+      [hotelId, stayId, body.folioId ?? null]);
+    if (body.folioId && !bills[0]) return refuse("That bill is not on this stay.");
 
-    /* ONE PRESS, ONE PAYMENT (28 September): after the guest's turn, so two
-       presses cannot both miss it, and before the cash counts, which would
-       otherwise count the first press against the repeat. */
-    const idem = c.req.header("idempotency-key") ?? null;
-    const done = await postedWith(client, hotelId, idem);
-    if (done) return { ok: true, data: { id: done } };
-
-    /* D25-40 - asked BEFORE folioFor, which may open a folio (MEMORY 243). */
-    let pan: string | null = null;
-    let form97 = false;
-    if (method === "cash") {
-      const { rows: cash } = await client.query<{ taken: string }>(
-        "select app.cash_taken($1, $2::date)::text as taken",
-        [c.req.param("id"), businessDate]);
-      const over = overCashLimit(Number(cash[0]!.taken), amount,
-        "card, UPI, cheque or bank transfer");
-      if (over) return refuse(over);
-      const kept = panFor(amount, { pan: body.pan, form97: body.form97, foreign: stay[0].foreign });
-      if (!kept.ok) return refuse(kept.reason, "pan");
-      ({ pan, form97 } = kept);
-    }
-
-    /* MORE THAN THE BILL (the owner's D27-4): taken only once the desk has
-       confirmed it is held as the guest's credit. The bill is the one the
-       Settle dialog shows (GET /stays/:id/folio). */
-    const { rows: bill } = await client.query<{ balance: string }>(
-      `${FOLIO_SELECT} having l.reservation_id = $2`, [hotelId, c.req.param("id")]);
-    const extra = Math.round((amount - Math.max(Number(bill[0]?.balance ?? 0), 0)) * 100) / 100;
-    if (extra > 0 && body.heldAsCredit !== true) {
-      return refuse(`This is ₹${inr(extra)} more than the bill; it will be held as the guest's credit.`, "credit");
-    }
-
-    const folioId = await folioFor(client, hotelId, c.req.param("id"));
-    if (!folioId) return refuse("Reservation not found.");
-
-    /* A payment is a NEGATIVE posting. The balance is the sum of the
-       ledger, so money received reduces it by being part of the sum —
-       there is no separate "paid" column to keep in step. */
-    const { rows: made } = await client.query<{ id: string }>(
-      `insert into folio_postings
-         (hotel_id, folio_id, business_date, category, description,
-          amount, tax_rate, tax_amount, idempotency_key)
-       values ($1,$2,$3,'payment',$4,$5,0,0,$6)
-       returning id::text`,
-      [hotelId, folioId,
-       businessDate,
-       method === "city_ledger"
-         ? "Transferred to city ledger"
-         : `Received - ${body.method}`,
-       -amount, idem],
-    );
-
-    await client.query(
-      `insert into payments (hotel_id, posting_id, method, amount, pan, form_97)
-       values ($1, $2::bigint, $3, $4, $5, $6)`,
-      [hotelId, made[0]?.id, method, amount, pan, form97],
-    );
-
-    return { ok: true, data: { id: made[0]?.id } };
+    const taken = await takeFolioPayment(client, hotelId, bills[0]?.id ?? null, {
+      ...body, idempotencyKey: c.req.header("idempotency-key") ?? null,
+    }, {
+      /* The guest's turn, then the group's - always in that order, so two
+         payments never wait on each other. */
+      locks: [`payment-guest:${stay[0].guest_id}`,
+              ...(stay[0].group_id ? [`payment-group:${stay[0].group_id}`] : [])],
+      cashTaken: async () => {
+        const { rows: cash } = await client.query<{ taken: string }>(
+          "select app.cash_taken($1, $2::date)::text as taken",
+          [stayId, await resolveDate(client, hotelId, body.businessDate)]);
+        return Number(cash[0]!.taken);
+      },
+      foreign: stay[0].foreign,
+      /* A named bill owes its own balance. Unnamed, the stay's, as the Settle
+         dialog showed it - which counts a group master folio's lines for
+         this stay too. */
+      ...(body.folioId ? {} : {
+        owed: async () => {
+          const { rows: bill } = await client.query<{ balance: string }>(
+            `${FOLIO_SELECT} having l.reservation_id = $2`, [hotelId, stayId]);
+          return Number(bill[0]?.balance ?? 0);
+        },
+      }),
+      openFolio: () => folioFor(client, hotelId, stayId),
+    });
+    return taken.ok ? { ok: true, data: { id: taken.id } } : refuse(taken.reason, taken.needs);
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
