@@ -11,6 +11,15 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-28 · Fix round F (QA leftovers, D27-149): more guests than the hall holds, a plate count below one, Catering with nothing served (QA BQ-5)
+
+**Asked for:** QA BQ-5. Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** Register a function warns "More than this hall holds (n)" above the larger of its seated and standing figures (a warning, not a refusal); Add a course says "At least one plate." under Plates instead of a silent disabled Add; the function's money reads Catering "-" while nothing is served (was ₹0). Wording only, no test.
+**Proved:** web banquet tests passed. On screen (QA Hall, seats 100 / 150): 500 guests warned; plates -10 said "At least one plate." with Add disabled; a new function showed Catering "-".
+**Left open:** D27-150 (reopening a billed function) needs a reversal through finance's front door; asked the master, nothing built.
+
+---
+
 ## 2026-09-28 · Fix round E: the function's bill, the banquet tax warning, Free prices, BQ-6, laundry and spa (QA 28 September)
 
 **Asked for:** the master's round E (D27-116, D27-120, D27-124; the QA's
