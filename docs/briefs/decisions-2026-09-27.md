@@ -114,3 +114,6 @@
 | D27-110 | Where the print samples go (28 Sep) | **Inside the project, `D:\fidato pms\.local\print-samples\`**; the owner uploads them to Google Drive (not OneDrive, not installed Google Drive). Fictional demo data only; **no encryption** |
 | D27-111 | How the browser-printed documents become PDFs | **Chrome, headless, with a throwaway profile inside the project**, local test pages only, no sign-in; Edge stays banned (D26-12). The server's own PDF renderer wherever a route exists |
 | D27-112 | What the print samples hold, and how | **Everything printed or reported**: guest and money documents, kitchen and service slips (KOTs, dockets, function bills, purchase orders, count sheet), every report; **one command, rerun any time**, dated folders with an index |
+| D27-113 | System health: a hotel's business date | **Amber when it is yesterday, red at two days or more behind** |
+| D27-114 | System health: the last backup | **Read from the nightly backup log** on the server (passed / failed / unknown, copied off or this disk only) |
+| D27-115 | System health on the live server | **No check on the live server by the session**; the owner opens System health after the release and sets up UptimeRobot on /health |
