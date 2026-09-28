@@ -33,6 +33,25 @@ the demo's shortest.
 
 ## Fixed — the solution is here; do not work it out again
 
+### ADM-11 · The telemetry tables were writable by the API although the migration "revoked" it - FIXED 28 September, before merge
+
+**Found** — 28 September, by the database test's "nobody through the
+application can delete the record": it FAILED. The migration said
+`revoke all ... from public; grant select ... to pms_app`, meaning read only.
+But 010's `alter default privileges` gives `pms_app` select, insert, update and
+delete on every new table in `public`, and a revoke from `public` does not
+touch a grant made to `pms_app` by name. Row security happened to stop the
+delete (no delete policy, so 0 rows), which is why nothing was lost - but the
+grant was there.
+
+**Fixed** — `revoke all ... from public, pms_app`, then grant select. The test
+now proves `pms_app` cannot delete or insert.
+
+**The rule** — a table meant to be read-only for the API must revoke from
+`pms_app` by name; `from public` is not enough in this schema. Check with
+`information_schema.role_table_grants`, not by reading the migration.
+
+
 ### ADM-10 · The group logo's SVG check could hold the API for minutes on a 211-byte file - FIXED 27 September, before merge
 
 **Found** — 27 September, re-reading `api/src/modules/admin/groupSettings.ts`

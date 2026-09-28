@@ -48,6 +48,7 @@ properties and people.
 | Administration → Audit log | `/admin/audit-log` | `pages/Admin.tsx` (`AuditLogPage`) | none |
 | Administration → Settings | `/admin/settings` | `pages/Admin.tsx` (`SettingsPage`, with `GroupCard` and `ModulesCard`) | none |
 | Administration → Console | `/admin/console` | `pages/Console.tsx` | none — development builds only |
+| System health | `/admin/system-health` | `pages/SystemHealth.tsx` | none — the owner and an administrator (`role`) |
 | — (not in the menu) one property | `/properties/:code` | `pages/Property.tsx` | reached from Properties |
 | — (redirect) | `/admin/properties` → `/properties` | — | an old link, kept working |
 
@@ -85,7 +86,7 @@ properties and people.
 
 ---
 
-## Server endpoints — 22
+## Server endpoints — 23
 
 The code is in `api/src/modules/admin/` (moved 15 September): `admin.ts`,
 and the parts split out of three mixed files — `adminLists.ts` (from
@@ -165,6 +166,25 @@ logo"), one row, FORCE RLS, `app.sets_group_settings()` for writes, audited.
 It starts EMPTY in every copy: the name is typed and the logo uploaded, never
 put in a migration.
 
+`systemHealth.ts` (28 September, D27-91 and D27-92) — 1, at `/api/hotels`:
+
+```
+GET    /:code/system-health       the owner and an administrator (roleGate READ_RULES,
+                                  `role` view, pinned by a test): version, uptime, pool,
+                                  database size, disk, traffic for the hour/day/week,
+                                  slowest routes, errors and slow queries, each hotel's
+                                  business date and last night audit, the last backup
+```
+
+The traffic is recorded by `api/src/telemetry.ts` (the core, one middleware in
+server.ts) into `telemetry_requests` and `telemetry_events` (its migration:
+"telemetry"): per minute, by route PATTERN, errors by kind, slow queries (over
+1 s) by value-free SQL name; nothing with an id, a name or a value. Read under
+RLS by `app.reads_system_health()`; written and pruned to 180 days only by
+`app.record_telemetry()`. The last backup is read from
+`/var/log/fidato-backup.log` (the 03:00 check's output); on a machine without
+it the screen says so.
+
 `PATCH /:code/front-desk` (the front desk's hours), which the plan gave to
 this service, went to inventory in the server split, beside the Room types
 page that holds its form — see inventory's brief.
@@ -197,6 +217,8 @@ data/groupSettings.ts  getGroupSettings, setGroupName, setGroupLogo, removeGroup
                        "by <group name>", the logo a data: URL for an <img src>, each
                        null when not set. NEVER inline the logo as markup: an SVG can
                        carry a script; inside an <img> it runs none of it.
+data/systemHealth.ts   getSystemHealth and auditLag - System health's one read, and
+                       how far a hotel's day is behind (0 up to date, 1 amber, 2+ red).
 components/GroupCard.tsx  Settings' "Group name and logo" card: the name with Change,
                        the logo with Upload/Replace and Remove, for the owner, an
                        admin and the GM.
