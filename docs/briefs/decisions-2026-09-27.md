@@ -129,3 +129,7 @@
 | D27-125 | Who may reverse a payment (round A, FI-5) | **Only the owner, admin, GM or accountant**; reception reverses charges only, with the D27-117 reason |
 | D27-126 | The interim bill's total (round A, FI-9) | **The exact figure, no round-off line** (Total = Outstanding); the guest's page shows the same |
 | D27-127 | Company accounts vs the City ledger report (round A, FI-2) | **Company accounts shows the City ledger report's figures**: bills sent "Bill to company", by account; Received and Balance a dash |
+| D27-128 | Who may void a dish that reached the kitchen (round C; settles D27-119's roles) | **The owner, admin, GM, hotel manager and kitchen manager, with a reason**; no new Captain role; waiters refused |
+| D27-129 | A drawer counted exactly showing "Over by 0.30" (round C, NA-2) | **A bill paid entirely in cash is rounded to the nearest rupee at settle, with a "Round off" line**; card, UPI and room charges stay exact to the paisa |
+| D27-130 | Other changes to dishes already sent (round C) | **The same people and a reason** to lower a sent dish's quantity, or to close a bill unpaid when any of its dishes were sent |
+| D27-131 | Where a void's reason shows (round C) | **On the KOT, the Kitchen screen, Close restaurant day's summary and the night audit's restaurant figures** |
