@@ -7,7 +7,7 @@ import { ApiError } from "@/lib/api";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, ErrorState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, DataTable,
-  StatusPill, toast, type Column, type Tone,
+  StatusPill, Checkbox, toast, type Column, type Tone,
 } from "@/components/ui";
 import {
   getPurchasing, raiseRequest,
@@ -275,7 +275,7 @@ export default function PurchasingPage() {
    and an order that cannot be sent yet, which is the honest state.
    ══════════════════════════════════════════════════════════════════ */
 
-interface Draft { itemId: string; quantity: string; unitPrice: string }
+interface Draft { itemId: string; quantity: string; unitPrice: string; free?: boolean }
 
 const EMPTY: Draft = { itemId: "", quantity: "", unitPrice: "" };
 
@@ -321,7 +321,9 @@ function AskDialog({
         quantity: Number(l.quantity),
         /* BLANK IS NOT ZERO. Nobody has agreed a price, so none is sent
            and the line reads "-" until somebody does. */
-        unitPrice: l.unitPrice.trim() === "" ? null : Number(l.unitPrice),
+        unitPrice: l.free ? 0 : l.unitPrice.trim() === "" ? null : Number(l.unitPrice),
+        /* ST-2, X-1 (D27-120): a ₹0 line only when ticked Free. */
+        ...(l.free ? { unitPriceFree: true } : {}),
       })),
     });
     setSaving(false);
@@ -411,11 +413,14 @@ function AskDialog({
                   <Input
                     aria-label={`Agreed price on line ${i + 1}`}
                     inputMode="decimal"
-                    value={l.unitPrice}
+                    value={l.free ? "0" : l.unitPrice}
                     onChange={(e) => set(i, { unitPrice: e.target.value })}
+                    disabled={l.free}
                     placeholder="Price, if agreed"
                   />
                 </div>
+                <Checkbox label="Free" checked={l.free ?? false}
+                  onCheckedChange={(v) => set(i, { free: v })} />
                 {lines.length > 1 && (
                   <Button
                     variant="ghost"

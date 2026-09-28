@@ -138,7 +138,7 @@ export async function getStaysToChargeTo(code: string): Promise<Stay[]> {
 /** Add a line to the price list. `price` left out means NOBODY HAS
     PRICED IT — it is sent as null and reads "-". Never 0. */
 export async function addPriceItem(
-  code: string, input: { name: string; service: LaundryService; price: number | null },
+  code: string, input: { name: string; service: LaundryService; price: number | null; free?: boolean },
 ): Promise<Result<{ data: { id: string } }>> {
   return call(`/api/hotels/${code}/laundry/price-list`, "POST", input);
 }
@@ -147,7 +147,7 @@ export async function addPriceItem(
     has set one", which is a dash and a docket that cannot be charged —
     a different fact from free, which is 0. */
 export async function setPriceItem(
-  code: string, id: string, input: { price?: number | null; isActive?: boolean },
+  code: string, id: string, input: { price?: number | null; isActive?: boolean; free?: boolean },
 ): Promise<Result<unknown>> {
   return call(`/api/hotels/${code}/laundry/price-list/${id}`, "POST", input);
 }

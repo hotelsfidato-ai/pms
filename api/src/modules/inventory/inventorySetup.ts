@@ -424,6 +424,12 @@ inventorySetup.post("/:code/room-types/import", async (c) => {
           || (extraChild !== null && Number.isNaN(extraChild))) {
         return reject("An extra-person rate must be a number, or blank.");
       }
+      /* X-1 (D27-120): 0 only when ticked Free, and a file has no tick.
+         Leave it blank, and mark a free one on Rate plans or the calendar. */
+      if (rate === 0 || extraAdult === 0 || extraChild === 0) {
+        return reject("0 is not taken from a file. Leave it blank if nobody has priced it; "
+          + "tick Free on the screen for one that costs nothing.");
+      }
 
       if (seen.has(code)) return reject(`"${code}" appears twice in this file.`);
       seen.add(code);

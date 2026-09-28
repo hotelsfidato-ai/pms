@@ -152,6 +152,8 @@ export async function recordStockMovement(
     kind: StockKind;
     quantity: number;
     unitCost?: number | null;
+    /** X-1 (D27-120): a cost of 0 only when ticked Free. */
+    unitCostFree?: boolean;
     supplier?: string;
     reference?: string;
     note?: string;

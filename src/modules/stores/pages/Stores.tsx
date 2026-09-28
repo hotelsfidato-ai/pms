@@ -15,7 +15,7 @@ import { useDocumentIdentity } from "@/lib/documentIdentity";
 import {
   Page, PageHeader, Card, Button, Skeleton, EmptyState, ErrorState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
-  StatusPill, IconChip, InfoButton, toast, Menu, MenuItem, MenuSeparator,
+  StatusPill, IconChip, InfoButton, toast, Menu, MenuItem, MenuSeparator, Checkbox,
 } from "@/components/ui";
 import {
   getStore, getStockHistory, addStockItem, recordStockMovement, moveStock,
@@ -780,6 +780,8 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
   const [storeId, setStoreId] = useState(() => startingStore(offered, startStoreId));
   const [qty, setQty] = useState("");
   const [cost, setCost] = useState("");
+  /* ST-1, X-1 (D27-120): 5 kg at 0 dragged the average down. 0 only ticked Free. */
+  const [costFree, setCostFree] = useState(false);
   const [supplier, setSupplier] = useState("");
   const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
@@ -833,7 +835,8 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
          the server applies the sign — a screen that has to remember to send
          -5 for an issue will one day send 5 and quietly double the stock. */
       quantity,
-      ...(isReceipt && cost.trim() !== "" ? { unitCost: Number(cost) } : {}),
+      ...(isReceipt && costFree ? { unitCost: 0, unitCostFree: true }
+        : isReceipt && cost.trim() !== "" ? { unitCost: Number(cost) } : {}),
       ...(supplier.trim() ? { supplier: supplier.trim() } : {}),
       ...(reference.trim() ? { reference: reference.trim() } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
@@ -933,10 +936,12 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
               <Field label={`What it cost, per ${item.unit}`}
                      hint="Leave blank if the bill has not arrived. A cost can only be added later by undoing this delivery and receiving it again - what it must not be is a guess.">
                 {(f) => (
-                  <Input {...fieldProps(f)} value={cost} inputMode="decimal"
+                  <Input {...fieldProps(f)} value={costFree ? "0" : cost} inputMode="decimal"
+                         disabled={costFree}
                          onChange={(e) => setCost(e.target.value)} />
                 )}
               </Field>
+              <Checkbox label="Free - it cost nothing" checked={costFree} onCheckedChange={setCostFree} />
               <Field label="Who from">
                 {(f) => (
                   <Input {...fieldProps(f)} value={supplier}

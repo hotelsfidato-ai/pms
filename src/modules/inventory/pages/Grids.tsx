@@ -8,7 +8,7 @@ import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, Button, Skeleton, EmptyState, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input,
-  Segmented,
+  Segmented, Checkbox,
 } from "@/components/ui";
 import { getInventory, getPriceGrid, setRate, setRestriction, type InventoryCell, type PriceCell, type Restriction } from "@/modules/inventory/data/rates";
 
@@ -497,6 +497,10 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
   const [label, setLabel] = useState("");
   const [extraAdult, setExtraAdult] = useState("");
   const [extraChild, setExtraChild] = useState("");
+  /* X-1 (D27-120): 0 only when ticked Free; empty is not priced yet. */
+  const [free, setFree] = useState(target.price === 0);
+  const [adultFree, setAdultFree] = useState(false);
+  const [childFree, setChildFree] = useState(false);
   const [saving, setSaving] = useState(false);
   const first = useRef<HTMLInputElement>(null);
 
@@ -516,13 +520,16 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
          covered. The screen asks for the last day INCLUDED, because
          that is the question a person is actually answering. */
       to: addDays(until, 1),
-      price: clearing ? null : Number(price),
+      price: clearing ? null : free ? 0 : Number(price),
+      ...(free && !clearing ? { free } : {}),
       ...(label.trim() ? { label: label.trim() } : {}),
       /* Empty is NOT zero. An unpriced extra adult makes the whole tariff
          unknown, which is the honest answer — a quiet zero would quote the
          couple's price for three people. */
-      ...(extraAdult.trim() === "" ? {} : { extraAdult: Number(extraAdult) }),
-      ...(extraChild.trim() === "" ? {} : { extraChild: Number(extraChild) }),
+      ...(adultFree ? { extraAdult: 0, extraAdultFree: true }
+        : extraAdult.trim() === "" ? {} : { extraAdult: Number(extraAdult) }),
+      ...(childFree ? { extraChild: 0, extraChildFree: true }
+        : extraChild.trim() === "" ? {} : { extraChild: Number(extraChild) }),
     });
     setSaving(false);
     if (!res.ok) return toast.error("Not saved", res.reason);
@@ -543,11 +550,13 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
               <Input
                 {...fieldProps(f)} ref={first}
                 type="number" inputMode="decimal" min={0}
-                value={price} onChange={(e) => setPrice(e.target.value)}
+                value={free ? "0" : price} onChange={(e) => setPrice(e.target.value)}
+                disabled={free}
                 className="text-lg tabular"
               />
             )}
           </Field>
+          <Checkbox label="Free" checked={free} onCheckedChange={setFree} />
 
           <Field label="Through" hint="The last day this price applies to.">
             {(f) => (
@@ -566,10 +575,11 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
                 <Input
                   {...fieldProps(f)}
                   type="number" inputMode="decimal" min={0}
-                  value={extraAdult}
+                  value={adultFree ? "0" : extraAdult}
                   onChange={(e) => setExtraAdult(e.target.value)}
                   placeholder="-"
                   numeric
+                  disabled={adultFree}
                 />
               )}
             </Field>
@@ -578,13 +588,16 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
                 <Input
                   {...fieldProps(f)}
                   type="number" inputMode="decimal" min={0}
-                  value={extraChild}
+                  value={childFree ? "0" : extraChild}
                   onChange={(e) => setExtraChild(e.target.value)}
                   placeholder="-"
                   numeric
+                  disabled={childFree}
                 />
               )}
             </Field>
+            <Checkbox label="Extra adult free" checked={adultFree} onCheckedChange={setAdultFree} />
+            <Checkbox label="Extra child free" checked={childFree} onCheckedChange={setChildFree} />
           </div>
 
           <Field label="Season name" hint="Optional. “Diwali week”, “Wedding”.">
@@ -618,7 +631,7 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
             )}
             <Button variant="primary"
               className="flex-1"
-              disabled={saving || price.trim() === ""}
+              disabled={saving || (price.trim() === "" && !free)}
               onClick={() => void save(false)}
             >
               {saving ? "Saving…" : "Set price"}

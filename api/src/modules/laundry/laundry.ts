@@ -4,6 +4,7 @@ import { withSession } from "../../auth.ts";
 import { businessDateFor, resolveDate } from "../../businessDate.ts";
 import { postCharge } from "../finance/index.ts";
 import type { PoolClient as Client } from "pg";
+import { priceProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE LAUNDRY
@@ -126,7 +127,7 @@ laundry.get("/:code/laundry/price-list", async (c) => {
 
 laundry.post("/:code/laundry/price-list", async (c) => {
   const input = (await c.req.json().catch(() => ({}))) as {
-    name?: string; service?: string; price?: unknown;
+    name?: string; service?: string; price?: unknown; free?: boolean;
   };
 
   const result = await withSession(c.get("subject"), async (client) => {
@@ -141,6 +142,8 @@ laundry.post("/:code/laundry/price-list", async (c) => {
 
     const price = priceOf(input.price ?? null);
     if (price === undefined) return refuse("That price is not a number.");
+    const zero = priceProblem(price, input.free === true);   /* X-1, D27-120 */
+    if (zero) return refuse(zero);
 
     try {
       const { rows } = await client.query<{ id: string }>(
@@ -166,7 +169,7 @@ laundry.post("/:code/laundry/price-list", async (c) => {
    already written keeps its own copy of the description and the price. */
 laundry.post("/:code/laundry/price-list/:id", async (c) => {
   const input = (await c.req.json().catch(() => ({}))) as {
-    price?: unknown; isActive?: boolean;
+    price?: unknown; isActive?: boolean; free?: boolean;
   };
 
   const result = await withSession(c.get("subject"), async (client) => {
@@ -177,6 +180,8 @@ laundry.post("/:code/laundry/price-list/:id", async (c) => {
     if (price === undefined && input.price !== undefined) {
       return refuse("That price is not a number.");
     }
+    const zero = priceProblem(price, input.free === true);   /* X-1, D27-120 */
+    if (zero) return refuse(zero);
 
     const { rows } = await client.query<{ id: string }>(
       `update laundry_price_items

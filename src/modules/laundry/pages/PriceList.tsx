@@ -7,7 +7,7 @@ import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import {
   Page, PageHeader, Card, Button, Skeleton, EmptyState, ErrorState, IconChip,
-  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, toast,
+  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, Checkbox, toast,
 } from "@/components/ui";
 import {
   getPriceList, addPriceItem, setPriceItem,
@@ -218,6 +218,18 @@ function ItemRow({
     onSaved();
   };
 
+  /* X-1 (the owner's D27-120): 0 only when ticked Free - the tick is
+     where somebody deciding it is free says so. */
+  const free = item.price === 0;
+  const tickFree = async (v: boolean) => {
+    setSaving(true);
+    const out = await setPriceItem(code, item.id, v ? { price: 0, free: true } : { price: null });
+    setSaving(false);
+    if (!out.ok) { toast.error(out.reason); return; }
+    setPrice(v ? "0" : "");
+    onSaved();
+  };
+
   const retire = async () => {
     const out = await setPriceItem(code, item.id, { isActive: !item.isActive });
     if (!out.ok) { toast.error(out.reason); return; }
@@ -235,16 +247,20 @@ function ItemRow({
       </td>
       <td className="px-4 py-3 text-right tabular">
         {item.isActive ? (
-          <Input
-            aria-label={`Price for ${item.name}, ${SERVICE_WORDS[item.service].toLowerCase()}`}
-            inputMode="decimal"
-            className="w-[100px] text-right"
-            placeholder="-"
-            value={price}
-            disabled={saving}
-            onChange={(e) => setPrice(e.target.value)}
-            onBlur={() => void save()}
-          />
+          <span className="inline-flex items-center gap-2">
+            <Input
+              aria-label={`Price for ${item.name}, ${SERVICE_WORDS[item.service].toLowerCase()}`}
+              inputMode="decimal"
+              className="w-[100px] text-right"
+              placeholder="-"
+              value={price}
+              disabled={saving || free}
+              onChange={(e) => setPrice(e.target.value)}
+              onBlur={() => void save()}
+            />
+            <Checkbox label="Free" checked={free} disabled={saving}
+              onCheckedChange={(v) => void tickFree(v)} />
+          </span>
         ) : (
           <span className={item.price === null ? "text-grey-500" : undefined}>
             {rupees(item.price)}
@@ -277,6 +293,7 @@ function AddDialog({
   const [name, setName] = useState("");
   const [service, setService] = useState<LaundryService>("wash");
   const [price, setPrice] = useState("");
+  const [free, setFree] = useState(false);
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -293,8 +310,10 @@ function AddDialog({
     const out = await addPriceItem(code, {
       name: name.trim(),
       service,
-      /* BLANK IS NOT ZERO. Nobody has priced it, so none is sent. */
-      price: typed === "" ? null : Number(typed),
+      /* BLANK IS NOT ZERO. Nobody has priced it, so none is sent; and 0
+         only ticked Free (D27-120). */
+      price: free ? 0 : typed === "" ? null : Number(typed),
+      ...(free ? { free } : {}),
     });
     setSaving(false);
 
@@ -347,18 +366,20 @@ function AddDialog({
 
           <Field
             label="Price"
-            hint={"Leave it blank if this property has not decided one. It reads \"-\", never 0, and a guest's bag holding it cannot be charged. Type 0 only where the answer really is free."}
+            hint={"Leave it blank if this property has not decided one. It reads \"-\", never 0, and a guest's bag holding it cannot be charged. Tick Free only where the answer really is free."}
           >
             {(p) => (
               <Input
                 {...fieldProps(p)}
                 inputMode="decimal"
-                value={price}
+                value={free ? "0" : price}
                 onChange={(e) => setPrice(e.target.value)}
+                disabled={free}
                 placeholder="Leave blank if nobody has priced it"
               />
             )}
           </Field>
+          <Checkbox label="Free" checked={free} onCheckedChange={setFree} />
 
           {problem && <p role="alert" className="text-sm text-brand-red-700">{problem}</p>}
         </div>

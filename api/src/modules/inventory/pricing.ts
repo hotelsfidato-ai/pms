@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
+import { priceProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    PRICING — one base, and everything else a difference from it
@@ -244,7 +245,7 @@ pricing.put("/:code/pricing/basis", async (c) => {
    call that could name a different one could reprice the wrong room by a
    typo — app.set_basis_price refuses to take one for the same reason. */
 pricing.put("/:code/pricing/base", async (c) => {
-  type Body = { from?: string; to?: string | null; price?: number | null; label?: string };
+  type Body = { from?: string; to?: string | null; price?: number | null; label?: string; free?: boolean };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   if (!input.from) return c.json(refuse("From which date?"), 409);
@@ -257,6 +258,9 @@ pricing.put("/:code/pricing/base", async (c) => {
   if (!clearing && (!Number.isFinite(price) || (price as number) < 0)) {
     return c.json(refuse("A base price is zero or more, or empty to clear it."), 409);
   }
+  /* RT-2, X-1 (D27-120): a base of 0 put every room and plan that day at ₹0. */
+  const zeroBase = priceProblem(price, input.free === true);
+  if (zeroBase) return c.json(refuse(zeroBase), 409);
   if (input.to && input.to <= input.from) {
     return c.json(refuse(
       "The end of a range has to be after its start. The last day is not "

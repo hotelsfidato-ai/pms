@@ -153,9 +153,15 @@ describe("the price list", () => {
     expect((await res.json() as { reason: string }).reason).toMatch(/already on the list/i);
   });
 
-  it("0 is allowed, because somebody deciding it is free is a decision", async () => {
+  /* The owner's D27-120 (28 September): 0 only when ticked Free - somebody
+     deciding it is free is a decision, and the tick is where it is made. */
+  it("takes 0 only when it is ticked Free", async () => {
+    const unticked = await post(`/${CODE}/laundry/price-list`,
+      { name: "Napkin", service: "wash", price: 0 });
+    expect(unticked.status).toBe(409);
+    expect((await unticked.json() as { reason: string }).reason).toMatch(/ticked Free/);
     expect((await post(`/${CODE}/laundry/price-list`,
-      { name: "Napkin", service: "wash", price: 0 })).status).toBe(200);
+      { name: "Napkin", service: "wash", price: 0, free: true })).status).toBe(200);
     const body = await (await get(`/${CODE}/laundry/price-list`)).json() as
       { items: Array<{ name: string; price: number | null }> };
     expect(body.items.find((i) => i.name === "Napkin")!.price).toBe(0);
