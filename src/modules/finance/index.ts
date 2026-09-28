@@ -13,3 +13,6 @@ export { BillPrint } from "./flows/BillPrint";
    card's one slab rule, and the companies a booking can be billed to. */
 export { getTaxRate } from "./data/tax";
 export { listBillingCompanies, type BillingCompany } from "./data/folios";
+/* D27-163 (delegated by the master): the one page takes an advance through
+   the bill's own payment door, held as the guest's credit (D27-4). */
+export { settle } from "./data/postings";

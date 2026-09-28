@@ -187,6 +187,9 @@ export async function createBooking(
       addressLine?: string; city?: string; state?: string;
       pincode?: string; country?: string;
     };
+    /** D27-163: the one page's Notes box, and the walk-in's tick. */
+    notes?: string;
+    isSingleLady?: boolean;
   },
 ): Promise<
   | { ok: true; groupId: string | null; rooms: number; guest: string;
