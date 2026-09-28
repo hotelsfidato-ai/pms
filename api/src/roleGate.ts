@@ -440,6 +440,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/channel-manager/availability/send`]: own("channel-manager/access.ts"),
   [`POST ${H}/channel-manager/bookings/:id/done`]: own("channel-manager/access.ts"),
 
+  /* crs: a desk note done is a change to how the booking stands (D27-168) */
+  [`POST ${H}/crs/bookings/:crsId/done`]: CHANGE_BOOKING,
+
   /* purchasing */
   [`PUT ${H}/purchasing/requesters/:role`]: own("purchasing/purchasingGrants.ts"),
   [`POST ${H}/purchasing/requests`]: own("purchasing/purchasingGrants.ts"),
@@ -675,6 +678,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/channel-manager/content`]: own("channel-manager/access.ts"),
   [`GET ${H}/channel-manager/availability`]: own("channel-manager/access.ts"),
   [`GET ${H}/channel-manager/bookings`]: own("channel-manager/access.ts"),
+
+  /* ── CRS bridge: the bookings the CRS sold, read as bookings are (D27-168) ── */
+  [`GET ${H}/crs/bookings`]: STAYS,
 
   /* ── Administration ── */
   [`GET /api/admin/hotels`]: own("admin/admin.ts: a group administrator"),
