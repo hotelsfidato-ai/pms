@@ -210,3 +210,14 @@ describe("settling it, and the tax invoice", () => {
     expect((await theBill()).invoice).toBe(number);
   });
 });
+
+describe("reopening it (the owner's D27-154)", () => {
+  it("is refused while the tax invoice stands, and takes nothing off the bill", async () => {
+    const before = await lines();
+    const r = await owner("POST", `/banquet/events/${eventId}/reopen`, { reason: "hall price was wrong" });
+    expect(r.status).toBe(409);
+    expect(await reason(r)).toContain("Only a credit note corrects it now");
+    expect(await lines()).toEqual(before);
+    expect((await theBill()).status).toBe("completed");
+  });
+});

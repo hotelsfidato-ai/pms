@@ -192,7 +192,8 @@ describe("who reads what (D27-140 to D27-147)", () => {
   });
 
   it("round E's function money writes keep their rules: the owner, an administrator and the GM; the invoice adds the accountant", () => {
-    for (const key of [`POST ${H}/banquet/events/:id/bill`, `POST ${H}/banquet/events/:id/payments`]) {
+    for (const key of [`POST ${H}/banquet/events/:id/bill`, `POST ${H}/banquet/events/:id/payments`,
+      /* D27-154 */ `POST ${H}/banquet/events/:id/reopen`]) {
       expect(whoMay(rule(key)), key).toEqual(["owner", "admin", "gm"]);
     }
     expect(whoMay(rule(`POST ${H}/banquet/events/:id/invoice`)))

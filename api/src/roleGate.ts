@@ -392,6 +392,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`DELETE ${H}/banquet/events/:id/catering/:lineId`]: FUNCTION_CHANGE,
   /* Round E (BQ-1): a function's bill. */
   [`POST ${H}/banquet/events/:id/bill`]: FUNCTION_MONEY,
+  /* D27-154: reopening the bill is the same people as billing it. */
+  [`POST ${H}/banquet/events/:id/reopen`]: FUNCTION_MONEY,
   [`POST ${H}/banquet/events/:id/payments`]: FUNCTION_MONEY,
   [`POST ${H}/banquet/events/:id/invoice`]: FUNCTION_INVOICE,
   [`POST ${H}/banquet/venues`]: HALLS,
