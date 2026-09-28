@@ -443,6 +443,11 @@ function Ticket({ line, action, busy, onMove }: {
         <p className="text-base text-grey-600 mt-1">
           {line.orderNo} · stop cooking this
         </p>
+        {line.cancelReason && (
+          /* The manager's reason (D27-119): "wrong table" and "dropped at
+             the pass" are different things to a kitchen. */
+          <p className="text-base text-ink-900 mt-1">Why: {line.cancelReason}</p>
+        )}
       </article>
     );
   }

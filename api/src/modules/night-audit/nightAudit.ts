@@ -3,6 +3,7 @@ import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
 import { POSTING_NIGHTS } from "../reports/index.ts";
+import { struckAfterKitchen } from "../pos/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE NIGHT AUDIT — closing a day
@@ -664,6 +665,9 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
         byTender: tenders.map((t) => ({
           method: t.method, amount: num(t.amount),
         })),
+        /* Dishes struck after the kitchen had them, and why (D27-119, the
+           owner's answer of 28 September). */
+        struck: await struckAfterKitchen(client, hotelId, businessDate),
       },
       /* Two drawers, side by side, never summed. */
       drawers: {

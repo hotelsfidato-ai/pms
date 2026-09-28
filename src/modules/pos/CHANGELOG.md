@@ -11,6 +11,14 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-28 · Fix round C: the kitchen keeps paid food, a reason to strike sent food, whole-rupee cash, a closed day stays closed
+
+**Asked for:** the owner's D27-116 (every BLOCKS WORK and WRONG RESULT in QA's restaurant and night-audit tables), D27-117 (ask before charging a bill to a room), D27-118 (on the till: the owner's answer 5), D27-119 (who strikes food the kitchen has). Branch `fix/restaurant-audit-28sep` from cp6 `631ce1f`; migration 151 (the master's number).
+**The owner's answers (28 September, round C):** 1 the existing roles strike sent food - owner, administrator, GM, hotel manager, kitchen manager - no Captain role; 2 a bill paid wholly in cash is rounded to the rupee, card/UPI/room exact; 3 the same people and a reason for fewer of a sent dish and for Close unpaid once any of the bill was sent; 4 the reason on the docket, the Kitchen screen, Close restaurant day and the night audit; 5 a closed restaurant day refuses new bills and payments until the night audit (no new "open the drawer" step); 6 fix now: more of a dish the kitchen has is a new line.
+**Shipped / found / proved / left open:** DEFECTS POS-22. **Commits:** on the branch.
+
+---
+
 ## 2026-09-28 · POS-19: the waiters list (`till.ts`, the read only) lists the hotel's people (D27-97)
 
 **Asked for:** the owner's D27-97, through the master: the same fault as housekeeping's HK-14. **Shipped:** the read uses `app.hotel_people` (migration 149), names only; branch `housekeeping/staff-lists-28sep`. **Proved:** `api/test/modules/pos/waitersList.test.ts` failed on the old code (1 failed) and passed on the fix; `cd api && npx tsc --noEmit` exit 0. Full gates: the master's combined run.

@@ -1137,7 +1137,7 @@ describe("the audit states the day rather than adding to it", () => {
         frontDesk: { shifts: number; opening: number; counted: number };
         till: { outlets: number; opening: number; counted: number };
       };
-      restaurant?: { orders: number; gross: number };
+      restaurant?: { orders: number; gross: number; struck?: unknown[] };
     };
     expect(body.ok, JSON.stringify(body)).toBe(true);
 
@@ -1155,6 +1155,10 @@ describe("the audit states the day rather than adding to it", () => {
     expect(body.restaurant).toBeTruthy();
     expect(body.restaurant!.orders).toBe(0);
     expect(body.restaurant!.gross).toBe(0);
+    /* D27-119: the dishes struck after the kitchen had them - read from
+       the list Close restaurant day shows (api/test/modules/pos/
+       restaurantFixes proves what is in it). None here, and said. */
+    expect(body.restaurant!.struck).toEqual([]);
 
     /* READ, NOT POSTED. The audit must not write the restaurant's
        takings onto the folio ledger — the till already did when it
