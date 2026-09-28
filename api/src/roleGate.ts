@@ -678,6 +678,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/staff`]: see("user", "the staff list"),
   [`GET ${H}/audit-log`]: own("admin/adminLists.ts: mayRead"),
   [`GET ${H}/settings`]: own("admin/adminLists.ts: mayRead"),
+  /* QA AD-1: what this server has set up, for whoever holds `integration`. */
+  [`GET ${H}/integrations`]: see("integration", "the integrations"),
   /* D27-91: the server's health, for the owner and an administrator. */
   [`GET ${H}/system-health`]: SYSTEM_HEALTH,
 };

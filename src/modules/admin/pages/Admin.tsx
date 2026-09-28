@@ -81,7 +81,9 @@ const STAFF_COLUMNS: Column<StaffRecord>[] = [
   },
   {
     key: "seen", header: "Last seen", hideBelow: "lg", numeric: true,
-    cell: () => <span className="text-grey-500">-</span>,
+    cell: (u) => (u.lastSeen
+      ? <span className="text-grey-600 tabular">{dateTime(u.lastSeen)}</span>
+      : <span className="text-grey-500">-</span>),
   },
 ];
 
@@ -329,28 +331,27 @@ export function AuditLogPage() {
 /* ── Integrations ────────────────────────────────────────────────── */
 
 const INT_TONE: Record<Integration["status"], Tone> = {
-  connected: "success",
-  "not-connected": "warning",
-  planned: "neutral",
+  "set-up": "success",
+  "not-set-up": "warning",
 };
 
 const INT_LABEL: Record<Integration["status"], string> = {
-  connected: "Connected",
-  "not-connected": "Not connected",
-  planned: "Planned",
+  "set-up": "Set up",
+  "not-set-up": "Not set up",
 };
 
 export function IntegrationsPage() {
+  const hotelId = useUi((s) => s.hotelId);
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["integrations"],
-    queryFn: listIntegrations,
+    queryKey: ["integrations", hotelId],
+    queryFn: () => listIntegrations(hotelId),
   });
 
   return (
     <Page>
       <PageHeader
         title="Integrations"
-        description="What this system talks to, and what it does not yet."
+        description="What this server has set up, as the server itself reports it."
       />
       {error ? (
         <Card>
@@ -383,9 +384,6 @@ export function IntegrationsPage() {
                   </StatusPill>
                 </div>
                 <p className="text-sm text-grey-600 mt-3 leading-relaxed">{i.detail}</p>
-                {i.stage && (
-                  <p className="text-2xs text-grey-500 mt-2.5">Arrives at {i.stage}</p>
-                )}
               </CardBody>
             </Card>
           ))}
