@@ -10,7 +10,7 @@ import { whyNotAttachable } from "../banquet/index.ts";
 import { overCashLimit, panFor } from "../finance/index.ts";
 /* The one way an outlet row is made (Restaurant setup, D22-6). */
 import { addOutlet } from "./pos.ts";
-import { priceProblem } from "../../validate.ts";
+import { phoneProblem, priceProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL — the POS built into the PMS
@@ -3100,6 +3100,9 @@ till.patch("/:code/till/orders/:id", async (c) => {
        waiter is not shown a constraint violation for a typo. */
     return c.json(refuse("How many people are eating?"), 409);
   }
+  /* X-2 (round D): "This order"'s phone "abc" was saved. */
+  const badPhone = phoneProblem(input.customerPhone);
+  if (badPhone) return c.json(refuse(badPhone), 409);
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));

@@ -4,6 +4,7 @@ import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { PoolClient as Client } from "pg";
 import { attachableFunctions } from "./attach.ts";
+import { emailProblem, phoneProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BANQUET HALL
@@ -314,6 +315,9 @@ banquet.post("/:code/banquet/events", async (c) => {
   if (!input.venueId) return c.json(refuse("Which hall?"), 409);
   if (!input.title?.trim()) return c.json(refuse("What is the function?"), 409);
   if (!input.hostName?.trim()) return c.json(refuse("Who is it for?"), 409);
+  /* X-2 (round D): the telephone and email are checked as everywhere. */
+  const contact = phoneProblem(input.hostPhone) ?? emailProblem(input.hostEmail);
+  if (contact) return c.json(refuse(contact), 409);
   if (!input.startsAt) return c.json(refuse("When does it start?"), 409);
   /* TILL WHEN. The whole module exists because this question was not
      being asked, so it is not optional and the refusal says why. */

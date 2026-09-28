@@ -5,6 +5,7 @@ import {
   ensureAccount, setAccountPassword, passwordProblem,
 } from "../../identity.ts";
 import type { PoolClient as Client } from "pg";
+import { phoneProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    ADMINISTRATION — the writes
@@ -541,6 +542,9 @@ admin.patch("/admin/staff/:id", async (c) => {
   if (fullName !== undefined && !fullName) {
     return c.json(refuse("A person needs a name."), 409);
   }
+  /* X-2, AD-3 (round D): a phone "abc" was saved. */
+  const badPhone = phoneProblem(input.phone);
+  if (badPhone) return c.json(refuse(badPhone), 409);
 
   const result = await withSession(c.get("subject"), async (client) => {
     /* A GM too, for somebody at their hotel (D22-3). */
