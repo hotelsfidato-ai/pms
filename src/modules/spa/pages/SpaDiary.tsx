@@ -84,7 +84,7 @@ export default function SpaDiaryPage() {
   if (diary.isLoading) {
     return (
       <Page>
-        <PageHeader title="Diary" description="Loading…" />
+        <PageHeader title="Spa diary" description="Loading…" />
         <Skeleton className="h-64" />
       </Page>
     );
@@ -97,7 +97,7 @@ export default function SpaDiaryPage() {
   if (!diary.data) {
     return (
       <Page>
-        <PageHeader title="Diary" />
+        <PageHeader title="Spa diary" />
         <ReadFailed error={readError(diary)} what="the spa diary"
                     onRetry={() => void diary.refetch()} />
       </Page>
@@ -110,7 +110,7 @@ export default function SpaDiaryPage() {
   return (
     <Page>
       <PageHeader
-        title="Diary"
+        title="Spa diary"
         description={
           booked === 0
             ? `Nothing booked on ${clockDate(from)}.`

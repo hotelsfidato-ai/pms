@@ -155,7 +155,7 @@ export default function LaundryPriceListPage() {
         title="Laundry price list"
         description="What this property charges for each thing it launders, item by item and service by service."
         breadcrumbs={[
-          { label: "Laundry", to: `/h/${code}/laundry` },
+          { label: "Dockets", to: `/h/${code}/laundry` },
           { label: "Price list" },
         ]}
         actions={

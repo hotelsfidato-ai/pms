@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserPlus, Check, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money } from "@/lib/format";
+import { money, dateShort } from "@/lib/format";
 import { rateOverrideNeedsReason, canConfirmWalkIn } from "@/lib/rules";
 import {
   Button, Field, Input, NativeSelect, Switch, toast,
@@ -160,7 +160,7 @@ export function WalkInFlow({
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
       <DialogContent
         title="Walk-in"
-        description={`Room ${roomNumber} · arriving ${date}`}
+        description={`Room ${roomNumber} · arriving ${dateShort(date)}`}
       >
         <div className="space-y-4">
           <Field label="Guest" required>
@@ -365,7 +365,7 @@ export function WalkInFlow({
             hint={
               rack === null
                 ? "This room type has no rate set, so there is nothing to compare against. Enter what the guest is paying."
-                : `Rack is ${money(rack)}`
+                : `Rack is ${money(rack)}. Left empty, the rack rate is charged.`
             }
           >
             {({ id }) => (

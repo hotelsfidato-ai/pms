@@ -203,7 +203,7 @@ export default function LaundryDocketsPage() {
   if (readProblem(q.error)?.kind === "refused") {
     return (
       <Page>
-        <PageHeader title="Laundry" />
+        <PageHeader title="Dockets" />
         <ReadFailed error={q.error} what="the laundry" onRetry={() => void q.refetch()} />
       </Page>
     );
@@ -212,7 +212,7 @@ export default function LaundryDocketsPage() {
   return (
     <Page>
       <PageHeader
-        title="Laundry"
+        title="Dockets"
         description="Every bag that has gone out - a guest's and the hotel's own - and what has come back."
         actions={
           <>

@@ -50,8 +50,8 @@ export default function RatesPage() {
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
             No channel is connected yet, so a rate changed here would move on this
             screen and nowhere else - not on Agoda, not on Booking.com, not in the
-            confirmation a guest receives. Editing arrives with the channel bridge at
-            Stage 9.
+            confirmation a guest receives. Editing comes once a channel manager is
+            connected.
           </p>
         </div>
       </div>

@@ -298,7 +298,7 @@ export function CompaniesPage() {
 
       <p className="text-xs text-grey-500 mt-4 leading-relaxed">
         Commission is charged outside this system today and prints as a dash rather
-        than a zero. It fills when the channel bridge lands at Stage 9.
+        than a zero. It fills once a channel manager is connected.
       </p>
     </Page>
   );

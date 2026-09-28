@@ -317,7 +317,7 @@ export default function InvoicesPage() {
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
             Not required of this group: registering each B2B invoice with
             the government portal begins above ₹5 crore of annual
-            turnover, and Fidato is under it. Invoices issued here are
+            turnover, and this group is under it. Invoices issued here are
             complete and valid GST invoices without an IRN.
             <strong className="font-medium text-ink-900">
               {" "}Tell us the year this group crosses ₹5 crore
