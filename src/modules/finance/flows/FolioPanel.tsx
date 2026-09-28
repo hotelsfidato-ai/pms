@@ -179,6 +179,8 @@ export function FolioPanel({
           allowed={(checkoutPermitted.data?.allowed ?? false)
                    && (!foreign || Boolean(nextDestination.trim()))}
           reason={checkoutPermitted.data?.reason}
+          guest={stay.guest}
+          room={stay.roomNumber}
           onCheckOut={async () => {
             const res = await checkOut(hotelId, stay.id, undefined, nextDestination.trim());
             if (res.ok) {
@@ -860,12 +862,18 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
 }
 
 function CheckOutButton({
-  allowed, reason, onCheckOut,
+  allowed, reason, guest, room, onCheckOut,
 }: {
   allowed: boolean;
   reason?: string;
-  onCheckOut: () => void;
+  guest: string;
+  room: string;
+  onCheckOut: () => Promise<void>;
 }) {
+  /* D27-117 (QA FD-16): "Are you sure?" first - a check-out closes the bill
+     and sends the room to housekeeping, and it went on one click. */
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   const button = (
     <Button
       /* Primary only once it may happen — while it is blocked, Settle
@@ -873,7 +881,7 @@ function CheckOutButton({
       variant={allowed ? "primary" : "secondary"}
       className="w-full"
       disabled={!allowed}
-      onClick={onCheckOut}
+      onClick={() => setOpen(true)}
       data-checkout
     >
       <LogOut className="size-4" />
@@ -889,6 +897,29 @@ function CheckOutButton({
           {reason}
         </p>
       )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          title={`Check ${guest} out?`}
+          description={`Room ${room}`}
+          size="sm"
+          footer={
+            <div className="flex gap-2 w-full justify-end">
+              <Button variant="secondary" onClick={() => setOpen(false)}>Not yet</Button>
+              <Button variant="primary" loading={busy} data-checkout-confirm
+                onClick={async () => {
+                  setBusy(true);
+                  try { await onCheckOut(); } finally { setBusy(false); setOpen(false); }
+                }}>
+                Check out
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-sm text-grey-700 leading-relaxed">
+            The bill closes and the room goes to housekeeping as dirty.
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
