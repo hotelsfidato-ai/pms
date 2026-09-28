@@ -206,11 +206,11 @@ async function maySwitchPerson(client: Client, staffId: string) {
 const OWN_ROLE =
   "You cannot change your own role. Ask the owner or an administrator to do it.";
 
-/** D22-2: the sentence for a GM asking to make an Admin. Null for any other
-    refusal, which keeps its own words. */
+/** D22-2, D27-140: the sentence for a GM or a hotel's Admin asking to make
+    an Admin. Null for any other refusal, which keeps its own words. */
 const adminRefusal = (role: string, allowed: string[]): string | null =>
   role === "admin" && !allowed.includes("admin") && allowed.length > 0
-    ? "Only the owner or an administrator can make somebody an Admin. "
+    ? "Only the owner can make somebody an Admin. "
       + `You may give: ${allowed.join(", ")}.`
     : null;
 

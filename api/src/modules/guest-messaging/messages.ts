@@ -36,18 +36,22 @@ export const guestMessages = new Hono<{ Variables: { subject: string } }>();
    when laundry and spa needed resources of their own and could not
    borrow one (D18-8).
 
-   ⚠ A COPY of `grantsFor(role, "reservation")` in src/lib/permissions.ts.
-   The server does not import the website's code, so the two are held
-   together by this module's own grants test, which fails the moment they
+   ⚠ 28 SEPTEMBER, THE OWNER (D27-144, QA RO-3): `customer`, not
+   `reservation`. A message carries the guest's number and what was said to
+   them - a guest's details - so the revenue manager, housekeeping, the
+   kitchen manager and the till, who read bookings but not guests, no
+   longer read these.
+
+   ⚠ A COPY of `grantsFor(role, "customer")` in api/src/permissions.ts,
+   held to it by this module's own grants test, which fails the moment they
    differ — the shape purchasingGrants.ts and stockGrants.ts both use. */
 export const VIEW_ROLES: readonly string[] = [
-  "owner", "admin", "gm", "hotel_manager", "revenue_manager", "kitchen_manager",
-  "front_desk", "pos", "housekeeping", "finance", "read_only",
+  "owner", "admin", "gm", "hotel_manager", "front_desk", "finance", "read_only",
 ];
 
 export const MESSAGES_REFUSED =
-  "What was sent to a guest is part of their booking, and your role cannot "
-  + "open bookings at this property.";
+  "What was sent to a guest is part of their guest record, and your role "
+  + "cannot open guests at this property.";
 
 /** Group admins answer for every property; everybody else for the ones
     they hold a role at. The same question purchasing and the Store ask. */

@@ -1,5 +1,6 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
+import { RequireAccess } from "@/components/app/RequireAccess";
 import FoliosPage from "@/modules/finance/pages/Folios";
 import CashieringPage from "@/modules/finance/pages/Cashiering";
 import {
@@ -54,7 +55,8 @@ export const routes = (
     />
     <Route
       path="/h/:code/city-ledger"
-      element={<><PropertyScope /><PropertyCityLedgerPage /></>}
+      /* Guarded since it is money owed (D27-145). */
+      element={<RequireAccess path="/h/:code/city-ledger" resource="commission"><PropertyScope /><PropertyCityLedgerPage /></RequireAccess>}
     />
   </>
 );

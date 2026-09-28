@@ -13,6 +13,7 @@ import {
 import { listPeople, createStaff, grantAccess, revokeAccess, deactivateStaff, amendStaff, reactivateStaff, setStaffPassword, setHomeScreen, MIN_PASSWORD, type AdminStaff, type HomeScreen, type RosterPlace } from "@/modules/admin/data/admin";
 import { useSession } from "@/lib/session";
 import { HOME_SCREENS } from "@/lib/homeScreen";
+import { ConfirmRemoveAccess } from "@/modules/admin/flows/ConfirmRemoveAccess";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PEOPLE WHO WORK HERE
@@ -233,6 +234,8 @@ function PersonCard({ person, places, onGrant, onChanged }: {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [password, setPassword] = useState(false);
+  /* D27-117: the ✕ asks first. */
+  const [taking, setTaking] = useState<string | null>(null);
 
   const bringBack = async () => {
     if (busy) return;
@@ -251,7 +254,9 @@ function PersonCard({ person, places, onGrant, onChanged }: {
 
   const revoke = async (code: string) => {
     const res = await revokeAccess(person.id, code);
+    setTaking(null);
     if (!res.ok) return toast.error("Not removed", res.reason);
+    toast.success(`${person.name} no longer works at ${code}`);
     onChanged();
   };
 
@@ -270,6 +275,11 @@ function PersonCard({ person, places, onGrant, onChanged }: {
 
   return (
     <li>
+      {taking && (
+        <ConfirmRemoveAccess name={person.name} code={taking}
+                             onCancel={() => setTaking(null)}
+                             onRemove={() => revoke(taking)} />
+      )}
       <Card className={cn(!person.isActive && "opacity-60")}>
         <CardBody className="space-y-3">
           <div className="flex items-start gap-x-3 gap-y-2 flex-wrap">
@@ -373,7 +383,7 @@ function PersonCard({ person, places, onGrant, onChanged }: {
                   {mayTake(a) && <button
                     type="button"
                     aria-label={`Remove ${a.code} from ${person.name}`}
-                    onClick={() => void revoke(a.code)}
+                    onClick={() => setTaking(a.code)}
                     className="press size-6 pointer-coarse:size-11 grid place-items-center rounded-full
                                text-grey-500 hover:text-brand-red-700
                                hover:bg-brand-red-50 cursor-pointer"
@@ -699,11 +709,11 @@ function AddPersonDialog({ open, places, placeRequired, onOpenChange, onAdded }:
           )}
           <p className="text-sm text-grey-600 rounded-lg bg-grey-50 px-3.5 py-3 leading-relaxed">
             {placeRequired
-              /* D22-2: the picker holds no Admin for a GM, and the server
-                 refuses one in the same words. */
+              /* D22-2, D27-140: the picker holds no Admin for a GM or a
+                 hotel's Admin, and the server refuses one in the same words. */
               ? "They see this property only."
                 + (place && !roles.includes("admin")
-                  ? " Only the owner or an administrator can make somebody an Admin."
+                  ? " Only the owner can make somebody an Admin."
                   : "")
               : <>
                   This adds an ordinary member of staff. Somebody who should reach

@@ -137,6 +137,12 @@ export interface NightAuditResult {
     tax: number;
     gross: number;
     byTender: Array<{ method: string; amount: number }>;
+    /** Dishes struck after the kitchen had them, with who and why
+        (D27-119, the owner's answer of 28 September). */
+    struck?: Array<{
+      orderNo: string; table: string | null; name: string; qty: number;
+      value: number; reason: string | null; by: string | null; at: string;
+    }>;
   };
 
   /** TWO drawers, and they are never added together. The front desk

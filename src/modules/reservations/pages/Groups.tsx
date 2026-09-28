@@ -9,6 +9,10 @@ import {
 } from "@/components/ui";
 import { listGroups, getGroup, type StayGroup } from "@/modules/reservations/data/groups";
 
+/* The server sends no balances to a role that reads bookings but not
+   bills (D27-143): null there is "not yours to see" - a dash, never ₹0. */
+const owed = (v: number | null | undefined): string => (v == null ? "-" : money(v));
+
 /* ══════════════════════════════════════════════════════════════════
    ONE BOOKING, ITS ROOMS BENEATH IT
 
@@ -191,14 +195,14 @@ function GroupRow({ group, code, open, onToggle }: {
             <div className="text-right shrink-0 pl-2">
               <p className="text-sm text-grey-500">Rooms owe</p>
               <p className="text-base tabular font-medium text-ink-900">
-                {money(group.guestBalance)}
+                {owed(group.guestBalance)}
               </p>
               <p className="text-sm text-grey-500 mt-1">Host owes</p>
               <p className={cn("text-base tabular font-medium",
-                group.masterBalance === null ? "text-grey-500" : "text-ink-900")}>
+                group.masterBalance == null ? "text-grey-500" : "text-ink-900")}>
                 {/* A dash, because most groups have no host account and
                     zero would say the host owes nothing. */}
-                {group.masterBalance === null ? "-" : money(group.masterBalance)}
+                {owed(group.masterBalance)}
               </p>
             </div>
           </button>
@@ -249,7 +253,7 @@ function GroupRow({ group, code, open, onToggle }: {
                             <StatusPill tone="neutral">Host pays</StatusPill>
                           )}
                           <span className="text-sm tabular text-ink-900 shrink-0 w-20 text-right">
-                            {money(r.balance)}
+                            {owed(r.balance)}
                           </span>
                           <ChevronRight className="size-4 text-grey-400 shrink-0" aria-hidden />
                         </Link>

@@ -85,3 +85,81 @@ begin
   select count(*) into n from pos_outlets where code = 'FNSET';
   perform test.ok('pos function', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- A DISH STRUCK AFTER THE KITCHEN HAD IT SAYS WHY (D27-119), AND A PAID DISH
+-- CAN STILL BE CARRIED OUT OF THE KITCHEN (QA POS-1)
+-- =============================================================================
+-- Who may strike is the till's to ask (api/test/modules/pos/restaurantFixes).
+-- What the database holds to: a strike of food the kitchen had carries a
+-- reason, and a settled order's lines stay frozen except for the kitchen
+-- status, which the pass has to be able to move for food paid before cooking.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_order uuid; bd date;
+  v_first bigint; v_second bigint; c text; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'STRUCK', 'Struck Test', 'food', v_staff)
+  returning id into v_outlet;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff)
+  returning id into v_order;
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, 'Struck Test Dish', 1, 100, 5, v_staff) returning id into v_first;
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, 'Paid Test Dish', 1, 100, 5, v_staff) returning id into v_second;
+  update pos_order_lines set kot_status = 'sent', kot_sent_at = now(), kot_no = 1
+   where order_id = v_order;
+
+  -- ---------- no reason, no strike ----------------------------------------------
+  -- By name, as above: every check on the table raises 23514.
+  c := null;
+  begin
+    update pos_order_lines set voided = true, voided_by = v_staff, voided_at = now()
+     where id = v_first;
+    c := 'it was allowed';
+    raise exception using errcode = 'P0001', message = 'undo the strike';
+  exception
+    when check_violation then get stacked diagnostics c = constraint_name;
+    when raise_exception then null;
+  end;
+  perform test.ok('pos strike', 'a dish the kitchen had, struck with no reason, is refused',
+    c = 'pos_order_lines_sent_strike_says_why', coalesce(c, 'it was allowed'));
+  perform test.raises('pos strike', 'a reason of spaces is no reason',
+    format($q$update pos_order_lines set voided = true, voided_by = %L, voided_at = now(),
+              void_reason = '   ' where id = %L$q$, v_staff, v_first), '23514');
+  perform test.allows('pos strike', 'with a reason it is struck',
+    format($q$update pos_order_lines set voided = true, voided_by = %L, voided_at = now(),
+              void_reason = 'dropped at the pass' where id = %L$q$, v_staff, v_first));
+  select count(*) into n from app.pos_struck_after_kitchen(a, bd)
+   where name = 'Struck Test Dish' and reason = 'dropped at the pass' and value = 100;
+  perform test.ok('pos strike', 'and the day''s list names it, why and what it was worth', n = 1, n::text);
+
+  -- ---------- paid before it was cooked ------------------------------------------
+  update pos_orders set status = 'settled', settled_by = v_staff, settled_at = now(),
+                        payment_method = 'card'
+   where id = v_order;
+  perform test.allows('pos strike', 'the kitchen moves a paid dish along',
+    format($q$update pos_order_lines set kot_status = 'ready' where id = %L$q$, v_second));
+  perform test.raises('pos strike', 'but the paid bill itself stays frozen',
+    format($q$update pos_order_lines set qty = 2 where id = %L$q$, v_second), '23000');
+  perform test.raises('pos strike', 'nor may a status move carry another change with it',
+    format($q$update pos_order_lines set kot_status = 'served', unit_price = 1
+              where id = %L$q$, v_second), '23000');
+
+  -- ---------- and the fixtures go ------------------------------------------------
+  alter table pos_order_lines disable trigger pos_order_lines_frozen;
+  delete from pos_order_lines where order_id = v_order;
+  delete from pos_orders where id = v_order;
+  alter table pos_order_lines enable trigger pos_order_lines_frozen;
+  delete from pos_outlets where id = v_outlet;
+  select count(*) into n from pos_outlets where code = 'STRUCK';
+  perform test.ok('pos strike', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;

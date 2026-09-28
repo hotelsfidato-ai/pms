@@ -141,12 +141,12 @@ const connected = () => {
 };
 
 describe("who may see what was sent to a guest", () => {
-  it("VIEW_ROLES is the website's matrix for `reservation`, exactly", () => {
+  it("VIEW_ROLES is the matrix for `customer`, exactly (D27-144)", () => {
     /* The server cannot import the website's code, so this list is a copy.
        A role given the grant in one place and not the other fails here
        rather than failing a person. */
     const fromMatrix = ASSIGNABLE_ROLES
-      .filter((r) => grantsFor(r, "reservation").includes("view"))
+      .filter((r) => grantsFor(r, "customer").includes("view"))
       .sort();
     expect([...VIEW_ROLES].sort()).toEqual(fromMatrix);
   });
@@ -154,7 +154,7 @@ describe("who may see what was sent to a guest", () => {
   it("opens for every role the matrix grants, and refuses every other", async () => {
     for (const role of ASSIGNABLE_ROLES) {
       const res = await call(staffByRole.get(role)!, "/guest-messages");
-      const mayLook = grantsFor(role, "reservation").includes("view");
+      const mayLook = grantsFor(role, "customer").includes("view");
       expect([role, res.status]).toEqual([role, mayLook ? 200 : 403]);
       if (!mayLook) {
         const body = await res.json() as { reason?: string };

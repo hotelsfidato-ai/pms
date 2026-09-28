@@ -37,6 +37,9 @@ const TAG = "SPATEST";
 
 let ownerId: string;
 let stayId: string;
+/* Three days of that stay: a treatment is booked on a day of the guest's
+   stay (BQ-2, D27-136), so the days below are the stay's own. */
+let D1: string; let D2: string; let D3: string;
 let hotelId: string;
 let massageId: string;
 let unpricedId: string;
@@ -85,6 +88,9 @@ beforeAll(async () => {
     `select id::text from reservations
       where hotel_id = $1 and status = 'checked_in' order by check_in limit 1`,
     [hotelId])).rows[0].id;
+  ({ d1: D1, d2: D2, d3: D3 } = (await sql(
+    `select check_in::text as d1, (check_in + 1)::text as d2, check_out::text as d3
+       from reservations where id = $1 and check_out >= check_in + 2`, [stayId])).rows[0]);
 
   for (const role of ["front_desk", "housekeeping", "gm", "chef"]) {
     await person(role, role);
@@ -232,7 +238,7 @@ describe("who may do what (the owner, 18 September)", () => {
 
     const booked = await post(hk, "/spa/appointments",
       { stayId, treatmentId: massageId, therapistId: priyaId,
-        startsAt: "2027-04-01T11:00" });
+        startsAt: `${D1}T11:00` });
     expect(booked.status).toBe(403);
     expect(((await booked.json()) as { reason: string }).reason)
       .toContain("Taking a spa booking is for reception");
@@ -274,7 +280,7 @@ describe("the day diary", () => {
   it("stores a time on the PROPERTY's clock, not the server's (MEMORY 297)", async () => {
     const made = await post(byRole.get("front_desk")!, "/spa/appointments", {
       stayId, treatmentId: massageId, therapistId: priyaId,
-      startsAt: "2027-04-01T11:00",     // as a clerk at Akkalkot types it
+      startsAt: `${D1}T11:00`,     // as a clerk at Akkalkot types it
     });
     expect(made.status, await made.clone().text()).toBe(200);
     const id = ((await made.json()) as { id: string }).id;
@@ -286,24 +292,24 @@ describe("the day diary", () => {
       `select to_char(starts_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI') as utc,
               to_char(ends_at   at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI') as utc_end
          from spa_appointments where id = $1`, [id]);
-    expect(rows[0].utc).toBe("2027-04-01T05:30");
+    expect(rows[0].utc).toBe(`${D1}T05:30`);
     /* And the length came from the treatment, not the caller. */
-    expect(rows[0].utc_end).toBe("2027-04-01T06:30");
+    expect(rows[0].utc_end).toBe(`${D1}T06:30`);
 
     /* And it reads back as the clerk typed it. */
-    const diary = await get(ownerId, "/spa?from=2027-04-01&to=2027-04-01");
+    const diary = await get(ownerId, `/spa?from=${D1}&to=${D1}`);
     const { therapists } = (await diary.json()) as {
       therapists: Array<{ id: string; appointments: Array<{ startsAt: string; endsAt: string }> }>;
     };
     const mine = therapists.find((t) => t.id === priyaId)!.appointments[0]!;
-    expect(mine.startsAt).toBe("2027-04-01T11:00");
-    expect(mine.endsAt).toBe("2027-04-01T12:00");
+    expect(mine.startsAt).toBe(`${D1}T11:00`);
+    expect(mine.endsAt).toBe(`${D1}T12:00`);
   });
 
   it("refuses the same therapist at the same hour, and NAMES what is in the way", async () => {
     const clash = await post(byRole.get("front_desk")!, "/spa/appointments", {
       stayId, treatmentId: unpricedId, therapistId: priyaId,
-      startsAt: "2027-04-01T11:30",
+      startsAt: `${D1}T11:30`,
     });
     expect(clash.status).toBe(409);
 
@@ -318,13 +324,13 @@ describe("the day diary", () => {
   it("takes the same hour for a second therapist", async () => {
     const r = await post(byRole.get("front_desk")!, "/spa/appointments", {
       stayId, treatmentId: massageId, therapistId: sunitaId,
-      startsAt: "2027-04-01T11:00",
+      startsAt: `${D1}T11:00`,
     });
     expect(r.status, await r.clone().text()).toBe(200);
   });
 
   it("keeps a therapist with an empty day in the diary", async () => {
-    const diary = await get(ownerId, "/spa?from=2027-04-05&to=2027-04-05");
+    const diary = await get(ownerId, `/spa?from=${D2}&to=${D2}`);
     const { therapists } = (await diary.json()) as {
       therapists: Array<{ id: string; appointments: unknown[] }>;
     };
@@ -336,11 +342,11 @@ describe("the day diary", () => {
   it("shows an unpriced treatment as a dash, never as free", async () => {
     const made = await post(byRole.get("front_desk")!, "/spa/appointments", {
       stayId, treatmentId: unpricedId, therapistId: sunitaId,
-      startsAt: "2027-04-02T09:00",
+      startsAt: `${D2}T09:00`,
     });
     expect(made.status, await made.clone().text()).toBe(200);
 
-    const diary = await get(ownerId, "/spa?from=2027-04-02&to=2027-04-02");
+    const diary = await get(ownerId, `/spa?from=${D2}&to=${D2}`);
     const { therapists } = (await diary.json()) as {
       therapists: Array<{ id: string; appointments: Array<{ amount: number | null }> }>;
     };
@@ -354,7 +360,7 @@ describe("the day diary", () => {
         where hotel_id = $1 and status = 'checked_out' limit 1`, [hotelId]);
     const r = await post(byRole.get("front_desk")!, "/spa/appointments", {
       stayId: rows[0].id, treatmentId: massageId, therapistId: priyaId,
-      startsAt: "2027-04-03T11:00",
+      startsAt: `${D1}T11:00`,
     });
     expect(r.status).toBe(409);
     expect(((await r.json()) as { reason: string }).reason)
@@ -364,7 +370,7 @@ describe("the day diary", () => {
   it("refuses a cancellation with no reason, and takes one with", async () => {
     const made = await post(byRole.get("front_desk")!, "/spa/appointments", {
       stayId, treatmentId: massageId, therapistId: priyaId,
-      startsAt: "2027-04-04T15:00",
+      startsAt: `${D3}T15:00`,
     });
     const id = ((await made.json()) as { id: string }).id;
 
@@ -381,7 +387,7 @@ describe("the day diary", () => {
     /* And the hour comes back — a cancellation releases the therapist. */
     const again = await post(byRole.get("front_desk")!, "/spa/appointments", {
       stayId, treatmentId: massageId, therapistId: priyaId,
-      startsAt: "2027-04-04T15:00",
+      startsAt: `${D3}T15:00`,
     });
     expect(again.status, await again.clone().text()).toBe(200);
   });
@@ -402,7 +408,7 @@ describe("closing a treatment", () => {
     await setModule(true);
     const made = await post(byRole.get("front_desk")!, "/spa/appointments", {
       stayId, treatmentId: massageId, therapistId: priyaId,
-      startsAt: "2027-04-06T10:00",
+      startsAt: `${D3}T10:00`,
     });
     expect(made.status, await made.clone().text()).toBe(200);
     closeId = ((await made.json()) as { id: string }).id;
@@ -453,7 +459,7 @@ describe("closing a treatment", () => {
     expect(Number(line[0].tax_rate)).toBe(18);
     expect(line[0].reservation_id).toBe(stayId);
     /* On the property's clock, as a clerk reads it (D17-77). */
-    expect(line[0].description).toContain("06/04/2027 10:00");
+    expect(line[0].description).toContain(`${D3.slice(8)}/${D3.slice(5, 7)}/${D3.slice(0, 4)} 10:00`);
 
     const { rows: appt } = await sql(
       `select status, settlement, closed_by::text, posting_id::text
@@ -480,11 +486,59 @@ describe("closing a treatment", () => {
   it("will not put an unpriced treatment on a bill", async () => {
     const made = await post(byRole.get("front_desk")!, "/spa/appointments", {
       stayId, treatmentId: unpricedId, therapistId: sunitaId,
-      startsAt: "2027-04-06T14:00",
+      startsAt: `${D3}T14:00`,
     });
     const id = ((await made.json()) as { id: string }).id;
     const r = await post(byRole.get("front_desk")!, `/spa/appointments/${id}/close`, {});
     expect(r.status).toBe(409);
     expect(((await r.json()) as { reason: string }).reason).toContain("no price");
+  });
+});
+
+/* BQ-2 (QA, 28 September; the owner's D27-136): a treatment is booked for
+   a day of the guest's stay, and goes on the room bill once they are in. */
+describe("a guest still to arrive (BQ-2)", () => {
+  let arriving: { id: string; check_in: string; before: string };
+  let bookedId: string;
+
+  beforeAll(async () => {
+    arriving = (await sql(
+      `select id::text, check_in::text, (check_in - 1)::text as before
+         from reservations
+        where hotel_id = $1 and status = 'confirmed'
+          and check_in > app.business_date($1)
+        order by check_in limit 1`, [hotelId])).rows[0];
+  });
+
+  it("refuses a treatment on a day before they arrive", async () => {
+    const r = await post(byRole.get("front_desk")!, "/spa/appointments", {
+      stayId: arriving.id, treatmentId: massageId, therapistId: sunitaId,
+      startsAt: `${arriving.before}T10:00`,
+    });
+    expect(r.status).toBe(409);
+    expect(((await r.json()) as { reason: string }).reason).toContain("not staying on that day");
+  });
+
+  it("takes one on their arrival day, and will not charge it to the room before they check in", async () => {
+    const made = await post(byRole.get("front_desk")!, "/spa/appointments", {
+      stayId: arriving.id, treatmentId: massageId, therapistId: sunitaId,
+      startsAt: `${arriving.check_in}T16:00`,
+    });
+    expect(made.status, await made.clone().text()).toBe(200);
+    bookedId = ((await made.json()) as { id: string }).id;
+
+    const r = await post(byRole.get("front_desk")!, `/spa/appointments/${bookedId}/close`, {});
+    expect(r.status).toBe(409);
+    expect(((await r.json()) as { reason: string }).reason).toContain("not checked in yet");
+    const { rows } = await sql("select status, posting_id from spa_appointments where id = $1", [bookedId]);
+    expect(rows[0]).toEqual({ status: "booked", posting_id: null });
+  });
+
+  it("keeps 0 only when it is ticked Free (D27-120)", async () => {
+    const bare = await post(ownerId, "/spa/treatments", { name: `${TAG} Foot rub`, minutes: 15, price: 0 });
+    expect(bare.status).toBe(409);
+    expect(((await bare.json()) as { reason: string }).reason).toContain("ticked Free");
+    const free = await post(ownerId, "/spa/treatments", { name: `${TAG} Foot rub`, minutes: 15, price: 0, free: true });
+    expect(free.status, await free.clone().text()).toBe(200);
   });
 });

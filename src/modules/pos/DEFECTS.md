@@ -182,6 +182,14 @@ Nine reads in `data/till.ts` ended in `catch { return [] }` (or `null`): the men
 
 **The rule** — A value kept for offline use must never be overwritten by a read that failed. A `catch` that returns a default turns a failure into a fact, and a cache believes facts.
 
+### POS-23 · An order settled to a banquet function reached no bill and no tax invoice — FIXED 28 September (round E)
+
+**Found** — round E, planning the function's bill (QA BQ-1): since 099 an order settled "to the function" touched no folio; the function's quotation counted it, but its bill, its payments and its tax invoice could not.
+
+**Fixed** — the owner's D27-133: the till posts it onto the function's open bill exactly as the room branch posts a room charge (one line per tax rate from `app.pos_order_by_tax`, a `pos_tickets` row each, `source_type 'pos'`), with `payment_method` still 'function'. The day book's till side (`reports/figures.ts` posSales) leaves 'function' out as it leaves 'room', so it is counted once, from the folio.
+
+**Proved** — `api/test/modules/pos/functionOrders.test.ts` "onto the function's bill as a room is charged", which also checks the day book's till side does not move; seen to fail on the old till.
+
 ### POS-20 · Two Settle presses on one bill both took the money — FIXED 28 September (release fixes)
 
 **Found** — 28 September, the release review before 40c9510 went live.
@@ -203,6 +211,27 @@ Nine reads in `data/till.ts` ended in `catch { return [] }` (or `null`): the men
 **Proved** — `rerun.sh` with the old 038: "1 of 148 abort on a second run" at 038 ("violated by some row"); with the fix all 148 re-runnable.
 
 **The rule** — MEMORY 293 and 299 again: every constraint a later file widens must be guarded where an earlier file re-adds it, and the replay test needs the row.
+
+### POS-22 · Fix round C of the QA of 28 September: the kitchen, the strike, the drawer, the closed day — FIXED 28 September
+
+**Found** — `docs/qa/qa-2026-09-28.md` ("Point of sale and kitchen", "Night audit and closing the restaurant day"), and one more found while fixing them. Branch `fix/restaurant-audit-28sep`; the owner's answers of 28 September, round C 1-6 (the master numbers them D27-…).
+
+- **QA POS-1 · paid food left the pass.** The kitchen feed read `o.status = 'open'` only, so a dish charged to a room or paid before it was cooked vanished. Behind it, a second guard: 028's `pos_order_lines_frozen` refused EVERY change to a settled order's lines, so the chef could not have moved such a dish even once it showed. **Done:** the feed reads open orders and settled orders of today's business date (`till.ts`, the pass); migration 151 lets the kitchen status, and nothing else, change on a settled order.
+- **QA POS-2 / NA-4 · `window.prompt()`.** Close unpaid (Till, Terminal) and the dish note (Terminal) asked through the browser, which the app's window refuses: nothing happened and the day could not close. **Done:** `components/AskDialog.tsx`, one dialog for a reason, a note or "are you sure?".
+- **QA POS-3 · Tables and the Till disagreed.** A table typed on the Till ("AC2") was kept as text with no `table_id`, so Tables showed it Free and a second bill opened on it; the demo loader did the same. **Done:** `tableNamed` puts a typed name that is a floor table on that table (both routes that open an order) and a running bill refuses a second; `api/scripts/demo-history.ts` sets `table_id` (and reads every table, not the first 12).
+- **QA POS-4 · D27-119.** A dish the kitchen had was struck on one tap, by anyone, with no reason. **Done:** `sentStrikeRefusal` in `till.ts` - the owner, an administrator, the GM, the hotel manager or the kitchen manager, with a reason (the owner's answers 1 and 3: also for fewer of a sent dish, and for Close unpaid once any of the bill was sent). The reason is kept (`void_reason`, 151, a check refuses a strike of sent food without one), printed on the docket ("STOP - TAKEN OFF"), shown on the Kitchen screen, and listed on Close restaurant day and in the night audit (`app.pos_struck_after_kitchen`, the answer 4).
+- **QA NA-2 · "Over by ₹0.30" on an exact count.** The Till shows whole rupees; the payment was written with paise. **Done:** a bill paid wholly in cash is rounded to the rupee at the settle, on its Round off line (the owner's answer 2); the Part panel shows the whole-rupee bill when every part is cash.
+- **QA NA-3 · "Settled ₹0" after six bills.** `day-end` was cached for good, like every non-money screen. **Done:** it is a money key (`src/lib/freshness.ts`, the master's yes).
+- **D27-117 · Charge to room asks first** (Till and Terminal), naming the guest (QA POS-8).
+- **D27-118 · a closed restaurant day took new bills.** **Done:** `dayClosed` refuses opening a bill and settling once Close restaurant day has counted the drawer, until the night audit moves the date (the owner's answer 5).
+- **Found while fixing: a second plate never reached the kitchen.** Tapping a dish again after its docket (or + on it) raised the sent line: the guest paid for two, the kitchen's slip said one, and "Send" found nothing new. **Done** (the owner's answer 6): the bump skips sent lines and + on a sent line adds a new pending one.
+- **QA X-2 (the order's phone)** uses `phoneProblem` from `api/src/validate.ts`.
+
+**Proved** — `api/test/modules/pos/restaurantFixes.test.ts` (12; 11 fail against cp6's `till.ts`, the twelfth is the unchanged "a waiter strikes an unsent dish"), `src/modules/pos/restaurantFixes.test.tsx` (4, all fail against cp6's screens), `src/modules/night-audit/nightAudit.test.tsx` (the Run test now confirms first), `src/lib/freshness.test.ts`, `db/tests/modules/pos.sql` ("pos strike", 8). On screen (fidato_s27): a struck Paneer Tikka with its reason on the Kitchen screen and the docket; Close unpaid and Charge to room ("Charge ₹651 to room 202? Sameer Gokhale ...") through the dialog; a room-charged order kept on the pass and moved to preparing; Close restaurant day live after a settle, an exact ₹767 count "The drawer balances", the day closed, a new bill then refused; the night audit's restaurant lines with both strikes.
+
+**Left open** — the Till's own lines do not show a strike's reason (the Kitchen, docket and day's lists do); the pad's quantity stepper on a dish with add-ons leaves the add-ons' quantity (older than this round). Cosmetic QA rows (POS-9, POS-10, POS-11) wait for after the pilot (D27-116); POS-5 (menu ₹0) is round D's.
+
+**The rule** — When a read starts showing what it used to hide, walk every write that screen makes against the new rows: a guard behind the filter (here, the freeze) only shows up then. And a "merge into the line" must stop at the point of no return: once the kitchen has a line, more of it is a new line.
 
 ---
 

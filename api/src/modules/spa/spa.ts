@@ -3,6 +3,7 @@ import type { Context, Next } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import { postCharge } from "../finance/index.ts";
+import { priceProblem } from "../../validate.ts";
 import type { PoolClient as Client } from "pg";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -204,8 +205,8 @@ spa.get("/:code/spa/treatments", async (c) => {
    without one is unpriced until somebody types a figure. */
 spa.post("/:code/spa/treatments", async (c) => {
   const input = await c.req.json<{
-    name?: string; minutes?: number; price?: number | null; notes?: string;
-  }>().catch(() => ({}) as { name?: string; minutes?: number; price?: number | null; notes?: string; });
+    name?: string; minutes?: number; price?: number | null; free?: boolean; notes?: string;
+  }>().catch(() => ({}) as { name?: string; minutes?: number; price?: number | null; free?: boolean; notes?: string; });
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -222,9 +223,9 @@ spa.post("/:code/spa/treatments", async (c) => {
       return refuse("How long does it take? The diary places a booking by "
         + "its length.");
     }
-    if (input.price !== undefined && input.price !== null && input.price < 0) {
-      return refuse("A price cannot be less than nothing.");
-    }
+    /* D27-120: 0 only when ticked Free, never negative (round D's rule). */
+    const badPrice = priceProblem(input.price, input.free === true);
+    if (badPrice) return refuse(badPrice);
 
     try {
       const { rows } = await client.query<{ id: string }>(
@@ -252,9 +253,9 @@ spa.post("/:code/spa/treatments", async (c) => {
    booking that already happened still names what it was. */
 spa.patch("/:code/spa/treatments/:id", async (c) => {
   const input = await c.req.json<{
-    name?: string; minutes?: number; price?: number | null;
+    name?: string; minutes?: number; price?: number | null; free?: boolean;
     isActive?: boolean; notes?: string | null;
-  }>().catch(() => ({}) as { name?: string; minutes?: number; price?: number | null; isActive?: boolean; notes?: string | null; });
+  }>().catch(() => ({}) as { name?: string; minutes?: number; price?: number | null; free?: boolean; isActive?: boolean; notes?: string | null; });
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -262,9 +263,9 @@ spa.patch("/:code/spa/treatments/:id", async (c) => {
     if (!(await holdsRoleHere(client, hotelId, SPA_LIST_ROLES))) {
       return forbidden(LIST_REFUSED);
     }
-    if (input.price !== undefined && input.price !== null && input.price < 0) {
-      return refuse("A price cannot be less than nothing.");
-    }
+    /* D27-120: 0 only when ticked Free, never negative (round D's rule). */
+    const badPrice = priceProblem(input.price, input.free === true);
+    if (badPrice) return refuse(badPrice);
     if (input.minutes !== undefined && (!input.minutes || input.minutes <= 0)) {
       return refuse("How long does it take? The diary places a booking by "
         + "its length.");
@@ -493,9 +494,16 @@ spa.post("/:code/spa/appointments", async (c) => {
        BILLED. A treatment booked against a cancelled booking is a
        charge with nowhere to go, and a checked-out guest's folio is
        closed — finance's own words when it refuses a posting. */
-    const { rows: stay } = await client.query<{ status: string }>(
-      `select status from reservations where hotel_id = $1 and id = $2`,
-      [hotelId, input.stayId],
+    /* BQ-2 (QA, 28 September; the owner's D27-136): a treatment is booked
+       for a day of the guest's stay, arrival to departure, on the
+       property's clock. Tomorrow's arrival may be booked for tomorrow;
+       not for today, when they are not here. */
+    const { rows: stay } = await client.query<{ status: string; on_a_stay_day: boolean }>(
+      `select status,
+              app.hotel_day(hotel_id, app.hotel_moment(hotel_id, $3))
+                between check_in and check_out as on_a_stay_day
+         from reservations where hotel_id = $1 and id = $2`,
+      [hotelId, input.stayId, input.startsAt],
     );
     if (!stay[0]) return refuse("That booking is not at this property.");
     if (stay[0].status === "cancelled") {
@@ -503,6 +511,9 @@ spa.post("/:code/spa/appointments", async (c) => {
     }
     if (stay[0].status === "checked_out") {
       return refuse("That guest has checked out.");
+    }
+    if (!stay[0].on_a_stay_day) {
+      return refuse("The guest is not staying on that day. Book the treatment for a day from their arrival to their departure.");
     }
 
     try {
@@ -615,9 +626,10 @@ spa.post("/:code/spa/appointments/:id/close", async (c) => {
 
     const { rows } = await client.query<{
       status: string; agreed_amount: string | null; reservation_id: string;
-      treatment: string; therapist: string; starts_at: string;
+      treatment: string; therapist: string; starts_at: string; stay_status: string;
     }>(
       `select a.status, a.agreed_amount::text, a.reservation_id::text,
+              (select r.status from reservations r where r.id = a.reservation_id) as stay_status,
               t.name as treatment, th.name as therapist,
               app.hotel_clock(a.hotel_id, a.starts_at) as starts_at
          from spa_appointments a
@@ -640,6 +652,10 @@ spa.post("/:code/spa/appointments/:id/close", async (c) => {
     if (a.agreed_amount === null) {
       return refuse("This treatment has no price, so it cannot go on a bill. "
         + "Price it under Treatments first.");
+    }
+    /* BQ-2 (D27-136): Charge to room once the guest is checked in. */
+    if (!["checked_in", "checked_out", "cancelled"].includes(a.stay_status)) {
+      return refuse("The guest has not checked in yet, so it cannot go on their room bill.");
     }
 
     let postingId: string | null = null;

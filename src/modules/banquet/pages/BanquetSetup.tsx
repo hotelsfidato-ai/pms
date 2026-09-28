@@ -10,7 +10,7 @@ import {
   StatusPill, IconChip,
 } from "@/components/ui";
 import { getBanquetSetup, addBanquetVenue, amendBanquetVenue, addBanquetPackage, type BanquetVenue } from "@/modules/banquet/data/banquet";
-import { ReadFailed, ReadStale, readError } from "@/components/ui";
+import { Checkbox, ReadFailed, ReadStale, readError } from "@/components/ui";
 import { queryKeys } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -223,6 +223,8 @@ function VenueDialog({
   const [rate, setRate] = useState(
     venue?.defaultRate === null || venue?.defaultRate === undefined
       ? "" : String(venue.defaultRate));
+  /* D27-120: 0 is kept only when ticked Free. */
+  const [free, setFree] = useState(venue?.defaultRate === 0);
   const [notes, setNotes] = useState(venue?.notes ?? "");
   const [busy, setBusy] = useState(false);
 
@@ -233,7 +235,7 @@ function VenueDialog({
     const body = {
       name: name.trim(),
       seated: num(seated), floating: num(floating),
-      defaultRate: num(rate),
+      defaultRate: num(rate), free,
       notes: notes || undefined,
     };
     const res = venue
@@ -296,9 +298,13 @@ function VenueDialog({
             }
           >
             {(f) => (
-              <Input {...fieldProps(f)} value={rate} inputMode="decimal"
-                     placeholder="-"
-                     onChange={(e) => setRate(e.target.value)} />
+              <div className="flex items-center gap-3">
+                <Input {...fieldProps(f)} value={rate} inputMode="decimal"
+                       placeholder="-" disabled={free}
+                       onChange={(e) => setRate(e.target.value)} />
+                <Checkbox label="Free" checked={free}
+                          onCheckedChange={(on) => { setFree(on); setRate(on ? "0" : ""); }} />
+              </div>
             )}
           </Field>
 
@@ -323,6 +329,7 @@ function PackageDialog({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [rate, setRate] = useState("");
+  const [free, setFree] = useState(false);
   const [mealType, setMealType] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -331,7 +338,7 @@ function PackageDialog({
     const res = await addBanquetPackage(hotelId, {
       name: name.trim(),
       description: description || undefined,
-      ratePerHead: rate.trim() === "" ? null : Number(rate),
+      ratePerHead: rate.trim() === "" ? null : Number(rate), free,
       mealType: mealType || undefined,
     });
     setBusy(false);
@@ -368,9 +375,13 @@ function PackageDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Rate a head" hint="Optional.">
               {(f) => (
-                <Input {...fieldProps(f)} value={rate} inputMode="decimal"
-                       placeholder="-"
-                       onChange={(e) => setRate(e.target.value)} />
+                <div className="flex items-center gap-3">
+                  <Input {...fieldProps(f)} value={rate} inputMode="decimal"
+                         placeholder="-" disabled={free}
+                         onChange={(e) => setRate(e.target.value)} />
+                  <Checkbox label="Free" checked={free}
+                          onCheckedChange={(on) => { setFree(on); setRate(on ? "0" : ""); }} />
+                </div>
               )}
             </Field>
             <Field label="Kind" hint="Veg, non-veg, jain…">

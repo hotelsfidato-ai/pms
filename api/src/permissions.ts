@@ -278,13 +278,14 @@ const MATRIX: Record<Role, ResourceGrants> = {
      against arrivals, and touches no money at all — a kitchen manager
      who can edit an invoice is a kitchen manager who will be asked to. */
   kitchen_manager: {
-    dashboard: READ,
+    /* No `dashboard` and no `report` (D27-141, 28 September): both carry
+       revenue - the owner's rule of 15 September, which until then only
+       shortened the menu while the address still opened them. */
     reservation: READ,
     inventory: ["view", "edit"],
     /* The menu is theirs to keep (pos/nav.ts); it was a by-name exception
        beside the rate setters' grant until it had a resource of its own. */
     menu: ["view", "create", "edit"],
-    report: READ,
     notification: READ,
     stock: ["view", "create"],
     equipment: READ,
@@ -294,7 +295,8 @@ const MATRIX: Record<Role, ResourceGrants> = {
   /* Narrower again. A chef moves dishes along and sees what is waiting;
      nothing else on the estate is any of their business. */
   chef: {
-    dashboard: READ,
+    /* No `dashboard` (D27-141): it carries revenue. No `reservation`, so no
+       Rooms and no Housekeeping board either (D27-142). */
     inventory: READ,
     notification: READ,
     stock: READ,
@@ -327,9 +329,9 @@ const MATRIX: Record<Role, ResourceGrants> = {
      when they are away (S14). Still RAISES a purchase and approves none —
      and never approves their own request (076, in the database). */
   stores: {
-    dashboard: READ,
+    /* No `dashboard` and no `report` (D27-141): both carry revenue. No
+       `reservation`, so no Rooms and no Housekeeping board (D27-142). */
     inventory: ["view", "create", "edit", "export"],
-    report: READ,
     notification: READ,
     stock: ["view", "create", "edit", "export"],
     equipment: ["view", "create", "edit", "approve"],
@@ -339,7 +341,7 @@ const MATRIX: Record<Role, ResourceGrants> = {
   /* A till, not a person. It opens orders and settles them, and it can
      read the rooms it may charge to. Nothing else. */
   pos: {
-    dashboard: READ,
+    /* No `dashboard` (D27-141): it carries revenue. */
     reservation: READ,
     inventory: READ,
   },
@@ -347,10 +349,9 @@ const MATRIX: Record<Role, ResourceGrants> = {
   housekeeping: {
     laundry: ["view", "create", "edit", "cancel"],
     spa: ["view"],
-    dashboard: READ,
+    /* No `dashboard` and no `report` (D27-141): both carry revenue. */
     reservation: READ,
     inventory: ["view", "edit"],
-    report: READ,
     notification: READ,
     stock: READ,
     equipment: READ,

@@ -140,6 +140,13 @@ describe("the Night audit screen", TEST_LIMIT, () => {
 
     fireEvent.click(button);
 
+    /* D27-117 (QA NA-1): it asks first, naming the day, and sends nothing
+       until the person says yes. It used to close the day on one click. */
+    const sure = await screen.findByRole("button", { name: /^Close 16 Sep/ }, SLOW);
+    expect(document.body.textContent).toContain("Close Wednesday, 16 September 2026?");
+    expect(posted, "the day was closed before anybody confirmed").toHaveLength(0);
+    fireEvent.click(sure);
+
     await waitFor(() => expect(posted).toHaveLength(1), SLOW);
     expect(posted[0], "Run sent no date, so the server closes its own day")
       .toEqual({ businessDate: SHOWN });

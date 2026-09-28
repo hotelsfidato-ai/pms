@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { ReactElement } from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
-import { HOTEL, startSignedIn } from "@/test/app";
+import { HOTEL, signedIn, startSignedIn } from "@/test/app";
 import { getBanquetDiary, getBanquetEvent, getBanquetSetup, type BanquetEvent } from "@/modules/banquet/data/banquet";
 import * as frontDoor from "@/modules/banquet";
 import BanquetPage from "@/modules/banquet/pages/Banquet";
@@ -81,7 +81,7 @@ function aFunction(over: Partial<BanquetEvent> = {}): BanquetEvent {
     notes: null, cancelReason: null,
     venue: { id: "v-1", name: "North hall", seated: 250, floating: null, defaultRate: null },
     registeredBy: "Owner", registeredAt: "2026-11-01T10:30",
-    confirmedBy: "Owner", folioId: "f-1", catering: [],
+    confirmedBy: "Owner", folioId: "f-1", taxWarning: null, bill: null, invoice: null, catering: [],
     restaurantOrders: [],
     money: { venue: 60000, food: 0, pos: 0, total: 60000, unpriced: null },
     ...over,
@@ -180,7 +180,8 @@ describe("one function", () => {
     server({ [EVENT]: () => aFunction() });
     eventPage();
 
-    expect(await screen.findByText("A bill is open for this function.")).toBeTruthy();
+    expect(await screen.findByText("The bill")).toBeTruthy();
+    expect(screen.getByText("Nothing is on the bill yet.")).toBeTruthy();
     expect(screen.queryByText(/folio/i)).toBeNull();
     expect(screen.getByText("14 Nov 2026, 6:00 PM")).toBeTruthy();
     expect(screen.getByText("1 Nov 2026, 10:30 AM")).toBeTruthy();
@@ -208,6 +209,72 @@ describe("one function", () => {
     expect(screen.getByText("Open")).toBeTruthy();
     expect(screen.getByText("An open order is not in the total until it is settled.")).toBeTruthy();
     expect(screen.getByText("Restaurant orders", { selector: "dt" })).toBeTruthy();
+  });
+
+  it("warns while the banquet tax is not set (D27-124)", async () => {
+    const warning = "Banquet tax is not set: ask the GM to set it before the bill.";
+    server({ [EVENT]: () => aFunction({ taxWarning: warning }) });
+    eventPage();
+    expect(await screen.findByText(warning)).toBeTruthy();
+  });
+
+  it("sends a hall price of 0 only with Free ticked (D27-120)", async () => {
+    const calls: Array<{ url: string; body: unknown }> = [];
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") {
+        calls.push({ url, body: JSON.parse(String(init.body)) });
+        return { ok: true } as never;
+      }
+      return aFunction({ agreedAmount: null }) as never;
+    });
+    eventPage();
+    fireEvent.click(await screen.findByText("Set the hall price"));
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Free" }));
+    await vi.waitFor(() =>
+      expect((screen.getByLabelText("Agreed amount") as HTMLInputElement).value).toBe("0"));
+    fireEvent.click(screen.getByText("Save"));
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]!.body).toEqual({ agreedAmount: 0, free: true });
+  });
+
+  it("offers reception no money on a function's bill (D27-132)", async () => {
+    server({ [EVENT]: () => aFunction() });
+    eventPage();
+    expect(await screen.findByText("The bill")).toBeTruthy();
+    expect(screen.queryByText("Take an advance")).toBeNull();
+    expect(screen.queryByText("Bill the function")).toBeNull();
+  });
+
+  it("offers the owner an advance and the bill, then Settle and the invoice (BQ-1)", async () => {
+    const owner = () => signedIn({ scope: {
+      staffId: "33333333-3333-3333-3333-333333333333", email: "owner@fidato.in",
+      fullName: "Group Owner", isGroupAdmin: true, hotels: [],
+    } });
+    owner();
+    server({ [EVENT]: () => aFunction() });
+    eventPage();
+    expect(await screen.findByText("Take an advance")).toBeTruthy();
+    expect(screen.getByText("Bill the function")).toBeTruthy();
+    expect(screen.getByText(/No GST receipt voucher/)).toBeTruthy();
+  });
+
+  it("after the bill: the figures, Settle, and the invoice once issued", async () => {
+    signedIn({ scope: {
+      staffId: "33333333-3333-3333-3333-333333333333", email: "owner@fidato.in",
+      fullName: "Group Owner", isGroupAdmin: true, hotels: [],
+    } });
+    server({ [EVENT]: () => aFunction({
+      status: "completed", bill: { charges: 60000, tax: 3000, paid: 20000, balance: 43000 },
+      invoice: "5EL/2026-27/00007",
+    }) });
+    eventPage();
+    expect(await screen.findByText("Settle")).toBeTruthy();
+    expect(screen.getByText("Balance")).toBeTruthy();
+    expect(screen.getByText("₹43,000")).toBeTruthy();
+    expect(screen.getByText("Tax invoice 5EL/2026-27/00007").closest("a")!.getAttribute("href"))
+      .toBe(`/h/${HOTEL}/invoices/doc/5EL/2026-27/00007`);
+    expect(screen.queryByText("Issue tax invoice")).toBeNull();
+    expect(screen.queryByText("Change the hall price")).toBeNull();
   });
 
   it("says plainly when no restaurant order is charged to it", async () => {

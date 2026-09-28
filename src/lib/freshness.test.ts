@@ -29,6 +29,10 @@ describe("money is re-checked", () => {
     }
   });
 
+  it("covers Close restaurant day's figures (QA NA-3)", () => {
+    expect(MONEY_KEYS).toContain("day-end");
+  });
+
   it("leaves rooms, menus and the floor as they were", () => {
     const client = fresh();
     for (const key of ["rooms", "floor", "till-menu", "housekeeping"]) {

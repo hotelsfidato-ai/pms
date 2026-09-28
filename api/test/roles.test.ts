@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../src/server.ts";
 import { closePool } from "../src/db.ts";
 import {
-  ASSIGNABLE_ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, canAccess,
+  ASSIGNABLE_ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, RESOURCES, canAccess,
 } from "../../src/lib/permissions.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -132,8 +132,9 @@ describe("the roles", () => {
       /* Asked through `canAccess`, which is what every screen calls.
          A role with no matrix entry answers false to everything: the
          person signs in and the product is empty, with no error
-         anywhere. Every role must reach at least the dashboard. */
-      expect(canAccess(role, "dashboard"), `${role} cannot see anything`)
+         anywhere. Every role must reach at least one screen - not the
+         Dashboard since D27-141, which keeps it from the working roles. */
+      expect(RESOURCES.some((r) => canAccess(role, r)), `${role} cannot see anything`)
         .toBe(true);
     }
   });

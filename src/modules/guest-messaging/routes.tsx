@@ -18,7 +18,7 @@ export const routes = (
   <Route
     path="/h/:code/guest-messages"
     element={
-      <RequireAccess path="/h/:code/guest-messages" resource="reservation">
+      <RequireAccess path="/h/:code/guest-messages" resource="customer">
         <PropertyScope /><GuestMessagesPage />
       </RequireAccess>
     }

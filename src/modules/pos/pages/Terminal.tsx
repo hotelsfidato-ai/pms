@@ -18,6 +18,7 @@ import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { SlipNotice, openSlip, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
+import { AskDialog, SENT_STRIKE, type Ask } from "@/modules/pos/components/AskDialog";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TERMINAL
@@ -194,32 +195,54 @@ export default function TerminalPage() {
     refresh();
   };
 
-  const setQty = async (lineId: string, qty: number) => {
+  /* Every question this screen asks, in a dialog: window.prompt() is
+     refused by the app's window and by kiosk shells (QA POS-2). */
+  const [ask, setAsk] = useState<Ask | null>(null);
+
+  const setQty = async (lineId: string, qty: number, reason?: string) => {
     if (!orderId) return;
-    const res = await setLineQty(hotelId, orderId, lineId, qty);
+    const res = await setLineQty(hotelId, orderId, lineId, qty, reason);
     if (!res.ok) return toast.error("Not changed", res.reason);
     refresh();
   };
 
-  const note = async (item: MenuItem) => {
+  const note = (item: MenuItem) => {
     if (!orderId) return;
     /* The dish dialog has its own note field. */
     if (asks(item)) { setAsking(item); return; }
     /* Modifiers. The column and the API have carried a note per line
        since 028 and nothing ever sent one, so "no chilli" reached the
        kitchen by shouting. */
-    const text = window.prompt(`Anything to say about the ${item.name}?`);
-    if (text === null) return;
-    const res = await addLine(hotelId, orderId, item.id, 1, text.trim() || undefined);
-    if (!res.ok) return toast.error("Not added", res.reason);
+    setAsk({
+      title: `A note for the ${item.name}`,
+      field: { label: "Anything to say about it?", required: false, hint: "No chilli, well done - it prints on the kitchen docket." },
+      confirm: "Add it",
+      onConfirm: async (text) => {
+        const res = await addLine(hotelId, orderId, item.id, 1, text || undefined);
+        if (!res.ok) return void toast.error("Not added", res.reason);
+        refresh();
+      },
+    });
+  };
+
+  const strike = async (lineId: string, reason?: string) => {
+    if (!orderId) return;
+    const res = await voidLine(hotelId, orderId, lineId, reason);
+    if (!res.ok) return toast.error("Not struck", res.reason);
     refresh();
   };
 
-  const strike = async (lineId: string) => {
-    if (!orderId) return;
-    const res = await voidLine(hotelId, orderId, lineId);
-    if (!res.ok) return toast.error("Not struck", res.reason);
-    refresh();
+  /* Once the kitchen has a dish, fewer of it or none is a manager's, with a
+     reason (D27-119). Before, it is the waiter's as ever. */
+  const takeOff = (l: { id: string; name: string; qty: number; kotStatus: string }, qty: number) => {
+    const go = (why?: string) => (qty === 0 ? strike(l.id, why) : setQty(l.id, qty, why));
+    if (l.kotStatus === "pending") return void go();
+    setAsk({
+      title: qty === 0 ? `Take off ${l.name}?` : `${l.qty - qty} fewer ${l.name}?`,
+      body: SENT_STRIKE,
+      field: { label: "Why is it coming off?", required: true },
+      confirm: "Take it off", onConfirm: (why) => go(why),
+    });
   };
 
   const kot = async () => {
@@ -281,14 +304,33 @@ export default function TerminalPage() {
     refresh();
   };
 
-  const abandon = async () => {
+  const abandon = () => {
     if (!orderId) return;
-    const reason = window.prompt("Why is this order being closed unpaid?");
-    if (!reason?.trim()) return;
-    const res = await abandonOrder(hotelId, orderId, reason.trim());
-    if (!res.ok) return toast.error("Not closed", res.reason);
-    setOrderId(null); setSettling(false);
-    refresh();
+    setAsk({
+      title: "Close this bill unpaid?",
+      body: "It stays on the record with this reason."
+        + ((current.data?.lines ?? []).some((l) => !l.voided && l.kotStatus !== "pending")
+          ? ` ${SENT_STRIKE}` : ""),
+      field: { label: "Why is it being closed unpaid?", required: true },
+      confirm: "Close unpaid",
+      onConfirm: async (reason) => {
+        const res = await abandonOrder(hotelId, orderId, reason);
+        if (!res.ok) return void toast.error("Not closed", res.reason);
+        setOrderId(null); setSettling(false);
+        refresh();
+      },
+    });
+  };
+
+  /* D27-117: charging to a room asks first, naming the guest (POS-8). */
+  const askRoom = () => {
+    const guests = (rooms.data ?? []).filter((r) => r.room === room.trim()).map((r) => r.guest);
+    if (guests.length === 0) return void settle("room");   // the server says why not
+    setAsk({
+      title: `Charge ${moneyPrecise(current.data?.gross ?? 0)} to room ${room.trim()}?`,
+      body: `${guests.join(" or ")} will see it on their room bill.`,
+      confirm: "Charge to room", onConfirm: () => settle("room"),
+    });
   };
 
   const order = current.data ?? null;
@@ -388,6 +430,7 @@ export default function TerminalPage() {
   /* ── The terminal ───────────────────────────────────────────── */
   return (
     <Shell>
+      <AskDialog ask={ask} onClose={() => setAsk(null)} />
       <header className="flex items-center gap-4 px-5 h-16 border-b border-grey-200 bg-white shrink-0">
         <UtensilsCrossed className="size-5 text-brand-orange shrink-0" />
         <div className="min-w-0 flex-1">
@@ -589,7 +632,7 @@ export default function TerminalPage() {
                           36 is under every touch guideline there is. */}
                       <button
                         type="button"
-                        onClick={() => void note(item)}
+                        onClick={() => note(item)}
                         disabled={!item.isActive || order?.status !== "open"}
                         aria-label={`Add ${item.name} with a note`}
                         title="Add with a note"
@@ -757,7 +800,7 @@ export default function TerminalPage() {
                       <div className="flex items-center gap-1 mt-1">
                         <button
                           type="button"
-                          onClick={() => void setQty(l.id, l.qty - 1)}
+                          onClick={() => takeOff(l, l.qty - 1)}
                           aria-label={`One fewer ${l.name}`}
                           className={STEP}
                         >
@@ -776,7 +819,7 @@ export default function TerminalPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => void strike(l.id)}
+                          onClick={() => takeOff(l, 0)}
                           aria-label={`Strike ${l.name}`}
                           className="press size-11 grid place-items-center rounded-full text-grey-500 hover:text-brand-red-700 hover:bg-brand-red-50 ml-auto cursor-pointer"
                         >
@@ -874,7 +917,7 @@ export default function TerminalPage() {
                     <button
                       type="button"
                       disabled={!room.trim() || busy}
-                      onClick={() => void settle("room")}
+                      onClick={askRoom}
                       className="press w-full h-14 rounded-full bg-brand-orange-600 hover:bg-brand-orange-700 text-white text-base font-semibold disabled:opacity-50"
                     >
                       Charge to the room
@@ -962,7 +1005,7 @@ export default function TerminalPage() {
                         </button>
                       ))}
                     </div>
-                    <button type="button" onClick={() => void abandon()}
+                    <button type="button" onClick={abandon}
                       className={cn(GHOST, "w-full h-12")}>
                       Close unpaid
                     </button>
