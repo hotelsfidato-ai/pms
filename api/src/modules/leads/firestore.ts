@@ -1,0 +1,121 @@
+/* ══════════════════════════════════════════════════════════════════
+   THE LEADS APP, READ ONLY (D27-100, D27-103, D27-168)
+
+   The market-to-revenue app keeps running; the PMS only reads it, with
+   the read-only Google login the owner creates (a service account whose
+   one role is Cloud Datastore Viewer - Google refuses its every write).
+   Firestore's REST API, three calls and nothing else:
+
+     query   runQuery            documents of one collection, in order
+     count   runAggregationQuery how many a query matches
+     get     batchGet            which of these documents still exist
+
+   ⚠ EVERY READ IS COUNTED. The app is on the free plan: 50,000 reads a
+   day, SHARED with the live app, and a careless copy stops the app
+   saving until midnight Pacific. What Google charges, as `counted` is
+   told it: a query, one per document back and one when nothing comes
+   back; a count, one per 1,000 matched; a get, one per document asked
+   for, found or not (the conservative reading). The sync decides whether
+   there is budget left BEFORE it asks; this file only counts.
+
+   Nothing here writes, and no key is in this file: the token comes from
+   the server's settings (M2R_SERVICE_ACCOUNT), handed in.
+   ══════════════════════════════════════════════════════════════════ */
+
+export type Doc = { name: string; id: string; fields: Record<string, unknown> };
+export type Query = Record<string, unknown>;
+
+export type Reader = {
+  /** Documents of one collection under `parent` ("" is the root, or
+      "conversations/<id>" for a lead's messages), in the query's order. */
+  query(parent: string, structuredQuery: Query): Promise<Doc[]>;
+  /** How many documents a root query matches. */
+  count(structuredQuery: Query): Promise<number>;
+  /** Which of these documents ("conversations/<id>") still exist. */
+  get(paths: readonly string[]): Promise<{ found: Doc[]; missing: string[] }>;
+};
+
+/** A refusal from Google, named by its status only: the body is never
+    kept, and telemetry records an error by its name (errorKind). */
+export class LeadsAppError extends Error {
+  constructor(readonly status: number) {
+    super(`The leads app answered ${status}.`);
+    this.name = `LeadsApp${status}`;
+  }
+}
+
+type FirestoreValue = Record<string, unknown>;
+
+/** A Firestore value as plain data. Timestamps stay ISO strings. */
+export function decode(v: FirestoreValue): unknown {
+  if ("stringValue" in v) return v["stringValue"];
+  if ("timestampValue" in v) return v["timestampValue"];
+  if ("integerValue" in v) return Number(v["integerValue"]);
+  if ("doubleValue" in v) return v["doubleValue"];
+  if ("booleanValue" in v) return v["booleanValue"];
+  if ("referenceValue" in v) return v["referenceValue"];
+  if ("mapValue" in v) return decodeFields((v["mapValue"] as { fields?: Record<string, FirestoreValue> }).fields ?? {});
+  if ("arrayValue" in v) return ((v["arrayValue"] as { values?: FirestoreValue[] }).values ?? []).map(decode);
+  return null; // nullValue, and bytes or places, which nothing here reads
+}
+
+const decodeFields = (fields: Record<string, FirestoreValue>) =>
+  Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, decode(v)]));
+
+const toDoc = (d: { name: string; fields?: Record<string, FirestoreValue> }): Doc =>
+  ({ name: d.name, id: d.name.split("/").pop()!, fields: decodeFields(d.fields ?? {}) });
+
+export function makeReader(o: {
+  projectId: string;
+  token: () => Promise<string>;
+  counted: (reads: number) => void;
+  fetch?: typeof fetch;
+}): Reader {
+  const root = `projects/${o.projectId}/databases/(default)/documents`;
+  const base = `https://firestore.googleapis.com/v1/${root}`;
+  const call = o.fetch ?? fetch;
+
+  async function post(url: string, body: unknown): Promise<unknown[]> {
+    const res = await call(url, {
+      method: "POST",
+      headers: { authorization: `Bearer ${await o.token()}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      /* A refused call is counted as one read, to be on the safe side. */
+      o.counted(1);
+      throw new LeadsAppError(res.status);
+    }
+    return (await res.json()) as unknown[];
+  }
+
+  return {
+    async query(parent, structuredQuery) {
+      const rows = await post(`${base}${parent ? `/${parent}` : ""}:runQuery`, { structuredQuery }) as
+        { document?: { name: string; fields?: Record<string, FirestoreValue> } }[];
+      const docs = rows.flatMap((r) => (r.document ? [toDoc(r.document)] : []));
+      o.counted(Math.max(1, docs.length));
+      return docs;
+    },
+
+    async count(structuredQuery) {
+      const rows = await post(`${base}:runAggregationQuery`, {
+        structuredAggregationQuery: { structuredQuery, aggregations: [{ alias: "n", count: {} }] },
+      }) as { result?: { aggregateFields?: { n?: FirestoreValue } } }[];
+      const n = Number(decode(rows[0]?.result?.aggregateFields?.n ?? { integerValue: "0" }));
+      o.counted(Math.max(1, Math.ceil(n / 1000)));
+      return n;
+    },
+
+    async get(paths) {
+      if (paths.length === 0) return { found: [], missing: [] };
+      const rows = await post(`${base}:batchGet`, { documents: paths.map((p) => `${root}/${p}`) }) as
+        { found?: { name: string; fields?: Record<string, FirestoreValue> }; missing?: string }[];
+      o.counted(paths.length);
+      return {
+        found: rows.flatMap((r) => (r.found ? [toDoc(r.found)] : [])),
+        missing: rows.flatMap((r) => (r.missing ? [r.missing.slice(root.length + 1)] : [])),
+      };
+    },
+  };
+}
