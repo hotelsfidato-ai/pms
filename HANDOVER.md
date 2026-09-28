@@ -47,11 +47,15 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
-### 28 September — the release waits on four fixes (branch `release/fixes-28sep`)
+### 28 September — the release waits on ten fixes (branch `release/fixes-28sep`)
 
-The owner held the release (`40c9510`, without the redesign) for four fixes,
-built ON 40c9510 in the release-fixes session and committed on
-`release/fixes-28sep`, not pushed. The master merges it into cp6 locally.
+The owner held the release for four fixes, then added six (D27-89), then made
+it ONE release with everything (D27-93): `release/fixes-28sep` is cp6 merged
+with all ten, committed here, not pushed; the master merges it. Fixes 5-10:
+POS-20 (a deploy after a bill settled to a function), NA-8 (other desks dated
+writes yesterday), NA-9 (a split-bill stay charged twice), FIN-11 (a double tap
+posted twice), FIN-12 (a company invoice with the guest's address), FIN-13 (no
+GSTIN, no invoice). The first four:
 (1) A GM could reset the password of somebody who is GM or Owner at another
 hotel - `may_manage_person` / `manages_person` in 133 now ask EVERY role
 (ADM-11). (2) Two Settle presses both took the money - the order is locked
@@ -312,8 +316,8 @@ npx vitest run          197 passed, 13 files
 ## 3 · What to do next, in order
 
 > **28 September: the release.** (1) The master merges `release/fixes-28sep`
-> and gives the owner the release steps; the release is 40c9510 plus that
-> branch. (2) After the server step, on the server, read-only:
+> and gives the owner the release steps; the release is cp6 plus that
+> branch (D27-93). (2) After the server step, on the server, read-only:
 > `systemctl show fidato-api -p ReadWritePaths` must list
 > `/var/lib/fidato/uploads` beside `/opt/fidato/api` (fix 3 cannot be tested
 > anywhere but the box).

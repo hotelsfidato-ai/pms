@@ -40,6 +40,26 @@ they read, or the branch it drops is untested everywhere at once.
 
 ## Fixed
 
+### NA-9 · A stay with two open folios (a split bill) was charged each night twice
+
+**Found** 28 September, the deep audit (D27-89). The room-charge query joined every open folio, so a stay with a second folio came back as two rows; the "already charged tonight" check ran for both before either insert. And `app.folio_for_room_charge` took the stay's open folio with `limit 1` and no order.
+
+**Fixed** - one row per stay (`exists` an open folio), and 056's `folio_for_room_charge` orders by `opened_at, id` - the folio the stay opened first. Corrected in place, same signature (MEMORY 317).
+
+**Proved** - `nightAudit.test.ts`, "a stay with a second folio": one room charge, on the first folio; the old code posted two.
+
+**The rule** - A query that posts money asks "does one exist", never joins to "each one".
+
+### NA-8 · After the audit on one desk, every other desk still dated its writes yesterday
+
+**Found** 28 September, the deep audit (D27-89). A device learns the business date at sign-in; only the desk that ran the audit refreshed it. Five writers took the device's `businessDate` (`resolveDate`: a charge, a payment, a check-in, a walk-in, a laundry docket), so a charge hit the closed-day trigger as a 500 and an early check-in moved the arrival back onto a closed day.
+
+**Fixed** - `resolveDate` (`api/src/businessDate.ts`) uses the hotel's own date and ignores the device's; the five callers are unchanged. And each screen that opens re-reads the dates (`useSession.refreshDates`, from `AppShell`), moving the device when a day has closed elsewhere - the owner's choice, 28 September.
+
+**Proved** - `api/test/modules/finance/deviceDate.test.ts` (a charge sent with yesterday lands today; old: yesterday) and `src/lib/dateMoved.test.tsx` (opening a screen moves the device; old: stayed on 24 August).
+
+**The rule** - The server dates a write. A date the device sends is at most a question.
+
 ### NA-5 · A walk-in staying two nights or more was charged twice from the second night
 
 **Found** 24 September, opening the correction screen on a closed day in a

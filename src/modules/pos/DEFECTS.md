@@ -190,6 +190,16 @@ Nine reads in `data/till.ts` ended in `catch { return [] }` (or `null`): the men
 
 **The rule** — A race test proves nothing until it has failed on the code it guards; check that the two requests really overlap.
 
+### POS-20 · The first bill settled to a banquet function would have stopped every deploy after it — FIXED 28 September (release fixes)
+
+**Found** — 28 September, the deep audit (D27-89). `038` dropped and re-added `pos_orders_payment_valid` without 'function', unguarded; `099` widens it, guarded. On every replay 038 put the narrow check back, a settled-to-a-function row failed it, and the one migration transaction rolled back: `launch.sh` stops.
+
+**Fixed** — 038 replaces the check only while it does not know 'split' (099's pattern), corrected in place. `db/tests/rerun.sh` seeds a bill settled to its function between the passes, so the replay test sees the row production will have.
+
+**Proved** — `rerun.sh` with the old 038: "1 of 148 abort on a second run" at 038 ("violated by some row"); with the fix all 148 re-runnable.
+
+**The rule** — MEMORY 293 and 299 again: every constraint a later file widens must be guarded where an earlier file re-adds it, and the replay test needs the row.
+
 ---
 
 ## Project-wide entries about this service
