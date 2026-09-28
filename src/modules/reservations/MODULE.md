@@ -343,6 +343,7 @@ typed rates stay as they are, the 10% rule binds the Discount box.
 | GET / PUT | `/:code/room-promotions` | `desk.ts` | this hotel's list, name and percent |
 | POST | `/:code/stays/:id/confirm` | `desk.ts` | waiting -> confirmed, every waiting room of its group |
 | POST | `/:code/stays/:id/cancel` | `desk.ts` | waiting -> cancelled with a reason, every waiting room of its group; no charge, nothing sent, the room free at once (D27-64); the gate's reservation-cancel grant |
+|  |  |  | and since 28 Sep a CONFIRMED booking, this room only, under its frozen terms: `dryRun` answers `{ preview: { terms, charge } }` (charge null = no terms, 0 = free window); the retention goes on its bill; `waive` for owner/admin/GM (BK-1) |
 
 `POST /:code/bookings` now also takes `tentative`, `expectedDeparture`,
 `salesPerson`, `companyId`, `discount {percent, reason | promotionId}`,

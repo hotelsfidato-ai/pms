@@ -557,6 +557,16 @@ describe("the owner's answers of 22 September, through the real server", () => {
 
 /* ── D25-38: guests' ID and Form C details, read by the check-in roles only ── */
 
+/* ── GU-1 (round D): correcting a guest, read and write ── */
+
+describe("Edit guest (GU-1)", () => {
+  it("is read and changed by exactly the roles holding customer:edit", () => {
+    const EDITORS = ["owner", "admin", "gm", "hotel_manager", "front_desk"];
+    expect(whoMay(READ_RULES[`GET ${H}/guests/:id/record`]!)).toEqual(EDITORS);
+    expect(whoMay(WRITE_RULES[`PATCH ${H}/guests/:id`]!)).toEqual(EDITORS);
+  });
+});
+
 describe("the reads that hand out a guest's passport or ID number (D25-38)", () => {
   const CHECK_IN_ROLES = ["owner", "admin", "gm", "hotel_manager", "front_desk"];
   const READS: [string, string][] = [

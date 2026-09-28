@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
+import { folioFor } from "../../folio.ts";
 import { COMP_ROLES, holdsRoleAt } from "./book.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -163,25 +164,52 @@ desk.post("/:code/stays/:id/confirm", async (c) => {
    no cancelled booking), and any room given to it is released by 073's
    trigger. The whole booking, as Confirm does, with a short reason kept
    on it. For the people who may cancel a booking (the gate: reservation
-   cancel). A confirmed booking is not cancelled here. */
+   cancel). A CONFIRMED booking goes to cancelConfirmed, below (BK-1). */
 desk.post("/:code/stays/:id/cancel", async (c) => {
-  const input = await c.req.json<{ reason?: unknown }>().catch(() => ({}) as { reason?: unknown });
+  const input = await c.req.json<{ reason?: unknown; waive?: unknown; dryRun?: unknown }>()
+    .catch(() => ({}) as { reason?: unknown; waive?: unknown; dryRun?: unknown });
   const reason = typeof input.reason === "string" ? input.reason.trim() : "";
-  if (!reason) {
+  /* dryRun: what the terms would charge, written nowhere - the dialog shows
+     it before the clerk confirms (BK-1). */
+  const dryRun = input.dryRun === true;
+  if (!reason && !dryRun) {
     return c.json(refuse("Why is it cancelled? It stays on the booking, e.g. “Hotel full that week”."), 409);
   }
 
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
-    const { rows } = await client.query<{ reference: string; status: string }>(
-      "select reference, status from reservations where id = $1 and hotel_id = $2",
+    const { rows } = await client.query<{
+      reference: string; status: string; terms: string | null; basis: string | null;
+      retention: string | null; free: boolean | null; nightly: string;
+    }>(
+      /* THE TERMS FROZEN ON THE BOOKING (036, 037), and whether now is still
+         inside their free window: free until N hours before the hotel's
+         check-in time on the arrival day, on the hotel's clock. No window
+         (N null) means the charge applies from the moment of booking. */
+      `select r.reference, r.status, r.cancel_terms as terms, r.cancel_basis as basis,
+              app.retention_for(r.id, 'cancel')::text as retention,
+              now() < app.hotel_moment(r.hotel_id,
+                        r.check_in::text || 'T' || to_char(h.check_in_time, 'HH24:MI'))
+                      - make_interval(hours => r.cancel_free_until_hours) as free,
+              r.agreed_rate::text as nightly
+         from reservations r join hotels h on h.id = r.hotel_id
+        where r.id = $1 and r.hotel_id = $2`,
       [c.req.param("id"), hotelId]);
     const stay = rows[0];
     if (!stay) return refuse("No such booking.");
-    if (stay.status !== "tentative") {
-      return refuse(`${stay.reference} is not waiting for the hotel, so it is not cancelled here.`);
+    if (stay.status === "confirmed") {
+      return cancelConfirmed(client, hotelId, c.req.param("id"), stay,
+        { reason, dryRun, waive: input.waive === true, staffId: session.staffId });
     }
+    if (stay.status !== "tentative") {
+      const why: Record<string, string> = {
+        checked_in: "has arrived. Check them out instead.", checked_out: "has checked out.",
+        cancelled: "is already cancelled.", void: "was voided.", no_show: "was marked a no-show.",
+      };
+      return refuse(`${stay.reference} ${why[stay.status] ?? "cannot be cancelled."}`);
+    }
+    if (dryRun) return { ok: true as const, preview: { terms: null, charge: 0 } };
     const { rowCount } = await client.query(
       `update reservations
           set status = 'cancelled', cancelled_at = now(), cancelled_by = $3,
@@ -194,3 +222,73 @@ desk.post("/:code/stays/:id/cancel", async (c) => {
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, result.ok ? 200 : 409);
 });
+
+/* ── Cancelling a CONFIRMED booking (BK-1; the owner, 28 September) ────
+   Until now a confirmed booking could only be voided, and the Void dialog
+   itself says "use Cancel if the guest cancelled": a guest's cancellation
+   and its fee could not be recorded. The owner's answers:
+
+     · the terms frozen on the booking decide (036, 037): inside the free
+       window nothing; outside it, what the terms retain - posted on the
+       guest's bill as the night audit posts a no-show's, category misc at
+       the ROOM's slab (circular 178/10/2022, as nightAudit.ts says)
+     · no terms on the booking: no charge, and the dialog says so
+     · the owner, an administrator or the GM may waive it, with the reason
+     · THIS ROOM ONLY - a family of nine rooms losing one keeps eight
+     · an advance already paid stays on the bill; more than the fee shows
+       as owed back, on the refunds due, and nothing is refunded here
+
+   Every refusal above the first write (MEMORY 243). */
+async function cancelConfirmed(
+  client: Client, hotelId: string, stayId: string,
+  stay: { reference: string; terms: string | null; basis: string | null;
+          retention: string | null; free: boolean | null; nightly: string },
+  ask: { reason: string; dryRun: boolean; waive: boolean; staffId: string },
+) {
+  const charge = stay.basis === null ? null            // no terms recorded
+    : stay.free === true ? 0                           // inside the free window
+    : Number(stay.retention ?? 0);
+  const preview = { terms: stay.terms, charge };
+  if (ask.dryRun) return { ok: true as const, preview };
+
+  const owed = charge !== null && charge > 0;
+  const waive = owed && ask.waive;
+  if (waive && !(await holdsRoleAt(client, hotelId, COMP_ROLES))) {
+    return refuse("A cancellation charge is waived by the owner, an administrator or the general manager.");
+  }
+  if (owed && !waive) {
+    /* app.gst_rate RAISES on a property with no rule; asked politely first
+       (finance's postCharge does the same). */
+    const { rows: rate } = await client.query<{ rate: string | null }>(
+      "select app.gst_rate_or_null($1, 'room', $2::numeric)::text as rate", [hotelId, stay.nightly]);
+    if (rate[0]?.rate === null || rate[0]?.rate === undefined) {
+      return refuse("This property has no GST rule for rooms, so the cancellation charge cannot be billed. "
+        + "Set it in the GST card under Rooms and rates → Room types.");
+    }
+  }
+
+  if (owed && !waive) {
+    const folioId = await folioFor(client, hotelId, stayId);
+    if (!folioId) return refuse("Could not open a bill for this booking.");
+    await client.query(
+      `insert into folio_postings
+         (hotel_id, folio_id, business_date, category, description,
+          amount, tax_rate, tax_amount, source_type, posted_by)
+       select $1::uuid, $2::uuid, app.business_date($1), 'misc', $3::text, $4::numeric,
+              t.rate, round($4::numeric * t.rate / 100.0, 2), 'front_desk', $5::uuid
+         from (select app.gst_rate($1, 'room', $6::numeric) as rate) t`,
+      [hotelId, folioId, `Retention - cancellation${stay.terms ? ` (${stay.terms})` : ""}`,
+       charge, ask.staffId, stay.nightly]);
+  }
+
+  await client.query(
+    `update reservations
+        set status = 'cancelled', cancelled_at = now(), cancelled_by = $3, cancel_reason = $4
+      where hotel_id = $2 and id = $1 and status = 'confirmed'`,
+    [stayId, hotelId, ask.staffId,
+     waive ? `${ask.reason} (the ₹${charge!.toFixed(2)} charge waived)` : ask.reason]);
+  return {
+    ok: true as const, rooms: 1, reference: stay.reference,
+    charged: owed && !waive ? charge : 0, waived: waive,
+  };
+}

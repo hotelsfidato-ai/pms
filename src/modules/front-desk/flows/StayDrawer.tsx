@@ -9,7 +9,7 @@ import {
 } from "@/components/ui";
 import { getFolio } from "@/modules/finance";
 import { queryKeys, type Stay } from "@/data/repositories";
-import { setGuestVip } from "@/modules/guests";
+import { setGuestVip, EditGuestFlow } from "@/modules/guests";
 import { CheckInFlow } from "@/modules/front-desk/flows/CheckInFlow";
 import { StayActions } from "@/modules/front-desk/flows/StayActions";
 import { FolioPanel } from "@/modules/finance";
@@ -169,7 +169,11 @@ function StayBody({
           {/* The toggle, not a mark — it CHANGES the guest rather than
               reporting them, so it sits beside the marks, not in them. */}
           {stay.guestId && can(role, "edit", "customer") && (
-            <VipToggle hotelId={hotelId} stay={stay} />
+            <>
+              <VipToggle hotelId={hotelId} stay={stay} />
+              {/* GU-1: nothing could correct a guest's record before. */}
+              <EditGuest hotelId={hotelId} guestId={stay.guestId} />
+            </>
           )}
           {/* The CRM's: stayed with the group before, the WhatsApp tick,
               and Guest 360 for the three who may open it. */}
@@ -409,6 +413,26 @@ function Total({ label, value, emphasis, className }: {
         {value === null ? DASH : money(value)}
       </dd>
     </div>
+  );
+}
+
+/* ── Correcting the guest (GU-1) ──────────────────────────────────
+   The same quiet link as Mark VIP: it changes the guest, not the stay. */
+function EditGuest({ hotelId, guestId }: { hotelId: string; guestId: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="min-h-8 px-1 text-sm font-medium text-grey-600 hover:text-ink-900
+                   underline underline-offset-4 cursor-pointer
+                   rounded-sm focus-visible:outline-2 focus-visible:outline-brand-orange"
+      >
+        Edit guest
+      </button>
+      {open && <EditGuestFlow hotelId={hotelId} guestId={guestId} open onOpenChange={setOpen} />}
+    </>
   );
 }
 

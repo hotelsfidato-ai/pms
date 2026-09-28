@@ -8,6 +8,30 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-28 · Fix round D: cancel a confirmed booking, the link, the dates (QA of 28 Sep)
+
+**Asked for:** D27-116 - every BLOCKS WORK and WRONG RESULT of the QA's Bookings
+table; the owner's answers of 28 September (round D, 1, 9-12).
+**Shipped:** QA BK-1 - "Cancel this booking" on a confirmed booking, THIS ROOM
+ONLY, under the terms frozen on it: nothing inside the free window or with no
+terms, else the retention on the bill (misc, the room's slab, as the no-show's);
+owner/admin/GM may waive it with the reason; a dryRun shows the figure first
+(desk.ts cancelConfirmed, CancelConfirmedFlow). QA BK-2 - `send` takes any 2xx as
+the yes, so the guest's page link shows. QA BK-3 - an arrival before the business
+date is refused in makeBooking, below the repeat check. QA BK-4 - nationality is
+an ISO country. QA BK-12 (D27-123) - migration 153, references take the business
+month. X-2/X-3 - New booking refuses an impossible phone or email, 0 adults, -1
+children.
+**Proved:** api reservations/cancelConfirmed.test.ts 7 (all 7 fail on the old
+route), newBooking.test.ts 20, bookingReference.test.ts 6 (2609 without 153, 3103
+with); web cancelConfirmed.test.tsx 2, guestLink.test.ts 1. On screen (5263):
+booked FH-5EL-2608-5031, the link shown, cancelled with ₹3,699 + 5% on its bill.
+**Left open:** nothing of the Bookings table's blocking or wrong rows. Cosmetic
+rows (BK-5..BK-11) wait for the pilot (D27-116).
+**Commits:** 8919792, a6d510e (X-3 on New booking).
+
+---
+
 ## 2026-09-27 · Cancel a booking waiting for the hotel (D27-64, RES-5)
 
 **Asked for:** the owner, through the master: "Cancel it directly". Three

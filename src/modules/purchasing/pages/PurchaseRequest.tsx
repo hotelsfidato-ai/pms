@@ -8,7 +8,7 @@ import { ApiError } from "@/lib/api";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, ErrorState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
-  StatusPill, IconChip, toast,
+  StatusPill, IconChip, Checkbox, toast,
 } from "@/components/ui";
 import {
   getPurchasing, getPurchaseRequest, priceLine, sendOrder, cancelRequest,
@@ -356,6 +356,17 @@ function LineRow({
     onSaved();
   };
 
+  /* ST-2, X-1 (D27-120): a ₹0 line only when ticked Free. */
+  const free = line.unitPrice !== null && Number(line.unitPrice) === 0;
+  const tickFree = async (v: boolean) => {
+    setSaving(true);
+    const out = await priceLine(code, requestId, line.id, v ? 0 : null, v);
+    setSaving(false);
+    if (!out.ok) { toast.error(out.reason); return; }
+    setPrice(v ? "0" : "");
+    onSaved();
+  };
+
   return (
     <tr>
       <td className="px-4 py-3">
@@ -366,16 +377,20 @@ function LineRow({
       <td className="px-4 py-3 text-right tabular-nums">{figure(line.quantity)}</td>
       <td className={cn("px-4 py-3 text-right tabular-nums", !mayPrice && line.unitPrice === null && "text-grey-500")}>
         {mayPrice ? (
-          <Input
-            aria-label={`Agreed price for ${line.item}`}
-            inputMode="decimal"
-            className="w-[110px] text-right"
-            value={price}
-            disabled={saving}
-            onChange={(e) => setPrice(e.target.value)}
-            onBlur={() => void save()}
-            placeholder="-"
-          />
+          <span className="inline-flex items-center gap-2">
+            <Input
+              aria-label={`Agreed price for ${line.item}`}
+              inputMode="decimal"
+              className="w-[110px] text-right"
+              value={price}
+              disabled={saving || free}
+              onChange={(e) => setPrice(e.target.value)}
+              onBlur={() => void save()}
+              placeholder="-"
+            />
+            <Checkbox label="Free" checked={free} disabled={saving}
+              onCheckedChange={(v) => void tickFree(v)} />
+          </span>
         ) : (
           rupees(line.unitPrice)
         )}

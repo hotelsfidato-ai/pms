@@ -685,12 +685,13 @@ export async function addCategory(
 
 export async function addItem(
   hotelId: string, categoryId: string, name: string,
-  price: number, taxRate: number,
+  price: number, taxRate: number, free = false,
 ): Promise<{ ok: boolean; reason?: string }> {
   try {
     await api(`/api/hotels/${hotelId}/till/menu/items`, {
       method: "POST",
-      body: JSON.stringify({ categoryId, name, price, taxRate }),
+      /* free: a dish at 0 only when ticked Free (X-1, D27-120). */
+      body: JSON.stringify({ categoryId, name, price, taxRate, ...(free ? { free } : {}) }),
     });
     return { ok: true };
   } catch (error) {

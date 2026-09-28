@@ -8,3 +8,5 @@ export { GROUP_ROOMS_ID, GroupRoomsList } from "./flows/GroupRoomsPanel";
    list, the walk-in's too (the master, 27 Sep). */
 export { confirmWaiting, MARKET_SEGMENTS } from "./data/booking";
 export { CancelWaitingFlow } from "./flows/CancelWaitingFlow";
+/* A confirmed booking the guest cancelled, under its terms (BK-1). */
+export { CancelConfirmedFlow } from "./flows/CancelConfirmedFlow";

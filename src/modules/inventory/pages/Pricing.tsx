@@ -8,7 +8,7 @@ import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, Skeleton, ErrorState, Button, Input, Field,
-  fieldProps, NativeSelect, Segmented, StatusPill, InfoButton, toast,
+  fieldProps, NativeSelect, Segmented, StatusPill, InfoButton, Checkbox, toast,
 } from "@/components/ui";
 import {
   getPricing, setBasis, setBasePrice, setOffset,
@@ -404,17 +404,20 @@ function TheBaseFigure({
   const base = current?.source === "typed" ? current.price : null;
   const rackInstead = current?.source === "rack" ? current.price : null;
   const [value, setValue] = useState("");
+  /* X-1 (D27-120): a base of 0 only when ticked Free. */
+  const [free, setFree] = useState(false);
 
   const save = useMutation({
     mutationFn: (price: number | null) =>
-      setBasePrice(hotelId, { from: applied.from, to: applied.to, price }),
+      setBasePrice(hotelId, { from: applied.from, to: applied.to, price,
+                              ...(free && price === 0 ? { free } : {}) }),
     onSuccess: (r, price) => {
       if (r.ok) {
         toast.success(
           price === null ? "The base is cleared" : "The base is set",
           `${applied.words}. Every price that is not typed follows it.`,
         );
-        setValue("");
+        setValue(""); setFree(false);
         onDone();
       } else {
         toast.error("That base was not set", r.reason);
@@ -446,17 +449,19 @@ function TheBaseFigure({
               {...fieldProps(f)}
               inputMode="decimal"
               placeholder="₹"
-              value={value}
+              value={free ? "0" : value}
               onChange={(e) => setValue(e.target.value)}
+              disabled={free}
               className="w-36"
             />
           )}
         </Field>
+        <Checkbox label="Free" checked={free} onCheckedChange={setFree} className="mb-3" />
         <Button
           variant="primary"
-          disabled={value.trim() === "" || save.isPending}
+          disabled={(value.trim() === "" && !free) || save.isPending}
           onClick={() => {
-            const n = Number(value);
+            const n = free ? 0 : Number(value);
             if (!Number.isFinite(n) || n < 0) {
               toast.error("That is not a price", "A price is zero or more.");
               return;

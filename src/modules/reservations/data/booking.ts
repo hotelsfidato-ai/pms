@@ -30,7 +30,11 @@ type Answer<T = object> = ({ ok: true } & T) | { ok: false; reason: string };
 
 async function send<T>(path: string, method: string, body: unknown): Promise<Answer<T>> {
   try {
-    return await api(path, { method, body: JSON.stringify(body) });
+    /* A 2xx IS the yes. Not every door says `ok`: the guest's page link
+       (guestDoor.ts) answers { status: 200, link }, and the Booked card
+       read the missing `ok` as a refusal - "No link" on every press (BK-2).
+       A door that does say ok: false keeps it, as it comes second. */
+    return { ok: true, ...(await api<object>(path, { method, body: JSON.stringify(body) })) } as Answer<T>;
   } catch (error) {
     if (error instanceof ApiError) {
       const p = error.body as { reason?: string } | undefined;
@@ -67,6 +71,19 @@ export const confirmWaiting = (hotelId: string, stayId: string) =>
 export const cancelWaiting = (hotelId: string, stayId: string, reason: string) =>
   send<{ rooms: number; reference: string }>(
     `/api/hotels/${hotelId}/stays/${stayId}/cancel`, "POST", { reason });
+
+/** A CONFIRMED booking's cancellation under the terms it was booked under
+    (BK-1): this room only; the charge the terms retain goes on its bill,
+    unless the owner, an administrator or the GM waives it. */
+export const cancelConfirmed = (hotelId: string, stayId: string, reason: string, waive: boolean) =>
+  send<{ rooms: number; reference: string; charged: number | null; waived: boolean }>(
+    `/api/hotels/${hotelId}/stays/${stayId}/cancel`, "POST", { reason, ...(waive ? { waive } : {}) });
+
+/** What cancelling would charge, written nowhere. `charge` null: the
+    booking carries no terms; 0: inside the free window. */
+export const cancelPreview = (hotelId: string, stayId: string) =>
+  send<{ preview: { terms: string | null; charge: number | null } }>(
+    `/api/hotels/${hotelId}/stays/${stayId}/cancel`, "POST", { dryRun: true });
 
 /** A new link to the guest's own page (114). Only its hash is kept, so each
     press makes a new one; the old ones keep working. */

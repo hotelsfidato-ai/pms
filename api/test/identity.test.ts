@@ -35,6 +35,10 @@ const SUPER =
   process.env["SUPER_DATABASE_URL"] ??
   "postgres://postgres:pw@127.0.0.1:55432/fidato";
 
+/* A passport number is 6 to 15 letters and digits (round D, validate.ts):
+   the process id padded, so a short one still makes a real number. */
+const PID = String(process.pid).padStart(6, "0");
+
 const admin = async () =>
   new (await import("pg")).default.Pool({ connectionString: SUPER });
 
@@ -264,7 +268,7 @@ describe("a captured document reaches the database", () => {
       earlyReason: EARLY,
       identity: {
         idType: "passport",
-        idNumber: `P${process.pid}`,
+        idNumber: `P${PID}`,
         nationality: "GB",
         passportExpiry: "2031-04-12",
         visaNumber: `V-${process.pid}`,
@@ -296,7 +300,7 @@ describe("a captured document reaches the database", () => {
       const d = rows[0];
       expect(d, "nothing was written to guest_documents").toBeTruthy();
       expect(d!.id_type).toBe("passport");
-      expect(d!.id_number).toBe(`P${process.pid}`);
+      expect(d!.id_number).toBe(`P${PID}`);
       expect(d!.visa_number).toBe(`V-${process.pid}`);
       expect(d!.address_line).toContain("Cranmer");
 
@@ -320,7 +324,7 @@ describe("a captured document reaches the database", () => {
       rows: Array<{ guest: string; nationality: string; passport: string | null }>;
     };
 
-    const mine = body.rows.find((r) => r.passport === `P${process.pid}`);
+    const mine = body.rows.find((r) => r.passport === `P${PID}`);
     expect(
       mine,
       "the guest checked in above is not on the Form III register",
@@ -344,7 +348,7 @@ describe("a document can be corrected", () => {
       roomNumber: room,
       earlyReason: EARLY,
       identity: {
-        idType: "passport", idNumber: `R${process.pid}`,
+        idType: "passport", idNumber: `R${PID}`,
         nationality: "US", visaNumber: "OLD-VISA",
         addressLine: "First address recorded", visaType: "Business",
       },
@@ -362,7 +366,7 @@ describe("a document can be corrected", () => {
            visa_number = excluded.visa_number,
            address_line = coalesce(excluded.address_line,
                                    guest_documents.address_line)`,
-        [guest, `R${process.pid}`],
+        [guest, `R${PID}`],
       );
 
       const { rows } = await db.query<{
