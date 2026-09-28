@@ -412,7 +412,8 @@ describe("the till - a drink under alcohol is VAT", () => {
         where f.reservation_id = $1 and fp.tax_scheme = 'vat' and fp.reverses_id is null
           and not exists (select 1 from folio_postings r where r.reverses_id = fp.id)`, [stayId]);
     expect(rows.length, "the whisky, live on one of the stay's bills").toBe(1);
-    const res = await send("POST", `/stays/${stayId}/charges/${rows[0].id}/reverse`);
+    const res = await send("POST", `/stays/${stayId}/charges/${rows[0].id}/reverse`,
+      { reason: "alcohol test" });
     expect(res.status, await res.clone().text()).toBe(200);
     const made = await json<{ data: { id: string } }>(res);
     const rev = await sql("select tax_scheme from folio_postings where id = $1::bigint", [made.data.id]);

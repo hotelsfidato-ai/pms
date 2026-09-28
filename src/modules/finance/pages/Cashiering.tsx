@@ -188,7 +188,9 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
     setSaving(true);
     const res = await countCashierDrawer(hotelId, DENOMINATIONS
       .map((v) => ({ value: v, count: Number(counts[v]) || 0 }))
-      .filter((d) => d.count > 0));
+      /* Everything typed, a mistake included, so the server can refuse it
+         (QA FI-10: a −3 was dropped here and saved as nothing). */
+      .filter((d) => d.count !== 0));
     setSaving(false);
     if (!res.ok) return toast.error("Not saved", res.reason);
     toast.success("Count saved", `${money(counted)} in the drawer.`);

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui";
 import { CreditNoteFlow } from "@/modules/finance/flows/CreditNoteFlow";
 import { getInvoice } from "@/modules/finance/data/billing";
+import { placeAfter } from "@/modules/finance/place";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PRINTED TAX INVOICE
@@ -146,14 +147,9 @@ export default function InvoicePage() {
      and state independently and printed a bare "MH" under "...Solapur
      District, Maharashtra 413216" - the address spells the state out and
      the column holds the code. Two spellings of one fact is not a reason to
-     print it twice. */
-  const supplierPlace = (() => {
-    const addr = (data.supplier.address ?? "").toLowerCase();
-    const city = data.supplier.city;
-    if (city && addr.includes(city.toLowerCase())) return null;
-    const parts = [city, data.supplier.state].filter(Boolean);
-    return parts.length ? parts.join(", ") : null;
-  })();
+     print it twice. (The rule is ../place.ts now, shared with the VAT bill
+     and the interim bill.) */
+  const supplierPlace = placeAfter(data.supplier.address, data.supplier.city, data.supplier.state);
   const sign = (n: number) => (isCreditNote ? -n : n);
 
   return (
@@ -238,9 +234,13 @@ export default function InvoicePage() {
       {/* Said on the page, because it is the line people query.
           Accommodation is supplied where the property is, so the tax is
           always CGST + SGST. */}
-      <p className="mt-1.5 text-xs text-grey-500">
-        Accommodation is supplied at the property's location - IGST Act
-        s.12(3)(b) - so this supply is intra-state.
+      {/* A banquet function's invoice (SAC 996334 or 997212, round E) is
+          s.12(3)(c): a function at the property - still the hotel's place,
+          still CGST + SGST. */}
+      <p className="mt-1.5 text-xs text-grey-500" data-place-of-supply>
+        {data.sacCode === "996311"
+          ? <>Accommodation is supplied at the property's location - IGST Act s.12(3)(b) - so this supply is intra-state.</>
+          : <>A function at the property is supplied at the property's location - IGST Act s.12(3)(c) - so this supply is intra-state.</>}
       </p>
 
       {/* D22-44: the same sale's alcohol is on its own VAT bill, and each
