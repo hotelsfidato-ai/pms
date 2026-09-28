@@ -6539,6 +6539,17 @@ copy will see of theirs.**
 
 ---
 
+### 348 · MINE: MEMORY 338 again: I nearly recycled a live session's copy
+
+29 September. The app reused round B's finished folder (modest-wilson-2807a1) for the new
+one-page lane, and the naming session's (nervous-spence-42dcae) for the folio lane. At about
+01:45 I removed "B's" node_modules junctions and tried to recycle the folder, without first
+running list_sessions, the check MEMORY 338 prescribes. The recycle failed only because the
+lane had the folder open. I re-created the junctions at 03:17; the lane had no code yet, and git
+status, its .env files and the links all checked out. **The rule, no exceptions:** before
+touching any copy, run list_sessions and match its cwd. A folder name tells you nothing about
+who is in it now.
+
 ### 347 · A bare `GET /x/:id` mounted first swallows a sibling's `/x/returning` (fix round D)
 
 29 September. Round D added `GET /guests/:id` in guests/directory.ts, which is mounted before
