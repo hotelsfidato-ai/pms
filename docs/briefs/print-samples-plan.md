@@ -69,3 +69,16 @@ It is one file, `scripts/print-samples.mjs`, plus one line in `package.json`. Th
    - *Recommendation:* use clearly fake round figures (₹100, ₹200) on the scratch database only, marked "sample figures" in the index. The rule about default prices covers the real system; this database is deleted after the run.
 3. **Reports twice.** The 8 server reports can be printed both as the server PDF (the PDF button) and as the screen's Print view (the Print button). They look different.
    - *Recommendation:* print both, so you approve both layouts.
+
+## Result (28 Sep, run `2026-09-28_1200`)
+
+The owner approved all three recommendations ("yes to all").
+
+- **31 printed:** 7 guest and money documents, 4 kitchen and service slips, 20 reports (12 screen prints and 8 server PDFs).
+- **8 not printed:** the list above, "Cannot be printed today".
+- **Nothing left behind:** no database, profile, lock or process.
+
+Found on the way, not fixed here:
+1. The VAT credit note's footer repeats the place.
+2. A check-in into a taken room is refused with "Record the guest's ID document…", the wrong reason.
+3. Form III shows the arrival on the wall clock, not the business date (visible only in the demo).
