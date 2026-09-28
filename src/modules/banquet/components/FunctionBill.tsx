@@ -106,7 +106,7 @@ export function FunctionBill({
           title="Bill the function"
           text={"The hall and every course go on this bill under the Banquet GST "
             + "rate. After this the price, the courses and the restaurant orders "
-            + "are fixed; a correction is a credit note."}
+            + "are fixed."}
           act="Bill the function"
           onClose={() => setBilling(false)}
           run={() => billBanquetEvent(hotelId, e.id)}

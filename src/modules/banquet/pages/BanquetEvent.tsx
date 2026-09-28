@@ -138,7 +138,8 @@ export default function BanquetEventPage() {
                 <Check className="size-4" /> Confirm and hold the hall
               </Button>
             )}
-            {e.status !== "cancelled" && (
+            {/* A billed function is not cancelled (D27-135). */}
+            {e.status !== "cancelled" && e.status !== "completed" && (
               <Button variant="secondary"
                       onClick={() => setCancelling(true)}>
                 Cancel
@@ -284,12 +285,12 @@ export default function BanquetEventPage() {
           <CardHeader
             title="Catering"
             className="items-center"
-            actions={
+            actions={e.status !== "completed" && (
               <Button variant="secondary"
                       onClick={() => setAddingFood(true)}>
                 <Plus className="size-4" /> Add a course
               </Button>
-            }
+            )}
           />
 
           {e.catering.length === 0 ? (
@@ -318,7 +319,7 @@ export default function BanquetEventPage() {
                                       c.ratePerHead === null ? "text-grey-500" : "text-ink-900")}>
                     {c.ratePerHead === null ? "-" : money(c.pax * c.ratePerHead)}
                   </span>
-                  <Button
+                  {e.status !== "completed" && <Button
                     variant="secondary" size="icon" className="shrink-0"
                     aria-label={`Remove ${c.name}`}
                     onClick={async () => {
@@ -328,7 +329,7 @@ export default function BanquetEventPage() {
                     }}
                   >
                     <Trash2 className="size-4" />
-                  </Button>
+                  </Button>}
                 </li>
               ))}
             </ul>

@@ -38,8 +38,7 @@ const refuse = (reason: string) => ({ ok: false as const, reason });
 /* Once "Bill the function" has put it on its bill (status 'completed',
    D27-138), what was billed is fixed: a correction is a credit note. */
 const BILLED =
-  "This function is on its bill, so its price, courses and times are fixed. "
-  + "Correct the bill with a credit note.";
+  "This function is on its bill, so its price, courses and times are fixed.";
 
 /* THE OWNER'S D27-124: a function may be set up while the property has no
    banquet GST rule, and it is told so; its bill is refused until the rule
@@ -801,7 +800,7 @@ banquet.post("/:code/banquet/events/:id/bill", async (c) => {
       { description: `Hall: ${e.venue} - ${e.title} (${e.reference})`,
         amount: Number(e.agreed_amount), category: "Miscellaneous" },
       ...courses.map((k) => ({
-        description: `${k.name}: ${k.pax} x Rs ${Number(k.rate)}`.slice(0, 240),
+        description: `${k.name}: ${k.pax} plates at ₹${Number(k.rate)}`.slice(0, 240),
         amount: Math.round(k.pax * Number(k.rate) * 100) / 100, category: "Food",
       })),
     ].filter((l) => l.amount > 0);

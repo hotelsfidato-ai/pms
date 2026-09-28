@@ -181,7 +181,7 @@ describe("billing the function", () => {
 
     const price = await owner("PATCH", `/banquet/events/${eventId}`, { agreedAmount: 40000 });
     expect(price.status).toBe(409);
-    expect(await reason(price)).toContain("credit note");
+    expect(await reason(price)).toContain("fixed");
     expect((await owner("POST", `/banquet/events/${eventId}/cancel`, { reason: "x" })).status).toBe(409);
     const twice = await owner("POST", `/banquet/events/${eventId}/bill`);
     expect(await reason(twice)).toContain("already on its bill");
