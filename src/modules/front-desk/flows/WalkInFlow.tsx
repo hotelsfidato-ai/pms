@@ -8,7 +8,7 @@ import {
   Button, Field, Input, NativeSelect, Switch, toast,
   Dialog, DialogContent,
 } from "@/components/ui";
-import { createWalkIn } from "@/modules/front-desk/data/operations";
+import { createWalkIn, mealPlanChoices } from "@/modules/front-desk/data/operations";
 import { getRoom } from "@/data/repositories";
 import { MARKET_SEGMENTS } from "@/modules/reservations";
 import {
@@ -305,7 +305,7 @@ export function WalkInFlow({
           <Field label="Meal plan">
             {({ id }) => (
               <NativeSelect id={id} value={ratePlan} onChange={(e) => setRatePlan(e.target.value)}>
-                {["CP", "Room Only", "EP", "MAP"].map((p) => <option key={p}>{p}</option>)}
+                {mealPlanChoices(ratePlan).map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
               </NativeSelect>
             )}
           </Field>

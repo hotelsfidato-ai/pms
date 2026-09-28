@@ -99,7 +99,8 @@ const PILLS = ["All", "Vacant", "Occupied", "Arrivals", "Reserved", "Blocked", "
    tiles marked Free: a new contradiction in place of the old one. Empty
    = Free + Needs cleaning + Arriving, and that adds up on screen. */
 const PILL_LABEL: Record<(typeof PILLS)[number], string> = {
-  All: "All",
+  /* What it counts (the owner's D27-164, QA FD-13): out of service is apart. */
+  All: "Sellable",
   Vacant: "Empty",
   Occupied: "In house",
   Arrivals: "Arriving",
@@ -438,7 +439,7 @@ export default function StayViewPage({ view }: {
       This reads the SAME `room.state` the pill counts are computed
       from, so a pill can never say six and then show nine. Out-of-
       service rooms are not part of the sellable house, so they appear
-      only under "Blocked" — which is why "All" reads 17 while eighteen
+      only under "Blocked" — which is why "Sellable" reads 17 while eighteen
       rooms physically exist. */
   const roomVisible = (room: ChartRoom) => {
     if (pill === "Blocked") return room.outOfService;

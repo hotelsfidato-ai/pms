@@ -499,3 +499,17 @@ export async function voidStay(
     throw error;
   }
 }
+
+/* The meal plans the desk offers, the code with its words (the owner's
+   D27-164). RO is EP and is not offered; a booking already on RO keeps it:
+   its "Room Only" is added back as its own choice. */
+export const MEAL_PLAN_CHOICES = [
+  { value: "EP", label: "EP · Room only" },
+  { value: "CP", label: "CP · Room + breakfast" },
+  { value: "MAP", label: "MAP · Room + breakfast + one meal" },
+] as const;
+
+export const mealPlanChoices = (current: string) =>
+  current === "Room Only"
+    ? [...MEAL_PLAN_CHOICES, { value: "Room Only", label: "RO · Room only" }]
+    : MEAL_PLAN_CHOICES;
