@@ -1,10 +1,11 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { AlertTriangle, Building2, Handshake, Home, Users, Wallet } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { Page, PageHeader, Card, FigureRow, FigureTile, DataTable, StatusPill, Avatar, EmptyState, type Column, type Tone } from "@/components/ui";
+import { Page, PageHeader, Card, FigureRow, FigureTile, DataTable, StatusPill, Avatar, EmptyState, Input, type Column, type Tone } from "@/components/ui";
 import { listGuests, listCompanies, type GuestRecord, type CompanyRecord } from "@/modules/guests/data/directory";
 
 /* Split out of Directory.tsx on 15 September in the service-folder move
@@ -84,13 +85,21 @@ export function GuestsPage() {
   });
 
   const dupes = (data ?? []).filter((g) => g.possibleDuplicate);
+  /* A search, and a word while the list loads (QA GU-5: 437 names, none). */
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
+  const shown = (data ?? []).filter((g) => !q || g.name.toLowerCase().includes(q));
 
   return (
     <Page>
       <PageHeader
         title="Guests"
-        description="Grouped by name from every stay. Repeat guests rise to the top."
+        description={isLoading ? "Loading…" : "Grouped by name from every stay. Repeat guests rise to the top."}
         badge={data ? <StatusPill tone="neutral">{data.length} guests</StatusPill> : undefined}
+        actions={
+          <Input aria-label="Find a guest by name" placeholder="Find a guest by name"
+                 value={search} onChange={(e) => setSearch(e.target.value)} className="w-64 max-w-full" />
+        }
       />
 
       {dupes.length > 0 && (
@@ -111,15 +120,17 @@ export function GuestsPage() {
 
       <Card>
         <DataTable<GuestRecord>
-          rows={data ?? []}
+          rows={shown}
           columns={GUEST_COLUMNS}
           rowKey={(g) => g.id}
           loading={isLoading}
           error={error}
           onRetry={() => refetch()}
           empty={
-            <EmptyState compact icon={<Users />} title="No guests yet"
-              description="A guest is added here the first time they are booked." />
+            q ? <EmptyState compact icon={<Users />} title="No guest by that name"
+                  description="Try part of the surname." />
+              : <EmptyState compact icon={<Users />} title="No guests yet"
+                  description="A guest is added here the first time they are booked." />
           }
         />
       </Card>

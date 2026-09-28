@@ -7,6 +7,8 @@ import { StayTable, type StayColumn, type StayRow } from "@/modules/front-desk/c
 import { listInHouse, listDepartures, getHouseNow } from "@/modules/front-desk/data/stays";
 import { queryKeys, BUSINESS_DATE } from "@/data/repositories";
 import { getFolioBalance } from "@/modules/finance";
+import { can } from "@/lib/permissions";
+import { useRole } from "@/lib/session";
 
 /* ══════════════════════════════════════════════════════════════════
    IN HOUSE · DUE OUT
@@ -38,16 +40,23 @@ export default function InHousePage() {
   const dueOut = pathname.endsWith("/due-out");
   const navigate = useNavigate();
 
+  /* No bill reads for a role without bills (D27-143): each one was a 403.
+     The balance column prints its dash. */
+  const bills = can(useRole(), "view", "invoice");
   const inHouse = useQuery({
     queryKey: queryKeys.inHouse(hotelId, BUSINESS_DATE),
-    queryFn: async () =>
-      withBalances(hotelId, await listInHouse(hotelId, BUSINESS_DATE)),
+    queryFn: async () => {
+      const stays: StayRow[] = await listInHouse(hotelId, BUSINESS_DATE);
+      return bills ? withBalances(hotelId, stays) : stays;
+    },
   });
 
   const departures = useQuery({
     queryKey: queryKeys.departures(hotelId, BUSINESS_DATE),
-    queryFn: async () =>
-      withBalances(hotelId, await listDepartures(hotelId, BUSINESS_DATE)),
+    queryFn: async () => {
+      const stays: StayRow[] = await listDepartures(hotelId, BUSINESS_DATE);
+      return bills ? withBalances(hotelId, stays) : stays;
+    },
   });
 
   /* HOW MANY ROOMS are in house is the server's one count (D21-36), the

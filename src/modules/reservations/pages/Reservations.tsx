@@ -35,7 +35,9 @@ const FILTERS: Array<{
   { key: "due-in", label: "Due in", status: ["due-in"], icon: LogIn, chip: "orange" },
   { key: "in-house", label: "In house", status: ["in-house", "due-out"], icon: Users, chip: "blue" },
   { key: "checked-out", label: "Checked out", status: ["checked-out"], icon: LogOut, chip: "neutral" },
-  { key: "lost", label: "Cancelled & no-show", status: ["cancelled", "no-show"], icon: UserX, chip: "neutral" },
+  /* A voided booking was in All and in no tab (QA BK-10). The API sends
+     "void"; StayStatus (the core's types.ts) does not list it yet. */
+  { key: "lost", label: "Cancelled, void & no-show", status: ["cancelled", "void" as StayStatus, "no-show"], icon: UserX, chip: "neutral" },
 ];
 
 export default function ReservationsPage() {
@@ -53,6 +55,8 @@ export default function ReservationsPage() {
 
   const active = FILTERS.find((f) => f.key === filter) ?? FILTERS[0]!;
   const q = search.trim().toLowerCase();
+  /* A phone is found by its digits, however it was typed (QA BK-10). */
+  const digits = q.replace(/\D/g, "");
 
   /* Filtering happens here rather than in the query so switching a
      tab does not re-fetch, and the counts on every tab stay live. */
@@ -63,7 +67,8 @@ export default function ReservationsPage() {
         !q ||
         s.guest.toLowerCase().includes(q) ||
         s.reference.toLowerCase().includes(q) ||
-        s.roomNumber.includes(q),
+        s.roomNumber.includes(q) ||
+        (digits.length >= 3 && (s.phone ?? "").replace(/\D/g, "").includes(digits)),
     )
     .sort((a, b) => b.arrival.localeCompare(a.arrival));
 

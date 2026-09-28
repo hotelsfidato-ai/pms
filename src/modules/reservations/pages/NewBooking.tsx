@@ -449,6 +449,14 @@ export default function NewBookingPage() {
     || !bookingSourceId || discountProblem !== null
     || (billTo === "company" && !companyId)
     || (salesPick === OTHER && !salesOther.trim());
+  /* What Confirm is waiting for, in words (QA BK-6: it was disabled with
+     no word why). The discount says its own problem beside it. */
+  const missing = !guestName.trim() ? "the guest's name"
+    : lines.length === 0 ? "a room"
+    : !bookingSourceId ? "the booking source"
+    : billTo === "company" && !companyId ? "the company to bill"
+    : salesPick === OTHER && !salesOther.trim() ? "who sold it"
+    : null;
 
   return (
     <Page>
@@ -811,6 +819,7 @@ export default function NewBookingPage() {
              the server to be told; refused there too, because a browser
              that has not reloaded still posts. Rule 6 both ends. */
           disabled={blocked}
+          missing={saving ? null : missing}
           checkInNow={mayCheckInNow}
           waiting={waiting}
           onSubmit={(now) => void submit(now)}
@@ -1066,12 +1075,12 @@ function Discount({
    what the bill will carry (finance's app.stay_bill: charges, their tax,
    minus what was paid - nothing, at booking). */
 function Summary({
-  nights, lines, quotes, types, discount, disabled, checkInNow, waiting, onSubmit,
+  nights, lines, quotes, types, discount, disabled, missing, checkInNow, waiting, onSubmit,
 }: {
   nights: number; lines: Line[]; quotes: Quote[];
   types: { id: string; name: string }[];
   discount: ReactNode;
-  disabled: boolean; checkInNow: boolean; waiting: boolean;
+  disabled: boolean; missing: string | null; checkInNow: boolean; waiting: boolean;
   onSubmit: (checkInNow: boolean) => void;
 }) {
   const rooms = lines.reduce((n, l) => n + l.rooms, 0);
@@ -1150,6 +1159,7 @@ function Summary({
                 disabled={disabled} onClick={() => onSubmit(false)}>
           {waiting ? "Hold it, waiting for the hotel" : "Confirm the booking"}
         </Button>
+        {missing && <p className="text-sm text-grey-600 text-center">Still needed: {missing}.</p>}
         {checkInNow && (
           <Button variant="secondary" className="h-12 w-full text-base"
                   disabled={disabled} onClick={() => onSubmit(true)}>
