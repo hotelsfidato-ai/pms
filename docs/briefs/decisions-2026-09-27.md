@@ -140,3 +140,4 @@
 | D27-136 | Spa and laundry for guests (BQ-2) | **Spa: book only on a day of the stay; Charge to room only once checked in. Laundry: collect only from a checked-in guest** |
 | D27-137 | Function bills on the Folios screen | **Not for now**; they live on the function's page |
 | D27-138 | When a function can be billed, and its advance | **"Bill the function" any time after Confirm; refused while unpriced, while Banquet tax is unset, or while a restaurant order is open.** An advance is a payment on the function's bill, with no GST receipt voucher until the CA answers (B5), said on screen |
+| D27-139 | The till and "no cash without a drawer" (round C; D27-118 on the till) | **No new "open the drawer" step** (the till's drawer is the outlet's business day); **once Close restaurant day has run, the till refuses new bills and cash until the night audit moves the date** |
