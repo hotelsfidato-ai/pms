@@ -182,6 +182,14 @@ Nine reads in `data/till.ts` ended in `catch { return [] }` (or `null`): the men
 
 **The rule** — A value kept for offline use must never be overwritten by a read that failed. A `catch` that returns a default turns a failure into a fact, and a cache believes facts.
 
+### POS-22 · An order settled to a banquet function reached no bill and no tax invoice — FIXED 28 September (round E; renumber at merge if taken)
+
+**Found** — round E, planning the function's bill (QA BQ-1): since 099 an order settled "to the function" touched no folio; the function's quotation counted it, but its bill, its payments and its tax invoice could not.
+
+**Fixed** — the owner's D27-133: the till posts it onto the function's open bill exactly as the room branch posts a room charge (one line per tax rate from `app.pos_order_by_tax`, a `pos_tickets` row each, `source_type 'pos'`), with `payment_method` still 'function'. The day book's till side (`reports/figures.ts` posSales) leaves 'function' out as it leaves 'room', so it is counted once, from the folio.
+
+**Proved** — `api/test/modules/pos/functionOrders.test.ts` "onto the function's bill as a room is charged", which also checks the day book's till side does not move; seen to fail on the old till.
+
 ### POS-20 · Two Settle presses on one bill both took the money — FIXED 28 September (release fixes)
 
 **Found** — 28 September, the release review before 40c9510 went live.
