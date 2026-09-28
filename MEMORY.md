@@ -6539,6 +6539,21 @@ copy will see of theirs.**
 
 ---
 
+### 338 · MINE: I tried to recycle a copy a new session had just moved into
+
+28 September. After archiving the redesign session I tried twice to send its folder
+`.claude\worktrees\nice-taussig-74dfdb` to the Recycle Bin. Both attempts failed with
+"in use". In between, the owner had clicked the System health card, and the app had
+started that new session IN THE SAME FOLDER (its cwd; a new branch). Had the first
+attempt gone through, the new session's working copy would have gone to the Recycle
+Bin under it. `git status` there afterwards: clean, nothing deleted.
+
+**The rule:** before recycling a copy, `list_sessions` and confirm no live session's
+`cwd` is that folder, and read `git worktree list` for what branch it holds now. A
+folder name is not the session's; an archived session's folder can be reused at once.
+
+---
+
 ### 337 · MINE: the gates are green but the website would not build
 
 28 September. After merging the redesign, every gate step was green (web 726, server

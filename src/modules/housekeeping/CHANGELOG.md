@@ -8,6 +8,51 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-28 · "The buttons are not working" - HK-12, HK-13, HK-14
+
+**Asked for:** the owner, 28 September: "check housekeeping because the
+buttons are not working in that. I tried to click inspect and that thing is
+not working." Seen on the redesign's local copy, as the owner, desk and phone.
+Branch `housekeeping/buttons-28sep`, from `cp6` at `5527ab5`.
+
+**Found** - every button on Housekeeping and Work orders pressed as the owner,
+Housekeeping, the Hotel Manager and the GM, at 1280 and 390 wide:
+- **HK-12** - Inspected WAS saved (PUT 200, ~30 ms); nothing said so, and the
+  card waited 1.2 s for every query in the app before it moved - meanwhile
+  saying "needs cleaning first" of a room just cleaned. Live code the same.
+- **HK-13** - the six counts at the top (the redesign's head) looked like the
+  Dashboard's and did nothing.
+- **HK-14** - a Hotel Manager could give rooms to nobody but themselves, and
+  saw every room as Unassigned; a housekeeper saw only themselves. Row
+  security on `staff_hotels`, which 027's colleague rule never got past.
+  Live code the same.
+- Clean, Repair, Put back, the name chips, Raise one, Start, Put back, Close,
+  Costs and the Open · Closed switch all worked for every role tried.
+
+**Shipped** (the owner's answers, 28 September):
+- A marked room moves at once and says "Room 210 is inspected." / "... is clean."
+- A count jumps to its group, with an arrow; Due out and a zero stay flat.
+- Migration **who works here** (149): `app.hotel_people`, names and roles of
+  the people at a hotel the caller works at; the three housekeeping reads use
+  it. The tables' own rules are unchanged.
+
+**Proved** - `bash scripts/gates.sh housekeeping-fix`, exit 0 (1243 s): web
+types 0, api types 0, strip 0 (147 files), web tests 729 passed / 88 files,
+api tests 1628 passed / 103 files, database 1225 assertions (149 migrations),
+replay 149 re-runnable. Seen failing without the fix: the two page tests (2
+failed, exit 1), "moves the room the moment it is marked" with only the cache
+write removed (1 failed), `roster.test.ts` on the old routes (2 failed, exit 1).
+Screens: owner at 1280 and 390 (message, jump); Housekeeping at 390 (Clean
+then Inspected at once, assign, Repair, Work orders Start, Put back, Close);
+Hotel Manager at 1280 (every person listed, room 304 given out, Raise one,
+Start); GM at 390 (Inspected, Close). Dialog fields filled through the page
+where the hidden pane froze them.
+
+**Left open** - the same staff read in `finance/cashier.ts` and `pos/till.ts`
+(the master's); an assignment PUT seen once to hang, not reproduced.
+
+---
+
 ## 2026-09-26 · HK-1: the board's own half held by a test
 
 **Asked for:** the owner's D25-27 (a test for each fix built but held by none, then close it; no behaviour changed), in the five-tests session, branch `tests/five-25sep`. **Shipped:** `housekeeping.test.tsx`, "reads the rooms again the moment the live channel says housekeeping" (the stream stubbed, one `changed` frame). **Proved:** seen failing with `useLive` taken off the board; passes on the fix. HK-1 moved to Fixed. **Left open:** nothing here. **Commits:** `689f837`.

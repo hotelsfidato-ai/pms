@@ -282,18 +282,20 @@ describe("who may open the export", () => {
     }
   });
 
-  it("sits in Reports now, and nowhere near Coming soon", () => {
-    /* A service that is built cannot also be coming soon. The owner's
-       own Coming soon list is asserted whole in navigation.test.ts;
-       this is the same fact from this service's side, so renaming the
-       entry here cannot quietly leave it in two menus. */
+  it("sits in Reports now, and is not marked Not built yet", () => {
+    /* A service that is built cannot also be not built. The owner's own
+       list of services not built yet (the Coming soon section until
+       28 September, D27-87) is asserted whole in navigation.test.ts; this
+       is the same fact from this service's side, so renaming the entry
+       here cannot quietly leave it in two menus. */
     const menu = navigationFor("owner", "5EL", ALL_ON);
     const where = (label: string) =>
       menu.filter((s) => s.items.some((i) => i.label === label)).map((s) => s.label);
 
     expect(where("Accounting export")).toEqual(["Reports"]);
 
-    const soon = menu.find((s) => s.label === "Coming soon");
-    expect(soon?.items.map((i) => i.to)).not.toContain("/coming-soon/accounting");
+    const notBuilt = menu.flatMap((s) => s.items).filter((i) => i.notBuilt).map((i) => i.to);
+    expect(notBuilt).not.toContain("/coming-soon/accounting");
+    expect(menu.flatMap((s) => s.items).find((i) => i.label === "Accounting export")?.notBuilt).toBeUndefined();
   });
 });

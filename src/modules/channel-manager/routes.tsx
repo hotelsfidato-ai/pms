@@ -3,9 +3,10 @@ import { PropertyScope } from "@/components/app/PropertyScope";
 import { RequireAccess } from "@/components/app/RequireAccess";
 import ChannelManagerPage from "@/modules/channel-manager/pages/ChannelManager";
 
-/* The channel manager's status page — in the Coming soon section since
-   16 September. Mounted by App.tsx inside the signed-in shell. Guarded like every
-   Coming soon page: the guard asks the navigation, so the page is refused to
+/* The channel manager's status page — under Distribution, marked "Not built
+   yet", since 28 September (D27-87; the Coming soon section from 16 September).
+   Mounted by App.tsx inside the signed-in shell. Guarded like every page of a
+   service not built yet: the guard asks the navigation, so the page is refused to
    exactly the people the menu does not show it to. */
 export const routes = (
   <>

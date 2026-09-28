@@ -353,6 +353,77 @@ else
   echo "  could not locate postgresql.conf — left at defaults"
 fi
 
+# -----------------------------------------------------------------------------
+say "Logs kept a year, and the clock (CERT-In)"
+# -----------------------------------------------------------------------------
+# CERT-In Directions of 28 April 2022, No. 20(3)/2022-CERT-In: logs of every
+# system kept for a rolling 180 days (iv), and clocks synchronised to NIC or
+# NPL or a source traceable to them (i). The owner chose A YEAR (27 September,
+# D27-15): 180 days now, and the year the DPDP Rules ask from 13 May 2027, so
+# nothing changes then. docs/INCIDENT-PLAN.md says what each log is for.
+#
+# Before this, each log kept whatever its package chose, and nothing here
+# asked for 180 days.
+#
+# THE JOURNAL — the API (fidato-api), ssh and sudo, the kernel and firewall,
+# and n8n's container if podman logs there (deploy/README.md says how to
+# check). Persistent, so a reboot does not empty it. The size cap
+# is journald's own ceiling; the API writes a line at start and little else.
+install -d /etc/systemd/journald.conf.d
+cat > /etc/systemd/journald.conf.d/retention.conf <<'JEOF'
+# Written by deploy/launch.sh. CERT-In: 180 days; the owner: a year.
+[Journal]
+Storage=persistent
+SystemMaxUse=4G
+MaxRetentionSec=1year
+JEOF
+systemctl restart systemd-journald
+echo "  journal: persistent, a year"
+
+# NGINX — every request to the API, with the time and its zone. Its own files,
+# rotated daily by logrotate; the package's 10 becomes 366. An edit, not a new
+# file: two logrotate entries for one log is an error that stops ALL rotation.
+if [ -f /etc/logrotate.d/nginx ]; then
+  sed -i -E 's/^([[:space:]]*)(daily|weekly|monthly)[[:space:]]*$/\1daily/;
+             s/^([[:space:]]*)rotate[[:space:]]+[0-9]+/\1rotate 366/' \
+    /etc/logrotate.d/nginx
+  echo "  nginx: daily, 366 kept"
+else
+  echo "  ⚠ no /etc/logrotate.d/nginx - nginx logs are NOT on a retention"
+fi
+
+# POSTGRES — its own files (Oracle Linux runs its logging collector). One
+# file a DAY instead of one per weekday overwritten a week later, and every
+# sign-in recorded as well as every refused one (CERT-In FAQ Q37: "both
+# successful as well as unsuccessful events"). Reload, not restart.
+if [ "$(sudo -u postgres psql -tAc 'show logging_collector')" = "on" ]; then
+  sudo -u postgres psql -qc "alter system set log_filename = 'postgresql-%Y-%m-%d.log'" \
+                        -c "alter system set log_truncate_on_rotation = off" \
+                        -c "alter system set log_connections = on" \
+                        -c "select pg_reload_conf()" >/dev/null
+  PGLOG="$(sudo -u postgres psql -tAc "select case when current_setting('log_directory') like '/%'
+             then current_setting('log_directory')
+             else current_setting('data_directory') || '/' || current_setting('log_directory') end")"
+  cat > /etc/cron.d/fidato-logs <<LEOF
+30 4 * * * postgres find $PGLOG -name 'postgresql-*.log' -mtime +366 -delete
+LEOF
+  echo "  postgres: a file a day in $PGLOG, sign-ins logged, 366 days kept"
+else
+  echo "  ⚠ Postgres's logging collector is off (not Oracle Linux?) - its logs"
+  echo "    follow this distribution's own rotation, NOT a year. Check them."
+fi
+
+# THE CLOCK. Oracle images point chrony at Oracle's own time service
+# (169.254.169.254), which CERT-In's FAQ Q42 allows: "The entities relying on
+# the native time services offered as part of Cloud may continue to use the
+# same". So nothing is changed — it is made sure of, and said out loud.
+command -v chronyd >/dev/null || $PKG -y install chrony
+systemctl enable --now chronyd
+sleep 2
+chronyc -n tracking 2>/dev/null | grep -E "^(Reference ID|Leap status)" | sed 's/^/  /' \
+  || echo "  ⚠ chrony is not answering - the clock is NOT known to be right"
+echo "  time zone: $(timedatectl show -p Timezone --value 2>/dev/null || echo unknown) (every log records its zone)"
+
 say "Migrations"
 # ⚠ THIS WAS ITS OWN LOOP, ONE psql PER FILE, AND THAT BROKE THE LIVE APP ON
 # EVERY UPGRADE.
@@ -566,7 +637,27 @@ say "Backups"
 # -----------------------------------------------------------------------------
 # The free tier has no managed backups, so this cron entry IS the backup story.
 # Nightly at 03:00, after any plausible night audit.
-install -m 755 "$APP_DIR/db/backup.sh" /usr/local/bin/fidato-backup
+#
+# What runs is verify-backup: it takes the backup (which copies it off the
+# box), restores it into a scratch database, checks what came back, and tells
+# the owner pass or fail (D27-15). A backup that is never restored is a belief.
+install -m 755 "$APP_DIR/db/backup.sh"        /usr/local/bin/fidato-backup
+install -m 755 "$APP_DIR/db/verify-backup.sh" /usr/local/bin/fidato-verify-backup
+
+# Where the copy goes and whom to tell: the server's own settings, never the
+# repository. Written EMPTY once and never overwritten; the owner fills it in
+# (deploy/README.md, "Backups"). postgres alone may read it, because the bucket
+# link in it lets whoever holds it write into the bucket.
+if [ ! -f /etc/fidato-backup.env ]; then
+  cat > /etc/fidato-backup.env <<'ENVEOF'
+# Read by the nightly backup. See deploy/README.md, "Backups".
+BACKUP_UPLOAD_URL=''
+ALERT_URL=''
+ALERT_SECRET=''
+ENVEOF
+fi
+chown postgres:postgres /etc/fidato-backup.env
+chmod 600 /etc/fidato-backup.env
 
 # Runs as `postgres`, NOT root. The script reaches the database over the unix
 # socket under peer authentication, and root is not postgres. Scheduled as root
@@ -574,17 +665,24 @@ install -m 755 "$APP_DIR/db/backup.sh" /usr/local/bin/fidato-backup
 # system spent its first weeks believing it had backups.
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/fidato}"
 install -d -o postgres -g postgres -m 700 "$BACKUP_DIR"
-: > /var/log/fidato-backup.log
+# Kept, not emptied: this used to be `: >` on every run, so each deploy erased
+# the record of every night before it.
+touch /var/log/fidato-backup.log
 chown postgres:postgres /var/log/fidato-backup.log
 cat > /etc/cron.d/fidato-backup <<CRONEOF
-0 3 * * * postgres /usr/local/bin/fidato-backup $BACKUP_DIR >> /var/log/fidato-backup.log 2>&1
+0 3 * * * postgres BACKUP_DIR=$BACKUP_DIR BACKUP_SH=/usr/local/bin/fidato-backup /usr/local/bin/fidato-verify-backup >> /var/log/fidato-backup.log 2>&1
 CRONEOF
 
-# Prove it works NOW rather than finding out at 03:00 that it never did.
+# Prove it works NOW rather than finding out at 03:00 that it never did: the
+# backup and its copy off the box. The restore test is 03:00's job.
 runuser -u postgres -- /usr/local/bin/fidato-backup "$BACKUP_DIR"   || die "The nightly backup failed on its very first run. Fix this before
   anything else - every other failure here is recoverable and this one is not."
-echo "  nightly at 03:00 — ON THE SAME DISK. See README: a copy that dies in"
-echo "  the same fire is not a backup. Getting it off-box is one more step."
+if grep -q "^BACKUP_UPLOAD_URL='..*'" /etc/fidato-backup.env; then
+  echo "  nightly at 03:00, copied off the box, restored and checked"
+else
+  echo "  nightly at 03:00 - ON THE SAME DISK until /etc/fidato-backup.env names"
+  echo "  a bucket. See README, \"Backups\"."
+fi
 
 # -----------------------------------------------------------------------------
 say "Preflight"

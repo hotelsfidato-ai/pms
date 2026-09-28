@@ -50,6 +50,56 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-25/28 · The master: Phase 1, Form III, the logo, the whole redesign, the audits, and the release held for ten fixes
+
+**Asked for:** start Phase 1 of the platform plan; bring Form C up to Form III;
+redesign every screen with the fidato-design skill; one group logo; audit the
+whole system (security, compliance, what could go wrong); QA every button; fix
+Housekeeping; a system map; a System health screen and telemetry; a plan to
+join the CRS and the market-to-revenue app into one face without changing them.
+
+**Shipped (merged into cp6)**
+- New booking with every recorded field of the owner's screenshot (migration
+  146), and cancelling a waiting booking (D27-55..64, D27-69..71)
+- Form III under the Immigration and Foreigners Act and Rules 2025 (147;
+  D27-72..80)
+- The group's name and logo as one setting, on every bill (148; D27-65..68)
+- The redesign of every screen, the owner's 21 changes, the bills in the CRS
+  voucher's look, the Tappable Rule (D27-39..54, D27-81..86); Coming soon
+  replaced by Distribution and Sales and marketing (D27-87)
+- Operations basics: backups off the box, a year of logs, the incident plan,
+  open-source notices (ops/basics-27sep)
+- Housekeeping: Inspected answers at once; counts jump; everyone sees their
+  hotel's staff (149; D27-94..96)
+- scripts/gates.sh: a step counts only with its passing last line (MEMORY 335);
+  vite.config.ts: the precache ceiling at 3 MiB (MEMORY 337)
+
+**Found**
+- Security audit: a GM could take over a person who works at two hotels; a
+  restaurant bill could be settled twice; uploads can't be written on the box;
+  sign-out leaves guest data. Deep audit and compliance: the 038 deploy blocker,
+  a stale business date on other devices, the night audit charging split bills
+  twice, double taps, a company invoice with the guest's address, invoices with
+  no GSTIN. All ten are fixed on release/fixes-28sep, not merged yet (D27-88,
+  D27-89)
+- QA: 134 findings so far, 9 that block work (docs/qa/qa-2026-09-28.md)
+- MEMORY 331..338
+
+**Proved**
+- Full gates on cp6 after the redesign: web 726, API 1,624, database 1,225,
+  148 re-runnable; build 0 (after the 3 MiB ceiling)
+- Housekeeping merge: every step green up to the database; the replay step was
+  cut off by the usage limit and must run again
+
+**Left open**
+- The ten fixes' full gates and build; the staff lists merge; the QA fix round;
+  the one release (the owner's); the one face plan (the owner's go); the CA and
+  lawyer answers
+
+**Commits:** `a245fad … f29f14b` (merges and decisions), notes in this entry
+
+---
+
 ## 2026-09-24 · The master: the queue finished by four lane sessions, and everything merged
 
 **Asked for:** "complete all the things which were pending/stopped", with minimal
