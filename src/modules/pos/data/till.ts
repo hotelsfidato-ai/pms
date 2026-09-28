@@ -269,12 +269,14 @@ export interface ChargeableRoom {
   room: string;
   guest: string;
   folioId: string;
+  /** The company, when this is a split stay's company bill (D27-162). */
+  company?: string | null;
 }
 
 /** A refusal a person can act on, or the order as it now stands. */
 export type TillResult =
   | { ok: true; order: Order; guest?: string; room?: string }
-  | { ok: false; reason: string; choices?: { folioId: string; guest: string }[] };
+  | { ok: false; reason: string; choices?: { folioId: string; guest: string; company?: string | null }[] };
 
 /* ── Reads ────────────────────────────────────────────────────────────
 
@@ -382,7 +384,7 @@ async function write(path: string, body?: unknown): Promise<TillResult> {
   } catch (error) {
     if (error instanceof ApiError) {
       const payload = error.body as
-        | { reason?: string; choices?: { folioId: string; guest: string }[] }
+        | { reason?: string; choices?: { folioId: string; guest: string; company?: string | null }[] }
         | undefined;
       return {
         ok: false,

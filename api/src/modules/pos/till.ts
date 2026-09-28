@@ -1598,6 +1598,15 @@ till.post("/:code/till/menu/addon-groups/import", async (c) => {
 
 /* ── Rooms a bill can be charged to ───────────────────────────────── */
 
+/* WHOSE BILL, when a stay's is split (D27-162): a company's bill names the
+   company, so the till can ask "Tanvi Bhide" or "Tanvi Bhide - bill to
+   ACME" rather than one name twice. A name the reader may not see is
+   "the company". */
+const BILL_JOIN = `join folios f on f.id = c.folio_id
+  left join companies co on co.id = f.company_id`;
+const BILL_COMPANY = `case when f.bill_to = 'company'
+  then coalesce(co.name, 'the company') end as company`;
+
 till.get("/:code/till/rooms", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -1608,17 +1617,17 @@ till.get("/:code/till/rooms", async (c) => {
        when the room is occupied. Two different questions with two
        different answers on a checkout morning. */
     const { rows } = await client.query<{
-      room_number: string; guest_name: string; folio_id: string;
+      room_number: string; guest_name: string; folio_id: string; company: string | null;
     }>(
-      `select room_number, guest_name, folio_id::text
-         from app.pos_chargeable_rooms($1)
-        order by room_number`,
+      `select c.room_number, c.guest_name, c.folio_id::text, ${BILL_COMPANY}
+         from app.pos_chargeable_rooms($1) c ${BILL_JOIN}
+        order by c.room_number`,
       [hotelId],
     );
 
     return {
       rooms: rows.map((r) => ({
-        room: r.room_number, guest: r.guest_name, folioId: r.folio_id,
+        room: r.room_number, guest: r.guest_name, folioId: r.folio_id, company: r.company,
       })),
     };
   });
@@ -3922,10 +3931,11 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       if (!room) return refuse("Which room is this bill for?");
 
       const { rows: chargeable } = await client.query<{
-        folio_id: string; guest_name: string;
+        folio_id: string; guest_name: string; company: string | null;
       }>(
-        `select folio_id::text, guest_name from app.pos_chargeable_rooms($1)
-          where room_number = $2`,
+        `select c.folio_id::text, c.guest_name, ${BILL_COMPANY}
+           from app.pos_chargeable_rooms($1) c ${BILL_JOIN}
+          where c.room_number = $2`,
         [hotelId, room],
       );
 
@@ -3944,7 +3954,7 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
             `Room ${room} has ${candidates.length} open folios - a changeover ` +
             `day. Choose the guest who ate.`,
           choices: candidates.map((r) => ({
-            folioId: r.folio_id, guest: r.guest_name,
+            folioId: r.folio_id, guest: r.guest_name, company: r.company,
           })),
         };
       }
