@@ -126,3 +126,6 @@
 | D27-122 | The Accountant's reports (QA Q-10) | **Opens the Accounting export; not the Form III register** (passport data stays with the check-in roles, D25-38) |
 | D27-123 | Booking references' month (QA Q-11, BK-12) | **The hotel's business date**, not the wall clock |
 | D27-124 | A banquet function while the banquet tax heading is not set (QA Q-12, BQ-3) | **Warn when the function is set up**; the bill is still refused until it is set |
+| D27-125 | Who may reverse a payment (round A, FI-5) | **Only the owner, admin, GM or accountant**; reception reverses charges only, with the D27-117 reason |
+| D27-126 | The interim bill's total (round A, FI-9) | **The exact figure, no round-off line** (Total = Outstanding); the guest's page shows the same |
+| D27-127 | Company accounts vs the City ledger report (round A, FI-2) | **Company accounts shows the City ledger report's figures**: bills sent "Bill to company", by account; Received and Balance a dash |
