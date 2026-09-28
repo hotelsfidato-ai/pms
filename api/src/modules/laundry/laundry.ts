@@ -238,7 +238,7 @@ const DOCKET_JOINS = `
       from room_assignments ra
       join rooms rm2 on rm2.id = ra.room_id
      where ra.reservation_id = r.id
-     order by ra.released_at nulls first, ra.from_date desc
+     order by ra.released_at desc nulls first, ra.from_date desc
      limit 1
   ) rm on true`;
 

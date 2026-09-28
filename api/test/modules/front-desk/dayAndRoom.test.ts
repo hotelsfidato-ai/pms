@@ -151,6 +151,25 @@ describe("FD-17 · taken out of the room it was given ahead", () => {
     expect(list.find((s) => s.id === id)?.roomNumber).toBe("");
   });
 
+  /* FD-5 (QA, 28 September): booked in 204, checked in to 208, checked out -
+     and every list said 204. Both assignments released, both from the same
+     date: the old order was a tie. The room left last is the one slept in. */
+  it("after check-out, shows the room slept in, not the one given ahead", async () => {
+    const id = await booking(`${CODE}-SLEPT`, "2026-08-26", "2026-08-27");
+    expect((await call(`/stays/${id}/assign`, "POST", { roomNumber: "105" })).status).toBe(200);
+    const res = await checkIn(id, "106");
+    expect(res.status, await res.clone().text()).toBe(200);
+    /* The leaving, as check-out writes it - the money is not what this tests. */
+    await sql(`update room_assignments set released_at = now() + interval '1 minute'
+                where reservation_id = $1 and released_at is null`, [id]);
+    await sql("update reservations set status = 'checked_out' where id = $1", [id]);
+
+    expect((await sql<{ room: string }>("select app.stay_room($1) as room", [id]))[0]!.room)
+      .toBe("106");
+    expect(((await (await call(`/stays/${id}`)).json()) as { roomNumber: string }).roomNumber)
+      .toBe("106");
+  });
+
   it("keeps a departed guest's room, for the bills that print it", async () => {
     const list = (await (await app.request("/api/hotels/5EL/stays", {
       headers: { "x-dev-staff-id": "dev-owner" },
