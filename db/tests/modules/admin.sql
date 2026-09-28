@@ -191,7 +191,9 @@ begin
     cardinality(app.grantable_roles(other)) = 0);
 
   perform test.ok('gm runs people', 'a GM edits somebody at their hotel (D22-3)',
-    app.manages_person(clerk) and app.manages_person(two));
+    app.manages_person(clerk));
+  perform test.ok('gm runs people', 'but not somebody who also works at another hotel - one account (every role, 28 September)',
+    not app.manages_person(two) and not app.may_set_password(two));
   perform test.ok('gm runs people', 'never a group administrator',
     not app.manages_person(owner));
   perform test.ok('gm runs people', 'a GM switches off somebody who works only at their hotel',
@@ -318,7 +320,9 @@ begin
     format($q$select app.require_hotel_admin(%L)$q$, other), '42501');
 
   perform test.ok('hotel admin', 'edits somebody at their hotel, never a group administrator',
-    app.manages_person(clerk) and app.manages_person(two) and not app.manages_person(owner));
+    app.manages_person(clerk) and not app.manages_person(owner));
+  perform test.ok('hotel admin', 'nor somebody who also works at another hotel (every role, 28 September)',
+    not app.manages_person(two));
   perform test.ok('hotel admin', 'switches off somebody who works only at their hotel, not somebody who also works elsewhere',
     app.may_switch_person(clerk) and not app.may_switch_person(two));
   perform test.ok('hotel admin', 'sets their people''s passwords, never a group administrator''s',
@@ -452,6 +456,65 @@ begin
   update staff set is_active = false where id in (gm, adm, own);
   alter table hotels disable trigger hotels_no_delete;
   delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+end $$;
+
+select set_config('app.user_id',
+       (select id::text from staff where email = 'owner@fidato.in'), false);
+
+
+-- =============================================================================
+-- EVERY ROLE, NOT ANY (28 September, the release review)
+-- =============================================================================
+-- Somebody who is front desk at A and GM at B has one password. A's GM could
+-- reset it, because ONE of their roles was one A's GM could give, and then
+-- sign in as B's GM. Every function the routes ask, asked directly (MEMORY
+-- 318), and the staff row the application may write.
+-- =============================================================================
+do $$
+declare
+  a uuid; b uuid; gm uuid; two uuid; one uuid; boss uuid; n int;
+begin
+  a := app.provision_property_unchecked('EVA', 'Every Role A', 'Nowhere');
+  b := app.provision_property_unchecked('EVB', 'Every Role B', 'Nowhere');
+  select id into boss from staff where email = 'owner@fidato.in';
+  insert into staff (email, full_name) values ('d28-gm@fidato.in', 'D28 GM of A')
+  on conflict (email) do update set is_active = true returning id into gm;
+  insert into staff (email, full_name) values ('d28-two@fidato.in', 'D28 Desk at A, GM at B')
+  on conflict (email) do update set is_active = true returning id into two;
+  insert into staff (email, full_name) values ('d28-one@fidato.in', 'D28 Desk at A')
+  on conflict (email) do update set is_active = true returning id into one;
+  delete from staff_hotels where staff_id in (gm, two, one);
+  insert into staff_hotels (staff_id, hotel_id, role) values
+    (gm, a, 'gm'), (two, a, 'front_desk'), (two, b, 'gm'), (one, a, 'front_desk');
+
+  perform set_config('app.user_id', gm::text, true);
+  perform test.ok('every role', 'A''s GM does not reset the password of B''s GM who is also desk at A',
+    not app.may_set_password(two));
+  perform test.ok('every role', 'nor edit them, nor set their first screen',
+    not app.manages_person(two) and not app.may_manage_person(two));
+  perform test.ok('every role', 'nor re-invite their address (it would set the password)',
+    not app.may_claim_address('d28-two@fidato.in'));
+  perform test.ok('every role', 'A''s GM still runs somebody who works only at A',
+    app.may_set_password(one) and app.manages_person(one)
+    and app.may_claim_address('d28-one@fidato.in'));
+
+  set local role pms_app;
+  update staff set full_name = 'Renamed' where id = two;
+  get diagnostics n = row_count;
+  reset role;
+  perform test.ok('every role', 'the row: A''s GM cannot rename B''s GM', n = 0, n || ' renamed');
+
+  perform set_config('app.user_id', boss::text, true);
+  perform test.ok('every role', 'a group administrator still may',
+    app.may_set_password(two) and app.manages_person(two));
+
+  -- ---------- and the fixtures go ----------
+  perform set_config('app.user_id', '', true);
+  delete from staff_hotels where staff_id in (gm, two, one);
+  update staff set is_active = false where id in (gm, two, one);
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id in (a, b);
   alter table hotels enable trigger hotels_no_delete;
 end $$;
 

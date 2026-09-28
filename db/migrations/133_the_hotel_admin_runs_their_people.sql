@@ -157,6 +157,15 @@ end $$;
 -- one I may give": `sh.role = any (app.grantable_roles(sh.hotel_id))`, which
 -- is empty at a hotel the caller does not run, so it carries manages_hotel in
 -- it. 084's and 128's functions, word for word apart from that line.
+--
+-- ⚠ EVERY ROLE, NOT ANY (28 September, the release review). This first read
+-- "ANY of their roles is one I may give", so a GM at A reset the password of
+-- somebody who was front desk at A and GM or Owner at B - one Firebase
+-- account, so the GM then signed in as B's GM. may_manage_person and
+-- manages_person now ask what may_switch_person always asked: rostered
+-- somewhere, and NO role anywhere that the caller could not give. Corrected
+-- here, not in a new file: no later migration redefines them, and migrate.sh
+-- replays this file on every deploy.
 -- -----------------------------------------------------------------------------
 create or replace function app.may_manage_person(p_staff uuid)
 returns boolean
@@ -170,19 +179,19 @@ as $$
                     and s.is_active and s.is_group_admin) then true
     when exists (select 1 from staff t where t.id = p_staff
                    and t.is_group_admin) then false
-    else exists (
-      select 1 from staff_hotels sh
-       where sh.staff_id = p_staff
-         and sh.role = any (app.grantable_roles(sh.hotel_id))
-    )
+    else exists (select 1 from staff_hotels sh where sh.staff_id = p_staff)
+     and not exists (select 1 from staff_hotels sh
+                      where sh.staff_id = p_staff
+                        and not sh.role = any (app.grantable_roles(sh.hotel_id)))
   end;
 $$;
 
 comment on function app.may_manage_person(uuid) is
   'Yourself, always. A group administrator, anybody. A property manager, '
-  'somebody at a hotel they run whose role there they could give (the owner, '
-  '24 September 2026) - never a group administrator. The row policies on '
-  '`staff` ask it and so does app.may_set_password.';
+  'somebody rostered only at hotels they run, in roles they could give there '
+  '(the owner, 24 September 2026; every role, 28 September) - never a group '
+  'administrator. The row policies on `staff` ask it and so does '
+  'app.may_set_password.';
 
 create or replace function app.manages_person(p_staff uuid)
 returns boolean
@@ -191,15 +200,16 @@ set search_path = public, pg_temp
 as $$
   select app.is_group_admin() or (
         not exists (select 1 from staff t where t.id = p_staff and t.is_group_admin)
-    and exists (select 1 from staff_hotels sh
-                 where sh.staff_id = p_staff
-                   and sh.role = any (app.grantable_roles(sh.hotel_id))));
+    and exists (select 1 from staff_hotels sh where sh.staff_id = p_staff)
+    and not exists (select 1 from staff_hotels sh
+                     where sh.staff_id = p_staff
+                       and not sh.role = any (app.grantable_roles(sh.hotel_id))));
 $$;
 
 comment on function app.manages_person(uuid) is
-  'A group administrator: anybody. A property manager: somebody at a hotel '
-  'they run whose role there they could give, never a group administrator. '
-  'Asked by PATCH /admin/staff/:id (D22-3).';
+  'A group administrator: anybody. A property manager: somebody rostered only '
+  'at hotels they run, in roles they could give there, never a group '
+  'administrator. Asked by PATCH /admin/staff/:id (D22-3).';
 
 create or replace function app.may_switch_person(p_staff uuid)
 returns boolean

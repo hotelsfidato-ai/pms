@@ -1,7 +1,7 @@
 # =============================================================================
 # fidato-api — the App API, under systemd
 # =============================================================================
-# Installed by deploy/launch.sh, which substitutes __APP_DIR__.
+# Installed by deploy/launch.sh, which substitutes __APP_DIR__ and __UPLOAD_DIR__.
 #
 #   systemctl status fidato-api
 #   journalctl -u fidato-api -f
@@ -46,13 +46,16 @@ StartLimitIntervalSec=60
 TimeoutStopSec=120
 KillSignal=SIGTERM
 
-# Containment. The process needs its own directory, the Postgres socket and
-# the network; nothing else.
+# Containment. The process needs its own directory, the uploaded bills, the
+# Postgres socket and the network; nothing else.
+# ⚠ __UPLOAD_DIR__ is outside the checkout on purpose (launch.sh), and under
+# ProtectSystem=strict every path not named here is READ-ONLY to the API:
+# without it no bill could be uploaded (28 September, the release review).
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=__APP_DIR__/api
+ReadWritePaths=__APP_DIR__/api __UPLOAD_DIR__
 ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictSUIDSGID=true

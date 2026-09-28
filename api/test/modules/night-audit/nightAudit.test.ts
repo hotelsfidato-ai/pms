@@ -1411,3 +1411,55 @@ describe("leaving after check-out time", () => {
     expect(await lateCharges(id), "a waived charge still posted").toBe(before);
   });
 });
+
+/* ── A split bill: one stay, two open folios (28 September) ───────── */
+
+describe("a stay with a second folio", () => {
+  it("is charged one room night, on the folio it opened first", async () => {
+    /* The audit JOINED every open folio, so a stay with two came back as
+       two rows, the "already charged" check ran for both before either
+       insert, and the night was charged twice. */
+    await clearDueOuts();
+    const db = await admin();
+    /* As the rooms were BEFORE the check-in, which marks the room occupied. */
+    const rooms = (await db.query<{ id: string; number: string; hk: string; occ: string }>(
+      `select id::text, number, housekeeping_status as hk, occupancy_status as occ
+         from rooms where hotel_id = $1`, [puneId])).rows;
+    const stay = await checkInAtPune(3, 1800);
+    const room = rooms.find((r) => r.number === stay.room)!;
+    const bd = await businessDate();
+    try {
+      await db.query(
+        `insert into folios (hotel_id, reservation_id, status, opened_at)
+         values ($1, $2, 'open', now() + interval '1 minute')`,
+        [puneId, stay.reservationId]);
+    } finally {
+      await db.end();
+    }
+
+    const db2 = await admin();
+    try {
+      const res = await closeDay();
+      expect(res.status, await res.clone().text()).toBe(200);
+      const { rows } = await db2.query<{ folio_id: string }>(
+        `select folio_id::text from folio_postings
+          where reservation_id = $1 and category = 'room' and business_date = $2::date`,
+        [stay.reservationId, bd]);
+      expect(rows.map((r) => r.folio_id)).toEqual([stay.folioId]);
+    } finally {
+      /* PUNE HAS TEN ROOMS, and later files need a clean free one (MEMORY
+         334): the stay ends and the room goes back as it was found. This
+         test took the last one on 28 September and a Form III file lost
+         all 28 of its tests to "no clean free room at PUN". */
+      await db2.query("update reservations set status = 'checked_out' where id = $1", [stay.reservationId]);
+      await db2.query("update folios set status = 'closed' where reservation_id = $1", [stay.reservationId]);
+      await db2.query(
+        "update room_assignments set released_at = now() where reservation_id = $1 and released_at is null",
+        [stay.reservationId]);
+      await db2.query(
+        "update rooms set housekeeping_status = $2, occupancy_status = $3 where id = $1",
+        [room.id, room.hk, room.occ]);
+      await db2.end();
+    }
+  });
+});

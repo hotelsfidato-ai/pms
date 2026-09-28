@@ -49,6 +49,11 @@ const refuse = (reason: string, extra: Record<string, unknown> = {}) => ({
   ok: false as const, reason, ...extra,
 });
 
+/** The owner's words, 28 September: where the GSTIN is typed is Properties. */
+export const noGstin = (document: string, it: string) =>
+  `This property has no GSTIN, and ${document} must carry one. Enter it on the `
+  + `Properties screen, then issue ${it}.`;
+
 async function hotelIdFor(client: Client, code: string): Promise<string | null> {
   const { rows } = await client.query<{ id: string }>(
     "select id from hotels where code = $1", [code.toUpperCase()],
@@ -130,10 +135,12 @@ invoices.post("/:code/stays/:id/invoice", async (c) => {
     const { rows: folio } = await client.query<{
       id: string; guest: string; company: string | null;
       company_gstin: string | null; guest_address: string | null;
-      status: string;
+      company_address: string | null; status: string;
     }>(
       `select f.id, g.full_name as guest, co.name as company,
               co.gstin as company_gstin, gd.address_line as guest_address,
+              nullif(concat_ws(', ', nullif(co.address_line, ''),
+                                     nullif(co.city, '')), '') as company_address,
               f.status
          from folios f
          join reservations r on r.id = f.reservation_id
@@ -197,10 +204,14 @@ invoices.post("/:code/stays/:id/invoice", async (c) => {
        computed from the tax the postings actually carry, and has been
        since it was written. Two dead columns that looked like the
        source of the numbers under them. */
-    const { rows: hotel } = await client.query<{ state: string | null }>(
-      "select state from hotels where id = $1",
+    const { rows: hotel } = await client.query<{ state: string | null; gstin: string | null }>(
+      "select state, gstin from hotels where id = $1",
       [hotelId],
     );
+    /* NO GSTIN, NO TAX INVOICE (CGST Rule 46(a); 28 September, the release
+       review): it printed "-" as the supplier's GSTIN. Above the number,
+       which is the first write (MEMORY 243). */
+    if (!hotel[0]?.gstin?.trim()) return refuse(noGstin("a tax invoice", "the invoice"));
 
     /* CGST and SGST are half the total tax each, by statute — they are
        levied at the same rate on the same value. Split from the tax
@@ -237,8 +248,11 @@ invoices.post("/:code/stays/:id/invoice", async (c) => {
       [hotelId, f.id, finYear.rows[0]!.y, number.rows[0]!.n,
        /* The COMPANY is the recipient when there is one — a corporate
           booking's invoice is addressed to the company, and only the
-          company can claim the input credit. */
-       f.company ?? f.guest, f.company_gstin, f.guest_address,
+          company can claim the input credit. And the company's ADDRESS
+          with it (CGST Rule 46(e)): this printed the guest's home address
+          under the company's name (28 September, the release review). */
+       f.company ?? f.guest, f.company_gstin,
+       f.company ? f.company_address : f.guest_address,
        hotel[0]?.state, totals.taxable, cgst, sgst, totals.tax,
        totals.total, businessDate],
     );
@@ -543,6 +557,12 @@ invoices.post("/:code/invoices/:number{.+}/credit-note", async (c) => {
          index enforces it if two arrive at once. */
       return { ok: true, duplicate: true, number: already[0].number };
     }
+
+    /* A credit note carries the supplier's GSTIN too (CGST Rule 53; the
+       owner, 28 September). Above the number, as the invoice's. */
+    const { rows: gstin } = await client.query<{ gstin: string | null }>(
+      "select gstin from hotels where id = $1", [hotelId]);
+    if (!gstin[0]?.gstin?.trim()) return refuse(noGstin("a credit note", "the credit note"));
 
     const number = await client.query<{ n: string }>(
       "select app.next_invoice_number($1, $2) as n", [hotelId, inv.fin_year],

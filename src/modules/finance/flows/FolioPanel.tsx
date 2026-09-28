@@ -409,6 +409,10 @@ function AddChargeDialog({
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [taxable, setTaxable] = useState(true);
+  /* ONE PRESS, ONE CHARGE (28 September): the button waits while it is
+     sent, and a repeat carries the same key until one has landed. */
+  const [saving, setSaving] = useState(false);
+  const [pressKey, setPressKey] = useState(() => crypto.randomUUID());
 
   const value = Number(amount) || 0;
 
@@ -515,17 +519,24 @@ function AddChargeDialog({
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
             <Button variant="primary"
               disabled={!description.trim() || value === 0}
+              loading={saving}
               onClick={async () => {
-                const res = await postCharge(hotelId, stay.id, {
-                  category, description, amount: value, taxable, businessDate,
-                });
-                if (res.ok) {
-                  toast.success("Charge posted", `${money(value + (tax ?? 0))} on room ${stay.roomNumber}`);
-                  setDescription(""); setAmount("");
-                  setOpen(false);
-                  onDone();
-                } else {
-                  toast.error("Could not post", res.reason);
+                setSaving(true);
+                try {
+                  const res = await postCharge(hotelId, stay.id, {
+                    category, description, amount: value, taxable, businessDate,
+                  }, pressKey);
+                  if (res.ok) {
+                    setPressKey(crypto.randomUUID());
+                    toast.success("Charge posted", `${money(value + (tax ?? 0))} on room ${stay.roomNumber}`);
+                    setDescription(""); setAmount("");
+                    setOpen(false);
+                    onDone();
+                  } else {
+                    toast.error("Could not post", res.reason);
+                  }
+                } finally {
+                  setSaving(false);
                 }
               }}
             >
@@ -553,6 +564,9 @@ function SettleDialog({
   const [pan, setPan] = useState("");
   const [form97, setForm97] = useState(false);
   const [asCredit, setAsCredit] = useState(false);
+  /* ONE PRESS, ONE PAYMENT (28 September), as Post charge. */
+  const [saving, setSaving] = useState(false);
+  const [pressKey, setPressKey] = useState(() => crypto.randomUUID());
 
   const outstanding = Math.max(balance, 0);
   const value = Number(amount) || 0;
@@ -663,21 +677,28 @@ function SettleDialog({
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
             <Button variant="primary"
               disabled={value <= 0 || (extra > 0 && !asCredit)}
+              loading={saving}
               onClick={async () => {
-                const res = await settle(hotelId, stay.id, {
-                  method, amount: value, businessDate,
-                  ...(asksPan ? (form97 ? { form97 } : { pan }) : {}),
-                  ...(extra > 0 ? { heldAsCredit: true } : {}),
-                });
-                if (res.ok) {
-                  toast.success(`${money(value)} received`, method);
-                  setOpen(false);
-                  onDone();
-                } else {
-                  toast.error("Could not settle", res.reason);
-                  /* The bill may have moved under the dialog (another
-                     payment): read it again, so the warning shows. */
-                  onDone();
+                setSaving(true);
+                try {
+                  const res = await settle(hotelId, stay.id, {
+                    method, amount: value, businessDate,
+                    ...(asksPan ? (form97 ? { form97 } : { pan }) : {}),
+                    ...(extra > 0 ? { heldAsCredit: true } : {}),
+                  }, pressKey);
+                  if (res.ok) {
+                    setPressKey(crypto.randomUUID());
+                    toast.success(`${money(value)} received`, method);
+                    setOpen(false);
+                    onDone();
+                  } else {
+                    toast.error("Could not settle", res.reason);
+                    /* The bill may have moved under the dialog (another
+                       payment): read it again, so the warning shows. */
+                    onDone();
+                  }
+                } finally {
+                  setSaving(false);
                 }
               }}
             >

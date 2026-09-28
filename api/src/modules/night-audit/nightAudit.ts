@@ -359,7 +359,6 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
               r.is_complimentary as comp,
               (r.route_room_to_group and r.group_id is not null) as routed
          from reservations r
-         join folios f on f.reservation_id = r.id and f.status = 'open'
          /* THE ROOM THIS STAY IS IN **TONIGHT**, and exactly one of them.
 
             ⚠ THIS WAS A PLAIN LEFT JOIN ON "released_at is null", WITH NO
@@ -398,6 +397,13 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
          ) a on true
         where r.hotel_id = $1
           and r.status = 'checked_in'
+          /* AN OPEN FOLIO, ASKED - NOT JOINED (28 September, the release
+             review). A join to every open folio gave a stay with a second
+             folio (a split bill) two rows, the "not exists" below ran for
+             both before either insert, and the night was charged twice.
+             Where the charge goes is folio_for_room_charge's answer. */
+          and exists (select 1 from folios f
+                       where f.reservation_id = r.id and f.status = 'open')
           -- A day-use room is sold and vacated inside one day. It has
           -- no night to charge for.
           and not r.is_day_use

@@ -29,9 +29,40 @@ a question for the owner. Seen once; not reproduced on demand.
 
 ## Fixed
 
+### FIN-14 · A tax invoice or credit note went out with no hotel GSTIN — FIXED 28 September (release fixes)
+
+**Found** — 28 September, the compliance check before the one release (D27-89). `invoices.ts` copied `hotels.gstin` into the invoice even when it was null, and the document printed "-" as the supplier's GSTIN (CGST Rule 46(a); a credit note, Rule 53).
+
+**Fixed** — both routes refuse before `app.next_invoice_number`, the first write (MEMORY 243), so no number is spent: "This property has no GSTIN, and a tax invoice must carry one. Enter it on the Properties screen, then issue the invoice." The credit note says the same of itself. The owner chose the wording and that credit notes are refused too.
+
+**Proved** — `api/test/modules/finance/invoiceRecipient.test.ts`: with 5EL's GSTIN blanked, both refused and the series' next number unchanged; on the old code the invoice was issued (200).
+
+**The rule** — A statutory field that can be empty is a refusal before the number, not a dash on the document.
+
+### FIN-13 · A company's tax invoice printed the guest's home address — FIXED 28 September (release fixes)
+
+**Found** — 28 September, the same check. `recipient_name` was the company, `recipient_address` the guest's `guest_documents.address_line`; `companies.address_line` was never read (CGST Rule 46(e)).
+
+**Fixed** — when the company is the recipient, its address line and city ("12 MG Road, Pune"; the owner's choice), or "-" when it has neither - never the guest's.
+
+**Proved** — `invoiceRecipient.test.ts`: the issued invoice carries the company's address; the old code gave the guest's.
+
+**The rule** — The recipient's name and address come from the same party.
+
+### FIN-12 · A double tap on Post charge or Take payment posted twice — FIXED 28 September (release fixes)
+
+**Found** — 28 September, the deep audit. Neither button was disabled while its request was on the way, and neither route read an idempotency key, though `folio_postings.idempotency_key` and its unique index exist since 011.
+
+**Fixed** — both buttons show `loading` while sending, and send one key per press (kept until one lands). `postings.ts` answers a repeat of a stored key with the first line before anything is written; the payment asks after the guest's lock and before the cash counts, so the repeat of an accepted cash payment is not counted against the limit.
+
+**Proved** — `src/modules/finance/onePress.test.tsx` (two clicks, one call; on the old dialog the button stayed enabled) and `api/test/modules/finance/onePress.test.ts` (the same key twice, one line; on the old routes the key was not stored).
+
+**The rule** — Money buttons wait for their answer, and money routes remember the press.
+
 ### FIN-11 · the drawer hand-over list (cashier.ts) showed nobody but the caller - FIXED 28 September (D27-97)
 
 Read from `staff` joined to `staff_hotels`, whose row security shows each person only their own line unless they run the hotel (housekeeping HK-14). Now reads `app.hotel_people` (149), names only. `api/test/modules/finance/drawerColleagues.test.ts` - failed on the old code, passes now.
+
 
 ### FIN-9 · The Bill tab offered housekeeping every act the server refuses — FIXED 25 September
 

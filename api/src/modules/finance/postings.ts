@@ -109,6 +109,8 @@ export interface ChargeToPost {
       treatment at all rather than billing it at the room's rate. Laundry
       has no rule of its own and stays on "room". */
   taxKind?: string;
+  /** The desk's `idempotency-key` (011's column): a repeat of one press. */
+  idempotencyKey?: string | null;
 }
 
 export async function postCharge(
@@ -183,19 +185,30 @@ export async function postCharge(
   const { rows: made } = await client.query<{ id: string }>(
     `insert into folio_postings
        (hotel_id, folio_id, business_date, category, description,
-        amount, tax_rate, tax_amount)
+        amount, tax_rate, tax_amount, idempotency_key)
      select $1::uuid, $2::uuid, $3::date, $4::text, $5::text, $6::numeric,
-            t.rate, round($6::numeric * t.rate / 100.0, 2)
+            t.rate, round($6::numeric * t.rate / 100.0, 2), $9::uuid
        from (select case when $7::boolean
                          then app.gst_rate($1, $8::text, $6::numeric)
                          else 0::numeric end as rate) t
      returning id::text`,
     [hotelId, folioId, await resolveDate(client, hotelId, input.businessDate),
      CATEGORY[input.category ?? "Miscellaneous"] ?? "misc",
-     description, amount, taxable, taxKind],
+     description, amount, taxable, taxKind, input.idempotencyKey ?? null],
   );
 
   return { ok: true, id: made[0]!.id };
+}
+
+/** The line already posted under this key, if any: asked before anything is
+    written or refused, so a repeat gets the first answer (folio_postings_idem_idx,
+    011, is the guarantee behind it). */
+async function postedWith(client: Client, hotelId: string, key: string | null) {
+  if (!key) return null;
+  const { rows } = await client.query<{ id: string }>(
+    "select id::text from folio_postings where hotel_id = $1 and idempotency_key = $2",
+    [hotelId, key]);
+  return rows[0]?.id ?? null;
 }
 
 postings.post("/:code/stays/:id/charges", async (c) => {
@@ -208,12 +221,19 @@ postings.post("/:code/stays/:id/charges", async (c) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
+    /* ONE PRESS, ONE CHARGE (28 September, the release review): a repeat
+       of a press the ledger already holds answers with that line. */
+    const key = c.req.header("idempotency-key") ?? null;
+    const done = await postedWith(client, hotelId, key);
+    if (done) return { ok: true, data: { id: done } };
+
     const posted = await postCharge(client, hotelId, c.req.param("id"), {
       description: body.description ?? "",
       amount: body.amount as number,
       category: body.category,
       taxable: body.taxable,
       businessDate: body.businessDate,
+      idempotencyKey: key,
     });
     return posted.ok ? { ok: true, data: { id: posted.id } } : refuse(posted.reason);
   });
@@ -345,6 +365,13 @@ postings.post("/:code/stays/:id/payments", async (c) => {
       if (key) await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [key]);
     }
 
+    /* ONE PRESS, ONE PAYMENT (28 September): after the guest's turn, so two
+       presses cannot both miss it, and before the cash counts, which would
+       otherwise count the first press against the repeat. */
+    const idem = c.req.header("idempotency-key") ?? null;
+    const done = await postedWith(client, hotelId, idem);
+    if (done) return { ok: true, data: { id: done } };
+
     /* D25-40 - asked BEFORE folioFor, which may open a folio (MEMORY 243). */
     let pan: string | null = null;
     let form97 = false;
@@ -379,15 +406,15 @@ postings.post("/:code/stays/:id/payments", async (c) => {
     const { rows: made } = await client.query<{ id: string }>(
       `insert into folio_postings
          (hotel_id, folio_id, business_date, category, description,
-          amount, tax_rate, tax_amount)
-       values ($1,$2,$3,'payment',$4,$5,0,0)
+          amount, tax_rate, tax_amount, idempotency_key)
+       values ($1,$2,$3,'payment',$4,$5,0,0,$6)
        returning id::text`,
       [hotelId, folioId,
        businessDate,
        method === "city_ledger"
          ? "Transferred to city ledger"
          : `Received - ${body.method}`,
-       -amount],
+       -amount, idem],
     );
 
     await client.query(

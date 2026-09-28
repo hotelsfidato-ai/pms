@@ -113,6 +113,10 @@ green "  all migrations applied to an empty database"
 # 067 used to drop and re-add the menu section's list of headings with its own
 # narrow one; the first section set to alcohol would have stopped every deploy
 # after it at 067. The 10 is this script's, not anybody's rate.
+#
+# AND A RESTAURANT BILL SETTLED TO THAT FUNCTION (28 September). 038 put back
+# a payment list without 'function' over 099's, and the first bill settled to
+# a banquet would have stopped every deploy after it at 038.
 if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 \
      -c "insert into hotels (code, name, city) values ('RRN','Rerun Property','Nowhere')" \
      -c "insert into hotel_modules (hotel_id, module, is_enabled)
@@ -144,7 +148,19 @@ if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 \
              from hall
            returning id, hotel_id)
          insert into folios (hotel_id, event_id, status)
-         select hotel_id, id, 'open' from fn" 2>&1); then
+         select hotel_id, id, 'open' from fn" \
+     -c "with who as (select id from staff where email like 'rerun-%' limit 1),
+         outlet as (
+           insert into pos_outlets (hotel_id, code, name, staff_id)
+           select h.id, 'RRN-REST', 'Rerun Restaurant', who.id
+             from hotels h, who where h.code = 'RRN'
+           returning id, hotel_id)
+         insert into pos_orders (hotel_id, outlet_id, order_no, business_date,
+                                 status, settled_by, settled_at, payment_method,
+                                 event_id, opened_by)
+         select outlet.hotel_id, outlet.id, 'RRN-1', current_date,
+                'settled', who.id, now(), 'function', e.id, who.id
+           from outlet, who, banquet_events e where e.reference = 'BQ-RERUN-1'" 2>&1); then
   red "  x could not create a property between the passes"
   echo "$out" | grep -m1 "ERROR" | sed 's/^/      /'
   exit 1
