@@ -3,7 +3,12 @@ import {
   BookOpen, Banknote,
 } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
-import { can } from "@/lib/permissions";
+import { can, type Role } from "@/lib/permissions";
+
+/* Money owed and money taken: the server asks `invoice` view of these
+   three reports (roleGate MONEY_REPORT), and so does the menu - the owner's
+   D27-147: not the revenue manager, who keeps every other report. */
+const seesMoney = (role: Role): boolean => can(role, "view", "invoice");
 
 /* Reports' menu entries: the Dashboard at the top of the menu, and the
    Reports section after the night audit. Three are listed for everybody;
@@ -25,6 +30,7 @@ export const nav: ServiceNavEntry[] = [
     keywords: ["audit", "close of day", "day end"], listed: false },
   { section: "reports", order: 40,
     label: "City ledger", to: "/reports/city-ledger", icon: Building2, resource: "report",
+    canSee: seesMoney,
     keywords: ["company accounts", "receivables"], listed: false },
   { section: "reports", order: 50,
     label: "No show", to: "/reports/no-show", icon: CalendarCheck, resource: "report", listed: false },
@@ -53,8 +59,10 @@ export const nav: ServiceNavEntry[] = [
     canSee: (role) => can(role, "edit", "customer"),
     keywords: ["foreign", "frro", "form c"], listed: false },
   { section: "reports", order: 120,
-    label: "Guest ledger", to: "/reports/guest-ledger", icon: BookOpen, resource: "report", listed: false },
+    label: "Guest ledger", to: "/reports/guest-ledger", icon: BookOpen, resource: "report",
+    canSee: seesMoney, listed: false },
   { section: "reports", order: 130,
     label: "Cashier shift", to: "/reports/cashier-shift", icon: Banknote, resource: "report",
+    canSee: seesMoney,
     keywords: ["drawer", "takings"], listed: false },
 ];

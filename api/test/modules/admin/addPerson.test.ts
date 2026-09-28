@@ -82,11 +82,15 @@ describe("adding somebody new at their own hotel (ADM-6)", () => {
     expect(await rosteredAs(email)).toEqual(["front_desk"]);
   });
 
-  it("lets a hotel's Admin add a new person as Admin there (D23-2)", async () => {
+  it("refuses a hotel's Admin adding a new person as Admin there (D27-140; was D23-2)", async () => {
     const email = `adm6-newadmin-${RUN}@fidato.in`;
     const res = await add(adminId, email, "admin");
-    expect(res.status, await res.clone().text()).toBe(200);
-    expect(await rosteredAs(email)).toEqual(["admin"]);
+    expect(res.status, await res.clone().text()).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toMatch(/^Only the owner can make somebody an Admin./);
+    expect(await rosteredAs(email)).toEqual([]);
+    /* Refused before anything is written (root MEMORY 243): no phantom person. */
+    expect((await sql("select 1 from staff where email = $1", [email])).rows).toEqual([]);
   });
 
   it("brings back somebody already there rather than adding them twice", async () => {

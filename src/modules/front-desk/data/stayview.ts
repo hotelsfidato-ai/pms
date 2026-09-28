@@ -2,6 +2,7 @@ import { listAllRooms } from "@/data/repositories/rooms";
 import { listStays, getHouseNow } from "./stays";
 import type { Stay } from "@/data/repositories/types";
 import { listOpenFolios } from "@/modules/finance";
+import { ApiError } from "@/lib/api";
 
 /* ══════════════════════════════════════════════════════════════════
    STAY VIEW — the tape chart's data
@@ -39,7 +40,8 @@ export interface ChartBar {
   tone: BarTone;
   clippedStart: boolean;
   clippedEnd: boolean;
-  balance: number;
+  /** Undefined for a role the server gives no bills (D27-143). */
+  balance: number | undefined;
 }
 
 export interface ChartRoom {
@@ -150,7 +152,12 @@ export async function getStayView(
   const [allRooms, allStays, openFolios, houseNow] = await Promise.all([
     listAllRooms(hotelId),
     listStays(hotelId),
-    listOpenFolios(hotelId),
+    /* Refused to a role that reads bookings but not bills (D27-143): the
+       board still draws, with no balance at all rather than ₹0. */
+    listOpenFolios(hotelId).catch((error) => {
+      if (error instanceof ApiError && error.status === 403) return null;
+      throw error;
+    }),
     getHouseNow(hotelId),
   ]);
 
@@ -165,8 +172,9 @@ export async function getStayView(
   /* A folio only appears in `openFolios` when it carries a balance,
      so absent IS zero. Looking each one up separately would have been
      eighty-three more requests to learn the same thing. */
-  const balances = new Map(openFolios.map((f) => [f.stayId, f.balance]));
-  const balanceOf = (stayId: string) => balances.get(stayId) ?? 0;
+  const balances = new Map((openFolios ?? []).map((f) => [f.stayId, f.balance]));
+  const balanceOf = (stayId: string) =>
+    openFolios === null ? undefined : balances.get(stayId) ?? 0;
 
     /* Whether a room could be SOLD on a date.
 

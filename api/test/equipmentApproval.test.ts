@@ -108,8 +108,14 @@ describe("equipment leaving the store (095)", () => {
       const asker = role === "housekeeping" ? "front_desk" : "housekeeping";
       const id = await raise(asker);
 
-      const row = await seenBy(role, id);
-      expect(row.mayDecide, `${role} is offered the button`).toBe(may);
+      /* The till reads no approvals at all since 28 September: it holds no
+         grant the queue asks (roleGate READ_RULES). */
+      if (role === "pos") {
+        expect((await as(person.get(role)!.uid, "/5EL/approvals")).status).toBe(403);
+      } else {
+        const row = await seenBy(role, id);
+        expect(row.mayDecide, `${role} is offered the button`).toBe(may);
+      }
 
       const res = await as(person.get(role)!.uid, `/5EL/approvals/${id}/approved`, "POST", {});
       const body = (await res.json()) as { ok: boolean; reason?: string };
