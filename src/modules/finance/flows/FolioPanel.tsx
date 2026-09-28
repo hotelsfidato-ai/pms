@@ -836,6 +836,15 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
         </Button>
       </DialogTrigger>
       <DialogContent title="Interim bill" description="Print preview">
+        {/* QA FI-8: a Print, as the invoice and the restaurant bill have. The
+            print is its own page, so the screen behind stays off the paper. */}
+        <div className="flex justify-end mb-3">
+          <Button variant="primary" size="sm" disabled={!bill.data}
+            onClick={() => window.open(`/h/${hotelId}/stays/${stayId}/bill`, "_blank", "noopener")}>
+            <Printer className="size-4" />
+            Print
+          </Button>
+        </div>
         {bill.data ? (
           <BillPrint bill={bill.data} title="Interim bill" group={group} />
         ) : bill.isError ? (

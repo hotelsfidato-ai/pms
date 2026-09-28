@@ -11,6 +11,7 @@ import {
 import InvoicesPage from "@/modules/finance/pages/Invoices";
 import InvoicePage from "@/modules/finance/pages/Invoice";
 import VatBillPage from "@/modules/finance/pages/VatBill";
+import InterimBillPage from "@/modules/finance/pages/InterimBill";
 
 /* Finance's screen addresses. Mounted by App.tsx inside the signed-in
    shell. */
@@ -45,6 +46,11 @@ export const routes = (
     <Route
       path="/h/:code/invoices/vat/*"
       element={<><PropertyScope /><VatBillPage /></>}
+    />
+    {/* The interim bill, printable (QA FI-8): opened from the Bill tab. */}
+    <Route
+      path="/h/:code/stays/:id/bill"
+      element={<><PropertyScope /><InterimBillPage /></>}
     />
     <Route
       path="/h/:code/city-ledger"

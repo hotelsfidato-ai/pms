@@ -4,6 +4,7 @@ import { cn } from "@/lib/cn";
 import { DocMasthead, DocFacts, DocTotals, DOC_TH, DOC_TD } from "@/components/ui";
 import type { GroupSettings } from "@/modules/admin";
 import type { StayBill } from "../data/bill";
+import { placeLine } from "../place";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PRINTED BILL — one layout, for the desk and the guest (D21-10)
@@ -29,7 +30,8 @@ const half = (rate: number) => String(Math.round((rate / 2) * 100) / 100);
     own page has no sign-in to ask for them, so it prints the hotel's name alone. */
 export function BillPrint({ bill, title, group }: { bill: StayBill; title: string; group?: GroupSettings }) {
   const { hotel, stay } = bill;
-  const place = [hotel.address, hotel.city, hotel.state].filter(Boolean).join(", ");
+  /* The place once (QA FI-16): it printed "…413216, Akkalkot, MH". */
+  const place = placeLine(hotel.address, hotel.city, hotel.state);
 
   /* The CRS voucher's look (the owner, 27 September): the masthead, a
      strip of the stay's facts, the lines on hairlines, the totals under a
@@ -81,9 +83,13 @@ export function BillPrint({ bill, title, group }: { bill: StayBill; title: strin
             ...(bill.vat ?? []).map((v): [ReactNode, string] => [
               <span key="v" data-bill-vat-rate={v.rate}>{`VAT ${v.rate}%`}</span>, moneyPrecise(v.vat),
             ]),
-            ...(bill.roundOff !== 0 ? [["Round off", moneyPrecise(bill.roundOff)] as [ReactNode, string]] : []),
           ]}
-          total={["Total", moneyPrecise(bill.rounded)]}
+          /* THE EXACT FIGURE, NO ROUND-OFF (the owner's D27-126, QA FI-9): it
+             printed Total ₹6,157.00 beside Outstanding ₹6,157.20, while the
+             ledger, the tax invoice and check-out all work to the paisa - a
+             guest who paid the Total still owed ₹0.20 and could not leave.
+             One figure, the one every other document uses. */
+          total={["Total", moneyPrecise(bill.total)]}
           after={[
             ["Paid", moneyPrecise(bill.paid)],
             ["Outstanding", moneyPrecise(bill.balance)],
