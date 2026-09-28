@@ -102,6 +102,8 @@ async function offered(stayId: string) {
     vip: has("button", /Mark VIP|Remove VIP/),
     whatsapp: has("checkbox", /Agreed to WhatsApp/),
     more: has("button", /More options/),
+    /* D27-143: the Bill tab only for a role given bills. */
+    bill: has("tab", /^Bill$/),
   };
   cleanup();
   return seen;
@@ -111,19 +113,19 @@ describe("the stay panel", () => {
   it("offers reception every act, and housekeeping none of them", async () => {
     /* stay-comp is in the house (206); stay-turn-in arrives today (204). */
     expect(await offered("stay-comp")).toEqual(
-      { checkIn: false, settle: true, vip: true, whatsapp: true, more: true });
+      { checkIn: false, settle: true, vip: true, whatsapp: true, more: true, bill: true });
     expect((await offered("stay-turn-in")).checkIn).toBe(true);
 
     as("housekeeping");
     expect(await offered("stay-comp")).toEqual(
-      { checkIn: false, settle: false, vip: false, whatsapp: false, more: false });
+      { checkIn: false, settle: false, vip: false, whatsapp: false, more: false, bill: false });
     expect((await offered("stay-turn-in")).checkIn).toBe(false);
   });
 
   it("keeps Settle and check out for the accountant, who may take the payment", async () => {
     as("finance");
     expect(await offered("stay-comp")).toEqual(
-      { checkIn: false, settle: true, vip: false, whatsapp: false, more: false });
+      { checkIn: false, settle: true, vip: false, whatsapp: false, more: false, bill: true });
   });
 });
 

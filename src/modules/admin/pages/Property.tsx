@@ -14,6 +14,7 @@ import { getPropertyDetail, createStaff, revokeAccess, setStaffPassword, setHome
 import { getTodaySnapshot, getPeriodStatistics } from "@/modules/reports";
 import { getHouseNow } from "@/modules/front-desk";
 import { HOME_SCREENS, homeScreenLabel } from "@/lib/homeScreen";
+import { ConfirmRemoveAccess } from "@/modules/admin/flows/ConfirmRemoveAccess";
 
 /* The GM setting where somebody starts after sign-in (087). */
 async function startOn(
@@ -58,6 +59,8 @@ export default function PropertyPage() {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [password, setPassword] = useState<PropertyTeamMember | null>(null);
+  /* D27-117: Remove asks first. */
+  const [taking, setTaking] = useState<PropertyTeamMember | null>(null);
 
   const detail = useQuery({
     queryKey: ["property-detail", code],
@@ -268,7 +271,7 @@ export default function PropertyPage() {
                         </span>
                       </Button>
                       <Button variant="ghost"
-                              onClick={() => void remove(p, code, refresh)}>
+                              onClick={() => setTaking(p)}>
                         Remove
                       </Button>
                     </div>
@@ -287,6 +290,11 @@ export default function PropertyPage() {
       {password && (
         <SetPasswordDialog person={password}
                            onClose={() => setPassword(null)} onSaved={refresh} />
+      )}
+      {taking && (
+        <ConfirmRemoveAccess name={taking.name} code={code}
+                             onCancel={() => setTaking(null)}
+                             onRemove={() => remove(taking, code, () => { setTaking(null); refresh(); })} />
       )}
     </Page>
   );

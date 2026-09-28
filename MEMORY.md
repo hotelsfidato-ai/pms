@@ -6539,6 +6539,16 @@ copy will see of theirs.**
 
 ---
 
+### 344 · A role test green on its own run, red in the full suite (fix round B)
+
+28 September. Round B added a READ_RULES entry for every GET and a test that walks them all.
+That test passed on its first scoped run. The full API suite then failed 7 older tests that
+pinned the old answers: "every role reaches the Dashboard", "a hotel's Admin makes an Admin",
+the till reading approvals. Two of them were right and kept (/places is `anyone`,
+/equipment/options is `own`). **The rule:** after changing who may read or write anything,
+run the WHOLE API suite once before the gates, and decide each old test: an owner's decision
+changed it (update it), or it was right (keep it and fix the rule).
+
 ### 343 · MINE: five lane cards didn't say "leave the root HANDOVER, CHANGELOG and MEMORY alone"
 
 28 September. The print-samples, release-fixes and fix-round cards left out the line the

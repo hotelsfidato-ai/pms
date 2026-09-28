@@ -20,8 +20,9 @@ import type { Role } from "@/lib/permissions";
     file - and not a side effect of adding a screen. The server refuses
     the other three as well (api/src/modules/accounting/routes.ts): a
     hidden menu entry has never been a permission. */
+/* 28 September (D27-122): and the accountant, who the export is for. */
 const EXPORTS_THE_BOOKS = (role: Role): boolean =>
-  role === "owner" || role === "admin" || role === "gm";
+  role === "owner" || role === "admin" || role === "gm" || role === "finance";
 
 export const nav: ServiceNavEntry[] = [
   /* `listed: false`, like most of the Reports section: reachable by its

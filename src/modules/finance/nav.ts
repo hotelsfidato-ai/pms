@@ -1,5 +1,6 @@
 import { Receipt, FileText, Wallet, Building2 } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
+import { can } from "@/lib/permissions";
 
 /* Finance's menu entries — the Finance section. "Folio" is finance's word;
    the desk says "bill" (owner, 15 September). Assembled by `navigation.ts`. */
@@ -21,5 +22,9 @@ export const nav: ServiceNavEntry[] = [
     keywords: ["cash drawer", "drawer", "shift", "hand over"] },
   { section: "finance", order: 50,
     label: "Company accounts", to: "/h/:code/city-ledger", icon: Building2, resource: "commission",
+    /* Money owed (D27-145): the server asks `invoice` view of it, so the
+       revenue manager, who holds `commission` for Booking sources, does not
+       see it. Round A reads the City ledger report here; the same rule. */
+    canSee: (role) => can(role, "view", "invoice"),
     keywords: ["city ledger", "receivables"] },
 ];

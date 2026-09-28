@@ -7,7 +7,10 @@ import type { ServiceNavEntry } from "@/components/app/navigation";
 export const nav: ServiceNavEntry[] = [
   /* Housekeeping's too: the owner's D22-19, 22 September. */
   { section: "home", order: 20, workingMenus: ["front_desk", "housekeeping"],
-    label: "Rooms", to: "/h/:code/stay", icon: Home, resource: "dashboard",
+    /* `reservation`, not `dashboard` (D27-141, D27-142, 28 September): every
+       room with its guest and booking. The chef and the Inventory Manager,
+       who read no bookings, no longer have it; everybody else is unchanged. */
+    label: "Rooms", to: "/h/:code/stay", icon: Home, resource: "reservation",
     keywords: ["house", "board", "tape chart", "vacant", "empty", "free"] },
   { section: "home", order: 30, workingMenus: ["front_desk"],
     label: "Calendar", to: "/h/:code/calendar", icon: CalendarRange, resource: "reservation",

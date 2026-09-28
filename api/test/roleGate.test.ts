@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { app } from "../src/server.ts";
 import { closePool } from "../src/db.ts";
 import {
-  WRITE_RULES, READ_RULES, isDoor, allows, whoMay, refusalFor, roleGate, UNMAPPED, type Rule,
+  WRITE_RULES, READ_RULES, WITHHELD, isDoor, allows, whoMay, refusalFor, roleGate, UNMAPPED, type Rule,
 } from "../src/roleGate.ts";
 import * as serverMatrix from "../src/permissions.ts";
 import * as websiteMatrix from "../../src/lib/permissions.ts";
@@ -92,6 +92,117 @@ describe("every write the server mounts", () => {
       .map(([k]) => k)
       .filter((k) => !k.split(" ")[1]!.startsWith(`${H}/`));
     expect(outside).toEqual([]);
+  });
+});
+
+/* ── 1b · Every read has a rule (RO-1, A7, the owner's D27-116) ──────
+   Until 28 September the server asked the role on reads only for Form III
+   and online check-in: the chef read the Manager report, every stay and
+   every bill by address. Now every read the server mounts has a rule, and
+   a read with no rule is refused for everybody, as a write is. */
+
+describe("every read the server mounts", () => {
+  const mounted = [...new Set(
+    app.routes.filter((r) => r.method === "GET").map((r) => `${r.method} ${r.path}`),
+  )];
+
+  it("has a rule, or is a door with no person behind it", () => {
+    const missing = mounted.filter((k) => !isDoor(k.split(" ")[1]!)
+      && k !== "GET /health" && !(k in READ_RULES));
+    expect(missing, "a read route with no rule in api/src/roleGate.ts").toEqual([]);
+  });
+
+  it("and no rule names a route that is not mounted", () => {
+    const stale = Object.keys(READ_RULES).filter((k) => !mounted.includes(k));
+    expect(stale).toEqual([]);
+  });
+
+  it("asks a role only where it can find the hotel in the address", () => {
+    const outside = Object.entries(READ_RULES)
+      .filter(([, r]) => r.kind === "grant")
+      .map(([k]) => k)
+      .filter((k) => !k.split(" ")[1]!.startsWith(`${H}/`));
+    expect(outside).toEqual([]);
+  });
+
+  it("says who may, in a sentence a person reads", () => {
+    for (const [key, r] of Object.entries(READ_RULES)) {
+      if (r.kind !== "grant") continue;
+      expect(refusalFor(r), key).toMatch(/^[A-Z][^—]* is for [^—]+\. Ask one of them\.$/);
+    }
+  });
+
+  it("is refused for everybody when nobody mapped it, before any database", async () => {
+    const t = new Hono();
+    t.use("/api/*", roleGate);
+    t.get(`${H}/brand-new`, (c) => c.json({ ok: true }));
+    const res = await t.request("/api/hotels/5EL/brand-new");
+    expect(res.status).toBe(403);
+    expect(((await res.json()) as { reason: string }).reason).toBe(UNMAPPED);
+  });
+});
+
+/* ── 1c · The owner's answers of 28 September, in the rules ─────────── */
+
+describe("who reads what (D27-140 to D27-147)", () => {
+  const readRule = (key: string): Rule => {
+    const r = READ_RULES[key];
+    if (!r) throw new Error(`no read rule for ${key}`);
+    return r;
+  };
+  const who = (key: string) => whoMay(readRule(key));
+  const BILL_READERS = ["owner", "admin", "gm", "hotel_manager", "front_desk", "finance", "read_only"];
+
+  it("D27-143: bills, payments and the cash drawer are not for the roles that only read bookings", () => {
+    for (const key of [
+      `GET ${H}/folios`, `GET ${H}/stays/:id/bill`, `GET ${H}/stays/:id/folio`,
+      `GET ${H}/stays/:id/folios`, `GET ${H}/stays/:id/postings`, `GET ${H}/billable`,
+      `GET ${H}/invoices`, `GET ${H}/payments`, `GET ${H}/cashier-shift`,
+    ]) {
+      expect(who(key), key).toEqual(BILL_READERS);
+    }
+  });
+
+  it("D27-145, D27-147: money owed and taken is not the revenue manager's; the Manager report is", () => {
+    for (const key of [
+      `GET ${H}/reports/city-ledger`, `GET ${H}/reports/guest-ledger`,
+      `GET ${H}/reports/cashier-shift`, `GET ${H}/reports/balances-by-source`,
+    ]) {
+      expect(who(key), key).toEqual(BILL_READERS);
+    }
+    expect(who(`GET ${H}/reports/manager`)).toContain("revenue_manager");
+  });
+
+  it("D27-141: no report for housekeeping, the kitchen or the Inventory Manager, nor the chef or the till", () => {
+    const readers = who(`GET ${H}/reports/manager`);
+    for (const role of ["housekeeping", "kitchen_manager", "stores", "chef", "pos"]) {
+      expect(readers, role).not.toContain(role);
+    }
+  });
+
+  it("D27-142: no bookings for the chef or the Inventory Manager", () => {
+    expect(who(`GET ${H}/stays`)).not.toContain("chef");
+    expect(who(`GET ${H}/stays`)).not.toContain("stores");
+    expect(who(`GET ${H}/stays`)).toContain("housekeeping");
+  });
+
+  it("D27-143: a function's bill is withheld from the roles that read bookings only (round E's BQ-1)", () => {
+    expect(WITHHELD[`GET ${H}/banquet/events/:id`]).toEqual(
+      { keys: ["folioId", "bill", "invoice"], unless: "invoice" });
+  });
+
+  it("round E's function money writes keep their rules: the owner, an administrator and the GM; the invoice adds the accountant", () => {
+    for (const key of [`POST ${H}/banquet/events/:id/bill`, `POST ${H}/banquet/events/:id/payments`]) {
+      expect(whoMay(rule(key)), key).toEqual(["owner", "admin", "gm"]);
+    }
+    expect(whoMay(rule(`POST ${H}/banquet/events/:id/invoice`)))
+      .toEqual(["owner", "admin", "gm", "finance"]);
+  });
+
+  it("D27-146: the Viewer keeps reading what its row allows, and still no ID details", () => {
+    expect(who(`GET ${H}/folios`)).toContain("read_only");
+    expect(who(`GET ${H}/guests`)).toContain("read_only");
+    expect(who(`GET ${H}/form-c`)).not.toContain("read_only");
   });
 });
 
@@ -461,14 +572,16 @@ describe("the reads that hand out a guest's passport or ID number (D25-38)", () 
   it("are every mounted read that returns an ID field, and each is mounted", () => {
     /* The reads that select guest_documents' or a submission's numbers
        (grep id_number, passport, visa in api/src). A new one goes here. */
-    expect(Object.keys(READ_RULES).sort()).toEqual([
-      `GET ${H}/form-c`, `GET ${H}/online-checkin`, `GET ${H}/reports/c-form`,
-      /* Not an ID read: telemetry's System health screen (150, D27-91), owner and
-         admin only. Round B's read rules for every GET replace this list. */
-      `GET ${H}/system-health`,
-    ].sort());
-    const mounted = new Set(app.routes.map((r) => `${r.method} ${r.path}`));
-    for (const key of Object.keys(READ_RULES)) expect(mounted.has(key), key).toBe(true);
+    /* Every read has a rule since 28 September, so these are picked out by
+       the rule they carry: the ID grant, or the desk's own list. */
+    const idReads = Object.entries(READ_RULES)
+      .filter(([, r]) => (r.kind === "grant" && /passport/.test(r.doing))
+        || (r.kind === "own" && /DESK_ROLES/.test(r.where)))
+      .map(([k]) => k).sort();
+    expect(idReads).toEqual([
+      `GET ${H}/form-c`, `GET ${H}/online-checkin`, `GET ${H}/online-checkin/messages`,
+      `GET ${H}/reports/c-form`,
+    ]);
   });
 
   it("let in exactly the owner, an administrator, the GM, the hotel manager and reception", () => {
@@ -510,6 +623,122 @@ describe("somebody not rostered at the hotel", () => {
   it("passes to the route, which says what it always said", async () => {
     const res = await send(puneClerkId, "PUT", "/pricing/base", { from: "2029-01-01", price: 1 });
     expect(res.status, await res.clone().text()).toBe(404);
+  });
+});
+
+/* ── Reads, asked of every role through the real server (RO-1) ──────
+   The QA's RO rows, plus the owner's answers: every role, and for each read
+   either the gate's own refusal or no refusal from the gate at all. A 400
+   for a missing parameter is the route's answer, which means the gate let
+   the person through. */
+
+describe("the reads, as every role (RO-1, D27-140 to D27-147)", () => {
+  const PROBES = [
+    "/reports/manager", "/stays", "/folios", "/billable", "/payments", "/cashier-shift",
+    "/reports/balances-by-source", "/reports/city-ledger", "/companies", "/guests",
+    "/invoices", `/stays/${UUID}/bill`, "/reports/guest-ledger?from=2026-08-01&to=2026-08-31",
+    "/reports/cashier-shift?from=2026-08-01&to=2026-08-31", "/statistics/period", "/pricing",
+    "/till/orders", "/kitchen", "/notifications", "/rooms", "/modules", "",
+  ];
+  const keyFor = (path: string) => {
+    const bare = path.split("?")[0]!.replace(UUID, ":id");
+    return `GET ${H}${bare}`;
+  };
+
+  it("refuses exactly the roles the rule leaves out, in the gate's words", async () => {
+    const wrong: string[] = [];
+    for (const role of websiteMatrix.ASSIGNABLE_ROLES) {
+      for (const path of PROBES) {
+        const key = keyFor(path);
+        const r = READ_RULES[key];
+        if (!r) throw new Error(`no read rule for ${key}`);
+        const res = await send(as(role), "GET", path);
+        const body = res.status === 403 ? await res.json() as { reason?: string } : null;
+        const refused = res.status === 403 && body?.reason === refusalFor(r);
+        if (refused === allows(r, role)) wrong.push(`${role} ${path}: ${res.status}`);
+      }
+    }
+    expect(wrong).toEqual([]);
+  }, 300_000);
+
+  it("the chef reads neither the Manager report, a stay nor a bill (RO-1)", async () => {
+    for (const path of ["/reports/manager", "/stays", "/folios"]) {
+      expect((await send(as("chef"), "GET", path)).status, path).toBe(403);
+    }
+  });
+
+  it("the revenue manager reads no guest messages (RO-3, D27-144), in the route's words", async () => {
+    const res = await send(as("revenue_manager"), "GET", "/guest-messages");
+    expect(res.status).toBe(403);
+    expect((await send(as("front_desk"), "GET", "/guest-messages")).status).toBe(200);
+  });
+
+  it("the accountant opens the Accounting export (D27-122), and still not Form III", async () => {
+    const book = await send(as("finance"), "GET", "/accounting/day-book?from=2026-08-01&to=2026-08-31");
+    expect(book.status, await book.clone().text()).toBe(200);
+    expect((await send(as("finance"), "GET", "/form-c")).status).toBe(403);
+  });
+
+  it("the revenue manager downloads the Manager report but not the City ledger (D27-147)", async () => {
+    const manager = await send(as("revenue_manager"), "GET", "/reports/manager.csv");
+    expect(manager.status, await manager.clone().text()).toBe(200);
+    const ledger = await send(as("revenue_manager"), "GET", "/reports/city-ledger.csv");
+    expect(ledger.status).toBe(403);
+    expect((await send(as("finance"), "GET", "/reports/city-ledger.csv")).status).toBe(200);
+  });
+});
+
+describe("what a read withholds (D27-143)", () => {
+  type Row = Record<string, unknown>;
+  const rows = async (role: string, path: string) =>
+    (await (await send(as(role), "GET", path)).json()) as Row[];
+
+  it("blanks a guest's phone and email for housekeeping, and keeps them for reception", async () => {
+    /* The demo's guests carry no phone, so one is given one for the test
+       and handed back as it was. */
+    const picked = (await sql(
+      `select r.id::text as stay, g.id::text as guest, g.phone from reservations r
+         join guests g on g.id = r.guest_id join hotels h on h.id = r.hotel_id
+        where h.code = '5EL' order by r.check_in desc limit 1`)).rows[0] as
+      { stay: string; guest: string; phone: string | null };
+    const withPhone = picked.stay;
+    await sql("update guests set phone = $2 where id = $1", [picked.guest, "9000012345"]);
+    try {
+
+    const desk = (await rows("front_desk", "/stays")).find((s) => s["id"] === withPhone)!;
+    expect(desk["phone"]).toBe("9000012345");
+    for (const role of ["housekeeping", "revenue_manager", "kitchen_manager", "pos"]) {
+      const theirs = (await rows(role, "/stays")).find((s) => s["id"] === withPhone)!;
+      expect(theirs, role).toBeTruthy();
+      expect([theirs["phone"], theirs["email"]], role).toEqual([null, null]);
+      expect(theirs["guest"], role).toBe(desk["guest"]);
+      const one = (await (await send(as(role), "GET", `/stays/${withPhone}`)).json()) as Row;
+      expect([one["phone"], one["email"]], `${role} one stay`).toEqual([null, null]);
+    }
+    } finally {
+      await sql("update guests set phone = $2 where id = $1", [picked.guest, picked.phone]);
+    }
+  });
+
+  it("sends a group's balances to reception and not to housekeeping", async () => {
+    /* scope=all: the demo's group is in the past. Asserted non-empty, or
+       the loop below would pass with nothing in it (MEMORY fault 4). */
+    const desk = await rows("front_desk", "/groups?scope=all");
+    const hk = await rows("housekeeping", "/groups?scope=all");
+    expect(desk.length, "the demo has a group").toBeGreaterThan(0);
+    expect(hk.length).toBe(desk.length);
+    expect(typeof desk[0]!["guestBalance"]).toBe("number");
+    for (const g of hk) expect([g["masterBalance"], g["guestBalance"]]).toEqual([null, null]);
+
+    const id = String(desk[0]!["id"]);
+    const deskOne = (await (await send(as("front_desk"), "GET", `/groups/${id}`)).json()) as Row;
+    const hkOne = (await (await send(as("housekeeping"), "GET", `/groups/${id}`)).json()) as Row;
+    expect(typeof deskOne["guestBalance"]).toBe("number");
+    expect([hkOne["guestBalance"], hkOne["master"]]).toEqual([null, null]);
+    const rooms = hkOne["rooms"] as Row[];
+    expect(rooms.length).toBeGreaterThan(0);
+    expect(rooms.map((r) => r["balance"])).toEqual(rooms.map(() => null));
+    expect(rooms.map((r) => r["guest"])).toEqual((deskOne["rooms"] as Row[]).map((r) => r["guest"]));
   });
 });
 

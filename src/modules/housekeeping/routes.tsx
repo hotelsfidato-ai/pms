@@ -1,5 +1,6 @@
 import { Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
+import { RequireAccess } from "@/components/app/RequireAccess";
 import HousekeepingPage from "@/modules/housekeeping/pages/Housekeeping";
 import WorkOrdersPage from "@/modules/housekeeping/pages/WorkOrders";
 
@@ -9,7 +10,8 @@ export const routes = (
   <>
     <Route
       path="/h/:code/housekeeping"
-      element={<><PropertyScope /><HousekeepingPage /></>}
+      /* Guarded since the board asks for bookings (D27-142). */
+      element={<RequireAccess path="/h/:code/housekeeping" resource="inventory"><PropertyScope /><HousekeepingPage /></RequireAccess>}
     />
     {/* What needs fixing. Not the same as a room being out. */}
     <Route
