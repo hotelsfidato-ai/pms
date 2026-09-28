@@ -227,13 +227,14 @@ export function CheckInFlow({
                       <span className="ml-auto">
                         <StatusPill
                           tone={
-                            room.housekeeping === "inspected" ? "success"
+                            room.label ? "warning"
+                              : room.housekeeping === "inspected" ? "success"
                               : room.housekeeping === "clean" ? "info"
                               : room.housekeeping === "dirty" ? "warning"
                               : "neutral"
                           }
                         >
-                          {room.housekeeping}
+                          {room.label ?? room.housekeeping}
                         </StatusPill>
                       </span>
                     </button>

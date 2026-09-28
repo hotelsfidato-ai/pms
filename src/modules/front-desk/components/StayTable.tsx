@@ -127,8 +127,9 @@ const ALL_COLUMNS: Record<StayColumn, Column<StayRow>> = {
           )}
         >
           {money(Math.abs(s.balance))}
+          {/* A real space, not only a margin: it read "₹784over" (QA FI-18). */}
           {s.balance < 0 && (
-            <span className="ml-1 text-2xs font-normal text-grey-500">over</span>
+            <span className="text-2xs font-normal text-grey-500">{" "}over</span>
           )}
         </span>
       ),

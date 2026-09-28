@@ -100,7 +100,7 @@ export async function assignableRooms(
          the first time this swap forced a SCREEN to change — which is
          the one thing the checkpoint is measuring. Mapping belongs in
          the repository; that is what a seam is for. */
-      const base = { ...r, housekeeping: r.status };
+      const base = { ...r, housekeeping: r.status, label: undefined as string | undefined };
 
       if (r.status === "out-of-service") {
         return { ...base, allowed: false, reason: "Held out of service." };
@@ -109,8 +109,12 @@ export async function assignableRooms(
         return { ...base, allowed: false, reason: "Not cleaned yet." };
       }
       const occupant = takenBy.get(r.number);
+      /* Its state in words (QA FD-10): an occupied room read "clean". */
       if (occupant && r.number !== currentRoom) {
-        return { ...base, allowed: false, reason: `${occupant} is in this room.` };
+        return { ...base, allowed: false, reason: `${occupant} is in this room.`, label: "Occupied" };
+      }
+      if (occupant) {
+        return { ...base, allowed: true, reason: `${occupant} has not left this room yet.`, label: "Guest still in" };
       }
       return { ...base, allowed: true, reason: undefined as string | undefined };
     });
