@@ -369,6 +369,15 @@ describe("what else New booking records", () => {
     expect(await reasonOf(res)).toMatch(why);
     expect(await onFile(name)).toEqual({ guests: 0, reservations: 0 });
   });
+
+  /* X-3: 0 adults reached the database's own check as a 500. */
+  it("refuses a room for nobody in words, and writes nothing", async () => {
+    const res = await call(ownerId, "POST", "/bookings", booking("Nobody",
+      { lines: [{ roomTypeId: typeId, adults: 0, rooms: 1, agreedRate: 4000 }] }));
+    expect(res.status).toBe(409);
+    expect(await reasonOf(res)).toBe("Adults is a whole number from 1 to 99.");
+    expect(await onFile("Nobody")).toEqual({ guests: 0, reservations: 0 });
+  });
 });
 
 describe("cancelling a booking waiting for the hotel (D27-64)", () => {

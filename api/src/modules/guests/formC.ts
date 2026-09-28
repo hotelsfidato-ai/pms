@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
-import { isForeign, saveIdentity, saveVisit, type Identity, type Visit } from "./formIII.ts";
+import {
+  identityProblem, isForeign, saveIdentity, saveVisit, type Identity, type Visit,
+} from "./formIII.ts";
+import { portalNumberProblem } from "../../validate.ts";
 
 /* Split out of api/src/routes/invoices.ts on 15 September in the
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service: guests.
@@ -114,6 +117,11 @@ formC.post("/:code/form-c/:reservationId", async (c) => {
     if (!hotelId) return null;
 
     const reference = body.reference?.trim();
+    /* GU-3 (the owner, 28 September): "!" was filed as a portal number and
+       the register said everyone was filed. Letters and digits, - and /,
+       6 to 30 characters, at least one digit. */
+    const notANumber = portalNumberProblem(reference);
+    if (notANumber) return refuse(notANumber);
     if (!reference) {
       /* The portal's acknowledgement IS the evidence. Recording a
          filing without it produces a register that proves nothing,
@@ -190,6 +198,12 @@ formC.put("/:code/form-c/:reservationId/details", async (c) => {
     if (id.idType?.trim() && !id.idNumber?.trim()) {
       return refuse(`A ${id.idType} needs its number.`);
     }
+    /* The desk's own rules (round D): the number by its type, no impossible
+       date, a real country, a real phone. */
+    const { rows: today } = await client.query<{ d: string }>(
+      "select app.business_date($1)::text as d", [hotelId]);
+    const wrong = identityProblem(id, body.visit, today[0]!.d);
+    if (wrong) return refuse(wrong);
 
     await saveIdentity(client, stay.guest_id, id);
     await saveVisit(client, hotelId, c.req.param("reservationId"), body.visit ?? {});

@@ -7,7 +7,7 @@ import { people } from "./people.ts";
 /* Form III (D27-25): the rule and the savers check-in, walk-in and
    check-out share with the register. */
 export {
-  formIIIRefusal, isForeign, saveIdentity, saveVisit,
+  formIIIRefusal, identityProblem, isForeign, saveIdentity, saveVisit,
   type Identity, type Visit,
 } from "./formIII.ts";
 

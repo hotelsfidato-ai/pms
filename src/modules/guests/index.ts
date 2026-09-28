@@ -19,5 +19,5 @@ export { BookingSiteBlacklist } from "./components/BookingSiteBlacklist";
    fields for check-in and the walk-in (front desk) and the register. */
 export {
   ForeignGuestFields, formIIIMissing, particularsPayload, NO_PARTICULARS,
-  ID_TYPES, PURPOSES, type Particulars,
+  ID_TYPES, PURPOSES, idProblem, idExpired, type Particulars,
 } from "./components/ForeignGuestFields";

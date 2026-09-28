@@ -1,4 +1,7 @@
 import { Field, Input, NativeSelect, fieldProps } from "@/components/ui";
+import {
+  countryProblem, documentDatesProblem, expiredDocuments, idNumberProblem, phoneProblem,
+} from "../../../../api/src/validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    FORM III — what the desk asks a foreign guest (D27-25)
@@ -99,6 +102,24 @@ export function formIIIMissing(
   return requiredKeys(nationality, idCaptured)
     .filter((k) => !p[k]?.trim()).map((k) => label.get(k)!);
 }
+
+/** What the server's identityProblem (api/src/modules/guests/formIII.ts)
+    will refuse, asked here from the same validate.ts so the clerk hears it
+    on the ID step (round D, 28 September): the number by its type, an
+    impossible date, a country or a phone that is not one. `today` is the
+    business date. */
+export function idProblem(
+  p: Particulars, idType: string, idNumber: string, nationality: string, today: string,
+): string | null {
+  return idNumberProblem(idType, idNumber) ?? documentDatesProblem(p, today)
+    ?? countryProblem(nationality)
+    ?? phoneProblem(p["phoneInIndia"]) ?? phoneProblem(p["mobileInIndia"])
+    ?? phoneProblem(p["phoneAbroad"]) ?? phoneProblem(p["mobileAbroad"]);
+}
+
+/** An expired passport or visa: WARNED, then recorded as typed (the owner,
+    28 September) - the flow asks "check in anyway?". */
+export const idExpired = (p: Particulars, today: string): string[] => expiredDocuments(p, today);
 
 /** The two halves the server takes: the person's, and this visit's.
     Only what was typed is sent - a blank never overwrites an answer. */

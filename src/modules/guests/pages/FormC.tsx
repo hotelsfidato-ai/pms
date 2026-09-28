@@ -353,7 +353,10 @@ function FormIIICard({
     ["Address abroad", [r["homeAddress"], r["homeCity"], r["homeCountry"]].filter(Boolean).join(", ") || "-"],
     ["Reference address in India", [r["refAddress"], r["refCity"], r["refState"], r["refPincode"]].filter(Boolean).join(", ") || "-"],
     ["Employed in India", r["employedInIndia"] === null || r["employedInIndia"] === undefined ? "-" : r["employedInIndia"] ? "Yes" : "No"],
-    ["Length of stay", `${nights} night${nights === 1 ? "" : "s"}, to ${dateShort(r.checkOut)}`],
+    /* GU-4 (the owner, 28 September): the arrival above is the real clock
+       of check-in, as the law asks; this line is the BOOKING's, worded so it
+       cannot read as a second arrival date. */
+    ["Length of stay", `${nights} night${nights === 1 ? "" : "s"} (booked), expected to leave ${dateShort(r.checkOut)}`],
     ["Portal number, arrival", r.arrivalNumbers.join(", ") || "-"],
     ["Portal number, departure", r.departureNumbers.join(", ") || "-"],
   ];

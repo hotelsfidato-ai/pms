@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Client } from "../../db.ts";
-import { countryProblem, dateProblem } from "../../validate.ts";
+import { countProblem, countryProblem, dateProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    MAKING A BOOKING - the one place a reservation is created
@@ -480,6 +480,10 @@ export async function makeBooking(
 
       const adults = line.adults ?? 1;
       const children = line.children ?? 0;
+      /* X-3 (round D): 0 adults or -1 children reached the database's own
+         check and came back as "Something went wrong". */
+      const count = countProblem(adults, "Adults", 1) ?? countProblem(children, "Children", 0);
+      if (count) return refuse(count);
       if (adults + children > rt[0].max) {
         return refuse(
           `${adults + children} people will not fit a ${rt[0].name} - it `
