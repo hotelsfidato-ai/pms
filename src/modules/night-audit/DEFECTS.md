@@ -40,6 +40,16 @@ they read, or the branch it drops is untested everywhere at once.
 
 ## Fixed
 
+### NA-10 · The audit closed the day on one click (QA NA-1, D27-117) — FIXED 28 September
+
+**Found** — the QA of 28 September (`docs/qa/qa-2026-09-28.md`, QA NA-1; not this file's NA-1): "Run night audit" closed the day and moved the date at once, and a closed day cannot be edited. The owner's D27-117: it asks first.
+
+**Done** — `pages/NightAudit.tsx`: Run opens "Close {day}?", saying the date it moves to, that tonight's room charges post and no-shows are marked, and that a closed day is only corrected afterwards; nothing is sent until "Close {date}". Also (the owner's answer 4, fix round C): the run's restaurant figures list the dishes struck after the kitchen had them, with who and why, read through the POS front door (`struckAfterKitchen`, `app.pos_struck_after_kitchen`, migration 151) - READ, nothing posted.
+
+**Proved** — `nightAudit.test.tsx`: the Run test asserts the question and that nothing is posted before it (fails on cp6's page: it posts on the first click); `api/test/modules/night-audit/nightAudit.test.ts` asserts `restaurant.struck` is `[]` for a hotel with no food. On screen (fidato_s27): Cancel left the day open; confirmed, 25 Aug closed and the two strikes were listed.
+
+**The rule** — An act that cannot be undone asks first, in words that name what it does.
+
 ### NA-9 · A stay with two open folios (a split bill) was charged each night twice
 
 **Found** 28 September, the deep audit (D27-89). The room-charge query joined every open folio, so a stay with a second folio came back as two rows; the "already charged tonight" check ran for both before either insert. And `app.folio_for_room_charge` took the stay's open folio with `limit 1` and no order.

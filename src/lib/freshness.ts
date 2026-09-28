@@ -24,6 +24,9 @@ export const MONEY_KEYS: readonly string[] = [
   "payments", "payments-by-method", "city-ledger", "cashier-drawer",
   "billable", "invoice",
   "dashboard-manager", "dashboard",
+  /* Close restaurant day (QA NA-3): opened before the evening's bills were
+     settled, it went on saying "Settled ₹0" at the count. */
+  "day-end",
 ];
 
 export function reCheckMoney(client: QueryClient): void {

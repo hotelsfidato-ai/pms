@@ -11,6 +11,7 @@ import { can } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardHeader, CardBody, Button, StatusPill, Skeleton, Tooltip,
   ErrorState, EmptyState, DataTable, Term, IconChip, type Column,
+  Dialog, DialogContent, DialogClose,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
 import {
@@ -57,6 +58,9 @@ export default function NightAuditPage() {
 
   const queryClient = useQueryClient();
   const [result, setResult] = useState<NightAuditResult | null>(null);
+  /* D27-117 (QA NA-1): the audit asks first. It closed the day on one click,
+     and a closed day cannot be edited. */
+  const [confirming, setConfirming] = useState(false);
 
   /* Correcting a closed day (D22-18): the owner, an administrator and the GM
      (D24-3), this month and last (D24-5). Anybody else sees a day's
@@ -198,12 +202,33 @@ export default function NightAuditPage() {
                 <span className="shrink-0">
                   <Button variant="primary"
                     disabled={!data.canRun.allowed || run.isPending}
-                    onClick={() => run.mutate(data.businessDate)}
+                    onClick={() => setConfirming(true)}
                   >
                     {run.isPending ? "Closing the day…" : "Run night audit"}
                   </Button>
                 </span>
               </Tooltip>
+              <Dialog open={confirming} onOpenChange={setConfirming}>
+                <DialogContent title={`Close ${dateLong(data.businessDate)}?`} size="sm">
+                  <div className="space-y-4">
+                    <p className="text-base text-grey-700 leading-relaxed">
+                      The property moves to {dateLong(data.nextBusinessDate)}. Tonight's
+                      room charges are posted to every guest in house and arrivals who
+                      did not come become no-shows. A closed day cannot be edited, only
+                      corrected afterwards.
+                    </p>
+                    <div className="flex gap-2">
+                      <DialogClose asChild>
+                        <Button variant="secondary" className="flex-1">Cancel</Button>
+                      </DialogClose>
+                      <Button variant="primary" className="flex-1"
+                        onClick={() => { setConfirming(false); run.mutate(data.businessDate); }}>
+                        Close {dateShort(data.businessDate)}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardBody>
           </Card>
 
@@ -284,6 +309,13 @@ export default function NightAuditPage() {
                           .join(" · ")}
                       </p>
                     )}
+                    {/* D27-119: food struck after the kitchen had it, and why. */}
+                    {(result.restaurant.struck ?? []).map((x, i) => (
+                      <p key={i} className="text-2xs text-success-600 mt-0.5">
+                        Struck after the kitchen: {x.qty} × {x.name} ({money(x.value)})
+                        {" · "}{x.orderNo} · {x.by ?? "-"} · {x.reason ?? "-"}
+                      </p>
+                    ))}
                   </div>
                 )}
 

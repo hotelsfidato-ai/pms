@@ -1892,16 +1892,22 @@ describe("the kitchen docket", () => {
       lines: { id: string; name: string }[];
     };
     const toStrike = current.lines.find((l) => l.name === "Butter Roti")!;
-    await post(
-      `/api/hotels/5EL/till/orders/${order.id}/lines/${toStrike.id}/void`);
+    /* With a reason: the kitchen had it (D27-119). */
+    const struck = await post(
+      `/api/hotels/5EL/till/orders/${order.id}/lines/${toStrike.id}/void`,
+      { reason: "not wanted after all" });
+    expect(struck.status, await struck.clone().text()).toBe(200);
 
     const docket = (await (await as(
       `/api/hotels/5EL/till/orders/${order.id}/kot/${kotNo}`)).json()) as {
-      lines: { name: string }[];
+      lines: { name: string }[]; struck: { name: string; reason: string }[];
     };
     /* A dish cancelled after the docket printed has its own loud line on
-       the pass. Reprinting it here would put it back on the chef's rail. */
+       the pass. Reprinting it here would put it back on the chef's rail -
+       it is printed apart instead, as taken off, with why (D27-119). */
     expect(docket.lines.map((l) => l.name)).toEqual(["Paneer Tikka"]);
+    expect(docket.struck.map((l) => [l.name, l.reason]))
+      .toEqual([["Butter Roti", "not wanted after all"]]);
   });
 
   it("has no docket for a number that was never sent", async () => {
