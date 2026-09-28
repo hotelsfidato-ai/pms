@@ -93,7 +93,7 @@ fix made elsewhere does not reach them unless it changes these queries.
 | Arrivals still outstanding | `reservations`: `confirmed`, `check_in = X` | the run marks `confirmed` with `check_in <= X`, so it can mark more than this counts |
 | Departures not yet checked out | `reservations`: `checked_in`, `check_out = X` | the same condition as the `departures` blocker |
 | In-house folios carrying a balance | `reservations` `checked_in` whose non-reversed `folio_postings` (charges plus tax; payments are negative lines) sum above ₹0.50, per booking across all its folios | **a third copy of "balance"** — not `app.folio_balance` (006), not finance's `getFolioBalance` |
-| Room charges to post | `reservations`: `checked_in`, not day-use | **an "in house" count of its own.** The run also skips complimentary stays, stays with no open folio and stays already charged tonight, so "rooms posted" can be smaller |
+| Room charges to post | `POSTS_TONIGHT` in `nightAudit.ts`, less the complimentary stays | **the run's own text** (QA NA-5, 28 Sep): checked in, an open folio, not day-use, not charged for tonight yet - so it equals the run's "rooms posted" |
 | Rooms still marked dirty | `rooms.housekeeping_status = 'dirty'` | |
 | Postings reversed today | `folio_postings` with a `reverses_id`, `business_date = X` | |
 | The Run button and its reason | `blockersFor(X)` in `nightAudit.ts` | the same function the run refuses with — asked for X, while the run asks for the server's date. Run sends X, and the server refuses it once X is closed (NA-2) |

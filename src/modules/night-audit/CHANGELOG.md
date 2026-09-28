@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-28 · Fix round F (QA leftovers, D27-149): "Room charges to post" counts what the run posts (QA NA-5)
+
+**Asked for:** QA NA-5: the checklist said 6, the run posted 0. Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** the run's stay predicate is one exported text, `POSTS_TONIGHT` (`nightAudit.ts`), used by the run and by the checklist's count, which also leaves out complimentary rooms (the run skips them) and stays due out today (the run is refused until they leave). The card's sentence says what is and is not counted. NA-11.
+**Proved:** `api/test/modules/night-audit/nightAudit.test.ts` 23 passed; the walk-in test now asserts the count drops by one once the whole stay is posted, and failed with `checklist.ts` put back ("expected 1 to be +0"). On screen (fidato_s30, 26 Aug): 0 to post, with two in-house stays already charged for both nights at check-in.
+
+---
+
 ## 2026-09-28 · Fix round C: the audit asks first; the restaurant's struck dishes in its figures
 
 **Asked for:** the owner's D27-116/117 through the master: QA NA-1 (Run night audit on one click); D27-119's reason "in the day's report" - the owner chose the night audit as well (fix round C, answer 4). Branch `fix/restaurant-audit-28sep` from cp6 `631ce1f`.
