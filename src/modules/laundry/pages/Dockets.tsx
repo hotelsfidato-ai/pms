@@ -7,7 +7,7 @@ import { ApiError } from "@/lib/api";
 import {
   Page, PageHeader, Card, Button, Skeleton, EmptyState, ErrorState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, DataTable,
-  Segmented, StatusPill, toast, type Column, type Tone,
+  Segmented, StatusPill, toast, type Column, type Tone, ReadFailed, readProblem,
 } from "@/components/ui";
 import {
   getDockets, getPriceList, getStaysToChargeTo, createDocket,
@@ -197,6 +197,17 @@ export default function LaundryDocketsPage() {
       />
     );
   })();
+
+  /* Laundry switched off (QA X-5): the server's one sentence, as the
+     banquet says it, with no tabs or buttons above it that cannot work. */
+  if (readProblem(q.error)?.kind === "refused") {
+    return (
+      <Page>
+        <PageHeader title="Laundry" />
+        <ReadFailed error={q.error} what="the laundry" onRetry={() => void q.refetch()} />
+      </Page>
+    );
+  }
 
   return (
     <Page>

@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 import {
   Page, PageHeader, Card, Button, Skeleton, EmptyState, ErrorState, IconChip,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, toast,
-  Checkbox,
+  Checkbox, ReadFailed, readProblem,
 } from "@/components/ui";
 import {
   getPriceList, addPriceItem, setPriceItem,
@@ -138,6 +138,16 @@ export default function LaundryPriceListPage() {
       </Card>
     );
   })();
+
+  /* Laundry switched off (QA X-5): one sentence, no Add above it. */
+  if (readProblem(q.error)?.kind === "refused") {
+    return (
+      <Page>
+        <PageHeader title="Laundry price list" />
+        <ReadFailed error={q.error} what="the laundry" onRetry={() => void q.refetch()} />
+      </Page>
+    );
+  }
 
   return (
     <Page>
