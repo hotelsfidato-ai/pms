@@ -117,3 +117,12 @@
 | D27-113 | System health: a hotel's business date | **Amber when it is yesterday, red at two days or more behind** |
 | D27-114 | System health: the last backup | **Read from the nightly backup log** on the server (passed / failed / unknown, copied off or this disk only) |
 | D27-115 | System health on the live server | **No check on the live server by the session**; the owner opens System health after the release and sets up UptimeRobot on /health |
+| D27-116 | QA's findings (docs/qa/qa-2026-09-28.md) and the release | **Fix before the release**: everything that blocks work and every wrong result (money, guest ID, roles); the 52 cosmetic items after the pilot starts. Five lanes in parallel |
+| D27-117 | "Are you sure?" (QA Q-6) | **All six ask first**: running the night audit, reversing a charge or payment (with a required reason), issuing an invoice number, check-out, removing a person's access, charging a restaurant bill to a room |
+| D27-118 | Cash with no drawer open (QA Q-5, FI-13) | **Refused until a cash drawer is open**, so every rupee belongs to a shift |
+| D27-119 | Voiding a dish already sent to the kitchen (QA Q-7, POS-4) | **Captain, restaurant manager or GM, with a reason**; waiters can't once it reaches the kitchen; the reason shows on the KOT and in the day's report |
+| D27-120 | A banquet hall price of 0 (QA Q-8, BQ-8), and zero prices generally (X-1) | **Refused unless ticked "Free"**; blank means not priced yet (the no-default-prices rule) |
+| D27-121 | May a hotel's Admin make other Admins (QA Q-9, RO-6) | **No: only the owner or the GM** |
+| D27-122 | The Accountant's reports (QA Q-10) | **Opens the Accounting export; not the Form III register** (passport data stays with the check-in roles, D25-38) |
+| D27-123 | Booking references' month (QA Q-11, BK-12) | **The hotel's business date**, not the wall clock |
+| D27-124 | A banquet function while the banquet tax heading is not set (QA Q-12, BQ-3) | **Warn when the function is set up**; the bill is still refused until it is set |
