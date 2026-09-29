@@ -211,17 +211,19 @@ describe("the two open faults (D21-25)", () => {
     } finally { await stopSender(server); }
   });
 
-  it("answers one knock too many exactly as it answers the right number", async () => {
-    const { server } = await standInSender();
+  /* Five codes an hour a link. The sixth used to be hidden behind the right
+     number's answer, when a typed number had to be kept secret; with no
+     number typed (D27-105) there is nothing to hide, and the guest is told
+     to use the one they have. */
+  it("sends no sixth code in an hour, and says so", async () => {
+    const { server, received } = await standInSender();
     try {
-      const first = await asGuest(`/${link}/code`, "POST", { phone });
-      const firstBody = await first.text();
-      let last = first;
-      for (let i = 0; i < 6; i += 1) last = await asGuest(`/${link}/code`, "POST", { phone });
-      /* The sixth in an hour is the rate-limited one. It used to answer
-         `{ sent: true, hint: null }` and the page printed a blank line. */
-      expect(last.status).toBe(first.status);
-      expect(await last.text()).toBe(firstBody);
+      let last: Response | null = null;
+      for (let i = 0; i < 6; i += 1) last = await asGuest(`/${link}/code`, "POST", {});
+      expect(received.length, "five went").toBe(5);
+      expect(last!.status).toBe(200);
+      expect(((await last!.json()) as { sent: boolean; message: string }))
+        .toEqual({ sent: false, message: expect.stringMatching(/Five codes .* Use the latest one/) });
     } finally { await stopSender(server); }
   });
 });
@@ -232,7 +234,7 @@ describe("the code reaches the booking's own number (OCI-2)", () => {
   it("hands the sender the whole number, not the masked one kept for the record", async () => {
     const { server, received } = await standInSender();
     try {
-      const res = await asGuest(`/${link}/code`, "POST", { phone });
+      const res = await asGuest(`/${link}/code`, "POST", {});
       expect(res.status).toBe(200);
       expect(received.length, "one message went to the stand-in").toBe(1);
       const sent = JSON.parse(received[0]!) as { to: { phone: string } };
@@ -396,9 +398,13 @@ describe("one fixed card per room", () => {
     const card = await printCard(roomId);
     const { server, received } = await standInSender();
     try {
-      await asGuest(`/${card}/code`, "POST", { phone });
+      const res = await asGuest(`/${card}/code`, "POST", {});
       expect(received.length).toBe(1);
       expect((JSON.parse(received[0]!) as { to: { phone: string } }).to.phone).toBe(phone);
+      /* D21-14: whoever holds the card is standing in somebody's room - the
+         answer says where the code went without a digit of the number. */
+      const said = ((await res.json()) as { message: string }).message;
+      expect(said).toBe("We sent the code on WhatsApp to the phone on the booking.");
     } finally { await stopSender(server); }
   });
 
@@ -582,6 +588,58 @@ describe("the check-in details wait for a clerk", () => {
     const after = (await sql(
       "select to_jsonb(d) as row from guest_documents d where guest_id = $1", [guestId])).rows[0]?.row;
     expect(after).toEqual(before);
+  });
+
+  /* D27-169: the arrival time, requests, nationality and Form III's person
+     and visit - each written where the desk keeps it, by the clerk's one
+     button, and nothing written over by a field the guest left blank. */
+  it("write the rest of what the guest sent where the desk keeps it (D27-169)", async () => {
+    const was = (await sql(
+      `select r.notes, r.expected_arrival::text, g.nationality,
+              exists (select 1 from form_iii_stays f where f.reservation_id = r.id) as had_form
+         from reservations r join guests g on g.id = r.guest_id where r.id = $1`, [stayId])).rows[0];
+    await sql("update reservations set notes = 'Late checkout asked' where id = $1", [stayId]);
+    try {
+      const unlock = await unlockWith(link);
+      const refused = await asGuest(`/${link}/details`, "POST",
+        { idType: "voter", idNumber: "FORM0001", gender: "unknown" }, unlock);
+      expect(refused.status, "Form III's own list").toBe(400);
+
+      const res = await asGuest(`/${link}/details`, "POST", {
+        idType: "voter", idNumber: "FORM0001", expectedArrival: "14:30",
+        specialRequests: "A quiet room", nationality: "Germany", gender: "female",
+        dateOfBirth: "1990-04-02", purpose: "tourism", arrivedInIndiaOn: "2026-08-20",
+        employedInIndia: false, refCity: "Pune",
+      }, unlock);
+      expect(res.status, await res.clone().text()).toBe(200);
+
+      const { rows } = await sql(
+        "select id::text from guest_detail_submissions where reservation_id = $1 and status = 'waiting'", [stayId]);
+      const confirmed = await asStaff(deskId, `/5EL/online-checkin/submissions/${rows[0].id}/confirm`, "POST", {});
+      expect(confirmed.status, await confirmed.clone().text()).toBe(200);
+
+      const { rows: now } = await sql(
+        `select r.notes, r.expected_arrival::text, g.nationality, d.gender, d.date_of_birth::text,
+                f.purpose, f.arrived_in_india_on::text, f.employed_in_india, f.ref_city,
+                f.updated_by::text
+           from reservations r join guests g on g.id = r.guest_id
+           left join guest_documents d on d.guest_id = g.id
+           left join form_iii_stays f on f.reservation_id = r.id
+          where r.id = $1`, [stayId]);
+      expect(now[0]).toEqual({
+        notes: "Late checkout asked\nGuest asked online: A quiet room",
+        expected_arrival: "14:30:00", nationality: "GERMANY",
+        gender: "female", date_of_birth: "1990-04-02",
+        purpose: "tourism", arrived_in_india_on: "2026-08-20", employed_in_india: false,
+        ref_city: "Pune", updated_by: deskId,
+      });
+    } finally {
+      await sql("update reservations set notes = $2, expected_arrival = $3::time where id = $1",
+        [stayId, was.notes, was.expected_arrival]);
+      await sql("update guests set nationality = $2 where id = (select guest_id from reservations where id = $1)",
+        [stayId, was.nationality]);
+      if (!was.had_form) await sql("delete from form_iii_stays where reservation_id = $1", [stayId]);
+    }
   });
 
   it("record the guest's own yes to offers at once, and nothing when it is not ticked (D25-39)", async () => {
