@@ -111,19 +111,23 @@ function companyFrom(input: Partial<Record<keyof CompanyFields, unknown>>, was?:
 }
 
 /** C-11: one name, one GSTIN. Asked here and not by an index: an index could
-    fail a deploy on rows nobody has looked at. */
-async function duplicateOf(client: Client, c: CompanyFields, id: string | null) {
+    fail a deploy on rows nobody has looked at - and there are some (the demo
+    loaded twice makes two "Agoda"s). So only a name or GSTIN being given is
+    asked (null skips it): a duplicate already on file can still be edited,
+    to tick its credit (D27-185), without first being renamed. */
+async function duplicateOf(client: Client, name: string | null, gstin: string | null, id: string | null) {
   const { rows } = await client.query<{ name: string; same_gstin: boolean }>(
     `select name, ($2::text is not null and upper(gstin) = $2) as same_gstin
        from companies
       where is_active and id <> coalesce($3::uuid, '00000000-0000-0000-0000-000000000000')
-        and (lower(trim(name)) = lower($1) or ($2::text is not null and upper(gstin) = $2))
+        and (($1::text is not null and lower(trim(name)) = lower($1))
+             or ($2::text is not null and upper(gstin) = $2))
       limit 1`,
-    [c.name, c.gstin, id]);
+    [name, gstin, id]);
   const d = rows[0];
   if (!d) return null;
   return d.same_gstin
-    ? `${d.name} already has GSTIN ${c.gstin}. Edit that company instead.`
+    ? `${d.name} already has GSTIN ${gstin}. Edit that company instead.`
     : `${d.name} is already on the list. Edit that company instead.`;
 }
 
@@ -166,7 +170,7 @@ contracts.post("/:code/companies", async (c) => {
     if (company.creditAllowed && !(await keepsCompanies(client))) {
       return refuse(`Credit is given by ${KEEPERS}. Add the company without it and ask one of them.`);
     }
-    const duplicate = await duplicateOf(client, company, null);
+    const duplicate = await duplicateOf(client, company.name, company.gstin, null);
     if (duplicate) return refuse(duplicate);
     const { rows } = await client.query<{ id: string }>(
       `insert into companies (name, kind, gstin, contact_name, phone, email, address_line,
@@ -187,9 +191,13 @@ contracts.patch("/:code/companies/:id", async (c) => {
     if (!hotelId || !A_UUID.test(id)) return null;
     const { rows: was } = await client.query<CompanyFields>(`${COMPANY} where co.id = $1 and co.is_active`, [id]);
     if (!was[0]) return null;
-    /* Absent is unchanged; blank clears. The whole record is checked. */
+    /* Absent is unchanged; blank clears. The whole record is checked; the
+       name and GSTIN for a duplicate only when they change. */
     const company = companyFrom(input, was[0]);
-    const wrong = companyProblem(company) ?? await duplicateOf(client, company, id);
+    const renamed = company.name.toLowerCase() !== was[0].name.trim().toLowerCase();
+    const regstin = company.gstin !== (was[0].gstin?.toUpperCase() ?? null);
+    const wrong = companyProblem(company) ?? await duplicateOf(client,
+      renamed ? company.name : null, regstin ? company.gstin : null, id);
     if (wrong) return refuse(wrong);
     await client.query(`update companies set ${COLUMNS} where id = $1`, [id, ...values(company)]);
     return { ok: true as const, id, name: company.name };

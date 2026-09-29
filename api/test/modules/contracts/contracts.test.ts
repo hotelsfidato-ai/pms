@@ -132,6 +132,18 @@ describe("a company's record", () => {
   });
 });
 
+describe("a duplicate already on file (the demo loaded twice)", () => {
+  it("is still edited, to tick its credit (D27-185); a rename onto another name is refused", async () => {
+    const twins = (await sql(
+      `insert into companies (name) values ($1), ($1) returning id::text`, [`${TAG} Twin`])).rows;
+    const tick = await call("gm", "PATCH", `/companies/${twins[0].id}`, { creditAllowed: true });
+    expect(tick.status, await tick.clone().text()).toBe(200);
+    const desk = (await sql("select id::text from companies where name = $1", [`${TAG} Desk Firm`])).rows[0].id;
+    const rename = await call("gm", "PATCH", `/companies/${desk}`, { name: `${TAG} Twin` });
+    expect(await reasonOf(rename)).toMatch(/is already on the list/);
+  });
+});
+
 describe("a contract", () => {
   let agent: string;
   beforeAll(async () => {
