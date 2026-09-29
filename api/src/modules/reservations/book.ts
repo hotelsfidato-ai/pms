@@ -476,6 +476,18 @@ export async function makeBooking(
     const terms = await deskTerms(client, request, lines);
     if ("ok" in terms) return terms;
 
+    /* THE COMPANY'S CONTRACT (D27-184). A booking naming a company is made
+       under its contract in force on the arrival date (C-3): the contract
+       prices a line with no typed rate, its commission replaces the
+       source's (C-8), and the booking keeps which contract it was. */
+    const { rows: under } = terms.companyId
+      ? await client.query<{ id: string; commission_pct: string | null }>(
+        `select id::text, commission_pct::text
+           from app.contract_in_force($1, $2, $3::date)`,
+        [terms.companyId, hotelId, request.checkIn])
+      : { rows: [] };
+    const contract = under[0] ?? null;
+
     /* EVERY LINE IS PRICED AND FITTED BEFORE ANY IS BOOKED. A refusal on
        the second room type must find nothing of the first on file. */
     const planned: {
@@ -511,13 +523,18 @@ export async function makeBooking(
          nothing for it (020), and an unpriced calendar does not stop a gift. */
       let rate = line.complimentary === true ? 0 : line.agreedRate ?? null;
       if (rate === null) {
+        /* Under a contract, its price - or, where it has no figure for this
+           room type and plan, the calendar's (C-4), inside the same function. */
         const { rows: t } = await client.query<{
           total: string | null; unpriced: string | null;
         }>(
-          `select total::text, unpriced
-             from app.tariff_for($1,$2,$3::date,$4,$5)`,
+          contract
+            ? `select total::text, unpriced
+                 from app.contract_price($6::uuid,$1,$2,$3::date,$4,$5)`
+            : `select total::text, unpriced
+                 from app.tariff_for($1,$2,$3::date,$4,$5)`,
           [line.roomTypeId, line.mealPlan ?? "EP", request.checkIn,
-           adults, children]);
+           adults, children, ...(contract ? [contract.id] : [])]);
         if (t[0]?.total === null || t[0]?.total === undefined) {
           /* NEVER A ZERO. A machine is told "unpriced" by name, so the channel
              manager can say which nights need a price rather than selling the
@@ -632,12 +649,12 @@ export async function makeBooking(
               ota_reference, ota_line, ota_fingerprint, whatsapp_agreed,
               is_complimentary, expected_departure, sales_person, company_id,
               discount_percent, discount_reason, room_promotion_id,
-              notes, is_single_lady)
+              notes, is_single_lady, contract_id)
            values ($1,$2,$3,$4,$5::date,$6::date,$7,$8,$9,$10,$30,$11,
                    $12,$13,$14,$15,$16::time,$17,$18::numeric,
                    $19,$20,$21,$22,
                    $23,$24::time,$25,$26,$27::numeric,$28,$29,
-                   $31,$32)
+                   $31,$32,$33::uuid)
            returning id::text`,
           [hotelId, ref[0]!.reference, guestId, line.roomTypeId,
            request.checkIn, request.checkOut, adults, children, adults + children,
@@ -655,7 +672,9 @@ export async function makeBooking(
               midnight — nothing should hold a room against a time
               nobody gave. */
            request.expectedArrival?.trim() || null,
-           request.bookingSourceId, commission,
+           request.bookingSourceId,
+           /* C-8: the contract's commission, when it has one. */
+           contract?.commission_pct ?? commission,
            /* All NULL for the desk. For a sender, every room carries its
               reference and its place in the request — line 1 is the one two
               racing copies collide on (091). */
@@ -671,7 +690,7 @@ export async function makeBooking(
            line.complimentary === true || rate === 0 ? null : terms.discount?.reason ?? null,
            line.complimentary === true || rate === 0 ? null : terms.discount?.promotionId ?? null,
            request.tentative === true ? "tentative" : "confirmed",
-           text(request.notes), request.isSingleLady === true],
+           text(request.notes), request.isSingleLady === true, contract?.id ?? null],
         );
 
         /* A BOOKING NEEDS SOMEWHERE TO PUT MONEY, from the moment it

@@ -676,6 +676,21 @@ export async function takeFolioPayment(
       "select 1 from folios where id = $1::uuid and hotel_id = $2", [folioId, hotelId]);
     if (!rows.length) return { ok: false, reason: "No such bill." };
   }
+
+  /* ON CREDIT ONLY WHERE CREDIT IS GIVEN (D27-184, C-9). The company is the
+     one the City ledger names: the bill's own, else its booking's. A bill
+     with no company (a booking site's) is not asked. */
+  if (method === "city_ledger" && folioId) {
+    const { rows: co } = await client.query<{ name: string }>(
+      `select co.name from folios f
+         left join reservations r on r.id = f.reservation_id
+         join companies co on co.id = coalesce(f.company_id, r.company_id)
+        where f.id = $1::uuid and not co.credit_allowed`, [folioId]);
+    if (co[0]) {
+      return { ok: false, reason: `${co[0].name} is not allowed credit. Take the payment another way, `
+        + "or ask the owner, an administrator or the general manager to allow credit on its record." };
+    }
+  }
   const businessDate = await resolveDate(client, hotelId, input.businessDate);
 
   /* ONE PAYER'S PAYMENTS TAKE TURNS (the owner's D27-2): two clerks taking
