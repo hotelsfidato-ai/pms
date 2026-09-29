@@ -95,7 +95,7 @@ function Setup({ code }: { code: string }) {
   const save = useMutation({
     mutationFn: () => saveCrsSetup(code, form!),
     onSuccess: () => {
-      toast.success("Saved. The CRS is read every five minutes.");
+      toast.success("Connection saved.");
       void qc.invalidateQueries({ queryKey: ["crs-setup", code] });
       void qc.invalidateQueries({ queryKey: ["crs-bookings", code] });
     },
@@ -214,7 +214,7 @@ export default function CrsBookingsPage() {
       key: "crs", header: "CRS booking",
       cell: (b) => (
         <span className="flex flex-col">
-          <span className="font-medium text-ink-900 tabular">{b.crsReference}</span>
+          <span className="font-medium text-ink-900 tabular whitespace-nowrap">{b.crsReference}</span>
           <span className="text-xs text-grey-600">{b.guestName ?? "-"}</span>
         </span>
       ),
