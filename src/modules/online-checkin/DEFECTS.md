@@ -167,6 +167,41 @@ link exists. Seen to fail with the fault put back.
 **The rule** — A "nothing is shown" assertion needs something in the same
 render that proves the answer arrived.
 
+### OCI-8 · A code that never went was counted as sent
+
+**Found** — 29 September, by reopening a guest's page in the browser within
+ten minutes. Every test passed.
+
+The page notes the moment it asks for a code, so reopening the link from
+WhatsApp does not send a second one (each new code kills the last, and a link
+gets five an hour). It noted it BEFORE asking and kept the note whatever came
+back - so a send the door refused, or one that never reached it, left the
+guest reading "A code was sent a few minutes ago. Use it" for a code that
+never existed.
+
+**What was done** — `sendCode` forgets the note when the answer is not
+`sent`, or the call fails; the next open asks again. Noting before the call
+stays, so a second mount while it is in flight still sends nothing. Guarded
+by "asks again on the next open when the last ask sent nothing"; seen to fail
+with the forgetting taken out.
+
+**The rule** — A record that something happened is written when it happened,
+or taken back when it did not.
+
+### OCI-9 · No number on the booking, and still a box for the code
+
+**Found** — the same evening, on the same screen: the door's "Ask the desk"
+sat above an empty code box and "Send a new code", under a line promising six
+digits "to the number on the booking".
+
+**What was done** — a booking's link whose booking has no number (the hint
+the link already shows) draws only "Ask the desk", asks the door nothing, and
+drops the promise. A room card never shows its number, so it still asks and
+reads the door's own words. The sentence is written twice - the page's and
+the door's - and each names the other. Guarded; seen to fail.
+
+**The rule** — A screen that says "you cannot" does not also offer the thing.
+
 ---
 
 ## Adding one

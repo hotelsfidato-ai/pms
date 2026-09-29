@@ -54,13 +54,25 @@ ten-minute guard, the unlock surviving the tab, Form III dropped for an
 Indian, the development code drawn, the desk's new lines, the build check's
 `devCode`. Type checks clean (web and API).
 
+**Opened, 29 September evening** (fidato_s35 at 162, the master ran it; the
+app's own browser pane): the guest page at 390 px - the code asked for by
+itself ("ending 0011"), the development code shown, the code typed, the
+booking opened, the unlock in localStorage and a new tab still unlocked, a
+foreign guest's form sent; a booking with no number; the desk at desktop as
+Reception - the waiting card with every field, and Confirm, whose writes were
+read back from the database (notes, arrival time, nationality, the person,
+the Form III visit).
+
+**Found by opening it (OCI-8, OCI-9):** a failed or refused send still
+counted as "asked", so the page said a code had been sent; a booking with no
+number still drew the code box. Both fixed, each with a test seen to fail.
+
 **Left open:**
-- **Migration 162 has not run and the API suite has not run** - both held
-  by the master. `guestDoor.test.ts` and `guestDoorBehindTheCode.test.ts`
+- **The API suite has not run** - held by the master; migration 162 is run
+  (by the master, on fidato_s35). `guestDoor.test.ts` and `guestDoorBehindTheCode.test.ts`
   carry the new server cases (the booking's own number whatever is posted,
   no number issues nothing, the dev switch's live code, five an hour, the
   room card's words, 24 hours, the confirm's writes) and wait for it.
-- The screens are not yet opened in the browser: the local API needs 162.
 - "New booking insists on a mobile number for online check-in" is the
   one-page lane's.
 

@@ -244,10 +244,12 @@ function ProveIt(
       <h2 className={H2}>
         Your check-in details are behind a code
       </h2>
-      <p className={cn(LEAD, "mb-3")}>
-        We send six digits on WhatsApp to the number on the booking
-        {view.phoneHint ? `, ending ${view.phoneHint.replace("…", "")}` : ""}.
-      </p>
+      {noPhone ? <div className="mb-3" /> : (
+        <p className={cn(LEAD, "mb-3")}>
+          We send six digits on WhatsApp to the number on the booking
+          {view.phoneHint ? `, ending ${view.phoneHint.replace("…", "")}` : ""}.
+        </p>
+      )}
 
       <Card><CardBody>
         {/* The door's sentence, printed as it came. */}
