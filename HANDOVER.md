@@ -47,6 +47,23 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+### 30 September — read this first
+
+```
+cp6 now              Release 1 (1612358): everything to 22 Sep's live + QA fix rounds A-F +
+                     the pool and bell speed fixes, fully checked. Release 2 on top (7fa0b52+):
+                     KOT station, messaging and online check-in with the voucher PDF, one-page
+                     booking, CRS bridge, leads and marketing, folio edit and change rate;
+                     migrations up to 161. All lanes merged and archived.
+live                 Still 0b4766e (22 Sep). The owner types the release (D21-50).
+drive D:             Dropped out 5 times on 28-29 Sep (MEMORY 345). Everything is backed up
+                     to GitHub as refs/backup-2026-09-29/* (D27-155). chkdsk D: /f after the
+                     release, then the cable.
+Postgres             Start it with the keeper command in the memory note local-postgres-start
+                     (-t 900). Only the master starts or stops it.
+decisions            D27-116 to D27-174 in docs/briefs/decisions-2026-09-27.md.
+```
+
 ### 28 September — read this first
 
 ```
@@ -339,6 +356,15 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **30 September: the queue.** (1) The owner runs the release (release 2 contains release 1;
+> the steps are in the chat, each labelled with where it runs). (2) The owner's connections:
+> Meta templates first (they take days), the CRS automation login and two n8n workflows
+> (deploy/n8n/OWNER-STEPS.md), the leads read-only login (src/modules/leads/OWNER-STEPS.md),
+> the n8n addresses, then the server settings from the master. (3) 5 Elements: room GST rate
+> first, the setup checklist, the GM's login, the receptionist test, the first real day.
+> (4) Later: availability out (D27-107), the second speed fixes (the booking list fetched three
+> times, the Manager report's daily figures), Add/Edit company, the CA's and lawyer's answers.
 
 > **28 September: the queue.** (1) Merge release/fixes-28sep and
 > housekeeping/staff-lists-28sep after their checks; one full gates run and a

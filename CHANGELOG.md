@@ -50,6 +50,39 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-09-28/30 · The master: the QA fix round, release 1 checked, drive D:, and release 2's six features
+
+**Asked for:** fix QA's findings before the one release; a local demo; then folio edit and
+change rate, the POS charge-to-room bug, one page for booking and check-in, a KOT station, a
+speed and workflow check; then "start the one face plan in different agents".
+
+**Shipped (merged into cp6, all local, nothing pushed)**
+- Fix rounds A (money), B (reads by role, 152), C (restaurant, 151), D (bookings, ID, zero
+  prices, 153-155), E (the banquet bill), F (leftovers, 156) - D27-116..154, D27-164
+- Speed: pool 20 / 30 s wait / 120 s statement cap; the bell 1.1 s to 0.1 s (D27-165)
+- Release 2: KOT station (157; D27-159, 161, 166, 167), messaging + online check-in + the
+  voucher PDF (158; D27-168, 169, 172), one-page booking (159; D27-158, 163), CRS bridge (160;
+  D27-171, 174), leads + marketing (161; D27-170, 173), folio edit and change rate (D27-157, 162)
+- Backup of every branch to GitHub as refs/backup-2026-09-29/* (D27-155)
+
+**Found**
+- Drive D: dropping out ("surprise removed", lost writes) was the cause of every Postgres death
+  on 28-29 Sep (MEMORY 345); the POS charge-to-room "bug" was two open bills in room 201 (POS-26);
+  a billed banquet freed its hall (BQ-12); a hotel without a room GST rate broke the Dashboard
+  and reports (fixed in 161's lane); MEMORY 344-353
+
+**Proved**
+- Release 1 (cp6 1612358): gates green except the API step's two explained failures, both fixed;
+  a clean rerun 125/125 files, 1,789 tests; database 1,260; replay 156; build 0
+- Release 2: see HANDOVER § 2 (the final check was running at the time of writing)
+
+**Left open**
+- The owner runs release 1 (or release 2, which contains it); the connections (CRS login and
+  workflows, leads login, WhatsApp number and Meta templates, n8n addresses); chkdsk D: /f;
+  who may press "Send check-in link" (recommended: whoever may make the guest's link)
+
+---
+
 ## 2026-09-25/28 · The master: Phase 1, Form III, the logo, the whole redesign, the audits, and the release held for ten fixes
 
 **Asked for:** start Phase 1 of the platform plan; bring Form C up to Form III;
