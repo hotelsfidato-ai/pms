@@ -51,7 +51,7 @@ owner's steps for the login. Then the owner's D27-170: read live, no copy, a
   master's file, its own commit).
 - `src/modules/leads/`: the screen at `/h/:code/leads` for `customer` view; the
   front door exports `fetchLeadForBooking` for New booking; `OWNER-STEPS.md`.
-- Migration 164: `reservations.campaign`, the four direct booking sources,
+- Migration 161 (164 until the merge): `reservations.campaign`, the four direct booking sources,
   `firestore_read` and `app.leads_reads_today()`.
 - System health: a "Leads app reads" card. Role gate: four read rules.
 

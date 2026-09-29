@@ -1,5 +1,5 @@
 -- =============================================================================
--- 164 · Leads and WhatsApp, read live from the leads app (D27-100, D27-168, D27-170)
+-- 161 · Leads and WhatsApp, read live from the leads app (D27-100, D27-168, D27-170)
 -- =============================================================================
 -- The market-to-revenue app keeps running and staff keep replying there
 -- (D27-100). The PMS shows its leads and conversations by READING THEM LIVE,
@@ -80,7 +80,7 @@ $$;
 
 comment on function app.leads_reads_today() is
   'Reads of the leads app since midnight Pacific, when Google resets the free '
-  'plan (164, D27-170). SECURITY DEFINER because telemetry_events answers only '
+  'plan (161, D27-170). SECURITY DEFINER because telemetry_events answers only '
   'the owner and administrators, and every screen that reads the app asks this '
   'first.';
 
