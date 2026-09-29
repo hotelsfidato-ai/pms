@@ -80,6 +80,15 @@ export const FOLIO_SELECT = `
    group by l.reservation_id
 `;
 
+/** The tax invoice standing on a line's bill (`fp`): issued and not
+    credited - issueFolioInvoice's own question before it issues another.
+    Once one stands, only a credit note corrects the bill (D27-162). */
+export const STANDING_INVOICE = `(
+  select i.number from invoices i
+   where i.folio_id = fp.folio_id and i.credits_id is null
+     and not exists (select 1 from invoices cn where cn.credits_id = i.id)
+   order by i.issued_at desc limit 1)`;
+
 /** ONE BILL'S FIGURES, by the folio rather than the stay (28 September, for
     the split bill's Settle and for a banquet function's bill, which has no
     stay). The live postings, as FOLIO_SELECT counts them; null when nothing
@@ -194,12 +203,20 @@ folios.get("/:code/stays/:id/postings", async (c) => {
       reversed: boolean;
       created_at: string;
       posted_by: string | null;
+      day_closed: boolean;
+      invoice: string | null;
     }>(
       `select fp.id::text, fp.folio_id::text, f.bill_to, co.name as company,
               fp.business_date::text, fp.category, fp.description,
               fp.amount, fp.tax_amount, fp.reverses_id::text,
               exists (select 1 from folio_postings r where r.reverses_id = fp.id) as reversed,
               fp.created_at::text,
+              -- Why Edit is off for a line, before anybody types (D27-157):
+              -- its day closed by the night audit, or a tax invoice on its bill.
+              exists (select 1 from night_audit_runs na
+                       where na.hotel_id = fp.hotel_id and na.business_date = fp.business_date
+                         and na.status = 'completed') as day_closed,
+              ${STANDING_INVOICE} as invoice,
               -- WHO, BY NAME: the person signed in when the line was made
               -- (101), as the Audit log names them. It printed the uuid, or
               -- "admin" for nobody. The night's room charge says "Night
@@ -240,6 +257,8 @@ folios.get("/:code/stays/:id/postings", async (c) => {
       /* Null where nobody was recorded (lines from before 101, bulk loads):
          the bill prints a dash, never a name nobody was. */
       user: p.posted_by,
+      dayClosed: p.day_closed,
+      invoice: p.invoice,
     }));
   });
 

@@ -5,7 +5,8 @@ import { resolveDate } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
 import { inr } from "../../reportRender.ts";
 import { overCashLimit, panFor } from "./cashLimit.ts";
-import { FOLIO_SELECT, folioBalance } from "./folios.ts";
+import { FOLIO_SELECT, STANDING_INVOICE, folioBalance } from "./folios.ts";
+import { POSTING_NIGHTS } from "../reports/index.ts";
 import { can, type Role } from "../../permissions.ts";
 
 /* Split out of api/src/routes/operations.ts on 15 September in the
@@ -322,11 +323,11 @@ export async function reverseFolioCharge(
     id: string; folio_id: string; business_date: string; category: string;
     description: string; amount: string; tax_rate: string; tax_amount: string;
     reverses_id: string | null; already: boolean;
-    day_closed: boolean;
+    day_closed: boolean; invoice: string | null;
   }>(
     `select fp.id::text, fp.folio_id, fp.business_date::text, fp.category,
             fp.description, fp.amount, fp.tax_rate, fp.tax_amount,
-            fp.reverses_id::text,
+            fp.reverses_id::text, ${STANDING_INVOICE} as invoice,
             exists (select 1 from folio_postings r where r.reverses_id = fp.id) as already,
             exists (select 1 from night_audit_runs na
                      where na.hotel_id = fp.hotel_id
@@ -351,6 +352,13 @@ export async function reverseFolioCharge(
     return no(["payment", "refund", "discount", "tax"].includes(p.category)
       ? "This day is closed. Its payments, refunds and discounts are not changed - put the difference right today."
       : "This day is closed - correct it on Closed days.");
+  }
+  /* ONCE A TAX INVOICE STANDS, A CREDIT NOTE CORRECTS THE BILL (D27-162): a
+     charge or discount taken off after it leaves the bill and the invoice
+     saying two things. A payment or refund is on no invoice, so a bounced
+     card can still be undone by the four who may (D27-125). */
+  if (p.invoice && !["payment", "refund"].includes(p.category)) {
+    return no(`This bill has tax invoice ${p.invoice}. Only a credit note corrects it now.`);
   }
 
   if (!reason) return no("Say why it is being reversed. The reason stays on the line.");
@@ -403,6 +411,117 @@ export async function reverseFolioCharge(
     }
     throw error;
   }
+}
+
+/* ── Edit one ────────────────────────────────────────────────────── */
+
+postings.post("/:code/stays/:id/charges/:postingId/edit", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as ChargeEdit;
+  const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const done = await editFolioCharge(client, hotelId, c.req.param("postingId"), body,
+      { reservationId: c.req.param("id") });
+    return done.ok ? { ok: true, data: { id: done.id } } : refuse(done.reason);
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/** What an Edit changes: the words, the price before tax, or both - and why. */
+export interface ChargeEdit { description?: string; amount?: number; reason?: string }
+
+/**
+ * EDIT A CHARGE (the owner's D27-157, D27-162): the old line reversed, with
+ * the reason on the reversal, and the corrected one posted - one step, one
+ * transaction, nothing changed in place. The owner, an administrator or the
+ * GM (roleGate). Refused on a closed day (Closed days corrects those) and
+ * once a tax invoice stands (a credit note does) - both by the reversal -
+ * and for drinks whose VAT bill is issued (cancel it first).
+ *
+ * The corrected line keeps the old one's bill, date, heading, tax scheme and
+ * source, so a restaurant line stays the restaurant's in every report. Its
+ * tax: a room night follows the slab on its price PER NIGHT, as the walk-in
+ * and the night audit ask it; any other line keeps the rate it was charged
+ * at (D25-9). A room night's words carry its nights ("Room 201 · 2 nights"),
+ * which the night audit and every report count, so they stay.
+ *
+ * {ok:false, reason} for a refusal, all asked before the first write
+ * (MEMORY 243); nothing is refused after the reversal is written.
+ */
+export async function editFolioCharge(
+  client: Client, hotelId: string, postingId: string, edit: ChargeEdit,
+  within: { reservationId: string },
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  const no = (why: string) => ({ ok: false as const, reason: why });
+  if (edit.amount !== undefined && !Number.isFinite(Number(edit.amount))) {
+    return no("The price is a number.");
+  }
+  const { rows } = await client.query<{
+    folio_id: string; reservation_id: string | null; business_date: string;
+    category: string; description: string; amount: string; tax_rate: string;
+    tax_scheme: string; source_type: string | null; source_id: string | null;
+    nights: number; vat_bill: string | null;
+  }>(
+    `select fp.folio_id::text, fp.reservation_id::text, fp.business_date::text,
+            fp.category, fp.description, fp.amount::text, fp.tax_rate::text,
+            fp.tax_scheme, fp.source_type, fp.source_id::text,
+            ${POSTING_NIGHTS} as nights,
+            (select v.number from vat_bills v
+              where fp.tax_scheme = 'vat' and v.folio_id = fp.folio_id and v.cancels_id is null
+                and not exists (select 1 from vat_bills c where c.cancels_id = v.id)
+              order by v.issued_at desc limit 1) as vat_bill
+       from folio_postings fp
+       join folios f on f.id = fp.folio_id
+      where f.hotel_id = $1 and f.reservation_id = $2 and fp.id = $3::bigint`,
+    [hotelId, within.reservationId, postingId],
+  );
+  const p = rows[0];
+  if (!p) return no("Posting not found.");
+  if (["payment", "refund", "discount", "tax"].includes(p.category) || !(Number(p.amount) > 0)) {
+    return no("Only a charge is edited. A payment, refund, discount or reversal is reversed instead.");
+  }
+  if (p.vat_bill) return no(`This bill has VAT bill ${p.vat_bill}. Cancel the VAT bill first.`);
+
+  const description = edit.description?.trim() || p.description;
+  const amount = edit.amount === undefined
+    ? Number(p.amount) : Math.round(Number(edit.amount) * 100) / 100;
+  if (!(amount > 0)) return no("A charge is more than zero. To take it off the bill, reverse it.");
+  if (p.category === "room" && description !== p.description) {
+    return no("A room night's words count its nights. Change its price only.");
+  }
+  if (description === p.description && amount === Number(p.amount)) {
+    return no("That is what the charge already says.");
+  }
+
+  let rate = Number(p.tax_rate);
+  if (p.category === "room") {
+    const { rows: slab } = await client.query<{ rate: string | null }>(
+      "select app.gst_rate_or_null($1, 'room', $2::numeric)::text as rate",
+      [hotelId, Math.round((amount / p.nights) * 100) / 100],
+    );
+    if (slab[0]?.rate == null) {
+      return no("This property has no GST rule for rooms. Set it under Rooms and rates → Room types, "
+        + "in the GST card. A missing rate is not zero.");
+    }
+    rate = Number(slab[0].rate);
+  }
+
+  const reversed = await reverseFolioCharge(client, hotelId, postingId, edit.reason?.trim(), within);
+  if (!reversed.ok) return reversed;
+
+  const { rows: made } = await client.query<{ id: string }>(
+    `insert into folio_postings
+       (hotel_id, folio_id, reservation_id, business_date, category, description,
+        amount, tax_rate, tax_amount, tax_scheme, source_type, source_id)
+     values ($1, $2, $3, $4::date, $5, $6, $7::numeric, $8::numeric,
+             round($7::numeric * $8::numeric / 100.0, 2), $9, $10, $11::uuid)
+     returning id::text`,
+    [hotelId, p.folio_id, p.reservation_id, p.business_date, p.category, description,
+     amount, rate, p.tax_scheme, p.source_type, p.source_id],
+  );
+  return { ok: true, id: made[0]!.id };
 }
 
 /* ── Take a payment ──────────────────────────────────────────────── */
