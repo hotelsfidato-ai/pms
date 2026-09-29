@@ -187,6 +187,11 @@ export async function createBooking(
       addressLine?: string; city?: string; state?: string;
       pincode?: string; country?: string;
     };
+    /** D27-163: the one page's Notes box, and the walk-in's tick. */
+    notes?: string;
+    isSingleLady?: boolean;
+    /** The lead's campaign, when the booking came from "Book this lead" (D27-170). */
+    campaign?: string;
   },
 ): Promise<
   | { ok: true; groupId: string | null; rooms: number; guest: string;

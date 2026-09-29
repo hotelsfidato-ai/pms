@@ -8,6 +8,28 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-29 · One page for booking, a room and check-in: three buttons, the walk-in as the page, the sections in Settings (D27-158, D27-163; "Book this lead", D27-170)
+
+Branch `frontdesk/one-page-29sep` (from cp6 7980862; cp6 59df358, round F, merged in), copy `.claude\worktrees\modest-wilson-2807a1`, database `fidato_s32`, API 8873, web 5273.
+**Asked for:** D27-158 - one page with guest, dates, room type, rate, room (optional), ID and advance; "Save booking", "Save and assign room", "Check in now"; Company, GST, Extras and Notes folding open, each switched per hotel in Settings; the rule from now: two pages or three clicks. The owner's details, D27-163: GST is the chosen company's GSTIN, read-only; Extras are the stay's inclusions; one Notes box; the walk-in becomes this page (the single-lady tick with it; the booking's 10% rule in place of the below-rack reason; Walk-in pre-chosen only from an empty room); an advance at booking is held as credit; a picked room is kept on Save booking; the four switches start ON; the arriving booking's check-in becomes one page. The master: "Book this lead" (`?lead=`, D27-170), the Phone line.
+**Shipped:** `pages/BookingPage.tsx` replaces `pages/NewBooking.tsx` at `/h/:code/book`. Every button uses a door that exists: the booking call; front desk's assign and check-in; finance's payment (heldAsCredit); front desk's inclusions. Each button greyed with its reason under it (Rule 6), including the server's phone and email rules (X-2) and "Pick a room." A refused later step leaves the booking standing and the Booked card says which step and why (`flows/BookedCard.tsx`). `?room=&date=`: tonight's is a walk-in (that room, the Walk-in source, Check in now filled); a later night's a booking of that room. `?lead=`: the lead's name, phone, source and campaign; a lead gone shows its sentence. Server: `POST /:code/bookings` takes `notes`, `isSingleLady` and `campaign` (book.ts, groups.ts; campaign by its own update, only when sent). Migration 161 (provisional) puts the four sections among the module switches, on until turned off.
+**Clicks (from the screen the job starts on; typing and list picks not counted):**
+```
+job                 before                                          after
+a booking           New booking, Add, Confirm - 3, 1 page           New booking, Save booking - 2, 1 page
+a room              at booking 0 extra; later 3 from Rooms          pick + Save and assign room - 2; later 3
+check-in            Arrivals, row, Check in, Continue x4, Check in  Arrivals, row, Check in, Check in -
+                    - 8, 7 views; book-and-check-in 9               3, 2 views; a new guest: 2, 1 page
+walk-in             free room, Confirm and check in - 2, 1 dialog   free room, Check in now - 2, 1 page
+```
+**Found (and fixed before merge):** the first room's list read "clean" for room 302 while Check in now answered "awd is in this room" - it now says what check-in says (ff4c9e4).
+**Proved:** web tests (this service, front desk, guests, admin, src/test): 152 passed, 1 failed - `migrationNumbers`, the 157-160 gap the provisional 161 leaves until the master renumbers it. `onePage.test.tsx` 8/8 (greyed reasons, the order of calls and a refused check-in, the advance, a lead and a gone lead, the walk-in with the tick, a later night); four rules broken on purpose each failed it. Before the master's stop, the API's `newBooking` + `moduleSwitches` on a scratch database: 40/40 with 161 (notes and the tick stored). On screen, fidato_s32, desktop and 390 px: a booking checked in to 307 with Aadhaar and a ₹1,000 advance (FH-5EL-2608-5032, read back from the database); a walk-in from free room 208 with the tick and the Walk-in source (FH-5EL-2608-5033); Notes switched off in Settings and gone from the page; no sideways scroll at 390 px.
+**Proved after the master's go (release 1 checked):** API `reservations` (bookings, newBooking, channelDoor, cancelConfirmed, reservationInserts), `moduleSwitches`, `phonesAtEveryDoor`, `oneGuestOneRecord`, `bookingReference`: 9 files, 109 passed; the notes-and-tick assertion fails with the two fields dropped from groups.ts (1 failed, 19 passed) and passes restored. `db/tests/run.sh`: all 1263 assertions passed (admin 3/3, the four sections). cp6 7a554fa merged in: tsc clean, the same 152 passed / 1 failed (the migration gap).
+**Left open:** `leadForBooking` (data/booking.ts) is a stand-in with the documented address until leads' `fetchLeadForBooking` merges - then one import; the campaign's API test comes with leads' 164. `SendCheckInLink` (guest messages, not in cp6 yet) goes on the Booked card when it merges. API tests since the stop wait for the master.
+**Commits:** 0ba2f49, 999cf18, 68195e1, ff4c9e4, b2f789c, c65892b, 20336aa, c59ad92, 7c0373e.
+
+---
+
 ## 2026-09-29 · Fix round F (QA leftovers, D27-149), part D: New booking says what it waits for; the group page's sentences; Void found; meal plans in code and words (QA BK-6, BK-7, BK-8, BK-10, RO-4; D27-164)
 
 Branch `fix/leftovers-28sep` (cp6 7c52bb9, round D, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.

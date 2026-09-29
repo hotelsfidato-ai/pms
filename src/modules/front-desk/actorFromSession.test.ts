@@ -31,7 +31,7 @@ describe("front desk: the person acting is never a literal (FD-2)", () => {
 
   it("reads the folder it means to read", () => {
     /* A guard pointed at the wrong directory passes on nothing (MEMORY 259). */
-    expect(files.some((f) => f.endsWith(join("flows", "WalkInFlow.tsx")))).toBe(true);
+    expect(files.some((f) => f.endsWith(join("flows", "CheckInFlow.tsx")))).toBe(true);
     expect(files.some((f) => f.endsWith(join("data", "operations.ts")))).toBe(true);
   });
 

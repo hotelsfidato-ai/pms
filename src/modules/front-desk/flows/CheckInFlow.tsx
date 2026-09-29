@@ -1,33 +1,35 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, LogIn, BedDouble, Users, Sparkle } from "lucide-react";
+import { Check, LogIn, BedDouble } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import {
   Button, Field, Input, NativeSelect, StatusPill, Switch, Tooltip, toast,
-  Dialog, DialogContent, DialogTrigger, Term,
+  Dialog, DialogContent, DialogTrigger,
 } from "@/components/ui";
 import { checkIn, assignableRooms, checkInAllowed, earlyArrival, mealPlanChoices } from "@/modules/front-desk/data/operations";
 import { type Stay } from "@/data/repositories";
 import {
-  BookingSiteBlacklist, ForeignGuestFields, formIIIMissing, particularsPayload,
-  NO_PARTICULARS, idProblem, idExpired, type Particulars,
+  BookingSiteBlacklist, GuestIdFields, guestIdState, guestIdPayload, noGuestId, type GuestId,
 } from "@/modules/guests";
 import { countProblem } from "../../../../api/src/validate.ts";
 import { WaitingDetailsLink } from "@/modules/online-checkin";
 
 /* ══════════════════════════════════════════════════════════════════
-   FLOW A — arrival to in house
+   FLOW A — arrival to in house, ON ONE PAGE (D27-163)
 
-   Five steps, in the order a clerk actually works: confirm the party,
-   assign a room, capture ID, confirm the rate, done.
+   It was five steps behind four Continues: the party, the room, the ID,
+   the rate, done - eight clicks from Arrivals. The owner's rule of 29
+   September is two pages or three clicks, so the same boxes now sit on
+   one page under one "Check in": Arrivals, the row, Check in, Check in.
+   Same call, same body.
 
-   Only clean or inspected rooms are offered. A dirty room appears in
-   the list, disabled, with the reason — hiding it would teach nobody
-   why they cannot use it.
+   Only clean or inspected rooms can take a guest. A dirty room appears,
+   disabled, with the reason - hiding it would teach nobody why. And the
+   button stays greyed with "Pick a room" until one is chosen: the steps
+   let Continue through the Room step with none, and the server answered
+   "Choose a room." at the very end (the speed lane's finding 6).
    ══════════════════════════════════════════════════════════════════ */
-
-const STEPS = ["Guest", "Room", "ID", "Rate", "Done"] as const;
 
 export function CheckInFlow({
   hotelId, stay, businessDate, onDone,
@@ -39,7 +41,7 @@ export function CheckInFlow({
 }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState(0);
+  const [busy, setBusy] = useState(false);
 
   /* As typed (FD-8): "abc" used to become 0 adults, and 0 reached the
      database's own check as "Something went wrong". */
@@ -49,34 +51,16 @@ export function CheckInFlow({
   const children = Number(childrenText);
   const partyWrong = countProblem(adults, "Adults", 1) ?? countProblem(children, "Children", 0);
   const [roomNumber, setRoomNumber] = useState(stay.roomNumber);
-  /* The document itself. This was `idCaptured: boolean` — a toggle that
-     said a passport had been looked at and stored nothing. */
-  const [idType, setIdType] = useState("");
-  const [idNumber, setIdNumber] = useState("");
-  /* The nationality ON FILE, not "IN": a foreign guest booked as such and
-     checked in with the default would have been sent back as Indian and
-     taken off the Form III register (D27-25). */
-  const [nationality, setNationality] = useState(stay.nationality ?? "IN");
-  /* Form III's questions for a foreign guest (the guests service's). */
-  const [particulars, setParticulars] = useState<Particulars>(NO_PARTICULARS);
-  const [idSkipReason, setIdSkipReason] = useState("");
+  /* The document, the nationality ON FILE (not "IN": a foreign guest
+     checked in with the default left the Form III register, D27-25), and
+     Form III - the guests service's one block, the one page's too. */
+  const [guestId, setGuestId] = useState<GuestId>(() => noGuestId(stay.nationality ?? "IN"));
+  const id = guestIdState(guestId, businessDate);
   const [earlyReason, setEarlyReason] = useState("");
   const [waiveEarly, setWaiveEarly] = useState(false);
   /* D25-39: offers only to a guest who said yes - asked here, face to face,
      for a guest booked by phone or a booking site. */
   const [offersAgreed, setOffersAgreed] = useState(false);
-
-  /* Captured means a TYPE and a NUMBER. Derived, never asserted — the
-     server derives it the same way and cannot be told otherwise. */
-  const idCaptured = Boolean(idType && idNumber.trim());
-  const isForeign = nationality.trim().toUpperCase() !== "IN";
-  const formIIINeeds = formIIIMissing(particulars, nationality, idCaptured);
-  /* FD-2, GU-2 (round D): the server's rules, said on the ID step - an
-     Aadhaar is 12 digits with its check digit, no birth in the future; an
-     expired passport or visa is warned of and recorded as typed. */
-  const idWrong = idProblem(particulars, idType, idNumber, nationality, businessDate);
-  const expired = isForeign ? idExpired(particulars, businessDate) : [];
-  const [expiredOk, setExpiredOk] = useState(false);
   const [ratePlan, setRatePlan] = useState(stay.ratePlan);
 
   const permitted = useQuery({
@@ -118,14 +102,50 @@ export function CheckInFlow({
   const allowed = (permitted.data?.allowed ?? false) || earlyByDate;
   const reason = permitted.data?.reason;
 
+  /* RULE 6: the one button says why it is greyed, under it. */
+  const chosen = (rooms.data ?? []).find((r) => r.number === roomNumber);
+  const blocked =
+    partyWrong
+      ?? (!roomNumber || !chosen ? "Pick a room."
+        : !chosen.allowed ? `Room ${roomNumber}: ${chosen.reason ?? "not available."}` : null)
+      ?? id.blocked
+      ?? (isEarly && !earlyReason.trim() ? "Say why the room is being given early." : null);
+
+  const reset = () => {
+    setAdults(String(stay.adults)); setChildren(String(stay.children));
+    setRoomNumber(stay.roomNumber); setGuestId(noGuestId(stay.nationality ?? "IN"));
+    setEarlyReason(""); setWaiveEarly(false); setOffersAgreed(false); setRatePlan(stay.ratePlan);
+  };
+
+  const submit = async () => {
+    setBusy(true);
+    const res = await checkIn(hotelId, stay.id, {
+      roomNumber, adults, children, ratePlan,
+      /* The nationality always - with the ID skipped too, or a foreign
+         guest never reached the Form III register; the document only when
+         a type and a number were both typed. */
+      ...guestIdPayload(guestId),
+      businessDate,
+      /* Sent since 24 September: without it the server refused every
+         check-in before the check-in hour. */
+      earlyReason, waiveEarly, offersAgreed,
+    });
+    setBusy(false);
+    if (res.ok) {
+      toast.success(`${stay.guest} is in house`, `Room ${roomNumber} · the arrivals count has dropped.`);
+      setOpen(false);
+      reset();
+      qc.invalidateQueries();
+      onDone?.();
+    } else {
+      toast.error("Could not check in", res.reason);
+    }
+  };
+
   /* THE REASON, not just a dead button. `canCheckIn` produces a real
      sentence — "Arrival is 30 Aug 2026. Check-in opens on the arrival
      date." — and the trigger used to throw it away, leaving a clerk
-     with a greyed control and nothing to act on.
-
-     Rule 6, which this project states as: a blocked action is shown
-     WITH ITS REASON. A disabled button on its own is the half of that
-     rule that helps nobody. */
+     with a greyed control and nothing to act on. */
   const trigger = (
     <div className="space-y-1.5">
       {/* PRIMARY. On an arrival this is the reason the panel is open —
@@ -144,435 +164,177 @@ export function CheckInFlow({
   );
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => { setOpen(o); if (!o) setStep(0); }}
-    >
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
       <DialogTrigger asChild>
-        {/* NO TOOLTIP. It carried the same sentence the paragraph
-            below the button now shows, so the reason appeared twice —
-            once on hover and once in the panel. And a tooltip needs a
-            pointer: on the tablet at the front desk it can never be
-            opened at all, which makes it the wrong half to keep. */}
+        {/* NO TOOLTIP: a tooltip needs a pointer, and on the desk's tablet
+            it can never be opened; the reason is written under it. */}
         {trigger}
       </DialogTrigger>
 
       <DialogContent
         title={`Check in ${stay.guest}`}
         description={`${stay.reference} · ${stay.roomType}`}
+        footer={
+          <div className="w-full space-y-1.5">
+            <Button variant="primary" className="w-full" loading={busy}
+              disabled={busy || blocked !== null} onClick={() => void submit()}>
+              <Check className="size-4" />
+              Check in
+            </Button>
+            {blocked && (
+              <p className="text-sm text-grey-600" data-checkin-blocked>{blocked}</p>
+            )}
+          </div>
+        }
       >
         {/* CRM-3 (D22-8): a booking site's guest on a blacklisted phone or email. */}
         <div className="mb-4 empty:hidden">
           <BookingSiteBlacklist hotelId={hotelId} from={stay.arrival} to={stay.arrival} stayIds={[stay.id]} />
         </div>
-        <Stepper current={step} />
 
-        <div className="mt-5 min-h-[220px]">
-          {step === 0 && (
-            <div className="space-y-4">
-              <p className="text-sm text-grey-600">
-                Confirm who is actually arriving. The booking says{" "}
-                {stay.adults} adult{stay.adults === 1 ? "" : "s"}
-                {stay.children ? `, ${stay.children} child` : ""}.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Adults">
-                  {({ id }) => (
-                    <Input
-                      id={id} numeric value={adultsText}
-                      onChange={(e) => setAdults(e.target.value)}
-                    />
-                  )}
-                </Field>
-                <Field label="Children">
-                  {({ id }) => (
-                    <Input
-                      id={id} numeric value={childrenText}
-                      onChange={(e) => setChildren(e.target.value)}
-                    />
-                  )}
-                </Field>
-              </div>
-              {partyWrong && (
-                <p className="text-sm text-brand-red-700" data-party-wrong>{partyWrong}</p>
-              )}
-            </div>
-          )}
-
-          {step === 1 && (
-            <div className="space-y-3">
-              <p className="text-sm text-grey-600">
-                Only a clean or inspected room can take a guest. The rest are
-                shown with the reason.
-              </p>
-              <ul className="grid grid-cols-2 gap-2 max-h-[240px] overflow-y-auto scrollbar-quiet">
-                {(rooms.data ?? []).map((room) => {
-                  const selected = room.number === roomNumber;
-                  const body = (
-                    <button
-                      type="button"
-                      disabled={!room.allowed}
-                      onClick={() => setRoomNumber(room.number)}
-                      className={cn(
-                        "w-full flex items-center gap-2 px-3 h-11 rounded-lg border text-left transition-colors duration-150",
-                        selected
-                          ? "border-brand-orange bg-brand-orange-50"
-                          : room.allowed
-                            ? "border-grey-200 hover:border-grey-300 bg-white"
-                            : "border-grey-200 bg-grey-50 cursor-not-allowed opacity-60",
-                      )}
-                    >
-                      <BedDouble className="size-4 text-grey-400 shrink-0" />
-                      <span className="tabular font-medium text-ink-900">{room.number}</span>
-                      <span className="ml-auto">
-                        <StatusPill
-                          tone={
-                            room.label ? "warning"
-                              : room.housekeeping === "inspected" ? "success"
-                              : room.housekeeping === "clean" ? "info"
-                              : room.housekeeping === "dirty" ? "warning"
-                              : "neutral"
-                          }
-                        >
-                          {room.label ?? room.housekeeping}
-                        </StatusPill>
-                      </span>
-                    </button>
-                  );
-                  return (
-                    <li key={room.number}>
-                      {room.reason ? <Tooltip content={room.reason}>{body}</Tooltip> : body}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-4">
-              <p className="text-sm text-grey-600">
-                Indian properties must record a guest's identity document.
-                It can be skipped, but the reason is kept in the stay's note.
-              </p>
-              <WaitingDetailsLink reference={stay.reference} />
-
-              <Field
-                label="Nationality"
-                hint={<>Anything other than IN puts this stay on the <Term name="formC">Form III</Term> register.</>}
-              >
-                {({ id }) => (
-                  <Input
-                    id={id}
-                    value={nationality}
-                    onChange={(e) => setNationality(e.target.value.toUpperCase())}
-                    placeholder="IN"
-                    maxLength={2}
-                    className="w-24"
-                  />
+        <div className="space-y-5">
+          <section className="space-y-3">
+            <p className="text-sm text-grey-600">
+              Who is actually arriving. The booking says{" "}
+              {stay.adults} adult{stay.adults === 1 ? "" : "s"}
+              {stay.children ? `, ${stay.children} child` : ""}.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Adults">
+                {({ id: f }) => (
+                  <Input id={f} numeric value={adultsText} onChange={(e) => setAdults(e.target.value)} />
                 )}
               </Field>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Document">
-                  {({ id }) => (
-                    <NativeSelect
-                      id={id}
-                      value={idType}
-                      onChange={(e) => setIdType(e.target.value)}
-                    >
-                      <option value="">Not recorded</option>
-                      {/* Exactly the types gd_id_type_valid permits. A
-                          fifth option here would be refused by the
-                          database as a constraint name. */}
-                      <option value="passport">Passport</option>
-                      <option value="aadhaar">Aadhaar</option>
-                      <option value="driving_licence">Driving licence</option>
-                      <option value="voter">Voter ID</option>
-                      <option value="other">Other</option>
-                    </NativeSelect>
-                  )}
-                </Field>
-
-                <Field label="Number" required={Boolean(idType)}>
-                  {({ id }) => (
-                    <Input
-                      id={id}
-                      value={idNumber}
-                      onChange={(e) => setIdNumber(e.target.value)}
-                      placeholder={idType === "passport" ? "P1234567" : "Document number"}
-                      disabled={!idType}
-                    />
-                  )}
-                </Field>
-              </div>
-
-              {/* Only for a foreign national. Asking an Indian guest for a
-                  visa number is how a form teaches people to leave fields
-                  blank. */}
-              {isForeign && (
-                <ForeignGuestFields value={particulars} onChange={setParticulars}
-                  nationality={nationality} idCaptured={idCaptured} />
-              )}
-              {isForeign && formIIINeeds.length > 0 && (
-                <p className="text-sm text-grey-600" data-form-iii-needs>
-                  Form III still needs: {formIIINeeds.join(", ")}.
-                </p>
-              )}
-              {idWrong && (
-                <p className="text-sm text-brand-red-700" data-id-wrong>{idWrong}</p>
-              )}
-              {expired.length > 0 && (
-                <Switch checked={expiredOk} onCheckedChange={setExpiredOk}
-                  label="Check in anyway"
-                  description={`${expired.join(" ")} It is recorded as typed.`} />
-              )}
-
-                {!idCaptured && (
-                  <Field label="Reason for skipping" required>
-                    {({ id }) => (
-                    <Input
-                      id={id}
-                      value={idSkipReason}
-                      onChange={(e) => setIdSkipReason(e.target.value)}
-                      placeholder="Scanner offline - to be captured at breakfast"
-                    />
-                  )}
-                </Field>
-              )}
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-4">
-              <Field label="Meal plan">
-                {({ id }) => (
-                  <NativeSelect
-                    id={id}
-                    value={ratePlan}
-                    onChange={(e) => setRatePlan(e.target.value)}
-                  >
-                    {mealPlanChoices(ratePlan).map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-                  </NativeSelect>
+              <Field label="Children">
+                {({ id: f }) => (
+                  <Input id={f} numeric value={childrenText} onChange={(e) => setChildren(e.target.value)} />
                 )}
               </Field>
-              {/* ── ARRIVING EARLY ─────────────────────────────────
-                  Shown only when the property says so. `isEarly` comes
-                  from the SERVER, against the property's clock — a
-                  tablet with the wrong time set must not be able to
-                  make an early arrival look like an ordinary one, and
-                  the server refuses independently either way. */}
-              {isEarly && (
-                <div className="rounded-lg border border-brand-yellow-100 bg-brand-yellow-50 p-3 space-y-2.5">
-                  <p className="text-sm text-[#8a6300]">
-                    {earlyByDate
-                      ? `This booking is for ${dateShort(stay.arrival)}. Checking `
-                        + "in now moves it to today, so tonight is charged."
-                      : `Rooms are ready from ${early.data?.checkInTime ?? ""}.`}
-                    {earlyByClock && (early.data?.charge == null
-                      ? " This property does not charge for an early arrival."
-                      : ` An early arrival is ${money(early.data.charge)}.`)}
-                  </p>
-                  <Field label="Why the room is being given early" required>
-                    {({ id }) => (
-                      <Input
-                        id={id}
-                        value={earlyReason}
-                        onChange={(e) => setEarlyReason(e.target.value)}
-                        placeholder="Overnight train, room vacant and clean"
-                      />
+            </div>
+            {partyWrong && (
+              <p className="text-sm text-brand-red-700" data-party-wrong>{partyWrong}</p>
+            )}
+          </section>
+
+          <section className="space-y-3 pt-4 border-t border-grey-200">
+            <p className="text-sm text-grey-600">
+              Room. Only a clean or inspected room can take a guest; the rest are
+              shown with the reason.
+            </p>
+            {/* One column on a phone: two cut "inspected" off at 390 px. */}
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[240px] overflow-y-auto scrollbar-quiet">
+              {(rooms.data ?? []).map((room) => {
+                const selected = room.number === roomNumber;
+                const body = (
+                  <button
+                    type="button"
+                    disabled={!room.allowed}
+                    onClick={() => setRoomNumber(room.number)}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 h-11 rounded-lg border text-left transition-colors duration-150",
+                      selected
+                        ? "border-brand-orange bg-brand-orange-50"
+                        : room.allowed
+                          ? "border-grey-200 hover:border-grey-300 bg-white"
+                          : "border-grey-200 bg-grey-50 cursor-not-allowed opacity-60",
                     )}
-                  </Field>
-                  {/* THE WAIVE IS A MANAGER'S. Shown only to somebody
-                      the server says may waive (rule C: its own mayWaive,
-                      not a role list here) — and refused again on the
-                      server, because a hidden checkbox is a courtesy and
-                      not a permission. */}
-                  {earlyByClock && early.data?.charge != null && early.data.mayWaive && (
-                    <label className="flex items-start gap-2.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={waiveEarly}
-                        onChange={(e) => setWaiveEarly(e.target.checked)}
-                        className="mt-0.5 size-4 accent-brand-orange cursor-pointer"
-                      />
-                      <span className="text-sm text-[#8a6300]">
-                        Waive the charge.
-                        {" "}
-                        <span className="text-grey-600">
-                          The reason is still recorded, and its absence
-                          from the bill is visible.
-                        </span>
-                      </span>
-                    </label>
-                  )}
-                </div>
+                  >
+                    <BedDouble className="size-4 text-grey-400 shrink-0" />
+                    <span className="tabular font-medium text-ink-900">{room.number}</span>
+                    <span className="ml-auto">
+                      <StatusPill
+                        tone={
+                          room.label ? "warning"
+                            : room.housekeeping === "inspected" ? "success"
+                            : room.housekeeping === "clean" ? "info"
+                            : room.housekeeping === "dirty" ? "warning"
+                            : "neutral"
+                        }
+                      >
+                        {room.label ?? room.housekeeping}
+                      </StatusPill>
+                    </span>
+                  </button>
+                );
+                return (
+                  <li key={room.number}>
+                    {room.reason ? <Tooltip content={room.reason}>{body}</Tooltip> : body}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+
+          <section className="space-y-4 pt-4 border-t border-grey-200">
+            <p className="text-sm text-grey-600">
+              Indian properties must record a guest's identity document. It can
+              be skipped, but the reason is kept in the stay's note.
+            </p>
+            <WaitingDetailsLink reference={stay.reference} />
+            <GuestIdFields value={guestId} onChange={setGuestId} today={businessDate} />
+          </section>
+
+          <section className="space-y-4 pt-4 border-t border-grey-200">
+            <Field label="Meal plan">
+              {({ id: f }) => (
+                <NativeSelect id={f} value={ratePlan} onChange={(e) => setRatePlan(e.target.value)}>
+                  {mealPlanChoices(ratePlan).map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </NativeSelect>
               )}
-
-              <div className="rounded-lg bg-grey-50 border border-grey-200 p-3 space-y-1.5">
-                {/* A dash when the room type has no rate — never ₹0
-                    (defect 246). */}
-                <Line
-                  label="Rack rate"
-                  value={stay.rackTariff === null ? "-" : money(stay.rackTariff)}
-                  muted
-                />
-                <Line
-                  label="Offered"
-                  value={stay.isComplimentary ? "Complimentary" : money(stay.offeredTariff)}
-                  bold
-                />
-                <Line
-                  label="Nights"
-                  value={String(stay.nights)}
-                  muted
-                />
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="text-center py-6 space-y-3">
-              <div className="inline-flex items-center justify-center size-12 rounded-full bg-success-50">
-                <Sparkle className="size-5 text-success" />
-              </div>
-              <p className="text-md font-semibold text-ink-900">Ready to check in</p>
-              <div className="text-sm text-grey-600 space-y-0.5">
-                <p>{stay.guest} · room {roomNumber}</p>
-                <p className="tabular">
-                  <Users className="inline size-3.5 -mt-0.5 mr-1" />
-                  {adults} adult{adults === 1 ? "" : "s"}{children ? `, ${children} child` : ""} · {ratePlan}
+            </Field>
+            {/* ── ARRIVING EARLY ─────────────────────────────────
+                Shown only when the property says so, against the property's
+                clock; the server refuses independently either way. */}
+            {isEarly && (
+              <div className="rounded-lg border border-brand-yellow-100 bg-brand-yellow-50 p-3 space-y-2.5">
+                <p className="text-sm text-[#8a6300]">
+                  {earlyByDate
+                    ? `This booking is for ${dateShort(stay.arrival)}. Checking `
+                      + "in now moves it to today, so tonight is charged."
+                    : `Rooms are ready from ${early.data?.checkInTime ?? ""}.`}
+                  {earlyByClock && (early.data?.charge == null
+                    ? " This property does not charge for an early arrival."
+                    : ` An early arrival is ${money(early.data.charge)}.`)}
                 </p>
-                {idCaptured ? (
-                  /* What was actually recorded. This showed NOTHING when a
-                     document HAD been captured, so a clerk confirming a
-                     check-in could not see the passport number they had
-                     just typed — the one screen where checking it is free. */
-                  <p className="tabular">
-                    {idType === "driving_licence"
-                      ? "Driving licence"
-                      : idType.charAt(0).toUpperCase() + idType.slice(1)}
-                    {" "}
-                    {/* FD-3, D21-18: an Aadhaar is its last four digits on
-                        every screen; the full number is not read back here. */}
-                    {idType === "aadhaar"
-                      ? `ending ${idNumber.replace(/\s/g, "").slice(-4)}`
-                      : idNumber}
-                    {isForeign ? " · " + nationality : ""}
-                  </p>
-                ) : (
-                  <p className="text-brand-yellow-800">
-                    ID not captured - {idSkipReason}
-                  </p>
+                <Field label="Why the room is being given early" required>
+                  {({ id: f }) => (
+                    <Input id={f} value={earlyReason} onChange={(e) => setEarlyReason(e.target.value)}
+                      placeholder="Overnight train, room vacant and clean" />
+                  )}
+                </Field>
+                {/* THE WAIVE IS A MANAGER'S, by the server's own mayWaive, and
+                    refused again there. */}
+                {earlyByClock && early.data?.charge != null && early.data.mayWaive && (
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input type="checkbox" checked={waiveEarly}
+                      onChange={(e) => setWaiveEarly(e.target.checked)}
+                      className="mt-0.5 size-4 accent-brand-orange cursor-pointer" />
+                    <span className="text-sm text-[#8a6300]">
+                      Waive the charge.{" "}
+                      <span className="text-grey-600">
+                        The reason is still recorded, and its absence from the bill is visible.
+                      </span>
+                    </span>
+                  </label>
                 )}
               </div>
-              <div className="text-left pt-2">
-                <Switch
-                  checked={offersAgreed}
-                  onCheckedChange={setOffersAgreed}
-                  label="Guest agreed to offers"
-                  description="Ask them. Unticked, no offers are sent. Kept against their phone and email at every hotel of the group."
-                />
-              </div>
+            )}
+            <div className="rounded-lg bg-grey-50 border border-grey-200 p-3 space-y-1.5">
+              {/* A dash when the room type has no rate - never ₹0 (defect 246). */}
+              <Line label="Rack rate" value={stay.rackTariff === null ? "-" : money(stay.rackTariff)} muted />
+              <Line label="Offered" value={stay.isComplimentary ? "Complimentary" : money(stay.offeredTariff)} bold />
+              <Line label="Nights" value={String(stay.nights)} muted />
             </div>
-          )}
-        </div>
-
-        <div className="flex justify-between gap-2 pt-4 border-t border-grey-200">
-          <Button
-            variant="ghost"
-            disabled={step === 0}
-            onClick={() => setStep((s) => s - 1)}
-          >
-            Back
-          </Button>
-
-          {step < 4 ? (
-            <Button
-              disabled={
-                (step === 0 && partyWrong !== null)
-                || (step === 2 && !idCaptured && !idSkipReason.trim())
-                || (step === 2 && formIIINeeds.length > 0)
-                || (step === 2 && (idWrong !== null || (expired.length > 0 && !expiredOk)))
-                /* The server refuses without it anyway. Disabling here
-                   too means the clerk finds out on the step that asks,
-                   not on the one that finishes. */
-                || (step === 3 && isEarly && !earlyReason.trim())
-              }
-              onClick={() => setStep((s) => s + 1)}
-            >
-              Continue
-            </Button>
-          ) : (
-            <Button
-              onClick={async () => {
-                const res = await checkIn(hotelId, stay.id, {
-                  roomNumber, adults, children, ratePlan,
-                  /* Sent only when there is something to send. An empty
-                     object would look like a capture to anything counting
-                     keys rather than reading them. */
-                  /* The nationality always - with the ID skipped too, or a
-                     foreign guest never reached the Form III register. */
-                  identity: {
-                    nationality,
-                    ...(idCaptured
-                      ? { idType, idNumber: idNumber.trim(),
-                          ...particularsPayload(particulars).identity }
-                      : {}),
-                  },
-                  ...(isForeign ? { visit: particularsPayload(particulars).visit } : {}),
-                  idSkipReason, businessDate,
-                  /* Asked for on the Rate step, and never sent until 24
-                     September - so the server refused every check-in
-                     before the check-in hour. */
-                  earlyReason, waiveEarly, offersAgreed,
-                });
-                if (res.ok) {
-                  toast.success(
-                    `${stay.guest} is in house`,
-                    `Room ${roomNumber} · the arrivals count has dropped.`,
-                  );
-                  setOpen(false);
-                  setStep(0);
-                  qc.invalidateQueries();
-                  onDone?.();
-                } else {
-                  toast.error("Could not check in", res.reason);
-                }
-              }}
-            >
-              <Check className="size-4" />
-              Check in
-            </Button>
-          )}
+            <Switch
+              checked={offersAgreed}
+              onCheckedChange={setOffersAgreed}
+              label="Guest agreed to offers"
+              description="Ask them. Unticked, no offers are sent. Kept against their phone and email at every hotel of the group."
+            />
+          </section>
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function Stepper({ current }: { current: number }) {
-  return (
-    <ol className="flex items-center gap-1">
-      {STEPS.map((label, i) => (
-        <li key={label} className="flex items-center gap-1 flex-1 last:flex-none">
-          <div
-            className={cn(
-              "flex items-center gap-1.5 px-2 h-6 rounded-full text-2xs font-medium whitespace-nowrap",
-              i < current ? "bg-success-50 text-success-600"
-                : i === current ? "bg-ink-900 text-white"
-                : "bg-grey-100 text-grey-500",
-            )}
-          >
-            {i < current ? <Check className="size-3" /> : <span className="tabular">{i + 1}</span>}
-            {label}
-          </div>
-          {i < STEPS.length - 1 && (
-            <div className={cn("h-px flex-1", i < current ? "bg-success" : "bg-grey-200")} />
-          )}
-        </li>
-      ))}
-    </ol>
   );
 }
 

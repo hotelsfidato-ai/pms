@@ -10,3 +10,7 @@ export type { HouseNow, HouseNowRoom } from "./data/stays";
 export { getStayView, getStayViewCounts } from "./data/stayview";
 export type { ChartRoom } from "./data/stayview";
 export { LateCheckOutFlow } from "./flows/LateCheckOutFlow";
+/* D27-163: the one page (reservations' New booking) checks a guest in and
+   adds the stay's extras through front desk's own doors, not copies. */
+export { checkIn, assignableRooms } from "./data/operations";
+export { listInclusions, addStayInclusion } from "./data/stayExtras";

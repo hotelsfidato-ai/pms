@@ -8,6 +8,17 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-29 · Check-in on one page; the walk-in is New booking's page (D27-158, D27-163)
+
+Branch `frontdesk/one-page-29sep` (from cp6 7980862; cp6 59df358, round F, merged in), copy `.claude\worktrees\modest-wilson-2807a1`, database `fidato_s32`, API 8873, web 5273.
+**Shipped:** `flows/CheckInFlow.tsx` - the five steps (Guest, Room, ID, Rate, Done) are one page under one Check in: Arrivals, row, Check in, Check in (8 clicks to 3). Same boxes, same call, same body; the ID is guests' shared `GuestIdFields`. Check in is greyed with its reason under it, "Pick a room." until a clean room is chosen (the speed lane's finding 6). `pages/StayView.tsx` - a free room's tile and the Calendar's empty cell open `/h/:code/book?room=&date=`. Removed `flows/WalkInFlow.tsx` and the client's `createWalkIn`; the server's `POST /:code/walk-ins` stays, called by no screen. Front door: `checkIn`, `assignableRooms`, `listInclusions`, `addStayInclusion` for the one page.
+**Found:** FD-20, the room tiles cut their pill at 390 px - fixed (7c0373e).
+**Proved:** checkInChecks (+ "Pick a room"), earlyCheckIn, formIIICheckIn, refusedControls (+ a free tile opens the page on its room and today), actorFromSession: all passed. On screen: Lata Bhosale checked in to 209 from Arrivals in one page; a walk-in from free room 208.
+**Left open:** `canConfirmWalkIn` and `rateOverrideNeedsReason` in `src/lib/rules.ts` (the master's) have no caller now.
+**Commits:** 999cf18 (front door), 20336aa, c59ad92, 7c0373e.
+
+---
+
 ## 2026-09-29 · Fix round F (QA leftovers, D27-149), part D: one occupancy, Sellable 17, EP not RO, dates and words (D27-151, D27-164; QA FD-10, FD-12, FD-13, FD-14, FD-15, FI-18, BK-9, BK-10, RO-4)
 
 **Asked for:** the master's part D, after round D merged. Branch `fix/leftovers-28sep` (cp6 7c52bb9, round D, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.

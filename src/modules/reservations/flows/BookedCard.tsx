@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { Check, Link2, Send } from "lucide-react";
-import { dateShort } from "@/lib/format";
+import { dateShort, moneyPrecise } from "@/lib/format";
 import { Button, Card, CardBody, CardHeader, Input, toast } from "@/components/ui";
 import { getGuestMessages } from "@/modules/guest-messaging";
 import { confirmWaiting, makeGuestLink, sendVoucher } from "@/modules/reservations/data/booking";
@@ -28,6 +28,11 @@ export interface Booked {
   /** A room picked on the form: the one it got, or why it did not. */
   assigned: Record<string, { room: string } | { failed: string }>;
   arrivesToday: boolean;
+  /* The one page (D27-163): what its later doors did, each after the booking
+     stood. Absent when that button did not ask for it. */
+  checkedIn?: { room: string } | { failed: string };
+  advance?: { amount: number } | { failed: string };
+  extrasFailed?: string[];
 }
 
 export function BookedCard({ hotelId, booked, onAnother }: {
@@ -62,7 +67,9 @@ export function BookedCard({ hotelId, booked, onAnother }: {
 
   return (
     <Card className="max-w-2xl">
-      <CardHeader title={waiting ? "Held, waiting for the hotel" : "Booked"}
+      <CardHeader
+        title={booked.checkedIn && "room" in booked.checkedIn ? "Checked in"
+          : waiting ? "Held, waiting for the hotel" : "Booked"}
         description={booked.guest} />
       <CardBody className="space-y-4">
         {/* List rows: 12px, a hairline between (the Rhythm Rule). */}
@@ -85,6 +92,21 @@ export function BookedCard({ hotelId, booked, onAnother }: {
             );
           })}
         </ul>
+
+        {/* Each later step, said: the booking stands whatever they answered. */}
+        {(booked.checkedIn || booked.advance || (booked.extrasFailed ?? []).length > 0) && (
+          <div className="space-y-1 text-base" data-booked-steps>
+            {booked.checkedIn && ("room" in booked.checkedIn
+              ? <p className="text-grey-600">In house, room {booked.checkedIn.room}.</p>
+              : <p className="text-warning-dark">Not checked in: {booked.checkedIn.failed} Check them in from Arrivals.</p>)}
+            {booked.advance && ("amount" in booked.advance
+              ? <p className="text-grey-600">Advance of {moneyPrecise(booked.advance.amount)} taken, held as the guest's credit.</p>
+              : <p className="text-warning-dark">Advance not taken: {booked.advance.failed} Take it on the bill.</p>)}
+            {(booked.extrasFailed ?? []).map((x) => (
+              <p key={x} className="text-warning-dark">Extra not added: {x}</p>
+            ))}
+          </div>
+        )}
 
         {waiting ? (
           <div className="space-y-2">
@@ -119,7 +141,8 @@ export function BookedCard({ hotelId, booked, onAnother }: {
         )}
 
         <div className="flex flex-wrap gap-2 pt-3 border-t border-grey-200">
-          {booked.arrivesToday && !waiting && booked.bookings.length === 1 && lead && (
+          {booked.arrivesToday && !waiting && booked.bookings.length === 1 && lead
+            && !(booked.checkedIn && "room" in booked.checkedIn) && (
             <Button variant="secondary"
               onClick={() => navigate(`/h/${hotelId}/arrivals?res=${lead}`)}>
               Check in now

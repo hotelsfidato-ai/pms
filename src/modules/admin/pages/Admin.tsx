@@ -486,9 +486,34 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
       "other sites through SU. Off means this property sends them nothing " +
       "and takes no booking from them.",
   },
+  /* D27-163, 29 September: New booking's fold-open sections, on until
+     turned off (161). Their own card below: nothing is refused when one
+     is off, the section is simply not drawn. */
+  booking_company: {
+    label: "Company section",
+    note: "Bill a booking to a company. Off, every new booking is billed to the guest.",
+  },
+  booking_gst: {
+    label: "GST section",
+    note: "Shows the chosen company's GSTIN, as the tax invoice will print it.",
+  },
+  booking_extras: {
+    label: "Extras section",
+    note: "The stay's extras from this hotel's list, added when the booking is saved.",
+  },
+  booking_notes: {
+    label: "Notes section",
+    note: "A note kept on the booking.",
+  },
 };
 
-function ModulesCard({ hotelId }: { hotelId: string }) {
+const BOOKING_SECTION = (module: string) => module.startsWith("booking_");
+
+function ModulesCard({ hotelId, title, description, only }: {
+  hotelId: string; title: string; description: string;
+  /** Which of the property's switches this card draws. */
+  only: (module: string) => boolean;
+}) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -513,12 +538,9 @@ function ModulesCard({ hotelId }: { hotelId: string }) {
 
   return (
     <Card>
-      <CardHeader
-        title="Modules"
-        description="What this property runs. Off means the screens go and the API refuses them."
-      />
+      <CardHeader title={title} description={description} />
       <CardBody className="pt-0 space-y-4">
-        {Object.entries(modules.data ?? {}).map(([module, enabled]) => (
+        {Object.entries(modules.data ?? {}).filter(([module]) => only(module)).map(([module, enabled]) => (
           <Switch
             key={module}
             checked={enabled}
@@ -588,7 +610,16 @@ export function SettingsPage() {
               not disabled — they are not the GM's to ask about, and the
               server refuses anybody else who sends one
               (api/src/modules/admin/grants.ts). */}
-          {switchesModules(role) && <ModulesCard hotelId={hotelId} />}
+          {switchesModules(role) && (
+            <>
+              <ModulesCard hotelId={hotelId} title="Modules"
+                description="What this property runs. Off means the screens go and the API refuses them."
+                only={(m) => !BOOKING_SECTION(m)} />
+              <ModulesCard hotelId={hotelId} title="New booking"
+                description="The sections that fold open on New booking. Off hides one at this property; nothing already booked changes."
+                only={BOOKING_SECTION} />
+            </>
+          )}
           {(data ?? []).map((group) => (
             <Card key={group.title}>
               <CardHeader title={group.title} description={group.note} />
