@@ -64,6 +64,19 @@ describe("the Rooms board and the Calendar", () => {
     expect(freeTiles().map((t) => t.tagName)).not.toContain("BUTTON");
   });
 
+  /* D27-163: the walk-in is New booking's one page, on that room and night. */
+  it("sends reception from a free room's tile to the one page, on that room and today", async () => {
+    go(`/h/${HOTEL}/stay`);
+    render(<App />);
+    await waitFor(() => expect(freeTiles().length).toBeGreaterThan(0));
+    const tile = freeTiles()[0] as HTMLButtonElement;
+    const number = tile.textContent?.match(/\d{3}/)?.[0];
+    tile.click();
+    await waitFor(() => expect(location.pathname).toBe(`/h/${HOTEL}/book`));
+    expect(new URLSearchParams(location.search).get("room")).toBe(number);
+    expect(new URLSearchParams(location.search).get("date")).toBe("2026-08-25");
+  });
+
   it("offers the Calendar's Book room cells to reception, and none to housekeeping", async () => {
     go(`/h/${HOTEL}/calendar`);
     const first = render(<App />);

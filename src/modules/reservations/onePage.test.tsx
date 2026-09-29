@@ -91,6 +91,7 @@ beforeEach(() => {
     if (path.includes("/guest-messages")) {
       return { messages: [], connected: false, notConnected: "Sending is not switched on." } as never;
     }
+    if (path.endsWith("/stays/r-1")) return { id: "r-1", guest: "Kavya Rao", roomNumber: "101" } as never;
     if (path.includes("/stays/r-1")) return null as never;
     return [] as never;
   });
@@ -223,12 +224,31 @@ describe("a lead", () => {
 });
 
 describe("a walk-in", () => {
-  it("opens on its room, today and the Walk-in source, with Check in now the filled button", async () => {
+  it("opens on its room, today and the Walk-in source, and checks them in with the single-lady tick", async () => {
     open("/?room=101&date=2026-08-25");
     await screen.findByText(/A walk-in into room 101/);
     await waitFor(() =>
       expect((screen.getByLabelText(/^Room$/, { selector: "select" }) as HTMLSelectElement).value).toBe("101"));
     expect((screen.getByLabelText(/^Booking source/, { selector: "select" }) as HTMLSelectElement).value).toBe("src-w");
     expect(button("Check in now").className).toContain("bg-brand-orange");
+
+    type(/^Guest or company/, "Kavya Rao");
+    fireEvent.click(screen.getByRole("switch", { name: /Woman travelling alone/ }));
+    type(/^Reason for skipping/, "Scanner offline");
+    await waitFor(() => expect(button("Check in now").disabled).toBe(false));
+    fireEvent.click(button("Check in now"));
+    await screen.findByText(/In house, room 101/);
+    expect(calls[0]!.body).toMatchObject({ bookingSourceId: "src-w", isSingleLady: true, checkIn: "2026-08-25" });
+    expect(calls[1]!.path).toContain("/stays/r-1/check-in");
+  });
+
+  it("a later night of an empty room is a booking of that room, with no source chosen", async () => {
+    open("/?room=101&date=2026-08-30");
+    await waitFor(() =>
+      expect((screen.getByLabelText(/^Room$/, { selector: "select" }) as HTMLSelectElement).value).toBe("101"));
+    expect((screen.getByLabelText(/^Arrival/, { selector: "input" }) as HTMLInputElement).value).toBe("2026-08-30");
+    expect((screen.getByLabelText(/^Booking source/, { selector: "select" }) as HTMLSelectElement).value).toBe("");
+    expect(screen.queryByText(/A walk-in into room/)).toBeNull();
+    expect(button("Save booking").className).toContain("bg-brand-orange");
   });
 });

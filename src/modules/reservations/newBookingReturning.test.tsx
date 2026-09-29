@@ -19,10 +19,12 @@ import NewBookingPage from "@/modules/reservations/pages/BookingPage";
    ══════════════════════════════════════════════════════════════════ */
 
 const posted: Array<{ path: string; body: Record<string, unknown> }> = [];
+let blacklisted = false;
 
 beforeEach(() => {
   startSignedIn();
   posted.length = 0;
+  blacklisted = false;
   useToastStore.setState({ toasts: [] });
   vi.spyOn(apiModule, "api").mockImplementation(async (path: string, init?: RequestInit) => {
     if (init?.method === "POST") {
@@ -47,7 +49,8 @@ beforeEach(() => {
     }
     if (path.includes("/guests/returning")) {
       return { matches: [{ guestId: "g-rohit", visits: 2, name: "Rohit Deshpande",
-                           suggested: true, blacklisted: false, blacklistReason: null }] } as never;
+                           suggested: true, blacklisted,
+                           blacklistReason: blacklisted ? "Left without paying" : null }] } as never;
     }
     return [] as never;
   });
@@ -94,5 +97,63 @@ describe("a booking for a returning guest", () => {
     });
     /* The Booked card (Phase 1) names whose booking it now is. */
     expect(await screen.findByText("Rohit Deshpande")).toBeTruthy();
+  });
+
+  /* The walk-in's own tests (walkInReturning, 21 September), kept when the
+     walk-in became this page (D27-163). */
+  const open = async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter><NewBookingPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("heading", { name: "Guest" });
+  };
+  const save = () => screen.getByRole("button", { name: "Save booking" }) as HTMLButtonElement;
+
+  it("'Not them' - and typing the phone again - leaves a new guest", async () => {
+    await open();
+    type("Guest or company", "Rohit D");
+    type("Phone", "9876543210");
+    fireEvent.click(await screen.findByRole("button", { name: "Same person" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Not them" }));
+    type("Phone", "98765 43210");
+    fireEvent.change(screen.getByLabelText(/Booking source/, { selector: "select" }),
+      { target: { value: "src-1" } });
+    await waitFor(() => expect(save().disabled).toBe(false));
+    fireEvent.click(save());
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]!.body).not.toHaveProperty("guestId");
+    expect(posted[0]!.body).toMatchObject({ whatsappAgreed: false, offersAgreed: false });
+  });
+
+  it("warns of a blacklisted guest with the reason, and still lets the desk book them (D21-21)", async () => {
+    blacklisted = true;
+    await open();
+    type("Guest or company", "Rohit D");
+    type("Phone", "9876543210");
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toMatch(/blacklisted/);
+    expect(alert.textContent).toMatch(/Left without paying/);
+    fireEvent.change(screen.getByLabelText(/Booking source/, { selector: "select" }),
+      { target: { value: "src-1" } });
+    await waitFor(() => expect(save().disabled).toBe(false));
+  });
+
+  it("asks nothing of a number too short to be one, and says a phone that is not one (X-2)", async () => {
+    await open();
+    type("Phone", "98765");
+    await new Promise((r) => setTimeout(r, 50));
+    const asked = vi.mocked(apiModule.api).mock.calls.some(([p]) => String(p).includes("/returning"));
+    expect(asked).toBe(false);
+
+    type("Guest or company", "Asha K");
+    type("Phone", "abc");
+    fireEvent.change(screen.getByLabelText(/Booking source/, { selector: "select" }),
+      { target: { value: "src-1" } });
+    await waitFor(() => expect(document.querySelector("[data-booking-reasons]")?.textContent)
+      .toMatch(/not a phone number/));
+    expect(save().disabled).toBe(true);
   });
 });

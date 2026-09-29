@@ -7,6 +7,7 @@ import { money, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useRole, useSession } from "@/lib/session";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/rules";
+import { emailProblem, phoneProblem } from "../../../../api/src/validate.ts";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Field, fieldProps,
   Input, NativeSelect, Skeleton, toast, Checkbox, Segmented, Switch, Textarea,
@@ -126,7 +127,8 @@ export default function BookingPage() {
   const role = useRole();
   const keeper = (LIST_KEEPERS as readonly string[]).includes(role);
   const hotel = useSession((s) => s.hotels.find((h) => h.code === hotelId) ?? null);
-  /* A walk-in: opened from an empty room on Rooms or the Calendar. */
+  /* Opened from an empty room on Rooms or the Calendar: that room and night.
+     Tonight's is a walk-in; a later night's, a booking of that room. */
   const [search] = useSearchParams();
   const walkRoom = search.get("room");
   const walkDate = search.get("date");
@@ -274,18 +276,22 @@ export default function BookingPage() {
   /* THE FIRST ROOM IS ALREADY THERE - one click fewer than "Add". A walk-in's
      is the room it was opened from, and its channel the Walk-in source. */
   useEffect(() => {
-    if (seeded || types.length === 0) return;
+    if (seeded || types.length === 0 || !today) return;
     if (walkRoom) {
       if (!rooms.data || !channels.data) return;
       const type = types.find((t) => t.name === rooms.data.find((r) => r.number === walkRoom)?.type);
       setLines([newLine(type?.id ?? types[0]!.id, 0, type ? walkRoom : "")]);
+      /* The Walk-in source only for tonight (D27-163): a later night's
+         booking came some other way, and nothing else is pre-chosen. */
       const walkIn = channels.data.find((s) => s.kind === "walk_in" && s.isActive);
-      if (walkIn) setBookingSourceId(walkIn.id);
+      if (walkIn && walkDate === today) setBookingSourceId(walkIn.id);
     } else {
       setLines([newLine(types[0]!.id, 0)]);
     }
     setSeeded(true);
-  }, [seeded, types, walkRoom, rooms.data, channels.data]);
+  }, [seeded, types, today, walkRoom, walkDate, rooms.data, channels.data]);
+
+  const isWalkIn = !!walkRoom && walkDate === today;
 
   const leftFor = (roomTypeId: string) => {
     const cells = (inventory.data?.cells ?? []).filter((c) => c.roomTypeId === roomTypeId
@@ -390,12 +396,14 @@ export default function BookingPage() {
   /* RULE 6: a button that cannot be used says why, under it. */
   const saveReason =
     !guestName.trim() ? "Type the guest's name."
-      : !bookingSourceId ? "Choose the booking source."
+      /* X-2 (round D): the server's own phone and email rules, said first. */
+      : phoneProblem(phone) ?? emailProblem(email)
+      ?? (!bookingSourceId ? "Choose the booking source."
         : lines.length === 0 ? "Add a room."
           : discountProblem
             ?? (show.company && billTo === "company" && !companyId ? "Choose the company." : null)
             ?? (salesPick === OTHER && !salesOther.trim() ? "Type the sales person's name." : null)
-            ?? advanceProblem;
+            ?? advanceProblem);
   const assignReason =
     waiting ? "A booking waiting for the hotel gets its room once it is confirmed."
       : !lines.some((l) => l.rooms === 1 && l.room) ? "Pick a room." : null;
@@ -553,7 +561,7 @@ export default function BookingPage() {
     <Page>
       <PageHeader
         title="New booking"
-        description={walkRoom
+        description={isWalkIn
           ? `A walk-in into room ${walkRoom}. Check them in, or save the booking.`
           : "One guest, one set of nights. Save it, give it a room, or check them in."}
       />
@@ -965,7 +973,7 @@ export default function BookingPage() {
           the job the page was opened for: a walk-in's check-in, else saving. */}
       <div className="mt-3 space-y-2" data-booking-actions>
         <div className="grid gap-2 sm:grid-cols-3">
-          <Button variant={walkRoom ? "secondary" : "primary"} className="h-12 text-base"
+          <Button variant={isWalkIn ? "secondary" : "primary"} className="h-12 text-base"
             loading={saving} disabled={saving || saveReason !== null}
             onClick={() => void submit(false)}>
             Save booking
@@ -975,7 +983,7 @@ export default function BookingPage() {
             onClick={() => void submit(false)}>
             Save and assign room
           </Button>
-          <Button variant={walkRoom ? "primary" : "secondary"} className="h-12 text-base"
+          <Button variant={isWalkIn ? "primary" : "secondary"} className="h-12 text-base"
             loading={saving} disabled={saving || saveReason !== null || checkInReason !== null}
             onClick={() => void submit(true)}>
             Check in now

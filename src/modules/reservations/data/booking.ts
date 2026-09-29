@@ -9,10 +9,8 @@ import { api, ApiError } from "@/lib/api";
    answer, the reason included.
    ══════════════════════════════════════════════════════════════════ */
 
-/** The walk-in's market segments (WalkInFlow.tsx), the owner's choice of
-    27 September. Stored as the words themselves.
-    ponytail: a second copy of the walk-in's inline list; one list once the
-    Form III session has merged its WalkInFlow changes. */
+/** The market segments, the walk-in's five (the owner's choice of 27
+    September). Stored as the words themselves. */
 export const MARKET_SEGMENTS = ["Corporate", "Leisure", "Group", "Crew", "Government"] as const;
 
 /** The owner's titles (27 September); none leaves it blank. The server and
