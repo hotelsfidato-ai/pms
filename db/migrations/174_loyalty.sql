@@ -284,7 +284,9 @@ begin
    where f.reservation_id = r.id
      and fp.category not in ('payment', 'refund', 'tax')
      and fp.tax_scheme = 'gst'
-     and not (fp.category = 'room' and r.source_kind in ('ota', 'travel_agent'))
+     -- coalesce: a booking with no source is direct, and `null in (...)`
+     -- would drop every room line of it (LOY-1).
+     and not (fp.category = 'room' and coalesce(r.source_kind in ('ota', 'travel_agent'), false))
      and fp.reverses_id is null
      and not exists (select 1 from folio_postings rev where rev.reverses_id = fp.id);
 

@@ -14,8 +14,28 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None (30 September, when it was built; `MODULE.md`, Left open, lists what
-is not built yet, which is not a defect).
+None. (`MODULE.md`, Left open, lists what is not built yet, which is not a
+defect.)
+
+---
+
+## Fixed
+
+### LOY-1 · A stay with no booking source earned only on its extras
+
+**Found** 30 September, by `db/tests/modules/loyalty.sql` on its first run,
+before any merge: a direct stay with 6,000 of room and 1,000 of food earned
+50 points, not 350. The earning left out an OTA's or an agent's room with
+`not (category = 'room' and source_kind in ('ota', 'travel_agent'))`; a
+booking with no source has `source_kind` NULL, so for a room line that is
+`not (true and null)`, which is NULL, and every room line of the stay
+dropped out.
+
+**Done:** `coalesce(source_kind in (...), false)` in `app.loyalty_earn`; the
+same check now passes (21 of 21).
+
+**The rule:** in SQL, a filter written `not (... in (...))` over a column
+that can be NULL drops the row. Coalesce the IN, or test `is distinct from`.
 
 ---
 

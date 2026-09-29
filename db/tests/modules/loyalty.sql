@@ -7,6 +7,10 @@
 -- not a rate anybody has decided. The functions are called as pms_app, as the
 -- API calls them.
 -- =============================================================================
+-- As the group's owner, so the file also runs on its own after the harness.
+select set_config('app.user_id',
+       (select id::text from staff where email = 'owner@fidato.in'), false);
+
 do $$
 declare
   h uuid; rt uuid; clerk uuid; gm uuid; g uuid; nophone uuid; twin uuid;
