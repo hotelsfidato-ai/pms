@@ -263,10 +263,14 @@ describe("each person's menu", () => {
        purchasing; the master reviews it at merge. */
     /* ⚠ AND "CENTRAL CRM" LEFT, 21 September — the owner gave it a home:
        the "Guests & CRM" section, which its screens join as they are built. */
+    /* ⚠ AND "FIDATO CRS" LEFT, 29 September - the CRS bridge is BUILT
+       (D27-168, D27-171), so its entry moved into "Bookings" as "CRS
+       bookings", as Guest messages did. Edited by the CRS lane; the master
+       reviews it at merge. */
     const NOT_BUILT: Record<string, string[]> = {
       "Front desk": ["Guest services"],
       "Sales and marketing": ["Leads and WhatsApp", "Marketing", "Loyalty"],
-      "Distribution": ["Channel manager", "Booking engine", "Fidato CRS", "Contracts"],
+      "Distribution": ["Channel manager", "Booking engine", "Contracts"],
       "Finance": ["Online payments"],
       "System": ["Room systems"],
     };
