@@ -39,12 +39,16 @@ const forbidden = (what: AdminRead) =>
 /* LAST SEEN (QA AD-2): Firebase's own record of when each sign-in was last
    active (its token refreshed), else last signed in. Nothing in the
    database records it. Empty where this server has no Firebase or the
-   read fails: the list still loads, with a dash.
-   ponytail: one getUsers call, which takes at most 100 people. */
+   read fails: the list still loads, with a dash. getUsers takes 100 people
+   at a time, so it is asked in hundreds (the full test suite, and a group
+   of seven hotels, has more). */
 async function lastSeenOf(uids: string[]): Promise<Map<string, string>> {
   if (!env.firebaseServiceAccount || uids.length === 0) return new Map();
   try {
-    const { users } = await getAuth(firebaseApp()).getUsers(uids.slice(0, 100).map((uid) => ({ uid })));
+    const users = [];
+    for (let i = 0; i < uids.length; i += 100) {
+      users.push(...(await getAuth(firebaseApp()).getUsers(uids.slice(i, i + 100).map((uid) => ({ uid })))).users);
+    }
     return new Map(users.flatMap((u) => {
       const at = u.metadata.lastRefreshTime ?? u.metadata.lastSignInTime;
       return at ? [[u.uid, new Date(at).toISOString()] as [string, string]] : [];
