@@ -7,8 +7,76 @@ its three rules: numbers you ran, not numbers you remember; a guard is not
 proved until it has refused something; "Left open" is the handover.
 
 Work that touches the core or several services still goes in the root
-`CHANGELOG.md`. **Since 17 September the SU connection is being built (D17-66);
-nothing is sent to SU or any booking site until the owner has SU's test keys.**
+`CHANGELOG.md`. **The SU connection is built (D17-66, D27-178, 30 September);
+nothing is sent to SU or any booking site until the owner has put SU's keys in
+the server's settings and the hotel is switched on.**
+
+---
+
+## 2026-09-30 · SU finished: a booking from a site becomes a booking (D27-178, D27-183)
+
+**Asked for:** D27-178, "build the channel manager now", lifting D22-29's
+hold: finish the SU connection (bookings, changes and cancellations in through
+reservations' machine door), the mapping, error visibility, the per-hotel
+switch; plan first. The owner's answers to the plan, D27-183: Q1 each site's SU
+code set in the system, as options; Q2 nights at different prices wait for the
+desk, each listed; Q3-Q7 as recommended (a change and a request wait for a
+person, a cancellation cancels, the GM reads Channel bookings, not-rupees waits);
+Q8 env names only. The master: the commission counted once, at the root.
+
+**Shipped**
+- `inbound/handle.ts`: new -> `createChannelBooking` (keyed by SU's booking id,
+  refused when full -> 0 back to SU, a race answered by
+  `channelBookingAlreadyHere`); cancelled -> `cancelChannelBooking` under the
+  site's policy; everything it cannot book by itself waits for a person with
+  every reason at once (`planBooking`, `whatChanged`).
+- `inbound/door.ts`: the reservations it made are recorded; a failure while
+  working it out is written on the list.
+- `inbound/parse.ts`: CM-6 (DEFECTS).
+- Q6: `CHANNEL_BOOKING_ROLES` (owner, admin, GM) for the list and "dealt
+  with"; the page shows the list to everybody who reaches it.
+- The page: no longer "Coming soon" / "Not built yet"; what it does, what it
+  still needs, each booking site with its SU code or why its bookings wait.
+- `data/suChannels.ts`: SU's 214 documented site codes, exported for Booking
+  sources, whose Channel code is now a pick-list (an old code stays in sight).
+- Reservations' `createChannelBooking`: the site's commission on the first room
+  only (SU's figure is per reservation).
+
+**Found** - CM-6 (a message with an impossible date was lost with a 500); the
+commission on every room (MODULE.md request 10). SU's public documents do not
+say how its push identifies itself or where it pushes from (request 12).
+
+**Proved** - on `b4e79d2` and this entry's commit; fidato_s38 at migration 161.
+- `npm test -- <file>`, one at a time (a fresh database each): suInbound 14/14;
+  channelDoor 9/9; crsReader 13/13; notSamePersonAndBookingSites 11/11;
+  roleGate 60/60; suLogin 19/19.
+- Red without the fix: the five source files put back to cp6, suInbound 7
+  failed, each on its own line (booking made: "needs_attention" for "created";
+  Q1: no "SU's code 19"; Q4: no booking to cancel; Q3: no side-by-side; the
+  failure line; CM-6: "expected 500 to be 200"; Q6: "expected 403 to be 200").
+  Only the door's catch removed: that one test, 500. channelDoor with cp6's
+  channel.ts: "[ '1234.50', '1234.50' ] to deeply equal [ '1234.50', null ]".
+- Web: channel-manager 5/5, navigation, guests 7/7, boundaries 4/4. The GM test
+  red with the list hidden from the GM; the pick-list test red on the old box.
+- `npx tsc -p tsconfig.app.json --noEmit` 0; `cd api && npx tsc --noEmit` 0;
+  `npm run strip-check` 163 files.
+- Screens, in the app's browser pane on 8885/5285: as the GM the list (Booked,
+  Needs somebody, Cancelled, Refused), "I have dealt with this" only where a
+  person is needed, pressed -> "Dealt with"; the SU codes card; the menu entry
+  without "Not built yet". As the owner the SU setup ("Not set up") with the
+  list once; Booking sources: Booking.com's BDC shown as "not one of SU's
+  codes", 19 picked and saved -> "19 · booking.com", and the page then read "SU
+  code 19 (booking.com)". Display rows and the code were put back afterwards.
+
+**Left open**
+- The owner: SU's sandbox account, the push header and addresses, registering
+  our address, the four settings; then the master's `run_as` and nginx lines.
+- Addons SU sends with a room (extras) are kept in the payload, not booked.
+- A per-night price (D17-82) and an amend door (Q3) are reservations' work if
+  ever wanted.
+
+**Commits:** `5de3903`, `7348cd1`, `91e9570`, `eab22ec`, `baa9ba5`,
+`b4e79d2`, and this entry.
 
 ---
 
