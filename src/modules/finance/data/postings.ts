@@ -172,7 +172,7 @@ export async function settle(
   },
   /** One per press of Take payment, kept until it lands. */
   idempotencyKey?: string,
-): Promise<OperationResult<Posting>> {
+): Promise<OperationResult> {
   try {
     await api(`/api/hotels/${hotelId}/stays/${stayId}/payments`, {
       method: "POST",
@@ -183,7 +183,8 @@ export async function settle(
     if (error instanceof ApiError) return refuse(error.message);
     throw error;
   }
-
-  const posting = (await getFolioPostings(hotelId, stayId)).at(-1);
-  return posting ? { ok: true, data: posting } : { ok: true };
+  /* Taken. It read the whole bill again here, for a line nobody used; when
+     that read failed the payment stood and the dialog never closed, the
+     amount still in it (speed finding 7). The panel reads the bill itself. */
+  return { ok: true };
 }

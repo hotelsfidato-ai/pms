@@ -968,6 +968,12 @@ function SettleDialog({
                   if (res.ok) {
                     setPressKey(crypto.randomUUID());
                     toast.success(`${money(value)} received`, method);
+                    /* NOTHING LEFT TO TAKE AGAIN (speed finding 7): the
+                       dialog animates out while the bill refreshes to ₹0,
+                       and with the amount still typed it offered the same
+                       money "as the guest's credit" - a tick and a press
+                       from taking it twice. */
+                    setAmount(""); setAsCredit(false);
                     setOpen(false);
                     onDone();
                   } else {
