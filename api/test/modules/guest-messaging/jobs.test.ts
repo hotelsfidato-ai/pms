@@ -72,14 +72,17 @@ function aLinkMaker() {
 /** Switched on, as stage 3 will (D21-76): the two sending settings, and
     the owner's pace. */
 const connected = (perMinute = "100") => {
-  process.env["N8N_SEND_URL"] = "http://127.0.0.1:1/pms-send";
-  process.env["N8N_SEND_SECRET"] = "not-used-here-nothing-is-really-sent";
+  process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = "http://127.0.0.1:1/pms-send";
+  process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
+  process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = "not-used-here-nothing-is-really-sent";
   process.env["GUEST_MESSAGES_PER_MINUTE"] = perMinute;
 };
 
 beforeEach(() => {
-  delete process.env["N8N_SEND_URL"];
-  delete process.env["N8N_SEND_SECRET"];
+  delete process.env["CRS_N8N_URL"];
+  delete process.env["M2R_N8N_URL"];
+  delete process.env["CRS_N8N_SECRET"];
+  delete process.env["M2R_N8N_SECRET"];
   delete process.env["GUEST_MESSAGES_PER_MINUTE"];
 });
 

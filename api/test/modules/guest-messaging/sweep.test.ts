@@ -131,16 +131,19 @@ afterAll(async () => {
     const left = await db.query("select count(*)::int as n from hotels where code = $1", [CODE]);
     expect(left.rows[0].n).toBe(0);
   } finally { await db.end(); }
-  delete process.env["N8N_SEND_URL"];
-  delete process.env["N8N_SEND_SECRET"];
+  delete process.env["CRS_N8N_URL"];
+  delete process.env["M2R_N8N_URL"];
+  delete process.env["CRS_N8N_SECRET"];
+  delete process.env["M2R_N8N_SECRET"];
   delete process.env["GUEST_MESSAGES_PER_MINUTE"];
   await closePool();
 });
 
 beforeEach(async () => {
   received = [];
-  process.env["N8N_SEND_URL"] = `http://127.0.0.1:${(server.address() as AddressInfo).port}/pms-send`;
-  process.env["N8N_SEND_SECRET"] = SECRET;
+  process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${(server.address() as AddressInfo).port}/pms-send`;
+  process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
+  process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = SECRET;
   process.env["GUEST_MESSAGES_PER_MINUTE"] = "10";
   await sql("delete from guest_links where hotel_id = $1", [hotelId]);
   await sql("delete from messages_sent where hotel_id = $1", [hotelId]);
@@ -275,7 +278,8 @@ describe("the moment sending began (D22-42)", () => {
     await sql("delete from guest_messaging_began");
     delete process.env["GUEST_MESSAGES_PER_MINUTE"];
     await runOnce(asTheSweep, mine);
-    delete process.env["N8N_SEND_URL"];
+    delete process.env["CRS_N8N_URL"];
+    delete process.env["M2R_N8N_URL"];
     process.env["GUEST_MESSAGES_PER_MINUTE"] = "10";
     await runOnce(asTheSweep, mine);
     expect(await began()).toBeUndefined();

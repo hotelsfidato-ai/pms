@@ -1,0 +1,437 @@
+{
+  "name": "PMS send · WhatsApp (market-to-revenue)",
+  "nodes": [
+    {
+      "name": "PMS message",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "d04b12df-b8e5-44b8-a93b-67dc598e6590",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pms-send",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1ae68a7c-fdbd-4318-aad5-e83fabdae3d8",
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Read the message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// PMS → market-to-revenue: \"Read the message\"          (workflow: PMS send · WhatsApp)\n// Mode: Run Once for All Items.\n//\n// The PMS decides WHAT and WHEN (D27-98). This workflow only marks the guest as a\n// booked guest in the sales inbox, so a reply does not start the greeting bot\n// (D27-104), and then - for action \"send\" - sends the WhatsApp template.\n//\n// ── THE OWNER'S SETTINGS: edit these four, nothing below them ───────────────\n// This app's Firebase project (the same one the other workflows name).\nconst PROJECT = \"live-inventory1\";\n// Each PMS hotel code → this app's hotel id (src/hotels.js). A hotel missing\n// here is refused, loudly, rather than marked under the wrong hotel.\nconst HOTELS = {\n  \"5EL\": { id: \"five-elements-akkalkot\", name: \"5 Elements Akkalkot\" },\n};\n// The language each template was approved in, in WhatsApp Manager.\nconst LANGUAGE = \"en\";\n// The PMS's kind of message → the Meta template, and the fields for its {{1}},\n// {{2}}, … in order (docs/go-live/whatsapp-templates.md). A kind missing here\n// is refused with a sentence the desk sees.\nconst TEMPLATES = {\n  \"guest-link-code\": { name: \"guest_page_code\", code: \"data.code\" },\n  \"arrival-reminder\": {\n    name: \"stay_reminder\",\n    body: [\"data.guestName\", \"data.hotelName\", \"data.checkInText\", \"data.reference\", \"data.link\"],\n  },\n  \"checkin-link\": {\n    name: \"checkin_link\",\n    body: [\"data.guestName\", \"data.hotelName\", \"data.checkInText\", \"data.reference\", \"data.link\"],\n  },\n  \"review\": { name: \"review_request\", body: [\"to.name\", \"hotel.name\", \"data.link\"] },\n};\n// How long a sent message id is remembered, so a retry is not sent twice.\nconst KEEP_DAYS = 30;\n// ─────────────────────────────────────────────────────────────────────────────\n\nconst m = $input.first().json.body ?? {};\nconst stop = (statusCode, answer) => [{ json: { stop: true, statusCode, answer } }];\n\n// Every PMS message carries its own id, the same on every retry of one message.\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.messageId ?? \"\")) {\n  return stop(400, { ok: false, error: \"No message id.\" });\n}\nif (m.action !== \"send\" && m.action !== \"mark\") {\n  return stop(400, { ok: false, error: \"The action is send or mark.\" });\n}\n\n// ALREADY SENT: the PMS timed out waiting for the answer and tried again. The\n// guest has it; say so, and send nothing.\nconst memory = $getWorkflowStaticData(\"global\");\nmemory.sent = memory.sent ?? {};\nconst now = Date.now();\nfor (const [id, at] of Object.entries(memory.sent)) {\n  if (now - at > KEEP_DAYS * 86400000) delete memory.sent[id];\n}\nif (m.action === \"send\" && memory.sent[m.messageId]) {\n  return stop(200, { ok: true, duplicate: true });\n}\n\n// The guest's number as this app keys it: digits, a 10-digit Indian number with 91.\nlet digits = String(m.to?.phone ?? \"\").replace(/\\D/g, \"\");\nif (digits.length === 10) digits = `91${digits}`;\nif (digits.length < 11) return stop(422, { ok: false, error: \"No WhatsApp number for the guest.\" });\n\nconst numberId = String(m.from?.phoneNumberId ?? \"\").replace(/\\D/g, \"\");\nif (!numberId) return stop(422, { ok: false, error: \"The PMS sent no WhatsApp number id.\" });\n\nconst hotel = HOTELS[m.hotel?.code];\nif (!hotel) {\n  return stop(422, { ok: false, error: `Hotel ${m.hotel?.code ?? \"-\"} is not in this workflow's HOTELS list.` });\n}\n\n// Meta refuses an EMPTY parameter, and a newline, a tab or four spaces inside one,\n// with an error that names none of them.\nconst flat = (v) => String(v ?? \"\").replace(/[\\n\\t\\r]+/g, \" \").replace(/ {4,}/g, \"   \").trim() || \"-\";\nconst pick = (path) => path.split(\".\").reduce((o, k) => (o == null ? o : o[k]), m);\n\nlet graphBody = null;\nif (m.action === \"send\") {\n  const t = TEMPLATES[m.kind];\n  if (!t) return stop(422, { ok: false, error: `No WhatsApp template for \"${m.kind}\" in this workflow.` });\n  const components = t.code\n    // An Authentication template: the code in the body and in its copy button.\n    ? [\n        { type: \"body\", parameters: [{ type: \"text\", text: flat(pick(t.code)) }] },\n        { type: \"button\", sub_type: \"url\", index: \"0\", parameters: [{ type: \"text\", text: flat(pick(t.code)) }] },\n      ]\n    : [{ type: \"body\", parameters: t.body.map((p) => ({ type: \"text\", text: flat(pick(p)) })) }];\n  graphBody = {\n    messaging_product: \"whatsapp\",\n    recipient_type: \"individual\",\n    to: digits,\n    type: \"template\",\n    template: { name: t.name, language: { code: LANGUAGE }, components },\n  };\n}\n\nconst documents = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;\nreturn [{\n  json: {\n    stop: false,\n    messageId: m.messageId,\n    action: m.action,\n    digits,\n    numberId,\n    hotel,\n    guestName: flat(m.to?.name),\n    reference: flat(m.data?.reference),\n    documents,\n    mappingUrl: `${documents}/numberMappings/${numberId}`,\n    graphUrl: `https://graph.facebook.com/v23.0/${numberId}/messages`,\n    graphBody,\n  },\n}];\n"
+      },
+      "id": "64a527f7-2c97-49da-ab5c-101873cb3101",
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "name": "Stop here?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "23a87451-e915-498a-ab59-651130fa20d1",
+              "leftValue": "={{ $json.stop }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "67b249d2-bf74-46a2-aba0-fe8be5ebf907",
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "name": "Read the number",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.mappingUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "4cb8a121-ed89-4c88-a51a-47081fe8c0a8",
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "name": "Which lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// PMS → market-to-revenue: \"Which lead\"                (workflow: PMS send · WhatsApp)\n// Mode: Run Once for All Items.\n//\n// Input: \"Read the number\" (HTTP Request, \"Include Response Headers and Status\"\n// and \"Never Error\" on). The guest's lead is the one their REPLY will land on,\n// so its id follows \"Route to property\" in the inbound workflow exactly:\n//   a number shared by several hotels   <number id>__<digits>\n//   a number mapped to one hotel        <that hotel>__<digits>\n//   a number not mapped at all          UNASSIGNED__<digits>\n// ⚠ Map the WhatsApp number in this app (Admin → WhatsApp routing) BEFORE the\n//   first PMS message, or the guest is marked in Unassigned.\n\nfunction parse(body) {\n  if (typeof body !== \"string\") return body ?? {};\n  try { return JSON.parse(body); } catch { return { raw: body }; }\n}\n\nconst msg = $(\"Read the message\").first().json;\nconst res = $input.first().json;\nconst mapping = parse(res.body);\n\nlet owner;\nif (res.statusCode === 200 && mapping.fields?.shared?.booleanValue) owner = msg.numberId;\nelse if (res.statusCode === 200 && mapping.fields?.hotelId?.stringValue) owner = mapping.fields.hotelId.stringValue;\nelse if (res.statusCode === 404) owner = \"UNASSIGNED\";\nelse {\n  throw new Error(`Number mapping lookup for ${msg.numberId} failed: HTTP ${res.statusCode} `\n    + JSON.stringify(mapping).slice(0, 300));\n}\n\nconst conversationId = `${owner}__${msg.digits}`;\nreturn [{ json: { ...msg, conversationId, leadUrl: `${msg.documents}/conversations/${conversationId}` } }];\n"
+      },
+      "id": "8a4ff39c-0aee-4fca-ab6b-c4f7b6de9b41",
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "name": "Read the lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.leadUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "74778409-1468-4fe9-a08c-2b5e12cde5ca",
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "name": "Mark as booked",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// PMS → market-to-revenue: \"Mark as booked\"            (workflow: PMS send · WhatsApp)\n// Mode: Run Once for All Items.\n//\n// Input: \"Read the lead\" (HTTP GET of the conversation, Never Error on).\n// ONE write, always, so the commit that follows is never empty:\n//   no lead yet     a lead made BOOKED - the shape the app's own \"Add enquiry\"\n//                   writes, so the inbox shows it like any other\n//   a lead          status BOOKED, the PMS booking's reference, booked now -\n//                   what the app's own \"Mark booked\" writes (setStatus)\n//   already BOOKED  only the reference, to the newest PMS booking\n// A booked lead is not reopened by a reply (3-build-firestore-commit.js), so\n// the guest's answer is a message on it: no greeting, no \"Which hotel?\".\n// No money is written: the PMS sends none, and a zero would be a figure\n// nobody set.\n\nfunction parse(body) {\n  if (typeof body !== \"string\") return body ?? {};\n  try { return JSON.parse(body); } catch { return { raw: body }; }\n}\n\nconst msg = $(\"Which lead\").first().json;\nconst res = $input.first().json;\nconst lead = parse(res.body);\nconst s = (v) => ({ stringValue: String(v) });\nconst name = `${msg.documents.replace(\"https://firestore.googleapis.com/v1/\", \"\")}/conversations/${msg.conversationId}`;\n\nlet write;\nif (res.statusCode === 404) {\n  write = {\n    update: {\n      name,\n      fields: {\n        hotelId: s(msg.hotel.id),\n        hotelName: s(msg.hotel.name),\n        contactPhone: s(`+${msg.digits}`),\n        contactDigits: s(msg.digits),\n        contactName: s(msg.guestName),\n        routingMethod: s(\"manual\"),\n        source: s(\"other\"),\n        attributionStatus: s(\"MANUAL\"),\n        status: s(\"BOOKED\"),\n        bookingRef: s(msg.reference),\n        lastMessagePreview: s(`Booked in the PMS: ${msg.reference}`),\n        lastMessageDirection: s(\"note\"),\n        unreadCount: { integerValue: \"0\" },\n        propertyNumberId: s(msg.numberId),\n      },\n    },\n    updateTransforms: [\"receivedAt\", \"createdAt\", \"lastMessageAt\", \"bookedAt\", \"updatedAt\"]\n      .map((fieldPath) => ({ fieldPath, setToServerValue: \"REQUEST_TIME\" })),\n    currentDocument: { exists: false },\n  };\n} else if (res.statusCode === 200) {\n  const booked = lead.fields?.status?.stringValue === \"BOOKED\";\n  write = {\n    update: { name, fields: booked\n      ? { bookingRef: s(msg.reference) }\n      : { status: s(\"BOOKED\"), bookingRef: s(msg.reference) } },\n    updateMask: { fieldPaths: booked ? [\"bookingRef\"] : [\"status\", \"bookingRef\"] },\n    updateTransforms: (booked ? [\"updatedAt\"] : [\"bookedAt\", \"updatedAt\"])\n      .map((fieldPath) => ({ fieldPath, setToServerValue: \"REQUEST_TIME\" })),\n    currentDocument: { exists: true },\n  };\n} else {\n  throw new Error(`Reading lead ${msg.conversationId} failed: HTTP ${res.statusCode} `\n    + JSON.stringify(lead).slice(0, 300));\n}\n\nreturn [{ json: { ...msg, commitBody: { writes: [write] } } }];\n"
+      },
+      "id": "7aa4260f-4cb4-43cb-a5f3-1391ed260acc",
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "name": "Write the mark",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.documents }}:commit",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.commitBody) }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "81ed91e5-8ae4-4f76-a9b0-66040bd0bdd1",
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "name": "After the mark",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// PMS → market-to-revenue: \"After the mark\"            (workflow: PMS send · WhatsApp)\n// Mode: Run Once for All Items.\n//\n// Input: \"Write the mark\" (the Firestore commit, Never Error on).\n// FAILED_PRECONDITION means another PMS message made this lead a moment ago:\n// the guest is marked either way. A mark that failed does NOT stop the message\n// itself - the guest's code or reminder matters more than the inbox - and the\n// PMS writes the reason down.\n\nfunction parse(body) {\n  if (typeof body !== \"string\") return body ?? {};\n  try { return JSON.parse(body); } catch { return { raw: body }; }\n}\n\nconst msg = $(\"Mark as booked\").first().json;\nconst res = $input.first().json;\nconst marked = res.statusCode === 200 || parse(res.body).error?.status === \"FAILED_PRECONDITION\";\nconst why = marked ? null : `The inbox was not marked (HTTP ${res.statusCode}).`;\n\nif (msg.action === \"mark\") {\n  return [{ json: marked\n    ? { stop: true, statusCode: 200, answer: { ok: true, marked: true } }\n    : { stop: true, statusCode: 502, answer: { ok: false, error: why } } }];\n}\nreturn [{ json: { ...msg, stop: false, markProblem: why } }];\n"
+      },
+      "id": "a0cdbfdf-d990-4a9c-a1d4-2ea521bc4e94",
+      "position": [
+        1920,
+        0
+      ]
+    },
+    {
+      "name": "Stop after the mark?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b7236332-64ed-4326-abd2-f9dd0dcb06b5",
+              "leftValue": "={{ $json.stop }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "85543b2f-6844-4017-aee8-0b51438cf9b9",
+      "position": [
+        2160,
+        0
+      ]
+    },
+    {
+      "name": "Send on WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.graphUrl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.graphBody) }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "df59b949-14f4-456c-ad54-ad3f0b15deab",
+      "position": [
+        2400,
+        0
+      ]
+    },
+    {
+      "name": "Remember it",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// PMS → n8n: \"Remember it\"                                (both PMS send workflows)\n// Mode: Run Once for All Items.\n//\n// Input: the send (HTTP Request with Never Error on, or the email node's\n// success / error output). Sent: its id is remembered, so the PMS's retry of\n// the SAME message is answered \"already sent\" and not sent again. Not sent:\n// nothing is remembered - the PMS's next try must really try.\n\nfunction parse(body) {\n  if (typeof body !== \"string\") return body ?? {};\n  try { return JSON.parse(body); } catch { return { raw: body }; }\n}\n\nconst msg = $(\"After the mark\").first().json;\nconst res = $input.first().json;\nconst sent = res.statusCode !== undefined\n  ? res.statusCode >= 200 && res.statusCode < 300\n  : !res.error;\n\nif (!sent) {\n  const said = res.statusCode !== undefined\n    ? `WhatsApp refused it (HTTP ${res.statusCode}): ${parse(res.body).error?.message ?? \"\"}`\n    : `The email did not go: ${res.error?.message ?? res.error ?? \"\"}`;\n  return [{ json: { statusCode: 502, answer: { ok: false, error: said.slice(0, 300).trim() } } }];\n}\n\n$getWorkflowStaticData(\"global\").sent ??= {};\n$getWorkflowStaticData(\"global\").sent[msg.messageId] = Date.now();\nreturn [{ json: { statusCode: 200, answer: { ok: true, ...(msg.markProblem ? { note: msg.markProblem } : {}) } } }];\n"
+      },
+      "id": "fd843af2-f4fc-412d-a9ea-8335a4bab003",
+      "position": [
+        2640,
+        0
+      ]
+    },
+    {
+      "name": "Answer the PMS",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.answer }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode }}"
+        }
+      },
+      "id": "aa8f65b4-2a44-423b-aa95-944538bca57c",
+      "position": [
+        2640,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "PMS message": {
+      "main": [
+        [
+          {
+            "node": "Read the message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the message": {
+      "main": [
+        [
+          {
+            "node": "Stop here?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stop here?": {
+      "main": [
+        [
+          {
+            "node": "Answer the PMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read the number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the number": {
+      "main": [
+        [
+          {
+            "node": "Which lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Which lead": {
+      "main": [
+        [
+          {
+            "node": "Read the lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the lead": {
+      "main": [
+        [
+          {
+            "node": "Mark as booked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as booked": {
+      "main": [
+        [
+          {
+            "node": "Write the mark",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the mark": {
+      "main": [
+        [
+          {
+            "node": "After the mark",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "After the mark": {
+      "main": [
+        [
+          {
+            "node": "Stop after the mark?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stop after the mark?": {
+      "main": [
+        [
+          {
+            "node": "Answer the PMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send on WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send on WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Remember it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remember it": {
+      "main": [
+        [
+          {
+            "node": "Answer the PMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {},
+  "tags": []
+}

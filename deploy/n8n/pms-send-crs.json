@@ -1,0 +1,293 @@
+{
+  "name": "PMS send · email and voucher (CRS)",
+  "nodes": [
+    {
+      "name": "PMS message",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "69e559e5-f82e-4caa-a724-6ca897a1c49c",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pms-send",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9d39a8c2-e557-4a1a-ade8-5d78a86ace48",
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Read the message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// PMS → CRS: \"Read the message\"                     (workflow: PMS send · email and voucher)\n// Mode: Run Once for All Items.\n//\n// The PMS decides WHAT and WHEN (D27-98) and sends named facts, never\n// sentences (D17-87): the words the guest reads are written HERE, where they\n// are changed without a release of the PMS. This workflow sends every PMS\n// email from the CRS's mailbox, and the booking voucher on WhatsApp.\n//\n// ── THE OWNER'S SETTINGS: edit these, nothing below them ────────────────────\n// The mailbox the guest sees the email from. Until it is filled in, every\n// email is refused with a sentence the desk sees.\nconst FROM = \"\";\nconst REPLY_TO = \"\";\n// The WhatsApp voucher: the Meta template, its language, and the fields for\n// its {{1}}, {{2}}, … in order (docs/go-live/whatsapp-templates.md, 1).\nconst LANGUAGE = \"en\";\nconst WHATSAPP = {\n  \"booking-confirmation\": {\n    name: \"booking_confirmation\",\n    body: [\"data.guestName\", \"data.hotelName\", \"data.reference\", \"data.checkInText\",\n           \"data.checkOutText\", \"data.nights\", \"data.link\"],\n  },\n};\n// How long a sent message id is remembered, so a retry is not sent twice.\nconst KEEP_DAYS = 30;\n\n// The words of each email. DRAFTS for the owner: change them here.\nconst EMAILS = {\n  \"booking-confirmation\": (d) => ({\n    subject: `Your booking at ${d.hotelName} is confirmed (${d.reference})`,\n    lines: [\n      `Hello ${d.guestName},`,\n      `Your stay at ${d.hotelName} is confirmed.`,\n      `Booking: ${d.reference}`,\n      `Check-in: ${d.checkInText}`,\n      `Check-out: ${d.checkOutText} (${d.nights} nights)`,\n      d.link ? `To save time at the desk, you can fill in your check-in details here: ${d.link}` : null,\n    ],\n  }),\n  \"arrival-reminder\": (d) => ({\n    subject: `See you tomorrow at ${d.hotelName} (${d.reference})`,\n    lines: [\n      `Hello ${d.guestName},`,\n      `We look forward to welcoming you at ${d.hotelName} tomorrow, ${d.checkInText}.`,\n      `Booking: ${d.reference}`,\n      d.link ? `If you have not filled in your check-in details yet, you can do it here: ${d.link}` : null,\n    ],\n  }),\n  \"checkin-link\": (d) => ({\n    subject: `Your check-in page for ${d.hotelName} (${d.reference})`,\n    lines: [\n      `Hello ${d.guestName},`,\n      `You can fill in your check-in details for ${d.hotelName} (arriving ${d.checkInText}) here: ${d.link}`,\n      `Booking: ${d.reference}`,\n    ],\n  }),\n  \"review\": (d, m) => ({\n    subject: `Thank you for staying at ${m.hotel?.name ?? \"\"}`,\n    lines: [\n      `Hello ${m.to?.name ?? \"\"},`,\n      `Thank you for staying at ${m.hotel?.name ?? \"\"}.`,\n      `If you have a minute, we would be grateful for a review: ${d.link}`,\n    ],\n  }),\n};\n// ─────────────────────────────────────────────────────────────────────────────\n\nconst m = $input.first().json.body ?? {};\nconst stop = (statusCode, answer) => [{ json: { stop: true, statusCode, answer } }];\n\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.messageId ?? \"\")) {\n  return stop(400, { ok: false, error: \"No message id.\" });\n}\n\n// ALREADY SENT: the PMS timed out waiting for the answer and tried again.\nconst memory = $getWorkflowStaticData(\"global\");\nmemory.sent = memory.sent ?? {};\nconst now = Date.now();\nfor (const [id, at] of Object.entries(memory.sent)) {\n  if (now - at > KEEP_DAYS * 86400000) delete memory.sent[id];\n}\nif (memory.sent[m.messageId]) return stop(200, { ok: true, duplicate: true });\n\nconst d = m.data ?? {};\n// The PDF, when the PMS sends one, as the attachment called \"data\".\nconst binary = m.file?.base64\n  ? { data: { data: m.file.base64, mimeType: m.file.contentType || \"application/pdf\", fileName: m.file.name || \"document.pdf\" } }\n  : undefined;\n\nif (m.channel === \"email\") {\n  if (!FROM) return stop(503, { ok: false, error: \"The CRS workflow has no mailbox to send from yet.\" });\n  const to = String(m.to?.email ?? \"\").trim();\n  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(to)) return stop(422, { ok: false, error: \"No email address for the guest.\" });\n  const words = EMAILS[m.kind];\n  if (!words) return stop(422, { ok: false, error: `No email for \"${m.kind}\" in this workflow.` });\n  const { subject, lines } = words(d, m);\n  const kept = lines.filter(Boolean);\n  // A guest's name is typed by people: it is text in the email, never HTML.\n  const esc = (s) => String(s).replace(/[&<>\"']/g, (c) => ({ \"&\": \"&amp;\", \"<\": \"&lt;\", \">\": \"&gt;\", '\"': \"&quot;\", \"'\": \"&#39;\" })[c]);\n  return [{\n    json: {\n      stop: false, email: true, messageId: m.messageId,\n      from: FROM, replyTo: REPLY_TO || FROM, to, subject,\n      text: kept.join(\"\\n\\n\"),\n      html: kept.map((l) => `<p>${esc(l)}</p>`).join(\"\\n\"),\n      attachments: binary ? \"data\" : \"\",\n    },\n    ...(binary ? { binary } : {}),\n  }];\n}\n\n// WhatsApp: only the voucher comes this way (D27-98); the rest go to the other app.\nconst t = WHATSAPP[m.kind];\nif (!t) return stop(422, { ok: false, error: `No WhatsApp template for \"${m.kind}\" in this workflow.` });\nlet digits = String(m.to?.phone ?? \"\").replace(/\\D/g, \"\");\nif (digits.length === 10) digits = `91${digits}`;\nif (digits.length < 11) return stop(422, { ok: false, error: \"No WhatsApp number for the guest.\" });\nconst numberId = String(m.from?.phoneNumberId ?? \"\").replace(/\\D/g, \"\");\nif (!numberId) return stop(422, { ok: false, error: \"The PMS sent no WhatsApp number id.\" });\n\n// Meta refuses an EMPTY parameter, and a newline, a tab or four spaces inside one.\nconst flat = (v) => String(v ?? \"\").replace(/[\\n\\t\\r]+/g, \" \").replace(/ {4,}/g, \"   \").trim() || \"-\";\nconst pick = (path) => path.split(\".\").reduce((o, k) => (o == null ? o : o[k]), m);\nreturn [{\n  json: {\n    stop: false, email: false, messageId: m.messageId,\n    graphUrl: `https://graph.facebook.com/v23.0/${numberId}/messages`,\n    graphBody: {\n      messaging_product: \"whatsapp\",\n      recipient_type: \"individual\",\n      to: digits,\n      type: \"template\",\n      template: {\n        name: t.name,\n        language: { code: LANGUAGE },\n        components: [{ type: \"body\", parameters: t.body.map((p) => ({ type: \"text\", text: flat(pick(p)) })) }],\n      },\n    },\n  },\n}];\n"
+      },
+      "id": "e1208aac-d45f-45b4-a3f2-ecceff11d362",
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "name": "Stop here?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "23a87451-e915-498a-ab59-651130fa20d1",
+              "leftValue": "={{ $json.stop }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cccba739-f8ed-48c4-a338-77cba6187b1c",
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "name": "Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "4dd8307b-cb83-4845-a0a6-ce005793acfa",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "314ba467-1e1a-46ac-a961-60d6a94a92f1",
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "name": "Send the email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "fromEmail": "={{ $json.from }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "both",
+        "text": "={{ $json.text }}",
+        "html": "={{ $json.html }}",
+        "options": {
+          "attachments": "={{ $json.attachments }}",
+          "replyTo": "={{ $json.replyTo }}",
+          "appendAttribution": false
+        }
+      },
+      "id": "eca43073-bda8-43e0-a4d0-11c47f844b8a",
+      "position": [
+        960,
+        -120
+      ]
+    },
+    {
+      "name": "Send on WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.graphUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.graphBody) }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "07a6e400-53bc-40ec-a730-3d955415cd99",
+      "position": [
+        960,
+        120
+      ]
+    },
+    {
+      "name": "Remember it",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// PMS → n8n: \"Remember it\"                                (both PMS send workflows)\n// Mode: Run Once for All Items.\n//\n// Input: the send (HTTP Request with Never Error on, or the email node's\n// success / error output). Sent: its id is remembered, so the PMS's retry of\n// the SAME message is answered \"already sent\" and not sent again. Not sent:\n// nothing is remembered - the PMS's next try must really try.\n\nfunction parse(body) {\n  if (typeof body !== \"string\") return body ?? {};\n  try { return JSON.parse(body); } catch { return { raw: body }; }\n}\n\nconst msg = $(\"Read the message\").first().json;\nconst res = $input.first().json;\nconst sent = res.statusCode !== undefined\n  ? res.statusCode >= 200 && res.statusCode < 300\n  : !res.error;\n\nif (!sent) {\n  const said = res.statusCode !== undefined\n    ? `WhatsApp refused it (HTTP ${res.statusCode}): ${parse(res.body).error?.message ?? \"\"}`\n    : `The email did not go: ${res.error?.message ?? res.error ?? \"\"}`;\n  return [{ json: { statusCode: 502, answer: { ok: false, error: said.slice(0, 300).trim() } } }];\n}\n\n$getWorkflowStaticData(\"global\").sent ??= {};\n$getWorkflowStaticData(\"global\").sent[msg.messageId] = Date.now();\nreturn [{ json: { statusCode: 200, answer: { ok: true, ...(msg.markProblem ? { note: msg.markProblem } : {}) } } }];\n"
+      },
+      "id": "7fa0dce4-0208-43d8-ae71-21fb6d109146",
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "name": "Answer the PMS",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.answer }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode }}"
+        }
+      },
+      "id": "ef955346-de6d-4822-a044-ec2ca7a16404",
+      "position": [
+        1440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "PMS message": {
+      "main": [
+        [
+          {
+            "node": "Read the message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the message": {
+      "main": [
+        [
+          {
+            "node": "Stop here?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stop here?": {
+      "main": [
+        [
+          {
+            "node": "Answer the PMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email?": {
+      "main": [
+        [
+          {
+            "node": "Send the email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send on WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the email": {
+      "main": [
+        [
+          {
+            "node": "Remember it",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Remember it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send on WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Remember it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remember it": {
+      "main": [
+        [
+          {
+            "node": "Answer the PMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {},
+  "tags": []
+}

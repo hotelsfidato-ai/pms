@@ -241,8 +241,10 @@ describe("the six digits that prove it is that guest", () => {
       where l.reservation_id = $1 order by c.created_at desc`, [stayId]);
 
   it("sends nothing AND ISSUES NOTHING while the hotel has not connected n8n", async () => {
-    delete process.env["N8N_SEND_URL"];
-    delete process.env["N8N_SEND_SECRET"];
+    delete process.env["CRS_N8N_URL"];
+    delete process.env["M2R_N8N_URL"];
+    delete process.env["CRS_N8N_SECRET"];
+    delete process.env["M2R_N8N_SECRET"];
     await sql("delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
     forgetKnocksForTests();
 
@@ -265,8 +267,9 @@ describe("the six digits that prove it is that guest", () => {
     const server = createServer((_req, res) => { res.writeHead(200).end("ok"); });
     await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
     const port = (server.address() as { port: number }).port;
-    process.env["N8N_SEND_URL"] = `http://127.0.0.1:${port}/pms-send`;
-    process.env["N8N_SEND_SECRET"] = "only-this-test-run-knows-this";
+    process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${port}/pms-send`;
+    process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
+    process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = "only-this-test-run-knows-this";
 
     try {
       await sql("delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
@@ -284,8 +287,10 @@ describe("the six digits that prove it is that guest", () => {
       expect(text, "and it is never in the answer, in any environment")
         .not.toMatch(/\b\d{6}\b/);
     } finally {
-      delete process.env["N8N_SEND_URL"];
-      delete process.env["N8N_SEND_SECRET"];
+      delete process.env["CRS_N8N_URL"];
+      delete process.env["M2R_N8N_URL"];
+      delete process.env["CRS_N8N_SECRET"];
+      delete process.env["M2R_N8N_SECRET"];
       await new Promise<void>((done) => server.close(() => done()));
     }
   });

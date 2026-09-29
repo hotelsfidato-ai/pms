@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { withUser, type Client } from "../../db.ts";
 import { env } from "../../env.ts";
-import { canSend, send, type Message, type SendResult } from "../../sending.ts";
+import { canSend, messageIdFor, send, type Message, type SendResult } from "../../sending.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TWO MESSAGES THIS SYSTEM SENDS BY ITSELF (D18-11, D18-12)
@@ -50,6 +50,8 @@ import { canSend, send, type Message, type SendResult } from "../../sending.ts";
 export const KIND = {
   confirmation: "booking-confirmation",
   reminder: "arrival-reminder",
+  /** The desk's Send check-in link (D27-105): not the sweep's, never owed. */
+  checkInLink: "checkin-link",
 } as const;
 
 export type MessageKind = (typeof KIND)[keyof typeof KIND];
@@ -138,6 +140,10 @@ export function messageFor(due: Due, link: string): Message | null {
   const channel = channelFor(due);
   if (!channel) return null;
   return {
+    /* ONE MESSAGE, ONE ID, however many tries (D27-168): the sweep's next
+       minute and the desk's Send voucher are the same message, so the
+       workflow sends it once even when the answer to the first was lost. */
+    id: messageIdFor(due.kind, due.reservationId),
     channel,
     kind: due.kind,
     hotel: due.hotel,
