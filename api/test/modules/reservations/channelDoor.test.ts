@@ -143,6 +143,21 @@ describe("a booking a site has taken", () => {
     expect(found?.ok && found.duplicate).toBe(true);
   });
 
+  it("keeps the site's commission once for the whole booking, on its first room (D27-183)", async () => {
+    const result = await session((client) =>
+      createChannelBooking(client, ownerStaffId, booking("SU-CHAN-6", {
+        lines: [{ roomTypeId: typeId, mealPlan: "EP", adults: 2, rooms: 2, agreedRate: 4200 }],
+      })));
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+
+    const { rows } = await sql(
+      `select ota_line, commission_amount::text as commission, notes from reservations
+        where hotel_id = $1 and ota_reference = 'SU-CHAN-6' order by ota_line`, [hotelId]);
+    expect(rows.map((r) => r.commission), "SU's figure is per reservation, not per room")
+      .toEqual(["1234.50", null]);
+    expect(rows.every((r) => String(r.notes).includes("High floor")), "the request on every room").toBe(true);
+  });
+
   it("refuses rather than overbooking, and leaves nothing behind (D17-80)", async () => {
     const { rows: free } = await sql(
       `select coalesce(min(g.available), 0)::int as short
