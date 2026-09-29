@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { withUser, type Client } from "../../db.ts";
 import { env } from "../../env.ts";
 import { canSend, messageIdFor, send, type Message, type SendResult } from "../../sending.ts";
+import { voucherFile } from "./voucherDocument.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TWO MESSAGES THIS SYSTEM SENDS BY ITSELF (D18-11, D18-12)
@@ -298,13 +299,23 @@ export async function claimTurn(
 
 export const NOT_OWED = "It was sent already, so it is not sent again.";
 
+/** The voucher goes with the booking confirmation's email (D27-171,
+    D27-172): the PDF in the CRS's design. WhatsApp sends the text and the
+    link for now (V3). The sweep and the desk's Send voucher both come
+    through here, so it is the same PDF whoever sends it. */
+export async function withVoucher(client: Client, message: Message): Promise<Message> {
+  if (message.kind !== KIND.confirmation || message.channel !== "email" || message.file) return message;
+  const file = await voucherFile(client, message.about?.id ?? "");
+  return file ? { ...message, file } : message;
+}
+
 /** The sweep's sender: the turn, the question again, then the one door out. */
 export async function sendIfOwed(client: Client, message: Message): Promise<SendResult> {
   const id = message.about?.id ?? "";
   await claimTurn(client, message.kind, id);
   const owed = (await dueFromDatabase(client, LIMITS, message.hotel.id))
     .some((d) => d.kind === message.kind && d.reservationId === id);
-  return owed ? send(client, message) : { ok: false, reason: NOT_OWED };
+  return owed ? send(client, await withVoucher(client, message)) : { ok: false, reason: NOT_OWED };
 }
 
 export interface SweepResult {

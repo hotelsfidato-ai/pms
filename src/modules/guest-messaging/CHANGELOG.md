@@ -50,9 +50,24 @@ lead's mask, remember-only-on-success, the shared number's lead id).
 18/18 with `sendCheckInLink.test.tsx`, whose "off where nothing can send"
 guard was seen to fail with `disabled` removed. API and web type checks clean.
 
+**Later the same day - the voucher (D27-171, D27-172, the owner's V1 to
+V5):** `voucherDocument.ts` draws the booking voucher in the CRS's design
+from `app.guest_voucher` (added to 162); `withVoucher` attaches it to the
+booking confirmation's email for the sweep and Send voucher alike; the CRS
+workflow's email is a short letter in the CRS's colours ("Your reservation
+voucher is attached.", the link clickable after escaping). **Proved:**
+`voucherDocument.test.ts` 7/7 - the dash rule (no GST rule, no total) seen to
+fail with a missing rate treated as zero; the per-night rounding matches the
+audit's (2,734.25 at 5% twice = 273.42); the PDF drawn and read back: every
+section, dashes for GST and both totals where no rate is set. The function
+was dry-run in a rolled-back transaction on fidato_s35. `checkinLink.test.ts`
+carries "the voucher's email carries the voucher PDF" for the API suite.
+
 **Left open**:
 - **The API suite has not run on the final tree** - held by the master
-  (round F first). `checkinLink.test.ts`, the new `sending.test.ts` cases and
+  (round F first). 162 gained `app.guest_voucher` after the master ran it on
+  fidato_s35: it needs running again there before Send voucher's PDF can be
+  seen end to end. `checkinLink.test.ts`, the new `sending.test.ts` cases and
   every test that switches sending on (now the five names) wait for it.
 - Placing `SendCheckInLink` on New booking's Booked card and the booking
   panel: other lanes' files, for the master to route.

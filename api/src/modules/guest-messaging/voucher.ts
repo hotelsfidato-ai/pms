@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { canSend, send, NOT_CONNECTED } from "../../sending.ts";
 import {
-  channelFor, claimTurn, dueFromDatabase, linkFromDatabase, messageFor, KIND, LIMITS, type Due,
+  channelFor, claimTurn, dueFromDatabase, linkFromDatabase, messageFor, withVoucher, KIND, LIMITS,
+  type Due,
 } from "./jobs.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -67,7 +68,7 @@ voucher.post("/:code/stays/:id/confirmation", async (c) => {
     }
 
     const link = await linkFromDatabase(client, due);
-    const message = messageFor(due, link)!;
+    const message = await withVoucher(client, messageFor(due, link)!);
     const answer = await send(client, {
       ...message, sentBy: { id: session.staffId, name: session.fullName },
     });

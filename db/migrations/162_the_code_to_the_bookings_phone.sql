@@ -306,3 +306,92 @@ begin
   return true;
 end
 $fn$;
+
+-- -----------------------------------------------------------------------------
+-- 4 · The voucher's facts (D27-171, D27-172)
+-- -----------------------------------------------------------------------------
+-- The booking voucher, in the CRS's design, is the PMS's own confirmation,
+-- sent once (D27-35) from the CRS's mailbox as a PDF. The sweep sends it with
+-- nobody signed in, and `reservations`, `guests` and `hotels` are row-secured,
+-- so it reads the booking through this one definer - the shape 126 gave the
+-- sweep's other ways in. Facts only: the figures are worked out by the one
+-- function that draws them (api/src/modules/guest-messaging/voucherDocument.ts)
+-- from the nightly rate the audit posts and the GST rate THIS database gives
+-- for that rate (app.gst_rate_or_null, 067) - null where no rule is set, so
+-- the voucher prints a dash and never a total nobody agreed to (D27-172).
+--
+-- One voucher per group, about its lead (D22-41): every room of the group
+-- still standing. Null for a booking that is not confirmed: no voucher.
+create or replace function app.guest_voucher(p_reservation uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = pg_catalog, public
+as $fn$
+  with l as (
+    select r.* from reservations r where r.id = p_reservation and r.status = 'confirmed'
+  ),
+  confirmed as (
+    -- Who made it confirmed, and when: the audit's own record of the change
+    -- (a booking made confirmed, or confirmed after waiting for the hotel).
+    select a.actor, a.at
+      from audit_log a
+     where a.table_name = 'reservations' and a.row_id = p_reservation::text
+       and a.after->>'status' = 'confirmed'
+       and coalesce(a.before->>'status', '') <> 'confirmed'
+     order by a.at desc
+     limit 1
+  )
+  select jsonb_build_object(
+    'reference', l.reference,
+    'bookedOn', (l.created_at at time zone h.timezone)::date,
+    'checkIn', l.check_in,
+    'checkOut', l.check_out,
+    'nights', l.check_out - l.check_in,
+    'hotel', jsonb_build_object(
+      'name', h.name, 'address', h.address_line, 'city', h.city, 'state', h.state,
+      'phone', h.phone, 'email', h.email, 'gstin', h.gstin,
+      'checkInTime', to_char(h.check_in_time, 'HH24:MI'),
+      'checkOutTime', to_char(h.check_out_time, 'HH24:MI')),
+    'groupName', (select gs.name from group_settings gs),
+    -- A PNG only: the PDF draws PNG, and an SVG logo prints the name instead.
+    'logoPng', (select encode(gs.logo, 'base64') from group_settings gs
+                 where gs.logo_type = 'image/png'),
+    'guest', (select jsonb_build_object('name', g.full_name, 'email', g.email, 'phone', g.phone)
+                from guests g where g.id = l.guest_id),
+    'company', (select c.name from companies c where c.id = l.company_id),
+    'rooms', (
+      select jsonb_agg(jsonb_build_object(
+               'roomType', rt.name, 'mealPlan', r.meal_plan,
+               'adults', r.adults, 'children', r.children,
+               'nights', r.check_out - r.check_in,
+               'rate', r.agreed_rate,
+               'complimentary', r.is_complimentary,
+               'gstRate', case when r.is_complimentary then null
+                               else app.gst_rate_or_null(r.hotel_id, 'room', r.agreed_rate) end)
+             order by r.created_at, r.reference)
+        from reservations r
+        join room_types rt on rt.id = r.room_type_id
+       where coalesce(r.group_id, r.id) = coalesce(l.group_id, l.id)
+         and r.status in ('confirmed', 'checked_in')),
+    'terms', jsonb_build_object(
+      'name', l.cancel_terms, 'freeUntilHours', l.cancel_free_until_hours,
+      'cancelBasis', l.cancel_basis, 'cancelPercent', l.cancel_percent,
+      'cancelAmount', l.cancel_amount, 'noShowBasis', l.no_show_basis,
+      'noShowPercent', l.no_show_percent, 'noShowAmount', l.no_show_amount),
+    'confirmedBy', (select s.full_name from confirmed c join staff s on s.id = c.actor),
+    'confirmedAt', (select to_char(c.at at time zone h.timezone, 'YYYY-MM-DD"T"HH24:MI')
+                      from confirmed c)
+  )
+  from l join hotels h on h.id = l.hotel_id;
+$fn$;
+
+comment on function app.guest_voucher(uuid) is
+  'The booking voucher''s facts, for the sweep and the desk''s Send voucher '
+  '(D27-171, D27-172): the group''s standing rooms, each nightly rate and its '
+  'GST rate from app.gst_rate_or_null (null where no rule: the voucher prints '
+  'a dash). Null unless the booking is confirmed.';
+
+revoke all on function app.guest_voucher(uuid) from public;
+grant execute on function app.guest_voucher(uuid) to pms_app;

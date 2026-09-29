@@ -149,6 +149,20 @@ describe("Send check-in link (D27-105)", () => {
     expect(await recorded(b.id)).toHaveLength(0);
   });
 
+  /* D27-171, D27-172: the voucher email carries the voucher, a PDF in the
+     CRS's design, made from this booking's own figures. */
+  it("sends the booking's voucher PDF with the voucher's email", async () => {
+    const b = await book("Voucher PDF");
+    const res = await call(clerk, "POST", `/stays/${b.id}/confirmation`, {});
+    expect(res.status, await res.clone().text()).toBe(200);
+    const sent = received[0] as unknown as { kind: string; channel: string;
+      file?: { name: string; contentType: string; base64: string } };
+    expect(sent).toMatchObject({ kind: "booking-confirmation", channel: "email" });
+    expect(sent.file?.name).toBe(`Voucher-${b.reference.replace(/[^A-Za-z0-9-]/g, "")}.pdf`);
+    expect(sent.file?.contentType).toBe("application/pdf");
+    expect(Buffer.from(sent.file!.base64, "base64").subarray(0, 5).toString("latin1")).toBe("%PDF-");
+  });
+
   it("says so, and records nothing, when sending is switched off", async () => {
     const b = await book("Off");
     delete process.env["M2R_N8N_URL"];

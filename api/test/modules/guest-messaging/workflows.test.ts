@@ -170,13 +170,25 @@ describe("the CRS workflow (email and the voucher)", () => {
     expect(out!.json["attachments"], "no document, no attachment").toBe("");
   });
 
-  it("attaches the document the PMS sends", () => {
+  it("attaches the document the PMS sends, and says the voucher is attached", () => {
     const [out] = run(withMailbox(), "Read the message", { body: message({
       channel: "email", kind: "booking-confirmation",
       file: { name: "Voucher.pdf", contentType: "application/pdf", base64: "JVBERg==" },
     }) });
     expect(out!.json["attachments"]).toBe("data");
     expect(out!.binary).toEqual({ data: { data: "JVBERg==", mimeType: "application/pdf", fileName: "Voucher.pdf" } });
+    expect(out!.json["text"]).toContain("Your reservation voucher is attached.");
+  });
+
+  /* D27-172 V2: a short letter in the CRS's colours; the link clickable,
+     made so only after the line was escaped. */
+  it("writes the letter in the CRS's colours with the guest's link clickable", () => {
+    const [out] = run(withMailbox(), "Read the message", { body: message({
+      channel: "email", kind: "booking-confirmation" }) });
+    const html = String(out!.json["html"]);
+    expect(html).toContain("#FE611F");
+    expect(html).toContain('<a href="https://example.test/g/x"');
+    expect(out!.json["text"], "no file, no word of one").not.toContain("attached");
   });
 
   it("sends only the voucher on WhatsApp; anything else belongs to the other workflow", () => {

@@ -66,6 +66,24 @@ WHO sends it, by the message, and nothing else changed for its callers:
   `deploy/n8n/IMPORT.md` is the owner's steps; `workflows.test.ts` runs each
   Code node with made-up messages.
 
+## The booking voucher (D27-171, D27-172)
+
+The booking confirmation's EMAIL carries the voucher: a PDF in the CRS's
+design (its `voucherPdf.ts`, read, not copied), drawn with pdfkit by
+`voucherDocument.ts` from `app.guest_voucher(reservation)` (162, a definer:
+the sweep has nobody signed in). `withVoucher` in `jobs.ts` attaches it for
+both the sweep and Send voucher, so it is the same PDF whoever sends it; the
+CRS workflow writes the short letter around it in the CRS's colours.
+WhatsApp sends the text and the link for now (V3).
+
+The owner's answers (D27-172), each where it lives:
+
+| | Rule | Where |
+|---|---|---|
+| V1 | per room the nightly rate the audit posts x nights; room charges, GST by the per-night slab (`app.gst_rate_or_null`, rounded per night as the audit posts), the total. **No GST rule: GST and the total print "-"** (`voucherFigures`, guarded by `voucherDocument.test.ts`, seen to fail). "Complimentary" where so. No payment line | `voucherFigures` |
+| V4 | the booking's own cancellation terms in the desk's words, the hotel's check-in and check-out times; no bank section until bank details exist in Settings | `voucherPolicies` |
+| V5 | "Confirmed by the hotel": the PMS reference, the clerk (the audit's record of the change to confirmed) and when | `app.guest_voucher` |
+
 ## Send check-in link (D27-105)
 
 `POST /api/hotels/:code/stays/:id/checkin-link` (`voucher.ts`): a confirmed
