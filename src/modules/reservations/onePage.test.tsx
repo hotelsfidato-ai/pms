@@ -184,6 +184,8 @@ describe("the advance", () => {
     fireEvent.click(button("Save booking"));
 
     await screen.findByText(/Advance of ₹2,000.00 taken/);
+    /* The check-in link beside the voucher (D27-105), for a guest not yet in. */
+    expect(screen.getByRole("button", { name: /Send check-in link/ })).toBeTruthy();
     const paid = calls.find((c) => c.path.endsWith("/stays/r-1/payments"));
     expect(paid?.body).toMatchObject({ method: "UPI", amount: 2000, heldAsCredit: true });
   });
@@ -238,6 +240,7 @@ describe("a walk-in", () => {
     await waitFor(() => expect(button("Check in now").disabled).toBe(false));
     fireEvent.click(button("Check in now"));
     await screen.findByText(/In house, room 101/);
+    expect(screen.queryByRole("button", { name: /Send check-in link/ })).toBeNull();
     expect(calls[0]!.body).toMatchObject({ bookingSourceId: "src-w", isSingleLady: true, checkIn: "2026-08-25" });
     expect(calls[1]!.path).toContain("/stays/r-1/check-in");
   });
