@@ -36,11 +36,10 @@ export async function listSellableRooms(hotelId: string): Promise<Room[]> {
   return (await listAllRooms(hotelId)).filter((r) => r.status !== "out-of-service");
 }
 
-export async function getRoom(hotelId: string, number: string): Promise<Room | null> {
-  return (await listAllRooms(hotelId)).find((r) => r.number === number) ?? null;
-}
+/* `getRoom` lived here until 30 Sep; the walk-in dialog was its only caller,
+   and the one-page booking replaced it (D27-158). Rule 2b.
 
-/* `roomCountForDate` lived here and had NO callers.
+   `roomCountForDate` lived here and had NO callers.
    Its own comment carried the removal condition — "it moves when room
    blocks are modelled" — and migration 022 modelled them. What the
    tape chart actually needed was per-room block ranges, which now
