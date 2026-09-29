@@ -67,28 +67,28 @@ notifications.get("/:code/notifications", async (c) => {
        ),
        balances as (
          select r.id, r.reference, r.status, r.check_out, g.full_name as guest,
-                /* app.stay_room (086), not the HELD assignment: a refund
-                   is owed to somebody who has LEFT, and their room was
-                   released at check-out - this printed "-" for them. */
-                app.stay_room(r.id) as room,
                 coalesce((select sum(amount + tax_amount) from live
                            where reservation_id = r.id), 0) as balance
            from reservations r
            join guests g on g.id = r.guest_id
           where r.hotel_id = $1
        )
+       /* app.stay_room (086), not the HELD assignment: a refund is owed to
+          somebody who has LEFT, and their room was released at check-out.
+          Called here, on the few rows returned, not inside balances for
+          every booking ever (D27-165, speed check S-1: 1.1 s to 0.1 s). */
        select 'arrival' as kind, b.id::text, b.guest as label,
-              coalesce(b.room, '-') as detail, null::text as amount
+              coalesce(app.stay_room(b.id), '-') as detail, null::text as amount
          from balances b
         where b.status = 'confirmed' and b.check_out > $2::date
           and exists (select 1 from reservations r2
                        where r2.id = b.id and r2.check_in = $2::date)
        union all
-       select 'owing', b.id::text, b.guest, coalesce(b.room, '-'), b.balance::text
+       select 'owing', b.id::text, b.guest, coalesce(app.stay_room(b.id), '-'), b.balance::text
          from balances b
         where b.status = 'checked_in' and b.check_out = $2::date and b.balance > 0.5
        union all
-       select 'refund', b.id::text, b.guest, coalesce(b.room, '-'), b.balance::text
+       select 'refund', b.id::text, b.guest, coalesce(app.stay_room(b.id), '-'), b.balance::text
          from balances b
         where b.balance < -0.5
        union all

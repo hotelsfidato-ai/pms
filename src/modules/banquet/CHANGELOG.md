@@ -11,6 +11,15 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-29 · Fix round F (QA leftovers, D27-149), part D: a billed function keeps its hall (migration 156)
+
+Branch `fix/leftovers-28sep` (cp6 7c52bb9, round D, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Found:** round E's "Bill the function" sets 'completed' any time after Confirm, and 060's guards held only 'confirmed', so a function billed ahead of its date freed its hall - a second function was confirmed into QA Hall over a billed one (BQ-12).
+**Shipped:** migration 156 - `app.banquet_conflicts` and `be_no_double_booking` hold ('confirmed', 'completed'); "The hall is taken: …" with its capital (X-4). Re-runnable; the functions keep their signatures (MEMORY 317).
+**Proved:** `bill.test.ts` "refuses to confirm another function over it" - 200 without 156 (the double booking), 409 with it; fidato_s30 migrated twice, exit 0 both times.
+
+---
+
 ## 2026-09-29 · Fix round F (QA leftovers, D27-149), part C: reopen a billed function while no tax invoice stands (D27-150, D27-154)
 
 **Asked for:** the owner's D27-154 (round E's question a). Branch `fix/leftovers-28sep` (cp6 6686af1, round A, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.

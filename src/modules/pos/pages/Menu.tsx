@@ -721,6 +721,8 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
   const setHeading = async (kind: SectionHeading) => {
     const res = await setCategoryTaxKind(hotelId, category.id, kind);
     if (!res.ok) return toast.error("Not changed", res.reason ?? "Refused.");
+    /* Said (QA RT-9: it saved with no word). */
+    toast.success("Saved", `${category.name}: the tax heading is changed.`);
     onChanged();
   };
 

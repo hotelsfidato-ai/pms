@@ -13,12 +13,14 @@ process.env["FIREBASE_SERVICE_ACCOUNT"] = "{}";
 
 vi.mock("firebase-admin/auth", () => ({
   getAuth: () => ({
-    getUsers: async (ids: Array<{ uid: string }>) => ({
-      users: ids.filter((i) => i.uid === "test-uid-ls-seen").map((i) => ({
+    /* Firebase refuses more than 100 at once; so does its stand-in. */
+    getUsers: async (ids: Array<{ uid: string }>) => {
+      if (ids.length > 100) throw new Error("Users list must not contain more than 100 items");
+      return { users: ids.filter((i) => i.uid === "test-uid-ls-seen").map((i) => ({
         uid: i.uid,
         metadata: { lastRefreshTime: "Mon, 28 Sep 2026 10:00:00 GMT", lastSignInTime: null },
-      })),
-    }),
+      })) };
+    },
   }),
 }));
 vi.mock("../../../src/auth.ts", async (original) => ({
@@ -43,6 +45,11 @@ const made: string[] = [];
 
 beforeAll(async () => {
   ownerId = (await sql("select id::text from staff where email = 'owner@fidato.in'")).rows[0].id;
+  /* More than one batch of 100, whatever else the database holds: the list
+     asked Firebase for the first 100 only, and the full suite has more. */
+  await sql(`insert into staff (email, full_name, firebase_uid)
+             select 'ls-bulk-' || i || '@fidato.in', 'LSTEST bulk ' || i, 'test-uid-ls-bulk-' || i
+               from generate_series(1, 100) i on conflict (email) do nothing`);
   for (const key of ["seen", "never"]) {
     const id = (await sql(
       `insert into staff (email, full_name, firebase_uid) values ($1, $2, $3)
@@ -56,6 +63,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await sql("update staff set is_active = false where email like 'ls-bulk-%@fidato.in'");
   await sql("delete from staff_hotels where staff_id = any($1)", [made]);
   await sql("update staff set is_active = false where id = any($1)", [made]);
   await closePool();
