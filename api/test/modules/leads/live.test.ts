@@ -220,9 +220,9 @@ describe("leads, read live (D27-170)", () => {
   });
 
   /* D27-173: booked value. A stay arriving later, nothing charged yet, counts
-     its nights at the booking's rate, before tax. NIGHTS asks the room GST
-     rule for such a night, and a new property has none (D22-9): said in words. */
-  it("counts a future stay nothing is charged to at its booked rate, and says so when rooms have no GST rate", async () => {
+     its nights at the booking's rate, before tax - with or without a room GST
+     rule (a new property has none, D22-9; NIGHTS raised there until 29 Sep). */
+  it("counts a future stay nothing is charged to at its booked rate, with or without a room GST rate", async () => {
     const owner = (await sql("select id::text from staff where email = 'owner@fidato.in'")).rows[0].id;
     const { month, arrive } = (await sql(
       `select to_char(d, 'YYYY-MM') as month, d::text as arrive
@@ -234,15 +234,15 @@ describe("leads, read live (D27-170)", () => {
       [hotelId, process.pid, guest, arrive]);
     const numbers = () => app.request(`/api/hotels/${CODE}/marketing/numbers?month=${month}`, { headers: { "x-dev-staff-id": owner } });
 
+    const future = async () => {
+      const res = await numbers();
+      expect(res.status, await res.clone().text()).toBe(200);
+      const body = await res.json() as { campaigns: { key: string; bookings: number; revenue: string | null }[] };
+      return body.campaigns.find((l) => l.key === "meta_120002");
+    };
     await sql("delete from tax_rules where hotel_id = $1 and kind = 'room'", [hotelId]);
-    const refused = await numbers();
-    expect(refused.status).toBe(409);
-    expect(((await refused.json()) as { error: string }).error).toMatch(/no GST rate for rooms/);
-
+    expect(await future()).toMatchObject({ bookings: 1, revenue: "6000.00" });
     await sql("insert into tax_rules (hotel_id, kind, over_amount, rate, note) values ($1, 'room', 0, 12, 'test')", [hotelId]);
-    const res = await numbers();
-    expect(res.status, await res.clone().text()).toBe(200);
-    const body = await res.json() as { campaigns: { key: string; bookings: number; revenue: string | null }[] };
-    expect(body.campaigns.find((l) => l.key === "meta_120002")).toMatchObject({ bookings: 1, revenue: "6000.00" });
+    expect(await future()).toMatchObject({ bookings: 1, revenue: "6000.00" });
   });
 });

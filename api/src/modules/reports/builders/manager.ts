@@ -284,14 +284,20 @@ export async function managerReport(
   /* Tax on the rooms, on the extras and on any tax posted as its own line.
      The restaurant's tax travels with its posting, below. */
   const extraTaxes = [...EXTRA_KINDS.map(([k]) => bucketTax(k)), bucketTax("discount"), bucket("tax_line")];
-  const taxTotal = add(of((x) => x.roomTax), ...extraTaxes);
-  const half = (v: { today: number; ptd: number; ytd: number }) =>
-    ({ today: round2(v.today / 2), ptd: round2(v.ptd / 2), ytd: round2(v.ytd / 2) });
-  const sgst = half(taxTotal);
-  const cgst = { today: round2(taxTotal.today - sgst.today), ptd: round2(taxTotal.ptd - sgst.ptd), ytd: round2(taxTotal.ytd - sgst.ytd) };
+  /* The room tax is unknown for a window holding a night not charged yet
+     where rooms have no GST rule (D27-173): then every figure it adds into
+     is a dash too, never the rest of the sum. */
+  const each = (f: (...v: number[]) => number) => (...xs: Three[]): Three => {
+    const at = (k: keyof Three) => (xs.some((x) => x[k] === null) ? null : round2(f(...xs.map((x) => Number(x[k])))));
+    return { today: at("today"), ptd: at("ptd"), ytd: at("ytd") };
+  };
+  const roomTax: Three = { today: t.today.roomTax, ptd: t.ptd.roomTax, ytd: t.ytd.roomTax };
+  const taxTotal = each((a, b) => a + b)(roomTax, add(...extraTaxes));
+  const sgst = each((v) => v / 2)(taxTotal);
+  const cgst = each((a, b) => a - b)(taxTotal, sgst);
 
   const withoutTax = add(roomTotal, extraTotal);
-  const withTax = add(withoutTax, taxTotal);
+  const withTax = each((a, b) => a + b)(withoutTax, taxTotal);
   const posPosting = add(bucket("pos"), bucketTax("pos"));
 
   const paymentRows: ReportRow[] = [];
@@ -331,7 +337,7 @@ export async function managerReport(
       line("Total Revenue without Tax", withoutTax),
       line("Total Revenue with Tax", withTax),
       line("POS to PMS Posting", posPosting),
-      sumLine("Transfer Charges to Guest Ledger", add(withTax, posPosting)),
+      sumLine("Transfer Charges to Guest Ledger", each((a, b) => a + b)(withTax, posPosting)),
     ]),
     section("payment", "Payment", [...paymentRows, sumLine("Total Payment", add(...payments))]),
     section("city-ledger", "City Ledger", [

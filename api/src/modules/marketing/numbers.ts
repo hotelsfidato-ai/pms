@@ -22,18 +22,12 @@ import { AtCap, LeadsAppError, appHotelOf, cached, openReader, settings } from "
    settling D27-170): the nights already charged, plus the nights not
    charged yet at the booking's rate, before tax, for stays still standing
    (cancelled and no-shows out). A figure nobody has is null, a dash on the
-   screen, never 0.
-
-   ⚠ NIGHTS asks app.gst_rate for a night not charged yet, and that RAISES
-   where the property has no GST rule for rooms (a new property has none,
-   D22-9) - even though only the figure before tax is used here. So that
-   one refusal is answered in words (409) instead of "Something went wrong".
+   screen, never 0. Booked value needs no GST rate: a property with no room
+   rule yet still shows it (NIGHTS gives such a night an unknown tax, not an
+   error, since 29 September).
    ══════════════════════════════════════════════════════════════════ */
 
 export const numbers = new Hono<{ Variables: { subject: string } }>();
-
-export const NO_ROOM_RULE =
-  "Revenue cannot be worked out yet: this property has no GST rate for rooms. Set it on Room types, then open this again.";
 
 type Row = { by_source: boolean; campaign: string | null; source_id: string | null; source: string | null; bookings: number; revenue: string | null };
 
@@ -72,12 +66,7 @@ numbers.get("/:code/marketing/numbers", async (c) => {
         group by grouping sets ((p.campaign), (p.booking_source_id, bs.name))`,
       [hotel.rows[0]!.id, `${month}-01`, `${Number(month.slice(0, 4)) + 2}-12-31`, `${month}-01`]);
     return rows;
-  }).catch((error: unknown) => {
-    const e = error as { code?: string; message?: string };
-    if (e.code === "23514" && e.message?.startsWith("No GST rule for room")) return "no room rule" as const;
-    throw error;
   });
-  if (pms === "no room rule") return c.json({ error: NO_ROOM_RULE }, 409);
   if (!pms) return c.json({ error: "No such property." }, 404);
 
   /* grouping() tells the two sets apart: a stay with no campaign and a stay
