@@ -243,6 +243,9 @@ const codeOnScreen = (): boolean =>
    last four digits, or on a room card nothing of the number (D21-14). The
    old rule that a right number and a wrong one must read the same went with
    the typed number: there is nothing left to guess. */
+/* The page says NO_PHONE itself on a booking's link with no number
+   (GuestPage.tsx) - change one, change both; the door's copy answers a room
+   card, which never shows the number. */
 const NO_PHONE = "There is no mobile number on this booking, so no code can be "
   + "sent. Ask the desk.";
 const TOO_OFTEN = "Five codes have gone to this booking in the last hour. "

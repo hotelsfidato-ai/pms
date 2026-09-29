@@ -46,6 +46,11 @@ import { BillPrint } from "@/modules/finance";
 
 /** The door's own sentence for everything it refuses, in its words. */
 const NOTHING_HERE = "This link is not usable. Ask the desk for a new one.";
+/** The door's words for a booking with no mobile number (guestDoor.ts,
+    NO_PHONE) - said here without asking, because the link already shows
+    there is no number to send to. Change one, change both. */
+const NO_PHONE = "There is no mobile number on this booking, so no code can be "
+  + "sent. Ask the desk.";
 
 /** Refused behind the code: the unlock has gone - expired, or a new guest
     is in the room. Not an error to show: the page asks for a code again. */
@@ -219,11 +224,17 @@ function ProveIt(
     onSuccess: (r) => { if (r.verified) onVerified(); },
   });
 
+  /* A booking's link with no number on the booking: nothing to send, no
+     code to wait for, no box to type one into - and nothing is asked of the
+     door. (The door says the same words for a room card whose guest has no
+     number: a room card never shows the number, so it asks.) */
+  const noPhone = view.kind === "booking" && !view.phoneHint;
+
   /* Asked for by opening the page. `sendCode` notes the moment before it
      asks, so a second mount (a reload, React's own double run in
      development) finds it asked and sends nothing. */
   const { mutate: ask } = asked;
-  useEffect(() => { if (!codeAskedRecently(token)) ask(); }, [token, ask]);
+  useEffect(() => { if (!noPhone && !codeAskedRecently(token)) ask(); }, [noPhone, token, ask]);
 
   const answer = (e: FormEvent) => { e.preventDefault(); answered.mutate(); };
 
@@ -241,7 +252,8 @@ function ProveIt(
       <Card><CardBody>
         {/* The door's sentence, printed as it came. */}
         <p className="text-sm text-grey-600" aria-live="polite">
-          {asked.isPending ? "Sending the code…"
+          {noPhone ? NO_PHONE
+            : asked.isPending ? "Sending the code…"
             : asked.data ? asked.data.message
             : asked.error ? messageFrom(asked.error)
             : "A code was sent a few minutes ago. Use it, or send a new one."}
@@ -255,7 +267,7 @@ function ProveIt(
           </p>
         )}
 
-        <form onSubmit={answer} className="mt-3.5 pt-3.5 border-t border-grey-100 flex flex-col gap-3">
+        {!noPhone && <form onSubmit={answer} className="mt-3.5 pt-3.5 border-t border-grey-100 flex flex-col gap-3">
           <Field label="The six digits">
             {(f) => (
               <Input
@@ -272,7 +284,7 @@ function ProveIt(
           <Button type="button" variant="ghost" disabled={asked.isPending} onClick={() => ask()}>
             Send a new code
           </Button>
-        </form>
+        </form>}
 
         {answered.error && (
           <p className="text-sm text-brand-red-700 mt-3">{messageFrom(answered.error)}</p>

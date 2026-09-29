@@ -106,11 +106,22 @@ export interface CodeAnswer {
   devCode?: string;
 }
 
-/** No number is typed: the code goes to the one the booking carries. */
-export const sendCode = (token: string): Promise<CodeAnswer> => {
+/** No number is typed: the code goes to the one the booking carries.
+    Noted as asked BEFORE the call, so a second mount while it is in flight
+    sends nothing; un-noted when no code went (refused, or not reached), so
+    the next open asks again rather than pointing at a code that never came. */
+export async function sendCode(token: string): Promise<CodeAnswer> {
+  const forget = () => { try { localStorage.removeItem(ASKED(token)); } catch { /* nothing held */ } };
   try { localStorage.setItem(ASKED(token), String(Date.now())); } catch { /* asked again next time */ }
-  return api<CodeAnswer>(at(token, "/code"), { method: "POST", body: "{}" });
-};
+  try {
+    const answer = await api<CodeAnswer>(at(token, "/code"), { method: "POST", body: "{}" });
+    if (!answer.sent) forget();
+    return answer;
+  } catch (error) {
+    forget();
+    throw error;
+  }
+}
 
 export async function verifyCode(token: string, code: string): Promise<{ verified: boolean }> {
   const answer = await api<{ verified: boolean; unlock?: string }>(at(token, "/verify"), {

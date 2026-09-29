@@ -205,10 +205,30 @@ describe("the code, straight to the booking's phone (D27-105)", () => {
 
   it("says Ask the desk, in the door's words, when the booking has no number", async () => {
     const noPhone = "There is no mobile number on this booking, so no code can be sent. Ask the desk.";
-    server({ [OPEN]: () => ({ ...BOOKING, phoneHint: null }), [`${OPEN}/code`]: () => ({ sent: false, message: noPhone }) });
+    const spy = server({ [OPEN]: () => ({ ...BOOKING, phoneHint: null }), [`${OPEN}/code`]: () => ({ sent: false, message: noPhone }) });
     open();
     expect(await screen.findByText(noPhone)).toBeTruthy();
     expect(screen.queryByText(/ending/)).toBeNull();
+    expect(screen.queryByLabelText("The six digits"), "no code to wait for, no box").toBeNull();
+    expect(spy.mock.calls.map((c) => c[0]), "nothing asked of the door").not.toContain(`${OPEN}/code`);
+  });
+
+  /* Found opening the page, 29 September: a send that failed was still
+     noted as asked, so reopening said "A code was sent a few minutes ago". */
+  it("asks again on the next open when the last ask sent nothing", async () => {
+    let calls = 0;
+    server({
+      [OPEN]: () => BOOKING,
+      [`${OPEN}/code`]: () => (++calls === 1
+        ? { sent: false, message: "The code could not be sent just now. Try again in a minute, or ask the desk." }
+        : SENT),
+    });
+    open();
+    expect(await screen.findByText(/could not be sent just now/)).toBeTruthy();
+    cleanup();
+    open();
+    expect(await screen.findByText(SENT.message)).toBeTruthy();
+    expect(calls).toBe(2);
   });
 
   it("prints the door's refusal to send, not a status code", async () => {
