@@ -88,6 +88,13 @@ beforeAll(async () => {
        join reservations r on r.id = f.reservation_id
        join hotels h on h.id = f.hotel_id
       where h.code = $1 and r.status = 'checked_in' and f.status = 'open'
+        /* A stay whose bill carries no standing tax invoice: since D27-162 a
+           charge on an invoiced bill is not reversed (a credit note is), and
+           other files in the run invoice the first stays. */
+        and not exists (
+          select 1 from folios f2 join invoices i on i.folio_id = f2.id
+           where f2.reservation_id = r.id and i.credits_id is null
+             and not exists (select 1 from invoices cn where cn.credits_id = i.id))
       order by r.check_in limit 1`, [HOTEL])).rows[0].id as string;
 
   /* The desk's three acts, as the clerk, through finance's own routes. */
