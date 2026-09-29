@@ -13,6 +13,10 @@
 --     GM); reception may add one but change none, and keeps no contract (C-6, C-7)
 -- Builds one property of its own and removes it.
 -- =============================================================================
+-- As the group administrator, so the file also runs on its own.
+select set_config('app.user_id',
+       (select id::text from staff where email = 'owner@fidato.in'), false);
+
 do $$
 declare
   h uuid; dlx uuid; clerk uuid; adm uuid; ag uuid; corp uuid; k uuid; k2 uuid;
