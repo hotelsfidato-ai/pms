@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router";
 import {
   UtensilsCrossed, Plus, X, Receipt, BedDouble, Banknote, ChevronRight,
-  CreditCard, Smartphone, Printer, Percent, Split, CalendarHeart,
+  CreditCard, Smartphone, Printer, Percent, Split, CalendarHeart, Flame,
 } from "lucide-react";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
@@ -17,8 +17,9 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, settleOrder, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, type Order, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, settleOrder, sendToKitchen, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, type Order, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
+import { KotStatus } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { AskDialog, SENT_STRIKE, type Ask } from "@/modules/pos/components/AskDialog";
@@ -213,6 +214,7 @@ export default function TillPage() {
       />
 
       <StartHere className="mb-5" />
+      <KotStatus hotelId={hotelId} className="mb-5" />
 
       {stale && (
         <ReadStale
@@ -965,6 +967,19 @@ function OrderPanel({
 
   const live = order.lines.filter((l) => !l.voided);
   const settled = order.status !== "open";
+  const unsent = live.some((l) => l.kotStatus === "pending");
+
+  /* D27-166: the Till sends to the kitchen as the Terminal does. It had
+     no send at all, so its dishes never reached the kitchen (the speed
+     check's W-1, 29 September). */
+  const kot = async () => {
+    setBusy(true);
+    const res = await sendToKitchen(hotelId, order.id);
+    setBusy(false);
+    if (!res.ok) return void toast.error("Not sent", res.reason);
+    toast.success(`Order ${res.kotNo} is with the kitchen`, "They can start on it now.");
+    onChanged();
+  };
 
   return (
     <Card>
@@ -1153,6 +1168,19 @@ function OrderPanel({
           />
         ) : (
           <div className="mt-3.5 space-y-2">
+            {/* The Terminal's own button: first, because it happens several
+                times per table while settling happens once. */}
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full"
+              loading={busy}
+              disabled={!unsent}
+              onClick={() => void kot()}
+            >
+              <Flame className="size-4" />
+              {unsent ? "Send to the kitchen" : "Kitchen has it all"}
+            </Button>
             {/* Before the payment buttons, because the bill has to be
                 right before it is taken. */}
             <div className="grid grid-cols-2 gap-2">
