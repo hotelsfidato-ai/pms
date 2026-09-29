@@ -11,6 +11,30 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-29 · Settings: New booking's four sections, switched per hotel (D27-163; delegated by the master)
+
+Branch `frontdesk/one-page-29sep` (from cp6 7980862; cp6 59df358, round F, merged in), copy `.claude\worktrees\modest-wilson-2807a1`, database `fidato_s32`, API 8873, web 5273.
+**Shipped:** `api/src/modules/admin/moduleSwitches.ts` SWITCHABLE gains `booking_company`, `booking_gst`, `booking_extras`, `booking_notes`; migration 159 adds them to `hotel_modules_known` and reads an absent row as ON. `pages/Admin.tsx`: `ModulesCard` draws the switches it is given - "Modules" keeps what the API refuses when off, a "New booking" card holds the four, with their words. Owner and administrator only, as every switch (D17-36).
+**Proved:** admin.test.tsx 20/20 (the new test fails with the filter taken out); API moduleSwitches on a scratch database with 159, before the stop: passed; db check in `db/tests/modules/admin.sql`: the database suite's 1263 assertions passed, admin 3/3; API moduleSwitches 20/20 again after the master's go. On screen: Notes switched off and on again, and the page followed.
+**Commits:** 0ba2f49, 68195e1.
+
+---
+
+## 2026-09-28 · Fix round F (QA leftovers, D27-149), part B: Integrations from the server, Users' role and last seen, no Firebase in plain words, masked passwords, audit log filters, the matrix's actions (QA AD-1, AD-2, AD-4, AD-5, AD-6, AD-8)
+
+**Asked for:** the master's part B of round F (after round B merged). Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:**
+- AD-1: `GET /:code/integrations` (read rule `see("integration")`, owner and admin, pinned in `roleGate.test.ts`) says whether this server holds a Firebase service account and whether sending is set up; the SU card reads the channel manager's own `/api/channel-manager/su`. Gone: "Firebase - Connected", STAAH's price, "Sattva POS ₹1,44,849", "Fidato CRS … 32 properties", "Arrives at Stage N". Cards read "Set up" / "Not set up".
+- AD-2: a group administrator reads "Group administrator" (the database cannot tell the owner from another one); Last seen is Firebase's own record (last active, else last signed in), a dash where none - nothing in the database records it.
+- AD-5: with no service account, Add somebody and Password answer "Sign-in accounts cannot be made on this server: it has no Firebase service account." (409) instead of a 500 (ADM-17).
+- AD-6: both password fields are masked, with Show / Hide.
+- AD-4: the audit log filters By (part of a name), From and To (business date), 100 a page with Newer and Older; with no parameters the route answers as before (newest 500).
+- AD-8: Roles and permissions names each partial grant's actions; the page no longer names a source file.
+**Proved:** `api/test/modules/admin` + `roleGate.test.ts`: 13 files, 225 passed. New: `lastSeen.test.ts` (failed with the old route: "expected undefined"), `propertyAdmin.test.ts` AD-5 ("expected 500 to be 409"), `auditLog.test.ts` AD-4 ("expected null to be 'ADM1TEST Reception Clerk'"). One existing test used the old 500 as the proof a request reached the account step; it asserts the new sentence. Web admin tests 4 files, 30 passed. On screen: Integrations (Firebase and SU "Not set up", sending "Set up"), Users ("Group administrator", dashes), People > Add (masked, Show, the refusal as a toast), Audit log (Test Reception's one entry; Entries 101-200), the matrix.
+**Left open:** RO-5 and X-6 are in the core shell (asked); the revenue manager's banquet Diary (asked).
+
+---
+
 ## 2026-09-28 · Who may read what: every read asks the role (fix round B)
 
 **Asked for:** QA RO-1 to RO-3 and A7 (the owner's D27-116: fix every wrong

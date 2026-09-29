@@ -6,7 +6,7 @@ import type { PoolClient as Client } from "pg";
 import { attachableFunctions } from "./attach.ts";
 import { emailProblem, phoneProblem, priceProblem } from "../../validate.ts";
 import {
-  folioBalance, issueFolioInvoice, postFolioCharge, takeFolioPayment,
+  folioBalance, issueFolioInvoice, postFolioCharge, reverseFolioCharge, takeFolioPayment,
 } from "../finance/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -817,6 +817,59 @@ banquet.post("/:code/banquet/events/:id/bill", async (c) => {
 
     await client.query(
       "update banquet_events set status = 'completed' where id = $1", [e.id]);
+    return { ok: true as const };
+  });
+
+  if (result === null) return c.json({ error: "No such property." }, 404);
+  if (result === "missing") return c.json({ error: "No such function." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/* ── Reopening a billed function (the owner's D27-150, D27-154) ─────
+   Only while no tax invoice stands on its bill; after that, only a credit
+   note corrects it. A reason is required, and a bill posted on a day the
+   night audit has closed is refused. Every refusal comes before any write
+   (MEMORY 243). The hall and course lines "Bill the function" posted are
+   reversed through finance's one reversal, with the reason on each;
+   advances, payments and settled restaurant orders stay on the bill. */
+banquet.post("/:code/banquet/events/:id/reopen", async (c) => {
+  const reason = ((await c.req.json().catch(() => ({}))) as { reason?: string }).reason?.trim();
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const e = await functionForBill(client, hotelId, c.req.param("id"));
+    if (!e) return "missing" as const;
+
+    if (e.status !== "completed") return refuse("Only a billed function is reopened.");
+    if (!e.folio_id) return refuse(`The bill for ${e.title} is closed.`);
+    const invoice = await standingInvoice(client, e.folio_id);
+    if (invoice) {
+      return refuse(`Tax invoice ${invoice} stands on this bill. Only a credit note corrects it now.`);
+    }
+    if (!reason) return refuse("Say why the bill is reopened. The reason stays on each line taken off.");
+
+    const { rows: billed } = await client.query<{ id: string; day_closed: boolean }>(
+      `select fp.id::text,
+              exists (select 1 from night_audit_runs na
+                       where na.hotel_id = fp.hotel_id and na.business_date = fp.business_date
+                         and na.status = 'completed') as day_closed
+         from folio_postings fp
+        where fp.folio_id = $1 and fp.source_type is null and fp.reverses_id is null
+          and fp.category not in ('payment', 'refund', 'discount', 'tax')
+          and not exists (select 1 from folio_postings r where r.reverses_id = fp.id)
+        order by fp.id`, [e.folio_id]);
+    if (billed.some((b) => b.day_closed)) {
+      return refuse("This function was billed on a day that is closed - correct it on Closed days.");
+    }
+
+    for (const b of billed) {
+      const done = await reverseFolioCharge(client, hotelId, b.id, reason, { folioId: e.folio_id });
+      /* Every refusal it has was asked above; a throw rolls back the lines
+         already taken off rather than committing half a reopen. */
+      if (!done.ok) throw new Error(done.reason);
+    }
+    await client.query("update banquet_events set status = 'confirmed' where id = $1", [e.id]);
     return { ok: true as const };
   });
 

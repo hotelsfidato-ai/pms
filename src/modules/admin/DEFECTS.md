@@ -33,6 +33,16 @@ the demo's shortest.
 
 ## Fixed — the solution is here; do not work it out again
 
+### ADM-17 · Adding somebody on a server with no Firebase ended in "Something went wrong" (QA AD-5) - FIXED 28 September (round F)
+
+**Found** - the QA of 28 September (AD-5): every Add ended in a 500; the log said there was no Firebase service account. `firebaseApp()` throws, and nothing turned that into words.
+
+**Done** - `admin.ts`: where the account is made or its password set, a failure on a server with no service account answers "Sign-in accounts cannot be made on this server: it has no Firebase service account." (409); anything else still throws.
+
+**Proved** - `propertyAdmin.test.ts` "says a sign-in account cannot be made here…" failed with the old route ("expected 500 to be 409").
+
+**The rule** - A fault the owner can fix by setting something up is said in words, naming what to set up.
+
 ### ADM-15 · The server asked the role on writes and almost never on reads - FIXED 28 September (fix round B)
 
 **Found** — QA RO-1 to RO-3 (docs/qa/qa-2026-09-28.md), and SELLING-IN-INDIA A7. `roleGate.ts` asked the role for three reads (Form III, online check-in, System health); every other read was answered by row security alone. The chef, the till, housekeeping, the kitchen manager, the Inventory Manager and the revenue manager got the Manager report, every stay with the guest's phone and email, bills, payments and the cash drawer by address; the revenue manager read guest messages. The owner's rules on money and guests held only because the menu hid the screens.

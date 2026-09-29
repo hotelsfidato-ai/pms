@@ -34,6 +34,7 @@ import * as guestMessaging from "./modules/guest-messaging/index.ts";
 import * as reputation from "./modules/reputation/index.ts";
 import * as marketing from "./modules/marketing/index.ts";
 import * as leads from "./modules/leads/index.ts";
+import * as crs from "./modules/crs/index.ts";
 import { live } from "./routes/live.ts";
 import {
   startListening, stopListening, watcherCount, isListening,
@@ -295,6 +296,8 @@ const SERVICES = [
   reputation, marketing,
   /* Leads and WhatsApp, read live from the leads app (D27-170). */
   leads,
+  /* The CRS bridge (D27-168): read-only, its own routes and its reader. */
+  crs,
 ];
 /* Every router, with the prefix it hangs from. Exported so that
    api/test/apiGate.test.ts can hold /api/channel - the one prefix that
@@ -346,6 +349,9 @@ if (process.argv[1]?.endsWith("server.ts")) {
   /* Guest messages' once-a-minute sweep (D18-11, D18-12). It sends nothing
      until the owner's sending settings and pace are in (D21-34, D21-76). */
   guestMessaging.jobs.start();
+  /* The CRS bridge's five-minute read (D27-168). Reads nothing until the
+     four CRS settings are on the server and a hotel is switched on. */
+  crs.jobs.start();
 
   const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
     console.log(
@@ -376,6 +382,7 @@ if (process.argv[1]?.endsWith("server.ts")) {
     /* Before the pool closes: a push in flight has a client out. */
     await channelManager.jobs.stop();
     await guestMessaging.jobs.stop();
+    await crs.jobs.stop();
     await stopListening();
     await closePool();
     process.exit(0);

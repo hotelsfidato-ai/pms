@@ -8,6 +8,7 @@ import { listProperties } from "@/data/repositories";
 import { listAdminProperties, amendProperty, setPropertyOpen, type AdminProperty } from "@/modules/admin/data/admin";
 import { NewProperty } from "@/modules/admin/flows/StaffAdmin";
 import { TaxInUseRows } from "@/modules/admin/components/TaxInUse";
+import { placeLine } from "@/modules/finance";
 
 /* Split out of Directory.tsx on 15 September in the service-folder move
    (docs/SERVICE-FOLDERS-PLAN.md). Service: admin. Unchanged. */
@@ -187,8 +188,7 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
           )}
         </div>
         <p className="text-sm text-grey-500 mt-0.5">
-          {[hotel.addressLine, hotel.city, hotel.state]
-            .filter(Boolean).join(", ") || "-"}
+          {placeLine(hotel.addressLine, hotel.city, hotel.state) || "-"}
         </p>
 
         <dl className="mt-3 border-t border-grey-100 pt-1.5">

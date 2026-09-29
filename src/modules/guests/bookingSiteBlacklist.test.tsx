@@ -71,7 +71,8 @@ describe("a booking site's guest on a blacklisted phone or email (CRM-3)", () =>
 
     const dialog = await screen.findByRole("dialog", { name: /Check in Lata Bhosale/ });
     expect(await within(dialog).findByText(WARNING)).toBeTruthy();
-    expect(within(dialog).getByRole("button", { name: /Next|Continue/ })).toBeTruthy();
+    /* The one-page check-in (D27-163): its one button is still there. */
+    expect(within(dialog).getByRole("button", { name: /^Check in$/ })).toBeTruthy();
   });
 
   it("asks about the next fortnight on the upcoming tab", async () => {

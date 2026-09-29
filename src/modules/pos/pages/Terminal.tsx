@@ -16,9 +16,10 @@ import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
-import { SlipNotice, openSlip, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
+import { KotStatus } from "@/modules/pos/components/KotStation";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { AskDialog, SENT_STRIKE, type Ask } from "@/modules/pos/components/AskDialog";
+import { useDocumentTitle } from "@/lib/documentTitle";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TERMINAL
@@ -72,6 +73,9 @@ const STEP = "press size-11 grid place-items-center rounded-full border border-g
 export default function TerminalPage() {
   const hotelId = useHotel();
   const qc = useQueryClient();
+  /* The menu's word, in the heading and the tab (QA X-4, POS-10): the tab
+     kept the last page's title, and the heading was the question. */
+  useDocumentTitle("Terminal");
 
   /* The outlet is remembered on THIS DEVICE. A terminal bolted to a
      counter in the restaurant should not ask again every morning, and
@@ -84,7 +88,6 @@ export default function TerminalPage() {
   const [table, setTable] = useState("");
   const [busy, setBusy] = useState(false);
   const [asking, setAsking] = useState<MenuItem | null>(null);
-  const [blockedSlips, setBlockedSlips] = useState<BlockedSlip[]>([]);
   const [settling, setSettling] = useState(false);
   const [room, setRoom] = useState("");
   const [cashId, setCashId] = useState<CashId>({});
@@ -254,19 +257,7 @@ export default function TerminalPage() {
     toast.success(
       `Order ${res.kotNo} is with the kitchen`,
       "They can start on it now.");
-    /* The paper, for kitchens that run on it. The pass screen already
-       has the same lines and is better — oldest first, colour by wait —
-       so this opens alongside rather than instead. */
-    if (res.kotNo) {
-      const url = `/h/${hotelId}/till/orders/${orderId}/kot/${res.kotNo}`;
-      /* POS-10: a slow send outlives the browser's few seconds for a new
-         tab, and the refusal is silent. The terminal says so and offers
-         it. */
-      if (!openSlip(url)) {
-        const slip = { url, what: `Order ${res.kotNo}` };
-        setBlockedSlips((s) => [...s, slip]);
-      }
-    }
+    /* The paper is the KOT station's (D27-159): this device opens none. */
     refresh();
   };
 
@@ -357,10 +348,10 @@ export default function TerminalPage() {
             Terminal setup
           </p>
           <h1 className="page-title text-ink-900 mb-2">
-            Which outlet is this terminal in?
+            Terminal
           </h1>
           <p className="text-base text-grey-600 mb-8 leading-relaxed">
-            Asked once. This screen is meant to stay open on a fixed
+            Which outlet is this terminal in? Asked once. This screen is meant to stay open on a fixed
             terminal, so the answer is remembered on this device rather
             than on the person signed into it.
           </p>
@@ -459,14 +450,7 @@ export default function TerminalPage() {
         />
       )}
 
-      {blockedSlips.map((slip) => (
-        <SlipNotice
-          key={slip.url}
-          slip={slip}
-          className="mx-4 mt-3 shrink-0"
-          onDone={() => setBlockedSlips((s) => s.filter((x) => x.url !== slip.url))}
-        />
-      ))}
+      <KotStatus hotelId={hotelId} className="mx-4 mt-3 shrink-0" />
 
       <div className="flex-1 min-h-0 flex">
         {/* ── The menu ─────────────────────────────────────────── */}

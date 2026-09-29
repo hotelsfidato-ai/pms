@@ -802,3 +802,29 @@ end $$;
 
 select set_config('app.user_id',
        (select id::text from staff where email = 'owner@fidato.in'), false);
+
+
+-- =============================================================================
+-- NEW BOOKING'S FOUR SECTIONS START ON, AND A HOTEL MAY TURN ONE OFF (D27-163)
+-- =============================================================================
+do $$
+declare h uuid; other uuid;
+begin
+  h     := app.provision_property_unchecked('BKS','Sections Test','Nowhere');
+  other := app.provision_property_unchecked('BKT','Sections Other','Nowhere');
+
+  perform test.ok('admin', 'the four New booking sections are on at a property nobody has touched',
+    app.module_enabled(h, 'booking_company') and app.module_enabled(h, 'booking_gst')
+    and app.module_enabled(h, 'booking_extras') and app.module_enabled(h, 'booking_notes'));
+
+  insert into hotel_modules (hotel_id, module, is_enabled) values (h, 'booking_notes', false);
+  perform test.ok('admin', 'Notes switched off at one property is off there, and on at the other',
+    not app.module_enabled(h, 'booking_notes') and app.module_enabled(other, 'booking_notes'));
+  perform test.ok('admin', 'and every other module still starts off, the till still on',
+    not app.module_enabled(h, 'laundry') and app.module_enabled(h, 'pos'));
+
+  delete from hotel_modules where hotel_id in (h, other);
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id in (h, other);
+  alter table hotels enable trigger hotels_no_delete;
+end $$;

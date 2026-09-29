@@ -131,6 +131,9 @@ function occupiedDates(stay: Stay): { from: string; to: string } {
     : { from: stay.arrival, to: addDays(stay.departure, -1) };
 }
 
+/** The stays whose nights the Manager report counts sold (figures.ts). */
+const SOLD = new Set<Stay["status"]>(["due-in", "in-house", "due-out", "checked-out"]);
+
 /* ── The chart ────────────────────────────────────────────────────── */
 
 export async function getStayView(
@@ -293,11 +296,18 @@ export async function getStayView(
         (b) => b.tone !== "void" && b.startIndex <= i && b.startIndex + b.span - 1 >= i,
       ),
     );
+    /* OCCUPANCY IS THE MANAGER REPORT'S (the owner's D27-151, QA RP-1): a
+       night of a booking confirmed, in house or checked out, complimentary
+       included, over the sellable rooms. A no-show, a tentative booking and
+       a day use are not nights sold; it counted every room with a bar, so
+       a no-show's room read as sold. */
+    const sold = allStays.filter((s) => SOLD.has(s.status) && !s.isDayUse
+      && s.arrival <= date && date < s.departure).length;
     return {
       date,
       availableInventory: sellable.length - taken.length,
       occupancyPct: sellable.length
-        ? Math.round((taken.length / sellable.length) * 1000) / 10
+        ? Math.round((sold / sellable.length) * 1000) / 10
         : 0,
     };
   });

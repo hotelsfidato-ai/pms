@@ -130,14 +130,17 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  delete process.env["N8N_SEND_URL"];
-  delete process.env["N8N_SEND_SECRET"];
+  delete process.env["CRS_N8N_URL"];
+  delete process.env["M2R_N8N_URL"];
+  delete process.env["CRS_N8N_SECRET"];
+  delete process.env["M2R_N8N_SECRET"];
   await sql("delete from messages_sent where to_name like $1", [`${TAG}%`]);
 });
 
 const connected = () => {
-  process.env["N8N_SEND_URL"] = "http://127.0.0.1:1/pms-send";
-  process.env["N8N_SEND_SECRET"] = "not-used-here-nothing-is-really-sent";
+  process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = "http://127.0.0.1:1/pms-send";
+  process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
+  process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = "not-used-here-nothing-is-really-sent";
 };
 
 describe("who may see what was sent to a guest", () => {

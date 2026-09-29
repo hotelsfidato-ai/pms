@@ -6,7 +6,7 @@ import {
   Page, PageHeader, Card, CardHeader, Button, Skeleton, EmptyState, StatusPill, IconChip,
   InfoButton,
   Dialog, DialogContent, Field, fieldProps, Input, toast, Checkbox,
-  ReadFailed, readError,
+  ReadFailed, readError, readProblem,
 } from "@/components/ui";
 import { useParams } from "react-router";
 import { useUi } from "@/lib/ui";
@@ -60,13 +60,25 @@ export default function SpaSetupPage() {
     enabled: !!code,
   });
 
+  /* Spa switched off (QA X-5): the server's one sentence, as Halls and
+     packages says it, not two cards of buttons that cannot work. */
+  if (readProblem(treatments.error)?.kind === "refused") {
+    return (
+      <Page>
+        <PageHeader title="Treatments and therapists" />
+        <ReadFailed error={treatments.error} what="treatments and therapists"
+                    onRetry={() => void treatments.refetch()} />
+      </Page>
+    );
+  }
+
   return (
     <Page>
       <PageHeader
         title="Treatments and therapists"
         description={
           "What this property's spa sells, how long each takes and what it "
-          + "costs — and who gives them."
+          + "costs - and who gives them."
         }
       />
 
@@ -166,7 +178,7 @@ export default function SpaSetupPage() {
                 compact icon={<UserRound />}
                 title="Nobody on the list yet"
                 description={
-                  "A name, not an account — nobody here signs in. The diary "
+                  "A name, not an account - nobody here signs in. The diary "
                   + "books against these names, which is how it can refuse to "
                   + "put one person in two places at once."
                 }

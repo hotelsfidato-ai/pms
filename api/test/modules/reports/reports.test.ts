@@ -98,10 +98,10 @@ const paymentTotal = async () => {
 };
 
 /** Post a payment, and remember to put it back. */
-async function postPayment(stay: string, body: unknown) {
+async function postPayment(stay: string, body: unknown, who = ownerId) {
   const res = await app.request(`/api/hotels/5EL/stays/${stay}/payments`, {
     method: "POST",
-    headers: { "x-dev-staff-id": ownerId, "content-type": "application/json" },
+    headers: { "x-dev-staff-id": who, "content-type": "application/json" },
     body: JSON.stringify(body),
   });
   const made = (await res.json()) as { ok?: boolean; data?: { id: string } };
@@ -373,6 +373,36 @@ describe("the cashier shift", () => {
     for (const r of shift.rows) {
       expect(r.cashier === null || typeof r.cashier === "string").toBe(true);
     }
+  });
+
+  it("names the clerk who took the money to the Accountant (QA RP-4)", async () => {
+    /* staff shows a clerk only their own row, so the Accountant read
+       Reception's receipt as "not on record". */
+    const db = await admin();
+    let stay = "", clerk = "", accountant = "";
+    try {
+      stay = (await db.query<{ id: string }>(
+        `select r.id from reservations r join hotels h on h.id = r.hotel_id
+          where h.code = '5EL' and r.status = 'checked_in' order by r.reference limit 1`)).rows[0]!.id;
+      const who = async (key: string, role: string) => {
+        const id = (await db.query<{ id: string }>(
+          `insert into staff (email, full_name, firebase_uid) values ($1, $2, $3)
+           on conflict (email) do update set is_active = true returning id::text`,
+          [`rp4-${key}@fidato.in`, `RPTEST ${key}`, `test-uid-rp4-${key}`])).rows[0]!.id;
+        await db.query(
+          `insert into staff_hotels (staff_id, hotel_id, role) select $1, id, $2 from hotels where code = '5EL'
+           on conflict do nothing`, [id, role]);
+        return id;
+      };
+      clerk = await who("clerk", "front_desk");
+      accountant = await who("accountant", "finance");
+    } finally { await db.end(); }
+
+    await postPayment(stay, { method: "UPI", amount: 11 }, clerk);
+    const res = await app.request("/api/hotels/5EL/reports/cashier-shift",
+      { headers: { "x-dev-staff-id": accountant } });
+    const shift = (await res.json()) as { rows: Array<{ staffId: string | null; cashier: string | null }> };
+    expect(shift.rows.find((r) => r.staffId === clerk)?.cashier).toBe("RPTEST clerk");
   });
 });
 

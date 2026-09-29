@@ -5,6 +5,48 @@ import type { Client } from "../../db.ts";
 import { POSTING_NIGHTS } from "../reports/index.ts";
 import { struckAfterKitchen } from "../pos/index.ts";
 
+/** The stays tonight's run charges a room night for, as SQL over `r` with
+    $1 the hotel and $2 the night; the run then skips the complimentary ones.
+    One text for the run and the checklist's count (QA NA-5: the checklist
+    counted every stay in house and the run then posted none). */
+export const POSTS_TONIGHT = `
+          r.hotel_id = $1
+          and r.status = 'checked_in'
+          /* AN OPEN FOLIO, ASKED - NOT JOINED (28 September, the release
+             review). A join to every open folio gave a stay with a second
+             folio (a split bill) two rows, the "not exists" below ran for
+             both before either insert, and the night was charged twice.
+             Where the charge goes is folio_for_room_charge's answer. */
+          and exists (select 1 from folios f
+                       where f.reservation_id = r.id and f.status = 'open')
+          -- A day-use room is sold and vacated inside one day. It has
+          -- no night to charge for.
+          and not r.is_day_use
+          /* Not already charged for tonight. This is what makes an
+             interrupted audit safe to restart: the charge is the thing
+             that must not happen twice, so the check is on the charge,
+             not on the run.
+
+             PER STAY, NOT PER FOLIO. It used to ask whether the folio
+             held a room charge for tonight, which is identical while
+             every stay has its own folio - and silently wrong the moment
+             a group routes twelve rooms to one master: charge the first,
+             skip the other eleven, every night, and the run's summary
+             reports what it posted so nothing looks amiss.
+
+             AND NOT ONLY A LINE DATED TONIGHT (D24-14). A walk-in posts
+             its whole stay on arrival, "Room 201 · 2 nights" (D17-33), and
+             this asked only for a line dated tonight - so every night
+             after the first was charged twice. A line counts for every
+             night it pays for, read the way the reports read it. */
+          and not exists (
+            select 1 from folio_postings fp
+             where fp.reservation_id = r.id
+               and fp.category = 'room'
+               and fp.business_date <= $2::date
+               and fp.business_date + ${POSTING_NIGHTS} > $2::date
+          )`;
+
 /* ══════════════════════════════════════════════════════════════════
    THE NIGHT AUDIT — closing a day
 
@@ -396,42 +438,7 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
             order by ra.from_date desc
             limit 1
          ) a on true
-        where r.hotel_id = $1
-          and r.status = 'checked_in'
-          /* AN OPEN FOLIO, ASKED - NOT JOINED (28 September, the release
-             review). A join to every open folio gave a stay with a second
-             folio (a split bill) two rows, the "not exists" below ran for
-             both before either insert, and the night was charged twice.
-             Where the charge goes is folio_for_room_charge's answer. */
-          and exists (select 1 from folios f
-                       where f.reservation_id = r.id and f.status = 'open')
-          -- A day-use room is sold and vacated inside one day. It has
-          -- no night to charge for.
-          and not r.is_day_use
-          /* Not already charged for tonight. This is what makes an
-             interrupted audit safe to restart: the charge is the thing
-             that must not happen twice, so the check is on the charge,
-             not on the run.
-
-             PER STAY, NOT PER FOLIO. It used to ask whether the folio
-             held a room charge for tonight, which is identical while
-             every stay has its own folio - and silently wrong the moment
-             a group routes twelve rooms to one master: charge the first,
-             skip the other eleven, every night, and the run's summary
-             reports what it posted so nothing looks amiss.
-
-             AND NOT ONLY A LINE DATED TONIGHT (D24-14). A walk-in posts
-             its whole stay on arrival, "Room 201 · 2 nights" (D17-33), and
-             this asked only for a line dated tonight - so every night
-             after the first was charged twice. A line counts for every
-             night it pays for, read the way the reports read it. */
-          and not exists (
-            select 1 from folio_postings fp
-             where fp.reservation_id = r.id
-               and fp.category = 'room'
-               and fp.business_date <= $2::date
-               and fp.business_date + ${POSTING_NIGHTS} > $2::date
-          )
+        where ${POSTS_TONIGHT}
         order by a.number`,
       [hotelId, businessDate],
     );

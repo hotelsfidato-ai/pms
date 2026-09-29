@@ -238,7 +238,7 @@ export function CashierShiftPage() {
 
           <p className="px-4 py-3 text-2xs text-grey-500 leading-relaxed border-t border-grey-200">
             A receipt whose posting has been reversed is not money the cashier
-            holds, so it is excluded — the same definition the Manager Report
+            holds, so it is excluded - the same definition the Manager Report
             uses. A blank cashier is a posting made before this system recorded
             who made it; naming somebody would be worse than the dash.
           </p>

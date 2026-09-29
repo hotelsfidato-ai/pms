@@ -5,12 +5,13 @@ import { dateShort, dateTime } from "@/lib/format";
 import { useDocumentIdentity } from "@/lib/documentIdentity";
 import {
   Button, Card, CardBody, Dialog, DialogContent, EmptyState, ErrorState, InfoButton, Page, PageHeader,
-  Skeleton,
+  Skeleton, toast,
 } from "@/components/ui";
 import {
   confirmDetails, getDesk, handleRequest, printEveryCard, printRoomCard, setAsideDetails,
   type PrintedCard, type WaitingDetails,
 } from "@/modules/online-checkin/data/desk";
+import { moreLines } from "@/modules/online-checkin/formIII";
 
 /* ══════════════════════════════════════════════════════════════════
    ONLINE CHECK-IN — THE DESK'S SIDE (/h/:code/online-checkin)
@@ -70,7 +71,11 @@ export default function DeskPage() {
 function Waiting(
   { code, rows, onChanged }: { code: string; rows: WaitingDetails[]; onChanged: () => void },
 ) {
-  const confirm = useMutation({ mutationFn: (id: string) => confirmDetails(code, id), onSuccess: onChanged });
+  /* Said, not only seen: the entry leaves the list (QA GP-6). */
+  const confirm = useMutation({
+    mutationFn: (d: WaitingDetails) => confirmDetails(code, d.id),
+    onSuccess: (_, d) => { toast.success("Confirmed", d.guest); onChanged(); },
+  });
   const aside = useMutation({ mutationFn: (id: string) => setAsideDetails(code, id), onSuccess: onChanged });
   const busy = confirm.isPending || aside.isPending;
 
@@ -101,9 +106,15 @@ function Waiting(
                     <dd className="font-medium text-ink-900 tabular">{d.visaNumber}{d.visaExpiry ? `, expires ${dateShort(d.visaExpiry)}` : ""}</dd></>}
                   {(d.addressLine || d.city || d.country) && <><dt className="text-grey-500">Address</dt>
                     <dd className="font-medium text-ink-900 break-words">{[d.addressLine, d.city, d.country].filter(Boolean).join(", ")}</dd></>}
+                  {moreLines(d.more ?? {}).map(([label, value]) => (
+                    <div key={label} className="contents">
+                      <dt className="text-grey-500">{label}</dt>
+                      <dd className="font-medium text-ink-900 break-words whitespace-pre-line">{value}</dd>
+                    </div>
+                  ))}
                 </dl>
                 <div className="mt-3.5 flex flex-wrap gap-2">
-                  <Button variant="secondary" disabled={busy} onClick={() => confirm.mutate(d.id)}>
+                  <Button variant="secondary" disabled={busy} onClick={() => confirm.mutate(d)}>
                     Confirm against the ID
                   </Button>
                   <Button variant="ghost" disabled={busy} onClick={() => aside.mutate(d.id)}>

@@ -288,6 +288,9 @@ function RegisterDialog({
 
   const venues = (setup.data?.venues ?? []).filter((v) => v.isActive);
   const chosen = venues.find((v) => v.id === venueId);
+  /* A warning, not a refusal (QA BQ-5): the hall's own figure may be old. */
+  const holds = Math.max(chosen?.seated ?? 0, chosen?.floating ?? 0);
+  const overfull = holds > 0 && Number(pax) > holds;
 
   const submit = async () => {
     setBusy(true);
@@ -388,7 +391,8 @@ function RegisterDialog({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Expected guests">
+            <Field label="Expected guests"
+                   hint={overfull ? <span className="text-warning-dark">More than this hall holds ({holds}).</span> : undefined}>
               {(f) => (
                 <Input {...fieldProps(f)} value={pax} inputMode="numeric"
                        onChange={(e) => setPax(e.target.value)} />

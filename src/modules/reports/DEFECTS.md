@@ -16,6 +16,16 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Fixed
 
+### REP-14 · The Cashier shift showed Reception's cash as "not on record" to the Accountant (QA RP-4) — FIXED 28 September
+
+**Found** — the QA of 28 September (RP-4). The report joined `staff` for the name, and `staff` shows a clerk only their own row and their colleagues through `staff_hotels`, which since 149 shows each person only their own roster line. So only the owner and the cashier themselves saw a name.
+
+**Done** — `reports.ts` reads the name through `app.hotel_people` (149, names and roles only, D27-96), keeping `staff` for the group administrator who is on no roster.
+
+**Proved** — `reports.test.ts` "names the clerk who took the money to the Accountant (QA RP-4)" failed with the old join ("expected null to be 'RPTEST clerk'"). On screen as Test Accountant: "Test Reception · UPI · 1 · ₹10".
+
+**The rule** — A name read from `staff` is only as wide as the reader's own row; a colleague's name comes through `app.hotel_people`.
+
 ### REP-13 · The Lodging tax heading read a rate nobody can set — FIXED 24 September
 
 **Found** — 23 September, while taking the 2.5% default off

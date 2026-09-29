@@ -11,6 +11,106 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-29 · Two senders, message ids, the inbox's booked mark, Send check-in link (D27-168, D27-169)
+
+**Asked for** (the master's card, D27-168; the owner's D27-98, D27-101,
+D27-104, D27-105, D27-169): the voucher and every email through a NEW
+workflow in the CRS's n8n, every other WhatsApp through a NEW workflow in
+the market-to-revenue n8n, each with its own address and key; a message id
+on every send so a retry is never sent twice; every WhatsApp also marks the
+guest booked in the sales inbox; a Send check-in link button; the workflows
+as files for the owner to import; the one Fidato number a setting.
+
+**Shipped** (branch `messaging/senders-29sep`):
+- `api/src/sending.ts` (the master's file, on the master's card):
+  `senderFor` - email and the voucher to `crs`, other WhatsApp to `m2r`;
+  five settings (`CRS_N8N_URL/SECRET`, `M2R_N8N_URL/SECRET`,
+  `WHATSAPP_PHONE_NUMBER_ID`), all five or `canSend()` is false;
+  `messageIdFor(...)` and a `messageId` in every body; a CRS WhatsApp is
+  preceded by a `"mark"` to m2r, whose failure is written into the detail.
+  `N8N_SEND_URL/SECRET` retired (never set live).
+- `jobs.ts`: the sweep's (and Send voucher's) message id is
+  `messageIdFor(kind, booking)`. `KIND.checkInLink`.
+- `voucher.ts`: `POST /:code/stays/:id/checkin-link`.
+- Web: `SendCheckInLink` on the front door, `sendCheckInLink` in the seam.
+- `deploy/n8n/pms-send-crs.json`, `pms-send-m2r.json`, `IMPORT.md`: Code-node
+  workflows, each webhook behind Header Auth, dedupe on the message id in the
+  workflow's static data (remembered only after a real send), m2r marks the
+  lead BOOKED by the app's own id rule (`<number>__digits` shared,
+  `<hotel>__digits` single, `UNASSIGNED__digits` unmapped) and the app's own
+  field shapes, no amount; the CRS writes each email from facts (drafts at
+  the top of its first node) and refuses email until the owner names the
+  mailbox.
+
+**Proved**: `api/test/modules/guest-messaging/workflows.test.ts` 16/16 (each
+Code node run with made-up messages); five of its guards broken on purpose
+and seen to fail (m2r and CRS dedupe, the email's HTML escape, the booked
+lead's mask, remember-only-on-success, the shared number's lead id).
+`sending.test.ts` 14/14 on 29 September before the hold. Web: guest-messaging
+18/18 with `sendCheckInLink.test.tsx`, whose "off where nothing can send"
+guard was seen to fail with `disabled` removed. API and web type checks clean.
+
+**Later the same day - the voucher (D27-171, D27-172, the owner's V1 to
+V5):** `voucherDocument.ts` draws the booking voucher in the CRS's design
+from `app.guest_voucher` (added to 158); `withVoucher` attaches it to the
+booking confirmation's email for the sweep and Send voucher alike; the CRS
+workflow's email is a short letter in the CRS's colours ("Your reservation
+voucher is attached.", the link clickable after escaping). **Proved:**
+`voucherDocument.test.ts` 7/7 - the dash rule (no GST rule, no total) seen to
+fail with a missing rate treated as zero; the per-night rounding matches the
+audit's (2,734.25 at 5% twice = 273.42); the PDF drawn and read back: every
+section, dashes for GST and both totals where no rate is set. The function
+was dry-run in a rolled-back transaction on fidato_s35. `checkinLink.test.ts`
+carries "the voucher's email carries the voucher PDF" for the API suite.
+
+**Seen end to end, 29 September, 20:54** (the master re-ran 162 on
+fidato_s35; a stand-in receiver on this machine, made-up secret): a booking
+made in New booking in the browser (Deluxe, 2 nights, quoted ₹3,699.00 a
+night + ₹184.95 tax, due ₹7,767.90), then **Send voucher** on its Booked card
+- "Voucher sent 29 Sep 2026, 20:54 by Test Reception". The receiver got ONE
+call, to the CRS workflow (email, so no inbox mark), carrying
+`Voucher-FH-5EL-2608-5032.pdf`; the PDF read back: INR 3,699.00 x 2 = INR
+7,398.00, GST 5% INR 369.90, total INR 7,767.90 - New booking's own figures
+to the paisa - and "Confirmed by Test Reception, 29/09/2026 20:53". Guest
+messages records it: Booking confirmation, email, the PDF's name and size,
+sent. **Found (MSG-6):** the room line printed the code "EP" alone - fixed to
+the owner's D27-164, the code with its words ("EP · Room only"), read from
+`meal_plans` by `app.guest_voucher` after taking in cp6 (round F), tested.
+
+**The API suite, 29 September night, on the tree merged with cp6 1612358** (one
+scratch database, 157 migrations, one file at a time - the master's go):
+`sending` 14/14 · `guestDoor` 12/12 · `guestDoorBehindTheCode` 31/31 ·
+`checkinLink` 5/5 · `roleGate` 59/59 · `jobs` 20/20 · `messages` 18/18 ·
+`sweep` 6/6 · `workflows` 17/17 · `voucherDocument` 8/8 · `reputation` 28/28 ·
+`newBooking` 20/20. **Found by it:** Send check-in link was refused 403 - the
+core role gate refuses an undeclared write - so it is declared, `GUEST_PAGE`
+(whoever may make the guest's page may send it; the owner to confirm); and
+the sweep's stand-in counted the inbox's mark as a second send - it now
+keeps the marks apart and asserts each WhatsApp confirmation was marked
+first. Migration replay: a second pass of all 157 files in one transaction
+over the same database, exit 0.
+
+**Left open**:
+- Send check-in link's grant is `GUEST_PAGE` (reservation edit), the same as
+  making the page: the owner to confirm. `checkinLink.test.ts`, the new `sending.test.ts` cases and
+  every test that switches sending on (now the five names) wait for it.
+- Placing `SendCheckInLink` on New booking's Booked card and the booking
+  panel: other lanes' files, for the master to route.
+- The voucher's own document (the CRS design, D27-171) is the CRS lane's; the
+  CRS workflow attaches whatever `file` a message carries.
+- Email is not marked in the sales inbox (a reply to an email never reaches
+  the WhatsApp bot) - say if the owner wants every send marked.
+
+---
+
+## 2026-09-28 · Fix round F (QA leftovers, D27-149), part B: a guest's message rings the bell (QA GP-5, D27-153)
+
+**Asked for:** QA GP-5 and the owner's D27-153, in the core's notifications (delegated by the master for these two only). Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** `api/src/routes/notifications.ts`: "{n} guest message(s) waiting", linking to Guest messages, while a guest's message to the desk is open, for the roles holding `customer` view (D27-144); and the bell's guest names only with `customer`, amounts only with `invoice` (other roles get the alert without them).
+**Proved:** `api/test/notifications.test.ts` 2 passed; both failed with the old route. On screen: Reception's bell "1 guest message waiting"; Housekeeping's rooms only, no amounts.
+
+---
+
 ## 2026-09-27 · Touched by Phase 1, New booking (reservations session)
 
 `POST /:code/stays/:id/confirmation` (`voucher.ts`): Send voucher from New booking's Booked card, the sweep's own confirmation now, with the clerk's name. `claimTurn` / `sendIfOwed` in `jobs.ts`: the sweep's sender takes the same per-booking turn and asks again, so a voucher never goes twice (D27-35). `getGuestMessages` on the web front door.

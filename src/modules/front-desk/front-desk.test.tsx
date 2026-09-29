@@ -134,7 +134,7 @@ describe("the tape chart at /h/:code/stay", () => {
       p.firstChild?.textContent,
     );
     expect(words).toEqual([
-      "All", "Empty", "In house", "Arriving", "Reserved", "Out of service", "Due out", "Needs cleaning",
+      "Sellable", "Empty", "In house", "Arriving", "Reserved", "Out of service", "Due out", "Needs cleaning",
     ]);
   });
 

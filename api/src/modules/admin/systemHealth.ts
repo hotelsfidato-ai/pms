@@ -202,7 +202,7 @@ systemHealth.get("/:code/system-health", async (c) => {
     pool: {
       inUse: pool.totalCount - pool.idleCount,
       waiting: pool.waitingCount,
-      max: pool.options.max ?? 10,
+      max: pool.options.max ?? 20,
     },
     disk: space,
     backup,

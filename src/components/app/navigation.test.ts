@@ -102,7 +102,11 @@ describe("each person's menu", () => {
       /* Online check-in's desk screen, 21 September (the owner's D21-89):
          reception confirms a guest's details against the ID here. */
       "Online check-in",
-      "All bookings", "New booking",
+      "All bookings",
+      /* 29 September (the owner's D27-174): what the CRS sold, and the
+         notes the desk acts on when it changes there. */
+      "CRS bookings",
+      "New booking",
       /* Guests & CRM, from 21 September (the owner): the same screen, its
          own section. */
       "Guests",
@@ -263,12 +267,16 @@ describe("each person's menu", () => {
        purchasing; the master reviews it at merge. */
     /* ⚠ AND "CENTRAL CRM" LEFT, 21 September — the owner gave it a home:
        the "Guests & CRM" section, which its screens join as they are built. */
+    /* ⚠ AND "FIDATO CRS" LEFT, 29 September - the CRS bridge is BUILT
+       (D27-168, D27-171), so its entry moved into "Bookings" as "CRS
+       bookings", as Guest messages did. Edited by the CRS lane; the master
+       reviews it at merge. */
     const NOT_BUILT: Record<string, string[]> = {
       "Front desk": ["Guest services"],
       /* 29 September: Leads and WhatsApp and Marketing are BUILT (D27-168,
          D27-170); their entries stay in this section as working screens. */
       "Sales and marketing": ["Loyalty"],
-      "Distribution": ["Channel manager", "Booking engine", "Fidato CRS", "Contracts"],
+      "Distribution": ["Channel manager", "Booking engine", "Contracts"],
       "Finance": ["Online payments"],
       "System": ["Room systems"],
     };

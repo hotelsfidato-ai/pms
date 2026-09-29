@@ -21,7 +21,6 @@ import {
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import { StayDrawer } from "@/modules/front-desk/flows/StayDrawer";
-import { WalkInFlow } from "@/modules/front-desk/flows/WalkInFlow";
 import { getStayView, addDays, isWeekend, type ChartBar, type ChartRoom, type BarTone } from "@/modules/front-desk/data/stayview";
 import { getStay, listStays } from "@/modules/front-desk/data/stays";
 import { queryKeys, BUSINESS_DATE, setMyPreferences, type Stay } from "@/data/repositories";
@@ -99,7 +98,8 @@ const PILLS = ["All", "Vacant", "Occupied", "Arrivals", "Reserved", "Blocked", "
    tiles marked Free: a new contradiction in place of the old one. Empty
    = Free + Needs cleaning + Arriving, and that adds up on screen. */
 const PILL_LABEL: Record<(typeof PILLS)[number], string> = {
-  All: "All",
+  /* What it counts (the owner's D27-164, QA FD-13): out of service is apart. */
+  All: "Sellable",
   Vacant: "Empty",
   Occupied: "In house",
   Arrivals: "Arriving",
@@ -285,12 +285,11 @@ export default function StayViewPage({ view }: {
     return map;
   }, [todaysStayList]);
 
-  /* An empty cell opens a walk-in for that room and date. */
-  const walkIn = useMemo(() => {
-    if (!selectedId?.startsWith("new:")) return null;
-    const [, roomNumber, date] = selectedId.split(":");
-    return roomNumber && date ? { roomNumber, date } : null;
-  }, [selectedId]);
+  /* AN EMPTY ROOM OPENS THE ONE PAGE (D27-163), on that room and night: a
+     walk-in today, a booking for a later night. The walk-in dialog was a
+     second form asking the same questions. */
+  const bookRoom = (roomNumber: string, date: string) =>
+    navigate(`/h/${hotelId}/book?room=${encodeURIComponent(roomNumber)}&date=${date}`);
 
   const selected = useMemo(() => {
     if (!selectedId || !data) return null;
@@ -306,7 +305,7 @@ export default function StayViewPage({ view }: {
   /* A deep link can name a stay outside the fortnight on screen — from
      the dashboard, a search result, or a link someone shared. Move the
      window to it rather than opening an empty panel. */
-  const missingFromWindow = !!selectedId && !!data && !selected && !selectedId.startsWith("new:");
+  const missingFromWindow = !!selectedId && !!data && !selected;
   const { data: offscreen } = useQuery({
     queryKey: queryKeys.stay(hotelId, selectedId ?? ""),
     queryFn: () => getStay(hotelId, selectedId!),
@@ -438,7 +437,7 @@ export default function StayViewPage({ view }: {
       This reads the SAME `room.state` the pill counts are computed
       from, so a pill can never say six and then show nine. Out-of-
       service rooms are not part of the sellable house, so they appear
-      only under "Blocked" — which is why "All" reads 17 while eighteen
+      only under "Blocked" — which is why "Sellable" reads 17 while eighteen
       rooms physically exist. */
   const roomVisible = (room: ChartRoom) => {
     if (pill === "Blocked") return room.outOfService;
@@ -520,17 +519,6 @@ export default function StayViewPage({ view }: {
         status={selected ? { tone: BAR_TONE[selected.tone], label: BAR_LABEL[selected.tone] } : null}
         onClose={closeStay}
       />
-
-      {/* ── Walk-in, from an empty cell ───────────────────────────── */}
-      {walkIn && (
-        <WalkInFlow
-          hotelId={hotelId}
-          roomNumber={walkIn.roomNumber}
-          date={walkIn.date}
-          open
-          onOpenChange={(o) => !o && closeStay()}
-        />
-      )}
     </>
   );
 
@@ -561,10 +549,7 @@ export default function StayViewPage({ view }: {
             businessDate={BUSINESS_DATE}
             todaysStays={todaysStays}
             onOpenStay={openStay}
-            onWalkIn={mayBook ? (roomNumber, date) => {
-              searchParams.set("res", `new:${roomNumber}:${date}`);
-              setSearchParams(searchParams);
-            } : undefined}
+            onWalkIn={mayBook ? bookRoom : undefined}
           />
         </Page>
         {drawers}
@@ -776,7 +761,7 @@ export default function StayViewPage({ view }: {
                         <button
                           key={d}
                           type="button"
-                          onClick={() => openStay(`new:${room.number}:${d}`)}
+                          onClick={() => bookRoom(room.number, d)}
                           aria-label={`Book room ${room.number} on ${d}`}
                           className={cn(cell, "hover:bg-brand-orange-50")}
                           style={place}

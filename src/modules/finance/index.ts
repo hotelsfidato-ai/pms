@@ -9,7 +9,12 @@ export { TaxRulesCard } from "./flows/TaxRulesCard";
    (app.stay_bill), one printed layout — the desk's and the guest's page's. */
 export { getStayBill, type StayBill, type StayBillLine } from "./data/bill";
 export { BillPrint } from "./flows/BillPrint";
+/* The address with its town once (QA FI-16), for any screen that prints it. */
+export { placeLine } from "./place";
 /* New booking (Phase 1): the tax a nightly rate will carry, from the tax
    card's one slab rule, and the companies a booking can be billed to. */
 export { getTaxRate } from "./data/tax";
 export { listBillingCompanies, type BillingCompany } from "./data/folios";
+/* D27-163 (delegated by the master): the one page takes an advance through
+   the bill's own payment door, held as the guest's credit (D27-4). */
+export { settle } from "./data/postings";

@@ -38,7 +38,7 @@ Find a screen (Ctrl K).
 | All bookings (Bookings) | `/h/:code/reservations` | `pages/Reservations.tsx` | Reception |
 | Groups (Bookings) | `/h/:code/groups` | `pages/Groups.tsx` | none — search-only for Reception |
 | (no menu entry) one group; its heading is the group's name | `/h/:code/groups/:id` | `pages/GroupPanel.tsx` | — |
-| New booking (Bookings) | `/h/:code/book` | `pages/NewBooking.tsx` | Reception |
+| New booking (Bookings) | `/h/:code/book` (`?room=&date=` from an empty room, `?lead=` from a lead) | `pages/BookingPage.tsx` | Reception |
 
 Four addresses, four page files. The menu gate is `reservation` for all
 three entries. The Bookings section interleaves these with guests' entries by
@@ -155,9 +155,14 @@ Other services, through their doors only:
 - **front desk** — `fetchStays` (`data/groups.ts`), `listStays`, `StayTable`
   and type `StayColumn` (`pages/Reservations.tsx`); and, on the server, front
   desk's `GET /:code/groups` for the Groups list.
-- **guests** — `listCompanies`, `listBookingSources` (`pages/NewBooking.tsx`).
-- **inventory** — `getInventory`, `getTariff` (`pages/NewBooking.tsx`): what
+- **guests** — `listCompanies`, `listBookingSources`, `ReturningGuest`,
+  `ConsentTicks`, the ID block `GuestIdFields` (`pages/BookingPage.tsx`).
+- **inventory** — `getInventory`, `getTariff` (`pages/BookingPage.tsx`): what
   is free and what it costs.
+- **front desk** (the one page) — `assignRoom`, `assignableRooms`, `checkIn`,
+  `earlyArrival`, `listInclusions`, `addStayInclusion`.
+- **finance** (the one page) — `getTaxRate`, `listBillingCompanies`, `settle`
+  (the advance).
 
 And the core: `src/lib/api`, the shared `Stay` type, `queryKeys` and
 `BUSINESS_DATE`.
@@ -303,6 +308,32 @@ that file, not in either caller.
 
 Still to come: each night at its own price (D17-82, migration and the night
 audit's reading of it), and `amendChannelBooking` for a change SU sends.
+
+## One page, three buttons (29 September, D27-158, D27-163)
+
+New booking is ONE page (`pages/BookingPage.tsx`, which replaced
+`pages/NewBooking.tsx`): the guest, the stay (dates, the booking source, room
+type, meal plan, party, rate, an optional room), the ID and an advance;
+"More about the guest" and "Booking details" fold open, and so do Company,
+GST, Extras and Notes, each drawn only where Settings has it on (admin's
+"New booking" card, migration 159: on until a hotel turns it off). Three
+buttons at the bottom, each greyed with its reason under it:
+
+```
+Save booking          the booking call; a room picked is kept (assign)
+Save and assign room  the same; live only with a room picked
+Check in now          the booking call, then front desk's check-in (room, ID,
+                      Form III, early reason); refused, the booking stands and
+                      its room is kept
+```
+
+Then the advance (finance's payment door, held as the guest's credit, D27-4)
+and the extras (the stay's inclusions, on the first room). A walk-in is this
+page opened from an empty room: that room, tonight, one night and the Walk-in
+source; a later night's empty cell is a booking of that room. "Book this
+lead" (D27-170) opens it with `?lead=<token>`: name, phone, source and the
+campaign. `POST /:code/bookings` also takes `notes`, `isSingleLady` and
+`campaign` (the last written only when sent: its column is leads' 164).
 
 ## Phase 1 — New booking records every field (27 September, D27-33)
 

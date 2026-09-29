@@ -10,6 +10,9 @@ import { toast } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import { getKitchen, moveKitchenLine, type KitchenLine } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
+import { useRole } from "@/lib/session";
+import { KotPrinterPanel, KotStatus } from "@/modules/pos/components/KotStation";
+import { mayRingUp } from "@/modules/pos/nav";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PASS
@@ -76,6 +79,9 @@ function waited(seconds: number): string {
 
 export default function KitchenPage() {
   const hotelId = useHotel();
+  /* The way back to the till, only for somebody who may use it (QA RO-4):
+     a chef's "Console" led into the till and its menu editor. */
+  const toTill = mayRingUp(useRole());
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -203,14 +209,19 @@ export default function KitchenPage() {
               </button>
             ))}
         </div>
-        <Link
-          to={`/h/${hotelId}/till`}
-          className="press inline-flex items-center gap-2 h-12 px-4 rounded-full border border-grey-300 bg-white text-base font-medium text-ink-900 hover:bg-grey-50 hover:border-grey-400"
-        >
-          <ArrowLeft className="size-4" />
-          Console
-        </Link>
+        <KotPrinterPanel hotelId={hotelId} />
+        {toTill && (
+          <Link
+            to={`/h/${hotelId}/till`}
+            className="press inline-flex items-center gap-2 h-12 px-4 rounded-full border border-grey-300 bg-white text-base font-medium text-ink-900 hover:bg-grey-50 hover:border-grey-400"
+          >
+            <ArrowLeft className="size-4" />
+            Console
+          </Link>
+        )}
       </header>
+
+      <KotStatus hotelId={hotelId} className="mx-5 mt-3 shrink-0" />
 
       {/* A refresh that failed while the board was already up: the
           tickets stay, and the kitchen is told they are not current. The

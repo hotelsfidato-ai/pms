@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { ChevronLeft, ChevronRight, Ban, LogIn, LogOut, Check } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money } from "@/lib/format";
+import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, Button, Skeleton, EmptyState, toast,
@@ -134,7 +134,7 @@ export default function GridsPage() {
               <ChevronLeft className="size-4" />
             </Button>
             <span className="text-sm font-medium text-ink-900 tabular whitespace-nowrap">
-              {from} → {addDays(from, DAYS - 1)}
+              {dateShort(from)} – {dateShort(addDays(from, DAYS - 1))}
             </span>
             <Button
               variant="secondary" size="icon"
@@ -360,8 +360,9 @@ function Legend() {
         <LogOut className="size-3.5 text-warning-dark" /> Closed to departure
       </span>
       <span className="text-grey-500">
-        The small figures are <b>sold / sellable</b>. Complimentary and
-        tentative rooms hold inventory but are not sold.
+        The small figures are <b>paying rooms sold / sellable</b>. Complimentary
+        and tentative rooms hold a room but are left out; occupancy on the reports
+        counts complimentary rooms.
       </span>
     </div>
   );
@@ -535,7 +536,7 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
     if (!res.ok) return toast.error("Not saved", res.reason);
     toast.success(
       clearing ? "Price cleared" : "Price set",
-      `${target.label} · ${nights} ${nights === 1 ? "day" : "days"} from ${target.date}`);
+      `${target.label} · ${nights} ${nights === 1 ? "day" : "days"} from ${dateShort(target.date)}`);
     onClose();
     onDone();
   };
@@ -611,8 +612,8 @@ function PriceDialog({ hotelId, target, onClose, onDone }: {
 
           <p className="text-sm text-grey-600">
             {nights === 1
-              ? `${target.date} only.`
-              : `${nights} days, ${target.date} through ${until}.`}
+              ? `${dateShort(target.date)} only.`
+              : `${nights} days, ${dateShort(target.date)} through ${dateShort(until)}.`}
             {" "}Whatever already covers those dates is split around this.
           </p>
 
@@ -712,7 +713,7 @@ function RestrictionDialog({ hotelId, target, existing, onClose, onDone }: {
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent title={`${target.roomType} · ${target.date}`}>
+      <DialogContent title={`${target.roomType} · ${dateShort(target.date)}`}>
         <div className="space-y-3">
           <Toggle on={stopSell} set={setStopSell}
             label="Stop sell" hint="Nothing may be booked at all" />
@@ -747,8 +748,8 @@ function RestrictionDialog({ hotelId, target, existing, onClose, onDone }: {
           </Field>
 
           <p className="text-sm text-grey-600">
-            {days === 1 ? `${target.date} only.`
-                        : `${days} days, ${target.date} through ${until}.`}
+            {days === 1 ? `${dateShort(target.date)} only.`
+                        : `${days} days, ${dateShort(target.date)} through ${dateShort(until)}.`}
             {" "}Clearing everything removes the rule rather than storing a
             row that says nothing.
           </p>
