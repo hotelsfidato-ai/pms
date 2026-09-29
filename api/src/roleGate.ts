@@ -81,6 +81,8 @@ const WALK_IN = grant("reservation", "create", "Checking in a walk-in");
 const CHANGE_BOOKING = grant("reservation", "edit", "Changing a booking");
 const CHECK_IN = grant("reservation", "edit", "Checking a guest in");
 const CHECK_OUT = grant("reservation", "edit", "Checking a guest out");
+/* D27-182: whoever may check a guest in cuts their key cards, a lost card too. */
+const KEY_CARDS = grant("reservation", "edit", "Cutting key cards");
 const ROOMING = grant("reservation", "edit", "Giving a booking a room, or moving it");
 const VOID = grant("reservation", "cancel", "Voiding a booking");
 const GUEST_PAGE = grant("reservation", "edit", "Making a guest's own page");
@@ -232,6 +234,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/stays/:id/unassign`]: ROOMING,
   [`POST ${H}/stays/:id/void`]: VOID,
   [`POST ${H}/stays/:id/exchange`]: ROOMING,
+  /* room-systems */
+  [`POST ${H}/stays/:id/keys`]: KEY_CARDS,
   /* The hotel's list of inclusions carries a default price; no screen adds
      to it yet. */
   [`POST ${H}/inclusions`]: PRICE,
@@ -558,6 +562,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/stays/:id/exchangeable`]: STAYS,
   [`GET ${H}/stays/:id/inclusions`]: STAYS,
   [`GET ${H}/stays/:id/guest-marks`]: STAYS,
+  [`GET ${H}/stays/:id/keys`]: STAYS,
   [`GET ${H}/inclusions`]: STAYS,
   [`GET ${H}/early-arrival`]: STAYS,
   [`GET ${H}/groups`]: STAYS,

@@ -3,6 +3,7 @@ import { withSession } from "../../auth.ts";
 import type { PoolClient as Client } from "pg";
 import { businessDateFor } from "../../businessDate.ts";
 import { stillIn } from "./operations.ts";
+import { cancelStaleKeys } from "../room-systems/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    EXCHANGING TWO ROOMS, AND WHAT A RATE INCLUDES
@@ -111,6 +112,8 @@ stayExtras.post("/:code/stays/:id/exchange", async (c) => {
         `select * from app.exchange_rooms($1,$2,$3,$4::date,$5,$6)`,
         [hotelId, c.req.param("id"), input.withStayId, from, reason,
          session.staffId]);
+      /* Swapped from tonight: both guests' old key cards stop (D27-178). */
+      for (const stayId of pair) await cancelStaleKeys(client, hotelId, stayId);
       const r = rows[0]!;
       return {
         ok: true as const,

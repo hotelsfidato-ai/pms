@@ -16,6 +16,7 @@ import { FolioPanel } from "@/modules/finance";
 import { StayMarks } from "@/modules/front-desk/flows/StayMarks";
 import { GuestMarks } from "@/modules/front-desk/flows/GuestMarks";
 import { GroupRoomsList } from "@/modules/reservations";
+import { KeyCards } from "@/modules/room-systems";
 import { useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 
@@ -212,6 +213,7 @@ function StayBody({
           </TabsList>
           <TabsContent value="stay">
             <StayFacts stay={stay} />
+            {arrived && <KeyCards hotelId={hotelId} stay={stay} />}
           </TabsContent>
           {seesBills && (
             <TabsContent value="folio">
