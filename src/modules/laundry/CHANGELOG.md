@@ -12,6 +12,14 @@ yet** (`MODULE.md`).
 
 ---
 
+## 2026-09-28 · Fix round F (QA leftovers, D27-149): the screens with the module off (QA X-5)
+
+**Asked for:** QA X-5. Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** Laundry and its price list with the laundry off read one sentence, "The laundry is not available" and the server's reason, with no tabs or buttons above it (was "The dockets did not load... Try again" under Collect a bag and the tabs). Wording only, no test.
+**Proved:** web laundry tests passed; seen on screen with the module off in fidato_s30.
+
+---
+
 ## 2026-09-24 · Dockets in reception's and housekeeping's menus (D22-22)
 
 On `admin/finish-24sep`: `workingMenus: ["front_desk", "housekeeping"]` on

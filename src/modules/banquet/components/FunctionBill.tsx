@@ -8,10 +8,10 @@ import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/rules";
 import { useRole } from "@/lib/session";
 import {
   Card, CardHeader, CardBody, Button, toast, Checkbox,
-  Dialog, DialogContent, DialogClose, Field, fieldProps, Input, NativeSelect,
+  Dialog, DialogContent, DialogClose, Field, fieldProps, Input, NativeSelect, Textarea,
 } from "@/components/ui";
 import {
-  billBanquetEvent, payBanquetEvent, invoiceBanquetEvent, type BanquetEvent,
+  billBanquetEvent, payBanquetEvent, invoiceBanquetEvent, reopenBanquetEvent, type BanquetEvent,
 } from "@/modules/banquet/data/banquet";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -25,6 +25,8 @@ import {
                        Banquet GST rule; price and courses are then fixed
      Settle            a payment until nothing is owed
      Issue tax invoice finance's own invoice, then its page and credit note
+     Reopen the bill   before the invoice only: the hall and courses come off,
+                       with a reason (D27-154)
    Owner, Admin and GM take money and bill it; the Accountant may also
    issue the invoice. The server asks the same (roleGate).
    ══════════════════════════════════════════════════════════════════ */
@@ -40,6 +42,7 @@ export function FunctionBill({
   const [paying, setPaying] = useState(false);
   const [billing, setBilling] = useState(false);
   const [invoicing, setInvoicing] = useState(false);
+  const [reopening, setReopening] = useState(false);
 
   const billed = e.status === "completed";
   const balance = e.bill?.balance ?? 0;
@@ -93,6 +96,10 @@ export function FunctionBill({
               Issue tax invoice
             </Button>
           )}
+          {/* D27-154: while no tax invoice stands; after it, a credit note. */}
+          {mayTakeMoney && billed && !e.invoice && (
+            <Button variant="ghost" onClick={() => setReopening(true)}>Reopen the bill</Button>
+          )}
         </div>
       </CardBody>
 
@@ -112,6 +119,11 @@ export function FunctionBill({
           run={() => billBanquetEvent(hotelId, e.id)}
           done={() => { setBilling(false); toast.success("Billed"); onDone(); }}
         />
+      )}
+      {reopening && (
+        <ReopenDialog hotelId={hotelId} event={e}
+                      onClose={() => setReopening(false)}
+                      onDone={() => { setReopening(false); onDone(); }} />
       )}
       {invoicing && (
         <Confirm
@@ -166,6 +178,56 @@ function Confirm({
         }
       >
         <p className="text-sm text-ink-700">{text}</p>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* Reopening a billed function (the owner's D27-154): asks first, and the
+   reason is required - it rides on every line taken off the bill. */
+function ReopenDialog({
+  hotelId, event: e, onClose, onDone,
+}: {
+  hotelId: string; event: BanquetEvent; onClose: () => void; onDone: () => void;
+}) {
+  const [why, setWhy] = useState("");
+  const [busy, setBusy] = useState(false);
+  const go = async () => {
+    setBusy(true);
+    const res = await reopenBanquetEvent(hotelId, e.id, why.trim());
+    setBusy(false);
+    if (!res.ok) return toast.error("Not reopened", res.reason);
+    toast.success("Bill reopened", "The hall and courses are off the bill; change them and bill the function again.");
+    onDone();
+  };
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        title="Reopen the bill?"
+        description={e.title}
+        footer={
+          <>
+            <DialogClose asChild><Button variant="secondary">Not now</Button></DialogClose>
+            <Button variant="primary" loading={busy} disabled={why.trim() === ""}
+                    onClick={() => void go()}>
+              Reopen the bill
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-ink-700">
+            The hall and every course come off the bill, so the price and the
+            courses can be changed and the function billed again. Advances,
+            payments and restaurant orders stay on it.
+          </p>
+          <Field label="Why" required>
+            {(f) => (
+              <Textarea {...fieldProps(f)} rows={2} value={why}
+                        onChange={(ev) => setWhy(ev.target.value)} />
+            )}
+          </Field>
+        </div>
       </DialogContent>
     </Dialog>
   );

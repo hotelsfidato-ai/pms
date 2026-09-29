@@ -7,7 +7,7 @@ import {
   Button, Field, Input, NativeSelect, StatusPill, Switch, Tooltip, toast,
   Dialog, DialogContent, DialogTrigger, Term,
 } from "@/components/ui";
-import { checkIn, assignableRooms, checkInAllowed, earlyArrival } from "@/modules/front-desk/data/operations";
+import { checkIn, assignableRooms, checkInAllowed, earlyArrival, mealPlanChoices } from "@/modules/front-desk/data/operations";
 import { type Stay } from "@/data/repositories";
 import {
   BookingSiteBlacklist, ForeignGuestFields, formIIIMissing, particularsPayload,
@@ -227,13 +227,14 @@ export function CheckInFlow({
                       <span className="ml-auto">
                         <StatusPill
                           tone={
-                            room.housekeeping === "inspected" ? "success"
+                            room.label ? "warning"
+                              : room.housekeeping === "inspected" ? "success"
                               : room.housekeeping === "clean" ? "info"
                               : room.housekeeping === "dirty" ? "warning"
                               : "neutral"
                           }
                         >
-                          {room.housekeeping}
+                          {room.label ?? room.housekeeping}
                         </StatusPill>
                       </span>
                     </button>
@@ -351,7 +352,7 @@ export function CheckInFlow({
                     value={ratePlan}
                     onChange={(e) => setRatePlan(e.target.value)}
                   >
-                    {["CP", "Room Only", "EP", "MAP"].map((p) => <option key={p}>{p}</option>)}
+                    {mealPlanChoices(ratePlan).map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                   </NativeSelect>
                 )}
               </Field>

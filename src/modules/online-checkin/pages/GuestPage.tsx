@@ -171,7 +171,10 @@ function Heading({ view }: { view: GuestPageView }) {
         /* The stay's facts as rows: label left, value right. */
         <Card className="mb-5">
           <dl className="px-4 divide-y divide-grey-100 text-base">
-            <Fact label="Arriving">{dateLong(booking.checkIn)}</Fact>
+            {/* A guest already in the room has arrived (QA GP-3). */}
+            <Fact label={booking.status === "checked_in" || booking.status === "checked_out" ? "Arrived" : "Arriving"}>
+              {dateLong(booking.checkIn)}
+            </Fact>
             <Fact label="Leaving">{dateLong(booking.checkOut)}</Fact>
             <Fact label="Booking">{booking.reference}</Fact>
           </dl>
@@ -530,6 +533,12 @@ function DetailsSection(
             >
               {send.isPending ? "Sending…" : "Send my details"}
             </Button>
+            {/* Back to what was sent, unchanged (QA GP-4). */}
+            {editing && (
+              <Button type="button" variant="secondary" onClick={() => { setEditing(false); setD({}); }}>
+                Cancel
+              </Button>
+            )}
             {send.error && !unlockGone(send.error) && (
               <p className="text-sm text-brand-red-700">{messageFrom(send.error)}</p>
             )}

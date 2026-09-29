@@ -244,7 +244,8 @@ export default function BanquetEventPage() {
             <CardBody className="space-y-3">
               <dl>
                 <Line label="Hall" value={rupees(e.money.venue)} />
-                <Line label="Catering" value={rupees(e.money.food)} />
+                {/* Nothing served is not ₹0 of food (QA BQ-5). */}
+                <Line label="Catering" value={rupees(e.catering.length === 0 ? null : e.money.food)} />
                 {/* Settled restaurant orders only; each one is listed below. */}
                 <Line label="Restaurant orders" value={rupees(e.money.pos)} />
               </dl>
@@ -595,7 +596,8 @@ function CourseDialog({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Plates" required
-                   hint="A per-head rate with no head count is not a price.">
+                   hint="A per-head rate with no head count is not a price."
+                   error={heads.trim() !== "" && !(Number(heads) > 0) ? "At least one plate." : undefined}>
               {(f) => (
                 <Input {...fieldProps(f)} value={heads} inputMode="numeric"
                        onChange={(e) => setHeads(e.target.value)} />

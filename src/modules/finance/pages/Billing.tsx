@@ -46,7 +46,13 @@ const PAYMENT_COLUMNS: Column<PaymentRow>[] = [
   },
   {
     key: "method", header: "Method",
-    cell: (p) => <StatusPill tone={p.reversed ? "neutral" : "info"}>{p.method}</StatusPill>,
+    /* "Reversed" in words (QA FI-18): the strike-through alone was easy to miss. */
+    cell: (p) => (
+      <span className="inline-flex flex-wrap gap-1">
+        <StatusPill tone={p.reversed ? "neutral" : "info"}>{p.method}</StatusPill>
+        {p.reversed && <StatusPill tone="neutral">Reversed</StatusPill>}
+      </span>
+    ),
   },
   {
     key: "description", header: "Narration", hideBelow: "lg",
@@ -129,7 +135,7 @@ export function PaymentsPage() {
 
       {reversedCount > 0 && (
         <p className="text-xs text-grey-500 mt-4 leading-relaxed">
-          {reversedCount} receipt{reversedCount === 1 ? " is" : "s are"} struck through.
+          {reversedCount} receipt{reversedCount === 1 ? " is" : "s are"} marked Reversed.
           The ledger is append-only, so a reversal is its own line and the original
           stays where it was - a receipt that disappeared is a receipt somebody would
           go looking for.
