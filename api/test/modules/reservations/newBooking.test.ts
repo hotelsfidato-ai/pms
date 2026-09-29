@@ -97,6 +97,7 @@ const row = async (id: string) => (await sql(
   `select r.status, r.agreed_rate::text, r.is_complimentary, r.discount_percent::text,
           r.discount_reason, r.room_promotion_id::text, r.company_id::text,
           r.expected_departure::text, r.sales_person, r.market_segment,
+          r.notes, r.is_single_lady,
           g.title, g.nationality, gd.address_line, gd.city, gd.state, gd.pincode, gd.country
      from reservations r join guests g on g.id = r.guest_id
      left join guest_documents gd on gd.guest_id = g.id
@@ -133,14 +134,17 @@ beforeAll(async () => {
 
 beforeEach(() => {
   received = [];
-  process.env["N8N_SEND_URL"] = `http://127.0.0.1:${(server.address() as AddressInfo).port}/pms-send`;
-  process.env["N8N_SEND_SECRET"] = SECRET;
+  process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${(server.address() as AddressInfo).port}/pms-send`;
+  process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
+  process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = SECRET;
 });
 
 afterAll(async () => {
   await new Promise<void>((done) => server.close(() => done()));
-  delete process.env["N8N_SEND_URL"];
-  delete process.env["N8N_SEND_SECRET"];
+  delete process.env["CRS_N8N_URL"];
+  delete process.env["M2R_N8N_URL"];
+  delete process.env["CRS_N8N_SECRET"];
+  delete process.env["M2R_N8N_SECRET"];
   const { rows } = await sql(
     `select r.id::text from reservations r join guests g on g.id = r.guest_id
       where g.full_name like $1`, [`${TAG} %`]);
@@ -266,7 +270,8 @@ describe("waiting for the hotel (D27-35)", () => {
 describe("the voucher (D27-35)", () => {
   it("says so, and records nothing, when sending is switched off", async () => {
     const made = (await (await call(ownerId, "POST", "/bookings", booking("Switched off"))).json()) as Made;
-    delete process.env["N8N_SEND_URL"];
+    delete process.env["CRS_N8N_URL"];
+    delete process.env["M2R_N8N_URL"];
     const res = await call(staff.get("front_desk")!, "POST",
       `/stays/${made.bookings[0]!.id}/confirmation`, {});
     expect(res.status).toBe(503);
@@ -330,10 +335,12 @@ describe("the two lists (the owner, 27 September)", () => {
 });
 
 describe("what else New booking records", () => {
-  it("title, nationality, address, the company billed, the hour they leave, sales person and segment", async () => {
+  it("title, nationality, address, the company billed, the hour they leave, sales person, segment, the note and the single-lady tick", async () => {
     const res = await call(staff.get("front_desk")!, "POST", "/bookings", booking("Everything", {
       title: "Mrs", nationality: "gb", companyId, expectedDeparture: "09:30",
       salesPerson: `${TAG} Asha`, marketSegment: "Leisure",
+      /* D27-163: the one page's Notes box and the walk-in's tick. */
+      notes: "  Late train, keep the room  ", isSingleLady: true,
       address: { addressLine: "12 High St", city: "Leeds", state: "West Yorkshire",
                  pincode: "LS1 4AP", country: "United Kingdom" },
     }));
@@ -346,6 +353,7 @@ describe("what else New booking records", () => {
       sales_person: `${TAG} Asha`, market_segment: "Leisure", title: "Mrs", nationality: "GB",
       address_line: "12 High St", city: "Leeds", state: "West Yorkshire",
       pincode: "LS1 4AP", country: "United Kingdom",
+      notes: "Late train, keep the room", is_single_lady: true,
     });
   });
 

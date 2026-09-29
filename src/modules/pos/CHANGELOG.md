@@ -11,14 +11,58 @@ Work that touches the core or several services still goes in the root
 
 ---
 
-## 2026-09-29 · The folio lane: "Charge to room" on a room with two open bills (POS-24, D27-162)
+## 2026-09-29 · The folio lane: "Charge to room" on a room with two open bills (POS-26, D27-162)
 
 **Asked for:** the owner's bug of 28 September (a POS charge to a room not on the guest's bill) - root cause, fixed once, one test. Branch `folio/edit-29sep` (from cp6 ca02e37, round F's `fix/leftovers-28sep` merged in), copy `.claude\worktrees\nervous-spence-42dcae`, database `fidato_s31`, API 8871, web 5271.
-**Found:** read-only on the master's `fidato`: the owner's order was still open, nothing from the till had ever reached a bill, and the telemetry held one settle answering 409. Room 201 held two checked-in stays; the confirm closed on "yes" and the server's "which of the two?" came back as two small lines under the total. Reproduced on `fidato_s31`. Nothing in the posting code was wrong - it was never reached. Full text: DEFECTS POS-24.
+**Found:** read-only on the master's `fidato`: the owner's order was still open, nothing from the till had ever reached a bill, and the telemetry held one settle answering 409. Room 201 held two checked-in stays; the confirm closed on "yes" and the server's "which of the two?" came back as two small lines under the total. Reproduced on `fidato_s31`. Nothing in the posting code was wrong - it was never reached. Full text: DEFECTS POS-26 (POS-24 went to the KOT lane first; my commits say POS-24).
 **Shipped:** `roomAsk` (`components/AskDialog.tsx`), used by the Till and the Terminal: one button per open bill in the confirm itself, a company bill named "guest - bill to company"; the server's question or refusal read in the same box (`Reply`). `/till/rooms` and the settle's choices carry the company (`till.ts`). The two side panels are gone.
 **Proved:** `restaurantFixes.test.tsx`, two new cases, both seen to fail on the old screens; web pos 10 files, 75 passed. On screen: the owner's order 20260825-1 settled to Tanvi Bhide and shows on her Bill tab.
 **Left open:** a split stay's two GUEST bills (no company) would show one name twice; none exists today.
 **Commits:** bb24d07.
+
+---
+
+## 2026-09-29 · One KOT printer per outlet (D27-159, D27-161, D27-167) and the Till's Send to the kitchen (D27-166)
+
+**Asked for:** the owner's D27-159: one device per outlet prints every KOT through its browser (Chrome with `--kiosk-printing`), switched on in Settings by the kitchen manager and admins; no other device prints one; the POS shows the station's status; the station has Reprint; a one-time setup doc. The owner's details, D27-161 (all nine recommendations): the switch in a "KOT printer" panel on the Kitchen screen (the kitchen manager cannot open Administration → Settings); owner, administrator, GM and kitchen manager; a typed name; no fallback, retiring D17-18's slip on every send, POS-10's notice and the docket page; missed KOTs print when the station is back, oldest first, and a station switched on or moved prints from then; the status wording, online = seen within 90 s; the last 20 with Reprint; prints while a restaurant screen is open; 80 mm, the content as today. D27-167: catch up on the business date only. D27-166 (the speed check's W-1): the Terminal's Send to the kitchen on the Till. Branch `pos/kot-station-29sep` from cp6 `7980862`, round F and cp6 merged in; copy `.claude\worktrees\cranky-leakey-4eb5e9`, database `fidato_s33`, API 8875, web 5275.
+
+**How KOTs printed before:** a send on Tables (the order pad) or the Terminal opened `/h/:code/till/orders/:id/kot/:no` in a new tab on the waiter's own device, which printed through the browser's dialog; the Till sent nothing at all (POS-24). Nothing recorded that a docket had printed.
+
+**Shipped:**
+- Migration "one KOT printer per outlet" (157): `pos_outlets.kot_station_device / _name / _since / _seen_at` (a device, its typed name and its start together, a check), and `pos_kot_prints` (one row per printed docket; RLS; the app role inserts, never updates or deletes).
+- `till.ts`: `GET /till/kot-station`, `POST /till/kot-station/:outlet` (on moves it; off only from the station), `POST /till/kot-station/:outlet/poll` (last seen; the due dockets and the last 20, to the station only), `POST /till/orders/:id/kot/:no/printed` (the claim before the paper). `KOT_STATION_ONLINE` and `CATCH_UP_FROM` are each one named line. `roleGate.ts` (delegated): `KOT_SWITCH` (menu edit), `KOT_PRINT` and `KOT_READ` (the till, the chef, the kitchen manager, `payment`); the docket read widened to the kitchen, which now prints it.
+- `components/KotStation.tsx`: the printer (in `PosGate`, so every restaurant screen), claim then `window.print()` with only the slip on the paper, one at a time, asking again on the live channel and every 30 s; the status line on Tables, the Till, the Terminal and the Kitchen; the Kitchen's KOT printer panel (name, "This device prints KOTs", the last 20 with Reprint). `components/DocketSlip.tsx`: the docket's layout, moved from `pages/Docket.tsx`.
+- The Till's "Send to the kitchen" (POS-24).
+- Retired: the slip on send in `OrderPad.tsx` and `Terminal.tsx`, `SlipNotice.tsx`, `pages/Docket.tsx` and its route.
+- `KOT-STATION-SETUP.md`: the owner's one-time setup.
+
+**Found:** POS-24 (the Till never reached the kitchen). POS-25 (mine, caught by its own test: the station asked again at once after a lost claim).
+
+**Proved:**
+- API `kotStation.test.ts`: 3 passed. With the business-date bound, the off-only-from-the-station condition and the claim's station check taken out: 3 failed.
+- Web `KotStation.test.tsx`: 6 passed. With the claim check taken out: 1 failed.
+- `ownerDecisions.test.tsx`: 21 passed. Its new tests are that a send on Tables or the Terminal opens no tab, and the Till's Send.
+- `src/modules/pos` + `src/test` + primaryAction + App.test: 110 passed, 1 failed. The failure is `migrationNumbers`, on the gap 157-159, which the master renumbers at merge.
+- `npx tsc -b --force` exit 0; `cd api && npx tsc --noEmit` exit 0.
+- **Opened, 29 September, 19:38 to 19:50 IST.** `fidato_s33` at 160, API 8875; two devices in the Claude app's browser pane. The station was `localhost:5275`, signed in as the Kitchen Manager. The other device was `localhost:5276`, the same code but a separate origin, so it had its own device id; it was signed in as Reception, then as the GM. `window.print` and `window.open` were replaced in both tabs by a recorder, so no print window blocked the pane; the recorder kept what was on the paper.
+  - Before switching on, both devices' lines read "No KOT printer for Fidato Restaurant - KOTs are not printing" in red.
+  - Ticking with no name was refused: "Type a name for this device, for example Kitchen PC."
+  - With "Kitchen PC" typed, both read "KOT printer: Kitchen PC - online". The six older KOTs showed in the last 20 as "not printed" and did not print.
+  - Reprint of KOT 2 put KOT - 2 · Table AC8 · four dishes on the paper, with no price, and wrote nothing to the server.
+  - From the other device:
+    - Tables (AC3), the Till's new "Send to the kitchen" (N6; the button then read "Kitchen has it all", switched off) and the Terminal (N6) each sent a KOT.
+    - The station printed KOT 3, 4 and 5, 1 to 7 seconds after each send, each once, with the dish names, quantities and table.
+    - The sending device opened nothing and printed nothing.
+  - Reception's panel showed the status only: no switch, no list.
+  - The station went to a non-restaurant screen while N5 was sent. After 90 s the other device read "KOT printer Kitchen PC not seen since 7:45 PM - KOTs are not printing". Back on the Kitchen screen, the station printed the missed KOT 6 at once and read online.
+  - The GM switched "Till PC" on at the other device. The old station read "KOT printer: Till PC - online", and the next KOT (7) printed on the new one only.
+  - `pos_kot_prints` held exactly KOTs 3 to 7, one row each.
+  - The only console error from this work was the deliberate 409.
+
+**Left open:**
+- Silent printing on a real printer is untested here: the setup doc's step 4 is the owner's test.
+- `window.print()` in a minimised window is not guaranteed; the doc says keep it open.
+- The last-20 read scans the outlet's lines on every ask (a `ponytail:` note in `till.ts`).
 
 ---
 

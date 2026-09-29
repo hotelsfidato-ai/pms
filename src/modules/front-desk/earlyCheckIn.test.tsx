@@ -62,22 +62,16 @@ async function toRateStep() {
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  const next = () => fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   fireEvent.click(await screen.findByRole("button", { name: /Check in/ }));
-  next();                                                   // Guest
   await screen.findByText("204");
-  next();                                                   // Room
   fireEvent.change(screen.getByLabelText(/Reason for skipping/), { target: { value: "Scanner offline" } });
-  next();                                                   // ID
   fireEvent.change(await screen.findByLabelText(/Why the room is being given early/),
     { target: { value: "Overnight train" } });
-  return next;
 }
 
 async function checkInEarly({ waive, offers = false }: { waive: boolean; offers?: boolean }) {
-  const next = await toRateStep();
+  await toRateStep();
   if (waive) fireEvent.click(screen.getByLabelText(/Waive the charge/));
-  next();                                                   // Rate
   if (offers) fireEvent.click(await screen.findByRole("switch", { name: /Guest agreed to offers/ }));
   const buttons = await screen.findAllByRole("button", { name: /Check in/ });
   fireEvent.click(buttons[buttons.length - 1]!);
@@ -148,11 +142,8 @@ describe("the ID step, when the guest sent their details online", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    const next = () => fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     fireEvent.click(await screen.findByRole("button", { name: /Check in/ }));
-    next();                                                   // Guest
     await screen.findByText("204");
-    next();                                                   // Room
 
     const link = await screen.findByRole("link", { name: "check them on Online check-in" });
     expect(link.getAttribute("href")).toBe("/h/5EL/online-checkin");

@@ -189,6 +189,27 @@ describe("D17-36 - the switches are the owner's and an administrator's", () => {
     expect((await screen.findAllByRole("switch")).length).toBe(3);
   });
 
+  /* D27-163: New booking's four sections have their own card, apart from
+     the modules the API refuses when off. */
+  it("New booking's sections are switched on a card of their own", async () => {
+    as("admin");
+    server({
+      "GET /api/hotels/5EL/settings": () => SETTINGS,
+      "GET /api/hotels/5EL/invoice-series": () => [],
+      "GET /api/hotels/5EL/pos/outlets": () => [],
+      "GET /api/hotels/5EL/modules": () => ({ modules: [
+        { module: "pos", enabled: true },
+        { module: "booking_notes", enabled: false },
+      ] }),
+      "GET /api/hotels/5EL/tax": () => TAX,
+    });
+    renderAt("/admin/settings", <SettingsPage />);
+    const notes = await screen.findByRole("switch", { name: /Notes section/ });
+    const card = notes.closest(".rounded-lg.border-grey-200")?.textContent ?? "";
+    expect(card).toContain("New booking");
+    expect(card).not.toContain("Point of sale");
+  });
+
   it("the general manager opens Settings and sees no switch", async () => {
     as("gm");
     settingsServer();

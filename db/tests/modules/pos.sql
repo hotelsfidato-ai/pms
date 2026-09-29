@@ -163,3 +163,45 @@ begin
   select count(*) into n from pos_outlets where code = 'STRUCK';
   perform test.ok('pos strike', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+-- =============================================================================
+-- THE KOT STATION (D27-159, D27-161) - "one KOT printer per outlet"
+-- =============================================================================
+-- Which device prints, and what it printed, are the API's to decide
+-- (api/test/modules/pos/kotStation.test.ts). What the database holds to: a
+-- station is a device, a typed name and a start, together; and a printed
+-- docket stays printed - the app role may neither change nor remove the row.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where email = 'agra@fidato.in';
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'KOTST', 'KOT Station Test', 'food', v_staff)
+  returning id into v_outlet;
+
+  perform test.allows('pos kot station', 'a device, its name and its start switch it on',
+    format($q$update pos_outlets set kot_station_device = 'dev-1', kot_station_name = 'Kitchen PC',
+              kot_station_since = now() where id = %L$q$, v_outlet));
+  perform test.raises('pos kot station', 'a device with no name is refused',
+    format($q$update pos_outlets set kot_station_name = null where id = %L$q$, v_outlet), '23514');
+  perform test.raises('pos kot station', 'a blank name is refused',
+    format($q$update pos_outlets set kot_station_name = '  ' where id = %L$q$, v_outlet), '23514');
+  perform test.raises('pos kot station', 'a name with no device is refused',
+    format($q$update pos_outlets set kot_station_device = null where id = %L$q$, v_outlet), '23514');
+
+  perform test.ok('pos kot station', 'the app may record a printed docket',
+    has_table_privilege('pms_app', 'pos_kot_prints', 'insert'));
+  perform test.ok('pos kot station', 'but never change one',
+    not has_table_privilege('pms_app', 'pos_kot_prints', 'update'));
+  perform test.ok('pos kot station', 'nor remove one',
+    not has_table_privilege('pms_app', 'pos_kot_prints', 'delete'));
+  perform test.ok('pos kot station', 'and row security keeps it to its hotel',
+    (select relforcerowsecurity from pg_class where relname = 'pos_kot_prints'));
+
+  delete from pos_outlets where id = v_outlet;
+  select count(*) into n from pos_outlets where code = 'KOTST';
+  perform test.ok('pos kot station', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;

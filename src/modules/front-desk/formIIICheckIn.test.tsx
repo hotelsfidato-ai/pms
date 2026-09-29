@@ -14,8 +14,8 @@ import type { Stay } from "@/data/repositories";
    Two ways a foreign guest used to miss the register: the dialog
    started at "IN" whatever the booking said, and sent the nationality
    only with a document - so an ID skipped for a reason left the guest
-   Indian. And Form III's own questions must be answered before the ID
-   step lets the clerk on (the owner, 27 September).
+   Indian. And Form III's own questions must be answered before Check in
+   goes (the owner, 27 September; one page since D27-163).
    ══════════════════════════════════════════════════════════════════ */
 
 const STAY = {
@@ -60,18 +60,16 @@ describe("a foreign guest's check-in", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    const next = () => fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     fireEvent.click(await screen.findByRole("button", { name: /Check in/ }));
-    next();                                                     // Guest
     await screen.findByText("204");
-    next();                                                     // Room
+    const go = () => screen.getAllByRole("button", { name: /Check in/ }).at(-1) as HTMLButtonElement;
 
     expect((screen.getByLabelText("Nationality") as HTMLInputElement).value).toBe("BR");
     fireEvent.change(screen.getByLabelText(/Reason for skipping/),
       { target: { value: "Passport at the bank" } });
-    const cont = screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement;
-    expect(cont.disabled, "Form III's questions were not asked").toBe(true);
-    expect(screen.getByText(/Form III still needs: Phone in India, Arrived from/)).toBeTruthy();
+    expect(go().disabled, "Form III's questions were not asked").toBe(true);
+    expect(document.querySelector("[data-form-iii-needs]")?.textContent)
+      .toMatch(/Form III still needs: Phone in India, Arrived from/);
 
     /* Starred, so the label reads "Phone in India*". */
     const type = (label: string, value: string) =>
@@ -80,11 +78,9 @@ describe("a foreign guest's check-in", () => {
     type("Arrived from", "Delhi");
     type("Purpose of visit", "tourism");
     type("Previous place of stay", "Hotel in Delhi");
-    expect(cont.disabled).toBe(false);
+    expect(go().disabled).toBe(false);
 
-    next();                                                     // ID
-    next();                                                     // Rate
-    fireEvent.click(screen.getAllByRole("button", { name: /Check in/ }).at(-1)!);
+    fireEvent.click(go());
     await waitFor(() => expect(sent).not.toBeNull());
     expect(sent!.identity).toEqual({ nationality: "BR" });
     expect(sent!.visit).toEqual({

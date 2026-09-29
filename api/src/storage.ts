@@ -57,7 +57,9 @@ export class StorageRefused extends Error {}
     box, where it must NOT be inside the git checkout — a deploy that
     re-clones would take the hotel's bills with it. */
 const ROOT = resolve(
-  process.env["UPLOAD_DIR"] ?? join(process.cwd(), ".uploads"),
+  /* `||`, not `??`: .env.example ships "UPLOAD_DIR=" empty, and an empty
+     string put uploads straight into the working folder (round F, 29 Sep). */
+  process.env["UPLOAD_DIR"] || join(process.cwd(), ".uploads"),
 );
 
 export function checkAcceptable(contentType: string, byteSize: number): void {

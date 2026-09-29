@@ -94,6 +94,11 @@ export function Guest360SearchPage() {
 
 type StayRow = Guest360["stays"][number];
 
+const STAY_WORD: Record<string, string> = {
+  confirmed: "Due in", checked_in: "In house", checked_out: "Checked out",
+  cancelled: "Cancelled", no_show: "No show", void: "Void", tentative: "Waiting for the hotel",
+};
+
 const STAY_COLUMNS: Column<StayRow>[] = [
   { key: "hotel", header: "Hotel", cell: (s) => s.hotelName },
   { key: "ref", header: "Booking", hideBelow: "md", cell: (s) => <span className="tabular">{s.reference}</span> },
@@ -101,7 +106,8 @@ const STAY_COLUMNS: Column<StayRow>[] = [
     cell: (s) => <span className="tabular">{dateShort(s.checkIn)} – {dateShort(s.checkOut)}</span> },
   { key: "type", header: "Room type", hideBelow: "lg", cell: (s) => s.roomType ?? DASH },
   { key: "source", header: "Booked via", hideBelow: "lg", cell: (s) => s.source ?? DASH },
-  { key: "status", header: "Status", cell: (s) => s.status.replace("_", " ") },
+  /* The desk's words, not the column's (QA GU-7: "checked in"). */
+  { key: "status", header: "Status", cell: (s) => STAY_WORD[s.status] ?? s.status.replace("_", " ") },
   { key: "charged", header: "Charged", numeric: true, cell: (s) => <span className="tabular">{money(s.charged)}</span> },
 ];
 

@@ -9,10 +9,8 @@ import { api, ApiError } from "@/lib/api";
    answer, the reason included.
    ══════════════════════════════════════════════════════════════════ */
 
-/** The walk-in's market segments (WalkInFlow.tsx), the owner's choice of
-    27 September. Stored as the words themselves.
-    ponytail: a second copy of the walk-in's inline list; one list once the
-    Form III session has merged its WalkInFlow changes. */
+/** The market segments, the walk-in's five (the owner's choice of 27
+    September). Stored as the words themselves. */
 export const MARKET_SEGMENTS = ["Corporate", "Leisure", "Group", "Crew", "Government"] as const;
 
 /** The owner's titles (27 September); none leaves it blank. The server and
@@ -43,6 +41,24 @@ async function send<T>(path: string, method: string, body: unknown): Promise<Ans
     throw error;
   }
 }
+
+/** "Book this lead" (D27-170): what the leads lane hands New booking for a
+    token of 22 characters, valid two hours, nothing personal in it. A 404 is
+    a lead expired or erased; the refusal carries its sentence.
+    ponytail: a stand-in for leads' own fetchLeadForBooking (the same address
+    and shape, as the master documented it); the one page imports that from
+    src/modules/leads/index.ts once the leads lane has merged. */
+export interface LeadForBooking {
+  name: string;
+  phone: string;
+  /** Null: the lead's channel has no booking source; the desk picks. */
+  bookingSourceId: string | null;
+  campaign: string | null;
+  channel: string | null;
+}
+export const leadForBooking = (hotelId: string, token: string) =>
+  send<LeadForBooking>(`/api/hotels/${hotelId}/leads/${encodeURIComponent(token)}/booking`,
+    "GET", undefined);
 
 export interface SalesPerson { id: string; name: string }
 export interface RoomPromotion { id: string; name: string; percent: number }

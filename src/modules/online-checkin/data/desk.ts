@@ -20,6 +20,10 @@ export interface WaitingDetails {
   city: string | null;
   country: string | null;
   submittedAt: string;
+  /** What else the guest sent (D27-169), only what they filled in: the
+      arrival time, requests, nationality, Form III's person and visit.
+      Named on the screen by `moreLines`. */
+  more: Record<string, string | boolean>;
 }
 
 export interface OpenRequest {

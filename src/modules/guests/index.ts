@@ -24,3 +24,9 @@ export {
 
 /* GU-1 (28 September): correcting a guest, from the stay panel and Guest 360. */
 export { EditGuestFlow } from "./components/EditGuestFlow";
+
+/* D27-163: the guest's ID asked once - the one page's and the one-page
+   check-in's, so the two cannot ask different questions. */
+export {
+  GuestIdFields, guestIdState, guestIdPayload, noGuestId, type GuestId,
+} from "./components/GuestIdFields";

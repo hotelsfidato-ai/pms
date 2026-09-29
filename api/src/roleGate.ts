@@ -186,6 +186,12 @@ const MENU = grant("menu", "edit", "Changing the menu");
    the owner, an administrator and the GM, the people who set the hotel up
    (the owner's answer, 25 September). `room_config` is exactly those three. */
 const TILL_SETUP = grant("room_config", "edit", "Setting up the restaurant's tables");
+/* The KOT station (D27-159, D27-161). Switching it: the menu's four - the
+   owner, an administrator, the GM and the kitchen manager. Printing: whoever
+   is signed in on the kitchen or POS PC - the till, the chef, the kitchen
+   manager, or a `payment` holder. */
+const KOT_SWITCH = grant("menu", "edit", "Choosing the KOT printer");
+const KOT_PRINT = grant("payment", "create", "Printing the kitchen's KOTs", ["pos", "chef", "kitchen_manager"]);
 
 /* No screen calls these two yet. A bill photographed for a purchase (§15) is
    purchasing's; where n8n copied a file is an integration's. */
@@ -205,6 +211,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/suppliers`]: own("routes/places.ts: keepsPlaces"),
   [`PUT ${H}/suppliers/:id`]: own("routes/places.ts: keepsPlaces"),
   [`POST ${H}/stays/:id/guest-link`]: GUEST_PAGE,
+  /* Send check-in link (D27-105): the same page, sent rather than copied -
+     so whoever may make it may send it. */
+  [`POST ${H}/stays/:id/checkin-link`]: GUEST_PAGE,
   [`POST ${H}/online-checkin/submissions/:id/confirm`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`POST ${H}/online-checkin/submissions/:id/set-aside`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`POST ${H}/online-checkin/requests/:id`]: own("routes/guestDoor.ts: DESK_ROLES"),
@@ -336,6 +345,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders/:id/lines/:lineId/qty`]: TILL,
   [`POST ${H}/till/orders/batch`]: TILL,
   [`POST ${H}/till/orders/:id/kot`]: TILL,
+  [`POST ${H}/till/orders/:id/kot/:no/printed`]: KOT_PRINT,
+  [`POST ${H}/till/kot-station/:outlet/poll`]: KOT_PRINT,
+  [`POST ${H}/till/kot-station/:outlet`]: KOT_SWITCH,
   [`POST ${H}/till/day-end/movements`]: DAY_END,
   [`POST ${H}/till/day-end/count`]: DAY_END,
   [`POST ${H}/till/day-end/close`]: DAY_END,
@@ -446,6 +458,10 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/channel-manager/availability/send`]: own("channel-manager/access.ts"),
   [`POST ${H}/channel-manager/bookings/:id/done`]: own("channel-manager/access.ts"),
 
+  /* crs: a desk note done is a change to how the booking stands (D27-168) */
+  [`POST ${H}/crs/bookings/:crsId/done`]: CHANGE_BOOKING,
+  [`PUT ${H}/crs/setup`]: own("crs/setup.ts: the owner and an administrator (D27-171)"),
+
   /* purchasing */
   [`PUT ${H}/purchasing/requesters/:role`]: own("purchasing/purchasingGrants.ts"),
   [`POST ${H}/purchasing/requests`]: own("purchasing/purchasingGrants.ts"),
@@ -517,6 +533,7 @@ const LAUNDRY = see("laundry", "laundry");
 /* The restaurant's screens are a grant plus the till by name (pos/nav.ts). */
 const TILL_READ = see("payment", "the restaurant's orders", ["pos"]);
 const MENU_READ = see(["menu", "payment"], "the menu", ["pos"]);
+const KOT_READ = see("payment", "the kitchen's KOTs", ["pos", "chef", "kitchen_manager"]);
 /* The Housekeeping board, Work orders and an item's page share these. */
 const REPAIRS = see(["room_config", "equipment", "inventory"], "repairs");
 
@@ -639,7 +656,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/till/promotions`]: MENU_READ,
   [`GET ${H}/till/orders`]: TILL_READ,
   [`GET ${H}/till/orders/:id`]: TILL_READ,
-  [`GET ${H}/till/orders/:id/kot/:no`]: TILL_READ,
+  /* The docket and the KOT printer: the kitchen too, which prints them. */
+  [`GET ${H}/till/orders/:id/kot/:no`]: KOT_READ,
+  [`GET ${H}/till/kot-station`]: KOT_READ,
   [`GET ${H}/till/floor`]: TILL_READ,
   [`GET ${H}/till/rooms`]: TILL_READ,
   [`GET ${H}/till/waiters`]: TILL_READ,
@@ -681,6 +700,10 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/channel-manager/content`]: own("channel-manager/access.ts"),
   [`GET ${H}/channel-manager/availability`]: own("channel-manager/access.ts"),
   [`GET ${H}/channel-manager/bookings`]: own("channel-manager/access.ts"),
+
+  /* ── CRS bridge: the bookings the CRS sold, read as bookings are (D27-168) ── */
+  [`GET ${H}/crs/bookings`]: STAYS,
+  [`GET ${H}/crs/setup`]: own("crs/setup.ts: the owner and an administrator (D27-171)"),
 
   /* ── Administration ── */
   [`GET /api/admin/hotels`]: own("admin/admin.ts: a group administrator"),

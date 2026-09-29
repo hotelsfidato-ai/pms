@@ -50,16 +50,18 @@ Seven addresses, four page files. The menu gate is `dashboard` for Rooms and
   Calendar from a deep link (`/h/:code/stay?res=<booking id>`; every link to
   a booking points there, which is why `/stay` stayed Rooms — `routes.tsx`)
   and from every stay list through `components/StayTable.tsx`. It holds check
-  in (`CheckInFlow`), the actions menu (`StayActions`: amend, move or
+  in (`CheckInFlow`: ONE page under one Check in since D27-163), the actions menu (`StayActions`: amend, move or
   unassign, exchange, inclusions, void), the marks (`StayMarks`), the
   group's rooms (reservations' `GroupRoomsList`) and the Bill (finance's
   `FolioPanel`, which calls back into this service for check-out and
   `LateCheckOutFlow`).
 - **On Rooms** the room tiles (`flows/HouseFloor.tsx`); **on both Rooms and
-  Calendar** the Assign room button (`flows/AssignRoomFlow.tsx`) and a
-  walk-in taken from an empty room (`flows/WalkInFlow.tsx`, opened as
-  `?res=new:<room>:<date>`). The Walk-ins screen is the record of walk-ins,
-  not a form (`WalkIns.tsx` header).
+  Calendar** the Assign room button (`flows/AssignRoomFlow.tsx`), and an
+  empty room that opens New booking's one page on it
+  (`/h/:code/book?room=<room>&date=<date>`, reservations; D27-163): tonight's
+  is a walk-in. `WalkInFlow.tsx` and its client door `createWalkIn` went; the
+  server's `POST /:code/walk-ins` stays and no screen calls it. The Walk-ins
+  screen is the record of walk-ins, not a form (`WalkIns.tsx` header).
 - `StayTable` is also used by reservations' All bookings and finance's
   Folios.
 

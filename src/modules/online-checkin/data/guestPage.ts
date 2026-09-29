@@ -9,12 +9,16 @@ import type { StayBill } from "@/modules/finance";
    guest account.
 
    ⚠ THE UNLOCK (D21-6). Answering the six digits hands back a second
-   secret that unlocks THIS phone, not the link. It is kept for the open
-   tab only - sessionStorage, which dies with the tab and is never shared
-   with another one - and sent as `Authorization: Guest …` on every call behind
-   the code. A forwarded link carries none, so it is asked for a code
-   again. Never in localStorage, never in a query key that is persisted,
-   never in the address.
+   secret that unlocks THIS phone, not the link, and it is sent as
+   `Authorization: Guest …` on every call behind the code. A forwarded link
+   carries none, so it is asked for a code again.
+
+   KEPT FOR A DAY, ON THIS PHONE (D27-169, replacing D21-92's hour in one
+   tab): a guest who closes the tab and comes back from WhatsApp the same
+   day is not asked for another code. So it lives in localStorage, keyed by
+   the link - and the SERVER decides when it ends (a day, migration 162):
+   the moment the door refuses it, it is dropped here. Never in a query key
+   that is persisted, never in the address.
 
    `api()` adds no credential when nobody is signed in, and the door
    ignores one if a clerk happens to be signed in on the same browser.
@@ -50,18 +54,32 @@ export interface GuestPageView {
 
 const KEY = (token: string) => `guest-unlock:${token.slice(0, 12)}`;
 
-/** This tab's unlock for this link, if it has one. */
+/** This phone's unlock for this link, if it has one. */
 function heldUnlock(token: string): string | null {
-  try { return sessionStorage.getItem(KEY(token)); } catch { return null; }
+  try { return localStorage.getItem(KEY(token)); } catch { return null; }
 }
 
 function keepUnlock(token: string, unlock: string): void {
-  try { sessionStorage.setItem(KEY(token), unlock); } catch { /* a private tab: asked again */ }
+  try { localStorage.setItem(KEY(token), unlock); } catch { /* a private tab: asked again */ }
 }
 
 /** Dropped when the door refuses it - expired, or a new guest in the room. */
 export function dropUnlock(token: string): void {
-  try { sessionStorage.removeItem(KEY(token)); } catch { /* nothing held */ }
+  try { localStorage.removeItem(KEY(token)); } catch { /* nothing held */ }
+}
+
+/* ── The code asks for itself, once (D27-105) ─────────────────────────
+   Opening the link sends the code; reopening it within the code's ten
+   minutes does not send another (each one would kill the last, and five
+   an hour is all a link gets). */
+const ASKED = (token: string) => `guest-code-asked:${token.slice(0, 12)}`;
+const CODE_LIVES_MS = 10 * 60_000;
+
+export function codeAskedRecently(token: string, now = Date.now()): boolean {
+  try {
+    const at = Number(localStorage.getItem(ASKED(token)));
+    return at > 0 && now - at < CODE_LIVES_MS;
+  } catch { return false; }
 }
 
 const at = (token: string, rest = "") => `/api/guest/${encodeURIComponent(token)}${rest}`;
@@ -76,19 +94,34 @@ const withUnlock = (token: string, init: RequestInit = {}): RequestInit => {
 export const openGuestPage = (token: string): Promise<GuestPageView> =>
   api<GuestPageView>(at(token), withUnlock(token));
 
-/* ⚠ THE ANSWER IS THE SAME WHETHER OR NOT THE NUMBER WAS RIGHT — same
-   words, same shape (guestDoor.ts). The screen prints the sentence the
-   door sent and decides nothing from it. */
+/* The door's own sentence - where it went, or why it did not (no mobile
+   number on the booking, five an hour, WhatsApp refused). The screen
+   prints it and decides nothing from it. */
 export interface CodeAnswer {
   sent: boolean;
   message?: string;
+  /** DEVELOPMENT ONLY (D27-105): the code itself, from a server started
+      with GUEST_CODE_ON_SCREEN beside ALLOW_DEV_AUTH. Drawn only in a
+      development build; a built app that carries the name fails the build. */
+  devCode?: string;
 }
 
-export const sendCode = (token: string, phone: string): Promise<CodeAnswer> =>
-  api<CodeAnswer>(at(token, "/code"), {
-    method: "POST",
-    body: JSON.stringify({ phone }),
-  });
+/** No number is typed: the code goes to the one the booking carries.
+    Noted as asked BEFORE the call, so a second mount while it is in flight
+    sends nothing; un-noted when no code went (refused, or not reached), so
+    the next open asks again rather than pointing at a code that never came. */
+export async function sendCode(token: string): Promise<CodeAnswer> {
+  const forget = () => { try { localStorage.removeItem(ASKED(token)); } catch { /* nothing held */ } };
+  try { localStorage.setItem(ASKED(token), String(Date.now())); } catch { /* asked again next time */ }
+  try {
+    const answer = await api<CodeAnswer>(at(token, "/code"), { method: "POST", body: "{}" });
+    if (!answer.sent) forget();
+    return answer;
+  } catch (error) {
+    forget();
+    throw error;
+  }
+}
 
 export async function verifyCode(token: string, code: string): Promise<{ verified: boolean }> {
   const answer = await api<{ verified: boolean; unlock?: string }>(at(token, "/verify"), {
@@ -114,6 +147,35 @@ export interface Details {
   visaExpiry?: string;
   /** The guest's own yes to offers (D25-39, opt-in): recorded at once. */
   offersAgreed?: boolean;
+  /* D27-169: the booking's, and a foreign guest's Form III (147). */
+  expectedArrival?: string;
+  specialRequests?: string;
+  /** "IN" for an Indian national, else the country as they wrote it. */
+  nationality?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  passportIssuedOn?: string;
+  passportIssuePlace?: string;
+  passportIssueCountry?: string;
+  visaType?: string;
+  visaIssuedOn?: string;
+  visaIssuePlace?: string;
+  visaIssueCountry?: string;
+  arrivedFrom?: string;
+  previousStay?: string;
+  purpose?: string;
+  purposeOther?: string;
+  arrivedInIndiaOn?: string;
+  arrivalPort?: string;
+  mobileInIndia?: string;
+  phoneInIndia?: string;
+  mobileAbroad?: string;
+  phoneAbroad?: string;
+  employedInIndia?: boolean;
+  refAddress?: string;
+  refCity?: string;
+  refState?: string;
+  refPincode?: string;
 }
 
 export interface DetailsState {

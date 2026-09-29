@@ -1238,6 +1238,69 @@ export async function getDocket(
     `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}`);
 }
 
+/* ── The KOT station (D27-159) ────────────────────────────────────
+   One device per outlet prints every KOT. `device` is this browser's own
+   id (components/KotStation.tsx); the server says whether it is the one. */
+export interface KotStationOutlet {
+  code: string;
+  name: string;
+  station: { name: string; mine: boolean; seenAt: string | null; online: boolean } | null;
+}
+
+export async function getKotStations(
+  hotelId: string, device: string,
+): Promise<KotStationOutlet[]> {
+  if (!hotelId) return [];
+  return (await api<{ outlets: KotStationOutlet[] }>(
+    `/api/hotels/${hotelId}/till/kot-station?device=${encodeURIComponent(device)}`)).outlets;
+}
+
+async function plainPost<T>(path: string, body: unknown): Promise<T | { ok: false; reason: string }> {
+  try {
+    return await api<T>(path, { method: "POST", body: JSON.stringify(body) });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const p = error.body as { reason?: string } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message };
+    }
+    throw error;
+  }
+}
+
+/** On: this device prints the outlet's KOTs, moved from wherever it was.
+    Off: only from the station itself. */
+export function setKotStation(
+  hotelId: string, outlet: string, device: string, on: boolean, name = "",
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  return plainPost(`/api/hotels/${hotelId}/till/kot-station/${outlet}`, { device, name, on });
+}
+
+export interface KotDocketRef {
+  orderId: string;
+  kotNo: number;
+  table: string | null;
+  sentAt: string;
+  printedAt: string | null;
+}
+
+/** The station's ask: it is also its "last seen". `due` oldest first. */
+export async function pollKotStation(
+  hotelId: string, outlet: string, device: string,
+): Promise<{ station: false } | { station: true; due: KotDocketRef[]; recent: KotDocketRef[] }> {
+  return api(`/api/hotels/${hotelId}/till/kot-station/${outlet}/poll`,
+    { method: "POST", body: JSON.stringify({ device }) });
+}
+
+/** The claim before the paper: true means print it; false, another tab
+    has, or this device is no longer the station. */
+export async function claimKot(
+  hotelId: string, orderId: string, kotNo: number, device: string,
+): Promise<boolean> {
+  const res = await plainPost<{ ok: true; claimed: boolean }>(
+    `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}/printed`, { device });
+  return res.ok && res.claimed;
+}
+
 /* ── The day end ──────────────────────────────────────────────────
    Three steps, as the screens have it:
 

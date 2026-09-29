@@ -56,6 +56,16 @@ moved out of, not for a check-out.
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-20 · The check-in's room tiles cut their pill on a phone — FIXED 29 September
+
+**Found** - 29 September, opening the one-page check-in at 390 px (D27-163):
+two tiles across left each about 159 px, and six of eight rooms'
+housekeeping pill ("inspected", "out-of-service") ran out of its tile. The
+five-step dialog had the same grid, so it was there before.
+**Fixed** - one column below the `sm` breakpoint (`flows/CheckInFlow.tsx`);
+measured again at 390 px, none overflow (7c0373e).
+**Rule:** measure a grid of tiles at 390 px with the longest word it can hold.
+
 ### FD-19 · The QA's front-desk wrong results of 28 September - FIXED 28 September (QA FD-1..FD-9)
 
 The walk-in skipped the ID step for an Indian guest (QA FD-1); an Aadhaar "12ab"

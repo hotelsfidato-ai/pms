@@ -37,6 +37,65 @@ nothing else. This service calls `send()`; it does **not** call n8n, and it does
 - **The wording lives in n8n**, where the owner changes it without a deploy
   (D17-87). This service sends named values and no prose.
 
+## Two senders, chosen by the message (D27-98, D27-101, D27-104, 29 September)
+
+`api/src/sending.ts` still decides nothing about WHAT goes; it now chooses
+WHO sends it, by the message, and nothing else changed for its callers:
+
+| Message | Sent by | Its settings |
+|---|---|---|
+| every email; the booking voucher (`booking-confirmation`) on WhatsApp | the CRS's n8n, workflow `deploy/n8n/pms-send-crs.json` | `CRS_N8N_URL`, `CRS_N8N_SECRET` |
+| every other WhatsApp: the check-in code, the arrival reminder, the check-in link, the review request | the market-to-revenue n8n, `deploy/n8n/pms-send-m2r.json` | `M2R_N8N_URL`, `M2R_N8N_SECRET` |
+| the one number both send from (D27-101) | a setting, sent in every WhatsApp as `from.phoneNumberId` | `WHATSAPP_PHONE_NUMBER_ID` |
+
+- **`canSend()` needs all five.** Half a setup would send the code and not
+  the voucher, which nobody could explain at the desk.
+- **Every send carries a `messageId`.** The sweep's and Send voucher's
+  messages take `messageIdFor(kind, booking)`, the same on every try, so a
+  retry after a timeout (sent, answer lost) is dropped by the workflow, which
+  remembers what it sent for 30 days - only what it really sent. The code
+  and each press of Send check-in link take a new one.
+- **The sales inbox is told first (D27-104).** A WhatsApp the CRS sends is
+  preceded by a `"mark"` to the market-to-revenue workflow, so a guest who
+  replies is already a BOOKED lead there and the greeting bot stays quiet; a
+  market-to-revenue message marks in the same call. A failed mark does not
+  stop the message; its sentence is added to the record's detail. Email is
+  not marked: a reply to an email never reaches the WhatsApp bot.
+- **The wording lives in the workflows** (D17-87): the email drafts and the
+  template names are at the top of each workflow's first Code node.
+  `deploy/n8n/IMPORT.md` is the owner's steps; `workflows.test.ts` runs each
+  Code node with made-up messages.
+
+## The booking voucher (D27-171, D27-172)
+
+The booking confirmation's EMAIL carries the voucher: a PDF in the CRS's
+design (its `voucherPdf.ts`, read, not copied), drawn with pdfkit by
+`voucherDocument.ts` from `app.guest_voucher(reservation)` (158, a definer:
+the sweep has nobody signed in). `withVoucher` in `jobs.ts` attaches it for
+both the sweep and Send voucher, so it is the same PDF whoever sends it; the
+CRS workflow writes the short letter around it in the CRS's colours.
+WhatsApp sends the text and the link for now (V3).
+
+The owner's answers (D27-172), each where it lives:
+
+| | Rule | Where |
+|---|---|---|
+| V1 | per room the nightly rate the audit posts x nights; room charges, GST by the per-night slab (`app.gst_rate_or_null`, rounded per night as the audit posts), the total. **No GST rule: GST and the total print "-"** (`voucherFigures`, guarded by `voucherDocument.test.ts`, seen to fail). "Complimentary" where so. No payment line | `voucherFigures` |
+| V4 | the booking's own cancellation terms in the desk's words, the hotel's check-in and check-out times; no bank section until bank details exist in Settings | `voucherPolicies` |
+| V5 | "Confirmed by the hotel": the PMS reference, the clerk (the audit's record of the change to confirmed) and when | `app.guest_voucher` |
+
+## Send check-in link (D27-105)
+
+`POST /api/hotels/:code/stays/:id/checkin-link` (`voucher.ts`): a confirmed
+booking's own page, sent now, the guest's way (`channelFor`), kind
+`checkin-link` (template `checkin_link`, D27-169), the clerk's name on the
+record, a new page and a new id each press. Refused, nothing written, for a
+waiting or unconfirmed booking or with nowhere to send it. The button is
+`SendCheckInLink` on the front door; **where it goes on the booking's screens
+is for the lanes that own them** (New booking's Booked card, the booking
+panel) - one line each. The day-before send is the arrival reminder, which
+already carries the link (D27-169).
+
 ## What is built
 
 | | |
@@ -86,8 +145,8 @@ A review request belongs to the reputation service.
 
 `server.ts` is the master's, so the two lines that start and stop the sweep are
 a merge-time step (below). Even started, it does nothing at all until **both**
-are in the server's settings: the owner's n8n steps (`N8N_SEND_URL`,
-`N8N_SEND_SECRET` - `canSend()`), and the owner's pace
+are in the server's settings: the owner's n8n steps (the five settings of the
+two senders below - `canSend()`), and the owner's pace
 (`GUEST_MESSAGES_PER_MINUTE`, D21-34). Without either it does not even ask which
 bookings are due, and no row is written. Stage 3 is a switch-on (D21-76), so the
 pace is a setting beside the other two, not a constant that would need a

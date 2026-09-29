@@ -30,13 +30,24 @@ put back (CHANGELOG, 21 September).
    caller. There is no session, no account, no guest role.
 2. **Only hashes reach the database** — the token's, the code's, the unlock's.
 3. **The code unlocks THIS PHONE, not the link (D21-6).** `verify` hands back
-   an unlock once; the page keeps it for the open tab (sessionStorage, never
-   localStorage) and sends it as `Authorization: Guest <unlock>`. It is stored
-   as a hash, tied to the link AND the stay, for an hour. Every function behind
-   the code takes both hashes and asks `app.guest_unlocked` in the database
-   every time. A forwarded link shows what it showed before and asks for a code.
-4. **A wrong phone and a right one are indistinguishable** — same status, same
-   words, same shape; one knock too many too (D21-25).
+   an unlock once; the page keeps it on this phone for the day (localStorage,
+   D27-169 - it was one tab and an hour, D21-92) and sends it as
+   `Authorization: Guest <unlock>`. It is stored as a hash, tied to the link
+   AND the stay, for 24 hours (158); the server ends it and the page drops it
+   the moment it is refused. Every function behind the code takes both hashes
+   and asks `app.guest_unlocked` in the database every time. A forwarded link
+   shows what it showed before and asks for a code.
+4. **Nobody types a number (D27-105).** The code goes to the number the stay
+   carries, and the answer says where: its last four digits on a booking's
+   link, nothing of it on a room card (D21-14). No mobile on the booking:
+   "Ask the desk", and no code is issued. (Until 29 September the guest typed
+   the number and a wrong one had to read like a right one; with nothing typed
+   there is nothing to guess.)
+   **The code is never in an answer** - except from a development server
+   started with `GUEST_CODE_ON_SCREEN=1` beside `ALLOW_DEV_AUTH=1`, which
+   `env.ts` refuses under production; the page draws it only in a development
+   build, and `scripts/check-no-dev-login.mjs` fails a build carrying
+   `devCode` (`devCodeNeverShips.test.ts`).
 5. **Every refusal takes the same shape** — behind the code, a refused call
    answers what an unknown link answers: 404 and one sentence.
 6. **Nothing a guest types reaches the legal register without a person
@@ -68,7 +79,15 @@ Coming soon page and its address are gone.
   button. **When the server cannot be reached (OCI-3)** — "We could not reach
   the hotel", not "your link is dead".
 - **Behind the code** — the details form (ID type, ID number, address; for a
-  passport, its expiry and the visa with its expiry — D21-19, nothing else),
+  passport, its expiry and the visa with its expiry — D21-19; and since
+  D27-169 the arrival time, "Anything you would like us to know?", the
+  nationality, and for a guest of another country Form III's person and
+  visit (147's questions, `formIII.ts`; not the remarks or the next
+  destination, which stay with the desk)). On the desk's Confirm: the
+  nationality to the guest, the arrival time and "Guest asked online: …"
+  (added to the notes, never over them) to the booking, the person to
+  `guest_documents`, the visit to `form_iii_stays` - a field left blank
+  changes nothing already there,
   what was sent and whether the desk has checked it, with an Aadhaar as its
   last four digits; **the bill as it stands**, exactly the desk's print,
   titled "Interim bill", with "Pay at the desk before you leave"; and a spa or
@@ -120,7 +139,7 @@ reception's menu for this (the owner, 24 September).
 | Method | Path | Before the code | What it does |
 |---|---|---|---|
 | GET | `/api/guest/:token` | answers | the booking or the room; `verified` for THIS phone; `canSendCodes`; `offers` once unlocked |
-| POST | `/api/guest/:token/code` | answers | a code to the phone on the stay it resolves to — one answer whatever happened |
+| POST | `/api/guest/:token/code` | answers | a code to the phone on the stay it resolves to, nothing typed; says where, or "Ask the desk" (D27-105). The page asks it by itself on opening, once per ten minutes |
 | POST | `/api/guest/:token/verify` | answers | the six digits; hands back the unlock once |
 | GET/POST | `/api/guest/:token/details` | **refused** | what the guest sent / send it, as a submission |
 | GET | `/api/guest/:token/bill` | **refused** | the bill as it stands — `app.guest_bill` (124), which is finance's `app.stay_bill` (123) for the one stay the link and the unlock reach |
@@ -137,7 +156,14 @@ reception's menu for this (the owner, 24 September).
 Staff routes are for owner, admin, GM, hotel manager and reception
 (`DESK_ROLES`); anybody else is refused with a sentence naming who may.
 
-## Database (migrations 114, 121 and 132)
+## Database (migrations 114, 121, 132 and 158)
+
+**162 (29 September; the master renumbers at merge):**
+`app.guest_code_make(text)` replaces the two-argument one (no number typed;
+a stay with no mobile answers a row with no code); the unlock lives 24 hours;
+`guest_detail_submissions` gains the arrival time, requests, nationality and
+Form III's person and visit, and `app.guest_details_submit` takes them (same
+signature, MEMORY 317).
 
 | Table | Holds |
 |---|---|
@@ -187,7 +213,7 @@ out has not been checked out yet) and `app.guest_unlocked`.
 
 - **The menu entry** — done by the master (`d6cef4a`, D21-89): under Front
   desk and in reception's menu, offered to exactly `DESK_ROLES`.
-- **How long an unlock lasts** — an hour, confirmed by the owner (D21-92).
+- **How long an unlock lasts** — an hour, confirmed by the owner (D21-92); **a day, on this phone past the tab, since D27-169** (29 September).
 - **"Fidato" in a guest's tab before the page loads** (`index.html`,
   `useDocumentTitle`) — noted on the master's list of places the code names
   the group (D21-27); left as it is for now.
@@ -203,7 +229,8 @@ out has not been checked out yet) and `app.guest_unlocked`.
   change the return type of a function an earlier migration makes** — every
   deploy replays from 001 (CHANGELOG, 21 September).
 - Guest documents are personal data and are not persisted in the browser;
-  the unlock is kept for the open tab only.
+  the unlock (a secret, not a document) is kept on this phone for the day
+  and dropped the moment the server refuses it (D27-169).
 
 ## Gates
 

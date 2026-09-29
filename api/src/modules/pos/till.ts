@@ -4636,6 +4636,187 @@ till.get("/:code/till/orders/:id/kot/:no", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such docket." }, 404);
 });
 
+/* ══════════════════════════════════════════════════════════════════
+   THE KOT STATION — one device per outlet prints every KOT (D27-159)
+
+   The owner, 29 September (D27-161): "This device prints KOTs", in the
+   Kitchen screen's KOT printer panel, for the kitchen manager, the owner,
+   an administrator and the GM (roleGate KOT_SWITCH). Switching it on
+   elsewhere MOVES it. The station asks every 30 seconds and whenever the
+   live channel says an order moved; the asking is its "last seen".
+
+   A docket is claimed (a pos_kot_prints row) BEFORE it is printed, so two
+   tabs on the station cannot both print it. A missed one prints when the
+   station is back, oldest first - but only from the current business
+   date (CATCH_UP_FROM) and never from before it was switched on.
+   ══════════════════════════════════════════════════════════════════ */
+
+/** Seen within this long is online (D27-161). */
+const KOT_STATION_ONLINE = "90 seconds";
+
+/* D27-167: a station catching up prints only the business date's missed
+   KOTs; older ones are reprinted from the list. No bound = delete this. */
+const CATCH_UP_FROM = "and o.business_date = $2::date";
+
+/** The device id a station sends: the browser makes it, so it is only
+    checked for shape. */
+const deviceOf = (raw: unknown): string | null =>
+  typeof raw === "string" && /^[\w-]{8,64}$/.test(raw) ? raw : null;
+
+/* The outlets the hotel's own till takes orders at: an outside till (it has
+   a key) sends finished bills, never a KOT. */
+const OWN_OUTLETS = "is_active and api_key_hash is null";
+
+till.get("/:code/till/kot-station", async (c) => {
+  const device = c.req.query("device") ?? "";
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{
+      code: string; name: string; station: string | null;
+      mine: boolean; seen_at: string | null; online: boolean;
+    }>(
+      `select code, name, kot_station_name as station,
+              coalesce(kot_station_device = $2, false) as mine,
+              kot_station_seen_at as seen_at,
+              coalesce(kot_station_seen_at > now() - interval '${KOT_STATION_ONLINE}', false) as online
+         from pos_outlets
+        where hotel_id = $1 and ${OWN_OUTLETS}
+        order by name`,
+      [hotelId, device],
+    );
+    return {
+      outlets: rows.map((r) => ({
+        code: r.code,
+        name: r.name,
+        station: r.station === null ? null
+          : { name: r.station, mine: r.mine, seenAt: r.seen_at, online: r.online },
+      })),
+    };
+  });
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+till.post("/:code/till/kot-station/:outlet", async (c) => {
+  const input = await c.req.json().catch(() => ({})) as
+    { device?: unknown; name?: unknown; on?: unknown };
+  const device = deviceOf(input.device);
+  const name = typeof input.name === "string" ? input.name.trim() : "";
+  if (!device) return c.json(refuse("This device has no id. Reload the page and try again."), 409);
+  if (input.on === true && !name) {
+    return c.json(refuse("Type a name for this device, for example Kitchen PC."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    /* On: this device, from now (a move starts afresh). Off: only the
+       station itself switches off, so a stale tab on the old station
+       cannot take the new one away. */
+    const { rowCount } = input.on === true
+      ? await client.query(
+        `update pos_outlets
+            set kot_station_device = $3, kot_station_name = $4,
+                kot_station_since = now(), kot_station_seen_at = now()
+          where hotel_id = $1 and code = $2 and ${OWN_OUTLETS}`,
+        [hotelId, c.req.param("outlet"), device, name])
+      : await client.query(
+        `update pos_outlets
+            set kot_station_device = null, kot_station_name = null,
+                kot_station_since = null, kot_station_seen_at = null
+          where hotel_id = $1 and code = $2 and kot_station_device = $3`,
+        [hotelId, c.req.param("outlet"), device]);
+    if (!rowCount) {
+      return refuse(input.on === true
+        ? "No such outlet."
+        : "This device is not the KOT printer here.");
+    }
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+till.post("/:code/till/kot-station/:outlet/poll", async (c) => {
+  const input = await c.req.json().catch(() => ({})) as { device?: unknown };
+  const device = deviceOf(input.device);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows: outlet } = await client.query<{ id: string }>(
+      `update pos_outlets set kot_station_seen_at = now()
+        where hotel_id = $1 and code = $2 and kot_station_device = $3
+       returning id::text`,
+      [hotelId, c.req.param("outlet"), device]);
+    if (!outlet[0]) return { station: false as const };
+
+    const docket = `select l.order_id::text as order_id, l.kot_no,
+                           o.table_ref, min(l.kot_sent_at) as sent_at,
+                           max(p.printed_at) as printed_at
+                      from pos_order_lines l
+                      join pos_orders o on o.id = l.order_id
+                      left join pos_kot_prints p
+                        on p.order_id = l.order_id and p.kot_no = l.kot_no
+                     where o.outlet_id = $1 and l.kot_no is not null`;
+    type Row = {
+      order_id: string; kot_no: number; table_ref: string | null;
+      sent_at: string; printed_at: string | null;
+    };
+    const { rows: due } = await client.query<Row>(
+      `${docket} and p.order_id is null
+         and l.kot_sent_at >= (select kot_station_since from pos_outlets where id = $1)
+         ${CATCH_UP_FROM}
+       group by l.order_id, l.kot_no, o.table_ref
+       order by min(l.kot_sent_at), l.kot_no`,
+      [outlet[0].id, await businessDateFor(client, hotelId)]);
+    /* ponytail: the last 20 read on every ask - fine at a hotel's volume;
+       an index on kot_sent_at if a year's lines ever make it slow. */
+    const { rows: recent } = await client.query<Row>(
+      `${docket} group by l.order_id, l.kot_no, o.table_ref
+       order by min(l.kot_sent_at) desc, l.kot_no desc limit 20`,
+      [outlet[0].id]);
+
+    const shape = (r: Row) => ({
+      orderId: r.order_id, kotNo: r.kot_no, table: r.table_ref,
+      sentAt: r.sent_at, printedAt: r.printed_at,
+    });
+    return { station: true as const, due: due.map(shape), recent: recent.map(shape) };
+  });
+
+  return result ? c.json(result) : c.json({ error: "No such property." }, 404);
+});
+
+till.post("/:code/till/orders/:id/kot/:no/printed", async (c) => {
+  const input = await c.req.json().catch(() => ({})) as { device?: unknown };
+  const kotNo = Number(c.req.param("no"));
+  if (!Number.isInteger(kotNo)) return c.json(refuse("No such docket."), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{ station: boolean }>(
+      `select coalesce(ou.kot_station_device = $3, false) as station
+         from pos_orders o join pos_outlets ou on ou.id = o.outlet_id
+        where o.id = $1 and o.hotel_id = $2
+          and exists (select 1 from pos_order_lines l
+                       where l.order_id = o.id and l.kot_no = $4)`,
+      [c.req.param("id"), hotelId, deviceOf(input.device), kotNo]);
+    if (!rows[0]) return refuse("No such docket.");
+    if (!rows[0].station) return refuse("This device is not the KOT printer here.");
+    /* The claim: the first asker prints, a second tab is told no. */
+    const { rowCount } = await client.query(
+      `insert into pos_kot_prints (hotel_id, order_id, kot_no) values ($1, $2, $3)
+       on conflict do nothing`,
+      [hotelId, c.req.param("id"), kotNo]);
+    return { ok: true as const, claimed: rowCount === 1 };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
 /* ── The pass ─────────────────────────────────────────────────────────
    Every line the kitchen holds, oldest first. Sorted by when it was
    SENT and not when it was rung up: a dish added to an old order still

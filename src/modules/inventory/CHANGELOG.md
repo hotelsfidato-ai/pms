@@ -11,6 +11,14 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-29 · Fix round F (QA leftovers, D27-149), part D: paying rooms sold; EP not RO; dates; said, not silent (D27-151, D27-164; QA FD-12, RT-6, RT-7, RT-8)
+
+Branch `fix/leftovers-28sep` (cp6 7c52bb9, round D, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** Rate calendar and Rate performance say "paying rooms sold" with a note that complimentary rooms are left out; Rate performance drops day use and its stale comment is corrected (`rateGrid.ts`). Pricing and Rate plans list the meal plans as code with words and no RO (`pricing.ts`, `rates.ts`; RT-7). The Rate calendar's range and its two dialogs print dates as 25 Aug 2026 (FD-12). A room type's counts say why Save is off (RT-6). Pricing's toast comes with the new base (RT-8). Rate performance: "Editing comes once a channel manager is connected" (was "at Stage 9").
+**Proved:** web inventory tests passed; api `unpriced.test.ts` 2 passed; the lists read from the API ("EP · Room only | CP · Room + breakfast | …", no RO).
+
+---
+
 ## 2026-09-28 · Fix round D: 0 only ticked Free, the unset difference, rooms (QA of 28 Sep)
 
 **Asked for:** D27-120 and the QA's Rooms, rates and setup table.
