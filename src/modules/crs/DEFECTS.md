@@ -14,8 +14,18 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None. This service is not built: it has a brief, a menu entry
-and a Coming soon page, and no code behind them.
+### CRS-1 · A CRS booking answered only when all its rooms agree
+
+**Found** 29 September, reading `answersOwed` (reader.ts). A CRS booking of several
+rooms becomes several reservations, and the register has one status per booking. So
+the answer goes only when every room is confirmed, or every room is cancelled or
+voided.
+
+If the desk confirms some rooms and cancels others, nothing is ever written, and the
+CRS bookings screen shows no answer for it.
+
+**The fix waiting:** the owner's word on what the register should say for a partly
+confirmed booking.
 
 ---
 
