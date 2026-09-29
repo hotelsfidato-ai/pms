@@ -152,9 +152,15 @@ A new migration needs a number claimed in `HANDOVER.md` first; the guard is
 
 ## Front door
 
-`index.ts` exports nothing yet (`export {};`), and no other service imports
-`@/modules/night-audit` (grep, 15 September). Add an export only when
-another service needs one, and only through this file.
+On the web, `index.ts` exports nothing yet (`export {};`), and no other
+service imports `@/modules/night-audit` (grep, 15 September). Add an export
+only when another service needs one, and only through this file.
+
+On the server, `api/src/modules/night-audit/index.ts` exports
+`correctClosedCharge` (29 September, D27-162): the Closed days correction -
+a correction row with the reason, the wrong line reversed and the right one
+posted on the closed day - which the correction route and finance's Change
+rate both call. One correction for every caller.
 
 ## Leans on
 

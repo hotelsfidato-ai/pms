@@ -22,7 +22,7 @@ import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
-import { AskDialog, SENT_STRIKE, type Ask } from "@/modules/pos/components/AskDialog";
+import { AskDialog, SENT_STRIKE, roomAsk, type Ask } from "@/modules/pos/components/AskDialog";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL
@@ -867,9 +867,6 @@ function OrderPanel({
   /** The bill changed but is still open. */
   onChanged: () => void;
 }) {
-  const [choices, setChoices] = useState<
-    { folioId: string; guest: string }[] | null
-  >(null);
   const [room, setRoom] = useState("");
   const [discounting, setDiscounting] = useState(false);
   const [splitting, setSplitting] = useState(false);
@@ -881,17 +878,11 @@ function OrderPanel({
     queryFn: () => listChargeableRooms(hotelId),
   });
 
-  /* D27-117: charging a restaurant bill to a room asks first, naming the
-     guest - the name used to appear only in the toast afterwards (POS-8). */
-  const askRoom = () => {
-    const guests = (rooms.data ?? []).filter((r) => r.room === room.trim()).map((r) => r.guest);
-    if (guests.length === 0) return void settle("room");   // the server says why not
-    setAsk({
-      title: `Charge ${money(order.gross)} to room ${room.trim()}?`,
-      body: `${guests.join(" or ")} will see it on their room bill.`,
-      confirm: "Charge to room", onConfirm: () => settle("room"),
-    });
-  };
+  /* D27-117, D27-162: charging a restaurant bill to a room asks first,
+     naming whose bill it lands on - and which, when the room has two. */
+  const askRoom = () => setAsk(roomAsk(room.trim(), money(order.gross),
+    (rooms.data ?? []).filter((r) => r.room === room.trim()),
+    (folioId) => settle("room", folioId)));
 
   const settle = async (
     method: "room" | "cash" | "card" | "upi" | "function", folioId?: string,
@@ -902,16 +893,11 @@ function OrderPanel({
     setBusy(false);
 
     if (!res.ok) {
-      /* A room with two open folios is a QUESTION, not a failure. The
-         waiter is standing there and can answer it — so the choices
-         come back and the panel asks. */
-      if (res.choices) {
-        setChoices(res.choices);
-        return;
-      }
-      return toast.error("Not settled", res.reason);
+      /* A room charge's refusal, or its "which bill?", is read in the box
+         that asked (roomAsk). */
+      if (method !== "room") toast.error("Not settled", res.reason);
+      return res;
     }
-    setChoices(null);
     toast.success(
       "Settled",
       res.guest ? `${money(order.gross)} to ${res.guest}`
@@ -920,6 +906,7 @@ function OrderPanel({
           : money(res.order.payable),
     );
     onDone();
+    return res;
   };
 
   /* D17-21: the banquet function this order is on, or off it. */
@@ -1129,36 +1116,6 @@ function OrderPanel({
                 Print the bill
               </Button>
             )}
-          </div>
-        ) : choices ? (
-          <div className="mt-3.5">
-            {/* The refusal, asked as a question. Charging whichever
-                guest the database returned first would be right most
-                days and silently wrong on a changeover. */}
-            <p className="text-sm text-ink-900 font-medium">
-              Two guests are in room {room}
-            </p>
-            <p className="text-sm text-grey-600 mt-0.5 mb-2 leading-relaxed">
-              One is checking out and one has arrived. Who ate?
-            </p>
-            <div className="space-y-2">
-              {choices.map((ch) => (
-                <Button
-                  key={ch.folioId}
-                  variant="secondary"
-                  size="lg"
-                  className="w-full justify-start"
-                  loading={busy}
-                  onClick={() => void settle("room", ch.folioId)}
-                >
-                  {ch.guest}
-                </Button>
-              ))}
-              <Button variant="ghost" size="lg" className="w-full"
-                onClick={() => setChoices(null)}>
-                Cancel
-              </Button>
-            </div>
           </div>
         ) : splitting ? (
           <SplitPanel

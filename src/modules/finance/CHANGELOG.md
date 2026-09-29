@@ -8,6 +8,21 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-29 · The folio lane: Edit a charge, Change rate, no reversal after a tax invoice, one payment taken once (D27-157, D27-162, FIN-19, FIN-20)
+
+**Asked for:** the owner's D27-157 and its details D27-162, and the speed lane's finding 7. Branch `folio/edit-29sep` (from cp6 ca02e37, round F's `fix/leftovers-28sep` merged in), copy `.claude\worktrees\nervous-spence-42dcae`, database `fidato_s31`, API 8871, web 5271.
+**Shipped:**
+- **Edit** (`editFolioCharge`, `POST /stays/:id/charges/:postingId/edit`; the Bill tab's pencil): owner, administrator, GM. The old line reversed through `reverseFolioCharge` with the reason, and the corrected one posted on the same bill and date, keeping its heading, tax scheme and source (a restaurant line stays the restaurant's). A room night: price only (its words count its nights), tax by the slab on the price a night; any other line keeps its rate (D25-9). Refused: a closed day, a standing tax invoice, drinks with a VAT bill, a price of 0. The pencil is off, with the reason, on a closed day or an invoiced bill (the bill's read now says `dayClosed` and `invoice` per line).
+- **Change rate** (`changeStayRate`, `POST /stays/:id/rate`; the Bill tab's button): the stay's `agreed_rate`, and every live room line corrected to rate x its nights - a closed day's through night-audit's `correctClosedCharge`, an open day's through Edit. All or nothing under a savepoint; the refusal names the night. A rate of 0 refused.
+- **↺ after a tax invoice** (FIN-19): a charge or discount refused ("Only a credit note corrects it now"); a payment or refund still reversed by the four money roles (D27-125).
+- **Settle** (FIN-20): the amount cleared on success; `settle()` no longer re-reads the bill after the payment.
+- `roleGate.ts` `EDIT_BILL` (the master's delegation) and `"stay-bill"` in `src/lib/freshness.ts` MONEY_KEYS (the master's delegation: the Interim bill re-reads when opened).
+**Proved:** web finance 17 files, 65 passed, `editCharge.test.tsx` and `settleOnce.test.tsx` seen to fail without their fixes; `freshness.test.ts` seen to fail without "stay-bill"; tsc -b and api tsc clean. API `editCharge.test.ts` 4 passed; with the ↺-invoice guard and Edit's per-night slab taken out, 3 failed ("expected '18.00' to be '5.00'", the reversal let through, Change rate not refused). After merging cp6 2fac3e8: `till.test.ts` + `roleGate.test.ts` 143 passed; web pos + finance + src/test 150 passed. On screen (`fidato_s31`, Owner): Edit ₹3,690 → ₹3,500 on Tanvi Bhide's restaurant line (reversal with the reason, the new line `pos`, 5%); Change rate ₹8,000 on her stay ("Room 201 · 2 nights" → ₹16,000 + 18%, agreed_rate 8000); Settle UPI ₹2,957.46 on Ananya Bose's stay, the closing dialog "₹0 outstanding / Paying ₹0" with no credit offer.
+**Left open:** Edit shows no figure for the new tax before the press (the bill shows it after); Change rate lists no night-by-night preview; a group master folio's lines are not on a stay's Bill tab and so not editable there; an outside till's void of a bill edited at the hotel answers "already taken off" while the corrected line stays; the desk's Add charge of a several-night "Room" line still asks the slab on the whole amount (postCharge; the walk-in and the audit ask per night).
+**Commits:** c48d0a8, 94433a2, 10b015b, a6ac53b, d9c7c41, 6150bae, 5e606c3; merge 5053764.
+
+---
+
 ## 2026-09-29 · Fix round F (QA leftovers, D27-149), part C: one reversal for a function's bill too; Reversed in words; the place once; Company accounts and Cashiering as the server asks (D27-154, QA FI-18, FI-16, D27-145, RO-4)
 
 **Asked for:** the master's part C, after round A merged; finance claimed for these only. Branch `fix/leftovers-28sep` (cp6 6686af1, round A, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.

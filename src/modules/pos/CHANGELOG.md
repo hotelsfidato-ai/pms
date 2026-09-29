@@ -11,6 +11,17 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-29 · The folio lane: "Charge to room" on a room with two open bills (POS-26, D27-162)
+
+**Asked for:** the owner's bug of 28 September (a POS charge to a room not on the guest's bill) - root cause, fixed once, one test. Branch `folio/edit-29sep` (from cp6 ca02e37, round F's `fix/leftovers-28sep` merged in), copy `.claude\worktrees\nervous-spence-42dcae`, database `fidato_s31`, API 8871, web 5271.
+**Found:** read-only on the master's `fidato`: the owner's order was still open, nothing from the till had ever reached a bill, and the telemetry held one settle answering 409. Room 201 held two checked-in stays; the confirm closed on "yes" and the server's "which of the two?" came back as two small lines under the total. Reproduced on `fidato_s31`. Nothing in the posting code was wrong - it was never reached. Full text: DEFECTS POS-26 (POS-24 went to the KOT lane first; my commits say POS-24).
+**Shipped:** `roomAsk` (`components/AskDialog.tsx`), used by the Till and the Terminal: one button per open bill in the confirm itself, a company bill named "guest - bill to company"; the server's question or refusal read in the same box (`Reply`). `/till/rooms` and the settle's choices carry the company (`till.ts`). The two side panels are gone.
+**Proved:** `restaurantFixes.test.tsx`, two new cases, both seen to fail on the old screens; web pos 10 files, 75 passed. On screen: the owner's order 20260825-1 settled to Tanvi Bhide and shows on her Bill tab.
+**Left open:** a split stay's two GUEST bills (no company) would show one name twice; none exists today.
+**Commits:** bb24d07. API `till.test.ts` 84 passed, and 143 with `roleGate.test.ts` after merging cp6 2fac3e8.
+
+---
+
 ## 2026-09-29 · One KOT printer per outlet (D27-159, D27-161, D27-167) and the Till's Send to the kitchen (D27-166)
 
 **Asked for:** the owner's D27-159: one device per outlet prints every KOT through its browser (Chrome with `--kiosk-printing`), switched on in Settings by the kitchen manager and admins; no other device prints one; the POS shows the station's status; the station has Reprint; a one-time setup doc. The owner's details, D27-161 (all nine recommendations): the switch in a "KOT printer" panel on the Kitchen screen (the kitchen manager cannot open Administration → Settings); owner, administrator, GM and kitchen manager; a typed name; no fallback, retiring D17-18's slip on every send, POS-10's notice and the docket page; missed KOTs print when the station is back, oldest first, and a station switched on or moved prints from then; the status wording, online = seen within 90 s; the last 20 with Reprint; prints while a restaurant screen is open; 80 mm, the content as today. D27-167: catch up on the business date only. D27-166 (the speed check's W-1): the Terminal's Send to the kitchen on the Till. Branch `pos/kot-station-29sep` from cp6 `7980862`, round F and cp6 merged in; copy `.claude\worktrees\cranky-leakey-4eb5e9`, database `fidato_s33`, API 8875, web 5275.
