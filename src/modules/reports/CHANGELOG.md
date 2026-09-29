@@ -11,6 +11,31 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-29 · A night not charged yet at a property with no room GST rule: its tax unknown, not a 500 (D27-173) - the leads lane's
+
+**Asked for:** the master, after the leads lane found it: `NIGHTS`' booked
+nights priced their tax with `app.gst_rate`, which raises where a property has
+no room GST rule (a new one has none, D22-9, and it can take bookings). Every
+reader of `NIGHTS` - the Dashboard, the Manager report, Statistics, the Night
+audit report, the accounting day book, marketing's numbers - answered
+"Something went wrong" for such a property.
+**Shipped:** `figures.ts`: booked nights' tax through `app.gst_rate_or_null`;
+the rent unchanged. A day's room tax is null when any night that day has an
+unknown tax (not the others' sum); `DayFigures.roomTax` and `StayNight.tax` are
+`number | null`; `sumDays` carries the null. Dashes, never 0: the Manager report
+(room tax and everything it adds into: SGST, CGST, total tax, revenue with tax,
+transfer to the guest ledger), Statistics (tax), the Night audit report (the
+stay's tax and rent with tax, Room Sales' tax, the tax and sales totals).
+Posting a charge still refuses without a rule: night-audit and front-desk
+operations untouched.
+**Proved:** `api/test/modules/reports/nightsNoRoomRule.test.ts`: a new property,
+a future booking, no room rule: `dailyFigures` answers 2,500 a night with a null
+tax and `sumDays` a null; with a 12% rule, 300 a night. Run results: the leads
+lane's CHANGELOG.
+**Left open:** nothing here.
+
+---
+
 ## 2026-09-27 · Form III at the desk (D27-25) - the guests lane's
 
 The guests lane (`guests/form-iii-27sep`) changed this service's files for

@@ -12,6 +12,28 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-29/30 · Booked value (D27-173), the NIGHTS root fix, the day book refusal, an unreachable app
+
+**Asked for:** the owner's D27-173 (revenue per campaign is booked value: nights
+charged plus nights not charged yet at the booking's rate, before tax); the
+master's fix at the root for the missing room GST rule found on the way, and
+the day book's refusal (both under delegated claims on reports and accounting).
+**Shipped:** marketing back on `NIGHTS` (the `LIVE` detour reverted); `NIGHTS`'
+booked nights' tax through `gst_rate_or_null`, a dash where unknown in the
+Manager report, Statistics and the Night audit report; the day book refuses such
+a range (409); a leads app not reached, or silent for 15 s, or with no token,
+answers "could not be reached" and counts nothing.
+**Proved (API, one scratch database each, 156 migrations):** `modules/leads` 15/15,
+`roleGate` 59/59, `modules/reports` 32/32, `modules/accounting` 20/20. Guards
+seen to fail when broken and restored from git: `NIGHTS` back to `gst_rate`
+(nightsNoRoomRule 1 failed), the day book without its refusal (1 of 20 failed),
+the booking pre-fill without its erased-lead check (1 of 9 failed).
+**Found:** the first roleGate run failed because this copy's own `api/.env` still
+pointed at the stopped stand-in (the tests read it): the unreachable-app gap
+above. The stand-in lines are out of that file.
+
+---
+
 ## 2026-09-29 · Leads and WhatsApp, read live (D27-168, D27-170)
 
 **Asked for:** the master's D27-168 lane 3: a reader for the leads app with the

@@ -11,6 +11,23 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-29 · A range holding a night with no room GST rate is refused (D27-173) - the leads lane's
+
+**Asked for:** the master: a Tally export never carries a null or a guessed
+tax. Since the reports' `NIGHTS` gives a night not charged yet, at a property
+with no room GST rate, an unknown tax (the reports' entry the same day), the
+day book could meet a null.
+**Shipped:** `dayBook()` checks the figures first and throws `NoRoomRate` before
+building anything; the route answers 409 "A night in this range is not charged
+yet and rooms have no GST rate. Set it on Room types, or end the range before
+today." Only a range reaching the business date or later can meet it.
+**Proved:** `dayBook.test.ts`, the last case: a new property with no room rule
+and a future booking is refused with that sentence; a range ending the day
+before builds. Run results: the leads lane's CHANGELOG.
+**Left open:** nothing here.
+
+---
+
 ## 2026-09-24 · the day book as a real Excel file (D22-37), and ACC-11
 
 **Asked for:** the owner's D22-37 - "both the CSV and a real .xlsx", same
