@@ -79,6 +79,8 @@ Plus the n8n file and the owner's steps.
 - A CRS booking whose rooms the desk partly confirms and partly cancels is never
   answered (CRS-1).
 
+---
+
 ## 2026-09-16 · its Coming soon page
 
 **Asked for:** the owner, 16 September — "a HMS with all the requested services
