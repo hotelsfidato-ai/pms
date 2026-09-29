@@ -480,6 +480,12 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
       "the tax card, and one VAT line on the bill. Off means no menu section " +
       "can sell it and the till refuses it.",
   },
+  /* D27-179, 30 September: off at every property until turned on (L2). */
+  loyalty: {
+    label: "Loyalty",
+    note: "Members earn points on their stays here and use them on their room " +
+      "charges. Off means nobody joins, earns or uses points at this property.",
+  },
   channel_manager: {
     label: "Channel manager",
     note: "Rooms, rates and bookings shared with Booking.com, Agoda and the " +

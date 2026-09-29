@@ -6,6 +6,7 @@ import { folioFor } from "../../folio.ts";
 import {
   formIIIRefusal, identityProblem, isForeign, saveIdentity, saveVisit, type Identity, type Visit,
 } from "../guests/index.ts";
+import { earnAtCheckOut } from "../loyalty/index.ts";
 import {
   countProblem, dateProblem, emailProblem, MAX_NIGHTS, phoneProblem,
 } from "../../validate.ts";
@@ -796,6 +797,8 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
       "update folios set status = 'closed', closed_at = now() where hotel_id = $1 and reservation_id = $2",
       [hotelId, stayId],
     );
+    /* A member's points for the stay (loyalty, D27-179). */
+    await earnAtCheckOut(client, stayId);
 
     if (room[0]) {
       /* Releasing the assignment IS the room being vacated, and 070 puts

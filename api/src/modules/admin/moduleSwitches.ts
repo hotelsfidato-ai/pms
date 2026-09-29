@@ -32,6 +32,8 @@ export const SWITCHABLE = [
   /* D27-163, 29 September: New booking's fold-open sections, per property,
      ON until turned off (159). */
   "booking_company", "booking_gst", "booking_extras", "booking_notes",
+  /* D27-179, 30 September: loyalty, per property, off until turned on (L2). */
+  "loyalty",
 ] as const;
 
 

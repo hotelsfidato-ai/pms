@@ -4,9 +4,16 @@ Returning guests recognised, rewarded and offered a member rate.
 
 > **30 September — D27-178: build it.** The programme's rules are the
 > owner's. The questions below went to the owner through the master on
-> 30 September; nothing that depends on an answer is built until it comes
-> back (MEMORY 353). Each answer, when it comes, is written beside its
-> question.
+> 30 September.
+>
+> **THE OWNER'S ANSWERS, 30 September (D27-179):** everything as
+> recommended, except
+> - **L8:** the earn rate (points per ₹100) is **system configuration**, a
+>   setting with **no default**: unset, nothing earns and the card says so.
+>   1 point = ₹1 is the unit, not a setting.
+> - **L12: no tiers** at the start.
+> - **CA-L1 to CA-L6** went to the CA list. Until the CA answers, points
+>   reduce the taxable value as a discount does (CA-L1's recommendation).
 
 ## The programme's rules — questions for the owner (30 September)
 

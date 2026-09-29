@@ -35,6 +35,7 @@ import * as reputation from "./modules/reputation/index.ts";
 import * as marketing from "./modules/marketing/index.ts";
 import * as leads from "./modules/leads/index.ts";
 import * as crs from "./modules/crs/index.ts";
+import * as loyalty from "./modules/loyalty/index.ts";
 import { live } from "./routes/live.ts";
 import {
   startListening, stopListening, watcherCount, isListening,
@@ -298,6 +299,8 @@ const SERVICES = [
   leads,
   /* The CRS bridge (D27-168): read-only, its own routes and its reader. */
   crs,
+  /* Loyalty (D27-178, D27-179). */
+  loyalty,
 ];
 /* Every router, with the prefix it hangs from. Exported so that
    api/test/apiGate.test.ts can hold /api/channel - the one prefix that
