@@ -7,9 +7,13 @@ import type { ServiceNavEntry } from "@/components/app/navigation";
    what changed in the CRS from here.
 
    NO NEW SECTION AND NO NEW RESOURCE: `reservation` is who sees bookings
-   today, and the server asks the same question (roleGate.ts). */
+   today, and the server asks the same question (roleGate.ts).
+
+   In reception's WORKING menu (the owner, D27-174): the desk acts on what
+   changed in the CRS. The connection card on the screen stays the owner's
+   and an administrator's. */
 export const nav: ServiceNavEntry[] = [
-  { section: "bookings", order: 40,
+  { section: "bookings", order: 40, workingMenus: ["front_desk"],
     label: "CRS bookings", to: "/h/:code/crs-bookings", icon: Network, resource: "reservation",
     keywords: ["crs", "central reservations", "partner hotels", "sales team", "fidato crs"] },
 ];

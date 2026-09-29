@@ -102,7 +102,11 @@ describe("each person's menu", () => {
       /* Online check-in's desk screen, 21 September (the owner's D21-89):
          reception confirms a guest's details against the ID here. */
       "Online check-in",
-      "All bookings", "New booking",
+      "All bookings",
+      /* 29 September (the owner's D27-174): what the CRS sold, and the
+         notes the desk acts on when it changes there. */
+      "CRS bookings",
+      "New booking",
       /* Guests & CRM, from 21 September (the owner): the same screen, its
          own section. */
       "Guests",

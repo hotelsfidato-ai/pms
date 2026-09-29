@@ -50,10 +50,12 @@ So every five minutes the reader signs in to the CRS with its own read-only
   - its CRS room type is not matched.
 - **A later change in the CRS**, a CRS cancellation included, is a **note** for the
   desk with Done. Nothing is applied.
-- **The answer.** The desk's Confirm (or a Cancel or Void of the waiting booking) is
-  written into the CRS's booking register once:
+- **The answer.** Once every room of the waiting booking has one, it is written into
+  the CRS's booking register once:
   - Confirmed, with the PMS reference as the hotel's confirmation number;
-  - or Cancelled, with the reason added to the row's notes.
+  - Cancelled, with the reason added to the row's notes;
+  - or, when the rooms were answered differently, "Partly confirmed: N of M rooms"
+    (D27-174, CRS-1).
 
   It goes through `deploy/n8n/crs-pms-answer.json` with its own address and secret.
   Until those are set, answers wait.
@@ -72,7 +74,7 @@ CRS_ANSWER_N8N_URL  CRS_ANSWER_N8N_SECRET
 
 | Menu | Address | Who |
 |---|---|---|
-| Bookings → CRS bookings | `/h/:code/crs-bookings` | whoever sees bookings (`reservation`) |
+| Bookings → CRS bookings | `/h/:code/crs-bookings` | whoever sees bookings (`reservation`); in reception's working menu (D27-174) |
 
 The **Connection to the CRS** card on the same screen is for the owner and admins only.
 It holds the property's CRS id, the source, the room types and the switch; the server
