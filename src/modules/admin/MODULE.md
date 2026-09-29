@@ -32,7 +32,7 @@ including the GST it actually charges, and — for the owner and an
 administrator only (D17-36) — the module switches: Point of sale, Banquet
 hall, and "Reception can use the POS"; and, on a card of their own, New
 booking's four fold-open sections (Company, GST, Extras, Notes; D27-163,
-migration 161: on until turned off, and nothing is refused when one is off). The Audit log, Roles and permissions and Integrations are read
+migration 159: on until turned off, and nothing is refused when one is off). The Audit log, Roles and permissions and Integrations are read
 only. A developers' Console, in development builds only, can create
 properties and people.
 
