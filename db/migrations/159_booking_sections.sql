@@ -1,5 +1,5 @@
 -- =============================================================================
--- 161 · New booking's fold-open sections, switched per hotel (D27-158, D27-163)
+-- 159 · New booking's fold-open sections, switched per hotel (D27-158, D27-163)
 -- =============================================================================
 -- The owner, 29 September: one page for booking, assigning and check-in, with
 -- Company, GST, Extras and Notes in fold-open sections, "each switchable on or
@@ -46,4 +46,4 @@ $$;
 
 comment on function app.module_enabled(uuid, text) is
   'True when the property has this module. Absent rows mean ON for pos and for '
-  'New booking''s four sections (161), OFF for everything else.';
+  'New booking''s four sections (159), OFF for everything else.';

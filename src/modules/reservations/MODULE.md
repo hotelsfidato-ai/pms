@@ -316,7 +316,7 @@ New booking is ONE page (`pages/BookingPage.tsx`, which replaced
 type, meal plan, party, rate, an optional room), the ID and an advance;
 "More about the guest" and "Booking details" fold open, and so do Company,
 GST, Extras and Notes, each drawn only where Settings has it on (admin's
-"New booking" card, migration 161: on until a hotel turns it off). Three
+"New booking" card, migration 159: on until a hotel turns it off). Three
 buttons at the bottom, each greyed with its reason under it:
 
 ```
