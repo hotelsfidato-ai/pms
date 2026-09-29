@@ -253,6 +253,28 @@ $$;
 
 
 -- -----------------------------------------------------------------------------
+-- 6b · A booking site's or an agent's booking (L10, L14)
+-- -----------------------------------------------------------------------------
+-- The channel, then - for the bookings made before there was one, which is
+-- nearly all of them - the free text `reservations.source` kept: a channel's
+-- own name ("Agoda", "go-MMT") or the bare word "ota" (LOY-2). No source at
+-- all is direct. Coalesced to false, never NULL (LOY-1).
+create or replace function app.loyalty_not_direct(p_reservation uuid)
+returns boolean
+language sql
+stable
+set search_path = public, pg_temp
+as $$
+  select coalesce((
+    select coalesce(bs.kind, ls.kind, r.source) in ('ota', 'travel_agent')
+      from reservations r
+      left join booking_sources bs on bs.id = r.booking_source_id
+      left join booking_sources ls on lower(trim(ls.name)) = lower(trim(r.source))
+     where r.id = p_reservation), false)
+$$;
+
+
+-- -----------------------------------------------------------------------------
 -- 7 · Earning at check-out (L7, L9, L10, L11)
 -- -----------------------------------------------------------------------------
 -- Called by the check-out, after the stay is checked out, in its transaction.
@@ -268,9 +290,8 @@ set search_path = public, pg_temp
 as $$
 declare r record; m uuid; rate numeric; net numeric; pts int;
 begin
-  select res.id, res.hotel_id, res.guest_id, bs.kind as source_kind into r
+  select res.id, res.hotel_id, res.guest_id, app.loyalty_not_direct(res.id) as not_direct into r
     from reservations res
-    left join booking_sources bs on bs.id = res.booking_source_id
    where res.id = p_reservation and res.status = 'checked_out'
      and res.hotel_id in (select app.auth_hotel_ids());
   if r.id is null or not app.module_enabled(r.hotel_id, 'loyalty') then return 0; end if;
@@ -284,9 +305,7 @@ begin
    where f.reservation_id = r.id
      and fp.category not in ('payment', 'refund', 'tax')
      and fp.tax_scheme = 'gst'
-     -- coalesce: a booking with no source is direct, and `null in (...)`
-     -- would drop every room line of it (LOY-1).
-     and not (fp.category = 'room' and coalesce(r.source_kind in ('ota', 'travel_agent'), false))
+     and not (fp.category = 'room' and r.not_direct)
      and fp.reverses_id is null
      and not exists (select 1 from folio_postings rev where rev.reverses_id = fp.id);
 
@@ -323,9 +342,8 @@ as $$
 declare r record; m uuid; bal int; room_left numeric; want int; take int; g record;
         name text; day date; pid bigint;
 begin
-  select res.id, res.hotel_id, res.guest_id, res.status, bs.kind as source_kind into r
+  select res.id, res.hotel_id, res.guest_id, res.status, app.loyalty_not_direct(res.id) as not_direct into r
     from reservations res
-    left join booking_sources bs on bs.id = res.booking_source_id
    where res.id = p_reservation and res.hotel_id in (select app.auth_hotel_ids());
   if r.id is null then return 'No such stay here.'; end if;
   perform pg_advisory_xact_lock(hashtext('loyalty:' || app.guest_standing(r.guest_id)));
@@ -339,7 +357,7 @@ begin
   if not app.module_enabled(r.hotel_id, 'loyalty') then
     return 'Loyalty is off at this hotel. The owner or an administrator turns it on in Settings.';
   end if;
-  if r.source_kind in ('ota', 'travel_agent') then
+  if r.not_direct then
     return 'Points are used on direct bookings only, not on a booking from a booking site or an agent.';
   end if;
   m := app.loyalty_member(r.guest_id);
@@ -494,7 +512,7 @@ declare f text;
 begin
   foreach f in array array[
     'app.loyalty_card(uuid)', 'app.loyalty_by_hotel(date)',
-    'app.loyalty_member(uuid)', 'app.loyalty_balance(uuid)', 'app.loyalty_consent_words()',
+    'app.loyalty_not_direct(uuid)', 'app.loyalty_member(uuid)', 'app.loyalty_balance(uuid)', 'app.loyalty_consent_words()',
     'app.loyalty_join(uuid, uuid)', 'app.loyalty_leave(uuid, uuid)', 'app.loyalty_earn(uuid)',
     'app.loyalty_redeem(uuid, integer, uuid)', 'app.loyalty_adjust(uuid, uuid, integer, text)']
   loop

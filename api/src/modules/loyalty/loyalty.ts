@@ -71,10 +71,9 @@ loyalty.get("/:code/loyalty", async (c) => {
               app.phone_key(g.phone) is not null as has_phone,
               app.loyalty_member(g.id) is not null as member,
               case when app.loyalty_member(g.id) is not null then app.loyalty_balance(g.id) end as points,
-              coalesce(bs.kind not in ('ota', 'travel_agent'), true) as direct
+              not app.loyalty_not_direct(r.id) as direct
          from reservations r
          join guests g on g.id = r.guest_id
-         left join booking_sources bs on bs.id = r.booking_source_id
          left join room_assignments ra on ra.reservation_id = r.id and ra.released_at is null
          left join rooms rm on rm.id = ra.room_id
         where r.hotel_id = $1 and r.status = 'checked_in'

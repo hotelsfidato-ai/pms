@@ -163,6 +163,24 @@ begin
   reset role;
   perform test.ok('loyalty', 'a booking site''s stay earns on its extras, not the room (L10)', n = 20, n::text);
 
+  -- Nearly every booking made before there were channels says where it came
+  -- from only in the free text (LOY-2): "Agoda" is a booking site too.
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status, source)
+  values (h, app.next_reference(h), g, rt, bd, bd + 1, 3000, 'checked_in', 'Agoda') returning id into ota_res;
+  insert into folios (hotel_id, reservation_id, status) values (h, ota_res, 'open') returning id into ota_fol;
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+  values (h, ota_fol, bd, 'room', 'Room night', 3000, 5, 150),
+         (h, ota_fol, bd, 'food', 'Lunch',       600, 5,  30);
+  set local role pms_app;
+  v := app.loyalty_redeem(ota_res, 500);
+  reset role;
+  update reservations set status = 'checked_out' where id = ota_res;
+  set local role pms_app;
+  n := app.loyalty_earn(ota_res);
+  reset role;
+  perform test.ok('loyalty', 'a booking site named only in the old text is not direct either (LOY-2)',
+    v like 'Points are used on direct bookings only%' and n = 30, coalesce(v, 'used') || ' / earned ' || n);
+
   -- ---------- one person, one balance (L3) --------------------------------------
   update guests set joined_into = g where id = twin;
   perform test.ok('loyalty', 'a record joined into a member''s shares their balance',
