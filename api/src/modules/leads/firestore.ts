@@ -40,8 +40,12 @@ export const WAIT_MS = 15_000;
     kept, and telemetry records an error by its name (errorKind). Status 0:
     not reached at all - no network, no answer in WAIT_MS, or no token. */
 export class LeadsAppError extends Error {
-  constructor(readonly status: number) {
+  /* Longhand, not `constructor(readonly status …)`: the server strips types
+     and emits nothing, so a parameter property cannot run (strip-check). */
+  readonly status: number;
+  constructor(status: number) {
     super(status ? `The leads app answered ${status}.` : "The leads app could not be reached.");
+    this.status = status;
     this.name = `LeadsApp${status}`;
   }
 }
