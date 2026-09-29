@@ -392,6 +392,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PUT ${H}/pricing/basis`]: PRICE,
   [`PUT ${H}/pricing/base`]: PRICE,
   [`PUT ${H}/pricing/offset`]: PRICE,
+  [`PUT ${H}/pricing/addon`]: PRICE,
   [`POST ${H}/room-types`]: SETUP_ADD,
   [`PATCH ${H}/room-types/:id`]: SETUP_CHANGE,
   [`POST ${H}/rooms`]: SETUP_ADD,

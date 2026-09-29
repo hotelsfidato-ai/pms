@@ -17,9 +17,13 @@ import { priceProblem } from "../../validate.ts";
    the arithmetic lives in the database, where the channel manager and
    any later caller will meet the same rules.
 
-     · deciding a price        app.price_for  (typed → derived → rack → null)
+     · deciding a price        app.price_parts (typed → base + add-ons → rack → null)
      · splitting date ranges   app.set_rate, app.set_offset
-     · the base covers one     a trigger on `rates`, not a caller's care
+     · the base covers one     app.set_base_price, the only writer of a base
+
+   30 September (D27-188, D27-194, migration 181): a base per room type, or
+   one base room type the others are derived from (+₹ or +%); add-ons set
+   once per hotel - meals, double occupancy, extra adult and extra child.
 
    NULL IS NOT ZERO, anywhere below. An unpriced thing travels as null
    and the screen renders a dash. Nothing here invents a rupee.
@@ -87,9 +91,10 @@ pricing.get("/:code/pricing", async (c) => {
 
     const { rows: typeRows } = await client.query<{
       id: string; code: string; name: string; category: string | null;
-      base_occupancy: number; max_occupancy: number;
+      base_occupancy: number; max_occupancy: number; rack: string | null;
     }>(
-      `select id::text, code, name, category, base_occupancy, max_occupancy
+      `select id::text, code, name, category, base_occupancy, max_occupancy,
+              base_rate::text as rack
          from room_types
         where hotel_id = $1 and is_active
         order by sort_order, name`,
@@ -112,9 +117,10 @@ pricing.get("/:code/pricing", async (c) => {
       id: string; kind: string; room_type_id: string | null;
       meal_plan: string | null; amount: string;
       valid_from: string; valid_to: string | null; label: string | null;
+      unit: "rupees" | "percent";
     }>(
       `select id::text, kind, room_type_id::text, meal_plan, amount::text,
-              valid_from::text, valid_to::text, label
+              valid_from::text, valid_to::text, label, unit
          from rate_offsets
         where hotel_id = $1
           and valid_from < ($2::date + $3::int)
@@ -122,6 +128,36 @@ pricing.get("/:code/pricing", async (c) => {
         order by kind, valid_from`,
       [hotelId, from, days],
     );
+
+    /* PRICES TYPED BEFORE 181 (D27-194): kept exactly, listed so a person can
+       see them and remove them. Everything in `rates` that is not a base -
+       one guest, on the base plan - is one. */
+    const { rows: olderRows } = await client.query<{
+      id: string; room_type_id: string; meal_plan: string; price: string;
+      valid_from: string; valid_to: string | null; label: string | null; covers: number;
+    }>(
+      `select r.id::text, r.room_type_id::text, r.meal_plan, r.price::text,
+              r.valid_from::text, r.valid_to::text, r.label,
+              coalesce(r.covers_persons, rt.base_occupancy) as covers
+         from rates r
+         join room_types rt on rt.id = r.room_type_id
+        where r.hotel_id = $1
+          and r.valid_from < ($2::date + $3::int)
+          and (r.valid_to is null or r.valid_to > $2::date)
+          and not (r.covers_persons = 1 and r.meal_plan = coalesce(
+                (select meal_plan from pricing_basis where hotel_id = $1), 'EP'))
+        order by rt.sort_order, r.meal_plan, r.valid_from`,
+      [hotelId, from, days],
+    );
+
+    /* The add-on or difference on the first day shown. Written once (181),
+       so it is the same on every date; an older dated one reads as its first. */
+    const onFrom = (o: (typeof offsetRows)[number]) =>
+      o.valid_from <= from && (o.valid_to === null || o.valid_to > from);
+    const addon = (kind: string, plan: string | null = null) => {
+      const o = offsetRows.find((r) => r.kind === kind && r.meal_plan === plan && onFrom(r));
+      return o ? Number(o.amount) : null;
+    };
 
     /* The base figure per date, and every type × plan under it. Read
        through app.price_for so the screen shows exactly what a booking
@@ -161,17 +197,37 @@ pricing.get("/:code/pricing", async (c) => {
             setAt: basisRows[0].set_at,
           }
         : null,
-      roomTypes: typeRows.map((t) => ({
-        id: t.id, code: t.code, name: t.name, category: t.category,
-        baseOccupancy: t.base_occupancy, maxOccupancy: t.max_occupancy,
-      })),
+      roomTypes: typeRows.map((t) => {
+        const d = offsetRows.find((o) => o.kind === "room_type" && o.room_type_id === t.id && onFrom(o));
+        return {
+          id: t.id, code: t.code, name: t.name, category: t.category,
+          baseOccupancy: t.base_occupancy, maxOccupancy: t.max_occupancy,
+          /* The old rack rate: priced only where no base covers the date. */
+          rack: num(t.rack),
+          /* Its difference from the base room type, null never set (a dash). */
+          difference: d ? { amount: Number(d.amount), unit: d.unit } : null,
+        };
+      }),
       mealPlans: planRows.map((p) => ({ code: p.code, name: p.name })),
+      /* Set once per hotel (D27-188); null is a dash and not sold. */
+      addons: {
+        CP: addon("meal_plan", "CP"), MAP: addon("meal_plan", "MAP"),
+        AP: addon("meal_plan", "AP"), AI: addon("meal_plan", "AI"),
+        double: addon("double"), extraAdult: addon("extra_adult"),
+        extraChild: addon("extra_child"),
+      },
+      older: olderRows.map((r) => ({
+        id: r.id, roomTypeId: r.room_type_id, mealPlan: r.meal_plan,
+        price: Number(r.price), from: r.valid_from, to: r.valid_to,
+        label: r.label, covers: r.covers,
+      })),
       offsets: offsetRows.map((o) => ({
         id: o.id,
-        kind: o.kind as "room_type" | "meal_plan",
+        kind: o.kind as "room_type" | "meal_plan" | "double" | "extra_adult" | "extra_child",
         roomTypeId: o.room_type_id,
         mealPlan: o.meal_plan,
         amount: Number(o.amount),
+        unit: o.unit,
         from: o.valid_from,
         to: o.valid_to,
         label: o.label,
@@ -199,16 +255,26 @@ pricing.get("/:code/pricing", async (c) => {
 /* ── Writing: which room is the base ──────────────────────────────── */
 
 pricing.put("/:code/pricing/basis", async (c) => {
-  type Body = { roomTypeId?: string; mealPlan?: string };
+  type Body = { roomTypeId?: string | null; mealPlan?: string };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
-  if (!input.roomTypeId) return c.json(refuse("Which room type is the base?"), 409);
-  if (!input.mealPlan) return c.json(refuse("Which meal plan is the base?"), 409);
+  /* null (D27-188): no base room type - each type is priced from its own
+     base. Absent is a caller that forgot, and is refused as before. */
+  if (input.roomTypeId === undefined || input.roomTypeId === "") {
+    return c.json(refuse("Which room type is the base?"), 409);
+  }
+  /* The base is one guest, room only (16 Sep, D27-188). */
+  const mealPlan = input.mealPlan ?? "EP";
 
   try {
     const result = await withSession(c.get("subject"), async (client, session) => {
       const hotelId = await hotelFor(client, c.req.param("code"));
       if (!hotelId) return null;
+
+      if (input.roomTypeId === null) {
+        await client.query("delete from pricing_basis where hotel_id = $1", [hotelId]);
+        return { ok: true as const, roomType: null, mealPlan: null };
+      }
 
       /* The room type has to belong to THIS property: the id comes from the
          caller, and RLS does not save us because the insert names hotel_id
@@ -227,10 +293,10 @@ pricing.put("/:code/pricing/basis", async (c) => {
                 meal_plan    = excluded.meal_plan,
                 set_by       = excluded.set_by,
                 set_at       = now()`,
-        [hotelId, input.roomTypeId, input.mealPlan, session.staffId],
+        [hotelId, input.roomTypeId, mealPlan, session.staffId],
       );
 
-      return { ok: true as const, roomType: owned[0].name, mealPlan: input.mealPlan };
+      return { ok: true as const, roomType: owned[0].name, mealPlan };
     });
 
     if (!result) return c.json({ error: "No such property." }, 404);
@@ -244,11 +310,14 @@ pricing.put("/:code/pricing/basis", async (c) => {
 
 /* ── Writing: the base figure ─────────────────────────────────────── */
 
-/* No room type in the body. The base is whatever `pricing_basis` says, and a
-   call that could name a different one could reprice the wrong room by a
-   typo — app.set_basis_price refuses to take one for the same reason. */
+/* Without a room type, the base room type's base (app.set_basis_price, which
+   takes the type from `pricing_basis`). With one (D27-188), that type's own
+   base - how a hotel with no base room type prices each type. */
 pricing.put("/:code/pricing/base", async (c) => {
-  type Body = { from?: string; to?: string | null; price?: number | null; label?: string; free?: boolean };
+  type Body = {
+    roomTypeId?: string; from?: string; to?: string | null;
+    price?: number | null; label?: string; free?: boolean;
+  };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   if (!input.from) return c.json(refuse("From which date?"), 409);
@@ -277,11 +346,24 @@ pricing.put("/:code/pricing/base", async (c) => {
       const hotelId = await hotelFor(client, c.req.param("code"));
       if (!hotelId) return null;
 
-      await client.query(
-        `select app.set_basis_price($1, $2::date, $3::date, $4, $5, $6)`,
-        [hotelId, input.from, input.to ?? null, price,
-         input.label ?? null, session.staffId],
-      );
+      if (input.roomTypeId) {
+        const { rows: owned } = await client.query<{ name: string }>(
+          `select name from room_types where id = $1 and hotel_id = $2`,
+          [input.roomTypeId, hotelId],
+        );
+        if (!owned[0]) return refuse("No such room type here.");
+        await client.query(
+          `select app.set_base_price($1, $2, $3::date, $4::date, $5, $6, $7)`,
+          [hotelId, input.roomTypeId, input.from, input.to ?? null, price,
+           input.label ?? null, session.staffId],
+        );
+      } else {
+        await client.query(
+          `select app.set_basis_price($1, $2::date, $3::date, $4, $5, $6)`,
+          [hotelId, input.from, input.to ?? null, price,
+           input.label ?? null, session.staffId],
+        );
+      }
 
       return { ok: true as const, cleared: clearing };
     });
@@ -391,6 +473,89 @@ pricing.put("/:code/pricing/offset", async (c) => {
     if (/ends after it starts|room type or a meal plan/.test(message)) {
       return c.json(refuse(message), 409);
     }
+    throw error;
+  }
+});
+
+/* ── Writing: an add-on, or a room type's difference (D27-188) ────────
+   Set ONCE per hotel: one figure for every date, replacing whatever was on
+   file for it (app.set_addon). null clears it - a dash, and nothing that
+   needs it is sold. 0 only with Free ticked (D27-120). A room type's
+   difference from the base type may be rupees or a percentage, rounded to
+   the whole rupee (D27-194); the base type has none. */
+const ADDON_KINDS = ["room_type", "meal_plan", "double", "extra_adult", "extra_child"] as const;
+const MEAL_ADDONS = ["CP", "MAP", "AP", "AI"];
+
+pricing.put("/:code/pricing/addon", async (c) => {
+  type Body = {
+    kind?: (typeof ADDON_KINDS)[number]; roomTypeId?: string; mealPlan?: string;
+    amount?: number | null; unit?: "rupees" | "percent"; free?: boolean;
+  };
+  const input = await c.req.json<Body>().catch(() => ({}) as Body);
+
+  if (!input.kind || !ADDON_KINDS.includes(input.kind)) {
+    return c.json(refuse("Which add-on: a meal plan, double occupancy, an extra adult or child, or a room type's difference?"), 409);
+  }
+  if (input.kind === "meal_plan" && !MEAL_ADDONS.includes(input.mealPlan ?? "")) {
+    return c.json(refuse("Which meal plan: CP, MAP, AP or AI? EP is the base itself."), 409);
+  }
+  if (input.kind === "room_type" && !input.roomTypeId) {
+    return c.json(refuse("Which room type?"), 409);
+  }
+  if (input.amount === undefined) {
+    return c.json(refuse("How much, or empty to clear it?"), 409);
+  }
+  const amount = input.amount === null ? null : Number(input.amount);
+  const percent = input.kind === "room_type" && input.unit === "percent";
+  if (input.unit === "percent" && input.kind !== "room_type") {
+    return c.json(refuse("Only a room type's difference can be a percentage."), 409);
+  }
+  if (amount !== null) {
+    if (!Number.isFinite(amount)) return c.json(refuse("That is not an amount."), 409);
+    if (input.kind === "room_type") {
+      /* A difference may be below the base (090), but never the whole of it. */
+      if (percent && amount <= -100) {
+        return c.json(refuse("A room type cannot cost 100% less than the base."), 409);
+      }
+    } else {
+      const problem = priceProblem(amount, input.free === true);
+      if (problem) return c.json(refuse(problem), 409);
+    }
+  }
+
+  try {
+    const result = await withSession(c.get("subject"), async (client, session) => {
+      const hotelId = await hotelFor(client, c.req.param("code"));
+      if (!hotelId) return null;
+
+      if (input.kind === "room_type") {
+        const { rows: owned } = await client.query<{ name: string; base: boolean }>(
+          `select name, exists (select 1 from pricing_basis b
+                                 where b.hotel_id = $2 and b.room_type_id = $1) as base
+             from room_types where id = $1 and hotel_id = $2`,
+          [input.roomTypeId, hotelId],
+        );
+        if (!owned[0]) return refuse("No such room type here.");
+        if (owned[0].base) {
+          return refuse(`${owned[0].name} is the base room type, so it has no difference from itself.`);
+        }
+      }
+
+      await client.query(
+        `select app.set_addon($1, $2, $3, $4, $5, $6, $7)`,
+        [hotelId, input.kind,
+         input.kind === "room_type" ? input.roomTypeId : null,
+         input.kind === "meal_plan" ? input.mealPlan : null,
+         amount, percent ? "percent" : "rupees", session.staffId],
+      );
+      return { ok: true as const, cleared: amount === null };
+    });
+
+    if (!result) return c.json({ error: "No such property." }, 404);
+    return c.json(result, "ok" in result && result.ok ? 200 : 409);
+  } catch (error) {
+    const reason = reasonFor(error);
+    if (reason) return c.json(refuse(reason), 409);
     throw error;
   }
 });

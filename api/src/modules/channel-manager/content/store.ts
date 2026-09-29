@@ -112,7 +112,10 @@ export async function loadContent(client: Client, hotelId: string): Promise<Hote
     is_connected: boolean | null; on_su: "active" | "deactivated" | null;
     sent_at: string | null; sent_as: string | null; sent_result: string | null; sent_ok: boolean | null;
   }>(
-    `select rt.id::text, rt.code, rt.name, rt.max_occupancy, rt.base_rate::text,
+    `select rt.id::text, rt.code, rt.name, rt.max_occupancy,
+            /* the normal price: the room type's own today (EP, one guest where it
+               has a base, D27-188), not only the old rack rate */
+            (select p.price from app.price_for(rt.id, 'EP', app.business_date($1)) p)::text as base_rate,
             (select count(*) from rooms r
               where r.room_type_id = rt.id and r.is_active)::text as rooms,
             m.su_room_id, m.su_room_type, m.max_children, m.is_connected, m.on_su,
