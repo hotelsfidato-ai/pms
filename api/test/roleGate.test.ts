@@ -699,6 +699,17 @@ describe("the reads, as every role (RO-1, D27-140 to D27-147)", () => {
     expect((await send(as("front_desk"), "GET", "/marketing/numbers?month=2026-09")).status).toBe(403);
   });
 
+  it("loyalty: the desk joins and takes points off a bill, whoever sees guests opens the screen (D27-179)", async () => {
+    expect(whoMay(WRITE_RULES[`POST ${H}/loyalty/guests/:id/join`]!))
+      .toEqual(["owner", "admin", "gm", "hotel_manager", "front_desk"]);
+    expect(whoMay(WRITE_RULES[`POST ${H}/loyalty/stays/:id/redeem`]!))
+      .toEqual(["owner", "admin", "gm", "hotel_manager", "front_desk", "finance"]);
+    const join = await send(as("housekeeping"), "POST", "/loyalty/guests/00000000-0000-0000-0000-000000000000/join", { agreed: true });
+    expect(join.status).toBe(403);
+    expect((await send(as("housekeeping"), "GET", "/loyalty")).status).toBe(403);
+    expect((await send(as("front_desk"), "GET", "/loyalty")).status).toBe(200);
+  });
+
   it("the accountant opens the Accounting export (D27-122), and still not Form III", async () => {
     const book = await send(as("finance"), "GET", "/accounting/day-book?from=2026-08-01&to=2026-08-31");
     expect(book.status, await book.clone().text()).toBe(200);
