@@ -24,6 +24,22 @@ describe("the dashboard at /", () => {
     expect(await screen.findByText("Room revenue")).toBeDefined();
   });
 
+  it("draws its loading figures without a <div> inside a <p> (30 September)", async () => {
+    /* The tile figure's <p> held the Skeleton, a <div>: React logged it on
+       every load of the Dashboard. */
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      render(<App />);
+      expect(await screen.findByText("Occupancy")).toBeDefined();
+      /* React logs it as a format string: "%s cannot be a descendant of <%s>". */
+      const said = logged.mock.calls.map(([f, ...args]) =>
+        args.reduce<string>((s, a) => s.replace("%s", String(a)), String(f)));
+      expect(said.join("\n")).not.toMatch(/cannot be a descendant of <p>/);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
   it("opens the list behind each count in the house", async () => {
     /* A count a clerk cannot follow is a number to read and nothing to
        do — each tile in "The house now" is the door to its list. */
