@@ -63,11 +63,21 @@ section, dashes for GST and both totals where no rate is set. The function
 was dry-run in a rolled-back transaction on fidato_s35. `checkinLink.test.ts`
 carries "the voucher's email carries the voucher PDF" for the API suite.
 
+**Seen end to end, 29 September, 20:54** (the master re-ran 162 on
+fidato_s35; a stand-in receiver on this machine, made-up secret): a booking
+made in New booking in the browser (Deluxe, 2 nights, quoted ₹3,699.00 a
+night + ₹184.95 tax, due ₹7,767.90), then **Send voucher** on its Booked card
+- "Voucher sent 29 Sep 2026, 20:54 by Test Reception". The receiver got ONE
+call, to the CRS workflow (email, so no inbox mark), carrying
+`Voucher-FH-5EL-2608-5032.pdf`; the PDF read back: INR 3,699.00 x 2 = INR
+7,398.00, GST 5% INR 369.90, total INR 7,767.90 - New booking's own figures
+to the paisa - and "Confirmed by Test Reception, 29/09/2026 20:53". Guest
+messages records it: Booking confirmation, email, the PDF's name and size,
+sent. **Found (MSG-6):** the room line printed the code "EP" where New
+booking says "Room only" - fixed with the desk's words (`planWords`), tested.
+
 **Left open**:
-- **The API suite has not run on the final tree** - held by the master
-  (round F first). 162 gained `app.guest_voucher` after the master ran it on
-  fidato_s35: it needs running again there before Send voucher's PDF can be
-  seen end to end. `checkinLink.test.ts`, the new `sending.test.ts` cases and
+- **The API suite has not run on the final tree** - held by the master. `checkinLink.test.ts`, the new `sending.test.ts` cases and
   every test that switches sending on (now the five names) wait for it.
 - Placing `SendCheckInLink` on New booking's Booked card and the booking
   panel: other lanes' files, for the master to route.

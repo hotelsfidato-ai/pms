@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  money, voucherFigures, voucherPdf, voucherPolicies, type VoucherFacts, type VoucherRoom,
+  money, planWords, voucherFigures, voucherPdf, voucherPolicies, type VoucherFacts, type VoucherRoom,
 } from "../../../src/modules/guest-messaging/voucherDocument.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -59,6 +59,17 @@ describe("the voucher's figures (V1)", () => {
   it("prints no room charges where a rate was never set", () => {
     const f = voucherFigures([room({ rate: null })]);
     expect([f.roomCharges, f.gst, f.total]).toEqual([null, null, null]);
+  });
+});
+
+/* Found reading the first voucher sent from New booking, 29 September: the
+   room line printed "EP" where the desk had said "Room only". */
+describe("the meal plan, in the desk's words", () => {
+  it("prints what New booking offered, not the code", () => {
+    expect(["EP", "CP", "MAP", "AP", "AI", "RO"].map(planWords)).toEqual([
+      "Room only", "With breakfast", "Breakfast and one meal", "All meals", "All inclusive", "Room only",
+    ]);
+    expect(planWords(null)).toBe("-");
   });
 });
 

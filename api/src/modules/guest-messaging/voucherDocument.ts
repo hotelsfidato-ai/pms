@@ -126,6 +126,17 @@ function retained(basis: string | null, percent: number | null, amount: number |
   }
 }
 
+/* The desk's words for a meal plan: New booking's PLANS
+   (src/modules/reservations/pages/NewBooking.tsx) - the API never imports
+   web code, so they are written here too; change both. RO is the walk-in's
+   "Room Only" (front-desk stays.ts). */
+const PLAN_WORDS: Record<string, string> = {
+  EP: "Room only", RO: "Room only", CP: "With breakfast", MAP: "Breakfast and one meal",
+  AP: "All meals", AI: "All inclusive",
+};
+export const planWords = (code: string | null): string =>
+  code === null ? "-" : PLAN_WORDS[code] ?? code;
+
 /** The policies the voucher prints (V4): the booking's own terms, then the
     hotel's times. Nothing else - no policy is written here for a hotel. */
 export function voucherPolicies(f: VoucherFacts): string[] {
@@ -289,7 +300,7 @@ export function voucherPdf(f: VoucherFacts): Promise<Uint8Array> {
     text(l.complimentary ? "Complimentary" : money(l.amount), RIGHT, y, { size: 8.6, bold: true, align: "right", width: 30 });
     y += 3.6;
     const people = `${l.adults} adult${l.adults === 1 ? "" : "s"}${l.children ? `, ${l.children} child${l.children === 1 ? "" : "ren"}` : ""}`;
-    text(`${l.mealPlan === "RO" ? "Room only" : l.mealPlan ?? "-"} - ${people}`, M, y, { size: 7, color: GREY, width: cNights - M - 6 });
+    text(`${planWords(l.mealPlan)} - ${people}`, M, y, { size: 7, color: GREY, width: cNights - M - 6 });
     y += 4;
   });
   rule(y);

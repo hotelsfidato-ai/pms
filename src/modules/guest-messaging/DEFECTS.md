@@ -124,6 +124,24 @@ loop turns one failure into a repeat of everything before it.**
 
 ---
 
+### MSG-6 · The voucher printed a code where the desk had said a word
+
+**Found** 29 September, by reading the first voucher sent from New booking
+through a stand-in receiver: the room line read "EP - 2 adults". New booking
+had offered the guest "Room only"; the voucher is the guest's copy of that
+conversation, and "EP" is a word only the trade reads.
+
+**What was done:** `planWords` in `voucherDocument.ts` prints New booking's
+own names (EP Room only, CP With breakfast, MAP Breakfast and one meal, AP
+All meals, AI All inclusive; RO the walk-in's Room Only). The API does not
+import web code, so the list is written twice and each copy names the other.
+Tested (`voucherDocument.test.ts`).
+
+**The rule: a document a guest reads uses the words the guest was offered,
+not the code the database keeps.**
+
+---
+
 ## Open — not fixed
 
 ### MSG-4 · The date is formatted twice in this repository
