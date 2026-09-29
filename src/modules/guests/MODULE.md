@@ -31,6 +31,9 @@ when, and records the portal's number per person once filed there — this
 system does not file. A guest's passport or ID and Form III's questions are
 asked during check-in and the walk-in, which are front desk's, with this
 service's fields (`ForeignGuestFields`); this service keeps and reads them.
+Since D27-163 the ID itself is asked once, in `GuestIdFields` (nationality,
+document, or a reason for skipping it, Form III and round D's checks): New
+booking's one page and front desk's one-page check-in both draw it.
 
 ## Screens
 
