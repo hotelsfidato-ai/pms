@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { propertyFor, isoDateParam } from "../reports/index.ts";
-import { dayBook, dayBookXlsx } from "./dayBook.ts";
+import { dayBook, dayBookXlsx, NoRoomRate } from "./dayBook.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    GET /:code/accounting/day-book?from=&to=
@@ -100,6 +100,10 @@ accounting.get("/:code/accounting/:file{day-book(?:\\.xlsx)?}", async (c) => {
     }
 
     return { status: 200 as const, body: await dayBook(client, property, from, to) };
+  }).catch((error: unknown) => {
+    /* D27-173: no null and no guessed tax in a Tally export. */
+    if (error instanceof NoRoomRate) return { status: 409 as const, body: { error: error.message } };
+    throw error;
   });
 
   if (answer.status !== 200 || !c.req.param("file").endsWith(".xlsx")) {

@@ -140,8 +140,8 @@ type Outlets = Pick<PosDay, "net" | "tax" | "alcohol" | "vat">;
     `net`/`tax` by the reports door; here they are only moved into their own
     two columns, so sales is unchanged and `tax` is GST alone (D21-91). */
 const columns = (
-  f: Pick<DayFigures,
-    "room" | "roomTax" | "extra" | "extraTax" | "alcohol" | "vat" | "discount" | "receipt">,
+  f: Pick<DayFigures, "room" | "extra" | "extraTax" | "alcohol" | "vat" | "discount" | "receipt">
+    & { roomTax: number },
   pos: Outlets,
 ): DayBookTotal => ({
   room: f.room,
@@ -164,10 +164,26 @@ const columns = (
 /** Nothing sold at an outlet that day is nil, not a missing row. */
 const NO_POS: Outlets = { net: 0, tax: 0, alcohol: 0, vat: 0 };
 
+/* ⚠ A TALLY EXPORT NEVER CARRIES A NULL OR A GUESSED TAX (D27-173, the
+   master). A night not charged yet, at a property with no GST rate for
+   rooms (a new one has none, D22-9), has an unknown tax in the reports'
+   figures. Such a range is refused, in one sentence, before anything is
+   built. Only a range reaching the business date or later can meet it. */
+export const NO_ROOM_RATE =
+  "A night in this range is not charged yet and rooms have no GST rate. Set it on Room types, or end the range before today.";
+export class NoRoomRate extends Error {
+  constructor() {
+    super(NO_ROOM_RATE);
+    this.name = "NoRoomRate";
+  }
+}
+const priced = (f: DayFigures): f is DayFigures & { roomTax: number } => f.roomTax !== null;
+
 export async function dayBook(
   client: Client, property: Property, from: string, to: string,
 ): Promise<DayBook> {
   const figures = await dailyFigures(client, property.id, from, to);
+  if (!figures.every(priced)) throw new NoRoomRate();
   const closed = await closedDays(client, property.id, from, to);
   const outlets = new Map(
     (await posSales(client, property.id, from, to)).map((p) => [p.date, p]));
@@ -199,7 +215,8 @@ export async function dayBook(
     from,
     to,
     days,
-    total: columns(t, posTotal),
+    /* Every day is priced (above), so their total is too. */
+    total: columns({ ...t, roomTax: t.roomTax! }, posTotal),
     openDays: days.filter((d) => !d.closed).map((d) => d.date),
   };
 }

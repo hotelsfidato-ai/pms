@@ -103,7 +103,9 @@ export async function nightAuditReport(
       normal,
       offered: n.rent,
       tax: n.tax,
-      rent: round2(n.rent + n.tax),
+      /* A night not charged yet with no room GST rule: its tax, and so its
+         rent with tax, are unknown (D27-173) - a dash, never the rent alone. */
+      rent: n.tax === null ? null : round2(n.rent + n.tax),
       varPct: variance(n.rent, normal),
       checkinBy: s.checkin_by,
     });
@@ -239,16 +241,17 @@ export async function nightAuditReport(
      the desk posted it on (D17-71) — so Room Sales carries that, not the
      postings dated today. */
   const nightRent = round2(nights.reduce((t, x) => t + x.rent, 0));
-  const nightTax = round2(nights.reduce((t, x) => t + x.tax, 0));
+  const nightTax = nights.some((x) => x.tax === null) ? null : round2(nights.reduce((t, x) => t + x.tax!, 0));
 
   const salesRow = (label: string, v: {
-    room: number; extra: number; roomTax: number; extraTax: number;
+    room: number; extra: number; roomTax: number | null; extraTax: number;
     discount: number; adjustment: number;
   }) => row({
     salesType: label,
     room: v.room, extra: v.extra, roomTax: v.roomTax, extraTax: v.extraTax,
     discount: v.discount, adjustment: v.adjustment,
-    totalSales: round2(v.room + v.extra + v.roomTax + v.extraTax + v.discount + v.adjustment),
+    totalSales: v.roomTax === null ? null
+      : round2(v.room + v.extra + v.roomTax + v.extraTax + v.discount + v.adjustment),
   });
 
   const extraOf = (kind: string) => round2(
@@ -297,7 +300,10 @@ export async function nightAuditReport(
       discount: part("incidental", "discount"), adjustment: part("incidental", "refund"),
     }),
   ];
-  const salesTotal = (k: string) => round2(salesRows.reduce((t, r) => t + Number(r.cells[k] ?? 0), 0));
+  /* Cancellation Sales is "-" by design and counts as nothing; tonight's room
+     tax unknown (D27-173) makes the tax and sales totals unknown too. */
+  const salesTotal = (k: string) => (nightTax === null && (k === "roomTax" || k === "totalSales")) ? null
+    : round2(salesRows.reduce((t, r) => t + Number(r.cells[k] ?? 0), 0));
   salesRows.push(total({
     salesType: "Total", room: salesTotal("room"), extra: salesTotal("extra"),
     roomTax: salesTotal("roomTax"), extraTax: salesTotal("extraTax"),

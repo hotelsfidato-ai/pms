@@ -212,7 +212,7 @@ describe("who sees the lists (D22-17)", () => {
       const allowed = THREE.includes(role);
       expect(canAccess(role, "marketing"), role).toBe(allowed);
       expect(can(role, "export", "marketing"), `${role} exports`).toBe(allowed);
-      expect(mayReach(role, "/coming-soon/marketing"), `${role} reaches`).toBe(allowed);
+      expect(mayReach(role, "/h/:code/marketing"), `${role} reaches`).toBe(allowed);
     }
   });
 });

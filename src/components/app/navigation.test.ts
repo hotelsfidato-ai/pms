@@ -273,7 +273,9 @@ describe("each person's menu", () => {
        reviews it at merge. */
     const NOT_BUILT: Record<string, string[]> = {
       "Front desk": ["Guest services"],
-      "Sales and marketing": ["Leads and WhatsApp", "Marketing", "Loyalty"],
+      /* 29 September: Leads and WhatsApp and Marketing are BUILT (D27-168,
+         D27-170); their entries stay in this section as working screens. */
+      "Sales and marketing": ["Loyalty"],
       "Distribution": ["Channel manager", "Booking engine", "Contracts"],
       "Finance": ["Online payments"],
       "System": ["Room systems"],
@@ -289,14 +291,15 @@ describe("each person's menu", () => {
         .filter(([, items]) => items.length > 0));
       expect(marked, role).toEqual(NOT_BUILT);
       /* A section of services not built yet holds nothing else - yet. */
-      for (const key of ["Sales and marketing", "Distribution"]) {
+      for (const key of ["Distribution"]) {
         expect(sections.find((s) => s.label === key)?.items.every((i) => i.notBuilt), role).toBe(true);
       }
     }
     const all = Object.values(NOT_BUILT).flat();
     for (const role of ROLES.filter((r) => !COMING_SOON_ROLES.includes(r))) {
       const labels = navigationFor(role, "5EL", ALL_ON).map((s) => s.label);
-      expect(labels, role).not.toContain("Sales and marketing");
+      /* Sales and marketing now holds Leads and WhatsApp for everyone who sees
+         guests (D27-170); its not-built entries stay hidden, below. */
       expect(labels, role).not.toContain("Distribution");
       for (const label of all) expect(searchable(role), `${role} finds ${label}`).not.toContain(label);
     }
@@ -315,7 +318,7 @@ describe("each person's menu", () => {
        ever a real check while the page it names still exists. */
     expect(mayReach("gm", "/coming-soon/room-systems")).toBe(true);
     expect(mayReach("front_desk", "/coming-soon/room-systems")).toBe(false);
-    expect(mayReach("hotel_manager", "/coming-soon/leads")).toBe(false);
+    expect(mayReach("hotel_manager", "/coming-soon/loyalty")).toBe(false);
     expect(mayReach("owner", "/h/:code/channels")).toBe(true);
     expect(mayReach("front_desk", "/h/:code/channels")).toBe(false);
   });

@@ -174,6 +174,21 @@ export default function SystemHealthPage() {
             empty={<p className="p-5 text-sm text-grey-500">No requests in the last day.</p>} />
         </Card>
 
+        {data.leadsReads && (
+          <Card>
+            {/* D27-170: the leads app's free allowance is 50,000 reads a day, shared with the app itself. */}
+            <CardHeader title="Leads app reads"
+              description="What this system read from the leads app, by Google's day: midnight to midnight Pacific time, 12:30 pm in India (1:30 pm in winter). The app's free allowance is 50,000 a day, shared with the app itself; this system stops at its own limit."
+              actions={<span className="text-sm text-grey-600 tabular-nums">Limit {data.leadsReads.cap === null ? "-" : number(data.leadsReads.cap)} a day</span>} />
+            <DataTable<{ day: string; reads: number }> rows={data.leadsReads.days} rowKey={(d) => d.day}
+              columns={[
+                { key: "day", header: "Day", cell: (d) => dateShort(d.day) },
+                { key: "reads", header: "Reads", numeric: true, cell: (d) => number(d.reads) },
+              ]}
+              empty={<p className="p-5 text-sm text-grey-500">Nothing read from the leads app in the last week.</p>} />
+          </Card>
+        )}
+
         <Card>
           <CardHeader title="Errors and slow queries" description="The last week. An error is named by its kind, never by what it said, so no guest's details are kept." />
           <DataTable<Problem> rows={problems} columns={PROBLEM_COLUMNS} rowKey={(p) => p.key}

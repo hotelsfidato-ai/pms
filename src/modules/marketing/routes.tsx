@@ -1,16 +1,17 @@
 import { Route } from "react-router";
+import { PropertyScope } from "@/components/app/PropertyScope";
 import { RequireAccess } from "@/components/app/RequireAccess";
 import MarketingPage from "@/modules/marketing/pages/Marketing";
 
-/* Marketing's one address — its Coming soon page. Mounted by App.tsx inside
-   the signed-in shell. The guard asks the navigation (`mayReach`), so the
-   page is refused to exactly the people the menu does not show it to. */
+/* Marketing's one address. It was `/coming-soon/marketing` until the numbers
+   were built (29 September). GUARDED by the navigation (`mayReach`) and by
+   the server (roleGate.ts, `marketing` view). */
 export const routes = (
   <Route
-    path="/coming-soon/marketing"
+    path="/h/:code/marketing"
     element={
-      <RequireAccess path="/coming-soon/marketing" resource="marketing">
-        <MarketingPage />
+      <RequireAccess path="/h/:code/marketing" resource="marketing">
+        <PropertyScope /><MarketingPage />
       </RequireAccess>
     }
   />

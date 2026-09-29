@@ -14,8 +14,40 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None. This service is not built: it has a brief, a menu entry
-and a Coming soon page, and no code behind them.
+None.
+
+## Fixed or answered
+
+### LEAD-1 · A background sync and a copy of every lead were built before the owner answered
+
+**Found:** 29 September, by the owner's answer (D27-170). My plan asked the owner
+whether to keep a copy in the PMS (for the read budget) or read live; while
+waiting I built the copy, the sync and its erasure check "as needing no answer",
+on my own recommendation. The owner chose read live, no copy. Two commits of
+work (b8bc76c, parts of e912046) were removed in 6d3bfe4.
+
+**Rule:** a question sent to the owner with a recommendation leaves everything
+that depends on its answer unbuilt. Build only what is the same under every
+answer (here: the reader and its count).
+
+### LEAD-2 · An API test run died with the local Postgres and left its scratch database
+
+**Found:** 29 September, 04:00: `npm test -- modules/leads` was mid-migration
+when the machine's Postgres stopped (every session stopped then). The script's
+trap never ran; `fidato_test_10231` stayed behind. Dropped on resume (my own).
+
+**Rule:** after an interrupted API test run, look for `fidato_test_<pid>` and
+drop only your own.
+
+### LEAD-3 · `tsx watch` restarted after an `.env` change and never listened again
+
+**Found:** 29 September, on this machine: touching a source file to make the API
+re-read `api/.env` left a child holding port 8883 and answering nothing. Found
+by the pid on the port (its parent was this copy's `tsx watch`); both stopped by
+pid, one at a time, and the API started without watch.
+
+**Rule:** after changing a copy's `api/.env`, stop and start the API; do not rely
+on the watcher to pick it up.
 
 ---
 

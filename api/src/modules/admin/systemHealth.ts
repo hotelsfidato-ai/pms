@@ -165,7 +165,18 @@ systemHealth.get("/:code/system-health", async (c) => {
           where h.id in (select app.auth_hotel_ids()) and h.is_active
           order by h.code`);
 
+      /* The leads app's reads (D27-168, D27-170), by Google's own day: the
+         free allowance resets at midnight Pacific. Group-wide, no guest. */
+      const reads = await client.query<{ day: string; reads: number }>(
+        `select to_char((minute at time zone 'America/Los_Angeles')::date, 'YYYY-MM-DD') as day,
+                sum(count)::int as reads
+           from telemetry_events
+          where kind = 'firestore_read' and minute > now() - interval '7 days'
+          group by 1 order by 1 desc`);
+      const cap = Math.floor(Number(process.env["M2R_DAILY_READS"]));
+
       return {
+        leadsReads: { cap: cap > 0 ? cap : null, days: reads.rows },
         databaseBytes: Number(size.rows[0]?.bytes ?? 0),
         traffic: { hour, day, week },
         slowest: slowest.rows.map((r) => ({ method: r.method, route: r.route, requests: r.requests, avgMs: r.avg_ms, maxMs: r.max_ms })),

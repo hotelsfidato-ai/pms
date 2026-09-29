@@ -81,7 +81,8 @@ function figuresRow(first: string, f: Omit<DayFigures, "date">) {
     pax: f.adults + f.children,
     room: f.room,
     extra: f.extra,
-    tax: round2(f.roomTax + f.extraTax),
+    /* Unknown when a night not charged yet has no room GST rule (D27-173): a dash. */
+    tax: f.roomTax === null ? null : round2(f.roomTax + f.extraTax),
     receipt: f.receipt,
     expense: null,
   };

@@ -1,16 +1,18 @@
 import { Route } from "react-router";
+import { PropertyScope } from "@/components/app/PropertyScope";
 import { RequireAccess } from "@/components/app/RequireAccess";
 import LeadsPage from "@/modules/leads/pages/Leads";
 
-/* Leads and WhatsApp's one address — its Coming soon page. Mounted by App.tsx inside
-   the signed-in shell. The guard asks the navigation (`mayReach`), so the
-   page is refused to exactly the people the menu does not show it to. */
+/* Leads and WhatsApp's one address. It was `/coming-soon/leads` until the
+   service was built (29 September). GUARDED: the guard asks the navigation
+   (`mayReach`), and the server refuses the same people (roleGate.ts,
+   READ_RULES, `customer` view), which is the half that matters. */
 export const routes = (
   <Route
-    path="/coming-soon/leads"
+    path="/h/:code/leads"
     element={
-      <RequireAccess path="/coming-soon/leads" resource="integration">
-        <LeadsPage />
+      <RequireAccess path="/h/:code/leads" resource="customer">
+        <PropertyScope /><LeadsPage />
       </RequireAccess>
     }
   />

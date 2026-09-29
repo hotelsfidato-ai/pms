@@ -33,6 +33,7 @@ import * as onlineCheckin from "./modules/online-checkin/index.ts";
 import * as guestMessaging from "./modules/guest-messaging/index.ts";
 import * as reputation from "./modules/reputation/index.ts";
 import * as marketing from "./modules/marketing/index.ts";
+import * as leads from "./modules/leads/index.ts";
 import * as crs from "./modules/crs/index.ts";
 import { live } from "./routes/live.ts";
 import {
@@ -293,6 +294,8 @@ const SERVICES = [
   purchasing,
   laundry, spa, revenueManagement, accounting, onlineCheckin, guestMessaging,
   reputation, marketing,
+  /* Leads and WhatsApp, read live from the leads app (D27-170). */
+  leads,
   /* The CRS bridge (D27-168): read-only, its own routes and its reader. */
   crs,
 ];

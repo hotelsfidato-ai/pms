@@ -66,7 +66,8 @@ export interface DayFigures {
   adults: number;
   children: number;
   room: number;
-  roomTax: number;
+  /** Null when a night not charged yet has no room GST rule (D27-173): unknown, a dash. */
+  roomTax: number | null;
   extra: number;
   extraTax: number;
   /** OF `extra` AND `extraTax`, what was alcohol and the VAT on it (D21-91).
@@ -142,10 +143,16 @@ export const NIGHTS = `
           and r.check_out > $2::date
      ),
      /* Tonight and the nights booked ahead, not posted yet, at the
-        booking's rate and the tax the room's rule gives that rate. */
+        booking's rate and the tax the room's rule gives that rate.
+        gst_rate_OR_NULL (29 September, D27-173): a property with no room
+        GST rule yet (a new one has none, D22-9) takes bookings, and
+        gst_rate raised here for every reader - a 500 on the Dashboard and
+        every report built on this. The tax of such a night is unknown: a
+        null, a dash on the screen, never a zero. Posting a charge still
+        refuses without a rule (night-audit, front-desk operations). */
      booked_nights as (
        select s.reservation_id, s.night, s.agreed_rate as rent,
-              round(s.agreed_rate * app.gst_rate($1, 'room', s.agreed_rate) / 100.0, 2) as tax
+              round(s.agreed_rate * app.gst_rate_or_null($1, 'room', s.agreed_rate) / 100.0, 2) as tax
          from stay_nights s, bd
         where not s.comp
           and s.agreed_rate > 0
@@ -187,7 +194,7 @@ export async function dailyFigures(
   const { rows } = await client.query<{
     date: string; available: number; blocked: number; paying: number; complimentary: number;
     day_use: number; adults: number; children: number;
-    room: string; room_tax: string; extra: string; extra_tax: string;
+    room: string; room_tax: string | null; extra: string; extra_tax: string;
     alcohol: string; vat: string;
     discount: string; receipt: string;
   }>(
@@ -197,7 +204,10 @@ export async function dailyFigures(
      ),
      ${NIGHTS},
      rent as (
-       select night, sum(rent) as room, sum(tax) as room_tax
+       /* One night with no tax rule makes the day's room tax unknown,
+          rather than the sum of the others. */
+       select night, sum(rent) as room,
+              case when bool_or(tax is null) then null else sum(tax) end as room_tax
          from (select night, rent, tax from posted_nights
                union all
                select night, rent, tax from booked_nights) x
@@ -260,7 +270,7 @@ export async function dailyFigures(
             coalesce(o.adults, 0)                    as adults,
             coalesce(o.children, 0)                  as children,
             coalesce(rent.room, 0)::text             as room,
-            coalesce(rent.room_tax, 0)::text         as room_tax,
+            case when rent.night is null then '0' else rent.room_tax::text end as room_tax,
             coalesce(other.extra, 0)::text           as extra,
             coalesce(other.extra_tax, 0)::text       as extra_tax,
             coalesce(other.alcohol, 0)::text         as alcohol,
@@ -287,7 +297,7 @@ export async function dailyFigures(
     adults: Number(r.adults),
     children: Number(r.children),
     room: round2(Number(r.room)),
-    roomTax: round2(Number(r.room_tax)),
+    roomTax: r.room_tax === null ? null : round2(Number(r.room_tax)),
     extra: round2(Number(r.extra)),
     extraTax: round2(Number(r.extra_tax)),
     alcohol: round2(Number(r.alcohol)),
@@ -403,7 +413,7 @@ export async function posSales(
 }
 
 export function sumDays(days: DayFigures[]): Omit<DayFigures, "date"> {
-  const add = (k: keyof Omit<DayFigures, "date">) =>
+  const add = (k: Exclude<keyof DayFigures, "date" | "roomTax">) =>
     round2(days.reduce((t, d) => t + d[k], 0));
   return {
     available: add("available"),
@@ -415,7 +425,8 @@ export function sumDays(days: DayFigures[]): Omit<DayFigures, "date"> {
     adults: add("adults"),
     children: add("children"),
     room: add("room"),
-    roomTax: add("roomTax"),
+    /* One day unknown makes the total unknown (D27-173). */
+    roomTax: days.some((d) => d.roomTax === null) ? null : round2(days.reduce((t, d) => t + d.roomTax!, 0)),
     extra: add("extra"),
     extraTax: add("extraTax"),
     alcohol: add("alcohol"),
@@ -486,13 +497,14 @@ export interface StayNight {
   complimentary: boolean;
   /** The night's room charge: posted and spread, or the booking's rate. */
   rent: number;
-  tax: number;
+  /** Null when the night is not charged yet and rooms have no GST rule (D27-173). */
+  tax: number | null;
 }
 
 /** Every stay occupying the night of `date`, with what that night earned. */
 export async function stayNights(client: Client, hotelId: string, date: string): Promise<StayNight[]> {
   const { rows } = await client.query<{
-    reservation_id: string; comp: boolean; rent: string; tax: string;
+    reservation_id: string; comp: boolean; rent: string; tax: string | null;
   }>(
     `with ${NIGHTS}
      select s.reservation_id::text,
@@ -501,10 +513,14 @@ export async function stayNights(client: Client, hotelId: string, date: string):
                         where p.reservation_id = s.reservation_id and p.night = s.night), 0)
              + coalesce((select sum(b.rent) from booked_nights b
                           where b.reservation_id = s.reservation_id and b.night = s.night), 0))::text as rent,
-            (coalesce((select sum(p.tax) from posted_nights p
-                        where p.reservation_id = s.reservation_id and p.night = s.night), 0)
-             + coalesce((select sum(b.tax) from booked_nights b
-                          where b.reservation_id = s.reservation_id and b.night = s.night), 0))::text as tax
+            case when exists (select 1 from booked_nights b
+                               where b.reservation_id = s.reservation_id and b.night = s.night
+                                 and b.tax is null) then null
+                 else (coalesce((select sum(p.tax) from posted_nights p
+                                  where p.reservation_id = s.reservation_id and p.night = s.night), 0)
+                       + coalesce((select sum(b.tax) from booked_nights b
+                                    where b.reservation_id = s.reservation_id and b.night = s.night), 0))::text
+            end as tax
        from stay_nights s`,
     [hotelId, date, date],
   );
@@ -512,6 +528,6 @@ export async function stayNights(client: Client, hotelId: string, date: string):
     reservationId: r.reservation_id,
     complimentary: r.comp,
     rent: round2(Number(r.rent)),
-    tax: round2(Number(r.tax)),
+    tax: r.tax === null ? null : round2(Number(r.tax)),
   }));
 }
