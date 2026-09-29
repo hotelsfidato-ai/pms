@@ -221,7 +221,8 @@ export function CheckInFlow({
               Room. Only a clean or inspected room can take a guest; the rest are
               shown with the reason.
             </p>
-            <ul className="grid grid-cols-2 gap-2 max-h-[240px] overflow-y-auto scrollbar-quiet">
+            {/* One column on a phone: two cut "inspected" off at 390 px. */}
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[240px] overflow-y-auto scrollbar-quiet">
               {(rooms.data ?? []).map((room) => {
                 const selected = room.number === roomNumber;
                 const body = (
