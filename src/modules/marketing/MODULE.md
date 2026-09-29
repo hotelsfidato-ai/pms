@@ -177,9 +177,10 @@ leads app (`hotels/{id}/marketing/campaigns` and `hotels/{id}/spend/{month}`,
 two reads, 60 s cache, under the leads service's cap), beside the bookings here
 that carry it (`reservations.campaign`, set when a booking is made from a lead)
 and their revenue; and every booking source's bookings and revenue.
-**Revenue is the reports door's own** (`NIGHTS`: posted room charges, and a
-night not posted yet at the booking's rate), before tax, cancelled and no-show
-stays out (D27-170). Server: `api/src/modules/marketing/numbers.ts`,
+**Revenue is room charges before tax** (D27-170): each stay's room postings
+that still count (the reports door's `LIVE`: not a reversal, not reversed), their
+amount without their tax, cancelled and no-show stays out. A stay nothing has
+been charged to yet shows a dash. Server: `api/src/modules/marketing/numbers.ts`,
 `GET /:code/marketing/numbers?month=YYYY-MM`, read rule `marketing` view.
 The D18-17 lists still have no screen (MKT-4).
 

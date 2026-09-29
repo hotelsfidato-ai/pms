@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
-import { NIGHTS } from "../reports/index.ts";
+import { LIVE } from "../reports/index.ts";
 import { AtCap, LeadsAppError, appHotelOf, cached, openReader, settings } from "../leads/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -18,10 +18,11 @@ import { AtCap, LeadsAppError, appHotelOf, cached, openReader, settings } from "
                     a lead) and their revenue
      per source     every booking source's bookings and revenue that month
 
-   REVENUE IS THE REPORTS' OWN (D27-170): room charges before tax, from
-   the reports door's NIGHTS - what was posted, and a night not posted yet
-   at the booking's rate - for stays still standing (cancelled and no-shows
-   out). A figure nobody has is null, a dash on the screen, never 0.
+   REVENUE IS ROOM CHARGES BEFORE TAX (D27-170): a stay's room postings
+   that still count (the reports door's LIVE: not a reversal, not reversed),
+   their amount without their tax, for stays still standing (cancelled and
+   no-shows out). A stay nothing has been charged to yet has no revenue: a
+   null, a dash on the screen, never 0.
    ══════════════════════════════════════════════════════════════════ */
 
 export const numbers = new Hono<{ Variables: { subject: string } }>();
@@ -37,23 +38,22 @@ numbers.get("/:code/marketing/numbers", async (c) => {
     const hotel = await client.query<{ id: string }>(
       "select id from hotels where code = upper($1) and id in (select app.auth_hotel_ids())", [code]);
     if (hotel.rowCount !== 1) return null;
-    /* $2..$3 is the window of nights NIGHTS spreads: from the month's first
-       day, far enough on to hold the longest stay that arrives in it. */
     const { rows } = await client.query<Row>(
-      `with ${NIGHTS},
-            stays as (
+      `with stays as (
               select r.id, r.campaign, r.booking_source_id
                 from reservations r
                where r.hotel_id = $1
-                 and r.check_in between $4::date and ($4::date + interval '1 month' - interval '1 day')::date
+                 and r.check_in between $2::date and ($2::date + interval '1 month' - interval '1 day')::date
                  and r.status in ('confirmed', 'checked_in', 'checked_out')),
-            rent as (
-              select reservation_id, rent from posted_nights
-              union all
-              select reservation_id, rent from booked_nights),
             per_stay as (
               select s.campaign, s.booking_source_id,
-                     (select sum(x.rent) from rent x where x.reservation_id = s.id) as revenue
+                     (select sum(fp.amount)
+                        from folio_postings fp
+                        join folios f on f.id = fp.folio_id
+                       where fp.hotel_id = $1
+                         and coalesce(fp.reservation_id, f.reservation_id) = s.id
+                         and fp.category = 'room'
+                         and ${LIVE}) as revenue
                 from stays s)
        select grouping(p.campaign) = 1 as by_source,
               p.campaign, p.booking_source_id::text as source_id, bs.name as source,
@@ -61,7 +61,7 @@ numbers.get("/:code/marketing/numbers", async (c) => {
          from per_stay p
          left join booking_sources bs on bs.id = p.booking_source_id
         group by grouping sets ((p.campaign), (p.booking_source_id, bs.name))`,
-      [hotel.rows[0]!.id, `${month}-01`, `${Number(month.slice(0, 4)) + 2}-12-31`, `${month}-01`]);
+      [hotel.rows[0]!.id, `${month}-01`]);
     return rows;
   });
   if (!pms) return c.json({ error: "No such property." }, 404);
