@@ -14,18 +14,34 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### CRS-1 · A CRS booking answered only when all its rooms agree
+None.
+
+## Fixed
+
+### CRS-1 · A CRS booking answered only when all its rooms agree - FIXED 29 September (D27-174)
 
 **Found** 29 September, reading `answersOwed` (reader.ts). A CRS booking of several
 rooms becomes several reservations, and the register has one status per booking. So
-the answer goes only when every room is confirmed, or every room is cancelled or
-voided.
+the answer went only when every room was confirmed, or every room was cancelled or
+voided. If the desk confirmed some rooms and cancelled others, nothing was ever
+written.
 
-If the desk confirms some rooms and cancels others, nothing is ever written, and the
-CRS bookings screen shows no answer for it.
+**What was done:** the owner answered on 29 September (D27-174). Once EVERY room has
+an answer and the answers differ, the register is told once, "Partly confirmed: N of
+M rooms". The confirmed rooms' references go as the hotel's confirmation number.
 
-**The fix waiting:** the owner's word on what the register should say for a partly
-confirmed booking.
+- The answer is `partly`, with the room counts.
+- The words live in the answer workflow's `STATUS`.
+- Migration 163's check allows the fourth answer, dropped and added so a replay
+  carries it.
+
+The guard is `crsReader.test.ts`, "tells the CRS 'partly' once": one room confirmed
+tells nothing; the second room cancelled tells "partly" once, across two runs.
+`crsAnswerWorkflow.test.ts` covers the words. Neither is run yet: API tests wait for
+the master's word.
+
+**The rule:** an answer about several things waits until each of them has one, and a
+mixed result is an answer of its own, not silence.
 
 ---
 

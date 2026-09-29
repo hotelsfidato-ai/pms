@@ -129,7 +129,7 @@ create table if not exists crs_bookings (
   constraint crs_bookings_outcome_known
     check (outcome in ('booked', 'full', 'needs_attention')),
   constraint crs_bookings_answer_known
-    check (answer is null or answer in ('confirmed', 'refused', 'full')),
+    check (answer is null or answer in ('confirmed', 'refused', 'full', 'partly')),
   constraint crs_bookings_id_format
     check (crs_id ~ '^[A-Za-z0-9_-]{1,64}$'),
   constraint crs_bookings_booked_has_rooms
@@ -137,6 +137,13 @@ create table if not exists crs_bookings (
   constraint crs_bookings_stay_sane
     check (check_in is null or check_out is null or check_out > check_in)
 );
+
+-- 'partly' (D27-174): every room of a CRS booking of several rooms has an
+-- answer, and they differ. Dropped and added so a database that ran this file
+-- before the owner's answer takes it on the next replay.
+alter table crs_bookings drop constraint if exists crs_bookings_answer_known;
+alter table crs_bookings add constraint crs_bookings_answer_known
+  check (answer is null or answer in ('confirmed', 'refused', 'full', 'partly'));
 
 -- What still needs somebody: a note not yet done, a booking not made.
 create index if not exists crs_bookings_to_act_on

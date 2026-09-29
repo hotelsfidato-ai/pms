@@ -271,20 +271,25 @@ export async function answersOwed(inSession: InSession, hotel: Hotel): Promise<v
 
   for (const b of owed) {
     const statuses = b.statuses ?? [];
+    const refs = b.refs ?? [];
+    const yes = statuses.flatMap((s, i) =>
+      ["confirmed", "checked_in", "checked_out"].includes(s) ? [refs[i]!] : []);
+    const no = statuses.filter((s) => s === "cancelled" || s === "void").length;
+    /* An answer only once every room has one. Mixed is "partly" (D27-174). */
     const answer: CrsAnswer["answer"] | null =
       b.outcome === "full" ? "full"
-      : statuses.length > 0 && statuses.every((s) => ["confirmed", "checked_in", "checked_out"].includes(s))
-        ? "confirmed"
-      : statuses.length > 0 && statuses.every((s) => s === "cancelled" || s === "void")
-        ? "refused"
-      : null;
+      : statuses.length === 0 || yes.length + no < statuses.length ? null
+      : yes.length === statuses.length ? "confirmed"
+      : no === statuses.length ? "refused"
+      : "partly";
     if (!answer) continue; // still waiting for the desk
 
     const told = await tell({
       crsId: b.crs_id,
       crsReference: b.crs_reference,
       answer,
-      hotelConfirmationNumber: answer === "confirmed" ? (b.refs ?? []).join(", ") : null,
+      ...(answer === "partly" ? { rooms: { confirmed: yes.length, total: statuses.length } } : {}),
+      hotelConfirmationNumber: yes.length > 0 ? yes.join(", ") : null,
       note: answer === "full" ? "The hotel is full on these dates. Nothing was booked."
         : answer === "refused" ? `Refused by the hotel${b.why ? `: ${b.why}` : "."}`
         : null,

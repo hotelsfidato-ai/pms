@@ -26,7 +26,10 @@ export interface CrsAnswer {
   /** The CRS document id, and the number the register row carries. */
   crsId: string;
   crsReference: string;
-  answer: "confirmed" | "refused" | "full";
+  /** partly (D27-174): every room answered, some confirmed and some not. */
+  answer: "confirmed" | "refused" | "full" | "partly";
+  /** For "partly": how many of the booking's rooms were confirmed. */
+  rooms?: { confirmed: number; total: number };
   /** The PMS's booking reference(s): the hotel's confirmation number. */
   hotelConfirmationNumber: string | null;
   /** The sentence for the register's notes. Null when nothing needs saying. */

@@ -227,6 +227,27 @@ describe("CRS bookings into the PMS", () => {
     })]);
   });
 
+  it("tells the CRS 'partly' once, when every room is answered and they differ (D27-174)", async () => {
+    store.set("crsDocPart", crsBooking(
+      { reference: "FH-2026-00045", checkIn: addDays(first, 50), checkOut: addDays(first, 52) },
+      { quantity: 2 }));
+    await run();
+    const [kept, dropped] = await stays("crsDocPart");
+    await sql("update reservations set status = 'confirmed' where id = $1", [kept!["id"]]);
+    await run();
+    expect(told).toHaveLength(0); // one room is still waiting for the desk
+
+    await sql(
+      `update reservations set status = 'cancelled', cancelled_at = now(),
+              cancel_reason = 'The guest took one room' where id = $1`, [dropped!["id"]]);
+    await run();
+    await run();
+    expect(told).toEqual([expect.objectContaining({
+      crsId: "crsDocPart", answer: "partly", rooms: { confirmed: 1, total: 2 },
+      hotelConfirmationNumber: kept!["reference"],
+    })]);
+  });
+
   it("does not take a booking made before the hotel was connected, or another hotel's", async () => {
     store.set("crsDocOld", crsBooking({ createdAt: "2026-09-20T10:00:00Z" }));
     store.set("crsDocElse", crsBooking({ hotelId: "someOtherHotel" }));

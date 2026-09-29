@@ -39,6 +39,7 @@ const ANSWER: Record<string, string> = {
   confirmed: "Told: confirmed",
   refused: "Told: refused",
   full: "Told: hotel full",
+  partly: "Told: partly confirmed",
 };
 
 const STAY_WORDS: Record<string, string> = {

@@ -27,7 +27,7 @@ export interface CrsBooking {
   changeNote: string | null;
   changedAt: string | null;
   changeDone: boolean;
-  /** What the CRS's register was told, once it was: confirmed · refused · full. */
+  /** What the CRS's register was told, once it was: confirmed · refused · full · partly. */
   answer: string | null;
   answerError: string | null;
   bookings: Array<{ id: string; reference: string; status: string }>;

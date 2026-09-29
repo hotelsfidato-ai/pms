@@ -98,6 +98,11 @@ describe("the CRS answer workflow", () => {
     });
   });
 
+  it("says how many rooms were confirmed when a booking's rooms were answered differently (D27-174)", () => {
+    expect(run("Read the answer", { body: answer({ answer: "partly", rooms: { confirmed: 1, total: 2 } }) }))
+      .toMatchObject({ status: "Partly confirmed: 1 of 2 rooms", confirmation: "FH-5EL-2610-0101" });
+  });
+
   it("names a booking number the register does not have", () => {
     const read = run("Read the answer", { body: answer() });
     expect(run("What to write", { statusCode: 200, body: [] }, { earlier: { "Read the answer": read } }))
