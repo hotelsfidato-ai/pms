@@ -23,7 +23,7 @@ import { fetchLeadForBooking } from "@/modules/leads";
 import { BookedCard, type Booked } from "@/modules/reservations/flows/BookedCard";
 import { KeepListDialog } from "@/modules/reservations/flows/KeepListDialog";
 import {
-  listCompanies, listBookingSources, ReturningGuest, ConsentTicks,
+  listCompanies, listBookingSources, ReturningGuest,
   GuestIdFields, guestIdState, guestIdPayload, noGuestId, type GuestId,
 } from "@/modules/guests";
 import { getTaxRate, listBillingCompanies, settle } from "@/modules/finance";
@@ -602,11 +602,11 @@ export default function BookingPage() {
               </div>
               <ReturningGuest hotelId={hotelId} phone={phone} email={email}
                 chosen={returning} onChoose={setReturning} />
-              <ConsentTicks whatsapp={whatsapp} onWhatsapp={setWhatsapp}
-                offersAgreed={offersAgreed} onOffersAgreed={setOffersAgreed} />
-              <Switch checked={singleLady} onCheckedChange={setSingleLady}
-                label="Woman travelling alone"
-                description="Placed away from stairwells and service corridors. Not announced at the desk." />
+              {/* D27-176: WhatsApp stays in sight (vouchers and the check-in
+                  code need it); offers and the single-lady tick fold away. */}
+              <Switch checked={whatsapp} onCheckedChange={setWhatsapp}
+                label="Guest agreed to WhatsApp"
+                description="Ask them. Unticked, messages go by email if there is one, else not at all." />
             </CardBody>
           </Card>
 
@@ -755,6 +755,12 @@ export default function BookingPage() {
           </Card>
 
           <Fold title="More about the guest">
+            <Switch checked={offersAgreed} onCheckedChange={setOffersAgreed}
+              label="Guest agreed to offers"
+              description="Ask them. Unticked, no offers are sent. Kept against this phone and email at every hotel of the group." />
+            <Switch checked={singleLady} onCheckedChange={setSingleLady}
+              label="Woman travelling alone"
+              description="Placed away from stairwells and service corridors. Not announced at the desk." />
             <div className="grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)]">
               <Field label="Title">
                 {(f) => (

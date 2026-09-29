@@ -8,7 +8,7 @@ export { listCompanies, setGuestVip } from "./data/directory";
    and the walk-in (front desk); "stayed with the group N times" for the
    stay panel; and the opt-out rule for marketing's gate (the master's
    line, src/modules/crm/MODULE.md). */
-export { ReturningGuest, ConsentTicks, stayedWords } from "./components/ReturningGuest";
+export { ReturningGuest, stayedWords } from "./components/ReturningGuest";
 export {
   phoneKey, emailKey, refusesOffers, agreedToOffers, type NoOffers,
 } from "./logic/contactKeys";

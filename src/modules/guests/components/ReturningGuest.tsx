@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, UserCheck } from "lucide-react";
-import { Button, Switch } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { findReturningGuest } from "@/modules/guests/data/people";
 import { phoneKey, emailKey } from "@/modules/guests/logic/contactKeys";
 
@@ -91,39 +91,6 @@ export function ReturningGuest({
           </div>
         );
       })}
-    </div>
-  );
-}
-
-/* ── The two ticks the desk asks about ─────────────────────────────
-   "Guest agreed to WhatsApp" (D21-72): WhatsApp's own rule is that a
-   business may start a conversation only with somebody who agreed, so a
-   booking nobody ticked gets email if it has one, else nothing.
-   "Guest agreed to offers" (D25-39, opt-in): off until the guest says yes;
-   kept against the phone and email themselves, for the whole group (D21-22)
-   - a manager may take it away on Guest 360. */
-export function ConsentTicks({
-  whatsapp, onWhatsapp, offersAgreed, onOffersAgreed,
-}: {
-  whatsapp: boolean;
-  onWhatsapp: (v: boolean) => void;
-  offersAgreed: boolean;
-  onOffersAgreed: (v: boolean) => void;
-}) {
-  return (
-    <div className="space-y-3">
-      <Switch
-        checked={whatsapp}
-        onCheckedChange={onWhatsapp}
-        label="Guest agreed to WhatsApp"
-        description="Ask them. Unticked, messages go by email if there is one, else not at all."
-      />
-      <Switch
-        checked={offersAgreed}
-        onCheckedChange={onOffersAgreed}
-        label="Guest agreed to offers"
-        description="Ask them. Unticked, no offers are sent. Kept against this phone and email at every hotel of the group."
-      />
     </div>
   );
 }
