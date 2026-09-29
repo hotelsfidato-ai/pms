@@ -6539,6 +6539,42 @@ copy will see of theirs.**
 
 ---
 
+### 353 · Build only what the owner has decided (leads lane, LEAD-1)
+
+29 September. The leads lane built a background sync and a Postgres copy of the leads on its
+own recommendation while the question was with the owner. The owner chose "read live, no copy"
+(D27-170) and both were removed. **The rule:** while a question is open, build only what does
+not depend on its answer; a recommendation is not a decision.
+
+### 352 · A copy's own api/.env reaches its API tests (messaging, leads, round F)
+
+29 September, three times: a stand-in N8N_SEND_URL, M2R settings, a leads-app address left in a
+copy's api/.env made that copy's API tests see sending switched on or a server that wasn't
+there (a 500, a wrong canSendCodes). **The rule:** a copy's api/.env holds only the dev basics;
+a stand-in for a screen check comes out before any test run, and the API is restarted after
+any change to it (tsx watch left a child holding the port, LEAD-3).
+
+### 351 · A new route without its roleGate line answers 403, and only the API suite shows it
+
+29 September (messaging lane: Send check-in link). Since round B every route must be in
+READ_RULES or WRITE_RULES; a new one is refused until declared and pinned in roleGate.test.ts.
+Web tests and type checks pass regardless. **The rule:** a lane adding a route runs roleGate
+and its own API file before calling the work done.
+
+### 350 · Parallel lanes took the same defect number (POS-24)
+
+29 September. The KOT and folio lanes each wrote POS-24 in pos/DEFECTS.md from their own
+branches; the folio one became POS-26 at merge. **The rule:** a lane reads the service's
+DEFECTS.md on cp6 AND on the other open branches (`git log --all -- <file>`) before taking a
+number, and says "numbered for now" in its report.
+
+### 349 · Quote a commit hash only from git's own output; never delete the line that closes a comment
+
+29 September (one-page lane). A hash was sent before the commit printed it (9e9d34e for
+c65892b); and a sed that deleted a comment's closing line swallowed the exports under it
+(tsc caught it). **The rule:** copy hashes from `git log -1`; edit words inside a comment,
+never remove its delimiters.
+
 ### 348 · MINE: MEMORY 338 again: I nearly recycled a live session's copy
 
 29 September. The app reused round B's finished folder (modest-wilson-2807a1) for the new
