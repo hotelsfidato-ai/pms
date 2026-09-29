@@ -170,6 +170,25 @@ async function main() {
           where lead_hotel_id = (select id from hotels where code = $1)`,
         [HOTEL_CODE],
       );
+      /* A ROW THAT NAMES THE HOTEL WITHOUT A CASCADE goes first, read from
+         the catalogue like the guards. The hotel's cascade reaches a kitchen
+         timing through its order, but the timing's own hotel_id is checked
+         before that, so a demo whose kitchen had been used would not reload
+         (pos_line_events_hotel_id_fkey, 30 September). */
+      const strays = (await client.query<{ tbl: string; col: string }>(
+        `select c.conrelid::regclass::text as tbl, a.attname as col
+           from pg_constraint c
+           join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+          where c.contype = 'f' and c.confrelid = 'hotels'::regclass
+            and c.confdeltype in ('a', 'r')
+            and c.conrelid <> 'reservation_groups'::regclass`,
+      )).rows;
+      for (const s of strays) {
+        await client.query(
+          `delete from ${s.tbl} where ${s.col} = (select id from hotels where code = $1)`,
+          [HOTEL_CODE],
+        );
+      }
       await client.query("delete from hotels where code = $1", [HOTEL_CODE]);
 
       /* ── The guests the hotel left behind ────────────────────────
