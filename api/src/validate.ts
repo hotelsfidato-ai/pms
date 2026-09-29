@@ -162,6 +162,31 @@ export function countryProblem(code: Text): string | null {
     : `"${c}" is not a country code. Type the two letters, e.g. IN, GB or US.`;
 }
 
+/* ── A company's GSTIN (contracts, D27-178) ──────────────────────── */
+
+/* GSTN's check digit, the 15th character: each of the first 14 read in
+   base 36, weighted 1, 2, 1, 2 ...; a product's two base-36 digits added.
+   It catches one mistyped character and most swapped pairs. */
+const B36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+/** Fifteen characters in the GSTIN's shape (state code, PAN, entity, Z,
+    check), with GSTN's check digit right. Case is not a mistake. */
+export function gstinProblem(gstin: Text): string | null {
+  if (blank(gstin)) return null;
+  const g = gstin.trim().toUpperCase();
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/.test(g)) {
+    return "A GSTIN is 15 characters: 2 digits, the 10-character PAN, then 3 more, e.g. 27AAPFU0939F1ZV.";
+  }
+  let sum = 0;
+  for (let i = 0; i < 14; i += 1) {
+    const product = B36.indexOf(g[i]!) * (i % 2 === 0 ? 1 : 2);
+    sum += Math.floor(product / 36) + (product % 36);
+  }
+  return B36[(36 - (sum % 36)) % 36] === g[14]
+    ? null
+    : "That GSTIN is not right - a character is mistyped. Check it against the company's GST certificate.";
+}
+
 /* ── The Form III portal's number (GU-3) ─────────────────────────── */
 
 /** Letters, digits, - and /; 6 to 30 characters; at least one digit (the
