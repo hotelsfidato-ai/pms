@@ -52,7 +52,6 @@ export function SuSetup({ code }: { code: string }) {
       <MealPlansOnSu code={code} data={content.data} />
       <SendToSu code={code} data={content.data} />
       <RoomsAndPrices code={code} data={content.data} />
-      <ChannelBookings code={code} />
     </div>
   );
 }
@@ -363,7 +362,8 @@ const OUTCOME: Record<ChannelBooking["outcome"], { words: string; tone: "neutral
   ignored: { words: "Nothing to do", tone: "neutral" },
 };
 
-function ChannelBookings({ code }: { code: string }) {
+/* On the page for everybody who reaches it, the GM included (D27-183, Q6). */
+export function ChannelBookings({ code }: { code: string }) {
   const qc = useQueryClient();
   const list = useQuery({ queryKey: ["channel-bookings", code], queryFn: () => getChannelBookings(code) });
   const [marking, setMarking] = useState<string | null>(null);
@@ -412,7 +412,7 @@ function ChannelBookings({ code }: { code: string }) {
                 {b.acknowledged ? " · SU told we have it" : " · SU not yet told"}
                 {b.cardFieldsRemoved > 0 && " · card details were not kept"}
               </p>
-              {!b.handled && b.outcome !== "created" && (
+              {!b.handled && !["created", "cancelled", "ignored"].includes(b.outcome) && (
                 <Button variant="secondary" size="sm" className="mt-2" onClick={() => done(b.id)}
                         disabled={marking === b.id}>
                   {marking === b.id ? "Marking" : "I have dealt with this"}
