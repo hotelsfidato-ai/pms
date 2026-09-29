@@ -33,11 +33,15 @@ export type Reader = {
   get(paths: readonly string[]): Promise<{ found: Doc[]; missing: string[] }>;
 };
 
+/** How long a screen waits for Google before saying the app could not be reached. */
+export const WAIT_MS = 15_000;
+
 /** A refusal from Google, named by its status only: the body is never
-    kept, and telemetry records an error by its name (errorKind). */
+    kept, and telemetry records an error by its name (errorKind). Status 0:
+    not reached at all - no network, no answer in WAIT_MS, or no token. */
 export class LeadsAppError extends Error {
   constructor(readonly status: number) {
-    super(`The leads app answered ${status}.`);
+    super(status ? `The leads app answered ${status}.` : "The leads app could not be reached.");
     this.name = `LeadsApp${status}`;
   }
 }
@@ -76,11 +80,18 @@ export function makeReader(o: {
   const call = o.fetch ?? fetch;
 
   async function post(url: string, body: unknown): Promise<unknown[]> {
-    const res = await call(url, {
-      method: "POST",
-      headers: { authorization: `Bearer ${await o.token()}`, "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    let res: Response;
+    try {
+      res = await call(url, {
+        method: "POST",
+        headers: { authorization: `Bearer ${await o.token()}`, "content-type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(WAIT_MS),
+      });
+    } catch {
+      /* Nothing came back, so nothing was read and nothing is counted. */
+      throw new LeadsAppError(0);
+    }
     if (!res.ok) {
       /* A refused call is counted as one read, to be on the safe side. */
       await o.counted(1);

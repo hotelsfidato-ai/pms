@@ -84,4 +84,16 @@ describe("the leads app reader", () => {
     expect((failure as Error).message).not.toContain("anything");
     expect(reads).toEqual([1]);
   });
+
+  it("says the app could not be reached, and counts nothing, when no answer comes", async () => {
+    const reads: number[] = [];
+    const reader = makeReader({
+      projectId: "demo-leads", token: async () => "t0ken", counted: (n) => { reads.push(n); },
+      fetch: (async () => { throw new TypeError("fetch failed"); }) as unknown as typeof fetch,
+    });
+    const failure = await reader.query("", {}).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(LeadsAppError);
+    expect((failure as LeadsAppError).status).toBe(0);
+    expect(reads).toEqual([]);
+  });
 });

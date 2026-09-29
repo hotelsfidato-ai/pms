@@ -96,7 +96,9 @@ numbers.get("/:code/marketing/numbers", async (c) => {
       });
     } catch (error) {
       if (error instanceof AtCap) appError = error.message;
-      else if (error instanceof LeadsAppError) appError = `The leads app did not answer (${error.status}), so spend is not shown.`;
+      else if (error instanceof LeadsAppError) {
+        appError = `The leads app ${error.status ? `did not answer (${error.status})` : "could not be reached"}, so spend is not shown.`;
+      }
       else throw error;
     }
   }

@@ -40,7 +40,8 @@ const here = (c: Context<{ Variables: { subject: string } }>, code: string) =>
 function failed(c: Context, error: unknown) {
   if (error instanceof AtCap) return c.json({ error: error.message, atCap: true }, 429);
   if (error instanceof LeadsAppError) {
-    return c.json({ error: `The leads app did not answer (${error.status}). Nothing was changed there. Try again in a few minutes.` }, 502);
+    const what = error.status ? `did not answer (${error.status})` : "could not be reached";
+    return c.json({ error: `The leads app ${what}. Nothing was changed there. Try again in a few minutes.` }, 502);
   }
   throw error;
 }

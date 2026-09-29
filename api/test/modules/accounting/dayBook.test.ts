@@ -7,7 +7,7 @@ import {
   buildReport, propertyFor, dailyFigures, sumDays,
   type ReportDoc, type ReportSection,
 } from "../../../src/modules/reports/index.ts";
-import { dayBook, type DayBook } from "../../../src/modules/accounting/dayBook.ts";
+import { dayBook, NO_ROOM_RATE, type DayBook } from "../../../src/modules/accounting/dayBook.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE EXPORT AND THE REPORTS CANNOT DISAGREE
@@ -504,5 +504,40 @@ describe("the day book as a real .xlsx", () => {
   it("is refused to reception, as the day book is", async () => {
     const res = await call(`/5EL/accounting/day-book.xlsx?from=${from}&to=${to}`, deskId);
     expect(res.status).toBe(403);
+  });
+});
+
+/* D27-173, the master: a Tally export never carries a null or a guessed tax.
+   A night not charged yet, at a property with no room GST rate (a new one has
+   none, D22-9), has an unknown tax in the reports' figures - so a range
+   holding one is refused, in words, before anything is built. One
+   transaction, rolled back. */
+describe("a range holding a night not charged yet, with no room GST rate (D27-173)", () => {
+  it("is refused before anything is built, and a range ending before it still builds", async () => {
+    const pool = new (await import("pg")).default.Pool({ connectionString: SUPER });
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      await client.query("select set_config('app.user_id', $1, true)", [ownerId]);
+      const h = (await client.query<{ id: string }>(
+        "select app.provision_property_unchecked('DBR','Day Book Rate Test','Nowhere')::text as id")).rows[0]!.id;
+      await client.query("delete from tax_rules where hotel_id = $1 and kind = 'room'", [h]);
+      const guest = (await client.query<{ id: string }>(
+        "insert into guests (full_name) values ('Day book rate test guest') returning id::text")).rows[0]!.id;
+      const d = (await client.query<{ today: string; first: string; last: string }>(
+        `insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+         values ($1, app.next_reference($1), $2, (select id from room_types where hotel_id = $1 limit 1),
+                 app.business_date($1) + 1, app.business_date($1) + 3, 2500, 'confirmed')
+         returning (check_in - 1)::text as today, check_in::text as first, (check_out - 1)::text as last`,
+        [h, guest])).rows[0]!;
+      const property = (await propertyFor(client, "DBR"))!;
+
+      await expect(dayBook(client, property, d.first, d.last)).rejects.toThrow(NO_ROOM_RATE);
+      expect((await dayBook(client, property, d.today, d.today)).days).toHaveLength(1);
+    } finally {
+      await client.query("rollback");
+      client.release();
+      await pool.end();
+    }
   });
 });
