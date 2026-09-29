@@ -83,33 +83,21 @@ describe("editing a charge (D27-157)", () => {
       { description: "Reversal - Room 205 · 1 night (why: Agreed at 8,000)", amount: "-7000.00" });
   });
 
-  it("refuses a room night's words, a price of nothing, and a line on a closed day", async () => {
+  it("refuses a room night's words and a price of nothing", async () => {
+    /* A line on a closed day is refused by the reversal Edit goes through;
+       asked at Pune, where a day is closed: night-audit/corrections.test.ts. */
     const stay = await aStayInHouse();
-    const { rows: closed } = await sql(
-      `select fp.id::text as id, f.reservation_id::text as stay
-         from folio_postings fp join folios f on f.id = fp.folio_id
-        where fp.category = 'room' and fp.amount > 0 and f.reservation_id is not null
-          and fp.reverses_id is null
-          and not exists (select 1 from folio_postings r where r.reverses_id = fp.id)
-          and exists (select 1 from night_audit_runs na where na.hotel_id = fp.hotel_id
-                       and na.business_date = fp.business_date and na.status = 'completed')
-        limit 1`);
-    expect(closed[0], "the demo has a closed day's room line").toBeTruthy();
-
     const out = await attempt(async (client) => {
       const id = await posted(client, stay, "Room 205 · 1 night", 7000);
       const words = await editFolioCharge(client, stay.hotel, id,
         { description: "Suite upgrade", reason: "x" }, { reservationId: stay.stay });
       const zero = await editFolioCharge(client, stay.hotel, id,
         { amount: 0, reason: "x" }, { reservationId: stay.stay });
-      const day = await editFolioCharge(client, stay.hotel, closed[0].id,
-        { amount: 1, reason: "x" }, { reservationId: closed[0].stay });
-      return [words, zero, day].map((r) => (r.ok ? "posted" : r.reason));
+      return [words, zero].map((r) => (r.ok ? "posted" : r.reason));
     });
     expect(out).toEqual([
       "A room night's words count its nights. Change its price only.",
       "A charge is more than zero. To take it off the bill, reverse it.",
-      "This day is closed - correct it on Closed days.",
     ]);
   });
 });

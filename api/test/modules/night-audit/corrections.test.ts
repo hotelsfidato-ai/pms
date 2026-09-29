@@ -262,6 +262,14 @@ describe("a room line of several nights, corrected (D27-162)", () => {
       { amount: "9000.00", tax_rate: "5.00", tax_amount: "450.00" });
   });
 
+  it("Edit on the Bill tab sends a closed day's charge to Closed days (D27-157)", async () => {
+    const res = await as(gmId, `/stays/${stay.stayId}/charges/${minibar}/edit`,
+      { amount: 60, reason: "One soft drink, not two" });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toBe("This day is closed - correct it on Closed days.");
+  });
+
   it("Change rate corrects a closed night through the same correction, for the GM and not reception", async () => {
     const desk = await as(deskId, `/stays/${walkIn.stayId}/rate`, { rate: 5000, reason: "x" });
     expect(desk.status, "reception changing a rate").toBe(403);
