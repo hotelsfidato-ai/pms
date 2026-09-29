@@ -31,10 +31,11 @@ import type { SendableFile } from "../../sending.ts";
 
 export interface VoucherRoom {
   roomType: string;
-  mealPlan: string | null;
   adults: number;
   children: number;
   nights: number;
+  /** The code with its words, "EP · Room only" (meal_plans, D27-164). */
+  mealPlan: string | null;
   /** The nightly rate the audit posts, before tax; null where none is set. */
   rate: number | null;
   complimentary: boolean;
@@ -108,10 +109,12 @@ export function voucherFigures(rooms: VoucherRoom[]): VoucherFigures {
 /** "INR 1,16,216.00", or "-" for a figure nobody set. */
 export const money = (n: number | null): string => (n === null ? "-" : `INR ${inr(n)}`);
 
-/** WinAnsi-safe text: what pdfkit's Helvetica can draw. */
-const plain = (value: unknown): string => String(value ?? "")
-  .replace(/[—–]/g, "-").replace(/[·•]/g, "-").replace(/[“”]/g, '"').replace(/[‘’]/g, "'")
-  .replace(/₹/g, "INR ").replace(/…/g, "...").replace(/[^\x20-\x7E]/g, "");
+/** WinAnsi-safe text: what pdfkit's Helvetica can draw. The middot is
+    WinAnsi's own, so a meal plan reads "EP · Room only" as every screen
+    says it (D27-164). */
+export const plain = (value: unknown): string => String(value ?? "")
+  .replace(/[—–]/g, "-").replace(/•/g, "·").replace(/[“”]/g, '"').replace(/[‘’]/g, "'")
+  .replace(/₹/g, "INR ").replace(/…/g, "...").replace(/[^\x20-\x7E·]/g, "");
 
 /* The desk's own words for terms (src/modules/inventory/pages/
    CancellationTerms.tsx `describe`), so the guest reads what the hotel set. */
@@ -125,17 +128,6 @@ function retained(basis: string | null, percent: number | null, amount: number |
     default: return "-";
   }
 }
-
-/* The desk's words for a meal plan: New booking's PLANS
-   (src/modules/reservations/pages/NewBooking.tsx) - the API never imports
-   web code, so they are written here too; change both. RO is the walk-in's
-   "Room Only" (front-desk stays.ts). */
-const PLAN_WORDS: Record<string, string> = {
-  EP: "Room only", RO: "Room only", CP: "With breakfast", MAP: "Breakfast and one meal",
-  AP: "All meals", AI: "All inclusive",
-};
-export const planWords = (code: string | null): string =>
-  code === null ? "-" : PLAN_WORDS[code] ?? code;
 
 /** The policies the voucher prints (V4): the booking's own terms, then the
     hotel's times. Nothing else - no policy is written here for a hotel. */
@@ -300,7 +292,7 @@ export function voucherPdf(f: VoucherFacts): Promise<Uint8Array> {
     text(l.complimentary ? "Complimentary" : money(l.amount), RIGHT, y, { size: 8.6, bold: true, align: "right", width: 30 });
     y += 3.6;
     const people = `${l.adults} adult${l.adults === 1 ? "" : "s"}${l.children ? `, ${l.children} child${l.children === 1 ? "" : "ren"}` : ""}`;
-    text(`${planWords(l.mealPlan)} - ${people}`, M, y, { size: 7, color: GREY, width: cNights - M - 6 });
+    text(`${l.mealPlan ?? "-"} - ${people}`, M, y, { size: 7, color: GREY, width: cNights - M - 6 });
     y += 4;
   });
   rule(y);

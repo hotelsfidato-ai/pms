@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  money, planWords, voucherFigures, voucherPdf, voucherPolicies, type VoucherFacts, type VoucherRoom,
+  money, plain, voucherFigures, voucherPdf, voucherPolicies, type VoucherFacts, type VoucherRoom,
 } from "../../../src/modules/guest-messaging/voucherDocument.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -12,7 +12,7 @@ import {
    ══════════════════════════════════════════════════════════════════ */
 
 const room = (over: Partial<VoucherRoom> = {}): VoucherRoom => ({
-  roomType: "Superior", mealPlan: "MAP", adults: 2, children: 0, nights: 2,
+  roomType: "Superior", mealPlan: "MAP · Room + breakfast + one meal", adults: 2, children: 0, nights: 2,
   rate: 2734.25, complimentary: false, gstRate: 5, ...over,
 });
 
@@ -63,13 +63,13 @@ describe("the voucher's figures (V1)", () => {
 });
 
 /* Found reading the first voucher sent from New booking, 29 September: the
-   room line printed "EP" where the desk had said "Room only". */
-describe("the meal plan, in the desk's words", () => {
-  it("prints what New booking offered, not the code", () => {
-    expect(["EP", "CP", "MAP", "AP", "AI", "RO"].map(planWords)).toEqual([
-      "Room only", "With breakfast", "Breakfast and one meal", "All meals", "All inclusive", "Room only",
-    ]);
-    expect(planWords(null)).toBe("-");
+   room line printed "EP" alone. The owner's D27-164: the code with its words,
+   everywhere - read from meal_plans by app.guest_voucher, and drawn with its
+   middot, which pdfkit's Helvetica has (WinAnsi 0xB7). */
+describe("the meal plan, as every screen says it (D27-164)", () => {
+  it("keeps the code with its words, middot and all", () => {
+    expect(plain("EP · Room only")).toBe("EP · Room only");
+    expect(plain("MAP • Room + breakfast + one meal ₹")).toBe("MAP · Room + breakfast + one meal INR ");
   });
 });
 

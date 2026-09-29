@@ -73,8 +73,9 @@ call, to the CRS workflow (email, so no inbox mark), carrying
 7,398.00, GST 5% INR 369.90, total INR 7,767.90 - New booking's own figures
 to the paisa - and "Confirmed by Test Reception, 29/09/2026 20:53". Guest
 messages records it: Booking confirmation, email, the PDF's name and size,
-sent. **Found (MSG-6):** the room line printed the code "EP" where New
-booking says "Room only" - fixed with the desk's words (`planWords`), tested.
+sent. **Found (MSG-6):** the room line printed the code "EP" alone - fixed to
+the owner's D27-164, the code with its words ("EP · Room only"), read from
+`meal_plans` by `app.guest_voucher` after taking in cp6 (round F), tested.
 
 **Left open**:
 - **The API suite has not run on the final tree** - held by the master. `checkinLink.test.ts`, the new `sending.test.ts` cases and

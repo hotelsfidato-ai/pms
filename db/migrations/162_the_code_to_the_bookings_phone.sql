@@ -363,7 +363,13 @@ as $fn$
     'company', (select c.name from companies c where c.id = l.company_id),
     'rooms', (
       select jsonb_agg(jsonb_build_object(
-               'roomType', rt.name, 'mealPlan', r.meal_plan,
+               'roomType', rt.name,
+               -- The code with its words, as every screen says it (D27-164),
+               -- from the one list the database keeps (inventory's pricing.ts
+               -- reads it the same way); the bare code where it has no row.
+               'mealPlan', coalesce((select mp.code || ' · ' || mp.includes
+                                       from meal_plans mp where mp.code = r.meal_plan),
+                                    r.meal_plan),
                'adults', r.adults, 'children', r.children,
                'nights', r.check_out - r.check_in,
                'rate', r.agreed_rate,

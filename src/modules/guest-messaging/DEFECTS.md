@@ -131,10 +131,11 @@ through a stand-in receiver: the room line read "EP - 2 adults". New booking
 had offered the guest "Room only"; the voucher is the guest's copy of that
 conversation, and "EP" is a word only the trade reads.
 
-**What was done:** `planWords` in `voucherDocument.ts` prints New booking's
-own names (EP Room only, CP With breakfast, MAP Breakfast and one meal, AP
-All meals, AI All inclusive; RO the walk-in's Room Only). The API does not
-import web code, so the list is written twice and each copy names the other.
+**What was done:** the owner's D27-164 - meal plans read the code WITH its words
+everywhere ("EP · Room only", "CP · Room + breakfast"), as round F made New
+booking say it. `app.guest_voucher` reads them from `meal_plans` (`code ·
+includes`, the way inventory's pricing.ts builds its list), so there is one
+list and it is the database's; the PDF keeps the middot (WinAnsi has it).
 Tested (`voucherDocument.test.ts`).
 
 **The rule: a document a guest reads uses the words the guest was offered,
