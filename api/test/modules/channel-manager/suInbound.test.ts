@@ -437,6 +437,17 @@ describe("a booking SU pushes", () => {
     expect(sent).toContain("\"roomstosell\":\"0\"");
   });
 
+  it("keeps a message whose date does not exist, and says so, rather than failing (CM-6)", async () => {
+    await connected();
+    su();
+    const res = await push(message({ id: "day_" + SU_HOTEL, reservation_notif_id: "n-day" },
+      { arrival_date: "2031-02-30", departure_date: "2031-03-02" }));
+    expect(res.status, "stored, not a 500 that loses it").toBe(200);
+    const kept = await outcomeOf("day_" + SU_HOTEL);
+    expect(kept["outcome"]).toBe("needs_attention");
+    expect(String(kept["reason"])).toContain("real arrival and departure");
+  });
+
   it("keeps a room SU has not mapped for a person", async () => {
     await connected();
     su();
