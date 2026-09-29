@@ -20,6 +20,10 @@ import type { QueryClient } from "@tanstack/react-query";
 
 export const MONEY_KEYS: readonly string[] = [
   "folio", "folio-postings", "folio-balance", "open-folios", "stay-folios",
+  /* The Interim bill (29 September, the folio lane): opened once, it kept its
+     first answer, and a restaurant, spa or laundry charge made since was not
+     on it until a reload. */
+  "stay-bill",
   "in-house", "departures",
   "payments", "payments-by-method", "city-ledger", "cashier-drawer",
   "billable", "invoice",

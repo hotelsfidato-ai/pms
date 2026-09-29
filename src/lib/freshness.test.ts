@@ -24,7 +24,7 @@ describe("money is re-checked", () => {
   });
 
   it("covers the bill, the balances, In house and Due out", () => {
-    for (const key of ["folio", "folio-balance", "open-folios", "in-house", "departures"]) {
+    for (const key of ["folio", "folio-balance", "open-folios", "in-house", "departures", "stay-bill"]) {
       expect(MONEY_KEYS).toContain(key);
     }
   });
