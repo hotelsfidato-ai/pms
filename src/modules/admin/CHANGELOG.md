@@ -15,7 +15,7 @@ Work that touches the core or several services still goes in the root
 
 Branch `frontdesk/one-page-29sep` (from cp6 7980862; cp6 59df358, round F, merged in), copy `.claude\worktrees\modest-wilson-2807a1`, database `fidato_s32`, API 8873, web 5273.
 **Shipped:** `api/src/modules/admin/moduleSwitches.ts` SWITCHABLE gains `booking_company`, `booking_gst`, `booking_extras`, `booking_notes`; migration 161 (provisional) adds them to `hotel_modules_known` and reads an absent row as ON. `pages/Admin.tsx`: `ModulesCard` draws the switches it is given - "Modules" keeps what the API refuses when off, a "New booking" card holds the four, with their words. Owner and administrator only, as every switch (D17-36).
-**Proved:** admin.test.tsx 20/20 (the new test fails with the filter taken out); API moduleSwitches on a scratch database with 161, before the stop: passed; db check in `db/tests/modules/admin.sql` (not run: no gates until the master says). On screen: Notes switched off and on again, and the page followed.
+**Proved:** admin.test.tsx 20/20 (the new test fails with the filter taken out); API moduleSwitches on a scratch database with 161, before the stop: passed; db check in `db/tests/modules/admin.sql`: the database suite's 1263 assertions passed, admin 3/3; API moduleSwitches 20/20 again after the master's go. On screen: Notes switched off and on again, and the page followed.
 **Commits:** 0ba2f49, 68195e1.
 
 ---
