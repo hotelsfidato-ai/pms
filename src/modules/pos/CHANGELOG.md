@@ -11,6 +11,17 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-29 · The folio lane: "Charge to room" on a room with two open bills (POS-24, D27-162)
+
+**Asked for:** the owner's bug of 28 September (a POS charge to a room not on the guest's bill) - root cause, fixed once, one test. Branch `folio/edit-29sep` (from cp6 ca02e37, round F's `fix/leftovers-28sep` merged in), copy `.claude\worktrees\nervous-spence-42dcae`, database `fidato_s31`, API 8871, web 5271.
+**Found:** read-only on the master's `fidato`: the owner's order was still open, nothing from the till had ever reached a bill, and the telemetry held one settle answering 409. Room 201 held two checked-in stays; the confirm closed on "yes" and the server's "which of the two?" came back as two small lines under the total. Reproduced on `fidato_s31`. Nothing in the posting code was wrong - it was never reached. Full text: DEFECTS POS-24.
+**Shipped:** `roomAsk` (`components/AskDialog.tsx`), used by the Till and the Terminal: one button per open bill in the confirm itself, a company bill named "guest - bill to company"; the server's question or refusal read in the same box (`Reply`). `/till/rooms` and the settle's choices carry the company (`till.ts`). The two side panels are gone.
+**Proved:** `restaurantFixes.test.tsx`, two new cases, both seen to fail on the old screens; web pos 10 files, 75 passed. On screen: the owner's order 20260825-1 settled to Tanvi Bhide and shows on her Bill tab.
+**Left open:** a split stay's two GUEST bills (no company) would show one name twice; none exists today.
+**Commits:** bb24d07.
+
+---
+
 ## 2026-09-28 · Fix round F (QA leftovers, D27-149), part B: the till's menu entries follow who may ring up (QA RO-4)
 
 **Asked for:** QA RO-4's POS part. Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
