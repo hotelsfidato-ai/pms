@@ -18,7 +18,7 @@ Work that touches the core or several services still goes in the root
 **Shipped:** `roomAsk` (`components/AskDialog.tsx`), used by the Till and the Terminal: one button per open bill in the confirm itself, a company bill named "guest - bill to company"; the server's question or refusal read in the same box (`Reply`). `/till/rooms` and the settle's choices carry the company (`till.ts`). The two side panels are gone.
 **Proved:** `restaurantFixes.test.tsx`, two new cases, both seen to fail on the old screens; web pos 10 files, 75 passed. On screen: the owner's order 20260825-1 settled to Tanvi Bhide and shows on her Bill tab.
 **Left open:** a split stay's two GUEST bills (no company) would show one name twice; none exists today.
-**Commits:** bb24d07.
+**Commits:** bb24d07. API `till.test.ts` 84 passed, and 143 with `roleGate.test.ts` after merging cp6 2fac3e8.
 
 ---
 
