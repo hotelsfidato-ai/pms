@@ -1,5 +1,5 @@
 -- =============================================================================
--- 162 · The code to the booking's phone; a day unlocked; what a guest sends
+-- 158 · The code to the booking's phone; a day unlocked; what a guest sends
 --       before they arrive (D27-105, D27-169)
 -- =============================================================================
 -- Three changes to the guest's own door (114, 121, 141), none of which changes

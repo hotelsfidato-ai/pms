@@ -33,7 +33,7 @@ put back (CHANGELOG, 21 September).
    an unlock once; the page keeps it on this phone for the day (localStorage,
    D27-169 - it was one tab and an hour, D21-92) and sends it as
    `Authorization: Guest <unlock>`. It is stored as a hash, tied to the link
-   AND the stay, for 24 hours (162); the server ends it and the page drops it
+   AND the stay, for 24 hours (158); the server ends it and the page drops it
    the moment it is refused. Every function behind the code takes both hashes
    and asks `app.guest_unlocked` in the database every time. A forwarded link
    shows what it showed before and asks for a code.
@@ -156,7 +156,7 @@ reception's menu for this (the owner, 24 September).
 Staff routes are for owner, admin, GM, hotel manager and reception
 (`DESK_ROLES`); anybody else is refused with a sentence naming who may.
 
-## Database (migrations 114, 121, 132 and 162)
+## Database (migrations 114, 121, 132 and 158)
 
 **162 (29 September; the master renumbers at merge):**
 `app.guest_code_make(text)` replaces the two-argument one (no number typed;

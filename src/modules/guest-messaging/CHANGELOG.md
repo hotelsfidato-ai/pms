@@ -52,7 +52,7 @@ guard was seen to fail with `disabled` removed. API and web type checks clean.
 
 **Later the same day - the voucher (D27-171, D27-172, the owner's V1 to
 V5):** `voucherDocument.ts` draws the booking voucher in the CRS's design
-from `app.guest_voucher` (added to 162); `withVoucher` attaches it to the
+from `app.guest_voucher` (added to 158); `withVoucher` attaches it to the
 booking confirmation's email for the sweep and Send voucher alike; the CRS
 workflow's email is a short letter in the CRS's colours ("Your reservation
 voucher is attached.", the link clickable after escaping). **Proved:**

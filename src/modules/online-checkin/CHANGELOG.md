@@ -23,7 +23,7 @@ the code on screen that can never reach the live build. Branch
 `messaging/senders-29sep`.
 
 **Shipped:**
-- Migration **162** (numbered for now; the master renumbers):
+- Migration **158** (was 162 until the merge):
   `app.guest_code_make(text)` replaces the two-argument one - no number is
   typed; a stay with no mobile answers a row with no code and issues none.
   The unlock lives 24 hours. `guest_detail_submissions` gains the arrival

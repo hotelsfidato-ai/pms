@@ -70,7 +70,7 @@ WHO sends it, by the message, and nothing else changed for its callers:
 
 The booking confirmation's EMAIL carries the voucher: a PDF in the CRS's
 design (its `voucherPdf.ts`, read, not copied), drawn with pdfkit by
-`voucherDocument.ts` from `app.guest_voucher(reservation)` (162, a definer:
+`voucherDocument.ts` from `app.guest_voucher(reservation)` (158, a definer:
 the sweep has nobody signed in). `withVoucher` in `jobs.ts` attaches it for
 both the sweep and Send voucher, so it is the same PDF whoever sends it; the
 CRS workflow writes the short letter around it in the CRS's colours.
