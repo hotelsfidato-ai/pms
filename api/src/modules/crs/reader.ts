@@ -118,9 +118,11 @@ const MEAL_PLANS: Record<string, string> = {
  * The booking the PMS makes of a CRS one, or why it cannot make it by
  * itself. Every refusal names what the desk must do instead.
  *
- * The rate is the CRS's pre-tax selling rate per room per night: what the
- * guest was quoted. A line with an extra bed or a child charge has no one
- * figure per room without rounding money, so it is left to a person.
+ * THE RATE IS THE CRS'S QUOTE (D27-171): pre-tax, per room per night. A CRS
+ * line prices its extra beds and children per line, so the line's nightly
+ * total is split across its rooms - and a line that does not split to the
+ * paisa, or whose children do not split evenly, is left to a person rather
+ * than rounded.
  */
 export function bookingFrom(
   d: Record<string, unknown>, roomTypes: Map<string, string>,
@@ -128,6 +130,7 @@ export function bookingFrom(
   const rooms = roomsOf(d);
   if (rooms.length === 0) return { problem: "The CRS booking has no rooms." };
   const lines: ChannelBookingInput["lines"] = [];
+  const paise = (v: unknown) => Math.round((num(v) ?? 0) * 100);
 
   for (const r of rooms) {
     const named = str(r["roomTypeName"]) ?? str(r["roomTypeId"]) ?? "(no room type)";
@@ -140,24 +143,26 @@ export function bookingFrom(
     const quantity = num(r["quantity"]) ?? 0;
     const adults = num(r["adults"]) ?? 0;
     const children = num(r["children"]) ?? 0;
-    if (!Number.isInteger(quantity) || quantity < 1 || !Number.isInteger(adults) || adults < 1) {
+    const extraBeds = num(r["extraBeds"]) ?? 0;
+    if (![quantity, adults, children, extraBeds].every(Number.isInteger) || quantity < 1 || adults < 1) {
       return { problem: `The CRS line "${named}" has no rooms or no adults.` };
     }
-    if ((num(r["extraBeds"]) ?? 0) > 0) {
-      return { problem: `The CRS line "${named}" has an extra bed. Book it by hand.` };
-    }
-    if (children > 0 && (num(r["childRate"]) ?? 0) > 0) {
-      return { problem: `The CRS line "${named}" charges for a child. Book it by hand.` };
-    }
-    if (children > 0 && quantity > 1) {
-      return { problem: `The CRS line "${named}" has children across ${quantity} rooms. Book it by hand.` };
-    }
-    const rate = num(r["sellingRate"]);
     /* A machine never books at zero (D10): a missing rate is a person's. */
-    if (rate === null || rate <= 0) {
+    if (paise(r["sellingRate"]) <= 0) {
       return { problem: `The CRS line "${named}" has no rate.` };
     }
-    lines.push({ roomTypeId, mealPlan, adults, children, rooms: quantity, agreedRate: rate });
+    if (children % quantity !== 0) {
+      return { problem: `The CRS line "${named}" has ${children} children across ${quantity} rooms. Book it by hand.` };
+    }
+    const nightly = paise(r["sellingRate"]) * quantity
+      + paise(r["extraBedRate"]) * extraBeds + paise(r["childRate"]) * children;
+    if (nightly % quantity !== 0) {
+      return { problem: `The CRS line "${named}" does not split to the paisa across ${quantity} rooms. Book it by hand.` };
+    }
+    lines.push({
+      roomTypeId, mealPlan, adults, children: children / quantity, rooms: quantity,
+      agreedRate: nightly / quantity / 100,
+    });
   }
   return { lines };
 }
