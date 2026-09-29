@@ -30,8 +30,8 @@ import { idNumberProblem } from "../validate.ts";
    · Before the code is answered, the page may show only what a clerk would
      say across the counter: the guest's own name, their dates, and the last
      four digits of the number on the booking. NOT the bill.
-   · A phone that does not match the booking gets no code AND no explanation.
-     "Wrong number" tells a stranger which number is right.
+   · Nobody types a number (D27-105): the code goes to the one the booking
+     carries, so there is no number to guess and nothing to give away.
    · Every refusal takes the same shape, so what is refused cannot be told
      apart from what does not exist.
 
@@ -206,11 +206,11 @@ guestDoor.get("/:token", async (c) => {
     },
     verified: it.verified,
     phoneHint: it.phone_hint,
-    /* D21-25: the page offers "Send me the code" only when one can be sent.
-       This is about the SERVER, not the booking - it is the same answer for
-       every link, so it tells a stranger nothing about this one. */
-    canSendCodes: canSend(),
-    cannotSend: canSend() ? null : CANNOT_SEND,
+    /* D21-25: the page asks for a code only when one can be sent. This is
+       about the SERVER, not the booking - it is the same answer for every
+       link, so it tells a stranger nothing about this one. */
+    canSendCodes: canSend() || codeOnScreen(),
+    cannotSend: canSend() || codeOnScreen() ? null : CANNOT_SEND,
     /* What this hotel offers behind the code (D21-63): only once unlocked. */
     offers: it.verified ? (it.offers ?? []) : [],
   });
@@ -226,94 +226,87 @@ guestDoor.get("/:token", async (c) => {
 const CANNOT_SEND = "Codes cannot be sent yet - WhatsApp is not connected to "
   + "this server. Ask the desk to send you the link instead.";
 
-const MAYBE_SENT = {
-  sent: true,
-  message: "If that is the number on the booking, the code has been sent to it.",
-};
+/* ── TRY IT WITHOUT WHATSAPP - DEVELOPMENT ONLY (D27-105) ─────────────
+   GUEST_CODE_ON_SCREEN=1 makes the code and hands it back in the answer
+   instead of sending it, so the owner and QA can walk the whole page with
+   no WhatsApp at all. It works only beside ALLOW_DEV_AUTH=1, which env.ts
+   refuses to start with under NODE_ENV=production - so on the live server
+   this is false whatever the settings say. The page shows it only in a
+   development build, and scripts/check-no-dev-login.mjs fails any build
+   that carries it. Everywhere else the rule stands: an answer that carries
+   the code is a door with no lock. */
+const codeOnScreen = (): boolean =>
+  env.allowDevAuth && process.env["GUEST_CODE_ON_SCREEN"] === "1";
+
+/* The answers to "send me the code" (D27-105). The guest types nothing: the
+   code goes to the number THE STAY carries, and the page says where - its
+   last four digits, or on a room card nothing of the number (D21-14). The
+   old rule that a right number and a wrong one must read the same went with
+   the typed number: there is nothing left to guess. */
+const NO_PHONE = "There is no mobile number on this booking, so no code can be "
+  + "sent. Ask the desk.";
+const TOO_OFTEN = "Five codes have gone to this booking in the last hour. "
+  + "Use the latest one, or ask the desk.";
+const NOT_SENT = "The code could not be sent just now. Try again in a minute, "
+  + "or ask the desk.";
 
 guestDoor.post("/:token/code", async (c) => {
   const hash = sha256(c.req.param("token"));
+  const onScreen = codeOnScreen();
   /* Nothing can be sent: say so first. Asked before the knock is counted, so
      a guest reading this sentence has not spent one of their five an hour. */
-  if (!canSend()) return c.json({ sent: false, message: CANNOT_SEND }, 503);
-  if (tooOften(hash, "code")) return c.json(MAYBE_SENT);
-  const body = await c.req.json<{ phone?: string }>().catch(() => ({}) as { phone?: string });
+  if (!canSend() && !onScreen) return c.json({ sent: false, message: CANNOT_SEND }, 503);
+  if (tooOften(hash, "code")) return c.json({ sent: false, message: TOO_OFTEN });
 
-  /* ⚠ THE SAME ANSWER WHETHER OR NOT A CODE WAS MADE. A page that says "that
-     is not the number on the booking" lets a stranger find the number by
-     trying. The guest who typed their own number gets the code; anybody else
-     gets this sentence and nothing else. */
-  /* ⚠ THE ANSWER DOES NOT DEPEND ON WHETHER A CODE WAS MADE. Not its words,
-     not its status, not its shape. The first version of this file returned
-     200 "if that is the number…" when the number was wrong and 503 "codes
-     cannot be sent yet" when it was right - so trying numbers until the
-     answer changed would have found the guest's own. Its own test caught it
-     the first time it ran (18 September).
-
-     SENDING IS n8n's (D17-87, D18-13) and n8n is not connected yet, so today
-     both answers are the same 503; when it is connected both become the same
-     200. The code is NEVER in this answer, in any environment: an answer that
-     carries the code is a door with no lock. */
-  /* ⚠ THIS ASKED FOR `N8N_SEND_WEBHOOK` UNTIL 19 SEPTEMBER, AND NOTHING HAS
-     EVER SET THAT NAME. It was invented here, in a file written before the
-     sender existed; the sender reads N8N_SEND_URL and N8N_SEND_SECRET, and
-     those are the two the owner is told to set. So the owner would have
-     followed the brief to the letter, restarted the API, and this door would
-     have gone on answering 503 for ever - with no error anywhere saying why,
-     and the whole of the verified half of the guest's page (the bill, the
-     identity form, the requests) unreachable behind it. Found by audit.
-
-     Its own test could not catch it: it asserted `[200, 503]` contained the
-     status, which is true either way. The test below now pins BOTH states.
-     (The `canSend` check that refuses now sits at the top of this handler,
-     above the knock count - 21 September, D21-25.) */
-
-  /* ⚠ AND NOTHING IS ISSUED ABOVE THIS LINE. The call to `guest_code_issue`
-     used to sit before the check, so every knock at a server that could not
-     send burned the guest's previous live code (migration 114 keeps one) for
-     an attempt nobody ever made. A record of what was never attempted is
-     exactly what migration 117 refuses to write; issuing one is worse. */
+  /* ⚠ NOTHING IS ISSUED ABOVE THIS LINE. The call that makes the code used
+     to sit before the check, so every knock at a server that could not send
+     burned the guest's previous live code (migration 114 keeps one) for an
+     attempt nobody ever made. */
   const client = await pool.connect();
   try {
     /* One call: the code, AND what the message needs - the stay, its name and
-       the booking's own number (migration 121). None of it goes into the
-       answer below; it goes only into the message. */
+       the booking's own number (162). None of the number goes into the
+       answer; it goes only into the message. */
     const { rows } = await client.query<{
-      code: string; phone: string; reservation_id: string; reference: string;
-      guest_name: string; hotel_id: string; hotel_code: string; hotel_name: string;
-    }>("select * from app.guest_code_make($1, $2)", [hash, body.phone ?? ""]);
+      code: string | null; sent_to: string | null; phone: string | null;
+      reservation_id: string; reference: string; guest_name: string;
+      hotel_id: string; hotel_code: string; hotel_name: string; room_card: boolean;
+    }>("select * from app.guest_code_make($1)", [hash]);
     const made = rows[0];
+    if (!made) return c.json({ error: NOTHING_HERE }, 404);
+    if (!made.code || !made.phone) return c.json({ sent: false, message: NO_PHONE });
 
-    if (made) {
-      /* THE CODE LEAVES THROUGH THE ONE DOOR OUT AND NOWHERE ELSE
-         (api/src/sending.ts). It is not logged, not returned, and not put in
-         the answer below in any environment - an answer that carries the
-         code is a door with no lock. Whether this succeeded does not change
-         what the caller is told.
-
-         ⚠ TO THE WHOLE NUMBER (OCI-2). This passed `sent_to`, the masked
-         "…0011" kept for the record, as the recipient - so the first code
-         sent once WhatsApp was connected would have reached nobody. */
-      await send(client, {
-        channel: "whatsapp",
-        kind: "guest-link-code",
-        hotel: { id: made.hotel_id, code: made.hotel_code, name: made.hotel_name },
-        to: { name: made.guest_name, phone: made.phone },
-        data: { code: made.code, reference: made.reference },
-        about: { kind: "reservation", id: made.reservation_id },
+    const where = made.room_card
+      ? "to the phone on the booking"
+      : `to the number ending ${made.sent_to!.replace("…", "")}`;
+    if (onScreen) {
+      return c.json({
+        sent: true,
+        message: `Development only: nothing was sent. The code would have gone ${where}.`,
+        devCode: made.code,
       });
     }
+
+    /* THE CODE LEAVES THROUGH THE ONE DOOR OUT AND NOWHERE ELSE
+       (api/src/sending.ts). It is not logged and not returned.
+
+       ⚠ TO THE WHOLE NUMBER (OCI-2). This once passed `sent_to`, the masked
+       "…0011" kept for the record, as the recipient - so the first code
+       sent once WhatsApp was connected would have reached nobody. */
+    const answer = await send(client, {
+      channel: "whatsapp",
+      kind: "guest-link-code",
+      hotel: { id: made.hotel_id, code: made.hotel_code, name: made.hotel_name },
+      to: { name: made.guest_name, phone: made.phone },
+      data: { code: made.code, reference: made.reference },
+      about: { kind: "reservation", id: made.reservation_id },
+    });
+    return c.json(answer.ok
+      ? { sent: true, message: `We sent the code on WhatsApp ${where}.` }
+      : { sent: false, message: NOT_SENT });
   } finally {
     client.release();
   }
-
-  /* ⚠ THE ANSWER IS THE SAME WHETHER OR NOT A CODE WAS MADE, WAS SENT, OR
-     FAILED TO SEND. A known and accepted limit: a determined attacker could
-     time the difference, because a matching number does an HTTP call and a
-     wrong one does not. The words, the status and the shape give nothing
-     away, which is what stops somebody finding the guest's number by
-     trying. */
-  return c.json(MAYBE_SENT);
 });
 
 guestDoor.post("/:token/verify", async (c) => {
@@ -353,6 +346,22 @@ guestDoor.post("/:token/verify", async (c) => {
    either whether the link is real (property 5). */
 
 const ID_TYPES = ["aadhaar", "passport", "driving_licence", "voter", "other"];
+/* What a guest may type, and how long (D21-19, D27-169). The Form III ones
+   are 147's: the person and the visit, not the remarks or the next
+   destination, which stay with the desk. */
+const TEXTS = [
+  ["visaNumber", 40], ["addressLine", 300], ["city", 80], ["country", 80],
+  ["specialRequests", 500], ["nationality", 60],
+  ["passportIssuePlace", 80], ["passportIssueCountry", 80], ["visaType", 40],
+  ["visaIssuePlace", 80], ["visaIssueCountry", 80], ["arrivedFrom", 200],
+  ["previousStay", 200], ["purposeOther", 200], ["arrivalPort", 80],
+  ["phoneInIndia", 20], ["mobileInIndia", 20], ["phoneAbroad", 20], ["mobileAbroad", 20],
+  ["refAddress", 300], ["refCity", 80], ["refState", 80], ["refPincode", 10],
+] as const;
+const DATES = ["passportExpiry", "visaExpiry", "dateOfBirth", "passportIssuedOn",
+  "visaIssuedOn", "arrivedInIndiaOn"] as const;
+const GENDERS = ["female", "male", "transgender"];
+const PURPOSES = ["tourism", "business", "employment", "medical", "student", "conference", "others"];
 const isDate = (v: unknown) => v === undefined || v === null || v === ""
   || (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)));
 
@@ -391,19 +400,29 @@ guestDoor.post("/:token/details", async (c) => {
   if (!isDate(b.passportExpiry) || !isDate(b.visaExpiry)) {
     return c.json({ error: "A date is not a date - check the expiry dates." }, 400);
   }
-  for (const [k, max] of [["visaNumber", 40], ["addressLine", 300], ["city", 80], ["country", 80]] as const) {
+  for (const [k, max] of TEXTS) {
     if (b[k] !== undefined && b[k] !== null && !text(b[k], max)) {
       return c.json({ error: "Something typed is too long." }, 400);
     }
+  }
+  /* D27-169: the arrival time, and Form III's own lists (147). */
+  if (!DATES.every((k) => isDate(b[k]))) {
+    return c.json({ error: "A date is not a date - check the dates." }, 400);
+  }
+  if (b.expectedArrival && !(typeof b.expectedArrival === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(b.expectedArrival))) {
+    return c.json({ error: "The arrival time is hours and minutes, like 14:30." }, 400);
+  }
+  if (b.gender && !GENDERS.includes(b.gender as string)) return c.json({ error: "Choose one of the listed genders." }, 400);
+  if (b.purpose && !PURPOSES.includes(b.purpose as string)) return c.json({ error: "Choose one of the listed purposes." }, 400);
+  if (b.employedInIndia !== undefined && b.employedInIndia !== null && typeof b.employedInIndia !== "boolean") {
+    return c.json({ error: "Employed in India is yes or no." }, 400);
   }
 
   const rows = await ask<{ ok: boolean }>(
     "select app.guest_details_submit($1, $2, $3::jsonb) as ok",
     [door.hash, door.unlock, JSON.stringify({
-      idType: b.idType, idNumber: b.idNumber,
-      passportExpiry: b.passportExpiry ?? null, visaNumber: b.visaNumber ?? null,
-      visaExpiry: b.visaExpiry ?? null, addressLine: b.addressLine ?? null,
-      city: b.city ?? null, country: b.country ?? null,
+      ...Object.fromEntries([...TEXTS.map(([k]) => k), ...DATES, "idType", "idNumber",
+        "expectedArrival", "gender", "purpose", "employedInIndia"].map((k) => [k, b[k] ?? null])),
       /* D25-39: the guest's own yes to offers, recorded at once. */
       offersAgreed: b.offersAgreed === true,
     })]);
@@ -570,11 +589,28 @@ guestLinks.get("/:code/online-checkin", async (c) => {
       id: string; guest: string; reference: string; id_type: string; id_number: string;
       passport_expiry: string | null; visa_number: string | null; visa_expiry: string | null;
       address_line: string | null; city: string | null; country: string | null;
-      submitted_at: string;
+      submitted_at: string; more: Record<string, string | boolean | null>;
     }>(
       `select d.id::text, g.full_name as guest, r.reference, d.id_type, d.id_number,
               d.passport_expiry::text, d.visa_number, d.visa_expiry::text,
-              d.address_line, d.city, d.country, d.submitted_at
+              d.address_line, d.city, d.country, d.submitted_at,
+              -- D27-169: what else the guest sent, for the clerk to check.
+              -- Only what was filled in; the screen names each one.
+              jsonb_strip_nulls(jsonb_build_object(
+                'expectedArrival', to_char(d.expected_arrival, 'HH24:MI'),
+                'specialRequests', d.special_requests, 'nationality', d.nationality,
+                'gender', d.gender, 'dateOfBirth', d.date_of_birth,
+                'passportIssuedOn', d.passport_issued_on, 'passportIssuePlace', d.passport_issue_place,
+                'passportIssueCountry', d.passport_issue_country, 'visaType', d.visa_type,
+                'visaIssuedOn', d.visa_issued_on, 'visaIssuePlace', d.visa_issue_place,
+                'visaIssueCountry', d.visa_issue_country, 'arrivedFrom', d.arrived_from,
+                'previousStay', d.previous_stay, 'purpose', d.purpose, 'purposeOther', d.purpose_other,
+                'arrivedInIndiaOn', d.arrived_in_india_on, 'arrivalPort', d.arrival_port,
+                'phoneInIndia', d.phone_in_india, 'mobileInIndia', d.mobile_in_india,
+                'phoneAbroad', d.phone_abroad, 'mobileAbroad', d.mobile_abroad,
+                'employedInIndia', d.employed_in_india, 'refAddress', d.ref_address,
+                'refCity', d.ref_city, 'refState', d.ref_state, 'refPincode', d.ref_pincode
+              )) as more
          from guest_detail_submissions d
          join reservations r on r.id = d.reservation_id
          join guests g       on g.id = d.guest_id
@@ -609,7 +645,7 @@ guestLinks.get("/:code/online-checkin", async (c) => {
         idNumber: shownNumber(d.id_type, d.id_number),
         passportExpiry: d.passport_expiry, visaNumber: d.visa_number,
         visaExpiry: d.visa_expiry, addressLine: d.address_line, city: d.city,
-        country: d.country, submittedAt: d.submitted_at,
+        country: d.country, submittedAt: d.submitted_at, more: d.more,
       })),
       requests: requests.map((q) => ({
         id: q.id, kind: q.kind, what: q.what, wanted: q.wanted,
@@ -638,9 +674,15 @@ guestLinks.post("/:code/online-checkin/submissions/:id/confirm", async (c) => {
           for update)
        insert into guest_documents
          (guest_id, id_type, id_number, passport_expiry, visa_number,
-          visa_expiry, address_line, city, country, captured_by, captured_at)
+          visa_expiry, address_line, city, country,
+          gender, date_of_birth, passport_issued_on, passport_issue_place,
+          passport_issue_country, visa_type, visa_issued_on, visa_issue_place,
+          visa_issue_country, captured_by, captured_at)
        select guest_id, id_type, id_number, passport_expiry, visa_number,
-              visa_expiry, address_line, city, country, app.current_user_id(), now()
+              visa_expiry, address_line, city, country,
+              gender, date_of_birth, passport_issued_on, passport_issue_place,
+              passport_issue_country, visa_type, visa_issued_on, visa_issue_place,
+              visa_issue_country, app.current_user_id(), now()
          from d
        on conflict (guest_id) do update set
          id_type         = excluded.id_type,
@@ -651,10 +693,73 @@ guestLinks.post("/:code/online-checkin/submissions/:id/confirm", async (c) => {
          address_line    = coalesce(excluded.address_line, guest_documents.address_line),
          city            = coalesce(excluded.city, guest_documents.city),
          country         = coalesce(excluded.country, guest_documents.country),
+         gender          = coalesce(excluded.gender, guest_documents.gender),
+         date_of_birth   = coalesce(excluded.date_of_birth, guest_documents.date_of_birth),
+         passport_issued_on     = coalesce(excluded.passport_issued_on, guest_documents.passport_issued_on),
+         passport_issue_place   = coalesce(excluded.passport_issue_place, guest_documents.passport_issue_place),
+         passport_issue_country = coalesce(excluded.passport_issue_country, guest_documents.passport_issue_country),
+         visa_type          = coalesce(excluded.visa_type, guest_documents.visa_type),
+         visa_issued_on     = coalesce(excluded.visa_issued_on, guest_documents.visa_issued_on),
+         visa_issue_place   = coalesce(excluded.visa_issue_place, guest_documents.visa_issue_place),
+         visa_issue_country = coalesce(excluded.visa_issue_country, guest_documents.visa_issue_country),
          captured_by     = excluded.captured_by,
          captured_at     = excluded.captured_at
        returning guest_id`, [c.req.param("id"), hotelId]);
     if (rows.length === 0) return 409 as const;
+
+    /* D27-169: the rest of what the guest sent goes where the desk keeps it,
+       in the same transaction, under the same clerk - the nationality on the
+       guest, the arrival time and their requests on the booking ("Guest asked
+       online: …", added to the notes, never over them), and a foreign
+       guest's visit on its Form III record (147). A field left blank changes
+       nothing already there. */
+    await client.query(
+      `update guests g set nationality = coalesce(d.nationality, g.nationality)
+         from guest_detail_submissions d where d.id = $1 and g.id = d.guest_id`,
+      [c.req.param("id")]);
+    await client.query(
+      `update reservations r
+          set expected_arrival = coalesce(d.expected_arrival, r.expected_arrival),
+              notes = case when d.special_requests is null then r.notes
+                           else concat_ws(E'\\n', nullif(r.notes, ''),
+                                          'Guest asked online: ' || d.special_requests) end
+         from guest_detail_submissions d where d.id = $1 and r.id = d.reservation_id`,
+      [c.req.param("id")]);
+    await client.query(
+      `insert into form_iii_stays
+         (hotel_id, reservation_id, arrived_from, previous_stay, purpose, purpose_other,
+          arrived_in_india_on, arrival_port, phone_in_india, mobile_in_india,
+          phone_abroad, mobile_abroad, employed_in_india,
+          ref_address, ref_city, ref_state, ref_pincode, updated_by)
+       select hotel_id, reservation_id, arrived_from, previous_stay, purpose, purpose_other,
+              arrived_in_india_on, arrival_port, phone_in_india, mobile_in_india,
+              phone_abroad, mobile_abroad, employed_in_india,
+              ref_address, ref_city, ref_state, ref_pincode, app.current_user_id()
+         from guest_detail_submissions
+        where id = $1
+          and coalesce(arrived_from, previous_stay, purpose, purpose_other,
+                       arrived_in_india_on::text, arrival_port, phone_in_india,
+                       mobile_in_india, phone_abroad, mobile_abroad,
+                       employed_in_india::text, ref_address, ref_city, ref_state,
+                       ref_pincode) is not null
+       on conflict (reservation_id) do update set
+         arrived_from        = coalesce(excluded.arrived_from, form_iii_stays.arrived_from),
+         previous_stay       = coalesce(excluded.previous_stay, form_iii_stays.previous_stay),
+         purpose             = coalesce(excluded.purpose, form_iii_stays.purpose),
+         purpose_other       = coalesce(excluded.purpose_other, form_iii_stays.purpose_other),
+         arrived_in_india_on = coalesce(excluded.arrived_in_india_on, form_iii_stays.arrived_in_india_on),
+         arrival_port        = coalesce(excluded.arrival_port, form_iii_stays.arrival_port),
+         phone_in_india      = coalesce(excluded.phone_in_india, form_iii_stays.phone_in_india),
+         mobile_in_india     = coalesce(excluded.mobile_in_india, form_iii_stays.mobile_in_india),
+         phone_abroad        = coalesce(excluded.phone_abroad, form_iii_stays.phone_abroad),
+         mobile_abroad       = coalesce(excluded.mobile_abroad, form_iii_stays.mobile_abroad),
+         employed_in_india   = coalesce(excluded.employed_in_india, form_iii_stays.employed_in_india),
+         ref_address         = coalesce(excluded.ref_address, form_iii_stays.ref_address),
+         ref_city            = coalesce(excluded.ref_city, form_iii_stays.ref_city),
+         ref_state           = coalesce(excluded.ref_state, form_iii_stays.ref_state),
+         ref_pincode         = coalesce(excluded.ref_pincode, form_iii_stays.ref_pincode),
+         updated_by          = excluded.updated_by`,
+      [c.req.param("id")]);
 
     await client.query(
       `update guest_detail_submissions
