@@ -22,6 +22,11 @@ import { TOKEN_SANDBOX, ARI_SUCCESS, ok200 } from "./suExamples.ts";
    6. A hotel that is not connected, or not switched on, is refused - SU keeps
       the booking and tells the property, rather than it vanishing here.
    7. A flood is refused.
+   8. (D27-183) A new booking becomes a booking through reservations' door,
+      once however often SU sends it; a cancellation cancels it; a change, a
+      site with no SU code, unequal night prices and another currency wait
+      for a person with the reason; a failure is said on the list; the GM
+      reads the list.
 
    The door is mounted here the way the master mounts it in server.ts
    (`/api/channel`, outside the staff sign-in), because this copy's server.ts
@@ -119,6 +124,32 @@ const rows = async (sql: string, params: unknown[] = []) => {
   finally { await db.end(); }
 };
 
+/* The Deluxe room at `offset` days out, two nights, at these prices: each
+   test its own nights, so a booking one makes does not fill another's. */
+const stay = (offset: number, prices = ["4500.00", "4500.00"]) => ({
+  arrival_date: addDays(first, offset), departure_date: addDays(first, offset + prices.length),
+  price: prices.map((p, i) => ({
+    date: addDays(first, offset + i), rate_id: "EP", mealplan: "Room only", pricebeforetax: p, tax: "540.00",
+  })),
+});
+
+/* Q1 (D27-183): a person picks SU's code for Booking.com on Booking sources.
+   The seeded code is not SU's, so a test that books sets it, and it is put back. */
+let bookingComCode: string | null = null;
+const bookingComIsSu19 = () =>
+  rows("update booking_sources set channel_code = '19' where lower(name) = 'booking.com'");
+
+const bookedHere = (suId: string) => rows(
+  `select r.reference, r.status, r.agreed_rate::text as rate, r.meal_plan, r.adults,
+          r.commission_amount::text as commission, r.notes, r.cancel_reason, bs.name as source
+     from reservations r join booking_sources bs on bs.id = r.booking_source_id
+    where r.hotel_id = $1 and r.ota_reference = $2 order by r.ota_line`, [hotelId, suId]);
+
+const outcomeOf = async (suId: string) => (await rows(
+  `select outcome, outcome_reason as reason, cardinality(reservation_ids) as made
+     from channel_bookings where hotel_id = $1 and su_booking_id = $2
+    order by received_at desc, id desc limit 1`, [hotelId, suId]))[0]!;
+
 beforeAll(async () => {
   const db = await admin();
   try {
@@ -137,6 +168,8 @@ beforeAll(async () => {
     await db.query(
       `insert into staff_hotels (staff_id, hotel_id, role) values ($1, $2, 'read_only')
        on conflict (staff_id, hotel_id) do update set role = 'read_only'`, [serviceId, hotelId]);
+    bookingComCode = (await db.query<{ c: string | null }>(
+      "select channel_code as c from booking_sources where lower(name) = 'booking.com'")).rows[0]!.c;
   } finally { await db.end(); }
 });
 
@@ -176,6 +209,20 @@ afterEach(async () => {
   useTransportForTests(null);
   const db = await admin();
   try {
+    /* What the door booked: its folios, rooms and guests. */
+    const made = (await db.query<{ id: string; guest_id: string }>(
+      `select id::text, guest_id::text from reservations
+        where hotel_id = $1 and ota_reference like '%\\_' || $2`, [hotelId, SU_HOTEL])).rows;
+    await db.query("delete from folios where reservation_id = any($1::uuid[])", [made.map((r) => r.id)]);
+    await db.query("delete from reservations where id = any($1::uuid[])", [made.map((r) => r.id)]);
+    await db.query("alter table guests disable trigger guests_no_delete");
+    try {
+      await db.query("delete from guests where id = any($1::uuid[])", [made.map((r) => r.guest_id)]);
+    } finally {
+      await db.query("alter table guests enable trigger guests_no_delete");
+    }
+    await db.query("update booking_sources set channel_code = $1 where lower(name) = 'booking.com'",
+      [bookingComCode]);
     for (const t of ["channel_bookings", "channel_ari_sent", "channel_ari_pushes",
                      "channel_room_types", "channel_rate_plans", "channel_hotels"]) {
       await db.query(`delete from ${t} where hotel_id = $1`, [hotelId]);
@@ -258,17 +305,96 @@ describe("a booking SU pushes", () => {
     });
   });
 
-  it("waits for the reservations door rather than inventing a booking", async () => {
+  it("becomes a booking through reservations' door, once, however often SU sends it (D27-183)", async () => {
+    await connected();
+    await bookingComIsSu19();
+    su();
+    const id = "6026344507_" + SU_HOTEL;
+    expect((await push(message({}, stay(40)))).status).toBe(200);
+
+    expect(await outcomeOf(id)).toMatchObject({ outcome: "created", made: 1 });
+    expect(String((await outcomeOf(id))["reason"])).toMatch(/^Booked as FH-/);
+    const booked = await bookedHere(id);
+    expect(booked).toHaveLength(1);
+    expect(booked[0]).toMatchObject({
+      status: "confirmed", rate: "4500.00", meal_plan: "EP", adults: 2,
+      commission: "450.00", source: "Booking.com",
+    });
+    expect(String(booked[0]!["notes"])).toContain("late arrival");
+
+    /* The same booking under a new notification: the first booking, not a second. */
+    await push(message({ reservation_notif_id: "n-again" }, stay(40)));
+    expect(await outcomeOf(id)).toMatchObject({ outcome: "ignored", made: 0 });
+    expect(await bookedHere(id)).toHaveLength(1);
+  });
+
+  it("waits for a person, with the reason, for what it cannot book by itself (Q1, Q2, Q7)", async () => {
     await connected();
     su();
-    await push(message());
-    const [row] = await rows(
-      "select outcome, outcome_reason from channel_bookings where hotel_id = $1", [hotelId]);
-    expect(row!["outcome"]).toBe("needs_attention");
-    expect(String(row!["outcome_reason"])).toContain("not built yet");
-    expect(await rows(
-      "select id from reservations where hotel_id = $1 and ota_reference = $2",
-      [hotelId, "6026344507_" + SU_HOTEL])).toHaveLength(0);
+    /* Q1: Booking.com still carries the seeded code, not SU's 19. */
+    await push(message({ id: "q1_" + SU_HOTEL, reservation_notif_id: "n-q1" }, stay(44)));
+    await bookingComIsSu19();
+    /* Q2: two nights at two prices, each listed. */
+    await push(message({ id: "q2_" + SU_HOTEL, reservation_notif_id: "n-q2" },
+      stay(48, ["4500.00", "5200.00"])));
+    /* Q7: not in rupees, never converted. */
+    await push(message({ id: "q7_" + SU_HOTEL, reservation_notif_id: "n-q7", currencycode: "USD" }, stay(52)));
+
+    const q1 = await outcomeOf("q1_" + SU_HOTEL);
+    expect(q1["outcome"]).toBe("needs_attention");
+    expect(String(q1["reason"])).toContain("SU's code 19");
+    expect(String(q1["reason"])).toContain("Booking sources");
+    const q2 = String((await outcomeOf("q2_" + SU_HOTEL))["reason"]);
+    expect(q2).toContain(`${addDays(first, 48)} 4500.00, ${addDays(first, 49)} 5200.00`);
+    expect(String((await outcomeOf("q7_" + SU_HOTEL))["reason"])).toContain("USD");
+    for (const q of ["q1", "q2", "q7"]) expect(await bookedHere(`${q}_${SU_HOTEL}`), q).toHaveLength(0);
+  });
+
+  it("cancels the booking here when the site cancels it, under the site's policy (Q4)", async () => {
+    await connected();
+    await bookingComIsSu19();
+    su();
+    const id = "cancel_" + SU_HOTEL;
+    await push(message({ id, reservation_notif_id: "n-new" }, stay(56)));
+    expect(await bookedHere(id)).toHaveLength(1);
+
+    await push(message({ id, reservation_notif_id: "n-cancel", status: "cancelled",
+                         cancelreason: "Guest changed plans" }, stay(56)));
+    expect(await outcomeOf(id)).toMatchObject({ outcome: "cancelled" });
+    const [room] = await bookedHere(id);
+    expect(room).toMatchObject({ status: "cancelled" });
+    expect(String(room!["cancel_reason"])).toContain("Guest changed plans");
+  });
+
+  it("keeps a change for a person, the booking here and SU's side by side (Q3)", async () => {
+    await connected();
+    await bookingComIsSu19();
+    su();
+    const id = "change_" + SU_HOTEL;
+    await push(message({ id, reservation_notif_id: "n-new" }, stay(60)));
+    await push(message({ id, reservation_notif_id: "n-mod", status: "modified" },
+      stay(60, ["4500.00", "4500.00", "4500.00"])));
+
+    const changed = await outcomeOf(id);
+    expect(changed["outcome"]).toBe("needs_attention");
+    expect(String(changed["reason"])).toContain(`to ${addDays(first, 62)}`);
+    expect(String(changed["reason"])).toContain(`Now: 1 room, ${addDays(first, 60)} to ${addDays(first, 63)}`);
+    /* Nothing changed by itself. */
+    expect((await rows("select check_out::text as d from reservations where hotel_id = $1 and ota_reference = $2",
+      [hotelId, id]))[0]!["d"]).toBe(addDays(first, 62));
+  });
+
+  it("says on the list when working a booking out fails, instead of leaving it 'Just arrived'", async () => {
+    await connected();
+    await bookingComIsSu19();
+    su();
+    /* A price no booking can hold (numeric(12,2)): the database throws. */
+    const res = await push(message({ id: "bad_" + SU_HOTEL, reservation_notif_id: "n-bad" },
+      stay(64, ["100000000000.00", "100000000000.00"])));
+    expect(res.status).toBe(200);
+    const bad = await outcomeOf("bad_" + SU_HOTEL);
+    expect(bad["outcome"]).toBe("needs_attention");
+    expect(String(bad["reason"])).toContain("Working this booking out failed");
   });
 
   it("is one row and one acknowledgement however often SU sends it again", async () => {
@@ -311,17 +437,13 @@ describe("a booking SU pushes", () => {
     expect(sent).toContain("\"roomstosell\":\"0\"");
   });
 
-  it("keeps a room SU has not mapped, and a cancellation, for a person", async () => {
+  it("keeps a room SU has not mapped for a person", async () => {
     await connected();
     su();
     await push(message({ id: "unmapped_1", reservation_notif_id: "n-unmapped" }, { id: "SUITE" }));
-    await push(message({ id: "cancel_1", reservation_notif_id: "n-cancel", status: "cancelled" }));
-
-    const found = await rows(
-      "select su_booking_id, outcome, outcome_reason from channel_bookings where hotel_id = $1 order by su_booking_id", [hotelId]);
-    expect(found.map((r) => r["outcome"])).toEqual(["needs_attention", "needs_attention"]);
-    expect(String(found.find((r) => r["su_booking_id"] === "unmapped_1")!["outcome_reason"])).toContain("SUITE");
-    expect(String(found.find((r) => r["su_booking_id"] === "cancel_1")!["outcome_reason"])).toContain("cancel");
+    const found = await outcomeOf("unmapped_1");
+    expect(found["outcome"]).toBe("needs_attention");
+    expect(String(found["reason"])).toContain("SUITE");
   });
 
   it("refuses a hotel it does not know, or one not switched on, and keeps nothing", async () => {
@@ -338,7 +460,7 @@ describe("a booking SU pushes", () => {
 });
 
 describe("the list a person reads", () => {
-  it("is refused to a GM and shows the owner what happened, without a card field", async () => {
+  it("is the GM's as well as the owner's (Q6), refused to the desk, without a card field", async () => {
     await connected();
     su();
     await push(message());
@@ -350,15 +472,19 @@ describe("the list a person reads", () => {
         `insert into staff (email, full_name, firebase_uid) values ('cm4-gm@fidato.in', 'CMTEST4 gm', 'test-uid-cm4gm')
          on conflict (email) do update set is_active = true returning id::text`)).rows[0]!.id;
       await db.query(
-        `insert into staff_hotels (staff_id, hotel_id, role) values ($1, $2, 'gm')
-         on conflict (staff_id, hotel_id) do update set role = 'gm'`, [gmId, hotelId]);
+        `insert into staff_hotels (staff_id, hotel_id, role) values ($1, $2, 'front_desk')
+         on conflict (staff_id, hotel_id) do update set role = 'front_desk'`, [gmId, hotelId]);
     } finally { await db.end(); }
 
     const ownerId = (await rows("select id::text as id from staff where email = 'owner@fidato.in'"))[0]!["id"] as string;
     const get = (who: string) =>
       app.request("/api/hotels/5EL/channel-manager/bookings", { headers: { "x-dev-staff-id": who } });
 
-    expect((await get(gmId)).status).toBe(403);
+    expect((await get(gmId)).status, "the desk").toBe(403);
+    await rows("update staff_hotels set role = 'gm' where staff_id = $1 and hotel_id = $2", [gmId, hotelId]);
+    const gm = await get(gmId);
+    expect(gm.status, "the GM settles a refused booking (D17-80)").toBe(200);
+    expect(await gm.text()).toContain("Asha Rao");
     const res = await get(ownerId);
     expect(res.status).toBe(200);
     const text = await res.text();
