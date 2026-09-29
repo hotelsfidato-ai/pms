@@ -104,6 +104,8 @@ async function clearDueOuts() {
 
 let day: string;
 let stay: { stayId: string; folioId: string };
+let walkIn: { stayId: string; folioId: string };
+let twoNights: string;
 let charge: string;
 let laundry: string;
 let food: string;
@@ -128,7 +130,13 @@ beforeAll(async () => {
   /* A day with a room charge and a laundry charge on it, closed. */
   await clearDueOuts();
   stay = await checkIn(3000);
+  /* A walk-in's whole stay on one line (D17-33), "· 2 nights": its slab is
+     asked on the price a night (D27-162). */
+  walkIn = await checkIn(4000);
   day = await businessDate();
+  const whole = await as(deskId, `/stays/${walkIn.stayId}/charges`,
+    { category: "Room", description: `Room ${tag} · 2 nights`, amount: 8000 });
+  expect(whole.status, await whole.clone().text()).toBe(200);
   const posted = await as(deskId, `/stays/${stay.stayId}/charges`,
     { category: "Laundry", description: `${tag} laundry`, amount: 200 });
   expect(posted.status, await posted.clone().text()).toBe(200);
@@ -167,6 +175,9 @@ beforeAll(async () => {
   payment = await line("category = 'payment'");
   minibar = await line(`description = '${tag} minibar'`);
   refund = await line("category = 'refund'");
+  [{ id: twoNights }] = await sql<{ id: string }>(
+    "select id::text from folio_postings where folio_id = $1 and category = 'room'",
+    [walkIn.folioId]) as [{ id: string }];
 });
 
 /* The stay, its bill and its corrections stay behind: they are on a closed
@@ -176,11 +187,12 @@ afterAll(async () => {
   await sql("delete from night_audit_runs where hotel_id = $1 and business_date = '2020-01-01'", [puneId]);
   /* Released, then clean again: a release dirties the room (074), and the
      files after this one look for a clean, free room at Pune. */
-  await sql("update room_assignments set released_at = now() where reservation_id = $1 and released_at is null",
-    [stay.stayId]);
+  const both = [stay.stayId, walkIn.stayId];
+  await sql("update room_assignments set released_at = now() where reservation_id = any($1) and released_at is null",
+    [both]);
   await sql(`update rooms set housekeeping_status = 'clean'
-              where id in (select room_id from room_assignments where reservation_id = $1)`, [stay.stayId]);
-  await sql("update reservations set status = 'checked_out' where id = $1", [stay.stayId]);
+              where id in (select room_id from room_assignments where reservation_id = any($1))`, [both]);
+  await sql("update reservations set status = 'checked_out' where id = any($1)", [both]);
   await sql("delete from staff_hotels where staff_id in ($1, $2)", [gmId, deskId]);
   await closePool();
 });
@@ -239,6 +251,17 @@ const written = async () => (await sql<{ n: string }>(
         + (select count(*) from folio_postings where hotel_id = $1) as n`, [puneId]))[0]!.n;
 
 /* ── The correction ───────────────────────────────────────────────── */
+
+describe("a room line of several nights, corrected (D27-162)", () => {
+  it("is taxed by the slab on its price a night, not on the whole line", async () => {
+    /* ₹9,000 for two nights is ₹4,500 a night: 5%. Asked on the whole
+       ₹9,000, as it was, it came out 18%. */
+    const res = await correct(twoNights, 9000, "Two nights at 4,500");
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await rightCharge(twoNights)).toMatchObject(
+      { amount: "9000.00", tax_rate: "5.00", tax_amount: "450.00" });
+  });
+});
 
 describe("the GM corrects a room charge on a closed day", () => {
   it("keeps the old line, puts the reversal and the right charge on that day, and moves its reports by exactly the difference", async () => {
