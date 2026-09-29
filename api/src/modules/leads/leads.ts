@@ -1,69 +1,126 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { withSession } from "../../auth.ts";
-import { connected } from "./sync.ts";
+import { LeadsAppError } from "./firestore.ts";
+import {
+  AtCap, appHotelOf, cached, campaignOf, channelOf, leadBehind, leadFrom,
+  messageFrom, openReader, settings, SOURCE_BY_CHANNEL, tokenFor,
+} from "./live.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   LEADS AND WHATSAPP, READ ONLY (D27-100, D27-168)
+   LEADS AND WHATSAPP, READ LIVE (D27-100, D27-168, D27-170)
 
-     GET /:code/leads       the hotel's leads, newest message first,
-                            and whether the leads app is connected
-     GET /:code/leads/:id   one lead: its conversation, the link to
-                            reply in the leads app, and what New
-                            booking pre-fills from it
+     GET /:code/leads                 the hotel's leads, newest message
+                                      first, 50 at a time (?before=)
+     GET /:code/leads/:ref            one lead's conversation, and the
+                                      link to reply in the leads app
+     GET /:code/leads/:ref/booking    what New booking pre-fills: name,
+                                      phone, booking source, campaign
 
    WHO is the role gate's before this runs (roleGate.ts READ_RULES,
-   `customer` view: whoever may see guests), and the database's behind
-   it: `leads` answers only the hotels the person works at. Nothing here
-   writes; the sync is the only writer (sync.ts, app.leads_apply).
-
-   `:id` is the PMS's own id. The app's id holds the guest's number, so
-   it never leaves the server except inside the link back to the app.
+   `customer` view: whoever may see guests, D27-170). Nothing here
+   writes, and nothing read is kept beyond 60 seconds in memory (live.ts).
+   `:ref` is a token (live.ts), never the app's id: that holds the
+   guest's number.
    ══════════════════════════════════════════════════════════════════ */
 
 export const leads = new Hono<{ Variables: { subject: string } }>();
 
-/** How many leads the list carries: the newest by last message.
-    ponytail: a fixed window; page by last_message_at if a hotel's
-    active leads outgrow it. */
-export const LIST_LIMIT = 500;
+/** Leads a list reads at once, and the newest messages a conversation shows. */
+export const PAGE = 50;
+export const THREAD = 100;
 
-const HOTEL = "select id from hotels where code = upper($1) and id in (select app.auth_hotel_ids())";
+const NO_LEAD = "This enquiry is no longer in the leads app, or its link has expired. Open it again from Leads and WhatsApp.";
 
-const LEAD_COLUMNS = `id, name, phone, status, category, source, campaign_id as "campaignId",
-  booking_ref as "bookingRef", booking_value::text as "bookingValue", do_not_contact as "doNotContact",
-  received_at as "receivedAt", last_message_at as "lastMessageAt", last_message as "lastMessage"`;
+/** Whether the person is at this hotel: the database's answer. */
+const here = (c: Context<{ Variables: { subject: string } }>, code: string) =>
+  withSession(c.get("subject"), async (client) =>
+    (await client.query("select 1 from hotels where code = upper($1) and id in (select app.auth_hotel_ids())", [code])).rowCount === 1);
+
+/** A refusal from the app or the cap, in the screen's words. */
+function failed(c: Context, error: unknown) {
+  if (error instanceof AtCap) return c.json({ error: error.message, atCap: true }, 429);
+  if (error instanceof LeadsAppError) {
+    return c.json({ error: `The leads app did not answer (${error.status}). Nothing was changed there. Try again in a few minutes.` }, 502);
+  }
+  throw error;
+}
 
 leads.get("/:code/leads", async (c) => {
-  const found = await withSession(c.get("subject"), async (client) => {
-    const hotel = await client.query<{ id: string }>(HOTEL, [c.req.param("code")]);
-    if (hotel.rowCount !== 1) return null;
-    const rows = await client.query(
-      `select ${LEAD_COLUMNS} from leads where hotel_id = $1
-        order by last_message_at desc nulls last limit ${LIST_LIMIT}`, [hotel.rows[0]!.id]);
-    const sync = await client.query<{ last_run: Date | null; last_error: string | null }>(
-      "select last_run, last_error from app.leads_sync_state()");
-    return { leads: rows.rows, lastRead: sync.rows[0]?.last_run ?? null, lastError: sync.rows[0]?.last_error ?? null };
-  });
-  if (!found) return c.json({ error: "No such property." }, 404);
-  return c.json({ connected: connected(), ...found });
+  const code = c.req.param("code");
+  if (!(await here(c, code))) return c.json({ error: "No such property." }, 404);
+  const s = settings();
+  if (!s) return c.json({ connected: false, inApp: false, leads: [], more: null });
+  const appHotel = appHotelOf(s, code);
+  if (!appHotel) return c.json({ connected: true, inApp: false, leads: [], more: null });
+
+  const before = c.req.query("before");
+  if (before !== undefined && Number.isNaN(Date.parse(before))) return c.json({ error: "That is not a time." }, 400);
+  try {
+    const page = await cached(`list:${appHotel}:${before ?? ""}`, async () => {
+      const { reader, left } = await openReader(s, "leads");
+      const limit = Math.min(PAGE, left);
+      const docs = await reader.query("", {
+        from: [{ collectionId: "conversations" }],
+        where: { fieldFilter: { field: { fieldPath: "hotelId" }, op: "EQUAL", value: { stringValue: appHotel } } },
+        /* The app's own index (hotelId, lastMessageAt). */
+        orderBy: [{ field: { fieldPath: "lastMessageAt" }, direction: "DESCENDING" }],
+        limit,
+        ...(before ? { startAt: { before: false, values: [{ timestampValue: before }] } } : {}),
+      });
+      const list = docs.map((d) => leadFrom(d, tokenFor(code, d.id)));
+      return { leads: list, more: docs.length === limit ? list.at(-1)?.lastMessageAt ?? null : null };
+    });
+    return c.json({ connected: true, inApp: true, ...page });
+  } catch (error) {
+    return failed(c, error);
+  }
 });
 
-leads.get("/:code/leads/:id", async (c) => {
-  const id = c.req.param("id");
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return c.json({ error: "No such lead." }, 404);
-  const found = await withSession(c.get("subject"), async (client) => {
-    const hotel = await client.query<{ id: string }>(HOTEL, [c.req.param("code")]);
-    if (hotel.rowCount !== 1) return undefined;
-    const lead = await client.query<Record<string, unknown> & { remote_id: string }>(
-      `select ${LEAD_COLUMNS}, remote_id from leads where hotel_id = $1 and id = $2`, [hotel.rows[0]!.id, id]);
-    if (lead.rowCount !== 1) return null;
-    const messages = await client.query(
-      "select direction, kind, body, at from lead_messages where lead_id = $1 order by at, remote_id", [id]);
-    const { remote_id, ...rest } = lead.rows[0]!;
-    const app = process.env["M2R_APP_URL"]?.trim().replace(/\/+$/, "");
-    return { ...rest, messages: messages.rows, replyUrl: app ? `${app}/inbox/${encodeURIComponent(remote_id)}` : null };
-  });
-  if (found === undefined) return c.json({ error: "No such property." }, 404);
-  if (found === null) return c.json({ error: "No such lead." }, 404);
-  return c.json(found);
+leads.get("/:code/leads/:ref", async (c) => {
+  const code = c.req.param("code");
+  if (!(await here(c, code))) return c.json({ error: "No such property." }, 404);
+  const s = settings();
+  const id = leadBehind(code, c.req.param("ref"));
+  if (!s || !id) return c.json({ error: NO_LEAD }, 404);
+  try {
+    const messages = await cached(`thread:${id}`, async () => {
+      const { reader, left } = await openReader(s, "conversation");
+      const docs = await reader.query(`conversations/${encodeURIComponent(id)}`, {
+        from: [{ collectionId: "messages" }],
+        orderBy: [{ field: { fieldPath: "receivedAt" }, direction: "DESCENDING" }],
+        limit: Math.min(THREAD, left),
+      });
+      return docs.map(messageFrom).filter((m) => m !== null).reverse();
+    });
+    return c.json({ messages, replyUrl: s.appUrl ? `${s.appUrl}/inbox/${encodeURIComponent(id)}` : null });
+  } catch (error) {
+    return failed(c, error);
+  }
 });
+
+leads.get("/:code/leads/:ref/booking", async (c) => {
+  const code = c.req.param("code");
+  if (!(await here(c, code))) return c.json({ error: "No such property." }, 404);
+  const s = settings();
+  const id = leadBehind(code, c.req.param("ref"));
+  const appHotel = s && appHotelOf(s, code);
+  if (!s || !id || !appHotel) return c.json({ error: NO_LEAD }, 404);
+  try {
+    /* Read again, live: an erased guest never pre-fills a booking (D27-108). */
+    const { reader } = await openReader(s, "booking");
+    const { found } = await reader.get([`conversations/${id}`, `hotels/${appHotel}/marketing/campaigns`]);
+    const lead = found.find((d) => d.name.endsWith(`/conversations/${id}`));
+    if (!lead || lead.fields["hotelId"] !== appHotel) return c.json({ error: NO_LEAD }, 404);
+    const catalogue = (found.find((d) => d !== lead)?.fields["campaigns"] ?? {}) as Record<string, Record<string, unknown>>;
+    const channel = channelOf(lead.fields);
+    const sourceName = SOURCE_BY_CHANNEL[channel] ?? null;
+    const sourceId = sourceName === null ? null : await withSession(c.get("subject"), async (client) =>
+      (await client.query<{ id: string }>(
+        "select id from booking_sources where lower(btrim(name)) = lower($1) and is_active", [sourceName])).rows[0]?.id ?? null);
+    const { name, phone } = leadFrom(lead, "");
+    return c.json({ name, phone, channel, bookingSourceId: sourceId, campaign: campaignOf(lead.fields, catalogue) });
+  } catch (error) {
+    return failed(c, error);
+  }
+});
+

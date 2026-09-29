@@ -570,6 +570,13 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/online-checkin/messages`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`GET ${H}/guest-messages`]: own("guest-messaging/messages.ts: VIEW_ROLES, `customer` view (D27-144)"),
   [`GET ${H}/reviews`]: own("reputation/reputation.ts: VIEW_ROLES"),
+  /* D27-170: whoever sees guests sees the leads app's leads, read live. */
+  [`GET ${H}/leads`]: GUESTS,
+  [`GET ${H}/leads/:ref`]: GUESTS,
+  [`GET ${H}/leads/:ref/booking`]: GUESTS,
+  /* D27-170 (and D22-17): spend and booked revenue by campaign and source,
+     the owner, an administrator and the GM only. */
+  [`GET ${H}/marketing/numbers`]: see("marketing", "marketing numbers"),
 
   /* ── Bills and money (D27-143) ── */
   [`GET ${H}/folios`]: BILLS,

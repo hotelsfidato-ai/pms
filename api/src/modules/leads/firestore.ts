@@ -4,19 +4,19 @@
    The market-to-revenue app keeps running; the PMS only reads it, with
    the read-only Google login the owner creates (a service account whose
    one role is Cloud Datastore Viewer - Google refuses its every write).
-   Firestore's REST API, three calls and nothing else:
+   Firestore's REST API, two calls and nothing else:
 
-     query   runQuery            documents of one collection, in order
-     count   runAggregationQuery how many a query matches
-     get     batchGet            which of these documents still exist
+     query   runQuery    documents of one collection, in order
+     get     batchGet    these documents, and which no longer exist
 
    ⚠ EVERY READ IS COUNTED. The app is on the free plan: 50,000 reads a
    day, SHARED with the live app, and a careless copy stops the app
    saving until midnight Pacific. What Google charges, as `counted` is
-   told it: a query, one per document back and one when nothing comes
-   back; a count, one per 1,000 matched; a get, one per document asked
-   for, found or not (the conservative reading). The sync decides whether
-   there is budget left BEFORE it asks; this file only counts.
+   told it - and waited for, so a read is written down before its data is
+   used: a query, one per document back and one when nothing comes back;
+   a get, one per document asked for, found or not (the conservative
+   reading). Whether there is budget left is asked BEFORE (live.ts); this
+   file only counts.
 
    Nothing here writes, and no key is in this file: the token comes from
    the server's settings (M2R_SERVICE_ACCOUNT), handed in.
@@ -29,8 +29,6 @@ export type Reader = {
   /** Documents of one collection under `parent` ("" is the root, or
       "conversations/<id>" for a lead's messages), in the query's order. */
   query(parent: string, structuredQuery: Query): Promise<Doc[]>;
-  /** How many documents a root query matches. */
-  count(structuredQuery: Query): Promise<number>;
   /** Which of these documents ("conversations/<id>") still exist. */
   get(paths: readonly string[]): Promise<{ found: Doc[]; missing: string[] }>;
 };
@@ -68,7 +66,7 @@ const toDoc = (d: { name: string; fields?: Record<string, FirestoreValue> }): Do
 export function makeReader(o: {
   projectId: string;
   token: () => Promise<string>;
-  counted: (reads: number) => void;
+  counted: (reads: number) => void | Promise<void>;
   fetch?: typeof fetch | undefined;
 }): Reader {
   const root = `projects/${o.projectId}/databases/(default)/documents`;
@@ -83,7 +81,7 @@ export function makeReader(o: {
     });
     if (!res.ok) {
       /* A refused call is counted as one read, to be on the safe side. */
-      o.counted(1);
+      await o.counted(1);
       throw new LeadsAppError(res.status);
     }
     return (await res.json()) as unknown[];
@@ -94,24 +92,15 @@ export function makeReader(o: {
       const rows = await post(`${base}${parent ? `/${parent}` : ""}:runQuery`, { structuredQuery }) as
         { document?: { name: string; fields?: Record<string, FirestoreValue> } }[];
       const docs = rows.flatMap((r) => (r.document ? [toDoc(r.document)] : []));
-      o.counted(Math.max(1, docs.length));
+      await o.counted(Math.max(1, docs.length));
       return docs;
-    },
-
-    async count(structuredQuery) {
-      const rows = await post(`${base}:runAggregationQuery`, {
-        structuredAggregationQuery: { structuredQuery, aggregations: [{ alias: "n", count: {} }] },
-      }) as { result?: { aggregateFields?: { n?: FirestoreValue } } }[];
-      const n = Number(decode(rows[0]?.result?.aggregateFields?.n ?? { integerValue: "0" }));
-      o.counted(Math.max(1, Math.ceil(n / 1000)));
-      return n;
     },
 
     async get(paths) {
       if (paths.length === 0) return { found: [], missing: [] };
       const rows = await post(`${base}:batchGet`, { documents: paths.map((p) => `${root}/${p}`) }) as
         { found?: { name: string; fields?: Record<string, FirestoreValue> }; missing?: string }[];
-      o.counted(paths.length);
+      await o.counted(paths.length);
       return {
         found: rows.flatMap((r) => (r.found ? [toDoc(r.found)] : [])),
         missing: rows.flatMap((r) => (r.missing ? [r.missing.slice(root.length + 1)] : [])),

@@ -683,6 +683,17 @@ describe("the reads, as every role (RO-1, D27-140 to D27-147)", () => {
     expect((await send(as("front_desk"), "GET", "/guest-messages")).status).toBe(200);
   });
 
+  it("leads are for whoever sees guests, marketing's numbers for the owner, an administrator and the GM (D27-170)", async () => {
+    const GUEST_READERS = ["owner", "admin", "gm", "hotel_manager", "front_desk", "finance", "read_only"];
+    for (const key of [`GET ${H}/leads`, `GET ${H}/leads/:ref`, `GET ${H}/leads/:ref/booking`]) {
+      expect(whoMay(READ_RULES[key]!), key).toEqual(GUEST_READERS);
+    }
+    expect(whoMay(READ_RULES[`GET ${H}/marketing/numbers`]!)).toEqual(["owner", "admin", "gm"]);
+    expect((await send(as("housekeeping"), "GET", "/leads")).status).toBe(403);
+    expect((await send(as("front_desk"), "GET", "/leads")).status).toBe(200);
+    expect((await send(as("front_desk"), "GET", "/marketing/numbers?month=2026-09")).status).toBe(403);
+  });
+
   it("the accountant opens the Accounting export (D27-122), and still not Form III", async () => {
     const book = await send(as("finance"), "GET", "/accounting/day-book?from=2026-08-01&to=2026-08-31");
     expect(book.status, await book.clone().text()).toBe(200);

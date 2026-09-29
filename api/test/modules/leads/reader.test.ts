@@ -37,7 +37,7 @@ function fake(answer: unknown, status = 200) {
 function setup(answer: unknown, status = 200) {
   const { f, calls } = fake(answer, status);
   const reads: number[] = [];
-  const reader = makeReader({ projectId: "demo-leads", token: async () => "t0ken", counted: (n) => reads.push(n), fetch: f });
+  const reader = makeReader({ projectId: "demo-leads", token: async () => "t0ken", counted: (n) => { reads.push(n); }, fetch: f });
   return { reader, calls, reads };
 }
 
@@ -62,12 +62,6 @@ describe("the leads app reader", () => {
     const { reader, reads } = setup([{ readTime: "2026-09-29T05:01:00Z" }]);
     expect(await reader.query("conversations/x", { from: [{ collectionId: "messages" }] })).toEqual([]);
     expect(reads).toEqual([1]);
-  });
-
-  it("counts a count as one read per 1,000 matched", async () => {
-    const { reader, reads } = setup([{ result: { aggregateFields: { n: { integerValue: "2500" } } } }]);
-    expect(await reader.count({ from: [{ collectionId: "conversations" }] })).toBe(2500);
-    expect(reads).toEqual([3]);
   });
 
   it("counts a get as one read per document asked for, and names the missing ones", async () => {
