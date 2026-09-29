@@ -70,10 +70,12 @@ own Firebase key:
 | `M2R_SERVICE_ACCOUNT` | the whole content of the JSON file from step 13, as one line |
 | `M2R_HOTELS` | which PMS hotel is which hotel in the app; for 5 Elements: `5EL=five-elements-akkalkot` |
 | `M2R_APP_URL` | the app's address, so the PMS can link to a lead: `https://live-inventory1.web.app` |
-| `M2R_DAILY_READS` | the most the PMS may read in a day (the owner's choice; 5,000 recommended, 10% of the free 50,000) |
+| `M2R_DAILY_READS` | the most the PMS may read in a day: `5000`, your decision of 29 September (D27-170), a tenth of the free 50,000 |
 
 Until they are set, the Leads and WhatsApp screen says it is not connected
-yet and the PMS reads nothing.
+yet and the PMS reads nothing. Once they are, the PMS reads the app only when
+somebody opens Leads and WhatsApp or Marketing, and keeps no copy (D27-170);
+System health shows how much it read each day.
 
 After the settings are in and the server has restarted, **delete the JSON
 file from Downloads** and empty the Recycle Bin.

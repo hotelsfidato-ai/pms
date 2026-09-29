@@ -68,9 +68,11 @@ export function makeReader(o: {
   token: () => Promise<string>;
   counted: (reads: number) => void | Promise<void>;
   fetch?: typeof fetch | undefined;
+  /** A stand-in for Google on this machine (live.ts, M2R_EMULATOR). */
+  host?: string | null | undefined;
 }): Reader {
   const root = `projects/${o.projectId}/databases/(default)/documents`;
-  const base = `https://firestore.googleapis.com/v1/${root}`;
+  const base = `${o.host ?? "https://firestore.googleapis.com"}/v1/${root}`;
   const call = o.fetch ?? fetch;
 
   async function post(url: string, body: unknown): Promise<unknown[]> {

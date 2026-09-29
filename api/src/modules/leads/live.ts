@@ -26,6 +26,11 @@ import { makeReader, type Doc, type Reader } from "./firestore.ts";
 
    Unset settings (OWNER-STEPS.md) mean not connected, and nothing is
    read. There is no default cap: that number is the owner's.
+
+   M2R_EMULATOR, on this machine only: a stand-in for Google (the Firestore
+   emulator's convention, an address and the token "owner"), for the tests
+   and for opening the screens with made-up leads. The server refuses to
+   read with it under NODE_ENV=production, as it refuses ALLOW_DEV_AUTH.
    ══════════════════════════════════════════════════════════════════ */
 
 export const CACHE_MS = 60_000;
@@ -38,17 +43,25 @@ export type Settings = {
   hotels: ReadonlyMap<string, string>;
   cap: number;
   appUrl: string | null;
+  host: string | null;
 };
 
+const emulatorOf = (e: NodeJS.ProcessEnv) => e["M2R_EMULATOR"]?.trim() || null;
+
 export const connected = (e: NodeJS.ProcessEnv = process.env): boolean =>
-  !!e["M2R_SERVICE_ACCOUNT"] && !!e["M2R_HOTELS"] && Number(e["M2R_DAILY_READS"]) > 0;
+  (!!e["M2R_SERVICE_ACCOUNT"] || !!emulatorOf(e)) && !!e["M2R_HOTELS"] && Number(e["M2R_DAILY_READS"]) > 0;
 
 let made: { raw: string; projectId: string; token: () => Promise<string> } | null = null;
 
 export function settings(e: NodeJS.ProcessEnv = process.env): Settings | null {
   if (!connected(e)) return null;
-  const raw = e["M2R_SERVICE_ACCOUNT"]!;
-  if (made?.raw !== raw) {
+  const host = emulatorOf(e);
+  if (host && e["NODE_ENV"] === "production") {
+    throw new Error("[config] M2R_EMULATOR is set with NODE_ENV=production. The leads app is read from Google only.");
+  }
+  const raw = host ? `{"project_id":"demo-leads"}` : e["M2R_SERVICE_ACCOUNT"]!;
+  if (host) made = { raw, projectId: "demo-leads", token: async () => "owner" };
+  else if (made?.raw !== raw) {
     const account = JSON.parse(raw) as { project_id: string };
     const credential = cert(account as Parameters<typeof cert>[0]);
     made = { raw, projectId: account.project_id, token: async () => (await credential.getAccessToken()).access_token };
@@ -62,6 +75,7 @@ export function settings(e: NodeJS.ProcessEnv = process.env): Settings | null {
     projectId: made.projectId, token: made.token, hotels,
     cap: Math.floor(Number(e["M2R_DAILY_READS"])),
     appUrl: e["M2R_APP_URL"]?.trim().replace(/\/+$/, "") || null,
+    host,
   };
 }
 
@@ -92,7 +106,7 @@ async function recordReads(what: string, count: number) {
 export async function openReader(s: Settings, what: string, f?: typeof fetch): Promise<{ reader: Reader; left: number }> {
   const left = s.cap - (await readsToday());
   if (left <= 0) throw new AtCap();
-  return { reader: makeReader({ projectId: s.projectId, token: s.token, fetch: f, counted: (n) => recordReads(what, n) }), left };
+  return { reader: makeReader({ projectId: s.projectId, token: s.token, host: s.host, fetch: f, counted: (n) => recordReads(what, n) }), left };
 }
 
 /* ── The 60 seconds ───────────────────────────────────────────────── */
