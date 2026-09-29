@@ -54,7 +54,8 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 | Close restaurant day | `/h/:code/till/day-end` | `pages/DayEnd.tsx` | waiter, kitchen manager, Reception |
 | Charges to rooms | `/h/:code/pos` | `pages/Pos.tsx` | none |
 | Restaurant setup | `/h/:code/till/setup` | `pages/Setup.tsx` | none - the owner, an administrator and the GM see it (`room_config` edit; D22-6, D25-20 to D25-26, 25 Sep) |
-| — (not in the menu) kitchen docket | `/h/:code/till/orders/:id/kot/:no` | `pages/Docket.tsx` | opened in a new tab on every send that reaches the kitchen — by the Terminal and, since 17 September, by Tables' order pad; never shows prices |
+| — (not in the menu) kitchen docket | none since 29 Sep | `components/DocketSlip.tsx` | printed by the outlet's KOT station alone (D27-159, D27-161); the page every send opened in a new tab (D17-18) is retired; never shows prices |
+| — KOT printer panel | on the Kitchen screen | `components/KotStation.tsx` | "This device prints KOTs" with a typed name, for the owner, an administrator, the GM and the kitchen manager; on the station, the last 20 KOTs with Reprint |
 | — (not in the menu) printed bill | `/h/:code/till/bill/:id` | `pages/Bill.tsx` | opened from an order |
 
 - Reception's four entries show only while the hotel's "Reception can use the
@@ -141,7 +142,17 @@ orders      GET    /:code/till/orders
             POST   /:code/till/orders/:id/lines/:lineId/void
             POST   /:code/till/orders/:id/lines/:lineId/qty
             POST   /:code/till/orders/:id/kot               send to the kitchen
-            GET    /:code/till/orders/:id/kot/:no           one docket
+            GET    /:code/till/orders/:id/kot/:no           one docket (the kitchen reads it too: KOT_READ)
+            POST   /:code/till/orders/:id/kot/:no/printed   {device}: the KOT station's claim before the paper;
+                                                            refused unless the device is the station; claimed
+                                                            false when another tab has it (D27-159)
+kot station GET    /:code/till/kot-station?device=          each own outlet's station: name, mine, last seen, online
+                                                            (seen within 90 s, KOT_STATION_ONLINE)
+            POST   /:code/till/kot-station/:outlet          {device,name,on}: on moves it here (a name is typed);
+                                                            off only from the station (KOT_SWITCH: menu edit)
+            POST   /:code/till/kot-station/:outlet/poll     {device}: last seen; to the station only, the due
+                                                            dockets (since switched on, unprinted, the business
+                                                            date only: CATCH_UP_FROM, D27-167) and the last 20
             POST   /:code/till/orders/:id/printed
             POST   /:code/till/orders/:id/clear
             POST   /:code/till/orders/:id/settle            cash · card · UPI · split · room · function (D17-21)
@@ -230,12 +241,14 @@ components/PosGate.tsx   see Screens.
 components/FunctionPicker.tsx   "Banquet function" (D17-21): banquet's list of
                     functions an order may go on, through its front door; nothing
                     drawn where there is nothing to choose and nothing chosen.
-components/SlipNotice.tsx   the kitchen slip the browser would not open (POS-10):
-                    openSlip() reads window.open's refusal; SlipNotice is the
-                    line on Tables and the Terminal with "Open the kitchen slip".
-                    Anything that must happen on a send happens BEFORE the slip
-                    opens — where the tab replaces the page, nothing after it
-                    runs (POS-11).
+components/KotStation.tsx   the KOT station (D27-159, D27-161): kotDevice() (this
+                    browser's id, localStorage `pms.kot-device`); KotStationPrinter,
+                    mounted by PosGate, prints every due docket on the station through
+                    window.print() (claim first, one at a time); KotStatus, the line
+                    on Tables, the Till, the Terminal and the Kitchen; KotPrinterPanel,
+                    the Kitchen's switch and Reprint. Setup: KOT-STATION-SETUP.md.
+components/DocketSlip.tsx   the 80 mm docket, as the station prints it.
+   (SlipNotice.tsx and pages/Docket.tsx went on 29 September: D27-161.)
 ```
 
 The screens also use core pieces: the live channel (`@/lib/useLiveOrders`,
@@ -276,6 +289,7 @@ pos_denominations
   audit trigger on pos_menu_items              076_approvals.sql
   prep_minutes on dish and category            079_prep_times.sql
 pos_line_events — kitchen timings              080_kitchen_timings.sql
+pos_kot_prints; pos_outlets.kot_station_*     "one KOT printer per outlet" (29 Sep, provisionally 160)
   course on dish and category                  081_courses.sql
 pos_promotions                                 083_promotions.sql
   reception_pos switch, app.may_use_pos        087_first_screen_and_reception_pos.sql
@@ -410,6 +424,14 @@ One other service's door is imported by this folder (17 September):
   `pos_tickets` like an outside till (028, `till.ts` header). A posting carries
   one tax rate, so a mixed bill posts one row per rate (MEMORY 55). The
   business date is the hotel's, not the till's clock (024's header; MEMORY 19).
+- **One KOT printer per outlet** (D27-159, D27-161, D27-167, 29 September):
+  the device switched on as the outlet's KOT station prints every KOT, and no
+  other device opens or offers one. Switching it on elsewhere moves it; only
+  the station switches itself off. It prints while a restaurant screen is
+  open on it (PosGate); missed KOTs print when it is back, oldest first, the
+  business date's only. Tables, the Till, the Terminal and the Kitchen say
+  whether KOTs are printing. The Till sends to the kitchen like the Terminal
+  (D27-166, POS-24).
 - **The kitchen hears from the database**: a trigger raises the live
   notification (075). Do not publish from routes (MEMORY 181).
 - **Words**: "Order 12", not "KOT 12", on screen; the printed kitchen slip
