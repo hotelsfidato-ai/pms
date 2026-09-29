@@ -18,7 +18,7 @@ import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { KotStatus } from "@/modules/pos/components/KotStation";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
-import { AskDialog, SENT_STRIKE, type Ask } from "@/modules/pos/components/AskDialog";
+import { AskDialog, SENT_STRIKE, roomAsk, type Ask } from "@/modules/pos/components/AskDialog";
 import { useDocumentTitle } from "@/lib/documentTitle";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -101,9 +101,6 @@ export default function TerminalPage() {
      the pattern every till on a phone uses, because there is no third
      option that is not a compromise on both. */
   const [billOpen, setBillOpen] = useState(false);
-  const [choices, setChoices] = useState<
-    { folioId: string; guest: string }[] | null
-  >(null);
 
   const outlets = useQuery({
     queryKey: ["pos-outlets", hotelId],
@@ -271,15 +268,18 @@ export default function TerminalPage() {
     setBusy(false);
 
     if (!res.ok) {
-      if (res.choices) { setChoices(res.choices); return; }
-      return toast.error("Not settled", res.reason);
+      /* A room charge's refusal, or its "which bill?", is read in the box
+         that asked (roomAsk). */
+      if (method !== "room") toast.error("Not settled", res.reason);
+      return res;
     }
     toast.success("Settled",
       res.guest ? `Charged to ${res.guest}`
         : method === "function" ? `On ${res.order.eventTitle ?? "the function"}'s bill`
           : undefined);
-    setOrderId(null); setSettling(false); setRoom(""); setChoices(null); setCashId({});
+    setOrderId(null); setSettling(false); setRoom(""); setCashId({});
     refresh();
+    return res;
   };
 
   /* D17-21: the banquet function this order is on, or off it. */
@@ -313,16 +313,11 @@ export default function TerminalPage() {
     });
   };
 
-  /* D27-117: charging to a room asks first, naming the guest (POS-8). */
-  const askRoom = () => {
-    const guests = (rooms.data ?? []).filter((r) => r.room === room.trim()).map((r) => r.guest);
-    if (guests.length === 0) return void settle("room");   // the server says why not
-    setAsk({
-      title: `Charge ${moneyPrecise(current.data?.gross ?? 0)} to room ${room.trim()}?`,
-      body: `${guests.join(" or ")} will see it on their room bill.`,
-      confirm: "Charge to room", onConfirm: () => settle("room"),
-    });
-  };
+  /* D27-117, D27-162: charging to a room asks first, naming whose bill it
+     lands on - and which, when the room has two (POS-8). */
+  const askRoom = () => setAsk(roomAsk(room.trim(), moneyPrecise(current.data?.gross ?? 0),
+    (rooms.data ?? []).filter((r) => r.room === room.trim()),
+    (folioId) => settle("room", folioId)));
 
   const order = current.data ?? null;
   const open = (orders.data?.orders ?? []).filter((o) => o.status === "open");
@@ -859,29 +854,6 @@ export default function TerminalPage() {
                       className="press w-full h-14 rounded-full bg-ink-900 hover:bg-ink-800 text-white text-base font-semibold"
                     >
                       Next order
-                    </button>
-                  </div>
-                ) : choices ? (
-                  <div className="space-y-2">
-                    <p className="text-base font-medium text-ink-900">
-                      Two guests in room {room}
-                    </p>
-                    <p className="text-2xs text-grey-600 leading-relaxed">
-                      One is checking out, one has arrived. Who ate?
-                    </p>
-                    {choices.map((ch) => (
-                      <button
-                        key={ch.folioId}
-                        type="button"
-                        onClick={() => void settle("room", ch.folioId)}
-                        className={cn(OUTLINE, "w-full h-14 text-base font-medium text-left px-5")}
-                      >
-                        {ch.guest}
-                      </button>
-                    ))}
-                    <button type="button" onClick={() => setChoices(null)}
-                      className={cn(GHOST, "w-full h-12")}>
-                      Cancel
                     </button>
                   </div>
                 ) : settling ? (

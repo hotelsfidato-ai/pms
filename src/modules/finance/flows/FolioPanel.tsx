@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Undo2, Plus, Receipt, LogOut, Printer, ArrowLeftRight,
+  Undo2, Plus, Receipt, LogOut, Printer, ArrowLeftRight, Pencil,
   Split as SplitIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -19,7 +19,7 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuLabel,
 } from "@/components/ui";
-import { getFolioPostings, getFolioBalance, postCharge, reverseCharge, settle, reverseChargeAllowed } from "@/modules/finance/data/postings";
+import { getFolioPostings, getFolioBalance, postCharge, reverseCharge, settle, reverseChargeAllowed, editCharge, changeRate, type BillLine } from "@/modules/finance/data/postings";
 import { checkOut, checkOutAllowed, earlyArrival } from "@/modules/front-desk";
 import { type Posting, type Stay } from "@/data/repositories";
 import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type StayFolio } from "@/modules/finance/data/folios";
@@ -71,6 +71,9 @@ export function FolioPanel({
   const mayPay = can(role, "create", "payment");
   const mayPrint = can(role, "view", "invoice");
   const mayCheckOut = can(role, "edit", "reservation");
+  /* D27-157: the owner, an administrator or the GM - `approve` on a booking,
+     the three who correct a closed day (the server asks the same). */
+  const mayEdit = can(role, "approve", "reservation");
 
   const postings = useQuery({
     queryKey: ["folio-postings", hotelId, stay.id],
@@ -124,6 +127,7 @@ export function FolioPanel({
         stayId={stay.id}
         folios={folios}
         mayChange={mayChange}
+        mayEdit={mayEdit}
         onChanged={refresh}
       />
 
@@ -149,6 +153,7 @@ export function FolioPanel({
         )}
         {mayPrint && <InvoiceDialog hotelId={hotelId} stayId={stay.id} />}
         {mayCharge && <SplitBillButton hotelId={hotelId} stayId={stay.id} onDone={refresh} />}
+        {mayEdit && <ChangeRateButton hotelId={hotelId} stay={stay} onDone={refresh} />}
       </div>
 
       {lateOut && (
@@ -257,13 +262,14 @@ function BalanceHeader({ stay, balance }: { stay: Stay; balance: number | null }
 }
 
 function LedgerList({
-  lines, hotelId, stayId, folios, mayChange, onChanged,
+  lines, hotelId, stayId, folios, mayChange, mayEdit, onChanged,
 }: {
-  lines: Posting[];
+  lines: BillLine[];
   hotelId: string;
   stayId: string;
   folios: StayFolio[];
   mayChange: boolean;
+  mayEdit: boolean;
   onChanged: () => void;
 }) {
   if (lines.length === 0) {
@@ -332,6 +338,9 @@ function LedgerList({
                 )}
               </div>
 
+              {mayEdit && (
+                <EditButton hotelId={hotelId} stayId={stayId} posting={p} onDone={onChanged} />
+              )}
               {mayChange && (
                 <>
                   <TransferButton
@@ -353,6 +362,177 @@ function LedgerList({
         })}
       </ul>
     </div>
+  );
+}
+
+/* EDIT A CHARGE (the owner's D27-157, D27-162): its price, its words or both,
+   with a reason, in one step - the server reverses the old line with the
+   reason and posts the corrected one, so the bill keeps both. Off, with the
+   reason, where the server would refuse: a closed day (Closed days corrects
+   it), a tax invoice on the bill (a credit note does). A payment, a reversal
+   or a line already reversed has nothing to edit, so no pencil. A room
+   night's words count its nights, so only its price changes. */
+function EditButton({
+  hotelId, stayId, posting, onDone,
+}: {
+  hotelId: string; stayId: string; posting: BillLine; onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [words, setWords] = useState(posting.description);
+  const [price, setPrice] = useState(String(posting.amount));
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (posting.kind !== "charge" || posting.reversed || !(posting.amount > 0)
+      || ["discount", "refund", "tax"].includes(posting.category)) return null;
+
+  const room = posting.category === "room";
+  const why = posting.dayClosed ? "This day is closed - correct it on Closed days."
+    : posting.invoice ? `This bill has tax invoice ${posting.invoice}. Only a credit note corrects it now.`
+    : null;
+  const value = Number(price);
+  const changed = words.trim() !== posting.description || value !== posting.amount;
+
+  const save = async () => {
+    setBusy(true);
+    const res = await editCharge(hotelId, stayId, posting.id,
+      { description: words.trim(), amount: value, reason: reason.trim() });
+    setBusy(false);
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    toast.success("Charge corrected", "The old line is reversed with the reason, and the corrected one posted.");
+    setOpen(false); setReason("");
+    onDone();
+  };
+
+  const button = (
+    <button
+      type="button"
+      disabled={!!why}
+      onClick={() => setOpen(true)}
+      aria-label={`Edit ${posting.description}`}
+      className={cn(
+        "shrink-0 grid place-items-center size-9 pointer-coarse:size-11 rounded-full transition-colors duration-150",
+        why ? "text-grey-300 cursor-not-allowed" : "text-grey-500 hover:text-ink-900 hover:bg-grey-50",
+      )}
+    >
+      <Pencil className="size-4" />
+    </button>
+  );
+
+  return (
+    <>
+      {why ? <Tooltip content={why}>{button}</Tooltip> : button}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          title="Edit this charge"
+          description={`${posting.description} · ${moneyPrecise(posting.amount + posting.tax)}`}
+          size="sm"
+          footer={
+            <div className="flex gap-2 w-full justify-end">
+              <Button variant="secondary" onClick={() => setOpen(false)}>Keep it</Button>
+              <Button variant="primary" loading={busy}
+                disabled={!reason.trim() || !(value > 0) || !words.trim() || !changed}
+                onClick={() => void save()}>
+                Correct the charge
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <Field label="Words" {...(room ? { hint: "A room night's words count its nights, so only its price changes." } : {})}>
+              {(f) => (
+                <Input {...fieldProps(f)} value={words} disabled={room}
+                  onChange={(e) => setWords(e.target.value)} />
+              )}
+            </Field>
+            <Field label="Price before tax"
+              hint={room ? "The tax follows the room's slab on the price a night." : "The tax stays at the rate it was charged."}>
+              {(f) => (
+                <Input {...fieldProps(f)} numeric inputMode="decimal" value={price}
+                  onChange={(e) => setPrice(e.target.value)} />
+              )}
+            </Field>
+            <Field label="Why" required hint="Kept on the reversed line. The guest's bill never shows it.">
+              {(f) => (
+                <Textarea {...fieldProps(f)} rows={2} value={reason}
+                  onChange={(e) => setReason(e.target.value)} />
+              )}
+            </Field>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/* CHANGE THE RATE (the owner's D27-157, D27-162): a new rate a night, with a
+   reason. Every night already charged is corrected to it - a closed day's
+   through Closed days, where it shows with its old and new figures - and
+   the night audit charges the nights to come at it. All or nothing: if one
+   night cannot be corrected, the server says which and nothing changes. */
+function ChangeRateButton({
+  hotelId, stay, onDone,
+}: {
+  hotelId: string; stay: Stay; onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [rate, setRate] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const value = Number(rate);
+
+  const save = async () => {
+    setBusy(true);
+    const res = await changeRate(hotelId, stay.id, { rate: value, reason: reason.trim() });
+    setBusy(false);
+    if (!res.ok) return toast.error("Rate not changed", res.reason);
+    const n = res.data?.corrected ?? 0;
+    toast.success("Rate changed", n === 0
+      ? `${money(value)} a night from tonight.`
+      : `${money(value)} a night; ${n} charged ${n === 1 ? "line" : "lines"} corrected.`);
+    setOpen(false); setRate(""); setReason("");
+    onDone();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm">Change rate</Button>
+      </DialogTrigger>
+      <DialogContent
+        title="Change the rate"
+        description={`${stay.guest} · now ${stay.isComplimentary ? "complimentary" : `${money(stay.offeredTariff)} a night`}`}
+        size="sm"
+        footer={
+          <div className="flex gap-2 w-full justify-end">
+            <Button variant="secondary" onClick={() => setOpen(false)}>Keep it</Button>
+            <Button variant="primary" loading={busy}
+              disabled={!(value > 0) || !reason.trim()}
+              onClick={() => void save()}>
+              Change the rate
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <Field label="New rate a night" required hint="Before tax. The room's GST slab follows it.">
+            {(f) => (
+              <Input {...fieldProps(f)} numeric inputMode="decimal" value={rate}
+                onChange={(e) => setRate(e.target.value)} />
+            )}
+          </Field>
+          <p className="text-sm text-grey-700 leading-relaxed">
+            Nights already charged are corrected to it, with this reason - a closed
+            day's on Closed days. Nights still to come are charged at it.
+          </p>
+          <Field label="Why" required hint="Kept with every night it corrects.">
+            {(f) => (
+              <Textarea {...fieldProps(f)} rows={2} value={reason}
+                onChange={(e) => setReason(e.target.value)} />
+            )}
+          </Field>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -788,6 +968,12 @@ function SettleDialog({
                   if (res.ok) {
                     setPressKey(crypto.randomUUID());
                     toast.success(`${money(value)} received`, method);
+                    /* NOTHING LEFT TO TAKE AGAIN (speed finding 7): the
+                       dialog animates out while the bill refreshes to ₹0,
+                       and with the amount still typed it offered the same
+                       money "as the guest's credit" - a tick and a press
+                       from taking it twice. */
+                    setAmount(""); setAsCredit(false);
                     setOpen(false);
                     onDone();
                   } else {

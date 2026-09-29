@@ -8,6 +8,15 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-29 · The folio lane: one correction for Closed days and Change rate; a room line's slab per night (NA-12, D27-162)
+
+**Asked for:** the owner's D27-162: Change rate corrects charged nights through the Closed days correction; the slab-on-the-whole-amount bug fixed. Branch `folio/edit-29sep` (from cp6 ca02e37, round F's `fix/leftovers-28sep` merged in), copy `.claude\worktrees\nervous-spence-42dcae`, database `fidato_s31`, API 8871, web 5271.
+**Shipped:** `correctClosedCharge` on the server's front door (`index.ts`): the correction route's body, moved unchanged, so finance's Change rate corrects a closed night through the same correction row, reversal and right charge. The fix: a room line's slab asked on its price a night (`POSTING_NIGHTS`), not the whole line (DEFECTS NA-12).
+**Proved:** tsc clean; the server loads with the new import. API `corrections.test.ts` 20 passed (3 new: the slab per night, Edit sent to Closed days, Change rate through the correction for the GM and not reception); with the per-night division taken out, the two slab cases failed (18% for 5%). The new cases run last: first, they moved two older cases' count of the day's corrections (1 → 3, 6 → 8).
+**Commits:** 271d93d, 5e606c3, e64a39e.
+
+---
+
 ## 2026-09-28 · Fix round F (QA leftovers, D27-149), part B: the screen guarded by its menu entry
 
 **Shipped:** `routes.tsx`: `RequireAccess` (resource `report`), as round B guarded the reports: the server refuses its reads to a role without `report` (D27-141). On screen, Housekeeping: "This page is not part of your role". Web night-audit tests passed.

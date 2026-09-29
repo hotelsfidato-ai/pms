@@ -126,6 +126,8 @@ const CLOSE_DAY = grant("invoice", "create", "Closing the day");
    who may waive a charge (the owner's D24-3) - `approve` on a booking is
    exactly those three. The database asks the same three (134). */
 const CORRECT_DAY = grant("reservation", "approve", "Correcting a closed day");
+/* Editing a charge and changing a stay's rate: the same three (D27-157). */
+const EDIT_BILL = grant("reservation", "approve", "Editing a charge on a bill");
 const PAYMENT = grant("payment", "create", "Taking a payment");
 const DRAWER = grant("payment", "create", "Running the cashier's drawer");
 
@@ -261,6 +263,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/postings/:id/transfer`]: CHANGE_BILL,
   [`POST ${H}/stays/:id/charges`]: CHARGE,
   [`POST ${H}/stays/:id/charges/:postingId/reverse`]: CHANGE_BILL,
+  [`POST ${H}/stays/:id/charges/:postingId/edit`]: EDIT_BILL,
+  [`POST ${H}/stays/:id/rate`]: EDIT_BILL,
   [`POST ${H}/stays/:id/payments`]: PAYMENT,
   [`POST ${H}/cashier-shift/open`]: DRAWER,
   [`POST ${H}/cashier-shift/movements`]: DRAWER,

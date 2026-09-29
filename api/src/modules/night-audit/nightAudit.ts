@@ -931,6 +931,129 @@ nightAudit.get("/:code/night-audit/days/:date/charges", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
+/** A CLOSED DAY'S CHARGE, PUT RIGHT (the owner's D24-1 to D24-8, D25-5 to
+    D25-9): a correction row with the reason, the wrong line reversed and the
+    right one posted, on the closed day itself. The route below and a stay's
+    Change rate (finance, D27-162) both come here, so there is one
+    correction. `amount` 0 takes the charge off. {ok:false, reason} for a
+    refusal, every one before the first write (MEMORY 243); a caller that has
+    already written throws on it. */
+export async function correctClosedCharge(
+  client: Client, hotelId: string, day: string, postingId: string,
+  amount: number, reason: string,
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  const { rows: state } = await client.query<{ closed: boolean; recent: boolean }>(
+    `select exists (select 1 from night_audit_runs
+                     where hotel_id = $1 and business_date = $2::date
+                       and status = 'completed') as closed,
+            $2::date >= (date_trunc('month', app.business_date($1))
+                         - interval '1 month')::date as recent`,
+    [hotelId, day],
+  );
+  if (!state[0]!.closed) {
+    return refuse(`${dayMonth(day)} is not closed. Its charges are changed at the desk.`);
+  }
+  if (!state[0]!.recent) {
+    return refuse(`Only this month's and last month's days can be corrected. ${dayMonth(day)} is older.`);
+  }
+
+  const { rows: found } = await client.query<{
+    folio_id: string; reservation_id: string | null; category: string;
+    description: string; amount: string; tax_rate: string; tax_amount: string;
+    tax_scheme: string; origin: string | null; invoice: string | null; vat_bill: string | null;
+    nights: number;
+  }>(
+    `select fp.folio_id::text, fp.reservation_id::text, fp.category, fp.description,
+            fp.amount::text, fp.tax_rate::text, fp.tax_amount::text, fp.tax_scheme,
+            ${ORIGIN} as origin, ${POSTING_NIGHTS} as nights,
+            ${STANDING_INVOICE} as invoice, ${STANDING_VAT_BILL} as vat_bill
+       from folio_postings fp
+      where fp.hotel_id = $1 and fp.business_date = $2::date and fp.id = $3::bigint
+        and ${CORRECTABLE}`,
+    [hotelId, day, postingId],
+  );
+  const p = found[0];
+  if (!p) {
+    return refuse(`That is not a charge still standing on ${dayMonth(day)}. `
+      + "Payments, refunds and discounts are not corrected here.");
+  }
+  if (p.invoice) {
+    return refuse(`This bill has tax invoice ${p.invoice}. Issue a credit note instead.`);
+  }
+  if (p.vat_bill) {
+    return refuse(`This bill has VAT bill ${p.vat_bill}. Cancel the VAT bill instead.`);
+  }
+  if (amount === Number(p.amount)) {
+    return refuse("That is the figure the charge already has.");
+  }
+
+  /* The GST, as the audit decides it. A room charge's slab follows its
+     price PER NIGHT, so a new figure can change the rate: a walk-in's "Room
+     201 · 2 nights" at ₹8,000 is ₹4,000 a night and 5%, where asking the
+     whole ₹8,000 made it 18% (D27-162), as the walk-in and the audit ask it.
+     Every other charge keeps the tax it was charged at (D25-9), as a
+     transfer does: a no-show charge's rate was decided by its room, a
+     drink's VAT by its menu. */
+  let rate = Number(p.tax_rate);
+  if (amount > 0 && p.category === "room") {
+    const { rows } = await client.query<{ rate: string | null }>(
+      "select app.gst_rate_or_null($1, 'room', $2::numeric)::text as rate",
+      [hotelId, Math.round((amount / p.nights) * 100) / 100],
+    );
+    if (rows[0]?.rate == null) {
+      return refuse(
+        "This property has no GST rule for rooms. Set it under Rooms and rates → Room types, "
+        + "in the GST card. A missing rate is not zero.");
+    }
+    rate = Number(rows[0].rate);
+  }
+
+  const { rows: made } = await client.query<{ id: string }>(
+    `insert into closed_day_corrections
+       (hotel_id, business_date, posting_id, old_amount, new_amount, reason, origin)
+     values ($1, $2::date, $3::bigint, $4::numeric, $5::numeric, $6, $7)
+     returning id::text`,
+    [hotelId, day, postingId, p.amount, amount, reason, p.origin],
+  );
+  const correction = made[0]!.id;
+
+  try {
+    await client.query(
+      `insert into folio_postings
+         (hotel_id, folio_id, reservation_id, business_date, category, description,
+          amount, tax_rate, tax_amount, reverses_id, source_type, source_id)
+       values ($1, $2, $3, $4::date, $5, $6, $7::numeric, $8::numeric, $9::numeric,
+               $10::bigint, 'correction', $11::uuid)`,
+      [hotelId, p.folio_id, p.reservation_id, day, p.category,
+       `Reversal - ${p.description}`, -Number(p.amount), p.tax_rate,
+       -Number(p.tax_amount), postingId, correction],
+    );
+  } catch (error) {
+    /* 021's index caught a reversal made a moment ago; the transaction is
+       spoiled, so nothing above is kept. */
+    if ((error as { code?: string }).code === "23505") {
+      return refuse("That charge has just been corrected or reversed. Reload to see it.");
+    }
+    throw error;
+  }
+
+  /* The reversal took its tax scheme from the line it reverses (126); the
+     right charge is told: a drink's VAT is still VAT (D21-91). */
+  if (amount > 0) {
+    await client.query(
+      `insert into folio_postings
+         (hotel_id, folio_id, reservation_id, business_date, category, description,
+          amount, tax_rate, tax_amount, tax_scheme, source_type, source_id)
+       values ($1, $2, $3, $4::date, $5, $6, $7::numeric, $8::numeric,
+               round($7::numeric * $8::numeric / 100.0, 2), $10, 'correction', $9::uuid)`,
+      [hotelId, p.folio_id, p.reservation_id, day, p.category, p.description,
+       amount, rate, correction, p.tax_scheme],
+    );
+  }
+
+  return { ok: true, id: correction };
+}
+
 nightAudit.post("/:code/night-audit/days/:date/corrections", async (c) => {
   const day = c.req.param("date");
   const body = (await c.req.json().catch(() => ({}))) as {
@@ -956,113 +1079,8 @@ nightAudit.post("/:code/night-audit/days/:date/corrections", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
-
-    const { rows: state } = await client.query<{ closed: boolean; recent: boolean }>(
-      `select exists (select 1 from night_audit_runs
-                       where hotel_id = $1 and business_date = $2::date
-                         and status = 'completed') as closed,
-              $2::date >= (date_trunc('month', app.business_date($1))
-                           - interval '1 month')::date as recent`,
-      [hotelId, day],
-    );
-    if (!state[0]!.closed) {
-      return refuse(`${dayMonth(day)} is not closed. Its charges are changed at the desk.`);
-    }
-    if (!state[0]!.recent) {
-      return refuse(`Only this month's and last month's days can be corrected. ${dayMonth(day)} is older.`);
-    }
-
-    const { rows: found } = await client.query<{
-      folio_id: string; reservation_id: string | null; category: string;
-      description: string; amount: string; tax_rate: string; tax_amount: string;
-      tax_scheme: string; origin: string | null; invoice: string | null; vat_bill: string | null;
-    }>(
-      `select fp.folio_id::text, fp.reservation_id::text, fp.category, fp.description,
-              fp.amount::text, fp.tax_rate::text, fp.tax_amount::text, fp.tax_scheme,
-              ${ORIGIN} as origin,
-              ${STANDING_INVOICE} as invoice, ${STANDING_VAT_BILL} as vat_bill
-         from folio_postings fp
-        where fp.hotel_id = $1 and fp.business_date = $2::date and fp.id = $3::bigint
-          and ${CORRECTABLE}`,
-      [hotelId, day, postingId],
-    );
-    const p = found[0];
-    if (!p) {
-      return refuse(`That is not a charge still standing on ${dayMonth(day)}. `
-        + "Payments, refunds and discounts are not corrected here.");
-    }
-    if (p.invoice) {
-      return refuse(`This bill has tax invoice ${p.invoice}. Issue a credit note instead.`);
-    }
-    if (p.vat_bill) {
-      return refuse(`This bill has VAT bill ${p.vat_bill}. Cancel the VAT bill instead.`);
-    }
-    if (amount === Number(p.amount)) {
-      return refuse("That is the figure the charge already has.");
-    }
-
-    /* The GST, as the audit decides it. A room charge's slab follows its own
-       amount, so a new figure can change the rate. Every other charge keeps
-       the tax it was charged at (D25-9), as a transfer does: a no-show
-       charge's rate was decided by its room, a drink's VAT by its menu. */
-    let rate = Number(p.tax_rate);
-    if (amount > 0 && p.category === "room") {
-      const { rows } = await client.query<{ rate: string | null }>(
-        "select app.gst_rate_or_null($1, 'room', $2::numeric)::text as rate",
-        [hotelId, amount],
-      );
-      if (rows[0]?.rate == null) {
-        return refuse(
-          "This property has no GST rule for rooms. Set it under Rooms and rates → Room types, "
-          + "in the GST card. A missing rate is not zero.");
-      }
-      rate = Number(rows[0].rate);
-    }
-
-    const { rows: made } = await client.query<{ id: string }>(
-      `insert into closed_day_corrections
-         (hotel_id, business_date, posting_id, old_amount, new_amount, reason, origin)
-       values ($1, $2::date, $3::bigint, $4::numeric, $5::numeric, $6, $7)
-       returning id::text`,
-      [hotelId, day, postingId, p.amount, amount, reason, p.origin],
-    );
-    const correction = made[0]!.id;
-
-    try {
-      await client.query(
-        `insert into folio_postings
-           (hotel_id, folio_id, reservation_id, business_date, category, description,
-            amount, tax_rate, tax_amount, reverses_id, source_type, source_id)
-         values ($1, $2, $3, $4::date, $5, $6, $7::numeric, $8::numeric, $9::numeric,
-                 $10::bigint, 'correction', $11::uuid)`,
-        [hotelId, p.folio_id, p.reservation_id, day, p.category,
-         `Reversal - ${p.description}`, -Number(p.amount), p.tax_rate,
-         -Number(p.tax_amount), postingId, correction],
-      );
-    } catch (error) {
-      /* 021's index caught a reversal made a moment ago; the transaction is
-         spoiled, so nothing above is kept. */
-      if ((error as { code?: string }).code === "23505") {
-        return refuse("That charge has just been corrected or reversed. Reload to see it.");
-      }
-      throw error;
-    }
-
-    /* The reversal took its tax scheme from the line it reverses (126); the
-       right charge is told: a drink's VAT is still VAT (D21-91). */
-    if (amount > 0) {
-      await client.query(
-        `insert into folio_postings
-           (hotel_id, folio_id, reservation_id, business_date, category, description,
-            amount, tax_rate, tax_amount, tax_scheme, source_type, source_id)
-         values ($1, $2, $3, $4::date, $5, $6, $7::numeric, $8::numeric,
-                 round($7::numeric * $8::numeric / 100.0, 2), $10, 'correction', $9::uuid)`,
-        [hotelId, p.folio_id, p.reservation_id, day, p.category, p.description,
-         amount, rate, correction, p.tax_scheme],
-      );
-    }
-
-    return { ok: true, id: correction } as Record<string, unknown>;
+    return await correctClosedCharge(client, hotelId, day, postingId, amount, reason) as
+      Record<string, unknown>;
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

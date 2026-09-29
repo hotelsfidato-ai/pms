@@ -18,6 +18,26 @@ Nothing open.
 
 ## Fixed
 
+### FIN-20 · After a payment, the Settle dialog offered the same money again "as the guest's credit" — FIXED 29 September (the speed lane's finding 7)
+
+**Found** — the speed lane (docs/qa/speed-2026-09-29.md, W-3): Take payment answered 200, balance ₹0, and the dialog stayed up showing "₹1,953 more than the bill". Reproduced on `fidato_s31`, sampling the dialog every 500 ms after a UPI payment of ₹3,286.24: at 1.0 s it was `data-state=closed` but on screen, reading "₹0 outstanding … This is ₹3,286.24 more than the bill; it will be held as the guest's credit". On success it closed and refreshed the bill in the same moment; while it animated out the balance arrived at ₹0 and the typed amount had not moved. On a slow machine or a hidden pane (animations frozen) that frame stays, and a tick and a press take the money again under a new press key. A second way in: `settle()` read the whole bill again after the POST, for a line nobody used; if that read failed the payment stood and the dialog never closed.
+
+**Fixed** — on success the dialog clears the amount and the credit tick before it closes; `settle()` answers once the POST is taken.
+
+**Proved** — `settleOnce.test.tsx`: the closing dialog held on screen (an exit animation Radix waits on, never ended) shows no credit offer and a switched-off Take payment; `settle()` answers ok with the re-read failing. Both seen to fail on the old code.
+
+**The rule** — A form that has done its job empties itself before it goes: the screen under it moves, and a closing dialog is still a dialog.
+
+### FIN-19 · A charge could be reversed after its bill's tax invoice was issued — FIXED 29 September (D27-162)
+
+**Found** — planning D27-157 (29 September): `reverseFolioCharge` (↺, and the banquet's reopened bill) asked nothing about a tax invoice, so a charge taken off after the invoice left the bill and the invoice saying two things.
+
+**Fixed** — the owner's D27-162: once a tax invoice stands on the line's bill (issued, not credited: `STANDING_INVOICE`, folios.ts), a charge or discount is refused, "This bill has tax invoice X. Only a credit note corrects it now." A payment or refund reversal stays for the four money roles (D27-125): it is on no invoice, and a bounced card must still be recorded. Edit goes through the same function, so it refuses the same.
+
+**Proved** — `api/test/modules/finance/editCharge.test.ts` "once a tax invoice stands" (↺ and Edit refused, the payment still reversed).
+
+**The rule** — Once a legal document states a figure, only its own correcting document moves it.
+
 ### FIN-15 · A split bill was invoiced, settled and listed as one stay — FIXED 28 September (QA FI-1, FI-2, FI-3, FI-7; round A)
 
 **Found** — the QA of 28 September. A split stay's tax invoice went to the booking's company (Agoda) with the guest's coffee on it, and the room was on no invoice: `POST /stays/:id/invoice` took the stay's first folio in no order and read the booking's company for it. Settle on Agoda's tab paid the guest's bill (`folioFor` = the first folio) and asked for the whole stay. Invoices had one row per stay. FI-7 (no re-issue after a credit note) did not reproduce on a one-bill stay; it lived in the same stay-for-bill confusion.

@@ -202,6 +202,16 @@ Nine reads in `data/till.ts` ended in `catch { return [] }` (or `null`): the men
 
 **The rule** — A value kept for offline use must never be overwritten by a read that failed. A `catch` that returns a default turns a failure into a fact, and a cache believes facts.
 
+### POS-26 · "Charge to room" on a room with two open bills charged nobody, and looked done — FIXED 29 September (folio lane)
+
+**Found** — the owner, on the local demo, 28 September 22:27: a ₹3,875 dinner charged to a room never reached the guest's bill. Read-only on the master's `fidato`: the order (20260825-1) was still open, no order had ever been settled, `pos_tickets` was empty, and the telemetry (150) held one `POST /till/orders/:id/settle` at 22:29 answering 409. Room 201 held two checked-in stays (the demo's changeover). Reproduced on `fidato_s31` in the app's pane: the D27-117 confirm said "Charge ₹3,875 to room 201? Tanvi Bhide or Rekha Gaikwad will see it on their room bill.", closed on its "Charge to room", and the server's "which of the two?" came back as two small lines under the total, with no toast. The order stayed open. Nothing in the posting code was wrong: it was never reached.
+
+**Fixed** — the owner's D27-162: one box asks. `roomAsk` (`components/AskDialog.tsx`), used by the Till and the Terminal, puts one button per open bill in the confirm itself ("Room 201 has 2 open bills. Whose is it?"), a company bill named "guest - bill to company" (`/till/rooms` and the settle's choices now carry the company); the server's own "which?" or its refusal is read in the same box (`Reply`: `{ refused }` or `{ next }`). The two side panels are gone.
+
+**Proved** — `restaurantFixes.test.tsx`: "a room with two open bills asks whose in the same box, one button each" and "a room charge the server refuses says why in the box that asked"; both seen to fail on the old screens. On screen (`fidato_s31`): the box offered Tanvi Bhide and Rekha Gaikwad, the press settled 20260825-1 to Tanvi Bhide, and her Bill tab showed "Fidato Restaurant - 20260825-1 · ₹3,875".
+
+**The rule** — A question the server asks after "yes" must be asked in the box that got the yes. An answer drawn anywhere else is an answer nobody reads.
+
 ### POS-23 · An order settled to a banquet function reached no bill and no tax invoice — FIXED 28 September (round E)
 
 **Found** — round E, planning the function's bill (QA BQ-1): since 099 an order settled "to the function" touched no folio; the function's quotation counted it, but its bill, its payments and its tax invoice could not.
