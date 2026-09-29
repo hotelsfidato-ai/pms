@@ -106,7 +106,7 @@ describe("loyalty through the desk's doors", () => {
     expect(lines).toEqual([{ category: "discount", amount: "-500.00", tax_amount: "-25.00" }]);
 
     /* 2000 + 100 GST - 500 - 25 = 1575 to settle, then the real check-out. */
-    await ok(await call(`/stays/${stayId}/payments`, "POST", { method: "Cash", amount: 1575 }));
+    await ok(await call(`/stays/${stayId}/payments`, "POST", { method: "UPI", amount: 1575 }));
     await ok(await call(`/stays/${stayId}/check-out`, "POST", {}));
 
     const card = await (await call(`/loyalty/guests/${guestId}`)).json() as {
