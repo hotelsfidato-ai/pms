@@ -1,6 +1,6 @@
-/* Fidato CRS — NOT BUILT. A Coming soon page only (the owner's decision,
-   16 September): `pages/Crs.tsx`, its menu entry (`nav.ts`) and its address
-   (`routes.tsx`). No other service uses anything from here yet, so this
-   front door exports nothing. What the service will be, and what it needs,
-   is in MODULE.md beside this file. */
-export {};
+/* The front door of the CRS bridge on the website - the only file another
+   service may import from here (src/test/boundaries.test.ts).
+
+   `CrsFacts`: a booking's CRS number, salesperson and company, and any
+   change made in the CRS since, for the booking's own panel (D27-168). */
+export { CrsFacts } from "./components/CrsFacts";

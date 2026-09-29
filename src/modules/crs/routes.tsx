@@ -1,16 +1,22 @@
 import { Route } from "react-router";
+import { PropertyScope } from "@/components/app/PropertyScope";
 import { RequireAccess } from "@/components/app/RequireAccess";
-import CrsPage from "@/modules/crs/pages/Crs";
+import CrsBookingsPage from "@/modules/crs/pages/CrsBookings";
 
-/* Fidato CRS's one address — its Coming soon page. Mounted by App.tsx inside
-   the signed-in shell. The guard asks the navigation (`mayReach`), so the
-   page is refused to exactly the people the menu does not show it to. */
+/* The CRS bridge's one address (D27-168). Mounted by App.tsx inside the
+   signed-in shell, scoped to a property like everything under `/h/:code/`.
+
+   GUARDED on `reservation`, as the server's read is: whoever may see the
+   hotel's bookings sees the ones the CRS sold. The mapping card on it is
+   the owner's and an administrator's, and the server refuses anybody else.
+
+   The Coming soon page it replaces is gone: the service is built. */
 export const routes = (
   <Route
-    path="/coming-soon/crs"
+    path="/h/:code/crs-bookings"
     element={
-      <RequireAccess path="/coming-soon/crs" resource="integration">
-        <CrsPage />
+      <RequireAccess path="/h/:code/crs-bookings" resource="reservation">
+        <PropertyScope /><CrsBookingsPage />
       </RequireAccess>
     }
   />
