@@ -14,10 +14,22 @@ the reason the fault does not come back.
 
 ## Open — not fixed
 
-None. The service is not built.
+None.
 
 ---
 
 ## Fixed — the solution is here; do not work it out again
 
-None yet.
+### RS-1 · A "draws nothing" test passed with the rule removed (30 September, numbered for now)
+
+`keyCards.test.tsx`'s first test checked that the key-card panel draws
+nothing where no lock is connected. It looked for the heading as soon as
+the read had been SENT. The panel draws nothing while the answer is on its
+way too, so the test passed with the rule deleted (`if (!k) return null`).
+Found by breaking the rule before committing, as AGENTS.md asks.
+
+**Fixed:** the test waits until the answer is in the query cache, then
+looks. Seen failing with the rule removed, passing with it.
+
+**The rule:** a test that something is NOT drawn must first wait for the
+thing that would have drawn it; "absent" is also what loading looks like.
