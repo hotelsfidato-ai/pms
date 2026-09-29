@@ -394,6 +394,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`DELETE ${H}/banquet/events/:id/catering/:lineId`]: FUNCTION_CHANGE,
   /* Round E (BQ-1): a function's bill. */
   [`POST ${H}/banquet/events/:id/bill`]: FUNCTION_MONEY,
+  /* D27-154: reopening the bill is the same people as billing it. */
+  [`POST ${H}/banquet/events/:id/reopen`]: FUNCTION_MONEY,
   [`POST ${H}/banquet/events/:id/payments`]: FUNCTION_MONEY,
   [`POST ${H}/banquet/events/:id/invoice`]: FUNCTION_INVOICE,
   [`POST ${H}/banquet/venues`]: HALLS,
@@ -691,6 +693,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/staff`]: see("user", "the staff list"),
   [`GET ${H}/audit-log`]: own("admin/adminLists.ts: mayRead"),
   [`GET ${H}/settings`]: own("admin/adminLists.ts: mayRead"),
+  /* QA AD-1: what this server has set up, for whoever holds `integration`. */
+  [`GET ${H}/integrations`]: see("integration", "the integrations"),
   /* D27-91: the server's health, for the owner and an administrator. */
   [`GET ${H}/system-health`]: SYSTEM_HEALTH,
 };

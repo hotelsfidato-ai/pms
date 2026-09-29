@@ -40,6 +40,16 @@ they read, or the branch it drops is untested everywhere at once.
 
 ## Fixed
 
+### NA-11 · "Room charges to post" counted every stay in house; the run posted none of them (QA NA-5) — FIXED 28 September
+
+**Found** — the QA of 28 September (QA NA-5; not this file's NA-5): "Room charges to post: 6", then "0 rooms posted". The count was checked-in and not day-use; the run also asks for an open folio and skips a stay already charged for tonight (every walk-in, posted whole on arrival) and a complimentary room. MODULE.md had said so since 16 September.
+
+**Done** — the run's predicate is one text, `POSTS_TONIGHT`, read by the run and by the count; the count also leaves out complimentary rooms and stays due out today (the run is refused until they leave).
+
+**Proved** — `nightAudit.test.ts` (the walk-in's whole stay) asserts the count drops by one when the stay's two nights are posted; it failed with the old count ("expected 1 to be +0").
+
+**The rule** — A count of what a job will do is the job's own query, not a description of it.
+
 ### NA-10 · The audit closed the day on one click (QA NA-1, D27-117) — FIXED 28 September
 
 **Found** — the QA of 28 September (`docs/qa/qa-2026-09-28.md`, QA NA-1; not this file's NA-1): "Run night audit" closed the day and moved the date at once, and a closed day cannot be edited. The owner's D27-117: it asks first.

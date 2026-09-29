@@ -99,8 +99,11 @@ pricing.get("/:code/pricing", async (c) => {
     /* `meal_plans` has no sort order (011) — four rows, ordered by how much
        they include, which is the order a person reads them in. Written out
        rather than alphabetical, where AP would come before EP. */
+    /* The owner's D27-164: the code with its words ("CP · Room + breakfast"),
+       and RO is not offered - it is EP; old RO bookings read as before. */
     const { rows: planRows } = await client.query<{ code: string; name: string }>(
-      `select code, name from meal_plans
+      `select code, code || ' · ' || includes as name from meal_plans
+        where code <> 'RO'
         order by case code when 'EP' then 1 when 'CP' then 2
                            when 'MAP' then 3 when 'AP' then 4 when 'AI' then 5 else 6 end, code`,
     );

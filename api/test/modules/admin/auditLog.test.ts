@@ -37,7 +37,7 @@ let adminId: string;
 let stayId: string;
 const made: string[] = [];
 
-interface Entry { id: string; actor: string | null; action: string; kind: string }
+interface Entry { id: string; actor: string | null; action: string; kind: string; businessDate: string }
 
 const post = async (staffId: string, path: string, body: unknown) => {
   const res = await app.request(`/api/hotels/${HOTEL}/stays/${stayId}${path}`, {
@@ -172,6 +172,29 @@ describe("shown - the audit log names them", () => {
     /* The demo's postings were bulk-loaded with nobody signed in. */
     const log = await auditLogAs(ownerId);
     expect(log.some((e) => e.actor === null)).toBe(true);
+  });
+
+  it("finds a person's entries and a day's, a page at a time (QA AD-4)", async () => {
+    const read = async (q: string) => {
+      const res = await app.request(`/api/hotels/${HOTEL}/audit-log?${q}`,
+        { headers: { "x-dev-staff-id": ownerId } });
+      expect(res.status, await res.clone().text()).toBe(200);
+      return (await res.json()) as Entry[];
+    };
+    const byName = await read("who=ADM1TEST");
+    expect(byName.filter((e) => made.includes(e.id))).toHaveLength(4);
+    for (const e of byName) expect(e.actor).toBe(CLERK_NAME);
+
+    const day = byName[0]!.businessDate;
+    const onDay = await read(`from=${day}&to=${day}`);
+    expect(onDay.length).toBeGreaterThan(0);
+    for (const e of onDay) expect(e.businessDate).toBe(day);
+
+    const first = await read("who=ADM1TEST&limit=2");
+    const second = await read("who=ADM1TEST&limit=2&offset=2");
+    expect(first).toHaveLength(2);
+    expect(second).toHaveLength(2);
+    expect(first.map((e) => e.id)).not.toContain(second[0]!.id);
   });
 
   it("somebody whose access is removed is still named on what they did", async () => {

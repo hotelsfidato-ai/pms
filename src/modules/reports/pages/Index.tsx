@@ -116,7 +116,7 @@ const GROUPS: Group[] = [
         title: "Lodging tax",
         icon: Landmark,
         path: "/reports/lodging-tax",
-        description: "CGST and SGST at 2.5% each, split by tax slab, as the return expects it.",
+        description: "CGST and SGST at each slab's rate, as the return expects it.",
       },
       {
         title: "GST sales register",

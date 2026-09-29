@@ -293,98 +293,117 @@ postings.post("/:code/stays/:id/charges/:postingId/reverse", async (c) => {
   const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
-
-    const postingId = c.req.param("postingId");
-
-    const { rows } = await client.query<{
-      id: string; folio_id: string; business_date: string; category: string;
-      description: string; amount: string; tax_rate: string; tax_amount: string;
-      reverses_id: string | null; already: boolean;
-      day_closed: boolean;
-    }>(
-      `select fp.id::text, fp.folio_id, fp.business_date::text, fp.category,
-              fp.description, fp.amount, fp.tax_rate, fp.tax_amount,
-              fp.reverses_id::text,
-              exists (select 1 from folio_postings r where r.reverses_id = fp.id) as already,
-              exists (select 1 from night_audit_runs na
-                       where na.hotel_id = fp.hotel_id
-                         and na.business_date = fp.business_date
-                         and na.status = 'completed') as day_closed
-         from folio_postings fp
-         join folios f on f.id = fp.folio_id
-        where f.hotel_id = $1 and f.reservation_id = $2 and fp.id = $3::bigint`,
-      [hotelId, c.req.param("id"), postingId],
-    );
-
-    const p = rows[0];
-    if (!p) return refuse("Posting not found.");
-    if (p.already) return refuse("That posting has already been reversed.");
-    if (p.reverses_id) return refuse("A reversal cannot itself be reversed.");
-    /* A line on a closed day reverses on its own day, which the database
-       refuses (012), and this said "Something went wrong". The owner's D24-9
-       and D25-11: every charge is corrected on Closed days (the night audit's
-       CORRECTABLE); a payment, refund or discount is not changed at all. */
-    if (p.day_closed) {
-      return refuse(["payment", "refund", "discount", "tax"].includes(p.category)
-        ? "This day is closed. Its payments, refunds and discounts are not changed - put the difference right today."
-        : "This day is closed - correct it on Closed days.");
-    }
-
-    if (!reason) return refuse("Say why it is being reversed. The reason stays on the line.");
-    /* A PAYMENT IS UNDONE BY A MANAGER (the owner's D27-125, QA FI-5): a
-       clerk could take cash and reverse the receipt. The owner, an
-       administrator, the GM or the accountant - `approve` on an invoice,
-       the four who cancel an invoice. A charge stays reception's. */
-    if (p.category === "payment") {
-      const { rows: me } = await client.query<{ role: string | null }>(
-        `select case when exists (select 1 from staff s
-                                   where s.id = app.current_user_id() and s.is_group_admin)
-                     then 'owner'
-                     else (select sh.role from staff_hotels sh
-                            where sh.staff_id = app.current_user_id() and sh.hotel_id = $1)
-                end as role`, [hotelId]);
-      if (!can((me[0]?.role ?? "") as Role, "approve", "invoice")) {
-        return refuse(PAYMENT_REVERSAL_WHO);
-      }
-    }
-    /* The reversal is its OWN row, pointing at what it undoes. The
-       original stays exactly as it was — that is the whole point of an
-       append-only ledger, and it is why the posting count goes UP.
-
-       No lock. `pms_app` has no UPDATE on this table (append-only), so
-       `SELECT ... FOR UPDATE` is refused outright — the permission was
-       telling me the lock was the wrong tool. Migration 021 puts a
-       unique index on `reverses_id` instead, so two concurrent
-       reversals leave one inserted and one refused by the database. */
-    try {
-      const { rows: made } = await client.query<{ id: string }>(
-        `insert into folio_postings
-           (hotel_id, folio_id, business_date, category, description,
-            amount, tax_rate, tax_amount, reverses_id)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9::bigint)
-         returning id::text`,
-        [hotelId, p.folio_id, p.business_date, p.category,
-         /* The reason rides on the reversal's own line, which the desk
-            reads and the guest's bill and invoice never print (both
-            leave a reversed pair out). */
-         `Reversal - ${p.description} (why: ${reason})`,
-         -Number(p.amount), p.tax_rate, -Number(p.tax_amount), postingId],
-      );
-      return { ok: true, data: { id: made[0]?.id } };
-    } catch (error) {
-      /* The index caught a second reversal. That is a refusal a clerk
-         can act on, not a server error — somebody else got there
-         first, and the credit is already on the folio. */
-      if ((error as { code?: string }).code === "23505") {
-        return refuse("That posting has already been reversed.");
-      }
-      throw error;
-    }
+    const done = await reverseFolioCharge(client, hotelId, c.req.param("postingId"), reason,
+      { reservationId: c.req.param("id") });
+    return done.ok ? { ok: true, data: { id: done.id } } : refuse(done.reason);
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, result.ok ? 200 : 409);
 });
+
+/**
+ * Takes one line off a bill: its own reversal line, pointing at it, with the
+ * reason on it (D27-117). The ↺ route and a function's reopened bill
+ * (banquet, D27-154) both come here, so there is one insert for a reversal.
+ * `within` is the bill the line must be on: a stay's, or one folio.
+ *
+ * Answers {ok:false, reason} for a refusal and never throws for one: a
+ * refusal returned inside `withSession` is a COMMIT (MEMORY 243), so a
+ * caller that has already written must throw on it.
+ */
+export async function reverseFolioCharge(
+  client: Client, hotelId: string, postingId: string, reason: string | undefined,
+  within: { reservationId: string } | { folioId: string },
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  const [column, value] = "folioId" in within
+    ? ["f.id", within.folioId] : ["f.reservation_id", within.reservationId];
+  const { rows } = await client.query<{
+    id: string; folio_id: string; business_date: string; category: string;
+    description: string; amount: string; tax_rate: string; tax_amount: string;
+    reverses_id: string | null; already: boolean;
+    day_closed: boolean;
+  }>(
+    `select fp.id::text, fp.folio_id, fp.business_date::text, fp.category,
+            fp.description, fp.amount, fp.tax_rate, fp.tax_amount,
+            fp.reverses_id::text,
+            exists (select 1 from folio_postings r where r.reverses_id = fp.id) as already,
+            exists (select 1 from night_audit_runs na
+                     where na.hotel_id = fp.hotel_id
+                       and na.business_date = fp.business_date
+                       and na.status = 'completed') as day_closed
+       from folio_postings fp
+       join folios f on f.id = fp.folio_id
+      where f.hotel_id = $1 and ${column} = $2 and fp.id = $3::bigint`,
+    [hotelId, value, postingId],
+  );
+  const no = (why: string) => ({ ok: false as const, reason: why });
+
+  const p = rows[0];
+  if (!p) return no("Posting not found.");
+  if (p.already) return no("That posting has already been reversed.");
+  if (p.reverses_id) return no("A reversal cannot itself be reversed.");
+  /* A line on a closed day reverses on its own day, which the database
+     refuses (012), and this said "Something went wrong". The owner's D24-9
+     and D25-11: every charge is corrected on Closed days (the night audit's
+     CORRECTABLE); a payment, refund or discount is not changed at all. */
+  if (p.day_closed) {
+    return no(["payment", "refund", "discount", "tax"].includes(p.category)
+      ? "This day is closed. Its payments, refunds and discounts are not changed - put the difference right today."
+      : "This day is closed - correct it on Closed days.");
+  }
+
+  if (!reason) return no("Say why it is being reversed. The reason stays on the line.");
+  /* A PAYMENT IS UNDONE BY A MANAGER (the owner's D27-125, QA FI-5): a
+     clerk could take cash and reverse the receipt. The owner, an
+     administrator, the GM or the accountant - `approve` on an invoice,
+     the four who cancel an invoice. A charge stays reception's. */
+  if (p.category === "payment") {
+    const { rows: me } = await client.query<{ role: string | null }>(
+      `select case when exists (select 1 from staff s
+                                 where s.id = app.current_user_id() and s.is_group_admin)
+                   then 'owner'
+                   else (select sh.role from staff_hotels sh
+                          where sh.staff_id = app.current_user_id() and sh.hotel_id = $1)
+              end as role`, [hotelId]);
+    if (!can((me[0]?.role ?? "") as Role, "approve", "invoice")) {
+      return no(PAYMENT_REVERSAL_WHO);
+    }
+  }
+  /* The reversal is its OWN row, pointing at what it undoes. The
+     original stays exactly as it was — that is the whole point of an
+     append-only ledger, and it is why the posting count goes UP.
+
+     No lock. `pms_app` has no UPDATE on this table (append-only), so
+     `SELECT ... FOR UPDATE` is refused outright — the permission was
+     telling me the lock was the wrong tool. Migration 021 puts a
+     unique index on `reverses_id` instead, so two concurrent
+     reversals leave one inserted and one refused by the database. */
+  try {
+    const { rows: made } = await client.query<{ id: string }>(
+      `insert into folio_postings
+         (hotel_id, folio_id, business_date, category, description,
+          amount, tax_rate, tax_amount, reverses_id)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9::bigint)
+       returning id::text`,
+      [hotelId, p.folio_id, p.business_date, p.category,
+       /* The reason rides on the reversal's own line, which the desk
+          reads and the guest's bill and invoice never print (both
+          leave a reversed pair out). */
+       `Reversal - ${p.description} (why: ${reason})`,
+       -Number(p.amount), p.tax_rate, -Number(p.tax_amount), postingId],
+    );
+    return { ok: true, id: made[0]!.id };
+  } catch (error) {
+    /* The index caught a second reversal. That is a refusal a clerk
+       can act on, not a server error — somebody else got there
+       first, and the credit is already on the folio. */
+    if ((error as { code?: string }).code === "23505") {
+      return no("That posting has already been reversed.");
+    }
+    throw error;
+  }
+}
 
 /* ── Take a payment ──────────────────────────────────────────────── */
 

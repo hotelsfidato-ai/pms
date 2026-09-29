@@ -50,8 +50,8 @@ export default function RatesPage() {
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">
             No channel is connected yet, so a rate changed here would move on this
             screen and nowhere else - not on Agoda, not on Booking.com, not in the
-            confirmation a guest receives. Editing arrives with the channel bridge at
-            Stage 9.
+            confirmation a guest receives. Editing comes once a channel manager is
+            connected.
           </p>
         </div>
       </div>
@@ -118,7 +118,7 @@ export default function RatesPage() {
                             </Tooltip>
                           ) : (
                             <Tooltip
-                              content={`${c.sold} of ${c.sellable} sold · rack ${
+                              content={`${c.sold} of ${c.sellable} paying rooms sold · rack ${
                                 c.rackRate === null ? "-" : money(c.rackRate)}`}
                             >
                               <span
@@ -146,9 +146,10 @@ export default function RatesPage() {
       )}
 
       <p className="text-xs text-grey-500 mt-3 leading-relaxed max-w-2xl">
-        A tangerine figure sold below rack. The line beneath each rate is rooms sold
-        against rooms sellable - a rate held at rack against an empty house is worth
-        as much attention as a discounted one.
+        A tangerine figure sold below rack. The line beneath each rate is paying rooms
+        sold against rooms sellable - a rate held at rack against an empty house is worth
+        as much attention as a discounted one. Complimentary rooms and day use are left
+        out; occupancy on the reports counts complimentary rooms.
       </p>
     </Page>
   );

@@ -405,13 +405,17 @@ function TypeDialog({
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="The rate covers" required
-                   hint="People included before an extra-person charge.">
+                   hint="People included before an extra-person charge."
+                   error={base.trim() !== "" && !(Number(base) >= 1) ? "At least one person." : undefined}>
               {(f) => (
                 <Input {...fieldProps(f)} value={base} inputMode="numeric"
                        onChange={(e) => setBase(e.target.value)} />
               )}
             </Field>
-            <Field label="Sleeps at most" required>
+            {/* Said, not only disabled (QA RT-6). */}
+            <Field label="Sleeps at most" required
+                   error={Number(base) >= 1 && max.trim() !== "" && !(Number(max) >= Number(base))
+                     ? `At least what the rate covers (${Number(base)}).` : undefined}>
               {(f) => (
                 <Input {...fieldProps(f)} value={max} inputMode="numeric"
                        onChange={(e) => setMax(e.target.value)} />

@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-29 · Fix round F (QA leftovers, D27-149), part D: New booking says what it waits for; the group page's sentences; Void found; meal plans in code and words (QA BK-6, BK-7, BK-8, BK-10, RO-4; D27-164)
+
+Branch `fix/leftovers-28sep` (cp6 7c52bb9, round D, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** New booking: "Still needed: …" under Confirm (BK-6); its meal plans "EP · Room only" … "AI · Everything charged to the room" (BK-7, D27-164); offered only with `reservation` create, the server's BOOK rule (RO-4). The group page: one whole footer sentence and no hanging "·" (BK-8). All bookings: voided bookings in "Cancelled, void & no-show", and search finds a phone by its digits (BK-10). BK-7's "Walk-In" beside "Walk-in" is a company row in QA's database, not code; not reproducible on fidato_s30. Wording only in NewBooking (D27-158).
+**Proved:** web reservations tests passed; on screen "Still needed: the guest's name." and the new tab.
+
+---
+
 ## 2026-09-28 · Fix round D: cancel a confirmed booking, the link, the dates (QA of 28 Sep)
 
 **Asked for:** D27-116 - every BLOCKS WORK and WRONG RESULT of the QA's Bookings

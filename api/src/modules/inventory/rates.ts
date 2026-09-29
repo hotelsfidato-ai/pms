@@ -83,7 +83,8 @@ rates.get("/:code/rate-plans", async (c) => {
 
     const { rows: plans } = await client.query<{
       code: string; name: string; includes: string;
-    }>("select code, name, includes from meal_plans order by code");
+    /* D27-164: RO is EP, so it is not offered; old RO bookings read as before. */
+    }>("select code, name, includes from meal_plans where code <> 'RO' order by code");
 
     const { rows: rows } = await client.query<{
       id: string; room_type_id: string; room_type: string;

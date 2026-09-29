@@ -1,8 +1,9 @@
 import { Link } from "react-router";
 import { ShieldOff } from "lucide-react";
 import { useRole } from "@/lib/session";
+import { useUi } from "@/lib/ui";
 import { ROLE_LABELS, type Resource } from "@/lib/permissions";
-import { mayReach, navItemFor } from "./navigation";
+import { flatNavigationFor, mayReach, navItemFor, workingHomeFor } from "./navigation";
 import { Page } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -53,8 +54,15 @@ export function RequireAccess({
   children: React.ReactNode;
 }) {
   const role = useRole();
+  const code = useUi((s) => s.hotelId);
 
   if (mayReach(role, path)) return <>{children}</>;
+
+  /* Back to the person's own first screen (QA RO-5): "the dashboard" sent
+     housekeeping, the kitchen and the store to a screen they are kept
+     from too. */
+  const home = workingHomeFor(role, code) ?? "/";
+  const homeLabel = flatNavigationFor(role, code).find((i) => i.to === home)?.label ?? "Dashboard";
 
   return (
     <Page>
@@ -72,10 +80,10 @@ export function RequireAccess({
           the person who set up your account can change your role.
         </p>
         <Link
-          to="/"
+          to={home}
           className="inline-block mt-5 text-sm text-brand hover:underline"
         >
-          Back to the dashboard
+          Back to {homeLabel}
         </Link>
       </div>
     </Page>

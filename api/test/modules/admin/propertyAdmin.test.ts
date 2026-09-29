@@ -271,7 +271,7 @@ describe("adding somebody", () => {
        refusal at the staff row came too late.
 
        Firebase is not configured in this suite, so a request that got as
-       far as ensureAccount comes back a 500. A 403 carrying the reason is
+       far as ensureAccount is refused there with a 409. A 403 carrying the reason is
        the proof that the refusal now comes FIRST. Capitals, because the
        address is citext and a check that missed them would miss them. */
     const res = await as(gmId, "/admin/staff", "POST", {
@@ -281,6 +281,18 @@ describe("adding somebody", () => {
     expect(res.status, await res.clone().text()).toBe(403);
     expect(((await res.json()) as { reason: string }).reason)
       .toMatch(/already belongs to somebody you cannot manage/i);
+  });
+
+  it("says a sign-in account cannot be made here when the server has no Firebase (QA AD-5)", async () => {
+    /* This suite has no service account, so this used to end in a 500,
+       "Something went wrong". */
+    const res = await as(ownerId, "/admin/staff", "POST", {
+      email: "pa-nofirebase@fidato.in", name: "PATEST No Firebase",
+      password: "a-real-password", hotelCode: "AGR", role: "front_desk",
+    });
+    expect(res.status, await res.clone().text()).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toBe("Sign-in accounts cannot be made on this server: it has no Firebase service account.");
   });
 
   it("refuses the same for somebody at a hotel the manager does not run", async () => {
@@ -472,15 +484,17 @@ describe("D22-3 - People works for the GM, at their own hotel only", () => {
 
   it("lets the GM add somebody AT their hotel - past every check, to the account", async () => {
     /* Firebase is not in this suite, so a request that clears every check
-       reaches ensureAccount and fails there (a 500), writing no row - the
-       account comes first. Any refusal would be a 403 or a 409 with a
-       sentence; "Only a group administrator may provision a property" was a
-       403, and it came from People sending no property at all. */
+       reaches ensureAccount and is refused there, writing no row - the
+       account comes first. Since QA AD-5 that refusal is its own sentence
+       (it was a 500), so reaching it is the proof; "Only a group
+       administrator may provision a property" was a 403, and it came from
+       People sending no property at all. */
     const res = await as(gmId, "/admin/staff", "POST", {
       email: "pa-gm-adds@fidato.in", name: "PATEST Added By GM",
       password: "a-real-password", hotelCode: "AGR", role: "front_desk",
     });
-    expect([403, 409], await res.clone().text()).not.toContain(res.status);
+    expect(((await res.json()) as { reason?: string }).reason)
+      .toBe("Sign-in accounts cannot be made on this server: it has no Firebase service account.");
   });
 });
 

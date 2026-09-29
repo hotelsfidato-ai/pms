@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-29 · Fix round F (QA leftovers, D27-149), part D: a guest search; plain words (QA GU-5, GU-6)
+
+Branch `fix/leftovers-28sep` (cp6 7c52bb9, round D, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** Guests has a name search and says "Loading…" while it loads (GU-5). Companies and agents: "It fills once a channel manager is connected" (was "lands at Stage 9"). GU-6's corporate "Walk-In" row is QA's data, not reproducible; Add/Edit company is later, its own job (D27-164).
+**Proved:** on screen, "bhide" found one guest of 435.
+
+---
+
 ## 2026-09-28 · Fix round D: Edit guest, the ID rules, Form III (QA of 28 Sep)
 
 **Asked for:** D27-116 - the QA's Guests, CRM and Form III table; GP-1.

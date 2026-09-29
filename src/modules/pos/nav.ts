@@ -1,8 +1,13 @@
 import {
   LayoutGrid, Receipt, MonitorSmartphone, Flame, UtensilsCrossed, Banknote, Plug, SlidersHorizontal,
 } from "lucide-react";
-import { can, canAccess } from "@/lib/permissions";
+import { can, canAccess, type Role } from "@/lib/permissions";
 import type { ServiceNavEntry } from "@/components/app/navigation";
+
+/* Who may ring up an order: the server's own rule (roleGate.ts TILL, `payment`
+   create, and the till operator). A Viewer or an Accountant who may only READ
+   the restaurant's orders is not offered the till (QA RO-4). */
+export const mayRingUp = (role: Role): boolean => can(role, "create", "payment") || role === "pos";
 
 /* The restaurant's menu entries — the Point of sale section, which is
    absent at a property without the POS module and, for reception, where
@@ -13,12 +18,12 @@ export const nav: ServiceNavEntry[] = [
   { section: "point-of-sale", order: 10, workingMenus: ["front_desk", "pos"],
     label: "Tables", to: "/h/:code/floor", icon: LayoutGrid, resource: "payment",
     keywords: ["floor", "restaurant"],
-    canSee: (role) => canAccess(role, "payment") || role === "pos" },
+    canSee: (role) => mayRingUp(role) },
   /* The till, the one somebody stands at. */
   { section: "point-of-sale", order: 20, workingMenus: ["front_desk", "pos"],
     label: "Till", to: "/h/:code/till", icon: Receipt, resource: "payment",
     keywords: ["pos", "order", "restaurant bill"],
-    canSee: (role) => canAccess(role, "payment") || role === "pos" },
+    canSee: (role) => mayRingUp(role) },
   /* A dedicated screen for a fixed terminal: no sidebar, no chrome,
      one outlet, targets sized for a thumb rather than a mouse. */
   {
@@ -26,7 +31,7 @@ export const nav: ServiceNavEntry[] = [
     label: "Terminal", to: "/h/:code/till/terminal",
     icon: MonitorSmartphone, resource: "payment",
     keywords: ["pos terminal"],
-    canSee: (role) => canAccess(role, "payment") || role === "pos",
+    canSee: (role) => mayRingUp(role),
   },
   /* The pass. A wall screen in the kitchen, behind the same
      permission as the till — the people who cook and the people who
@@ -58,8 +63,7 @@ export const nav: ServiceNavEntry[] = [
     label: "Close restaurant day", to: "/h/:code/till/day-end",
     icon: Banknote, resource: "payment",
     keywords: ["day end", "restaurant close"],
-    canSee: (role) =>
-      canAccess(role, "payment") || role === "pos" || role === "kitchen_manager",
+    canSee: (role) => mayRingUp(role) || role === "kitchen_manager",
   },
   /* What an OUTSIDE till sent and what was refused. Read-only, and
      named so nobody mistakes it for the till above. */
