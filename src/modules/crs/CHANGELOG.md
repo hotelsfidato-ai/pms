@@ -100,9 +100,19 @@ Plus the n8n file and the owner's steps.
   - Web tests pass: `src/components/app` 18, `src/modules/crs` 3, `src/test`, apart
     from the migration-number gap.
 
+**API tests, 29-30 September, on the master's word:**
+
+- `npm test -- crs` passed 20/20 before the merge, and 20/20 again after `git merge
+  cp6` (3afe1f2). That is `crsReader.test.ts` 13 and `crsAnswerWorkflow.test.ts` 7.
+- **The guards refused broken code.** I set `tentative: false` and turned "partly"
+  into silence in the reader, and exactly those two tests failed (2 failed, 11
+  passed). The code was restored before the real run.
+- After the merge: `tsc -b --force` clean, api `tsc --noEmit` clean. Web tests
+  (`src/components/app`, `src/modules/crs`, `src/test`) 27/28; the one failure is
+  `migrationNumbers`, on the 157-162 gap before 163, which the master renumbers.
+
 **Left open:**
 
-- Run 163 and the two API test files, when the master says.
 - The master: who places `CrsFacts`.
 - `fidato_s36` needs 163 replayed for the widened answer check, before a "partly"
   answer can be recorded there.
