@@ -11,6 +11,58 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-29 · Two senders, message ids, the inbox's booked mark, Send check-in link (D27-168, D27-169)
+
+**Asked for** (the master's card, D27-168; the owner's D27-98, D27-101,
+D27-104, D27-105, D27-169): the voucher and every email through a NEW
+workflow in the CRS's n8n, every other WhatsApp through a NEW workflow in
+the market-to-revenue n8n, each with its own address and key; a message id
+on every send so a retry is never sent twice; every WhatsApp also marks the
+guest booked in the sales inbox; a Send check-in link button; the workflows
+as files for the owner to import; the one Fidato number a setting.
+
+**Shipped** (branch `messaging/senders-29sep`):
+- `api/src/sending.ts` (the master's file, on the master's card):
+  `senderFor` - email and the voucher to `crs`, other WhatsApp to `m2r`;
+  five settings (`CRS_N8N_URL/SECRET`, `M2R_N8N_URL/SECRET`,
+  `WHATSAPP_PHONE_NUMBER_ID`), all five or `canSend()` is false;
+  `messageIdFor(...)` and a `messageId` in every body; a CRS WhatsApp is
+  preceded by a `"mark"` to m2r, whose failure is written into the detail.
+  `N8N_SEND_URL/SECRET` retired (never set live).
+- `jobs.ts`: the sweep's (and Send voucher's) message id is
+  `messageIdFor(kind, booking)`. `KIND.checkInLink`.
+- `voucher.ts`: `POST /:code/stays/:id/checkin-link`.
+- Web: `SendCheckInLink` on the front door, `sendCheckInLink` in the seam.
+- `deploy/n8n/pms-send-crs.json`, `pms-send-m2r.json`, `IMPORT.md`: Code-node
+  workflows, each webhook behind Header Auth, dedupe on the message id in the
+  workflow's static data (remembered only after a real send), m2r marks the
+  lead BOOKED by the app's own id rule (`<number>__digits` shared,
+  `<hotel>__digits` single, `UNASSIGNED__digits` unmapped) and the app's own
+  field shapes, no amount; the CRS writes each email from facts (drafts at
+  the top of its first node) and refuses email until the owner names the
+  mailbox.
+
+**Proved**: `api/test/modules/guest-messaging/workflows.test.ts` 16/16 (each
+Code node run with made-up messages); five of its guards broken on purpose
+and seen to fail (m2r and CRS dedupe, the email's HTML escape, the booked
+lead's mask, remember-only-on-success, the shared number's lead id).
+`sending.test.ts` 14/14 on 29 September before the hold. Web: guest-messaging
+18/18 with `sendCheckInLink.test.tsx`, whose "off where nothing can send"
+guard was seen to fail with `disabled` removed. API and web type checks clean.
+
+**Left open**:
+- **The API suite has not run on the final tree** - held by the master
+  (round F first). `checkinLink.test.ts`, the new `sending.test.ts` cases and
+  every test that switches sending on (now the five names) wait for it.
+- Placing `SendCheckInLink` on New booking's Booked card and the booking
+  panel: other lanes' files, for the master to route.
+- The voucher's own document (the CRS design, D27-171) is the CRS lane's; the
+  CRS workflow attaches whatever `file` a message carries.
+- Email is not marked in the sales inbox (a reply to an email never reaches
+  the WhatsApp bot) - say if the owner wants every send marked.
+
+---
+
 ## 2026-09-27 · Touched by Phase 1, New booking (reservations session)
 
 `POST /:code/stays/:id/confirmation` (`voucher.ts`): Send voucher from New booking's Booked card, the sweep's own confirmation now, with the clerk's name. `claimTurn` / `sendIfOwed` in `jobs.ts`: the sweep's sender takes the same per-booking turn and asks again, so a voucher never goes twice (D27-35). `getGuestMessages` on the web front door.

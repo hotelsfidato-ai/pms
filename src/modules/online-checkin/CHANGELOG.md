@@ -12,6 +12,60 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-09-29 · The code straight to the booking's phone; a day unlocked; Form III and requests from the guest; a development-only code on screen (D27-105, D27-169)
+
+**Asked for** (the master's card, D27-168; the owner's D27-105, D27-169):
+opening the link sends the code to the phone on the booking, showing only
+its last digits; no phone: "Ask the desk"; the missing fields - arrival time,
+special requests, nationality, Form III for foreign guests; a verified phone
+unlocked for a day, not an hour in one tab; a development-only switch showing
+the code on screen that can never reach the live build. Branch
+`messaging/senders-29sep`.
+
+**Shipped:**
+- Migration **162** (numbered for now; the master renumbers):
+  `app.guest_code_make(text)` replaces the two-argument one - no number is
+  typed; a stay with no mobile answers a row with no code and issues none.
+  The unlock lives 24 hours. `guest_detail_submissions` gains the arrival
+  time, requests (500 characters), nationality and Form III's person and
+  visit, with 147's gender and purpose lists; `app.guest_details_submit`
+  takes them, same signature.
+- The door (`api/src/routes/guestDoor.ts`): `POST /code` reads no body and
+  says where the code went - "ending 0011", or on a room card "the phone on
+  the booking" (D21-14); "Ask the desk" with no number; "Five codes … use the
+  latest one" past five an hour. `GUEST_CODE_ON_SCREEN=1` hands the code
+  back, sent to nobody, only beside `ALLOW_DEV_AUTH` (refused under
+  production by env.ts). The details route checks the new fields; the desk's
+  Confirm writes nationality to the guest, the arrival time and "Guest asked
+  online: …" (added to the notes) to the booking, the person to
+  `guest_documents` and the visit to `form_iii_stays`, a blank field changing
+  nothing; the waiting list carries it (`more`).
+- `scripts/check-no-dev-login.mjs` refuses `devCode` in a build.
+- The page: the code asks for itself on opening, once per ten minutes
+  (`codeAskedRecently`), with "Send a new code"; the unlock in localStorage;
+  nationality (Indian / another country / not said - not said sends nothing,
+  so a nationality on file is never overwritten); Form III only for another
+  country, and dropped if the guest then says Indian. The desk's card names
+  each field (`formIII.ts`, one list of words for both).
+
+**Proved:** web online-checkin 30/30 and `devCodeNeverShips.test.ts` 2/2;
+guards seen to fail with their fix taken out: the page asking by itself, the
+ten-minute guard, the unlock surviving the tab, Form III dropped for an
+Indian, the development code drawn, the desk's new lines, the build check's
+`devCode`. Type checks clean (web and API).
+
+**Left open:**
+- **Migration 162 has not run and the API suite has not run** - both held
+  by the master. `guestDoor.test.ts` and `guestDoorBehindTheCode.test.ts`
+  carry the new server cases (the booking's own number whatever is posted,
+  no number issues nothing, the dev switch's live code, five an hour, the
+  room card's words, 24 hours, the confirm's writes) and wait for it.
+- The screens are not yet opened in the browser: the local API needs 162.
+- "New booking insists on a mobile number for online check-in" is the
+  one-page lane's.
+
+---
+
 ## 2026-09-25 · Room cards: the QR code, four to a page; the check-in's line here (D21-62, D21-95, D25-1 to D25-4)
 
 **Asked for:** the master, 25 September - finish the room cards as the brief
