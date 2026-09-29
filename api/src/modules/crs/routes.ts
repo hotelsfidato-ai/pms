@@ -19,8 +19,13 @@ import { crsSettings } from "./firestore.ts";
 
 export const crsRoutes = new Hono<{ Variables: { subject: string } }>();
 
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 crsRoutes.get("/:code/crs/bookings", async (c) => {
   const reservation = c.req.query("reservation") ?? null;
+  if (reservation !== null && !UUID.test(reservation)) {
+    return c.json({ error: "That is not a booking." }, 400);
+  }
   const result = await withSession(c.get("subject"), async (client) => {
     const { rows: hotel } = await client.query<{
       id: string; is_on: boolean | null; last_read_at: string | null; last_error: string | null;

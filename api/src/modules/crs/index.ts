@@ -1,5 +1,6 @@
 import type { Mount } from "../../mount.ts";
 import { crsRoutes } from "./routes.ts";
+import { crsSetup } from "./setup.ts";
 
 /* The front door of the CRS bridge on the server - the only file the core or
    another service may import (src/test/boundaries.test.ts).
@@ -9,6 +10,8 @@ import { crsRoutes } from "./routes.ts";
    back to the CRS's booking register through its n8n. */
 export const mounts: readonly Mount[] = [
   ["/api/hotels", crsRoutes],
+  /* The mapping form: the owner and an administrator (D27-171). */
+  ["/api/hotels", crsSetup],
 ];
 
 /* THE READER is not started here: `server.ts` (the master's) starts it after

@@ -442,6 +442,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
 
   /* crs: a desk note done is a change to how the booking stands (D27-168) */
   [`POST ${H}/crs/bookings/:crsId/done`]: CHANGE_BOOKING,
+  [`PUT ${H}/crs/setup`]: own("crs/setup.ts: the owner and an administrator (D27-171)"),
 
   /* purchasing */
   [`PUT ${H}/purchasing/requesters/:role`]: own("purchasing/purchasingGrants.ts"),
@@ -681,6 +682,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
 
   /* ── CRS bridge: the bookings the CRS sold, read as bookings are (D27-168) ── */
   [`GET ${H}/crs/bookings`]: STAYS,
+  [`GET ${H}/crs/setup`]: own("crs/setup.ts: the owner and an administrator (D27-171)"),
 
   /* ── Administration ── */
   [`GET /api/admin/hotels`]: own("admin/admin.ts: a group administrator"),
