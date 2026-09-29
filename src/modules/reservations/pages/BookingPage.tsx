@@ -26,10 +26,8 @@ import {
   listCompanies, listBookingSources, ReturningGuest,
   GuestIdFields, guestIdState, guestIdPayload, noGuestId, type GuestId,
 } from "@/modules/guests";
-import { getTaxRate, listBillingCompanies, settle } from "@/modules/finance";
-import {
-  assignRoom, assignableRooms, checkIn, earlyArrival, listInclusions, addStayInclusion,
-} from "@/modules/front-desk";
+import { getCashierDrawer, getTaxRate, listBillingCompanies, settle } from "@/modules/finance";
+import { assignRoom, assignableRooms, checkIn, earlyArrival } from "@/modules/front-desk";
 
 /* ══════════════════════════════════════════════════════════════════
    ONE PAGE FOR BOOKING, GIVING A ROOM AND CHECKING IN (D27-158, D27-163)
@@ -38,8 +36,9 @@ import {
    (optional), ID and advance on one page, and three buttons at the bottom
    - "Save booking", "Save and assign room", "Check in now". A walk-in is
    this page opened from an empty room: that room, today, one night, the
-   Walk-in source. Company, GST, Extras and Notes fold open, and each is
+   Walk-in source. Company (with its GSTIN) and Notes fold open, each
    switched on or off per hotel in Settings (159, on until turned off).
+   Extras left the page (D27-187): they are added on the booking later.
    The owner's standing rule from now: nothing takes more than two pages
    or three clicks.
 
@@ -48,7 +47,7 @@ import {
    front desk's assign, D27-163: a picked room is kept). Check in now =
    the booking call, then front desk's own check-in (the room, the ID, Form
    III, the early-arrival reason). The advance = the bill's payment door,
-   held as the guest's credit (D27-4). Extras = the stay's inclusions. When
+   held as the guest's credit (D27-4). When
    a later door refuses, the booking stands and the Booked card says which
    step and why.
 
@@ -176,7 +175,6 @@ export default function BookingPage() {
   const [discountPct, setDiscountPct] = useState("");
   const [discountReason, setDiscountReason] = useState("");
   const [promotionId, setPromotionId] = useState("");
-  const [extras, setExtras] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [advance, setAdvance] = useState("");
   const [advanceBy, setAdvanceBy] = useState<PaymentMethod>("Cash");
@@ -222,19 +220,12 @@ export default function BookingPage() {
   });
   const show = {
     company: modules.data?.["booking_company"] !== false,
-    gst: modules.data?.["booking_gst"] !== false,
-    extras: modules.data?.["booking_extras"] !== false,
     notes: modules.data?.["booking_notes"] !== false,
   };
   const billable = useQuery({
     queryKey: ["billing-companies", hotelId],
     queryFn: () => listBillingCompanies(hotelId),
-    enabled: (show.company && billTo === "company") || show.gst,
-  });
-  const inclusions = useQuery({
-    queryKey: ["inclusions", hotelId],
-    queryFn: () => listInclusions(hotelId),
-    enabled: show.extras,
+    enabled: show.company && billTo === "company",
   });
   const salesPeople = useQuery({
     queryKey: ["sales-people", hotelId],
@@ -393,8 +384,19 @@ export default function BookingPage() {
   const picked = checkRooms.data?.find((r) => r.number === first?.room);
 
   const advanceAmount = advance.trim() === "" ? null : Number(advance);
+  /* Cash goes only into the clerk's own open drawer (D27-118): said here,
+     before the booking is saved without it (D27-193). Unreadable is not
+     "closed": the payment door still refuses. */
+  const drawer = useQuery({
+    queryKey: ["cashier-drawer", hotelId],
+    queryFn: () => getCashierDrawer(hotelId),
+    enabled: advanceAmount !== null && advanceBy === "Cash",
+  });
   const advanceProblem = advanceAmount !== null && !(Number.isFinite(advanceAmount) && advanceAmount > 0)
-    ? "An advance is an amount above 0." : null;
+    ? "An advance is an amount above 0."
+    : advanceAmount !== null && advanceBy === "Cash" && drawer.data && !drawer.data.shift
+      ? "Cash goes into your open drawer: open it in Cashiering, or take it by card or UPI."
+      : null;
 
   /* RULE 6: a button that cannot be used says why, under it. */
   const saveReason =
@@ -432,7 +434,7 @@ export default function BookingPage() {
     setSalesPick(""); setSalesOther(""); setBillTo("guest"); setCompanyId("");
     setWaiting(false); setExpected(""); setExpectedOut(""); setGroupName("");
     setLines([]); setSeeded(false); setDiscountMode("none"); setDiscountPct(""); setDiscountReason("");
-    setPromotionId(""); setExtras([]); setNotes(""); setAdvance(""); setAdvanceBy("Cash");
+    setPromotionId(""); setNotes(""); setAdvance(""); setAdvanceBy("Cash");
     setEarlyReason(""); setWaiveEarly(false); setCampaign("");
     if (today) { setFrom(today); setTo(addDays(today, 1)); }
   };
@@ -512,15 +514,7 @@ export default function BookingPage() {
       at += l.rooms;
     }
 
-    /* Extras on the first room; the advance on its bill, held as credit. */
-    const extrasFailed: string[] = [];
-    if (show.extras && lead?.id) {
-      for (const inclusionId of extras) {
-        const x = await addStayInclusion(hotelId, lead.id, { inclusionId });
-        const name = (inclusions.data ?? []).find((i) => i.id === inclusionId)?.name ?? "An extra";
-        if (!x.ok) extrasFailed.push(`${name}: ${x.reason}`);
-      }
-    }
+    /* The advance on the first room's bill, held as credit. */
     let advanceTaken: Booked["advance"];
     if (advanceAmount !== null && lead?.id) {
       const p = await settle(hotelId, lead.id, {
@@ -533,7 +527,7 @@ export default function BookingPage() {
     void qc.invalidateQueries();
     setBooked({
       guest: res.guest, groupId: res.groupId, bookings: res.bookings,
-      waiting, assigned, arrivesToday, checkedIn, advance: advanceTaken, extrasFailed,
+      waiting, assigned, arrivesToday, checkedIn, advance: advanceTaken,
     });
   };
 
@@ -751,6 +745,7 @@ export default function BookingPage() {
                   )}
                 </Field>
               </div>
+              {advanceProblem && <p className="mt-2 text-sm text-warning-dark" data-advance-problem>{advanceProblem}</p>}
             </CardBody>
           </Card>
 
@@ -925,39 +920,14 @@ export default function BookingPage() {
                   </Field>
                 )}
               </div>
-            </Fold>
-          )}
-
-          {/* GST: the chosen company's GSTIN, read-only (D27-163). The tax
-              invoice takes it from the company's record; nothing is stored here. */}
-          {show.gst && (
-            <Fold title="GST">
-              <p className="text-base text-grey-600" data-gstin>
-                {!(show.company && billTo === "company" && company)
-                  ? "The bill goes to the guest, with no GSTIN. Choose a company under Company to bill it."
-                  : company.gstin
+              {/* Its GSTIN, read-only (D27-163, D27-193): from the company's
+                  record, which the tax invoice prints. Nothing is stored here. */}
+              {billTo === "company" && company && (
+                <p className="text-base text-grey-600" data-gstin>
+                  {company.gstin
                     ? <>GSTIN <span className="tabular text-ink-900 font-medium">{company.gstin}</span>, from {company.name}'s record. The tax invoice prints it.</>
                     : `${company.name} has no GSTIN on its record.`}
-              </p>
-            </Fold>
-          )}
-
-          {show.extras && (
-            <Fold title="Extras">
-              {(inclusions.data ?? []).length === 0 ? (
-                <p className="text-base text-grey-500">
-                  {inclusions.isLoading ? "Loading…" : "This hotel has no extras on its list yet."}
                 </p>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-grey-500">Added to the first room once it is saved.</p>
-                  {(inclusions.data ?? []).map((x) => (
-                    <Checkbox key={x.id} checked={extras.includes(x.id)}
-                      onCheckedChange={(on) => setExtras((xs) =>
-                        on ? [...xs, x.id] : xs.filter((id) => id !== x.id))}
-                      label={`${x.name} · ${x.rate === null ? "included" : moneyPrecise(x.rate)}`} />
-                  ))}
-                </div>
               )}
             </Fold>
           )}
@@ -1314,7 +1284,7 @@ function Summary({ nights, lines, quotes, types, advance }: {
         )}
         <dl className="pt-3 border-t border-grey-200 divide-y divide-grey-200">
           <Row label="Room charges" value={charges === null ? "-" : moneyPrecise(charges)} />
-          <Row label="Taxes" value={tax === null ? "-" : moneyPrecise(tax)} />
+          <Row label="GST" value={tax === null ? "-" : moneyPrecise(tax)} />
           {advance !== null && <Row label="Advance" value={`- ${moneyPrecise(advance)}`} />}
           <div className="flex items-baseline justify-between py-2">
             <dt className="text-base font-medium text-ink-900">Due</dt>

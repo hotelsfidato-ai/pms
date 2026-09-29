@@ -18,3 +18,6 @@ export { listBillingCompanies, type BillingCompany } from "./data/folios";
 /* D27-163 (delegated by the master): the one page takes an advance through
    the bill's own payment door, held as the guest's credit (D27-4). */
 export { settle } from "./data/postings";
+/* D27-193: the one page says, before saving, that a cash advance needs the
+   clerk's own open drawer (D27-118). Read only; the drawer is the Cash lane's. */
+export { getCashierDrawer } from "./data/cashier";

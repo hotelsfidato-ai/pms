@@ -25,12 +25,14 @@ import BookingPage from "@/modules/reservations/pages/BookingPage";
 const calls: Array<{ method: string; path: string; body: Record<string, unknown> }> = [];
 let modules: Record<string, boolean> = {};
 let refuseCheckIn = false;
+let drawerOpen = false;
 
 beforeEach(() => {
   startSignedIn();
   calls.length = 0;
   modules = {};
   refuseCheckIn = false;
+  drawerOpen = false;
   vi.spyOn(apiModule, "api").mockImplementation(async (path: string, init?: RequestInit) => {
     const method = init?.method ?? "GET";
     if (method !== "GET") {
@@ -86,7 +88,13 @@ beforeEach(() => {
       return { isEarly: false, checkInTime: "12:00", checkOutTime: "11:00", charge: null,
                lateCharge: null, mayWaive: false } as never;
     }
-    if (path.endsWith("/inclusions")) return { inclusions: [] } as never;
+    if (path.endsWith("/cashier-shift")) {
+      return { businessDate: "2026-08-25", shift: drawerOpen ? { id: "d-1" } : null,
+               colleagues: [], previous: null } as never;
+    }
+    if (path.endsWith("/billing-companies")) {
+      return [{ id: "co-1", name: "Tata Motors", gstin: "27AAACT2727Q1ZW" }] as never;
+    }
     if (path.endsWith("/stays/r-1/postings")) return [] as never;
     if (path.includes("/guest-messages")) {
       return { messages: [], connected: false, notConnected: "Sending is not switched on." } as never;
@@ -189,6 +197,21 @@ describe("the advance", () => {
     const paid = calls.find((c) => c.path.endsWith("/stays/r-1/payments"));
     expect(paid?.body).toMatchObject({ method: "UPI", amount: 2000, heldAsCredit: true });
   });
+
+  it("in cash, holds the buttons until the clerk's own drawer is open (D27-118, D27-193)", async () => {
+    open();
+    await screen.findByRole("heading", { name: "Guest" });
+    type(/^Guest or company/, "Anna Smith");
+    pick(/^Booking source/, "src-1");
+    type(/^Amount/, "2000");
+    const said = "Cash goes into your open drawer: open it in Cashiering, or take it by card or UPI.";
+    await screen.findByText(said, { selector: "[data-advance-problem]" });
+    expect(button("Save booking").disabled).toBe(true);
+
+    pick(/^Paid by/, "UPI");
+    await waitFor(() => expect(button("Save booking").disabled).toBe(false));
+    expect(screen.queryAllByText(said)).toEqual([]);
+  });
 });
 
 describe("the Settings switches", () => {
@@ -198,7 +221,19 @@ describe("the Settings switches", () => {
     await screen.findByRole("heading", { name: "Guest" });
     const folds = () => [...document.querySelectorAll("summary")].map((s) => s.textContent);
     await waitFor(() => expect(folds()).not.toContain("Notes"));
-    expect(folds()).toEqual(["More about the guest", "Booking details", "Company", "GST", "Extras"]);
+    /* GST folded into Company and Extras left the page (D27-187, D27-193). */
+    expect(folds()).toEqual(["More about the guest", "Booking details", "Company"]);
+  });
+
+  it("show a company's GSTIN under the company picked, and call the tax GST", async () => {
+    open();
+    await screen.findByRole("heading", { name: "Guest" });
+    fireEvent.click(screen.getByRole("tab", { name: "Company" }));
+    await screen.findByRole("option", { name: "Tata Motors" });
+    pick(/^Company/, "co-1");
+    const gstin = await screen.findByText("27AAACT2727Q1ZW");
+    expect(gstin.closest("details")?.querySelector("summary")?.textContent).toBe("Company");
+    expect(screen.getByText("GST", { selector: "dt" })).toBeTruthy();
   });
 });
 
