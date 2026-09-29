@@ -1,0 +1,320 @@
+{
+  "name": "PMS answer · CRS register",
+  "nodes": [
+    {
+      "id": "b1d0c7e2-1a40-4c1e-9d0e-5a1f0c2d3e01",
+      "name": "PMS answer",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "c7a1e3f0-2b54-4d8a-8f61-0e9b7d6c5a42",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pms-crs-answer",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "b1d0c7e2-1a40-4c1e-9d0e-5a1f0c2d3e02",
+      "name": "Read the answer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// PMS → CRS register: \"Read the answer\"              (workflow: PMS answer · CRS register)\n// Mode: Run Once for All Items.\n//\n// The hotel's answer on a CRS booking (D27-102, D27-106): Confirmed, or\n// Cancelled when the hotel refused it or was full. Written into the booking\n// register the CRS's Register screen shows, so the salesperson sees it. The\n// PMS decides; this only writes. Nothing else in the CRS changes.\n//\n// ── THE OWNER'S SETTINGS: edit these, nothing below them ────────────────────\n// The booking register's address: copy it from the existing CRS workflow's\n// \"Add to booking register\" node (it ends in /rest/v1/bookings). Until it is\n// filled in, every answer is refused with a sentence the PMS shows.\nconst REGISTER_URL = \"\";\n// The words the Register screen shows for each answer.\nconst STATUS = { confirmed: \"Confirmed\", refused: \"Cancelled\", full: \"Cancelled\" };\n// How long an answer's id is remembered, so a retry is not written twice.\nconst KEEP_DAYS = 30;\n// ─────────────────────────────────────────────────────────────────────────────\n\nconst a = $input.first().json.body ?? {};\nconst stop = (statusCode, answer) => [{ json: { stop: true, statusCode, answer } }];\nconst text = (v, most) => (typeof v === \"string\" && v.trim() && v.length <= most ? v.trim() : null);\n\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(a.messageId ?? \"\")) {\n  return stop(400, { ok: false, error: \"No message id.\" });\n}\nconst memory = $getWorkflowStaticData(\"global\");\nmemory.written = memory.written ?? {};\nconst now = Date.now();\nfor (const [id, at] of Object.entries(memory.written)) {\n  if (now - at > KEEP_DAYS * 86400000) delete memory.written[id];\n}\nif (memory.written[a.messageId]) return stop(200, { ok: true, duplicate: true });\n\nconst reference = text(a.crsReference, 40);\nif (!reference || !/^[A-Za-z0-9-]+$/.test(reference)) {\n  return stop(400, { ok: false, error: \"No CRS booking number.\" });\n}\nif (!Object.hasOwn(STATUS, a.answer)) return stop(400, { ok: false, error: \"No answer.\" });\nif (!REGISTER_URL) {\n  return stop(503, { ok: false, error: \"The register's address is not filled in in this workflow yet.\" });\n}\n\nreturn [{ json: {\n  stop: false,\n  messageId: a.messageId,\n  reference,\n  status: STATUS[a.answer],\n  confirmation: a.answer === \"confirmed\" ? text(a.hotelConfirmationNumber, 200) : null,\n  note: text(a.note, 300),\n  findUrl: `${REGISTER_URL}?fidato_conf_no=eq.${encodeURIComponent(reference)}`\n    + \"&select=id,booking_status,hotel_conf_no,amendment_notes\",\n  registerUrl: REGISTER_URL,\n} }];\n"
+      }
+    },
+    {
+      "id": "b1d0c7e2-1a40-4c1e-9d0e-5a1f0c2d3e03",
+      "name": "Stop here?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b1d0c7e2-1a40-4c1e-9d0e-5a1f0c2d3e03-c",
+              "leftValue": "={{ $json.stop }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b1d0c7e2-1a40-4c1e-9d0e-5a1f0c2d3e04",
+      "name": "Find the register row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        120
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.findUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "b1d0c7e2-1a40-4c1e-9d0e-5a1f0c2d3e05",
+      "name": "What to write",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// PMS → CRS register: \"What to write\"\n// Mode: Run Once for All Items.\n//\n// Input: the register row(s) carrying this CRS booking number. The number is\n// unique in the register (the existing workflow's own index), so one row or\n// none. The status and the hotel's confirmation number are set; the PMS's\n// sentence is ADDED to the notes, never written over what somebody typed.\n\nconst a = $(\"Read the answer\").first().json;\nconst res = $input.first().json;\nconst stop = (statusCode, answer) => [{ json: { stop: true, statusCode, answer } }];\n\nif (!(res.statusCode >= 200 && res.statusCode < 300)) {\n  return stop(502, { ok: false, error: `The register did not answer (HTTP ${res.statusCode}).` });\n}\nconst rows = Array.isArray(res.body) ? res.body : [];\nif (rows.length !== 1) {\n  return stop(404, { ok: false, error: `No row in the booking register carries ${a.reference}.` });\n}\nconst row = rows[0];\nconst notes = row.amendment_notes ?? \"\";\nconst line = a.note ? `PMS: ${a.note}` : null;\n\nconst patch = { booking_status: a.status };\nif (a.confirmation) patch.hotel_conf_no = a.confirmation;\nif (line && !notes.includes(line)) patch.amendment_notes = notes ? `${notes}\\n${line}` : line;\n\nreturn [{ json: {\n  stop: false,\n  patchUrl: `${a.registerUrl}?id=eq.${encodeURIComponent(row.id)}`,\n  patch,\n} }];\n"
+      }
+    },
+    {
+      "id": "b1d0c7e2-1a40-4c1e-9d0e-5a1f0c2d3e06",
+      "name": "Anything to write?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b1d0c7e2-1a40-4c1e-9d0e-5a1f0c2d3e06-c",
+              "leftValue": "={{ $json.stop }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b1d0c7e2-1a40-4c1e-9d0e-5a1f0c2d3e07",
+      "name": "Write to the register",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        120
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $json.patchUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.patch) }}"
+      }
+    },
+    {
+      "id": "b1d0c7e2-1a40-4c1e-9d0e-5a1f0c2d3e08",
+      "name": "Remember it",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// PMS → CRS register: \"Remember it\"\n// Mode: Run Once for All Items.\n//\n// Written: the answer's id is remembered, so the PMS's retry of the SAME\n// answer is told \"already written\". Not written: nothing is remembered - the\n// PMS's next try must really try.\n\nconst a = $(\"Read the answer\").first().json;\nconst res = $input.first().json;\nif (!(res.statusCode >= 200 && res.statusCode < 300)) {\n  return [{ json: { statusCode: 502,\n    answer: { ok: false, error: `The register refused the change (HTTP ${res.statusCode}).` } } }];\n}\n$getWorkflowStaticData(\"global\").written ??= {};\n$getWorkflowStaticData(\"global\").written[a.messageId] = Date.now();\nreturn [{ json: { statusCode: 200, answer: { ok: true } } }];\n"
+      }
+    },
+    {
+      "id": "b1d0c7e2-1a40-4c1e-9d0e-5a1f0c2d3e09",
+      "name": "Answer the PMS",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1920,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.answer }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "PMS answer": {
+      "main": [
+        [
+          {
+            "node": "Read the answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the answer": {
+      "main": [
+        [
+          {
+            "node": "Stop here?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stop here?": {
+      "main": [
+        [
+          {
+            "node": "Answer the PMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find the register row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find the register row": {
+      "main": [
+        [
+          {
+            "node": "What to write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "What to write": {
+      "main": [
+        [
+          {
+            "node": "Anything to write?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything to write?": {
+      "main": [
+        [
+          {
+            "node": "Answer the PMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Write to the register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write to the register": {
+      "main": [
+        [
+          {
+            "node": "Remember it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remember it": {
+      "main": [
+        [
+          {
+            "node": "Answer the PMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {},
+  "tags": []
+}
