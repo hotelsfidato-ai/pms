@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
-import { Check, Link2, Send } from "lucide-react";
+import { Check, FileText, Link2, Send } from "lucide-react";
 import { dateShort, moneyPrecise } from "@/lib/format";
 import { Button, Card, CardBody, CardHeader, Input, toast } from "@/components/ui";
 import { getGuestMessages, SendCheckInLink } from "@/modules/guest-messaging";
-import { confirmWaiting, makeGuestLink, sendVoucher } from "@/modules/reservations/data/booking";
+import { confirmWaiting, makeGuestLink, sendVoucher, viewVoucher } from "@/modules/reservations/data/booking";
 
 /* ══════════════════════════════════════════════════════════════════
    BOOKED - what the desk does next, on the booking just made
@@ -137,9 +137,14 @@ export function BookedCard({ hotelId, booked, onAnother }: {
             {lead && (
               <div className="flex flex-wrap items-start gap-2">
                 <Voucher hotelId={hotelId} stayId={lead} />
-                {!(booked.checkedIn && "room" in booked.checkedIn) && (
+                {!(booked.checkedIn && "room" in booked.checkedIn) && <>
+                  {/* D27-187: the same PDF to look at, print or save; sends nothing. */}
+                  <Button variant="secondary" onClick={() => void viewVoucher(hotelId, lead)
+                    .then((r) => { if (!r.ok) toast.error("No voucher", r.reason); })}>
+                    <FileText className="size-4" /> View voucher
+                  </Button>
                   <SendCheckInLink hotelId={hotelId} stayId={lead} />
-                )}
+                </>}
               </div>
             )}
           </>

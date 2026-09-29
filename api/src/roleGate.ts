@@ -558,6 +558,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/stays/:id/exchangeable`]: STAYS,
   [`GET ${H}/stays/:id/inclusions`]: STAYS,
   [`GET ${H}/stays/:id/guest-marks`]: STAYS,
+  /* D27-187: View voucher, for the people who may send it. */
+  [`GET ${H}/stays/:id/voucher.pdf`]: grant("reservation", "create", "Viewing a booking's voucher"),
   [`GET ${H}/inclusions`]: STAYS,
   [`GET ${H}/early-arrival`]: STAYS,
   [`GET ${H}/groups`]: STAYS,

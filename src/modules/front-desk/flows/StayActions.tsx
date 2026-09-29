@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarRange, ArrowLeftRight, Ban, Repeat, Gift, Check } from "lucide-react";
+import { CalendarRange, ArrowLeftRight, Ban, Repeat, Gift, Check, FileText } from "lucide-react";
 import { Menu, MenuItem, MenuLabel, MenuSeparator, toast } from "@/components/ui";
-import { confirmWaiting, CancelWaitingFlow, CancelConfirmedFlow } from "@/modules/reservations";
+import { confirmWaiting, viewVoucher, CancelWaitingFlow, CancelConfirmedFlow } from "@/modules/reservations";
 import { AmendStayFlow } from "@/modules/front-desk/flows/AmendStayFlow";
 import { MoveRoomFlow } from "@/modules/front-desk/flows/MoveRoomFlow";
 import { VoidFlow } from "@/modules/front-desk/flows/VoidFlow";
@@ -75,6 +75,16 @@ export function StayActions({ hotelId, stay, businessDate }: {
             reason="This stay is over."
           >
             Change dates or guests
+          </MenuItem>
+          {/* D27-187: the voucher to look at, print or save; sends nothing. */}
+          <MenuItem
+            icon={FileText}
+            onSelect={() => void viewVoucher(hotelId, stay.id)
+              .then((r) => { if (!r.ok) toast.error("No voucher", r.reason); })}
+            disabled={stay.status !== "due-in"}
+            reason="Only a confirmed booking still to arrive has a voucher."
+          >
+            View voucher
           </MenuItem>
 
           <MenuLabel>The room</MenuLabel>
