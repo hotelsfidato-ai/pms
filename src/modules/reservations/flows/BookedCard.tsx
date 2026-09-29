@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { Check, Link2, Send } from "lucide-react";
 import { dateShort, moneyPrecise } from "@/lib/format";
 import { Button, Card, CardBody, CardHeader, Input, toast } from "@/components/ui";
-import { getGuestMessages } from "@/modules/guest-messaging";
+import { getGuestMessages, SendCheckInLink } from "@/modules/guest-messaging";
 import { confirmWaiting, makeGuestLink, sendVoucher } from "@/modules/reservations/data/booking";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -136,7 +136,16 @@ export function BookedCard({ hotelId, booked, onAnother }: {
                 </Button>
               )}
             </div>
-            {lead && <Voucher hotelId={hotelId} stayId={lead} />}
+            {/* The check-in link beside the voucher (D27-105): the guest's own
+                page, sent now; not once they are in house. */}
+            {lead && (
+              <div className="flex flex-wrap items-start gap-2">
+                <Voucher hotelId={hotelId} stayId={lead} />
+                {!(booked.checkedIn && "room" in booked.checkedIn) && (
+                  <SendCheckInLink hotelId={hotelId} stayId={lead} />
+                )}
+              </div>
+            )}
           </>
         )}
 

@@ -38,7 +38,7 @@ import {
    - "Save booking", "Save and assign room", "Check in now". A walk-in is
    this page opened from an empty room: that room, today, one night, the
    Walk-in source. Company, GST, Extras and Notes fold open, and each is
-   switched on or off per hotel in Settings (161, on until turned off).
+   switched on or off per hotel in Settings (159, on until turned off).
    The owner's standing rule from now: nothing takes more than two pages
    or three clicks.
 
@@ -212,7 +212,7 @@ export default function BookingPage() {
     queryKey: ["companies", hotelId],
     queryFn: () => listCompanies(hotelId),
   });
-  /* The Settings switches (161). Unreadable is not off: {} shows them all. */
+  /* The Settings switches (159). Unreadable is not off: {} shows them all. */
   const modules = useQuery({
     queryKey: ["modules", hotelId],
     queryFn: () => getModules(hotelId),

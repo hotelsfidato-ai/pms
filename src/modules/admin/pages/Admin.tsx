@@ -487,7 +487,7 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
       "and takes no booking from them.",
   },
   /* D27-163, 29 September: New booking's fold-open sections, on until
-     turned off (161). Their own card below: nothing is refused when one
+     turned off (159). Their own card below: nothing is refused when one
      is off, the section is simply not drawn. */
   booking_company: {
     label: "Company section",
