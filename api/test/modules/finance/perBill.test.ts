@@ -60,8 +60,9 @@ beforeAll(async () => {
       [CODE])).rows[0]!.id;
     await db.query("update hotels set gstin = '27AAAAA0000A1Z5', state = 'MH' where id = $1", [hotelId]);
     const company = (await db.query<{ id: string }>(
-      `insert into companies (name, gstin, address_line, city)
-       values ('Per Bill Travels', '27BBBBB1111B1Z5', '12 MG Road', 'Pune') returning id::text`,
+      /* Credit allowed: its bill is sent to it on credit below (D27-184, C-9). */
+      `insert into companies (name, gstin, address_line, city, credit_allowed)
+       values ('Per Bill Travels', '27BBBBB1111B1Z5', '12 MG Road', 'Pune', true) returning id::text`,
     )).rows[0]!.id;
     const guest = (await db.query<{ id: string }>(
       "insert into guests (full_name) values ('Per Bill Guest') returning id::text")).rows[0]!.id;

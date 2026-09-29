@@ -209,6 +209,17 @@ describe("who reads what (D27-140 to D27-147)", () => {
     expect(who(`GET ${H}/guests`)).toContain("read_only");
     expect(who(`GET ${H}/form-c`)).not.toContain("read_only");
   });
+
+  it("D27-184: contracts are read by whoever reads companies, kept by the owner, an administrator and the GM; reception adds a company", () => {
+    for (const key of [`GET ${H}/company-records`, `GET ${H}/companies/:id/contracts`]) {
+      expect(who(key), key).toEqual(BILL_READERS);
+    }
+    expect(who(`GET ${H}/contract-price`)).toEqual(who(`GET ${H}/tariff`));
+    for (const key of [`PATCH ${H}/companies/:id`, `POST ${H}/contracts`, `PUT ${H}/contracts/:id`]) {
+      expect(whoMay(rule(key)), key).toEqual(["owner", "admin", "gm"]);
+    }
+    expect(whoMay(rule(`POST ${H}/companies`))).toEqual(["owner", "admin", "gm", "front_desk"]);
+  });
 });
 
 /* ── 2 · One matrix ───────────────────────────────────────────────── */
