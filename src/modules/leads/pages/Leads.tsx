@@ -4,7 +4,7 @@ import { Link, useParams } from "react-router";
 import { ArrowLeft, CalendarPlus, ExternalLink, MessageCircle, PlugZap } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { dateTime, NO_DATE, money } from "@/lib/format";
+import { dateTime, NO_DATE, money, phone } from "@/lib/format";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, StatusPill, EmptyState,
   ReadFailed, SkeletonText, readError,
@@ -228,7 +228,7 @@ function LeadPanel({ code, lead, onBack }: { code: string; lead: Lead; onBack: (
     <Card>
       <CardHeader
         title={lead.name ?? lead.phone ?? NO_DATE}
-        description={[lead.phone, channelWord(lead.channel)].filter(Boolean).join(" · ")}
+        description={[lead.phone && phone(lead.phone), channelWord(lead.channel)].filter(Boolean).join(" · ")}
         actions={<StatusPill tone={TONE[lead.status] ?? "neutral"}>{statusWord(lead.status)}</StatusPill>}
       />
       <CardBody className="flex flex-col gap-4">
@@ -236,13 +236,14 @@ function LeadPanel({ code, lead, onBack }: { code: string; lead: Lead; onBack: (
           <ArrowLeft className="size-4" /> Back to the enquiries
         </button>
 
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          <dt className="text-grey-500">Came in</dt><dd className="text-grey-700 tabular-nums text-right">{dateTime(lead.receivedAt)}</dd>
+        {/* On a phone each label sits over its value: side by side they wrap (Breathing Room). */}
+        <dl className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-x-4 sm:gap-y-2 text-sm [&>dt]:whitespace-nowrap [&>dd]:mb-2 sm:[&>dd]:mb-0 sm:[&>dd]:text-right">
+          <dt className="text-grey-500">Came in</dt><dd className="text-grey-700 tabular-nums">{dateTime(lead.receivedAt)}</dd>
           {lead.status === "BOOKED" && <>
             <dt className="text-grey-500">Booking in the leads app</dt>
-            <dd className="text-grey-700 text-right">{lead.bookingRef ?? NO_DATE}</dd>
+            <dd className="text-grey-700">{lead.bookingRef ?? NO_DATE}</dd>
             <dt className="text-grey-500">Value typed there</dt>
-            <dd className="text-grey-700 tabular-nums text-right">{lead.bookingValue === null ? NO_DATE : money(lead.bookingValue)}</dd>
+            <dd className="text-grey-700 tabular-nums">{lead.bookingValue === null ? NO_DATE : money(lead.bookingValue)}</dd>
           </>}
         </dl>
         {lead.doNotContact && (
