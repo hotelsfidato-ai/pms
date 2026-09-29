@@ -15,7 +15,6 @@ import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { getMenu, getOrder, sendOrder, type MenuItem } from "@/modules/pos/data/till";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { ReadFailed } from "@/components/ui";
-import { openSlip, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
 
 /* ══════════════════════════════════════════════════════════════════
    THE ORDER PAD
@@ -48,7 +47,6 @@ const STEP = "press size-11 grid place-items-center rounded-full border border-g
 
 export function OrderPad({
   hotelId, outlet, tableId, tableLabel, orderId, open, onOpenChange, onSent,
-  onSlipBlocked,
 }: {
   hotelId: string;
   outlet: string;
@@ -60,10 +58,6 @@ export function OrderPad({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSent: () => void;
-  /** The kitchen slip the browser would not open (POS-10). The pad has
-      closed by the time anybody could act on it, so the screen under it
-      keeps the notice. */
-  onSlipBlocked?: (slip: BlockedSlip) => void;
 }) {
   const qc = useQueryClient();
   const key = draftKey(hotelId, outlet, tableId);
@@ -249,28 +243,11 @@ export function OrderPad({
       return;
     }
 
-    /* ⚠ THE DRAFT GOES FIRST, THEN THE SLIP (POS-11). Opening the slip
-       first left a SENT round saved on the device as unsent wherever the
-       new tab replaced this page — a browser set to open new windows in
-       the same tab, a kiosk's web view — and the table then read "not
-       sent" with the dishes still on its pad, one Send away from cooking
-       and billing them twice. Seen in the preview pane, 17 September.
-       Deleting a draft takes milliseconds of the browser's few seconds. */
+    /* The sent round leaves the device. The paper is the KOT station's
+       (D27-159): this device opens no slip - D17-18's slip on every send
+       was retired by D27-161. */
     await clearDraft(key);
     setLines([]);
-
-    /* The paper, the same as the Terminal (POS-5; the owner's D17-18,
-       17 September: "Tables opens the kitchen slip on every send"). Only
-       when the kitchen has a docket number — a round that went on the
-       bill alone has no slip, and a held round is answered above. */
-    if (result.kotNo !== null) {
-      const url =
-        `/h/${hotelId}/till/orders/${result.order.id}/kot/${result.kotNo}`;
-      /* POS-10: refused on a slow line. Tables says so and offers it. */
-      if (!openSlip(url)) {
-        onSlipBlocked?.({ url, what: `Order ${result.kotNo} for ${tableLabel}` });
-      }
-    }
 
     qc.setQueryData(["till-order", hotelId, result.order.id], result.order);
     void qc.invalidateQueries({ queryKey: ["till-orders"] });

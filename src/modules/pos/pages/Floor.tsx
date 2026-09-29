@@ -17,7 +17,7 @@ import { OrderPad } from "@/modules/pos/flows/OrderPad";
 import { draftedTables } from "@/lib/draft";
 import { getFloor, markPrinted, clearTable, setOutletClosed, type FloorTable, type TableState, type OffFor } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
-import { SlipNotice, type BlockedSlip } from "@/modules/pos/components/SlipNotice";
+import { KotStatus } from "@/modules/pos/components/KotStation";
 
 /* ══════════════════════════════════════════════════════════════════
    THE FLOOR
@@ -105,7 +105,6 @@ export default function FloorPage() {
      pocket knows it exists. The floor is where a manager would look, so
      the floor says so. */
   const [drafted, setDrafted] = useState<Set<string>>(new Set());
-  const [blockedSlips, setBlockedSlips] = useState<BlockedSlip[]>([]);
   const rescanDrafts = () => {
     void draftedTables(hotelId).then(setDrafted);
   };
@@ -192,16 +191,7 @@ export default function FloorPage() {
 
       <StartHere className="mb-5" />
 
-      {/* POS-10. One line per slip, because two tables sent on a slow
-          line are two slips the kitchen is waiting for. */}
-      {blockedSlips.map((slip) => (
-        <SlipNotice
-          key={slip.url}
-          slip={slip}
-          className="mb-5"
-          onDone={() => setBlockedSlips((s) => s.filter((x) => x.url !== slip.url))}
-        />
-      ))}
+      <KotStatus hotelId={hotelId} className="mb-5" />
 
       {closed && (
         <Card className="mb-5">
@@ -423,7 +413,6 @@ export default function FloorPage() {
           open
           onOpenChange={(o) => { if (!o) setPad(null); }}
           onSent={() => { setPad(null); refresh(); }}
-          onSlipBlocked={(slip) => setBlockedSlips((s) => [...s, slip])}
         />
       )}
     </Page>
