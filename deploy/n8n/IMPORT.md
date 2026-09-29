@@ -133,6 +133,12 @@ for `GUEST_MESSAGES_PER_MINUTE`, your pace (D21-34).
   own saved data) and answers a repeat "already sent" without sending, so a
   retry after a timeout never reaches the guest twice. A message that failed
   is not remembered: the PMS's next try really tries.
+- **The voucher (D27-171, D27-172)**: the booking confirmation's email
+  carries the PMS's voucher, a PDF in the CRS's design, made by the PMS from
+  the booking's own figures; this workflow only writes the short letter
+  around it (in the CRS's colours) and attaches it. On WhatsApp the voucher
+  is the `booking_confirmation` text with the check-in link; a PDF on
+  WhatsApp needs a template with a document header, and comes later.
 - **The voucher on WhatsApp**: the market-to-revenue workflow is told first
   (a "mark" with no message), so a guest who replies to the CRS's voucher is
   already a booked guest in the sales inbox.
