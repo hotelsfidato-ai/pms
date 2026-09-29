@@ -43,6 +43,10 @@ export interface SystemHealth {
     code: string; name: string; businessDate: string; today: string;
     lastAuditAt: string | null; lastRun: string | null;
   }[];
+  /** Reads of the leads app (D27-170): the owner's daily cap (null until it
+      is set) and each of the last days, newest first, by Google's day
+      (midnight to midnight Pacific). Absent from a server older than it. */
+  leadsReads?: { cap: number | null; days: { day: string; reads: number }[] };
 }
 
 export function getSystemHealth(hotelCode: string): Promise<SystemHealth> {
