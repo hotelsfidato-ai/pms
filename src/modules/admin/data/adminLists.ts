@@ -1,5 +1,7 @@
 import type { Role } from "@/lib/permissions";
 import { fetchOr } from "@/data/repositories/http";
+import { api } from "@/lib/api";
+import { dateTime } from "@/lib/format";
 import { ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS } from "@/lib/permissions";
 /* Staff, the audit log, integrations and settings.
 
@@ -40,6 +42,8 @@ interface ApiStaff {
   isGroupAdmin: boolean;
   properties: string | null;
   status: "active" | "inactive";
+  /** Firebase's last-active time, or null: a dash (QA AD-2). */
+  lastSeen: string | null;
 }
 
 export async function listStaff(hotelId: string): Promise<StaffRecord[]> {
@@ -75,11 +79,12 @@ export async function listStaff(hotelId: string): Promise<StaffRecord[]> {
       name: r.name,
       email: r.email,
       role,
-      roleLabel: ROLE_LABELS[role],
+      /* A group administrator holds no role at a property, and the
+         database cannot tell the owner from another one (QA AD-2). */
+      roleLabel: r.isGroupAdmin ? "Group administrator" : ROLE_LABELS[role],
       properties: r.properties ? [r.properties] : [],
       status: r.status,
-      /* Nothing records a last sign-in yet. A dash, not a guess. */
-      lastSeen: null,
+      lastSeen: r.lastSeen,
     };
   });
 }
@@ -111,9 +116,15 @@ export interface AuditEntry {
  * posting and every reversal is already a permanent record. Nothing is
  * stored twice to produce this.
  */
-export async function listAuditLog(hotelId: string): Promise<AuditEntry[]> {
+export async function listAuditLog(
+  hotelId: string,
+  q: { who?: string; from?: string; to?: string; offset?: number; limit?: number } = {},
+): Promise<AuditEntry[]> {
   if (!hotelId) return [];
-  return fetchOr<AuditEntry[]>(`/api/hotels/${hotelId}/audit-log`, []);
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "") params.set(k, String(v));
+  const qs = params.toString();
+  return fetchOr<AuditEntry[]>(`/api/hotels/${hotelId}/audit-log${qs ? `?${qs}` : ""}`, []);
 }
 
 /* ── Integrations ────────────────────────────────────────────────── */
@@ -121,34 +132,45 @@ export async function listAuditLog(hotelId: string): Promise<AuditEntry[]> {
 export interface Integration {
   id: string;
   name: string;
-  kind: "Channel manager" | "POS" | "Platform" | "Distribution";
-  status: "connected" | "not-connected" | "planned";
+  kind: "Platform" | "Channel manager" | "Messages";
+  status: "set-up" | "not-set-up";
   detail: string;
-  stage: string | null;
 }
 
-/** Honest status. Nothing here claims a connection that does not exist. */
-export async function listIntegrations(): Promise<Integration[]> {
+/** What THIS server has set up (QA AD-1), from the server. It was fixed
+    text: "Firebase - Connected" on a server with no Firebase, a POS figure
+    and "32 properties". What the server cannot know is not listed. */
+export async function listIntegrations(hotelId: string): Promise<Integration[]> {
+  if (!hotelId) return [];
+  const [here, su] = await Promise.all([
+    api<{ signIn: boolean; sending: boolean; sendingNote: string | null }>(
+      `/api/hotels/${hotelId}/integrations`),
+    api<{ configured: boolean; environment: "sandbox" | "live" | null; reason: string | null;
+          lastLogin: { ok: boolean; at: string; reason: string | null } | null }>(
+      "/api/channel-manager/su"),
+  ]);
+  const at = (s: string) => dateTime(s);
   return [
     {
-      id: "staah", name: "STAAH", kind: "Channel manager", status: "planned",
-      detail: "Availability and rates to Agoda, Booking.com, Expedia and go-MMT. Quoted at ₹50 per room per month.",
-      stage: "Stage 9",
+      id: "firebase", name: "Password sign-in (Firebase)", kind: "Platform",
+      status: here.signIn ? "set-up" : "not-set-up",
+      detail: here.signIn
+        ? "This server holds its Firebase service account, which password sign-in needs."
+        : "This server holds no Firebase service account: nobody can sign in with a password here, and no sign-in account can be made.",
     },
     {
-      id: "sattva", name: "Sattva POS", kind: "POS", status: "not-connected",
-      detail: "Live in eZee today - ₹1,44,849 posted to rooms in August. This is a migration off a running system, not a new build.",
-      stage: "Stage 7",
+      id: "su", name: "Channel manager (SU)", kind: "Channel manager",
+      status: su.configured ? "set-up" : "not-set-up",
+      detail: !su.configured ? (su.reason ?? "SU's settings are not on this server.")
+        : `SU's ${su.environment === "live" ? "live" : "test"} account is set up on this server. `
+          + (su.lastLogin
+            ? `Last login ${at(su.lastLogin.at)}: ${su.lastLogin.ok ? "it worked" : su.lastLogin.reason ?? "it failed"}.`
+            : "No login tried since the server started."),
     },
     {
-      id: "firebase", name: "Firebase", kind: "Platform", status: "connected",
-      detail: "Authentication is wired: a token reaches Postgres and comes back with that person's properties. A service account is still needed before anyone can sign in with a password.",
-      stage: "Stage 3",
-    },
-    {
-      id: "crs", name: "Fidato CRS", kind: "Distribution", status: "planned",
-      detail: "Owned-property inventory appearing in the central reservation system that already runs 32 properties.",
-      stage: "Stage 11",
+      id: "sending", name: "WhatsApp and email", kind: "Messages",
+      status: here.sending ? "set-up" : "not-set-up",
+      detail: here.sendingNote ?? "The sending workflow's address and secret are on this server.",
     },
   ];
 }

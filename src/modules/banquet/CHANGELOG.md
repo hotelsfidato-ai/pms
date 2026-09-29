@@ -11,6 +11,32 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-29 · Fix round F (QA leftovers, D27-149), part D: a billed function keeps its hall (migration 156)
+
+Branch `fix/leftovers-28sep` (cp6 7c52bb9, round D, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Found:** round E's "Bill the function" sets 'completed' any time after Confirm, and 060's guards held only 'confirmed', so a function billed ahead of its date freed its hall - a second function was confirmed into QA Hall over a billed one (BQ-12).
+**Shipped:** migration 156 - `app.banquet_conflicts` and `be_no_double_booking` hold ('confirmed', 'completed'); "The hall is taken: …" with its capital (X-4). Re-runnable; the functions keep their signatures (MEMORY 317).
+**Proved:** `bill.test.ts` "refuses to confirm another function over it" - 200 without 156 (the double booking), 409 with it; fidato_s30 migrated twice, exit 0 both times.
+
+---
+
+## 2026-09-29 · Fix round F (QA leftovers, D27-149), part C: reopen a billed function while no tax invoice stands (D27-150, D27-154)
+
+**Asked for:** the owner's D27-154 (round E's question a). Branch `fix/leftovers-28sep` (cp6 6686af1, round A, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** `POST /banquet/events/:id/reopen` (FUNCTION_MONEY: owner, admin, GM). Refused before any write when the function is not billed, a tax invoice stands ("Tax invoice … stands on this bill. Only a credit note corrects it now."), no reason is given, or the bill was posted on a day the night audit closed. It reverses the hall and course lines through finance's `reverseFolioCharge`, the reason on each; advances, payments and restaurant orders stay; the function goes back to confirmed. `FunctionBill.tsx`: "Reopen the bill" for the same roles while no invoice stands, asking first with a required Why.
+**Proved:** `bill.test.ts` "is refused while the tax invoice stands, and takes nothing off the bill" (failed without the route: 404); `roleGate.test.ts` pins the rule. On screen (QA test function, fidato_s30): billed at ₹25,000 + ₹4,500; Reopen disabled until a reason; reopened ("Bill reopened"), the ledger shows the hall line and its reversal "(why: Hall price agreed at 20,000, not 25,000)"; re-priced ₹20,000, billed, invoiced 5EL/2026-27/00001 (taxable ₹20,000); Reopen then gone, and the route refused it.
+
+---
+
+## 2026-09-28 · Fix round F (QA leftovers, D27-149): more guests than the hall holds, a plate count below one, Catering with nothing served (QA BQ-5)
+
+**Asked for:** QA BQ-5. Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** Register a function warns "More than this hall holds (n)" above the larger of its seated and standing figures (a warning, not a refusal); Add a course says "At least one plate." under Plates instead of a silent disabled Add; the function's money reads Catering "-" while nothing is served (was ₹0). Wording only, no test.
+**Proved:** web banquet tests passed. On screen (QA Hall, seats 100 / 150): 500 guests warned; plates -10 said "At least one plate." with Add disabled; a new function showed Catering "-".
+**Left open:** D27-150 (reopening a billed function) needs a reversal through finance's front door; asked the master, nothing built.
+
+---
+
 ## 2026-09-28 · Fix round E: the function's bill, the banquet tax warning, Free prices, BQ-6, laundry and spa (QA 28 September)
 
 **Asked for:** the master's round E (D27-116, D27-120, D27-124; the QA's

@@ -42,6 +42,16 @@ None, 28 September.
 
 **Proved** — `api/test/modules/banquet/qaFixes.test.ts` "banquet tax not set"; `banquet.test.tsx` "warns while the banquet tax is not set"; on screen.
 
+### BQ-12 · A billed function freed its hall - FIXED 29 September (round F, migration 156)
+
+**Found** - round F, 28-29 September, checking X-4's "the hall is taken" on screen: a second function was confirmed into a hall over a billed one.
+
+**Done** - round E's billing sets 'completed' before the function takes place; 060's conflict check and exclusion constraint held only 'confirmed'. Migration 156 makes both hold ('confirmed', 'completed').
+
+**Proved** - `bill.test.ts`: confirming over a billed function is 200 without 156, 409 with it.
+
+**The rule** - A new status for an existing thing is checked against every guard that names the old one.
+
 ### BQ-11 · A hall price of 0 was saved as a free hall without anybody saying so — FIXED 28 September (round E)
 
 **Found** — the QA of 28 September (QA BQ-8, the owner's question Q-8).

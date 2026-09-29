@@ -284,7 +284,7 @@ function NewSeason({ hotelId, types, plans, onDone }: {
             <NativeSelect value={plan} onChange={(e) => setPlan(e.target.value)}>
               {plans.map((p) => (
                 <option key={p.code} value={p.code}>
-                  {p.code} · {p.name}
+                  {p.code} · {p.includes}
                 </option>
               ))}
             </NativeSelect>

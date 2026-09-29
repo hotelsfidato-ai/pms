@@ -4,7 +4,7 @@ import { CalendarRange } from "lucide-react";
 import {
   Button, Dialog, DialogContent, Field, fieldProps, Input, toast,
 } from "@/components/ui";
-import { money } from "@/lib/format";
+import { money, dateShort } from "@/lib/format";
 import { amendStay } from "@/modules/front-desk/data/operations";
 import type { Stay } from "@/data/repositories";
 import { countProblem, dateProblem, MAX_NIGHTS } from "../../../../api/src/validate.ts";
@@ -124,7 +124,7 @@ export function AmendStayFlow({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           title={`Amend ${stay.guest}`}
-          description={`${was} ${was === 1 ? "night" : "nights"}, ${stay.arrival} to ${stay.departure}.`}
+          description={`${was} ${was === 1 ? "night" : "nights"}, ${dateShort(stay.arrival)} to ${dateShort(stay.departure)}.`}
           size="sm"
           footer={
             <div className="flex gap-2 w-full justify-end">

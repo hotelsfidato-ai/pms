@@ -2,13 +2,13 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserPlus, Check, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money } from "@/lib/format";
+import { money, dateShort } from "@/lib/format";
 import { rateOverrideNeedsReason, canConfirmWalkIn } from "@/lib/rules";
 import {
   Button, Field, Input, NativeSelect, Switch, toast,
   Dialog, DialogContent,
 } from "@/components/ui";
-import { createWalkIn } from "@/modules/front-desk/data/operations";
+import { createWalkIn, mealPlanChoices } from "@/modules/front-desk/data/operations";
 import { getRoom } from "@/data/repositories";
 import { MARKET_SEGMENTS } from "@/modules/reservations";
 import {
@@ -160,7 +160,7 @@ export function WalkInFlow({
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
       <DialogContent
         title="Walk-in"
-        description={`Room ${roomNumber} · arriving ${date}`}
+        description={`Room ${roomNumber} · arriving ${dateShort(date)}`}
       >
         <div className="space-y-4">
           <Field label="Guest" required>
@@ -305,7 +305,7 @@ export function WalkInFlow({
           <Field label="Meal plan">
             {({ id }) => (
               <NativeSelect id={id} value={ratePlan} onChange={(e) => setRatePlan(e.target.value)}>
-                {["CP", "Room Only", "EP", "MAP"].map((p) => <option key={p}>{p}</option>)}
+                {mealPlanChoices(ratePlan).map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
               </NativeSelect>
             )}
           </Field>
@@ -365,7 +365,7 @@ export function WalkInFlow({
             hint={
               rack === null
                 ? "This room type has no rate set, so there is nothing to compare against. Enter what the guest is paying."
-                : `Rack is ${money(rack)}`
+                : `Rack is ${money(rack)}. Left empty, the rack rate is charged.`
             }
           >
             {({ id }) => (

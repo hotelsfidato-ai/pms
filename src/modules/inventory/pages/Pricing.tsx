@@ -391,7 +391,7 @@ function TheBaseFigure({
 }: {
   data: Pricing; hotelId: string;
   applied: { from: string; to: string; words: string };
-  onDone: () => void;
+  onDone: () => Promise<unknown> | void;
 }) {
   const current = data.cells.find(
     (c) => c.date === applied.from
@@ -411,14 +411,16 @@ function TheBaseFigure({
     mutationFn: (price: number | null) =>
       setBasePrice(hotelId, { from: applied.from, to: applied.to, price,
                               ...(free && price === 0 ? { free } : {}) }),
-    onSuccess: (r, price) => {
+    /* The new figures first, then the word (QA RT-8: the toast came about
+       four seconds before the base showed). */
+    onSuccess: async (r, price) => {
       if (r.ok) {
+        await onDone();
         toast.success(
           price === null ? "The base is cleared" : "The base is set",
           `${applied.words}. Every price that is not typed follows it.`,
         );
         setValue(""); setFree(false);
-        onDone();
       } else {
         toast.error("That base was not set", r.reason);
       }

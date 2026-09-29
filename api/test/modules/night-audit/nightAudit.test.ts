@@ -519,6 +519,11 @@ describe("closing a day", () => {
     await clearDueOuts();
     const stay = await checkInAtPune(2, 2500);
     const db = await admin();
+    /* QA NA-5: the checklist's "Room charges to post" counted this stay, and
+       the run then posted nothing for it. */
+    const toPost = async () => ((await (await asOwner("/PUN/night-audit")).json()) as
+      { checks: Array<{ id: string; count: number }> }).checks.find((c) => c.id === "room-charges")!.count;
+    const counted = await toPost();
     try {
       /* What the walk-in route writes: both nights, one line, on arrival. */
       await db.query(
@@ -526,6 +531,7 @@ describe("closing a day", () => {
                                      category, description, amount, tax_rate, tax_amount)
          values ($1, $2, $3, app.business_date($1), 'room', $4, 5000, 5, 250)`,
         [puneId, stay.folioId, stay.reservationId, `Room ${stay.room} · 2 nights`]);
+      expect(await toPost(), "the checklist counts a night the run will not post").toBe(counted - 1);
 
       for (let night = 0; night < 2; night++) {
         await clearDueOuts();

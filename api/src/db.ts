@@ -13,11 +13,18 @@ import { env } from "./env.ts";
    exactly the column where that matters, so it stays a string all the
    way to the wire and the interface parses it once, deliberately. */
 
+/* D27-165 (speed check, 29 Sep): 10 connections and a 5 s wait turned a
+   Dashboard's burst into 500s after exactly 5 s. 20 connections, a 30 s
+   wait (under nginx's timeouts), and a statement cap so a runaway query
+   frees its connection. ponytail: 120 s, not the check's 30 s, because
+   /api/ allows 300 s for imports and the night audit; lower it when a
+   measured long operation says it can. */
 export const pool = new pg.Pool({
   connectionString: env.databaseUrl,
-  max: 10,
+  max: 20,
   idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 5_000,
+  connectionTimeoutMillis: 30_000,
+  statement_timeout: 120_000,
 });
 
 pool.on("error", (err) => {

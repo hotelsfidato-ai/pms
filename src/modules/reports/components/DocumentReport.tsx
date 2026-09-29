@@ -50,6 +50,10 @@ export function DocumentReport({
     queryKey: ["report", report, hotelId, query],
     queryFn: () => getReport(hotelId, report, query),
     enabled: Boolean(hotelId),
+    /* The Manager report is read afresh each time it opens, as the
+       Dashboard's copy of it is (D27-151): kept for the session, it showed
+       a booking voided since as still sold. */
+    ...(report === "manager" ? { staleTime: 0, refetchOnMount: "always" as const } : {}),
   });
   const doc = q.data;
 

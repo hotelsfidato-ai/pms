@@ -8,6 +8,19 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-29 · Fix round F (QA leftovers, D27-149), part C: one reversal for a function's bill too; Reversed in words; the place once; Company accounts and Cashiering as the server asks (D27-154, QA FI-18, FI-16, D27-145, RO-4)
+
+**Asked for:** the master's part C, after round A merged; finance claimed for these only. Branch `fix/leftovers-28sep` (cp6 6686af1, round A, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:**
+- `reverseFolioCharge(client, hotelId, postingId, reason, within)` on the front door: round A's reversal moved into a function unchanged (reason required, D27-117; a payment only by the money roles, D27-125; closed days refused) and the ↺ route calls it, so there is one insert for a reversal. `within` is the stay's bills or one folio. Used by the banquet's reopen (D27-154).
+- FI-18, Payments: a "Reversed" pill beside the method, and the note says "marked Reversed" (strike-through only before). FI-18's "₹784over" is front-desk's `StayTable.tsx`: part D.
+- FI-16: `placeLine` (round A's) on the front door; the admin Properties list and a property's page use it. The guest's interim bill already prints the town once.
+- D27-145: Company accounts' entry and route declare `invoice` (they said `commission`; the entry's own rule already kept the revenue manager out).
+- RO-4: Cashiering's entry asks `payment` create, the server's DRAWER rule: the Viewer no longer finds it in the menu or search; the page is not guarded, so it still reads by address (D27-146).
+**Proved:** api `billControls`, `alcoholVat`, `auditLog`, `corrections`, the banquet tests and `roleGate.test.ts`: 11 files, 152 passed (the reversal's own tests unchanged). Web finance + navigation 16 files, 79 passed. On screen: Payments "UPI Reversed … ₹10" after a reversal through the route, and "1 receipt is marked Reversed"; Properties "Akkalkot, Solapur District, Maharashtra 413216".
+
+---
+
 ## 2026-09-28 · QA fix round A: money and bills (branch `fix/money-28sep`)
 
 **Asked for:** the owner's D27-116 - every BLOCKS WORK and WRONG RESULT in the QA's finance table (docs/qa/qa-2026-09-28.md) before the release - with D27-117 ("Are you sure?" before reversing, issuing an invoice number, check-out) and D27-118 (cash only into an open drawer). The owner answered three more here (D27-125 to D27-127): a payment is reversed only by the owner, an administrator, the GM or the accountant; the interim bill prints the exact figure, no round-off; Company accounts shows the City ledger report's figures.
