@@ -11,6 +11,26 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-28 · Fix round F (QA leftovers, D27-149), part B: the owner's answers to RP-1 and RP-2 (D27-151, D27-152)
+
+**Shipped:** `DocumentReport.tsx`: the Manager report is read afresh each time it opens (staleTime 0, refetch on mount), as the Dashboard's copy is - kept for the session it showed a booking voided since as still sold (D27-151; the Calendar and rate screens follow in part D). `builders/manager.ts`: under the City ledger, "Opening, Payment received and Closing need a company's payment, which this system does not record yet." (D27-152; the dashes stay, D17-74).
+
+---
+
+## 2026-09-28 · Fix round F (QA leftovers, D27-149): the Manager report's two ledger figures, its complimentary rows, the cashier's name, the lodging tax line
+
+**Asked for:** QA RP-3 to RP-6 (`docs/qa/qa-2026-09-28.md`). Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:**
+- RP-3: a footnote under the Manager report saying why "Transfer Charges to Guest Ledger" (the day's revenue with tax, each night on its night, tonight at the booking's rate until posted) and "Charge Posted to Guest Ledger" (what was posted to the bills that day, a stay posted on arrival counted whole, refunds in) differ. No figure changed. Checked for 25 Aug on fidato_s30: ₹25,557.79 against ₹35,940.73, the gap being the multi-night room lines posted on the 25th (₹28,899.60 over six lines).
+- RP-4: the Cashier shift names the clerk through `app.hotel_people` (149), so the Accountant sees "Test Reception", not "not on record" (REP-14).
+- RP-5: "Complimentary Room | Complimentary Day Use" is two rows, counts each (and "Complimentary Room" now finds its glossary term).
+- RP-6: All reports says "CGST and SGST at each slab's rate" (was "at 2.5% each, split by tax slab": the sheet is by day, not by slab).
+- The Cashier shift's note lost its long dash.
+**Proved:** `api/test/modules/reports/reports.test.ts` 31 passed; the new RP-4 test failed with `reports.ts` put back ("expected null to be 'RPTEST clerk'"). Web `src/modules/reports` tests passed. On screen: the Manager report's two rows and the footnote, the Cashier shift as Test Accountant ("Test Reception · UPI · 1 · ₹10"), All reports' Lodging tax line.
+**Left open:** RP-1 (four occupancy definitions) and RP-2 (City ledger dashes are D17-74) are with the master as questions; nothing changed for either.
+
+---
+
 ## 2026-09-27 · Form III at the desk (D27-25) - the guests lane's
 
 The guests lane (`guests/form-iii-27sep`) changed this service's files for

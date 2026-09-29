@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getStayView, addDays, isWeekend } from "@/modules/front-desk/data/stayview";
+import { listStays } from "@/modules/front-desk/data/stays";
 import { defaultPropertyId, BUSINESS_DATE } from "@/data/repositories";
 
 /* CP9: the id a screen puts in a URL is the hotel CODE, because that is
@@ -147,6 +148,17 @@ describe("tape chart - the footer", () => {
         expect(f.occupancyPct).toBeGreaterThanOrEqual(0);
         expect(f.occupancyPct).toBeLessThanOrEqual(100);
       }
+    }
+  });
+
+  it("counts a night as the Manager report does: no day use, no no-show, nothing tentative (D27-151)", async () => {
+    const data = await chart();
+    const stays = await listStays(HOTEL);
+    const sold = (d: string) => stays.filter((s) =>
+      ["due-in", "in-house", "due-out", "checked-out"].includes(s.status) && !s.isDayUse
+      && s.arrival <= d && d < s.departure).length;
+    for (const f of data.footer) {
+      expect(f.occupancyPct, f.date).toBe(Math.round((sold(f.date) / data.counts.All!) * 1000) / 10);
     }
   });
 

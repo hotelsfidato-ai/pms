@@ -392,7 +392,7 @@ export function NewProperty({ onDone }: { onDone: () => void }) {
             placeholder="NSK" mono
             hint="2–8 letters or digits. It appears in every URL and every invoice number, and it cannot be changed later." />
           <Field label="Name" value={name} onChange={setName}
-            placeholder="Fidato Nashik" />
+            placeholder="The property's name" />
           <Field label="City" value={city} onChange={setCity}
             placeholder="Nashik" />
           <div className="grid grid-cols-2 gap-3">

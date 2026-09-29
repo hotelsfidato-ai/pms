@@ -122,7 +122,7 @@ export function AccountMenu() {
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="w-[290px]" align="end">
+      <DropdownMenuContent className="w-[290px] max-h-[calc(100dvh-5rem)] overflow-y-auto" align="end">
         <div className="px-2.5 py-2">
           <p className="text-base font-medium text-ink-900">{scope.fullName}</p>
           <p className="text-2xs text-grey-500 mt-0.5">{scope.email}</p>

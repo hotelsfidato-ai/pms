@@ -264,13 +264,17 @@ reports.get("/:code/reports/cashier-shift", async (c) => {
       n: string; amount: string;
     }>(
       `select fp.posted_by::text as staff_id,
-              s.full_name as cashier,
+              coalesce(s.full_name, hp.full_name) as cashier,
               coalesce(p.method, 'unrecorded') as method,
               count(*)::text as n,
               (-sum(fp.amount))::text as amount
          from folio_postings fp
          left join payments p on p.posting_id = fp.id
          left join staff s on s.id = fp.posted_by
+         /* A colleague's name comes through app.hotel_people (149): staff
+            shows a clerk only their own row, so the Accountant read
+            Reception's cash as "not on record" (QA RP-4). */
+         left join app.hotel_people($1) hp on hp.id = fp.posted_by
         where fp.hotel_id = $1
           and fp.category = 'payment'
           /* Money in the drawer. A bill transferred to the city ledger is
@@ -282,8 +286,8 @@ reports.get("/:code/reports/cashier-shift", async (c) => {
           and not exists (
             select 1 from folio_postings rev where rev.reverses_id = fp.id
           )
-        group by fp.posted_by, s.full_name, coalesce(p.method, 'unrecorded')
-        order by s.full_name nulls last, method`,
+        group by fp.posted_by, 2, coalesce(p.method, 'unrecorded')
+        order by 2 nulls last, method`,
       [hotelId, from, to],
     );
 

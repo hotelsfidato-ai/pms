@@ -11,6 +11,13 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-29 · Fix round F (QA leftovers, D27-149), part D: Guest 360 in the desk's words (QA GU-7)
+
+Branch `fix/leftovers-28sep` (cp6 7c52bb9, round D, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** a stay's status reads "In house", "Due in", "Checked out" … (it read "checked in").
+
+---
+
 ## 2026-09-26 · Guest 360's Offers card (D25-39, opt-in)
 
 **Asked for / Shipped:** the compliance lane (in full in the front desk's

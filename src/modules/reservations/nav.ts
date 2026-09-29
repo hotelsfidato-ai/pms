@@ -1,5 +1,6 @@
 import { CalendarCheck, Users, BookPlus } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
+import { can } from "@/lib/permissions";
 
 /* Reservations' menu entries — the Bookings section, interleaved with the
    guests service's by `order`. Assembled by `navigation.ts`. */
@@ -19,5 +20,8 @@ export const nav: ServiceNavEntry[] = [
      for them automatically when there is more than one. */
   { section: "bookings", order: 50, workingMenus: ["front_desk"],
     label: "New booking", to: "/h/:code/book", icon: BookPlus, resource: "reservation",
+    /* Only for whoever may make one: the server's BOOK rule (QA RO-4 - the
+       Viewer and the Accountant were offered it). */
+    canSee: (role) => can(role, "create", "reservation"),
     keywords: ["reservation", "book a room"] },
 ];

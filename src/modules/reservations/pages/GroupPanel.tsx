@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
-import { Users, Wallet, ArrowRight, Check, Flag } from "lucide-react";
+import { Users, Wallet, Check, Flag } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -265,8 +265,8 @@ export default function GroupPanelPage() {
                         {dateShort(r.checkIn)} → {dateShort(r.checkOut)}
                       </span>
                       <span className="block text-xs text-grey-500 whitespace-nowrap">
-                        {r.nights} {r.nights === 1 ? "night" : "nights"} ·{" "}
-                        <StatusPill tone={STATUS_TONE[stateOf(r)] ?? "neutral"}>
+                        {r.nights} {r.nights === 1 ? "night" : "nights"}{" "}
+                        <StatusPill className="ml-1" tone={STATUS_TONE[stateOf(r)] ?? "neutral"}>
                           {STATUS_WORD[stateOf(r)] ?? r.status.replace("_", " ")}
                         </StatusPill>
                       </span>
@@ -367,8 +367,8 @@ export default function GroupPanelPage() {
       <p className="mt-5 text-sm text-grey-600">
         Changing who pays affects nights <b>not yet charged</b>. The audit
         posts one night at a time, so anything already on a folio stays where
-        it was posted - moving it is a reversal and a re-post, with a reason
-        beside it. <ArrowRight className="inline size-3" /> the folio.
+        it was posted - moving it is a reversal and a re-post on the folio,
+        with a reason beside it.
       </p>
     </Page>
   );

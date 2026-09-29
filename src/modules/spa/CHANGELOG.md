@@ -12,6 +12,14 @@ are done, the screens are not** (`MODULE.md`).
 
 ---
 
+## 2026-09-28 · Fix round F (QA leftovers, D27-149): the screens with the module off (QA X-5)
+
+**Asked for:** QA X-5. Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:** Treatments and therapists with the spa off reads one sentence, "Treatments and therapists is not available" and the server's reason, as Halls and packages does (was two cards, "The treatments is not available", with Add buttons). The page's description and the therapists' empty line lost their long dash. Wording only, no test.
+**Proved:** web spa tests passed; seen on screen with the module off in fidato_s30.
+
+---
+
 ## 2026-09-24 · SPA-2: the matrix names the server's six
 
 On `admin/finish-24sep` (the helper's `admin/hotel-admin-menus`, finished):

@@ -19,9 +19,13 @@ export const nav: ServiceNavEntry[] = [
      read afterwards, this is used during the shift. */
   { section: "finance", order: 40, workingMenus: ["front_desk"],
     label: "Cashiering", to: "/h/:code/cashiering", icon: Wallet, resource: "payment",
+    /* Only for whoever may run a drawer: the server's rule (roleGate.ts
+       DRAWER, `payment` create). The Viewer reads payments but was offered
+       the drawer (QA RO-4). */
+    canSee: (role) => can(role, "create", "payment"),
     keywords: ["cash drawer", "drawer", "shift", "hand over"] },
   { section: "finance", order: 50,
-    label: "Company accounts", to: "/h/:code/city-ledger", icon: Building2, resource: "commission",
+    label: "Company accounts", to: "/h/:code/city-ledger", icon: Building2, resource: "invoice",
     /* Money owed (D27-145): the server asks `invoice` view of it, so the
        revenue manager, who holds `commission` for Booking sources, does not
        see it. Round A reads the City ledger report here; the same rule. */

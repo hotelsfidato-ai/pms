@@ -474,13 +474,9 @@ function PasswordDialog({ person, onClose, onSaved }: {
             error={short ? `At least ${MIN_PASSWORD} characters.` : undefined}
           >
             {(f) => (
-              /* ⚠ NOT type="password". The manager is setting it FOR
-                 somebody else and has to read it back to them — a
-                 masked box means it gets typed twice, or written on a
-                 sticky note beside the terminal. */
-              <Input {...fieldProps(f)} value={value} autoFocus
-                     placeholder="something they will remember"
-                     onChange={(e) => setValue(e.target.value)} />
+              <PasswordBox {...fieldProps(f)} value={value} autoFocus
+                           placeholder="something they will remember"
+                           onChange={(e) => setValue(e.target.value)} />
             )}
           </Field>
           <p className="text-sm text-grey-600">
@@ -672,13 +668,10 @@ function AddPersonDialog({ open, places, placeRequired, onOpenChange, onAdded }:
             error={password.length > 0 && password.length < MIN_PASSWORD
               ? `At least ${MIN_PASSWORD} characters.` : undefined}
           >
-            {/* ⚠ NOT type="password". You are setting it FOR somebody
-                else and have to read it back to them. A masked box gets
-                typed twice, or written on a note beside the terminal. */}
             {(f) => (
-              <Input {...fieldProps(f)} value={password}
-                     placeholder="something they will remember"
-                     onChange={(e) => setPassword(e.target.value)} />
+              <PasswordBox {...fieldProps(f)} value={password}
+                           placeholder="something they will remember"
+                           onChange={(e) => setPassword(e.target.value)} />
             )}
           </Field>
           {placeRequired && (
@@ -823,5 +816,20 @@ function GrantDialog({ person, open, places, onOpenChange, onGranted }: {
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* A password typed FOR somebody else (QA AD-6): masked, with Show, so the
+   manager can read it back to them without it sitting in plain view of
+   whoever is at the desk. It was a plain text box. */
+function PasswordBox(props: React.ComponentProps<typeof Input>) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="flex gap-2">
+      <Input {...props} type={show ? "text" : "password"} autoComplete="new-password" />
+      <Button type="button" variant="secondary" className="shrink-0" onClick={() => setShow((v) => !v)}>
+        {show ? "Hide" : "Show"}
+      </Button>
+    </div>
   );
 }

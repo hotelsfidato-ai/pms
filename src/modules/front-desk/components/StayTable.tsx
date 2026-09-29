@@ -31,6 +31,7 @@ const TONE: Record<string, Tone> = {
   "checked-out": "neutral",
   "no-show": "danger",
   cancelled: "danger",
+  void: "neutral",
   /* Phase 1: a booking held for the hotel to confirm (status 'tentative').
      Grey - not firm yet - the owner, 27 September. */
   tentative: "neutral",
@@ -43,6 +44,8 @@ const LABEL: Record<string, string> = {
   "checked-out": "Checked out",
   "no-show": "No show",
   cancelled: "Cancelled",
+  /* A voided booking said "void" (QA BK-10). */
+  void: "Void",
   tentative: "Waiting for the hotel",
 };
 
@@ -127,8 +130,9 @@ const ALL_COLUMNS: Record<StayColumn, Column<StayRow>> = {
           )}
         >
           {money(Math.abs(s.balance))}
+          {/* A real space, not only a margin: it read "₹784over" (QA FI-18). */}
           {s.balance < 0 && (
-            <span className="ml-1 text-2xs font-normal text-grey-500">over</span>
+            <span className="text-2xs font-normal text-grey-500">{" "}over</span>
           )}
         </span>
       ),

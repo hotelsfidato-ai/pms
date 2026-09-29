@@ -8,6 +8,22 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-29 · Fix round F (QA leftovers, D27-149), part D: one occupancy, Sellable 17, EP not RO, dates and words (D27-151, D27-164; QA FD-10, FD-12, FD-13, FD-14, FD-15, FI-18, BK-9, BK-10, RO-4)
+
+**Asked for:** the master's part D, after round D merged. Branch `fix/leftovers-28sep` (cp6 7c52bb9, round D, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.
+**Shipped:**
+- D27-151: the Calendar footer's occupancy counts nights as the Manager report does (bookings confirmed, in house or checked out, complimentary in; no-show, tentative and day use out) - `data/stayview.ts`. 26 Aug on fidato_s30: 35%, as the Dashboard (was 41%).
+- D27-164: the chip that counts the sellable rooms reads "Sellable 17" (FD-13); check-in and walk-in offer "EP · Room only", "CP · Room + breakfast", "MAP · Room + breakfast + one meal" and no RO - a booking already on RO keeps it (FD-15, `MEAL_PLAN_CHOICES` in `data/operations.ts`).
+- FD-10: the check-in room step names "Occupied" and "Guest still in" (it said "clean").
+- FD-12: the amend and walk-in dialogs print dates as 25 Aug 2026. FD-14: "Left empty, the rack rate is charged."
+- FI-18: "₹784 over" has a real space (`StayTable.tsx`). BK-10: a voided booking reads "Void". BK-9: More options points to Assign room on the Calendar.
+- In house and Due out skip the per-stay bill reads for a role without bills (round B's note).
+Wording only in CheckInFlow and WalkInFlow (D27-158).
+**Proved:** `data/stayview.test.ts` "counts a night as the Manager report does…" fails with the old footer ("41.2 to be 35.3"); web front-desk 12 files, 72 passed; tsc -b exit 0. On screen: Calendar "Sellable 17", 35% for 26 Aug; Folios "₹784 over"; the walk-in form "Room 209 · arriving 26 Aug 2026", its plans and the rack line.
+**Not seen on screen:** FD-10 - every arrival on 26 Aug has its room still held by a due-out guest, so Check in is disabled and the room step cannot open on this data.
+
+---
+
 ## 2026-09-28 · Fix round D: the ID step, the counts, the room slept in (QA of 28 Sep)
 
 **Asked for:** D27-116 - the QA's Front desk table; the owner's answers of 28 Sep.
