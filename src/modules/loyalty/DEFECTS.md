@@ -14,8 +14,8 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None. This service is not built: it has a brief, a menu entry
-and a Coming soon page, and no code behind them.
+None (30 September, when it was built; `MODULE.md`, Left open, lists what
+is not built yet, which is not a defect).
 
 ---
 
