@@ -224,7 +224,9 @@ describe("each person's menu", () => {
     expect(workingHomeFor("housekeeping", "5EL")).toBe("/h/5EL/housekeeping");
     expect(workingHomeFor("kitchen_manager", "5EL")).toBe("/h/5EL/kitchen");
     expect(workingHomeFor("chef", "5EL")).toBe("/h/5EL/kitchen");
-    /* Still Tables, with Guest requests above it (D27-181). */
+    /* The chef and the waiter still land on the Kitchen and Tables, with
+       Guest requests above them in their menus (D27-181, GS-1: without
+       WORKING_HOME naming them, both landed on Guest requests). */
     expect(workingHomeFor("pos", "5EL")).toBe("/h/5EL/floor");
     expect(workingHomeFor("front_desk", "5EL")).toBeNull();
     expect(workingHomeFor("owner", "5EL")).toBeNull();
