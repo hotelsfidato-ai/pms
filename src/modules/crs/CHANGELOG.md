@@ -85,14 +85,28 @@ Plus the n8n file and the owner's steps.
   - Reception sees the list without the card. The list reads well at 375 px.
   - Two fixes came of it: the CRS number kept on one line, and the save message.
 
+**Then the owner's D27-174, the same evening:**
+
+- **CRS-1 fixed.** Once every room of a CRS booking of several rooms has an answer
+  and they differ, the register is told "Partly confirmed: N of M rooms", once. The
+  confirmed rooms' references go as the hotel's confirmation number. It touches the
+  reader, the sender's shape, the workflow's `STATUS`, 163's check (dropped and added,
+  so the replay carries it) and the screen's words.
+  - One reader test and one workflow test cover it. Neither is run yet.
+- **CRS bookings joins reception's working menu,** between All bookings and New
+  booking (pinned in `navigation.test.ts`). The connection card stays the owner's and
+  an admin's.
+  - Seen in the pane as Reception: the entry is in the sidebar, and there is no card.
+  - Web tests pass: `src/components/app` 18, `src/modules/crs` 3, `src/test`, apart
+    from the migration-number gap.
+
 **Left open:**
 
 - Run 163 and the two API test files, when the master says.
-- The master: skip automationQueue? CRS bookings in reception's working menu? Who
-  places `CrsFacts`?
+- The master: who places `CrsFacts`.
+- `fidato_s36` needs 163 replayed for the widened answer check, before a "partly"
+  answer can be recorded there.
 - `run_as` at go-live.
-- A CRS booking whose rooms the desk partly confirms and partly cancels is never
-  answered (CRS-1).
 
 ---
 
