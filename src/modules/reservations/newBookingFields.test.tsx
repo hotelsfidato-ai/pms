@@ -4,13 +4,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import * as apiModule from "@/lib/api";
 import { startSignedIn } from "@/test/app";
-import NewBookingPage from "@/modules/reservations/pages/NewBooking";
+import NewBookingPage from "@/modules/reservations/pages/BookingPage";
 
 /* ══════════════════════════════════════════════════════════════════
    NEW BOOKING, PHASE 1 (D27-33) - what the form SENDS
 
-   Every field the owner's screenshot records, proved on what the Confirm
-   button sends (root MEMORY 329: a field a screen asks for is proved by
+   Every field the owner's screenshot records, proved on what Save booking
+   sends (the one page, D27-163; the rarer fields fold open) (root MEMORY 329: a field a screen asks for is proved by
    what the button sends). The rules themselves are the server's -
    api/test/modules/reservations/newBooking.test.ts. Here: reception is not
    offered the complimentary tick, the tax from the tax card sits beside
@@ -70,26 +70,25 @@ describe("New booking's Phase 1 fields", () => {
       </QueryClientProvider>,
     );
 
-    await screen.findByText("Who");
+    await screen.findByRole("heading", { name: "Guest" });
     pick(/^Title$/, "Ms");
     type("Guest or company", "Anna Smith");
     type("Email", "anna@example.test");
     type("Nationality", "gb");
-    /* A foreigner's form is due at check-in: said at booking. */
-    expect(screen.getByText(/A foreign guest/)).toBeTruthy();
+    /* A foreign guest arriving today: Form III is asked on the same page. */
+    expect(document.querySelector("[data-form-iii]")).toBeTruthy();
     type("City", "Leeds");
     type("PIN code", "LS1 4AP");
     type("Expected check-out", "09:30");
     pick(/Booking source/, "src-1");
     pick(/Market segment/, "Leisure");
     fireEvent.click(screen.getByRole("tab", { name: "Waiting for the hotel" }));
-    fireEvent.click(screen.getByRole("button", { name: /^Add$/ }));
 
     /* Reception is not offered the gift (the owner, 27 September). */
     const comp = await screen.findByRole("checkbox", { name: /Complimentary/ });
     expect((comp as HTMLButtonElement).disabled).toBe(true);
     /* A waiting booking gets no room yet: the desk's assign refuses one. */
-    expect(screen.queryByRole("combobox", { name: "Room" })).toBeNull();
+    expect(screen.queryByLabelText("Room", { selector: "select" })).toBeNull();
 
     fireEvent.click(screen.getByRole("tab", { name: "Up to 10%" }));
     fireEvent.change(screen.getByLabelText("Discount percent"), { target: { value: "10" } });
@@ -98,7 +97,7 @@ describe("New booking's Phase 1 fields", () => {
     /* ₹3,000 less 10% is ₹2,700; 5% of it is ₹135 - the tax card's rate. */
     expect(await screen.findByText(/₹2,700.00 a night \+ ₹135.00 tax \(5%\)/)).toBeTruthy();
 
-    const hold = await screen.findByRole("button", { name: "Hold it, waiting for the hotel" });
+    const hold = await screen.findByRole("button", { name: "Save booking" });
     await waitFor(() => expect((hold as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(hold);
 

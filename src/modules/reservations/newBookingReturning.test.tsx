@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router";
 import * as apiModule from "@/lib/api";
 import { useToastStore } from "@/components/ui/Toast";
 import { startSignedIn } from "@/test/app";
-import NewBookingPage from "@/modules/reservations/pages/NewBooking";
+import NewBookingPage from "@/modules/reservations/pages/BookingPage";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BOOKING FORM RECOGNISES A RETURNING GUEST (D21-20)
@@ -13,7 +13,7 @@ import NewBookingPage from "@/modules/reservations/pages/NewBooking";
    A phone that is an earlier guest's suggests them - a name and "stayed
    with the group N times", nothing more (D21-13). "Same person" makes the
    booking theirs; the two ticks go with it (D21-72, D21-22). Proved on
-   what the Confirm button sends and what the clerk is then told (root
+   what Save booking sends (the one page, D27-163) and what the clerk is then told (root
    MEMORY 291). The server's half - checking the guest again, filling a
    blank, refusing a mismatch - is api/test/modules/guests/oneGuestOneRecord.test.ts.
    ══════════════════════════════════════════════════════════════════ */
@@ -73,7 +73,7 @@ describe("a booking for a returning guest", () => {
     );
 
     /* The heading is drawn while the inventory loads; the form after it. */
-    await screen.findByText("Who");
+    await screen.findByRole("heading", { name: "Guest" });
     type("Guest or company", "Rohit D");
     type("Phone", "+91 98765 43210");
     expect(await screen.findByText(/Stayed with the group 2 times/))
@@ -82,10 +82,9 @@ describe("a booking for a returning guest", () => {
 
     fireEvent.change(screen.getByLabelText(/Booking source/, { selector: "select" }),
       { target: { value: "src-1" } });
-    fireEvent.click(screen.getByRole("button", { name: /Add/ }));
     fireEvent.click(screen.getByRole("switch", { name: /Guest agreed to WhatsApp/ }));
 
-    const confirm = await screen.findByRole("button", { name: "Confirm the booking" });
+    const confirm = await screen.findByRole("button", { name: "Save booking" });
     await waitFor(() => expect((confirm as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(confirm);
 
