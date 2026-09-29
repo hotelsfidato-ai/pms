@@ -15,10 +15,15 @@ import type { Permitted } from "@/data/repositories/types";
 
 /* ── Folio reads ──────────────────────────────────────────────────── */
 
-export async function getFolioPostings(hotelId: string, stayId: string): Promise<Posting[]> {
+/** A line as the Bill tab reads it: the core's Posting, and why Edit is off
+    for it before anybody types (D27-157) - its day closed by the night
+    audit, or the tax invoice standing on its bill. */
+export type BillLine = Posting & { dayClosed?: boolean; invoice?: string | null };
+
+export async function getFolioPostings(hotelId: string, stayId: string): Promise<BillLine[]> {
   if (!hotelId || !stayId) return [];
   try {
-    return await api<Posting[]>(`/api/hotels/${hotelId}/stays/${stayId}/postings`);
+    return await api<BillLine[]>(`/api/hotels/${hotelId}/stays/${stayId}/postings`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return [];
     throw error;
@@ -116,6 +121,23 @@ export async function reverseCharge(
 
   const reversal = (await getFolioPostings(hotelId, stayId)).at(-1);
   return reversal ? { ok: true, data: reversal } : { ok: true };
+}
+
+/** EDIT A CHARGE (the owner's D27-157): its price, its words, or both, with a
+    reason. The server reverses the old line and posts the corrected one in
+    one step, and says no - with the sentence - where it may not. */
+export async function editCharge(
+  hotelId: string, stayId: string, postingId: string,
+  edit: { description: string; amount: number; reason: string },
+): Promise<OperationResult> {
+  try {
+    await api(`/api/hotels/${hotelId}/stays/${stayId}/charges/${postingId}/edit`,
+      { method: "POST", body: JSON.stringify(edit) });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
 }
 
 export async function settle(
