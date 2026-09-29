@@ -40,6 +40,16 @@ they read, or the branch it drops is untested everywhere at once.
 
 ## Fixed
 
+### NA-12 · Closed days taxed a multi-night room line by its whole amount — FIXED 29 September (D27-162)
+
+**Found** — the folio lane, reading the correction for D27-157 (29 September): the correction asked `app.gst_rate_or_null('room', amount)` on the line's whole new figure. A walk-in's "Room 201 · 2 nights" corrected to ₹9,000 is ₹4,500 a night - 5% - and was taxed 18%. The walk-in (front-desk operations.ts) and the night audit ask the slab on the price a night.
+
+**Fixed** — the correction reads the line's nights (`POSTING_NIGHTS`, the reports' one definition) and asks the slab on the price a night. The correction also moved, unchanged otherwise, into `correctClosedCharge` on the front door, so a stay's Change rate (finance, D27-162) corrects closed nights through the same correction row, reversal and right charge.
+
+**Proved** — `api/test/modules/night-audit/corrections.test.ts` "a room line of several nights, corrected".
+
+**The rule** — A slab is a price a night; a line of several nights is divided before it is asked.
+
 ### NA-11 · "Room charges to post" counted every stay in house; the run posted none of them (QA NA-5) — FIXED 28 September
 
 **Found** — the QA of 28 September (QA NA-5; not this file's NA-5): "Room charges to post: 6", then "0 rooms posted". The count was checked-in and not day-use; the run also asks for an open folio and skips a stay already charged for tonight (every walk-in, posted whole on arrival) and a complimentary room. MODULE.md had said so since 16 September.

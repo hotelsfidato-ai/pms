@@ -56,7 +56,9 @@ holds guests' Form C (order 60).
 
 - `flows/FolioPanel.tsx` — the Bill tab inside front desk's stay panel:
   postings, charge, reverse, settle, split billing, and check out (which it
-  asks front desk to do). Each line names who posted it ("Night audit" for
+  asks front desk to do). For the owner, an administrator and the GM, a
+  pencil on each charge (Edit: price or words, with a reason) and "Change
+  rate" for the stay (D27-157, D27-162). Each line names who posted it ("Night audit" for
   the audit's room charge); its print, and the button that opens it, say
   "Interim bill", before check-out and after (D22-7, D24-25) - the numbered
   tax invoice is issued on Invoices.
@@ -95,7 +97,9 @@ of the old `inventorySetup.ts` (`3ca215d`).
 | Method | Path | What it does |
 |---|---|---|
 | POST | `/:code/stays/:id/charges` | post a charge; everything the desk posts carries the room rate of GST (`app.gst_rate`), unless the clerk marks it not taxable |
-| POST | `/:code/stays/:id/charges/:postingId/reverse` | reverse a charge — once (021), with a required `reason` kept on the reversal line (D27-117); a payment only by the owner, an administrator, the GM or the accountant (D27-125) |
+| POST | `/:code/stays/:id/charges/:postingId/reverse` | reverse a charge — once (021), with a required `reason` kept on the reversal line (D27-117); a payment only by the owner, an administrator, the GM or the accountant (D27-125); a charge or discount refused once a tax invoice stands on its bill (D27-162, FIN-19) |
+| POST | `/:code/stays/:id/charges/:postingId/edit` | edit a charge's price and/or words with a `reason` (D27-157): the old line reversed and the corrected one posted in one step (`editFolioCharge`); owner, administrator, GM; refused on a closed day, with a tax invoice, for drinks with a VAT bill, and for a room night's words |
+| POST | `/:code/stays/:id/rate` | change the stay's rate a night with a `reason` (D27-162): every charged night corrected to it (a closed day's through night-audit's `correctClosedCharge`), all or nothing; owner, administrator, GM |
 | POST | `/:code/stays/:id/payments` | take a payment: a posting and its receipt; one guest's (and group's) payments take turns (D27-2); more than the bill only with `heldAsCredit: true`, else refused with `needs: "credit"` (D27-4); `folioId` names the bill of a split stay (QA FI-2); cash only by someone holding an open drawer (D27-118) |
 
 **`api/src/modules/finance/cashier.ts`** (cut from the old `api/src/routes/operations.ts`)
