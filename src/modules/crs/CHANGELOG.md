@@ -68,11 +68,26 @@ Plus the n8n file and the owner's steps.
   failure was the full-hotel case asking for 99 rooms, now fixed. It has not been rerun,
   because the master holds API tests until round F's gates are done.
 - The answer workflow's test is not run yet, for the same reason.
+- **Screens, opened in the browser pane.** On `fidato_s36`, migrated to 163 by the
+  master, with the API on 8881 and the web on 5281.
+  - The owner filled the connection card (CRS id, source, two room types, switch) and
+    saved it. It reads back.
+  - The REAL reader then ran against a faked CRS (`.local/crs-try.ts`, not committed,
+    made-up bookings) and made:
+    - a waiting booking FH-5EL-2608-5032 (salesperson on it, ₹4,200 CP, WhatsApp
+      unticked);
+    - a full Superior line, refused, and "full" told;
+    - a 3-room line with one extra bed, left to the desk.
+  - A date change in the CRS became a note. The booking kept its dates, and Done
+    cleared the note.
+  - The desk's Confirm (More options → Confirm the booking) was told to the register
+    ONCE across two runs, carrying FH-5EL-2608-5032.
+  - Reception sees the list without the card. The list reads well at 375 px.
+  - Two fixes came of it: the CRS number kept on one line, and the save message.
 
 **Left open:**
 
 - Run 163 and the two API test files, when the master says.
-- Open the screen in the browser pane (it needs 163).
 - The master: skip automationQueue? CRS bookings in reception's working menu? Who
   places `CrsFacts`?
 - `run_as` at go-live.
