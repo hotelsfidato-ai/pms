@@ -1,5 +1,5 @@
 -- =============================================================================
--- 160 · One KOT printer per outlet (D27-159, D27-161)
+-- 157 · One KOT printer per outlet (D27-159, D27-161)
 -- =============================================================================
 -- The owner, 29 September: one device per outlet prints every new kitchen
 -- docket, through its browser (Chrome started with --kiosk-printing), and no

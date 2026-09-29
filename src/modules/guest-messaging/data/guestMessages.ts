@@ -74,6 +74,16 @@ export interface Unreachable {
   why: string;
 }
 
+/** The booking's own page, sent to the guest now (D27-105). The ONE write
+    this seam makes - and it writes nothing itself: the server sends through
+    the one door out, which records the attempt. Refused (an error with the
+    server's sentence) for a booking waiting for the hotel, not confirmed,
+    or with nowhere to send it. */
+export const sendCheckInLink = (hotelCode: string, reservationId: string) =>
+  api<{ ok: true }>(
+    `/api/hotels/${hotelCode}/stays/${encodeURIComponent(reservationId)}/checkin-link`,
+    { method: "POST", body: "{}" });
+
 /** Everything sent at one property, newest first - or, given a booking,
     only what went about that one. */
 export async function getGuestMessages(

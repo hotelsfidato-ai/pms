@@ -396,7 +396,7 @@ async function main() {
       ALLOW_DEV_AUTH: "1", CORS_ORIGIN: WEBURL, UPLOAD_DIR: path.join(OUT, "_uploads"),
       /* Blank, not absent: an empty value here wins over api/.env, so
          nothing can be sent or synced from this run. */
-      FIREBASE_SERVICE_ACCOUNT: "", N8N_SEND_URL: "", N8N_SEND_SECRET: "", N8N_ATTACHMENT_WEBHOOK: "",
+      FIREBASE_SERVICE_ACCOUNT: "", CRS_N8N_URL: "", M2R_N8N_URL: "", N8N_ATTACHMENT_WEBHOOK: "",
       SU_ENVIRONMENT: "", SU_CLIENT_ID: "", SU_CLIENT_SECRET: "", SU_PUSH_KEY: "",
     },
   });

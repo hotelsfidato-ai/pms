@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { withSession } from "../src/auth.ts";
 import { closePool, type Client } from "../src/db.ts";
-import { send, canSend, NOT_CONNECTED } from "../src/sending.ts";
+import { send, canSend, messageIdFor, senderFor, NOT_CONNECTED } from "../src/sending.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE ONE DOOR OUT — PROVED AGAINST A FAKE RECEIVER
@@ -41,8 +41,12 @@ const sql = async (text: string, params: unknown[] = []) => {
 
 /** What the fake receiver saw, for the test to look at afterwards. */
 interface Seen {
+  /** Which workflow was called: "crs" or "m2r" (D27-98). */
+  sender: string;
   secret: string | undefined;
   body: {
+    messageId?: string; action?: string;
+    from?: { phoneNumberId?: string | null };
     channel?: string; kind?: string;
     hotel?: { code?: string; name?: string };
     to?: { name?: string | null; phone?: string | null; email?: string | null };
@@ -55,32 +59,50 @@ interface Seen {
 let server: Server;
 let url: string;
 let seen: Seen | null = null;
+/** Every call, in order - the inbox's mark comes before the CRS's send. */
+let calls: Seen[] = [];
 /** What the fake receiver answers next. n8n's own step 5 answers 401 to
     anything without the secret; the rest is the workflow's own result. */
 let answerWith = { status: 200, body: "sent" };
+/** What the market-to-revenue workflow answers a "mark", when it differs. */
+let markAnswer: { status: number; body: string } | null = null;
 
-const THE_SECRET = "a-secret-that-exists-only-in-this-test-run";
+/* One secret per workflow, both made up for this run. */
+const SECRETS: Record<string, string> = {
+  crs: "a-crs-secret-that-exists-only-in-this-test-run",
+  m2r: "an-m2r-secret-that-exists-only-in-this-test-run",
+};
+const THE_NUMBER = "100000000000001";
 
 beforeAll(async () => {
   server = createServer((req, res) => {
     let raw = "";
     req.on("data", (chunk) => { raw += chunk; });
     req.on("end", () => {
-      seen = {
+      const call: Seen = {
+        sender: (req.url ?? "").replace("/", ""),
         secret: req.headers["x-fidato-secret"] as string | undefined,
         body: JSON.parse(raw || "{}"),
       };
+      calls.push(call);
       /* The workflow's first node, as the owner will build it: anything
-         without the secret is refused and nothing is sent. */
-      if (seen.secret !== THE_SECRET) {
+         without ITS secret is refused and nothing is sent. */
+      if (call.secret !== SECRETS[call.sender]) {
+        seen = call;
         res.writeHead(401).end("no secret");
         return;
       }
+      if (call.body.action === "mark") {
+        const a = markAnswer ?? { status: 200, body: "marked" };
+        res.writeHead(a.status).end(a.body);
+        return;
+      }
+      seen = call;
       res.writeHead(answerWith.status).end(answerWith.body);
     });
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
-  url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/pms-send`;
+  url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 });
 
 afterAll(async () => {
@@ -90,14 +112,21 @@ afterAll(async () => {
 
 beforeEach(() => {
   seen = null;
+  calls = [];
   answerWith = { status: 200, body: "sent" };
-  delete process.env["N8N_SEND_URL"];
-  delete process.env["N8N_SEND_SECRET"];
+  markAnswer = null;
+  for (const name of SETTINGS) delete process.env[name];
 });
 
+const SETTINGS = ["CRS_N8N_URL", "CRS_N8N_SECRET", "M2R_N8N_URL", "M2R_N8N_SECRET",
+  "WHATSAPP_PHONE_NUMBER_ID"];
+
 const connected = () => {
-  process.env["N8N_SEND_URL"] = url;
-  process.env["N8N_SEND_SECRET"] = THE_SECRET;
+  process.env["CRS_N8N_URL"] = `${url}/crs`;
+  process.env["CRS_N8N_SECRET"] = SECRETS["crs"];
+  process.env["M2R_N8N_URL"] = `${url}/m2r`;
+  process.env["M2R_N8N_SECRET"] = SECRETS["m2r"];
+  process.env["WHATSAPP_PHONE_NUMBER_ID"] = THE_NUMBER;
 };
 
 async function theDemoProperty() {
@@ -161,7 +190,10 @@ describe("the one door out", () => {
     });
 
     expect(out!.result.ok, out!.result.ok ? "" : (out!.result as { reason: string }).reason).toBe(true);
-    expect(seen!.secret).toBe(THE_SECRET);
+    expect(seen!.sender, "a bill on WhatsApp is the market-to-revenue app's").toBe("m2r");
+    expect(seen!.secret).toBe(SECRETS["m2r"]);
+    expect(seen!.body.from?.phoneNumberId, "the one number, from the settings").toBe(THE_NUMBER);
+    expect(seen!.body.messageId, "every send carries an id").toMatch(/^[0-9a-f-]{36}$/);
     expect(seen!.body.channel).toBe("whatsapp");
     expect(seen!.body.hotel?.name).toBe(hotel.name);
     expect(seen!.body.document?.total).toBe("12,142.88");
@@ -230,8 +262,8 @@ describe("the one door out", () => {
   /* The secret is the whole of the protection on an address that is open
      to the internet. A wrong one must not send. */
   it("is refused by the receiver when the secret is wrong", async () => {
-    process.env["N8N_SEND_URL"] = url;
-    process.env["N8N_SEND_SECRET"] = "not-the-secret";
+    connected();
+    process.env["M2R_N8N_SECRET"] = "not-the-secret";
     const hotel = await theDemoProperty();
 
     const out = await attempt(async (client) => {
@@ -244,6 +276,100 @@ describe("the one door out", () => {
     expect(out!.result.ok).toBe(false);
     expect(out!.row!.status).toBe("failed");
     expect(out!.row!.detail).toContain("401");
+  });
+
+  /* ── Two senders (D27-98, D27-101, D27-104) ─────────────────────── */
+
+  it("sends nothing on half a setup: both workflows and the number, or nothing", () => {
+    connected();
+    expect(canSend()).toBe(true);
+    delete process.env["M2R_N8N_URL"];
+    expect(canSend(), "the CRS alone").toBe(false);
+    connected();
+    delete process.env["WHATSAPP_PHONE_NUMBER_ID"];
+    expect(canSend(), "no WhatsApp number").toBe(false);
+  });
+
+  it("chooses the sender by the message: every email and the voucher are the CRS's", () => {
+    expect(senderFor({ channel: "email", kind: "arrival-reminder" })).toBe("crs");
+    expect(senderFor({ channel: "whatsapp", kind: "booking-confirmation" })).toBe("crs");
+    expect(senderFor({ channel: "whatsapp", kind: "guest-link-code" })).toBe("m2r");
+    expect(senderFor({ channel: "whatsapp", kind: "arrival-reminder" })).toBe("m2r");
+    expect(senderFor({ channel: "whatsapp", kind: "review" })).toBe("m2r");
+  });
+
+  it("sends an email to the CRS alone, with no number and no inbox mark", async () => {
+    connected();
+    const hotel = await theDemoProperty();
+    const out = await attempt((client) => send(client, {
+      ...aBill(hotel), channel: "email", to: { name: "Mr Sharma", email: "sharma@example.com" },
+    }));
+    expect(out!.ok).toBe(true);
+    expect(calls.map((c) => c.sender)).toEqual(["crs"]);
+    expect(seen!.secret).toBe(SECRETS["crs"]);
+    expect(seen!.body.from, "an email carries no WhatsApp number").toBeUndefined();
+  });
+
+  it("tells the sales inbox first, then the CRS sends the voucher on WhatsApp", async () => {
+    connected();
+    const hotel = await theDemoProperty();
+    const bytes = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+    const out = await attempt((client) => send(client, {
+      ...aBill(hotel), kind: "booking-confirmation", id: messageIdFor("booking-confirmation", MINE),
+      file: { name: "Voucher.pdf", contentType: "application/pdf", bytes },
+    }));
+    expect(out!.ok).toBe(true);
+    expect(calls.map((c) => `${c.sender}:${c.body.action}`)).toEqual(["m2r:mark", "crs:send"]);
+    const [mark, voucher] = calls;
+    expect(mark!.body.file, "the inbox gets the guest, not the PDF").toBeUndefined();
+    expect(mark!.body.to?.phone).toBe("+919876543210");
+    expect(voucher!.body.file?.name).toBe("Voucher.pdf");
+    expect(mark!.body.messageId).toBe(voucher!.body.messageId);
+  });
+
+  it("sends the check-in code through the market-to-revenue workflow alone", async () => {
+    connected();
+    const hotel = await theDemoProperty();
+    const out = await attempt((client) => send(client, { ...aBill(hotel), kind: "guest-link-code" }));
+    expect(out!.ok).toBe(true);
+    expect(calls.map((c) => `${c.sender}:${c.body.action}`)).toEqual(["m2r:send"]);
+  });
+
+  /* A retry after a timeout: the same message must reach the workflow with
+     the same id, or the workflow cannot know it sent it already. */
+  it("carries the message's own id, the same for every try of one message", async () => {
+    connected();
+    const hotel = await theDemoProperty();
+    const id = messageIdFor("booking-confirmation", MINE);
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    expect(messageIdFor("booking-confirmation", MINE), "worked out again").toBe(id);
+    expect(messageIdFor("arrival-reminder", MINE), "another message").not.toBe(id);
+
+    await attempt((client) => send(client, { ...aBill(hotel), id }));
+    await attempt((client) => send(client, { ...aBill(hotel), id }));
+    expect(calls.map((c) => c.body.messageId)).toEqual([id, id]);
+
+    calls = [];
+    await attempt((client) => send(client, aBill(hotel)));
+    await attempt((client) => send(client, aBill(hotel)));
+    expect(calls[0]!.body.messageId, "no id given: a new message each time")
+      .not.toBe(calls[1]!.body.messageId);
+  });
+
+  it("still sends the voucher when the inbox cannot be told, and writes that down", async () => {
+    connected();
+    markAnswer = { status: 500, body: "Firestore said no" };
+    const hotel = await theDemoProperty();
+    const out = await attempt(async (client) => {
+      const result = await send(client, { ...aBill(hotel), kind: "booking-confirmation" });
+      const { rows } = await client.query<{ status: string; detail: string }>(
+        "select status, detail from messages_sent where about_id = $1 order by id desc limit 1", [MINE]);
+      return { result, row: rows[0] };
+    });
+    expect(out!.result.ok).toBe(true);
+    expect(out!.row!.status).toBe("sent");
+    expect(out!.row!.detail).toContain("sales inbox was not told the guest is booked");
+    expect(out!.row!.detail).toContain("500");
   });
 
   it("leaves no message behind on the demo property", async () => {

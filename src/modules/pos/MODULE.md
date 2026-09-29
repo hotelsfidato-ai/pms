@@ -289,7 +289,7 @@ pos_denominations
   audit trigger on pos_menu_items              076_approvals.sql
   prep_minutes on dish and category            079_prep_times.sql
 pos_line_events — kitchen timings              080_kitchen_timings.sql
-pos_kot_prints; pos_outlets.kot_station_*     "one KOT printer per outlet" (29 Sep, provisionally 160)
+pos_kot_prints; pos_outlets.kot_station_*     "one KOT printer per outlet" (29 Sep, 157)
   course on dish and category                  081_courses.sql
 pos_promotions                                 083_promotions.sql
   reception_pos switch, app.may_use_pos        087_first_screen_and_reception_pos.sql

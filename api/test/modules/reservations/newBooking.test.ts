@@ -134,14 +134,17 @@ beforeAll(async () => {
 
 beforeEach(() => {
   received = [];
-  process.env["N8N_SEND_URL"] = `http://127.0.0.1:${(server.address() as AddressInfo).port}/pms-send`;
-  process.env["N8N_SEND_SECRET"] = SECRET;
+  process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${(server.address() as AddressInfo).port}/pms-send`;
+  process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
+  process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = SECRET;
 });
 
 afterAll(async () => {
   await new Promise<void>((done) => server.close(() => done()));
-  delete process.env["N8N_SEND_URL"];
-  delete process.env["N8N_SEND_SECRET"];
+  delete process.env["CRS_N8N_URL"];
+  delete process.env["M2R_N8N_URL"];
+  delete process.env["CRS_N8N_SECRET"];
+  delete process.env["M2R_N8N_SECRET"];
   const { rows } = await sql(
     `select r.id::text from reservations r join guests g on g.id = r.guest_id
       where g.full_name like $1`, [`${TAG} %`]);
@@ -267,7 +270,8 @@ describe("waiting for the hotel (D27-35)", () => {
 describe("the voucher (D27-35)", () => {
   it("says so, and records nothing, when sending is switched off", async () => {
     const made = (await (await call(ownerId, "POST", "/bookings", booking("Switched off"))).json()) as Made;
-    delete process.env["N8N_SEND_URL"];
+    delete process.env["CRS_N8N_URL"];
+    delete process.env["M2R_N8N_URL"];
     const res = await call(staff.get("front_desk")!, "POST",
       `/stays/${made.bookings[0]!.id}/confirmation`, {});
     expect(res.status).toBe(503);

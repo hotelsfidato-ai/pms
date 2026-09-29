@@ -9,9 +9,10 @@ import {
   Button, Card, CardBody, Field, fieldProps, Input, NativeSelect, Segmented, StatusPill, Textarea,
 } from "@/components/ui";
 import {
-  dropUnlock, getBill, getDetails, getRequests, makeRequest, openGuestPage, sendCode,
-  sendDetails, verifyCode, type Details, type GuestPageView,
+  codeAskedRecently, dropUnlock, getBill, getDetails, getRequests, makeRequest, openGuestPage,
+  sendCode, sendDetails, verifyCode, type Details, type GuestPageView,
 } from "@/modules/online-checkin/data/guestPage";
+import { GENDERS, LABELS, PURPOSES } from "@/modules/online-checkin/formIII";
 import { privacyNoticeFor } from "@/modules/online-checkin/privacyNotice";
 import { BillPrint } from "@/modules/finance";
 
@@ -45,6 +46,11 @@ import { BillPrint } from "@/modules/finance";
 
 /** The door's own sentence for everything it refuses, in its words. */
 const NOTHING_HERE = "This link is not usable. Ask the desk for a new one.";
+/** The door's words for a booking with no mobile number (guestDoor.ts,
+    NO_PHONE) - said here without asking, because the link already shows
+    there is no number to send to. Change one, change both. */
+const NO_PHONE = "There is no mobile number on this booking, so no code can be "
+  + "sent. Ask the desk.";
 
 /** Refused behind the code: the unlock has gone - expired, or a new guest
     is in the room. Not an error to show: the page asks for a code again. */
@@ -203,25 +209,36 @@ function Notice({ hotel, className }: { hotel: string; className?: string }) {
   );
 }
 
-/* ── The six digits ───────────────────────────────────────────────
-   The number is asked for even though the booking already carries one:
-   the guest proves they hold the phone, and a number the booking does not
-   have gets exactly this same screen back. On a room card there is no
-   hint - whoever holds the card is standing in somebody's room. */
+/* ── The six digits (D27-105) ─────────────────────────────────────
+   Nothing is typed but the code. Opening the link sends it to the number
+   the booking carries - once; reopening within its ten minutes does not
+   send another - and the door says where: the last four digits, or on a
+   room card nothing of the number (D21-14). No number on the booking:
+   the door's own "Ask the desk". */
 function ProveIt(
   { token, view, onVerified }:
   { token: string; view: GuestPageView; onVerified: () => void },
 ) {
-  const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
 
-  const asked = useMutation({ mutationFn: () => sendCode(token, phone) });
+  const asked = useMutation({ mutationFn: () => sendCode(token) });
   const answered = useMutation({
     mutationFn: () => verifyCode(token, code),
     onSuccess: (r) => { if (r.verified) onVerified(); },
   });
 
-  const ask = (e: FormEvent) => { e.preventDefault(); asked.mutate(); };
+  /* A booking's link with no number on the booking: nothing to send, no
+     code to wait for, no box to type one into - and nothing is asked of the
+     door. (The door says the same words for a room card whose guest has no
+     number: a room card never shows the number, so it asks.) */
+  const noPhone = view.kind === "booking" && !view.phoneHint;
+
+  /* Asked for by opening the page. `sendCode` notes the moment before it
+     asks, so a second mount (a reload, React's own double run in
+     development) finds it asked and sends nothing. */
+  const { mutate: ask } = asked;
+  useEffect(() => { if (!noPhone && !codeAskedRecently(token)) ask(); }, [noPhone, token, ask]);
+
   const answer = (e: FormEvent) => { e.preventDefault(); answered.mutate(); };
 
   return (
@@ -230,35 +247,32 @@ function ProveIt(
       <h2 className={H2}>
         Your check-in details are behind a code
       </h2>
-      <p className={cn(LEAD, "mb-3")}>
-        We send six digits on WhatsApp to the number the booking carries
-        {view.phoneHint ? `, ending ${view.phoneHint}` : ""}.
-      </p>
+      {noPhone ? <div className="mb-3" /> : (
+        <p className={cn(LEAD, "mb-3")}>
+          We send six digits on WhatsApp to the number on the booking
+          {view.phoneHint ? `, ending ${view.phoneHint.replace("…", "")}` : ""}.
+        </p>
+      )}
 
       <Card><CardBody>
-        <form onSubmit={ask} className="flex flex-col gap-3">
-          <Field label="Your phone number">
-            {(f) => (
-              <Input
-                {...fieldProps(f)}
-                type="tel" inputMode="tel" autoComplete="tel" value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="As it was given to the hotel"
-              />
-            )}
-          </Field>
-          <Button type="submit" variant="primary" disabled={asked.isPending || phone.trim() === ""}>
-            {asked.isPending ? "Sending…" : "Send me the code"}
-          </Button>
-        </form>
+        {/* The door's sentence, printed as it came. */}
+        <p className="text-sm text-grey-600" aria-live="polite">
+          {noPhone ? NO_PHONE
+            : asked.isPending ? "Sending the code…"
+            : asked.data ? asked.data.message
+            : asked.error ? messageFrom(asked.error)
+            : "A code was sent a few minutes ago. Use it, or send a new one."}
+        </p>
+        {/* DEVELOPMENT ONLY (D27-105): the code on screen, from a server
+            started to show it. A production build compiles this away, and
+            scripts/check-no-dev-login.mjs fails any build that carries it. */}
+        {import.meta.env.DEV && asked.data?.devCode && (
+          <p className="text-sm text-warning-dark mt-1.5">
+            Development only - the code is <span className="font-semibold tabular">{asked.data.devCode}</span>
+          </p>
+        )}
 
-        {/* The door's sentence, printed as it came - one shape for a right
-            number, a wrong one and one knock too many (D21-25). */}
-        {asked.data && <p className="text-sm text-grey-600 mt-3">{asked.data.message}</p>}
-        {asked.error && <p className="text-sm text-grey-600 mt-3">{messageFrom(asked.error)}</p>}
-
-        {/* The second step, under a hairline in the same card. */}
-        <form onSubmit={answer} className="mt-3.5 pt-3.5 border-t border-grey-100 flex flex-col gap-3">
+        {!noPhone && <form onSubmit={answer} className="mt-3.5 pt-3.5 border-t border-grey-100 flex flex-col gap-3">
           <Field label="The six digits">
             {(f) => (
               <Input
@@ -269,10 +283,13 @@ function ProveIt(
               />
             )}
           </Field>
-          <Button type="submit" variant="secondary" disabled={answered.isPending || code.trim() === ""}>
+          <Button type="submit" variant="primary" disabled={answered.isPending || code.trim() === ""}>
             {answered.isPending ? "Checking…" : "Open my booking"}
           </Button>
-        </form>
+          <Button type="button" variant="ghost" disabled={asked.isPending} onClick={() => ask()}>
+            Send a new code
+          </Button>
+        </form>}
 
         {answered.error && (
           <p className="text-sm text-brand-red-700 mt-3">{messageFrom(answered.error)}</p>
@@ -403,9 +420,14 @@ function DetailsSection(
   const [editing, setEditing] = useState(false);
   const [d, setD] = useState<Partial<Details>>({});
   const set = (k: keyof Details) => (v: string) => setD((was) => ({ ...was, [k]: v }));
+  /* D27-169: Indian, another country, or not said - and not said sends
+     nothing, so a nationality already on the booking is never overwritten
+     by a question the guest skipped. */
+  const [nationality, setNationality] = useState<"" | "IN" | "other">("");
+  const abroad = nationality === "other";
 
   const send = useMutation({
-    mutationFn: () => sendDetails(token, d as Details),
+    mutationFn: () => sendDetails(token, detailsToSend(d, nationality)),
     onSuccess: async () => {
       setEditing(false);
       await qc.invalidateQueries({ queryKey: ["guest-behind", token, "details"] });
@@ -461,16 +483,40 @@ function DetailsSection(
               )}
             </Field>
             <TextField label="The number on it" value={d.idNumber} onChange={set("idNumber")} />
-            {d.idType === "passport" && (
+            <Field label="Your nationality">
+              {(f) => (
+                <NativeSelect {...fieldProps(f)} value={nationality}
+                  onChange={(e) => setNationality(e.target.value as "" | "IN" | "other")}>
+                  <option value="">Choose one</option>
+                  <option value="IN">Indian</option>
+                  <option value="other">Another country</option>
+                </NativeSelect>
+              )}
+            </Field>
+            {abroad && (
+              <TextField label="Which country?" value={d.nationality} onChange={set("nationality")}
+                maxLength={60} />
+            )}
+            {(d.idType === "passport" || abroad) && (
               <>
                 <TextField label="Passport expires" type="date" value={d.passportExpiry} onChange={set("passportExpiry")} />
                 <TextField label="Visa number" value={d.visaNumber} onChange={set("visaNumber")} />
                 <TextField label="Visa expires" type="date" value={d.visaExpiry} onChange={set("visaExpiry")} />
               </>
             )}
+            {/* Form III (147): what the portal asks of every foreign guest. */}
+            {abroad && <FormIII d={d} set={set} setD={setD} />}
             <TextField label="Address" value={d.addressLine} onChange={set("addressLine")} autoComplete="street-address" />
             <TextField label="City" value={d.city} onChange={set("city")} autoComplete="address-level2" />
             <TextField label="Country" value={d.country} onChange={set("country")} autoComplete="country-name" />
+            <TextField label="When do you expect to arrive?" type="time" value={d.expectedArrival}
+              onChange={set("expectedArrival")} />
+            <Field label="Anything you would like us to know?">
+              {(f) => (
+                <Textarea {...fieldProps(f)} rows={3} maxLength={500}
+                  value={d.specialRequests ?? ""} onChange={(e) => set("specialRequests")(e.target.value)} />
+              )}
+            </Field>
             {/* D25-39: offers only to a guest who said yes. Unticked, none. A
                 plain box: the shared one measures itself inside a form. */}
             <label className="flex items-center gap-2.5 text-sm text-ink-900 pointer-coarse:min-h-11 cursor-pointer">
@@ -612,6 +658,96 @@ function RequestsSection(
       </CardBody></Card>
     </section>
   );
+}
+
+/* ── Form III, for a foreign guest (D27-169, migration 147) ─────────────
+   The person and the visit - the portal's own questions and lists. Not the
+   remarks or where they go next: the desk asks those. The same words the
+   desk's card shows (`LABELS`). */
+const FORM_III_TEXT = ["passportIssuePlace", "passportIssueCountry", "visaType",
+  "visaIssuePlace", "visaIssueCountry", "arrivedFrom", "previousStay", "arrivalPort",
+  "mobileInIndia", "phoneInIndia", "mobileAbroad", "phoneAbroad",
+  "refAddress", "refCity", "refState", "refPincode"] as const;
+const FORM_III_DATES = ["dateOfBirth", "passportIssuedOn", "visaIssuedOn", "arrivedInIndiaOn"] as const;
+const FORM_III = [...FORM_III_TEXT, ...FORM_III_DATES, "gender", "purpose", "purposeOther",
+  "employedInIndia"] as const;
+
+function FormIII(
+  { d, set, setD }: {
+    d: Partial<Details>; set: (k: keyof Details) => (v: string) => void;
+    setD: (fn: (was: Partial<Details>) => Partial<Details>) => void;
+  },
+) {
+  const pick = (k: "gender" | "purpose", options: { value: string; label: string }[]) => (
+    <Field label={LABELS[k]!}>
+      {(f) => (
+        <NativeSelect {...fieldProps(f)} value={d[k] ?? ""} onChange={(e) => set(k)(e.target.value)}>
+          <option value="">Choose one</option>
+          {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </NativeSelect>
+      )}
+    </Field>
+  );
+  const text = (k: (typeof FORM_III_TEXT)[number], type = "text") => (
+    <TextField key={k} label={LABELS[k]!} type={type} value={d[k]} onChange={set(k)} />
+  );
+  const date = (k: (typeof FORM_III_DATES)[number]) => (
+    <TextField key={k} label={LABELS[k]!} type="date" value={d[k]} onChange={set(k)} />
+  );
+  return (
+    <>
+      {pick("gender", GENDERS)}
+      {date("dateOfBirth")}
+      {date("passportIssuedOn")}
+      {text("passportIssuePlace")}
+      {text("passportIssueCountry")}
+      {text("visaType")}
+      {date("visaIssuedOn")}
+      {text("visaIssuePlace")}
+      {text("visaIssueCountry")}
+      {text("arrivedFrom")}
+      {text("previousStay")}
+      {pick("purpose", PURPOSES)}
+      {d.purpose === "others" && (
+        <TextField label={LABELS["purposeOther"]!} value={d.purposeOther} onChange={set("purposeOther")} />
+      )}
+      {date("arrivedInIndiaOn")}
+      {text("arrivalPort")}
+      {text("mobileInIndia", "tel")}
+      {text("phoneInIndia", "tel")}
+      {text("mobileAbroad", "tel")}
+      {text("phoneAbroad", "tel")}
+      <Field label={LABELS["employedInIndia"]!}>
+        {(f) => (
+          <NativeSelect {...fieldProps(f)}
+            value={d.employedInIndia === undefined ? "" : d.employedInIndia ? "yes" : "no"}
+            onChange={(e) => setD((was) => ({
+              ...was, employedInIndia: e.target.value === "" ? undefined : e.target.value === "yes",
+            }))}>
+            <option value="">Choose one</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </NativeSelect>
+        )}
+      </Field>
+      {text("refAddress")}
+      {text("refCity")}
+      {text("refState")}
+      {text("refPincode")}
+    </>
+  );
+}
+
+/** What goes to the door: the nationality as chosen (nothing when not
+    said), and Form III's answers only for a foreign guest - a guest who
+    filled them in and then chose Indian sends none of them. */
+function detailsToSend(d: Partial<Details>, nationality: "" | "IN" | "other"): Details {
+  const out: Partial<Details> = { ...d };
+  delete out.nationality;
+  if (nationality === "IN") out.nationality = "IN";
+  if (nationality === "other" && d.nationality?.trim()) out.nationality = d.nationality.trim();
+  if (nationality !== "other") for (const k of FORM_III) delete out[k];
+  return out as Details;
 }
 
 function TextField(

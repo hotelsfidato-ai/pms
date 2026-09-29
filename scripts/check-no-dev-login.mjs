@@ -32,6 +32,11 @@ const MARKERS = [
   "dev-owner",           // the test accounts themselves
   "dev-gm",
   "dev-desk",
+  /* The guest page's development-only code on screen (D27-105): the API
+     hands it back only beside ALLOW_DEV_AUTH, and the page draws it only in
+     a development build. A build carrying the name would be a page ready to
+     print a guest's code the day a server is misconfigured. */
+  "devCode",
 ];
 
 const dir = process.argv[2];

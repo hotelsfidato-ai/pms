@@ -11,6 +11,7 @@ import {
   confirmDetails, getDesk, handleRequest, printEveryCard, printRoomCard, setAsideDetails,
   type PrintedCard, type WaitingDetails,
 } from "@/modules/online-checkin/data/desk";
+import { moreLines } from "@/modules/online-checkin/formIII";
 
 /* ══════════════════════════════════════════════════════════════════
    ONLINE CHECK-IN — THE DESK'S SIDE (/h/:code/online-checkin)
@@ -105,6 +106,12 @@ function Waiting(
                     <dd className="font-medium text-ink-900 tabular">{d.visaNumber}{d.visaExpiry ? `, expires ${dateShort(d.visaExpiry)}` : ""}</dd></>}
                   {(d.addressLine || d.city || d.country) && <><dt className="text-grey-500">Address</dt>
                     <dd className="font-medium text-ink-900 break-words">{[d.addressLine, d.city, d.country].filter(Boolean).join(", ")}</dd></>}
+                  {moreLines(d.more ?? {}).map(([label, value]) => (
+                    <div key={label} className="contents">
+                      <dt className="text-grey-500">{label}</dt>
+                      <dd className="font-medium text-ink-900 break-words whitespace-pre-line">{value}</dd>
+                    </div>
+                  ))}
                 </dl>
                 <div className="mt-3.5 flex flex-wrap gap-2">
                   <Button variant="secondary" disabled={busy} onClick={() => confirm.mutate(d)}>
