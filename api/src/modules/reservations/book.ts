@@ -398,6 +398,12 @@ export async function makeBooking(
       `${total} rooms in one booking looks like a mistake. Split it, or say `
       + "so and it can be raised.");
   }
+  /* The lead's campaign (D27-170): leads' 161 holds it to 200 characters,
+     trimmed. Asked here, before any write, so it is a sentence and not a
+     constraint thrown after the rooms are made (MEMORY 243). */
+  if ((request.campaign?.trim().length ?? 0) > 200) {
+    return refuse("A campaign is at most 200 characters.");
+  }
   if (externalRef !== null && (externalRef.trim() === "" || externalRef.length > 100)) {
     return refuse(
       "externalRef must be your own reference for this booking, as text, "

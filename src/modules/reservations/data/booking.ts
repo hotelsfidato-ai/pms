@@ -42,24 +42,6 @@ async function send<T>(path: string, method: string, body: unknown): Promise<Ans
   }
 }
 
-/** "Book this lead" (D27-170): what the leads lane hands New booking for a
-    token of 22 characters, valid two hours, nothing personal in it. A 404 is
-    a lead expired or erased; the refusal carries its sentence.
-    ponytail: a stand-in for leads' own fetchLeadForBooking (the same address
-    and shape, as the master documented it); the one page imports that from
-    src/modules/leads/index.ts once the leads lane has merged. */
-export interface LeadForBooking {
-  name: string;
-  phone: string;
-  /** Null: the lead's channel has no booking source; the desk picks. */
-  bookingSourceId: string | null;
-  campaign: string | null;
-  channel: string | null;
-}
-export const leadForBooking = (hotelId: string, token: string) =>
-  send<LeadForBooking>(`/api/hotels/${hotelId}/leads/${encodeURIComponent(token)}/booking`,
-    "GET", undefined);
-
 export interface SalesPerson { id: string; name: string }
 export interface RoomPromotion { id: string; name: string; percent: number }
 
