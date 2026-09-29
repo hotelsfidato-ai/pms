@@ -440,6 +440,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/work-orders/:id`]: own("housekeeping/repairRoles.ts: REPAIR_UPDATERS"),
   [`POST ${H}/repair-costs`]: own("housekeeping/repairRoles.ts: COST_RECORDERS"),
   [`POST ${H}/repair-costs/:id/cancel`]: own("housekeeping/repairRoles.ts: COST_RECORDERS"),
+  /* guest services: in-stay requests - the desk and the team that receives each (D27-181) */
+  [`POST ${H}/requests`]: own("guest-services/requests.ts: teamsFor"),
+  [`PATCH ${H}/requests/:id`]: own("guest-services/requests.ts: teamsFor"),
 
   /* equipment */
   [`POST ${H}/equipment`]: own("equipment/grants.ts"),
@@ -656,6 +659,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/housekeeping/assignments`]: see("inventory", "who cleans which room"),
   [`GET ${H}/work-orders`]: REPAIRS,
   [`GET ${H}/repairable-equipment`]: REPAIRS,
+  [`GET ${H}/requests`]: own("guest-services/requests.ts: teamsFor"),
 
   /* ── The restaurant ── */
   [`GET ${H}/till/menu`]: MENU_READ,
