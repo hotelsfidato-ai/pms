@@ -586,9 +586,14 @@ function BillSection({ token, onUnlockGone }: { token: string; onUnlockGone: () 
 /* ── A spa or laundry request (D21-9) ────────────────────────────────
    A request the desk confirms, never a booking: the spa and laundry keep
    their own rules on their own screens. */
-const KIND_LABEL: Record<string, string> = { spa: "Spa", laundry: "Laundry" };
+const KIND_LABEL: Record<string, string> = {
+  spa: "Spa", laundry: "Laundry",
+  /* While checked in, a request goes straight to its team (D27-181). */
+  housekeeping: "Housekeeping", maintenance: "Something broken", fnb: "Food and drink",
+};
 const STATUS_LABEL: Record<string, string> = {
   open: "Waiting for the desk", done: "Done", declined: "Declined",
+  waiting: "Open", in_progress: "Being done",
 };
 
 function RequestsSection(
