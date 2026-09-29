@@ -274,8 +274,9 @@ describe("each person's menu", () => {
     const NOT_BUILT: Record<string, string[]> = {
       "Front desk": ["Guest services"],
       /* 29 September: Leads and WhatsApp and Marketing are BUILT (D27-168,
-         D27-170); their entries stay in this section as working screens. */
-      "Sales and marketing": ["Loyalty"],
+         D27-170); their entries stay in this section as working screens.
+         30 September: Loyalty too (D27-179), so the section has none left
+         to mark. Edited by the loyalty lane; the master reviews it at merge. */
       "Distribution": ["Channel manager", "Booking engine", "Contracts"],
       "Finance": ["Online payments"],
       "System": ["Room systems"],
@@ -318,7 +319,6 @@ describe("each person's menu", () => {
        ever a real check while the page it names still exists. */
     expect(mayReach("gm", "/coming-soon/room-systems")).toBe(true);
     expect(mayReach("front_desk", "/coming-soon/room-systems")).toBe(false);
-    expect(mayReach("hotel_manager", "/coming-soon/loyalty")).toBe(false);
     expect(mayReach("owner", "/h/:code/channels")).toBe(true);
     expect(mayReach("front_desk", "/h/:code/channels")).toBe(false);
   });
