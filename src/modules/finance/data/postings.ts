@@ -15,10 +15,15 @@ import type { Permitted } from "@/data/repositories/types";
 
 /* ── Folio reads ──────────────────────────────────────────────────── */
 
-export async function getFolioPostings(hotelId: string, stayId: string): Promise<Posting[]> {
+/** A line as the Bill tab reads it: the core's Posting, and why Edit is off
+    for it before anybody types (D27-157) - its day closed by the night
+    audit, or the tax invoice standing on its bill. */
+export type BillLine = Posting & { dayClosed?: boolean; invoice?: string | null };
+
+export async function getFolioPostings(hotelId: string, stayId: string): Promise<BillLine[]> {
   if (!hotelId || !stayId) return [];
   try {
-    return await api<Posting[]>(`/api/hotels/${hotelId}/stays/${stayId}/postings`);
+    return await api<BillLine[]>(`/api/hotels/${hotelId}/stays/${stayId}/postings`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return [];
     throw error;
@@ -118,6 +123,41 @@ export async function reverseCharge(
   return reversal ? { ok: true, data: reversal } : { ok: true };
 }
 
+/** EDIT A CHARGE (the owner's D27-157): its price, its words, or both, with a
+    reason. The server reverses the old line and posts the corrected one in
+    one step, and says no - with the sentence - where it may not. */
+export async function editCharge(
+  hotelId: string, stayId: string, postingId: string,
+  edit: { description: string; amount: number; reason: string },
+): Promise<OperationResult> {
+  try {
+    await api(`/api/hotels/${hotelId}/stays/${stayId}/charges/${postingId}/edit`,
+      { method: "POST", body: JSON.stringify(edit) });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
+}
+
+/** CHANGE THE RATE (the owner's D27-157, D27-162): the stay's rate a night,
+    with a reason. The server corrects every night already charged to it (a
+    closed day's through Closed days) and the night audit charges the rest at
+    it - or, if one night cannot be corrected, changes nothing and says which. */
+export async function changeRate(
+  hotelId: string, stayId: string, input: { rate: number; reason: string },
+): Promise<OperationResult<{ corrected: number }>> {
+  try {
+    const res = await api<{ data?: { corrected: number } }>(
+      `/api/hotels/${hotelId}/stays/${stayId}/rate`,
+      { method: "POST", body: JSON.stringify(input) });
+    return { ok: true, ...(res?.data ? { data: res.data } : {}) };
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
+}
+
 export async function settle(
   hotelId: string,
   stayId: string,
@@ -132,7 +172,7 @@ export async function settle(
   },
   /** One per press of Take payment, kept until it lands. */
   idempotencyKey?: string,
-): Promise<OperationResult<Posting>> {
+): Promise<OperationResult> {
   try {
     await api(`/api/hotels/${hotelId}/stays/${stayId}/payments`, {
       method: "POST",
@@ -143,7 +183,8 @@ export async function settle(
     if (error instanceof ApiError) return refuse(error.message);
     throw error;
   }
-
-  const posting = (await getFolioPostings(hotelId, stayId)).at(-1);
-  return posting ? { ok: true, data: posting } : { ok: true };
+  /* Taken. It read the whole bill again here, for a line nobody used; when
+     that read failed the payment stood and the dialog never closed, the
+     amount still in it (speed finding 7). The panel reads the bill itself. */
+  return { ok: true };
 }

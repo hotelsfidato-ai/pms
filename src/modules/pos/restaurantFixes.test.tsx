@@ -49,20 +49,26 @@ const order: Order = {
   customerPhone: null, customerAddress: null, customerLocality: null, heldAt: null,
 };
 
-function till() {
+function till({
+  rooms = [{ room: "209", guest: "Asha Kulkarni", folioId: "f-1" }] as unknown[],
+  refuse = null as string | null,
+} = {}) {
   const posts: { path: string; body: unknown }[] = [];
   vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
     const path = url.split("?")[0]!;
     const method = init?.method ?? "GET";
     if (method === "POST") {
       posts.push({ path, body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined });
+      /* The body as the browser hands it over (it does not survive the
+         constructor under vitest: MEMORY, "ApiError has two shapes"). */
+      if (refuse) throw Object.assign(new ApiError(409, "Request failed (409)."), { body: { ok: false, reason: refuse } });
       return { ...order, ok: true, status: "settled" } as never;
     }
     const answers: Record<string, unknown> = {
       [`${API}/till/orders`]: { businessDate: "2026-08-25", orders: [] },
       [`${API}/till/menu`]: { categories: [] },
       [`${API}/till/orders/o-5`]: order,
-      [`${API}/till/rooms`]: { rooms: [{ room: "209", guest: "Asha Kulkarni", folioId: "f-1" }] },
+      [`${API}/till/rooms`]: { rooms },
       [`${API}/till/promotions`]: { freehandCapPercent: 10, promotions: [] },
       [`${API}/banquet/attachable`]: { enabled: false, businessDate: "2026-08-25", functions: [] },
     };
@@ -110,6 +116,35 @@ describe("the Till's questions are asked on screen", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Charge to room" }));
     await vi.waitFor(() => expect(posts[0]).toMatchObject({
       path: `${API}/till/orders/o-5/settle`, body: { method: "room", room: "209" } }));
+  });
+
+  it("a room with two open bills asks whose in the same box, one button each (D27-162)", async () => {
+    /* The owner's order of 28 September: room 201 on a changeover, and a
+       split bill's company bill beside a guest's. It closed on "yes" and
+       asked "who ate?" in a corner, and the order stayed open. */
+    const posts = till({ rooms: [
+      { room: "201", guest: "Rekha Gaikwad", folioId: "f-1" },
+      { room: "201", guest: "Tanvi Bhide", folioId: "f-2", company: "ACME Ltd" },
+    ] });
+    fireEvent.change(await screen.findByPlaceholderText("Room"), { target: { value: "201" } });
+    fireEvent.click(screen.getByRole("button", { name: "Charge to room" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByRole("button", { name: "Charge to room" }), "a yes that chooses nobody").toBeNull();
+    within(dialog).getByRole("button", { name: "Rekha Gaikwad" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Tanvi Bhide - bill to ACME Ltd" }));
+    await vi.waitFor(() => expect(posts[0]).toMatchObject({
+      path: `${API}/till/orders/o-5/settle`, body: { method: "room", room: "201", folioId: "f-2" } }));
+  });
+
+  it("a room charge the server refuses says why in the box that asked (D27-162)", async () => {
+    till({ refuse: "Room 209 cannot be charged: nobody is checked in there." });
+    fireEvent.change(await screen.findByPlaceholderText("Room"), { target: { value: "209" } });
+    fireEvent.click(screen.getByRole("button", { name: "Charge to room" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Charge to room" }));
+    expect((await within(dialog).findByRole("alert")).textContent)
+      .toBe("Room 209 cannot be charged: nobody is checked in there.");
   });
 
   it("a dish the kitchen has asks why before it comes off, and sends the reason (D27-119)", async () => {

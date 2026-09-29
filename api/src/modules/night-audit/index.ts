@@ -9,3 +9,7 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", checklist],
   ["/api/hotels", nightAudit],
 ];
+
+/* A closed day's charge put right, one correction for every caller: the
+   Closed days screen and a stay's Change rate (finance, D27-162). */
+export { correctClosedCharge } from "./nightAudit.ts";

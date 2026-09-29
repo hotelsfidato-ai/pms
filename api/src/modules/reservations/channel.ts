@@ -44,6 +44,12 @@ export interface ChannelBookingInput {
   expectedArrival?: string;
   /** Anything the guest asked for, kept on the booking's notes. */
   specialRequest?: string;
+  /** Waiting for the hotel, the room held (D27-35): the CRS's bookings
+      arrive this way and the hotel confirms. Left out: confirmed, as a
+      booking site's always has been. */
+  tentative?: boolean;
+  /** Who sold it - the CRS's salesperson (D27-168). */
+  salesPerson?: string;
   lines: Array<{
     roomTypeId: string;
     mealPlan?: string;
@@ -103,6 +109,8 @@ export async function createChannelBooking(
     bookingSourceId: input.bookingSourceId,
     externalRef: input.externalRef,
     ...(input.expectedArrival === undefined ? {} : { expectedArrival: input.expectedArrival }),
+    ...(input.tentative === undefined ? {} : { tentative: input.tentative }),
+    ...(input.salesPerson === undefined ? {} : { salesPerson: input.salesPerson }),
     lines: input.lines,
     /* The whole point of the difference (D17-80). */
     refuseWhenFull: true,
