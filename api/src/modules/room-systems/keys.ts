@@ -31,6 +31,9 @@ type Why = "check_in" | "reissue" | "lost" | "check_out" | "move";
 type Live = { room_id: string; room: string; cards: number; valid_until: Date };
 
 const refuse = (reason: string) => ({ ok: false as const, reason });
+/* A stay id that is not a uuid is no stay, not a 500 from the cast (RS-2).
+   ponytail: the eighth copy of this pattern; one in the core when the master moves it. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The stay's cards that open a door now: its last act the lock accepted,
     when that act was an issue. */
@@ -109,6 +112,7 @@ const STAY_ENDS =
 
 keys.get("/:code/stays/:id/keys", async (c) => {
   const code = c.req.param("code");
+  if (!UUID.test(c.req.param("id"))) return c.json({ error: "No such stay." }, 404);
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, code);
     if (!hotelId) return null;
@@ -145,6 +149,7 @@ keys.get("/:code/stays/:id/keys", async (c) => {
 });
 
 keys.post("/:code/stays/:id/keys", async (c) => {
+  if (!UUID.test(c.req.param("id"))) return c.json(refuse("No such stay."), 404);
   type Body = { cards?: unknown; lost?: unknown };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
   const cards = input.cards;

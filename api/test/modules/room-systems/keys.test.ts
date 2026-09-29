@@ -157,6 +157,11 @@ describe("cutting cards", () => {
     expect((await keysOf(waiting)).acts).toHaveLength(0);
   });
 
+  it("answers a stay id that is not one with 404, not a 500 (RS-2)", async () => {
+    expect((await call("/stays/not-a-stay/keys")).status).toBe(404);
+    expect((await cut("not-a-stay", { cards: 1 })).status).toBe(404);
+  });
+
   it("refuses, and records nothing, where no lock system is connected", async () => {
     process.env["ROOM_SYSTEMS_HOTELS"] = "";
     try {

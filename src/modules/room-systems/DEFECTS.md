@@ -20,6 +20,17 @@ None.
 
 ## Fixed — the solution is here; do not work it out again
 
+### RS-2 · A stay id that is not a uuid answered 500 (30 September, numbered for now)
+
+Found opening the routes by hand on the copy's own server:
+`GET /stays/not-a-uuid/keys` came back "Something went wrong" (500), the
+database refusing the cast. **Fixed:** both key routes answer 404 "No such
+stay." before any query; tested (`keys.test.ts`, RS-2). Front desk's
+`GET /stays/:id/inclusions` does the same today; told to the master, not
+changed (not this service's).
+
+**The rule:** an id from the address is checked before it reaches a cast.
+
 ### RS-1 · A "draws nothing" test passed with the rule removed (30 September, numbered for now)
 
 `keyCards.test.tsx`'s first test checked that the key-card panel draws
