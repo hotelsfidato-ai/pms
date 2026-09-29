@@ -7,9 +7,31 @@ its three rules: numbers you ran, not numbers you remember; a guard is not
 proved until it has refused something; "Left open" is the handover.
 
 Work that touches the core or several services still goes in the root
-`CHANGELOG.md`. **The three lists of D18-17 are built; the screen, the server
-route and the send are not, and each waits on somebody else** (`MODULE.md`,
-Requests).
+`CHANGELOG.md`. **The three lists of D18-17 are built as logic; their screen,
+route and send are not. The marketing numbers are built (29 September)**
+(`MODULE.md`).
+
+---
+
+## 2026-09-29 · The numbers: spend, campaigns and booked revenue by source (D27-168, D27-170)
+
+**Asked for:** D27-168 lane 3 and the owner's D27-170: spend, campaigns and
+booked revenue by source, joined with this system's own stays, so revenue per
+campaign comes from real stays; owner, admin and GM only.
+
+**Shipped** (the leads lane, branch `leads/view-29sep`): `numbers.ts` on the
+server (mounted in this service's front door), `data/numbers.ts` and the page at
+`/h/:code/marketing`, which replaces the Coming soon page; the menu entry leaves
+"Not built yet". `lists.test.ts` now asks for the new address.
+
+**Proved:** opened as the GM against fidato_s37 and a made-up stand-in app at
+1280 and 390 px; two August stays marked with a made-up campaign read 2 bookings
+and ₹11,814.89, equal to their live room postings before tax (the ₹590.75 tax
+left out); cancelled stays out of the by-source figures (83 of 84). The read
+takes 0.04 to 0.15 s. Reception is refused (403). The API test for it is written
+in `api/test/modules/leads/live.test.ts`, not run yet (the master's word).
+
+**Left open:** the D18-17 lists' screen (MKT-4).
 
 ---
 

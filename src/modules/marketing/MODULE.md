@@ -169,12 +169,19 @@ and is not made here unasked. Logged as MKT-5.
 
 | Menu name | Address (`routes.tsx`) | Page file | Who sees it (`nav.ts`) |
 |---|---|---|---|
-| Marketing | `/coming-soon/marketing` | `pages/Marketing.tsx` | owner, admin, GM - the `marketing` grant (D22-17), in the Coming soon section |
+| Marketing | `/h/:code/marketing` | `pages/Marketing.tsx` | owner, admin, GM - the `marketing` grant (D22-17, D27-170), under Sales and marketing |
 
-**Unchanged on 19 September**, and deliberately: request 3 above. When the
-section exists the entry moves out of Coming soon and the real screens take
-their addresses - `navigation.test.ts` pins every role's list and the Coming
-soon list, so that move is one the master makes together with this service.
+**Built 29 September (D27-168, D27-170): the numbers, not the lists.** One
+month by the stays' arrival date: each campaign's spend, read live from the
+leads app (`hotels/{id}/marketing/campaigns` and `hotels/{id}/spend/{month}`,
+two reads, 60 s cache, under the leads service's cap), beside the bookings here
+that carry it (`reservations.campaign`, set when a booking is made from a lead)
+and their revenue; and every booking source's bookings and revenue.
+**Revenue is the reports door's own** (`NIGHTS`: posted room charges, and a
+night not posted yet at the booking's rate), before tax, cancelled and no-show
+stays out (D27-170). Server: `api/src/modules/marketing/numbers.ts`,
+`GET /:code/marketing/numbers?month=YYYY-MM`, read rule `marketing` view.
+The D18-17 lists still have no screen (MKT-4).
 
 ---
 
