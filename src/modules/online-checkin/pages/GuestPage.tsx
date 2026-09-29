@@ -627,8 +627,10 @@ function RequestsSection(
       <Card><CardBody>
         <form onSubmit={(e) => { e.preventDefault(); ask.mutate(); }} className="flex flex-col gap-3">
           {offers.length > 1 && (
+            /* One a line on a phone: with the teams' three (D27-181) they do
+               not fit across. */
             <Segmented
-              className="flex w-full [&>button]:flex-1"
+              className="grid w-full sm:grid-cols-3"
               value={kind} onChange={setKind}
               options={offers.map((k) => ({ value: k, label: KIND_LABEL[k] ?? k }))}
             />

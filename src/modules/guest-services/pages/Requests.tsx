@@ -84,11 +84,15 @@ export default function RequestsPage() {
           options={[{ value: "open", label: "Open" }, { value: "done", label: "Done, last 24 h" }]}
         />
         {teams.length > 1 && (
-          <Segmented<Team | "all">
-            value={team} onChange={setTeam}
-            options={[{ value: "all", label: "All" },
-              ...teams.map((t) => ({ value: t, label: TEAM_LABEL[t] }))]}
-          />
+          /* On a phone the four do not fit: they scroll inside themselves,
+             never the page (DESIGN.md, Breathing Room). */
+          <div className="max-w-full overflow-x-auto">
+            <Segmented<Team | "all">
+              value={team} onChange={setTeam}
+              options={[{ value: "all", label: "All" },
+                ...teams.map((t) => ({ value: t, label: TEAM_LABEL[t] }))]}
+            />
+          </div>
         )}
       </div>
 
@@ -153,7 +157,8 @@ function RequestCard({ r, onTake, onDone, onCancel }: {
             {r.guest ? ` · ${r.guest}` : ""}
             {r.fromGuest ? " · from the guest's page" : r.raisedBy ? ` · raised by ${r.raisedBy}` : ""}
             {closed
-              ? ` · took ${minutes(r.minutes)}${r.takenBy ? ` · ${r.takenBy}` : ""}`
+              ? ` · took ${minutes(r.minutes)}${r.takenBy
+                  ? ` · ${r.status === "done" ? "done" : "taken"} by ${r.takenBy}` : ""}`
               : ` · waiting ${minutes(r.minutes)}${r.takenBy ? ` · ${r.takenBy} has it` : " · nobody has taken it"}`}
           </p>
           {closed && r.resolution && r.resolution !== "Done" && (
@@ -214,8 +219,9 @@ function RaiseDialog({ code, rooms, onClose, onDone }: {
                 </NativeSelect>
               )}
             </Field>
+            {/* One a line on a phone, where three do not fit; three across above. */}
             <Segmented<Team>
-              className="flex w-full [&>button]:flex-1"
+              className="grid w-full sm:grid-cols-3"
               value={team} onChange={setTeam}
               options={(["housekeeping", "maintenance", "fnb"] as const)
                 .map((t) => ({ value: t, label: TEAM_LABEL[t] }))}
