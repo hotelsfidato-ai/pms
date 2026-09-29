@@ -644,7 +644,13 @@ export default function BookingPage() {
                     rooms={(rooms.data ?? []).filter((r) =>
                       r.type === types.find((t) => t.id === line.roomTypeId)?.name
                       && r.status !== "out-of-service")
-                      .map((r) => ({ number: r.number, state: arrivesToday ? ROOM_STATE[r.status] : undefined }))}
+                      .map((r) => {
+                        /* The first room of an arrival today says what
+                           check-in would say of it: who is still in it. */
+                        const why = i === 0 ? checkRooms.data?.find((c) => c.number === r.number) : undefined;
+                        return { number: r.number, state: !arrivesToday ? undefined
+                          : why && !why.allowed ? why.reason : ROOM_STATE[r.status] };
+                      })}
                     onChange={(next) => setLine(line.key, next)}
                     onRemove={() => setLines((ls) => ls.filter((l) => l.key !== line.key))}
                   />
