@@ -97,7 +97,7 @@ const row = async (id: string) => (await sql(
   `select r.status, r.agreed_rate::text, r.is_complimentary, r.discount_percent::text,
           r.discount_reason, r.room_promotion_id::text, r.company_id::text,
           r.expected_departure::text, r.sales_person, r.market_segment,
-          r.notes, r.is_single_lady,
+          r.notes, r.is_single_lady, r.campaign,
           g.title, g.nationality, gd.address_line, gd.city, gd.state, gd.pincode, gd.country
      from reservations r join guests g on g.id = r.guest_id
      left join guest_documents gd on gd.guest_id = g.id
@@ -341,6 +341,8 @@ describe("what else New booking records", () => {
       salesPerson: `${TAG} Asha`, marketSegment: "Leisure",
       /* D27-163: the one page's Notes box and the walk-in's tick. */
       notes: "  Late train, keep the room  ", isSingleLady: true,
+      /* D27-170: "Book this lead" keeps the lead's campaign (leads' 161). */
+      campaign: "meta_120211234567890",
       address: { addressLine: "12 High St", city: "Leeds", state: "West Yorkshire",
                  pincode: "LS1 4AP", country: "United Kingdom" },
     }));
@@ -353,8 +355,15 @@ describe("what else New booking records", () => {
       sales_person: `${TAG} Asha`, market_segment: "Leisure", title: "Mrs", nationality: "GB",
       address_line: "12 High St", city: "Leeds", state: "West Yorkshire",
       pincode: "LS1 4AP", country: "United Kingdom",
-      notes: "Late train, keep the room", is_single_lady: true,
+      notes: "Late train, keep the room", is_single_lady: true, campaign: "meta_120211234567890",
     });
+  });
+
+  it("refuses a campaign over 200 characters in words, and writes nothing", async () => {
+    const res = await call(ownerId, "POST", "/bookings", booking("Long campaign", { campaign: "x".repeat(201) }));
+    expect(res.status).toBe(409);
+    expect(await reasonOf(res)).toMatch(/at most 200 characters/);
+    expect(await onFile("Long campaign")).toEqual({ guests: 0, reservations: 0 });
   });
 
   it("refuses a title that is not on the owner's list, and writes nothing", async () => {

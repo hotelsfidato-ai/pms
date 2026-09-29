@@ -17,8 +17,9 @@ import { getInventory, getTariff, type Tariff } from "@/modules/inventory";
 import { createBooking } from "@/modules/reservations/data/groups";
 import {
   MARKET_SEGMENTS, TITLES, LIST_KEEPERS, FREEHAND_CAP,
-  listSalesPeople, saveSalesPeople, listRoomPromotions, saveRoomPromotions, leadForBooking,
+  listSalesPeople, saveSalesPeople, listRoomPromotions, saveRoomPromotions,
 } from "@/modules/reservations/data/booking";
+import { fetchLeadForBooking } from "@/modules/leads";
 import { BookedCard, type Booked } from "@/modules/reservations/flows/BookedCard";
 import { KeepListDialog } from "@/modules/reservations/flows/KeepListDialog";
 import {
@@ -188,15 +189,17 @@ export default function BookingPage() {
 
   const lead = useQuery({
     queryKey: ["lead-for-booking", hotelId, leadToken],
-    queryFn: () => leadForBooking(hotelId, leadToken ?? ""),
+    queryFn: () => fetchLeadForBooking(hotelId, leadToken ?? ""),
     enabled: !!leadToken,
     staleTime: Infinity,
+    /* A 404 is an answer (expired or erased), not a hiccup to retry. */
+    retry: false,
   });
   /* The lead's name, phone, channel and campaign, once. A lead expired or
      erased (404) leaves the page blank, with its sentence above. */
   const [leadTaken, setLeadTaken] = useState(false);
   useEffect(() => {
-    if (leadTaken || !lead.data?.ok) return;
+    if (leadTaken || !lead.data) return;
     setGuestName(lead.data.name ?? "");
     setPhone(lead.data.phone ?? "");
     if (lead.data.bookingSourceId) setBookingSourceId(lead.data.bookingSourceId);
@@ -565,8 +568,8 @@ export default function BookingPage() {
           ? `A walk-in into room ${walkRoom}. Check them in, or save the booking.`
           : "One guest, one set of nights. Save it, give it a room, or check them in."}
       />
-      {lead.data && !lead.data.ok && (
-        <p className="mb-3 text-sm text-warning-dark" data-lead-gone>{lead.data.reason}</p>
+      {lead.error && (
+        <p className="mb-3 text-sm text-warning-dark" data-lead-gone>{lead.error.message}</p>
       )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
