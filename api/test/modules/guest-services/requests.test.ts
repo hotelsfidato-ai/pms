@@ -176,7 +176,7 @@ describe("where else it shows", () => {
       ((await (await call(role, "/notifications")).json()) as Array<{ id: string; title: string }>)
         .find((x) => x.id === "guest-requests-waiting");
     expect((await bell("chef"))?.title).toMatch(/guest request/);
-    await sql(`update work_orders set status = 'in_progress' where hotel_id = $1 and category <> 'fnb'`, [hotelId]);
+    await sql(`update work_orders set status = 'in_progress' where hotel_id = $1 and category <> 'fnb' and status = 'open'`, [hotelId]);
     expect(await bell("housekeeping")).toBeUndefined();
   });
 });
