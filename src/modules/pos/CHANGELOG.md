@@ -33,6 +33,20 @@ Work that touches the core or several services still goes in the root
 - `ownerDecisions.test.tsx`: 21 passed. Its new tests are that a send on Tables or the Terminal opens no tab, and the Till's Send.
 - `src/modules/pos` + `src/test` + primaryAction + App.test: 110 passed, 1 failed. The failure is `migrationNumbers`, on the gap 157-159, which the master renumbers at merge.
 - `npx tsc -b --force` exit 0; `cd api && npx tsc --noEmit` exit 0.
+- **Opened, 29 September, 19:38 to 19:50 IST.** `fidato_s33` at 160, API 8875; two devices in the Claude app's browser pane. The station was `localhost:5275`, signed in as the Kitchen Manager. The other device was `localhost:5276`, the same code but a separate origin, so it had its own device id; it was signed in as Reception, then as the GM. `window.print` and `window.open` were replaced in both tabs by a recorder, so no print window blocked the pane; the recorder kept what was on the paper.
+  - Before switching on, both devices' lines read "No KOT printer for Fidato Restaurant - KOTs are not printing" in red.
+  - Ticking with no name was refused: "Type a name for this device, for example Kitchen PC."
+  - With "Kitchen PC" typed, both read "KOT printer: Kitchen PC - online". The six older KOTs showed in the last 20 as "not printed" and did not print.
+  - Reprint of KOT 2 put KOT - 2 · Table AC8 · four dishes on the paper, with no price, and wrote nothing to the server.
+  - From the other device:
+    - Tables (AC3), the Till's new "Send to the kitchen" (N6; the button then read "Kitchen has it all", switched off) and the Terminal (N6) each sent a KOT.
+    - The station printed KOT 3, 4 and 5, 1 to 7 seconds after each send, each once, with the dish names, quantities and table.
+    - The sending device opened nothing and printed nothing.
+  - Reception's panel showed the status only: no switch, no list.
+  - The station went to a non-restaurant screen while N5 was sent. After 90 s the other device read "KOT printer Kitchen PC not seen since 7:45 PM - KOTs are not printing". Back on the Kitchen screen, the station printed the missed KOT 6 at once and read online.
+  - The GM switched "Till PC" on at the other device. The old station read "KOT printer: Till PC - online", and the next KOT (7) printed on the new one only.
+  - `pos_kot_prints` held exactly KOTs 3 to 7, one row each.
+  - The only console error from this work was the deliberate 409.
 
 **Left open:**
 - Silent printing on a real printer is untested here: the setup doc's step 4 is the owner's test.
