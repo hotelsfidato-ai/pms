@@ -116,15 +116,18 @@ function OutletPrinter({ hotelId, outlet }: { hotelId: string; outlet: string })
   const next = queue.data?.station ? queue.data.due[0] : undefined;
 
   /* One at a time, oldest first: the docket, the claim, the paper, then
-     ask again for the next. A failure waits for the next ask. */
+     ask again for the next. Anything else - a claim another tab won, a
+     failure - waits for the next ask rather than asking again at once. */
   useEffect(() => {
     if (!next || busy.current) return;
     busy.current = true;
     void (async () => {
       try {
         const d = await getDocket(hotelId, next.orderId, next.kotNo);
-        if (d && await claimKot(hotelId, next.orderId, next.kotNo, kotDevice())) print(d);
-        void qc.invalidateQueries({ queryKey: queueKey(hotelId, outlet) });
+        if (d && await claimKot(hotelId, next.orderId, next.kotNo, kotDevice())) {
+          print(d);
+          void qc.invalidateQueries({ queryKey: queueKey(hotelId, outlet) });
+        }
       } catch {
         /* The next ask tries again. */
       } finally {
