@@ -8,7 +8,6 @@ import MenuPage from "@/modules/pos/pages/Menu";
 import DayEndPage from "@/modules/pos/pages/DayEnd";
 import KitchenPage from "@/modules/pos/pages/Kitchen";
 import TerminalPage from "@/modules/pos/pages/Terminal";
-import DocketPage from "@/modules/pos/pages/Docket";
 import BillPage from "@/modules/pos/pages/Bill";
 import PosPage from "@/modules/pos/pages/Pos";
 import SetupPage from "@/modules/pos/pages/Setup";
@@ -59,12 +58,6 @@ export const routes = (
     <Route
       path="/h/:code/till/terminal"
       element={<><PropertyScope /><PosGate><TerminalPage /></PosGate></>}
-    />
-    {/* The docket, before the bill route so :id does not
-        swallow it. No prices on this one, ever. */}
-    <Route
-      path="/h/:code/till/orders/:id/kot/:no"
-      element={<><PropertyScope /><DocketPage /></>}
     />
     <Route
       path="/h/:code/till/bill/:id"

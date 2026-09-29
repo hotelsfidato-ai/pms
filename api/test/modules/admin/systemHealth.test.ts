@@ -127,7 +127,7 @@ describe("the System health screen's API", () => {
       expect(body.traffic.hour.series).toHaveLength(12);
       expect(body.traffic.week.series).toHaveLength(28);
       expect(body.hotels.map((h) => h.code)).toContain("5EL");
-      expect(body.pool.max).toBe(10);
+      expect(body.pool.max).toBe(20); // D27-165
       expect(body.databaseBytes).toBeGreaterThan(0);
       /* No nightly log on a laptop: said, not guessed. */
       expect(["none", "unreadable"]).toContain(body.backup.state);

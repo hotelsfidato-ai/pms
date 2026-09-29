@@ -9,8 +9,9 @@ import { useDocumentTitle } from "@/lib/documentTitle";
 import { toast } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import { getKitchen, moveKitchenLine, type KitchenLine } from "@/modules/pos/data/till";
-import { ReadFailed, ReadStale } from "@/components/ui";
-import { useRole } from "@/lib/session";
+import { ReadFailed, ReadStale } from "@/components/ui";
+import { useRole } from "@/lib/session";
+import { KotPrinterPanel, KotStatus } from "@/modules/pos/components/KotStation";
 import { mayRingUp } from "@/modules/pos/nav";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -208,6 +209,7 @@ export default function KitchenPage() {
               </button>
             ))}
         </div>
+        <KotPrinterPanel hotelId={hotelId} />
         {toTill && (
           <Link
             to={`/h/${hotelId}/till`}
@@ -218,6 +220,8 @@ export default function KitchenPage() {
           </Link>
         )}
       </header>
+
+      <KotStatus hotelId={hotelId} className="mx-5 mt-3 shrink-0" />
 
       {/* A refresh that failed while the board was already up: the
           tickets stay, and the kitchen is told they are not current. The

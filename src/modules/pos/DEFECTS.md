@@ -29,6 +29,26 @@ fails "expected 'front_desk' to be 'pos'".
 
 ## Fixed
 
+### POS-24 · The Till never sent anything to the kitchen - FIXED 29 September (D27-166)
+
+**Found** - 29 September, by the speed and workflow check (`docs/qa/speed-2026-09-29.md` on `qa/speed-29sep`, finding 5, W-1): two Till orders charged to rooms 301 and 202 stayed `kot_status = pending`, had no KOT number and never reached the Kitchen screen. `pages/Till.tsx` opened an order, added dishes, struck and settled, and never called `sendToKitchen` or the batch route with `send: true`. Tables' order pad always sends its round; the Terminal has "Send to the kitchen". So with the KOT station (D27-159) a Till order would never have printed either.
+
+**What was done** - The owner's D27-166 (option a of three; no automatic send at charge or settle, which would send food already eaten; no refusal to settle): the Terminal's own button on the Till's order - orange, "Send to the kitchen", "Kitchen has it all" and switched off when nothing is unsent, first above the bill's other actions - through the same `sendToKitchen`. Guarded by `ownerDecisions.test.tsx` ("the Till's Send to the kitchen (D27-166)"): on the old Till there is no such button and the test cannot find it.
+
+**The rule** - Three screens that take the same order must all reach the kitchen. A way in that only writes to the bill is a way round the kitchen.
+
+### POS-25 · MINE: the KOT station asked again at once after a claim another tab had won - caught before commit
+
+**Found** - 29 September, building the station (`components/KotStation.tsx`). After each docket the printer asked the server again straight away, whatever had happened. Its own test ("prints nothing when another tab claimed it first") answered every ask with the same docket and every claim with "no", and the loop asked, claimed and asked again until the test's worker ran out of memory and died ("Worker exited unexpectedly"). Against the real server the second ask would no longer list a docket another tab had claimed, but a docket the server kept listing for any other reason would have spun the same way on the kitchen PC.
+
+**What was done** - It asks again at once only after it has printed; a lost claim or a failure waits for the next ask (the live channel or the 30-second floor). The test now passes, and with the claim check taken out (printing whatever the claim says) it fails.
+
+**The rule** - A loop that re-asks on its own result needs a reason to stop that does not depend on the other side changing its answer.
+
+### Retired by D27-161 (29 September): POS-5's slip on every send, POS-10's notice, POS-11's order
+
+The KOT station prints every KOT; no other device opens or offers one. Tables and the Terminal no longer open `/h/:code/till/orders/:id/kot/:no` on a send (D17-18, POS-5), so a browser refusing the tab (POS-10, `components/SlipNotice.tsx`) and the draft cleared before the tab (POS-11) no longer arise. `SlipNotice.tsx` and `pages/Docket.tsx` are gone; the docket's layout is `components/DocketSlip.tsx`, printed by the station. The entries below stay as the record.
+
 ### POS-19 · the waiters list (till.ts) showed nobody but the caller - FIXED 28 September (D27-97)
 
 Read from `staff` joined to `staff_hotels`, whose row security shows each person only their own line unless they run the hotel (housekeeping HK-14). Now reads `app.hotel_people` (149), names only. `api/test/modules/pos/waitersList.test.ts` - failed on the old code, passes now.

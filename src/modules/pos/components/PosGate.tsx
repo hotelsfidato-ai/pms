@@ -4,6 +4,7 @@ import { useParams } from "react-router";
 import { Store } from "lucide-react";
 import { Page, EmptyState, Skeleton } from "@/components/ui";
 import { getPosAccess } from "@/modules/pos/data/till";
+import { KotStationPrinter } from "@/modules/pos/components/KotStation";
 
 /* ══════════════════════════════════════════════════════════════════
    THE POINT OF SALE, OR THE REASON IT IS SHUT
@@ -54,5 +55,6 @@ export function PosGate({ children }: { children: ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  /* On the KOT station, every restaurant screen prints (D27-161). */
+  return <>{children}<KotStationPrinter hotelId={code} /></>;
 }
