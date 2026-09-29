@@ -42,10 +42,6 @@ export { col, row, total } from "./document.ts";
 export {
   dailyFigures, sumDays, firstTradingDay, propertyFor, propertyById,
   isoDateParam, heading, NIGHTS,
-  /* A posting that still counts: not a reversal, and not reversed. Opened
-     29 September for marketing's booked revenue per campaign (D27-170),
-     which sums a stay's live room postings rather than its nights. */
-  LIVE,
   /* The nights a room posting pays for, read from its words. Opened 24
      September for the night audit (D24-14): a walk-in's whole-stay line
      has paid for tonight, and the audit must not charge it again. */

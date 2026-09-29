@@ -31,11 +31,16 @@ left out); cancelled stays out of the by-source figures (83 of 84). The read
 takes 0.04 to 0.15 s. Reception is refused (403). The API test for it is written
 in `api/test/modules/leads/live.test.ts`, not run yet (the master's word).
 
-**Then, the master's answer the same day:** revenue sums a stay's live room
-postings (the reports door now exports `LIVE`, one line, delegated) instead of
-`NIGHTS`, so a stay not charged yet is a dash rather than its nights at the
-rate. August at 5EL read again: 83 stays, the Booking.com arrival with no
-posting now a dash.
+**Then, the same day (D27-173):** revenue was switched for an hour to charged
+postings only (reports' `LIVE`), until the owner chose booked value: charged
+nights plus nights not charged yet at the booking's rate, before tax. Back on
+`NIGHTS`; the `LIVE` export on the reports door was dropped again (nothing
+else used it). Found doing it: `NIGHTS` raises "No GST rule for room" for a
+future stay at a property with no room GST rate, so Marketing answers that
+in words (409, naming Room types) instead of "Something went wrong". Checked
+on fidato_s37 inside a rolled-back transaction. Tests added in
+`api/test/modules/leads/live.test.ts` (a future uncharged stay counts 6,000 for
+two nights at 3,000; no room rule gives the sentence), not run yet.
 
 **Left open:** the D18-17 lists' screen (MKT-4).
 

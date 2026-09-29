@@ -23,6 +23,7 @@ OWNER-STEPS.md                     the owner's clicks for the read-only Google l
 - **D27-103** the owner creates a read-only Google login; its key goes only into the server's settings.
 - **D27-108** a guest erased in the app is erased from the PMS's view too; their stays and bills stay (tax law).
 - **D27-170** read live every time, **no copy** of a lead or a message in the PMS, a cap of **5,000 reads a day**; everyone who sees guests sees leads, marketing numbers only owner/admin/GM; a lead's booking takes a source by channel (Meta Ads, Google Ads, WhatsApp, Website) and keeps its campaign; staff notes not shown; other hotels' leads never kept; booked revenue = room charges before tax of its stays, cancelled and no-shows out, by arrival date.
+- **D27-173** booked revenue is booked value: the nights already charged plus the nights not charged yet at the booking's rate, before tax (the reports door's `NIGHTS`).
 
 ## How it reads
 

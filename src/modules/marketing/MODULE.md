@@ -177,10 +177,12 @@ leads app (`hotels/{id}/marketing/campaigns` and `hotels/{id}/spend/{month}`,
 two reads, 60 s cache, under the leads service's cap), beside the bookings here
 that carry it (`reservations.campaign`, set when a booking is made from a lead)
 and their revenue; and every booking source's bookings and revenue.
-**Revenue is room charges before tax** (D27-170): each stay's room postings
-that still count (the reports door's `LIVE`: not a reversal, not reversed), their
-amount without their tax, cancelled and no-show stays out. A stay nothing has
-been charged to yet shows a dash. Server: `api/src/modules/marketing/numbers.ts`,
+**Revenue is booked value, the reports door's own `NIGHTS`** (the owner's
+D27-173): the nights already charged, plus the nights not charged yet at the
+booking's rate, before tax, cancelled and no-show stays out. `NIGHTS` asks the
+room GST rule for a night not charged yet and raises where a property has none
+(a new one has none, D22-9); the screen then says so in words (409) and names
+Room types, where the rate is set. Server: `api/src/modules/marketing/numbers.ts`,
 `GET /:code/marketing/numbers?month=YYYY-MM`, read rule `marketing` view.
 The D18-17 lists still have no screen (MKT-4).
 

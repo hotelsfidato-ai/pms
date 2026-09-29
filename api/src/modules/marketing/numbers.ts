@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
-import { LIVE } from "../reports/index.ts";
+import { NIGHTS } from "../reports/index.ts";
 import { AtCap, LeadsAppError, appHotelOf, cached, openReader, settings } from "../leads/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -18,14 +18,22 @@ import { AtCap, LeadsAppError, appHotelOf, cached, openReader, settings } from "
                     a lead) and their revenue
      per source     every booking source's bookings and revenue that month
 
-   REVENUE IS ROOM CHARGES BEFORE TAX (D27-170): a stay's room postings
-   that still count (the reports door's LIVE: not a reversal, not reversed),
-   their amount without their tax, for stays still standing (cancelled and
-   no-shows out). A stay nothing has been charged to yet has no revenue: a
-   null, a dash on the screen, never 0.
+   REVENUE IS BOOKED VALUE, THE REPORTS' OWN NIGHTS (the owner's D27-173,
+   settling D27-170): the nights already charged, plus the nights not
+   charged yet at the booking's rate, before tax, for stays still standing
+   (cancelled and no-shows out). A figure nobody has is null, a dash on the
+   screen, never 0.
+
+   ⚠ NIGHTS asks app.gst_rate for a night not charged yet, and that RAISES
+   where the property has no GST rule for rooms (a new property has none,
+   D22-9) - even though only the figure before tax is used here. So that
+   one refusal is answered in words (409) instead of "Something went wrong".
    ══════════════════════════════════════════════════════════════════ */
 
 export const numbers = new Hono<{ Variables: { subject: string } }>();
+
+export const NO_ROOM_RULE =
+  "Revenue cannot be worked out yet: this property has no GST rate for rooms. Set it on Room types, then open this again.";
 
 type Row = { by_source: boolean; campaign: string | null; source_id: string | null; source: string | null; bookings: number; revenue: string | null };
 
@@ -38,22 +46,23 @@ numbers.get("/:code/marketing/numbers", async (c) => {
     const hotel = await client.query<{ id: string }>(
       "select id from hotels where code = upper($1) and id in (select app.auth_hotel_ids())", [code]);
     if (hotel.rowCount !== 1) return null;
+    /* $2..$3 is the window of nights NIGHTS spreads: from the month's first
+       day, far enough on to hold the longest stay that arrives in it. */
     const { rows } = await client.query<Row>(
-      `with stays as (
+      `with ${NIGHTS},
+            stays as (
               select r.id, r.campaign, r.booking_source_id
                 from reservations r
                where r.hotel_id = $1
-                 and r.check_in between $2::date and ($2::date + interval '1 month' - interval '1 day')::date
+                 and r.check_in between $4::date and ($4::date + interval '1 month' - interval '1 day')::date
                  and r.status in ('confirmed', 'checked_in', 'checked_out')),
+            rent as (
+              select reservation_id, rent from posted_nights
+              union all
+              select reservation_id, rent from booked_nights),
             per_stay as (
               select s.campaign, s.booking_source_id,
-                     (select sum(fp.amount)
-                        from folio_postings fp
-                        join folios f on f.id = fp.folio_id
-                       where fp.hotel_id = $1
-                         and coalesce(fp.reservation_id, f.reservation_id) = s.id
-                         and fp.category = 'room'
-                         and ${LIVE}) as revenue
+                     (select sum(x.rent) from rent x where x.reservation_id = s.id) as revenue
                 from stays s)
        select grouping(p.campaign) = 1 as by_source,
               p.campaign, p.booking_source_id::text as source_id, bs.name as source,
@@ -61,9 +70,14 @@ numbers.get("/:code/marketing/numbers", async (c) => {
          from per_stay p
          left join booking_sources bs on bs.id = p.booking_source_id
         group by grouping sets ((p.campaign), (p.booking_source_id, bs.name))`,
-      [hotel.rows[0]!.id, `${month}-01`]);
+      [hotel.rows[0]!.id, `${month}-01`, `${Number(month.slice(0, 4)) + 2}-12-31`, `${month}-01`]);
     return rows;
+  }).catch((error: unknown) => {
+    const e = error as { code?: string; message?: string };
+    if (e.code === "23514" && e.message?.startsWith("No GST rule for room")) return "no room rule" as const;
+    throw error;
   });
+  if (pms === "no room rule") return c.json({ error: NO_ROOM_RULE }, 409);
   if (!pms) return c.json({ error: "No such property." }, 404);
 
   /* grouping() tells the two sets apart: a stay with no campaign and a stay
