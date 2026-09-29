@@ -35,7 +35,7 @@ function what(a: KeyAct): string {
 
 export function KeyCards({ hotelId, stay }: { hotelId: string; stay: Stay }) {
   const qc = useQueryClient();
-  /* Whoever may check a guest in (the recommendation to the owner, Q3). */
+  /* Whoever may check a guest in, a lost card too (the owner, D27-182). */
   const mayCut = can(useRole(), "edit", "reservation");
   const keys = useQuery({
     queryKey: keysKey(hotelId, stay.id),
@@ -51,7 +51,7 @@ export function KeyCards({ hotelId, stay }: { hotelId: string; stay: Stay }) {
   }
   if (!k || (!k.connected && k.acts.length === 0)) return null;
 
-  /* Starts at one per adult (Q4's recommendation), never above the cap. */
+  /* Starts at one per adult, never above the cap (the owner, D27-182). */
   const count = cards ?? Math.min(Math.max(stay.adults, 1), k.maxCards);
   const endsEarly = k.live !== null && new Date(k.live.validUntil) < new Date(k.stayEnds);
 

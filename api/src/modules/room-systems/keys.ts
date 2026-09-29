@@ -24,7 +24,7 @@ import { lockFor, type LockAnswer, type LockDriver } from "./locks.ts";
 
 export const keys = new Hono<{ Variables: { subject: string } }>();
 
-/** ponytail: the owner's cap is question Q4 (30 Sep); 4 is the recommendation. */
+/** The owner, D27-182: 1 to 4 cards at once. */
 export const MAX_CARDS = 4;
 
 type Why = "check_in" | "reissue" | "lost" | "check_out" | "move";

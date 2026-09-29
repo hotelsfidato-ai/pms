@@ -1,8 +1,8 @@
 # Room systems
 
-Connections to the devices in the rooms: door locks, and room controls
-(energy saving, do-not-disturb). The phone system, minibar and TV are not in
-this build.
+Connections to the devices in the rooms. This build is door locks only:
+room controls are not built (card-slot energy savers, D27-182), and the
+phone system, minibar and TV are not in it.
 
 **KEY CARDS: BUILT AGAINST A STAND-IN, 30 September (D27-178). Not
 connected to any lock.** The owner has not named 5 Elements' lock system;
@@ -66,15 +66,23 @@ of lock needs from the owner (research of 30 September):
   Orbita, Adel, Be-Tech, Godrej Catus, Ozone; TTLock's encoder DLL): the
   vendor's SDK under their licence, and the desk PC for the same bridge.
 
-## Waiting on the owner (asked 30 September, through the master)
+## The owner's decisions (D27-182, 30 September)
 
-Q1 which lock 5 Elements has · Q2 key cards at the pilot (recommended: no) ·
-Q3 who may cut and cancel (recommended: whoever may check in) · Q4 how many
-cards at once (recommended: 1 to 4, starting at the number of adults) ·
-Q5 whether the rooms have networked controls (if not, no controls are
-built) · Q6 the menu entry stays "Not built yet" until a lock is connected.
+- **Not at the pilot.** The stand-in only, and switched off: the live
+  server sets neither setting, so no panel shows and nothing is recorded.
+- **Who:** whoever may check a guest in (owner, Admin, GM, hotel manager,
+  reception), a lost card too; the lost-card dialog says to check the ID.
+- **How many:** 1 to 4 cards at once, starting at the number of adults.
+- **Room controls: none.** 5 Elements has card-slot energy savers, which no
+  system reaches. Nothing is built for energy saving or do-not-disturb.
+- **The menu** keeps "Not built yet"; the page says "Built; waiting for the
+  hotel's lock system".
+- **Still open, Q1:** which lock 5 Elements has. The owner is sending
+  photos of a lock, the encoder and the lock software's About screen.
 
-## Requests
+## Outside this folder (the master's yes, T2)
 
-None yet. The server mount (`api/src/server.ts`), the `roleGate.ts` lines
-and front desk's four one-line calls are asked of the master (T1-T4).
+`api/src/server.ts` (the mount), `api/src/roleGate.ts` (two lines, pinned
+in `api/test/roleGate.test.ts`), front desk's `operations.ts` (check-out,
+move) and `stayExtras.ts` (exchange), one `cancelStaleKeys` call each, and
+`StayDrawer.tsx` (the panel). The migration is numbered 175 for now.
