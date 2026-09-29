@@ -14,7 +14,7 @@ READ FIRST (read-only; these are the PMS's files):
 - D:\fidato pms\docs\go-live\whatsapp-templates.md: the template wording (stay_reminder,
   guest_page_code, checkin_link, review_request)
 
-THE TWO HOTELS GOING LIVE: <the owner names them here>.
+THE TWO HOTELS GOING LIVE: Amrapali, Kolhapur (PMS code AMR) and Hotel Grand Lucent, Mathura (PMS code GLM).
 
 DO, WITH THE OWNER, IN THIS ORDER:
 1. CHECK IN THIS APP'S CODE (read-only), and report what you find:

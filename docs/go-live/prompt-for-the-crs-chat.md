@@ -13,7 +13,7 @@ READ FIRST (read-only; these are the PMS's files):
   the two workflows to import into the CRS's n8n
 - D:\fidato pms\docs\go-live\whatsapp-templates.md: the template wording (booking_confirmation)
 
-THE TWO HOTELS GOING LIVE: <the owner names them here>.
+THE TWO HOTELS GOING LIVE: Amrapali, Kolhapur (PMS code AMR) and Hotel Grand Lucent, Mathura (PMS code GLM).
 
 DO, WITH THE OWNER, IN THIS ORDER:
 1. CHECK IN THE CRS'S CODE (read-only), and report what you find:
@@ -33,6 +33,11 @@ DO, WITH THE OWNER, IN THIS ORDER:
    hotels' ids. Download a copy of the workflow first. Test with one partner-hotel booking
    (the voucher still goes) and one own-hotel booking (no voucher; Drive and the register row
    still happen).
+NOTE (30 Sep, D27-186): EVERY guest message now goes through the CRS's n8n - the voucher,
+email AND the WhatsApp check-in code, check-in link, stay reminder and review request - from the
+Fidato number (Meta Phone number ID 1299890296534851). The PMS team is updating
+pms-send-crs.json for this; import the updated file when the owner says it is ready.
+
 5. IMPORT THE TWO NEW WORKFLOWS: crs-pms-answer.json (part 3) and pms-send-crs.json (IMPORT.md
    part B). Each gets its OWN new secret, made in the owner's password manager. Set
    REGISTER_URL, and FROM (the mailbox guests see). Switch both Active, and note their
