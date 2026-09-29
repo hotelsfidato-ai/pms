@@ -67,9 +67,15 @@ the Form III visit).
 counted as "asked", so the page said a code had been sent; a booking with no
 number still drew the code box. Both fixed, each with a test seen to fail.
 
+**The API suite (29 September night, merged with cp6, the master's go):**
+`guestDoor` 12/12, `guestDoorBehindTheCode` 31/31 - the code to the booking's
+own number whatever is posted, no number issues nothing, the dev switch's
+live code only when told, five an hour then a sentence, the room card's
+words, 24 hours, the desk's writes. Migration 162 replays over itself.
+
 **Left open:**
-- **The API suite has not run** - held by the master; migration 162 is run
-  (by the master, on fidato_s35). `guestDoor.test.ts` and `guestDoorBehindTheCode.test.ts`
+- `migrationNumbers` fails in this copy on the gap 157-161 until the master
+  renumbers 162 at merge. `guestDoor.test.ts` and `guestDoorBehindTheCode.test.ts`
   carry the new server cases (the booking's own number whatever is posted,
   no number issues nothing, the dev switch's live code, five an hour, the
   room card's words, 24 hours, the confirm's writes) and wait for it.

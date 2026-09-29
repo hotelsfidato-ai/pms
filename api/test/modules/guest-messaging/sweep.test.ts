@@ -48,6 +48,9 @@ const booking = new Map<string, string>();
 
 let server: Server;
 let received: Array<{ kind: string; channel: string; data: Record<string, string> }> = [];
+/** The sales inbox told first (D27-104): a WhatsApp the CRS sends is marked
+    booked in the market-to-revenue workflow before it goes. */
+let marks: string[] = [];
 
 const admin = async () => {
   const db = new (await import("pg")).default.Client({ connectionString: SUPER });
@@ -106,7 +109,9 @@ beforeAll(async () => {
     req.on("data", (chunk) => { raw += chunk; });
     req.on("end", () => {
       if (req.headers["x-fidato-secret"] !== SECRET) { res.writeHead(401).end(); return; }
-      received.push(JSON.parse(raw));
+      const body = JSON.parse(raw);
+      if (body.action === "mark") marks.push(body.data?.reference);
+      else received.push(body);
       res.writeHead(200).end("sent");
     });
   });
@@ -141,6 +146,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   received = [];
+  marks = [];
   process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${(server.address() as AddressInfo).port}/pms-send`;
   process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
   process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = SECRET;
@@ -164,6 +170,7 @@ describe("the sweep, as the server runs it", () => {
 
     expect(out).toEqual({ due: 3, attempted: 3, sent: 3, nowhereToSend: 0, waiting: 0 });
     expect(received.map((m) => m.data["reference"])).toEqual(["GMW-1", "GMW-2", "GMW-3"]);
+    expect(marks, "each guest marked booked in the sales inbox first").toEqual(["GMW-1", "GMW-2", "GMW-3"]);
     expect(received.every((m) => m.kind === KIND.confirmation && m.channel === "whatsapp"))
       .toBe(true);
 

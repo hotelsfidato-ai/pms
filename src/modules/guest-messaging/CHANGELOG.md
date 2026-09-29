@@ -77,8 +77,22 @@ sent. **Found (MSG-6):** the room line printed the code "EP" alone - fixed to
 the owner's D27-164, the code with its words ("EP · Room only"), read from
 `meal_plans` by `app.guest_voucher` after taking in cp6 (round F), tested.
 
+**The API suite, 29 September night, on the tree merged with cp6 1612358** (one
+scratch database, 157 migrations, one file at a time - the master's go):
+`sending` 14/14 · `guestDoor` 12/12 · `guestDoorBehindTheCode` 31/31 ·
+`checkinLink` 5/5 · `roleGate` 59/59 · `jobs` 20/20 · `messages` 18/18 ·
+`sweep` 6/6 · `workflows` 17/17 · `voucherDocument` 8/8 · `reputation` 28/28 ·
+`newBooking` 20/20. **Found by it:** Send check-in link was refused 403 - the
+core role gate refuses an undeclared write - so it is declared, `GUEST_PAGE`
+(whoever may make the guest's page may send it; the owner to confirm); and
+the sweep's stand-in counted the inbox's mark as a second send - it now
+keeps the marks apart and asserts each WhatsApp confirmation was marked
+first. Migration replay: a second pass of all 157 files in one transaction
+over the same database, exit 0.
+
 **Left open**:
-- **The API suite has not run on the final tree** - held by the master. `checkinLink.test.ts`, the new `sending.test.ts` cases and
+- Send check-in link's grant is `GUEST_PAGE` (reservation edit), the same as
+  making the page: the owner to confirm. `checkinLink.test.ts`, the new `sending.test.ts` cases and
   every test that switches sending on (now the five names) wait for it.
 - Placing `SendCheckInLink` on New booking's Booked card and the booking
   panel: other lanes' files, for the master to route.
