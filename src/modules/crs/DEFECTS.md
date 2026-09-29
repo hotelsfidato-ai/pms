@@ -32,7 +32,7 @@ M rooms". The confirmed rooms' references go as the hotel's confirmation number.
 
 - The answer is `partly`, with the room counts.
 - The words live in the answer workflow's `STATUS`.
-- Migration 163's check allows the fourth answer, dropped and added so a replay
+- Migration 160's check allows the fourth answer, dropped and added so a replay
   carries it.
 
 The guard is `crsReader.test.ts`, "tells the CRS 'partly' once": one room confirmed

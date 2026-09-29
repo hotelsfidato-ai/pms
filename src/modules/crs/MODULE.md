@@ -92,7 +92,7 @@ GET  /api/hotels/:code/crs/setup                         owner, admin (setup.ts)
 PUT  /api/hotels/:code/crs/setup                         owner, admin (setup.ts)
 ```
 
-## Tables (163)
+## Tables (160)
 
 - `crs_hotels`: the CRS property id, the source, `run_as` (a service account set by
   the master at go-live), `is_on`, `connected_at`, and the read cursor.

@@ -31,7 +31,7 @@ Plus the n8n file and the owner's steps.
   - A daily check for bookings deleted in the CRS.
   - Books through reservations' `createChannelBooking` (tentative, refuse when full).
   - The rate is the CRS's quote, split per room exactly or left to the desk.
-- **Migration 163** (not run yet): `crs_hotels`, `crs_room_types`, `crs_bookings`,
+- **Migration 160** (163 until the merge): `crs_hotels`, `crs_room_types`, `crs_bookings`,
   `app.crs_due()`.
 - **Routes**: the bookings list and Done; the mapping (owner, admin).
 - **The screen**: CRS bookings under Bookings. It replaces the Coming soon page and
