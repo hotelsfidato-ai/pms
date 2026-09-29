@@ -29,6 +29,25 @@ fails "expected 'front_desk' to be 'pos'".
 
 ## Fixed
 
+### POS-27 · "It just keeps adding new dishes": the same dish tapped again made a new line - FIXED 30 September (D27-189)
+
+**Found** - the owner's report of 30 September, reproduced that morning on `fidato_s46` as the GM:
+- **Tables:** three taps on Butter Roti gave three pad lines of "1 Butter Roti". `flows/OrderPad.tsx` `put()` appended every tap and never looked for the dish already on the pad. The server joined them at Send, so the kitchen got 3, but the waiter's pad did not show it.
+- **The Till:** Bhaaji Pau (Butter) + Onions, chosen the same way twice, gave two lines. `addOneLine` in `till.ts` is the one place every line is written, and it merged a plain dish but started a new line for any dish with sides. The Till also had no −, only the strike.
+- **The Terminal:** two presses of + on a sent Butter Roti gave two new lines of 1. The quantity route's "more of a sent dish" branch made its own insert on every press, outside `addOneLine`.
+
+**What was done** - `addOneLine` treats a dish as the same when its variation, its note and exactly its sides are the same, and only while it is unsent (D27-148). The dish and its sides go up together. More of a sent dish on the quantity route now goes through `addOneLine`, so it joins that dish's unsent line and copies its sides (D27-192, Q7). The pad's `put()` joins the same way. The Till has a − beside each dish; for a sent dish it asks for a manager's reason (D27-119). Guarded by `api/test/modules/pos/sameDish.test.ts` (4) and `src/modules/pos/sameDish.test.tsx` (4); all 8 fail on cp6's code.
+
+**The rule** - The screen a person reads must say what the kitchen will get. A pad that shows three ones while the server makes one three is right on paper and wrong at the table.
+
+### POS-28 · A dish's quantity changed without its sides - FIXED 30 September (D27-192, Q8)
+
+**Found** - 30 September, reading the quantity route for POS-27. Setting an unsent dish's quantity (the Terminal's −/+) updated the dish's line only. So "Bhaaji Pau (Butter)" raised to 2 billed two plates with one lot of Onions. Lowering a sent dish (D27-119) did the same. The Terminal also showed each side as a line with its own −/+.
+
+**What was done** - The route sets the dish and its sides together. On the Terminal the sides sit under their dish, as on the Till, with no −/+ of their own. Guarded by `sameDish.test.ts` ("the quantity of an unsent dish takes its sides with it") and `sameDish.test.tsx` ("a side follows its dish").
+
+**The rule** - A child line priced per plate must move with its plate.
+
 ### POS-24 · The Till never sent anything to the kitchen - FIXED 29 September (D27-166)
 
 **Found** - 29 September, by the speed and workflow check (`docs/qa/speed-2026-09-29.md` on `qa/speed-29sep`, finding 5, W-1): two Till orders charged to rooms 301 and 202 stayed `kot_status = pending`, had no KOT number and never reached the Kitchen screen. `pages/Till.tsx` opened an order, added dishes, struck and settled, and never called `sendToKitchen` or the batch route with `send: true`. Tables' order pad always sends its round; the Terminal has "Send to the kitchen". So with the KOT station (D27-159) a Till order would never have printed either.

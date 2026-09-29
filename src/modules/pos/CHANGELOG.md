@@ -11,6 +11,30 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · D27-189 part 1: the same dish tapped again is one more of it (POS-27, POS-28)
+
+**Asked for:** the owner's D27-189, with their answers of 30 September (D27-192, Q7 and Q8). An unsent dish tapped again adds to its quantity, and it has a − to reduce it. Once the kitchen has a dish, more of it is a new line for the next KOT (D27-148). A dish with a variation or sides is the same only when its choices are the same. Branch `pos/tap-variations-30sep` from cp6 `c01b150`, copy `.claude\worktrees\admiring-goldstine-34db29`, database `fidato_s46`, API 8905, web 5305.
+**Found:** reproduced on all three screens first. The full account is in DEFECTS POS-27 and POS-28:
+- Tables' pad appended every tap.
+- `addOneLine` started a new line for any dish with sides.
+- The Terminal's + on a sent dish made a new line on every press.
+- The Till had no −.
+- A dish's quantity changed without its sides.
+**Shipped:**
+- `till.ts`: `addOneLine` matches the variation, the note and the same set of sides, on unsent lines only, and raises the dish and its sides together. The quantity route's "more of a sent dish" calls `addOneLine`, which copies the sides; its own insert and its refusal for a dish with sides are gone. Setting a quantity sets the sides too.
+- `OrderPad.tsx` `put()` joins the same dish.
+- The Till: a − beside each dish; a sent dish asks for a manager's reason.
+- The Terminal: a side sits under its dish, with no −/+ of its own.
+**Proved:**
+- API `sameDish.test.ts`: 4 passed, and 4 failed on cp6's `till.ts`. `restaurantFixes` 12, `till` 84, `tillBatch` 5 and `padTotal` 3 passed, each file run on its own.
+- Web `sameDish.test.tsx`: 4 passed, and 4 failed on cp6's three screens. `src/modules/pos` + `src/test` + primaryAction + repositories: 17 files, 104 passed.
+- `npx tsc -b --force` exit 0; api `tsc --noEmit` exit 0; strip-check: 163 files load.
+- **Opened, 30 September:**
+  - Tables, AC6: three taps read "Butter Roti 3, Rs 120". Bhaaji Pau (Butter) + Onions twice read one line of 2. The second of those two was added by a script click on the pop-up's buttons, because the dialog sat mid-animation. Sent, KOT 4 held Butter Roti 3, Dal Tadka 3, and Bhaaji Pau (Butter) 2 with Onions 2.
+  - The Till, order 20260825-3: − took Butter Roti from 2 to 1. The same Bhaaji Pau choices joined the first line, giving "2× Bhaaji Pau (Butter)" and "2× Sides: Onions".
+  - The Terminal at tablet width (768 x 1024), AC6 all sent: two presses of + on Butter Roti gave one new "Butter Roti 2". + on Bhaaji Pau gave a new Bhaaji Pau (Butter) 1 with its Onions 1. The sides had no −/+.
+**Left open:** part 2, the variation form (several types per dish, D27-192), waits on the master's check of the model.
+
 ## 2026-09-29 · The folio lane: "Charge to room" on a room with two open bills (POS-26, D27-162)
 
 **Asked for:** the owner's bug of 28 September (a POS charge to a room not on the guest's bill) - root cause, fixed once, one test. Branch `folio/edit-29sep` (from cp6 ca02e37, round F's `fix/leftovers-28sep` merged in), copy `.claude\worktrees\nervous-spence-42dcae`, database `fidato_s31`, API 8871, web 5271.

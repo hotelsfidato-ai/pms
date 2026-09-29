@@ -175,7 +175,18 @@ export function OrderPad({
       addonLabels,
       unitPrice: unitPriceOf(item, variationId, addonIds),
     };
-    setLines((prev) => [...prev, line]);
+    /* The same dish again is one more of it (D27-189): the same choices -
+       variation, note and sides - as the server matches them on Send.
+       Everything on the pad is unsent, so it always joins. */
+    const sides = [...line.addonIds].sort().join();
+    setLines((prev) => {
+      const same = prev.find((l) => l.itemId === item.id
+        && l.variationId === line.variationId && l.note.trim() === note.trim()
+        && [...l.addonIds].sort().join() === sides);
+      return same
+        ? prev.map((l) => (l === same ? { ...l, qty: l.qty + qty } : l))
+        : [...prev, line];
+    });
     setAsking(null);
   };
 

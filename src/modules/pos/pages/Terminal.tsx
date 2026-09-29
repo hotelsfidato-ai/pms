@@ -738,6 +738,9 @@ export default function TerminalPage() {
                 {order.lines.map((l) => (
                   <li key={l.id} className={cn(
                     "py-1", l.voided && "opacity-45",
+                    /* A side sits under its dish and follows its quantity
+                       (D27-192, Q8), as on the Till. */
+                    l.isAddon && "pl-5",
                   )}>
                     <div className="flex items-center gap-2">
                       <span className={cn(
@@ -770,7 +773,7 @@ export default function TerminalPage() {
                       </p>
                     )}
 
-                    {!l.voided && order.status === "open" ? (
+                    {!l.voided && order.status === "open" && !l.isAddon ? (
                       /* A STEPPER, not a strike-and-retype. "Make that two
                          rather than three" used to mean cancelling the line
                          and adding it again, which left a struck row on the

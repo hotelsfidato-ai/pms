@@ -2265,32 +2265,45 @@ async function addOneLine(
 
     /* Price and tax are COPIED onto the line. A menu price that rises
        next month must not silently re-price a bill printed today. */
-      /* Increment first. Only if nothing matched does a row get added. */
-      /* Add-ons make two lines DIFFERENT even when the dish and note
-         match — a Bhaaji Pau with onions is not the same thing to a
-         kitchen as one without. Sent with add-ons, it always starts a
-         new line rather than joining one whose sides nobody checked. */
-      const wantsAddons = (input.addonIds?.length ?? 0) > 0;
-      const { rowCount: bumped } = wantsAddons ? { rowCount: 0 } : await client.query(
+      /* Increment first. Only if nothing matched does a row get added.
+         THE SAME DISH IS THE SAME CHOICES (D27-189): the variation, the
+         note and exactly these sides. A Bhaaji Pau with onions is not the
+         same thing to a kitchen as one without, but a second one with
+         onions is one more of it - with sides, this started a new line
+         every time, so the same dish ordered twice read as two. The dish
+         and its sides go up together. */
+      const { rows: same } = await client.query<{ id: string }>(
         `update pos_order_lines
             set qty = qty + $1
-          where order_id = $2
-            and item_id = $3
-            and variation_id is not distinct from $5
-            and parent_line_id is null
-            and not exists (select 1 from pos_order_lines a
-                             where a.parent_line_id = pos_order_lines.id
-                               and not a.voided)
-            and not voided
-            /* NOT ONE THE KITCHEN HAS (the owner, 28 September). Raising a
-               sent line put the second plate on the bill and on no docket:
-               the guest paid for two and the kitchen's slip said one. An
-               extra after the send is a new line and goes on the next. */
-            and kot_status = 'pending'
-            and note is not distinct from $4`,
+          where id = (
+            select l.id from pos_order_lines l
+             where l.order_id = $2
+               and l.item_id = $3
+               and l.variation_id is not distinct from $5
+               and l.parent_line_id is null
+               and not l.voided
+               /* NOT ONE THE KITCHEN HAS (the owner, 28 September). Raising a
+                  sent line put the second plate on the bill and on no docket:
+                  the guest paid for two and the kitchen's slip said one. An
+                  extra after the send is a new line and goes on the next. */
+               and l.kot_status = 'pending'
+               and l.note is not distinct from $4
+               and array(select a.addon_id from pos_order_lines a
+                          where a.parent_line_id = l.id and not a.voided
+                          order by 1)
+                 = array(select unnest($6::uuid[]) order by 1)
+             order by l.added_at limit 1)
+          returning id::text`,
         [qty, orderId, input.itemId, input.note?.trim() || null,
-         input.variationId ?? null],
+         input.variationId ?? null, chosen.map((a) => a.id)],
       );
+      if (same[0]) {
+        await client.query(
+          `update pos_order_lines set qty = qty + $1
+            where parent_line_id = $2 and not voided`,
+          [qty, same[0].id]);
+      }
+      const bumped = same.length;
 
       const added = !bumped ? await client.query<{ id: string }>(
       /* TAPPING THE SAME DISH TWICE MEANS TWO OF IT, NOT TWO LINES.
@@ -4163,11 +4176,13 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
     }
 
     const { rows: line } = await client.query<{
-      qty: string; sent: boolean; has_addons: boolean;
+      qty: string; sent: boolean; addon_ids: string[];
+      item_id: string | null; variation_id: string | null; note: string | null;
     }>(
       `select qty::text, kot_status <> 'pending' as sent,
-              exists (select 1 from pos_order_lines a
-                       where a.parent_line_id = l.id and not a.voided) as has_addons
+              array(select a.addon_id::text from pos_order_lines a
+                     where a.parent_line_id = l.id and not a.voided) as addon_ids,
+              item_id::text, variation_id::text, note
          from pos_order_lines l
         where id = $1 and order_id = $2 and not voided
         for update`,
@@ -4175,14 +4190,9 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
     );
     if (!line[0]) return refuse("That line is struck, or is not here.");
     /* MORE of a dish the kitchen has is a new line, for the next docket -
-       the same as tapping it again (the owner, 28 September). With sides,
-       the waiter adds it from the menu so its sides are chosen with it. */
+       the same as tapping it again (the owner, 28 September), sides and
+       all (D27-192, Q7). */
     const moreSent = line[0].sent && qty > Number(line[0].qty);
-    if (moreSent && line[0].has_addons) {
-      return refuse(
-        "The kitchen already has this. Add another from the menu, with its " +
-        "sides, and send it.");
-    }
     /* Fewer of a dish the kitchen already has is a strike (D27-119). */
     const fewerSent = line[0].sent && qty < Number(line[0].qty);
     if (fewerSent) {
@@ -4203,15 +4213,17 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
       );
       if (!rowCount) return refuse("That line is already struck.");
     } else if (moreSent) {
-      await client.query(
-        `insert into pos_order_lines
-           (order_id, hotel_id, item_id, variation_id, name, qty, unit_price,
-            tax_rate, tax_scheme, note, added_by)
-         select order_id, hotel_id, item_id, variation_id, name, $2 - qty,
-                unit_price, tax_rate, tax_scheme, note, $3
-           from pos_order_lines where id = $1`,
-        [c.req.param("lineId"), qty, session.staffId],
-      );
+      /* Through the one place a dish goes on (D27-189): it joins the unsent
+         line of the same dish, and starts one only when there is none. Its
+         own insert here made a new line on every press. */
+      const l = line[0];
+      const refused = await addOneLine(client, session, hotelId, orderId, {
+        qty: qty - Number(l.qty), addonIds: l.addon_ids,
+        ...(l.item_id ? { itemId: l.item_id } : {}),
+        ...(l.note ? { note: l.note } : {}),
+        ...(l.variation_id ? { variationId: l.variation_id } : {}),
+      });
+      if (refused) return refused;
     } else if (fewerSent) {
       /* THREE SENT, TWO WANTED: the one that goes is a struck line of its
          own, from the same ticket, so the docket, the pass and the day's
@@ -4228,14 +4240,16 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
            from pos_order_lines where id = $1`,
         [c.req.param("lineId"), qty, session.staffId, reason],
       );
+      /* Its sides go with it (D27-189): two plates, two lots of onions. */
       await client.query(
-        `update pos_order_lines set qty = $1 where id = $2`,
+        `update pos_order_lines set qty = $1
+          where (id = $2 or parent_line_id = $2) and not voided`,
         [qty, c.req.param("lineId")],
       );
     } else {
       const { rowCount } = await client.query(
         `update pos_order_lines set qty = $1
-          where id = $2 and order_id = $3 and not voided`,
+          where (id = $2 or parent_line_id = $2) and order_id = $3 and not voided`,
         [qty, c.req.param("lineId"), orderId],
       );
       if (!rowCount) return refuse("That line is struck, or is not here.");
