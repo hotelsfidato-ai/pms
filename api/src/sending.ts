@@ -1,3 +1,4 @@
+import { createHash, randomUUID } from "node:crypto";
 import type { Client } from "./db.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -22,10 +23,10 @@ import type { Client } from "./db.ts";
    sitting on this server. One POST carries it.
 
    THE SECRET. The webhook address is open to the internet, because that
-   is what a webhook is. Every call carries `x-fidato-secret` and n8n
-   drops anything without it (docs/briefs/n8n-sending.md, step 5). It
-   lives ONLY in the server's settings — never in the repository, a
-   screen, a test file or a chat.
+   is what a webhook is. Every call carries `x-fidato-secret` and each
+   workflow's webhook refuses anything without it (deploy/n8n/IMPORT.md).
+   Each sender has its own. They live ONLY in the server's settings -
+   never in the repository, a screen, a test file or a chat.
 
    UNTIL THE OWNER HAS BUILT THE WORKFLOW, nothing sends. `canSend()` is
    false, every screen says so plainly rather than offering a button that
@@ -34,27 +35,65 @@ import type { Client } from "./db.ts";
    did.
    ══════════════════════════════════════════════════════════════════ */
 
-/** Read at CALL time, not at import. `api/src/env.ts` reads once and
-    freezes, which is right for everything that must be true at boot —
-    but these two are allowed to be absent, and the test starts a fake
-    receiver on a random port and points them at it. */
-export function sendingTarget(): { url: string; secret: string } | null {
-  const url = process.env["N8N_SEND_URL"];
-  const secret = process.env["N8N_SEND_SECRET"];
+/* ── TWO SENDERS, CHOSEN BY THE MESSAGE (D27-98, 29 September) ──────
+   The PMS runs no n8n of its own for guests. It decides what and when,
+   as before; the sending is done by a NEW workflow in each of the two
+   apps that already talk to guests:
+
+     crs   the CRS's n8n: every email (its mailbox), and the booking
+           voucher on WhatsApp (D27-99)
+     m2r   the market-to-revenue app's n8n: every other WhatsApp - the
+           check-in code, the arrival reminder, the check-in link, the
+           review request
+
+   Both workflows send from the ONE Fidato WhatsApp number (D27-101), a
+   setting here and nowhere in either file: WHATSAPP_PHONE_NUMBER_ID
+   travels in every WhatsApp message as `from.phoneNumberId`.
+
+   Read at CALL time, not at import. `api/src/env.ts` reads once and
+   freezes, which is right for everything that must be true at boot -
+   but these are allowed to be absent, and the tests start a fake
+   receiver on a random port and point them at it. */
+export type Sender = "crs" | "m2r";
+
+/** The kinds the CRS's WhatsApp sends; every other WhatsApp is m2r's. */
+const CRS_WHATSAPP_KINDS: readonly string[] = ["booking-confirmation"];
+
+export const senderFor = (m: Pick<Message, "channel" | "kind">): Sender =>
+  m.channel === "email" || CRS_WHATSAPP_KINDS.includes(m.kind) ? "crs" : "m2r";
+
+function sendingTarget(sender: Sender): { url: string; secret: string } | null {
+  const url = process.env[sender === "crs" ? "CRS_N8N_URL" : "M2R_N8N_URL"];
+  const secret = process.env[sender === "crs" ? "CRS_N8N_SECRET" : "M2R_N8N_SECRET"];
   return url && secret ? { url, secret } : null;
 }
 
-/** Whether anything can be sent at all. A screen asks this BEFORE it
-    offers to send, so nobody presses a button that was never going to
-    work. */
-export const canSend = (): boolean => sendingTarget() !== null;
+const whatsappNumberId = () => process.env["WHATSAPP_PHONE_NUMBER_ID"] || null;
+
+/** Whether anything can be sent at all: both workflows and the number.
+    One answer for every screen - half a setup would send the check-in
+    code and not the voucher, which nobody could explain at the desk. A
+    screen asks this BEFORE it offers to send, so nobody presses a button
+    that was never going to work. */
+export const canSend = (): boolean =>
+  sendingTarget("crs") !== null && sendingTarget("m2r") !== null && whatsappNumberId() !== null;
+
+/** A message id that is the same every time it is worked out from the
+    same parts - the sweep's third try at one booking's confirmation is
+    the SAME message as its first. The workflow drops an id it has sent
+    already, so a retry after a timeout (sent, but the answer was lost)
+    never reaches the guest twice. */
+export function messageIdFor(...parts: string[]): string {
+  const h = createHash("sha256").update(parts.join(":"), "utf8").digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
 
 /** The sentence every screen shows where it cannot send. One wording, so
     the desk reads the same thing wherever it meets this. */
 export const NOT_CONNECTED =
   "Sending is not set up yet. Bills and vouchers print and download as usual; "
-  + "nothing goes by WhatsApp or email until the workflow and its secret are "
-  + "in the server's settings.";
+  + "nothing goes by WhatsApp or email until both workflows, their secrets and "
+  + "the WhatsApp number are in the server's settings.";
 
 export interface SendableFile {
   /** What the guest sees the attachment called. */
@@ -64,6 +103,9 @@ export interface SendableFile {
 }
 
 export interface Message {
+  /** The same on every try of the same message (`messageIdFor`), so the
+      workflow sends it once. Absent: a new message, a new id. */
+  id?: string;
   /** The PMS decides per message; n8n branches on the same word. */
   channel: "whatsapp" | "email";
   /** bill, voucher, confirmation, review, offer… a word, not an enum:
@@ -109,9 +151,46 @@ function addressFor(message: Message): string | null {
   return to?.trim() || null;
 }
 
+/** One POST to one workflow, and what to write down about it. */
+async function post(
+  to: { url: string; secret: string }, body: unknown, timeoutMs: number, inWords: string,
+): Promise<{ ok: boolean; detail: string }> {
+  try {
+    const answer = await fetch(to.url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-fidato-secret": to.secret },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    /* THE RECEIVER'S ANSWER IS SHOWN TO A CLERK, so it is trimmed to a
+       sentence rather than pasted whole. It is also UNTRUSTED: it goes
+       into a text column and is never parsed or executed. */
+    return answer.ok
+      ? { ok: true, detail: `The receiver took it (${answer.status}).` }
+      : {
+          ok: false,
+          detail: `The receiver refused it (${answer.status}). `
+            + (await answer.text().catch(() => "")).slice(0, 200).trim(),
+        };
+  } catch (error) {
+    return {
+      ok: false,
+      detail: error instanceof Error && error.name === "TimeoutError"
+        ? `The receiver did not answer within ${inWords} seconds.`
+        : `Could not reach the receiver. ${(error as Error)?.message ?? ""}`.trim(),
+    };
+  }
+}
+
+/** The inbox is told first, and briefly: a guest who replies at once finds
+    themselves already a booked guest. Ten seconds, because a clerk is
+    waiting on the voucher behind it. */
+const MARK_TIMEOUT_MS = 10_000;
+
 export async function send(client: Client, message: Message): Promise<SendResult> {
-  const target = sendingTarget();
-  if (!target) return { ok: false, reason: NOT_CONNECTED };
+  if (!canSend()) return { ok: false, reason: NOT_CONNECTED };
+  const sender = senderFor(message);
+  const target = sendingTarget(sender)!;
 
   const to = addressFor(message);
   if (!to) {
@@ -124,8 +203,14 @@ export async function send(client: Client, message: Message): Promise<SendResult
   }
 
   const body = {
+    messageId: message.id ?? randomUUID(),
+    /* The market-to-revenue workflow marks the guest booked, then sends
+       (D27-104); "mark" alone is the inbox being told about a message the
+       CRS sends. The CRS workflow reads no action. */
+    action: "send" as "send" | "mark",
     channel: message.channel,
     kind: message.kind,
+    ...(message.channel === "whatsapp" ? { from: { phoneNumberId: whatsappNumberId() } } : {}),
     hotel: {
       code: message.hotel.code, name: message.hotel.name,
       phone: message.hotel.phone ?? null,
@@ -152,32 +237,21 @@ export async function send(client: Client, message: Message): Promise<SendResult
     sentBy: message.sentBy?.name ?? null,
   };
 
-  let status: "sent" | "failed";
-  let detail: string;
-  try {
-    const answer = await fetch(target.url, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-fidato-secret": target.secret,
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    status = answer.ok ? "sent" : "failed";
-    /* THE RECEIVER'S ANSWER IS SHOWN TO A CLERK, so it is trimmed to a
-       sentence rather than pasted whole. It is also UNTRUSTED: it goes
-       into a text column and is never parsed or executed. */
-    detail = answer.ok
-      ? `The receiver took it (${answer.status}).`
-      : `The receiver refused it (${answer.status}). `
-        + (await answer.text().catch(() => "")).slice(0, 200).trim();
-  } catch (error) {
-    status = "failed";
-    detail = error instanceof Error && error.name === "TimeoutError"
-      ? "The receiver did not answer within twenty seconds."
-      : `Could not reach the receiver. ${(error as Error)?.message ?? ""}`.trim();
+  /* A WHATSAPP THE CRS SENDS STILL REACHES THE SALES INBOX when the guest
+     replies - one number for both (D27-101) - so that inbox is told first
+     that this is a booked guest, or their reply starts the greeting bot
+     (D27-104). Without the document: the inbox needs the guest, not the
+     PDF. A failed mark does not stop the voucher; it is written down. */
+  let marked = "";
+  if (sender === "crs" && message.channel === "whatsapp") {
+    const { file: _file, ...rest } = body as typeof body & { file?: unknown };
+    const mark = await post(sendingTarget("m2r")!, { ...rest, action: "mark" }, MARK_TIMEOUT_MS, "ten");
+    if (!mark.ok) marked = ` The sales inbox was not told the guest is booked: ${mark.detail}`;
   }
+
+  const answer = await post(target, body, TIMEOUT_MS, "twenty");
+  const status: "sent" | "failed" = answer.ok ? "sent" : "failed";
+  const detail = answer.detail + marked;
 
   /* ⚠ THROUGH THE DEFINER FUNCTION, NOT A BARE INSERT (migration 117).
      `messages_sent` is FORCE row-secured and scoped to

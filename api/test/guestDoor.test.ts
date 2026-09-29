@@ -12,8 +12,8 @@ import { forgetKnocksForTests } from "../src/routes/guestDoor.ts";
 
      · a link that was never made, or has expired, or was revoked
      · another booking - a token is one booking and nothing else
-     · a phone that is not the one on the booking: no code, and no hint
-       that it was wrong
+     · any number but the booking's own: nobody types one (D27-105), the
+       code goes to the number the booking carries, or to nobody
      · a guessed code: five tries and it is dead
      · the bill, before the code has been answered
 
@@ -212,18 +212,88 @@ describe("what the link shows before the guest has proved who they are", () => {
 });
 
 describe("the six digits that prove it is that guest", () => {
-  it("says the same thing, in the same way, whether or not the number was right", async () => {
-    const right = await asGuest(`/${link}/code`, "POST", { phone });
-    const wrong = await asGuest(`/${link}/code`, "POST", { phone: "9000000001" });
+  /* A receiver shaped like the market-to-revenue workflow, keeping what it
+     was sent: the code must go to the BOOKING's number, whatever anybody
+     posts (D27-105, and OCI-2's rule that a stand-in must read what it
+     gets). */
+  const withReceiver = async <T>(fn: (seen: Array<{ to: { phone: string } }>) => Promise<T>) => {
+    const { createServer } = await import("node:http");
+    const seen: Array<{ to: { phone: string } }> = [];
+    const server = createServer((req, res) => {
+      let raw = "";
+      req.on("data", (c) => { raw += c; });
+      req.on("end", () => { seen.push(JSON.parse(raw)); res.writeHead(200).end("ok"); });
+    });
+    await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+    const port = (server.address() as { port: number }).port;
+    process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${port}/pms-send`;
+    process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = "only-this-test-run-knows-this";
+    process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
+    try { return await fn(seen); } finally {
+      for (const k of ["CRS_N8N_URL", "M2R_N8N_URL", "CRS_N8N_SECRET", "M2R_N8N_SECRET"]) delete process.env[k];
+      await new Promise<void>((done) => server.close(() => done()));
+    }
+  };
 
-    /* One of them made a code and one did not. A stranger trying numbers must
-       not be able to tell which - not by the words, and NOT BY THE STATUS
-       (D18-13). The first version of the door answered 200 for a wrong number
-       and 503 for the right one, which is exactly how a stranger would have
-       found the guest's number; this test caught it on its first run. */
-    expect(wrong.status).toBe(right.status);
-    expect(((await wrong.json()) as { message: string }).message)
-      .toBe(((await right.json()) as { message: string }).message);
+  it("sends the code to the booking's own number, with none typed, and says where", async () => {
+    await withReceiver(async (seen) => {
+      forgetKnocksForTests();
+      /* A number in the body is not read: there is nothing to type. */
+      const res = await asGuest(`/${link}/code`, "POST", { phone: "9000000001" });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { sent: boolean; message: string };
+      expect(body.sent).toBe(true);
+      expect(body.message).toBe("We sent the code on WhatsApp to the number ending 0011.");
+      expect(seen).toHaveLength(1);
+      expect(seen[0]!.to.phone, "the booking's whole number, never the one posted").toBe(phone);
+    });
+  });
+
+  it("says Ask the desk, and issues nothing, for a booking with no number", async () => {
+    await sql("update guests set phone = null where id = $1", [guestId]);
+    try {
+      await withReceiver(async (seen) => {
+        forgetKnocksForTests();
+        await sql("delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
+        const res = await asGuest(`/${link}/code`, "POST", {});
+        expect(res.status).toBe(200);
+        expect(((await res.json()) as { message: string }).message).toMatch(/no mobile number .* Ask the desk/);
+        expect(seen, "nothing sent").toHaveLength(0);
+        const { rows } = await sql(
+          `select 1 from guest_link_codes c join guest_links l on l.id = c.link_id
+            where l.reservation_id = $1`, [stayId]);
+        expect(rows, "a code nobody can receive is not issued").toHaveLength(0);
+      });
+    } finally {
+      await sql("update guests set phone = $2 where id = $1", [guestId, phone]);
+    }
+  });
+
+  /* The development-only switch (D27-105): the code in the answer, sent to
+     nobody - and only beside ALLOW_DEV_AUTH, which env.ts refuses to start
+     with under production. The test server runs with it on. */
+  it("hands the code back, and sends nothing, only on a development server told to", async () => {
+    forgetKnocksForTests();
+    const off = await asGuest(`/${link}/code`, "POST", {});
+    expect(off.status, "no switch: nothing can be sent, and no code in the answer").toBe(503);
+    expect(await off.text()).not.toMatch(/\b\d{6}\b/);
+
+    process.env["GUEST_CODE_ON_SCREEN"] = "1";
+    try {
+      const on = await asGuest(`/${link}/code`, "POST", {});
+      expect(on.status).toBe(200);
+      const body = (await on.json()) as { devCode: string; message: string };
+      expect(body.devCode).toMatch(/^\d{6}$/);
+      expect(body.message).toMatch(/Development only: nothing was sent/);
+      const { rows } = await sql(
+        `select c.code_hash = encode(digest($2::text, 'sha256'), 'hex') as same
+           from guest_link_codes c join guest_links l on l.id = c.link_id
+          where l.token_hash = encode(digest($1::text, 'sha256'), 'hex')
+          order by c.created_at desc limit 1`, [link, body.devCode]);
+      expect(rows[0].same, "the code on screen is the live code").toBe(true);
+    } finally {
+      delete process.env["GUEST_CODE_ON_SCREEN"];
+    }
   });
 
   /* ⚠ THIS TEST USED TO SAY `expect([200, 503]).toContain(res.status)` AND
@@ -241,12 +311,14 @@ describe("the six digits that prove it is that guest", () => {
       where l.reservation_id = $1 order by c.created_at desc`, [stayId]);
 
   it("sends nothing AND ISSUES NOTHING while the hotel has not connected n8n", async () => {
-    delete process.env["N8N_SEND_URL"];
-    delete process.env["N8N_SEND_SECRET"];
+    delete process.env["CRS_N8N_URL"];
+    delete process.env["M2R_N8N_URL"];
+    delete process.env["CRS_N8N_SECRET"];
+    delete process.env["M2R_N8N_SECRET"];
     await sql("delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
     forgetKnocksForTests();
 
-    const res = await asGuest(`/${link}/code`, "POST", { phone });
+    const res = await asGuest(`/${link}/code`, "POST", {});
     expect(res.status, "it says plainly that it cannot send").toBe(503);
 
     /* The issue call used to sit ABOVE the check, so a knock at a server that
@@ -265,14 +337,15 @@ describe("the six digits that prove it is that guest", () => {
     const server = createServer((_req, res) => { res.writeHead(200).end("ok"); });
     await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
     const port = (server.address() as { port: number }).port;
-    process.env["N8N_SEND_URL"] = `http://127.0.0.1:${port}/pms-send`;
-    process.env["N8N_SEND_SECRET"] = "only-this-test-run-knows-this";
+    process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${port}/pms-send`;
+    process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
+    process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = "only-this-test-run-knows-this";
 
     try {
       await sql("delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
       forgetKnocksForTests();
 
-      const res = await asGuest(`/${link}/code`, "POST", { phone });
+      const res = await asGuest(`/${link}/code`, "POST", {});
       const text = await res.clone().text();
       expect(res.status).toBe(200);
 
@@ -284,8 +357,10 @@ describe("the six digits that prove it is that guest", () => {
       expect(text, "and it is never in the answer, in any environment")
         .not.toMatch(/\b\d{6}\b/);
     } finally {
-      delete process.env["N8N_SEND_URL"];
-      delete process.env["N8N_SEND_SECRET"];
+      delete process.env["CRS_N8N_URL"];
+      delete process.env["M2R_N8N_URL"];
+      delete process.env["CRS_N8N_SECRET"];
+      delete process.env["M2R_N8N_SECRET"];
       await new Promise<void>((done) => server.close(() => done()));
     }
   });
@@ -310,6 +385,11 @@ describe("the six digits that prove it is that guest", () => {
     /* D21-6: the answer unlocks THIS phone - api/test/guestDoorBehindTheCode
        .test.ts proves the link alone opens nothing behind the code. */
     expect(answered.unlock, "this phone's unlock, handed back once").toMatch(/^[\w-]{43}$/);
+    /* D27-169: for a day, not the hour it was (D21-92). */
+    const { rows: life } = await sql(
+      `select extract(epoch from expires_at - created_at)::int as seconds from guest_unlocks
+        where unlock_hash = encode(digest($1::text, 'sha256'), 'hex')`, [answered.unlock]);
+    expect(life[0].seconds, "a day unlocked").toBe(24 * 3600);
 
     /* THIS link, by its hash. The stay has two - the desk made it another in
        the first test - and "where reservation_id" answered whichever one the

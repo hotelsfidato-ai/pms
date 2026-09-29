@@ -209,6 +209,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/suppliers`]: own("routes/places.ts: keepsPlaces"),
   [`PUT ${H}/suppliers/:id`]: own("routes/places.ts: keepsPlaces"),
   [`POST ${H}/stays/:id/guest-link`]: GUEST_PAGE,
+  /* Send check-in link (D27-105): the same page, sent rather than copied -
+     so whoever may make it may send it. */
+  [`POST ${H}/stays/:id/checkin-link`]: GUEST_PAGE,
   [`POST ${H}/online-checkin/submissions/:id/confirm`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`POST ${H}/online-checkin/submissions/:id/set-aside`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`POST ${H}/online-checkin/requests/:id`]: own("routes/guestDoor.ts: DESK_ROLES"),

@@ -124,6 +124,25 @@ loop turns one failure into a repeat of everything before it.**
 
 ---
 
+### MSG-6 · The voucher printed a code where the desk had said a word
+
+**Found** 29 September, by reading the first voucher sent from New booking
+through a stand-in receiver: the room line read "EP - 2 adults". New booking
+had offered the guest "Room only"; the voucher is the guest's copy of that
+conversation, and "EP" is a word only the trade reads.
+
+**What was done:** the owner's D27-164 - meal plans read the code WITH its words
+everywhere ("EP · Room only", "CP · Room + breakfast"), as round F made New
+booking say it. `app.guest_voucher` reads them from `meal_plans` (`code ·
+includes`, the way inventory's pricing.ts builds its list), so there is one
+list and it is the database's; the PDF keeps the middot (WinAnsi has it).
+Tested (`voucherDocument.test.ts`).
+
+**The rule: a document a guest reads uses the words the guest was offered,
+not the code the database keeps.**
+
+---
+
 ## Open — not fixed
 
 ### MSG-4 · The date is formatted twice in this repository

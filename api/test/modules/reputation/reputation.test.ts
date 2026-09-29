@@ -98,8 +98,9 @@ let seen: Seen | null = null;
 const THE_SECRET = "a-secret-that-exists-only-in-this-test-run";
 
 const connected = () => {
-  process.env["N8N_SEND_URL"] = receiverUrl;
-  process.env["N8N_SEND_SECRET"] = THE_SECRET;
+  process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = receiverUrl;
+  process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
+  process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = THE_SECRET;
 };
 
 /** How many review requests this file's property has recorded. Counted for
@@ -174,8 +175,10 @@ beforeEach(() => {
   seen = null;
   /* Nothing is connected unless a test says so. This is the state the
      system is actually in today. */
-  delete process.env["N8N_SEND_URL"];
-  delete process.env["N8N_SEND_SECRET"];
+  delete process.env["CRS_N8N_URL"];
+  delete process.env["M2R_N8N_URL"];
+  delete process.env["CRS_N8N_SECRET"];
+  delete process.env["M2R_N8N_SECRET"];
 });
 
 afterAll(async () => {

@@ -89,6 +89,7 @@ export const KIND_WORDS: Record<string, string> = {
   "booking-confirmation": "Booking confirmation",
   "arrival-reminder": "Before arrival",
   "guest-link-code": "Their sign-in code",
+  "checkin-link": "Check-in link",
   bill: "Bill",
   voucher: "Voucher",
 };
