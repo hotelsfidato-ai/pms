@@ -173,8 +173,8 @@ after the stay is checked out (`front-desk/operations.ts`).
 
 - **L17, expiry after 24 months with no stay: not built.** No point can
   lapse before October 2028; write the lapse row before then.
-- **Guest 360's card is not placed**: `crm` is claimed by the contracts
-  lane. The two lines are in Requests below.
+- **Guest 360's card is placed by the master at merge** (30 September):
+  `crm` is claimed by the contracts lane. The two lines are in Requests below.
 - The CA's six answers (CA-L1 to CA-L6).
 - A code to the member's phone before points are used (L16), once sending
   is switched on.
@@ -207,4 +207,4 @@ src/components/app/navigation.test.ts`, `cd api && npm test` (its
   `src/modules/crm/pages/Guest360.tsx`, `import { MemberCard } from
   "@/modules/loyalty";` and, after the "Every stay, at every hotel" card,
   `<MemberCard hotelId={hotelId} guestId={g.id} />`. Not done by this lane:
-  crm is claimed by the contracts lane; the master decides who adds it.
+  crm is claimed by the contracts lane; the master adds it at merge (30 September).
