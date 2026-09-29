@@ -1932,6 +1932,19 @@ const DAY_CLOSED =
   "The restaurant's day is closed and its drawer counted. New bills and " +
   "payments wait until the night audit moves the date.";
 
+/* THE DAY OPENS BY COUNTING THE FLOAT (D27-190, replacing D27-139's "no
+   open step"): the outlet's day row is made by Open the day, and until it
+   exists no CASH is taken, so every rupee belongs to a counted day. Bills,
+   card, UPI and room charges go on (D27-118's shape at the desk). */
+async function dayOpened(client: Client, outletId: string, date: string): Promise<boolean> {
+  const { rows } = await client.query<{ opened: boolean }>(
+    `select exists (select 1 from pos_day_ends
+                     where outlet_id = $1 and business_date = $2::date) as opened`,
+    [outletId, date],
+  );
+  return rows[0]!.opened;
+}
+
 till.post("/:code/till/orders", async (c) => {
   type OpenBody = { outlet?: string; table?: string; tableId?: string };
   const input = await c.req.json<OpenBody>().catch(() => ({}) as OpenBody);
@@ -3461,12 +3474,52 @@ till.get("/:code/till/day-end", async (c) => {
           value: Number(d.value), count: d.count,
         })),
       },
+      /* Open the day has counted the float (D27-190). */
+      opened: Boolean(day[0]),
       closedAt: day[0]?.closed_at ?? null,
       closedBy: day[0]?.closed_by_name ?? null,
     };
   });
 
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+/* Open the day: the float counted before any cash is taken (D27-190).
+   Once, and final - the close counts against this figure. */
+till.post("/:code/till/day-end/open", async (c) => {
+  type OpenBody = { outlet?: string; opening?: unknown };
+  const input = await c.req.json<OpenBody>().catch(() => ({}) as OpenBody);
+  const opening = input.opening;
+  if (typeof opening !== "number" || !Number.isFinite(opening) || opening < 0) {
+    return c.json(refuse(
+      "Count the opening float first - enter 0 if the tin is empty."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: outlet } = await client.query<{ id: string }>(
+      `select id::text from pos_outlets
+        where hotel_id = $1 and code = $2 and is_active`,
+      [hotelId, (input.outlet ?? "REST").toUpperCase()],
+    );
+    if (!outlet[0]) return refuse("No such outlet.");
+
+    const businessDate = await businessDateFor(client, hotelId);
+    const { rows } = await client.query(
+      `insert into pos_day_ends (hotel_id, outlet_id, business_date, opening_cash)
+       values ($1,$2,$3,$4)
+       on conflict (outlet_id, business_date) do nothing
+       returning id`,
+      [hotelId, outlet[0].id, businessDate, opening.toFixed(2)],
+    );
+    if (!rows.length) return refuse("Today is already open. Its float was counted.");
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
 till.post("/:code/till/day-end/movements", async (c) => {
@@ -3531,7 +3584,7 @@ till.post("/:code/till/day-end/movements", async (c) => {
 
 till.post("/:code/till/day-end/count", async (c) => {
   type CountBody = {
-    outlet?: string; opening?: number;
+    outlet?: string;
     denominations?: { value: number; count: number }[];
   };
   const input = await c.req.json<CountBody>().catch(() => ({}) as CountBody);
@@ -3549,17 +3602,16 @@ till.post("/:code/till/day-end/count", async (c) => {
 
     const businessDate = await businessDateFor(client, hotelId);
 
+    /* The float was counted at Open the day (D27-190); the count no longer
+       makes the day or types its float, which it used to default to 0. */
     const { rows: day } = await client.query<{ id: string; closed_at: string | null }>(
-      `insert into pos_day_ends
-         (hotel_id, outlet_id, business_date, opening_cash)
-       values ($1,$2,$3,$4)
-       on conflict (outlet_id, business_date) do update
-          set opening_cash = coalesce($4, pos_day_ends.opening_cash)
-       returning id::text, closed_at::text`,
-      [hotelId, outlet[0].id, businessDate,
-       input.opening === undefined ? 0 : Number(input.opening).toFixed(2)],
+      `select id::text, closed_at::text from pos_day_ends
+        where outlet_id = $1 and business_date = $2::date`,
+      [outlet[0].id, businessDate],
     );
-    const dayId = day[0]!.id;
+    if (!day[0]) return refuse("Open the day first: count the float it started with.");
+    if (day[0].closed_at) return refuse("That day is already closed.");
+    const dayId = day[0].id;
 
     if (input.denominations) {
       /* Replaced wholesale. A count is one act — somebody empties the tin
@@ -3816,6 +3868,12 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       return refuse(
         "This is a delivery with no phone number. It will be cooked and " +
         "then it cannot leave the building - take a number first.");
+    }
+    if ((tenders ? tenders.some((t) => t.method === "cash") : method === "cash")
+        && !(await dayOpened(client, order[0].outlet_id, order[0].business_date))) {
+      return refuse(
+        "Open the restaurant's day first (Close restaurant day, Open the day): cash is "
+        + "taken only once the float is counted. Card, UPI and room charges need no opening.");
     }
 
     const { rows: t } = await client.query<{

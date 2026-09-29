@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
+import { openTillDay } from "../../drawer.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    FIX ROUND C - the restaurant and the kitchen (QA of 28 September)
@@ -232,6 +233,11 @@ describe("D27-119: a dish the kitchen has comes off only for a manager, with a r
 });
 
 describe("NA-2: a bill paid wholly in cash is whole rupees", () => {
+  /* Cash only once the day is open, its float counted (D27-190). */
+  let putAway: () => Promise<void>;
+  beforeAll(async () => { putAway = await openTillDay("5EL", OUTLET); });
+  afterAll(async () => { await putAway(); });
+
   it("rounds the cash, with a Round off line; card stays exact", async () => {
     const cash = await open();
     const exact = (await add(cash.id, 1, papad)).payable;

@@ -176,9 +176,12 @@ cashier.get("/:code/cashier-shift", async (c) => {
 cashier.post("/:code/cashier-shift/open", async (c) => {
   const input = await c.req.json<{ opening?: number }>()
     .catch(() => ({}) as { opening?: number });
-  const opening = Number(input.opening ?? 0);
-  if (!Number.isFinite(opening) || opening < 0) {
-    return c.json(refuse("An opening float is zero or more."), 409);
+  /* COUNTED, NEVER ASSUMED (D27-190): a blank float was saved as ₹0, a
+     figure nobody counted. Zero is an answer only when somebody gives it. */
+  const opening = input.opening;
+  if (typeof opening !== "number" || !Number.isFinite(opening) || opening < 0) {
+    return c.json(refuse(
+      "Count the opening float first - enter 0 if the drawer is empty."), 409);
   }
 
   const result = await withSession(c.get("subject"), async (client, session) => {

@@ -348,6 +348,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders/:id/kot/:no/printed`]: KOT_PRINT,
   [`POST ${H}/till/kot-station/:outlet/poll`]: KOT_PRINT,
   [`POST ${H}/till/kot-station/:outlet`]: KOT_SWITCH,
+  /* Open the day, the float counted (D27-190): whoever closes it. */
+  [`POST ${H}/till/day-end/open`]: DAY_END,
   [`POST ${H}/till/day-end/movements`]: DAY_END,
   [`POST ${H}/till/day-end/count`]: DAY_END,
   [`POST ${H}/till/day-end/close`]: DAY_END,
