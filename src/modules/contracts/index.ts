@@ -1,6 +1,5 @@
-/* Contracts — negotiated rates and allotments — NOT BUILT. A Coming soon page only (the owner's decision,
-   16 September): `pages/Contracts.tsx`, its menu entry (`nav.ts`) and its address
-   (`routes.tsx`). No other service uses anything from here yet, so this
-   front door exports nothing. What the service will be, and what it needs,
-   is in MODULE.md beside this file. */
-export {};
+/* The front door of Contracts (D27-184) - the only file another service may
+   import (src/test/boundaries.test.ts). The company dialog, for Companies
+   and agents' Add company (C-13); the contract price, for the booking page. */
+export { CompanyDialog } from "./components/CompanyDialog";
+export { getContractTariff, type ContractTariff } from "./data/contracts";

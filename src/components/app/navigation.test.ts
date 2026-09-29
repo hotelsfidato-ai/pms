@@ -3,7 +3,7 @@ import {
   navigationFor, sidebarFor, flatNavigationFor, workingHomeFor, type NavItem,
   declaredEntries, sectionKeys, mayReach,
 } from "./navigation";
-import { ROLES, COMING_SOON_ROLES, type Role } from "@/lib/permissions";
+import { ROLES, COMING_SOON_ROLES, can, type Role } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
    THE MENU'S NAMING RULES, ENFORCED
@@ -276,7 +276,8 @@ describe("each person's menu", () => {
       /* 29 September: Leads and WhatsApp and Marketing are BUILT (D27-168,
          D27-170); their entries stay in this section as working screens. */
       "Sales and marketing": ["Loyalty"],
-      "Distribution": ["Channel manager", "Booking engine", "Contracts"],
+      /* 30 September: Contracts is BUILT (D27-184) and stays in Distribution. */
+      "Distribution": ["Channel manager", "Booking engine"],
       "Finance": ["Online payments"],
       "System": ["Room systems"],
     };
@@ -290,17 +291,18 @@ describe("each person's menu", () => {
         .map((s) => [s.label, s.items.filter((i) => i.notBuilt).map((i) => i.label)] as const)
         .filter(([, items]) => items.length > 0));
       expect(marked, role).toEqual(NOT_BUILT);
-      /* A section of services not built yet holds nothing else - yet. */
-      for (const key of ["Distribution"]) {
-        expect(sections.find((s) => s.label === key)?.items.every((i) => i.notBuilt), role).toBe(true);
-      }
+      /* Distribution holds the services not built yet, and Contracts. */
+      expect(sections.find((s) => s.label === "Distribution")?.items
+        .filter((i) => !i.notBuilt).map((i) => i.label), role).toEqual(["Contracts"]);
     }
     const all = Object.values(NOT_BUILT).flat();
     for (const role of ROLES.filter((r) => !COMING_SOON_ROLES.includes(r))) {
-      const labels = navigationFor(role, "5EL", ALL_ON).map((s) => s.label);
       /* Sales and marketing now holds Leads and WhatsApp for everyone who sees
-         guests (D27-170); its not-built entries stay hidden, below. */
-      expect(labels, role).not.toContain("Distribution");
+         guests (D27-170); its not-built entries stay hidden, below. And
+         Distribution shows Contracts alone, to whoever reads companies (C-6). */
+      const distribution = navigationFor(role, "5EL", ALL_ON).find((s) => s.label === "Distribution");
+      expect(distribution?.items.map((i) => i.label) ?? [], role)
+        .toEqual(can(role, "view", "company") ? ["Contracts"] : []);
       for (const label of all) expect(searchable(role), `${role} finds ${label}`).not.toContain(label);
     }
   });

@@ -27,6 +27,7 @@ import {
   GuestIdFields, guestIdState, guestIdPayload, noGuestId, type GuestId,
 } from "@/modules/guests";
 import { getTaxRate, listBillingCompanies, settle } from "@/modules/finance";
+import { getContractTariff, type ContractTariff } from "@/modules/contracts";
 import {
   assignRoom, assignableRooms, checkIn, earlyArrival, listInclusions, addStayInclusion,
 } from "@/modules/front-desk";
@@ -98,6 +99,10 @@ interface Quote {
   nightly: number | null;
   unpriced: string | null;
   differs: boolean;
+  /** The company's contract in force on arrival (D27-184), and, where it has
+      no figure for this line, the sentence saying the day's price applies. */
+  contract?: string | null;
+  note?: string | null;
   taxRate: number | null | undefined;
   taxPerNight: number | null;
 }
@@ -320,13 +325,18 @@ export default function BookingPage() {
       : discountMode === "promotion" && !promotion ? "Choose the promotion." : null;
 
   /* ── What each line will cost ──────────────────────────────────── */
+  /* A company named on the booking prices it by its contract in force on
+     arrival (D27-184); with none, the same calendar price, asked there. */
+  const contractOf = show.company && billTo === "company" ? companyId : "";
   const tariffs = useQueries({
     queries: lines.map((l) => ({
-      queryKey: ["tariff", hotelId, l.roomTypeId, l.mealPlan, from, to, l.adults, l.children],
-      queryFn: () => getTariff(hotelId, {
-        roomTypeId: l.roomTypeId, mealPlan: l.mealPlan,
-        from: from ?? "", to: to ?? "", adults: l.adults, children: l.children,
-      }),
+      queryKey: ["tariff", hotelId, l.roomTypeId, l.mealPlan, from, to, l.adults, l.children, contractOf],
+      queryFn: (): Promise<Tariff | ContractTariff | null> => {
+        const input = { roomTypeId: l.roomTypeId, mealPlan: l.mealPlan,
+          from: from ?? "", to: to ?? "", adults: l.adults, children: l.children };
+        return contractOf ? getContractTariff(hotelId, { ...input, companyId: contractOf })
+          : getTariff(hotelId, input);
+      },
       enabled: !!from && !!to && !l.comp && l.rate.trim() === "",
     })),
   });
@@ -337,13 +347,14 @@ export default function BookingPage() {
       const typed = Number(l.rate);
       return { nightly: typed > 0 ? afterDiscount(typed, pct) : typed, unpriced: null, differs: false };
     }
-    const t: Tariff | null | undefined = tariffs[i]?.data;
+    const t = tariffs[i]?.data;
     if (!t) return { nightly: null, unpriced: null, differs: false };
+    const terms = "contract" in t ? { contract: t.contract?.name ?? null, note: t.note } : {};
     const first = t.nights[0]?.total ?? null;
     if (first === null) {
-      return { nightly: null, unpriced: t.nights[0]?.unpriced ?? t.unpriced ?? "this party", differs: false };
+      return { nightly: null, unpriced: t.nights[0]?.unpriced ?? t.unpriced ?? "this party", differs: false, ...terms };
     }
-    return { nightly: afterDiscount(first, pct), unpriced: null, differs: t.nights.some((n) => n.total !== first) };
+    return { nightly: afterDiscount(first, pct), unpriced: null, differs: t.nights.some((n) => n.total !== first), ...terms };
   });
 
   const taxes = useQueries({
@@ -1189,6 +1200,11 @@ function LinePrice({ line, quote, pricing, nights }: {
       {quote.differs && (
         <span className="block text-warning-dark">
           The first night's price is kept for every night; the calendar differs later.
+        </span>
+      )}
+      {quote.contract && line.rate.trim() === "" && (
+        <span className="block" data-contract-line>
+          Contract: {quote.contract}{quote.note && <span className="text-warning-dark">. {quote.note}</span>}
         </span>
       )}
     </span>
