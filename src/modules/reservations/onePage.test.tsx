@@ -50,6 +50,13 @@ beforeEach(() => {
       }
       return { ok: true } as never;
     }
+    if (path.includes("/leads/tok-good/booking")) {
+      return { name: "Meera Joshi", phone: "9812345678", bookingSourceId: "src-1",
+               campaign: "Diwali 2026", channel: "Meta Ads" } as never;
+    }
+    if (path.includes("/leads/tok-gone/booking")) {
+      throw new ApiError(404, "This lead has expired or was erased. Book it by hand.");
+    }
     if (path.includes("/booking-sources")) {
       return [
         { id: "src-1", name: "Phone", kind: "direct", channelCode: null, isActive: true, commissionPct: null, bookings: 0 },
@@ -189,6 +196,29 @@ describe("the Settings switches", () => {
     const folds = () => [...document.querySelectorAll("summary")].map((s) => s.textContent);
     await waitFor(() => expect(folds()).not.toContain("Notes"));
     expect(folds()).toEqual(["More about the guest", "Booking details", "Company", "GST", "Extras"]);
+  });
+});
+
+/* "Book this lead" (D27-170): the leads view's token fills the guest, the
+   channel and the campaign; an expired or erased one says so and leaves the
+   page blank. */
+describe("a lead", () => {
+  it("fills the name, phone and source, and the booking keeps its campaign", async () => {
+    open("/?lead=tok-good");
+    await waitFor(() =>
+      expect((screen.getByLabelText(/^Guest or company/, { selector: "input" }) as HTMLInputElement).value).toBe("Meera Joshi"));
+    expect((screen.getByLabelText(/^Phone/, { selector: "input" }) as HTMLInputElement).value).toBe("9812345678");
+    expect((screen.getByLabelText(/^Booking source/, { selector: "select" }) as HTMLSelectElement).value).toBe("src-1");
+    await waitFor(() => expect(button("Save booking").disabled).toBe(false));
+    fireEvent.click(button("Save booking"));
+    await waitFor(() => expect(calls.find((c) => c.path.endsWith("/bookings"))?.body)
+      .toMatchObject({ guestName: "Meera Joshi", phone: "9812345678", campaign: "Diwali 2026" }));
+  });
+
+  it("gone: its sentence, and a blank page", async () => {
+    open("/?lead=tok-gone");
+    expect((await screen.findByText(/This lead has expired or was erased/)).closest("[data-lead-gone]")).toBeTruthy();
+    expect((screen.getByLabelText(/^Guest or company/, { selector: "input" }) as HTMLInputElement).value).toBe("");
   });
 });
 

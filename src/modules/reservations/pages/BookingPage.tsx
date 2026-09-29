@@ -16,7 +16,7 @@ import { getInventory, getTariff, type Tariff } from "@/modules/inventory";
 import { createBooking } from "@/modules/reservations/data/groups";
 import {
   MARKET_SEGMENTS, TITLES, LIST_KEEPERS, FREEHAND_CAP,
-  listSalesPeople, saveSalesPeople, listRoomPromotions, saveRoomPromotions,
+  listSalesPeople, saveSalesPeople, listRoomPromotions, saveRoomPromotions, leadForBooking,
 } from "@/modules/reservations/data/booking";
 import { BookedCard, type Booked } from "@/modules/reservations/flows/BookedCard";
 import { KeepListDialog } from "@/modules/reservations/flows/KeepListDialog";
@@ -130,6 +130,9 @@ export default function BookingPage() {
   const [search] = useSearchParams();
   const walkRoom = search.get("room");
   const walkDate = search.get("date");
+  /* "Book this lead" (D27-170): the leads view opens this page with a token. */
+  const leadToken = search.get("lead");
+  const [campaign, setCampaign] = useState("");
 
   const [title, setTitle] = useState("");
   const [guestName, setGuestName] = useState("");
@@ -180,6 +183,24 @@ export default function BookingPage() {
   const [nextKey, setNextKey] = useState(1);
   const [booked, setBooked] = useState<Booked | null>(null);
   const [keeping, setKeeping] = useState<"sales" | "promotions" | null>(null);
+
+  const lead = useQuery({
+    queryKey: ["lead-for-booking", hotelId, leadToken],
+    queryFn: () => leadForBooking(hotelId, leadToken ?? ""),
+    enabled: !!leadToken,
+    staleTime: Infinity,
+  });
+  /* The lead's name, phone, channel and campaign, once. A lead expired or
+     erased (404) leaves the page blank, with its sentence above. */
+  const [leadTaken, setLeadTaken] = useState(false);
+  useEffect(() => {
+    if (leadTaken || !lead.data?.ok) return;
+    setGuestName(lead.data.name ?? "");
+    setPhone(lead.data.phone ?? "");
+    if (lead.data.bookingSourceId) setBookingSourceId(lead.data.bookingSourceId);
+    setCampaign(lead.data.campaign ?? "");
+    setLeadTaken(true);
+  }, [lead.data, leadTaken]);
 
   const channels = useQuery({
     queryKey: ["booking-sources", hotelId],
@@ -401,7 +422,7 @@ export default function BookingPage() {
     setWaiting(false); setExpected(""); setExpectedOut(""); setGroupName("");
     setLines([]); setSeeded(false); setDiscountMode("none"); setDiscountPct(""); setDiscountReason("");
     setPromotionId(""); setExtras([]); setNotes(""); setAdvance(""); setAdvanceBy("Cash");
-    setEarlyReason(""); setWaiveEarly(false);
+    setEarlyReason(""); setWaiveEarly(false); setCampaign("");
     if (today) { setFrom(today); setTo(addDays(today, 1)); }
   };
 
@@ -436,6 +457,7 @@ export default function BookingPage() {
       },
       ...(show.notes && notes.trim() ? { notes: notes.trim() } : {}),
       ...(singleLady ? { isSingleLady: true } : {}),
+      ...(campaign ? { campaign } : {}),
       lines: lines.map((l) => ({
         roomTypeId: l.roomTypeId, mealPlan: l.mealPlan,
         adults: l.adults, children: l.children, rooms: l.rooms,
@@ -535,6 +557,9 @@ export default function BookingPage() {
           ? `A walk-in into room ${walkRoom}. Check them in, or save the booking.`
           : "One guest, one set of nights. Save it, give it a room, or check them in."}
       />
+      {lead.data && !lead.data.ok && (
+        <p className="mb-3 text-sm text-warning-dark" data-lead-gone>{lead.data.reason}</p>
+      )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-3">
@@ -549,7 +574,7 @@ export default function BookingPage() {
                 )}
               </Field>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Phone">
+                <Field label="Phone" hint="Needed for online check-in and WhatsApp.">
                   {(f) => (
                     <Input {...fieldProps(f)} value={phone} type="tel"
                       onChange={(e) => { setPhone(e.target.value); setReturning(null); }}

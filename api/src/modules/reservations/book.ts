@@ -108,6 +108,8 @@ export interface BookingRequest {
   notes?: string;
   /** "Woman travelling alone" (D27-163): the walk-in's tick, now the booking's. */
   isSingleLady?: boolean;
+  /** The lead's campaign, from "Book this lead" (D27-170): reservations.campaign. */
+  campaign?: string;
 }
 
 export interface BookingMade {
@@ -686,6 +688,15 @@ export async function makeBooking(
         reservationIds.push(booked[0]!.id);
         folioIds.push(folio[0]!.id);
       }
+    }
+
+    /* THE LEAD'S CAMPAIGN (D27-170), on every room of it. Its own statement,
+       and only when there is one: the column is the leads lane's (164). */
+    const campaign = text(request.campaign);
+    if (campaign) {
+      await client.query(
+        "update reservations set campaign = $1 where id = any($2::uuid[])",
+        [campaign, reservationIds]);
     }
 
     /* WHERE THEY LIVE, beside the ID documents where 013 keeps an address.

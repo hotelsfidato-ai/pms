@@ -325,6 +325,8 @@ groups.post("/:code/bookings", async (c) => {
     title?: string; nationality?: string; address?: BookingAddress;
     /* D27-163: the one page's Notes box and the walk-in's tick. */
     notes?: string; isSingleLady?: boolean;
+    /* D27-170: the lead's campaign, from "Book this lead". */
+    campaign?: string;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
@@ -380,6 +382,7 @@ groups.post("/:code/bookings", async (c) => {
     ...(input.address && typeof input.address === "object" ? { address: input.address } : {}),
     ...(typeof input.notes === "string" ? { notes: input.notes } : {}),
     isSingleLady: input.isSingleLady === true,
+    ...(typeof input.campaign === "string" ? { campaign: input.campaign } : {}),
   });
 
   const result = await withSession(c.get("subject"), async (client) => {
