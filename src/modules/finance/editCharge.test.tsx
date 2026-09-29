@@ -85,3 +85,23 @@ describe("Edit on a charge", () => {
     expect(screen.queryByRole("button", { name: "Edit Laundry · 2 shirts" })).toBeNull();
   });
 });
+
+describe("Change rate on the stay", () => {
+  it("sends the new rate a night with its reason, for the GM; reception has no such button", async () => {
+    const posts = bill("gm");
+    fireEvent.click(await screen.findByRole("button", { name: "Change rate" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/New rate a night/), { target: { value: "8000" } });
+    const press = within(dialog).getByRole("button", { name: "Change the rate" }) as HTMLButtonElement;
+    expect(press.disabled, "changed with no reason").toBe(true);
+    fireEvent.change(within(dialog).getByLabelText(/Why/), { target: { value: "Corporate rate" } });
+    fireEvent.click(press);
+    await waitFor(() => expect(posts).toEqual([{
+      url: "/api/hotels/5EL/stays/stay-1/rate", body: { rate: 8000, reason: "Corporate rate" } }]));
+
+    cleanup();
+    bill("front_desk");
+    await screen.findByText("Laundry · 2 shirts");
+    expect(screen.queryByRole("button", { name: "Change rate" })).toBeNull();
+  });
+});

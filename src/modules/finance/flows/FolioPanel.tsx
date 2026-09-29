@@ -19,7 +19,7 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuLabel,
 } from "@/components/ui";
-import { getFolioPostings, getFolioBalance, postCharge, reverseCharge, settle, reverseChargeAllowed, editCharge, type BillLine } from "@/modules/finance/data/postings";
+import { getFolioPostings, getFolioBalance, postCharge, reverseCharge, settle, reverseChargeAllowed, editCharge, changeRate, type BillLine } from "@/modules/finance/data/postings";
 import { checkOut, checkOutAllowed, earlyArrival } from "@/modules/front-desk";
 import { type Posting, type Stay } from "@/data/repositories";
 import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type StayFolio } from "@/modules/finance/data/folios";
@@ -153,6 +153,7 @@ export function FolioPanel({
         )}
         {mayPrint && <InvoiceDialog hotelId={hotelId} stayId={stay.id} />}
         {mayCharge && <SplitBillButton hotelId={hotelId} stayId={stay.id} onDone={refresh} />}
+        {mayEdit && <ChangeRateButton hotelId={hotelId} stay={stay} onDone={refresh} />}
       </div>
 
       {lateOut && (
@@ -460,6 +461,78 @@ function EditButton({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+/* CHANGE THE RATE (the owner's D27-157, D27-162): a new rate a night, with a
+   reason. Every night already charged is corrected to it - a closed day's
+   through Closed days, where it shows with its old and new figures - and
+   the night audit charges the nights to come at it. All or nothing: if one
+   night cannot be corrected, the server says which and nothing changes. */
+function ChangeRateButton({
+  hotelId, stay, onDone,
+}: {
+  hotelId: string; stay: Stay; onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [rate, setRate] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const value = Number(rate);
+
+  const save = async () => {
+    setBusy(true);
+    const res = await changeRate(hotelId, stay.id, { rate: value, reason: reason.trim() });
+    setBusy(false);
+    if (!res.ok) return toast.error("Rate not changed", res.reason);
+    const n = res.data?.corrected ?? 0;
+    toast.success("Rate changed", n === 0
+      ? `${money(value)} a night from tonight.`
+      : `${money(value)} a night; ${n} charged ${n === 1 ? "line" : "lines"} corrected.`);
+    setOpen(false); setRate(""); setReason("");
+    onDone();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm">Change rate</Button>
+      </DialogTrigger>
+      <DialogContent
+        title="Change the rate"
+        description={`${stay.guest} · now ${stay.isComplimentary ? "complimentary" : `${money(stay.offeredTariff)} a night`}`}
+        size="sm"
+        footer={
+          <div className="flex gap-2 w-full justify-end">
+            <Button variant="secondary" onClick={() => setOpen(false)}>Keep it</Button>
+            <Button variant="primary" loading={busy}
+              disabled={!(value > 0) || !reason.trim()}
+              onClick={() => void save()}>
+              Change the rate
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <Field label="New rate a night" required hint="Before tax. The room's GST slab follows it.">
+            {(f) => (
+              <Input {...fieldProps(f)} numeric inputMode="decimal" value={rate}
+                onChange={(e) => setRate(e.target.value)} />
+            )}
+          </Field>
+          <p className="text-sm text-grey-700 leading-relaxed">
+            Nights already charged are corrected to it, with this reason - a closed
+            day's on Closed days. Nights still to come are charged at it.
+          </p>
+          <Field label="Why" required hint="Kept with every night it corrects.">
+            {(f) => (
+              <Textarea {...fieldProps(f)} rows={2} value={reason}
+                onChange={(e) => setReason(e.target.value)} />
+            )}
+          </Field>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

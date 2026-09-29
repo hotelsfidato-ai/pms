@@ -3,7 +3,7 @@ import { withSession } from "../../../src/auth.ts";
 import { closePool } from "../../../src/db.ts";
 import type { Client } from "../../../src/db.ts";
 import { issueFolioInvoice, postCharge, takeFolioPayment } from "../../../src/modules/finance/index.ts";
-import { editFolioCharge, reverseFolioCharge } from "../../../src/modules/finance/postings.ts";
+import { changeStayRate, editFolioCharge, reverseFolioCharge } from "../../../src/modules/finance/postings.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    EDITING A CHARGE, AND THE BILL ONCE A TAX INVOICE STANDS
@@ -142,5 +142,43 @@ describe("once a tax invoice stands (D27-162)", () => {
     expect(out.reverse).toEqual({ ok: false, reason: refusal });
     expect(out.edit).toEqual({ ok: false, reason: refusal });
     expect(out.payment, "a payment is on no invoice (D27-125)").toBe(true);
+  });
+});
+
+describe("changing the rate (D27-162)", () => {
+  it("corrects a night charged today to the new rate, and changes nothing when one night cannot be", async () => {
+    const stay = await aStayInHouse();
+    const rateOf = async (client: Client) => (await client.query<{ rate: string }>(
+      "select agreed_rate::text as rate from reservations where id = $1", [stay.stay])).rows[0]!.rate;
+    const live = async (client: Client) => (await client.query<{ amount: string; tax_rate: string }>(
+      `select amount::text, tax_rate::text from folio_postings fp
+        where fp.reservation_id = $1 and fp.category = 'room' and fp.reverses_id is null
+          and not exists (select 1 from folio_postings r where r.reverses_id = fp.id)
+        order by fp.id`, [stay.stay])).rows;
+
+    const changed = await attempt(async (client) => {
+      const out = await changeStayRate(client, stay.hotel, stay.stay, 8000, "Corporate rate");
+      return { out, rate: await rateOf(client), lines: await live(client) };
+    });
+    expect(changed.out.ok, JSON.stringify(changed.out)).toBe(true);
+    expect(changed.rate).toBe("8000.00");
+    expect(changed.lines.length, "the demo's night charged today").toBeGreaterThan(0);
+    for (const l of changed.lines) expect(l.tax_rate, "₹8,000 a night").toBe("18.00");
+
+    const refused = await attempt(async (client) => {
+      const before = await rateOf(client);
+      const { rows } = await client.query<{ folio: string }>(
+        `select folio_id::text as folio from folio_postings
+          where reservation_id = $1 and category = 'room' limit 1`, [stay.stay]);
+      const invoice = await issueFolioInvoice(client, stay.hotel, rows[0]!.folio,
+        { name: "Invoice Test", gstin: null, address: null });
+      if (!invoice.ok) throw new Error(JSON.stringify(invoice));
+      const out = await changeStayRate(client, stay.hotel, stay.stay, 8000, "Corporate rate");
+      return { out, before, after: await rateOf(client), number: (invoice as { number: string }).number };
+    });
+    expect(refused.out.ok).toBe(false);
+    expect((refused.out as { reason: string }).reason).toMatch(
+      new RegExp(`^Nothing changed\\. The night of .+: This bill has tax invoice ${refused.number}\\.`));
+    expect(refused.after, "the rate stays with the nights").toBe(refused.before);
   });
 });

@@ -255,6 +255,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/stays/:id/charges`]: CHARGE,
   [`POST ${H}/stays/:id/charges/:postingId/reverse`]: CHANGE_BILL,
   [`POST ${H}/stays/:id/charges/:postingId/edit`]: EDIT_BILL,
+  [`POST ${H}/stays/:id/rate`]: EDIT_BILL,
   [`POST ${H}/stays/:id/payments`]: PAYMENT,
   [`POST ${H}/cashier-shift/open`]: DRAWER,
   [`POST ${H}/cashier-shift/movements`]: DRAWER,

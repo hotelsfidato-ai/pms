@@ -7,6 +7,9 @@ import { inr } from "../../reportRender.ts";
 import { overCashLimit, panFor } from "./cashLimit.ts";
 import { FOLIO_SELECT, STANDING_INVOICE, folioBalance } from "./folios.ts";
 import { POSTING_NIGHTS } from "../reports/index.ts";
+/* A closed day's charge is put right by the night audit's one correction
+   (D27-162), for a stay's Change rate. */
+import { correctClosedCharge } from "../night-audit/index.ts";
 import { can, type Role } from "../../permissions.ts";
 
 /* Split out of api/src/routes/operations.ts on 15 September in the
@@ -522,6 +525,95 @@ export async function editFolioCharge(
      amount, rate, p.tax_scheme, p.source_type, p.source_id],
   );
   return { ok: true, id: made[0]!.id };
+}
+
+/* ── Change the stay's rate ──────────────────────────────────────── */
+
+postings.post("/:code/stays/:id/rate", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { rate?: unknown; reason?: unknown };
+  const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const done = await changeStayRate(client, hotelId, c.req.param("id"),
+      Number(body.rate), typeof body.reason === "string" ? body.reason : "");
+    return done.ok ? { ok: true, data: { corrected: done.corrected } } : refuse(done.reason);
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/**
+ * CHANGE THE RATE (the owner's D27-157, D27-162): the stay's nightly rate
+ * becomes `rate`, so the night audit charges every night to come at it, and
+ * every night already charged is put right to it - rate x its nights - with
+ * the reason: a closed day's through the Closed days correction (the only
+ * way onto a closed day), a line on an open day (a walk-in's stay posted
+ * today) through Edit. The owner, an administrator or the GM (roleGate).
+ *
+ * ALL OR NOTHING: a night that cannot be corrected (a tax invoice on its
+ * bill, a day older than last month, no room GST rule) refuses the whole
+ * change, naming the night, and a savepoint takes back what was already
+ * written - a bill half at the old rate and half at the new is worse than
+ * either.
+ */
+export async function changeStayRate(
+  client: Client, hotelId: string, stayId: string, rate: number, reason: string,
+): Promise<{ ok: true; corrected: number } | { ok: false; reason: string }> {
+  const no = (why: string) => ({ ok: false as const, reason: why });
+  if (!Number.isFinite(rate) || !(rate > 0)) {
+    return no("A rate is more than zero. A free stay is ticked complimentary instead.");
+  }
+  const why = reason.trim();
+  if (!why) return no("Say why the rate is changing. It stays on every night it corrects.");
+  const nightly = Math.round(rate * 100) / 100;
+
+  const { rows: stay } = await client.query<{ status: string }>(
+    "select status from reservations where hotel_id = $1 and id = $2", [hotelId, stayId]);
+  if (!stay[0]) return no("Reservation not found.");
+  if (!["confirmed", "checked_in"].includes(stay[0].status)) {
+    return no("Only a booking to come or a guest in the house changes rate. "
+      + "A bill after check-out is corrected on Closed days or by a credit note.");
+  }
+
+  /* The nights already charged: the stay's live room lines, wherever they
+     sit (its own bill or a group's master), each for the nights it pays. */
+  const { rows: nights } = await client.query<{
+    id: string; business_date: string; amount: string; nights: number; closed: boolean;
+  }>(
+    `select fp.id::text, fp.business_date::text, fp.amount::text,
+            ${POSTING_NIGHTS} as nights,
+            exists (select 1 from night_audit_runs na
+                     where na.hotel_id = fp.hotel_id and na.business_date = fp.business_date
+                       and na.status = 'completed') as closed
+       from folio_postings fp
+      where fp.hotel_id = $1 and fp.reservation_id = $2 and fp.category = 'room'
+        and fp.amount > 0 and fp.reverses_id is null
+        and not exists (select 1 from folio_postings r where r.reverses_id = fp.id)
+      order by fp.business_date, fp.id`,
+    [hotelId, stayId],
+  );
+
+  await client.query("savepoint change_rate");
+  await client.query("update reservations set agreed_rate = $1 where id = $2",
+    [nightly.toFixed(2), stayId]);
+  let corrected = 0;
+  for (const n of nights) {
+    const amount = Math.round(nightly * n.nights * 100) / 100;
+    if (amount === Number(n.amount)) continue;
+    const done = n.closed
+      ? await correctClosedCharge(client, hotelId, n.business_date, n.id, amount, why)
+      : await editFolioCharge(client, hotelId, n.id, { amount, reason: why }, { reservationId: stayId });
+    if (!done.ok) {
+      await client.query("rollback to savepoint change_rate");
+      const on = new Date(`${n.business_date}T00:00:00Z`)
+        .toLocaleDateString("en-IN", { day: "numeric", month: "long", timeZone: "UTC" });
+      return no(`Nothing changed. The night of ${on}: ${done.reason}`);
+    }
+    corrected += 1;
+  }
+  await client.query("release savepoint change_rate");
+  return { ok: true, corrected };
 }
 
 /* ── Take a payment ──────────────────────────────────────────────── */

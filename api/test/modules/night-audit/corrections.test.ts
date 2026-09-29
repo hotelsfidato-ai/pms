@@ -261,6 +261,29 @@ describe("a room line of several nights, corrected (D27-162)", () => {
     expect(await rightCharge(twoNights)).toMatchObject(
       { amount: "9000.00", tax_rate: "5.00", tax_amount: "450.00" });
   });
+
+  it("Change rate corrects a closed night through the same correction, for the GM and not reception", async () => {
+    const desk = await as(deskId, `/stays/${walkIn.stayId}/rate`, { rate: 5000, reason: "x" });
+    expect(desk.status, "reception changing a rate").toBe(403);
+
+    const res = await as(gmId, `/stays/${walkIn.stayId}/rate`, { rate: 5000, reason: "Long-stay rate" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const live = await sql<{ amount: string; tax_rate: string; source_type: string; day: string }>(
+      `select amount::text, tax_rate::text, source_type, business_date::text as day
+         from folio_postings fp
+        where fp.reservation_id = $1 and fp.category = 'room' and fp.reverses_id is null
+          and not exists (select 1 from folio_postings r where r.reverses_id = fp.id)`,
+      [walkIn.stayId]);
+    expect(live, "two nights at 5,000, on the closed day, as a correction").toEqual(
+      [{ amount: "10000.00", tax_rate: "5.00", source_type: "correction", day }]);
+    const [kept] = await sql<{ reason: string; old_amount: string; new_amount: string; rate: string }>(
+      `select c.reason, c.old_amount::text, c.new_amount::text,
+              (select agreed_rate::text from reservations where id = $1) as rate
+         from closed_day_corrections c
+        where c.hotel_id = $2 order by c.corrected_at desc limit 1`, [walkIn.stayId, puneId]);
+    expect(kept).toEqual(
+      { reason: "Long-stay rate", old_amount: "9000.00", new_amount: "10000.00", rate: "5000.00" });
+  });
 });
 
 describe("the GM corrects a room charge on a closed day", () => {

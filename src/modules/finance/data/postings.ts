@@ -140,6 +140,24 @@ export async function editCharge(
   }
 }
 
+/** CHANGE THE RATE (the owner's D27-157, D27-162): the stay's rate a night,
+    with a reason. The server corrects every night already charged to it (a
+    closed day's through Closed days) and the night audit charges the rest at
+    it - or, if one night cannot be corrected, changes nothing and says which. */
+export async function changeRate(
+  hotelId: string, stayId: string, input: { rate: number; reason: string },
+): Promise<OperationResult<{ corrected: number }>> {
+  try {
+    const res = await api<{ data?: { corrected: number } }>(
+      `/api/hotels/${hotelId}/stays/${stayId}/rate`,
+      { method: "POST", body: JSON.stringify(input) });
+    return { ok: true, ...(res?.data ? { data: res.data } : {}) };
+  } catch (error) {
+    if (error instanceof ApiError) return refuse(error.message);
+    throw error;
+  }
+}
+
 export async function settle(
   hotelId: string,
   stayId: string,
