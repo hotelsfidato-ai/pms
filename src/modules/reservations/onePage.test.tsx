@@ -198,6 +198,25 @@ describe("the advance", () => {
     expect(paid?.body).toMatchObject({ method: "UPI", amount: 2000, heldAsCredit: true });
   });
 
+  it("View voucher on the Booked card opens the voucher PDF in a new tab, and sends nothing (D27-187)", async () => {
+    const tab = { location: { href: "" }, close: vi.fn() };
+    vi.spyOn(window, "open").mockReturnValue(tab as unknown as Window);
+    const fetched = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      { ok: true, blob: async () => new Blob(["%PDF-"], { type: "application/pdf" }) } as Response);
+    URL.createObjectURL = vi.fn(() => "blob:voucher");
+    open();
+    await screen.findByRole("heading", { name: "Guest" });
+    type(/^Guest or company/, "Anna Smith");
+    pick(/^Booking source/, "src-1");
+    await waitFor(() => expect(button("Save booking").disabled).toBe(false));
+    fireEvent.click(button("Save booking"));
+
+    fireEvent.click(await screen.findByRole("button", { name: /View voucher/ }));
+    await waitFor(() => expect(tab.location.href).toBe("blob:voucher"));
+    expect(String(fetched.mock.calls[0]![0])).toMatch(/\/api\/hotels\/5EL\/stays\/r-1\/voucher\.pdf$/);
+    expect(calls.filter((c) => c.path.endsWith("/confirmation"))).toEqual([]);
+  });
+
   it("in cash, holds the buttons until the clerk's own drawer is open (D27-118, D27-193)", async () => {
     open();
     await screen.findByRole("heading", { name: "Guest" });
