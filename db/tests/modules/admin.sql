@@ -839,7 +839,7 @@ end $$;
 -- =============================================================================
 do $$
 declare
-  h uuid; other uuid; adm uuid; clerk uuid; two uuid; n int;
+  h uuid; other uuid; adm uuid; clerk uuid; two uuid; n int; m int;
 begin
   h     := app.provision_property_unchecked('HPR', 'Hotel Profile Test', 'Nowhere');
   other := app.provision_property_unchecked('HPS', 'Hotel Profile Other', 'Nowhere');
@@ -928,6 +928,56 @@ begin
   perform set_config('app.user_id', '', true);
   perform test.raises('hotel profile', 'a logo is a PNG or an SVG',
     format($q$update hotel_logos set logo_type = 'image/jpeg' where hotel_id = %L$q$, h), '23514');
+
+  -- ---------- what the voucher prints (D27-215): the house policies ----------
+  perform test.ok('voucher settings', 'a new hotel starts with the reference''s four house policies',
+    (select cardinality(house_policies) = 4
+            and house_policies[1] like 'Guests must present government photo identity%' from hotels where id = h));
+  update hotels set house_policies = '{}' where id = h;
+  perform test.ok('voucher settings', 'a hotel may have none, and keeps none',
+    (select house_policies = '{}' from hotels where id = h));
+  perform test.raises('voucher settings', 'at most eight',
+    format($q$update hotels set house_policies = array_fill('A policy.'::text, array[9]) where id = %L$q$, h), '23514');
+  perform test.raises('voucher settings', 'each of 200 characters at most',
+    format($q$update hotels set house_policies = array[repeat('x', 201)] where id = %L$q$, h), '23514');
+  perform test.raises('voucher settings', 'and never a blank one',
+    format($q$update hotels set house_policies = array['  '] where id = %L$q$, h), '23514');
+
+  -- ---------- the hotel's bank details: whoever manages THAT hotel ----------
+  perform set_config('app.user_id', adm::text, true);
+  set local role pms_app;
+  insert into hotel_bank_details (hotel_id, account_name, account_number, bank_name, ifsc)
+  values (h, 'Test Hotels Private Limited', '000011112222', 'Test Bank', 'TEST0001234');
+  get diagnostics n = row_count;
+  reset role;
+  perform test.ok('voucher settings', 'the hotel''s Admin sets its bank details', n = 1, n || ' rows');
+  perform test.ok('voucher settings', 'and the change is recorded under their name, for the owner''s bell',
+    exists (select 1 from audit_log where table_name = 'hotel_bank_details'
+             and hotel_id = h and actor = adm and action = 'INSERT'));
+
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  select count(*) into n from hotel_bank_details where hotel_id = h;
+  reset role;
+  perform test.ok('voucher settings', 'reception does not read them', n = 0, n || ' rows');
+
+  /* A GM of another hotel who works the desk here: not this hotel's to read or change. */
+  perform set_config('app.user_id', two::text, true);
+  set local role pms_app;
+  select count(*) into n from hotel_bank_details where hotel_id = h;
+  update hotel_bank_details set account_name = 'Somebody Else' where hotel_id = h;
+  get diagnostics m = row_count;
+  reset role;
+  perform test.ok('voucher settings', 'a GM of another hotel, at the desk here, neither reads nor changes them',
+    n = 0 and m = 0, n || ' read, ' || m || ' changed');
+  perform set_config('app.user_id', '', true);
+
+  perform test.raises('voucher settings', 'an account number is digits',
+    format($q$update hotel_bank_details set account_number = '0000-1111-2222' where hotel_id = %L$q$, h), '23514');
+  perform test.raises('voucher settings', 'an IFSC has its shape',
+    format($q$update hotel_bank_details set ifsc = 'TEST1001234' where hotel_id = %L$q$, h), '23514');
+  perform test.raises('voucher settings', 'a UPI ID is name@handle',
+    format($q$update hotel_bank_details set upi_id = 'not a upi id' where hotel_id = %L$q$, h), '23514');
 
   -- ---------- and the fixtures go ----------
   delete from staff_hotels where staff_id in (adm, clerk, two);
