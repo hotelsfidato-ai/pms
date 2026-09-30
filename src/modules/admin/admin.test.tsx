@@ -579,3 +579,84 @@ describe("D22-3 and D22-2 - People, for a GM", () => {
       .toBeDefined();
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   THE HOTEL'S PROFILE ON SETTINGS (D27-214, phase 2)
+
+   What nobody has said is a dash, never a zero or an empty word. Edit
+   carries the profile's fields and sends them as typed; the server is
+   the one that refuses.
+   ══════════════════════════════════════════════════════════════════ */
+describe("D27-214 - the hotel's profile", () => {
+  const PROPERTY = {
+    id: "h-1", code: "5EL", name: "5 Elements", city: "Akkalkot", state: "MH",
+    gstin: null, phone: null, email: null, addressLine: "Station Road", isActive: true,
+    rooms: 2, roomTypes: [], checkedIn: 0, fssaiNumber: null,
+    addressLine2: null, pin: "413216", website: null, pan: null, reservationsPhone: null,
+    propertyType: "boutique_hotel", starRating: null, latitude: null, longitude: null,
+  };
+  const profileServer = () => {
+    settingsServer();
+    const others = vi.mocked(apiModule.api).getMockImplementation()!;
+    vi.mocked(apiModule.api).mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/admin/hotels/5EL") {
+        return (init?.method ? { ok: true } : { property: PROPERTY, staff: [], grantableRoles: [] }) as never;
+      }
+      if (url === "/api/hotels/5EL/group") return { name: null, logo: null, hotelLogo: null } as never;
+      return others(url, init);
+    });
+  };
+
+  it("shows what is set, and a dash for what nobody has said", async () => {
+    as("gm");
+    profileServer();
+    renderSettings("property");
+    expect(await valueOf("PIN code")).toBe("413216");
+    expect(await valueOf("Property type")).toBe("Boutique hotel");
+    for (const unset of ["Stars", "Map point", "PAN", "Reservations phone", "Website", "Address line 2"]) {
+      expect(await valueOf(unset), unset).toBe("-");
+    }
+    expect(screen.getByText("This hotel's logo")).toBeTruthy();
+  });
+
+  it("Edit sends the profile's fields as typed", async () => {
+    as("gm");
+    profileServer();
+    renderSettings("property");
+    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText(/^PAN/), { target: { value: "aagcf5655f" } });
+    fireEvent.change(screen.getByLabelText(/^Stars/), { target: { value: "4" } });
+    fireEvent.change(screen.getByLabelText(/^Latitude/), { target: { value: "17.5236" } });
+    fireEvent.change(screen.getByLabelText(/^Longitude/), { target: { value: "76.2036" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      const write = vi.mocked(apiModule.api).mock.calls.find(([, init]) => init?.method === "PATCH");
+      expect(write, "nothing was saved").toBeDefined();
+      expect(JSON.parse(String(write![1]!.body))).toMatchObject({
+        pin: "413216", propertyType: "boutique_hotel", pan: "AAGCF5655F", starRating: "4",
+        latitude: "17.5236", longitude: "76.2036", website: "", reservationsPhone: "",
+      });
+    });
+  });
+
+  it("Edit on the Properties cards neither shows nor sends the profile, so it stays as it is", async () => {
+    as("group-admin");
+    const { pin: _pin, propertyType: _type, ...card } = PROPERTY;
+    server({
+      "GET /api/hotels": () => [],
+      "GET /api/admin/hotels": () => ({ hotels: [card] }),
+      "GET /api/hotels/5EL/tax": () => TAX,
+      "PATCH /api/admin/hotels/5EL": () => ({ ok: true }),
+    });
+    renderAt("/properties", <PropertiesPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    expect(screen.queryByLabelText(/^PIN code/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      const write = vi.mocked(apiModule.api).mock.calls.find(([, init]) => init?.method === "PATCH");
+      expect(write, "nothing was saved").toBeDefined();
+      expect(Object.keys(JSON.parse(String(write![1]!.body))).sort())
+        .toEqual(["addressLine", "city", "email", "gstin", "name", "phone", "state"]);
+    });
+  });
+});

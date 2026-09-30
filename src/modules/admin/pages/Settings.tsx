@@ -11,11 +11,11 @@ import {
   Tabs, TabsList, TabsTrigger, TabsContent,
 } from "@/components/ui";
 import { getSettings, type SettingGroup } from "@/modules/admin/data/adminLists";
-import { getPropertyDetail } from "@/modules/admin/data/admin";
+import { getPropertyDetail, PROPERTY_TYPES } from "@/modules/admin/data/admin";
 import { getCommissioning } from "@/modules/admin/data/commissioning";
 import { switchesModules } from "@/modules/admin/moduleSwitchRoles";
 import { TaxInUseRows } from "@/modules/admin/components/TaxInUse";
-import { GroupCard } from "@/modules/admin/components/GroupCard";
+import { GroupCard, HotelLogoCard } from "@/modules/admin/components/GroupCard";
 import { CommissioningCard } from "@/modules/admin/flows/CommissioningCard";
 import { ModulesCard, BOOKING_SECTION, SettingRow } from "@/modules/admin/pages/Admin";
 import { EditPropertyDialog } from "@/modules/admin/pages/Properties";
@@ -254,27 +254,38 @@ function ProfileCard({ hotelId, facts }: { hotelId: string; facts: SettingGroup 
   if (!p) return null;
   /* Set once for the property; no screen changes them. */
   const fact = (label: string) => facts?.rows.find((r) => r.label === label)?.value ?? "-";
+  const type = PROPERTY_TYPES.find(([word]) => word === p.propertyType)?.[1];
 
   return (
     <>
       <Card>
-        <CardHeader title="Profile" description="These print on this property's invoices."
+        <CardHeader title="Profile" description="The name, address, GSTIN, phone and email print on this property's invoices."
           actions={<Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>} />
         <CardBody className="pt-0">
           <dl className="divide-y divide-grey-100">
             <SettingRow label="Name" value={p.name} />
             <SettingRow label="Code" value={p.code} />
+            <SettingRow label="Property type" value={type ?? "-"} />
+            <SettingRow label="Stars" value={p.starRating?.toString() ?? "-"} />
             <SettingRow label="Address" value={p.addressLine ?? "-"} />
+            <SettingRow label="Address line 2" value={p.addressLine2 ?? "-"} />
             <SettingRow label="City" value={p.city ?? "-"} />
             <SettingRow label="State" value={p.state ?? "-"} />
+            <SettingRow label="PIN code" value={p.pin ?? "-"} />
+            <SettingRow label="Map point"
+              value={p.latitude && p.longitude ? `${p.latitude}, ${p.longitude}` : "-"} />
             <SettingRow label="GSTIN" value={p.gstin ?? "-"} />
+            <SettingRow label="PAN" value={p.pan ?? "-"} />
             <SettingRow label="Phone" value={p.phone ?? "-"} />
+            <SettingRow label="Reservations phone" value={p.reservationsPhone ?? "-"} />
             <SettingRow label="Email" value={p.email ?? "-"} />
+            <SettingRow label="Website" value={p.website ?? "-"} />
             <SettingRow label="Currency" value={fact("Currency")} />
             <SettingRow label="Time zone" value={fact("Time zone")} />
           </dl>
         </CardBody>
       </Card>
+      <HotelLogoCard hotelCode={p.code} />
       <FssaiCard code={p.code} value={p.fssaiNumber} onSaved={refresh} />
       {editing && (
         <EditPropertyDialog hotel={p} nameLocked={!groupAdmin}

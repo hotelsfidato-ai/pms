@@ -6,8 +6,12 @@ import type { Client } from "../../../db.ts";
    Everything SU's content calls need, in one read, inside the caller's
    session so row-level security scopes it to the hotels the person has:
 
-     the hotel record          hotels (002, 019): name, address, phone,
-                               email, currency, time zone, check-in/out
+     the hotel record          hotels (002, 019, 168): name, address, phone,
+                               email, currency, time zone, check-in/out, and
+                               its postcode and map point - the hotel's own,
+                               set in Settings (D27-214); where its profile
+                               has none yet, what was typed in SU's setup
+                               before 168 (channel_hotels keeps those columns)
      its SU details            channel_hotels (106): SU's hotel id and
                                what SU requires that the record lacks
      its room types            room_types, with the rooms that are active,
@@ -29,12 +33,12 @@ export interface HotelRecord {
   phone: string | null; email: string | null;
   currency: string; timezone: string;
   checkIn: string; checkOut: string;
+  postalCode: string | null; latitude: string | null; longitude: string | null;
 }
 
 export interface ChannelHotel {
   suHotelId: string;
-  postalCode: string | null; countryCode: string | null;
-  latitude: string | null; longitude: string | null;
+  countryCode: string | null;
   contactFirstName: string | null; contactLastName: string | null;
   description: string | null;
   onSu: boolean;
@@ -80,26 +84,30 @@ export async function loadContent(client: Client, hotelId: string): Promise<Hote
     id: string; code: string; name: string; address_line: string | null;
     city: string; state: string | null; phone: string | null; email: string | null;
     currency: string; timezone: string; check_in: string; check_out: string;
+    postal_code: string | null; latitude: string | null; longitude: string | null;
     switched_on: boolean;
   }>(
     `select h.id::text, h.code, h.name, h.address_line, h.city, h.state, h.phone,
             h.email::text, h.currency, h.timezone,
             to_char(h.check_in_time, 'HH24:MI') as check_in,
             to_char(h.check_out_time, 'HH24:MI') as check_out,
+            coalesce(h.pin, c.postal_code) as postal_code,
+            coalesce(h.latitude, c.latitude)::text as latitude,
+            coalesce(h.longitude, c.longitude)::text as longitude,
             app.module_enabled(h.id, 'channel_manager') as switched_on
-       from hotels h where h.id = $1`,
+       from hotels h left join channel_hotels c on c.hotel_id = h.id
+      where h.id = $1`,
     [hotelId]);
   const h = hotels[0];
   if (!h) return null;
 
   const { rows: ch } = await client.query<{
-    su_hotel_id: string; postal_code: string | null; country_code: string | null;
-    latitude: string | null; longitude: string | null;
+    su_hotel_id: string; country_code: string | null;
     contact_first_name: string | null; contact_last_name: string | null;
     description: string | null; on_su: boolean;
     content_sent_at: string | null; content_result: string | null; content_ok: boolean | null;
   }>(
-    `select su_hotel_id, postal_code, country_code, latitude::text, longitude::text,
+    `select su_hotel_id, country_code,
             contact_first_name, contact_last_name, description, on_su,
             content_sent_at::text, content_result, content_ok
        from channel_hotels where hotel_id = $1`,
@@ -146,10 +154,10 @@ export async function loadContent(client: Client, hotelId: string): Promise<Hote
       id: h.id, code: h.code, name: h.name, addressLine: h.address_line,
       city: h.city, state: h.state, phone: h.phone, email: h.email,
       currency: h.currency, timezone: h.timezone, checkIn: h.check_in, checkOut: h.check_out,
+      postalCode: h.postal_code, latitude: h.latitude, longitude: h.longitude,
     },
     channel: c ? {
-      suHotelId: c.su_hotel_id, postalCode: c.postal_code, countryCode: c.country_code,
-      latitude: c.latitude, longitude: c.longitude,
+      suHotelId: c.su_hotel_id, countryCode: c.country_code,
       contactFirstName: c.contact_first_name, contactLastName: c.contact_last_name,
       description: c.description, onSu: c.on_su,
       contentSentAt: c.content_sent_at, contentResult: c.content_result, contentOk: c.content_ok,

@@ -4,7 +4,8 @@ import { Button, Card, CardBody, CardHeader, Field, fieldProps, Input, Skeleton,
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
 import {
-  getGroupSettings, setGroupName, setGroupLogo, removeGroupLogo, logoSrc, GROUP_SETTINGS_KEY,
+  getGroupSettings, setGroupName, setGroupLogo, removeGroupLogo, setHotelLogo, removeHotelLogo,
+  logoSrc, GROUP_SETTINGS_KEY, groupSettingsKey,
 } from "@/modules/admin/data/groupSettings";
 
 /* The group's name and logo on Settings (the owner's D27-53 and D27-65): one
@@ -16,11 +17,9 @@ import {
 export function GroupCard({ hotelCode }: { hotelCode: string }) {
   const queryClient = useQueryClient();
   const mayEdit = can(useRole(), "edit", "room_config");
-  const picker = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
   const [typed, setTyped] = useState<string | null>(null);
   const group = useQuery({
-    queryKey: GROUP_SETTINGS_KEY,
+    queryKey: groupSettingsKey(hotelCode),
     queryFn: () => getGroupSettings(hotelCode),
     enabled: Boolean(hotelCode),
   });
@@ -37,27 +36,17 @@ export function GroupCard({ hotelCode }: { hotelCode: string }) {
     refresh();
   };
 
-  const upload = async (file: File) => {
-    setBusy(true);
-    const url = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
-    const res = await setGroupLogo(hotelCode, url.slice(url.indexOf(",") + 1));
-    setBusy(false);
-    if (!res.ok) return toast.error("Not saved", res.reason);
-    toast.success("Logo saved", "It prints on every bill at every hotel from now on.");
+  const upload = async (data: string) => {
+    const res = await setGroupLogo(hotelCode, data);
+    if (!res.ok) return void toast.error("Not saved", res.reason);
+    toast.success("Logo saved", "It prints on every bill at every hotel that has no logo of its own.");
     refresh();
   };
 
   const remove = async () => {
-    setBusy(true);
     const res = await removeGroupLogo(hotelCode);
-    setBusy(false);
-    if (!res.ok) return toast.error("Not removed", res.reason);
-    toast.success("Logo removed", "Bills print no logo.");
+    if (!res.ok) return void toast.error("Not removed", res.reason);
+    toast.success("Logo removed", "A hotel with a logo of its own still prints it.");
     refresh();
   };
 
@@ -99,39 +88,111 @@ export function GroupCard({ hotelCode }: { hotelCode: string }) {
               )}
             </div>
 
-            <div>
-              <p className="text-sm text-grey-500 mb-2">Logo - a PNG or an SVG, 200 KB at most</p>
-              <div className="flex flex-wrap items-center gap-4">
-                {src ? (
-                  <img src={src} alt="The group's logo" className="h-16 w-auto max-w-full object-contain" />
-                ) : (
-                  <p className="text-base text-grey-500">None</p>
-                )}
-                {mayEdit && (
-                  <div className="flex gap-2">
-                    <input
-                      ref={picker}
-                      type="file"
-                      accept="image/png,image/svg+xml"
-                      aria-label="Choose the logo file"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        e.target.value = "";
-                        if (file) void upload(file);
-                      }}
-                    />
-                    <Button variant="secondary" loading={busy} onClick={() => picker.current?.click()}>
-                      {src ? "Replace" : "Upload"}
-                    </Button>
-                    {src && (
-                      <Button variant="ghost" disabled={busy} onClick={() => void remove()}>Remove</Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+            <LogoRow src={src} alt="The group's logo" pickLabel="Choose the logo file"
+              mayEdit={mayEdit} upload={upload} remove={remove} />
           </>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+/* A logo: the picture or "None", and Upload / Replace and Remove for whoever
+   may. The file goes as it is; the server decides what it is. */
+function LogoRow({ src, alt, pickLabel, mayEdit, upload, remove }: {
+  src: string | null; alt: string; pickLabel: string; mayEdit: boolean;
+  /** The file's bytes, base64. Says its own result. */
+  upload: (data: string) => Promise<void>;
+  remove: () => Promise<void>;
+}) {
+  const picker = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const during = async (work: Promise<void>) => { setBusy(true); await work; setBusy(false); };
+
+  const pick = async (file: File) => {
+    const url = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+    await upload(url.slice(url.indexOf(",") + 1));
+  };
+
+  return (
+    <div>
+      <p className="text-sm text-grey-500 mb-2">Logo - a PNG or an SVG, 200 KB at most</p>
+      <div className="flex flex-wrap items-center gap-4">
+        {src ? (
+          <img src={src} alt={alt} className="h-16 w-auto max-w-full object-contain" />
+        ) : (
+          <p className="text-base text-grey-500">None</p>
+        )}
+        {mayEdit && (
+          <div className="flex gap-2">
+            <input
+              ref={picker}
+              type="file"
+              accept="image/png,image/svg+xml"
+              aria-label={pickLabel}
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void during(pick(file));
+              }}
+            />
+            <Button variant="secondary" loading={busy} onClick={() => picker.current?.click()}>
+              {src ? "Replace" : "Upload"}
+            </Button>
+            {src && (
+              <Button variant="ghost" disabled={busy} onClick={() => void during(remove())}>Remove</Button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* THIS hotel's own logo (the owner's D27-214): on its documents in place of
+   the group's. None, and the group's prints. The same picture rules, and the
+   same three people - at this hotel. */
+export function HotelLogoCard({ hotelCode }: { hotelCode: string }) {
+  const queryClient = useQueryClient();
+  const mayEdit = can(useRole(), "edit", "room_config");
+  const group = useQuery({
+    queryKey: groupSettingsKey(hotelCode),
+    queryFn: () => getGroupSettings(hotelCode),
+    enabled: Boolean(hotelCode),
+  });
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: GROUP_SETTINGS_KEY });
+
+  const upload = async (data: string) => {
+    const res = await setHotelLogo(hotelCode, data);
+    if (!res.ok) return void toast.error("Not saved", res.reason);
+    toast.success("Logo saved", "This hotel's documents print it from now on.");
+    refresh();
+  };
+  const remove = async () => {
+    const res = await removeHotelLogo(hotelCode);
+    if (!res.ok) return void toast.error("Not removed", res.reason);
+    toast.success("Logo removed", "This hotel's documents print the group's logo.");
+    refresh();
+  };
+
+  return (
+    <Card>
+      <CardHeader
+        title="This hotel's logo"
+        description="On this hotel's bills and documents in place of the group's logo. With none, the group's prints."
+      />
+      <CardBody className="pt-0">
+        {group.isLoading ? (
+          <Skeleton className="h-16 w-full" />
+        ) : (
+          <LogoRow src={logoSrc(group.data?.hotelLogo ?? null)} alt="This hotel's logo"
+            pickLabel="Choose this hotel's logo file" mayEdit={mayEdit} upload={upload} remove={remove} />
         )}
       </CardBody>
     </Card>

@@ -74,8 +74,7 @@ export interface ContentMealPlan {
 
 export interface ChannelHotel {
   suHotelId: string;
-  postalCode: string | null; countryCode: string | null;
-  latitude: string | null; longitude: string | null;
+  countryCode: string | null;
   contactFirstName: string | null; contactLastName: string | null;
   description: string | null;
   onSu: boolean;
@@ -86,6 +85,8 @@ export interface SuContent {
   hotel: {
     code: string; name: string; addressLine: string | null; city: string;
     phone: string | null; email: string | null; currency: string;
+    /** The hotel's own (D27-214), set in Settings on the Property tab. */
+    postalCode: string | null; latitude: string | null; longitude: string | null;
   };
   channel: ChannelHotel | null;
   roomTypes: ContentRoomType[];
@@ -106,8 +107,7 @@ const base = (code: string) => `/api/hotels/${encodeURIComponent(code)}/channel-
 export const getSuContent = (code: string) => api<SuContent>(`${base(code)}/content`);
 
 export const saveSuHotel = (code: string, input: {
-  suHotelId: string; postalCode: string; countryCode: string;
-  latitude: string; longitude: string;
+  suHotelId: string; countryCode: string;
   contactFirstName: string; contactLastName: string; description: string;
 }) => call<{ suHotelId: string }>(`${base(code)}/hotel`, "PUT", input);
 
