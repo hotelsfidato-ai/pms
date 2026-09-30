@@ -328,6 +328,7 @@ admin.get("/admin/hotels/:code", async (c) => {
       pan: string | null; reservations_phone: string | null;
       property_type: string | null; star_rating: number | null;
       latitude: string | null; longitude: string | null;
+      reservations_contact: string | null; house_policies: string[];
     }>(
       `select h.id::text, h.code, h.name, h.city, h.state, h.gstin,
               h.phone, h.email::text, h.address_line, h.is_active,
@@ -342,7 +343,8 @@ admin.get("/admin/hotels/:code", async (c) => {
               h.fssai_number,
               h.address_line_2, h.pin, h.website, h.pan, h.reservations_phone,
               h.property_type, h.star_rating,
-              h.latitude::text, h.longitude::text
+              h.latitude::text, h.longitude::text,
+              h.reservations_contact, h.house_policies
          from hotels h where h.id = $1`, [hotelId]);
 
     /* Everyone rostered HERE, whatever else they can reach. The
@@ -386,6 +388,8 @@ admin.get("/admin/hotels/:code", async (c) => {
         pan: h.pan, reservationsPhone: h.reservations_phone,
         propertyType: h.property_type, starRating: h.star_rating,
         latitude: h.latitude, longitude: h.longitude,
+        /* What the voucher prints (D27-215, migration 169). */
+        reservationsContact: h.reservations_contact, housePolicies: h.house_policies,
       },
       staff: staff.map((r) => ({
         id: r.id, name: r.name, email: r.email, role: r.role,
@@ -440,8 +444,8 @@ const PROPERTY_TYPES = ["hotel", "resort", "boutique_hotel", "heritage_hotel", "
     the value (a wrong website must be removable); a key not sent is left
     alone. The table's constraints say the same, without the words. */
 function profileFields(input: Record<string, unknown>):
-  { set: Record<string, string | number | null> } | { reason: string } {
-  const set: Record<string, string | number | null> = {};
+  { set: Record<string, string | number | string[] | null> } | { reason: string } {
+  const set: Record<string, string | number | string[] | null> = {};
   const sent = (key: string): string | undefined => {
     const v = input[key];
     return v === undefined ? undefined : v === null ? "" : String(v).trim();
@@ -476,6 +480,34 @@ function profileFields(input: Record<string, unknown>):
 
   const reservationsPhone = sent("reservationsPhone");
   if (reservationsPhone !== undefined) set["reservations_phone"] = reservationsPhone || null;
+
+  /* Printed on the booking voucher as "Contact" (D27-215). */
+  const contact = sent("reservationsContact");
+  if (contact !== undefined) {
+    if (contact.length > 80) {
+      return { reason: `The reservations contact is ${contact.length} characters. The most is 80.` };
+    }
+    set["reservations_contact"] = contact || null;
+  }
+
+  /* The hotel's house policies, in its order, printed on the voucher after the
+     booking's own terms (D27-215). A list: a policy a line, blank lines
+     dropped. Eight of 200 characters at most - the voucher is one page. An
+     empty list is a hotel with none, and it stays so. */
+  if (input["housePolicies"] !== undefined) {
+    if (!Array.isArray(input["housePolicies"])) {
+      return { reason: "House policies are a list, one policy a line." };
+    }
+    const lines = input["housePolicies"].map((line) => String(line ?? "").trim()).filter(Boolean);
+    if (lines.length > 8) {
+      return { reason: `A hotel has at most 8 house policies. This is ${lines.length}.` };
+    }
+    const long = lines.findIndex((line) => line.length > 200);
+    if (long >= 0) {
+      return { reason: `House policy ${long + 1} is ${lines[long]!.length} characters. The most is 200.` };
+    }
+    set["house_policies"] = lines;
+  }
 
   const type = sent("propertyType");
   if (type !== undefined) {

@@ -42,6 +42,8 @@ const stored = async () => {
 const storedName = async () =>
   (await sql<{ name: string | null }>("select name from group_settings"))[0]?.name ?? null;
 const reason = async (res: Response) => ((await res.json()) as { reason: string }).reason;
+/* The group's office details (D27-215) ride on the same read: none typed here. */
+const OFFICE = { office: { address: null, phone: null, email: null, website: null, gstin: null, instagram: null } };
 
 const PNG = Buffer.concat([
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from("a tiny picture"),
@@ -85,14 +87,14 @@ describe("the group's name and logo", () => {
   it("are none to begin with: a new copy prints the hotel's name alone", async () => {
     const res = await read(people.desk);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ name: null, logo: null, hotelLogo: null });
+    expect(await res.json()).toEqual({ name: null, logo: null, hotelLogo: null, ...OFFICE });
   });
 
   it("take the group's name from the GM, trimmed, and reception reads it", async () => {
     const res = await call(people.gm, "PUT", { name: "  Fidato Hotels " }, "/group/name");
     expect(res.status, await res.clone().text()).toBe(200);
     expect(await storedName()).toBe("Fidato Hotels");
-    expect(await (await read(people.desk)).json()).toEqual({ name: "Fidato Hotels", logo: null, hotelLogo: null });
+    expect(await (await read(people.desk)).json()).toEqual({ name: "Fidato Hotels", logo: null, hotelLogo: null, ...OFFICE });
   });
 
   it("refuse the name to reception, in the gate's words, and keep the one there", async () => {
@@ -131,7 +133,7 @@ describe("the group's name and logo", () => {
     expect(res.status, await res.clone().text()).toBe(200);
     expect(await stored()).toEqual({ image_type: "image/png", image: PNG });
     expect(await (await read(people.desk)).json())
-      .toEqual({ name: "Fidato Hotels", logo: { type: "image/png", data: PNG.toString("base64") }, hotelLogo: null });
+      .toEqual({ name: "Fidato Hotels", logo: { type: "image/png", data: PNG.toString("base64") }, hotelLogo: null, ...OFFICE });
   });
 
   it.each([
@@ -188,7 +190,7 @@ describe("the group's name and logo", () => {
   it("is removed by the GM, and the name stays", async () => {
     expect((await call(people.gm, "DELETE")).status).toBe(200);
     expect(await stored()).toBeNull();
-    expect(await (await read(people.desk)).json()).toEqual({ name: "Fidato Hotels", logo: null, hotelLogo: null });
+    expect(await (await read(people.desk)).json()).toEqual({ name: "Fidato Hotels", logo: null, hotelLogo: null, ...OFFICE });
   });
 
   it("clears the name with a blank: bills print the hotel's name alone", async () => {

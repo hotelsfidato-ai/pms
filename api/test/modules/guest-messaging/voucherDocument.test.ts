@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
-  money, plain, voucherFigures, voucherPdf, voucherPolicies, type VoucherFacts, type VoucherRoom,
+  money, plain, voucherBlocks, voucherFigures, voucherHeight, voucherPdf, voucherPolicies,
+  type VoucherFacts, type VoucherRoom,
 } from "../../../src/modules/guest-messaging/voucherDocument.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -101,5 +102,169 @@ describe("the PDF", () => {
       expect(Buffer.from(bytes.slice(0, 5)).toString("latin1")).toBe("%PDF-");
       expect(bytes.byteLength).toBeGreaterThan(1000);
     }
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   THE VOUCHER, REFINED TO THE OWNER'S REFERENCE (D27-215)
+
+   What each block says is worked out in one place (voucherBlocks) and the
+   PDF draws exactly that, so the words are tested here and the drawing is
+   read by eye. The owner's answers:
+     - a PAYMENT cell: the advance and the balance at the hotel; "Pay at
+       the hotel" with no advance; "Bill to company"; never a negative
+       balance, never one worked from a total nobody agreed to;
+     - Contact and, once the footer is the group's, the hotel's GSTIN in
+       the HOTEL block; Booked by in the GUEST block;
+     - extra guests under the room's line;
+     - BANK DETAILS when set, the block left out when not;
+     - the hotel's house policies AFTER the booking's terms and the times;
+     - Instagram as a line of text;
+     - the footer is the GROUP's office once any of it is typed, and the
+       hotel's own, as today, until then.
+   A hotel with nothing new set prints today's voucher but for the
+   Payment cell.
+   ══════════════════════════════════════════════════════════════════ */
+describe("the voucher's blocks (D27-215)", () => {
+  const BANK = { accountName: "Test Hotels Private Limited", accountNumber: "000011112222",
+    bankName: "Test Bank", branch: "Akkalkot", ifsc: "TEST0001234", upi: "testhotel@testbank" };
+  const OFFICE = { name: "Test Group", address: "1 Office Road, Pune", phone: "+91 20 0000 0000",
+    email: "office@example.test", website: "www.example.test", gstin: "27BBBBB0000B1Z5", instagram: "@testgroup" };
+
+  it("prints today's voucher for a hotel with nothing new set, but for the Payment cell", () => {
+    expect(voucherBlocks(facts([room()]))).toEqual({
+      payment: { value: "Pay at the hotel" },
+      hotelRows: [["Phone", "+91 00000 00000"], ["Email", "desk@example.test"]],
+      guestRows: [["Email", "asha@example.test"]],
+      extras: [""],
+      bank: null,
+      policies: ["This booking carries no cancellation terms.", "Check-in from 14:00; check-out by 11:00."],
+      instagram: null,
+      footer: { name: "TEST GROUP", address: "1 Test Road",
+        lines: ["+91 00000 00000", "desk@example.test", "GSTIN 27AAAAA0000A1Z5"] },
+    });
+    /* The same with the new keys present and empty, as app.guest_voucher sends them. */
+    const empty: VoucherFacts = { ...facts([room({ extraAdults: 0, extraChildren: 0 })]),
+      contact: null, bookedBy: null, payment: { received: 0, billTo: "guest" }, bank: null,
+      group: { name: "Test Group", address: null, phone: null, email: null, website: null, gstin: null, instagram: null },
+      housePolicies: [] };
+    expect(voucherBlocks(empty)).toEqual(voucherBlocks(facts([room()])));
+  });
+
+  it.each([
+    ["an advance: what was received, and the balance at the hotel",
+      { received: 2000, billTo: "guest" }, [room()], { value: "Advance INR 2,000.00", hint: "Balance INR 3,741.92 at the hotel" }],
+    ["paid in full: a balance of nothing, said",
+      { received: 5741.92, billTo: "guest" }, [room()], { value: "Advance INR 5,741.92", hint: "Balance INR 0.00 at the hotel" }],
+    ["paid more than the total: the advance alone, never a negative balance",
+      { received: 9000, billTo: "guest" }, [room()], { value: "Advance INR 9,000.00" }],
+    ["no total (no GST rate): the advance alone, never a balance from a total nobody agreed to",
+      { received: 2000, billTo: "guest" }, [room({ gstRate: null })], { value: "Advance INR 2,000.00" }],
+    ["no advance", { received: 0, billTo: "guest" }, [room()], { value: "Pay at the hotel" }],
+    ["a company's booking, even with an advance",
+      { received: 2000, billTo: "company" }, [room()], { value: "Bill to company" }],
+  ])("the Payment cell - %s", (_, payment, rooms, cell) => {
+    expect(voucherBlocks({ ...facts(rooms), payment }).payment).toEqual(cell);
+  });
+
+  it("adds Contact under the hotel's email, and Booked by under the guest's", () => {
+    const b = voucherBlocks({ ...facts([room()]), contact: "Meera Kulkarni", bookedBy: "Test Desk" });
+    expect(b.hotelRows).toEqual([["Phone", "+91 00000 00000"], ["Email", "desk@example.test"], ["Contact", "Meera Kulkarni"]]);
+    expect(b.guestRows).toEqual([["Email", "asha@example.test"], ["Booked by", "Test Desk"]]);
+  });
+
+  it("says the extra guests under a room's line, and nothing where there are none", () => {
+    const b = voucherBlocks(facts([
+      room({ extraAdults: 1, extraChildren: 0 }), room({ extraAdults: 2, extraChildren: 1 }),
+      room({ extraAdults: 0, extraChildren: 2 }), room(),
+    ]));
+    expect(b.extras).toEqual(["1 extra adult", "2 extra adults, 1 extra child", "2 extra children", ""]);
+  });
+
+  it("prints the bank details that are set, and leaves the block out when there are none", () => {
+    expect(voucherBlocks({ ...facts([room()]), bank: BANK }).bank).toEqual([
+      ["Account name", "Test Hotels Private Limited"], ["Account no.", "000011112222"],
+      ["Bank", "Test Bank"], ["Branch", "Akkalkot"], ["IFSC", "TEST0001234"], ["UPI", "testhotel@testbank"],
+    ]);
+    expect(voucherBlocks({ ...facts([room()]), bank: { ...BANK, branch: null, upi: null } }).bank).toEqual([
+      ["Account name", "Test Hotels Private Limited"], ["Account no.", "000011112222"],
+      ["Bank", "Test Bank"], ["IFSC", "TEST0001234"],
+    ]);
+    expect(voucherBlocks({ ...facts([room()]), bank: null }).bank).toBeNull();
+  });
+
+  it("puts the hotel's house policies after the booking's terms and the times, in the hotel's order", () => {
+    const f = { ...facts([room()]), housePolicies: ["Pets are welcome.", "No smoking in the rooms."] };
+    expect(voucherPolicies(f)).toEqual([
+      "This booking carries no cancellation terms.",
+      "Check-in from 14:00; check-out by 11:00.",
+      "Pets are welcome.",
+      "No smoking in the rooms.",
+    ]);
+    expect(voucherBlocks(f).policies).toEqual(voucherPolicies(f));
+  });
+
+  it("makes the footer the group's office once any of it is typed, and moves the hotel's GSTIN up", () => {
+    const b = voucherBlocks({ ...facts([room()]), contact: "Meera Kulkarni", group: OFFICE });
+    expect(b.footer).toEqual({ name: "TEST GROUP", address: "1 Office Road, Pune",
+      lines: ["+91 20 0000 0000", "office@example.test", "www.example.test", "GSTIN 27BBBBB0000B1Z5"] });
+    expect(b.instagram).toBe("Instagram: @testgroup");
+    /* The hotel's own GSTIN was only in the footer: it must not vanish. */
+    expect(b.hotelRows).toEqual([["Phone", "+91 00000 00000"], ["Email", "desk@example.test"],
+      ["Contact", "Meera Kulkarni"], ["GSTIN", "27AAAAA0000A1Z5"]]);
+
+    /* One detail is enough, and an unset one is simply absent. */
+    const one = voucherBlocks({ ...facts([room()]),
+      group: { ...OFFICE, address: null, email: null, website: null, gstin: null, instagram: null } });
+    expect(one.footer).toEqual({ name: "TEST GROUP", address: null, lines: ["+91 20 0000 0000"] });
+    expect(one.instagram).toBeNull();
+  });
+
+  it("keeps Instagram and the hotel's own footer when the group typed only that", () => {
+    const b = voucherBlocks({ ...facts([room()]),
+      group: { name: "Test Group", address: null, phone: null, email: null, website: null, gstin: null, instagram: "@testgroup" } });
+    expect(b.instagram).toBe("Instagram: @testgroup");
+    expect(b.footer.address).toBe("1 Test Road");
+  });
+});
+
+describe("the PDF, with everything the reference has", () => {
+  const pages = (bytes: Uint8Array) =>
+    (Buffer.from(bytes).toString("latin1").match(/\/Type \/Page\b(?!s)/g) ?? []).length;
+
+  it("still fits ONE A4 page with bank details, eight house policies of the greatest length and three rooms", async () => {
+    const long = "A house policy of the greatest length a hotel may type, which is two hundred characters, so that the page is proved with the most words any hotel can put on it and not the fewest words anyone would.";
+    expect(long.length).toBeLessThanOrEqual(200);
+    const f: VoucherFacts = {
+      ...facts([room({ extraAdults: 1, extraChildren: 1 }), room({ roomType: "Deluxe", extraAdults: 1 }), room({ roomType: "Suite" })]),
+      contact: "Meera Kulkarni", bookedBy: "Test Desk",
+      payment: { received: 2000, billTo: "guest" },
+      bank: { accountName: "Test Hotels Private Limited", accountNumber: "000011112222",
+        bankName: "Test Bank", branch: "Akkalkot", ifsc: "TEST0001234", upi: "testhotel@testbank" },
+      group: { name: "Test Group", address: "1 Office Road, Pune 411001", phone: "+91 20 0000 0000",
+        email: "office@example.test", website: "www.example.test", gstin: "27BBBBB0000B1Z5", instagram: "@testgroup" },
+      housePolicies: Array.from({ length: 8 }, () => long),
+    };
+    f.terms = { ...f.terms, name: "Flexible", freeUntilHours: 48, cancelBasis: "first_night",
+      noShowBasis: "percent", noShowPercent: 100 };
+    /* More than the page at full size, so it is drawn smaller - and whole. */
+    expect(voucherHeight(f)).toBeGreaterThan(297);
+    expect(pages(await voucherPdf(f))).toBe(1);
+
+    /* The reference's own four lines, twice over: nine tenths of full size. */
+    const eight = { ...f, housePolicies: Array.from({ length: 8 }, () =>
+      "Guests must present government photo identity at check in - driving licence, voter ID, Aadhaar or passport.") };
+    expect(297 / voucherHeight(eight)).toBeGreaterThan(0.88);
+    expect(pages(await voucherPdf(eight))).toBe(1);
+  });
+
+  it("is one page at full size for a booking with nothing new set, as today", async () => {
+    expect(voucherHeight(facts([room()]))).toBeLessThanOrEqual(297);
+    expect(pages(await voucherPdf(facts([room()])))).toBe(1);
+  });
+
+  it("runs onto a second page, whole, only when it is longer than the smallest drawing holds", async () => {
+    const many = facts(Array.from({ length: 20 }, () => room()));
+    expect(pages(await voucherPdf(many))).toBe(2);
   });
 });

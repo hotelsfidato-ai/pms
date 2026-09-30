@@ -180,6 +180,37 @@ notifications.get("/:code/notifications", async (c) => {
       });
     }
 
+    /* A HOTEL'S BANK DETAILS WERE SET, CHANGED OR REMOVED (the owner's
+       D27-216): they print on every booking voucher, so the group owner is
+       told - which hotel, who, when; never the account. For group
+       administrators only, and for EVERY hotel whichever one is open: it is
+       there to catch a change at a hotel the owner is not looking at. Read
+       from the change record the table's own trigger keeps (migration 169),
+       so a write through any door shows; the newest change at a hotel, for
+       seven days. */
+    if (session.isGroupAdmin) {
+      const { rows: changed } = await client.query<{
+        id: string; action: string; at: Date; code: string; name: string; who: string | null;
+      }>(
+        `select distinct on (a.hotel_id) a.id::text, a.action, a.at, h.code, h.name, s.full_name as who
+           from audit_log a
+           join hotels h on h.id = a.hotel_id
+           left join staff s on s.id = a.actor
+          where a.table_name = 'hotel_bank_details' and a.at > now() - interval '7 days'
+          order by a.hotel_id, a.at desc`);
+      const DID: Record<string, string> = { INSERT: "set", UPDATE: "changed", DELETE: "removed" };
+      for (const b of changed) {
+        out.push({
+          id: `bank-details-${b.id}`, hotelId: code, category: "system",
+          title: `${b.name}: bank details ${DID[b.action] ?? "changed"}`,
+          body: `By ${b.who ?? "somebody"}. They print on this hotel's booking vouchers. `
+            + "Open Settings to see them, and ask if you did not expect this.",
+          isRead: false, at: b.at.toISOString(),
+          link: `/h/${b.code}/settings/taxes-and-billing`, actionRequired: true,
+        });
+      }
+    }
+
     return out;
   });
 

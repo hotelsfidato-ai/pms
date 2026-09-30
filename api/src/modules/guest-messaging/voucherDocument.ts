@@ -24,6 +24,21 @@ import type { SendableFile } from "../../sending.ts";
          check-out times; no bank section until bank details exist.
      V5  "Confirmed by the hotel": the PMS reference, the clerk, and when.
 
+   REFINED TO THE OWNER'S REFERENCE (D27-215, 1 October; facts from 169):
+     - a PAYMENT cell beside the total (this lifts V1's "no payment line"):
+       the advance the booking's bills have received and the balance at the
+       hotel; "Pay at the hotel"; "Bill to company". Never a negative balance,
+       never one worked from a total nobody agreed to;
+     - BANK DETAILS when the hotel has set them (this lifts V4's "no bank
+       section"), the block left out when not;
+     - the hotel's reservations contact, who booked, extra guests under a
+       room's line, the hotel's house policies after the booking's terms;
+     - the footer is the GROUP's office once any of it is typed in Settings,
+       and its Instagram address a line of text (no QR code yet).
+   What each of these SAYS is worked out in voucherBlocks, and the PDF draws
+   exactly that. A hotel with nothing new set prints the voucher it printed
+   before, but for the Payment cell.
+
    ⚠ WinAnsi only - pdfkit's Helvetica cannot draw the rupee sign, a long
    dash or a middot. Money prints "INR 12,345.67" and everything goes
    through `plain()`, as the CRS's does.
@@ -42,6 +57,10 @@ export interface VoucherRoom {
   /** The database's GST rate for this rate (app.gst_rate_or_null), null
       where no rule covers it. */
   gstRate: number | null;
+  /** The guests past what the room's price covers, by the tariff's own count
+      (app.tariff_for); absent on facts from before 169. */
+  extraAdults?: number | null;
+  extraChildren?: number | null;
 }
 
 export interface VoucherFacts {
@@ -67,6 +86,24 @@ export interface VoucherFacts {
   };
   confirmedBy: string | null;
   confirmedAt: string | null;
+  /* ── added by 169 (D27-215); each absent or null prints nothing ── */
+  /** The hotel's reservations contact person. */
+  contact?: string | null;
+  /** Who made the booking: a person, or the source of a machine's booking. */
+  bookedBy?: string | null;
+  /** What the booking's bills have received (the ledger's own figure), and
+      whom the lead's bill is made out to. */
+  payment?: { received: number | string; billTo: string | null } | null;
+  bank?: {
+    accountName: string; accountNumber: string; bankName: string;
+    branch: string | null; ifsc: string; upi: string | null;
+  } | null;
+  /** The group's office details, for the footer. */
+  group?: {
+    name: string | null; address: string | null; phone: string | null; email: string | null;
+    website: string | null; gstin: string | null; instagram: string | null;
+  } | null;
+  housePolicies?: string[] | null;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -130,7 +167,8 @@ function retained(basis: string | null, percent: number | null, amount: number |
 }
 
 /** The policies the voucher prints (V4): the booking's own terms, then the
-    hotel's times. Nothing else - no policy is written here for a hotel. */
+    hotel's times, then the hotel's house policies in its own order (D27-215).
+    No policy is written here for a hotel: it types its own in Settings. */
 export function voucherPolicies(f: VoucherFacts): string[] {
   const t = f.terms;
   const lines: string[] = [];
@@ -144,7 +182,75 @@ export function voucherPolicies(f: VoucherFacts): string[] {
     lines.push(`No-show: ${retained(t.noShowBasis, t.noShowPercent, t.noShowAmount)}.`);
   }
   lines.push(`Check-in from ${f.hotel.checkInTime ?? "-"}; check-out by ${f.hotel.checkOutTime ?? "-"}.`);
+  lines.push(...(f.housePolicies ?? []));
   return lines;
+}
+
+export interface VoucherBlocks {
+  payment: { value: string; hint?: string };
+  hotelRows: [string, string][];
+  guestRows: [string, string][];
+  /** Per room, in order: "1 extra adult, 1 extra child", or "" for none. */
+  extras: string[];
+  bank: [string, string][] | null;
+  policies: string[];
+  instagram: string | null;
+  footer: { name: string; address: string | null; lines: string[] };
+}
+
+const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** What each block of the voucher SAYS (D27-215) - the one place it is
+    decided, so the PDF below only draws. */
+export function voucherBlocks(f: VoucherFacts, figures: VoucherFigures = voucherFigures(f.rooms)): VoucherBlocks {
+  /* The advance is the ledger's figure (app.guest_voucher); the balance is
+     the voucher's own total less it - and is said only when there is a total
+     and it is not negative. */
+  const received = round2(Number(f.payment?.received ?? 0));
+  const balance = figures.total === null ? null : round2(figures.total - received);
+  const payment = f.payment?.billTo === "company" ? { value: "Bill to company" }
+    : received > 0 ? {
+        value: `Advance ${money(received)}`,
+        ...(balance !== null && balance >= 0 ? { hint: `Balance ${money(balance)} at the hotel` } : {}),
+      }
+    : { value: "Pay at the hotel" };
+
+  /* The footer is the GROUP's office once any of it is typed; until then the
+     hotel's own facts, as before. */
+  const g = f.group;
+  const office = g ? [g.address, g.phone, g.email, g.website, g.gstin].some(Boolean) : false;
+  const hotelAddress = f.hotel.address || [f.hotel.city, f.hotel.state].filter(Boolean).join(", ") || null;
+  const gstin = (value: string | null | undefined) => (value ? `GSTIN ${value}` : null);
+  const footer = office
+    ? { name: (g!.name ?? f.groupName ?? f.hotel.name).toUpperCase(), address: g!.address,
+        lines: [g!.phone, g!.email, g!.website, gstin(g!.gstin)].filter((x): x is string => Boolean(x)) }
+    : { name: (f.groupName ?? f.hotel.name).toUpperCase(), address: hotelAddress,
+        lines: [f.hotel.phone, f.hotel.email, gstin(f.hotel.gstin)].filter((x): x is string => Boolean(x)) };
+
+  const rows = (pairs: [string, string | null | undefined][]) =>
+    pairs.filter((pair): pair is [string, string] => Boolean(pair[1]));
+
+  return {
+    payment,
+    hotelRows: rows([
+      ["Phone", f.hotel.phone], ["Email", f.hotel.email], ["Contact", f.contact],
+      /* Printed only in the footer before: with the group's office there, it
+         moves here so it does not leave the voucher. */
+      ["GSTIN", office ? f.hotel.gstin : null],
+    ]),
+    guestRows: rows([["Email", f.guest.email], ["Phone", f.guest.phone], ["Booked by", f.bookedBy]]),
+    extras: f.rooms.map((r) => [
+      r.extraAdults ? count(r.extraAdults, "extra adult", "extra adults") : null,
+      r.extraChildren ? count(r.extraChildren, "extra child", "extra children") : null,
+    ].filter(Boolean).join(", ")),
+    bank: f.bank ? rows([
+      ["Account name", f.bank.accountName], ["Account no.", f.bank.accountNumber],
+      ["Bank", f.bank.bankName], ["Branch", f.bank.branch], ["IFSC", f.bank.ifsc], ["UPI", f.bank.upi],
+    ]) : null,
+    policies: voucherPolicies(f),
+    instagram: g?.instagram ? `Instagram: ${g.instagram}` : null,
+    footer,
+  };
 }
 
 /* The CRS's colours (its voucherPdf.ts), and A4 in millimetres. */
@@ -160,17 +266,51 @@ const M = 13;
 const RIGHT = W - M;
 const CONTENT = W - M * 2;
 
+const PAGE = 297;
+/* The smallest the voucher is drawn: its 7 point policies at 5.7. Measured on
+   1 October with three rooms, extra guests, bank details and the group's
+   footer: eight one-line house policies need 90%, eight of 200 characters 84%. */
+const SMALLEST = 0.82;
+
 /** The PDF itself, from the facts.
-    ponytail: one A4 page, as the CRS's; a group of more than about a dozen
-    rooms runs onto a second page without a repeated header. */
+
+    ONE A4 WHERE IT CAN BE (D27-215). The voucher is laid out once to learn
+    its height. Where that is more than the page - bank details, three rooms
+    and a long list of house policies - the WHOLE voucher is drawn a little
+    smaller, centred, down to 82%. Only a voucher longer than that runs onto a
+    second page: whole policy lines at a time and the footer whole.
+    ponytail: a group of more than about a dozen rooms carries its rooms table
+    onto the second page without repeating the table's header. */
 export function voucherPdf(f: VoucherFacts): Promise<Uint8Array> {
-  const figures = voucherFigures(f.rooms);
+  const height = voucherHeight(f);
   const pdf = new PDFDocument({ size: "A4", margin: 0, info: { Title: plain(`Reservation voucher ${f.reference}`) } });
   const chunks: Buffer[] = [];
   pdf.on("data", (c: Buffer) => chunks.push(c));
   const done = new Promise<Uint8Array>((resolve) => pdf.on("end", () => resolve(Buffer.concat(chunks))));
+  draw(pdf, f, Math.max(SMALLEST, Math.min(1, PAGE / height)));
+  pdf.end();
+  return done;
+}
 
+/** The height the voucher needs at full size, in millimetres: 297 is the page. */
+export const voucherHeight = (f: VoucherFacts): number =>
+  draw(new PDFDocument({ size: "A4", margin: 0 }), f, null);
+
+/** Draws the voucher and answers the height it needed, in millimetres.
+    `scale` null only measures: nothing is ever moved to a second page. */
+function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: number | null): number {
+  const figures = voucherFigures(f.rooms);
+  const blocks = voucherBlocks(f, figures);
   const at = (v: number) => v * MM;
+  /* The page's bottom, in the voucher's own millimetres. */
+  const pageBottom = scale === null ? Infinity : PAGE / scale;
+  const page = () => {
+    /* Page breaks are decided here (`room`), never by pdfkit half-way down a
+       block: it is told the page has no bottom. */
+    pdf.page.margins.bottom = -100000;
+    if (scale !== null && scale < 1) pdf.translate(at((W * (1 - scale)) / 2), 0).scale(scale);
+  };
+  page();
   const text = (value: unknown, x: number, y: number, o: {
     size?: number; color?: string; bold?: boolean; align?: "left" | "right" | "center"; width?: number | undefined;
   } = {}) => {
@@ -197,13 +337,28 @@ export function voucherPdf(f: VoucherFacts): Promise<Uint8Array> {
       const x = c.right ? left + colW - 4 : left + 4;
       const align = c.right ? "right" : "left";
       label(c.label, x, y + 5, align);
-      text(c.value, x, y + 9.6, { size: 9.5, bold: true, align, width: colW - 8 });
+      /* A long value ("Advance INR 1,20,000.00") is drawn smaller, never
+         wrapped onto the hint under it. */
+      let size = 9.5;
+      pdf.font("Helvetica-Bold");
+      while (size > 6.5 && pdf.fontSize(size).widthOfString(plain(c.value)) > at(colW - 8)) size -= 0.25;
+      text(c.value, x, y + 9.6, { size, bold: true, align, width: colW - 8 });
       if (c.hint) text(c.hint, x, y + 13, { size: 6.6, color: GREY, align, width: colW - 8 });
     });
     return y + 15;
   };
 
   let y = M;
+  /* Room for what comes next, or a new page for it: a block is never cut. */
+  let above = 0;
+  const room = (height: number) => {
+    if (y + height <= pageBottom - 3) return;
+    above += pageBottom;
+    pdf.addPage({ size: "A4", margin: 0 });
+    page();
+    y = M + 4;
+  };
+
   /* ── Masthead: the hotel's own logo or the group's (a PNG; app.guest_voucher,
      168), else the hotel's name (D27-65, D27-214) ── */
   if (f.logoPng) {
@@ -219,10 +374,11 @@ export function voucherPdf(f: VoucherFacts): Promise<Uint8Array> {
   pdf.rect(at(M), at(y), at(CONTENT), at(1.1)).fill(ORANGE);
   y += 5;
 
-  /* ── Status (V1: no payment line) ── */
+  /* ── Status, and the payment (D27-215) ── */
   y = strip(y, [
     { label: "Booked on", value: dateReport(f.bookedOn) },
     { label: "Status", value: "CONFIRMED" },
+    { label: "Payment", value: blocks.payment.value, hint: blocks.payment.hint },
     { label: "Total", value: money(figures.total), right: true },
   ]) + 6;
 
@@ -235,8 +391,7 @@ export function voucherPdf(f: VoucherFacts): Promise<Uint8Array> {
   /* The address line as the hotel wrote it; its city and state only where there is none. */
   const address = f.hotel.address || [f.hotel.city, f.hotel.state].filter(Boolean).join(", ");
   if (address) y += text(address, M, y, { size: 8, color: GREY, width: colW - 8 }) + 1.5;
-  for (const [k, v] of [["Phone", f.hotel.phone], ["Email", f.hotel.email]] as const) {
-    if (!v) continue;
+  for (const [k, v] of blocks.hotelRows) {
     text(k, M, y, { size: 7.6, color: GREY, width: 16 });
     text(v, M + 17, y, { size: 7.6, bold: true, width: colW - 24 });
     y += 4;
@@ -249,8 +404,7 @@ export function voucherPdf(f: VoucherFacts): Promise<Uint8Array> {
   y += 5;
   y += text(f.guest.name, gx, y, { size: 11.5, bold: true, width: colW - 10 }) + 0.6;
   if (f.company) y += text(f.company, gx, y, { size: 8, color: GREY, width: colW - 10 }) + 0.6;
-  for (const [k, v] of [["Email", f.guest.email], ["Phone", f.guest.phone]] as const) {
-    if (!v) continue;
+  for (const [k, v] of blocks.guestRows) {
     text(k, gx, y, { size: 7.6, color: GREY, width: 18 });
     text(v, gx + 19, y, { size: 7.6, bold: true, width: colW - 26 });
     y += 4;
@@ -285,6 +439,7 @@ export function voucherPdf(f: VoucherFacts): Promise<Uint8Array> {
   label("Amount", RIGHT, y, "right");
   y += 2.4;
   figures.lines.forEach((l, i) => {
+    room(blocks.extras[i] ? 15.1 : 12);
     rule(y);
     y += 4.4;
     text(`Room ${i + 1} - ${l.roomType}`, M, y, { size: 8.6, bold: true, width: cNights - M - 6 });
@@ -294,12 +449,18 @@ export function voucherPdf(f: VoucherFacts): Promise<Uint8Array> {
     y += 3.6;
     const people = `${l.adults} adult${l.adults === 1 ? "" : "s"}${l.children ? `, ${l.children} child${l.children === 1 ? "" : "ren"}` : ""}`;
     text(`${l.mealPlan ?? "-"} - ${people}`, M, y, { size: 7, color: GREY, width: cNights - M - 6 });
+    /* The guests past what the room's price covers (the tariff's own count). */
+    if (blocks.extras[i]) {
+      y += 3.1;
+      text(blocks.extras[i], M, y, { size: 7, color: GREY, width: cNights - M - 6 });
+    }
     y += 4;
   });
   rule(y);
   y += 5;
 
   /* ── Totals (V1: a dash where no GST rate is set, and then no total) ── */
+  room(16 + (figures.bands?.length ?? 1) * 4.2);
   const tl = M + CONTENT - 62;
   const row = (l: string, v: string, bold = false) => {
     text(l, tl, y, { size: bold ? 9 : 8, color: bold ? INK : GREY, bold, width: 30 });
@@ -315,6 +476,7 @@ export function voucherPdf(f: VoucherFacts): Promise<Uint8Array> {
   y += 3;
 
   /* ── Confirmed by the hotel (V5) ── */
+  room(17);
   pdf.rect(at(M), at(y), at(CONTENT), at(17)).lineWidth(at(0.2)).fillAndStroke(PEACH, LINE);
   pdf.rect(at(M), at(y), at(1.3), at(17)).fill(ORANGE);
   text("CONFIRMED BY THE HOTEL", M + 5, y + 5, { size: 6, color: ORANGE, bold: true });
@@ -330,30 +492,63 @@ export function voucherPdf(f: VoucherFacts): Promise<Uint8Array> {
   });
   y += 22;
 
-  /* ── Policies (V4) ── */
+  /* ── Bank details (D27-215): when the hotel has set them. In three columns,
+     the figures in Courier as the CRS draws them - an account number is
+     copied by hand into a banking app, and a monospaced face is read right. ── */
+  if (blocks.bank) {
+    const perRow = 3;
+    const h = 8 + Math.ceil(blocks.bank.length / perRow) * 8.4;
+    room(h);
+    pdf.rect(at(M), at(y), at(CONTENT), at(h)).lineWidth(at(0.2)).strokeColor(LINE).stroke();
+    label("Bank details", M + 5, y + 5);
+    const bw = (CONTENT - 10) / perRow;
+    blocks.bank.forEach(([k, v], i) => {
+      const x = M + 5 + bw * (i % perRow);
+      const by = y + 9.6 + Math.floor(i / perRow) * 8.4;
+      text(k, x, by, { size: 6.6, color: GREY, width: bw - 4 });
+      const figure = k === "Account no." || k === "IFSC";
+      pdf.font(figure ? "Courier-Bold" : "Helvetica-Bold").fontSize(8.4).fillColor(INK)
+        .text(plain(v), at(x), at(by + 3.8) - 8.4 * 0.8, { width: at(bw - 4), lineBreak: false });
+    });
+    y += h + 5;
+  }
+
+  /* ── Policies (V4, then the hotel's own), and the group's Instagram ── */
+  const footerHeight = 4.5 + Math.max(12, blocks.footer.lines.length * 3.4 + 4) + 3;
+  const numbered = blocks.policies.map((p, i) => plain(`${i + 1}.  ${p}`));
+  const lineHeight = (line: string, bold = false) =>
+    pdf.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(7).heightOfString(line, { width: at(CONTENT) }) / MM;
+  room(4 + (numbered[0] ? lineHeight(numbered[0]) : 0));
   label("Hotel policies", M, y);
   y += 4;
-  voucherPolicies(f).forEach((p, i) => {
-    y += text(`${i + 1}.  ${p}`, M, y, { size: 7, color: GREY, width: CONTENT }) + 1.1;
-  });
+  for (const line of numbered) {
+    room(lineHeight(line));
+    y += text(line, M, y, { size: 7, color: GREY, width: CONTENT }) + 1.1;
+  }
+  if (blocks.instagram) {
+    y += 1;
+    room(lineHeight(plain(blocks.instagram), true));
+    y += text(blocks.instagram, M, y, { size: 7, color: INK, bold: true, width: CONTENT }) + 1.1;
+  }
   y += 3;
 
-  /* ── Footer: the hotel's own facts ── */
+  /* ── Footer: the group's office once any of it is typed in Settings; the
+     hotel's own facts until then (voucherBlocks) ── */
+  room(footerHeight);
   rule(y, INK, 0.4);
   y += 4.5;
-  text((f.groupName ?? f.hotel.name).toUpperCase(), M, y, { size: 8, bold: true, width: CONTENT / 2 });
-  if (address) text(address, M, y + 4, { size: 7, color: GREY, width: CONTENT / 2 - 6 });
+  text(blocks.footer.name, M, y, { size: 8, bold: true, width: CONTENT / 2 });
+  if (blocks.footer.address) text(blocks.footer.address, M, y + 4, { size: 7, color: GREY, width: CONTENT / 2 - 6 });
   let fy = y;
-  for (const line of [f.hotel.phone, f.hotel.email, f.hotel.gstin ? `GSTIN ${f.hotel.gstin}` : null]) {
-    if (!line) continue;
+  for (const line of blocks.footer.lines) {
     text(line, RIGHT, fy, { size: 7, color: GREY, align: "right", width: 80 });
     fy += 3.4;
   }
+  const last = Math.max(y + 12, fy + 4);
   text("This voucher confirms the booking described above. Please present it at check in.",
-    W / 2, Math.max(y + 12, fy + 4), { size: 6.6, color: GREY, align: "center", width: CONTENT });
-
-  pdf.end();
-  return done;
+    W / 2, last, { size: 6.6, color: GREY, align: "center", width: CONTENT });
+  /* The closing sentence, and the margin `room` keeps under the footer. */
+  return above + last + 7;
 }
 
 /** The voucher for a confirmed booking, ready to go with its message - or
