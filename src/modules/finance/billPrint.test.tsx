@@ -145,3 +145,37 @@ describe("the printed bill's sections", () => {
     expect(screen.getByText("₹4,604.50")).toBeDefined();
   });
 });
+
+/* D27-204 (the owner, 30 September): the first night is posted at check-in,
+   the audit posts each later night - so a guest staying on, before tonight's
+   audit, is shown tonight's night as "to be posted tonight", counted in the
+   amount due. The posted sections and totals do not change. */
+describe("the printed bill's night to be posted tonight", () => {
+  const posted = { net: 3522.86, tax: 176.14, total: 3699, rounded: 3699, roundOff: 0, paid: 1001, balance: 2698 };
+  const staying = bill({
+    lines: [{ date: "2026-09-30", description: "Room 301 · 1 night", category: "room",
+              amount: 3522.86, tax: 176.14, rate: 5, scheme: "gst", billTo: "guest", company: null }],
+    taxes: [{ rate: 5, taxable: 3522.86, cgst: 88.07, sgst: 88.07 }],
+    ...posted,
+    tonight: { description: "Room 301 · 1 night", amount: 3522.86, tax: 176.14, rate: 5 },
+  });
+
+  it("shows it under Paid and counts it in the amount due", () => {
+    render(<BillPrint bill={staying} title="Interim bill" />);
+    const text = document.querySelector("[data-bill-print]")!.textContent!;
+    expect(text).toContain("Total₹3,699.00Paid₹1,001.00"
+      + "To be posted tonight · Room 301 · 1 night, with GST 5%₹3,699.00Amount due₹6,397.00");
+    expect(text).not.toContain("Outstanding");
+    /* The posted section is the posted night alone. */
+    expect(document.querySelector('[data-bill-section="room"]')!.textContent)
+      .toBe("RoomRoom 301 · 1 night₹3,522.86Subtotal₹3,522.86GST 5%₹176.14");
+  });
+
+  it("prints as before when no night is to be posted tonight", () => {
+    const { tonight: _none, ...settled } = staying;
+    render(<BillPrint bill={settled} title="Interim bill" />);
+    const text = document.querySelector("[data-bill-print]")!.textContent!;
+    expect(text).toContain("Total₹3,699.00Paid₹1,001.00Outstanding₹2,698.00");
+    expect(text).not.toContain("To be posted tonight");
+  });
+});
