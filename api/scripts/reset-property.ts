@@ -140,6 +140,11 @@ export const CLEAR: [table: string, how: string][] = [
      schema's keys. */
   ["spa_appointments",  "hotel_id = $1"],
   ["laundry_dockets",   "hotel_id = $1"],
+  /* A guest's ID photo rows point at the booking, the guest and the link (167).
+     Only the rows go: the sealed files they name stay in Drive, and are
+     removed there by hand. */
+  ["guest_id_photo_views", "hotel_id = $1"],
+  ["guest_id_photos",   "hotel_id = $1"],
   ["guest_links",       "hotel_id = $1"],
 
   ["form_c_filings",    "hotel_id = $1"],

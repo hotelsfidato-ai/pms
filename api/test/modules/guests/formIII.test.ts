@@ -81,6 +81,13 @@ afterAll(async () => {
     const mine = `${tag} %`;
     const stays = `select id from reservations where guest_id in (
                      select id from guests where full_name like $1)`;
+    /* The check-out case pays its first night (D27-204), and a payment's row
+       points at its posting: it goes first, or this whole clean-up stops here
+       and leaves its stays at Pune for every file after it (1 October). */
+    await db.query(
+      `delete from payments where posting_id in (
+         select fp.id from folio_postings fp join folios f on f.id = fp.folio_id
+          where f.reservation_id in (${stays}))`, [mine]);
     await db.query("alter table folio_postings disable trigger folio_postings_append_only");
     await db.query(
       `delete from folio_postings where folio_id in (
