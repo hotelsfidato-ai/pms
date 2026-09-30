@@ -102,7 +102,7 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 
 ---
 
-## Server endpoints — 73 (counted 30 September: 67 in till.ts, 6 in pos.ts)
+## Server endpoints — 75 (counted 1 October: 69 in till.ts, 6 in pos.ts)
 
 The code is in `api/src/modules/pos/` (moved 15 September): `till.ts` (the
 till, **3,555 lines** — splitting it into parts is not done yet) and `pos.ts`
@@ -161,6 +161,9 @@ orders      GET    /:code/till/orders
             POST   /:code/till/orders/:id/lines/:lineId/void
             POST   /:code/till/orders/:id/lines/:lineId/qty
             POST   /:code/till/orders/:id/kot               send to the kitchen
+            POST   /:code/till/orders/:id/taken             {lineIds}: the waiter carried these Ready dishes
+                                                            out; served. Ready ones only, said why otherwise
+                                                            (D27-222; roleGate TILL)
             GET    /:code/till/orders/:id/kot/:no           one docket (the kitchen reads it too: KOT_READ)
             POST   /:code/till/orders/:id/kot/:no/printed   {device}: the KOT station's claim before the paper;
                                                             refused unless the device is the station; claimed
@@ -204,8 +207,10 @@ setup       GET    /:code/till/setup                        D22-6 (25 Sep): the 
             PATCH  /:code/till/setup/tables/:id             label and seats, both sent
             POST   /:code/till/setup/tables/:id/off         switched off, never deleted; refused while a bill sits
                                                             on it (open, or paid and not cleared)
-kitchen     GET    /:code/kitchen
-            POST   /:code/kitchen/lines/:lineId/:to
+kitchen     GET    /:code/kitchen                           ordered and on the fire only: a Ready dish is the
+                                                            waiter's (D27-221)
+            POST   /:code/kitchen/lines/:lineId/:to         preparing or ready - the kitchen's two buttons;
+                                                            served is the waiter's Taken (D27-222)
 ```
 
 **The bridge, machine side** — `/api/pos`, an outlet key in `x-pos-key`
@@ -390,7 +395,12 @@ One other service's door is imported by this folder (17 September):
 - **Cash is whole rupees; a closed day is closed** (the owner, 28 September): a
   bill paid wholly in cash is rounded at the settle; once Close restaurant day
   has counted the drawer, new bills and payments wait for the night audit.
-- **The pass shows paid food** until it is served (QA POS-1); 151 lets only the
+- **The kitchen has two buttons, Start and Ready** (D27-221, D27-222). A Ready dish
+  leaves the Kitchen screen and is the waiter's: "N ready" on the table's tile on
+  Tables (one tap: Taken, all of them) and "Ready" with Taken on the Terminal's
+  bill; Taken sets served. The at-the-pass clock went with the third column;
+  080 still records ready and served, so `app.pos_line_timings` has both.
+- **The kitchen board shows paid food** until it is Ready (QA POS-1); 151 lets only the
   kitchen status change on a settled order.
 - **No default prices** (`HANDOVER.md` § 5). The schema ships no dish and no
   price — the hotel types them (`028_pos_till.sql`, header and the comment on
