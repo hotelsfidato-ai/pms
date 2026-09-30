@@ -46,6 +46,7 @@ a screen (Ctrl K).
 | (no menu entry) the interim bill, to print (QA FI-8) | `/h/:code/stays/:id/bill` | `pages/InterimBill.tsx` | — |
 | Payments (Finance) | `/h/:code/payments` | `pages/Billing.tsx` (`PaymentsPage`) | none |
 | Cashiering (Finance) | `/h/:code/cashiering` | `pages/Cashiering.tsx` | Reception |
+| Cash deposits (Finance) | `/h/:code/cash-deposits` | `pages/CashDeposits.tsx` | none (owner, Admin, GM, accountant, Viewer; D27-191) |
 | Company accounts (Finance) | `/h/:code/city-ledger` | `pages/Billing.tsx` (`PropertyCityLedgerPage`) | none |
 
 Six addresses, five page files. Menu gates (`nav.ts`): Folios and Invoices
@@ -87,6 +88,7 @@ of the old `inventorySetup.ts` (`3ca215d`).
 | GET | `/:code/stays/:id/folio` | a stay's bill in one figure — what the stay panel and In house read |
 | GET | `/:code/folios` | every open folio (the Folios screen) |
 | GET | `/:code/stays/:id/postings` | every line on a stay's bill |
+| GET | `/:code/stays/:id/bill` | the bill as it stands, `app.stay_bill` (123, 125, 166) - what the desk prints. Since D27-204 it adds `tonight` (`description`, `amount`, `tax`, `rate`) when a guest staying on has tonight's room night still to post: the night audit's own answer for this stay (`night-audit/roomNight.ts`). Absent when tonight is posted, the room is complimentary, there is no GST rule for rooms, or the guest leaves today. The desk's bill only: `app.stay_bill`, which the guest's own page reads through its door, is unchanged (D27-205) |
 | GET | `/:code/stays/:id/folios` | the stay's folios, when the bill is split |
 | POST | `/:code/stays/:id/folios` | open another folio for the stay (split billing) |
 | POST | `/:code/postings/:id/transfer` | move a line to another folio — two postings, never an edit |
@@ -99,18 +101,29 @@ of the old `inventorySetup.ts` (`3ca215d`).
 | POST | `/:code/stays/:id/charges` | post a charge; everything the desk posts carries the room rate of GST (`app.gst_rate`), unless the clerk marks it not taxable |
 | POST | `/:code/stays/:id/charges/:postingId/reverse` | reverse a charge — once (021), with a required `reason` kept on the reversal line (D27-117); a payment only by the owner, an administrator, the GM or the accountant (D27-125); a charge or discount refused once a tax invoice stands on its bill (D27-162, FIN-19) |
 | POST | `/:code/stays/:id/charges/:postingId/edit` | edit a charge's price and/or words with a `reason` (D27-157): the old line reversed and the corrected one posted in one step (`editFolioCharge`); owner, administrator, GM; refused on a closed day, with a tax invoice, for drinks with a VAT bill, and for a room night's words |
-| POST | `/:code/stays/:id/rate` | change the stay's rate a night with a `reason` (D27-162): every charged night corrected to it (a closed day's through night-audit's `correctClosedCharge`), all or nothing; owner, administrator, GM |
-| POST | `/:code/stays/:id/payments` | take a payment: a posting and its receipt; one guest's (and group's) payments take turns (D27-2); more than the bill only with `heldAsCredit: true`, else refused with `needs: "credit"` (D27-4); `folioId` names the bill of a split stay (QA FI-2); cash only by someone holding an open drawer (D27-118) |
+| POST | `/:code/stays/:id/rate` | change the stay's rate a night with a `reason` (D27-162): every charged night corrected to it (a closed day's through night-audit's `correctClosedCharge`), all or nothing; owner, administrator, GM. Before check-in it only changes the agreed rate, and with no night charged the reason goes into the booking's notes (D27-187, D27-195; the panel's menu opens `ChangeRateDialog`). `includesGst: true`: the rate is all-in and is split by `roomRateBeforeGst` first (D27-199) |
+| GET | `/:code/tax/room/before-gst?gross=` | a room rate that includes GST, split as the booking keeps it (D27-195): `{ok, pre, rate, total}` - the slab on the pre-tax value, the nearest total not above the figure; the slab gap and no room rule refused in words (`roomRateBeforeGst`, also used by reservations' `book.ts`); anyone |
+| POST | `/:code/stays/:id/payments` | take a payment: a posting and its receipt; one guest's (and group's) payments take turns (D27-2); more than the bill only with `heldAsCredit: true`, else refused with `needs: "credit"` (D27-4); `folioId` names the bill of a split stay (QA FI-2); cash opens the taker's own drawer by itself, after every refusal (`openOwnDrawer`, D27-200; every rupee still belongs to a shift, D27-118) |
 
 **`api/src/modules/finance/cashier.ts`** (cut from the old `api/src/routes/operations.ts`)
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/cashier-shift` | the drawer this person is holding (`app.cashier_expected_cash`) |
-| POST | `/:code/cashier-shift/open` | open it with a float |
-| POST | `/:code/cashier-shift/movements` | money in or out of the drawer |
+| GET | `/:code/cashier-shift` | the drawer this person is holding (`app.cashier_expected_cash`), with `received` - the kept floats it took up and from whose close; with none open, `waiting` - the float handed to them by name (`app.cashier_float_waiting`) - and their last close's count, float kept and for whom (D27-202). A read opens nothing |
+| POST | `/:code/cashier-shift/open` | open it BY HAND on a counted float - blank refused, 0 only when typed (D27-190, FIN-21). How a desk's first float gets in; every other drawer opens by itself (D27-200). What was handed to the person is taken up by it, never added on top |
+| POST | `/:code/cashier-shift/movements` | money in or out of the drawer; opens the drawer by itself if none is open (D27-200) |
 | POST | `/:code/cashier-shift/count` | count it, by denomination |
-| POST | `/:code/cashier-shift/close` | close and hand over |
+| POST | `/:code/cashier-shift/close` | close and hand over, with `keptCash` - the float kept, always typed, 0 to counted; above 0 it needs `handOverTo`, the next person's name (D27-201, D27-202); the rest is to deposit. If that person's drawer is already open the float is added to its opening and taken up at once |
+
+**`api/src/modules/finance/deposits.ts`** (30 September, D27-190, D27-191)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/:code/cash-deposits` | each closed day's cash to deposit per cash point (`app.cash_to_deposit`), deposited, difference, red until explained; every deposit; `canRecord`, `canVerify`. Owner, Admin, GM, accountant, Viewer |
+| POST | `/:code/cash-deposits` | record a deposit against the business day it banks: amount, date, bank, slip number. Owner, Admin, GM. The slip's photo goes through the shared `POST /attachments` (table `cash_deposits`) |
+| POST | `/:code/cash-deposits/:id/reverse` | reverse an unverified deposit by a line of its own, with a reason, once. Owner, Admin, GM |
+| POST | `/:code/cash-deposits/days/:date/explain` | why a day's deposits differ; red until then. Owner, Admin, GM |
+| POST | `/:code/cash-deposits/:id/verify` | owner or accountant only; refused without the slip's photo or on a red day |
 
 **`api/src/modules/finance/billing.ts`** (finance's part of the old `api/src/routes/billing.ts`)
 
@@ -155,6 +168,7 @@ be reversed once") is still in `api/test/`.
 | File | What it does |
 |---|---|
 | `postings.ts` | a stay's lines and balance (`getFolioPostings`, `getFolioBalance`), post a charge, reverse one, settle; asks `src/lib/rules.ts` (`canPostCharge`, `canReverse`) first |
+| `../sections.ts` | THE BILL IN SECTIONS (D27-200): `sectionOf` (a line's section by its category and tax scheme) and `billSections` (each section's lines, subtotal and tax rows). The Bill tab and `BillPrint` both read it; `useStayDue` (FolioPanel) is the one due figure for the headline, the closing row and the stay panel's foot |
 | `folios.ts` | one stay's folio (`getFolio`), the open folios (`listOpenFolios`), split billing (`listStayFolios`, `openFolio`, `transferPosting`, `listBillingCompanies`) |
 | `billing.ts` | payments and payments by method, billable stays, the invoice series, invoices, issuing one, a credit note |
 | `cashier.ts` | the drawer: read, open, money in or out, count, close |
@@ -172,7 +186,9 @@ migrations that made or changed them:
 | `payments` | the receipt behind a payment line | created `011_model_additions.sql`; `014_simulation_fixes.sql` (same hotel as its posting), `016_audit_coverage.sql` (never zero; audited) |
 | `vat_bills`, `vat_bill_series` | VAT bills for alcohol and their credit notes (D22-44): their own series per hotel, `VAT/5EL/2026-27/0001`, opened by the year's first bill so it restarts each 1 April | "a separate VAT bill for alcohol" (135 in this branch: `app.next_vat_bill_number`, `app.issue_vat_bill`; 025's immutability trigger) |
 | `invoices`, `invoice_series` | tax invoices and credit notes, numbered from a statutory series | created `011_model_additions.sql` (`app.next_invoice_number`); `013_policies.sql` (numbering protected), `014_simulation_fixes.sql` (the first invoice at a property), `016_audit_coverage.sql` (a series only moves forward), `025_invoices_form_c.sql` (the GST fields, credit notes, never edited, a series opened for each new property); "the FSSAI number on the invoice" (145 in this branch: `fssai_number`, copied from the hotel at issue and printed from there, D27-3) |
-| `cashier_shifts`, `cashier_movements`, `cashier_denominations` | the desk's drawer | created `059_cashier_shift.sql` (`app.cashier_expected_cash`; a closed shift is final) |
+| `cashier_shifts`, `cashier_movements`, `cashier_denominations` | the desk's drawer | created `059_cashier_shift.sql` (`app.cashier_expected_cash`; a closed shift is final); "the cash deposits log" (163: `kept_cash`, the float kept at the close) |
+| `cashier_float_claims` | which drawer took up the float a close kept (D27-200): the primary key is the close, so a float is carried into one drawer, once | "cash opens by itself" (165: `app.cashier_float_waiting`; also `app.pos_opening_cash` for the till, and `app.pos_expected_cash` reading it). **A close that kept a float with nobody named - made before D27-201 - is never carried: it stays unclaimed** |
+| `cash_deposits`, `cash_deposit_notes` | cash banked per business day, and why a day's deposits differ (D27-190) | "the cash deposits log" (163: append-only - insert and read, the verification stamp once; `app.cash_to_deposit`, also over `pos_day_ends.kept_cash`) |
 | `tax_rules` | GST as rules, one set for the desk and the till — and VAT on alcohol (kind `alcohol`) | created `067_tax_rules.sql` (`app.gst_rate`; the tax kind on outlets and menu categories); `119_the_spa.sql` (`spa`); "alcohol, a switch per property, and the VAT it is taxed under" (126 in this branch: `alcohol` as a kind and a menu heading, `folio_postings.tax_scheme` and `pos_order_lines.tax_scheme` gst/vat, a reversal takes its original's scheme, `app.pos_order_by_tax`, `app.stay_bill`'s `vat` rows) |
 
 Others post into it directly in SQL: front desk (a folio at check-in and
@@ -199,7 +215,7 @@ What `index.ts` exports, and who uses each (grep of `@/modules/finance`,
 | `FolioPanel` | front desk (`flows/StayDrawer.tsx`) — the Bill tab |
 | `TaxRulesCard` | inventory (`pages/RoomSetup.tsx`) |
 
-On the server (`api/src/modules/finance/index.ts`): `postCharge` (laundry, spa), and since 28 September the per-bill door for a banquet function's bill - `takeFolioPayment`, `postFolioCharge`, `issueFolioInvoice`, `folioBalance` (round E).
+On the server (`api/src/modules/finance/index.ts`): `postCharge` (laundry, spa), and since 28 September the per-bill door for a banquet function's bill - `takeFolioPayment`, `postFolioCharge`, `issueFolioInvoice`, `folioBalance` (round E). `editFolioCharge` since 30 September (D27-205): the front desk's room move puts tonight's posted night right to a new rate through it.
 
 ## Leans on
 
@@ -267,8 +283,9 @@ types, `BUSINESS_DATE` and `PTD_FROM`.
 - **Start here, reception's card** (`src/components/app/startHereCards.ts`)
   names this service's buttons: "Take a payment — Open the guest, go to Bill,
   **Settle**, then **Take payment**"; "Check a guest out — … **Check out**
-  opens once nothing is owed"; "Open the cash drawer — Enter the opening
-  float, then **Open the drawer**. **Close the shift** when you hand over."
+  opens once nothing is owed"; "Count and close the cash drawer - Your
+  drawer opens by itself with your first cash. At hand over, count it, type
+  the float kept and who takes it." (D27-200; the master's, 30 September)
   Rename one and the card changes too (`HANDOVER.md` § 3.3).
 - **Glossary:** the Folios screen uses the `folio` line of
   `src/lib/glossary.ts`; if what a folio is changes, the line changes.

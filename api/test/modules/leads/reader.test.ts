@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decode, makeReader, LeadsAppError } from "../../../src/modules/leads/firestore.ts";
+import { decode, impersonated, makeReader, LeadsAppError } from "../../../src/modules/leads/firestore.ts";
 
 /* The reader against a faked fetch: made-up leads shaped like the app's
    (n8n/3-build-firestore-commit.js), never a real person. What matters
@@ -95,5 +95,75 @@ describe("the leads app reader", () => {
     expect(failure).toBeInstanceOf(LeadsAppError);
     expect((failure as LeadsAppError).status).toBe(0);
     expect(reads).toEqual([]);
+  });
+});
+
+/* ── The keyless login (D27-186) ─────────────────────────────────────
+   Google, faked: the IAM Credentials call that lends an hour's token as
+   the read-only login. Every token here is a made-up word. */
+describe("the keyless login", () => {
+  const READER = "pms-reader@demo-leads.iam.gserviceaccount.com";
+  const inMinutes = (n: number) => new Date(Date.now() + n * 60_000).toISOString();
+
+  function google(answers: { status?: number; body: unknown }[]) {
+    const calls: { url: string; auth: string; body: unknown }[] = [];
+    const f = (async (url: string, init: RequestInit) => {
+      calls.push({ url, auth: String((init.headers as Record<string, string>)["authorization"]), body: JSON.parse(String(init.body)) });
+      const a = answers[Math.min(calls.length, answers.length) - 1]!;
+      return new Response(JSON.stringify(a.body), { status: a.status ?? 200 });
+    }) as unknown as typeof fetch;
+    return { f, calls };
+  }
+
+  it("asks Google for a token as the read-only login, with the server's own, for Datastore, for an hour", async () => {
+    const { f, calls } = google([{ body: { accessToken: "borrowed-1", expireTime: inMinutes(60) } }]);
+    const token = impersonated(READER, async () => "servers-own", f);
+    expect(await token()).toBe("borrowed-1");
+    expect(calls).toEqual([{
+      url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${encodeURIComponent(READER)}:generateAccessToken`,
+      auth: "Bearer servers-own",
+      body: { scope: ["https://www.googleapis.com/auth/datastore"], lifetime: "3600s" },
+    }]);
+  });
+
+  it("keeps the token until five minutes before it ends, then asks again", async () => {
+    const { f, calls } = google([
+      { body: { accessToken: "borrowed-1", expireTime: inMinutes(60) } },
+    ]);
+    const token = impersonated(READER, async () => "servers-own", f);
+    expect([await token(), await token(), await token()]).toEqual(["borrowed-1", "borrowed-1", "borrowed-1"]);
+    expect(calls, "one ask for three reads").toHaveLength(1);
+
+    const dying = google([
+      { body: { accessToken: "nearly-over", expireTime: inMinutes(4) } },
+      { body: { accessToken: "fresh", expireTime: inMinutes(60) } },
+    ]);
+    const next = impersonated(READER, async () => "servers-own", dying.f);
+    expect([await next(), await next()]).toEqual(["nearly-over", "fresh"]);
+    expect(dying.calls).toHaveLength(2);
+  });
+
+  it("names a refused token by its status, keeps nothing of the answer, and reads nothing", async () => {
+    const { f } = google([{ status: 403, body: { error: { message: "Permission iam.serviceAccounts.getAccessToken denied" } } }]);
+    const reads: number[] = [];
+    const lookedUp: string[] = [];
+    const reader = makeReader({
+      projectId: "demo-leads", token: impersonated(READER, async () => "servers-own", f), counted: (n) => { reads.push(n); },
+      fetch: (async (url: string) => { lookedUp.push(url); return new Response("[]"); }) as unknown as typeof fetch,
+    });
+    const failure = await reader.query("", {}).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(LeadsAppError);
+    expect((failure as LeadsAppError).status).toBe(403);
+    expect((failure as Error).message).not.toContain("denied");
+    expect(lookedUp, "no token, no read").toEqual([]);
+    expect(reads).toEqual([]);
+  });
+
+  it("says the app could not be reached when the server has no Google login of its own", async () => {
+    const { f, calls } = google([{ body: {} }]);
+    const token = impersonated(READER, async () => { throw new Error("[auth] No service account configured."); }, f);
+    const failure = await token().catch((e: unknown) => e);
+    expect((failure as LeadsAppError).status).toBe(0);
+    expect(calls).toEqual([]);
   });
 });

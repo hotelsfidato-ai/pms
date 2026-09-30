@@ -58,7 +58,7 @@ export function contentProblems(content: HotelContent): string[] {
 
   if (!channel) {
     return ["The hotel's SU details have not been entered yet: its SU hotel id, "
-      + "postcode, country, position and a contact's name."];
+      + "country and a contact's name."];
   }
 
   const need = (value: string | null | undefined, what: string) => {
@@ -66,10 +66,11 @@ export function contentProblems(content: HotelContent): string[] {
   };
   need(hotel.addressLine, "SU needs the hotel's street address. It is set on the Properties screen.");
   need(hotel.city, "SU needs the hotel's city. It is set on the Properties screen.");
-  need(channel.postalCode, "SU needs the hotel's postcode.");
+  /* The hotel's own, from its profile (D27-214). */
+  need(hotel.postalCode, "SU needs the hotel's postcode: the PIN code in Settings, on the Property tab.");
   need(channel.countryCode, "SU needs the hotel's country.");
-  need(channel.latitude, "SU needs the hotel's latitude.");
-  need(channel.longitude, "SU needs the hotel's longitude.");
+  need(hotel.latitude, "SU needs the hotel's latitude. It is set in Settings, on the Property tab.");
+  need(hotel.longitude, "SU needs the hotel's longitude. It is set in Settings, on the Property tab.");
   need(channel.contactFirstName, "SU needs a contact's first name.");
   need(channel.contactLastName, "SU needs a contact's last name.");
   need(hotel.email, "SU needs the hotel's email address. It is set on the Properties screen.");
@@ -119,7 +120,7 @@ function propertyRequest(content: HotelContent): ContentRequest {
   const address = {
     AddressLine: hotel.addressLine!.trim(),
     CityName: hotel.city.trim(),
-    PostalCode: c.postalCode!.trim(),
+    PostalCode: hotel.postalCode!.trim(),
     CountryName: c.countryCode!.trim(),
   };
 
@@ -151,7 +152,7 @@ function propertyRequest(content: HotelContent): ContentRequest {
               },
             ],
           },
-          HotelInfo: { Position: { Latitude: c.latitude!, Longitude: c.longitude! } },
+          HotelInfo: { Position: { Latitude: hotel.latitude!, Longitude: hotel.longitude! } },
           ...(c.description?.trim() ? { HotelDescription: c.description.trim() } : {}),
         },
       },

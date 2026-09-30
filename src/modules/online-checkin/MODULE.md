@@ -9,14 +9,28 @@ and D21-6 to D21-19, D21-25, D21-29, D21-59 to D21-63, D21-72, D21-75
 (`docs/briefs/decisions-2026-09-21.md`). The design is
 `docs/architecture/online-checkin.md`; the brief is `docs/briefs/guest-page.md`.
 
-**Not built, on purpose:** the ID photo (waits on the owner's rule for how
-long it is kept, D21-11), paying online, choosing a room.
+**30 September (D27-207, D27-210):** three ways to prove it is you - a code
+on WhatsApp, a code by email, Continue with Google - and nothing sent until
+the guest chooses. **And the ID photo (D27-207 to D27-212):** optional on
+the guest's page, addable by the desk at check-in, encrypted with the
+hotel's own password and kept in Google Drive - never on this server.
+**Not built, on purpose:** paying online, choosing a room.
 
 ```
 src/modules/online-checkin/        the guest's page, the desk's screen, their data and tests
-api/src/routes/guestDoor.ts        the door (the brief gives this lane that file)
-db/migrations/121_…, 124_…         everything behind the code; the guest's bill
+api/src/routes/guestDoor.ts        the door, and the desk's routes (the brief gives this lane that file)
+api/src/routes/idPhotos.ts         everything that touches a photo: the checks, and put · get · remove
+api/src/aesZip.ts                  the encrypted zip 7-Zip opens, written and read here
+deploy/n8n/pms-id-photos-crs.json  the Drive workflow: store, fetch, delete - ciphertext only
+db/migrations/121_…, 124_…, 167_…  everything behind the code; the guest's bill; the three ways in; where a photo is
+OWNER-STEPS.md                     the owner's clicks: the email code, the Google client ID, ID photos
 ```
+
+Server settings, names only: `GOOGLE_CLIENT_ID` (public; unset, no Google
+button). `ID_PHOTO_N8N_URL`, `ID_PHOTO_N8N_SECRET` and one
+`ID_PHOTO_PASSWORD_<CODE>` per hotel (secrets; without them that hotel's
+upload is not offered). Codes need the sending settings
+(`deploy/n8n/IMPORT.md`).
 
 ---
 
@@ -37,23 +51,63 @@ put back (CHANGELOG, 21 September).
    the moment it is refused. Every function behind the code takes both hashes
    and asks `app.guest_unlocked` in the database every time. A forwarded link
    shows what it showed before and asks for a code.
-4. **Nobody types a number (D27-105).** The code goes to the number the stay
-   carries, and the answer says where: its last four digits on a booking's
-   link, nothing of it on a room card (D21-14). No mobile on the booking:
-   "Ask the desk", and no code is issued. (Until 29 September the guest typed
-   the number and a wrong one had to read like a right one; with nothing typed
-   there is nothing to guess.)
+4. **Nobody types a number or an address, and nothing is sent until the
+   guest chooses (D27-105, D27-207, D27-210).** Opening the page sends
+   nothing. The guest presses "Send the code on WhatsApp" or "Send the code
+   by email"; the code goes to the number or the email the stay carries, and
+   the answer says where: the number's last four digits or the address
+   masked ("a…@example.com") on a booking's link, nothing of either on a room
+   card (D21-14). A booking's link offers only the ways the booking has; with
+   neither, "Ask the desk", and no code is issued. One live code per link,
+   whichever way it went; the same answer opens both. (Until 29 September the
+   guest typed the number; until 30 September the WhatsApp code went by
+   itself on opening.)
    **The code is never in an answer** - except from a development server
    started with `GUEST_CODE_ON_SCREEN=1` beside `ALLOW_DEV_AUTH=1`, which
    `env.ts` refuses under production; the page draws it only in a development
    build, and `scripts/check-no-dev-login.mjs` fails a build carrying
    `devCode` (`devCodeNeverShips.test.ts`).
+   **Continue with Google (D27-207) is a third proof, not an account.**
+   The page hands the door Google's signed answer; the door checks it with
+   Google's own library against Google's published keys - signed by Google,
+   made for this system (`aud` = `GOOGLE_CLIENT_ID`), issued by Google, not
+   expired, under ten minutes old, the address verified - and the DATABASE
+   compares that address with the stay's own, letter case aside
+   (`app.guest_google_answer`). A match hands out the same unlock as a right
+   code and nothing else: no session, no guest role, and NO Firebase user -
+   no guest ever sits in the project staff sign in to. Every failure reads
+   the same sentence. Google's script is not in the bundle: the page fetches
+   it from accounts.google.com only when the guest presses the button
+   (`googleSignIn.ts`). Offered only where the server has the client id and,
+   on a booking's link, the booking an email.
 5. **Every refusal takes the same shape** — behind the code, a refused call
    answers what an unknown link answers: 404 and one sentence.
 6. **Nothing a guest types reaches the legal register without a person
    (D21-8).** Their details are a submission; a clerk confirms them against
    the ID and only then are they written to `guest_documents`, under the
-   clerk's own session.
+   clerk's own session. The ID photo is a submission too: it never reaches
+   `guest_documents`, Form C or Form III.
+7. **The guest sends a photo and never reads one back, and no photo is ever
+   on this server (D27-207 to D27-212).** The upload is behind the code, and
+   the link, the knocks and this phone's unlock are checked BEFORE a byte of
+   the body is read. Only a JPEG or a PNG, by the file's own bytes; 4 MB a
+   photo, 9 MB an upload, ten an hour a link; the guest's tick; a JPEG's
+   location stripped. It is sealed with that hotel's password
+   (`ID_PHOTO_PASSWORD_<CODE>`) into an AES-256 zip (`api/src/aesZip.ts`) and
+   stored in Drive through its own workflow; the row keeps the Drive file's
+   id and the sha256 of the ciphertext, nothing of the image. No route on
+   the guest's door returns a photo, its name or where it is. A replaced
+   photo is deleted from Drive at once. Drive down: "try again shortly", and
+   nothing is kept anywhere. **At the desk** the image is fetched, checked
+   against its hash and decrypted in memory: reception while its details
+   wait; once kept (confirmed, set aside, or added at the desk) the owner,
+   an administrator and the GM only. Every view is written down
+   (`guest_id_photo_views`); a removal records who and why; a Drive delete
+   that failed shows "not yet deleted" with Try again.
+   ⚠ **`deploy/nginx.conf` passes these three paths straight through
+   (`proxy_request_buffering off`, `proxy_max_temp_file_size 0`)**: by
+   default nginx writes a body or an answer of this size to a temporary
+   file, which would be the photo, unencrypted, on this server's disk.
 
 ## Screens
 
@@ -71,7 +125,8 @@ Coming soon page and its address are gone.
 **The guest's page, at 375px (the primary size):**
 
 - **A booking's link, before the code** — the guest's own name, dates,
-  reference, and the last four digits of the number on the booking.
+  reference, the last four digits of the number on the booking and its email
+  masked, and one button for each way the booking has.
 - **A room's card, before the code (D21-14)** — the hotel and the room number,
   nothing of the guest: not even the last four digits. **Nobody checked in
   (D21-15)** — "This opens once you're checked in", with the hotel's name.
@@ -139,8 +194,9 @@ reception's menu for this (the owner, 24 September).
 | Method | Path | Before the code | What it does |
 |---|---|---|---|
 | GET | `/api/guest/:token` | answers | the booking or the room; `verified` for THIS phone; `canSendCodes`; `offers` once unlocked |
-| POST | `/api/guest/:token/code` | answers | a code to the phone on the stay it resolves to, nothing typed; says where, or "Ask the desk" (D27-105). The page asks it by itself on opening, once per ten minutes |
+| POST | `/api/guest/:token/code` | answers | `{ by: "whatsapp" \| "email" }`: a code to the phone or the email on the stay it resolves to, nothing else read; says where, or "Ask the desk". Asked only when the guest presses (D27-210) |
 | POST | `/api/guest/:token/verify` | answers | the six digits; hands back the unlock once |
+| POST | `/api/guest/:token/google` | answers | Continue with Google (D27-207): Google's signed answer; the same unlock when its address is the stay's. Refused like an unknown link while `GOOGLE_CLIENT_ID` is unset |
 | GET/POST | `/api/guest/:token/details` | **refused** | what the guest sent / send it, as a submission |
 | GET | `/api/guest/:token/bill` | **refused** | the bill as it stands — `app.guest_bill` (124), which is finance's `app.stay_bill` (123) for the one stay the link and the unlock reach |
 | GET/POST | `/api/guest/:token/requests` | **refused** | their requests / make one; kind `desk` is a message to the front desk (D23-14) |
@@ -152,11 +208,26 @@ reception's menu for this (the owner, 24 September).
 | GET | `/api/hotels/:code/online-checkin/messages` | staff | messages to the desk: one booking's (`?reservation=`, handled ones too) or every booking's unread |
 | POST | `/api/hotels/:code/online-checkin/rooms/:roomId/card` | staff | a new card for a room; the old one dies |
 | POST | `/api/hotels/:code/online-checkin/cards` | staff | a new card for every room |
+| GET | `/api/guest/:token/id-photo` | **refused** | whether a photo is there and since when, or that the desk removed it and why; whether the hotel takes them. Never the image |
+| POST | `/api/guest/:token/id-photo` | **refused** | a form: `front`, `back` (optional), `agreed=yes`. Checked, encrypted, stored in Drive; replaces the one before |
+| GET | `/api/hotels/:code/online-checkin/id-photos/:id` | staff | the photo, decrypted in memory: desk roles while its details wait, then owner, Admin, GM. The view is recorded |
+| POST | `/api/hotels/:code/online-checkin/id-photos/:id/remove` | staff | remove with a reason (the desk's three while waiting; a keeper's own words once kept); also "Try again" for a Drive delete that failed |
+| GET | `/api/hotels/:code/online-checkin/id-photos` | staff | "ID photos kept": owner, Admin, GM |
+| POST | `/api/hotels/:code/stays/:id/id-photo` | staff | the desk adds one at check-in (D27-210): desk roles, the same checks and the same `put` |
 
 Staff routes are for owner, admin, GM, hotel manager and reception
 (`DESK_ROLES`); anybody else is refused with a sentence naming who may.
 
-## Database (migrations 114, 121, 132 and 158)
+## Database (migrations 114, 121, 132, 158 and 167)
+
+**167 (30 September, D27-207):** all new functions, nothing earlier changed.
+`app.guest_email_code_make(text)` (158's code, to the stay's email; no email
+answers a row with no code), `app.guest_link_ways(text)` (the masked email a
+booking's link may show; null on a room card - its own function because
+`guest_link_open`'s return type cannot change on a replay),
+`app.masked_email(text)` (internal), and `app.guest_google_answer(text, text,
+text)` for Continue with Google (the address Google vouched for against the
+stay's own, then the same unlock).
 
 **162 (29 September; the master renumbers at merge):**
 `app.guest_code_make(text)` replaces the two-argument one (no number typed;
@@ -172,6 +243,15 @@ signature, MEMORY 317).
 | `guest_unlocks` | this phone's unlock, hashed, for one link and one stay, an hour |
 | `guest_detail_submissions` | what a guest typed, waiting for a clerk; Aadhaar whole (D21-17) |
 | `guest_requests` | a spa or laundry request, or a message to the desk (kind `desk`, 132), open / done / declined; open is unread |
+| `guest_id_photos` (167) | WHERE a guest's ID photo is, never the photo: one row per encrypted bundle - hotel and its code, stay, guest, submission, who added it (the guest's link or a clerk), sides, the notice version agreed to, `pending` / `stored` / `removed`, the Drive file id, the ciphertext's sha256 and size, who removed it and why, `drive_delete_failed_at`. Only a `pending` row can be deleted |
+| `guest_id_photo_views` (167) | one row each time a member of staff opens a photo: who, when |
+
+**The guest's photo functions (167)**, each asking `app.guest_unlocked`
+itself: `guest_id_photo_begin` (the pending row, only while details wait),
+`guest_id_photo_stored` (Drive has it; hands back the bundle it replaces),
+`guest_id_photo_abandon`, `guest_id_photo_delete_failed`,
+`guest_id_photo_state`. The desk's side is ordinary staff SQL under row
+security; WHICH staff is the route's rule.
 
 **The bill (D21-10, migration 124):** `app.guest_bill(token_hash,
 unlock_hash)` is one line — finance's `app.stay_bill` for the stay
@@ -242,9 +322,19 @@ bash db/tests/run.sh
 bash db/tests/rerun.sh          # this lane added a migration: it must replay twice
 ```
 
-Guards: `onlineCheckin.test.tsx` (the screen), `api/test/guestDoor.test.ts`
-and `api/test/guestDoorBehindTheCode.test.ts` (the door), and the core's
+Guards: `onlineCheckin.test.tsx` and `idPhoto.test.tsx` (the screens),
+`api/test/guestDoor.test.ts` and `api/test/guestDoorBehindTheCode.test.ts`
+(the door), `api/test/guestIdPhoto.test.ts` (the photo, against a stand-in
+for the Drive workflow), `api/test/aesZip.test.ts` (the encrypted zip: a
+round trip, and against Windows' own tar both ways),
+`api/test/idPhotoWorkflow.test.ts` (the workflow's own code), and the core's
 `boundaries`, `migrationNumbers`, `navigation` and `primaryAction` tests.
+
+**Exported for other services (`index.ts`):** `AddIdPhotoAtDesk` -
+`<AddIdPhotoAtDesk stayId={reservationId} />` inside a `/h/:code/…` screen;
+front desk's check-in and the stay panel draw it (the master mounts it). It
+shows itself only to the desk's roles, and says so where the hotel's ID
+photos are off.
 
 ## Requests from other services
 

@@ -42,7 +42,56 @@ const refuse = (
    The POS day end's shape, deliberately — a front office that
    reasons about its cash differently from its restaurant is one
    where the two get compared and nobody can.
+
+   THE DRAWER OPENS BY ITSELF (the owner's D27-200, D27-201): the first
+   cash a person takes after the night audit, or the first money they
+   record in or out, opens their drawer - on the float a close handed to
+   them by name, and ₹0 for anyone else. A FLOAT IS CARRIED ONCE:
+   cashier_float_claims (165) says which drawer took which close's float,
+   its primary key refuses a second, and openings and handovers at one
+   hotel take turns so neither misses the other.
    ══════════════════════════════════════════════════════════════════ */
+
+/** One opening or handover at a time per hotel, to the end of the transaction. */
+const drawerTurn = (client: Client, hotelId: string) =>
+  client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [`cash-drawer:${hotelId}`]);
+
+/** Marks every float waiting for this drawer's holder as taken up by it. */
+const claimFloats = (client: Client, hotelId: string, shiftId: string) =>
+  client.query(
+    `insert into cashier_float_claims (closed_shift_id, taken_by_shift_id)
+     select cs.id, $2::uuid
+       from cashier_shifts cs
+      where cs.hotel_id = $1
+        and cs.handed_to = (select staff_id from cashier_shifts where id = $2::uuid)
+        and cs.closed_at is not null and cs.kept_cash > 0
+        and not exists (select 1 from cashier_float_claims c where c.closed_shift_id = cs.id)`,
+    [hotelId, shiftId]);
+
+/**
+ * Opens the caller's drawer if they hold none, on the float waiting for them
+ * (app.cashier_float_waiting; ₹0 when nothing was handed to them).
+ *
+ * A WRITE: call it after every refusal (MEMORY 243). The shift's `opened_at`
+ * is this transaction's own time, so the payment that opened it is counted
+ * in it (app.cashier_expected_cash asks created_at >= opened_at).
+ */
+export async function openOwnDrawer(
+  client: Client, hotelId: string, businessDate: string,
+): Promise<void> {
+  const open = `select 1 from cashier_shifts
+                 where hotel_id = $1 and staff_id = app.current_user_id() and closed_at is null`;
+  if ((await client.query(open, [hotelId])).rows.length) return;
+  await drawerTurn(client, hotelId);
+  const { rows: made } = await client.query<{ id: string }>(
+    `insert into cashier_shifts (hotel_id, staff_id, business_date, opening_cash, opened_by)
+     select $1, app.current_user_id(), $2::date,
+            app.cashier_float_waiting($1, app.current_user_id()), app.current_user_id()
+      where not exists (${open})
+     returning id::text`,
+    [hotelId, businessDate]);
+  if (made[0]) await claimFloats(client, hotelId, made[0].id);
+}
 
 cashier.get("/:code/cashier-shift", async (c) => {
   const body = await withSession(c.get("subject"), async (client, session) => {
@@ -68,22 +117,36 @@ cashier.get("/:code/cashier-shift", async (c) => {
        so somebody taking over knows what they were handed. */
     if (!open[0]) {
       const { rows: last } = await client.query<{
-        closed_at: string; counted: string; handed_to: string | null;
+        closed_at: string; counted: string; kept: string | null; handed_to: string | null;
       }>(
+        /* The colleague's name through app.hotel_people (149): `staff` shows
+           a clerk only their own row, so it read "handed to nobody". */
         `select to_char(cs.closed_at,'DD Mon, HH24:MI') as closed_at,
-                cs.counted_cash::text as counted, s.full_name as handed_to
+                cs.counted_cash::text as counted, cs.kept_cash::text as kept,
+                coalesce(s.full_name, hp.full_name) as handed_to
            from cashier_shifts cs
            left join staff s on s.id = cs.handed_to
+           left join app.hotel_people($1) hp on hp.id = cs.handed_to
           where cs.hotel_id = $1 and cs.staff_id = $2
             and cs.closed_at is not null
           order by cs.closed_at desc limit 1`,
         [hotelId, session.staffId]);
+      const { rows: float } = await client.query<{ waiting: string }>(
+        `select app.cashier_float_waiting($1, $2)::text as waiting`,
+        [hotelId, session.staffId]);
       return {
         businessDate,
         shift: null,
+        /* What the drawer opens on when this person first takes cash: the
+           float handed to them by name, 0 for anyone else (D27-201). */
+        waiting: Number(float[0]!.waiting),
         colleagues: [],
         previous: last[0]
           ? { closedAt: last[0].closed_at, counted: Number(last[0].counted),
+              /* What goes is on record with what came (D27-202): the float
+                 kept, for whom, and so the rest to deposit. Null on a close
+                 from before the float was recorded. */
+              kept: last[0].kept === null ? null : Number(last[0].kept),
               handedTo: last[0].handed_to }
           : null,
       };
@@ -129,6 +192,19 @@ cashier.get("/:code/cashier-shift", async (c) => {
     const { rows: expected } = await client.query<{ amount: string }>(
       `select app.cashier_expected_cash($1)::text as amount`, [shiftId]);
 
+    /* WHAT COMES IS WHAT GOES (the owner, D27-202): the floats this drawer
+       took up, and from whose close. */
+    const { rows: received } = await client.query<{ amount: string; from_name: string | null; at: string }>(
+      `select cs.kept_cash::text as amount, coalesce(s.full_name, hp.full_name) as from_name,
+              to_char(cs.closed_at, 'DD Mon, HH24:MI') as at
+         from cashier_float_claims c
+         join cashier_shifts cs on cs.id = c.closed_shift_id
+         left join staff s on s.id = cs.staff_id
+         left join app.hotel_people($2) hp on hp.id = cs.staff_id
+        where c.taken_by_shift_id = $1
+        order by cs.closed_at`,
+      [shiftId, hotelId]);
+
     /* From app.hotel_people (149, the owner's D27-97): read from `staff` and
        `staff_hotels` it was nobody for anyone who does not run the hotel -
        row security shows each person only their own roster line. */
@@ -148,6 +224,7 @@ cashier.get("/:code/cashier-shift", async (c) => {
         id: shiftId,
         openedAt: open[0].opened_at,
         opening: Number(open[0].opening),
+        received: received.map((r) => ({ amount: Number(r.amount), from: r.from_name, closedAt: r.at })),
         receipts: receipts.map((r) => ({
           method: r.method, count: r.n, amount: Number(r.amount),
         })),
@@ -176,9 +253,12 @@ cashier.get("/:code/cashier-shift", async (c) => {
 cashier.post("/:code/cashier-shift/open", async (c) => {
   const input = await c.req.json<{ opening?: number }>()
     .catch(() => ({}) as { opening?: number });
-  const opening = Number(input.opening ?? 0);
-  if (!Number.isFinite(opening) || opening < 0) {
-    return c.json(refuse("An opening float is zero or more."), 409);
+  /* COUNTED, NEVER ASSUMED (D27-190): a blank float was saved as ₹0, a
+     figure nobody counted. Zero is an answer only when somebody gives it. */
+  const opening = input.opening;
+  if (typeof opening !== "number" || !Number.isFinite(opening) || opening < 0) {
+    return c.json(refuse(
+      "Count the opening float first - enter 0 if the drawer is empty."), 409);
   }
 
   const result = await withSession(c.get("subject"), async (client, session) => {
@@ -186,12 +266,18 @@ cashier.post("/:code/cashier-shift/open", async (c) => {
     if (!hotelId) return null;
     const businessDate = await businessDateFor(client, hotelId);
 
+    /* A float counted in by hand - how a desk's first float gets in. What
+       was handed to this person by name is what they are counting, so it is
+       taken up here and never carried again; the count is the opening. */
+    await drawerTurn(client, hotelId);
     try {
-      await client.query(
+      const { rows: made } = await client.query<{ id: string }>(
         `insert into cashier_shifts (hotel_id, staff_id, business_date,
                                      opening_cash, opened_by)
-         values ($1,$2,$3::date,$4,$2)`,
+         values ($1,$2,$3::date,$4,$2)
+         returning id::text`,
         [hotelId, session.staffId, businessDate, opening.toFixed(2)]);
+      await claimFloats(client, hotelId, made[0]!.id);
       return { ok: true as const };
     } catch (error) {
       const e = error as { code?: string } | undefined;
@@ -228,6 +314,9 @@ cashier.post("/:code/cashier-shift/movements", async (c) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
+    /* Money in or out is cash in hand: it opens the drawer as a payment
+       does (D27-200). Every refusal is above this. */
+    await openOwnDrawer(client, hotelId, await businessDateFor(client, hotelId));
     const { rows: shift } = await client.query<{ id: string }>(
       `select id::text from cashier_shifts
         where hotel_id = $1 and staff_id = $2 and closed_at is null`,
@@ -297,7 +386,7 @@ cashier.post("/:code/cashier-shift/count", async (c) => {
 });
 
 cashier.post("/:code/cashier-shift/close", async (c) => {
-  type Body = { varianceReason?: string; handOverTo?: string | null };
+  type Body = { varianceReason?: string; handOverTo?: string | null; keptCash?: unknown };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   const result = await withSession(c.get("subject"), async (client, session) => {
@@ -326,15 +415,53 @@ cashier.post("/:code/cashier-shift/close", async (c) => {
         + `${Math.abs(variance).toFixed(2)}. Say why, and it closes.`);
     }
 
+    /* THE FLOAT KEPT (D27-191, D27-202): typed at every close, 0 up to the
+       count, never assumed; the rest of the count is cash to deposit. To
+       hand the whole drawer over, the whole count is typed. */
+    const counted = Number(shift[0].counted);
+    const kept = input.keptCash;
+    if (typeof kept !== "number" || !Number.isFinite(kept) || kept < 0 || kept > counted) {
+      return refuse(
+        `Say what float is kept for the next shift - from 0 to the ${counted.toFixed(2)} counted.`);
+    }
+    /* A KEPT FLOAT NAMES THE NEXT PERSON (the owner's D27-201): it waits for
+       them, and their drawer opens on it. Kept with nobody named it would be
+       nobody's. ₹0 kept needs no name. */
+    if (kept > 0 && !input.handOverTo) {
+      return refuse(
+        "Say who takes the float: a float kept needs the next person's name, and it "
+        + "waits for them. Keep 0 to deposit it all.");
+    }
+
+    /* Handovers and openings take turns, so the float below is either seen
+       by the next person's opening or added to the drawer they hold. */
+    if (kept > 0) await drawerTurn(client, hotelId);
+
     await client.query(
       `update cashier_shifts
           set variance_reason = $1, handed_to = $2, closed_by = $3,
-              closed_at = now()
+              closed_at = now(), kept_cash = $5
         where id = $4`,
       [input.varianceReason?.trim() || null, input.handOverTo || null,
-       session.staffId, shift[0].id]);
+       session.staffId, shift[0].id, kept.toFixed(2)]);
 
-    return { ok: true as const, variance };
+    /* THE NEXT PERSON IS ALREADY OPEN (a shift overlap): the float goes into
+       the drawer they hold, and is taken up here so it is never carried
+       again (D27-201). Otherwise it waits for their next opening. */
+    if (kept > 0) {
+      const { rows: theirs } = await client.query<{ id: string }>(
+        `update cashier_shifts set opening_cash = opening_cash + $3
+          where hotel_id = $1 and staff_id = $2::uuid and closed_at is null
+         returning id::text`,
+        [hotelId, input.handOverTo, kept.toFixed(2)]);
+      if (theirs[0]) {
+        await client.query(
+          `insert into cashier_float_claims (closed_shift_id, taken_by_shift_id)
+           values ($1::uuid, $2::uuid)`, [shift[0].id, theirs[0].id]);
+      }
+    }
+
+    return { ok: true as const, variance, toDeposit: counted - kept };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

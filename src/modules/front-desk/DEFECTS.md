@@ -56,6 +56,56 @@ moved out of, not for a check-out.
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-24 · A check-in that moved the arrival left the room hold on the old dates - FIXED 30 September (D27-205, numbered for now)
+
+**Found** - 30 September, planning D27-204: the first night's line reads the
+room held tonight, and for `FH-2608-4867` (booked from 2 October, checked in
+on 30 September) there was none. The booking said 30 Sep - 5 Oct; the live
+hold said 2 Oct - 5 Oct.
+
+**What was wrong** - `POST /:code/stays/:id/check-in`
+(`api/src/modules/front-desk/operations.ts`) moves `reservations.check_in` to
+today for an early arrival, but asked the room's clash about the booking's OLD
+dates and wrote the hold (`room_assignments`) on them. The nights the guest
+moved onto were neither checked nor held: somebody else could already hold the
+room tonight, the room could be sold again tomorrow, and the night audit's
+line read "Room - · 1 night".
+
+**The fix** - one `arrival` (today when the arrival moves, else the booking's)
+for the clash check and the hold; a hold given ahead on the same room is
+stretched back to it (`update room_assignments set from_date`), since the
+insert would otherwise meet its own exclusion and do nothing.
+
+**Proved** - `api/test/modules/front-desk/firstNight.test.ts`, "FD-24": the
+hold starts today and the first night names the room; a room somebody else
+holds on a moved-onto night is refused by name. Both fail on the old code
+(held from 2026-08-31; 200 for 409).
+
+### FD-23 · A check-in with the ID block's default "IN" took a returning foreign guest off the Form III register - FIXED 30 September (D27-197, numbered for now)
+
+**Found** - 30 September, moving the walk-in route's tests onto the booking
+plus the check-in (the route went, Rule 2b). The one page's ID block opens on
+"IN" and does not read a returning guest's record. The check-in took the
+nationality typed over the one on file, so Form III was not asked, and it then
+wrote `guests.nationality = 'IN'`. The walk-in route had the guard; the
+check-in never did, from Arrivals either. On a guest on file as GB: expected
+409 and GB, got 200 and IN.
+**Fixed** - the owner's D27-197: at check-in, "IN" typed never replaces a
+foreign nationality on file (`operations.ts`, the check-in); Form III is asked
+of the nationality on file. `api/test/modules/guests/formIII.test.ts`, "keeps
+a returning foreign guest foreign when the form says IN", seen failing first.
+**Rule:** a rule that lives in one route is lost when that route goes. Before
+removing a route, list what it refuses and find each refusal on the path that
+replaces it.
+
+### FD-21 · A bad stay id on a stay's inclusions answered 500 - FIXED 30 September (numbered for now)
+
+`GET/POST/DELETE /:code/stays/:id/inclusions` passed the id to Postgres unchecked; a non-uuid failed the cast. **Fixed:** one middleware answers 404 "No such stay." first (`stayExtras.ts`, `api/test/modules/front-desk/badStayId.test.ts`).
+
+### FD-22 · A check-in could move a booking weeks earlier with nobody seeing it - FIXED 30 September (D27-193, numbered for now)
+
+The owner's 1 October booking, checked in on a hotel still on 25 August, became 39 nights: early-by-days moved the arrival with any reason. **Fixed:** more than a day early, the check-in first shows the move and the stay's new cost (GST a night as the audit rounds it) with Cancel and Confirm; the server refuses without `confirmMove: true`, before any write (`dayAndRoom.test.ts`, `earlyCheckIn.test.tsx`).
+
 ### FD-20 · The check-in's room tiles cut their pill on a phone — FIXED 29 September
 
 **Found** - 29 September, opening the one-page check-in at 390 px (D27-163):

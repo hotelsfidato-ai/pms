@@ -24,7 +24,7 @@ time targets; guests may ask from their page while checked in; something broken
 also on Work orders and asks what was done, the other two close with one tap.
 
 **Shipped**
-- A request is a work order that carries the stay: migration 172 (number for
+- A request is a work order that carries the stay: migration 170 (number for
   now) - `reservation_id`, `raised_by_guest`, the `fnb` category, the stay at
   this property; the guest page's three functions, bodies only
 - `api/src/modules/guest-services/requests.ts`: GET, POST, PATCH `/requests`,

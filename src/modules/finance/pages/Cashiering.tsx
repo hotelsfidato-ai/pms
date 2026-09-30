@@ -91,7 +91,7 @@ export default function CashieringPage() {
       />
       {!data || !data.shift ? (
         <OpenDrawer hotelId={hotelId} previous={data?.previous ?? null}
-                    onDone={refresh} />
+                    waiting={data?.waiting ?? 0} onDone={refresh} />
       ) : (
         <Shift hotelId={hotelId} shift={data.shift}
                colleagues={data.colleagues} onDone={refresh} />
@@ -102,20 +102,26 @@ export default function CashieringPage() {
 
 /* ── No drawer open ───────────────────────────────────────────────
    A real state, not an error: the shift has not started. */
-function OpenDrawer({ hotelId, previous, onDone }: {
+function OpenDrawer({ hotelId, previous, waiting, onDone }: {
   hotelId: string;
-  previous: { closedAt: string; counted: number; handedTo: string | null } | null;
+  /** The float handed to this person by name (D27-201). */
+  waiting: number;
+  previous: { closedAt: string; counted: number; kept?: number | null; handedTo: string | null } | null;
   onDone: () => void;
 }) {
-  const [opening, setOpening] = useState("");
+  /* COUNTED, NEVER ASSUMED (D27-190): a blank float used to open as ₹0.
+     Open waits until something is typed; 0 only when somebody types it. */
+  const [counts, setCounts] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
+  const typed = Object.values(counts).some((v) => v.trim() !== "");
+  const opening = DENOMINATIONS.reduce((s, v) => s + v * (Number(counts[v]) || 0), 0);
 
   const open = async () => {
     setBusy(true);
-    const res = await openCashierShift(hotelId, Number(opening || 0));
+    const res = await openCashierShift(hotelId, opening);
     setBusy(false);
     if (!res.ok) return toast.error("Not opened", res.reason);
-    toast.success("Drawer open", `Starting with ${money(Number(opening || 0))}.`);
+    toast.success("Drawer open", `Starting with ${money(opening)}.`);
     onDone();
   };
 
@@ -124,26 +130,20 @@ function OpenDrawer({ hotelId, previous, onDone }: {
       <Card>
         <CardHeader
           title="No drawer open"
-          description="Start a shift by counting in what you have been given."
+          description="It opens by itself the first time you take cash. Count a float in here only when one is given to you by hand."
         />
         <CardBody className="space-y-4">
-          <Field
-            label="Opening float"
-            hint="What is in the drawer before you take anything."
-          >
-            {(f) => (
-              <Input
-                {...fieldProps(f)}
-                type="number" inputMode="decimal" min={0} autoFocus
-                value={opening} onChange={(e) => setOpening(e.target.value)}
-                className="h-12 text-lg tabular"
-              />
-            )}
-          </Field>
-          <Button variant="primary" className="h-12 w-full text-base" disabled={busy}
-                  onClick={() => void open()}>
+          {/* D27-200: no counting step; D27-201: the float waits for its named person. */}
+          <p className="text-sm text-grey-600">
+            {waiting > 0
+              ? `${moneyPrecise(waiting)} was handed to you: your drawer opens on it.`
+              : "Nothing was handed to you: your drawer opens at ₹0."}
+          </p>
+          <NoteGrid counts={counts} onChange={setCounts} />
+          <Button variant="primary" className="h-12 w-full text-base"
+                  disabled={busy || !typed} onClick={() => void open()}>
             <Wallet className="size-4" />
-            {busy ? "Opening…" : "Open the drawer"}
+            {busy ? "Opening…" : typed ? `Open the drawer - ${money(opening)}` : "Count a float to open by hand"}
           </Button>
         </CardBody>
       </Card>
@@ -151,10 +151,13 @@ function OpenDrawer({ hotelId, previous, onDone }: {
       {previous && (
         <p className="mt-4 text-sm text-grey-600">
           Your last shift closed {previous.closedAt} with{" "}
-          <b className="tabular">{money(previous.counted)}</b>
-          {previous.handedTo
-            ? <>, handed to {previous.handedTo}.</>
-            : <>, handed to nobody.</>}
+          <b className="tabular">{money(previous.counted)}</b> counted
+          {/* Both ends on record (D27-202): the float kept, for whom, the rest to deposit. */}
+          {previous.kept === null || previous.kept === undefined ? "." : <>
+            : <b className="tabular">{moneyPrecise(previous.kept)}</b> kept
+            {previous.kept > 0 ? ` for ${previous.handedTo ?? "-"}` : ""},{" "}
+            <b className="tabular">{moneyPrecise(previous.counted - previous.kept)}</b> to deposit.
+          </>}
         </p>
       )}
     </div>
@@ -241,32 +244,7 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
             description="Notes and coins, as they come out."
           />
           <CardBody className="space-y-4">
-            <div className="grid gap-2 sm:grid-cols-2">
-              {DENOMINATIONS.map((value) => {
-                const n = Number(counts[value]) || 0;
-                return (
-                  <div key={value}
-                       className="flex items-center gap-3 rounded-lg border border-grey-200 px-3 py-2">
-                    <span className="w-14 text-base font-medium tabular shrink-0">
-                      ₹{value}
-                    </span>
-                    <span className="text-grey-500">×</span>
-                    <Input
-                      type="number" inputMode="numeric" min={0}
-                      value={counts[value] ?? ""} placeholder="0"
-                      onChange={(e) => setCounts(
-                        (c) => ({ ...c, [value]: e.target.value }))}
-                      className="h-12 w-24 text-lg tabular"
-                      aria-label={`Number of ₹${value} notes`}
-                    />
-                    {/* A dash, not a zero. Nobody counted zero here. */}
-                    <span className="ml-auto text-base tabular text-grey-600">
-                      {n > 0 ? money(value * n) : "-"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <NoteGrid counts={counts} onChange={setCounts} />
             <Button variant="primary" onClick={() => void save()} disabled={saving}
                     className="h-12 w-full text-base">
               {saving ? "Saving…" : `Save the count - ${money(counted)}`}
@@ -320,6 +298,12 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
         <CardBody>
           <dl className="divide-y divide-grey-200">
             <Line label="Opening float" value={shift.opening} />
+            {/* What comes is what goes (D27-202): whose close it came from. */}
+            {(shift.received ?? []).map((r) => (
+              <p key={r.closedAt + r.from} className="pb-2 text-sm text-grey-600">
+                {moneyPrecise(r.amount)} from {r.from ?? "-"}'s close, {r.closedAt}
+              </p>
+            ))}
             <Line label="Cash taken" value={cashTaken} />
             {MOVEMENTS.map((m) => {
               const total = shift.movements
@@ -367,6 +351,42 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
         <CloseDialog hotelId={hotelId} shift={shift} colleagues={colleagues}
                      onClose={() => setCloseOpen(false)} onDone={onDone} />
       )}
+    </div>
+  );
+}
+
+/* Notes and coins, one row each - the float at open and the drawer at the
+   count, added up the same way. */
+function NoteGrid({ counts, onChange }: {
+  counts: Record<number, string>;
+  onChange: (update: (c: Record<number, string>) => Record<number, string>) => void;
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {DENOMINATIONS.map((value) => {
+        const n = Number(counts[value]) || 0;
+        return (
+          <div key={value}
+               className="flex items-center gap-3 rounded-lg border border-grey-200 px-3 py-2">
+            <span className="w-14 text-base font-medium tabular shrink-0">
+              ₹{value}
+            </span>
+            <span className="text-grey-500">×</span>
+            <Input
+              type="number" inputMode="numeric" min={0}
+              value={counts[value] ?? ""} placeholder="0"
+              onChange={(e) => onChange(
+                (c) => ({ ...c, [value]: e.target.value }))}
+              className="h-12 w-24 text-lg tabular"
+              aria-label={`Number of ₹${value} notes`}
+            />
+            {/* A dash, not a zero. Nobody counted zero here. */}
+            <span className="ml-auto text-base tabular text-grey-600">
+              {n > 0 ? money(value * n) : "-"}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -491,16 +511,27 @@ function CloseDialog({ hotelId, shift, colleagues, onClose, onDone }: {
 }) {
   const [why, setWhy] = useState(shift.varianceReason ?? "");
   const [handOverTo, setHandOverTo] = useState("");
+  const [kept, setKept] = useState("");
   const [busy, setBusy] = useState(false);
 
   const variance = shift.variance;
   const needsReason = variance !== null && Math.abs(variance) >= 0.01;
+  /* D27-191, D27-202: the float kept is typed at every close, ₹0 up to the
+     count, and the rest is to deposit; above ₹0 it names the next person
+     (D27-201). To hand everything over, the whole count is typed. Blank is
+     not zero. */
+  const counted = shift.counted ?? 0;
+  const keptNum = kept.trim() === "" ? null : Number(kept);
+  const keptValid = keptNum !== null && Number.isFinite(keptNum) && keptNum >= 0 && keptNum <= counted;
+  const needsName = keptValid && keptNum > 0 && handOverTo === "";
+  const keptOk = keptValid && !needsName;
 
   const submit = async () => {
     setBusy(true);
     const res = await closeCashierShift(hotelId, {
       varianceReason: why,
       handOverTo: handOverTo || null,
+      keptCash: keptNum!,
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not closed", res.reason);
@@ -530,7 +561,7 @@ function CloseDialog({ hotelId, shift, colleagues, onClose, onDone }: {
 
           <Field
             label="Hand the drawer to"
-            hint="Leave empty if nobody is taking it - the last close of the night hands over to no one."
+            hint="A float kept waits for this person. Leave empty only when ₹0 is kept."
           >
             {(f) => (
               <NativeSelect {...fieldProps(f)} value={handOverTo}
@@ -544,12 +575,25 @@ function CloseDialog({ hotelId, shift, colleagues, onClose, onDone }: {
             )}
           </Field>
 
+          <Field label="Float kept for the next shift"
+                 hint={needsName
+                   ? "A float kept needs the next person's name: choose who takes it above."
+                   : keptValid
+                     ? `To deposit: ${moneyPrecise(counted - keptNum)}`
+                     : `From ₹0 to the ${moneyPrecise(counted)} counted. The rest is deposited.`}>
+            {(f) => (
+              <Input {...fieldProps(f)} type="number" inputMode="decimal" min={0}
+                value={kept} onChange={(e) => setKept(e.target.value)}
+                className="h-12 text-lg tabular" />
+            )}
+          </Field>
+
           <div className="flex gap-2">
             <DialogClose asChild>
               <Button variant="secondary" className="h-12 flex-1">Not yet</Button>
             </DialogClose>
             <Button variant="primary" className="h-12 flex-1"
-                    disabled={busy || (needsReason && !why.trim())}
+                    disabled={busy || !keptOk || (needsReason && !why.trim())}
                     onClick={() => void submit()}>
               <Lock className="size-4" />
               Close the shift

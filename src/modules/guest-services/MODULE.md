@@ -8,7 +8,7 @@ to done, with who took each and how long it took. Built 30 September 2026
 ```
 src/modules/guest-services/          the screen, its menu entry and address, its data, its test
 api/src/modules/guest-services/      the three routes, and who is on which team
-db/migrations/172_a_guests_request_is_a_work_order.sql   (number for now; refer to it
+db/migrations/170_a_guests_request_is_a_work_order.sql   (number for now; refer to it
                                      as "a guest's request is a work order")
 db/tests/modules/guest-services.sql  the guest page's three functions, called directly
 ```
@@ -27,7 +27,7 @@ page. No second table and no second set of states.
 |---|---|---|
 | Housekeeping | `housekeeping` | housekeeping |
 | Something broken | `maintenance` | whoever updates a repair today (D22-34): owner, admin, GM, hotel manager, Inventory Manager, housekeeping |
-| Food and drink | `fnb` (new in 172) | kitchen manager, chef, waiter |
+| Food and drink | `fnb` (new in 170) | kitchen manager, chef, waiter |
 
 **The desk** (owner, admin, GM, hotel manager, reception) sees every team's
 and may take, close or cancel any. A team sees and acts on its own. Anybody who
@@ -84,7 +84,7 @@ Each is `own` in `api/src/roleGate.ts` (the route decides by the request's
 team), pinned in `roleGate.test.ts`. Names come through `app.colleague_name`,
 never an inner join on `staff` (root MEMORY 283).
 
-## Database (172)
+## Database (170)
 
 - `work_orders.reservation_id`, `work_orders.raised_by_guest`; the `fnb`
   category; a guest's request always names its stay and no member of staff.

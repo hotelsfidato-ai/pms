@@ -11,6 +11,70 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · A second workflow file beside the sending one: ID photos (D27-209)
+
+Branch `online-checkin/verify-photo-30sep`; the whole account is online check-in's CHANGELOG,
+same date. Here: `deploy/n8n/pms-id-photos-crs.json` and `IMPORT.md` part D. It is NOT a
+sender and `sending.ts` does not know it: its own address, its own secret
+(`ID_PHOTO_N8N_URL`, `ID_PHOTO_N8N_SECRET`), and only encrypted files pass through it.
+
+## 2026-09-30 · The check-in code by email (D27-207)
+
+Branch `online-checkin/verify-photo-30sep`; the whole account is online check-in's CHANGELOG,
+same date. Here: `deploy/n8n/pms-send-crs.json`'s `EMAILS` gains `guest-link-code` ("Your
+check-in code for {hotel}", the six digits in the letter, "It works for 10 minutes"), and
+`IMPORT.md` says a workflow imported before today must be imported again or a code asked for
+by email is refused. `sending.ts` is unchanged: the kind is the same word on the other
+channel. `workflows.test` 24/24; the new test fails on the old file.
+
+## 2026-09-30 · One sender: every guest message through the CRS's workflow (D27-186)
+
+Branch `connections/crs-only-30sep`, the connections follow-up lane.
+
+**Asked for** (the owner's D27-186, the master's card): the live-inventory app stays separate,
+so its sending workflow is not used for now; the voucher, every email, and the WhatsApp
+check-in code, check-in link, stay reminder and review request all go through the CRS's n8n,
+from the one Fidato number.
+**Shipped:**
+- `api/src/sending.ts` (core, delegated): one sender. `canSend()` needs `CRS_N8N_URL`,
+  `CRS_N8N_SECRET` and `WHATSAPP_PHONE_NUMBER_ID`. `senderFor` is gone. The sales inbox's
+  "booked guest" mark (D27-104) runs before a WhatsApp only when `M2R_N8N_URL` and
+  `M2R_N8N_SECRET` are both present; otherwise it is skipped and nothing is written as failed.
+  The not-connected sentence now names "the sending workflow's address, its secret and the
+  WhatsApp number".
+- `deploy/n8n/pms-send-crs.json`: `WHATSAPP` gains `stay_reminder`, `guest_page_code`
+  (Authentication: the code in the body and the copy button), `checkin_link` and
+  `review_request`, language `en`, fields as in `pms-send-m2r.json`. The retry check by
+  message id is unchanged. Renamed "PMS send · email and WhatsApp (CRS)".
+- `deploy/n8n/pms-send-m2r.json`: `HOTELS` gains `AMR` and `GLM`, by the leads app's own ids
+  and names (read from its `src/hotels.js`). Not imported for now.
+- `deploy/n8n/IMPORT.md`: part A not used for now, part B sends everything, three settings.
+  `api/.env.example` and `docs/go-live/prompt-for-the-crs-chat.md` say the same.
+
+**Found:** with the mark skipped, a booked guest's WhatsApp reply reaches the live-inventory
+inbox as a new enquiry (what D27-104 prevented). Told to the master for the owner; written in
+`IMPORT.md`. Tests in several files set both apps' addresses to one stand-in; with both present
+a WhatsApp is two calls, so the guest door's tests now stand in for the CRS alone, and the
+check-in link's "switched off" test removes the CRS address.
+**Proved:** `sending.test` 14/14 (10 failed on the old `sending.ts`: `canSend()` without the
+other app's settings, every kind through the CRS, the mark skipped with no failure recorded);
+`workflows.test` 23/23 (5 failed on the old files: the three body templates, the code's
+template, the two hotels). Then, one file at a time, each on its own scratch database:
+`sweep` 6, `messages` 18, `jobs` 20, `guestDoorBehindTheCode` 31, `reputation` 28, `newBooking`
+21, all passing; `checkinLink` 5 and `guestDoor` 12 after their stand-ins. The seven files this
+lane changed, in one run: 107/107. **Screen opened:** Guest messages at 5EL with nothing set
+reads "Nothing is sent yet - Sending is not set up yet. ... until the sending workflow's
+address, its secret and the WhatsApp number are in the server's settings."
+**Not proved here:** a real send. No workflow was imported and nothing left this machine.
+**Left open:** the five templates' approval by Meta, and `FROM` in the workflow (the owner's).
+`pms-send-m2r.json` names 5 Elements "5 Elements Akkalkot"; the leads app calls it "Hotel 5
+Elements" - one word to change the day that workflow is used.
+**Commits:** 2d9d5f04, d06254bf, d9aff939, 5d2b8649, and this entry's own.
+
+## 2026-09-30 · Booking and bill (D27-187, D27-193)
+
+Branch `fix/booking-bill-30sep`, the booking and bill lane; the whole account is reservations' CHANGELOG, same date. Here: `GET /:code/stays/:id/voucher.pdf` - View voucher, the confirmation's own PDF, sending nothing; a confirmed booking only (409), a bad id 404; roleGate the same people as Send voucher, pinned (viewVoucher.test.ts 3/3, roleGate).
+
 ## 2026-09-29 · Two senders, message ids, the inbox's booked mark, Send check-in link (D27-168, D27-169)
 
 **Asked for** (the master's card, D27-168; the owner's D27-98, D27-101,

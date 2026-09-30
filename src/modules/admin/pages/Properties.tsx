@@ -3,9 +3,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { ArrowRight, Info } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { Page, PageHeader, Card, CardBody, StatusPill, Skeleton, ErrorState, Button, Dialog, DialogContent, Field, fieldProps, Input, toast } from "@/components/ui";
+import { Page, PageHeader, Card, CardBody, StatusPill, Skeleton, ErrorState, Button, Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, toast } from "@/components/ui";
 import { listProperties } from "@/data/repositories";
-import { listAdminProperties, amendProperty, setPropertyOpen, type AdminProperty } from "@/modules/admin/data/admin";
+import {
+  listAdminProperties, amendProperty, setPropertyOpen, PROPERTY_TYPES,
+  type AdminProperty, type PropertyProfile,
+} from "@/modules/admin/data/admin";
 import { NewProperty } from "@/modules/admin/flows/StaffAdmin";
 import { TaxInUseRows } from "@/modules/admin/components/TaxInUse";
 import { placeLine } from "@/modules/finance";
@@ -258,9 +261,26 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
    endpoint refuses to change it for that reason. Showing a greyed-out
    box says so better than leaving it out.
    ═══════════════════════════════════════════════════════════════════ */
-function EditPropertyDialog({ hotel, onClose, onSaved }: {
-  hotel: AdminProperty; onClose: () => void; onSaved: () => void;
+export function EditPropertyDialog({ hotel, nameLocked = false, onClose, onSaved }: {
+  /** With the profile (Settings' Property tab reads it), its fields are
+      drawn and saved too. Without (the Properties cards), they are neither
+      shown nor sent, so they stay as they are. */
+  hotel: Pick<AdminProperty, "code" | "name" | "city" | "state" | "gstin" | "phone" | "email" | "addressLine">
+    & Partial<PropertyProfile>;
+  /** The name stays the group owner's (D27-214): a GM or Admin sees it, locked. */
+  nameLocked?: boolean;
+  onClose: () => void; onSaved: () => void;
 }) {
+  const withProfile = hotel.pin !== undefined;
+  const [more, setMore] = useState<Record<keyof PropertyProfile, string>>({
+    addressLine2: hotel.addressLine2 ?? "", pin: hotel.pin ?? "", website: hotel.website ?? "",
+    pan: hotel.pan ?? "", reservationsPhone: hotel.reservationsPhone ?? "",
+    propertyType: hotel.propertyType ?? "", starRating: hotel.starRating?.toString() ?? "",
+    latitude: hotel.latitude ?? "", longitude: hotel.longitude ?? "",
+  });
+  const put = (key: keyof PropertyProfile, upper = false) =>
+    (e: { target: { value: string } }) =>
+      setMore((m) => ({ ...m, [key]: upper ? e.target.value.toUpperCase() : e.target.value }));
   const [name, setName] = useState(hotel.name);
   const [city, setCity] = useState(hotel.city ?? "");
   const [state, setState] = useState(hotel.state ?? "");
@@ -276,6 +296,7 @@ function EditPropertyDialog({ hotel, onClose, onSaved }: {
       name: name.trim(), city: city.trim(), state: state.trim(),
       gstin: gstin.trim(), phone: phone.trim(), email: email.trim(),
       addressLine: line.trim(),
+      ...(withProfile ? more : {}),
     });
     setBusy(false);
     /* The server's sentence. It is the one that knows what a GSTIN has
@@ -311,9 +332,10 @@ function EditPropertyDialog({ hotel, onClose, onSaved }: {
                      className="tabular" />
             )}
           </Field>
-          <Field label="Name" required>
+          <Field label="Name" required
+                 {...(nameLocked ? { hint: "The group's owner changes the name." } : {})}>
             {(f) => (
-              <Input {...fieldProps(f)} value={name} autoFocus
+              <Input {...fieldProps(f)} value={name} autoFocus={!nameLocked} disabled={nameLocked}
                      onChange={(e) => setName(e.target.value)} />
             )}
           </Field>
@@ -337,6 +359,19 @@ function EditPropertyDialog({ hotel, onClose, onSaved }: {
                      onChange={(e) => setLine(e.target.value)} />
             )}
           </Field>
+          {withProfile && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Address line 2">
+                {(f) => <Input {...fieldProps(f)} value={more.addressLine2} onChange={put("addressLine2")} />}
+              </Field>
+              <Field label="PIN code" hint="Six digits.">
+                {(f) => (
+                  <Input {...fieldProps(f)} value={more.pin} inputMode="numeric" maxLength={6}
+                         className="tabular" onChange={put("pin")} />
+                )}
+              </Field>
+            </div>
+          )}
           <Field label="GSTIN"
                  hint="Fifteen characters, the two-digit state code first. It prints on every invoice.">
             {(f) => (
@@ -358,6 +393,60 @@ function EditPropertyDialog({ hotel, onClose, onSaved }: {
               )}
             </Field>
           </div>
+          {withProfile && (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Property type">
+                  {(f) => (
+                    <NativeSelect {...fieldProps(f)} value={more.propertyType} onChange={put("propertyType")}>
+                      <option value="">Not set</option>
+                      {PROPERTY_TYPES.map(([word, label]) => <option key={word} value={word}>{label}</option>)}
+                    </NativeSelect>
+                  )}
+                </Field>
+                <Field label="Stars">
+                  {(f) => (
+                    <NativeSelect {...fieldProps(f)} value={more.starRating} onChange={put("starRating")}>
+                      <option value="">Not set</option>
+                      {["1", "2", "3", "4", "5"].map((n) => <option key={n} value={n}>{n}</option>)}
+                    </NativeSelect>
+                  )}
+                </Field>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Latitude" hint="The map point: both, or neither.">
+                  {(f) => (
+                    <Input {...fieldProps(f)} value={more.latitude} inputMode="decimal"
+                           className="tabular" onChange={put("latitude")} />
+                  )}
+                </Field>
+                <Field label="Longitude">
+                  {(f) => (
+                    <Input {...fieldProps(f)} value={more.longitude} inputMode="decimal"
+                           className="tabular" onChange={put("longitude")} />
+                  )}
+                </Field>
+              </div>
+              {/* Stored, and printed on no document until the owner says where (D27-214). */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Reservations phone" hint="Kept here. It prints on no document.">
+                  {(f) => (
+                    <Input {...fieldProps(f)} value={more.reservationsPhone} type="tel"
+                           onChange={put("reservationsPhone")} />
+                  )}
+                </Field>
+                <Field label="Website" hint="Kept here. It prints on no document.">
+                  {(f) => <Input {...fieldProps(f)} value={more.website} onChange={put("website")} />}
+                </Field>
+              </div>
+              <Field label="PAN" hint="Ten characters. Kept here; it prints on no document.">
+                {(f) => (
+                  <Input {...fieldProps(f)} value={more.pan} maxLength={10} className="tabular"
+                         onChange={put("pan", true)} />
+                )}
+              </Field>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

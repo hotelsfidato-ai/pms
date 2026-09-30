@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from "react-router";
 import QRCode from "qrcode";
 import * as apiModule from "@/lib/api";
 import * as notice from "@/modules/online-checkin/privacyNotice";
+import * as google from "@/modules/online-checkin/googleSignIn";
 import GuestPage from "@/modules/online-checkin/pages/GuestPage";
 import DeskPage from "@/modules/online-checkin/pages/Desk";
 import { MessagesToTheDesk, WaitingDetailsLink } from "@/modules/online-checkin";
@@ -37,13 +38,17 @@ const BOOKING = {
   },
   verified: false,
   phoneHint: "…4321",
+  emailHint: "a…@example.com" as string | null,
   canSendCodes: true,
   cannotSend: null,
+  googleClientId: null as string | null,
   offers: [] as string[],
 };
 
 /** The door's answer to "send me the code" (D27-105). */
 const SENT = { sent: true, message: "We sent the code on WhatsApp to the number ending 4321." };
+const ON_WHATSAPP = { name: "Send the code on WhatsApp" };
+const BY_EMAIL = { name: "Send the code by email" };
 
 type Answer = (init?: RequestInit) => unknown;
 
@@ -102,15 +107,15 @@ describe("before the six digits are answered", () => {
     expect(screen.queryByText(/Verified/)).toBeNull();
   });
 
-  it("asks the server for nothing else — no details, no requests", async () => {
+  it("asks the server for nothing else — no details, no requests, and no code (D27-210)", async () => {
     const spy = server({ [OPEN]: () => BOOKING, [`${OPEN}/code`]: () => SENT });
     open();
-    await screen.findByText(SENT.message);
+    await screen.findByRole("button", ON_WHATSAPP);
 
-    /* The link, and the code it asks for by opening (D27-105) - both
-       named by the token. A screen that fetched what is behind the code
-       and hid it would be a leak with a stylesheet. */
-    expect(spy.mock.calls.map((c) => c[0])).toEqual([OPEN, `${OPEN}/code`]);
+    /* The link, and nothing more: opening sends no code (D27-210), and a
+       screen that fetched what is behind the code and hid it would be a
+       leak with a stylesheet. */
+    expect(spy.mock.calls.map((c) => c[0])).toEqual([OPEN]);
   });
 
   it("says the same nothing for a link that is dead, whatever killed it", async () => {
@@ -137,20 +142,20 @@ describe("before the six digits are answered", () => {
 
   /* D21-25: "Send me the code" was offered when nothing could send. */
   it("does not offer a code when none can be sent, and says why first", async () => {
-    const cannot = "Codes cannot be sent yet - WhatsApp is not connected to this server. "
-      + "Ask the desk to send you the link instead.";
+    const cannot = "Codes cannot be sent yet - sending is not set up on this server. Ask the desk.";
     server({ [OPEN]: () => ({ ...BOOKING, canSendCodes: false, cannotSend: cannot }) });
     open();
 
     expect(await screen.findByText(cannot)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Send me the code" })).toBeNull();
-    expect(screen.queryByLabelText("Your phone number")).toBeNull();
+    expect(screen.queryByRole("button", ON_WHATSAPP)).toBeNull();
+    expect(screen.queryByRole("button", BY_EMAIL)).toBeNull();
+    expect(screen.queryByLabelText("The six digits")).toBeNull();
   });
 });
 
 describe("a room's fixed card (D21-7)", () => {
   const CARD = {
-    ...BOOKING, kind: "room" as const, room: "204", booking: null, phoneHint: null,
+    ...BOOKING, kind: "room" as const, room: "204", booking: null, phoneHint: null, emailHint: null,
   };
 
   it("shows the hotel and the room number, and nothing of the guest (D21-14)", async () => {
@@ -159,9 +164,13 @@ describe("a room's fixed card (D21-7)", () => {
     open();
 
     expect(await screen.findByRole("heading", { name: "Room 204" })).toBeTruthy();
+    /* Both ways are offered: a card cannot say which the booking has. */
+    expect(screen.getByRole("button", BY_EMAIL)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", ON_WHATSAPP));
     expect(await screen.findByText(toTheRoom), "the code goes, with no digits said").toBeTruthy();
     expect(screen.getByText("5 Elements Akkalkot")).toBeTruthy();
     expect(screen.queryByText(/ending/), "not even the last four digits").toBeNull();
+    expect(screen.queryByText(/@/), "nor any of an address").toBeNull();
     expect(screen.queryByText("Arriving")).toBeNull();
   });
 
@@ -175,72 +184,72 @@ describe("a room's fixed card (D21-7)", () => {
   });
 });
 
-describe("the code, straight to the booking's phone (D27-105)", () => {
-  it("is asked for by opening the link, with no number typed, and says where it went", async () => {
+describe("the code, the way the guest chooses (D27-207, D27-210)", () => {
+  const codeCalls = (spy: ReturnType<typeof server>) => spy.mock.calls.filter((c) => c[0] === `${OPEN}/code`);
+
+  it("sends nothing on opening, and says where each way would go", async () => {
     const spy = server({ [OPEN]: () => BOOKING, [`${OPEN}/code`]: () => SENT });
     open();
 
-    expect(await screen.findByText(SENT.message)).toBeTruthy();
+    expect(await screen.findByText(
+      "We send six digits on WhatsApp to the number on the booking, ending 4321, or by email to a…@example.com.",
+    )).toBeTruthy();
+    expect(screen.getByRole("button", ON_WHATSAPP)).toBeTruthy();
+    expect(screen.getByRole("button", BY_EMAIL)).toBeTruthy();
     expect(screen.queryByLabelText("Your phone number"), "nothing to type but the code").toBeNull();
-    const asked = spy.mock.calls.filter((c) => c[0] === `${OPEN}/code`);
-    expect(asked).toHaveLength(1);
-    expect(asked[0]![1]?.body, "no number goes with it").toBe("{}");
+    expect(codeCalls(spy), "no code goes until the guest asks").toHaveLength(0);
   });
 
-  /* Each new code kills the last, and a link gets five an hour: reopening
-     the page from WhatsApp within the code's ten minutes sends none. */
-  it("is not asked for again when the page is opened again within ten minutes", async () => {
-    const spy = server({ [OPEN]: () => BOOKING, [`${OPEN}/code`]: () => SENT });
-    open();
-    await screen.findByText(SENT.message);
-    cleanup();
-    open();
-    expect(await screen.findByText(/A code was sent a few minutes ago/)).toBeTruthy();
-    expect(spy.mock.calls.filter((c) => c[0] === `${OPEN}/code`)).toHaveLength(1);
-
-    fireEvent.click(screen.getByRole("button", { name: "Send a new code" }));
-    expect(await screen.findByText(SENT.message)).toBeTruthy();
-    expect(spy.mock.calls.filter((c) => c[0] === `${OPEN}/code`)).toHaveLength(2);
-  });
-
-  it("says Ask the desk, in the door's words, when the booking has no number", async () => {
-    const noPhone = "There is no mobile number on this booking, so no code can be sent. Ask the desk.";
-    const spy = server({ [OPEN]: () => ({ ...BOOKING, phoneHint: null }), [`${OPEN}/code`]: () => ({ sent: false, message: noPhone }) });
-    open();
-    expect(await screen.findByText(noPhone)).toBeTruthy();
-    expect(screen.queryByText(/ending/)).toBeNull();
-    expect(screen.queryByLabelText("The six digits"), "no code to wait for, no box").toBeNull();
-    expect(spy.mock.calls.map((c) => c[0]), "nothing asked of the door").not.toContain(`${OPEN}/code`);
-  });
-
-  /* Found opening the page, 29 September: a send that failed was still
-     noted as asked, so reopening said "A code was sent a few minutes ago". */
-  it("asks again on the next open when the last ask sent nothing", async () => {
-    let calls = 0;
-    server({
+  it("sends by the way the guest presses, with nothing typed, and says where it went", async () => {
+    const byEmail = { sent: true, message: "We sent the code by email to a…@example.com." };
+    const spy = server({
       [OPEN]: () => BOOKING,
-      [`${OPEN}/code`]: () => (++calls === 1
-        ? { sent: false, message: "The code could not be sent just now. Try again in a minute, or ask the desk." }
-        : SENT),
+      [`${OPEN}/code`]: (init) => (String(init?.body).includes("email") ? byEmail : SENT),
     });
     open();
-    expect(await screen.findByText(/could not be sent just now/)).toBeTruthy();
-    cleanup();
-    open();
+
+    fireEvent.click(await screen.findByRole("button", ON_WHATSAPP));
     expect(await screen.findByText(SENT.message)).toBeTruthy();
-    expect(calls).toBe(2);
+    fireEvent.click(screen.getByRole("button", BY_EMAIL));
+    expect(await screen.findByText(byEmail.message)).toBeTruthy();
+    expect(codeCalls(spy).map((c) => c[1]?.body), "only the way goes: no number, no address")
+      .toEqual(['{"by":"whatsapp"}', '{"by":"email"}']);
+  });
+
+  /* A booking's link already shows what the booking carries: a way that
+     cannot work is not offered. */
+  it("offers only the way the booking has, and Ask the desk when it has neither", async () => {
+    server({ [OPEN]: () => ({ ...BOOKING, emailHint: null }) });
+    open();
+    expect(await screen.findByRole("button", ON_WHATSAPP)).toBeTruthy();
+    expect(screen.queryByRole("button", BY_EMAIL)).toBeNull();
+    cleanup();
+
+    server({ [OPEN]: () => ({ ...BOOKING, phoneHint: null }) });
+    open();
+    expect(await screen.findByRole("button", BY_EMAIL)).toBeTruthy();
+    expect(screen.queryByRole("button", ON_WHATSAPP)).toBeNull();
+    expect(screen.queryByText(/ending/)).toBeNull();
+    cleanup();
+
+    const spy = server({ [OPEN]: () => ({ ...BOOKING, phoneHint: null, emailHint: null }) });
+    open();
+    expect(await screen.findByText(
+      "There is no mobile number or email address on this booking, so no code can be sent. Ask the desk.")).toBeTruthy();
+    expect(screen.queryByLabelText("The six digits"), "no code to wait for, no box").toBeNull();
+    expect(codeCalls(spy), "nothing asked of the door").toHaveLength(0);
   });
 
   it("prints the door's refusal to send, not a status code", async () => {
     /* OCI-1's screen half. `api()` has read a refusal's `message` since
        21 September, so the sentence arrives as the error's own. */
-    const message = "Codes cannot be sent yet - WhatsApp is not connected to this "
-      + "server. Ask the desk to send you the link instead.";
+    const message = "Codes cannot be sent yet - sending is not set up on this server. Ask the desk.";
     server({
       [OPEN]: () => BOOKING,
       [`${OPEN}/code`]: () => { throw new apiModule.ApiError(503, message); },
     });
     open();
+    fireEvent.click(await screen.findByRole("button", ON_WHATSAPP));
 
     expect(await screen.findByText(message)).toBeTruthy();
     expect(screen.queryByText(/Request failed/)).toBeNull();
@@ -251,6 +260,7 @@ describe("the code, straight to the booking's phone (D27-105)", () => {
   it("shows a development server's code on screen, in a development build", async () => {
     server({ [OPEN]: () => BOOKING, [`${OPEN}/code`]: () => ({ ...SENT, devCode: "482913" }) });
     open();
+    fireEvent.click(await screen.findByRole("button", ON_WHATSAPP));
     expect(await screen.findByText("482913")).toBeTruthy();
     expect(screen.getByText(/Development only/)).toBeTruthy();
   });
@@ -273,6 +283,92 @@ describe("the code, straight to the booking's phone (D27-105)", () => {
     await waitFor(() => expect(screen.getByText(
       "That code is not right, or it has expired. Ask for a new one.")).toBeTruthy());
     expect(screen.queryByText(/Verified/)).toBeNull();
+  });
+});
+
+describe("Continue with Google (D27-207)", () => {
+  const CLIENT = "made-up-client.apps.googleusercontent.test";
+  const WITH_GOOGLE = { ...BOOKING, googleClientId: CLIENT };
+  const CONTINUE = { name: "Continue with Google" };
+  const UNLOCK = "an-unlock-from-a-google-answer-0123456789";
+
+  /** Google's script, stood in for: it keeps what the page gave it, so the
+      test can answer as Google would. */
+  function googleStandIn() {
+    const given: { clientId?: string; answer?: (a: { credential?: string }) => void; drawn: number } = { drawn: 0 };
+    const load = vi.spyOn(google, "loadGoogleSignIn").mockResolvedValue({
+      initialize: (o) => { given.clientId = o.client_id; given.answer = o.callback; },
+      renderButton: () => { given.drawn += 1; },
+    });
+    return { load, given };
+  }
+
+  it("is offered only where the server has its client id and the booking an email", async () => {
+    server({ [OPEN]: () => WITH_GOOGLE });
+    open();
+    expect(await screen.findByRole("button", CONTINUE)).toBeTruthy();
+    cleanup();
+
+    server({ [OPEN]: () => BOOKING });
+    open();
+    await screen.findByRole("button", ON_WHATSAPP);
+    expect(screen.queryByRole("button", CONTINUE), "no client id on the server").toBeNull();
+    cleanup();
+
+    server({ [OPEN]: () => ({ ...WITH_GOOGLE, emailHint: null }) });
+    open();
+    await screen.findByRole("button", ON_WHATSAPP);
+    expect(screen.queryByRole("button", CONTINUE), "no email on the booking to match").toBeNull();
+  });
+
+  it("fetches Google's script only on the press, posts Google's answer as it came, and opens on a match", async () => {
+    const { load, given } = googleStandIn();
+    const spy = server({
+      [OPEN]: (init) => ({ ...WITH_GOOGLE, verified: unlockSent(init) === UNLOCK }),
+      [`${OPEN}/google`]: () => ({ verified: true, unlock: UNLOCK }),
+      [`${OPEN}/details`]: () => ({ sent: null }),
+    });
+    open();
+    const button = await screen.findByRole("button", CONTINUE);
+    expect(load, "nothing of Google's runs until the guest asks").not.toHaveBeenCalled();
+
+    fireEvent.click(button);
+    await waitFor(() => expect(given.drawn).toBe(1));
+    expect(given.clientId).toBe(CLIENT);
+
+    given.answer!({ credential: "googles-signed-answer" });
+    expect(await screen.findByText("Verified on this phone")).toBeTruthy();
+    const posted = spy.mock.calls.find((c) => c[0] === `${OPEN}/google`);
+    expect(posted![1]?.body).toBe('{"credential":"googles-signed-answer"}');
+    expect(localStorage.getItem(`guest-unlock:${TOKEN.slice(0, 12)}`), "the same unlock as a code").toBe(UNLOCK);
+  });
+
+  it("prints the door's refusal of another account, and stays shut", async () => {
+    const { given } = googleStandIn();
+    const refusal = "That Google account is not the one on this booking. "
+      + "Use the email the booking was made with, or ask for a code.";
+    server({
+      [OPEN]: () => WITH_GOOGLE,
+      [`${OPEN}/google`]: () => { throw new apiModule.ApiError(401, refusal); },
+    });
+    open();
+    fireEvent.click(await screen.findByRole("button", CONTINUE));
+    await waitFor(() => expect(given.answer).toBeTruthy());
+    given.answer!({ credential: "somebody-elses-answer" });
+
+    expect(await screen.findByText(refusal)).toBeTruthy();
+    expect(screen.queryByText(/Verified/)).toBeNull();
+    expect(localStorage.getItem(`guest-unlock:${TOKEN.slice(0, 12)}`)).toBeNull();
+  });
+
+  it("still offers Google where the server cannot send a code, and says why there is no code", async () => {
+    const cannot = "Codes cannot be sent yet - sending is not set up on this server. Ask the desk.";
+    server({ [OPEN]: () => ({ ...WITH_GOOGLE, canSendCodes: false, cannotSend: cannot }) });
+    open();
+    expect(await screen.findByRole("button", CONTINUE)).toBeTruthy();
+    expect(screen.getByText(cannot)).toBeTruthy();
+    expect(screen.queryByRole("button", ON_WHATSAPP)).toBeNull();
+    expect(screen.queryByLabelText("The six digits")).toBeNull();
   });
 });
 

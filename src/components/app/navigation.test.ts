@@ -174,10 +174,10 @@ describe("each person's menu", () => {
   it("still lets reception FIND what left its menu", () => {
     /* The owner's condition for a shorter menu: nothing lost. */
     const found = searchable("front_desk");
-    for (const screen of ["Rate plans", "Night audit", "Lodging tax", "Housekeeping", "Groups"]) {
+    for (const screen of ["Rates", "Night audit", "Lodging tax", "Housekeeping", "Groups"]) {
       expect(found).toContain(screen);
     }
-    expect(menu("front_desk")).not.toContain("Rate plans");
+    expect(menu("front_desk")).not.toContain("Rates");
   });
 
   it("gives the restaurant and the kitchen their own screens", () => {
@@ -287,7 +287,9 @@ describe("each person's menu", () => {
       /* 29 September: Leads and WhatsApp and Marketing are BUILT (D27-168,
          D27-170); their entries stay in this section as working screens. */
       "Sales and marketing": ["Loyalty"],
-      "Distribution": ["Channel manager", "Booking engine", "Contracts"],
+      /* 30 September: the channel manager is BUILT (D27-178); it stays in
+         Distribution as a working screen. */
+      "Distribution": ["Booking engine", "Contracts"],
       "Finance": ["Online payments"],
       "System": ["Room systems"],
     };
@@ -301,10 +303,6 @@ describe("each person's menu", () => {
         .map((s) => [s.label, s.items.filter((i) => i.notBuilt).map((i) => i.label)] as const)
         .filter(([, items]) => items.length > 0));
       expect(marked, role).toEqual(NOT_BUILT);
-      /* A section of services not built yet holds nothing else - yet. */
-      for (const key of ["Distribution"]) {
-        expect(sections.find((s) => s.label === key)?.items.every((i) => i.notBuilt), role).toBe(true);
-      }
     }
     const all = Object.values(NOT_BUILT).flat();
     for (const role of ROLES.filter((r) => !COMING_SOON_ROLES.includes(r))) {

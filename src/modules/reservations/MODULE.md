@@ -314,9 +314,19 @@ audit's reading of it), and `amendChannelBooking` for a change SU sends.
 New booking is ONE page (`pages/BookingPage.tsx`, which replaced
 `pages/NewBooking.tsx`): the guest, the stay (dates, the booking source, room
 type, meal plan, party, rate, an optional room), the ID and an advance;
-"More about the guest" and "Booking details" fold open, and so do Company,
-GST, Extras and Notes, each drawn only where Settings has it on (admin's
-"New booking" card, migration 159: on until a hotel turns it off). Three
+"More about the guest" and "Booking details" fold open, and so do Company
+(with the chosen company's GSTIN under the picker) and Notes, each drawn only
+where Settings has it on (admin's "New booking" card, migration 159: on until
+a hotel turns it off). GST folded into Company and Extras left the page on 30
+September (D27-187, D27-193); inclusions are added on the booking. A cash
+advance needs no open drawer: it opens by itself on the first cash (D27-200;
+the hold of D27-193 went). The Booked card and the panel's menu have View voucher
+(`viewVoucher`, guest messages' `voucher.pdf`); the panel's menu has Change
+rate for a booking still to arrive (finance's `ChangeRateDialog`). Each room
+line has a "Rate includes GST" tick under its rate (off by default, D27-195,
+D27-199): the typed figure, or with none typed the list price, is split by
+finance's `roomRateBeforeGst` and `book.ts` keeps the rate before GST
+(`rateIncludesGst` on the line). Three
 buttons at the bottom, each greyed with its reason under it:
 
 ```

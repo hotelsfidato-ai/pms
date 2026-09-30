@@ -5,10 +5,10 @@ import PropertyPage from "@/modules/admin/pages/Property";
 import PeoplePage from "@/modules/admin/pages/People";
 import AdminConsolePage from "@/modules/admin/pages/Console";
 import SystemHealthPage from "@/modules/admin/pages/SystemHealth";
+import SettingsPage from "@/modules/admin/pages/Settings";
 import { PropertiesPage } from "@/modules/admin/pages/Properties";
 import {
   UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
-  SettingsPage,
 } from "@/modules/admin/pages/Admin";
 
 /* Administration's screen addresses. Mounted by App.tsx inside the
@@ -115,13 +115,22 @@ export const routes = (
         </RequireAccess>
       }
     />
-    <Route
-      path="/admin/settings"
-      element={
-        <RequireAccess path="/admin/settings" resource="setting">
-          <SettingsPage />
-        </RequireAccess>
-      }
-    />
+    {/* D27-213, D27-214: ONE place for settings, its tab in the address.
+        Asked as "/settings" whichever tab: the menu entry is the rule. */}
+    {["/settings", "/settings/:tab"].map((path) => (
+      <Route
+        key={path}
+        path={path}
+        element={
+          <RequireAccess path="/settings" resource="setting">
+            <SettingsPage />
+          </RequireAccess>
+        }
+      />
+    ))}
+    {/* The two screens it replaced: their addresses open it. Configuration
+        was where the refusals sent people to set GST. */}
+    <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
+    <Route path="/admin/configuration" element={<Navigate to="/settings/taxes-and-billing" replace />} />
   </>
 );

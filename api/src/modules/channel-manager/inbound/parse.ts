@@ -70,6 +70,14 @@ const text = (v: unknown): string | null => {
   return null;
 };
 
+/** A calendar day that exists, or null (CM-6): "2031-02-30" would reach the
+    database and throw before the message is kept. */
+const day = (v: unknown): string | null => {
+  const t = text(v);
+  return t && /^\d{4}-\d{2}-\d{2}$/.test(t) && new Date(`${t}T00:00:00Z`).toISOString().startsWith(t)
+    ? t : null;
+};
+
 const whole = (v: unknown): number | null => {
   const n = Number(text(v));
   return Number.isInteger(n) ? n : null;
@@ -109,8 +117,14 @@ function readBooking(value: unknown): PushedBooking {
   const guestName = guest || rooms.find((x) => x.guestName)?.guestName || null;
   if (!guestName) problems.push("SU did not send a guest name.");
 
-  const dates = rooms.flatMap((x) => (x.arrival ? [x.arrival] : []));
-  const leaves = rooms.flatMap((x) => (x.departure ? [x.departure] : []));
+  /* CM-6: a room with no real day, or leaving before it arrives, is a
+     person's; its dates are not stored, because the database refuses them. */
+  const sane = rooms.every((x) => x.arrival && x.departure && x.departure > x.arrival);
+  if (rooms.length > 0 && !sane) {
+    problems.push("SU sent a room without a real arrival and departure date, or leaving before it arrives.");
+  }
+  const dates = sane ? rooms.map((x) => x.arrival!) : [];
+  const leaves = sane ? rooms.map((x) => x.departure!) : [];
 
   return {
     suBookingId,
@@ -145,8 +159,8 @@ function readRoom(value: unknown): BookingRoom {
       ?? (text(r["first_name"]) || text(r["last_name"])
           ? [text(r["first_name"]), text(r["last_name"])].filter(Boolean).join(" ")
           : null),
-    arrival: text(r["arrival_date"]),
-    departure: text(r["departure_date"]),
+    arrival: day(r["arrival_date"]),
+    departure: day(r["departure_date"]),
     adults: whole(r["numberofadults"]) ?? whole(r["numberofguests"]),
     children: whole(r["numberofchildren"]),
     total: text(r["totalprice"]),
@@ -154,7 +168,7 @@ function readRoom(value: unknown): BookingRoom {
     nights: prices.map((p) => {
       const n = record(p) ?? {};
       return {
-        date: text(n["date"]) ?? "",
+        date: day(n["date"]) ?? "",
         rateId: text(n["rate_id"]),
         mealPlanName: text(n["mealplan"]),
         priceBeforeTax: text(n["pricebeforetax"]),

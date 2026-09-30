@@ -181,6 +181,8 @@ export async function checkIn(
     waiveEarly?: boolean;
     /** "Guest agreed to offers", asked face to face (D25-39). */
     offersAgreed?: boolean;
+    /** D27-193: the clerk confirmed a move of the arrival by more than a day. */
+    confirmMove?: boolean;
     businessDate: string;
     /* ⚠ NO `user`. This sent the literal "front desk", and so did the
        walk-in below (FD-2). Neither route ever read it: the server takes
@@ -273,7 +275,8 @@ export async function checkOut(
 /* ── D · Walk-in ──────────────────────────────────────────────────────
    The walk-in is New booking's one page opened from an empty room
    (D27-163): the booking call, then the check-in above. The server's
-   POST /walk-ins stays, and no screen calls it. */
+   POST /walk-ins, which no screen called after that, was removed on
+   30 September (Rule 2b). */
 
 /**
  * Give a booking a room ahead of arrival.
@@ -315,7 +318,8 @@ export async function assignRoom(
  * audit posts the reservation's agreed rate, snapshotted at booking
  * and never looked up again, so a move reprices nothing by itself —
  * and nights already posted are history in any case. Passing a rate
- * changes what the audit charges from tonight forward.
+ * changes what the audit charges from tonight forward - and, on the
+ * arrival day, tonight's night posted at check-in (D27-205).
  */
 export async function moveRoom(
   hotelId: string, stayId: string,

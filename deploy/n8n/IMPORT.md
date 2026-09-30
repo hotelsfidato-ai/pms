@@ -1,44 +1,52 @@
-# The two PMS sending workflows - how to import them
+# The PMS sending workflow - how to import it
 
-**For the owner.** D27-98: the PMS sends guest messages through a NEW workflow
-in each of the two apps that already talk to guests. Nothing existing is
-changed, in either app or in either n8n. Import each file, fill in what it
-asks, switch it on, then put its address and secret in the PMS server's
-settings.
+**For the owner.** The PMS sends guest messages through a NEW workflow in the
+CRS's n8n (D27-98). Nothing existing is changed, in the CRS or in its n8n.
+Import the file, fill in what it asks, switch it on, then put its address and
+secret in the PMS server's settings.
+
+**Since 30 September (D27-186): one workflow sends everything.**
 
 ```
-pms-send-crs.json   into the CRS's n8n                  every email, and the
-                                                        booking voucher on WhatsApp
-pms-send-m2r.json   into the market-to-revenue n8n      every other WhatsApp: the
-                                                        check-in code, the arrival
-                                                        reminder, the check-in link,
-                                                        the review request - and it
-                                                        marks the guest as a booked
-                                                        guest in the sales inbox
-                                                        (D27-104)
+pms-send-crs.json   into the CRS's n8n     EVERY guest message: every email, and
+                                           on WhatsApp the booking voucher, the
+                                           check-in code, the check-in link, the
+                                           stay reminder and the review request
+                                           - part B below
+
+pms-id-photos-crs.json  into the CRS's n8n  guests' ID photos, ENCRYPTED, kept in
+                                           Google Drive (D27-209) - part D below;
+                                           a separate workflow, its own secret
+
+pms-send-m2r.json   NOT USED FOR NOW       the live-inventory (market-to-revenue)
+                                           app is kept separate; the PMS only
+                                           shows its leads. Do not import it.
+                                           Part A below is kept for the day you
+                                           decide otherwise.
 ```
 
-Both send from **the one Fidato WhatsApp number** (D27-101). Neither file holds
-it: the PMS sends its Meta **Phone number ID** in every message, from its own
-settings.
+Everything goes from **the one Fidato WhatsApp number** (D27-101). The file
+does not hold it: the PMS sends its Meta **Phone number ID** in every message,
+from its own settings.
 
 ---
 
 ## What you need first
 
 1. **The WhatsApp number on Meta's Cloud API**, and its **Phone number ID**
-   (Meta → WhatsApp Manager → Phone numbers). Both n8n's WhatsApp logins must
-   be for the Meta app that owns this number.
-2. **The templates, approved by Meta** (WhatsApp Manager → Message templates).
-   The words are the drafts in `docs/go-live/whatsapp-templates.md`:
+   (Meta → WhatsApp Manager → Phone numbers). The CRS n8n's WhatsApp login
+   must be for the Meta app that owns this number.
+2. **Five templates, approved by Meta, in English (`en`)** (WhatsApp Manager →
+   Message templates). The words are the drafts in
+   `docs/go-live/whatsapp-templates.md`:
 
-   | Template | Category | Sent by | For |
-   |---|---|---|---|
-   | `booking_confirmation` | Utility | CRS | the booking voucher |
-   | `stay_reminder` | Utility | market-to-revenue | the day before arrival |
-   | `guest_page_code` | Authentication (Copy code, 10 minutes) | market-to-revenue | the check-in code |
-   | `checkin_link` | Utility | market-to-revenue | the desk's "Send check-in link" - new, words below |
-   | `review_request` | Meta decides | market-to-revenue | the review request |
+   | Template | Category | For |
+   |---|---|---|
+   | `booking_confirmation` | Utility | the booking voucher |
+   | `stay_reminder` | Utility | the day before arrival |
+   | `guest_page_code` | Authentication (Copy code, 10 minutes) | the check-in code |
+   | `checkin_link` | Utility | the desk's "Send check-in link" - words below |
+   | `review_request` | Meta decides | the review request |
 
    `checkin_link` (draft, yours to change):
 
@@ -53,57 +61,58 @@ settings.
    Its fields, in order: `data.guestName`, `data.hotelName`,
    `data.checkInText`, `data.reference`, `data.link`.
 
-   A template approved under another name or language: change `TEMPLATES`
-   (market-to-revenue) or `WHATSAPP` (CRS) and `LANGUAGE` at the top of each
-   workflow's **Read the message** node. Nothing else changes.
-3. **Two long random secrets**, one per workflow. Make them yourself, for
-   example with a password manager's generator (40 characters or more). They
-   are the whole of the lock on an address open to the internet. **Never** the
-   n8n encryption key.
+   A template approved under another name or language: change `WHATSAPP` and
+   `LANGUAGE` at the top of the workflow's **Read the message** node. Nothing
+   else changes. A message whose template is not approved yet is refused by
+   WhatsApp, and the PMS shows that sentence on Guest messages; the others
+   still go.
+3. **One long random secret** for the workflow. Make it yourself, for example
+   with a password manager's generator (40 characters or more). It is the whole
+   of the lock on an address open to the internet. **Never** the n8n
+   encryption key.
 
 ---
 
-## A · The market-to-revenue workflow (`pms-send-m2r.json`)
+## A · The market-to-revenue workflow (`pms-send-m2r.json`) - NOT USED FOR NOW
 
-In the market-to-revenue n8n (**Admin → Settings → n8n connection** in that
-app names its address):
+**Skip this part** (D27-186). Nothing in the PMS needs it: with its two
+settings left empty the PMS sends everything through part B and asks nothing
+of the live-inventory app.
 
-1. **Workflows → Import from file →** `pms-send-m2r.json`.
-2. **PMS message** (the first node) → Credential: **Create new → Header Auth**.
-   Name `x-fidato-secret`, Value: the first secret. Call the credential
-   `PMS secret`.
-3. **Read the number**, **Read the lead** and **Write the mark** → Credential:
-   the existing **Firestore (live-inventory1)** (Google Service Account API).
-4. **Send on WhatsApp** → Credential: the existing **WhatsApp token** (Header
-   Auth). It must be the token of the app that owns the Fidato number.
-5. **Read the message** → at the top, under "THE OWNER'S SETTINGS":
-   - `HOTELS`: each PMS hotel code and this app's hotel id and name
-     (`5EL` → `five-elements-akkalkot` is filled in; add the others as they
-     go live).
-   - `TEMPLATES` / `LANGUAGE`, only if Meta approved other names.
-6. **In the market-to-revenue app itself: Admin → WhatsApp routing** - add the
-   Fidato number, **shared by all hotels**. The guest's reply lands on the lead
-   this workflow marks only when the number is mapped; an unmapped number puts
-   it in Unassigned.
-7. **Save**, then switch it **Active**. Copy the **Production URL** of **PMS
-   message** (not the Test URL, which only answers while you watch).
+What it would add, the day you want it: before each WhatsApp message the PMS
+would first tell the live-inventory app's sales inbox that this guest is
+booked, so a guest's reply does not start the greeting bot (D27-104). Its list
+of hotels already names 5 Elements (`5EL`), Amrapali (`AMR` →
+`amrapali-kolhapur`) and Hotel Grand Lucent (`GLM` → `grand-lucent-mathura`).
+Ask the master for the steps then; they are in this file's history.
 
-## B · The CRS workflow (`pms-send-crs.json`)
+## B · The CRS workflow (`pms-send-crs.json`) - every message
 
 In the CRS's n8n (the CRS's **Admin → Integrations** names its address):
 
-1. **Workflows → Import from file →** `pms-send-crs.json`.
-2. **PMS message** → Credential: **Create new → Header Auth**, name
-   `x-fidato-secret`, Value: the **second** secret. Call it `PMS secret`.
+1. **Workflows → Import from file →** `pms-send-crs.json`. It arrives named
+   **PMS send · email and WhatsApp (CRS)**.
+   - If you imported the earlier file (named "PMS send · email and voucher"):
+     switch that one off and delete it after this one works, or the address
+     `pms-send` is claimed twice.
+2. **PMS message** (the first node) → Credential: **Create new → Header
+   Auth**, name `x-fidato-secret`, Value: the secret. Call it `PMS secret`.
 3. **Send the email** → Credential: the CRS's existing **SMTP** login.
 4. **Send on WhatsApp** → Credential: the existing **WhatsApp** login (the
    Fidato number's app).
-5. **Read the message** → at the top: `FROM` - the mailbox the guest sees,
-   for example `Reservations <reservations@your-domain>`; `REPLY_TO` if
-   replies should go elsewhere. **Until `FROM` is filled, every email is
-   refused** with a sentence the desk sees. The words of each email are the
-   `EMAILS` drafts just below - change them there.
-6. **Save**, **Active**, and copy the **Production URL** of **PMS message**.
+5. **Read the message** → at the top, under "THE OWNER'S SETTINGS":
+   - `FROM` - the mailbox the guest sees, for example
+     `Reservations <reservations@your-domain>`; `REPLY_TO` if replies should
+     go elsewhere. **Until `FROM` is filled, every email is refused** with a
+     sentence the desk sees. WhatsApp messages do not need it.
+   - `WHATSAPP` / `LANGUAGE`, only if Meta approved other names or another
+     language.
+   - The words of each email are the `EMAILS` drafts just below - change them
+     there.
+   - There is no list of hotels to fill in: the hotel's name comes with each
+     message.
+6. **Save**, switch it **Active**, and copy the **Production URL** of **PMS
+   message** (not the Test URL, which only answers while you watch).
 
 ---
 
@@ -114,22 +123,78 @@ guiding - never pasted into a chat):
 
 ```
 CRS_N8N_URL=<the CRS workflow's Production URL>
-CRS_N8N_SECRET=<the second secret>
-M2R_N8N_URL=<the market-to-revenue workflow's Production URL>
-M2R_N8N_SECRET=<the first secret>
+CRS_N8N_SECRET=<the secret>
 WHATSAPP_PHONE_NUMBER_ID=<the Fidato number's Phone number ID>
 ```
 
-**All five, or nothing sends** - every screen says "Sending is not set up yet"
-until they are in. Then the API restarts. The guest messages sweep also waits
-for `GUEST_MESSAGES_PER_MINUTE`, your pace (D21-34).
+**All three, or nothing sends** - every screen says "Sending is not set up
+yet" until they are in. Then the API restarts. The guest messages sweep also
+waits for `GUEST_MESSAGES_PER_MINUTE`, your pace (D21-34).
+
+`M2R_N8N_URL` and `M2R_N8N_SECRET` stay **empty** for now (part A).
 
 ---
 
-## How they behave
+## D · The ID photos workflow (`pms-id-photos-crs.json`)
+
+**A second workflow, separate from sending, with its own secret** (D27-209).
+A guest's ID photo is never kept on the PMS server: the PMS encrypts it with
+that hotel's password and this workflow puts the encrypted file in Google
+Drive, fetches it back when the desk opens it, and deletes it when somebody
+removes it. **Only encrypted files pass through it**: it never sees a photo
+or a password, and it refuses anything that is not an encrypted zip.
+
+Do `src/modules/online-checkin/OWNER-STEPS.md` **Part 3** first (the Drive
+folders and their ids). Then, in the CRS's n8n:
+
+1. **Workflows → Import from file →** `pms-id-photos-crs.json`. It arrives
+   named **PMS ID photos · Drive (CRS)**.
+2. **PMS photo** (the first node) → Credential: **Create new → Header Auth**,
+   name `x-fidato-secret`, Value: a **new** long random secret, not the
+   sending workflow's. Call it `PMS photo secret`.
+3. **Save to Drive**, **Where is it**, **Download** and **Delete** →
+   Credential: the CRS's existing **Google Drive** login (the one its voucher
+   workflow saves PDFs with). All four use the same one.
+4. **Read the request** → at the top, under "THE OWNER'S SETTINGS": in
+   `HOTELS`, paste each hotel's folder id between the quotes:
+
+   ```
+   const HOTELS = {
+     "AMR": "<the id of the AMR folder>",
+     "GLM": "<the id of the GLM folder>",
+   };
+   ```
+
+   A hotel with nothing between its quotes is refused. A new hotel is a new
+   line here and a new folder.
+5. **Save**, switch it **Active**, and copy the **Production URL** of **PMS
+   photo**.
+
+On the PMS server (release day, with the master; never pasted into a chat):
+
+```
+ID_PHOTO_N8N_URL=<this workflow's Production URL>
+ID_PHOTO_N8N_SECRET=<its secret>
+ID_PHOTO_PASSWORD_AMR=<the AMR password>
+ID_PHOTO_PASSWORD_GLM=<the GLM password>
+```
+
+**Then the check in OWNER-STEPS Part 3, step 3f, before any guest's photo is
+taken.** It is the first time this workflow's Drive steps run at all: they
+cannot be run on the development machine.
+
+**If a photo is ever refused as too large by n8n:** n8n takes 16 MB in one
+request by default, and the PMS never sends it more than about 12 MB (two
+photos of 4 MB, encrypted, as text). The setting that raises n8n's own limit
+is `N8N_PAYLOAD_SIZE_MAX` (in megabytes) in the n8n container's settings; it
+should not be needed.
+
+---
+
+## How it behaves
 
 - **Every message carries its own id**, the same on every try of one message.
-  Each workflow remembers the ids it has sent for 30 days (in the workflow's
+  The workflow remembers the ids it has sent for 30 days (in the workflow's
   own saved data) and answers a repeat "already sent" without sending, so a
   retry after a timeout never reaches the guest twice. A message that failed
   is not remembered: the PMS's next try really tries.
@@ -139,12 +204,19 @@ for `GUEST_MESSAGES_PER_MINUTE`, your pace (D21-34).
   around it (in the CRS's colours) and attaches it. On WhatsApp the voucher
   is the `booking_confirmation` text with the check-in link; a PDF on
   WhatsApp needs a template with a document header, and comes later.
-- **The voucher on WhatsApp**: the market-to-revenue workflow is told first
-  (a "mark" with no message), so a guest who replies to the CRS's voucher is
-  already a booked guest in the sales inbox.
-- **Marking** follows the app's own rules: a new guest becomes a lead with
-  status BOOKED and the PMS booking's reference; an existing lead is set to
-  BOOKED; an already booked lead only takes the newest reference. No amount is
-  written. A mark that fails does not stop the message; the PMS records why.
-- **Every refusal is a sentence** the PMS shows on Guest messages: a hotel not
-  in `HOTELS`, a kind with no template, no mailbox, WhatsApp's own error.
+- **The check-in code** goes the way the guest chooses on their page
+  (D27-207). On WhatsApp it is the `guest_page_code` template: the six digits
+  in the message and in its **Copy code** button; Meta writes that template's
+  words itself. By email it is the `guest-link-code` draft in `EMAILS`
+  ("Your check-in code for …"), to the email on the booking; it needs `FROM`
+  like every other email. A workflow imported before 30 September does not
+  have that draft: import this file again (or paste the one entry into
+  `EMAILS`), or a code asked for by email is refused and the guest reads
+  "could not be sent".
+- **A guest's reply on WhatsApp** is not read by the PMS. The Fidato number
+  is in the live-inventory app's WhatsApp routing (D27-186), so a reply
+  arrives in that app's inbox. ⚠ Without part A that app is not told the
+  guest is booked, so it treats the reply as a new enquiry (its greeting
+  may answer). That is what part A's "booked guest" mark was for (D27-104).
+- **Every refusal is a sentence** the PMS shows on Guest messages: a kind
+  with no template, no mailbox, WhatsApp's own error.

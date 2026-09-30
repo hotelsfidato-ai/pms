@@ -27,6 +27,20 @@ confirms the whole group, so it cannot happen from the desk today.
 
 ## Fixed
 
+### RES-11 · A booking made with real dates vanished from Arrivals - FIXED 30 September (D27-187, D27-193; numbered for now)
+
+The owner's walk-through booked 1-3 October on the master's demo, whose business date was 25 August. Arrivals shows the business date and the fourteen days after it, so the booking was in neither view, and nothing said why. It was not the cache (the page invalidates every query on save) and not a status. **Fixed** at the cause: `npm run demo` passes `--today` and the demo's dates move onto today (`api/scripts/demoDate.ts`); the API test harness keeps 25 August. **Rule:** a demo whose day is not today makes every date the owner types look like a bug; reproduce with the owner's own rows before theorising.
+
+### RES-12 · A cash advance refused at booking was one amber line under "Booked" - FIXED 30 September (D27-187, D27-193); the hold REMOVED the same day (D27-200)
+
+**Since D27-200:** the drawer opens by itself on the first cash (the Cash lane's 165), so cash is never refused and the hold below was taken out again. What follows is the record of the fix as first made.
+
+D27-118 refuses cash without the clerk's own open drawer, and the master's demo had never had one: the booking saved and the advance did not, and the owner read the bill as missing it. A UPI advance did reach the bill. **Fixed:** with Paid by Cash and no drawer of yours open, the reason shows under the Advance field and the three buttons are held (`getCashierDrawer`, finance's front door). D27-118 is unchanged.
+
+### RES-13 · The GST section could only say "no GSTIN" - FIXED 30 September (D27-187, D27-193)
+
+The fold was there (switched on) but read-only by D27-163, and no demo company has a GSTIN. **Fixed:** GST folded into Company - the chosen company's GSTIN, or "no GSTIN on its record", under the picker; the summary says GST. The GST and Extras switches left Settings with their sections.
+
 ### RES-9 · A confirmed booking could only be voided, and the guest page link always said "No link" - FIXED 28 September (QA BK-1, BK-2)
 
 BK-1: StayActions offered Cancel only on a booking waiting for the hotel, so a

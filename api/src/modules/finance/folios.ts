@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
+import { roomNightsDue, roomNightWords } from "../night-audit/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    FOLIOS — derived from the ledger, never stored
@@ -205,10 +206,14 @@ folios.get("/:code/stays/:id/postings", async (c) => {
       posted_by: string | null;
       day_closed: boolean;
       invoice: string | null;
+      tax_scheme: string;
+      tax_rate: string | null;
     }>(
       `select fp.id::text, fp.folio_id::text, f.bill_to, co.name as company,
               fp.business_date::text, fp.category, fp.description,
               fp.amount, fp.tax_amount, fp.reverses_id::text,
+              -- What the line was billed under, for the bill's sections (D27-200).
+              fp.tax_scheme, fp.tax_rate::text,
               exists (select 1 from folio_postings r where r.reverses_id = fp.id) as reversed,
               fp.created_at::text,
               -- Why Edit is off for a line, before anybody types (D27-157):
@@ -259,6 +264,8 @@ folios.get("/:code/stays/:id/postings", async (c) => {
       user: p.posted_by,
       dayClosed: p.day_closed,
       invoice: p.invoice,
+      scheme: p.tax_scheme,
+      rate: p.tax_rate === null ? null : Number(p.tax_rate),
     }));
   });
 
@@ -270,18 +277,37 @@ folios.get("/:code/stays/:id/postings", async (c) => {
    hotel's own name and GSTIN, the live lines, tax by each line's own rate.
    The printed bill used to build itself in the browser with a made-up
    GSTIN and a fixed 2.5% (21 September). Row security decides whose stay
-   this session may read, as for every other finance read. */
+   this session may read, as for every other finance read.
+
+   AND TONIGHT'S NIGHT, WHERE IT IS NOT POSTED YET (the owner's D27-204): a
+   guest staying on, before tonight's audit, is shown the night "to be posted
+   tonight", counted in the amount due. It is the audit's own answer for this
+   stay (night-audit/roomNight.ts) - the same rule, rate and GST the run will
+   post - and the desk's print only: app.stay_bill, which the guest's own page
+   reads, is unchanged (D27-205). */
 folios.get("/:code/stays/:id/bill", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
-    const { rows } = await client.query<{ bill: unknown }>(
-      `select app.stay_bill(r.id) as bill
+    const stayId = c.req.param("id");
+    const { rows } = await client.query<{ bill: Record<string, unknown> | null; staying: boolean }>(
+      `select app.stay_bill(r.id) as bill,
+              r.check_out > app.business_date(r.hotel_id) as staying
          from reservations r
         where r.hotel_id = $1 and r.id = $2`,
-      [hotelId, c.req.param("id")],
+      [hotelId, stayId],
     );
-    return rows[0]?.bill ?? null;
+    const bill = rows[0]?.bill ?? null;
+    if (!bill || !rows[0]!.staying) return bill;
+    const [night] = await roomNightsDue(client, hotelId, await businessDateFor(client, hotelId), stayId);
+    if (!night || night.comp || night.gst === null) return bill;
+    return {
+      ...bill,
+      tonight: {
+        description: roomNightWords(night),
+        amount: Number(night.rate), tax: Number(night.tax), rate: Number(night.gst),
+      },
+    };
   });
 
   return body ? c.json(body) : c.json({ error: "Not found." }, 404);

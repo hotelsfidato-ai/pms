@@ -14,24 +14,51 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### ADM-9 · At phone width Settings cuts a long value off at the card's edge - OPEN
+### ADM-19 · A PIN or map point emptied in Settings comes back from SU's old row - OPEN, accepted (numbered for now)
 
-**Found** — 27 September, opening Settings at 375 px while proving the group
-group card (the group-logo session). The GSTIN `27AAAAA0000A1Z5` needs 131 px
-and its `<dd>` gets 86: it runs past the card's right edge and is cut. The
-page itself does not scroll sideways, so nothing flags it.
+**Found** - 30 September, building D27-214's phase 2. The postcode and the map
+point moved from the channel manager's setup (`channel_hotels`) to the hotel's
+profile (`hotels.pin`, `latitude`, `longitude`; migration 168). So that nothing
+already set up was lost, the channel manager reads the hotel's own and, where
+it has none, what `channel_hotels` still holds (`content/store.ts`), and 168
+copies those into a hotel that has none, on every replay. A GM who EMPTIES the
+PIN or the map point in Settings therefore still sees SU sending the old one,
+and the next deploy puts it back in the profile. Changing a value works; only
+emptying it does not stick, and only for a hotel that had typed one in SU's
+setup before 168.
 
-**Not fixed** — not in that session's brief, and how a long value wraps is a
-look decision. The row is `SettingRow` in `pages/Admin.tsx`
-(`grid-cols-[minmax(130px,200px)_1fr]`); `break-words` on the `<dd>`, or one
-column below `sm`, would do. Passed to the master with the group logo.
+**Not fixed** - accepted by the master, 30 September. It goes when the three
+`channel_hotels` columns (postal_code, latitude, longitude) are retired and
+168's copy with them, which is the owner's to say once every hotel's profile
+holds its own.
 
-**The rule** — measure a row at phone width with its longest real value, not
-the demo's shortest.
+**The rule** - A fallback that keeps old data alive also keeps alive what
+somebody meant to remove. Say so where the fallback is written, and name the
+day it goes.
 
 ---
 
 ## Fixed — the solution is here; do not work it out again
+
+### ADM-9 · At phone width Settings cut a long value off at the card's edge - FIXED 30 September
+
+**Found** - 27 September, opening Settings at 375 px (the group-logo session): the GSTIN `27AAAAA0000A1Z5` needs 131 px and its `<dd>` got 86, so it ran past the card's right edge and was cut. The page itself does not scroll sideways, so nothing flagged it. Left open then as "a look decision"; the one Settings place (D27-213) gave it three more rows (PAN, email, website).
+
+**Done** - the master, 30 September: "clipped text is a fault, not a look". `SettingRow` in `pages/Admin.tsx`: `break-words` on the `<dd>`.
+
+**Proved** - in the app's pane at 375 px as the GM, measured: before, four rows on the Property tab ran past the card's edge (GSTIN, PAN, Email, Website); after, none, and each wraps inside it. At 1280 px no row on the Property tab (18) or the Taxes and billing tab (8) takes a second line, as before.
+
+**The rule** - measure a row at phone width with its longest real value, not the demo's shortest.
+
+### ADM-18 · A hotel's Admin saved its details and nothing was written; a GM of another hotel could write this one - FIXED 30 September by migration 168
+
+**Found** - planning D27-213, in a rolled-back transaction as `pms_app`. `hotels_manage` (the UPDATE policy on `hotels`) asked `app.is_manager()`: a group administrator, or owner or GM at ANY hotel. So a person whose role at a hotel is `admin` (D23-2) updated 0 rows there, and a GM of hotel A who also works the desk at hotel B could update hotel B's row. The profile's route was for a group administrator only, so it never reached the policy and nothing showed; the FSSAI save (owner, admin, GM) is a plain update under it.
+
+**Done** - migration 168: `hotels_manage` asks `app.manages_hotel(id)` (a group administrator, or owner, GM or Admin AT that hotel), for `using` and `with check`. `PATCH /api/admin/hotels/:code` asks the same function, and refuses a changed name from anybody but a group administrator (D27-214). `roleGate.ts` says so.
+
+**Proved** - `db/tests/modules/admin.sql` "hotel profile": with the policy line taken out three assertions fail (the Admin writes 0 rows, the GM elsewhere writes 1, no audit row). `api/test/modules/admin/hotelProfile.test.ts`: 3 of 5 failed against the old route.
+
+**The rule** - A policy that asks "is this person a manager" without "of THIS row" is two faults at once: it refuses the row's own manager who holds a narrower role, and admits a manager from somewhere else.
 
 ### ADM-17 · Adding somebody on a server with no Firebase ended in "Something went wrong" (QA AD-5) - FIXED 28 September (round F)
 

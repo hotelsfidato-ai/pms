@@ -130,7 +130,7 @@ checklist.get("/:code/night-audit", async (c) => {
         {
           id: "room-charges",
           label: "Room charges to post",
-          detail: "One night's tariff and tax for each room the run will charge. A stay charged for tonight already (a walk-in's whole stay is charged at check-in), a day-use stay and a complimentary room are not counted.",
+          detail: "One night's tariff and tax for each room the run will charge. A stay charged for tonight already (the first night is charged at check-in), a day-use stay and a complimentary room are not counted.",
           state: "ok",
           count: n(r.to_post),
         },

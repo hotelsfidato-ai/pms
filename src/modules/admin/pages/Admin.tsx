@@ -13,13 +13,9 @@ import {
   Skeleton, Avatar, Tooltip, ErrorState, Switch, toast, EmptyState, Input, Button,
   type Column, type Tone,
 } from "@/components/ui";
-import { listStaff, listAuditLog, listIntegrations, getSettings, roleDescription, type StaffRecord, type AuditEntry, type Integration } from "@/modules/admin/data/adminLists";
+import { listStaff, listAuditLog, listIntegrations, roleDescription, type StaffRecord, type AuditEntry, type Integration } from "@/modules/admin/data/adminLists";
 import { getMatrix } from "@/modules/admin/data/admin";
 import { getModules, setModule } from "@/data/repositories";
-import { useRole } from "@/lib/session";
-import { switchesModules } from "@/modules/admin/moduleSwitchRoles";
-import { TaxInUseRows } from "@/modules/admin/components/TaxInUse";
-import { GroupCard } from "@/modules/admin/components/GroupCard";
 
 /* ══════════════════════════════════════════════════════════════════
    ADMINISTRATION
@@ -491,15 +487,7 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
      is off, the section is simply not drawn. */
   booking_company: {
     label: "Company section",
-    note: "Bill a booking to a company. Off, every new booking is billed to the guest.",
-  },
-  booking_gst: {
-    label: "GST section",
-    note: "Shows the chosen company's GSTIN, as the tax invoice will print it.",
-  },
-  booking_extras: {
-    label: "Extras section",
-    note: "The stay's extras from this hotel's list, added when the booking is saved.",
+    note: "Bill a booking to a company, with its GSTIN. Off, every new booking is billed to the guest.",
   },
   booking_notes: {
     label: "Notes section",
@@ -507,9 +495,9 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
   },
 };
 
-const BOOKING_SECTION = (module: string) => module.startsWith("booking_");
+export const BOOKING_SECTION = (module: string) => module.startsWith("booking_");
 
-function ModulesCard({ hotelId, title, description, only }: {
+export function ModulesCard({ hotelId, title, description, only }: {
   hotelId: string; title: string; description: string;
   /** Which of the property's switches this card draws. */
   only: (module: string) => boolean;
@@ -568,78 +556,14 @@ function ModulesCard({ hotelId, title, description, only }: {
   );
 }
 
-function SettingRow({ label, value }: { label: string; value: string }) {
+export function SettingRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid grid-cols-[minmax(130px,200px)_1fr] gap-4 py-2.5">
       <dt className="text-sm text-grey-500">{label}</dt>
-      <dd className="text-base text-ink-900 min-w-0">{value}</dd>
+      {/* A long unbroken value (a GSTIN, an email) wraps inside the card; it was
+          cut at the edge at phone width (ADM-9). */}
+      <dd className="text-base text-ink-900 min-w-0 break-words">{value}</dd>
     </div>
-  );
-}
-
-export function SettingsPage() {
-  const hotelId = useHotel();
-  const role = useRole();
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["settings", hotelId],
-    queryFn: () => getSettings(hotelId),
-  });
-
-  return (
-    <Page>
-      <PageHeader
-        title="Settings"
-        description="What this property is configured as. Editing arrives with the stage that owns each value."
-      />
-      {error ? (
-        <Card>
-          <ErrorState
-            title="Settings did not load"
-            description="Nothing was changed. Try again."
-            error={error}
-            onRetry={() => refetch()}
-          />
-        </Card>
-      ) : isLoading ? (
-        <Skeleton className="h-96 w-full" />
-      ) : (
-        <div className="space-y-4">
-          <GroupCard hotelCode={hotelId} />
-          {/* D17-36, 17 September: the GM may open Settings, and the
-              switches stay with the owner and an administrator. Hidden,
-              not disabled — they are not the GM's to ask about, and the
-              server refuses anybody else who sends one
-              (api/src/modules/admin/grants.ts). */}
-          {switchesModules(role) && (
-            <>
-              <ModulesCard hotelId={hotelId} title="Modules"
-                description="What this property runs. Off means the screens go and the API refuses them."
-                only={(m) => !BOOKING_SECTION(m)} />
-              <ModulesCard hotelId={hotelId} title="New booking"
-                description="The sections that fold open on New booking. Off hides one at this property; nothing already booked changes."
-                only={BOOKING_SECTION} />
-            </>
-          )}
-          {(data ?? []).map((group) => (
-            <Card key={group.title}>
-              <CardHeader title={group.title} description={group.note} />
-              <CardBody className="pt-0">
-                <dl className="divide-y divide-grey-100">
-                  {group.taxInUse && (
-                    <TaxInUseRows hotelCode={hotelId} row={(label, value, key) => (
-                      <SettingRow key={key} label={label} value={value} />
-                    )} />
-                  )}
-                  {group.rows.map((row) => (
-                    <SettingRow key={row.label} label={row.label} value={row.value} />
-                  ))}
-                </dl>
-              </CardBody>
-            </Card>
-          ))}
-        </div>
-      )}
-    </Page>
   );
 }
 

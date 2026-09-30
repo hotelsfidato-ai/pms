@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { UtensilsCrossed, Plus, Upload, TicketPercent, ListPlus } from "lucide-react";
+import { UtensilsCrossed, Plus, Upload, TicketPercent, ListPlus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -10,12 +10,13 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, Checkbox,
 } from "@/components/ui";
 import { getModules } from "@/data/repositories";
-import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, importAddons, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, setCategoryTaxKind, type SectionHeading, listPromotions, addPromotion, amendPromotion, addVariation, editVariation, removeVariation, listAddonGroups, addAddonGroup, editAddonGroup, setGroupDishes, addAddonOption, editAddonOption, removeAddonOption, type OffFor, type Promotion, type MenuCategory, type MenuItem, type MenuVariation, type Addon, type AddonGroupSetup } from "@/modules/pos/data/till";
+import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, importAddons, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, setCategoryTaxKind, type SectionHeading, listPromotions, addPromotion, amendPromotion, saveVariations, listAddonGroups, addAddonGroup, editAddonGroup, setGroupDishes, addAddonOption, editAddonOption, removeAddonOption, type OffFor, type Promotion, type MenuCategory, type MenuItem, type VariationKind, type Addon, type AddonGroupSetup } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { MENU_SPEC } from "@/lib/importSpec";
 import { ADDON_SPEC } from "@/modules/pos/lib/addonSpec";
 import { chooseRule } from "@/modules/pos/flows/DishDialog";
+import { typesOf } from "@/modules/pos/lib/pricing";
 
 /* ══════════════════════════════════════════════════════════════════
    THE MENU
@@ -666,21 +667,8 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
   const [free, setFree] = useState(false);
   const [tax, setTax] = useState("5");
   const [busy, setBusy] = useState(false);
-  /* The variation dialog: adding one to a dish, or changing one. */
-  const [entry, setEntry] =
-    useState<{ item: MenuItem; variation?: MenuVariation } | null>(null);
-  /* Removing a dish's LAST variation: it is sold at one price again, and
-     that price is typed now (the owner, 21 September). */
-  const [lastOf, setLastOf] =
-    useState<{ item: MenuItem; variation: MenuVariation } | null>(null);
-
-  const remove = async (item: MenuItem, variation: MenuVariation) => {
-    if (item.variations.length === 1) return setLastOf({ item, variation });
-    const res = await removeVariation(hotelId, variation.id);
-    if (!res.ok) return toast.error("Not removed", res.reason);
-    toast.success(`${variation.label} is off ${item.name}`);
-    onChanged();
-  };
+  /* The dish whose variations are open in the form (D27-192). */
+  const [varying, setVarying] = useState<MenuItem | null>(null);
 
   const add = async () => {
     const trimmed = name.trim();
@@ -848,9 +836,11 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
                     a dish taken off the card is still off tomorrow, which
                     is exactly what nobody wants from the first one. */}
                 <Button variant="ghost" size="sm"
-                        aria-label={`Add variation to ${item.name}`}
-                        onClick={() => setEntry({ item })}>
-                  <ListPlus className="size-4" /> Add variation
+                        aria-label={item.variations.length > 0
+                          ? `Change variations of ${item.name}` : `Add variation to ${item.name}`}
+                        onClick={() => setVarying(item)}>
+                  <ListPlus className="size-4" />
+                  {item.variations.length > 0 ? "Change variations" : "Add variation"}
                 </Button>
                 <OffControl
                   name={item.name}
@@ -874,38 +864,22 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
               </div>
             </div>
 
-            {/* ── Its variations (D21-40) ──────────────────────────────
-                Each carries its own price; the waiter must pick one. */}
+            {/* ── Its variations, type by type (D27-192) ─────────────────
+                The first type is the dish's price; a later one adds to it.
+                Changed on the form, all at once. */}
             {item.variations.length > 0 && (
               <div className="mt-2 ml-4 pl-3 border-l border-grey-200">
-                <p className="text-2xs uppercase tracking-wide text-grey-500 pt-1">
-                  Variations
-                </p>
-                <ul>
-                  {item.variations.map((v) => (
-                    <li key={v.id}
-                        className="flex flex-wrap items-center gap-x-3 min-h-9 py-0.5">
-                      <span className="flex-1 min-w-28 text-base text-ink-900 truncate">
-                        {v.label}
-                      </span>
-                      <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right">
-                        {moneyPrecise(v.price)}
-                      </span>
-                      <div className="ml-auto flex gap-1">
-                        <Button variant="ghost" size="sm"
-                                aria-label={`Change ${item.name} ${v.label}`}
-                                onClick={() => setEntry({ item, variation: v })}>
-                          Change
-                        </Button>
-                        <Button variant="ghost" size="sm"
-                                aria-label={`Remove ${item.name} ${v.label}`}
-                                onClick={() => void remove(item, v)}>
-                          Remove
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                {typesOf(item).map((t, i) => (
+                  <p key={t.typeNo} className="text-base text-ink-900 py-0.5">
+                    <span className="text-2xs uppercase tracking-wide text-grey-500 mr-2">
+                      {t.heading}
+                    </span>
+                    <span className="tabular">
+                      {t.choices.map((v) => `${v.label} ${v.price === 0 ? "Free"
+                        : `${i > 0 ? "+" : ""}${moneyPrecise(v.price)}`}`).join(" · ")}
+                    </span>
+                  </p>
+                ))}
               </div>
             )}
 
@@ -930,7 +904,7 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
                         {addon.label}
                       </span>
                       <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right">
-                        {moneyPrecise(addon.price)}
+                        {addon.price === 0 ? "Free" : moneyPrecise(addon.price)}
                       </span>
                       <div className="ml-auto">
                         <OffControl
@@ -995,89 +969,45 @@ function CategoryCard({ category, hotelId, servesAlcohol, dishesByGroup, onChang
         </div>
       </CardBody>
 
-      {entry && (
-        <EntryDialog
-          title={entry.variation
-            ? `Change ${entry.item.name} - ${entry.variation.label}`
-            : `Add a variation to ${entry.item.name}`}
-          description={entry.item.variations.length === 0 && !entry.variation
-            ? "Half, Full, 250 ml. Once a dish has variations, each carries "
-              + "its own price and the waiter must choose one."
-            : "Each variation carries its own price."}
-          name={{ label: "Variation", initial: entry.variation?.label ?? "",
-                  placeholder: "Half" }}
-          initialPrice={entry.variation ? String(entry.variation.price) : ""}
-          onSave={async (label, typed) => {
-            const res = entry.variation
-              ? await editVariation(hotelId, entry.variation.id, label, typed)
-              : await addVariation(hotelId, entry.item.id, label, typed);
-            if (res.ok) {
-              toast.success(entry.variation ? `${label} saved`
-                : `${label} added to ${entry.item.name}`);
-              onChanged();
-            }
-            return res;
-          }}
-          onClose={() => setEntry(null)}
-        />
-      )}
-      {lastOf && (
-        <EntryDialog
-          title={`Remove ${lastOf.variation.label} from ${lastOf.item.name}`}
-          description={`It is the last variation, so ${lastOf.item.name} will `
-            + "be sold at one price again. What price?"}
-          priceLabel={`Price of ${lastOf.item.name}`}
-          confirm="Remove"
-          onSave={async (_label, typed) => {
-            const res = await removeVariation(hotelId, lastOf.variation.id, typed);
-            if (res.ok) {
-              toast.success(`${lastOf.item.name} is one price again`);
-              onChanged();
-            }
-            return res;
-          }}
-          onClose={() => setLastOf(null)}
-        />
+      {varying && (
+        <VariationsDialog hotelId={hotelId} item={varying}
+                          onClose={() => setVarying(null)} onSaved={onChanged} />
       )}
     </Card>
   );
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   A NAME AND A PRICE — a variation, an add-on option, or a dish's own
-   price when its last variation goes.
+   AN ADD-ON OPTION: A NAME AND A PRICE, OR FREE
 
-   THE PRICE IS TYPED OR NOTHING IS SAVED. Save waits for a figure, and
-   the server refuses a blank as well: "0" typed is a real answer - a
-   Preference such as No onion costs nothing (D21-42) - and a blank is
-   not zero (HANDOVER § 5).
+   THE PRICE IS TYPED OR TICKED FREE, OR NOTHING IS SAVED. A blank is not
+   zero (HANDOVER § 5), and since D27-192 a 0 is a Preference such as No
+   onion only when it is ticked Free (D27-120 replaced D21-42's "type 0").
    ══════════════════════════════════════════════════════════════════ */
 function EntryDialog({
-  title, description, name, priceLabel = "Price", initialPrice = "",
-  confirm = "Save", onSave, onClose,
+  title, description, name, initialPrice = "", initialFree = false, onSave, onClose,
 }: {
   title: string;
   description: string;
-  /** Asked for when given; a dish's own price needs no name. */
-  name?: { label: string; initial: string; placeholder: string };
-  priceLabel?: string;
+  name: { label: string; initial: string; placeholder: string };
   initialPrice?: string;
-  confirm?: string;
-  onSave: (label: string, price: string) => Promise<{ ok: boolean; reason?: string }>;
+  initialFree?: boolean;
+  onSave: (label: string, price: string, free: boolean) => Promise<{ ok: boolean; reason?: string }>;
   onClose: () => void;
 }) {
-  const [label, setLabel] = useState(name?.initial ?? "");
+  const [label, setLabel] = useState(name.initial);
   const [price, setPrice] = useState(initialPrice);
+  const [free, setFree] = useState(initialFree);
   const [busy, setBusy] = useState(false);
 
   const typed = price.trim();
   const rupees = Number(typed.replace(/[,₹\s]/g, ""));
-  const bad = typed !== "" && (!Number.isFinite(rupees) || rupees < 0);
-  const ready = (!name || label.trim() !== "") && typed !== "" && !bad;
+  const bad = !free && typed !== "" && (!Number.isFinite(rupees) || rupees < 0);
+  const ready = label.trim() !== "" && (free || typed !== "") && !bad;
 
   const submit = async () => {
     setBusy(true);
-    const res = await onSave(label.trim(), typed);
+    const res = await onSave(label.trim(), free ? "" : typed, free);
     setBusy(false);
     if (!res.ok) return toast.error("Not saved", res.reason);
     onClose();
@@ -1096,30 +1026,235 @@ function EntryDialog({
             </Button>
             <Button variant="primary" size="lg" loading={busy} disabled={!ready}
                     onClick={() => void submit()}>
-              {confirm}
+              Save
             </Button>
           </>
         }
       >
         <div className="space-y-4">
-          {name && (
-            <Field label={name.label} required>
-              {(f) => (
-                <Input {...fieldProps(f)} value={label} autoFocus
-                       placeholder={name.placeholder}
-                       onChange={(e) => setLabel(e.target.value)} />
-              )}
-            </Field>
-          )}
-          <Field label={priceLabel} required
-                 hint="Rupees. Type 0 for something that is free - a blank is not zero."
-                 error={bad ? "A price is a number, 0 or more." : undefined}>
+          <Field label={name.label} required>
             {(f) => (
-              <Input {...fieldProps(f)} value={price} inputMode="decimal"
-                     autoFocus={!name} className="tabular"
+              <Input {...fieldProps(f)} value={label} autoFocus
+                     placeholder={name.placeholder}
+                     onChange={(e) => setLabel(e.target.value)} />
+            )}
+          </Field>
+          <Field label="Price" required
+                 hint="Rupees. A blank is not zero - tick Free for something that costs nothing."
+                 error={bad ? "A price is a number, more than 0." : undefined}>
+            {(f) => (
+              <Input {...fieldProps(f)} value={free ? "" : price} inputMode="decimal"
+                     disabled={free} className="tabular"
                      onChange={(e) => setPrice(e.target.value)} />
             )}
           </Field>
+          <Checkbox label="Free" checked={free} onCheckedChange={setFree} />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   A DISH'S VARIATIONS, EVERY TYPE AT ONCE (D27-189, D27-192, D27-195)
+
+   Size, Quantity, or an Option the manager heads ("Crust", "Spice
+   level"). The first type's choices are the dish's price; a further
+   type's choices add to it. Picking a type fills in the NAMES when its
+   list is empty - never a price (no default prices, HANDOVER § 5). A name may
+   be in two types ("Regular" size and "Regular" crust). Saved in one go:
+   the server keeps all of it or none.
+   ══════════════════════════════════════════════════════════════════ */
+const KINDS: { kind: VariationKind; label: string; names: string[] }[] = [
+  { kind: "size", label: "Size", names: ["Small", "Medium", "Large"] },
+  { kind: "quantity", label: "Quantity", names: ["Half", "Full"] },
+  { kind: "option", label: "Option", names: [] },
+];
+type ChoiceRow = { id?: string; label: string; price: string; free: boolean };
+type TypeRow = { kind: VariationKind | null; heading: string; choices: ChoiceRow[] };
+const blankChoice = (): ChoiceRow => ({ label: "", price: "", free: false });
+const priced = (c: { price: string; free: boolean }) => c.free || c.price.trim() !== "";
+
+function VariationsDialog({ hotelId, item, onClose, onSaved }: {
+  hotelId: string; item: MenuItem; onClose: () => void; onSaved: () => void;
+}) {
+  /* A carried-over dish's type is not picked yet: kind null, and Save
+     waits until it is (D27-195, C). A ₹0 choice was ticked Free. */
+  const [types, setTypes] = useState<TypeRow[]>(() => typesOf(item).map((t) => ({
+    kind: t.choices[0]!.kind ?? null,
+    heading: t.choices[0]!.heading ?? "",
+    choices: t.choices.map((v) => ({ id: v.id, label: v.label,
+      price: v.price === 0 ? "" : String(v.price), free: v.price === 0 })),
+  })));
+  /* The first type went, so the next one's figures are no longer
+     additions: cleared, to be typed again as the dish's price. */
+  const [moved, setMoved] = useState(false);
+  const [dishPrice, setDishPrice] = useState("");
+  const [dishFree, setDishFree] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const hadAny = item.variations.length > 0;
+
+  const change = (i: number, next: Partial<TypeRow>) =>
+    setTypes((ts) => ts.map((t, j) => (j === i ? { ...t, ...next } : t)));
+  const changeChoice = (i: number, k: number, next: Partial<ChoiceRow>) =>
+    setTypes((ts) => ts.map((t, j) => (j !== i ? t : {
+      ...t, choices: t.choices.map((c, m) => (m === k ? { ...c, ...next } : c)) })));
+
+  const pick = (i: number, kind: VariationKind) => {
+    const t = types[i]!;
+    const untouched = t.choices.every((c) => !c.label.trim() && !priced(c));
+    const names = KINDS.find((k) => k.kind === kind)!.names;
+    change(i, {
+      kind,
+      ...(kind === "option" ? {} : { heading: "" }),
+      ...(untouched && names.length > 0
+        ? { choices: names.map((label) => ({ ...blankChoice(), label })) } : {}),
+    });
+  };
+
+  const removeType = (i: number) => {
+    if (i === 0 && types.length > 1) setMoved(true);
+    setTypes((ts) => ts.filter((_, j) => j !== i).map((t, j) => (i === 0 && j === 0
+      ? { ...t, choices: t.choices.map((c) => ({ ...c, price: "", free: false })) } : t)));
+  };
+
+  const ready = types.length > 0
+    ? types.every((t) => t.kind && (t.kind !== "option" || t.heading.trim())
+        && t.choices.length > 0 && t.choices.every((c) => c.label.trim() && priced(c)))
+    : hadAny && priced({ price: dishPrice, free: dishFree });
+
+  const save = async () => {
+    setBusy(true);
+    const res = await saveVariations(hotelId, item.id, {
+      types: types.map((t) => ({
+        kind: t.kind!,
+        ...(t.kind === "option" ? { heading: t.heading.trim() } : {}),
+        choices: t.choices.map((c) => ({
+          ...(c.id ? { id: c.id } : {}), label: c.label.trim(), price: c.price, free: c.free })),
+      })),
+      ...(types.length === 0 ? { dishPrice, dishFree } : {}),
+    });
+    setBusy(false);
+    if (!res.ok) return toast.error("Not saved", res.reason);
+    toast.success(`${item.name}: variations saved`);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        size="lg"
+        title={`Variations - ${item.name}`}
+        description={"The waiter picks one of each. The first type's prices are the dish's "
+          + "price; each further type adds to it. A blank price is not zero - tick Free."}
+        footer={
+          <>
+            <Button variant="secondary" size="lg" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="lg" loading={busy} disabled={!ready}
+                    onClick={() => void save()}>
+              Save
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          {types.map((t, i) => (
+            <section key={i} aria-label={`Type ${i + 1}`}
+                     className="space-y-3 pb-4 border-b border-grey-100">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-md font-semibold text-ink-900 w-6">{i + 1}</span>
+                {KINDS.map((k) => (
+                  <button key={k.kind} type="button" aria-pressed={t.kind === k.kind}
+                          onClick={() => pick(i, k.kind)}
+                          className={cn(
+                            "press h-11 px-4 rounded-full border text-base font-medium cursor-pointer",
+                            t.kind === k.kind
+                              ? "border-brand-orange bg-brand-orange-50 text-brand-orange-700"
+                              : "border-grey-300 bg-white text-grey-700 hover:border-grey-400 hover:bg-grey-50",
+                          )}>
+                    {k.label}
+                  </button>
+                ))}
+                <Button variant="ghost" size="sm" className="ml-auto"
+                        onClick={() => removeType(i)}>
+                  Remove type
+                </Button>
+              </div>
+              {!t.kind && (
+                <p className="text-sm text-brand-red-700">
+                  Pick Size, Quantity or Option. It sells as "Variation" until you do.
+                </p>
+              )}
+              {t.kind === "option" && (
+                <Field label="Heading" required hint="What the waiter reads - Spice level, Crust.">
+                  {(f) => (
+                    <Input {...fieldProps(f)} value={t.heading}
+                           onChange={(e) => change(i, { heading: e.target.value })} />
+                  )}
+                </Field>
+              )}
+              <div className="space-y-2">
+                <div className="flex gap-2 text-2xs uppercase tracking-wide text-grey-500">
+                  <span className="flex-1 min-w-32">Choice</span>
+                  <span className="w-24">{i === 0 ? "Price" : "Adds"}</span>
+                  <span className="w-28" />
+                </div>
+                {t.choices.map((c, k) => (
+                  <div key={k} className="flex flex-wrap items-center gap-2">
+                    <Input aria-label={`Type ${i + 1}, choice ${k + 1}`} value={c.label}
+                           className="flex-1 min-w-32"
+                           onChange={(e) => changeChoice(i, k, { label: e.target.value })} />
+                    <Input aria-label={`Price of type ${i + 1}, choice ${k + 1}`}
+                           value={c.free ? "" : c.price} disabled={c.free}
+                           inputMode="decimal" className="w-24 tabular"
+                           onChange={(e) => changeChoice(i, k, { price: e.target.value })} />
+                    <Checkbox label="Free" checked={c.free}
+                              onCheckedChange={(free) => changeChoice(i, k, { free })} />
+                    <button type="button"
+                            aria-label={`Remove type ${i + 1}, choice ${k + 1}`}
+                            onClick={() => change(i, { choices: t.choices.filter((_, m) => m !== k) })}
+                            className="press size-11 grid place-items-center rounded-full text-grey-500 hover:text-brand-red-700 hover:bg-brand-red-50 cursor-pointer">
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                ))}
+                <Button variant="secondary" size="sm"
+                        onClick={() => change(i, { choices: [...t.choices, blankChoice()] })}>
+                  <Plus className="size-4" /> Add a choice
+                </Button>
+              </div>
+            </section>
+          ))}
+
+          {moved && (
+            <p className="text-sm text-brand-orange-700">
+              The next type is now the first, so its prices are the dish's price.
+              Type them again.
+            </p>
+          )}
+
+          {types.length === 0 && hadAny && (
+            <div className="space-y-2">
+              <Field label={`Price of ${item.name}`} required
+                     hint="With no variations it is sold at one price again.">
+                {(f) => (
+                  <Input {...fieldProps(f)} value={dishFree ? "" : dishPrice}
+                         disabled={dishFree} inputMode="decimal" className="tabular w-32"
+                         onChange={(e) => setDishPrice(e.target.value)} />
+                )}
+              </Field>
+              <Checkbox label="Free" checked={dishFree} onCheckedChange={setDishFree} />
+            </div>
+          )}
+
+          <Button variant="secondary"
+                  onClick={() => setTypes((ts) => [...ts,
+                    { kind: null, heading: "", choices: [blankChoice()] }])}>
+            <Plus className="size-4" /> {types.length > 0 ? "Add another type" : "Add a type"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -1236,7 +1371,7 @@ function AddonGroups({ hotelId, categories, onChanged }: {
                         {a.label}
                       </span>
                       <span className="tabular text-base text-ink-900 shrink-0 w-20 text-right">
-                        {moneyPrecise(a.price)}
+                        {a.price === 0 ? "Free" : moneyPrecise(a.price)}
                       </span>
                       <div className="ml-auto flex gap-1">
                         <Button variant="ghost" size="sm"
@@ -1282,11 +1417,12 @@ function AddonGroups({ hotelId, categories, onChanged }: {
           description="A price changed here changes on every dish that offers the group."
           name={{ label: "Option", initial: option.addon?.label ?? "",
                   placeholder: "Butter naan" }}
-          initialPrice={option.addon ? String(option.addon.price) : ""}
-          onSave={async (label, typed) => {
+          initialPrice={option.addon && option.addon.price > 0 ? String(option.addon.price) : ""}
+          initialFree={option.addon?.price === 0}
+          onSave={async (label, typed, free) => {
             const res = option.addon
-              ? await editAddonOption(hotelId, option.addon.id, label, typed)
-              : await addAddonOption(hotelId, option.group.id, label, typed);
+              ? await editAddonOption(hotelId, option.addon.id, label, typed, free)
+              : await addAddonOption(hotelId, option.group.id, label, typed, free);
             if (res.ok) {
               toast.success(option.addon ? `${label} saved`
                 : `${label} added to ${option.group.label}`);

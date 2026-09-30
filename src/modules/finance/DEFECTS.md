@@ -14,9 +14,68 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-Nothing open.
+### FIN-24 · The Bill tab's charges-to-come box counts a night that was taken off as still to come (numbered for now)
+
+**Found** - 30 September, planning D27-204 (the owner's D27-205 keeps the
+audit's rule: a night somebody reversed is not charged again).
+
+**What is wrong** - the box (`useChargesToCome`, `flows/FolioPanel.tsx`) counts
+the stay's LIVE room lines: nights to come = the stay's nights less those. The
+night audit asks a different question: is there ANY room line for this night,
+reversed or not (`POSTS_TONIGHT`, `night-audit/roomNight.ts`). So after a
+clerk reverses a night - the first night on the arrival day, or a night taken
+off on Closed days - the box shows one more night to come than the audit will
+ever post, and its "Due" is a night too high. The printed bill's "to be posted
+tonight" asks the audit's own rule and is right.
+
+**The fix, when it is done** - the server says how many nights are still to
+come, by the audit's rule (one read beside `tonight` on the bill route), and
+the box shows that. Not done here: the master said a follow-up.
 
 ## Fixed
+
+### FIN-23 · Edit and Reverse could not find a stay's own room night on its group's bill — FIXED 30 September (D27-204; numbered for now)
+
+**Found** - 30 September, writing D27-204's tests: Change rate on the arrival
+day for a room routed to its group answered "Nothing changed. The night of 26
+August: Posting not found."
+
+**What was wrong** - `reverseFolioCharge` and `editFolioCharge`
+(`api/src/modules/finance/postings.ts`) looked a stay's line up by the FOLIO's
+stay (`f.reservation_id = $2`). A room routed to its group is charged on the
+group's master folio, which belongs to no stay, so the line was never found.
+It could not be met before: only the night audit posted a routed room's night,
+on a day that is closed the moment it is posted, and Change rate corrects a
+closed night another way. D27-204 posts the first night at check-in, on an
+open day.
+
+**The fix** - `coalesce(f.reservation_id, fp.reservation_id) = $2` in both
+lookups: a stay's own folio by the folio, a line on a bill with no stay by the
+stay the line itself names.
+
+**Proved** - front desk's `firstNight.test.ts`, "Change rate on the arrival
+day, for a room on the group's bill": 409 "Posting not found" with
+`postings.ts` put back, 200 and the night at ₹2,500.00 on the master with it.
+
+### FIN-22 · Cashiering told a receptionist their drawer was "handed to nobody" when it had been handed to a colleague — FIXED 30 September (cash lane, D27-202; numbered for now)
+
+**Found** — building D27-202's "both ends on record": the line under Cashiering's closed view read the colleague's name from `staff`, and row security shows a clerk only their own staff row (housekeeping's HK-14, the owner's D27-97). So `handed_to` came back with no name and the screen said "handed to nobody" about a drawer that had a name on it.
+
+**Fixed** — the name comes through `app.hotel_people` (149), as the hand-over list already did; the same line now says the float kept, for whom, and the rest to deposit.
+
+**Proved** — on screen, `fidato_s47`, as Reception: "Your last shift closed … with ₹890 counted: ₹500.00 kept for Test GM, ₹390.00 to deposit."
+
+**The rule** — A colleague's name is read through `app.hotel_people`, never `staff`: a join that returns no row says "nobody", which is a different fact.
+
+### FIN-21 · The desk's drawer opened on a blank float as ₹0 — FIXED 30 September (D27-190, D27-191; numbered for now)
+
+**Found** — the cash lane, reading the drawer for D27-190: Cashiering's "Opening float" sent `Number(opening || 0)` and the server read `input.opening ?? 0`, so an untouched box opened the drawer on ₹0. That is a figure nobody counted, and the close then measured the drawer against it.
+
+**Fixed** — the server refuses a float that is not a typed number ("Count the opening float first - enter 0 if the drawer is empty"); the screen counts it on the note grid the close uses and does not open until something is typed. 0 opens only when somebody types it.
+
+**Proved** — `api/test/modules/finance/cashCounts.test.ts`: a blank float refused and no drawer opened; 0 typed opens. It failed with the old `?? 0` put back.
+
+**The rule** — A count is what somebody counted. Blank is "not counted", never zero.
 
 ### FIN-20 · After a payment, the Settle dialog offered the same money again "as the guest's credit" — FIXED 29 September (the speed lane's finding 7)
 

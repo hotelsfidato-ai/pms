@@ -1,7 +1,8 @@
 import { cert } from "firebase-admin/app";
 import { randomBytes } from "node:crypto";
+import { firebaseApp } from "../../auth.ts";
 import { withUser } from "../../db.ts";
-import { makeReader, type Doc, type Reader } from "./firestore.ts";
+import { impersonated, makeReader, type Doc, type Reader } from "./firestore.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    READING THE LEADS APP LIVE (D27-170)
@@ -27,6 +28,12 @@ import { makeReader, type Doc, type Reader } from "./firestore.ts";
    Unset settings (OWNER-STEPS.md) mean not connected, and nothing is
    read. There is no default cap: that number is the owner's.
 
+   THE LOGIN IS KEYLESS (D27-186): M2R_IMPERSONATE is the read-only
+   login's email, not a secret. The server's own Google login (the one it
+   checks staff sign-ins with) borrows an hour's token as that login
+   (firestore.ts, `impersonated`). M2R_SERVICE_ACCOUNT, a key, still works
+   if one is ever set, and is used first.
+
    M2R_EMULATOR, on this machine only: a stand-in for Google (the Firestore
    emulator's convention, an address and the token "owner"), for the tests
    and for opening the screens with made-up leads. The server refuses to
@@ -48,8 +55,16 @@ export type Settings = {
 
 const emulatorOf = (e: NodeJS.ProcessEnv) => e["M2R_EMULATOR"]?.trim() || null;
 
+/** The read-only login's email and its project, or null: only a service
+    account's own address names the project to read. */
+function impersonateOf(e: NodeJS.ProcessEnv): { email: string; projectId: string } | null {
+  const email = e["M2R_IMPERSONATE"]?.trim() ?? "";
+  const projectId = /^[a-z0-9-]+@([a-z0-9-]+)\.iam\.gserviceaccount\.com$/.exec(email)?.[1];
+  return projectId ? { email, projectId } : null;
+}
+
 export const connected = (e: NodeJS.ProcessEnv = process.env): boolean =>
-  (!!e["M2R_SERVICE_ACCOUNT"] || !!emulatorOf(e)) && !!e["M2R_HOTELS"] && Number(e["M2R_DAILY_READS"]) > 0;
+  (!!e["M2R_SERVICE_ACCOUNT"] || !!impersonateOf(e) || !!emulatorOf(e)) && !!e["M2R_HOTELS"] && Number(e["M2R_DAILY_READS"]) > 0;
 
 let made: { raw: string; projectId: string; token: () => Promise<string> } | null = null;
 
@@ -59,9 +74,17 @@ export function settings(e: NodeJS.ProcessEnv = process.env): Settings | null {
   if (host && e["NODE_ENV"] === "production") {
     throw new Error("[config] M2R_EMULATOR is set with NODE_ENV=production. The leads app is read from Google only.");
   }
-  const raw = host ? `{"project_id":"demo-leads"}` : e["M2R_SERVICE_ACCOUNT"]!;
+  const as = e["M2R_SERVICE_ACCOUNT"] ? null : impersonateOf(e);
+  const raw = host ? `{"project_id":"demo-leads"}` : as ? `as:${as.email}` : e["M2R_SERVICE_ACCOUNT"]!;
   if (host) made = { raw, projectId: "demo-leads", token: async () => "owner" };
-  else if (made?.raw !== raw) {
+  else if (as) {
+    if (made?.raw !== raw) {
+      made = {
+        raw, projectId: as.projectId,
+        token: impersonated(as.email, async () => (await firebaseApp().options.credential!.getAccessToken()).access_token),
+      };
+    }
+  } else if (made?.raw !== raw) {
     const account = JSON.parse(raw) as { project_id: string };
     const credential = cert(account as Parameters<typeof cert>[0]);
     made = { raw, projectId: account.project_id, token: async () => (await credential.getAccessToken()).access_token };

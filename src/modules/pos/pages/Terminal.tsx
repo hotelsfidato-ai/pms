@@ -183,12 +183,12 @@ export default function TerminalPage() {
 
   const addChosen = async (
     itemId: string, qty: number, text: string,
-    variationId?: string, addonIds?: string[],
+    variationId?: string, addonIds?: string[], moreChoiceIds?: string[],
   ) => {
     if (!orderId) return;
     setBusy(true);
     const res = await addLine(hotelId, orderId, itemId, qty,
-      text.trim() || undefined, variationId, addonIds);
+      text.trim() || undefined, variationId, addonIds, moreChoiceIds);
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
     setAsking(null);
@@ -738,6 +738,9 @@ export default function TerminalPage() {
                 {order.lines.map((l) => (
                   <li key={l.id} className={cn(
                     "py-1", l.voided && "opacity-45",
+                    /* A side sits under its dish and follows its quantity
+                       (D27-192, Q8), as on the Till. */
+                    l.isAddon && "pl-5",
                   )}>
                     <div className="flex items-center gap-2">
                       <span className={cn(
@@ -770,7 +773,7 @@ export default function TerminalPage() {
                       </p>
                     )}
 
-                    {!l.voided && order.status === "open" ? (
+                    {!l.voided && order.status === "open" && !l.isAddon ? (
                       /* A STEPPER, not a strike-and-retype. "Make that two
                          rather than three" used to mean cancelling the line
                          and adding it again, which left a struck row on the
@@ -1022,8 +1025,8 @@ export default function TerminalPage() {
         item={asking}
         open={asking !== null}
         onOpenChange={(o) => { if (!o) setAsking(null); }}
-        onAdd={(id, qty, text, variationId, addonIds) =>
-          void addChosen(id, qty, text, variationId, addonIds)}
+        onAdd={(id, qty, text, variationId, addonIds, moreChoiceIds) =>
+          void addChosen(id, qty, text, variationId, addonIds, moreChoiceIds)}
         busy={busy}
       />
     </Shell>

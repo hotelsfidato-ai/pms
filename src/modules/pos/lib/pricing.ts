@@ -1,4 +1,4 @@
-import type { MenuItem } from "@/modules/pos/data/till";
+import type { MenuItem, MenuVariation } from "@/modules/pos/data/till";
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT ONE DISH COSTS
@@ -40,10 +40,18 @@ export function unitPriceOf(
   item: MenuItem,
   variationId: string | null | undefined,
   addonIds: Iterable<string> | null | undefined,
+  /* The choice of each further type (D27-192): each ADDS its price to
+     the first type's, which carries the dish's. */
+  moreChoiceIds: Iterable<string> | null | undefined = undefined,
 ): number {
-  const base = item.variations.length > 0
-    ? item.variations.find((v) => v.id === variationId)?.price ?? 0
+  const [first, ...later] = typesOf(item);
+  const base = first
+    ? first.choices.find((v) => v.id === variationId)?.price ?? 0
     : item.price;
+  const more = new Set(moreChoiceIds ?? []);
+  const added = later.flatMap((t) => t.choices)
+    .filter((v) => more.has(v.id))
+    .reduce((sum, v) => sum + v.price, 0);
 
   const wanted = new Set(addonIds ?? []);
   const sides = wanted.size === 0
@@ -53,7 +61,28 @@ export function unitPriceOf(
         .filter((a) => wanted.has(a.id))
         .reduce((sum, a) => sum + a.price, 0);
 
-  return base + sides;
+  return base + added + sides;
+}
+
+/** A dish's variation types, in order (D27-192), each under the heading
+    a waiter reads. A menu cached before the types reads as one type. */
+export function typesOf(item: MenuItem): {
+  typeNo: number; heading: string; choices: MenuVariation[];
+}[] {
+  const byType = new Map<number, MenuVariation[]>();
+  for (const v of item.variations) {
+    const n = v.typeNo ?? 1;
+    byType.set(n, [...(byType.get(n) ?? []), v]);
+  }
+  return [...byType.entries()].sort(([a], [b]) => a - b)
+    .map(([typeNo, choices]) => ({ typeNo, heading: headingOf(choices[0]!), choices }));
+}
+
+/** "Size", "Quantity", an Option's own heading, or "Variation" for one
+    whose kind nobody has picked yet (carried over, D27-195). */
+export function headingOf(v: MenuVariation): string {
+  return v.heading ?? (v.kind === "size" ? "Size"
+    : v.kind === "quantity" ? "Quantity" : "Variation");
 }
 
 /** The labels that go with those ids, so the pad can show a line
@@ -63,11 +92,13 @@ export function chosenLabels(
   item: MenuItem,
   variationId: string | null | undefined,
   addonIds: Iterable<string> | null | undefined,
+  moreChoiceIds: Iterable<string> | null | undefined = undefined,
 ): { variationLabel?: string; addonLabels: string[] } {
   const wanted = new Set(addonIds ?? []);
-  const variationLabel = variationId
-    ? item.variations.find((v) => v.id === variationId)?.label
-    : undefined;
+  /* Every choice, in type order, as the kitchen's docket reads them. */
+  const picked = new Set([variationId, ...(moreChoiceIds ?? [])]);
+  const variationLabel = typesOf(item).flatMap((t) => t.choices)
+    .filter((v) => picked.has(v.id)).map((v) => v.label).join(", ") || undefined;
   const addonLabels = item.addonGroups
     .flatMap((g) => g.addons)
     .filter((a) => wanted.has(a.id))

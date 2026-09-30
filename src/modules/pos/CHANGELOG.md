@@ -11,6 +11,92 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · D27-189 part 2: a dish's variation types on one form (D27-192, D27-195)
+
+**Asked for:** the owner's D27-189 and their answers of 30 September (D27-192, D27-195). "Add variation" is a simple form: pick a type, Size, Quantity or Option (an Option headed by the manager, "Spice level"); list its choices, each with a price or Free. A dish may have SEVERAL types, each a required single choice. The first type carries the full price; each further type's choices add +₹ or are Free. The same name may be in two types. Add-ons stay the Add-on groups, with the Free tick. A 0 is refused unless ticked Free (D27-120 replaces D21-42). The waiter picks in one pop-up. A carried-over dish sells as "Variation" until its type is picked. The master approved the model before any of it was written. The owner stopped work mid-way; it resumed after merging cp6 (rates 162, cash 163).
+**Shipped:**
+- Migration 164, "several variation types per dish" (written as 182, renumbered at the master's word). `pos_item_variations` gains `type_no` (default 1), `kind` and `heading`, with a check. A name is unique within its type, `(item_id, type_no, label)`. `pos_order_lines` gains `extra_choice_ids`. 045's trigger now asks one choice of every type, all of this dish. The defaults carry every existing variation, the menu import and the demo loader over as "type 1, not picked". The two `on conflict` lines (`till.ts` import, `api/scripts/load-demo.ts`) name the new key.
+- `till.ts`:
+  - One `PUT /till/menu/items/:id/variations` saves the whole set in one transaction. A choice keeps its row by type and name (a removed one comes back), else by its id; one left out is switched off; emptying the set asks for the dish's price. The three per-variation routes, their data functions and their `roleGate.ts` lines are gone.
+  - `addOneLine` takes `moreChoiceIds`: one per further type. The price is the first choice plus the others, worked in paise; the name reads every choice ("Paneer Tikka (Large, Extra hot)"); the match includes them. A + on a sent dish carries them.
+  - Add-on options take `free`; the add-ons file refuses 0.
+  - "No price" now says "Type a price, or tick Free."
+- Screens:
+  - Menu: the form ("Add variation" / "Change variations"). Type buttons; Heading for an Option; names filled in, never prices; "Price" on the first type, "Adds" on the others; Free on each choice; "Remove type" (the next one's figures cleared, to be typed again as the price); "Add another type". Under the dish, one line per type. An add-on option has Free, and a ₹0 one reads "Free".
+  - The pop-up: a row per type under its heading; "+₹20" / "Free"; Add waits for one of each; with two or more types it says "Choose one of each, and any sides."
+  - `pricing.ts` (`typesOf`, `headingOf`, the added price); the pad keeps `moreChoiceIds` (`src/lib/draft.ts`, one optional field, the master's yes).
+**Proved:**
+- Database (before the merge, on the branch): `db/tests/run.sh`, all 1,280 assertions. "pos variation types" 8/8, and 3 of them fail with the trigger section taken out. `db/tests/rerun.sh`: 162 migrations re-runnable. After the merge the master runs both in the full gates.
+- `fidato_s46` migrated to 164 with the master's OK: 116 → 118 tables. The demo's two variations came over as type 1, not picked.
+- API, each file on its own after the merge:
+  - `padTotal` 4, including the new two-type case: the pad's ₹480 agrees with the bill.
+  - `variationTypes` 5; all 5 fail on the pre-PUT `till.ts`.
+  - `menuOptions` 8, `sameDish` 4, `restaurantFixes` 12, `till` 84.
+  - `tillBatch` 5; `roleGate` 63, with the PUT pinned to the kitchen manager and the menu-route floor at 23 (three routes became one).
+  - strip-check: 165 files load.
+- Web: `variationTypes.test.tsx` 2 and `ownerDecisions.test.tsx` 22; the 6 new ones fail on the pre-form client. `src/modules/pos` + `src/test` + primaryAction + repositories + navigation: 125 passed, migration numbers included. `npx tsc -b --force` exit 0; api `tsc --noEmit` exit 0.
+- **Opened, 30 September, as the GM on `fidato_s46`:**
+  - Menu: Bhaaji Pau read "Variation: Oil ₹300.00 · Butter ₹400.00". Its form said "Pick Size, Quantity or Option. It sells as "Variation" until you do", with Save off. Option kept the names and asked for a Heading; "Cooked in" saved, and the dish then read "Cooked in: Oil ₹300.00 · Butter ₹400.00".
+  - Paneer Tikka: Size filled in Small / Medium / Large with blank prices and Save off. It was made Regular ₹320 / Large ₹480, plus an Option "Spice level": Regular ticked Free (the same name as in Size) and Extra hot 20. It saved and read "Size: Regular ₹320.00 · Large ₹480.00", "Spice level: Regular Free · Extra hot +₹20.00", with "-" for its own price.
+  - Tables, AC7: the pop-up showed Size and Spice level rows, "+₹20" and "Free". Large alone was ₹480 with Add off; with Extra hot, ₹500. Two of the same read one line, "Large, Extra hot · 2 · ₹1,000". Large with a Regular spice was its own line. Sent as KOT 5; the Kitchen screen read "2 × Paneer Tikka (Large, Extra hot)" and "1 × Paneer Tikka (Large, Regular)".
+  - The docket: this tab was switched on as the KOT station, with `window.print` recorded. The reprint of KOT 5 put on the paper "KOT - 5 · Dine In · Table No: AC7 · Paneer Tikka (Large, Extra hot) 2 · Paneer Tikka (Large, Regular) 1", with no prices. The station was switched off again.
+  - The Till (a new order, Lane T2): the same choices twice read "2× Paneer Tikka (Large, Extra hot) ₹1,000".
+  - The Terminal at 768 x 1025, AC7: + on the sent "Paneer Tikka (Large, Extra hot)" made one unsent line of 1 (₹500) with the spice carried; + again made it 2; the tile's pop-up with the same choices made it 3 (₹1,500).
+  - Some adds (the second on Tables, the Till's two, the Terminal's tile) were driven by script clicks on the page's own buttons, because the pane's viewport kept jumping. The rest were real clicks.
+**Left open:** the menu import cannot carry a second type (not asked for).
+
+## 2026-09-30 · D27-189 part 1: the same dish tapped again is one more of it (POS-27, POS-28)
+
+**Asked for:** the owner's D27-189, with their answers of 30 September (D27-192, Q7 and Q8). An unsent dish tapped again adds to its quantity, and it has a − to reduce it. Once the kitchen has a dish, more of it is a new line for the next KOT (D27-148). A dish with a variation or sides is the same only when its choices are the same. Branch `pos/tap-variations-30sep` from cp6 `c01b150`, copy `.claude\worktrees\admiring-goldstine-34db29`, database `fidato_s46`, API 8905, web 5305.
+**Found:** reproduced on all three screens first. The full account is in DEFECTS POS-27 and POS-28:
+- Tables' pad appended every tap.
+- `addOneLine` started a new line for any dish with sides.
+- The Terminal's + on a sent dish made a new line on every press.
+- The Till had no −.
+- A dish's quantity changed without its sides.
+**Shipped:**
+- `till.ts`: `addOneLine` matches the variation, the note and the same set of sides, on unsent lines only, and raises the dish and its sides together. The quantity route's "more of a sent dish" calls `addOneLine`, which copies the sides; its own insert and its refusal for a dish with sides are gone. Setting a quantity sets the sides too.
+- `OrderPad.tsx` `put()` joins the same dish.
+- The Till: a − beside each dish; a sent dish asks for a manager's reason.
+- The Terminal: a side sits under its dish, with no −/+ of its own.
+**Proved:**
+- API `sameDish.test.ts`: 4 passed, and 4 failed on cp6's `till.ts`. `restaurantFixes` 12, `till` 84, `tillBatch` 5 and `padTotal` 3 passed, each file run on its own.
+- Web `sameDish.test.tsx`: 4 passed, and 4 failed on cp6's three screens. `src/modules/pos` + `src/test` + primaryAction + repositories: 17 files, 104 passed.
+- `npx tsc -b --force` exit 0; api `tsc --noEmit` exit 0; strip-check: 163 files load.
+- **Opened, 30 September:**
+  - Tables, AC6: three taps read "Butter Roti 3, Rs 120". Bhaaji Pau (Butter) + Onions twice read one line of 2. The second of those two was added by a script click on the pop-up's buttons, because the dialog sat mid-animation. Sent, KOT 4 held Butter Roti 3, Dal Tadka 3, and Bhaaji Pau (Butter) 2 with Onions 2.
+  - The Till, order 20260825-3: − took Butter Roti from 2 to 1. The same Bhaaji Pau choices joined the first line, giving "2× Bhaaji Pau (Butter)" and "2× Sides: Onions".
+  - The Terminal at tablet width (768 x 1024), AC6 all sent: two presses of + on Butter Roti gave one new "Butter Roti 2". + on Bhaaji Pau gave a new Bhaaji Pau (Butter) 1 with its Onions 1. The sides had no −/+.
+**Left open:** part 2, the variation form - done the same day, the entry above.
+
+---
+
+## 2026-09-30 · The cash lane, second round: the outlet's day opens by itself (D27-200, D27-201)
+
+**Asked for:** the owner's D27-200, which replaces the daily "Open the day" of the entry below. The day-end hunks and the settle check's condition only.
+**Shipped:** `app.pos_opening_cash` (165): the day's own row, else the float kept at the outlet's most recent close that kept one, however many days back; null only on the first-ever day. `app.pos_expected_cash` reads it. GET day-end shows it (`opened` = not null); Settle refuses cash only when it is null; the night count writes the day's row with it (it refused "Open the day first"); `POST /till/day-end/open` is for the first-ever day and refuses once a float carries. Nothing is written for a day until its night count. `DayEnd.tsx`: the Open card shows only on that first day; its words.
+**Proved:** `cashCounts.test.ts`: five days after a close that kept 800 the day is open with nothing pressed, takes cash, expects 800 + the bill, refuses day-end/open, and the count writes 800 down; failed with the carry taken out of the function. POS folder run with the rest (finance's entry). On screen: no Open card, float ₹1,000 from 24 Aug's close, expected ₹1,336.
+**Left open:** an expense paid from the tin on a day with no sale and no close shows as a difference at the next close (the owner's yes, D27-201).
+**Commits:** 45c21be9.
+
+---
+
+## 2026-09-30 · The cash lane: Open the day, no cash before it, the float kept at the close (D27-190, D27-191, POS-29)
+
+**Asked for:** the owner's D27-190 at each restaurant outlet, which replaces D27-139's "no open step" (D27-191); the master's yes for the day-end routes and the one cash-tender refusal only, away from the order pad the POS lane works on. Branch `cash/counts-deposits-30sep`; finance's own entry has the whole of it.
+**Shipped:**
+- `POST /till/day-end/open` (roleGate DAY_END, pinned): the float counted once; a blank float refused. `GET /till/day-end` says `opened`.
+- Settle refuses CASH (and a split with cash) until the outlet's day is open, after the function and delivery refusals; bills, card, UPI and room charges go on.
+- The night count needs the opened day, no longer takes or defaults the float, and refuses a closed day in words (it gave a 500).
+- The close asks `keptCash`, the float kept for the next day (0 to counted); `pos_day_ends.kept_cash` (migration 163).
+- `pages/DayEnd.tsx`: an "Open the day" card on the note grid; the count step's float field gone (read-only in the sum, a dash until opened); Finalize asks the float kept and shows To deposit. `data/till.ts`: `openDay`, `opened`, `keptCash`.
+- Tests that take cash at the till open the outlet's day first (`openTillDay` in `api/test/drawer.ts`): till, cashLimit, settleTwice, restaurantFixes (NA-2), finance's alcoholVat (D22-44), reports (one test); web fixtures carry `opened`.
+**Proved:** see finance's entry - `cashCounts.test.ts` guards seen failing without them; POS folder 18 files 190 passed; the screen walked on `fidato_s47`.
+**Left open:** the page still serves one outlet (REST). "To the safe" before the day is opened is not refused (not in the master's yes).
+**Commits:** 0cadb22, c9ba2b4, and the next.
+
+---
+
 ## 2026-09-29 · The folio lane: "Charge to room" on a room with two open bills (POS-26, D27-162)
 
 **Asked for:** the owner's bug of 28 September (a POS charge to a room not on the guest's bill) - root cause, fixed once, one test. Branch `folio/edit-29sep` (from cp6 ca02e37, round F's `fix/leftovers-28sep` merged in), copy `.claude\worktrees\nervous-spence-42dcae`, database `fidato_s31`, API 8871, web 5271.

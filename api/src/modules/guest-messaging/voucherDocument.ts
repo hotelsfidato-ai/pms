@@ -204,7 +204,8 @@ export function voucherPdf(f: VoucherFacts): Promise<Uint8Array> {
   };
 
   let y = M;
-  /* ── Masthead: the group's logo, else the hotel's name (D27-65) ── */
+  /* ── Masthead: the hotel's own logo or the group's (a PNG; app.guest_voucher,
+     168), else the hotel's name (D27-65, D27-214) ── */
   if (f.logoPng) {
     try { pdf.image(Buffer.from(f.logoPng, "base64"), at(M), at(y), { fit: [at(46), at(13)] }); }
     catch { text(f.hotel.name, M, y + 6, { size: 13, bold: true }); }

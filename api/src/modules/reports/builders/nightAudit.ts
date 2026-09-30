@@ -66,7 +66,9 @@ export async function nightAuditReport(
     `select r.id::text as id, r.reference, g.full_name as guest,
             app.stay_room(r.id)                                   as room,
             rt.name                                               as room_type,
-            rt.base_rate::text                                    as base_rate,
+            /* the normal price that night (EP): a base where there is one
+               (D27-188), else the old rack rate */
+            (select p.price from app.price_for(rt.id, 'EP', $3::date) p)::text as base_rate,
             app.booking_source_label(bs.name, co.name, r.source)  as source,
             co.name                                               as company,
             r.meal_plan, r.adults, r.children, r.status,
@@ -84,7 +86,7 @@ export async function nightAuditReport(
        left join companies co       on co.id = r.company_id
        left join booking_sources bs on bs.id = r.booking_source_id
       where r.hotel_id = $1 and r.id = any($2::uuid[])`,
-    [hotelId, nights.map((n) => n.reservationId)],
+    [hotelId, nights.map((n) => n.reservationId), asOn],
   );
   const stayById = new Map(stays.map((s) => [s.id, s]));
 
