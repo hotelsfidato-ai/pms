@@ -568,8 +568,9 @@ export async function changeStayRate(
   if (!why) return no("Say why the rate is changing. It stays on every night it corrects.");
   const nightly = Math.round(rate * 100) / 100;
 
-  const { rows: stay } = await client.query<{ status: string }>(
-    "select status from reservations where hotel_id = $1 and id = $2", [hotelId, stayId]);
+  const { rows: stay } = await client.query<{ status: string; agreed_rate: string }>(
+    "select status, agreed_rate::text from reservations where hotel_id = $1 and id = $2",
+    [hotelId, stayId]);
   if (!stay[0]) return no("Reservation not found.");
   if (!["confirmed", "checked_in"].includes(stay[0].status)) {
     return no("Only a booking to come or a guest in the house changes rate. "
@@ -611,6 +612,15 @@ export async function changeStayRate(
       return no(`Nothing changed. The night of ${on}: ${done.reason}`);
     }
     corrected += 1;
+  }
+  /* NO NIGHT CHARGED YET (D27-187, D27-195): no line carries the reason, so
+     the booking's notes do, as check-in keeps "ID not captured - why". */
+  if (nights.length === 0) {
+    await client.query(
+      `update reservations
+          set notes = concat_ws(' · ', nullif(notes, ''), $2::text)
+        where id = $1`,
+      [stayId, `Rate ₹${inr(Number(stay[0].agreed_rate))} → ₹${inr(nightly)}: ${why}`]);
   }
   await client.query("release savepoint change_rate");
   return { ok: true, corrected };
