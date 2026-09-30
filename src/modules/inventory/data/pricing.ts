@@ -100,6 +100,31 @@ export async function getPricing(
   );
 }
 
+/** One day of a room type's break-up (D27-206): what it really sells for,
+    every figure the server's (app.tariff_for's). null: an add-on is not
+    set - a dash, not sold. */
+export interface BreakupDay {
+  date: string;
+  /** How many guests the rows price: two, or one for a room that sleeps one. */
+  guests: number;
+  EP: number | null; CP: number | null; MAP: number | null;
+  AP: number | null; AI: number | null;
+  /** What a further guest adds on room only. */
+  extraAdult: number | null; extraChild: number | null;
+}
+
+/** A room type's break-up rows, asked for when its line is opened. */
+export async function getBreakup(
+  hotelId: string, from: string, days: number, roomTypeId: string,
+): Promise<BreakupDay[]> {
+  const body = await fetchOr<{ breakup: BreakupDay[] }>(
+    `/api/hotels/${hotelId}/pricing?from=${encodeURIComponent(from)}&days=${days}`
+      + `&breakup=${encodeURIComponent(roomTypeId)}`,
+    { breakup: [] },
+  );
+  return body.breakup;
+}
+
 /** Names the base room type; null = each room type has its own base. */
 export async function setBasis(
   hotelId: string, roomTypeId: string | null,

@@ -11,6 +11,19 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · Rates: the calendar opens to the break-up; Set prices (D27-206)
+
+Branch `rates/base-addons-30sep` (cp6 e350e71b taken in), copy `.claude\worktrees\mystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.
+**Asked for:** the owner's screenshot of Rates (D27-206): the calendar shows the break-up - CP, MAP, AP, AI, the extra adult and child - and says how to change a day or a range of days.
+**Shipped:** each room type's line is a button that opens rows under it (2 guests; CP, MAP, AP, AI for 2 guests; + per extra adult; + per extra child), closed by default, read when opened from `GET /pricing?breakup=<room type>` - one query, every figure `app.tariff_guests` / `app.extra_person_rates`; a room that sleeps one gets "· 1 guest" rows. A "Set prices" button (room type, from, through, price) is the tapped price's dialog and call; a line under the calendar says a price can be tapped. No migration, no new route.
+**Proved:** each seen failing first - `api/test/modules/inventory/pricing.test.ts` 16 passed (the rows equal `app.tariff_for` plan by plan, day by day; an unset add-on is null); `freeTick.test.tsx` (the rows and the dash; reception sees rows, no Set prices, no tap; Set prices sends from and through + 1). Web inventory 11 passed; tsc web and api clean; strip-check 166 files.
+In the app (the pane, `fidato_s45` at 166): as the owner at 1280, Deluxe opens to 2 guests ₹4,400, CP · 2 guests ₹5,400, MAP/AP/AI a dash, + per extra adult ₹1,000, + per extra child ₹400; Set prices offers only Superior (the base room type) and ₹3,200 for 1-5 Sep moved Superior, Deluxe (₹3,840) and the opened rows (₹4,640 / ₹5,640); the hint shows. As reception at 1280 and 390: the rows, no Set prices, no Edit or Remove, no tappable price, no hint. At 390 with the rows open the page is as wide as the screen (the calendar scrolls inside its card).
+**Found:** the read is about 3x slower for a signed-in person than my first figure. `api/src/db.ts` `withUser` puts the raw Firebase uid into `app.user_id`, and `app.current_user_id()` (017) resolves it through an exception block and a staff lookup on every row-security check. Measured here: the calendar 0.92-1.1 s (0.24 s with a staff uuid as the subject), an opened room type 2.7-2.9 s (0.65-0.77 s). It is the core's, for every request, not this screen's; reported to the master with the one-line fix.
+**Then, the owner's answer (the master, 30 Sep):** the two "+ per extra" rows show only for a room type a further guest fits in (`sleeps > guests`) - a guest who can never be sold must not show a figure, the same rule as the dash. `freeTick.test.tsx` "shows no extra-guest rows for a room type no further guest fits in", seen failing first; inventory web 12 passed. Set prices is the screen's primary button. Opened again as the owner and as reception at 1280 and 390: Superior (sleeps 2) has no extra rows, Deluxe (sleeps 3) keeps them; one opened line filled in 3.1-3.4 s in the browser as a signed-in owner.
+**Left open:** the slow identity path (the master's, `api/src/db.ts`).
+
+---
+
 ## 2026-09-30 · Rates are a base plus add-ons; one Rates screen; Room types is the list (D27-188, D27-194)
 
 Branch `rates/base-addons-30sep` (from cp6 c01b150, e4c5929 taken in), copy `.claudeworktreesmystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.

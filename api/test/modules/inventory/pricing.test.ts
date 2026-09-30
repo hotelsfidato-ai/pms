@@ -288,6 +288,51 @@ describe("the pricing screen's data", () => {
     expect(cell(after, other.id, "CP").price).toBe(3350);
   });
 
+  it("gives a room type's break-up as app.tariff_for prices it, null where an add-on is not set (D27-206)", async () => {
+    const other = (await read()).roomTypes.find((t) => t.code !== "DLX")!;
+    expect((await put("/5EL/pricing/addon", { kind: "double", amount: 700 })).status).toBe(200);
+
+    const res = await as(`/5EL/pricing?from=${FROM}&days=2&breakup=${other.id}`);
+    expect(res.status).toBe(200);
+    type Day = {
+      date: string; guests: number;
+      EP: number | null; CP: number | null; MAP: number | null; AP: number | null; AI: number | null;
+      extraAdult: number | null; extraChild: number | null;
+    };
+    const { breakup } = (await res.json()) as { breakup: Day[] };
+    expect(breakup.map((b) => b.date)).toEqual([FROM, "2028-01-02"]);
+
+    /* THE ROWS ARE THE ONE DEFINITION'S: each figure is asked of the database
+       again here, and must be the same - so a rule changed in app.tariff_for
+       changes the screen with it and cannot be re-derived anywhere else. */
+    const num = (v: string | null) => (v === null ? null : Number(v));
+    const db = await admin();
+    try {
+      for (const day of breakup) {
+        for (const plan of ["EP", "CP", "MAP", "AP", "AI"] as const) {
+          const { rows } = await db.query<{ total: string | null }>(
+            "select total::text from app.tariff_for($1, $2, $3::date, $4, 0)",
+            [other.id, plan, day.date, day.guests]);
+          expect(day[plan], `${plan} on ${day.date}`).toBe(num(rows[0]!.total));
+        }
+        const { rows: x } = await db.query<{ adult: string | null; child: string | null }>(
+          "select adult::text, child::text from app.extra_person_rates($1, 'EP', $2::date)",
+          [other.id, day.date]);
+        expect(day.extraAdult).toBe(num(x[0]!.adult));
+        expect(day.extraChild).toBe(num(x[0]!.child));
+      }
+    } finally {
+      await db.end();
+    }
+
+    /* And in rupees: base 3000, the second guest 700, breakfast 350 a guest. */
+    expect(breakup[0]!.guests).toBe(2);
+    expect(breakup[0]!.EP).toBe(3700);
+    expect(breakup[0]!.CP).toBe(4400);
+    expect(breakup[0]!.MAP, "an add-on nobody set is null, never 0").toBeNull();
+    expect(breakup[0]!.extraAdult, "nor is the extra adult").toBeNull();
+  });
+
   it("never sends a zero for a price nobody has set", async () => {
     const body = await read("?from=2026-08-25&days=1");
     for (const c of body.cells) {

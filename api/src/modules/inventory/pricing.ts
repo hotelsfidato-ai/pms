@@ -69,11 +69,51 @@ pricing.get("/:code/pricing", async (c) => {
   /* One meal plan's cells only (the Rates calendar asks for the base's):
      every plan is six price reads a room type a day. */
   const plan = c.req.query("plan") ?? null;
+  /* One room type's break-up rows (D27-206), asked for when its line is
+     opened: 84 price reads a room type, so not with every load. */
+  const breakup = c.req.query("breakup") ?? null;
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
     const from = fromParam ?? (await businessDateFor(client, hotelId));
+
+    if (breakup) {
+      if (!/^[0-9a-f-]{36}$/i.test(breakup)) return { from, days, breakup: [] };
+      /* EVERY FIGURE IS THE ONE DEFINITION'S (app.tariff_guests is
+         app.tariff_for for 1, 2 … adults; app.extra_person_rates what a
+         further guest adds) - none is worked out here or on the page. NULL
+         where an add-on is not set: a dash, never a zero. `guests` is two,
+         or one for a room that sleeps one. */
+      const { rows } = await client.query<{
+        for_date: string; guests: number; ep: string | null; cp: string | null;
+        map: string | null; ap: string | null; ai: string | null;
+        extra_adult: string | null; extra_child: string | null;
+      }>(
+        `select d::date::text as for_date, g.n as guests,
+                (app.tariff_guests(t.id, 'EP',  d::date, g.n))[g.n]::text as ep,
+                (app.tariff_guests(t.id, 'CP',  d::date, g.n))[g.n]::text as cp,
+                (app.tariff_guests(t.id, 'MAP', d::date, g.n))[g.n]::text as map,
+                (app.tariff_guests(t.id, 'AP',  d::date, g.n))[g.n]::text as ap,
+                (app.tariff_guests(t.id, 'AI',  d::date, g.n))[g.n]::text as ai,
+                x.adult::text as extra_adult, x.child::text as extra_child
+           from room_types t
+           cross join lateral (select least(2, t.max_occupancy) as n) g
+           cross join generate_series($2::date, $2::date + ($3::int - 1), interval '1 day') d
+           left join lateral app.extra_person_rates(t.id, 'EP', d::date) x on true
+          where t.hotel_id = $1 and t.id = $4::uuid
+          order by d`,
+        [hotelId, from, days, breakup],
+      );
+      return {
+        from, days,
+        breakup: rows.map((r) => ({
+          date: r.for_date, guests: r.guests,
+          EP: num(r.ep), CP: num(r.cp), MAP: num(r.map), AP: num(r.ap), AI: num(r.ai),
+          extraAdult: num(r.extra_adult), extraChild: num(r.extra_child),
+        })),
+      };
+    }
 
     const { rows: basisRows } = await client.query<{
       room_type_id: string; room_type: string; meal_plan: string;
