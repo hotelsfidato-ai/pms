@@ -269,7 +269,7 @@ begin
     t.extra_adults = 0 and t.total = 4000,
     t.extra_adults || ' extra / ' || coalesce(t.total::text, '<null>'));
 
-  -- ---------- 11a · ONLY A BASE WRITE MAKES A ONE-GUEST PRICE (181) ----------
+  -- ---------- 11a · ONLY A BASE WRITE MAKES A ONE-GUEST PRICE (162) ----------
   -- A price typed straight into a date range (the old grid, a season) is a set
   -- price: it covers what the room type says, and 090's trigger no longer
   -- re-reads it as a base. The base it split keeps covering one guest on both

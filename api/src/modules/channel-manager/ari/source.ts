@@ -10,7 +10,7 @@ import type { Client } from "../../../db.ts";
                      taken out, INV-6) less every booking holding one. The
                      same number the Inventory grid shows a person. Never
                      below zero.
-     prices          app.tariff_guests (181): app.tariff_for for 1, 2 … up to
+     prices          app.tariff_guests (162): app.tariff_for for 1, 2 … up to
                      the room's sleeps adults: the price a booking of that many people
                      would be charged that night. NULL when any part of it is
                      unpriced; NULL is carried, never turned into 0.
@@ -132,7 +132,7 @@ export async function readAri(
     by_guests: (string | null)[]; source: "typed" | "derived" | "rack" | null;
     extra_adult: string | null; extra_child: string | null;
   }>(
-    /* The prices for 1 … n adults are app.tariff_guests (181): tariff_for's
+    /* The prices for 1 … n adults are app.tariff_guests (162): tariff_for's
        own arithmetic, one read a date, in inventory - no copy here any more
        (it could not know a one-guest base's second guest is double
        occupancy, D27-194). Calling app.tariff_for per date and per guest

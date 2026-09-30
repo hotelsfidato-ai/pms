@@ -241,13 +241,13 @@ describe("the pricing screen's data", () => {
     expect(after.covers).toBeGreaterThan(1);
   });
 
-  /* ── 181: a base plus add-ons (D27-188, D27-194) ─────────────────── */
+  /* ── 162: a base plus add-ons (D27-188, D27-194) ─────────────────── */
   type Extra = {
     addons: Record<string, number | null>;
     older: { roomTypeId: string; mealPlan: string; price: number; covers: number }[];
   };
 
-  it("lists a price typed before 181 as an older price, not the base", async () => {
+  it("lists a price typed before 162 as an older price, not the base", async () => {
     const body = (await read()) as Pricing & Extra;
     const other = body.roomTypes.find((t) => t.code !== "DLX")!;
     const deluxe = body.roomTypes.find((t) => t.code === "DLX")!;

@@ -2,13 +2,13 @@ import { api, ApiError } from "@/lib/api";
 import { fetchOr } from "@/data/repositories/http";
 
 /* ══════════════════════════════════════════════════════════════════
-   PRICING — a base plus add-ons (D27-188, D27-194; migration 181)
+   PRICING — a base plus add-ons (D27-188, D27-194; migration 162)
 
    A base per room type (one guest, room only), or one base room type the
    others are derived from (+₹ or +%); add-ons set once per hotel - the
    meal plans per guest, double occupancy, extra adult, extra child. The
    Rates screen's data: the setup, each day's price, and the prices typed
-   before 181, which are kept exactly.
+   before 162, which are kept exactly.
 
    A price with no figure behind it is `null` here and a dash on the
    screen. Never a zero.
@@ -57,7 +57,7 @@ export interface Addons {
   double: number | null; extraAdult: number | null; extraChild: number | null;
 }
 
-/** A price typed before 181: kept exactly, covering what it always did. */
+/** A price typed before 162: kept exactly, covering what it always did. */
 export interface OlderPrice {
   id: string;
   roomTypeId: string;

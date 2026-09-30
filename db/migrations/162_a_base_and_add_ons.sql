@@ -1,5 +1,5 @@
 -- =============================================================================
--- 181 — a room's price is a BASE plus ADD-ONS (D27-188, D27-194; 30 September)
+-- 162 — a room's price is a BASE plus ADD-ONS (D27-188, D27-194; 30 September)
 -- =============================================================================
 -- The owner, 30 September: rates are a base and add-ons. Either each room type
 -- has its own base, or the room types are derived from one base room type

@@ -21,7 +21,7 @@ import { priceProblem } from "../../validate.ts";
      · splitting date ranges   app.set_rate, app.set_offset
      · the base covers one     app.set_base_price, the only writer of a base
 
-   30 September (D27-188, D27-194, migration 181): a base per room type, or
+   30 September (D27-188, D27-194, migration 162): a base per room type, or
    one base room type the others are derived from (+₹ or +%); add-ons set
    once per hotel - meals, double occupancy, extra adult and extra child.
 
@@ -132,7 +132,7 @@ pricing.get("/:code/pricing", async (c) => {
       [hotelId, from, days],
     );
 
-    /* PRICES TYPED BEFORE 181 (D27-194): kept exactly, listed so a person can
+    /* PRICES TYPED BEFORE 162 (D27-194): kept exactly, listed so a person can
        see them and remove them. Everything in `rates` that is not a base -
        one guest, on the base plan - is one. */
     const { rows: olderRows } = await client.query<{
@@ -153,7 +153,7 @@ pricing.get("/:code/pricing", async (c) => {
       [hotelId, from, days],
     );
 
-    /* The add-on or difference on the first day shown. Written once (181),
+    /* The add-on or difference on the first day shown. Written once (162),
        so it is the same on every date; an older dated one reads as its first. */
     const onFrom = (o: (typeof offsetRows)[number]) =>
       o.valid_from <= from && (o.valid_to === null || o.valid_to > from);

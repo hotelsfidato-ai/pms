@@ -26,7 +26,7 @@ service (`docs/SERVICE-FOLDERS-PLAN.md`).
 
 The person setting up a hotel enters its room types (who they sleep) and its
 rooms, by hand or from a file. Prices are a **base plus add-ons** (D27-188,
-D27-194, migration 181): a base per room type, or one base room type the
+D27-194, migration 162): a base per room type, or one base room type the
 others are derived from (+₹ or +%, whole rupees); the add-ons set once per
 hotel - CP, MAP, AP, AI per guest, double occupancy (the second guest, adult
 or child), extra adult and extra child (from the third). The calendar changes
@@ -52,7 +52,7 @@ each booking.
   rates are built" (mode, base room type, each type's difference, the add-ons
   with Free ticks), a 14-day calendar of each type's base with each day's
   paying rooms sold, occupancy, ADR and revenue under it (D27-151), the prices
-  set before 181 (kept exactly, with Remove), Rooms left and restrictions
+  set before 162 (kept exactly, with Remove), Rooms left and restrictions
   behind the title-row switch, and links to the Manager report, Monthly
   occupancy, Monthly statistics and Revenue outlook. Everyone with `rate:
   READ` sees it; only `setsRates` roles (RATE_SETTER_ROLES) get anything to
@@ -117,7 +117,7 @@ admin — `GET /:code/commissioning`, in `admin/commissioning.ts`. The plan had
 given the front desk's hours to admin; the split kept them here, with the
 form.)
 
-`pricing.ts` (16 September, migration 090; 30 September, 181) — 5:
+`pricing.ts` (16 September, migration 090; 30 September, 162) — 5:
 
 ```
 GET    /:code/pricing                             the setup (base room type, each type's difference
@@ -195,12 +195,12 @@ cancellation_policies              036_cancellation_terms.sql  (app.retention_fo
 rate_restrictions                  044_restrictions.sql  (app.sellable_rooms — the denominator
                                    of every occupancy figure)
 pricing_basis, rate_offsets        090_pricing_basis.sql  (app.price_for; rates.covers_persons)
-  a base plus add-ons              181 (numbered for now) - app.price_parts is the one
+  a base plus add-ons              162 - app.price_parts is the one
                                    definition; price_for, rate_for, extra_person_rates and
                                    tariff_for read it (signatures kept); app.tariff_guests
                                    for the channel manager; app.set_base_price, app.set_addon.
                                    A base = a rates row on EP covering ONE guest; covers NULL
-                                   is a price set before 181 and prices exactly as it did.
+                                   is a price set before 162 and prices exactly as it did.
                                    Also: tax_rules takes 'laundry' (D27-194)
 meal_plans                         011_model_additions.sql — read, not written
 ```
