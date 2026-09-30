@@ -213,7 +213,7 @@ async function chargeRefused(
       [hotelId, taxKind, amount],
     );
     if (rate[0]?.rate === null || rate[0]?.rate === undefined) {
-      return `This property has no GST rule for ${taxKind}. Set it in the GST card, under Rooms and rates → Room types or Finance → Invoices. `
+      return `This property has no GST rule for ${taxKind}. Set it in the GST card, under System → Administration → Configuration or Finance → Invoices. `
            + "A missing rate is not zero - nothing is billed until somebody sets it.";
     }
   }
@@ -505,7 +505,7 @@ export async function editFolioCharge(
       [hotelId, Math.round((amount / p.nights) * 100) / 100],
     );
     if (slab[0]?.rate == null) {
-      return no("This property has no GST rule for rooms. Set it under Rooms and rates → Room types, "
+      return no("This property has no GST rule for rooms. Set it under System → Administration → Configuration, "
         + "in the GST card. A missing rate is not zero.");
     }
     rate = Number(slab[0].rate);
