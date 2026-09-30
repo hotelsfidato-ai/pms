@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
+import { openTillDay } from "../../drawer.ts";
 import { PAN_NEEDED } from "../../../src/modules/finance/cashLimit.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -51,9 +52,13 @@ beforeAll(async () => {
   const res = await app.request("/api/hotels/5EL/till/menu", { headers: { "x-dev-staff-id": owner } });
   const menu = (await res.json()) as { categories: { items: { id: string; name: string }[] }[] };
   tikka = menu.categories.flatMap((c) => c.items).find((i) => i.name === "Paneer Tikka")!.id;
+  /* Cash only once the day is open, its float counted (D27-190). */
+  putAwayTillDay = await openTillDay("5EL");
 });
+let putAwayTillDay: () => Promise<void>;
 
 afterAll(async () => {
+  await putAwayTillDay();
   const db = new (await import("pg")).default.Pool({ connectionString: SUPER });
   try {
     await db.query("alter table pos_order_tenders disable trigger pos_order_tenders_no_delete_settled");

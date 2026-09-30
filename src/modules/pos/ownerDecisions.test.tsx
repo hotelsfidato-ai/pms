@@ -294,7 +294,7 @@ const A_DAY: DayEnd = {
     varianceReason: null, denominations: [],
   },
   closedAt: null,
-  closedBy: null,
+  closedBy: null, opened: true,
 };
 
 /** The session's hotel list, with this property in it by name. */

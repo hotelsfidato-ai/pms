@@ -260,7 +260,7 @@ describe("Close restaurant day - a bill on a function", () => {
       blockers: [], movements: [],
       cash: { opening: 0, expected: 0, counted: null, variance: null,
               varianceReason: null, denominations: [] },
-      closedAt: null, closedBy: null,
+      closedAt: null, closedBy: null, opened: true,
     };
     server({ [`GET ${API}/till/day-end`]: () => day });
     renderAt(`/h/${HOTEL}/till/day-end`, "/h/:code/till/day-end", <DayEndPage />);
@@ -285,7 +285,7 @@ describe("Close restaurant day - cash the owner paid in, read by a GM (D27-9)", 
                     recordedBy: null, at: "20:15" }],
       cash: { opening: 0, expected: 700, counted: null, variance: null,
               varianceReason: null, denominations: [] },
-      closedAt: null, closedBy: null,
+      closedAt: null, closedBy: null, opened: true,
     };
     server({ [`GET ${API}/till/day-end`]: () => day });
     renderAt(`/h/${HOTEL}/till/day-end`, "/h/:code/till/day-end", <DayEndPage />);

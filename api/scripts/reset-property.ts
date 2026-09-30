@@ -123,6 +123,9 @@ export const CLEAR: [table: string, how: string][] = [
   ["cashier_denominations", "shift_id in (select id from cashier_shifts where hotel_id = $1)"],
   ["cashier_movements", "hotel_id = $1"],
   ["cashier_shifts",    "hotel_id = $1"],
+  /* D27-190: the banked cash, and why a day's deposits differ. */
+  ["cash_deposit_notes", "hotel_id = $1"],
+  ["cash_deposits",     "hotel_id = $1"],
 
   /* ⚠ ADDED 21 SEPTEMBER: THREE SERVICES BUILT AFTER THIS LIST WAS WRITTEN.
      A treatment and a laundry bag each point at a stay AND at the line they

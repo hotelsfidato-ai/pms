@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool, withUser } from "../../../src/db.ts";
+import { openTillDay } from "../../drawer.ts";
 import {
   buildReport, propertyFor, dailyFigures, posSales,
   type ReportDoc, type ReportSection,
@@ -423,6 +424,11 @@ describe("the till - a drink under alcohol is VAT", () => {
 });
 
 describe("D22-44: a restaurant bill paid at the till, and cancelling a VAT bill", () => {
+  /* Cash only once the day is open, its float counted (D27-190). */
+  let putAway: () => Promise<void>;
+  beforeAll(async () => { putAway = await openTillDay("5EL"); });
+  afterAll(async () => { await putAway(); });
+
   it("issues the drinks' VAT bill at the settlement, and the restaurant bill names it", async () => {
     const o = await openOrder("cash");
     await send("POST", `/till/orders/${o.id}/lines`, { itemId: tikkaId, qty: 1 });
