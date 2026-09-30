@@ -497,16 +497,24 @@ function CloseDialog({ hotelId, shift, colleagues, onClose, onDone }: {
 }) {
   const [why, setWhy] = useState(shift.varianceReason ?? "");
   const [handOverTo, setHandOverTo] = useState("");
+  const [kept, setKept] = useState("");
   const [busy, setBusy] = useState(false);
 
   const variance = shift.variance;
   const needsReason = variance !== null && Math.abs(variance) >= 0.01;
+  /* D27-191: the float kept is typed at every close and the rest is to
+     deposit; a handover keeps all of it. Blank is not zero. */
+  const counted = shift.counted ?? 0;
+  const keptNum = kept.trim() === "" ? null : Number(kept);
+  const keptOk = handOverTo !== ""
+    || (keptNum !== null && Number.isFinite(keptNum) && keptNum >= 0 && keptNum <= counted);
 
   const submit = async () => {
     setBusy(true);
     const res = await closeCashierShift(hotelId, {
       varianceReason: why,
       handOverTo: handOverTo || null,
+      ...(handOverTo ? {} : { keptCash: keptNum! }),
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not closed", res.reason);
@@ -550,12 +558,29 @@ function CloseDialog({ hotelId, shift, colleagues, onClose, onDone }: {
             )}
           </Field>
 
+          {handOverTo ? (
+            <p className="text-sm text-grey-600">
+              The whole drawer goes to them - nothing is deposited from this shift.
+            </p>
+          ) : (
+            <Field label="Float kept for the next shift"
+                   hint={keptOk && keptNum !== null
+                     ? `To deposit: ${moneyPrecise(counted - keptNum)}`
+                     : `From ₹0 to the ${moneyPrecise(counted)} counted. The rest is deposited.`}>
+              {(f) => (
+                <Input {...fieldProps(f)} type="number" inputMode="decimal" min={0}
+                  value={kept} onChange={(e) => setKept(e.target.value)}
+                  className="h-12 text-lg tabular" />
+              )}
+            </Field>
+          )}
+
           <div className="flex gap-2">
             <DialogClose asChild>
               <Button variant="secondary" className="h-12 flex-1">Not yet</Button>
             </DialogClose>
             <Button variant="primary" className="h-12 flex-1"
-                    disabled={busy || (needsReason && !why.trim())}
+                    disabled={busy || !keptOk || (needsReason && !why.trim())}
                     onClick={() => void submit()}>
               <Lock className="size-4" />
               Close the shift

@@ -18,6 +18,16 @@ Nothing open.
 
 ## Fixed
 
+### FIN-21 · The desk's drawer opened on a blank float as ₹0 — FIXED 30 September (D27-190, D27-191; numbered for now)
+
+**Found** — the cash lane, reading the drawer for D27-190: Cashiering's "Opening float" sent `Number(opening || 0)` and the server read `input.opening ?? 0`, so an untouched box opened the drawer on ₹0. That is a figure nobody counted, and the close then measured the drawer against it.
+
+**Fixed** — the server refuses a float that is not a typed number ("Count the opening float first - enter 0 if the drawer is empty"); the screen counts it on the note grid the close uses and does not open until something is typed. 0 opens only when somebody types it.
+
+**Proved** — `api/test/modules/finance/cashCounts.test.ts`: a blank float refused and no drawer opened; 0 typed opens. It failed with the old `?? 0` put back.
+
+**The rule** — A count is what somebody counted. Blank is "not counted", never zero.
+
 ### FIN-20 · After a payment, the Settle dialog offered the same money again "as the guest's credit" — FIXED 29 September (the speed lane's finding 7)
 
 **Found** — the speed lane (docs/qa/speed-2026-09-29.md, W-3): Take payment answered 200, balance ₹0, and the dialog stayed up showing "₹1,953 more than the bill". Reproduced on `fidato_s31`, sampling the dialog every 500 ms after a UPI payment of ₹3,286.24: at 1.0 s it was `data-state=closed` but on screen, reading "₹0 outstanding … This is ₹3,286.24 more than the bill; it will be held as the guest's credit". On success it closed and refreshed the bill in the same moment; while it animated out the balance arrived at ₹0 and the typed amount had not moved. On a slow machine or a hidden pane (animations frozen) that frame stays, and a tick and a press take the money again under a new press key. A second way in: `settle()` read the whole bill again after the POST, for a line nobody used; if that read failed the payment stood and the dialog never closed.

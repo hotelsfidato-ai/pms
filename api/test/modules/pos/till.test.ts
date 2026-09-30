@@ -2124,8 +2124,13 @@ describe("day end", () => {
   });
 
   it("closes with the reason, and stays closed", async () => {
-    const res = await post("/api/hotels/5EL/till/day-end/close",
+    /* The float kept for tomorrow, typed at every close (D27-191). */
+    const blank = await post("/api/hotels/5EL/till/day-end/close",
       { varianceReason: "counted twice, not found" });
+    expect(blank.status).toBe(409);
+    expect(((await blank.json()) as { reason: string }).reason).toMatch(/float is kept/);
+    const res = await post("/api/hotels/5EL/till/day-end/close",
+      { varianceReason: "counted twice, not found", keptCash: 500 });
     expect(res.status, await res.clone().text()).toBe(200);
 
     const body = await dayEnd();

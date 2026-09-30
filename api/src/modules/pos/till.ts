@@ -3644,7 +3644,7 @@ till.post("/:code/till/day-end/count", async (c) => {
 });
 
 till.post("/:code/till/day-end/close", async (c) => {
-  type CloseBody = { outlet?: string; varianceReason?: string };
+  type CloseBody = { outlet?: string; varianceReason?: string; keptCash?: unknown };
   const input = await c.req.json<CloseBody>().catch(() => ({}) as CloseBody);
 
   const result = await withSession(c.get("subject"), async (client, session) => {
@@ -3698,11 +3698,20 @@ till.post("/:code/till/day-end/close", async (c) => {
         `₹${Math.abs(variance).toFixed(2)}. Say why, and it closes.`);
     }
 
+    /* THE FLOAT KEPT (D27-191): typed at every close; the rest of the count
+       is cash to deposit. */
+    const counted = Number(day[0].counted_cash);
+    const kept = input.keptCash;
+    if (typeof kept !== "number" || !Number.isFinite(kept) || kept < 0 || kept > counted) {
+      return refuse(
+        `Say what float is kept for the next day - from ₹0 to the ₹${counted.toFixed(2)} counted.`);
+    }
+
     await client.query(
       `update pos_day_ends
-          set variance_reason = $1, closed_by = $2, closed_at = now()
+          set variance_reason = $1, closed_by = $2, closed_at = now(), kept_cash = $4
         where id = $3`,
-      [input.varianceReason?.trim() || null, session.staffId, day[0].id],
+      [input.varianceReason?.trim() || null, session.staffId, day[0].id, kept.toFixed(2)],
     );
 
     return {

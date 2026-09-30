@@ -1394,7 +1394,7 @@ export async function countDrawer(
 
 export async function closeDay(
   hotelId: string,
-  input: { outlet?: string; varianceReason?: string },
+  input: { outlet?: string; varianceReason?: string; keptCash: number },
 ): Promise<Refusal> {
   return till(hotelId, "day-end/close", input);
 }

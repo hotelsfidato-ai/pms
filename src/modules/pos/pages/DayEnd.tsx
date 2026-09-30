@@ -688,6 +688,7 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
   onDone: () => void; onBack: () => void;
 }) {
   const [why, setWhy] = useState(day.cash.varianceReason ?? "");
+  const [kept, setKept] = useState("");
   const [closing, setClosing] = useState(false);
 
   if (day.closedAt) {
@@ -716,10 +717,15 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
 
   const variance = day.cash.variance;
   const needsReason = variance !== null && Math.abs(variance) >= 0.01;
+  /* D27-191: the float kept for tomorrow, typed at every close; the rest
+     of the count is deposited. Blank is not zero. */
+  const counted = day.cash.counted ?? 0;
+  const keptNum = kept.trim() === "" ? null : Number(kept);
+  const keptOk = keptNum !== null && Number.isFinite(keptNum) && keptNum >= 0 && keptNum <= counted;
 
   const close = async () => {
     setClosing(true);
-    const res = await closeDay(hotelId, { varianceReason: why });
+    const res = await closeDay(hotelId, { varianceReason: why, keptCash: keptNum! });
     setClosing(false);
     if (!res.ok) return toast.error("Not closed", res.reason);
     toast.success("Day closed",
@@ -790,6 +796,19 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
             </Field>
           )}
 
+          {day.cash.counted !== null && (
+            <Field label="Float kept for the next day" className="mt-4"
+                   hint={keptOk
+                     ? `To deposit: ${moneyPrecise(counted - keptNum!)}`
+                     : `From ₹0 to the ${moneyPrecise(counted)} counted. The rest is deposited.`}>
+              {(f) => (
+                <Input {...fieldProps(f)} type="number" inputMode="decimal" min={0}
+                  value={kept} onChange={(e) => setKept(e.target.value)}
+                  className="h-12 text-lg tabular" />
+              )}
+            </Field>
+          )}
+
           {day.cash.counted === null && (
             <p className="mt-4 text-base text-grey-600">
               The drawer has not been counted.{" "}
@@ -807,6 +826,7 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
               closing
               || day.blockers.length > 0
               || day.cash.counted === null
+              || !keptOk
               || (needsReason && !why.trim())
             }
             /* TWO LINES, the day and then the hotel. On one line the

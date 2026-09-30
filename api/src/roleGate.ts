@@ -270,6 +270,13 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/cashier-shift/movements`]: DRAWER,
   [`POST ${H}/cashier-shift/count`]: DRAWER,
   [`POST ${H}/cashier-shift/close`]: DRAWER,
+  /* Cash deposits (D27-191): record, reverse and explain - the owner, an
+     administrator and the GM; verify - the owner and the accountant. No grant
+     in the matrix is exactly either, so the route asks. */
+  [`POST ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM"),
+  [`POST ${H}/cash-deposits/:id/reverse`]: own("finance/deposits.ts: owner, admin, GM"),
+  [`POST ${H}/cash-deposits/days/:date/explain`]: own("finance/deposits.ts: owner, admin, GM"),
+  [`POST ${H}/cash-deposits/:id/verify`]: own("finance/deposits.ts: owner, accountant"),
   [`POST ${H}/stays/:id/invoice`]: TAX_INVOICE,
   [`POST ${H}/invoices/:number{.+}/credit-note`]: CREDIT_NOTE,
   [`POST ${H}/vat-bills/:number{.+}/cancel`]: VAT_CANCEL,
@@ -620,6 +627,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/pos/outlets`]: see(["payment", "invoice", "setting"], "the restaurant's outlets", ["pos"]),
   [`GET ${H}/payments`]: MONEY,
   [`GET ${H}/cashier-shift`]: MONEY,
+  /* D27-191: the owner, an administrator, the GM, the accountant and the Viewer. */
+  [`GET ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM, accountant, viewer"),
   [`GET ${H}/accounting/:file{day-book(?:\\.xlsx)?}`]: own("accounting/routes.ts: MAY_EXPORT (D27-122)"),
 
   /* ── Reports ── */

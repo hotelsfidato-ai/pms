@@ -5,6 +5,7 @@ import { cashier } from "./cashier.ts";
 import { billing } from "./billing.ts";
 import { invoices } from "./invoices.ts";
 import { tax } from "./tax.ts";
+import { deposits } from "./deposits.ts";
 
 /* The front door of the finance service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -16,6 +17,8 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", billing],
   ["/api/hotels", invoices],
   ["/api/hotels", tax],
+  /* D27-190: the float kept at each close, and the cash deposits log. */
+  ["/api/hotels", deposits],
 ];
 
 /* ⚠ THE DOOR A CHARGE REACHES A ROOM BILL THROUGH — opened 18 September

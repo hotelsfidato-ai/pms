@@ -300,7 +300,7 @@ cashier.post("/:code/cashier-shift/count", async (c) => {
 });
 
 cashier.post("/:code/cashier-shift/close", async (c) => {
-  type Body = { varianceReason?: string; handOverTo?: string | null };
+  type Body = { varianceReason?: string; handOverTo?: string | null; keptCash?: unknown };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   const result = await withSession(c.get("subject"), async (client, session) => {
@@ -329,15 +329,25 @@ cashier.post("/:code/cashier-shift/close", async (c) => {
         + `${Math.abs(variance).toFixed(2)}. Say why, and it closes.`);
     }
 
+    /* THE FLOAT KEPT (D27-191): typed at every close, and the rest of the
+       count is cash to deposit. A handover keeps all of it - the whole
+       drawer goes to the next person. */
+    const counted = Number(shift[0].counted);
+    const kept = input.handOverTo ? counted : input.keptCash;
+    if (typeof kept !== "number" || !Number.isFinite(kept) || kept < 0 || kept > counted) {
+      return refuse(
+        `Say what float is kept for the next shift - from 0 to the ${counted.toFixed(2)} counted.`);
+    }
+
     await client.query(
       `update cashier_shifts
           set variance_reason = $1, handed_to = $2, closed_by = $3,
-              closed_at = now()
+              closed_at = now(), kept_cash = $5
         where id = $4`,
       [input.varianceReason?.trim() || null, input.handOverTo || null,
-       session.staffId, shift[0].id]);
+       session.staffId, shift[0].id, kept.toFixed(2)]);
 
-    return { ok: true as const, variance };
+    return { ok: true as const, variance, toDeposit: counted - kept };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

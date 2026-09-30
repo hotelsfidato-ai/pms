@@ -3,6 +3,7 @@ import { PropertyScope } from "@/components/app/PropertyScope";
 import { RequireAccess } from "@/components/app/RequireAccess";
 import FoliosPage from "@/modules/finance/pages/Folios";
 import CashieringPage from "@/modules/finance/pages/Cashiering";
+import CashDepositsPage from "@/modules/finance/pages/CashDeposits";
 import {
   PaymentsPage, PropertyCityLedgerPage,
 } from "@/modules/finance/pages/Billing";
@@ -35,6 +36,12 @@ export const routes = (
     <Route
       path="/h/:code/cashiering"
       element={<><PropertyScope /><CashieringPage /></>}
+    />
+    {/* D27-190: each day's cash to deposit, the deposits, their checks.
+        The server decides who reads it; the page shows its refusal. */}
+    <Route
+      path="/h/:code/cash-deposits"
+      element={<><PropertyScope /><CashDepositsPage /></>}
     />
     {/* An invoice number contains slashes — 5EL/2026-27/00001 — so
         the segment has to swallow them. `*` after the param is how
