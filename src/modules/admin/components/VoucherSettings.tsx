@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Button, Card, CardBody, CardHeader, Dialog, DialogContent, Field, fieldProps, Input, Textarea,
+  Button, Card, CardBody, Dialog, DialogContent, Field, fieldProps, Input, Textarea,
   ReadFailed, Skeleton, toast,
 } from "@/components/ui";
 import { dateTime } from "@/lib/format";
 import {
   amendProperty, getBankDetails, setBankDetails, removeBankDetails, type BankDetails,
 } from "@/modules/admin/data/admin";
-import { SettingRow } from "@/modules/admin/pages/Admin";
+import { SettingHeader, SettingRow, SettingValues } from "@/modules/admin/pages/Admin";
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT THE BOOKING VOUCHER PRINTS, SET HERE (the owner's D27-215)
@@ -42,15 +42,15 @@ export function BankDetailsCard({ hotelCode }: { hotelCode: string }) {
 
   return (
     <Card>
-      <CardHeader
+      <SettingHeader
         title="Bank details"
-        description={"Printed on this hotel's booking voucher. With none set, the voucher prints no bank details. "
-          + "The group's owner is told whenever they change."}
+        line="The group's owner is told whenever they change."
+        info="Printed on this hotel's booking voucher. With none set, the voucher prints no bank details."
         actions={!q.isLoading && !q.isError && (
           <Button variant="secondary" onClick={() => setEditing(true)}>{bank ? "Change" : "Set bank details"}</Button>
         )}
       />
-      <CardBody className="pt-0">
+      <CardBody>
         {q.isLoading ? (
           <Skeleton className="h-24 w-full" />
         ) : q.isError ? (
@@ -59,15 +59,15 @@ export function BankDetailsCard({ hotelCode }: { hotelCode: string }) {
           <p className="text-base text-grey-500">None set.</p>
         ) : (
           <>
-            <dl className="divide-y divide-grey-100">
-              <SettingRow label="Account name" value={bank.accountName} />
-              <SettingRow label="Account no." value={bank.accountNumber} />
-              <SettingRow label="Bank" value={bank.bankName} />
-              <SettingRow label="Branch" value={bank.branch ?? "-"} />
+            <SettingValues>
+              <SettingRow wide label="Account name" value={bank.accountName} />
+              <SettingRow wide label="Account no." value={bank.accountNumber} />
+              <SettingRow wide label="Bank" value={bank.bankName} />
+              <SettingRow wide label="Branch" value={bank.branch ?? "-"} />
               <SettingRow label="IFSC" value={bank.ifsc} />
               <SettingRow label="UPI ID" value={bank.upi ?? "-"} />
-            </dl>
-            <p className="text-sm text-grey-500 mt-3">
+            </SettingValues>
+            <p className="text-xs font-medium text-grey-500 mt-3">
               Last changed{bank.changedBy ? ` by ${bank.changedBy}` : ""} on {dateTime(bank.changedAt)}.
             </p>
           </>
@@ -179,16 +179,17 @@ export function HousePoliciesCard({ hotelCode, policies, onSaved }: {
 
   return (
     <Card>
-      <CardHeader
+      <SettingHeader
         title="House policies"
-        description="Printed on this hotel's booking voucher, after the booking's own cancellation terms and the check-in and check-out times."
+        line="Printed on this hotel's booking voucher."
+        info="After the booking's own cancellation terms and the check-in and check-out times."
         actions={<Button variant="secondary" onClick={() => setTyped(policies.join("\n"))}>Edit</Button>}
       />
-      <CardBody className="pt-0">
+      <CardBody>
         {policies.length === 0 ? (
           <p className="text-base text-grey-500">None. The voucher prints the booking's terms and the times only.</p>
         ) : (
-          <ol className="list-decimal pl-5 space-y-1.5 text-base text-ink-900">
+          <ol className="list-decimal pl-5 space-y-2 text-base text-ink-900">
             {policies.map((line, i) => <li key={i} className="break-words">{line}</li>)}
           </ol>
         )}

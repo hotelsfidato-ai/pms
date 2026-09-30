@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { Check, Minus, Plug, ShieldCheck, Info, UserCog, ScrollText } from "lucide-react";
@@ -10,7 +10,7 @@ import {
 } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, DataTable, StatusPill,
-  Skeleton, Avatar, Tooltip, ErrorState, Switch, toast, EmptyState, Input, Button,
+  Skeleton, Avatar, Tooltip, ErrorState, Switch, toast, EmptyState, Input, Button, InfoButton,
   type Column, type Tone,
 } from "@/components/ui";
 import { listStaff, listAuditLog, listIntegrations, roleDescription, type StaffRecord, type AuditEntry, type Integration } from "@/modules/admin/data/adminLists";
@@ -497,8 +497,10 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
 
 export const BOOKING_SECTION = (module: string) => module.startsWith("booking_");
 
-export function ModulesCard({ hotelId, title, description, only }: {
+export function ModulesCard({ hotelId, title, description, info, only }: {
   hotelId: string; title: string; description: string;
+  /** The rest of what the card says, behind its (i). */
+  info?: string;
   /** Which of the property's switches this card draws. */
   only: (module: string) => boolean;
 }) {
@@ -526,43 +528,75 @@ export function ModulesCard({ hotelId, title, description, only }: {
 
   return (
     <Card>
-      <CardHeader title={title} description={description} />
-      <CardBody className="pt-0 space-y-4">
+      <SettingHeader title={title} line={description} {...(info ? { info } : {})} />
+      <CardBody className="py-0 divide-y divide-grey-100">
         {Object.entries(modules.data ?? {}).filter(([module]) => only(module)).map(([module, enabled]) => (
-          <Switch
-            key={module}
-            checked={enabled}
-            /* ⚠ NOT `|| module === "banquet"` ANY MORE.
-               That was hardcoded when banquet did not exist, alongside a
-               note reading "Not built yet". Stage 14 built it — three
-               screens, four tables and an API — and NOBODY CAME BACK FOR
-               THE SWITCH. The copy and the code disagreed for eight days
-               and the owner found it by trying to turn banquet on and
-               watching nothing happen.
+          <div key={module} className="py-3">
+            <Switch
+              checked={enabled}
+              /* ⚠ NOT `|| module === "banquet"` ANY MORE.
+                 That was hardcoded when banquet did not exist, alongside a
+                 note reading "Not built yet". Stage 14 built it — three
+                 screens, four tables and an API — and NOBODY CAME BACK FOR
+                 THE SWITCH. The copy and the code disagreed for eight days
+                 and the owner found it by trying to turn banquet on and
+                 watching nothing happen.
 
-               A disabled control with stale copy is worse than a missing
-               one: it looks like an answer. `moduleSwitchesAreLive` in
-               `Admin.test.tsx` now fails if any module the API accepts
-               comes back disabled. */
-            disabled={busy === module}
-            onCheckedChange={(next) => void toggle(module, next)}
-            label={MODULE_COPY[module]?.label ?? module}
-            description={MODULE_COPY[module]?.note}
-          />
+                 A disabled control with stale copy is worse than a missing
+                 one: it looks like an answer. `moduleSwitchesAreLive` in
+                 `Admin.test.tsx` now fails if any module the API accepts
+                 comes back disabled. */
+              disabled={busy === module}
+              onCheckedChange={(next) => void toggle(module, next)}
+              label={MODULE_COPY[module]?.label ?? module}
+              description={MODULE_COPY[module]?.note}
+            />
+          </div>
         ))}
-        {modules.isLoading && <Skeleton className="h-16 w-full" />}
+        {modules.isLoading && <Skeleton className="h-16 w-full my-3" />}
       </CardBody>
     </Card>
   );
 }
 
-export function SettingRow({ label, value }: { label: string; value: string }) {
+/* A Settings card's heading (D27-220): the title, one line under it, and
+   anything longer behind the (i) - the fidato-design rule, same words. */
+export function SettingHeader({ title, line, info, actions }: {
+  title: string; line?: string; info?: string; actions?: ReactNode;
+}) {
   return (
-    <div className="grid grid-cols-[minmax(130px,200px)_1fr] gap-4 py-2.5">
-      <dt className="text-sm text-grey-500">{label}</dt>
+    <CardHeader actions={actions}>
+      <div className="min-w-0">
+        <div className="flex items-center gap-1">
+          <h3 className="text-md font-semibold text-ink-900">{title}</h3>
+          {info && <InfoButton>{info}</InfoButton>}
+        </div>
+        {line && <p className="text-sm text-grey-500 mt-0.5">{line}</p>}
+      </div>
+    </CardHeader>
+  );
+}
+
+/* Settings' values (D27-220, the fidato-design figure block): a 12px label
+   over its 14px value, 2px apart, in level columns - four across where the
+   CARD is 512px or wider, two below (a half-width card on a laptop is
+   narrow). A `wide` row takes two cells, for a value too long for one. */
+export function SettingValues({ children }: { children: ReactNode }) {
+  return (
+    <div className="@container">
+      <dl className="grid grid-cols-2 @lg:grid-cols-4 gap-x-4 gap-y-3">{children}</dl>
+    </div>
+  );
+}
+
+export function SettingRow({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
+  return (
+    <div className={cn("min-w-0", wide && "col-span-2")}>
+      <dt className="text-xs font-medium text-grey-500 whitespace-nowrap">{label}</dt>
       {/* A long unbroken value (a GSTIN, an email) wraps inside the card; it was
           cut at the edge at phone width (ADM-9). */}
-      <dd className="text-base text-ink-900 min-w-0 break-words">{value}</dd>
+      <dd className={cn("mt-0.5 text-sm font-medium tabular min-w-0 break-words",
+                        value === "-" ? "text-grey-500" : "text-grey-700")}>{value}</dd>
     </div>
   );
 }

@@ -326,7 +326,7 @@ export function FssaiCard({ code, value, onSaved }: {
     onSaved();
   };
   return (
-    <Card className="mb-5">
+    <Card>
       <CardBody className="flex flex-wrap items-end gap-3">
         {typed === null ? (
           <>
