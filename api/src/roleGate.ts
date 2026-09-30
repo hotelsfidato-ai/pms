@@ -548,6 +548,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/group`]: anyone("the group's name and logo, on every document"),
   [`GET ${H}/tax`]: anyone("the GST rates in use: neither a guest nor money taken"),
   [`GET ${H}/tax/:kind/rate`]: anyone("the GST rate for an amount"),
+  [`GET ${H}/tax/room/before-gst`]: anyone("the rate before GST inside an inclusive room rate"),
   [`GET ${H}/till/access`]: anyone("what the till lets this person do"),
   [`GET ${H}/notifications`]: see("notification", "notifications"),
   [`GET /api/admin/overview`]: anyone("counts of people and hotels, under row security"),

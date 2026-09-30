@@ -36,6 +36,8 @@ export const mounts: readonly Mount[] = [
 export { postCharge } from "./postings.ts";
 /* D25-40: the cash limit and the PAN, for the till's settle as for the desk. */
 export { overCashLimit, panFor } from "./cashLimit.ts";
+/* D27-195: a room rate that includes GST, split for the booking (reservations). */
+export { roomRateBeforeGst } from "./tax.ts";
 export type { ChargeToPost } from "./postings.ts";
 
 /* PER BILL (28 September; the master's yes for round E): a payment on one

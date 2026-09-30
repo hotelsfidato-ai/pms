@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { PoolClient as Client } from "pg";
+import { inr } from "../../reportRender.ts";
 
 /* Split out of api/src/routes/inventorySetup.ts on 15 September in the
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service: finance.
@@ -285,5 +286,78 @@ inventorySetup.get("/:code/tax/:kind/rate", async (c) => {
     };
   });
 
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   A ROOM RATE THAT INCLUDES GST (D27-187, D27-195)
+
+   The typed figure a night is split into the rate before GST and the GST
+   by the slab, WORKED ON THE PRE-TAX VALUE (app.gst_rate_or_null, the one
+   place the slab is decided), rounded a night as the audit rounds it:
+   pre + round(pre x rate / 100, 2). A slab counts only when the figure's
+   own pre-tax value falls in it; then, of the paisa splits near it, the
+   nearest total NOT above the typed figure (the owner: a figure no split
+   reaches exactly, like 502, is billed 501.99). No slab holds it: the gap
+   between two slabs, refused in the owner's words with the card's own
+   figures; no room rule at all: refused, never a zero.
+   ══════════════════════════════════════════════════════════════════ */
+export async function roomRateBeforeGst(
+  client: Client, hotelId: string, gross: number,
+): Promise<{ ok: true; pre: number; rate: number; total: number } | { ok: false; reason: string }> {
+  if (!Number.isFinite(gross) || !(gross > 0)) {
+    return refuse("A rate that includes GST is an amount above zero.");
+  }
+  const g = Math.round(gross * 100) / 100;
+  const { rows } = await client.query<{ pre: string; rate: string; total: string }>(
+    `with slab as (
+       select distinct t.rate from tax_rules t
+        where t.hotel_id = $1 and t.kind = 'room'
+          and app.gst_rate_or_null($1, 'room', $2::numeric / (1 + t.rate / 100)) = t.rate),
+     near as (
+       select s.rate, round($2::numeric / (1 + s.rate / 100), 2) + d * 0.01 as pre
+         from slab s, generate_series(-3, 3) d)
+     select pre::text, rate::text, (pre + round(pre * rate / 100, 2))::text as total
+       from near
+      where pre > 0 and app.gst_rate_or_null($1, 'room', pre) = rate
+        and pre + round(pre * rate / 100, 2) <= $2::numeric
+      order by pre + round(pre * rate / 100, 2) desc, pre desc
+      limit 1`,
+    [hotelId, g]);
+  const best = rows[0];
+  if (best) {
+    return { ok: true, pre: Number(best.pre), rate: Number(best.rate), total: Number(best.total) };
+  }
+
+  const { rows: gap } = await client.query<{ lo: string; hi: string }>(
+    `select (b.over_amount * (1 + below.rate / 100))::text as lo,
+            (b.over_amount * (1 + b.rate / 100))::text as hi
+       from tax_rules b
+       join lateral (
+         select l.rate from tax_rules l
+          where l.hotel_id = b.hotel_id and l.kind = 'room' and l.over_amount < b.over_amount
+          order by l.over_amount desc limit 1) below on true
+      where b.hotel_id = $1 and b.kind = 'room'
+        and $2::numeric > b.over_amount * (1 + below.rate / 100)
+        and $2::numeric <= b.over_amount * (1 + b.rate / 100)
+      limit 1`,
+    [hotelId, g]);
+  if (gap[0]) {
+    const rupees = (n: string) => `₹${inr(Number(n)).replace(/\.00$/, "")}`;
+    const [lo, hi] = [rupees(gap[0].lo), rupees(gap[0].hi)];
+    return refuse(`An inclusive rate between ${lo} and ${hi} can't be split under the GST slab: `
+      + `type ${lo} or less, or more than ${hi}.`);
+  }
+  return refuse("This property has no GST rule for rooms, so a rate that includes GST cannot be "
+    + "split. Set it in the GST card first. A missing rate is not zero.");
+}
+
+/** The split, for the one page to show before saving (D27-195). */
+inventorySetup.get("/:code/tax/room/before-gst", async (c) => {
+  const gross = Number(c.req.query("gross"));
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    return hotelId ? roomRateBeforeGst(client, hotelId, gross) : null;
+  });
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
