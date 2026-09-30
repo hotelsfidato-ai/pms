@@ -84,6 +84,15 @@ The owner's answers (D27-172), each where it lives:
 | V4 | the booking's own cancellation terms in the desk's words, the hotel's check-in and check-out times; no bank section until bank details exist in Settings | `voucherPolicies` |
 | V5 | "Confirmed by the hotel": the PMS reference, the clerk (the audit's record of the change to confirmed) and when | `app.guest_voucher` |
 
+## View voucher (D27-187)
+
+`GET /api/hotels/:code/stays/:id/voucher.pdf` (`voucher.ts`): the same PDF the
+confirmation carries (`voucherFile`, about the group's lead), to view, print or
+save; it sends nothing. Read under the clerk's session first; only a confirmed
+booking has one (409), a bad id is 404. roleGate: the people who may send it
+(pinned). The buttons are reservations' `viewVoucher`: the Booked card and the
+booking panel's menu.
+
 ## Send check-in link (D27-105)
 
 `POST /api/hotels/:code/stays/:id/checkin-link` (`voucher.ts`): a confirmed

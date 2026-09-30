@@ -16,6 +16,10 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Fixed
 
+### REP-15 · The Dashboard put a <div> inside a <p> on every load - FIXED 30 September (by the booking and bill lane; numbered for now)
+
+The occupancy and figure tiles wrapped `fig()` in `<p>`; while loading `fig()` is the Skeleton, a `<div>`, and React logged the nesting. **Fixed:** both wrappers are `<div>`. The test formats React's `%s` message - matching the raw call missed it and passed on the broken code first.
+
 ### REP-14 · The Cashier shift showed Reception's cash as "not on record" to the Accountant (QA RP-4) — FIXED 28 September
 
 **Found** — the QA of 28 September (RP-4). The report joined `staff` for the name, and `staff` shows a clerk only their own row and their colleagues through `staff_hotels`, which since 149 shows each person only their own roster line. So only the owner and the cashier themselves saw a name.

@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-30 · Booking and bill (D27-187, D27-193)
+
+Branch `fix/booking-bill-30sep`, the booking and bill lane; the whole account is reservations' CHANGELOG, same date. Here: a check-in more than a day early shows the move and its cost and needs Confirm, `confirmMove` on the server (FD-22; dayAndRoom, earlyCheckIn); Change rate and View voucher on the panel's menu (changeRateBeforeArrival); `/stays/:id/inclusions` answers 404 on a bad id (FD-21, badStayId).
+
 ## 2026-09-29 · Check-in on one page; the walk-in is New booking's page (D27-158, D27-163)
 
 Branch `frontdesk/one-page-29sep` (from cp6 7980862; cp6 59df358, round F, merged in), copy `.claude\worktrees\modest-wilson-2807a1`, database `fidato_s32`, API 8873, web 5273.

@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-30 · Booking and bill (D27-187, D27-193)
+
+Branch `fix/booking-bill-30sep`, the booking and bill lane; the whole account is reservations' CHANGELOG, same date. Here: the bill shows the charges to come - nights not posted x the agreed rate, GST by the slab rounded a night, the balance due once posted with the advance counted - marked not posted, nothing posted (chargesToCome). The front door gains `ChangeRateDialog` (the panel's Change rate before check-in) and `getCashierDrawer` (read only, the one page's cash advance). Change rate's toast no longer says "from tonight" when nothing is charged.
+
 ## 2026-09-29 · The folio lane: Edit a charge, Change rate, no reversal after a tax invoice, one payment taken once (D27-157, D27-162, FIN-19, FIN-20)
 
 **Asked for:** the owner's D27-157 and its details D27-162, and the speed lane's finding 7. Branch `folio/edit-29sep` (from cp6 ca02e37, round F's `fix/leftovers-28sep` merged in), copy `.claude\worktrees\nervous-spence-42dcae`, database `fidato_s31`, API 8871, web 5271.

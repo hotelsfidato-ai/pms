@@ -56,6 +56,14 @@ moved out of, not for a check-out.
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-21 · A bad stay id on a stay's inclusions answered 500 - FIXED 30 September (numbered for now)
+
+`GET/POST/DELETE /:code/stays/:id/inclusions` passed the id to Postgres unchecked; a non-uuid failed the cast. **Fixed:** one middleware answers 404 "No such stay." first (`stayExtras.ts`, `api/test/modules/front-desk/badStayId.test.ts`).
+
+### FD-22 · A check-in could move a booking weeks earlier with nobody seeing it - FIXED 30 September (D27-193, numbered for now)
+
+The owner's 1 October booking, checked in on a hotel still on 25 August, became 39 nights: early-by-days moved the arrival with any reason. **Fixed:** more than a day early, the check-in first shows the move and the stay's new cost (GST a night as the audit rounds it) with Cancel and Confirm; the server refuses without `confirmMove: true`, before any write (`dayAndRoom.test.ts`, `earlyCheckIn.test.tsx`).
+
 ### FD-20 · The check-in's room tiles cut their pill on a phone — FIXED 29 September
 
 **Found** - 29 September, opening the one-page check-in at 390 px (D27-163):
