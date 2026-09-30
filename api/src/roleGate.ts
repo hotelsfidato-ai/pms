@@ -152,6 +152,11 @@ const GROUP_LOGO = grant("room_config", "edit", "Changing the group's logo");
 /* A hotel's OWN logo (D27-214): the same three, at the hotel in the address;
    the table's policy asks app.manages_hotel behind it (migration 168). */
 const HOTEL_LOGO = grant("room_config", "edit", "Changing the hotel's logo");
+/* What the voucher prints (D27-215): a hotel's bank details and the group's
+   office details - the same three, and for the bank details the route and the
+   table ask app.manages_hotel behind it (migration 169). */
+const BANK_DETAILS = grant("room_config", "edit", "Changing the hotel's bank details");
+const GROUP_OFFICE = grant("room_config", "edit", "Changing the group's office details");
 /* GST sits on Configuration (D27-194; Room types before), so it is setup - and the accountant, who holds no
    setup grant, sets the rate too: "the accountant confirms the rate on the tax
    screen" (D21-91), and "owner, admin, GM and accountant" (D22-32). */
@@ -384,6 +389,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`DELETE ${H}/group/logo`]: GROUP_LOGO,
   [`PUT ${H}/logo`]: HOTEL_LOGO,
   [`DELETE ${H}/logo`]: HOTEL_LOGO,
+  [`PUT ${H}/bank-details`]: BANK_DETAILS,
+  [`DELETE ${H}/bank-details`]: BANK_DETAILS,
+  [`PUT ${H}/group/office`]: GROUP_OFFICE,
   [`POST /api/admin/hotels/:code/:state`]: own("admin/admin.ts: a group administrator"),
   [`PATCH /api/admin/staff/:id`]: own("admin/admin.ts: app.manages_person (D22-3)"),
   [`PUT /api/admin/staff/:id/home-screen`]: own("admin/admin.ts: app.set_home_screen asks app.may_manage_person"),
@@ -565,6 +573,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/rooms`]: anyone("room numbers and their states: nearly every screen"),
   [`GET ${H}/house-now`]: anyone("which rooms are occupied, blocked or empty - no guest"),
   [`GET ${H}/group`]: anyone("the group's name and logo, on every document"),
+  [`GET ${H}/bank-details`]: own("admin/bankDetails.ts: app.manages_hotel - the hotel's owner, GM or Admin, or a group administrator (D27-215)"),
   [`GET ${H}/tax`]: anyone("the GST rates in use: neither a guest nor money taken"),
   [`GET ${H}/tax/:kind/rate`]: anyone("the GST rate for an amount"),
   [`GET ${H}/tax/room/before-gst`]: anyone("the rate before GST inside an inclusive room rate"),

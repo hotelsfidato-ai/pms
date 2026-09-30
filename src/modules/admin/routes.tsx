@@ -1,5 +1,6 @@
 import { Navigate, Route } from "react-router";
 import { RequireAccess } from "@/components/app/RequireAccess";
+import { PropertyScope } from "@/components/app/PropertyScope";
 import { IS_DEV } from "@/components/app/navigation";
 import PropertyPage from "@/modules/admin/pages/Property";
 import PeoplePage from "@/modules/admin/pages/People";
@@ -128,6 +129,18 @@ export const routes = (
         }
       />
     ))}
+    {/* With the hotel in the address (D27-216): the group owner's bell links to
+        the hotel whose bank details changed, whichever one is open. The
+        top bar's hotel follows the address (PropertyScope), as on every
+        /h/:code screen. */}
+    <Route
+      path="/h/:code/settings/:tab"
+      element={
+        <RequireAccess path="/settings" resource="setting">
+          <PropertyScope /><SettingsPage />
+        </RequireAccess>
+      }
+    />
     {/* The two screens it replaced: their addresses open it. Configuration
         was where the refusals sent people to set GST. */}
     <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />

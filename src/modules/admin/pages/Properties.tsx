@@ -277,6 +277,7 @@ export function EditPropertyDialog({ hotel, nameLocked = false, onClose, onSaved
     pan: hotel.pan ?? "", reservationsPhone: hotel.reservationsPhone ?? "",
     propertyType: hotel.propertyType ?? "", starRating: hotel.starRating?.toString() ?? "",
     latitude: hotel.latitude ?? "", longitude: hotel.longitude ?? "",
+    reservationsContact: hotel.reservationsContact ?? "",
   });
   const put = (key: keyof PropertyProfile, upper = false) =>
     (e: { target: { value: string } }) =>
@@ -427,6 +428,12 @@ export function EditPropertyDialog({ hotel, nameLocked = false, onClose, onSaved
                   )}
                 </Field>
               </div>
+              <Field label="Reservations contact" hint={'The person a guest asks for. Printed on the booking voucher as "Contact".'}>
+                {(f) => (
+                  <Input {...fieldProps(f)} value={more.reservationsContact} maxLength={80}
+                         onChange={put("reservationsContact")} />
+                )}
+              </Field>
               {/* Stored, and printed on no document until the owner says where (D27-214). */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Reservations phone" hint="Kept here. It prints on no document.">

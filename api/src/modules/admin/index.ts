@@ -4,6 +4,7 @@ import { adminLists } from "./adminLists.ts";
 import { admin } from "./admin.ts";
 import { commissioning } from "./commissioning.ts";
 import { groupSettings } from "./groupSettings.ts";
+import { bankDetails } from "./bankDetails.ts";
 import { systemHealth } from "./systemHealth.ts";
 
 /* The front door of the administration service on the server — the only file
@@ -15,5 +16,6 @@ export const mounts: readonly Mount[] = [
   ["/api", admin],
   ["/api/hotels", commissioning],
   ["/api/hotels", groupSettings],
+  ["/api/hotels", bankDetails],
   ["/api/hotels", systemHealth],
 ];

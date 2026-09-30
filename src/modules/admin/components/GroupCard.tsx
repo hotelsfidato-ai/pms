@@ -1,11 +1,13 @@
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, CardBody, CardHeader, Field, fieldProps, Input, Skeleton, toast } from "@/components/ui";
+import {
+  Button, Card, CardBody, CardHeader, Dialog, DialogContent, Field, fieldProps, Input, Skeleton, toast,
+} from "@/components/ui";
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
 import {
-  getGroupSettings, setGroupName, setGroupLogo, removeGroupLogo, setHotelLogo, removeHotelLogo,
-  logoSrc, GROUP_SETTINGS_KEY, groupSettingsKey,
+  getGroupSettings, setGroupName, setGroupLogo, removeGroupLogo, setHotelLogo, removeHotelLogo, setGroupOffice,
+  logoSrc, GROUP_SETTINGS_KEY, groupSettingsKey, type GroupOffice,
 } from "@/modules/admin/data/groupSettings";
 
 /* The group's name and logo on Settings (the owner's D27-53 and D27-65): one
@@ -90,10 +92,88 @@ export function GroupCard({ hotelCode }: { hotelCode: string }) {
 
             <LogoRow src={src} alt="The group's logo" pickLabel="Choose the logo file"
               mayEdit={mayEdit} upload={upload} remove={remove} />
+            <OfficeDetails hotelCode={hotelCode} office={group.data?.office} mayEdit={mayEdit} onSaved={refresh} />
           </>
         )}
       </CardBody>
     </Card>
+  );
+}
+
+/* The group's office details (the owner's D27-215): the footer of every
+   booking voucher - name, address, phone, email, website, GSTIN - and the
+   Instagram address printed under its policies. Typed once, for every hotel.
+   Until one of the footer's five is typed, a voucher's footer is the hotel's
+   own, as before. */
+const OFFICE: [keyof GroupOffice, string, string?][] = [
+  ["address", "Office address"], ["phone", "Phone"], ["email", "Email"], ["website", "Website"],
+  ["gstin", "GSTIN"], ["instagram", "Instagram", "As it should print, such as @fidatohotels."],
+];
+
+function OfficeDetails({ hotelCode, office, mayEdit, onSaved }: {
+  hotelCode: string; office: GroupOffice | undefined; mayEdit: boolean; onSaved: () => void;
+}) {
+  const [form, setForm] = useState<Record<keyof GroupOffice, string> | null>(null);
+  const [busy, setBusy] = useState(false);
+  const open = () => setForm(Object.fromEntries(
+    OFFICE.map(([key]) => [key, office?.[key] ?? ""])) as Record<keyof GroupOffice, string>);
+
+  const save = async () => {
+    setBusy(true);
+    const res = await setGroupOffice(hotelCode, form!);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not saved", res.reason);
+    toast.success("Office details saved", "They print in the footer of every booking voucher from now on.");
+    setForm(null);
+    onSaved();
+  };
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-1">
+        <div>
+          <p className="text-sm text-grey-500">Office details</p>
+          <p className="text-sm text-grey-500">
+            The footer of every booking voucher. Until one is typed, a voucher's footer is the hotel's own.
+          </p>
+        </div>
+        {mayEdit && <Button variant="secondary" onClick={open}>Change office details</Button>}
+      </div>
+      <dl className="divide-y divide-grey-100">
+        {OFFICE.map(([key, label]) => (
+          <div key={key} className="grid grid-cols-[minmax(130px,200px)_1fr] gap-4 py-2.5">
+            <dt className="text-sm text-grey-500">{label}</dt>
+            <dd className="text-base text-ink-900 min-w-0 break-words">{office?.[key] ?? "-"}</dd>
+          </div>
+        ))}
+      </dl>
+      {form && (
+        <Dialog open onOpenChange={(o) => !o && setForm(null)}>
+          <DialogContent
+            title="The group's office details"
+            description="Printed in the footer of every hotel's booking voucher. Leave one blank and it is left out."
+            footer={
+              <>
+                <Button variant="secondary" size="lg" onClick={() => setForm(null)}>Cancel</Button>
+                <Button variant="primary" size="lg" loading={busy} onClick={() => void save()}>Save</Button>
+              </>
+            }
+          >
+            <div className="space-y-3">
+              {OFFICE.map(([key, label, hint], i) => (
+                <Field key={key} label={label} {...(hint ? { hint } : {})}>
+                  {(f) => (
+                    <Input {...fieldProps(f)} value={form[key]} autoFocus={i === 0}
+                      onChange={(e) => setForm({ ...form,
+                        [key]: key === "gstin" ? e.target.value.toUpperCase() : e.target.value })} />
+                  )}
+                </Field>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
   );
 }
 
