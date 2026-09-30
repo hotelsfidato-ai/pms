@@ -5,6 +5,7 @@ import { resolveDate } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
 import { inr } from "../../reportRender.ts";
 import { roomRateBeforeGst } from "./tax.ts";
+import { PAYMENT_METHOD } from "./paymentMethods.ts";
 import { overCashLimit, panFor } from "./cashLimit.ts";
 import { openOwnDrawer } from "./cashier.ts";
 import { FOLIO_SELECT, STANDING_INVOICE, folioBalance } from "./folios.ts";
@@ -72,12 +73,6 @@ const CATEGORY: Record<string, string> = {
   Discount: "discount", Payment: "payment", Refund: "refund",
 };
 
-const PAYMENT_METHOD: Record<string, string> = {
-  Cash: "cash", UPI: "upi", "Credit Card": "card", "Debit Card": "card",
-  "Net Banking": "netbanking", Wallet: "wallet", Cheque: "cheque",
-  "Bank Transfer": "bank_transfer", "Bill to company": "city_ledger",
-  "Room Posting": "city_ledger",
-};
 
 /* ── Post a charge ───────────────────────────────────────────────── */
 

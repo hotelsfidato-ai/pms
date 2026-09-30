@@ -101,6 +101,14 @@ beforeEach(() => {
         : gross === 502 ? { ok: true, pre: 478.09, rate: 5, total: 501.99 }
         : { ok: false, reason: "An inclusive rate between ₹7,875 and ₹8,850 can't be split under the GST slab: type ₹7,875 or less, or more than ₹8,850." }) as never;
     }
+    /* The accounts report keys a row by a slug of its name, and two names can
+       share one: the demo had "Walk-In" and "Walk-in", both `walk-in`. */
+    if (path.endsWith("/companies")) {
+      return [
+        { id: "walk-in", name: "Walk-In", kind: "Corporate", bookings: 117, roomNights: 0, revenue: 0, openBalance: 0, commissionPct: null },
+        { id: "walk-in", name: "Walk-in", kind: "Corporate", bookings: 18, roomNights: 0, revenue: 0, openBalance: 0, commissionPct: null },
+      ] as never;
+    }
     if (path.endsWith("/billing-companies")) {
       return [{ id: "co-1", name: "Tata Motors", gstin: "27AAACT2727Q1ZW" }] as never;
     }
@@ -322,6 +330,20 @@ describe("a rate that includes GST", () => {
     type(/^Rate/, "8000");
     await screen.findByText(/can't be split under the GST slab/, { selector: "[data-inclusive-note]" });
     expect(button("Save booking").disabled).toBe(true);
+  });
+});
+
+describe("the Business source list", () => {
+  it("draws two accounts whose ids are the same slug without React's duplicate-key warning", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    open();
+    await screen.findByRole("heading", { name: "Guest" });
+    const list = screen.getByLabelText(/^Business source/, { selector: "select" }) as HTMLSelectElement;
+    await waitFor(() => expect([...list.options].map((o) => o.text)).toEqual(["None", "Walk-In", "Walk-in"]));
+    /* React logs it as a format string: "...the same key, `%s`". */
+    const said = logged.mock.calls.map(([f, ...args]) =>
+      args.reduce<string>((t, x) => t.replace("%s", String(x)), String(f)));
+    expect(said.filter((m) => m.includes("two children with the same key"))).toEqual([]);
   });
 });
 
