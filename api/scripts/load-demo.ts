@@ -729,7 +729,7 @@ async function main() {
           `insert into pos_item_variations
              (hotel_id, item_id, label, price, sort_order)
            values ($1,$2,$3,$4,$5)
-           on conflict (item_id, label) do update set price = excluded.price`,
+           on conflict (item_id, type_no, label) do update set price = excluded.price`,
           [hotelId, dish!.id, label, price, sort]);
       }
 

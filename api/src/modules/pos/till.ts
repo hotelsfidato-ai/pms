@@ -738,7 +738,7 @@ till.post("/:code/till/menu/import", async (c) => {
           `insert into pos_item_variations
              (hotel_id, item_id, label, price, sort_order)
            values ($1,$2,$3,$4,$5)
-           on conflict (item_id, label) do update
+           on conflict (item_id, type_no, label) do update
              set price = excluded.price, is_active = true`,
           [hotelId, item[0]!.id, v.label, v.price, i + 1],
         );
