@@ -11,6 +11,13 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · A second workflow file beside the sending one: ID photos (D27-209)
+
+Branch `online-checkin/verify-photo-30sep`; the whole account is online check-in's CHANGELOG,
+same date. Here: `deploy/n8n/pms-id-photos-crs.json` and `IMPORT.md` part D. It is NOT a
+sender and `sending.ts` does not know it: its own address, its own secret
+(`ID_PHOTO_N8N_URL`, `ID_PHOTO_N8N_SECRET`), and only encrypted files pass through it.
+
 ## 2026-09-30 · The check-in code by email (D27-207)
 
 Branch `online-checkin/verify-photo-30sep`; the whole account is online check-in's CHANGELOG,

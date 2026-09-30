@@ -6,6 +6,10 @@ import { pool } from "../db.ts";
 import { env } from "../env.ts";
 import { canSend, send } from "../sending.ts";
 import { idNumberProblem } from "../validate.ts";
+import {
+  ID_PHOTOS_OFF, MAX_UPLOAD, NOTICE_VERSION, get as getPhotos, idPhotosOn, photosFrom,
+  put as putPhotos, remove as removePhotos,
+} from "./idPhotos.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S OWN DOOR — one private page per booking (D18-9, D18-10, D18-13)
@@ -74,7 +78,10 @@ const NOTHING_HERE = "This link is not usable. Ask the desk for a new one.";
 const A_MINUTE = 60_000;
 const OPENS_A_MINUTE = 30;
 const CODES_AN_HOUR = 5;
-const knocks = new Map<string, { at: number; opens: number; codes: number; hour: number }>();
+/* An ID photo is megabytes, encrypted here and sent on: ten an hour is a
+   guest retaking a blurred one, not a stranger filling the hotel's Drive. */
+const PHOTOS_AN_HOUR = 10;
+const knocks = new Map<string, { at: number; opens: number; codes: number; photos: number; hour: number }>();
 
 /* ⚠ AND IT IS SWEPT, WHICH IT WAS NOT (19 September, found by audit).
    A token hash was added on the first knock and never removed, and this is
@@ -92,7 +99,7 @@ function sweep(now: number): void {
   }
 }
 
-function tooOften(tokenHash: string, kind: "open" | "code"): boolean {
+function tooOften(tokenHash: string, kind: "open" | "code" | "photo"): boolean {
   const now = Date.now();
   /* Cheap: this map holds one small object per token seen in the last hour,
      and the sweep only walks that. It runs on the knock rather than on a
@@ -105,6 +112,7 @@ function tooOften(tokenHash: string, kind: "open" | "code"): boolean {
     knocks.set(tokenHash, {
       at: minute, opens: 0,
       codes: seen && seen.hour === hour ? seen.codes : 0,
+      photos: seen && seen.hour === hour ? seen.photos : 0,
       hour,
     });
   }
@@ -112,6 +120,10 @@ function tooOften(tokenHash: string, kind: "open" | "code"): boolean {
   if (kind === "open") {
     row.opens += 1;
     return row.opens > OPENS_A_MINUTE;
+  }
+  if (kind === "photo") {
+    row.photos += 1;
+    return row.photos > PHOTOS_AN_HOUR;
   }
   row.codes += 1;
   return row.codes > CODES_AN_HOUR;
@@ -569,6 +581,122 @@ guestDoor.post("/:token/requests", async (c) => {
   return c.json({ sent: true });
 });
 
+/* ── THE ID PHOTO (D27-207 to D27-212) ─────────────────────────────
+   Optional, after the details are sent: a photo of the front of a
+   government photo ID, and the back if it has one. It is a SUBMISSION like
+   the details (D21-8) - the desk sees it beside them and checks the real
+   ID - and it is never on this server: idPhotos.ts encrypts it with the
+   hotel's own password and stores it in Drive.
+
+   ⚠ THE GUEST WRITES, AND NEVER READS. There is no route on this door that
+   hands a photo back: not the image, not its name, not where it is. The
+   guest is told only that it is there and since when, or that the desk
+   removed it and why.
+
+   THE ORDER OF THE CHECKS: the link, the knocks, this phone's unlock -
+   and only then is a single byte of the body read. A stranger cannot make
+   this server take in megabytes. */
+const PHOTO_NOT_OFFERED = "This hotel is not taking ID photos online. Show your ID at the desk.";
+const PHOTO_TOO_OFTEN = "Ten photos have been sent from this link in the last hour. "
+  + "Try again later, or show your ID at the desk.";
+const PHOTO_TOO_BIG = "Those photos are too large to send. Take them again, or show your ID at the desk.";
+const PHOTO_NOT_NOW = "Send your check-in details first. If the desk has already "
+  + "checked them, show your ID at the desk.";
+const PHOTO_NOT_STORED = "The photo could not be stored just now, and nothing was kept. "
+  + "Try again shortly, or show your ID at the desk.";
+
+/** What the desk's reason reads as on the guest's own page. */
+const REMOVED_SAYS: Readonly<Record<string, string>> = {
+  not_masked: "The front desk removed your photo because the Aadhaar number was not covered. "
+    + "Send it again with the first 8 digits hidden.",
+  not_readable: "The front desk could not read your photo. Send a clearer one.",
+  not_an_id: "The photo was not a government photo ID. Send one, or show your ID at the desk.",
+};
+const REMOVED_OTHERWISE = "The hotel removed your ID photo.";
+
+guestDoor.get("/:token/id-photo", async (c) => {
+  const door = await openedHere(c);
+  if (!door) return refused(c);
+  const rows = await ask<{
+    status: string | null; sides: string[] | null; stored_at: string | null;
+    removed_reason: string | null; may_send: boolean; hotel_phone: string | null;
+  }>("select * from app.guest_id_photo_state($1, $2)", [door.hash, door.unlock]);
+  const it = rows[0];
+  if (!it) return refused(c);
+  return c.json({
+    /* Whether this hotel takes them at all: its password and the store. */
+    offered: idPhotosOn(door.it.hotel_code),
+    maySend: it.may_send,
+    notice: NOTICE_VERSION,
+    /* The hotel's own number, for the notice's "to have it deleted, contact". */
+    contact: it.hotel_phone,
+    sent: it.status === "stored" ? { sides: it.sides, at: it.stored_at } : null,
+    removed: it.status === "removed"
+      ? REMOVED_SAYS[it.removed_reason ?? ""] ?? REMOVED_OTHERWISE : null,
+  });
+});
+
+guestDoor.post("/:token/id-photo", async (c) => {
+  const door = await openedHere(c);
+  if (!door) return refused(c);
+  /* From here the caller is behind the code, so a plain sentence is safe. */
+  const code = door.it.hotel_code;
+  if (!idPhotosOn(code)) return c.json({ error: PHOTO_NOT_OFFERED }, 409);
+  if (tooOften(door.hash, "photo")) return c.json({ error: PHOTO_TOO_OFTEN }, 429);
+
+  /* The length the browser declares is the length Node will read, and no
+     more: checked before the body is touched. */
+  const length = Number(c.req.header("content-length"));
+  if (!Number.isFinite(length) || length <= 0 || length > MAX_UPLOAD) {
+    return c.json({ error: PHOTO_TOO_BIG }, 413);
+  }
+  const form = await c.req.formData().catch(() => null);
+  if (!form) return c.json({ error: "Send the photo as a form upload." }, 400);
+  /* The consent the notice asks for (DPDP): no tick, no photo. */
+  if (form.get("agreed") !== "yes") {
+    return c.json({ error: "Tick the box to agree before sending the photo." }, 400);
+  }
+  const photos = await photosFrom(form);
+  if (typeof photos === "string") return c.json({ error: photos }, 400);
+
+  /* The row first (167), so a file that reaches Drive always has one. */
+  const begun = await ask<{
+    id: string; hotel_code: string; reference: string; guest_name: string;
+  }>("select * from app.guest_id_photo_begin($1, $2, $3::text[], $4)",
+    [door.hash, door.unlock, photos.map((p) => p.side), NOTICE_VERSION]);
+  const row = begun[0];
+  if (!row) return c.json({ error: PHOTO_NOT_NOW }, 409);
+
+  const stored = await putPhotos({
+    id: row.id, hotelCode: row.hotel_code, reference: row.reference,
+    guestName: row.guest_name, by: "the guest",
+  }, photos);
+  if (!stored) {
+    await ask("select app.guest_id_photo_abandon($1, $2, $3)", [door.hash, door.unlock, row.id]);
+    return c.json({ error: PHOTO_NOT_STORED }, 503);
+  }
+
+  const done = await ask<{ done: { replaced: { id: string; driveFileId: string }[] } | null }>(
+    "select app.guest_id_photo_stored($1, $2, $3, $4, $5, $6) as done",
+    [door.hash, door.unlock, row.id, stored.driveFileId, stored.sha256, stored.bytes]);
+  if (!done[0]?.done) {
+    /* The unlock ended while Drive was answering: take the file back. */
+    await removePhotos(row.hotel_code, stored.driveFileId);
+    await ask("select app.guest_id_photo_abandon($1, $2, $3)", [door.hash, door.unlock, row.id]);
+    return refused(c);
+  }
+
+  /* A REPLACED PHOTO GOES AT ONCE - an unmasked Aadhaar replaced by a masked
+     one must not stay in Drive. If Drive will not delete it now, that is
+     written down for a manager. */
+  for (const old of done[0].done.replaced) {
+    if (!(await removePhotos(row.hotel_code, old.driveFileId))) {
+      await ask("select app.guest_id_photo_delete_failed($1, $2, $3)", [door.hash, door.unlock, old.id]);
+    }
+  }
+  return c.json({ sent: true });
+});
+
 /* ── The desk's side ──────────────────────────────────────────────
    Inside the ordinary staff gate, under row level security, like everything
    else a clerk does. It hands back the link ONCE: after this response the
@@ -652,7 +780,9 @@ type Db = Parameters<Parameters<typeof withSession>[1]>[0];
 
 /* The hotel, if this person holds a desk role there - the same question the
    spa and the other services ask, in the same words. */
-async function deskAt(client: Db, code: string): Promise<string | null> {
+async function deskAt(
+  client: Db, code: string, roles: readonly string[] = DESK_ROLES,
+): Promise<string | null> {
   const { rows } = await client.query<{ id: string; may: boolean }>(
     `select h.id::text,
             exists (select 1 from staff s
@@ -661,7 +791,7 @@ async function deskAt(client: Db, code: string): Promise<string | null> {
                      where sh.staff_id = app.current_user_id() and sh.hotel_id = h.id
                        and s.is_active and sh.role = any($2::text[])) as may
        from hotels h where h.code = $1`,
-    [code.toUpperCase(), DESK_ROLES]);
+    [code.toUpperCase(), roles]);
   return rows[0]?.may ? rows[0].id : null;
 }
 
@@ -682,10 +812,14 @@ guestLinks.get("/:code/online-checkin", async (c) => {
       passport_expiry: string | null; visa_number: string | null; visa_expiry: string | null;
       address_line: string | null; city: string | null; country: string | null;
       submitted_at: string; more: Record<string, string | boolean | null>;
+      photo_id: string | null; photo_sides: string[] | null; photo_at: string | null;
     }>(
       `select d.id::text, g.full_name as guest, r.reference, d.id_type, d.id_number,
               d.passport_expiry::text, d.visa_number, d.visa_expiry::text,
               d.address_line, d.city, d.country, d.submitted_at,
+              -- The ID photo sent with them, if any: that it is there, never
+              -- where. The image is fetched only when a clerk opens it.
+              p.id::text as photo_id, p.sides as photo_sides, p.stored_at as photo_at,
               -- D27-169: what else the guest sent, for the clerk to check.
               -- Only what was filled in; the screen names each one.
               jsonb_strip_nulls(jsonb_build_object(
@@ -706,8 +840,14 @@ guestLinks.get("/:code/online-checkin", async (c) => {
          from guest_detail_submissions d
          join reservations r on r.id = d.reservation_id
          join guests g       on g.id = d.guest_id
+         left join lateral (
+           select x.id, x.sides, x.stored_at from guest_id_photos x
+            where x.reservation_id = d.reservation_id and x.guest_id = d.guest_id
+              and x.status = 'stored'
+            order by x.created_at desc limit 1) p on true
         where d.hotel_id = $1 and d.status = 'waiting'
         order by d.submitted_at`, [hotelId]);
+    const keeps = (await deskAt(client, c.req.param("code"), KEEPER_ROLES)) !== null;
 
     const { rows: requests } = await client.query<{
       id: string; kind: string; what: string; wanted: string | null;
@@ -738,16 +878,258 @@ guestLinks.get("/:code/online-checkin", async (c) => {
         passportExpiry: d.passport_expiry, visaNumber: d.visa_number,
         visaExpiry: d.visa_expiry, addressLine: d.address_line, city: d.city,
         country: d.country, submittedAt: d.submitted_at, more: d.more,
+        photo: d.photo_id ? { id: d.photo_id, sides: d.photo_sides, at: d.photo_at } : null,
       })),
       requests: requests.map((q) => ({
         id: q.id, kind: q.kind, what: q.what, wanted: q.wanted,
         createdAt: q.created_at, guest: q.guest, reference: q.reference,
       })),
       rooms: rooms.map((r) => ({ id: r.id, number: r.number, cardSince: r.card_since })),
+      /* Whether this hotel's ID photos can be kept at all, and the sentence
+         when not; and whether this person is one of those who see the kept
+         ones (owner, Admin, GM). */
+      idPhotos: {
+        on: idPhotosOn(c.req.param("code")),
+        off: idPhotosOn(c.req.param("code")) ? null : ID_PHOTOS_OFF,
+        keeper: keeps,
+      },
     };
   });
   if (!body) return c.json({ error: DESK_REFUSED }, 403);
   return c.json(body);
+});
+
+/* ── THE ID PHOTO, AT THE DESK (D27-210) ───────────────────────────
+   WHO SEES ONE, and it is decided here on every call:
+
+     while its details WAIT      every desk role - the clerk confirming them
+                                 looks at it beside the typed details, and
+                                 removes one that is not masked, not
+                                 readable or not an ID
+     once it is KEPT             (confirmed, set aside, or added at the desk)
+                                 the owner, an administrator and the GM
+                                 only; they alone delete it, with a reason
+
+   EVERY VIEW IS WRITTEN DOWN, before the image is fetched. The image comes
+   from Drive, is checked against its hash and decrypted in memory
+   (idPhotos.ts), and goes out with `no-store`: nothing of it is kept here
+   or in the browser's cache. */
+const KEEPER_ROLES: readonly string[] = ["owner", "admin", "gm"];
+const KEEPER_REFUSED = "A kept ID photo is seen and deleted by the owner, an "
+  + "administrator or the general manager. Ask one of them.";
+const PHOTO_REFUSED = "An ID photo is for reception while its details wait to be "
+  + "checked, and afterwards for the owner, an administrator or the general manager.";
+const NO_PHOTO = "No such photo here.";
+const DESK_REASONS: readonly string[] = ["not_masked", "not_readable", "not_an_id"];
+
+type PhotoRow = {
+  id: string; hotel_code: string; status: string; drive_file_id: string | null;
+  cipher_sha256: string | null; waiting: boolean; delete_failed: boolean;
+};
+
+/** The row, and whether this person may act on it: 200 with the row, or
+    the status to answer. Under the clerk's own session, so another hotel's
+    photo is simply not there. */
+async function photoFor(client: Db, code: string, id: string): Promise<PhotoRow | 403 | 404> {
+  if (!A_UUID.test(id)) return 404;
+  const hotelId = await deskAt(client, code);
+  if (!hotelId) return 403;
+  const { rows } = await client.query<PhotoRow>(
+    `select p.id::text, p.hotel_code, p.status, p.drive_file_id, p.cipher_sha256,
+            coalesce(d.status = 'waiting', false) as waiting,
+            p.drive_delete_failed_at is not null as delete_failed
+       from guest_id_photos p
+       left join guest_detail_submissions d on d.id = p.submission_id
+      where p.id = $1 and p.hotel_id = $2 and p.status <> 'pending'`, [id, hotelId]);
+  const row = rows[0];
+  if (!row) return 404;
+  if (!(row.status === "stored" && row.waiting) && !(await deskAt(client, code, KEEPER_ROLES))) return 403;
+  return row;
+}
+
+guestLinks.get("/:code/online-checkin/id-photos", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await deskAt(client, c.req.param("code"), KEEPER_ROLES);
+    if (!hotelId) return null;
+    const { rows } = await client.query<{
+      id: string; guest: string; reference: string; sides: string[]; stored_at: string;
+      by: string | null; status: string; removed_reason: string | null;
+    }>(
+      `select p.id::text, g.full_name as guest, r.reference, p.sides, p.stored_at,
+              s.full_name as by, p.status, p.removed_reason
+         from guest_id_photos p
+         join reservations r on r.id = p.reservation_id
+         join guests g       on g.id = p.guest_id
+         left join staff s   on s.id = p.uploaded_by
+         left join guest_detail_submissions d on d.id = p.submission_id
+        where p.hotel_id = $1
+          and ((p.status = 'stored' and coalesce(d.status <> 'waiting', true))
+            or (p.status = 'removed' and p.drive_delete_failed_at is not null))
+        order by p.stored_at desc
+        limit 200`, [hotelId]);
+    return {
+      photos: rows.map((p) => ({
+        id: p.id, guest: p.guest, reference: p.reference, sides: p.sides, at: p.stored_at,
+        /* Null: the guest sent it from their own page. */
+        addedBy: p.by,
+        /* Removed, but Drive has not deleted its file yet: "Try again". */
+        notYetDeleted: p.status === "removed",
+      })),
+    };
+  });
+  if (!body) return c.json({ error: KEEPER_REFUSED }, 403);
+  return c.json(body);
+});
+
+guestLinks.get("/:code/online-checkin/id-photos/:id", async (c) => {
+  const found = await withSession(c.get("subject"), async (client, session) => {
+    const row = await photoFor(client, c.req.param("code"), c.req.param("id"));
+    if (typeof row === "number") return row;
+    if (row.status !== "stored") return 404 as const;
+    await client.query(
+      `insert into guest_id_photo_views (hotel_id, photo_id, viewed_by)
+       select hotel_id, id, $2 from guest_id_photos where id = $1`, [row.id, session.staffId]);
+    return row;
+  });
+  if (found === 403) return c.json({ error: PHOTO_REFUSED }, 403);
+  if (found === 404) return c.json({ error: NO_PHOTO }, 404);
+
+  const photos = await getPhotos({
+    hotelCode: found.hotel_code, driveFileId: found.drive_file_id!, sha256: found.cipher_sha256!,
+  });
+  c.header("Cache-Control", "no-store");
+  if (photos === "unreachable") {
+    return c.json({ error: "The photo cannot be fetched right now. The typed details are "
+      + "still here; try the photo again in a few minutes." }, 503);
+  }
+  if (photos === "unreadable") {
+    return c.json({ error: "The photo could not be opened: it is not what was stored, or "
+      + "this hotel's password has changed since. Tell the owner." }, 409);
+  }
+  return c.json({
+    photos: photos.map((p) => ({
+      side: p.side, image: `data:${p.type};base64,${p.bytes.toString("base64")}`,
+    })),
+  });
+});
+
+/* REMOVED BY A PERSON, WITH A REASON. The row is marked first - so the
+   photo is gone from every screen whatever Drive does - and then the Drive
+   file is deleted; if Drive will not, that is written on the row and a
+   keeper sees "not yet deleted" with Try again, which is this same call. */
+guestLinks.post("/:code/online-checkin/id-photos/:id/remove", async (c) => {
+  const { reason } = await c.req.json<{ reason?: string }>().catch(() => ({}) as { reason?: string });
+  const typed = (reason ?? "").trim();
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const row = await photoFor(client, c.req.param("code"), c.req.param("id"));
+    if (typeof row === "number") return row;
+    if (row.status === "stored") {
+      /* While the details wait, one of the desk's three reasons; a kept
+         photo is deleted with the keeper's own words. */
+      const why = row.waiting ? (DESK_REASONS.includes(typed) ? typed : null)
+        : (typed.length >= 3 && typed.length <= 200 ? `deleted: ${typed}` : null);
+      if (!why) return 400 as const;
+      await client.query(
+        `update guest_id_photos
+            set status = 'removed', removed_at = now(), removed_by = $2, removed_reason = $3
+          where id = $1 and status = 'stored'`, [row.id, session.staffId, why]);
+    } else if (!row.delete_failed) {
+      return 404 as const;
+    }
+    return row;
+  });
+  if (result === 403) return c.json({ error: PHOTO_REFUSED }, 403);
+  if (result === 404) return c.json({ error: NO_PHOTO }, 404);
+  if (result === 400) return c.json({ error: "Say why it is being removed." }, 400);
+
+  const deleted = await removePhotos(result.hotel_code, result.drive_file_id!);
+  await withSession(c.get("subject"), (client) => client.query(
+    "update guest_id_photos set drive_delete_failed_at = $2 where id = $1",
+    [result.id, deleted ? null : new Date()]));
+  return c.json({ removed: true, deletedFromDrive: deleted });
+});
+
+/* THE DESK ADDS ONE AT CHECK-IN (D27-210), for a guest who did not send it
+   online - so there is a copy for every guest. The clerk has the real ID in
+   hand and photographs it; the guest's yes is the clerk's tick, recorded
+   with the clerk's name. The same checks and the same `put` as the guest's
+   own, and the photo is KEPT from that moment: the desk does not fetch it
+   back (the screen showed it from the device before it was sent). */
+guestLinks.post("/:code/stays/:id/id-photo", async (c) => {
+  const code = c.req.param("code");
+  const stayId = c.req.param("id");
+  if (!A_UUID.test(stayId)) return c.json({ error: "No such booking." }, 404);
+
+  /* Who, and which booking, before a byte of the body is read. */
+  const who = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await deskAt(client, code);
+    if (!hotelId) return null;
+    const { rows } = await client.query<{
+      guest_id: string; reference: string; guest: string; hotel_code: string;
+    }>(
+      `select r.guest_id::text, r.reference, g.full_name as guest, h.code as hotel_code
+         from reservations r
+         join guests g on g.id = r.guest_id
+         join hotels h on h.id = r.hotel_id
+        where r.id = $1 and r.hotel_id = $2`, [stayId, hotelId]);
+    return { hotelId, stay: rows[0] ?? null, staffId: session.staffId, clerk: session.fullName };
+  });
+  if (!who) return c.json({ error: DESK_REFUSED }, 403);
+  if (!who.stay) return c.json({ error: "No such booking." }, 404);
+  if (!idPhotosOn(code)) return c.json({ error: ID_PHOTOS_OFF }, 409);
+
+  const length = Number(c.req.header("content-length"));
+  if (!Number.isFinite(length) || length <= 0 || length > MAX_UPLOAD) {
+    return c.json({ error: "Those photos are too large. Take them again." }, 413);
+  }
+  const form = await c.req.formData().catch(() => null);
+  if (!form) return c.json({ error: "Send the photo as a form upload." }, 400);
+  if (form.get("agreed") !== "yes") {
+    return c.json({ error: "Tick that the guest agreed to the hotel keeping this photo." }, 400);
+  }
+  const photos = await photosFrom(form);
+  if (typeof photos === "string") return c.json({ error: photos }, 400);
+
+  const id = await withSession(c.get("subject"), async (client) => (await client.query<{ id: string }>(
+    `insert into guest_id_photos
+       (hotel_id, hotel_code, reservation_id, guest_id, uploaded_by, sides, notice_version)
+     values ($1, $2, $3, $4, $5, $6::text[], $7)
+     returning id::text`,
+    [who.hotelId, who.stay!.hotel_code, stayId, who.stay!.guest_id, who.staffId,
+     photos.map((p) => p.side), NOTICE_VERSION])).rows[0]!.id);
+
+  const stored = await putPhotos({
+    id, hotelCode: who.stay.hotel_code, reference: who.stay.reference,
+    guestName: who.stay.guest, by: `${who.clerk}, at the desk`,
+  }, photos);
+  if (!stored) {
+    await withSession(c.get("subject"), (client) => client.query(
+      "delete from guest_id_photos where id = $1 and status = 'pending'", [id]));
+    return c.json({ error: "The photo could not be stored just now, and nothing was kept. "
+      + "Try again shortly." }, 503);
+  }
+
+  /* Stored; and the photo before it for this guest and stay, if there was
+     one, goes at once - the same rule as a guest's own replacement. */
+  const replaced = await withSession(c.get("subject"), async (client, session) => {
+    await client.query(
+      `update guest_id_photos
+          set status = 'stored', stored_at = now(), drive_file_id = $2,
+              cipher_sha256 = $3, cipher_bytes = $4
+        where id = $1 and status = 'pending'`, [id, stored.driveFileId, stored.sha256, stored.bytes]);
+    return (await client.query<{ id: string; drive_file_id: string }>(
+      `update guest_id_photos
+          set status = 'removed', removed_at = now(), removed_by = $4, removed_reason = 'replaced'
+        where reservation_id = $1 and guest_id = $2 and status = 'stored' and id <> $3
+        returning id::text, drive_file_id`, [stayId, who.stay!.guest_id, id, session.staffId])).rows;
+  });
+  for (const old of replaced) {
+    if (!(await removePhotos(who.stay.hotel_code, old.drive_file_id))) {
+      await withSession(c.get("subject"), (client) => client.query(
+        "update guest_id_photos set drive_delete_failed_at = now() where id = $1", [old.id]));
+    }
+  }
+  return c.json({ added: true });
 });
 
 /* CONFIRMED BY A PERSON, UNDER THEIR NAME (D21-8). The one place a guest's

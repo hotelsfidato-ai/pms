@@ -12,6 +12,7 @@ import {
   type PrintedCard, type WaitingDetails,
 } from "@/modules/online-checkin/data/desk";
 import { moreLines } from "@/modules/online-checkin/formIII";
+import { KeptPhotos, WaitingPhoto } from "@/modules/online-checkin/pages/IdPhotosAtDesk";
 
 /* ══════════════════════════════════════════════════════════════════
    ONLINE CHECK-IN — THE DESK'S SIDE (/h/:code/online-checkin)
@@ -59,7 +60,10 @@ export default function DeskPage() {
       ) : (
         /* Sections 20px apart (the Rhythm Rule). */
         <div className="flex flex-col gap-5">
-          <Waiting code={code} rows={desk.data!.waiting} onChanged={refresh} />
+          <Waiting code={code} rows={desk.data!.waiting} photosOff={desk.data!.idPhotos?.off ?? null}
+            onChanged={refresh} />
+          {/* Kept ID photos: the owner, an administrator and the GM (D27-210). */}
+          {desk.data!.idPhotos?.keeper && <KeptPhotos code={code} />}
           <Requests code={code} rows={desk.data!.requests} onChanged={refresh} />
           <RoomCards code={code} rooms={desk.data!.rooms} onPrinted={setPrinted} />
         </div>
@@ -69,7 +73,8 @@ export default function DeskPage() {
 }
 
 function Waiting(
-  { code, rows, onChanged }: { code: string; rows: WaitingDetails[]; onChanged: () => void },
+  { code, rows, photosOff, onChanged }:
+  { code: string; rows: WaitingDetails[]; photosOff: string | null; onChanged: () => void },
 ) {
   /* Said, not only seen: the entry leaves the list (QA GP-6). */
   const confirm = useMutation({
@@ -82,6 +87,8 @@ function Waiting(
   return (
     <section>
       <h2 className="text-md font-semibold text-ink-900 mb-3">Details waiting to be checked</h2>
+      {/* The server's own sentence where this hotel cannot keep ID photos. */}
+      {photosOff && <p className="text-sm text-grey-600 mb-3" data-id-photos-off>{photosOff}</p>}
       {rows.length === 0 ? (
         <Card>
           <EmptyState compact title="Nothing waiting"
@@ -113,6 +120,8 @@ function Waiting(
                     </div>
                   ))}
                 </dl>
+                {/* The photo they sent, to look at beside what they typed. */}
+                {!photosOff && <WaitingPhoto code={code} details={d} onChanged={onChanged} />}
                 <div className="mt-3.5 flex flex-wrap gap-2">
                   <Button variant="secondary" disabled={busy} onClick={() => confirm.mutate(d)}>
                     Confirm against the ID

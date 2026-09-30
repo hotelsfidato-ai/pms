@@ -9,10 +9,13 @@ import {
   Button, Card, CardBody, Field, fieldProps, Input, NativeSelect, Segmented, StatusPill, Textarea,
 } from "@/components/ui";
 import {
-  dropUnlock, getBill, getDetails, getRequests, makeRequest, openGuestPage,
-  sendCode, sendDetails, verifyCode, verifyWithGoogle, type Details, type GuestPageView,
+  dropUnlock, getBill, getDetails, getIdPhoto, getRequests, makeRequest, openGuestPage,
+  sendCode, sendDetails, sendIdPhoto, verifyCode, verifyWithGoogle, type Details, type GuestPageView,
 } from "@/modules/online-checkin/data/guestPage";
 import { loadGoogleSignIn } from "@/modules/online-checkin/googleSignIn";
+import { IdPhotoInputs, type ChosenPhotos } from "@/modules/online-checkin/IdPhotoInputs";
+import { idPhotoNotice } from "@/modules/online-checkin/idPhotoNotice";
+import { shrinkPhoto } from "@/modules/online-checkin/shrinkPhoto";
 import { GENDERS, LABELS, PURPOSES } from "@/modules/online-checkin/formIII";
 import { privacyNoticeFor } from "@/modules/online-checkin/privacyNotice";
 import { BillPrint } from "@/modules/finance";
@@ -383,6 +386,7 @@ function Behind(
         <StatusPill tone="success">Verified on this phone</StatusPill>
       </div>
       <DetailsSection token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
+      <IdPhotoSection token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
       <BillSection token={token} onUnlockGone={onUnlockGone} />
       {/* Only what this hotel has switched on (D21-63). */}
       {view.offers.length > 0 && (
@@ -610,6 +614,128 @@ function DetailsSection(
                 Cancel
               </Button>
             )}
+            {send.error && !unlockGone(send.error) && (
+              <p className="text-sm text-brand-red-700">{messageFrom(send.error)}</p>
+            )}
+          </form>
+        )}
+      </CardBody></Card>
+    </section>
+  );
+}
+
+/* ── A photo of their ID (D27-207 to D27-212) ────────────────────────
+   Optional, and only once the details are sent: it is part of that
+   submission, for the desk to check against the real ID. The notice and
+   the tick come BEFORE the file button (`idPhotoNotice.ts`, approved by
+   the owner), Aadhaar's rule among them.
+
+   ⚠ THE GUEST SENDS AND NEVER READS BACK. The chosen photo is shown from
+   this phone before it goes; afterwards the page knows only that one is
+   there and since when, or that the desk removed it and why. Nothing of
+   it is kept on this phone.
+
+   Drawn only where the hotel takes them (its password is on the server)
+   and only when there is something to say. */
+function IdPhotoSection(
+  { token, hotel, onUnlockGone }:
+  { token: string; hotel: string; onUnlockGone: () => void },
+) {
+  const qc = useQueryClient();
+  /* The details' own state (the same read as the section above): a photo
+     may be added the moment they are sent, so this asks again when that
+     changes. */
+  const details = useQuery({
+    queryKey: ["guest-behind", token, "details"],
+    queryFn: () => getDetails(token),
+    retry: false,
+  });
+  const state = useQuery({
+    queryKey: ["guest-behind", token, "id-photo", details.data?.sent?.status ?? "none"],
+    queryFn: () => getIdPhoto(token),
+    retry: false,
+  });
+
+  const [chosen, setChosen] = useState<ChosenPhotos>({ front: null, back: null });
+  const [agreed, setAgreed] = useState(false);
+  const [again, setAgain] = useState(false);
+  const send = useMutation({
+    mutationFn: async () => sendIdPhoto(token, {
+      front: await shrinkPhoto(chosen.front!),
+      back: chosen.back ? await shrinkPhoto(chosen.back) : null,
+    }),
+    onSuccess: async () => {
+      setChosen({ front: null, back: null });
+      setAgreed(false);
+      setAgain(false);
+      await qc.invalidateQueries({ queryKey: ["guest-behind", token, "id-photo"] });
+    },
+  });
+  useUnlockGone(state.error ?? send.error, onUnlockGone);
+
+  const it = state.data;
+  if (!it?.offered || (!it.maySend && !it.sent && !it.removed)) return null;
+  const notice = idPhotoNotice(hotel, it.contact);
+  const asking = it.maySend && (!it.sent || again);
+
+  return (
+    <section className={SECTION} data-id-photo>
+      <h2 className={cn(H2, "mb-3")}>{notice.heading}</h2>
+      <Card><CardBody>
+        {it.sent && !asking && (
+          <div className="text-sm text-grey-600">
+            <p className="text-base text-ink-900">
+              {it.sent.sides.includes("back") ? "Front and back sent" : "Photo sent"}
+            </p>
+            <p className="mt-1">
+              {dateTime(it.sent.at)}. {it.maySend
+                ? "The desk will check it against your ID when you arrive."
+                : "The desk has checked your details. Nothing more is needed."}
+            </p>
+            {it.maySend && (
+              <Button variant="secondary" className="mt-3.5 w-full" onClick={() => setAgain(true)}>
+                Send a different photo
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* The desk's reason, in the door's words. */}
+        {it.removed && !it.sent && (
+          <p className={cn("text-sm text-brand-red-700", asking && "mb-3")}>{it.removed}</p>
+        )}
+
+        {asking && (
+          <form
+            onSubmit={(e) => { e.preventDefault(); send.mutate(); }}
+            className="flex flex-col gap-3"
+          >
+            {/* THE NOTICE, before the first button. */}
+            <dl className="rounded-lg bg-grey-100 px-3.5 py-3 text-sm flex flex-col gap-2" data-id-photo-notice>
+              {notice.points.map((p) => (
+                <div key={p.label}>
+                  <dt className="font-medium text-ink-900">{p.label}</dt>
+                  <dd className="text-grey-600">{p.text}</dd>
+                </div>
+              ))}
+            </dl>
+            <IdPhotoInputs value={chosen} onChange={setChosen} disabled={send.isPending} />
+            <label className="flex items-start gap-2.5 text-sm text-ink-900 pointer-coarse:min-h-11 cursor-pointer">
+              <input
+                type="checkbox" className="mt-0.5 size-4 accent-brand-orange cursor-pointer"
+                checked={agreed} onChange={(e) => setAgreed(e.target.checked)}
+              />
+              {notice.agree}
+            </label>
+            <Button type="submit" variant="secondary" disabled={send.isPending || !chosen.front || !agreed}>
+              {send.isPending ? "Sending…" : "Send the photo"}
+            </Button>
+            {again && (
+              <Button type="button" variant="ghost" onClick={() => { setAgain(false); setChosen({ front: null, back: null }); }}>
+                Cancel
+              </Button>
+            )}
+            <p className="text-sm text-grey-600">{notice.skip}</p>
             {send.error && !unlockGone(send.error) && (
               <p className="text-sm text-brand-red-700">{messageFrom(send.error)}</p>
             )}

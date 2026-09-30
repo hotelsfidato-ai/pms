@@ -218,6 +218,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/online-checkin/requests/:id`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`POST ${H}/online-checkin/rooms/:roomId/card`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`POST ${H}/online-checkin/cards`]: own("routes/guestDoor.ts: DESK_ROLES"),
+  /* A guest's ID photo (D27-207 to D27-212): removed by the desk while its
+     details wait, by the owner, Admin or GM once kept; added at check-in by
+     the desk. Asked in the route, on every call. */
+  [`POST ${H}/online-checkin/id-photos/:id/remove`]: own("routes/guestDoor.ts: DESK_ROLES while the details wait, then KEEPER_ROLES"),
+  [`POST ${H}/stays/:id/id-photo`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`POST ${H}/attachments`]: BILL_PHOTO,
   [`POST ${H}/attachments/:id/mirrored`]: MIRROR,
 
@@ -600,6 +605,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* The details guests sent from their own page: asked in the route. */
   [`GET ${H}/online-checkin`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`GET ${H}/online-checkin/messages`]: own("routes/guestDoor.ts: DESK_ROLES"),
+  /* A guest's ID photo itself, and the list of kept ones. */
+  [`GET ${H}/online-checkin/id-photos`]: own("routes/guestDoor.ts: KEEPER_ROLES, a narrowing of DESK_ROLES"),
+  [`GET ${H}/online-checkin/id-photos/:id`]: own("routes/guestDoor.ts: DESK_ROLES while the details wait, then KEEPER_ROLES"),
   [`GET ${H}/guest-messages`]: own("guest-messaging/messages.ts: VIEW_ROLES, `customer` view (D27-144)"),
   [`GET ${H}/reviews`]: own("reputation/reputation.ts: VIEW_ROLES"),
   /* D27-170: whoever sees guests sees the leads app's leads, read live. */

@@ -1,0 +1,533 @@
+{
+  "name": "PMS ID photos · Drive (CRS)",
+  "nodes": [
+    {
+      "name": "PMS photo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "webhookId": "1928d7ab-ae78-4906-bab9-c697a95d81a3",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pms-id-photos",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "083efe6e-a823-4d91-805e-68f332660c9b",
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Read the request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// PMS → CRS: \"Read the request\"                        (workflow: PMS ID photos · Drive)\n// Mode: Run Once for All Items.\n//\n// The PMS keeps a guest's ID photo in Google Drive, ENCRYPTED (D27-209). What\n// arrives here is already a password-protected zip: this workflow never sees\n// a photo or the password. It is asked three things: store a file, fetch one\n// back, delete one.\n//\n// ── THE OWNER'S SETTINGS: edit these, nothing below them ────────────────────\n// Each PMS hotel code → the id of ITS folder inside \"ID photos\" in Drive.\n// Open the folder in Drive: the id is the last part of its address, after\n// /folders/. A hotel with no folder id here is refused.\nconst HOTELS = {\n  \"AMR\": \"\",\n  \"GLM\": \"\",\n};\n// ─────────────────────────────────────────────────────────────────────────────\n\nconst m = $input.first().json.body ?? {};\nconst stop = (statusCode, error) => [{ json: { stop: true, statusCode, answer: { ok: false, error } } }];\n\nconst folderId = HOTELS[m.hotel];\nif (!folderId) return stop(422, `Hotel ${m.hotel ?? \"-\"} has no folder in this workflow's HOTELS list.`);\n\nif (m.action === \"store\") {\n  // Named by the PMS's own record and nothing else: no guest, no booking.\n  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.zip$/.test(m.name ?? \"\")) {\n    return stop(400, \"Not a file name the PMS makes.\");\n  }\n  if (typeof m.base64 !== \"string\" || m.base64.length < 100 || !/^[A-Za-z0-9+/]+=*$/.test(m.base64)) {\n    return stop(400, \"No file was sent.\");\n  }\n  // ONLY AN ENCRYPTED ZIP IS STORED. A zip whose first file is AES-encrypted\n  // says so in its first bytes (method 99, the encrypted flag): a plain photo,\n  // or a plain zip, sent here by mistake is refused rather than kept readable.\n  const head = Buffer.from(m.base64.slice(0, 16), \"base64\");\n  if (head.length < 10 || head.readUInt32LE(0) !== 0x04034b50 || (head.readUInt16LE(6) & 1) !== 1 || head.readUInt16LE(8) !== 99) {\n    return stop(400, \"Only the PMS's encrypted bundles are stored here.\");\n  }\n  return [{\n    json: { stop: false, store: true, action: \"store\", folderId, name: m.name },\n    binary: { data: { data: m.base64, mimeType: \"application/zip\", fileName: m.name } },\n  }];\n}\n\nif (m.action === \"fetch\" || m.action === \"delete\") {\n  if (!/^[A-Za-z0-9_-]{10,100}$/.test(m.fileId ?? \"\")) return stop(400, \"Not a Drive file id.\");\n  const file = `https://www.googleapis.com/drive/v3/files/${m.fileId}`;\n  return [{\n    json: {\n      stop: false, store: false, action: m.action, folderId, fileId: m.fileId,\n      file, whereUrl: `${file}?fields=id,parents,trashed`,\n    },\n  }];\n}\n\nreturn stop(400, \"The action is store, fetch or delete.\");\n"
+      },
+      "id": "91162221-d2ca-4465-8fdd-6d273485d51d",
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "name": "Stop here?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "fa6c57b0-e656-4c4c-9bcc-ed72fd3d32cd",
+              "leftValue": "={{ $json.stop }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0913ff58-5c5b-4f9a-832a-b24f4659f4ed",
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "name": "Store?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "dc89a72e-e606-4446-840b-788a9d9a0015",
+              "leftValue": "={{ $json.store }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "191ee2c8-d327-480d-b1d3-77a0c909c8c5",
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "name": "Save to Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "parameters": {
+        "inputDataFieldName": "data",
+        "name": "={{ $json.name }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $json.folderId }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "b830946a-5aa6-4ece-9deb-9e99658eb8df",
+      "position": [
+        960,
+        -160
+      ]
+    },
+    {
+      "name": "Stored",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// PMS → CRS: \"Stored\"\n// Mode: Run Once for All Items.\n//\n// Input: the Drive node's answer. The PMS keeps the file's id, and nothing\n// else tells it where the photo is.\nconst file = $input.first().json;\nif (!file.id) return [{ json: { statusCode: 502, answer: { ok: false, error: \"Drive gave no file id.\" } } }];\nreturn [{ json: { statusCode: 200, answer: { ok: true, fileId: file.id } } }];\n"
+      },
+      "id": "47b33c2c-5cc2-4e9f-850b-97d5ab994743",
+      "position": [
+        1200,
+        -160
+      ]
+    },
+    {
+      "name": "Where is it",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.whereUrl }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "0f469991-665b-4740-a151-ea638f58c791",
+      "position": [
+        960,
+        160
+      ]
+    },
+    {
+      "name": "One of ours?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// PMS → CRS: \"One of ours?\"\n// Mode: Run Once for All Items.\n//\n// Input: Drive's own record of the file (HTTP Request, Never Error on).\n//\n// ⚠ ONLY A FILE IN THIS HOTEL'S OWN FOLDER is fetched or deleted. The secret\n// on this workflow's address must not be a way to read or remove anything\n// else in the Drive.\nfunction parse(body) {\n  if (typeof body !== \"string\") return body ?? {};\n  try { return JSON.parse(body); } catch { return {}; }\n}\n\nconst req = $(\"Read the request\").first().json;\nconst res = $input.first().json;\nconst answer = (statusCode, body) => [{ json: { stop: true, statusCode, answer: body } }];\n\nif (res.statusCode === 404) {\n  // Already gone is what a delete wants; a fetch has nothing to give.\n  return req.action === \"delete\"\n    ? answer(200, { ok: true, deleted: true })\n    : answer(404, { ok: false, error: \"No such file in Drive.\" });\n}\nif (res.statusCode !== 200) return answer(502, { ok: false, error: `Drive answered ${res.statusCode}.` });\n\nconst file = parse(res.body);\nif (!Array.isArray(file.parents) || !file.parents.includes(req.folderId) || file.trashed === true) {\n  return answer(403, { ok: false, error: \"That file is not one of this hotel's ID photos.\" });\n}\nreturn [{ json: { ...req, fetch: req.action === \"fetch\" } }];\n"
+      },
+      "id": "2c12bd5b-9ec6-425a-9415-0a8980772b0f",
+      "position": [
+        1200,
+        160
+      ]
+    },
+    {
+      "name": "Not ours?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "558bc886-6fb9-4fbc-bb8e-9e9d2ad8c44b",
+              "leftValue": "={{ $json.stop }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a04f9cda-18d9-4cf3-b473-47c5fe7e0901",
+      "position": [
+        1440,
+        160
+      ]
+    },
+    {
+      "name": "Fetch?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "857e04af-130b-4250-87aa-3c63ea030907",
+              "leftValue": "={{ $json.fetch }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1156354e-fb58-4eec-9a20-44055ce609da",
+      "position": [
+        1680,
+        160
+      ]
+    },
+    {
+      "name": "Download",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.file }}?alt=media",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "id": "e74e13f7-10c2-4eb5-b87c-07ec87f26500",
+      "position": [
+        1920,
+        80
+      ]
+    },
+    {
+      "name": "Fetched",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// PMS → CRS: \"Fetched\"\n// Mode: Run Once for All Items.\n//\n// Input: the file, as binary \"data\" (HTTP Request, response format File).\n// It goes back to the PMS as it was stored: still encrypted.\nconst bytes = await this.helpers.getBinaryDataBuffer(0, \"data\");\nreturn [{ json: { statusCode: 200, answer: { ok: true, base64: bytes.toString(\"base64\") } } }];\n"
+      },
+      "id": "c3e64abd-76ab-4f76-8405-238154b1e389",
+      "position": [
+        2160,
+        80
+      ]
+    },
+    {
+      "name": "Delete",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "DELETE",
+        "url": "={{ $json.file }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "572e19e6-58d5-403c-9c38-e63bbcc00df1",
+      "position": [
+        1920,
+        320
+      ]
+    },
+    {
+      "name": "Deleted",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// PMS → CRS: \"Deleted\"\n// Mode: Run Once for All Items.\n//\n// Input: Drive's answer to the delete (HTTP Request, Never Error on). 204 is\n// done; 404 is already gone. Anything else is said, so the PMS writes down\n// that the file is still there and a manager tries again.\nconst res = $input.first().json;\nif (res.statusCode === 204 || res.statusCode === 200 || res.statusCode === 404) {\n  return [{ json: { statusCode: 200, answer: { ok: true, deleted: true } } }];\n}\nreturn [{ json: { statusCode: 502, answer: { ok: false, error: `Drive answered ${res.statusCode} to the delete.` } } }];\n"
+      },
+      "id": "3b3f26b8-eac1-423f-835d-ceb36356127a",
+      "position": [
+        2160,
+        320
+      ]
+    },
+    {
+      "name": "Answer the PMS",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.answer }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode }}"
+        }
+      },
+      "id": "84a35f5b-c884-4d84-b072-5ab36c1b2698",
+      "position": [
+        2400,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "PMS photo": {
+      "main": [
+        [
+          {
+            "node": "Read the request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the request": {
+      "main": [
+        [
+          {
+            "node": "Stop here?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stop here?": {
+      "main": [
+        [
+          {
+            "node": "Answer the PMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Store?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store?": {
+      "main": [
+        [
+          {
+            "node": "Save to Drive",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Where is it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Drive": {
+      "main": [
+        [
+          {
+            "node": "Stored",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stored": {
+      "main": [
+        [
+          {
+            "node": "Answer the PMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Where is it": {
+      "main": [
+        [
+          {
+            "node": "One of ours?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One of ours?": {
+      "main": [
+        [
+          {
+            "node": "Not ours?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Not ours?": {
+      "main": [
+        [
+          {
+            "node": "Answer the PMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch?": {
+      "main": [
+        [
+          {
+            "node": "Download",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download": {
+      "main": [
+        [
+          {
+            "node": "Fetched",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetched": {
+      "main": [
+        [
+          {
+            "node": "Answer the PMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete": {
+      "main": [
+        [
+          {
+            "node": "Deleted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deleted": {
+      "main": [
+        [
+          {
+            "node": "Answer the PMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {},
+  "tags": []
+}

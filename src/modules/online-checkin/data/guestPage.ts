@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { upload } from "@/modules/online-checkin/data/upload";
 import type { StayBill } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -214,3 +215,34 @@ export const makeRequest = (
     method: "POST",
     body: JSON.stringify(request),
   }));
+
+/* ── The ID photo (D27-207 to D27-212) ────────────────────────────────
+   Optional, after the details are sent. The guest SENDS and never reads
+   back: the door tells this page only that a photo is there and since
+   when, or that the desk removed it and why. */
+export interface IdPhotoState {
+  /** Whether this hotel takes ID photos at all. */
+  offered: boolean;
+  /** Only while the details wait for the desk. */
+  maySend: boolean;
+  /** The hotel's own number, for the notice. */
+  contact: string | null;
+  sent: { sides: ("front" | "back")[]; at: string } | null;
+  /** The desk's reason, as the door words it for the guest. */
+  removed: string | null;
+}
+
+export const getIdPhoto = (token: string) =>
+  api<IdPhotoState>(at(token, "/id-photo"), withUnlock(token));
+
+/** NOT THROUGH `api()`, which always sends JSON: a photo goes as a form.
+    It is called only after the guest has ticked the consent, and says so. */
+export async function sendIdPhoto(
+  token: string, photos: { front: Blob; back: Blob | null },
+): Promise<{ sent: boolean }> {
+  const form = new FormData();
+  form.append("front", photos.front, "front");
+  if (photos.back) form.append("back", photos.back, "back");
+  form.append("agreed", "yes");
+  return upload<{ sent: boolean }>(at(token), "/id-photo", form, withUnlock(token).headers);
+}

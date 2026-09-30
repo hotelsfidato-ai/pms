@@ -11,19 +11,26 @@ and D21-6 to D21-19, D21-25, D21-29, D21-59 to D21-63, D21-72, D21-75
 
 **30 September (D27-207, D27-210):** three ways to prove it is you - a code
 on WhatsApp, a code by email, Continue with Google - and nothing sent until
-the guest chooses. **Not built yet:** the ID photo (decided, D27-207 to
-D27-210: encrypted, kept in Drive; its own stage). **Not built, on
-purpose:** paying online, choosing a room.
+the guest chooses. **And the ID photo (D27-207 to D27-212):** optional on
+the guest's page, addable by the desk at check-in, encrypted with the
+hotel's own password and kept in Google Drive - never on this server.
+**Not built, on purpose:** paying online, choosing a room.
 
 ```
 src/modules/online-checkin/        the guest's page, the desk's screen, their data and tests
-api/src/routes/guestDoor.ts        the door (the brief gives this lane that file)
-db/migrations/121_…, 124_…, 167_…  everything behind the code; the guest's bill; the three ways in
-OWNER-STEPS.md                     the owner's clicks: the email code, the Google client ID
+api/src/routes/guestDoor.ts        the door, and the desk's routes (the brief gives this lane that file)
+api/src/routes/idPhotos.ts         everything that touches a photo: the checks, and put · get · remove
+api/src/aesZip.ts                  the encrypted zip 7-Zip opens, written and read here
+deploy/n8n/pms-id-photos-crs.json  the Drive workflow: store, fetch, delete - ciphertext only
+db/migrations/121_…, 124_…, 167_…  everything behind the code; the guest's bill; the three ways in; where a photo is
+OWNER-STEPS.md                     the owner's clicks: the email code, the Google client ID, ID photos
 ```
 
 Server settings, names only: `GOOGLE_CLIENT_ID` (public; unset, no Google
-button). Codes need the sending settings (`deploy/n8n/IMPORT.md`).
+button). `ID_PHOTO_N8N_URL`, `ID_PHOTO_N8N_SECRET` and one
+`ID_PHOTO_PASSWORD_<CODE>` per hotel (secrets; without them that hotel's
+upload is not offered). Codes need the sending settings
+(`deploy/n8n/IMPORT.md`).
 
 ---
 
@@ -78,7 +85,29 @@ put back (CHANGELOG, 21 September).
 6. **Nothing a guest types reaches the legal register without a person
    (D21-8).** Their details are a submission; a clerk confirms them against
    the ID and only then are they written to `guest_documents`, under the
-   clerk's own session.
+   clerk's own session. The ID photo is a submission too: it never reaches
+   `guest_documents`, Form C or Form III.
+7. **The guest sends a photo and never reads one back, and no photo is ever
+   on this server (D27-207 to D27-212).** The upload is behind the code, and
+   the link, the knocks and this phone's unlock are checked BEFORE a byte of
+   the body is read. Only a JPEG or a PNG, by the file's own bytes; 4 MB a
+   photo, 9 MB an upload, ten an hour a link; the guest's tick; a JPEG's
+   location stripped. It is sealed with that hotel's password
+   (`ID_PHOTO_PASSWORD_<CODE>`) into an AES-256 zip (`api/src/aesZip.ts`) and
+   stored in Drive through its own workflow; the row keeps the Drive file's
+   id and the sha256 of the ciphertext, nothing of the image. No route on
+   the guest's door returns a photo, its name or where it is. A replaced
+   photo is deleted from Drive at once. Drive down: "try again shortly", and
+   nothing is kept anywhere. **At the desk** the image is fetched, checked
+   against its hash and decrypted in memory: reception while its details
+   wait; once kept (confirmed, set aside, or added at the desk) the owner,
+   an administrator and the GM only. Every view is written down
+   (`guest_id_photo_views`); a removal records who and why; a Drive delete
+   that failed shows "not yet deleted" with Try again.
+   ⚠ **`deploy/nginx.conf` passes these three paths straight through
+   (`proxy_request_buffering off`, `proxy_max_temp_file_size 0`)**: by
+   default nginx writes a body or an answer of this size to a temporary
+   file, which would be the photo, unencrypted, on this server's disk.
 
 ## Screens
 
@@ -179,6 +208,12 @@ reception's menu for this (the owner, 24 September).
 | GET | `/api/hotels/:code/online-checkin/messages` | staff | messages to the desk: one booking's (`?reservation=`, handled ones too) or every booking's unread |
 | POST | `/api/hotels/:code/online-checkin/rooms/:roomId/card` | staff | a new card for a room; the old one dies |
 | POST | `/api/hotels/:code/online-checkin/cards` | staff | a new card for every room |
+| GET | `/api/guest/:token/id-photo` | **refused** | whether a photo is there and since when, or that the desk removed it and why; whether the hotel takes them. Never the image |
+| POST | `/api/guest/:token/id-photo` | **refused** | a form: `front`, `back` (optional), `agreed=yes`. Checked, encrypted, stored in Drive; replaces the one before |
+| GET | `/api/hotels/:code/online-checkin/id-photos/:id` | staff | the photo, decrypted in memory: desk roles while its details wait, then owner, Admin, GM. The view is recorded |
+| POST | `/api/hotels/:code/online-checkin/id-photos/:id/remove` | staff | remove with a reason (the desk's three while waiting; a keeper's own words once kept); also "Try again" for a Drive delete that failed |
+| GET | `/api/hotels/:code/online-checkin/id-photos` | staff | "ID photos kept": owner, Admin, GM |
+| POST | `/api/hotels/:code/stays/:id/id-photo` | staff | the desk adds one at check-in (D27-210): desk roles, the same checks and the same `put` |
 
 Staff routes are for owner, admin, GM, hotel manager and reception
 (`DESK_ROLES`); anybody else is refused with a sentence naming who may.
@@ -208,6 +243,15 @@ signature, MEMORY 317).
 | `guest_unlocks` | this phone's unlock, hashed, for one link and one stay, an hour |
 | `guest_detail_submissions` | what a guest typed, waiting for a clerk; Aadhaar whole (D21-17) |
 | `guest_requests` | a spa or laundry request, or a message to the desk (kind `desk`, 132), open / done / declined; open is unread |
+| `guest_id_photos` (167) | WHERE a guest's ID photo is, never the photo: one row per encrypted bundle - hotel and its code, stay, guest, submission, who added it (the guest's link or a clerk), sides, the notice version agreed to, `pending` / `stored` / `removed`, the Drive file id, the ciphertext's sha256 and size, who removed it and why, `drive_delete_failed_at`. Only a `pending` row can be deleted |
+| `guest_id_photo_views` (167) | one row each time a member of staff opens a photo: who, when |
+
+**The guest's photo functions (167)**, each asking `app.guest_unlocked`
+itself: `guest_id_photo_begin` (the pending row, only while details wait),
+`guest_id_photo_stored` (Drive has it; hands back the bundle it replaces),
+`guest_id_photo_abandon`, `guest_id_photo_delete_failed`,
+`guest_id_photo_state`. The desk's side is ordinary staff SQL under row
+security; WHICH staff is the route's rule.
 
 **The bill (D21-10, migration 124):** `app.guest_bill(token_hash,
 unlock_hash)` is one line — finance's `app.stay_bill` for the stay
@@ -278,9 +322,19 @@ bash db/tests/run.sh
 bash db/tests/rerun.sh          # this lane added a migration: it must replay twice
 ```
 
-Guards: `onlineCheckin.test.tsx` (the screen), `api/test/guestDoor.test.ts`
-and `api/test/guestDoorBehindTheCode.test.ts` (the door), and the core's
+Guards: `onlineCheckin.test.tsx` and `idPhoto.test.tsx` (the screens),
+`api/test/guestDoor.test.ts` and `api/test/guestDoorBehindTheCode.test.ts`
+(the door), `api/test/guestIdPhoto.test.ts` (the photo, against a stand-in
+for the Drive workflow), `api/test/aesZip.test.ts` (the encrypted zip: a
+round trip, and against Windows' own tar both ways),
+`api/test/idPhotoWorkflow.test.ts` (the workflow's own code), and the core's
 `boundaries`, `migrationNumbers`, `navigation` and `primaryAction` tests.
+
+**Exported for other services (`index.ts`):** `AddIdPhotoAtDesk` -
+`<AddIdPhotoAtDesk stayId={reservationId} />` inside a `/h/:code/…` screen;
+front desk's check-in and the stay panel draw it (the master mounts it). It
+shows itself only to the desk's roles, and says so where the hotel's ID
+photos are off.
 
 ## Requests from other services
 
