@@ -131,6 +131,8 @@ export function FolioPanel({
         onChanged={refresh}
       />
 
+      <ChargesToCome hotelId={hotelId} stay={stay} lines={all} balance={billed} />
+
       <div className="flex flex-wrap gap-2">
         {mayCharge && (
           <AddChargeDialog
@@ -258,6 +260,59 @@ function BalanceHeader({ stay, balance }: { stay: Stay; balance: number | null }
         </p>
       </div>
     </div>
+  );
+}
+
+/* CHARGES TO COME (D27-187): the nights the night audit has not posted yet,
+   at the agreed rate with GST by the slab, a night rounded as the audit rounds
+   it. Shown, never posted, and the balance due once they are, the advance
+   counted, so the desk sees what is owed from check-in. A room line pays for
+   the "N nights" its words say, else one (the server's POSTING_NIGHTS). A
+   rate with no GST rule gives a dash, and then no balance (no default price). */
+function ChargesToCome({ hotelId, stay, lines, balance }: {
+  hotelId: string; stay: Stay; lines: BillLine[]; balance: number | null;
+}) {
+  const posted = lines
+    .filter((l) => l.category === "room" && l.kind === "charge" && !l.reversed && l.amount > 0)
+    .reduce((n, l) => n + Math.max(1, Number(/(\d+)\s+nights?\s*$/.exec(l.description)?.[1] ?? 1)), 0);
+  const nights = Math.max(0, stay.nights - posted);
+  const rate = stay.offeredTariff;
+  const shown = nights > 0 && !stay.isComplimentary && rate > 0
+    && ["due-in", "in-house", "due-out"].includes(stay.status);
+  const gst = useQuery({
+    queryKey: ["tax-rate", hotelId, "room", rate],
+    queryFn: () => getTaxRate(hotelId, "room", rate),
+    enabled: shown,
+  });
+  if (!shown) return null;
+
+  const paise = (n: number) => Math.round(n * 100);
+  const pct = gst.data?.rate;
+  const charges = paise(rate) * nights;
+  const tax = pct == null ? null : Math.round(paise(rate) * pct / 100) * nights;
+  const after = tax === null ? null : (paise(balance ?? 0) + charges + tax) / 100;
+
+  return (
+    <section className="rounded-lg border border-dashed border-grey-300 p-3 space-y-1.5" data-charges-to-come>
+      <p className="text-sm font-medium text-ink-900">
+        Charges to come <span className="font-normal text-grey-500">· not posted yet</span>
+      </p>
+      <div className="flex justify-between gap-4 text-sm text-grey-700">
+        <span>{nights} {nights === 1 ? "night" : "nights"} × {moneyPrecise(rate)}</span>
+        <span className="tabular">{moneyPrecise(charges / 100)}</span>
+      </div>
+      <div className="flex justify-between gap-4 text-sm text-grey-700">
+        <span>GST{pct == null ? "" : ` ${pct}%`}</span>
+        <span className="tabular">{tax === null ? DASH_MARK : moneyPrecise(tax / 100)}</span>
+      </div>
+      <div className="flex justify-between gap-4 pt-1.5 border-t border-grey-200 text-base font-semibold text-ink-900">
+        <span>Due once they are posted</span>
+        <span className="tabular">{after === null ? DASH_MARK : moneyPrecise(after)}</span>
+      </div>
+      <p className="text-xs text-grey-500">
+        The night audit posts each night. The advance and anything paid are counted.
+      </p>
+    </section>
   );
 }
 
