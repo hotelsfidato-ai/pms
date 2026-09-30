@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-30 · "Rate includes GST" covers the list price, as a tick beside the rate (D27-199)
+
+Branch `fix/booking-bill-30sep`, the booking and bill lane. **Shipped:** `api/src/modules/reservations/book.ts` - the split block moved to after the tariff branch, so with no rate typed the list price is the all-in figure too (₹3,699 = ₹3,522.86 + ₹176.14; `app.tariff_for` untouched; the gap refusal and the paisa rule as before). `pages/BookingPage.tsx` - the page splits the calendar's first-night price the same way and sends `rateIncludesGst` without a rate; the sliding Switch is the kit's Checkbox under the Rate field, whose column is wider so the tick sits on one line. **Proved (failing on the old code first):** inclusiveGst 6/6 (the list-price case), onePage 14/14. Screen, desktop and 390 px: ₹3,699 list with the tick reads ₹3,522.86 + ₹176.14, due ₹3,699.00; the booking kept 3,522.86.
+
 ## 2026-09-30 · Booking and bill: the owner's walk-through (D27-187, D27-193)
 
 Branch `fix/booking-bill-30sep` (from cp6 c01b150), copy `.claude\worktrees\zealous-wu-560bed`, database `fidato_s44`, API 8901, web 5301. Lane session "Booking and bill fixes"; the master answered D27-193.

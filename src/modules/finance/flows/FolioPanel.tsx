@@ -12,9 +12,9 @@ import {
   CHARGE_CATEGORIES, PAYMENT_METHODS,
   type ChargeCategory, type PaymentMethod,
 } from "@/lib/rules";
-import { getTaxRate } from "@/modules/finance/data/tax";
+import { getRateBeforeGst, getTaxRate } from "@/modules/finance/data/tax";
 import {
-  Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast, Textarea, fieldProps,
+  Button, Checkbox, Field, Input, NativeSelect, StatusPill, Tooltip, toast, Textarea, fieldProps,
   Dialog, DialogContent, DialogTrigger,
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuLabel,
@@ -114,10 +114,11 @@ export function FolioPanel({
      invoice work on the zero they always did, since nothing is owed. */
   const billed = balance.data ?? null;
   const due = billed ?? 0;
+  const toCome = useStayDue(hotelId, stay);
 
   return (
     <div className="space-y-5">
-      <BalanceHeader stay={stay} balance={billed} />
+      <BalanceHeader stay={stay} balance={billed} toCome={toCome} />
 
       <FolioStrip folios={folios} active={only} onPick={setOnly} />
 
@@ -131,7 +132,7 @@ export function FolioPanel({
         onChanged={refresh}
       />
 
-      <ChargesToCome hotelId={hotelId} stay={stay} lines={all} balance={billed} />
+      <ChargesToCome toCome={toCome} />
 
       <div className="flex flex-wrap gap-2">
         {mayCharge && (
@@ -217,7 +218,37 @@ export function FolioPanel({
 /** The mark for a figure nobody has — the same one the stay table prints. */
 const DASH_MARK = "-";
 
-function BalanceHeader({ stay, balance }: { stay: Stay; balance: number | null }) {
+function BalanceHeader({ stay, balance, toCome }: {
+  stay: Stay; balance: number | null; toCome: ToCome | null;
+}) {
+  /* WHILE CHARGES ARE TO COME, THE HEADLINE IS WHAT IS DUE WITH THEM COUNTED
+     (the owner's D27-199): the bill said "₹1,001 Overpaid" above a box saying
+     ₹2,882.95 was due. The posted balance alone is not what the guest owes
+     until the night audit has posted the night. */
+  if (toCome) {
+    const { after, received } = toCome;
+    const label = after === null || after > 0 ? "Due" : after < 0 ? "Overpaid" : "Settled";
+    return (
+      <div className="flex items-baseline justify-between gap-4 flex-wrap" data-bill-headline>
+        <div>
+          <p className="text-sm font-medium text-grey-600">{label}</p>
+          <p className={cn("text-2xl font-semibold tabular tracking-[-0.022em] mt-0.5",
+            after === null ? "text-grey-500" : after > 0 ? "text-danger" : after < 0 ? "text-info" : "text-success")}>
+            {after === null ? DASH_MARK : moneyPrecise(Math.abs(after))}
+          </p>
+          {received > 0 && (
+            <p className="text-sm text-grey-600 tabular mt-0.5">Received {moneyPrecise(received)}</p>
+          )}
+        </div>
+        <div className="text-right">
+          <StatusPill tone="neutral" dot>Charges to come</StatusPill>
+          <p className="text-2xs text-grey-500 tabular mt-1.5">
+            Room {stay.roomNumber} · {stay.reference}
+          </p>
+        </div>
+      </div>
+    );
+  }
   if (balance === null) {
     return (
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
@@ -268,10 +299,19 @@ function BalanceHeader({ stay, balance }: { stay: Stay; balance: number | null }
    it. Shown, never posted, and the balance due once they are, the advance
    counted, so the desk sees what is owed from check-in. A room line pays for
    the "N nights" its words say, else one (the server's POSTING_NIGHTS). A
-   rate with no GST rule gives a dash, and then no balance (no default price). */
-function ChargesToCome({ hotelId, stay, lines, balance }: {
-  hotelId: string; stay: Stay; lines: BillLine[]; balance: number | null;
-}) {
+   rate with no GST rule gives a dash, and then no balance (no default price).
+   Worked out once, for the headline and the box under the lines (D27-199). */
+export interface ToCome {
+  nights: number; rate: number; pct: number | null | undefined;
+  /** Rupees. `tax` and `after` are null where no GST rule covers the rate. */
+  charges: number; tax: number | null; after: number | null;
+  /** What has been received on this bill, reversals taken off. */
+  received: number;
+}
+
+function useChargesToCome(
+  hotelId: string, stay: Stay, lines: BillLine[], balance: number | null,
+): ToCome | null {
   const posted = lines
     .filter((l) => l.category === "room" && l.kind === "charge" && !l.reversed && l.amount > 0)
     .reduce((n, l) => n + Math.max(1, Number(/(\d+)\s+nights?\s*$/.exec(l.description)?.[1] ?? 1)), 0);
@@ -290,7 +330,34 @@ function ChargesToCome({ hotelId, stay, lines, balance }: {
   const pct = gst.data?.rate;
   const charges = paise(rate) * nights;
   const tax = pct == null ? null : Math.round(paise(rate) * pct / 100) * nights;
-  const after = tax === null ? null : (paise(balance ?? 0) + charges + tax) / 100;
+  return {
+    nights, rate, pct,
+    charges: charges / 100,
+    tax: tax === null ? null : tax / 100,
+    after: tax === null ? null : (paise(balance ?? 0) + charges + tax) / 100,
+    received: -lines.filter((l) => l.category === "payment").reduce((n, l) => n + paise(l.amount), 0) / 100,
+  };
+}
+
+/** What a stay owes with its charges to come counted, or null when none are
+    to come (D27-199). THE ONE FIGURE: the Bill tab's headline, its box and the
+    stay panel's foot all read this, from the Bill tab's own two reads (one
+    cache), so they cannot disagree. */
+export function useStayDue(hotelId: string, stay: Stay): ToCome | null {
+  const postings = useQuery({
+    queryKey: ["folio-postings", hotelId, stay.id],
+    queryFn: () => getFolioPostings(hotelId, stay.id),
+  });
+  const balance = useQuery({
+    queryKey: ["folio-balance", hotelId, stay.id],
+    queryFn: () => getFolioBalance(hotelId, stay.id),
+  });
+  return useChargesToCome(hotelId, stay, postings.data ?? [], balance.data ?? null);
+}
+
+function ChargesToCome({ toCome }: { toCome: ToCome | null }) {
+  if (!toCome) return null;
+  const { nights, rate, pct, charges, tax, after } = toCome;
 
   return (
     <section className="rounded-lg border border-dashed border-grey-300 p-3 space-y-1.5" data-charges-to-come>
@@ -299,11 +366,11 @@ function ChargesToCome({ hotelId, stay, lines, balance }: {
       </p>
       <div className="flex justify-between gap-4 text-sm text-grey-700">
         <span>{nights} {nights === 1 ? "night" : "nights"} × {moneyPrecise(rate)}</span>
-        <span className="tabular">{moneyPrecise(charges / 100)}</span>
+        <span className="tabular">{moneyPrecise(charges)}</span>
       </div>
       <div className="flex justify-between gap-4 text-sm text-grey-700">
         <span>GST{pct == null ? "" : ` ${pct}%`}</span>
-        <span className="tabular">{tax === null ? DASH_MARK : moneyPrecise(tax / 100)}</span>
+        <span className="tabular">{tax === null ? DASH_MARK : moneyPrecise(tax)}</span>
       </div>
       <div className="flex justify-between gap-4 pt-1.5 border-t border-grey-200 text-base font-semibold text-ink-900">
         <span>Due once they are posted</span>
@@ -550,17 +617,30 @@ export function ChangeRateDialog({
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const value = Number(rate);
+  /* "Includes GST" (D27-199), as on the booking page: the typed figure is
+     all-in and the server splits it - shown here before it is kept. */
+  const [inclusive, setInclusive] = useState(false);
+  const split = useQuery({
+    queryKey: ["before-gst", hotelId, value],
+    queryFn: () => getRateBeforeGst(hotelId, value),
+    enabled: open && inclusive && value > 0,
+  });
+  const s = inclusive && value > 0 ? split.data : undefined;
+  const refused = s && !s.ok ? s.reason : null;
+  const kept = s?.ok ? s.pre : value;
 
   const save = async () => {
     setBusy(true);
-    const res = await changeRate(hotelId, stay.id, { rate: value, reason: reason.trim() });
+    const res = await changeRate(hotelId, stay.id,
+      { rate: value, reason: reason.trim(), ...(inclusive ? { includesGst: true } : {}) });
     setBusy(false);
     if (!res.ok) return toast.error("Rate not changed", res.reason);
     const n = res.data?.corrected ?? 0;
+    const said = inclusive ? `${moneyPrecise(kept)} a night before GST` : `${money(value)} a night`;
     toast.success("Rate changed", n === 0
-      ? `${money(value)} a night, for every night not yet charged.`
-      : `${money(value)} a night; ${n} charged ${n === 1 ? "line" : "lines"} corrected.`);
-    setOpen(false); setRate(""); setReason("");
+      ? `${said}, for every night not yet charged.`
+      : `${said}; ${n} charged ${n === 1 ? "line" : "lines"} corrected.`);
+    setOpen(false); setRate(""); setReason(""); setInclusive(false);
     onDone?.();
   };
 
@@ -574,7 +654,7 @@ export function ChangeRateDialog({
           <div className="flex gap-2 w-full justify-end">
             <Button variant="secondary" onClick={() => setOpen(false)}>Keep it</Button>
             <Button variant="primary" loading={busy}
-              disabled={!(value > 0) || !reason.trim()}
+              disabled={!(value > 0) || !reason.trim() || refused !== null || (inclusive && !s)}
               onClick={() => void save()}>
               Change the rate
             </Button>
@@ -582,12 +662,25 @@ export function ChangeRateDialog({
         }
       >
         <div className="space-y-4">
-          <Field label="New rate a night" required hint="Before tax. The room's GST slab follows it.">
-            {(f) => (
-              <Input {...fieldProps(f)} numeric inputMode="decimal" value={rate}
-                onChange={(e) => setRate(e.target.value)} />
+          <div data-rate-inclusive>
+            <Field label="New rate a night" required
+              hint={inclusive ? "With GST. It is split by the room's GST slab before it is kept."
+                : "Before tax. The room's GST slab follows it."}>
+              {(f) => (
+                <Input {...fieldProps(f)} numeric inputMode="decimal" value={rate}
+                  onChange={(e) => setRate(e.target.value)} />
+              )}
+            </Field>
+            <Checkbox checked={inclusive} onCheckedChange={setInclusive} label="Includes GST" className="mt-2" />
+            {s?.ok && (
+              <p className="mt-1.5 text-sm text-grey-600" data-rate-split>
+                {s.total < value
+                  ? `${moneyPrecise(value)} can't split exactly: the bill will say ${moneyPrecise(s.total)} a night.`
+                  : `${moneyPrecise(s.pre)} a night + ${moneyPrecise(s.total - s.pre)} GST (${s.rate}%).`}
+              </p>
             )}
-          </Field>
+            {refused && <p className="mt-1.5 text-sm text-warning-dark" data-rate-split>{refused}</p>}
+          </div>
           <p className="text-sm text-grey-700 leading-relaxed">
             Nights already charged are corrected to it, with this reason - a closed
             day's on Closed days. Nights still to come are charged at it.

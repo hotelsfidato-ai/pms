@@ -3,7 +3,7 @@
    move in; see MODULE.md. */
 export { getFolio, listOpenFolios } from "./data/folios";
 export { getFolioBalance } from "./data/postings";
-export { FolioPanel, ChangeRateDialog } from "./flows/FolioPanel";
+export { FolioPanel, ChangeRateDialog, useStayDue } from "./flows/FolioPanel";
 export { TaxRulesCard } from "./flows/TaxRulesCard";
 /* The bill as it stands (D21-10): one definition on the server
    (app.stay_bill), one printed layout — the desk's and the guest's page's. */

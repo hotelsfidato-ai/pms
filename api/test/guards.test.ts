@@ -310,13 +310,17 @@ describe("a walk-in records where it came from", () => {
     }
   });
 
-  it("stores the segment, the source and the seller", async () => {
+  /* A WALK-IN IS THE ONE-PAGE BOOKING (D27-158): the booking on the Walk-in
+     channel, then front desk's check-in. The route that did both at once,
+     POST /walk-ins, went on 30 September; each rule it held is proved here
+     through the two calls a clerk's "Check in now" makes. */
+  const freeRoom = async () => {
     const db = await admin();
-    let room: string;
     try {
-      /* A room nobody is in, so the walk-in is not fighting the demo. */
-      const { rows } = await db.query<{ number: string }>(
-        `select rm.number from rooms rm
+      const { rows } = await db.query<{ number: string; type: string; today: string }>(
+        `select rm.number, rm.room_type_id::text as type,
+                app.business_date(h.id)::text as today
+           from rooms rm
            join hotels h on h.id = rm.hotel_id
           where h.code = '5EL'
             and not exists (
@@ -325,33 +329,63 @@ describe("a walk-in records where it came from", () => {
             and rm.housekeeping_status = 'clean'
           limit 1`);
       expect(rows[0], "the demo has no free room").toBeTruthy();
-      room = rows[0]!.number;
+      return rows[0]!;
     } finally {
       await db.end();
     }
+  };
 
-    const res = await post("/5EL/walk-ins", {
-      guestName: "Source Test Guest",
-      roomNumber: room, nights: 1, adults: 1, children: 0,
-      ratePlan: "CP", rackTariff: 4000, offeredTariff: 4000,
-      overrideReason: "", businessDate: "2026-08-25", user: "test",
-      idSkipReason: "Test fixture - FD-1 asks every walk-in for an ID or a reason",
+  const walkInSource = async () => {
+    const db = await admin();
+    try {
+      return (await db.query<{ id: string | null }>(
+        "select app.walk_in_source()::text as id")).rows[0]!.id;
+    } finally {
+      await db.end();
+    }
+  };
+
+  const book = async (
+    guestName: string, room: { type: string; today: string },
+    over: Record<string, unknown> = {},
+  ) => {
+    const next = new Date(`${room.today}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + 1);
+    return post("/5EL/bookings", {
+      guestName, checkIn: room.today, checkOut: next.toISOString().slice(0, 10),
+      bookingSourceId: await walkInSource(),
+      lines: [{ roomTypeId: room.type, mealPlan: "CP", adults: 1, rooms: 1, agreedRate: 4000 }],
+      ...over,
+    });
+  };
+
+  it("stores the segment, the source and the seller", async () => {
+    const room = await freeRoom();
+    const res = await book("Source Test Guest", room, {
       businessSource: "Sharma Travels",
       marketSegment: "Corporate",
       salesPerson: "R Patil",
       isSingleLady: true,
     });
     expect(res.status, await res.clone().text()).toBe(200);
-    made = ((await res.json()) as { data: { id: string } }).data.id;
+    made = ((await res.json()) as { bookings: { id: string }[] }).bookings[0]!.id;
+
+    const checkIn = await post(`/5EL/stays/${made}/check-in`, {
+      roomNumber: room.number,
+      earlyReason: "Test fixture - the arrival hour is not what this tests",
+      idSkipReason: "Test fixture - FD-1 asks every walk-in for an ID or a reason",
+    });
+    expect(checkIn.status, await checkIn.clone().text()).toBe(200);
 
     const check = await admin();
     try {
       const { rows } = await check.query<{
         business_source: string | null; market_segment: string | null;
         sales_person: string | null; is_single_lady: boolean; reference: string;
+        status: string;
       }>(
         `select business_source, market_segment, sales_person, is_single_lady,
-                reference
+                reference, status
            from reservations where id = $1`, [made]);
 
       /* RES-2: a walk-in's reference comes from app.next_reference, in the
@@ -361,16 +395,17 @@ describe("a walk-in records where it came from", () => {
       expect(rows[0]!.market_segment).toBe("Corporate");
       expect(rows[0]!.sales_person).toBe("R Patil");
       expect(rows[0]!.is_single_lady).toBe(true);
+      expect(rows[0]!.status).toBe("checked_in");
     } finally {
       await check.end();
     }
   });
 
   it("⚠ RECORDS THE WALK-IN CHANNEL - defect 242", async () => {
-    /* The booking form refused a booking with no channel; this route
-       saved one on every walk-in, and the stay list hid it by reading
-       "Walk-in" off the legacy column. The channel is the row, not the
-       label. */
+    /* The old walk-in route saved no channel, and the stay list hid it by
+       reading "Walk-in" off the legacy column. The channel is the row, not
+       the label. The one page picks the Walk-in source for a walk-in
+       (src/modules/reservations/onePage.test.tsx); the booking keeps it. */
     const db = await admin();
     try {
       const { rows } = await db.query<{
@@ -410,26 +445,6 @@ describe("a walk-in records where it came from", () => {
     }
   });
 
-  /* A room nobody is in, for the two refusals below. */
-  const freeRoom = async () => {
-    const db = await admin();
-    try {
-      const { rows } = await db.query<{ number: string }>(
-        `select rm.number from rooms rm
-           join hotels h on h.id = rm.hotel_id
-          where h.code = '5EL'
-            and not exists (
-              select 1 from room_assignments a
-               where a.room_id = rm.id and a.released_at is null)
-            and rm.housekeeping_status = 'clean'
-          limit 1`);
-      expect(rows[0], "the demo has no free room").toBeTruthy();
-      return rows[0]!.number;
-    } finally {
-      await db.end();
-    }
-  };
-
   const guestsNamed = async (name: string) => {
     const db = await admin();
     try {
@@ -442,24 +457,20 @@ describe("a walk-in records where it came from", () => {
   };
 
   it("refuses when no Walk-in channel is switched on, and writes nothing", async () => {
-    /* Saving the stay with no channel is the defect; refusing is what
-       the booking form does too. The clerk is told who can fix it. */
+    /* Saving the stay with no channel is the defect. A page opened before
+       the source was switched off still sends its id; the booking refuses. */
     const room = await freeRoom();
+    const walkIn = await walkInSource();
     const db = await admin();
     const { rows: off } = await db.query<{ id: string }>(
       `update booking_sources set is_active = false
         where kind = 'walk_in' and is_active returning id::text`);
     try {
-      const res = await post("/5EL/walk-ins", {
-        guestName: "No Channel Guest",
-        roomNumber: room, nights: 1, adults: 1, children: 0,
-        ratePlan: "CP", rackTariff: 4000, offeredTariff: 4000,
-        overrideReason: "", businessDate: "2026-08-25", user: "test",
-        idSkipReason: "Test fixture - FD-1 asks every walk-in for an ID or a reason",
-      });
+      const res = await book("No Channel Guest", room, { bookingSourceId: walkIn });
       expect(res.status).toBe(409);
       expect(((await res.json()) as { reason: string }).reason)
-        .toMatch(/no Walk-in booking source switched on/);
+        .toBe("That booking source is not on the list any more. A manager can "
+          + "switch it back on under Property setup → Booking sources.");
     } finally {
       await db.query(
         "update booking_sources set is_active = true where id = any($1::uuid[])",
@@ -470,22 +481,18 @@ describe("a walk-in records where it came from", () => {
   });
 
   it("⚠ A REFUSED WALK-IN LEAVES NO GUEST BEHIND - defect 243", async () => {
-    /* `withSession` commits a refusal like any other return. The rate
-       check sat under the guest insert, so a walk-in refused for having
-       no rate kept its guest — and guests_no_delete means that row could
-       never be removed. Every refusal now sits above the first write. */
+    /* `withSession` commits a refusal like any other return. The old
+       walk-in's rate check sat under the guest insert, so a refused walk-in
+       kept its guest — and guests_no_delete means that row could never be
+       removed. The booking refuses above its first write (RES-1). */
     const room = await freeRoom();
-    const res = await post("/5EL/walk-ins", {
-      guestName: "Refused Rate Guest",
-      roomNumber: room, nights: 1, adults: 1, children: 0,
-      ratePlan: "CP", rackTariff: 4000, offeredTariff: "not a number",
-      overrideReason: "", businessDate: "2026-08-25", user: "test",
-      idSkipReason: "Test fixture - FD-1 asks every walk-in for an ID or a reason",
+    const res = await book("Refused Party Guest", room, {
+      lines: [{ roomTypeId: room.type, mealPlan: "CP", adults: 20, rooms: 1, agreedRate: 4000 }],
     });
     expect(res.status).toBe(409);
     expect(((await res.json()) as { reason: string }).reason)
-      .toMatch(/no rate set/);
-    expect(await guestsNamed("Refused Rate Guest"),
+      .toMatch(/will not fit/);
+    expect(await guestsNamed("Refused Party Guest"),
       "the refusal kept the guest it had already written").toBe("0");
   });
 });

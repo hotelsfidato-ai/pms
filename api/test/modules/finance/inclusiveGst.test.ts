@@ -58,7 +58,7 @@ describe("the split", () => {
 });
 
 describe("a booking at an inclusive rate", () => {
-  const book = async (name: string, rate: number) => {
+  const book = async (name: string, rate: number | null) => {
     const [source] = await sql<{ id: string }>(
       "select id::text from booking_sources where is_active and kind = 'direct' order by name limit 1");
     const [type] = await sql<{ id: string; d: string; e: string }>(
@@ -71,7 +71,8 @@ describe("a booking at an inclusive rate", () => {
       body: JSON.stringify({
         guestName: `${tag} ${name}`, phone: "9812300003", checkIn: type!.d, checkOut: type!.e,
         bookingSourceId: source!.id,
-        lines: [{ roomTypeId: type!.id, adults: 2, rooms: 1, agreedRate: rate, rateIncludesGst: true }],
+        lines: [{ roomTypeId: type!.id, adults: 2, rooms: 1, rateIncludesGst: true,
+                  ...(rate === null ? {} : { agreedRate: rate }) }],
       }),
     });
   };
@@ -85,6 +86,23 @@ describe("a booking at an inclusive rate", () => {
               (agreed_rate + round(agreed_rate * app.gst_rate_or_null(hotel_id, 'room', agreed_rate) / 100, 2))::text as night
          from reservations where id = $1`, [id]);
     expect(r).toEqual({ rate: "3809.52", night: "4000.00" });
+  });
+
+  /* D27-199: with no rate typed, the LIST price is the all-in figure. The flag
+     was silently ignored: the list price was kept whole and GST added on top. */
+  it("splits the list price too when no rate is typed", async () => {
+    const res = await book("List", null);
+    expect(res.status, await res.clone().text()).toBe(200);
+    const id = ((await res.json()) as { bookings: { id: string }[] }).bookings[0]!.id;
+    const [r] = await sql<{ rate: string; night: string; list: string }>(
+      `select r.agreed_rate::text as rate,
+              (r.agreed_rate + round(r.agreed_rate * app.gst_rate_or_null(r.hotel_id, 'room', r.agreed_rate) / 100, 2))::text as night,
+              (select t.total::text from app.tariff_for(r.room_type_id, 'EP', r.check_in, 2, 0) t) as list
+         from reservations r where r.id = $1`, [id]);
+    expect(Number(r!.rate), "the rate kept is before GST").toBeLessThan(Number(r!.list));
+    /* To the paisa, or the nearest total not above it (D27-195). */
+    expect(Number(r!.list) - Number(r!.night)).toBeGreaterThanOrEqual(0);
+    expect(Number(r!.list) - Number(r!.night)).toBeLessThanOrEqual(0.011);
   });
 
   it("is refused in the slab gap, and nothing is written", async () => {
