@@ -9,8 +9,8 @@ import {
 import { cn } from "@/lib/cn";
 import { dateLong, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { toast, Button } from "@/components/ui";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, type MenuItem, type CashId } from "@/modules/pos/data/till";
+import { toast, Button, StatusPill } from "@/components/ui";
+import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, type MenuItem, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
@@ -223,6 +223,14 @@ export default function TerminalPage() {
         refresh();
       },
     });
+  };
+
+  /* The waiter carried it from the pass: served (D27-222). */
+  const take = async (lineId: string) => {
+    if (!orderId) return;
+    const res = await takeDishes(hotelId, orderId, [lineId]);
+    if (!res.ok) return toast.error("Not taken", res.reason);
+    refresh();
   };
 
   const strike = async (lineId: string, reason?: string) => {
@@ -763,12 +771,25 @@ export default function TerminalPage() {
                       </p>
                     )}
                     {/* Which dishes the kitchen already holds, so a second
-                        KOT visibly sends only what is new. */}
-                    {!l.voided && l.kotStatus !== "pending" && (
+                        KOT visibly sends only what is new. A Ready dish is
+                        the waiter's to fetch: Taken when it goes out
+                        (D27-221, D27-222). */}
+                    {!l.voided && l.kotStatus === "ready" ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <StatusPill tone="success">Ready</StatusPill>
+                        <button
+                          type="button"
+                          onClick={() => void take(l.id)}
+                          aria-label={`Taken: ${l.name}`}
+                          className="press h-11 px-4 rounded-full border border-grey-300 bg-white text-base font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer"
+                        >
+                          Taken
+                        </button>
+                      </div>
+                    ) : !l.voided && l.kotStatus !== "pending" && (
                       <p className="text-2xs text-grey-500 mt-0.5 pl-0.5">
                         {l.kotStatus === "sent" ? "with the kitchen"
                           : l.kotStatus === "preparing" ? "on the fire"
-                          : l.kotStatus === "ready" ? "at the pass"
                           : "served"}
                       </p>
                     )}

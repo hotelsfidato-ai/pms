@@ -115,7 +115,7 @@ afterAll(async () => {
 });
 
 describe("POS-1: the kitchen keeps food that is already paid for", () => {
-  it("a dish sent, then paid in cash, stays on the pass until it is served", async () => {
+  it("a dish sent, then paid, stays on the board until the kitchen says Ready (D27-221)", async () => {
     const o = await open();
     await add(o.id);
     await send(o.id);
@@ -125,9 +125,9 @@ describe("POS-1: the kitchen keeps food that is already paid for", () => {
     const pass = async () => ((await (await call(owner, "GET", "/kitchen")).json()) as {
       lines: { id: string; orderNo: string }[] }).lines;
     const [line] = await lines(o.id);
-    expect((await pass()).map((l) => l.id), "a paid dish vanished from the pass").toContain(line!.id);
+    expect((await pass()).map((l) => l.id), "a paid dish vanished from the board").toContain(line!.id);
 
-    const moved = await post(owner, `/kitchen/lines/${line!.id}/served`);
+    const moved = await post(owner, `/kitchen/lines/${line!.id}/ready`);
     expect(moved.status, await moved.clone().text()).toBe(200);
     expect((await pass()).map((l) => l.id)).not.toContain(line!.id);
   });

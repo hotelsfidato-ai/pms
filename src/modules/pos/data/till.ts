@@ -159,11 +159,6 @@ export interface KitchenLine {
       a drink — which is not course zero and must not sort ahead of the
       starters. */
   course: number | null;
-  /** ⚠ HOW LONG IT HAS SAT UNDER THE LAMP. Null until the dish is
-      ready, because a dish still cooking is not waiting on anybody.
-      This is the number that ruins food, and nothing showed it before
-      migration 080. */
-  atPassSeconds: number | null;
   /** Struck after the kitchen already had it — stop cooking. */
   cancelled: boolean;
   /** Why, in the manager's words (D27-119). */
@@ -425,6 +420,14 @@ export function addLine(
     { itemId, qty, note, variationId, addonIds, moreChoiceIds });
 }
 
+/** The waiter carried these Ready dishes out: they are served (D27-222).
+    Only a ready dish; the server says why not. */
+export function takeDishes(
+  hotelId: string, orderId: string, lineIds: string[],
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/taken`, { lineIds });
+}
+
 /** `reason` is required once the kitchen has the dish, and only a manager
     may strike it then (D27-119); the server says so if not. */
 export function voidLine(
@@ -610,7 +613,7 @@ export async function getKitchen(hotelId: string): Promise<KitchenLine[]> {
 }
 
 export async function moveKitchenLine(
-  hotelId: string, lineId: string, to: "preparing" | "ready" | "served",
+  hotelId: string, lineId: string, to: "preparing" | "ready",
 ): Promise<{ ok: boolean; reason?: string }> {
   try {
     await api(`/api/hotels/${hotelId}/kitchen/lines/${lineId}/${to}`,
@@ -959,6 +962,10 @@ export interface FloorTable {
       the room for. Null when nothing is on it. */
   minutes: number | null;
   payable: number | null;
+  /** Dishes the kitchen made Ready that nobody has Taken (D27-221), and
+      their lines. Absent on a floor cached before 1 October: none. */
+  ready?: number;
+  readyIds?: string[];
 }
 
 export interface FloorSection {

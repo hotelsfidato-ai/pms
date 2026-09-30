@@ -3141,12 +3141,23 @@ till.get("/:code/till/floor", async (c) => {
       section_id: string; section: string; table_id: string; label: string;
       seats: number | null; row_no: number; col_no: number;
       order_id: string | null; order_no: string | null; state: string;
-      minutes: number | null; payable: string | null;
+      minutes: number | null; payable: string | null; ready: string;
+      ready_ids: string[];
     }>(
       `select section_id::text, section, table_id::text, label, seats,
               row_no, col_no, order_id::text, order_no, state, minutes,
-              payable::text
-         from app.pos_floor($1)`,
+              payable::text,
+              /* Dishes the kitchen has made Ready and nobody has Taken
+                 (D27-221): what the waiter walks to the pass for. Dishes,
+                 not their sides. */
+              (select coalesce(sum(l.qty), 0) from pos_order_lines l
+                where l.order_id = f.order_id and l.kot_status = 'ready'
+                  and not l.voided and l.parent_line_id is null)::text as ready,
+              /* The same dishes, for the badge's one-tap Taken (D27-222). */
+              array(select l.id::text from pos_order_lines l
+                     where l.order_id = f.order_id and l.kot_status = 'ready'
+                       and not l.voided and l.parent_line_id is null) as ready_ids
+         from app.pos_floor($1) f`,
       [outlet[0].id],
     );
 
@@ -3160,6 +3171,7 @@ till.get("/:code/till/floor", async (c) => {
         row: number; col: number;
         orderId: string | null; orderNo: string | null;
         state: string; minutes: number | null; payable: number | null;
+        ready: number; readyIds: string[];
       }[];
     }[] = [];
 
@@ -3178,6 +3190,8 @@ till.get("/:code/till/floor", async (c) => {
         state: r.state,
         minutes: r.minutes,
         payable: r.payable === null ? null : Number(r.payable),
+        ready: Number(r.ready),
+        readyIds: r.ready_ids,
       });
     }
 
@@ -4975,7 +4989,9 @@ till.post("/:code/till/orders/:id/kot/:no/printed", async (c) => {
 });
 
 /* ── The pass ─────────────────────────────────────────────────────────
-   Every line the kitchen holds, oldest first. Sorted by when it was
+   Every line the kitchen holds, oldest first. TWO STAGES (D27-221): a
+   dish is ordered or on the fire; once it is Ready it is the waiter's,
+   and leaves this board for Tables and the Terminal. Sorted by when it was
    SENT and not when it was rung up: a dish added to an old order still
    goes to the back of the queue, because that is when the kitchen
    learned about it.
@@ -4991,7 +5007,7 @@ till.get("/:code/kitchen", async (c) => {
       note: string | null; kot_status: string; waited: string;
       voided: boolean; was_sent_when_voided: boolean;
       void_reason: string | null;
-      prep_minutes: number | null; at_pass: string | null;
+      prep_minutes: number | null;
       course: number | null;
     }>(
       `select l.id::text, o.order_no, o.table_ref, o.order_type,
@@ -5002,15 +5018,6 @@ till.get("/:code/kitchen", async (c) => {
               /* What this dish SHOULD take, from 079. Null when nobody
                  has timed it - the pass shows a dash, not a zero. */
               app.prep_minutes(l.item_id) as prep_minutes,
-              /* HOW LONG IT HAS BEEN SITTING UNDER THE LAMP. Null until
-                 it is ready, because a dish still cooking is not late
-                 in this sense - it is being made. This is the number
-                 that ruins food and the one nothing showed before. */
-              case when l.kot_status = 'ready' then
-                extract(epoch from (
-                  now() - (select ready_at from app.pos_line_timings(l.id))
-                ))::int::text
-              end as at_pass,
               /* Which course, from the one place that fallback lives.
                  NULL is an unsequenced dish - a drink - and sorts last
                  rather than ahead of the starters. */
@@ -5019,13 +5026,13 @@ till.get("/:code/kitchen", async (c) => {
          join pos_orders o  on o.id = l.order_id
          join pos_outlets ou on ou.id = o.outlet_id
         where l.hotel_id = $1
-          and l.kot_status in ('sent', 'preparing', 'ready')
+          and l.kot_status in ('sent', 'preparing')
           /* PAID OR NOT (QA POS-1). Room service and take-away are paid or
              charged to the room when ordered, before anybody cooks them;
-             reading open orders only took them off the pass at once. A
-             settled order's dishes stay until they are served - for the
-             restaurant's day, so one never marked served does not sit
-             there for ever. A bill closed unpaid leaves, as before. */
+             reading open orders only took them off the board at once. A
+             settled order's dishes stay until the kitchen says Ready -
+             for the restaurant's day. A bill closed unpaid leaves, as
+             before. */
           and (o.status = 'open'
                or (o.status = 'settled' and o.business_date = $2::date))
         order by l.kot_sent_at`,
@@ -5047,12 +5054,9 @@ till.get("/:code/kitchen", async (c) => {
            colours by this — a dish waiting eleven minutes is the only
            thing on that screen that matters. */
         waitedSeconds: Number(r.waited),
-        /* The estimate, and how long it has been at the pass. Both null
-           rather than zero when unknown — an untimed dish is not an
-           instant one, and a dish still cooking has not been waiting on
-           a waiter. */
+        /* The estimate: null rather than zero when unknown - an untimed
+           dish is not an instant one. */
         prepMinutes: r.prep_minutes,
-        atPassSeconds: r.at_pass === null ? null : Number(r.at_pass),
         course: r.course,
         /* A struck line the kitchen already had. Shown so the pass can
            stop cooking it, rather than having the ticket vanish. */
@@ -5066,10 +5070,12 @@ till.get("/:code/kitchen", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
+/* The kitchen's two buttons, Start and Ready (D27-221, D27-222). Served is
+   the waiter's "Taken", below the till's routes - not the kitchen's. */
 till.post("/:code/kitchen/lines/:lineId/:to", async (c) => {
   const to = c.req.param("to");
-  if (!["preparing", "ready", "served"].includes(to)) {
-    return c.json(refuse("A dish moves to preparing, ready or served."), 409);
+  if (!["preparing", "ready"].includes(to)) {
+    return c.json(refuse("The kitchen starts a dish or makes it ready."), 409);
   }
 
   const result = await withSession(c.get("subject"), async (client) => {
@@ -5086,6 +5092,46 @@ till.post("/:code/kitchen/lines/:lineId/:to", async (c) => {
       return refuse("That dish is not with the kitchen, or was cancelled.");
     }
     return { ok: true as const, status: to };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── Taken (D27-221, D27-222) ────────────────────────────────────────
+   A dish the kitchen made Ready is the waiter's; "Taken" says they carried
+   it, and it is served. Only a ready dish: one still cooking is not the
+   waiter's to take, and one already taken is said so. The whole list is
+   checked before anything is written (MEMORY 243). */
+till.post("/:code/till/orders/:id/taken", async (c) => {
+  const input = await c.req.json<{ lineIds?: unknown }>()
+    .catch(() => ({}) as { lineIds?: unknown });
+  const lineIds = Array.isArray(input.lineIds)
+    ? [...new Set(input.lineIds.filter((x): x is string => typeof x === "string"))] : [];
+  if (lineIds.length === 0) return c.json(refuse("Which dishes?"), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+
+    const { rows } = await client.query<{ id: string; name: string; kot_status: string; voided: boolean }>(
+      `select l.id::text, l.name, l.kot_status, l.voided
+         from pos_order_lines l join pos_orders o on o.id = l.order_id
+        where l.id::text = any($3::text[]) and l.order_id = $1 and o.hotel_id = $2`,
+      [orderId, hotelId, lineIds]);
+    if (rows.length !== lineIds.length) return refuse("That dish is not on this order.");
+    const notReady = rows.find((r) => r.voided || r.kot_status !== "ready");
+    if (notReady) {
+      return refuse(notReady.kot_status === "served"
+        ? `${notReady.name} is already taken.`
+        : `${notReady.name} is not ready yet - the kitchen says when it is.`);
+    }
+    await client.query(
+      `update pos_order_lines set kot_status = 'served'
+        where id::text = any($1::text[]) and order_id = $2`,
+      [lineIds, orderId]);
+    return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
