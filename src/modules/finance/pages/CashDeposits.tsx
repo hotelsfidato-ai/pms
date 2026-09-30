@@ -57,7 +57,7 @@ export default function CashDepositsPage() {
   if (!view.data) {
     return (
       <Page>{header}
-        <Card><ReadFailed error={view.error} what="the cash deposits" onRetry={() => void view.refetch()} /></Card>
+        <Card><ReadFailed error={view.error} what="the cash deposits log" onRetry={() => void view.refetch()} /></Card>
       </Page>
     );
   }

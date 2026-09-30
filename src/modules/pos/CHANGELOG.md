@@ -11,6 +11,22 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · The cash lane: Open the day, no cash before it, the float kept at the close (D27-190, D27-191, POS-29)
+
+**Asked for:** the owner's D27-190 at each restaurant outlet, which replaces D27-139's "no open step" (D27-191); the master's yes for the day-end routes and the one cash-tender refusal only, away from the order pad the POS lane works on. Branch `cash/counts-deposits-30sep`; finance's own entry has the whole of it.
+**Shipped:**
+- `POST /till/day-end/open` (roleGate DAY_END, pinned): the float counted once; a blank float refused. `GET /till/day-end` says `opened`.
+- Settle refuses CASH (and a split with cash) until the outlet's day is open, after the function and delivery refusals; bills, card, UPI and room charges go on.
+- The night count needs the opened day, no longer takes or defaults the float, and refuses a closed day in words (it gave a 500).
+- The close asks `keptCash`, the float kept for the next day (0 to counted); `pos_day_ends.kept_cash` (migration 183 in this branch).
+- `pages/DayEnd.tsx`: an "Open the day" card on the note grid; the count step's float field gone (read-only in the sum, a dash until opened); Finalize asks the float kept and shows To deposit. `data/till.ts`: `openDay`, `opened`, `keptCash`.
+- Tests that take cash at the till open the outlet's day first (`openTillDay` in `api/test/drawer.ts`): till, cashLimit, settleTwice, restaurantFixes (NA-2), finance's alcoholVat (D22-44), reports (one test); web fixtures carry `opened`.
+**Proved:** see finance's entry - `cashCounts.test.ts` guards seen failing without them; POS folder 18 files 190 passed; the screen walked on `fidato_s47`.
+**Left open:** the page still serves one outlet (REST). "To the safe" before the day is opened is not refused (not in the master's yes).
+**Commits:** 0cadb22, c9ba2b4, and the next.
+
+---
+
 ## 2026-09-29 · The folio lane: "Charge to room" on a room with two open bills (POS-26, D27-162)
 
 **Asked for:** the owner's bug of 28 September (a POS charge to a room not on the guest's bill) - root cause, fixed once, one test. Branch `folio/edit-29sep` (from cp6 ca02e37, round F's `fix/leftovers-28sep` merged in), copy `.claude\worktrees\nervous-spence-42dcae`, database `fidato_s31`, API 8871, web 5271.
