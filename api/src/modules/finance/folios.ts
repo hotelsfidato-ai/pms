@@ -205,10 +205,14 @@ folios.get("/:code/stays/:id/postings", async (c) => {
       posted_by: string | null;
       day_closed: boolean;
       invoice: string | null;
+      tax_scheme: string;
+      tax_rate: string | null;
     }>(
       `select fp.id::text, fp.folio_id::text, f.bill_to, co.name as company,
               fp.business_date::text, fp.category, fp.description,
               fp.amount, fp.tax_amount, fp.reverses_id::text,
+              -- What the line was billed under, for the bill's sections (D27-200).
+              fp.tax_scheme, fp.tax_rate::text,
               exists (select 1 from folio_postings r where r.reverses_id = fp.id) as reversed,
               fp.created_at::text,
               -- Why Edit is off for a line, before anybody types (D27-157):
@@ -259,6 +263,8 @@ folios.get("/:code/stays/:id/postings", async (c) => {
       user: p.posted_by,
       dayClosed: p.day_closed,
       invoice: p.invoice,
+      scheme: p.tax_scheme,
+      rate: p.tax_rate === null ? null : Number(p.tax_rate),
     }));
   });
 

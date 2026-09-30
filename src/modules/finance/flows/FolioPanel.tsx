@@ -25,6 +25,7 @@ import { type Posting, type Stay } from "@/data/repositories";
 import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type StayFolio } from "@/modules/finance/data/folios";
 import { LateCheckOutFlow } from "@/modules/front-desk";
 import { getStayBill } from "@/modules/finance/data/bill";
+import { billSections, sectionsTotal } from "@/modules/finance/sections";
 import { BillPrint } from "./BillPrint";
 import { useGroupSettings } from "@/modules/admin";
 
@@ -124,6 +125,8 @@ export function FolioPanel({
 
       <LedgerList
         lines={lines}
+        toCome={toCome}
+        closing={closing(billed, toCome)}
         hotelId={hotelId}
         stayId={stay.id}
         folios={folios}
@@ -131,8 +134,6 @@ export function FolioPanel({
         mayEdit={mayEdit}
         onChanged={refresh}
       />
-
-      <ChargesToCome toCome={toCome} />
 
       <div className="flex flex-wrap gap-2">
         {mayCharge && (
@@ -218,6 +219,17 @@ export function FolioPanel({
 /** The mark for a figure nobody has — the same one the stay table prints. */
 const DASH_MARK = "-";
 
+/** The bill's one closing figure and its word: the headline, and the last row
+    under the sections (D27-200). */
+function closing(balance: number | null, toCome: ToCome | null): { label: string; amount: number | null } {
+  if (toCome) {
+    const a = toCome.after;
+    return { label: a === null || a > 0 ? "Due" : a < 0 ? "Overpaid" : "Settled", amount: a };
+  }
+  if (balance === null) return { label: "Balance", amount: null };
+  return { label: balance > 0 ? "Outstanding" : balance < 0 ? "Overpaid" : "Settled", amount: balance };
+}
+
 function BalanceHeader({ stay, balance, toCome }: {
   stay: Stay; balance: number | null; toCome: ToCome | null;
 }) {
@@ -227,7 +239,7 @@ function BalanceHeader({ stay, balance, toCome }: {
      until the night audit has posted the night. */
   if (toCome) {
     const { after, received } = toCome;
-    const label = after === null || after > 0 ? "Due" : after < 0 ? "Overpaid" : "Settled";
+    const { label } = closing(balance, toCome);
     return (
       <div className="flex items-baseline justify-between gap-4 flex-wrap" data-bill-headline>
         <div>
@@ -335,7 +347,7 @@ function useChargesToCome(
     charges: charges / 100,
     tax: tax === null ? null : tax / 100,
     after: tax === null ? null : (paise(balance ?? 0) + charges + tax) / 100,
-    received: -lines.filter((l) => l.category === "payment").reduce((n, l) => n + paise(l.amount), 0) / 100,
+    received: (-lines.filter((l) => l.category === "payment").reduce((n, l) => n + paise(l.amount), 0) / 100) || 0,
   };
 }
 
@@ -383,10 +395,21 @@ function ChargesToCome({ toCome }: { toCome: ToCome | null }) {
   );
 }
 
+/* THE BILL IN SECTIONS (the owner's D27-200): Room with GST, Restaurant with
+   GST, Bar with VAT, then other charges - each with its lines, its subtotal
+   and its tax - then the total, the payments received and what is due. The
+   ledger is still append-only and every line is still here: a reversed line
+   stays struck through with its reversal right under it, in its section.
+   Where a line sits and what a section comes to is finance's one rule
+   (sections.ts), the printed bill's too. A line shows its amount before tax,
+   so a section's lines add up to its subtotal; the running balance under
+   each line went, the subtotals, the total and the closing row replace it. */
 function LedgerList({
-  lines, hotelId, stayId, folios, mayChange, mayEdit, onChanged,
+  lines, toCome, closing: close, hotelId, stayId, folios, mayChange, mayEdit, onChanged,
 }: {
   lines: BillLine[];
+  toCome: ToCome | null;
+  closing: { label: string; amount: number | null };
   hotelId: string;
   stayId: string;
   folios: StayFolio[];
@@ -394,7 +417,7 @@ function LedgerList({
   mayEdit: boolean;
   onChanged: () => void;
 }) {
-  if (lines.length === 0) {
+  if (lines.length === 0 && !toCome) {
     return (
       <p className="text-sm text-grey-500 py-6 text-center">
         Nothing posted to this folio yet.
@@ -402,87 +425,134 @@ function LedgerList({
     );
   }
 
-  let running = 0;
+  /* A reversal is stored without its line's tax scheme, so it takes its
+     original's here and the pair stays in one section; and it is listed
+     right under the line it reverses. */
+  const byId = new Map(lines.map((l) => [l.id, l]));
+  const placed = lines.map((l) => {
+    const original = l.reversalOf ? byId.get(l.reversalOf) : undefined;
+    return original?.scheme ? { ...l, scheme: original.scheme } : l;
+  });
+  const ordered = [
+    ...placed.filter((l) => !l.reversalOf)
+      .flatMap((l) => [l, ...placed.filter((r) => r.reversalOf === l.id)]),
+    ...placed.filter((r) => r.reversalOf && !byId.has(r.reversalOf)),
+  ];
+  const payments = ordered.filter((l) => l.category === "payment");
+  const sections = billSections(ordered.filter((l) => l.category !== "payment"), toCome ? ["room"] : []);
+  /* `|| 0`: a payment and its reversal come to minus zero, which prints "-₹0.00". */
+  const received = (-payments.reduce((n, l) => n + Math.round(l.amount * 100), 0) / 100) || 0;
+
+  const row = (p: BillLine) => {
+    const isReversal = p.kind === "reversal";
+    return (
+      <li
+        key={p.id}
+        className={cn(
+          "flex items-start gap-3 px-3 py-2.5",
+          p.reversed && "opacity-55",
+        )}
+      >
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              "text-base",
+              isReversal ? "text-brand-rose font-medium" : "text-ink-900",
+              p.reversed && "line-through",
+            )}
+          >
+            {p.description}
+          </p>
+          <p className="text-2xs text-grey-500 tabular mt-0.5">
+            {dateShort(p.businessDate)} · {p.category}
+            {p.method ? ` · ${p.method}` : ""} · {p.user ?? "-"}
+          </p>
+        </div>
+
+        <p
+          className={cn(
+            "text-base tabular font-medium text-right shrink-0",
+            isReversal ? "text-brand-rose"
+              : p.amount < 0 ? "text-success" : "text-ink-900",
+            p.reversed && "line-through",
+          )}
+        >
+          {p.amount < 0 ? "−" : ""}{moneyPrecise(Math.abs(p.amount))}
+        </p>
+
+        {mayEdit && (
+          <EditButton hotelId={hotelId} stayId={stayId} posting={p} onDone={onChanged} />
+        )}
+        {mayChange && (
+          <>
+            <TransferButton
+              hotelId={hotelId}
+              posting={p}
+              folios={folios}
+              onDone={onChanged}
+            />
+            <ReverseButton
+              hotelId={hotelId}
+              stayId={stayId}
+              posting={p}
+              onDone={onChanged}
+            />
+          </>
+        )}
+      </li>
+    );
+  };
+  const heading = (title: string) => (
+    <div className="bg-grey-50 border-b border-grey-200 px-3 py-2">
+      <p className="text-2xs font-semibold uppercase tracking-wide text-grey-500">{title}</p>
+    </div>
+  );
+  const sum = (label: string, amount: string, strong = false) => (
+    <div key={label} className={cn("flex justify-between gap-4",
+      strong ? "text-base font-semibold text-ink-900" : "text-sm text-grey-700")}>
+      <dt>{label}</dt>
+      <dd className="tabular">{amount}</dd>
+    </div>
+  );
 
   return (
-    <div className="border border-grey-200 rounded-lg overflow-hidden">
-      <div className="bg-grey-50 border-b border-grey-200 px-3 py-2">
-        <p className="text-2xs font-semibold uppercase tracking-wide text-grey-500">
-          Postings - append only
-        </p>
-      </div>
-      <ul className="divide-y divide-grey-100">
-        {lines.map((p) => {
-          /* EVERY LINE COUNTS (QA FI-6): an original and its reversal cancel
-             each other. It left the reversed original out and added its
-             reversal, so the last "bal" read ₹1,000 over the Balance. */
-          running += p.amount + p.tax;
-          const isReversal = p.kind === "reversal";
-          return (
-            <li
-              key={p.id}
-              className={cn(
-                "flex items-start gap-3 px-3 py-2.5",
-                p.reversed && "opacity-55",
-              )}
-            >
-              <div className="min-w-0 flex-1">
-                <p
-                  className={cn(
-                    "text-base",
-                    isReversal ? "text-brand-rose font-medium" : "text-ink-900",
-                    p.reversed && "line-through",
-                  )}
-                >
-                  {p.description}
-                </p>
-                <p className="text-2xs text-grey-500 tabular mt-0.5">
-                  {dateShort(p.businessDate)} · {p.category}
-                  {p.method ? ` · ${p.method}` : ""} · {p.user ?? "-"}
-                </p>
-              </div>
+    <div className="space-y-3">
+      {sections.map((s) => (
+        <section key={s.key} className="border border-grey-200 rounded-lg overflow-hidden" data-bill-section={s.key}>
+          {heading(s.title)}
+          {s.lines.length > 0 && <ul className="divide-y divide-grey-100">{s.lines.map(row)}</ul>}
+          {s.key === "room" && toCome && (
+            <div className="p-3 border-t border-grey-100"><ChargesToCome toCome={toCome} /></div>
+          )}
+          {/* Room with only charges to come has nothing posted to add up. */}
+          {s.lines.length > 0 && (
+            <dl className="border-t border-grey-200 px-3 py-2 space-y-1">
+              {sum("Subtotal", moneyPrecise(s.subtotal))}
+              {s.taxes.map((t) => sum(t.label, moneyPrecise(t.amount)))}
+            </dl>
+          )}
+        </section>
+      ))}
 
-              <div className="text-right shrink-0">
-                <p
-                  className={cn(
-                    "text-base tabular font-medium",
-                    isReversal ? "text-brand-rose"
-                      : p.amount < 0 ? "text-success" : "text-ink-900",
-                    p.reversed && "line-through",
-                  )}
-                >
-                  {p.amount < 0 ? "−" : ""}{money(Math.abs(p.amount + p.tax))}
-                </p>
-                {!p.reversed && (
-                  <p className="text-2xs text-grey-500 tabular">
-                    bal {money(running)}
-                  </p>
-                )}
-              </div>
+      {sections.length > 0 && (
+        <dl className="px-3" data-bill-total>
+          {sum("Total charges", moneyPrecise(sectionsTotal(sections)), true)}
+        </dl>
+      )}
 
-              {mayEdit && (
-                <EditButton hotelId={hotelId} stayId={stayId} posting={p} onDone={onChanged} />
-              )}
-              {mayChange && (
-                <>
-                  <TransferButton
-                    hotelId={hotelId}
-                    posting={p}
-                    folios={folios}
-                    onDone={onChanged}
-                  />
-                  <ReverseButton
-                    hotelId={hotelId}
-                    stayId={stayId}
-                    posting={p}
-                    onDone={onChanged}
-                  />
-                </>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+      {payments.length > 0 && (
+        <section className="border border-grey-200 rounded-lg overflow-hidden" data-bill-section="payments">
+          {heading("Payments received")}
+          <ul className="divide-y divide-grey-100">{payments.map(row)}</ul>
+          <dl className="border-t border-grey-200 px-3 py-2">
+            {sum("Received", moneyPrecise(received))}
+          </dl>
+        </section>
+      )}
+
+      <dl className="px-3" data-bill-closing>
+        {sum(close.label, close.amount === null ? DASH_MARK : moneyPrecise(Math.abs(close.amount)), true)}
+      </dl>
     </div>
   );
 }

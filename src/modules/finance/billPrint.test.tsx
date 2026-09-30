@@ -110,3 +110,38 @@ describe("the desk's printed bill, from the Bill tab", () => {
       expect(text).not.toMatch(/tax invoice/i);
     });
 });
+
+/* D27-200 (the owner, 30 September): the printed bill in sections - Room with
+   GST, Restaurant with GST, Bar with VAT, other charges - each with its
+   subtotal and tax. The totals under them are the server's, unchanged, and
+   the sections come to the same Total. */
+describe("the printed bill's sections", () => {
+  const row = (description: string, category: string, amount: number, tax: number, rate: number,
+    scheme: "gst" | "vat" = "gst") =>
+    ({ date: "2026-09-20", description, category, amount, tax, rate, scheme, billTo: "guest", company: null });
+  const sectioned = bill({
+    lines: [
+      row("Room 204", "room", 3522.86, 176.14, 5),
+      row("Restaurant - R-0012 (5%)", "food", 850, 42.5, 5),
+      row("Restaurant - R-0012 (VAT 10%)", "food", 600, 60, 10, "vat"),
+      row("Laundry", "laundry", 300, 54, 18),
+    ],
+    taxes: [{ rate: 5, taxable: 4372.86, cgst: 109.32, sgst: 109.32 }, { rate: 18, taxable: 300, cgst: 27, sgst: 27 }],
+    vat: [{ rate: 10, taxable: 600, vat: 60 }],
+    net: 5272.86, tax: 332.64, total: 5605.5, rounded: 5606, roundOff: 0.5, paid: 1001, balance: 4604.5,
+  });
+
+  it("groups the lines, each section with its subtotal and its tax, and keeps the server's totals", () => {
+    render(<BillPrint bill={sectioned} title="Interim bill" />);
+    const section = (key: string) => document.querySelector(`[data-bill-section="${key}"]`)!.textContent;
+    expect(section("room")).toBe("RoomRoom 204₹3,522.86Subtotal₹3,522.86GST 5%₹176.14");
+    expect(section("restaurant")).toBe("RestaurantRestaurant - R-0012 (5%)₹850.00Subtotal₹850.00GST 5%₹42.50");
+    /* Alcohol is under VAT, so it is the Bar's, though the restaurant sold it. */
+    expect(section("bar")).toBe("BarRestaurant - R-0012 (VAT 10%)₹600.00Subtotal₹600.00VAT 10%₹60.00");
+    expect(section("other")).toBe("Other chargesLaundry₹300.00Subtotal₹300.00GST 18%₹54.00");
+    /* 3,699.00 + 892.50 + 660.00 + 354.00: the sections come to the Total. */
+    expect(3699 + 892.5 + 660 + 354).toBe(sectioned.total);
+    expect(screen.getByText("₹5,605.50")).toBeDefined();
+    expect(screen.getByText("₹4,604.50")).toBeDefined();
+  });
+});
