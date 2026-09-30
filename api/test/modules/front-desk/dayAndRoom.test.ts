@@ -136,6 +136,36 @@ describe("FD-16 · a date left out is the hotel's day", () => {
   });
 });
 
+describe("D27-193 · a check-in that moves the arrival more than a day", () => {
+  const early = (id: string, room: string, confirmMove?: boolean) =>
+    call(`/stays/${id}/check-in`, "POST", {
+      roomNumber: room, adults: 1, idSkipReason: "Test", earlyReason: "Came early",
+      ...(confirmMove === undefined ? {} : { confirmMove }),
+    });
+
+  it("is refused until the move is confirmed, and nothing moves", async () => {
+    const id = await booking(`${CODE}-MOVE`, "2026-08-31", "2026-09-02");
+    const res = await early(id, "104");
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason)
+      .toBe("Checking in now moves the arrival from 2026-08-31 to 2026-08-26: 7 nights. Confirm the move first.");
+    const [r] = await sql<{ status: string; check_in: string }>(
+      "select status, check_in::text from reservations where id = $1", [id]);
+    expect(r).toEqual({ status: "confirmed", check_in: "2026-08-31" });
+
+    expect((await early(id, "104", true)).status).toBe(200);
+    const [after] = await sql<{ status: string; check_in: string }>(
+      "select status, check_in::text from reservations where id = $1", [id]);
+    expect(after).toEqual({ status: "checked_in", check_in: "2026-08-26" });
+  });
+
+  it("needs no confirming for a booking that arrives tomorrow", async () => {
+    const id = await booking(`${CODE}-TOMORROW`, "2026-08-27", "2026-08-28");
+    const res = await early(id, "105");
+    expect(res.status, await res.clone().text()).toBe(200);
+  });
+});
+
 describe("FD-17 · taken out of the room it was given ahead", () => {
   it("holds no room any more, in the stay and in the list", async () => {
     const id = await booking(`${CODE}-OUT`, "2026-08-27", "2026-08-29");
