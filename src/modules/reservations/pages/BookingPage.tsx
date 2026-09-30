@@ -865,8 +865,10 @@ export default function BookingPage() {
                   <NativeSelect {...fieldProps(f)} value={businessSource}
                     onChange={(e) => setBusinessSource(e.target.value)} className="h-12 text-base">
                     <option value="">None</option>
+                    {/* Keyed by the name: the accounts report's id is a slug of
+                        it, and two names can share one ("Walk-In", "Walk-in"). */}
                     {(accounts.data ?? []).map((cmp) => (
-                      <option key={cmp.id} value={cmp.name}>{cmp.name}</option>
+                      <option key={cmp.name} value={cmp.name}>{cmp.name}</option>
                     ))}
                   </NativeSelect>
                 )}
