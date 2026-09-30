@@ -199,7 +199,7 @@ const A_DAY: DayEnd = {
     varianceReason: null, denominations: [],
   },
   closedAt: null,
-  closedBy: null,
+  closedBy: null, opened: true,
 };
 
 describe("Close restaurant day", () => {

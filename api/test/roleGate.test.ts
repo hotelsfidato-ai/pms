@@ -209,6 +209,11 @@ describe("who reads what (D27-140 to D27-147)", () => {
       .toEqual(["owner", "admin", "gm", "finance"]);
   });
 
+  it("D27-190: the restaurant's day is opened by whoever closes it", () => {
+    expect(whoMay(rule(`POST ${H}/till/day-end/open`)))
+      .toEqual(whoMay(rule(`POST ${H}/till/day-end/close`)));
+  });
+
   it("QA AD-1: what the server has set up is the owner's and an administrator's", () => {
     expect(who(`GET ${H}/integrations`)).toEqual(["owner", "admin"]);
   });

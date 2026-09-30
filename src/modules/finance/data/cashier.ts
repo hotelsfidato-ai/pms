@@ -107,7 +107,7 @@ export async function countCashierDrawer(
  */
 export async function closeCashierShift(
   hotelId: string,
-  input: { varianceReason?: string; handOverTo?: string | null },
+  input: { varianceReason?: string; handOverTo?: string | null; keptCash?: number },
 ): Promise<ShiftResult> {
   return shiftCall(hotelId, "close", input);
 }

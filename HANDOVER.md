@@ -47,6 +47,21 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+### 30 September, later — read this first
+
+```
+cp6 now              Release 2 + the owner's walk-through: rates (162), booking and bill, cash
+                     (163) merged; quick gates green (web 812). Migrations up to 163. NOT yet
+                     run on the combined cp6: the API suite, the database, the replay, a build.
+paused               POS part 2 (pos/tap-variations-30sep, WIP; its 182 becomes 164). The
+                     walk-in route cleanup (cleanup/walk-in-route). The booking lane's e918193
+                     (stays.ts rack read) waits to be merged. The six lanes paused earlier:
+                     the memory note resume-start-pending-work.
+local demo           `fidato` at 163, on today (30 Sep); api 8787, web 5173.
+live                 Still 0b4766e. 5EL's business date 9 Sep (its night audit has not run).
+decisions            D27-187 to D27-196.
+```
+
 ### 30 September — read this first
 
 ```
@@ -356,6 +371,14 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **30 September, later: the queue.** (1) On restart: finish POS part 2 and merge it (182 to
+> 164), the booking lane's e918193 plus the walk-in's rack read, and the cleanup lane. (2) Full
+> gates on the combined cp6 (API suite, database, replay) and a build. (3) The words-only sweep:
+> "set GST on Room types" to "System > Administration > Configuration" (postings.ts:216/508 and
+> signedLines.test.ts:92, nightAudit.ts:193/1005, till.ts:2172-2173/2183, desk.ts:266,
+> dayBook.ts:173). (4) The release steps gain: each hotel's laundry GST; 5EL's night audit.
+> (5) Then the six paused lanes ("start pending work new pending").
 
 > **30 September: the queue.** (1) The owner runs the release (release 2 contains release 1;
 > the steps are in the chat, each labelled with where it runs). (2) The owner's connections:

@@ -46,6 +46,7 @@ a screen (Ctrl K).
 | (no menu entry) the interim bill, to print (QA FI-8) | `/h/:code/stays/:id/bill` | `pages/InterimBill.tsx` | — |
 | Payments (Finance) | `/h/:code/payments` | `pages/Billing.tsx` (`PaymentsPage`) | none |
 | Cashiering (Finance) | `/h/:code/cashiering` | `pages/Cashiering.tsx` | Reception |
+| Cash deposits (Finance) | `/h/:code/cash-deposits` | `pages/CashDeposits.tsx` | none (owner, Admin, GM, accountant, Viewer; D27-191) |
 | Company accounts (Finance) | `/h/:code/city-ledger` | `pages/Billing.tsx` (`PropertyCityLedgerPage`) | none |
 
 Six addresses, five page files. Menu gates (`nav.ts`): Folios and Invoices
@@ -108,10 +109,20 @@ of the old `inventorySetup.ts` (`3ca215d`).
 | Method | Path | What it does |
 |---|---|---|
 | GET | `/:code/cashier-shift` | the drawer this person is holding (`app.cashier_expected_cash`) |
-| POST | `/:code/cashier-shift/open` | open it with a float |
+| POST | `/:code/cashier-shift/open` | open it with a counted float - blank refused, 0 only when typed (D27-190, FIN-21) |
 | POST | `/:code/cashier-shift/movements` | money in or out of the drawer |
 | POST | `/:code/cashier-shift/count` | count it, by denomination |
-| POST | `/:code/cashier-shift/close` | close and hand over |
+| POST | `/:code/cashier-shift/close` | close and hand over, with `keptCash` - the float kept for the next shift, 0 to counted; a handover keeps all of it (D27-191) |
+
+**`api/src/modules/finance/deposits.ts`** (30 September, D27-190, D27-191)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/:code/cash-deposits` | each closed day's cash to deposit per cash point (`app.cash_to_deposit`), deposited, difference, red until explained; every deposit; `canRecord`, `canVerify`. Owner, Admin, GM, accountant, Viewer |
+| POST | `/:code/cash-deposits` | record a deposit against the business day it banks: amount, date, bank, slip number. Owner, Admin, GM. The slip's photo goes through the shared `POST /attachments` (table `cash_deposits`) |
+| POST | `/:code/cash-deposits/:id/reverse` | reverse an unverified deposit by a line of its own, with a reason, once. Owner, Admin, GM |
+| POST | `/:code/cash-deposits/days/:date/explain` | why a day's deposits differ; red until then. Owner, Admin, GM |
+| POST | `/:code/cash-deposits/:id/verify` | owner or accountant only; refused without the slip's photo or on a red day |
 
 **`api/src/modules/finance/billing.ts`** (finance's part of the old `api/src/routes/billing.ts`)
 
@@ -173,7 +184,8 @@ migrations that made or changed them:
 | `payments` | the receipt behind a payment line | created `011_model_additions.sql`; `014_simulation_fixes.sql` (same hotel as its posting), `016_audit_coverage.sql` (never zero; audited) |
 | `vat_bills`, `vat_bill_series` | VAT bills for alcohol and their credit notes (D22-44): their own series per hotel, `VAT/5EL/2026-27/0001`, opened by the year's first bill so it restarts each 1 April | "a separate VAT bill for alcohol" (135 in this branch: `app.next_vat_bill_number`, `app.issue_vat_bill`; 025's immutability trigger) |
 | `invoices`, `invoice_series` | tax invoices and credit notes, numbered from a statutory series | created `011_model_additions.sql` (`app.next_invoice_number`); `013_policies.sql` (numbering protected), `014_simulation_fixes.sql` (the first invoice at a property), `016_audit_coverage.sql` (a series only moves forward), `025_invoices_form_c.sql` (the GST fields, credit notes, never edited, a series opened for each new property); "the FSSAI number on the invoice" (145 in this branch: `fssai_number`, copied from the hotel at issue and printed from there, D27-3) |
-| `cashier_shifts`, `cashier_movements`, `cashier_denominations` | the desk's drawer | created `059_cashier_shift.sql` (`app.cashier_expected_cash`; a closed shift is final) |
+| `cashier_shifts`, `cashier_movements`, `cashier_denominations` | the desk's drawer | created `059_cashier_shift.sql` (`app.cashier_expected_cash`; a closed shift is final); "the cash deposits log" (163: `kept_cash`, the float kept at the close) |
+| `cash_deposits`, `cash_deposit_notes` | cash banked per business day, and why a day's deposits differ (D27-190) | "the cash deposits log" (163: append-only - insert and read, the verification stamp once; `app.cash_to_deposit`, also over `pos_day_ends.kept_cash`) |
 | `tax_rules` | GST as rules, one set for the desk and the till — and VAT on alcohol (kind `alcohol`) | created `067_tax_rules.sql` (`app.gst_rate`; the tax kind on outlets and menu categories); `119_the_spa.sql` (`spa`); "alcohol, a switch per property, and the VAT it is taxed under" (126 in this branch: `alcohol` as a kind and a menu heading, `folio_postings.tax_scheme` and `pos_order_lines.tax_scheme` gst/vat, a reversal takes its original's scheme, `app.pos_order_by_tax`, `app.stay_bill`'s `vat` rows) |
 
 Others post into it directly in SQL: front desk (a folio at check-in and

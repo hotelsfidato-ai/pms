@@ -6539,6 +6539,32 @@ copy will see of theirs.**
 
 ---
 
+### 356 · `git checkout -- <file>` during a failing-first check threw away uncommitted work (booking lane, 30 Sep)
+
+To watch a new test fail on the old code, the lane restored a file with `git checkout -- <file>`,
+and its uncommitted edits to that file went with it. A copy saved beforehand brought them back.
+**The rule:** before restoring any file to prove a test fails, commit or copy the work first.
+
+---
+
+### 355 · React 19 logs a nesting warning as a format string (booking lane, REP-15)
+
+The Dashboard's "<div> cannot be a descendant of <p>" arrives as a format string with %s
+arguments; a test matching the raw first argument passed on the broken code. **The rule:**
+format the console arguments before matching, and watch the test fail on the bug.
+
+---
+
+### 354 · A demo whose business date isn't today makes real dates look like bugs (booking lane, D27-193)
+
+The owner's walk-through booked 1 October on a demo still on 25 August. Arrivals looks 14 days
+past the business date, so the booking "vanished", and checking it in moved its arrival back to
+25 August (a 39-night stay). The list was not broken. The lane found it by reading the owner's
+own rows, not by theorising. **The rule:** reproduce from the owner's own rows first. The demo
+now loads on today (`npm run demo` passes --today). Live 5EL's date lagged too (9 Sep on 30 Sep).
+
+---
+
 ### 353 · Build only what the owner has decided (leads lane, LEAD-1)
 
 29 September. The leads lane built a background sync and a Postgres copy of the leads on its
