@@ -5,6 +5,7 @@ import { DocMasthead, DocFacts, DocTotals, DOC_TH, DOC_TD } from "@/components/u
 import type { GroupSettings } from "@/modules/admin";
 import type { StayBill } from "../data/bill";
 import { placeLine } from "../place";
+import { billSections } from "../sections";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PRINTED BILL — one layout, for the desk and the guest (D21-10)
@@ -58,14 +59,29 @@ export function BillPrint({ bill, title, group }: { bill: StayBill; title: strin
             <th className={cn(DOC_TH, "text-right pl-2 w-32")}>Amount</th>
           </tr>
         </thead>
-        <tbody>
-          {bill.lines.map((line, i) => (
-            <tr key={i}>
-              <td className={cn(DOC_TD, "pr-2")}>{line.description}</td>
-              <td className={cn(DOC_TD, "pl-2 text-right tabular font-semibold")}>{moneyPrecise(line.amount)}</td>
+        {/* IN SECTIONS (the owner's D27-200): Room, Restaurant, Bar, other
+            charges - each its lines, its subtotal and its tax, by finance's
+            one rule (sections.ts), the Bill tab's too. The totals below are
+            the server's, unchanged. */}
+        {billSections(bill.lines).map((s) => (
+          <tbody key={s.key} data-bill-section={s.key}>
+            <tr>
+              <th colSpan={2} className={cn(DOC_TH, "text-left pt-4")}>{s.title}</th>
             </tr>
-          ))}
-        </tbody>
+            {s.lines.map((line, i) => (
+              <tr key={i}>
+                <td className={cn(DOC_TD, "pr-2")}>{line.description}</td>
+                <td className={cn(DOC_TD, "pl-2 text-right tabular font-semibold")}>{moneyPrecise(line.amount)}</td>
+              </tr>
+            ))}
+            {[{ label: "Subtotal", amount: s.subtotal }, ...s.taxes].map((r) => (
+              <tr key={r.label}>
+                <td className={cn(DOC_TD, "pr-2 text-grey-600")}>{r.label}</td>
+                <td className={cn(DOC_TD, "pl-2 text-right tabular text-grey-600")}>{moneyPrecise(r.amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        ))}
       </table>
 
       <div className="mt-4 flex justify-end">

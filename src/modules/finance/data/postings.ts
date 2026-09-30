@@ -18,7 +18,11 @@ import type { Permitted } from "@/data/repositories/types";
 /** A line as the Bill tab reads it: the core's Posting, and why Edit is off
     for it before anybody types (D27-157) - its day closed by the night
     audit, or the tax invoice standing on its bill. */
-export type BillLine = Posting & { dayClosed?: boolean; invoice?: string | null };
+export type BillLine = Posting & {
+  dayClosed?: boolean; invoice?: string | null;
+  /** What the line was billed under, for the bill's sections (D27-200). */
+  scheme?: "gst" | "vat"; rate?: number | null;
+};
 
 export async function getFolioPostings(hotelId: string, stayId: string): Promise<BillLine[]> {
   if (!hotelId || !stayId) return [];

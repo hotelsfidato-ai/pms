@@ -54,9 +54,11 @@ describe("the bill's charges to come", () => {
         </TooltipProvider>
       </QueryClientProvider>,
     );
-    /* In the box and, since D27-199, as the headline too. */
-    expect(await screen.findAllByText("₹10,651.85")).toHaveLength(2);
+    /* In the box, as the headline (D27-199) and as the closing row under the
+       sections (D27-200): one figure, three places. */
+    expect(await screen.findAllByText("₹10,651.85")).toHaveLength(3);
     const block = document.querySelector("[data-charges-to-come]")!;
+    expect(block.closest("[data-bill-section]")!.getAttribute("data-bill-section"), "under Room").toBe("room");
     expect(block.textContent).toContain("not posted yet");
     expect(block.textContent).toContain("2 nights × ₹3,699.00₹7,398.00");
     expect(block.textContent).toContain("GST 5%₹369.90");

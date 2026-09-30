@@ -68,12 +68,21 @@ function bill(role: Role, rates?: (amount: string) => unknown) {
   );
 }
 
-describe("the running balance (FI-6)", () => {
-  it("ends at the balance after a reversed charge and a reversed payment", async () => {
+/* FI-6's rule - every line counts, an original and its reversal cancel - now
+   in the sections (D27-200): the running "bal" under each line went, and the
+   subtotals, the total and the payments say the same thing. */
+describe("every line counts, in its section (FI-6, D27-200)", () => {
+  it("comes to the balance after a reversed charge and a reversed payment", async () => {
     bill("front_desk");
     await screen.findByText("Room 208");
-    const bals = screen.getAllByText(/^bal /).map((e) => e.textContent);
-    expect(bals.at(-1)).toBe("bal ₹6,158");
+    const text = (selector: string) => document.querySelector(selector)!.textContent;
+    expect(text('[data-bill-section="room"]')).toContain("Subtotal₹6,000.00");
+    /* The reversed snack and its reversal sit together, and cancel. */
+    expect(text('[data-bill-section="restaurant"]')).toContain("Late snack");
+    expect(text('[data-bill-section="restaurant"]')).toContain("Subtotal₹150.00GST₹7.50");
+    expect(text("[data-bill-total]")).toBe("Total charges₹6,157.50");
+    expect(text('[data-bill-section="payments"]')).toContain("Received₹0.00");
+    expect(screen.queryByText(/^bal /)).toBeNull();
   });
 });
 
