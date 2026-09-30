@@ -124,7 +124,12 @@ POST   /api/admin/hotels                     create a property — needs the pro
 GET    /api/admin/hotels                     every property, closed ones included
 GET    /api/admin/hotels/:code               one property, for whoever runs it
 PATCH  /api/admin/hotels/:code               its address, phone, email, GSTIN…: a group admin, or the
-                                             owner, GM or Admin AT that hotel; the name a group admin only
+                                             owner, GM or Admin AT that hotel; the name a group admin only.
+                                             And the profile (D27-214): addressLine2, pin, pan, website,
+                                             reservationsPhone, propertyType, starRating, latitude,
+                                             longitude - each refused in a sentence; sent blank a field
+                                             is CLEARED, not sent it is left alone (the seven older
+                                             fields keep what they had when sent blank)
 PUT    /api/hotels/:code/fssai               its FSSAI licence number (A16): owner, admin, GM
 POST   /api/admin/hotels/:code/:state        close or reopen
 GET    /api/admin/staff
@@ -177,12 +182,26 @@ name on every bill, and its logo:
 
 ```
 GET    /:code/group               every active member of staff:
-                                  { name | null, logo: { type, data } | null }
+                                  { name | null, logo: { type, data } | null,
+                                    hotelLogo: { type, data } | null } - hotelLogo is
+                                  the OWN logo of the hotel in the address (D27-214)
 PUT    /:code/group/name          { name } - blank clears, 80 characters at most
 PUT    /:code/group/logo          { data: base64 } - a PNG or SVG by content, 200 KB,
                                   no script-carrying SVG; refused before withSession
 DELETE /:code/group/logo          the logo only; the name stays
+PUT    /:code/logo                THIS hotel's own logo (D27-214, table hotel_logos):
+DELETE /:code/logo                the same picture rules; the owner, an administrator
+                                  or the GM at that hotel (roleGate HOTEL_LOGO, and
+                                  app.manages_hotel in the table's policy)
 ```
+
+**Which logo a document prints** is decided in ONE place, `useGroupSettings`
+(`data/groupSettings.ts`): the hotel's own where it has one, the group's where
+it has not. Every `DocMasthead` takes its logo from that hook, so a new
+document gets the rule by using it. Two documents do NOT go through it: the
+voucher PDF (the logo is read inside `app.guest_voucher`, migration 158, the
+group's PNG only) and the guest's page (no logo at all) - both the messaging
+and online check-in lanes', reported to the master on 30 September.
 
 Every write: the owner, an admin or the GM (roleGate, room setup; the owner,
 27 Sep). The table is `group_settings` (its migration: "the group's name and
@@ -236,16 +255,25 @@ data/taxInUse.ts       getTaxInUse — finance's GST rules over HTTP, for Settin
 components/TaxInUse.tsx   TaxInUseRows and taxLine: the GST in use, one row per kind,
                        "-" where unset, "Could not load" on a failed read.
 data/groupSettings.ts  getGroupSettings, setGroupName, setGroupLogo, removeGroupLogo,
+                       setHotelLogo, removeHotelLogo,
                        logoSrc and useGroupSettings(hotelCode) -> { name, logo } -
                        exported from index.ts for every document: the name for
-                       "by <group name>", the logo a data: URL for an <img src>, each
-                       null when not set. NEVER inline the logo as markup: an SVG can
+                       "by <group name>", the logo a data: URL for an <img src> (the
+                       hotel's own, else the group's), each null when not set. The
+                       cache is per hotel (groupSettingsKey); invalidate by the
+                       GROUP_SETTINGS_KEY prefix. NEVER inline the logo as markup: an SVG can
                        carry a script; inside an <img> it runs none of it.
 data/systemHealth.ts   getSystemHealth and auditLag - System health's one read, and
                        how far a hotel's day is behind (0 up to date, 1 amber, 2+ red).
 components/GroupCard.tsx  Settings' "Group name and logo" card: the name with Change,
                        the logo with Upload/Replace and Remove, for the owner, an
-                       admin and the GM.
+                       admin and the GM. And HotelLogoCard, "This hotel's logo", on
+                       the Property tab - the same picker (LogoRow).
+data/admin.ts          PropertyProfile and PROPERTY_TYPES (the owner's list: the stored
+                       word and its label). EditPropertyDialog (pages/Properties.tsx)
+                       draws and sends the profile only when the hotel it is given
+                       carries it: Settings' Property tab does, the Properties cards
+                       do not, so their Edit cannot clear a field it never showed.
 moduleSwitchRoles.ts   MODULE_SWITCH_ROLES (owner, admin) — who sees the switches (D17-36);
                        the server's copy is in api/src/modules/admin/grants.ts.
 flows/StaffAdmin.tsx   NewPerson, People, NewProperty.
@@ -358,6 +386,9 @@ The server's door, `api/src/modules/admin/index.ts`, exports only `mounts`
   (084; MEMORY 250). The GM opens Settings and does not see them; the server
   refuses anybody else (ADM-5). "Reception can use the POS" is on at 5
   Elements and off for a hotel added later (owner, 14 September; 087).
+- **PAN, the reservations phone and the website are STORED and printed on no
+  document** until the owner says where (D27-214). Do not add them to a
+  masthead or a footer without that.
 - **Tax on these screens is the tax actually charged** (D17-37): finance's
   rules, "-" where a kind has none. Never `hotels.cgst_rate`/`sgst_rate`.
 - **Creating a property keeps the provisioning key** — without it the

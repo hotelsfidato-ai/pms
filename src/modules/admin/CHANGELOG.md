@@ -11,6 +11,18 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · One place for settings, phase 2: the hotel's profile, its own logo, the map point from the hotel (D27-214)
+
+Branch `settings/one-place-30sep` (cp6 13f2a294 merged in), copy `.claude\worktrees\mystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.
+**Asked for:** D27-214 Q4 to Q10: the hotel's GM and Admin fill in its profile (PIN six digits, PAN, website, "Reservations phone", property type from the owner's list, stars 1 to 5 or not set, the map point); a hotel's own logo, a PNG or SVG of 200 KB checked from its bytes, printed on that hotel's documents in place of the group's at the ONE place a masthead takes its logo; the map point read-only on the SU setup, set in Settings. PAN, reservations phone and website stored and printed nowhere.
+**Shipped:** `PATCH /api/admin/hotels/:code` takes the nine profile fields, each with its refusal sentence; a blank clears, a key not sent is left alone; GET returns them. `PUT`/`DELETE /api/hotels/:code/logo` (roleGate `HOTEL_LOGO`, the group logo's `readLogo`). `GET /:code/group` also answers `hotelLogo`, and `useGroupSettings` hands every `DocMasthead` the hotel's where it has one - one line, no document edited; its cache is now per hotel. Settings' Property tab: the profile's rows (a dash where nobody has said), Edit with the fields, "This hotel's logo". Channel manager (claimed for this): `content/store.ts` reads the hotel's PIN and map point and falls back to what SU's setup held before 168; `routes.ts` no longer writes them; `SuSetup.tsx` shows them read-only with a link to Settings.
+**Found:** the voucher PDF and the guest's page do not take their logo from the shared reader (the voucher's is inside `app.guest_voucher`, migration 158; the guest's page shows none). Not touched; reported to the master with the exact lines.
+**Proved:** API, one file at a time: `hotelProfile` 26 (21 seen failing before the code), `groupSettings` 23, `suContent` 14 (5 failed first; 2 fail with either fallback taken out), `suAvailability` 12, the channel manager's six files 72, `propertyAdmin` 39, `roleGate` 63; strip-check 169 files; both `tsc` clean. Web: admin, channel manager, finance, pos, laundry, guests, reports, `src/components`, `App.test.tsx`, `src/test`: 341 passed. Taken out and seen to fail: the hook preferring the hotel's logo; the per-hotel cache key (one hotel borrowed another's logo); the Properties cards' Edit sending the profile.
+**Left open:** NOT opened on screen yet: fidato_s45 is at 166 and the profile needs 168's columns (asked of the master). Whether Form III and the printed reports, which use the same reader, should follow the hotel's logo or keep the group's (asked; built to follow). The voucher and the guest's page. Known ceiling: a PIN or map point CLEARED in Settings falls back to what SU's setup held before 168, and 168's copy puts it back on the next replay; it goes once the owner retires those three `channel_hotels` columns.
+**Commits:** dd337fac, a3c64e89 and the one after it.
+
+---
+
 ## 2026-09-30 · One place for settings, phase 1: the Settings screen and its eight tabs (D27-213, D27-214)
 
 Branch `settings/one-place-30sep` (from cp6 7fc6b4b6), copy `.claude\worktrees\mystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.

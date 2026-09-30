@@ -98,10 +98,11 @@ on Booking sources, or why its bookings wait for a person.
 
 1. **SU login** - test or live account, or "Not set up" naming the settings;
    the last check; logins used this hour. *Check the login*.
-2. **This hotel on SU** - the SU hotel id, postcode, country, latitude,
-   longitude, a contact's first and last name, a description; beside them what
-   the hotel record already holds (address, phone, email) with "-" where empty.
-   *Save hotel details*.
+2. **This hotel on SU** - the SU hotel id, country, a contact's first and last
+   name, a description; beside them what the hotel record already holds
+   (address, phone, email, and since D27-214 its PIN code and map point) with
+   "-" where empty. The PIN and the map point are read-only here, with a link
+   to Settings' Property tab where they are set. *Save hotel details*.
 3. **Room types** - each with its sleeps, rooms and rack rate ("-" if none); an
    SU room id, SU's room type (from SU's list), children at most, *Send to SU*;
    *Save <room type>*; the last send and what SU said.
@@ -307,7 +308,11 @@ Migration 106, **the SU mapping** (`db/migrations/106_channel_manager_su_mapping
 ```
 channel_hotels       one row per hotel set up for SU: its SU hotel id (unique in
                      the group, any case), the details SU needs that the hotel
-                     record lacks, on_su, and the last send and SU's words
+                     record lacks, on_su, and the last send and SU's words.
+                     postal_code, latitude and longitude are NO LONGER WRITTEN
+                     (D27-214, migration 168): the hotel's own pin, latitude and
+                     longitude are read first (content/store.ts) and these three
+                     only where the hotel's profile has none
 channel_room_types   one row per room type mapped: SU room id (unique per hotel,
                      any case), SU room type, children at most, is_connected,
                      on_su (active | deactivated), the last send
