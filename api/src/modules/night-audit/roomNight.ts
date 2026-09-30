@@ -128,6 +128,10 @@ export async function roomNightsDue(
   return rows;
 }
 
+/** The line's words. The room number is on every line, and it has to be: a
+    master folio holding twelve of these is unreadable otherwise. */
+export const roomNightWords = (stay: RoomNight) => `Room ${stay.room} · 1 night`;
+
 /** Post that night's charge and answer its amount. `source` is who wrote it:
     the audit's run, or the check-in (the first night). */
 export async function postRoomNight(
@@ -149,9 +153,7 @@ export async function postRoomNight(
             $7::text, app.current_user_id()
        from (select app.gst_rate($1, 'room', $6::numeric) as rate) t`,
     [hotelId, stay.folio_id, stay.reservation_id, date,
-     /* The room number is on every line, and it has to be: a master
-        folio holding twelve of these is unreadable otherwise. */
-     `Room ${stay.room} · 1 night`,
+     roomNightWords(stay),
      amount, source],
   );
   return amount;

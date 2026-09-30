@@ -48,7 +48,7 @@ export type { ChargeToPost } from "./postings.ts";
    routes call the same three, so a banquet function's bill - a folio with
    no stay - goes through the same checks and the same insert. Each answers
    a refusal as {ok:false, reason} (MEMORY 243). */
-export { takeFolioPayment, postFolioCharge, reverseFolioCharge } from "./postings.ts";
+export { takeFolioPayment, postFolioCharge, reverseFolioCharge, editFolioCharge } from "./postings.ts";
 export type { PaymentToTake, Payer } from "./postings.ts";
 export { issueFolioInvoice } from "./invoices.ts";
 export type { InvoiceRecipient } from "./invoices.ts";

@@ -3,6 +3,8 @@ import { withSession, type Session } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { resolveDate, businessDateFor } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
+import { roomNightsDue, postRoomNight } from "../night-audit/index.ts";
+import { editFolioCharge } from "../finance/index.ts";
 import {
   formIIIRefusal, identityProblem, isForeign, saveIdentity, saveVisit, type Identity, type Visit,
 } from "../guests/index.ts";
@@ -352,7 +354,14 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       /* The room must be free for the WHOLE stay, not merely tonight.
          The EXCLUDE constraint on room_assignments would catch an
          overlap anyway — but it would arrive as a constraint name, and
-         a clerk needs a sentence. */
+         a clerk needs a sentence.
+
+         THE WHOLE STAY STARTS TODAY when the arrival moves (FD-24, 30
+         September): this asked about the booking's old dates, and the hold
+         below was written on them, so the nights the guest moved onto were
+         neither checked nor held - somebody else's room tonight, and free
+         to sell again tomorrow. */
+      const arrival = earlyByDays ? businessDate : stay.check_in;
       const { rows: clash } = await client.query<{ reference: string }>(
         `select r.reference
            from room_assignments ra
@@ -363,7 +372,7 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
             and daterange(ra.from_date, greatest(ra.to_date, ra.from_date + 1), '[)')
                 && daterange($3::date, greatest($4::date, $3::date + 1), '[)')
           limit 1`,
-        [room.id, stayId, stay.check_in, stay.check_out],
+        [room.id, stayId, arrival, stay.check_out],
       );
       if (clash[0]) {
         return refuse(`Room ${roomNumber} is held by ${clash[0].reference} for part of that stay.`);
@@ -539,13 +548,35 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
           where reservation_id = $1 and released_at is null and room_id <> $2`,
         [stayId, room.id],
       );
+      /* A hold given ahead on this room starts on the old arrival: it is
+         stretched back to the day the guest came (FD-24). */
+      await client.query(
+        `update room_assignments set from_date = $3::date
+          where reservation_id = $1 and released_at is null and room_id = $2
+            and from_date > $3::date`,
+        [stayId, room.id, arrival],
+      );
       await client.query(
         `insert into room_assignments
            (hotel_id, reservation_id, room_id, from_date, to_date, reason)
          values ($1, $2, $3, $4, $5, 'arrival')
          on conflict do nothing`,
-        [hotelId, stayId, room.id, stay.check_in, stay.check_out],
+        [hotelId, stayId, room.id, arrival, stay.check_out],
       );
+
+      /* THE FIRST NIGHT IS CHARGED NOW (the owner's D27-204, D27-205): the
+         room charge and its GST, dated today, by the night audit's own code -
+         so the audit finds this night charged and posts each later one. The
+         last write, in the check-in's own transaction, after every refusal
+         (MEMORY 243) and after the hold, which names the room on the line.
+         Nothing for a complimentary room, as the audit. And nothing where the
+         property has no GST rule for rooms: the guest is not kept at the desk
+         for a setting, and the audit - refused until the rule is set - posts
+         this night. */
+      const [night] = await roomNightsDue(client, hotelId, businessDate, stayId);
+      if (night && !night.comp && night.gst !== null) {
+        await postRoomNight(client, hotelId, businessDate, night, "check_in");
+      }
 
       /* No write to rooms.occupancy_status here: the check-in above and
          the assignment re-read it from app.in_house (129), the one rule. */
@@ -982,7 +1013,8 @@ operations.post("/:code/stays/:id/move", async (c) => {
   type Body = {
     roomNumber?: string; from?: string; reason?: string;
     /* Optional. Applies to nights not yet posted, which is every night from
-       tonight on — a posted night is history. */
+       tonight on — a posted night is history. On the arrival day tonight IS
+       posted, at check-in (D27-204): that one line is put right too. */
     agreedRate?: number;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
@@ -1041,6 +1073,30 @@ operations.post("/:code/stays/:id/move", async (c) => {
         && from <= await businessDateFor(client, hotelId)) {
       const inRoom = await stillIn(client, hotelId, room[0].id, roomNumber, [stayId]);
       if (inRoom) return refuse(inRoom);
+    }
+
+    /* TONIGHT FOLLOWS THE NEW RATE ON THE ARRIVAL DAY TOO (the owner's
+       D27-205). A new rate has always applied "from tonight forward"; since
+       D27-204 tonight's night is posted at check-in, so the move puts that
+       one line right - finance's Edit: the old line reversed with the reason,
+       the corrected one posted. The desk may do it through the move, though
+       it edits no other charge. Before app.move_room writes: Edit asks all
+       its questions before its first write, so a refusal changes nothing
+       (MEMORY 243). */
+    if (input.agreedRate !== undefined && stay[0].status === "checked_in") {
+      const today = await businessDateFor(client, hotelId);
+      const { rows: tonight } = from > today ? { rows: [] } : await client.query<{ id: string }>(
+        `select fp.id::text from folio_postings fp
+          where fp.hotel_id = $1 and fp.reservation_id = $2 and fp.category = 'room'
+            and fp.source_type = 'check_in' and fp.business_date = $3::date
+            and fp.amount <> $4::numeric and fp.reverses_id is null
+            and not exists (select 1 from folio_postings r where r.reverses_id = fp.id)`,
+        [hotelId, stayId, today, input.agreedRate.toFixed(2)]);
+      if (tonight[0]) {
+        const done = await editFolioCharge(client, hotelId, tonight[0].id,
+          { amount: input.agreedRate, reason: `Room move: ${reason}` }, { reservationId: stayId });
+        if (!done.ok) return refuse(`Tonight is already charged. ${done.reason}`);
+      }
     }
 
     try {

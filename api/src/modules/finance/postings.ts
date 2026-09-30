@@ -317,8 +317,11 @@ export async function reverseFolioCharge(
   client: Client, hotelId: string, postingId: string, reason: string | undefined,
   within: { reservationId: string } | { folioId: string },
 ): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  /* A stay's line: on its own bill, or its own room night on its group's
+     (D27-204 posts a routed room's first night there on an open day). */
   const [column, value] = "folioId" in within
-    ? ["f.id", within.folioId] : ["f.reservation_id", within.reservationId];
+    ? ["f.id", within.folioId]
+    : ["coalesce(f.reservation_id, fp.reservation_id)", within.reservationId];
   const { rows } = await client.query<{
     id: string; folio_id: string; business_date: string; category: string;
     description: string; amount: string; tax_rate: string; tax_amount: string;
@@ -474,7 +477,8 @@ export async function editFolioCharge(
               order by v.issued_at desc limit 1) as vat_bill
        from folio_postings fp
        join folios f on f.id = fp.folio_id
-      where f.hotel_id = $1 and f.reservation_id = $2 and fp.id = $3::bigint`,
+      where f.hotel_id = $1 and coalesce(f.reservation_id, fp.reservation_id) = $2
+        and fp.id = $3::bigint`,
     [hotelId, within.reservationId, postingId],
   );
   const p = rows[0];
