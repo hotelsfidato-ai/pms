@@ -12,6 +12,28 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-10-01 · A kept ID photo is never replaced (OCI-11, the pre-launch review)
+
+Branch `online-checkin/kept-photo-1oct`, from cp6 7ada2983.
+
+**Asked for** (the master, from the read-only pre-launch review): a replace removed every
+stored photo of the stay, a kept one included - see OCI-11. The rule, already decided: a
+replace only ever replaces a WAITING photo of the SAME submission; a kept photo is deleted
+only by the owner, an administrator or the GM, with a reason.
+**Shipped:** `app.guest_id_photo_stored` (167, edited in place: unreleased and re-runnable)
+replaces only the guest's own photo of the same waiting submission. The desk's add replaces
+nothing (the button after an add reads "Add another photo", and the sentence says only the
+keepers can delete it). The desk's list shows a waiting submission's own photo.
+**Proved:** `guestIdPhoto` 29 of 29. Seen to fail on the code before the fix: a kept photo
+surviving the guest's re-sent details and new photo, surviving a desk add, and the guest's
+waiting photo surviving a desk add (3). The list's own fix, seen to fail with the old query
+(1). The waiting-photo replace, seen to fail when nothing is ever replaced (1). Web: online
+check-in and front desk 124 of 124; `npx tsc -b`, the API typecheck, strip-check (172 files)
+clean. `db/tests/rerun.sh`: all 170 migrations re-runnable. `guestDoor` 28,
+`guestDoorBehindTheCode` 32, `roleGate` 64, `guards` 45: 169 of 169.
+**Not done:** no database-suite file exists for this module (`db/tests/modules/` has none);
+the functions are tested through the door and directly in `guestIdPhoto.test.ts`.
+
 ## 2026-09-30 · The ID photo: encrypted with the hotel's password, kept in Google Drive, never on this server; the desk adds one at check-in (D27-207 to D27-212)
 
 Branch `online-checkin/verify-photo-30sep`. Stages C and D; A and B are the entry below.

@@ -313,6 +313,9 @@ describe("the desk adds a photo at check-in (D27-210)", () => {
     fireEvent.click(button);
 
     expect(await screen.findByText(/Added. It is kept, encrypted, for the owner/)).toBeTruthy();
+    /* 1 October: another is a second kept photo, never a replacement. */
+    expect(screen.getByRole("button", { name: "Add another photo" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Replace the photo" })).toBeNull();
     expect(sent).toHaveLength(1);
     expect(sent[0]!.url).toBe("/api/hotels/5EL/stays/stay-1/id-photo");
     expect(sent[0]!.form.get("agreed")).toBe("yes");

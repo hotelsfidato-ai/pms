@@ -841,9 +841,10 @@ guestLinks.get("/:code/online-checkin", async (c) => {
          join reservations r on r.id = d.reservation_id
          join guests g       on g.id = d.guest_id
          left join lateral (
+           -- THIS submission's photo, not the stay's latest: a photo already
+           -- kept from an earlier one is not reception's to open (1 October).
            select x.id, x.sides, x.stored_at from guest_id_photos x
-            where x.reservation_id = d.reservation_id and x.guest_id = d.guest_id
-              and x.status = 'stored'
+            where x.submission_id = d.id and x.status = 'stored'
             order by x.created_at desc limit 1) p on true
         where d.hotel_id = $1 and d.status = 'waiting'
         order by d.submitted_at`, [hotelId]);
@@ -1109,26 +1110,18 @@ guestLinks.post("/:code/stays/:id/id-photo", async (c) => {
       + "Try again shortly." }, 503);
   }
 
-  /* Stored; and the photo before it for this guest and stay, if there was
-     one, goes at once - the same rule as a guest's own replacement. */
-  const replaced = await withSession(c.get("subject"), async (client, session) => {
-    await client.query(
-      `update guest_id_photos
-          set status = 'stored', stored_at = now(), drive_file_id = $2,
-              cipher_sha256 = $3, cipher_bytes = $4
-        where id = $1 and status = 'pending'`, [id, stored.driveFileId, stored.sha256, stored.bytes]);
-    return (await client.query<{ id: string; drive_file_id: string }>(
-      `update guest_id_photos
-          set status = 'removed', removed_at = now(), removed_by = $4, removed_reason = 'replaced'
-        where reservation_id = $1 and guest_id = $2 and status = 'stored' and id <> $3
-        returning id::text, drive_file_id`, [stayId, who.stay!.guest_id, id, session.staffId])).rows;
-  });
-  for (const old of replaced) {
-    if (!(await removePhotos(who.stay.hotel_code, old.drive_file_id))) {
-      await withSession(c.get("subject"), (client) => client.query(
-        "update guest_id_photos set drive_delete_failed_at = now() where id = $1", [old.id]));
-    }
-  }
+  /* Stored, and KEPT from this moment - and it REPLACES NOTHING (1 October,
+     the pre-launch review). It used to remove every other stored photo of the
+     stay, a kept one included. A replace only ever replaces a waiting photo
+     of the same submission, and a photo added here has none: beside a kept
+     one it is a second kept one, and beside the guest's waiting one it leaves
+     that for the clerk to confirm or remove. A kept photo is deleted only by
+     the owner, an administrator or the GM, with a reason (D27-210). */
+  await withSession(c.get("subject"), (client) => client.query(
+    `update guest_id_photos
+        set status = 'stored', stored_at = now(), drive_file_id = $2,
+            cipher_sha256 = $3, cipher_bytes = $4
+      where id = $1 and status = 'pending'`, [id, stored.driveFileId, stored.sha256, stored.bytes]));
   return c.json({ added: true });
 });
 

@@ -730,6 +730,45 @@ describe("a kept photo", () => {
     expect(list.photos).toEqual([]);
   });
 
+  /* ⚠ 1 October, found by the pre-launch review: a replace removed EVERY
+     stored photo of the stay. A guest who sent their details again - a new
+     waiting submission - and any JPEG deleted the copy the desk had kept;
+     the desk then removing the new one as "not an ID" left none. */
+  it("survives the guest sending their details again and another photo", async () => {
+    const row = await keep();
+    await sendDetails(link, unlock);   // a new waiting submission
+    type DeskList = { waiting: { reference: string; photo: { id: string } | null }[] };
+    const before = (await (await asStaff(deskId, "/5EL/online-checkin")).json()) as DeskList;
+    expect(before.waiting.find((w) => w.reference === "GIP-1")!.photo,
+      "the new details have no photo: the kept one is not shown to reception as theirs").toBeNull();
+    expect((await send(link, unlock, { front: jpeg("after-the-desk-checked") })).status).toBe(200);
+
+    const rows = await rowsOf();
+    expect(rows.map((r) => [r.id === row.id ? "kept" : "new", r.status, r.removed_reason]))
+      .toEqual([["kept", "stored", null], ["new", "stored", null]]);
+    expect(files.has(row.drive_file_id), "the kept copy is still in Drive").toBe(true);
+
+    /* The new details show THEIR photo to reception, not the kept one. */
+    const fresh = rows.find((r) => r.id !== row.id)!;
+    const list = (await (await asStaff(deskId, "/5EL/online-checkin")).json()) as DeskList;
+    expect(list.waiting.find((w) => w.reference === "GIP-1")!.photo!.id).toBe(fresh.id);
+
+    /* And the desk removing the new one leaves the kept one kept. */
+    expect((await asStaff(deskId, `/5EL/online-checkin/id-photos/${fresh.id}/remove`, "POST", { reason: "not_an_id" })).status).toBe(200);
+    expect((await rowsOf()).find((r) => r.id === row.id)).toMatchObject({ status: "stored", removed_reason: null });
+    expect(files.has(row.drive_file_id)).toBe(true);
+  });
+
+  it("survives a photo added at the desk: that is a second kept one", async () => {
+    const row = await keep();
+    expect((await deskAdds(deskId, stayId)).status).toBe(200);
+    expect((await rowsOf()).map((r) => [r.status, r.removed_reason, r.by_guest])).toEqual([
+      ["stored", null, true], ["stored", null, false]]);
+    expect(files.has(row.drive_file_id)).toBe(true);
+    const list = (await (await kept(gmId)).json()) as { photos: { id: string }[] };
+    expect(list.photos, "both kept, for a keeper to delete one with a reason").toHaveLength(2);
+  });
+
   it("says so at the desk when the hotel has no password", async () => {
     delete process.env["ID_PHOTO_PASSWORD_5EL"];
     const list = (await (await asStaff(ownerId, "/5EL/online-checkin")).json()) as { idPhotos: { on: boolean; off: string; keeper: boolean } };
@@ -760,13 +799,17 @@ describe("the desk adds one at check-in (D27-210)", () => {
     expect(list.photos).toMatchObject([{ id: row.id, addedBy: `${TAG} Desk` }]);
   });
 
-  it("takes the place of one the guest sent, which goes from Drive at once", async () => {
+  /* 1 October: a photo added at the desk replaces NOTHING. It has no
+     submission, and a replace only ever replaces a waiting photo of the
+     same submission. The guest's own stays for the clerk to confirm or
+     remove. */
+  it("sits beside one the guest sent, and deletes nothing", async () => {
     expect((await send(link, unlock, { front: jpeg("guests-own") })).status).toBe(200);
     const theirs = (await storedRow())!;
     expect((await deskAdds(deskId, stayId)).status).toBe(200);
-    expect(files.has(theirs.drive_file_id)).toBe(false);
+    expect(files.has(theirs.drive_file_id), "the guest's is still in Drive").toBe(true);
     expect((await rowsOf()).map((r) => [r.status, r.removed_reason, r.by_guest])).toEqual([
-      ["removed", "replaced", true], ["stored", null, false]]);
+      ["stored", null, true], ["stored", null, false]]);
   });
 
   it("is the desk's alone, needs the tick, the same kind of file, and a password", async () => {
