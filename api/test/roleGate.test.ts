@@ -333,6 +333,12 @@ describe("the matrix the server asks", () => {
     expect(rule(`PATCH ${H}/work-orders/:id`).kind).toBe("own");
   });
 
+  it("D27-181: a guest request's read and writes are the route's, which alone knows the request's team", () => {
+    expect(rule(`POST ${H}/requests`).kind).toBe("own");
+    expect(rule(`PATCH ${H}/requests/:id`).kind).toBe("own");
+    expect(READ_RULES[`GET ${H}/requests`]?.kind).toBe("own");
+  });
+
   it("says who may, in a sentence a person reads", () => {
     for (const [key, r] of Object.entries(WRITE_RULES)) {
       if (r.kind !== "grant") continue;

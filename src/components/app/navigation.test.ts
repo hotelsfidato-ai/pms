@@ -102,6 +102,8 @@ describe("each person's menu", () => {
       /* Online check-in's desk screen, 21 September (the owner's D21-89):
          reception confirms a guest's details against the ID here. */
       "Online check-in",
+      /* 30 September (the owner's D27-181): guests' in-stay requests. */
+      "Guest requests",
       "All bookings",
       /* 29 September (the owner's D27-174): what the CRS sold, and the
          notes the desk acts on when it changes there. */
@@ -179,10 +181,14 @@ describe("each person's menu", () => {
   });
 
   it("gives the restaurant and the kitchen their own screens", () => {
-    expect(menu("pos")).toEqual(["Tables", "Till", "Terminal", "Close restaurant day"]);
-    expect(menu("chef")).toEqual(["Kitchen", "Notifications"]);
+    /* Guest requests joined all three on 30 September (D27-181): food and
+       drink is theirs. It sits in the Front desk section, so it comes first;
+       where they land is unchanged (below). */
+    expect(menu("pos")).toEqual(["Guest requests", "Tables", "Till", "Terminal", "Close restaurant day"]);
+    expect(menu("chef")).toEqual(["Guest requests", "Kitchen", "Notifications"]);
     /* The Store joined the kitchen manager's on 22 September (D22-19). */
-    expect(menu("kitchen_manager")).toEqual(["Store", "Kitchen", "Menu", "Close restaurant day", "Notifications"]);
+    expect(menu("kitchen_manager")).toEqual(
+      ["Guest requests", "Store", "Kitchen", "Menu", "Close restaurant day", "Notifications"]);
   });
 
   it("keeps the revenue manager out of the restaurant's menu (D22-35)", () => {
@@ -205,7 +211,7 @@ describe("each person's menu", () => {
        hotel has it on (D22-22), and Purchasing once D22-11 let housekeeping
        see it (the owner, 24 September). */
     expect(menu("housekeeping")).toEqual(
-      ["Rooms", "Housekeeping", "Work orders", "Store", "Equipment", "Purchasing", "Dockets",
+      ["Rooms", "Housekeeping", "Work orders", "Guest requests", "Store", "Equipment", "Purchasing", "Dockets",
        "Notifications"]);
     expect(menu("stores")).toEqual(["Store", "Equipment", "Purchasing", "Notifications"]);
     for (const role of ["housekeeping", "stores", "chef", "kitchen_manager", "pos"] as Role[]) {
@@ -218,6 +224,10 @@ describe("each person's menu", () => {
     expect(workingHomeFor("housekeeping", "5EL")).toBe("/h/5EL/housekeeping");
     expect(workingHomeFor("kitchen_manager", "5EL")).toBe("/h/5EL/kitchen");
     expect(workingHomeFor("chef", "5EL")).toBe("/h/5EL/kitchen");
+    /* The chef and the waiter still land on the Kitchen and Tables, with
+       Guest requests above them in their menus (D27-181, GS-1: without
+       WORKING_HOME naming them, both landed on Guest requests). */
+    expect(workingHomeFor("pos", "5EL")).toBe("/h/5EL/floor");
     expect(workingHomeFor("front_desk", "5EL")).toBeNull();
     expect(workingHomeFor("owner", "5EL")).toBeNull();
   });
@@ -271,8 +281,9 @@ describe("each person's menu", () => {
        (D27-168, D27-171), so its entry moved into "Bookings" as "CRS
        bookings", as Guest messages did. Edited by the CRS lane; the master
        reviews it at merge. */
+    /* ⚠ AND "GUEST SERVICES" LEFT, 30 September - it is BUILT as Guest
+       requests (D27-178, D27-181), a working screen in the Front desk. */
     const NOT_BUILT: Record<string, string[]> = {
-      "Front desk": ["Guest services"],
       /* 29 September: Leads and WhatsApp and Marketing are BUILT (D27-168,
          D27-170); their entries stay in this section as working screens. */
       "Sales and marketing": ["Loyalty"],

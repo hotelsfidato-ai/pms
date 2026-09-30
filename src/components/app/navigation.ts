@@ -540,6 +540,10 @@ export function sidebarFor(
 const WORKING_HOME: Partial<Record<Role, string>> = {
   housekeeping: "/h/:code/housekeeping",
   kitchen_manager: "/h/:code/kitchen",
+  /* Guest requests joined their menus in the Front desk section, above the
+     restaurant's (D27-181); they still land on their own work (GS-1). */
+  chef: "/h/:code/kitchen",
+  pos: "/h/:code/floor",
 };
 
 /**

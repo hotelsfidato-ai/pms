@@ -3,6 +3,7 @@ import { withSession } from "../auth.ts";
 import type { Client } from "../db.ts";
 import { businessDateFor } from "../businessDate.ts";
 import { can, type Role } from "../permissions.ts";
+import { teamsFor } from "../modules/guest-services/index.ts";
 
 /* Split out of billing.ts on 15 September in the service-folder move
    (docs/SERVICE-FOLDERS-PLAN.md). The core's: the bell reads arrivals,
@@ -166,6 +167,25 @@ notifications.get("/:code/notifications", async (c) => {
           title: `${waiting!.n} guest message${waiting!.n === 1 ? "" : "s"} waiting`,
           body: "Written to the front desk from the guest's own page. Read it and mark it handled.",
           isRead: false, at, link: `/h/${code}/guest-messages`, actionRequired: true,
+        });
+      }
+    }
+
+    /* An in-stay request nobody has taken yet (D27-181): for the team that
+       receives it, and for the desk, which sees every one. */
+    const teams = teamsFor(role);
+    if (teams.length) {
+      const { rows: [open] } = await client.query<{ n: number }>(
+        `select count(*)::int as n from work_orders
+          where hotel_id = $1 and reservation_id is not null and status = 'open'
+            and (case when category in ('housekeeping', 'fnb') then category
+                      else 'maintenance' end) = any($2::text[])`, [hotelId, teams]);
+      if (open!.n) {
+        out.push({
+          id: "guest-requests-waiting", hotelId: code, category: "customer",
+          title: `${open!.n} guest request${open!.n === 1 ? "" : "s"} waiting`,
+          body: `Nobody has taken ${open!.n === 1 ? "it" : "them"} yet. Take one on Guest requests and mark it done.`,
+          isRead: false, at, link: `/h/${code}/requests`, actionRequired: true,
         });
       }
     }
