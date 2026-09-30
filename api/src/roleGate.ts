@@ -316,9 +316,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
      import that also sets it. The tax card's own picker stays GST. */
   [`POST ${H}/till/menu/categories/:id/tax-kind`]: MENU,
   [`POST ${H}/till/menu/items/:id/toggle`]: MENU,
-  [`POST ${H}/till/menu/items/:id/variations`]: MENU,
-  [`PATCH ${H}/till/menu/variations/:id`]: MENU,
-  [`POST ${H}/till/menu/variations/:id/remove`]: MENU,
+  [`PUT ${H}/till/menu/items/:id/variations`]: MENU,  // the whole set, D27-192
   [`POST ${H}/till/menu/addon-groups`]: MENU,
   [`PATCH ${H}/till/menu/addon-groups/:id`]: MENU,
   [`POST ${H}/till/menu/addon-groups/:id/dishes`]: MENU,

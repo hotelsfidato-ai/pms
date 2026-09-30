@@ -267,7 +267,7 @@ describe("what the desk is told when a booking is refused", () => {
 
   it("shows the tax refusal naming where GST is set (D18-21)", async () => {
     const noRate = "This property has not set a GST rate for the spa, so a "
-      + "treatment cannot be billed. Set it under Rooms and rates → Room types, in the GST card.";
+      + "treatment cannot be billed. Set it under System → Administration → Configuration, in the GST card.";
     server(booking(refuse(409, noRate)));
     diaryPage();
 

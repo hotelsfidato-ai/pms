@@ -50,7 +50,7 @@ function typedPrice(raw: unknown): number | null {
 }
 
 const NO_PRICE =
-  "Type a price. A blank is not zero - type 0 for something that is free.";
+  "Type a price, or tick Free. A blank is not zero.";
 
 /** The hotel this route is about, or null if the code is unknown. */
 async function hotelFor(client: Client, code: string): Promise<string | null> {
@@ -234,7 +234,10 @@ till.get("/:code/till/menu", async (c) => {
         ownPrepMinutes: number | null;
         course: number | null;
         ownCourse: number | null;
-        variations: { id: string; label: string; price: number }[];
+        variations: {
+          id: string; label: string; price: number;
+          typeNo: number; kind: string | null; heading: string | null;
+        }[];
         addonGroups: {
           id: string; label: string; minSelect: number; maxSelect: number | null;
           addons: { id: string; label: string; price: number; offUntil: string | null }[];
@@ -282,12 +285,14 @@ till.get("/:code/till/menu", async (c) => {
        has a bug in it. */
     const { rows: variations } = await client.query<{
       item_id: string; id: string; label: string; price: string;
+      type_no: number; kind: string | null; heading: string | null;
     }>(
-      `select v.item_id::text, v.id::text, v.label, v.price::text
+      `select v.item_id::text, v.id::text, v.label, v.price::text,
+              v.type_no, v.kind, v.heading
          from pos_item_variations v
          join pos_menu_items i on i.id = v.item_id
         where i.hotel_id = $1 and v.is_active
-        order by v.sort_order, v.price`,
+        order by v.type_no, v.sort_order, v.price`,
       [hotelId],
     );
 
@@ -312,8 +317,12 @@ till.get("/:code/till/menu", async (c) => {
     );
 
     for (const v of variations) {
+      /* Its type (D27-192): type 1 carries the dish's price, a later one
+         adds to it. Added fields, so a menu cached before them reads every
+         choice as type 1, as it was. */
       items.get(v.item_id)?.variations.push({
         id: v.id, label: v.label, price: Number(v.price),
+        typeNo: v.type_no, kind: v.kind, heading: v.heading,
       });
     }
 
@@ -738,7 +747,7 @@ till.post("/:code/till/menu/import", async (c) => {
           `insert into pos_item_variations
              (hotel_id, item_id, label, price, sort_order)
            values ($1,$2,$3,$4,$5)
-           on conflict (item_id, label) do update
+           on conflict (item_id, type_no, label) do update
              set price = excluded.price, is_active = true`,
           [hotelId, item[0]!.id, v.label, v.price, i + 1],
         );
@@ -1053,29 +1062,76 @@ till.post("/:code/till/menu/items/:id/toggle", async (c) => {
 
    045 made the tables and the order pad has sold from them since; until
    21 September nothing but the demo loader could write one (D21-39). The
-   owner's answers: an "Add variation" button on each dish (D21-40); an
-   add-on group made once and offered on many dishes, saying how many a
-   guest may choose (D21-41); "Preferences" as options a person prices
-   at 0 (D21-42). "The way Bhaaji Pau works, for the whole menu."
+   owner's answers: an add-on group made once and offered on many dishes,
+   saying how many a guest may choose (D21-41). Since 30 September a dish
+   has one or more variation TYPES, saved together on one form (D27-189,
+   D27-192): Size, Quantity, or an Option with the manager's heading;
+   the first type carries the dish's price, each further one adds to it.
 
    REMOVED, NEVER DELETED. A line on a printed bill points at the
    variation or add-on it sold, so removing one switches it off
-   (`is_active`) and the menu stops offering it. Adding the same name
-   again brings the old row back at the new price.
+   (`is_active`) and the menu stops offering it. The same name typed
+   again in the same type brings that row back.
 
-   EVERY PRICE IS TYPED. A blank is refused, never kept as zero; a typed
-   0 is a real answer - "no onion" costs nothing.
+   EVERY PRICE IS TYPED, OR TICKED FREE. A blank is refused, never kept
+   as zero, and a 0 without the Free tick is refused too (D27-120, which
+   replaced D21-42's "type 0").
    ══════════════════════════════════════════════════════════════════ */
 
-type Named = { label?: unknown; price?: unknown };
+type Named = { label?: unknown; price?: unknown; free?: unknown };
 const labelOf = (raw: unknown) => (typeof raw === "string" ? raw.trim() : "");
+const TYPE_KINDS = ["size", "quantity", "option"];
 
-till.post("/:code/till/menu/items/:id/variations", async (c) => {
-  const input = await c.req.json<Named>().catch(() => ({}) as Named);
-  const label = labelOf(input.label);
-  if (!label) return c.json(refuse("A variation needs a name - Half, Full, 500 ml."), 409);
-  const price = typedPrice(input.price);
-  if (price === null) return c.json(refuse(NO_PRICE), 409);
+/** A price as the form sends it: typed, or ticked Free (0). Null with the
+    reason when it is neither, or a 0 that was not ticked. */
+function priceOf(raw: Named): { price: number } | { reason: string } {
+  const free = raw.free === true;
+  const price = free ? 0 : typedPrice(raw.price);
+  if (price === null) return { reason: NO_PRICE };
+  const bad = priceProblem(price, free);
+  return bad ? { reason: bad } : { price };
+}
+
+/** THE WHOLE SET, in one transaction (D27-192, T2). A choice keeps its
+    row by its type and name, so a name moved back into a type it left
+    revives that row; one sent with an id and a new name renames it. */
+till.put("/:code/till/menu/items/:id/variations", async (c) => {
+  type TypeIn = { kind?: unknown; heading?: unknown; choices?: (Named & { id?: unknown })[] };
+  type SetIn = { types?: TypeIn[]; dishPrice?: unknown; dishFree?: unknown };
+  const input = await c.req.json<SetIn>().catch(() => ({}) as SetIn);
+  const typesIn = Array.isArray(input.types) ? input.types : [];
+
+  type Choice = { id: string | null; typeNo: number; label: string; price: number;
+                  kind: string; heading: string | null; sort: number };
+  const wanted: Choice[] = [];
+  for (const [i, t] of typesIn.entries()) {
+    const typeNo = i + 1;
+    const kind = typeof t.kind === "string" ? t.kind : "";
+    if (!TYPE_KINDS.includes(kind)) {
+      return c.json(refuse(`Type ${typeNo}: pick Size, Quantity or Option.`), 409);
+    }
+    const heading = kind === "option" ? labelOf(t.heading) : null;
+    if (heading === "") {
+      return c.json(refuse(`Type ${typeNo}: an Option needs a heading - Spice level, Crust.`), 409);
+    }
+    const choices = Array.isArray(t.choices) ? t.choices : [];
+    if (choices.length === 0) return c.json(refuse(`Type ${typeNo} has no choices.`), 409);
+    const seen = new Set<string>();
+    for (const [j, ch] of choices.entries()) {
+      const label = labelOf(ch.label);
+      if (!label) return c.json(refuse("A choice needs a name - Small, Half, Mild."), 409);
+      if (seen.has(label.toLowerCase())) {
+        return c.json(refuse(`${label} is in type ${typeNo} twice.`), 409);
+      }
+      seen.add(label.toLowerCase());
+      const priced = priceOf(ch);
+      if ("reason" in priced) return c.json(refuse(`${label}: ${priced.reason}`), 409);
+      wanted.push({ id: typeof ch.id === "string" ? ch.id : null, typeNo, label,
+                    price: priced.price, kind, heading, sort: j + 1 });
+    }
+  }
+  const dishPrice = typesIn.length === 0
+    ? priceOf({ price: input.dishPrice, free: input.dishFree }) : null;
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -1083,106 +1139,65 @@ till.post("/:code/till/menu/items/:id/variations", async (c) => {
     const itemId = c.req.param("id");
 
     const { rows: dish } = await client.query<{ name: string }>(
-      "select name from pos_menu_items where id = $1 and hotel_id = $2",
-      [itemId, hotelId]);
+      "select name from pos_menu_items where id = $1 and hotel_id = $2", [itemId, hotelId]);
     if (!dish[0]) return refuse("No such dish.");
-
-    const { rows } = await client.query<{ id: string }>(
-      `insert into pos_item_variations (hotel_id, item_id, label, price, sort_order)
-       values ($1, $2, $3, $4,
-               (select coalesce(max(sort_order), 0) + 1
-                  from pos_item_variations where item_id = $2))
-       on conflict (item_id, label) do update
-         set price = excluded.price, is_active = true
-         where not pos_item_variations.is_active
-       returning id::text`,
-      [hotelId, itemId, label, price]);
-    if (!rows[0]) return refuse(`${dish[0].name} already has ${label}.`);
-    return { ok: true as const, id: rows[0].id };
-  });
-
-  if (!result) return c.json({ error: "No such property." }, 404);
-  return c.json(result, result.ok ? 200 : 409);
-});
-
-/** Rename and reprice, both sent. */
-till.patch("/:code/till/menu/variations/:id", async (c) => {
-  const input = await c.req.json<Named>().catch(() => ({}) as Named);
-  const label = labelOf(input.label);
-  if (!label) return c.json(refuse("A variation needs a name."), 409);
-  const price = typedPrice(input.price);
-  if (price === null) return c.json(refuse(NO_PRICE), 409);
-
-  const result = await withSession(c.get("subject"), async (client) => {
-    const hotelId = await hotelFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-    const id = c.req.param("id");
-
-    const { rows: clash } = await client.query<{ is_active: boolean; dish: string }>(
-      `select o.is_active, i.name as dish
-         from pos_item_variations v
-         join pos_item_variations o on o.item_id = v.item_id
-                                   and o.label = $3 and o.id <> v.id
-         join pos_menu_items i on i.id = v.item_id
-        where v.id = $1 and v.hotel_id = $2`,
-      [id, hotelId, label]);
-    if (clash[0]) {
-      return refuse(clash[0].is_active
-        ? `${clash[0].dish} already has ${label}.`
-        : `${clash[0].dish} had a ${label} that was removed. Add ${label} again `
-          + "to bring it back.");
-    }
-
-    const { rowCount } = await client.query(
-      `update pos_item_variations set label = $3, price = $4
-        where id = $1 and hotel_id = $2 and is_active`,
-      [id, hotelId, label, price]);
-    if (!rowCount) return refuse("No such variation.");
-    return { ok: true as const };
-  });
-
-  if (!result) return c.json({ error: "No such property." }, 404);
-  return c.json(result, result.ok ? 200 : 409);
-});
-
-/** Removing the LAST variation makes the dish a one-price dish again, and
-    its own price has not been looked at since it gained variations. So
-    that removal needs the price, typed (the owner, 21 September). */
-till.post("/:code/till/menu/variations/:id/remove", async (c) => {
-  const input = await c.req.json<{ dishPrice?: unknown }>()
-    .catch(() => ({}) as { dishPrice?: unknown });
-  const dishPrice = typedPrice(input.dishPrice);
-
-  const result = await withSession(c.get("subject"), async (client) => {
-    const hotelId = await hotelFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-    const id = c.req.param("id");
-
-    const { rows: v } = await client.query<{
-      item_id: string; dish: string; others: string;
+    const { rows: rows } = await client.query<{
+      id: string; type_no: number; label: string; is_active: boolean;
     }>(
-      `select v.item_id::text, i.name as dish,
-              (select count(*) from pos_item_variations o
-                where o.item_id = v.item_id and o.is_active
-                  and o.id <> v.id)::text as others
-         from pos_item_variations v
-         join pos_menu_items i on i.id = v.item_id
-        where v.id = $1 and v.hotel_id = $2 and v.is_active`,
-      [id, hotelId]);
-    if (!v[0]) return refuse("No such variation.");
+      `select id::text, type_no, label, is_active from pos_item_variations
+        where item_id = $1`, [itemId]);
 
-    const last = v[0].others === "0";
-    if (last && dishPrice === null) {
-      return refuse(`${v[0].dish} will be sold at one price again. What price?`);
+    /* Removing the last one makes the dish one price again, and that
+       price has not been looked at since it gained variations - so it is
+       typed now (the owner, 21 September). */
+    const hadAny = rows.some((r) => r.is_active);
+    if (dishPrice && hadAny && "reason" in dishPrice) {
+      return refuse(`${dish[0].name} will be sold at one price again. `
+        + `What price? ${dishPrice.reason}`);
     }
-    if (last) {
-      await client.query(
-        `update pos_menu_items set price = $3, updated_at = now()
-          where id = $1 and hotel_id = $2`,
-        [v[0].item_id, hotelId, dishPrice]);
+
+    /* Which row each choice lands on: the same type and name first (a
+       revival), then the row its id names if nobody took it, else new. */
+    const byKey = new Map(rows.map((r) => [`${r.type_no}|${r.label}`, r.id]));
+    const ids = new Set(rows.map((r) => r.id));
+    const taken = new Set<string>();
+    const rowOf = new Map<Choice, string | null>();
+    for (const w of wanted) {
+      const hit = byKey.get(`${w.typeNo}|${w.label}`);
+      if (hit) { taken.add(hit); rowOf.set(w, hit); }
     }
+    for (const w of wanted) {
+      if (rowOf.has(w)) continue;
+      const own = w.id && ids.has(w.id) && !taken.has(w.id) ? w.id : null;
+      if (own) taken.add(own);
+      rowOf.set(w, own);
+    }
+
     await client.query(
-      "update pos_item_variations set is_active = false where id = $1", [id]);
+      `update pos_item_variations set is_active = false
+        where item_id = $1 and is_active and not (id = any($2::uuid[]))`,
+      [itemId, [...taken]]);
+    for (const w of wanted) {
+      const row = rowOf.get(w);
+      const values = [w.typeNo, w.label, w.price, w.kind, w.heading, w.sort];
+      if (row) {
+        await client.query(
+          `update pos_item_variations
+              set type_no = $2, label = $3, price = $4, kind = $5, heading = $6,
+                  sort_order = $7, is_active = true
+            where id = $1`, [row, ...values]);
+      } else {
+        await client.query(
+          `insert into pos_item_variations
+             (hotel_id, item_id, type_no, label, price, kind, heading, sort_order)
+           values ($1, $2, $3, $4, $5, $6, $7, $8)`, [hotelId, itemId, ...values]);
+      }
+    }
+    if (dishPrice && hadAny && "price" in dishPrice) {
+      await client.query(
+        "update pos_menu_items set price = $3, updated_at = now() where id = $1 and hotel_id = $2",
+        [itemId, hotelId, dishPrice.price]);
+    }
     return { ok: true as const };
   });
 
@@ -1353,8 +1368,9 @@ till.post("/:code/till/menu/addon-groups/:id/addons", async (c) => {
   const input = await c.req.json<Named>().catch(() => ({}) as Named);
   const label = labelOf(input.label);
   if (!label) return c.json(refuse("An option needs a name - Butter naan, No onion."), 409);
-  const price = typedPrice(input.price);
-  if (price === null) return c.json(refuse(NO_PRICE), 409);
+  const priced = priceOf(input);
+  if ("reason" in priced) return c.json(refuse(priced.reason), 409);
+  const price = priced.price;
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -1390,8 +1406,9 @@ till.patch("/:code/till/menu/addons/:id", async (c) => {
   const input = await c.req.json<Named>().catch(() => ({}) as Named);
   const label = labelOf(input.label);
   if (!label) return c.json(refuse("An option needs a name."), 409);
-  const price = typedPrice(input.price);
-  if (price === null) return c.json(refuse(NO_PRICE), 409);
+  const priced = priceOf(input);
+  if ("reason" in priced) return c.json(refuse(priced.reason), 409);
+  const price = priced.price;
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -1510,6 +1527,10 @@ till.post("/:code/till/menu/addon-groups/import", async (c) => {
       }
       const price = typedPrice(rawPrice);
       if (price === null) return reject(`"${rawPrice}" is not a price.`);
+      /* D27-192 (Q6, D): a file cannot tick Free, as the menu file cannot. */
+      if (price === 0) {
+        return reject("0 is not taken from a file. Add a free option on the menu screen, ticked Free.");
+      }
 
       const min = whole(raw.minSelect);
       const max = whole(raw.maxSelect);
@@ -2072,6 +2093,9 @@ export interface LineInput {
      REQUIRES one and the database refuses without it; a dish with none
      must not be sent one. */
   variationId?: string;
+  /* The choice of each further type, when the dish has more than one
+     (D27-192): Large is the variation, Cheese burst and Thin are these. */
+  moreChoiceIds?: string[];
   addonIds?: string[];
 }
 
@@ -2146,7 +2170,7 @@ async function addOneLine(
               app.module_enabled(i.hotel_id, 'alcohol') as serves_alcohol,
               ${DISH_TAX_RATE}::text as tax_rate,
               (select count(*)::text from pos_item_variations v
-                where v.item_id = i.id and v.is_active) as variation_count
+                where v.item_id = i.id and v.is_active and v.type_no = 1) as variation_count
          from pos_menu_items i
          join pos_menu_categories c on c.id = i.category_id
         where i.id = $1 and i.hotel_id = $2`,
@@ -2182,8 +2206,8 @@ async function addOneLine(
     if (item[0].tax_rate === null && item[0].tax_kind === "alcohol") {
       return refuse(
         `${item[0].name} has no VAT rate. Nothing is set for alcohol, and a `
-        + "missing rate is not zero - set it in the GST and VAT card, under Rooms "
-        + "and rates → Room types or Finance → Invoices.");
+        + "missing rate is not zero - set it in the GST and VAT card, under System → "
+        + "Administration → Configuration or Finance → Invoices.");
     }
     if (item[0].tax_rate === null) {
       const KIND: Record<string, string> = {
@@ -2193,7 +2217,7 @@ async function addOneLine(
       return refuse(
         `${item[0].name} has no GST rate. Nothing is set for `
         + `${KIND[item[0].tax_kind] ?? "this category"}, and a missing rate `
-        + `is not zero - set it in the GST card, under Rooms and rates → Room types or Finance → Invoices.`);
+        + `is not zero - set it in the GST card, under System → Administration → Configuration or Finance → Invoices.`);
     }
 
     /* THE PRICE COMES FROM THE VARIATION, NOT THE ITEM.
@@ -2204,6 +2228,7 @@ async function addOneLine(
        reason before the constraint does. */
     let name = item[0].name;
     let unitPrice = item[0].price;
+    let firstLabel: string | null = null;
 
     if (Number(item[0].variation_count) > 0) {
       if (!input.variationId) {
@@ -2211,15 +2236,48 @@ async function addOneLine(
       }
       const { rows: v } = await client.query<{ label: string; price: string }>(
         `select label, price::text from pos_item_variations
-          where id = $1 and item_id = $2 and is_active`,
+          where id = $1 and item_id = $2 and is_active and type_no = 1`,
         [input.variationId, input.itemId],
       );
       if (!v[0]) return refuse("That variation is not on this dish.");
+      firstLabel = v[0].label;
       name = `${item[0].name} (${v[0].label})`;
       unitPrice = v[0].price;
     } else if (input.variationId) {
       return refuse(`${item[0].name} has no variations.`);
     }
+
+    /* EACH FURTHER TYPE (D27-192): one choice of each, and its price is
+       added to the first's - Large ₹400 + Cheese burst ₹80 is ₹480. The
+       kitchen reads every choice in the name, Free ones too. */
+    const wanted = input.moreChoiceIds ?? [];
+    const { rows: types } = await client.query<{ type_no: number; heading: string }>(
+      `select type_no, coalesce(max(heading), max(kind), 'variation') as heading
+         from pos_item_variations
+        where item_id = $1 and is_active and type_no > 1
+        group by type_no order by type_no`,
+      [input.itemId]);
+    const { rows: more } = wanted.length === 0 ? { rows: [] } : await client.query<{
+      id: string; type_no: number; label: string; price: string;
+    }>(
+      `select id::text, type_no, label, price::text from pos_item_variations
+        where id = any($2::uuid[]) and item_id = $1 and is_active and type_no > 1
+        order by type_no`,
+      [input.itemId, wanted]);
+    if (more.length !== wanted.length) return refuse("That choice is not on this dish.");
+    for (const t of types) {
+      if (more.filter((m) => m.type_no === t.type_no).length !== 1) {
+        return refuse(`${item[0].name}: choose one ${t.heading.toLowerCase()}.`);
+      }
+    }
+    if (more.length > 0) {
+      const paise = (rupees: string) => Math.round(Number(rupees) * 100);
+      unitPrice = ((paise(unitPrice) + more.reduce((sum, m) => sum + paise(m.price), 0))
+        / 100).toFixed(2);
+      name = `${item[0].name} (${[firstLabel, ...more.map((m) => m.label)]
+        .filter(Boolean).join(", ")})`;
+    }
+    const extraChoiceIds = more.map((m) => m.id);
 
     /* ── The sides, checked BEFORE anything is written ────────────
        They were checked after the dish's line went in, and a refusal
@@ -2278,32 +2336,46 @@ async function addOneLine(
 
     /* Price and tax are COPIED onto the line. A menu price that rises
        next month must not silently re-price a bill printed today. */
-      /* Increment first. Only if nothing matched does a row get added. */
-      /* Add-ons make two lines DIFFERENT even when the dish and note
-         match — a Bhaaji Pau with onions is not the same thing to a
-         kitchen as one without. Sent with add-ons, it always starts a
-         new line rather than joining one whose sides nobody checked. */
-      const wantsAddons = (input.addonIds?.length ?? 0) > 0;
-      const { rowCount: bumped } = wantsAddons ? { rowCount: 0 } : await client.query(
+      /* Increment first. Only if nothing matched does a row get added.
+         THE SAME DISH IS THE SAME CHOICES (D27-189): the variation, the
+         note and exactly these sides. A Bhaaji Pau with onions is not the
+         same thing to a kitchen as one without, but a second one with
+         onions is one more of it - with sides, this started a new line
+         every time, so the same dish ordered twice read as two. The dish
+         and its sides go up together. */
+      const { rows: same } = await client.query<{ id: string }>(
         `update pos_order_lines
             set qty = qty + $1
-          where order_id = $2
-            and item_id = $3
-            and variation_id is not distinct from $5
-            and parent_line_id is null
-            and not exists (select 1 from pos_order_lines a
-                             where a.parent_line_id = pos_order_lines.id
-                               and not a.voided)
-            and not voided
-            /* NOT ONE THE KITCHEN HAS (the owner, 28 September). Raising a
-               sent line put the second plate on the bill and on no docket:
-               the guest paid for two and the kitchen's slip said one. An
-               extra after the send is a new line and goes on the next. */
-            and kot_status = 'pending'
-            and note is not distinct from $4`,
+          where id = (
+            select l.id from pos_order_lines l
+             where l.order_id = $2
+               and l.item_id = $3
+               and l.variation_id is not distinct from $5
+               and l.parent_line_id is null
+               and not l.voided
+               /* NOT ONE THE KITCHEN HAS (the owner, 28 September). Raising a
+                  sent line put the second plate on the bill and on no docket:
+                  the guest paid for two and the kitchen's slip said one. An
+                  extra after the send is a new line and goes on the next. */
+               and l.kot_status = 'pending'
+               and l.note is not distinct from $4
+               and l.extra_choice_ids = $7::uuid[]
+               and array(select a.addon_id from pos_order_lines a
+                          where a.parent_line_id = l.id and not a.voided
+                          order by 1)
+                 = array(select unnest($6::uuid[]) order by 1)
+             order by l.added_at limit 1)
+          returning id::text`,
         [qty, orderId, input.itemId, input.note?.trim() || null,
-         input.variationId ?? null],
+         input.variationId ?? null, chosen.map((a) => a.id), extraChoiceIds],
       );
+      if (same[0]) {
+        await client.query(
+          `update pos_order_lines set qty = qty + $1
+            where parent_line_id = $2 and not voided`,
+          [qty, same[0].id]);
+      }
+      const bumped = same.length;
 
       const added = !bumped ? await client.query<{ id: string }>(
       /* TAPPING THE SAME DISH TWICE MEANS TWO OF IT, NOT TWO LINES.
@@ -2319,12 +2391,12 @@ async function addOneLine(
          re-adding something that was cancelled starts fresh. */
       `insert into pos_order_lines
          (order_id, hotel_id, item_id, variation_id, name, qty, unit_price,
-          tax_rate, tax_scheme, note, added_by)
-       values ($1,$2,$3,$10,$4,$5,$6,$7,$11,$8,$9)
+          tax_rate, tax_scheme, note, added_by, extra_choice_ids)
+       values ($1,$2,$3,$10,$4,$5,$6,$7,$11,$8,$9,$12)
        returning id`,
       [orderId, hotelId, input.itemId, name, qty,
        unitPrice, item[0].tax_rate, input.note?.trim() || null, session.staffId,
-       input.variationId ?? null, item[0].tax_scheme],
+       input.variationId ?? null, item[0].tax_scheme, extraChoiceIds],
     ) : null;
 
     /* ── The sides, as child lines ────────────────────────────────
@@ -4230,11 +4302,13 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
     }
 
     const { rows: line } = await client.query<{
-      qty: string; sent: boolean; has_addons: boolean;
+      qty: string; sent: boolean; addon_ids: string[]; extra_choice_ids: string[];
+      item_id: string | null; variation_id: string | null; note: string | null;
     }>(
       `select qty::text, kot_status <> 'pending' as sent,
-              exists (select 1 from pos_order_lines a
-                       where a.parent_line_id = l.id and not a.voided) as has_addons
+              array(select a.addon_id::text from pos_order_lines a
+                     where a.parent_line_id = l.id and not a.voided) as addon_ids,
+              item_id::text, variation_id::text, note, extra_choice_ids::text[]
          from pos_order_lines l
         where id = $1 and order_id = $2 and not voided
         for update`,
@@ -4242,14 +4316,9 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
     );
     if (!line[0]) return refuse("That line is struck, or is not here.");
     /* MORE of a dish the kitchen has is a new line, for the next docket -
-       the same as tapping it again (the owner, 28 September). With sides,
-       the waiter adds it from the menu so its sides are chosen with it. */
+       the same as tapping it again (the owner, 28 September), sides and
+       all (D27-192, Q7). */
     const moreSent = line[0].sent && qty > Number(line[0].qty);
-    if (moreSent && line[0].has_addons) {
-      return refuse(
-        "The kitchen already has this. Add another from the menu, with its " +
-        "sides, and send it.");
-    }
     /* Fewer of a dish the kitchen already has is a strike (D27-119). */
     const fewerSent = line[0].sent && qty < Number(line[0].qty);
     if (fewerSent) {
@@ -4270,15 +4339,18 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
       );
       if (!rowCount) return refuse("That line is already struck.");
     } else if (moreSent) {
-      await client.query(
-        `insert into pos_order_lines
-           (order_id, hotel_id, item_id, variation_id, name, qty, unit_price,
-            tax_rate, tax_scheme, note, added_by)
-         select order_id, hotel_id, item_id, variation_id, name, $2 - qty,
-                unit_price, tax_rate, tax_scheme, note, $3
-           from pos_order_lines where id = $1`,
-        [c.req.param("lineId"), qty, session.staffId],
-      );
+      /* Through the one place a dish goes on (D27-189): it joins the unsent
+         line of the same dish, and starts one only when there is none. Its
+         own insert here made a new line on every press. */
+      const l = line[0];
+      const refused = await addOneLine(client, session, hotelId, orderId, {
+        qty: qty - Number(l.qty), addonIds: l.addon_ids,
+        moreChoiceIds: l.extra_choice_ids,
+        ...(l.item_id ? { itemId: l.item_id } : {}),
+        ...(l.note ? { note: l.note } : {}),
+        ...(l.variation_id ? { variationId: l.variation_id } : {}),
+      });
+      if (refused) return refused;
     } else if (fewerSent) {
       /* THREE SENT, TWO WANTED: the one that goes is a struck line of its
          own, from the same ticket, so the docket, the pass and the day's
@@ -4295,14 +4367,16 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
            from pos_order_lines where id = $1`,
         [c.req.param("lineId"), qty, session.staffId, reason],
       );
+      /* Its sides go with it (D27-189): two plates, two lots of onions. */
       await client.query(
-        `update pos_order_lines set qty = $1 where id = $2`,
+        `update pos_order_lines set qty = $1
+          where (id = $2 or parent_line_id = $2) and not voided`,
         [qty, c.req.param("lineId")],
       );
     } else {
       const { rowCount } = await client.query(
         `update pos_order_lines set qty = $1
-          where id = $2 and order_id = $3 and not voided`,
+          where (id = $2 or parent_line_id = $2) and order_id = $3 and not voided`,
         [qty, c.req.param("lineId"), orderId],
       );
       if (!rowCount) return refuse("That line is struck, or is not here.");

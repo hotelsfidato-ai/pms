@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router";
 import {
-  UtensilsCrossed, Plus, X, Receipt, BedDouble, Banknote, ChevronRight,
+  UtensilsCrossed, Plus, Minus, X, Receipt, BedDouble, Banknote, ChevronRight,
   CreditCard, Smartphone, Printer, Percent, Split, CalendarHeart, Flame,
 } from "lucide-react";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
@@ -17,7 +17,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, settleOrder, sendToKitchen, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, type Order, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, type Order, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -151,12 +151,12 @@ export default function TillPage() {
 
   const addChosen = async (
     itemId: string, qty: number, note: string,
-    variationId?: string, addonIds?: string[],
+    variationId?: string, addonIds?: string[], moreChoiceIds?: string[],
   ) => {
     if (!openId) return;
     setBusy(true);
     const res = await addLine(hotelId, openId, itemId, qty,
-      note.trim() || undefined, variationId, addonIds);
+      note.trim() || undefined, variationId, addonIds, moreChoiceIds);
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
     setAsking(null);
@@ -178,6 +178,25 @@ export default function TillPage() {
       title: `Take off ${line.name}?`, body: SENT_STRIKE,
       field: { label: "Why is it coming off?", required: true },
       confirm: "Take it off", onConfirm: (why) => strike(lineId, why),
+    });
+  };
+
+  /* One fewer (D27-189): the last one is a strike; once the kitchen has
+     it, a manager's, with a reason (D27-119), as on the Terminal. */
+  const fewer = (lineId: string) => {
+    const line = current.data?.lines.find((l) => l.id === lineId);
+    if (!line || !openId) return;
+    if (line.qty <= 1) return askStrike(lineId);
+    const go = async (reason?: string) => {
+      const res = await setLineQty(hotelId, openId, lineId, line.qty - 1, reason);
+      if (!res.ok) return toast.error("Not changed", res.reason);
+      applyOrder(res.order);
+    };
+    if (line.kotStatus === "pending") return void go();
+    setAsk({
+      title: `1 fewer ${line.name}?`, body: SENT_STRIKE,
+      field: { label: "Why is it coming off?", required: true },
+      confirm: "Take it off", onConfirm: (why) => go(why),
     });
   };
 
@@ -365,6 +384,7 @@ export default function TillPage() {
               busy={busy}
               setBusy={setBusy}
               onStrike={askStrike}
+              onFewer={fewer}
               /* Settling or abandoning FINISHES a bill, so the panel
                  closes. Discounting it does not — the biller is still
                  standing at the same order and about to take payment. */
@@ -404,8 +424,8 @@ export default function TillPage() {
         item={asking}
         open={asking !== null}
         onOpenChange={(o) => { if (!o) setAsking(null); }}
-        onAdd={(id, qty, note, variationId, addonIds) =>
-          void addChosen(id, qty, note, variationId, addonIds)}
+        onAdd={(id, qty, note, variationId, addonIds, moreChoiceIds) =>
+          void addChosen(id, qty, note, variationId, addonIds, moreChoiceIds)}
         busy={busy}
       />
     </Page>
@@ -855,13 +875,14 @@ function SplitPanel({
 }
 
 function OrderPanel({
-  order, hotelId, busy, setBusy, onStrike, onDone, onChanged,
+  order, hotelId, busy, setBusy, onStrike, onFewer, onDone, onChanged,
 }: {
   order: Order;
   hotelId: string;
   busy: boolean;
   setBusy: (b: boolean) => void;
   onStrike: (lineId: string) => void;
+  onFewer: (lineId: string) => void;
   /** The bill is finished — settled or closed unpaid. */
   onDone: () => void;
   /** The bill changed but is still open. */
@@ -1048,6 +1069,17 @@ function OrderPanel({
                 <span className="tabular text-base text-ink-900 shrink-0">
                   {money(line.qty * line.unitPrice)}
                 </span>
+                {/* A side follows its dish (D27-192, Q8): only the dish has a −. */}
+                {!settled && !line.voided && !line.isAddon && (
+                  <button
+                    type="button"
+                    onClick={() => onFewer(line.id)}
+                    aria-label={`One fewer ${line.name}`}
+                    className="press size-11 grid place-items-center rounded-full text-grey-500 hover:text-ink-900 hover:bg-grey-100 shrink-0 cursor-pointer"
+                  >
+                    <Minus className="size-4" />
+                  </button>
+                )}
                 {!settled && !line.voided && (
                   <button
                     type="button"
