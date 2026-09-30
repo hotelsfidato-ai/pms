@@ -144,9 +144,15 @@ waits for `GUEST_MESSAGES_PER_MINUTE`, your pace (D21-34).
   around it (in the CRS's colours) and attaches it. On WhatsApp the voucher
   is the `booking_confirmation` text with the check-in link; a PDF on
   WhatsApp needs a template with a document header, and comes later.
-- **The check-in code** goes as the `guest_page_code` template: the six
-  digits in the message and in its **Copy code** button. Meta writes that
-  template's words itself.
+- **The check-in code** goes the way the guest chooses on their page
+  (D27-207). On WhatsApp it is the `guest_page_code` template: the six digits
+  in the message and in its **Copy code** button; Meta writes that template's
+  words itself. By email it is the `guest-link-code` draft in `EMAILS`
+  ("Your check-in code for …"), to the email on the booking; it needs `FROM`
+  like every other email. A workflow imported before 30 September does not
+  have that draft: import this file again (or paste the one entry into
+  `EMAILS`), or a code asked for by email is refused and the guest reads
+  "could not be sent".
 - **A guest's reply on WhatsApp** is not read by the PMS. The Fidato number
   is in the live-inventory app's WhatsApp routing (D27-186), so a reply
   arrives in that app's inbox. ⚠ Without part A that app is not told the

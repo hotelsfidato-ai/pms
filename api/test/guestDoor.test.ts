@@ -216,9 +216,14 @@ describe("the six digits that prove it is that guest", () => {
      was sent: the code must go to the BOOKING's number, whatever anybody
      posts (D27-105, and OCI-2's rule that a stand-in must read what it
      gets). */
-  const withReceiver = async <T>(fn: (seen: Array<{ to: { phone: string } }>) => Promise<T>) => {
+  type Sent = {
+    channel: string; kind: string;
+    to: { phone: string | null; email: string | null };
+    data: Record<string, string>;
+  };
+  const withReceiver = async <T>(fn: (seen: Sent[]) => Promise<T>) => {
     const { createServer } = await import("node:http");
-    const seen: Array<{ to: { phone: string } }> = [];
+    const seen: Sent[] = [];
     const server = createServer((req, res) => {
       let raw = "";
       req.on("data", (c) => { raw += c; });
@@ -267,6 +272,93 @@ describe("the six digits that prove it is that guest", () => {
     } finally {
       await sql("update guests set phone = $2 where id = $1", [guestId, phone]);
     }
+  });
+
+  /* ── The code by email (D27-207) ─────────────────────────────────────
+     The second way, the guest's choice. The same rules as the first: the
+     address is the booking's own and nobody types one; the code is kept
+     only as a hash and is never in an answer; and the same six-digit
+     answer hands out the same unlock. */
+  const EMAIL = "Asha.Gdr@example.com";
+  const noCodes = () => sql(
+    "delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
+  const withEmail = async <T>(email: string | null, fn: () => Promise<T>) => {
+    await sql("update guests set email = $2 where id = $1", [guestId, email]);
+    try { return await fn(); } finally {
+      await sql("update guests set email = null where id = $1", [guestId]);
+    }
+  };
+
+  it("sends the code to the booking's own email, with none typed, and shows it masked", async () => {
+    await withEmail(EMAIL, () => withReceiver(async (seen) => {
+      await noCodes();
+      /* An address in the body is not read: there is nothing to type. */
+      const res = await asGuest(`/${link}/code`, "POST", { by: "email", email: "somebody@else.test" });
+      const text = await res.clone().text();
+      expect(res.status).toBe(200);
+      expect(JSON.parse(text)).toEqual({ sent: true, message: "We sent the code by email to A…@example.com." });
+
+      expect(seen).toHaveLength(1);
+      expect(seen[0]).toMatchObject({ channel: "email", kind: "guest-link-code" });
+      expect(seen[0]!.to.email, "the booking's whole address, never the one posted").toBe(EMAIL);
+      const code = seen[0]!.data["code"]!;
+      expect(code).toMatch(/^\d{6}$/);
+      expect(text, "the code is never in the answer").not.toContain(code);
+      expect(text, "nor the whole address").not.toContain(EMAIL);
+
+      const { rows } = await sql(
+        `select c.code_hash, c.sent_to from guest_link_codes c
+           join guest_links l on l.id = c.link_id
+          where l.reservation_id = $1 order by c.created_at desc`, [stayId]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].sent_to, "only the masked address is kept").toBe("A…@example.com");
+      expect(rows[0].code_hash, "the code is kept hashed").toHaveLength(64);
+
+      /* And it opens the same way as a code from WhatsApp. */
+      const right = await asGuest(`/${link}/verify`, "POST", { code });
+      expect(right.status, await right.clone().text()).toBe(200);
+      expect(((await right.json()) as { unlock?: string }).unlock).toBeTruthy();
+    }));
+  });
+
+  it("says Ask the desk, and issues nothing, for a booking with no email", async () => {
+    for (const email of [null, "not-an-address"]) {
+      await withEmail(email, () => withReceiver(async (seen) => {
+        forgetKnocksForTests();
+        await noCodes();
+        const res = await asGuest(`/${link}/code`, "POST", { by: "email" });
+        expect(res.status).toBe(200);
+        expect(((await res.json()) as { message: string }).message).toMatch(/no email address .* Ask the desk/);
+        expect(seen, "nothing sent").toHaveLength(0);
+        const { rows } = await sql(
+          `select 1 from guest_link_codes c join guest_links l on l.id = c.link_id
+            where l.reservation_id = $1`, [stayId]);
+        expect(rows, "a code nobody can receive is not issued").toHaveLength(0);
+      }));
+    }
+  });
+
+  it("tells a booking's link its email masked, and nothing where there is none", async () => {
+    const opened = async () => (await asGuest(`/${link}`)).text();
+    expect(JSON.parse(await opened()).emailHint, "no email on the booking").toBeNull();
+    await withEmail(EMAIL, async () => {
+      const text = await opened();
+      expect(JSON.parse(text).emailHint).toBe("A…@example.com");
+      expect(text, "never the whole address before the code").not.toContain(EMAIL);
+    });
+  });
+
+  it("is dead after five wrong answers, like a code that went on WhatsApp", async () => {
+    await withEmail(EMAIL, () => withReceiver(async (seen) => {
+      await noCodes();
+      await asGuest(`/${link}/code`, "POST", { by: "email" });
+      const code = seen[0]!.data["code"]!;
+      const wrong = code === "000000" ? "000001" : "000000";
+      for (let i = 0; i < 5; i += 1) {
+        expect((await asGuest(`/${link}/verify`, "POST", { code: wrong })).status).toBe(401);
+      }
+      expect((await asGuest(`/${link}/verify`, "POST", { code })).status, "five wrong and it is dead").toBe(401);
+    }));
   });
 
   /* The development-only switch (D27-105): the code in the answer, sent to

@@ -11,8 +11,9 @@ import { idNumberProblem } from "../validate.ts";
 
    GET  /api/guest/:token          what this booking is, and whether the guest
                                    has proved who they are yet
-   POST /api/guest/:token/code     send a six-digit code to the phone THE
-                                   BOOKING carries
+   POST /api/guest/:token/code     send a six-digit code to the phone or the
+                                   email THE BOOKING carries - the guest
+                                   chooses which, and types neither (D27-207)
    POST /api/guest/:token/verify   answer it
 
    and, for the desk, inside the ordinary staff gate:
@@ -188,6 +189,12 @@ guestDoor.get("/:token", async (c) => {
   const it = rows[0];
   if (!it) return c.json({ error: NOTHING_HERE }, 404);
 
+  /* The booking's email, masked, so the page can offer "a code by email" and
+     say where it would go (D27-207). Null on a room card (D21-14) and where
+     the booking has none. */
+  const ways = await ask<{ email_hint: string | null }>(
+    "select * from app.guest_link_ways($1)", [hash]);
+
   return c.json({
     kind: it.kind,
     hotel: { code: it.hotel_code, name: it.hotel_name },
@@ -206,6 +213,7 @@ guestDoor.get("/:token", async (c) => {
     },
     verified: it.verified,
     phoneHint: it.phone_hint,
+    emailHint: ways[0]?.email_hint ?? null,
     /* D21-25: the page asks for a code only when one can be sent. This is
        about the SERVER, not the booking - it is the same answer for every
        link, so it tells a stranger nothing about this one. */
@@ -223,8 +231,8 @@ guestDoor.get("/:token", async (c) => {
 /* And the one sentence for a server that cannot send at all - on opening, so
    the page can say it BEFORE asking for a number (D21-25), and again if a
    code is asked for anyway. One definition, here. */
-const CANNOT_SEND = "Codes cannot be sent yet - WhatsApp is not connected to "
-  + "this server. Ask the desk to send you the link instead.";
+const CANNOT_SEND = "Codes cannot be sent yet - sending is not set up on this "
+  + "server. Ask the desk.";
 
 /* ── TRY IT WITHOUT WHATSAPP - DEVELOPMENT ONLY (D27-105) ─────────────
    GUEST_CODE_ON_SCREEN=1 makes the code and hands it back in the answer
@@ -248,6 +256,8 @@ const codeOnScreen = (): boolean =>
    card, which never shows the number. */
 const NO_PHONE = "There is no mobile number on this booking, so no code can be "
   + "sent. Ask the desk.";
+const NO_EMAIL = "There is no email address on this booking, so no code can be "
+  + "sent by email. Ask the desk.";
 const TOO_OFTEN = "Five codes have gone to this booking in the last hour. "
   + "Use the latest one, or ask the desk.";
 const NOT_SENT = "The code could not be sent just now. Try again in a minute, "
@@ -256,6 +266,10 @@ const NOT_SENT = "The code could not be sent just now. Try again in a minute, "
 guestDoor.post("/:token/code", async (c) => {
   const hash = sha256(c.req.param("token"));
   const onScreen = codeOnScreen();
+  /* WHICH WAY, the guest's choice (D27-207): WhatsApp, or the email on the
+     booking. Only the word is read - never a number or an address. */
+  const body = await c.req.json<{ by?: string }>().catch(() => ({}) as { by?: string });
+  const byEmail = body.by === "email";
   /* Nothing can be sent: say so first. Asked before the knock is counted, so
      a guest reading this sentence has not spent one of their five an hour. */
   if (!canSend() && !onScreen) return c.json({ sent: false, message: CANNOT_SEND }, 503);
@@ -271,17 +285,23 @@ guestDoor.post("/:token/code", async (c) => {
        the booking's own number (162). None of the number goes into the
        answer; it goes only into the message. */
     const { rows } = await client.query<{
-      code: string | null; sent_to: string | null; phone: string | null;
+      code: string | null; sent_to: string | null; phone?: string | null; email?: string | null;
       reservation_id: string; reference: string; guest_name: string;
       hotel_id: string; hotel_code: string; hotel_name: string; room_card: boolean;
-    }>("select * from app.guest_code_make($1)", [hash]);
+    }>(byEmail ? "select * from app.guest_email_code_make($1)"
+               : "select * from app.guest_code_make($1)", [hash]);
     const made = rows[0];
     if (!made) return c.json({ error: NOTHING_HERE }, 404);
-    if (!made.code || !made.phone) return c.json({ sent: false, message: NO_PHONE });
+    const address = byEmail ? made.email : made.phone;
+    if (!made.code || !address) return c.json({ sent: false, message: byEmail ? NO_EMAIL : NO_PHONE });
 
-    const where = made.room_card
-      ? "to the phone on the booking"
-      : `to the number ending ${made.sent_to!.replace("…", "")}`;
+    /* Where it went, as the page may say it: on a room card nothing of the
+       guest (D21-14); on a booking's link the number's last digits or the
+       address masked, never whole. */
+    const where = byEmail
+      ? (made.room_card ? "to the email on the booking" : `to ${made.sent_to}`)
+      : (made.room_card ? "to the phone on the booking"
+        : `to the number ending ${made.sent_to!.replace("…", "")}`);
     if (onScreen) {
       return c.json({
         sent: true,
@@ -297,15 +317,20 @@ guestDoor.post("/:token/code", async (c) => {
        "…0011" kept for the record, as the recipient - so the first code
        sent once WhatsApp was connected would have reached nobody. */
     const answer = await send(client, {
-      channel: "whatsapp",
+      channel: byEmail ? "email" : "whatsapp",
       kind: "guest-link-code",
       hotel: { id: made.hotel_id, code: made.hotel_code, name: made.hotel_name },
-      to: { name: made.guest_name, phone: made.phone },
-      data: { code: made.code, reference: made.reference },
+      to: byEmail ? { name: made.guest_name, email: address }
+        : { name: made.guest_name, phone: address },
+      /* The email's words are written in the workflow from these (D17-87). */
+      data: {
+        code: made.code, reference: made.reference,
+        guestName: made.guest_name, hotelName: made.hotel_name,
+      },
       about: { kind: "reservation", id: made.reservation_id },
     });
     return c.json(answer.ok
-      ? { sent: true, message: `We sent the code on WhatsApp ${where}.` }
+      ? { sent: true, message: `We sent the code ${byEmail ? "by email" : "on WhatsApp"} ${where}.` }
       : { sent: false, message: NOT_SENT });
   } finally {
     client.release();

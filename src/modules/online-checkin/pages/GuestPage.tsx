@@ -9,7 +9,7 @@ import {
   Button, Card, CardBody, Field, fieldProps, Input, NativeSelect, Segmented, StatusPill, Textarea,
 } from "@/components/ui";
 import {
-  codeAskedRecently, dropUnlock, getBill, getDetails, getRequests, makeRequest, openGuestPage,
+  dropUnlock, getBill, getDetails, getRequests, makeRequest, openGuestPage,
   sendCode, sendDetails, verifyCode, type Details, type GuestPageView,
 } from "@/modules/online-checkin/data/guestPage";
 import { GENDERS, LABELS, PURPOSES } from "@/modules/online-checkin/formIII";
@@ -46,11 +46,11 @@ import { BillPrint } from "@/modules/finance";
 
 /** The door's own sentence for everything it refuses, in its words. */
 const NOTHING_HERE = "This link is not usable. Ask the desk for a new one.";
-/** The door's words for a booking with no mobile number (guestDoor.ts,
-    NO_PHONE) - said here without asking, because the link already shows
-    there is no number to send to. Change one, change both. */
-const NO_PHONE = "There is no mobile number on this booking, so no code can be "
-  + "sent. Ask the desk.";
+/** A booking with neither a mobile number nor an email - said here without
+    asking the door, because the link already shows there is nowhere to send
+    a code. */
+const NO_WAY = "There is no mobile number or email address on this booking, so "
+  + "no code can be sent. Ask the desk.";
 
 /** Refused behind the code: the unlock has gone - expired, or a new guest
     is in the room. Not an error to show: the page asks for a code again. */
@@ -209,35 +209,35 @@ function Notice({ hotel, className }: { hotel: string; className?: string }) {
   );
 }
 
-/* ── The six digits (D27-105) ─────────────────────────────────────
-   Nothing is typed but the code. Opening the link sends it to the number
-   the booking carries - once; reopening within its ten minutes does not
-   send another - and the door says where: the last four digits, or on a
-   room card nothing of the number (D21-14). No number on the booking:
-   the door's own "Ask the desk". */
+/* ── The six digits, the way the guest chooses (D27-207, D27-210) ───
+   Nothing is sent on opening, and nothing is typed but the code. The guest
+   presses WhatsApp or email; the code goes to what THE BOOKING carries and
+   the door says where: the number's last four digits or the address
+   masked, and on a room card nothing of either (D21-14). */
 function ProveIt(
   { token, view, onVerified }:
   { token: string; view: GuestPageView; onVerified: () => void },
 ) {
   const [code, setCode] = useState("");
 
-  const asked = useMutation({ mutationFn: () => sendCode(token) });
+  const asked = useMutation({ mutationFn: (by: "whatsapp" | "email") => sendCode(token, by) });
   const answered = useMutation({
     mutationFn: () => verifyCode(token, code),
     onSuccess: (r) => { if (r.verified) onVerified(); },
   });
 
-  /* A booking's link with no number on the booking: nothing to send, no
-     code to wait for, no box to type one into - and nothing is asked of the
-     door. (The door says the same words for a room card whose guest has no
-     number: a room card never shows the number, so it asks.) */
-  const noPhone = view.kind === "booking" && !view.phoneHint;
-
-  /* Asked for by opening the page. `sendCode` notes the moment before it
-     asks, so a second mount (a reload, React's own double run in
-     development) finds it asked and sends nothing. */
-  const { mutate: ask } = asked;
-  useEffect(() => { if (!noPhone && !codeAskedRecently(token)) ask(); }, [noPhone, token, ask]);
+  /* A booking's link already shows whether the booking has a number or an
+     address, so a way that cannot work is not offered. A room card shows
+     nothing of the guest: both are offered, and the door says "Ask the
+     desk" for the one the booking lacks. */
+  const card = view.kind === "room";
+  const byWhatsApp = card || !!view.phoneHint;
+  const byEmail = card || !!view.emailHint;
+  const noWay = !byWhatsApp && !byEmail;
+  const where = card ? "on WhatsApp or by email, to the phone or the email on the booking" : [
+    view.phoneHint && `on WhatsApp to the number on the booking, ending ${view.phoneHint.replace("…", "")}`,
+    view.emailHint && `by email to ${view.emailHint}`,
+  ].filter(Boolean).join(", or ");
 
   const answer = (e: FormEvent) => { e.preventDefault(); answered.mutate(); };
 
@@ -247,22 +247,32 @@ function ProveIt(
       <h2 className={H2}>
         Your check-in details are behind a code
       </h2>
-      {noPhone ? <div className="mb-3" /> : (
-        <p className={cn(LEAD, "mb-3")}>
-          We send six digits on WhatsApp to the number on the booking
-          {view.phoneHint ? `, ending ${view.phoneHint.replace("…", "")}` : ""}.
-        </p>
+      {noWay ? <div className="mb-3" /> : (
+        <p className={cn(LEAD, "mb-3")}>We send six digits {where}.</p>
       )}
 
       <Card><CardBody>
-        {/* The door's sentence, printed as it came. */}
-        <p className="text-sm text-grey-600" aria-live="polite">
-          {noPhone ? NO_PHONE
-            : asked.isPending ? "Sending the code…"
-            : asked.data ? asked.data.message
-            : asked.error ? messageFrom(asked.error)
-            : "A code was sent a few minutes ago. Use it, or send a new one."}
-        </p>
+        {noWay ? <p className="text-sm text-grey-600">{NO_WAY}</p> : (
+          <div className="flex flex-col gap-3">
+            {byWhatsApp && (
+              <Button variant="secondary" disabled={asked.isPending} onClick={() => asked.mutate("whatsapp")}>
+                Send the code on WhatsApp
+              </Button>
+            )}
+            {byEmail && (
+              <Button variant="secondary" disabled={asked.isPending} onClick={() => asked.mutate("email")}>
+                Send the code by email
+              </Button>
+            )}
+            {/* The door's sentence, printed as it came. */}
+            <p className="text-sm text-grey-600 empty:hidden" aria-live="polite">
+              {asked.isPending ? "Sending the code…"
+                : asked.data ? asked.data.message
+                : asked.error ? messageFrom(asked.error)
+                : null}
+            </p>
+          </div>
+        )}
         {/* DEVELOPMENT ONLY (D27-105): the code on screen, from a server
             started to show it. A production build compiles this away, and
             scripts/check-no-dev-login.mjs fails any build that carries it. */}
@@ -272,7 +282,7 @@ function ProveIt(
           </p>
         )}
 
-        {!noPhone && <form onSubmit={answer} className="mt-3.5 pt-3.5 border-t border-grey-100 flex flex-col gap-3">
+        {!noWay && <form onSubmit={answer} className="mt-3.5 pt-3.5 border-t border-grey-100 flex flex-col gap-3">
           <Field label="The six digits">
             {(f) => (
               <Input
@@ -285,9 +295,6 @@ function ProveIt(
           </Field>
           <Button type="submit" variant="primary" disabled={answered.isPending || code.trim() === ""}>
             {answered.isPending ? "Checking…" : "Open my booking"}
-          </Button>
-          <Button type="button" variant="ghost" disabled={asked.isPending} onClick={() => ask()}>
-            Send a new code
           </Button>
         </form>}
 

@@ -37,12 +37,17 @@ put back (CHANGELOG, 21 September).
    the moment it is refused. Every function behind the code takes both hashes
    and asks `app.guest_unlocked` in the database every time. A forwarded link
    shows what it showed before and asks for a code.
-4. **Nobody types a number (D27-105).** The code goes to the number the stay
-   carries, and the answer says where: its last four digits on a booking's
-   link, nothing of it on a room card (D21-14). No mobile on the booking:
-   "Ask the desk", and no code is issued. (Until 29 September the guest typed
-   the number and a wrong one had to read like a right one; with nothing typed
-   there is nothing to guess.)
+4. **Nobody types a number or an address, and nothing is sent until the
+   guest chooses (D27-105, D27-207, D27-210).** Opening the page sends
+   nothing. The guest presses "Send the code on WhatsApp" or "Send the code
+   by email"; the code goes to the number or the email the stay carries, and
+   the answer says where: the number's last four digits or the address
+   masked ("a…@example.com") on a booking's link, nothing of either on a room
+   card (D21-14). A booking's link offers only the ways the booking has; with
+   neither, "Ask the desk", and no code is issued. One live code per link,
+   whichever way it went; the same answer opens both. (Until 29 September the
+   guest typed the number; until 30 September the WhatsApp code went by
+   itself on opening.)
    **The code is never in an answer** - except from a development server
    started with `GUEST_CODE_ON_SCREEN=1` beside `ALLOW_DEV_AUTH=1`, which
    `env.ts` refuses under production; the page draws it only in a development
@@ -71,7 +76,8 @@ Coming soon page and its address are gone.
 **The guest's page, at 375px (the primary size):**
 
 - **A booking's link, before the code** — the guest's own name, dates,
-  reference, and the last four digits of the number on the booking.
+  reference, the last four digits of the number on the booking and its email
+  masked, and one button for each way the booking has.
 - **A room's card, before the code (D21-14)** — the hotel and the room number,
   nothing of the guest: not even the last four digits. **Nobody checked in
   (D21-15)** — "This opens once you're checked in", with the hotel's name.
@@ -139,7 +145,7 @@ reception's menu for this (the owner, 24 September).
 | Method | Path | Before the code | What it does |
 |---|---|---|---|
 | GET | `/api/guest/:token` | answers | the booking or the room; `verified` for THIS phone; `canSendCodes`; `offers` once unlocked |
-| POST | `/api/guest/:token/code` | answers | a code to the phone on the stay it resolves to, nothing typed; says where, or "Ask the desk" (D27-105). The page asks it by itself on opening, once per ten minutes |
+| POST | `/api/guest/:token/code` | answers | `{ by: "whatsapp" \| "email" }`: a code to the phone or the email on the stay it resolves to, nothing else read; says where, or "Ask the desk". Asked only when the guest presses (D27-210) |
 | POST | `/api/guest/:token/verify` | answers | the six digits; hands back the unlock once |
 | GET/POST | `/api/guest/:token/details` | **refused** | what the guest sent / send it, as a submission |
 | GET | `/api/guest/:token/bill` | **refused** | the bill as it stands — `app.guest_bill` (124), which is finance's `app.stay_bill` (123) for the one stay the link and the unlock reach |
@@ -156,7 +162,16 @@ reception's menu for this (the owner, 24 September).
 Staff routes are for owner, admin, GM, hotel manager and reception
 (`DESK_ROLES`); anybody else is refused with a sentence naming who may.
 
-## Database (migrations 114, 121, 132 and 158)
+## Database (migrations 114, 121, 132, 158 and 167)
+
+**167 (30 September, D27-207):** all new functions, nothing earlier changed.
+`app.guest_email_code_make(text)` (158's code, to the stay's email; no email
+answers a row with no code), `app.guest_link_ways(text)` (the masked email a
+booking's link may show; null on a room card - its own function because
+`guest_link_open`'s return type cannot change on a replay),
+`app.masked_email(text)` (internal), and `app.guest_google_answer(text, text,
+text)` for Continue with Google (the address Google vouched for against the
+stay's own, then the same unlock).
 
 **162 (29 September; the master renumbers at merge):**
 `app.guest_code_make(text)` replaces the two-argument one (no number typed;

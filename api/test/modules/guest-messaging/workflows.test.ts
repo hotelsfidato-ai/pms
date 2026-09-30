@@ -201,7 +201,22 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     expect(out!.json["text"], "no file, no word of one").not.toContain("attached");
   });
 
-  type Graph = { to: string; template: { name: string; language: { code: string }; components: { type: string; parameters: { text: string }[] }[] } };
+  /* D27-207: the check-in code by email, to the address the PMS names. */
+  it("writes the check-in code's email, the code in the letter and not in the subject", () => {
+    const [out] = run(withMailbox(), "Read the message", { body: message({
+      channel: "email", kind: "guest-link-code",
+      data: { code: "482913", reference: "FH-5EL-2610-0001", guestName: "<b>Asha</b>", hotelName: "Test Hotel" },
+    }) });
+    expect(out!.json["stop"]).toBe(false);
+    expect(out!.json["to"]).toBe("asha@example.com");
+    expect(out!.json["subject"]).toBe("Your check-in code for Test Hotel");
+    expect(out!.json["text"]).toContain("Your code is 482913");
+    expect(out!.json["text"]).toContain("10 minutes");
+    expect(out!.json["html"], "a typed name is text").toContain("&lt;b&gt;Asha&lt;/b&gt;");
+    expect(out!.json["attachments"]).toBe("");
+  });
+
+  type Graph ={ to: string; template: { name: string; language: { code: string }; components: { type: string; parameters: { text: string }[] }[] } };
   const whatsapp = (over: Json) => run(crs, "Read the message", { body: message(over) })[0]!.json;
 
   /* One Meta template per kind, in English, its fields in the template's
