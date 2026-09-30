@@ -343,8 +343,8 @@ function CashStep({ hotelId, day, onDone }: {
       (sum, v) => sum + v * (Number(counts[v]) || 0), 0),
     [counts]);
 
-  /* The float was counted at Open the day (D27-190) and is not retyped
-     here, so the server's expected figure is the one shown. */
+  /* The day opened on the float the last close kept (D27-200); it is not
+     typed here, so the server's expected figure is the one shown. */
   const expected = day.cash.expected;
   const variance = counted - expected;
 
@@ -481,10 +481,11 @@ function NoteGrid({ counts, onChange, disabled }: {
   );
 }
 
-/* ── Open the day (D27-190) ───────────────────────────────────────
-   The float counted before any cash is taken. Blank is not zero:
-   Open waits until something is typed, and 0 is an answer only when
-   somebody types it. */
+/* ── Open the day - an outlet's first day only (D27-200) ──────────
+   After the night audit a day opens by itself on the float the last
+   close kept, so this shows once: before any close has kept one.
+   Blank is not zero: Open waits until something is typed, and 0 is
+   an answer only when somebody types it. */
 function OpenDay({ hotelId, onDone }: { hotelId: string; onDone: () => void }) {
   const [counts, setCounts] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
@@ -504,7 +505,7 @@ function OpenDay({ hotelId, onDone }: { hotelId: string; onDone: () => void }) {
     <Card className="mb-5">
       <CardHeader
         title="Open the day"
-        description="Count the float in the tin. No cash is taken until you do - card, UPI and room charges go on."
+        description="This outlet's first float, counted once - cash is taken after it. From then on each day opens by itself on the float the close keeps."
       />
       <CardBody className="space-y-4">
         <NoteGrid counts={counts} onChange={setCounts} />

@@ -1953,17 +1953,16 @@ const DAY_CLOSED =
   "The restaurant's day is closed and its drawer counted. New bills and " +
   "payments wait until the night audit moves the date.";
 
-/* THE DAY OPENS BY COUNTING THE FLOAT (D27-190, replacing D27-139's "no
-   open step"): the outlet's day row is made by Open the day, and until it
-   exists no CASH is taken, so every rupee belongs to a counted day. Bills,
-   card, UPI and room charges go on (D27-118's shape at the desk). */
-async function dayOpened(client: Client, outletId: string, date: string): Promise<boolean> {
-  const { rows } = await client.query<{ opened: boolean }>(
-    `select exists (select 1 from pos_day_ends
-                     where outlet_id = $1 and business_date = $2::date) as opened`,
-    [outletId, date],
-  );
-  return rows[0]!.opened;
+/* THE DAY OPENS BY ITSELF (the owner's D27-200, replacing D27-190's count-in):
+   after the night audit an outlet's day is open on the float its last close
+   kept, however many days back (app.pos_opening_cash, 165) - nothing to
+   count, nothing to press. Null only on the outlet's FIRST-EVER day, when
+   no close has kept a float yet: that one float is counted once (Open the
+   day), and until it is no CASH is taken. */
+async function openingCash(client: Client, outletId: string, date: string): Promise<number | null> {
+  const { rows } = await client.query<{ opening: string | null }>(
+    `select app.pos_opening_cash($1, $2::date)::text as opening`, [outletId, date]);
+  return rows[0]!.opening === null ? null : Number(rows[0]!.opening);
 }
 
 till.post("/:code/till/orders", async (c) => {
@@ -3510,6 +3509,7 @@ till.get("/:code/till/day-end", async (c) => {
 
     const counted = day[0]?.counted_cash;
     const expectedCash = Number(expected[0]!.amount);
+    const opening = await openingCash(client, outlet[0].id, businessDate);
 
     return {
       outlet: { code: outletCode, name: outlet[0].name },
@@ -3534,7 +3534,7 @@ till.get("/:code/till/day-end", async (c) => {
         reason: m.reason, recordedBy: m.recorded_by_name, at: m.recorded_at,
       })),
       cash: {
-        opening: Number(day[0]?.opening_cash ?? 0),
+        opening: opening ?? 0,
         expected: expectedCash,
         counted: counted === null || counted === undefined ? null : Number(counted),
         /* The one figure anybody argues about, worked out in one place
@@ -3546,8 +3546,8 @@ till.get("/:code/till/day-end", async (c) => {
           value: Number(d.value), count: d.count,
         })),
       },
-      /* Open the day has counted the float (D27-190). */
-      opened: Boolean(day[0]),
+      /* False only on the outlet's first-ever day, before its one count (D27-200). */
+      opened: opening !== null,
       closedAt: day[0]?.closed_at ?? null,
       closedBy: day[0]?.closed_by_name ?? null,
     };
@@ -3556,8 +3556,9 @@ till.get("/:code/till/day-end", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
-/* Open the day: the float counted before any cash is taken (D27-190).
-   Once, and final - the close counts against this figure. */
+/* Open the day: an outlet's FIRST-EVER float, counted once (D27-200). Every
+   day after opens by itself on the float the last close kept, and this is
+   refused. */
 till.post("/:code/till/day-end/open", async (c) => {
   type OpenBody = { outlet?: string; opening?: unknown };
   const input = await c.req.json<OpenBody>().catch(() => ({}) as OpenBody);
@@ -3579,6 +3580,10 @@ till.post("/:code/till/day-end/open", async (c) => {
     if (!outlet[0]) return refuse("No such outlet.");
 
     const businessDate = await businessDateFor(client, hotelId);
+    const carried = await openingCash(client, outlet[0].id, businessDate);
+    if (carried !== null) {
+      return refuse(`Today is already open, on a float of ₹${carried.toFixed(2)}. There is nothing to count in.`);
+    }
     const { rows } = await client.query(
       `insert into pos_day_ends (hotel_id, outlet_id, business_date, opening_cash)
        values ($1,$2,$3,$4)
@@ -3674,14 +3679,25 @@ till.post("/:code/till/day-end/count", async (c) => {
 
     const businessDate = await businessDateFor(client, hotelId);
 
-    /* The float was counted at Open the day (D27-190); the count no longer
-       makes the day or types its float, which it used to default to 0. */
+    /* The day opened by itself on the float the last close kept (D27-200);
+       the count writes that down as the day's row. Never a typed or a
+       default float - on the outlet's first-ever day it is counted first. */
+    const carried = await openingCash(client, outlet[0].id, businessDate);
+    if (carried === null) {
+      return refuse("Open the day first: this outlet's first float is counted once.");
+    }
+    await client.query(
+      `insert into pos_day_ends (hotel_id, outlet_id, business_date, opening_cash)
+       values ($1,$2,$3,$4)
+       on conflict (outlet_id, business_date) do nothing`,
+      [hotelId, outlet[0].id, businessDate, carried.toFixed(2)],
+    );
     const { rows: day } = await client.query<{ id: string; closed_at: string | null }>(
       `select id::text, closed_at::text from pos_day_ends
         where outlet_id = $1 and business_date = $2::date`,
       [outlet[0].id, businessDate],
     );
-    if (!day[0]) return refuse("Open the day first: count the float it started with.");
+    if (!day[0]) return refuse("Open the day first: this outlet's first float is counted once.");
     if (day[0].closed_at) return refuse("That day is already closed.");
     const dayId = day[0].id;
 
@@ -3951,10 +3967,10 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
         "then it cannot leave the building - take a number first.");
     }
     if ((tenders ? tenders.some((t) => t.method === "cash") : method === "cash")
-        && !(await dayOpened(client, order[0].outlet_id, order[0].business_date))) {
+        && (await openingCash(client, order[0].outlet_id, order[0].business_date)) === null) {
       return refuse(
-        "Open the restaurant's day first (Close restaurant day, Open the day): cash is "
-        + "taken only once the float is counted. Card, UPI and room charges need no opening.");
+        "Count this outlet's first float once (Close restaurant day, Open the day): cash is "
+        + "taken after it. From then on the day opens by itself. Card, UPI and room charges go on.");
     }
 
     const { rows: t } = await client.query<{
