@@ -386,6 +386,11 @@ describe("a foreign guest's departure", () => {
   });
 
   it("checks out with it, and the departure's clock starts", async () => {
+    /* The first night was charged at check-in (D27-204): a guest who leaves
+       the same day owes it (D27-205), so it is paid before the check-out. */
+    const paid = await call(`/PUN/stays/${stay}/payments`, "POST", { method: "UPI", amount: 2625 });
+    expect(paid.status, await paid.clone().text()).toBe(200);
+
     const res = await call(`/PUN/stays/${stay}/check-out`, "POST",
       { ...LATE, nextDestination: "Jaipur" });
     expect(res.status, await res.text()).toBe(200);

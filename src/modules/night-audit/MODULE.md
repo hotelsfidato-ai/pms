@@ -93,7 +93,7 @@ fix made elsewhere does not reach them unless it changes these queries.
 | Arrivals still outstanding | `reservations`: `confirmed`, `check_in = X` | the run marks `confirmed` with `check_in <= X`, so it can mark more than this counts |
 | Departures not yet checked out | `reservations`: `checked_in`, `check_out = X` | the same condition as the `departures` blocker |
 | In-house folios carrying a balance | `reservations` `checked_in` whose non-reversed `folio_postings` (charges plus tax; payments are negative lines) sum above ₹0.50, per booking across all its folios | **a third copy of "balance"** — not `app.folio_balance` (006), not finance's `getFolioBalance` |
-| Room charges to post | `POSTS_TONIGHT` in `nightAudit.ts`, less the complimentary stays | **the run's own text** (QA NA-5, 28 Sep): checked in, an open folio, not day-use, not charged for tonight yet - so it equals the run's "rooms posted" |
+| Room charges to post | `POSTS_TONIGHT` in `roomNight.ts` (re-exported by `nightAudit.ts`), less the complimentary stays | **the run's own text** (QA NA-5, 28 Sep): checked in, an open folio, not day-use, not charged for tonight yet - so it equals the run's "rooms posted" |
 | Rooms still marked dirty | `rooms.housekeeping_status = 'dirty'` | |
 | Postings reversed today | `folio_postings` with a `reverses_id`, `business_date = X` | |
 | The Run button and its reason | `blockersFor(X)` in `nightAudit.ts` | the same function the run refuses with — asked for X, while the run asks for the server's date. Run sends X, and the server refuses it once X is closed (NA-2) |
@@ -161,6 +161,21 @@ On the server, `api/src/modules/night-audit/index.ts` exports
 a correction row with the reason, the wrong line reversed and the right one
 posted on the closed day - which the correction route and finance's Change
 rate both call. One correction for every caller.
+
+And since 30 September (D27-204) `roomNightsDue`, `postRoomNight` and
+`roomNightWords`, from **`api/src/modules/night-audit/roomNight.ts`**: one
+night's room charge in one place. Who is charged for a night (`POSTS_TONIGHT`),
+the read of those stays (the folio by `app.folio_for_room_charge`, the room
+held that night, the agreed rate, complimentary) and the insert that writes
+the charge were moved there from `nightAudit.ts` as they stood. Three callers:
+the run (every stay, source `night_audit`), the front desk's check-in (the
+one stay, source `check_in` - the first night), and finance's bill route (the
+one stay, nothing posted - the printed bill's "to be posted tonight"). A night
+is keyed by the stay and the night a room line pays for, not by who wrote the
+line, so the night check-in posted is a night the run skips. **The run's
+record - rooms posted, revenue posted - is what the RUN wrote** (the owner,
+D27-205): an arrival's first night is not in it; the day's reports read every
+room line by its date and do not move.
 
 ## Leans on
 

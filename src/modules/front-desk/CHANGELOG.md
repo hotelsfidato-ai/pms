@@ -8,6 +8,20 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-30 · The first night is charged at check-in; an early arrival's hold moves with it (D27-204, D27-205, FD-24)
+
+**Asked for:** the owner's D27-204 and D27-205, through the master, plan first. Branch `fix/booking-bill-30sep` (cp6 634f8622 merged in), the booking and bill lane; database `fidato_s44` at 166, no migration; API 8901, web 5301.
+**Shipped:**
+- `POST /:code/stays/:id/check-in` posts the first night's room charge and GST as its last write, dated the business date, by calling the night audit's own code (`night-audit/roomNight.ts`: `roomNightsDue` for this one stay, then `postRoomNight` with source `check_in`). Same transaction, after every refusal (MEMORY 243) and after the room hold, which names the room on the line. The audit finds that night charged (D24-14's rule, unchanged) and posts each later night. Complimentary: nothing. A room routed to its group: on the group's bill. No GST rule for rooms: checked in, nothing posted, the audit posts it once the rule is set (D27-205).
+- FD-24: a check-in that moves the arrival now asks the room's clash from today and holds the room from today (DEFECTS).
+- `POST /:code/stays/:id/move` with a new rate on the arrival day puts tonight's posted night right to it (finance's Edit, "Room move: upgrade"), asked before `app.move_room` writes (D27-205).
+**Found:** FD-24. And finance's Edit and Reverse could not find a stay's own room night on its group's bill (finance DEFECTS FIN-23), which the routed first night made reachable.
+**Proved:** `api/test/modules/front-desk/firstNight.test.ts`, 14 tests: 11 fail on the old code; the move and the group's-bill lookup each fail their own test when taken out alone. The nine files that call check-in, one at a time: identity 7, guards 45, roleGate 63, guests/formIII 15, guests/notSamePersonAndBookingSites 11, guests/oneGuestOneRecord 28, inHouseRule 14, dayAndRoom 10, deskChecks 15 - all passed. Two of them flipped and were changed: `guests/formIII` "checks out with it" pays the night first (a same-day leaver owes it, D27-205; 3 cases had failed from that one check-out), and `dayAndRoom`'s two FD-17 cases take room 107, because 104 and 105 are now held from the 26th by that file's own early arrivals (FD-24; they had relied on the missing hold). Also one at a time: night-audit 23 and 20, reports 1, 1 and 31, finance's 18 files (106 tests), front desk's badStayId 3, cashLimit 13 and firstNight 14 - all passed. `dayAndRoom` timed out once on a loaded machine (20 s on one case) and passed three runs after; the two new calls in check-in measure 13-26 ms and 6-8 ms.
+**Screens** (the app's own pane, desktop and 390 px, as Reception then the owner): check-in → the Bill tab shows "Room 210 · 1 night · 30 Sep · Test Reception ₹3,809.52", two nights to come, Due ₹12,000.00; an upgrade move to 302 at ₹4,500 → the night struck through, its reversal "(why: Room move: upgrade)", the night again at ₹4,500.00, Due ₹14,175.00; the night audit of 30 September posted 2 rooms, neither of them this one; on 1 October the interim bill showed the night to be posted; the audit of 1 October posted "Room 302 · 1 night".
+**Left open:** the Move dialog still says "Nights already posted stay as they are", which on the arrival day is not true of tonight; and the corrected line reads "Room 210" for a night slept in 302 (a room night's words are not edited). Both told to the master.
+
+---
+
 ## 2026-09-30 · The walk-in route is gone (Rule 2b: no dead code); two rules it held are kept (D27-197)
 
 **Asked for:** the master's cleanup lane. `POST /:code/walk-ins` has had no screen since 29 September, when New booking's one page took the walk-in (D27-158). Branch `cleanup/walk-in-route` from cp6 dfc5d39, cp6 672ae1b merged in; copy `.claude\worktrees\quizzical-bouman-ff2071`; no servers, no database of its own (`npm test`'s scratch one only), no migration. Front desk was held by `fix/booking-bill-30sep` at the start; the master said to go ahead, the files being disjoint, and the claim was taken once that lane let go.

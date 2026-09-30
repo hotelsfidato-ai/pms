@@ -14,9 +14,48 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-Nothing open.
+### FIN-24 · The Bill tab's charges-to-come box counts a night that was taken off as still to come (numbered for now)
+
+**Found** - 30 September, planning D27-204 (the owner's D27-205 keeps the
+audit's rule: a night somebody reversed is not charged again).
+
+**What is wrong** - the box (`useChargesToCome`, `flows/FolioPanel.tsx`) counts
+the stay's LIVE room lines: nights to come = the stay's nights less those. The
+night audit asks a different question: is there ANY room line for this night,
+reversed or not (`POSTS_TONIGHT`, `night-audit/roomNight.ts`). So after a
+clerk reverses a night - the first night on the arrival day, or a night taken
+off on Closed days - the box shows one more night to come than the audit will
+ever post, and its "Due" is a night too high. The printed bill's "to be posted
+tonight" asks the audit's own rule and is right.
+
+**The fix, when it is done** - the server says how many nights are still to
+come, by the audit's rule (one read beside `tonight` on the bill route), and
+the box shows that. Not done here: the master said a follow-up.
 
 ## Fixed
+
+### FIN-23 · Edit and Reverse could not find a stay's own room night on its group's bill — FIXED 30 September (D27-204; numbered for now)
+
+**Found** - 30 September, writing D27-204's tests: Change rate on the arrival
+day for a room routed to its group answered "Nothing changed. The night of 26
+August: Posting not found."
+
+**What was wrong** - `reverseFolioCharge` and `editFolioCharge`
+(`api/src/modules/finance/postings.ts`) looked a stay's line up by the FOLIO's
+stay (`f.reservation_id = $2`). A room routed to its group is charged on the
+group's master folio, which belongs to no stay, so the line was never found.
+It could not be met before: only the night audit posted a routed room's night,
+on a day that is closed the moment it is posted, and Change rate corrects a
+closed night another way. D27-204 posts the first night at check-in, on an
+open day.
+
+**The fix** - `coalesce(f.reservation_id, fp.reservation_id) = $2` in both
+lookups: a stay's own folio by the folio, a line on a bill with no stay by the
+stay the line itself names.
+
+**Proved** - front desk's `firstNight.test.ts`, "Change rate on the arrival
+day, for a room on the group's bill": 409 "Posting not found" with
+`postings.ts` put back, 200 and the night at ₹2,500.00 on the master with it.
 
 ### FIN-22 · Cashiering told a receptionist their drawer was "handed to nobody" when it had been handed to a colleague — FIXED 30 September (cash lane, D27-202; numbered for now)
 
