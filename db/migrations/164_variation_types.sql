@@ -1,5 +1,5 @@
 -- =============================================================================
--- 182 — a dish has several variation types (D27-189, D27-192, D27-195)
+-- 164 — a dish has several variation types (D27-189, D27-192, D27-195)
 -- =============================================================================
 -- 045 gave a dish ONE required choice: Bhaaji Pau is Oil ₹300 or Butter ₹400.
 -- The owner's menu needs more than one:
@@ -30,7 +30,7 @@ comment on column pos_item_variations.type_no is
   'Which of the dish''s types this choice is in. Type 1 carries the dish''s '
   'full price; a choice in type 2 or later ADDS its price to it (D27-192).';
 comment on column pos_item_variations.kind is
-  'size, quantity or option. NULL: not picked yet (made before 182, or imported).';
+  'size, quantity or option. NULL: not picked yet (made before 164, or imported).';
 comment on column pos_item_variations.heading is
   'An Option''s heading, typed by the manager ("Spice level"). NULL for Size '
   'and Quantity, which are headed by their kind.';

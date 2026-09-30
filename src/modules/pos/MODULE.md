@@ -299,8 +299,8 @@ pos_addons, pos_item_addon_groups
   (045's four tables are WRITTEN by the Menu screen and the two import
    files since 21 September - no migration: a removed variation or option is
    is_active false, because a sold line points at it)
-  a variation's type_no, kind, heading;         "several variation types per dish" (30 Sep, 182 for
-  a name unique within its type;               now): type 1 carries the price, a later one adds;
+  a variation's type_no, kind, heading;         "several variation types per dish" (164, 30 Sep):
+  a name unique within its type;               type 1 carries the price, a later one adds;
   pos_order_lines.extra_choice_ids             045's trigger asks one choice of every type
 pos_sections, pos_tables                       047_tables_and_floor.sql
   covers, waiter, customer, held               048_order_header.sql
