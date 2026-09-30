@@ -30,6 +30,18 @@ interface GroupSettingsRead {
   logo: GroupLogo | null;
   /** The hotel's OWN logo (D27-214), for the hotel that was asked about. */
   hotelLogo?: GroupLogo | null;
+  /** The group's office details (D27-215): the booking voucher's footer, and
+      its Instagram line. Each null until typed. */
+  office?: GroupOffice;
+}
+
+export type GroupOffice = Record<"address" | "phone" | "email" | "website" | "gstin" | "instagram", string | null>;
+
+/** Sent blank, a field is cleared. */
+export function setGroupOffice(
+  hotelCode: string, office: Record<keyof GroupOffice, string>,
+): Promise<AdminResult<object>> {
+  return put(`/api/hotels/${hotelCode}/group/office`, office);
 }
 
 export interface GroupSettings {
