@@ -26,7 +26,7 @@ import {
   listCompanies, listBookingSources, ReturningGuest,
   GuestIdFields, guestIdState, guestIdPayload, noGuestId, type GuestId,
 } from "@/modules/guests";
-import { getCashierDrawer, getTaxRate, listBillingCompanies, settle } from "@/modules/finance";
+import { getCashierDrawer, getRateBeforeGst, getTaxRate, listBillingCompanies, settle } from "@/modules/finance";
 import { assignRoom, assignableRooms, checkIn, earlyArrival } from "@/modules/front-desk";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -86,6 +86,8 @@ interface Line {
   rooms: number;
   /** Empty means "use the calendar". A number is a rate somebody agreed. */
   rate: string;
+  /** D27-195: the typed rate includes GST; split before it is kept. Off by default. */
+  inclusive: boolean;
   /** ₹0 and nothing posted (020). The owner, an administrator or the GM. */
   comp: boolean;
   /** A room number for a one-room line; empty is "later". */
@@ -264,7 +266,7 @@ export default function BookingPage() {
   }, [inventory.data]);
 
   const newLine = (roomTypeId: string, key: number, room = ""): Line => ({
-    key, roomTypeId, mealPlan: "EP", adults: 2, children: 0, rooms: 1, rate: "", comp: false, room,
+    key, roomTypeId, mealPlan: "EP", adults: 2, children: 0, rooms: 1, rate: "", inclusive: false, comp: false, room,
   });
 
   /* THE FIRST ROOM IS ALREADY THERE - one click fewer than "Add". A walk-in's
@@ -322,10 +324,30 @@ export default function BookingPage() {
     })),
   });
 
+  /* A typed rate that includes GST, split by the server (D27-195). */
+  const splits = useQueries({
+    queries: lines.map((l) => ({
+      queryKey: ["before-gst", hotelId, l.rate],
+      queryFn: () => getRateBeforeGst(hotelId, Number(l.rate)),
+      enabled: l.inclusive && !l.comp && Number(l.rate) > 0,
+    })),
+  });
+  const inclusiveNote = (l: Line, i: number): string | null => {
+    const s = splits[i]?.data;
+    if (!l.inclusive || l.comp || !(Number(l.rate) > 0) || !s) return null;
+    if (!s.ok) return s.reason;
+    return s.total < Number(l.rate)
+      ? `${moneyPrecise(Number(l.rate))} can't split exactly: the bill will say ${moneyPrecise(s.total)} a night.`
+      : null;
+  };
+
   const priced = lines.map((l, i): Omit<Quote, "taxRate" | "taxPerNight"> => {
     if (l.comp) return { nightly: 0, unpriced: null, differs: false };
     if (l.rate.trim() !== "") {
-      const typed = Number(l.rate);
+      const s = splits[i]?.data;
+      const typed = !l.inclusive || !(Number(l.rate) > 0) ? Number(l.rate)
+        : s?.ok ? s.pre : null;
+      if (typed === null) return { nightly: null, unpriced: null, differs: false };
       return { nightly: typed > 0 ? afterDiscount(typed, pct) : typed, unpriced: null, differs: false };
     }
     const t: Tariff | null | undefined = tariffs[i]?.data;
@@ -408,6 +430,10 @@ export default function BookingPage() {
           : discountProblem
             ?? (show.company && billTo === "company" && !companyId ? "Choose the company." : null)
             ?? (salesPick === OTHER && !salesOther.trim() ? "Type the sales person's name." : null)
+            ?? lines.map((l, i) => {
+              const s = splits[i]?.data;
+              return l.inclusive && !l.comp && s && !s.ok ? s.reason : null;
+            }).find((r) => r !== null)
             ?? advanceProblem);
   const assignReason =
     waiting ? "A booking waiting for the hotel gets its room once it is confirmed."
@@ -476,6 +502,7 @@ export default function BookingPage() {
         adults: l.adults, children: l.children, rooms: l.rooms,
         ...(l.comp ? { complimentary: true } : {}),
         ...(l.comp || l.rate.trim() === "" ? {} : { agreedRate: Number(l.rate) }),
+        ...(!l.comp && l.inclusive && l.rate.trim() !== "" ? { rateIncludesGst: true } : {}),
       })),
     });
 
@@ -669,6 +696,7 @@ export default function BookingPage() {
                     types={types}
                     left={leftFor(line.roomTypeId)}
                     mayGive={keeper}
+                    inclusiveNote={inclusiveNote(line, i)}
                     waiting={waiting}
                     removable={lines.length > 1}
                     rooms={(rooms.data ?? []).filter((r) =>
@@ -1026,7 +1054,7 @@ function Fold({ title, children }: { title: string; children: ReactNode }) {
    The price sits beside the room, live: the question on the phone is
    "what will that cost". */
 function RoomLine({
-  line, quote, pricing, nights, types, left, mayGive, waiting, removable, rooms, onChange, onRemove,
+  line, quote, pricing, nights, types, left, mayGive, inclusiveNote, waiting, removable, rooms, onChange, onRemove,
 }: {
   line: Line;
   quote: Quote;
@@ -1035,6 +1063,8 @@ function RoomLine({
   types: { id: string; name: string }[];
   left: number | null;
   mayGive: boolean;
+  /** Why the inclusive rate is refused, or the paisa it cannot reach (D27-195). */
+  inclusiveNote: string | null;
   waiting: boolean;
   removable: boolean;
   /** Rooms of this type; `state` is today's cleaning, for an arrival today. */
@@ -1091,6 +1121,17 @@ function RoomLine({
           )}
         </Field>
       </div>
+
+      {!line.comp && (
+        <div data-inclusive>
+          <Switch checked={line.inclusive} onCheckedChange={(inclusive) => onChange({ ...line, inclusive })}
+            label="Rate includes GST"
+            description={line.inclusive
+              ? "Split each night into the rate and the GST by the slab; the bill adds up to it."
+              : "Off: GST is added on top of the rate."} />
+          {inclusiveNote && <p className="mt-1.5 text-sm text-warning-dark" data-inclusive-note>{inclusiveNote}</p>}
+        </div>
+      )}
 
       <div className="grid gap-2 sm:grid-cols-2 items-end">
         {line.rooms === 1 && !waiting ? (

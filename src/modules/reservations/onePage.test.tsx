@@ -88,6 +88,12 @@ beforeEach(() => {
       return { isEarly: false, checkInTime: "12:00", checkOutTime: "11:00", charge: null,
                lateCharge: null, mayWaive: false } as never;
     }
+    if (path.includes("/tax/room/before-gst")) {
+      const gross = Number(new URL(path, "http://x").searchParams.get("gross"));
+      return (gross === 4000 ? { ok: true, pre: 3809.52, rate: 5, total: 4000 }
+        : gross === 502 ? { ok: true, pre: 478.09, rate: 5, total: 501.99 }
+        : { ok: false, reason: "An inclusive rate between ₹7,875 and ₹8,850 can't be split under the GST slab: type ₹7,875 or less, or more than ₹8,850." }) as never;
+    }
     if (path.endsWith("/cashier-shift")) {
       return { businessDate: "2026-08-25", shift: drawerOpen ? { id: "d-1" } : null,
                colleagues: [], previous: null } as never;
@@ -259,6 +265,40 @@ describe("the Settings switches", () => {
 /* "Book this lead" (D27-170): the leads view's token fills the guest, the
    channel and the campaign; an expired or erased one says so and leaves the
    page blank. */
+/* D27-187, D27-195: Rate inclusive of GST, per room line, off by default. The
+   split is the server's; the page shows it and sends the typed figure with the
+   flag, and says what the server says of a figure it cannot split exactly. */
+describe("a rate that includes GST", () => {
+  const typeRate = async (rate: string) => {
+    open();
+    await screen.findByRole("heading", { name: "Guest" });
+    type(/^Guest or company/, "Anna Smith");
+    pick(/^Booking source/, "src-1");
+    const toggle = screen.getByRole("switch", { name: /Rate includes GST/ });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(toggle);
+    type(/^Rate/, rate);
+  };
+
+  it("prices the line before GST and books the typed figure with the flag", async () => {
+    await typeRate("4000");
+    await screen.findByText(/₹3,809\.52 a night/);
+    await waitFor(() => expect(button("Save booking").disabled).toBe(false));
+    fireEvent.click(button("Save booking"));
+    await waitFor(() => expect(calls.find((c) => c.path.endsWith("/bookings"))?.body)
+      .toMatchObject({ lines: [expect.objectContaining({ agreedRate: 4000, rateIncludesGst: true })] }));
+  });
+
+  it("says a figure cannot split exactly, and holds the buttons in the slab gap", async () => {
+    await typeRate("502");
+    expect((await screen.findByText("₹502.00 can't split exactly: the bill will say ₹501.99 a night."))
+      .closest("[data-inclusive]")).toBeTruthy();
+    type(/^Rate/, "8000");
+    await screen.findByText(/can't be split under the GST slab/, { selector: "[data-inclusive-note]" });
+    expect(button("Save booking").disabled).toBe(true);
+  });
+});
+
 describe("a lead", () => {
   it("fills the name, phone and source, and the booking keeps its campaign", async () => {
     open("/?lead=tok-good");
