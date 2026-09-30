@@ -5,6 +5,7 @@ import {
 } from "../../src/data/fixtures/property.ts";
 import { stays, folios, groups } from "../../src/data/fixtures/reservations.ts";
 import { databaseForScript } from "./scriptDatabase.ts";
+import { ANCHOR, shift } from "./demoDate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    LOAD THE DEMO PROPERTY INTO POSTGRES
@@ -170,6 +171,25 @@ async function main() {
           where lead_hotel_id = (select id from hotels where code = $1)`,
         [HOTEL_CODE],
       );
+      /* A ROW THAT NAMES THE HOTEL WITHOUT A CASCADE goes first, read from
+         the catalogue like the guards. The hotel's cascade reaches a kitchen
+         timing through its order, but the timing's own hotel_id is checked
+         before that, so a demo whose kitchen had been used would not reload
+         (pos_line_events_hotel_id_fkey, 30 September). */
+      const strays = (await client.query<{ tbl: string; col: string }>(
+        `select c.conrelid::regclass::text as tbl, a.attname as col
+           from pg_constraint c
+           join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+          where c.contype = 'f' and c.confrelid = 'hotels'::regclass
+            and c.confdeltype in ('a', 'r')
+            and c.conrelid <> 'reservation_groups'::regclass`,
+      )).rows;
+      for (const s of strays) {
+        await client.query(
+          `delete from ${s.tbl} where ${s.col} = (select id from hotels where code = $1)`,
+          [HOTEL_CODE],
+        );
+      }
       await client.query("delete from hotels where code = $1", [HOTEL_CODE]);
 
       /* ── The guests the hotel left behind ────────────────────────
@@ -302,7 +322,7 @@ async function main() {
        side of the week the room was back, and the 431 is DERIVED. */
     const blocked = roomInventory.filter((r) => r.status === "out-of-service");
     for (const room of blocked) {
-      const back = [...EXTRA_ROOM_DATES].sort();
+      const back = EXTRA_ROOM_DATES.map(shift).sort();
       const first = back[0];
       const last = back[back.length - 1];
 
@@ -330,7 +350,9 @@ async function main() {
        Grouped by name, which is exactly what the interface does. The
        fixture has no other identifier, and inventing one here would
        make the two sides disagree about who is a repeat guest. */
-    const mine = stays.filter((s) => s.hotelId === PROPERTY_ID);
+    /* On the demo's day (demoDate.ts): every date below is read from here. */
+    const mine = stays.filter((s) => s.hotelId === PROPERTY_ID)
+      .map((s) => ({ ...s, arrival: shift(s.arrival), departure: shift(s.departure) }));
     const guestIds = new Map<string, string>();
     for (const name of [...new Set(mine.map((s) => s.guest))]) {
       const { rows: [g] } = await client.query<{ id: string }>(
@@ -375,7 +397,7 @@ async function main() {
       const { rows: [row] } = await client.query<{ id: string }>(
         `insert into reservation_groups (name, block_code, lead_hotel_id, notes)
          values ($1, $2, $3, $4) returning id`,
-        [g.name, g.reference, hotelId, `${g.rooms} rooms, ${g.arrival} to ${g.departure}`],
+        [g.name, g.reference, hotelId, `${g.rooms} rooms, ${shift(g.arrival)} to ${shift(g.departure)}`],
       );
       groupIds.set(g.id, row!.id);
     }
@@ -618,8 +640,8 @@ async function main() {
        database rather than a number the product carries. */
     const { rows: [avail] } = await client.query<{ nights: string }>(
       `select sum(app.sellable_rooms($1, d::date))::text as nights
-         from generate_series(date '2026-08-01', date '2026-08-25', interval '1 day') d`,
-      [hotelId],
+         from generate_series($2::date, $3::date, interval '1 day') d`,
+      [hotelId, shift("2026-08-01"), BUSINESS_DATE],
     );
     const availableNights = Number(avail!.nights);
 
@@ -629,8 +651,8 @@ async function main() {
         where r.hotel_id = $1
           and r.status in ('confirmed','checked_in','checked_out')
           and not r.is_complimentary
-          and d::date between date '2026-08-01' and date '2026-08-25'`,
-      [hotelId],
+          and d::date between $2::date and $3::date`,
+      [hotelId, shift("2026-08-01"), BUSINESS_DATE],
     );
     const sold = Number(check!.sold);
 
@@ -809,6 +831,23 @@ async function main() {
       }
     }
 
+    /* THE DAY MOVED WITH THE BOOKINGS (D27-193). A date left unshifted puts
+       the snapshot's arrivals off the business date, which is the owner's
+       "my booking is not in Arrivals" the other way round. */
+    const { rows: [due] } = await client.query<{ n: string }>(
+      `select count(*)::text as n from reservations
+        where hotel_id = $1 and check_in = (select business_date from hotels where id = $1)`,
+      [hotelId],
+    );
+    const snapshotDue = stays.filter((s) => s.hotelId === PROPERTY_ID && s.arrival === ANCHOR).length;
+    if (Number(due!.n) !== snapshotDue) {
+      throw new Error(
+        `${due!.n} bookings arrive on the business date ${BUSINESS_DATE}; the snapshot has ` +
+          `${snapshotDue} arriving on ${ANCHOR}. A date did not move with the demo. ` +
+          `Nothing was committed.`,
+      );
+    }
+
     if (sold !== 132) {
       throw new Error(
         `Calibration drift: Postgres says ${sold} room-nights sold in the PTD ` +
@@ -858,12 +897,14 @@ async function main() {
  *
  * NOT the business date the application reads — that comes from
  * app.business_date() per property, and this value is what gets
- * WRITTEN into hotels.business_date so the two agree. It must stay
- * fixed: 431 available room-nights, 132 sold, ADR ₹3,178.63 and room
- * revenue ₹4,19,578.76 all reconcile to the real eZee Night Audit
- * export for 1–25 August 2026.
+ * WRITTEN into hotels.business_date so the two agree. The snapshot's
+ * day is 25 August (431 available room-nights, 132 sold, ADR ₹3,178.63
+ * and room revenue ₹4,19,578.76 reconcile to the real eZee Night Audit
+ * export for 1–25 August 2026); `--today` moves it, and every date with
+ * it, onto today (demoDate.ts), so the same figures land on the days
+ * before today.
  */
-const BUSINESS_DATE = "2026-08-25";
+const BUSINESS_DATE = shift(ANCHOR);
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch((error) => {

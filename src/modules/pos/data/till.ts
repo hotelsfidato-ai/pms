@@ -1360,6 +1360,8 @@ export interface DayEnd {
     varianceReason: string | null;
     denominations: { value: number; count: number }[];
   };
+  /** The float was counted at Open the day (D27-190); no cash before. */
+  opened: boolean;
   closedAt: string | null;
   closedBy: string | null;
 }
@@ -1379,12 +1381,19 @@ export async function recordMovement(
   return till(hotelId, "day-end/movements", input);
 }
 
+/** Open the day: the float counted before any cash is taken (D27-190). */
+export async function openDay(
+  hotelId: string, input: { outlet?: string; opening: number },
+): Promise<Refusal> {
+  return till(hotelId, "day-end/open", input);
+}
+
 /** The count, replaced wholesale. Somebody empties the tin and counts
     it — merging a new count into an old one leaves denominations
     nobody typed this time. */
 export async function countDrawer(
   hotelId: string,
-  input: { outlet?: string; opening: number;
+  input: { outlet?: string;
            denominations: { value: number; count: number }[] },
 ): Promise<Refusal> {
   return till(hotelId, "day-end/count", input);
@@ -1392,7 +1401,7 @@ export async function countDrawer(
 
 export async function closeDay(
   hotelId: string,
-  input: { outlet?: string; varianceReason?: string },
+  input: { outlet?: string; varianceReason?: string; keptCash: number },
 ): Promise<Refusal> {
   return till(hotelId, "day-end/close", input);
 }

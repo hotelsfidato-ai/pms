@@ -49,6 +49,7 @@ properties and people.
 | Administration → Integrations | `/admin/integrations` | `pages/Admin.tsx` (`IntegrationsPage`) | none |
 | Administration → Audit log | `/admin/audit-log` | `pages/Admin.tsx` (`AuditLogPage`) | none |
 | Administration → Settings | `/admin/settings` | `pages/Admin.tsx` (`SettingsPage`, with `GroupCard` and `ModulesCard`) | none |
+| Administration → Configuration | `/admin/configuration` | `pages/Configuration.tsx` (what the property still needs, inventory's `FrontDeskCard`, finance's `TaxRulesCard`; D27-188, D27-194; resource `setting`) | none |
 | Administration → Console | `/admin/console` | `pages/Console.tsx` | none — development builds only |
 | System health | `/admin/system-health` | `pages/SystemHealth.tsx` | none — the owner and an administrator (`role`) |
 | — (not in the menu) one property | `/properties/:code` | `pages/Property.tsx` | reached from Properties |
@@ -83,8 +84,8 @@ properties and people.
   carries the GSTIN (`routes.tsx`).
 - Dialogs and panels in `flows/`: `StaffAdmin.tsx` (`NewPerson`, `People`,
   `NewProperty` — shared by Properties and the Console) and
-  `CommissioningCard.tsx` (what a property still needs — shown on inventory's
-  Room types page).
+  `CommissioningCard.tsx` (what a property still needs — shown on
+  Configuration since 30 September; on inventory's Room types before).
 
 ---
 
@@ -290,8 +291,9 @@ word, so the master renumbers it at merge).
 
 ## Front door
 
-`src/modules/admin/index.ts` exports `CommissioningCard`. Its one importer is
-`src/modules/inventory/pages/RoomSetup.tsx`.
+`src/modules/admin/index.ts` exports `CommissioningCard` (no other service
+imports it since Room types moved it to Configuration, 30 September) and
+`useGroupSettings`.
 
 The server's door, `api/src/modules/admin/index.ts`, exports only `mounts`
 (`["/api", admin]`), read by `api/src/server.ts`.

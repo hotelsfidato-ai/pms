@@ -150,7 +150,7 @@ const FSSAI = grant("room_config", "edit", "Setting the FSSAI licence number");
    changes. The database asks the same three (app.sets_group_settings). */
 const GROUP_NAME = grant("room_config", "edit", "Changing the group's name");
 const GROUP_LOGO = grant("room_config", "edit", "Changing the group's logo");
-/* GST sits on Room types, so it is setup - and the accountant, who holds no
+/* GST sits on Configuration (D27-194; Room types before), so it is setup - and the accountant, who holds no
    setup grant, sets the rate too: "the accountant confirms the rate on the tax
    screen" (D21-91), and "owner, admin, GM and accountant" (D22-32). */
 const GST = grant("room_config", "edit", "Setting GST", ["finance"]);
@@ -270,6 +270,13 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/cashier-shift/movements`]: DRAWER,
   [`POST ${H}/cashier-shift/count`]: DRAWER,
   [`POST ${H}/cashier-shift/close`]: DRAWER,
+  /* Cash deposits (D27-191): record, reverse and explain - the owner, an
+     administrator and the GM; verify - the owner and the accountant. No grant
+     in the matrix is exactly either, so the route asks. */
+  [`POST ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM"),
+  [`POST ${H}/cash-deposits/:id/reverse`]: own("finance/deposits.ts: owner, admin, GM"),
+  [`POST ${H}/cash-deposits/days/:date/explain`]: own("finance/deposits.ts: owner, admin, GM"),
+  [`POST ${H}/cash-deposits/:id/verify`]: own("finance/deposits.ts: owner, accountant"),
   [`POST ${H}/stays/:id/invoice`]: TAX_INVOICE,
   [`POST ${H}/invoices/:number{.+}/credit-note`]: CREDIT_NOTE,
   [`POST ${H}/vat-bills/:number{.+}/cancel`]: VAT_CANCEL,
@@ -346,6 +353,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders/:id/kot/:no/printed`]: KOT_PRINT,
   [`POST ${H}/till/kot-station/:outlet/poll`]: KOT_PRINT,
   [`POST ${H}/till/kot-station/:outlet`]: KOT_SWITCH,
+  /* Open the day, the float counted (D27-190): whoever closes it. */
+  [`POST ${H}/till/day-end/open`]: DAY_END,
   [`POST ${H}/till/day-end/movements`]: DAY_END,
   [`POST ${H}/till/day-end/count`]: DAY_END,
   [`POST ${H}/till/day-end/close`]: DAY_END,
@@ -390,6 +399,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PUT ${H}/pricing/basis`]: PRICE,
   [`PUT ${H}/pricing/base`]: PRICE,
   [`PUT ${H}/pricing/offset`]: PRICE,
+  [`PUT ${H}/pricing/addon`]: PRICE,
   [`POST ${H}/room-types`]: SETUP_ADD,
   [`PATCH ${H}/room-types/:id`]: SETUP_CHANGE,
   [`POST ${H}/rooms`]: SETUP_ADD,
@@ -546,6 +556,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/group`]: anyone("the group's name and logo, on every document"),
   [`GET ${H}/tax`]: anyone("the GST rates in use: neither a guest nor money taken"),
   [`GET ${H}/tax/:kind/rate`]: anyone("the GST rate for an amount"),
+  [`GET ${H}/tax/room/before-gst`]: anyone("the rate before GST inside an inclusive room rate"),
   [`GET ${H}/till/access`]: anyone("what the till lets this person do"),
   [`GET ${H}/notifications`]: see("notification", "notifications"),
   [`GET /api/admin/overview`]: anyone("counts of people and hotels, under row security"),
@@ -556,6 +567,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/stays/:id/exchangeable`]: STAYS,
   [`GET ${H}/stays/:id/inclusions`]: STAYS,
   [`GET ${H}/stays/:id/guest-marks`]: STAYS,
+  /* D27-187: View voucher, for the people who may send it. */
+  [`GET ${H}/stays/:id/voucher.pdf`]: grant("reservation", "create", "Viewing a booking's voucher"),
   [`GET ${H}/inclusions`]: STAYS,
   [`GET ${H}/early-arrival`]: STAYS,
   [`GET ${H}/groups`]: STAYS,
@@ -616,6 +629,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/pos/outlets`]: see(["payment", "invoice", "setting"], "the restaurant's outlets", ["pos"]),
   [`GET ${H}/payments`]: MONEY,
   [`GET ${H}/cashier-shift`]: MONEY,
+  /* D27-191: the owner, an administrator, the GM, the accountant and the Viewer. */
+  [`GET ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM, accountant, viewer"),
   [`GET ${H}/accounting/:file{day-book(?:\\.xlsx)?}`]: own("accounting/routes.ts: MAY_EXPORT (D27-122)"),
 
   /* ── Reports ── */

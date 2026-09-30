@@ -25,12 +25,14 @@ import BookingPage from "@/modules/reservations/pages/BookingPage";
 const calls: Array<{ method: string; path: string; body: Record<string, unknown> }> = [];
 let modules: Record<string, boolean> = {};
 let refuseCheckIn = false;
+let drawerOpen = false;
 
 beforeEach(() => {
   startSignedIn();
   calls.length = 0;
   modules = {};
   refuseCheckIn = false;
+  drawerOpen = false;
   vi.spyOn(apiModule, "api").mockImplementation(async (path: string, init?: RequestInit) => {
     const method = init?.method ?? "GET";
     if (method !== "GET") {
@@ -86,7 +88,19 @@ beforeEach(() => {
       return { isEarly: false, checkInTime: "12:00", checkOutTime: "11:00", charge: null,
                lateCharge: null, mayWaive: false } as never;
     }
-    if (path.endsWith("/inclusions")) return { inclusions: [] } as never;
+    if (path.includes("/tax/room/before-gst")) {
+      const gross = Number(new URL(path, "http://x").searchParams.get("gross"));
+      return (gross === 4000 ? { ok: true, pre: 3809.52, rate: 5, total: 4000 }
+        : gross === 502 ? { ok: true, pre: 478.09, rate: 5, total: 501.99 }
+        : { ok: false, reason: "An inclusive rate between ₹7,875 and ₹8,850 can't be split under the GST slab: type ₹7,875 or less, or more than ₹8,850." }) as never;
+    }
+    if (path.endsWith("/cashier-shift")) {
+      return { businessDate: "2026-08-25", shift: drawerOpen ? { id: "d-1" } : null,
+               colleagues: [], previous: null } as never;
+    }
+    if (path.endsWith("/billing-companies")) {
+      return [{ id: "co-1", name: "Tata Motors", gstin: "27AAACT2727Q1ZW" }] as never;
+    }
     if (path.endsWith("/stays/r-1/postings")) return [] as never;
     if (path.includes("/guest-messages")) {
       return { messages: [], connected: false, notConnected: "Sending is not switched on." } as never;
@@ -189,6 +203,40 @@ describe("the advance", () => {
     const paid = calls.find((c) => c.path.endsWith("/stays/r-1/payments"));
     expect(paid?.body).toMatchObject({ method: "UPI", amount: 2000, heldAsCredit: true });
   });
+
+  it("View voucher on the Booked card opens the voucher PDF in a new tab, and sends nothing (D27-187)", async () => {
+    const tab = { location: { href: "" }, close: vi.fn() };
+    vi.spyOn(window, "open").mockReturnValue(tab as unknown as Window);
+    const fetched = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      { ok: true, blob: async () => new Blob(["%PDF-"], { type: "application/pdf" }) } as Response);
+    URL.createObjectURL = vi.fn(() => "blob:voucher");
+    open();
+    await screen.findByRole("heading", { name: "Guest" });
+    type(/^Guest or company/, "Anna Smith");
+    pick(/^Booking source/, "src-1");
+    await waitFor(() => expect(button("Save booking").disabled).toBe(false));
+    fireEvent.click(button("Save booking"));
+
+    fireEvent.click(await screen.findByRole("button", { name: /View voucher/ }));
+    await waitFor(() => expect(tab.location.href).toBe("blob:voucher"));
+    expect(String(fetched.mock.calls[0]![0])).toMatch(/\/api\/hotels\/5EL\/stays\/r-1\/voucher\.pdf$/);
+    expect(calls.filter((c) => c.path.endsWith("/confirmation"))).toEqual([]);
+  });
+
+  it("in cash, holds the buttons until the clerk's own drawer is open (D27-118, D27-193)", async () => {
+    open();
+    await screen.findByRole("heading", { name: "Guest" });
+    type(/^Guest or company/, "Anna Smith");
+    pick(/^Booking source/, "src-1");
+    type(/^Amount/, "2000");
+    const said = "Cash goes into your open drawer: open it in Cashiering, or take it by card or UPI.";
+    await screen.findByText(said, { selector: "[data-advance-problem]" });
+    expect(button("Save booking").disabled).toBe(true);
+
+    pick(/^Paid by/, "UPI");
+    await waitFor(() => expect(button("Save booking").disabled).toBe(false));
+    expect(screen.queryAllByText(said)).toEqual([]);
+  });
 });
 
 describe("the Settings switches", () => {
@@ -198,13 +246,59 @@ describe("the Settings switches", () => {
     await screen.findByRole("heading", { name: "Guest" });
     const folds = () => [...document.querySelectorAll("summary")].map((s) => s.textContent);
     await waitFor(() => expect(folds()).not.toContain("Notes"));
-    expect(folds()).toEqual(["More about the guest", "Booking details", "Company", "GST", "Extras"]);
+    /* GST folded into Company and Extras left the page (D27-187, D27-193). */
+    expect(folds()).toEqual(["More about the guest", "Booking details", "Company"]);
+  });
+
+  it("show a company's GSTIN under the company picked, and call the tax GST", async () => {
+    open();
+    await screen.findByRole("heading", { name: "Guest" });
+    fireEvent.click(screen.getByRole("tab", { name: "Company" }));
+    await screen.findByRole("option", { name: "Tata Motors" });
+    pick(/^Company/, "co-1");
+    const gstin = await screen.findByText("27AAACT2727Q1ZW");
+    expect(gstin.closest("details")?.querySelector("summary")?.textContent).toBe("Company");
+    expect(screen.getByText("GST", { selector: "dt" })).toBeTruthy();
   });
 });
 
 /* "Book this lead" (D27-170): the leads view's token fills the guest, the
    channel and the campaign; an expired or erased one says so and leaves the
    page blank. */
+/* D27-187, D27-195: Rate inclusive of GST, per room line, off by default. The
+   split is the server's; the page shows it and sends the typed figure with the
+   flag, and says what the server says of a figure it cannot split exactly. */
+describe("a rate that includes GST", () => {
+  const typeRate = async (rate: string) => {
+    open();
+    await screen.findByRole("heading", { name: "Guest" });
+    type(/^Guest or company/, "Anna Smith");
+    pick(/^Booking source/, "src-1");
+    const toggle = screen.getByRole("switch", { name: /Rate includes GST/ });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(toggle);
+    type(/^Rate/, rate);
+  };
+
+  it("prices the line before GST and books the typed figure with the flag", async () => {
+    await typeRate("4000");
+    await screen.findByText(/₹3,809\.52 a night/);
+    await waitFor(() => expect(button("Save booking").disabled).toBe(false));
+    fireEvent.click(button("Save booking"));
+    await waitFor(() => expect(calls.find((c) => c.path.endsWith("/bookings"))?.body)
+      .toMatchObject({ lines: [expect.objectContaining({ agreedRate: 4000, rateIncludesGst: true })] }));
+  });
+
+  it("says a figure cannot split exactly, and holds the buttons in the slab gap", async () => {
+    await typeRate("502");
+    expect((await screen.findByText("₹502.00 can't split exactly: the bill will say ₹501.99 a night."))
+      .closest("[data-inclusive]")).toBeTruthy();
+    type(/^Rate/, "8000");
+    await screen.findByText(/can't be split under the GST slab/, { selector: "[data-inclusive-note]" });
+    expect(button("Save booking").disabled).toBe(true);
+  });
+});
+
 describe("a lead", () => {
   it("fills the name, phone and source, and the booking keeps its campaign", async () => {
     open("/?lead=tok-good");

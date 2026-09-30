@@ -186,6 +186,7 @@ money       POST   /:code/till/orders/:id/discount
 floor       GET    /:code/till/floor
             GET    /:code/till/waiters
 day end     GET    /:code/till/day-end
+            POST   /:code/till/day-end/open       (D27-190: the float counted; no cash before it)
             POST   /:code/till/day-end/movements
             POST   /:code/till/day-end/count
             POST   /:code/till/day-end/close

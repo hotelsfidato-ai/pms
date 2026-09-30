@@ -172,10 +172,10 @@ describe("each person's menu", () => {
   it("still lets reception FIND what left its menu", () => {
     /* The owner's condition for a shorter menu: nothing lost. */
     const found = searchable("front_desk");
-    for (const screen of ["Rate plans", "Night audit", "Lodging tax", "Housekeeping", "Groups"]) {
+    for (const screen of ["Rates", "Night audit", "Lodging tax", "Housekeeping", "Groups"]) {
       expect(found).toContain(screen);
     }
-    expect(menu("front_desk")).not.toContain("Rate plans");
+    expect(menu("front_desk")).not.toContain("Rates");
   });
 
   it("gives the restaurant and the kitchen their own screens", () => {

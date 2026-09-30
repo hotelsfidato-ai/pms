@@ -166,6 +166,8 @@ interface CheckInBody {
   user?: string;
   /* D25-39: the guest agreed to offers, asked face to face at check-in. */
   offersAgreed?: boolean;
+  /* D27-193: the clerk saw and confirmed a move of more than a day. */
+  confirmMove?: boolean;
 }
 
 operations.post("/:code/stays/:id/check-in", async (c) => {
@@ -259,6 +261,17 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
           `This booking arrives on ${stay.check_in}, not today. It can be `
           + "checked in early if a room is free - give a reason and it moves "
           + "to today.",
+        );
+      }
+      /* MORE THAN A DAY EARLY MOVES A WHOLE BOOKING (D27-193): the owner's
+         1 October booking, checked in on a hotel still on 25 August, became
+         39 nights nobody had seen. Allowed, but only once the screen has
+         shown the move and the clerk confirmed it - a stale screen cannot. */
+      const day = (d: string) => Date.parse(`${d}T00:00:00Z`) / 86_400_000;
+      if (day(stay.check_in) - day(businessDate) > 1 && body.confirmMove !== true) {
+        return refuse(
+          `Checking in now moves the arrival from ${stay.check_in} to ${businessDate}: `
+          + `${day(stay.check_out) - day(businessDate)} nights. Confirm the move first.`,
         );
       }
 

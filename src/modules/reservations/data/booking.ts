@@ -1,4 +1,4 @@
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, apiBase, authHeaders } from "@/lib/api";
 
 /* ══════════════════════════════════════════════════════════════════
    NEW BOOKING'S LISTS AND ITS "BOOKED" CARD (Phase 1, D27-33)
@@ -92,3 +92,29 @@ export const makeGuestLink = (hotelId: string, stayId: string) =>
 /** The booking's one voucher, now (D27-35). Refused if it went already. */
 export const sendVoucher = (hotelId: string, stayId: string) =>
   send(`/api/hotels/${hotelId}/stays/${stayId}/confirmation`, "POST", {});
+
+/** The booking's voucher PDF (D27-187), opened in a new tab to view, print
+    or save. It sends nothing. The tab is opened first, inside the press: one
+    opened after an await is a pop-up the browser blocks (root MEMORY 290). */
+export async function viewVoucher(
+  hotelId: string, stayId: string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const tab = window.open("", "_blank");
+  const headers = new Headers(await authHeaders());
+  headers.delete("content-type");
+  try {
+    const response = await fetch(
+      `${await apiBase()}/api/hotels/${hotelId}/stays/${stayId}/voucher.pdf`, { headers });
+    if (!response.ok) {
+      tab?.close();
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      return { ok: false, reason: body?.error ?? "The voucher could not be opened." };
+    }
+    const url = URL.createObjectURL(await response.blob());
+    if (tab) tab.location.href = url; else window.location.href = url;
+    return { ok: true };
+  } catch {
+    tab?.close();
+    return { ok: false, reason: "The voucher needs the connection to open." };
+  }
+}

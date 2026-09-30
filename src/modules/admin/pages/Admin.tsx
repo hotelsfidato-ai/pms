@@ -491,15 +491,7 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
      is off, the section is simply not drawn. */
   booking_company: {
     label: "Company section",
-    note: "Bill a booking to a company. Off, every new booking is billed to the guest.",
-  },
-  booking_gst: {
-    label: "GST section",
-    note: "Shows the chosen company's GSTIN, as the tax invoice will print it.",
-  },
-  booking_extras: {
-    label: "Extras section",
-    note: "The stay's extras from this hotel's list, added when the booking is saved.",
+    note: "Bill a booking to a company, with its GSTIN. Off, every new booking is billed to the guest.",
   },
   booking_notes: {
     label: "Notes section",

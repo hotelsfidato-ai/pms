@@ -72,7 +72,11 @@ inventorySetup.get("/:code/commissioning", async (c) => {
     };
 
     const types      = await one("select count(*)::text as n from room_types where hotel_id = $1 and is_active");
-    const unpriced   = await one("select count(*)::text as n from room_types where hotel_id = $1 and is_active and base_rate is null");
+    /* Priced = a price today on room only: its base, one derived from the
+       base type, or an old rack rate (D27-188) - not the rack alone. */
+    const unpriced   = await one(`select count(*)::text as n from room_types rt
+                                   where rt.hotel_id = $1 and rt.is_active
+                                     and (select p.price from app.price_for(rt.id, 'EP', app.business_date($1)) p) is null`);
     const rooms      = await one("select count(*)::text as n from rooms where hotel_id = $1 and is_active");
     const taxRules   = await one("select count(*)::text as n from tax_rules where hotel_id = $1 and kind = 'room'");
     const series     = await one("select count(*)::text as n from invoice_series where hotel_id = $1");
@@ -110,7 +114,8 @@ inventorySetup.get("/:code/commissioning", async (c) => {
           : "Without one a room charge has no rate to carry, and nothing "
             + "assumes a figure. The night audit will not run.",
         blocking: true,
-        to: "/room-types",
+        /* The GST card is on this page (Configuration, D27-194). */
+        to: null,
       },
       {
         id: "room-types",
@@ -132,7 +137,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
               + "cannot be sold. That is deliberate - an unpriced room is not "
               + "a free one.",
         blocking: true,
-        to: "/room-types",
+        to: "/rates",
       },
       {
         id: "rooms",
@@ -194,7 +199,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
           : `${untaxedCat} sections have none, and the till refuses their `
             + "items rather than billing them at nothing.",
         blocking: false,
-        to: "/room-types",
+        to: null,
       } as Check] : []),
     ];
 

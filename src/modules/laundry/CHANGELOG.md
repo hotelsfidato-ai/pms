@@ -12,6 +12,16 @@ yet** (`MODULE.md`).
 
 ---
 
+## 2026-09-30 · Laundry has its own GST heading (D27-194, by the rooms-and-rates lane)
+
+Branch `rates/base-addons-30sep`, copy `.claude\worktrees\mystifying-napier-d2f754`.
+**Asked for:** the owner's D27-194: laundry gets its own GST heading, refused until set; routed to this lane by the master.
+**Shipped:** the charge posts with `taxKind: "laundry"` (`laundry.ts`); `tax_rules` takes a `laundry` kind (migration 162, guarded like 125); the GST card lists "Laundry" (finance's `tax.ts`, `data/tax.ts`, `TaxRulesCard.tsx`, and admin's copy of the list).
+**⚠ After the release, a laundry charge is REFUSED ("This property has no GST rule for laundry") until the hotel sets its laundry GST on the GST card.** It used to go under the room's rate. The rate is the CA's to give. The master puts this in the release steps for 5EL, AMR and GLM.
+**Proved:** `api/test/modules/laundry/laundry.test.ts` "refuses the bag until laundry's own GST is set, whatever rooms carry": a room rule alone is refused.
+
+---
+
 ## 2026-09-28 · Fix round F (QA leftovers, D27-149): the screens with the module off (QA X-5)
 
 **Asked for:** QA X-5. Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.

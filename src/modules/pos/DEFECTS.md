@@ -48,6 +48,16 @@ fails "expected 'front_desk' to be 'pos'".
 
 **The rule** - A child line priced per plate must move with its plate.
 
+### POS-29 · The till's float was typed at night and read as ₹0 when left blank; the night count on a closed day answered 500 — FIXED 30 September (cash lane, D27-190; numbered for now)
+
+**Found** — the cash lane, reading Close restaurant day for D27-190: the day's row was made by the night count, whose `opening` fell back to 0 (`input.opening === undefined ? 0`) and whose screen sent `Number(opening) || 0`. Cash was taken all day before any float was counted (D27-139, which D27-190 replaces). A count sent after the day closed tried to update the closed row and the final trigger raised: a 500.
+
+**Fixed** — "Open the day" (`POST /till/day-end/open`) counts the float once, on the note grid; Settle refuses cash (only) until the outlet's day is open; the night count needs the opened day, no longer types or defaults the float, and refuses a closed day in words. The close asks the float kept for the next day (D27-191).
+
+**Proved** — `api/test/modules/finance/cashCounts.test.ts` (cash and a split with cash refused before Open the day, a card goes on, the count refused, a blank float refused, opened once, then cash taken; each failed with its guard taken out) and `till.test.ts`'s close without a float kept.
+
+**The rule** — A drawer's first figure is counted before its first rupee, never typed after its last.
+
 ### POS-24 · The Till never sent anything to the kitchen - FIXED 29 September (D27-166)
 
 **Found** - 29 September, by the speed and workflow check (`docs/qa/speed-2026-09-29.md` on `qa/speed-29sep`, finding 5, W-1): two Till orders charged to rooms 301 and 202 stayed `kot_status = pending`, had no KOT number and never reached the Kitchen screen. `pages/Till.tsx` opened an order, added dishes, struck and settled, and never called `sendToKitchen` or the batch route with `send: true`. Tables' order pad always sends its round; the Terminal has "Send to the kitchen". So with the KOT station (D27-159) a Till order would never have printed either.

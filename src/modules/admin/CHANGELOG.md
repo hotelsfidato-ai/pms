@@ -11,6 +11,16 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · Settings › Configuration, the hotel-wide settings (D27-188, D27-194; the rooms-and-rates lane)
+
+Branch `rates/base-addons-30sep`, copy `.claudeworktreesmystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.
+**Asked for:** the owner's D27-188 / D27-194: a new Configuration page under System › Administration for owner, Admin and GM, holding the taxes and the hotel-wide settings; Room types becomes the list of room types.
+**Shipped:** `pages/Configuration.tsx` at `/admin/configuration` (`RequireAccess` resource `setting`, a menu child beside Settings, found by "GST", "VAT", "tax", "check-in time"): `CommissioningCard`, inventory's `FrontDeskCard` and finance's `TaxRulesCard` through their doors. Commissioning's "a tariff on every room type" reads `app.price_for` (EP, the business date), not the rack alone, and links to Rates; its two GST checks no longer link away (the card is on the page). Settings says GST is set under System → Administration → Configuration (`adminLists.ts`). `TaxInUse` lists the new Laundry heading.
+**Proved:** in the app as the GM, Configuration shows the three cards; Find a screen "GST" offers it. `api/test/modules/admin/settings.test.ts` 7 passed, `propertyAdmin.test.ts` 39 passed.
+**Left open:** the page's name matches the menu SECTION "Configuration" and `navigation.test.ts` "never gives two places the same name" fails - asked of the master (recommended: rename the section).
+
+---
+
 ## 2026-09-29 · Settings: New booking's four sections, switched per hotel (D27-163; delegated by the master)
 
 Branch `frontdesk/one-page-29sep` (from cp6 7980862; cp6 59df358, round F, merged in), copy `.claude\worktrees\modest-wilson-2807a1`, database `fidato_s32`, API 8873, web 5273.

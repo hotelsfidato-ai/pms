@@ -93,7 +93,7 @@ and `cashier.ts`)
 
 | Method | Path | What it does |
 |---|---|---|
-| POST | `/:code/stays/:id/check-in` | check in; records the ID document; posts an early-arrival charge; refuses a room somebody is still in by `app.in_house` (FD-11), and a waive of the early charge by somebody who may not give it (FD-14) - both before the first write |
+| POST | `/:code/stays/:id/check-in` | check in; records the ID document; posts an early-arrival charge; refuses a room somebody is still in by `app.in_house` (FD-11), and a waive of the early charge by somebody who may not give it (FD-14) - both before the first write; a move of the arrival by more than a day only with `confirmMove: true` (FD-22, D27-193) |
 | GET | `/:code/early-arrival` | is arriving now early, with the hotel's times and charges (063) — null, never 0; and `mayWaive`, whether the server takes a waive of either charge from this person (the screens draw the tick from it, D24-16) |
 | POST | `/:code/stays/:id/check-out` | check out; posts a late check-out charge; closes the folio |
 | POST | `/:code/walk-ins` | a walk-in: guest, booking on the Walk-in channel (085), room, folio, first night; refuses a room somebody is still in, by name (`stillIn`, D24-15) |

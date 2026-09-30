@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · Booking and bill (D27-187, D27-193)
+
+Branch `fix/booking-bill-30sep`, the booking and bill lane; the whole account is reservations' CHANGELOG, same date. Here: `GET /:code/stays/:id/voucher.pdf` - View voucher, the confirmation's own PDF, sending nothing; a confirmed booking only (409), a bad id 404; roleGate the same people as Send voucher, pinned (viewVoucher.test.ts 3/3, roleGate).
+
 ## 2026-09-29 · Two senders, message ids, the inbox's booked mark, Send check-in link (D27-168, D27-169)
 
 **Asked for** (the master's card, D27-168; the owner's D27-98, D27-101,

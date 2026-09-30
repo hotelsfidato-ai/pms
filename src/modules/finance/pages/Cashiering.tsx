@@ -107,15 +107,19 @@ function OpenDrawer({ hotelId, previous, onDone }: {
   previous: { closedAt: string; counted: number; handedTo: string | null } | null;
   onDone: () => void;
 }) {
-  const [opening, setOpening] = useState("");
+  /* COUNTED, NEVER ASSUMED (D27-190): a blank float used to open as ₹0.
+     Open waits until something is typed; 0 only when somebody types it. */
+  const [counts, setCounts] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
+  const typed = Object.values(counts).some((v) => v.trim() !== "");
+  const opening = DENOMINATIONS.reduce((s, v) => s + v * (Number(counts[v]) || 0), 0);
 
   const open = async () => {
     setBusy(true);
-    const res = await openCashierShift(hotelId, Number(opening || 0));
+    const res = await openCashierShift(hotelId, opening);
     setBusy(false);
     if (!res.ok) return toast.error("Not opened", res.reason);
-    toast.success("Drawer open", `Starting with ${money(Number(opening || 0))}.`);
+    toast.success("Drawer open", `Starting with ${money(opening)}.`);
     onDone();
   };
 
@@ -127,23 +131,14 @@ function OpenDrawer({ hotelId, previous, onDone }: {
           description="Start a shift by counting in what you have been given."
         />
         <CardBody className="space-y-4">
-          <Field
-            label="Opening float"
-            hint="What is in the drawer before you take anything."
-          >
-            {(f) => (
-              <Input
-                {...fieldProps(f)}
-                type="number" inputMode="decimal" min={0} autoFocus
-                value={opening} onChange={(e) => setOpening(e.target.value)}
-                className="h-12 text-lg tabular"
-              />
-            )}
-          </Field>
-          <Button variant="primary" className="h-12 w-full text-base" disabled={busy}
-                  onClick={() => void open()}>
+          <p className="text-sm text-grey-600">
+            The opening float: what is in the drawer before you take anything.
+          </p>
+          <NoteGrid counts={counts} onChange={setCounts} />
+          <Button variant="primary" className="h-12 w-full text-base"
+                  disabled={busy || !typed} onClick={() => void open()}>
             <Wallet className="size-4" />
-            {busy ? "Opening…" : "Open the drawer"}
+            {busy ? "Opening…" : typed ? `Open the drawer - ${money(opening)}` : "Count the float first"}
           </Button>
         </CardBody>
       </Card>
@@ -241,32 +236,7 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
             description="Notes and coins, as they come out."
           />
           <CardBody className="space-y-4">
-            <div className="grid gap-2 sm:grid-cols-2">
-              {DENOMINATIONS.map((value) => {
-                const n = Number(counts[value]) || 0;
-                return (
-                  <div key={value}
-                       className="flex items-center gap-3 rounded-lg border border-grey-200 px-3 py-2">
-                    <span className="w-14 text-base font-medium tabular shrink-0">
-                      ₹{value}
-                    </span>
-                    <span className="text-grey-500">×</span>
-                    <Input
-                      type="number" inputMode="numeric" min={0}
-                      value={counts[value] ?? ""} placeholder="0"
-                      onChange={(e) => setCounts(
-                        (c) => ({ ...c, [value]: e.target.value }))}
-                      className="h-12 w-24 text-lg tabular"
-                      aria-label={`Number of ₹${value} notes`}
-                    />
-                    {/* A dash, not a zero. Nobody counted zero here. */}
-                    <span className="ml-auto text-base tabular text-grey-600">
-                      {n > 0 ? money(value * n) : "-"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <NoteGrid counts={counts} onChange={setCounts} />
             <Button variant="primary" onClick={() => void save()} disabled={saving}
                     className="h-12 w-full text-base">
               {saving ? "Saving…" : `Save the count - ${money(counted)}`}
@@ -367,6 +337,42 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
         <CloseDialog hotelId={hotelId} shift={shift} colleagues={colleagues}
                      onClose={() => setCloseOpen(false)} onDone={onDone} />
       )}
+    </div>
+  );
+}
+
+/* Notes and coins, one row each - the float at open and the drawer at the
+   count, added up the same way. */
+function NoteGrid({ counts, onChange }: {
+  counts: Record<number, string>;
+  onChange: (update: (c: Record<number, string>) => Record<number, string>) => void;
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {DENOMINATIONS.map((value) => {
+        const n = Number(counts[value]) || 0;
+        return (
+          <div key={value}
+               className="flex items-center gap-3 rounded-lg border border-grey-200 px-3 py-2">
+            <span className="w-14 text-base font-medium tabular shrink-0">
+              ₹{value}
+            </span>
+            <span className="text-grey-500">×</span>
+            <Input
+              type="number" inputMode="numeric" min={0}
+              value={counts[value] ?? ""} placeholder="0"
+              onChange={(e) => onChange(
+                (c) => ({ ...c, [value]: e.target.value }))}
+              className="h-12 w-24 text-lg tabular"
+              aria-label={`Number of ₹${value} notes`}
+            />
+            {/* A dash, not a zero. Nobody counted zero here. */}
+            <span className="ml-auto text-base tabular text-grey-600">
+              {n > 0 ? money(value * n) : "-"}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -491,16 +497,24 @@ function CloseDialog({ hotelId, shift, colleagues, onClose, onDone }: {
 }) {
   const [why, setWhy] = useState(shift.varianceReason ?? "");
   const [handOverTo, setHandOverTo] = useState("");
+  const [kept, setKept] = useState("");
   const [busy, setBusy] = useState(false);
 
   const variance = shift.variance;
   const needsReason = variance !== null && Math.abs(variance) >= 0.01;
+  /* D27-191: the float kept is typed at every close and the rest is to
+     deposit; a handover keeps all of it. Blank is not zero. */
+  const counted = shift.counted ?? 0;
+  const keptNum = kept.trim() === "" ? null : Number(kept);
+  const keptOk = handOverTo !== ""
+    || (keptNum !== null && Number.isFinite(keptNum) && keptNum >= 0 && keptNum <= counted);
 
   const submit = async () => {
     setBusy(true);
     const res = await closeCashierShift(hotelId, {
       varianceReason: why,
       handOverTo: handOverTo || null,
+      ...(handOverTo ? {} : { keptCash: keptNum! }),
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not closed", res.reason);
@@ -544,12 +558,29 @@ function CloseDialog({ hotelId, shift, colleagues, onClose, onDone }: {
             )}
           </Field>
 
+          {handOverTo ? (
+            <p className="text-sm text-grey-600">
+              The whole drawer goes to them - nothing is deposited from this shift.
+            </p>
+          ) : (
+            <Field label="Float kept for the next shift"
+                   hint={keptOk && keptNum !== null
+                     ? `To deposit: ${moneyPrecise(counted - keptNum)}`
+                     : `From ₹0 to the ${moneyPrecise(counted)} counted. The rest is deposited.`}>
+              {(f) => (
+                <Input {...fieldProps(f)} type="number" inputMode="decimal" min={0}
+                  value={kept} onChange={(e) => setKept(e.target.value)}
+                  className="h-12 text-lg tabular" />
+              )}
+            </Field>
+          )}
+
           <div className="flex gap-2">
             <DialogClose asChild>
               <Button variant="secondary" className="h-12 flex-1">Not yet</Button>
             </DialogClose>
             <Button variant="primary" className="h-12 flex-1"
-                    disabled={busy || (needsReason && !why.trim())}
+                    disabled={busy || !keptOk || (needsReason && !why.trim())}
                     onClick={() => void submit()}>
               <Lock className="size-4" />
               Close the shift
