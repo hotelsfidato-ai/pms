@@ -90,7 +90,7 @@ describe("the old flat tax is gone", () => {
     const tax = groups.find((g) => g.taxInUse);
     expect(tax, "no group carries the tax in use").toBeDefined();
     expect(tax!.title).toBe("Tax and billing");
-    expect(tax!.note).toMatch(/Configuration/);
+    expect(tax!.note).toMatch(/GST card above/);
   });
 });
 

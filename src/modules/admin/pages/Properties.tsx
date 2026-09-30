@@ -258,8 +258,11 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
    endpoint refuses to change it for that reason. Showing a greyed-out
    box says so better than leaving it out.
    ═══════════════════════════════════════════════════════════════════ */
-function EditPropertyDialog({ hotel, onClose, onSaved }: {
-  hotel: AdminProperty; onClose: () => void; onSaved: () => void;
+export function EditPropertyDialog({ hotel, nameLocked = false, onClose, onSaved }: {
+  hotel: Pick<AdminProperty, "code" | "name" | "city" | "state" | "gstin" | "phone" | "email" | "addressLine">;
+  /** The name stays the group owner's (D27-214): a GM or Admin sees it, locked. */
+  nameLocked?: boolean;
+  onClose: () => void; onSaved: () => void;
 }) {
   const [name, setName] = useState(hotel.name);
   const [city, setCity] = useState(hotel.city ?? "");
@@ -311,9 +314,10 @@ function EditPropertyDialog({ hotel, onClose, onSaved }: {
                      className="tabular" />
             )}
           </Field>
-          <Field label="Name" required>
+          <Field label="Name" required
+                 {...(nameLocked ? { hint: "The group's owner changes the name." } : {})}>
             {(f) => (
-              <Input {...fieldProps(f)} value={name} autoFocus
+              <Input {...fieldProps(f)} value={name} autoFocus={!nameLocked} disabled={nameLocked}
                      onChange={(e) => setName(e.target.value)} />
             )}
           </Field>
