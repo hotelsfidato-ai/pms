@@ -7,6 +7,18 @@ NEW workflow in this app's n8n. Nothing in this app's code or its security rules
 (the owner's decision D27-98). Your job is to guide the owner through the setup, check the facts
 in this app's code, and report back the non-secret values the PMS needs.
 
+NOTE (30 Sep, D27-186 and D27-203) - THIS CHANGES STEPS 3 TO 6 BELOW:
+- The PMS only SHOWS this app's leads and marketing. It sends nothing through this app's n8n
+  for now: do NOT import pms-send-m2r.json (step 4), and the templates in step 6 are submitted
+  on the Fidato number through the CRS chat instead.
+- NO JSON KEY (step 3): the Google organisation forbids keys. The `pms-reader` service account
+  keeps ONLY "Cloud Datastore Viewer"; the PMS server's own Google login is given "Service
+  Account Token Creator" on `pms-reader` alone. The exact steps are in
+  D:\fidato pms\src\modules\leads\OWNER-STEPS.md.
+- Known effect while the PMS sends through the CRS: a booked guest's WhatsApp reply reaches
+  this app's inbox as a new enquiry (nothing marks it as a PMS conversation).
+Steps 1, 2, 5 and 7 stand.
+
 READ FIRST (read-only; these are the PMS's files):
 - D:\fidato pms\src\modules\leads\OWNER-STEPS.md: the read-only Google login
 - D:\fidato pms\deploy\n8n\IMPORT.md: part A, the WhatsApp workflow
