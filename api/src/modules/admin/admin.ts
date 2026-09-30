@@ -425,16 +425,38 @@ admin.patch("/admin/hotels/:code", async (c) => {
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   const result = await withSession(c.get("subject"), async (client) => {
-    const denied = await requireGroupAdmin(client);
-    if (denied) return denied;
-
+    /* WHO (the owner's D27-213, D27-214): a group administrator, or the
+       owner, GM or Admin AT THIS HOTEL - app.manages_hotel, the same
+       question the row's write policy asks since 168. Asked before anything
+       else, so a person who may not is told so whichever hotel they named
+       (another hotel's GM cannot even see this one). Until 1 October only a
+       group administrator could, and a GM could not fix their own address. */
     const hotelId = await hotelFor(client, c.req.param("code"));
+    const { rows: who } = await client.query<{ manages: boolean; group_admin: boolean }>(
+      `select coalesce(app.manages_hotel($1), false) as manages,
+              app.is_group_admin() as group_admin`, [hotelId]);
+    if (!who[0]?.manages) {
+      return refuse(
+        "A hotel's details are changed by its owner, general manager or Admin, "
+        + "or by a group administrator. Ask one of them.");
+    }
     if (!hotelId) return null;
 
     const name = input.name?.trim();
     const city = input.city?.trim();
     if (name !== undefined && !name) {
       return refuse("A property needs a name.");
+    }
+    /* THE NAME STAYS THE GROUP OWNER'S, like the code (D27-214). The form
+       sends it back unchanged, which is fine; a different one is refused. */
+    if (name !== undefined && !who[0].group_admin) {
+      const { rows: now } = await client.query<{ name: string }>(
+        "select name from hotels where id = $1", [hotelId]);
+      if (now[0]?.name !== name) {
+        return refuse(
+          "The hotel's name is changed by the group's owner. Everything else "
+          + "here is yours to change.");
+      }
     }
     if (city !== undefined && !city) {
       return refuse("Which city is it in?");

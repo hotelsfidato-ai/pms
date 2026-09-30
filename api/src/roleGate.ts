@@ -369,7 +369,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   /* admin */
   [`POST ${H}/modules/:module`]: own("admin/moduleSwitches.ts: the owner or an administrator"),
   [`POST /api/admin/hotels`]: own("admin/admin.ts: a group administrator, with the provisioning key"),
-  [`PATCH /api/admin/hotels/:code`]: own("admin/admin.ts: a group administrator"),
+  [`PATCH /api/admin/hotels/:code`]: own("admin/admin.ts: app.manages_hotel - a group administrator, or owner, GM or Admin at that hotel; the name a group administrator only (D27-214)"),
   [`PUT ${H}/fssai`]: FSSAI,
   [`PUT ${H}/group/name`]: GROUP_NAME,
   [`PUT ${H}/group/logo`]: GROUP_LOGO,
