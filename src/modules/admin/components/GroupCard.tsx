@@ -185,7 +185,8 @@ export function HotelLogoCard({ hotelCode }: { hotelCode: string }) {
     <Card>
       <CardHeader
         title="This hotel's logo"
-        description="On this hotel's bills and documents in place of the group's logo. With none, the group's prints."
+        description={"On this hotel's bills and documents in place of the group's logo. With none, the group's prints. "
+          + "The voucher PDF prints a PNG logo; an SVG logo shows on the bills and the group's logo on the voucher."}
       />
       <CardBody className="pt-0">
         {group.isLoading ? (

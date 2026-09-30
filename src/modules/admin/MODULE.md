@@ -198,10 +198,16 @@ DELETE /:code/logo                the same picture rules; the owner, an administ
 **Which logo a document prints** is decided in ONE place, `useGroupSettings`
 (`data/groupSettings.ts`): the hotel's own where it has one, the group's where
 it has not. Every `DocMasthead` takes its logo from that hook, so a new
-document gets the rule by using it. Two documents do NOT go through it: the
-voucher PDF (the logo is read inside `app.guest_voucher`, migration 158, the
-group's PNG only) and the guest's page (no logo at all) - both the messaging
-and online check-in lanes', reported to the master on 30 September.
+document gets the rule by using it. Two documents do NOT go through it:
+- **the voucher PDF** - sent with nobody signed in, its logo is read inside
+  `app.guest_voucher`. Migration 168 (section 5) re-creates that function with
+  the one expression changed: the hotel's own PNG, else the group's PNG. The
+  PDF draws PNG only, so a hotel whose own logo is an SVG prints the group's
+  on its voucher; the logo card says so.
+  `api/test/modules/guest-messaging/viewVoucher.test.ts` holds the rule and
+  that nothing else in the function moved from 158;
+- **the guest's page** (`/g/:token`) - it shows no logo at all; left out of
+  this job by the master (30 September), the owner to say whether it should.
 
 Every write: the owner, an admin or the GM (roleGate, room setup; the owner,
 27 Sep). The table is `group_settings` (its migration: "the group's name and

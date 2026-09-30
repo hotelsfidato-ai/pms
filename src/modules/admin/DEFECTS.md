@@ -33,7 +33,7 @@ the demo's shortest.
 
 ## Fixed — the solution is here; do not work it out again
 
-### ADM-18 · A hotel's Admin saved its details and nothing was written; a GM of another hotel could write this one - FIXED 30 September (numbered for now)
+### ADM-18 · A hotel's Admin saved its details and nothing was written; a GM of another hotel could write this one - FIXED 30 September by migration 168
 
 **Found** - planning D27-213, in a rolled-back transaction as `pms_app`. `hotels_manage` (the UPDATE policy on `hotels`) asked `app.is_manager()`: a group administrator, or owner or GM at ANY hotel. So a person whose role at a hotel is `admin` (D23-2) updated 0 rows there, and a GM of hotel A who also works the desk at hotel B could update hotel B's row. The profile's route was for a group administrator only, so it never reached the policy and nothing showed; the FSSAI save (owner, admin, GM) is a plain update under it.
 
