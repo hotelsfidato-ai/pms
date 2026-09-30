@@ -129,7 +129,7 @@ const RULES: Rule[] = [
 
   /* ── queue, and warn ────────────────────────────────────────── */
   {
-    test: /\/stays\/[^/]+\/(check-in|assign|unassign)$|\/walk-ins$/,
+    test: /\/stays\/[^/]+\/(check-in|assign|unassign)$/,
     tier: "queue-warn",
     label: "Check-in",
   },

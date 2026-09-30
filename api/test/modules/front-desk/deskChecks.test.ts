@@ -44,11 +44,29 @@ const reasonOf = async (res: Response) => ((await res.json()) as { reason: strin
 const guests = async (name: string) => Number((await sql<{ n: string }>(
   "select count(*)::text as n from guests where full_name = $1", [`${TAG} ${name}`]))[0]!.n);
 
-const walkIn = (name: string, room: string, over: Record<string, unknown> = {}) =>
-  call("/walk-ins", "POST", {
-    guestName: `${TAG} ${name}`, roomNumber: room, nights: 1, adults: 1, children: 0,
-    ratePlan: "EP", offeredTariff: 2000, ...over,
+/* A WALK-IN IS THE ONE-PAGE BOOKING (D27-158): the booking on the Walk-in
+   channel, then front desk's check-in. POST /walk-ins went on 30 September;
+   each check it made is asked here of the call that now makes it. */
+let walkInSource = "";
+let stdType = "";
+
+const book = (name: string, over: Record<string, unknown> = {}, line: Record<string, unknown> = {}) =>
+  call("/bookings", "POST", {
+    guestName: `${TAG} ${name}`, checkIn: "2026-08-26", checkOut: "2026-08-27",
+    bookingSourceId: walkInSource,
+    lines: [{ roomTypeId: stdType, mealPlan: "EP", adults: 1, rooms: 1, agreedRate: 2000, ...line }],
+    ...over,
   });
+
+async function walkIn(name: string, room: string, checkIn: Record<string, unknown> = {}) {
+  const made = await book(name);
+  expect(made.status, await made.clone().text()).toBe(200);
+  const id = ((await made.json()) as { bookings: { id: string }[] }).bookings[0]!.id;
+  return { id, res: await call(`/stays/${id}/check-in`, "POST", { roomNumber: room, ...checkIn }) };
+}
+
+const statusOf = async (id: string) => (await sql<{ status: string }>(
+  "select status from reservations where id = $1", [id]))[0]!.status;
 
 async function booking(ref: string) {
   return (await sql<{ id: string }>(
@@ -77,6 +95,10 @@ beforeAll(async () => {
       `insert into tax_rules (hotel_id, kind, over_amount, rate, note)
        values ($1, 'room', 0, 5, 'Test')`, [hotelId]);
     await db.query("insert into guests (full_name) values ($1)", [`${TAG} booked`]);
+    walkInSource = (await db.query<{ id: string }>(
+      "select app.walk_in_source()::text as id")).rows[0]!.id;
+    stdType = (await db.query<{ id: string }>(
+      "select id::text from room_types where hotel_id = $1 and code = 'STD'", [hotelId])).rows[0]!.id;
   } finally { await db.end(); }
 });
 
@@ -93,29 +115,37 @@ afterAll(async () => {
 });
 
 describe("the walk-in (FD-1, FD-2, FD-6, FD-7)", () => {
-  it("asks an Indian guest for an ID or a reason, as check-in does, and writes nothing", async () => {
-    const res = await walkIn("No ID", "101");
+  it("asks an Indian guest for an ID or a reason, as check-in does, and leaves a booking", async () => {
+    const { id, res } = await walkIn("No ID", "101");
     expect(res.status).toBe(409);
     expect(await reasonOf(res)).toMatch(/Record the guest's ID document/);
-    expect(await guests("No ID")).toBe(0);
+    /* The booking stands and nobody is checked in (D27-158). */
+    expect(await statusOf(id)).toBe("confirmed");
+  });
+
+  it("refuses an Aadhaar that is not one at the check-in, and nobody is checked in", async () => {
+    const { id, res } = await walkIn("Aadhaar", "102",
+      { identity: { idType: "aadhaar", idNumber: "12ab" } });
+    expect(res.status).toBe(409);
+    expect(await reasonOf(res)).toMatch(/12 digits/);
+    expect(await statusOf(id)).toBe("confirmed");
   });
 
   it.each([
-    ["Aadhaar", { identity: { idType: "aadhaar", idNumber: "12ab" } }, /12 digits/],
-    ["Nights 400", { nights: 400, idSkipReason: "Test" }, /Nights is a whole number from 1 to 90/],
-    ["Nights -2", { nights: -2, idSkipReason: "Test" }, /Nights is a whole number from 1 to 90/],
-    ["Children", { children: -1, idSkipReason: "Test" }, /Children is a whole number from 0/],
-    ["Phone", { phone: "abc", idSkipReason: "Test" }, /not a phone number/],
-    ["Email", { email: "not-an-email", idSkipReason: "Test" }, /not an email address/],
-  ])("refuses %s, and writes nothing", async (name, over, why) => {
-    const res = await walkIn(name, "102", over);
+    ["Nights 400", { checkOut: "2027-09-30" }, {}, /Nights is a whole number from 1 to 90/],
+    ["Nights -2", { checkOut: "2026-08-24" }, {}, /A stay ends after it starts/],
+    ["Children", {}, { children: -1 }, /Children is a whole number from 0/],
+    ["Phone", { phone: "abc" }, {}, /not a phone number/],
+    ["Email", { email: "not-an-email" }, {}, /not an email address/],
+  ])("refuses %s at the booking, and writes nothing", async (name, over, line, why) => {
+    const res = await book(name, over, line);
     expect(res.status).toBe(409);
     expect(await reasonOf(res)).toMatch(why);
     expect(await guests(name)).toBe(0);
   });
 
   it("keeps an Indian guest's Aadhaar, as it keeps a foreigner's passport", async () => {
-    const res = await walkIn("Aadhaar kept", "103",
+    const { res } = await walkIn("Aadhaar kept", "103",
       { identity: { idType: "aadhaar", idNumber: "2345 6789 0124" } });
     expect(res.status, await res.clone().text()).toBe(200);
     const [d] = await sql<{ id_type: string; id_number: string }>(
@@ -125,11 +155,10 @@ describe("the walk-in (FD-1, FD-2, FD-6, FD-7)", () => {
   });
 
   it("keeps the reason an ID was skipped on the stay", async () => {
-    const res = await walkIn("Skipped", "104", { idSkipReason: "Scanner offline" });
+    const { id, res } = await walkIn("Skipped", "104", { idSkipReason: "Scanner offline" });
     expect(res.status, await res.clone().text()).toBe(200);
     const [r] = await sql<{ notes: string }>(
-      `select r.notes from reservations r join guests g on g.id = r.guest_id
-        where g.full_name = $1`, [`${TAG} Skipped`]);
+      "select notes from reservations where id = $1", [id]);
     expect(r!.notes).toBe("ID not captured - Scanner offline");
   });
 });

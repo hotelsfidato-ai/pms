@@ -56,6 +56,23 @@ moved out of, not for a check-out.
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-23 · A check-in with the ID block's default "IN" took a returning foreign guest off the Form III register - FIXED 30 September (D27-197, numbered for now)
+
+**Found** - 30 September, moving the walk-in route's tests onto the booking
+plus the check-in (the route went, Rule 2b). The one page's ID block opens on
+"IN" and does not read a returning guest's record. The check-in took the
+nationality typed over the one on file, so Form III was not asked, and it then
+wrote `guests.nationality = 'IN'`. The walk-in route had the guard; the
+check-in never did, from Arrivals either. On a guest on file as GB: expected
+409 and GB, got 200 and IN.
+**Fixed** - the owner's D27-197: at check-in, "IN" typed never replaces a
+foreign nationality on file (`operations.ts`, the check-in); Form III is asked
+of the nationality on file. `api/test/modules/guests/formIII.test.ts`, "keeps
+a returning foreign guest foreign when the form says IN", seen failing first.
+**Rule:** a rule that lives in one route is lost when that route goes. Before
+removing a route, list what it refuses and find each refusal on the path that
+replaces it.
+
 ### FD-21 · A bad stay id on a stay's inclusions answered 500 - FIXED 30 September (numbered for now)
 
 `GET/POST/DELETE /:code/stays/:id/inclusions` passed the id to Postgres unchecked; a non-uuid failed the cast. **Fixed:** one middleware answers 404 "No such stay." first (`stayExtras.ts`, `api/test/modules/front-desk/badStayId.test.ts`).

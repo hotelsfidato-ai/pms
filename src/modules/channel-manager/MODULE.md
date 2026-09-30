@@ -384,13 +384,12 @@ exports nothing.
 
 - **guests** - `listCompanies` through `@/modules/guests`, on the status page.
 - **inventory** - reads `room_types`, `rooms` and `meal_plans` for the content,
-  and `app.inventory_grid`, `app.price_for`, `app.extra_person_rates` and
+  and `app.inventory_grid`, `app.price_for`, `app.tariff_guests` and
   `rate_restrictions` for part 3, in SQL, as the booking door and the rate grid
-  do (the master, 17 September). ⚠ `ari/source.ts` carries a COPY of
-  `app.tariff_for`'s arithmetic for adults, because calling it per date and per
-  guest count took 11 seconds a year under row security; the test
-  `suAvailability.test.ts` compares the two date by date. A set-based tariff in
-  inventory would end the copy: asked below.
+  do (the master, 17 September). Since 30 September (migration 162, D27-188)
+  `ari/source.ts` takes the prices for 1 … n guests from `app.tariff_guests`:
+  the copy of `app.tariff_for`'s arithmetic it carried is gone, and the test
+  `suAvailability.test.ts` still compares the two date by date.
 - **reservations** (part 4), through its front door: `createChannelBooking`,
   `cancelChannelBooking`, `channelBookingAlreadyHere`, `isUniqueViolation`
   (the CRS bridge uses the same door). What is not exported there is a request
@@ -430,10 +429,9 @@ db      bash db/tests/run.sh    all pass; bash db/tests/rerun.sh re-runnable
    master's own, which makes `channel_manager` a module a hotel is switched on
    for, so part 3's gate can be true. `server.ts` starts `jobs` after listen,
    never under the tests.
-5. **17 Sep · a set-based tariff in inventory.** `app.tariff_for` per date and
-   per guest count costs 11 seconds a year under row security, so part 3 keeps a
-   copy of its arithmetic for adults. Something like
-   `app.tariff_grid(hotel, from, to, guests)` in inventory would end the copy.
+5. **17 Sep · a set-based tariff in inventory.** **Met 30 September** by
+   `app.tariff_guests` (migration 162, the rates lane): part 3 reads it and no
+   longer keeps a copy of the arithmetic.
 6. **17 Sep · a booking door a machine can call, in process** (D17-79). **Built
    by reservations; used from 30 September** (D27-183). What was asked for: Exported from
    `api/src/modules/reservations/index.ts`, called inside the caller's own

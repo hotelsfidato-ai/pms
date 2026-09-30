@@ -53,9 +53,10 @@ const inserts = (): Insert[] =>
 describe("every way a reservation is created", () => {
   it("finds the doors at all", () => {
     /* Without this the next test passes vacuously on an empty list —
-       which is how a guard ends up agreeing with everything. Two today:
-       the booking form and the walk-in desk. */
-    expect(inserts().length).toBeGreaterThanOrEqual(2);
+       which is how a guard ends up agreeing with everything. One today:
+       the booking (book.ts). The walk-in desk's went on 30 September - a
+       walk-in is that booking, then a check-in (D27-158). */
+    expect(inserts().length).toBeGreaterThanOrEqual(1);
   });
 
   it("⚠ RECORDS THE BOOKING CHANNEL ON EVERY ONE", () => {
