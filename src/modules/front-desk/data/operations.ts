@@ -275,7 +275,8 @@ export async function checkOut(
 /* ── D · Walk-in ──────────────────────────────────────────────────────
    The walk-in is New booking's one page opened from an empty room
    (D27-163): the booking call, then the check-in above. The server's
-   POST /walk-ins stays, and no screen calls it. */
+   POST /walk-ins, which no screen called after that, was removed on
+   30 September (Rule 2b). */
 
 /**
  * Give a booking a room ahead of arrival.

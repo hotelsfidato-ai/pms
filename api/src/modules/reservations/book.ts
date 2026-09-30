@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Client } from "../../db.ts";
-import { countProblem, countryProblem, dateProblem } from "../../validate.ts";
+import { countProblem, countryProblem, dateProblem, MAX_NIGHTS } from "../../validate.ts";
 import { roomRateBeforeGst } from "../finance/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -388,6 +388,12 @@ export async function makeBooking(
       "A stay ends after it starts. The night of departure is not charged, "
       + "so a guest leaving on the 5th has their last night on the 4th.");
   }
+  /* FD-6 (the owner, 28 September; D27-197): at most 90 nights, as the
+     walk-in desk held it and Change dates does. */
+  const tooLong = countProblem(
+    (Date.parse(request.checkOut) - Date.parse(request.checkIn)) / 86_400_000,
+    "Nights", 1, MAX_NIGHTS);
+  if (tooLong) return refuse(tooLong);
   if (lines.length === 0) return refuse("Which rooms?");
   if (!sourceId) {
     return refuse(
@@ -472,7 +478,9 @@ export async function makeBooking(
         where bs.id = $1 and bs.is_active`,
       [request.bookingSourceId, hotelId]);
     if (!src[0]) {
-      return refuse("That booking source is not on the list any more.");
+      return refuse(
+        "That booking source is not on the list any more. A manager can "
+        + "switch it back on under Property setup → Booking sources.");
     }
     const commission = src[0].commission_pct;
 

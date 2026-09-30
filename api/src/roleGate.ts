@@ -77,7 +77,6 @@ const anyone = (why: string): Rule => ({ kind: "anyone", why });
 
 /* Bookings, stays and functions: `reservation`. */
 const BOOK = grant("reservation", "create", "Making a booking");
-const WALK_IN = grant("reservation", "create", "Checking in a walk-in");
 const CHANGE_BOOKING = grant("reservation", "edit", "Changing a booking");
 const CHECK_IN = grant("reservation", "edit", "Checking a guest in");
 const CHECK_OUT = grant("reservation", "edit", "Checking a guest out");
@@ -225,7 +224,6 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   /* front-desk */
   [`POST ${H}/stays/:id/check-in`]: CHECK_IN,
   [`POST ${H}/stays/:id/check-out`]: CHECK_OUT,
-  [`POST ${H}/walk-ins`]: WALK_IN,
   [`POST ${H}/stays/:id/assign`]: ROOMING,
   [`POST ${H}/stays/:id/move`]: ROOMING,
   [`PATCH ${H}/stays/:id`]: CHANGE_BOOKING,
