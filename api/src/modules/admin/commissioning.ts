@@ -116,7 +116,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
         blocking: true,
         /* Each row opens the Settings tab that settles it (D27-213); the
            rest open this hotel's own screen. */
-        to: "/settings/taxes-and-billing",
+        to: "/settings/rates-and-taxes",
       },
       {
         id: "room-types",
@@ -178,7 +178,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
           : "Nobody has been given this property, so only a group "
             + "administrator can see it.",
         blocking: false,
-        to: "/settings/people-and-access",
+        to: "/settings/people",
       },
       {
         id: "cancellation",
@@ -201,7 +201,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
           : `${untaxedCat} sections have none, and the till refuses their `
             + "items rather than billing them at nothing.",
         blocking: false,
-        to: "/settings/taxes-and-billing",
+        to: "/settings/rates-and-taxes",
       } as Check] : []),
     ];
 

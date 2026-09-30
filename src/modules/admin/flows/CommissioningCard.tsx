@@ -78,12 +78,7 @@ export function CommissioningCard({ hotelId }: { hotelId: string }) {
             <Row key={c.id} check={c} hotelId={hotelId} />
           ))}
         </ul>
-
-        {data.done > 0 && (
-          <p className="text-sm text-grey-500">
-            Done: {data.checks.filter((c) => c.done).map((c) => c.label).join(", ")}.
-          </p>
-        )}
+        {/* Only what is missing (the owner's D27-220): what is done is not listed. */}
       </CardBody>
     </Card>
   );

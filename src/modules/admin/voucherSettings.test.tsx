@@ -161,13 +161,17 @@ describe("the group's office details on Settings", () => {
 /* D27-216: the bell's link names the hotel whose bank details changed, and
    Settings opens for THAT hotel whichever one was open. */
 describe("Settings, opened for a named hotel", () => {
+  /* The bell's link still says taxes-and-billing (api notifications.ts): since
+     D27-220 it opens Rates and taxes, where the bank details are, for the
+     same hotel. */
   it("reads that hotel's bank details, on the tab the address names", async () => {
     as("group-admin");
     serve({ "/api/hotels/AGR/bank-details": () => ({ bank: BANK }) });
     go("/h/AGR/settings/taxes-and-billing");
     render(<App />);
     expect(await screen.findByRole("heading", { level: 1, name: "Settings" })).toBeTruthy();
-    expect((await screen.findByRole("tab", { name: "Taxes and billing" })).getAttribute("aria-selected")).toBe("true");
+    expect((await screen.findByRole("tab", { name: "Rates and taxes" })).getAttribute("aria-selected")).toBe("true");
+    expect(window.location.pathname).toBe("/h/AGR/settings/rates-and-taxes");
     await waitFor(() => expect(vi.mocked(apiModule.api).mock.calls.map(([path]) => path))
       .toContain("/api/hotels/AGR/bank-details"));
     expect(await screen.findByText("TEST0001234")).toBeTruthy();

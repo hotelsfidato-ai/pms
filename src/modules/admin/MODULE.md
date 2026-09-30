@@ -27,13 +27,15 @@ The owner adds a property and its general manager. The GM adds the people
 who work at their hotel, gives each a role and a password, sets the screen
 each person starts on, and can take access away, switch somebody off or bring
 them back. A group administrator sees every property and every person; a GM
-sees their own hotel. **Settings** (D27-213, D27-214, 30 September) is the ONE
-place for how a property is set up, in eight tabs: it mounts the cards that
-exist (the profile, the GST rules, the front desk's hours, the group's name
-and logo, the switches, what the property still needs) and links every other
-setup screen the person may open. It shows the GST the property actually
-charges, and — for the owner and an
-administrator only (D17-36) — the module switches: Point of sale, Banquet
+sees their own hotel. **Settings** (D27-213, D27-214, 30 September; D27-220,
+1 October) is the ONE place for how a property is set up, in five tabs, and
+shows ONLY what somebody can change: it mounts the cards that exist (the
+profile, the hotel's logo, FSSAI, the group's name, logo and office details,
+the GST rules, bank details, the front desk's hours, house policies, the
+switches) and links the few screens where a tab's subject is set; what the
+property still needs is a checklist above the tabs, drawn only while something
+is missing. For the owner and an administrator only (D17-36) — the module
+switches: Point of sale, Banquet
 hall, and "Reception can use the POS"; and, on a card of their own, New
 booking's four fold-open sections (Company, GST, Extras, Notes; D27-163,
 migration 159: on until turned off, and nothing is refused when one is off). The Audit log, Roles and permissions and Integrations are read
@@ -48,13 +50,13 @@ properties and people.
 |---|---|---|---|
 | Properties | `/properties` | `pages/Properties.tsx` (`PropertiesPage`) | none |
 | People | `/people` | `pages/People.tsx` | none |
-| Settings | `/settings`, `/settings/:tab` | `pages/Settings.tsx` (eight tabs; resource `setting`: owner, Admin, GM) | none |
-| — (Find a screen, and Settings › People and access) Users | `/admin/users` | `pages/Admin.tsx` (`UsersPage`) | none |
-| — (same) Roles and permissions | `/admin/roles` | `pages/Admin.tsx` (`RolesPage`) | none |
-| — (same, Modules and connections) Integrations | `/admin/integrations` | `pages/Admin.tsx` (`IntegrationsPage`) | none |
-| — (same, People and access) Audit log | `/admin/audit-log` | `pages/Admin.tsx` (`AuditLogPage`) | none |
-| — (Find a screen) Taxes and billing | `/settings/taxes-and-billing` | the tab; a menu entry of its own so "GST" finds it and a pointer to it is offered only to who may open it | none |
-| — (redirects) | `/admin/settings` → `/settings`; `/admin/configuration` → `/settings/taxes-and-billing` | — | old links, kept working |
+| Settings | `/settings`, `/settings/:tab`, `/h/:code/settings/:tab` | `pages/Settings.tsx` (five tabs; resource `setting`: owner, Admin, GM) | none |
+| — (Find a screen) Users | `/admin/users` | `pages/Admin.tsx` (`UsersPage`) | none |
+| — (Find a screen, and Settings › People) Roles and permissions | `/admin/roles` | `pages/Admin.tsx` (`RolesPage`) | none |
+| — (Find a screen) Integrations | `/admin/integrations` | `pages/Admin.tsx` (`IntegrationsPage`) | none |
+| — (Find a screen, and Settings › People) Audit log | `/admin/audit-log` | `pages/Admin.tsx` (`AuditLogPage`) | none |
+| — (Find a screen) Rates and taxes | `/settings/taxes-and-billing` (redirects to `/settings/rates-and-taxes`) | the tab; a menu entry of its own so "GST" or "bank" finds it and a pointer to it is offered only to who may open it. The address is the old one because the till's setup links it and `mayReach` offers a link with no entry to everybody; move both together | none |
+| — (redirects) | `/admin/settings` → `/settings`; `/admin/configuration` → `/settings/taxes-and-billing`; the eight tabs of 30 September → the tab their things moved to (`MOVED` in `pages/Settings.tsx`) | — | old links, kept working |
 | — (Find a screen) Console | `/admin/console` | `pages/Console.tsx` | none — development builds only |
 | System health | `/admin/system-health` | `pages/SystemHealth.tsx` | none — the owner and an administrator (`role`) |
 | — (not in the menu) one property | `/properties/:code` | `pages/Property.tsx` | reached from Properties |
@@ -63,14 +65,36 @@ properties and people.
 - Properties and People sit in the menu's **Across properties** section;
   Settings and System health in **System**. "Administration" and its children
   left the sidebar on 30 September (D27-214): `listed: false`, so Find a
-  screen and their Settings tab still reach them.
-- **Settings' tabs** (`SETTINGS_TABS`, the tab is in the address): Property ·
-  Rooms and rates · Taxes and billing · Reservations and front desk ·
-  Departments · People and access · Modules and connections · Getting started.
-  A link row is drawn only if `flatNavigationFor` holds its address for this
-  person (role and modules), and takes the menu's own name; a tab of links
-  with none left is not shown. To add a screen to a tab, add its address and
-  one line to `LINKS` in `pages/Settings.tsx`.
+  screen still reaches them (Roles and the Audit log also from Settings › People).
+- **Settings' tabs** (`SETTINGS_TABS`, the tab is in the address; D27-220):
+  - **Property**: the profile (a grid of label-over-value cells), this hotel's
+    logo, FSSAI, the group's name, logo and office details.
+  - **Rates and taxes**: finance's GST card, bank details, and links to Rates,
+    Room types, Cancellation terms and Booking sources.
+  - **Operations**: inventory's front desk card, house policies, and for the
+    owner and an administrator the Modules and New booking switches.
+  - **People**: links to People, Roles and permissions, Audit log.
+  - **Connections**: links to Channel manager, CRS bookings, Guest messages,
+    Reviews, Online check-in.
+
+  Not drawn, because nobody can change them: the code, currency, time zone
+  (Properties, every address and invoice number; currency and time zone are
+  kept and used by the server), the financial year (every invoice number on
+  Finance › Invoices), the GST repeated (the GST card; every Properties card),
+  check-in and check-out as fixed rows (the front desk card), sellable rooms,
+  room types and rate plans (Room types, Rates). The department setups are in
+  their own sections of the menu. A link row is drawn only if
+  `flatNavigationFor` holds its address for this person (role and modules),
+  and takes the menu's own name and glyph; People and Connections, links only,
+  are not shown to somebody who can open none. To add a screen to a tab, add
+  its address and one line to `LINKS` in `pages/Settings.tsx`.
+- **Settings' look** (the fidato-design skill): cards 12px apart, stacked full
+  width (no pair of cards whose heights differ); a card's heading is
+  `SettingHeader` (the title, one line, anything longer behind the (i));
+  values are `SettingValues` of `SettingRow` (a 12px label over a 14px
+  value, four across where the card is 512px wide, two below, `wide` for a
+  long value); link rows at least 56px with the menu's glyph in a 28px chip.
+  All three are in `pages/Admin.tsx`.
 - **The hotel's name is the group owner's** (D27-214): the profile's Edit
   locks Name for anybody but a group administrator, and the server refuses a
   changed name from them. Everything else is the hotel's owner's, GM's and
@@ -102,10 +126,10 @@ properties and people.
   carries the GSTIN (`routes.tsx`).
 - Dialogs and panels in `flows/`: `StaffAdmin.tsx` (`NewPerson`, `People`,
   `NewProperty` — shared by Properties and the Console) and
-  `CommissioningCard.tsx` (what a property still needs — Settings' Getting
-  started tab since 30 September; on inventory's Room types before). A row
-  whose `to` starts "/settings" opens that tab; the rest open the hotel's
-  own screen.
+  `CommissioningCard.tsx` (what a property still needs — above Settings'
+  tabs since 1 October, only what is missing; the Getting started tab on 30
+  September; on inventory's Room types before). A row whose `to` starts
+  "/settings" opens that tab; the rest open the hotel's own screen.
 
 ---
 
@@ -235,7 +259,8 @@ bell reads (D27-216): `api/src/routes/notifications.ts` (the core's) tells a
 group administrator, for EVERY hotel whichever is open, "<hotel>: bank details
 set / changed / removed", by whom - never the account - for seven days, linking
 to `/h/<code>/settings/taxes-and-billing` (a Settings address that carries its
-hotel, `routes.tsx`).
+hotel, `routes.tsx`; since D27-220 it redirects to Rates and taxes, where the
+bank details are - `voucherSettings.test.tsx` pins it).
 
 `systemHealth.ts` (28 September, D27-91 and D27-92) — 1, at `/api/hotels`:
 
@@ -275,11 +300,13 @@ data/admin.ts          375 lines. Roles and the permission matrix, read from
                        close/reopen, home screen; MIN_PASSWORD = 8.
 data/adminLists.ts     212 lines. listStaff, roleDescription, listAuditLog,
                        listIntegrations — a fixed list written in the code, not read
-                       from anywhere — and getSettings, which adds the invoice series
-                       and the POS outlets over HTTP. Split out of the old directory.ts.
+                       from anywhere. Split out of the old directory.ts. (getSettings,
+                       the fixed rows with the invoice series and POS outlets, went
+                       with them on 1 October, D27-220; the server's GET /:code/settings
+                       is still there and has no screen.)
 data/commissioning.ts  getCommissioning. Split out of the old roomSetup.ts.
-data/taxInUse.ts       getTaxInUse — finance's GST rules over HTTP, for Settings and the
-                       Properties cards (ADM-2, D17-37).
+data/taxInUse.ts       getTaxInUse — finance's GST rules over HTTP, for the Properties
+                       cards (ADM-2, D17-37; Settings shows finance's own GST card).
 components/TaxInUse.tsx   TaxInUseRows and taxLine: the GST in use, one row per kind,
                        "-" where unset, "Could not load" on a failed read.
 data/groupSettings.ts  getGroupSettings, setGroupName, setGroupLogo, removeGroupLogo,
@@ -387,10 +414,9 @@ The server's door, `api/src/modules/admin/index.ts`, exports only `mounts`
 
 - **reports** — `getTodaySnapshot` and `getPeriodStatistics` through
   `@/modules/reports`, on one property's page.
-- **finance** and **pos**, over HTTP, not by import: Settings reads
-  `GET /:code/invoice-series` (finance's `invoices.ts`) and
-  `GET /:code/pos/outlets` (the restaurant's bridge); Settings and every
-  Properties card read `GET /:code/tax` (finance's `tax.ts`) for the GST in use.
+- **finance**, over HTTP, not by import: every Properties card reads
+  `GET /:code/tax` (finance's `tax.ts`) for the GST in use. Settings mounts
+  finance's `TaxRulesCard` and inventory's `FrontDeskCard` through their doors.
   If any of them changes shape, those screens break. The five kind names in
   `components/TaxInUse.tsx` are a copy of `LABEL` in finance's `TaxRulesCard`.
 - The core: `getModules` and `setModule` (`src/data/repositories/properties.ts`),
@@ -417,9 +443,9 @@ The server's door, `api/src/modules/admin/index.ts`, exports only `mounts`
 - **PAN, the reservations phone and the website are STORED and printed on no
   document** until the owner says where (D27-214).
 - **What the booking voucher prints is set here** (D27-215, migration 169): the
-  hotel's bank details (Taxes and billing, `components/VoucherSettings.tsx`,
+  hotel's bank details (Rates and taxes, `components/VoucherSettings.tsx`,
   `bankDetails.ts`: read AND written only by whoever manages that hotel), its
-  house policies (Reservations and front desk; on the hotel's row, at most 8 of
+  house policies (Operations; on the hotel's row, at most 8 of
   200 characters, the reference's four to begin with) and reservations contact
   (Property), and the group's office details (the group card). Every change to
   bank details reaches the group owner's bell (D27-216) - see below. Do not add them to a

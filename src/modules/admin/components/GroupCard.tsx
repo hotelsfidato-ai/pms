@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Button, Card, CardBody, CardHeader, Dialog, DialogContent, Field, fieldProps, Input, Skeleton, toast,
+  Button, Card, CardBody, Dialog, DialogContent, Field, fieldProps, Input, Skeleton, toast,
 } from "@/components/ui";
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
@@ -9,6 +9,7 @@ import {
   getGroupSettings, setGroupName, setGroupLogo, removeGroupLogo, setHotelLogo, removeHotelLogo, setGroupOffice,
   logoSrc, GROUP_SETTINGS_KEY, groupSettingsKey, type GroupOffice,
 } from "@/modules/admin/data/groupSettings";
+import { SettingHeader, SettingRow, SettingValues } from "@/modules/admin/pages/Admin";
 
 /* The group's name and logo on Settings (the owner's D27-53 and D27-65): one
    setting for every hotel, printed on every bill as "by <group name>" under
@@ -54,11 +55,11 @@ export function GroupCard({ hotelCode }: { hotelCode: string }) {
 
   return (
     <Card>
-      <CardHeader
+      <SettingHeader
         title="Group name and logo"
-        description={"One for every hotel, printed on every bill: the hotel's name, then \"by\" the group's."}
+        line={"One for every hotel, printed on every bill: the hotel's name, then \"by\" the group's."}
       />
-      <CardBody className="pt-0 space-y-5">
+      <CardBody className="space-y-5">
         {group.isLoading ? (
           <Skeleton className="h-28 w-full" />
         ) : (
@@ -66,12 +67,7 @@ export function GroupCard({ hotelCode }: { hotelCode: string }) {
             <div className="flex flex-wrap items-end gap-4">
               {typed === null ? (
                 <>
-                  <div>
-                    <p className="text-sm text-grey-500">Group name</p>
-                    <p className={name ? "text-lg font-semibold text-ink-900" : "text-lg text-grey-500"}>
-                      {name ?? "-"}
-                    </p>
-                  </div>
+                  <dl><SettingRow label="Group name" value={name ?? "-"} /></dl>
                   {mayEdit && (
                     <Button variant="secondary" onClick={() => setTyped(name ?? "")}>Change</Button>
                   )}
@@ -110,6 +106,10 @@ const OFFICE: [keyof GroupOffice, string, string?][] = [
   ["gstin", "GSTIN"], ["instagram", "Instagram", "As it should print, such as @fidatohotels."],
 ];
 
+/* Shown in this order, so the long three take two cells each without a hole. */
+const SHOWN: (keyof GroupOffice)[] = ["address", "phone", "gstin", "email", "website", "instagram"];
+const WIDE: (keyof GroupOffice)[] = ["address", "email", "website"];
+
 function OfficeDetails({ hotelCode, office, mayEdit, onSaved }: {
   hotelCode: string; office: GroupOffice | undefined; mayEdit: boolean; onSaved: () => void;
 }) {
@@ -130,23 +130,21 @@ function OfficeDetails({ hotelCode, office, mayEdit, onSaved }: {
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-3 mb-1">
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
         <div>
-          <p className="text-sm text-grey-500">Office details</p>
-          <p className="text-sm text-grey-500">
+          <p className="text-sm font-medium text-ink-900">Office details</p>
+          <p className="text-xs font-medium text-grey-500 mt-0.5">
             The footer of every booking voucher. Until one is typed, a voucher's footer is the hotel's own.
           </p>
         </div>
         {mayEdit && <Button variant="secondary" onClick={open}>Change office details</Button>}
       </div>
-      <dl className="divide-y divide-grey-100">
-        {OFFICE.map(([key, label]) => (
-          <div key={key} className="grid grid-cols-[minmax(130px,200px)_1fr] gap-4 py-2.5">
-            <dt className="text-sm text-grey-500">{label}</dt>
-            <dd className="text-base text-ink-900 min-w-0 break-words">{office?.[key] ?? "-"}</dd>
-          </div>
+      <SettingValues>
+        {SHOWN.map((key) => (
+          <SettingRow key={key} wide={WIDE.includes(key)}
+            label={OFFICE.find(([k]) => k === key)![1]} value={office?.[key] ?? "-"} />
         ))}
-      </dl>
+      </SettingValues>
       {form && (
         <Dialog open onOpenChange={(o) => !o && setForm(null)}>
           <DialogContent
@@ -201,7 +199,7 @@ function LogoRow({ src, alt, pickLabel, mayEdit, upload, remove }: {
 
   return (
     <div>
-      <p className="text-sm text-grey-500 mb-2">Logo - a PNG or an SVG, 200 KB at most</p>
+      <p className="text-xs font-medium text-grey-500 mb-2">Logo - a PNG or an SVG, 200 KB at most</p>
       <div className="flex flex-wrap items-center gap-4">
         {src ? (
           <img src={src} alt={alt} className="h-16 w-auto max-w-full object-contain" />
@@ -263,12 +261,13 @@ export function HotelLogoCard({ hotelCode }: { hotelCode: string }) {
 
   return (
     <Card>
-      <CardHeader
+      <SettingHeader
         title="This hotel's logo"
-        description={"On this hotel's bills and documents in place of the group's logo. With none, the group's prints. "
+        line="On this hotel's bills and documents in place of the group's logo."
+        info={"With none, the group's prints. "
           + "The voucher PDF prints a PNG logo; an SVG logo shows on the bills and the group's logo on the voucher."}
       />
-      <CardBody className="pt-0">
+      <CardBody>
         {group.isLoading ? (
           <Skeleton className="h-16 w-full" />
         ) : (

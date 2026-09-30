@@ -7,7 +7,6 @@ import * as apiModule from "@/lib/api";
 import { AGRA_HOTEL, HOTEL, go, signedIn, startSignedIn } from "@/test/app";
 import App from "@/App";
 import SettingsPage from "@/modules/admin/pages/Settings";
-import { CommissioningCard } from "@/modules/admin/flows/CommissioningCard";
 import { flatNavigationFor, sidebarFor } from "@/components/app/navigation";
 import { PropertiesPage } from "@/modules/admin/pages/Properties";
 import { taxLine } from "@/modules/admin/components/TaxInUse";
@@ -149,49 +148,39 @@ describe("D17-37 - the tax in words", () => {
   });
 });
 
-describe("D17-37 - Settings shows the tax actually used", () => {
-  it("one row per kind, from finance's rules, '-' where nothing is set", async () => {
-    as("group-admin");
-    settingsServer();
-    renderSettings("taxes-and-billing");
-
-    expect(await valueOf("GST on rooms")).toBe("5% up to ₹7,500 · 18% above ₹7,500");
-    expect(await valueOf("GST on restaurant")).toBe("5%");
-    expect(await valueOf("GST on bar")).toBe("-");
-    expect(await valueOf("GST on banquet")).toBe("-");
-    expect(await valueOf("GST on everything else")).toBe("-");
-    expect(screen.queryByText(/CGST|SGST|editable at/i)).toBeNull();
-  });
+/* D27-220: Settings no longer repeats the GST under the GST card; the same
+   rows, from the same reader, are on every Properties card. */
+describe("D17-37 - the tax actually used, on the GM's Properties card", () => {
+  const gmCard = (tax: () => unknown = () => TAX) => {
+    as("gm");
+    server({
+      "GET /api/hotels": () => ({ scope: { isGroupAdmin: false, hotels: [] }, hotels: [{ id: AGRA_HOTEL, code: "5EL" }] }),
+      "GET /api/hotels/5EL": () => ({
+        id: "5EL", name: "5 Elements Akkalkot", address: "Akkalkot", phone: "", email: "",
+        gstin: "27AAGCF5655F1ZI", currency: "INR", checkInTime: "12:00", checkOutTime: "11:00",
+        rooms: 18, roomTypes: ["Deluxe"], rateTypes: ["CP"], tax: { cgst: 2.5, sgst: 2.5 }, paymentMethods: [],
+      }),
+      "GET /api/hotels/5EL/tax": tax,
+    });
+    renderAt("/properties", <PropertiesPage />);
+  };
 
   it("a failed read says so - it is not '-', which would claim nothing is set", async () => {
-    as("group-admin");
-    settingsServer(() => { throw new ApiError(500, "Request failed (500)."); });
-    renderSettings("taxes-and-billing");
-
-    /* The GST card above it is finance's and has its own heading: read the
-       row inside Settings' own "Tax and billing" card. */
-    const card = (await screen.findByText("Tax and billing")).closest(".rounded-lg") as HTMLElement;
-    const term = await within(card).findByText("GST");
-    expect(term.parentElement!.lastElementChild!.textContent).toMatch(/could not load/i);
+    gmCard(() => { throw new ApiError(500, "Request failed (500)."); });
+    expect(await valueOf("GST")).toMatch(/could not load/i);
     expect(screen.queryByText("GST on rooms")).toBeNull();
   });
 
   /* D21-90 and D21-91, 22 September: alcohol is VAT, not GST, and only where
      the property serves it - finance lists the heading only then. */
   it("no alcohol row where the property does not serve it", async () => {
-    as("group-admin");
-    settingsServer();
-    renderSettings("taxes-and-billing");
+    gmCard();
     await valueOf("GST on rooms");
     expect(screen.queryByText(/on alcohol/)).toBeNull();
   });
 
   it("where it does, the row says VAT - and '-' until the accountant's rate is set", async () => {
-    as("group-admin");
-    settingsServer(() => ({
-      ...TAX, servesAlcohol: true, kinds: [...TAX.kinds, { kind: "alcohol", slabs: [] }],
-    }));
-    renderSettings("taxes-and-billing");
+    gmCard(() => ({ ...TAX, servesAlcohol: true, kinds: [...TAX.kinds, { kind: "alcohol", slabs: [] }] }));
     expect(await valueOf("VAT on alcohol")).toBe("-");
     expect(screen.queryByText("GST on alcohol")).toBeNull();
   });
@@ -204,7 +193,7 @@ describe("D17-36 - the switches are the owner's and an administrator's", () => {
   ] as const)("%s sees the switches", async (_who, role) => {
     as(role);
     settingsServer();
-    renderSettings("modules-and-connections");
+    renderSettings("operations");
     expect((await screen.findAllByRole("switch")).length).toBe(3);
   });
 
@@ -222,51 +211,40 @@ describe("D17-36 - the switches are the owner's and an administrator's", () => {
       ] }),
       "GET /api/hotels/5EL/tax": () => TAX,
     });
-    renderSettings("reservations-and-front-desk");
+    renderSettings("operations");
     const notes = await screen.findByRole("switch", { name: /Notes section/ });
     const card = notes.closest(".rounded-lg.border-grey-200")?.textContent ?? "";
     expect(card).toContain("New booking");
     expect(card).not.toContain("Point of sale");
   });
 
-  it("the general manager opens Settings and sees no switch", async () => {
+  it("the general manager opens Settings and sees no switch, on any tab", async () => {
     as("gm");
     settingsServer();
-    renderSettings("taxes-and-billing");
-
-    /* The page itself is there — the tax rows prove it drew — and no
-       switch and no Modules card is on it. */
-    expect(await valueOf("GST on rooms")).toBe("5% up to ₹7,500 · 18% above ₹7,500");
-    expect(screen.queryAllByRole("switch")).toHaveLength(0);
-    expect(screen.queryByText("Modules")).toBeNull();
-  });
-
-  it("and none on the tabs that hold them for the owner", async () => {
-    as("gm");
-    settingsServer();
-    renderSettings("modules-and-connections");
-    expect(await screen.findByRole("tab", { name: "Modules and connections" })).toBeTruthy();
-    expect(screen.queryAllByRole("switch")).toHaveLength(0);
-    cleanup();
-    renderSettings("reservations-and-front-desk");
-    expect(await screen.findByRole("tab", { name: "Reservations and front desk" })).toBeTruthy();
-    expect(screen.queryAllByRole("switch")).toHaveLength(0);
+    for (const tab of ["Property", "Rates and taxes", "Operations"]) {
+      renderSettings(tab.toLowerCase().split(" ").join("-"));
+      expect((await screen.findByRole("tab", { name: tab })).getAttribute("aria-selected"), tab).toBe("true");
+      expect(screen.queryAllByRole("switch"), tab).toHaveLength(0);
+      expect(screen.queryByText("Modules"), tab).toBeNull();
+      cleanup();
+    }
   });
 });
 
 /* ══════════════════════════════════════════════════════════════════
-   ONE PLACE FOR SETTINGS (the owner's D27-213 and D27-214)
+   ONE PLACE FOR SETTINGS (D27-213, D27-214), ONLY WHAT CAN BE CHANGED
+   (the owner's D27-220, 1 October)
 
-   One "Settings" entry with eight tabs replaces Administration and its
-   children. Every screen a tab links to is one the person may open; the
-   rest are not shown. Nothing is lost from Find a screen.
+   Five tabs. Every screen a tab links to is one the person may open; the
+   rest are not shown. The eight tabs' old addresses open the tab their
+   things moved to. Nothing is lost from Find a screen.
    ══════════════════════════════════════════════════════════════════ */
-describe("D27-213 - one place for settings", () => {
-  const TABS = ["Property", "Rooms and rates", "Taxes and billing", "Reservations and front desk",
-    "Departments", "People and access", "Modules and connections", "Getting started"];
-  const rowNames = () => screen.getAllByRole("link").map((a) => a.querySelector("span span")?.textContent);
+describe("D27-220 - Settings, five tabs, only what can be changed", () => {
+  const TABS = ["Property", "Rates and taxes", "Operations", "People", "Connections"];
+  const rowNames = (inside: HTMLElement = document.body) =>
+    within(inside).getAllByRole("link").map((a) => a.querySelector("span span")?.textContent);
 
-  it("has the owner's eight tabs, in order", async () => {
+  it("has the owner's five tabs, in order", async () => {
     as("group-admin");
     settingsServer();
     renderSettings("property");
@@ -277,24 +255,41 @@ describe("D27-213 - one place for settings", () => {
   it("links each person only to the screens they may open", async () => {
     as("group-admin");
     settingsServer();
-    renderSettings("people-and-access");
-    await screen.findByRole("tab", { name: "People and access" });
-    expect(rowNames()).toEqual(["People", "Users", "Roles and permissions", "Audit log"]);
+    renderSettings("people");
+    await screen.findByRole("tab", { name: "People" });
+    expect(rowNames()).toEqual(["People", "Roles and permissions", "Audit log"]);
+    cleanup();
+
+    renderSettings("rates-and-taxes");
+    const own = (await screen.findByText("Set on their own screens")).closest(".rounded-lg") as HTMLElement;
+    expect(rowNames(own)).toEqual(["Rates", "Room types", "Cancellation terms", "Booking sources"]);
     cleanup();
 
     /* The GM holds no grant on the roles matrix: the row is not drawn. */
     as("gm");
-    renderSettings("people-and-access");
-    await screen.findByRole("tab", { name: "People and access" });
-    expect(rowNames()).toEqual(["People", "Users", "Audit log"]);
+    renderSettings("people");
+    await screen.findByRole("tab", { name: "People" });
+    expect(rowNames()).toEqual(["People", "Audit log"]);
     cleanup();
 
-    renderSettings("modules-and-connections");
-    await screen.findByRole("tab", { name: "Modules and connections" });
+    renderSettings("connections");
+    await screen.findByRole("tab", { name: "Connections" });
     /* Channel manager stays: its menu entry is the GM's today (seesComingSoon). */
     expect(rowNames()).toContain("Channel manager");
-    for (const hidden of ["Integrations", "System health"]) {
-      expect(rowNames(), hidden).not.toContain(hidden);
+    for (const gone of ["Users", "Integrations", "System health", "Leads and WhatsApp"]) {
+      expect(rowNames(), gone).not.toContain(gone);
+    }
+  });
+
+  /* The rows nobody can change went (D27-220); where each is now is in
+     Settings.tsx's header. */
+  it("shows no row nobody can change", async () => {
+    as("group-admin");
+    settingsServer();
+    renderSettings("property");
+    await screen.findByRole("tab", { name: "Property" });
+    for (const fixed of ["Code", "Currency", "Time zone", "Financial year starts", "Tax and billing", "Getting started"]) {
+      expect(screen.queryByText(fixed), fixed).toBeNull();
     }
   });
 
@@ -312,15 +307,25 @@ describe("D27-213 - one place for settings", () => {
       expect(found.map((i) => i.label), name).toContain(name);
     }
     const settings = found.find((i) => i.to === "/settings")!;
-    expect(settings.keywords).toEqual(expect.arrayContaining(["configuration", "administration"]));
-    /* And "GST" finds the tab the refusals point at. */
-    expect(found.find((i) => i.to === "/settings/taxes-and-billing")!.keywords).toContain("GST");
+    expect(settings.keywords).toEqual(expect.arrayContaining(["configuration", "administration", "house policies"]));
+    /* "GST" and "bank" find the tab the refusals and the till point at. Its
+       address is the old one, which redirects (nav.ts says why). */
+    const taxes = found.find((i) => i.label === "Rates and taxes")!;
+    expect(taxes.to).toBe("/settings/taxes-and-billing");
+    expect(taxes.keywords).toEqual(expect.arrayContaining(["GST", "bank details"]));
   });
 
   it.each([
     ["/admin/settings", "Property"],
-    ["/admin/configuration", "Taxes and billing"],
-  ])("opens from the old address %s, on its tab", async (old, tab) => {
+    ["/admin/configuration", "Rates and taxes"],
+    ["/settings/rooms-and-rates", "Rates and taxes"],
+    ["/settings/taxes-and-billing", "Rates and taxes"],
+    ["/settings/reservations-and-front-desk", "Operations"],
+    ["/settings/departments", "Operations"],
+    ["/settings/modules-and-connections", "Operations"],
+    ["/settings/people-and-access", "People"],
+    ["/settings/getting-started", "Property"],
+  ])("opens from the old address %s, on the tab its things moved to", async (old, tab) => {
     as("group-admin");
     settingsServer();
     go(old);
@@ -330,21 +335,25 @@ describe("D27-213 - one place for settings", () => {
     cleanup();
   });
 
-  it("the checklist's rows open the tab that settles them", async () => {
+  it("the checklist sits above the tabs, lists only what is missing, and each row opens its tab", async () => {
     as("group-admin");
     server({
       "GET /api/hotels/5EL/commissioning": () => ({
-        property: "5 Elements", canTakeABooking: false, done: 0, total: 2,
+        property: "5 Elements", canTakeABooking: false, done: 1, total: 3,
         checks: [
-          { id: "tax-rules", label: "A GST rule for rooms", done: false, detail: "x", blocking: true, to: "/settings/taxes-and-billing" },
+          { id: "tax-rules", label: "A GST rule for rooms", done: false, detail: "x", blocking: true, to: "/settings/rates-and-taxes" },
           { id: "tariffs", label: "A tariff on every room type", done: false, detail: "y", blocking: true, to: "/rates" },
+          { id: "gstin", label: "A real GSTIN", done: true, detail: null, blocking: true, to: "/settings/property" },
         ],
       }),
     });
-    renderAt("/x", <CommissioningCard hotelId="5EL" />);
+    renderSettings("property");
     const gst = (await screen.findByText("A GST rule for rooms")).closest("a")!;
-    expect(gst.getAttribute("href")).toBe("/settings/taxes-and-billing");
+    expect(gst.getAttribute("href")).toBe("/settings/rates-and-taxes");
     expect(screen.getByText("A tariff on every room type").closest("a")!.getAttribute("href")).toBe("/h/5EL/rates");
+    expect(screen.queryByText(/A real GSTIN|Done:/)).toBeNull();
+    const list = screen.getByRole("tablist");
+    expect(gst.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
@@ -611,12 +620,17 @@ describe("D27-214 - the hotel's profile", () => {
     as("gm");
     profileServer();
     renderSettings("property");
-    expect(await valueOf("PIN code")).toBe("413216");
-    expect(await valueOf("Property type")).toBe("Boutique hotel");
+    /* The Profile card's own rows: the group's office details, on the same
+       tab since D27-220, have a Website too. */
+    const profile = (await screen.findByText("Profile")).closest(".rounded-lg") as HTMLElement;
+    const value = (label: string) => within(profile).getByText(label).parentElement!.lastElementChild!.textContent;
+    expect(await within(profile).findByText("413216")).toBeTruthy();
+    expect(value("Property type")).toBe("Boutique hotel");
     for (const unset of ["Stars", "Map point", "PAN", "Reservations phone", "Website", "Address line 2"]) {
-      expect(await valueOf(unset), unset).toBe("-");
+      expect(value(unset), unset).toBe("-");
     }
     expect(screen.getByText("This hotel's logo")).toBeTruthy();
+    expect(screen.getByText("Group name and logo")).toBeTruthy();
   });
 
   it("Edit sends the profile's fields as typed", async () => {

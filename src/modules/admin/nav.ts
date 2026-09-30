@@ -16,13 +16,18 @@ export const nav: ServiceNavEntry[] = [
   { section: "system", order: 20,
     label: "Settings", to: "/settings", icon: Settings, resource: "setting", matchPrefix: true,
     keywords: ["configuration", "administration", "setup", "modules", "property profile", "address",
-               "GSTIN", "check-in time", "check-out time", "front desk hours", "group name", "logo"] },
+               "GSTIN", "check-in time", "check-out time", "front desk hours", "group name", "logo",
+               "FSSAI", "house policies", "office details", "Instagram", "reservations contact"] },
   /* The tab other screens point at by address (a refusal's "set it under…",
      the restaurant's checklist): an entry of its own, so the link is offered
-     only to somebody who may open it, and Find a screen "GST" lands on it. */
+     only to somebody who may open it, and Find a screen "GST" or "bank"
+     lands on it. D27-220 renamed the tab (Taxes and billing is Rates and
+     taxes); the ADDRESS stays the old one, which Settings redirects, because
+     the till's setup (pos/pages/Setup.tsx) links it and `mayReach` offers a
+     link with no entry to everybody. Move both together. */
   { section: "system", order: 21, listed: false,
-    label: "Taxes and billing", to: "/settings/taxes-and-billing", icon: Settings, resource: "setting",
-    keywords: ["GST", "VAT", "tax", "invoice series", "tax rules"] },
+    label: "Rates and taxes", to: "/settings/taxes-and-billing", icon: Settings, resource: "setting",
+    keywords: ["GST", "VAT", "tax", "tax rules", "bank details", "IFSC", "UPI"] },
   /* Off the sidebar, on their Settings tab and in Find a screen - nothing
      lost (the owner's rule of 15 September, and D27-214). */
   { section: "system", order: 22, listed: false,
