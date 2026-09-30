@@ -269,6 +269,9 @@ describe("the matrix the server asks", () => {
     /* The restaurant keeps the roles its menu names (pos/nav.ts). */
     expect(allows(rule(`POST ${H}/till/orders`), "pos")).toBe(true);
     expect(allows(rule(`POST ${H}/kitchen/lines/:lineId/:to`), "chef")).toBe(true);
+    /* Taken is the waiter's (D27-222), not the kitchen's. */
+    expect(allows(rule(`POST ${H}/till/orders/:id/taken`), "pos")).toBe(true);
+    expect(allows(rule(`POST ${H}/till/orders/:id/taken`), "chef")).toBe(false);
     expect(allows(rule(`POST ${H}/till/menu/items`), "kitchen_manager")).toBe(true);
     expect(allows(rule(`PUT ${H}/till/menu/items/:id/variations`), "kitchen_manager")).toBe(true);
     expect(allows(rule(`POST ${H}/till/orders`), "housekeeping")).toBe(false);

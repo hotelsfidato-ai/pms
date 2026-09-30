@@ -356,6 +356,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders/:id/lines/:lineId/qty`]: TILL,
   [`POST ${H}/till/orders/batch`]: TILL,
   [`POST ${H}/till/orders/:id/kot`]: TILL,
+  [`POST ${H}/till/orders/:id/taken`]: TILL,  // the waiter's Taken, D27-222
   [`POST ${H}/till/orders/:id/kot/:no/printed`]: KOT_PRINT,
   [`POST ${H}/till/kot-station/:outlet/poll`]: KOT_PRINT,
   [`POST ${H}/till/kot-station/:outlet`]: KOT_SWITCH,
