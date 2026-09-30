@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
-import { roomNightsDue, roomNightWords } from "../night-audit/index.ts";
+import { roomNightsDue, roomNightWords, nightsToCome } from "../night-audit/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    FOLIOS — derived from the ledger, never stored
@@ -297,8 +297,12 @@ folios.get("/:code/stays/:id/bill", async (c) => {
         where r.hotel_id = $1 and r.id = $2`,
       [hotelId, stayId],
     );
-    const bill = rows[0]?.bill ?? null;
-    if (!bill || !rows[0]!.staying) return bill;
+    const found = rows[0]?.bill ?? null;
+    if (!found) return null;
+    /* The nights still to come on this bill, by the run's own rule - the Bill
+       tab's box and its Due count nothing themselves (FIN-24, 1 October). */
+    const bill = { ...found, nightsToCome: await nightsToCome(client, hotelId, stayId) };
+    if (!rows[0]!.staying) return bill;
     const [night] = await roomNightsDue(client, hotelId, await businessDateFor(client, hotelId), stayId);
     if (!night || night.comp || night.gst === null) return bill;
     return {

@@ -28,10 +28,17 @@ const line = (over: Partial<postings.BillLine>) => ({
   tax: 184.95, kind: "charge", reversed: false, createdAt: "2026-09-21T23:00:00", ...over,
 }) as postings.BillLine;
 
+/* How many nights are to come is the SERVER's answer, by the night audit's
+   own rule (`nightsToCome` on the bill; the review of 1 October, FIN-24). */
+let nightsToCome = 2;
+
 beforeEach(() => {
   startSignedIn();
+  nightsToCome = 2;
   vi.spyOn(apiModule, "api").mockImplementation(async (path: string) =>
-    (path.includes("/tax/room/rate") ? { rate: 5, scheme: "gst" } : new Promise(() => {})) as never);
+    (path.includes("/tax/room/rate") ? { rate: 5, scheme: "gst" }
+      : path.endsWith("/stays/stay-1/bill") ? { lines: [], taxes: [], nightsToCome }
+      : new Promise(() => {})) as never);
   vi.spyOn(postings, "getFolioPostings").mockResolvedValue([
     line({ id: "p1" }),
     line({ id: "p2", category: "payment", description: "Received - UPI", amount: -1000, tax: 0, kind: "payment" }),
@@ -68,6 +75,7 @@ describe("the bill's charges to come", () => {
      in, nothing posted yet. The headline said "₹1,001 Overpaid" above a box
      saying ₹2,882.95 was due. The headline is what is due, the night counted. */
   it("heads the bill with what is due and what was received, never Overpaid while a due is to come", async () => {
+    nightsToCome = 1;
     vi.mocked(postings.getFolioPostings).mockResolvedValue([
       line({ id: "p2", category: "payment", description: "Received - UPI", amount: -1001, tax: 0, kind: "payment" }),
     ]);
@@ -86,5 +94,39 @@ describe("the bill's charges to come", () => {
     expect(head.closest("[data-bill-headline]")!.textContent).toContain("Due");
     expect(head.closest("[data-bill-headline]")!.textContent).toContain("Received ₹1,001.00");
     expect(screen.queryByText("Overpaid")).toBeNull();
+  });
+
+  /* THE REVIEW OF 1 OCTOBER. The page counted the nights from the room lines
+     on the stay's own bills: a room billed to its group - its nights on the
+     master - showed all three as to come, and a Due the company pays; and a
+     night somebody reversed came back as to come (FIN-24). */
+  const panel = () => render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <TooltipProvider>
+        <MemoryRouter><FolioPanel hotelId="5EL" stay={STAY} businessDate="2026-09-22" /></MemoryRouter>
+      </TooltipProvider>
+    </QueryClientProvider>,
+  );
+
+  it("shows nothing to come for a room billed to its group, and no Due for it", async () => {
+    nightsToCome = 0;
+    vi.mocked(postings.getFolioPostings).mockResolvedValue([]);
+    vi.mocked(postings.getFolioBalance).mockResolvedValue(0 as never);
+    panel();
+    expect((await screen.findAllByText("Settled")).length).toBeGreaterThan(0);
+    expect(document.querySelector("[data-charges-to-come]")).toBeNull();
+    expect(screen.queryByText("Due")).toBeNull();
+  });
+
+  it("does not count a reversed night as to come", async () => {
+    nightsToCome = 2;
+    vi.mocked(postings.getFolioPostings).mockResolvedValue([
+      line({ id: "p1", reversed: true }),
+      line({ id: "p1r", amount: -3699, tax: -184.95, kind: "reversal", reversalOf: "p1" } as Partial<postings.BillLine>),
+    ]);
+    vi.mocked(postings.getFolioBalance).mockResolvedValue(0 as never);
+    panel();
+    await screen.findByText(/nights × ₹3,699.00/);
+    expect(document.querySelector("[data-charges-to-come]")!.textContent).toContain("2 nights × ₹3,699.00");
   });
 });

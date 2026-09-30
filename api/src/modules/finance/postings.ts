@@ -166,6 +166,12 @@ export async function postFolioCharge(
 async function chargeRefused(
   client: Client, hotelId: string, input: ChargeToPost,
 ): Promise<string | null> {
+  /* MONEY IN OR OUT IS NOT A CHARGE (the review of 1 October): a "Payment"
+     here wrote a payment line with no payment record and no drawer, and a
+     "Refund" one with GST on it. No screen sends either; a direct call did. */
+  const category = CATEGORY[input.category ?? "Miscellaneous"];
+  if (category === "payment") return "Take a payment through Payments.";
+  if (category === "refund") return "A refund is not a charge. Reverse the payment it gives back.";
   const description = input.description?.trim();
   if (!description) return "A charge needs a description.";
   if (!input.amount) return "A charge of zero is not a charge.";

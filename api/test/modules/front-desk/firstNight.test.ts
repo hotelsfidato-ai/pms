@@ -280,3 +280,34 @@ describe("D27-204 · the audit never posts the first night twice, and the bill s
     expect(await tonight(suite)).toMatchObject({ amount: 8000 });
   });
 });
+
+/* THE REVIEW OF 1 OCTOBER, FIN-24: the Bill tab counted the nights to come
+   from the room lines on the stay's OWN bills, so a room billed to its group
+   showed every night as to come - a Due the company pays - and a night
+   somebody reversed came back as to come too. The bill now says how many, by
+   the night audit's own rule. The hotel is on the 28th here. */
+describe("the nights still to come on the stay's bill", () => {
+  const toCome = async (id: string) =>
+    ((await (await call(`/stays/${id}/bill`)).json()) as { nightsToCome?: number }).nightsToCome;
+
+  it("are the nights no room line pays for yet, from today", async () => {
+    /* 26th to 29th: the 26th and 27th are posted, the 28th is to come. */
+    expect(await toCome(suite)).toBe(1);
+  });
+
+  it("are none for a room whose nights go on the group's bill", async () => {
+    expect(await toCome(routed)).toBe(0);
+  });
+
+  it("do not bring back a night somebody reversed", async () => {
+    const id = await booking(`${CODE}-REVERSED`, "2026-08-28", "2026-08-31");
+    expect((await checkIn(id, "109")).status).toBe(200);
+    const [night] = await sql<{ id: string }>(
+      "select id::text from folio_postings where reservation_id = $1 and category = 'room'", [id]);
+    const res = await call(`/stays/${id}/charges/${night!.id}/reverse`, "POST", { reason: "Goodwill" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    /* The 29th and 30th. The 28th was charged and taken off: the audit will
+       not charge it again (D27-205), so it is not to come either. */
+    expect(await toCome(id)).toBe(2);
+  });
+});

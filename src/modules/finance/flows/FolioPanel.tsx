@@ -309,10 +309,13 @@ function BalanceHeader({ stay, balance, toCome }: {
 /* CHARGES TO COME (D27-187): the nights the night audit has not posted yet,
    at the agreed rate with GST by the slab, a night rounded as the audit rounds
    it. Shown, never posted, and the balance due once they are, the advance
-   counted, so the desk sees what is owed from check-in. A room line pays for
-   the "N nights" its words say, else one (the server's POSTING_NIGHTS). A
-   rate with no GST rule gives a dash, and then no balance (no default price).
-   Worked out once, for the headline and the box under the lines (D27-199). */
+   counted, so the desk sees what is owed from check-in. HOW MANY NIGHTS is the
+   server's answer, by the audit's own rule (`nightsToCome` on the bill, the
+   review of 1 October): this counted the room lines on the stay's own bills,
+   so a room billed to its group showed every night as to come, and a reversed
+   night too (FIN-24). A rate with no GST rule gives a dash, and then no
+   balance (no default price). Worked out once, for the headline and the box
+   under the lines (D27-199). */
 export interface ToCome {
   nights: number; rate: number; pct: number | null | undefined;
   /** Rupees. `tax` and `after` are null where no GST rule covers the rate. */
@@ -322,12 +325,8 @@ export interface ToCome {
 }
 
 function useChargesToCome(
-  hotelId: string, stay: Stay, lines: BillLine[], balance: number | null,
+  hotelId: string, stay: Stay, lines: BillLine[], balance: number | null, nights: number,
 ): ToCome | null {
-  const posted = lines
-    .filter((l) => l.category === "room" && l.kind === "charge" && !l.reversed && l.amount > 0)
-    .reduce((n, l) => n + Math.max(1, Number(/(\d+)\s+nights?\s*$/.exec(l.description)?.[1] ?? 1)), 0);
-  const nights = Math.max(0, stay.nights - posted);
   const rate = stay.offeredTariff;
   const shown = nights > 0 && !stay.isComplimentary && rate > 0
     && ["due-in", "in-house", "due-out"].includes(stay.status);
@@ -364,7 +363,12 @@ export function useStayDue(hotelId: string, stay: Stay): ToCome | null {
     queryKey: ["folio-balance", hotelId, stay.id],
     queryFn: () => getFolioBalance(hotelId, stay.id),
   });
-  return useChargesToCome(hotelId, stay, postings.data ?? [], balance.data ?? null);
+  const bill = useQuery({
+    queryKey: ["stay-bill", hotelId, stay.id],
+    queryFn: () => getStayBill(hotelId, stay.id),
+  });
+  return useChargesToCome(hotelId, stay, postings.data ?? [], balance.data ?? null,
+    bill.data?.nightsToCome ?? 0);
 }
 
 function ChargesToCome({ toCome }: { toCome: ToCome | null }) {
