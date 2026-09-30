@@ -57,6 +57,13 @@ each booking.
   occupancy, Monthly statistics and Revenue outlook. Everyone with `rate:
   READ` sees it; only `setsRates` roles (RATE_SETTER_ROLES) get anything to
   press, and every write route asks the gate.
+- **The break-up (D27-206):** each room type's line on the calendar is a button
+  (`aria-expanded`, closed by default) that opens rows under it - "2 guests",
+  "CP · 2 guests" … "AI · 2 guests", "+ per extra adult", "+ per extra child" -
+  read from `GET /pricing?breakup=` when it opens; not set is a dash. **Set
+  prices** (setters only) is the tapped price's dialog with a room type and a
+  first day - the same `setBasePrice` call; with a base room type chosen only
+  it is offered.
 - Room types is the list of room types and their rooms (D27-194). What the
   property still needs, the front desk's hours and GST are on admin's
   Settings → Configuration; the front desk's form is this service's
@@ -122,7 +129,12 @@ form.)
 ```
 GET    /:code/pricing                             the setup (base room type, each type's difference
                                                   and rack, the add-ons, older prices) and a price
-                                                  per date; ?plan=EP for one plan's cells
+                                                  per date; ?plan=EP for one plan's cells;
+                                                  ?breakup=<room type> for that type's break-up rows
+                                                  alone (D27-206): per day, the two-guest price on
+                                                  EP, CP, MAP, AP, AI and what a further adult or
+                                                  child adds - app.tariff_guests and
+                                                  app.extra_person_rates, never worked out here
 PUT    /:code/pricing/basis                       the base room type; roomTypeId null = each type
                                                   its own base (D27-188); the plan is EP
 PUT    /:code/pricing/base                        a base over a range; with roomTypeId, that type's
