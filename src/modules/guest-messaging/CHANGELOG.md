@@ -11,6 +11,17 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-01 · The voucher, refined to the owner's reference (D27-215; the settings lane)
+
+Branch `voucher/reference-1oct` (from cp6 3104d319; 23b10cb9 merged in), copy `.claude\worktrees\mystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.
+**Asked for:** the owner's D27-215: the booking voucher gains what their reference (a CRS voucher) has - a payment line, bank details, the group's office in the footer, the hotel's contact, "Booked by", the hotel's house policies, extra guests - and stays one A4 page.
+**Shipped:** migration 169 section 5 re-creates `app.guest_voucher` with keys added (contact, bookedBy, payment, bank, group, housePolicies; extraAdults and extraChildren in each room). `voucherDocument.ts`: `voucherBlocks` (what each block says), the four-cell top strip, the new rows and blocks, `voucherHeight` and the drawing scaled to one page (down to 82%), whole blocks to a second page beyond that. Sending by email and WhatsApp is untouched.
+**Found:** `reservations.created_by` is never written (RES-14, open): "Booked by" reads the audit log's INSERT row.
+**Proved:** `voucherDocument.test.ts` 24 (the block tests failed before `voucherBlocks` existed; the one-page test failed at 4 pages and then 2 before the scaling); `viewVoucher.test.ts` 14 (the nine new-fact tests could not run before 169); `db/tests/run.sh` 1323; `rerun.sh` 169 re-runnable.
+**Left open:** the QR code (after the launch, a library the owner approves); the PDFs read from the real database after the migrate (see the admin CHANGELOG).
+
+---
+
 ## 2026-09-30 · A second workflow file beside the sending one: ID photos (D27-209)
 
 Branch `online-checkin/verify-photo-30sep`; the whole account is online check-in's CHANGELOG,

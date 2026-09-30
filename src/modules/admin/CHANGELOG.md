@@ -11,6 +11,16 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-01 · What the voucher prints, set in Settings; the owner's bell (D27-215, D27-216)
+
+Branch `voucher/reference-1oct` (from cp6 3104d319; 23b10cb9 merged in), copy `.claude\worktrees\mystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.
+**Asked for:** D27-215: bank details per hotel (the hotel's owner, GM and Admin, every change recorded), the group's office details, the hotel's reservations contact and house policies - all set in Settings and printed on the voucher. D27-216: the group owner's bell says when a hotel's bank details change, for every hotel, without the account.
+**Shipped:** migration 169 sections 1-4 (`hotels.reservations_contact`, `hotels.house_policies` with the reference's four for every hotel that had none and as the default, `hotel_bank_details`, the group's office columns). `bankDetails.ts` (GET/PUT/DELETE), `PUT /:code/group/office`, the contact and the policies on the profile's PATCH, roleGate lines pinned. The bell block in `routes/notifications.ts`. Settings: Bank details (Taxes and billing), House policies (Reservations and front desk), Office details in the group card, Reservations contact (Property); `/h/:code/settings/:tab` so the bell opens the right hotel.
+**Proved:** `voucherSettings.test.ts` 36 (35 failed before the routes; the bell's: the owner standing in 5EL sees Pune's change, Pune's GM who made it, reception and another GM do not; gone after seven days); `groupSettings` 23, `hotelProfile` 26, `roleGate` 63, `notifications` 2; `db/tests` 1323 (12 new: the four policies, the cap, bank details for who manages that hotel only, audited). Web: `voucherSettings.test.tsx` 7 (the named-hotel address failed with its route taken out), admin + shell + channel manager + `src/test` 115. Both `tsc` clean, strip-check 170.
+**Left open:** the screens and the two PDFs after the migrate of fidato_s45 (asked).
+
+---
+
 ## 2026-09-30 · One place for settings, phase 2: the hotel's profile, its own logo, the map point from the hotel (D27-214)
 
 Branch `settings/one-place-30sep` (cp6 13f2a294 merged in), copy `.claude\worktrees\mystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.
