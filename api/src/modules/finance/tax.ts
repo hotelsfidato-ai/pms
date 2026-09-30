@@ -47,7 +47,8 @@ async function hotelFor(client: Client, code: string): Promise<string | null> {
    rate, never slabs, never halved into CGST and SGST, and never seeded - the
    accountant confirms it here, and until somebody does, nothing sold under it
    can be billed. */
-const TAX_KINDS = ["room", "restaurant", "bar", "banquet", "spa", "alcohol", "other"] as const;
+/* "laundry" is its own heading since D27-194 (it went under "room" before). */
+const TAX_KINDS = ["room", "restaurant", "bar", "banquet", "spa", "alcohol", "laundry", "other"] as const;
 type TaxKind = (typeof TAX_KINDS)[number];
 
 /** Whether the property is switched on for alcohol (D21-90) - the same
@@ -227,10 +228,10 @@ inventorySetup.patch("/:code/menu-categories/:name/tax-kind", async (c) => {
   }
   /* The database refuses it too (067's check on pos_menu_categories); this
      says so in a sentence instead of an error. */
-  if (kind === "spa") {
+  if (kind === "spa" || kind === "laundry") {
     return c.json(refuse(
-      "A menu category cannot be taxed as the spa. Treatments are the "
-      + "spa's; a category sells under the restaurant, the bar or "
+      `A menu category cannot be taxed as the ${kind}. That heading is the `
+      + `${kind}'s own; a category sells under the restaurant, the bar or `
       + "banqueting."), 409);
   }
 

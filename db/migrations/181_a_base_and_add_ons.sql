@@ -707,3 +707,27 @@ comment on function app.set_addon(uuid, text, uuid, text, numeric, text, uuid) i
 
 revoke all on function app.set_addon(uuid, text, uuid, text, numeric, text, uuid) from public;
 grant execute on function app.set_addon(uuid, text, uuid, text, numeric, text, uuid) to pms_app;
+
+
+-- -----------------------------------------------------------------------------
+-- 9 · laundry has its own GST heading (D27-194)
+-- -----------------------------------------------------------------------------
+-- Until now a laundry charge went under the ROOM rule. The owner: laundry gets
+-- its own heading, and like every heading it is refused until somebody sets
+-- it (the CA gives the rate). Guarded as 125 guards its own change, so the
+-- replay of 119 and 125 never narrows the list again.
+-- -----------------------------------------------------------------------------
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'tax_rules'::regclass
+       and conname  = 'tax_rules_kind_known'
+       and pg_get_constraintdef(oid) like '%laundry%'
+  ) then
+    alter table tax_rules drop constraint if exists tax_rules_kind_known;
+    alter table tax_rules add constraint tax_rules_kind_known
+      check (kind in ('room', 'restaurant', 'bar', 'banquet', 'spa', 'alcohol',
+                      'laundry', 'other'));
+  end if;
+end $$;

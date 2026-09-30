@@ -150,7 +150,7 @@ const FSSAI = grant("room_config", "edit", "Setting the FSSAI licence number");
    changes. The database asks the same three (app.sets_group_settings). */
 const GROUP_NAME = grant("room_config", "edit", "Changing the group's name");
 const GROUP_LOGO = grant("room_config", "edit", "Changing the group's logo");
-/* GST sits on Room types, so it is setup - and the accountant, who holds no
+/* GST sits on Configuration (D27-194; Room types before), so it is setup - and the accountant, who holds no
    setup grant, sets the rate too: "the accountant confirms the rate on the tax
    screen" (D21-91), and "owner, admin, GM and accountant" (D22-32). */
 const GST = grant("room_config", "edit", "Setting GST", ["finance"]);

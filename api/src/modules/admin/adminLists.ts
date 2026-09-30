@@ -275,7 +275,7 @@ directory.get("/:code/settings", async (c) => {
            (`TaxInUse`), so Settings and the Properties cards print one
            answer from one reader; `taxInUse` says where they go. */
         note:
-          "GST is set on Room types, under GST. The front desk and the till "
+          "GST is set under System → Administration → Configuration. The front desk and the till "
           + "both charge what is shown here.",
         taxInUse: true,
         rows: [
