@@ -104,7 +104,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
               + "a document with a made-up tax number on it."
             : null,
         blocking: true,
-        to: null,
+        to: "/settings/property",
       },
       {
         id: "tax-rules",
@@ -114,8 +114,9 @@ inventorySetup.get("/:code/commissioning", async (c) => {
           : "Without one a room charge has no rate to carry, and nothing "
             + "assumes a figure. The night audit will not run.",
         blocking: true,
-        /* The GST card is on this page (Configuration, D27-194). */
-        to: null,
+        /* Each row opens the Settings tab that settles it (D27-213); the
+           rest open this hotel's own screen. */
+        to: "/settings/taxes-and-billing",
       },
       {
         id: "room-types",
@@ -156,7 +157,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
         detail: (!!hotel.address && !!hotel.phone && !!hotel.email) ? null
           : "These print on the invoice as the supplier's details.",
         blocking: false,
-        to: null,
+        to: "/settings/property",
       },
       {
         id: "series",
@@ -166,6 +167,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
           : "Created with the property. If this one is missing, invoices "
             + "cannot be numbered.",
         blocking: true,
+        /* No screen makes one: it is made with the property. */
         to: null,
       },
       {
@@ -176,7 +178,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
           : "Nobody has been given this property, so only a group "
             + "administrator can see it.",
         blocking: false,
-        to: null,
+        to: "/settings/people-and-access",
       },
       {
         id: "cancellation",
@@ -199,7 +201,7 @@ inventorySetup.get("/:code/commissioning", async (c) => {
           : `${untaxedCat} sections have none, and the till refuses their `
             + "items rather than billing them at nothing.",
         blocking: false,
-        to: null,
+        to: "/settings/taxes-and-billing",
       } as Check] : []),
     ];
 

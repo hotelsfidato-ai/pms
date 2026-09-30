@@ -111,7 +111,9 @@ function ReadyToOpen({ hotelId, setup, menu }: {
     menu.error ? "The menu could not be read" : menu.isLoading ? "Reading the menu" : text;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-  const ticks: { done: boolean; label: string; detail: string; to?: string; open?: string }[] = [
+  /* `asks`: the menu entry that decides who is offered the link, where `to`
+     is a tab of it and not an entry of its own. */
+  const ticks: { done: boolean; label: string; detail: string; to?: string; asks?: string; open?: string }[] = [
     { done: setup.restaurant !== null, label: "Restaurant named",
       detail: setup.restaurant?.name ?? "Not named yet - below" },
     { done: tables > 0, label: "Tables laid out",
@@ -125,7 +127,7 @@ function ReadyToOpen({ hotelId, setup, menu }: {
       detail: menuSaid(!dishes.length ? "Checked once there are dishes"
         : noRate ? `${plural(noRate, "dish has", "dishes have")} none - they cannot be rung`
         : "Every dish has one"),
-      to: "/h/:code/room-types", open: "Open Room types" },
+      to: "/settings/taxes-and-billing", open: "Open Settings" },
     { done: setup.waiters > 0, label: "A waiter",
       detail: setup.waiters ? plural(setup.waiters, "person", "people") + " with the Waiter role"
         : "Nobody has the Waiter role yet",
@@ -134,7 +136,7 @@ function ReadyToOpen({ hotelId, setup, menu }: {
        restaurant is switched off (the owner kept it on the list). */
     { done: true, label: "Restaurant switched on",
       detail: "On - this screen opens only when it is",
-      to: "/admin/settings", open: "Open Settings" },
+      to: "/settings/modules-and-connections", asks: "/settings", open: "Open Settings" },
   ];
 
   return (
@@ -149,7 +151,7 @@ function ReadyToOpen({ hotelId, setup, menu }: {
               <div className="min-w-0 flex-1">
                 <p className="text-base font-medium text-ink-900">{t.label}</p>
                 <p className="text-sm text-grey-600 mt-0.5">{t.detail}</p>
-                {t.to && t.open && mayReach(role, t.to) && (
+                {t.to && t.open && mayReach(role, t.asks ?? t.to) && (
                   <Link to={t.to.replace(":code", hotelId)}
                         className="inline-block mt-1.5 text-sm font-medium text-brand-orange-700 hover:underline">
                     {t.open}

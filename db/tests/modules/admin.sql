@@ -828,3 +828,114 @@ begin
   delete from hotels where id in (h, other);
   alter table hotels enable trigger hotels_no_delete;
 end $$;
+
+
+-- =============================================================================
+-- THE HOTEL'S OWN PROFILE, AND WHO MAY WRITE IT (168; D27-213, D27-214)
+-- =============================================================================
+-- The write policy on `hotels` asked app.is_manager(), which left the
+-- hotel-level Admin out (a save wrote nothing) and let a GM of one hotel write
+-- another where they held a lesser role. It asks app.manages_hotel(id) now.
+-- =============================================================================
+do $$
+declare
+  h uuid; other uuid; adm uuid; clerk uuid; two uuid; n int;
+begin
+  h     := app.provision_property_unchecked('HPR', 'Hotel Profile Test', 'Nowhere');
+  other := app.provision_property_unchecked('HPS', 'Hotel Profile Other', 'Nowhere');
+
+  insert into staff (email, full_name) values ('d214-admin@fidato.in', 'D214 Hotel Admin')
+  on conflict (email) do update set is_active = true returning id into adm;
+  insert into staff (email, full_name) values ('d214-clerk@fidato.in', 'D214 Clerk')
+  on conflict (email) do update set is_active = true returning id into clerk;
+  insert into staff (email, full_name) values ('d214-two@fidato.in', 'D214 GM There, Desk Here')
+  on conflict (email) do update set is_active = true returning id into two;
+  delete from staff_hotels where staff_id in (adm, clerk, two);
+  insert into staff_hotels (staff_id, hotel_id, role) values
+    (adm, h, 'admin'), (clerk, h, 'front_desk'),
+    (two, other, 'gm'), (two, h, 'front_desk');
+
+  -- ---------- the hotel's Admin: the save really writes ----------
+  perform set_config('app.user_id', adm::text, true);
+  set local role pms_app;
+  update hotels set fssai_number = '12345678901234' where id = h;
+  get diagnostics n = row_count;
+  reset role;
+  perform test.ok('hotel profile', 'a hotel''s Admin saving its details writes the row (it wrote nothing before 168)',
+    n = 1 and (select fssai_number from hotels where id = h) = '12345678901234', n || ' rows');
+
+  -- ---------- a GM elsewhere, reception here: not this hotel's ----------
+  perform set_config('app.user_id', two::text, true);
+  set local role pms_app;
+  update hotels set fssai_number = null where id = h;
+  get diagnostics n = row_count;
+  reset role;
+  perform test.ok('hotel profile', 'a GM of another hotel, at the desk here, does not write this hotel',
+    n = 0, n || ' rows');
+
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  update hotels set fssai_number = null where id = h;
+  get diagnostics n = row_count;
+  reset role;
+  perform test.ok('hotel profile', 'nor does reception', n = 0, n || ' rows');
+  perform set_config('app.user_id', '', true);
+
+  -- ---------- every change is recorded, with who ----------
+  select count(*) into n from audit_log
+   where table_name = 'hotels' and row_id = h::text and actor = adm
+     and after->>'fssai_number' = '12345678901234';
+  perform test.ok('hotel profile', 'the change is in the audit log under the Admin''s name',
+    n = 1, n || ' entries');
+
+  -- ---------- the new fields keep their shape ----------
+  update hotels set pin = '413216', pan = 'AAGCF5655F', star_rating = 4,
+         property_type = 'heritage_hotel', latitude = 17.524800, longitude = 76.205600
+   where id = h;
+  perform test.ok('hotel profile', 'a PIN, a PAN, a type, stars and a map point are kept as typed',
+    (select pin = '413216' and pan = 'AAGCF5655F' and star_rating = 4
+            and property_type = 'heritage_hotel' and latitude = 17.5248 from hotels where id = h));
+  perform test.raises('hotel profile', 'a PIN is six digits',
+    format($q$update hotels set pin = '41321' where id = %L$q$, h), '23514');
+  perform test.raises('hotel profile', 'a PAN has its shape',
+    format($q$update hotels set pan = 'AAGCF5655' where id = %L$q$, h), '23514');
+  perform test.raises('hotel profile', 'a map point is two figures, never one',
+    format($q$update hotels set longitude = null where id = %L$q$, h), '23514');
+  perform test.raises('hotel profile', 'and lies on the globe',
+    format($q$update hotels set latitude = 91 where id = %L$q$, h), '23514');
+  perform test.raises('hotel profile', 'stars are one to five',
+    format($q$update hotels set star_rating = 6 where id = %L$q$, h), '23514');
+  perform test.raises('hotel profile', 'the type is one of the owner''s list',
+    format($q$update hotels set property_type = 'motel' where id = %L$q$, h), '23514');
+
+  -- ---------- a hotel's own logo ----------
+  perform set_config('app.user_id', adm::text, true);
+  set local role pms_app;
+  insert into hotel_logos (hotel_id, logo_type, logo) values (h, 'image/png', '\x89504e47'::bytea);
+  get diagnostics n = row_count;
+  reset role;
+  perform test.ok('hotel profile', 'the hotel''s Admin keeps its logo', n = 1, n || ' rows');
+
+  perform set_config('app.user_id', clerk::text, true);
+  set local role pms_app;
+  select count(*) into n from hotel_logos where hotel_id = h;
+  reset role;
+  perform test.ok('hotel profile', 'reception reads it - they print the bills', n = 1, n || ' rows');
+  perform test.raises('hotel profile', 'and does not change it',
+    format($q$set local role pms_app; insert into hotel_logos (hotel_id, logo_type, logo)
+              values (%L, 'image/png', '\x89504e47'::bytea)$q$, other), '42501');
+  reset role;
+  perform set_config('app.user_id', '', true);
+  perform test.raises('hotel profile', 'a logo is a PNG or an SVG',
+    format($q$update hotel_logos set logo_type = 'image/jpeg' where hotel_id = %L$q$, h), '23514');
+
+  -- ---------- and the fixtures go ----------
+  delete from staff_hotels where staff_id in (adm, clerk, two);
+  update staff set is_active = false where id in (adm, clerk, two);
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id in (h, other);
+  alter table hotels enable trigger hotels_no_delete;
+end $$;
+
+select set_config('app.user_id',
+       (select id::text from staff where email = 'owner@fidato.in'), false);

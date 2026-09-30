@@ -11,6 +11,18 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · One place for settings, phase 1: the Settings screen and its eight tabs (D27-213, D27-214)
+
+Branch `settings/one-place-30sep` (from cp6 7fc6b4b6), copy `.claude\worktrees\mystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.
+**Asked for:** the owner's D27-213: settings were on about two dozen screens; one "Settings" entry with eight tabs where every one is found. D27-214: it replaces Administration; owner, Admin and GM open it; the hotel's name stays the group owner's; the hotel-level Admin's save must really write.
+**Shipped:** `pages/Settings.tsx` at `/settings/:tab` (resource `setting`). It mounts what exists - the profile with its Edit and the FSSAI card, finance's `TaxRulesCard`, the read-only tax and operations rows, `GroupCard`, inventory's `FrontDeskCard`, the two `ModulesCard`s, `CommissioningCard` - and links every other setup screen through the menu's own reachability, so nobody is shown a row they cannot open. `nav.ts`: "Settings" in System; Users, Roles and permissions, Integrations, Audit log and the Console are `listed: false`. `/admin/settings` and `/admin/configuration` redirect; `pages/Configuration.tsx` is deleted. The checklist's rows open their tab (`commissioning.ts`; the invoice series row opens nothing, as no screen makes one). Server: `PATCH /api/admin/hotels/:code` asks `app.manages_hotel` and refuses a changed name from anybody but a group administrator; migration 168's first section rewrites `hotels_manage` the same way (ADM-18). Pointers: the restaurant's ready-to-open list (GST, the module switch), the GST note on Settings, a comment on Invoices.
+**Found:** ADM-18 (a hotel's Admin saved nothing; a GM elsewhere who works the desk here could). The plan said the GM would not see Channel manager on Modules and connections; the GM's menu has held it all along (`seesComingSoon`), so it stays.
+**Proved:** `db/tests/run.sh` 1311 assertions, the "hotel profile" block 15 (3 fail with the policy line out); `rerun.sh` 168 migrations re-runnable. API, one file at a time: `hotelProfile` 5 (3 seen failing first), `adminWrites` 10, `propertyAdmin` 39, `settings` 30, `roleGate` 63, `fssai` 6. Web: `src/modules/admin`, `src/components/app`, `App.test.tsx`, pos and finance 243 passed (4 failed first: a label over 21 characters and two entries on one `order`, both fixed in `nav.ts`; a failed-read assertion that read finance's card; a wrong expectation about the GM). Both `tsc` clean, strip-check 167 files. In the app's pane on fidato_s45 at 166: as the owner every tab, 7 + 2 switches, the old addresses land on their tab, Find a screen "gst" → Taxes and billing, "configuration" → Settings, "audit" → Audit log; as the GM no switches, no Roles, Integrations or System health, Name locked in Edit and a save answered 200; as reception "This page is not part of your role"; at 375 px the open tab is scrolled into view and the page does not scroll sideways.
+**Left open:** phase 2 (the profile's new fields, the hotel's logo, the map point read from `hotels`). 168 is not yet run on fidato_s45, so the hotel-level Admin's save is proved by the tests, not on screen. The master's words: "System → Administration → Configuration" in `postings.ts`, `nightAudit.ts`, `till.ts`, `desk.ts`, `dayBook.ts` now means Settings → Taxes and billing (the old address still opens it).
+**Commits:** 347a9c23, b92a3d9f, 1e7aa28e and the one after it.
+
+---
+
 ## 2026-09-30 · Settings › Configuration, the hotel-wide settings (D27-188, D27-194; the rooms-and-rates lane)
 
 Branch `rates/base-addons-30sep`, copy `.claudeworktreesmystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.

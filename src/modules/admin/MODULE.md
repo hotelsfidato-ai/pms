@@ -27,8 +27,12 @@ The owner adds a property and its general manager. The GM adds the people
 who work at their hotel, gives each a role and a password, sets the screen
 each person starts on, and can take access away, switch somebody off or bring
 them back. A group administrator sees every property and every person; a GM
-sees their own hotel. The Settings screen shows how a property is set up,
-including the GST it actually charges, and — for the owner and an
+sees their own hotel. **Settings** (D27-213, D27-214, 30 September) is the ONE
+place for how a property is set up, in eight tabs: it mounts the cards that
+exist (the profile, the GST rules, the front desk's hours, the group's name
+and logo, the switches, what the property still needs) and links every other
+setup screen the person may open. It shows the GST the property actually
+charges, and — for the owner and an
 administrator only (D17-36) — the module switches: Point of sale, Banquet
 hall, and "Reception can use the POS"; and, on a card of their own, New
 booking's four fold-open sections (Company, GST, Extras, Notes; D27-163,
@@ -44,19 +48,33 @@ properties and people.
 |---|---|---|---|
 | Properties | `/properties` | `pages/Properties.tsx` (`PropertiesPage`) | none |
 | People | `/people` | `pages/People.tsx` | none |
-| Administration → Users | `/admin/users` | `pages/Admin.tsx` (`UsersPage`) | none |
-| Administration → Roles and permissions | `/admin/roles` | `pages/Admin.tsx` (`RolesPage`) | none |
-| Administration → Integrations | `/admin/integrations` | `pages/Admin.tsx` (`IntegrationsPage`) | none |
-| Administration → Audit log | `/admin/audit-log` | `pages/Admin.tsx` (`AuditLogPage`) | none |
-| Administration → Settings | `/admin/settings` | `pages/Admin.tsx` (`SettingsPage`, with `GroupCard` and `ModulesCard`) | none |
-| Administration → Configuration | `/admin/configuration` | `pages/Configuration.tsx` (what the property still needs, inventory's `FrontDeskCard`, finance's `TaxRulesCard`; D27-188, D27-194; resource `setting`) | none |
-| Administration → Console | `/admin/console` | `pages/Console.tsx` | none — development builds only |
+| Settings | `/settings`, `/settings/:tab` | `pages/Settings.tsx` (eight tabs; resource `setting`: owner, Admin, GM) | none |
+| — (Find a screen, and Settings › People and access) Users | `/admin/users` | `pages/Admin.tsx` (`UsersPage`) | none |
+| — (same) Roles and permissions | `/admin/roles` | `pages/Admin.tsx` (`RolesPage`) | none |
+| — (same, Modules and connections) Integrations | `/admin/integrations` | `pages/Admin.tsx` (`IntegrationsPage`) | none |
+| — (same, People and access) Audit log | `/admin/audit-log` | `pages/Admin.tsx` (`AuditLogPage`) | none |
+| — (Find a screen) Taxes and billing | `/settings/taxes-and-billing` | the tab; a menu entry of its own so "GST" finds it and a pointer to it is offered only to who may open it | none |
+| — (redirects) | `/admin/settings` → `/settings`; `/admin/configuration` → `/settings/taxes-and-billing` | — | old links, kept working |
+| — (Find a screen) Console | `/admin/console` | `pages/Console.tsx` | none — development builds only |
 | System health | `/admin/system-health` | `pages/SystemHealth.tsx` | none — the owner and an administrator (`role`) |
 | — (not in the menu) one property | `/properties/:code` | `pages/Property.tsx` | reached from Properties |
 | — (redirect) | `/admin/properties` → `/properties` | — | an old link, kept working |
 
 - Properties and People sit in the menu's **Across properties** section;
-  Administration in **System**.
+  Settings and System health in **System**. "Administration" and its children
+  left the sidebar on 30 September (D27-214): `listed: false`, so Find a
+  screen and their Settings tab still reach them.
+- **Settings' tabs** (`SETTINGS_TABS`, the tab is in the address): Property ·
+  Rooms and rates · Taxes and billing · Reservations and front desk ·
+  Departments · People and access · Modules and connections · Getting started.
+  A link row is drawn only if `flatNavigationFor` holds its address for this
+  person (role and modules), and takes the menu's own name; a tab of links
+  with none left is not shown. To add a screen to a tab, add its address and
+  one line to `LINKS` in `pages/Settings.tsx`.
+- **The hotel's name is the group owner's** (D27-214): the profile's Edit
+  locks Name for anybody but a group administrator, and the server refuses a
+  changed name from them. Everything else is the hotel's owner's, GM's and
+  Admin's (`app.manages_hotel`), audited by `hotels_audit`.
 - No working menu lists any of them. Owner, admin, GM, hotel manager, finance
   and read-only see what their grants allow: Properties needs `hotel`, People
   and Users `user`, Roles `role`, Integrations `integration`, Audit log
@@ -84,8 +102,10 @@ properties and people.
   carries the GSTIN (`routes.tsx`).
 - Dialogs and panels in `flows/`: `StaffAdmin.tsx` (`NewPerson`, `People`,
   `NewProperty` — shared by Properties and the Console) and
-  `CommissioningCard.tsx` (what a property still needs — shown on
-  Configuration since 30 September; on inventory's Room types before).
+  `CommissioningCard.tsx` (what a property still needs — Settings' Getting
+  started tab since 30 September; on inventory's Room types before). A row
+  whose `to` starts "/settings" opens that tab; the rest open the hotel's
+  own screen.
 
 ---
 
@@ -103,7 +123,8 @@ property is not scoped to one):
 POST   /api/admin/hotels                     create a property — needs the provisioning key
 GET    /api/admin/hotels                     every property, closed ones included
 GET    /api/admin/hotels/:code               one property, for whoever runs it
-PATCH  /api/admin/hotels/:code               its name, address, phone, email, GSTIN…
+PATCH  /api/admin/hotels/:code               its address, phone, email, GSTIN…: a group admin, or the
+                                             owner, GM or Admin AT that hotel; the name a group admin only
 PUT    /api/hotels/:code/fssai               its FSSAI licence number (A16): owner, admin, GM
 POST   /api/admin/hotels/:code/:state        close or reopen
 GET    /api/admin/staff
@@ -276,6 +297,12 @@ audit_log                               011_model_additions.sql; triggers from
                                         staff_hotels manager policies check the role,
                                         app.manages_person (edit), app.may_switch_person
                                         (switch off / on: every hotel theirs)
+  a hotel's row is written by whoever   168_the_hotels_own_profile.sql (D27-213, D27-214):
+  manages THAT hotel                    hotels_manage asks app.manages_hotel(id) - the
+                                        hotel's Admin can save, a GM of another hotel
+                                        cannot (ADM-18); the profile's columns (pin, pan,
+                                        website, reservations_phone, property_type,
+                                        star_rating, latitude/longitude) and hotel_logos
 ```
 
 Isolation is checked as the application role in `db/tests/rls.sql`, never in
@@ -292,7 +319,7 @@ word, so the master renumbers it at merge).
 ## Front door
 
 `src/modules/admin/index.ts` exports `CommissioningCard` (no other service
-imports it since Room types moved it to Configuration, 30 September) and
+imports it since Room types gave it up, 30 September) and
 `useGroupSettings`.
 
 The server's door, `api/src/modules/admin/index.ts`, exports only `mounts`

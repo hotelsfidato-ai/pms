@@ -127,7 +127,7 @@ function Row({ check, hotelId }: {
   return (
     <li>
       {check.to ? (
-        <Link to={`/h/${hotelId}${check.to}`}
+        <Link to={check.to.startsWith("/settings") ? check.to : `/h/${hotelId}${check.to}`}
               className={cn(shell, "hover:bg-white/60 transition-colors duration-150 cursor-pointer",
                 "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-orange")}>
           {body}

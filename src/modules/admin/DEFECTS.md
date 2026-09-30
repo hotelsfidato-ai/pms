@@ -33,6 +33,16 @@ the demo's shortest.
 
 ## Fixed — the solution is here; do not work it out again
 
+### ADM-18 · A hotel's Admin saved its details and nothing was written; a GM of another hotel could write this one - FIXED 30 September (numbered for now)
+
+**Found** - planning D27-213, in a rolled-back transaction as `pms_app`. `hotels_manage` (the UPDATE policy on `hotels`) asked `app.is_manager()`: a group administrator, or owner or GM at ANY hotel. So a person whose role at a hotel is `admin` (D23-2) updated 0 rows there, and a GM of hotel A who also works the desk at hotel B could update hotel B's row. The profile's route was for a group administrator only, so it never reached the policy and nothing showed; the FSSAI save (owner, admin, GM) is a plain update under it.
+
+**Done** - migration 168: `hotels_manage` asks `app.manages_hotel(id)` (a group administrator, or owner, GM or Admin AT that hotel), for `using` and `with check`. `PATCH /api/admin/hotels/:code` asks the same function, and refuses a changed name from anybody but a group administrator (D27-214). `roleGate.ts` says so.
+
+**Proved** - `db/tests/modules/admin.sql` "hotel profile": with the policy line taken out three assertions fail (the Admin writes 0 rows, the GM elsewhere writes 1, no audit row). `api/test/modules/admin/hotelProfile.test.ts`: 3 of 5 failed against the old route.
+
+**The rule** - A policy that asks "is this person a manager" without "of THIS row" is two faults at once: it refuses the row's own manager who holds a narrower role, and admits a manager from somewhere else.
+
 ### ADM-17 · Adding somebody on a server with no Firebase ended in "Something went wrong" (QA AD-5) - FIXED 28 September (round F)
 
 **Found** - the QA of 28 September (AD-5): every Add ended in a 500; the log said there was no Firebase service account. `firebaseApp()` throws, and nothing turned that into words.
