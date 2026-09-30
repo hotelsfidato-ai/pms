@@ -368,21 +368,23 @@ export default function FloorPage() {
                         </span>
                       </button>
 
+                      {/* FOOD AT THE PASS (D27-221). The kitchen made it
+                          Ready; one tap says the waiter took it all out
+                          (D27-222). The tile's own tap still opens the pad.
+                          A row of its own: beside the two round buttons it
+                          wrapped on a desktop tile (126px, measured). */}
+                      {(t.ready ?? 0) > 0 && t.orderId && (
+                        <button
+                          type="button"
+                          disabled={busy === t.id}
+                          onClick={() => void take(t)}
+                          aria-label={`Taken: the ${t.ready} ready at ${t.label}`}
+                          className="press mt-2 w-full h-11 px-3 rounded-full ring-1 ring-inset ring-success-100 bg-success-50 text-success-600 text-sm font-semibold tabular whitespace-nowrap cursor-pointer hover:ring-success"
+                        >
+                          {t.ready} ready
+                        </button>
+                      )}
                       <div className="flex gap-2 mt-2">
-                        {/* FOOD AT THE PASS (D27-221). The kitchen made it
-                            Ready; one tap says the waiter took it all out
-                            (D27-222). The tile's own tap still opens the pad. */}
-                        {(t.ready ?? 0) > 0 && t.orderId && (
-                          <button
-                            type="button"
-                            disabled={busy === t.id}
-                            onClick={() => void take(t)}
-                            aria-label={`Taken: the ${t.ready} ready at ${t.label}`}
-                            className="press h-11 px-3 rounded-full ring-1 ring-inset ring-success-100 bg-success-50 text-success-600 text-sm font-semibold tabular cursor-pointer hover:ring-success"
-                          >
-                            {t.ready} ready
-                          </button>
-                        )}
                         {t.state === "paid" ? (
                           <Button
                             variant="secondary"

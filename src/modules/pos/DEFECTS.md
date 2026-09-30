@@ -48,6 +48,14 @@ fails "expected 'front_desk' to be 'pos'".
 
 **The rule** - A child line priced per plate must move with its plate.
 
+### POS-31 · MINE: the "7 ready" badge wrapped to two lines on a desktop Tables tile - caught before commit
+
+**Found** - 1 October, opening Tables at 1280 wide for D27-221. The badge sat in the tile's action row beside its two round buttons: the row is 126px wide and the three need about 167px, so it read "7 / ready" on two lines. The web test passed, because jsdom has no layout.
+
+**What was done** - The badge has its own full-width row under the amount, above the actions (`Floor.tsx`), `whitespace-nowrap`. Measured again: 126 x 44 at 1280 wide, 136 x 44 on a 375 phone, one line, and no sideways scroll.
+
+**The rule** - A button added to a row of fixed-size buttons is measured at the narrowest tile before it is called done.
+
 ### POS-30 · MINE: a commit hash sent to the master before git printed it - corrected at once
 
 **Found** - 30 September, the POS lane's report after renumbering its migration. The message named the commit "10d9d4e"; git had printed 76174e7. Caught on reading git's output a moment later, and corrected to the master in a second message.

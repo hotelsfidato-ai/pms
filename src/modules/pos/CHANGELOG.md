@@ -11,6 +11,40 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-01 · The kitchen has two buttons; Ready goes to the waiter (D27-221, D27-222)
+
+**Asked for:** the owner's D27-221, before the launch. The Kitchen screen has two buttons, Start and Ready, and a ready dish leaves it and shows as "Ready" to the waiter on Tables and the Terminal. D27-222 answered the plan's questions:
+- the waiter taps "Taken": beside each Ready dish on the Terminal, and once on the table's "2 ready" badge for all of them;
+- the kitchen's route takes preparing and ready only;
+- no waiting clock on the waiter's side.
+Branch `pos/kitchen-two-1oct` from cp6 `022e14e`, cp6 `7ada298` merged in; `fidato_s46` migrated to 170 with the master's OK.
+**Shipped:**
+- `till.ts`:
+  - The kitchen read holds sent and preparing only. POS-1 now keeps paid food until it is Ready.
+  - The at-the-pass clock (and its `app.pos_line_timings` call) went with the third column.
+  - The kitchen's move takes preparing and ready ("The kitchen starts a dish or makes it ready.").
+  - The floor read gives each table its ready dishes: `ready`, a count of dishes (quantity, sides not counted), and `readyIds`.
+  - `POST /till/orders/:id/taken {lineIds}` serves Ready dishes only, all checked before the write, and says why otherwise ("… is not ready yet - the kitchen says when it is", "… is already taken"). It works on a settled order too (151 lets the kitchen status move).
+- `roleGate.ts`: the Taken line is TILL (the waiter's), pinned in `roleGate.test.ts`: the waiter may, the chef may not.
+- Screens:
+  - Kitchen: two columns, Ordered and On the fire; By table has no "Done" fallback; a ticket is judged on its wait.
+  - Terminal: a Ready dish reads "Ready" (green) with a Taken button.
+  - Tables: "N ready" in green on the table's tile, a row of its own (POS-31), one tap for all.
+**What was lost:** the kitchen's at-the-pass clock. Nothing else read it: no report or lateness screen uses `app.pos_line_timings` or `app.pos_line_lateness`. 080 still records every status change, and Taken is the served time, so ready → served stays in the timings for anyone who asks later.
+**Proved:**
+- API, one file at a time: `kitchenTwo` 3 (new); `kitchenTimings` 4 and `restaurantFixes` 12 (one case each rewritten). All 5 new or rewritten cases fail on cp6's `till.ts` and `roleGate.ts`. Also `roleGate` 63, `till` 84, `tillBatch` 5, `courses` 3, `prepTimes` 5, `kotStation` 3 and `sameDish` 4. strip-check: 169 files load.
+- Web: `kitchenTwo.test.tsx` 3; all 3 fail on cp6's screens. `src/modules/pos` + `src/test` + primaryAction + repositories + navigation: 20 files, 129 passed.
+- `npx tsc -b --force` exit 0; api `tsc --noEmit` exit 0, both after merging cp6.
+- The database suite's timing and course checks are unchanged (no database change); the master runs the suite in the full gates.
+- **Opened, 1 October, on `fidato_s46`:**
+  - Kitchen at 1280 x 800, as the Kitchen Manager: "Ordered 13" and "On the fire 2", two columns of 640px, no "Picked up". Ready on AC2's Masala Chai took it off the board. By table showed 13 Start and 1 Ready, and no Done.
+  - Tables at 1280 x 800, as the GM: "7 ready" on AC1 (the demo's old at-the-pass food) and "2 ready" on AC2. A real tap on AC2's badge cleared it and opened no pad; the database then read Masala Chai and Chicken 65 served, Veg Manchurian still preparing.
+  - Tables on a 375 phone: "7 ready" on one line, 136 x 44, no sideways scroll.
+  - Terminal at 768 x 1025 on AC1's DH-001: four Ready dishes, each with Taken; a real tap on Veg Manchurian's turned it to "served".
+**Left open:** the Till's bill shows no kitchen status (not asked for, D27-221 names Tables and the Terminal).
+
+---
+
 ## 2026-09-30 · D27-189 part 2: a dish's variation types on one form (D27-192, D27-195)
 
 **Asked for:** the owner's D27-189 and their answers of 30 September (D27-192, D27-195). "Add variation" is a simple form: pick a type, Size, Quantity or Option (an Option headed by the manager, "Spice level"); list its choices, each with a price or Free. A dish may have SEVERAL types, each a required single choice. The first type carries the full price; each further type's choices add +₹ or are Free. The same name may be in two types. Add-ons stay the Add-on groups, with the Free tick. A 0 is refused unless ticked Free (D27-120 replaces D21-42). The waiter picks in one pop-up. A carried-over dish sells as "Variation" until its type is picked. The master approved the model before any of it was written. The owner stopped work mid-way; it resumed after merging cp6 (rates 162, cash 163).
