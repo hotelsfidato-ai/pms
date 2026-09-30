@@ -18,6 +18,16 @@ Nothing open.
 
 ## Fixed
 
+### FIN-22 · Cashiering told a receptionist their drawer was "handed to nobody" when it had been handed to a colleague — FIXED 30 September (cash lane, D27-202; numbered for now)
+
+**Found** — building D27-202's "both ends on record": the line under Cashiering's closed view read the colleague's name from `staff`, and row security shows a clerk only their own staff row (housekeeping's HK-14, the owner's D27-97). So `handed_to` came back with no name and the screen said "handed to nobody" about a drawer that had a name on it.
+
+**Fixed** — the name comes through `app.hotel_people` (149), as the hand-over list already did; the same line now says the float kept, for whom, and the rest to deposit.
+
+**Proved** — on screen, `fidato_s47`, as Reception: "Your last shift closed … with ₹890 counted: ₹500.00 kept for Test GM, ₹390.00 to deposit."
+
+**The rule** — A colleague's name is read through `app.hotel_people`, never `staff`: a join that returns no row says "nobody", which is a different fact.
+
 ### FIN-21 · The desk's drawer opened on a blank float as ₹0 — FIXED 30 September (D27-190, D27-191; numbered for now)
 
 **Found** — the cash lane, reading the drawer for D27-190: Cashiering's "Opening float" sent `Number(opening || 0)` and the server read `input.opening ?? 0`, so an untouched box opened the drawer on ₹0. That is a figure nobody counted, and the close then measured the drawer against it.
