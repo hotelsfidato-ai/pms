@@ -1,4 +1,4 @@
-import { Hotel, UserCog, Settings, ShieldCheck, Plug, ScrollText, Terminal, Activity } from "lucide-react";
+import { Hotel, UserCog, Settings, ShieldCheck, Plug, ScrollText, Terminal, Activity, SlidersHorizontal } from "lucide-react";
 import { can } from "@/lib/permissions";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 
@@ -30,6 +30,10 @@ export const nav: ServiceNavEntry[] = [
       { label: "Integrations", to: "/admin/integrations", icon: Plug, resource: "integration" },
       { label: "Audit log", to: "/admin/audit-log", icon: ScrollText, resource: "audit_log" },
       { label: "Settings", to: "/admin/settings", icon: Settings, resource: "setting" },
+      /* D27-188, D27-194: GST and VAT, the front desk's hours and what the
+         property still needs - moved here from Room types. */
+      { label: "Configuration", to: "/admin/configuration", icon: SlidersHorizontal,
+        resource: "setting", keywords: ["GST", "VAT", "tax", "check-in time", "check-out time", "front desk hours"] },
       /* The console CREATES things — properties, people, access. It is
          the only screen in the system that manufactures a tenant, so it
          stays out of production builds until the group says otherwise. */

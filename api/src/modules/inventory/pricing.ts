@@ -144,7 +144,7 @@ pricing.get("/:code/pricing", async (c) => {
         where r.hotel_id = $1
           and r.valid_from < ($2::date + $3::int)
           and (r.valid_to is null or r.valid_to > $2::date)
-          and not (r.covers_persons = 1 and r.meal_plan = coalesce(
+          and not (coalesce(r.covers_persons, 0) = 1 and r.meal_plan = coalesce(
                 (select meal_plan from pricing_basis where hotel_id = $1), 'EP'))
         order by rt.sort_order, r.meal_plan, r.valid_from`,
       [hotelId, from, days],

@@ -3,3 +3,5 @@
    move in; see MODULE.md. */
 export { getInventory, getTariff } from "./data/rates";
 export type { Tariff } from "./data/rates";
+/* The front desk's hours and charges, shown on Settings > Configuration (D27-194). */
+export { FrontDeskCard } from "./components/FrontDeskCard";

@@ -5,6 +5,7 @@ import PropertyPage from "@/modules/admin/pages/Property";
 import PeoplePage from "@/modules/admin/pages/People";
 import AdminConsolePage from "@/modules/admin/pages/Console";
 import SystemHealthPage from "@/modules/admin/pages/SystemHealth";
+import ConfigurationPage from "@/modules/admin/pages/Configuration";
 import { PropertiesPage } from "@/modules/admin/pages/Properties";
 import {
   UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
@@ -112,6 +113,15 @@ export const routes = (
       element={
         <RequireAccess path="/admin/system-health" resource="role">
           <SystemHealthPage />
+        </RequireAccess>
+      }
+    />
+    {/* D27-188, D27-194: the hotel-wide settings, for whoever opens Settings. */}
+    <Route
+      path="/admin/configuration"
+      element={
+        <RequireAccess path="/admin/configuration" resource="setting">
+          <ConfigurationPage />
         </RequireAccess>
       }
     />
