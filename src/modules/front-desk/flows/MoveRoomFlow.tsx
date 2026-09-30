@@ -230,8 +230,8 @@ export function MoveRoomFlow({
             {/* Said plainly, because it is the question a clerk will
                 otherwise ask a manager, and the manager will guess. */}
             <p className="text-sm text-grey-600 leading-relaxed">
-              Moving rooms changes no charge on its own. Nights already
-              posted stay as they are - the guest slept in{" "}
+              Moving rooms changes no charge on its own. Nights before
+              tonight stay as they are - the guest slept in{" "}
               {stay.roomNumber || "that room"} for them. A new rate applies
               from tonight forward; to change a night already billed, adjust
               it on the folio so there is a reason beside it.

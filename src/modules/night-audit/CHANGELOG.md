@@ -14,7 +14,7 @@ project, still goes in the root `CHANGELOG.md`.
 **Shipped:** `api/src/modules/night-audit/roomNight.ts`, new: `POSTS_TONIGHT`, the run's read of the stays to charge (`roomNightsDue`) and the insert (`postRoomNight`), MOVED from `nightAudit.ts` as they stood. `nightAudit.ts` re-exports `POSTS_TONIGHT` for the checklist and calls the two functions; `index.ts` exports them, and `roomNightWords`, for the front desk's check-in and finance's bill route. **No figure, order or condition of the run changed:** the read gains two read-only columns (`gst`, `tax`, by `app.gst_rate_or_null`) and an optional one-stay filter the run does not pass; the insert takes its `source_type` as a parameter and the run passes `night_audit`.
 **Kept as they are (the owner, D27-205):** a night somebody reversed is not charged again by the run; the run's record counts what the run posted.
 **Proved:** `nightAudit.test.ts` 23 passed and `corrections.test.ts` 20 passed, one file at a time, before the move and after it. The front desk's `firstNight.test.ts` runs the audit twice through the route: the night check-in posted is not posted again (the run posts 1 room of 5, the one checked in while there was no GST rule), and the next night posts night 2 for all five.
-**Left open, for the master:** the checklist's line under "Room charges to post" still says "(a walk-in's whole stay is charged at check-in)". True, and no longer the usual reason: the first night is charged at check-in. Not changed without a yes.
+**The checklist's line** under "Room charges to post" said "(a walk-in's whole stay is charged at check-in)"; with the master's yes it says "(the first night is charged at check-in)" (`checklist.ts`, that one sentence).
 **Commits:** e7564506, 700fd4d0.
 
 ---
