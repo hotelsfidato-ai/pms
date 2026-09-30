@@ -165,7 +165,7 @@ describe("Send check-in link (D27-105)", () => {
 
   it("says so, and records nothing, when sending is switched off", async () => {
     const b = await book("Off");
-    delete process.env["M2R_N8N_URL"];
+    delete process.env["CRS_N8N_URL"];
     const res = await call(clerk, "POST", `/stays/${b.id}/checkin-link`, {});
     expect(res.status).toBe(503);
     expect(await recorded(b.id)).toHaveLength(0);
