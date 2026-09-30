@@ -846,12 +846,16 @@ const WRITES = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 /* ── The gate ──────────────────────────────────────────────────────── */
 
 export const roleGate: MiddlewareHandler<{ Variables: { subject: string } }> = async (c, next) => {
-  const write = WRITES.has(c.req.method);
-  if (!write && c.req.method !== "GET") return next();
+  /* HEAD is answered by the GET route (Hono), so it is gated as the GET it is:
+     otherwise a refused person could learn from the status whether a read
+     would succeed (the pre-launch review, 1 October). */
+  const method = c.req.method === "HEAD" ? "GET" : c.req.method;
+  const write = WRITES.has(method);
+  if (!write && method !== "GET") return next();
 
   /* The route that will answer: the first one matched for this method. Hono
      lists middleware too (method ALL), which is why the method is compared. */
-  const route = matchedRoutes(c).find((r) => r.method === c.req.method);
+  const route = matchedRoutes(c).find((r) => r.method === method);
   if (!route || isDoor(route.path)) return next();
 
   const key = `${route.method} ${route.path}`;

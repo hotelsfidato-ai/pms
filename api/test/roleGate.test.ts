@@ -688,6 +688,19 @@ describe("the reads, as every role (RO-1, D27-140 to D27-147)", () => {
     return `GET ${H}${bare}`;
   };
 
+  /* The pre-launch review (1 October): Hono answers HEAD with the GET route,
+     but c.req.method is "HEAD", so the gate let it through and a refused person
+     could learn from the status whether a read would succeed. */
+  it("treats HEAD as GET: a read the gate refuses is refused on HEAD too", async () => {
+    const key = keyFor("/reports/manager");
+    const r = READ_RULES[key]!;
+    const refused = websiteMatrix.ASSIGNABLE_ROLES.find(
+      (role) => r.kind === "grant" && !allows(r, role as Parameters<typeof allows>[1]));
+    expect(refused, "some role is refused the manager report").toBeTruthy();
+    expect((await send(as(refused!), "GET", "/reports/manager")).status).toBe(403);
+    expect((await send(as(refused!), "HEAD", "/reports/manager")).status).toBe(403);
+  });
+
   it("refuses exactly the roles the rule leaves out, in the gate's words", async () => {
     const wrong: string[] = [];
     for (const role of websiteMatrix.ASSIGNABLE_ROLES) {
