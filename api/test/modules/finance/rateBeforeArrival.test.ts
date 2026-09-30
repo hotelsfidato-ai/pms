@@ -57,4 +57,26 @@ describe("Change rate before check-in", () => {
     });
     expect(await sql("select 1 from folio_postings where reservation_id = $1", [stay])).toEqual([]);
   });
+
+  /* D27-199: the same "Includes GST" tick as the booking page. The typed
+     figure is split before it is kept; the note keeps what was typed. */
+  it("splits a rate that includes GST, and the note says the all-in figure", async () => {
+    const res = await post(`/stays/${stay}/rate`,
+      { rate: 4000, reason: "Walk-in price agreed", includesGst: true });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const [r] = await sql<{ agreed_rate: string; notes: string }>(
+      "select agreed_rate::text, notes from reservations where id = $1", [stay]);
+    expect(r!.agreed_rate).toBe("3809.52");
+    expect(r!.notes.endsWith("Rate ₹3,200.00 → ₹4,000.00 incl. GST: Walk-in price agreed")).toBe(true);
+  });
+
+  it("refuses an all-in figure in the slab gap, and nothing changes", async () => {
+    const res = await post(`/stays/${stay}/rate`, { rate: 8000, reason: "Upgrade", includesGst: true });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toBe(
+      "An inclusive rate between ₹7,875 and ₹8,850 can't be split under the GST slab: "
+      + "type ₹7,875 or less, or more than ₹8,850.");
+    expect((await sql<{ r: string }>(
+      "select agreed_rate::text as r from reservations where id = $1", [stay]))[0]!.r).toBe("3809.52");
+  });
 });

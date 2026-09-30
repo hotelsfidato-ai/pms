@@ -8,10 +8,11 @@ values the PMS needs.
 
 READ FIRST (read-only; these are the PMS's files):
 - D:\fidato pms\deploy\n8n\OWNER-STEPS.md: the five parts, in order
-- D:\fidato pms\deploy\n8n\IMPORT.md: part B, the voucher and email workflow
+- D:\fidato pms\deploy\n8n\IMPORT.md: part B, the workflow that sends every guest message
 - D:\fidato pms\deploy\n8n\crs-pms-answer.json and D:\fidato pms\deploy\n8n\pms-send-crs.json:
   the two workflows to import into the CRS's n8n
-- D:\fidato pms\docs\go-live\whatsapp-templates.md: the template wording (booking_confirmation)
+- D:\fidato pms\docs\go-live\whatsapp-templates.md: the template wording (all five;
+  checkin_link's words are in IMPORT.md)
 
 THE TWO HOTELS GOING LIVE: Amrapali, Kolhapur (PMS code AMR) and Hotel Grand Lucent, Mathura (PMS code GLM).
 
@@ -35,21 +36,30 @@ DO, WITH THE OWNER, IN THIS ORDER:
    still happen).
 NOTE (30 Sep, D27-186): EVERY guest message now goes through the CRS's n8n - the voucher,
 email AND the WhatsApp check-in code, check-in link, stay reminder and review request - from the
-Fidato number (Meta Phone number ID 1299890296534851). The PMS team is updating
-pms-send-crs.json for this; import the updated file when the owner says it is ready.
+Fidato number (Meta Phone number ID 1299890296534851). THE UPDATED pms-send-crs.json IS READY
+(it arrives named "PMS send · email and WhatsApp (CRS)"). Besides booking_confirmation it now
+sends four more Meta templates, all in English (en):
+   - stay_reminder (Utility): the day before arrival
+   - guest_page_code (Authentication, Copy code, 10 minutes): the check-in code
+   - checkin_link (Utility): the desk's "Send check-in link"
+   - review_request (Meta decides the category): the review request
+If the earlier pms-send-crs.json was already imported, switch that one off and delete it once
+the new one works: both answer on the same address (pms-send). The live-inventory app's
+workflow (pms-send-m2r.json, IMPORT.md part A) is NOT imported for now.
 
 5. IMPORT THE TWO NEW WORKFLOWS: crs-pms-answer.json (part 3) and pms-send-crs.json (IMPORT.md
    part B). Each gets its OWN new secret, made in the owner's password manager. Set
    REGISTER_URL, and FROM (the mailbox guests see). Switch both Active, and note their
    Production URLs.
-6. WHATSAPP: the booking_confirmation template must be approved on the Fidato number's Meta
-   account. Help the owner submit it if it isn't.
+6. WHATSAPP: all five templates (booking_confirmation and the four in the note above) must be
+   approved on the Fidato number's Meta account, in English. Help the owner submit any that
+   aren't. A message whose template is not approved yet is refused by WhatsApp; the rest still go.
 7. REPORT BACK TO THE OWNER, in one message the owner can pass to the PMS master chat:
    - the CRS Project ID;
    - each hotel's CRS property id and room type ids;
    - the two workflows' Production URLs;
    - the mailbox used in FROM;
-   - whether booking_confirmation is approved.
+   - which of the five templates are approved.
    NO secrets or passwords in that message. The owner types those into the PMS server's
    settings themselves.
 

@@ -2,12 +2,12 @@ import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Phone, Mail, Globe, LogOut } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, dateShort } from "@/lib/format";
+import { money, moneyPrecise, dateShort } from "@/lib/format";
 import {
   Button, Drawer, DrawerContent, StatusPill, Skeleton, toast,
   Tabs, TabsList, TabsTrigger, TabsContent, type Tone,
 } from "@/components/ui";
-import { getFolio } from "@/modules/finance";
+import { getFolio, useStayDue } from "@/modules/finance";
 import { queryKeys, type Stay } from "@/data/repositories";
 import { setGuestVip, EditGuestFlow } from "@/modules/guests";
 import { CheckInFlow } from "@/modules/front-desk/flows/CheckInFlow";
@@ -360,6 +360,10 @@ function FolioTotals({ hotelId, stay }: { hotelId: string; stay: Stay }) {
     queryKey: queryKeys.folio(hotelId, stay.id),
     queryFn: () => getFolio(hotelId, stay.id),
   });
+  /* WHILE CHARGES ARE TO COME, THE FOOT SAYS WHAT IS DUE WITH THEM COUNTED -
+     finance's one figure, the Bill tab's own (D27-199). The posted balance
+     alone read "In advance" under a bill saying an amount was due. */
+  const due = useStayDue(hotelId, stay);
 
   if (q.isLoading) {
     return (
@@ -380,18 +384,20 @@ function FolioTotals({ hotelId, stay }: { hotelId: string; stay: Stay }) {
     ? (stay.status === "checked-out" ? "Overpaid" : "In advance")
     : "Balance";
 
+  const owed = due ? due.after : balance;
   return (
-    <dl className="grid w-full grid-cols-3 gap-4">
+    <dl className="grid w-full grid-cols-3 gap-4" data-stay-totals>
       <Total label="Charged" value={f ? f.balance + f.payments : null} />
       <Total label="Paid" value={f ? f.payments : null} />
       <Total
-        label={balanceLabel}
-        value={balance === null ? null : Math.abs(balance)}
+        label={due && (owed === null || owed > 0) ? "Due" : balanceLabel}
+        value={owed === null ? null : Math.abs(owed)}
+        precise={!!due}
         className={cn(
           "text-right",
-          balance === null ? "text-ink-900"
-            : balance > 0 ? "text-brand-red-700"
-            : balance < 0 ? "text-info"
+          owed === null ? "text-ink-900"
+            : owed > 0 ? "text-brand-red-700"
+            : owed < 0 ? "text-info"
             : "text-success-600",
         )}
         emphasis
@@ -400,8 +406,10 @@ function FolioTotals({ hotelId, stay }: { hotelId: string; stay: Stay }) {
   );
 }
 
-function Total({ label, value, emphasis, className }: {
-  label: string; value: number | null; emphasis?: boolean; className?: string;
+function Total({ label, value, emphasis, precise, className }: {
+  label: string; value: number | null; emphasis?: boolean;
+  /** To the paisa, as the Bill tab's headline prints the same figure. */
+  precise?: boolean; className?: string;
 }) {
   return (
     <div className={cn("min-w-0", className)}>
@@ -410,7 +418,7 @@ function Total({ label, value, emphasis, className }: {
         "tabular font-semibold",
         emphasis ? "text-lg" : "text-md text-ink-900",
       )}>
-        {value === null ? DASH : money(value)}
+        {value === null ? DASH : precise ? moneyPrecise(value) : money(value)}
       </dd>
     </div>
   );

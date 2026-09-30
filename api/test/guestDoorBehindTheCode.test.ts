@@ -97,9 +97,9 @@ async function standInSender(): Promise<{ server: Server; received: string[] }> 
     req.on("end", () => { received.push(body); res.writeHead(200).end("ok"); });
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
-  process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${(server.address() as { port: number }).port}/pms-send`;
+  process.env["CRS_N8N_URL"] = `http://127.0.0.1:${(server.address() as { port: number }).port}/pms-send`;
   process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
-  process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = "only-this-test-run-knows-this";
+  process.env["CRS_N8N_SECRET"] = "only-this-test-run-knows-this";
   return { server, received };
 }
 

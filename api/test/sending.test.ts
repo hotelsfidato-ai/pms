@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { withSession } from "../src/auth.ts";
 import { closePool, type Client } from "../src/db.ts";
-import { send, canSend, messageIdFor, senderFor, NOT_CONNECTED } from "../src/sending.ts";
+import { send, canSend, messageIdFor, NOT_CONNECTED } from "../src/sending.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE ONE DOOR OUT — PROVED AGAINST A FAKE RECEIVER
@@ -41,7 +41,7 @@ const sql = async (text: string, params: unknown[] = []) => {
 
 /** What the fake receiver saw, for the test to look at afterwards. */
 interface Seen {
-  /** Which workflow was called: "crs" or "m2r" (D27-98). */
+  /** Which workflow was called: "crs", or "m2r" for the inbox's mark. */
   sender: string;
   secret: string | undefined;
   body: {
@@ -121,12 +121,17 @@ beforeEach(() => {
 const SETTINGS = ["CRS_N8N_URL", "CRS_N8N_SECRET", "M2R_N8N_URL", "M2R_N8N_SECRET",
   "WHATSAPP_PHONE_NUMBER_ID"];
 
+/* What the owner sets for now (D27-186): the CRS's workflow and the number. */
 const connected = () => {
   process.env["CRS_N8N_URL"] = `${url}/crs`;
   process.env["CRS_N8N_SECRET"] = SECRETS["crs"];
+  process.env["WHATSAPP_PHONE_NUMBER_ID"] = THE_NUMBER;
+};
+/* And the day the sales inbox's workflow is set up as well. */
+const withInbox = () => {
+  connected();
   process.env["M2R_N8N_URL"] = `${url}/m2r`;
   process.env["M2R_N8N_SECRET"] = SECRETS["m2r"];
-  process.env["WHATSAPP_PHONE_NUMBER_ID"] = THE_NUMBER;
 };
 
 async function theDemoProperty() {
@@ -190,8 +195,8 @@ describe("the one door out", () => {
     });
 
     expect(out!.result.ok, out!.result.ok ? "" : (out!.result as { reason: string }).reason).toBe(true);
-    expect(seen!.sender, "a bill on WhatsApp is the market-to-revenue app's").toBe("m2r");
-    expect(seen!.secret).toBe(SECRETS["m2r"]);
+    expect(seen!.sender).toBe("crs");
+    expect(seen!.secret).toBe(SECRETS["crs"]);
     expect(seen!.body.from?.phoneNumberId, "the one number, from the settings").toBe(THE_NUMBER);
     expect(seen!.body.messageId, "every send carries an id").toMatch(/^[0-9a-f-]{36}$/);
     expect(seen!.body.channel).toBe("whatsapp");
@@ -263,7 +268,7 @@ describe("the one door out", () => {
      to the internet. A wrong one must not send. */
   it("is refused by the receiver when the secret is wrong", async () => {
     connected();
-    process.env["M2R_N8N_SECRET"] = "not-the-secret";
+    process.env["CRS_N8N_SECRET"] = "not-the-secret";
     const hotel = await theDemoProperty();
 
     const out = await attempt(async (client) => {
@@ -278,24 +283,44 @@ describe("the one door out", () => {
     expect(out!.row!.detail).toContain("401");
   });
 
-  /* ── Two senders (D27-98, D27-101, D27-104) ─────────────────────── */
+  /* ── One sender (D27-186), and the inbox's mark (D27-104) ───────── */
 
-  it("sends nothing on half a setup: both workflows and the number, or nothing", () => {
+  it("needs the CRS's workflow and the number, and nothing of the other app", () => {
     connected();
-    expect(canSend()).toBe(true);
-    delete process.env["M2R_N8N_URL"];
-    expect(canSend(), "the CRS alone").toBe(false);
-    connected();
+    expect(canSend(), "the market-to-revenue settings are not needed").toBe(true);
     delete process.env["WHATSAPP_PHONE_NUMBER_ID"];
     expect(canSend(), "no WhatsApp number").toBe(false);
+    withInbox();
+    delete process.env["CRS_N8N_SECRET"];
+    expect(canSend(), "the other app alone sends nothing").toBe(false);
   });
 
-  it("chooses the sender by the message: every email and the voucher are the CRS's", () => {
-    expect(senderFor({ channel: "email", kind: "arrival-reminder" })).toBe("crs");
-    expect(senderFor({ channel: "whatsapp", kind: "booking-confirmation" })).toBe("crs");
-    expect(senderFor({ channel: "whatsapp", kind: "guest-link-code" })).toBe("m2r");
-    expect(senderFor({ channel: "whatsapp", kind: "arrival-reminder" })).toBe("m2r");
-    expect(senderFor({ channel: "whatsapp", kind: "review" })).toBe("m2r");
+  it("sends every kind of WhatsApp through the CRS's workflow", async () => {
+    connected();
+    const hotel = await theDemoProperty();
+    for (const kind of ["booking-confirmation", "guest-link-code", "checkin-link", "arrival-reminder", "review"]) {
+      calls = [];
+      const out = await attempt((client) => send(client, { ...aBill(hotel), kind }));
+      expect(out!.ok, kind).toBe(true);
+      expect(calls.map((c) => `${c.sender}:${c.body.action}:${c.body.kind}`), kind).toEqual([`crs:send:${kind}`]);
+    }
+  });
+
+  /* The inbox's workflow is not set up for now: that is not a failure, and
+     the log must not say the guest's message had a problem. */
+  it("skips the sales inbox's mark where its workflow is not set up, and records no failure", async () => {
+    connected();
+    const hotel = await theDemoProperty();
+    const out = await attempt(async (client) => {
+      const result = await send(client, { ...aBill(hotel), kind: "booking-confirmation" });
+      const { rows } = await client.query<{ status: string; detail: string }>(
+        "select status, detail from messages_sent where about_id = $1 order by id desc limit 1", [MINE]);
+      return { result, row: rows[0] };
+    });
+    expect(out!.result.ok).toBe(true);
+    expect(calls.map((c) => `${c.sender}:${c.body.action}`)).toEqual(["crs:send"]);
+    expect(out!.row!.status).toBe("sent");
+    expect(out!.row!.detail).not.toContain("sales inbox");
   });
 
   it("sends an email to the CRS alone, with no number and no inbox mark", async () => {
@@ -311,7 +336,7 @@ describe("the one door out", () => {
   });
 
   it("tells the sales inbox first, then the CRS sends the voucher on WhatsApp", async () => {
-    connected();
+    withInbox();
     const hotel = await theDemoProperty();
     const bytes = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
     const out = await attempt((client) => send(client, {
@@ -325,14 +350,6 @@ describe("the one door out", () => {
     expect(mark!.body.to?.phone).toBe("+919876543210");
     expect(voucher!.body.file?.name).toBe("Voucher.pdf");
     expect(mark!.body.messageId).toBe(voucher!.body.messageId);
-  });
-
-  it("sends the check-in code through the market-to-revenue workflow alone", async () => {
-    connected();
-    const hotel = await theDemoProperty();
-    const out = await attempt((client) => send(client, { ...aBill(hotel), kind: "guest-link-code" }));
-    expect(out!.ok).toBe(true);
-    expect(calls.map((c) => `${c.sender}:${c.body.action}`)).toEqual(["m2r:send"]);
   });
 
   /* A retry after a timeout: the same message must reach the workflow with
@@ -357,7 +374,7 @@ describe("the one door out", () => {
   });
 
   it("still sends the voucher when the inbox cannot be told, and writes that down", async () => {
-    connected();
+    withInbox();
     markAnswer = { status: 500, body: "Firestore said no" };
     const hotel = await theDemoProperty();
     const out = await attempt(async (client) => {

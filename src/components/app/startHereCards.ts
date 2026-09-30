@@ -42,8 +42,8 @@ export const START_HERE: Partial<Record<Role, { intro: string; tasks: StartTask[
         how: "Open the guest, go to Bill, Settle, then Take payment." },
       { job: "Check a guest out", to: "/h/:code/in-house/due-out", icon: LogOut,
         how: "Open the guest, go to Bill - Check out opens once nothing is owed." },
-      { job: "Open the cash drawer", to: "/h/:code/cashiering", icon: Banknote,
-        how: "Enter the opening float, then Open the drawer. Close the shift when you hand over." },
+      { job: "Count and close the cash drawer", to: "/h/:code/cashiering", icon: Banknote,
+        how: "Your drawer opens by itself with your first cash. At hand over, count it, type the float kept and who takes it." },
     ],
   },
   housekeeping: {

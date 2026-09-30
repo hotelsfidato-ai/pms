@@ -145,7 +145,9 @@ export async function editCharge(
     closed day's through Closed days) and the night audit charges the rest at
     it - or, if one night cannot be corrected, changes nothing and says which. */
 export async function changeRate(
-  hotelId: string, stayId: string, input: { rate: number; reason: string },
+  hotelId: string, stayId: string,
+  /** `includesGst`: the rate typed is all-in, split by the server (D27-199). */
+  input: { rate: number; reason: string; includesGst?: boolean },
 ): Promise<OperationResult<{ corrected: number }>> {
   try {
     const res = await api<{ data?: { corrected: number } }>(

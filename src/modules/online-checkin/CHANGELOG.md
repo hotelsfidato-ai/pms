@@ -12,6 +12,15 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-09-30 · The check-in code goes through the CRS's workflow (D27-186)
+
+Branch `connections/crs-only-30sep`; the whole account is guest messages' CHANGELOG, same
+date. Here: no code of this service changed. The code (`guest-link-code`) now leaves through
+`deploy/n8n/pms-send-crs.json` as the `guest_page_code` template, the six digits in the body
+and in the copy button, and `canSendCodes` is true with the CRS's two settings and the number
+alone. `guestDoor.test.ts` and `guestDoorBehindTheCode.test.ts` stand in for that one workflow
+(12/12 and 31/31).
+
 ## 2026-09-29 · The code straight to the booking's phone; a day unlocked; Form III and requests from the guest; a development-only code on screen (D27-105, D27-169)
 
 **Asked for** (the master's card, D27-168; the owner's D27-105, D27-169):

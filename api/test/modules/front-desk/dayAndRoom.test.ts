@@ -182,12 +182,18 @@ describe("the rack a stay shows is today's price in the new model (162, D27-188)
     expect(stay.rackTariff).toBe(2500);
   });
 
-  /* The walk-in route (no screen calls it since 29 Sep; a cleanup lane removes
-     it) read the old rack too, and refused this hotel "no rate set". */
+  /* The walk-in route read the old rack too, and refused this hotel "no rate
+     set". It went on 30 September: a walk-in is the booking on the Walk-in
+     channel (D27-158), which prices an untyped rate the same way. */
   it("prices a walk-in with no typed tariff at that base, not a refusal", async () => {
-    const res = await call("/walk-ins", "POST", {
-      guestName: "Day and room walk-in", roomNumber: "107", nights: 1, adults: 1, children: 0,
-      ratePlan: "EP", idSkipReason: "Test",
+    const [d] = await sql<{ source: string; type: string }>(
+      `select app.walk_in_source()::text as source,
+              (select id::text from room_types where hotel_id = $1 and code = 'STD') as type`,
+      [hotelId]);
+    const res = await call("/bookings", "POST", {
+      guestName: "Day and room walk-in", checkIn: "2026-08-26", checkOut: "2026-08-27",
+      bookingSourceId: d!.source,
+      lines: [{ roomTypeId: d!.type, mealPlan: "EP", adults: 1, rooms: 1 }],
     });
     expect(res.status, await res.clone().text()).toBe(200);
     const [r] = await sql<{ rate: string }>(

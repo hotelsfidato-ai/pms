@@ -323,8 +323,9 @@ advance with no drawer of the clerk's own open is said under Advance and holds
 the buttons (D27-118). The Booked card and the panel's menu have View voucher
 (`viewVoucher`, guest messages' `voucher.pdf`); the panel's menu has Change
 rate for a booking still to arrive (finance's `ChangeRateDialog`). Each room
-line has "Rate includes GST" (off by default, D27-195): the typed figure is
-split by finance's `roomRateBeforeGst` and `book.ts` keeps the rate before GST
+line has a "Rate includes GST" tick under its rate (off by default, D27-195,
+D27-199): the typed figure, or with none typed the list price, is split by
+finance's `roomRateBeforeGst` and `book.ts` keeps the rate before GST
 (`rateIncludesGst` on the line). Three
 buttons at the bottom, each greyed with its reason under it:
 
