@@ -167,7 +167,8 @@ inventorySetup.get("/:code/commissioning", async (c) => {
           : "Created with the property. If this one is missing, invoices "
             + "cannot be numbered.",
         blocking: true,
-        to: "/settings/taxes-and-billing",
+        /* No screen makes one: it is made with the property. */
+        to: null,
       },
       {
         id: "staff",

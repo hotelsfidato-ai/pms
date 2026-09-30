@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate, useNavigate, useParams } from "react-router";
 import { ChevronRight } from "lucide-react";
@@ -136,6 +136,13 @@ export default function SettingsPage() {
   const group = (title: string) => (settings.data ?? []).find((g) => g.title === title);
   const switches = switchesModules(role);
   const outstanding = checklist.data?.checks.filter((c) => !c.done).length ?? 0;
+
+  /* Eight tabs scroll sideways where they do not fit: bring the open one in
+     (again once its count is drawn, which widens it). */
+  useEffect(() => {
+    document.querySelector('[role="tab"][aria-selected="true"]')
+      ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [tab, outstanding]);
 
   /* A tab of links alone is not shown to somebody who can open none of them. */
   const shown = SETTINGS_TABS.filter((t) =>
