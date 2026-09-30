@@ -375,6 +375,14 @@ grant execute on function app.guest_id_photo_begin(text, text, text[], text) to 
 -- STORED: Drive has it. The bundle before it, if the guest sent one, is
 -- marked replaced here and handed back so its Drive file can be deleted at
 -- once - an unmasked Aadhaar replaced by a masked one must not stay.
+--
+-- ⚠ ONLY THE GUEST'S OWN, WAITING, OF THE SAME SUBMISSION (1 October, found by
+-- the pre-launch review). It replaced EVERY stored photo of the stay: a guest
+-- who sent their details again - a new waiting submission - and any JPEG
+-- with it deleted the copy the desk had already confirmed, and a desk that
+-- then removed the new one as "not an ID" left none at all. A KEPT photo
+-- (confirmed, set aside, or added at the desk) is deleted only by the owner,
+-- an administrator or the GM, with a reason (D27-210) - never by a replace.
 create or replace function app.guest_id_photo_stored(
   p_token_hash text, p_unlock_hash text, p_id uuid,
   p_drive_file_id text, p_sha256 text, p_bytes integer)
@@ -405,6 +413,8 @@ begin
        set status = 'removed', removed_at = now(), removed_reason = 'replaced'
      where reservation_id = v.reservation_id and guest_id = v.guest_id
        and status = 'stored' and id <> p_id
+       and link_id is not null
+       and submission_id = (select submission_id from guest_id_photos where id = p_id)
     returning id, drive_file_id)
   select coalesce(jsonb_agg(jsonb_build_object('id', id, 'driveFileId', drive_file_id)), '[]'::jsonb)
     into v_replaced from gone;

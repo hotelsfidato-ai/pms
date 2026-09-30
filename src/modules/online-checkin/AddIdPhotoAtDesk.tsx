@@ -59,11 +59,14 @@ export default function AddIdPhotoAtDesk({ stayId }: { stayId: string }) {
       ) : add.isSuccess ? (
         <>
           <p className="text-sm text-grey-600">
-            Added. It is kept, encrypted, for the owner, an administrator and the general manager.
+            Added. It is kept, encrypted, for the owner, an administrator and the general manager,
+            and only they can delete it.
           </p>
+          {/* A photo added here is kept at once and REPLACES NOTHING (1 October):
+              another is a second kept photo, not a replacement. */}
           <div>
             <Button type="button" variant="ghost" onClick={() => { add.reset(); setRound((n) => n + 1); }}>
-              Replace the photo
+              Add another photo
             </Button>
           </div>
         </>
