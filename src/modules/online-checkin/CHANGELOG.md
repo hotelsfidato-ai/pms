@@ -12,6 +12,56 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-09-30 · Three ways to prove it is you: the code by email, Continue with Google; nothing sent on opening (D27-207, D27-210)
+
+Branch `online-checkin/verify-photo-30sep`. Stages A and B of four; the ID photo (C) and
+the desk adding one (D) have their own entry when built.
+
+**Asked for** (the owner's D27-207, D27-210; the master's card): the guest chooses how to
+prove it is them - a code on WhatsApp as before, a code to the email on the booking, or
+Continue with Google where the account's verified email is the booking's. Nothing is sent
+until they choose. No account, no session, no guest role: rule 1 stands.
+**Shipped, A:** migration 167, all new functions. `POST /:token/code` reads only
+`{ by: "whatsapp" | "email" }`; `app.guest_email_code_make` issues the same kind of code (hash
+only, ten minutes, five wrong answers, one live code a link) to the stay's email, and
+`guest_code_answer` opens it unchanged. The answer shows the address masked ("a…@example.com");
+a room card shows none of it (D21-14). The page shows one button per way the booking has,
+"Ask the desk" with neither, and sends nothing on opening: the auto-send and its ten-minute
+bookkeeping are deleted. `pms-send-crs.json` has the code's email. The cannot-send sentence no
+longer names WhatsApp.
+**Shipped, B:** `POST /:token/google`. Google's signed answer is checked with
+google-auth-library against Google's published keys (signature, `aud` = `GOOGLE_CLIENT_ID`,
+`iss`, `exp`), then here: address verified, under ten minutes old. `app.guest_google_answer`
+compares the address with the stay's, letter case aside, and records the same unlock. Every
+refusal is one sentence; with no client id the route answers like an unknown link and the
+button is not drawn. No Firebase user is made. Google's script is fetched only when the guest
+presses "Continue with Google" (`googleSignIn.ts`); Google then draws its own button, so it is
+two presses. `OWNER-STEPS.md` (new): the Google client ID, and re-importing the workflow.
+**Found:** `roleGate.test.ts` pins the person-less write routes by name: the new route failed
+it until it was added to the list (MEMORY 351's rule, for a door). OCI-10: Google's script
+on the guest's page, accepted for the launch, with the no-script redirect written down.
+**Proved:** API, one scratch database, 167 migrations: `guestDoor` 28, `guestDoorBehindTheCode`
+32, `guards` 45, `roleGate` 63, `workflows` 24, `sending` 14. Web: online check-in 34/34;
+`npx tsc -b`, the API typecheck and strip-check clean. `db/tests/rerun.sh`: all 167
+re-runnable; `db/tests/run.sh`: 1,296 assertions. Seen to fail with the fault put back: the
+old door (4: the email send, no email, the masked hint, the room card's email); the old
+workflow file (1); a code sent on opening (4 web) and email always offered (1 web); `email_verified`,
+the age check and the database's comparison each removed (exactly those 3); Google's script
+fetched on opening (1 web), offered with no email (1 web). The signature, `aud`, `iss`, `exp`
+and unsigned cases are the library's own checks: they pass against a key made in the test,
+and the library was not broken to watch them fail.
+**Screens opened** at 375 px (`fidato_s38` at 167, API 8909, web 5309, read as text - the
+pane would not give a screenshot): a booking's link shows three buttons of 302 x 44, no
+sideways scroll, "We send six digits on WhatsApp to the number on the booking, ending 0011,
+or by email to a…@example.com."; opening sent nothing (one GET); "Send the code by email"
+made one POST and said where; the code opened the booking ("Verified on this phone"); with
+neither a number nor an email, the one sentence and no box. Continue with Google was seen
+drawn and was NOT pressed: the client id was made up, and nothing was asked of Google.
+**Not proved here:** a real Google sign-in (the owner's client ID, a real phone) and a real
+email (the owner's workflow).
+**Left open:** OCI-10. Stages C and D.
+**Commits:** 328c0ff4 (A), 6dab7241 (B), and this entry's own.
+
 ## 2026-09-30 · The check-in code goes through the CRS's workflow (D27-186)
 
 Branch `connections/crs-only-30sep`; the whole account is guest messages' CHANGELOG, same
