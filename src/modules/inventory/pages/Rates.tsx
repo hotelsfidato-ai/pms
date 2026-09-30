@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { Fragment, useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { ChevronLeft, ChevronRight, Ban, LogIn, LogOut, Check } from "lucide-react";
@@ -14,8 +14,8 @@ import {
 } from "@/components/ui";
 import { getInventory, setRestriction, type InventoryCell, type Restriction } from "@/modules/inventory/data/rates";
 import {
-  getPricing, setBasis, setBasePrice, setAddon,
-  type Pricing, type Addons, type PricingCell,
+  getPricing, getBreakup, setBasis, setBasePrice, setAddon,
+  type Pricing, type Addons, type PricingCell, type BreakupDay,
 } from "@/modules/inventory/data/pricing";
 import { getRateDays, type RateDay } from "@/modules/inventory/data/rateGrid";
 import { removeRate, setRackRate } from "@/modules/inventory/data/rateSetup";
@@ -83,6 +83,8 @@ export default function RatesPage() {
   const mayEdit = setsRates(useRole());
   const [from, setFrom] = useState<string | null>(null);
   const [view, setView] = useState<"prices" | "rooms">("prices");
+  /* "Set prices" (D27-206): the same dialog and call as a tapped price. */
+  const [setting, setSetting] = useState(false);
 
   const inventory = useQuery({
     queryKey: ["inventory", hotelId, from],
@@ -112,12 +114,17 @@ export default function RatesPage() {
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["inventory", hotelId] });
     void qc.invalidateQueries({ queryKey: ["pricing", hotelId] });
+    void qc.invalidateQueries({ queryKey: ["pricing-breakup", hotelId] });
     void qc.invalidateQueries({ queryKey: ["rate-days", hotelId] });
   };
 
   const dates = useMemo(
     () => (from ? Array.from({ length: DAYS }, (_, i) => addDays(from, i)) : []),
     [from]);
+
+  /* With a base room type chosen, only its base is typed; the rest follow. */
+  const offered = (pricing.data?.roomTypes ?? []).filter((t) =>
+    !pricing.data?.basis || pricing.data.basis.roomTypeId === t.id);
 
   if (inventory.isLoading || !from) {
     return (
@@ -174,6 +181,9 @@ export default function RatesPage() {
               { value: "rooms", label: "Rooms left" },
             ]}
           />
+          {mayEdit && view === "prices" && offered.length > 0 && (
+            <Button onClick={() => setSetting(true)}>Set prices</Button>
+          )}
           </>
         }
       />
@@ -203,6 +213,11 @@ export default function RatesPage() {
           <OlderPrices hotelId={hotelId} pricing={pricing.data} mayEdit={mayEdit} onDone={refresh} />
           <ReportLinks hotelId={hotelId} />
         </div>
+      )}
+      {setting && offered[0] && (
+        <BaseDialog hotelId={hotelId} types={offered}
+          target={{ roomTypeId: offered[0].id, roomType: offered[0].name, date: from, price: null }}
+          onClose={() => setSetting(false)} onDone={refresh} />
       )}
     </Page>
   );
@@ -585,6 +600,13 @@ function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
 }) {
   const [editing, setEditing] = useState<
     { roomTypeId: string; roomType: string; date: string; price: number | null } | null>(null);
+  /* Which room types are opened to their break-up rows; closed by default. */
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (id: string) => setOpen((was) => {
+    const next = new Set(was);
+    if (!next.delete(id)) next.add(id);
+    return next;
+  });
   const plan = "EP";            // the base: one guest, room only (D27-188)
 
   const at = useMemo(() => {
@@ -612,9 +634,19 @@ function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
       <GridShell dates={dates} corner="Base, one guest, room only">
         <tbody>
           {pricing.roomTypes.map((t) => (
-            <tr key={t.id}>
-              <th className="sticky left-0 z-10 bg-white border-b border-r border-grey-200 px-3 py-2 text-left text-sm font-medium text-ink-900">
-                {t.name}
+            <Fragment key={t.id}>
+            <tr>
+              <th className="sticky left-0 z-10 bg-white border-b border-r border-grey-200 p-0 text-left text-sm font-medium text-ink-900">
+                <button
+                  type="button"
+                  aria-expanded={open.has(t.id)}
+                  onClick={() => toggle(t.id)}
+                  className="w-full min-h-14 px-3 py-2 flex items-center gap-1.5 text-left cursor-pointer transition-colors duration-150 hover:bg-grey-100"
+                >
+                  <ChevronRight aria-hidden
+                    className={cn("size-4 shrink-0 text-grey-500 transition-transform duration-150", open.has(t.id) && "rotate-90")} />
+                  {t.name}
+                </button>
               </th>
               {dates.map((d) => {
                 const cell = at.get(`${t.id}/${d}`);
@@ -657,6 +689,8 @@ function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
                 );
               })}
             </tr>
+            {open.has(t.id) && <BreakupRows hotelId={hotelId} roomTypeId={t.id} dates={dates} />}
+            </Fragment>
           ))}
           {PERFORMANCE.map((p, i) => (
             <tr key={p.label} className={cn(i === 0 && "border-t-2 border-grey-300")}>
@@ -677,6 +711,11 @@ function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
         </tbody>
       </GridShell>
 
+      {mayEdit && (
+        <p className="-mt-2 text-sm text-grey-600">
+          Tap any price to change it, for that day or through a later day.
+        </p>
+      )}
       <div className="-mt-2 flex flex-wrap gap-x-6 gap-y-2 text-xs text-grey-600">
         <span><b className="text-ink-900">4,000</b> a base</span>
         <span className="text-grey-600">4,000 from the base room type</span>
@@ -696,11 +735,64 @@ function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
   );
 }
 
-function BaseDialog({ hotelId, target, onClose, onDone }: {
+/* ── A room type's break-up (D27-206) ────────────────────────────────
+   What the room really sells for on each day: for two guests on room only
+   and on each meal plan, and what a further guest adds. EVERY FIGURE IS
+   THE SERVER'S - app.tariff_for's, through GET /pricing?breakup= - so an
+   older "covers 2" price shows what it sells for and nothing is added up
+   here. Not set is a dash, never a zero. Read when the line is opened. */
+function BreakupRows({ hotelId, roomTypeId, dates }: {
+  hotelId: string; roomTypeId: string; dates: string[];
+}) {
+  const q = useQuery({
+    queryKey: ["pricing-breakup", hotelId, dates[0], roomTypeId],
+    queryFn: () => getBreakup(hotelId, dates[0]!, dates.length, roomTypeId),
+  });
+  const at = new Map((q.data ?? []).map((d) => [d.date, d]));
+  const guests = q.data?.[0]?.guests ?? 2;
+  const who = guests === 1 ? "1 guest" : `${guests} guests`;
+  const ROWS: { label: string; pick: (d: BreakupDay) => number | null }[] = [
+    /* A room that sleeps one: its base line is this row already. */
+    ...(guests > 1 ? [{ label: who, pick: (d: BreakupDay) => d.EP }] : []),
+    { label: `CP · ${who}`, pick: (d) => d.CP },
+    { label: `MAP · ${who}`, pick: (d) => d.MAP },
+    { label: `AP · ${who}`, pick: (d) => d.AP },
+    { label: `AI · ${who}`, pick: (d) => d.AI },
+    { label: "+ per extra adult", pick: (d) => d.extraAdult },
+    { label: "+ per extra child", pick: (d) => d.extraChild },
+  ];
+  return (
+    <>
+      {ROWS.map((r) => (
+        <tr key={r.label}>
+          <th className="sticky left-0 z-10 bg-grey-50 border-b border-r border-grey-200 pl-9 pr-3 py-1.5 text-left text-xs font-medium text-grey-600">
+            {r.label}
+          </th>
+          {dates.map((d) => {
+            const day = at.get(d);
+            return (
+              <td key={d} className="bg-grey-50 border-b border-grey-200 px-1 py-1.5 text-center text-sm tabular text-grey-700">
+                {q.isLoading ? "…" : figure(day ? r.pick(day) : null)}
+              </td>
+            );
+          })}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+/* A tapped price (one room type, from its day) and "Set prices" (`types`:
+   the room type and the first day are chosen here) - one dialog, one call. */
+function BaseDialog({ hotelId, target, types, onClose, onDone }: {
   hotelId: string;
   target: { roomTypeId: string; roomType: string; date: string; price: number | null };
+  types?: { id: string; name: string }[];
   onClose: () => void; onDone: () => void;
 }) {
+  const [typeId, setTypeId] = useState(target.roomTypeId);
+  const [from, setFrom] = useState(target.date);
+  const roomType = types?.find((t) => t.id === typeId)?.name ?? target.roomType;
   const [price, setPrice] = useState(target.price === null || target.price === 0 ? "" : String(target.price));
   /* X-1 (D27-120): 0 only when ticked Free; empty is not priced yet. */
   const [free, setFree] = useState(target.price === 0);
@@ -711,13 +803,13 @@ function BaseDialog({ hotelId, target, onClose, onDone }: {
 
   const nights = Math.max(1,
     Math.round((Date.parse(`${until}T00:00:00Z`)
-      - Date.parse(`${target.date}T00:00:00Z`)) / 86_400_000) + 1);
+      - Date.parse(`${from}T00:00:00Z`)) / 86_400_000) + 1);
 
   const save = async (clearing: boolean) => {
     setSaving(true);
     const res = await setBasePrice(hotelId, {
-      roomTypeId: target.roomTypeId,
-      from: target.date,
+      roomTypeId: typeId,
+      from,
       /* Half-open: `to` is the first day NOT covered. */
       to: addDays(until, 1),
       price: clearing ? null : free ? 0 : Number(price),
@@ -726,15 +818,36 @@ function BaseDialog({ hotelId, target, onClose, onDone }: {
     setSaving(false);
     if (!res.ok) return toast.error("Not saved", res.reason);
     toast.success(clearing ? "Base cleared" : "Base set",
-      `${target.roomType} · ${nights} ${nights === 1 ? "day" : "days"} from ${dateShort(target.date)}`);
+      `${roomType} · ${nights} ${nights === 1 ? "day" : "days"} from ${dateShort(from)}`);
     onClose();
     onDone();
   };
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent title={`${target.roomType} · base`}>
+      <DialogContent title={types ? "Set prices" : `${roomType} · base`}>
         <div className="space-y-4">
+          {types && (
+            <>
+              <Field label="Room type">
+                {(f) => (
+                  <NativeSelect {...fieldProps(f)} value={typeId}
+                    onChange={(e) => setTypeId(e.target.value)}>
+                    {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </NativeSelect>
+                )}
+              </Field>
+              <Field label="From" hint="The first day this base applies to.">
+                {(f) => (
+                  <Input {...fieldProps(f)} type="date" value={from}
+                    onChange={(e) => {
+                      setFrom(e.target.value);
+                      if (until < e.target.value) setUntil(e.target.value);
+                    }} />
+                )}
+              </Field>
+            </>
+          )}
           <Field label="Base per night" hint="One guest, room only. The add-ons follow it.">
             {(f) => (
               <Input {...fieldProps(f)} ref={first}
@@ -746,14 +859,14 @@ function BaseDialog({ hotelId, target, onClose, onDone }: {
           <Checkbox label="Free" checked={free} onCheckedChange={setFree} />
           <Field label="Through" hint="The last day this base applies to.">
             {(f) => (
-              <Input {...fieldProps(f)} type="date" min={target.date}
+              <Input {...fieldProps(f)} type="date" min={from}
                 value={until} onChange={(e) => setUntil(e.target.value)} />
             )}
           </Field>
           <p className="text-sm text-grey-600">
             {nights === 1
-              ? `${dateShort(target.date)} only.`
-              : `${nights} days, ${dateShort(target.date)} through ${dateShort(until)}.`}
+              ? `${dateShort(from)} only.`
+              : `${nights} days, ${dateShort(from)} through ${dateShort(until)}.`}
           </p>
           <div className="flex gap-2">
             <DialogClose asChild>
