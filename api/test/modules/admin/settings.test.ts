@@ -90,7 +90,7 @@ describe("the old flat tax is gone", () => {
     const tax = groups.find((g) => g.taxInUse);
     expect(tax, "no group carries the tax in use").toBeDefined();
     expect(tax!.title).toBe("Tax and billing");
-    expect(tax!.note).toMatch(/Room types/);
+    expect(tax!.note).toMatch(/Configuration/);
   });
 });
 
@@ -121,6 +121,6 @@ describe("the readers the screens rely on answer the people who open them", () =
     const res = await get(id(), "/tax");
     expect(res.status, await res.clone().text()).toBe(200);
     const body = (await res.json()) as { kinds: { kind: string }[] };
-    expect(body.kinds.map((k) => k.kind)).toEqual(["room", "restaurant", "bar", "banquet", "spa", "other"]);
+    expect(body.kinds.map((k) => k.kind)).toEqual(["room", "restaurant", "bar", "banquet", "spa", "laundry", "other"]);
   });
 });

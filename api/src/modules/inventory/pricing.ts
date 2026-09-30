@@ -66,6 +66,9 @@ const num = (v: string | null) => (v === null ? null : Number(v));
 pricing.get("/:code/pricing", async (c) => {
   const fromParam = c.req.query("from");
   const days = Math.min(Math.max(Number(c.req.query("days") ?? 31), 1), 62);
+  /* One meal plan's cells only (the Rates calendar asks for the base's):
+     every plan is six price reads a room type a day. */
+  const plan = c.req.query("plan") ?? null;
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -171,7 +174,7 @@ pricing.get("/:code/pricing", async (c) => {
            from generate_series($2::date, $2::date + ($3::int - 1), interval '1 day') d
        ),
        types as (select id from room_types where hotel_id = $1 and is_active),
-       plans as (select code from meal_plans)
+       plans as (select code from meal_plans where $4::text is null or code = $4)
        select d.for_date::text, t.id::text as room_type_id, p.code as meal_plan,
               f.price::text, f.covers, f.source
          from days d
@@ -179,7 +182,7 @@ pricing.get("/:code/pricing", async (c) => {
          cross join plans p
          cross join lateral app.price_for(t.id, p.code, d.for_date) f
         order by d.for_date, t.id, p.code`,
-      [hotelId, from, days],
+      [hotelId, from, days, plan],
     );
 
     return {

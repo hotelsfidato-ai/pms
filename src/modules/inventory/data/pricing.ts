@@ -90,11 +90,12 @@ const EMPTY: Pricing = {
 
 /** The setup and each day's prices, for a run of dates. */
 export async function getPricing(
-  hotelId: string, from: string, days = 14,
+  hotelId: string, from: string, days = 14, plan?: string,
 ): Promise<Pricing> {
   if (!hotelId) return EMPTY;
   return fetchOr<Pricing>(
-    `/api/hotels/${hotelId}/pricing?from=${encodeURIComponent(from)}&days=${days}`,
+    `/api/hotels/${hotelId}/pricing?from=${encodeURIComponent(from)}&days=${days}`
+      + (plan ? `&plan=${encodeURIComponent(plan)}` : ""),
     EMPTY,
   );
 }

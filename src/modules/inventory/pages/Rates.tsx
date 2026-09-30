@@ -98,7 +98,9 @@ export default function RatesPage() {
 
   const pricing = useQuery({
     queryKey: ["pricing", hotelId, from],
-    queryFn: () => getPricing(hotelId, from!, DAYS),
+    /* The base plan's cells only: the calendar shows the base (EP). An older
+       base on another plan shows as it is until the setup is saved. */
+    queryFn: () => getPricing(hotelId, from!, DAYS, "EP"),
     enabled: Boolean(from),
   });
   const days = useQuery({
@@ -182,6 +184,7 @@ export default function RatesPage() {
           dates={dates}
           cells={inventory.data.cells}
           restrictions={inventory.data.restrictions}
+          mayEdit={mayEdit}
           onDone={refresh}
         />
       ) : pricing.isLoading || !pricing.data ? (
@@ -247,9 +250,11 @@ function GridShell({ dates, children, corner }: {
 
 /* ── Inventory ────────────────────────────────────────────────── */
 
-function InventoryGrid({ hotelId, dates, cells, restrictions, onDone }: {
+function InventoryGrid({ hotelId, dates, cells, restrictions, mayEdit, onDone }: {
   hotelId: string; dates: string[];
   cells: InventoryCell[]; restrictions: Restriction[];
+  /* Restrictions are set by the rate setters only, as prices are. */
+  mayEdit: boolean;
   onDone: () => void;
 }) {
   const [editing, setEditing] = useState<
@@ -305,11 +310,12 @@ function InventoryGrid({ hotelId, dates, cells, restrictions, onDone }: {
                   >
                     <button
                       type="button"
+                      disabled={!mayEdit}
                       onClick={() => setEditing({
                         roomTypeId: t.id, roomType: t.name, date: d })}
                       className={cn(
-                        "w-full min-h-14 px-1 py-1.5 cursor-pointer",
-                        "transition-colors duration-150 hover:bg-grey-100",
+                        "w-full min-h-14 px-1 py-1.5",
+                        mayEdit && "cursor-pointer transition-colors duration-150 hover:bg-grey-100",
                         closed && "bg-brand-red-50",
                         !closed && none && "bg-brand-yellow-50",
                       )}
@@ -468,7 +474,9 @@ function SetupDialog({ hotelId, pricing, onClose, onDone }: {
   const save = async () => {
     setSaving(true);
     const steps: (() => Promise<{ ok: true } | { ok: false; reason: string }>)[] = [];
-    if (baseType !== (pricing.basis?.roomTypeId ?? "")) {
+    /* Also when an older base sits on another meal plan: the base is room only (D27-188). */
+    if (baseType !== (pricing.basis?.roomTypeId ?? "")
+        || (baseType !== "" && pricing.basis?.mealPlan !== "EP")) {
       steps.push(() => setBasis(hotelId, baseType || null));
     }
     if (baseType) {
@@ -523,7 +531,7 @@ function SetupDialog({ hotelId, pricing, onClose, onDone }: {
 
           {baseType && pricing.roomTypes.filter((t) => t.id !== baseType).map((t) => (
             <div key={t.id} className="grid grid-cols-[1fr_auto] gap-3 items-end">
-              <Field label={`${t.name}: more than the base`} hint="Empty is not set - a dash, not sold.">
+              <Field label={`${t.name}: more than the base`}>
                 {(f) => (
                   <Input {...fieldProps(f)} type="number" inputMode="decimal" numeric
                     value={diffs[t.id]!.value} placeholder="-"
@@ -577,7 +585,7 @@ function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
 }) {
   const [editing, setEditing] = useState<
     { roomTypeId: string; roomType: string; date: string; price: number | null } | null>(null);
-  const plan = pricing.basis?.mealPlan ?? "EP";
+  const plan = "EP";            // the base: one guest, room only (D27-188)
 
   const at = useMemo(() => {
     const m = new Map<string, PricingCell>();
