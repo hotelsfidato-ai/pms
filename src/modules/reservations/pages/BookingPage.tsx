@@ -324,20 +324,24 @@ export default function BookingPage() {
     })),
   });
 
-  /* A typed rate that includes GST, split by the server (D27-195). */
+  /* A rate that includes GST, split by the server (D27-195): the typed rate,
+     or with none typed the list price the calendar gives (D27-199). */
+  const allIn = (l: Line, i: number): number | null =>
+    l.rate.trim() !== "" ? Number(l.rate) : tariffs[i]?.data?.nights[0]?.total ?? null;
   const splits = useQueries({
-    queries: lines.map((l) => ({
-      queryKey: ["before-gst", hotelId, l.rate],
-      queryFn: () => getRateBeforeGst(hotelId, Number(l.rate)),
-      enabled: l.inclusive && !l.comp && Number(l.rate) > 0,
+    queries: lines.map((l, i) => ({
+      queryKey: ["before-gst", hotelId, allIn(l, i)],
+      queryFn: () => getRateBeforeGst(hotelId, allIn(l, i) ?? 0),
+      enabled: l.inclusive && !l.comp && (allIn(l, i) ?? 0) > 0,
     })),
   });
   const inclusiveNote = (l: Line, i: number): string | null => {
     const s = splits[i]?.data;
-    if (!l.inclusive || l.comp || !(Number(l.rate) > 0) || !s) return null;
+    const gross = allIn(l, i);
+    if (!l.inclusive || l.comp || gross === null || !(gross > 0) || !s) return null;
     if (!s.ok) return s.reason;
-    return s.total < Number(l.rate)
-      ? `${moneyPrecise(Number(l.rate))} can't split exactly: the bill will say ${moneyPrecise(s.total)} a night.`
+    return s.total < gross
+      ? `${moneyPrecise(gross)} can't split exactly: the bill will say ${moneyPrecise(s.total)} a night.`
       : null;
   };
 
@@ -356,7 +360,13 @@ export default function BookingPage() {
     if (first === null) {
       return { nightly: null, unpriced: t.nights[0]?.unpriced ?? t.unpriced ?? "this party", differs: false };
     }
-    return { nightly: afterDiscount(first, pct), unpriced: null, differs: t.nights.some((n) => n.total !== first) };
+    /* The list price as the all-in figure: the rate before GST (D27-199). */
+    const split = l.inclusive ? splits[i]?.data : undefined;
+    if (l.inclusive && !split?.ok) return { nightly: null, unpriced: null, differs: false };
+    return {
+      nightly: afterDiscount(split?.ok ? split.pre : first, pct), unpriced: null,
+      differs: t.nights.some((n) => n.total !== first),
+    };
   });
 
   const taxes = useQueries({
@@ -502,7 +512,7 @@ export default function BookingPage() {
         adults: l.adults, children: l.children, rooms: l.rooms,
         ...(l.comp ? { complimentary: true } : {}),
         ...(l.comp || l.rate.trim() === "" ? {} : { agreedRate: Number(l.rate) }),
-        ...(!l.comp && l.inclusive && l.rate.trim() !== "" ? { rateIncludesGst: true } : {}),
+        ...(!l.comp && l.inclusive ? { rateIncludesGst: true } : {}),
       })),
     });
 
@@ -1112,25 +1122,26 @@ function RoomLine({
           onChange={(adults) => onChange({ ...line, adults })} />
         <Counter label="Children" value={line.children} min={0}
           onChange={(children) => onChange({ ...line, children })} />
-        <Field label="Rate" hint={line.comp ? "Complimentary." : "Empty uses the calendar."}>
-          {(f) => (
-            <Input {...fieldProps(f)} type="number" inputMode="decimal" min={0}
-              value={line.comp ? "" : line.rate} placeholder="-" disabled={line.comp}
-              onChange={(e) => onChange({ ...line, rate: e.target.value })}
-              className="h-12 text-base tabular" />
+        <div data-inclusive>
+          <Field label="Rate" hint={line.comp ? "Complimentary." : "Empty uses the calendar."}>
+            {(f) => (
+              <Input {...fieldProps(f)} type="number" inputMode="decimal" min={0}
+                value={line.comp ? "" : line.rate} placeholder="-" disabled={line.comp}
+                onChange={(e) => onChange({ ...line, rate: e.target.value })}
+                className="h-12 text-base tabular" />
+            )}
+          </Field>
+          {/* A tick beside the rate (D27-199): the typed rate, or the list price
+              with none typed, already includes GST and is split by the slab. */}
+          {!line.comp && (
+            <Checkbox checked={line.inclusive} onCheckedChange={(inclusive) => onChange({ ...line, inclusive })}
+              label="Rate includes GST" className="mt-2" />
           )}
-        </Field>
+        </div>
       </div>
 
-      {!line.comp && (
-        <div data-inclusive>
-          <Switch checked={line.inclusive} onCheckedChange={(inclusive) => onChange({ ...line, inclusive })}
-            label="Rate includes GST"
-            description={line.inclusive
-              ? "Split each night into the rate and the GST by the slab; the bill adds up to it."
-              : "Off: GST is added on top of the rate."} />
-          {inclusiveNote && <p className="mt-1.5 text-sm text-warning-dark" data-inclusive-note>{inclusiveNote}</p>}
-        </div>
+      {!line.comp && inclusiveNote && (
+        <p className="text-sm text-warning-dark" data-inclusive-note>{inclusiveNote}</p>
       )}
 
       <div className="grid gap-2 sm:grid-cols-2 items-end">
