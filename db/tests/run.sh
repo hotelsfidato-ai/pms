@@ -147,6 +147,13 @@ for f in "$ROOT"/db/migrations/*.sql; do
     exit 1
   fi
 done
+# As db/migrate.sh does: every run ends with 014's ownership (db/ownership.sql).
+out=$(PGPASSWORD=$SUPERPASS "$PSQL" $S -d "$DB" -v ON_ERROR_STOP=1 -q -f "$ROOT/db/ownership.sql" 2>&1)
+if [ $? -ne 0 ]; then
+  red "  ✗ ownership.sql"
+  echo "$out" | grep -iE "ERROR|HINT" | head -4 | sed 's/^/      /'
+  exit 1
+fi
 green "  ✓ $(ls "$ROOT"/db/migrations/*.sql | wc -l | tr -d ' ') migrations applied"
 
 echo "── harness + suite ────────────────────────────────────────"

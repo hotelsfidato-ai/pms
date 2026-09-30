@@ -139,6 +139,9 @@ echo "── migrations ──────────────────�
 FILES=()
 for f in "$ROOT"/db/migrations/*.sql; do FILES+=(-f "$f"); done
 N=$(( ${#FILES[@]} / 2 ))
+# LAST, in the same transaction: every run ends with 014's ownership, so a
+# first deploy is never the mixed state a definer is refused in (db/ownership.sql).
+FILES+=(-f "$ROOT/db/ownership.sql")
 
 out=$("$PSQL" $S -d "$DB" -1 -v ON_ERROR_STOP=1 -q "${FILES[@]}" 2>&1)
 if [ $? -ne 0 ]; then
