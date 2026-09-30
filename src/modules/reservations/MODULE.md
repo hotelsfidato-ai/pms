@@ -319,8 +319,8 @@ type, meal plan, party, rate, an optional room), the ID and an advance;
 where Settings has it on (admin's "New booking" card, migration 159: on until
 a hotel turns it off). GST folded into Company and Extras left the page on 30
 September (D27-187, D27-193); inclusions are added on the booking. A cash
-advance with no drawer of the clerk's own open is said under Advance and holds
-the buttons (D27-118). The Booked card and the panel's menu have View voucher
+advance needs no open drawer: it opens by itself on the first cash (D27-200;
+the hold of D27-193 went). The Booked card and the panel's menu have View voucher
 (`viewVoucher`, guest messages' `voucher.pdf`); the panel's menu has Change
 rate for a booking still to arrive (finance's `ChangeRateDialog`). Each room
 line has a "Rate includes GST" tick under its rate (off by default, D27-195,

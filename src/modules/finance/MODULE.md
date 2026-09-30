@@ -167,6 +167,7 @@ be reversed once") is still in `api/test/`.
 | File | What it does |
 |---|---|
 | `postings.ts` | a stay's lines and balance (`getFolioPostings`, `getFolioBalance`), post a charge, reverse one, settle; asks `src/lib/rules.ts` (`canPostCharge`, `canReverse`) first |
+| `../sections.ts` | THE BILL IN SECTIONS (D27-200): `sectionOf` (a line's section by its category and tax scheme) and `billSections` (each section's lines, subtotal and tax rows). The Bill tab and `BillPrint` both read it; `useStayDue` (FolioPanel) is the one due figure for the headline, the closing row and the stay panel's foot |
 | `folios.ts` | one stay's folio (`getFolio`), the open folios (`listOpenFolios`), split billing (`listStayFolios`, `openFolio`, `transferPosting`, `listBillingCompanies`) |
 | `billing.ts` | payments and payments by method, billable stays, the invoice series, invoices, issuing one, a credit note |
 | `cashier.ts` | the drawer: read, open, money in or out, count, close |

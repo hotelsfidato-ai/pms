@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-30 · The cash advance hold goes (D27-200 item 6)
+
+Branch `fix/booking-bill-30sep`, on the master's go once the Cash lane's 165 was in cp6. A receptionist's drawer now opens by itself on the first cash, so the hold of D27-193 (RES-12) is removed from `pages/BookingPage.tsx`: no drawer read, no sentence, no held buttons; finance's `getCashierDrawer` export went with it. **Proved:** onePage 14/14, the flipped case failing on the old page (the server says no drawer is open; the advance is taken and the page never asks). Screen: a ₹1,500 cash advance with no drawer open - "Advance of ₹1,500.00 taken" on the Booked card, "Received - Cash" on the Bill tab, and Cashiering showing the drawer open since 14:37 at a ₹0 float with the receipt in it.
+
 ## 2026-09-30 · "Rate includes GST" covers the list price, as a tick beside the rate (D27-199)
 
 Branch `fix/booking-bill-30sep`, the booking and bill lane. **Shipped:** `api/src/modules/reservations/book.ts` - the split block moved to after the tariff branch, so with no rate typed the list price is the all-in figure too (₹3,699 = ₹3,522.86 + ₹176.14; `app.tariff_for` untouched; the gap refusal and the paisa rule as before). `pages/BookingPage.tsx` - the page splits the calendar's first-night price the same way and sends `rateIncludesGst` without a rate; the sliding Switch is the kit's Checkbox under the Rate field, whose column is wider so the tick sits on one line. **Proved (failing on the old code first):** inclusiveGst 6/6 (the list-price case), onePage 14/14. Screen, desktop and 390 px: ₹3,699 list with the tick reads ₹3,522.86 + ₹176.14, due ₹3,699.00; the booking kept 3,522.86.

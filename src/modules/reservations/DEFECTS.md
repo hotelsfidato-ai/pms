@@ -31,7 +31,9 @@ confirms the whole group, so it cannot happen from the desk today.
 
 The owner's walk-through booked 1-3 October on the master's demo, whose business date was 25 August. Arrivals shows the business date and the fourteen days after it, so the booking was in neither view, and nothing said why. It was not the cache (the page invalidates every query on save) and not a status. **Fixed** at the cause: `npm run demo` passes `--today` and the demo's dates move onto today (`api/scripts/demoDate.ts`); the API test harness keeps 25 August. **Rule:** a demo whose day is not today makes every date the owner types look like a bug; reproduce with the owner's own rows before theorising.
 
-### RES-12 · A cash advance refused at booking was one amber line under "Booked" - FIXED 30 September (D27-187, D27-193)
+### RES-12 · A cash advance refused at booking was one amber line under "Booked" - FIXED 30 September (D27-187, D27-193); the hold REMOVED the same day (D27-200)
+
+**Since D27-200:** the drawer opens by itself on the first cash (the Cash lane's 165), so cash is never refused and the hold below was taken out again. What follows is the record of the fix as first made.
 
 D27-118 refuses cash without the clerk's own open drawer, and the master's demo had never had one: the booking saved and the advance did not, and the owner read the bill as missing it. A UPI advance did reach the bill. **Fixed:** with Paid by Cash and no drawer of yours open, the reason shows under the Advance field and the three buttons are held (`getCashierDrawer`, finance's front door). D27-118 is unchanged.
 
