@@ -11,6 +11,40 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · D27-189 part 2: a dish's variation types on one form (D27-192, D27-195)
+
+**Asked for:** the owner's D27-189 and their answers of 30 September (D27-192, D27-195). "Add variation" is a simple form: pick a type, Size, Quantity or Option (an Option headed by the manager, "Spice level"); list its choices, each with a price or Free. A dish may have SEVERAL types, each a required single choice. The first type carries the full price; each further type's choices add +₹ or are Free. The same name may be in two types. Add-ons stay the Add-on groups, with the Free tick. A 0 is refused unless ticked Free (D27-120 replaces D21-42). The waiter picks in one pop-up. A carried-over dish sells as "Variation" until its type is picked. The master approved the model before any of it was written. The owner stopped work mid-way; it resumed after merging cp6 (rates 162, cash 163).
+**Shipped:**
+- Migration 164, "several variation types per dish" (written as 182, renumbered at the master's word). `pos_item_variations` gains `type_no` (default 1), `kind` and `heading`, with a check. A name is unique within its type, `(item_id, type_no, label)`. `pos_order_lines` gains `extra_choice_ids`. 045's trigger now asks one choice of every type, all of this dish. The defaults carry every existing variation, the menu import and the demo loader over as "type 1, not picked". The two `on conflict` lines (`till.ts` import, `api/scripts/load-demo.ts`) name the new key.
+- `till.ts`:
+  - One `PUT /till/menu/items/:id/variations` saves the whole set in one transaction. A choice keeps its row by type and name (a removed one comes back), else by its id; one left out is switched off; emptying the set asks for the dish's price. The three per-variation routes, their data functions and their `roleGate.ts` lines are gone.
+  - `addOneLine` takes `moreChoiceIds`: one per further type. The price is the first choice plus the others, worked in paise; the name reads every choice ("Paneer Tikka (Large, Extra hot)"); the match includes them. A + on a sent dish carries them.
+  - Add-on options take `free`; the add-ons file refuses 0.
+  - "No price" now says "Type a price, or tick Free."
+- Screens:
+  - Menu: the form ("Add variation" / "Change variations"). Type buttons; Heading for an Option; names filled in, never prices; "Price" on the first type, "Adds" on the others; Free on each choice; "Remove type" (the next one's figures cleared, to be typed again as the price); "Add another type". Under the dish, one line per type. An add-on option has Free, and a ₹0 one reads "Free".
+  - The pop-up: a row per type under its heading; "+₹20" / "Free"; Add waits for one of each; with two or more types it says "Choose one of each, and any sides."
+  - `pricing.ts` (`typesOf`, `headingOf`, the added price); the pad keeps `moreChoiceIds` (`src/lib/draft.ts`, one optional field, the master's yes).
+**Proved:**
+- Database (before the merge, on the branch): `db/tests/run.sh`, all 1,280 assertions. "pos variation types" 8/8, and 3 of them fail with the trigger section taken out. `db/tests/rerun.sh`: 162 migrations re-runnable. After the merge the master runs both in the full gates.
+- `fidato_s46` migrated to 164 with the master's OK: 116 → 118 tables. The demo's two variations came over as type 1, not picked.
+- API, each file on its own after the merge:
+  - `padTotal` 4, including the new two-type case: the pad's ₹480 agrees with the bill.
+  - `variationTypes` 5; all 5 fail on the pre-PUT `till.ts`.
+  - `menuOptions` 8, `sameDish` 4, `restaurantFixes` 12, `till` 84.
+  - `tillBatch` 5; `roleGate` 63, with the PUT pinned to the kitchen manager and the menu-route floor at 23 (three routes became one).
+  - strip-check: 165 files load.
+- Web: `variationTypes.test.tsx` 2 and `ownerDecisions.test.tsx` 22; the 6 new ones fail on the pre-form client. `src/modules/pos` + `src/test` + primaryAction + repositories + navigation: 125 passed, migration numbers included. `npx tsc -b --force` exit 0; api `tsc --noEmit` exit 0.
+- **Opened, 30 September, as the GM on `fidato_s46`:**
+  - Menu: Bhaaji Pau read "Variation: Oil ₹300.00 · Butter ₹400.00". Its form said "Pick Size, Quantity or Option. It sells as "Variation" until you do", with Save off. Option kept the names and asked for a Heading; "Cooked in" saved, and the dish then read "Cooked in: Oil ₹300.00 · Butter ₹400.00".
+  - Paneer Tikka: Size filled in Small / Medium / Large with blank prices and Save off. It was made Regular ₹320 / Large ₹480, plus an Option "Spice level": Regular ticked Free (the same name as in Size) and Extra hot 20. It saved and read "Size: Regular ₹320.00 · Large ₹480.00", "Spice level: Regular Free · Extra hot +₹20.00", with "-" for its own price.
+  - Tables, AC7: the pop-up showed Size and Spice level rows, "+₹20" and "Free". Large alone was ₹480 with Add off; with Extra hot, ₹500. Two of the same read one line, "Large, Extra hot · 2 · ₹1,000". Large with a Regular spice was its own line. Sent as KOT 5; the Kitchen screen read "2 × Paneer Tikka (Large, Extra hot)" and "1 × Paneer Tikka (Large, Regular)".
+  - The docket: this tab was switched on as the KOT station, with `window.print` recorded. The reprint of KOT 5 put on the paper "KOT - 5 · Dine In · Table No: AC7 · Paneer Tikka (Large, Extra hot) 2 · Paneer Tikka (Large, Regular) 1", with no prices. The station was switched off again.
+  - The Till (a new order, Lane T2): the same choices twice read "2× Paneer Tikka (Large, Extra hot) ₹1,000".
+  - The Terminal at 768 x 1025, AC7: + on the sent "Paneer Tikka (Large, Extra hot)" made one unsent line of 1 (₹500) with the spice carried; + again made it 2; the tile's pop-up with the same choices made it 3 (₹1,500).
+  - Some adds (the second on Tables, the Till's two, the Terminal's tile) were driven by script clicks on the page's own buttons, because the pane's viewport kept jumping. The rest were real clicks.
+**Left open:** the menu import cannot carry a second type (not asked for).
+
 ## 2026-09-30 · D27-189 part 1: the same dish tapped again is one more of it (POS-27, POS-28)
 
 **Asked for:** the owner's D27-189, with their answers of 30 September (D27-192, Q7 and Q8). An unsent dish tapped again adds to its quantity, and it has a − to reduce it. Once the kitchen has a dish, more of it is a new line for the next KOT (D27-148). A dish with a variation or sides is the same only when its choices are the same. Branch `pos/tap-variations-30sep` from cp6 `c01b150`, copy `.claude\worktrees\admiring-goldstine-34db29`, database `fidato_s46`, API 8905, web 5305.
@@ -33,7 +67,7 @@ Work that touches the core or several services still goes in the root
   - Tables, AC6: three taps read "Butter Roti 3, Rs 120". Bhaaji Pau (Butter) + Onions twice read one line of 2. The second of those two was added by a script click on the pop-up's buttons, because the dialog sat mid-animation. Sent, KOT 4 held Butter Roti 3, Dal Tadka 3, and Bhaaji Pau (Butter) 2 with Onions 2.
   - The Till, order 20260825-3: − took Butter Roti from 2 to 1. The same Bhaaji Pau choices joined the first line, giving "2× Bhaaji Pau (Butter)" and "2× Sides: Onions".
   - The Terminal at tablet width (768 x 1024), AC6 all sent: two presses of + on Butter Roti gave one new "Butter Roti 2". + on Bhaaji Pau gave a new Bhaaji Pau (Butter) 1 with its Onions 1. The sides had no −/+.
-**Left open:** part 2, the variation form (several types per dish, D27-192), waits on the master's check of the model.
+**Left open:** part 2, the variation form - done the same day, the entry above.
 
 ---
 

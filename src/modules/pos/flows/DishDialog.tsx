@@ -104,7 +104,7 @@ export function DishDialog({
         title={item.name}
         description={
           needsVariation
-            ? "Choose one, and any sides."
+            ? (types.length > 1 ? "Choose one of each, and any sides." : "Choose one, and any sides.")
             : "Add sides, or a note for the kitchen."
         }
         footer={
