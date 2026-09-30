@@ -26,7 +26,7 @@ import {
   listCompanies, listBookingSources, ReturningGuest,
   GuestIdFields, guestIdState, guestIdPayload, noGuestId, type GuestId,
 } from "@/modules/guests";
-import { getCashierDrawer, getRateBeforeGst, getTaxRate, listBillingCompanies, settle } from "@/modules/finance";
+import { getRateBeforeGst, getTaxRate, listBillingCompanies, settle } from "@/modules/finance";
 import { assignRoom, assignableRooms, checkIn, earlyArrival } from "@/modules/front-desk";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -416,19 +416,10 @@ export default function BookingPage() {
   const picked = checkRooms.data?.find((r) => r.number === first?.room);
 
   const advanceAmount = advance.trim() === "" ? null : Number(advance);
-  /* Cash goes only into the clerk's own open drawer (D27-118): said here,
-     before the booking is saved without it (D27-193). Unreadable is not
-     "closed": the payment door still refuses. */
-  const drawer = useQuery({
-    queryKey: ["cashier-drawer", hotelId],
-    queryFn: () => getCashierDrawer(hotelId),
-    enabled: advanceAmount !== null && advanceBy === "Cash",
-  });
+  /* No hold on cash (D27-200): the taker's drawer opens by itself on the
+     first cash after the night audit, so the payment door never refuses it. */
   const advanceProblem = advanceAmount !== null && !(Number.isFinite(advanceAmount) && advanceAmount > 0)
-    ? "An advance is an amount above 0."
-    : advanceAmount !== null && advanceBy === "Cash" && drawer.data && !drawer.data.shift
-      ? "Cash goes into your open drawer: open it in Cashiering, or take it by card or UPI."
-      : null;
+    ? "An advance is an amount above 0." : null;
 
   /* RULE 6: a button that cannot be used says why, under it. */
   const saveReason =
@@ -783,7 +774,6 @@ export default function BookingPage() {
                   )}
                 </Field>
               </div>
-              {advanceProblem && <p className="mt-2 text-sm text-warning-dark" data-advance-problem>{advanceProblem}</p>}
             </CardBody>
           </Card>
 

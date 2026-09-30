@@ -23,16 +23,17 @@ import BookingPage from "@/modules/reservations/pages/BookingPage";
    ══════════════════════════════════════════════════════════════════ */
 
 const calls: Array<{ method: string; path: string; body: Record<string, unknown> }> = [];
+/** Every read the page asked for, by path. */
+const asked: string[] = [];
 let modules: Record<string, boolean> = {};
 let refuseCheckIn = false;
-let drawerOpen = false;
 
 beforeEach(() => {
   startSignedIn();
   calls.length = 0;
+  asked.length = 0;
   modules = {};
   refuseCheckIn = false;
-  drawerOpen = false;
   vi.spyOn(apiModule, "api").mockImplementation(async (path: string, init?: RequestInit) => {
     const method = init?.method ?? "GET";
     if (method !== "GET") {
@@ -51,6 +52,11 @@ beforeEach(() => {
         return { ok: true, room: "101", guest: "Anna Smith", typeChanged: false, typeName: "Deluxe" } as never;
       }
       return { ok: true } as never;
+    }
+    asked.push(path);
+    /* What the server says before anybody's first cash of the day (D27-200). */
+    if (path.endsWith("/cashier-shift")) {
+      return { businessDate: "2026-08-25", shift: null, waiting: 0, colleagues: [], previous: null } as never;
     }
     if (path.includes("/leads/tok-good/booking")) {
       return { name: "Meera Joshi", phone: "9812345678", bookingSourceId: "src-1",
@@ -94,10 +100,6 @@ beforeEach(() => {
         : gross === 3000 ? { ok: true, pre: 2857.14, rate: 5, total: 3000 }
         : gross === 502 ? { ok: true, pre: 478.09, rate: 5, total: 501.99 }
         : { ok: false, reason: "An inclusive rate between ₹7,875 and ₹8,850 can't be split under the GST slab: type ₹7,875 or less, or more than ₹8,850." }) as never;
-    }
-    if (path.endsWith("/cashier-shift")) {
-      return { businessDate: "2026-08-25", shift: drawerOpen ? { id: "d-1" } : null,
-               colleagues: [], previous: null } as never;
     }
     if (path.endsWith("/billing-companies")) {
       return [{ id: "co-1", name: "Tata Motors", gstin: "27AAACT2727Q1ZW" }] as never;
@@ -224,19 +226,27 @@ describe("the advance", () => {
     expect(calls.filter((c) => c.path.endsWith("/confirmation"))).toEqual([]);
   });
 
-  it("in cash, holds the buttons until the clerk's own drawer is open (D27-118, D27-193)", async () => {
+  /* D27-200: the hold of D27-193 went. A receptionist's drawer opens by itself
+     on the first cash, so a cash advance with no drawer open is simply taken. */
+  it("in cash with no drawer open, is taken and reaches the bill", async () => {
     open();
     await screen.findByRole("heading", { name: "Guest" });
     type(/^Guest or company/, "Anna Smith");
     pick(/^Booking source/, "src-1");
     type(/^Amount/, "2000");
-    const said = "Cash goes into your open drawer: open it in Cashiering, or take it by card or UPI.";
-    await screen.findByText(said, { selector: "[data-advance-problem]" });
-    expect(button("Save booking").disabled).toBe(true);
+    /* The summary has taken the advance in: the page has settled. It neither
+       asks whether a drawer is open nor holds the buttons when none is. */
+    await screen.findByText("- ₹2,000.00");
+    await new Promise((r) => setTimeout(r, 50));
+    expect(asked.filter((path) => path.endsWith("/cashier-shift"))).toEqual([]);
+    expect(document.body.textContent).not.toContain("Cash goes into your open drawer");
+    expect(button("Save booking").disabled).toBe(false);
+    fireEvent.click(button("Save booking"));
 
-    pick(/^Paid by/, "UPI");
-    await waitFor(() => expect(button("Save booking").disabled).toBe(false));
-    expect(screen.queryAllByText(said)).toEqual([]);
+    await screen.findByText(/Advance of ₹2,000.00 taken/);
+    expect(screen.queryByText(/Advance not taken/)).toBeNull();
+    const paid = calls.find((c) => c.path.endsWith("/stays/r-1/payments"));
+    expect(paid?.body).toMatchObject({ method: "Cash", amount: 2000, heldAsCredit: true });
   });
 });
 
