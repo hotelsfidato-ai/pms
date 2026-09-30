@@ -31,6 +31,12 @@ const half = (rate: number) => String(Math.round((rate / 2) * 100) / 100);
     own page has no sign-in to ask for them, so it prints the hotel's name alone. */
 export function BillPrint({ bill, title, group }: { bill: StayBill; title: string; group?: GroupSettings }) {
   const { hotel, stay } = bill;
+  /* TONIGHT'S NIGHT, NOT POSTED YET (the owner's D27-204): shown as "to be
+     posted tonight" and counted in the amount due. The posted sections and
+     totals above it do not change; the figures are the server's, added in
+     paise. */
+  const tonight = bill.tonight;
+  const toPost = tonight ? Math.round(tonight.amount * 100) + Math.round(tonight.tax * 100) : 0;
   /* The place once (QA FI-16): it printed "…413216, Akkalkot, MH". */
   const place = placeLine(hotel.address, hotel.city, hotel.state);
 
@@ -106,7 +112,12 @@ export function BillPrint({ bill, title, group }: { bill: StayBill; title: strin
              guest who paid the Total still owed ₹0.20 and could not leave.
              One figure, the one every other document uses. */
           total={["Total", moneyPrecise(bill.total)]}
-          after={[
+          after={tonight ? [
+            ["Paid", moneyPrecise(bill.paid)],
+            [<span key="t" data-bill-tonight>{`To be posted tonight · ${tonight.description}, with GST ${tonight.rate}%`}</span>,
+              moneyPrecise(toPost / 100)],
+            ["Amount due", moneyPrecise((Math.round(bill.balance * 100) + toPost) / 100)],
+          ] : [
             ["Paid", moneyPrecise(bill.paid)],
             ["Outstanding", moneyPrecise(bill.balance)],
           ]}

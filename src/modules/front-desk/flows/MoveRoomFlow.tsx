@@ -27,7 +27,10 @@ import type { Stay } from "@/data/repositories";
    it usually should change too, so the field appears — but it is
    empty, it is optional, and it is described as applying from
    tonight, because that is what it does: the audit charges one night
-   at a time, so it can only ever reach nights not yet posted.
+   at a time, so it can only ever reach nights not yet posted. On the
+   arrival day tonight IS posted, at check-in (D27-204): the server puts
+   that one line right to the new rate as part of the move (D27-205), so
+   "from tonight" holds on every day.
 
    WHY THEY MOVED IS RECORDED. `reason` already allowed move,
    upgrade, downgrade, fault and group_consolidation before this

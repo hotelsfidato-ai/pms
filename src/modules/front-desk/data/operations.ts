@@ -318,7 +318,8 @@ export async function assignRoom(
  * audit posts the reservation's agreed rate, snapshotted at booking
  * and never looked up again, so a move reprices nothing by itself —
  * and nights already posted are history in any case. Passing a rate
- * changes what the audit charges from tonight forward.
+ * changes what the audit charges from tonight forward - and, on the
+ * arrival day, tonight's night posted at check-in (D27-205).
  */
 export async function moveRoom(
   hotelId: string, stayId: string,
