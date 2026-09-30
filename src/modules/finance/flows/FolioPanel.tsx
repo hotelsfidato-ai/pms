@@ -524,10 +524,13 @@ function LedgerList({
           {s.key === "room" && toCome && (
             <div className="p-3 border-t border-grey-100"><ChargesToCome toCome={toCome} /></div>
           )}
-          <dl className="border-t border-grey-200 px-3 py-2 space-y-1">
-            {sum("Subtotal", moneyPrecise(s.subtotal))}
-            {s.taxes.map((t) => sum(t.label, moneyPrecise(t.amount)))}
-          </dl>
+          {/* Room with only charges to come has nothing posted to add up. */}
+          {s.lines.length > 0 && (
+            <dl className="border-t border-grey-200 px-3 py-2 space-y-1">
+              {sum("Subtotal", moneyPrecise(s.subtotal))}
+              {s.taxes.map((t) => sum(t.label, moneyPrecise(t.amount)))}
+            </dl>
+          )}
         </section>
       ))}
 
