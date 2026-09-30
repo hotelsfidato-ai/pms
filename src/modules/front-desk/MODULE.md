@@ -59,9 +59,11 @@ Seven addresses, four page files. The menu gate is `dashboard` for Rooms and
   Calendar** the Assign room button (`flows/AssignRoomFlow.tsx`), and an
   empty room that opens New booking's one page on it
   (`/h/:code/book?room=<room>&date=<date>`, reservations; D27-163): tonight's
-  is a walk-in. `WalkInFlow.tsx` and its client door `createWalkIn` went; the
-  server's `POST /:code/walk-ins` stays and no screen calls it. The Walk-ins
-  screen is the record of walk-ins, not a form (`WalkIns.tsx` header).
+  is a walk-in: the booking on the Walk-in channel, then the check-in.
+  `WalkInFlow.tsx` and its client door `createWalkIn` went, and the server's
+  `POST /:code/walk-ins` followed on 30 September (Rule 2b: no screen called
+  it). The Walk-ins screen is the record of walk-ins, not a form (`WalkIns.tsx`
+  header).
 - `StayTable` is also used by reservations' All bookings and finance's
   Folios.
 
@@ -96,7 +98,6 @@ and `cashier.ts`)
 | POST | `/:code/stays/:id/check-in` | check in; records the ID document; posts an early-arrival charge; refuses a room somebody is still in by `app.in_house` (FD-11), and a waive of the early charge by somebody who may not give it (FD-14) - both before the first write; a move of the arrival by more than a day only with `confirmMove: true` (FD-22, D27-193) |
 | GET | `/:code/early-arrival` | is arriving now early, with the hotel's times and charges (063) — null, never 0; and `mayWaive`, whether the server takes a waive of either charge from this person (the screens draw the tick from it, D24-16) |
 | POST | `/:code/stays/:id/check-out` | check out; posts a late check-out charge; closes the folio |
-| POST | `/:code/walk-ins` | a walk-in: guest, booking on the Walk-in channel (085), room, folio, first night; refuses a room somebody is still in, by name (`stillIn`, D24-15) |
 | POST | `/:code/stays/:id/assign` | give a booking a room; for a guest already checked in, refuses a room somebody is still in (`stillIn`, D24-15) - a booking not yet here is only held |
 | POST | `/:code/stays/:id/move` | move a guest to another room (`app.move_room`, 054); a checked-in guest moved from tonight or earlier is refused a room somebody is still in (`stillIn`, D24-15) |
 | PATCH | `/:code/stays/:id` | amend the dates and number of guests (`app.amend_stay`, 055) |
@@ -128,7 +129,7 @@ refinement).
 | File | What it does |
 |---|---|
 | `stays.ts` | reads stays over HTTP and slices one list three ways — arrivals, in house, departures — plus `listArrivalsOutstanding` (still to come, for the Dashboard) and `fetchStays` (the raw read other services reuse) |
-| `operations.ts` | the writes behind the desk's flows: check in and out, walk-in, assign, move, unassign, amend, void, and the early-arrival read; check-in, check-out and walk-in ask `src/lib/rules.ts` first |
+| `operations.ts` | the writes behind the desk's flows: check in and out, assign, move, unassign, amend, void, and the early-arrival read; check-in and check-out ask `src/lib/rules.ts` first |
 | `stayExtras.ts` | exchanging two rooms, and inclusions |
 | `stayview.ts` | the Calendar's data — a fourteen-day window, bars and their tones, room rates from the room type (null when unpriced) — and the counts the Dashboard shows |
 | `stayview.test.ts` | the Calendar's data: the window, rooms and bars, counts that agree with their filters, the footer, and rates (a dash, never a zero) |
@@ -148,17 +149,16 @@ migrations that made or changed them:
 
 | Table | What front desk does to it | Migrations |
 |---|---|---|
-| `reservations` | checks in, checks out, voids; records early and late times and reasons; inserts the walk-in's booking | created `005_reservations.sql`; `011_model_additions.sql` (the room moved out to `room_assignments`), `015_edge_cases.sql` (day use, dates in order), `042_void_and_sources.sql` (void and its reason), `043_indicators.sql` (single-lady mark), `055_amend_stay.sql`, `063_early_late.sql`, `064_expected_arrival.sql`, `085_walk_in_channel.sql` |
+| `reservations` | checks in, checks out, voids; records early and late times and reasons | created `005_reservations.sql`; `011_model_additions.sql` (the room moved out to `room_assignments`), `015_edge_cases.sql` (day use, dates in order), `042_void_and_sources.sql` (void and its reason), `043_indicators.sql` (single-lady mark), `055_amend_stay.sql`, `063_early_late.sql`, `064_expected_arrival.sql`, `085_walk_in_channel.sql` |
 | `room_assignments` | which room a stay holds, night by night: assign, move, exchange, unassign, release | created `011_model_additions.sql` (`ra_no_double_booking`); `015_edge_cases.sql` (an assignment stays inside its booking), `054_room_move.sql`, `065_exchange_and_inclusions.sql`, `070_vacating_dirties.sql`, `072_room_tonight.sql` (`app.room_on`, `app.room_for`), `073_no_show_releases_rooms.sql`, `074_nobody_slept_there.sql`, `086_stay_room.sql` (`app.stay_room`), `130_moved_out_room_is_dirty.sql` (a move dirties the room left, FD-9) |
 | `rooms` (`occupancy_status`) | NOT written here any more (22 September, FD-8): set from `app.in_house` by the one in-house rule's triggers, on every assignment and every status change | `003_rooms.sql`; `043_indicators.sql` (smoking, connected rooms); `070_vacating_dirties.sql`; the one in-house rule (`app.in_house`, `app.house_now`, `app.sync_room_occupancy`) |
 | `inclusions`, `reservation_inclusions` | what a rate includes, its price snapshotted onto the stay | `065_exchange_and_inclusions.sql` |
 
-It also writes into other services' tables, directly in SQL: `guests` (the
-walk-in's guest; nationality at check-in) and `guest_documents` (the ID
-recorded at check-in, `026_identity_capture.sql`) — guests' tables; and
-`folios` and `folio_postings` (a folio opened at check-in and walk-in; the
-early-arrival, late check-out and walk-in charges; the folio closed at
-check-out) — finance's tables, append-only (`006_folio.sql`). It reads the
+It also writes into other services' tables, directly in SQL: `guests`
+(nationality at check-in) and `guest_documents` (the ID recorded at check-in,
+`026_identity_capture.sql`) — guests' tables; and `folios` and
+`folio_postings` (a folio opened at check-in if the booking has none; the
+early-arrival and late check-out charges; the folio closed at check-out) — finance's tables, append-only (`006_folio.sql`). It reads the
 hotel's check-in and check-out times and early and late charges (`hotels`,
 `063_early_late.sql`), which are set in administration.
 
@@ -187,8 +187,8 @@ What `index.ts` exports, and who uses each (grep of `@/modules/front-desk`,
 asks an optional phone and email; they suggest a returning guest ("stayed
 with the group N times - same person?") and warn of a blacklisted one, and
 the name list that matched a shared surname is gone (the owner). `POST
-/:code/walk-ins` takes `phone`, `email`, `guestId`, `whatsappAgreed`,
-`noOffers`. The stay panel (`flows/GuestMarks.tsx`) shows "stayed with the
+/:code/walk-ins` took `phone`, `email`, `guestId`, `whatsappAgreed`,
+`noOffers` (the route went 30 September; the booking takes them). The stay panel (`flows/GuestMarks.tsx`) shows "stayed with the
 group N times" (not counting this stay), the WhatsApp tick the desk may
 change (`GET /:code/stays/:id/guest-marks`, `POST /:code/stays/:id/whatsapp`,
 in `stayExtras.ts`), and a Guest 360 link for the owner, an administrator and
@@ -261,7 +261,7 @@ imported from housekeeping — the database sets it when a room is vacated
 - **A refusal goes above the first write** — `withSession` commits a refusal
   like any other return (MEMORY 243).
 - **With the line down** (`src/lib/offline.ts`, core; guarded by
-  `src/lib/offline.test.ts`): check in, assign, unassign and a walk-in may be
+  `src/lib/offline.test.ts`): check in, assign and unassign may be
   held and sent later, with a warning; check-out, void and move are refused;
   any write not named there — amend, exchange, inclusions — is refused too. A
   new write that must work offline is a request to the core owner.
@@ -272,8 +272,8 @@ imported from housekeeping — the database sets it when a room is vacated
 
 From `PENDING.md`, and one found while writing this brief:
 
-- **Defect 243's shape in the other routes** — the walk-in route puts its
-  refusals before its first write; "the other routes have not been checked"
+- **Defect 243's shape in the other routes** — the walk-in route (gone
+  30 September) put its refusals before its first write; "the other routes have not been checked"
   (PENDING § 2 and § 5).
 - **Rooms on a phone** — the controls take 376px of an 812px screen before
   the first room (PENDING § 5a; MEMORY 268).

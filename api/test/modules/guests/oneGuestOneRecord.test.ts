@@ -330,15 +330,24 @@ describe("a returning guest is suggested, and a clerk decides", () => {
   });
 
   it("the walk-in: YES puts her in the room as herself, with both ticks kept", async () => {
+    /* A walk-in is the one-page booking (D27-158): the booking on the
+       Walk-in channel, then the check-in, as the clerk's "Check in now". */
     const room = await freeRoom("5EL");
-    const res = await call("clerk", "/5EL/walk-ins", "POST", {
+    const walkIn = (await sql<{ id: string }>("select app.walk_in_source()::text as id"))[0]!.id;
+    const made = await call("clerk", "/5EL/bookings", "POST", {
       guestName: "Priya D", phone: spaced(phone(2)), guestId: priya,
-      roomNumber: room.number, nights: 1, adults: 1, children: 0,
-      ratePlan: "CP", offeredTariff: 3200, whatsappAgreed: true, offersAgreed: true,
+      ...(await aNight("5EL")), bookingSourceId: walkIn,
+      whatsappAgreed: true, offersAgreed: true,
+      lines: [{ roomTypeId: room.typeId, mealPlan: "CP", adults: 1, rooms: 1, agreedRate: 3200 }],
+    });
+    expect(made.status, await made.clone().text()).toBe(200);
+    const id = ((await made.json()) as { bookings: { id: string }[] }).bookings[0]!.id;
+    const res = await call("clerk", `/5EL/stays/${id}/check-in`, "POST", {
+      roomNumber: room.number, offersAgreed: true,
+      earlyReason: "CRM fixture - the arrival hour is not what these test",
       idSkipReason: "Test fixture - FD-1 asks every walk-in for an ID or a reason",
     });
     expect(res.status, await res.clone().text()).toBe(200);
-    const id = ((await res.json()) as { data: { id: string } }).data.id;
     const rows = await sql<{ guest_id: string; whatsapp_agreed: boolean }>(
       "select guest_id::text, whatsapp_agreed from reservations where id = $1", [id]);
     expect(rows[0]).toEqual({ guest_id: priya, whatsapp_agreed: true });
@@ -611,8 +620,16 @@ describe("Guest 360", () => {
   });
 
   it("says what she was charged the way the Guests screen does - one definition, on a real charge", async () => {
+    /* Her walk-in's room night, posted through the desk's own charge route:
+       the check-in posts none (the night audit does), and a sum of zeros
+       would agree with anything. */
+    const [stay] = await sql<{ id: string }>(
+      "select id::text from reservations where guest_id = $1 and status = 'checked_in'", [priya]);
+    const posted = await call("owner", `/5EL/stays/${stay!.id}/charges`, "POST",
+      { category: "Room", description: "Room night", amount: 3200 });
+    expect(posted.status, await posted.clone().text()).toBe(200);
+
     const whole = (await (await call("owner", `/5EL/crm/guests/${priya}`)).json()) as Whole;
-    /* The walk-in posted her room night, so this is not a sum of zeros. */
     expect(whole.charged).toBeGreaterThan(0);
     expect(whole.noOffers.map((o) => o.value)).toContain(phone(2));
 

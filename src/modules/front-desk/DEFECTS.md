@@ -52,6 +52,27 @@ moved out of, not for a check-out.
 **The fix, when it is done** - ask whether anybody is IN the room
 (`app.in_house`, or the column now set from it) instead of whether it is held.
 
+### FD-23 · A check-in with the ID block's default "IN" takes a returning foreign guest off the Form III register
+
+**Found** - 30 September, moving the walk-in route's tests onto the booking
+plus the check-in (the route went, Rule 2b). The one page's ID block opens on
+"IN" (`noGuestId`, guests) and does not read a returning guest's record. The
+check-in takes the nationality typed over the one on file
+(`identity?.nationality || stay.nationality`), so Form III is not asked, and
+it then writes `guests.nationality = 'IN'`. The walk-in route had the guard
+(typed IN plus a confirmed returning guest: the nationality on file); the
+check-in never did, from Arrivals either. Run as a probe on a guest on file
+as GB: expected 409 and GB, got 200 and IN.
+
+**Not fixed** - it changes what a clerk may do at check-in, so it is the
+owner's. The test "keeps a returning foreign guest foreign when the form
+says IN" is out of `api/test/modules/guests/formIII.test.ts` until then.
+
+**The fix, when it is decided** - either the check-in never lets a typed "IN"
+replace a foreign nationality on file (three lines in `operations.ts`; a
+wrong nationality is then corrected on the guest's record), or the one page
+fills its ID block from the returning guest chosen (reservations and guests).
+
 ---
 
 ## Fixed — the solution is here; do not work it out again

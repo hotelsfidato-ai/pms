@@ -63,12 +63,28 @@ const column = async (number: string) =>
     "select occupancy_status as occ from rooms where hotel_id = $1 and number = $2",
     [hotelId, number]))[0]!.occ;
 
-const walkIn = (roomNumber: string, nights: number) =>
-  call(`/${CODE}/walk-ins`, "POST", {
-    guestName: `Walk-in ${roomNumber} ${process.pid}`, roomNumber, nights,
-    adults: 1, offeredTariff: 2000,
+/* A walk-in is the one-page booking (D27-158): the booking on the Walk-in
+   channel from tonight, then the check-in, which answers for the room. */
+async function walkIn(roomNumber: string, nights: number) {
+  const [d] = await sql<{ today: string; out: string; source: string; type: string }>(
+    `select app.business_date($1)::text as today,
+            (app.business_date($1) + $2::int)::text as out,
+            app.walk_in_source()::text as source,
+            (select id::text from room_types where hotel_id = $1 and code = 'STD') as type`,
+    [hotelId, nights]);
+  const made = await call(`/${CODE}/bookings`, "POST", {
+    guestName: `Walk-in ${roomNumber} ${process.pid}`,
+    checkIn: d!.today, checkOut: d!.out, bookingSourceId: d!.source,
+    lines: [{ roomTypeId: d!.type, adults: 1, rooms: 1, agreedRate: 2000 }],
+  });
+  expect(made.status, await made.clone().text()).toBe(200);
+  const id = ((await made.json()) as { bookings: { id: string }[] }).bookings[0]!.id;
+  const res = await call(`/${CODE}/stays/${id}/check-in`, "POST", {
+    roomNumber, earlyReason: "Test fixture - the arrival hour is not what this tests",
     idSkipReason: "Test fixture - FD-1 asks every walk-in for an ID or a reason",
   });
+  return { id, res };
+}
 
 async function heldBooking(reference: string, from: string, to: string, roomNumber: string) {
   const [row] = await sql<{ id: string }>(
@@ -136,7 +152,7 @@ describe("FD-8 · a room held for a later booking", () => {
   });
 
   it("takes a one-night walk-in before that booking arrives", async () => {
-    const res = await walkIn("101", 1);
+    const { res } = await walkIn("101", 1);
     const body = await res.json() as { ok: boolean; reason?: string };
     expect(body.reason ?? "").not.toMatch(/already in that room/i);
     expect(res.status, body.reason).toBe(200);
@@ -147,7 +163,7 @@ describe("FD-8 · a room held for a later booking", () => {
   });
 
   it("refuses a walk-in into nights the booking holds, and names the booking", async () => {
-    const res = await walkIn("102", 2);
+    const { res } = await walkIn("102", 2);
     expect(res.status).toBe(409);
     const { reason } = await res.json() as { reason: string };
     expect(reason).toMatch(new RegExp(`held by ${CODE}-SOON`));
@@ -164,7 +180,7 @@ describe("D21-36 · a guest past their departure date who has not checked out", 
     const h = await houseNow(CODE);
     expect(room(h, "101")).toMatchObject({ inHouse: true, empty: false });
 
-    const res = await walkIn("101", 1);
+    const { res } = await walkIn("101", 1);
     expect(res.status).toBe(409);
     /* Named, as the check-in names them (rule A, 24 September). */
     expect(((await res.json()) as { reason: string }).reason).toMatch(
@@ -299,9 +315,9 @@ describe("rule A · a guest put into a room somebody is still in", () => {
   beforeAll(async () => {
     await sql("select app.bulk_create_rooms($1,'STD',1::smallint,105,107)", [hotelId]);
     for (const [n, nights] of [["105", 1], ["106", 3], ["107", 1]] as const) {
-      const res = await walkIn(n, nights);
+      const { id, res } = await walkIn(n, nights);
       expect(res.status, await res.clone().text()).toBe(200);
-      ids[n] = ((await res.json()) as { data: { id: string } }).data.id;
+      ids[n] = id;
     }
     await sql("update hotels set business_date = date '2026-08-28' where id = $1", [hotelId]);
     ids["legacy"] = await stay(`${CODE}-LEGACY`, "2026-08-28", "2026-08-30", "checked_in");
