@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
-import { unitPriceOf } from "@/modules/pos/lib/pricing";
+import { unitPriceOf, typesOf } from "@/modules/pos/lib/pricing";
 import {
   Button, Dialog, DialogContent, Input,
 } from "@/components/ui";
@@ -24,7 +24,9 @@ import type { MenuItem } from "@/modules/pos/data/till";
    a line without it — an item that gained variations has a `price`
    column nobody has looked at since, and charging it puts a number on
    the bill that is on no menu. So Add stays disabled until one is
-   chosen, and the reason is written where it is read.
+   chosen, and the reason is written where it is read. Since D27-192 a
+   dish may have several types - Size, then a Crust - and Add waits for
+   one of EACH; the first carries the price, the others add to it.
    ══════════════════════════════════════════════════════════════════ */
 
 export function DishDialog({
@@ -35,11 +37,12 @@ export function DishDialog({
   onOpenChange: (open: boolean) => void;
   onAdd: (
     itemId: string, qty: number, note: string,
-    variationId?: string, addonIds?: string[],
+    variationId?: string, addonIds?: string[], moreChoiceIds?: string[],
   ) => void;
   busy?: boolean;
 }) {
-  const [variationId, setVariationId] = useState<string | null>(null);
+  /* One choice per type: type number → the choice's id. */
+  const [picked, setPicked] = useState<Record<number, string>>({});
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState("");
@@ -51,7 +54,7 @@ export function DishDialog({
   const [lastKey, setLastKey] = useState(key);
   if (key !== lastKey) {
     setLastKey(key);
-    setVariationId(null);
+    setPicked({});
     setChosen(new Set());
     setQty(1);
     setNote("");
@@ -62,20 +65,20 @@ export function DishDialog({
      same number, and this dialog having its own copy is how the two
      start disagreeing. Same reason the server's copy is pinned by a
      test. */
-  const unitPrice = useMemo(
-    () => (item ? unitPriceOf(item, variationId, chosen) : 0),
-    [item, variationId, chosen],
-  );
+  const types = useMemo(() => (item ? typesOf(item) : []), [item]);
+  const variationId = types[0] ? picked[types[0].typeNo] ?? null : null;
+  const moreChoiceIds = types.slice(1).flatMap((t) => picked[t.typeNo] ?? []);
+  const unitPrice = item ? unitPriceOf(item, variationId, chosen, moreChoiceIds) : 0;
 
   if (!item) return null;
 
-  const needsVariation = item.variations.length > 0;
+  const needsVariation = types.length > 0;
   /* How many a guest may choose from each group (D21-41). The server
      refuses the same, so this only saves the waiter the round trip. */
   const countIn = (g: MenuItem["addonGroups"][number]) =>
     g.addons.filter((a) => chosen.has(a.id)).length;
   const short = item.addonGroups.find((g) => countIn(g) < g.minSelect);
-  const ready = (!needsVariation || variationId !== null) && !short;
+  const ready = types.every((t) => picked[t.typeNo]) && !short;
 
   const toggle = (id: string, group: MenuItem["addonGroups"][number]) => {
     setChosen((prev) => {
@@ -122,6 +125,7 @@ export function DishDialog({
                 item.id, qty, note,
                 variationId ?? undefined,
                 chosen.size ? [...chosen] : undefined,
+                moreChoiceIds.length ? moreChoiceIds : undefined,
               )}
             >
               Add
@@ -130,43 +134,49 @@ export function DishDialog({
         }
       >
         <div className="space-y-5">
-          {needsVariation && (
-            <section>
+          {types.map((t, i) => (
+            <section key={t.typeNo}>
               <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-3">
-                Variation
+                {t.heading}
               </h4>
               <div className="flex gap-2 flex-wrap">
-                {item.variations.map((v) => (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => setVariationId(v.id)}
-                    className={cn(
-                      "press-tile min-w-24 min-h-16 px-4 rounded-lg border text-left cursor-pointer",
-                      variationId === v.id
-                        ? "border-brand-orange bg-brand-orange-50"
-                        : "border-grey-300 bg-white hover:border-grey-400 hover:bg-grey-50",
-                    )}
-                  >
-                    <span className={cn(
-                      "block text-base font-medium",
-                      variationId === v.id ? "text-brand-orange-700" : "text-ink-900",
-                    )}>
-                      {v.label}
-                    </span>
-                    <span className="block tabular text-sm text-grey-600">
-                      {money(v.price)}
-                    </span>
-                  </button>
-                ))}
+                {t.choices.map((v) => {
+                  const on = picked[t.typeNo] === v.id;
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => setPicked((p) => ({ ...p, [t.typeNo]: v.id }))}
+                      className={cn(
+                        "press-tile min-w-24 min-h-16 px-4 rounded-lg border text-left cursor-pointer",
+                        on
+                          ? "border-brand-orange bg-brand-orange-50"
+                          : "border-grey-300 bg-white hover:border-grey-400 hover:bg-grey-50",
+                      )}
+                    >
+                      <span className={cn(
+                        "block text-base font-medium",
+                        on ? "text-brand-orange-700" : "text-ink-900",
+                      )}>
+                        {v.label}
+                      </span>
+                      {/* The first type is the dish's price; a later one
+                          adds to it (D27-192). ₹0 was ticked Free. */}
+                      <span className="block tabular text-sm text-grey-600">
+                        {v.price === 0 ? "Free" : `${i > 0 ? "+" : ""}${money(v.price)}`}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-              {variationId === null && (
+              {i === 0 && variationId === null && (
                 <p className="text-sm text-grey-600 mt-2">
                   This dish is sold by variation - it has no price of its own.
                 </p>
               )}
             </section>
-          )}
+          ))}
 
           {item.addonGroups.length > 0 && (
             <section>
@@ -224,7 +234,7 @@ export function DishDialog({
                               {a.label}
                             </span>
                             <span className="block tabular text-sm text-grey-600">
-                              {off ? "off today" : money(a.price)}
+                              {off ? "off today" : a.price === 0 ? "Free" : money(a.price)}
                             </span>
                           </button>
                         );

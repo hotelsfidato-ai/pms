@@ -366,8 +366,11 @@ describe("Close restaurant day (D17-20)", () => {
            price (the owner, the same day).
    D21-41  An add-on group made once, offered on many dishes, saying how
            many a guest may choose - held to on the pad.
-   D21-42  "Preferences" at 0: TYPED, never a default. Save waits for a
-           figure; a typed "0" is sent as "0".
+   D21-42  "Preferences" at 0: never a default. Since D27-192 (Q6) a 0 is
+           ticked Free, and Save waits for a figure or the tick.
+   D27-192 The variation form: types (Size, Quantity, an Option with its
+           heading), names filled in never prices, one save for the set;
+           emptying it asks for the dish's own price (D21-40's rule).
    And the Terminal opens the same dish dialog, with a dash on a sized
    dish's tile (the owner, 21 September).
    ══════════════════════════════════════════════════════════════════ */
@@ -391,33 +394,64 @@ function menuWithVariation() {
       id: "g-9", label: "Preferences", minSelect: 0, maxSelect: null,
       itemIds: ["i-1"], addons: [],
     }] }),
-    [`POST /api/hotels/${HOTEL}/till/menu/items/i-3/variations`]: () => ({ ok: true, id: "v-2" }),
-    [`POST /api/hotels/${HOTEL}/till/menu/variations/v-1/remove`]: () => ({ ok: true }),
+    [`PUT /api/hotels/${HOTEL}/till/menu/items/i-3/variations`]: () => ({ ok: true }),
+    [`PUT /api/hotels/${HOTEL}/till/menu/items/i-1/variations`]: () => ({ ok: true }),
     [`POST ${GROUPS}/g-9/addons`]: () => ({ ok: true, id: "a-9" }),
   });
 }
 
 describe("variations and add-ons on the Menu screen (D21-40 to 42)", () => {
-  it("adds a variation only once a price is typed, and a typed 0 is kept", async () => {
+  it("the form: Size fills in names, never prices; Save waits for a price or Free", async () => {
     const calls = menuWithVariation();
     menuAt();
 
     fireEvent.click(await screen.findByRole("button", { name: "Add variation to Paneer Tikka" }));
     const dialog = await screen.findByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText(/Variation/), { target: { value: "Taster" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add a type" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Size" }));
+    const name = (k: number) => within(dialog).getByLabelText(`Type 1, choice ${k}`) as HTMLInputElement;
+    const price = (k: number) =>
+      within(dialog).getByLabelText(`Price of type 1, choice ${k}`) as HTMLInputElement;
+    expect([1, 2, 3].map((k) => [name(k).value, price(k).value]))
+      .toEqual([["Small", ""], ["Medium", ""], ["Large", ""]]);
 
     /* A name and no price: nothing to save. A blank is not zero. */
     const save = within(dialog).getByRole("button", { name: "Save" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remove type 1, choice 3" }));
+    fireEvent.change(price(1), { target: { value: "180" } });
     expect(save.hasAttribute("disabled")).toBe(true);
-
-    fireEvent.change(within(dialog).getByLabelText(/Price/), { target: { value: "0" } });
+    fireEvent.click(within(dialog).getAllByRole("checkbox", { name: "Free" })[1]!);
     expect(save.hasAttribute("disabled")).toBe(false);
     fireEvent.click(save);
 
     await vi.waitFor(() => expect(
       calls.find((c) => c.path.endsWith("/items/i-3/variations")),
-    ).toMatchObject({ method: "POST", body: { label: "Taster", price: "0" } }));
+    ).toMatchObject({ method: "PUT", body: { types: [{ kind: "size", choices: [
+      { label: "Small", price: "180", free: false },
+      { label: "Medium", price: "", free: true },
+    ] }] } }));
     await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("a carried-over type must be picked, and an Option needs its heading", async () => {
+    const calls = menuWithVariation();
+    menuAt();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Change variations of Bhaaji Pau" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/Pick Size, Quantity or Option/)).toBeTruthy();
+    const save = within(dialog).getByRole("button", { name: "Save" });
+    expect(save.hasAttribute("disabled")).toBe(true);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Option" }));
+    expect(save.hasAttribute("disabled"), "an Option saved with no heading").toBe(true);
+    fireEvent.change(within(dialog).getByLabelText(/Heading/), { target: { value: "Fat" } });
+    fireEvent.click(save);
+
+    await vi.waitFor(() => expect(
+      calls.find((c) => c.path.endsWith("/items/i-1/variations")),
+    ).toMatchObject({ method: "PUT", body: { types: [{ kind: "option", heading: "Fat",
+      choices: [{ id: "v-1", label: "Oil", price: "300", free: false }] }] } }));
   });
 
   it("shows a dash, not the dish's own price, for a dish sold by variation", async () => {
@@ -427,27 +461,24 @@ describe("variations and add-ons on the Menu screen (D21-40 to 42)", () => {
     expect(slot.textContent).toBe("-");
   });
 
-  it("asks for the dish's price before removing its last variation", async () => {
+  it("asks for the dish's price when every type is removed", async () => {
     const calls = menuWithVariation();
     menuAt();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Remove Bhaaji Pau Oil" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Change variations of Bhaaji Pau" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText(/sold at one price again\. What price\?/)).toBeTruthy();
-    /* Nothing was removed on the tap alone. */
-    expect(calls.some((c) => c.path.endsWith("/variations/v-1/remove"))).toBe(false);
-
-    const remove = within(dialog).getByRole("button", { name: "Remove" });
-    expect(remove.hasAttribute("disabled")).toBe(true);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remove type" }));
+    const save = within(dialog).getByRole("button", { name: "Save" });
+    expect(save.hasAttribute("disabled")).toBe(true);
     fireEvent.change(within(dialog).getByLabelText(/Price of Bhaaji Pau/), { target: { value: "300" } });
-    fireEvent.click(remove);
+    fireEvent.click(save);
 
     await vi.waitFor(() => expect(
-      calls.find((c) => c.path.endsWith("/variations/v-1/remove")),
-    ).toMatchObject({ method: "POST", body: { dishPrice: "300" } }));
+      calls.find((c) => c.path.endsWith("/items/i-1/variations")),
+    ).toMatchObject({ method: "PUT", body: { types: [], dishPrice: "300", dishFree: false } }));
   });
 
-  it("adds a Preference only once its price is typed - 0 included", async () => {
+  it("adds a Preference only once it is priced or ticked Free (D27-192)", async () => {
     const calls = menuWithVariation();
     menuAt();
 
@@ -458,11 +489,11 @@ describe("variations and add-ons on the Menu screen (D21-40 to 42)", () => {
     const save = within(dialog).getByRole("button", { name: "Save" });
     expect(save.hasAttribute("disabled")).toBe(true);
 
-    fireEvent.change(within(dialog).getByLabelText(/Price/), { target: { value: "0" } });
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: "Free" }));
     fireEvent.click(save);
     await vi.waitFor(() => expect(
       calls.find((c) => c.path === `${GROUPS}/g-9/addons`),
-    ).toMatchObject({ method: "POST", body: { label: "No onion", price: "0" } }));
+    ).toMatchObject({ method: "POST", body: { label: "No onion", price: "", free: true } }));
   });
 });
 

@@ -76,17 +76,33 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
   `DishDialog.tsx` (variations, sides, a note - and since 21 September each
   group's "choose 1 to 2", Add held until it is met; opened by Tables, the Till
   and the Terminal), `OrderHeaderPanel.tsx` (covers, waiter, customer, order type).
-- **The Menu screen, 21 September (D21-40 to D21-43):** "Add variation" on each
-  dish, and its variations under it with Change and Remove (a dish with
-  variations shows "-" for its own price); an **Add-on groups** section - each
-  group's rule, its options with Change and Remove, "Add option", "Dishes" to
-  choose which dishes offer it; **Import add-ons** and **Import the menu**, two
-  files, add-ons first. Every price is typed: Save waits for one, and a typed 0
-  is kept (Preferences such as No onion, D21-42).
+- **The Menu screen, 21 September (D21-40 to D21-43), and 30 September
+  (D27-189, D27-192, D27-195):** "Add variation" / "Change variations" on each
+  dish opens ONE form for all its variation types - Size, Quantity, or an
+  Option with the manager's heading ("Crust"); picking a type fills in the
+  choice names when its list is empty, never a price; the first type's prices
+  are the dish's, a further type's add to it; each choice is priced or ticked
+  Free; removing every type asks for the dish's own price. Under the dish, one
+  line per type ("Size: Small ₹200 · Large ₹400", "Crust: Cheese burst +₹80 ·
+  Thin Free"); a dish with variations shows "-" for its own price. An
+  **Add-on groups** section - each group's rule, its options with Change and
+  Remove, "Add option" (a price or Free), "Dishes" to choose which dishes
+  offer it; **Import add-ons** and **Import the menu**, two files, add-ons
+  first. A blank price is refused, and a 0 unless ticked Free (D27-120; a file
+  cannot tick Free, so a file's 0 is refused).
+- **The dish pop-up (`DishDialog`)**: one row per variation type under its
+  heading ("Variation" for a type carried over from before 30 September, until
+  the manager picks one); a later type reads "+₹80" or "Free"; Add waits for
+  one choice in every type and each group's add-on rule.
+- **The same dish again is one more of it (D27-189, POS-27):** on Tables' pad,
+  the Till and the Terminal, a dish with the same variation choices, note and
+  sides joins its unsent line; once the kitchen has it, more is a new line
+  (D27-148). The Till has a − (a sent dish asks a manager's reason, D27-119);
+  sides follow their dish's quantity (POS-28).
 
 ---
 
-## Server endpoints — 71
+## Server endpoints — 73 (counted 30 September: 67 in till.ts, 6 in pos.ts)
 
 The code is in `api/src/modules/pos/` (moved 15 September): `till.ts` (the
 till, **3,555 lines** — splitting it into parts is not done yet) and `pos.ts`
@@ -119,15 +135,18 @@ menu        GET    /:code/till/menu                         a dish's taxRate is 
             POST   /:code/till/menu/items/:id/on
             POST   /:code/till/addons/:id/off              the Menu screen's add-on switch (17 Sep, POS-2)
             POST   /:code/till/addons/:id/on               the Menu screen's add-on switch (17 Sep, POS-2)
-variations  POST   /:code/till/menu/items/:id/variations   D21-40, 21 Sep: a name and a TYPED price
-            PATCH  /:code/till/menu/variations/:id         rename and reprice, both sent
-            POST   /:code/till/menu/variations/:id/remove  switched off, never deleted; the LAST one
-                                                           needs { dishPrice } (the owner, 21 Sep)
+variations  PUT    /:code/till/menu/items/:id/variations   the dish's whole set, one transaction (D27-192):
+                                                           {types:[{kind, heading?, choices:[{id?, label,
+                                                           price, free}]}], dishPrice?, dishFree?}; a choice
+                                                           keeps its row by type and name (a removed one
+                                                           comes back), else by id; one left out is switched
+                                                           off, never deleted; emptying it needs dishPrice.
+                                                           Replaced the three per-variation routes, 30 Sep
 add-ons     GET    /:code/till/menu/addon-groups           every group, its options and its dishes
             POST   /:code/till/menu/addon-groups           D21-41: name, minSelect, maxSelect
             PATCH  /:code/till/menu/addon-groups/:id       the same three
             POST   /:code/till/menu/addon-groups/:id/dishes  the whole list of dishes offering it
-            POST   /:code/till/menu/addon-groups/:id/addons  an option: a name and a TYPED price
+            POST   /:code/till/menu/addon-groups/:id/addons  an option: a name and a TYPED price, or free
             PATCH  /:code/till/menu/addons/:id             rename and reprice, both sent
             POST   /:code/till/menu/addons/:id/remove      switched off, never deleted
             POST   /:code/till/menu/addon-groups/import    the add-ons file (D21-43), dry run first
@@ -279,6 +298,9 @@ pos_addons, pos_item_addon_groups
   (045's four tables are WRITTEN by the Menu screen and the two import
    files since 21 September - no migration: a removed variation or option is
    is_active false, because a sold line points at it)
+  a variation's type_no, kind, heading;         "several variation types per dish" (30 Sep, 182 for
+  a name unique within its type;               now): type 1 carries the price, a later one adds;
+  pos_order_lines.extra_choice_ids             045's trigger asks one choice of every type
 pos_sections, pos_tables                       047_tables_and_floor.sql
   covers, waiter, customer, held               048_order_header.sql
   kitchen docket numbers                       049_kot_docket.sql

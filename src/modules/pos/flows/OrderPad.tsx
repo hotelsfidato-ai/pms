@@ -159,10 +159,10 @@ export function OrderPad({
 
   const put = (
     item: MenuItem, qty: number, note: string,
-    variationId?: string, addonIds?: string[],
+    variationId?: string, addonIds?: string[], moreChoiceIds?: string[],
   ) => {
     const { variationLabel, addonLabels } =
-      chosenLabels(item, variationId, addonIds);
+      chosenLabels(item, variationId, addonIds, moreChoiceIds);
     const line: DraftLine = {
       uid: `${item.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       itemId: item.id,
@@ -170,10 +170,11 @@ export function OrderPad({
       qty,
       note,
       ...(variationId ? { variationId } : {}),
+      ...(moreChoiceIds?.length ? { moreChoiceIds } : {}),
       ...(variationLabel ? { variationLabel } : {}),
       addonIds: addonIds ?? [],
       addonLabels,
-      unitPrice: unitPriceOf(item, variationId, addonIds),
+      unitPrice: unitPriceOf(item, variationId, addonIds, moreChoiceIds),
     };
     /* The same dish again is one more of it (D27-189): the same choices -
        variation, note and sides - as the server matches them on Send.
@@ -182,6 +183,7 @@ export function OrderPad({
     setLines((prev) => {
       const same = prev.find((l) => l.itemId === item.id
         && l.variationId === line.variationId && l.note.trim() === note.trim()
+        && (l.moreChoiceIds ?? []).join() === (line.moreChoiceIds ?? []).join()
         && [...l.addonIds].sort().join() === sides);
       return same
         ? prev.map((l) => (l === same ? { ...l, qty: l.qty + qty } : l))
@@ -215,6 +217,7 @@ export function OrderPad({
         qty: l.qty,
         ...(l.note ? { note: l.note } : {}),
         ...(l.variationId ? { variationId: l.variationId } : {}),
+        ...(l.moreChoiceIds?.length ? { moreChoiceIds: l.moreChoiceIds } : {}),
         ...(l.addonIds.length ? { addonIds: l.addonIds } : {}),
       })),
       send: true,
@@ -526,10 +529,10 @@ export function OrderPad({
         item={asking}
         open={asking !== null}
         onOpenChange={(o) => { if (!o) setAsking(null); }}
-        onAdd={(id, qty, note, variationId, addonIds) => {
+        onAdd={(id, qty, note, variationId, addonIds, moreChoiceIds) => {
           const item = categories
             .flatMap((c) => c.items).find((i) => i.id === id);
-          if (item) put(item, qty, note, variationId, addonIds);
+          if (item) put(item, qty, note, variationId, addonIds, moreChoiceIds);
         }}
       />
     </>

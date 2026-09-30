@@ -253,6 +253,7 @@ describe("the matrix the server asks", () => {
     expect(allows(rule(`POST ${H}/till/orders`), "pos")).toBe(true);
     expect(allows(rule(`POST ${H}/kitchen/lines/:lineId/:to`), "chef")).toBe(true);
     expect(allows(rule(`POST ${H}/till/menu/items`), "kitchen_manager")).toBe(true);
+    expect(allows(rule(`PUT ${H}/till/menu/items/:id/variations`), "kitchen_manager")).toBe(true);
     expect(allows(rule(`POST ${H}/till/orders`), "housekeeping")).toBe(false);
   });
 
@@ -303,7 +304,8 @@ describe("the matrix the server asks", () => {
   it("D22-35: the menu - dishes, add-ons, promotions, a dish off - is not the revenue manager's", () => {
     const menu = Object.keys(WRITE_RULES).filter((k) => /\/till\/(menu|promotions|addons)\//.test(k)
       || k.endsWith("/till/promotions"));
-    expect(menu.length).toBeGreaterThanOrEqual(24);
+    /* 23 since D27-192 made the three variation routes one PUT. */
+    expect(menu.length).toBeGreaterThanOrEqual(23);
     for (const key of menu) {
       expect(who(key), key).toEqual(["owner", "admin", "gm", "kitchen_manager"]);
     }

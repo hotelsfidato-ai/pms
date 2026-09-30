@@ -183,12 +183,12 @@ export default function TerminalPage() {
 
   const addChosen = async (
     itemId: string, qty: number, text: string,
-    variationId?: string, addonIds?: string[],
+    variationId?: string, addonIds?: string[], moreChoiceIds?: string[],
   ) => {
     if (!orderId) return;
     setBusy(true);
     const res = await addLine(hotelId, orderId, itemId, qty,
-      text.trim() || undefined, variationId, addonIds);
+      text.trim() || undefined, variationId, addonIds, moreChoiceIds);
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
     setAsking(null);
@@ -1025,8 +1025,8 @@ export default function TerminalPage() {
         item={asking}
         open={asking !== null}
         onOpenChange={(o) => { if (!o) setAsking(null); }}
-        onAdd={(id, qty, text, variationId, addonIds) =>
-          void addChosen(id, qty, text, variationId, addonIds)}
+        onAdd={(id, qty, text, variationId, addonIds, moreChoiceIds) =>
+          void addChosen(id, qty, text, variationId, addonIds, moreChoiceIds)}
         busy={busy}
       />
     </Shell>

@@ -151,12 +151,12 @@ export default function TillPage() {
 
   const addChosen = async (
     itemId: string, qty: number, note: string,
-    variationId?: string, addonIds?: string[],
+    variationId?: string, addonIds?: string[], moreChoiceIds?: string[],
   ) => {
     if (!openId) return;
     setBusy(true);
     const res = await addLine(hotelId, openId, itemId, qty,
-      note.trim() || undefined, variationId, addonIds);
+      note.trim() || undefined, variationId, addonIds, moreChoiceIds);
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
     setAsking(null);
@@ -424,8 +424,8 @@ export default function TillPage() {
         item={asking}
         open={asking !== null}
         onOpenChange={(o) => { if (!o) setAsking(null); }}
-        onAdd={(id, qty, note, variationId, addonIds) =>
-          void addChosen(id, qty, note, variationId, addonIds)}
+        onAdd={(id, qty, note, variationId, addonIds, moreChoiceIds) =>
+          void addChosen(id, qty, note, variationId, addonIds, moreChoiceIds)}
         busy={busy}
       />
     </Page>
