@@ -454,7 +454,8 @@ grant execute on function app.guest_id_photo_delete_failed(text, text, uuid) to 
 -- when, or that the desk removed it and why. Never the image, never where it
 -- is kept.
 create or replace function app.guest_id_photo_state(p_token_hash text, p_unlock_hash text)
-returns table (status text, sides text[], stored_at timestamptz, removed_reason text, may_send boolean)
+returns table (status text, sides text[], stored_at timestamptz, removed_reason text,
+               may_send boolean, hotel_phone text)
 language sql
 stable
 security definer
@@ -462,7 +463,9 @@ set search_path = pg_catalog, public
 as $fn$
   select p.status, p.sides, p.stored_at, p.removed_reason,
          exists (select 1 from guest_detail_submissions d
-                  where d.reservation_id = v.reservation_id and d.status = 'waiting')
+                  where d.reservation_id = v.reservation_id and d.status = 'waiting'),
+         -- Whom to ask to have it deleted: the notice names the hotel's own number.
+         (select nullif(btrim(h.phone), '') from hotels h where h.id = v.hotel_id)
     from app.guest_unlocked(p_token_hash, p_unlock_hash) v
     left join lateral (
       select * from guest_id_photos x

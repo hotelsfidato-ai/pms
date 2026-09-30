@@ -619,7 +619,7 @@ guestDoor.get("/:token/id-photo", async (c) => {
   if (!door) return refused(c);
   const rows = await ask<{
     status: string | null; sides: string[] | null; stored_at: string | null;
-    removed_reason: string | null; may_send: boolean;
+    removed_reason: string | null; may_send: boolean; hotel_phone: string | null;
   }>("select * from app.guest_id_photo_state($1, $2)", [door.hash, door.unlock]);
   const it = rows[0];
   if (!it) return refused(c);
@@ -628,6 +628,8 @@ guestDoor.get("/:token/id-photo", async (c) => {
     offered: idPhotosOn(door.it.hotel_code),
     maySend: it.may_send,
     notice: NOTICE_VERSION,
+    /* The hotel's own number, for the notice's "to have it deleted, contact". */
+    contact: it.hotel_phone,
     sent: it.status === "stored" ? { sides: it.sides, at: it.stored_at } : null,
     removed: it.status === "removed"
       ? REMOVED_SAYS[it.removed_reason ?? ""] ?? REMOVED_OTHERWISE : null,

@@ -538,7 +538,7 @@ describe("the guest never reads a photo back", () => {
     const res = await asGuest(`/${link}/id-photo`, "GET", undefined, unlock);
     const text = await res.clone().text();
     const body = (await res.json()) as Record<string, unknown>;
-    expect(Object.keys(body).sort()).toEqual(["maySend", "notice", "offered", "removed", "sent"]);
+    expect(Object.keys(body).sort()).toEqual(["contact", "maySend", "notice", "offered", "removed", "sent"]);
     expect(body["sent"]).toMatchObject({ sides: ["front", "back"] });
     expect(text).not.toContain(row.drive_file_id);
     expect(text).not.toContain(row.cipher_sha256);
