@@ -944,12 +944,14 @@ operations.post("/:code/walk-ins", async (c) => {
       type_name: string; max_occupancy: number;
     }>(
       `select rm.id, rm.room_type_id, rm.housekeeping_status,
-              rt.base_rate,
+              /* Today's normal price (EP): a base where there is one (D27-188,
+                 162), else the old rack rate - as property.ts reads it. */
+              (select p.price from app.price_for(rt.id, 'EP', $3::date) p)::text as base_rate,
               rt.name as type_name, rt.max_occupancy
          from rooms rm
          join room_types rt on rt.id = rm.room_type_id
         where rm.hotel_id = $1 and rm.number = $2 and rm.is_active`,
-      [hotelId, roomNumber],
+      [hotelId, roomNumber, businessDate],
     );
     const room = roomRows[0];
     if (!room) return refuse("That room is not part of this property.");

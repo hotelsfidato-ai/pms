@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-09-30 · The rack is today's price in the new model (162, D27-188) - the master's follow-up
+
+Branch `fix/booking-bill-30sep` (cp6 merged in), database `fidato_s44` at 163. The Rooms and rates lane moved every reader of the old rack to `app.price_for`; front desk's last two were left. **Shipped:** `stays.ts` - a stay's `rackTariff` is `app.price_for(type, 'EP', the business date)`, once per room type (a CTE), so a hotel priced only by a base shows its price on the stay panel and the check-in, not a dash. `operations.ts` - the walk-in route's rack the same way (no screen calls the route; the cleanup lane removes it - nothing removed here). **Proved:** dayAndRoom 10/10, both new cases failing on the old code (null for 2500; "That room type has no rate set"); deskChecks 15, inHouseRule 14, formIII 15, oneGuestOneRecord 28, guards 45, each file on its own; strip-check 165 files; both tsc clean. Screen, desktop and 390 px: Deluxe with no old rack and a base of ₹3,111 shows "Rack rate ₹3,111" on its booking panel.
+
 ## 2026-09-30 · Booking and bill (D27-187, D27-193)
 
 Branch `fix/booking-bill-30sep`, the booking and bill lane; the whole account is reservations' CHANGELOG, same date. Here: a check-in more than a day early shows the move and its cost and needs Confirm, `confirmMove` on the server (FD-22; dayAndRoom, earlyCheckIn); Change rate and View voucher on the panel's menu (changeRateBeforeArrival); `/stays/:id/inclusions` answers 404 on a bad id (FD-21, badStayId).

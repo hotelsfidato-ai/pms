@@ -71,7 +71,7 @@ beforeAll(async () => {
     await db.query(
       `update hotels set business_date = date '2026-08-25', check_in_time = '00:00'
         where id = $1`, [hotelId]);
-    await db.query("select app.bulk_create_rooms($1,'STD',1::smallint,101,106)", [hotelId]);
+    await db.query("select app.bulk_create_rooms($1,'STD',1::smallint,101,107)", [hotelId]);
     await db.query(
       `insert into tax_rules (hotel_id, kind, over_amount, rate, note)
        values ($1, 'room', 0, 5, 'Test')`, [hotelId]);
@@ -163,6 +163,37 @@ describe("D27-193 · a check-in that moves the arrival more than a day", () => {
     const id = await booking(`${CODE}-TOMORROW`, "2026-08-27", "2026-08-28");
     const res = await early(id, "105");
     expect(res.status, await res.clone().text()).toBe(200);
+  });
+});
+
+describe("the rack a stay shows is today's price in the new model (162, D27-188)", () => {
+  it("is the base where a room type has a base and no old rack rate, not a dash", async () => {
+    expect((await sql<{ r: string | null }>(
+      "select base_rate::text as r from room_types where hotel_id = $1 and code = 'STD'", [hotelId]))[0]!.r,
+      "no old rack rate on this room type").toBeNull();
+    const [std] = await sql<{ id: string }>(
+      "select id::text from room_types where hotel_id = $1 and code = 'STD'", [hotelId]);
+    const set = await call("/pricing/base", "PUT",
+      { roomTypeId: std!.id, from: "2026-08-01", to: "2026-09-30", price: 2500 });
+    expect(set.status, await set.clone().text()).toBe(200);
+
+    const id = await booking(`${CODE}-RACK`, "2026-08-27", "2026-08-28");
+    const stay = (await (await call(`/stays/${id}`)).json()) as { rackTariff: number | null };
+    expect(stay.rackTariff).toBe(2500);
+  });
+
+  /* The walk-in route (no screen calls it since 29 Sep; a cleanup lane removes
+     it) read the old rack too, and refused this hotel "no rate set". */
+  it("prices a walk-in with no typed tariff at that base, not a refusal", async () => {
+    const res = await call("/walk-ins", "POST", {
+      guestName: "Day and room walk-in", roomNumber: "107", nights: 1, adults: 1, children: 0,
+      ratePlan: "EP", idSkipReason: "Test",
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const [r] = await sql<{ rate: string }>(
+      `select r.agreed_rate::text as rate from reservations r join guests g on g.id = r.guest_id
+        where r.hotel_id = $1 and g.full_name = 'Day and room walk-in'`, [hotelId]);
+    expect(r?.rate).toBe("2500.00");
   });
 });
 
