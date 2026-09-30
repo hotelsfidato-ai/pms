@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from "react-router";
 import QRCode from "qrcode";
 import * as apiModule from "@/lib/api";
 import * as notice from "@/modules/online-checkin/privacyNotice";
+import * as google from "@/modules/online-checkin/googleSignIn";
 import GuestPage from "@/modules/online-checkin/pages/GuestPage";
 import DeskPage from "@/modules/online-checkin/pages/Desk";
 import { MessagesToTheDesk, WaitingDetailsLink } from "@/modules/online-checkin";
@@ -40,6 +41,7 @@ const BOOKING = {
   emailHint: "a…@example.com" as string | null,
   canSendCodes: true,
   cannotSend: null,
+  googleClientId: null as string | null,
   offers: [] as string[],
 };
 
@@ -281,6 +283,92 @@ describe("the code, the way the guest chooses (D27-207, D27-210)", () => {
     await waitFor(() => expect(screen.getByText(
       "That code is not right, or it has expired. Ask for a new one.")).toBeTruthy());
     expect(screen.queryByText(/Verified/)).toBeNull();
+  });
+});
+
+describe("Continue with Google (D27-207)", () => {
+  const CLIENT = "made-up-client.apps.googleusercontent.test";
+  const WITH_GOOGLE = { ...BOOKING, googleClientId: CLIENT };
+  const CONTINUE = { name: "Continue with Google" };
+  const UNLOCK = "an-unlock-from-a-google-answer-0123456789";
+
+  /** Google's script, stood in for: it keeps what the page gave it, so the
+      test can answer as Google would. */
+  function googleStandIn() {
+    const given: { clientId?: string; answer?: (a: { credential?: string }) => void; drawn: number } = { drawn: 0 };
+    const load = vi.spyOn(google, "loadGoogleSignIn").mockResolvedValue({
+      initialize: (o) => { given.clientId = o.client_id; given.answer = o.callback; },
+      renderButton: () => { given.drawn += 1; },
+    });
+    return { load, given };
+  }
+
+  it("is offered only where the server has its client id and the booking an email", async () => {
+    server({ [OPEN]: () => WITH_GOOGLE });
+    open();
+    expect(await screen.findByRole("button", CONTINUE)).toBeTruthy();
+    cleanup();
+
+    server({ [OPEN]: () => BOOKING });
+    open();
+    await screen.findByRole("button", ON_WHATSAPP);
+    expect(screen.queryByRole("button", CONTINUE), "no client id on the server").toBeNull();
+    cleanup();
+
+    server({ [OPEN]: () => ({ ...WITH_GOOGLE, emailHint: null }) });
+    open();
+    await screen.findByRole("button", ON_WHATSAPP);
+    expect(screen.queryByRole("button", CONTINUE), "no email on the booking to match").toBeNull();
+  });
+
+  it("fetches Google's script only on the press, posts Google's answer as it came, and opens on a match", async () => {
+    const { load, given } = googleStandIn();
+    const spy = server({
+      [OPEN]: (init) => ({ ...WITH_GOOGLE, verified: unlockSent(init) === UNLOCK }),
+      [`${OPEN}/google`]: () => ({ verified: true, unlock: UNLOCK }),
+      [`${OPEN}/details`]: () => ({ sent: null }),
+    });
+    open();
+    const button = await screen.findByRole("button", CONTINUE);
+    expect(load, "nothing of Google's runs until the guest asks").not.toHaveBeenCalled();
+
+    fireEvent.click(button);
+    await waitFor(() => expect(given.drawn).toBe(1));
+    expect(given.clientId).toBe(CLIENT);
+
+    given.answer!({ credential: "googles-signed-answer" });
+    expect(await screen.findByText("Verified on this phone")).toBeTruthy();
+    const posted = spy.mock.calls.find((c) => c[0] === `${OPEN}/google`);
+    expect(posted![1]?.body).toBe('{"credential":"googles-signed-answer"}');
+    expect(localStorage.getItem(`guest-unlock:${TOKEN.slice(0, 12)}`), "the same unlock as a code").toBe(UNLOCK);
+  });
+
+  it("prints the door's refusal of another account, and stays shut", async () => {
+    const { given } = googleStandIn();
+    const refusal = "That Google account is not the one on this booking. "
+      + "Use the email the booking was made with, or ask for a code.";
+    server({
+      [OPEN]: () => WITH_GOOGLE,
+      [`${OPEN}/google`]: () => { throw new apiModule.ApiError(401, refusal); },
+    });
+    open();
+    fireEvent.click(await screen.findByRole("button", CONTINUE));
+    await waitFor(() => expect(given.answer).toBeTruthy());
+    given.answer!({ credential: "somebody-elses-answer" });
+
+    expect(await screen.findByText(refusal)).toBeTruthy();
+    expect(screen.queryByText(/Verified/)).toBeNull();
+    expect(localStorage.getItem(`guest-unlock:${TOKEN.slice(0, 12)}`)).toBeNull();
+  });
+
+  it("still offers Google where the server cannot send a code, and says why there is no code", async () => {
+    const cannot = "Codes cannot be sent yet - sending is not set up on this server. Ask the desk.";
+    server({ [OPEN]: () => ({ ...WITH_GOOGLE, canSendCodes: false, cannotSend: cannot }) });
+    open();
+    expect(await screen.findByRole("button", CONTINUE)).toBeTruthy();
+    expect(screen.getByText(cannot)).toBeTruthy();
+    expect(screen.queryByRole("button", ON_WHATSAPP)).toBeNull();
+    expect(screen.queryByLabelText("The six digits")).toBeNull();
   });
 });
 

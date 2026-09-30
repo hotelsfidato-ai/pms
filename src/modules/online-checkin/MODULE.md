@@ -9,14 +9,21 @@ and D21-6 to D21-19, D21-25, D21-29, D21-59 to D21-63, D21-72, D21-75
 (`docs/briefs/decisions-2026-09-21.md`). The design is
 `docs/architecture/online-checkin.md`; the brief is `docs/briefs/guest-page.md`.
 
-**Not built, on purpose:** the ID photo (waits on the owner's rule for how
-long it is kept, D21-11), paying online, choosing a room.
+**30 September (D27-207, D27-210):** three ways to prove it is you - a code
+on WhatsApp, a code by email, Continue with Google - and nothing sent until
+the guest chooses. **Not built yet:** the ID photo (decided, D27-207 to
+D27-210: encrypted, kept in Drive; its own stage). **Not built, on
+purpose:** paying online, choosing a room.
 
 ```
 src/modules/online-checkin/        the guest's page, the desk's screen, their data and tests
 api/src/routes/guestDoor.ts        the door (the brief gives this lane that file)
-db/migrations/121_…, 124_…         everything behind the code; the guest's bill
+db/migrations/121_…, 124_…, 167_…  everything behind the code; the guest's bill; the three ways in
+OWNER-STEPS.md                     the owner's clicks: the email code, the Google client ID
 ```
+
+Server settings, names only: `GOOGLE_CLIENT_ID` (public; unset, no Google
+button). Codes need the sending settings (`deploy/n8n/IMPORT.md`).
 
 ---
 
@@ -53,6 +60,19 @@ put back (CHANGELOG, 21 September).
    `env.ts` refuses under production; the page draws it only in a development
    build, and `scripts/check-no-dev-login.mjs` fails a build carrying
    `devCode` (`devCodeNeverShips.test.ts`).
+   **Continue with Google (D27-207) is a third proof, not an account.**
+   The page hands the door Google's signed answer; the door checks it with
+   Google's own library against Google's published keys - signed by Google,
+   made for this system (`aud` = `GOOGLE_CLIENT_ID`), issued by Google, not
+   expired, under ten minutes old, the address verified - and the DATABASE
+   compares that address with the stay's own, letter case aside
+   (`app.guest_google_answer`). A match hands out the same unlock as a right
+   code and nothing else: no session, no guest role, and NO Firebase user -
+   no guest ever sits in the project staff sign in to. Every failure reads
+   the same sentence. Google's script is not in the bundle: the page fetches
+   it from accounts.google.com only when the guest presses the button
+   (`googleSignIn.ts`). Offered only where the server has the client id and,
+   on a booking's link, the booking an email.
 5. **Every refusal takes the same shape** — behind the code, a refused call
    answers what an unknown link answers: 404 and one sentence.
 6. **Nothing a guest types reaches the legal register without a person
@@ -147,6 +167,7 @@ reception's menu for this (the owner, 24 September).
 | GET | `/api/guest/:token` | answers | the booking or the room; `verified` for THIS phone; `canSendCodes`; `offers` once unlocked |
 | POST | `/api/guest/:token/code` | answers | `{ by: "whatsapp" \| "email" }`: a code to the phone or the email on the stay it resolves to, nothing else read; says where, or "Ask the desk". Asked only when the guest presses (D27-210) |
 | POST | `/api/guest/:token/verify` | answers | the six digits; hands back the unlock once |
+| POST | `/api/guest/:token/google` | answers | Continue with Google (D27-207): Google's signed answer; the same unlock when its address is the stay's. Refused like an unknown link while `GOOGLE_CLIENT_ID` is unset |
 | GET/POST | `/api/guest/:token/details` | **refused** | what the guest sent / send it, as a submission |
 | GET | `/api/guest/:token/bill` | **refused** | the bill as it stands — `app.guest_bill` (124), which is finance's `app.stay_bill` (123) for the one stay the link and the unlock reach |
 | GET/POST | `/api/guest/:token/requests` | **refused** | their requests / make one; kind `desk` is a message to the front desk (D23-14) |

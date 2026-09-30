@@ -51,6 +51,9 @@ export interface GuestPageView {
   canSendCodes: boolean;
   /** The door's own sentence when it cannot. */
   cannotSend: string | null;
+  /** Continue with Google is offered only where the server has this
+      (D27-207). Public: it names this system to Google. */
+  googleClientId: string | null;
   /** What the hotel offers behind the code (D21-63): "spa", "laundry". */
   offers: string[];
 }
@@ -105,6 +108,18 @@ export async function verifyCode(token: string, code: string): Promise<{ verifie
   const answer = await api<{ verified: boolean; unlock?: string }>(at(token, "/verify"), {
     method: "POST",
     body: JSON.stringify({ code }),
+  });
+  if (answer.verified && answer.unlock) keepUnlock(token, answer.unlock);
+  return { verified: answer.verified };
+}
+
+/** Continue with Google (D27-207): Google's signed answer, posted as it
+    came. The door checks it and compares its address with the booking's;
+    a match hands back the same unlock as a right code. */
+export async function verifyWithGoogle(token: string, credential: string): Promise<{ verified: boolean }> {
+  const answer = await api<{ verified: boolean; unlock?: string }>(at(token, "/google"), {
+    method: "POST",
+    body: JSON.stringify({ credential }),
   });
   if (answer.verified && answer.unlock) keepUnlock(token, answer.unlock);
   return { verified: answer.verified };

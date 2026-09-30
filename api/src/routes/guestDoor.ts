@@ -1,4 +1,5 @@
 import { Hono, type Context } from "hono";
+import { OAuth2Client } from "google-auth-library";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { withSession } from "../auth.ts";
 import { pool } from "../db.ts";
@@ -219,6 +220,10 @@ guestDoor.get("/:token", async (c) => {
        link, so it tells a stranger nothing about this one. */
     canSendCodes: canSend() || codeOnScreen(),
     cannotSend: canSend() || codeOnScreen() ? null : CANNOT_SEND,
+    /* Continue with Google is offered only where the server has its client
+       id (D27-207). The id is public - it names this system to Google - and
+       the same for every link. */
+    googleClientId: googleClientId(),
     /* What this hotel offers behind the code (D21-63): only once unlocked. */
     offers: it.verified ? (it.offers ?? []) : [],
   });
@@ -363,6 +368,65 @@ guestDoor.post("/:token/verify", async (c) => {
       error: "That code is not right, or it has expired. Ask for a new one.",
     }, 401);
   }
+  return c.json({ verified: true, unlock });
+});
+
+/* ── CONTINUE WITH GOOGLE (D27-207) ────────────────────────────────
+   The third proof. The page gets a signed answer from Google ("this browser
+   is signed in as this address") and posts it here. Nothing of it is
+   trusted until it is checked:
+
+     · Google signed it - against Google's own published keys
+     · for THIS system - `aud` is our client id (GOOGLE_CLIENT_ID)
+     · Google issued it, it has not expired, and it was made in the last
+       ten minutes - so an old answer found somewhere is not a key
+     · the address is one Google has verified
+
+   and then the DATABASE decides whose booking it is: the address must be the
+   one the stay carries (`app.guest_google_answer`, 167). A match hands out
+   the same unlock as a right code, and nothing else: no account, no
+   session, no guest role (rule 1) - and no Firebase user, so no guest ever
+   sits in the project the staff sign in to.
+
+   GOOGLE_CLIENT_ID unset: the button is not offered and this answers what
+   an unknown link answers. */
+const googleClientId = (): string | null => process.env["GOOGLE_CLIENT_ID"]?.trim() || null;
+const google = new OAuth2Client();
+const GOOGLE_ANSWER_LIVES_S = 10 * 60;
+const NOT_THIS_GOOGLE = "That Google account is not the one on this booking. "
+  + "Use the email the booking was made with, or ask for a code.";
+
+/** The address Google vouches for, or null for anything that fails a check.
+    Which check failed is not said: the answer is the same sentence. */
+async function emailGoogleVouchesFor(credential: string, clientId: string): Promise<string | null> {
+  try {
+    const ticket = await google.verifyIdToken({ idToken: credential, audience: clientId });
+    const p = ticket.getPayload();
+    if (!p || p.email_verified !== true || typeof p.email !== "string") return null;
+    if (Date.now() / 1000 - p.iat > GOOGLE_ANSWER_LIVES_S) return null;
+    return p.email;
+  } catch {
+    return null;
+  }
+}
+
+guestDoor.post("/:token/google", async (c) => {
+  const hash = sha256(c.req.param("token"));
+  const clientId = googleClientId();
+  if (!clientId) return refused(c);
+  if (tooOften(hash, "open")) return c.json({ error: NOTHING_HERE }, 429);
+
+  const body = await c.req.json<{ credential?: unknown }>().catch(() => ({}) as { credential?: unknown });
+  const email = typeof body.credential === "string" && body.credential.length <= 4096
+    ? await emailGoogleVouchesFor(body.credential, clientId) : null;
+
+  /* The unlock, as `verify` makes it: only its hash reaches the database,
+     in the same statement that accepts the address. */
+  const unlock = randomBytes(32).toString("base64url");
+  const rows = email === null ? [] : await ask<{ ok: boolean }>(
+    "select app.guest_google_answer($1, $2, $3) as ok", [hash, email, sha256(unlock)]);
+
+  if (!rows[0]?.ok) return c.json({ verified: false, error: NOT_THIS_GOOGLE }, 401);
   return c.json({ verified: true, unlock });
 });
 
