@@ -114,7 +114,7 @@ export function FolioPanel({
      invoice work on the zero they always did, since nothing is owed. */
   const billed = balance.data ?? null;
   const due = billed ?? 0;
-  const toCome = useChargesToCome(hotelId, stay, all, billed);
+  const toCome = useStayDue(hotelId, stay);
 
   return (
     <div className="space-y-5">
@@ -301,7 +301,7 @@ function BalanceHeader({ stay, balance, toCome }: {
    the "N nights" its words say, else one (the server's POSTING_NIGHTS). A
    rate with no GST rule gives a dash, and then no balance (no default price).
    Worked out once, for the headline and the box under the lines (D27-199). */
-interface ToCome {
+export interface ToCome {
   nights: number; rate: number; pct: number | null | undefined;
   /** Rupees. `tax` and `after` are null where no GST rule covers the rate. */
   charges: number; tax: number | null; after: number | null;
@@ -337,6 +337,22 @@ function useChargesToCome(
     after: tax === null ? null : (paise(balance ?? 0) + charges + tax) / 100,
     received: -lines.filter((l) => l.category === "payment").reduce((n, l) => n + paise(l.amount), 0) / 100,
   };
+}
+
+/** What a stay owes with its charges to come counted, or null when none are
+    to come (D27-199). THE ONE FIGURE: the Bill tab's headline, its box and the
+    stay panel's foot all read this, from the Bill tab's own two reads (one
+    cache), so they cannot disagree. */
+export function useStayDue(hotelId: string, stay: Stay): ToCome | null {
+  const postings = useQuery({
+    queryKey: ["folio-postings", hotelId, stay.id],
+    queryFn: () => getFolioPostings(hotelId, stay.id),
+  });
+  const balance = useQuery({
+    queryKey: ["folio-balance", hotelId, stay.id],
+    queryFn: () => getFolioBalance(hotelId, stay.id),
+  });
+  return useChargesToCome(hotelId, stay, postings.data ?? [], balance.data ?? null);
 }
 
 function ChargesToCome({ toCome }: { toCome: ToCome | null }) {
