@@ -18,6 +18,22 @@ Branch `fix/booking-bill-30sep`, the booking and bill lane; the whole account is
 
 ---
 
+## 2026-09-30 · The cash lane, second round: cash opens by itself after the night audit (D27-200, D27-201, D27-202, FIN-22)
+
+**Asked for:** the owner, after the hotel's supervisor: "after the night audit, the new register is open, the new cash thing is open … we don't need to open the thing separately." It replaces D27-190/191's count-in and "no cash before"; the closing count, its reason, the float kept and the deposits log stay. Branch `cash/counts-deposits-30sep` on cp6 9d6e084f; `fidato_s47`, API 8907, web 5307.
+**Shipped:**
+- **The desk opens by itself** (`openOwnDrawer` in `cashier.ts`): a person's first cash payment, or first money in or out, opens their drawer - on the float handed to them BY NAME (`app.cashier_float_waiting`), ₹0 for anyone else. Never on a read: an open drawer must be counted before the audit. `postings.ts` (two hunks, the master's yes): the "Open your cash drawer first" refusal is gone and the opening runs after every refusal, in the payment's own transaction.
+- **A float is carried once**: `cashier_float_claims` (165) - the primary key is the close. Openings and handovers take turns per hotel (an advisory lock), so a handover is either seen by the next opening or added to the drawer already open (the shift-overlap case, D27-201).
+- **The close** (D27-201, D27-202): the float kept is always typed, 0 up to the count; above 0 it names the next person and waits for them; the rest is to deposit. To hand everything over, the whole count is typed.
+- **Both ends on record, and shown** (the owner: "what comes is what goes"): Cashiering's closed view says the last close's count, float kept, for whom and the amount to deposit; an open drawer says the float it took and from whose close (FIN-22 fixed on the way).
+- **The counted open stays** as it was: how a desk's first float gets in. What was handed to the person is taken up by it, never added on top.
+- The till: pos's CHANGELOG.
+**Proved:** API `cashOpens.test.ts` (new) 6, `cashCounts` 7, `cashDeposits` 8, `billControls`' flipped test - each new guard seen failing with it removed, one a round (the waiting float, the payment's opening, the claims, the add to an open drawer, the counted open's take-up, the name rule, the money-in opening, the till's carry). On screen (`fidato_s47`): a cash payment from the Bill tab with no drawer open was taken and the drawer stood open at ₹0 with ₹890; ₹500 kept with nobody named held the close, naming Test GM gave "To deposit: ₹390.00"; the GM read "₹500.00 was handed to you", and after their first cash "₹500.00 from Test Reception's close" and ₹600 expected.
+**Left open:** reception's Start here card (core) still describes opening the drawer by hand. A float handed to a named person waits for that person; if they do not come in, whoever works starts at ₹0 and counts over by it, with a reason. A close that kept a float with nobody named, made before D27-201, is never carried.
+**Commits:** 45c21be9 and the next.
+
+---
+
 ## 2026-09-30 · The cash lane: count in, count out, and the Cash deposits log (D27-190, D27-191, FIN-21)
 
 **Asked for:** the owner's D27-190, with the details the owner took on the lane's recommendations (D27-191). Branch `cash/counts-deposits-30sep` from cp6 c01b150, copy `.claude\worktrees\suspicious-germain-e18615`, database `fidato_s47`, API 8907, web 5307. Finance worked under the contracts lane's paused claim, by the master's leave; no bill file touched (postings.ts, FolioPanel).

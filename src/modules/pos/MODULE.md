@@ -186,7 +186,8 @@ money       POST   /:code/till/orders/:id/discount
 floor       GET    /:code/till/floor
             GET    /:code/till/waiters
 day end     GET    /:code/till/day-end
-            POST   /:code/till/day-end/open       (D27-190: the float counted; no cash before it)
+            POST   /:code/till/day-end/open       (an outlet's FIRST-EVER float, counted once; every day after opens by
+                                                   itself on the float the last close kept - app.pos_opening_cash, D27-200)
             POST   /:code/till/day-end/movements
             POST   /:code/till/day-end/count
             POST   /:code/till/day-end/close
