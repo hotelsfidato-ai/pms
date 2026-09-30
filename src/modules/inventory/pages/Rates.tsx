@@ -182,7 +182,7 @@ export default function RatesPage() {
             ]}
           />
           {mayEdit && view === "prices" && offered.length > 0 && (
-            <Button onClick={() => setSetting(true)}>Set prices</Button>
+            <Button variant="primary" onClick={() => setSetting(true)}>Set prices</Button>
           )}
           </>
         }
@@ -689,7 +689,9 @@ function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
                 );
               })}
             </tr>
-            {open.has(t.id) && <BreakupRows hotelId={hotelId} roomTypeId={t.id} dates={dates} />}
+            {open.has(t.id) && (
+              <BreakupRows hotelId={hotelId} roomTypeId={t.id} sleeps={t.maxOccupancy} dates={dates} />
+            )}
             </Fragment>
           ))}
           {PERFORMANCE.map((p, i) => (
@@ -741,8 +743,8 @@ function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
    THE SERVER'S - app.tariff_for's, through GET /pricing?breakup= - so an
    older "covers 2" price shows what it sells for and nothing is added up
    here. Not set is a dash, never a zero. Read when the line is opened. */
-function BreakupRows({ hotelId, roomTypeId, dates }: {
-  hotelId: string; roomTypeId: string; dates: string[];
+function BreakupRows({ hotelId, roomTypeId, sleeps, dates }: {
+  hotelId: string; roomTypeId: string; sleeps: number; dates: string[];
 }) {
   const q = useQuery({
     queryKey: ["pricing-breakup", hotelId, dates[0], roomTypeId],
@@ -758,8 +760,12 @@ function BreakupRows({ hotelId, roomTypeId, dates }: {
     { label: `MAP · ${who}`, pick: (d) => d.MAP },
     { label: `AP · ${who}`, pick: (d) => d.AP },
     { label: `AI · ${who}`, pick: (d) => d.AI },
-    { label: "+ per extra adult", pick: (d) => d.extraAdult },
-    { label: "+ per extra child", pick: (d) => d.extraChild },
+    /* Only where a further guest fits: a guest who can never be sold must
+       not show a figure (the owner, D27-206) - the same rule as the dash. */
+    ...(sleeps > guests ? [
+      { label: "+ per extra adult", pick: (d: BreakupDay) => d.extraAdult },
+      { label: "+ per extra child", pick: (d: BreakupDay) => d.extraChild },
+    ] : []),
   ];
   return (
     <>

@@ -22,7 +22,10 @@ const PRICING = {
   from: "2026-08-25", days: 14,
   basis: null,
   roomTypes: [{ id: "rt-1", code: "SUP", name: "Superior", category: null,
-    baseOccupancy: 2, maxOccupancy: 3, rack: null, difference: null }],
+    baseOccupancy: 2, maxOccupancy: 3, rack: null, difference: null },
+    /* Sleeps two: no third guest fits, so it has no "extra" rows (D27-206). */
+    { id: "rt-2", code: "TWN", name: "Twin", category: null,
+      baseOccupancy: 2, maxOccupancy: 2, rack: null, difference: null }],
   mealPlans: [{ code: "EP", name: "EP · Room only" }],
   addons: { CP: 500, MAP: null, AP: null, AI: null, double: null, extraAdult: null, extraChild: null },
   older: [],
@@ -107,6 +110,17 @@ describe("Rates", () => {
     expect(screen.queryByRole("button", { name: "Set prices" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Superior on/ })).toBeNull();
     expect(screen.queryByText(/Tap any price/)).toBeNull();
+  });
+
+  it("shows no extra-guest rows for a room type no further guest fits in (D27-206)", async () => {
+    ratesPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Twin" }));
+    const cp = (await screen.findByText("CP · 2 guests")).closest("tr")!;
+    expect(await within(cp).findByText("₹4,800")).toBeTruthy();
+    /* The hotel's figures exist (the read sends them), but a guest who can
+       never be sold must not show one: the same rule as the dash. */
+    expect(screen.queryByText("+ per extra adult")).toBeNull();
+    expect(screen.queryByText("+ per extra child")).toBeNull();
   });
 
   it("sets a base over a range from Set prices, the same call as a tapped price (D27-206)", async () => {

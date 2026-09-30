@@ -59,7 +59,8 @@ each booking.
   press, and every write route asks the gate.
 - **The break-up (D27-206):** each room type's line on the calendar is a button
   (`aria-expanded`, closed by default) that opens rows under it - "2 guests",
-  "CP · 2 guests" … "AI · 2 guests", "+ per extra adult", "+ per extra child" -
+  "CP · 2 guests" … "AI · 2 guests", and "+ per extra adult", "+ per extra child"
+  only where a further guest fits the room -
   read from `GET /pricing?breakup=` when it opens; not set is a dash. **Set
   prices** (setters only) is the tapped price's dialog with a room type and a
   first day - the same `setBasePrice` call; with a base room type chosen only
