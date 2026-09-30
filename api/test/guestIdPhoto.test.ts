@@ -245,7 +245,9 @@ beforeAll(async () => {
   unlock = await unlockWith(link);
   otherUnlock = await unlockWith(otherLink);
   await sendDetails(link, unlock);
-});
+  /* Two dozen round trips before the first test: on a busy machine the
+     default thirty seconds has not been enough. */
+}, 120_000);
 
 beforeEach(async () => {
   forgetKnocksForTests();
