@@ -4,6 +4,7 @@ import type { Client } from "../../db.ts";
 import { resolveDate } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
 import { inr } from "../../reportRender.ts";
+import { roomRateBeforeGst } from "./tax.ts";
 import { overCashLimit, panFor } from "./cashLimit.ts";
 import { FOLIO_SELECT, STANDING_INVOICE, folioBalance } from "./folios.ts";
 import { POSTING_NIGHTS } from "../reports/index.ts";
@@ -530,12 +531,24 @@ export async function editFolioCharge(
 /* ── Change the stay's rate ──────────────────────────────────────── */
 
 postings.post("/:code/stays/:id/rate", async (c) => {
-  const body = (await c.req.json().catch(() => ({}))) as { rate?: unknown; reason?: unknown };
+  const body = (await c.req.json().catch(() => ({}))) as {
+    rate?: unknown; reason?: unknown; includesGst?: unknown;
+  };
   const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    /* "Includes GST" (D27-199): the typed figure is split as the booking's is
+       (the slab gap refused, the nearest total not above it) before it is kept. */
+    const typed = Number(body.rate);
+    let rate = typed;
+    if (body.includesGst === true) {
+      const split = await roomRateBeforeGst(client, hotelId, typed);
+      if (!split.ok) return refuse(split.reason);
+      rate = split.pre;
+    }
     const done = await changeStayRate(client, hotelId, c.req.param("id"),
-      Number(body.rate), typeof body.reason === "string" ? body.reason : "");
+      rate, typeof body.reason === "string" ? body.reason : "",
+      body.includesGst === true ? typed : undefined);
     return done.ok ? { ok: true, data: { corrected: done.corrected } } : refuse(done.reason);
   });
 
@@ -559,6 +572,8 @@ postings.post("/:code/stays/:id/rate", async (c) => {
  */
 export async function changeStayRate(
   client: Client, hotelId: string, stayId: string, rate: number, reason: string,
+  /** The all-in figure typed, where `rate` is its split (D27-199): the note says it. */
+  allIn?: number,
 ): Promise<{ ok: true; corrected: number } | { ok: false; reason: string }> {
   const no = (why: string) => ({ ok: false as const, reason: why });
   if (!Number.isFinite(rate) || !(rate > 0)) {
@@ -620,7 +635,8 @@ export async function changeStayRate(
       `update reservations
           set notes = concat_ws(' · ', nullif(notes, ''), $2::text)
         where id = $1`,
-      [stayId, `Rate ₹${inr(Number(stay[0].agreed_rate))} → ₹${inr(nightly)}: ${why}`]);
+      [stayId, `Rate ₹${inr(Number(stay[0].agreed_rate))} → `
+        + `${allIn === undefined ? `₹${inr(nightly)}` : `₹${inr(allIn)} incl. GST`}: ${why}`]);
   }
   await client.query("release savepoint change_rate");
   return { ok: true, corrected };

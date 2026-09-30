@@ -28,6 +28,9 @@ beforeEach(() => {
       posted.push({ path, body: JSON.parse(String(init.body)) });
       return { ok: true, data: { corrected: 0 } } as never;
     }
+    if (path.includes("/tax/room/before-gst")) {
+      return { ok: true, pre: 3809.52, rate: 5, total: 4000 } as never;
+    }
     return [] as never;
   });
 });
@@ -65,6 +68,25 @@ describe("Change rate on the booking panel, before check-in", () => {
 
     await waitFor(() => expect(posted).toEqual([
       { path: "/api/hotels/5EL/stays/stay-9/rate", body: { rate: 3200, reason: "Corporate rate agreed" } },
+    ]));
+  });
+
+  /* D27-199: the same "Includes GST" tick as the booking page. */
+  it("with Includes GST ticked, shows the split and sends the typed figure with the flag", async () => {
+    signedIn({ scope: {
+      staffId: "22222222-2222-2222-2222-222222222222", email: "owner@fidato.in",
+      fullName: "Owner", isGroupAdmin: true, hotels: [],
+    } });
+    fireEvent.click(within(await openMenu()).getByRole("menuitem", { name: /Change rate/ }));
+    fireEvent.change(await screen.findByLabelText(/New rate a night/), { target: { value: "4000" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Includes GST" }));
+    await screen.findByText("₹3,809.52 a night + ₹190.48 GST (5%).");
+    fireEvent.change(screen.getByLabelText(/^Why/), { target: { value: "Walk-in price agreed" } });
+    fireEvent.click(screen.getByRole("button", { name: "Change the rate" }));
+
+    await waitFor(() => expect(posted).toEqual([
+      { path: "/api/hotels/5EL/stays/stay-9/rate",
+        body: { rate: 4000, reason: "Walk-in price agreed", includesGst: true } },
     ]));
   });
 });

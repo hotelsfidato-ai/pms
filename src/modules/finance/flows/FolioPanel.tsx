@@ -12,9 +12,9 @@ import {
   CHARGE_CATEGORIES, PAYMENT_METHODS,
   type ChargeCategory, type PaymentMethod,
 } from "@/lib/rules";
-import { getTaxRate } from "@/modules/finance/data/tax";
+import { getRateBeforeGst, getTaxRate } from "@/modules/finance/data/tax";
 import {
-  Button, Field, Input, NativeSelect, StatusPill, Tooltip, toast, Textarea, fieldProps,
+  Button, Checkbox, Field, Input, NativeSelect, StatusPill, Tooltip, toast, Textarea, fieldProps,
   Dialog, DialogContent, DialogTrigger,
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuLabel,
@@ -601,17 +601,30 @@ export function ChangeRateDialog({
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const value = Number(rate);
+  /* "Includes GST" (D27-199), as on the booking page: the typed figure is
+     all-in and the server splits it - shown here before it is kept. */
+  const [inclusive, setInclusive] = useState(false);
+  const split = useQuery({
+    queryKey: ["before-gst", hotelId, value],
+    queryFn: () => getRateBeforeGst(hotelId, value),
+    enabled: open && inclusive && value > 0,
+  });
+  const s = inclusive && value > 0 ? split.data : undefined;
+  const refused = s && !s.ok ? s.reason : null;
+  const kept = s?.ok ? s.pre : value;
 
   const save = async () => {
     setBusy(true);
-    const res = await changeRate(hotelId, stay.id, { rate: value, reason: reason.trim() });
+    const res = await changeRate(hotelId, stay.id,
+      { rate: value, reason: reason.trim(), ...(inclusive ? { includesGst: true } : {}) });
     setBusy(false);
     if (!res.ok) return toast.error("Rate not changed", res.reason);
     const n = res.data?.corrected ?? 0;
+    const said = inclusive ? `${moneyPrecise(kept)} a night before GST` : `${money(value)} a night`;
     toast.success("Rate changed", n === 0
-      ? `${money(value)} a night, for every night not yet charged.`
-      : `${money(value)} a night; ${n} charged ${n === 1 ? "line" : "lines"} corrected.`);
-    setOpen(false); setRate(""); setReason("");
+      ? `${said}, for every night not yet charged.`
+      : `${said}; ${n} charged ${n === 1 ? "line" : "lines"} corrected.`);
+    setOpen(false); setRate(""); setReason(""); setInclusive(false);
     onDone?.();
   };
 
@@ -625,7 +638,7 @@ export function ChangeRateDialog({
           <div className="flex gap-2 w-full justify-end">
             <Button variant="secondary" onClick={() => setOpen(false)}>Keep it</Button>
             <Button variant="primary" loading={busy}
-              disabled={!(value > 0) || !reason.trim()}
+              disabled={!(value > 0) || !reason.trim() || refused !== null || (inclusive && !s)}
               onClick={() => void save()}>
               Change the rate
             </Button>
@@ -633,12 +646,25 @@ export function ChangeRateDialog({
         }
       >
         <div className="space-y-4">
-          <Field label="New rate a night" required hint="Before tax. The room's GST slab follows it.">
-            {(f) => (
-              <Input {...fieldProps(f)} numeric inputMode="decimal" value={rate}
-                onChange={(e) => setRate(e.target.value)} />
+          <div data-rate-inclusive>
+            <Field label="New rate a night" required
+              hint={inclusive ? "With GST. It is split by the room's GST slab before it is kept."
+                : "Before tax. The room's GST slab follows it."}>
+              {(f) => (
+                <Input {...fieldProps(f)} numeric inputMode="decimal" value={rate}
+                  onChange={(e) => setRate(e.target.value)} />
+              )}
+            </Field>
+            <Checkbox checked={inclusive} onCheckedChange={setInclusive} label="Includes GST" className="mt-2" />
+            {s?.ok && (
+              <p className="mt-1.5 text-sm text-grey-600" data-rate-split>
+                {s.total < value
+                  ? `${moneyPrecise(value)} can't split exactly: the bill will say ${moneyPrecise(s.total)} a night.`
+                  : `${moneyPrecise(s.pre)} a night + ${moneyPrecise(s.total - s.pre)} GST (${s.rate}%).`}
+              </p>
             )}
-          </Field>
+            {refused && <p className="mt-1.5 text-sm text-warning-dark" data-rate-split>{refused}</p>}
+          </div>
           <p className="text-sm text-grey-700 leading-relaxed">
             Nights already charged are corrected to it, with this reason - a closed
             day's on Closed days. Nights still to come are charged at it.
