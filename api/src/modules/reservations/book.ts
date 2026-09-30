@@ -521,14 +521,6 @@ export async function makeBooking(
       /* A COMPLIMENTARY ROOM IS ₹0 AND NEEDS NO PRICE: the night audit posts
          nothing for it (020), and an unpriced calendar does not stop a gift. */
       let rate = line.complimentary === true ? 0 : line.agreedRate ?? null;
-      /* A TYPED RATE THAT INCLUDES GST (D27-187, D27-195) is split here, before
-         it is kept: agreed_rate is the rate before GST the audit posts, and its
-         GST by the slab adds back to the typed figure (finance's one split). */
-      if (rate !== null && rate > 0 && line.rateIncludesGst === true) {
-        const split = await roomRateBeforeGst(client, hotelId, rate);
-        if (!split.ok) return refuse(split.reason);
-        rate = split.pre;
-      }
       if (rate === null) {
         const { rows: t } = await client.query<{
           total: string | null; unpriced: string | null;
@@ -548,6 +540,16 @@ export async function makeBooking(
           };
         }
         rate = Number(t[0].total);
+      }
+
+      /* A RATE THAT INCLUDES GST (D27-187, D27-195) is split here, before it is
+         kept: agreed_rate is the rate before GST the audit posts, and its GST
+         by the slab adds back to the figure (finance's one split). The typed
+         rate, or with none typed the list price the tariff gave (D27-199). */
+      if (rate > 0 && line.rateIncludesGst === true) {
+        const split = await roomRateBeforeGst(client, hotelId, rate);
+        if (!split.ok) return refuse(split.reason);
+        rate = split.pre;
       }
 
       /* THE DISCOUNT LOWERS THE ONE FIGURE THE BOOKING KEEPS, rounded to the

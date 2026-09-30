@@ -91,6 +91,7 @@ beforeEach(() => {
     if (path.includes("/tax/room/before-gst")) {
       const gross = Number(new URL(path, "http://x").searchParams.get("gross"));
       return (gross === 4000 ? { ok: true, pre: 3809.52, rate: 5, total: 4000 }
+        : gross === 3000 ? { ok: true, pre: 2857.14, rate: 5, total: 3000 }
         : gross === 502 ? { ok: true, pre: 478.09, rate: 5, total: 501.99 }
         : { ok: false, reason: "An inclusive rate between ₹7,875 and ₹8,850 can't be split under the GST slab: type ₹7,875 or less, or more than ₹8,850." }) as never;
     }
@@ -269,16 +270,31 @@ describe("the Settings switches", () => {
    split is the server's; the page shows it and sends the typed figure with the
    flag, and says what the server says of a figure it cannot split exactly. */
 describe("a rate that includes GST", () => {
-  const typeRate = async (rate: string) => {
+  /* A tick box beside the rate, not a sliding switch (D27-199). */
+  const typeRate = async (rate: string | null) => {
     open();
     await screen.findByRole("heading", { name: "Guest" });
     type(/^Guest or company/, "Anna Smith");
     pick(/^Booking source/, "src-1");
-    const toggle = screen.getByRole("switch", { name: /Rate includes GST/ });
-    expect(toggle.getAttribute("aria-checked")).toBe("false");
-    fireEvent.click(toggle);
-    type(/^Rate/, rate);
+    const tick = screen.getByRole("checkbox", { name: /Rate includes GST/ });
+    expect(tick.getAttribute("aria-checked")).toBe("false");
+    expect(tick.closest("[data-inclusive]")!.querySelector("input[type=number]"), "beside the rate").toBeTruthy();
+    fireEvent.click(tick);
+    if (rate !== null) type(/^Rate/, rate);
   };
+
+  /* D27-199: with no rate typed, the list price is the all-in figure. The flag
+     went only with a typed rate, so the tick was silently ignored. */
+  it("splits the list price when no rate is typed, and sends the flag without a rate", async () => {
+    await typeRate(null);
+    await screen.findByText(/₹2,857\.14 a night/);
+    await waitFor(() => expect(button("Save booking").disabled).toBe(false));
+    fireEvent.click(button("Save booking"));
+    await waitFor(() => expect(calls.find((c) => c.path.endsWith("/bookings"))?.body)
+      .toMatchObject({ lines: [expect.objectContaining({ rateIncludesGst: true })] }));
+    const sent = (calls.find((c) => c.path.endsWith("/bookings"))!.body as { lines: object[] }).lines[0]!;
+    expect(sent).not.toHaveProperty("agreedRate");
+  });
 
   it("prices the line before GST and books the typed figure with the flag", async () => {
     await typeRate("4000");
@@ -291,8 +307,8 @@ describe("a rate that includes GST", () => {
 
   it("says a figure cannot split exactly, and holds the buttons in the slab gap", async () => {
     await typeRate("502");
-    expect((await screen.findByText("₹502.00 can't split exactly: the bill will say ₹501.99 a night."))
-      .closest("[data-inclusive]")).toBeTruthy();
+    await screen.findByText("₹502.00 can't split exactly: the bill will say ₹501.99 a night.",
+      { selector: "[data-inclusive-note]" });
     type(/^Rate/, "8000");
     await screen.findByText(/can't be split under the GST slab/, { selector: "[data-inclusive-note]" });
     expect(button("Save booking").disabled).toBe(true);
