@@ -76,8 +76,16 @@ Release history → the previous release → Roll back (instant).
 
 1. **Each hotel: Settings → Rates and taxes → GST.** The room rate and the **laundry** rate
    (laundry cannot be billed until it is set; your CA gives the rate).
-2. **5 Elements' night audit** is stuck on 9 September. **Ask me first**: I will check, read
-   only, what running it day by day would post, before anybody presses it.
+2. **5 Elements' test data** (D27-223: 5 Elements was only testing). Checked read-only on 1 Oct:
+   5 bookings, none in house, 20 bill lines, **2 tax invoices**, date stuck on 9 Sep. Instead of
+   22 night audits, clear the test transactions and set the date to today (rooms, rates, staff and
+   settings stay). *The server, over ssh*: first see what would go, then do it:
+   ```bash
+   cd /opt/fidato/api && sudo -u fidato env HOME=/tmp npm run reset -- 5EL
+   cd /opt/fidato/api && sudo -u fidato env HOME=/tmp npm run reset -- 5EL --yes
+   ```
+   The first line only reports. Send me what it says before the second. **Ask your CA** about the
+   two invoice numbers already used: whether the series continues after them or restarts.
 3. **Amrapali (AMR) and Grand Lucent (GLM)**: you create each property (Across properties), then
    Settings → Property (profile, logo, reservations contact), room types and rooms, Rates (base
    and add-ons), bank details, house policies, and the staff's logins.
