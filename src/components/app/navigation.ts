@@ -234,7 +234,10 @@ const SECTION_LAYOUT: Array<Omit<NavSection, "items"> & { key: SectionKey }> = [
      "Across properties" says the scope out loud, which is the whole
      point: the property switcher does not touch anything in here. */
   { key: "across-properties", label: "Across properties" },
-  { key: "configuration", label: "Configuration" },
+  /* "PROPERTY SETUP" (the owner, D27-196, 30 September): Settings ›
+     Configuration is the hotel-wide settings page, and two places in one
+     sidebar may not share a name. The key stays `configuration`. */
+  { key: "configuration", label: "Property setup" },
   /* "ROOMS AND RATES", NOT "INVENTORY" — the owner, 16 September (S1). Since
      the Store and Equipment were planned, "inventory" meant two things: rooms
      and prices here, and stock on shelves. The key stays `inventory` because

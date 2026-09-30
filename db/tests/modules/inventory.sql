@@ -333,3 +333,41 @@ begin
   perform test.ok('pricing','the pricing fixture does not outlive the test',
     n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- THE OLD RACK AT A RACK-ONLY HOTEL (the owner, D27-196, 30 September)
+-- =============================================================================
+-- A hotel priced only by the old rack keeps selling every meal plan at the
+-- room-only rack (D17-92) until a base and the meal add-on are set on Rates,
+-- which then win. D27-194's "an unset plan is not sold" is the new model's.
+-- =============================================================================
+do $$
+declare
+  h uuid; std uuid; admin uuid; s text;
+begin
+  select id into admin from staff where is_group_admin limit 1;
+  h := app.provision_property_unchecked('RKO','Rack Only Test','Nowhere');
+  select id into std from room_types where hotel_id = h and code = 'STD';
+
+  update room_types set base_rate = 3000 where id = std;
+  select p2.source into s from app.price_for(std, 'CP', date '2026-12-14') p2;
+  perform test.ok('pricing','a rack-only hotel sells breakfast at the room-only rack (D27-196)',
+    app.rate_for(std, 'CP', date '2026-12-14') = 3000 and s = 'rack',
+    coalesce(app.rate_for(std, 'CP', date '2026-12-14')::text, '<null>') || ' / ' || coalesce(s, '<null>'));
+
+  perform app.set_addon(h, 'meal_plan', null, 'CP', 500, null, admin);
+  perform test.ok('pricing','the meal add-on alone does not move the rack',
+    app.rate_for(std, 'CP', date '2026-12-14') = 3000,
+    coalesce(app.rate_for(std, 'CP', date '2026-12-14')::text, '<null>'));
+
+  perform app.set_base_price(h, std, date '2026-12-01', date '2027-01-01', 2000, null, admin);
+  perform test.ok('pricing','a base and the meal add-on then win over the rack',
+    app.rate_for(std, 'CP', date '2026-12-14') = 2500
+    and app.rate_for(std, 'CP', date '2027-01-05') = 3000,
+    coalesce(app.rate_for(std, 'CP', date '2026-12-14')::text, '<null>'));
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+end $$;

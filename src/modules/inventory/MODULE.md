@@ -61,7 +61,7 @@ each booking.
   property still needs, the front desk's hours and GST are on admin's
   Settings → Configuration; the front desk's form is this service's
   `components/FrontDeskCard.tsx`, exported through the door.
-- Room types sits in the menu's **Configuration** section with Cancellation
+- Room types sits in the menu's **Property setup** section (D27-196) with Cancellation
   terms; Rates in **Rooms and rates**. No working menu lists them.
 
 ---
