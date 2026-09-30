@@ -425,18 +425,14 @@ function LedgerList({
     );
   }
 
-  /* A reversal is stored without its line's tax scheme, so it takes its
-     original's here and the pair stays in one section; and it is listed
-     right under the line it reverses. */
-  const byId = new Map(lines.map((l) => [l.id, l]));
-  const placed = lines.map((l) => {
-    const original = l.reversalOf ? byId.get(l.reversalOf) : undefined;
-    return original?.scheme ? { ...l, scheme: original.scheme } : l;
-  });
+  /* A reversal is listed right under the line it reverses. It is in the same
+     section by itself: the database gives a reversal its line's tax scheme
+     (125's trigger), and the reversal copies the category. */
+  const ids = new Set(lines.map((l) => l.id));
   const ordered = [
-    ...placed.filter((l) => !l.reversalOf)
-      .flatMap((l) => [l, ...placed.filter((r) => r.reversalOf === l.id)]),
-    ...placed.filter((r) => r.reversalOf && !byId.has(r.reversalOf)),
+    ...lines.filter((l) => !l.reversalOf)
+      .flatMap((l) => [l, ...lines.filter((r) => r.reversalOf === l.id)]),
+    ...lines.filter((r) => r.reversalOf && !ids.has(r.reversalOf)),
   ];
   const payments = ordered.filter((l) => l.category === "payment");
   const sections = billSections(ordered.filter((l) => l.category !== "payment"), toCome ? ["room"] : []);
