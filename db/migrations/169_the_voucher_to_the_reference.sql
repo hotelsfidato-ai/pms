@@ -127,6 +127,17 @@ create policy hotel_bank_details_manage on hotel_bank_details
 
 grant select, insert, update, delete on hotel_bank_details to pms_app;
 
+/* ⚠ OWNED BY pms_migrate AT ONCE, NOT ON THE NEXT RUN. 014 hands every table to
+   pms_migrate - but only the tables that exist when 014 runs, so a table made
+   later in the same run stays the superuser's until the next deploy replays
+   014. The voucher's definer (app.guest_voucher, owned by pms_migrate) was
+   refused it: "permission denied for table hotel_bank_details" on the first
+   migrate of fidato_s45 (1 October). db/tests/modules/admin.sql holds it.
+   168's hotel_logos is read by the same function and had the same gap on a
+   database built in one run: given to pms_migrate here too. */
+alter table hotel_bank_details owner to pms_migrate;
+alter table hotel_logos        owner to pms_migrate;
+
 drop trigger if exists hotel_bank_details_audit on hotel_bank_details;
 create trigger hotel_bank_details_audit after insert or update or delete on hotel_bank_details
   for each row execute function app.write_audit();

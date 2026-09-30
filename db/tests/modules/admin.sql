@@ -972,6 +972,13 @@ begin
     n = 0 and m = 0, n || ' read, ' || m || ' changed');
   perform set_config('app.user_id', '', true);
 
+  /* Built from zero in one run, as a first deploy is: the voucher's definer
+     (owned by pms_migrate) must be able to read the table the same run made. */
+  perform test.ok('voucher settings', 'the voucher''s definer owns the bank details from the first run',
+    (select pg_get_userbyid(relowner) from pg_class where relname = 'hotel_bank_details') = 'pms_migrate');
+  perform test.ok('voucher settings', 'and the hotel''s logo (168)',
+    (select pg_get_userbyid(relowner) from pg_class where relname = 'hotel_logos') = 'pms_migrate');
+
   perform test.raises('voucher settings', 'an account number is digits',
     format($q$update hotel_bank_details set account_number = '0000-1111-2222' where hotel_id = %L$q$, h), '23514');
   perform test.raises('voucher settings', 'an IFSC has its shape',
