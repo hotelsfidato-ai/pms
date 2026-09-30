@@ -1,5 +1,5 @@
 -- =============================================================================
--- 183 — the float kept back, and the cash deposits log (D27-190, D27-191)
+-- 163 — the float kept back, and the cash deposits log (D27-190, D27-191)
 -- =============================================================================
 -- Every cash point counts out at its close: the front desk's shifts (059) and
 -- each restaurant outlet's day (050). What the count keeps in the drawer for

@@ -7,7 +7,7 @@ import { businessDateFor } from "../../businessDate.ts";
    CASH DEPOSITS - the owner's D27-190 and D27-191, 30 September
 
    Every cash point counts out at its close and keeps a float; the rest is
-   cash to deposit (app.cash_to_deposit, 183). Each morning the GM banks
+   cash to deposit (app.cash_to_deposit, 163). Each morning the GM banks
    the days before and records each deposit: the day it banks, amount,
    date, bank, slip number and a photo of the slip (the shared attachments
    route, table `cash_deposits`). The owner or the accountant verifies.
