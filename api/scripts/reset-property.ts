@@ -120,6 +120,8 @@ export const CLEAR: [table: string, how: string][] = [
 
   ["banquet_event_packages", "hotel_id = $1"],
 
+  /* D27-200: which drawer took up which close's float. */
+  ["cashier_float_claims", "closed_shift_id in (select id from cashier_shifts where hotel_id = $1)"],
   ["cashier_denominations", "shift_id in (select id from cashier_shifts where hotel_id = $1)"],
   ["cashier_movements", "hotel_id = $1"],
   ["cashier_shifts",    "hotel_id = $1"],

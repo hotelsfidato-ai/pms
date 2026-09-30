@@ -208,7 +208,7 @@ describe("the log is append-only in the database", () => {
 });
 
 describe("the float kept at every close (D27-191)", () => {
-  it("is asked at the desk's close, and a handover keeps the whole drawer", async () => {
+  it("is typed at the desk's close, with a name or without, and only that much is kept (D27-202)", async () => {
     const clerk = people["front_desk"]!;
     await sql("delete from cashier_shifts where staff_id = $1 and closed_at is null", [clerk]);
     expect((await as(clerk, "POST", "/cashier-shift/open", { opening: 0 })).status).toBe(200);
@@ -217,12 +217,16 @@ describe("the float kept at every close (D27-191)", () => {
     const blank = await as(clerk, "POST", "/cashier-shift/close", { varianceReason: `${TAG} found` });
     expect(blank.status).toBe(409);
     expect(((await blank.json()) as { reason: string }).reason).toMatch(/float is kept/);
-    const handed = await as(clerk, "POST", "/cashier-shift/close",
+    /* A name alone keeps nothing by itself: the figure is typed. */
+    const named = await as(clerk, "POST", "/cashier-shift/close",
       { varianceReason: `${TAG} found`, handOverTo: people["gm"] });
+    expect(named.status).toBe(409);
+    const handed = await as(clerk, "POST", "/cashier-shift/close",
+      { varianceReason: `${TAG} found`, handOverTo: people["gm"], keptCash: 600 });
     expect(handed.status, await handed.clone().text()).toBe(200);
     const [s] = await sql<{ kept: string }>(
       "select kept_cash::text as kept from cashier_shifts where staff_id = $1 order by closed_at desc limit 1", [clerk]);
-    expect(Number(s!.kept)).toBe(1000);
+    expect(Number(s!.kept)).toBe(600);
     await sql("delete from cashier_shifts where staff_id = $1", [clerk]);
   });
 });

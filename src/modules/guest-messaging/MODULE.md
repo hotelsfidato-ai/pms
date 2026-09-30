@@ -37,30 +37,34 @@ nothing else. This service calls `send()`; it does **not** call n8n, and it does
 - **The wording lives in n8n**, where the owner changes it without a deploy
   (D17-87). This service sends named values and no prose.
 
-## Two senders, chosen by the message (D27-98, D27-101, D27-104, 29 September)
+## One sender: the CRS's n8n (D27-186, 30 September)
 
-`api/src/sending.ts` still decides nothing about WHAT goes; it now chooses
-WHO sends it, by the message, and nothing else changed for its callers:
+`api/src/sending.ts` still decides nothing about WHAT goes. Since 30 September
+every guest message leaves through ONE workflow; nothing changed for its
+callers. (29 September's two senders, D27-98, lasted a day: the owner keeps
+the live-inventory app separate, and the PMS only shows its leads.)
 
 | Message | Sent by | Its settings |
 |---|---|---|
-| every email; the booking voucher (`booking-confirmation`) on WhatsApp | the CRS's n8n, workflow `deploy/n8n/pms-send-crs.json` | `CRS_N8N_URL`, `CRS_N8N_SECRET` |
-| every other WhatsApp: the check-in code, the arrival reminder, the check-in link, the review request | the market-to-revenue n8n, `deploy/n8n/pms-send-m2r.json` | `M2R_N8N_URL`, `M2R_N8N_SECRET` |
-| the one number both send from (D27-101) | a setting, sent in every WhatsApp as `from.phoneNumberId` | `WHATSAPP_PHONE_NUMBER_ID` |
+| every email; on WhatsApp the voucher (`booking-confirmation`), the check-in code (`guest-link-code`), the check-in link (`checkin-link`), the stay reminder (`arrival-reminder`) and the review request (`review`) | the CRS's n8n, workflow `deploy/n8n/pms-send-crs.json` | `CRS_N8N_URL`, `CRS_N8N_SECRET` |
+| the one number they go from (D27-101) | a setting, sent in every WhatsApp as `from.phoneNumberId` | `WHATSAPP_PHONE_NUMBER_ID` |
+| not used for now: the sales inbox's "booked guest" mark (D27-104) | the market-to-revenue n8n, `deploy/n8n/pms-send-m2r.json` | `M2R_N8N_URL`, `M2R_N8N_SECRET`, both empty |
 
-- **`canSend()` needs all five.** Half a setup would send the code and not
-  the voucher, which nobody could explain at the desk.
+- **`canSend()` needs the first three.** Half a setup would send the emails
+  and not the check-in code, which nobody could explain at the desk.
 - **Every send carries a `messageId`.** The sweep's and Send voucher's
   messages take `messageIdFor(kind, booking)`, the same on every try, so a
   retry after a timeout (sent, answer lost) is dropped by the workflow, which
   remembers what it sent for 30 days - only what it really sent. The code
   and each press of Send check-in link take a new one.
-- **The sales inbox is told first (D27-104).** A WhatsApp the CRS sends is
-  preceded by a `"mark"` to the market-to-revenue workflow, so a guest who
-  replies is already a BOOKED lead there and the greeting bot stays quiet; a
-  market-to-revenue message marks in the same call. A failed mark does not
-  stop the message; its sentence is added to the record's detail. Email is
-  not marked: a reply to an email never reaches the WhatsApp bot.
+- **The sales inbox's mark runs only where its workflow is set up.** With
+  `M2R_N8N_URL` and `M2R_N8N_SECRET` both present, every WhatsApp is preceded
+  by a `"mark"` to that workflow, so a guest who replies is already a BOOKED
+  lead in the sales inbox; a failed mark does not stop the message, and its
+  sentence is added to the record's detail. With either empty (now) the step
+  is skipped: nothing is asked, and nothing is written as failed. ⚠ Until
+  then a booked guest's WhatsApp reply reaches the live-inventory inbox as
+  an ordinary enquiry.
 - **The wording lives in the workflows** (D17-87): the email drafts and the
   template names are at the top of each workflow's first Code node.
   `deploy/n8n/IMPORT.md` is the owner's steps; `workflows.test.ts` runs each

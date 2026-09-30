@@ -25,7 +25,7 @@ import type { Client } from "./db.ts";
    THE SECRET. The webhook address is open to the internet, because that
    is what a webhook is. Every call carries `x-fidato-secret` and each
    workflow's webhook refuses anything without it (deploy/n8n/IMPORT.md).
-   Each sender has its own. They live ONLY in the server's settings -
+   Each workflow has its own. They live ONLY in the server's settings -
    never in the repository, a screen, a test file or a chat.
 
    UNTIL THE OWNER HAS BUILT THE WORKFLOW, nothing sends. `canSend()` is
@@ -35,48 +35,44 @@ import type { Client } from "./db.ts";
    did.
    ══════════════════════════════════════════════════════════════════ */
 
-/* ── TWO SENDERS, CHOSEN BY THE MESSAGE (D27-98, 29 September) ──────
+/* ── ONE SENDER (D27-186, 30 September) ─────────────────────────────
    The PMS runs no n8n of its own for guests. It decides what and when,
-   as before; the sending is done by a NEW workflow in each of the two
-   apps that already talk to guests:
+   as before; the sending is done by ONE new workflow in the CRS's n8n
+   (deploy/n8n/pms-send-crs.json): the voucher, every email, and on
+   WhatsApp the check-in code, the check-in link, the stay reminder and
+   the review request.
 
-     crs   the CRS's n8n: every email (its mailbox), and the booking
-           voucher on WhatsApp (D27-99)
-     m2r   the market-to-revenue app's n8n: every other WhatsApp - the
-           check-in code, the arrival reminder, the check-in link, the
-           review request
+   It sends from the ONE Fidato WhatsApp number (D27-101), a setting here
+   and not in the workflow's file: WHATSAPP_PHONE_NUMBER_ID travels in
+   every WhatsApp message as `from.phoneNumberId`.
 
-   Both workflows send from the ONE Fidato WhatsApp number (D27-101), a
-   setting here and nowhere in either file: WHATSAPP_PHONE_NUMBER_ID
-   travels in every WhatsApp message as `from.phoneNumberId`.
+   THE MARKET-TO-REVENUE APP'S WORKFLOW IS NOT USED FOR NOW. It sent the
+   other WhatsApp messages until 30 September (D27-98); the owner keeps
+   that app separate, and the PMS only shows its leads. One job of it is
+   kept for the day its two settings are filled in: telling the sales
+   inbox that a guest is booked (D27-104, `send` below). Without them that
+   step is skipped - not tried, and not written down as failed.
 
    Read at CALL time, not at import. `api/src/env.ts` reads once and
    freezes, which is right for everything that must be true at boot -
    but these are allowed to be absent, and the tests start a fake
    receiver on a random port and point them at it. */
-export type Sender = "crs" | "m2r";
-
-/** The kinds the CRS's WhatsApp sends; every other WhatsApp is m2r's. */
-const CRS_WHATSAPP_KINDS: readonly string[] = ["booking-confirmation"];
-
-export const senderFor = (m: Pick<Message, "channel" | "kind">): Sender =>
-  m.channel === "email" || CRS_WHATSAPP_KINDS.includes(m.kind) ? "crs" : "m2r";
-
-function sendingTarget(sender: Sender): { url: string; secret: string } | null {
-  const url = process.env[sender === "crs" ? "CRS_N8N_URL" : "M2R_N8N_URL"];
-  const secret = process.env[sender === "crs" ? "CRS_N8N_SECRET" : "M2R_N8N_SECRET"];
+function target(urlName: string, secretName: string): { url: string; secret: string } | null {
+  const url = process.env[urlName];
+  const secret = process.env[secretName];
   return url && secret ? { url, secret } : null;
 }
+const crsTarget = () => target("CRS_N8N_URL", "CRS_N8N_SECRET");
+const m2rTarget = () => target("M2R_N8N_URL", "M2R_N8N_SECRET");
 
 const whatsappNumberId = () => process.env["WHATSAPP_PHONE_NUMBER_ID"] || null;
 
-/** Whether anything can be sent at all: both workflows and the number.
-    One answer for every screen - half a setup would send the check-in
-    code and not the voucher, which nobody could explain at the desk. A
-    screen asks this BEFORE it offers to send, so nobody presses a button
-    that was never going to work. */
-export const canSend = (): boolean =>
-  sendingTarget("crs") !== null && sendingTarget("m2r") !== null && whatsappNumberId() !== null;
+/** Whether anything can be sent at all: the CRS's workflow and the
+    number. One answer for every screen - half a setup would send the
+    emails and not the check-in code, which nobody could explain at the
+    desk. A screen asks this BEFORE it offers to send, so nobody presses a
+    button that was never going to work. */
+export const canSend = (): boolean => crsTarget() !== null && whatsappNumberId() !== null;
 
 /** A message id that is the same every time it is worked out from the
     same parts - the sweep's third try at one booking's confirmation is
@@ -92,8 +88,8 @@ export function messageIdFor(...parts: string[]): string {
     the desk reads the same thing wherever it meets this. */
 export const NOT_CONNECTED =
   "Sending is not set up yet. Bills and vouchers print and download as usual; "
-  + "nothing goes by WhatsApp or email until both workflows, their secrets and "
-  + "the WhatsApp number are in the server's settings.";
+  + "nothing goes by WhatsApp or email until the sending workflow's address, its "
+  + "secret and the WhatsApp number are in the server's settings.";
 
 export interface SendableFile {
   /** What the guest sees the attachment called. */
@@ -189,8 +185,7 @@ const MARK_TIMEOUT_MS = 10_000;
 
 export async function send(client: Client, message: Message): Promise<SendResult> {
   if (!canSend()) return { ok: false, reason: NOT_CONNECTED };
-  const sender = senderFor(message);
-  const target = sendingTarget(sender)!;
+  const crs = crsTarget()!;
 
   const to = addressFor(message);
   if (!to) {
@@ -204,9 +199,8 @@ export async function send(client: Client, message: Message): Promise<SendResult
 
   const body = {
     messageId: message.id ?? randomUUID(),
-    /* The market-to-revenue workflow marks the guest booked, then sends
-       (D27-104); "mark" alone is the inbox being told about a message the
-       CRS sends. The CRS workflow reads no action. */
+    /* The CRS workflow reads no action; "mark" is the sales inbox being
+       told about a guest, below. */
     action: "send" as "send" | "mark",
     channel: message.channel,
     kind: message.kind,
@@ -237,19 +231,23 @@ export async function send(client: Client, message: Message): Promise<SendResult
     sentBy: message.sentBy?.name ?? null,
   };
 
-  /* A WHATSAPP THE CRS SENDS STILL REACHES THE SALES INBOX when the guest
-     replies - one number for both (D27-101) - so that inbox is told first
-     that this is a booked guest, or their reply starts the greeting bot
-     (D27-104). Without the document: the inbox needs the guest, not the
-     PDF. A failed mark does not stop the voucher; it is written down. */
+  /* A WHATSAPP STILL REACHES THE SALES INBOX when the guest replies - one
+     number for both apps (D27-101) - so that inbox is told first that this
+     is a booked guest, or their reply starts the greeting bot (D27-104).
+     Without the document: the inbox needs the guest, not the PDF. A failed
+     mark does not stop the message; it is written down.
+
+     ONLY WHERE THE INBOX'S WORKFLOW IS SET UP (D27-186). It is not, for
+     now: then nothing is asked of it, and nothing is written about it. */
   let marked = "";
-  if (sender === "crs" && message.channel === "whatsapp") {
+  const inbox = m2rTarget();
+  if (inbox && message.channel === "whatsapp") {
     const { file: _file, ...rest } = body as typeof body & { file?: unknown };
-    const mark = await post(sendingTarget("m2r")!, { ...rest, action: "mark" }, MARK_TIMEOUT_MS, "ten");
+    const mark = await post(inbox, { ...rest, action: "mark" }, MARK_TIMEOUT_MS, "ten");
     if (!mark.ok) marked = ` The sales inbox was not told the guest is booked: ${mark.detail}`;
   }
 
-  const answer = await post(target, body, TIMEOUT_MS, "twenty");
+  const answer = await post(crs, body, TIMEOUT_MS, "twenty");
   const status: "sent" | "failed" = answer.ok ? "sent" : "failed";
   const detail = answer.detail + marked;
 

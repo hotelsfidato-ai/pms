@@ -71,6 +71,16 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · The cash lane, second round: the outlet's day opens by itself (D27-200, D27-201)
+
+**Asked for:** the owner's D27-200, which replaces the daily "Open the day" of the entry below. The day-end hunks and the settle check's condition only.
+**Shipped:** `app.pos_opening_cash` (165): the day's own row, else the float kept at the outlet's most recent close that kept one, however many days back; null only on the first-ever day. `app.pos_expected_cash` reads it. GET day-end shows it (`opened` = not null); Settle refuses cash only when it is null; the night count writes the day's row with it (it refused "Open the day first"); `POST /till/day-end/open` is for the first-ever day and refuses once a float carries. Nothing is written for a day until its night count. `DayEnd.tsx`: the Open card shows only on that first day; its words.
+**Proved:** `cashCounts.test.ts`: five days after a close that kept 800 the day is open with nothing pressed, takes cash, expects 800 + the bill, refuses day-end/open, and the count writes 800 down; failed with the carry taken out of the function. POS folder run with the rest (finance's entry). On screen: no Open card, float ₹1,000 from 24 Aug's close, expected ₹1,336.
+**Left open:** an expense paid from the tin on a day with no sale and no close shows as a difference at the next close (the owner's yes, D27-201).
+**Commits:** 45c21be9.
+
+---
+
 ## 2026-09-30 · The cash lane: Open the day, no cash before it, the float kept at the close (D27-190, D27-191, POS-29)
 
 **Asked for:** the owner's D27-190 at each restaurant outlet, which replaces D27-139's "no open step" (D27-191); the master's yes for the day-end routes and the one cash-tender refusal only, away from the order pad the POS lane works on. Branch `cash/counts-deposits-30sep`; finance's own entry has the whole of it.

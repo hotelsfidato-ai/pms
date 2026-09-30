@@ -212,7 +212,7 @@ describe("what the link shows before the guest has proved who they are", () => {
 });
 
 describe("the six digits that prove it is that guest", () => {
-  /* A receiver shaped like the market-to-revenue workflow, keeping what it
+  /* A receiver shaped like the CRS's workflow (D27-186), keeping what it
      was sent: the code must go to the BOOKING's number, whatever anybody
      posts (D27-105, and OCI-2's rule that a stand-in must read what it
      gets). */
@@ -226,8 +226,8 @@ describe("the six digits that prove it is that guest", () => {
     });
     await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
     const port = (server.address() as { port: number }).port;
-    process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${port}/pms-send`;
-    process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = "only-this-test-run-knows-this";
+    process.env["CRS_N8N_URL"] = `http://127.0.0.1:${port}/pms-send`;
+    process.env["CRS_N8N_SECRET"] = "only-this-test-run-knows-this";
     process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
     try { return await fn(seen); } finally {
       for (const k of ["CRS_N8N_URL", "M2R_N8N_URL", "CRS_N8N_SECRET", "M2R_N8N_SECRET"]) delete process.env[k];
@@ -337,9 +337,9 @@ describe("the six digits that prove it is that guest", () => {
     const server = createServer((_req, res) => { res.writeHead(200).end("ok"); });
     await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
     const port = (server.address() as { port: number }).port;
-    process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${port}/pms-send`;
+    process.env["CRS_N8N_URL"] = `http://127.0.0.1:${port}/pms-send`;
     process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
-    process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = "only-this-test-run-knows-this";
+    process.env["CRS_N8N_SECRET"] = "only-this-test-run-knows-this";
 
     try {
       await sql("delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
