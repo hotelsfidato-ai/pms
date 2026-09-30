@@ -166,6 +166,23 @@ describe("D27-193 · a check-in that moves the arrival more than a day", () => {
   });
 });
 
+describe("the rack a stay shows is today's price in the new model (162, D27-188)", () => {
+  it("is the base where a room type has a base and no old rack rate, not a dash", async () => {
+    expect((await sql<{ r: string | null }>(
+      "select base_rate::text as r from room_types where hotel_id = $1 and code = 'STD'", [hotelId]))[0]!.r,
+      "no old rack rate on this room type").toBeNull();
+    const [std] = await sql<{ id: string }>(
+      "select id::text from room_types where hotel_id = $1 and code = 'STD'", [hotelId]);
+    const set = await call("/pricing/base", "PUT",
+      { roomTypeId: std!.id, from: "2026-08-01", to: "2026-09-30", price: 2500 });
+    expect(set.status, await set.clone().text()).toBe(200);
+
+    const id = await booking(`${CODE}-RACK`, "2026-08-27", "2026-08-28");
+    const stay = (await (await call(`/stays/${id}`)).json()) as { rackTariff: number | null };
+    expect(stay.rackTariff).toBe(2500);
+  });
+});
+
 describe("FD-17 · taken out of the room it was given ahead", () => {
   it("holds no room any more, in the stay and in the list", async () => {
     const id = await booking(`${CODE}-OUT`, "2026-08-27", "2026-08-29");

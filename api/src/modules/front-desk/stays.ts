@@ -79,6 +79,12 @@ interface StayRow {
 }
 
 const SELECT = `
+  /* THE RACK IS TODAY'S NORMAL PRICE (EP): a base where there is one
+     (D27-188, 162), else the old rack rate - app.price_for, as the property
+     page and the night-audit report read it; once per room type, not per stay. */
+  with rack as (
+    select rt.id, (select p.price from app.price_for(rt.id, 'EP', app.business_date($1)) p) as price
+      from room_types rt where rt.hotel_id = $1)
   select r.id,
          r.reference,
          /* A group member's own reference is the group's plus its room.
@@ -91,7 +97,7 @@ const SELECT = `
          r.meal_plan,
          r.check_in::text, r.check_out::text,
          r.adults, r.children, r.status, r.is_day_use,
-         r.agreed_rate, rt.base_rate, r.is_complimentary,
+         r.agreed_rate, rack.price::text as base_rate, r.is_complimentary,
          r.notes, r.group_id,
          /* THE GROUP'S NAME AND SIZE, so a stay panel can say "one of
             nine rooms in the Kulkarni wedding" instead of showing a
@@ -118,6 +124,7 @@ const SELECT = `
     from reservations r
     join guests gu     on gu.id = r.guest_id
     join room_types rt on rt.id = r.room_type_id
+    left join rack           on rack.id = r.room_type_id
     left join companies co          on co.id = r.company_id
     left join booking_sources bs    on bs.id = r.booking_source_id
     left join reservation_groups g  on g.id  = r.group_id
