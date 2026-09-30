@@ -397,8 +397,13 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       if (wrong) return refuse(wrong);
       /* Form III's own fields, before the first write (MEMORY 243). The
          nationality typed, else the one on file: leaving the field out must
-         not be a way past the rule. */
-      const nationality = identity?.nationality?.trim() || stay.nationality;
+         not be a way past the rule. And "IN" typed - the ID block opens on
+         it - never replaces a foreign nationality on file (D27-197, the
+         owner, FD-23; D27-25's walk-in rule, on every path). A wrong one is
+         corrected on the guest's record. */
+      const typed = identity?.nationality?.trim().toUpperCase();
+      const nationality = typed && !(typed === "IN" && isForeign(stay.nationality))
+        ? typed : stay.nationality;
       const formIII = formIIIRefusal({ ...identity, nationality }, body.visit, captured);
       if (formIII) return refuse(formIII);
 
@@ -517,10 +522,10 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
          and overwriting a recorded nationality with a default because
          a form field was left empty would remove a foreign national
          from the register entirely. */
-      if (identity?.nationality?.trim()) {
+      if (typed) {
         await client.query(
           "update guests set nationality = $2 where id = $1",
-          [stay.guest_id, identity.nationality.trim().toUpperCase()],
+          [stay.guest_id, nationality],
         );
       }
       if (isForeign(nationality)) {

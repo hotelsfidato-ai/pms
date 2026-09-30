@@ -132,6 +132,7 @@ describe("the walk-in (FD-1, FD-2, FD-6, FD-7)", () => {
   });
 
   it.each([
+    ["Nights 400", { checkOut: "2027-09-30" }, {}, /Nights is a whole number from 1 to 90/],
     ["Nights -2", { checkOut: "2026-08-24" }, {}, /A stay ends after it starts/],
     ["Children", {}, { children: -1 }, /Children is a whole number from 0/],
     ["Phone", { phone: "abc" }, {}, /not a phone number/],

@@ -469,7 +469,8 @@ describe("a walk-in records where it came from", () => {
       const res = await book("No Channel Guest", room, { bookingSourceId: walkIn });
       expect(res.status).toBe(409);
       expect(((await res.json()) as { reason: string }).reason)
-        .toMatch(/not on the list any more/);
+        .toBe("That booking source is not on the list any more. A manager can "
+          + "switch it back on under Property setup → Booking sources.");
     } finally {
       await db.query(
         "update booking_sources set is_active = true where id = any($1::uuid[])",

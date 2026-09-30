@@ -260,6 +260,10 @@ imported from housekeeping — the database sets it when a room is vacated
   which reads every `insert into reservations` under `api/src`.
 - **A refusal goes above the first write** — `withSession` commits a refusal
   like any other return (MEMORY 243).
+- **At check-in, "IN" typed never replaces a foreign nationality on file**
+  (D27-197, FD-23): the ID block opens on IN, and Form III is asked of the
+  nationality on the guest's record. A wrong nationality is corrected on the
+  guest's record, not by a check-in. Guarded by guests' `formIII.test.ts`.
 - **With the line down** (`src/lib/offline.ts`, core; guarded by
   `src/lib/offline.test.ts`): check in, assign and unassign may be
   held and sent later, with a warning; check-out, void and move are refused;

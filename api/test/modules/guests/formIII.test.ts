@@ -269,7 +269,9 @@ describe("a foreign walk-in", () => {
   /* A walk-in is the one-page booking (D27-158): the booking on the Walk-in
      channel, then the check-in, which asks Form III. The page always sends
      the ID block's nationality. */
-  const walkIn = async (nationality: string, checkIn: Record<string, unknown>) => {
+  const walkIn = async (
+    nationality: string, checkIn: Record<string, unknown>, guest: Record<string, unknown> = {},
+  ) => {
     const r = await room();
     const db = await admin();
     let d: { today: string; out: string; source: string };
@@ -285,6 +287,7 @@ describe("a foreign walk-in", () => {
       guestName: `${tag} walk-in ${Date.now()}`, nationality,
       checkIn: d.today, checkOut: d.out, bookingSourceId: d.source,
       lines: [{ roomTypeId: r.typeId, mealPlan: "EP", adults: 1, rooms: 1, agreedRate: 2500 }],
+      ...guest,
     });
     expect(made.status, await made.clone().text()).toBe(200);
     const id = ((await made.json()) as { bookings: { id: string }[] }).bookings[0]!.id;
@@ -318,6 +321,36 @@ describe("a foreign walk-in", () => {
     expect(mine).toMatchObject({
       nationality: "US", passport: `P${PID}W2`, arrivedFrom: "Delhi",
     });
+  });
+
+  it("keeps a returning foreign guest foreign when the form says IN", async () => {
+    /* D27-197: the ID block opens on IN, and that default must not take
+       somebody off the register. A wrong nationality is corrected on the
+       guest's record, not by a check-in. */
+    const phone = `+44 7700 ${process.pid}`;
+    const db = await admin();
+    let guestId: string;
+    try {
+      guestId = (await db.query<{ id: string }>(
+        `insert into guests (full_name, phone, nationality) values ($1, $2, 'GB')
+         returning id::text`, [`${tag} returning ${Date.now()}`, phone])).rows[0]!.id;
+    } finally {
+      await db.end();
+    }
+    const { id, res } = await walkIn("IN",
+      { identity: { nationality: "IN" }, idSkipReason: "Passport at the bank" },
+      { guestId, phone });
+    if (res.status === 200) await release(id);
+    const after = await admin();
+    let onFile: string;
+    try {
+      onFile = (await after.query<{ n: string }>(
+        "select nationality as n from guests where id = $1", [guestId])).rows[0]!.n;
+    } finally {
+      await after.end();
+    }
+    expect({ status: res.status, onFile }).toEqual({ status: 409, onFile: "GB" });
+    expect(((await res.json()) as { reason: string }).reason).toMatch(/arrived from/);
   });
 });
 
