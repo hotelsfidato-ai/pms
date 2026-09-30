@@ -1,4 +1,5 @@
 import { Hono, type Context } from "hono";
+import { OAuth2Client } from "google-auth-library";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { withSession } from "../auth.ts";
 import { pool } from "../db.ts";
@@ -11,8 +12,9 @@ import { idNumberProblem } from "../validate.ts";
 
    GET  /api/guest/:token          what this booking is, and whether the guest
                                    has proved who they are yet
-   POST /api/guest/:token/code     send a six-digit code to the phone THE
-                                   BOOKING carries
+   POST /api/guest/:token/code     send a six-digit code to the phone or the
+                                   email THE BOOKING carries - the guest
+                                   chooses which, and types neither (D27-207)
    POST /api/guest/:token/verify   answer it
 
    and, for the desk, inside the ordinary staff gate:
@@ -188,6 +190,12 @@ guestDoor.get("/:token", async (c) => {
   const it = rows[0];
   if (!it) return c.json({ error: NOTHING_HERE }, 404);
 
+  /* The booking's email, masked, so the page can offer "a code by email" and
+     say where it would go (D27-207). Null on a room card (D21-14) and where
+     the booking has none. */
+  const ways = await ask<{ email_hint: string | null }>(
+    "select * from app.guest_link_ways($1)", [hash]);
+
   return c.json({
     kind: it.kind,
     hotel: { code: it.hotel_code, name: it.hotel_name },
@@ -206,11 +214,16 @@ guestDoor.get("/:token", async (c) => {
     },
     verified: it.verified,
     phoneHint: it.phone_hint,
+    emailHint: ways[0]?.email_hint ?? null,
     /* D21-25: the page asks for a code only when one can be sent. This is
        about the SERVER, not the booking - it is the same answer for every
        link, so it tells a stranger nothing about this one. */
     canSendCodes: canSend() || codeOnScreen(),
     cannotSend: canSend() || codeOnScreen() ? null : CANNOT_SEND,
+    /* Continue with Google is offered only where the server has its client
+       id (D27-207). The id is public - it names this system to Google - and
+       the same for every link. */
+    googleClientId: googleClientId(),
     /* What this hotel offers behind the code (D21-63): only once unlocked. */
     offers: it.verified ? (it.offers ?? []) : [],
   });
@@ -223,8 +236,8 @@ guestDoor.get("/:token", async (c) => {
 /* And the one sentence for a server that cannot send at all - on opening, so
    the page can say it BEFORE asking for a number (D21-25), and again if a
    code is asked for anyway. One definition, here. */
-const CANNOT_SEND = "Codes cannot be sent yet - WhatsApp is not connected to "
-  + "this server. Ask the desk to send you the link instead.";
+const CANNOT_SEND = "Codes cannot be sent yet - sending is not set up on this "
+  + "server. Ask the desk.";
 
 /* ── TRY IT WITHOUT WHATSAPP - DEVELOPMENT ONLY (D27-105) ─────────────
    GUEST_CODE_ON_SCREEN=1 makes the code and hands it back in the answer
@@ -248,6 +261,8 @@ const codeOnScreen = (): boolean =>
    card, which never shows the number. */
 const NO_PHONE = "There is no mobile number on this booking, so no code can be "
   + "sent. Ask the desk.";
+const NO_EMAIL = "There is no email address on this booking, so no code can be "
+  + "sent by email. Ask the desk.";
 const TOO_OFTEN = "Five codes have gone to this booking in the last hour. "
   + "Use the latest one, or ask the desk.";
 const NOT_SENT = "The code could not be sent just now. Try again in a minute, "
@@ -256,6 +271,10 @@ const NOT_SENT = "The code could not be sent just now. Try again in a minute, "
 guestDoor.post("/:token/code", async (c) => {
   const hash = sha256(c.req.param("token"));
   const onScreen = codeOnScreen();
+  /* WHICH WAY, the guest's choice (D27-207): WhatsApp, or the email on the
+     booking. Only the word is read - never a number or an address. */
+  const body = await c.req.json<{ by?: string }>().catch(() => ({}) as { by?: string });
+  const byEmail = body.by === "email";
   /* Nothing can be sent: say so first. Asked before the knock is counted, so
      a guest reading this sentence has not spent one of their five an hour. */
   if (!canSend() && !onScreen) return c.json({ sent: false, message: CANNOT_SEND }, 503);
@@ -271,17 +290,23 @@ guestDoor.post("/:token/code", async (c) => {
        the booking's own number (162). None of the number goes into the
        answer; it goes only into the message. */
     const { rows } = await client.query<{
-      code: string | null; sent_to: string | null; phone: string | null;
+      code: string | null; sent_to: string | null; phone?: string | null; email?: string | null;
       reservation_id: string; reference: string; guest_name: string;
       hotel_id: string; hotel_code: string; hotel_name: string; room_card: boolean;
-    }>("select * from app.guest_code_make($1)", [hash]);
+    }>(byEmail ? "select * from app.guest_email_code_make($1)"
+               : "select * from app.guest_code_make($1)", [hash]);
     const made = rows[0];
     if (!made) return c.json({ error: NOTHING_HERE }, 404);
-    if (!made.code || !made.phone) return c.json({ sent: false, message: NO_PHONE });
+    const address = byEmail ? made.email : made.phone;
+    if (!made.code || !address) return c.json({ sent: false, message: byEmail ? NO_EMAIL : NO_PHONE });
 
-    const where = made.room_card
-      ? "to the phone on the booking"
-      : `to the number ending ${made.sent_to!.replace("…", "")}`;
+    /* Where it went, as the page may say it: on a room card nothing of the
+       guest (D21-14); on a booking's link the number's last digits or the
+       address masked, never whole. */
+    const where = byEmail
+      ? (made.room_card ? "to the email on the booking" : `to ${made.sent_to}`)
+      : (made.room_card ? "to the phone on the booking"
+        : `to the number ending ${made.sent_to!.replace("…", "")}`);
     if (onScreen) {
       return c.json({
         sent: true,
@@ -297,15 +322,20 @@ guestDoor.post("/:token/code", async (c) => {
        "…0011" kept for the record, as the recipient - so the first code
        sent once WhatsApp was connected would have reached nobody. */
     const answer = await send(client, {
-      channel: "whatsapp",
+      channel: byEmail ? "email" : "whatsapp",
       kind: "guest-link-code",
       hotel: { id: made.hotel_id, code: made.hotel_code, name: made.hotel_name },
-      to: { name: made.guest_name, phone: made.phone },
-      data: { code: made.code, reference: made.reference },
+      to: byEmail ? { name: made.guest_name, email: address }
+        : { name: made.guest_name, phone: address },
+      /* The email's words are written in the workflow from these (D17-87). */
+      data: {
+        code: made.code, reference: made.reference,
+        guestName: made.guest_name, hotelName: made.hotel_name,
+      },
       about: { kind: "reservation", id: made.reservation_id },
     });
     return c.json(answer.ok
-      ? { sent: true, message: `We sent the code on WhatsApp ${where}.` }
+      ? { sent: true, message: `We sent the code ${byEmail ? "by email" : "on WhatsApp"} ${where}.` }
       : { sent: false, message: NOT_SENT });
   } finally {
     client.release();
@@ -338,6 +368,65 @@ guestDoor.post("/:token/verify", async (c) => {
       error: "That code is not right, or it has expired. Ask for a new one.",
     }, 401);
   }
+  return c.json({ verified: true, unlock });
+});
+
+/* ── CONTINUE WITH GOOGLE (D27-207) ────────────────────────────────
+   The third proof. The page gets a signed answer from Google ("this browser
+   is signed in as this address") and posts it here. Nothing of it is
+   trusted until it is checked:
+
+     · Google signed it - against Google's own published keys
+     · for THIS system - `aud` is our client id (GOOGLE_CLIENT_ID)
+     · Google issued it, it has not expired, and it was made in the last
+       ten minutes - so an old answer found somewhere is not a key
+     · the address is one Google has verified
+
+   and then the DATABASE decides whose booking it is: the address must be the
+   one the stay carries (`app.guest_google_answer`, 167). A match hands out
+   the same unlock as a right code, and nothing else: no account, no
+   session, no guest role (rule 1) - and no Firebase user, so no guest ever
+   sits in the project the staff sign in to.
+
+   GOOGLE_CLIENT_ID unset: the button is not offered and this answers what
+   an unknown link answers. */
+const googleClientId = (): string | null => process.env["GOOGLE_CLIENT_ID"]?.trim() || null;
+const google = new OAuth2Client();
+const GOOGLE_ANSWER_LIVES_S = 10 * 60;
+const NOT_THIS_GOOGLE = "That Google account is not the one on this booking. "
+  + "Use the email the booking was made with, or ask for a code.";
+
+/** The address Google vouches for, or null for anything that fails a check.
+    Which check failed is not said: the answer is the same sentence. */
+async function emailGoogleVouchesFor(credential: string, clientId: string): Promise<string | null> {
+  try {
+    const ticket = await google.verifyIdToken({ idToken: credential, audience: clientId });
+    const p = ticket.getPayload();
+    if (!p || p.email_verified !== true || typeof p.email !== "string") return null;
+    if (Date.now() / 1000 - p.iat > GOOGLE_ANSWER_LIVES_S) return null;
+    return p.email;
+  } catch {
+    return null;
+  }
+}
+
+guestDoor.post("/:token/google", async (c) => {
+  const hash = sha256(c.req.param("token"));
+  const clientId = googleClientId();
+  if (!clientId) return refused(c);
+  if (tooOften(hash, "open")) return c.json({ error: NOTHING_HERE }, 429);
+
+  const body = await c.req.json<{ credential?: unknown }>().catch(() => ({}) as { credential?: unknown });
+  const email = typeof body.credential === "string" && body.credential.length <= 4096
+    ? await emailGoogleVouchesFor(body.credential, clientId) : null;
+
+  /* The unlock, as `verify` makes it: only its hash reaches the database,
+     in the same statement that accepts the address. */
+  const unlock = randomBytes(32).toString("base64url");
+  const rows = email === null ? [] : await ask<{ ok: boolean }>(
+    "select app.guest_google_answer($1, $2, $3) as ok", [hash, email, sha256(unlock)]);
+
+  if (!rows[0]?.ok) return c.json({ verified: false, error: NOT_THIS_GOOGLE }, 401);
   return c.json({ verified: true, unlock });
 });
 

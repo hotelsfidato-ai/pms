@@ -408,6 +408,31 @@ describe("one fixed card per room", () => {
     } finally { await stopSender(server); }
   });
 
+  /* D27-207: the code by email from a room card. Nothing of the guest is
+     shown before the code (D21-14) - so not even the masked address, on
+     opening or in the answer. */
+  it("sends a code by email to whoever is checked in there, and shows none of the address", async () => {
+    const card = await printCard(roomId);
+    const emailWas = (await sql("select email::text from guests where id = $1", [guestId])).rows[0].email;
+    await sql("update guests set email = 'card.guest@example.com' where id = $1", [guestId]);
+    const { server, received } = await standInSender();
+    try {
+      const opened = await (await asGuest(`/${card}`)).text();
+      expect(JSON.parse(opened).emailHint, "a room card says nothing of the guest").toBeNull();
+      expect(opened).not.toContain("example.com");
+
+      const res = await asGuest(`/${card}/code`, "POST", { by: "email" });
+      expect(received.length).toBe(1);
+      expect((JSON.parse(received[0]!) as { to: { email: string } }).to.email).toBe("card.guest@example.com");
+      const said = await res.text();
+      expect(JSON.parse(said).message).toBe("We sent the code by email to the email on the booking.");
+      expect(said).not.toContain("example.com");
+    } finally {
+      await stopSender(server);
+      await sql("update guests set email = $2 where id = $1", [guestId, emailWas]);
+    }
+  });
+
   it("opens the stay with the unlock, and reaches nothing of it once they have gone", async () => {
     const card = await printCard(roomId);
     const unlock = await unlockWith(card);

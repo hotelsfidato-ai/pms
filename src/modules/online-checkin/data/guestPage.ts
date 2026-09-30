@@ -44,10 +44,16 @@ export interface GuestPageView {
   verified: boolean;
   /** The last four digits of the number the booking carries, or null. */
   phoneHint: string | null;
+  /** The email the booking carries, masked ("a…@example.com"), or null:
+      none on the booking, or a room card, which shows nothing of the guest. */
+  emailHint: string | null;
   /** Whether this server can send a code at all (D21-25). */
   canSendCodes: boolean;
   /** The door's own sentence when it cannot. */
   cannotSend: string | null;
+  /** Continue with Google is offered only where the server has this
+      (D27-207). Public: it names this system to Google. */
+  googleClientId: string | null;
   /** What the hotel offers behind the code (D21-63): "spa", "laundry". */
   offers: string[];
 }
@@ -68,21 +74,7 @@ export function dropUnlock(token: string): void {
   try { localStorage.removeItem(KEY(token)); } catch { /* nothing held */ }
 }
 
-/* ── The code asks for itself, once (D27-105) ─────────────────────────
-   Opening the link sends the code; reopening it within the code's ten
-   minutes does not send another (each one would kill the last, and five
-   an hour is all a link gets). */
-const ASKED = (token: string) => `guest-code-asked:${token.slice(0, 12)}`;
-const CODE_LIVES_MS = 10 * 60_000;
-
-export function codeAskedRecently(token: string, now = Date.now()): boolean {
-  try {
-    const at = Number(localStorage.getItem(ASKED(token)));
-    return at > 0 && now - at < CODE_LIVES_MS;
-  } catch { return false; }
-}
-
-const at = (token: string, rest = "") => `/api/guest/${encodeURIComponent(token)}${rest}`;
+const at =(token: string, rest = "") => `/api/guest/${encodeURIComponent(token)}${rest}`;
 
 const withUnlock = (token: string, init: RequestInit = {}): RequestInit => {
   const unlock = heldUnlock(token);
@@ -106,27 +98,28 @@ export interface CodeAnswer {
   devCode?: string;
 }
 
-/** No number is typed: the code goes to the one the booking carries.
-    Noted as asked BEFORE the call, so a second mount while it is in flight
-    sends nothing; un-noted when no code went (refused, or not reached), so
-    the next open asks again rather than pointing at a code that never came. */
-export async function sendCode(token: string): Promise<CodeAnswer> {
-  const forget = () => { try { localStorage.removeItem(ASKED(token)); } catch { /* nothing held */ } };
-  try { localStorage.setItem(ASKED(token), String(Date.now())); } catch { /* asked again next time */ }
-  try {
-    const answer = await api<CodeAnswer>(at(token, "/code"), { method: "POST", body: "{}" });
-    if (!answer.sent) forget();
-    return answer;
-  } catch (error) {
-    forget();
-    throw error;
-  }
-}
+/** The guest's choice, and nothing typed (D27-207, D27-210): the code goes
+    to the number or the email the booking carries. Nothing is sent until
+    the guest presses one - opening the page sends nothing. */
+export const sendCode = (token: string, by: "whatsapp" | "email"): Promise<CodeAnswer> =>
+  api<CodeAnswer>(at(token, "/code"), { method: "POST", body: JSON.stringify({ by }) });
 
 export async function verifyCode(token: string, code: string): Promise<{ verified: boolean }> {
   const answer = await api<{ verified: boolean; unlock?: string }>(at(token, "/verify"), {
     method: "POST",
     body: JSON.stringify({ code }),
+  });
+  if (answer.verified && answer.unlock) keepUnlock(token, answer.unlock);
+  return { verified: answer.verified };
+}
+
+/** Continue with Google (D27-207): Google's signed answer, posted as it
+    came. The door checks it and compares its address with the booking's;
+    a match hands back the same unlock as a right code. */
+export async function verifyWithGoogle(token: string, credential: string): Promise<{ verified: boolean }> {
+  const answer = await api<{ verified: boolean; unlock?: string }>(at(token, "/google"), {
+    method: "POST",
+    body: JSON.stringify({ credential }),
   });
   if (answer.verified && answer.unlock) keepUnlock(token, answer.unlock);
   return { verified: answer.verified };

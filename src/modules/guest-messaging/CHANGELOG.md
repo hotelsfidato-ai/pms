@@ -11,6 +11,15 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · The check-in code by email (D27-207)
+
+Branch `online-checkin/verify-photo-30sep`; the whole account is online check-in's CHANGELOG,
+same date. Here: `deploy/n8n/pms-send-crs.json`'s `EMAILS` gains `guest-link-code` ("Your
+check-in code for {hotel}", the six digits in the letter, "It works for 10 minutes"), and
+`IMPORT.md` says a workflow imported before today must be imported again or a code asked for
+by email is refused. `sending.ts` is unchanged: the kind is the same word on the other
+channel. `workflows.test` 24/24; the new test fails on the old file.
+
 ## 2026-09-30 · One sender: every guest message through the CRS's workflow (D27-186)
 
 Branch `connections/crs-only-30sep`, the connections follow-up lane.

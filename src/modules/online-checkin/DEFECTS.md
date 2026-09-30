@@ -14,7 +14,23 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None.
+### OCI-10 · Continue with Google runs Google's script on the guest's page
+
+30 September (D27-207; numbered for now). Accepted for the launch by the
+master, and written down so it is a choice and not an oversight. Google
+Identity Services is a script from accounts.google.com, and a script on a
+page can read that page: the link in the address and, on a phone that has
+already been verified, the unlock kept for the day. **What limits it now:**
+the script is not in the bundle and not fetched on opening - only when the
+guest presses "Continue with Google" (`googleSignIn.ts`, pinned by a test);
+a guest who uses a code never runs it; and it comes from Google's own
+address only. **The way with no script:** a full-page redirect to Google
+(OpenID Connect, `response_type=id_token`, a `state` kept in the tab and a
+registered return address). The door's check would not change - it already
+takes Google's signed answer. About two hours, and one more owner step (the
+return address in the Google client). **The rule:** anything loaded from
+outside onto `/g/:token` is loaded on the guest's own press, never on
+opening.
 
 ---
 

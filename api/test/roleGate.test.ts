@@ -75,6 +75,7 @@ describe("every write the server mounts", () => {
       "POST /api/channel/su/reservations",
       "POST /api/guest/:token/code",
       "POST /api/guest/:token/details",
+      "POST /api/guest/:token/google",
       "POST /api/guest/:token/requests",
       "POST /api/guest/:token/verify",
       "POST /api/pos/tickets",

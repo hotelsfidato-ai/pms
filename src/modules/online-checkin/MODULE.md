@@ -9,14 +9,21 @@ and D21-6 to D21-19, D21-25, D21-29, D21-59 to D21-63, D21-72, D21-75
 (`docs/briefs/decisions-2026-09-21.md`). The design is
 `docs/architecture/online-checkin.md`; the brief is `docs/briefs/guest-page.md`.
 
-**Not built, on purpose:** the ID photo (waits on the owner's rule for how
-long it is kept, D21-11), paying online, choosing a room.
+**30 September (D27-207, D27-210):** three ways to prove it is you - a code
+on WhatsApp, a code by email, Continue with Google - and nothing sent until
+the guest chooses. **Not built yet:** the ID photo (decided, D27-207 to
+D27-210: encrypted, kept in Drive; its own stage). **Not built, on
+purpose:** paying online, choosing a room.
 
 ```
 src/modules/online-checkin/        the guest's page, the desk's screen, their data and tests
 api/src/routes/guestDoor.ts        the door (the brief gives this lane that file)
-db/migrations/121_…, 124_…         everything behind the code; the guest's bill
+db/migrations/121_…, 124_…, 167_…  everything behind the code; the guest's bill; the three ways in
+OWNER-STEPS.md                     the owner's clicks: the email code, the Google client ID
 ```
+
+Server settings, names only: `GOOGLE_CLIENT_ID` (public; unset, no Google
+button). Codes need the sending settings (`deploy/n8n/IMPORT.md`).
 
 ---
 
@@ -37,17 +44,35 @@ put back (CHANGELOG, 21 September).
    the moment it is refused. Every function behind the code takes both hashes
    and asks `app.guest_unlocked` in the database every time. A forwarded link
    shows what it showed before and asks for a code.
-4. **Nobody types a number (D27-105).** The code goes to the number the stay
-   carries, and the answer says where: its last four digits on a booking's
-   link, nothing of it on a room card (D21-14). No mobile on the booking:
-   "Ask the desk", and no code is issued. (Until 29 September the guest typed
-   the number and a wrong one had to read like a right one; with nothing typed
-   there is nothing to guess.)
+4. **Nobody types a number or an address, and nothing is sent until the
+   guest chooses (D27-105, D27-207, D27-210).** Opening the page sends
+   nothing. The guest presses "Send the code on WhatsApp" or "Send the code
+   by email"; the code goes to the number or the email the stay carries, and
+   the answer says where: the number's last four digits or the address
+   masked ("a…@example.com") on a booking's link, nothing of either on a room
+   card (D21-14). A booking's link offers only the ways the booking has; with
+   neither, "Ask the desk", and no code is issued. One live code per link,
+   whichever way it went; the same answer opens both. (Until 29 September the
+   guest typed the number; until 30 September the WhatsApp code went by
+   itself on opening.)
    **The code is never in an answer** - except from a development server
    started with `GUEST_CODE_ON_SCREEN=1` beside `ALLOW_DEV_AUTH=1`, which
    `env.ts` refuses under production; the page draws it only in a development
    build, and `scripts/check-no-dev-login.mjs` fails a build carrying
    `devCode` (`devCodeNeverShips.test.ts`).
+   **Continue with Google (D27-207) is a third proof, not an account.**
+   The page hands the door Google's signed answer; the door checks it with
+   Google's own library against Google's published keys - signed by Google,
+   made for this system (`aud` = `GOOGLE_CLIENT_ID`), issued by Google, not
+   expired, under ten minutes old, the address verified - and the DATABASE
+   compares that address with the stay's own, letter case aside
+   (`app.guest_google_answer`). A match hands out the same unlock as a right
+   code and nothing else: no session, no guest role, and NO Firebase user -
+   no guest ever sits in the project staff sign in to. Every failure reads
+   the same sentence. Google's script is not in the bundle: the page fetches
+   it from accounts.google.com only when the guest presses the button
+   (`googleSignIn.ts`). Offered only where the server has the client id and,
+   on a booking's link, the booking an email.
 5. **Every refusal takes the same shape** — behind the code, a refused call
    answers what an unknown link answers: 404 and one sentence.
 6. **Nothing a guest types reaches the legal register without a person
@@ -71,7 +96,8 @@ Coming soon page and its address are gone.
 **The guest's page, at 375px (the primary size):**
 
 - **A booking's link, before the code** — the guest's own name, dates,
-  reference, and the last four digits of the number on the booking.
+  reference, the last four digits of the number on the booking and its email
+  masked, and one button for each way the booking has.
 - **A room's card, before the code (D21-14)** — the hotel and the room number,
   nothing of the guest: not even the last four digits. **Nobody checked in
   (D21-15)** — "This opens once you're checked in", with the hotel's name.
@@ -139,8 +165,9 @@ reception's menu for this (the owner, 24 September).
 | Method | Path | Before the code | What it does |
 |---|---|---|---|
 | GET | `/api/guest/:token` | answers | the booking or the room; `verified` for THIS phone; `canSendCodes`; `offers` once unlocked |
-| POST | `/api/guest/:token/code` | answers | a code to the phone on the stay it resolves to, nothing typed; says where, or "Ask the desk" (D27-105). The page asks it by itself on opening, once per ten minutes |
+| POST | `/api/guest/:token/code` | answers | `{ by: "whatsapp" \| "email" }`: a code to the phone or the email on the stay it resolves to, nothing else read; says where, or "Ask the desk". Asked only when the guest presses (D27-210) |
 | POST | `/api/guest/:token/verify` | answers | the six digits; hands back the unlock once |
+| POST | `/api/guest/:token/google` | answers | Continue with Google (D27-207): Google's signed answer; the same unlock when its address is the stay's. Refused like an unknown link while `GOOGLE_CLIENT_ID` is unset |
 | GET/POST | `/api/guest/:token/details` | **refused** | what the guest sent / send it, as a submission |
 | GET | `/api/guest/:token/bill` | **refused** | the bill as it stands — `app.guest_bill` (124), which is finance's `app.stay_bill` (123) for the one stay the link and the unlock reach |
 | GET/POST | `/api/guest/:token/requests` | **refused** | their requests / make one; kind `desk` is a message to the front desk (D23-14) |
@@ -156,7 +183,16 @@ reception's menu for this (the owner, 24 September).
 Staff routes are for owner, admin, GM, hotel manager and reception
 (`DESK_ROLES`); anybody else is refused with a sentence naming who may.
 
-## Database (migrations 114, 121, 132 and 158)
+## Database (migrations 114, 121, 132, 158 and 167)
+
+**167 (30 September, D27-207):** all new functions, nothing earlier changed.
+`app.guest_email_code_make(text)` (158's code, to the stay's email; no email
+answers a row with no code), `app.guest_link_ways(text)` (the masked email a
+booking's link may show; null on a room card - its own function because
+`guest_link_open`'s return type cannot change on a replay),
+`app.masked_email(text)` (internal), and `app.guest_google_answer(text, text,
+text)` for Continue with Google (the address Google vouched for against the
+stay's own, then the same unlock).
 
 **162 (29 September; the master renumbers at merge):**
 `app.guest_code_make(text)` replaces the two-argument one (no number typed;
