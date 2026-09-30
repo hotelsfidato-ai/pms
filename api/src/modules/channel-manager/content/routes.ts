@@ -16,6 +16,9 @@ import { contentProblems, contentRequests } from "./payloads.ts";
    GET  /:code/channel-manager/content                 what goes to SU, and what is missing
    PUT  /:code/channel-manager/hotel                   the hotel's SU id and the details SU
                                                        needs that the hotel record lacks
+                                                       (not its postcode or map point: those
+                                                       are the hotel's own since 168, set in
+                                                       Settings, and this never writes them)
    PUT  /:code/channel-manager/room-types/:roomTypeId  a room type's SU id, SU room type,
                                                        children, and on or off SU
    PUT  /:code/channel-manager/rate-plans/:mealPlan    a meal plan's SU rate plan id, SU
@@ -89,23 +92,6 @@ content.put("/:code/channel-manager/hotel", async (c) => {
   if (countryCode && !/^[A-Z]{2}$/.test(countryCode)) {
     return c.json(refuse("The country is its two-letter code, such as IN."), 409);
   }
-  const postalCode = text(input["postalCode"]);
-  if (postalCode && postalCode.length > 10) {
-    return c.json(refuse("SU takes a postcode of at most 10 characters."), 409);
-  }
-  const coordinate = (key: string, limit: number, label: string): string | null | Refusal => {
-    const raw = input[key];
-    if (raw === null || raw === undefined || raw === "") return null;
-    const n = Number(raw);
-    if (!Number.isFinite(n) || Math.abs(n) > limit) {
-      return refuse(`The ${label} is a number between -${limit} and ${limit}.`);
-    }
-    return n.toFixed(6);
-  };
-  const latitude = coordinate("latitude", 90, "latitude");
-  if (latitude && typeof latitude !== "string") return c.json(latitude, 409);
-  const longitude = coordinate("longitude", 180, "longitude");
-  if (longitude && typeof longitude !== "string") return c.json(longitude, 409);
   const description = text(input["description"]);
   if (description && description.length > 2000) {
     return c.json(refuse("SU shows at most 2,000 characters of description."), 409);
@@ -131,16 +117,15 @@ content.put("/:code/channel-manager/hotel", async (c) => {
 
     await client.query(
       `insert into channel_hotels
-         (hotel_id, su_hotel_id, postal_code, country_code, latitude, longitude,
+         (hotel_id, su_hotel_id, country_code,
           contact_first_name, contact_last_name, description, updated_by)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       values ($1, $2, $3, $4, $5, $6, $7)
        on conflict (hotel_id) do update
-          set su_hotel_id = excluded.su_hotel_id, postal_code = excluded.postal_code,
-              country_code = excluded.country_code, latitude = excluded.latitude,
-              longitude = excluded.longitude, contact_first_name = excluded.contact_first_name,
+          set su_hotel_id = excluded.su_hotel_id,
+              country_code = excluded.country_code, contact_first_name = excluded.contact_first_name,
               contact_last_name = excluded.contact_last_name, description = excluded.description,
               updated_by = excluded.updated_by, updated_at = now()`,
-      [hotelId, suHotelId, postalCode, countryCode, latitude, longitude,
+      [hotelId, suHotelId, countryCode,
        text(input["contactFirstName"]), text(input["contactLastName"]), description,
        session.staffId]);
     return { ok: true as const, suHotelId };

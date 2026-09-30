@@ -560,7 +560,9 @@ export function SettingRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid grid-cols-[minmax(130px,200px)_1fr] gap-4 py-2.5">
       <dt className="text-sm text-grey-500">{label}</dt>
-      <dd className="text-base text-ink-900 min-w-0">{value}</dd>
+      {/* A long unbroken value (a GSTIN, an email) wraps inside the card; it was
+          cut at the edge at phone width (ADM-9). */}
+      <dd className="text-base text-ink-900 min-w-0 break-words">{value}</dd>
     </div>
   );
 }

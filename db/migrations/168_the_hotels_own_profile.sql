@@ -2,7 +2,7 @@
 -- 168 — the hotel's own profile, and who may write it (D27-213, D27-214)
 -- =============================================================================
 -- The owner, 30 September and 1 October: one place for settings, and a hotel's
--- GM and Admin may edit their OWN hotel's details. Three things, all additive,
+-- GM and Admin may edit their OWN hotel's details. Five things, all additive,
 -- re-runnable, and nothing already typed is changed.
 --
 --   1  who may write a hotel's row            a finding, fixed first (D27-214)
@@ -10,6 +10,8 @@
 --   3  a hotel's own logo                     its own table, the group logo's limits
 --   4  the map point and PIN come home        copied from the channel manager's
 --                                             setup where the hotel has none
+--   5  the voucher prints the hotel's logo    app.guest_voucher (158), one
+--                                             expression changed
 -- =============================================================================
 
 
@@ -152,3 +154,96 @@ update hotels h
  where c.hotel_id = h.id
    and h.pin is null
    and btrim(c.postal_code) ~ '^[1-9][0-9]{5}$';
+
+
+-- -----------------------------------------------------------------------------
+-- 5 · the voucher prints the hotel's own logo
+-- -----------------------------------------------------------------------------
+-- The owner named the voucher among the hotel's guest documents (D27-214). Its
+-- logo is not read through the screens' shared reader: the sweep sends it with
+-- nobody signed in, so its facts come from this definer (158).
+--
+-- ⚠ THIS IS 158's FUNCTION, WORD FOR WORD, WITH ONE EXPRESSION CHANGED: 'logoPng'
+-- is the HOTEL'S OWN logo (hotel_logos, section 3) where it has a PNG, and the
+-- group's PNG where it has not. The signature, the return type and every other
+-- line are as 158 has them (MEMORY 317), and
+-- api/test/modules/guest-messaging/viewVoucher.test.ts fails if the two drift.
+-- A later change to the voucher's facts re-creates the function in its own
+-- migration, starting from THIS text, not 158's.
+--
+-- A PNG only, as before: the PDF draws PNG. A hotel whose own logo is an SVG
+-- prints the group's PNG on its voucher, and its own SVG on its bills.
+-- -----------------------------------------------------------------------------
+create or replace function app.guest_voucher(p_reservation uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = pg_catalog, public
+as $fn$
+  with l as (
+    select r.* from reservations r where r.id = p_reservation and r.status = 'confirmed'
+  ),
+  confirmed as (
+    -- Who made it confirmed, and when: the audit's own record of the change
+    -- (a booking made confirmed, or confirmed after waiting for the hotel).
+    select a.actor, a.at
+      from audit_log a
+     where a.table_name = 'reservations' and a.row_id = p_reservation::text
+       and a.after->>'status' = 'confirmed'
+       and coalesce(a.before->>'status', '') <> 'confirmed'
+     order by a.at desc
+     limit 1
+  )
+  select jsonb_build_object(
+    'reference', l.reference,
+    'bookedOn', (l.created_at at time zone h.timezone)::date,
+    'checkIn', l.check_in,
+    'checkOut', l.check_out,
+    'nights', l.check_out - l.check_in,
+    'hotel', jsonb_build_object(
+      'name', h.name, 'address', h.address_line, 'city', h.city, 'state', h.state,
+      'phone', h.phone, 'email', h.email, 'gstin', h.gstin,
+      'checkInTime', to_char(h.check_in_time, 'HH24:MI'),
+      'checkOutTime', to_char(h.check_out_time, 'HH24:MI')),
+    'groupName', (select gs.name from group_settings gs),
+    -- A PNG only: the PDF draws PNG, and an SVG logo prints the name instead.
+    'logoPng', coalesce(
+                 (select encode(hl.logo, 'base64') from hotel_logos hl
+                   where hl.hotel_id = l.hotel_id and hl.logo_type = 'image/png'),
+                 (select encode(gs.logo, 'base64') from group_settings gs
+                   where gs.logo_type = 'image/png')),
+    'guest', (select jsonb_build_object('name', g.full_name, 'email', g.email, 'phone', g.phone)
+                from guests g where g.id = l.guest_id),
+    'company', (select c.name from companies c where c.id = l.company_id),
+    'rooms', (
+      select jsonb_agg(jsonb_build_object(
+               'roomType', rt.name,
+               -- The code with its words, as every screen says it (D27-164),
+               -- from the one list the database keeps (inventory's pricing.ts
+               -- reads it the same way); the bare code where it has no row.
+               'mealPlan', coalesce((select mp.code || ' · ' || mp.includes
+                                       from meal_plans mp where mp.code = r.meal_plan),
+                                    r.meal_plan),
+               'adults', r.adults, 'children', r.children,
+               'nights', r.check_out - r.check_in,
+               'rate', r.agreed_rate,
+               'complimentary', r.is_complimentary,
+               'gstRate', case when r.is_complimentary then null
+                               else app.gst_rate_or_null(r.hotel_id, 'room', r.agreed_rate) end)
+             order by r.created_at, r.reference)
+        from reservations r
+        join room_types rt on rt.id = r.room_type_id
+       where coalesce(r.group_id, r.id) = coalesce(l.group_id, l.id)
+         and r.status in ('confirmed', 'checked_in')),
+    'terms', jsonb_build_object(
+      'name', l.cancel_terms, 'freeUntilHours', l.cancel_free_until_hours,
+      'cancelBasis', l.cancel_basis, 'cancelPercent', l.cancel_percent,
+      'cancelAmount', l.cancel_amount, 'noShowBasis', l.no_show_basis,
+      'noShowPercent', l.no_show_percent, 'noShowAmount', l.no_show_amount),
+    'confirmedBy', (select s.full_name from confirmed c join staff s on s.id = c.actor),
+    'confirmedAt', (select to_char(c.at at time zone h.timezone, 'YYYY-MM-DD"T"HH24:MI')
+                      from confirmed c)
+  )
+  from l join hotels h on h.id = l.hotel_id;
+$fn$;

@@ -16,6 +16,8 @@ import type { Client } from "../../db.ts";
      PUT     /:code/group/name   the owner, an administrator or the GM
      PUT     /:code/group/logo   the same three
      DELETE  /:code/group/logo   the same three
+     PUT     /:code/logo         THIS hotel's own logo (D27-214): the owner, an
+     DELETE  /:code/logo         administrator or the GM AT that hotel
 
    WHO is the role gate's (roleGate.ts, GROUP_SETTINGS), before this route
    runs, and the database's (`app.sets_group_settings`) behind it. The
@@ -101,14 +103,19 @@ async function change(client: Client, set: string, values: unknown[]) {
 groupSettings.get("/:code/group", async (c) => {
   const found = await withSession(c.get("subject"), async (client) => {
     if (!(await worksAt(client, c.req.param("code")))) return null;
-    const { rows } = await client.query<{ name: string | null; logo_type: LogoType | null; logo: string | null }>(
+    type Picture = { logo_type: LogoType | null; logo: string | null };
+    const { rows } = await client.query<Picture & { name: string | null }>(
       "select name, logo_type, encode(logo, 'base64') as logo from group_settings");
-    const row = rows[0];
-    return {
-      name: row?.name ?? null,
-      /* Postgres wraps base64 every 76 characters; a data: URL wants none. */
-      logo: row?.logo && row.logo_type ? { type: row.logo_type, data: row.logo.replace(/\s/g, "") } : null,
-    };
+    /* The hotel's own (D27-214, migration 168): its documents print it in
+       place of the group's. No row, and the group's prints. */
+    const { rows: own } = await client.query<Picture>(
+      `select l.logo_type, encode(l.logo, 'base64') as logo
+         from hotel_logos l join hotels h on h.id = l.hotel_id
+        where h.code = upper($1)`, [c.req.param("code")]);
+    /* Postgres wraps base64 every 76 characters; a data: URL wants none. */
+    const picture = (row: Picture | undefined) =>
+      row?.logo && row.logo_type ? { type: row.logo_type, data: row.logo.replace(/\s/g, "") } : null;
+    return { name: rows[0]?.name ?? null, logo: picture(rows[0]), hotelLogo: picture(own[0]) };
   });
   return found ? c.json(found) : c.json(NO_SUCH, 404);
 });
@@ -145,6 +152,47 @@ groupSettings.delete("/:code/group/logo", async (c) => {
   const done = await withSession(c.get("subject"), async (client) => {
     if (!(await worksAt(client, c.req.param("code")))) return false;
     await change(client, "logo_type = null, logo = null", []);
+    return true;
+  });
+  return done ? c.json({ ok: true }) : c.json(NO_SUCH, 404);
+});
+
+/* ── A hotel's own logo (D27-214, migration 168) ─────────────────────
+   The same picture rules as the group's (readLogo). WHO: the role gate's
+   room-setup grant at the hotel in the address, and the table's policy
+   (app.manages_hotel) behind it - asked here first, so a person who may
+   not is told "No such property" and nothing is attempted. */
+const managedHotel = async (client: Client, code: string) =>
+  (await client.query<{ id: string }>(
+    "select id::text from hotels where code = upper($1) and app.manages_hotel(id)",
+    [code])).rows[0]?.id ?? null;
+
+groupSettings.put("/:code/logo", async (c) => {
+  const { data } = await c.req.json<{ data?: unknown }>().catch(() => ({}) as { data?: unknown });
+  const bytes = Buffer.from(typeof data === "string" ? data : "", "base64");
+  const read = readLogo(bytes);
+  if ("reason" in read) return c.json(refuse(read.reason), 409);
+
+  const done = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await managedHotel(client, c.req.param("code"));
+    if (!hotelId) return false;
+    await client.query(
+      `insert into hotel_logos (hotel_id, logo_type, logo, changed_by)
+       values ($1, $2, $3, app.current_user_id())
+       on conflict (hotel_id) do update
+          set logo_type = excluded.logo_type, logo = excluded.logo,
+              changed_by = excluded.changed_by, changed_at = now()`,
+      [hotelId, read.type, bytes]);
+    return true;
+  });
+  return done ? c.json({ ok: true, type: read.type }) : c.json(NO_SUCH, 404);
+});
+
+groupSettings.delete("/:code/logo", async (c) => {
+  const done = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await managedHotel(client, c.req.param("code"));
+    if (!hotelId) return false;
+    await client.query("delete from hotel_logos where hotel_id = $1", [hotelId]);
     return true;
   });
   return done ? c.json({ ok: true }) : c.json(NO_SUCH, 404);

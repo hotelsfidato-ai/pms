@@ -24,12 +24,15 @@ const status: SuStatus = {
 };
 
 const content: SuContent = {
-  hotel: { code: "AGR", name: "Fidato Agra", addressLine: null, city: "Agra", phone: null, email: null, currency: "INR" },
+  hotel: {
+    code: "AGR", name: "Fidato Agra", addressLine: null, city: "Agra", phone: null, email: null, currency: "INR",
+    postalCode: "282001", latitude: "27.175000", longitude: "78.042100",
+  },
   channel: null,
   roomTypes: [{ id: "rt-1", code: "DLX", name: "Deluxe", maxOccupancy: 3, rackRate: null, rooms: 4, mapping: null }],
   mealPlans: [{ code: "EP", name: "European Plan", includes: "Room only", mapping: null }],
   switchedOn: false,
-  problems: ["The hotel's SU details have not been entered yet: its SU hotel id, postcode, country, position and a contact's name."],
+  problems: ["The hotel's SU details have not been entered yet: its SU hotel id, country and a contact's name."],
   su: { configured: false, environment: null },
   suRoomTypes: [{ code: 7, name: "Triple" }],
   suMealPlans: [{ code: 15, name: "Room only" }],
@@ -107,6 +110,17 @@ describe("the channel manager page", () => {
     expect(screen.getByText(/rack rate -/)).toBeTruthy();
     const send = screen.getByRole("button", { name: /Send to SU/ }) as HTMLButtonElement;
     expect(send.disabled).toBe(true);
+  });
+
+  it("shows the hotel's PIN and map point read-only, with where they are set (D27-214)", async () => {
+    as("owner");
+    render(<App />);
+    expect(await screen.findByText(/PIN code 282001 · map point 27\.175000, 78\.042100/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Set in Settings, on the Property tab" }).getAttribute("href"))
+      .toBe("/settings/property");
+    for (const gone of ["Postcode", "Latitude", "Longitude"]) {
+      expect(screen.queryByLabelText(gone), gone).toBeNull();
+    }
   });
 
   it("shows an administrator the setup too (D17-85)", async () => {

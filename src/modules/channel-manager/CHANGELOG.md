@@ -13,6 +13,16 @@ the server's settings and the hotel is switched on.**
 
 ---
 
+## 2026-09-30 · The postcode and the map point are the hotel's, set in Settings (D27-214; the settings lane)
+
+Branch `settings/one-place-30sep`, copy `.claude\worktrees\mystifying-napier-d2f754`.
+**Asked for:** D27-214 Q9: the map point read-only on the SU setup, set in Settings; SU reads the hotel's own and what was already typed is not lost.
+**Shipped:** `content/store.ts`: `hotel.postalCode`, `latitude`, `longitude` are `coalesce(the hotel's, the SU row's)`; they left `ChannelHotel`. `content/payloads.ts` reads them from the hotel and says where they are set. `content/routes.ts`: `PUT /hotel` no longer takes or writes the three. `SuSetup.tsx`: the three inputs are gone; one line shows the PIN and the map point with "Set in Settings, on the Property tab". Migration 168 (the settings lane's) copied what each hotel had typed into `hotels`.
+**Proved:** `api/test/modules/channel-manager/suContent.test.ts` 14: a hotel with only the old SU row still sends its point and postcode; a postcode 168 could not copy (not six digits) is still read, and saving the SU details again does not wipe it; the hotel's own wins and the PUT writes none of the three. Two fail with either fallback taken out. The six channel-manager API files 72 passed; `channelManager.test.tsx` 6.
+**Left open:** the three `channel_hotels` columns stay as the fallback; retiring them is the owner's to say, once every hotel's profile holds its own.
+
+---
+
 ## 2026-09-30 · SU finished: a booking from a site becomes a booking (D27-178, D27-183)
 
 **Asked for:** D27-178, "build the channel manager now", lifting D22-29's
