@@ -7,7 +7,7 @@ import {
   permissionMatrix, type Role,
 } from "@/lib/permissions";
 import type { AdminResult } from "@/data/repositories/result";
-import { write, patch, put } from "@/data/repositories/http";
+import { write, patch, put, call } from "@/data/repositories/http";
 
 /* ══════════════════════════════════════════════════════════════════
    ADMIN
@@ -301,6 +301,8 @@ export interface PropertyProfile {
   starRating: number | null;
   latitude: string | null;
   longitude: string | null;
+  /** Printed on the booking voucher as "Contact" (D27-215). */
+  reservationsContact: string | null;
 }
 
 /** The owner's list (D27-214): the stored word and what people read. */
@@ -312,7 +314,11 @@ export const PROPERTY_TYPES: [string, string][] = [
 
 export interface PropertyDetail {
   /** `fssaiNumber`: the hotel's 14-digit FSSAI licence (A16), null until typed. */
-  property: AdminProperty & PropertyProfile & { fssaiNumber: string | null };
+  property: AdminProperty & PropertyProfile & {
+    fssaiNumber: string | null;
+    /** The hotel's house policies, in the order the voucher prints them (D27-215). */
+    housePolicies: string[];
+  };
   staff: PropertyTeamMember[];
   /** What THIS caller may hand out HERE. An owner sees every role; a
       general manager sees everything but `owner`. Sent by the server so
@@ -358,9 +364,39 @@ export function amendProperty(
   input: {
     name?: string; city?: string; state?: string; gstin?: string;
     phone?: string; email?: string; addressLine?: string;
-  } & { [K in keyof PropertyProfile]?: string },
+  } & { [K in keyof PropertyProfile]?: string } & {
+    /** One policy a line; blank lines are dropped by the server. */
+    housePolicies?: string[];
+  },
 ): Promise<AdminResult> {
   return patch(`/api/admin/hotels/${code}`, input);
+}
+
+/** A hotel's bank details (D27-215): printed on its booking voucher when set.
+    Seen and changed by whoever manages that hotel; anybody else is refused. */
+export interface BankDetails {
+  accountName: string;
+  accountNumber: string;
+  bankName: string;
+  branch: string | null;
+  ifsc: string;
+  upi: string | null;
+  changedAt: string;
+  changedBy: string | null;
+}
+
+export async function getBankDetails(code: string): Promise<BankDetails | null> {
+  return (await api<{ bank: BankDetails | null }>(`/api/hotels/${code}/bank-details`)).bank;
+}
+
+export function setBankDetails(code: string, input: {
+  accountName: string; accountNumber: string; bankName: string; branch: string; ifsc: string; upi: string;
+}): Promise<AdminResult> {
+  return put(`/api/hotels/${code}/bank-details`, input);
+}
+
+export function removeBankDetails(code: string): Promise<AdminResult> {
+  return call(`/api/hotels/${code}/bank-details`, "DELETE");
 }
 
 /** Closing refuses while anybody is still checked in — a closed

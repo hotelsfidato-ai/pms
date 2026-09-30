@@ -84,9 +84,33 @@ The owner's answers (D27-172), each where it lives:
 
 | | Rule | Where |
 |---|---|---|
-| V1 | per room the nightly rate the audit posts x nights; room charges, GST by the per-night slab (`app.gst_rate_or_null`, rounded per night as the audit posts), the total. **No GST rule: GST and the total print "-"** (`voucherFigures`, guarded by `voucherDocument.test.ts`, seen to fail). "Complimentary" where so. No payment line | `voucherFigures` |
-| V4 | the booking's own cancellation terms in the desk's words, the hotel's check-in and check-out times; no bank section until bank details exist in Settings | `voucherPolicies` |
+| V1 | per room the nightly rate the audit posts x nights; room charges, GST by the per-night slab (`app.gst_rate_or_null`, rounded per night as the audit posts), the total. **No GST rule: GST and the total print "-"** (`voucherFigures`, guarded by `voucherDocument.test.ts`, seen to fail). "Complimentary" where so. (The payment line V1 left out came with D27-215, below.) | `voucherFigures` |
+| V4 | the booking's own cancellation terms in the desk's words, the hotel's check-in and check-out times, then (D27-215) the hotel's house policies; bank details since D27-215, below | `voucherPolicies` |
 | V5 | "Confirmed by the hotel": the PMS reference, the clerk (the audit's record of the change to confirmed) and when | `app.guest_voucher` |
+
+### Refined to the owner's reference (D27-215, 1 October)
+
+The facts come from `app.guest_voucher` as re-created by migration 169 - 168's
+function with keys ADDED and no line changed (`viewVoucher.test.ts` holds
+every line of 168's in 169's, in order). What each block SAYS is decided in
+`voucherBlocks` and the PDF draws exactly that:
+
+| Block | Rule | From |
+|---|---|---|
+| Payment (top strip) | "Advance INR X" with "Balance INR Y at the hotel" under it; no balance line when paid more than the total or when the total is "-"; "Pay at the hotel" with no advance; "Bill to company" when the lead's bill is made out to a company, even with an advance | `payment.received`: the booking's bills' payments, less a reversed one and its reversal (finance's own "paid"), read in the function; `payment.billTo` |
+| Hotel | Contact (`hotels.reservations_contact`); the hotel's GSTIN moves here once the footer is the group's | 169 |
+| Guest | Booked by: the person the audit names on the booking's INSERT; the booking source's name when that account is the channel manager's or the CRS's own; nothing where no record is kept (RES-14) | `bookedBy` |
+| Rooms | "1 extra adult, 1 extra child" under a room's line, by `app.tariff_for`'s own count | `extraAdults`, `extraChildren` |
+| Bank details | when the hotel has set them (Settings, Taxes and billing); the block left out when not | `hotel_bank_details` |
+| Policies | after the booking's terms and the times, the hotel's house policies in its order (at most 8 of 200 characters); then "Instagram: ..." as a line of text - no QR code yet | `housePolicies`, `group.instagram` |
+| Footer | the GROUP's office (name, address, phone, email, website, GSTIN) once any of the five is typed; the hotel's own, as before, until then | `group` |
+
+ONE A4 WHERE IT CAN BE: `voucherHeight` lays it out once; more than the page,
+the whole voucher is drawn smaller and centred, down to 82% (measured: three
+rooms, extra guests, bank details and eight one-line house policies need 90%,
+eight of 200 characters 84%). Longer than that, whole blocks move to a second
+page (`room`), never a line cut. A hotel with nothing new set prints the
+voucher it printed before, but for the Payment cell (`voucherDocument.test.ts`).
 
 ## View voucher (D27-187)
 

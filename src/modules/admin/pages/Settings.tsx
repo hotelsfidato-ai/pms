@@ -16,6 +16,7 @@ import { getCommissioning } from "@/modules/admin/data/commissioning";
 import { switchesModules } from "@/modules/admin/moduleSwitchRoles";
 import { TaxInUseRows } from "@/modules/admin/components/TaxInUse";
 import { GroupCard, HotelLogoCard } from "@/modules/admin/components/GroupCard";
+import { BankDetailsCard, HousePoliciesCard } from "@/modules/admin/components/VoucherSettings";
 import { CommissioningCard } from "@/modules/admin/flows/CommissioningCard";
 import { ModulesCard, BOOKING_SECTION, SettingRow } from "@/modules/admin/pages/Admin";
 import { EditPropertyDialog } from "@/modules/admin/pages/Properties";
@@ -185,11 +186,13 @@ export default function SettingsPage() {
         <TabsContent value="taxes-and-billing" className="flex flex-col gap-5">
           <TaxRulesCard hotelId={hotelId} />
           <GroupCardOf group={group("Tax and billing")} hotelId={hotelId} loading={settings.isLoading} />
+          <BankDetailsCard hotelCode={hotelId} />
           <GroupCard hotelCode={hotelId} />
         </TabsContent>
 
         <TabsContent value="reservations-and-front-desk" className="flex flex-col gap-5">
           <FrontDeskCard hotelId={hotelId} />
+          <HousePolicies hotelId={hotelId} />
           {/* D17-36: the switches stay with the owner and an administrator;
               hidden from the GM, whom the server would refuse. */}
           {switches && (
@@ -278,6 +281,7 @@ function ProfileCard({ hotelId, facts }: { hotelId: string; facts: SettingGroup 
             <SettingRow label="PAN" value={p.pan ?? "-"} />
             <SettingRow label="Phone" value={p.phone ?? "-"} />
             <SettingRow label="Reservations phone" value={p.reservationsPhone ?? "-"} />
+            <SettingRow label="Reservations contact" value={p.reservationsContact ?? "-"} />
             <SettingRow label="Email" value={p.email ?? "-"} />
             <SettingRow label="Website" value={p.website ?? "-"} />
             <SettingRow label="Currency" value={fact("Currency")} />
@@ -292,6 +296,24 @@ function ProfileCard({ hotelId, facts }: { hotelId: string; facts: SettingGroup 
           onClose={() => setEditing(false)} onSaved={refresh} />
       )}
     </>
+  );
+}
+
+/* ── The hotel's house policies (D27-215): read with the profile ──── */
+
+function HousePolicies({ hotelId }: { hotelId: string }) {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ["property-detail", hotelId],
+    queryFn: () => getPropertyDetail(hotelId),
+    enabled: Boolean(hotelId),
+  });
+  if (q.isLoading) return <Skeleton className="h-40 w-full" />;
+  const p = q.data?.property;
+  if (!p) return null;
+  return (
+    <HousePoliciesCard hotelCode={p.code} policies={p.housePolicies ?? []}
+      onSaved={() => void qc.invalidateQueries({ queryKey: ["property-detail", hotelId] })} />
   );
 }
 

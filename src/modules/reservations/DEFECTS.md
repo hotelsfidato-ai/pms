@@ -23,6 +23,14 @@ New booking makes every room of one booking waiting or none, and Confirm
 confirms the whole group, so it cannot happen from the desk today.
 **Noted, not fixed.**
 
+### RES-14 · A booking's created_by is never written (numbered for now)
+
+Found 1 October building the voucher's "Booked by" (D27-215): `book.ts`
+inserts reservations without `created_by`, so every row holds NULL (all 778 in
+the demo). Who made a booking is only in the audit log's INSERT row (016),
+which is where `app.guest_voucher` (169) reads it. **Open, not fixed here**
+(the master, 1 October).
+
 ---
 
 ## Fixed

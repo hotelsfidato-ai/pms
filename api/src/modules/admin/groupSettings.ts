@@ -16,6 +16,8 @@ import type { Client } from "../../db.ts";
      PUT     /:code/group/name   the owner, an administrator or the GM
      PUT     /:code/group/logo   the same three
      DELETE  /:code/group/logo   the same three
+     PUT     /:code/group/office the group's office details, for the voucher's
+                                 footer (D27-215): the same three
      PUT     /:code/logo         THIS hotel's own logo (D27-214): the owner, an
      DELETE  /:code/logo         administrator or the GM AT that hotel
 
@@ -104,8 +106,11 @@ groupSettings.get("/:code/group", async (c) => {
   const found = await withSession(c.get("subject"), async (client) => {
     if (!(await worksAt(client, c.req.param("code")))) return null;
     type Picture = { logo_type: LogoType | null; logo: string | null };
-    const { rows } = await client.query<Picture & { name: string | null }>(
-      "select name, logo_type, encode(logo, 'base64') as logo from group_settings");
+    type Office = Record<"office_address" | "phone" | "email" | "website" | "gstin" | "instagram", string | null>;
+    const { rows } = await client.query<Picture & Partial<Office> & { name: string | null }>(
+      `select name, logo_type, encode(logo, 'base64') as logo,
+              office_address, phone, email, website, gstin, instagram
+         from group_settings`);
     /* The hotel's own (D27-214, migration 168): its documents print it in
        place of the group's. No row, and the group's prints. */
     const { rows: own } = await client.query<Picture>(
@@ -115,7 +120,15 @@ groupSettings.get("/:code/group", async (c) => {
     /* Postgres wraps base64 every 76 characters; a data: URL wants none. */
     const picture = (row: Picture | undefined) =>
       row?.logo && row.logo_type ? { type: row.logo_type, data: row.logo.replace(/\s/g, "") } : null;
-    return { name: rows[0]?.name ?? null, logo: picture(rows[0]), hotelLogo: picture(own[0]) };
+    const g = rows[0];
+    return {
+      name: g?.name ?? null, logo: picture(g), hotelLogo: picture(own[0]),
+      /* The group's office (D27-215), for the voucher's footer: null until typed. */
+      office: {
+        address: g?.office_address ?? null, phone: g?.phone ?? null, email: g?.email ?? null,
+        website: g?.website ?? null, gstin: g?.gstin ?? null, instagram: g?.instagram ?? null,
+      },
+    };
   });
   return found ? c.json(found) : c.json(NO_SUCH, 404);
 });
@@ -132,6 +145,49 @@ groupSettings.put("/:code/group/name", async (c) => {
     return true;
   });
   return done ? c.json({ ok: true, name: typed || null }) : c.json(NO_SUCH, 404);
+});
+
+/* ── The group's office details (D27-215, migration 169) ─────────────
+   The voucher's footer, and the Instagram line under its policies. A key
+   sent blank CLEARS the value; a key not sent is left alone. */
+const OFFICE: [key: string, column: string, what: string, most: number][] = [
+  ["address", "office_address", "The office address", 200],
+  ["phone", "phone", "The office phone", 40],
+  ["email", "email", "The office email", 120],
+  ["website", "website", "The website", 120],
+  ["gstin", "gstin", "The GSTIN", 15],
+  ["instagram", "instagram", "The Instagram address", 80],
+];
+
+groupSettings.put("/:code/group/office", async (c) => {
+  const input = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
+  const set: [column: string, value: string | null][] = [];
+  for (const [key, column, what, most] of OFFICE) {
+    if (input[key] === undefined) continue;
+    const typed = typeof input[key] === "string" ? (input[key] as string).trim() : "";
+    const value = key === "gstin" ? typed.toUpperCase() : typed;
+    const wrong =
+      key === "gstin" && value && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/.test(value)
+        ? "That does not look like a GSTIN - fifteen characters, starting with the two-digit state code."
+      : value.length > most ? `${what} is ${value.length} characters. The most is ${most}.`
+      : key === "email" && value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)
+        ? "That does not look like an email address."
+      : key === "website" && value && !/^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(value)
+        ? "A website is an address such as www.example.com."
+      : null;
+    if (wrong) return c.json(refuse(wrong), 409);
+    set.push([column, value || null]);
+  }
+
+  const done = await withSession(c.get("subject"), async (client) => {
+    if (!(await worksAt(client, c.req.param("code")))) return false;
+    /* The column names are this file's own (OFFICE), never the caller's. */
+    if (set.length) {
+      await change(client, set.map(([column], i) => `${column} = $${i + 1}`).join(", "), set.map(([, value]) => value));
+    }
+    return true;
+  });
+  return done ? c.json({ ok: true }) : c.json(NO_SUCH, 404);
 });
 
 groupSettings.put("/:code/group/logo", async (c) => {

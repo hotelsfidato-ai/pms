@@ -189,6 +189,9 @@ PUT    /:code/group/name          { name } - blank clears, 80 characters at most
 PUT    /:code/group/logo          { data: base64 } - a PNG or SVG by content, 200 KB,
                                   no script-carrying SVG; refused before withSession
 DELETE /:code/group/logo          the logo only; the name stays
+PUT    /:code/group/office        the group's office details for the voucher's footer (D27-215):
+                                  address, phone, email, website, GSTIN, Instagram; sent blank
+                                  clears; the owner, an administrator or the GM
 PUT    /:code/logo                THIS hotel's own logo (D27-214, table hotel_logos):
 DELETE /:code/logo                the same picture rules; the owner, an administrator
                                   or the GM at that hotel (roleGate HOTEL_LOGO, and
@@ -214,6 +217,25 @@ Every write: the owner, an admin or the GM (roleGate, room setup; the owner,
 logo"), one row, FORCE RLS, `app.sets_group_settings()` for writes, audited.
 It starts EMPTY in every copy: the name is typed and the logo uploaded, never
 put in a migration.
+
+`bankDetails.ts` (1 October, D27-215) — 3, at `/api/hotels`. A hotel's bank
+details, printed on its booking voucher when set:
+
+```
+GET    /:code/bank-details        whoever manages that hotel (app.manages_hotel); anybody
+                                  else 403 - reception has no use for an account number
+PUT    /:code/bank-details        account name, number (9-18 digits), bank, branch, IFSC,
+                                  UPI ID - each refused in a sentence; roleGate BANK_DETAILS
+DELETE /:code/bank-details        the same people
+```
+
+Table `hotel_bank_details` (169): FORCE RLS on app.manages_hotel for reads and
+writes, audited by app.write_audit. That audit row is what the group owner's
+bell reads (D27-216): `api/src/routes/notifications.ts` (the core's) tells a
+group administrator, for EVERY hotel whichever is open, "<hotel>: bank details
+set / changed / removed", by whom - never the account - for seven days, linking
+to `/h/<code>/settings/taxes-and-billing` (a Settings address that carries its
+hotel, `routes.tsx`).
 
 `systemHealth.ts` (28 September, D27-91 and D27-92) — 1, at `/api/hotels`:
 
@@ -393,7 +415,14 @@ The server's door, `api/src/modules/admin/index.ts`, exports only `mounts`
   refuses anybody else (ADM-5). "Reception can use the POS" is on at 5
   Elements and off for a hotel added later (owner, 14 September; 087).
 - **PAN, the reservations phone and the website are STORED and printed on no
-  document** until the owner says where (D27-214). Do not add them to a
+  document** until the owner says where (D27-214).
+- **What the booking voucher prints is set here** (D27-215, migration 169): the
+  hotel's bank details (Taxes and billing, `components/VoucherSettings.tsx`,
+  `bankDetails.ts`: read AND written only by whoever manages that hotel), its
+  house policies (Reservations and front desk; on the hotel's row, at most 8 of
+  200 characters, the reference's four to begin with) and reservations contact
+  (Property), and the group's office details (the group card). Every change to
+  bank details reaches the group owner's bell (D27-216) - see below. Do not add them to a
   masthead or a footer without that.
 - **Tax on these screens is the tax actually charged** (D17-37): finance's
   rules, "-" where a kind has none. Never `hotels.cgst_rate`/`sgst_rate`.
