@@ -14,6 +14,10 @@ pms-send-crs.json   into the CRS's n8n     EVERY guest message: every email, and
                                            stay reminder and the review request
                                            - part B below
 
+pms-id-photos-crs.json  into the CRS's n8n  guests' ID photos, ENCRYPTED, kept in
+                                           Google Drive (D27-209) - part D below;
+                                           a separate workflow, its own secret
+
 pms-send-m2r.json   NOT USED FOR NOW       the live-inventory (market-to-revenue)
                                            app is kept separate; the PMS only
                                            shows its leads. Do not import it.
@@ -128,6 +132,62 @@ yet" until they are in. Then the API restarts. The guest messages sweep also
 waits for `GUEST_MESSAGES_PER_MINUTE`, your pace (D21-34).
 
 `M2R_N8N_URL` and `M2R_N8N_SECRET` stay **empty** for now (part A).
+
+---
+
+## D · The ID photos workflow (`pms-id-photos-crs.json`)
+
+**A second workflow, separate from sending, with its own secret** (D27-209).
+A guest's ID photo is never kept on the PMS server: the PMS encrypts it with
+that hotel's password and this workflow puts the encrypted file in Google
+Drive, fetches it back when the desk opens it, and deletes it when somebody
+removes it. **Only encrypted files pass through it**: it never sees a photo
+or a password, and it refuses anything that is not an encrypted zip.
+
+Do `src/modules/online-checkin/OWNER-STEPS.md` **Part 3** first (the Drive
+folders and their ids). Then, in the CRS's n8n:
+
+1. **Workflows → Import from file →** `pms-id-photos-crs.json`. It arrives
+   named **PMS ID photos · Drive (CRS)**.
+2. **PMS photo** (the first node) → Credential: **Create new → Header Auth**,
+   name `x-fidato-secret`, Value: a **new** long random secret, not the
+   sending workflow's. Call it `PMS photo secret`.
+3. **Save to Drive**, **Where is it**, **Download** and **Delete** →
+   Credential: the CRS's existing **Google Drive** login (the one its voucher
+   workflow saves PDFs with). All four use the same one.
+4. **Read the request** → at the top, under "THE OWNER'S SETTINGS": in
+   `HOTELS`, paste each hotel's folder id between the quotes:
+
+   ```
+   const HOTELS = {
+     "AMR": "<the id of the AMR folder>",
+     "GLM": "<the id of the GLM folder>",
+   };
+   ```
+
+   A hotel with nothing between its quotes is refused. A new hotel is a new
+   line here and a new folder.
+5. **Save**, switch it **Active**, and copy the **Production URL** of **PMS
+   photo**.
+
+On the PMS server (release day, with the master; never pasted into a chat):
+
+```
+ID_PHOTO_N8N_URL=<this workflow's Production URL>
+ID_PHOTO_N8N_SECRET=<its secret>
+ID_PHOTO_PASSWORD_AMR=<the AMR password>
+ID_PHOTO_PASSWORD_GLM=<the GLM password>
+```
+
+**Then the check in OWNER-STEPS Part 3, step 3f, before any guest's photo is
+taken.** It is the first time this workflow's Drive steps run at all: they
+cannot be run on the development machine.
+
+**If a photo is ever refused as too large by n8n:** n8n takes 16 MB in one
+request by default, and the PMS never sends it more than about 12 MB (two
+photos of 4 MB, encrypted, as text). The setting that raises n8n's own limit
+is `N8N_PAYLOAD_SIZE_MAX` (in megabytes) in the n8n container's settings; it
+should not be needed.
 
 ---
 
