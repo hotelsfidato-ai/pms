@@ -14,12 +14,34 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None, 25 September. CM-1 and CM-4 were fixed by the master on 17 and 18
-September (below).
+None, 30 September. CM-1 and CM-4 were fixed by the master on 17 and 18
+September; CM-6 on 30 September (below).
 
 ---
 
 ## Fixed — the solution is here; do not work it out again
+
+### CM-6 · A booking message with a day that does not exist was lost, not kept — FIXED 30 September
+
+**Found** — 30 September, writing D27-183's test for "a failure is said on
+the list" with an arrival of 2031-02-30. The door stores the message before
+anything else (step 4), and `parse.ts` read SU's dates as any text. The insert
+into `channel_bookings.arrival` (a date) threw, so the door answered **500
+before keeping anything**: SU resends three times, then drops the booking and
+emails the property, and the Channel bookings list never shows it. A departure
+on or before the arrival did the same through `channel_bookings_stay_sane`.
+
+**Fixed** — `parse.ts` reads every room and night date as a real calendar day
+(`day()`), and a room without one, or leaving before it arrives, is a problem
+named on the list; the booking's dates are then not stored. The message is
+kept and the booking waits for a person.
+
+**Proved** — `suInbound.test.ts`, "keeps a message whose date does not
+exist": 200 and "Needs somebody" with the reason. Without the fix: 500.
+
+**The rule** — at a door that must keep what it is sent, read every field the
+database will type before the first insert; a value the column refuses is a
+message lost, not a message refused.
 
 ### CM-4 · Switching the channel manager on breaks the next deploy — FIXED 18 September
 

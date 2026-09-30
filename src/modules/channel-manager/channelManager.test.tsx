@@ -9,8 +9,8 @@ import type { AriState, ChannelBooking, SuContent, SuStatus } from "./data/su";
 
    The setup (SU login, the hotel on SU, room types, meal plans, Send to SU,
    rooms left and prices) is the owner's and an administrator's, D17-85. A GM
-   still opens the page - it is under Distribution in their menu, marked "Not
-   built yet" - and sees what the connection is, but not the setup, and the
+   still opens the page - it is under Distribution in their menu - and sees
+   the bookings the sites sent (D27-183) and what the connection is, but not the setup, and the
    screen never asks the server for it: the server would refuse them anyway.
 
    The data is stood in for: nothing here reaches SU or the API.
@@ -100,7 +100,8 @@ describe("the channel manager page", () => {
     render(<App />);
 
     expect(await screen.findByText("This hotel on SU")).toBeTruthy();
-    expect(screen.getByText(status.reason!)).toBeTruthy();
+    /* Its own query: awaited, not assumed loaded with the content. */
+    expect(await screen.findByText(status.reason!)).toBeTruthy();
     expect(screen.getByText(content.problems[0]!)).toBeTruthy();
     /* The rack rate nobody set is a hyphen, never ₹0. */
     expect(screen.getByText(/rack rate -/)).toBeTruthy();
@@ -137,11 +138,14 @@ describe("the channel manager page", () => {
     expect(screen.getByRole("button", { name: /I have dealt with this/ })).toBeTruthy();
   });
 
-  it("shows a GM what the connection is, without the setup, and never asks for it", async () => {
+  it("shows a GM the bookings the sites sent, without the setup, and never asks for it (Q6)", async () => {
     as("gm");
     render(<App />);
 
     expect(await screen.findByText("What it still needs before it goes live")).toBeTruthy();
+    /* D27-183 Q6: the GM settles a refused booking, so the GM sees the list. */
+    expect(await screen.findByText("Refused: no room free")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /I have dealt with this/ })).toBeTruthy();
     expect(screen.queryByText("This hotel on SU")).toBeNull();
     expect(getSuContent).not.toHaveBeenCalled();
   });

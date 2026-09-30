@@ -128,9 +128,14 @@ export async function createChannelBooking(
       ? null : String(input.commissionAmount);
     const note = input.specialRequest?.trim() || null;
     if (commission !== null || note !== null) {
+      /* The commission is the whole booking's (SU: "per complete
+         reservation"), so it goes on the first room alone; on every room a
+         two-room booking counted it twice (D27-183). */
       await client.query(
         `update reservations
-            set commission_amount = coalesce($2::numeric, commission_amount),
+            set commission_amount = case when ota_line = 1
+                                         then coalesce($2::numeric, commission_amount)
+                                         else commission_amount end,
                 notes = coalesce($3, notes)
           where id = any($1::uuid[])`,
         [result.reservationIds, commission, note]);
