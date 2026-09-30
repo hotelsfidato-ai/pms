@@ -3,14 +3,15 @@ import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   COUNT IN, AT EVERY CASH POINT - the owner's D27-190, 30 September
+   THE FIRST FLOAT IS COUNTED ONCE; AFTER IT THE DAY OPENS BY ITSELF
+   (the owner's D27-190, then D27-200, 30 September)
 
-   The day opens by counting the float, and no cash is taken before it.
-   At the desk the drawer already refused cash until it was open (D27-118)
-   but opened a blank float as ₹0 - a figure nobody counted. At the till
-   there was no opening at all (D27-139): cash was taken all day and the
-   float typed at night, 0 if left blank. Everything here is tagged
-   CASHIN and removed afterwards.
+   A float is counted, never assumed: the desk's counted open refuses a
+   blank one (it used to open as ₹0), and an outlet's first-ever day takes
+   no cash until its float is counted. Every day after that opens by
+   itself on the float the last close kept, however many days back - no
+   counting step, no refusal (D27-200 replaced D27-190's daily count-in).
+   Everything here is tagged CASHIN and removed afterwards.
    ══════════════════════════════════════════════════════════════════ */
 
 const SUPER =
@@ -87,11 +88,11 @@ describe("the desk's drawer opens on a counted float", () => {
   });
 });
 
-describe("the till's day opens on a counted float (D27-190)", () => {
+describe("an outlet's first-ever day opens on a counted float (D27-190, D27-200)", () => {
   it("takes no cash before the day is opened; a card goes on", async () => {
     const cash = await post(`/till/orders/${await bill(1)}/settle`, { method: "cash" });
     expect(cash.status, await cash.clone().text()).toBe(409);
-    expect(((await cash.json()) as { reason: string }).reason).toMatch(/Open the restaurant's day first/);
+    expect(((await cash.json()) as { reason: string }).reason).toMatch(/first float once/);
     /* Part of a split in cash is cash too. */
     const split = await post(`/till/orders/${await bill(2)}/settle`, {
       tenders: [{ method: "card", amount: 1 }, { method: "cash", amount: 1 }] });
@@ -125,5 +126,47 @@ describe("the till's day opens on a counted float (D27-190)", () => {
 
     const cash = await post(`/till/orders/${await bill(4)}/settle`, { method: "cash" });
     expect(cash.status, await cash.clone().text()).toBe(200);
+  });
+});
+
+describe("every day after opens by itself on the float the last close kept (D27-200)", () => {
+  beforeAll(async () => {
+    /* The last close was five days ago and kept 800; nothing since. */
+    await sql(`delete from pos_day_ends where outlet_id in (select id from pos_outlets where code = 'REST')`);
+    await sql(
+      `insert into pos_day_ends (hotel_id, outlet_id, business_date, opening_cash, counted_cash,
+                                 kept_cash, closed_by, closed_at)
+       select h.id, o.id, app.business_date(h.id) - 5, 0, 800, 800, $1, now()
+         from hotels h join pos_outlets o on o.hotel_id = h.id
+        where h.code = '5EL' and o.code = 'REST'`, [owner]);
+  });
+
+  it("is open with nothing pressed, takes cash, and expects the carried float", async () => {
+    const before = (await (await app.request("/api/hotels/5EL/till/day-end",
+      { headers: { "x-dev-staff-id": owner } })).json()) as
+      { opened: boolean; cash: { opening: number; expected: number } };
+    expect([before.opened, before.cash.opening]).toEqual([true, 800]);
+
+    const cash = await post(`/till/orders/${await bill(5)}/settle`, { method: "cash" });
+    expect(cash.status, await cash.clone().text()).toBe(200);
+    const { payable } = (await cash.json()) as { payable: number };
+    const after = (await (await app.request("/api/hotels/5EL/till/day-end",
+      { headers: { "x-dev-staff-id": owner } })).json()) as { cash: { expected: number } };
+    expect(after.cash.expected).toBe(before.cash.expected + payable);
+    expect(await outletDays(), "nothing is written until the night count").toBe(0);
+  });
+
+  it("has nothing to count in, and the night count writes the carried float down", async () => {
+    const open = await post("/till/day-end/open", { opening: 5000 });
+    expect(open.status).toBe(409);
+    expect(((await open.json()) as { reason: string }).reason).toMatch(/already open, on a float of ₹800/);
+
+    const count = await post("/till/day-end/count", { denominations: [{ value: 500, count: 2 }] });
+    expect(count.status, await count.clone().text()).toBe(200);
+    const [day] = await sql<{ opening: string; counted: string }>(
+      `select d.opening_cash::text as opening, d.counted_cash::text as counted from pos_day_ends d
+         join pos_outlets o on o.id = d.outlet_id join hotels h on h.id = o.hotel_id
+        where o.code = 'REST' and d.business_date = app.business_date(h.id)`);
+    expect([Number(day!.opening), Number(day!.counted)]).toEqual([800, 1000]);
   });
 });

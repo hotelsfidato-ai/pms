@@ -150,29 +150,26 @@ describe("a reversal (FI-5)", () => {
   });
 });
 
-describe("cash (D27-118, QA FI-13)", () => {
-  it("is refused while the person taking it has no drawer open, and nothing is written", async () => {
-    const before = await lines();
-    const res = await call(deskId, "/payments", { method: "Cash", amount: 100, heldAsCredit: true });
-    const body = await res.json() as { ok: boolean; reason?: string };
-    expect(res.status, JSON.stringify(body)).toBe(409);
-    expect(body.reason).toMatch(/Open your cash drawer first/);
-    expect(await lines()).toBe(before);
-  });
-
-  it("is taken into the drawer once it is open, and the drawer counts it", async () => {
-    const open = await app.request(`/api/hotels/${CODE}/cashier-shift/open`, {
-      method: "POST",
-      headers: { "x-dev-staff-id": deskId, "content-type": "application/json" },
-      body: JSON.stringify({ opening: 0 }),
-    });
-    expect(open.status, await open.clone().text()).toBe(200);
+describe("cash (D27-118 every rupee belongs to a shift; D27-200 the drawer opens by itself)", () => {
+  it("opens the drawer of the person taking it, at ₹0 with nothing handed to them, and the drawer counts it", async () => {
+    expect(await sql("select 1 from cashier_shifts where staff_id = $1 and closed_at is null", [deskId]))
+      .toHaveLength(0);
     const res = await call(deskId, "/payments", { method: "Cash", amount: 100, heldAsCredit: true });
     expect(res.status, await res.clone().text()).toBe(200);
-    const [drawer] = await sql<{ expected: string }>(
-      `select app.cashier_expected_cash(id)::text as expected from cashier_shifts
-        where staff_id = $1 and closed_at is null`, [deskId]);
-    expect(Number(drawer!.expected)).toBe(100);
+    const [drawer] = await sql<{ opening: string; expected: string }>(
+      `select opening_cash::text as opening, app.cashier_expected_cash(id)::text as expected
+         from cashier_shifts where staff_id = $1 and closed_at is null`, [deskId]);
+    expect([Number(drawer!.opening), Number(drawer!.expected)]).toEqual([0, 100]);
+  });
+
+  it("opens no drawer for a payment that is refused, nor for a card", async () => {
+    await sql("delete from cashier_shifts where staff_id = $1 and closed_at is null", [gmId]);
+    const refused = await call(gmId, "/payments", { method: "Cash", amount: 0 });
+    expect(refused.status).toBe(409);
+    const card = await call(gmId, "/payments", { method: "Credit Card", amount: 50, heldAsCredit: true });
+    expect(card.status, await card.clone().text()).toBe(200);
+    expect(await sql("select 1 from cashier_shifts where staff_id = $1 and closed_at is null", [gmId]))
+      .toHaveLength(0);
   });
 });
 

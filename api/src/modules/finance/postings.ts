@@ -5,6 +5,7 @@ import { resolveDate } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
 import { inr } from "../../reportRender.ts";
 import { overCashLimit, panFor } from "./cashLimit.ts";
+import { openOwnDrawer } from "./cashier.ts";
 import { FOLIO_SELECT, STANDING_INVOICE, folioBalance } from "./folios.ts";
 import { POSTING_NIGHTS } from "../reports/index.ts";
 /* A closed day's charge is put right by the night audit's one correction
@@ -707,20 +708,6 @@ export async function takeFolioPayment(
   let pan: string | null = null;
   let form97 = false;
   if (method === "cash") {
-    /* EVERY RUPEE BELONGS TO A SHIFT (the owner's D27-118, QA FI-13): cash
-       taken with no drawer open showed "Cash taken ₹0" on the drawer opened
-       later. The person taking it must hold an open drawer here - the drawer
-       counts what its holder took (app.cashier_expected_cash). */
-    const { rows: drawer } = await client.query(
-      `select 1 from cashier_shifts
-        where hotel_id = $1 and staff_id = app.current_user_id() and closed_at is null`,
-      [hotelId]);
-    if (!drawer.length) {
-      return {
-        ok: false,
-        reason: "Open your cash drawer first (Cashiering): cash is taken only into an open drawer, so every rupee belongs to a shift. Card, UPI and the rest need no drawer.",
-      };
-    }
     const over = overCashLimit(await payer.cashTaken(), amount,
       "card, UPI, cheque or bank transfer");
     if (over) return { ok: false, reason: over };
@@ -743,6 +730,12 @@ export async function takeFolioPayment(
 
   const folio = folioId ?? (await payer.openFolio?.()) ?? null;
   if (!folio) return { ok: false, reason: "There is no bill to take this payment on." };
+
+  /* THE DRAWER OPENS BY ITSELF (the owner's D27-200; D27-118's "every rupee
+     belongs to a shift" kept): the first cash a person takes after the night
+     audit opens their drawer, on any float handed to them. After every
+     refusal (MEMORY 243). */
+  if (method === "cash") await openOwnDrawer(client, hotelId, businessDate);
 
   /* A payment is a NEGATIVE posting. The balance is the sum of the
      ledger, so money received reduces it by being part of the sum —

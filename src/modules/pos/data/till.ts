@@ -1360,7 +1360,7 @@ export interface DayEnd {
     varianceReason: string | null;
     denominations: { value: number; count: number }[];
   };
-  /** The float was counted at Open the day (D27-190); no cash before. */
+  /** False only on the outlet's first-ever day, before its one count (D27-200). */
   opened: boolean;
   closedAt: string | null;
   closedBy: string | null;
@@ -1381,7 +1381,7 @@ export async function recordMovement(
   return till(hotelId, "day-end/movements", input);
 }
 
-/** Open the day: the float counted before any cash is taken (D27-190). */
+/** Open the day: an outlet's first float, counted once (D27-200). */
 export async function openDay(
   hotelId: string, input: { outlet?: string; opening: number },
 ): Promise<Refusal> {

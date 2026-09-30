@@ -38,6 +38,8 @@ export interface CashierDrawer {
   id: string;
   openedAt: string;
   opening: number;
+  /** The kept floats this drawer took up, and from whose close (D27-202). */
+  received?: { amount: number; from: string | null; closedAt: string }[];
   receipts: CashierReceipt[];
   movements: CashierMovement[];
   /** Opening float plus CASH receipts taken by this cashier during this
@@ -56,10 +58,17 @@ export interface CashierDrawerView {
   /** Null when no drawer is open. That is a real state, not an error:
       the shift has not started. */
   shift: CashierDrawer | null;
+  /** With no drawer open: the float handed to this person by name, which
+      their drawer opens on when they first take cash (D27-201). 0 for
+      anyone else. */
+  waiting?: number;
   /** Who the drawer can be handed to. Nobody is a real answer — the
       last close of the night hands over to no one. */
   colleagues: { id: string; name: string }[];
-  previous: { closedAt: string; counted: number; handedTo: string | null } | null;
+  /** The person's last close: what was counted, the float kept and for
+      whom - so the rest, what went to deposit (D27-202). `kept` is null on
+      a close from before the float was recorded. */
+  previous: { closedAt: string; counted: number; kept?: number | null; handedTo: string | null } | null;
 }
 
 export async function getCashierDrawer(
@@ -107,7 +116,7 @@ export async function countCashierDrawer(
  */
 export async function closeCashierShift(
   hotelId: string,
-  input: { varianceReason?: string; handOverTo?: string | null; keptCash?: number },
+  input: { varianceReason?: string; handOverTo?: string | null; keptCash: number },
 ): Promise<ShiftResult> {
   return shiftCall(hotelId, "close", input);
 }
