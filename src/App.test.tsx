@@ -434,7 +434,8 @@ describe("find a screen", () => {
     fireEvent.change(box, { target: { value: "rate plans" } });
     fireEvent.keyDown(box, { key: "Enter" });
 
-    await waitFor(() => expect(window.location.pathname).toBe(`/h/${HOTEL}/rate-plans`));
+    /* Rate plans is one of Rates' words since D27-194: the old name finds the new screen. */
+    await waitFor(() => expect(window.location.pathname).toBe(`/h/${HOTEL}/rates`));
   });
 
   it("understands the words the glossary retired", async () => {

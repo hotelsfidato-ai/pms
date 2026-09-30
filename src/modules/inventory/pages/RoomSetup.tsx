@@ -3,16 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { Plus, Layers, BedDouble, Cigarette, Upload, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, Button, Skeleton, EmptyState, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input,
   NativeSelect, StatusPill,
 } from "@/components/ui";
-import { getRoomSetup, addRoomType, amendRoomType, addRoom, amendRoom, amendFrontDesk, importSetup, type RoomTypeSetup, type RoomSetup as Room, type FrontDeskSettings } from "@/modules/inventory/data/roomSetup";
-import { TaxRulesCard } from "@/modules/finance";
-import { CommissioningCard } from "@/modules/admin";
+import { getRoomSetup, addRoomType, amendRoomType, addRoom, amendRoom, importSetup, type RoomTypeSetup, type RoomSetup as Room } from "@/modules/inventory/data/roomSetup";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { ROOM_TYPE_SPEC, ROOM_SPEC } from "@/lib/importSpec";
 
@@ -25,8 +22,8 @@ import { ROOM_TYPE_SPEC, ROOM_SPEC } from "@/lib/importSpec";
    that the interface offered nothing. Six of the seven properties are
    still unconfigured, so this is the screen that lets them be.
 
-   NO PRICE IS ASKED FOR HERE. A new type is unpriced, and the rack
-   rate is set on the rate calendar by whoever decides what a room is
+   NO PRICE IS ASKED FOR HERE. A new type is unpriced, and its price is
+   set on Rates (D27-188) by whoever decides what a room is
    worth. Putting a rate field on a create form is how a system ends up
    shipping prices nobody at the hotel chose.
 
@@ -51,7 +48,6 @@ export default function RoomSetupPage() {
   const [importing, setImporting] =
     useState<"room-types" | "rooms" | null>(null);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
-  const [editingDesk, setEditingDesk] = useState(false);
 
   const q = useQuery({
     queryKey: ["room-setup", hotelId],
@@ -86,7 +82,7 @@ export default function RoomSetupPage() {
     );
   }
 
-  const { types, rooms, frontDesk } = q.data;
+  const { types, rooms } = q.data;
   const sellable = rooms.filter((r) => r.isActive).length;
 
   return (
@@ -120,48 +116,11 @@ export default function RoomSetupPage() {
         }
       />
 
-      {/* The page's sections, 20px apart (the Rhythm Rule). A gap, not
-          margins: the commissioning card removes itself when done. */}
+      {/* The page's sections, 20px apart (the Rhythm Rule). What the
+          property still needs, the front desk's hours and GST moved to
+          Settings → Configuration (D27-194): this is the list of room
+          types and their rooms. */}
       <div className="flex flex-col gap-5">
-      {/* ── What is still missing ──────────────────────────
-          First on the screen, because a property that cannot take a
-          booking should say so before it shows you its room list. It
-          removes itself once everything is settled, and comes back on
-          its own the moment a check stops being true. */}
-      <CommissioningCard hotelId={hotelId} />
-
-      {/* ── The front desk's hours ───────────────────────────────
-          063 gave the system an opinion about the hour a guest
-          arrives, and for a few hours nothing could set it — the times
-          and both charges were reachable only through a database
-          session, which makes a feature unusable by the people it is
-          for. The same hole room types had this morning. */}
-      <Card className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3.5">
-        {/* Four level columns (label over value), two by two until
-            there is room for four. */}
-        <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3 flex-1 min-w-0">
-          <DeskFigure label="Rooms ready from" value={frontDesk.checkInTime} />
-          <DeskFigure label="Check-out by" value={frontDesk.checkOutTime} />
-          {/* A DASH, not a zero. "We do not charge for this" is a
-              decision a property makes; zero is a price. */}
-          <DeskFigure label="Early arrival" value={
-            frontDesk.earlyCheckinCharge === null
-              ? null : money(frontDesk.earlyCheckinCharge)} />
-          <DeskFigure label="Late departure" value={
-            frontDesk.lateCheckoutCharge === null
-              ? null : money(frontDesk.lateCheckoutCharge)} />
-        </dl>
-        <Button variant="secondary" onClick={() => setEditingDesk(true)}>
-          Edit
-        </Button>
-      </Card>
-
-      {/* ── GST ────────────────────────────────────
-          Beside the hours and the charges, because it is the same
-          question: what does this property sell, and on what terms.
-          The till reads these rules too — there is not a second screen
-          for the restaurant, which is how the two used to disagree. */}
-      <TaxRulesCard hotelId={hotelId} />
 
       {/* ── Types ────────────────────────────────────────────────── */}
       <section className="@container">
@@ -199,10 +158,6 @@ export default function RoomSetupPage() {
                       t.rooms === t.sellable
                         ? String(t.rooms)
                         : `${t.sellable} of ${t.rooms}`} />
-                    {/* A DASH. The rack rate is set on the rate
-                        calendar, and an unpriced type is not free. */}
-                    <Line label="Rack rate" value={
-                      t.rackRate === null ? "-" : money(t.rackRate)} muted={t.rackRate === null} />
                   </dl>
                   <Button variant="secondary" className="w-full"
                           onClick={() => setEditingType(t)}>
@@ -259,11 +214,6 @@ export default function RoomSetupPage() {
       )}
       </div>
 
-      {editingDesk && (
-        <FrontDeskDialog hotelId={hotelId} current={frontDesk}
-          onClose={() => setEditingDesk(false)}
-          onDone={() => { setEditingDesk(false); refresh(); }} />
-      )}
       {addingType && (
         <TypeDialog hotelId={hotelId} type={null}
           onClose={() => setAddingType(false)}
@@ -316,19 +266,6 @@ function Line({ label, value, muted }: {
         {value}
       </dd>
     </>
-  );
-}
-
-/** One of the front desk's four figures; null is a grey dash. */
-function DeskFigure({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-sm text-grey-500 whitespace-nowrap">{label}</dt>
-      <dd className={cn("text-md font-semibold tabular",
-                        value === null ? "text-grey-500" : "text-ink-900")}>
-        {value ?? "-"}
-      </dd>
-    </div>
   );
 }
 
@@ -549,97 +486,6 @@ function RoomDialog({
               </span>
             </label>
           )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function FrontDeskDialog({
-  hotelId, current, onClose, onDone,
-}: {
-  hotelId: string; current: FrontDeskSettings;
-  onClose: () => void; onDone: () => void;
-}) {
-  const [cin, setCin] = useState(current.checkInTime);
-  const [cout, setCout] = useState(current.checkOutTime);
-  /* Empty string is a CLEARED charge, not zero. Kept as text for
-     exactly that reason: a number input cannot tell "nothing typed"
-     from "typed a zero", and here those are different answers. */
-  const [early, setEarly] = useState(
-    current.earlyCheckinCharge === null ? "" : String(current.earlyCheckinCharge));
-  const [late, setLate] = useState(
-    current.lateCheckoutCharge === null ? "" : String(current.lateCheckoutCharge));
-  const [busy, setBusy] = useState(false);
-
-  const submit = async () => {
-    setBusy(true);
-    const res = await amendFrontDesk(hotelId, {
-      checkInTime: cin, checkOutTime: cout,
-      earlyCheckinCharge: early.trim() === "" ? null : Number(early),
-      lateCheckoutCharge: late.trim() === "" ? null : Number(late),
-    });
-    setBusy(false);
-    if (!res.ok) return toast.error("Not saved", res.reason);
-    toast.success("Saved");
-    onDone();
-  };
-
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent
-        title="The front desk's hours"
-        description="When rooms are ready, when they are due back, and what an exception costs."
-        footer={
-          <>
-            <DialogClose asChild>
-              <Button variant="secondary">Cancel</Button>
-            </DialogClose>
-            <Button variant="primary" disabled={busy}
-                    onClick={() => void submit()}>
-              {busy ? "Saving…" : "Save"}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Rooms ready from" required>
-              {(f) => (
-                <Input {...fieldProps(f)} type="time" value={cin}
-                       onChange={(e) => setCin(e.target.value)} />
-              )}
-            </Field>
-            <Field label="Check-out by" required>
-              {(f) => (
-                <Input {...fieldProps(f)} type="time" value={cout}
-                       onChange={(e) => setCout(e.target.value)} />
-              )}
-            </Field>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Early arrival charge"
-                   hint="Blank if the property does not charge for one.">
-              {(f) => (
-                <Input {...fieldProps(f)} value={early} inputMode="decimal"
-                       placeholder="-"
-                       onChange={(e) => setEarly(e.target.value)} />
-              )}
-            </Field>
-            <Field label="Late departure charge" hint="Blank for none.">
-              {(f) => (
-                <Input {...fieldProps(f)} value={late} inputMode="decimal"
-                       placeholder="-"
-                       onChange={(e) => setLate(e.target.value)} />
-              )}
-            </Field>
-          </div>
-          <p className="text-sm text-grey-500 leading-relaxed">
-            A guest arriving before the first time, or leaving after the
-            second, needs a reason and somebody to allow it. The charge
-            reaches their folio unless it is waived, and the reason is
-            kept either way.
-          </p>
         </div>
       </DialogContent>
     </Dialog>

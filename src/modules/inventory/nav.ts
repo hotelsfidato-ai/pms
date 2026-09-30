@@ -1,34 +1,21 @@
-import { LayoutDashboard, Wallet, ShieldAlert, Table2, BarChart3, IndianRupee } from "lucide-react";
+import { LayoutDashboard, ShieldAlert, IndianRupee } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
-import { setsRates } from "@/lib/permissions";
 
 /* Inventory and rates — how this hotel is set up to sell (Configuration)
-   and what it is selling today (Inventory). Assembled by `navigation.ts`. */
+   and what it is selling today (Rooms and rates). Assembled by
+   `navigation.ts`. */
 export const nav: ServiceNavEntry[] = [
   { section: "configuration", order: 10,
     label: "Room types", to: "/h/:code/room-types", icon: LayoutDashboard, resource: "room_config" },
-  { section: "configuration", order: 20,
-    label: "Rate plans", to: "/h/:code/rate-plans", icon: Wallet, resource: "rate",
-    keywords: ["price", "tariff", "rates"] },
   { section: "configuration", order: 30,
     label: "Cancellation terms", to: "/h/:code/cancellation-terms", icon: ShieldAlert, resource: "rate" },
+  /* D27-188, D27-194: one screen replaces Pricing, Rate plans, the Rate
+     calendar and Rate performance. Everyone with `rate: READ` sees it; the
+     screen and the server let only RATE_SETTER_ROLES change a price. The
+     old names stay as words Find a screen understands. */
   { section: "inventory", order: 5,
-    label: "Pricing", to: "/h/:code/pricing", icon: IndianRupee, resource: "rate",
-    /* Not everybody who may READ a price may move one. `rate: READ` is
-       reception's grant, and this screen changes every price in the property
-       at once — see RATE_SETTER_ROLES. The route guard asks the navigation,
-       so this line closes the door as well as hiding it. */
-    canSee: setsRates,
-    keywords: ["base price", "difference", "dynamic", "tariff", "calendar"] },
-  { section: "inventory", order: 10,
-    label: "Rate calendar", to: "/h/:code/grids", icon: Table2, resource: "rate",
-    /* It WRITES prices, so it asks the same question as Pricing — INV-5,
-       approved by the owner on 16 September. Reception, the hotel manager
-       and the viewer hold `rate: READ` and used to reach it. The route
-       guard asks this line, and PUT /:code/rate-grid refuses the same
-       people on the server. */
-    canSee: setsRates,
-    keywords: ["prices by day", "grid"] },
-  { section: "inventory", order: 20,
-    label: "Rate performance", to: "/h/:code/rates", icon: BarChart3, resource: "rate" },
+    label: "Rates", to: "/h/:code/rates", icon: IndianRupee, resource: "rate",
+    keywords: ["price", "tariff", "pricing", "rate plans", "rate calendar",
+               "rate performance", "base price", "add-ons", "breakfast",
+               "extra adult", "occupancy", "ADR", "stop sell", "restrictions"] },
 ];

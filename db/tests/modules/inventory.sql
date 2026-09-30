@@ -190,24 +190,75 @@ begin
               values (%L,'meal_plan',%L,'CP',100,'2027-01-01')$q$,
            h, dlx), '23514');
 
-  -- ---------- 10 · THE PARTY: COUNTING STARTS AT THE FIRST PERSON ----------
-  -- The owner, 16 September: two adults are the base plus one extra adult.
-  -- The extra-adult figure is unset here, so the total must be NULL and say
-  -- so — a second guest who has not been priced is not a free one.
+  -- ---------- 10 · THE PARTY (D27-194, replacing 16 September) ----------
+  -- One guest is the base; the second, adult or child, is double occupancy;
+  -- from the third, extra adult / extra child; every guest pays the meal.
+  -- Nothing is set yet, so a second guest is not a free one.
   select * into t from app.tariff_for(dlx, 'EP', date '2026-12-14', 2, 0);
-  perform test.ok('pricing','a derived price makes the second adult an extra',
-    t.extra_adults = 1, t.extra_adults || ' extra');
-  perform test.ok('pricing','and an unpriced extra adult makes the total null, in words',
-    t.total is null and t.unpriced = 'the extra adult',
-    coalesce(t.unpriced, '<null>'));
+  perform test.ok('pricing','a second guest with no double occupancy set is not priced, in words',
+    t.total is null and t.unpriced = 'the second guest' and t.extra_adults = 0,
+    coalesce(t.unpriced, '<null>') || ' / ' || t.extra_adults || ' extra');
 
+  -- The type's own older extra-adult figure is not the double occupancy.
   update room_types set extra_adult_rate = 700 where id = dlx;
   select * into t from app.tariff_for(dlx, 'EP', date '2026-12-14', 2, 0);
-  perform test.ok('pricing','two adults are the base plus one extra adult',
-    t.total = 2800, coalesce(t.total::text, '<null>'));
+  perform test.ok('pricing','an older extra-adult figure does not price a base''s second guest',
+    t.total is null, coalesce(t.total::text, '<null>'));
+
+  perform app.set_addon(h, 'double', null, null, 600, null, admin);
+  select * into t from app.tariff_for(dlx, 'EP', date '2026-12-14', 2, 0);
+  perform test.ok('pricing','two adults are the base plus double occupancy',
+    t.total = 2700, coalesce(t.total::text, '<null>'));
+  select * into t from app.tariff_for(dlx, 'EP', date '2026-12-14', 1, 1);
+  perform test.ok('pricing','and so are an adult and a child',
+    t.total = 2700, coalesce(t.total::text, '<null>'));
   select * into t from app.tariff_for(dlx, 'EP', date '2026-12-14', 3, 0);
-  perform test.ok('pricing','three adults are the base plus two',
+  perform test.ok('pricing','a third adult with no extra-adult add-on is not priced',
+    t.total is null and t.unpriced = 'the extra adult', coalesce(t.unpriced, '<null>'));
+
+  perform app.set_addon(h, 'extra_adult', null, null, 800, null, admin);
+  perform app.set_addon(h, 'extra_child', null, null, 400, null, admin);
+  select * into t from app.tariff_for(dlx, 'EP', date '2026-12-14', 3, 0);
+  perform test.ok('pricing','three adults are base + double + an extra adult',
     t.total = 3500, coalesce(t.total::text, '<null>'));
+  select * into t from app.tariff_for(dlx, 'EP', date '2026-12-14', 2, 1);
+  perform test.ok('pricing','two adults and a child are base + double + an extra child',
+    t.total = 3100, coalesce(t.total::text, '<null>'));
+
+  -- Breakfast (300, section 4) for every guest, the child too.
+  select * into t from app.tariff_for(dlx, 'CP', date '2026-12-14', 2, 1);
+  perform test.ok('pricing','a meal is added for every guest, children too',
+    t.total = 4000 and t.base + t.extra_adults * t.adult_rate
+                     + t.extra_children * t.child_rate = t.total,
+    coalesce(t.total::text, '<null>'));
+
+  -- The channel manager's per-guest prices are tariff_for's, guest by guest.
+  select count(*) into n
+    from generate_series(1, 4) g
+   where (app.tariff_guests(dlx, 'CP', date '2026-12-14', 4))[g]
+         is distinct from (select t2.total from app.tariff_for(dlx, 'CP', date '2026-12-14', g, 0) t2);
+  perform test.ok('pricing','tariff_guests is tariff_for for 1 to 4 adults on a base',
+    n = 0, n || ' differ');
+  select count(*) into n
+    from generate_series(1, 3) g
+   where (app.tariff_guests(std, 'EP', date '2026-12-14', 3))[g]
+         is distinct from (select t2.total from app.tariff_for(std, 'EP', date '2026-12-14', g, 0) t2);
+  perform test.ok('pricing','and on an older price',
+    n = 0, n || ' differ');
+
+  -- Free is a typed 0 (D27-120), not a missing figure.
+  perform app.set_addon(h, 'double', null, null, 0, null, admin);
+  select * into t from app.tariff_for(dlx, 'EP', date '2026-12-14', 2, 0);
+  perform test.ok('pricing','double occupancy ticked Free adds nothing',
+    t.total = 2100, coalesce(t.total::text, '<null>'));
+  perform app.set_addon(h, 'double', null, null, 600, null, admin);
+
+  perform test.raises('pricing','an add-on may not name a room type',
+    format($q$insert into rate_offsets (hotel_id, kind, room_type_id, amount, valid_from)
+              values (%L,'double',%L,100,'2027-01-01')$q$, h, dlx), '23514');
+  perform test.raises('pricing','only a room type is set as a percentage',
+    format($q$insert into rate_offsets (hotel_id, kind, meal_plan, amount, unit, valid_from)
+              values (%L,'meal_plan','MAP',10,'percent','2027-01-01')$q$, h), '23514');
 
   -- ---------- 11 · A TYPED PRICE KEEPS THE MEANING IT WAS WRITTEN WITH ----
   -- THE ASSERTION THAT PROTECTS EVERY BOOKING MADE BEFORE TODAY. The standard type's
@@ -218,31 +269,50 @@ begin
     t.extra_adults = 0 and t.total = 4000,
     t.extra_adults || ' extra / ' || coalesce(t.total::text, '<null>'));
 
-  -- ---------- 11a · THE BASE COVERS ONE PERSON WHOEVER WROTE IT ----------
-  -- Not the caller's discipline: the Inventory and rates screen writes the
-  -- basis pair like any other cell, and app.set_rate re-creates the tail of a
-  -- row it splits. Either could leave a base row covering two, and every
-  -- derived price in the property would be built from a two-person figure.
+  -- ---------- 11a · ONLY A BASE WRITE MAKES A ONE-GUEST PRICE (181) ----------
+  -- A price typed straight into a date range (the old grid, a season) is a set
+  -- price: it covers what the room type says, and 090's trigger no longer
+  -- re-reads it as a base. The base it split keeps covering one guest on both
+  -- sides - the tail used to come back without it.
   perform app.set_rate(h, dlx, 'EP', date '2027-03-01', date '2027-03-10',
                        2500, 'Typed straight into the grid', admin, null, null);
-  select count(*) into n from rates
-   where hotel_id = h and room_type_id = dlx and meal_plan = 'EP'
-     and covers_persons is distinct from 1;
-  perform test.ok('pricing','every price on the base pair covers one person',
-    n = 0, n || ' cover something else');
+  select p2.covers into c from app.price_for(dlx, 'EP', date '2027-03-02') p2;
+  perform test.ok('pricing','a price typed into a range is a set price, covering two (D27-194)',
+    c = 2, c || ' covered');
+  select p2.covers into c from app.price_for(dlx, 'EP', date '2027-06-01') p2;
+  perform test.ok('pricing','the base after it still covers one guest (a split keeps it)',
+    c = 1 and app.rate_for(dlx, 'EP', date '2027-06-01') = 2100,
+    c || ' covered / ' || coalesce(app.rate_for(dlx, 'EP', date '2027-06-01')::text, '<null>'));
 
-  -- And the other direction: prices first, basis second.
   perform app.set_basis_price(h, date '2027-04-01', date '2027-04-10',
                               2400, 'April', admin);
-  perform test.ok('pricing','the base figure can be set without naming the type',
-    app.rate_for(dlx, 'EP', date '2027-04-02') = 2400,
-    coalesce(app.rate_for(dlx, 'EP', date '2027-04-02')::text, '<null>'));
+  select p2.covers into c from app.price_for(dlx, 'EP', date '2027-04-02') p2;
+  perform test.ok('pricing','the base figure is set without naming the type, for one guest',
+    app.rate_for(dlx, 'EP', date '2027-04-02') = 2400 and c = 1,
+    coalesce(app.rate_for(dlx, 'EP', date '2027-04-02')::text, '<null>') || ' / ' || c);
 
-  -- ---------- 12 · a property with no basis is untouched ----------
-  -- Every property in this database is in this state until somebody sets one.
+  -- ---------- 11b · a room type derived by a percentage (D27-188, D27-194) ----
+  -- Set once: it replaces the dated rupee differences above, for every date.
+  perform app.set_addon(h, 'room_type', std, null, 12.5, 'percent', admin);
+  perform test.ok('pricing','a percentage of the base rounds to the whole rupee',
+    app.rate_for(std, 'EP', date '2027-06-01') = 2363,
+    coalesce(app.rate_for(std, 'EP', date '2027-06-01')::text, '<null>'));
+
+  -- A type given its own base keeps it, even with a base type chosen.
+  perform app.set_base_price(h, std, date '2027-06-01', date '2027-06-02', 2900, null, admin);
+  perform test.ok('pricing','a type''s own base wins over its derivation',
+    app.rate_for(std, 'EP', date '2027-06-01') = 2900
+    and app.rate_for(std, 'CP', date '2027-06-01') = 3200,
+    coalesce(app.rate_for(std, 'CP', date '2027-06-01')::text, '<null>'));
+
+  -- ---------- 12 · no base type: each type prices from its own base (mode a) ----
   delete from pricing_basis where hotel_id = h;
-  perform test.ok('pricing','remove the basis and nothing derives any more',
-    app.rate_for(dlx, 'CP', date '2026-12-14') is null);
+  perform test.ok('pricing','without a base type a type keeps its own base and add-ons',
+    app.rate_for(dlx, 'CP', date '2026-12-14') = 2400,
+    coalesce(app.rate_for(dlx, 'CP', date '2026-12-14')::text, '<null>'));
+  perform test.ok('pricing','and a type with no base of its own is not priced',
+    app.rate_for(std, 'EP', date '2027-06-05') is null,
+    coalesce(app.rate_for(std, 'EP', date '2027-06-05')::text, '<null>'));
 
   -- ---------- 13 · the category groups types without selling anything ------
   update room_types set category = 'Deluxe' where id in (dlx, std);
@@ -262,4 +332,42 @@ begin
   select count(*) into n from hotels where code = 'PBS';
   perform test.ok('pricing','the pricing fixture does not outlive the test',
     n = 0, n || ' left behind');
+end $$;
+
+
+-- =============================================================================
+-- THE OLD RACK AT A RACK-ONLY HOTEL (the owner, D27-196, 30 September)
+-- =============================================================================
+-- A hotel priced only by the old rack keeps selling every meal plan at the
+-- room-only rack (D17-92) until a base and the meal add-on are set on Rates,
+-- which then win. D27-194's "an unset plan is not sold" is the new model's.
+-- =============================================================================
+do $$
+declare
+  h uuid; std uuid; admin uuid; s text;
+begin
+  select id into admin from staff where is_group_admin limit 1;
+  h := app.provision_property_unchecked('RKO','Rack Only Test','Nowhere');
+  select id into std from room_types where hotel_id = h and code = 'STD';
+
+  update room_types set base_rate = 3000 where id = std;
+  select p2.source into s from app.price_for(std, 'CP', date '2026-12-14') p2;
+  perform test.ok('pricing','a rack-only hotel sells breakfast at the room-only rack (D27-196)',
+    app.rate_for(std, 'CP', date '2026-12-14') = 3000 and s = 'rack',
+    coalesce(app.rate_for(std, 'CP', date '2026-12-14')::text, '<null>') || ' / ' || coalesce(s, '<null>'));
+
+  perform app.set_addon(h, 'meal_plan', null, 'CP', 500, null, admin);
+  perform test.ok('pricing','the meal add-on alone does not move the rack',
+    app.rate_for(std, 'CP', date '2026-12-14') = 3000,
+    coalesce(app.rate_for(std, 'CP', date '2026-12-14')::text, '<null>'));
+
+  perform app.set_base_price(h, std, date '2026-12-01', date '2027-01-01', 2000, null, admin);
+  perform test.ok('pricing','a base and the meal add-on then win over the rack',
+    app.rate_for(std, 'CP', date '2026-12-14') = 2500
+    and app.rate_for(std, 'CP', date '2027-01-05') = 3000,
+    coalesce(app.rate_for(std, 'CP', date '2026-12-14')::text, '<null>'));
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
 end $$;

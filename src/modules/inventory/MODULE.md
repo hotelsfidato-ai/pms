@@ -24,15 +24,16 @@ service (`docs/SERVICE-FOLDERS-PLAN.md`).
 
 ## What it is
 
-The person setting up a hotel enters its room types (who they sleep, what
-they cost on the rack) and its rooms, by hand or from a file. The revenue
-manager then sets prices: rate plans per room type and meal plan, seasons
-over date ranges, a price for a run of dates typed straight onto the rate
-calendar, extra adults and children, and restrictions — stop sell, closed to
-arrival or departure, minimum and maximum nights. The hotel writes down its
+The person setting up a hotel enters its room types (who they sleep) and its
+rooms, by hand or from a file. Prices are a **base plus add-ons** (D27-188,
+D27-194, migration 181): a base per room type, or one base room type the
+others are derived from (+₹ or +%, whole rupees); the add-ons set once per
+hotel - CP, MAP, AP, AI per guest, double occupancy (the second guest, adult
+or child), extra adult and extra child (from the third). The calendar changes
+only the base. Restrictions - stop sell, closed to arrival or departure,
+minimum and maximum nights - sit beside it. The hotel writes down its
 cancellation terms and may mark one as the default; the terms freeze onto
-each booking. "Rate performance" compares the rack rate with what rooms
-actually sold for, fourteen days out.
+each booking.
 
 ---
 
@@ -41,40 +42,31 @@ actually sold for, fourteen days out.
 | Menu name | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
 |---|---|---|---|
 | Room types | `/h/:code/room-types` | `pages/RoomSetup.tsx` | none |
-| Rate plans | `/h/:code/rate-plans` | `pages/RatePlans.tsx` | none |
 | Cancellation terms | `/h/:code/cancellation-terms` | `pages/CancellationTerms.tsx` | none |
-| Pricing | `/h/:code/pricing` | `pages/Pricing.tsx` | none |
-| Rate calendar | `/h/:code/grids` | `pages/Grids.tsx` | none |
-| Rate performance | `/h/:code/rates` | `pages/Rates.tsx` | none |
+| Rates | `/h/:code/rates` | `pages/Rates.tsx` | none |
 | — routed nowhere | — | `pages/UnroutedLists.tsx` (`RoomTypesPage`, `RatePlansPage`) | kept, pending the owner |
 
-- The first three sit in the menu's **Configuration** section, the last three in
-  **Inventory**. Room types needs the `room_config` grant; the others the
-  `rate` grant (the default test, no `canSee`) — **except Pricing and the Rate
-  calendar**, which carry `canSee: setsRates` and a `RequireAccess` route
-  guard: they set prices, and `rate: READ` is reception's grant. Who may:
-  `RATE_SETTER_ROLES` in `src/lib/permissions.ts` (the master's file — owner,
-  admin, GM today; the revenue manager is being added). The Rate calendar was
-  closed on 16 September on the owner's approval (INV-5). **Rate plans still
-  writes prices and is still open to `rate: READ`** — see INV-5 "Still open".
-
-**Pricing (16 September)** — one base figure, Deluxe · one person · room only,
-and every other price a difference from it in rupees, with dates. Migration
-090, `api/src/modules/inventory/pricing.ts`, `data/pricing.ts`. The plan and
-every decision behind it: `docs/PRICING-PLAN.md`. A price says what it covers
-(`rates.covers_persons`), which is how nothing already sold was repriced.
-- No working menu lists any of them. Owner, admin, GM, hotel manager, finance
-  and read-only see them where their permissions allow; others reach them by
-  Find a screen, if allowed.
-- The Room types page also carries three pieces that belong elsewhere:
-  `CommissioningCard` (admin — what the property still needs),
-  `TaxRulesCard` (finance — GST rules), and "The front desk's hours"
-  (check-in and check-out times and early/late charges — the form is here,
-  and so is its server endpoint).
+- **Rates (30 September, D27-188, D27-194)** replaces Pricing, Rate plans, the
+  Rate calendar and Rate performance; `/h/:code/pricing`, `/rate-plans` and
+  `/grids` open it, and their names are its Find-a-screen words. On it: "How
+  rates are built" (mode, base room type, each type's difference, the add-ons
+  with Free ticks), a 14-day calendar of each type's base with each day's
+  paying rooms sold, occupancy, ADR and revenue under it (D27-151), the prices
+  set before 181 (kept exactly, with Remove), Rooms left and restrictions
+  behind the title-row switch, and links to the Manager report, Monthly
+  occupancy, Monthly statistics and Revenue outlook. Everyone with `rate:
+  READ` sees it; only `setsRates` roles (RATE_SETTER_ROLES) get anything to
+  press, and every write route asks the gate.
+- Room types is the list of room types and their rooms (D27-194). What the
+  property still needs, the front desk's hours and GST are on admin's
+  Settings → Configuration; the front desk's form is this service's
+  `components/FrontDeskCard.tsx`, exported through the door.
+- Room types sits in the menu's **Property setup** section (D27-196) with Cancellation
+  terms; Rates in **Rooms and rates**. No working menu lists them.
 
 ---
 
-## Server endpoints — 27
+## Server endpoints — 28
 
 The code is in `api/src/modules/inventory/` (moved 15 September):
 `rates.ts`, `inventorySetup.ts`, `pricing.ts` (16 September), and the parts
@@ -125,20 +117,28 @@ admin — `GET /:code/commissioning`, in `admin/commissioning.ts`. The plan had
 given the front desk's hours to admin; the split kept them here, with the
 form.)
 
-`pricing.ts` (16 September, migration 090) — 4:
+`pricing.ts` (16 September, migration 090; 30 September, 181) — 5:
 
 ```
-GET    /:code/pricing                             the base, the differences, and a price per date
-PUT    /:code/pricing/basis                       which room type and meal plan is the base
-PUT    /:code/pricing/base                        the base price, for a date or a range
-PUT    /:code/pricing/offset                      a difference from the base, in rupees
+GET    /:code/pricing                             the setup (base room type, each type's difference
+                                                  and rack, the add-ons, older prices) and a price
+                                                  per date; ?plan=EP for one plan's cells
+PUT    /:code/pricing/basis                       the base room type; roomTypeId null = each type
+                                                  its own base (D27-188); the plan is EP
+PUT    /:code/pricing/base                        a base over a range; with roomTypeId, that type's
+PUT    /:code/pricing/offset                      a dated rupee difference (the old Pricing screen's;
+                                                  no screen calls it now)
+PUT    /:code/pricing/addon                       an add-on or a type's difference, for every date
+                                                  (app.set_addon); 0 only with free (D27-120)
 ```
 
 `rateGrid.ts` (split out of billing.ts) — 1:
 
 ```
-GET    /:code/rates                               Rate performance: rack against achieved, by date.
-                                                  An unpriced type's rack is null, never 0 (INV-3)
+GET    /:code/rates                               each day's hotel totals for Rates: paying rooms
+                                                  sold, ADR, revenue (paying, no day use, booked
+                                                  rate before tax) and occupancy from the reports'
+                                                  dailyFigures (D27-151). ADR null when nothing sold
 ```
 
 `roomTypesAndPlans.ts` (split out of directory.ts) — 1, read only by the routed-nowhere room-type list:
@@ -159,19 +159,21 @@ because it is mounted first (MEMORY 70) — an order the server split kept. Grep
 ## Data
 
 ```
-data/rates.ts          getInventory, getPriceGrid, setRate, setRestriction, getTariff.
+data/rates.ts          getInventory, setRestriction, getTariff.
                        getInventory and getTariff are the front door's exports.
-data/rateSetup.ts      getRates, setRackRate, addRate, removeRate; cancellation
+data/pricing.ts        getPricing, setBasis, setBasePrice, setAddon - the Rates screen.
+data/rateSetup.ts      setRackRate, removeRate (clearing an older price); cancellation
                        policies — list, add, retire, set the default. Split out of
                        the old admin.ts on 15 September.
-data/rateGrid.ts       getRateGrid — Rate performance. Split out of the old billing.ts.
+data/rateGrid.ts       getRateDays - each day's performance on Rates.
 data/roomSetup.ts      getRoomSetup, addRoomType, amendRoomType, addRoom, amendRoom,
                        amendFrontDesk, importSetup.
 data/unroutedLists.ts  listRoomTypes, listRatePlans — for the two screens no address
                        reaches. Split out of the old directory.ts.
 ```
 
-No `lib/`, `components/` or `flows/` in this folder.
+`components/FrontDeskCard.tsx` - the front desk's hours and charges, on admin's
+Configuration page through the door (D27-194).
 
 ---
 
@@ -193,6 +195,13 @@ cancellation_policies              036_cancellation_terms.sql  (app.retention_fo
 rate_restrictions                  044_restrictions.sql  (app.sellable_rooms — the denominator
                                    of every occupancy figure)
 pricing_basis, rate_offsets        090_pricing_basis.sql  (app.price_for; rates.covers_persons)
+  a base plus add-ons              181 (numbered for now) - app.price_parts is the one
+                                   definition; price_for, rate_for, extra_person_rates and
+                                   tariff_for read it (signatures kept); app.tariff_guests
+                                   for the channel manager; app.set_base_price, app.set_addon.
+                                   A base = a rates row on EP covering ONE guest; covers NULL
+                                   is a price set before 181 and prices exactly as it did.
+                                   Also: tax_rules takes 'laundry' (D27-194)
 meal_plans                         011_model_additions.sql — read, not written
 ```
 
@@ -218,8 +227,8 @@ master. 091–093 were assigned on 16 September to reservations and the master.
 ## Front door
 
 `src/modules/inventory/index.ts` exports `getInventory`, `getTariff` and the
-type `Tariff` (from `data/rates.ts`). The only importer is
-`src/modules/reservations/pages/NewBooking.tsx`.
+type `Tariff` (from `data/rates.ts`), read by reservations' booking page; and
+`FrontDeskCard`, read by admin's Configuration page.
 
 The server's door, `api/src/modules/inventory/index.ts`, exports only
 `mounts` (`roomTypesAndPlans`, `rateGrid`, `rates`, `pricing`,
@@ -229,12 +238,15 @@ The server's door, `api/src/modules/inventory/index.ts`, exports only
 
 ## Leans on
 
-- **finance** — `TaxRulesCard` through `@/modules/finance`, on Room types.
-- **admin** — `CommissioningCard` through `@/modules/admin`, on Room types;
-  and the front desk's hours form posts to admin's `PATCH /:code/front-desk`.
+- **reports** — `dailyFigures` through its door, for Rates' occupancy (D27-151).
+- Room types no longer carries finance's `TaxRulesCard` or admin's
+  `CommissioningCard`: both are on admin's Configuration page (D27-194).
 
 Others lean on this one: reservations — the door, for New booking, and
-`app.tariff_for` when a booking is priced (`api/src/modules/reservations/groups.ts`); and
+`app.tariff_for` when a booking is priced (`api/src/modules/reservations/book.ts`); the
+channel manager - `app.tariff_guests` and `app.price_parts` (`ari/source.ts`) and
+`app.price_for` for the normal price (`content/store.ts`); the night-audit report and
+admin's commissioning, `app.price_for` (EP); and
 reports — every occupancy figure divides by `app.sellable_rooms`
 (`statistics.ts`, `manager.ts`).
 

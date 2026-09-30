@@ -11,6 +11,21 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · Rates are a base plus add-ons; one Rates screen; Room types is the list (D27-188, D27-194)
+
+Branch `rates/base-addons-30sep` (from cp6 c01b150, e4c5929 taken in), copy `.claudeworktreesmystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.
+**Asked for:** the owner's D27-188, the details in D27-194: a base plus add-ons in two modes; one Rates screen for the Rate calendar and Rate performance; Room types just the list; a Configuration page for the taxes (admin). Plan sent to the master first; every question answered before building.
+**Shipped:**
+- Migration 181 (numbered for now): `app.price_parts` is the one definition. A base is a `rates` row on EP covering one guest; a type's own base, else (mode b) the base room type's plus its difference (rupees or %, whole rupees); add-ons in `rate_offsets` (new kinds `double`, `extra_adult`, `extra_child` beside `meal_plan`; a `unit`), set once from -infinity by `app.set_addon`. A night: 1 guest = base; 2 (adult or child) = + double occupancy; from the 3rd, extra adult / child; meals per guest. `price_for`, `rate_for`, `extra_person_rates`, `tariff_for`, `set_rate`, `set_offset`, `set_basis_price` keep their signatures; every price set before 181 (covers NULL) prices exactly as it did. `set_rate`'s split keeps `covers_persons` and 090's two stamping triggers go (INV-9). `app.tariff_guests` for the channel manager. `tax_rules` takes `laundry`.
+- API: `GET /pricing` carries the setup, add-ons, differences, rack and the older prices (`?plan=` for one plan's cells); `PUT /pricing/basis` null = each type its own base; `PUT /pricing/base` takes a room type; `PUT /pricing/addon` (roleGate PRICE, pinned); `GET /rates` is each day's hotel totals (D27-151).
+- Outside this service, as the master routed: the channel manager's by-guest prices read `app.tariff_guests` (`ari/source.ts`) and its content's normal price `app.price_for` (`content/store.ts`); the night-audit report's "normal" rate and `property.ts`'s rooms read `app.price_for` (EP); laundry charges post under their own GST heading (finance's `tax.ts`, `data/tax.ts`, `TaxRulesCard.tsx`; `laundry.ts`).
+- Screens: `pages/Rates.tsx` (was Grids.tsx): how rates are built, the base calendar with each day's performance, older prices with Remove, Rooms left and restrictions, report links; read-only for everyone but the rate setters. Pricing.tsx and RatePlans.tsx deleted; `/pricing`, `/rate-plans`, `/grids` open Rates. Room types loses the three cards and the rack line; the front desk's card is `components/FrontDeskCard.tsx`.
+**Found:** INV-9 (a split base lost "one guest"; choosing a base type re-read older prices). The new older-prices list listed none (NOT on a NULL) - caught by its own API test before commit.
+**Proved:** `db/tests/run.sh` all 1285 assertions; `db/tests/rerun.sh` 162 migrations re-runnable (again after the laundry part); API one file at a time: pricing 15, unpriced 2, zeroPrices 6, inventory 29, rateSetters 17, roleGate 60, channel-manager suAvailability 12 and suContent 11, reports 31, admin settings 7 and propertyAdmin 39, laundry 27 (the new laundry test seen failing with its line taken out). Web: inventory, admin, finance, components/app and App tests pass except navigation's "two places the same name" (the Configuration name, with the master). In the app: Rates as the revenue manager (setup saved, Superior base ₹3,000, Deluxe derived +20% = ₹3,600), the tariff through `GET /tariff` (Deluxe CP 3 adults ₹6,900; 1 adult + 1 child EP ₹4,400; MAP unset not sold), Room types, Configuration as the GM, Rates read-only as reception from the old `/grids` address.
+**Left open:** the Configuration name clash; the migration number; the front desk's two rack reads (with the master for the booking lane).
+
+---
+
 ## 2026-09-29 · Fix round F (QA leftovers, D27-149), part D: paying rooms sold; EP not RO; dates; said, not silent (D27-151, D27-164; QA FD-12, RT-6, RT-7, RT-8)
 
 Branch `fix/leftovers-28sep` (cp6 7c52bb9, round D, merged in), copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.

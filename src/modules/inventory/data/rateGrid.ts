@@ -1,45 +1,28 @@
-import { BUSINESS_DATE } from "@/data/repositories/businessDate";
 import { fetchOr } from "@/data/repositories/http";
-/* The rate grid.
 
-   Service: inventory. Moved out of billing.ts on 15 September in the
-   service-folder move (docs/SERVICE-FOLDERS-PLAN.md); the code is
-   unchanged. */
+/* Each day's performance under its price on the Rates screen, for the
+   hotel as a whole (D27-188, D27-194). Service: inventory.
 
-/* ── Rates ───────────────────────────────────────────────────────── */
+   Paying rooms sold, ADR and revenue are the rate screens' own rule
+   (D27-151): paying rooms only, no day use, at the booked nightly rate
+   before tax. Occupancy is the one rule everywhere: complimentary in,
+   over sellable rooms. */
 
-export interface RateCell {
+export interface RateDay {
   date: string;
-  /** null when nobody has priced the room type — never 0 (INV-3). */
-  rackRate: number | null;
-  /** What rooms of this type actually sold for on the date. */
-  soldAdr: number | null;
-  sold: number;
-  sellable: number;
+  paidSold: number;
+  /** A percentage; null when the hotel had no rooms to sell. */
+  occupancy: number | null;
+  /** null when nothing was sold - a dash, never ₹0. */
+  adr: number | null;
+  revenue: number;
 }
 
-export interface RateRow {
-  roomType: string;
-  rackRate: number | null;
-  cells: RateCell[];
-}
-
-/**
- * Rack against achieved: a report on what rooms actually SOLD for,
- * against the room type's rack rate.
- *
- * Not to be confused with `getPriceGrid` in `rates.ts`, which is the
- * pricing calendar — what a room WILL cost. This one looks backwards
- * and that one forwards, and every difference in the achieved line
- * here is something a person negotiated on the day.
- */
-export async function getRateGrid(
-  hotelId: string,
-  from = BUSINESS_DATE,
-  days = 14,
-): Promise<RateRow[]> {
+export async function getRateDays(
+  hotelId: string, from: string, days = 14,
+): Promise<RateDay[]> {
   if (!hotelId) return [];
-  return fetchOr<RateRow[]>(
+  return fetchOr<RateDay[]>(
     `/api/hotels/${hotelId}/rates?from=${encodeURIComponent(from)}&days=${days}`,
     [],
   );

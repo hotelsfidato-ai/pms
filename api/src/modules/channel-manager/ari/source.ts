@@ -10,8 +10,8 @@ import type { Client } from "../../../db.ts";
                      taken out, INV-6) less every booking holding one. The
                      same number the Inventory grid shows a person. Never
                      below zero.
-     prices          app.tariff_for (033, 090) for 1, 2 … up to the room's
-                     sleeps adults: the price a booking of that many people
+     prices          app.tariff_guests (181): app.tariff_for for 1, 2 … up to
+                     the room's sleeps adults: the price a booking of that many people
                      would be charged that night. NULL when any part of it is
                      unpriced; NULL is carried, never turned into 0.
      where from      app.price_for's source: "typed" (a price set for this
@@ -132,38 +132,24 @@ export async function readAri(
     by_guests: (string | null)[]; source: "typed" | "derived" | "rack" | null;
     extra_adult: string | null; extra_child: string | null;
   }>(
-    /* ⚠ app.tariff_for's ARITHMETIC, for adults only, written once more here.
-       Calling app.tariff_for for every date and every guest count asks for
-       the price and the extra-person figures again each time, under row
-       security each time: a year for two room types and two meal plans took
-       11 seconds as pms_app. So the price (app.price_for) and the extra
-       figures (app.extra_person_rates) are read once a date, and the total
-       for n adults is tariff_for's own rule: the price covers `covers`
-       people (2 when it does not say); each adult beyond that adds the
-       extra-adult figure; no price, or an extra adult with no figure, is
-       NULL, never a partial total.
-       HELD TOGETHER BY api/test/modules/channel-manager/suAvailability.test.ts,
-       which compares this with app.tariff_for date by date and guest by guest
-       and fails the moment they differ. Asked of the master: a set-based
-       tariff in inventory, so there is one copy again. */
+    /* The prices for 1 … n adults are app.tariff_guests (181): tariff_for's
+       own arithmetic, one read a date, in inventory - no copy here any more
+       (it could not know a one-guest base's second guest is double
+       occupancy, D27-194). Calling app.tariff_for per date and per guest
+       count took 11 seconds for a year as pms_app, which is why this read
+       once a date. Held to app.tariff_for by
+       api/test/modules/channel-manager/suAvailability.test.ts and
+       db/tests/modules/inventory.sql. */
     `select rt.id::text as room_type_id, mp.meal_plan, d::date::text as for_date,
-            array(select case
-                           when p.price is null then null
-                           when n <= coalesce(p.covers, 2) then p.price
-                           when x.adult is null then null
-                           else p.price + (n - coalesce(p.covers, 2)) * x.adult
-                         end::text
-                    from generate_series(1, rt.max_occupancy) n
-                   order by n) as by_guests,
+            app.tariff_guests(rt.id, mp.meal_plan, d::date, rt.max_occupancy)::text[] as by_guests,
             p.source,
-            x.adult::text as extra_adult, x.child::text as extra_child
+            p.extra_adult::text as extra_adult, p.extra_child::text as extra_child
        from room_types rt
        cross join unnest($4::text[]) as mp(meal_plan)
        cross join generate_series($2::date, $3::date, interval '1 day') d
-       /* left joins: a date the functions answer with no row is still a date SU
+       /* left join: a date the function answers with no row is still a date SU
           must hear about, with no price. */
-       left join lateral app.price_for(rt.id, mp.meal_plan, d::date) p on true
-       left join lateral app.extra_person_rates(rt.id, mp.meal_plan, d::date) x on true
+       left join lateral app.price_parts(rt.id, mp.meal_plan, d::date) p on true
       where rt.hotel_id = $1 and rt.id = any($5::uuid[])
       order by rt.id, mp.meal_plan, d`,
     [hotelId, from, to, plans.map((p) => p.meal_plan), rooms.map((r) => r.room_type_id)]);

@@ -28,7 +28,7 @@ type Result<T = unknown> = ({ ok: true } & T) | { ok: false; reason: string };
 
 /** "alcohol" is VAT, not GST (D21-91), and is listed only where the property
     is switched on for it (D21-90). */
-export type TaxKind = "room" | "restaurant" | "bar" | "banquet" | "spa" | "alcohol" | "other";
+export type TaxKind = "room" | "restaurant" | "bar" | "banquet" | "spa" | "alcohol" | "laundry" | "other";
 
 export interface TaxSlab {
   id: string;

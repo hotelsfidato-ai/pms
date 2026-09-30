@@ -87,7 +87,7 @@ const SETTINGS = [
   { title: "Property", rows: [{ label: "GSTIN", value: "27AAGCF5655F1ZI" }] },
   {
     title: "Tax and billing",
-    note: "GST is set on Room types, under GST.",
+    note: "GST is set under System → Administration → Configuration.",
     taxInUse: true,
     rows: [{ label: "Financial year starts", value: "1 April" }],
   },

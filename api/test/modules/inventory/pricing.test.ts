@@ -241,6 +241,53 @@ describe("the pricing screen's data", () => {
     expect(after.covers).toBeGreaterThan(1);
   });
 
+  /* ── 181: a base plus add-ons (D27-188, D27-194) ─────────────────── */
+  type Extra = {
+    addons: Record<string, number | null>;
+    older: { roomTypeId: string; mealPlan: string; price: number; covers: number }[];
+  };
+
+  it("lists a price typed before 181 as an older price, not the base", async () => {
+    const body = (await read()) as Pricing & Extra;
+    const other = body.roomTypes.find((t) => t.code !== "DLX")!;
+    const deluxe = body.roomTypes.find((t) => t.code === "DLX")!;
+    expect(body.older.some((o) => o.roomTypeId === other.id && o.price === 5000)).toBe(true);
+    expect(body.older.some((o) => o.roomTypeId === deluxe.id && o.mealPlan === "EP"),
+      "the base is not an older price").toBe(false);
+  });
+
+  it("sets an add-on once, and 0 only when ticked Free (D27-120)", async () => {
+    expect((await put("/5EL/pricing/addon", { kind: "double", amount: 0 })).status).toBe(409);
+    expect((await put("/5EL/pricing/addon", { kind: "double", amount: 0, free: true })).status).toBe(200);
+    expect(((await read()) as Pricing & Extra).addons["double"]).toBe(0);
+    expect((await put("/5EL/pricing/addon", { kind: "double", amount: null })).status).toBe(200);
+    expect(((await read()) as Pricing & Extra).addons["double"], "cleared is a dash").toBeNull();
+    expect((await put("/5EL/pricing/addon", { kind: "meal_plan", mealPlan: "EP", amount: 100 })).status)
+      .toBe(409);
+  });
+
+  it("derives a room type by a percentage, to the whole rupee", async () => {
+    const other = (await read()).roomTypes.find((t) => t.code !== "DLX")!;
+    expect((await put("/5EL/pricing/addon", {
+      kind: "room_type", roomTypeId: other.id, amount: 10, unit: "percent",
+    })).status).toBe(200);
+    /* 2000 + 10% = 2200, and breakfast 350 for one guest. */
+    expect(cell(await read(), other.id, "CP").price).toBe(2550);
+  });
+
+  it("prices each room type from its own base with no base room type", async () => {
+    const other = (await read()).roomTypes.find((t) => t.code !== "DLX")!;
+    expect((await put("/5EL/pricing/basis", { roomTypeId: null })).status).toBe(200);
+    expect((await put("/5EL/pricing/base", {
+      roomTypeId: other.id, from: FROM, to: LATER, price: 3000,
+    })).status).toBe(200);
+    const after = await read();
+    expect(after.basis).toBeNull();
+    expect(cell(after, other.id, "EP").price).toBe(3000);
+    expect(cell(after, other.id, "EP").covers).toBe(1);
+    expect(cell(after, other.id, "CP").price).toBe(3350);
+  });
+
   it("never sends a zero for a price nobody has set", async () => {
     const body = await read("?from=2026-08-25&days=1");
     for (const c of body.cells) {

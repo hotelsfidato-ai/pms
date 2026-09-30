@@ -235,6 +235,7 @@ describe("the matrix the server asks", () => {
   it("gives every price write to exactly the rate setters (INV-5)", () => {
     const prices = [
       `PUT ${H}/pricing/basis`, `PUT ${H}/pricing/base`, `PUT ${H}/pricing/offset`,
+      `PUT ${H}/pricing/addon`,
       `PUT ${H}/room-types/:id/rate`, `POST ${H}/rate-plans`, `DELETE ${H}/rate-plans/:id`,
       `POST ${H}/restrictions`, `POST ${H}/cancellation-policies`,
       `DELETE ${H}/cancellation-policies/:id`, `PUT ${H}/cancellation-policies/:id/default`,
@@ -373,6 +374,7 @@ const PRICE_PROBES: [string, string, unknown][] = [
   ["PUT", "/pricing/basis", {}],
   ["PUT", "/pricing/base", {}],
   ["PUT", "/pricing/offset", {}],
+  ["PUT", "/pricing/addon", {}],
   ["PUT", `/room-types/${UUID}/rate`, {}],
   ["POST", "/rate-plans", {}],
   ["DELETE", `/rate-plans/${UUID}`, undefined],
