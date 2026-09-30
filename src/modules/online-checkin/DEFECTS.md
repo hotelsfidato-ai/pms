@@ -36,6 +36,36 @@ opening.
 
 ## Fixed
 
+### OCI-11 · A guest's second upload deleted the photo the desk had kept
+
+1 October, found by the master's read-only pre-launch review, before any guest
+used it (numbered for now). **What happened:** `app.guest_id_photo_stored`
+(167) marked EVERY stored photo of the stay and guest as replaced, and the
+door then deleted each from Drive. A guest whose details the desk had
+confirmed could send their details again - a new waiting submission - and any
+JPEG with them: the kept copy was deleted. If the desk then removed the new
+one as "not an ID", no copy was left. The desk's own "add a photo at
+check-in" did the same to a kept photo. That broke D27-210 (only the owner,
+an administrator or the GM delete a kept photo, with a reason) and this
+file's own comment that the guest "adds nothing more" once confirmed.
+**Also found, the same fault's other face:** the desk's list picked the
+stay's latest stored photo for a waiting submission, so new details with no
+photo showed reception the KEPT one - which reception may not open.
+**Why the tests did not catch it:** every photo test began from one waiting
+submission; none sent details twice, and the desk-add test asserted the
+replacement as correct.
+**Fixed:** a replace only replaces the guest's own photo of the SAME waiting
+submission (`link_id is not null and submission_id = …`). A photo added at
+the desk replaces nothing: beside a kept one it is a second kept one ("Add
+another photo", not "Replace"). The list shows a waiting submission's own
+photo (`x.submission_id = d.id`). Three tests, each seen failing on the old
+code; the waiting-photo replace kept its test, seen failing when nothing is
+ever replaced.
+**The rule:** a delete reached by a side road (a "replace", a "tidy") must
+be scoped as narrowly as the front door's own delete. When a table has a
+state that only some people may end, every statement that ends it names
+that state.
+
 ### OCI-1 · The guest was shown "Request failed (503)." where the door had written them a sentence
 
 **Found** — 19 September, by opening `/g/:token` on a phone-sized window

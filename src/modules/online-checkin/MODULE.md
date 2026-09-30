@@ -97,7 +97,10 @@ put back (CHANGELOG, 21 September).
    stored in Drive through its own workflow; the row keeps the Drive file's
    id and the sha256 of the ciphertext, nothing of the image. No route on
    the guest's door returns a photo, its name or where it is. A replaced
-   photo is deleted from Drive at once. Drive down: "try again shortly", and
+   photo is deleted from Drive at once - and **a replace only ever replaces
+   the guest's own photo of the SAME waiting submission (OCI-11)**: a kept
+   one is never replaced, and a photo added at the desk replaces nothing.
+   Drive down: "try again shortly", and
    nothing is kept anywhere. **At the desk** the image is fetched, checked
    against its hash and decrypted in memory: reception while its details
    wait; once kept (confirmed, set aside, or added at the desk) the owner,
