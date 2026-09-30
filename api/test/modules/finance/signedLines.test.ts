@@ -89,7 +89,7 @@ describe("a charge refused for a missing GST rule", () => {
     const body = await res.json() as { ok: boolean; reason?: string };
     expect(res.status).toBe(409);
     expect(body.reason).toMatch(/no GST rule for room/);
-    expect(body.reason, "says where the rate is set").toMatch(/Configuration or Finance → Invoices/);
+    expect(body.reason, "says where the rate is set").toMatch(/Taxes and billing or Finance → Invoices/);
 
     const [folios] = await sql<{ n: number }>(
       "select count(*)::int as n from folios where reservation_id = $1", [stayId]);

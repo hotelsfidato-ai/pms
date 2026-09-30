@@ -426,7 +426,7 @@ describe("closing a treatment", () => {
     await sql("delete from tax_rules where hotel_id = $1 and kind = 'spa'", [hotelId]);
     const r = await post(byRole.get("front_desk")!, `/spa/appointments/${closeId}/close`, {});
     expect(r.status).toBe(409);
-    expect(((await r.json()) as { reason: string }).reason).toContain("System → Administration → Configuration");
+    expect(((await r.json()) as { reason: string }).reason).toContain("Settings → Taxes and billing");
 
     /* And nothing moved: still booked, nothing on the bill. */
     const { rows } = await sql(

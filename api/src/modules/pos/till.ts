@@ -2205,8 +2205,8 @@ async function addOneLine(
     if (item[0].tax_rate === null && item[0].tax_kind === "alcohol") {
       return refuse(
         `${item[0].name} has no VAT rate. Nothing is set for alcohol, and a `
-        + "missing rate is not zero - set it in the GST and VAT card, under System → "
-        + "Administration → Configuration or Finance → Invoices.");
+        + "missing rate is not zero - set it in the GST and VAT card, under Settings → "
+        + "Taxes and billing or Finance → Invoices.");
     }
     if (item[0].tax_rate === null) {
       const KIND: Record<string, string> = {
@@ -2216,7 +2216,7 @@ async function addOneLine(
       return refuse(
         `${item[0].name} has no GST rate. Nothing is set for `
         + `${KIND[item[0].tax_kind] ?? "this category"}, and a missing rate `
-        + `is not zero - set it in the GST card, under System → Administration → Configuration or Finance → Invoices.`);
+        + `is not zero - set it in the GST card, under Settings → Taxes and billing or Finance → Invoices.`);
     }
 
     /* THE PRICE COMES FROM THE VARIATION, NOT THE ITEM.

@@ -153,7 +153,7 @@ export async function blockersFor(
       id: "no-tax-rule",
       reason:
         "This property has no GST rule for rooms, so a room charge has no " +
-        "rate to carry. Set it in the GST card, under System → Administration → Configuration or Finance → Invoices. A missing rate is not " +
+        "rate to carry. Set it in the GST card, under Settings → Taxes and billing or Finance → Invoices. A missing rate is not " +
         "zero - the audit will not invent one.",
       rooms: [],
     });
@@ -893,7 +893,7 @@ export async function correctClosedCharge(
     );
     if (rows[0]?.rate == null) {
       return refuse(
-        "This property has no GST rule for rooms. Set it under System → Administration → Configuration, "
+        "This property has no GST rule for rooms. Set it under Settings → Taxes and billing, "
         + "in the GST card. A missing rate is not zero.");
     }
     rate = Number(rows[0].rate);

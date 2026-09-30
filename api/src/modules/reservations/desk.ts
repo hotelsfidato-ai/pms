@@ -263,7 +263,7 @@ async function cancelConfirmed(
       "select app.gst_rate_or_null($1, 'room', $2::numeric)::text as rate", [hotelId, stay.nightly]);
     if (rate[0]?.rate === null || rate[0]?.rate === undefined) {
       return refuse("This property has no GST rule for rooms, so the cancellation charge cannot be billed. "
-        + "Set it in the GST card under System → Administration → Configuration.");
+        + "Set it in the GST card under Settings → Taxes and billing.");
     }
   }
 
