@@ -47,6 +47,24 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+### 1 October — read this first
+
+```
+cp6 now              THE LAUNCH SET, fully checked at 25842836 (gates launch-1oct-b: web 870,
+                     api 2068 of 2068, database 1311, replay 168; build passes). Migrations to
+                     168. Everything the owner decided up to D27-214 is in.
+not in it            contracts, guest services, loyalty, room systems (paused lanes; the memory
+                     note resume-start-pending-work); online payments; settings phases 3 to 5.
+the release          NOT RUN. The owner types it (D21-50). It now needs: nginx's three new
+                     locations; the settings CRS_N8N_*, WHATSAPP_PHONE_NUMBER_ID, GOOGLE_CLIENT_ID,
+                     M2R_*, ID_PHOTO_*; then each hotel's room and laundry GST, 5EL's night
+                     audit (stuck on 9 Sep), and the made-up ID photo check before photos go on.
+owner steps          deploy/n8n/IMPORT.md, deploy/n8n/OWNER-STEPS.md, src/modules/leads/
+                     OWNER-STEPS.md, src/modules/online-checkin/OWNER-STEPS.md.
+local demo           `fidato` at 168, business date moves with the real day; api 8787, web 5173.
+live                 Still 0b4766e.
+```
+
 ### 30 September, later — read this first
 
 ```
@@ -371,6 +389,13 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **1 October: the queue.** (1) The release steps for the owner, each labelled with where it
+> runs, from section 9's shape (backup, pull, launch.sh, nginx, website, look), then the owner's
+> steps in the four OWNER-STEPS files. (2) Archive and recycle the finished lanes' copies
+> (D24-21). (3) The owner's open questions: is 5 Elements using live; 5EL in the leads map; a
+> logo on the guest's page; fees under Room; day use charged by itself. (4) Then the four paused
+> lanes ("start pending work new pending"), renumbering their migrations after 168.
 
 > **30 September, later: the queue.** (1) On restart: finish POS part 2 and merge it (182 to
 > 164), the booking lane's e918193 plus the walk-in's rack read, and the cleanup lane. (2) Full

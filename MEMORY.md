@@ -6539,6 +6539,67 @@ copy will see of theirs.**
 
 ---
 
+### 362 · nginx writes a large body to a temporary file (online check-in lane, D27-209)
+
+The rule was "an ID photo is never on the server's disk". The code kept it in memory, and nginx,
+in front of it, would have written the unencrypted upload to a temp file on the way in and the
+decrypted answer on the way out. No test could show it: there is no nginx here. Found by the lane
+reading the proxy's defaults. **The rule:** "never on disk" is a claim about every hop, not the
+code alone - read the proxy's buffering for that path (proxy_request_buffering off,
+proxy_max_temp_file_size 0).
+
+---
+
+### 361 · A file that fails in afterAll shows every test passed, and its leftovers break other files (formIII, 1 October)
+
+The full run failed four tests in four files with two causes. formIII's check-out case pays its
+first night since D27-204; its clean-up then stopped on the payment's row and left its stays at
+Pune, so identity found no free room and bookingReference read a timestamped reference as the
+hotel's highest number. Run alone, formIII said "15 passed". **The rule:** read "Test Files", not
+"Tests"; a test that starts taking money cleans the money up; when unrelated files fail together,
+look for one file's leftovers first.
+
+---
+
+### 360 · A new field read from an answer the device kept from before the release (MEMORY 201 again)
+
+Mounting the desk's ID photo box in the check-in, `q.data.idPhotos` was undefined for a desk
+answer without the field - which is what a clerk's tablet holds from before the release - and the
+check-in dialog fell over. front-desk's own older fixture showed it; the lane's fixtures could
+not. **The rule:** a field added to an answer that is persisted on the device is optional to its
+readers until the old answers have aged out.
+
+---
+
+### 359 · Speed measured with the developer's header hid the path real people take (rates lane)
+
+Every figure I had quoted was taken with a staff uuid as the subject. A person signs in with a
+Firebase uid, and `app.current_user_id()` then took an exception and a staff lookup on every
+policy check: about three times slower on every request. Fixed in withUser (resolve once).
+**The rule:** measure as a signed-in person (`x-dev-staff-id: dev-owner` is the Firebase-uid
+path), and say which path a figure was taken on.
+
+---
+
+### 358 · MINE: I told the owner a reported defect was real before it was proved (1 October)
+
+The booking lane reported "a VAT line's reversal is stored as gst" from reading one insert; I
+passed it to the owner as a real bug. Migration 125's trigger already copies the scheme; the
+lane's own failing-first test passed on the unchanged code, and I had to correct myself.
+**The rule:** a reported defect is a claim until a test fails on it; tell the owner "reported,
+being proved", not "found".
+
+---
+
+### 357 · A rule that lives in one route is lost when the route goes (walk-in cleanup, D27-197)
+
+Removing the dead walk-in route would have dropped three rules that only it enforced: the
+90-night cap, a returning foreign guest staying foreign (Form C), and the hint for a switched-off
+booking source. The one-page path had none of them. **The rule:** before removing a route, list
+what it refuses and find each refusal on the path that replaces it.
+
+---
+
 ### 356 · `git checkout -- <file>` during a failing-first check threw away uncommitted work (booking lane, 30 Sep)
 
 To watch a new test fail on the old code, the lane restored a file with `git checkout -- <file>`,

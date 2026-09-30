@@ -50,6 +50,51 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-01 · The master: the owner's second walk-through, and the launch set checked
+
+**Asked for (30 Sep evening to 1 Oct):** the bill before the night audit; cash opening by itself;
+the first night charged at check-in; the Rates break-up; the connections job and the channel
+manager in the launch; online check-in with an email code, Google and an ID photo kept encrypted
+in Google Drive; one place for settings. "Tell me when all is merged and checked."
+
+**Decided** (docs/briefs/decisions-2026-09-27.md): D27-197 to D27-214.
+
+**Shipped (merged into cp6, local, nothing pushed)**
+- Walk-in cleanup: the dead route gone; the 90-night cap and the foreign-guest rule on the new
+  path (D27-197). The channel manager (D27-198). Connections: every message through the CRS,
+  keyless leads, AMR and GLM (D27-203).
+- Booking and bill: the bill's headline shows what is due; "Rate includes GST" on the list price,
+  as a tick, and on Change rate (D27-199); the bill in Room / Restaurant / Bar sections
+  (migration 166); the first night posted at check-in through night-audit/roomNight.ts, the
+  interim bill's "to be posted tonight", an early arrival's hold (D27-204, D27-205).
+- Cash: every cash point opens by itself after the night audit; a kept desk float names the next
+  person (migration 165; D27-200 to D27-202).
+- Rates: each room type opens to its break-up; Set prices (D27-206).
+- Online check-in: three ways to verify; the ID photo sealed in an AES-256 zip and stored in
+  Drive through a new n8n workflow; the desk's view, removal and kept list; the desk adds a photo
+  at check-in (migration 167; D27-207 to D27-212). nginx gained three locations.
+- Settings: one Settings place with eight tabs; the hotel's own profile and logo; a hotel's GM
+  and Admin edit their own hotel (migration 168; D27-213, D27-214).
+- Core, the master's: withUser resolves a Firebase uid once (every signed-in request about 3x
+  faster); "Google Pay" out of the payment list; the "where to set GST" sentences.
+
+**Proved:** `bash scripts/gates.sh launch-1oct-b` on cp6 25842836: web types, api types, strip
+169; web 870 of 871 (1 skipped); api 149 files, 2068 of 2068; database 1311 assertions, 168
+migrations; replay 168. `npm run build` exit 0. The run before it (launch-1oct) failed four API
+tests from two causes, both fixed (MEMORY 361).
+
+**Not proved here, the owner's on the server:** a real WhatsApp and email; a real Google
+sign-in; a real leads read; the Drive workflow; a bundle opened in 7-Zip; nginx's three
+locations.
+
+**Left open:** the release (the owner types it) and its owner steps; contracts, guest services,
+loyalty, room systems (paused); online payments; settings phases 3 to 5; FIN-24, ADM-19; the
+guest's page has no logo; day use is not charged automatically.
+
+**Commits:** dfc5d39..25842836 on cp6.
+
+---
+
 ## 2026-09-30 · The master: the owner's walk-through, four lanes, three merged
 
 **Asked for:** the owner's walk-through of 30 Sep ("plan all of this and let's complete this"):
