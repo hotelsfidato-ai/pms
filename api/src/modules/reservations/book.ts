@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Client } from "../../db.ts";
 import { countProblem, countryProblem, dateProblem } from "../../validate.ts";
+import { roomRateBeforeGst } from "../finance/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    MAKING A BOOKING - the one place a reservation is created
@@ -28,6 +29,8 @@ export interface BookingLineInput {
   children?: number;
   rooms?: number;
   agreedRate?: number;
+  /** D27-195: agreedRate includes GST; it is split before it is kept. */
+  rateIncludesGst?: boolean;
   /** A complimentary room (020): booked at ₹0, and the night audit posts
       nothing for it. Only COMP_ROLES may give one (the owner, 27 Sep). */
   complimentary?: boolean;
@@ -510,6 +513,14 @@ export async function makeBooking(
       /* A COMPLIMENTARY ROOM IS ₹0 AND NEEDS NO PRICE: the night audit posts
          nothing for it (020), and an unpriced calendar does not stop a gift. */
       let rate = line.complimentary === true ? 0 : line.agreedRate ?? null;
+      /* A TYPED RATE THAT INCLUDES GST (D27-187, D27-195) is split here, before
+         it is kept: agreed_rate is the rate before GST the audit posts, and its
+         GST by the slab adds back to the typed figure (finance's one split). */
+      if (rate !== null && rate > 0 && line.rateIncludesGst === true) {
+        const split = await roomRateBeforeGst(client, hotelId, rate);
+        if (!split.ok) return refuse(split.reason);
+        rate = split.pre;
+      }
       if (rate === null) {
         const { rows: t } = await client.query<{
           total: string | null; unpriced: string | null;

@@ -181,6 +181,8 @@ export async function checkIn(
     waiveEarly?: boolean;
     /** "Guest agreed to offers", asked face to face (D25-39). */
     offersAgreed?: boolean;
+    /** D27-193: the clerk confirmed a move of the arrival by more than a day. */
+    confirmMove?: boolean;
     businessDate: string;
     /* ⚠ NO `user`. This sent the literal "front desk", and so did the
        walk-in below (FD-2). Neither route ever read it: the server takes

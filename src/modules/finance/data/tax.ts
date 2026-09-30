@@ -93,3 +93,12 @@ export async function setCategoryTaxKind(
     `/api/hotels/${hotelId}/menu-categories/${encodeURIComponent(category)}/tax-kind`,
     "PATCH", { kind });
 }
+
+/** A room rate that includes GST, split as the booking will keep it (D27-195):
+    the rate before GST and its slab, the nearest total not above the figure,
+    or the server's refusal (the slab gap, no room rule). */
+export async function getRateBeforeGst(
+  hotelId: string, gross: number,
+): Promise<{ ok: true; pre: number; rate: number; total: number } | { ok: false; reason: string }> {
+  return api(`/api/hotels/${hotelId}/tax/room/before-gst?gross=${encodeURIComponent(String(gross))}`);
+}

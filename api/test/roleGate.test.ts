@@ -180,6 +180,15 @@ describe("who reads what (D27-140 to D27-147)", () => {
     }
   });
 
+  it("D27-195: the rate before GST inside an inclusive rate is anyone's, as the GST rate is", () => {
+    expect(READ_RULES[`GET ${H}/tax/room/before-gst`]?.kind).toBe("anyone");
+  });
+
+  it("D27-187: View voucher is for exactly the people who may send it", () => {
+    expect(who(`GET ${H}/stays/:id/voucher.pdf`))
+      .toEqual(whoMay(rule(`POST ${H}/stays/:id/confirmation`)));
+  });
+
   it("D27-142: no bookings for the chef or the Inventory Manager", () => {
     expect(who(`GET ${H}/stays`)).not.toContain("chef");
     expect(who(`GET ${H}/stays`)).not.toContain("stores");

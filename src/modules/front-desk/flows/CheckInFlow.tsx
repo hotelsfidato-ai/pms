@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, LogIn, BedDouble } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, dateShort } from "@/lib/format";
+import { money, moneyPrecise, dateShort } from "@/lib/format";
 import {
   Button, Field, Input, NativeSelect, StatusPill, Switch, Tooltip, toast,
   Dialog, DialogContent, DialogTrigger,
@@ -14,6 +14,7 @@ import {
 } from "@/modules/guests";
 import { countProblem } from "../../../../api/src/validate.ts";
 import { WaitingDetailsLink } from "@/modules/online-checkin";
+import { getTaxRate } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
    FLOW A — arrival to in house, ON ONE PAGE (D27-163)
@@ -99,6 +100,29 @@ export function CheckInFlow({
   const earlyByClock = early.data?.isEarly ?? false;
   const isEarly = earlyByClock || earlyByDate;
 
+  /* MORE THAN A DAY EARLY MOVES THE WHOLE BOOKING (D27-193): the first press
+     shows the move and what the stay now costs; nothing moves until Confirm,
+     and the server refuses the move without it. */
+  const day = (d: string) => Date.parse(`${d}T00:00:00Z`) / 86_400_000;
+  const bigMove = day(stay.arrival) - day(businessDate) > 1;
+  const movedNights = day(stay.departure) - day(businessDate);
+  const [confirming, setConfirming] = useState(false);
+  const gst = useQuery({
+    queryKey: ["tax-rate", hotelId, "room", stay.offeredTariff],
+    queryFn: () => getTaxRate(hotelId, "room", stay.offeredTariff),
+    enabled: open && bigMove && !stay.isComplimentary && stay.offeredTariff > 0,
+  });
+  const paise = (n: number) => Math.round(n * 100);
+  /* GST a night as the night audit posts it, rounded to the paisa. */
+  const taxNight = gst.data?.rate == null ? null
+    : Math.round(paise(stay.offeredTariff) * gst.data.rate / 100) / 100;
+  const moved = `This moves the arrival from ${dateShort(stay.arrival)} to ${dateShort(businessDate)}: `
+    + `${movedNights} nights, `
+    + (stay.isComplimentary ? "complimentary."
+      : taxNight === null
+        ? `${moneyPrecise(stay.offeredTariff * movedNights)} before GST (no GST rule for this rate).`
+        : `${moneyPrecise((paise(stay.offeredTariff) + paise(taxNight)) * movedNights / 100)} with GST.`);
+
   const allowed = (permitted.data?.allowed ?? false) || earlyByDate;
   const reason = permitted.data?.reason;
 
@@ -115,6 +139,7 @@ export function CheckInFlow({
     setAdults(String(stay.adults)); setChildren(String(stay.children));
     setRoomNumber(stay.roomNumber); setGuestId(noGuestId(stay.nationality ?? "IN"));
     setEarlyReason(""); setWaiveEarly(false); setOffersAgreed(false); setRatePlan(stay.ratePlan);
+    setConfirming(false);
   };
 
   const submit = async () => {
@@ -129,6 +154,7 @@ export function CheckInFlow({
       /* Sent since 24 September: without it the server refused every
          check-in before the check-in hour. */
       earlyReason, waiveEarly, offersAgreed,
+      ...(bigMove ? { confirmMove: true } : {}),
     });
     setBusy(false);
     if (res.ok) {
@@ -175,9 +201,25 @@ export function CheckInFlow({
         title={`Check in ${stay.guest}`}
         description={`${stay.reference} · ${stay.roomType}`}
         footer={
+          confirming ? (
+            <div className="w-full space-y-2" data-checkin-move>
+              <p className="text-sm text-warning-dark">{moved}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="secondary" disabled={busy} onClick={() => setConfirming(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" loading={busy}
+                  disabled={busy || gst.isLoading} onClick={() => void submit()}>
+                  <Check className="size-4" />
+                  Confirm
+                </Button>
+              </div>
+            </div>
+          ) : (
           <div className="w-full space-y-1.5">
             <Button variant="primary" className="w-full" loading={busy}
-              disabled={busy || blocked !== null} onClick={() => void submit()}>
+              disabled={busy || blocked !== null}
+              onClick={() => (bigMove ? setConfirming(true) : void submit())}>
               <Check className="size-4" />
               Check in
             </Button>
@@ -185,6 +227,7 @@ export function CheckInFlow({
               <p className="text-sm text-grey-600" data-checkin-blocked>{blocked}</p>
             )}
           </div>
+          )
         }
       >
         {/* CRM-3 (D22-8): a booking site's guest on a blacklisted phone or email. */}

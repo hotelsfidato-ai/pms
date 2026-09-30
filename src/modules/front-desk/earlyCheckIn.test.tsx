@@ -149,3 +149,38 @@ describe("the ID step, when the guest sent their details online", () => {
     expect(link.getAttribute("href")).toBe("/h/5EL/online-checkin");
   });
 });
+
+/* D27-193 (the owner, 30 September): a booking for 1 October checked in on a
+   hotel still on 25 August became 39 nights nobody had seen. More than a day
+   early, the first press shows the move and what the stay now costs; only
+   Confirm sends it, with the flag the server asks for. */
+describe("checking in more than a day before the booking's arrival", () => {
+  it("shows the move and the stay's new cost, and sends nothing until Confirm", async () => {
+    const later = { ...STAY, arrival: "2026-08-31", departure: "2026-09-02", offeredTariff: 3000,
+      isComplimentary: false } as unknown as Stay;
+    vi.mocked(apiModule.api).mockImplementation(async (url: string) => (
+      url.includes("/tax/room/rate") ? { rate: 5, scheme: "gst" } : []) as never);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>
+          <CheckInFlow hotelId="5EL" stay={later} businessDate="2026-08-25" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /Check in/ }));
+    await screen.findByText("204");
+    fireEvent.change(screen.getByLabelText(/Reason for skipping/), { target: { value: "Scanner offline" } });
+    fireEvent.change(await screen.findByLabelText(/Why the room is being given early/),
+      { target: { value: "Came early" } });
+    const buttons = await screen.findAllByRole("button", { name: /Check in/ });
+    fireEvent.click(buttons[buttons.length - 1]!);
+
+    const move = await screen.findByText(/This moves the arrival from/);
+    expect(move.textContent).toMatch(/: 8 nights, ₹25,200\.00 with GST\.$/);
+    expect(sent).toBeNull();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(sent).toMatchObject({ confirmMove: true, earlyReason: "Came early" }));
+  });
+});
