@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { withSession } from "../../../auth.ts";
-import { maySetUpSuAt, SU_REFUSED } from "../access.ts";
+import { maySetUpSuAt, CHANNEL_BOOKING_ROLES, CHANNEL_BOOKINGS_REFUSED } from "../access.ts";
 import { hotelIdFor } from "../content/store.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -25,7 +25,9 @@ bookings.get("/:code/channel-manager/bookings", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
-    if (!(await maySetUpSuAt(client, hotelId))) return { ok: false as const, reason: SU_REFUSED };
+    if (!(await maySetUpSuAt(client, hotelId, CHANNEL_BOOKING_ROLES))) {
+      return { ok: false as const, reason: CHANNEL_BOOKINGS_REFUSED };
+    }
 
     const { rows } = await client.query<{
       id: string; su_booking_id: string; channel_code: string | null; channel_name: string | null;
@@ -71,7 +73,9 @@ bookings.post("/:code/channel-manager/bookings/:id/done", async (c) => {
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
-    if (!(await maySetUpSuAt(client, hotelId))) return { ok: false as const, reason: SU_REFUSED };
+    if (!(await maySetUpSuAt(client, hotelId, CHANNEL_BOOKING_ROLES))) {
+      return { ok: false as const, reason: CHANNEL_BOOKINGS_REFUSED };
+    }
 
     const { rows } = await client.query<{ id: string }>(
       `update channel_bookings
@@ -83,6 +87,6 @@ bookings.post("/:code/channel-manager/bookings/:id/done", async (c) => {
     return { ok: true as const };
   });
   if (result === null) return c.json({ error: "No such property." }, 404);
-  if (result.ok === false) return c.json(result, result.reason === SU_REFUSED ? 403 : 409);
+  if (result.ok === false) return c.json(result, result.reason === CHANNEL_BOOKINGS_REFUSED ? 403 : 409);
   return c.json(result);
 });
