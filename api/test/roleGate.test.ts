@@ -76,6 +76,7 @@ describe("every write the server mounts", () => {
       "POST /api/guest/:token/code",
       "POST /api/guest/:token/details",
       "POST /api/guest/:token/google",
+      "POST /api/guest/:token/id-photo",
       "POST /api/guest/:token/requests",
       "POST /api/guest/:token/verify",
       "POST /api/pos/tickets",
@@ -613,7 +614,9 @@ describe("the reads that hand out a guest's passport or ID number (D25-38)", () 
         || (r.kind === "own" && /DESK_ROLES/.test(r.where)))
       .map(([k]) => k).sort();
     expect(idReads).toEqual([
-      `GET ${H}/form-c`, `GET ${H}/online-checkin`, `GET ${H}/online-checkin/messages`,
+      `GET ${H}/form-c`, `GET ${H}/online-checkin`,
+      `GET ${H}/online-checkin/id-photos`, `GET ${H}/online-checkin/id-photos/:id`,
+      `GET ${H}/online-checkin/messages`,
       `GET ${H}/reports/c-form`,
     ]);
   });
