@@ -281,8 +281,9 @@ types, `BUSINESS_DATE` and `PTD_FROM`.
 - **Start here, reception's card** (`src/components/app/startHereCards.ts`)
   names this service's buttons: "Take a payment — Open the guest, go to Bill,
   **Settle**, then **Take payment**"; "Check a guest out — … **Check out**
-  opens once nothing is owed"; "Open the cash drawer — Enter the opening
-  float, then **Open the drawer**. **Close the shift** when you hand over."
+  opens once nothing is owed"; "Count and close the cash drawer - Your
+  drawer opens by itself with your first cash. At hand over, count it, type
+  the float kept and who takes it." (D27-200; the master's, 30 September)
   Rename one and the card changes too (`HANDOVER.md` § 3.3).
 - **Glossary:** the Folios screen uses the `folio` line of
   `src/lib/glossary.ts`; if what a folio is changes, the line changes.
