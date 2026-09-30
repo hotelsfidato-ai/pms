@@ -48,6 +48,12 @@ fails "expected 'front_desk' to be 'pos'".
 
 **The rule** - A child line priced per plate must move with its plate.
 
+### POS-30 · MINE: a commit hash sent to the master before git printed it - corrected at once
+
+**Found** - 30 September, the POS lane's report after renumbering its migration. The message named the commit "10d9d4e"; git had printed 76174e7. Caught on reading git's output a moment later, and corrected to the master in a second message.
+
+**The rule** - root MEMORY 349: quote a hash only from git's own output, copied after the commit prints it.
+
 ### POS-29 · The till's float was typed at night and read as ₹0 when left blank; the night count on a closed day answered 500 — FIXED 30 September (cash lane, D27-190; numbered for now)
 
 **Found** — the cash lane, reading Close restaurant day for D27-190: the day's row was made by the night count, whose `opening` fell back to 0 (`input.opening === undefined ? 0`) and whose screen sent `Number(opening) || 0`. Cash was taken all day before any float was counted (D27-139, which D27-190 replaces). A count sent after the day closed tried to update the closed row and the final trigger raised: a 500.
