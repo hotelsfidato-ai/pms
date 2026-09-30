@@ -14,6 +14,7 @@ import { CheckInFlow } from "@/modules/front-desk/flows/CheckInFlow";
 import { StayActions } from "@/modules/front-desk/flows/StayActions";
 import { FolioPanel } from "@/modules/finance";
 import { StayMarks } from "@/modules/front-desk/flows/StayMarks";
+import { AddIdPhotoAtDesk } from "@/modules/online-checkin";
 import { GuestMarks } from "@/modules/front-desk/flows/GuestMarks";
 import { GroupRoomsList } from "@/modules/reservations";
 import { useRole } from "@/lib/session";
@@ -211,7 +212,11 @@ function StayBody({
             {seesBills && <TabsTrigger value="folio">Bill</TabsTrigger>}
           </TabsList>
           <TabsContent value="stay">
-            <StayFacts stay={stay} />
+            <div className="flex flex-col gap-6">
+              <StayFacts stay={stay} />
+              {/* D27-210: the desk adds the ID photo here too; it draws nothing for anybody else. */}
+              <AddIdPhotoAtDesk stayId={stay.id} />
+            </div>
           </TabsContent>
           {seesBills && (
             <TabsContent value="folio">

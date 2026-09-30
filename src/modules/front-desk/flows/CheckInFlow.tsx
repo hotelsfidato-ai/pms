@@ -13,7 +13,7 @@ import {
   BookingSiteBlacklist, GuestIdFields, guestIdState, guestIdPayload, noGuestId, type GuestId,
 } from "@/modules/guests";
 import { countProblem } from "../../../../api/src/validate.ts";
-import { WaitingDetailsLink } from "@/modules/online-checkin";
+import { AddIdPhotoAtDesk, WaitingDetailsLink } from "@/modules/online-checkin";
 import { getTaxRate } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -315,6 +315,8 @@ export function CheckInFlow({
             </p>
             <WaitingDetailsLink reference={stay.reference} />
             <GuestIdFields value={guestId} onChange={setGuestId} today={businessDate} />
+            {/* D27-210: the desk adds the ID photo for a guest who sent none. */}
+            <AddIdPhotoAtDesk stayId={stay.id} />
           </section>
 
           <section className="space-y-4 pt-4 border-t border-grey-200">

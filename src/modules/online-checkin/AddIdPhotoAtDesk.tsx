@@ -46,7 +46,9 @@ export default function AddIdPhotoAtDesk({ stayId }: { stayId: string }) {
     onSuccess: () => { setChosen({ front: null, back: null }); setAgreed(false); },
   });
 
-  if (!desk || !q.data) return null;
+  /* An answer kept on the device from before this release has no `idPhotos`
+     (MEMORY 201): draw nothing rather than fall over inside the check-in. */
+  if (!desk || !q.data?.idPhotos) return null;
   const { on, off } = q.data.idPhotos;
 
   return (
