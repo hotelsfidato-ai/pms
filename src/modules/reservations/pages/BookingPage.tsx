@@ -1115,7 +1115,8 @@ function RoomLine({
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {/* The rate's column is wider: its tick sits on one line under it. */}
+      <div className="grid grid-cols-2 sm:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.8fr)] gap-2">
         <Counter label="Rooms" value={line.rooms} min={1}
           onChange={(n) => onChange({ ...line, rooms: n, room: n === 1 ? line.room : "" })} />
         <Counter label="Adults" value={line.adults} min={1}
