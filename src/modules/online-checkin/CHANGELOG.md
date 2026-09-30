@@ -12,6 +12,104 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-09-30 · The ID photo: encrypted with the hotel's password, kept in Google Drive, never on this server; the desk adds one at check-in (D27-207 to D27-212)
+
+Branch `online-checkin/verify-photo-30sep`. Stages C and D; A and B are the entry below.
+
+**Asked for** (the owner's D27-207 to D27-212; the master's cards): a guest may upload a photo
+of a government photo ID, Aadhaar only masked; it stays a submission the desk checks against
+the real ID (D21-8). It is bundled, compressed and encrypted on this server with THAT hotel's
+password and stored in Google Drive through a new workflow in the CRS's n8n, from day one:
+nothing of it is kept here. The owner must be able to open a bundle on a Windows PC with a
+common tool. Optional online, and the desk can add one at check-in. One ID per stay for the
+launch, the booking's guest (D27-212). No new dependency (D27-211).
+**Shipped:**
+- `api/src/aesZip.ts`: the AES-256 zip 7-Zip opens (WinZip AE-2), written and read over
+  node:crypto and node:zlib. Per file: a fresh salt, PBKDF2-SHA1 keys, AES-256 in the format's
+  own counter mode, HMAC-SHA1 checked constant-time BEFORE anything is decrypted. Reading is
+  strict and fails closed. The format's 1,000 rounds are few, so a hotel's password under 20
+  characters, or with a symbol in it, counts as not set.
+- `api/src/routes/idPhotos.ts`: the checks (JPEG or PNG by the file's own bytes; 4 MB a photo;
+  a JPEG's location stripped) and the only three things that touch a photo: `put`, `get`,
+  `remove`. The bundle holds the photos and an `about.txt` (hotel, booking, guest, who added
+  it), all inside the encryption; the Drive file is named by the row's id alone.
+- The guest's door: `GET` and `POST /:token/id-photo`. The link, the knocks and the unlock are
+  checked before the body is read; the declared length must be 9 MB or less; the tick is
+  required; ten an hour a link; only while the details wait. The row is written `pending`
+  first, then Drive, then `stored`; Drive down takes the row back and says "try again
+  shortly". A replaced photo is deleted from Drive at once. No route returns a photo.
+- The desk: the photo beside a waiting submission, fetched only on "Show the photo", checked
+  against the ciphertext's sha256 and decrypted in memory, `no-store`; "Remove the photo" with
+  one of three reasons, which the guest's page then says. Once kept (confirmed, set aside, or
+  added at the desk): "ID photos kept", for the owner, an administrator and the GM, who alone
+  see and delete, with a reason. Every view is a row in `guest_id_photo_views`. A Drive delete
+  that failed is recorded and shown with Try again.
+- Stage D: `POST /:code/stays/:id/id-photo` (desk roles) and `AddIdPhotoAtDesk`, exported from
+  `index.ts` for the master to mount: camera inputs, the masked-Aadhaar sentence, the tick "The
+  guest agreed…", the chosen photo shown from the device, never fetched back.
+- The guest's page: the owner-approved notice (`idPhotoNotice.ts`, version on every row), the
+  Aadhaar rule and the tick before the file button; the photo shrunk to 1600 px on the phone.
+- Migration 167 gains `guest_id_photos`, `guest_id_photo_views` and five definer functions,
+  each asking `app.guest_unlocked` itself.
+- `deploy/n8n/pms-id-photos-crs.json`: store, fetch, delete; only an AES-encrypted zip named by
+  a record id is stored; a file is fetched or deleted only from the hotel's own folder.
+- `deploy/nginx.conf`: three locations. The upload and the desk's view pass straight through
+  (`proxy_request_buffering off`, `proxy_max_temp_file_size 0`) - see Found.
+- `OWNER-STEPS.md` Part 3 and `IMPORT.md` part D: folders, passwords, the workflow, and the
+  five-step check with a made-up photo, 7-Zip included, that gates switching it on.
+
+**Found:**
+- nginx writes a request body, and an answer, of this size to a temporary file by default.
+  That would have been the photo, unencrypted, on this server's disk, on the way in and again
+  on the way out to the desk. Not visible in any test: the tests never pass through nginx.
+- `/api/guest/` is capped at 16k in nginx; the upload needed its own location.
+- Windows' own tar is libarchive's bsdtar and reads and writes AES zips: an independent
+  implementation on this machine, used both ways in the tests. 7-Zip is not installed here.
+- A defect I nearly logged and did not: "the key login asks for a token on every read" (leads).
+  Read in firebase-admin's source before writing it down: its credential keeps the token.
+
+**Proved:**
+- API, one scratch database, 167 migrations: `guestIdPhoto` 27, `idPhotoWorkflow` 8, `aesZip`
+  11, `roleGate` 63, `guards` 45, `guestDoor` 28, `guestDoorBehindTheCode` 32 = 214 of 214.
+  Web: online check-in 50 of 50 (`idPhoto.test.tsx` 14). `npx tsc -b`, the API typecheck,
+  strip-check (168 files) clean. `db/tests/rerun.sh`: all 167 re-runnable; `run.sh`: 1,296.
+- The zip, three ways: a round trip (3 MB and empty files too); bsdtar opens what `seal` writes
+  and refuses a wrong password, and `decrypt` opens a file bsdtar encrypted (a 266-byte made-up
+  fixture); one bundle with fixed salts pinned by its sha256. The WinZip specification
+  publishes no test vectors. The third way, the owner opening one in 7-Zip, is OWNER-STEPS 3f.
+- Seen to fail with the fault put back. The zip: a big-endian counter (3), the proof unchecked
+  (1), 1,001 rounds (4). The door, eight faults in one run, 12 tests failing between them: the
+  tick not asked for; any file taken as a photo; the hash not checked (a swapped bundle opened);
+  the desk shown a kept photo; a JPEG's location kept; a database function forgetting the
+  unlock; a replaced photo left in Drive; a failed store leaving its row. The workflow: any
+  folder accepted (1), a plain file stored (1). The screens: no tick needed (1), the photo
+  fetched on opening the desk's screen (1).
+- **Screens opened** on `fidato_s38` with a stand-in for the workflow that kept bundles in
+  memory (API 8909, web 5309; read as text, the pane gives no screenshot while hidden). At
+  375 px: the photo section appears once the details are sent; the notice, with the hotel's
+  number, comes before the two file buttons (302 x 48); Send is off until a photo and the
+  tick; no sideways scroll. A made-up card drawn in the page was sent: what reached the
+  stand-in was one 15.8 KB file named by the row's id, starting "PK". Reception saw "ID photo:
+  front, sent …", nothing fetched until Show, then the picture at 1600 x 1067; after Confirm,
+  no kept list for reception. The owner saw "ID photos kept", deleted it with a reason; the
+  stand-in deleted its file; the row says who and why; the guest's page says "The hotel
+  removed your ID photo."
+**Not proved here, and it matters:**
+- The workflow's Drive steps (the upload node and three HTTP calls) have never run. They
+  cannot on this machine.
+- No bundle has been opened in 7-Zip itself. bsdtar stands in for it here.
+- `AddIdPhotoAtDesk` has not been opened in a screen: nothing mounts it yet (its route and its
+  component are tested).
+- nginx's new locations are untested: there is no nginx on this machine.
+  All four are the owner's five-step check on the server (3f), which gates the upload.
+**Left open:** OCI-10 (Google's script on the page). A PNG is stored as sent: only a JPEG's
+location is stripped (a phone's camera makes JPEGs). A JPEG that skipped the page's shrinking
+loses its rotation note with its location, and may show sideways at the desk. A guest's
+photo is visible to reception only while the details wait; if the desk never confirms or sets
+them aside, it stays visible to reception.
+**Commits:** f3dbe2dc (the zip), d9ac8125 (the door and the table), 19d2b0b1 (the workflow),
+2a9516f3 (nginx), the screens and the owner's steps after them, and this entry's own.
+
 ## 2026-09-30 · Three ways to prove it is you: the code by email, Continue with Google; nothing sent on opening (D27-207, D27-210)
 
 Branch `online-checkin/verify-photo-30sep`. Stages A and B of four; the ID photo (C) and
