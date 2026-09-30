@@ -205,10 +205,12 @@ describe("the rack a stay shows is today's price in the new model (162, D27-188)
 
 describe("FD-17 · taken out of the room it was given ahead", () => {
   it("holds no room any more, in the stay and in the list", async () => {
+    /* Room 107: 104 and 105 are held from the 26th by the early arrivals
+       above, since FD-24 moved their holds with them. */
     const id = await booking(`${CODE}-OUT`, "2026-08-27", "2026-08-29");
-    expect((await call(`/stays/${id}/assign`, "POST", { roomNumber: "104" })).status).toBe(200);
+    expect((await call(`/stays/${id}/assign`, "POST", { roomNumber: "107" })).status).toBe(200);
     expect(((await (await call(`/stays/${id}`)).json()) as { roomNumber: string }).roomNumber)
-      .toBe("104");
+      .toBe("107");
 
     const out = await call(`/stays/${id}/unassign`, "POST", {});
     expect(out.status, await out.clone().text()).toBe(200);
@@ -223,7 +225,7 @@ describe("FD-17 · taken out of the room it was given ahead", () => {
      date: the old order was a tie. The room left last is the one slept in. */
   it("after check-out, shows the room slept in, not the one given ahead", async () => {
     const id = await booking(`${CODE}-SLEPT`, "2026-08-26", "2026-08-27");
-    expect((await call(`/stays/${id}/assign`, "POST", { roomNumber: "105" })).status).toBe(200);
+    expect((await call(`/stays/${id}/assign`, "POST", { roomNumber: "107" })).status).toBe(200);
     const res = await checkIn(id, "106");
     expect(res.status, await res.clone().text()).toBe(200);
     /* The leaving, as check-out writes it - the money is not what this tests. */

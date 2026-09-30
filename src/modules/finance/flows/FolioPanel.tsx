@@ -389,7 +389,7 @@ function ChargesToCome({ toCome }: { toCome: ToCome | null }) {
         <span className="tabular">{after === null ? DASH_MARK : moneyPrecise(after)}</span>
       </div>
       <p className="text-xs text-grey-500">
-        The night audit posts each night. The advance and anything paid are counted.
+        The first night is posted at check-in, each later night by the night audit. The advance and anything paid are counted.
       </p>
     </section>
   );

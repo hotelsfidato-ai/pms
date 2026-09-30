@@ -88,6 +88,7 @@ of the old `inventorySetup.ts` (`3ca215d`).
 | GET | `/:code/stays/:id/folio` | a stay's bill in one figure — what the stay panel and In house read |
 | GET | `/:code/folios` | every open folio (the Folios screen) |
 | GET | `/:code/stays/:id/postings` | every line on a stay's bill |
+| GET | `/:code/stays/:id/bill` | the bill as it stands, `app.stay_bill` (123, 125, 166) - what the desk prints. Since D27-204 it adds `tonight` (`description`, `amount`, `tax`, `rate`) when a guest staying on has tonight's room night still to post: the night audit's own answer for this stay (`night-audit/roomNight.ts`). Absent when tonight is posted, the room is complimentary, there is no GST rule for rooms, or the guest leaves today. The desk's bill only: `app.stay_bill`, which the guest's own page reads through its door, is unchanged (D27-205) |
 | GET | `/:code/stays/:id/folios` | the stay's folios, when the bill is split |
 | POST | `/:code/stays/:id/folios` | open another folio for the stay (split billing) |
 | POST | `/:code/postings/:id/transfer` | move a line to another folio — two postings, never an edit |
@@ -214,7 +215,7 @@ What `index.ts` exports, and who uses each (grep of `@/modules/finance`,
 | `FolioPanel` | front desk (`flows/StayDrawer.tsx`) — the Bill tab |
 | `TaxRulesCard` | inventory (`pages/RoomSetup.tsx`) |
 
-On the server (`api/src/modules/finance/index.ts`): `postCharge` (laundry, spa), and since 28 September the per-bill door for a banquet function's bill - `takeFolioPayment`, `postFolioCharge`, `issueFolioInvoice`, `folioBalance` (round E).
+On the server (`api/src/modules/finance/index.ts`): `postCharge` (laundry, spa), and since 28 September the per-bill door for a banquet function's bill - `takeFolioPayment`, `postFolioCharge`, `issueFolioInvoice`, `folioBalance` (round E). `editFolioCharge` since 30 September (D27-205): the front desk's room move puts tonight's posted night right to a new rate through it.
 
 ## Leans on
 

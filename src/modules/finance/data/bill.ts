@@ -50,6 +50,11 @@ export interface StayBill {
   roundOff: number;
   paid: number;
   balance: number;
+  /** Tonight's room night, not posted yet (D27-204): a guest staying on,
+      before tonight's audit. The audit's own answer - its words, the rate
+      before GST, the GST and its rate. Absent when tonight is posted, the
+      room is complimentary or the guest leaves today; the desk's bill only. */
+  tonight?: { description: string; amount: number; tax: number; rate: number };
 }
 
 /** The stay's bill, or null for a stay this person may not see. */
