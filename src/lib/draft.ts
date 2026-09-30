@@ -49,6 +49,8 @@ export interface DraftLine {
   note: string;
 
   variationId?: string;
+  /** The choice of each further variation type (D27-192, the POS lane). */
+  moreChoiceIds?: string[];
   variationLabel?: string;
   addonIds: string[];
   addonLabels: string[];

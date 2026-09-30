@@ -48,7 +48,7 @@ const admin = async () =>
    real one. */
 interface Addon { id: string; label: string; price: number; offUntil: string | null }
 interface AddonGroup { id: string; label: string; minSelect: number; maxSelect: number | null; addons: Addon[] }
-interface Variation { id: string; label: string; price: number }
+interface Variation { id: string; label: string; price: number; typeNo?: number }
 interface Item {
   id: string; name: string; price: number; taxRate: number; isActive: boolean;
   shortCode: string | null; isVeg: boolean | null; isFavourite: boolean;
@@ -120,6 +120,52 @@ function serverTotal(lines: { qty: number; unitPrice: number; voided: boolean }[
 }
 
 describe("the running total the waiter sees", () => {
+  it("matches the server for a dish with two variation types (D27-192)", async () => {
+    /* Large ₹400 + Cheese burst +₹80: the first type is the price, the
+       second adds. Made here, on a section of its own, switched off after. */
+    const cat = await call("/5EL/till/menu/categories",
+      { method: "POST", body: JSON.stringify({ name: "PADSUM types" }) });
+    const categoryId = ((await cat.json()) as { id: string }).id;
+    const dish = await call("/5EL/till/menu/items", { method: "POST",
+      body: JSON.stringify({ categoryId, name: "PADSUM Pizza", price: "1", taxRate: 5 }) });
+    const dishId = ((await dish.json()) as { id: string }).id;
+    const set = await call(`/5EL/till/menu/items/${dishId}/variations`, { method: "PUT",
+      body: JSON.stringify({ types: [
+        { kind: "size", choices: [{ label: "Large", price: 400 }] },
+        { kind: "option", heading: "Crust", choices: [{ label: "Cheese burst", price: 80 }] },
+      ] }) });
+    expect(set.status, await set.clone().text()).toBe(200);
+
+    try {
+      const res = await call("/5EL/till/menu");
+      const pizza = ((await res.json()) as { categories: { items: Item[] }[] })
+        .categories.flatMap((c) => c.items).find((i) => i.id === dishId)!;
+      const large = pizza.variations.find((v) => v.label === "Large")!.id;
+      const burst = pizza.variations.find((v) => v.label === "Cheese burst")!.id;
+      const unit = unitPriceOf(pizza, large, undefined, [burst]);
+      expect(unit).toBe(480);
+
+      const sent = await call("/5EL/till/orders/batch", { method: "POST",
+        body: JSON.stringify({ outlet, table: "PADSUM-4",
+          lines: [{ itemId: dishId, qty: 2, variationId: large, moreChoiceIds: [burst] }] }) });
+      expect(sent.status, await sent.clone().text()).toBe(200);
+      const order = (await sent.json()) as {
+        id: string; lines: { qty: number; unitPrice: number; voided: boolean }[];
+      };
+      made.push(order.id);
+      expect(unit * 2, "the pad and the bill disagree on a dish with two types")
+        .toBe(serverTotal(order.lines));
+    } finally {
+      const db = await admin();
+      try {
+        await db.query("update pos_menu_items set is_active = false where id = $1", [dishId]);
+        await db.query("update pos_menu_categories set is_active = false where id = $1", [categoryId]);
+      } finally {
+        await db.end();
+      }
+    }
+  });
+
   it("matches the server for plain dishes", async () => {
     const plain = items.filter(
       (i) => i.variations.length === 0 && i.addonGroups.length === 0,

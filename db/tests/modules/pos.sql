@@ -205,3 +205,106 @@ begin
   select count(*) into n from pos_outlets where code = 'KOTST';
   perform test.ok('pos kot station', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+-- =============================================================================
+-- A DISH WITH SEVERAL VARIATION TYPES (D27-189, D27-192, D27-195)
+-- =============================================================================
+-- "Pizza": Size (Regular, Large) and a Crust option (Regular, Thin). Which
+-- choices a waiter may ring is the till's to ask (api/test/modules/pos/
+-- variationTypes.test.ts). What the database holds to: a name is unique within
+-- its type, an Option has a heading, and a line names one choice of EVERY
+-- type, all of this dish. Refusals are caught by message: every one of the
+-- line's refusals is P0001, and "some trigger refused it" would pass for the
+-- wrong reason.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_order uuid; v_cat uuid; v_dish uuid;
+  bd date; v_large uuid; v_thin uuid; m text; c text; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'VTYPE', 'Variation Types Test', 'food', v_staff) returning id into v_outlet;
+  insert into pos_menu_categories (hotel_id, name)
+  values (a, 'Variation Types Test') returning id into v_cat;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_cat, 'Types Test Pizza', 1, 5) returning id into v_dish;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff) returning id into v_order;
+
+  insert into pos_item_variations (hotel_id, item_id, label, price, kind)
+  values (a, v_dish, 'Regular', 200, 'size');
+  insert into pos_item_variations (hotel_id, item_id, label, price, kind)
+  values (a, v_dish, 'Large', 400, 'size') returning id into v_large;
+
+  -- ---------- names, kinds and headings ----------------------------------------
+  perform test.allows('pos variation types', 'the same name may be in a second type (D27-195)',
+    format($q$insert into pos_item_variations (hotel_id, item_id, type_no, label, price, kind, heading)
+              values (%L, %L, 2, 'Regular', 0, 'option', 'Crust')$q$, a, v_dish));
+  perform test.raises('pos variation types', 'but not twice in one type',
+    format($q$insert into pos_item_variations (hotel_id, item_id, type_no, label, price, kind, heading)
+              values (%L, %L, 2, 'Regular', 10, 'option', 'Crust')$q$, a, v_dish), '23505');
+  c := null;
+  begin
+    insert into pos_item_variations (hotel_id, item_id, type_no, label, price, kind)
+    values (a, v_dish, 2, 'Thin', 0, 'option');
+    c := 'it was allowed';
+  exception when check_violation then get stacked diagnostics c = constraint_name;
+  end;
+  perform test.ok('pos variation types', 'an Option with no heading is refused',
+    c = 'pos_item_variations_type_sane', coalesce(c, 'it was allowed'));
+  insert into pos_item_variations (hotel_id, item_id, type_no, label, price, kind, heading)
+  values (a, v_dish, 2, 'Thin', 0, 'option', 'Crust') returning id into v_thin;
+
+  -- ---------- a line names one choice of every type ----------------------------
+  m := null;
+  begin
+    insert into pos_order_lines (order_id, hotel_id, item_id, variation_id, name, qty, unit_price, tax_rate, added_by)
+    values (v_order, a, v_dish, v_large, 'Types Test Pizza (Large)', 1, 400, 5, v_staff);
+    m := 'it was allowed';
+  exception when raise_exception then get stacked diagnostics m = message_text;
+  end;
+  perform test.ok('pos variation types', 'a Large with no crust is refused, naming the crust',
+    m = 'this dish needs one choice of each type: Crust', coalesce(m, 'it was allowed'));
+
+  m := null;
+  begin
+    insert into pos_order_lines (order_id, hotel_id, item_id, variation_id, extra_choice_ids,
+                                 name, qty, unit_price, tax_rate, added_by)
+    values (v_order, a, v_dish, v_large, array[v_thin, v_large], 'Types Test Pizza', 1, 400, 5, v_staff);
+    m := 'it was allowed';
+  exception when raise_exception then get stacked diagnostics m = message_text;
+  end;
+  perform test.ok('pos variation types', 'a first-type choice among the others is refused',
+    m = 'that choice belongs to a different dish', coalesce(m, 'it was allowed'));
+
+  m := null;
+  begin
+    insert into pos_order_lines (order_id, hotel_id, item_id, variation_id, extra_choice_ids,
+                                 name, qty, unit_price, tax_rate, added_by)
+    values (v_order, a, v_dish, v_thin, array[v_thin], 'Types Test Pizza', 1, 0, 5, v_staff);
+    m := 'it was allowed';
+  exception when raise_exception then get stacked diagnostics m = message_text;
+  end;
+  perform test.ok('pos variation types', 'a crust cannot stand in for the size, which prices the dish',
+    m = 'that variation belongs to a different dish', coalesce(m, 'it was allowed'));
+
+  perform test.allows('pos variation types', 'Large with a Thin crust goes on',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, variation_id, extra_choice_ids,
+                                          name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %L, %L, array[%L]::uuid[], 'Types Test Pizza (Large, Thin)', 1, 400, 5, %L)$q$,
+           v_order, a, v_dish, v_large, v_thin, v_staff));
+
+  -- ---------- and the fixtures go ----------------------------------------------
+  delete from pos_order_lines where order_id = v_order;
+  delete from pos_orders where id = v_order;
+  delete from pos_item_variations where item_id = v_dish;
+  delete from pos_menu_items where id = v_dish;
+  delete from pos_menu_categories where id = v_cat;
+  delete from pos_outlets where id = v_outlet;
+  select count(*) into n from pos_outlets where code = 'VTYPE';
+  perform test.ok('pos variation types', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;
