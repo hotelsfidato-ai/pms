@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarRange, ArrowLeftRight, Ban, Repeat, Gift, Check, FileText } from "lucide-react";
+import { CalendarRange, ArrowLeftRight, Ban, Repeat, Gift, Check, FileText, IndianRupee } from "lucide-react";
 import { Menu, MenuItem, MenuLabel, MenuSeparator, toast } from "@/components/ui";
 import { confirmWaiting, viewVoucher, CancelWaitingFlow, CancelConfirmedFlow } from "@/modules/reservations";
 import { AmendStayFlow } from "@/modules/front-desk/flows/AmendStayFlow";
@@ -8,6 +8,7 @@ import { MoveRoomFlow } from "@/modules/front-desk/flows/MoveRoomFlow";
 import { VoidFlow } from "@/modules/front-desk/flows/VoidFlow";
 import { ExchangeRoomFlow } from "@/modules/front-desk/flows/ExchangeRoomFlow";
 import { InclusionsFlow } from "@/modules/front-desk/flows/InclusionsFlow";
+import { ChangeRateDialog } from "@/modules/finance";
 import type { Stay } from "@/data/repositories";
 import { useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
@@ -32,6 +33,7 @@ export function StayActions({ hotelId, stay, businessDate }: {
   const [swap, setSwap] = useState(false);
   const [inclusions, setInclusions] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [rerate, setRerate] = useState(false);
 
   const arrived = stay.status === "in-house" || stay.status === "due-out";
   /* The statuses this type actually has. `void` is a BAR TONE on the
@@ -50,6 +52,8 @@ export function StayActions({ hotelId, stay, businessDate }: {
   const role = useRole();
   if (!can(role, "edit", "reservation")) return null;
   const mayVoid = can(role, "cancel", "reservation");
+  /* D27-187: the owner, an administrator or the GM, as on the bill. */
+  const mayRerate = can(role, "approve", "reservation");
 
   return (
     <>
@@ -123,6 +127,13 @@ export function StayActions({ hotelId, stay, businessDate }: {
           <MenuItem icon={Gift} onSelect={() => setInclusions(true)}>
             What this booking includes
           </MenuItem>
+          {/* D27-187: after confirmation, before check-in; nothing is posted,
+              the agreed rate changes. In house, it is on the bill. */}
+          {mayRerate && stay.status === "due-in" && (
+            <MenuItem icon={IndianRupee} onSelect={() => setRerate(true)}>
+              Change rate
+            </MenuItem>
+          )}
 
           {/* A booking waiting for the hotel is CANCELLED, never voided: it
               was never confirmed, so no charge and nothing sent (D27-64). */}
@@ -195,6 +206,13 @@ export function StayActions({ hotelId, stay, businessDate }: {
         hotelId={hotelId} stay={stay}
         open={inclusions} onOpenChange={setInclusions}
       />
+      {mayRerate && stay.status === "due-in" && (
+        <ChangeRateDialog
+          hotelId={hotelId} stay={stay}
+          open={rerate} onOpenChange={setRerate}
+          onDone={() => void qc.invalidateQueries()}
+        />
+      )}
       {arrived && (
         <MoveRoomFlow
           hotelId={hotelId} stay={stay} businessDate={businessDate}

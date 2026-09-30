@@ -475,6 +475,22 @@ function ChangeRateButton({
   hotelId: string; stay: Stay; onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>Change rate</Button>
+      <ChangeRateDialog hotelId={hotelId} stay={stay} open={open} onOpenChange={setOpen} onDone={onDone} />
+    </>
+  );
+}
+
+/** The same dialog, opened from the booking panel's menu before check-in too
+    (D27-187): the agreed rate changes, and with nothing charged yet nothing
+    is posted. */
+export function ChangeRateDialog({
+  hotelId, stay, open, onOpenChange: setOpen, onDone,
+}: {
+  hotelId: string; stay: Stay; open: boolean; onOpenChange: (o: boolean) => void; onDone?: () => void;
+}) {
   const [rate, setRate] = useState("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -487,17 +503,14 @@ function ChangeRateButton({
     if (!res.ok) return toast.error("Rate not changed", res.reason);
     const n = res.data?.corrected ?? 0;
     toast.success("Rate changed", n === 0
-      ? `${money(value)} a night from tonight.`
+      ? `${money(value)} a night, for every night not yet charged.`
       : `${money(value)} a night; ${n} charged ${n === 1 ? "line" : "lines"} corrected.`);
     setOpen(false); setRate(""); setReason("");
-    onDone();
+    onDone?.();
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="sm">Change rate</Button>
-      </DialogTrigger>
       <DialogContent
         title="Change the rate"
         description={`${stay.guest} · now ${stay.isComplimentary ? "complimentary" : `${money(stay.offeredTariff)} a night`}`}
