@@ -324,6 +324,10 @@ admin.get("/admin/hotels/:code", async (c) => {
       phone: string | null; email: string | null; address_line: string | null;
       is_active: boolean; rooms: string; room_types: string | null;
       checked_in: string; fssai_number: string | null;
+      address_line_2: string | null; pin: string | null; website: string | null;
+      pan: string | null; reservations_phone: string | null;
+      property_type: string | null; star_rating: number | null;
+      latitude: string | null; longitude: string | null;
     }>(
       `select h.id::text, h.code, h.name, h.city, h.state, h.gstin,
               h.phone, h.email::text, h.address_line, h.is_active,
@@ -335,7 +339,10 @@ admin.get("/admin/hotels/:code", async (c) => {
               (select count(*) from reservations res
                 where res.hotel_id = h.id
                   and res.status = 'checked_in')::text as checked_in,
-              h.fssai_number
+              h.fssai_number,
+              h.address_line_2, h.pin, h.website, h.pan, h.reservations_phone,
+              h.property_type, h.star_rating,
+              h.latitude::text, h.longitude::text
          from hotels h where h.id = $1`, [hotelId]);
 
     /* Everyone rostered HERE, whatever else they can reach. The
@@ -374,6 +381,11 @@ admin.get("/admin/hotels/:code", async (c) => {
         roomTypes: (h.room_types ?? "").split(", ").filter(Boolean),
         checkedIn: Number(h.checked_in),
         fssaiNumber: h.fssai_number,
+        /* The profile (D27-214, migration 168): null is "nobody has said". */
+        addressLine2: h.address_line_2, pin: h.pin, website: h.website,
+        pan: h.pan, reservationsPhone: h.reservations_phone,
+        propertyType: h.property_type, starRating: h.star_rating,
+        latitude: h.latitude, longitude: h.longitude,
       },
       staff: staff.map((r) => ({
         id: r.id, name: r.name, email: r.email, role: r.role,
@@ -416,6 +428,92 @@ admin.put("/hotels/:code/fssai", async (c) => {
   return done ? c.json({ ok: true, fssaiNumber: digits || null })
     : c.json({ error: "No such property." }, 404);
 });
+
+/* ── The hotel's profile (the owner's D27-214, migration 168) ────────
+   The owner's list of property types: a word here and in the table's
+   constraint, its label on the screen. */
+const PROPERTY_TYPES = ["hotel", "resort", "boutique_hotel", "heritage_hotel", "homestay",
+  "villa", "serviced_apartment", "guest_house", "other"];
+
+/** The profile fields that were SENT, as column and value, or the sentence
+    that refuses one. Unlike the seven older fields, a key sent blank CLEARS
+    the value (a wrong website must be removable); a key not sent is left
+    alone. The table's constraints say the same, without the words. */
+function profileFields(input: Record<string, unknown>):
+  { set: Record<string, string | number | null> } | { reason: string } {
+  const set: Record<string, string | number | null> = {};
+  const sent = (key: string): string | undefined => {
+    const v = input[key];
+    return v === undefined ? undefined : v === null ? "" : String(v).trim();
+  };
+
+  const line2 = sent("addressLine2");
+  if (line2 !== undefined) set["address_line_2"] = line2 || null;
+
+  const pin = sent("pin");
+  if (pin !== undefined) {
+    if (pin && !/^[1-9][0-9]{5}$/.test(pin)) {
+      return { reason: "A PIN code is six digits, and does not start with 0." };
+    }
+    set["pin"] = pin || null;
+  }
+
+  const pan = sent("pan")?.toUpperCase();
+  if (pan !== undefined) {
+    if (pan && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
+      return { reason: "A PAN is ten characters: five letters, four digits, then a letter." };
+    }
+    set["pan"] = pan || null;
+  }
+
+  const website = sent("website");
+  if (website !== undefined) {
+    if (website && !/^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(website)) {
+      return { reason: "A website is an address such as www.example.com." };
+    }
+    set["website"] = website || null;
+  }
+
+  const reservationsPhone = sent("reservationsPhone");
+  if (reservationsPhone !== undefined) set["reservations_phone"] = reservationsPhone || null;
+
+  const type = sent("propertyType");
+  if (type !== undefined) {
+    if (type && !PROPERTY_TYPES.includes(type)) {
+      return { reason: "Pick the property type from the list." };
+    }
+    set["property_type"] = type || null;
+  }
+
+  const stars = sent("starRating");
+  if (stars !== undefined) {
+    if (stars && !/^[1-5]$/.test(stars)) {
+      return { reason: "Stars are a whole number from 1 to 5, or not set." };
+    }
+    set["star_rating"] = stars ? Number(stars) : null;
+  }
+
+  /* A map point is two figures or none. */
+  const latitude = sent("latitude");
+  const longitude = sent("longitude");
+  if (latitude !== undefined || longitude !== undefined) {
+    if (!latitude !== !longitude) {
+      return { reason: "A map point is both a latitude and a longitude, or neither." };
+    }
+    const within = (value: string, limit: number) =>
+      Number.isFinite(Number(value)) && Math.abs(Number(value)) <= limit;
+    if (latitude && !within(latitude, 90)) {
+      return { reason: "The latitude is a number between -90 and 90." };
+    }
+    if (longitude && !within(longitude, 180)) {
+      return { reason: "The longitude is a number between -180 and 180." };
+    }
+    set["latitude"] = latitude ? Number(latitude).toFixed(6) : null;
+    set["longitude"] = longitude ? Number(longitude).toFixed(6) : null;
+  }
+
+  return { set };
+}
 
 admin.patch("/admin/hotels/:code", async (c) => {
   type Body = {
@@ -478,6 +576,11 @@ admin.patch("/admin/hotels/:code", async (c) => {
       );
     }
 
+    const profile = profileFields(input as Record<string, unknown>);
+    if ("reason" in profile) return refuse(profile.reason);
+    /* The column names are this file's own (profileFields), never the caller's. */
+    const columns = Object.keys(profile.set);
+
     const updated = await client.query(
       `update hotels set
          name         = coalesce($2, name),
@@ -487,11 +590,13 @@ admin.patch("/admin/hotels/:code", async (c) => {
          phone        = coalesce($6, phone),
          email        = coalesce($7, email),
          address_line = coalesce($8, address_line)
+         ${columns.map((column, i) => `, ${column} = $${9 + i}`).join("")}
        where id = $1`,
       [hotelId, name ?? null, city ?? null,
        input.state?.trim() || null, gstin || null,
        input.phone?.trim() || null, input.email?.trim() || null,
-       input.addressLine?.trim() || null],
+       input.addressLine?.trim() || null,
+       ...columns.map((column) => profile.set[column])],
     );
     const nothing = changedOrRefuse(
       updated.rowCount, "that property is not one you can write to");

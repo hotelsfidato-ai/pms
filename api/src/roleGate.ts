@@ -149,6 +149,9 @@ const FSSAI = grant("room_config", "edit", "Setting the FSSAI licence number");
    changes. The database asks the same three (app.sets_group_settings). */
 const GROUP_NAME = grant("room_config", "edit", "Changing the group's name");
 const GROUP_LOGO = grant("room_config", "edit", "Changing the group's logo");
+/* A hotel's OWN logo (D27-214): the same three, at the hotel in the address;
+   the table's policy asks app.manages_hotel behind it (migration 168). */
+const HOTEL_LOGO = grant("room_config", "edit", "Changing the hotel's logo");
 /* GST sits on Configuration (D27-194; Room types before), so it is setup - and the accountant, who holds no
    setup grant, sets the rate too: "the accountant confirms the rate on the tax
    screen" (D21-91), and "owner, admin, GM and accountant" (D22-32). */
@@ -379,6 +382,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PUT ${H}/group/name`]: GROUP_NAME,
   [`PUT ${H}/group/logo`]: GROUP_LOGO,
   [`DELETE ${H}/group/logo`]: GROUP_LOGO,
+  [`PUT ${H}/logo`]: HOTEL_LOGO,
+  [`DELETE ${H}/logo`]: HOTEL_LOGO,
   [`POST /api/admin/hotels/:code/:state`]: own("admin/admin.ts: a group administrator"),
   [`PATCH /api/admin/staff/:id`]: own("admin/admin.ts: app.manages_person (D22-3)"),
   [`PUT /api/admin/staff/:id/home-screen`]: own("admin/admin.ts: app.set_home_screen asks app.may_manage_person"),
