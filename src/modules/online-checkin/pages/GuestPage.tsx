@@ -4,12 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { dateLong, dateShort, dateTime } from "@/lib/format";
+import { dateLong, dateTime } from "@/lib/format";
 import {
   Button, Card, CardBody, Field, fieldProps, Input, NativeSelect, Segmented, StatusPill, Textarea,
 } from "@/components/ui";
 import {
-  dropUnlock, getBill, getDetails, getIdPhoto, getRequests, makeRequest, openGuestPage,
+  dropUnlock, getBill, getDetails, getIdPhoto, getRequests, logoAddress, makeRequest, openGuestPage,
   sendCode, sendDetails, sendIdPhoto, verifyCode, verifyWithGoogle, type Details, type GuestPageView,
 } from "@/modules/online-checkin/data/guestPage";
 import { loadGoogleSignIn } from "@/modules/online-checkin/googleSignIn";
@@ -21,6 +21,7 @@ import {
   H2, LEAD, NOTHING_HERE, SECTION, messageFrom, unlockGone, useUnlockGone,
 } from "@/modules/online-checkin/guestKit";
 import { privacyNoticeFor } from "@/modules/online-checkin/privacyNotice";
+import { MessageTheDesk } from "@/modules/online-checkin/MessageTheDesk";
 import { BillPrint } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -130,7 +131,7 @@ export default function GuestPage() {
 
   return (
     <Shell>
-      <Heading view={view} />
+      <Heading token={token} view={view} />
       {view.verified ? (
         <Behind token={token} view={view} onUnlockGone={askAgain} />
       ) : view.canSendCodes || view.googleClientId ? (
@@ -148,12 +149,13 @@ export default function GuestPage() {
   );
 }
 
-function Heading({ view }: { view: GuestPageView }) {
+function Heading({ token, view }: { token: string; view: GuestPageView }) {
   const { booking } = view;
   return (
     <>
       {/* The large title: the hotel over the guest's name (or the room). */}
       <header className={booking ? "mb-3" : "mb-5"}>
+        <Logo token={token} />
         <p className="text-sm text-grey-600">{view.hotel.name}</p>
         <h1 className="page-title text-ink-900 mt-0.5 break-words">
           {booking ? booking.guestName : `Room ${view.room}`}
@@ -173,6 +175,19 @@ function Heading({ view }: { view: GuestPageView }) {
         </Card>
       )}
     </>
+  );
+}
+
+/* The hotel's logo, else the group's (D27-223), above its name. Decorative:
+   the name is printed under it. No logo, or a link that stopped opening, and
+   the door answers 404 - the picture goes, rather than a broken one. */
+function Logo({ token }: { token: string }) {
+  const [gone, setGone] = useState(false);
+  const src = useQuery({ queryKey: ["guest-logo", token], queryFn: () => logoAddress(token), staleTime: Infinity });
+  if (gone || !src.data) return null;
+  return (
+    <img src={src.data} alt="" onError={() => setGone(true)}
+      className="mb-3 h-10 w-auto max-w-40 object-contain object-left" />
   );
 }
 
@@ -385,76 +400,6 @@ function Behind(
       )}
       <MessageTheDesk token={token} onUnlockGone={onUnlockGone} />
     </>
-  );
-}
-
-/* ── Message the front desk (D23-14) ─────────────────────────────────
-   Anything, in the guest's own words. A request of kind 'desk' through the
-   same door and the same limits as a spa or laundry request; it lands in
-   the booking's Guest messages at the desk, unread until handled.
-
-   Under it, what they sent (the owner, 24 September): each Sent or
-   Handled, with the day and nothing else - no staff name, no time. The
-   door's own list of this stay's requests, the same read as above; the
-   words are a text node, never HTML. */
-function MessageTheDesk({ token, onUnlockGone }: { token: string; onUnlockGone: () => void }) {
-  const qc = useQueryClient();
-  const [what, setWhat] = useState("");
-  const list = useQuery({
-    queryKey: ["guest-behind", token, "requests"],
-    queryFn: () => getRequests(token),
-    retry: false,
-  });
-  const send = useMutation({
-    mutationFn: () => makeRequest(token, { kind: "desk", what }),
-    onSuccess: async () => {
-      setWhat("");
-      await qc.invalidateQueries({ queryKey: ["guest-behind", token, "requests"] });
-    },
-  });
-  useUnlockGone(list.error ?? send.error, onUnlockGone);
-  const sent = (list.data?.requests ?? []).filter((q) => q.kind === "desk");
-
-  return (
-    <section className={SECTION}>
-      <h2 className={cn(H2, "mb-3")}>Message the front desk</h2>
-      <Card><CardBody>
-        <form onSubmit={(e) => { e.preventDefault(); send.mutate(); }} className="flex flex-col gap-3">
-          <Field label="Your message">
-            {(f) => (
-              <Textarea {...fieldProps(f)} rows={3} maxLength={500}
-                value={what} onChange={(e) => setWhat(e.target.value)} />
-            )}
-          </Field>
-          <Button type="submit" variant="secondary" disabled={send.isPending || what.trim() === ""}>
-            {send.isPending ? "Sending…" : "Send to the front desk"}
-          </Button>
-          {send.isSuccess && what === "" && (
-            <p className="text-sm text-grey-600">Sent. The front desk will see it.</p>
-          )}
-          {send.error && !unlockGone(send.error) && (
-            <p className="text-sm text-brand-red-700">{messageFrom(send.error)}</p>
-          )}
-        </form>
-
-        {/* What they sent: list rows under a hairline, not boxes in the card. */}
-        {sent.length > 0 && (
-          <ul className="mt-3.5 border-t border-grey-100 divide-y divide-grey-100 -mb-3.5">
-            {sent.map((q) => (
-              <li key={q.createdAt} className="py-3 text-sm">
-                <p className="text-ink-900 whitespace-pre-line break-words">{q.what}</p>
-                <p className="mt-1 flex items-center gap-2 text-grey-600">
-                  {dateShort(q.createdAt)}
-                  <StatusPill tone={q.status === "open" ? "neutral" : "success"}>
-                    {q.status === "open" ? "Sent" : "Handled"}
-                  </StatusPill>
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardBody></Card>
-    </section>
   );
 }
 

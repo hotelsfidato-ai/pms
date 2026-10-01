@@ -15,6 +15,7 @@ import {
   put as putPhotos, remove as removePhotos,
 } from "./idPhotos.ts";
 import { messagesDesk, messagesDoor } from "./guestMessages.ts";
+import { logoDoor } from "./guestLogo.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S OWN DOOR — one private page per booking (D18-9, D18-10, D18-13)
@@ -1245,6 +1246,7 @@ guestLinks.post("/:code/online-checkin/cards", async (c) => {
    `app.guest_link_open` (rule 8). */
 guestDoor.route("/", messagesDoor);      // messages with the desk, both ways (D27-224)
 guestLinks.route("/", messagesDesk);
+guestDoor.route("/", logoDoor);          // the hotel's logo, else the group's (D27-223)
 
 /* Exported for the test that proves a stolen token is not a key to anything
    else: the hash the door computes is the hash the database holds. */

@@ -85,15 +85,27 @@ export interface DeskMessage {
   createdAt: string;
   guest: string;
   reference: string;
+  reservationId: string;
   /** Null where this reader may not see who (`staff` is row-secured). */
   handledBy: string | null;
   handledAt: string | null;
 }
 
-/** One booking's messages, handled ones too; or every booking's unread. */
+/** The desk's reply (D27-224). The guest sees "Front desk"; who sent it is
+    for the desk. */
+export interface DeskReply { id: string; what: string; sentAt: string; sentBy: string | null }
+
+/** One booking's messages, handled ones too, its replies, and whether the
+    desk may still reply (not once the guest has checked out); or every
+    booking's unread, with no replies. */
 export const getDeskMessages = (code: string, reservation?: string) =>
-  api<{ messages: DeskMessage[] }>(
+  api<{ messages: DeskMessage[]; replies?: DeskReply[]; canReply?: boolean }>(
     at(code, `/messages${reservation ? `?reservation=${encodeURIComponent(reservation)}` : ""}`));
+
+export const replyToGuest = (code: string, reservation: string, what: string) =>
+  api<{ reply: DeskReply }>(at(code, `/messages/${encodeURIComponent(reservation)}/reply`), {
+    method: "POST", body: JSON.stringify({ what }),
+  });
 
 export const printRoomCard = (code: string, roomId: string) =>
   api<{ cards: PrintedCard[] }>(at(code, `/rooms/${roomId}/card`), post);

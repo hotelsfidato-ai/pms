@@ -36,6 +36,21 @@ opening.
 
 ## Fixed
 
+### OCI-12 · The database guard test asked about an empty stay, so a function that skipped the unlock still passed
+
+1 October, found while proving the desk's replies (D27-224; numbered for
+now). **What happened:** OCI-5's test calls every function behind the code
+with the link's hash and no unlock, and expects nothing back. Broken on
+purpose to take the link alone, `app.guest_desk_thread` still answered
+nothing and the test passed: at that point in the file the stay had no
+messages, so there was nothing for it to leak. `guest_requests_mine` and
+`guest_details_state` were asked the same way, so their checks were weaker
+than they read.
+**Fixed:** the test first gives the stay a message to the desk and a reply,
+then asks. With the thread broken again, it failed.
+**The rule:** a "nothing comes back" test needs something there that could
+come back. Fill the room before you prove the door is shut.
+
 ### OCI-11 · A guest's second upload deleted the photo the desk had kept
 
 1 October, found by the master's read-only pre-launch review, before any guest

@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { api, apiBase } from "@/lib/api";
 import { upload } from "@/modules/online-checkin/data/upload";
 import type { StayBill } from "@/modules/finance";
 
@@ -86,6 +86,12 @@ const withUnlock = (token: string, init: RequestInit = {}): RequestInit => {
 
 export const openGuestPage = (token: string): Promise<GuestPageView> =>
   api<GuestPageView>(at(token), withUnlock(token));
+
+/** Where this link's hotel logo is (D27-223): the hotel's own, else the
+    group's. An <img> asks it with no unlock - it is the hotel's picture,
+    not the stay's - and the door answers the picture or its one sentence. */
+export const logoAddress = async (token: string): Promise<string> =>
+  `${await apiBase()}${at(token, "/logo")}`;
 
 /* The door's own sentence - where it went, or why it did not (no mobile
    number on the booking, five an hour, WhatsApp refused). The screen
@@ -215,6 +221,15 @@ export const makeRequest = (
     method: "POST",
     body: JSON.stringify(request),
   }));
+
+/** One line of the guest's conversation with the desk (D27-224): their own
+    message, or the desk's reply - which carries no name. Newest first. */
+export type ThreadLine =
+  | { from: "you"; what: string; status: "open" | "done" | "declined"; at: string }
+  | { from: "desk"; what: string; at: string };
+
+export const getThread = (token: string): Promise<{ thread: ThreadLine[] }> =>
+  api(at(token, "/messages"), withUnlock(token));
 
 /* ── The ID photo (D27-207 to D27-212) ────────────────────────────────
    Optional, after the details are sent. The guest SENDS and never reads

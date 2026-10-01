@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, waitFor, fireEvent } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import QRCode from "qrcode";
 import * as apiModule from "@/lib/api";
@@ -116,6 +116,28 @@ describe("before the six digits are answered", () => {
        screen that fetched what is behind the code and hid it would be a
        leak with a stylesheet. */
     expect(spy.mock.calls.map((c) => c[0])).toEqual([OPEN]);
+  });
+
+  /* D27-223: the hotel's logo, else the group's - an <img> on the door's
+     own address for this link, which answers the picture and nothing else.
+     Decorative: the hotel's name is printed under it. */
+  it("shows the hotel's logo above its name, from the door, and nothing where it does not load", async () => {
+    server({ [OPEN]: () => BOOKING });
+    open();
+
+    await screen.findByText("A. Guest");
+    const logo = await waitFor(() => {
+      const img = document.querySelector("header img");
+      expect(img).toBeTruthy();
+      return img!;
+    });
+    expect(logo.getAttribute("src")).toMatch(new RegExp(`/api/guest/${TOKEN}/logo$`));
+    expect(logo.getAttribute("alt"), "the name is printed under it").toBe("");
+    expect(logo.compareDocumentPosition(screen.getByText("5 Elements Akkalkot")) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
+
+    fireEvent.error(logo);   // no logo, or the link stopped opening: the door's 404
+    expect(document.querySelector("header img"), "no broken picture").toBeNull();
   });
 
   it("says the same nothing for a link that is dead, whatever killed it", async () => {
@@ -599,6 +621,7 @@ describe("behind the code", () => {
     server({
       [OPEN]: () => unlocked,
       [`${OPEN}/details`]: () => ({ sent: null }),
+      [`${OPEN}/messages`]: () => ({ thread: [] }),
       [`${OPEN}/requests`]: (init) => {
         if (init?.method !== "POST") return { offers: [], requests: [] };
         sent = { body: JSON.parse(String(init.body)), unlock: unlockSent(init) };
@@ -621,15 +644,14 @@ describe("behind the code", () => {
     server({
       [OPEN]: () => unlocked,
       [`${OPEN}/details`]: () => ({ sent: null }),
-      [`${OPEN}/requests`]: (init) => {
+      [`${OPEN}/requests`]: () => ({ offers: [], requests: [
+        { kind: "spa", what: "A massage", wanted: "4pm", status: "open", createdAt: "2026-08-24T11:00:00Z" },
+      ] }),
+      [`${OPEN}/messages`]: (init) => {
         listAsked = init;
-        return { offers: [], requests: [
-          { kind: "desk", what: "<b>Two more towels</b>", wanted: null, status: "open",
-            createdAt: "2026-08-25T10:00:00Z" },
-          { kind: "desk", what: "A taxi at six", wanted: null, status: "done",
-            createdAt: "2026-08-24T10:00:00Z" },
-          { kind: "spa", what: "A massage", wanted: "4pm", status: "open",
-            createdAt: "2026-08-24T11:00:00Z" },
+        return { thread: [
+          { from: "you", what: "<b>Two more towels</b>", status: "open", at: "2026-08-25T10:00:00Z" },
+          { from: "you", what: "A taxi at six", status: "done", at: "2026-08-24T10:00:00Z" },
         ] };
       },
     });
@@ -642,6 +664,54 @@ describe("behind the code", () => {
       .toBe("A taxi at six24 Aug 2026Handled");
     expect(screen.queryByText("A massage"), "a spa request is not a message").toBeNull();
     expect(unlockSent(listAsked), "asked with this tab's unlock").toBe(UNLOCK);
+  });
+
+  /* D27-224: the desk replies; the guest reads it as the front desk, never
+     a person - the door sends no name, and the page draws none. */
+  it("shows the desk's replies as the Front desk, in one thread with theirs, newest first", async () => {
+    server({
+      [OPEN]: () => unlocked,
+      [`${OPEN}/details`]: () => ({ sent: null }),
+      [`${OPEN}/requests`]: () => ({ offers: [], requests: [] }),
+      [`${OPEN}/messages`]: () => ({ thread: [
+        { from: "desk", what: "Yes, <i>on the roof</i>, 7 to 7.", at: "2026-08-25T11:00:00Z" },
+        { from: "you", what: "Is there a pool?", status: "done", at: "2026-08-25T10:00:00Z" },
+      ] }),
+    });
+    open();
+
+    const answer = (await screen.findByText("Yes, <i>on the roof</i>, 7 to 7.")).closest("li")!;
+    expect(answer.textContent).toBe("Front deskYes, <i>on the roof</i>, 7 to 7.25 Aug 2026");
+    expect(answer.querySelector("i"), "the desk's words are text, not HTML").toBeNull();
+    const items = [...answer.closest("ul")!.querySelectorAll("li")].map((li) => li.textContent);
+    expect(items).toEqual(["Front deskYes, <i>on the roof</i>, 7 to 7.25 Aug 2026",
+      "Is there a pool?25 Aug 2026Handled"]);
+  });
+
+  /* No WhatsApp "the desk replied" (the owner, D27-224): the page asks
+     again every 30 seconds while it is open - and not while it is hidden. */
+  it("reads the thread again every 30 seconds while the page is open, and not while it is hidden", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let asked = 0;
+    server({
+      [OPEN]: () => unlocked,
+      [`${OPEN}/details`]: () => ({ sent: null }),
+      [`${OPEN}/requests`]: () => ({ offers: [], requests: [] }),
+      [`${OPEN}/messages`]: () => { asked += 1; return { thread: [] }; },
+    });
+    try {
+      open();
+      await waitFor(() => expect(asked).toBe(1));
+      await vi.advanceTimersByTimeAsync(30_000);
+      await waitFor(() => expect(asked, "read again after 30 seconds").toBe(2));
+
+      focusManager.setFocused(false);   // the phone's screen is off, or another tab is in front
+      await vi.advanceTimersByTimeAsync(90_000);
+      expect(asked, "nothing asked while hidden").toBe(2);
+    } finally {
+      focusManager.setFocused(undefined);
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -714,6 +784,70 @@ describe("the desk's side", () => {
     fireEvent.click(screen.getByRole("button", { name: "Mark handled" }));
     await waitFor(() => expect(spy.mock.calls.find((c) => c[0] === MARK)?.[1]?.body)
       .toBe(JSON.stringify({ status: "done" })));
+  });
+
+  /* D27-224: a booking's Guest messages has one reply box; the reply goes to
+     the booking's own route, and the guest's words and the desk's are text. */
+  it("replies to a booking's guest from its Guest messages, and shows who replied", async () => {
+    signedIn();   // reception
+    const REPLY = "/api/hotels/5EL/online-checkin/messages/r-1/reply";
+    const spy = server({
+      "/api/hotels/5EL/online-checkin/messages": () => ({
+        messages: [{
+          id: "q-1", what: "Is there a pool?", createdAt: "2026-08-25T09:00:00Z", guest: "A. Guest",
+          reference: "FH-2609-5001", reservationId: "r-1", handledBy: null, handledAt: null,
+        }],
+        replies: [{ id: "d-1", what: "<b>Earlier</b> answer", sentAt: "2026-08-25T10:00:00Z", sentBy: "R. Clerk" }],
+        canReply: true,
+      }),
+      [REPLY]: () => ({ reply: { id: "d-2", what: "On the roof", sentAt: "2026-08-25T11:00:00Z", sentBy: "R. Clerk" } }),
+    });
+    open("/", "/", <MessagesToTheDesk code="5EL" reservation="r-1" />);
+
+    const earlier = (await screen.findByText("<b>Earlier</b> answer")).closest("li")!;
+    expect(earlier.textContent).toContain("Reply from the front desk");
+    expect(earlier.textContent).toContain("R. Clerk");
+    expect(earlier.querySelector("b")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Reply" }), "already on the booking's own list").toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Reply to the guest"), { target: { value: "  On the roof  " } });
+    fireEvent.click(screen.getByRole("button", { name: "Send reply" }));
+    await waitFor(() => expect(spy.mock.calls.find((c) => c[0] === REPLY)?.[1]?.body)
+      .toBe(JSON.stringify({ what: "On the roof" })));
+  });
+
+  it("offers no reply once the guest has checked out, and says why", async () => {
+    signedIn();
+    server({
+      "/api/hotels/5EL/online-checkin/messages": () => ({
+        messages: [{
+          id: "q-1", what: "Thanks for everything", createdAt: "2026-08-25T09:00:00Z", guest: "A. Guest",
+          reference: "FH-2609-5001", reservationId: "r-1", handledBy: null, handledAt: null,
+        }],
+        replies: [], canReply: false,
+      }),
+    });
+    open("/", "/", <MessagesToTheDesk code="5EL" reservation="r-1" />);
+
+    expect(await screen.findByText("This guest has checked out. Replies stop at check-out.")).toBeTruthy();
+    expect(screen.queryByLabelText("Reply to the guest")).toBeNull();
+  });
+
+  it("points each unread message on the property's list to its booking, to reply there", async () => {
+    signedIn();
+    server({
+      "/api/hotels/5EL/online-checkin/messages": () => ({
+        messages: [{
+          id: "q-1", what: "Late checkout?", createdAt: "2026-08-25T09:00:00Z", guest: "A. Guest",
+          reference: "FH-2609-5001", reservationId: "r-1", handledBy: null, handledAt: null,
+        }],
+      }),
+    });
+    open("/", "/", <MessagesToTheDesk code="5EL" />);
+
+    expect((await screen.findByRole("link", { name: "Reply" })).getAttribute("href"))
+      .toBe("/h/5EL/guest-messages?reservation=r-1");
+    expect(screen.queryByLabelText("Reply to the guest"), "the box is on the booking's list").toBeNull();
   });
 
   /* D21-62, D21-95. The card's QR must carry exactly the link the server
