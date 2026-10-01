@@ -167,7 +167,9 @@ And since 30 September (D27-204) `roomNightsDue`, `postRoomNight` and
 night's room charge in one place. Who is charged for a night (`POSTS_TONIGHT`),
 the read of those stays (the folio by `app.folio_for_room_charge`, the room
 held that night, the agreed rate, complimentary) and the insert that writes
-the charge were moved there from `nightAudit.ts` as they stood. And since 1
+the charge were moved there from `nightAudit.ts` as they stood. The run never
+charges a day use (`POSTS_TONIGHT` = `CHARGEABLE` and not a day use); a named
+stay at its check-in may be one, and its day is charged then (D27-225). And since 1
 October `nightsToCome` (FIN-24): the stay's nights from the business date on
 that no room line pays for yet, by the same test the run skips a night on
 (`CHARGED`), for finance's Bill tab - none for a room billed to its group.

@@ -22,6 +22,8 @@ export type BillLine = Posting & {
   dayClosed?: boolean; invoice?: string | null;
   /** What the line was billed under, for the bill's sections (D27-200). */
   scheme?: "gst" | "vat"; rate?: number | null;
+  /** Where the line came from (D27-223): an early or late fee is the room's. */
+  source?: string | null;
 };
 
 export async function getFolioPostings(hotelId: string, stayId: string): Promise<BillLine[]> {

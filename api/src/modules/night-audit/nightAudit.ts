@@ -730,8 +730,10 @@ const CORRECTABLE = `
   and fp.category not in ('payment', 'refund', 'discount', 'tax')
   and not exists (select 1 from folio_postings rev where rev.reverses_id = fp.id)`;
 
-/** Where the line first came from, through any corrections of it (139). */
-const ORIGIN = `(case when fp.source_type = 'correction'
+/** Where the line first came from, through any corrections of it (139).
+    Finance's postings route reads it too: a corrected early check-in fee is
+    still the room's on the bill (D27-223). */
+export const ORIGIN = `(case when fp.source_type = 'correction'
   then (select c.origin from closed_day_corrections c where c.id = fp.source_id)
   else fp.source_type end)`;
 

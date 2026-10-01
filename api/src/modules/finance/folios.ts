@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
-import { roomNightsDue, roomNightWords, nightsToCome } from "../night-audit/index.ts";
+import { roomNightsDue, roomNightWords, nightsToCome, ORIGIN } from "../night-audit/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    FOLIOS — derived from the ledger, never stored
@@ -222,12 +222,19 @@ folios.get("/:code/stays/:id/postings", async (c) => {
       invoice: string | null;
       tax_scheme: string;
       tax_rate: string | null;
+      source: string | null;
     }>(
       `select fp.id::text, fp.folio_id::text, f.bill_to, co.name as company,
               fp.business_date::text, fp.category, fp.description,
               fp.amount, fp.tax_amount, fp.reverses_id::text,
               -- What the line was billed under, for the bill's sections (D27-200).
               fp.tax_scheme, fp.tax_rate::text,
+              -- Where the line came from, through a correction (D27-223): an
+              -- early or late fee is the room's on the bill. A reversal is
+              -- written with no source, so it takes its line's and the pair
+              -- stays in one section.
+              coalesce(${ORIGIN}, (select x.source_type from folio_postings x
+                                    where x.id = fp.reverses_id)) as source,
               exists (select 1 from folio_postings r where r.reverses_id = fp.id) as reversed,
               fp.created_at::text,
               -- Why Edit is off for a line, before anybody types (D27-157):
@@ -280,6 +287,7 @@ folios.get("/:code/stays/:id/postings", async (c) => {
       invoice: p.invoice,
       scheme: p.tax_scheme,
       rate: p.tax_rate === null ? null : Number(p.tax_rate),
+      source: p.source,
     }));
   });
 

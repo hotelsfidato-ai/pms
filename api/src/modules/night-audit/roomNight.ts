@@ -30,7 +30,7 @@ const CHARGED = (night: string) => `exists (
     $1 the hotel and $2 the night; the run then skips the complimentary ones.
     One text for the run and the checklist's count (QA NA-5: the checklist
     counted every stay in house and the run then posted none). */
-export const POSTS_TONIGHT = `
+const CHARGEABLE = `
           r.hotel_id = $1
           and r.status = 'checked_in'
           /* AN OPEN FOLIO, ASKED - NOT JOINED (28 September, the release
@@ -40,9 +40,6 @@ export const POSTS_TONIGHT = `
              Where the charge goes is folio_for_room_charge's answer. */
           and exists (select 1 from folios f
                        where f.reservation_id = r.id and f.status = 'open')
-          -- A day-use room is sold and vacated inside one day. It has
-          -- no night to charge for.
-          and not r.is_day_use
           /* Not already charged for tonight. This is what makes an
              interrupted audit safe to restart: the charge is the thing
              that must not happen twice, so the check is on the charge,
@@ -62,16 +59,27 @@ export const POSTS_TONIGHT = `
              night it pays for, read the way the reports read it. */
           and not ${CHARGED("$2::date")}`;
 
+/** The run's stays: as above, and never a day-use room. A day use is sold and
+    vacated inside one day, so it has no night for the run to charge: its
+    check-in charges its day (the owner's D27-225). */
+export const POSTS_TONIGHT = `${CHARGEABLE}
+          and not r.is_day_use`;
+
 /** A stay whose night is still to be charged, as `roomNightsDue` answers it. */
 export interface RoomNight {
   reservation_id: string; folio_id: string; room: string;
   rate: string; comp: boolean; routed: boolean;
   gst: string | null; tax: string | null;
+  /** A day-use stay (check-out the day of check-in): charged its day at
+      check-in, never by the run (D27-225). */
+  day_use: boolean;
 }
 
 /** The stays whose night of `date` is still to be charged: every one at the
-    hotel (the audit's run), or `stayId` alone (check-in, the printed bill).
-    The caller skips the complimentary ones. */
+    hotel (the audit's run, never a day use), or `stayId` alone (check-in,
+    the printed bill) - which may be a day-use stay, its day charged at
+    check-in like a first night (D27-225). The caller skips the
+    complimentary ones. */
 export async function roomNightsDue(
   client: Client, hotelId: string, date: string, stayId?: string,
 ): Promise<RoomNight[]> {
@@ -85,6 +93,7 @@ export async function roomNightsDue(
             r.agreed_rate::text as rate,
             r.is_complimentary as comp,
             (r.route_room_to_group and r.group_id is not null) as routed,
+            r.is_day_use as day_use,
             /* Read-only, for a caller that shows the charge before it is
                posted: null where the property has no GST rule for rooms. */
             app.gst_rate_or_null($1, 'room', r.agreed_rate)::text as gst,
@@ -123,11 +132,14 @@ export async function roomNightsDue(
           where ra.reservation_id = r.id
             and ra.released_at is null
             and ra.from_date <= $2::date
-            and (ra.to_date is null or ra.to_date > $2::date)
+            /* A day-use hold starts and ends the same day (015): it is that
+               day's room too. Only a day use holds a room that way, and the
+               run never charges one. */
+            and (ra.to_date is null or ra.to_date > $2::date or ra.to_date = ra.from_date)
           order by ra.from_date desc
           limit 1
        ) a on true
-      where ${POSTS_TONIGHT}${stayId ? "\n          and r.id = $3::uuid" : ""}
+      where ${stayId ? `${CHARGEABLE}\n          and r.id = $3::uuid` : POSTS_TONIGHT}
       order by a.number`,
     stayId ? [hotelId, date, stayId] : [hotelId, date],
   );
@@ -159,7 +171,8 @@ export async function nightsToCome(client: Client, hotelId: string, stayId: stri
 
 /** The line's words. The room number is on every line, and it has to be: a
     master folio holding twelve of these is unreadable otherwise. */
-export const roomNightWords = (stay: RoomNight) => `Room ${stay.room} · 1 night`;
+export const roomNightWords = (stay: RoomNight) =>
+  `Room ${stay.room} · ${stay.day_use ? "day use" : "1 night"}`;
 
 /** Post that night's charge and answer its amount. `source` is who wrote it:
     the audit's run, or the check-in (the first night). */

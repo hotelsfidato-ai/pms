@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-01 · The early and late fees say what they are; a day use is charged at check-in (the owner's D27-223, D27-225)
+
+**Asked for:** through the master, after the pre-launch review. Branch `fix/fees-dayuse-1oct` from cp6 9a9e7a3b; database `fidato_s44` at 175.
+**Shipped:** check-in's "Early check-in" and check-out's "Late check-out" are posted with source `early_checkin` and `late_checkout` (were `front_desk`), so finance's bill puts them under Room (D27-223). A day-use stay (out the day it comes) is charged its day rate with GST at check-in - "Room 102 · day use" - through the night audit's own `roomNightsDue`/`postRoomNight`, like a first night; complimentary nothing, no GST rule nothing; the run never charges a day use (D27-225).
+**Proved:** `api/test/modules/front-desk/feesAndDayUse.test.ts` (its own hotel, FFD): the early fee's source on the posting, the Bill tab and the printed bill; the late fee's; the day use posted with its words and GST; complimentary and no-rule nothing; the run's read leaves a day use out. The fee and day-use cases fail on the old code.
+
 ## 2026-09-30 · The first night is charged at check-in; an early arrival's hold moves with it (D27-204, D27-205, FD-24)
 
 **Asked for:** the owner's D27-204 and D27-205, through the master, plan first. Branch `fix/booking-bill-30sep` (cp6 634f8622 merged in), the booking and bill lane; database `fidato_s44` at 166, no migration; API 8901, web 5301.
