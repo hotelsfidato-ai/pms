@@ -81,6 +81,11 @@ GET   /api/hotels/:code/contract-price          the booking page's quote under t
   every time). The booking page does not ask `/contract-price` for it, and
   `book.ts` refuses an untyped day use before the pricing branch; the booking
   is still stamped with the contract and its commission.
+- **Contract rates are before GST** (D27-233). "Rate includes GST" applies to
+  a typed rate and the list price only: on a line the contract prices, the
+  page greys it ("Contract rates are before GST") and `book.ts` ignores it
+  (`from_contract`), so a contract rate is never split. Where the contract has
+  no figure (C-4) the line carries the list price, and the tick applies.
 - **One contract in force per company, hotel and date** (`contracts_one_in_force`).
 - Reach other services only through their `index.ts`.
 

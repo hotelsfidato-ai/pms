@@ -232,4 +232,19 @@ describe("a contract", () => {
         where g.full_name = $1`, [`${TAG} Day use`]);
     expect(rows).toEqual([{ rate: 1500, contract: `${TAG} 2029` }]);
   });
+
+  /* D27-233: contract rates are before GST, so "Rate includes GST" never
+     splits one; it still splits a typed rate (inclusiveGst.test.ts). */
+  it("never splits a contract rate when the line ticks Rate includes GST (D27-233)", async () => {
+    const res = await call("front_desk", "POST", "/bookings", {
+      guestName: `${TAG} Ticked`, checkIn: "2029-06-10", checkOut: "2029-06-12",
+      bookingSourceId: source, companyId: agent,
+      lines: [{ roomTypeId: typeId, mealPlan: "EP", adults: 1, children: 0, rooms: 1, rateIncludesGst: true }],
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const { rows } = await sql(
+      `select r.agreed_rate::float8 as rate from reservations r join guests g on g.id = r.guest_id
+        where g.full_name = $1`, [`${TAG} Ticked`]);
+    expect(rows).toEqual([{ rate: 2500 }]);
+  });
 });

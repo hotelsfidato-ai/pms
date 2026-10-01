@@ -50,6 +50,7 @@ beforeEach(() => {
     }
     if (path.includes("/billing-companies")) return [{ id: "co-1", name: "Tata Motors", gstin: null }] as never;
     if (path.includes("/tax/room/rate")) return { kind: "room", rate: 5, scheme: "gst" } as never;
+    if (path.includes("/tax/room/before-gst")) return { ok: true, pre: 3000, rate: 5, total: 3150 } as never;
     if (path.endsWith("/modules")) return { modules: [] } as never;
     if (path.endsWith("/inclusions")) return { inclusions: [] } as never;
     return [] as never;
@@ -79,6 +80,32 @@ describe("the company's contract prices the booking", () => {
       .toBe("Contract: Tata Motors 2026-27");
     await waitFor(() =>
       expect(asked.some((p) => p.includes("/contract-price?") && p.includes("companyId=co-1"))).toBe(true));
+  });
+
+  /* D27-233: contract rates are before GST. On a line the contract prices the
+     tick is greyed and says so; a typed rate takes it again, and is split. */
+  it("greys Rate includes GST on a contract-priced line, and keeps it for a typed rate", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter><BookingPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByText(/₹3,000\.00 a night/);
+    const tick = () => screen.getByRole("checkbox", { name: "Rate includes GST" }) as HTMLButtonElement;
+    expect(tick().disabled).toBe(false);
+
+    await nameTheCompany();
+    await screen.findByText(/₹2,500\.00 a night/);
+    expect(tick().disabled).toBe(true);
+    expect(screen.getByText("Contract rates are before GST")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText(/^Rate$/, { selector: "input" }), { target: { value: "3150" } });
+    await waitFor(() => expect(tick().disabled).toBe(false));
+    expect(screen.queryByText("Contract rates are before GST")).toBeNull();
+    fireEvent.click(tick());
+    await screen.findByText(/₹3,000\.00 a night/);
+    expect(asked.some((p) => p.includes("/tax/room/before-gst?gross=3150"))).toBe(true);
   });
 
   /* D27-229 meets D27-184: a day use's price is typed every time, so with a

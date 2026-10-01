@@ -543,16 +543,18 @@ export async function makeBooking(
       if (dayUse && line.complimentary !== true && !(rate !== null && rate > 0)) {
         return refuse("Type the day-use price.");
       }
+      /* The contract's own figure priced this line (D27-233): before GST. */
+      let byContract = false;
       if (rate === null) {
         /* Under a contract, its price - or, where it has no figure for this
            room type and plan, the calendar's (C-4), inside the same function. */
         const { rows: t } = await client.query<{
-          total: string | null; unpriced: string | null;
+          total: string | null; unpriced: string | null; from_contract: boolean;
         }>(
           contract
-            ? `select total::text, unpriced
+            ? `select total::text, unpriced, from_contract
                  from app.contract_price($6::uuid,$1,$2,$3::date,$4,$5)`
-            : `select total::text, unpriced
+            : `select total::text, unpriced, false as from_contract
                  from app.tariff_for($1,$2,$3::date,$4,$5)`,
           [line.roomTypeId, line.mealPlan ?? "EP", request.checkIn,
            adults, children, ...(contract ? [contract.id] : [])]);
@@ -567,13 +569,15 @@ export async function makeBooking(
           };
         }
         rate = Number(t[0].total);
+        byContract = t[0].from_contract;
       }
 
       /* A RATE THAT INCLUDES GST (D27-187, D27-195) is split here, before it is
          kept: agreed_rate is the rate before GST the audit posts, and its GST
          by the slab adds back to the figure (finance's one split). The typed
-         rate, or with none typed the list price the tariff gave (D27-199). */
-      if (rate > 0 && line.rateIncludesGst === true) {
+         rate, or with none typed the list price the tariff gave (D27-199) -
+         never a contract's rate, which is before GST already (D27-233). */
+      if (rate > 0 && line.rateIncludesGst === true && !byContract) {
         const split = await roomRateBeforeGst(client, hotelId, rate);
         if (!split.ok) return refuse(split.reason);
         rate = split.pre;

@@ -50,7 +50,18 @@ sideways.
 whatever price the line carries, so on a contract-priced line it would split
 the contract's own price; kept as cp6 built it, asked through the master.
 
-**Left open:** that question; the master's merge.
+**Left open:** the master's merge.
+
+**Then, D27-233** (the owner took the recommendation): "Rate includes GST"
+applies to a typed rate and the list price only. `BookingPage.tsx` greys it
+on a contract-priced line with "Contract rates are before GST" and sends and
+splits nothing there; `book.ts` reads `from_contract` and skips the split.
+Failing tests first: contractPrice "greys Rate includes GST" failed (the tick
+was enabled), contracts.test "never splits a contract rate" failed on the old
+`book.ts` (2,380.95 stored for 2,500). After: web reservations and contracts
+9 files, 31 tests; API contracts 9, newBooking 21, inclusiveGst 6, one at a
+time; tsc exit 0; seen on the screen (Superior for two under Agoda's
+contract: ₹2,800 + ₹140 GST, the tick greyed with its line).
 
 ---
 
