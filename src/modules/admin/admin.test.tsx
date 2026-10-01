@@ -357,6 +357,49 @@ describe("D27-220 - Settings, five tabs, only what can be changed", () => {
   });
 });
 
+/* D27-223 (the owner, 1 October): on a phone the checklist above the tabs
+   folds its reasons behind a tap, so the tabs start on the first screen. */
+describe("D27-223 - the checklist folds its reasons on a phone", () => {
+  const REASON = "27AAAAA0000A1Z5 is the standard dummy number. It PRINTS on the tax invoice.";
+  const phone = (matches: boolean) => vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: matches && query === "(max-width: 639px)", media: query,
+    addEventListener: () => {}, removeEventListener: () => {},
+  }));
+  const checklist = () => {
+    as("group-admin");
+    server({
+      "GET /api/hotels/5EL/commissioning": () => ({
+        property: "5 Elements", canTakeABooking: false, done: 8, total: 9,
+        checks: [{ id: "gstin", label: "A real GSTIN", done: false, detail: REASON, blocking: true, to: "/settings/property" }],
+      }),
+    });
+    renderSettings("property");
+  };
+
+  it("one line an item; a tap shows why, and the reason opens its fix", async () => {
+    phone(true);
+    checklist();
+    const item = await screen.findByRole("button", { name: /A real GSTIN/ });
+    expect(item.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.getByText(REASON).closest("[hidden]"), "the reason shows before the tap").not.toBeNull();
+
+    fireEvent.click(item);
+    expect(item.getAttribute("aria-expanded")).toBe("true");
+    const reason = screen.getByText(REASON);
+    expect(reason.closest("[hidden]")).toBeNull();
+    expect(document.getElementById(item.getAttribute("aria-controls")!)!.contains(reason)).toBe(true);
+    expect(reason.closest("a")!.getAttribute("href")).toBe("/settings/property");
+  });
+
+  it("stays as it was on a wider screen: the reason shown, the row a link", async () => {
+    phone(false);
+    checklist();
+    const reason = await screen.findByText(REASON);
+    expect(reason.closest("a")!.getAttribute("href")).toBe("/settings/property");
+    expect(screen.queryByRole("button", { name: /A real GSTIN/ })).toBeNull();
+  });
+});
+
 describe("D17-37 - every Properties card shows the tax actually used", () => {
   const PROPERTY = {
     id: "5EL", name: "5 Elements Akkalkot", address: "Akkalkot", phone: "", email: "",

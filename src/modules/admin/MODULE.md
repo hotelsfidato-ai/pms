@@ -130,6 +130,9 @@ properties and people.
   tabs since 1 October, only what is missing; the Getting started tab on 30
   September; on inventory's Room types before). A row whose `to` starts
   "/settings" opens that tab; the rest open the hotel's own screen.
+  On a phone (under 640px, read with `matchMedia`) each row is one line,
+  a button with `aria-expanded`; a tap shows the reason, which links to the
+  fix (D27-223). Wider screens show the reasons, the row a link, as before.
 
 ---
 
