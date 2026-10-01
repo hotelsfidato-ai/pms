@@ -11,6 +11,49 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-01 · In-room dining from the menu (D27-224, D27-225; the in-stay plan, A)
+
+**Asked for:** a checked-in guest orders from the restaurant's menu on their own page. The order is a SUBMISSION; whoever rings the till accepts it on the Terminal (a room-service order, sent) or declines it with a reason the guest reads. The owner's answers (D27-224):
+- prices with "GST added on your bill";
+- charged to the room at delivery;
+- off while the restaurant or its day is closed;
+- no alcohol.
+The master's approvals Q1-Q6 (1 Oct):
+- the guest's price is kept, and Accept is refused, naming the dish, if it moved;
+- the waiter's pop-up, with no per-dish note;
+- one note for the order;
+- "Room 201" is the stay's room now;
+- the five conditions, checked again at Accept;
+- TILL accepts, and there is a bell.
+Built on step 0's kits (online-checkin MODULE.md rule 8). Branch `pos/room-dining-1oct` from cp6 `1befb5a`.
+**Shipped:**
+- Migration "in-room dining" (171 for now):
+  - `guest_food_orders` (RLS, checks);
+  - `app.guest_dining_outlet` (the five conditions);
+  - `app.guest_dish_price`, the one price rule: the first choice, plus the further ones, plus the sides, as the till prices it. It is null when the dish is off, taken off the card, alcohol, without a GST rate, or a choice does not belong;
+  - the four definers behind the code: `guest_menu`, `guest_food_order_make` (1 to 30 lines, 1 to 20 of each, three waiting at most, a note of 200 at most, each line priced here), `guest_food_orders_mine`, `guest_food_order_cancel`.
+- Server:
+  - `api/src/routes/guestDining.ts`, mounted with one line in `guestDoor.ts`.
+  - `till.ts`: the batch route's `guestOrderId`. The round is the stored basket, priced again; a moved price or a dish gone off refuses the Accept, naming it, and nothing is written. It opens a room_service order for the stay's room, with the note on the first dish, and sends it. The guest order is accepted only `where status = 'waiting'`, otherwise everything rolls back.
+  - `GET /till/guest-orders`, `POST /till/guest-orders/:id/decline`, with their roleGate lines (TILL_READ, TILL) pinned. The guest door's pinned writes gain the two new ones.
+  - `notifications.ts`: the bell, for whoever may ring the till.
+- Screens:
+  - online-checkin `RoomDining.tsx`, one line in `Behind`: the menu, a basket where the same dish joins one line, one note, the total with "GST added on your bill", the guest's orders with Take it back. It hides itself when there is nothing to show.
+  - `pos/components/GuestOrders.tsx` on the Terminal: "Room-service orders waiting", Accept and send, and Decline (asks why).
+  - `DishDialog`'s `guest` hides the per-dish note; pos/index.ts exports it and `MenuItem`; online-checkin's `data/guestPage.ts` exports `at` and `withUnlock` for the feature's data file.
+**Proved:**
+- Database: "room dining" 17/17, all 1,356 assertions. With the menu keyed on the link alone and no alcohol filter, 4 fail: OCI-5, another stay's unlock, no alcohol, a beer ordered.
+- API, one file at a time:
+  - `roomDining` 6; 5 of them fail on step 0's `till.ts` (accept, a second accept, a price changed, a dish off, a cancelled order).
+  - `roleGate` 65 (the guest door's list pinned), `notifications` 2, `guestDoor` 28, `till` 84, `tillBatch` 5.
+  - strip-check: 174 files load.
+- Web: `online-checkin/roomDining.test.tsx` 3 (the no-per-dish-note one fails on step 0's pop-up) and `pos/guestOrders.test.tsx` 2. pos + online-checkin + guards: 25 files, 184 passed. Both tsc clean.
+- **Opened, 1 October, on `fidato_s46` at 171** (migrated after the master's check for other builds). The pane was hidden for most of it, so the screens were read from the page, and the later taps were script clicks on the page's own buttons.
+  - The guest at 375 on a stay in room 201: the menu by section, a dash for dishes sold by their choices, no sideways scroll. Two real taps on Cold Coffee made one line of 2. Paneer Tikka's pop-up had no note section. Large + Extra hot, a note and Order: the total read ₹1,100 (2 x 160 + 280 + 500), then "Waiting for the restaurant · Take it back".
+  - The Terminal at 768 as the GM: "Room-service orders waiting · Room 201 · ₹1,100", the dishes and "Please knock softly". Accept and send opened order 20260825-7 for "Room 201": Cold Coffee 2 x 160, Veg Manchurian 280, Paneer Tikka (Large, Extra hot) 500, all sent (KOT 6). The guest order was accepted.
+  - The Kitchen at 1280: the three dishes under "ROOM 201 · 20260825-7".
+**Left open:** the guest page's screenshots (the pane was hidden; the page was read instead).
+
 ## 2026-10-01 · The kitchen has two buttons; Ready goes to the waiter (D27-221, D27-222)
 
 **Asked for:** the owner's D27-221, before the launch. The Kitchen screen has two buttons, Start and Ready, and a ready dish leaves it and shows as "Ready" to the waiter on Tables and the Terminal. D27-222 answered the plan's questions:

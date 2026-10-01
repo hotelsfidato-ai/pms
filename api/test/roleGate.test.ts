@@ -77,6 +77,9 @@ describe("every write the server mounts", () => {
       "POST /api/guest/:token/details",
       "POST /api/guest/:token/google",
       "POST /api/guest/:token/id-photo",
+      /* In-room dining (D27-224): behind the code, each its own definer. */
+      "POST /api/guest/:token/orders",
+      "POST /api/guest/:token/orders/:id/cancel",
       "POST /api/guest/:token/requests",
       "POST /api/guest/:token/verify",
       "POST /api/pos/tickets",
@@ -272,6 +275,9 @@ describe("the matrix the server asks", () => {
     /* Taken is the waiter's (D27-222), not the kitchen's. */
     expect(allows(rule(`POST ${H}/till/orders/:id/taken`), "pos")).toBe(true);
     expect(allows(rule(`POST ${H}/till/orders/:id/taken`), "chef")).toBe(false);
+    /* In-room dining (D27-224): whoever rings the till accepts and declines. */
+    expect(allows(rule(`POST ${H}/till/guest-orders/:id/decline`), "pos")).toBe(true);
+    expect(allows(rule(`POST ${H}/till/guest-orders/:id/decline`), "housekeeping")).toBe(false);
     expect(allows(rule(`POST ${H}/till/menu/items`), "kitchen_manager")).toBe(true);
     expect(allows(rule(`PUT ${H}/till/menu/items/:id/variations`), "kitchen_manager")).toBe(true);
     expect(allows(rule(`POST ${H}/till/orders`), "housekeeping")).toBe(false);

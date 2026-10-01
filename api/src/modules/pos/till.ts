@@ -4486,6 +4486,112 @@ async function fireKot(
    order back so the pad can replace its own arithmetic with the real
    figures.
    ══════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════
+   A GUEST'S ORDER, ACCEPTED (D27-224, D27-225; the in-stay plan, A)
+
+   The round is the stored basket, never the Terminal's copy of it. Each
+   line is priced again by the one rule the guest's order was priced by
+   (app.guest_dish_price): a dish no longer on the menu, or a price that
+   moved, refuses the Accept naming the dish, and the waiter declines with
+   the reason the guest reads - never more than the guest saw (Q1). The
+   restaurant must still be taking orders for that stay (Q5).
+   ══════════════════════════════════════════════════════════════════ */
+type GuestLine = {
+  itemId: string; qty: number; variationId: string | null;
+  moreChoiceIds: string[]; addonIds: string[]; name: string; unitPrice: number;
+};
+
+async function guestOrderRound(
+  client: Client, hotelId: string, id: string,
+): Promise<{ lines: LineInput[]; table: string } | { reason: string }> {
+  const { rows: g } = await client.query<{
+    reservation_id: string; basket: GuestLine[]; note: string | null; status: string;
+    open: boolean; room: string | null;
+  }>(
+    `select f.reservation_id::text, f.basket, f.note, f.status,
+            app.guest_dining_outlet(f.reservation_id) is not null as open,
+            (select r.number from room_assignments ra join rooms r on r.id = ra.room_id
+              where ra.reservation_id = f.reservation_id and ra.released_at is null
+              order by ra.from_date desc, ra.created_at desc limit 1) as room
+       from guest_food_orders f
+      where f.id::text = $1 and f.hotel_id = $2`,
+    [id, hotelId]);
+  const order = g[0];
+  if (!order) return { reason: "No such guest order." };
+  if (order.status !== "waiting") return { reason: `This guest order was already ${order.status}.` };
+  if (!order.open) {
+    return { reason: "The restaurant is not taking room orders now, or the guest has left. Decline it and say why." };
+  }
+
+  const lines: LineInput[] = [];
+  for (const [i, l] of order.basket.entries()) {
+    const { rows: p } = await client.query<{ unit_price: string | null }>(
+      "select unit_price::text from app.guest_dish_price($1, $2, $3, $4::uuid[], $5::uuid[])",
+      [hotelId, l.itemId, l.variationId, l.moreChoiceIds, l.addonIds]);
+    const now = p[0]?.unit_price ?? null;
+    if (now === null) return { reason: `${l.name} is not on the menu now. Decline it and say why.` };
+    if (Math.round(Number(now) * 100) !== Math.round(Number(l.unitPrice) * 100)) {
+      return { reason: `The price of ${l.name} has changed since the guest ordered. Decline it and say why.` };
+    }
+    lines.push({
+      itemId: l.itemId, qty: l.qty,
+      ...(l.variationId ? { variationId: l.variationId } : {}),
+      ...(l.moreChoiceIds.length ? { moreChoiceIds: l.moreChoiceIds } : {}),
+      ...(l.addonIds.length ? { addonIds: l.addonIds } : {}),
+      /* The guest's one note, on the first dish (Q3). */
+      ...(i === 0 && order.note ? { note: order.note } : {}),
+    });
+  }
+  return { lines, table: order.room ? `Room ${order.room}` : "Room service" };
+}
+
+/* The guest orders waiting for the restaurant: the room, what, the note. */
+till.get("/:code/till/guest-orders", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{
+      id: string; basket: GuestLine[]; note: string | null; created_at: string; room: string | null;
+    }>(
+      `select f.id::text, f.basket, f.note, f.created_at::text,
+              (select r.number from room_assignments ra join rooms r on r.id = ra.room_id
+                where ra.reservation_id = f.reservation_id and ra.released_at is null
+                order by ra.from_date desc, ra.created_at desc limit 1) as room
+         from guest_food_orders f
+        where f.hotel_id = $1 and f.status = 'waiting'
+        order by f.created_at`,
+      [hotelId]);
+    return {
+      orders: rows.map((r) => ({
+        id: r.id, room: r.room, note: r.note, createdAt: r.created_at,
+        lines: r.basket.map((l) => ({ name: l.name, qty: l.qty, unitPrice: Number(l.unitPrice) })),
+      })),
+    };
+  });
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+/* Declined, with the reason the guest reads on their page. */
+till.post("/:code/till/guest-orders/:id/decline", async (c) => {
+  const input = await c.req.json<{ reason?: unknown }>().catch(() => ({}) as { reason?: unknown });
+  const reason = typeof input.reason === "string" ? input.reason.trim() : "";
+  if (!reason || reason.length > 200) {
+    return c.json(refuse("Say why, in a line the guest will read."), 409);
+  }
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rowCount } = await client.query(
+      `update guest_food_orders
+          set status = 'declined', reason = $3, handled_by = $4, handled_at = now()
+        where id::text = $1 and hotel_id = $2 and status = 'waiting'`,
+      [c.req.param("id"), hotelId, reason, session.staffId]);
+    return rowCount ? { ok: true as const } : refuse("This guest order was already answered.");
+  });
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
 class LineRefused extends Error {
   /* ⚠ WRITTEN OUT LONGHAND, NOT AS PARAMETER PROPERTIES.
      `constructor(public readonly reason: string, ...)` is valid
@@ -4530,6 +4636,10 @@ till.post("/:code/till/orders/batch", async (c) => {
     /* The banquet function this order goes on (D17-21), chosen on the
        pad. Null takes an open order off its function; absent leaves it. */
     eventId?: string | null;
+    /* A guest's order from their own page (D27-224, D27-225): its stored
+       basket is the round, a room-service order for the stay's room, sent
+       at once; the guest order is accepted in this same transaction. */
+    guestOrderId?: string;
   };
   const input = await c.req.json<BatchBody>().catch(() => ({}) as BatchBody);
 
@@ -4538,14 +4648,16 @@ till.post("/:code/till/orders/batch", async (c) => {
     return c.json(refuse("Which function is this order for?"), 409);
   }
 
-  const lines = input.lines ?? [];
-  if (lines.length === 0) return c.json(refuse("There is nothing to send."), 409);
+  let lines = input.lines ?? [];
+  if (lines.length === 0 && !input.guestOrderId) {
+    return c.json(refuse("There is nothing to send."), 409);
+  }
   if (lines.length > 100) {
     /* Not a real order. A guard against a loop somewhere, not against a
        large table. */
     return c.json(refuse("That is more than a hundred lines."), 409);
   }
-  if (!input.outlet && !input.orderId) {
+  if (!input.outlet && !input.orderId && !input.guestOrderId) {
     return c.json(refuse("Which outlet is this order for?"), 409);
   }
 
@@ -4557,6 +4669,18 @@ till.post("/:code/till/orders/batch", async (c) => {
     let outletId: string;
     let businessDate: string;
     let opened = false;
+
+    if (input.guestOrderId) {
+      if (orderId) return refuse("A guest's order is a new room-service order.");
+      const round = await guestOrderRound(client, hotelId, input.guestOrderId);
+      if ("reason" in round) return refuse(round.reason);
+      lines = round.lines;
+      input.outlet = "REST";
+      input.table = round.table;
+      delete input.tableId;
+      input.orderType = "room_service";
+      input.send = true;
+    }
 
     /* The banquet service's rule, before anything is written (D17-21;
        MEMORY 243). The same rule as the header route's. */
@@ -4646,6 +4770,19 @@ till.post("/:code/till/orders/batch", async (c) => {
       kot = await fireKot(client, outletId, businessDate, orderId);
     }
 
+    /* Accepted only if it is still waiting: a second Accept, or a Decline
+       between the two, throws and takes this whole order back with it. */
+    if (input.guestOrderId) {
+      const { rowCount } = await client.query(
+        `update guest_food_orders
+            set status = 'accepted', pos_order_id = $2, handled_by = $3, handled_at = now()
+          where id = $1 and status = 'waiting'`,
+        [input.guestOrderId, orderId, session.staffId]);
+      if (!rowCount) {
+        throw new LineRefused("This guest order was already answered. Nothing was sent.", -1);
+      }
+    }
+
     return {
       ok: true as const,
       opened,
@@ -4656,6 +4793,7 @@ till.post("/:code/till/orders/batch", async (c) => {
     /* The throw rolled the transaction back, so nothing was written.
        Said with the dish's position, because "a variation is required"
        is not actionable when six dishes went up at once. */
+    if (error instanceof LineRefused && error.at < 0) return refuse(error.reason);
     if (error instanceof LineRefused) {
       return refuse(
         `Nothing was sent. Dish ${error.at + 1} could not be added: ` +

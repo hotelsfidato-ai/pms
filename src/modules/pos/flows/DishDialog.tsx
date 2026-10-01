@@ -30,7 +30,7 @@ import type { MenuItem } from "@/modules/pos/data/till";
    ══════════════════════════════════════════════════════════════════ */
 
 export function DishDialog({
-  item, open, onOpenChange, onAdd, busy,
+  item, open, onOpenChange, onAdd, busy, guest = false,
 }: {
   item: MenuItem | null;
   open: boolean;
@@ -40,6 +40,9 @@ export function DishDialog({
     variationId?: string, addonIds?: string[], moreChoiceIds?: string[],
   ) => void;
   busy?: boolean;
+  /** The guest's own page (D27-224): no note per dish - the guest's one
+      note is for the whole order (the door's rule: the only typing is a note). */
+  guest?: boolean;
 }) {
   /* One choice per type: type number → the choice's id. */
   const [picked, setPicked] = useState<Record<number, string>>({});
@@ -246,7 +249,7 @@ export function DishDialog({
             </section>
           )}
 
-          <section>
+          {!guest && (<section>
             <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-3">
               Note for the kitchen
             </h4>
@@ -275,7 +278,7 @@ export function DishDialog({
               onChange={(e) => setNote(e.target.value)}
               placeholder="Anything else"
             />
-          </section>
+          </section>)}
 
           <section className="flex items-center gap-3">
             <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500">

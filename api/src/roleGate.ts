@@ -362,6 +362,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders/batch`]: TILL,
   [`POST ${H}/till/orders/:id/kot`]: TILL,
   [`POST ${H}/till/orders/:id/taken`]: TILL,  // the waiter's Taken, D27-222
+  [`POST ${H}/till/guest-orders/:id/decline`]: TILL,  // in-room dining, D27-224
   [`POST ${H}/till/orders/:id/kot/:no/printed`]: KOT_PRINT,
   [`POST ${H}/till/kot-station/:outlet/poll`]: KOT_PRINT,
   [`POST ${H}/till/kot-station/:outlet`]: KOT_SWITCH,
@@ -700,6 +701,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/till/menu/addon-groups`]: MENU_READ,
   [`GET ${H}/till/promotions`]: MENU_READ,
   [`GET ${H}/till/orders`]: TILL_READ,
+  [`GET ${H}/till/guest-orders`]: TILL_READ,  // in-room dining, D27-224
   [`GET ${H}/till/orders/:id`]: TILL_READ,
   /* The docket and the KOT printer: the kitchen too, which prints them. */
   [`GET ${H}/till/orders/:id/kot/:no`]: KOT_READ,

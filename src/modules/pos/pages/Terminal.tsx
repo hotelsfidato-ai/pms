@@ -18,6 +18,7 @@ import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { KotStatus } from "@/modules/pos/components/KotStation";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
+import { GuestOrders } from "@/modules/pos/components/GuestOrders";
 import { AskDialog, SENT_STRIKE, roomAsk, type Ask } from "@/modules/pos/components/AskDialog";
 import { useDocumentTitle } from "@/lib/documentTitle";
 
@@ -468,6 +469,9 @@ export default function TerminalPage() {
         <div className="@container flex-1 min-w-0 overflow-y-auto p-4">
           {!orderId ? (
             <div className="max-w-md mx-auto pt-10">
+              {/* Guests' room-service orders first: they are waiting on
+                  somebody (D27-224). Accepted, the order opens here. */}
+              <GuestOrders hotelId={hotelId} onAccepted={(id) => { setOrderId(id); refresh(); }} />
               <p className="text-2xs uppercase tracking-wide text-grey-500 mb-2">
                 Start an order
               </p>

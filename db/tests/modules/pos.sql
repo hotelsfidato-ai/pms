@@ -308,3 +308,132 @@ begin
   select count(*) into n from pos_outlets where code = 'VTYPE';
   perform test.ok('pos variation types', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+-- =============================================================================
+-- IN-ROOM DINING: THE GUEST'S SIDE (D27-224, D27-225; the in-stay plan, A)
+-- =============================================================================
+-- The guest's page reaches the menu and its own orders only through four
+-- functions behind the code, so each is called HERE, with the link's hash and
+-- no unlock, and with another stay's unlock (root MEMORY 318, the OCI-5 test).
+-- Accept and Decline are the till's (api/test/modules/pos/roomDining.test.ts).
+-- Builds a property of its own and removes it.
+-- =============================================================================
+do $$
+declare
+  h uuid; guest uuid; stay uuid; stay2 uuid; booked uuid; r101 uuid; r102 uuid;
+  link uuid; link2 uuid; link_booked uuid; outlet uuid; food uuid; bar uuid;
+  dal uuid; beer uuid; staff_id uuid; n int; o uuid; ok boolean; p numeric;
+begin
+  h := app.provision_property_unchecked('GDN', 'Dining Test', 'Nowhere');
+  perform app.bulk_create_rooms(h, 'STD', 1::smallint, 101, 102);
+  select id into r101 from rooms where hotel_id = h and number = '101';
+  select id into r102 from rooms where hotel_id = h and number = '102';
+  select id into staff_id from staff where email = 'agra@fidato.in';
+
+  insert into guests (full_name) values ('Dining Guest') returning id into guest;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+  values (h, app.next_reference(h), guest, (select id from room_types where hotel_id = h limit 1),
+          current_date, current_date + 2, 2000, 'checked_in') returning id into stay;
+  insert into room_assignments (hotel_id, reservation_id, room_id, from_date, to_date, reason)
+  values (h, stay, r101, current_date, current_date + 2, 'arrival');
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+  values (h, app.next_reference(h), guest, (select id from room_types where hotel_id = h limit 1),
+          current_date, current_date + 2, 2000, 'checked_in') returning id into stay2;
+  insert into room_assignments (hotel_id, reservation_id, room_id, from_date, to_date, reason)
+  values (h, stay2, r102, current_date, current_date + 2, 'arrival');
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+  values (h, app.next_reference(h), guest, (select id from room_types where hotel_id = h limit 1),
+          current_date + 5, current_date + 6, 2000, 'confirmed') returning id into booked;
+
+  insert into guest_links (hotel_id, reservation_id, token_hash, expires_at)
+  values (h, stay, 'gdn-link', now() + interval '1 day') returning id into link;
+  insert into guest_unlocks (link_id, reservation_id, unlock_hash, expires_at)
+  values (link, stay, 'gdn-unlock', now() + interval '1 hour');
+  insert into guest_links (hotel_id, reservation_id, token_hash, expires_at)
+  values (h, stay2, 'gdn-link-2', now() + interval '1 day') returning id into link2;
+  insert into guest_unlocks (link_id, reservation_id, unlock_hash, expires_at)
+  values (link2, stay2, 'gdn-unlock-2', now() + interval '1 hour');
+  insert into guest_links (hotel_id, reservation_id, token_hash, expires_at)
+  values (h, booked, 'gdn-link-booked', now() + interval '1 day') returning id into link_booked;
+  insert into guest_unlocks (link_id, reservation_id, unlock_hash, expires_at)
+  values (link_booked, booked, 'gdn-unlock-booked', now() + interval '1 hour');
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (h, 'REST', 'Dining Test Restaurant', 'food', staff_id) returning id into outlet;
+  insert into pos_menu_categories (hotel_id, name) values (h, 'Food') returning id into food;
+  insert into pos_menu_categories (hotel_id, name, tax_kind) values (h, 'Bar', 'alcohol') returning id into bar;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (h, food, 'Dining Dal', 260, 5) returning id into dal;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (h, bar, 'Dining Beer', 300, 18) returning id into beer;
+
+  -- ---------- the menu, behind the code only ----------------------------------
+  select count(*) into n from app.guest_menu('gdn-link', null);
+  perform test.ok('room dining', 'the link alone shows no menu (OCI-5)', n = 0, n || ' dishes');
+  select count(*) into n from app.guest_menu('gdn-link', 'gdn-unlock-2');
+  perform test.ok('room dining', 'another stay''s unlock shows no menu', n = 0, n || ' dishes');
+  select count(*) into n from app.guest_menu('gdn-link-booked', 'gdn-unlock-booked');
+  perform test.ok('room dining', 'a guest not checked in sees no menu', n = 0, n || ' dishes');
+  select count(*) into n from app.guest_menu('gdn-link', 'gdn-unlock') m
+   where m.item->>'name' = 'Dining Dal';
+  perform test.ok('room dining', 'a checked-in guest sees the dal', n = 1, n || ' dals');
+  select count(*) into n from app.guest_menu('gdn-link', 'gdn-unlock') m
+   where m.item->>'name' = 'Dining Beer';
+  perform test.ok('room dining', 'and no alcohol (the owner)', n = 0, n || ' beers');
+
+  -- ---------- the order --------------------------------------------------------
+  o := app.guest_food_order_make('gdn-link', null,
+         jsonb_build_array(jsonb_build_object('itemId', dal, 'qty', 1)), null);
+  perform test.ok('room dining', 'the link alone orders nothing', o is null, 'an order was made');
+  o := app.guest_food_order_make('gdn-link', 'gdn-unlock',
+         jsonb_build_array(jsonb_build_object('itemId', beer, 'qty', 1)), null);
+  perform test.ok('room dining', 'a beer cannot be ordered', o is null, 'it was');
+  o := app.guest_food_order_make('gdn-link', 'gdn-unlock',
+         jsonb_build_array(jsonb_build_object('itemId', dal, 'qty', 21)), null);
+  perform test.ok('room dining', 'twenty of a dish is the most', o is null, 'twenty-one were ordered');
+  o := app.guest_food_order_make('gdn-link', 'gdn-unlock',
+         jsonb_build_array(jsonb_build_object('itemId', dal, 'qty', 2)), ' No onion ');
+  select (basket->0->>'unitPrice')::numeric into p from guest_food_orders where id = o;
+  perform test.ok('room dining', 'the guest''s order keeps the price they saw', p = 260, coalesce(p::text, 'none'));
+  select count(*) into n from app.guest_food_orders_mine('gdn-link-2', 'gdn-unlock-2');
+  perform test.ok('room dining', 'another stay does not see it', n = 0, n || ' seen');
+
+  perform app.guest_food_order_make('gdn-link', 'gdn-unlock',
+            jsonb_build_array(jsonb_build_object('itemId', dal, 'qty', 1)), null);
+  perform app.guest_food_order_make('gdn-link', 'gdn-unlock',
+            jsonb_build_array(jsonb_build_object('itemId', dal, 'qty', 1)), null);
+  o := app.guest_food_order_make('gdn-link', 'gdn-unlock',
+         jsonb_build_array(jsonb_build_object('itemId', dal, 'qty', 1)), null);
+  perform test.ok('room dining', 'three waiting is the most', o is null, 'a fourth was made');
+
+  -- ---------- taken back, only by the guest and only while waiting --------------
+  select id into o from guest_food_orders where reservation_id = stay order by created_at limit 1;
+  ok := app.guest_food_order_cancel('gdn-link-2', 'gdn-unlock-2', o);
+  perform test.ok('room dining', 'another stay cannot take it back', not ok, 'it did');
+  ok := app.guest_food_order_cancel('gdn-link', 'gdn-unlock', o);
+  perform test.ok('room dining', 'the guest takes it back while it waits', ok, 'refused');
+  ok := app.guest_food_order_cancel('gdn-link', 'gdn-unlock', o);
+  perform test.ok('room dining', 'but not twice', not ok, 'cancelled again');
+
+  -- ---------- off, or the restaurant closed ---------------------------------------
+  update pos_menu_items set off_until = now() + interval '1 hour' where id = dal;
+  select unit_price into p from app.guest_dish_price(h, dal, null, '{}', '{}');
+  perform test.ok('room dining', 'a dish off is not priced, so not accepted', p is null, coalesce(p::text, ''));
+  update pos_menu_items set off_until = null where id = dal;
+  update pos_outlets set closed_until = now() + interval '1 hour' where id = outlet;
+  select count(*) into n from app.guest_menu('gdn-link', 'gdn-unlock');
+  perform test.ok('room dining', 'a restaurant closed for a while shows no menu', n = 0, n || ' dishes');
+
+  -- ---------- clean up -----------------------------------------------------------
+  delete from guest_food_orders where hotel_id = h;
+  delete from guest_unlocks where link_id in (link, link2, link_booked);
+  delete from guest_links where id in (link, link2, link_booked);
+  delete from pos_menu_items where hotel_id = h;
+  delete from pos_menu_categories where hotel_id = h;
+  delete from pos_outlets where id = outlet;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+  select count(*) into n from hotels where code = 'GDN';
+  perform test.ok('room dining', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;

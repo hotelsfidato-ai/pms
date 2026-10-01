@@ -1,3 +1,4 @@
+import { guestDining } from "./guestDining.ts";
 import { Hono } from "hono";
 import { OAuth2Client } from "google-auth-library";
 import { randomBytes, timingSafeEqual } from "node:crypto";
@@ -1222,6 +1223,7 @@ guestLinks.post("/:code/online-checkin/cards", async (c) => {
    and is mounted here: `guestDoor.route("/", itsDoor)` for the guest's side,
    `guestLinks.route("/", itsDesk)` for the desk's. Nobody widens
    `app.guest_link_open` (rule 8). */
+guestDoor.route("/", guestDining);   // in-room dining (D27-224, D27-225)
 
 /* Exported for the test that proves a stolen token is not a key to anything
    else: the hash the door computes is the hash the database holds. */

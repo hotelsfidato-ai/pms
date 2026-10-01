@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import RoomDining from "@/modules/online-checkin/RoomDining";
 import { useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
@@ -385,6 +386,7 @@ function Behind(
         <RequestsSection token={token} offers={view.offers} onUnlockGone={onUnlockGone} />
       )}
       <MessageTheDesk token={token} onUnlockGone={onUnlockGone} />
+      <RoomDining token={token} onUnlockGone={onUnlockGone} />
     </>
   );
 }
