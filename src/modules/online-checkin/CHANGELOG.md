@@ -12,6 +12,87 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-10-01 · The guest's in-stay page: step 0, the desk replies, the hotel's logo (D27-223 to D27-225)
+
+Branch `guest/in-stay-1oct`, from cp6 1dc9c483.
+
+**Asked for** (the master, D27-225; the launch waits for it):
+- Step 0 first: the door's kit, so each in-stay feature has its own route file and section file.
+- B: two-way messages (D27-224).
+- The hotel's logo on the guest's page (D27-223).
+
+**Shipped:**
+- **Step 0** (360d110e, reported at once). No behaviour change.
+  - `api/src/routes/guestDoorKit.ts` holds the door's helpers.
+  - `guestKit.ts` holds the page's.
+  - Each feature mounts with one line at the foot of `guestDoor.ts`, and adds one line in `Behind`.
+  - MODULE.md rule 8: nobody replaces `app.guest_link_open` again.
+- **B, the desk replies:**
+  - Migration 173 (written as 172): `guest_desk_replies` and `app.guest_desk_thread`.
+  - `guestMessages.ts`:
+    - the guest's `GET /:token/messages`;
+    - the desk's `POST …/messages/:reservationId/reply`, for DESK_ROLES. A reply marks the stay's unread messages handled. It is refused once the guest has checked out.
+  - The guest's section, `MessageTheDesk.tsx`, moved out of GuestPage:
+    - their messages, and the replies as "Front desk";
+    - read again every 30 s while the page is open, and not while it is hidden;
+    - no WhatsApp.
+  - The desk's list, on a booking's Guest messages:
+    - the replies, with who and when;
+    - one reply box, or "Replies stop at check-out".
+  - On the property's list, each unread message has "Reply", to its booking.
+- **The logo:**
+  - Migration 174 (written as 173), `app.guest_logo`: the link's hotel's own logo, else the group's (the voucher's rule; the staff reader needs a person, so the door has its own).
+  - `GET /api/guest/:token/logo` (`guestLogo.ts`) answers the picture only:
+    - `private, max-age=3600`;
+    - a tag per picture, the same for every link to the hotel;
+    - a 304 only once the link opens;
+    - an SVG is served under a CSP that runs nothing;
+    - the one sentence for a dead link or no logo.
+  - It is drawn above the hotel's name, before the code too. It is decorative, and nothing is drawn where it does not load.
+
+**Found:** OCI-12. The database guard test asked about an empty stay, so the thread function, broken to take the link alone, still passed. The test now fills the stay first.
+
+**Proved:**
+- Every new test was seen failing before its code:
+  - B's API, 10;
+  - the logo's API, 3;
+  - the logo's screen, 1.
+- Then each rule was broken on purpose and seen caught:
+  - the thread taking the link alone;
+  - the thread being the hotel's rather than the stay's (the next guest saw "Changeover:");
+  - a reply after check-out;
+  - a reply leaving messages unread;
+  - no 30 s re-read;
+  - a reply box after check-out;
+  - no Reply link;
+  - the group's logo before the hotel's;
+  - a tag answered before the link is asked.
+- API: `guestDoor` 31, `guestDoorBehindTheCode` 37, `guestIdPhoto` 29, `roleGate` 66, so 163 of 163.
+- Web: online check-in and guest messaging, 70 of 70.
+- `npx tsc -b`, the API typecheck and strip-check (175 files) are clean.
+- `db/tests/rerun.sh`: all 172 migration files are re-runnable.
+- `db/tests/run.sh`: 1,339 of 1,339.
+
+**Seen on screen at 375 px** (fidato_s38 migrated with the master's yes, alone; the copy's servers on 8909/5309):
+- The guest's page shows the logo above the hotel's name before the code (160 × 40, at the page's 20 px edge).
+- Unlocked with the development code, the guest sent a message. Reception's Guest messages for the booking showed it with the reply box.
+- After the reply, the message read "Handled by Test Reception". The guest's page showed "Front desk", the words and the day; the thread's answer carried no name.
+- With the booking set to checked out, there was no box, and "Replies stop at check-out" showed.
+- On the property's list, a new message had "Reply" to its booking.
+- No page scrolled sideways.
+- The pane was hidden, so the rest was read from the page, not photographed.
+- The test rows, the made-up logo and the link were removed from s38 afterwards.
+
+**Merged:** cp6 5fc3b20a (the one-tap choices, the checklist fold). GuestPage's two new imports were kept side by side. The tiles' test now answers the thread the page asks for. MODULE.md notes the tiles.
+
+**Left open:**
+- Renumbered by the master at merge: 172 -> 173, 173 -> 174 (171 dining and 172 table booking went first).
+- The master's merge lines: two mounts in guestDoor.ts, one `roleGate.ts` line, one line in `Behind`.
+- The master's answer on the three choices, for the owner, who may change them:
+  - only check-out refuses a reply;
+  - the day only on a reply;
+  - the logo shown before the code, cached for an hour.
+
 ## 2026-10-01 · A kept ID photo is never replaced (OCI-11, the pre-launch review)
 
 Branch `online-checkin/kept-photo-1oct`, from cp6 7ada2983.

@@ -72,6 +72,7 @@ const guestDoor = (photo: unknown, more: Record<string, Answer> = {}) => ({
   [`${OPEN}/id-photo`]: () => photo,
   [`${OPEN}/bill`]: () => { throw new apiModule.ApiError(409, "not yet"); },
   [`${OPEN}/requests`]: () => ({ offers: [], requests: [] }),
+  [`${OPEN}/messages`]: () => ({ thread: [] }),
   ...more,
 });
 const aPhoto = (name = "IMG_0001.jpg") => new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3])], name, { type: "image/jpeg" });

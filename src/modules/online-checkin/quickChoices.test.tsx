@@ -33,6 +33,7 @@ function serve(offers: string[], post: (body: unknown) => Promise<unknown> | unk
     const path = url.split("?")[0]!;
     if (path === OPEN) return { ...VIEW, offers } as never;
     if (path === `${OPEN}/details`) return { sent: null } as never;
+    if (path === `${OPEN}/messages`) return { thread: [] } as never;   // the desk thread (D27-224)
     if (path === `${OPEN}/requests`) {
       return (init?.method === "POST" ? await post(JSON.parse(String(init.body)))
         : { offers, requests: [] }) as never;

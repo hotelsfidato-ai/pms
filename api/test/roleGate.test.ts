@@ -350,6 +350,12 @@ describe("the matrix the server asks", () => {
     expect(READ_RULES[`GET ${H}/requests`]?.kind).toBe("own");
   });
 
+  it("D27-224: the desk's reply to a guest is the route's own, for the desk's roles", () => {
+    const r = rule(`POST ${H}/online-checkin/messages/:reservationId/reply`);
+    expect(r.kind).toBe("own");
+    expect(JSON.stringify(r)).toContain("DESK_ROLES");
+  });
+
   it("says who may, in a sentence a person reads", () => {
     for (const [key, r] of Object.entries(WRITE_RULES)) {
       if (r.kind !== "grant") continue;

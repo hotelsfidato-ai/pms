@@ -16,6 +16,8 @@ import {
   put as putPhotos, remove as removePhotos,
 } from "./idPhotos.ts";
 import { guestTables } from "./guestTables.ts";
+import { messagesDesk, messagesDoor } from "./guestMessages.ts";
+import { logoDoor } from "./guestLogo.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S OWN DOOR — one private page per booking (D18-9, D18-10, D18-13)
@@ -1149,12 +1151,13 @@ guestLinks.get("/:code/online-checkin/messages", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await deskAt(client, c.req.param("code"));
     if (!hotelId) return null;
-    if (reservation !== null && !A_UUID.test(reservation)) return { messages: [] };
+    if (reservation !== null && !A_UUID.test(reservation)) return { messages: [], replies: [], canReply: false };
     const { rows } = await client.query<{
       id: string; what: string; created_at: string; guest: string; reference: string;
-      handled_by: string | null; handled_at: string | null;
+      reservation_id: string; handled_by: string | null; handled_at: string | null;
     }>(
       `select q.id::text, q.what, q.created_at, g.full_name as guest, r.reference,
+              q.reservation_id::text,
               s.full_name as handled_by, q.handled_at
          from guest_requests q
          join reservations r on r.id = q.reservation_id
@@ -1167,13 +1170,32 @@ guestLinks.get("/:code/online-checkin/messages", async (c) => {
     return {
       messages: rows.map((m) => ({
         id: m.id, what: m.what, createdAt: m.created_at, guest: m.guest,
-        reference: m.reference, handledBy: m.handled_by, handledAt: m.handled_at,
+        reference: m.reference, reservationId: m.reservation_id,
+        handledBy: m.handled_by, handledAt: m.handled_at,
       })),
+      ...(await repliesTo(client, hotelId, reservation)),
     };
   });
   if (!body) return c.json({ error: DESK_REFUSED }, 403);
   return c.json(body);
 });
+
+/* One booking's replies from the desk, who sent each, and whether it may
+   still reply - none once the guest has checked out (D27-224). */
+async function repliesTo(client: Db, hotelId: string, reservation: string | null) {
+  if (reservation === null) return { replies: [], canReply: false };
+  const { rows } = await client.query<{ id: string; what: string; sent_at: string; sent_by: string | null }>(
+    `select d.id::text, d.what, d.sent_at, s.full_name as sent_by
+       from guest_desk_replies d left join staff s on s.id = d.sent_by
+      where d.hotel_id = $1 and d.reservation_id = $2
+      order by d.sent_at desc`, [hotelId, reservation]);
+  const { rows: [booking] } = await client.query<{ status: string }>(
+    "select status from reservations where id = $1 and hotel_id = $2", [reservation, hotelId]);
+  return {
+    replies: rows.map((d) => ({ id: d.id, what: d.what, sentAt: d.sent_at, sentBy: d.sent_by })),
+    canReply: !!booking && booking.status !== "checked_out",
+  };
+}
 
 /* ROOM CARDS (D21-7, D21-16, D21-62). A card's token is shown ONCE, here, to
    be printed - only its hash is kept - so printing is always making: a new
@@ -1226,6 +1248,9 @@ guestLinks.post("/:code/online-checkin/cards", async (c) => {
    `app.guest_link_open` (rule 8). */
 guestDoor.route("/", guestDining);   // in-room dining (D27-224, D27-225)
 guestDoor.route("/", guestTables);   // a table at the restaurant (D27-224)
+guestDoor.route("/", messagesDoor);      // messages with the desk, both ways (D27-224)
+guestLinks.route("/", messagesDesk);
+guestDoor.route("/", logoDoor);          // the hotel's logo, else the group's (D27-223)
 
 /* Exported for the test that proves a stolen token is not a key to anything
    else: the hash the door computes is the hash the database holds. */

@@ -172,12 +172,26 @@ Coming soon page and its address are gone.
   titled "Interim bill", with "Pay at the desk before you leave"; and a spa or
   laundry request **only where the hotel has
   that module switched on (D21-63)** — 5 Elements has neither.
+- **One-tap choices (D27-224, D27-225; guest services' `QuickChoices.tsx`)** -
+  while checked in, "Ask for something" shows tiles first (Housekeeping:
+  water, towels, toiletries with a count, Clean my room; Something broken:
+  AC, plumbing, power/lights, TV/Wi-Fi), each the same request the text box
+  sends; the text box is behind "Something else".
 - **"Message the front desk" (D23-14)** - always there behind the code: the
   guest types anything (500 characters at most), "Send to the front desk",
   and "Sent. The front desk will see it." It is a request of kind `desk`
   through the same door and the same limits as a spa or laundry request (the
   owner, 24 September: as built - at most ten open at once for the stay,
   shared with those requests; the door's 30 opens a minute).
+  **Under it, the conversation (D27-224):** what they sent, each Sent or
+  Handled, and the desk's replies as **"Front desk"** - never a name, newest
+  first, the day only. Read again every 30 seconds while the page is open,
+  and not while it is hidden; there is no WhatsApp "the desk replied". Its
+  own file, `MessageTheDesk.tsx`.
+- **The hotel's logo (D27-223)** - above the hotel's name, before the code
+  too: the hotel's own, else the group's, as an `<img>` on the door's
+  `/logo`. Decorative (`alt=""`: the name is printed under it); where there
+  is none, or it does not load, nothing is drawn.
 - **"A table at the restaurant" (D27-224)** - the POS lane's, by rule 8:
   `TableBooking.tsx`, `api/src/routes/guestTables.ts`, the definers
   `app.guest_table_*` (172). Any night of the stay, a slot the restaurant
@@ -218,6 +232,13 @@ handled ones with who and when; on the property's, every booking's unread
 ones - with an unread count and "Mark handled". The guest's words are a text
 node, never HTML. Only `DESK_ROLES` are shown it. Guest messages is in
 reception's menu for this (the owner, 24 September).
+**Replies (D27-224):** on a booking's Guest messages, its messages and the
+desk's replies in one list, newest first ("Reply from the front desk", who
+and when), and one box, "Reply to the guest" - it says the guest sees it as
+"Front desk" and that nothing goes on WhatsApp. A reply marks the booking's
+unread messages handled. Once the guest has checked out there is no box:
+"This guest has checked out. Replies stop at check-out." On the property's
+list each unread message has "Reply", to its booking's list.
 
 ## The door (`api/src/routes/guestDoor.ts`)
 
@@ -235,7 +256,10 @@ reception's menu for this (the owner, 24 September).
 | POST | `/api/hotels/:code/online-checkin/submissions/:id/confirm` | staff | write the details to `guest_documents`, under the clerk |
 | POST | `/api/hotels/:code/online-checkin/submissions/:id/set-aside` | staff | not right: nothing written |
 | POST | `/api/hotels/:code/online-checkin/requests/:id` | staff | `done` or `declined`; a message to the desk is marked handled with `done` |
-| GET | `/api/hotels/:code/online-checkin/messages` | staff | messages to the desk: one booking's (`?reservation=`, handled ones too) or every booking's unread |
+| GET | `/api/hotels/:code/online-checkin/messages` | staff | messages to the desk: one booking's (`?reservation=`, handled ones too, with the desk's `replies` and `canReply`) or every booking's unread; each with its `reservationId` |
+| GET | `/api/guest/:token/messages` | **refused** | the guest's thread (D27-224, `guestMessages.ts`): their messages and the desk's replies, newest first; a reply is `from: "desk"`, never a name |
+| POST | `/api/hotels/:code/online-checkin/messages/:reservationId/reply` | staff | the desk replies (D27-224, `guestMessages.ts`): 1 to 500 characters; marks the stay's unread messages handled; refused once the guest has checked out |
+| GET | `/api/guest/:token/logo` | answers | the hotel's logo, else the group's (D27-223, `guestLogo.ts`): the picture only, `private, max-age=3600`, a tag per picture (304 for it, once the link opens); no logo or a dead link: the one sentence |
 | POST | `/api/hotels/:code/online-checkin/rooms/:roomId/card` | staff | a new card for a room; the old one dies |
 | POST | `/api/hotels/:code/online-checkin/cards` | staff | a new card for every room |
 | GET | `/api/guest/:token/id-photo` | **refused** | whether a photo is there and since when, or that the desk removed it and why; whether the hotel takes them. Never the image |
@@ -248,7 +272,17 @@ reception's menu for this (the owner, 24 September).
 Staff routes are for owner, admin, GM, hotel manager and reception
 (`DESK_ROLES`); anybody else is refused with a sentence naming who may.
 
-## Database (migrations 114, 121, 132, 158 and 167)
+## Database (migrations 114, 121, 132, 158, 167, 172 (table booking), 173 and 174)
+
+**173 (1 October, D27-224):** `guest_desk_replies` (the
+stay, the words 1-500, who, when; RLS by hotel; the desk inserts under its
+own session) and `app.guest_desk_thread(text, text)` - the guest's messages
+and the replies for the stay `app.guest_unlocked` reaches. **174 (D27-223;
+1 October):** `app.guest_logo(text)` - the link's hotel's
+`hotel_logos` row, else `group_settings`' logo: type, bytes and a tag. The
+staff reader (`groupSettings.ts`) needs a person's session, so the door has
+its own, the same coalesce. It takes the token's hash only: the logo is the
+hotel's, not the stay's.
 
 **167 (30 September, D27-207):** all new functions, nothing earlier changed.
 `app.guest_email_code_make(text)` (158's code, to the stay's email; no email

@@ -230,6 +230,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/online-checkin/requests/:id`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`POST ${H}/online-checkin/rooms/:roomId/card`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`POST ${H}/online-checkin/cards`]: own("routes/guestDoor.ts: DESK_ROLES"),
+  /* The desk's reply to a guest's message (D27-224). */
+  [`POST ${H}/online-checkin/messages/:reservationId/reply`]: own("routes/guestMessages.ts: DESK_ROLES"),
   /* A guest's ID photo (D27-207 to D27-212): removed by the desk while its
      details wait, by the owner, Admin or GM once kept; added at check-in by
      the desk. Asked in the route, on every call. */

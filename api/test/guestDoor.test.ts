@@ -40,6 +40,7 @@ let guestId: string;
 let link: string;         // the token itself, as the guest would hold it
 
 const TAG = "GUESTDOOR";
+const NOTHING = "This link is not usable. Ask the desk for a new one.";
 
 const asStaff = (who: string, path: string, method = "GET", body?: unknown) =>
   app.request(`/api/hotels${path}`, {
@@ -210,6 +211,105 @@ describe("what the link shows before the guest has proved who they are", () => {
     const one = (await (await asGuest(`/${link}`)).json()) as { booking: { reference: string } };
     const two = (await (await asGuest(`/${second}`)).json()) as { booking: { reference: string } };
     expect(one.booking.reference).not.toBe(two.booking.reference);
+  });
+});
+
+/* ── The hotel's logo on the guest's page (D27-223) ────────────────────
+   The hotel's own, else the group's - the picture and nothing else. It is
+   the hotel's, not the stay's, so it is shown before the code like the
+   hotel's name; a link that does not open gets the door's one sentence. */
+
+describe("the hotel's logo on the guest's page (D27-223)", () => {
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+  const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>');
+  let hotelId: string;
+  let groupWas: { logo_type: string | null; logo: Buffer | null } | undefined;
+  let hotelWas: { logo_type: string; logo: Buffer } | undefined;
+
+  const logoOf = (token: string, headers: Record<string, string> = {}) =>
+    app.request(`/api/guest/${token}/logo`, { headers });
+  const setGroup = (type: string | null, logo: Buffer | null) => sql(
+    `insert into group_settings (id, logo_type, logo) values (1, $1, $2)
+     on conflict (id) do update set logo_type = $1, logo = $2`, [type, logo]);
+  const setHotel = async (type: string | null, logo: Buffer | null) => {
+    await sql("delete from hotel_logos where hotel_id = $1", [hotelId]);
+    if (type) await sql("insert into hotel_logos (hotel_id, logo_type, logo) values ($1, $2, $3)", [hotelId, type, logo]);
+  };
+
+  beforeAll(async () => {
+    hotelId = (await sql("select id::text as id from hotels where code = '5EL'")).rows[0].id;
+    groupWas = (await sql("select logo_type, logo from group_settings where id = 1")).rows[0];
+    hotelWas = (await sql("select logo_type, logo from hotel_logos where hotel_id = $1", [hotelId])).rows[0];
+  });
+  afterAll(async () => {
+    if (groupWas) await setGroup(groupWas.logo_type, groupWas.logo);
+    else await sql("delete from group_settings where id = 1");
+    await setHotel(hotelWas?.logo_type ?? null, hotelWas?.logo ?? null);
+  });
+
+  it("is the hotel's own where it has one, else the group's, and the picture only", async () => {
+    await setGroup("image/png", PNG);
+    await setHotel("image/svg+xml", SVG);
+    const own = await logoOf(link);
+    expect(own.status, await own.clone().text()).toBe(200);
+    expect(own.headers.get("content-type")).toBe("image/svg+xml");
+    expect(Buffer.from(await own.arrayBuffer()).equals(SVG), "the hotel's own, byte for byte").toBe(true);
+    expect(own.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(own.headers.get("content-security-policy"), "an SVG opened on its own runs nothing")
+      .toContain("default-src 'none'");
+
+    await setHotel(null, null);
+    const group = await logoOf(link);
+    expect(group.status).toBe(200);
+    expect(group.headers.get("content-type")).toBe("image/png");
+    expect(Buffer.from(await group.arrayBuffer()).equals(PNG), "else the group's").toBe(true);
+  });
+
+  it("says the door's one sentence to a link that does not open, and where there is no logo", async () => {
+    await setGroup("image/png", PNG);
+    const never = await logoOf("n".repeat(43));
+    expect(never.status).toBe(404);
+    expect(((await never.json()) as { error: string }).error).toBe(NOTHING);
+
+    await sql("update guest_links set revoked_at = now() where reservation_id = $1", [stayId]);
+    try {
+      const revoked = await logoOf(link);
+      expect(revoked.status).toBe(404);
+      expect(((await revoked.json()) as { error: string }).error).toBe(NOTHING);
+    } finally {
+      await sql("update guest_links set revoked_at = null where reservation_id = $1", [stayId]);
+    }
+
+    await setGroup(null, null);
+    await setHotel(null, null);
+    const none = await logoOf(link);
+    expect(none.status).toBe(404);
+    expect(((await none.json()) as { error: string }).error).toBe(NOTHING);
+  });
+
+  it("is cached per hotel: one tag for every link to it, a 304 for that tag, and a dead link still refused", async () => {
+    await setGroup(null, null);
+    await setHotel("image/png", PNG);
+    const made = await asStaff(ownerStaffId, `/5EL/stays/${otherStayId}/guest-link`, "POST", {});
+    const second = tokenOf(((await made.json()) as { link: string }).link);
+
+    const one = await logoOf(link);
+    const two = await logoOf(second);
+    const tag = one.headers.get("etag");
+    expect(tag, "a tag the browser can ask with").toBeTruthy();
+    expect(two.headers.get("etag"), "the same picture, the same tag, whichever link").toBe(tag);
+    expect(one.headers.get("cache-control")).toMatch(/^private, max-age=\d+$/);
+
+    const again = await logoOf(link, { "if-none-match": tag! });
+    expect(again.status).toBe(304);
+    expect(await again.text()).toBe("");
+
+    await sql("update guest_links set revoked_at = now() where reservation_id = $1", [stayId]);
+    try {
+      expect((await logoOf(link, { "if-none-match": tag! })).status, "the tag opens nothing").toBe(404);
+    } finally {
+      await sql("update guest_links set revoked_at = null where reservation_id = $1", [stayId]);
+    }
   });
 });
 
