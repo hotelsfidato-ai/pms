@@ -23,6 +23,7 @@ import {
 } from "@/modules/online-checkin/guestKit";
 import { privacyNoticeFor } from "@/modules/online-checkin/privacyNotice";
 import { QuickChoices, hasQuickChoices } from "@/modules/online-checkin/QuickChoices";
+import { TableBookingSection } from "@/modules/online-checkin/TableBooking";
 import { BillPrint } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -385,6 +386,7 @@ function Behind(
       {view.offers.length > 0 && (
         <RequestsSection token={token} offers={view.offers} onUnlockGone={onUnlockGone} />
       )}
+      <TableBookingSection token={token} onUnlockGone={onUnlockGone} />
       <MessageTheDesk token={token} onUnlockGone={onUnlockGone} />
       <RoomDining token={token} onUnlockGone={onUnlockGone} />
     </>

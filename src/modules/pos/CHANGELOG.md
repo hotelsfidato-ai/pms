@@ -11,6 +11,62 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-01 · A table at the restaurant, from the guest's page (D27-221, D27-223, D27-224, D27-225)
+
+**Asked for:** section D of `docs/briefs/guest-in-stay-plan.md`. The owner answered Q1–Q5 as recommended:
+- the last seating is half an hour before each meal ends;
+- a guest may book before arrival (confirmed or checked in), any night of the stay;
+- the till's people answer, and the owner, admin and GM set the hours;
+- an empty meal is off;
+- the guest sees the time and the party, not the table.
+
+Also the voucher's Instagram QR (D27-223). Branch `pos/table-booking-1oct`, under the POS lane's claim; cp6 merged in (step 0 `1befb5a4`, quick taps `5fc3b20a`).
+
+**Shipped:**
+- Migration 172 (written as 173; renumbered by the master at merge):
+  - `pos_outlets.table_lunch / table_dinner`: NULL means the default (12:30-15:00, 19:30-23:00), `''` means not offered.
+  - `app.table_slots`: the one definition of a day's slots, in the hotel's zone.
+  - The `table_bookings` table: one hotel per booking by trigger, a reason required on a decline, RLS, audit.
+  - The guest's four definers, each starting from `app.guest_unlocked`.
+- The staff side:
+  - `tableBookings.ts` holds the list, Confirm (a table if known) and Decline (a reason), only while the request waits, plus the hours.
+  - The Table bookings screen shows Waiting, Today and Upcoming, by the hotel's today.
+  - The hours are set on Restaurant setup.
+  - The bell says "N table bookings waiting".
+  - roleGate: TABLE_ANSWER and TABLE_HOURS.
+- The guest side, by online check-in's rule 8:
+  - `api/src/routes/guestTables.ts`, with one mount line in `guestDoor.ts`.
+  - `online-checkin/TableBooking.tsx`, with one line in `Behind`. It hides when it has nothing.
+  - `at` and `withUnlock` are exported from `guestPage.ts`.
+- The voucher's QR: `instagramLink` (a handle, or a URL as typed), drawn beside the Instagram address, with "Scan to connect".
+
+**Found:**
+- `pos` (the waiter) has no bell: the matrix gives it no notification. The waiter reads the screen.
+- `finance` can ring up an order, so it also sees the answer buttons.
+- The answer dialog wrote the date as `2026-10-03`. It now matches the card ("Sat, 3 Oct").
+
+**Proved:**
+- API, one file at a time:
+  - `tableBookings` 16. The two guest-route cases fail with the route's 409s switched off.
+  - `roleGate` 65. The two guest POSTs are added to the person-less-doors pin; the test failed before they were added.
+  - `notifications` 2, `guestDoorBehindTheCode` 32, `voucherDocument` 33 (2 fail with the QR forced off).
+  - strip-check: 175 files load. api `tsc` exit 0.
+- Database: every assertion passes. With the offer switched to `guest_link_stay`, "the link alone" and "another stay's unlock" fail (OCI-5).
+- Web:
+  - `pos/tableBookings.test.tsx` 5; "today" is the hotel's, and that test fails with the device's day.
+  - `online-checkin/tableBooking.test.tsx` 5.
+  - `online-checkin`, `pos`, `components/app`, `App`, `src/test`: 205 of 206. The one failure is migrationNumbers: 173 leaves a gap, and 171/172 are other lanes'.
+  - web `tsc` exit 0.
+- **Opened, 1 October, on `fidato_s45` (migrated to 173):** a made-up stay `TBSCREEN-1` (2–5 Oct), its link unlocked with a code set in the database (sending is not set up locally). The pane was hidden, so buttons were pressed with `element.click()`; the app's own handlers ran.
+  - Guest at 375: Fri–Sun nights, twelve slots 12:30 pm – 10:30 pm, no sideways scroll. Sat 3 Oct, 8:00 pm, 4 people, a note: "Waiting for the restaurant" with Cancel. Stored as 3 Oct 20:00 IST.
+  - Staff at 1280 x 800 as the GM: the request under Waiting. Confirmed on AC2, it moved to Upcoming with "Table AC2 · by Test GM".
+  - Staff at 375: the same, no sideways scroll.
+  - The guest's read then said `confirmed`, with no table in it.
+
+**Left open:**
+- A booking before arrival shows "room -" on the card (the dash rule). Dropping "room" when there is none is the owner's call.
+- The made-up stay `TBSCREEN-1` stays on `fidato_s45`.
+
 ## 2026-10-01 · In-room dining from the menu (D27-224, D27-225; the in-stay plan, A)
 
 **Asked for:** a checked-in guest orders from the restaurant's menu on their own page. The order is a SUBMISSION; whoever rings the till accepts it on the Terminal (a room-service order, sent) or declines it with a reason the guest reads. The owner's answers (D27-224):

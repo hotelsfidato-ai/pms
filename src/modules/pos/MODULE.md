@@ -47,6 +47,7 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 | Menu name | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
 |---|---|---|---|
 | Tables | `/h/:code/floor` | `pages/Floor.tsx` | waiter (`pos`), Reception |
+| Table bookings | `/h/:code/table-bookings` | `pages/TableBookings.tsx` | none - whoever may ring an order (`mayRingUp`); hotel guests' table requests, Waiting / Today / Upcoming, Confirm (a table if known) or Decline with a reason (D27-221, D27-224) |
 | Till | `/h/:code/till` | `pages/Till.tsx` | waiter, Reception |
 | Terminal | `/h/:code/till/terminal` | `pages/Terminal.tsx` | waiter, Reception |
 | Kitchen | `/h/:code/kitchen` | `pages/Kitchen.tsx` | chef, kitchen manager |
@@ -107,6 +108,34 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 The code is in `api/src/modules/pos/` (moved 15 September): `till.ts` (the
 till, **3,555 lines** — splitting it into parts is not done yet) and `pos.ts`
 (the bridge to an outside till). The door `index.ts` mounts them.
+
+**Table bookings** (D27-221, D27-224) — `tableBookings.ts`, its own router at
+`/api/hotels`, NOT in till.ts:
+
+```
+GET   /:code/table-bookings              the hotel's today, waiting first then today and upcoming, the tables
+POST  /:code/table-bookings/:id/confirm  { tableId? } - only while requested; roleGate TABLE_ANSWER
+POST  /:code/table-bookings/:id/decline  { reason } - required, the guest reads it; TABLE_ANSWER
+GET   /:code/table-bookings/hours        each food restaurant's lunch and dinner, and today's slots
+PUT   /:code/table-bookings/hours        { outlet, lunch, dinner }; TABLE_HOURS (owner, admin, GM)
+```
+
+The bell says "N table bookings waiting" to the same people who hold a bell
+(`api/src/routes/notifications.ts`) - the waiter has none, and reads the
+screen. The guest's side follows online check-in's rule 8:
+
+```
+GET   /api/guest/:token/tables              the offer (each restaurant's nights and slots) and the guest's own
+POST  /api/guest/:token/tables              { outlet, night, time, party, note? } - a slot from the offer only
+POST  /api/guest/:token/tables/:id/cancel   the guest's own, only while requested
+```
+
+`api/src/routes/guestTables.ts` (one mount line in `guestDoor.ts`), the
+definers `app.guest_table_offer / _book / _bookings_mine / _cancel` in 172,
+each from `app.guest_unlocked`; the page's section is
+`src/modules/online-checkin/TableBooking.tsx`, one line in `Behind`. It
+hides when nothing is offered and nothing is booked. A guest holds at most
+three open requests; the guest never sees the table.
 
 **The till** — `/api/hotels`, a person's bearer token. Every `/:code/till/*`
 and `/:code/kitchen*` route passes two gates first: the `pos` module must be
@@ -294,6 +323,15 @@ the offline rules (`@/lib/offline.ts`), the import dialog and `MENU_SPEC`
 Tables this service owns, and the migrations that made or changed them:
 
 ```
+table_bookings; pos_outlets.table_lunch,       "a table for the guest" (172; D27-224): a
+  .table_dinner                                hotel guest's request, requested / confirmed /
+                                               declined / cancelled, a decline's reason, an
+                                               optional table; NULL hours are the owner's default
+                                               (12:30-15:00, 19:30-23:00), '' a meal not offered;
+                                               app.table_slots(outlet, date) - the ONE definition
+                                               of a day's half-hour slots, in the hotel's time
+                                               zone, the last half an hour before a meal ends;
+                                               the guest's four definers (above)
 pos_outlets, pos_tickets                       024_pos_bridge.sql (app.pos_chargeable_rooms,
                                                app.pos_outlet_for_key)
                                                (046_store_and_off.sql: an outlet's closed_until)

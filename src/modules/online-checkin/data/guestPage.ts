@@ -75,8 +75,8 @@ export function dropUnlock(token: string): void {
   try { localStorage.removeItem(KEY(token)); } catch { /* nothing held */ }
 }
 
-/* Exported for each feature's own data file behind the code (D27-225:
-   in-room dining's data/roomDining.ts). */
+/* Exported for each feature's own data file behind the code (D27-225, rule 8:
+   in-room dining, table booking). */
 export const at = (token: string, rest = "") => `/api/guest/${encodeURIComponent(token)}${rest}`;
 
 export const withUnlock = (token: string, init: RequestInit = {}): RequestInit => {

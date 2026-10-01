@@ -15,6 +15,7 @@ import {
   ID_PHOTOS_OFF, MAX_UPLOAD, NOTICE_VERSION, get as getPhotos, idPhotosOn, photosFrom,
   put as putPhotos, remove as removePhotos,
 } from "./idPhotos.ts";
+import { guestTables } from "./guestTables.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S OWN DOOR — one private page per booking (D18-9, D18-10, D18-13)
@@ -1224,6 +1225,7 @@ guestLinks.post("/:code/online-checkin/cards", async (c) => {
    `guestLinks.route("/", itsDesk)` for the desk's. Nobody widens
    `app.guest_link_open` (rule 8). */
 guestDoor.route("/", guestDining);   // in-room dining (D27-224, D27-225)
+guestDoor.route("/", guestTables);   // a table at the restaurant (D27-224)
 
 /* Exported for the test that proves a stolen token is not a key to anything
    else: the hash the door computes is the hash the database holds. */

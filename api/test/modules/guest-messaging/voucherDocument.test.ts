@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  money, plain, voucherBlocks, voucherFigures, voucherHeight, voucherPdf, voucherPolicies,
+  instagramLink, money, plain, voucherBlocks, voucherFigures, voucherHeight, voucherPdf, voucherPolicies,
   type VoucherFacts, type VoucherRoom,
 } from "../../../src/modules/guest-messaging/voucherDocument.ts";
 
@@ -140,6 +140,7 @@ describe("the voucher's blocks (D27-215)", () => {
       bank: null,
       policies: ["This booking carries no cancellation terms.", "Check-in from 14:00; check-out by 11:00."],
       instagram: null,
+      qr: null,
       footer: { name: "TEST GROUP", address: "1 Test Road",
         lines: ["+91 00000 00000", "desk@example.test", "GSTIN 27AAAAA0000A1Z5"] },
     });
@@ -225,6 +226,37 @@ describe("the voucher's blocks (D27-215)", () => {
       group: { name: "Test Group", address: null, phone: null, email: null, website: null, gstin: null, instagram: "@testgroup" } });
     expect(b.instagram).toBe("Instagram: @testgroup");
     expect(b.footer.address).toBe("1 Test Road");
+  });
+});
+
+/* D27-223: "Scan to connect" beside the Instagram address, only when one is set. */
+describe("the Instagram QR code", () => {
+  it.each([
+    ["@fidatohotels", "https://instagram.com/fidatohotels"],
+    ["fidato.hotels", "https://instagram.com/fidato.hotels"],
+    ["https://www.instagram.com/fidatohotels/", "https://www.instagram.com/fidatohotels/"],
+    ["instagram.com/fidatohotels", "https://instagram.com/fidatohotels"],
+    ["Follow us on Instagram!", null],
+    ["", null],
+    [null, null],
+  ])("opens %j as %j", (typed, link) => {
+    expect(instagramLink(typed)).toBe(link);
+  });
+
+  it("is on the voucher only when the group has an Instagram address", () => {
+    const office = { name: "Test Group", address: null, phone: null, email: null, website: null, gstin: null };
+    expect(voucherBlocks({ ...facts([room()]), group: { ...office, instagram: "@testgroup" } }).qr)
+      .toBe("https://instagram.com/testgroup");
+    expect(voucherBlocks({ ...facts([room()]), group: { ...office, instagram: null } }).qr).toBeNull();
+  });
+
+  it("is drawn in the PDF, and the voucher stays one page", async () => {
+    const office = { name: "Test Group", address: null, phone: null, email: null, website: null, gstin: null };
+    const withCode = await voucherPdf({ ...facts([room()]), group: { ...office, instagram: "@testgroup" } });
+    const without = await voucherPdf({ ...facts([room()]), group: { ...office, instagram: null } });
+    /* The modules are many small squares: the page's drawing grows by them. */
+    expect(withCode.byteLength).toBeGreaterThan(without.byteLength + 500);
+    expect((Buffer.from(withCode).toString("latin1").match(/\/Type \/Page\b(?!s)/g) ?? []).length).toBe(1);
   });
 });
 

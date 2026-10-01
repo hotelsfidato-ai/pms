@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import QRCode from "qrcode";
 import type { Client } from "../../db.ts";
 import { dateReport, inr } from "../../reportRender.ts";
 import type { SendableFile } from "../../sending.ts";
@@ -195,7 +196,20 @@ export interface VoucherBlocks {
   bank: [string, string][] | null;
   policies: string[];
   instagram: string | null;
+  /** What the "Scan to connect" code opens (D27-223), or null for none. */
+  qr: string | null;
   footer: { name: string; address: string | null; lines: string[] };
+}
+
+/** The address the Instagram QR code opens (the owner's D27-223): a bare
+    handle ("@fidatohotels") is its profile; a link is used as typed, given
+    https:// where it has none; anything else has no code. */
+export function instagramLink(typed: string | null): string | null {
+  const t = (typed ?? "").trim();
+  if (/^https?:\/\/\S+$/i.test(t)) return t;
+  if (/^(www\.)?instagram\.com\/\S+$/i.test(t)) return `https://${t}`;
+  if (/^@?[A-Za-z0-9._]{1,30}$/.test(t)) return `https://instagram.com/${t.replace(/^@/, "")}`;
+  return null;
 }
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -249,6 +263,7 @@ export function voucherBlocks(f: VoucherFacts, figures: VoucherFigures = voucher
     ]) : null,
     policies: voucherPolicies(f),
     instagram: g?.instagram ? `Instagram: ${g.instagram}` : null,
+    qr: instagramLink(g?.instagram ?? null),
     footer,
   };
 }
@@ -516,20 +531,41 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
   /* ── Policies (V4, then the hotel's own), and the group's Instagram ── */
   const footerHeight = 4.5 + Math.max(12, blocks.footer.lines.length * 3.4 + 4) + 3;
   const numbered = blocks.policies.map((p, i) => plain(`${i + 1}.  ${p}`));
+  /* With a QR code, the policies keep clear of its column on the right. */
+  const QR = 22;
+  const wide = blocks.qr ? CONTENT - QR - 8 : CONTENT;
   const lineHeight = (line: string, bold = false) =>
-    pdf.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(7).heightOfString(line, { width: at(CONTENT) }) / MM;
-  room(4 + (numbered[0] ? lineHeight(numbered[0]) : 0));
+    pdf.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(7).heightOfString(line, { width: at(wide) }) / MM;
+  room(4 + (numbered[0] ? lineHeight(numbered[0]) : 0) + (blocks.qr ? QR + 8 : 0));
   label("Hotel policies", M, y);
+  const qrTop = y - 2;
   y += 4;
+  /* The Instagram QR code (D27-223): drawn square by square in vector, as the
+     rest of the voucher is, with "Scan to connect" under it. */
+  if (blocks.qr) {
+    const code = QRCode.create(blocks.qr, { errorCorrectionLevel: "M" });
+    const n = code.modules.size;
+    const cell = QR / n;
+    const left = RIGHT - QR;
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        /* A hair wider than the cell, so no seam shows between two dark ones. */
+        if (code.modules.get(r, c)) pdf.rect(at(left + c * cell), at(qrTop + r * cell), at(cell + 0.02), at(cell + 0.02));
+      }
+    }
+    pdf.fillColor(INK).fill();
+    text("Scan to connect", left + QR / 2, qrTop + QR + 3.6, { size: 6.6, color: GREY, align: "center", width: QR + 8 });
+  }
   for (const line of numbered) {
     room(lineHeight(line));
-    y += text(line, M, y, { size: 7, color: GREY, width: CONTENT }) + 1.1;
+    y += text(line, M, y, { size: 7, color: GREY, width: wide }) + 1.1;
   }
   if (blocks.instagram) {
     y += 1;
     room(lineHeight(plain(blocks.instagram), true));
-    y += text(blocks.instagram, M, y, { size: 7, color: INK, bold: true, width: CONTENT }) + 1.1;
+    y += text(blocks.instagram, M, y, { size: 7, color: INK, bold: true, width: wide }) + 1.1;
   }
+  if (blocks.qr) y = Math.max(y, qrTop + QR + 5);
   y += 3;
 
   /* ── Footer: the group's office once any of it is typed in Settings; the
