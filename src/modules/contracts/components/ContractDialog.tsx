@@ -149,15 +149,15 @@ export function ContractDialog({ hotelId, data, contract, open, onOpenChange }: 
               {data.roomTypes.map((t) => (
                 <div key={t.id}>
                   <h3 className="text-sm font-semibold text-ink-900 mb-2">{t.name}</h3>
-                  <div className="grid grid-cols-[minmax(0,1fr)_7rem_7rem] gap-x-3 gap-y-2 items-center">
-                    <span className="text-xs text-grey-500">Meal plan</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-[minmax(0,1fr)_7rem_7rem] gap-x-3 gap-y-2 items-center">
+                    <span className="hidden sm:block text-xs text-grey-500">Meal plan</span>
                     <span className="text-xs text-grey-500">Single (₹)</span>
                     <span className="text-xs text-grey-500">Double (₹)</span>
                     {data.mealPlans.map((p) => {
                       const key = cellKey(t.id, p.code);
                       const cell = form.cells[key] ?? { single: "", double: "" };
                       return [
-                        <span key={`${key}-l`} className="text-sm text-grey-700">{p.code} · {p.includes}</span>,
+                        <span key={`${key}-l`} className="col-span-2 sm:col-span-1 text-sm text-grey-700">{p.code} · {p.includes}</span>,
                         <Input key={`${key}-s`} type="number" inputMode="decimal" placeholder="-"
                           aria-label={`${t.name} ${p.code} single`} className="tabular"
                           value={cell.single} onChange={(e) => setCell(key, "single", e.target.value)} />,
