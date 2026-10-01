@@ -102,7 +102,7 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 
 ---
 
-## Server endpoints — 75 (counted 1 October: 69 in till.ts, 6 in pos.ts)
+## Server endpoints — 77 (counted 1 October: 71 in till.ts, 6 in pos.ts)
 
 The code is in `api/src/modules/pos/` (moved 15 September): `till.ts` (the
 till, **3,555 lines** — splitting it into parts is not done yet) and `pos.ts`
@@ -161,6 +161,11 @@ orders      GET    /:code/till/orders
             POST   /:code/till/orders/:id/lines/:lineId/void
             POST   /:code/till/orders/:id/lines/:lineId/qty
             POST   /:code/till/orders/:id/kot               send to the kitchen
+            GET    /:code/till/guest-orders                 guests' room-service orders waiting (D27-224; TILL_READ)
+            POST   /:code/till/guest-orders/:id/decline     {reason}: the guest reads it on their page (TILL)
+            (Accept and send is the batch route with {guestOrderId}: the stored basket, priced
+             again by app.guest_dish_price - refused naming the dish if it moved or went off -
+             a room_service order for the stay's room, sent; accepted only while waiting)
             POST   /:code/till/orders/:id/taken             {lineIds}: the waiter carried these Ready dishes
                                                             out; served. Ready ones only, said why otherwise
                                                             (D27-222; roleGate TILL)
@@ -308,6 +313,9 @@ pos_addons, pos_item_addon_groups
   a variation's type_no, kind, heading;         "several variation types per dish" (164, 30 Sep):
   a name unique within its type;               type 1 carries the price, a later one adds;
   pos_order_lines.extra_choice_ids             045's trigger asks one choice of every type
+guest_food_orders; app.guest_menu,            "in-room dining" (171 for now, 1 Oct): the guest's
+  guest_food_order_make/_mine/_cancel,        order behind the code (their own door file,
+  guest_dish_price, guest_dining_outlet       api/src/routes/guestDining.ts); the price kept
 pos_sections, pos_tables                       047_tables_and_floor.sql
   covers, waiter, customer, held               048_order_header.sql
   kitchen docket numbers                       049_kot_docket.sql
@@ -400,6 +408,12 @@ One other service's door is imported by this folder (17 September):
   Tables (one tap: Taken, all of them) and "Ready" with Taken on the Terminal's
   bill; Taken sets served. The at-the-pass clock went with the third column;
   080 still records ready and served, so `app.pos_line_timings` has both.
+- **In-room dining (D27-224, D27-225)**: a checked-in guest orders from their own page
+  (online-checkin's `RoomDining.tsx`, the waiter's pop-up through this folder's front
+  door); the Terminal's "Room-service orders waiting" accepts (a room_service order for
+  the stay's room, sent) or declines with a reason the guest reads. Never more than the
+  guest saw: a moved price refuses the Accept. No alcohol; off while the restaurant or
+  its day is closed; charged to the room at delivery (Charge to room).
 - **The kitchen board shows paid food** until it is Ready (QA POS-1); 151 lets only the
   kitchen status change on a settled order.
 - **No default prices** (`HANDOVER.md` § 5). The schema ships no dish and no

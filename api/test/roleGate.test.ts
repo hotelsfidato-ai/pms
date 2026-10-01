@@ -77,6 +77,9 @@ describe("every write the server mounts", () => {
       "POST /api/guest/:token/details",
       "POST /api/guest/:token/google",
       "POST /api/guest/:token/id-photo",
+      /* In-room dining (D27-224): behind the code, each its own definer. */
+      "POST /api/guest/:token/orders",
+      "POST /api/guest/:token/orders/:id/cancel",
       "POST /api/guest/:token/requests",
       "POST /api/guest/:token/verify",
       "POST /api/pos/tickets",
