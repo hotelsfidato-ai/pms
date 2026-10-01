@@ -123,7 +123,7 @@ begin
   v := app.loyalty_redeem(res, 5000);
   reset role;
   perform test.ok('loyalty', 'never more than the room charges left on the bill (L13)',
-    v like 'Points come off room charges only, and this bill has ₹4500%', coalesce(v, 'used'));
+    v like 'Points come off room charges only, and this bill has %4500 of them left.', coalesce(v, 'used'));
 
   -- ↺ on the discount line gives the points back by itself.
   insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount, reverses_id)
