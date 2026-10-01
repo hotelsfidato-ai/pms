@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { AlertTriangle, Building2, Handshake, Home, Users, Wallet } from "lucide-react";
+import { AlertTriangle, Building2, Handshake, Home, Plus, Users, Wallet } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { Page, PageHeader, Card, FigureRow, FigureTile, DataTable, StatusPill, Avatar, EmptyState, Input, type Column, type Tone } from "@/components/ui";
+import { Page, PageHeader, Card, FigureRow, FigureTile, DataTable, StatusPill, Avatar, EmptyState, Input, Button, type Column, type Tone } from "@/components/ui";
+import { can } from "@/lib/permissions";
+import { useRole } from "@/lib/session";
+import { CompanyDialog } from "@/modules/contracts";
 import { listGuests, listCompanies, type GuestRecord, type CompanyRecord } from "@/modules/guests/data/directory";
 
 /* Split out of Directory.tsx on 15 September in the service-folder move
@@ -206,6 +209,9 @@ const SOURCE_COLUMNS: Column<CompanyRecord>[] = [
 
 export function CompaniesPage() {
   const hotelId = useHotel();
+  /* Add company (QA GU-6; D27-184, C-13): the Contracts dialog, here too. */
+  const mayAdd = can(useRole(), "create", "company");
+  const [adding, setAdding] = useState(false);
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["companies", hotelId],
     queryFn: () => listCompanies(hotelId),
@@ -232,7 +238,13 @@ export function CompaniesPage() {
       <PageHeader
         title="Companies and agents"
         description="Where the business came from, and what each channel is worth."
+        actions={mayAdd && (
+          <Button variant="primary" leadingIcon={<Plus />} onClick={() => setAdding(true)}>
+            Add company
+          </Button>
+        )}
       />
+      <CompanyDialog hotelId={hotelId} open={adding} onOpenChange={setAdding} />
 
       {/* THE SPLIT, before the detail. "How much of this did we pay
           commission on" is the first question, and reading it off six

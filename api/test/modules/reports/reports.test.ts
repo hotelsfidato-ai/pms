@@ -744,6 +744,11 @@ describe("the city ledger, as the owner decided", () => {
       stay = (await db.query<{ id: string }>(
         `select r.id from reservations r join hotels h on h.id = r.hotel_id
           where h.code = '5EL' and r.status = 'checked_in' order by r.reference limit 1`)).rows[0]!.id;
+      /* Its bill goes to its company on credit below: the GM has ticked
+         credit on that company (D27-184 C-9, D27-185). */
+      await db.query(
+        `update companies set credit_allowed = true
+          where id = (select company_id from reservations where id = $1)`, [stay]);
     } finally { await db.end(); }
 
     const statsBefore = (await (await call("/5EL/reports/monthly-statistics?month=2026-08")).json()) as ReportDoc;

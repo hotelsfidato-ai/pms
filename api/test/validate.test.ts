@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   phoneProblem, emailProblem, aadhaarProblem, idNumberProblem, documentDatesProblem,
   expiredDocuments, countryProblem, portalNumberProblem, roomNumberProblem, floorProblem,
-  countProblem, dateProblem, priceProblem, MAX_NIGHTS,
+  countProblem, dateProblem, priceProblem, MAX_NIGHTS, gstinProblem,
 } from "../src/validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -85,6 +85,18 @@ describe("nationality, the portal's number, rooms (BK-4, GU-3, RT-4)", () => {
     expect(floorProblem(1.5)).toMatch(/whole number/);
     expect(floorProblem(null)).toBeNull();
     expect(floorProblem(0)).toBeNull();
+  });
+});
+
+describe("a company's GSTIN (contracts, D27-178)", () => {
+  it("takes a real GSTIN in any case, refuses a wrong shape or a wrong check digit", () => {
+    expect(gstinProblem("27AAPFU0939F1ZV")).toBeNull();
+    expect(gstinProblem("29aagcb7383j1z4")).toBeNull();
+    expect(gstinProblem("27AAPFU0939F1Z")).toMatch(/15 characters/);
+    expect(gstinProblem("27AAPFU0939F1ZW")).toMatch(/mistyped/);
+    /* The demo hotel's placeholder has the shape and not the check digit. */
+    expect(gstinProblem("27AAAAA0000A1Z5")).toMatch(/mistyped/);
+    expect(gstinProblem(" ")).toBeNull();
   });
 });
 

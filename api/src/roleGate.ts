@@ -514,6 +514,14 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/crs/bookings/:crsId/done`]: CHANGE_BOOKING,
   [`PUT ${H}/crs/setup`]: own("crs/setup.ts: the owner and an administrator (D27-171)"),
 
+  /* contracts (D27-184): reception adds a company (C-7) without credit, which
+     the route asks; the owner, an administrator and the GM change companies
+     and keep contracts (C-6). */
+  [`POST ${H}/companies`]: grant("company", "create", "Adding a company"),
+  [`PATCH ${H}/companies/:id`]: grant("company", "edit", "Changing a company"),
+  [`POST ${H}/contracts`]: grant("company", "edit", "Setting a company's contract"),
+  [`PUT ${H}/contracts/:id`]: grant("company", "edit", "Setting a company's contract"),
+
   /* purchasing */
   [`PUT ${H}/purchasing/requesters/:role`]: own("purchasing/purchasingGrants.ts"),
   [`POST ${H}/purchasing/requests`]: own("purchasing/purchasingGrants.ts"),
@@ -783,6 +791,12 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* ── CRS bridge: the bookings the CRS sold, read as bookings are (D27-168) ── */
   [`GET ${H}/crs/bookings`]: STAYS,
   [`GET ${H}/crs/setup`]: own("crs/setup.ts: the owner and an administrator (D27-171)"),
+
+  /* ── Contracts (D27-184): whoever reads companies (C-6); the quote as the
+     calendar's price is read, by whoever books or prices ── */
+  [`GET ${H}/company-records`]: see("company", "companies"),
+  [`GET ${H}/companies/:id/contracts`]: see("company", "companies"),
+  [`GET ${H}/contract-price`]: see(["reservation", "rate"], "a stay's price"),
 
   /* ── Administration ── */
   [`GET /api/admin/hotels`]: own("admin/admin.ts: a group administrator"),

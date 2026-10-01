@@ -76,6 +76,12 @@ beforeEach(() => {
                cells: [{ roomTypeId: "rt-1", roomType: "Deluxe", date: "2026-08-25",
                          sellable: 5, occupied: 0, sold: 0, available: 5 }] } as never;
     }
+    /* A company picked asks its contract's price (D27-184); none here, so the
+       calendar's, as the route answers. */
+    if (path.includes("/contract-price")) {
+      return { roomType: "Deluxe", total: 3000, unpriced: null, contract: null, note: null,
+               nights: [{ night: "2026-08-25", total: 3000, unpriced: null }] } as never;
+    }
     if (path.includes("/tariff")) {
       return { roomType: "Deluxe", total: 3000, unpriced: null,
                nights: [{ night: "2026-08-25", total: 3000, unpriced: null }] } as never;

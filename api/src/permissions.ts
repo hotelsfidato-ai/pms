@@ -309,7 +309,10 @@ const MATRIX: Record<Role, ResourceGrants> = {
     dashboard: READ,
     reservation: ["view", "create", "edit", "cancel"],
     customer: ["view", "create", "edit"],
-    company: ["view"],
+    /* D27-184, C-7: reception adds a company at the desk (a walk-in's firm
+       for its GST invoice) - never credit, which the route refuses; changing
+       one stays with the owner, an administrator and the GM. */
+    company: ["view", "create"],
     hotel: READ,
     inventory: ["view", "edit"],
     room_config: READ,

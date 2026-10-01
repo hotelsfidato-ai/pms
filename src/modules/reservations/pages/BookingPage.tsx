@@ -27,6 +27,7 @@ import {
   GuestIdFields, guestIdState, guestIdPayload, noGuestId, type GuestId,
 } from "@/modules/guests";
 import { getRateBeforeGst, getTaxRate, listBillingCompanies, settle } from "@/modules/finance";
+import { getContractTariff, type ContractTariff } from "@/modules/contracts";
 import { assignRoom, assignableRooms, checkIn, earlyArrival } from "@/modules/front-desk";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -99,6 +100,10 @@ interface Quote {
   nightly: number | null;
   unpriced: string | null;
   differs: boolean;
+  /** The company's contract in force on arrival (D27-184), and, where it has
+      no figure for this line, the sentence saying the day's price applies. */
+  contract?: string | null;
+  note?: string | null;
   taxRate: number | null | undefined;
   taxPerNight: number | null;
 }
@@ -316,16 +321,32 @@ export default function BookingPage() {
       : discountMode === "promotion" && !promotion ? "Choose the promotion." : null;
 
   /* ── What each line will cost ──────────────────────────────────── */
+  /* A company named on the booking prices it by its contract in force on
+     arrival (D27-184); with none, the same calendar price, asked there. */
+  const contractOf = show.company && billTo === "company" ? companyId : "";
   const tariffs = useQueries({
     queries: lines.map((l) => ({
-      queryKey: ["tariff", hotelId, l.roomTypeId, l.mealPlan, from, to, l.adults, l.children],
-      queryFn: () => getTariff(hotelId, {
-        roomTypeId: l.roomTypeId, mealPlan: l.mealPlan,
-        from: from ?? "", to: to ?? "", adults: l.adults, children: l.children,
-      }),
+      queryKey: ["tariff", hotelId, l.roomTypeId, l.mealPlan, from, to, l.adults, l.children, contractOf],
+      queryFn: (): Promise<Tariff | ContractTariff | null> => {
+        const input = { roomTypeId: l.roomTypeId, mealPlan: l.mealPlan,
+          from: from ?? "", to: to ?? "", adults: l.adults, children: l.children };
+        return contractOf ? getContractTariff(hotelId, { ...input, companyId: contractOf })
+          : getTariff(hotelId, input);
+      },
+      /* Never for a day use (D27-229): its price is typed, the contract's too. */
       enabled: !!from && !!to && !dayUse && !l.comp && l.rate.trim() === "",
     })),
   });
+
+  /* A LINE THE CONTRACT PRICES (D27-233): no rate typed, and the contract has a
+     figure for it (no "the day's price" note). Contract rates are before GST,
+     so the tick neither applies nor is offered there. */
+  const byContract = (l: Line, i: number): boolean => {
+    const t = tariffs[i]?.data;
+    return l.rate.trim() === "" && !!t && "contract" in t && !!t.contract && !t.note;
+  };
+  /* The tick as it counts: off on a contract-priced line. */
+  const inclusive = (l: Line, i: number): boolean => l.inclusive && !byContract(l, i);
 
   /* A rate that includes GST, split by the server (D27-195): the typed rate,
      or with none typed the list price the calendar gives (D27-199). */
@@ -335,13 +356,13 @@ export default function BookingPage() {
     queries: lines.map((l, i) => ({
       queryKey: ["before-gst", hotelId, allIn(l, i)],
       queryFn: () => getRateBeforeGst(hotelId, allIn(l, i) ?? 0),
-      enabled: l.inclusive && !l.comp && (allIn(l, i) ?? 0) > 0,
+      enabled: inclusive(l, i) && !l.comp && (allIn(l, i) ?? 0) > 0,
     })),
   });
   const inclusiveNote = (l: Line, i: number): string | null => {
     const s = splits[i]?.data;
     const gross = allIn(l, i);
-    if (!l.inclusive || l.comp || gross === null || !(gross > 0) || !s) return null;
+    if (!inclusive(l, i) || l.comp || gross === null || !(gross > 0) || !s) return null;
     if (!s.ok) return s.reason;
     return s.total < gross
       ? `${moneyPrecise(gross)} can't split exactly: the bill will say ${moneyPrecise(s.total)} a night.`
@@ -357,18 +378,19 @@ export default function BookingPage() {
       if (typed === null) return { nightly: null, unpriced: null, differs: false };
       return { nightly: typed > 0 ? afterDiscount(typed, pct) : typed, unpriced: null, differs: false };
     }
-    const t: Tariff | null | undefined = tariffs[i]?.data;
+    const t = tariffs[i]?.data;
     if (!t) return { nightly: null, unpriced: null, differs: false };
+    const terms = "contract" in t ? { contract: t.contract?.name ?? null, note: t.note } : {};
     const first = t.nights[0]?.total ?? null;
     if (first === null) {
-      return { nightly: null, unpriced: t.nights[0]?.unpriced ?? t.unpriced ?? "this party", differs: false };
+      return { nightly: null, unpriced: t.nights[0]?.unpriced ?? t.unpriced ?? "this party", differs: false, ...terms };
     }
     /* The list price as the all-in figure: the rate before GST (D27-199). */
-    const split = l.inclusive ? splits[i]?.data : undefined;
-    if (l.inclusive && !split?.ok) return { nightly: null, unpriced: null, differs: false };
+    const split = inclusive(l, i) ? splits[i]?.data : undefined;
+    if (inclusive(l, i) && !split?.ok) return { nightly: null, unpriced: null, differs: false };
     return {
       nightly: afterDiscount(split?.ok ? split.pre : first, pct), unpriced: null,
-      differs: t.nights.some((n) => n.total !== first),
+      differs: t.nights.some((n) => n.total !== first), ...terms,
     };
   });
 
@@ -437,7 +459,7 @@ export default function BookingPage() {
             ?? (salesPick === OTHER && !salesOther.trim() ? "Type the sales person's name." : null)
             ?? lines.map((l, i) => {
               const s = splits[i]?.data;
-              return l.inclusive && !l.comp && s && !s.ok ? s.reason : null;
+              return inclusive(l, i) && !l.comp && s && !s.ok ? s.reason : null;
             }).find((r) => r !== null)
             ?? advanceProblem);
   const assignReason =
@@ -502,12 +524,12 @@ export default function BookingPage() {
       ...(show.notes && notes.trim() ? { notes: notes.trim() } : {}),
       ...(singleLady ? { isSingleLady: true } : {}),
       ...(campaign ? { campaign } : {}),
-      lines: lines.map((l) => ({
+      lines: lines.map((l, i) => ({
         roomTypeId: l.roomTypeId, mealPlan: l.mealPlan,
         adults: l.adults, children: l.children, rooms: l.rooms,
         ...(l.comp ? { complimentary: true } : {}),
         ...(l.comp || l.rate.trim() === "" ? {} : { agreedRate: Number(l.rate) }),
-        ...(!l.comp && l.inclusive ? { rateIncludesGst: true } : {}),
+        ...(!l.comp && inclusive(l, i) ? { rateIncludesGst: true } : {}),
       })),
     });
 
@@ -708,6 +730,7 @@ export default function BookingPage() {
                     left={leftFor(line.roomTypeId)}
                     mayGive={keeper}
                     inclusiveNote={inclusiveNote(line, i)}
+                    contractRate={byContract(line, i)}
                     waiting={waiting}
                     removable={lines.length > 1}
                     rooms={(rooms.data ?? []).filter((r) =>
@@ -1066,7 +1089,7 @@ function Fold({ title, children }: { title: string; children: ReactNode }) {
    The price sits beside the room, live: the question on the phone is
    "what will that cost". */
 function RoomLine({
-  line, quote, pricing, nights, dayUse, types, left, mayGive, inclusiveNote, waiting, removable, rooms, onChange, onRemove,
+  line, quote, pricing, nights, dayUse, types, left, mayGive, inclusiveNote, contractRate, waiting, removable, rooms, onChange, onRemove,
 }: {
   line: Line;
   quote: Quote;
@@ -1079,6 +1102,8 @@ function RoomLine({
   mayGive: boolean;
   /** Why the inclusive rate is refused, or the paisa it cannot reach (D27-195). */
   inclusiveNote: string | null;
+  /** Priced by the company's contract: its rates are before GST (D27-233). */
+  contractRate: boolean;
   waiting: boolean;
   removable: boolean;
   /** Rooms of this type; `state` is today's cleaning, for an arrival today. */
@@ -1140,8 +1165,12 @@ function RoomLine({
           {/* A tick beside the rate (D27-199): the typed rate, or the list price
               with none typed, already includes GST and is split by the slab. */}
           {!line.comp && (
-            <Checkbox checked={line.inclusive} onCheckedChange={(inclusive) => onChange({ ...line, inclusive })}
+            <Checkbox checked={line.inclusive && !contractRate} disabled={contractRate}
+              onCheckedChange={(inclusive) => onChange({ ...line, inclusive })}
               label="Rate includes GST" className="mt-2" />
+          )}
+          {!line.comp && contractRate && (
+            <p className="text-xs text-grey-500 mt-1">Contract rates are before GST</p>
           )}
         </div>
       </div>
@@ -1217,6 +1246,11 @@ function LinePrice({ line, quote, pricing, nights, dayUse }: {
       {quote.differs && (
         <span className="block text-warning-dark">
           The first night's price is kept for every night; the calendar differs later.
+        </span>
+      )}
+      {quote.contract && line.rate.trim() === "" && (
+        <span className="block" data-contract-line>
+          Contract: {quote.contract}{quote.note && <span className="text-warning-dark">. {quote.note}</span>}
         </span>
       )}
     </span>
