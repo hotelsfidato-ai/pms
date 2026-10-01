@@ -126,7 +126,7 @@ function JoinDialog({ hotelId, stay, words, onClose }: {
         description="Read this to the guest. Joining is not a yes to offers."
         footer={<>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button disabled={busy || !agreed || !words}
+          <Button variant="primary" disabled={busy || !agreed || !words}
             onClick={() => void act(joinLoyalty(hotelId, stay.guestId), `${stay.name} joined`)}>Join</Button>
         </>}>
         <div className="space-y-3">
@@ -152,7 +152,7 @@ function SpendDialog({ hotelId, stay, onClose }: { hotelId: string; stay: Loyalt
         description={`${number(stay.points ?? 0)} points. They come off the room charges as a discount line, from 500 at a time.`}
         footer={<>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button disabled={busy || !Number.isInteger(n) || n < 500}
+          <Button variant="primary" disabled={busy || !Number.isInteger(n) || n < 500}
             onClick={() => void act(spendPoints(hotelId, stay.id, n, pressKey), `${money(n)} off the room charges`)}>
             Use {Number.isInteger(n) && n > 0 ? money(n) : "points"}
           </Button>
