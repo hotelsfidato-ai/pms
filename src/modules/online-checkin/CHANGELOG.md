@@ -73,14 +73,25 @@ Branch `guest/in-stay-1oct`, from cp6 1dc9c483.
 - `db/tests/rerun.sh`: all 172 migration files are re-runnable.
 - `db/tests/run.sh`: 1,339 of 1,339.
 
+**Seen on screen at 375 px** (fidato_s38 migrated with the master's yes, alone; the copy's servers on 8909/5309):
+- The guest's page shows the logo above the hotel's name before the code (160 × 40, at the page's 20 px edge).
+- Unlocked with the development code, the guest sent a message. Reception's Guest messages for the booking showed it with the reply box.
+- After the reply, the message read "Handled by Test Reception". The guest's page showed "Front desk", the words and the day; the thread's answer carried no name.
+- With the booking set to checked out, there was no box, and "Replies stop at check-out" showed.
+- On the property's list, a new message had "Reply" to its booking.
+- No page scrolled sideways.
+- The pane was hidden, so the rest was read from the page, not photographed.
+- The test rows, the made-up logo and the link were removed from s38 afterwards.
+
+**Merged:** cp6 5fc3b20a (the one-tap choices, the checklist fold). GuestPage's two new imports were kept side by side. The tiles' test now answers the thread the page asks for. MODULE.md notes the tiles.
+
 **Left open:**
 - 172 and 173 are to be renumbered by the master.
-- fidato_s38 has not been migrated, and the 375 px screens wait on that (asked).
 - The master's merge lines: two mounts in guestDoor.ts, one `roleGate.ts` line, one line in `Behind`.
-- Asked, not decided:
-  - replies to a cancelled, no-show or void booking (only check-out is refused);
+- The master's answer on the three choices, for the owner, who may change them:
+  - only check-out refuses a reply;
   - the day only on a reply;
-  - the logo cached for an hour.
+  - the logo shown before the code, cached for an hour.
 
 ## 2026-10-01 · A kept ID photo is never replaced (OCI-11, the pre-launch review)
 
