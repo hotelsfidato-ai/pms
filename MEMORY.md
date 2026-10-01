@@ -6539,6 +6539,94 @@ copy will see of theirs.**
 
 ---
 
+### 371 · Four copies of "what a guest owes", one grouped by the wrong key (booking lane, D27-226)
+
+A group guest whose room the host pays showed "₹3,150 Outstanding" over "Nothing posted to this
+folio yet", and the Check out button refused. FOLIO_SELECT summed the lines by the stay the
+POSTING named, so every night on the group's master bill counted as the guest's own; the
+server's own check-out summed only the guest's folios, so screen and server disagreed. It had
+been there since 056 and showed only when D27-204 posted the first night at check-in. Fixing it
+found the same sum three more times: Settle's "owed", the night audit's checklist and the bell.
+**The rule:** a figure for a person groups by the bill a line is ON. When one definition of a
+money figure changes, grep every copy of it before calling it fixed.
+
+---
+
+### 370 · MINE: I committed lines another chat had not committed, and duplicated a decision number (1 October)
+
+Appending the Settings decision to `docs/briefs/decisions-2026-09-27.md`, I committed the whole
+file. The design chat had written D27-217 to D27-219 there and not committed them, so my commit
+carried its lines, and my own entry was a second D27-217. Renumbered mine D27-220. **The rule:**
+before appending to a file another chat also writes, read its `git diff`; commit only my lines.
+
+---
+
+### 369 · MINE: a wait that matched its own command line could never end (2 October)
+
+I waited for "no database build running" by listing processes whose command line contained
+`with-test-db` or `migrate.sh`. My own waiting shell's command line contained those words, so
+the count was never zero; the migrate behind it would have waited forever. Caught by reading the
+process list by hand. Now `busy.ps1` (my scratchpad) matches a command line STARTING with
+`bash scripts/` or `bash db/`, or a `psql.exe`. **The rule:** a check that searches running
+processes must not search for text its own command carries; match the start, or run it from a
+file.
+
+---
+
+### 368 · Each lane's files green, the merged tree red (all-merged-1oct, 1 October)
+
+Five lanes each ran their own test files green; the first full run on the merged tree failed 6
+of 2,202 server tests. Two tables (`guest_food_orders`, `table_bookings`) point at rows the
+property reset clears, and no lane added them to `api/scripts/reset-property.ts` - the 5EL reset
+in the release steps would have stopped on them; `resetOrder.test.ts` caught it. A field added
+beside the staff bill (`nightsToCome`) broke a test that compared the guest's bill to the desk's
+with `toEqual`. Four channel-manager tests timed out at 20 s under load and pass alone.
+**The rule:** a migration that adds a table with a key to a stay, an order or a guest adds its
+reset line in the same commit, and runs `resetOrder.test.ts`. Before adding a field to a
+route's answer, grep the tests that compare that answer whole. The full run on the merged tree
+is the proof, never the lanes' own files.
+
+---
+
+### 367 · A guard test asked about an empty stay proves nothing (online check-in, OCI-12)
+
+OCI-5's database test called each guest function with the link's hash and no unlock, about a
+stay with nothing in it. A thread function that ignored the unlock still passed: there was
+nothing to leak. **The rule:** a test that proves "X cannot see Y" first puts Y there.
+
+---
+
+### 366 · A delete reached by a side road was wider than the front door's (online check-in, OCI-11)
+
+A guest sending their details again, or the desk adding a photo, "replaced" every stored ID photo
+of the stay and guest, and the door deleted each from Drive, the one the desk had kept included.
+Only the owner, an administrator or the GM may delete a kept photo (D27-210). Found by the
+pre-launch review, before any guest used it. **The rule:** a delete reached by a side road (a
+replace, a tidy-up) is scoped as narrowly as the front door's own delete.
+
+---
+
+### 365 · Adding an entry to a working menu can move a role's landing screen (guest services, GS-1)
+
+`workingHomeFor` sends a person to the FIRST entry of their role's working menu. An entry added
+at the top of a menu changed where that role lands after signing in. **The rule:** adding to a
+role's working menu, check that role's landing screen in the same change.
+
+---
+
+### 364 · A table made later in the same migration run belonged to the wrong owner (1 October)
+
+Migration 014 hands every table and app function to `pms_migrate`, but only those that exist
+when 014 runs. On a first deploy, the run replays from 001, so tables made after 014 in the same
+run stayed the superuser's, and a definer function owned by `pms_migrate` was refused them: the
+voucher answered 500 ("permission denied for table hotel_bank_details"). The second deploy would
+have healed it; the first day would not have worked. Fixed: `db/ownership.sql` runs last in
+every migration run (migrate.sh, with-test-db.sh, db/tests/run.sh), and the "ownership" database
+suite checks nothing strays. **The rule:** a fix that a migration applies "to what exists"
+must run again at the end of the run, or a first deploy is a different system from a second.
+
+---
+
 ### 362 · nginx writes a large body to a temporary file (online check-in lane, D27-209)
 
 The rule was "an ID photo is never on the server's disk". The code kept it in memory, and nginx,

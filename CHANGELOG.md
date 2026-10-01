@@ -50,6 +50,57 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-01 to 02 · the one launch: the after-launch items built now (D27-225), merged and checked
+
+**Asked for:** the owner, 1 October: build everything planned for after the launch now, and
+launch once with all of it (D27-225). Then, while it was being built: a group guest the company
+pays for must not owe the company's nights (D27-226); a day use bookable from New booking with
+its price typed every time (D27-227, D27-229, D27-230); small choices on the guest's page
+confirmed (D27-228). "Tell me when all is merged and checked", with a progress bar.
+
+**Shipped** (each a lane, merged by the master into cp6; migrations renumbered 171-176)
+- Step 0: the guest door's kit and the page's kit split out (`api/src/routes/guestDoorKit.ts`,
+  `src/modules/online-checkin/guestKit.ts`); every guest feature has its own route file and
+  section (online-checkin MODULE.md rule 8). No behaviour change.
+- Settings: the checklist folds its reasons behind a tap on a phone (D27-223).
+- One-tap choices on the guest's page (guest services; no migration).
+- In-room dining from the menu, accepted on the Terminal as a room-service order (POS; 171).
+- Table booking from the guest's page, answered on Table bookings; the voucher's Instagram QR
+  (rates lane; 172).
+- Two-way messages with the desk, replies signed "Front desk"; the hotel's logo on the guest's
+  page (online check-in; 173, 174).
+- The review fixes FIN-24 (nights to come by the audit's rule), FIN-25 (the invoice's odd paisa
+  to CGST), FIN-26 (no payment or refund through the charge door), FIN-27 / D27-226 (a guest's
+  figures count only their own bill; the group's master bill listed once; the bell too).
+- Early and late fees under Room on the bill (175); day use charged at check-in; day use from
+  New booking, price typed, amendable, never turned into nights (176).
+- Mine: `api/scripts/reset-property.ts` clears `guest_food_orders` and `table_bookings` (the
+  5EL reset in the release steps would have stopped on them); the guest-bill test compares the
+  bill without the desk's own `nightsToCome`; `docs/go-live/RELEASE-1OCT.md` filled in.
+
+**Found**
+- The first full run on the merged tree (`all-merged-1oct`) failed 6 of 2,202 server tests in
+  3 files: the two above, and four channel-manager timeouts under load (pass alone). MEMORY 368.
+- My wait for a free database looked for words its own command line carried, so it could never
+  end. MEMORY 369.
+
+**Proved**
+- Full gates `final-1oct` on 80d18688: web 919, api 2,206 of 2,206, database 1,374, replay 176.
+  `npm run build` passes (no test sign-in in dist).
+- The guest's page walked on `fidato` at 375 px with a made-up link (the pane was hidden, so the
+  page's own buttons were pressed by script): drinking water × 2 sent; a message, the desk's reply
+  read as "Front desk", the message "Handled"; dining 2 × Chicken 65 + 1 × Masala Chai = ₹780,
+  accepted as a room-service order for Room 203 (₹780 + ₹39), "On its way"; a table on a
+  confirmed booking for Sat 3 Oct 8:00 pm for 4, confirmed, the guest seeing no table. No
+  sideways scroll. The two test links are revoked.
+
+**Left open**
+- The owner runs the release (`docs/go-live/RELEASE-1OCT.md`).
+- Archive and recycle the finished lanes' copies (D24-21).
+- The paused lanes: contracts, loyalty, room systems (migrations after 176).
+
+**Commits:** `1befb5a4 … 80d18688` (merges), then notes.
+
 ## 2026-10-01 · The master: the owner's second walk-through, and the launch set checked
 
 **Asked for (30 Sep evening to 1 Oct):** the bill before the night audit; cash opening by itself;

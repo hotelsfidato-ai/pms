@@ -3,8 +3,14 @@
 Written 1 October 2026. **You type every command** (D21-50). Nothing here was run by Claude.
 Each step says where it runs. Stop at the first red ✗ and send me the output.
 
-The release commit: **`<given by the master when the last full check passes>`**.
+The release: **the tip of `cp6`**. Its code was fully checked at **`80d18688`** on 1-2 October
+(gates `final-1oct`: website 919, server 2,206 of 2,206, database 1,374, all 176 migrations
+re-runnable; `npm run build` passes). Every commit after `80d18688` is notes only.
 Live today: `0b4766e`. The release is a fast-forward from it (checked).
+It holds everything decided up to D27-230: the guest's in-stay page (one-tap choices, in-room
+dining, table booking, two-way messages with the desk, the hotel's logo), the voucher's QR code,
+the group-bill fix, fees under Room, and day use (charged at check-in, booked from New booking
+with its price typed every time). Database changes 162 to 176 run in A6, in one go.
 
 ---
 
@@ -12,9 +18,10 @@ Live today: `0b4766e`. The release is a fast-forward from it (checked).
 
 **A1 · your PC, PowerShell** — this copy is the checked one
 ```powershell
-cd "D:\fidato pms"; git checkout cp6; git status --short; git log -1 --oneline
+cd "D:\fidato pms"; git checkout cp6; git status --short; git diff --stat 80d18688 HEAD
 ```
-Expect no files listed (your design chat's files may show; tell me if they do), then the release commit.
+Expect no files listed by the first part (your design chat's files may show; tell me if they
+do), then only `.md` files (notes) from the second. Any other file: stop and tell me.
 
 **A2 · your PC, PowerShell, same folder** — send it to the branch the server follows
 ```powershell
@@ -67,7 +74,8 @@ firebase deploy --only hosting:app
 Expect `Deploy complete!`
 
 **A10 · look at it**: https://pms.fidatohotels.com, Ctrl+Shift+R, sign in. Open Settings, Rates,
-a guest's bill, the Kitchen, Tables. If the website is wrong: Firebase console → Hosting →
+a guest's bill, the Kitchen, Tables, Table bookings, and New booking with the same arrival and
+departure day (it should say "Day use" and ask you to type the day's price). If the website is wrong: Firebase console → Hosting →
 Release history → the previous release → Roll back (instant).
 
 ---
@@ -89,6 +97,9 @@ Release history → the previous release → Roll back (instant).
 3. **Amrapali (AMR) and Grand Lucent (GLM)**: you create each property (Across properties), then
    Settings → Property (profile, logo, reservations contact), room types and rooms, Rates (base
    and add-ons), bank details, house policies, and the staff's logins.
+4. **Table booking times** (D27-224): each restaurant offers lunch 12:30-3:00 pm and dinner
+   7:30-11:00 pm, in half hours, until you change them on Restaurant setup. A meal left empty
+   there is not offered.
 
 ---
 

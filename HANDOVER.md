@@ -47,6 +47,26 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+### 2 October, after midnight — read this first
+
+```
+cp6 now              THE ONE LAUNCH (D27-225), fully checked: code at 80d18688 (gates final-1oct:
+                     web 919, api 2,206 of 2,206, database 1,374, replay 176; build passes);
+                     every later commit is notes. Migrations to 176. Everything decided up to
+                     D27-230: the guest's in-stay page (one-tap choices, in-room dining, table
+                     booking, two-way desk messages, the hotel's logo), the voucher's QR, the
+                     group-bill fix (D27-226), FIN-24..26, fees under Room, day use charged at
+                     check-in and booked from New booking (price typed every time).
+the release          NOT RUN. docs/go-live/RELEASE-1OCT.md; the owner types it (D21-50).
+not in it            contracts, loyalty, room systems (paused); online payments; settings
+                     phases 3 to 5.
+progress page        https://claude.ai/artifact/PrxGEtDY9SnfWVSmo1xGk7 (the owner's; its
+                     database is updated with ArtifactData).
+local demo           `fidato` at 176; api 8787, web 5173. Its business date is 30 Sep.
+live                 Still 0b4766e.
+decisions            D27-191 to D27-230.
+```
+
 ### 1 October — read this first
 
 ```
@@ -389,6 +409,13 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **2 October: the queue.** (1) The owner runs `docs/go-live/RELEASE-1OCT.md` (the tip of cp6;
+> code checked at 80d18688), then Part B (each hotel's room and laundry GST, 5EL's test data
+> cleared, AMR and GLM set up) and Part C (Meta templates first, the CRS's n8n, Google, Drive,
+> the server's settings). (2) Archive and recycle the finished lanes' copies (D24-21): settings
+> design, guest services, POS, rates/table booking, online check-in, booking. (3) Then the three
+> paused lanes (contracts, loyalty, room systems), their migrations after 176.
 
 > **1 October: the queue.** (1) The release steps for the owner, each labelled with where it
 > runs, from section 9's shape (backup, pull, launch.sh, nginx, website, look), then the owner's
