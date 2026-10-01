@@ -3,6 +3,8 @@ import { withSession } from "../auth.ts";
 import type { Client } from "../db.ts";
 import { businessDateFor } from "../businessDate.ts";
 import { can, type Role } from "../permissions.ts";
+import { teamsFor } from "../modules/guest-services/index.ts";
+import { allows, WRITE_RULES } from "../roleGate.ts";
 
 /* Split out of billing.ts on 15 September in the service-folder move
    (docs/SERVICE-FOLDERS-PLAN.md). The core's: the bell reads arrivals,
@@ -56,7 +58,9 @@ notifications.get("/:code/notifications", async (c) => {
       kind: string; id: string; label: string; detail: string; amount: string | null;
     }>(
       `with live as (
-         select fp.*
+         /* The bill a line is ON (the owner's D27-226): a guest owes their own
+            bills, not the nights their group's master carries for them. */
+         select fp.*, f.reservation_id as bill_stay
            from folio_postings fp
            join folios f on f.id = fp.folio_id
           where fp.hotel_id = $1
@@ -68,7 +72,7 @@ notifications.get("/:code/notifications", async (c) => {
        balances as (
          select r.id, r.reference, r.status, r.check_out, g.full_name as guest,
                 coalesce((select sum(amount + tax_amount) from live
-                           where reservation_id = r.id), 0) as balance
+                           where bill_stay = r.id), 0) as balance
            from reservations r
            join guests g on g.id = r.guest_id
           where r.hotel_id = $1
@@ -170,6 +174,41 @@ notifications.get("/:code/notifications", async (c) => {
       }
     }
 
+    /* An in-stay request nobody has taken yet (D27-181): for the team that
+       receives it, and for the desk, which sees every one. */
+    const teams = teamsFor(role);
+    if (teams.length) {
+      const { rows: [open] } = await client.query<{ n: number }>(
+        `select count(*)::int as n from work_orders
+          where hotel_id = $1 and reservation_id is not null and status = 'open'
+            and (case when category in ('housekeeping', 'fnb') then category
+                      else 'maintenance' end) = any($2::text[])`, [hotelId, teams]);
+      if (open!.n) {
+        out.push({
+          id: "guest-requests-waiting", hotelId: code, category: "customer",
+          title: `${open!.n} guest request${open!.n === 1 ? "" : "s"} waiting`,
+          body: `Nobody has taken ${open!.n === 1 ? "it" : "them"} yet. Take one on Guest requests and mark it done.`,
+          isRead: false, at, link: `/h/${code}/requests`, actionRequired: true,
+        });
+      }
+    }
+
+    /* A guest's room-service order from their own page (D27-224): for
+       whoever may ring the till, who accepts or declines it on the Terminal. */
+    if (role && allows(WRITE_RULES["POST /api/hotels/:code/till/orders/batch"]!, role)) {
+      const { rows: [food] } = await client.query<{ n: number }>(
+        `select count(*)::int as n from guest_food_orders
+          where hotel_id = $1 and status = 'waiting'`, [hotelId]);
+      if (food!.n) {
+        out.push({
+          id: "guest-food-orders-waiting", hotelId: code, category: "customer",
+          title: `${food!.n} room-service order${food!.n === 1 ? "" : "s"} waiting`,
+          body: "From a guest's own page. Accept and send it, or decline it with a reason, on the Terminal.",
+          isRead: false, at, link: `/h/${code}/till/terminal`, actionRequired: true,
+        });
+      }
+    }
+
     const reversals = by("reversal");
     if (reversals.length) {
       out.push({
@@ -178,6 +217,55 @@ notifications.get("/:code/notifications", async (c) => {
         body: "The ledger is append-only, so each reversal is its own line. Worth a look before the night audit.",
         isRead: false, at, link: "/admin/audit-log", actionRequired: false,   // ADM-4
       });
+    }
+
+    /* TABLES A GUEST ASKED FOR, WAITING FOR AN ANSWER (D27-221, D27-224): for
+       the people who answer them - whoever may ring an order (roleGate
+       TABLE_ANSWER) - at this hotel, among those who read the bell (a waiter
+       has none and answers on the Table bookings screen). */
+    if (role !== null && (can(role, "create", "payment") || role === "pos")) {
+      const { rows: [tables] } = await client.query<{ n: number }>(
+        "select count(*)::int as n from table_bookings where hotel_id = $1 and status = 'requested'",
+        [hotelId]);
+      if (tables!.n) {
+        out.push({
+          id: "table-bookings-waiting", hotelId: code, category: "reservation",
+          title: `${tables!.n} table booking${tables!.n === 1 ? "" : "s"} waiting`,
+          body: "Hotel guests asked for a table from their own page. Confirm each one, or decline it with a reason.",
+          isRead: false, at, link: `/h/${code}/table-bookings`, actionRequired: true,
+        });
+      }
+    }
+
+    /* A HOTEL'S BANK DETAILS WERE SET, CHANGED OR REMOVED (the owner's
+       D27-216): they print on every booking voucher, so the group owner is
+       told - which hotel, who, when; never the account. For group
+       administrators only, and for EVERY hotel whichever one is open: it is
+       there to catch a change at a hotel the owner is not looking at. Read
+       from the change record the table's own trigger keeps (migration 169),
+       so a write through any door shows; the newest change at a hotel, for
+       seven days. */
+    if (session.isGroupAdmin) {
+      const { rows: changed } = await client.query<{
+        id: string; action: string; at: Date; code: string; name: string; who: string | null;
+      }>(
+        `select distinct on (a.hotel_id) a.id::text, a.action, a.at, h.code, h.name, s.full_name as who
+           from audit_log a
+           join hotels h on h.id = a.hotel_id
+           left join staff s on s.id = a.actor
+          where a.table_name = 'hotel_bank_details' and a.at > now() - interval '7 days'
+          order by a.hotel_id, a.at desc`);
+      const DID: Record<string, string> = { INSERT: "set", UPDATE: "changed", DELETE: "removed" };
+      for (const b of changed) {
+        out.push({
+          id: `bank-details-${b.id}`, hotelId: code, category: "system",
+          title: `${b.name}: bank details ${DID[b.action] ?? "changed"}`,
+          body: `By ${b.who ?? "somebody"}. They print on this hotel's booking vouchers. `
+            + "Open Settings to see them, and ask if you did not expect this.",
+          isRead: false, at: b.at.toISOString(),
+          link: `/h/${b.code}/settings/taxes-and-billing`, actionRequired: true,
+        });
+      }
     }
 
     return out;

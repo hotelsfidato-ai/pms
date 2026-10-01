@@ -14,7 +14,7 @@ this was the `equipment` service's Coming soon page, "Hotel equipment"
 src/modules/room-systems/          KeyCards.tsx (the panel), data/keys.ts, the Coming soon page
 api/src/modules/room-systems/      locks.ts (the driver and its stand-in), keys.ts (routes)
 db/tests/modules/room-systems.sql  the key-card record's database rules
-db/migrations/175_key_cards.sql    numbered for now; the master renumbers at merge
+db/migrations/179_key_cards.sql    the master's number (2 October)
 ```
 
 ---
@@ -85,4 +85,4 @@ of lock needs from the owner (research of 30 September):
 `api/src/server.ts` (the mount), `api/src/roleGate.ts` (two lines, pinned
 in `api/test/roleGate.test.ts`), front desk's `operations.ts` (check-out,
 move) and `stayExtras.ts` (exchange), one `cancelStaleKeys` call each, and
-`StayDrawer.tsx` (the panel). The migration is numbered 175 for now.
+`StayDrawer.tsx` (the panel). The migration is 179 (177 contracts', 178 loyalty's).

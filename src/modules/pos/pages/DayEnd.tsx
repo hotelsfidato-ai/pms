@@ -14,7 +14,7 @@ import {
   NativeSelect, Textarea, Skeleton, EmptyState, toast,
   Dialog, DialogContent, DialogClose, StatusPill, FigureRow, FigureTile,
 } from "@/components/ui";
-import { getDayEnd, recordMovement, countDrawer, closeDay, type DayEnd, type MovementKind } from "@/modules/pos/data/till";
+import { getDayEnd, recordMovement, openDay, countDrawer, closeDay, type DayEnd, type MovementKind } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -176,6 +176,8 @@ export default function DayEndPage() {
         />
       )}
 
+      {!d.opened && !d.closedAt && <OpenDay hotelId={hotelId} onDone={refresh} />}
+
       <Steps current={step} onPick={setStep} blockers={d.blockers.length} />
 
       {step === "overview" && <Overview day={d} />}
@@ -334,7 +336,6 @@ function CashStep({ hotelId, day, onDone }: {
     for (const d of day.cash.denominations) seed[d.value] = String(d.count);
     return seed;
   });
-  const [opening, setOpening] = useState(String(day.cash.opening));
   const [saving, setSaving] = useState(false);
 
   const counted = useMemo(
@@ -342,17 +343,14 @@ function CashStep({ hotelId, day, onDone }: {
       (sum, v) => sum + v * (Number(counts[v]) || 0), 0),
     [counts]);
 
-  const openingNum = Number(opening) || 0;
-  /* The expected figure the server sent already includes the opening it
-     has on file. Re-typing it here changes the sum, so the difference
-     is shown against the opening on screen. */
-  const expected = day.cash.expected - day.cash.opening + openingNum;
+  /* The day opened on the float the last close kept (D27-200); it is not
+     typed here, so the server's expected figure is the one shown. */
+  const expected = day.cash.expected;
   const variance = counted - expected;
 
   const save = async () => {
     setSaving(true);
     const res = await countDrawer(hotelId, {
-      opening: openingNum,
       denominations: DENOMINATIONS
         .map((v) => ({ value: v, count: Number(counts[v]) || 0 }))
         .filter((d) => d.count > 0),
@@ -372,50 +370,12 @@ function CashStep({ hotelId, day, onDone }: {
             description="Notes and coins, as they come out of the tin."
           />
           <CardBody className="space-y-4">
-            <Field label="Opening float"
-                   hint="What was in the tin at the start of the shift.">
-              {(f) => (
-                <Input
-                  {...fieldProps(f)}
-                  type="number" inputMode="decimal" min={0}
-                  value={opening} disabled={closed}
-                  onChange={(e) => setOpening(e.target.value)}
-                  className="h-12 text-lg tabular"
-                />
-              )}
-            </Field>
-
-            <div className="grid gap-2 sm:grid-cols-2">
-              {DENOMINATIONS.map((value) => {
-                const n = Number(counts[value]) || 0;
-                return (
-                  <div key={value}
-                       className="flex items-center gap-3 rounded-lg border border-grey-200 px-3.5 py-2">
-                    <span className="w-14 text-base font-medium tabular shrink-0">
-                      ₹{value}
-                    </span>
-                    <span className="text-grey-500">×</span>
-                    <Input
-                      type="number" inputMode="numeric" min={0}
-                      value={counts[value] ?? ""} disabled={closed}
-                      placeholder="0"
-                      onChange={(e) => setCounts(
-                        (c) => ({ ...c, [value]: e.target.value }))}
-                      className="h-12 w-24 text-lg tabular"
-                      aria-label={`Number of ₹${value} notes`}
-                    />
-                    {/* A dash, not a zero. Nobody counted zero here. */}
-                    <span className="ml-auto text-base tabular text-grey-600">
-                      {n > 0 ? money(value * n) : "-"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <NoteGrid counts={counts} onChange={setCounts} disabled={closed} />
 
             {!closed && (
-              <Button onClick={save} disabled={saving} className="h-12 w-full text-base">
-                {saving ? "Saving…" : `Save the count - ${money(counted)}`}
+              <Button onClick={save} disabled={saving || !day.opened} className="h-12 w-full text-base">
+                {!day.opened ? "Open the day first"
+                  : saving ? "Saving…" : `Save the count - ${money(counted)}`}
               </Button>
             )}
           </CardBody>
@@ -429,7 +389,8 @@ function CashStep({ hotelId, day, onDone }: {
           <CardHeader title="The sum" />
           <CardBody>
             <dl className="divide-y divide-grey-200">
-              <Line label="Opening float" value={openingNum} />
+              {/* A dash until Open the day has counted it. */}
+              <Line label="Opening float" value={day.opened ? day.cash.opening : null} />
               <Line label="Cash taken"
                     value={day.summary.byMethod["cash"] ?? 0} />
               {MOVEMENTS.map((m) => {
@@ -466,17 +427,95 @@ function CashStep({ hotelId, day, onDone }: {
 }
 
 function Line({ label, value, signed }: {
-  label: string; value: number; signed?: boolean;
+  label: string; value: number | null; signed?: boolean;
 }) {
   return (
     <div className="flex items-baseline justify-between py-2.5">
       <dt className="text-base text-grey-600">{label}</dt>
       <dd className="text-base tabular">
-        {signed && value > 0 ? "+" : ""}
-        {signed && value < 0 ? "−" : ""}
-        {money(Math.abs(value))}
+        {value === null ? "-" : <>
+          {signed && value > 0 ? "+" : ""}
+          {signed && value < 0 ? "−" : ""}
+          {money(Math.abs(value))}
+        </>}
       </dd>
     </div>
+  );
+}
+
+/* Notes and coins, one row each - the float at Open the day and the tin at
+   the count, added up the same way. */
+function NoteGrid({ counts, onChange, disabled }: {
+  counts: Record<number, string>;
+  onChange: (update: (c: Record<number, string>) => Record<number, string>) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {DENOMINATIONS.map((value) => {
+        const n = Number(counts[value]) || 0;
+        return (
+          <div key={value}
+               className="flex items-center gap-3 rounded-lg border border-grey-200 px-3.5 py-2">
+            <span className="w-14 text-base font-medium tabular shrink-0">
+              ₹{value}
+            </span>
+            <span className="text-grey-500">×</span>
+            <Input
+              type="number" inputMode="numeric" min={0}
+              value={counts[value] ?? ""} disabled={disabled}
+              placeholder="0"
+              onChange={(e) => onChange(
+                (c) => ({ ...c, [value]: e.target.value }))}
+              className="h-12 w-24 text-lg tabular"
+              aria-label={`Number of ₹${value} notes`}
+            />
+            {/* A dash, not a zero. Nobody counted zero here. */}
+            <span className="ml-auto text-base tabular text-grey-600">
+              {n > 0 ? money(value * n) : "-"}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Open the day - an outlet's first day only (D27-200) ──────────
+   After the night audit a day opens by itself on the float the last
+   close kept, so this shows once: before any close has kept one.
+   Blank is not zero: Open waits until something is typed, and 0 is
+   an answer only when somebody types it. */
+function OpenDay({ hotelId, onDone }: { hotelId: string; onDone: () => void }) {
+  const [counts, setCounts] = useState<Record<number, string>>({});
+  const [busy, setBusy] = useState(false);
+  const typed = Object.values(counts).some((v) => v.trim() !== "");
+  const opening = DENOMINATIONS.reduce((s, v) => s + v * (Number(counts[v]) || 0), 0);
+
+  const open = async () => {
+    setBusy(true);
+    const res = await openDay(hotelId, { opening });
+    setBusy(false);
+    if (!res.ok) return toast.error("Not opened", res.reason);
+    toast.success("Day open", `Starting with ${money(opening)}.`);
+    onDone();
+  };
+
+  return (
+    <Card className="mb-5">
+      <CardHeader
+        title="Open the day"
+        description="This outlet's first float, counted once - cash is taken after it. From then on each day opens by itself on the float the close keeps."
+      />
+      <CardBody className="space-y-4">
+        <NoteGrid counts={counts} onChange={setCounts} />
+        <Button variant="primary" className="h-12 w-full text-base"
+                disabled={busy || !typed} onClick={() => void open()}>
+          <Wallet className="size-4" />
+          {busy ? "Opening…" : typed ? `Open the day - ${money(opening)}` : "Count the float first"}
+        </Button>
+      </CardBody>
+    </Card>
   );
 }
 
@@ -650,6 +689,7 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
   onDone: () => void; onBack: () => void;
 }) {
   const [why, setWhy] = useState(day.cash.varianceReason ?? "");
+  const [kept, setKept] = useState("");
   const [closing, setClosing] = useState(false);
 
   if (day.closedAt) {
@@ -678,10 +718,15 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
 
   const variance = day.cash.variance;
   const needsReason = variance !== null && Math.abs(variance) >= 0.01;
+  /* D27-191: the float kept for tomorrow, typed at every close; the rest
+     of the count is deposited. Blank is not zero. */
+  const counted = day.cash.counted ?? 0;
+  const keptNum = kept.trim() === "" ? null : Number(kept);
+  const keptOk = keptNum !== null && Number.isFinite(keptNum) && keptNum >= 0 && keptNum <= counted;
 
   const close = async () => {
     setClosing(true);
-    const res = await closeDay(hotelId, { varianceReason: why });
+    const res = await closeDay(hotelId, { varianceReason: why, keptCash: keptNum! });
     setClosing(false);
     if (!res.ok) return toast.error("Not closed", res.reason);
     toast.success("Day closed",
@@ -752,6 +797,19 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
             </Field>
           )}
 
+          {day.cash.counted !== null && (
+            <Field label="Float kept for the next day" className="mt-4"
+                   hint={keptOk
+                     ? `To deposit: ${moneyPrecise(counted - keptNum!)}`
+                     : `From ₹0 to the ${moneyPrecise(counted)} counted. The rest is deposited.`}>
+              {(f) => (
+                <Input {...fieldProps(f)} type="number" inputMode="decimal" min={0}
+                  value={kept} onChange={(e) => setKept(e.target.value)}
+                  className="h-12 text-lg tabular" />
+              )}
+            </Field>
+          )}
+
           {day.cash.counted === null && (
             <p className="mt-4 text-base text-grey-600">
               The drawer has not been counted.{" "}
@@ -769,6 +827,7 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
               closing
               || day.blockers.length > 0
               || day.cash.counted === null
+              || !keptOk
               || (needsReason && !why.trim())
             }
             /* TWO LINES, the day and then the hotel. On one line the

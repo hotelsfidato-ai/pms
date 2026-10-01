@@ -30,8 +30,9 @@ export const SWITCHABLE = [
      and lets the till sell a dish in a section taxed as alcohol. */
   "alcohol",
   /* D27-163, 29 September: New booking's fold-open sections, per property,
-     ON until turned off (159). */
-  "booking_company", "booking_gst", "booking_extras", "booking_notes",
+     ON until turned off (159). GST folded into Company and Extras left the
+     page (D27-187, D27-193): their switches went with them. */
+  "booking_company", "booking_notes",
 ] as const;
 
 

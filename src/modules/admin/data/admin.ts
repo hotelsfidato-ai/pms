@@ -7,7 +7,7 @@ import {
   permissionMatrix, type Role,
 } from "@/lib/permissions";
 import type { AdminResult } from "@/data/repositories/result";
-import { write, patch, put } from "@/data/repositories/http";
+import { write, patch, put, call } from "@/data/repositories/http";
 
 /* ══════════════════════════════════════════════════════════════════
    ADMIN
@@ -288,9 +288,37 @@ export interface PropertyTeamMember {
   homeScreen: HomeScreen;
 }
 
+/** The hotel's profile (D27-214, migration 168). Null is "nobody has said":
+    a dash on the screen. PAN, the reservations phone and the website are
+    stored and printed on no document. */
+export interface PropertyProfile {
+  addressLine2: string | null;
+  pin: string | null;
+  website: string | null;
+  pan: string | null;
+  reservationsPhone: string | null;
+  propertyType: string | null;
+  starRating: number | null;
+  latitude: string | null;
+  longitude: string | null;
+  /** Printed on the booking voucher as "Contact" (D27-215). */
+  reservationsContact: string | null;
+}
+
+/** The owner's list (D27-214): the stored word and what people read. */
+export const PROPERTY_TYPES: [string, string][] = [
+  ["hotel", "Hotel"], ["resort", "Resort"], ["boutique_hotel", "Boutique hotel"],
+  ["heritage_hotel", "Heritage hotel"], ["homestay", "Homestay"], ["villa", "Villa"],
+  ["serviced_apartment", "Serviced apartment"], ["guest_house", "Guest house"], ["other", "Other"],
+];
+
 export interface PropertyDetail {
   /** `fssaiNumber`: the hotel's 14-digit FSSAI licence (A16), null until typed. */
-  property: AdminProperty & { fssaiNumber: string | null };
+  property: AdminProperty & PropertyProfile & {
+    fssaiNumber: string | null;
+    /** The hotel's house policies, in the order the voucher prints them (D27-215). */
+    housePolicies: string[];
+  };
   staff: PropertyTeamMember[];
   /** What THIS caller may hand out HERE. An owner sees every role; a
       general manager sees everything but `owner`. Sent by the server so
@@ -327,15 +355,48 @@ export async function getPropertyDetail(
 
 /** A property's own details. NOT its code — that appears in every URL
     and every invoice number this property has ever issued, and the
-    route refuses to change it for the same reason. */
+    route refuses to change it for the same reason.
+
+    The profile's fields (D27-214): sent blank, a field is CLEARED; not
+    sent, it is left alone. The seven older ones keep what they had. */
 export function amendProperty(
   code: string,
   input: {
     name?: string; city?: string; state?: string; gstin?: string;
     phone?: string; email?: string; addressLine?: string;
+  } & { [K in keyof PropertyProfile]?: string } & {
+    /** One policy a line; blank lines are dropped by the server. */
+    housePolicies?: string[];
   },
 ): Promise<AdminResult> {
   return patch(`/api/admin/hotels/${code}`, input);
+}
+
+/** A hotel's bank details (D27-215): printed on its booking voucher when set.
+    Seen and changed by whoever manages that hotel; anybody else is refused. */
+export interface BankDetails {
+  accountName: string;
+  accountNumber: string;
+  bankName: string;
+  branch: string | null;
+  ifsc: string;
+  upi: string | null;
+  changedAt: string;
+  changedBy: string | null;
+}
+
+export async function getBankDetails(code: string): Promise<BankDetails | null> {
+  return (await api<{ bank: BankDetails | null }>(`/api/hotels/${code}/bank-details`)).bank;
+}
+
+export function setBankDetails(code: string, input: {
+  accountName: string; accountNumber: string; bankName: string; branch: string; ifsc: string; upi: string;
+}): Promise<AdminResult> {
+  return put(`/api/hotels/${code}/bank-details`, input);
+}
+
+export function removeBankDetails(code: string): Promise<AdminResult> {
+  return call(`/api/hotels/${code}/bank-details`, "DELETE");
 }
 
 /** Closing refuses while anybody is still checked in — a closed

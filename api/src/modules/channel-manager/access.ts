@@ -40,7 +40,15 @@ export async function maySetUpSu(client: Client): Promise<boolean> {
   return rows[0]?.may === true;
 }
 
-export async function maySetUpSuAt(client: Client, hotelId: string): Promise<boolean> {
+/* D27-183 (Q6): the GM settles a booking the site sent (D17-80), so the GM
+   reads Channel bookings and marks one dealt with. The setup stays SU_ROLES. */
+export const CHANNEL_BOOKING_ROLES = ["owner", "admin", "gm"] as const;
+export const CHANNEL_BOOKINGS_REFUSED =
+  "Bookings from the booking sites are for the owner, an administrator and the general manager.";
+
+export async function maySetUpSuAt(
+  client: Client, hotelId: string, roles: readonly string[] = SU_ROLES,
+): Promise<boolean> {
   const { rows } = await client.query<{ may: boolean }>(
     `select exists (
        select 1 from staff s
@@ -50,7 +58,7 @@ export async function maySetUpSuAt(client: Client, hotelId: string): Promise<boo
                   where sh.staff_id = s.id and sh.hotel_id = $1
                     and sh.role = any($2::text[])))
      ) as may`,
-    [hotelId, SU_ROLES],
+    [hotelId, roles],
   );
   return rows[0]?.may === true;
 }

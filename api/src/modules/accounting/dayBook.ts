@@ -170,7 +170,7 @@ const NO_POS: Outlets = { net: 0, tax: 0, alcohol: 0, vat: 0 };
    figures. Such a range is refused, in one sentence, before anything is
    built. Only a range reaching the business date or later can meet it. */
 export const NO_ROOM_RATE =
-  "A night in this range is not charged yet and rooms have no GST rate. Set it on Room types, or end the range before today.";
+  "A night in this range is not charged yet and rooms have no GST rate. Set it under Settings → Taxes and billing, or end the range before today.";
 export class NoRoomRate extends Error {
   constructor() {
     super(NO_ROOM_RATE);

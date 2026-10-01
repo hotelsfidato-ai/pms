@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router";
 import { CheckCircle2, AlertTriangle, Send } from "lucide-react";
 import {
   Button, Card, CardBody, Checkbox, Field, fieldProps, Input, NativeSelect, Textarea,
@@ -52,7 +53,6 @@ export function SuSetup({ code }: { code: string }) {
       <MealPlansOnSu code={code} data={content.data} />
       <SendToSu code={code} data={content.data} />
       <RoomsAndPrices code={code} data={content.data} />
-      <ChannelBookings code={code} />
     </div>
   );
 }
@@ -114,10 +114,7 @@ function HotelOnSu({ code, data }: { code: string; data: SuContent }) {
   const qc = useQueryClient();
   const initial = () => ({
     suHotelId: data.channel?.suHotelId ?? "",
-    postalCode: data.channel?.postalCode ?? "",
     countryCode: data.channel?.countryCode ?? "",
-    latitude: data.channel?.latitude ?? "",
-    longitude: data.channel?.longitude ?? "",
     contactFirstName: data.channel?.contactFirstName ?? "",
     contactLastName: data.channel?.contactLastName ?? "",
     description: data.channel?.description ?? "",
@@ -150,25 +147,23 @@ function HotelOnSu({ code, data }: { code: string; data: SuContent }) {
             From the hotel record, set on the Properties screen: {shown(data.hotel.addressLine)},{" "}
             {data.hotel.city} · phone {shown(data.hotel.phone)} · email {shown(data.hotel.email)}.
           </p>
+          {/* The hotel's own since D27-214: shown here, changed in Settings. */}
+          <p className="text-sm text-grey-500">
+            PIN code {shown(data.hotel.postalCode)} · map point{" "}
+            {data.hotel.latitude && data.hotel.longitude
+              ? `${data.hotel.latitude}, ${data.hotel.longitude}` : "-"}.{" "}
+            <Link to="/settings/property" className="font-medium text-brand-orange-700 hover:underline">
+              Set in Settings, on the Property tab
+            </Link>
+          </p>
         </div>
         <div className="grid gap-3 @2xl:grid-cols-2">
           <Field label="SU hotel id" hint="Up to 20 letters, digits and hyphens. It cannot change once SU has it." required>
             {(p) => <Input {...fieldProps(p)} value={form.suHotelId} onChange={set("suHotelId")} maxLength={20} />}
           </Field>
-          <Field label="Postcode">
-            {(p) => <Input {...fieldProps(p)} value={form.postalCode} onChange={set("postalCode")} maxLength={10} />}
-          </Field>
           <Field label="Country" hint="Its two-letter code.">
             {(p) => <Input {...fieldProps(p)} value={form.countryCode} onChange={set("countryCode")} maxLength={2} />}
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Latitude">
-              {(p) => <Input {...fieldProps(p)} inputMode="decimal" value={form.latitude} onChange={set("latitude")} />}
-            </Field>
-            <Field label="Longitude">
-              {(p) => <Input {...fieldProps(p)} inputMode="decimal" value={form.longitude} onChange={set("longitude")} />}
-            </Field>
-          </div>
           <Field label="Contact's first name">
             {(p) => <Input {...fieldProps(p)} value={form.contactFirstName} onChange={set("contactFirstName")} />}
           </Field>
@@ -363,7 +358,8 @@ const OUTCOME: Record<ChannelBooking["outcome"], { words: string; tone: "neutral
   ignored: { words: "Nothing to do", tone: "neutral" },
 };
 
-function ChannelBookings({ code }: { code: string }) {
+/* On the page for everybody who reaches it, the GM included (D27-183, Q6). */
+export function ChannelBookings({ code }: { code: string }) {
   const qc = useQueryClient();
   const list = useQuery({ queryKey: ["channel-bookings", code], queryFn: () => getChannelBookings(code) });
   const [marking, setMarking] = useState<string | null>(null);
@@ -412,7 +408,7 @@ function ChannelBookings({ code }: { code: string }) {
                 {b.acknowledged ? " · SU told we have it" : " · SU not yet told"}
                 {b.cardFieldsRemoved > 0 && " · card details were not kept"}
               </p>
-              {!b.handled && b.outcome !== "created" && (
+              {!b.handled && !["created", "cancelled", "ignored"].includes(b.outcome) && (
                 <Button variant="secondary" size="sm" className="mt-2" onClick={() => done(b.id)}
                         disabled={marking === b.id}>
                   {marking === b.id ? "Marking" : "I have dealt with this"}

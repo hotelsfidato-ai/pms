@@ -1,7 +1,7 @@
 -- =============================================================================
--- 175 · Key cards, recorded against the stay (D27-178, room-systems lane)
+-- 179 · Key cards, recorded against the stay (D27-178, room-systems lane)
 -- =============================================================================
--- Numbered 175 FOR NOW: the master renumbers it at merge (migrationNumbers
+-- 179, the master's number (2 Oct): 177 is contracts', 178 loyalty's (migrationNumbers
 -- refuses a gap). Referred to by what it does: "the key-card record".
 --
 -- Every key card the desk cuts, and every cancellation, is one row here: what

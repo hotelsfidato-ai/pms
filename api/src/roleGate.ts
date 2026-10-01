@@ -77,7 +77,6 @@ const anyone = (why: string): Rule => ({ kind: "anyone", why });
 
 /* Bookings, stays and functions: `reservation`. */
 const BOOK = grant("reservation", "create", "Making a booking");
-const WALK_IN = grant("reservation", "create", "Checking in a walk-in");
 const CHANGE_BOOKING = grant("reservation", "edit", "Changing a booking");
 const CHECK_IN = grant("reservation", "edit", "Checking a guest in");
 const CHECK_OUT = grant("reservation", "edit", "Checking a guest out");
@@ -152,7 +151,15 @@ const FSSAI = grant("room_config", "edit", "Setting the FSSAI licence number");
    changes. The database asks the same three (app.sets_group_settings). */
 const GROUP_NAME = grant("room_config", "edit", "Changing the group's name");
 const GROUP_LOGO = grant("room_config", "edit", "Changing the group's logo");
-/* GST sits on Room types, so it is setup - and the accountant, who holds no
+/* A hotel's OWN logo (D27-214): the same three, at the hotel in the address;
+   the table's policy asks app.manages_hotel behind it (migration 168). */
+const HOTEL_LOGO = grant("room_config", "edit", "Changing the hotel's logo");
+/* What the voucher prints (D27-215): a hotel's bank details and the group's
+   office details - the same three, and for the bank details the route and the
+   table ask app.manages_hotel behind it (migration 169). */
+const BANK_DETAILS = grant("room_config", "edit", "Changing the hotel's bank details");
+const GROUP_OFFICE = grant("room_config", "edit", "Changing the group's office details");
+/* GST sits on Configuration (D27-194; Room types before), so it is setup - and the accountant, who holds no
    setup grant, sets the rate too: "the accountant confirms the rate on the tax
    screen" (D21-91), and "owner, admin, GM and accountant" (D22-32). */
 const GST = grant("room_config", "edit", "Setting GST", ["finance"]);
@@ -188,6 +195,10 @@ const MENU = grant("menu", "edit", "Changing the menu");
    the owner, an administrator and the GM, the people who set the hotel up
    (the owner's answer, 25 September). `room_config` is exactly those three. */
 const TILL_SETUP = grant("room_config", "edit", "Setting up the restaurant's tables");
+/* Table booking (D27-224): a guest's request is answered by whoever may ring
+   an order; the restaurant's booking hours are Restaurant setup's. */
+const TABLE_ANSWER = grant("payment", "create", "Answering a table booking", ["pos"]);
+const TABLE_HOURS = grant("room_config", "edit", "Setting the restaurant's table-booking hours");
 /* The KOT station (D27-159, D27-161). Switching it: the menu's four - the
    owner, an administrator, the GM and the kitchen manager. Printing: whoever
    is signed in on the kitchen or POS PC - the till, the chef, the kitchen
@@ -221,13 +232,19 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/online-checkin/requests/:id`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`POST ${H}/online-checkin/rooms/:roomId/card`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`POST ${H}/online-checkin/cards`]: own("routes/guestDoor.ts: DESK_ROLES"),
+  /* The desk's reply to a guest's message (D27-224). */
+  [`POST ${H}/online-checkin/messages/:reservationId/reply`]: own("routes/guestMessages.ts: DESK_ROLES"),
+  /* A guest's ID photo (D27-207 to D27-212): removed by the desk while its
+     details wait, by the owner, Admin or GM once kept; added at check-in by
+     the desk. Asked in the route, on every call. */
+  [`POST ${H}/online-checkin/id-photos/:id/remove`]: own("routes/guestDoor.ts: DESK_ROLES while the details wait, then KEEPER_ROLES"),
+  [`POST ${H}/stays/:id/id-photo`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`POST ${H}/attachments`]: BILL_PHOTO,
   [`POST ${H}/attachments/:id/mirrored`]: MIRROR,
 
   /* front-desk */
   [`POST ${H}/stays/:id/check-in`]: CHECK_IN,
   [`POST ${H}/stays/:id/check-out`]: CHECK_OUT,
-  [`POST ${H}/walk-ins`]: WALK_IN,
   [`POST ${H}/stays/:id/assign`]: ROOMING,
   [`POST ${H}/stays/:id/move`]: ROOMING,
   [`PATCH ${H}/stays/:id`]: CHANGE_BOOKING,
@@ -274,6 +291,13 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/cashier-shift/movements`]: DRAWER,
   [`POST ${H}/cashier-shift/count`]: DRAWER,
   [`POST ${H}/cashier-shift/close`]: DRAWER,
+  /* Cash deposits (D27-191): record, reverse and explain - the owner, an
+     administrator and the GM; verify - the owner and the accountant. No grant
+     in the matrix is exactly either, so the route asks. */
+  [`POST ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM"),
+  [`POST ${H}/cash-deposits/:id/reverse`]: own("finance/deposits.ts: owner, admin, GM"),
+  [`POST ${H}/cash-deposits/days/:date/explain`]: own("finance/deposits.ts: owner, admin, GM"),
+  [`POST ${H}/cash-deposits/:id/verify`]: own("finance/deposits.ts: owner, accountant"),
   [`POST ${H}/stays/:id/invoice`]: TAX_INVOICE,
   [`POST ${H}/invoices/:number{.+}/credit-note`]: CREDIT_NOTE,
   [`POST ${H}/vat-bills/:number{.+}/cancel`]: VAT_CANCEL,
@@ -315,9 +339,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
      import that also sets it. The tax card's own picker stays GST. */
   [`POST ${H}/till/menu/categories/:id/tax-kind`]: MENU,
   [`POST ${H}/till/menu/items/:id/toggle`]: MENU,
-  [`POST ${H}/till/menu/items/:id/variations`]: MENU,
-  [`PATCH ${H}/till/menu/variations/:id`]: MENU,
-  [`POST ${H}/till/menu/variations/:id/remove`]: MENU,
+  [`PUT ${H}/till/menu/items/:id/variations`]: MENU,  // the whole set, D27-192
   [`POST ${H}/till/menu/addon-groups`]: MENU,
   [`PATCH ${H}/till/menu/addon-groups/:id`]: MENU,
   [`POST ${H}/till/menu/addon-groups/:id/dishes`]: MENU,
@@ -349,9 +371,13 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders/:id/lines/:lineId/qty`]: TILL,
   [`POST ${H}/till/orders/batch`]: TILL,
   [`POST ${H}/till/orders/:id/kot`]: TILL,
+  [`POST ${H}/till/orders/:id/taken`]: TILL,  // the waiter's Taken, D27-222
+  [`POST ${H}/till/guest-orders/:id/decline`]: TILL,  // in-room dining, D27-224
   [`POST ${H}/till/orders/:id/kot/:no/printed`]: KOT_PRINT,
   [`POST ${H}/till/kot-station/:outlet/poll`]: KOT_PRINT,
   [`POST ${H}/till/kot-station/:outlet`]: KOT_SWITCH,
+  /* Open the day, the float counted (D27-190): whoever closes it. */
+  [`POST ${H}/till/day-end/open`]: DAY_END,
   [`POST ${H}/till/day-end/movements`]: DAY_END,
   [`POST ${H}/till/day-end/count`]: DAY_END,
   [`POST ${H}/till/day-end/close`]: DAY_END,
@@ -363,16 +389,24 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/setup/sections/:id/tables`]: TILL_SETUP,
   [`PATCH ${H}/till/setup/tables/:id`]: TILL_SETUP,
   [`POST ${H}/till/setup/tables/:id/off`]: TILL_SETUP,
+  [`POST ${H}/table-bookings/:id/confirm`]: TABLE_ANSWER,
+  [`POST ${H}/table-bookings/:id/decline`]: TABLE_ANSWER,
+  [`PUT ${H}/table-bookings/hours`]: TABLE_HOURS,
   [`POST ${H}/kitchen/lines/:lineId/:to`]: PASS,
 
   /* admin */
   [`POST ${H}/modules/:module`]: own("admin/moduleSwitches.ts: the owner or an administrator"),
   [`POST /api/admin/hotels`]: own("admin/admin.ts: a group administrator, with the provisioning key"),
-  [`PATCH /api/admin/hotels/:code`]: own("admin/admin.ts: a group administrator"),
+  [`PATCH /api/admin/hotels/:code`]: own("admin/admin.ts: app.manages_hotel - a group administrator, or owner, GM or Admin at that hotel; the name a group administrator only (D27-214)"),
   [`PUT ${H}/fssai`]: FSSAI,
   [`PUT ${H}/group/name`]: GROUP_NAME,
   [`PUT ${H}/group/logo`]: GROUP_LOGO,
   [`DELETE ${H}/group/logo`]: GROUP_LOGO,
+  [`PUT ${H}/logo`]: HOTEL_LOGO,
+  [`DELETE ${H}/logo`]: HOTEL_LOGO,
+  [`PUT ${H}/bank-details`]: BANK_DETAILS,
+  [`DELETE ${H}/bank-details`]: BANK_DETAILS,
+  [`PUT ${H}/group/office`]: GROUP_OFFICE,
   [`POST /api/admin/hotels/:code/:state`]: own("admin/admin.ts: a group administrator"),
   [`PATCH /api/admin/staff/:id`]: own("admin/admin.ts: app.manages_person (D22-3)"),
   [`PUT /api/admin/staff/:id/home-screen`]: own("admin/admin.ts: app.set_home_screen asks app.may_manage_person"),
@@ -396,6 +430,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PUT ${H}/pricing/basis`]: PRICE,
   [`PUT ${H}/pricing/base`]: PRICE,
   [`PUT ${H}/pricing/offset`]: PRICE,
+  [`PUT ${H}/pricing/addon`]: PRICE,
   [`POST ${H}/room-types`]: SETUP_ADD,
   [`PATCH ${H}/room-types/:id`]: SETUP_CHANGE,
   [`POST ${H}/rooms`]: SETUP_ADD,
@@ -444,6 +479,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/work-orders/:id`]: own("housekeeping/repairRoles.ts: REPAIR_UPDATERS"),
   [`POST ${H}/repair-costs`]: own("housekeeping/repairRoles.ts: COST_RECORDERS"),
   [`POST ${H}/repair-costs/:id/cancel`]: own("housekeeping/repairRoles.ts: COST_RECORDERS"),
+  /* guest services: in-stay requests - the desk and the team that receives each (D27-181) */
+  [`POST ${H}/requests`]: own("guest-services/requests.ts: teamsFor"),
+  [`PATCH ${H}/requests/:id`]: own("guest-services/requests.ts: teamsFor"),
 
   /* equipment */
   [`POST ${H}/equipment`]: own("equipment/grants.ts"),
@@ -550,8 +588,10 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/rooms`]: anyone("room numbers and their states: nearly every screen"),
   [`GET ${H}/house-now`]: anyone("which rooms are occupied, blocked or empty - no guest"),
   [`GET ${H}/group`]: anyone("the group's name and logo, on every document"),
+  [`GET ${H}/bank-details`]: own("admin/bankDetails.ts: app.manages_hotel - the hotel's owner, GM or Admin, or a group administrator (D27-215)"),
   [`GET ${H}/tax`]: anyone("the GST rates in use: neither a guest nor money taken"),
   [`GET ${H}/tax/:kind/rate`]: anyone("the GST rate for an amount"),
+  [`GET ${H}/tax/room/before-gst`]: anyone("the rate before GST inside an inclusive room rate"),
   [`GET ${H}/till/access`]: anyone("what the till lets this person do"),
   [`GET ${H}/notifications`]: see("notification", "notifications"),
   [`GET /api/admin/overview`]: anyone("counts of people and hotels, under row security"),
@@ -563,6 +603,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/stays/:id/inclusions`]: STAYS,
   [`GET ${H}/stays/:id/guest-marks`]: STAYS,
   [`GET ${H}/stays/:id/keys`]: STAYS,
+  /* D27-187: View voucher, for the people who may send it. */
+  [`GET ${H}/stays/:id/voucher.pdf`]: grant("reservation", "create", "Viewing a booking's voucher"),
   [`GET ${H}/inclusions`]: STAYS,
   [`GET ${H}/early-arrival`]: STAYS,
   [`GET ${H}/groups`]: STAYS,
@@ -596,6 +638,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* The details guests sent from their own page: asked in the route. */
   [`GET ${H}/online-checkin`]: own("routes/guestDoor.ts: DESK_ROLES"),
   [`GET ${H}/online-checkin/messages`]: own("routes/guestDoor.ts: DESK_ROLES"),
+  /* A guest's ID photo itself, and the list of kept ones. */
+  [`GET ${H}/online-checkin/id-photos`]: own("routes/guestDoor.ts: KEEPER_ROLES, a narrowing of DESK_ROLES"),
+  [`GET ${H}/online-checkin/id-photos/:id`]: own("routes/guestDoor.ts: DESK_ROLES while the details wait, then KEEPER_ROLES"),
   [`GET ${H}/guest-messages`]: own("guest-messaging/messages.ts: VIEW_ROLES, `customer` view (D27-144)"),
   [`GET ${H}/reviews`]: own("reputation/reputation.ts: VIEW_ROLES"),
   /* D27-170: whoever sees guests sees the leads app's leads, read live. */
@@ -623,6 +668,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/pos/outlets`]: see(["payment", "invoice", "setting"], "the restaurant's outlets", ["pos"]),
   [`GET ${H}/payments`]: MONEY,
   [`GET ${H}/cashier-shift`]: MONEY,
+  /* D27-191: the owner, an administrator, the GM, the accountant and the Viewer. */
+  [`GET ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM, accountant, viewer"),
   [`GET ${H}/accounting/:file{day-book(?:\\.xlsx)?}`]: own("accounting/routes.ts: MAY_EXPORT (D27-122)"),
 
   /* ── Reports ── */
@@ -657,21 +704,25 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/room-setup`]: SETUP,
   [`GET ${H}/commissioning`]: SETUP,
   [`GET ${H}/till/setup`]: SETUP,
+  [`GET ${H}/table-bookings/hours`]: SETUP,
   [`GET ${H}/housekeepers`]: see("inventory", "who cleans which room"),
   [`GET ${H}/housekeeping/assignments`]: see("inventory", "who cleans which room"),
   [`GET ${H}/work-orders`]: REPAIRS,
   [`GET ${H}/repairable-equipment`]: REPAIRS,
+  [`GET ${H}/requests`]: own("guest-services/requests.ts: teamsFor"),
 
   /* ── The restaurant ── */
   [`GET ${H}/till/menu`]: MENU_READ,
   [`GET ${H}/till/menu/addon-groups`]: MENU_READ,
   [`GET ${H}/till/promotions`]: MENU_READ,
   [`GET ${H}/till/orders`]: TILL_READ,
+  [`GET ${H}/till/guest-orders`]: TILL_READ,  // in-room dining, D27-224
   [`GET ${H}/till/orders/:id`]: TILL_READ,
   /* The docket and the KOT printer: the kitchen too, which prints them. */
   [`GET ${H}/till/orders/:id/kot/:no`]: KOT_READ,
   [`GET ${H}/till/kot-station`]: KOT_READ,
   [`GET ${H}/till/floor`]: TILL_READ,
+  [`GET ${H}/table-bookings`]: TILL_READ,
   [`GET ${H}/till/rooms`]: TILL_READ,
   [`GET ${H}/till/waiters`]: TILL_READ,
   [`GET ${H}/banquet/attachable`]: TILL_READ,
@@ -814,12 +865,16 @@ const WRITES = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 /* ── The gate ──────────────────────────────────────────────────────── */
 
 export const roleGate: MiddlewareHandler<{ Variables: { subject: string } }> = async (c, next) => {
-  const write = WRITES.has(c.req.method);
-  if (!write && c.req.method !== "GET") return next();
+  /* HEAD is answered by the GET route (Hono), so it is gated as the GET it is:
+     otherwise a refused person could learn from the status whether a read
+     would succeed (the pre-launch review, 1 October). */
+  const method = c.req.method === "HEAD" ? "GET" : c.req.method;
+  const write = WRITES.has(method);
+  if (!write && method !== "GET") return next();
 
   /* The route that will answer: the first one matched for this method. Hono
      lists middleware too (method ALL), which is why the method is compared. */
-  const route = matchedRoutes(c).find((r) => r.method === c.req.method);
+  const route = matchedRoutes(c).find((r) => r.method === method);
   if (!route || isDoor(route.path)) return next();
 
   const key = `${route.method} ${route.path}`;

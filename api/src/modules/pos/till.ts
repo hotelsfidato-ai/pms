@@ -50,7 +50,7 @@ function typedPrice(raw: unknown): number | null {
 }
 
 const NO_PRICE =
-  "Type a price. A blank is not zero - type 0 for something that is free.";
+  "Type a price, or tick Free. A blank is not zero.";
 
 /** The hotel this route is about, or null if the code is unknown. */
 async function hotelFor(client: Client, code: string): Promise<string | null> {
@@ -234,7 +234,10 @@ till.get("/:code/till/menu", async (c) => {
         ownPrepMinutes: number | null;
         course: number | null;
         ownCourse: number | null;
-        variations: { id: string; label: string; price: number }[];
+        variations: {
+          id: string; label: string; price: number;
+          typeNo: number; kind: string | null; heading: string | null;
+        }[];
         addonGroups: {
           id: string; label: string; minSelect: number; maxSelect: number | null;
           addons: { id: string; label: string; price: number; offUntil: string | null }[];
@@ -282,12 +285,14 @@ till.get("/:code/till/menu", async (c) => {
        has a bug in it. */
     const { rows: variations } = await client.query<{
       item_id: string; id: string; label: string; price: string;
+      type_no: number; kind: string | null; heading: string | null;
     }>(
-      `select v.item_id::text, v.id::text, v.label, v.price::text
+      `select v.item_id::text, v.id::text, v.label, v.price::text,
+              v.type_no, v.kind, v.heading
          from pos_item_variations v
          join pos_menu_items i on i.id = v.item_id
         where i.hotel_id = $1 and v.is_active
-        order by v.sort_order, v.price`,
+        order by v.type_no, v.sort_order, v.price`,
       [hotelId],
     );
 
@@ -312,8 +317,12 @@ till.get("/:code/till/menu", async (c) => {
     );
 
     for (const v of variations) {
+      /* Its type (D27-192): type 1 carries the dish's price, a later one
+         adds to it. Added fields, so a menu cached before them reads every
+         choice as type 1, as it was. */
       items.get(v.item_id)?.variations.push({
         id: v.id, label: v.label, price: Number(v.price),
+        typeNo: v.type_no, kind: v.kind, heading: v.heading,
       });
     }
 
@@ -738,7 +747,7 @@ till.post("/:code/till/menu/import", async (c) => {
           `insert into pos_item_variations
              (hotel_id, item_id, label, price, sort_order)
            values ($1,$2,$3,$4,$5)
-           on conflict (item_id, label) do update
+           on conflict (item_id, type_no, label) do update
              set price = excluded.price, is_active = true`,
           [hotelId, item[0]!.id, v.label, v.price, i + 1],
         );
@@ -1053,29 +1062,76 @@ till.post("/:code/till/menu/items/:id/toggle", async (c) => {
 
    045 made the tables and the order pad has sold from them since; until
    21 September nothing but the demo loader could write one (D21-39). The
-   owner's answers: an "Add variation" button on each dish (D21-40); an
-   add-on group made once and offered on many dishes, saying how many a
-   guest may choose (D21-41); "Preferences" as options a person prices
-   at 0 (D21-42). "The way Bhaaji Pau works, for the whole menu."
+   owner's answers: an add-on group made once and offered on many dishes,
+   saying how many a guest may choose (D21-41). Since 30 September a dish
+   has one or more variation TYPES, saved together on one form (D27-189,
+   D27-192): Size, Quantity, or an Option with the manager's heading;
+   the first type carries the dish's price, each further one adds to it.
 
    REMOVED, NEVER DELETED. A line on a printed bill points at the
    variation or add-on it sold, so removing one switches it off
-   (`is_active`) and the menu stops offering it. Adding the same name
-   again brings the old row back at the new price.
+   (`is_active`) and the menu stops offering it. The same name typed
+   again in the same type brings that row back.
 
-   EVERY PRICE IS TYPED. A blank is refused, never kept as zero; a typed
-   0 is a real answer - "no onion" costs nothing.
+   EVERY PRICE IS TYPED, OR TICKED FREE. A blank is refused, never kept
+   as zero, and a 0 without the Free tick is refused too (D27-120, which
+   replaced D21-42's "type 0").
    ══════════════════════════════════════════════════════════════════ */
 
-type Named = { label?: unknown; price?: unknown };
+type Named = { label?: unknown; price?: unknown; free?: unknown };
 const labelOf = (raw: unknown) => (typeof raw === "string" ? raw.trim() : "");
+const TYPE_KINDS = ["size", "quantity", "option"];
 
-till.post("/:code/till/menu/items/:id/variations", async (c) => {
-  const input = await c.req.json<Named>().catch(() => ({}) as Named);
-  const label = labelOf(input.label);
-  if (!label) return c.json(refuse("A variation needs a name - Half, Full, 500 ml."), 409);
-  const price = typedPrice(input.price);
-  if (price === null) return c.json(refuse(NO_PRICE), 409);
+/** A price as the form sends it: typed, or ticked Free (0). Null with the
+    reason when it is neither, or a 0 that was not ticked. */
+function priceOf(raw: Named): { price: number } | { reason: string } {
+  const free = raw.free === true;
+  const price = free ? 0 : typedPrice(raw.price);
+  if (price === null) return { reason: NO_PRICE };
+  const bad = priceProblem(price, free);
+  return bad ? { reason: bad } : { price };
+}
+
+/** THE WHOLE SET, in one transaction (D27-192, T2). A choice keeps its
+    row by its type and name, so a name moved back into a type it left
+    revives that row; one sent with an id and a new name renames it. */
+till.put("/:code/till/menu/items/:id/variations", async (c) => {
+  type TypeIn = { kind?: unknown; heading?: unknown; choices?: (Named & { id?: unknown })[] };
+  type SetIn = { types?: TypeIn[]; dishPrice?: unknown; dishFree?: unknown };
+  const input = await c.req.json<SetIn>().catch(() => ({}) as SetIn);
+  const typesIn = Array.isArray(input.types) ? input.types : [];
+
+  type Choice = { id: string | null; typeNo: number; label: string; price: number;
+                  kind: string; heading: string | null; sort: number };
+  const wanted: Choice[] = [];
+  for (const [i, t] of typesIn.entries()) {
+    const typeNo = i + 1;
+    const kind = typeof t.kind === "string" ? t.kind : "";
+    if (!TYPE_KINDS.includes(kind)) {
+      return c.json(refuse(`Type ${typeNo}: pick Size, Quantity or Option.`), 409);
+    }
+    const heading = kind === "option" ? labelOf(t.heading) : null;
+    if (heading === "") {
+      return c.json(refuse(`Type ${typeNo}: an Option needs a heading - Spice level, Crust.`), 409);
+    }
+    const choices = Array.isArray(t.choices) ? t.choices : [];
+    if (choices.length === 0) return c.json(refuse(`Type ${typeNo} has no choices.`), 409);
+    const seen = new Set<string>();
+    for (const [j, ch] of choices.entries()) {
+      const label = labelOf(ch.label);
+      if (!label) return c.json(refuse("A choice needs a name - Small, Half, Mild."), 409);
+      if (seen.has(label.toLowerCase())) {
+        return c.json(refuse(`${label} is in type ${typeNo} twice.`), 409);
+      }
+      seen.add(label.toLowerCase());
+      const priced = priceOf(ch);
+      if ("reason" in priced) return c.json(refuse(`${label}: ${priced.reason}`), 409);
+      wanted.push({ id: typeof ch.id === "string" ? ch.id : null, typeNo, label,
+                    price: priced.price, kind, heading, sort: j + 1 });
+    }
+  }
+  const dishPrice = typesIn.length === 0
+    ? priceOf({ price: input.dishPrice, free: input.dishFree }) : null;
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -1083,106 +1139,65 @@ till.post("/:code/till/menu/items/:id/variations", async (c) => {
     const itemId = c.req.param("id");
 
     const { rows: dish } = await client.query<{ name: string }>(
-      "select name from pos_menu_items where id = $1 and hotel_id = $2",
-      [itemId, hotelId]);
+      "select name from pos_menu_items where id = $1 and hotel_id = $2", [itemId, hotelId]);
     if (!dish[0]) return refuse("No such dish.");
-
-    const { rows } = await client.query<{ id: string }>(
-      `insert into pos_item_variations (hotel_id, item_id, label, price, sort_order)
-       values ($1, $2, $3, $4,
-               (select coalesce(max(sort_order), 0) + 1
-                  from pos_item_variations where item_id = $2))
-       on conflict (item_id, label) do update
-         set price = excluded.price, is_active = true
-         where not pos_item_variations.is_active
-       returning id::text`,
-      [hotelId, itemId, label, price]);
-    if (!rows[0]) return refuse(`${dish[0].name} already has ${label}.`);
-    return { ok: true as const, id: rows[0].id };
-  });
-
-  if (!result) return c.json({ error: "No such property." }, 404);
-  return c.json(result, result.ok ? 200 : 409);
-});
-
-/** Rename and reprice, both sent. */
-till.patch("/:code/till/menu/variations/:id", async (c) => {
-  const input = await c.req.json<Named>().catch(() => ({}) as Named);
-  const label = labelOf(input.label);
-  if (!label) return c.json(refuse("A variation needs a name."), 409);
-  const price = typedPrice(input.price);
-  if (price === null) return c.json(refuse(NO_PRICE), 409);
-
-  const result = await withSession(c.get("subject"), async (client) => {
-    const hotelId = await hotelFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-    const id = c.req.param("id");
-
-    const { rows: clash } = await client.query<{ is_active: boolean; dish: string }>(
-      `select o.is_active, i.name as dish
-         from pos_item_variations v
-         join pos_item_variations o on o.item_id = v.item_id
-                                   and o.label = $3 and o.id <> v.id
-         join pos_menu_items i on i.id = v.item_id
-        where v.id = $1 and v.hotel_id = $2`,
-      [id, hotelId, label]);
-    if (clash[0]) {
-      return refuse(clash[0].is_active
-        ? `${clash[0].dish} already has ${label}.`
-        : `${clash[0].dish} had a ${label} that was removed. Add ${label} again `
-          + "to bring it back.");
-    }
-
-    const { rowCount } = await client.query(
-      `update pos_item_variations set label = $3, price = $4
-        where id = $1 and hotel_id = $2 and is_active`,
-      [id, hotelId, label, price]);
-    if (!rowCount) return refuse("No such variation.");
-    return { ok: true as const };
-  });
-
-  if (!result) return c.json({ error: "No such property." }, 404);
-  return c.json(result, result.ok ? 200 : 409);
-});
-
-/** Removing the LAST variation makes the dish a one-price dish again, and
-    its own price has not been looked at since it gained variations. So
-    that removal needs the price, typed (the owner, 21 September). */
-till.post("/:code/till/menu/variations/:id/remove", async (c) => {
-  const input = await c.req.json<{ dishPrice?: unknown }>()
-    .catch(() => ({}) as { dishPrice?: unknown });
-  const dishPrice = typedPrice(input.dishPrice);
-
-  const result = await withSession(c.get("subject"), async (client) => {
-    const hotelId = await hotelFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-    const id = c.req.param("id");
-
-    const { rows: v } = await client.query<{
-      item_id: string; dish: string; others: string;
+    const { rows: rows } = await client.query<{
+      id: string; type_no: number; label: string; is_active: boolean;
     }>(
-      `select v.item_id::text, i.name as dish,
-              (select count(*) from pos_item_variations o
-                where o.item_id = v.item_id and o.is_active
-                  and o.id <> v.id)::text as others
-         from pos_item_variations v
-         join pos_menu_items i on i.id = v.item_id
-        where v.id = $1 and v.hotel_id = $2 and v.is_active`,
-      [id, hotelId]);
-    if (!v[0]) return refuse("No such variation.");
+      `select id::text, type_no, label, is_active from pos_item_variations
+        where item_id = $1`, [itemId]);
 
-    const last = v[0].others === "0";
-    if (last && dishPrice === null) {
-      return refuse(`${v[0].dish} will be sold at one price again. What price?`);
+    /* Removing the last one makes the dish one price again, and that
+       price has not been looked at since it gained variations - so it is
+       typed now (the owner, 21 September). */
+    const hadAny = rows.some((r) => r.is_active);
+    if (dishPrice && hadAny && "reason" in dishPrice) {
+      return refuse(`${dish[0].name} will be sold at one price again. `
+        + `What price? ${dishPrice.reason}`);
     }
-    if (last) {
-      await client.query(
-        `update pos_menu_items set price = $3, updated_at = now()
-          where id = $1 and hotel_id = $2`,
-        [v[0].item_id, hotelId, dishPrice]);
+
+    /* Which row each choice lands on: the same type and name first (a
+       revival), then the row its id names if nobody took it, else new. */
+    const byKey = new Map(rows.map((r) => [`${r.type_no}|${r.label}`, r.id]));
+    const ids = new Set(rows.map((r) => r.id));
+    const taken = new Set<string>();
+    const rowOf = new Map<Choice, string | null>();
+    for (const w of wanted) {
+      const hit = byKey.get(`${w.typeNo}|${w.label}`);
+      if (hit) { taken.add(hit); rowOf.set(w, hit); }
     }
+    for (const w of wanted) {
+      if (rowOf.has(w)) continue;
+      const own = w.id && ids.has(w.id) && !taken.has(w.id) ? w.id : null;
+      if (own) taken.add(own);
+      rowOf.set(w, own);
+    }
+
     await client.query(
-      "update pos_item_variations set is_active = false where id = $1", [id]);
+      `update pos_item_variations set is_active = false
+        where item_id = $1 and is_active and not (id = any($2::uuid[]))`,
+      [itemId, [...taken]]);
+    for (const w of wanted) {
+      const row = rowOf.get(w);
+      const values = [w.typeNo, w.label, w.price, w.kind, w.heading, w.sort];
+      if (row) {
+        await client.query(
+          `update pos_item_variations
+              set type_no = $2, label = $3, price = $4, kind = $5, heading = $6,
+                  sort_order = $7, is_active = true
+            where id = $1`, [row, ...values]);
+      } else {
+        await client.query(
+          `insert into pos_item_variations
+             (hotel_id, item_id, type_no, label, price, kind, heading, sort_order)
+           values ($1, $2, $3, $4, $5, $6, $7, $8)`, [hotelId, itemId, ...values]);
+      }
+    }
+    if (dishPrice && hadAny && "price" in dishPrice) {
+      await client.query(
+        "update pos_menu_items set price = $3, updated_at = now() where id = $1 and hotel_id = $2",
+        [itemId, hotelId, dishPrice.price]);
+    }
     return { ok: true as const };
   });
 
@@ -1353,8 +1368,9 @@ till.post("/:code/till/menu/addon-groups/:id/addons", async (c) => {
   const input = await c.req.json<Named>().catch(() => ({}) as Named);
   const label = labelOf(input.label);
   if (!label) return c.json(refuse("An option needs a name - Butter naan, No onion."), 409);
-  const price = typedPrice(input.price);
-  if (price === null) return c.json(refuse(NO_PRICE), 409);
+  const priced = priceOf(input);
+  if ("reason" in priced) return c.json(refuse(priced.reason), 409);
+  const price = priced.price;
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -1390,8 +1406,9 @@ till.patch("/:code/till/menu/addons/:id", async (c) => {
   const input = await c.req.json<Named>().catch(() => ({}) as Named);
   const label = labelOf(input.label);
   if (!label) return c.json(refuse("An option needs a name."), 409);
-  const price = typedPrice(input.price);
-  if (price === null) return c.json(refuse(NO_PRICE), 409);
+  const priced = priceOf(input);
+  if ("reason" in priced) return c.json(refuse(priced.reason), 409);
+  const price = priced.price;
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -1510,6 +1527,10 @@ till.post("/:code/till/menu/addon-groups/import", async (c) => {
       }
       const price = typedPrice(rawPrice);
       if (price === null) return reject(`"${rawPrice}" is not a price.`);
+      /* D27-192 (Q6, D): a file cannot tick Free, as the menu file cannot. */
+      if (price === 0) {
+        return reject("0 is not taken from a file. Add a free option on the menu screen, ticked Free.");
+      }
 
       const min = whole(raw.minSelect);
       const max = whole(raw.maxSelect);
@@ -1932,6 +1953,18 @@ const DAY_CLOSED =
   "The restaurant's day is closed and its drawer counted. New bills and " +
   "payments wait until the night audit moves the date.";
 
+/* THE DAY OPENS BY ITSELF (the owner's D27-200, replacing D27-190's count-in):
+   after the night audit an outlet's day is open on the float its last close
+   kept, however many days back (app.pos_opening_cash, 165) - nothing to
+   count, nothing to press. Null only on the outlet's FIRST-EVER day, when
+   no close has kept a float yet: that one float is counted once (Open the
+   day), and until it is no CASH is taken. */
+async function openingCash(client: Client, outletId: string, date: string): Promise<number | null> {
+  const { rows } = await client.query<{ opening: string | null }>(
+    `select app.pos_opening_cash($1, $2::date)::text as opening`, [outletId, date]);
+  return rows[0]!.opening === null ? null : Number(rows[0]!.opening);
+}
+
 till.post("/:code/till/orders", async (c) => {
   type OpenBody = { outlet?: string; table?: string; tableId?: string };
   const input = await c.req.json<OpenBody>().catch(() => ({}) as OpenBody);
@@ -2059,6 +2092,9 @@ export interface LineInput {
      REQUIRES one and the database refuses without it; a dish with none
      must not be sent one. */
   variationId?: string;
+  /* The choice of each further type, when the dish has more than one
+     (D27-192): Large is the variation, Cheese burst and Thin are these. */
+  moreChoiceIds?: string[];
   addonIds?: string[];
 }
 
@@ -2133,7 +2169,7 @@ async function addOneLine(
               app.module_enabled(i.hotel_id, 'alcohol') as serves_alcohol,
               ${DISH_TAX_RATE}::text as tax_rate,
               (select count(*)::text from pos_item_variations v
-                where v.item_id = i.id and v.is_active) as variation_count
+                where v.item_id = i.id and v.is_active and v.type_no = 1) as variation_count
          from pos_menu_items i
          join pos_menu_categories c on c.id = i.category_id
         where i.id = $1 and i.hotel_id = $2`,
@@ -2169,8 +2205,8 @@ async function addOneLine(
     if (item[0].tax_rate === null && item[0].tax_kind === "alcohol") {
       return refuse(
         `${item[0].name} has no VAT rate. Nothing is set for alcohol, and a `
-        + "missing rate is not zero - set it in the GST and VAT card, under Rooms "
-        + "and rates → Room types or Finance → Invoices.");
+        + "missing rate is not zero - set it in the GST and VAT card, under Settings → "
+        + "Taxes and billing or Finance → Invoices.");
     }
     if (item[0].tax_rate === null) {
       const KIND: Record<string, string> = {
@@ -2180,7 +2216,7 @@ async function addOneLine(
       return refuse(
         `${item[0].name} has no GST rate. Nothing is set for `
         + `${KIND[item[0].tax_kind] ?? "this category"}, and a missing rate `
-        + `is not zero - set it in the GST card, under Rooms and rates → Room types or Finance → Invoices.`);
+        + `is not zero - set it in the GST card, under Settings → Taxes and billing or Finance → Invoices.`);
     }
 
     /* THE PRICE COMES FROM THE VARIATION, NOT THE ITEM.
@@ -2191,6 +2227,7 @@ async function addOneLine(
        reason before the constraint does. */
     let name = item[0].name;
     let unitPrice = item[0].price;
+    let firstLabel: string | null = null;
 
     if (Number(item[0].variation_count) > 0) {
       if (!input.variationId) {
@@ -2198,15 +2235,48 @@ async function addOneLine(
       }
       const { rows: v } = await client.query<{ label: string; price: string }>(
         `select label, price::text from pos_item_variations
-          where id = $1 and item_id = $2 and is_active`,
+          where id = $1 and item_id = $2 and is_active and type_no = 1`,
         [input.variationId, input.itemId],
       );
       if (!v[0]) return refuse("That variation is not on this dish.");
+      firstLabel = v[0].label;
       name = `${item[0].name} (${v[0].label})`;
       unitPrice = v[0].price;
     } else if (input.variationId) {
       return refuse(`${item[0].name} has no variations.`);
     }
+
+    /* EACH FURTHER TYPE (D27-192): one choice of each, and its price is
+       added to the first's - Large ₹400 + Cheese burst ₹80 is ₹480. The
+       kitchen reads every choice in the name, Free ones too. */
+    const wanted = input.moreChoiceIds ?? [];
+    const { rows: types } = await client.query<{ type_no: number; heading: string }>(
+      `select type_no, coalesce(max(heading), max(kind), 'variation') as heading
+         from pos_item_variations
+        where item_id = $1 and is_active and type_no > 1
+        group by type_no order by type_no`,
+      [input.itemId]);
+    const { rows: more } = wanted.length === 0 ? { rows: [] } : await client.query<{
+      id: string; type_no: number; label: string; price: string;
+    }>(
+      `select id::text, type_no, label, price::text from pos_item_variations
+        where id = any($2::uuid[]) and item_id = $1 and is_active and type_no > 1
+        order by type_no`,
+      [input.itemId, wanted]);
+    if (more.length !== wanted.length) return refuse("That choice is not on this dish.");
+    for (const t of types) {
+      if (more.filter((m) => m.type_no === t.type_no).length !== 1) {
+        return refuse(`${item[0].name}: choose one ${t.heading.toLowerCase()}.`);
+      }
+    }
+    if (more.length > 0) {
+      const paise = (rupees: string) => Math.round(Number(rupees) * 100);
+      unitPrice = ((paise(unitPrice) + more.reduce((sum, m) => sum + paise(m.price), 0))
+        / 100).toFixed(2);
+      name = `${item[0].name} (${[firstLabel, ...more.map((m) => m.label)]
+        .filter(Boolean).join(", ")})`;
+    }
+    const extraChoiceIds = more.map((m) => m.id);
 
     /* ── The sides, checked BEFORE anything is written ────────────
        They were checked after the dish's line went in, and a refusal
@@ -2265,32 +2335,46 @@ async function addOneLine(
 
     /* Price and tax are COPIED onto the line. A menu price that rises
        next month must not silently re-price a bill printed today. */
-      /* Increment first. Only if nothing matched does a row get added. */
-      /* Add-ons make two lines DIFFERENT even when the dish and note
-         match — a Bhaaji Pau with onions is not the same thing to a
-         kitchen as one without. Sent with add-ons, it always starts a
-         new line rather than joining one whose sides nobody checked. */
-      const wantsAddons = (input.addonIds?.length ?? 0) > 0;
-      const { rowCount: bumped } = wantsAddons ? { rowCount: 0 } : await client.query(
+      /* Increment first. Only if nothing matched does a row get added.
+         THE SAME DISH IS THE SAME CHOICES (D27-189): the variation, the
+         note and exactly these sides. A Bhaaji Pau with onions is not the
+         same thing to a kitchen as one without, but a second one with
+         onions is one more of it - with sides, this started a new line
+         every time, so the same dish ordered twice read as two. The dish
+         and its sides go up together. */
+      const { rows: same } = await client.query<{ id: string }>(
         `update pos_order_lines
             set qty = qty + $1
-          where order_id = $2
-            and item_id = $3
-            and variation_id is not distinct from $5
-            and parent_line_id is null
-            and not exists (select 1 from pos_order_lines a
-                             where a.parent_line_id = pos_order_lines.id
-                               and not a.voided)
-            and not voided
-            /* NOT ONE THE KITCHEN HAS (the owner, 28 September). Raising a
-               sent line put the second plate on the bill and on no docket:
-               the guest paid for two and the kitchen's slip said one. An
-               extra after the send is a new line and goes on the next. */
-            and kot_status = 'pending'
-            and note is not distinct from $4`,
+          where id = (
+            select l.id from pos_order_lines l
+             where l.order_id = $2
+               and l.item_id = $3
+               and l.variation_id is not distinct from $5
+               and l.parent_line_id is null
+               and not l.voided
+               /* NOT ONE THE KITCHEN HAS (the owner, 28 September). Raising a
+                  sent line put the second plate on the bill and on no docket:
+                  the guest paid for two and the kitchen's slip said one. An
+                  extra after the send is a new line and goes on the next. */
+               and l.kot_status = 'pending'
+               and l.note is not distinct from $4
+               and l.extra_choice_ids = $7::uuid[]
+               and array(select a.addon_id from pos_order_lines a
+                          where a.parent_line_id = l.id and not a.voided
+                          order by 1)
+                 = array(select unnest($6::uuid[]) order by 1)
+             order by l.added_at limit 1)
+          returning id::text`,
         [qty, orderId, input.itemId, input.note?.trim() || null,
-         input.variationId ?? null],
+         input.variationId ?? null, chosen.map((a) => a.id), extraChoiceIds],
       );
+      if (same[0]) {
+        await client.query(
+          `update pos_order_lines set qty = qty + $1
+            where parent_line_id = $2 and not voided`,
+          [qty, same[0].id]);
+      }
+      const bumped = same.length;
 
       const added = !bumped ? await client.query<{ id: string }>(
       /* TAPPING THE SAME DISH TWICE MEANS TWO OF IT, NOT TWO LINES.
@@ -2306,12 +2390,12 @@ async function addOneLine(
          re-adding something that was cancelled starts fresh. */
       `insert into pos_order_lines
          (order_id, hotel_id, item_id, variation_id, name, qty, unit_price,
-          tax_rate, tax_scheme, note, added_by)
-       values ($1,$2,$3,$10,$4,$5,$6,$7,$11,$8,$9)
+          tax_rate, tax_scheme, note, added_by, extra_choice_ids)
+       values ($1,$2,$3,$10,$4,$5,$6,$7,$11,$8,$9,$12)
        returning id`,
       [orderId, hotelId, input.itemId, name, qty,
        unitPrice, item[0].tax_rate, input.note?.trim() || null, session.staffId,
-       input.variationId ?? null, item[0].tax_scheme],
+       input.variationId ?? null, item[0].tax_scheme, extraChoiceIds],
     ) : null;
 
     /* ── The sides, as child lines ────────────────────────────────
@@ -3057,12 +3141,23 @@ till.get("/:code/till/floor", async (c) => {
       section_id: string; section: string; table_id: string; label: string;
       seats: number | null; row_no: number; col_no: number;
       order_id: string | null; order_no: string | null; state: string;
-      minutes: number | null; payable: string | null;
+      minutes: number | null; payable: string | null; ready: string;
+      ready_ids: string[];
     }>(
       `select section_id::text, section, table_id::text, label, seats,
               row_no, col_no, order_id::text, order_no, state, minutes,
-              payable::text
-         from app.pos_floor($1)`,
+              payable::text,
+              /* Dishes the kitchen has made Ready and nobody has Taken
+                 (D27-221): what the waiter walks to the pass for. Dishes,
+                 not their sides. */
+              (select coalesce(sum(l.qty), 0) from pos_order_lines l
+                where l.order_id = f.order_id and l.kot_status = 'ready'
+                  and not l.voided and l.parent_line_id is null)::text as ready,
+              /* The same dishes, for the badge's one-tap Taken (D27-222). */
+              array(select l.id::text from pos_order_lines l
+                     where l.order_id = f.order_id and l.kot_status = 'ready'
+                       and not l.voided and l.parent_line_id is null) as ready_ids
+         from app.pos_floor($1) f`,
       [outlet[0].id],
     );
 
@@ -3076,6 +3171,7 @@ till.get("/:code/till/floor", async (c) => {
         row: number; col: number;
         orderId: string | null; orderNo: string | null;
         state: string; minutes: number | null; payable: number | null;
+        ready: number; readyIds: string[];
       }[];
     }[] = [];
 
@@ -3094,6 +3190,8 @@ till.get("/:code/till/floor", async (c) => {
         state: r.state,
         minutes: r.minutes,
         payable: r.payable === null ? null : Number(r.payable),
+        ready: Number(r.ready),
+        readyIds: r.ready_ids,
       });
     }
 
@@ -3425,6 +3523,7 @@ till.get("/:code/till/day-end", async (c) => {
 
     const counted = day[0]?.counted_cash;
     const expectedCash = Number(expected[0]!.amount);
+    const opening = await openingCash(client, outlet[0].id, businessDate);
 
     return {
       outlet: { code: outletCode, name: outlet[0].name },
@@ -3449,7 +3548,7 @@ till.get("/:code/till/day-end", async (c) => {
         reason: m.reason, recordedBy: m.recorded_by_name, at: m.recorded_at,
       })),
       cash: {
-        opening: Number(day[0]?.opening_cash ?? 0),
+        opening: opening ?? 0,
         expected: expectedCash,
         counted: counted === null || counted === undefined ? null : Number(counted),
         /* The one figure anybody argues about, worked out in one place
@@ -3461,12 +3560,57 @@ till.get("/:code/till/day-end", async (c) => {
           value: Number(d.value), count: d.count,
         })),
       },
+      /* False only on the outlet's first-ever day, before its one count (D27-200). */
+      opened: opening !== null,
       closedAt: day[0]?.closed_at ?? null,
       closedBy: day[0]?.closed_by_name ?? null,
     };
   });
 
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+/* Open the day: an outlet's FIRST-EVER float, counted once (D27-200). Every
+   day after opens by itself on the float the last close kept, and this is
+   refused. */
+till.post("/:code/till/day-end/open", async (c) => {
+  type OpenBody = { outlet?: string; opening?: unknown };
+  const input = await c.req.json<OpenBody>().catch(() => ({}) as OpenBody);
+  const opening = input.opening;
+  if (typeof opening !== "number" || !Number.isFinite(opening) || opening < 0) {
+    return c.json(refuse(
+      "Count the opening float first - enter 0 if the tin is empty."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows: outlet } = await client.query<{ id: string }>(
+      `select id::text from pos_outlets
+        where hotel_id = $1 and code = $2 and is_active`,
+      [hotelId, (input.outlet ?? "REST").toUpperCase()],
+    );
+    if (!outlet[0]) return refuse("No such outlet.");
+
+    const businessDate = await businessDateFor(client, hotelId);
+    const carried = await openingCash(client, outlet[0].id, businessDate);
+    if (carried !== null) {
+      return refuse(`Today is already open, on a float of ₹${carried.toFixed(2)}. There is nothing to count in.`);
+    }
+    const { rows } = await client.query(
+      `insert into pos_day_ends (hotel_id, outlet_id, business_date, opening_cash)
+       values ($1,$2,$3,$4)
+       on conflict (outlet_id, business_date) do nothing
+       returning id`,
+      [hotelId, outlet[0].id, businessDate, opening.toFixed(2)],
+    );
+    if (!rows.length) return refuse("Today is already open. Its float was counted.");
+    return { ok: true as const };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
 till.post("/:code/till/day-end/movements", async (c) => {
@@ -3531,7 +3675,7 @@ till.post("/:code/till/day-end/movements", async (c) => {
 
 till.post("/:code/till/day-end/count", async (c) => {
   type CountBody = {
-    outlet?: string; opening?: number;
+    outlet?: string;
     denominations?: { value: number; count: number }[];
   };
   const input = await c.req.json<CountBody>().catch(() => ({}) as CountBody);
@@ -3549,17 +3693,27 @@ till.post("/:code/till/day-end/count", async (c) => {
 
     const businessDate = await businessDateFor(client, hotelId);
 
-    const { rows: day } = await client.query<{ id: string; closed_at: string | null }>(
-      `insert into pos_day_ends
-         (hotel_id, outlet_id, business_date, opening_cash)
+    /* The day opened by itself on the float the last close kept (D27-200);
+       the count writes that down as the day's row. Never a typed or a
+       default float - on the outlet's first-ever day it is counted first. */
+    const carried = await openingCash(client, outlet[0].id, businessDate);
+    if (carried === null) {
+      return refuse("Open the day first: this outlet's first float is counted once.");
+    }
+    await client.query(
+      `insert into pos_day_ends (hotel_id, outlet_id, business_date, opening_cash)
        values ($1,$2,$3,$4)
-       on conflict (outlet_id, business_date) do update
-          set opening_cash = coalesce($4, pos_day_ends.opening_cash)
-       returning id::text, closed_at::text`,
-      [hotelId, outlet[0].id, businessDate,
-       input.opening === undefined ? 0 : Number(input.opening).toFixed(2)],
+       on conflict (outlet_id, business_date) do nothing`,
+      [hotelId, outlet[0].id, businessDate, carried.toFixed(2)],
     );
-    const dayId = day[0]!.id;
+    const { rows: day } = await client.query<{ id: string; closed_at: string | null }>(
+      `select id::text, closed_at::text from pos_day_ends
+        where outlet_id = $1 and business_date = $2::date`,
+      [outlet[0].id, businessDate],
+    );
+    if (!day[0]) return refuse("Open the day first: this outlet's first float is counted once.");
+    if (day[0].closed_at) return refuse("That day is already closed.");
+    const dayId = day[0].id;
 
     if (input.denominations) {
       /* Replaced wholesale. A count is one act — somebody empties the tin
@@ -3592,7 +3746,7 @@ till.post("/:code/till/day-end/count", async (c) => {
 });
 
 till.post("/:code/till/day-end/close", async (c) => {
-  type CloseBody = { outlet?: string; varianceReason?: string };
+  type CloseBody = { outlet?: string; varianceReason?: string; keptCash?: unknown };
   const input = await c.req.json<CloseBody>().catch(() => ({}) as CloseBody);
 
   const result = await withSession(c.get("subject"), async (client, session) => {
@@ -3646,11 +3800,20 @@ till.post("/:code/till/day-end/close", async (c) => {
         `₹${Math.abs(variance).toFixed(2)}. Say why, and it closes.`);
     }
 
+    /* THE FLOAT KEPT (D27-191): typed at every close; the rest of the count
+       is cash to deposit. */
+    const counted = Number(day[0].counted_cash);
+    const kept = input.keptCash;
+    if (typeof kept !== "number" || !Number.isFinite(kept) || kept < 0 || kept > counted) {
+      return refuse(
+        `Say what float is kept for the next day - from ₹0 to the ₹${counted.toFixed(2)} counted.`);
+    }
+
     await client.query(
       `update pos_day_ends
-          set variance_reason = $1, closed_by = $2, closed_at = now()
+          set variance_reason = $1, closed_by = $2, closed_at = now(), kept_cash = $4
         where id = $3`,
-      [input.varianceReason?.trim() || null, session.staffId, day[0].id],
+      [input.varianceReason?.trim() || null, session.staffId, day[0].id, kept.toFixed(2)],
     );
 
     return {
@@ -3816,6 +3979,12 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
       return refuse(
         "This is a delivery with no phone number. It will be cooked and " +
         "then it cannot leave the building - take a number first.");
+    }
+    if ((tenders ? tenders.some((t) => t.method === "cash") : method === "cash")
+        && (await openingCash(client, order[0].outlet_id, order[0].business_date)) === null) {
+      return refuse(
+        "Count this outlet's first float once (Close restaurant day, Open the day): cash is "
+        + "taken after it. From then on the day opens by itself. Card, UPI and room charges go on.");
     }
 
     const { rows: t } = await client.query<{
@@ -4163,11 +4332,13 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
     }
 
     const { rows: line } = await client.query<{
-      qty: string; sent: boolean; has_addons: boolean;
+      qty: string; sent: boolean; addon_ids: string[]; extra_choice_ids: string[];
+      item_id: string | null; variation_id: string | null; note: string | null;
     }>(
       `select qty::text, kot_status <> 'pending' as sent,
-              exists (select 1 from pos_order_lines a
-                       where a.parent_line_id = l.id and not a.voided) as has_addons
+              array(select a.addon_id::text from pos_order_lines a
+                     where a.parent_line_id = l.id and not a.voided) as addon_ids,
+              item_id::text, variation_id::text, note, extra_choice_ids::text[]
          from pos_order_lines l
         where id = $1 and order_id = $2 and not voided
         for update`,
@@ -4175,14 +4346,9 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
     );
     if (!line[0]) return refuse("That line is struck, or is not here.");
     /* MORE of a dish the kitchen has is a new line, for the next docket -
-       the same as tapping it again (the owner, 28 September). With sides,
-       the waiter adds it from the menu so its sides are chosen with it. */
+       the same as tapping it again (the owner, 28 September), sides and
+       all (D27-192, Q7). */
     const moreSent = line[0].sent && qty > Number(line[0].qty);
-    if (moreSent && line[0].has_addons) {
-      return refuse(
-        "The kitchen already has this. Add another from the menu, with its " +
-        "sides, and send it.");
-    }
     /* Fewer of a dish the kitchen already has is a strike (D27-119). */
     const fewerSent = line[0].sent && qty < Number(line[0].qty);
     if (fewerSent) {
@@ -4203,15 +4369,18 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
       );
       if (!rowCount) return refuse("That line is already struck.");
     } else if (moreSent) {
-      await client.query(
-        `insert into pos_order_lines
-           (order_id, hotel_id, item_id, variation_id, name, qty, unit_price,
-            tax_rate, tax_scheme, note, added_by)
-         select order_id, hotel_id, item_id, variation_id, name, $2 - qty,
-                unit_price, tax_rate, tax_scheme, note, $3
-           from pos_order_lines where id = $1`,
-        [c.req.param("lineId"), qty, session.staffId],
-      );
+      /* Through the one place a dish goes on (D27-189): it joins the unsent
+         line of the same dish, and starts one only when there is none. Its
+         own insert here made a new line on every press. */
+      const l = line[0];
+      const refused = await addOneLine(client, session, hotelId, orderId, {
+        qty: qty - Number(l.qty), addonIds: l.addon_ids,
+        moreChoiceIds: l.extra_choice_ids,
+        ...(l.item_id ? { itemId: l.item_id } : {}),
+        ...(l.note ? { note: l.note } : {}),
+        ...(l.variation_id ? { variationId: l.variation_id } : {}),
+      });
+      if (refused) return refused;
     } else if (fewerSent) {
       /* THREE SENT, TWO WANTED: the one that goes is a struck line of its
          own, from the same ticket, so the docket, the pass and the day's
@@ -4228,14 +4397,16 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
            from pos_order_lines where id = $1`,
         [c.req.param("lineId"), qty, session.staffId, reason],
       );
+      /* Its sides go with it (D27-189): two plates, two lots of onions. */
       await client.query(
-        `update pos_order_lines set qty = $1 where id = $2`,
+        `update pos_order_lines set qty = $1
+          where (id = $2 or parent_line_id = $2) and not voided`,
         [qty, c.req.param("lineId")],
       );
     } else {
       const { rowCount } = await client.query(
         `update pos_order_lines set qty = $1
-          where id = $2 and order_id = $3 and not voided`,
+          where (id = $2 or parent_line_id = $2) and order_id = $3 and not voided`,
         [qty, c.req.param("lineId"), orderId],
       );
       if (!rowCount) return refuse("That line is struck, or is not here.");
@@ -4315,6 +4486,112 @@ async function fireKot(
    order back so the pad can replace its own arithmetic with the real
    figures.
    ══════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════
+   A GUEST'S ORDER, ACCEPTED (D27-224, D27-225; the in-stay plan, A)
+
+   The round is the stored basket, never the Terminal's copy of it. Each
+   line is priced again by the one rule the guest's order was priced by
+   (app.guest_dish_price): a dish no longer on the menu, or a price that
+   moved, refuses the Accept naming the dish, and the waiter declines with
+   the reason the guest reads - never more than the guest saw (Q1). The
+   restaurant must still be taking orders for that stay (Q5).
+   ══════════════════════════════════════════════════════════════════ */
+type GuestLine = {
+  itemId: string; qty: number; variationId: string | null;
+  moreChoiceIds: string[]; addonIds: string[]; name: string; unitPrice: number;
+};
+
+async function guestOrderRound(
+  client: Client, hotelId: string, id: string,
+): Promise<{ lines: LineInput[]; table: string } | { reason: string }> {
+  const { rows: g } = await client.query<{
+    reservation_id: string; basket: GuestLine[]; note: string | null; status: string;
+    open: boolean; room: string | null;
+  }>(
+    `select f.reservation_id::text, f.basket, f.note, f.status,
+            app.guest_dining_outlet(f.reservation_id) is not null as open,
+            (select r.number from room_assignments ra join rooms r on r.id = ra.room_id
+              where ra.reservation_id = f.reservation_id and ra.released_at is null
+              order by ra.from_date desc, ra.created_at desc limit 1) as room
+       from guest_food_orders f
+      where f.id::text = $1 and f.hotel_id = $2`,
+    [id, hotelId]);
+  const order = g[0];
+  if (!order) return { reason: "No such guest order." };
+  if (order.status !== "waiting") return { reason: `This guest order was already ${order.status}.` };
+  if (!order.open) {
+    return { reason: "The restaurant is not taking room orders now, or the guest has left. Decline it and say why." };
+  }
+
+  const lines: LineInput[] = [];
+  for (const [i, l] of order.basket.entries()) {
+    const { rows: p } = await client.query<{ unit_price: string | null }>(
+      "select unit_price::text from app.guest_dish_price($1, $2, $3, $4::uuid[], $5::uuid[])",
+      [hotelId, l.itemId, l.variationId, l.moreChoiceIds, l.addonIds]);
+    const now = p[0]?.unit_price ?? null;
+    if (now === null) return { reason: `${l.name} is not on the menu now. Decline it and say why.` };
+    if (Math.round(Number(now) * 100) !== Math.round(Number(l.unitPrice) * 100)) {
+      return { reason: `The price of ${l.name} has changed since the guest ordered. Decline it and say why.` };
+    }
+    lines.push({
+      itemId: l.itemId, qty: l.qty,
+      ...(l.variationId ? { variationId: l.variationId } : {}),
+      ...(l.moreChoiceIds.length ? { moreChoiceIds: l.moreChoiceIds } : {}),
+      ...(l.addonIds.length ? { addonIds: l.addonIds } : {}),
+      /* The guest's one note, on the first dish (Q3). */
+      ...(i === 0 && order.note ? { note: order.note } : {}),
+    });
+  }
+  return { lines, table: order.room ? `Room ${order.room}` : "Room service" };
+}
+
+/* The guest orders waiting for the restaurant: the room, what, the note. */
+till.get("/:code/till/guest-orders", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{
+      id: string; basket: GuestLine[]; note: string | null; created_at: string; room: string | null;
+    }>(
+      `select f.id::text, f.basket, f.note, f.created_at::text,
+              (select r.number from room_assignments ra join rooms r on r.id = ra.room_id
+                where ra.reservation_id = f.reservation_id and ra.released_at is null
+                order by ra.from_date desc, ra.created_at desc limit 1) as room
+         from guest_food_orders f
+        where f.hotel_id = $1 and f.status = 'waiting'
+        order by f.created_at`,
+      [hotelId]);
+    return {
+      orders: rows.map((r) => ({
+        id: r.id, room: r.room, note: r.note, createdAt: r.created_at,
+        lines: r.basket.map((l) => ({ name: l.name, qty: l.qty, unitPrice: Number(l.unitPrice) })),
+      })),
+    };
+  });
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+/* Declined, with the reason the guest reads on their page. */
+till.post("/:code/till/guest-orders/:id/decline", async (c) => {
+  const input = await c.req.json<{ reason?: unknown }>().catch(() => ({}) as { reason?: unknown });
+  const reason = typeof input.reason === "string" ? input.reason.trim() : "";
+  if (!reason || reason.length > 200) {
+    return c.json(refuse("Say why, in a line the guest will read."), 409);
+  }
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rowCount } = await client.query(
+      `update guest_food_orders
+          set status = 'declined', reason = $3, handled_by = $4, handled_at = now()
+        where id::text = $1 and hotel_id = $2 and status = 'waiting'`,
+      [c.req.param("id"), hotelId, reason, session.staffId]);
+    return rowCount ? { ok: true as const } : refuse("This guest order was already answered.");
+  });
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
 class LineRefused extends Error {
   /* ⚠ WRITTEN OUT LONGHAND, NOT AS PARAMETER PROPERTIES.
      `constructor(public readonly reason: string, ...)` is valid
@@ -4359,6 +4636,10 @@ till.post("/:code/till/orders/batch", async (c) => {
     /* The banquet function this order goes on (D17-21), chosen on the
        pad. Null takes an open order off its function; absent leaves it. */
     eventId?: string | null;
+    /* A guest's order from their own page (D27-224, D27-225): its stored
+       basket is the round, a room-service order for the stay's room, sent
+       at once; the guest order is accepted in this same transaction. */
+    guestOrderId?: string;
   };
   const input = await c.req.json<BatchBody>().catch(() => ({}) as BatchBody);
 
@@ -4367,14 +4648,16 @@ till.post("/:code/till/orders/batch", async (c) => {
     return c.json(refuse("Which function is this order for?"), 409);
   }
 
-  const lines = input.lines ?? [];
-  if (lines.length === 0) return c.json(refuse("There is nothing to send."), 409);
+  let lines = input.lines ?? [];
+  if (lines.length === 0 && !input.guestOrderId) {
+    return c.json(refuse("There is nothing to send."), 409);
+  }
   if (lines.length > 100) {
     /* Not a real order. A guard against a loop somewhere, not against a
        large table. */
     return c.json(refuse("That is more than a hundred lines."), 409);
   }
-  if (!input.outlet && !input.orderId) {
+  if (!input.outlet && !input.orderId && !input.guestOrderId) {
     return c.json(refuse("Which outlet is this order for?"), 409);
   }
 
@@ -4386,6 +4669,18 @@ till.post("/:code/till/orders/batch", async (c) => {
     let outletId: string;
     let businessDate: string;
     let opened = false;
+
+    if (input.guestOrderId) {
+      if (orderId) return refuse("A guest's order is a new room-service order.");
+      const round = await guestOrderRound(client, hotelId, input.guestOrderId);
+      if ("reason" in round) return refuse(round.reason);
+      lines = round.lines;
+      input.outlet = "REST";
+      input.table = round.table;
+      delete input.tableId;
+      input.orderType = "room_service";
+      input.send = true;
+    }
 
     /* The banquet service's rule, before anything is written (D17-21;
        MEMORY 243). The same rule as the header route's. */
@@ -4475,6 +4770,19 @@ till.post("/:code/till/orders/batch", async (c) => {
       kot = await fireKot(client, outletId, businessDate, orderId);
     }
 
+    /* Accepted only if it is still waiting: a second Accept, or a Decline
+       between the two, throws and takes this whole order back with it. */
+    if (input.guestOrderId) {
+      const { rowCount } = await client.query(
+        `update guest_food_orders
+            set status = 'accepted', pos_order_id = $2, handled_by = $3, handled_at = now()
+          where id = $1 and status = 'waiting'`,
+        [input.guestOrderId, orderId, session.staffId]);
+      if (!rowCount) {
+        throw new LineRefused("This guest order was already answered. Nothing was sent.", -1);
+      }
+    }
+
     return {
       ok: true as const,
       opened,
@@ -4485,6 +4793,7 @@ till.post("/:code/till/orders/batch", async (c) => {
     /* The throw rolled the transaction back, so nothing was written.
        Said with the dish's position, because "a variation is required"
        is not actionable when six dishes went up at once. */
+    if (error instanceof LineRefused && error.at < 0) return refuse(error.reason);
     if (error instanceof LineRefused) {
       return refuse(
         `Nothing was sent. Dish ${error.at + 1} could not be added: ` +
@@ -4818,7 +5127,9 @@ till.post("/:code/till/orders/:id/kot/:no/printed", async (c) => {
 });
 
 /* ── The pass ─────────────────────────────────────────────────────────
-   Every line the kitchen holds, oldest first. Sorted by when it was
+   Every line the kitchen holds, oldest first. TWO STAGES (D27-221): a
+   dish is ordered or on the fire; once it is Ready it is the waiter's,
+   and leaves this board for Tables and the Terminal. Sorted by when it was
    SENT and not when it was rung up: a dish added to an old order still
    goes to the back of the queue, because that is when the kitchen
    learned about it.
@@ -4834,7 +5145,7 @@ till.get("/:code/kitchen", async (c) => {
       note: string | null; kot_status: string; waited: string;
       voided: boolean; was_sent_when_voided: boolean;
       void_reason: string | null;
-      prep_minutes: number | null; at_pass: string | null;
+      prep_minutes: number | null;
       course: number | null;
     }>(
       `select l.id::text, o.order_no, o.table_ref, o.order_type,
@@ -4845,15 +5156,6 @@ till.get("/:code/kitchen", async (c) => {
               /* What this dish SHOULD take, from 079. Null when nobody
                  has timed it - the pass shows a dash, not a zero. */
               app.prep_minutes(l.item_id) as prep_minutes,
-              /* HOW LONG IT HAS BEEN SITTING UNDER THE LAMP. Null until
-                 it is ready, because a dish still cooking is not late
-                 in this sense - it is being made. This is the number
-                 that ruins food and the one nothing showed before. */
-              case when l.kot_status = 'ready' then
-                extract(epoch from (
-                  now() - (select ready_at from app.pos_line_timings(l.id))
-                ))::int::text
-              end as at_pass,
               /* Which course, from the one place that fallback lives.
                  NULL is an unsequenced dish - a drink - and sorts last
                  rather than ahead of the starters. */
@@ -4862,13 +5164,13 @@ till.get("/:code/kitchen", async (c) => {
          join pos_orders o  on o.id = l.order_id
          join pos_outlets ou on ou.id = o.outlet_id
         where l.hotel_id = $1
-          and l.kot_status in ('sent', 'preparing', 'ready')
+          and l.kot_status in ('sent', 'preparing')
           /* PAID OR NOT (QA POS-1). Room service and take-away are paid or
              charged to the room when ordered, before anybody cooks them;
-             reading open orders only took them off the pass at once. A
-             settled order's dishes stay until they are served - for the
-             restaurant's day, so one never marked served does not sit
-             there for ever. A bill closed unpaid leaves, as before. */
+             reading open orders only took them off the board at once. A
+             settled order's dishes stay until the kitchen says Ready -
+             for the restaurant's day. A bill closed unpaid leaves, as
+             before. */
           and (o.status = 'open'
                or (o.status = 'settled' and o.business_date = $2::date))
         order by l.kot_sent_at`,
@@ -4890,12 +5192,9 @@ till.get("/:code/kitchen", async (c) => {
            colours by this — a dish waiting eleven minutes is the only
            thing on that screen that matters. */
         waitedSeconds: Number(r.waited),
-        /* The estimate, and how long it has been at the pass. Both null
-           rather than zero when unknown — an untimed dish is not an
-           instant one, and a dish still cooking has not been waiting on
-           a waiter. */
+        /* The estimate: null rather than zero when unknown - an untimed
+           dish is not an instant one. */
         prepMinutes: r.prep_minutes,
-        atPassSeconds: r.at_pass === null ? null : Number(r.at_pass),
         course: r.course,
         /* A struck line the kitchen already had. Shown so the pass can
            stop cooking it, rather than having the ticket vanish. */
@@ -4909,10 +5208,12 @@ till.get("/:code/kitchen", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
+/* The kitchen's two buttons, Start and Ready (D27-221, D27-222). Served is
+   the waiter's "Taken", below the till's routes - not the kitchen's. */
 till.post("/:code/kitchen/lines/:lineId/:to", async (c) => {
   const to = c.req.param("to");
-  if (!["preparing", "ready", "served"].includes(to)) {
-    return c.json(refuse("A dish moves to preparing, ready or served."), 409);
+  if (!["preparing", "ready"].includes(to)) {
+    return c.json(refuse("The kitchen starts a dish or makes it ready."), 409);
   }
 
   const result = await withSession(c.get("subject"), async (client) => {
@@ -4929,6 +5230,46 @@ till.post("/:code/kitchen/lines/:lineId/:to", async (c) => {
       return refuse("That dish is not with the kitchen, or was cancelled.");
     }
     return { ok: true as const, status: to };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── Taken (D27-221, D27-222) ────────────────────────────────────────
+   A dish the kitchen made Ready is the waiter's; "Taken" says they carried
+   it, and it is served. Only a ready dish: one still cooking is not the
+   waiter's to take, and one already taken is said so. The whole list is
+   checked before anything is written (MEMORY 243). */
+till.post("/:code/till/orders/:id/taken", async (c) => {
+  const input = await c.req.json<{ lineIds?: unknown }>()
+    .catch(() => ({}) as { lineIds?: unknown });
+  const lineIds = Array.isArray(input.lineIds)
+    ? [...new Set(input.lineIds.filter((x): x is string => typeof x === "string"))] : [];
+  if (lineIds.length === 0) return c.json(refuse("Which dishes?"), 409);
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+
+    const { rows } = await client.query<{ id: string; name: string; kot_status: string; voided: boolean }>(
+      `select l.id::text, l.name, l.kot_status, l.voided
+         from pos_order_lines l join pos_orders o on o.id = l.order_id
+        where l.id::text = any($3::text[]) and l.order_id = $1 and o.hotel_id = $2`,
+      [orderId, hotelId, lineIds]);
+    if (rows.length !== lineIds.length) return refuse("That dish is not on this order.");
+    const notReady = rows.find((r) => r.voided || r.kot_status !== "ready");
+    if (notReady) {
+      return refuse(notReady.kot_status === "served"
+        ? `${notReady.name} is already taken.`
+        : `${notReady.name} is not ready yet - the kitchen says when it is.`);
+    }
+    await client.query(
+      `update pos_order_lines set kot_status = 'served'
+        where id::text = any($1::text[]) and order_id = $2`,
+      [lineIds, orderId]);
+    return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

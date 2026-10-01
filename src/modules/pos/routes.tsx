@@ -11,6 +11,7 @@ import TerminalPage from "@/modules/pos/pages/Terminal";
 import BillPage from "@/modules/pos/pages/Bill";
 import PosPage from "@/modules/pos/pages/Pos";
 import SetupPage from "@/modules/pos/pages/Setup";
+import TableBookingsPage from "@/modules/pos/pages/TableBookings";
 
 /* The restaurant's screen addresses. Mounted by App.tsx inside the
    signed-in shell. */
@@ -26,6 +27,11 @@ export const routes = (
     <Route
       path="/h/:code/floor"
       element={<><PropertyScope /><PosGate><FloorPage /></PosGate></>}
+    />
+    {/* Hotel guests' table requests, answered here (D27-224). */}
+    <Route
+      path="/h/:code/table-bookings"
+      element={<><PropertyScope /><PosGate><TableBookingsPage /></PosGate></>}
     />
     <Route
       path="/h/:code/menu"

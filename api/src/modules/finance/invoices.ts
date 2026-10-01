@@ -234,9 +234,15 @@ export async function issueFolioInvoice(
 
      The odd paisa goes to CGST. Somewhere has to take it, and saying
      which, once, is better than letting the two halves round
-     independently and produce a total that is not the total. */
-  const sgst = Math.round(totals.tax * 50) / 100;
-  const cgst = Math.round((totals.tax - sgst) * 100) / 100;
+     independently and produce a total that is not the total.
+
+     IN WHOLE PAISE (the review of 1 October): this rounded a float
+     `tax * 50`, which gave the odd paisa to SGST - ₹0.05 of tax printed CGST
+     0.02 / SGST 0.03 while the bill (app.stay_bill) printed 0.03 / 0.02. */
+  const taxPaise = Math.round(totals.tax * 100);
+  const cgstPaise = Math.ceil(taxPaise / 2);
+  const cgst = cgstPaise / 100;
+  const sgst = (taxPaise - cgstPaise) / 100;
 
   const finYear = await client.query<{ y: string }>(
     "select app.current_fin_year($1) as y", [hotelId],

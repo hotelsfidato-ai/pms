@@ -51,10 +51,12 @@ function useHotel(): string {
   return params.code ?? fallback;
 }
 
+/* TWO BUTTONS, Start and Ready (D27-221). A Ready dish leaves this board:
+   it is the waiter's now, shown on Tables and the Terminal, where they
+   tap Taken when they carry it (D27-222). */
 const COLUMNS = [
   { key: "sent", label: "Ordered", next: "preparing" as const, action: "Start" },
   { key: "preparing", label: "On the fire", next: "ready" as const, action: "Ready" },
-  { key: "ready", label: "At the pass", next: "served" as const, action: "Picked up" },
 ];
 
 /* What an empty column says — in the column's own words, not "Nothing
@@ -62,7 +64,6 @@ const COLUMNS = [
 const EMPTY_COLUMN: Record<(typeof COLUMNS)[number]["key"], string> = {
   sent: "Nothing ordered yet.",
   preparing: "Nothing on the fire.",
-  ready: "Nothing at the pass.",
 };
 
 /* The wait's alarm in words: red when late, yellow when warm - the same
@@ -137,7 +138,7 @@ export default function KitchenPage() {
   }, []);
 
   const move = async (
-    line: KitchenLine, to: "preparing" | "ready" | "served",
+    line: KitchenLine, to: "preparing" | "ready",
   ) => {
     setBusy(line.id);
     const res = await moveKitchenLine(hotelId, line.id, to);
@@ -258,7 +259,7 @@ export default function KitchenPage() {
       ) : byTable ? (
         <ByTable lines={lines} busy={busy} onMove={move} />
       ) : (
-      <div className="flex-1 min-h-0 grid grid-cols-3 gap-px bg-grey-300">
+      <div className="flex-1 min-h-0 grid grid-cols-2 gap-px bg-grey-300">
         {COLUMNS.map((col) => {
           const mine = lines.filter((l) => l.status === col.key);
           return (
@@ -317,7 +318,7 @@ export default function KitchenPage() {
 function ByTable({ lines, busy, onMove }: {
   lines: KitchenLine[];
   busy: string | null;
-  onMove: (line: KitchenLine, to: "preparing" | "ready" | "served") => void;
+  onMove: (line: KitchenLine, to: "preparing" | "ready") => void;
 }) {
   const tables = new Map<string, KitchenLine[]>();
   for (const l of lines) {
@@ -393,15 +394,16 @@ function ByTable({ lines, busy, onMove }: {
                       </p>
                       <div className="space-y-2">
                         {mine.map((l) => {
+                          /* Ordered or on the fire: the read holds nothing
+                             else (D27-221), so there is no third button. */
                           const col = COLUMNS.find((c) => c.key === l.status);
-                          return (
+                          return col && (
                             <Ticket
                               key={l.id}
                               line={l}
-                              action={col?.action ?? "Done"}
+                              action={col.action}
                               busy={busy === l.id}
-                              onMove={() =>
-                                onMove(l, col?.next ?? "served")}
+                              onMove={() => onMove(l, col.next)}
                             />
                           );
                         })}
@@ -424,21 +426,10 @@ function Ticket({ line, action, busy, onMove }: {
   /* Colour carries the wait, so a chef glancing across the kitchen gets
      it without reading. Ten minutes is the threshold most passes use.
 
-     ⚠ A DISH AT THE PASS IS ON A MUCH SHORTER CLOCK. Food under a lamp
-     is dying, not cooking, and two minutes there is worse than eight in
-     a pan. So a ready dish is judged on how long it has been WAITING FOR
-     A WAITER rather than on its total age — otherwise a fast dish
-     plated in three minutes reads as calm while it goes cold. */
-  /* `?? null` and `!= null` throughout — defect 201's lesson, applied
-     the same afternoon it was learned. The read cache holds a response
-     for a week, so a browser can be showing a kitchen feed from before
-     these two fields existed; `=== null` is false for undefined and
-     would print the literal string "undefined min est" on a pass
-     screen. A field that is missing and a field that is unset mean the
-     same thing to a chef: nobody has said. */
-  const atPass = line.atPassSeconds ?? null;
-  const late = atPass != null ? atPass >= 300 : line.waitedSeconds >= 600;
-  const warm = atPass != null ? atPass >= 120 : line.waitedSeconds >= 300;
+     A Ready dish is not on this board any more (D27-221), so every
+     ticket here is judged on its wait. */
+  const late = line.waitedSeconds >= 600;
+  const warm = line.waitedSeconds >= 300;
 
   if (line.cancelled) {
     return (
@@ -490,17 +481,16 @@ function Ticket({ line, action, busy, onMove }: {
             "block tabular text-lg font-semibold",
             late ? WAIT_INK.late : warm ? WAIT_INK.warm : "text-grey-500",
           )}>
-            {waited(atPass ?? line.waitedSeconds)}
+            {waited(line.waitedSeconds)}
           </span>
           {/* What it SHOULD take, so a chef can tell a slow dish from a
               dish that is simply slow to make. A dash when nobody has
               timed it — never a zero, which would read as instant. */}
+          {/* `== null`, not `=== null`: a feed cached before the estimate
+              existed has it undefined, and a missing field means the same
+              to a chef as an unset one - nobody has said (defect 201). */}
           <span className="block text-2xs text-grey-500 tabular">
-            {atPass != null
-              ? "at the pass"
-              : line.prepMinutes == null
-                ? "- est"
-                : `${line.prepMinutes} min est`}
+            {line.prepMinutes == null ? "- est" : `${line.prepMinutes} min est`}
           </span>
         </span>
       </div>

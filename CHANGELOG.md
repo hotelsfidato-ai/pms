@@ -50,6 +50,144 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-01 to 02 · the one launch: the after-launch items built now (D27-225), merged and checked
+
+**Asked for:** the owner, 1 October: build everything planned for after the launch now, and
+launch once with all of it (D27-225). Then, while it was being built: a group guest the company
+pays for must not owe the company's nights (D27-226); a day use bookable from New booking with
+its price typed every time (D27-227, D27-229, D27-230); small choices on the guest's page
+confirmed (D27-228). "Tell me when all is merged and checked", with a progress bar.
+
+**Shipped** (each a lane, merged by the master into cp6; migrations renumbered 171-176)
+- Step 0: the guest door's kit and the page's kit split out (`api/src/routes/guestDoorKit.ts`,
+  `src/modules/online-checkin/guestKit.ts`); every guest feature has its own route file and
+  section (online-checkin MODULE.md rule 8). No behaviour change.
+- Settings: the checklist folds its reasons behind a tap on a phone (D27-223).
+- One-tap choices on the guest's page (guest services; no migration).
+- In-room dining from the menu, accepted on the Terminal as a room-service order (POS; 171).
+- Table booking from the guest's page, answered on Table bookings; the voucher's Instagram QR
+  (rates lane; 172).
+- Two-way messages with the desk, replies signed "Front desk"; the hotel's logo on the guest's
+  page (online check-in; 173, 174).
+- The review fixes FIN-24 (nights to come by the audit's rule), FIN-25 (the invoice's odd paisa
+  to CGST), FIN-26 (no payment or refund through the charge door), FIN-27 / D27-226 (a guest's
+  figures count only their own bill; the group's master bill listed once; the bell too).
+- Early and late fees under Room on the bill (175); day use charged at check-in; day use from
+  New booking, price typed, amendable, never turned into nights (176).
+- Mine: `api/scripts/reset-property.ts` clears `guest_food_orders` and `table_bookings` (the
+  5EL reset in the release steps would have stopped on them); the guest-bill test compares the
+  bill without the desk's own `nightsToCome`; `docs/go-live/RELEASE-1OCT.md` filled in.
+
+**Found**
+- The first full run on the merged tree (`all-merged-1oct`) failed 6 of 2,202 server tests in
+  3 files: the two above, and four channel-manager timeouts under load (pass alone). MEMORY 368.
+- My wait for a free database looked for words its own command line carried, so it could never
+  end. MEMORY 369.
+
+**Proved**
+- Full gates `final-1oct` on 80d18688: web 919, api 2,206 of 2,206, database 1,374, replay 176.
+  `npm run build` passes (no test sign-in in dist).
+- The guest's page walked on `fidato` at 375 px with a made-up link (the pane was hidden, so the
+  page's own buttons were pressed by script): drinking water × 2 sent; a message, the desk's reply
+  read as "Front desk", the message "Handled"; dining 2 × Chicken 65 + 1 × Masala Chai = ₹780,
+  accepted as a room-service order for Room 203 (₹780 + ₹39), "On its way"; a table on a
+  confirmed booking for Sat 3 Oct 8:00 pm for 4, confirmed, the guest seeing no table. No
+  sideways scroll. The two test links are revoked.
+
+**Left open**
+- The owner runs the release (`docs/go-live/RELEASE-1OCT.md`).
+- Archive and recycle the finished lanes' copies (D24-21).
+- The paused lanes: contracts, loyalty, room systems (migrations after 176).
+
+**Commits:** `1befb5a4 … 80d18688` (merges), then notes.
+
+## 2026-10-01 · The master: the owner's second walk-through, and the launch set checked
+
+**Asked for (30 Sep evening to 1 Oct):** the bill before the night audit; cash opening by itself;
+the first night charged at check-in; the Rates break-up; the connections job and the channel
+manager in the launch; online check-in with an email code, Google and an ID photo kept encrypted
+in Google Drive; one place for settings. "Tell me when all is merged and checked."
+
+**Decided** (docs/briefs/decisions-2026-09-27.md): D27-197 to D27-214.
+
+**Shipped (merged into cp6, local, nothing pushed)**
+- Walk-in cleanup: the dead route gone; the 90-night cap and the foreign-guest rule on the new
+  path (D27-197). The channel manager (D27-198). Connections: every message through the CRS,
+  keyless leads, AMR and GLM (D27-203).
+- Booking and bill: the bill's headline shows what is due; "Rate includes GST" on the list price,
+  as a tick, and on Change rate (D27-199); the bill in Room / Restaurant / Bar sections
+  (migration 166); the first night posted at check-in through night-audit/roomNight.ts, the
+  interim bill's "to be posted tonight", an early arrival's hold (D27-204, D27-205).
+- Cash: every cash point opens by itself after the night audit; a kept desk float names the next
+  person (migration 165; D27-200 to D27-202).
+- Rates: each room type opens to its break-up; Set prices (D27-206).
+- Online check-in: three ways to verify; the ID photo sealed in an AES-256 zip and stored in
+  Drive through a new n8n workflow; the desk's view, removal and kept list; the desk adds a photo
+  at check-in (migration 167; D27-207 to D27-212). nginx gained three locations.
+- Settings: one Settings place with eight tabs; the hotel's own profile and logo; a hotel's GM
+  and Admin edit their own hotel (migration 168; D27-213, D27-214).
+- Core, the master's: withUser resolves a Firebase uid once (every signed-in request about 3x
+  faster); "Google Pay" out of the payment list; the "where to set GST" sentences.
+
+**Proved:** `bash scripts/gates.sh launch-1oct-b` on cp6 25842836: web types, api types, strip
+169; web 870 of 871 (1 skipped); api 149 files, 2068 of 2068; database 1311 assertions, 168
+migrations; replay 168. `npm run build` exit 0. The run before it (launch-1oct) failed four API
+tests from two causes, both fixed (MEMORY 361).
+
+**Not proved here, the owner's on the server:** a real WhatsApp and email; a real Google
+sign-in; a real leads read; the Drive workflow; a bundle opened in 7-Zip; nginx's three
+locations.
+
+**Left open:** the release (the owner types it) and its owner steps; contracts, guest services,
+loyalty, room systems (paused); online payments; settings phases 3 to 5; FIN-24, ADM-19; the
+guest's page has no logo; day use is not charged automatically.
+
+**Commits:** dfc5d39..25842836 on cp6.
+
+---
+
+## 2026-09-30 · The master: the owner's walk-through, four lanes, three merged
+
+**Asked for:** the owner's walk-through of 30 Sep ("plan all of this and let's complete this"):
+booking and bill, rooms and rates, POS, cash (D27-187..190). Then "stop this for now".
+
+**Decided** (docs/briefs/decisions-2026-09-27.md): D27-191 cash details; D27-192 POS variations
+(several types per dish, a typed Option heading, the first type prices); D27-193 booking root
+causes (demo to today, early check-in warns, a cash advance held without a drawer, GST under
+Company); D27-194 rates (one-guest base + double occupancy, meals per guest, AI, a laundry GST
+heading, Settings › Configuration); D27-195 (a choice name may repeat across types, the
+inclusive-GST slab gap refused, the paisa 1p under, a rate change's reason in the notes);
+D27-196 (the "Property setup" section; the old rack keeps pricing meal plans).
+
+**Shipped (merged into cp6, local, nothing pushed)**
+- Rooms and rates (rates/base-addons-30sep, 4a7ef0c; migration 162): a base plus add-ons, one
+  Rates screen with each day's performance, Room types as a list, Settings › Configuration with
+  the GST card and a Laundry heading; the channel manager, night-audit report, property and
+  commissioning read app.price_for / app.tariff_guests.
+- Booking and bill (fix/booking-bill-30sep, 08649c0): early check-in confirm, the cash advance
+  held, GST under Company, Extras off, charges to come, change rate before check-in (reason in
+  the notes), View voucher, rate inclusive of GST, the inclusions 404, the Dashboard nesting
+  warning, the demo teardown and --today.
+- Cash (cash/counts-deposits-30sep, 2fdd8eb; migration 163): count in and out at the desk and
+  the restaurant, no cash before the till's day opens, the float kept at every close, the Cash
+  deposits log (the GM records, the owner or accountant verifies, slip photo, append-only).
+
+**Proved:** quick gates after each merge; the last, merge-cash-30sep: web types, api types,
+strip 165, web 812/813. Each lane's own API files one at a time (each module's CHANGELOG).
+Local `fidato` migrated to 163 and reloaded on 30 Sep.
+
+**Found:** live 5EL's business date was 9 Sep on 30 Sep (read-only): its night audit has not run
+for 21 days. The owner was asked whether 5 Elements uses the live PMS day to day.
+
+**Left open:** POS part 2, the variation form (paused WIP; 182 becomes 164 at merge). The
+booking lane's e918193 (stays.ts rack read, not merged) and the walk-in route's read. The full
+API suite, database and replay on the combined cp6. The words-only sweep ("set GST on Room types"
+to Configuration). The walk-in route cleanup lane (started, stopped). The six lanes paused earlier.
+
+**Commits:** c01b150..HEAD on cp6.
+
+---
+
 ## 2026-09-28/30 · The master: the QA fix round, release 1 checked, drive D:, and release 2's six features
 
 **Asked for:** fix QA's findings before the one release; a local demo; then folio edit and

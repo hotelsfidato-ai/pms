@@ -12,6 +12,45 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-09-30 · The keyless login, the two live hotels, a hotel with no campaign list (D27-186)
+
+Branch `connections/crs-only-30sep`, the connections follow-up lane; the sending half of the same
+decision is guest messages' CHANGELOG, same date.
+
+**Asked for** (the owner's D27-186, the master's card): Google refused a key for `pms-reader`
+(the organisation's `iam.disableServiceAccountKeyCreation`), so read without one; the two live
+hotels, Amrapali Kolhapur (`AMR` = `amrapali-kolhapur`) and Hotel Grand Lucent Mathura (`GLM` =
+`grand-lucent-mathura`); Grand Lucent's missing campaign list is "no campaigns", not an error.
+**Shipped:** `M2R_IMPERSONATE`, the read-only login's email. The server's own Google login (the
+Firebase admin credential `auth.ts` loads) asks IAM Credentials `generateAccessToken` for a
+token as that login: scope `datastore`, `3600s`, kept in memory until five minutes before it
+ends, never logged (`firestore.ts`, `impersonated`). The project to read is the one in the
+login's own address. `M2R_SERVICE_ACCOUNT` still works and is used first; neither, or an address
+that is not a service account's, is "not connected". A refused token keeps its status, so the
+screen says "did not answer (403)" rather than "could not be reached". `OWNER-STEPS.md`
+rewritten: Token Creator on `pms-reader` ONLY, for the one email the owner reads in the Firebase
+console of `poms-fad05`; the IAM Service Account Credentials API switched on in `poms-fad05`
+(Google: "the source project using ImpersonatedCredentials must enable the IAMCredentials API");
+`M2R_HOTELS=AMR=amrapali-kolhapur,GLM=grand-lucent-mathura`. No change to marketing's code: a
+campaign list that is not there already comes back from `batchGet` as `missing`.
+**Asked and answered (the master, 30 September):** should a call refused whole with 404 also read
+as "no campaigns"? No: it would hide a wrong project id. It stays an error.
+**Proved:** the seven API files this lane changed, in one run on one scratch database (164
+migrations): 107/107 (`leads/reader` 10, `leads/live` 12). Each rule seen to fail without it:
+the token's cache removed, its five minutes set to 0, its lifetime changed, a refusal's status
+swallowed (1 of 10 each); `live.ts` back to cp6 (the settings test: projectId undefined); a
+404 read as no campaigns in `numbers.ts` (the campaign-list test). `npm run typecheck`,
+`npm run strip-check` (165 files), `npx tsc -b` clean. **Screens opened** (`fidato_s38`, API
+8909, web 5309, the owner's development sign-in): Leads and WhatsApp with nothing set says "Not
+connected yet"; with `M2R_IMPERSONATE` set and no Google login on this machine, Leads says
+"The leads app could not be reached" and Marketing says the same under "No campaigns this
+month". Nothing was asked of Google from this machine.
+**Not proved here:** a real token from Google. It needs the owner's Parts 3 and 4 and the
+server's own login; the first open of Leads on the server is that proof.
+**Left open:** `M2R_SERVICE_ACCOUNT` with a real key is not under test (a test would need a
+private key in a file).
+**Commits:** c7486e11 (code and tests), d9aff939 (the owner's steps), and this entry's own.
+
 ## 2026-09-29/30 · Booked value (D27-173), the NIGHTS root fix, the day book refusal, an unreachable app
 
 **Asked for:** the owner's D27-173 (revenue per campaign is booked value: nights

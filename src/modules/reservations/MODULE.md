@@ -64,7 +64,7 @@ of 15 September (`3424882`).
 | POST | `/:code/groups/:id/lead` | make a room that still stands the group's lead (D22-52): its guest gets the group's one confirmation and its one review request. `reservation: edit` |
 | POST | `/:code/groups/:id/master` | open the host's master bill for the group (056); a second press returns the one already open |
 | POST | `/:code/stays/:id/routing` | send a room's charges to the group's master bill, or back (`reservations.route_room_to_group`, 056) |
-| POST | `/:code/bookings` | New booking: the guest, a group when there is more than one room, one reservation per room with its channel and commission, the rate from `app.tariff_for` (057), and a folio for each booking. A sender's `externalRef` makes it safe to send twice (091) |
+| POST | `/:code/bookings` | New booking: the guest, a group when there is more than one room, one reservation per room with its channel and commission, the rate from `app.tariff_for` (057) - except a DAY USE (departure = arrival, D27-227), whose price must be typed and is never looked up (D27-229) - and a folio for each booking. A sender's `externalRef` makes it safe to send twice (091) |
 
 5 endpoints. The groups **list** the Groups screen reads, `GET /:code/groups`,
 is not here: it is in front desk's `api/src/modules/front-desk/stays.ts`,
@@ -314,9 +314,19 @@ audit's reading of it), and `amendChannelBooking` for a change SU sends.
 New booking is ONE page (`pages/BookingPage.tsx`, which replaced
 `pages/NewBooking.tsx`): the guest, the stay (dates, the booking source, room
 type, meal plan, party, rate, an optional room), the ID and an advance;
-"More about the guest" and "Booking details" fold open, and so do Company,
-GST, Extras and Notes, each drawn only where Settings has it on (admin's
-"New booking" card, migration 159: on until a hotel turns it off). Three
+"More about the guest" and "Booking details" fold open, and so do Company
+(with the chosen company's GSTIN under the picker) and Notes, each drawn only
+where Settings has it on (admin's "New booking" card, migration 159: on until
+a hotel turns it off). GST folded into Company and Extras left the page on 30
+September (D27-187, D27-193); inclusions are added on the booking. A cash
+advance needs no open drawer: it opens by itself on the first cash (D27-200;
+the hold of D27-193 went). The Booked card and the panel's menu have View voucher
+(`viewVoucher`, guest messages' `voucher.pdf`); the panel's menu has Change
+rate for a booking still to arrive (finance's `ChangeRateDialog`). Each room
+line has a "Rate includes GST" tick under its rate (off by default, D27-195,
+D27-199): the typed figure, or with none typed the list price, is split by
+finance's `roomRateBeforeGst` and `book.ts` keeps the rate before GST
+(`rateIncludesGst` on the line). Three
 buttons at the bottom, each greyed with its reason under it:
 
 ```

@@ -486,7 +486,7 @@ export default function InvoicesPage() {
       )}
 
       {/* D23-1: the accountant sets GST and VAT here - the same card as on
-          Room types, which the accountant cannot open. Shown to the four who
+          Settings (Taxes and billing), which the accountant cannot open. Shown to the four who
           may set a rate (D22-32), the server's own rule (roleGate.ts `GST`);
           reception, the hotel manager and the viewer are not shown a Save
           the server would refuse (the owner, 24 September). */}

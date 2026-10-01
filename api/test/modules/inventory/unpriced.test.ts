@@ -80,25 +80,23 @@ afterAll(async () => {
 });
 
 describe("an unpriced room type (INV-3)", () => {
-  it("reads as null on Rate performance, on the row and on every date", async () => {
-    const res = await as("/5EL/rates?from=2026-08-24&days=3");
+  /* 30 September (D27-188): Rates shows each day's performance for the
+     hotel, and no rack at all. The same rule stands: a day with nothing
+     sold has NO average rate - a dash, never ₹0. */
+  it("reads a day with nothing sold as no average rate, not ₹0", async () => {
+    const res = await as("/5EL/rates?from=2031-01-01&days=3");
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      roomType: string; rackRate: number | null;
-      cells: { date: string; rackRate: number | null }[];
+      date: string; paidSold: number; occupancy: number | null;
+      adr: number | null; revenue: number;
     }[];
 
-    const row = body.find((r) => r.roomType === unpriced.name)!;
-    expect(row, `${unpriced.name} is missing from /rates`).toBeDefined();
-    expect(row.rackRate, "an unpriced room type read as a figure").toBeNull();
-    expect(row.cells).toHaveLength(3);
-    for (const c of row.cells) {
-      expect(c.rackRate, `${unpriced.name} on ${c.date}`).toBeNull();
+    expect(body.map((d) => d.date)).toEqual(["2031-01-01", "2031-01-02", "2031-01-03"]);
+    for (const d of body) {
+      expect(d.paidSold, d.date).toBe(0);
+      expect(d.adr, `${d.date}: nothing sold is not ₹0 a room`).toBeNull();
+      expect(d.revenue).toBe(0);
     }
-
-    const other = body.find((r) => r.roomType === priced.name)!;
-    expect(other.rackRate).toBe(priced.rate);
-    expect(other.cells.every((c) => c.rackRate === priced.rate)).toBe(true);
   });
 
   it("reads as null on the room-type list", async () => {

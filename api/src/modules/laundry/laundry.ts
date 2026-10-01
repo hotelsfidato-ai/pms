@@ -574,8 +574,8 @@ laundry.post("/:code/laundry/dockets/:id/cancel", async (c) => {
    So: this route is the call now. `charge_posting_id` is set on the
    docket, and the database's own trigger (`laundry_charge_needs_a_total`)
    still refuses the whole thing if anything in the bag is unpriced.
-   Laundry follows the ROOM tax rule (D18-21 gave the spa its own; laundry
-   has none), so `taxKind` is left alone.
+   Laundry has its OWN GST heading since D27-194 (it followed the room rule
+   before): `taxKind: "laundry"`, refused in words until the hotel sets it.
 
    THE ROW IS LOCKED FIRST. Two clerks pressing Charge at the same moment
    would otherwise both read "not charged", both post, and put the same
@@ -644,6 +644,7 @@ laundry.post("/:code/laundry/dockets/:id/charge", async (c) => {
       description: `Laundry ${docket.number}${inTheBag ? `: ${inTheBag}` : ""}`.slice(0, 240),
       amount: Number(docket.total),
       category: "Laundry",
+      taxKind: "laundry",
     });
     if (!posted.ok) return refuse(posted.reason);
 

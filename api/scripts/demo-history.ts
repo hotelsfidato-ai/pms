@@ -1,6 +1,7 @@
 import pg from "pg";
 import { fileURLToPath } from "node:url";
 import { databaseForScript } from "./scriptDatabase.ts";
+import { shift } from "./demoDate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    MORE OF THE DEMO — history, and the other two properties
@@ -91,8 +92,8 @@ async function main() {
        means on every report here. */
     await fill(client, made, {
       code: "5EL",
-      from: "2026-04-01",
-      to: "2026-07-31",
+      from: shift("2026-04-01"),
+      to: shift("2026-07-31"),
       /* Roughly a third of the house, which is what this property
          actually ran at before August. Invented occupancy that flatters
          the property would make every rate report a lie. */
@@ -104,11 +105,11 @@ async function main() {
        They have ten rooms each and were carrying four bookings between
        them, so the group dashboard had nothing to compare. */
     await fill(client, made, {
-      code: "AGR", from: "2026-04-01", to: "2026-09-03",
+      code: "AGR", from: shift("2026-04-01"), to: shift("2026-09-03"),
       occupancy: 0.46, seed: 77,
     });
     await fill(client, made, {
-      code: "PUN", from: "2026-04-01", to: "2026-09-03",
+      code: "PUN", from: shift("2026-04-01"), to: shift("2026-09-03"),
       occupancy: 0.39, seed: 113,
     });
 
@@ -153,7 +154,7 @@ async function soldInWindow(client: pg.Client): Promise<number> {
       where h.code = '5EL'
         and r.status not in ('cancelled', 'no_show')
         and not r.is_complimentary
-        and d::date between date '2026-08-01' and date '2026-08-25'`);
+        and d::date between $1::date and $2::date`, [shift("2026-08-01"), shift("2026-08-25")]);
   return Number(rows[0]!.n);
 }
 
@@ -271,7 +272,7 @@ async function fill(
        1–25 August, and a stay starting on the 30th of July for four
        nights would reach into it. So July stops short by a week and
        August is skipped entirely at 5EL. */
-    if (opts.code === "5EL" && iso >= "2026-07-25") continue;
+    if (opts.code === "5EL" && iso >= shift("2026-07-25")) continue;
 
     const arrivals = Math.round(rooms.length * opts.occupancy * (0.5 + rand()));
     for (let a = 0; a < arrivals; a += 1) {
@@ -279,7 +280,7 @@ async function fill(
       const nights = 1 + Math.floor(rand() * 3);
       const out = new Date(date.getTime() + nights * 86400000);
       const outIso = out.toISOString().slice(0, 10);
-      if (opts.code === "5EL" && outIso > "2026-07-31") continue;
+      if (opts.code === "5EL" && outIso > shift("2026-07-31")) continue;
 
       /* Does this room already have somebody in it? `ra_no_double_booking`
          would refuse, and an exception here would roll back the whole

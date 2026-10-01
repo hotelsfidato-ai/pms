@@ -203,6 +203,14 @@ stayExtras.post("/:code/inclusions", async (c) => {
 
 /* ── What THIS booking was promised ──────────────────────────────── */
 
+/* A stay id that is not an id is no such stay: Postgres refused the cast
+   and every inclusions route answered 500 (30 September). */
+const STAY_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+stayExtras.use("/:code/stays/:id/inclusions/*", async (c, next) => {
+  if (!STAY_ID.test(c.req.param("id") ?? "")) return c.json({ error: "No such stay." }, 404);
+  await next();
+});
+
 stayExtras.get("/:code/stays/:id/inclusions", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));

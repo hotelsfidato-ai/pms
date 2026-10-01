@@ -225,6 +225,12 @@ interface CostRow {
   cancelled_by: string | null; cancelled_at: string | null; cancel_reason: string | null;
 }
 
+/* A guest's request for housekeeping or food and drink is not a repair:
+   it lives on Guest requests. "Something broken" is, and stays here
+   (D27-181). */
+const NOT_A_GUEST_REQUEST =
+  `not (w.reservation_id is not null and w.category in ('housekeeping', 'fnb'))`;
+
 /* ONE QUERY FOR THE THREE LISTS — outstanding work, closed work, and every
    repair on one piece of equipment (its page, phase 2B) — so the three
    cannot describe an order three ways. Names come from `staff` with a LEFT
@@ -247,7 +253,7 @@ const ORDER_SELECT = `
     left join staff asg on asg.id = w.assigned_to
     left join staff cl on cl.id = w.closed_by
     left join equipment_items ei on ei.id = w.equipment_item_id
-   where w.hotel_id = $1`;
+   where w.hotel_id = $1 and ${NOT_A_GUEST_REQUEST}`;
 
 /* Most urgent first, oldest first within that — a maintenance list exists
    to surface what has been ignored (058's own order, kept). */
@@ -294,7 +300,7 @@ housekeeping.get("/:code/work-orders", async (c) => {
     const { rows: counts } = await client.query<{ open: string; closed: string }>(
       `select count(*) filter (where status in ('open','in_progress'))::text as open,
               count(*) filter (where status in ('done','cancelled'))::text as closed
-         from work_orders where hotel_id = $1`,
+         from work_orders w where hotel_id = $1 and ${NOT_A_GUEST_REQUEST}`,
       [hotel.id],
     );
 

@@ -5,7 +5,7 @@ import { readSuPushKey } from "../su/config.ts";
 import { suConnection } from "../su/runtime.ts";
 import { scrubCardFields } from "./scrub.ts";
 import { readPushedMessage, type PushedBooking } from "./parse.ts";
-import { acknowledge, handleBooking } from "./handle.ts";
+import { acknowledge, handleBooking, type Handled } from "./handle.ts";
 import type { InSession } from "../ari/push.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -37,7 +37,8 @@ import type { InSession } from "../ari/push.ts";
    4. SU is told we have it, which stops it resending.
    5. It is worked out (see handle.ts): a booking for a room that is no
       longer free is refused and those dates go back to SU as 0 rooms left
-      (D17-80); the rest waits for the reservations door.
+      (D17-80); the rest becomes a booking, a cancellation, or a line for a
+      person that says why (D27-183).
 
    The answer to SU is `{"Status":"Success"}` once the message is stored,
    because that is what SU asked for and what is true: we have it.
@@ -136,18 +137,27 @@ inbound.post("/su/reservations", async (c) => {
       }
     }
 
-    const handled = su.ok
-      ? await handleBooking(inSession, su.client, where.hotelId, booking)
-      : {
-          outcome: "needs_attention" as const,
+    const handled: Handled = !su.ok
+      ? {
+          outcome: "needs_attention",
           reason: "SU is not set up on this server, so this booking was kept but nothing "
             + "was sent back to SU about it.",
           pushedBack: null,
-        };
+          reservationIds: [],
+        }
+      /* A failure is said on the list, not left as "Just arrived" forever. */
+      : await handleBooking(inSession, su.client, where.hotelId, booking).catch((error: unknown) => ({
+          outcome: "needs_attention" as const,
+          reason: `Working this booking out failed (${error instanceof Error ? error.message : String(error)}). `
+            + "It is kept here; nothing was booked.",
+          pushedBack: null,
+          reservationIds: [],
+        }));
 
     await inSession((client) => client.query(
-      `update channel_bookings set outcome = $2, outcome_reason = $3 where id = $1`,
-      [stored.id, handled.outcome, handled.reason]));
+      `update channel_bookings set outcome = $2, outcome_reason = $3, reservation_ids = $4::uuid[]
+        where id = $1`,
+      [stored.id, handled.outcome, handled.reason, handled.reservationIds]));
   }
 
   if (kept === 0) {

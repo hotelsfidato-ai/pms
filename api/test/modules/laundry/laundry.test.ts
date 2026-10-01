@@ -401,8 +401,10 @@ describe("a guest's bag, charged to the room", () => {
   beforeAll(async () => {
     await setLaundry(true);
     /* A freshly provisioned property has NO tax rule — nothing ships a
-       price (032) — and finance refuses to post without one. Laundry
-       follows the room's rule. The rate here is this fixture's own. */
+       price (032) — and finance refuses to post without one. Only the
+       ROOM rule here: laundry has its own heading since D27-194, and the
+       first test proves the room's does not stand in for it. The rate is
+       this fixture's own. */
     const db = await admin();
     await db.query(
       `insert into tax_rules (hotel_id, kind, over_amount, rate, note)
@@ -423,6 +425,20 @@ describe("a guest's bag, charged to the room", () => {
     total = (await (await get(`/${CODE}/laundry/dockets/${docketId}`)).json() as
       { total: number }).total;
     expect(total, "the bag has a total to charge").toBeGreaterThan(0);
+  });
+
+  it("refuses the bag until laundry's own GST is set, whatever rooms carry (D27-194)", async () => {
+    const refused = await post(`/${CODE}/laundry/dockets/${docketId}/charge`);
+    expect(refused.status).toBe(409);
+    expect((await refused.json() as { reason: string }).reason)
+      .toMatch(/no GST rule for laundry/i);
+
+    const db = await admin();
+    await db.query(
+      `insert into tax_rules (hotel_id, kind, over_amount, rate, note)
+       values ($1, 'laundry', 0, 18, 'laundry test fixture')
+       on conflict (hotel_id, kind, over_amount) do nothing`, [hotelId]);
+    await db.end();
   });
 
   it("puts the bag on the guest's own bill, as its own laundry line", async () => {

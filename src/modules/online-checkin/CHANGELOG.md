@@ -12,6 +12,266 @@ exists** (`MODULE.md`).
 
 ---
 
+## 2026-10-01 · The guest's in-stay page: step 0, the desk replies, the hotel's logo (D27-223 to D27-225)
+
+Branch `guest/in-stay-1oct`, from cp6 1dc9c483.
+
+**Asked for** (the master, D27-225; the launch waits for it):
+- Step 0 first: the door's kit, so each in-stay feature has its own route file and section file.
+- B: two-way messages (D27-224).
+- The hotel's logo on the guest's page (D27-223).
+
+**Shipped:**
+- **Step 0** (360d110e, reported at once). No behaviour change.
+  - `api/src/routes/guestDoorKit.ts` holds the door's helpers.
+  - `guestKit.ts` holds the page's.
+  - Each feature mounts with one line at the foot of `guestDoor.ts`, and adds one line in `Behind`.
+  - MODULE.md rule 8: nobody replaces `app.guest_link_open` again.
+- **B, the desk replies:**
+  - Migration 173 (written as 172): `guest_desk_replies` and `app.guest_desk_thread`.
+  - `guestMessages.ts`:
+    - the guest's `GET /:token/messages`;
+    - the desk's `POST …/messages/:reservationId/reply`, for DESK_ROLES. A reply marks the stay's unread messages handled. It is refused once the guest has checked out.
+  - The guest's section, `MessageTheDesk.tsx`, moved out of GuestPage:
+    - their messages, and the replies as "Front desk";
+    - read again every 30 s while the page is open, and not while it is hidden;
+    - no WhatsApp.
+  - The desk's list, on a booking's Guest messages:
+    - the replies, with who and when;
+    - one reply box, or "Replies stop at check-out".
+  - On the property's list, each unread message has "Reply", to its booking.
+- **The logo:**
+  - Migration 174 (written as 173), `app.guest_logo`: the link's hotel's own logo, else the group's (the voucher's rule; the staff reader needs a person, so the door has its own).
+  - `GET /api/guest/:token/logo` (`guestLogo.ts`) answers the picture only:
+    - `private, max-age=3600`;
+    - a tag per picture, the same for every link to the hotel;
+    - a 304 only once the link opens;
+    - an SVG is served under a CSP that runs nothing;
+    - the one sentence for a dead link or no logo.
+  - It is drawn above the hotel's name, before the code too. It is decorative, and nothing is drawn where it does not load.
+
+**Found:** OCI-12. The database guard test asked about an empty stay, so the thread function, broken to take the link alone, still passed. The test now fills the stay first.
+
+**Proved:**
+- Every new test was seen failing before its code:
+  - B's API, 10;
+  - the logo's API, 3;
+  - the logo's screen, 1.
+- Then each rule was broken on purpose and seen caught:
+  - the thread taking the link alone;
+  - the thread being the hotel's rather than the stay's (the next guest saw "Changeover:");
+  - a reply after check-out;
+  - a reply leaving messages unread;
+  - no 30 s re-read;
+  - a reply box after check-out;
+  - no Reply link;
+  - the group's logo before the hotel's;
+  - a tag answered before the link is asked.
+- API: `guestDoor` 31, `guestDoorBehindTheCode` 37, `guestIdPhoto` 29, `roleGate` 66, so 163 of 163.
+- Web: online check-in and guest messaging, 70 of 70.
+- `npx tsc -b`, the API typecheck and strip-check (175 files) are clean.
+- `db/tests/rerun.sh`: all 172 migration files are re-runnable.
+- `db/tests/run.sh`: 1,339 of 1,339.
+
+**Seen on screen at 375 px** (fidato_s38 migrated with the master's yes, alone; the copy's servers on 8909/5309):
+- The guest's page shows the logo above the hotel's name before the code (160 × 40, at the page's 20 px edge).
+- Unlocked with the development code, the guest sent a message. Reception's Guest messages for the booking showed it with the reply box.
+- After the reply, the message read "Handled by Test Reception". The guest's page showed "Front desk", the words and the day; the thread's answer carried no name.
+- With the booking set to checked out, there was no box, and "Replies stop at check-out" showed.
+- On the property's list, a new message had "Reply" to its booking.
+- No page scrolled sideways.
+- The pane was hidden, so the rest was read from the page, not photographed.
+- The test rows, the made-up logo and the link were removed from s38 afterwards.
+
+**Merged:** cp6 5fc3b20a (the one-tap choices, the checklist fold). GuestPage's two new imports were kept side by side. The tiles' test now answers the thread the page asks for. MODULE.md notes the tiles.
+
+**Left open:**
+- Renumbered by the master at merge: 172 -> 173, 173 -> 174 (171 dining and 172 table booking went first).
+- The master's merge lines: two mounts in guestDoor.ts, one `roleGate.ts` line, one line in `Behind`.
+- The master's answer on the three choices, for the owner, who may change them:
+  - only check-out refuses a reply;
+  - the day only on a reply;
+  - the logo shown before the code, cached for an hour.
+
+## 2026-10-01 · A kept ID photo is never replaced (OCI-11, the pre-launch review)
+
+Branch `online-checkin/kept-photo-1oct`, from cp6 7ada2983.
+
+**Asked for** (the master, from the read-only pre-launch review): a replace removed every
+stored photo of the stay, a kept one included - see OCI-11. The rule, already decided: a
+replace only ever replaces a WAITING photo of the SAME submission; a kept photo is deleted
+only by the owner, an administrator or the GM, with a reason.
+**Shipped:** `app.guest_id_photo_stored` (167, edited in place: unreleased and re-runnable)
+replaces only the guest's own photo of the same waiting submission. The desk's add replaces
+nothing (the button after an add reads "Add another photo", and the sentence says only the
+keepers can delete it). The desk's list shows a waiting submission's own photo.
+**Proved:** `guestIdPhoto` 29 of 29. Seen to fail on the code before the fix: a kept photo
+surviving the guest's re-sent details and new photo, surviving a desk add, and the guest's
+waiting photo surviving a desk add (3). The list's own fix, seen to fail with the old query
+(1). The waiting-photo replace, seen to fail when nothing is ever replaced (1). Web: online
+check-in and front desk 124 of 124; `npx tsc -b`, the API typecheck, strip-check (172 files)
+clean. `db/tests/rerun.sh`: all 170 migrations re-runnable. `guestDoor` 28,
+`guestDoorBehindTheCode` 32, `roleGate` 64, `guards` 45: 169 of 169.
+**Not done:** no database-suite file exists for this module (`db/tests/modules/` has none);
+the functions are tested through the door and directly in `guestIdPhoto.test.ts`.
+
+## 2026-09-30 · The ID photo: encrypted with the hotel's password, kept in Google Drive, never on this server; the desk adds one at check-in (D27-207 to D27-212)
+
+Branch `online-checkin/verify-photo-30sep`. Stages C and D; A and B are the entry below.
+
+**Asked for** (the owner's D27-207 to D27-212; the master's cards): a guest may upload a photo
+of a government photo ID, Aadhaar only masked; it stays a submission the desk checks against
+the real ID (D21-8). It is bundled, compressed and encrypted on this server with THAT hotel's
+password and stored in Google Drive through a new workflow in the CRS's n8n, from day one:
+nothing of it is kept here. The owner must be able to open a bundle on a Windows PC with a
+common tool. Optional online, and the desk can add one at check-in. One ID per stay for the
+launch, the booking's guest (D27-212). No new dependency (D27-211).
+**Shipped:**
+- `api/src/aesZip.ts`: the AES-256 zip 7-Zip opens (WinZip AE-2), written and read over
+  node:crypto and node:zlib. Per file: a fresh salt, PBKDF2-SHA1 keys, AES-256 in the format's
+  own counter mode, HMAC-SHA1 checked constant-time BEFORE anything is decrypted. Reading is
+  strict and fails closed. The format's 1,000 rounds are few, so a hotel's password under 20
+  characters, or with a symbol in it, counts as not set.
+- `api/src/routes/idPhotos.ts`: the checks (JPEG or PNG by the file's own bytes; 4 MB a photo;
+  a JPEG's location stripped) and the only three things that touch a photo: `put`, `get`,
+  `remove`. The bundle holds the photos and an `about.txt` (hotel, booking, guest, who added
+  it), all inside the encryption; the Drive file is named by the row's id alone.
+- The guest's door: `GET` and `POST /:token/id-photo`. The link, the knocks and the unlock are
+  checked before the body is read; the declared length must be 9 MB or less; the tick is
+  required; ten an hour a link; only while the details wait. The row is written `pending`
+  first, then Drive, then `stored`; Drive down takes the row back and says "try again
+  shortly". A replaced photo is deleted from Drive at once. No route returns a photo.
+- The desk: the photo beside a waiting submission, fetched only on "Show the photo", checked
+  against the ciphertext's sha256 and decrypted in memory, `no-store`; "Remove the photo" with
+  one of three reasons, which the guest's page then says. Once kept (confirmed, set aside, or
+  added at the desk): "ID photos kept", for the owner, an administrator and the GM, who alone
+  see and delete, with a reason. Every view is a row in `guest_id_photo_views`. A Drive delete
+  that failed is recorded and shown with Try again.
+- Stage D: `POST /:code/stays/:id/id-photo` (desk roles) and `AddIdPhotoAtDesk`, exported from
+  `index.ts` for the master to mount: camera inputs, the masked-Aadhaar sentence, the tick "The
+  guest agreed…", the chosen photo shown from the device, never fetched back.
+- The guest's page: the owner-approved notice (`idPhotoNotice.ts`, version on every row), the
+  Aadhaar rule and the tick before the file button; the photo shrunk to 1600 px on the phone.
+- Migration 167 gains `guest_id_photos`, `guest_id_photo_views` and five definer functions,
+  each asking `app.guest_unlocked` itself.
+- `deploy/n8n/pms-id-photos-crs.json`: store, fetch, delete; only an AES-encrypted zip named by
+  a record id is stored; a file is fetched or deleted only from the hotel's own folder.
+- `deploy/nginx.conf`: three locations. The upload and the desk's view pass straight through
+  (`proxy_request_buffering off`, `proxy_max_temp_file_size 0`) - see Found.
+- `OWNER-STEPS.md` Part 3 and `IMPORT.md` part D: folders, passwords, the workflow, and the
+  five-step check with a made-up photo, 7-Zip included, that gates switching it on.
+
+**Found:**
+- nginx writes a request body, and an answer, of this size to a temporary file by default.
+  That would have been the photo, unencrypted, on this server's disk, on the way in and again
+  on the way out to the desk. Not visible in any test: the tests never pass through nginx.
+- `/api/guest/` is capped at 16k in nginx; the upload needed its own location.
+- Windows' own tar is libarchive's bsdtar and reads and writes AES zips: an independent
+  implementation on this machine, used both ways in the tests. 7-Zip is not installed here.
+- A defect I nearly logged and did not: "the key login asks for a token on every read" (leads).
+  Read in firebase-admin's source before writing it down: its credential keeps the token.
+
+**Proved:**
+- API, one scratch database, 167 migrations: `guestIdPhoto` 27, `idPhotoWorkflow` 8, `aesZip`
+  11, `roleGate` 63, `guards` 45, `guestDoor` 28, `guestDoorBehindTheCode` 32 = 214 of 214.
+  Web: online check-in 50 of 50 (`idPhoto.test.tsx` 14). `npx tsc -b`, the API typecheck,
+  strip-check (168 files) clean. `db/tests/rerun.sh`: all 167 re-runnable; `run.sh`: 1,296.
+- The zip, three ways: a round trip (3 MB and empty files too); bsdtar opens what `seal` writes
+  and refuses a wrong password, and `decrypt` opens a file bsdtar encrypted (a 266-byte made-up
+  fixture); one bundle with fixed salts pinned by its sha256. The WinZip specification
+  publishes no test vectors. The third way, the owner opening one in 7-Zip, is OWNER-STEPS 3f.
+- Seen to fail with the fault put back. The zip: a big-endian counter (3), the proof unchecked
+  (1), 1,001 rounds (4). The door, eight faults in one run, 12 tests failing between them: the
+  tick not asked for; any file taken as a photo; the hash not checked (a swapped bundle opened);
+  the desk shown a kept photo; a JPEG's location kept; a database function forgetting the
+  unlock; a replaced photo left in Drive; a failed store leaving its row. The workflow: any
+  folder accepted (1), a plain file stored (1). The screens: no tick needed (1), the photo
+  fetched on opening the desk's screen (1).
+- **Screens opened** on `fidato_s38` with a stand-in for the workflow that kept bundles in
+  memory (API 8909, web 5309; read as text, the pane gives no screenshot while hidden). At
+  375 px: the photo section appears once the details are sent; the notice, with the hotel's
+  number, comes before the two file buttons (302 x 48); Send is off until a photo and the
+  tick; no sideways scroll. A made-up card drawn in the page was sent: what reached the
+  stand-in was one 15.8 KB file named by the row's id, starting "PK". Reception saw "ID photo:
+  front, sent …", nothing fetched until Show, then the picture at 1600 x 1067; after Confirm,
+  no kept list for reception. The owner saw "ID photos kept", deleted it with a reason; the
+  stand-in deleted its file; the row says who and why; the guest's page says "The hotel
+  removed your ID photo."
+**Not proved here, and it matters:**
+- The workflow's Drive steps (the upload node and three HTTP calls) have never run. They
+  cannot on this machine.
+- No bundle has been opened in 7-Zip itself. bsdtar stands in for it here.
+- `AddIdPhotoAtDesk` has not been opened in a screen: nothing mounts it yet (its route and its
+  component are tested).
+- nginx's new locations are untested: there is no nginx on this machine.
+  All four are the owner's five-step check on the server (3f), which gates the upload.
+**Left open:** OCI-10 (Google's script on the page). A PNG is stored as sent: only a JPEG's
+location is stripped (a phone's camera makes JPEGs). A JPEG that skipped the page's shrinking
+loses its rotation note with its location, and may show sideways at the desk. A guest's
+photo is visible to reception only while the details wait; if the desk never confirms or sets
+them aside, it stays visible to reception.
+**Commits:** f3dbe2dc (the zip), d9ac8125 (the door and the table), 19d2b0b1 (the workflow),
+2a9516f3 (nginx), the screens and the owner's steps after them, and this entry's own.
+
+## 2026-09-30 · Three ways to prove it is you: the code by email, Continue with Google; nothing sent on opening (D27-207, D27-210)
+
+Branch `online-checkin/verify-photo-30sep`. Stages A and B of four; the ID photo (C) and
+the desk adding one (D) have their own entry when built.
+
+**Asked for** (the owner's D27-207, D27-210; the master's card): the guest chooses how to
+prove it is them - a code on WhatsApp as before, a code to the email on the booking, or
+Continue with Google where the account's verified email is the booking's. Nothing is sent
+until they choose. No account, no session, no guest role: rule 1 stands.
+**Shipped, A:** migration 167, all new functions. `POST /:token/code` reads only
+`{ by: "whatsapp" | "email" }`; `app.guest_email_code_make` issues the same kind of code (hash
+only, ten minutes, five wrong answers, one live code a link) to the stay's email, and
+`guest_code_answer` opens it unchanged. The answer shows the address masked ("a…@example.com");
+a room card shows none of it (D21-14). The page shows one button per way the booking has,
+"Ask the desk" with neither, and sends nothing on opening: the auto-send and its ten-minute
+bookkeeping are deleted. `pms-send-crs.json` has the code's email. The cannot-send sentence no
+longer names WhatsApp.
+**Shipped, B:** `POST /:token/google`. Google's signed answer is checked with
+google-auth-library against Google's published keys (signature, `aud` = `GOOGLE_CLIENT_ID`,
+`iss`, `exp`), then here: address verified, under ten minutes old. `app.guest_google_answer`
+compares the address with the stay's, letter case aside, and records the same unlock. Every
+refusal is one sentence; with no client id the route answers like an unknown link and the
+button is not drawn. No Firebase user is made. Google's script is fetched only when the guest
+presses "Continue with Google" (`googleSignIn.ts`); Google then draws its own button, so it is
+two presses. `OWNER-STEPS.md` (new): the Google client ID, and re-importing the workflow.
+**Found:** `roleGate.test.ts` pins the person-less write routes by name: the new route failed
+it until it was added to the list (MEMORY 351's rule, for a door). OCI-10: Google's script
+on the guest's page, accepted for the launch, with the no-script redirect written down.
+**Proved:** API, one scratch database, 167 migrations: `guestDoor` 28, `guestDoorBehindTheCode`
+32, `guards` 45, `roleGate` 63, `workflows` 24, `sending` 14. Web: online check-in 34/34;
+`npx tsc -b`, the API typecheck and strip-check clean. `db/tests/rerun.sh`: all 167
+re-runnable; `db/tests/run.sh`: 1,296 assertions. Seen to fail with the fault put back: the
+old door (4: the email send, no email, the masked hint, the room card's email); the old
+workflow file (1); a code sent on opening (4 web) and email always offered (1 web); `email_verified`,
+the age check and the database's comparison each removed (exactly those 3); Google's script
+fetched on opening (1 web), offered with no email (1 web). The signature, `aud`, `iss`, `exp`
+and unsigned cases are the library's own checks: they pass against a key made in the test,
+and the library was not broken to watch them fail.
+**Screens opened** at 375 px (`fidato_s38` at 167, API 8909, web 5309, read as text - the
+pane would not give a screenshot): a booking's link shows three buttons of 302 x 44, no
+sideways scroll, "We send six digits on WhatsApp to the number on the booking, ending 0011,
+or by email to a…@example.com."; opening sent nothing (one GET); "Send the code by email"
+made one POST and said where; the code opened the booking ("Verified on this phone"); with
+neither a number nor an email, the one sentence and no box. Continue with Google was seen
+drawn and was NOT pressed: the client id was made up, and nothing was asked of Google.
+**Not proved here:** a real Google sign-in (the owner's client ID, a real phone) and a real
+email (the owner's workflow).
+**Left open:** OCI-10. Stages C and D.
+**Commits:** 328c0ff4 (A), 6dab7241 (B), and this entry's own.
+
+## 2026-09-30 · The check-in code goes through the CRS's workflow (D27-186)
+
+Branch `connections/crs-only-30sep`; the whole account is guest messages' CHANGELOG, same
+date. Here: no code of this service changed. The code (`guest-link-code`) now leaves through
+`deploy/n8n/pms-send-crs.json` as the `guest_page_code` template, the six digits in the body
+and in the copy button, and `canSendCodes` is true with the CRS's two settings and the number
+alone. `guestDoor.test.ts` and `guestDoorBehindTheCode.test.ts` stand in for that one workflow
+(12/12 and 31/31).
+
 ## 2026-09-29 · The code straight to the booking's phone; a day unlocked; Form III and requests from the guest; a development-only code on screen (D27-105, D27-169)
 
 **Asked for** (the master's card, D27-168; the owner's D27-105, D27-169):

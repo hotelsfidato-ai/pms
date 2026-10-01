@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { ReactElement } from "react";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
@@ -75,5 +75,26 @@ describe("each guests screen", () => {
     renderAt("/companies", "/companies", <CompaniesPage />);
     await screen.findByRole("heading", { level: 1 });
     expect(screen.queryByRole("heading", { name: "Booking sources" })).toBeNull();
+  });
+});
+
+describe("a booking source's channel code (D27-183)", () => {
+  it("is picked from SU's list, and a code saved before the list stays in sight", async () => {
+    const sent: RequestInit[] = [];
+    vi.spyOn(apiModule, "api").mockImplementation(async (_path: string, init: RequestInit = {}) => {
+      if (init.method) { sent.push(init); return { source: {} } as never; }
+      return [{ id: "s1", name: "Booking.com", kind: "ota", channelCode: "BDC",
+                isActive: true, commissionPct: null, bookings: 0 }] as never;
+    });
+    renderAt(`/h/${HOTEL}/booking-sources`, "/h/:code/booking-sources", <BookingSourcesPage />);
+
+    fireEvent.click((await screen.findAllByRole("button", { name: "Edit" }))[0]!);
+    const code = await screen.findByLabelText("Channel code") as HTMLSelectElement;
+    expect(code.value).toBe("BDC");
+    expect(screen.getByRole("option", { name: "BDC (not one of SU's codes)" })).toBeTruthy();
+
+    fireEvent.change(code, { target: { value: "19" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(sent.map((s) => JSON.parse(String(s.body)).channelCode)).toEqual(["19"]));
   });
 });

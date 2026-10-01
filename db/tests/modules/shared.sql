@@ -278,3 +278,25 @@ begin
   perform test.ok('property delete','neither fixture outlived its block',
     (select count(*) from hotels where code in ('EQD', 'STD')) = 0);
 end $$;
+
+-- =============================================================================
+-- OWNERSHIP AFTER ONE RUN (1 October). A first deploy migrates once. Every
+-- table and every app function must end that run owned by pms_migrate, or a
+-- definer that existed before is refused a table the same run made (the
+-- voucher's "permission denied for table hotel_bank_details"). db/ownership.sql
+-- runs last and makes it so; this database was built in one run, as a first
+-- deploy is.
+-- =============================================================================
+do $$
+declare stray_tables text; stray_functions text;
+begin
+  select string_agg(tablename, ', ') into stray_tables
+    from pg_tables where schemaname = 'public' and tableowner <> 'pms_migrate';
+  select string_agg(p.proname, ', ') into stray_functions
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'app' and pg_get_userbyid(p.proowner) <> 'pms_migrate';
+  perform test.ok('ownership', 'every table is pms_migrate''s after one run',
+    stray_tables is null, coalesce(stray_tables, ''));
+  perform test.ok('ownership', 'every app function is pms_migrate''s after one run',
+    stray_functions is null, coalesce(stray_functions, ''));
+end $$;
