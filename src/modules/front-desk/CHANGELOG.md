@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-01 · A day use can be amended (the owner's D27-229)
+
+Branch `fix/dayuse-booking-1oct`. **Shipped:** migration `176_a_day_use_can_be_amended.sql` - `app.amend_stay` takes check-out = check-in (only a departure before the arrival is refused), counts a day use's own charged day as inside it, and keeps its same-day hold. The rate is still not touched: a day use keeps its typed price. `PATCH /:code/stays/:id` refuses turning a day use into nights or a stay into a day use, in words: the rate is a day's or a night's. Change dates (`AmendStayFlow.tsx`) saves a day use's change ("Day use, in and out on …, at its day price") and says why a conversion is refused. **Proved:** `feesAndDayUse.test.ts` "can be amended, and keeps its price; it does not turn into nights" (refused "a stay ends after it starts" before 176).
+
 ## 2026-10-01 · The early and late fees say what they are; a day use is charged at check-in (the owner's D27-223, D27-225)
 
 **Asked for:** through the master, after the pre-launch review. Branch `fix/fees-dayuse-1oct` from cp6 9a9e7a3b; database `fidato_s44` at 175.

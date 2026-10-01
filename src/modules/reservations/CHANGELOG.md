@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-01 · New booking makes a day use, its price typed every time (the owner's D27-227, D27-229)
+
+**Asked for:** through the master. Branch `fix/dayuse-booking-1oct` from cp6 5d049167, the booking and bill lane; migration 176 (front desk's Change dates).
+**Shipped:** `book.ts` takes a departure ON the arrival day as a day use (015's `is_day_use`); only a departure before the arrival is refused, and the 90-night rule counts 0..90 for a day use. A day use's price is TYPED on every booking: refused "Type the day-use price." with none typed or a zero (a complimentary room aside) - never the night's tariff (`app.tariff_for` is not asked), never a zero; any role that books may type it, no override reason. The page (`BookingPage.tsx`): Departure may equal Arrival (a day use moves with its arrival day); the hint "Day use - in and out on 2 Oct 2026. Type the day's price; it is charged at check-in."; the tariff is never asked for a day use; Save holds with "Type the day-use price."; the line reads "₹1,500.00 for the day … · day use"; the summary "Nights: Day use" and the total is one day x rooms. The night stays for sale: no inventory or channel change (the owner).
+**Proved:** web `onePage.test.tsx` "a day use" (fails on the old page); API front desk's `feesAndDayUse.test.ts` "a day use from New booking" (no price and a zero refused; saved as a day use at the typed price; amended keeping its price, refused as nights).
+
 ## 2026-09-30 · The cash advance hold goes (D27-200 item 6)
 
 Branch `fix/booking-bill-30sep`, on the master's go once the Cash lane's 165 was in cp6. A receptionist's drawer now opens by itself on the first cash, so the hold of D27-193 (RES-12) is removed from `pages/BookingPage.tsx`: no drawer read, no sentence, no held buttons; finance's `getCashierDrawer` export went with it. **Proved:** onePage 14/14, the flipped case failing on the old page (the server says no drawer is open; the advance is taken and the page never asks). Screen: a ₹1,500 cash advance with no drawer open - "Advance of ₹1,500.00 taken" on the Booked card, "Received - Cash" on the Bill tab, and Cashiering showing the drawer open since 14:37 at a ₹0 float with the receipt in it.

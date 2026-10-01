@@ -383,16 +383,20 @@ export async function makeBooking(
   if (!request.checkIn || !request.checkOut) return refuse("Which nights?");
   const badDate = dateProblem(request.checkIn) ?? dateProblem(request.checkOut);
   if (badDate) return refuse(badDate);
-  if (request.checkOut <= request.checkIn) {
+  /* A DAY USE (the owner's D27-227): out the day it comes, check-out =
+     check-in, saved as one (is_day_use, 015) and charged its day at check-in.
+     Only a departure BEFORE the arrival is refused now. */
+  if (request.checkOut < request.checkIn) {
     return refuse(
       "A stay ends after it starts. The night of departure is not charged, "
       + "so a guest leaving on the 5th has their last night on the 4th.");
   }
+  const dayUse = request.checkOut === request.checkIn;
   /* FD-6 (the owner, 28 September; D27-197): at most 90 nights, as the
      walk-in desk held it and Change dates does. */
   const tooLong = countProblem(
     (Date.parse(request.checkOut) - Date.parse(request.checkIn)) / 86_400_000,
-    "Nights", 1, MAX_NIGHTS);
+    "Nights", dayUse ? 0 : 1, MAX_NIGHTS);
   if (tooLong) return refuse(tooLong);
   if (lines.length === 0) return refuse("Which rooms?");
   if (!sourceId) {
@@ -521,6 +525,12 @@ export async function makeBooking(
       /* A COMPLIMENTARY ROOM IS ₹0 AND NEEDS NO PRICE: the night audit posts
          nothing for it (020), and an unpriced calendar does not stop a gift. */
       let rate = line.complimentary === true ? 0 : line.agreedRate ?? null;
+      /* A DAY USE'S PRICE IS TYPED, EVERY TIME (the owner's D27-229): there is
+         no day rate to look up and the night's tariff is not one - never
+         filled in, never a zero. Any role that may book may type it. */
+      if (dayUse && line.complimentary !== true && !(rate !== null && rate > 0)) {
+        return refuse("Type the day-use price.");
+      }
       if (rate === null) {
         const { rows: t } = await client.query<{
           total: string | null; unpriced: string | null;

@@ -51,6 +51,14 @@ describe("the voucher's figures (V1)", () => {
     expect(money(f.total)).toBe("INR 24,621.92");
   });
 
+  /* D27-227: a day use has no night; it is one day at its typed rate, charged
+     at check-in. Its zero nights printed ₹0 and no GST. */
+  it("charges a day use one day at its rate, with its GST", () => {
+    const f = voucherFigures([room({ nights: 0, rate: 1500, gstRate: 5 })]);
+    expect(f.lines[0]).toMatchObject({ amount: 1500, tax: 75 });
+    expect(f.total).toBe(1575);
+  });
+
   it("counts a complimentary room as nothing, taxed at nothing", () => {
     const f = voucherFigures([room({ complimentary: true, rate: 0, gstRate: null }), room()]);
     expect(f.lines[0]).toMatchObject({ amount: 0, tax: 0 });

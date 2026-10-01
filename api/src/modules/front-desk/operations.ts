@@ -1203,6 +1203,15 @@ operations.patch("/:code/stays/:id", async (c) => {
     if (nights > MAX_NIGHTS) {
       return refuse(`A stay is at most ${MAX_NIGHTS} nights. Split a longer one into two bookings.`);
     }
+    /* A DAY USE STAYS ONE, AND A STAY STAYS A STAY (D27-229): a day use's rate
+       is its typed day price, a stay's is a night's - turned into the other,
+       the same figure would be charged as the wrong thing. */
+    const wasDayUse = now[0].check_in === now[0].check_out;
+    if ((checkIn === checkOut) !== wasDayUse) {
+      return refuse(wasDayUse
+        ? "A day use stays a day use: its price is the day's. To stay the night, book the nights."
+        : "A stay does not become a day use here: book the day use on New booking, with its day price.");
+    }
 
     try {
       const { rows } = await client.query<{

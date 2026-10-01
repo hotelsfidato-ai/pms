@@ -177,3 +177,51 @@ describe("D27-225 · a day-use stay is charged its day at check-in", () => {
     expect(due.map((d) => d.reservation_id)).not.toContain(noRule);
   });
 });
+
+/* THE OWNER'S D27-227, D27-229 (1 October): New booking makes a day use; its
+   price is typed on every booking - never the night's tariff, never a zero -
+   and a day use can be amended, keeping its price. */
+describe("D27-227 · a day use from New booking", () => {
+  const book = async (lines: object[]) => {
+    const [d] = await sql<{ source: string; type: string }>(
+      `select app.walk_in_source()::text as source,
+              (select id::text from room_types where hotel_id = $1 and code = 'STD') as type`,
+      [hotelId]);
+    return call("/bookings", "POST", {
+      guestName: "Day use guest", checkIn: "2026-08-27", checkOut: "2026-08-27",
+      bookingSourceId: d!.source,
+      lines: lines.map((l) => ({ roomTypeId: d!.type, mealPlan: "EP", adults: 1, rooms: 1, ...l })),
+    });
+  };
+
+  it("is refused with no typed price - never the night's tariff - and with a zero", async () => {
+    for (const line of [{}, { agreedRate: 0 }]) {
+      const res = await book([line]);
+      expect(res.status).toBe(409);
+      expect(((await res.json()) as { reason: string }).reason).toBe("Type the day-use price.");
+    }
+  });
+
+  let dayUse = "";
+  it("is saved as a day use at the typed price", async () => {
+    const res = await book([{ agreedRate: 1500 }]);
+    expect(res.status, await res.clone().text()).toBe(200);
+    dayUse = ((await res.json()) as { bookings: Array<{ id: string }> }).bookings[0]!.id;
+    const [r] = await sql<{ day_use: boolean; rate: string }>(
+      "select is_day_use as day_use, agreed_rate::text as rate from reservations where id = $1", [dayUse]);
+    expect(r).toEqual({ day_use: true, rate: "1500.00" });
+  });
+
+  it("can be amended, and keeps its price; it does not turn into nights", async () => {
+    const res = await call(`/stays/${dayUse}`, "PATCH", { adults: 2 });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const [r] = await sql<{ adults: number; ci: string; co: string; rate: string }>(
+      `select adults, check_in::text as ci, check_out::text as co, agreed_rate::text as rate
+         from reservations where id = $1`, [dayUse]);
+    expect(r).toEqual({ adults: 2, ci: "2026-08-27", co: "2026-08-27", rate: "1500.00" });
+    const nights = await call(`/stays/${dayUse}`, "PATCH", { checkOut: "2026-08-28" });
+    expect(nights.status).toBe(409);
+    expect(((await nights.json()) as { reason: string }).reason)
+      .toBe("A day use stays a day use: its price is the day's. To stay the night, book the nights.");
+  });
+});

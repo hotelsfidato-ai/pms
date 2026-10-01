@@ -133,7 +133,7 @@ export function AmendStayFlow({
               </Button>
               <Button variant="primary"
                 size="lg" loading={busy}
-                disabled={!changed || wrong !== null || nights < 1}
+                disabled={!changed || wrong !== null || nights < 0 || (nights === 0) !== (was === 0)}
                 onClick={() => void submit()}
               >
                 Save
@@ -196,6 +196,16 @@ export function AmendStayFlow({
             <p className="text-base" data-amend-summary>
               {wrong ? (
                 <span className="text-danger">{wrong}</span>
+              ) : nights === 0 && was === 0 ? (
+                <span className="text-grey-600">
+                  Day use, in and out on {dateShort(checkIn)}, at its day price.
+                </span>
+              ) : (nights === 0) !== (was === 0) && nights >= 0 ? (
+                <span className="text-danger">
+                  {was === 0
+                    ? "A day use stays a day use: its price is the day's. To stay the night, book the nights."
+                    : "A stay does not become a day use here: book the day use on New booking, with its day price."}
+                </span>
               ) : nights < 1 ? (
                 <span className="text-danger">
                   Departure has to be after arrival. The night of departure is
