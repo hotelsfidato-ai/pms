@@ -111,6 +111,27 @@ put back (CHANGELOG, 21 September).
    (`proxy_request_buffering off`, `proxy_max_temp_file_size 0`)**: by
    default nginx writes a body or an answer of this size to a temporary
    file, which would be the photo, unencrypted, on this server's disk.
+8. **NOBODY REPLACES `app.guest_link_open` AGAIN (D27-225).** Its return
+   type cannot change on a replay, and a lane that widened it would wipe the
+   columns another lane had added. **Each feature behind the code asks its
+   OWN definer function** - taking the token's hash and the unlock's hash,
+   finding the stay only through `app.guest_unlocked` - through its OWN route
+   file, and its section on the page **hides itself when it has nothing**.
+
+### Adding a feature to the guest's page (D27-225, step 0)
+
+- **The door:** the feature's routes go in their own file under
+  `api/src/routes/`, built from `guestDoorKit.ts` (`openedHere` first,
+  `refused` for every refusal, `ask` for the definer call; `deskAt` and
+  `DESK_ROLES` for its desk routes), and are mounted with ONE line in the
+  marked block at the foot of `guestDoor.ts`. Its staff routes need their
+  `roleGate.ts` line and pin (MEMORY 351).
+- **The page:** the feature's section goes in its own file, built from
+  `guestKit.ts` (`SECTION`, `H2`, `LEAD`, `useUnlockGone`, `messageFrom`),
+  and is added with ONE line in `Behind` (`pages/GuestPage.tsx`).
+- **The database:** a new definer function, never a wider
+  `guest_link_open`; and a test that calls it with the link's hash and no
+  unlock, after the code has been answered on that link (OCI-5).
 
 ## Screens
 

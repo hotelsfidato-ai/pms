@@ -17,7 +17,11 @@ import { IdPhotoInputs, type ChosenPhotos } from "@/modules/online-checkin/IdPho
 import { idPhotoNotice } from "@/modules/online-checkin/idPhotoNotice";
 import { shrinkPhoto } from "@/modules/online-checkin/shrinkPhoto";
 import { GENDERS, LABELS, PURPOSES } from "@/modules/online-checkin/formIII";
+import {
+  H2, LEAD, NOTHING_HERE, SECTION, messageFrom, unlockGone, useUnlockGone,
+} from "@/modules/online-checkin/guestKit";
 import { privacyNoticeFor } from "@/modules/online-checkin/privacyNotice";
+import { QuickChoices, hasQuickChoices } from "@/modules/online-checkin/QuickChoices";
 import { BillPrint } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -48,26 +52,11 @@ import { BillPrint } from "@/modules/finance";
    handed, often on hotel wifi.
    ══════════════════════════════════════════════════════════════════ */
 
-/** The door's own sentence for everything it refuses, in its words. */
-const NOTHING_HERE = "This link is not usable. Ask the desk for a new one.";
 /** A booking with neither a mobile number nor an email - said here without
     asking the door, because the link already shows there is nowhere to send
     a code. */
 const NO_WAY = "There is no mobile number or email address on this booking, so "
   + "no code can be sent. Ask the desk.";
-
-/** Refused behind the code: the unlock has gone - expired, or a new guest
-    is in the room. Not an error to show: the page asks for a code again. */
-const unlockGone = (error: unknown) => error instanceof ApiError && error.status === 404;
-
-/* The fidato look, phone first (375px is this page's primary size): the
-   guest's name as the large title, then one card per part, each under its
-   own 16px heading, parts 20px apart and 12px from a heading to its card.
-   The bill is finance's own document, so it sits on the page, not in a
-   card of ours. */
-const SECTION = "mb-5 last:mb-0";
-const H2 = "text-md font-semibold text-ink-900";
-const LEAD = "text-sm text-grey-600 mt-0.5";
 
 export default function GuestPage() {
   const token = useParams().token ?? "";
@@ -373,7 +362,10 @@ function WithGoogle(
   );
 }
 
-/* ── Behind the code ──────────────────────────────────────────────── */
+/* ── Behind the code ──────────────────────────────────────────────────
+   Each part is its own section, and a new feature adds ONE line here: its
+   section asks its own door route and draws nothing when it has nothing
+   (guestKit.ts, MODULE.md). */
 
 function Behind(
   { token, view, onUnlockGone }:
@@ -475,11 +467,6 @@ const ID_TYPES: { value: Details["idType"]; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 const idLabel = (type: string) => ID_TYPES.find((t) => t.value === type)?.label ?? type;
-
-/** Refused behind the code → ask for a code again, once. */
-function useUnlockGone(error: unknown, onUnlockGone: () => void) {
-  useEffect(() => { if (unlockGone(error)) onUnlockGone(); }, [error, onUnlockGone]);
-}
 
 /* ── Their details: a SUBMISSION the desk confirms (D21-8, D21-19) ──── */
 function DetailsSection(
@@ -806,6 +793,10 @@ function RequestsSection(
   const [kind, setKind] = useState(offers[0]!);
   const [what, setWhat] = useState("");
   const [wanted, setWanted] = useState("");
+  /* While checked in, the tiles come first and the text box waits behind
+     "Something else" (D27-224). */
+  const quick = hasQuickChoices(offers);
+  const [other, setOther] = useState(!quick);
 
   const ask = useMutation({
     mutationFn: () => makeRequest(token, { kind, what, wanted }),
@@ -822,7 +813,8 @@ function RequestsSection(
     <section className={SECTION}>
       <h2 className={cn(H2, "mb-3")}>Ask for something</h2>
       <Card><CardBody>
-        <form onSubmit={(e) => { e.preventDefault(); ask.mutate(); }} className="flex flex-col gap-3">
+        {quick && <QuickChoices token={token} offers={offers} onOther={setOther} onUnlockGone={onUnlockGone} />}
+        {other && <form onSubmit={(e) => { e.preventDefault(); ask.mutate(); }} className="flex flex-col gap-3">
           {offers.length > 1 && (
             /* One a line on a phone: with the teams' three (D27-181) they do
                not fit across. */
@@ -845,7 +837,7 @@ function RequestsSection(
           {ask.error && !unlockGone(ask.error) && (
             <p className="text-sm text-brand-red-700">{messageFrom(ask.error)}</p>
           )}
-        </form>
+        </form>}
 
         {mine.length > 0 && (
           <ul className="mt-3.5 border-t border-grey-100 divide-y divide-grey-100 -mb-3.5">
@@ -969,12 +961,6 @@ function TextField(
       )}
     </Field>
   );
-}
-
-/** The server's own words (`api()` reads `error`, `reason`, then
-    `message` - fixed for every screen on 21 September); nothing invented. */
-function messageFrom(error: unknown): string {
-  return (error instanceof Error && error.message) || NOTHING_HERE;
 }
 
 /* One narrow column, centred, no shell around it: the page's 20px sides,
