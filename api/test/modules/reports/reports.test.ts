@@ -810,10 +810,17 @@ describe("the lodging tax sheet", () => {
     const db = await admin();
     let number = "";
     try {
+      /* On a CHECKED-OUT stay's bill, and the same one every run. This took
+         the first folio by its random id, so on some runs it landed on the
+         in-house stay editCharge.test edits, and that bill then refused every
+         correction ("only a credit note corrects it now", D27-162) - the
+         second full gates of 2 October. */
       const { rows } = await db.query<{ number: string }>(
         `with f as (
            select fo.id, fo.hotel_id from folios fo join hotels h on h.id = fo.hotel_id
-            where h.code = '5EL' and fo.reservation_id is not null order by fo.id limit 1)
+             join reservations r on r.id = fo.reservation_id
+            where h.code = '5EL' and r.status = 'checked_out'
+            order by r.reference desc, fo.id limit 1)
          insert into invoices (hotel_id, folio_id, fin_year, number, total, tax_total,
                                taxable_value, cgst_total, sgst_total, business_date, sac_code)
          select f.hotel_id, f.id, '2025-26', 'REPORTS-TEST-1', 10500, 500,

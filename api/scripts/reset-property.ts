@@ -158,6 +158,9 @@ export const CLEAR: [table: string, how: string][] = [
   ["closed_day_corrections", "hotel_id = $1"],
   ["invoices",          "hotel_id = $1"],
   ["payments",          "hotel_id = $1"],
+  /* Loyalty's points earned or used here point at the stay and its bill line
+     (178); the member stays, as the guest does. */
+  ["loyalty_points",    "hotel_id = $1"],
   ["folio_postings",    "hotel_id = $1"],
   ["folios",            "hotel_id = $1"],
 
@@ -206,6 +209,8 @@ const GUARDS: [table: string, trigger: string][] = [
   /* 21 September: a restaurant order's history goes by cascade with the
      order, and this trigger refuses every delete of it. */
   ["pos_line_events",   "pos_line_events_no_delete"],
+  /* 2 October: loyalty's points ledger is append-only (178). */
+  ["loyalty_points",    "loyalty_points_append_only"],
 ];
 
 async function main() {
