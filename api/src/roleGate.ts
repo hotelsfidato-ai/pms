@@ -193,6 +193,10 @@ const MENU = grant("menu", "edit", "Changing the menu");
    the owner, an administrator and the GM, the people who set the hotel up
    (the owner's answer, 25 September). `room_config` is exactly those three. */
 const TILL_SETUP = grant("room_config", "edit", "Setting up the restaurant's tables");
+/* Table booking (D27-224): a guest's request is answered by whoever may ring
+   an order; the restaurant's booking hours are Restaurant setup's. */
+const TABLE_ANSWER = grant("payment", "create", "Answering a table booking", ["pos"]);
+const TABLE_HOURS = grant("room_config", "edit", "Setting the restaurant's table-booking hours");
 /* The KOT station (D27-159, D27-161). Switching it: the menu's four - the
    owner, an administrator, the GM and the kitchen manager. Printing: whoever
    is signed in on the kitchen or POS PC - the till, the chef, the kitchen
@@ -378,6 +382,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/setup/sections/:id/tables`]: TILL_SETUP,
   [`PATCH ${H}/till/setup/tables/:id`]: TILL_SETUP,
   [`POST ${H}/till/setup/tables/:id/off`]: TILL_SETUP,
+  [`POST ${H}/table-bookings/:id/confirm`]: TABLE_ANSWER,
+  [`POST ${H}/table-bookings/:id/decline`]: TABLE_ANSWER,
+  [`PUT ${H}/table-bookings/hours`]: TABLE_HOURS,
   [`POST ${H}/kitchen/lines/:lineId/:to`]: PASS,
 
   /* admin */
@@ -689,6 +696,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/room-setup`]: SETUP,
   [`GET ${H}/commissioning`]: SETUP,
   [`GET ${H}/till/setup`]: SETUP,
+  [`GET ${H}/table-bookings/hours`]: SETUP,
   [`GET ${H}/housekeepers`]: see("inventory", "who cleans which room"),
   [`GET ${H}/housekeeping/assignments`]: see("inventory", "who cleans which room"),
   [`GET ${H}/work-orders`]: REPAIRS,
@@ -705,6 +713,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/till/orders/:id/kot/:no`]: KOT_READ,
   [`GET ${H}/till/kot-station`]: KOT_READ,
   [`GET ${H}/till/floor`]: TILL_READ,
+  [`GET ${H}/table-bookings`]: TILL_READ,
   [`GET ${H}/till/rooms`]: TILL_READ,
   [`GET ${H}/till/waiters`]: TILL_READ,
   [`GET ${H}/banquet/attachable`]: TILL_READ,

@@ -47,6 +47,7 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 | Menu name | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
 |---|---|---|---|
 | Tables | `/h/:code/floor` | `pages/Floor.tsx` | waiter (`pos`), Reception |
+| Table bookings | `/h/:code/table-bookings` | `pages/TableBookings.tsx` | none - whoever may ring an order (`mayRingUp`); hotel guests' table requests, Waiting / Today / Upcoming, Confirm (a table if known) or Decline with a reason (D27-221, D27-224) |
 | Till | `/h/:code/till` | `pages/Till.tsx` | waiter, Reception |
 | Terminal | `/h/:code/till/terminal` | `pages/Terminal.tsx` | waiter, Reception |
 | Kitchen | `/h/:code/kitchen` | `pages/Kitchen.tsx` | chef, kitchen manager |
@@ -107,6 +108,22 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 The code is in `api/src/modules/pos/` (moved 15 September): `till.ts` (the
 till, **3,555 lines** — splitting it into parts is not done yet) and `pos.ts`
 (the bridge to an outside till). The door `index.ts` mounts them.
+
+**Table bookings** (D27-221, D27-224) — `tableBookings.ts`, its own router at
+`/api/hotels`, NOT in till.ts:
+
+```
+GET   /:code/table-bookings              the hotel's today, waiting first then today and upcoming, the tables
+POST  /:code/table-bookings/:id/confirm  { tableId? } - only while requested; roleGate TABLE_ANSWER
+POST  /:code/table-bookings/:id/decline  { reason } - required, the guest reads it; TABLE_ANSWER
+GET   /:code/table-bookings/hours        each food restaurant's lunch and dinner, and today's slots
+PUT   /:code/table-bookings/hours        { outlet, lunch, dinner }; TABLE_HOURS (owner, admin, GM)
+```
+
+The bell says "N table bookings waiting" to the same people
+(`api/src/routes/notifications.ts`). The guest's side - offer, book, mine,
+cancel while requested - is the door's, behind `app.guest_unlocked`, and
+follows the online check-in lane's step 0.
 
 **The till** — `/api/hotels`, a person's bearer token. Every `/:code/till/*`
 and `/:code/kitchen*` route passes two gates first: the `pos` module must be
@@ -289,6 +306,14 @@ the offline rules (`@/lib/offline.ts`), the import dialog and `MENU_SPEC`
 Tables this service owns, and the migrations that made or changed them:
 
 ```
+table_bookings; pos_outlets.table_lunch,       "a table for the guest" (173 for now; D27-224): a
+  .table_dinner                                hotel guest's request, requested / confirmed /
+                                               declined / cancelled, a decline's reason, an
+                                               optional table; NULL hours are the owner's default
+                                               (12:30-15:00, 19:30-23:00), '' a meal not offered;
+                                               app.table_slots(outlet, date) - the ONE definition
+                                               of a day's half-hour slots, in the hotel's time
+                                               zone, the last half an hour before a meal ends
 pos_outlets, pos_tickets                       024_pos_bridge.sql (app.pos_chargeable_rooms,
                                                app.pos_outlet_for_key)
                                                (046_store_and_off.sql: an outlet's closed_until)

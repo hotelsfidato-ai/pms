@@ -14,6 +14,7 @@ import {
   getTillSetup, getMenu, nameRestaurant, addSection, renameSection, takeSectionAway,
   addTables, changeTable, takeTableAway, type TillSetup, type SetupTable, type MenuCategory,
 } from "@/modules/pos/data/till";
+import { getTableHours, setTableHours, type TableHours } from "@/modules/pos/data/tableBookings";
 
 /* ══════════════════════════════════════════════════════════════════
    RESTAURANT SETUP (D22-6, the owner's answers of 25 September)
@@ -88,6 +89,7 @@ export default function SetupPage() {
           <ReadyToOpen hotelId={hotelId} setup={setup.data} menu={menu} />
           <Restaurant hotelId={hotelId} setup={setup.data} run={run} />
           <Sections hotelId={hotelId} setup={setup.data} run={run} />
+          <TableBookingHours hotelId={hotelId} />
         </>
       )}
     </Page>
@@ -95,6 +97,62 @@ export default function SetupPage() {
 }
 
 type Run = (write: Promise<Done>, done: string) => Promise<boolean>;
+
+/* ── Table booking hours (D27-224) ─────────────────────────────────── */
+
+/* When hotel guests may ask for a table, per restaurant: lunch and dinner,
+   in half-hour slots, the last half an hour before each ends. The owner's
+   default is lunch 12:30-15:00 and dinner 19:30-23:00; an empty meal is not
+   offered, and both empty means no table booking here. */
+function TableBookingHours({ hotelId }: { hotelId: string }) {
+  const q = useQuery({
+    queryKey: ["table-hours", hotelId],
+    queryFn: () => getTableHours(hotelId),
+    enabled: Boolean(hotelId),
+  });
+  return (
+    <Section title="Table booking hours"
+             description="When hotel guests may ask for a table from their own page. Somebody at the restaurant confirms each request.">
+      {q.isLoading ? <Skeleton className="h-24 w-full" />
+        : q.isError || !q.data ? <ReadFailed compact error={q.error} what="the table booking hours" onRetry={() => void q.refetch()} />
+        : q.data.restaurants.map((r) => <HoursCard key={r.code} hotelId={hotelId} restaurant={r} />)}
+    </Section>
+  );
+}
+
+function HoursCard({ hotelId, restaurant: r }: { hotelId: string; restaurant: TableHours }) {
+  const qc = useQueryClient();
+  const [lunch, setLunch] = useState(r.lunch);
+  const [dinner, setDinner] = useState(r.dinner);
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    const res = await setTableHours(hotelId, r.code, lunch, dinner);
+    setBusy(false);
+    if (!res.ok) return toast.error("Not saved", res.reason);
+    toast.success("Hours saved", "Guests are offered these from now on.");
+    void qc.invalidateQueries({ queryKey: ["table-hours", hotelId] });
+  };
+  return (
+    <Card>
+      <CardBody className="space-y-3">
+        <p className="text-base font-medium text-ink-900">{r.name}</p>
+        <div className="grid gap-3 sm:grid-cols-2 max-w-xl">
+          <Field label="Lunch" hint="Such as 12:30-15:00. Empty: no lunch bookings.">
+            {(f) => <Input {...fieldProps(f)} value={lunch} className="tabular" onChange={(e) => setLunch(e.target.value)} />}
+          </Field>
+          <Field label="Dinner" hint="Such as 19:30-23:00. Empty: no dinner bookings.">
+            {(f) => <Input {...fieldProps(f)} value={dinner} className="tabular" onChange={(e) => setDinner(e.target.value)} />}
+          </Field>
+        </div>
+        <p className="text-sm text-grey-600 break-words">
+          {r.slots.length ? `Slots: ${r.slots.join(", ")}` : "No table booking at this restaurant."}
+        </p>
+        <Button variant="secondary" loading={busy} onClick={() => void save()}>Save hours</Button>
+      </CardBody>
+    </Card>
+  );
+}
 
 /* ── Ready to open: the six ticks the owner chose ─────────────────── */
 

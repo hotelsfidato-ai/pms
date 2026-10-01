@@ -200,6 +200,23 @@ notifications.get("/:code/notifications", async (c) => {
       });
     }
 
+    /* TABLES A GUEST ASKED FOR, WAITING FOR AN ANSWER (D27-221, D27-224): for
+       the people who answer them - whoever may ring an order (roleGate
+       TABLE_ANSWER) - at this hotel. */
+    if (role !== null && (can(role, "create", "payment") || role === "pos")) {
+      const { rows: [tables] } = await client.query<{ n: number }>(
+        "select count(*)::int as n from table_bookings where hotel_id = $1 and status = 'requested'",
+        [hotelId]);
+      if (tables!.n) {
+        out.push({
+          id: "table-bookings-waiting", hotelId: code, category: "reservation",
+          title: `${tables!.n} table booking${tables!.n === 1 ? "" : "s"} waiting`,
+          body: "Hotel guests asked for a table from their own page. Confirm each one, or decline it with a reason.",
+          isRead: false, at, link: `/h/${code}/table-bookings`, actionRequired: true,
+        });
+      }
+    }
+
     /* A HOTEL'S BANK DETAILS WERE SET, CHANGED OR REMOVED (the owner's
        D27-216): they print on every booking voucher, so the group owner is
        told - which hotel, who, when; never the account. For group

@@ -1,5 +1,6 @@
 import {
   LayoutGrid, Receipt, MonitorSmartphone, Flame, UtensilsCrossed, Banknote, Plug, SlidersHorizontal,
+  CalendarClock,
 } from "lucide-react";
 import { can, canAccess, type Role } from "@/lib/permissions";
 import type { ServiceNavEntry } from "@/components/app/navigation";
@@ -18,6 +19,12 @@ export const nav: ServiceNavEntry[] = [
   { section: "point-of-sale", order: 10, workingMenus: ["front_desk", "pos"],
     label: "Tables", to: "/h/:code/floor", icon: LayoutGrid, resource: "payment",
     keywords: ["floor", "restaurant"],
+    canSee: (role) => mayRingUp(role) },
+  /* Hotel guests' requests for a table (D27-221, D27-224): answered by the
+     till's people, as the server asks (roleGate TABLE_ANSWER). */
+  { section: "point-of-sale", order: 15,
+    label: "Table bookings", to: "/h/:code/table-bookings", icon: CalendarClock, resource: "payment",
+    keywords: ["table booking", "reservation", "restaurant booking", "dinner", "lunch"],
     canSee: (role) => mayRingUp(role) },
   /* The till, the one somebody stands at. */
   { section: "point-of-sale", order: 20, workingMenus: ["front_desk", "pos"],
