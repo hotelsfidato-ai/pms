@@ -93,7 +93,7 @@ describe("loyalty through the desk's doors", () => {
     await ok(await call(`/loyalty/guests/${guestId}/join`, "POST", { agreed: true }));
 
     await ok(await call(`/stays/${stayId}/check-in`, "POST", { roomNumber: "101", adults: 1, idSkipReason: "Test" }));
-    await ok(await call(`/stays/${stayId}/charges`, "POST", { category: "Room", description: "Room night", amount: 2000 }));
+    /* The check-in posts the first night itself, at the booking's 2000. */
     await ok(await call(`/loyalty/guests/${guestId}/adjust`, "POST", { points: 600, reason: "Test balance" }));
     const key = crypto.randomUUID();
     await ok(await call(`/loyalty/stays/${stayId}/redeem`, "POST", { points: 500 }, { "idempotency-key": key }));
