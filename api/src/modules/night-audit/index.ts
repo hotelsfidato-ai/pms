@@ -18,3 +18,6 @@ export { correctClosedCharge } from "./nightAudit.ts";
    the check-in's first night (front desk) and the printed bill's "to be
    posted tonight" (finance). */
 export { roomNightsDue, postRoomNight, roomNightWords, nightsToCome } from "./roomNight.ts";
+/* Where a line first came from, through corrections (139): the bill's
+   sections place a corrected fee by it (D27-223). */
+export { ORIGIN } from "./nightAudit.ts";

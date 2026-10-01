@@ -59,4 +59,14 @@ describe("the bill's sections", () => {
     expect(sections.map((s) => s.title)).toEqual(["Room", "Other charges"]);
     expect(billSections([], ["room"]).map((s) => [s.title, s.subtotal])).toEqual([["Room", 0]]);
   });
+
+  /* D27-223 (the owner, 1 October): the desk's early check-in and late
+     check-out fees are part of the room - by where they came from, never by
+     their words. Lines from before say 'front_desk' and stay where they were. */
+  it("put the room's own fees under Room, and older ones with the other charges", () => {
+    expect(sectionOf({ category: "misc", scheme: "gst", source: "early_checkin" })).toBe("room");
+    expect(sectionOf({ category: "misc", scheme: "gst", source: "late_checkout" })).toBe("room");
+    expect(sectionOf({ category: "misc", scheme: "gst", source: "front_desk" })).toBe("other");
+    expect(sectionOf({ category: "misc", scheme: "gst" })).toBe("other");
+  });
 });

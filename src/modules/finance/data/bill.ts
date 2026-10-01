@@ -16,6 +16,8 @@ export interface StayBillLine {
   rate: number | null;
   /** gst or vat (166); absent from an older server, read as GST. */
   scheme?: "gst" | "vat";
+  /** Where the line came from, through a correction (175, D27-223). */
+  source?: string | null;
   billTo: string;
   company: string | null;
 }

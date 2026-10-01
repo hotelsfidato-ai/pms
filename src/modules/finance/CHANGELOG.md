@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-01 · The room's own fees under Room on the bill (the owner's D27-223); the bell by the guest's own bill (D27-226)
+
+Branch `fix/fees-dayuse-1oct` from cp6 9a9e7a3b, the booking and bill lane. **Shipped:** the desk's early check-in and late check-out fees are posted with their own source (`early_checkin`, `late_checkout`, front desk's check-in and check-out) and `sections.ts` puts a misc line with either source under Room; the postings route sends `source` (through a closed-day correction to its origin, the night audit's `ORIGIN`; a reversal takes its line's), and `app.stay_bill` carries it on the printed bill - migration `175_bill_lines_say_where_they_came_from.sql` (same jsonb, one key). Lines before 1 October say `front_desk` and stay in Other charges. **The reports do not move**: they read the category, and these stay `misc` (the owner, through the master). **Corrected:** the D27-200 entry below said "extra person fees" sit under Other charges - there is no such posting; the extra adult or child is priced inside the room rate, so it was always the room's. The bell (core `api/src/routes/notifications.ts`, the master's yes): "outstanding" and "to refund" count the guest's own bills (D27-226). **Proved:** web `billSections.test.ts` (fails on the old `sections.ts`); API front desk's `feesAndDayUse.test.ts` and `notifications.test.ts`, each failing on the old code.
+
 ## 2026-10-01 · A guest's own figures count only the guest's own bill (the owner's D27-226, FIN-27)
 
 Same branch. **Shipped:** `FOLIO_SELECT` counts a line for the bill it is on (the stay's folio, or the group's master) - GET /stays/:id/folio, Settle's unnamed `owed` and the night audit's owing count with it; GET /folios lists a group's master bill once, named for the group; the Folios page shows "Group bills" and counts them. **Proved:** 4 API cases and 1 web case, each failing on the old code. **Told the master:** the notifications' fourth copy (core).

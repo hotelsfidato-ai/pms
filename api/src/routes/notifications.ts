@@ -58,7 +58,9 @@ notifications.get("/:code/notifications", async (c) => {
       kind: string; id: string; label: string; detail: string; amount: string | null;
     }>(
       `with live as (
-         select fp.*
+         /* The bill a line is ON (the owner's D27-226): a guest owes their own
+            bills, not the nights their group's master carries for them. */
+         select fp.*, f.reservation_id as bill_stay
            from folio_postings fp
            join folios f on f.id = fp.folio_id
           where fp.hotel_id = $1
@@ -70,7 +72,7 @@ notifications.get("/:code/notifications", async (c) => {
        balances as (
          select r.id, r.reference, r.status, r.check_out, g.full_name as guest,
                 coalesce((select sum(amount + tax_amount) from live
-                           where reservation_id = r.id), 0) as balance
+                           where bill_stay = r.id), 0) as balance
            from reservations r
            join guests g on g.id = r.guest_id
           where r.hotel_id = $1

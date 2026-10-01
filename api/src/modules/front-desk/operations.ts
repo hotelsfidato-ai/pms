@@ -471,6 +471,10 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
            a manager deciding not to - asked above, before any write - and
            worth being visible by its absence on the bill. */
         if (!body.waiveEarly && isEarly) {
+          /* PART OF THE ROOM ON THE BILL (the owner's D27-223): its source
+             says what it is, 'early_checkin', and the bill's sections put it
+             under Room. Lines before 1 October say 'front_desk' and stay in
+             Other charges. */
           /* The charge is the property's; the RATE is the room's.
              Letting somebody in at eleven is ancillary to selling them
              the room, so it carries the room's slab — and the room's
@@ -496,7 +500,7 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
                select $1::uuid, f.id, $2::date, 'misc', 'Early check-in',
                       $3::numeric, t.rate,
                       round($3::numeric * t.rate / 100.0, 2),
-                      'front_desk', $4::uuid
+                      'early_checkin', $4::uuid
                  from folios f
                 cross join (select app.gst_rate($1,'room',$6::numeric) as rate) t
                 where f.reservation_id = $5 and f.status = 'open'
@@ -740,7 +744,9 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
 
       if (!body.waiveLate) {
         /* Same rule as the early charge above: the room decides the
-           slab, because a late departure is ancillary to the room. */
+           slab, because a late departure is ancillary to the room - and
+           its source, 'late_checkout', puts it under Room on the bill
+           (D27-223). */
         /* ⚠ THIS READ `hotels.business_date` AND POSTED TO IT.
            That column is the property's CONFIGURED date. The real one
            is `app.business_date()` — the last completed night audit
@@ -773,7 +779,7 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
              select $1::uuid, f.id, $2::date, 'misc', 'Late check-out',
                     $3::numeric, t.rate,
                     round($3::numeric * t.rate / 100.0, 2),
-                    'front_desk', $4::uuid
+                    'late_checkout', $4::uuid
                from folios f
               cross join (select app.gst_rate($1,'room',$6::numeric) as rate) t
               where f.reservation_id = $5 and f.status = 'open'

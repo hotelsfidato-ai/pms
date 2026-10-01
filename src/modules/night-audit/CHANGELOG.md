@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-01 · A day use is charged at check-in, never by the run (D27-225); ORIGIN on the front door
+
+The booking and bill lane, `fix/fees-dayuse-1oct`, the master's approved plan. `roomNight.ts`: `POSTS_TONIGHT` is `CHARGEABLE` plus "never a day use" - the run's SQL is the same; a NAMED stay (the check-in) is read by `CHARGEABLE`, so a day-use stay's day is charged at its check-in. `RoomNight.day_use`; `roomNightWords` says "Room N · day use"; the room join also matches a hold that starts and ends the same day (015's day-use hold), which only a day use has. `nightAudit.ts`: `ORIGIN` exported through `index.ts` for finance's postings route (a corrected fee keeps its section, D27-223).
+
 ## 2026-10-01 · The nights still to come, by the run's own rule (FIN-24)
 
 The booking and bill lane, `fix/review-1oct`, from the master's pre-launch review. `roomNight.ts`: the "a room line already pays for this night" test is one expression, `CHARGED(night)`, which `POSTS_TONIGHT` now uses for tonight - the same SQL, written once - and a new `nightsToCome(client, hotel, stay)` uses for each night from today to departure, for finance's Bill tab. Exported through `index.ts`. The run's figures, order and conditions are unchanged: `nightAudit.test.ts` 23 and `corrections.test.ts` 20 passed after it.

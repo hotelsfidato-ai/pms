@@ -5,11 +5,14 @@
    on the Bill tab and on the printed bill alike. ONE place decides where a
    line sits and adds a section up, so the screen and the print cannot differ.
 
-   A line is placed by WHAT IT WAS BILLED UNDER - its category and its tax
-   scheme - never by the words in its description. A posting does not carry
-   the tax rule it was billed under (room, laundry, spa…), only gst or vat, so
-   the desk's early arrival, late departure and extra person fees (category
-   misc) sit with the other charges until it does.
+   A line is placed by WHAT IT WAS BILLED UNDER - its category, its tax scheme
+   and where it came from - never by the words in its description. The desk's
+   early check-in and late check-out fees are part of the room (the owner's
+   D27-223): since 1 October they are posted with their own source
+   ('early_checkin', 'late_checkout') and sit under Room; older ones say
+   'front_desk' and stay with the other charges. (There is no extra-person
+   fee to place: the extra adult or child is priced inside the room rate.)
+   The reports do not move: they read the category, and these stay misc.
 
    NO FIGURE IS MADE HERE THAT THE BILL DID NOT HAVE: a subtotal is its lines'
    amounts added, a tax row its lines' tax added, in paise. The sections'
@@ -26,6 +29,8 @@ export interface SectionLine {
   amount: number;
   tax: number;
   rate?: number | null;
+  /** Where the line came from, through a correction (D27-223). */
+  source?: string | null;
 }
 
 export interface BillSection<T> {
@@ -37,9 +42,12 @@ export interface BillSection<T> {
   taxes: { label: string; amount: number }[];
 }
 
-export function sectionOf(line: Pick<SectionLine, "category" | "scheme">): SectionKey {
+/** The desk's fees that are part of the room (D27-223). */
+const ROOM_FEES = new Set(["early_checkin", "late_checkout"]);
+
+export function sectionOf(line: Pick<SectionLine, "category" | "scheme" | "source">): SectionKey {
   if (line.scheme === "vat") return "bar";
-  if (line.category === "room") return "room";
+  if (line.category === "room" || ROOM_FEES.has(line.source ?? "")) return "room";
   if (line.category === "food" || line.category === "beverage") return "restaurant";
   return "other";
 }
