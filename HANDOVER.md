@@ -47,6 +47,22 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+### 2 October, about 2 am — read this first
+
+```
+live                 THE LAUNCH SET (D27-232), released by the owner from release/launch-2oct:
+                     server adc8e846, website published. Live 5EL's business date is 11 Sep
+                     (test data): RELEASE-1OCT Part B2 resets it to today.
+cp6 now              + contracts (177), loyalty (178), room systems (179), fully checked at
+                     7a2946b0 (gates second-2oct-b: web 928, api 2,233, database 1,419, replay
+                     179; build passes). The second release: docs/go-live/RELEASE-2OCT.md,
+                     branch release/second-2oct, page https://claude.ai/artifact/E2je4qa2vYqEdHUQ4gJcAn.
+pages                tracker https://claude.ai/artifact/PrxGEtDY9SnfWVSmo1xGk7; the first
+                     release https://claude.ai/artifact/Ja5r7keaPRK7omJMgULZvm (ticks in its db).
+local demo           `fidato` at 179; api 8787, web 5173.
+decisions            D27-191 to D27-233.
+```
+
 ### 2 October, after midnight — read this first
 
 ```
@@ -409,6 +425,12 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **2 October, 2 am: the queue.** (1) The owner runs the second release (RELEASE-2OCT.md), then
+> RELEASE-1OCT Part B2 (5EL reset to today) and Part C (connections). (2) The owner's answers to
+> the plans of 2 October (online check-in by WhatsApp code, DigiLocker provision, one-page desk
+> check-in, calendar always open, Rates redesign, stores, dashboards). (3) Archive the finished
+> lanes' copies (D24-21). Nothing is paused now.
 
 > **2 October: the queue.** (1) The owner runs `docs/go-live/RELEASE-1OCT.md` (the tip of cp6;
 > code checked at 80d18688), then Part B (each hotel's room and laundry GST, 5EL's test data

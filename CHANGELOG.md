@@ -50,6 +50,43 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-02 · the launch release went live; contracts, loyalty and room systems merged and checked for a second release
+
+**Asked for:** the owner, 2 October: release the checked launch set now (D27-232, replacing
+D27-231), then finish the three paused lanes for a second release; a step-by-step page to follow;
+"tell me when all is merged and checked".
+
+**Shipped**
+- The launch release is LIVE: the owner ran `docs/go-live/RELEASE-1OCT.md` A1-A10 from the branch
+  `release/launch-2oct` (adc8e846); I ran A11 (back to cp6). Checked read-only on the server: code
+  adc8e846, the new tables present, backups at 19:11 and 19:12 UTC; the website's config points at
+  the live API.
+- Merged into cp6: loyalty (178), room systems (179), contracts (177, with D27-233: the "Rate
+  includes GST" tick is not used on a contract price); Guest 360 shows loyalty's member card.
+- Mine: loyalty's Join and Use declare themselves primary; the property reset clears loyalty points
+  (its append-only guard lifted like the folio's); reports.test's invoice goes on a checked-out bill.
+- `docs/go-live/RELEASE-2OCT.md` and its page https://claude.ai/artifact/E2je4qa2vYqEdHUQ4gJcAn;
+  the branch `release/second-2oct`.
+
+**Found**
+- The first full run on the merged tree failed 4 tests: loyalty's buttons (the lane had not run
+  src/components/ui), the reset missing loyalty points (MEMORY 368's rule again), and a flaky test
+  fixture (MEMORY 372). I ran roleGate with plain vitest against the demo database (MEMORY 373).
+
+**Proved**
+- Full gates `second-2oct-b` on 7a2946b0: web 928, api 2,233 of 2,233, database 1,419, replay 179.
+  `npm run build:app` with the live API passes.
+
+**Left open**
+- The owner runs the second release. Live 5 Elements' date is 11 September: Part B2 of
+  RELEASE-1OCT (the reset) moves it to today. Part C connections (nothing is sent to guests until
+  they are done).
+- Plans the owner asked for, not built: online check-in by WhatsApp code with room and phone, a
+  DigiLocker provision, a one-page desk check-in, the calendar always open, the Rates page redesign,
+  the stores improvements and their daily data, the best PMS dashboards (research).
+
+**Commits:** `8f38b55f … 7a2946b0`, then notes.
+
 ## 2026-10-01 to 02 · the one launch: the after-launch items built now (D27-225), merged and checked
 
 **Asked for:** the owner, 1 October: build everything planned for after the launch now, and

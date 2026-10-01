@@ -6539,6 +6539,27 @@ copy will see of theirs.**
 
 ---
 
+### 373 · MINE: I ran an API test with plain vitest, against the demo database, again (2 October)
+
+Checking the loyalty and room-systems merge, I ran `npx vitest run test/roleGate.test.ts` in api/.
+Without `scripts/with-test-db.sh` it used api/.env's database, my demo `fidato`, which did not
+have migration 178 yet: loyalty's read answered 500 and the test failed. MEMORY 277 already says
+this. Re-run on a scratch database: 68/68. **The rule:** every API test file runs through
+`bash scripts/with-test-db.sh <file>`, never plain vitest, whatever the hurry.
+
+---
+
+### 372 · A test fixture on "the first row by its random id" is a test that fails some nights (2 October)
+
+reports.test put an invoice (which can never be deleted) on the first 5EL folio ordered by its
+uuid. Each scratch database gets new uuids, so on some runs it landed on the in-house stay
+editCharge.test corrects, and D27-162 then refused every correction. Green on 1 October, red on 2
+October, with no code change in either file. **The rule:** a fixture that leaves something behind
+picks its row by a stable business key no other test uses (here a checked-out stay by reference),
+never by a random id.
+
+---
+
 ### 371 · Four copies of "what a guest owes", one grouped by the wrong key (booking lane, D27-226)
 
 A group guest whose room the host pays showed "₹3,150 Outstanding" over "Nothing posted to this
