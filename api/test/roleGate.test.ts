@@ -232,6 +232,15 @@ describe("who reads what (D27-140 to D27-147)", () => {
   });
 });
 
+describe("key cards (D27-178, D27-182)", () => {
+  it("are cut by whoever may check a guest in, a lost card too, and read by whoever reads stays", () => {
+    const cut = whoMay(rule(`POST ${H}/stays/:id/keys`));
+    expect(cut).toEqual(whoMay(rule(`POST ${H}/stays/:id/check-in`)));
+    expect(cut).toEqual(["owner", "admin", "gm", "hotel_manager", "front_desk"]);
+    expect(READ_RULES[`GET ${H}/stays/:id/keys`]).toBe(READ_RULES[`GET ${H}/stays/:id`]);
+  });
+});
+
 /* ── 2 · One matrix ───────────────────────────────────────────────── */
 
 describe("the matrix the server asks", () => {

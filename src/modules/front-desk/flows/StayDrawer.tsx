@@ -17,6 +17,7 @@ import { StayMarks } from "@/modules/front-desk/flows/StayMarks";
 import { AddIdPhotoAtDesk } from "@/modules/online-checkin";
 import { GuestMarks } from "@/modules/front-desk/flows/GuestMarks";
 import { GroupRoomsList } from "@/modules/reservations";
+import { KeyCards } from "@/modules/room-systems";
 import { useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 
@@ -216,6 +217,7 @@ function StayBody({
               <StayFacts stay={stay} />
               {/* D27-210: the desk adds the ID photo here too; it draws nothing for anybody else. */}
               <AddIdPhotoAtDesk stayId={stay.id} />
+              {arrived && <KeyCards hotelId={hotelId} stay={stay} />}
             </div>
           </TabsContent>
           {seesBills && (

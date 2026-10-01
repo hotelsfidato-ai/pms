@@ -11,7 +11,8 @@ import { ComingSoonPage, type ComingSoonContent } from "@/pages/ComingSoon";
 const CONTENT: ComingSoonContent = {
   title: "Room systems",
   summary: "Door locks, room phones, minibars and TVs connected to the rooms and the bill.",
-  status: "When a hotel asks",
+  /* D27-182: still "Not built yet" in the menu, in the owner's words here. */
+  status: "Built; waiting for the hotel's lock system",
   willDo: [
     { icon: KeyRound, title: "Key cards at check-in",
       body: "Cut for the room assigned, and cancelled at check-out." },
@@ -25,7 +26,8 @@ const CONTENT: ComingSoonContent = {
     "The makers' connection documents.",
     "Possibly a small computer at the hotel, when a maker's system cannot be reached over the internet.",
   ],
-  today: "Nothing is connected. The desk's Post a charge list has no telephone or minibar line.",
+  today: "Key cards are built and tested against a stand-in lock, and switched off: nothing reaches a door "
+    + "until the hotel's lock system is connected. The desk's Post a charge list has no telephone or minibar line.",
   leansOn: ["Rooms", "Folios"],
 };
 

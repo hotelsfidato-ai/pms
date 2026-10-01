@@ -10,6 +10,7 @@ import {
 } from "../guests/index.ts";
 import { earnAtCheckOut } from "../loyalty/index.ts";
 import { countProblem, dateProblem, MAX_NIGHTS } from "../../validate.ts";
+import { cancelStaleKeys } from "../room-systems/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE FLOWS THAT WRITE
@@ -843,6 +844,8 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
       "update reservations set status = 'checked_out' where hotel_id = $1 and id = $2",
       [hotelId, stayId],
     );
+    /* Their key cards stop (D27-178): after the last refusal, never one. */
+    await cancelStaleKeys(client, hotelId, stayId);
     if (isForeign(stay.nationality)) {
       await saveVisit(client, hotelId, stayId, { nextDestination: nextDestination! });
     }
@@ -1122,6 +1125,8 @@ operations.post("/:code/stays/:id/move", async (c) => {
           `update reservations set agreed_rate = $1 where id = $2`,
           [input.agreedRate.toFixed(2), stayId]);
       }
+      /* Moved from tonight: the old room's key cards stop (D27-178). */
+      await cancelStaleKeys(client, hotelId, stayId);
 
       return {
         ok: true as const,

@@ -37,6 +37,7 @@ import * as leads from "./modules/leads/index.ts";
 import * as crs from "./modules/crs/index.ts";
 import * as guestServices from "./modules/guest-services/index.ts";
 import * as loyalty from "./modules/loyalty/index.ts";
+import * as roomSystems from "./modules/room-systems/index.ts";
 import { live } from "./routes/live.ts";
 import {
   startListening, stopListening, watcherCount, isListening,
@@ -304,6 +305,8 @@ const SERVICES = [
   guestServices,
   /* Loyalty (D27-178, D27-179). */
   loyalty,
+  /* Key cards through the hotel's lock system (D27-178). */
+  roomSystems,
 ];
 /* Every router, with the prefix it hangs from. Exported so that
    api/test/apiGate.test.ts can hold /api/channel - the one prefix that
