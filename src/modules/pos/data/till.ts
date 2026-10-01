@@ -420,6 +420,30 @@ export function addLine(
     { itemId, qty, note, variationId, addonIds, moreChoiceIds });
 }
 
+/* ── In-room dining (D27-224): the guests' orders the Terminal answers ── */
+export interface GuestOrder {
+  id: string; room: string | null; note: string | null; createdAt: string;
+  lines: { name: string; qty: number; unitPrice: number }[];
+}
+
+export async function listGuestOrders(hotelId: string): Promise<GuestOrder[]> {
+  if (!hotelId) return [];
+  return (await api<{ orders: GuestOrder[] }>(`/api/hotels/${hotelId}/till/guest-orders`)).orders;
+}
+
+/** Accept and send: the batch route builds the round from the guest's own
+    basket, a room-service order for their room (Q4), sent at once. */
+export function acceptGuestOrder(hotelId: string, guestOrderId: string): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/batch`, { guestOrderId });
+}
+
+/** Declined, with the reason the guest reads on their page. */
+export function declineGuestOrder(
+  hotelId: string, id: string, reason: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/guest-orders/${id}/decline`, { reason });
+}
+
 /** The waiter carried these Ready dishes out: they are served (D27-222).
     Only a ready dish; the server says why not. */
 export function takeDishes(
