@@ -11,6 +11,37 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-01 · One-tap choices on the guest's page (D27-224, D27-225)
+
+**Asked for:** section C of `docs/briefs/guest-in-stay-plan.md`, as the owner
+accepted it (D27-224) and before the launch (D27-225): tiles above the free
+text for the things most asked for. The master's answers: the 1-4 count only
+for Drinking water, Fresh towels and Toiletries; no "× 1".
+
+**Shipped** (branch `guest-services/quick-taps-1oct`, from cp6 1befb5a4, after
+step 0)
+- `src/modules/online-checkin/QuickChoices.tsx`: the tiles, the count, one Send
+  (off while sending); `whatOf`, `hasQuickChoices`
+- `pages/GuestPage.tsx`, `RequestsSection` only (8 lines): the tiles first, the
+  text box behind "Something else" while checked in; as before otherwise
+- No migration, no route, nothing on the server: the same request, so the
+  team, the bell and the ten-open cap are 170's
+
+**Proved**
+- `quickChoices.test.tsx` 4/4: 3 seen failing before the build; 2 seen failing
+  with "× 1" and an always-on Send put back
+- tsc -b clean; online-checkin + guest-services 55/55
+- The guest page at 375 in the app's own pane: eight tiles 147x44, "Something
+  else" 301x44, every label whole, nothing sideways, sizes 12/14/16 only, the
+  text box hidden until Something else. The pane was hidden from the session,
+  so no tap reached it: the count row and Send are proved by the tests
+
+**Left open**
+- None in this job. Online check-in's `MODULE.md` could mention the tiles (the
+  messages lane holds it)
+
+---
+
 ## 2026-09-30 · Guest requests: in-stay requests, built (D27-178, D27-181)
 
 **Asked for:** the owner's D27-178, "build every service still Not built yet":

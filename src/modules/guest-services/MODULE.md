@@ -68,6 +68,14 @@ checked in, "Ask for something" offers Housekeeping, Something broken and Food
 and drink beside the spa and laundry, and lists the guest's own requests as
 Open, Being done, Done or Declined. What the desk raised for them is not shown.
 
+**One-tap choices** (D27-224, D27-225; online-checkin's `QuickChoices.tsx`,
+inside "Ask for something" while checked in): Drinking water, Fresh towels,
+Toiletries (a count 1-4), Clean my room; AC, Plumbing, Power/lights, TV/Wi-Fi;
+"Something else" opens the text box, which waits behind it. A tap sends the
+same request the text box does, kind and words: "Drinking water × 2", the ×
+only from 2 up. All free; the list is fixed in code. Food and drink has no
+tiles (it is the text box). No migration, no route.
+
 **The bell** (`api/src/routes/notifications.ts`): "{n} guest requests
 waiting" - open and not taken - for the team that receives them and for the
 desk, linking here.
