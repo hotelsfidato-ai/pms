@@ -1,13 +1,13 @@
 # The launch release: your steps, in order
 
-> **DO NOT RUN YET (D27-231, 2 October):** the release waits for contracts, loyalty and room
-> systems. The master updates the commit below and removes this line when all three are merged
-> and checked.
-
 Written 1 October 2026. **You type every command** (D21-50). Nothing here was run by Claude.
 Each step says where it runs. Stop at the first red ✗ and send me the output.
 
-The release: **the tip of `cp6`**. Its code was fully checked at **`80d18688`** on 1-2 October
+**Release now (D27-232, 2 October):** this launch set goes first; contracts, loyalty and room
+systems follow in a second release. They are merged into `cp6` as they finish, so this release
+is the branch **`release/launch-2oct`**, which stays put.
+
+The release: **the branch `release/launch-2oct`**. Its code was fully checked at **`80d18688`** on 1-2 October
 (gates `final-1oct`: website 919, server 2,206 of 2,206, database 1,374, all 176 migrations
 re-runnable; `npm run build` passes). Every commit after `80d18688` is notes only.
 Live today: `0b4766e`. The release is a fast-forward from it (checked).
@@ -22,14 +22,14 @@ with its price typed every time). Database changes 162 to 176 run in A6, in one 
 
 **A1 · your PC, PowerShell** — this copy is the checked one
 ```powershell
-cd "D:\fidato pms"; git checkout cp6; git status --short; git diff --stat 80d18688 HEAD
+cd "D:\fidato pms"; git checkout release/launch-2oct; git status --short; git diff --stat 80d18688 HEAD
 ```
 Expect no files listed by the first part (your design chat's files may show; tell me if they
 do), then only `.md` files (notes) from the second. Any other file: stop and tell me.
 
 **A2 · your PC, PowerShell, same folder** — send it to the branch the server follows
 ```powershell
-git push origin cp6:main
+git push origin release/launch-2oct:main
 ```
 Expect a fast-forward from `0b4766e`. This is the one push (D27-155 style exception for the release).
 
@@ -79,7 +79,13 @@ Expect `Deploy complete!`
 
 **A10 · look at it**: https://pms.fidatohotels.com, Ctrl+Shift+R, sign in. Open Settings, Rates,
 a guest's bill, the Kitchen, Tables, Table bookings, and New booking with the same arrival and
-departure day (it should say "Day use" and ask you to type the day's price). If the website is wrong: Firebase console → Hosting →
+departure day (it should say "Day use" and ask you to type the day's price).
+
+**A11 · your PC, PowerShell** — back to the working branch, so the next jobs can be merged
+```powershell
+cd "D:\fidato pms"; git checkout cp6
+```
+Then tell me the release is done. If the website is wrong: Firebase console → Hosting →
 Release history → the previous release → Roll back (instant).
 
 ---
