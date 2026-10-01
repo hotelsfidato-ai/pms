@@ -168,7 +168,7 @@ function AnswerDialog({ booking: b, hotelId, tables, confirm, onClose }: {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         title={confirm ? "Confirm this table" : "Decline this table"}
-        description={`${b.guest}, ${b.party} ${b.party === 1 ? "person" : "people"}, ${b.date} at ${b.time}.`}
+        description={`${b.guest}, ${b.party} ${b.party === 1 ? "person" : "people"}, ${dayWords(b.date, "")} at ${b.time}.`}
         footer={
           <>
             <Button variant="secondary" size="lg" onClick={onClose}>Cancel</Button>
