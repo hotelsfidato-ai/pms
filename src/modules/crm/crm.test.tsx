@@ -96,6 +96,8 @@ function answer(path: string, init?: RequestInit): unknown {
       sent: [], noOffers: [], joined: [],
     };
   }
+  /* Loyalty's member card on Guest 360 (D27-179): not a member. */
+  if (path.includes("/loyalty/guests/")) return { member: null, points: 0, statement: [] };
   return [];
 }
 

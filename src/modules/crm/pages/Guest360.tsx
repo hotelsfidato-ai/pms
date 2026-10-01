@@ -13,6 +13,7 @@ import {
   clearNoOffers, getOffersYes, recordOffersYes, type Guest360,
 } from "@/modules/crm/data/crm";
 import { agreedToOffers, stayedWords, EditGuestFlow } from "@/modules/guests";
+import { MemberCard } from "@/modules/loyalty";
 
 /* ══════════════════════════════════════════════════════════════════
    GUEST 360 — one person, across the whole group (D21-3, D21-4)
@@ -192,6 +193,8 @@ export function Guest360Page() {
             empty={<EmptyState compact title="No stays"
               description="A booking made for this guest appears here, whichever hotel it is at." />} />
         </Card>
+
+        <MemberCard hotelId={hotelId} guestId={g.id} />
 
         <div className="grid gap-3 lg:grid-cols-3">
           <Card>
