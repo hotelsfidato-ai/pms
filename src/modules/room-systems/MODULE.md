@@ -31,7 +31,8 @@ db/migrations/179_key_cards.sql    the master's number (2 October)
   The room is the one the stay holds tonight and the validity is the
   booking's departure date at the property's check-out time, both decided on
   the server. Only a checked-in guest. A lost card is a cancel then a new
-  issue.
+  issue. **Not for a day use** (RS-3): it has no end time, so it is refused
+  in words until the owner names one.
 - **The record**: `GET /api/hotels/:code/stays/:id/keys`.
 - **Cancelling** is front desk's check-out, move and exchange, one call each
   to `cancelStaleKeys` (the front door): it cancels the cards when they no

@@ -20,6 +20,21 @@ None.
 
 ## Fixed — the solution is here; do not work it out again
 
+### RS-3 · A day use would have been refused "departure has passed" (2 October)
+
+Found reading cp6's day use (D27-227) at the merge. A card stops at the
+booking's departure date at the property's check-out time; a day use departs
+the day it arrives, so at 5 Elements its cards would stop at 11:00 that day,
+before most day guests arrive, and the refusal ("change its dates") is one a
+day use cannot follow (D27-230). There is no day-use end time anywhere.
+**Done:** a day use is refused in words ("not cut here yet ... cut them in
+the lock system's own software"), read from `reservations.is_day_use`;
+tested, and seen failing with the rule removed. Cutting cards for a day use
+waits for the owner to name when a day use ends.
+
+**The rule:** a validity built from a booking's dates is checked against
+the kind of booking that has no night.
+
 ### RS-2 · A stay id that is not a uuid answered 500 (30 September, numbered for now)
 
 Found opening the routes by hand on the copy's own server:
