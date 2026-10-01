@@ -212,4 +212,24 @@ describe("a contract", () => {
       `select count(*)::int as n from folio_postings fp join folios f on f.id = fp.folio_id
         where f.reservation_id = $1`, [stay])).rows[0].n).toBe(0);
   });
+
+  it("never prices a day use: its price is typed even under a contract (D27-229)", async () => {
+    const dayUse = (rate?: number) => call("front_desk", "POST", "/bookings", {
+      guestName: `${TAG} Day use`, checkIn: "2029-05-11", checkOut: "2029-05-11",
+      bookingSourceId: source, companyId: agent,
+      lines: [{ roomTypeId: typeId, mealPlan: "EP", adults: 1, children: 0, rooms: 1,
+                ...(rate === undefined ? {} : { agreedRate: rate }) }],
+    });
+    const untyped = await dayUse();
+    expect(untyped.status).toBe(409);
+    expect(await reasonOf(untyped)).toBe("Type the day-use price.");
+    const typed = await dayUse(1500);
+    expect(typed.status, await typed.clone().text()).toBe(200);
+    const { rows } = await sql(
+      `select r.agreed_rate::float8 as rate, k.name as contract
+         from reservations r join guests g on g.id = r.guest_id
+         left join contracts k on k.id = r.contract_id
+        where g.full_name = $1`, [`${TAG} Day use`]);
+    expect(rows).toEqual([{ rate: 1500, contract: `${TAG} 2029` }]);
+  });
 });

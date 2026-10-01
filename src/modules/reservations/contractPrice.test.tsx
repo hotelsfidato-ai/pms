@@ -17,6 +17,14 @@ import BookingPage from "@/modules/reservations/pages/BookingPage";
 
 const asked: string[] = [];
 
+/** Bill to: Company, then the company, once its option has loaded. */
+const nameTheCompany = async () => {
+  fireEvent.click(screen.getByRole("tab", { name: "Company" }));
+  await screen.findByRole("option", { name: "Tata Motors" });
+  fireEvent.change(screen.getByLabelText(/^Company/, { selector: "select" }),
+    { target: { value: "co-1" } });
+};
+
 beforeEach(() => {
   startSignedIn();
   asked.length = 0;
@@ -64,14 +72,36 @@ describe("the company's contract prices the booking", () => {
     await screen.findByText(/₹3,000\.00 a night/);
     expect(document.querySelector("[data-contract-line]")).toBeNull();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Company" }));
-    fireEvent.change(await screen.findByLabelText(/^Company/, { selector: "select" }),
-      { target: { value: "co-1" } });
+    await nameTheCompany();
 
     await screen.findByText(/₹2,500\.00 a night/);
     expect(document.querySelector("[data-contract-line]")?.textContent)
       .toBe("Contract: Tata Motors 2026-27");
     await waitFor(() =>
       expect(asked.some((p) => p.includes("/contract-price?") && p.includes("companyId=co-1"))).toBe(true));
+  });
+
+  /* D27-229 meets D27-184: a day use's price is typed every time, so with a
+     company named the contract is not asked for it either, and the typed
+     price stands. */
+  it("never prices a day use: the contract and the tariff are not asked", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter><BookingPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByText(/₹3,000\.00 a night/);
+    await nameTheCompany();
+    await screen.findByText(/₹2,500\.00 a night/);
+
+    const arrival = (screen.getByLabelText(/^Arrival/, { selector: "input" }) as HTMLInputElement).value;
+    asked.length = 0;
+    fireEvent.change(screen.getByLabelText(/^Departure/, { selector: "input" }), { target: { value: arrival } });
+    await screen.findByText(/^Day use - in and out on /);
+    fireEvent.change(screen.getByLabelText(/^Rate/, { selector: "input" }), { target: { value: "1500" } });
+    await screen.findByText(/₹1,500\.00 for the day/);
+    expect(document.querySelector("[data-contract-line]")).toBeNull();
+    expect(asked.filter((p) => p.includes("/contract-price") || p.includes("/tariff"))).toEqual([]);
   });
 });
