@@ -120,7 +120,7 @@ the lane's recommendation, not a decision.
 ```
 src/modules/loyalty/               the Loyalty screen, the member card, the menu entry, the address
 api/src/modules/loyalty/           the routes, and earnAtCheckOut for the front desk
-db/migrations/174_loyalty.sql      numbered for now; the master settles it at merge
+db/migrations/178_loyalty.sql      numbered for now (was 174); the master settles it at merge
 db/tests/modules/loyalty.sql       one check per rule (L3-L16)
 ```
 

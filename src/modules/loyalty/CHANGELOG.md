@@ -11,6 +11,52 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · resumed: cp6 taken in, proved again on the merged tree
+
+**Asked for:** the master, 2 October (the owner's word to resume): merge cp6
+(ffda580a, migrations to 176), renumber the migration, migrate fidato_s42,
+re-run what the merge touched, finish the report.
+
+**Shipped:** the migration is `178_loyalty.sql` (was 174; cp6 has 174-176).
+cp6 merged with both sides kept: the module list (cp6's two booking switches
+plus loyalty), the server's services (guest services and loyalty), the
+check-out (cp6's new lines and the one earn call; still the only path that
+checks a stay out), the menu test (cp6's Distribution and no Loyalty mark).
+The 30 September papers are below; LOY-1 and LOY-2 are in `DEFECTS.md`.
+
+**Found:** cp6's check-in posts the first night itself, so loyalty's API test
+no longer posts a room charge of its own (it doubled the room). The database
+check matched the room-charges refusal with its rupee sign, which passes or
+fails with the client's encoding; it matches the sentence without it now.
+
+**Proved (2 October, this copy, the merged tree):** `npx tsc -b --force` exit
+0; `cd api && npx tsc --noEmit` exit 0; `DB=fidato_s42 bash db/migrate.sh`:
+177 migrations, exit 0, the module list keeps every module plus loyalty;
+`db/tests/modules/loyalty.sql` on fidato_s42: 22 of 22 (with and without
+PGCLIENTENCODING=UTF8). API, one file at a time after `psql.exe` was idle:
+`test/modules/loyalty` 1 of 1, `test/roleGate.test.ts` 67 of 67,
+`test/modules/admin/moduleSwitches.test.ts` 20 of 20, `test/modules/front-desk`
+7 files, 85 of 85. Web: `npx vitest run src/modules/loyalty
+src/components/app/navigation.test.ts src/test src/modules/admin
+src/modules/crm`: 94 passed, 1 failed - `migrationNumbers`, the gap at 177
+(the contracts lane's), which the master renumbers. Screens, in the app's
+browser pane on fidato_s42: Loyalty as Reception on the merged tree; Rekha
+Gaikwad settled by UPI on Due out and checked out there, and the real
+check-out earned 110 points ((3,704.84 - 1,500) x 5 / 100, rounded down).
+On 30 September also: the rules saved, the Settings switch, join refused
+without a phone and with no tick, the bill's discount line and GST, the
+statement on Guest 360 (its two lines placed locally and taken out again),
+the phone width.
+
+**Left open:** as on 30 September - L17 expiry; Guest 360's two lines (the
+master's, at merge); the CA's answers; the phone code before points are used.
+
+**Commits:** 7e976dc, 218249d, 0b822b5, 13b0d8c, 4a510c5, 94c1028, b525c32,
+530b41b, 4ddb59e (30 September); the renumber, the cp6 merge 40839af1,
+b338626a, 848d53b6 and this one (2 October).
+
+---
+
 ## 2026-09-30 · the programme, built (D27-178, D27-179)
 
 **Asked for:** D27-178, the master's card: a group-wide programme - earning
