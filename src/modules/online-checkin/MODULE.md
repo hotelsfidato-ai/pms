@@ -172,6 +172,11 @@ Coming soon page and its address are gone.
   titled "Interim bill", with "Pay at the desk before you leave"; and a spa or
   laundry request **only where the hotel has
   that module switched on (D21-63)** — 5 Elements has neither.
+- **One-tap choices (D27-224, D27-225; guest services' `QuickChoices.tsx`)** -
+  while checked in, "Ask for something" shows tiles first (Housekeeping:
+  water, towels, toiletries with a count, Clean my room; Something broken:
+  AC, plumbing, power/lights, TV/Wi-Fi), each the same request the text box
+  sends; the text box is behind "Something else".
 - **"Message the front desk" (D23-14)** - always there behind the code: the
   guest types anything (500 characters at most), "Send to the front desk",
   and "Sent. The front desk will see it." It is a request of kind `desk`

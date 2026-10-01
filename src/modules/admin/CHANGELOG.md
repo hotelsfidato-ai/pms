@@ -11,6 +11,17 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-01 · The checklist folds its reasons on a phone (D27-223)
+
+Branch `settings/checklist-fold-1oct` (from cp6 a8b261aa), the same copy; web 5391 against the master's API 8787, read-only.
+**Asked for:** the owner's yes (D27-223): on a phone the checklist above Settings' tabs folds its reasons behind a tap - one line an item, a tap shows why and the way to its fix. A real button with aria-expanded, keyboard focus visible, no new shared component. Desktop unchanged unless the fold reads better there.
+**Shipped:** `flows/CommissioningCard.tsx` only. Under 640px (`matchMedia`, followed when the screen turns) each item is a 56px button (icon, label, "not blocking", a chevron that turns); `aria-controls` names the reason's region, `hidden` until the tap; the reason is the link to the fix, with its arrow, starting at the label's x. No disclosure component exists in the kit; the modules' pattern (a button with aria-expanded and a chevron) is followed. Wider screens: unchanged.
+**Proved:** `admin.test.tsx` "D27-223": at phone width the item is a button, aria-expanded false and the reason inside a hidden region; a tap turns it true, shows the reason in the region it controls, linking to /settings/property - it FAILS on cp6's card (no button) and passes now; and at desktop width the row is still the link with its reason, no button.
+**On screen** (owner, 375 x 812, the demo's two long reasons): before, the checklist 499px and the tabs at 674px; now 313px and the tabs at 488px, the Profile card from 549px. One item open: the tabs at 613px. Tab reaches the item (the orange ring), Enter opens it, Tab reaches the reason's link (the ring). Screenshots `d27-223-owner-375-checklist-folded.jpg` and `-open-keyboard.jpg`.
+**Left open:** desktop kept as it was: there the reasons take one or two lines each and the tabs start on the first screen, so a tap would cost more than it saves - the master to confirm with the owner.
+
+---
+
 ## 2026-10-01 · Settings: only what can be changed, five tabs, the Fidato design (D27-220)
 
 Branch `settings/design-1oct` (from cp6 a0c5334b; cp6 0e02c352 merged in, the voucher lane's cards included), copy `.claude\worktrees\competent-leakey-110512`, no database of its own: web 5391 against the master's API 8787 and `fidato`, read-only, nothing saved.

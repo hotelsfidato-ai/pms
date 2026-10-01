@@ -22,6 +22,7 @@ import {
 } from "@/modules/online-checkin/guestKit";
 import { privacyNoticeFor } from "@/modules/online-checkin/privacyNotice";
 import { MessageTheDesk } from "@/modules/online-checkin/MessageTheDesk";
+import { QuickChoices, hasQuickChoices } from "@/modules/online-checkin/QuickChoices";
 import { BillPrint } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -737,6 +738,10 @@ function RequestsSection(
   const [kind, setKind] = useState(offers[0]!);
   const [what, setWhat] = useState("");
   const [wanted, setWanted] = useState("");
+  /* While checked in, the tiles come first and the text box waits behind
+     "Something else" (D27-224). */
+  const quick = hasQuickChoices(offers);
+  const [other, setOther] = useState(!quick);
 
   const ask = useMutation({
     mutationFn: () => makeRequest(token, { kind, what, wanted }),
@@ -753,7 +758,8 @@ function RequestsSection(
     <section className={SECTION}>
       <h2 className={cn(H2, "mb-3")}>Ask for something</h2>
       <Card><CardBody>
-        <form onSubmit={(e) => { e.preventDefault(); ask.mutate(); }} className="flex flex-col gap-3">
+        {quick && <QuickChoices token={token} offers={offers} onOther={setOther} onUnlockGone={onUnlockGone} />}
+        {other && <form onSubmit={(e) => { e.preventDefault(); ask.mutate(); }} className="flex flex-col gap-3">
           {offers.length > 1 && (
             /* One a line on a phone: with the teams' three (D27-181) they do
                not fit across. */
@@ -776,7 +782,7 @@ function RequestsSection(
           {ask.error && !unlockGone(ask.error) && (
             <p className="text-sm text-brand-red-700">{messageFrom(ask.error)}</p>
           )}
-        </form>
+        </form>}
 
         {mine.length > 0 && (
           <ul className="mt-3.5 border-t border-grey-100 divide-y divide-grey-100 -mb-3.5">
