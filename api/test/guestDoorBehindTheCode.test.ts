@@ -300,20 +300,31 @@ describe("the code unlocks the phone that answered, not the link (D21-6)", () =>
   it("is asked for in every function behind the code, in the database itself", async () => {
     const hash = hashForTests(link);
     await unlockWith(link);   // the link HAS been answered; its hash alone is still nothing
+    /* Something to leak: a function that skipped the unlock still answers
+       nothing for a stay with nothing in it (seen: the thread, D27-224). */
+    await sql(`insert into guest_requests (hotel_id, reservation_id, kind, what)
+               values ($1, $2, 'desk', 'Guarded: towels')`, [hotelId, stayId]);
+    await sql(`insert into guest_desk_replies (hotel_id, reservation_id, what, sent_by)
+               values ($1, $2, 'Guarded: on the way', $3)`, [hotelId, stayId, deskId]);
 
-    for (const unlock of [null, hashForTests("an-unlock-nobody-was-given")]) {
-      const one = async (text: string) => (await sql(text, [hash, unlock])).rows[0];
-      expect((await one("select app.guest_bill($1, $2) as v")).v, "guest_bill").toBeNull();
-      expect(await one("select * from app.guest_details_state($1, $2)"), "guest_details_state").toBeUndefined();
-      expect(await one("select * from app.guest_requests_mine($1, $2)"), "guest_requests_mine").toBeUndefined();
-      expect((await one(
-        `select app.guest_details_submit($1, $2, '{"idType":"voter","idNumber":"X1"}'::jsonb) as v`)).v,
-        "guest_details_submit").toBe(false);
-      expect((await one("select app.guest_request_make($1, $2, 'spa', 'A massage', null) as v")).v,
-        "guest_request_make").toBe(false);
-      expect((await one("select app.guest_request_make($1, $2, 'desk', 'Towels', null) as v")).v,
-        "guest_request_make, a message to the desk (D23-14)").toBe(false);
-      expect(await one("select * from app.guest_desk_thread($1, $2)"), "guest_desk_thread (D27-224)").toBeUndefined();
+    try {
+      for (const unlock of [null, hashForTests("an-unlock-nobody-was-given")]) {
+        const one = async (text: string) => (await sql(text, [hash, unlock])).rows[0];
+        expect((await one("select app.guest_bill($1, $2) as v")).v, "guest_bill").toBeNull();
+        expect(await one("select * from app.guest_details_state($1, $2)"), "guest_details_state").toBeUndefined();
+        expect(await one("select * from app.guest_requests_mine($1, $2)"), "guest_requests_mine").toBeUndefined();
+        expect((await one(
+          `select app.guest_details_submit($1, $2, '{"idType":"voter","idNumber":"X1"}'::jsonb) as v`)).v,
+          "guest_details_submit").toBe(false);
+        expect((await one("select app.guest_request_make($1, $2, 'spa', 'A massage', null) as v")).v,
+          "guest_request_make").toBe(false);
+        expect((await one("select app.guest_request_make($1, $2, 'desk', 'Towels', null) as v")).v,
+          "guest_request_make, a message to the desk (D23-14)").toBe(false);
+        expect(await one("select * from app.guest_desk_thread($1, $2)"), "guest_desk_thread (D27-224)").toBeUndefined();
+      }
+    } finally {
+      await sql("delete from guest_desk_replies where reservation_id = $1", [stayId]);
+      await sql("delete from guest_requests where reservation_id = $1 and what like 'Guarded:%'", [stayId]);
     }
   });
 
