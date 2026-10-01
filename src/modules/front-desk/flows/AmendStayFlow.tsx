@@ -100,7 +100,9 @@ export function AmendStayFlow({
     setOpen(false);
     toast.success(
       "Stay amended",
-      result.nightsBefore === result.nightsAfter
+      result.nightsAfter === 0 && result.nightsBefore === 0
+        ? `${result.guest}: still a day use.`
+        : result.nightsBefore === result.nightsAfter
         ? `${result.guest}: ${result.nightsAfter} nights, unchanged in length.`
         : `${result.guest}: ${result.nightsBefore} nights becomes `
           + `${result.nightsAfter}${result.roomHeld
@@ -124,7 +126,8 @@ export function AmendStayFlow({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           title={`Amend ${stay.guest}`}
-          description={`${was} ${was === 1 ? "night" : "nights"}, ${dateShort(stay.arrival)} to ${dateShort(stay.departure)}.`}
+          description={was === 0 ? `Day use, ${dateShort(stay.arrival)}.`
+            : `${was} ${was === 1 ? "night" : "nights"}, ${dateShort(stay.arrival)} to ${dateShort(stay.departure)}.`}
           size="sm"
           footer={
             <div className="flex gap-2 w-full justify-end">
