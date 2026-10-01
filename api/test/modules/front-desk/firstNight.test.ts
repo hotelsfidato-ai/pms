@@ -280,3 +280,81 @@ describe("D27-204 · the audit never posts the first night twice, and the bill s
     expect(await tonight(suite)).toMatchObject({ amount: 8000 });
   });
 });
+
+/* THE REVIEW OF 1 OCTOBER, FIN-24: the Bill tab counted the nights to come
+   from the room lines on the stay's OWN bills, so a room billed to its group
+   showed every night as to come - a Due the company pays - and a night
+   somebody reversed came back as to come too. The bill now says how many, by
+   the night audit's own rule. The hotel is on the 28th here. */
+describe("the nights still to come on the stay's bill", () => {
+  const toCome = async (id: string) =>
+    ((await (await call(`/stays/${id}/bill`)).json()) as { nightsToCome?: number }).nightsToCome;
+
+  it("are the nights no room line pays for yet, from today", async () => {
+    /* 26th to 29th: the 26th and 27th are posted, the 28th is to come. */
+    expect(await toCome(suite)).toBe(1);
+  });
+
+  it("are none for a room whose nights go on the group's bill", async () => {
+    expect(await toCome(routed)).toBe(0);
+  });
+
+  it("do not bring back a night somebody reversed", async () => {
+    const id = await booking(`${CODE}-REVERSED`, "2026-08-28", "2026-08-31");
+    expect((await checkIn(id, "109")).status).toBe(200);
+    const [night] = await sql<{ id: string }>(
+      "select id::text from folio_postings where reservation_id = $1 and category = 'room'", [id]);
+    const res = await call(`/stays/${id}/charges/${night!.id}/reverse`, "POST", { reason: "Goodwill" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    /* The 29th and 30th. The 28th was charged and taken off: the audit will
+       not charge it again (D27-205), so it is not to come either. */
+    expect(await toCome(id)).toBe(2);
+  });
+});
+
+/* THE OWNER'S D27-226 (1 October): a guest's own figures count only the
+   guest's own bill. The routed room's nights are on the group's master: its
+   guest showed them as "Outstanding", the screen would not check them out,
+   and Settle asked them for the company's money. The company's nights are
+   listed once, under the group. */
+describe("a guest the group pays for owes only their own bill", () => {
+  it("has no bill of their own while the group's master carries the nights", async () => {
+    const res = await call(`/stays/${routed}/folio`);
+    expect(res.status, await res.clone().text()).toBe(404);
+    expect(((await res.json()) as { noBill?: boolean }).noBill).toBe(true);
+  });
+
+  it("is not asked by Settle for the company's money", async () => {
+    const res = await call(`/stays/${routed}/payments`, "POST", { method: "UPI", amount: 100 });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toMatch(/₹100(\.00)? more than the bill/);
+  });
+
+  it("puts the company's nights on the list once, under the group", async () => {
+    const list = (await (await call("/folios")).json()) as
+      Array<{ stayId: string | null; groupId?: string; group?: string; balance: number }>;
+    expect(list.find((f) => f.stayId === routed)).toBeUndefined();
+    const master = list.filter((f) => f.groupId === groupId);
+    expect(master).toEqual([expect.objectContaining({ stayId: null, group: "FNT group" })]);
+    expect(master[0]!.balance).toBeGreaterThan(0);
+  });
+
+  it("is not counted by the night audit as an in-house folio carrying a balance", async () => {
+    const checks = ((await (await call("/night-audit")).json()) as
+      { checks: Array<{ id: string; count: number }> }).checks;
+    /* Counted by the bill each line is on, the rule; and by the stay each
+       posting names, the old one - which counted the routed guest too. */
+    const owing = (by: string) => sql<{ n: string }>(
+      `select count(*)::text as n from reservations r
+        where r.hotel_id = $1 and r.status = 'checked_in'
+          and (select coalesce(sum(fp.amount + fp.tax_amount), 0)
+                 from folio_postings fp join folios f on f.id = fp.folio_id
+                where ${by} = r.id and fp.reverses_id is null
+                  and not exists (select 1 from folio_postings x where x.reverses_id = fp.id)) > 0.5`,
+      [hotelId]);
+    const [own] = await owing("f.reservation_id");
+    const [named] = await owing("fp.reservation_id");
+    expect(Number(named!.n), "the routed guest makes a difference").toBe(Number(own!.n) + 1);
+    expect(checks.find((c) => c.id === "balances")!.count).toBe(Number(own!.n));
+  });
+});

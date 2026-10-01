@@ -14,6 +14,18 @@ import { POSTING_NIGHTS } from "../reports/index.ts";
    line. The night check-in posted is a night the audit finds charged.
    ══════════════════════════════════════════════════════════════════ */
 
+/** Whether a room line already pays for the night `night` (SQL, a date) of
+    the stay `r`: any of its lines on any bill - a reversed one too, so a night
+    somebody took off is not charged again - read the way the reports read it.
+    The run's rule, and the Bill tab's count of nights to come (FIN-24). */
+const CHARGED = (night: string) => `exists (
+            select 1 from folio_postings fp
+             where fp.reservation_id = r.id
+               and fp.category = 'room'
+               and fp.business_date <= ${night}
+               and fp.business_date + ${POSTING_NIGHTS} > ${night}
+          )`;
+
 /** The stays tonight's run charges a room night for, as SQL over `r` with
     $1 the hotel and $2 the night; the run then skips the complimentary ones.
     One text for the run and the checklist's count (QA NA-5: the checklist
@@ -48,13 +60,7 @@ export const POSTS_TONIGHT = `
              this asked only for a line dated tonight - so every night
              after the first was charged twice. A line counts for every
              night it pays for, read the way the reports read it. */
-          and not exists (
-            select 1 from folio_postings fp
-             where fp.reservation_id = r.id
-               and fp.category = 'room'
-               and fp.business_date <= $2::date
-               and fp.business_date + ${POSTING_NIGHTS} > $2::date
-          )`;
+          and not ${CHARGED("$2::date")}`;
 
 /** A stay whose night is still to be charged, as `roomNightsDue` answers it. */
 export interface RoomNight {
@@ -126,6 +132,29 @@ export async function roomNightsDue(
     stayId ? [hotelId, date, stayId] : [hotelId, date],
   );
   return rows;
+}
+
+/** HOW MANY NIGHTS ARE STILL TO COME ON THE STAY'S OWN BILL (the review of
+    1 October; FIN-24): its nights from the business date on that no room line
+    pays for yet, by the run's own rule - so a night on the group's master and
+    a night somebody reversed are not "to come". None for a room whose charge
+    goes to its group's bill (the company pays it), a complimentary or day-use
+    room, or a stay not booked or in house. The Bill tab counts nothing. */
+export async function nightsToCome(client: Client, hotelId: string, stayId: string): Promise<number> {
+  const { rows } = await client.query<{ n: number }>(
+    `select count(*)::int as n
+       from reservations r
+      cross join generate_series(greatest(r.check_in, app.business_date(r.hotel_id)),
+                                 r.check_out - 1, interval '1 day') as night
+      where r.hotel_id = $1 and r.id = $2
+        and r.status in ('confirmed', 'checked_in')
+        and not r.is_complimentary and not r.is_day_use
+        and not exists (select 1 from folios m
+                         where m.id = app.folio_for_room_charge(r.id) and m.group_id is not null)
+        and not ${CHARGED("night::date")}`,
+    [hotelId, stayId],
+  );
+  return rows[0]?.n ?? 0;
 }
 
 /** The line's words. The room number is on every line, and it has to be: a

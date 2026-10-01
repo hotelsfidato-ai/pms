@@ -35,6 +35,8 @@ beforeEach(() => {
                 createdAt: "2026-09-30T10:00:00" }] as never;
     }
     if (path.includes("/tax/room/rate")) return { rate: 5, scheme: "gst" } as never;
+    /* One night to come, the server's count (the review of 1 October). */
+    if (path.endsWith("/stays/stay-1/bill")) return { lines: [], taxes: [], nightsToCome: 1 } as never;
     return new Promise(() => {}) as never;
   });
 });

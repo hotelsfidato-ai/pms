@@ -55,6 +55,10 @@ export interface StayBill {
       before GST, the GST and its rate. Absent when tonight is posted, the
       room is complimentary or the guest leaves today; the desk's bill only. */
   tonight?: { description: string; amount: number; tax: number; rate: number };
+  /** The stay's nights still to come on this bill, counted by the night
+      audit's own rule on the server (FIN-24, 1 October): not a night on the
+      group's master, not a night somebody reversed. The desk's bill only. */
+  nightsToCome?: number;
 }
 
 /** The stay's bill, or null for a stay this person may not see. */

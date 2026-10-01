@@ -166,6 +166,12 @@ export async function postFolioCharge(
 async function chargeRefused(
   client: Client, hotelId: string, input: ChargeToPost,
 ): Promise<string | null> {
+  /* MONEY IN OR OUT IS NOT A CHARGE (the review of 1 October): a "Payment"
+     here wrote a payment line with no payment record and no drawer, and a
+     "Refund" one with GST on it. No screen sends either; a direct call did. */
+  const category = CATEGORY[input.category ?? "Miscellaneous"];
+  if (category === "payment") return "Take a payment through Payments.";
+  if (category === "refund") return "A refund is not a charge. Reverse the payment it gives back.";
   const description = input.description?.trim();
   if (!description) return "A charge needs a description.";
   if (!input.amount) return "A charge of zero is not a charge.";
@@ -823,12 +829,12 @@ postings.post("/:code/stays/:id/payments", async (c) => {
       },
       foreign: stay[0].foreign,
       /* A named bill owes its own balance. Unnamed, the stay's, as the Settle
-         dialog showed it - which counts a group master folio's lines for
-         this stay too. */
+         dialog shows it: the guest's own bills only - not the nights the
+         group's master bill carries for this stay (the owner's D27-226). */
       ...(body.folioId ? {} : {
         owed: async () => {
           const { rows: bill } = await client.query<{ balance: string }>(
-            `${FOLIO_SELECT} having l.reservation_id = $2`, [hotelId, stayId]);
+            `${FOLIO_SELECT} having l.bill_stay = $2`, [hotelId, stayId]);
           return Number(bill[0]?.balance ?? 0);
         },
       }),

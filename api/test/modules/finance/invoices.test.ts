@@ -82,10 +82,14 @@ afterAll(async () => {
     await db.query(
       "alter table folio_postings enable trigger folio_postings_append_only");
 
+    /* The odd-paisa case issues an invoice on a stay of this file's own, and
+       an issued invoice refuses deletion (025) - off for the teardown only. */
+    await db.query("alter table invoices disable trigger invoices_immutable");
     await db.query(
       `delete from invoices where folio_id in (
          select f.id from folios f join reservations r on r.id = f.reservation_id
           where r.reference like $1)`, [mine]).catch(() => undefined);
+    await db.query("alter table invoices enable trigger invoices_immutable");
     await db.query(
       `delete from folios where reservation_id in (
          select id from reservations where reference like $1)`, [mine]);
@@ -230,6 +234,41 @@ describe("issuing a tax invoice", () => {
     expect(lineSum).toBeCloseTo(detail.taxableValue, 2);
     expect(detail.cgst.amount + detail.sgst.amount)
       .toBeCloseTo(detail.taxTotal, 2);
+  });
+
+  /* The review of 1 October: ₹0.05 of tax printed CGST 0.02 / SGST 0.03 on
+     the invoice and 0.03 / 0.02 on the bill. The odd paisa is CGST's, on both. */
+  it("gives the odd paisa of tax to CGST, as the bill does", async () => {
+    const db = await admin();
+    let stay: string;
+    try {
+      const guest = (await db.query<{ id: string }>(
+        "insert into guests (full_name) values ($1) returning id::text", [`${tag} Odd Paisa`])).rows[0]!.id;
+      stay = (await db.query<{ id: string }>(
+        `insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                                   agreed_rate, status)
+         select $1, $2, $3, rt.id, app.business_date($1), app.business_date($1) + 1, 1, 'checked_in'
+           from room_types rt where rt.hotel_id = $1 limit 1
+         returning id::text`, [demoId, `${tag}-ODD`, guest])).rows[0]!.id;
+      const folio = (await db.query<{ id: string }>(
+        "insert into folios (hotel_id, reservation_id) values ($1, $2) returning id::text",
+        [demoId, stay])).rows[0]!.id;
+      /* ₹1.00 at 5%: ₹0.05 of tax, five paise. */
+      await db.query(
+        `insert into folio_postings (hotel_id, folio_id, business_date, category, description,
+                                     amount, tax_rate, tax_amount)
+         values ($1, $2, app.business_date($1), 'misc', 'Odd paisa', 1, 5, 0.05)`, [demoId, folio]);
+    } finally {
+      await db.end();
+    }
+    const issued = (await (await call(`/5EL/stays/${stay}/invoice`, "POST"))
+      .json()) as { ok: boolean; cgst: number; sgst: number; taxTotal: number };
+    expect(issued.ok, JSON.stringify(issued)).toBe(true);
+    expect([issued.cgst, issued.sgst, issued.taxTotal]).toEqual([0.03, 0.02, 0.05]);
+    const bill = (await (await call(`/5EL/stays/${stay}/bill`)).json()) as {
+      taxes: Array<{ cgst: number; sgst: number }>;
+    };
+    expect(bill.taxes.map((t) => [t.cgst, t.sgst])).toEqual([[0.03, 0.02]]);
   });
 
   it("answers a second click with the first invoice", async () => {

@@ -144,10 +144,14 @@ beforeAll(async () => {
     { category: "Minibar", description: `${tag} minibar`, amount: 80 });
   expect(bar.status, await bar.clone().text()).toBe(200);
   /* A refund is a line above zero, like a charge: only its category keeps
-     it off Closed days (a payment is below zero). */
-  const back = await as(ownerId, `/stays/${stay.stayId}/charges`,
-    { category: "Refund", description: `${tag} refund`, amount: 50, taxable: false });
-  expect(back.status, await back.clone().text()).toBe(200);
+     it off Closed days (a payment is below zero). Written here: the charge
+     door refuses a refund since the review of 1 October (FIN-26), and no
+     other route writes one. */
+  await sql(
+    `insert into folio_postings (hotel_id, folio_id, business_date, category, description,
+                                 amount, tax_rate, tax_amount)
+     values ($1, $2, $3::date, 'refund', $4, 50, 0, 0)`,
+    [puneId, stay.folioId, day, `${tag} refund`]);
   const paid = await withDrawer("PUN", ownerId, () =>
     as(ownerId, `/stays/${stay.stayId}/payments`, { method: "Cash", amount: 100 }));
   expect(paid.status, await paid.clone().text()).toBe(200);

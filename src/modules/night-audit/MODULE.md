@@ -92,7 +92,7 @@ fix made elsewhere does not reach them unless it changes these queries.
 | "closing X and opening Y" | X is `BUSINESS_DATE`, learned by the browser at sign-in (core, `src/data/repositories/businessDate.ts`) and sent as `?asOn=`; Y is X + 1, worked out in `checklist.ts` | **the browser's date, not the server's** — NA-2 |
 | Arrivals still outstanding | `reservations`: `confirmed`, `check_in = X` | the run marks `confirmed` with `check_in <= X`, so it can mark more than this counts |
 | Departures not yet checked out | `reservations`: `checked_in`, `check_out = X` | the same condition as the `departures` blocker |
-| In-house folios carrying a balance | `reservations` `checked_in` whose non-reversed `folio_postings` (charges plus tax; payments are negative lines) sum above ₹0.50, per booking across all its folios | **a third copy of "balance"** — not `app.folio_balance` (006), not finance's `getFolioBalance` |
+| In-house folios carrying a balance | `reservations` `checked_in` whose non-reversed `folio_postings` (charges plus tax; payments are negative lines) sum above ₹0.50, per booking across all its OWN folios - not the nights its group's master carries for it (the owner's D27-226, 1 October) | **a third copy of "balance"** — not `app.folio_balance` (006), not finance's `getFolioBalance` |
 | Room charges to post | `POSTS_TONIGHT` in `roomNight.ts` (re-exported by `nightAudit.ts`), less the complimentary stays | **the run's own text** (QA NA-5, 28 Sep): checked in, an open folio, not day-use, not charged for tonight yet - so it equals the run's "rooms posted" |
 | Rooms still marked dirty | `rooms.housekeeping_status = 'dirty'` | |
 | Postings reversed today | `folio_postings` with a `reverses_id`, `business_date = X` | |
@@ -167,7 +167,11 @@ And since 30 September (D27-204) `roomNightsDue`, `postRoomNight` and
 night's room charge in one place. Who is charged for a night (`POSTS_TONIGHT`),
 the read of those stays (the folio by `app.folio_for_room_charge`, the room
 held that night, the agreed rate, complimentary) and the insert that writes
-the charge were moved there from `nightAudit.ts` as they stood. Three callers:
+the charge were moved there from `nightAudit.ts` as they stood. And since 1
+October `nightsToCome` (FIN-24): the stay's nights from the business date on
+that no room line pays for yet, by the same test the run skips a night on
+(`CHARGED`), for finance's Bill tab - none for a room billed to its group.
+Three callers of the run's pieces:
 the run (every stay, source `night_audit`), the front desk's check-in (the
 one stay, source `check_in` - the first night), and finance's bill route (the
 one stay, nothing posted - the printed bill's "to be posted tonight"). A night

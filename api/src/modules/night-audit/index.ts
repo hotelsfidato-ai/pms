@@ -17,4 +17,4 @@ export { correctClosedCharge } from "./nightAudit.ts";
 /* One night's room charge, one definition (D27-204): the audit's run,
    the check-in's first night (front desk) and the printed bill's "to be
    posted tonight" (finance). */
-export { roomNightsDue, postRoomNight, roomNightWords } from "./roomNight.ts";
+export { roomNightsDue, postRoomNight, roomNightWords, nightsToCome } from "./roomNight.ts";
