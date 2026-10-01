@@ -15,7 +15,7 @@ declare
   h uuid; other uuid; clerk uuid; rest uuid;
   guest uuid; stay uuid; booked uuid;
   link uuid; link_booked uuid;
-  d date; n int; ok boolean; v text; id uuid; slots text[];
+  d date; n int; ok boolean; v text; bid uuid; slots text[];
 begin
   h     := app.provision_property_unchecked('TBK', 'Tables Test', 'Nowhere');
   other := app.provision_property_unchecked('TBL', 'Tables Other', 'Nowhere');
@@ -78,12 +78,12 @@ begin
   perform test.ok('table bookings', 'a party over twenty is refused', not ok, 'accepted');
 
   ok := app.guest_table_book('tbk-link', 'tbk-unlock', 'REST', d + 1, '20:00', 2, ' A quiet corner ');
-  select b.id into id from table_bookings b
+  select b.id into bid from table_bookings b
    where b.reservation_id = stay and b.status = 'requested' and b.party = 2
      and b.note = 'A quiet corner' and b.outlet_id = rest
      and b.at = ((d + 1) + time '20:00') at time zone 'Asia/Kolkata';
   perform test.ok('table bookings', 'a slot is booked, requested, at that time in the hotel''s zone',
-    ok and id is not null, coalesce(id::text, 'none'));
+    ok and bid is not null, coalesce(bid::text, 'none'));
 
   select count(*), max(m.at_time) into n, v from app.guest_table_bookings_mine('tbk-link', 'tbk-unlock') m;
   perform test.ok('table bookings', 'the guest sees it, at their own time', n = 1 and v = '20:00', n || ', ' || coalesce(v, 'null'));
@@ -97,23 +97,23 @@ begin
   perform test.ok('table bookings', 'three open is the most a stay may have', not ok, 'a fourth was accepted');
 
   -- ---------- cancelling ----------
-  ok := app.guest_table_cancel('tbk-link', 'nope', id);
-  ok := ok or app.guest_table_cancel('tbk-link-booked', 'tbk-unlock-booked', id);
+  ok := app.guest_table_cancel('tbk-link', 'nope', bid);
+  ok := ok or app.guest_table_cancel('tbk-link-booked', 'tbk-unlock-booked', bid);
   perform test.ok('table bookings', 'the link alone, or another stay''s unlock, cancels nothing',
-    not ok and (select status from table_bookings where table_bookings.id = id) = 'requested', 'cancelled');
-  ok := app.guest_table_cancel('tbk-link', 'tbk-unlock', id);
+    not ok and (select status from table_bookings where table_bookings.id = bid) = 'requested', 'cancelled');
+  ok := app.guest_table_cancel('tbk-link', 'tbk-unlock', bid);
   perform test.ok('table bookings', 'the guest cancels their own request while it waits',
-    ok and (select status from table_bookings where table_bookings.id = id) = 'cancelled', 'not cancelled');
-  ok := app.guest_table_cancel('tbk-link', 'tbk-unlock', id);
+    ok and (select status from table_bookings where table_bookings.id = bid) = 'cancelled', 'not cancelled');
+  ok := app.guest_table_cancel('tbk-link', 'tbk-unlock', bid);
   perform test.ok('table bookings', 'and not twice', not ok, 'cancelled again');
 
   update table_bookings set status = 'confirmed', answered_by = clerk, answered_at = now()
    where reservation_id = stay and status = 'requested'
      and at = ((d + 1) + time '13:00') at time zone 'Asia/Kolkata'
-  returning table_bookings.id into id;
-  ok := app.guest_table_cancel('tbk-link', 'tbk-unlock', id);
+  returning table_bookings.id into bid;
+  ok := app.guest_table_cancel('tbk-link', 'tbk-unlock', bid);
   perform test.ok('table bookings', 'a confirmed table is not the guest''s to cancel here - they ask the desk',
-    not ok and (select status from table_bookings where table_bookings.id = id) = 'confirmed', 'cancelled');
+    not ok and (select status from table_bookings where table_bookings.id = bid) = 'confirmed', 'cancelled');
 
   -- ---------- the hours, and the zone ----------
   update pos_outlets set table_lunch = '', table_dinner = '' where id = rest;

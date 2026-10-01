@@ -202,7 +202,8 @@ notifications.get("/:code/notifications", async (c) => {
 
     /* TABLES A GUEST ASKED FOR, WAITING FOR AN ANSWER (D27-221, D27-224): for
        the people who answer them - whoever may ring an order (roleGate
-       TABLE_ANSWER) - at this hotel. */
+       TABLE_ANSWER) - at this hotel, among those who read the bell (a waiter
+       has none and answers on the Table bookings screen). */
     if (role !== null && (can(role, "create", "payment") || role === "pos")) {
       const { rows: [tables] } = await client.query<{ n: number }>(
         "select count(*)::int as n from table_bookings where hotel_id = $1 and status = 'requested'",

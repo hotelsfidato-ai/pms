@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
 import { READ_RULES, WRITE_RULES, whoMay } from "../../../src/roleGate.ts";
+import { forgetKnocksForTests, hashForTests } from "../../../src/routes/guestDoor.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    TABLE BOOKINGS, THE RESTAURANT'S SIDE (the owner's D27-221, D27-224)
@@ -16,7 +17,7 @@ import { READ_RULES, WRITE_RULES, whoMay } from "../../../src/roleGate.ts";
 const SUPER =
   process.env["SUPER_DATABASE_URL"] ?? "postgres://postgres:pw@127.0.0.1:55432/fidato";
 const TAG = "TBTEST";
-const people: Record<"gm" | "waiter" | "housekeeper", string> = { gm: "", waiter: "", housekeeper: "" };
+const people: Record<"gm" | "waiter" | "desk" | "housekeeper", string> = { gm: "", waiter: "", desk: "", housekeeper: "" };
 let outlet = "";
 let otherOutlet = "";
 let table = "";
@@ -69,7 +70,7 @@ beforeAll(async () => {
       where h.code = '5EL' and r.status in ('confirmed', 'checked_in') limit 1`))[0]!.id;
   wasZone = (await sql<{ timezone: string }>("select timezone from hotels where code = 'AGR'"))[0]!.timezone;
 
-  for (const [who, role] of [["gm", "gm"], ["waiter", "pos"], ["housekeeper", "housekeeping"]] as const) {
+  for (const [who, role] of [["gm", "gm"], ["waiter", "pos"], ["desk", "front_desk"], ["housekeeper", "housekeeping"]] as const) {
     const [row] = await sql<{ id: string }>(
       `insert into staff (email, full_name) values ($1, $2)
        on conflict (email) do update set is_active = true returning id::text`,
@@ -214,12 +215,14 @@ describe("the bell", () => {
     ((await (await call(who, "GET", "/notifications")).json()) as Array<{ id: string; title: string; link: string }>)
       .filter((n) => n.id === "table-bookings-waiting");
 
-  it("tells the people who answer how many wait, and not the housekeeper", async () => {
+  /* The waiter answers on the Table bookings screen and has no bell (the
+     matrix gives `pos` no notification); the desk and the managers do. */
+  it("tells the people who answer and read the bell how many wait, and not the housekeeper", async () => {
     await sql("update table_bookings set status = 'cancelled' where hotel_id = (select id from hotels where code = '5EL') and status = 'requested'");
-    expect(await bell(people.waiter)).toEqual([]);
+    expect(await bell(people.desk)).toEqual([]);
     await book("2099-02-01T14:00:00Z");
     await book("2099-02-02T14:00:00Z");
-    const notes = await bell(people.waiter);
+    const notes = await bell(people.desk);
     expect(notes.map((n) => [n.title, n.link])).toEqual([["2 table bookings waiting", "/h/5EL/table-bookings"]]);
     expect(await bell(people.housekeeper)).toEqual([]);
   });
@@ -236,5 +239,108 @@ describe("the database's own rules", () => {
     await expect(sql(
       `insert into table_bookings (hotel_id, outlet_id, reservation_id, party, at)
        select hotel_id, id, $2, 21, now() from pos_outlets where id = $1`, [outlet, stay])).rejects.toThrow();
+  });
+});
+
+/* ── The guest's page (api/src/routes/guestTables.ts) ────────────────
+   Through the door, on a stay of this file's own: nothing with the link
+   alone, only a slot the restaurant offers, stored at the hotel's time;
+   cancelled only while it waits. The definers' own refusals are
+   db/tests/modules/table-bookings.sql (OCI-5). */
+
+describe("from the guest's page", () => {
+  const NOTHING = "This link is not usable. Ask the desk for a new one.";
+  const stays: string[] = [];
+  let guest = "";
+  let link = "";
+  let unlock = "";
+  let tomorrow = "";
+
+  const asGuest = (path: string, method = "GET", body?: unknown, held?: string) =>
+    app.request(`/api/guest/${link}${path}`, {
+      method,
+      headers: { "content-type": "application/json", ...(held ? { authorization: `Guest ${held}` } : {}) },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+
+  beforeAll(async () => {
+    forgetKnocksForTests();
+    const owner = (await sql<{ id: string }>("select id::text from staff where email = 'owner@fidato.in'"))[0]!.id;
+    tomorrow = (await sql<{ d: string }>("select ((now() at time zone 'Asia/Kolkata')::date + 1)::text as d"))[0]!.d;
+    guest = (await sql<{ id: string }>(
+      "insert into guests (full_name, phone) values ($1, '9876500044') returning id::text", [`${TAG} Guest`]))[0]!.id;
+    for (const n of [1, 2]) {
+      stays.push((await sql<{ id: string }>(
+        `insert into reservations (hotel_id, guest_id, room_type_id, reference, check_in, check_out, adults, status, source, agreed_rate)
+         select h.id, $1, (select id from room_types where hotel_id = h.id limit 1), $2,
+                $3::date, $3::date + 2, 1, 'confirmed', 'direct', 1000
+           from hotels h where h.code = '5EL' returning id::text`,
+        [guest, `${TAG}-${n}-${Date.now() % 1e6}`, tomorrow]))[0]!.id);
+    }
+    const made = await call(owner, "POST", `/stays/${stays[0]}/guest-link`, {});
+    expect(made.status, await made.clone().text()).toBe(200);
+    link = ((await made.json()) as { link: string }).link.split("/g/")[1]!;
+    await sql(
+      `insert into guest_link_codes (link_id, reservation_id, code_hash, sent_to, expires_at)
+       select s.link_id, s.reservation_id, encode(digest('424242','sha256'),'hex'), '…0000', now() + interval '10 minutes'
+         from app.guest_link_stay($1) s`, [hashForTests(link)]);
+    const verified = await asGuest("/verify", "POST", { code: "424242" });
+    expect(verified.status, await verified.clone().text()).toBe(200);
+    unlock = ((await verified.json()) as { unlock: string }).unlock;
+  }, 120_000);
+
+  afterAll(async () => {
+    await sql("delete from table_bookings where reservation_id = any($1::uuid[])", [stays]);
+    await sql("delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = any($1::uuid[]))", [stays]);
+    await sql("delete from guest_links where reservation_id = any($1::uuid[])", [stays]);
+    await sql("delete from reservations where id = any($1::uuid[])", [stays]);
+    await sql("alter table guests disable trigger guests_no_delete");
+    await sql("delete from guests where id = $1", [guest]);
+    await sql("alter table guests enable trigger guests_no_delete");
+  });
+
+  it("offers nothing to the link alone, and asks only for a slot the restaurant gives", async () => {
+    const alone = await asGuest("/tables");
+    expect([alone.status, ((await alone.json()) as { error: string }).error]).toEqual([404, NOTHING]);
+
+    const seen = (await (await asGuest("/tables", "GET", undefined, unlock)).json()) as {
+      offer: { outlet: string; night: string; slots: string[] }[];
+    };
+    const ours = seen.offer.find((o) => o.outlet === TAG && o.night === tomorrow);
+    expect(ours?.slots.slice(0, 2)).toEqual(["12:30", "13:00"]);
+
+    const ask = (time: string, party = 3) =>
+      asGuest("/tables", "POST", { outlet: TAG, night: tomorrow, time, party, note: "A birthday" }, unlock);
+    expect((await ask("20:00", 0)).status, "a party of nobody").toBe(400);
+    expect((await ask("18:00")).status, "a time the restaurant does not give").toBe(409);
+    expect((await ask("20:00")).status).toBe(200);
+    expect(await sql(
+      `select to_char(at at time zone 'Asia/Kolkata', 'YYYY-MM-DD HH24:MI') as at, party, note, status, reservation_id::text as stay
+         from table_bookings where outlet_id = $1 and reservation_id = any($2::uuid[])`, [outlet, stays]))
+      .toEqual([{ at: `${tomorrow} 20:00`, party: 3, note: "A birthday", status: "requested", stay: stays[0] }]);
+  });
+
+  it("cancels the guest's own request while it waits, and nothing answered or another stay's", async () => {
+    const at = `${tomorrow} 19:30:00+05:30`;
+    const [mine, answered, theirs] = [
+      (await sql<{ id: string }>(
+        `insert into table_bookings (hotel_id, outlet_id, reservation_id, party, at)
+         select hotel_id, id, $2, 2, $3::timestamptz from pos_outlets where id = $1 returning id::text`, [outlet, stays[0], at]))[0]!.id,
+      (await sql<{ id: string }>(
+        `insert into table_bookings (hotel_id, outlet_id, reservation_id, party, at, status)
+         select hotel_id, id, $2, 2, $3::timestamptz, 'confirmed' from pos_outlets where id = $1 returning id::text`, [outlet, stays[0], at]))[0]!.id,
+      (await sql<{ id: string }>(
+        `insert into table_bookings (hotel_id, outlet_id, reservation_id, party, at)
+         select hotel_id, id, $2, 2, $3::timestamptz from pos_outlets where id = $1 returning id::text`, [outlet, stays[1], at]))[0]!.id,
+    ];
+    const cancel = (id: string, held?: string) => asGuest(`/tables/${id}/cancel`, "POST", undefined, held);
+    expect((await cancel(mine)).status, "the link alone").toBe(404);
+    expect((await cancel(answered, unlock)).status).toBe(409);
+    expect((await cancel(theirs, unlock)).status).toBe(409);
+    expect((await cancel(mine, unlock)).status).toBe(200);
+    expect(await sql("select id::text, status from table_bookings where id = any($1::uuid[]) order by status",
+      [[mine, answered, theirs]])).toEqual([
+      { id: mine, status: "cancelled" }, { id: answered, status: "confirmed" }, { id: theirs, status: "requested" },
+    ]);
   });
 });

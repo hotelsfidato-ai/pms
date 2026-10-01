@@ -178,6 +178,12 @@ Coming soon page and its address are gone.
   through the same door and the same limits as a spa or laundry request (the
   owner, 24 September: as built - at most ten open at once for the stay,
   shared with those requests; the door's 30 opens a minute).
+- **"A table at the restaurant" (D27-224)** - the POS lane's, by rule 8:
+  `TableBooking.tsx`, `api/src/routes/guestTables.ts`, the definers
+  `app.guest_table_*` (173). Any night of the stay, a slot the restaurant
+  offers, how many, a note; the restaurant confirms or says why not; cancel
+  while it waits. Hidden when nothing is offered and nothing is booked. The
+  POS module's notes have the rest.
 - **The privacy notice (D21-61)** has its place before the first question
   (`privacyNotice.ts`) and **shows nothing** until the advisor has approved
   its words: the draft still has blanks only the owner and the advisor can

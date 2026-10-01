@@ -78,6 +78,8 @@ describe("every write the server mounts", () => {
       "POST /api/guest/:token/google",
       "POST /api/guest/:token/id-photo",
       "POST /api/guest/:token/requests",
+      "POST /api/guest/:token/tables",              // a table at the restaurant (D27-224)
+      "POST /api/guest/:token/tables/:id/cancel",
       "POST /api/guest/:token/verify",
       "POST /api/pos/tickets",
       "POST /api/pos/tickets/:ref/void",

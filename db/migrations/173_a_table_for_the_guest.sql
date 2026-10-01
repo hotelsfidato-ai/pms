@@ -8,9 +8,9 @@
 -- default for a restaurant whose hours nobody has set, changed per restaurant
 -- on Restaurant setup.
 --
--- THIS FILE IS THE STAFF HALF: the hours, the bookings and the one definition
--- of a day's slots. The guest's functions (behind the door's unlock) follow in
--- this file once the online check-in lane's step 0 is merged.
+-- The staff half: the hours, the bookings and the one definition of a day's
+-- slots (sections 1-3). The guest's half: four functions behind the door's
+-- unlock (section 4; the door is api/src/routes/guestTables.ts).
 --
 -- The master numbers it at merge; refer to it as "a table for the guest".
 -- =============================================================================
@@ -161,3 +161,156 @@ grant select, update on table_bookings to pms_app;
 drop trigger if exists table_bookings_audit on table_bookings;
 create trigger table_bookings_audit after insert or update or delete on table_bookings
   for each row execute function app.write_audit();
+
+
+-- -----------------------------------------------------------------------------
+-- 4 · the guest's side, behind the door's unlock
+-- -----------------------------------------------------------------------------
+-- The door's rules (online-checkin/MODULE.md, rule 8): each function takes the
+-- token's hash and this phone's unlock's hash and finds the stay ONLY through
+-- app.guest_unlocked - never a stay, outlet or table id from the caller; a
+-- refusal is "nothing" (an empty answer, or false). Nobody widens
+-- app.guest_link_open. db/tests/modules/pos.sql calls each with the link's
+-- hash and no unlock (OCI-5).
+--
+-- Who: a hotel guest whose booking is confirmed (the page opens before
+-- arrival) or who is checked in (the owner's answer, 1 October). Which nights:
+-- any night of the stay from the hotel's today, the slots still to come.
+-- -----------------------------------------------------------------------------
+
+/* What this guest may ask for: each restaurant, each night, the slots left. */
+create or replace function app.guest_table_offer(p_token_hash text, p_unlock_hash text)
+returns table (outlet text, outlet_name text, night date, slots text[])
+language sql
+stable
+security definer
+set search_path = pg_catalog, public
+as $fn$
+  select o.code, o.name, d::date,
+         array(select to_char(s at time zone h.timezone, 'HH24:MI')
+                 from app.table_slots(o.id, d::date) s
+                where s > now()
+                  and (o.closed_until is null or s >= o.closed_until)
+                order by s)
+    from app.guest_unlocked(p_token_hash, p_unlock_hash) v
+    join reservations r on r.id = v.reservation_id and r.status in ('confirmed', 'checked_in')
+    join hotels h on h.id = v.hotel_id
+    join pos_outlets o on o.hotel_id = v.hotel_id and o.is_active and o.category = 'food'
+   cross join lateral generate_series(
+           greatest(r.check_in, (now() at time zone h.timezone)::date),
+           r.check_out - 1, interval '1 day') d
+   where app.module_enabled(v.hotel_id, 'pos')
+     and exists (select 1 from app.table_slots(o.id, d::date) s
+                  where s > now() and (o.closed_until is null or s >= o.closed_until))
+   order by o.code, d;
+$fn$;
+
+comment on function app.guest_table_offer(text, text) is
+  'A guest''s table-booking choices (D27-224): each restaurant, each night of '
+  'the stay from today, the half-hour slots still to come. Behind this phone''s unlock.';
+
+/* A request for a table: only a slot the offer holds, three open at most. */
+create or replace function app.guest_table_book(
+  p_token_hash text, p_unlock_hash text,
+  p_outlet text, p_night date, p_time text, p_party int, p_note text)
+returns boolean
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $fn$
+declare
+  v record;
+  v_outlet uuid;
+  v_at timestamptz;
+begin
+  select * into v from app.guest_unlocked(p_token_hash, p_unlock_hash);
+  if v.reservation_id is null or p_party is null or p_party not between 1 and 20
+     or char_length(coalesce(p_note, '')) > 200 then
+    return false;
+  end if;
+
+  /* The slot must be one the offer holds, for this stay - nothing else. */
+  select o.id, (p_night + p_time::time) at time zone h.timezone into v_outlet, v_at
+    from app.guest_table_offer(p_token_hash, p_unlock_hash) f
+    join pos_outlets o on o.hotel_id = v.hotel_id and o.code = f.outlet
+    join hotels h on h.id = v.hotel_id
+   where f.outlet = upper(p_outlet) and f.night = p_night
+     and p_time = any(f.slots);
+  if v_outlet is null then
+    return false;
+  end if;
+
+  if (select count(*) from table_bookings
+       where reservation_id = v.reservation_id
+         and (status = 'requested' or (status = 'confirmed' and at > now()))) >= 3 then
+    return false;
+  end if;
+
+  insert into table_bookings (hotel_id, outlet_id, reservation_id, party, at, note)
+  values (v.hotel_id, v_outlet, v.reservation_id, p_party, v_at, nullif(btrim(p_note), ''));
+  return true;
+end
+$fn$;
+
+comment on function app.guest_table_book(text, text, text, date, text, int, text) is
+  'A guest asks for a table (D27-224): a slot from app.guest_table_offer, a party '
+  'of 1 to 20, a note of 200 characters at most, three open at most. Behind this '
+  'phone''s unlock; false for anything else.';
+
+/* What this guest has asked for - never the table, which is the staff's. */
+create or replace function app.guest_table_bookings_mine(p_token_hash text, p_unlock_hash text)
+returns table (id uuid, outlet_name text, night date, at_time text, party smallint,
+               note text, status text, answer text)
+language sql
+stable
+security definer
+set search_path = pg_catalog, public
+as $fn$
+  select b.id, o.name, (b.at at time zone h.timezone)::date,
+         to_char(b.at at time zone h.timezone, 'HH24:MI'), b.party, b.note, b.status,
+         case when b.status = 'declined' then b.answer end
+    from app.guest_unlocked(p_token_hash, p_unlock_hash) v
+    join table_bookings b on b.reservation_id = v.reservation_id
+    join pos_outlets o on o.id = b.outlet_id
+    join hotels h on h.id = b.hotel_id
+   order by b.at;
+$fn$;
+
+comment on function app.guest_table_bookings_mine(text, text) is
+  'A guest''s own table requests and their answers - the time and the party, '
+  'never the table (D27-224). Behind this phone''s unlock.';
+
+/* Cancelled by the guest - only while nobody has answered. */
+create or replace function app.guest_table_cancel(p_token_hash text, p_unlock_hash text, p_booking uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $fn$
+declare
+  v record;
+  n int;
+begin
+  select * into v from app.guest_unlocked(p_token_hash, p_unlock_hash);
+  if v.reservation_id is null then
+    return false;
+  end if;
+  update table_bookings set status = 'cancelled'
+   where id = p_booking and reservation_id = v.reservation_id and status = 'requested';
+  get diagnostics n = row_count;
+  return n = 1;
+end
+$fn$;
+
+comment on function app.guest_table_cancel(text, text, uuid) is
+  'A guest cancels their own table request, only while it is still requested '
+  '(D27-224). Behind this phone''s unlock.';
+
+revoke all on function app.guest_table_offer(text, text) from public;
+revoke all on function app.guest_table_book(text, text, text, date, text, int, text) from public;
+revoke all on function app.guest_table_bookings_mine(text, text) from public;
+revoke all on function app.guest_table_cancel(text, text, uuid) from public;
+grant execute on function app.guest_table_offer(text, text) to pms_app;
+grant execute on function app.guest_table_book(text, text, text, date, text, int, text) to pms_app;
+grant execute on function app.guest_table_bookings_mine(text, text) to pms_app;
+grant execute on function app.guest_table_cancel(text, text, uuid) to pms_app;

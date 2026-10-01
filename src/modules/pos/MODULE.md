@@ -120,10 +120,22 @@ GET   /:code/table-bookings/hours        each food restaurant's lunch and dinner
 PUT   /:code/table-bookings/hours        { outlet, lunch, dinner }; TABLE_HOURS (owner, admin, GM)
 ```
 
-The bell says "N table bookings waiting" to the same people
-(`api/src/routes/notifications.ts`). The guest's side - offer, book, mine,
-cancel while requested - is the door's, behind `app.guest_unlocked`, and
-follows the online check-in lane's step 0.
+The bell says "N table bookings waiting" to the same people who hold a bell
+(`api/src/routes/notifications.ts`) - the waiter has none, and reads the
+screen. The guest's side follows online check-in's rule 8:
+
+```
+GET   /api/guest/:token/tables              the offer (each restaurant's nights and slots) and the guest's own
+POST  /api/guest/:token/tables              { outlet, night, time, party, note? } - a slot from the offer only
+POST  /api/guest/:token/tables/:id/cancel   the guest's own, only while requested
+```
+
+`api/src/routes/guestTables.ts` (one mount line in `guestDoor.ts`), the
+definers `app.guest_table_offer / _book / _bookings_mine / _cancel` in 173,
+each from `app.guest_unlocked`; the page's section is
+`src/modules/online-checkin/TableBooking.tsx`, one line in `Behind`. It
+hides when nothing is offered and nothing is booked. A guest holds at most
+three open requests; the guest never sees the table.
 
 **The till** — `/api/hotels`, a person's bearer token. Every `/:code/till/*`
 and `/:code/kitchen*` route passes two gates first: the `pos` module must be
@@ -313,7 +325,8 @@ table_bookings; pos_outlets.table_lunch,       "a table for the guest" (173 for 
                                                (12:30-15:00, 19:30-23:00), '' a meal not offered;
                                                app.table_slots(outlet, date) - the ONE definition
                                                of a day's half-hour slots, in the hotel's time
-                                               zone, the last half an hour before a meal ends
+                                               zone, the last half an hour before a meal ends;
+                                               the guest's four definers (above)
 pos_outlets, pos_tickets                       024_pos_bridge.sql (app.pos_chargeable_rooms,
                                                app.pos_outlet_for_key)
                                                (046_store_and_off.sql: an outlet's closed_until)

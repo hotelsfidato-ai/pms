@@ -75,9 +75,10 @@ export function dropUnlock(token: string): void {
   try { localStorage.removeItem(KEY(token)); } catch { /* nothing held */ }
 }
 
-const at =(token: string, rest = "") => `/api/guest/${encodeURIComponent(token)}${rest}`;
+/* Exported for each feature's own section file (D27-225, rule 8). */
+export const at =(token: string, rest = "") => `/api/guest/${encodeURIComponent(token)}${rest}`;
 
-const withUnlock = (token: string, init: RequestInit = {}): RequestInit => {
+export const withUnlock = (token: string, init: RequestInit = {}): RequestInit => {
   const unlock = heldUnlock(token);
   return unlock
     ? { ...init, headers: { ...(init.headers ?? {}), authorization: `Guest ${unlock}` } }

@@ -108,7 +108,7 @@ describe("the Table bookings screen", () => {
   });
 
   it("offers no answer to somebody who may not ring an order", async () => {
-    as("accountant");
+    as("read_only");
     serve({ [`/api/hotels/${HOTEL}/table-bookings`]: () => LIST });
     renderAt(`/h/${HOTEL}/table-bookings`, "/h/:code/table-bookings", <TableBookingsPage />);
     await screen.findByText("A quiet corner, please", { exact: false });
