@@ -45,13 +45,15 @@ const slots = async (outletId: string, date: string) => (await sql<{ s: string }
   [outletId, date])).map((r) => r.s);
 
 beforeAll(async () => {
+  /* An outlet runs as somebody; the owner, as the restaurant's own tests do. */
+  const owner = (await sql<{ id: string }>("select id::text from staff where email = 'owner@fidato.in'"))[0]!.id;
   [outlet, otherOutlet] = [
     (await sql<{ id: string }>(
-      `insert into pos_outlets (hotel_id, code, name, category)
-       select id, $1, 'Table Test Restaurant', 'food' from hotels where code = '5EL' returning id::text`, [TAG]))[0]!.id,
+      `insert into pos_outlets (hotel_id, code, name, category, staff_id)
+       select id, $1, 'Table Test Restaurant', 'food', $2 from hotels where code = '5EL' returning id::text`, [TAG, owner]))[0]!.id,
     (await sql<{ id: string }>(
-      `insert into pos_outlets (hotel_id, code, name, category)
-       select id, $1, 'Table Test Elsewhere', 'food' from hotels where code = 'AGR' returning id::text`, [TAG]))[0]!.id,
+      `insert into pos_outlets (hotel_id, code, name, category, staff_id)
+       select id, $1, 'Table Test Elsewhere', 'food', $2 from hotels where code = 'AGR' returning id::text`, [TAG, owner]))[0]!.id,
   ];
   const tableOf = async (o: string) => {
     const [section] = await sql<{ id: string }>(
