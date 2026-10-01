@@ -736,7 +736,11 @@ describe("the guest's bill", () => {
     const desks = await asStaff(deskId, `/5EL/stays/${stayId}/bill`);
     expect(desks.status).toBe(200);
     const guestBill = (await theirs.json()) as { stay: { reference: string }; balance: number };
-    expect(guestBill).toEqual(await desks.json());
+    /* `nightsToCome` is the desk's Bill-tab count (FIN-24, 1 October), added
+       by the staff route beside the bill; it is not part of the bill. */
+    const { nightsToCome, ...desksBill } = (await desks.json()) as { nightsToCome?: number };
+    expect(typeof nightsToCome).toBe("number");
+    expect(guestBill).toEqual(desksBill);
     expect(guestBill.stay.reference).toBeTruthy();
     expect(typeof guestBill.balance).toBe("number");
   });

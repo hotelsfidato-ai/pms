@@ -97,6 +97,8 @@ export const CLEAR: [table: string, how: string][] = [
   /* D22-44's VAT bills point at an order, a bill and its tax invoice, so
      they go before all three. Their series stays, as the GST one does. */
   ["vat_bills",         "hotel_id = $1"],
+  /* A guest's room-service order points at the POS order it became (171). */
+  ["guest_food_orders", "hotel_id = $1"],
   ["pos_order_tenders", "order_id in (select id from pos_orders where hotel_id = $1)"],
   ["pos_order_lines",   "hotel_id = $1"],
   /* ⚠ ORDERS BEFORE TICKETS. `pos_orders.ticket_id` references
@@ -140,6 +142,8 @@ export const CLEAR: [table: string, how: string][] = [
      schema's keys. */
   ["spa_appointments",  "hotel_id = $1"],
   ["laundry_dockets",   "hotel_id = $1"],
+  /* A guest's table booking points at the stay and the table (172). */
+  ["table_bookings",    "hotel_id = $1"],
   /* A guest's ID photo rows point at the booking, the guest and the link (167).
      Only the rows go: the sealed files they name stay in Drive, and are
      removed there by hand. */
