@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-01 · The nights still to come, by the run's own rule (FIN-24)
+
+The booking and bill lane, `fix/review-1oct`, from the master's pre-launch review. `roomNight.ts`: the "a room line already pays for this night" test is one expression, `CHARGED(night)`, which `POSTS_TONIGHT` now uses for tonight - the same SQL, written once - and a new `nightsToCome(client, hotel, stay)` uses for each night from today to departure, for finance's Bill tab. Exported through `index.ts`. The run's figures, order and conditions are unchanged: `nightAudit.test.ts` 23 and `corrections.test.ts` 20 passed after it.
+
 ## 2026-09-30 · One night's room charge in one place: `roomNight.ts` (D27-204)
 
 **Asked for:** the owner's D27-204 - the first night's room charge is posted at check-in, the audit posts each later night and never the first one twice - by the booking and bill lane (`fix/booking-bill-30sep`), with the master's yes on these exact hunks; this service has no lane.

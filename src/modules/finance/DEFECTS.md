@@ -14,25 +14,100 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FIN-24 · The Bill tab's charges-to-come box counts a night that was taken off as still to come (numbered for now)
-
-**Found** - 30 September, planning D27-204 (the owner's D27-205 keeps the
-audit's rule: a night somebody reversed is not charged again).
-
-**What is wrong** - the box (`useChargesToCome`, `flows/FolioPanel.tsx`) counts
-the stay's LIVE room lines: nights to come = the stay's nights less those. The
-night audit asks a different question: is there ANY room line for this night,
-reversed or not (`POSTS_TONIGHT`, `night-audit/roomNight.ts`). So after a
-clerk reverses a night - the first night on the arrival day, or a night taken
-off on Closed days - the box shows one more night to come than the audit will
-ever post, and its "Due" is a night too high. The printed bill's "to be posted
-tonight" asks the audit's own rule and is right.
-
-**The fix, when it is done** - the server says how many nights are still to
-come, by the audit's rule (one read beside `tonight` on the bill route), and
-the box shows that. Not done here: the master said a follow-up.
+Nothing open.
 
 ## Fixed
+
+### FIN-27 · A guest the group pays for owed the group's nights on their own bill — FIXED 1 October (the owner's D27-226; numbered for now)
+
+**Found** - 1 October, on the group-booking screen for the pre-launch review:
+a room routed to its group ("Host pays"), first night on the group's master,
+read "Balance ₹3,150 Outstanding" over "Nothing posted to this folio yet",
+and the screen's Check out was refused: "₹3,150 is still owed on this bill."
+
+**What was wrong** - the stay's one figure (`FOLIO_SELECT`, `folios.ts`) grouped
+lines by the POSTING's stay, on purpose since 056, so every night on the
+master counted as the guest's: GET /stays/:id/folio (the Bill tab, the
+screen's check-out gate, the In house list), Settle's `owed` with no bill
+named, and the night audit's "In-house folios carrying a balance" (a third
+copy in `checklist.ts`). The server's own check-out summed only the stay's own
+folios, so the screen and the server disagreed.
+
+**The fix** - a line counts for the bill it is ON: the stay whose folio it is,
+or the group whose master it is. GET /folios lists a group's master bill once,
+named for the group (`groupId`, `group`; the web's `Folio` type gains them),
+and the Folios page shows "Group bills" and counts them in its totals.
+
+**Not changed** - `api/src/routes/notifications.ts` (core) has a fourth copy
+(its "owing" and "refund" lists sum by the posting's stay): told to the master.
+
+**Proved** - front desk's `firstNight.test.ts`, "a guest the group pays for owes
+only their own bill": the folio, Settle, the list's group row and the audit's
+count - all four failed on the old code. Web `groupBills.test.tsx` (failed on
+the old page). Screen: the guest's Bill tab "No bill yet", Check out allowed;
+the Folios page's "Group bills: Group Bill Review - 2 rooms ₹3,150".
+
+### FIN-24 · The Bill tab counted a room billed to its group, and a reversed night, as nights still to come — FIXED 1 October (the pre-launch review; numbered for now)
+
+**Found** - 30 September (a reversed night, planning D27-204) and 1 October
+(the master's read-only pre-launch review: a room billed to its group).
+
+**What was wrong** - the charges-to-come box (`useChargesToCome`,
+`flows/FolioPanel.tsx`) worked out the nights to come itself: the stay's
+nights less the room lines on the stay's OWN bills. A room routed to its
+group is charged on the group's master bill, so every night stayed "to come"
+for ever, and the headline and the stay panel's foot showed a Due the company
+was paying - money the desk might collect. And a night somebody reversed
+counted as to come, though the night audit will not charge it again (D27-205).
+
+**The fix** - the page counts nothing. `GET /stays/:id/bill` returns
+`nightsToCome`, counted on the server by the night audit's own rule
+(`nightsToCome` in `night-audit/roomNight.ts`, sharing the run's `CHARGED`
+test): the stay's nights from the business date on that no room line pays
+for yet, on any bill, a reversed line included - and none at all for a room
+whose charge goes to its group's bill, a complimentary or day-use room, or a
+stay not booked or in house. The box, the headline and the panel's foot read
+that number (`useStayDue`).
+
+**Proved** - web `chargesToCome.test.tsx`: a room billed to its group shows
+nothing to come and no Due; a reversed night is not counted (both fail on
+the old panel: "Due", and "3 nights"). API: front desk's `firstNight.test.ts`,
+"the nights still to come on the stay's bill" (1 from today; none for the
+routed room; 2, not 3, after the first night is reversed).
+
+### FIN-25 · The tax invoice gave the odd paisa to SGST, the bill to CGST — FIXED 1 October (the pre-launch review; numbered for now)
+
+**What was wrong** - `issueFolioInvoice` (`api/src/modules/finance/invoices.ts`)
+split the tax as `Math.round(tax * 50) / 100` for SGST and the rest for CGST,
+on a float: ₹0.05 of tax printed CGST 0.02 / SGST 0.03, while the bill
+(`app.stay_bill`, 166) printed 0.03 / 0.02, and its own comment said the odd
+paisa is CGST's.
+
+**The fix** - in whole paise: CGST is `ceil(paise / 2)`, SGST the rest.
+**Only invoices issued from now on**; an invoice already issued is not
+changed (it cannot be).
+
+**Left as it is** - the bill splits PER RATE and the invoice splits its total,
+so a bill with an odd paisa at two rates can still differ from its invoice by
+a paisa in the CGST/SGST split (never in the total). Told to the master.
+
+**Proved** - `invoices.test.ts`, "gives the odd paisa of tax to CGST, as the
+bill does": ₹1.00 at 5% invoices CGST 0.03, SGST 0.02, and the bill agrees
+(0.02 / 0.03 on the old code).
+
+### FIN-26 · "Payment" and "Refund" could be posted through the charges route — FIXED 1 October (the pre-launch review; numbered for now)
+
+**What was wrong** - the charge door (`chargeRefused`/`insertCharge`,
+`api/src/modules/finance/postings.ts`) took "Payment" and "Refund" as charge
+headings: a payment line with no payment record and no drawer, and a refund
+with GST on it. No screen sent either; a direct API call could.
+
+**The fix** - refused above the first write, for the stay's route and every
+service's door alike: "Take a payment through Payments." and "A refund is not
+a charge. Reverse the payment it gives back." (there is no refund route).
+
+**Proved** - `chargeDoor.test.ts`, "refuses a payment or a refund as a
+charge" (on the old code the payment was posted).
 
 ### FIN-23 · Edit and Reverse could not find a stay's own room night on its group's bill — FIXED 30 September (D27-204; numbered for now)
 
