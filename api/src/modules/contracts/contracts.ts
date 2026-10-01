@@ -22,7 +22,7 @@ import {
                        from app.contract_price, the booking's own function
 
    Every refusal is asked before the first write (MEMORY 243). The database
-   holds the same rules underneath (173): one contract in force per date, no
+   holds the same rules underneath (177): one contract in force per date, no
    price of 0, only the three may change a company or a contract.
    ══════════════════════════════════════════════════════════════════ */
 

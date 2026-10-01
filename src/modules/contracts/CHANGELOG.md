@@ -20,7 +20,7 @@ Branch `contracts/rates-30sep` (from cp6 24d99f2), copy
 planned first; the owner took all thirteen recommendations (D27-184, C-1 to
 C-13; `MODULE.md`).
 
-**Shipped:** migration 173 (numbered for now): companies gain kind, state,
+**Shipped:** migration 177: companies gain kind, state,
 PIN and credit allowed, and their credit figures become not-set instead of 0;
 `contracts` (one in force per company, hotel and date), `contract_rates`
 (single and double), `reservations.contract_id`, `app.contract_in_force`,
@@ -42,7 +42,7 @@ records; open with the owner).
 **Proved:** `npx tsc -b --force` exit 0; `api` strip-check 165 files; web
 tests contracts, contractPrice (fails on cp6's booking page), navigation,
 boundaries, guests, reservations, lib: pass, except migrationNumbers on the
-gap to 173 (the master renumbers). The API tests and the database test are
+gap to 173, since renumbered 177. The API tests and the database test are
 written and not yet run (the master's word).
 
 **Left open:** the API and database runs; the screens in the browser pane

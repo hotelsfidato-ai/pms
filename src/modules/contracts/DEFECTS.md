@@ -21,7 +21,7 @@ refusal. `api/scripts/load-demo.ts` files Agoda, Booking.com, Expedia,
 go-MMT and Fidato Hotels as COMPANIES and puts them on their stays; live may
 hold the same rows. A booking site pays later, so its stays are settled Bill
 to company, which C-9 now refuses for a company not allowed credit, and
-migration 173 allows credit only for companies already billed on credit.
+migration 177 allows credit only for companies already billed on credit.
 **What was done:** the question is with the owner through the master
 (recommendation: the migration also allows credit for companies named like
 an `ota` booking source). `reports.test.ts`'s city ledger test sends a demo

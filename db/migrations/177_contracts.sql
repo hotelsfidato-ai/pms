@@ -1,5 +1,5 @@
 -- =============================================================================
--- 173 · Contracts: a company's record, and the rates it has agreed per hotel
+-- 177 · Contracts: a company's record, and the rates it has agreed per hotel
 -- =============================================================================
 -- D27-178 (build every service still "Not built yet") and D27-184, the owner's
 -- answers to the contracts lane's thirteen questions, all as recommended:

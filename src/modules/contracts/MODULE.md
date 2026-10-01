@@ -10,7 +10,7 @@ booking priced by it. Allotments (rooms held until a release date) are
 ```
 src/modules/contracts/                  the screens, the dialogs, the client
 api/src/modules/contracts/contracts.ts  the routes
-db/migrations/173_contracts.sql         numbered for now; the master renumbers at merge
+db/migrations/177_contracts.sql         (was 173 before the merge of 2 Oct)
 db/tests/modules/contracts.sql          what only the database can promise
 api/test/modules/contracts/             the routes, the booking, the credit refusal
 ```
