@@ -77,6 +77,10 @@ GET   /api/hotels/:code/contract-price          the booking page's quote under t
   booking.
 - **No default prices.** A figure not agreed is NULL and reads as a dash; the
   database refuses a contract price or a credit figure of 0.
+- **A day use is never priced by a contract** (D27-229: its price is typed
+  every time). The booking page does not ask `/contract-price` for it, and
+  `book.ts` refuses an untyped day use before the pricing branch; the booking
+  is still stamped with the contract and its commission.
 - **One contract in force per company, hotel and date** (`contracts_one_in_force`).
 - Reach other services only through their `index.ts`.
 

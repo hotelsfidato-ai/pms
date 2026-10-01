@@ -11,6 +11,49 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · cp6 merged in (the launch), the migration renumbered 177, a day use kept typed, CON-4, the screens seen
+
+Same branch and copy; `fidato_s41` migrated to 177.
+
+**Asked for:** the master, on the owner's resume: merge cp6 (ffda580a,
+migrations 162-176), renumber the migration 177, keep cp6's day use (D27-227,
+D27-229, D27-230) typed-only with a test, finish the paused steps.
+
+**Shipped:** `173_contracts.sql` is `177_contracts.sql`. The merge kept both
+sides in `server.ts` (guest services and contracts), `navigation.test.ts`
+(Distribution: the channel manager and Contracts built, Booking engine not)
+and `BookingPage.tsx` (cp6's GST split and imports; the contract quote never
+asked for a day use). `book.ts` merged by itself: cp6's "Type the day-use
+price." refusal sits above the pricing branch. CON-4's fix (an edit asks for
+a duplicate only on a changed name or GSTIN). The contract dialog's rates
+grid on a phone: each plan on its own line over its two prices.
+`onePage.test.tsx`'s mock answers `/contract-price`.
+
+**Proved:** `npx tsc -b --force` exit 0; strip-check 180 files. Web: 30
+files, 200 tests (navigation, src/test incl. migrationNumbers, guests,
+reservations, contracts, lib); contractPrice's day-use test fails with the
+`!dayUse` guard removed. API, one file at a time, no other build running:
+contracts 8, roleGate 67, validate 12, newBooking 21, bookings 15,
+feesAndDayUse 9, perBill 11, reports 31, all passed. Database:
+`contracts.sql` 16 of 16 on a copy of `fidato_s41` at 177. Screens, as the
+Owner at 1280x720: Contracts, a company, Edit company (a duplicate Agoda
+ticked "Allowed · 30 days · -"), Add contract (saved, "In force", the rate
+table), New booking (Deluxe: "Contract: Agoda 2026-27. No contract rate for
+Deluxe · EP; the day's price." at ₹3,699; Superior for two: ₹2,800 and
+"Contract: Agoda 2026-27"; a day use: no price, no contract line, "Type the
+day's price"), Companies and agents' Add company; as Reception: Add company
+with name, GSTIN and address only, no Edit or Add contract on the company's
+page; at 375 px: the contract dialog, a company and Contracts, nothing
+sideways.
+
+**Found:** CON-4. And for the owner: cp6's "Rate includes GST" tick splits
+whatever price the line carries, so on a contract-priced line it would split
+the contract's own price; kept as cp6 built it, asked through the master.
+
+**Left open:** that question; the master's merge.
+
+---
+
 ## 2026-09-30 · Contracts built: Add/Edit company, a contract per company and hotel, the booking priced by it (D27-178, D27-184)
 
 Branch `contracts/rates-30sep` (from cp6 24d99f2), copy
