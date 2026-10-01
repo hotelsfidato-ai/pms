@@ -4,6 +4,7 @@ import type { Client } from "../db.ts";
 import { businessDateFor } from "../businessDate.ts";
 import { can, type Role } from "../permissions.ts";
 import { teamsFor } from "../modules/guest-services/index.ts";
+import { allows, WRITE_RULES } from "../roleGate.ts";
 
 /* Split out of billing.ts on 15 September in the service-folder move
    (docs/SERVICE-FOLDERS-PLAN.md). The core's: the bell reads arrivals,
@@ -186,6 +187,22 @@ notifications.get("/:code/notifications", async (c) => {
           title: `${open!.n} guest request${open!.n === 1 ? "" : "s"} waiting`,
           body: `Nobody has taken ${open!.n === 1 ? "it" : "them"} yet. Take one on Guest requests and mark it done.`,
           isRead: false, at, link: `/h/${code}/requests`, actionRequired: true,
+        });
+      }
+    }
+
+    /* A guest's room-service order from their own page (D27-224): for
+       whoever may ring the till, who accepts or declines it on the Terminal. */
+    if (role && allows(WRITE_RULES["POST /api/hotels/:code/till/orders/batch"]!, role)) {
+      const { rows: [food] } = await client.query<{ n: number }>(
+        `select count(*)::int as n from guest_food_orders
+          where hotel_id = $1 and status = 'waiting'`, [hotelId]);
+      if (food!.n) {
+        out.push({
+          id: "guest-food-orders-waiting", hotelId: code, category: "customer",
+          title: `${food!.n} room-service order${food!.n === 1 ? "" : "s"} waiting`,
+          body: "From a guest's own page. Accept and send it, or decline it with a reason, on the Terminal.",
+          isRead: false, at, link: `/h/${code}/till/terminal`, actionRequired: true,
         });
       }
     }
