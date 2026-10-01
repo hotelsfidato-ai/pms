@@ -122,13 +122,16 @@ export interface VoucherFigures {
     figure this system does not hold, and a total that would need one is
     itself null (D27-172): no GST rule, no total. */
 export function voucherFigures(rooms: VoucherRoom[]): VoucherFigures {
+  /* A day use (no night) is one day at its rate, charged at check-in
+     (D27-225, D27-227): its zero nights printed ₹0 and no GST. */
+  const charged = (r: VoucherRoom) => Math.max(1, r.nights);
   const lines = rooms.map((r) => ({
     ...r,
-    amount: r.complimentary ? 0 : r.rate === null ? null : round2(r.rate * r.nights),
+    amount: r.complimentary ? 0 : r.rate === null ? null : round2(r.rate * charged(r)),
     /* Per night, as the audit posts it: round(rate x GST% / 100, 2). */
     tax: r.complimentary ? 0
       : r.rate === null || r.gstRate === null ? null
-      : round2(round2((r.rate * r.gstRate) / 100) * r.nights),
+      : round2(round2((r.rate * r.gstRate) / 100) * charged(r)),
   }));
   const every = (xs: Array<number | null>) =>
     xs.every((x) => x !== null) ? round2((xs as number[]).reduce((a, b) => a + b, 0)) : null;
@@ -434,7 +437,7 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
   y = strip(y, [
     { label: "Check in", value: dateReport(f.checkIn), hint: f.hotel.checkInTime ? `From ${f.hotel.checkInTime}` : undefined },
     { label: "Check out", value: dateReport(f.checkOut), hint: f.hotel.checkOutTime ? `By ${f.hotel.checkOutTime}` : undefined },
-    { label: "Nights", value: String(f.nights) },
+    { label: "Nights", value: f.nights === 0 ? "Day use" : String(f.nights) },
     {
       label: "Guests", value: `${f.rooms.length} room${f.rooms.length === 1 ? "" : "s"}`,
       hint: `${adults} adult${adults === 1 ? "" : "s"}${children ? `, ${children} child${children === 1 ? "" : "ren"}` : ""}`,
@@ -458,7 +461,7 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
     rule(y);
     y += 4.4;
     text(`Room ${i + 1} - ${l.roomType}`, M, y, { size: 8.6, bold: true, width: cNights - M - 6 });
-    text(String(l.nights), cNights, y, { size: 8.6, width: 15 });
+    text(l.nights === 0 ? "Day use" : String(l.nights), cNights, y, { size: 8.6, width: 15 });
     text(l.complimentary ? "Complimentary" : money(l.rate), cRate, y, { size: 8.6, align: "right", width: 40 });
     text(l.complimentary ? "Complimentary" : money(l.amount), RIGHT, y, { size: 8.6, bold: true, align: "right", width: 30 });
     y += 3.6;

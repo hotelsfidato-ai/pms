@@ -397,3 +397,33 @@ describe("a walk-in", () => {
     expect(button("Save booking").className).toContain("bg-brand-orange");
   });
 });
+
+/* THE OWNER'S D27-227, D27-229 (1 October): New booking makes a day use - out
+   the day it comes - and its price is typed on every booking: the night's
+   tariff is never asked for it, and the page will not save without the price. */
+describe("a day use", () => {
+  it("is out the day it comes: its price is typed, the tariff never asked, one day charged", async () => {
+    open();
+    await screen.findByRole("heading", { name: "Guest" });
+    type(/^Guest or company/, "Anna Smith");
+    pick(/^Booking source/, "src-1");
+    const arrival = (screen.getByLabelText(/^Arrival/, { selector: "input" }) as HTMLInputElement).value;
+    asked.length = 0;
+    type(/^Departure/, arrival);
+    await screen.findByText(/^Day use - in and out on .*Type the day's price; it is charged at check-in\.$/);
+    await waitFor(() => expect(reasons()).toContain("Type the day-use price."));
+    expect(button("Save booking").disabled).toBe(true);
+
+    type(/^Rate/, "1500");
+    await waitFor(() => expect(button("Save booking").disabled).toBe(false));
+    expect(screen.getByText(/₹1,500\.00 for the day/)).toBeTruthy();
+    expect(screen.getAllByText("Day use").length).toBeGreaterThan(0);
+    expect(asked.filter((p) => p.includes("/tariff")), "the night's tariff is never asked").toEqual([]);
+
+    fireEvent.click(button("Save booking"));
+    await waitFor(() => expect(calls.find((c) => c.path.endsWith("/bookings"))?.body).toMatchObject({
+      checkIn: arrival, checkOut: arrival, lines: [expect.objectContaining({ agreedRate: 1500 })],
+    }));
+  });
+});
+

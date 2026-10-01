@@ -100,7 +100,7 @@ and `cashier.ts`)
 | POST | `/:code/stays/:id/check-out` | check out; posts a late check-out charge; closes the folio |
 | POST | `/:code/stays/:id/assign` | give a booking a room; for a guest already checked in, refuses a room somebody is still in (`stillIn`, D24-15) - a booking not yet here is only held |
 | POST | `/:code/stays/:id/move` | move a guest to another room (`app.move_room`, 054); a checked-in guest moved from tonight or earlier is refused a room somebody is still in (`stillIn`, D24-15). With a new rate (`agreedRate`) on the arrival day, tonight's night - posted at check-in - is put right to it by finance's `editFolioCharge`, reason "Room move: …", before `app.move_room` writes (D27-205). **The desk may do this through the move**, though it edits no other charge; the corrected line keeps the first room's number in its words |
-| PATCH | `/:code/stays/:id` | amend the dates and number of guests (`app.amend_stay`, 055) |
+| PATCH | `/:code/stays/:id` | amend the dates and number of guests (`app.amend_stay`, 055; 176: a day use is a stay too). A day use stays a day use and a stay stays a stay (D27-229): the rate is a day's or a night's, so turning one into the other is refused in words |
 | POST | `/:code/stays/:id/unassign` | take the room back (`app.unassign_room`, 054) |
 | POST | `/:code/stays/:id/void` | void a booking entered by mistake (042) |
 

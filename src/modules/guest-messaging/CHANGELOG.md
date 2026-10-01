@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-01 · A day use's voucher charges its day (D27-227)
+
+The booking and bill lane, `fix/dayuse-booking-1oct`. `voucherDocument.ts`: a day use (no night) is one day at its typed rate with its GST - it printed ₹0 and no GST - and reads "Day use" where the nights are. `voucherDocument.test.ts` "charges a day use one day at its rate" fails on the old figures.
+
 ## 2026-10-01 · The voucher, refined to the owner's reference (D27-215; the settings lane)
 
 Branch `voucher/reference-1oct` (from cp6 3104d319; 23b10cb9 merged in), copy `.claude\worktrees\mystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.

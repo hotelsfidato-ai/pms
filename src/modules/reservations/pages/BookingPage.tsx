@@ -3,7 +3,7 @@ import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router";
 import { Plus, Trash2, AlertTriangle, ListPlus, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, moneyPrecise } from "@/lib/format";
+import { money, moneyPrecise, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useRole, useSession } from "@/lib/session";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/rules";
@@ -297,6 +297,9 @@ export default function BookingPage() {
   };
 
   const nights = from && to ? nightsBetween(from, to) : 0;
+  /* A DAY USE (the owner's D27-227, D27-229): out the day it comes. Its price
+     is typed on every booking - the night's tariff is never asked for it. */
+  const dayUse = !!from && from === to;
 
   /* ── The discount in force ─────────────────────────────────────── */
   const promotion = (promotions.data ?? []).find((p) => p.id === promotionId) ?? null;
@@ -320,7 +323,7 @@ export default function BookingPage() {
         roomTypeId: l.roomTypeId, mealPlan: l.mealPlan,
         from: from ?? "", to: to ?? "", adults: l.adults, children: l.children,
       }),
-      enabled: !!from && !!to && !l.comp && l.rate.trim() === "",
+      enabled: !!from && !!to && !dayUse && !l.comp && l.rate.trim() === "",
     })),
   });
 
@@ -428,7 +431,8 @@ export default function BookingPage() {
       : phoneProblem(phone) ?? emailProblem(email)
       ?? (!bookingSourceId ? "Choose the booking source."
         : lines.length === 0 ? "Add a room."
-          : discountProblem
+          : (dayUse && lines.some((l) => !l.comp && !(Number(l.rate) > 0)) ? "Type the day-use price." : null)
+            ?? discountProblem
             ?? (show.company && billTo === "company" && !companyId ? "Choose the company." : null)
             ?? (salesPick === OTHER && !salesOther.trim() ? "Type the sales person's name." : null)
             ?? lines.map((l, i) => {
@@ -648,17 +652,22 @@ export default function BookingPage() {
                   {(f) => (
                     <Input {...fieldProps(f)} type="date" value={from}
                       onChange={(e) => {
-                        setFrom(e.target.value);
-                        if (to <= e.target.value) setTo(addDays(e.target.value, 1));
+                        const v = e.target.value;
+                        setFrom(v);
+                        /* A day use moves with its day; a stay keeps a night. */
+                        if (dayUse) setTo(v);
+                        else if (to <= v) setTo(addDays(v, 1));
                       }}
                       className="h-12 text-base" />
                   )}
                 </Field>
                 <Field label="Departure"
-                  hint={nights > 0 ? `${nights} ${nights === 1 ? "night" : "nights"}`
+                  hint={dayUse
+                    ? `Day use - in and out on ${dateShort(from)}. Type the day's price; it is charged at check-in.`
+                    : nights > 0 ? `${nights} ${nights === 1 ? "night" : "nights"}`
                     : "The night of departure is not charged."}>
                   {(f) => (
-                    <Input {...fieldProps(f)} type="date" value={to} min={addDays(from, 1)}
+                    <Input {...fieldProps(f)} type="date" value={to} min={from}
                       onChange={(e) => setTo(e.target.value)} className="h-12 text-base" />
                   )}
                 </Field>
@@ -694,6 +703,7 @@ export default function BookingPage() {
                     quote={quotes[i]!}
                     pricing={tariffs[i]?.isLoading ?? false}
                     nights={nights}
+                    dayUse={dayUse}
                     types={types}
                     left={leftFor(line.roomTypeId)}
                     mayGive={keeper}
@@ -974,7 +984,7 @@ export default function BookingPage() {
           )}
         </div>
 
-        <Summary nights={nights} lines={lines} quotes={quotes} types={types}
+        <Summary nights={nights} dayUse={dayUse} lines={lines} quotes={quotes} types={types}
           advance={advanceProblem ? null : advanceAmount} />
       </div>
 
@@ -1056,12 +1066,14 @@ function Fold({ title, children }: { title: string; children: ReactNode }) {
    The price sits beside the room, live: the question on the phone is
    "what will that cost". */
 function RoomLine({
-  line, quote, pricing, nights, types, left, mayGive, inclusiveNote, waiting, removable, rooms, onChange, onRemove,
+  line, quote, pricing, nights, dayUse, types, left, mayGive, inclusiveNote, waiting, removable, rooms, onChange, onRemove,
 }: {
   line: Line;
   quote: Quote;
   pricing: boolean;
   nights: number;
+  /** A day use: its price is typed (D27-229). */
+  dayUse: boolean;
   types: { id: string; name: string }[];
   left: number | null;
   mayGive: boolean;
@@ -1116,7 +1128,8 @@ function RoomLine({
         <Counter label="Children" value={line.children} min={0}
           onChange={(children) => onChange({ ...line, children })} />
         <div data-inclusive>
-          <Field label="Rate" hint={line.comp ? "Complimentary." : "Empty uses the calendar."}>
+          <Field label="Rate" hint={line.comp ? "Complimentary."
+            : dayUse ? "Type the day's price." : "Empty uses the calendar."}>
             {(f) => (
               <Input {...fieldProps(f)} type="number" inputMode="decimal" min={0}
                 value={line.comp ? "" : line.rate} placeholder="-" disabled={line.comp}
@@ -1174,14 +1187,14 @@ function RoomLine({
             All {left} left
           </Button>
         )}
-        <LinePrice line={line} quote={quote} pricing={pricing} nights={nights} />
+        <LinePrice line={line} quote={quote} pricing={pricing} nights={nights} dayUse={dayUse} />
       </div>
     </div>
   );
 }
 
-function LinePrice({ line, quote, pricing, nights }: {
-  line: Line; quote: Quote; pricing: boolean; nights: number;
+function LinePrice({ line, quote, pricing, nights, dayUse }: {
+  line: Line; quote: Quote; pricing: boolean; nights: number; dayUse: boolean;
 }) {
   if (line.comp) return <span className="text-grey-600">Complimentary: no charge, nothing posted</span>;
   if (quote.unpriced) {
@@ -1195,12 +1208,12 @@ function LinePrice({ line, quote, pricing, nights }: {
   if (quote.nightly === null) return <span className="text-grey-500">{pricing ? "Pricing…" : "-"}</span>;
   return (
     <span className="text-grey-600">
-      {moneyPrecise(quote.nightly)} a night
+      {moneyPrecise(quote.nightly)} {dayUse ? "for the day" : "a night"}
       {" + "}
       {quote.taxPerNight === null ? "-" : moneyPrecise(quote.taxPerNight)} tax
       {quote.taxRate !== null && quote.taxRate !== undefined && ` (${quote.taxRate}%)`}
       {line.rate.trim() !== "" && ", agreed"}
-      {nights > 0 && ` · ${nights} ${nights === 1 ? "night" : "nights"}`}
+      {dayUse ? " · day use" : nights > 0 && ` · ${nights} ${nights === 1 ? "night" : "nights"}`}
       {quote.differs && (
         <span className="block text-warning-dark">
           The first night's price is kept for every night; the calendar differs later.
@@ -1285,17 +1298,19 @@ function Discount({
 /* ── The figures ──────────────────────────────────────────────────
    It refuses to show a total it cannot stand behind: a dash before any
    price is known, and while any part is unpriced or its tax unknown. */
-function Summary({ nights, lines, quotes, types, advance }: {
-  nights: number; lines: Line[]; quotes: Quote[];
+function Summary({ nights, dayUse, lines, quotes, types, advance }: {
+  nights: number; dayUse: boolean; lines: Line[]; quotes: Quote[];
   types: { id: string; name: string }[];
   /** A valid advance typed on the page; null when none. */
   advance: number | null;
 }) {
   const rooms = lines.reduce((n, l) => n + l.rooms, 0);
+  /* What is charged: each night, or a day use's one day (D27-227). */
+  const units = dayUse ? 1 : nights;
   const priced = lines.length > 0 && quotes.every((q) => q.nightly !== null);
   const taxed = priced && quotes.every((q) => q.taxPerNight !== null);
   const sum = (each: (q: Quote, l: Line) => number) =>
-    lines.reduce((p, l, i) => p + paise(each(quotes[i]!, l)) * l.rooms * nights, 0) / 100;
+    lines.reduce((p, l, i) => p + paise(each(quotes[i]!, l)) * l.rooms * units, 0) / 100;
   const charges = priced ? sum((q) => q.nightly ?? 0) : null;
   const tax = taxed ? sum((q) => q.taxPerNight ?? 0) : null;
   const bill = charges !== null && tax !== null ? charges + tax : null;
@@ -1308,7 +1323,7 @@ function Summary({ nights, lines, quotes, types, advance }: {
       <CardHeader title="The booking" />
       <CardBody className="space-y-3">
         <dl className="divide-y divide-grey-200">
-          <Row label="Nights" value={String(nights)} />
+          <Row label="Nights" value={dayUse ? "Day use" : String(nights)} />
           <Row label="Rooms" value={String(rooms)} />
         </dl>
         {lines.length > 0 && (
@@ -1321,7 +1336,7 @@ function Summary({ nights, lines, quotes, types, advance }: {
                 </span>
                 <span className="tabular shrink-0">
                   {quotes[i]?.nightly === null || quotes[i]?.nightly === undefined
-                    ? "-" : money(quotes[i]!.nightly! * nights * l.rooms)}
+                    ? "-" : money(quotes[i]!.nightly! * units * l.rooms)}
                 </span>
               </li>
             ))}
