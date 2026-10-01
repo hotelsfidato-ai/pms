@@ -1,16 +1,17 @@
 import { Route } from "react-router";
+import { PropertyScope } from "@/components/app/PropertyScope";
 import { RequireAccess } from "@/components/app/RequireAccess";
 import LoyaltyPage from "@/modules/loyalty/pages/Loyalty";
 
-/* Loyalty's one address — its Coming soon page. Mounted by App.tsx inside
-   the signed-in shell. The guard asks the navigation (`mayReach`), so the
-   page is refused to exactly the people the menu does not show it to. */
+/* Loyalty's one address. It was `/coming-soon/loyalty` until the service was
+   built (30 September). The guard asks the navigation (`mayReach`); the
+   server refuses the same people (roleGate.ts, `customer` view). */
 export const routes = (
   <Route
-    path="/coming-soon/loyalty"
+    path="/h/:code/loyalty"
     element={
-      <RequireAccess path="/coming-soon/loyalty" resource="integration">
-        <LoyaltyPage />
+      <RequireAccess path="/h/:code/loyalty" resource="customer">
+        <PropertyScope /><LoyaltyPage />
       </RequireAccess>
     }
   />

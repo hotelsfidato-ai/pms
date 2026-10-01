@@ -33,6 +33,8 @@ export const SWITCHABLE = [
      ON until turned off (159). GST folded into Company and Extras left the
      page (D27-187, D27-193): their switches went with them. */
   "booking_company", "booking_notes",
+  /* D27-179, 30 September: loyalty, per property, off until turned on (L2). */
+  "loyalty",
 ] as const;
 
 

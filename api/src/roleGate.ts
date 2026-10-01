@@ -109,6 +109,9 @@ const SYSTEM_HEALTH = grant("role", "view", "Reading the system's health");
 
 /* Bills: `invoice`. Money taken: `payment`. */
 const CHARGE = grant("invoice", "create", "Adding to a bill");
+/* Loyalty (D27-179): the desk joins a guest and takes points off a bill (L6). */
+const LOYALTY_MEMBER = grant("customer", "edit", "Joining a guest to loyalty, or taking them out");
+const LOYALTY_POINTS = grant("invoice", "create", "Taking loyalty points off a bill");
 const CHANGE_BILL = grant("invoice", "edit", "Changing a bill");
 const TAX_INVOICE = grant("invoice", "create", "Issuing a tax invoice");
 /* The owner's D22-33: the owner, an administrator, the GM and the accountant -
@@ -318,6 +321,13 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/crm/no-offers`]: own("guests/people.ts: app.is_crm_manager"),
   [`DELETE ${H}/crm/no-offers/:id`]: own("guests/people.ts: app.is_crm_manager"),
   [`POST ${H}/crm/offers-yes`]: own("guests/people.ts: app.is_crm_manager"),
+
+  /* loyalty (D27-179) */
+  [`PUT ${H}/loyalty/rules`]: own("loyalty/loyalty.ts: app.sets_group_settings"),
+  [`POST ${H}/loyalty/guests/:id/join`]: LOYALTY_MEMBER,
+  [`POST ${H}/loyalty/guests/:id/leave`]: LOYALTY_MEMBER,
+  [`POST ${H}/loyalty/stays/:id/redeem`]: LOYALTY_POINTS,
+  [`POST ${H}/loyalty/guests/:id/adjust`]: own("loyalty/loyalty.ts: app.loyalty_adjust asks app.is_crm_manager"),
 
   /* night-audit */
   [`POST ${H}/night-audit/run`]: CLOSE_DAY,
@@ -642,6 +652,12 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/leads`]: GUESTS,
   [`GET ${H}/leads/:ref`]: GUESTS,
   [`GET ${H}/leads/:ref/booking`]: GUESTS,
+  /* D27-179: the Loyalty screen for whoever sees guests; the member card and
+     the month by hotel answer only the owner, an administrator and the GM,
+     asked in the database (app.loyalty_card, app.is_crm_manager). */
+  [`GET ${H}/loyalty`]: GUESTS,
+  [`GET ${H}/loyalty/guests/:id`]: GUESTS,
+  [`GET ${H}/loyalty/by-hotel`]: GUESTS,
   /* D27-170 (and D22-17): spend and booked revenue by campaign and source,
      the owner, an administrator and the GM only. */
   [`GET ${H}/marketing/numbers`]: see("marketing", "marketing numbers"),
