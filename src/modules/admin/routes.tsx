@@ -1,14 +1,15 @@
 import { Navigate, Route } from "react-router";
 import { RequireAccess } from "@/components/app/RequireAccess";
+import { PropertyScope } from "@/components/app/PropertyScope";
 import { IS_DEV } from "@/components/app/navigation";
 import PropertyPage from "@/modules/admin/pages/Property";
 import PeoplePage from "@/modules/admin/pages/People";
 import AdminConsolePage from "@/modules/admin/pages/Console";
 import SystemHealthPage from "@/modules/admin/pages/SystemHealth";
+import SettingsPage from "@/modules/admin/pages/Settings";
 import { PropertiesPage } from "@/modules/admin/pages/Properties";
 import {
   UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
-  SettingsPage,
 } from "@/modules/admin/pages/Admin";
 
 /* Administration's screen addresses. Mounted by App.tsx inside the
@@ -115,13 +116,34 @@ export const routes = (
         </RequireAccess>
       }
     />
+    {/* D27-213, D27-214: ONE place for settings, its tab in the address.
+        Asked as "/settings" whichever tab: the menu entry is the rule. */}
+    {["/settings", "/settings/:tab"].map((path) => (
+      <Route
+        key={path}
+        path={path}
+        element={
+          <RequireAccess path="/settings" resource="setting">
+            <SettingsPage />
+          </RequireAccess>
+        }
+      />
+    ))}
+    {/* With the hotel in the address (D27-216): the group owner's bell links to
+        the hotel whose bank details changed, whichever one is open. The
+        top bar's hotel follows the address (PropertyScope), as on every
+        /h/:code screen. */}
     <Route
-      path="/admin/settings"
+      path="/h/:code/settings/:tab"
       element={
-        <RequireAccess path="/admin/settings" resource="setting">
-          <SettingsPage />
+        <RequireAccess path="/settings" resource="setting">
+          <PropertyScope /><SettingsPage />
         </RequireAccess>
       }
     />
+    {/* The two screens it replaced: their addresses open it. Configuration
+        was where the refusals sent people to set GST. */}
+    <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
+    <Route path="/admin/configuration" element={<Navigate to="/settings/taxes-and-billing" replace />} />
   </>
 );

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
+import { openTillDay } from "../../drawer.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL — the POS built into the PMS
@@ -20,6 +21,7 @@ import { closePool } from "../../../src/db.ts";
    ══════════════════════════════════════════════════════════════════ */
 
 let ownerStaffId: string;
+let putAwayTillDay: () => Promise<void>;
 
 const admin = async () =>
   new (await import("pg")).default.Pool({
@@ -35,9 +37,12 @@ beforeAll(async () => {
   );
   ownerStaffId = staff.rows[0]!.id;
   await db.end();
+  /* Cash only once the day is open, its float counted (D27-190). */
+  putAwayTillDay = await openTillDay("5EL", "REST", 2000);
 });
 
 afterAll(async () => {
+  await putAwayTillDay();
   /* Everything this file charged to a guest folio, reversed.
 
      pos.test.ts learned this the hard way — ₹3,635 of test charges
@@ -2058,8 +2063,8 @@ describe("day end", () => {
   });
 
   it("counts the drawer by denomination", async () => {
+    /* The float, 2000, was counted when the day opened (D27-190). */
     const res = await post("/api/hotels/5EL/till/day-end/count", {
-      opening: 2000,
       denominations: [
         { value: 500, count: 4 }, { value: 100, count: 3 },
         { value: 50, count: 2 },
@@ -2119,8 +2124,13 @@ describe("day end", () => {
   });
 
   it("closes with the reason, and stays closed", async () => {
-    const res = await post("/api/hotels/5EL/till/day-end/close",
+    /* The float kept for tomorrow, typed at every close (D27-191). */
+    const blank = await post("/api/hotels/5EL/till/day-end/close",
       { varianceReason: "counted twice, not found" });
+    expect(blank.status).toBe(409);
+    expect(((await blank.json()) as { reason: string }).reason).toMatch(/float is kept/);
+    const res = await post("/api/hotels/5EL/till/day-end/close",
+      { varianceReason: "counted twice, not found", keptCash: 500 });
     expect(res.status, await res.clone().text()).toBe(200);
 
     const body = await dayEnd();

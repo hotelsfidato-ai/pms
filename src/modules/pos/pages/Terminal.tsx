@@ -9,8 +9,8 @@ import {
 import { cn } from "@/lib/cn";
 import { dateLong, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { toast, Button } from "@/components/ui";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, type MenuItem, type CashId } from "@/modules/pos/data/till";
+import { toast, Button, StatusPill } from "@/components/ui";
+import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, type MenuItem, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
@@ -18,6 +18,7 @@ import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { KotStatus } from "@/modules/pos/components/KotStation";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
+import { GuestOrders } from "@/modules/pos/components/GuestOrders";
 import { AskDialog, SENT_STRIKE, roomAsk, type Ask } from "@/modules/pos/components/AskDialog";
 import { useDocumentTitle } from "@/lib/documentTitle";
 
@@ -183,12 +184,12 @@ export default function TerminalPage() {
 
   const addChosen = async (
     itemId: string, qty: number, text: string,
-    variationId?: string, addonIds?: string[],
+    variationId?: string, addonIds?: string[], moreChoiceIds?: string[],
   ) => {
     if (!orderId) return;
     setBusy(true);
     const res = await addLine(hotelId, orderId, itemId, qty,
-      text.trim() || undefined, variationId, addonIds);
+      text.trim() || undefined, variationId, addonIds, moreChoiceIds);
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
     setAsking(null);
@@ -223,6 +224,14 @@ export default function TerminalPage() {
         refresh();
       },
     });
+  };
+
+  /* The waiter carried it from the pass: served (D27-222). */
+  const take = async (lineId: string) => {
+    if (!orderId) return;
+    const res = await takeDishes(hotelId, orderId, [lineId]);
+    if (!res.ok) return toast.error("Not taken", res.reason);
+    refresh();
   };
 
   const strike = async (lineId: string, reason?: string) => {
@@ -460,6 +469,9 @@ export default function TerminalPage() {
         <div className="@container flex-1 min-w-0 overflow-y-auto p-4">
           {!orderId ? (
             <div className="max-w-md mx-auto pt-10">
+              {/* Guests' room-service orders first: they are waiting on
+                  somebody (D27-224). Accepted, the order opens here. */}
+              <GuestOrders hotelId={hotelId} onAccepted={(id) => { setOrderId(id); refresh(); }} />
               <p className="text-2xs uppercase tracking-wide text-grey-500 mb-2">
                 Start an order
               </p>
@@ -738,6 +750,9 @@ export default function TerminalPage() {
                 {order.lines.map((l) => (
                   <li key={l.id} className={cn(
                     "py-1", l.voided && "opacity-45",
+                    /* A side sits under its dish and follows its quantity
+                       (D27-192, Q8), as on the Till. */
+                    l.isAddon && "pl-5",
                   )}>
                     <div className="flex items-center gap-2">
                       <span className={cn(
@@ -760,17 +775,30 @@ export default function TerminalPage() {
                       </p>
                     )}
                     {/* Which dishes the kitchen already holds, so a second
-                        KOT visibly sends only what is new. */}
-                    {!l.voided && l.kotStatus !== "pending" && (
+                        KOT visibly sends only what is new. A Ready dish is
+                        the waiter's to fetch: Taken when it goes out
+                        (D27-221, D27-222). */}
+                    {!l.voided && l.kotStatus === "ready" ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <StatusPill tone="success">Ready</StatusPill>
+                        <button
+                          type="button"
+                          onClick={() => void take(l.id)}
+                          aria-label={`Taken: ${l.name}`}
+                          className="press h-11 px-4 rounded-full border border-grey-300 bg-white text-base font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer"
+                        >
+                          Taken
+                        </button>
+                      </div>
+                    ) : !l.voided && l.kotStatus !== "pending" && (
                       <p className="text-2xs text-grey-500 mt-0.5 pl-0.5">
                         {l.kotStatus === "sent" ? "with the kitchen"
                           : l.kotStatus === "preparing" ? "on the fire"
-                          : l.kotStatus === "ready" ? "at the pass"
                           : "served"}
                       </p>
                     )}
 
-                    {!l.voided && order.status === "open" ? (
+                    {!l.voided && order.status === "open" && !l.isAddon ? (
                       /* A STEPPER, not a strike-and-retype. "Make that two
                          rather than three" used to mean cancelling the line
                          and adding it again, which left a struck row on the
@@ -1022,8 +1050,8 @@ export default function TerminalPage() {
         item={asking}
         open={asking !== null}
         onOpenChange={(o) => { if (!o) setAsking(null); }}
-        onAdd={(id, qty, text, variationId, addonIds) =>
-          void addChosen(id, qty, text, variationId, addonIds)}
+        onAdd={(id, qty, text, variationId, addonIds, moreChoiceIds) =>
+          void addChosen(id, qty, text, variationId, addonIds, moreChoiceIds)}
         busy={busy}
       />
     </Shell>

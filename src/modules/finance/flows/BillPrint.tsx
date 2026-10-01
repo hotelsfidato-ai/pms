@@ -5,6 +5,7 @@ import { DocMasthead, DocFacts, DocTotals, DOC_TH, DOC_TD } from "@/components/u
 import type { GroupSettings } from "@/modules/admin";
 import type { StayBill } from "../data/bill";
 import { placeLine } from "../place";
+import { billSections } from "../sections";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PRINTED BILL — one layout, for the desk and the guest (D21-10)
@@ -30,6 +31,12 @@ const half = (rate: number) => String(Math.round((rate / 2) * 100) / 100);
     own page has no sign-in to ask for them, so it prints the hotel's name alone. */
 export function BillPrint({ bill, title, group }: { bill: StayBill; title: string; group?: GroupSettings }) {
   const { hotel, stay } = bill;
+  /* TONIGHT'S NIGHT, NOT POSTED YET (the owner's D27-204): shown as "to be
+     posted tonight" and counted in the amount due. The posted sections and
+     totals above it do not change; the figures are the server's, added in
+     paise. */
+  const tonight = bill.tonight;
+  const toPost = tonight ? Math.round(tonight.amount * 100) + Math.round(tonight.tax * 100) : 0;
   /* The place once (QA FI-16): it printed "…413216, Akkalkot, MH". */
   const place = placeLine(hotel.address, hotel.city, hotel.state);
 
@@ -58,14 +65,29 @@ export function BillPrint({ bill, title, group }: { bill: StayBill; title: strin
             <th className={cn(DOC_TH, "text-right pl-2 w-32")}>Amount</th>
           </tr>
         </thead>
-        <tbody>
-          {bill.lines.map((line, i) => (
-            <tr key={i}>
-              <td className={cn(DOC_TD, "pr-2")}>{line.description}</td>
-              <td className={cn(DOC_TD, "pl-2 text-right tabular font-semibold")}>{moneyPrecise(line.amount)}</td>
+        {/* IN SECTIONS (the owner's D27-200): Room, Restaurant, Bar, other
+            charges - each its lines, its subtotal and its tax, by finance's
+            one rule (sections.ts), the Bill tab's too. The totals below are
+            the server's, unchanged. */}
+        {billSections(bill.lines).map((s) => (
+          <tbody key={s.key} data-bill-section={s.key}>
+            <tr>
+              <th colSpan={2} className={cn(DOC_TH, "text-left pt-4")}>{s.title}</th>
             </tr>
-          ))}
-        </tbody>
+            {s.lines.map((line, i) => (
+              <tr key={i}>
+                <td className={cn(DOC_TD, "pr-2")}>{line.description}</td>
+                <td className={cn(DOC_TD, "pl-2 text-right tabular font-semibold")}>{moneyPrecise(line.amount)}</td>
+              </tr>
+            ))}
+            {[{ label: "Subtotal", amount: s.subtotal }, ...s.taxes].map((r) => (
+              <tr key={r.label}>
+                <td className={cn(DOC_TD, "pr-2 text-grey-600")}>{r.label}</td>
+                <td className={cn(DOC_TD, "pl-2 text-right tabular text-grey-600")}>{moneyPrecise(r.amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        ))}
       </table>
 
       <div className="mt-4 flex justify-end">
@@ -90,7 +112,12 @@ export function BillPrint({ bill, title, group }: { bill: StayBill; title: strin
              guest who paid the Total still owed ₹0.20 and could not leave.
              One figure, the one every other document uses. */
           total={["Total", moneyPrecise(bill.total)]}
-          after={[
+          after={tonight ? [
+            ["Paid", moneyPrecise(bill.paid)],
+            [<span key="t" data-bill-tonight>{`To be posted tonight · ${tonight.description}, with GST ${tonight.rate}%`}</span>,
+              moneyPrecise(toPost / 100)],
+            ["Amount due", moneyPrecise((Math.round(bill.balance * 100) + toPost) / 100)],
+          ] : [
             ["Paid", moneyPrecise(bill.paid)],
             ["Outstanding", moneyPrecise(bill.balance)],
           ]}

@@ -90,7 +90,7 @@ describe("what is safe to hold", () => {
   it("warns on check-in rather than queueing it silently", () => {
     /* The desk keeps working — but a room is a scarce resource, and
        the clerk is told this is held rather than done. */
-    for (const path of ["stays/abc/check-in", "stays/abc/assign", "walk-ins"]) {
+    for (const path of ["stays/abc/check-in", "stays/abc/assign", "stays/abc/unassign"]) {
       expect(ruleFor(`${P}/${path}`, "POST").tier).toBe("queue-warn");
     }
   });

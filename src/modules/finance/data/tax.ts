@@ -28,7 +28,7 @@ type Result<T = unknown> = ({ ok: true } & T) | { ok: false; reason: string };
 
 /** "alcohol" is VAT, not GST (D21-91), and is listed only where the property
     is switched on for it (D21-90). */
-export type TaxKind = "room" | "restaurant" | "bar" | "banquet" | "spa" | "alcohol" | "other";
+export type TaxKind = "room" | "restaurant" | "bar" | "banquet" | "spa" | "alcohol" | "laundry" | "other";
 
 export interface TaxSlab {
   id: string;
@@ -92,4 +92,13 @@ export async function setCategoryTaxKind(
   return call(
     `/api/hotels/${hotelId}/menu-categories/${encodeURIComponent(category)}/tax-kind`,
     "PATCH", { kind });
+}
+
+/** A room rate that includes GST, split as the booking will keep it (D27-195):
+    the rate before GST and its slab, the nearest total not above the figure,
+    or the server's refusal (the slab gap, no room rule). */
+export async function getRateBeforeGst(
+  hotelId: string, gross: number,
+): Promise<{ ok: true; pre: number; rate: number; total: number } | { ok: false; reason: string }> {
+  return api(`/api/hotels/${hotelId}/tax/room/before-gst?gross=${encodeURIComponent(String(gross))}`);
 }

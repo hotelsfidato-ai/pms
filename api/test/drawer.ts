@@ -36,3 +36,20 @@ export async function withDrawer<T>(hotel: string, who: string, run: () => T | P
   const close = await openDrawer(hotel, who);
   try { return await run(); } finally { await close(); }
 }
+
+/** The till takes cash only once its outlet's day is open, the float counted
+    (the owner's D27-190). Opens it for today (or finds it open) and answers
+    how to put it away. */
+export async function openTillDay(
+  hotel: string, outlet = "REST", opening = 0,
+): Promise<() => Promise<void>> {
+  const [made] = await sql<{ id: string | null }>(
+    `insert into pos_day_ends (hotel_id, outlet_id, business_date, opening_cash)
+     select h.id, o.id, app.business_date(h.id), $3
+       from hotels h join pos_outlets o on o.hotel_id = h.id
+      where h.code = upper($1) and o.code = upper($2)
+     on conflict do nothing
+     returning id::text`, [hotel, outlet, opening]);
+  if (!made?.id) return async () => {};
+  return async () => { await sql("delete from pos_day_ends where id = $1::uuid", [made.id]); };
+}

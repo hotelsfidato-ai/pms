@@ -81,6 +81,13 @@ afterAll(async () => {
     const mine = `${tag} %`;
     const stays = `select id from reservations where guest_id in (
                      select id from guests where full_name like $1)`;
+    /* The check-out case pays its first night (D27-204), and a payment's row
+       points at its posting: it goes first, or this whole clean-up stops here
+       and leaves its stays at Pune for every file after it (1 October). */
+    await db.query(
+      `delete from payments where posting_id in (
+         select fp.id from folio_postings fp join folios f on f.id = fp.folio_id
+          where f.reservation_id in (${stays}))`, [mine]);
     await db.query("alter table folio_postings disable trigger folio_postings_append_only");
     await db.query(
       `delete from folio_postings where folio_id in (
@@ -266,32 +273,57 @@ describe("a foreign guest's check-in", () => {
 /* ── Walk-in ──────────────────────────────────────────────────────── */
 
 describe("a foreign walk-in", () => {
-  const walkIn = async (extra: Record<string, unknown>) => {
+  /* A walk-in is the one-page booking (D27-158): the booking on the Walk-in
+     channel, then the check-in, which asks Form III. The page always sends
+     the ID block's nationality. */
+  const walkIn = async (
+    nationality: string, checkIn: Record<string, unknown>, guest: Record<string, unknown> = {},
+  ) => {
     const r = await room();
-    return call("/PUN/walk-ins", "POST", {
-      guestName: `${tag} walk-in ${Date.now()}`, roomNumber: r.number, nights: 1,
-      adults: 1, children: 0, ratePlan: "Room Only", offeredTariff: 2500,
-      ...extra,
+    const db = await admin();
+    let d: { today: string; out: string; source: string };
+    try {
+      d = (await db.query<typeof d>(
+        `select app.business_date($1)::text as today,
+                (app.business_date($1) + 1)::text as out,
+                app.walk_in_source()::text as source`, [puneId])).rows[0]!;
+    } finally {
+      await db.end();
+    }
+    const made = await call("/PUN/bookings", "POST", {
+      guestName: `${tag} walk-in ${Date.now()}`, nationality,
+      checkIn: d.today, checkOut: d.out, bookingSourceId: d.source,
+      lines: [{ roomTypeId: r.typeId, mealPlan: "EP", adults: 1, rooms: 1, agreedRate: 2500 }],
+      ...guest,
     });
+    expect(made.status, await made.clone().text()).toBe(200);
+    const id = ((await made.json()) as { bookings: { id: string }[] }).bookings[0]!.id;
+    const res = await call(`/PUN/stays/${id}/check-in`, "POST",
+      { roomNumber: r.number, ...CLOCK, ...checkIn });
+    return { id, res, room: r.number };
   };
 
   it("is asked what check-in asks", async () => {
-    const res = await walkIn({ nationality: "US" });
+    const { id, res, room: number } = await walkIn("US", { identity: { nationality: "US" } });
     expect(res.status).toBe(409);
     expect(((await res.json()) as { reason: string }).reason).toMatch(/ID document/);
 
-    const noVisit = await walkIn({ nationality: "US", identity: passport("W") });
+    const noVisit = await call(`/PUN/stays/${id}/check-in`, "POST", {
+      roomNumber: number, ...CLOCK,
+      identity: passport("W", { nationality: "US" }),
+    });
     expect(((await noVisit.json()) as { reason: string }).reason).toMatch(/arrived from/);
+    expect(await status(id), "a refused walk-in checked the guest in").toBe("confirmed");
   });
 
   it("lands on the register as a foreigner, with the document and the visit", async () => {
-    const res = await walkIn({ nationality: "US", identity: passport("W2"), visit: VISIT });
+    const { id, res } = await walkIn("US",
+      { identity: passport("W2", { nationality: "US" }), visit: VISIT });
     const text = await res.text();
     expect(res.status, text).toBe(200);
-    const { data } = JSON.parse(text) as { data: { id: string } };
-    await release(data.id);
+    await release(id);
 
-    const mine = (await register()).find((r) => r.reservationId === data.id);
+    const mine = (await register()).find((r) => r.reservationId === id);
     expect(mine, "a foreign walk-in is missing from the register").toBeTruthy();
     expect(mine).toMatchObject({
       nationality: "US", passport: `P${PID}W2`, arrivedFrom: "Delhi",
@@ -299,7 +331,9 @@ describe("a foreign walk-in", () => {
   });
 
   it("keeps a returning foreign guest foreign when the form says IN", async () => {
-    /* The form's default must not take somebody off the register. */
+    /* D27-197: the ID block opens on IN, and that default must not take
+       somebody off the register. A wrong nationality is corrected on the
+       guest's record, not by a check-in. */
     const phone = `+44 7700 ${process.pid}`;
     const db = await admin();
     let guestId: string;
@@ -310,9 +344,20 @@ describe("a foreign walk-in", () => {
     } finally {
       await db.end();
     }
-    const res = await walkIn({ guestId, phone, nationality: "IN" });
-    expect(res.status).toBe(409);
-    expect(((await res.json()) as { reason: string }).reason).toMatch(/ID document/);
+    const { id, res } = await walkIn("IN",
+      { identity: { nationality: "IN" }, idSkipReason: "Passport at the bank" },
+      { guestId, phone });
+    if (res.status === 200) await release(id);
+    const after = await admin();
+    let onFile: string;
+    try {
+      onFile = (await after.query<{ n: string }>(
+        "select nationality as n from guests where id = $1", [guestId])).rows[0]!.n;
+    } finally {
+      await after.end();
+    }
+    expect({ status: res.status, onFile }).toEqual({ status: 409, onFile: "GB" });
+    expect(((await res.json()) as { reason: string }).reason).toMatch(/arrived from/);
   });
 });
 
@@ -348,6 +393,11 @@ describe("a foreign guest's departure", () => {
   });
 
   it("checks out with it, and the departure's clock starts", async () => {
+    /* The first night was charged at check-in (D27-204): a guest who leaves
+       the same day owes it (D27-205), so it is paid before the check-out. */
+    const paid = await call(`/PUN/stays/${stay}/payments`, "POST", { method: "UPI", amount: 2625 });
+    expect(paid.status, await paid.clone().text()).toBe(200);
+
     const res = await call(`/PUN/stays/${stay}/check-out`, "POST",
       { ...LATE, nextDestination: "Jaipur" });
     expect(res.status, await res.text()).toBe(200);

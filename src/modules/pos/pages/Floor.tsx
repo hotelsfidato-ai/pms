@@ -15,7 +15,7 @@ import { mayReach } from "@/components/app/navigation";
 import { useRole } from "@/lib/session";
 import { OrderPad } from "@/modules/pos/flows/OrderPad";
 import { draftedTables } from "@/lib/draft";
-import { getFloor, markPrinted, clearTable, setOutletClosed, type FloorTable, type TableState, type OffFor } from "@/modules/pos/data/till";
+import { getFloor, markPrinted, clearTable, setOutletClosed, takeDishes, type FloorTable, type TableState, type OffFor } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { KotStatus } from "@/modules/pos/components/KotStation";
 
@@ -161,6 +161,16 @@ export default function FloorPage() {
        says to take payment first — which is what the waiter does next. */
     if (!res.ok) return toast.error("Not cleared", res.reason);
     toast.success(`${table.label} is free`);
+    refresh();
+  };
+
+  /* Every ready dish on the table, taken out at once (D27-222). */
+  const take = async (table: FloorTable) => {
+    if (!table.orderId || !table.readyIds?.length) return;
+    setBusy(table.id);
+    const res = await takeDishes(hotelId, table.orderId, table.readyIds);
+    setBusy(null);
+    if (!res.ok) return toast.error("Not taken", res.reason);
     refresh();
   };
 
@@ -358,6 +368,22 @@ export default function FloorPage() {
                         </span>
                       </button>
 
+                      {/* FOOD AT THE PASS (D27-221). The kitchen made it
+                          Ready; one tap says the waiter took it all out
+                          (D27-222). The tile's own tap still opens the pad.
+                          A row of its own: beside the two round buttons it
+                          wrapped on a desktop tile (126px, measured). */}
+                      {(t.ready ?? 0) > 0 && t.orderId && (
+                        <button
+                          type="button"
+                          disabled={busy === t.id}
+                          onClick={() => void take(t)}
+                          aria-label={`Taken: the ${t.ready} ready at ${t.label}`}
+                          className="press mt-2 w-full h-11 px-3 rounded-full ring-1 ring-inset ring-success-100 bg-success-50 text-success-600 text-sm font-semibold tabular whitespace-nowrap cursor-pointer hover:ring-success"
+                        >
+                          {t.ready} ready
+                        </button>
+                      )}
                       <div className="flex gap-2 mt-2">
                         {t.state === "paid" ? (
                           <Button

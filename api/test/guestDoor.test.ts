@@ -1,4 +1,6 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import { createSign, generateKeyPairSync } from "node:crypto";
+import { OAuth2Client } from "google-auth-library";
 import { app } from "../src/server.ts";
 import { closePool } from "../src/db.ts";
 import { forgetKnocksForTests } from "../src/routes/guestDoor.ts";
@@ -38,6 +40,7 @@ let guestId: string;
 let link: string;         // the token itself, as the guest would hold it
 
 const TAG = "GUESTDOOR";
+const NOTHING = "This link is not usable. Ask the desk for a new one.";
 
 const asStaff = (who: string, path: string, method = "GET", body?: unknown) =>
   app.request(`/api/hotels${path}`, {
@@ -211,14 +214,118 @@ describe("what the link shows before the guest has proved who they are", () => {
   });
 });
 
+/* ── The hotel's logo on the guest's page (D27-223) ────────────────────
+   The hotel's own, else the group's - the picture and nothing else. It is
+   the hotel's, not the stay's, so it is shown before the code like the
+   hotel's name; a link that does not open gets the door's one sentence. */
+
+describe("the hotel's logo on the guest's page (D27-223)", () => {
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+  const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>');
+  let hotelId: string;
+  let groupWas: { logo_type: string | null; logo: Buffer | null } | undefined;
+  let hotelWas: { logo_type: string; logo: Buffer } | undefined;
+
+  const logoOf = (token: string, headers: Record<string, string> = {}) =>
+    app.request(`/api/guest/${token}/logo`, { headers });
+  const setGroup = (type: string | null, logo: Buffer | null) => sql(
+    `insert into group_settings (id, logo_type, logo) values (1, $1, $2)
+     on conflict (id) do update set logo_type = $1, logo = $2`, [type, logo]);
+  const setHotel = async (type: string | null, logo: Buffer | null) => {
+    await sql("delete from hotel_logos where hotel_id = $1", [hotelId]);
+    if (type) await sql("insert into hotel_logos (hotel_id, logo_type, logo) values ($1, $2, $3)", [hotelId, type, logo]);
+  };
+
+  beforeAll(async () => {
+    hotelId = (await sql("select id::text as id from hotels where code = '5EL'")).rows[0].id;
+    groupWas = (await sql("select logo_type, logo from group_settings where id = 1")).rows[0];
+    hotelWas = (await sql("select logo_type, logo from hotel_logos where hotel_id = $1", [hotelId])).rows[0];
+  });
+  afterAll(async () => {
+    if (groupWas) await setGroup(groupWas.logo_type, groupWas.logo);
+    else await sql("delete from group_settings where id = 1");
+    await setHotel(hotelWas?.logo_type ?? null, hotelWas?.logo ?? null);
+  });
+
+  it("is the hotel's own where it has one, else the group's, and the picture only", async () => {
+    await setGroup("image/png", PNG);
+    await setHotel("image/svg+xml", SVG);
+    const own = await logoOf(link);
+    expect(own.status, await own.clone().text()).toBe(200);
+    expect(own.headers.get("content-type")).toBe("image/svg+xml");
+    expect(Buffer.from(await own.arrayBuffer()).equals(SVG), "the hotel's own, byte for byte").toBe(true);
+    expect(own.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(own.headers.get("content-security-policy"), "an SVG opened on its own runs nothing")
+      .toContain("default-src 'none'");
+
+    await setHotel(null, null);
+    const group = await logoOf(link);
+    expect(group.status).toBe(200);
+    expect(group.headers.get("content-type")).toBe("image/png");
+    expect(Buffer.from(await group.arrayBuffer()).equals(PNG), "else the group's").toBe(true);
+  });
+
+  it("says the door's one sentence to a link that does not open, and where there is no logo", async () => {
+    await setGroup("image/png", PNG);
+    const never = await logoOf("n".repeat(43));
+    expect(never.status).toBe(404);
+    expect(((await never.json()) as { error: string }).error).toBe(NOTHING);
+
+    await sql("update guest_links set revoked_at = now() where reservation_id = $1", [stayId]);
+    try {
+      const revoked = await logoOf(link);
+      expect(revoked.status).toBe(404);
+      expect(((await revoked.json()) as { error: string }).error).toBe(NOTHING);
+    } finally {
+      await sql("update guest_links set revoked_at = null where reservation_id = $1", [stayId]);
+    }
+
+    await setGroup(null, null);
+    await setHotel(null, null);
+    const none = await logoOf(link);
+    expect(none.status).toBe(404);
+    expect(((await none.json()) as { error: string }).error).toBe(NOTHING);
+  });
+
+  it("is cached per hotel: one tag for every link to it, a 304 for that tag, and a dead link still refused", async () => {
+    await setGroup(null, null);
+    await setHotel("image/png", PNG);
+    const made = await asStaff(ownerStaffId, `/5EL/stays/${otherStayId}/guest-link`, "POST", {});
+    const second = tokenOf(((await made.json()) as { link: string }).link);
+
+    const one = await logoOf(link);
+    const two = await logoOf(second);
+    const tag = one.headers.get("etag");
+    expect(tag, "a tag the browser can ask with").toBeTruthy();
+    expect(two.headers.get("etag"), "the same picture, the same tag, whichever link").toBe(tag);
+    expect(one.headers.get("cache-control")).toMatch(/^private, max-age=\d+$/);
+
+    const again = await logoOf(link, { "if-none-match": tag! });
+    expect(again.status).toBe(304);
+    expect(await again.text()).toBe("");
+
+    await sql("update guest_links set revoked_at = now() where reservation_id = $1", [stayId]);
+    try {
+      expect((await logoOf(link, { "if-none-match": tag! })).status, "the tag opens nothing").toBe(404);
+    } finally {
+      await sql("update guest_links set revoked_at = null where reservation_id = $1", [stayId]);
+    }
+  });
+});
+
 describe("the six digits that prove it is that guest", () => {
-  /* A receiver shaped like the market-to-revenue workflow, keeping what it
+  /* A receiver shaped like the CRS's workflow (D27-186), keeping what it
      was sent: the code must go to the BOOKING's number, whatever anybody
      posts (D27-105, and OCI-2's rule that a stand-in must read what it
      gets). */
-  const withReceiver = async <T>(fn: (seen: Array<{ to: { phone: string } }>) => Promise<T>) => {
+  type Sent = {
+    channel: string; kind: string;
+    to: { phone: string | null; email: string | null };
+    data: Record<string, string>;
+  };
+  const withReceiver = async <T>(fn: (seen: Sent[]) => Promise<T>) => {
     const { createServer } = await import("node:http");
-    const seen: Array<{ to: { phone: string } }> = [];
+    const seen: Sent[] = [];
     const server = createServer((req, res) => {
       let raw = "";
       req.on("data", (c) => { raw += c; });
@@ -226,8 +333,8 @@ describe("the six digits that prove it is that guest", () => {
     });
     await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
     const port = (server.address() as { port: number }).port;
-    process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${port}/pms-send`;
-    process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = "only-this-test-run-knows-this";
+    process.env["CRS_N8N_URL"] = `http://127.0.0.1:${port}/pms-send`;
+    process.env["CRS_N8N_SECRET"] = "only-this-test-run-knows-this";
     process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
     try { return await fn(seen); } finally {
       for (const k of ["CRS_N8N_URL", "M2R_N8N_URL", "CRS_N8N_SECRET", "M2R_N8N_SECRET"]) delete process.env[k];
@@ -267,6 +374,93 @@ describe("the six digits that prove it is that guest", () => {
     } finally {
       await sql("update guests set phone = $2 where id = $1", [guestId, phone]);
     }
+  });
+
+  /* ── The code by email (D27-207) ─────────────────────────────────────
+     The second way, the guest's choice. The same rules as the first: the
+     address is the booking's own and nobody types one; the code is kept
+     only as a hash and is never in an answer; and the same six-digit
+     answer hands out the same unlock. */
+  const EMAIL = "Asha.Gdr@example.com";
+  const noCodes = () => sql(
+    "delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
+  const withEmail = async <T>(email: string | null, fn: () => Promise<T>) => {
+    await sql("update guests set email = $2 where id = $1", [guestId, email]);
+    try { return await fn(); } finally {
+      await sql("update guests set email = null where id = $1", [guestId]);
+    }
+  };
+
+  it("sends the code to the booking's own email, with none typed, and shows it masked", async () => {
+    await withEmail(EMAIL, () => withReceiver(async (seen) => {
+      await noCodes();
+      /* An address in the body is not read: there is nothing to type. */
+      const res = await asGuest(`/${link}/code`, "POST", { by: "email", email: "somebody@else.test" });
+      const text = await res.clone().text();
+      expect(res.status).toBe(200);
+      expect(JSON.parse(text)).toEqual({ sent: true, message: "We sent the code by email to A…@example.com." });
+
+      expect(seen).toHaveLength(1);
+      expect(seen[0]).toMatchObject({ channel: "email", kind: "guest-link-code" });
+      expect(seen[0]!.to.email, "the booking's whole address, never the one posted").toBe(EMAIL);
+      const code = seen[0]!.data["code"]!;
+      expect(code).toMatch(/^\d{6}$/);
+      expect(text, "the code is never in the answer").not.toContain(code);
+      expect(text, "nor the whole address").not.toContain(EMAIL);
+
+      const { rows } = await sql(
+        `select c.code_hash, c.sent_to from guest_link_codes c
+           join guest_links l on l.id = c.link_id
+          where l.reservation_id = $1 order by c.created_at desc`, [stayId]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].sent_to, "only the masked address is kept").toBe("A…@example.com");
+      expect(rows[0].code_hash, "the code is kept hashed").toHaveLength(64);
+
+      /* And it opens the same way as a code from WhatsApp. */
+      const right = await asGuest(`/${link}/verify`, "POST", { code });
+      expect(right.status, await right.clone().text()).toBe(200);
+      expect(((await right.json()) as { unlock?: string }).unlock).toBeTruthy();
+    }));
+  });
+
+  it("says Ask the desk, and issues nothing, for a booking with no email", async () => {
+    for (const email of [null, "not-an-address"]) {
+      await withEmail(email, () => withReceiver(async (seen) => {
+        forgetKnocksForTests();
+        await noCodes();
+        const res = await asGuest(`/${link}/code`, "POST", { by: "email" });
+        expect(res.status).toBe(200);
+        expect(((await res.json()) as { message: string }).message).toMatch(/no email address .* Ask the desk/);
+        expect(seen, "nothing sent").toHaveLength(0);
+        const { rows } = await sql(
+          `select 1 from guest_link_codes c join guest_links l on l.id = c.link_id
+            where l.reservation_id = $1`, [stayId]);
+        expect(rows, "a code nobody can receive is not issued").toHaveLength(0);
+      }));
+    }
+  });
+
+  it("tells a booking's link its email masked, and nothing where there is none", async () => {
+    const opened = async () => (await asGuest(`/${link}`)).text();
+    expect(JSON.parse(await opened()).emailHint, "no email on the booking").toBeNull();
+    await withEmail(EMAIL, async () => {
+      const text = await opened();
+      expect(JSON.parse(text).emailHint).toBe("A…@example.com");
+      expect(text, "never the whole address before the code").not.toContain(EMAIL);
+    });
+  });
+
+  it("is dead after five wrong answers, like a code that went on WhatsApp", async () => {
+    await withEmail(EMAIL, () => withReceiver(async (seen) => {
+      await noCodes();
+      await asGuest(`/${link}/code`, "POST", { by: "email" });
+      const code = seen[0]!.data["code"]!;
+      const wrong = code === "000000" ? "000001" : "000000";
+      for (let i = 0; i < 5; i += 1) {
+        expect((await asGuest(`/${link}/verify`, "POST", { code: wrong })).status).toBe(401);
+      }
+      expect((await asGuest(`/${link}/verify`, "POST", { code })).status, "five wrong and it is dead").toBe(401);
+    }));
   });
 
   /* The development-only switch (D27-105): the code in the answer, sent to
@@ -337,9 +531,9 @@ describe("the six digits that prove it is that guest", () => {
     const server = createServer((_req, res) => { res.writeHead(200).end("ok"); });
     await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
     const port = (server.address() as { port: number }).port;
-    process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${port}/pms-send`;
+    process.env["CRS_N8N_URL"] = `http://127.0.0.1:${port}/pms-send`;
     process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
-    process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = "only-this-test-run-knows-this";
+    process.env["CRS_N8N_SECRET"] = "only-this-test-run-knows-this";
 
     try {
       await sql("delete from guest_link_codes where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
@@ -420,5 +614,110 @@ describe("the six digits that prove it is that guest", () => {
     const { rows } = await sql(
       "select verified_at is null as unverified from guest_links where token_hash = encode(digest($1,'sha256'),'hex')", [link]);
     expect(rows[0].unverified).toBe(true);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   CONTINUE WITH GOOGLE (D27-207)
+
+   Google is stood in for by a key made in this run: the library's own
+   check (signature, aud, iss, exp) runs untouched against that key in
+   place of Google's published ones - the one call that would leave this
+   machine. Every answer below is signed here; none is a real account.
+   ══════════════════════════════════════════════════════════════════ */
+describe("Continue with Google (D27-207)", () => {
+  const CLIENT = "made-up-client.apps.googleusercontent.test";
+  const BOOKED = "asha.gdr@example.com";
+  const ours = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const somebodyElses = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const b64 = (v: unknown) => Buffer.from(JSON.stringify(v)).toString("base64url");
+  const now = () => Math.floor(Date.now() / 1000);
+
+  /** Google's answer, as Google shapes it, signed with this run's key. */
+  const answer = (over: Record<string, unknown> = {}, key = ours.privateKey, signed = true) => {
+    const head = b64({ alg: signed ? "RS256" : "none", kid: "this-run", typ: "JWT" });
+    const body = b64({
+      iss: "https://accounts.google.com", aud: CLIENT, sub: "1234567890",
+      email: BOOKED, email_verified: true, iat: now() - 5, exp: now() + 3600, ...over,
+    });
+    const signature = signed
+      ? createSign("RSA-SHA256").update(`${head}.${body}`).sign(key).toString("base64url") : "";
+    return `${head}.${body}.${signature}`;
+  };
+  const withGoogle = (credential: unknown) => asGuest(`/${link}/google`, "POST", { credential });
+  const unlocks = async () => Number((await sql(
+    `select count(*) as n from guest_unlocks u join guest_links l on l.id = u.link_id
+      where l.reservation_id = $1`, [stayId])).rows[0].n);
+
+  beforeAll(async () => {
+    vi.spyOn(OAuth2Client.prototype, "getFederatedSignonCertsAsync").mockResolvedValue({
+      certs: { "this-run": ours.publicKey.export({ type: "spki", format: "pem" }) as string },
+      format: "PEM",
+    } as never);
+    await sql("update guests set email = $2 where id = $1", [guestId, BOOKED]);
+  });
+  beforeEach(() => { process.env["GOOGLE_CLIENT_ID"] = CLIENT; });
+  afterAll(async () => {
+    delete process.env["GOOGLE_CLIENT_ID"];
+    vi.restoreAllMocks();
+    await sql("delete from guest_unlocks where link_id in (select id from guest_links where reservation_id = $1)", [stayId]);
+    await sql("update guests set email = null where id = $1", [guestId]);
+  });
+
+  it("unlocks this phone when the address Google vouches for is the booking's, whatever its letter case", async () => {
+    const res = await withGoogle(answer({ email: "Asha.GDR@Example.com" }));
+    expect(res.status, await res.clone().text()).toBe(200);
+    const body = (await res.json()) as { verified: boolean; unlock: string };
+    expect(body.verified).toBe(true);
+
+    /* The same unlock as a right code: it opens what is behind the code,
+       and only its hash is kept. */
+    const behind = await app.request(`/api/guest/${link}/details`, {
+      headers: { authorization: `Guest ${body.unlock}` } });
+    expect(behind.status).toBe(200);
+    const { rows } = await sql("select 1 from guest_unlocks where unlock_hash = $1", [body.unlock]);
+    expect(rows, "never the unlock itself").toHaveLength(0);
+  });
+
+  it.each([
+    ["another address", () => answer({ email: "somebody.else@example.com" })],
+    ["an address Google has not verified", () => answer({ email_verified: false })],
+    ["an answer made for another system", () => answer({ aud: "another-client.apps.googleusercontent.test" })],
+    ["an answer Google did not issue", () => answer({ iss: "https://accounts.example.test" })],
+    /* Expired, and still under ten minutes old: the expiry alone refuses it. */
+    ["an expired answer", () => answer({ iat: now() - 500, exp: now() - 400 })],
+    ["an answer older than ten minutes", () => answer({ iat: now() - 700 })],
+    ["an answer signed by somebody else", () => answer({}, somebodyElses.privateKey)],
+    ["an unsigned answer", () => answer({}, ours.privateKey, false)],
+    ["something that is not an answer at all", () => "not.a.token"],
+  ])("refuses %s, in one sentence, and unlocks nothing", async (_what, make) => {
+    const before = await unlocks();
+    const res = await withGoogle(make());
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({
+      verified: false,
+      error: "That Google account is not the one on this booking. "
+        + "Use the email the booking was made with, or ask for a code.",
+    });
+    expect(await unlocks(), "nothing unlocked").toBe(before);
+  });
+
+  it("refuses the right account on a link that is not this booking's", async () => {
+    const res = await asGuest("/no-such-link/google", "POST", { credential: answer() });
+    expect(res.status).toBe(401);
+    expect(((await res.json()) as { unlock?: string }).unlock).toBeUndefined();
+  });
+
+  it("is not offered, and answers like an unknown link, until the server has its client id", async () => {
+    const opened = async () => ((await (await asGuest(`/${link}`)).json()) as { googleClientId: string | null }).googleClientId;
+    expect(await opened()).toBe(CLIENT);
+
+    delete process.env["GOOGLE_CLIENT_ID"];
+    expect(await opened()).toBeNull();
+    const before = await unlocks();
+    const res = await withGoogle(answer());
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "This link is not usable. Ask the desk for a new one." });
+    expect(await unlocks()).toBe(before);
   });
 });

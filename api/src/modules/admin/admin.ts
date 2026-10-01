@@ -324,6 +324,11 @@ admin.get("/admin/hotels/:code", async (c) => {
       phone: string | null; email: string | null; address_line: string | null;
       is_active: boolean; rooms: string; room_types: string | null;
       checked_in: string; fssai_number: string | null;
+      address_line_2: string | null; pin: string | null; website: string | null;
+      pan: string | null; reservations_phone: string | null;
+      property_type: string | null; star_rating: number | null;
+      latitude: string | null; longitude: string | null;
+      reservations_contact: string | null; house_policies: string[];
     }>(
       `select h.id::text, h.code, h.name, h.city, h.state, h.gstin,
               h.phone, h.email::text, h.address_line, h.is_active,
@@ -335,7 +340,11 @@ admin.get("/admin/hotels/:code", async (c) => {
               (select count(*) from reservations res
                 where res.hotel_id = h.id
                   and res.status = 'checked_in')::text as checked_in,
-              h.fssai_number
+              h.fssai_number,
+              h.address_line_2, h.pin, h.website, h.pan, h.reservations_phone,
+              h.property_type, h.star_rating,
+              h.latitude::text, h.longitude::text,
+              h.reservations_contact, h.house_policies
          from hotels h where h.id = $1`, [hotelId]);
 
     /* Everyone rostered HERE, whatever else they can reach. The
@@ -374,6 +383,13 @@ admin.get("/admin/hotels/:code", async (c) => {
         roomTypes: (h.room_types ?? "").split(", ").filter(Boolean),
         checkedIn: Number(h.checked_in),
         fssaiNumber: h.fssai_number,
+        /* The profile (D27-214, migration 168): null is "nobody has said". */
+        addressLine2: h.address_line_2, pin: h.pin, website: h.website,
+        pan: h.pan, reservationsPhone: h.reservations_phone,
+        propertyType: h.property_type, starRating: h.star_rating,
+        latitude: h.latitude, longitude: h.longitude,
+        /* What the voucher prints (D27-215, migration 169). */
+        reservationsContact: h.reservations_contact, housePolicies: h.house_policies,
       },
       staff: staff.map((r) => ({
         id: r.id, name: r.name, email: r.email, role: r.role,
@@ -417,6 +433,120 @@ admin.put("/hotels/:code/fssai", async (c) => {
     : c.json({ error: "No such property." }, 404);
 });
 
+/* ── The hotel's profile (the owner's D27-214, migration 168) ────────
+   The owner's list of property types: a word here and in the table's
+   constraint, its label on the screen. */
+const PROPERTY_TYPES = ["hotel", "resort", "boutique_hotel", "heritage_hotel", "homestay",
+  "villa", "serviced_apartment", "guest_house", "other"];
+
+/** The profile fields that were SENT, as column and value, or the sentence
+    that refuses one. Unlike the seven older fields, a key sent blank CLEARS
+    the value (a wrong website must be removable); a key not sent is left
+    alone. The table's constraints say the same, without the words. */
+function profileFields(input: Record<string, unknown>):
+  { set: Record<string, string | number | string[] | null> } | { reason: string } {
+  const set: Record<string, string | number | string[] | null> = {};
+  const sent = (key: string): string | undefined => {
+    const v = input[key];
+    return v === undefined ? undefined : v === null ? "" : String(v).trim();
+  };
+
+  const line2 = sent("addressLine2");
+  if (line2 !== undefined) set["address_line_2"] = line2 || null;
+
+  const pin = sent("pin");
+  if (pin !== undefined) {
+    if (pin && !/^[1-9][0-9]{5}$/.test(pin)) {
+      return { reason: "A PIN code is six digits, and does not start with 0." };
+    }
+    set["pin"] = pin || null;
+  }
+
+  const pan = sent("pan")?.toUpperCase();
+  if (pan !== undefined) {
+    if (pan && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
+      return { reason: "A PAN is ten characters: five letters, four digits, then a letter." };
+    }
+    set["pan"] = pan || null;
+  }
+
+  const website = sent("website");
+  if (website !== undefined) {
+    if (website && !/^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(website)) {
+      return { reason: "A website is an address such as www.example.com." };
+    }
+    set["website"] = website || null;
+  }
+
+  const reservationsPhone = sent("reservationsPhone");
+  if (reservationsPhone !== undefined) set["reservations_phone"] = reservationsPhone || null;
+
+  /* Printed on the booking voucher as "Contact" (D27-215). */
+  const contact = sent("reservationsContact");
+  if (contact !== undefined) {
+    if (contact.length > 80) {
+      return { reason: `The reservations contact is ${contact.length} characters. The most is 80.` };
+    }
+    set["reservations_contact"] = contact || null;
+  }
+
+  /* The hotel's house policies, in its order, printed on the voucher after the
+     booking's own terms (D27-215). A list: a policy a line, blank lines
+     dropped. Eight of 200 characters at most - the voucher is one page. An
+     empty list is a hotel with none, and it stays so. */
+  if (input["housePolicies"] !== undefined) {
+    if (!Array.isArray(input["housePolicies"])) {
+      return { reason: "House policies are a list, one policy a line." };
+    }
+    const lines = input["housePolicies"].map((line) => String(line ?? "").trim()).filter(Boolean);
+    if (lines.length > 8) {
+      return { reason: `A hotel has at most 8 house policies. This is ${lines.length}.` };
+    }
+    const long = lines.findIndex((line) => line.length > 200);
+    if (long >= 0) {
+      return { reason: `House policy ${long + 1} is ${lines[long]!.length} characters. The most is 200.` };
+    }
+    set["house_policies"] = lines;
+  }
+
+  const type = sent("propertyType");
+  if (type !== undefined) {
+    if (type && !PROPERTY_TYPES.includes(type)) {
+      return { reason: "Pick the property type from the list." };
+    }
+    set["property_type"] = type || null;
+  }
+
+  const stars = sent("starRating");
+  if (stars !== undefined) {
+    if (stars && !/^[1-5]$/.test(stars)) {
+      return { reason: "Stars are a whole number from 1 to 5, or not set." };
+    }
+    set["star_rating"] = stars ? Number(stars) : null;
+  }
+
+  /* A map point is two figures or none. */
+  const latitude = sent("latitude");
+  const longitude = sent("longitude");
+  if (latitude !== undefined || longitude !== undefined) {
+    if (!latitude !== !longitude) {
+      return { reason: "A map point is both a latitude and a longitude, or neither." };
+    }
+    const within = (value: string, limit: number) =>
+      Number.isFinite(Number(value)) && Math.abs(Number(value)) <= limit;
+    if (latitude && !within(latitude, 90)) {
+      return { reason: "The latitude is a number between -90 and 90." };
+    }
+    if (longitude && !within(longitude, 180)) {
+      return { reason: "The longitude is a number between -180 and 180." };
+    }
+    set["latitude"] = latitude ? Number(latitude).toFixed(6) : null;
+    set["longitude"] = longitude ? Number(longitude).toFixed(6) : null;
+  }
+
+  return { set };
+}
+
 admin.patch("/admin/hotels/:code", async (c) => {
   type Body = {
     name?: string; city?: string; state?: string; gstin?: string;
@@ -425,16 +555,38 @@ admin.patch("/admin/hotels/:code", async (c) => {
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   const result = await withSession(c.get("subject"), async (client) => {
-    const denied = await requireGroupAdmin(client);
-    if (denied) return denied;
-
+    /* WHO (the owner's D27-213, D27-214): a group administrator, or the
+       owner, GM or Admin AT THIS HOTEL - app.manages_hotel, the same
+       question the row's write policy asks since 168. Asked before anything
+       else, so a person who may not is told so whichever hotel they named
+       (another hotel's GM cannot even see this one). Until 1 October only a
+       group administrator could, and a GM could not fix their own address. */
     const hotelId = await hotelFor(client, c.req.param("code"));
+    const { rows: who } = await client.query<{ manages: boolean; group_admin: boolean }>(
+      `select coalesce(app.manages_hotel($1), false) as manages,
+              app.is_group_admin() as group_admin`, [hotelId]);
+    if (!who[0]?.manages) {
+      return refuse(
+        "A hotel's details are changed by its owner, general manager or Admin, "
+        + "or by a group administrator. Ask one of them.");
+    }
     if (!hotelId) return null;
 
     const name = input.name?.trim();
     const city = input.city?.trim();
     if (name !== undefined && !name) {
       return refuse("A property needs a name.");
+    }
+    /* THE NAME STAYS THE GROUP OWNER'S, like the code (D27-214). The form
+       sends it back unchanged, which is fine; a different one is refused. */
+    if (name !== undefined && !who[0].group_admin) {
+      const { rows: now } = await client.query<{ name: string }>(
+        "select name from hotels where id = $1", [hotelId]);
+      if (now[0]?.name !== name) {
+        return refuse(
+          "The hotel's name is changed by the group's owner. Everything else "
+          + "here is yours to change.");
+      }
     }
     if (city !== undefined && !city) {
       return refuse("Which city is it in?");
@@ -456,6 +608,11 @@ admin.patch("/admin/hotels/:code", async (c) => {
       );
     }
 
+    const profile = profileFields(input as Record<string, unknown>);
+    if ("reason" in profile) return refuse(profile.reason);
+    /* The column names are this file's own (profileFields), never the caller's. */
+    const columns = Object.keys(profile.set);
+
     const updated = await client.query(
       `update hotels set
          name         = coalesce($2, name),
@@ -465,11 +622,13 @@ admin.patch("/admin/hotels/:code", async (c) => {
          phone        = coalesce($6, phone),
          email        = coalesce($7, email),
          address_line = coalesce($8, address_line)
+         ${columns.map((column, i) => `, ${column} = $${9 + i}`).join("")}
        where id = $1`,
       [hotelId, name ?? null, city ?? null,
        input.state?.trim() || null, gstin || null,
        input.phone?.trim() || null, input.email?.trim() || null,
-       input.addressLine?.trim() || null],
+       input.addressLine?.trim() || null,
+       ...columns.map((column) => profile.set[column])],
     );
     const nothing = changedOrRefuse(
       updated.rowCount, "that property is not one you can write to");

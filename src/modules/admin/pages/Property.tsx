@@ -313,7 +313,7 @@ const label = (role: string) => ROLE_LABELS[role as Role] ?? role;
    stay's tax invoice that carries food; a dash until typed. Offered to the
    owner, an administrator and the GM - who the server lets set it (the
    role gate's room-setup grant). */
-function FssaiCard({ code, value, onSaved }: {
+export function FssaiCard({ code, value, onSaved }: {
   code: string; value: string | null; onSaved: () => void;
 }) {
   const mayEdit = can(useRole(), "edit", "room_config");
@@ -326,7 +326,7 @@ function FssaiCard({ code, value, onSaved }: {
     onSaved();
   };
   return (
-    <Card className="mb-5">
+    <Card>
       <CardBody className="flex flex-wrap items-end gap-3">
         {typed === null ? (
           <>

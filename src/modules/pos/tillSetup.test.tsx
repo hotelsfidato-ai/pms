@@ -103,6 +103,13 @@ describe("the ready-to-open list", () => {
     expect(await screen.findByText("Every dish has one")).toBeTruthy();
     expect(screen.getAllByLabelText("Done")).toHaveLength(6);
   });
+
+  it("sends GST and the module switch to their Settings tab (D27-213)", async () => {
+    renderSetup([dish("Dal Tadka", 5)]);
+    await screen.findByText("Every dish has one");
+    expect(screen.getAllByRole("link", { name: "Open Settings" }).map((a) => a.getAttribute("href")))
+      .toEqual(["/settings/taxes-and-billing", "/settings/modules-and-connections"]);
+  });
 });
 
 describe("an empty Tables screen", () => {

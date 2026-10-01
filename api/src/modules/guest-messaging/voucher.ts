@@ -5,6 +5,7 @@ import {
   channelFor, claimTurn, dueFromDatabase, linkFromDatabase, messageFor, withVoucher, KIND, LIMITS,
   type Due,
 } from "./jobs.ts";
+import { voucherFile } from "./voucherDocument.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    SEND VOUCHER - the booking confirmation, now, from the desk (D27-35)
@@ -143,4 +144,36 @@ voucher.post("/:code/stays/:id/checkin-link", async (c) => {
 
   if (!result) return c.json({ error: "No such booking." }, 404);
   return c.json(result, result.ok ? 200 : 409);
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   VIEW VOUCHER - the same PDF, to look at, print or save (D27-187)
+
+   The one the confirmation carries (voucherFile), about the group's lead as
+   Send voucher's is, and it sends nothing. Read under the clerk's session
+   first: the voucher's facts come through a definer (158), so a booking this
+   person cannot see is "No such booking." before it is ever drawn. Only a
+   confirmed booking has a voucher (app.guest_voucher).
+   ══════════════════════════════════════════════════════════════════ */
+const AN_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+voucher.get("/:code/stays/:id/voucher.pdf", async (c) => {
+  if (!AN_ID.test(c.req.param("id"))) return c.json({ error: "No such booking." }, 404);
+  const file = await withSession(c.get("subject"), async (client) => {
+    const { rows } = await client.query<{ lead: string }>(
+      `select coalesce(app.group_lead(r.group_id), r.id)::text as lead
+         from reservations r join hotels h on h.id = r.hotel_id
+        where r.id = $1 and h.code = $2`,
+      [c.req.param("id"), c.req.param("code").toUpperCase()]);
+    if (!rows[0]) return null;
+    return (await voucherFile(client, rows[0].lead)) ?? ("none" as const);
+  });
+  if (!file) return c.json({ error: "No such booking." }, 404);
+  if (file === "none") {
+    return c.json({ error: "Only a confirmed booking has a voucher." }, 409);
+  }
+  return c.body(file.bytes, 200, {
+    "content-type": file.contentType,
+    "content-disposition": `inline; filename="${file.name}"`,
+  });
 });

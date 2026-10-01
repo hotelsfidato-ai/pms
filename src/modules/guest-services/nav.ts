@@ -1,13 +1,13 @@
 import { ConciergeBell } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
-import { seesComingSoon } from "@/lib/permissions";
+import { REQUEST_ROLES } from "@/modules/guest-services/requestRoles";
 
-/* Guest services — not built. Its page sits at the foot of the Front desk,
-   marked "Not built yet" (D27-87), for the owner, admins and general managers
-   only; reception's menu is unchanged. Assembled by `navigation.ts`. When
-   the service is built its real screens take its place and the mark goes. */
+/* In the Front desk section, in the working menus of reception, housekeeping,
+   the kitchen and the restaurant (D27-181). Assembled by `navigation.ts`. */
 export const nav: ServiceNavEntry[] = [
-  { section: "front-desk", order: 90, notBuilt: true,
-    label: "Guest services", to: "/coming-soon/guest-services", icon: ConciergeBell, resource: "integration",
-    canSee: seesComingSoon, keywords: ["requests", "wake-up call", "lost and found", "concierge", "tasks"] },
+  { section: "front-desk", order: 90,
+    workingMenus: ["front_desk", "housekeeping", "kitchen_manager", "chef", "pos"],
+    label: "Guest requests", to: "/h/:code/requests", icon: ConciergeBell, resource: "reservation",
+    canSee: (role) => REQUEST_ROLES.includes(role),
+    keywords: ["requests", "towels", "room service", "something broken", "concierge", "tasks"] },
 ];

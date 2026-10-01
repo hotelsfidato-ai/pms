@@ -3,49 +3,12 @@ import { withSession } from "../../auth.ts";
 import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
 import { POSTING_NIGHTS } from "../reports/index.ts";
+import { roomNightsDue, postRoomNight } from "./roomNight.ts";
 import { struckAfterKitchen } from "../pos/index.ts";
 
-/** The stays tonight's run charges a room night for, as SQL over `r` with
-    $1 the hotel and $2 the night; the run then skips the complimentary ones.
-    One text for the run and the checklist's count (QA NA-5: the checklist
-    counted every stay in house and the run then posted none). */
-export const POSTS_TONIGHT = `
-          r.hotel_id = $1
-          and r.status = 'checked_in'
-          /* AN OPEN FOLIO, ASKED - NOT JOINED (28 September, the release
-             review). A join to every open folio gave a stay with a second
-             folio (a split bill) two rows, the "not exists" below ran for
-             both before either insert, and the night was charged twice.
-             Where the charge goes is folio_for_room_charge's answer. */
-          and exists (select 1 from folios f
-                       where f.reservation_id = r.id and f.status = 'open')
-          -- A day-use room is sold and vacated inside one day. It has
-          -- no night to charge for.
-          and not r.is_day_use
-          /* Not already charged for tonight. This is what makes an
-             interrupted audit safe to restart: the charge is the thing
-             that must not happen twice, so the check is on the charge,
-             not on the run.
-
-             PER STAY, NOT PER FOLIO. It used to ask whether the folio
-             held a room charge for tonight, which is identical while
-             every stay has its own folio - and silently wrong the moment
-             a group routes twelve rooms to one master: charge the first,
-             skip the other eleven, every night, and the run's summary
-             reports what it posted so nothing looks amiss.
-
-             AND NOT ONLY A LINE DATED TONIGHT (D24-14). A walk-in posts
-             its whole stay on arrival, "Room 201 · 2 nights" (D17-33), and
-             this asked only for a line dated tonight - so every night
-             after the first was charged twice. A line counts for every
-             night it pays for, read the way the reports read it. */
-          and not exists (
-            select 1 from folio_postings fp
-             where fp.reservation_id = r.id
-               and fp.category = 'room'
-               and fp.business_date <= $2::date
-               and fp.business_date + ${POSTING_NIGHTS} > $2::date
-          )`;
+/* Who is charged for a night, what the charge is and the insert that writes
+   it are in roomNight.ts, which check-in calls too (D27-204). */
+export { POSTS_TONIGHT } from "./roomNight.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE NIGHT AUDIT — closing a day
@@ -190,7 +153,7 @@ export async function blockersFor(
       id: "no-tax-rule",
       reason:
         "This property has no GST rule for rooms, so a room charge has no " +
-        "rate to carry. Set it in the GST card, under Rooms and rates → Room types or Finance → Invoices. A missing rate is not " +
+        "rate to carry. Set it in the GST card, under Settings → Taxes and billing or Finance → Invoices. A missing rate is not " +
         "zero - the audit will not invent one.",
       rooms: [],
     });
@@ -388,60 +351,7 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
        writes it, so the amount and the rate cannot drift apart. */
 
     /* ── One night's room charge, per in-house stay ────────────────── */
-    const { rows: stays } = await client.query<{
-      reservation_id: string; folio_id: string; room: string;
-      rate: string; comp: boolean; routed: boolean;
-    }>(
-      `select r.id::text as reservation_id,
-              /* WHERE THE CHARGE GOES, in one definition. A stay routed to
-                 its group posts to the master folio; everything else posts
-                 to its own. */
-              app.folio_for_room_charge(r.id)::text as folio_id,
-              coalesce(a.number, '-') as room,
-              r.agreed_rate::text as rate,
-              r.is_complimentary as comp,
-              (r.route_room_to_group and r.group_id is not null) as routed
-         from reservations r
-         /* THE ROOM THIS STAY IS IN **TONIGHT**, and exactly one of them.
-
-            ⚠ THIS WAS A PLAIN LEFT JOIN ON "released_at is null", WITH NO
-            DATE, AND IT POSTED THE NIGHT TWICE.
-
-            A room move does not release anything. It is modelled as two
-            live assignments over adjoining half-open ranges - 302 for
-            [5 Sep, 6 Sep), then 303 for [6 Sep, 10 Sep) - because both
-            are true, on different nights. "released_at is null" is true
-            of both, so one stay came back as TWO rows, the "not exists"
-            guard below was evaluated once per row before either insert,
-            and the loop inserted a room charge for each.
-
-            One guest, one night, charged twice, every night for the rest
-            of the stay. It was invisible here only because the one moved
-            stay at Akkalkot happens to be complimentary, so the loop
-            skips before posting and the miscount surfaced as
-            "complimentary: 2" for a property with one complimentary
-            room. Make that guest a paying one and it is money.
-
-            The predicate is the half-open range this schema uses
-            everywhere: "from <= D < to". LATERAL with "limit 1" on top,
-            because a query that posts money must not depend on the data
-            never producing an overlap - belt and braces are cheap here
-            and a double charge on a guest's bill is not. */
-         left join lateral (
-           select rm.number
-             from room_assignments ra
-             join rooms rm on rm.id = ra.room_id
-            where ra.reservation_id = r.id
-              and ra.released_at is null
-              and ra.from_date <= $2::date
-              and (ra.to_date is null or ra.to_date > $2::date)
-            order by ra.from_date desc
-            limit 1
-         ) a on true
-        where ${POSTS_TONIGHT}
-        order by a.number`,
-      [hotelId, businessDate],
-    );
+    const stays = await roomNightsDue(client, hotelId, businessDate);
 
     let roomsPosted = 0;
     let revenuePosted = 0;
@@ -459,26 +369,7 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
         continue;
       }
 
-      const amount = Number(stay.rate);
-
-      await client.query(
-        /* The rate and the tax it produces are BOTH derived here, from
-           this room's own charge. Computing the rate in TypeScript and
-           the amount in SQL is how the two stop agreeing. */
-        `insert into folio_postings
-           (hotel_id, folio_id, reservation_id, business_date, category,
-            description, amount, tax_rate, tax_amount, source_type, posted_by)
-         select $1::uuid, $2::uuid, $3::uuid, $4::date, 'room',
-                $5::text, $6::numeric,
-                t.rate, round($6::numeric * t.rate / 100.0, 2),
-                'night_audit', app.current_user_id()
-           from (select app.gst_rate($1, 'room', $6::numeric) as rate) t`,
-        [hotelId, stay.folio_id, stay.reservation_id, businessDate,
-         /* The room number is on every line, and it has to be: a master
-            folio holding twelve of these is unreadable otherwise. */
-         `Room ${stay.room} · 1 night`,
-         amount],
-      );
+      const amount = await postRoomNight(client, hotelId, businessDate, stay, "night_audit");
 
       roomsPosted += 1;
       revenuePosted += amount;
@@ -839,8 +730,10 @@ const CORRECTABLE = `
   and fp.category not in ('payment', 'refund', 'discount', 'tax')
   and not exists (select 1 from folio_postings rev where rev.reverses_id = fp.id)`;
 
-/** Where the line first came from, through any corrections of it (139). */
-const ORIGIN = `(case when fp.source_type = 'correction'
+/** Where the line first came from, through any corrections of it (139).
+    Finance's postings route reads it too: a corrected early check-in fee is
+    still the room's on the bill (D27-223). */
+export const ORIGIN = `(case when fp.source_type = 'correction'
   then (select c.origin from closed_day_corrections c where c.id = fp.source_id)
   else fp.source_type end)`;
 
@@ -1002,7 +895,7 @@ export async function correctClosedCharge(
     );
     if (rows[0]?.rate == null) {
       return refuse(
-        "This property has no GST rule for rooms. Set it under Rooms and rates → Room types, "
+        "This property has no GST rule for rooms. Set it under Settings → Taxes and billing, "
         + "in the GST card. A missing rate is not zero.");
     }
     rate = Number(rows[0].rate);

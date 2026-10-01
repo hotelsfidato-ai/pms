@@ -171,8 +171,8 @@ export default function StayViewPage({ view }: {
   /* The question the server's gate asks of "Assign room" (roleGate's
      ROOMING: reservation edit, nobody added by name), from the same matrix.
      Housekeeping read Rooms and are refused it, so they are not offered it
-     (D24-18). A free tile and an empty Calendar cell open the walk-in, which
-     roleGate's WALK_IN asks as reservation create (D24-27). */
+     (D24-18). A free tile and an empty Calendar cell open the walk-in, whose
+     booking roleGate's BOOK asks as reservation create (D24-27). */
   const role = useRole();
   const mayRoom = can(role, "edit", "reservation");
   const mayBook = can(role, "create", "reservation");

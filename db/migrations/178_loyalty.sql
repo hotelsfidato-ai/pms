@@ -1,7 +1,7 @@
 -- =============================================================================
--- 174 · Loyalty: members, their points, and points taken off a bill
+-- 178 · Loyalty: members, their points, and points taken off a bill
 -- =============================================================================
--- Numbered 174 for now (the master's number for this lane, 30 September); the
+-- Numbered 178 for now (the master's number for this lane, 2 October; first 174); the
 -- master settles it at merge. Refer to this file by what it does - "loyalty" -
 -- never by its number.
 --

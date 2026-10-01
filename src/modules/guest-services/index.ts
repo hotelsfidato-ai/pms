@@ -1,6 +1,5 @@
-/* Guest services — NOT BUILT. A Coming soon page only (the owner's decision,
-   16 September): `pages/GuestServices.tsx`, its menu entry (`nav.ts`) and its address
-   (`routes.tsx`). No other service uses anything from here yet, so this
-   front door exports nothing. What the service will be, and what it needs,
-   is in MODULE.md beside this file. */
+/* Guest services' front door: in-stay requests (D27-178, D27-181). Nothing
+   outside this folder uses anything from here yet, so it exports nothing;
+   the screen, its menu entry and its address are `pages/`, `nav.ts` and
+   `routes.tsx`, and the server's is api/src/modules/guest-services. */
 export {};

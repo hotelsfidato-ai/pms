@@ -106,6 +106,13 @@ for f in "$ROOT"/db/migrations/*.sql; do
     exit 1
   fi
 done
+# As db/migrate.sh does: every run ends with 014's ownership (db/ownership.sql),
+# so the tests run in the state a deploy leaves, not a mixed one.
+if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 -f "$ROOT/db/ownership.sql" 2>&1); then
+  red "  x ownership.sql failed"
+  echo "$out" | grep -m1 "ERROR" | sed 's/^/      /'
+  exit 1
+fi
 dim "   $(ls "$ROOT"/db/migrations/*.sql | wc -l | tr -d ' ') migrations applied"
 
 # THE DEMO STAFF COME FROM THE SUITE, not from a migration. `load-demo` grants

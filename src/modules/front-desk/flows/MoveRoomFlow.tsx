@@ -27,7 +27,10 @@ import type { Stay } from "@/data/repositories";
    it usually should change too, so the field appears — but it is
    empty, it is optional, and it is described as applying from
    tonight, because that is what it does: the audit charges one night
-   at a time, so it can only ever reach nights not yet posted.
+   at a time, so it can only ever reach nights not yet posted. On the
+   arrival day tonight IS posted, at check-in (D27-204): the server puts
+   that one line right to the new rate as part of the move (D27-205), so
+   "from tonight" holds on every day.
 
    WHY THEY MOVED IS RECORDED. `reason` already allowed move,
    upgrade, downgrade, fault and group_consolidation before this
@@ -227,8 +230,8 @@ export function MoveRoomFlow({
             {/* Said plainly, because it is the question a clerk will
                 otherwise ask a manager, and the manager will guess. */}
             <p className="text-sm text-grey-600 leading-relaxed">
-              Moving rooms changes no charge on its own. Nights already
-              posted stay as they are - the guest slept in{" "}
+              Moving rooms changes no charge on its own. Nights before
+              tonight stay as they are - the guest slept in{" "}
               {stay.roomNumber || "that room"} for them. A new rate applies
               from tonight forward; to change a night already billed, adjust
               it on the folio so there is a reason beside it.

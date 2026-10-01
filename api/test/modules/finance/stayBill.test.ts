@@ -143,4 +143,30 @@ describe("the bill as it stands", () => {
       { headers: { "x-dev-staff-id": "dev-pune" } });
     expect(outsider.status).toBe(404);
   });
+
+  /* D27-200: the bill is drawn in sections, Bar by its VAT. Every line says
+     what it was billed under - on the bill (app.stay_bill, 166) and on the
+     Bill tab's own read - or a VAT line and a GST line at one rate look alike. */
+  it("says each line's tax scheme, on the bill and on the Bill tab's lines", async () => {
+    /* A stay with a charge on its bill (the first guest in house may have none). */
+    const { rows } = await sql(
+      `select r.id::text as stay
+         from reservations r join hotels h on h.id = r.hotel_id
+         join folios f on f.reservation_id = r.id
+         join folio_postings fp on fp.folio_id = f.id
+        where h.code = '5EL' and fp.category = 'room' and fp.reverses_id is null
+          and not exists (select 1 from folio_postings x where x.reverses_id = fp.id)
+        limit 1`);
+    const stay = rows[0] as { stay: string } | undefined;
+    const headers = { "x-dev-staff-id": "dev-owner" };
+    const bill = (await (await app.request(`/api/hotels/5EL/stays/${stay!.stay}/bill`, { headers }))
+      .json()) as { lines: { scheme?: string }[] };
+    expect(bill.lines.length).toBeGreaterThan(0);
+    expect(bill.lines.map((l) => l.scheme).every((x) => x === "gst" || x === "vat")).toBe(true);
+
+    const lines = (await (await app.request(`/api/hotels/5EL/stays/${stay!.stay}/postings`, { headers }))
+      .json()) as { scheme?: string; rate?: number | null }[];
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines.every((l) => (l.scheme === "gst" || l.scheme === "vat") && "rate" in l)).toBe(true);
+  });
 });

@@ -7,47 +7,7 @@ import { write } from "@/data/repositories/http";
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md); the code is
    unchanged. */
 
-/* ── Rates — what a room costs ────────────────────────────────────── */
-
-export interface RateRoomType {
-  id: string;
-  code: string;
-  name: string;
-  /** NULL until the hotel sets one. Never 0 — see migration 032. */
-  rackRate: number | null;
-  maxOccupancy: number;
-  rooms: number;
-}
-
-export interface RateRule {
-  id: string;
-  roomTypeId: string;
-  roomType: string;
-  mealPlan: string;
-  price: number;
-  from: string;
-  /** null is open-ended, which is what a rack rate is. */
-  to: string | null;
-  label: string | null;
-  setBy: string | null;
-  isCurrent: boolean;
-}
-
-export interface RatesBoard {
-  businessDate: string;
-  roomTypes: RateRoomType[];
-  mealPlans: { code: string; name: string; includes: string }[];
-  rates: RateRule[];
-}
-
-export async function getRates(hotelId: string): Promise<RatesBoard | null> {
-  if (!hotelId) return null;
-  try {
-    return await api<RatesBoard>(`/api/hotels/${hotelId}/rate-plans`);
-  } catch {
-    return null;
-  }
-}
+/* ── Clearing an older price (the Rates screen, D27-194) ──────────── */
 
 export async function setRackRate(
   hotelId: string, roomTypeId: string, rate: number | null, free = false,
@@ -65,16 +25,6 @@ export async function setRackRate(
     }
     throw error;
   }
-}
-
-export function addRate(
-  hotelId: string,
-  input: {
-    roomTypeId: string; mealPlan: string; price: number;
-    from: string; to?: string | null; label?: string; free?: boolean;
-  },
-): Promise<AdminResult<{ roomType: string }>> {
-  return write(`/api/hotels/${hotelId}/rate-plans`, input);
 }
 
 export async function removeRate(

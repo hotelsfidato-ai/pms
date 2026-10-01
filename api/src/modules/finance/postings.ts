@@ -4,7 +4,10 @@ import type { Client } from "../../db.ts";
 import { resolveDate } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
 import { inr } from "../../reportRender.ts";
+import { roomRateBeforeGst } from "./tax.ts";
+import { PAYMENT_METHOD } from "./paymentMethods.ts";
 import { overCashLimit, panFor } from "./cashLimit.ts";
+import { openOwnDrawer } from "./cashier.ts";
 import { FOLIO_SELECT, STANDING_INVOICE, folioBalance } from "./folios.ts";
 import { POSTING_NIGHTS } from "../reports/index.ts";
 /* A closed day's charge is put right by the night audit's one correction
@@ -70,12 +73,6 @@ const CATEGORY: Record<string, string> = {
   Discount: "discount", Payment: "payment", Refund: "refund",
 };
 
-const PAYMENT_METHOD: Record<string, string> = {
-  Cash: "cash", UPI: "upi", "Credit Card": "card", "Debit Card": "card",
-  "Net Banking": "netbanking", Wallet: "wallet", Cheque: "cheque",
-  "Bank Transfer": "bank_transfer", "Bill to company": "city_ledger",
-  "Room Posting": "city_ledger",
-};
 
 /* ── Post a charge ───────────────────────────────────────────────── */
 
@@ -169,6 +166,12 @@ export async function postFolioCharge(
 async function chargeRefused(
   client: Client, hotelId: string, input: ChargeToPost,
 ): Promise<string | null> {
+  /* MONEY IN OR OUT IS NOT A CHARGE (the review of 1 October): a "Payment"
+     here wrote a payment line with no payment record and no drawer, and a
+     "Refund" one with GST on it. No screen sends either; a direct call did. */
+  const category = CATEGORY[input.category ?? "Miscellaneous"];
+  if (category === "payment") return "Take a payment through Payments.";
+  if (category === "refund") return "A refund is not a charge. Reverse the payment it gives back.";
   const description = input.description?.trim();
   if (!description) return "A charge needs a description.";
   if (!input.amount) return "A charge of zero is not a charge.";
@@ -213,7 +216,7 @@ async function chargeRefused(
       [hotelId, taxKind, amount],
     );
     if (rate[0]?.rate === null || rate[0]?.rate === undefined) {
-      return `This property has no GST rule for ${taxKind}. Set it in the GST card, under Rooms and rates → Room types or Finance → Invoices. `
+      return `This property has no GST rule for ${taxKind}. Set it in the GST card, under Settings → Taxes and billing or Finance → Invoices. `
            + "A missing rate is not zero - nothing is billed until somebody sets it.";
     }
   }
@@ -320,8 +323,11 @@ export async function reverseFolioCharge(
   client: Client, hotelId: string, postingId: string, reason: string | undefined,
   within: { reservationId: string } | { folioId: string },
 ): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  /* A stay's line: on its own bill, or its own room night on its group's
+     (D27-204 posts a routed room's first night there on an open day). */
   const [column, value] = "folioId" in within
-    ? ["f.id", within.folioId] : ["f.reservation_id", within.reservationId];
+    ? ["f.id", within.folioId]
+    : ["coalesce(f.reservation_id, fp.reservation_id)", within.reservationId];
   const { rows } = await client.query<{
     id: string; folio_id: string; business_date: string; category: string;
     description: string; amount: string; tax_rate: string; tax_amount: string;
@@ -477,7 +483,8 @@ export async function editFolioCharge(
               order by v.issued_at desc limit 1) as vat_bill
        from folio_postings fp
        join folios f on f.id = fp.folio_id
-      where f.hotel_id = $1 and f.reservation_id = $2 and fp.id = $3::bigint`,
+      where f.hotel_id = $1 and coalesce(f.reservation_id, fp.reservation_id) = $2
+        and fp.id = $3::bigint`,
     [hotelId, within.reservationId, postingId],
   );
   const p = rows[0];
@@ -505,7 +512,7 @@ export async function editFolioCharge(
       [hotelId, Math.round((amount / p.nights) * 100) / 100],
     );
     if (slab[0]?.rate == null) {
-      return no("This property has no GST rule for rooms. Set it under Rooms and rates → Room types, "
+      return no("This property has no GST rule for rooms. Set it under Settings → Taxes and billing, "
         + "in the GST card. A missing rate is not zero.");
     }
     rate = Number(slab[0].rate);
@@ -530,12 +537,24 @@ export async function editFolioCharge(
 /* ── Change the stay's rate ──────────────────────────────────────── */
 
 postings.post("/:code/stays/:id/rate", async (c) => {
-  const body = (await c.req.json().catch(() => ({}))) as { rate?: unknown; reason?: unknown };
+  const body = (await c.req.json().catch(() => ({}))) as {
+    rate?: unknown; reason?: unknown; includesGst?: unknown;
+  };
   const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    /* "Includes GST" (D27-199): the typed figure is split as the booking's is
+       (the slab gap refused, the nearest total not above it) before it is kept. */
+    const typed = Number(body.rate);
+    let rate = typed;
+    if (body.includesGst === true) {
+      const split = await roomRateBeforeGst(client, hotelId, typed);
+      if (!split.ok) return refuse(split.reason);
+      rate = split.pre;
+    }
     const done = await changeStayRate(client, hotelId, c.req.param("id"),
-      Number(body.rate), typeof body.reason === "string" ? body.reason : "");
+      rate, typeof body.reason === "string" ? body.reason : "",
+      body.includesGst === true ? typed : undefined);
     return done.ok ? { ok: true, data: { corrected: done.corrected } } : refuse(done.reason);
   });
 
@@ -559,6 +578,8 @@ postings.post("/:code/stays/:id/rate", async (c) => {
  */
 export async function changeStayRate(
   client: Client, hotelId: string, stayId: string, rate: number, reason: string,
+  /** The all-in figure typed, where `rate` is its split (D27-199): the note says it. */
+  allIn?: number,
 ): Promise<{ ok: true; corrected: number } | { ok: false; reason: string }> {
   const no = (why: string) => ({ ok: false as const, reason: why });
   if (!Number.isFinite(rate) || !(rate > 0)) {
@@ -568,8 +589,9 @@ export async function changeStayRate(
   if (!why) return no("Say why the rate is changing. It stays on every night it corrects.");
   const nightly = Math.round(rate * 100) / 100;
 
-  const { rows: stay } = await client.query<{ status: string }>(
-    "select status from reservations where hotel_id = $1 and id = $2", [hotelId, stayId]);
+  const { rows: stay } = await client.query<{ status: string; agreed_rate: string }>(
+    "select status, agreed_rate::text from reservations where hotel_id = $1 and id = $2",
+    [hotelId, stayId]);
   if (!stay[0]) return no("Reservation not found.");
   if (!["confirmed", "checked_in"].includes(stay[0].status)) {
     return no("Only a booking to come or a guest in the house changes rate. "
@@ -611,6 +633,16 @@ export async function changeStayRate(
       return no(`Nothing changed. The night of ${on}: ${done.reason}`);
     }
     corrected += 1;
+  }
+  /* NO NIGHT CHARGED YET (D27-187, D27-195): no line carries the reason, so
+     the booking's notes do, as check-in keeps "ID not captured - why". */
+  if (nights.length === 0) {
+    await client.query(
+      `update reservations
+          set notes = concat_ws(' · ', nullif(notes, ''), $2::text)
+        where id = $1`,
+      [stayId, `Rate ₹${inr(Number(stay[0].agreed_rate))} → `
+        + `${allIn === undefined ? `₹${inr(nightly)}` : `₹${inr(allIn)} incl. GST`}: ${why}`]);
   }
   await client.query("release savepoint change_rate");
   return { ok: true, corrected };
@@ -697,20 +729,6 @@ export async function takeFolioPayment(
   let pan: string | null = null;
   let form97 = false;
   if (method === "cash") {
-    /* EVERY RUPEE BELONGS TO A SHIFT (the owner's D27-118, QA FI-13): cash
-       taken with no drawer open showed "Cash taken ₹0" on the drawer opened
-       later. The person taking it must hold an open drawer here - the drawer
-       counts what its holder took (app.cashier_expected_cash). */
-    const { rows: drawer } = await client.query(
-      `select 1 from cashier_shifts
-        where hotel_id = $1 and staff_id = app.current_user_id() and closed_at is null`,
-      [hotelId]);
-    if (!drawer.length) {
-      return {
-        ok: false,
-        reason: "Open your cash drawer first (Cashiering): cash is taken only into an open drawer, so every rupee belongs to a shift. Card, UPI and the rest need no drawer.",
-      };
-    }
     const over = overCashLimit(await payer.cashTaken(), amount,
       "card, UPI, cheque or bank transfer");
     if (over) return { ok: false, reason: over };
@@ -733,6 +751,12 @@ export async function takeFolioPayment(
 
   const folio = folioId ?? (await payer.openFolio?.()) ?? null;
   if (!folio) return { ok: false, reason: "There is no bill to take this payment on." };
+
+  /* THE DRAWER OPENS BY ITSELF (the owner's D27-200; D27-118's "every rupee
+     belongs to a shift" kept): the first cash a person takes after the night
+     audit opens their drawer, on any float handed to them. After every
+     refusal (MEMORY 243). */
+  if (method === "cash") await openOwnDrawer(client, hotelId, businessDate);
 
   /* A payment is a NEGATIVE posting. The balance is the sum of the
      ledger, so money received reduces it by being part of the sum —
@@ -805,12 +829,12 @@ postings.post("/:code/stays/:id/payments", async (c) => {
       },
       foreign: stay[0].foreign,
       /* A named bill owes its own balance. Unnamed, the stay's, as the Settle
-         dialog showed it - which counts a group master folio's lines for
-         this stay too. */
+         dialog shows it: the guest's own bills only - not the nights the
+         group's master bill carries for this stay (the owner's D27-226). */
       ...(body.folioId ? {} : {
         owed: async () => {
           const { rows: bill } = await client.query<{ balance: string }>(
-            `${FOLIO_SELECT} having l.reservation_id = $2`, [hotelId, stayId]);
+            `${FOLIO_SELECT} having l.bill_stay = $2`, [hotelId, stayId]);
           return Number(bill[0]?.balance ?? 0);
         },
       }),

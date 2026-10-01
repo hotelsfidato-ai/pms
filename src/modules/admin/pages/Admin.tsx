@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { Check, Minus, Plug, ShieldCheck, Info, UserCog, ScrollText } from "lucide-react";
@@ -10,16 +10,12 @@ import {
 } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, DataTable, StatusPill,
-  Skeleton, Avatar, Tooltip, ErrorState, Switch, toast, EmptyState, Input, Button,
+  Skeleton, Avatar, Tooltip, ErrorState, Switch, toast, EmptyState, Input, Button, InfoButton,
   type Column, type Tone,
 } from "@/components/ui";
-import { listStaff, listAuditLog, listIntegrations, getSettings, roleDescription, type StaffRecord, type AuditEntry, type Integration } from "@/modules/admin/data/adminLists";
+import { listStaff, listAuditLog, listIntegrations, roleDescription, type StaffRecord, type AuditEntry, type Integration } from "@/modules/admin/data/adminLists";
 import { getMatrix } from "@/modules/admin/data/admin";
 import { getModules, setModule } from "@/data/repositories";
-import { useRole } from "@/lib/session";
-import { switchesModules } from "@/modules/admin/moduleSwitchRoles";
-import { TaxInUseRows } from "@/modules/admin/components/TaxInUse";
-import { GroupCard } from "@/modules/admin/components/GroupCard";
 
 /* ══════════════════════════════════════════════════════════════════
    ADMINISTRATION
@@ -497,15 +493,7 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
      is off, the section is simply not drawn. */
   booking_company: {
     label: "Company section",
-    note: "Bill a booking to a company. Off, every new booking is billed to the guest.",
-  },
-  booking_gst: {
-    label: "GST section",
-    note: "Shows the chosen company's GSTIN, as the tax invoice will print it.",
-  },
-  booking_extras: {
-    label: "Extras section",
-    note: "The stay's extras from this hotel's list, added when the booking is saved.",
+    note: "Bill a booking to a company, with its GSTIN. Off, every new booking is billed to the guest.",
   },
   booking_notes: {
     label: "Notes section",
@@ -513,10 +501,12 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
   },
 };
 
-const BOOKING_SECTION = (module: string) => module.startsWith("booking_");
+export const BOOKING_SECTION = (module: string) => module.startsWith("booking_");
 
-function ModulesCard({ hotelId, title, description, only }: {
+export function ModulesCard({ hotelId, title, description, info, only }: {
   hotelId: string; title: string; description: string;
+  /** The rest of what the card says, behind its (i). */
+  info?: string;
   /** Which of the property's switches this card draws. */
   only: (module: string) => boolean;
 }) {
@@ -544,108 +534,76 @@ function ModulesCard({ hotelId, title, description, only }: {
 
   return (
     <Card>
-      <CardHeader title={title} description={description} />
-      <CardBody className="pt-0 space-y-4">
+      <SettingHeader title={title} line={description} {...(info ? { info } : {})} />
+      <CardBody className="py-0 divide-y divide-grey-100">
         {Object.entries(modules.data ?? {}).filter(([module]) => only(module)).map(([module, enabled]) => (
-          <Switch
-            key={module}
-            checked={enabled}
-            /* ⚠ NOT `|| module === "banquet"` ANY MORE.
-               That was hardcoded when banquet did not exist, alongside a
-               note reading "Not built yet". Stage 14 built it — three
-               screens, four tables and an API — and NOBODY CAME BACK FOR
-               THE SWITCH. The copy and the code disagreed for eight days
-               and the owner found it by trying to turn banquet on and
-               watching nothing happen.
+          <div key={module} className="py-3">
+            <Switch
+              checked={enabled}
+              /* ⚠ NOT `|| module === "banquet"` ANY MORE.
+                 That was hardcoded when banquet did not exist, alongside a
+                 note reading "Not built yet". Stage 14 built it — three
+                 screens, four tables and an API — and NOBODY CAME BACK FOR
+                 THE SWITCH. The copy and the code disagreed for eight days
+                 and the owner found it by trying to turn banquet on and
+                 watching nothing happen.
 
-               A disabled control with stale copy is worse than a missing
-               one: it looks like an answer. `moduleSwitchesAreLive` in
-               `Admin.test.tsx` now fails if any module the API accepts
-               comes back disabled. */
-            disabled={busy === module}
-            onCheckedChange={(next) => void toggle(module, next)}
-            label={MODULE_COPY[module]?.label ?? module}
-            description={MODULE_COPY[module]?.note}
-          />
+                 A disabled control with stale copy is worse than a missing
+                 one: it looks like an answer. `moduleSwitchesAreLive` in
+                 `Admin.test.tsx` now fails if any module the API accepts
+                 comes back disabled. */
+              disabled={busy === module}
+              onCheckedChange={(next) => void toggle(module, next)}
+              label={MODULE_COPY[module]?.label ?? module}
+              description={MODULE_COPY[module]?.note}
+            />
+          </div>
         ))}
-        {modules.isLoading && <Skeleton className="h-16 w-full" />}
+        {modules.isLoading && <Skeleton className="h-16 w-full my-3" />}
       </CardBody>
     </Card>
   );
 }
 
-function SettingRow({ label, value }: { label: string; value: string }) {
+/* A Settings card's heading (D27-220): the title, one line under it, and
+   anything longer behind the (i) - the fidato-design rule, same words. */
+export function SettingHeader({ title, line, info, actions }: {
+  title: string; line?: string; info?: string; actions?: ReactNode;
+}) {
   return (
-    <div className="grid grid-cols-[minmax(130px,200px)_1fr] gap-4 py-2.5">
-      <dt className="text-sm text-grey-500">{label}</dt>
-      <dd className="text-base text-ink-900 min-w-0">{value}</dd>
+    <CardHeader actions={actions}>
+      <div className="min-w-0">
+        <div className="flex items-center gap-1">
+          <h3 className="text-md font-semibold text-ink-900">{title}</h3>
+          {info && <InfoButton>{info}</InfoButton>}
+        </div>
+        {line && <p className="text-sm text-grey-500 mt-0.5">{line}</p>}
+      </div>
+    </CardHeader>
+  );
+}
+
+/* Settings' values (D27-220, the fidato-design figure block): a 12px label
+   over its 14px value, 2px apart, in level columns - four across where the
+   CARD is 512px or wider, two below (a half-width card on a laptop is
+   narrow). A `wide` row takes two cells, for a value too long for one. */
+export function SettingValues({ children }: { children: ReactNode }) {
+  return (
+    <div className="@container">
+      <dl className="grid grid-cols-2 @lg:grid-cols-4 gap-x-4 gap-y-3">{children}</dl>
     </div>
   );
 }
 
-export function SettingsPage() {
-  const hotelId = useHotel();
-  const role = useRole();
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["settings", hotelId],
-    queryFn: () => getSettings(hotelId),
-  });
-
+export function SettingRow({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
   return (
-    <Page>
-      <PageHeader
-        title="Settings"
-        description="What this property is configured as. Editing arrives with the stage that owns each value."
-      />
-      {error ? (
-        <Card>
-          <ErrorState
-            title="Settings did not load"
-            description="Nothing was changed. Try again."
-            error={error}
-            onRetry={() => refetch()}
-          />
-        </Card>
-      ) : isLoading ? (
-        <Skeleton className="h-96 w-full" />
-      ) : (
-        <div className="space-y-4">
-          <GroupCard hotelCode={hotelId} />
-          {/* D17-36, 17 September: the GM may open Settings, and the
-              switches stay with the owner and an administrator. Hidden,
-              not disabled — they are not the GM's to ask about, and the
-              server refuses anybody else who sends one
-              (api/src/modules/admin/grants.ts). */}
-          {switchesModules(role) && (
-            <>
-              <ModulesCard hotelId={hotelId} title="Modules"
-                description="What this property runs. Off means the screens go and the API refuses them."
-                only={(m) => !BOOKING_SECTION(m)} />
-              <ModulesCard hotelId={hotelId} title="New booking"
-                description="The sections that fold open on New booking. Off hides one at this property; nothing already booked changes."
-                only={BOOKING_SECTION} />
-            </>
-          )}
-          {(data ?? []).map((group) => (
-            <Card key={group.title}>
-              <CardHeader title={group.title} description={group.note} />
-              <CardBody className="pt-0">
-                <dl className="divide-y divide-grey-100">
-                  {group.taxInUse && (
-                    <TaxInUseRows hotelCode={hotelId} row={(label, value, key) => (
-                      <SettingRow key={key} label={label} value={value} />
-                    )} />
-                  )}
-                  {group.rows.map((row) => (
-                    <SettingRow key={row.label} label={row.label} value={row.value} />
-                  ))}
-                </dl>
-              </CardBody>
-            </Card>
-          ))}
-        </div>
-      )}
-    </Page>
+    <div className={cn("min-w-0", wide && "col-span-2")}>
+      <dt className="text-xs font-medium text-grey-500 whitespace-nowrap">{label}</dt>
+      {/* A long unbroken value (a GSTIN, an email) wraps inside the card; it was
+          cut at the edge at phone width (ADM-9). */}
+      <dd className={cn("mt-0.5 text-sm font-medium tabular min-w-0 break-words",
+                        value === "-" ? "text-grey-500" : "text-grey-700")}>{value}</dd>
+    </div>
   );
 }
 

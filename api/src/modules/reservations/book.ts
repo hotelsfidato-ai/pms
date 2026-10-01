@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Client } from "../../db.ts";
-import { countProblem, countryProblem, dateProblem } from "../../validate.ts";
+import { countProblem, countryProblem, dateProblem, MAX_NIGHTS } from "../../validate.ts";
+import { roomRateBeforeGst } from "../finance/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    MAKING A BOOKING - the one place a reservation is created
@@ -28,6 +29,8 @@ export interface BookingLineInput {
   children?: number;
   rooms?: number;
   agreedRate?: number;
+  /** D27-195: agreedRate includes GST; it is split before it is kept. */
+  rateIncludesGst?: boolean;
   /** A complimentary room (020): booked at ₹0, and the night audit posts
       nothing for it. Only COMP_ROLES may give one (the owner, 27 Sep). */
   complimentary?: boolean;
@@ -380,11 +383,21 @@ export async function makeBooking(
   if (!request.checkIn || !request.checkOut) return refuse("Which nights?");
   const badDate = dateProblem(request.checkIn) ?? dateProblem(request.checkOut);
   if (badDate) return refuse(badDate);
-  if (request.checkOut <= request.checkIn) {
+  /* A DAY USE (the owner's D27-227): out the day it comes, check-out =
+     check-in, saved as one (is_day_use, 015) and charged its day at check-in.
+     Only a departure BEFORE the arrival is refused now. */
+  if (request.checkOut < request.checkIn) {
     return refuse(
       "A stay ends after it starts. The night of departure is not charged, "
       + "so a guest leaving on the 5th has their last night on the 4th.");
   }
+  const dayUse = request.checkOut === request.checkIn;
+  /* FD-6 (the owner, 28 September; D27-197): at most 90 nights, as the
+     walk-in desk held it and Change dates does. */
+  const tooLong = countProblem(
+    (Date.parse(request.checkOut) - Date.parse(request.checkIn)) / 86_400_000,
+    "Nights", dayUse ? 0 : 1, MAX_NIGHTS);
+  if (tooLong) return refuse(tooLong);
   if (lines.length === 0) return refuse("Which rooms?");
   if (!sourceId) {
     return refuse(
@@ -469,7 +482,9 @@ export async function makeBooking(
         where bs.id = $1 and bs.is_active`,
       [request.bookingSourceId, hotelId]);
     if (!src[0]) {
-      return refuse("That booking source is not on the list any more.");
+      return refuse(
+        "That booking source is not on the list any more. A manager can "
+        + "switch it back on under Property setup → Booking sources.");
     }
     const commission = src[0].commission_pct;
 
@@ -510,6 +525,12 @@ export async function makeBooking(
       /* A COMPLIMENTARY ROOM IS ₹0 AND NEEDS NO PRICE: the night audit posts
          nothing for it (020), and an unpriced calendar does not stop a gift. */
       let rate = line.complimentary === true ? 0 : line.agreedRate ?? null;
+      /* A DAY USE'S PRICE IS TYPED, EVERY TIME (the owner's D27-229): there is
+         no day rate to look up and the night's tariff is not one - never
+         filled in, never a zero. Any role that may book may type it. */
+      if (dayUse && line.complimentary !== true && !(rate !== null && rate > 0)) {
+        return refuse("Type the day-use price.");
+      }
       if (rate === null) {
         const { rows: t } = await client.query<{
           total: string | null; unpriced: string | null;
@@ -529,6 +550,16 @@ export async function makeBooking(
           };
         }
         rate = Number(t[0].total);
+      }
+
+      /* A RATE THAT INCLUDES GST (D27-187, D27-195) is split here, before it is
+         kept: agreed_rate is the rate before GST the audit posts, and its GST
+         by the slab adds back to the figure (finance's one split). The typed
+         rate, or with none typed the list price the tariff gave (D27-199). */
+      if (rate > 0 && line.rateIncludesGst === true) {
+        const split = await roomRateBeforeGst(client, hotelId, rate);
+        if (!split.ok) return refuse(split.reason);
+        rate = split.pre;
       }
 
       /* THE DISCOUNT LOWERS THE ONE FIGURE THE BOOKING KEEPS, rounded to the

@@ -10,6 +10,8 @@ import {
   NativeSelect, StatusPill, DataTable, IconChip, type Column,
 } from "@/components/ui";
 import { listBookingSources, addBookingSource, amendBookingSource, setBookingSourceCommission, SOURCE_KINDS, kindLabel, type BookingSource, type BookingSourceKind } from "@/modules/guests/data/bookingSources";
+/* D27-183: the channel code is picked from SU's own list, not typed. */
+import { SU_CHANNELS, suChannelName } from "@/modules/channel-manager";
 
 /* ══════════════════════════════════════════════════════════════════
    WHERE THE BOOKINGS COME FROM
@@ -122,7 +124,9 @@ export default function BookingSourcesPage() {
       width: "w-[160px]",
       cell: (s) => (
         s.channelCode
-          ? <span className="tabular text-grey-600">{s.channelCode}</span>
+          ? <span className="tabular text-grey-600">
+              {s.channelCode}{suChannelName(s.channelCode) ? ` · ${suChannelName(s.channelCode)}` : ""}
+            </span>
           /* A walk-in has no code and never will. A dash says "none",
              which is the truth, rather than an empty cell that reads
              as "not filled in yet". */
@@ -346,11 +350,20 @@ function SourceDialog({
           </Field>
 
           <Field label="Channel code"
-                 hint="What a channel manager will send for this source. Leave it blank if there is none - a walk-in has no code.">
+                 hint="The code SU sends with a booking from this site. None for a source no channel manager sends, such as a walk-in.">
             {(f) => (
-              <Input {...fieldProps(f)} value={code} placeholder="AGODA"
-                     className="h-12 text-base"
-                     onChange={(e) => setCode(e.target.value.toUpperCase())} />
+              <NativeSelect {...fieldProps(f)} value={code}
+                            className="h-12 text-base"
+                            onChange={(e) => setCode(e.target.value)}>
+                <option value="">None</option>
+                {/* A code saved before the list: shown, never silently dropped. */}
+                {code && !suChannelName(code) && (
+                  <option value={code}>{code} (not one of SU's codes)</option>
+                )}
+                {SU_CHANNELS.map(([c, n]) => (
+                  <option key={c} value={c}>{n} · {c}</option>
+                ))}
+              </NativeSelect>
             )}
           </Field>
 

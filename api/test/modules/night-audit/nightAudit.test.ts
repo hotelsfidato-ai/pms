@@ -525,6 +525,10 @@ describe("closing a day", () => {
       { checks: Array<{ id: string; count: number }> }).checks.find((c) => c.id === "room-charges")!.count;
     const counted = await toPost();
     try {
+      /* D27-204, D27-205: the line says why a stay may be charged already. */
+      expect(((await (await asOwner("/PUN/night-audit")).json()) as
+        { checks: Array<{ id: string; detail: string }> }).checks.find((c) => c.id === "room-charges")!.detail)
+        .toContain("A stay charged for tonight already (the first night is charged at check-in)");
       /* What the walk-in route writes: both nights, one line, on arrival. */
       await db.query(
         `insert into folio_postings (hotel_id, folio_id, reservation_id, business_date,

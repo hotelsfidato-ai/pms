@@ -75,6 +75,18 @@ describe("the charge door", () => {
     expect(out!.ok, out!.ok ? "" : (out as { reason: string }).reason).toBe(true);
   });
 
+  /* The review of 1 October: "Payment" and "Refund" were charge headings, so
+     a direct call wrote a payment line with no payment record and no drawer,
+     and a refund with GST on it. */
+  it("refuses a payment or a refund as a charge", async () => {
+    const stay = await aStayInHouse();
+    const as = (category: string) => attempt((client) =>
+      postCharge(client, stay!.hotel, stay!.stay, { description: category, amount: 500, category }));
+    expect(await as("Payment")).toEqual({ ok: false, reason: "Take a payment through Payments." });
+    expect(await as("Refund"))
+      .toEqual({ ok: false, reason: "A refund is not a charge. Reverse the payment it gives back." });
+  });
+
   it("refuses a charge with no words on it", async () => {
     const stay = await aStayInHouse();
     const out = await attempt((client) =>
@@ -135,7 +147,7 @@ describe("the charge door", () => {
     });
 
     expect(out!.refused.ok).toBe(false);
-    expect((out!.refused as { reason: string }).reason).toContain("Rooms and rates → Room types");
+    expect((out!.refused as { reason: string }).reason).toContain("Settings → Taxes and billing");
     expect(out!.alive, "the transaction is still usable after the refusal").toBe(1);
   });
 

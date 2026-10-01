@@ -18,7 +18,13 @@ import type { Permitted } from "@/data/repositories/types";
 /** A line as the Bill tab reads it: the core's Posting, and why Edit is off
     for it before anybody types (D27-157) - its day closed by the night
     audit, or the tax invoice standing on its bill. */
-export type BillLine = Posting & { dayClosed?: boolean; invoice?: string | null };
+export type BillLine = Posting & {
+  dayClosed?: boolean; invoice?: string | null;
+  /** What the line was billed under, for the bill's sections (D27-200). */
+  scheme?: "gst" | "vat"; rate?: number | null;
+  /** Where the line came from (D27-223): an early or late fee is the room's. */
+  source?: string | null;
+};
 
 export async function getFolioPostings(hotelId: string, stayId: string): Promise<BillLine[]> {
   if (!hotelId || !stayId) return [];
@@ -145,7 +151,9 @@ export async function editCharge(
     closed day's through Closed days) and the night audit charges the rest at
     it - or, if one night cannot be corrected, changes nothing and says which. */
 export async function changeRate(
-  hotelId: string, stayId: string, input: { rate: number; reason: string },
+  hotelId: string, stayId: string,
+  /** `includesGst`: the rate typed is all-in, split by the server (D27-199). */
+  input: { rate: number; reason: string; includesGst?: boolean },
 ): Promise<OperationResult<{ corrected: number }>> {
   try {
     const res = await api<{ data?: { corrected: number } }>(

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
+import { connected, settings } from "../../../src/modules/leads/live.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    LEADS, READ LIVE (D27-170), against a faked leads app
@@ -38,6 +39,8 @@ const messages = new Map<string, { id: string; f: Fields }[]>();
 const other = new Map<string, Fields>(); // hotels/{id}/marketing/campaigns, hotels/{id}/spend/{month}
 const ROOT = "projects/demo-leads/databases/(default)/documents";
 const asked: string[] = [];
+/** The whole call refused, as Google answers a project or database that is not there. */
+let notFound = false;
 
 const enc = (v: unknown): unknown =>
   v === null ? { nullValue: null }
@@ -69,6 +72,7 @@ const fake = (async (url: string, init: RequestInit) => {
     return json(rows.length ? rows.map((m) => ({ document: doc(`conversations/${sub[1]}/messages/${m.id}`, m.f) })) : none);
   }
   if (path === ":batchGet") {
+    if (notFound) return new Response("{}", { status: 404 });
     return json(body.documents.map((name: string) => {
       const p = name.slice(ROOT.length + 1);
       const f = p.startsWith("conversations/") ? leads.get(p.split("/")[1]!) : other.get(p);
@@ -244,5 +248,46 @@ describe("leads, read live (D27-170)", () => {
     expect(await future()).toMatchObject({ bookings: 1, revenue: "6000.00" });
     await sql("insert into tax_rules (hotel_id, kind, over_amount, rate, note) values ($1, 'room', 0, 12, 'test')", [hotelId]);
     expect(await future()).toMatchObject({ bookings: 1, revenue: "6000.00" });
+  });
+
+  /* D27-186: Grand Lucent has no campaign list in the app yet. Google
+     answers a document that is not there as "missing", inside a call that
+     succeeded: that is no campaigns, and no error. A call refused whole
+     with 404 is a wrong project or database, and must still be said. */
+  it("reads a hotel with no campaign list as no campaigns, not as an error", async () => {
+    const owner = (await sql("select id::text from staff where email = 'owner@fidato.in'")).rows[0].id;
+    const numbers = async (month: string) => {
+      const res = await app.request(`/api/hotels/${CODE}/marketing/numbers?month=${month}`, { headers: { "x-dev-staff-id": owner } });
+      expect(res.status, await res.clone().text()).toBe(200);
+      return await res.json() as { connected: boolean; inApp: boolean; appError: string | null; campaigns: unknown[] };
+    };
+    const kept = other.get(`hotels/${OURS}/marketing/campaigns`)!;
+    other.delete(`hotels/${OURS}/marketing/campaigns`);
+    try {
+      expect(await numbers("2026-07")).toMatchObject({ connected: true, inApp: true, appError: null, campaigns: [] });
+      notFound = true;
+      expect((await numbers("2026-06")).appError).toContain("did not answer (404)");
+    } finally {
+      notFound = false;
+      other.set(`hotels/${OURS}/marketing/campaigns`, kept);
+    }
+  });
+});
+
+/* ── The keyless login's settings (D27-186) ─────────────────────────── */
+describe("the leads app's settings", () => {
+  const rest = { M2R_HOTELS: "AMR=amrapali-kolhapur,GLM=grand-lucent-mathura", M2R_DAILY_READS: "5000" };
+
+  it("is connected by the read-only login's email alone, and reads that login's own project", () => {
+    const s = settings({ ...rest, M2R_IMPERSONATE: "pms-reader@demo-leads.iam.gserviceaccount.com" });
+    expect(s?.projectId).toBe("demo-leads");
+    expect(s?.host, "Google itself, no stand-in").toBeNull();
+    expect([...s!.hotels]).toEqual([["amrapali-kolhapur", "AMR"], ["grand-lucent-mathura", "GLM"]]);
+  });
+
+  it("is not connected with neither a key nor an email, nor with an address that is not a service account's", () => {
+    expect(connected(rest)).toBe(false);
+    expect(settings(rest)).toBeNull();
+    expect(connected({ ...rest, M2R_IMPERSONATE: "somebody@example.com" })).toBe(false);
   });
 });

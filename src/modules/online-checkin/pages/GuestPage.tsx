@@ -1,19 +1,30 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import RoomDining from "@/modules/online-checkin/RoomDining";
 import { useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { dateLong, dateShort, dateTime } from "@/lib/format";
+import { dateLong, dateTime } from "@/lib/format";
 import {
   Button, Card, CardBody, Field, fieldProps, Input, NativeSelect, Segmented, StatusPill, Textarea,
 } from "@/components/ui";
 import {
-  codeAskedRecently, dropUnlock, getBill, getDetails, getRequests, makeRequest, openGuestPage,
-  sendCode, sendDetails, verifyCode, type Details, type GuestPageView,
+  dropUnlock, getBill, getDetails, getIdPhoto, getRequests, logoAddress, makeRequest, openGuestPage,
+  sendCode, sendDetails, sendIdPhoto, verifyCode, verifyWithGoogle, type Details, type GuestPageView,
 } from "@/modules/online-checkin/data/guestPage";
+import { loadGoogleSignIn } from "@/modules/online-checkin/googleSignIn";
+import { IdPhotoInputs, type ChosenPhotos } from "@/modules/online-checkin/IdPhotoInputs";
+import { idPhotoNotice } from "@/modules/online-checkin/idPhotoNotice";
+import { shrinkPhoto } from "@/modules/online-checkin/shrinkPhoto";
 import { GENDERS, LABELS, PURPOSES } from "@/modules/online-checkin/formIII";
+import {
+  H2, LEAD, NOTHING_HERE, SECTION, messageFrom, unlockGone, useUnlockGone,
+} from "@/modules/online-checkin/guestKit";
 import { privacyNoticeFor } from "@/modules/online-checkin/privacyNotice";
+import { MessageTheDesk } from "@/modules/online-checkin/MessageTheDesk";
+import { QuickChoices, hasQuickChoices } from "@/modules/online-checkin/QuickChoices";
+import { TableBookingSection } from "@/modules/online-checkin/TableBooking";
 import { BillPrint } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -44,26 +55,11 @@ import { BillPrint } from "@/modules/finance";
    handed, often on hotel wifi.
    ══════════════════════════════════════════════════════════════════ */
 
-/** The door's own sentence for everything it refuses, in its words. */
-const NOTHING_HERE = "This link is not usable. Ask the desk for a new one.";
-/** The door's words for a booking with no mobile number (guestDoor.ts,
-    NO_PHONE) - said here without asking, because the link already shows
-    there is no number to send to. Change one, change both. */
-const NO_PHONE = "There is no mobile number on this booking, so no code can be "
-  + "sent. Ask the desk.";
-
-/** Refused behind the code: the unlock has gone - expired, or a new guest
-    is in the room. Not an error to show: the page asks for a code again. */
-const unlockGone = (error: unknown) => error instanceof ApiError && error.status === 404;
-
-/* The fidato look, phone first (375px is this page's primary size): the
-   guest's name as the large title, then one card per part, each under its
-   own 16px heading, parts 20px apart and 12px from a heading to its card.
-   The bill is finance's own document, so it sits on the page, not in a
-   card of ours. */
-const SECTION = "mb-5 last:mb-0";
-const H2 = "text-md font-semibold text-ink-900";
-const LEAD = "text-sm text-grey-600 mt-0.5";
+/** A booking with neither a mobile number nor an email - said here without
+    asking the door, because the link already shows there is nowhere to send
+    a code. */
+const NO_WAY = "There is no mobile number or email address on this booking, so "
+  + "no code can be sent. Ask the desk.";
 
 export default function GuestPage() {
   const token = useParams().token ?? "";
@@ -138,10 +134,10 @@ export default function GuestPage() {
 
   return (
     <Shell>
-      <Heading view={view} />
+      <Heading token={token} view={view} />
       {view.verified ? (
         <Behind token={token} view={view} onUnlockGone={askAgain} />
-      ) : view.canSendCodes ? (
+      ) : view.canSendCodes || view.googleClientId ? (
         <ProveIt token={token} view={view} onVerified={() => void link.refetch()} />
       ) : (
         /* D21-25: nothing can be sent, so nothing is offered - the door's
@@ -156,12 +152,13 @@ export default function GuestPage() {
   );
 }
 
-function Heading({ view }: { view: GuestPageView }) {
+function Heading({ token, view }: { token: string; view: GuestPageView }) {
   const { booking } = view;
   return (
     <>
       {/* The large title: the hotel over the guest's name (or the room). */}
       <header className={booking ? "mb-3" : "mb-5"}>
+        <Logo token={token} />
         <p className="text-sm text-grey-600">{view.hotel.name}</p>
         <h1 className="page-title text-ink-900 mt-0.5 break-words">
           {booking ? booking.guestName : `Room ${view.room}`}
@@ -181,6 +178,19 @@ function Heading({ view }: { view: GuestPageView }) {
         </Card>
       )}
     </>
+  );
+}
+
+/* The hotel's logo, else the group's (D27-223), above its name. Decorative:
+   the name is printed under it. No logo, or a link that stopped opening, and
+   the door answers 404 - the picture goes, rather than a broken one. */
+function Logo({ token }: { token: string }) {
+  const [gone, setGone] = useState(false);
+  const src = useQuery({ queryKey: ["guest-logo", token], queryFn: () => logoAddress(token), staleTime: Infinity });
+  if (gone || !src.data) return null;
+  return (
+    <img src={src.data} alt="" onError={() => setGone(true)}
+      className="mb-3 h-10 w-auto max-w-40 object-contain object-left" />
   );
 }
 
@@ -209,35 +219,38 @@ function Notice({ hotel, className }: { hotel: string; className?: string }) {
   );
 }
 
-/* ── The six digits (D27-105) ─────────────────────────────────────
-   Nothing is typed but the code. Opening the link sends it to the number
-   the booking carries - once; reopening within its ten minutes does not
-   send another - and the door says where: the last four digits, or on a
-   room card nothing of the number (D21-14). No number on the booking:
-   the door's own "Ask the desk". */
+/* ── Three ways, the guest's choice (D27-207, D27-210) ──────────────
+   Nothing is sent on opening, and nothing is typed but a code. The guest
+   presses WhatsApp or email and the code goes to what THE BOOKING carries;
+   the door says where: the number's last four digits or the address
+   masked, and on a room card nothing of either (D21-14). Or they continue
+   with Google, and the door checks that the account's address is the
+   booking's. */
 function ProveIt(
   { token, view, onVerified }:
   { token: string; view: GuestPageView; onVerified: () => void },
 ) {
   const [code, setCode] = useState("");
 
-  const asked = useMutation({ mutationFn: () => sendCode(token) });
+  const asked = useMutation({ mutationFn: (by: "whatsapp" | "email") => sendCode(token, by) });
   const answered = useMutation({
     mutationFn: () => verifyCode(token, code),
     onSuccess: (r) => { if (r.verified) onVerified(); },
   });
 
-  /* A booking's link with no number on the booking: nothing to send, no
-     code to wait for, no box to type one into - and nothing is asked of the
-     door. (The door says the same words for a room card whose guest has no
-     number: a room card never shows the number, so it asks.) */
-  const noPhone = view.kind === "booking" && !view.phoneHint;
-
-  /* Asked for by opening the page. `sendCode` notes the moment before it
-     asks, so a second mount (a reload, React's own double run in
-     development) finds it asked and sends nothing. */
-  const { mutate: ask } = asked;
-  useEffect(() => { if (!noPhone && !codeAskedRecently(token)) ask(); }, [noPhone, token, ask]);
+  /* A booking's link already shows whether the booking has a number or an
+     address, so a way that cannot work is not offered. A room card shows
+     nothing of the guest: every way is offered, and the door says "Ask the
+     desk" for the one the booking lacks. */
+  const card = view.kind === "room";
+  const byWhatsApp = view.canSendCodes && (card || !!view.phoneHint);
+  const byEmail = view.canSendCodes && (card || !!view.emailHint);
+  const byGoogle = !!view.googleClientId && (card || !!view.emailHint);
+  const byCode = byWhatsApp || byEmail;
+  const where = card ? "on WhatsApp or by email, to the phone or the email on the booking" : [
+    byWhatsApp && `on WhatsApp to the number on the booking, ending ${view.phoneHint!.replace("…", "")}`,
+    byEmail && `by email to ${view.emailHint}`,
+  ].filter(Boolean).join(", or ");
 
   const answer = (e: FormEvent) => { e.preventDefault(); answered.mutate(); };
 
@@ -247,22 +260,35 @@ function ProveIt(
       <h2 className={H2}>
         Your check-in details are behind a code
       </h2>
-      {noPhone ? <div className="mb-3" /> : (
-        <p className={cn(LEAD, "mb-3")}>
-          We send six digits on WhatsApp to the number on the booking
-          {view.phoneHint ? `, ending ${view.phoneHint.replace("…", "")}` : ""}.
-        </p>
-      )}
+      {byCode ? <p className={cn(LEAD, "mb-3")}>We send six digits {where}.</p> : <div className="mb-3" />}
 
       <Card><CardBody>
-        {/* The door's sentence, printed as it came. */}
-        <p className="text-sm text-grey-600" aria-live="polite">
-          {noPhone ? NO_PHONE
-            : asked.isPending ? "Sending the code…"
-            : asked.data ? asked.data.message
-            : asked.error ? messageFrom(asked.error)
-            : "A code was sent a few minutes ago. Use it, or send a new one."}
-        </p>
+        {/* No way at all: the booking has neither, or the server cannot send. */}
+        {!byCode && (
+          <p className={cn("text-sm text-grey-600", byGoogle && "mb-3")}>
+            {view.canSendCodes ? NO_WAY : view.cannotSend}
+          </p>
+        )}
+        <div className="flex flex-col gap-3">
+          {byWhatsApp && (
+            <Button variant="secondary" disabled={asked.isPending} onClick={() => asked.mutate("whatsapp")}>
+              Send the code on WhatsApp
+            </Button>
+          )}
+          {byEmail && (
+            <Button variant="secondary" disabled={asked.isPending} onClick={() => asked.mutate("email")}>
+              Send the code by email
+            </Button>
+          )}
+          {byGoogle && <WithGoogle token={token} clientId={view.googleClientId!} onVerified={onVerified} />}
+          {/* The door's sentence, printed as it came. */}
+          <p className="text-sm text-grey-600 empty:hidden" aria-live="polite">
+            {asked.isPending ? "Sending the code…"
+              : asked.data ? asked.data.message
+              : asked.error ? messageFrom(asked.error)
+              : null}
+          </p>
+        </div>
         {/* DEVELOPMENT ONLY (D27-105): the code on screen, from a server
             started to show it. A production build compiles this away, and
             scripts/check-no-dev-login.mjs fails any build that carries it. */}
@@ -272,7 +298,7 @@ function ProveIt(
           </p>
         )}
 
-        {!noPhone && <form onSubmit={answer} className="mt-3.5 pt-3.5 border-t border-grey-100 flex flex-col gap-3">
+        {byCode && <form onSubmit={answer} className="mt-3.5 pt-3.5 border-t border-grey-100 flex flex-col gap-3">
           <Field label="The six digits">
             {(f) => (
               <Input
@@ -286,9 +312,6 @@ function ProveIt(
           <Button type="submit" variant="primary" disabled={answered.isPending || code.trim() === ""}>
             {answered.isPending ? "Checking…" : "Open my booking"}
           </Button>
-          <Button type="button" variant="ghost" disabled={asked.isPending} onClick={() => ask()}>
-            Send a new code
-          </Button>
         </form>}
 
         {answered.error && (
@@ -299,7 +322,67 @@ function ProveIt(
   );
 }
 
-/* ── Behind the code ──────────────────────────────────────────────── */
+/* ── Continue with Google (D27-207) ──────────────────────────────────
+   Our button first; Google's script is fetched only when it is pressed
+   (googleSignIn.ts) and then draws Google's own button in its place, which
+   opens Google's window. What Google hands back goes to the door as it
+   came; the door decides. */
+function WithGoogle(
+  { token, clientId, onVerified }:
+  { token: string; clientId: string; onVerified: () => void },
+) {
+  const box = useRef<HTMLDivElement>(null);
+  const [state, setState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const answered = useMutation({
+    mutationFn: (credential: string) => verifyWithGoogle(token, credential),
+    onSuccess: (r) => { if (r.verified) onVerified(); },
+  });
+  const { mutate: check } = answered;
+
+  const show = async () => {
+    setState("loading");
+    try {
+      const google = await loadGoogleSignIn();
+      google.initialize({
+        client_id: clientId,
+        callback: (answer) => { if (answer.credential) check(answer.credential); },
+      });
+      google.renderButton(box.current!, {
+        type: "standard", theme: "outline", size: "large", text: "continue_with",
+        /* Google's limits are 200 to 400; the box itself is hidden until the
+           button is in it, so its parent is measured. */
+        width: Math.min(400, Math.max(200, box.current!.parentElement!.clientWidth)),
+      });
+      setState("ready");
+    } catch {
+      setState("failed");
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      {state !== "ready" && (
+        <Button variant="secondary" disabled={state === "loading"} onClick={() => void show()}>
+          {state === "loading" ? "Opening Google…" : "Continue with Google"}
+        </Button>
+      )}
+      {/* Google draws its own button in here. */}
+      <div ref={box} className={state === "ready" ? "flex justify-center" : "hidden"} />
+      <p className="text-sm text-grey-600 empty:hidden" aria-live="polite">
+        {answered.isPending ? "Checking with Google…"
+          : answered.error ? messageFrom(answered.error)
+          : state === "ready" ? "Press the Google button and choose the account with the email on the booking."
+          : state === "failed" ? "Google could not be reached. Try again, or use a code."
+          : null}
+      </p>
+    </div>
+  );
+}
+
+/* ── Behind the code ──────────────────────────────────────────────────
+   Each part is its own section, and a new feature adds ONE line here: its
+   section asks its own door route and draws nothing when it has nothing
+   (guestKit.ts, MODULE.md). */
 
 function Behind(
   { token, view, onUnlockGone }:
@@ -312,83 +395,16 @@ function Behind(
         <StatusPill tone="success">Verified on this phone</StatusPill>
       </div>
       <DetailsSection token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
+      <IdPhotoSection token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
       <BillSection token={token} onUnlockGone={onUnlockGone} />
       {/* Only what this hotel has switched on (D21-63). */}
       {view.offers.length > 0 && (
         <RequestsSection token={token} offers={view.offers} onUnlockGone={onUnlockGone} />
       )}
+      <TableBookingSection token={token} onUnlockGone={onUnlockGone} />
       <MessageTheDesk token={token} onUnlockGone={onUnlockGone} />
+      <RoomDining token={token} onUnlockGone={onUnlockGone} />
     </>
-  );
-}
-
-/* ── Message the front desk (D23-14) ─────────────────────────────────
-   Anything, in the guest's own words. A request of kind 'desk' through the
-   same door and the same limits as a spa or laundry request; it lands in
-   the booking's Guest messages at the desk, unread until handled.
-
-   Under it, what they sent (the owner, 24 September): each Sent or
-   Handled, with the day and nothing else - no staff name, no time. The
-   door's own list of this stay's requests, the same read as above; the
-   words are a text node, never HTML. */
-function MessageTheDesk({ token, onUnlockGone }: { token: string; onUnlockGone: () => void }) {
-  const qc = useQueryClient();
-  const [what, setWhat] = useState("");
-  const list = useQuery({
-    queryKey: ["guest-behind", token, "requests"],
-    queryFn: () => getRequests(token),
-    retry: false,
-  });
-  const send = useMutation({
-    mutationFn: () => makeRequest(token, { kind: "desk", what }),
-    onSuccess: async () => {
-      setWhat("");
-      await qc.invalidateQueries({ queryKey: ["guest-behind", token, "requests"] });
-    },
-  });
-  useUnlockGone(list.error ?? send.error, onUnlockGone);
-  const sent = (list.data?.requests ?? []).filter((q) => q.kind === "desk");
-
-  return (
-    <section className={SECTION}>
-      <h2 className={cn(H2, "mb-3")}>Message the front desk</h2>
-      <Card><CardBody>
-        <form onSubmit={(e) => { e.preventDefault(); send.mutate(); }} className="flex flex-col gap-3">
-          <Field label="Your message">
-            {(f) => (
-              <Textarea {...fieldProps(f)} rows={3} maxLength={500}
-                value={what} onChange={(e) => setWhat(e.target.value)} />
-            )}
-          </Field>
-          <Button type="submit" variant="secondary" disabled={send.isPending || what.trim() === ""}>
-            {send.isPending ? "Sending…" : "Send to the front desk"}
-          </Button>
-          {send.isSuccess && what === "" && (
-            <p className="text-sm text-grey-600">Sent. The front desk will see it.</p>
-          )}
-          {send.error && !unlockGone(send.error) && (
-            <p className="text-sm text-brand-red-700">{messageFrom(send.error)}</p>
-          )}
-        </form>
-
-        {/* What they sent: list rows under a hairline, not boxes in the card. */}
-        {sent.length > 0 && (
-          <ul className="mt-3.5 border-t border-grey-100 divide-y divide-grey-100 -mb-3.5">
-            {sent.map((q) => (
-              <li key={q.createdAt} className="py-3 text-sm">
-                <p className="text-ink-900 whitespace-pre-line break-words">{q.what}</p>
-                <p className="mt-1 flex items-center gap-2 text-grey-600">
-                  {dateShort(q.createdAt)}
-                  <StatusPill tone={q.status === "open" ? "neutral" : "success"}>
-                    {q.status === "open" ? "Sent" : "Handled"}
-                  </StatusPill>
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardBody></Card>
-    </section>
   );
 }
 
@@ -400,11 +416,6 @@ const ID_TYPES: { value: Details["idType"]; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 const idLabel = (type: string) => ID_TYPES.find((t) => t.value === type)?.label ?? type;
-
-/** Refused behind the code → ask for a code again, once. */
-function useUnlockGone(error: unknown, onUnlockGone: () => void) {
-  useEffect(() => { if (unlockGone(error)) onUnlockGone(); }, [error, onUnlockGone]);
-}
 
 /* ── Their details: a SUBMISSION the desk confirms (D21-8, D21-19) ──── */
 function DetailsSection(
@@ -549,6 +560,128 @@ function DetailsSection(
   );
 }
 
+/* ── A photo of their ID (D27-207 to D27-212) ────────────────────────
+   Optional, and only once the details are sent: it is part of that
+   submission, for the desk to check against the real ID. The notice and
+   the tick come BEFORE the file button (`idPhotoNotice.ts`, approved by
+   the owner), Aadhaar's rule among them.
+
+   ⚠ THE GUEST SENDS AND NEVER READS BACK. The chosen photo is shown from
+   this phone before it goes; afterwards the page knows only that one is
+   there and since when, or that the desk removed it and why. Nothing of
+   it is kept on this phone.
+
+   Drawn only where the hotel takes them (its password is on the server)
+   and only when there is something to say. */
+function IdPhotoSection(
+  { token, hotel, onUnlockGone }:
+  { token: string; hotel: string; onUnlockGone: () => void },
+) {
+  const qc = useQueryClient();
+  /* The details' own state (the same read as the section above): a photo
+     may be added the moment they are sent, so this asks again when that
+     changes. */
+  const details = useQuery({
+    queryKey: ["guest-behind", token, "details"],
+    queryFn: () => getDetails(token),
+    retry: false,
+  });
+  const state = useQuery({
+    queryKey: ["guest-behind", token, "id-photo", details.data?.sent?.status ?? "none"],
+    queryFn: () => getIdPhoto(token),
+    retry: false,
+  });
+
+  const [chosen, setChosen] = useState<ChosenPhotos>({ front: null, back: null });
+  const [agreed, setAgreed] = useState(false);
+  const [again, setAgain] = useState(false);
+  const send = useMutation({
+    mutationFn: async () => sendIdPhoto(token, {
+      front: await shrinkPhoto(chosen.front!),
+      back: chosen.back ? await shrinkPhoto(chosen.back) : null,
+    }),
+    onSuccess: async () => {
+      setChosen({ front: null, back: null });
+      setAgreed(false);
+      setAgain(false);
+      await qc.invalidateQueries({ queryKey: ["guest-behind", token, "id-photo"] });
+    },
+  });
+  useUnlockGone(state.error ?? send.error, onUnlockGone);
+
+  const it = state.data;
+  if (!it?.offered || (!it.maySend && !it.sent && !it.removed)) return null;
+  const notice = idPhotoNotice(hotel, it.contact);
+  const asking = it.maySend && (!it.sent || again);
+
+  return (
+    <section className={SECTION} data-id-photo>
+      <h2 className={cn(H2, "mb-3")}>{notice.heading}</h2>
+      <Card><CardBody>
+        {it.sent && !asking && (
+          <div className="text-sm text-grey-600">
+            <p className="text-base text-ink-900">
+              {it.sent.sides.includes("back") ? "Front and back sent" : "Photo sent"}
+            </p>
+            <p className="mt-1">
+              {dateTime(it.sent.at)}. {it.maySend
+                ? "The desk will check it against your ID when you arrive."
+                : "The desk has checked your details. Nothing more is needed."}
+            </p>
+            {it.maySend && (
+              <Button variant="secondary" className="mt-3.5 w-full" onClick={() => setAgain(true)}>
+                Send a different photo
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* The desk's reason, in the door's words. */}
+        {it.removed && !it.sent && (
+          <p className={cn("text-sm text-brand-red-700", asking && "mb-3")}>{it.removed}</p>
+        )}
+
+        {asking && (
+          <form
+            onSubmit={(e) => { e.preventDefault(); send.mutate(); }}
+            className="flex flex-col gap-3"
+          >
+            {/* THE NOTICE, before the first button. */}
+            <dl className="rounded-lg bg-grey-100 px-3.5 py-3 text-sm flex flex-col gap-2" data-id-photo-notice>
+              {notice.points.map((p) => (
+                <div key={p.label}>
+                  <dt className="font-medium text-ink-900">{p.label}</dt>
+                  <dd className="text-grey-600">{p.text}</dd>
+                </div>
+              ))}
+            </dl>
+            <IdPhotoInputs value={chosen} onChange={setChosen} disabled={send.isPending} />
+            <label className="flex items-start gap-2.5 text-sm text-ink-900 pointer-coarse:min-h-11 cursor-pointer">
+              <input
+                type="checkbox" className="mt-0.5 size-4 accent-brand-orange cursor-pointer"
+                checked={agreed} onChange={(e) => setAgreed(e.target.checked)}
+              />
+              {notice.agree}
+            </label>
+            <Button type="submit" variant="secondary" disabled={send.isPending || !chosen.front || !agreed}>
+              {send.isPending ? "Sending…" : "Send the photo"}
+            </Button>
+            {again && (
+              <Button type="button" variant="ghost" onClick={() => { setAgain(false); setChosen({ front: null, back: null }); }}>
+                Cancel
+              </Button>
+            )}
+            <p className="text-sm text-grey-600">{notice.skip}</p>
+            {send.error && !unlockGone(send.error) && (
+              <p className="text-sm text-brand-red-700">{messageFrom(send.error)}</p>
+            )}
+          </form>
+        )}
+      </CardBody></Card>
+    </section>
+  );
+}
+
 /* ── The bill as it stands (D21-10) ─────────────────────────────────
    EXACTLY THE BILL THE DESK PRINTS: finance's own `BillPrint`, drawing
    finance's one definition of a bill (`app.stay_bill`, migration 123)
@@ -586,9 +719,14 @@ function BillSection({ token, onUnlockGone }: { token: string; onUnlockGone: () 
 /* ── A spa or laundry request (D21-9) ────────────────────────────────
    A request the desk confirms, never a booking: the spa and laundry keep
    their own rules on their own screens. */
-const KIND_LABEL: Record<string, string> = { spa: "Spa", laundry: "Laundry" };
+const KIND_LABEL: Record<string, string> = {
+  spa: "Spa", laundry: "Laundry",
+  /* While checked in, a request goes straight to its team (D27-181). */
+  housekeeping: "Housekeeping", maintenance: "Something broken", fnb: "Food and drink",
+};
 const STATUS_LABEL: Record<string, string> = {
   open: "Waiting for the desk", done: "Done", declined: "Declined",
+  waiting: "Open", in_progress: "Being done",
 };
 
 function RequestsSection(
@@ -604,6 +742,10 @@ function RequestsSection(
   const [kind, setKind] = useState(offers[0]!);
   const [what, setWhat] = useState("");
   const [wanted, setWanted] = useState("");
+  /* While checked in, the tiles come first and the text box waits behind
+     "Something else" (D27-224). */
+  const quick = hasQuickChoices(offers);
+  const [other, setOther] = useState(!quick);
 
   const ask = useMutation({
     mutationFn: () => makeRequest(token, { kind, what, wanted }),
@@ -620,10 +762,13 @@ function RequestsSection(
     <section className={SECTION}>
       <h2 className={cn(H2, "mb-3")}>Ask for something</h2>
       <Card><CardBody>
-        <form onSubmit={(e) => { e.preventDefault(); ask.mutate(); }} className="flex flex-col gap-3">
+        {quick && <QuickChoices token={token} offers={offers} onOther={setOther} onUnlockGone={onUnlockGone} />}
+        {other && <form onSubmit={(e) => { e.preventDefault(); ask.mutate(); }} className="flex flex-col gap-3">
           {offers.length > 1 && (
+            /* One a line on a phone: with the teams' three (D27-181) they do
+               not fit across. */
             <Segmented
-              className="flex w-full [&>button]:flex-1"
+              className="grid w-full sm:grid-cols-3"
               value={kind} onChange={setKind}
               options={offers.map((k) => ({ value: k, label: KIND_LABEL[k] ?? k }))}
             />
@@ -641,7 +786,7 @@ function RequestsSection(
           {ask.error && !unlockGone(ask.error) && (
             <p className="text-sm text-brand-red-700">{messageFrom(ask.error)}</p>
           )}
-        </form>
+        </form>}
 
         {mine.length > 0 && (
           <ul className="mt-3.5 border-t border-grey-100 divide-y divide-grey-100 -mb-3.5">
@@ -765,12 +910,6 @@ function TextField(
       )}
     </Field>
   );
-}
-
-/** The server's own words (`api()` reads `error`, `reason`, then
-    `message` - fixed for every screen on 21 September); nothing invented. */
-function messageFrom(error: unknown): string {
-  return (error instanceof Error && error.message) || NOTHING_HERE;
 }
 
 /* One narrow column, centred, no shell around it: the page's 20px sides,
