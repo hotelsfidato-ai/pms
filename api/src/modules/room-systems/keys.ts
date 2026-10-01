@@ -170,9 +170,10 @@ keys.post("/:code/stays/:id/keys", async (c) => {
        beside a check-out, take turns rather than interleave. */
     const { rows } = await client.query<{
       reference: string; status: string; room_id: string | null; room: string | null;
-      until: Date; past: boolean;
+      until: Date; past: boolean; day_use: boolean;
     }>(
       `select r.reference, r.status, rm.id::text as room_id, rm.number as room,
+              r.is_day_use as day_use,
               ${STAY_ENDS} as until, ${STAY_ENDS} <= now() as past
          from reservations r
          join hotels h on h.id = r.hotel_id
@@ -184,6 +185,13 @@ keys.post("/:code/stays/:id/keys", async (c) => {
     if (!stay) return refuse("No such stay.");
     if (stay.status !== "checked_in") return refuse("Cards are cut for a guest who is checked in.");
     if (!stay.room_id || !stay.room) return refuse("This stay has no room tonight.");
+    /* A DAY USE (D27-227) leaves the day it comes, and the property has no
+       time that day ends: its check-out time would stop the card before most
+       day guests arrive. Refused in words until the owner names one. */
+    if (stay.day_use) {
+      return refuse("Cards for a day use are not cut here yet: the property has no time a "
+        + "day use ends. Cut them in the lock system's own software.");
+    }
     if (stay.past) {
       return refuse("This stay's departure has passed. Change its dates, or check the guest out.");
     }

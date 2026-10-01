@@ -57,21 +57,36 @@ const cut = (stay: string, body: unknown) => call(`/stays/${stay}/keys`, "POST",
 const reason = async (res: Response) => ((await res.json()) as { reason: string }).reason;
 
 let n = 0;
-/** A booking arriving today, checked in to `room` through the desk's own route. */
-async function arrive(room: string, checkIn = true): Promise<string> {
+/** A booking arriving today for `nights` (0 is a day use), checked in to
+    `room` through the desk's own route. */
+async function arrive(room: string, checkIn = true, nights = 2): Promise<string> {
   const [row] = await sql<{ id: string }>(
     `insert into reservations (hotel_id, reference, guest_id, room_type_id,
                                check_in, check_out, agreed_rate, status)
      values ($1, $2, (select id from guests where full_name = 'Key card guest' limit 1),
              (select id from room_types where hotel_id = $1 and code = 'STD'),
-             $3::date, $3::date + 2, 2000, 'confirmed')
-     returning id::text`, [hotelId, `${CODE}-${process.pid}-${++n}`, today]);
+             $3::date, $3::date + $4::int, 2000, 'confirmed')
+     returning id::text`, [hotelId, `${CODE}-${process.pid}-${++n}`, today, nights]);
   if (checkIn) {
     const res = await call(`/stays/${row!.id}/check-in`, "POST", {
       roomNumber: room, idSkipReason: "Key-card fixture - the ID is not what this tests" });
     expect(res.status, await res.clone().text()).toBe(200);
   }
   return row!.id;
+}
+
+/** Pays what the stay owes - its first night is charged at check-in
+    (D27-204) - so the check-out is about the cards, not the money. */
+async function settle(stay: string) {
+  const [owed] = await sql<{ due: string }>(
+    `select coalesce(sum(fp.amount + fp.tax_amount), 0)::text as due
+       from folio_postings fp join folios f on f.id = fp.folio_id
+      where f.reservation_id = $1 and fp.reverses_id is null
+        and not exists (select 1 from folio_postings r where r.reverses_id = fp.id)`, [stay]);
+  const due = Number(owed!.due);
+  if (due <= 0) return;
+  const res = await call(`/stays/${stay}/payments`, "POST", { method: "UPI", amount: due });
+  expect(res.status, await res.clone().text()).toBe(200);
 }
 
 beforeAll(async () => {
@@ -94,7 +109,11 @@ beforeAll(async () => {
         returning business_date::text as d, (business_date + 1)::text as t`, [hotelId])).rows;
     today = d!.d;
     tomorrow = d!.t;
-    await db.query("select app.bulk_create_rooms($1,'STD',1::smallint,101,110)", [hotelId]);
+    await db.query("select app.bulk_create_rooms($1,'STD',1::smallint,101,111)", [hotelId]);
+    /* A room charge needs a GST rule (067), as at any real property. */
+    await db.query(
+      `insert into tax_rules (hotel_id, kind, over_amount, rate, note)
+       values ($1, 'room', 0, 5, 'Test')`, [hotelId]);
     await db.query("insert into guests (full_name) values ('Key card guest')");
   } finally { await db.end(); }
 });
@@ -104,6 +123,8 @@ afterAll(async () => {
   process.env["ROOM_SYSTEMS_HOTELS"] = saved.hotels;
   const db = await admin();
   try {
+    /* A payment points at its posting: it goes first (formIII.test's lesson). */
+    await db.query("delete from payments where hotel_id = $1", [hotelId]);
     await db.query("alter table key_cards disable trigger key_cards_append_only");
     await db.query("alter table folio_postings disable trigger folio_postings_append_only");
     await db.query("alter table hotels disable trigger hotels_no_delete");
@@ -162,6 +183,14 @@ describe("cutting cards", () => {
     expect((await cut("not-a-stay", { cards: 1 })).status).toBe(404);
   });
 
+  it("refuses a day use in words: the property has no time a day use ends", async () => {
+    const day = await arrive("111", true, 0);
+    const res = await cut(day, { cards: 1 });
+    expect(res.status).toBe(409);
+    expect(await reason(res)).toMatch(/day use/);
+    expect((await keysOf(day)).acts).toHaveLength(0);
+  });
+
   it("refuses, and records nothing, where no lock system is connected", async () => {
     process.env["ROOM_SYSTEMS_HOTELS"] = "";
     try {
@@ -201,6 +230,7 @@ describe("front desk's calls: check-out, move and exchange", () => {
   it("check-out cancels the cards", async () => {
     const stay = await arrive("103");
     expect((await cut(stay, { cards: 1 })).status).toBe(200);
+    await settle(stay);
     const res = await call(`/stays/${stay}/check-out`, "POST", {});
     expect(res.status, await res.clone().text()).toBe(200);
     const k = await keysOf(stay);
@@ -211,6 +241,7 @@ describe("front desk's calls: check-out, move and exchange", () => {
   it("a lock that refuses at check-out is recorded, and the guest still checks out", async () => {
     const stay = await arrive("104");
     expect((await cut(stay, { cards: 1 })).status).toBe(200);
+    await settle(stay);
     standIn.failNext = true;
     const res = await call(`/stays/${stay}/check-out`, "POST", {});
     expect(res.status, await res.clone().text()).toBe(200);
