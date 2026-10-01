@@ -1,5 +1,9 @@
 # The launch release: your steps, in order
 
+> **DO NOT RUN YET (D27-231, 2 October):** the release waits for contracts, loyalty and room
+> systems. The master updates the commit below and removes this line when all three are merged
+> and checked.
+
 Written 1 October 2026. **You type every command** (D21-50). Nothing here was run by Claude.
 Each step says where it runs. Stop at the first red ✗ and send me the output.
 
