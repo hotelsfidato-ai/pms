@@ -31,6 +31,8 @@ async function hotelIdFor(client: Client, code: string) {
 
 interface FolioRow {
   stay_id: string;
+  group_id: string | null;
+  group_name: string | null;
   room_charges: string;
   extra_charges: string;
   tax: string;
@@ -46,14 +48,20 @@ interface FolioRow {
  */
 export const FOLIO_SELECT = `
   with live as (
-    /* fp.* CARRIES reservation_id SINCE 056, so the folio's own is no longer
-       selected alongside it - two columns of one name made every later
+    /* fp.* CARRIES reservation_id SINCE 056, so the folio's own is selected
+       under its own names - two columns of one name made every later
        reference ambiguous and broke this endpoint, the notification count and
        the night-audit checklist together.
 
-       The posting's is the better answer anyway: on a master folio the folio
-       has no reservation, and the posting names the stay the line is for. */
-    select fp.*
+       A GUEST'S FIGURES ARE THE GUEST'S OWN BILL (the owner's D27-226,
+       1 October). A line counts for the bill it is ON: the stay whose folio
+       it is (bill_stay), or the group whose master it is (bill_group) - never
+       the stay the posting names. This grouped by the posting's stay, so a
+       room the host pays for showed its nights as the guest's own: "₹3,150
+       Outstanding" over "Nothing posted to this folio yet", the screen's
+       check-out refused, Settle asked the guest for the company's money. The
+       company's nights are counted once, on the group's master bill. */
+    select fp.*, f.reservation_id as bill_stay, f.group_id as bill_group
       from folio_postings fp
       join folios f on f.id = fp.folio_id
      where f.hotel_id = $1
@@ -63,7 +71,9 @@ export const FOLIO_SELECT = `
           where rev.reverses_id = fp.id
        )
   )
-  select l.reservation_id                                   as stay_id,
+  select l.bill_stay                                        as stay_id,
+         l.bill_group::text                                 as group_id,
+         (select g.name from reservation_groups g where g.id = l.bill_group) as group_name,
          /* The store lumps every positive charge into roomCharges and
             reports extraCharges as 0. Reproduced exactly, because CP9
             is a change of TRANSPORT: a figure that moves here cannot
@@ -78,7 +88,7 @@ export const FOLIO_SELECT = `
          coalesce(-sum(l.amount) filter (where l.category = 'payment'), 0)::text as payments,
          coalesce(sum(l.amount + l.tax_amount), 0)::text     as balance
     from live l
-   group by l.reservation_id
+   group by l.bill_stay, l.bill_group
 `;
 
 /** The tax invoice standing on a line's bill (`fp`): issued and not
@@ -127,6 +137,8 @@ const toFolio = (r: FolioRow) => {
     payments: Number(r.payments),
     balance,
     status: balance === 0 ? "settled" : "open",
+    /* A group's master bill: no stay, the group named (D27-226). */
+    ...(r.group_id ? { groupId: r.group_id, group: r.group_name } : {}),
   };
 };
 
@@ -146,7 +158,7 @@ folios.get("/:code/stays/:id/folio", async (c) => {
     if (!exists.length) return null;
 
     const { rows } = await client.query<FolioRow>(
-      `${FOLIO_SELECT} having l.reservation_id = $2`,
+      `${FOLIO_SELECT} having l.bill_stay = $2`,
       [hotelId, c.req.param("id")],
     );
 
@@ -176,8 +188,10 @@ folios.get("/:code/folios", async (c) => {
     return rows
       .map(toFolio)
       /* A banquet function's bill has no stay; it is not listed here
-         (round E, 28 September). */
-      .filter((f) => f.balance !== 0 && f.stayId !== null)
+         (round E, 28 September). A group's master bill is listed once, under
+         the group's name (D27-226): the company's nights, never under each
+         guest. */
+      .filter((f) => f.balance !== 0 && (f.stayId !== null || "groupId" in f))
       .sort((a, b) => a.balance - b.balance);
   });
 

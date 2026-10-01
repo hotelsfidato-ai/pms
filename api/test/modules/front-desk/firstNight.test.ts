@@ -311,3 +311,50 @@ describe("the nights still to come on the stay's bill", () => {
     expect(await toCome(id)).toBe(2);
   });
 });
+
+/* THE OWNER'S D27-226 (1 October): a guest's own figures count only the
+   guest's own bill. The routed room's nights are on the group's master: its
+   guest showed them as "Outstanding", the screen would not check them out,
+   and Settle asked them for the company's money. The company's nights are
+   listed once, under the group. */
+describe("a guest the group pays for owes only their own bill", () => {
+  it("has no bill of their own while the group's master carries the nights", async () => {
+    const res = await call(`/stays/${routed}/folio`);
+    expect(res.status, await res.clone().text()).toBe(404);
+    expect(((await res.json()) as { noBill?: boolean }).noBill).toBe(true);
+  });
+
+  it("is not asked by Settle for the company's money", async () => {
+    const res = await call(`/stays/${routed}/payments`, "POST", { method: "UPI", amount: 100 });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toMatch(/₹100(\.00)? more than the bill/);
+  });
+
+  it("puts the company's nights on the list once, under the group", async () => {
+    const list = (await (await call("/folios")).json()) as
+      Array<{ stayId: string | null; groupId?: string; group?: string; balance: number }>;
+    expect(list.find((f) => f.stayId === routed)).toBeUndefined();
+    const master = list.filter((f) => f.groupId === groupId);
+    expect(master).toEqual([expect.objectContaining({ stayId: null, group: "FNT group" })]);
+    expect(master[0]!.balance).toBeGreaterThan(0);
+  });
+
+  it("is not counted by the night audit as an in-house folio carrying a balance", async () => {
+    const checks = ((await (await call("/night-audit")).json()) as
+      { checks: Array<{ id: string; count: number }> }).checks;
+    /* Counted by the bill each line is on, the rule; and by the stay each
+       posting names, the old one - which counted the routed guest too. */
+    const owing = (by: string) => sql<{ n: string }>(
+      `select count(*)::text as n from reservations r
+        where r.hotel_id = $1 and r.status = 'checked_in'
+          and (select coalesce(sum(fp.amount + fp.tax_amount), 0)
+                 from folio_postings fp join folios f on f.id = fp.folio_id
+                where ${by} = r.id and fp.reverses_id is null
+                  and not exists (select 1 from folio_postings x where x.reverses_id = fp.id)) > 0.5`,
+      [hotelId]);
+    const [own] = await owing("f.reservation_id");
+    const [named] = await owing("fp.reservation_id");
+    expect(Number(named!.n), "the routed guest makes a difference").toBe(Number(own!.n) + 1);
+    expect(checks.find((c) => c.id === "balances")!.count).toBe(Number(own!.n));
+  });
+});

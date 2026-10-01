@@ -36,7 +36,9 @@ checklist.get("/:code/night-audit", async (c) => {
       to_post: string; dirty: string; reversals: string;
     }>(
       `with live as (
-         select fp.*
+         /* The bill a line is ON (the owner's D27-226): a guest owes their own
+            bills, not the nights their group's master carries for them. */
+         select fp.*, f.reservation_id as bill_stay
            from folio_postings fp
            join folios f on f.id = fp.folio_id
           where fp.hotel_id = $1
@@ -55,7 +57,7 @@ checklist.get("/:code/night-audit", async (c) => {
          (select count(*) from reservations r
            where r.hotel_id = $1 and r.status = 'checked_in'
              and (select coalesce(sum(amount + tax_amount), 0) from live
-                   where reservation_id = r.id) > 0.5)::text           as owing,
+                   where bill_stay = r.id) > 0.5)::text                as owing,
          /* What the run posts (QA NA-5). A stay due out today is left out:
             the run is refused until it has left (blockersFor), so its room
             is never charged tonight. */

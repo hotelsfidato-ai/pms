@@ -829,12 +829,12 @@ postings.post("/:code/stays/:id/payments", async (c) => {
       },
       foreign: stay[0].foreign,
       /* A named bill owes its own balance. Unnamed, the stay's, as the Settle
-         dialog showed it - which counts a group master folio's lines for
-         this stay too. */
+         dialog shows it: the guest's own bills only - not the nights the
+         group's master bill carries for this stay (the owner's D27-226). */
       ...(body.folioId ? {} : {
         owed: async () => {
           const { rows: bill } = await client.query<{ balance: string }>(
-            `${FOLIO_SELECT} having l.reservation_id = $2`, [hotelId, stayId]);
+            `${FOLIO_SELECT} having l.bill_stay = $2`, [hotelId, stayId]);
           return Number(bill[0]?.balance ?? 0);
         },
       }),
