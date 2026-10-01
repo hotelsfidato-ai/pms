@@ -37,12 +37,13 @@ const LABEL: Record<TaxKind, string> = {
   banquet: "Banquet",
   spa: "Spa",
   alcohol: "Alcohol",
+  laundry: "Laundry",
   other: "Everything else",
 };
 
 const WHAT: Record<TaxKind, string> = {
   room: "The night, and everything the front desk adds to it - an early "
-      + "arrival, a late departure, laundry, transport.",
+      + "arrival, a late departure, transport.",
   restaurant: "Food and non-alcoholic drink, on any menu category set to it.",
   bar: "What the bar sells under GST - soft drinks, mocktails, snacks. "
      + "Alcohol itself is VAT, under its own heading, where the property serves it.",
@@ -52,6 +53,9 @@ const WHAT: Record<TaxKind, string> = {
   alcohol: "Beer, wine and spirits, on any menu category set to it. VAT, not "
          + "GST: one VAT line on the bill, never split into CGST and SGST, and "
          + "kept off the GST invoice. Your accountant confirms the rate.",
+  /* D27-194: its own heading; until set, a laundry charge is refused. */
+  laundry: "A guest's laundry, charged to the room bill. Its own rate - your "
+         + "accountant confirms it.",
   other: "Anything that belongs under none of the above.",
 };
 

@@ -1,18 +1,32 @@
-import { Hono, type Context } from "hono";
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { guestDining } from "./guestDining.ts";
+import { Hono } from "hono";
+import { OAuth2Client } from "google-auth-library";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { withSession } from "../auth.ts";
 import { pool } from "../db.ts";
 import { env } from "../env.ts";
 import { canSend, send } from "../sending.ts";
 import { idNumberProblem } from "../validate.ts";
+import {
+  A_UUID, DESK_REFUSED, NOTHING_HERE, ask, deskAt, openedHere, refused, sha256,
+  tooOften, unlockOf, type Db, type OpenRow,
+} from "./guestDoorKit.ts";
+import {
+  ID_PHOTOS_OFF, MAX_UPLOAD, NOTICE_VERSION, get as getPhotos, idPhotosOn, photosFrom,
+  put as putPhotos, remove as removePhotos,
+} from "./idPhotos.ts";
+import { guestTables } from "./guestTables.ts";
+import { messagesDesk, messagesDoor } from "./guestMessages.ts";
+import { logoDoor } from "./guestLogo.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S OWN DOOR — one private page per booking (D18-9, D18-10, D18-13)
 
    GET  /api/guest/:token          what this booking is, and whether the guest
                                    has proved who they are yet
-   POST /api/guest/:token/code     send a six-digit code to the phone THE
-                                   BOOKING carries
+   POST /api/guest/:token/code     send a six-digit code to the phone or the
+                                   email THE BOOKING carries - the guest
+                                   chooses which, and types neither (D27-207)
    POST /api/guest/:token/verify   answer it
 
    and, for the desk, inside the ordinary staff gate:
@@ -60,123 +74,6 @@ import { idNumberProblem } from "../validate.ts";
 export const guestDoor = new Hono();
 export const guestLinks = new Hono<{ Variables: { subject: string } }>();
 
-const sha256 = (value: string) => createHash("sha256").update(value, "utf8").digest("hex");
-
-/** One sentence for every refusal: a stranger learns nothing from which one. */
-const NOTHING_HERE = "This link is not usable. Ask the desk for a new one.";
-
-/* ── How often anybody may knock ──────────────────────────────────
-   A token is 32 bytes, so guessing one is not the risk; a stolen link being
-   hammered for codes is. Per token, per minute, in this process - nginx has
-   its own limit in front (deploy/nginx.conf, the master's). */
-const A_MINUTE = 60_000;
-const OPENS_A_MINUTE = 30;
-const CODES_AN_HOUR = 5;
-const knocks = new Map<string, { at: number; opens: number; codes: number; hour: number }>();
-
-/* ⚠ AND IT IS SWEPT, WHICH IT WAS NOT (19 September, found by audit).
-   A token hash was added on the first knock and never removed, and this is
-   the one door in the system that needs no credential of any kind: anybody
-   could walk random tokens and grow this map until the process died, taking
-   the front desk and the tills with it. The comment above claimed nginx had
-   a limit in front — it does not. `deploy/nginx.conf` applied `limit_req`
-   only to /api/channel/, and /api/guest/ fell through the plain /api/ block.
-   Both halves are fixed: nginx has its own zone now, and nothing here is
-   remembered longer than the hour its counters cover. */
-const KEEP_FOR = 60 * A_MINUTE;
-function sweep(now: number): void {
-  for (const [hash, seen] of knocks) {
-    if (now - seen.at * A_MINUTE > KEEP_FOR) knocks.delete(hash);
-  }
-}
-
-function tooOften(tokenHash: string, kind: "open" | "code"): boolean {
-  const now = Date.now();
-  /* Cheap: this map holds one small object per token seen in the last hour,
-     and the sweep only walks that. It runs on the knock rather than on a
-     timer so a process with no guests does no work at all. */
-  if (knocks.size > 1_000) sweep(now);
-  const minute = Math.floor(now / A_MINUTE);
-  const hour = Math.floor(now / (60 * A_MINUTE));
-  const seen = knocks.get(tokenHash);
-  if (!seen || seen.at !== minute) {
-    knocks.set(tokenHash, {
-      at: minute, opens: 0,
-      codes: seen && seen.hour === hour ? seen.codes : 0,
-      hour,
-    });
-  }
-  const row = knocks.get(tokenHash)!;
-  if (kind === "open") {
-    row.opens += 1;
-    return row.opens > OPENS_A_MINUTE;
-  }
-  row.codes += 1;
-  return row.codes > CODES_AN_HOUR;
-}
-
-export function forgetKnocksForTests(): void {
-  knocks.clear();
-}
-
-interface OpenRow extends Record<string, unknown> {
-  link_id: string; kind: "booking" | "room";
-  hotel_id: string; hotel_code: string; hotel_name: string;
-  room_number: string | null; occupied: boolean;
-  /* Null on a room card until THIS phone has answered the code (D21-14). */
-  reservation_id: string | null; reference: string | null; guest_name: string | null;
-  check_in: string | null; check_out: string | null; status: string | null;
-  verified: boolean; phone_hint: string | null; offers: string[] | null;
-}
-
-/** The unlock this phone holds, hashed - or null, which unlocks nothing.
-
-    ⚠ IN `Authorization: Guest <unlock>`, NOT A HEADER OF ITS OWN (OCI-4).
-    It was `x-guest-unlock` until the page was opened in a browser on 21
-    September: the API's CORS list (server.ts, the master's) does not name
-    it, so every call behind the code was blocked by its preflight and the
-    guest read "could not reach the hotel" the moment the code was right.
-    The tests run in-process and never meet a preflight. `authorization` is
-    already allowed, is not written to access logs, and is ignored on
-    /api/guest by the staff gate - and a signed-in clerk's `Bearer` token on
-    the same browser is not a `Guest` one, so it unlocks nothing here. */
-const unlockOf = (c: Context) => {
-  const held = /^Guest\s+(\S+)$/.exec(c.req.header("authorization") ?? "")?.[1];
-  return held ? sha256(held) : null;
-};
-
-const refused = (c: Context) => c.json({ error: NOTHING_HERE }, 404);
-
-/* Opened WITH this phone's unlock: the one check every route behind the code
-   makes before it does anything. Each database function behind it asks again
-   - this is the door's courtesy, the function is the guard. */
-async function openedHere(
-  c: Context,
-): Promise<{ hash: string; unlock: string; it: OpenRow } | null> {
-  const hash = sha256(c.req.param("token") ?? "");
-  const unlock = unlockOf(c);
-  if (tooOften(hash, "open") || !unlock) return null;
-  const rows = await ask<OpenRow>("select * from app.guest_link_open($1, $2)", [hash, unlock]);
-  const it = rows[0];
-  return it?.verified ? { hash, unlock, it } : null;
-}
-
-/* The door's own connection. NOT `withSession`: a guest has no staff id to run
-   as, and giving them one would be giving them a person's reach. Every
-   statement below is a call to one of migration 114's functions, each of which
-   answers about the single booking the token names. */
-async function ask<T extends Record<string, unknown>>(
-  text: string, params: unknown[],
-): Promise<T[]> {
-  const client = await pool.connect();
-  try {
-    const { rows } = await client.query<T>(text, params);
-    return rows;
-  } finally {
-    client.release();
-  }
-}
-
 guestDoor.get("/:token", async (c) => {
   const hash = sha256(c.req.param("token"));
   if (tooOften(hash, "open")) return c.json({ error: NOTHING_HERE }, 429);
@@ -187,6 +84,12 @@ guestDoor.get("/:token", async (c) => {
     "select * from app.guest_link_open($1, $2)", [hash, unlockOf(c)]);
   const it = rows[0];
   if (!it) return c.json({ error: NOTHING_HERE }, 404);
+
+  /* The booking's email, masked, so the page can offer "a code by email" and
+     say where it would go (D27-207). Null on a room card (D21-14) and where
+     the booking has none. */
+  const ways = await ask<{ email_hint: string | null }>(
+    "select * from app.guest_link_ways($1)", [hash]);
 
   return c.json({
     kind: it.kind,
@@ -206,11 +109,16 @@ guestDoor.get("/:token", async (c) => {
     },
     verified: it.verified,
     phoneHint: it.phone_hint,
+    emailHint: ways[0]?.email_hint ?? null,
     /* D21-25: the page asks for a code only when one can be sent. This is
        about the SERVER, not the booking - it is the same answer for every
        link, so it tells a stranger nothing about this one. */
     canSendCodes: canSend() || codeOnScreen(),
     cannotSend: canSend() || codeOnScreen() ? null : CANNOT_SEND,
+    /* Continue with Google is offered only where the server has its client
+       id (D27-207). The id is public - it names this system to Google - and
+       the same for every link. */
+    googleClientId: googleClientId(),
     /* What this hotel offers behind the code (D21-63): only once unlocked. */
     offers: it.verified ? (it.offers ?? []) : [],
   });
@@ -223,8 +131,8 @@ guestDoor.get("/:token", async (c) => {
 /* And the one sentence for a server that cannot send at all - on opening, so
    the page can say it BEFORE asking for a number (D21-25), and again if a
    code is asked for anyway. One definition, here. */
-const CANNOT_SEND = "Codes cannot be sent yet - WhatsApp is not connected to "
-  + "this server. Ask the desk to send you the link instead.";
+const CANNOT_SEND = "Codes cannot be sent yet - sending is not set up on this "
+  + "server. Ask the desk.";
 
 /* ── TRY IT WITHOUT WHATSAPP - DEVELOPMENT ONLY (D27-105) ─────────────
    GUEST_CODE_ON_SCREEN=1 makes the code and hands it back in the answer
@@ -248,6 +156,8 @@ const codeOnScreen = (): boolean =>
    card, which never shows the number. */
 const NO_PHONE = "There is no mobile number on this booking, so no code can be "
   + "sent. Ask the desk.";
+const NO_EMAIL = "There is no email address on this booking, so no code can be "
+  + "sent by email. Ask the desk.";
 const TOO_OFTEN = "Five codes have gone to this booking in the last hour. "
   + "Use the latest one, or ask the desk.";
 const NOT_SENT = "The code could not be sent just now. Try again in a minute, "
@@ -256,6 +166,10 @@ const NOT_SENT = "The code could not be sent just now. Try again in a minute, "
 guestDoor.post("/:token/code", async (c) => {
   const hash = sha256(c.req.param("token"));
   const onScreen = codeOnScreen();
+  /* WHICH WAY, the guest's choice (D27-207): WhatsApp, or the email on the
+     booking. Only the word is read - never a number or an address. */
+  const body = await c.req.json<{ by?: string }>().catch(() => ({}) as { by?: string });
+  const byEmail = body.by === "email";
   /* Nothing can be sent: say so first. Asked before the knock is counted, so
      a guest reading this sentence has not spent one of their five an hour. */
   if (!canSend() && !onScreen) return c.json({ sent: false, message: CANNOT_SEND }, 503);
@@ -271,17 +185,23 @@ guestDoor.post("/:token/code", async (c) => {
        the booking's own number (162). None of the number goes into the
        answer; it goes only into the message. */
     const { rows } = await client.query<{
-      code: string | null; sent_to: string | null; phone: string | null;
+      code: string | null; sent_to: string | null; phone?: string | null; email?: string | null;
       reservation_id: string; reference: string; guest_name: string;
       hotel_id: string; hotel_code: string; hotel_name: string; room_card: boolean;
-    }>("select * from app.guest_code_make($1)", [hash]);
+    }>(byEmail ? "select * from app.guest_email_code_make($1)"
+               : "select * from app.guest_code_make($1)", [hash]);
     const made = rows[0];
     if (!made) return c.json({ error: NOTHING_HERE }, 404);
-    if (!made.code || !made.phone) return c.json({ sent: false, message: NO_PHONE });
+    const address = byEmail ? made.email : made.phone;
+    if (!made.code || !address) return c.json({ sent: false, message: byEmail ? NO_EMAIL : NO_PHONE });
 
-    const where = made.room_card
-      ? "to the phone on the booking"
-      : `to the number ending ${made.sent_to!.replace("…", "")}`;
+    /* Where it went, as the page may say it: on a room card nothing of the
+       guest (D21-14); on a booking's link the number's last digits or the
+       address masked, never whole. */
+    const where = byEmail
+      ? (made.room_card ? "to the email on the booking" : `to ${made.sent_to}`)
+      : (made.room_card ? "to the phone on the booking"
+        : `to the number ending ${made.sent_to!.replace("…", "")}`);
     if (onScreen) {
       return c.json({
         sent: true,
@@ -297,15 +217,20 @@ guestDoor.post("/:token/code", async (c) => {
        "…0011" kept for the record, as the recipient - so the first code
        sent once WhatsApp was connected would have reached nobody. */
     const answer = await send(client, {
-      channel: "whatsapp",
+      channel: byEmail ? "email" : "whatsapp",
       kind: "guest-link-code",
       hotel: { id: made.hotel_id, code: made.hotel_code, name: made.hotel_name },
-      to: { name: made.guest_name, phone: made.phone },
-      data: { code: made.code, reference: made.reference },
+      to: byEmail ? { name: made.guest_name, email: address }
+        : { name: made.guest_name, phone: address },
+      /* The email's words are written in the workflow from these (D17-87). */
+      data: {
+        code: made.code, reference: made.reference,
+        guestName: made.guest_name, hotelName: made.hotel_name,
+      },
       about: { kind: "reservation", id: made.reservation_id },
     });
     return c.json(answer.ok
-      ? { sent: true, message: `We sent the code on WhatsApp ${where}.` }
+      ? { sent: true, message: `We sent the code ${byEmail ? "by email" : "on WhatsApp"} ${where}.` }
       : { sent: false, message: NOT_SENT });
   } finally {
     client.release();
@@ -338,6 +263,65 @@ guestDoor.post("/:token/verify", async (c) => {
       error: "That code is not right, or it has expired. Ask for a new one.",
     }, 401);
   }
+  return c.json({ verified: true, unlock });
+});
+
+/* ── CONTINUE WITH GOOGLE (D27-207) ────────────────────────────────
+   The third proof. The page gets a signed answer from Google ("this browser
+   is signed in as this address") and posts it here. Nothing of it is
+   trusted until it is checked:
+
+     · Google signed it - against Google's own published keys
+     · for THIS system - `aud` is our client id (GOOGLE_CLIENT_ID)
+     · Google issued it, it has not expired, and it was made in the last
+       ten minutes - so an old answer found somewhere is not a key
+     · the address is one Google has verified
+
+   and then the DATABASE decides whose booking it is: the address must be the
+   one the stay carries (`app.guest_google_answer`, 167). A match hands out
+   the same unlock as a right code, and nothing else: no account, no
+   session, no guest role (rule 1) - and no Firebase user, so no guest ever
+   sits in the project the staff sign in to.
+
+   GOOGLE_CLIENT_ID unset: the button is not offered and this answers what
+   an unknown link answers. */
+const googleClientId = (): string | null => process.env["GOOGLE_CLIENT_ID"]?.trim() || null;
+const google = new OAuth2Client();
+const GOOGLE_ANSWER_LIVES_S = 10 * 60;
+const NOT_THIS_GOOGLE = "That Google account is not the one on this booking. "
+  + "Use the email the booking was made with, or ask for a code.";
+
+/** The address Google vouches for, or null for anything that fails a check.
+    Which check failed is not said: the answer is the same sentence. */
+async function emailGoogleVouchesFor(credential: string, clientId: string): Promise<string | null> {
+  try {
+    const ticket = await google.verifyIdToken({ idToken: credential, audience: clientId });
+    const p = ticket.getPayload();
+    if (!p || p.email_verified !== true || typeof p.email !== "string") return null;
+    if (Date.now() / 1000 - p.iat > GOOGLE_ANSWER_LIVES_S) return null;
+    return p.email;
+  } catch {
+    return null;
+  }
+}
+
+guestDoor.post("/:token/google", async (c) => {
+  const hash = sha256(c.req.param("token"));
+  const clientId = googleClientId();
+  if (!clientId) return refused(c);
+  if (tooOften(hash, "open")) return c.json({ error: NOTHING_HERE }, 429);
+
+  const body = await c.req.json<{ credential?: unknown }>().catch(() => ({}) as { credential?: unknown });
+  const email = typeof body.credential === "string" && body.credential.length <= 4096
+    ? await emailGoogleVouchesFor(body.credential, clientId) : null;
+
+  /* The unlock, as `verify` makes it: only its hash reaches the database,
+     in the same statement that accepts the address. */
+  const unlock = randomBytes(32).toString("base64url");
+  const rows = email === null ? [] : await ask<{ ok: boolean }>(
+    "select app.guest_google_answer($1, $2, $3) as ok", [hash, email, sha256(unlock)]);
+
+  if (!rows[0]?.ok) return c.json({ verified: false, error: NOT_THIS_GOOGLE }, 401);
   return c.json({ verified: true, unlock });
 });
 
@@ -480,6 +464,122 @@ guestDoor.post("/:token/requests", async (c) => {
   return c.json({ sent: true });
 });
 
+/* ── THE ID PHOTO (D27-207 to D27-212) ─────────────────────────────
+   Optional, after the details are sent: a photo of the front of a
+   government photo ID, and the back if it has one. It is a SUBMISSION like
+   the details (D21-8) - the desk sees it beside them and checks the real
+   ID - and it is never on this server: idPhotos.ts encrypts it with the
+   hotel's own password and stores it in Drive.
+
+   ⚠ THE GUEST WRITES, AND NEVER READS. There is no route on this door that
+   hands a photo back: not the image, not its name, not where it is. The
+   guest is told only that it is there and since when, or that the desk
+   removed it and why.
+
+   THE ORDER OF THE CHECKS: the link, the knocks, this phone's unlock -
+   and only then is a single byte of the body read. A stranger cannot make
+   this server take in megabytes. */
+const PHOTO_NOT_OFFERED = "This hotel is not taking ID photos online. Show your ID at the desk.";
+const PHOTO_TOO_OFTEN = "Ten photos have been sent from this link in the last hour. "
+  + "Try again later, or show your ID at the desk.";
+const PHOTO_TOO_BIG = "Those photos are too large to send. Take them again, or show your ID at the desk.";
+const PHOTO_NOT_NOW = "Send your check-in details first. If the desk has already "
+  + "checked them, show your ID at the desk.";
+const PHOTO_NOT_STORED = "The photo could not be stored just now, and nothing was kept. "
+  + "Try again shortly, or show your ID at the desk.";
+
+/** What the desk's reason reads as on the guest's own page. */
+const REMOVED_SAYS: Readonly<Record<string, string>> = {
+  not_masked: "The front desk removed your photo because the Aadhaar number was not covered. "
+    + "Send it again with the first 8 digits hidden.",
+  not_readable: "The front desk could not read your photo. Send a clearer one.",
+  not_an_id: "The photo was not a government photo ID. Send one, or show your ID at the desk.",
+};
+const REMOVED_OTHERWISE = "The hotel removed your ID photo.";
+
+guestDoor.get("/:token/id-photo", async (c) => {
+  const door = await openedHere(c);
+  if (!door) return refused(c);
+  const rows = await ask<{
+    status: string | null; sides: string[] | null; stored_at: string | null;
+    removed_reason: string | null; may_send: boolean; hotel_phone: string | null;
+  }>("select * from app.guest_id_photo_state($1, $2)", [door.hash, door.unlock]);
+  const it = rows[0];
+  if (!it) return refused(c);
+  return c.json({
+    /* Whether this hotel takes them at all: its password and the store. */
+    offered: idPhotosOn(door.it.hotel_code),
+    maySend: it.may_send,
+    notice: NOTICE_VERSION,
+    /* The hotel's own number, for the notice's "to have it deleted, contact". */
+    contact: it.hotel_phone,
+    sent: it.status === "stored" ? { sides: it.sides, at: it.stored_at } : null,
+    removed: it.status === "removed"
+      ? REMOVED_SAYS[it.removed_reason ?? ""] ?? REMOVED_OTHERWISE : null,
+  });
+});
+
+guestDoor.post("/:token/id-photo", async (c) => {
+  const door = await openedHere(c);
+  if (!door) return refused(c);
+  /* From here the caller is behind the code, so a plain sentence is safe. */
+  const code = door.it.hotel_code;
+  if (!idPhotosOn(code)) return c.json({ error: PHOTO_NOT_OFFERED }, 409);
+  if (tooOften(door.hash, "photo")) return c.json({ error: PHOTO_TOO_OFTEN }, 429);
+
+  /* The length the browser declares is the length Node will read, and no
+     more: checked before the body is touched. */
+  const length = Number(c.req.header("content-length"));
+  if (!Number.isFinite(length) || length <= 0 || length > MAX_UPLOAD) {
+    return c.json({ error: PHOTO_TOO_BIG }, 413);
+  }
+  const form = await c.req.formData().catch(() => null);
+  if (!form) return c.json({ error: "Send the photo as a form upload." }, 400);
+  /* The consent the notice asks for (DPDP): no tick, no photo. */
+  if (form.get("agreed") !== "yes") {
+    return c.json({ error: "Tick the box to agree before sending the photo." }, 400);
+  }
+  const photos = await photosFrom(form);
+  if (typeof photos === "string") return c.json({ error: photos }, 400);
+
+  /* The row first (167), so a file that reaches Drive always has one. */
+  const begun = await ask<{
+    id: string; hotel_code: string; reference: string; guest_name: string;
+  }>("select * from app.guest_id_photo_begin($1, $2, $3::text[], $4)",
+    [door.hash, door.unlock, photos.map((p) => p.side), NOTICE_VERSION]);
+  const row = begun[0];
+  if (!row) return c.json({ error: PHOTO_NOT_NOW }, 409);
+
+  const stored = await putPhotos({
+    id: row.id, hotelCode: row.hotel_code, reference: row.reference,
+    guestName: row.guest_name, by: "the guest",
+  }, photos);
+  if (!stored) {
+    await ask("select app.guest_id_photo_abandon($1, $2, $3)", [door.hash, door.unlock, row.id]);
+    return c.json({ error: PHOTO_NOT_STORED }, 503);
+  }
+
+  const done = await ask<{ done: { replaced: { id: string; driveFileId: string }[] } | null }>(
+    "select app.guest_id_photo_stored($1, $2, $3, $4, $5, $6) as done",
+    [door.hash, door.unlock, row.id, stored.driveFileId, stored.sha256, stored.bytes]);
+  if (!done[0]?.done) {
+    /* The unlock ended while Drive was answering: take the file back. */
+    await removePhotos(row.hotel_code, stored.driveFileId);
+    await ask("select app.guest_id_photo_abandon($1, $2, $3)", [door.hash, door.unlock, row.id]);
+    return refused(c);
+  }
+
+  /* A REPLACED PHOTO GOES AT ONCE - an unmasked Aadhaar replaced by a masked
+     one must not stay in Drive. If Drive will not delete it now, that is
+     written down for a manager. */
+  for (const old of done[0].done.replaced) {
+    if (!(await removePhotos(row.hotel_code, old.driveFileId))) {
+      await ask("select app.guest_id_photo_delete_failed($1, $2, $3)", [door.hash, door.unlock, old.id]);
+    }
+  }
+  return c.json({ sent: true });
+});
+
 /* ── The desk's side ──────────────────────────────────────────────
    Inside the ordinary staff gate, under row level security, like everything
    else a clerk does. It hands back the link ONCE: after this response the
@@ -555,26 +655,6 @@ function linkFor(token: string): string {
    Ordinary staff routes: row level security decides which hotel's rows a
    clerk sees, and these roles decide who may act. Reception does all of it
    at the desk; the floor above it may too. */
-const DESK_ROLES: readonly string[] = ["owner", "admin", "gm", "hotel_manager", "front_desk"];
-const DESK_REFUSED = "Online check-in is handled by reception, the manager, an "
-  + "administrator or the owner. Ask one of them.";
-
-type Db = Parameters<Parameters<typeof withSession>[1]>[0];
-
-/* The hotel, if this person holds a desk role there - the same question the
-   spa and the other services ask, in the same words. */
-async function deskAt(client: Db, code: string): Promise<string | null> {
-  const { rows } = await client.query<{ id: string; may: boolean }>(
-    `select h.id::text,
-            exists (select 1 from staff s
-                     where s.id = app.current_user_id() and s.is_active and s.is_group_admin)
-         or exists (select 1 from staff_hotels sh join staff s on s.id = sh.staff_id
-                     where sh.staff_id = app.current_user_id() and sh.hotel_id = h.id
-                       and s.is_active and sh.role = any($2::text[])) as may
-       from hotels h where h.code = $1`,
-    [code.toUpperCase(), DESK_ROLES]);
-  return rows[0]?.may ? rows[0].id : null;
-}
 
 /* AADHAAR: THE LAST FOUR, ON EVERY SCREEN (D21-18). The full number is stored
    (D21-17) and appears only on the printed registration card; it never leaves
@@ -593,10 +673,14 @@ guestLinks.get("/:code/online-checkin", async (c) => {
       passport_expiry: string | null; visa_number: string | null; visa_expiry: string | null;
       address_line: string | null; city: string | null; country: string | null;
       submitted_at: string; more: Record<string, string | boolean | null>;
+      photo_id: string | null; photo_sides: string[] | null; photo_at: string | null;
     }>(
       `select d.id::text, g.full_name as guest, r.reference, d.id_type, d.id_number,
               d.passport_expiry::text, d.visa_number, d.visa_expiry::text,
               d.address_line, d.city, d.country, d.submitted_at,
+              -- The ID photo sent with them, if any: that it is there, never
+              -- where. The image is fetched only when a clerk opens it.
+              p.id::text as photo_id, p.sides as photo_sides, p.stored_at as photo_at,
               -- D27-169: what else the guest sent, for the clerk to check.
               -- Only what was filled in; the screen names each one.
               jsonb_strip_nulls(jsonb_build_object(
@@ -617,8 +701,15 @@ guestLinks.get("/:code/online-checkin", async (c) => {
          from guest_detail_submissions d
          join reservations r on r.id = d.reservation_id
          join guests g       on g.id = d.guest_id
+         left join lateral (
+           -- THIS submission's photo, not the stay's latest: a photo already
+           -- kept from an earlier one is not reception's to open (1 October).
+           select x.id, x.sides, x.stored_at from guest_id_photos x
+            where x.submission_id = d.id and x.status = 'stored'
+            order by x.created_at desc limit 1) p on true
         where d.hotel_id = $1 and d.status = 'waiting'
         order by d.submitted_at`, [hotelId]);
+    const keeps = (await deskAt(client, c.req.param("code"), KEEPER_ROLES)) !== null;
 
     const { rows: requests } = await client.query<{
       id: string; kind: string; what: string; wanted: string | null;
@@ -649,16 +740,250 @@ guestLinks.get("/:code/online-checkin", async (c) => {
         passportExpiry: d.passport_expiry, visaNumber: d.visa_number,
         visaExpiry: d.visa_expiry, addressLine: d.address_line, city: d.city,
         country: d.country, submittedAt: d.submitted_at, more: d.more,
+        photo: d.photo_id ? { id: d.photo_id, sides: d.photo_sides, at: d.photo_at } : null,
       })),
       requests: requests.map((q) => ({
         id: q.id, kind: q.kind, what: q.what, wanted: q.wanted,
         createdAt: q.created_at, guest: q.guest, reference: q.reference,
       })),
       rooms: rooms.map((r) => ({ id: r.id, number: r.number, cardSince: r.card_since })),
+      /* Whether this hotel's ID photos can be kept at all, and the sentence
+         when not; and whether this person is one of those who see the kept
+         ones (owner, Admin, GM). */
+      idPhotos: {
+        on: idPhotosOn(c.req.param("code")),
+        off: idPhotosOn(c.req.param("code")) ? null : ID_PHOTOS_OFF,
+        keeper: keeps,
+      },
     };
   });
   if (!body) return c.json({ error: DESK_REFUSED }, 403);
   return c.json(body);
+});
+
+/* ── THE ID PHOTO, AT THE DESK (D27-210) ───────────────────────────
+   WHO SEES ONE, and it is decided here on every call:
+
+     while its details WAIT      every desk role - the clerk confirming them
+                                 looks at it beside the typed details, and
+                                 removes one that is not masked, not
+                                 readable or not an ID
+     once it is KEPT             (confirmed, set aside, or added at the desk)
+                                 the owner, an administrator and the GM
+                                 only; they alone delete it, with a reason
+
+   EVERY VIEW IS WRITTEN DOWN, before the image is fetched. The image comes
+   from Drive, is checked against its hash and decrypted in memory
+   (idPhotos.ts), and goes out with `no-store`: nothing of it is kept here
+   or in the browser's cache. */
+const KEEPER_ROLES: readonly string[] = ["owner", "admin", "gm"];
+const KEEPER_REFUSED = "A kept ID photo is seen and deleted by the owner, an "
+  + "administrator or the general manager. Ask one of them.";
+const PHOTO_REFUSED = "An ID photo is for reception while its details wait to be "
+  + "checked, and afterwards for the owner, an administrator or the general manager.";
+const NO_PHOTO = "No such photo here.";
+const DESK_REASONS: readonly string[] = ["not_masked", "not_readable", "not_an_id"];
+
+type PhotoRow = {
+  id: string; hotel_code: string; status: string; drive_file_id: string | null;
+  cipher_sha256: string | null; waiting: boolean; delete_failed: boolean;
+};
+
+/** The row, and whether this person may act on it: 200 with the row, or
+    the status to answer. Under the clerk's own session, so another hotel's
+    photo is simply not there. */
+async function photoFor(client: Db, code: string, id: string): Promise<PhotoRow | 403 | 404> {
+  if (!A_UUID.test(id)) return 404;
+  const hotelId = await deskAt(client, code);
+  if (!hotelId) return 403;
+  const { rows } = await client.query<PhotoRow>(
+    `select p.id::text, p.hotel_code, p.status, p.drive_file_id, p.cipher_sha256,
+            coalesce(d.status = 'waiting', false) as waiting,
+            p.drive_delete_failed_at is not null as delete_failed
+       from guest_id_photos p
+       left join guest_detail_submissions d on d.id = p.submission_id
+      where p.id = $1 and p.hotel_id = $2 and p.status <> 'pending'`, [id, hotelId]);
+  const row = rows[0];
+  if (!row) return 404;
+  if (!(row.status === "stored" && row.waiting) && !(await deskAt(client, code, KEEPER_ROLES))) return 403;
+  return row;
+}
+
+guestLinks.get("/:code/online-checkin/id-photos", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await deskAt(client, c.req.param("code"), KEEPER_ROLES);
+    if (!hotelId) return null;
+    const { rows } = await client.query<{
+      id: string; guest: string; reference: string; sides: string[]; stored_at: string;
+      by: string | null; status: string; removed_reason: string | null;
+    }>(
+      `select p.id::text, g.full_name as guest, r.reference, p.sides, p.stored_at,
+              s.full_name as by, p.status, p.removed_reason
+         from guest_id_photos p
+         join reservations r on r.id = p.reservation_id
+         join guests g       on g.id = p.guest_id
+         left join staff s   on s.id = p.uploaded_by
+         left join guest_detail_submissions d on d.id = p.submission_id
+        where p.hotel_id = $1
+          and ((p.status = 'stored' and coalesce(d.status <> 'waiting', true))
+            or (p.status = 'removed' and p.drive_delete_failed_at is not null))
+        order by p.stored_at desc
+        limit 200`, [hotelId]);
+    return {
+      photos: rows.map((p) => ({
+        id: p.id, guest: p.guest, reference: p.reference, sides: p.sides, at: p.stored_at,
+        /* Null: the guest sent it from their own page. */
+        addedBy: p.by,
+        /* Removed, but Drive has not deleted its file yet: "Try again". */
+        notYetDeleted: p.status === "removed",
+      })),
+    };
+  });
+  if (!body) return c.json({ error: KEEPER_REFUSED }, 403);
+  return c.json(body);
+});
+
+guestLinks.get("/:code/online-checkin/id-photos/:id", async (c) => {
+  const found = await withSession(c.get("subject"), async (client, session) => {
+    const row = await photoFor(client, c.req.param("code"), c.req.param("id"));
+    if (typeof row === "number") return row;
+    if (row.status !== "stored") return 404 as const;
+    await client.query(
+      `insert into guest_id_photo_views (hotel_id, photo_id, viewed_by)
+       select hotel_id, id, $2 from guest_id_photos where id = $1`, [row.id, session.staffId]);
+    return row;
+  });
+  if (found === 403) return c.json({ error: PHOTO_REFUSED }, 403);
+  if (found === 404) return c.json({ error: NO_PHOTO }, 404);
+
+  const photos = await getPhotos({
+    hotelCode: found.hotel_code, driveFileId: found.drive_file_id!, sha256: found.cipher_sha256!,
+  });
+  c.header("Cache-Control", "no-store");
+  if (photos === "unreachable") {
+    return c.json({ error: "The photo cannot be fetched right now. The typed details are "
+      + "still here; try the photo again in a few minutes." }, 503);
+  }
+  if (photos === "unreadable") {
+    return c.json({ error: "The photo could not be opened: it is not what was stored, or "
+      + "this hotel's password has changed since. Tell the owner." }, 409);
+  }
+  return c.json({
+    photos: photos.map((p) => ({
+      side: p.side, image: `data:${p.type};base64,${p.bytes.toString("base64")}`,
+    })),
+  });
+});
+
+/* REMOVED BY A PERSON, WITH A REASON. The row is marked first - so the
+   photo is gone from every screen whatever Drive does - and then the Drive
+   file is deleted; if Drive will not, that is written on the row and a
+   keeper sees "not yet deleted" with Try again, which is this same call. */
+guestLinks.post("/:code/online-checkin/id-photos/:id/remove", async (c) => {
+  const { reason } = await c.req.json<{ reason?: string }>().catch(() => ({}) as { reason?: string });
+  const typed = (reason ?? "").trim();
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const row = await photoFor(client, c.req.param("code"), c.req.param("id"));
+    if (typeof row === "number") return row;
+    if (row.status === "stored") {
+      /* While the details wait, one of the desk's three reasons; a kept
+         photo is deleted with the keeper's own words. */
+      const why = row.waiting ? (DESK_REASONS.includes(typed) ? typed : null)
+        : (typed.length >= 3 && typed.length <= 200 ? `deleted: ${typed}` : null);
+      if (!why) return 400 as const;
+      await client.query(
+        `update guest_id_photos
+            set status = 'removed', removed_at = now(), removed_by = $2, removed_reason = $3
+          where id = $1 and status = 'stored'`, [row.id, session.staffId, why]);
+    } else if (!row.delete_failed) {
+      return 404 as const;
+    }
+    return row;
+  });
+  if (result === 403) return c.json({ error: PHOTO_REFUSED }, 403);
+  if (result === 404) return c.json({ error: NO_PHOTO }, 404);
+  if (result === 400) return c.json({ error: "Say why it is being removed." }, 400);
+
+  const deleted = await removePhotos(result.hotel_code, result.drive_file_id!);
+  await withSession(c.get("subject"), (client) => client.query(
+    "update guest_id_photos set drive_delete_failed_at = $2 where id = $1",
+    [result.id, deleted ? null : new Date()]));
+  return c.json({ removed: true, deletedFromDrive: deleted });
+});
+
+/* THE DESK ADDS ONE AT CHECK-IN (D27-210), for a guest who did not send it
+   online - so there is a copy for every guest. The clerk has the real ID in
+   hand and photographs it; the guest's yes is the clerk's tick, recorded
+   with the clerk's name. The same checks and the same `put` as the guest's
+   own, and the photo is KEPT from that moment: the desk does not fetch it
+   back (the screen showed it from the device before it was sent). */
+guestLinks.post("/:code/stays/:id/id-photo", async (c) => {
+  const code = c.req.param("code");
+  const stayId = c.req.param("id");
+  if (!A_UUID.test(stayId)) return c.json({ error: "No such booking." }, 404);
+
+  /* Who, and which booking, before a byte of the body is read. */
+  const who = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await deskAt(client, code);
+    if (!hotelId) return null;
+    const { rows } = await client.query<{
+      guest_id: string; reference: string; guest: string; hotel_code: string;
+    }>(
+      `select r.guest_id::text, r.reference, g.full_name as guest, h.code as hotel_code
+         from reservations r
+         join guests g on g.id = r.guest_id
+         join hotels h on h.id = r.hotel_id
+        where r.id = $1 and r.hotel_id = $2`, [stayId, hotelId]);
+    return { hotelId, stay: rows[0] ?? null, staffId: session.staffId, clerk: session.fullName };
+  });
+  if (!who) return c.json({ error: DESK_REFUSED }, 403);
+  if (!who.stay) return c.json({ error: "No such booking." }, 404);
+  if (!idPhotosOn(code)) return c.json({ error: ID_PHOTOS_OFF }, 409);
+
+  const length = Number(c.req.header("content-length"));
+  if (!Number.isFinite(length) || length <= 0 || length > MAX_UPLOAD) {
+    return c.json({ error: "Those photos are too large. Take them again." }, 413);
+  }
+  const form = await c.req.formData().catch(() => null);
+  if (!form) return c.json({ error: "Send the photo as a form upload." }, 400);
+  if (form.get("agreed") !== "yes") {
+    return c.json({ error: "Tick that the guest agreed to the hotel keeping this photo." }, 400);
+  }
+  const photos = await photosFrom(form);
+  if (typeof photos === "string") return c.json({ error: photos }, 400);
+
+  const id = await withSession(c.get("subject"), async (client) => (await client.query<{ id: string }>(
+    `insert into guest_id_photos
+       (hotel_id, hotel_code, reservation_id, guest_id, uploaded_by, sides, notice_version)
+     values ($1, $2, $3, $4, $5, $6::text[], $7)
+     returning id::text`,
+    [who.hotelId, who.stay!.hotel_code, stayId, who.stay!.guest_id, who.staffId,
+     photos.map((p) => p.side), NOTICE_VERSION])).rows[0]!.id);
+
+  const stored = await putPhotos({
+    id, hotelCode: who.stay.hotel_code, reference: who.stay.reference,
+    guestName: who.stay.guest, by: `${who.clerk}, at the desk`,
+  }, photos);
+  if (!stored) {
+    await withSession(c.get("subject"), (client) => client.query(
+      "delete from guest_id_photos where id = $1 and status = 'pending'", [id]));
+    return c.json({ error: "The photo could not be stored just now, and nothing was kept. "
+      + "Try again shortly." }, 503);
+  }
+
+  /* Stored, and KEPT from this moment - and it REPLACES NOTHING (1 October,
+     the pre-launch review). It used to remove every other stored photo of the
+     stay, a kept one included. A replace only ever replaces a waiting photo
+     of the same submission, and a photo added here has none: beside a kept
+     one it is a second kept one, and beside the guest's waiting one it leaves
+     that for the clerk to confirm or remove. A kept photo is deleted only by
+     the owner, an administrator or the GM, with a reason (D27-210). */
+  await withSession(c.get("subject"), (client) => client.query(
+    `update guest_id_photos
+        set status = 'stored', stored_at = now(), drive_file_id = $2,
+            cipher_sha256 = $3, cipher_bytes = $4
+      where id = $1 and status = 'pending'`, [id, stored.driveFileId, stored.sha256, stored.bytes]));
+  return c.json({ added: true });
 });
 
 /* CONFIRMED BY A PERSON, UNDER THEIR NAME (D21-8). The one place a guest's
@@ -820,19 +1145,19 @@ guestLinks.post("/:code/online-checkin/requests/:id", async (c) => {
    on the desk's Guest messages screen: one booking's, handled ones too, or
    (no `reservation`) every booking's still unread. Marked handled through the
    request route above, as `done` - who and when are its columns. */
-const A_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 guestLinks.get("/:code/online-checkin/messages", async (c) => {
   const reservation = c.req.query("reservation") ?? null;
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await deskAt(client, c.req.param("code"));
     if (!hotelId) return null;
-    if (reservation !== null && !A_UUID.test(reservation)) return { messages: [] };
+    if (reservation !== null && !A_UUID.test(reservation)) return { messages: [], replies: [], canReply: false };
     const { rows } = await client.query<{
       id: string; what: string; created_at: string; guest: string; reference: string;
-      handled_by: string | null; handled_at: string | null;
+      reservation_id: string; handled_by: string | null; handled_at: string | null;
     }>(
       `select q.id::text, q.what, q.created_at, g.full_name as guest, r.reference,
+              q.reservation_id::text,
               s.full_name as handled_by, q.handled_at
          from guest_requests q
          join reservations r on r.id = q.reservation_id
@@ -845,13 +1170,32 @@ guestLinks.get("/:code/online-checkin/messages", async (c) => {
     return {
       messages: rows.map((m) => ({
         id: m.id, what: m.what, createdAt: m.created_at, guest: m.guest,
-        reference: m.reference, handledBy: m.handled_by, handledAt: m.handled_at,
+        reference: m.reference, reservationId: m.reservation_id,
+        handledBy: m.handled_by, handledAt: m.handled_at,
       })),
+      ...(await repliesTo(client, hotelId, reservation)),
     };
   });
   if (!body) return c.json({ error: DESK_REFUSED }, 403);
   return c.json(body);
 });
+
+/* One booking's replies from the desk, who sent each, and whether it may
+   still reply - none once the guest has checked out (D27-224). */
+async function repliesTo(client: Db, hotelId: string, reservation: string | null) {
+  if (reservation === null) return { replies: [], canReply: false };
+  const { rows } = await client.query<{ id: string; what: string; sent_at: string; sent_by: string | null }>(
+    `select d.id::text, d.what, d.sent_at, s.full_name as sent_by
+       from guest_desk_replies d left join staff s on s.id = d.sent_by
+      where d.hotel_id = $1 and d.reservation_id = $2
+      order by d.sent_at desc`, [hotelId, reservation]);
+  const { rows: [booking] } = await client.query<{ status: string }>(
+    "select status from reservations where id = $1 and hotel_id = $2", [reservation, hotelId]);
+  return {
+    replies: rows.map((d) => ({ id: d.id, what: d.what, sentAt: d.sent_at, sentBy: d.sent_by })),
+    canReply: !!booking && booking.status !== "checked_out",
+  };
+}
 
 /* ROOM CARDS (D21-7, D21-16, D21-62). A card's token is shown ONCE, here, to
    be printed - only its hash is kept - so printing is always making: a new
@@ -897,8 +1241,20 @@ guestLinks.post("/:code/online-checkin/cards", async (c) => {
   return c.json({ cards });
 });
 
+/* ── The features behind the code: ONE line each (D27-225, MODULE.md) ──
+   Each feature keeps its routes in its own file, built from guestDoorKit.ts,
+   and is mounted here: `guestDoor.route("/", itsDoor)` for the guest's side,
+   `guestLinks.route("/", itsDesk)` for the desk's. Nobody widens
+   `app.guest_link_open` (rule 8). */
+guestDoor.route("/", guestDining);   // in-room dining (D27-224, D27-225)
+guestDoor.route("/", guestTables);   // a table at the restaurant (D27-224)
+guestDoor.route("/", messagesDoor);      // messages with the desk, both ways (D27-224)
+guestLinks.route("/", messagesDesk);
+guestDoor.route("/", logoDoor);          // the hotel's logo, else the group's (D27-223)
+
 /* Exported for the test that proves a stolen token is not a key to anything
    else: the hash the door computes is the hash the database holds. */
+export { forgetKnocksForTests } from "./guestDoorKit.ts";
 export const hashForTests = sha256;
 export const constantTimeEqualForTests = (a: string, b: string) =>
   a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));

@@ -87,3 +87,44 @@ describe("a guest's message to the desk (QA GP-5)", () => {
     expect((await bell(housekeeping, day)).some((x) => x.id === "guest-messages-waiting")).toBe(false);
   });
 });
+
+/* THE OWNER'S D27-226 (1 October): a guest owes only their own bill. The bell
+   summed a stay's lines by the stay each POSTING names, so a guest the group
+   pays for, leaving today, rang "outstanding" for the company's nights on the
+   group's master bill. */
+describe("a guest the group pays for (D27-226)", () => {
+  let stay = "";
+  let groupId = "";
+  afterAll(async () => {
+    await sql("alter table folio_postings disable trigger folio_postings_append_only");
+    await sql("delete from folio_postings where reservation_id = $1", [stay]);
+    await sql("alter table folio_postings enable trigger folio_postings_append_only");
+    await sql("delete from folios where reservation_id = $1 or group_id = $2", [stay, groupId]);
+    await sql("delete from reservations where id = $1", [stay]);
+    await sql("delete from reservation_groups where id = $1", [groupId]);
+  });
+
+  it("does not ring 'outstanding' for the nights on the group's bill", async () => {
+    const { rows: [h] } = await sql(
+      "select id::text, app.business_date(id)::text as day from hotels where code = '5EL'");
+    groupId = (await sql("insert into reservation_groups (name) values ('NTFTEST group') returning id::text"))
+      .rows[0].id;
+    stay = (await sql(
+      `insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                                 agreed_rate, status, group_id, route_room_to_group)
+       select $1, 'NTFTEST-ROUTED', (select id from guests limit 1),
+              (select id from room_types where hotel_id = $1 limit 1),
+              $2::date - 1, $2::date, 3000, 'checked_in', $3, true
+       returning id::text`, [h.id, h.day, groupId])).rows[0].id;
+    await sql("insert into folios (hotel_id, reservation_id) values ($1, $2)", [h.id, stay]);
+    const master = (await sql(
+      "insert into folios (hotel_id, group_id) values ($1, $2) returning id::text", [h.id, groupId])).rows[0].id;
+    await sql(
+      `insert into folio_postings (hotel_id, folio_id, reservation_id, business_date, category,
+                                   description, amount, tax_rate, tax_amount)
+       values ($1, $2, $3, $4::date, 'room', 'Room - · 1 night', 3000, 5, 150)`,
+      [h.id, master, stay, h.day]);
+    const owner = (await sql("select id::text from staff where email = 'owner@fidato.in'")).rows[0].id;
+    expect((await bell(owner, h.day)).some((x) => x.id === `balance-${stay}`)).toBe(false);
+  });
+});

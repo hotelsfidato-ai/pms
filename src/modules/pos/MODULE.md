@@ -47,6 +47,7 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 | Menu name | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
 |---|---|---|---|
 | Tables | `/h/:code/floor` | `pages/Floor.tsx` | waiter (`pos`), Reception |
+| Table bookings | `/h/:code/table-bookings` | `pages/TableBookings.tsx` | none - whoever may ring an order (`mayRingUp`); hotel guests' table requests, Waiting / Today / Upcoming, Confirm (a table if known) or Decline with a reason (D27-221, D27-224) |
 | Till | `/h/:code/till` | `pages/Till.tsx` | waiter, Reception |
 | Terminal | `/h/:code/till/terminal` | `pages/Terminal.tsx` | waiter, Reception |
 | Kitchen | `/h/:code/kitchen` | `pages/Kitchen.tsx` | chef, kitchen manager |
@@ -76,21 +77,65 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
   `DishDialog.tsx` (variations, sides, a note - and since 21 September each
   group's "choose 1 to 2", Add held until it is met; opened by Tables, the Till
   and the Terminal), `OrderHeaderPanel.tsx` (covers, waiter, customer, order type).
-- **The Menu screen, 21 September (D21-40 to D21-43):** "Add variation" on each
-  dish, and its variations under it with Change and Remove (a dish with
-  variations shows "-" for its own price); an **Add-on groups** section - each
-  group's rule, its options with Change and Remove, "Add option", "Dishes" to
-  choose which dishes offer it; **Import add-ons** and **Import the menu**, two
-  files, add-ons first. Every price is typed: Save waits for one, and a typed 0
-  is kept (Preferences such as No onion, D21-42).
+- **The Menu screen, 21 September (D21-40 to D21-43), and 30 September
+  (D27-189, D27-192, D27-195):** "Add variation" / "Change variations" on each
+  dish opens ONE form for all its variation types - Size, Quantity, or an
+  Option with the manager's heading ("Crust"); picking a type fills in the
+  choice names when its list is empty, never a price; the first type's prices
+  are the dish's, a further type's add to it; each choice is priced or ticked
+  Free; removing every type asks for the dish's own price. Under the dish, one
+  line per type ("Size: Small ₹200 · Large ₹400", "Crust: Cheese burst +₹80 ·
+  Thin Free"); a dish with variations shows "-" for its own price. An
+  **Add-on groups** section - each group's rule, its options with Change and
+  Remove, "Add option" (a price or Free), "Dishes" to choose which dishes
+  offer it; **Import add-ons** and **Import the menu**, two files, add-ons
+  first. A blank price is refused, and a 0 unless ticked Free (D27-120; a file
+  cannot tick Free, so a file's 0 is refused).
+- **The dish pop-up (`DishDialog`)**: one row per variation type under its
+  heading ("Variation" for a type carried over from before 30 September, until
+  the manager picks one); a later type reads "+₹80" or "Free"; Add waits for
+  one choice in every type and each group's add-on rule.
+- **The same dish again is one more of it (D27-189, POS-27):** on Tables' pad,
+  the Till and the Terminal, a dish with the same variation choices, note and
+  sides joins its unsent line; once the kitchen has it, more is a new line
+  (D27-148). The Till has a − (a sent dish asks a manager's reason, D27-119);
+  sides follow their dish's quantity (POS-28).
 
 ---
 
-## Server endpoints — 71
+## Server endpoints — 77 (counted 1 October: 71 in till.ts, 6 in pos.ts)
 
 The code is in `api/src/modules/pos/` (moved 15 September): `till.ts` (the
 till, **3,555 lines** — splitting it into parts is not done yet) and `pos.ts`
 (the bridge to an outside till). The door `index.ts` mounts them.
+
+**Table bookings** (D27-221, D27-224) — `tableBookings.ts`, its own router at
+`/api/hotels`, NOT in till.ts:
+
+```
+GET   /:code/table-bookings              the hotel's today, waiting first then today and upcoming, the tables
+POST  /:code/table-bookings/:id/confirm  { tableId? } - only while requested; roleGate TABLE_ANSWER
+POST  /:code/table-bookings/:id/decline  { reason } - required, the guest reads it; TABLE_ANSWER
+GET   /:code/table-bookings/hours        each food restaurant's lunch and dinner, and today's slots
+PUT   /:code/table-bookings/hours        { outlet, lunch, dinner }; TABLE_HOURS (owner, admin, GM)
+```
+
+The bell says "N table bookings waiting" to the same people who hold a bell
+(`api/src/routes/notifications.ts`) - the waiter has none, and reads the
+screen. The guest's side follows online check-in's rule 8:
+
+```
+GET   /api/guest/:token/tables              the offer (each restaurant's nights and slots) and the guest's own
+POST  /api/guest/:token/tables              { outlet, night, time, party, note? } - a slot from the offer only
+POST  /api/guest/:token/tables/:id/cancel   the guest's own, only while requested
+```
+
+`api/src/routes/guestTables.ts` (one mount line in `guestDoor.ts`), the
+definers `app.guest_table_offer / _book / _bookings_mine / _cancel` in 172,
+each from `app.guest_unlocked`; the page's section is
+`src/modules/online-checkin/TableBooking.tsx`, one line in `Behind`. It
+hides when nothing is offered and nothing is booked. A guest holds at most
+three open requests; the guest never sees the table.
 
 **The till** — `/api/hotels`, a person's bearer token. Every `/:code/till/*`
 and `/:code/kitchen*` route passes two gates first: the `pos` module must be
@@ -119,15 +164,18 @@ menu        GET    /:code/till/menu                         a dish's taxRate is 
             POST   /:code/till/menu/items/:id/on
             POST   /:code/till/addons/:id/off              the Menu screen's add-on switch (17 Sep, POS-2)
             POST   /:code/till/addons/:id/on               the Menu screen's add-on switch (17 Sep, POS-2)
-variations  POST   /:code/till/menu/items/:id/variations   D21-40, 21 Sep: a name and a TYPED price
-            PATCH  /:code/till/menu/variations/:id         rename and reprice, both sent
-            POST   /:code/till/menu/variations/:id/remove  switched off, never deleted; the LAST one
-                                                           needs { dishPrice } (the owner, 21 Sep)
+variations  PUT    /:code/till/menu/items/:id/variations   the dish's whole set, one transaction (D27-192):
+                                                           {types:[{kind, heading?, choices:[{id?, label,
+                                                           price, free}]}], dishPrice?, dishFree?}; a choice
+                                                           keeps its row by type and name (a removed one
+                                                           comes back), else by id; one left out is switched
+                                                           off, never deleted; emptying it needs dishPrice.
+                                                           Replaced the three per-variation routes, 30 Sep
 add-ons     GET    /:code/till/menu/addon-groups           every group, its options and its dishes
             POST   /:code/till/menu/addon-groups           D21-41: name, minSelect, maxSelect
             PATCH  /:code/till/menu/addon-groups/:id       the same three
             POST   /:code/till/menu/addon-groups/:id/dishes  the whole list of dishes offering it
-            POST   /:code/till/menu/addon-groups/:id/addons  an option: a name and a TYPED price
+            POST   /:code/till/menu/addon-groups/:id/addons  an option: a name and a TYPED price, or free
             PATCH  /:code/till/menu/addons/:id             rename and reprice, both sent
             POST   /:code/till/menu/addons/:id/remove      switched off, never deleted
             POST   /:code/till/menu/addon-groups/import    the add-ons file (D21-43), dry run first
@@ -142,6 +190,14 @@ orders      GET    /:code/till/orders
             POST   /:code/till/orders/:id/lines/:lineId/void
             POST   /:code/till/orders/:id/lines/:lineId/qty
             POST   /:code/till/orders/:id/kot               send to the kitchen
+            GET    /:code/till/guest-orders                 guests' room-service orders waiting (D27-224; TILL_READ)
+            POST   /:code/till/guest-orders/:id/decline     {reason}: the guest reads it on their page (TILL)
+            (Accept and send is the batch route with {guestOrderId}: the stored basket, priced
+             again by app.guest_dish_price - refused naming the dish if it moved or went off -
+             a room_service order for the stay's room, sent; accepted only while waiting)
+            POST   /:code/till/orders/:id/taken             {lineIds}: the waiter carried these Ready dishes
+                                                            out; served. Ready ones only, said why otherwise
+                                                            (D27-222; roleGate TILL)
             GET    /:code/till/orders/:id/kot/:no           one docket (the kitchen reads it too: KOT_READ)
             POST   /:code/till/orders/:id/kot/:no/printed   {device}: the KOT station's claim before the paper;
                                                             refused unless the device is the station; claimed
@@ -167,6 +223,8 @@ money       POST   /:code/till/orders/:id/discount
 floor       GET    /:code/till/floor
             GET    /:code/till/waiters
 day end     GET    /:code/till/day-end
+            POST   /:code/till/day-end/open       (an outlet's FIRST-EVER float, counted once; every day after opens by
+                                                   itself on the float the last close kept - app.pos_opening_cash, D27-200)
             POST   /:code/till/day-end/movements
             POST   /:code/till/day-end/count
             POST   /:code/till/day-end/close
@@ -183,8 +241,10 @@ setup       GET    /:code/till/setup                        D22-6 (25 Sep): the 
             PATCH  /:code/till/setup/tables/:id             label and seats, both sent
             POST   /:code/till/setup/tables/:id/off         switched off, never deleted; refused while a bill sits
                                                             on it (open, or paid and not cleared)
-kitchen     GET    /:code/kitchen
-            POST   /:code/kitchen/lines/:lineId/:to
+kitchen     GET    /:code/kitchen                           ordered and on the fire only: a Ready dish is the
+                                                            waiter's (D27-221)
+            POST   /:code/kitchen/lines/:lineId/:to         preparing or ready - the kitchen's two buttons;
+                                                            served is the waiter's Taken (D27-222)
 ```
 
 **The bridge, machine side** — `/api/pos`, an outlet key in `x-pos-key`
@@ -263,6 +323,15 @@ the offline rules (`@/lib/offline.ts`), the import dialog and `MENU_SPEC`
 Tables this service owns, and the migrations that made or changed them:
 
 ```
+table_bookings; pos_outlets.table_lunch,       "a table for the guest" (172; D27-224): a
+  .table_dinner                                hotel guest's request, requested / confirmed /
+                                               declined / cancelled, a decline's reason, an
+                                               optional table; NULL hours are the owner's default
+                                               (12:30-15:00, 19:30-23:00), '' a meal not offered;
+                                               app.table_slots(outlet, date) - the ONE definition
+                                               of a day's half-hour slots, in the hotel's time
+                                               zone, the last half an hour before a meal ends;
+                                               the guest's four definers (above)
 pos_outlets, pos_tickets                       024_pos_bridge.sql (app.pos_chargeable_rooms,
                                                app.pos_outlet_for_key)
                                                (046_store_and_off.sql: an outlet's closed_until)
@@ -279,6 +348,12 @@ pos_addons, pos_item_addon_groups
   (045's four tables are WRITTEN by the Menu screen and the two import
    files since 21 September - no migration: a removed variation or option is
    is_active false, because a sold line points at it)
+  a variation's type_no, kind, heading;         "several variation types per dish" (164, 30 Sep):
+  a name unique within its type;               type 1 carries the price, a later one adds;
+  pos_order_lines.extra_choice_ids             045's trigger asks one choice of every type
+guest_food_orders; app.guest_menu,            "in-room dining" (171 for now, 1 Oct): the guest's
+  guest_food_order_make/_mine/_cancel,        order behind the code (their own door file,
+  guest_dish_price, guest_dining_outlet       api/src/routes/guestDining.ts); the price kept
 pos_sections, pos_tables                       047_tables_and_floor.sql
   covers, waiter, customer, held               048_order_header.sql
   kitchen docket numbers                       049_kot_docket.sql
@@ -366,7 +441,18 @@ One other service's door is imported by this folder (17 September):
 - **Cash is whole rupees; a closed day is closed** (the owner, 28 September): a
   bill paid wholly in cash is rounded at the settle; once Close restaurant day
   has counted the drawer, new bills and payments wait for the night audit.
-- **The pass shows paid food** until it is served (QA POS-1); 151 lets only the
+- **The kitchen has two buttons, Start and Ready** (D27-221, D27-222). A Ready dish
+  leaves the Kitchen screen and is the waiter's: "N ready" on the table's tile on
+  Tables (one tap: Taken, all of them) and "Ready" with Taken on the Terminal's
+  bill; Taken sets served. The at-the-pass clock went with the third column;
+  080 still records ready and served, so `app.pos_line_timings` has both.
+- **In-room dining (D27-224, D27-225)**: a checked-in guest orders from their own page
+  (online-checkin's `RoomDining.tsx`, the waiter's pop-up through this folder's front
+  door); the Terminal's "Room-service orders waiting" accepts (a room_service order for
+  the stay's room, sent) or declines with a reason the guest reads. Never more than the
+  guest saw: a moved price refuses the Accept. No alcohol; off while the restaurant or
+  its day is closed; charged to the room at delivery (Charge to room).
+- **The kitchen board shows paid food** until it is Ready (QA POS-1); 151 lets only the
   kitchen status change on a settled order.
 - **No default prices** (`HANDOVER.md` § 5). The schema ships no dish and no
   price — the hotel types them (`028_pos_till.sql`, header and the comment on

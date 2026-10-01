@@ -14,8 +14,25 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None. This service is not built: it has a brief, a menu entry
-and a Coming soon page, and no code behind them.
+None.
+
+## Fixed
+
+### GS-1 · A working-menu entry above the kitchen's moved where the chef and waiter land
+
+**Found** 30 September, by `navigation.test.ts` while building Guest requests.
+A role with a working menu lands on the first entry of it (`workingHomeFor`).
+Guest requests sits in the Front desk section, which comes before the
+restaurant's, so putting it in the chef's and waiter's working menus would have
+sent them to Guest requests after sign-in instead of the Kitchen and Tables.
+
+**What was done:** the chef and the waiter (`pos`) named in `WORKING_HOME`
+(`src/components/app/navigation.ts`), as D22-19 did for housekeeping and the
+kitchen manager; the waiter's landing screen is now pinned too. Numbered for
+now (root MEMORY 350).
+
+**The rule:** adding an entry to a working menu can change where that role
+lands. Run `navigation.test.ts` and read "lands them on their own work".
 
 ---
 

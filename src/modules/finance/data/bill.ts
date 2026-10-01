@@ -14,6 +14,10 @@ export interface StayBillLine {
   tax: number;
   /** The line's own GST rate, or null when it carries none. */
   rate: number | null;
+  /** gst or vat (166); absent from an older server, read as GST. */
+  scheme?: "gst" | "vat";
+  /** Where the line came from, through a correction (175, D27-223). */
+  source?: string | null;
   billTo: string;
   company: string | null;
 }
@@ -48,6 +52,15 @@ export interface StayBill {
   roundOff: number;
   paid: number;
   balance: number;
+  /** Tonight's room night, not posted yet (D27-204): a guest staying on,
+      before tonight's audit. The audit's own answer - its words, the rate
+      before GST, the GST and its rate. Absent when tonight is posted, the
+      room is complimentary or the guest leaves today; the desk's bill only. */
+  tonight?: { description: string; amount: number; tax: number; rate: number };
+  /** The stay's nights still to come on this bill, counted by the night
+      audit's own rule on the server (FIN-24, 1 October): not a night on the
+      group's master, not a night somebody reversed. The desk's bill only. */
+  nightsToCome?: number;
 }
 
 /** The stay's bill, or null for a stay this person may not see. */

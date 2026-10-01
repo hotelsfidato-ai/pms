@@ -18,8 +18,11 @@
    reading). Whether there is budget left is asked BEFORE (live.ts); this
    file only counts.
 
-   Nothing here writes, and no key is in this file: the token comes from
-   the server's settings (M2R_SERVICE_ACCOUNT), handed in.
+   Nothing here writes, and no key is in this file: the token is handed
+   in (live.ts). Since 30 September it is KEYLESS (D27-186, `impersonated`
+   below): Google's organisation rule forbids a key for the read-only
+   login, so the server's own Google login asks Google for an hour's token
+   as that login instead.
    ══════════════════════════════════════════════════════════════════ */
 
 export type Doc = { name: string; id: string; fields: Record<string, unknown> };
@@ -48,6 +51,47 @@ export class LeadsAppError extends Error {
     this.status = status;
     this.name = `LeadsApp${status}`;
   }
+}
+
+/** What the borrowed token may do: read and write Datastore - and the
+    read-only login's one role (Cloud Datastore Viewer) refuses the writes. */
+const SCOPE = "https://www.googleapis.com/auth/datastore";
+/** Asked again this long before it ends, so no read starts on a dying token. */
+const RENEW_BEFORE_MS = 5 * 60_000;
+
+/** A token AS the read-only login `email`, with no key of its own: the
+    server's own Google login (`caller`, its token) asks Google's IAM
+    Credentials service for one. Google allows an hour at most; it is kept
+    in memory until five minutes before it ends, and never written or
+    logged. Google answers only if `email` has granted the caller Service
+    Account Token Creator (OWNER-STEPS.md); a refusal is named by its
+    status, like every other. */
+export function impersonated(
+  email: string, caller: () => Promise<string>, call: typeof fetch = fetch,
+): () => Promise<string> {
+  let kept: { token: string; until: number } | null = null;
+  return async () => {
+    if (kept && kept.until > Date.now()) return kept.token;
+    let res: Response;
+    try {
+      res = await call(
+        `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${encodeURIComponent(email)}:generateAccessToken`,
+        {
+          method: "POST",
+          headers: { authorization: `Bearer ${await caller()}`, "content-type": "application/json" },
+          body: JSON.stringify({ scope: [SCOPE], lifetime: "3600s" }),
+          signal: AbortSignal.timeout(WAIT_MS),
+        });
+    } catch {
+      throw new LeadsAppError(0);
+    }
+    if (!res.ok) throw new LeadsAppError(res.status);
+    const answer = (await res.json()) as { accessToken?: string; expireTime?: string };
+    const until = Date.parse(answer.expireTime ?? "") - RENEW_BEFORE_MS;
+    if (!answer.accessToken || Number.isNaN(until)) throw new LeadsAppError(0);
+    kept = { token: answer.accessToken, until };
+    return kept.token;
+  };
 }
 
 type FirestoreValue = Record<string, unknown>;
@@ -92,9 +136,10 @@ export function makeReader(o: {
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(WAIT_MS),
       });
-    } catch {
-      /* Nothing came back, so nothing was read and nothing is counted. */
-      throw new LeadsAppError(0);
+    } catch (error) {
+      /* Nothing came back, so nothing was read and nothing is counted. A
+         refused token keeps its status, so the screen can name it. */
+      throw error instanceof LeadsAppError ? error : new LeadsAppError(0);
     }
     if (!res.ok) {
       /* A refused call is counted as one read, to be on the safe side. */

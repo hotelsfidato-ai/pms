@@ -163,7 +163,9 @@ property.get("/:code/rooms", async (c) => {
          state and the interface shows a dash for it. */
       `select r.number, rt.name as type, r.floor,
               r.housekeeping_status, rt.max_occupancy,
-              rt.base_rate::text,
+              /* the normal price today (EP): a base where there is one
+                 (D27-188), else the old rack rate */
+              (select p.price from app.price_for(rt.id, 'EP', app.business_date($1)) p)::text as base_rate,
               (select json_agg(json_build_object(
                         'id',   b.id::text,
                         'from', to_char(b.from_date,'YYYY-MM-DD'),

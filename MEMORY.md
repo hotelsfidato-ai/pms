@@ -6539,6 +6539,181 @@ copy will see of theirs.**
 
 ---
 
+### 371 · Four copies of "what a guest owes", one grouped by the wrong key (booking lane, D27-226)
+
+A group guest whose room the host pays showed "₹3,150 Outstanding" over "Nothing posted to this
+folio yet", and the Check out button refused. FOLIO_SELECT summed the lines by the stay the
+POSTING named, so every night on the group's master bill counted as the guest's own; the
+server's own check-out summed only the guest's folios, so screen and server disagreed. It had
+been there since 056 and showed only when D27-204 posted the first night at check-in. Fixing it
+found the same sum three more times: Settle's "owed", the night audit's checklist and the bell.
+**The rule:** a figure for a person groups by the bill a line is ON. When one definition of a
+money figure changes, grep every copy of it before calling it fixed.
+
+---
+
+### 370 · MINE: I committed lines another chat had not committed, and duplicated a decision number (1 October)
+
+Appending the Settings decision to `docs/briefs/decisions-2026-09-27.md`, I committed the whole
+file. The design chat had written D27-217 to D27-219 there and not committed them, so my commit
+carried its lines, and my own entry was a second D27-217. Renumbered mine D27-220. **The rule:**
+before appending to a file another chat also writes, read its `git diff`; commit only my lines.
+
+---
+
+### 369 · MINE: a wait that matched its own command line could never end (2 October)
+
+I waited for "no database build running" by listing processes whose command line contained
+`with-test-db` or `migrate.sh`. My own waiting shell's command line contained those words, so
+the count was never zero; the migrate behind it would have waited forever. Caught by reading the
+process list by hand. Now `busy.ps1` (my scratchpad) matches a command line STARTING with
+`bash scripts/` or `bash db/`, or a `psql.exe`. **The rule:** a check that searches running
+processes must not search for text its own command carries; match the start, or run it from a
+file.
+
+---
+
+### 368 · Each lane's files green, the merged tree red (all-merged-1oct, 1 October)
+
+Five lanes each ran their own test files green; the first full run on the merged tree failed 6
+of 2,202 server tests. Two tables (`guest_food_orders`, `table_bookings`) point at rows the
+property reset clears, and no lane added them to `api/scripts/reset-property.ts` - the 5EL reset
+in the release steps would have stopped on them; `resetOrder.test.ts` caught it. A field added
+beside the staff bill (`nightsToCome`) broke a test that compared the guest's bill to the desk's
+with `toEqual`. Four channel-manager tests timed out at 20 s under load and pass alone.
+**The rule:** a migration that adds a table with a key to a stay, an order or a guest adds its
+reset line in the same commit, and runs `resetOrder.test.ts`. Before adding a field to a
+route's answer, grep the tests that compare that answer whole. The full run on the merged tree
+is the proof, never the lanes' own files.
+
+---
+
+### 367 · A guard test asked about an empty stay proves nothing (online check-in, OCI-12)
+
+OCI-5's database test called each guest function with the link's hash and no unlock, about a
+stay with nothing in it. A thread function that ignored the unlock still passed: there was
+nothing to leak. **The rule:** a test that proves "X cannot see Y" first puts Y there.
+
+---
+
+### 366 · A delete reached by a side road was wider than the front door's (online check-in, OCI-11)
+
+A guest sending their details again, or the desk adding a photo, "replaced" every stored ID photo
+of the stay and guest, and the door deleted each from Drive, the one the desk had kept included.
+Only the owner, an administrator or the GM may delete a kept photo (D27-210). Found by the
+pre-launch review, before any guest used it. **The rule:** a delete reached by a side road (a
+replace, a tidy-up) is scoped as narrowly as the front door's own delete.
+
+---
+
+### 365 · Adding an entry to a working menu can move a role's landing screen (guest services, GS-1)
+
+`workingHomeFor` sends a person to the FIRST entry of their role's working menu. An entry added
+at the top of a menu changed where that role lands after signing in. **The rule:** adding to a
+role's working menu, check that role's landing screen in the same change.
+
+---
+
+### 364 · A table made later in the same migration run belonged to the wrong owner (1 October)
+
+Migration 014 hands every table and app function to `pms_migrate`, but only those that exist
+when 014 runs. On a first deploy, the run replays from 001, so tables made after 014 in the same
+run stayed the superuser's, and a definer function owned by `pms_migrate` was refused them: the
+voucher answered 500 ("permission denied for table hotel_bank_details"). The second deploy would
+have healed it; the first day would not have worked. Fixed: `db/ownership.sql` runs last in
+every migration run (migrate.sh, with-test-db.sh, db/tests/run.sh), and the "ownership" database
+suite checks nothing strays. **The rule:** a fix that a migration applies "to what exists"
+must run again at the end of the run, or a first deploy is a different system from a second.
+
+---
+
+### 362 · nginx writes a large body to a temporary file (online check-in lane, D27-209)
+
+The rule was "an ID photo is never on the server's disk". The code kept it in memory, and nginx,
+in front of it, would have written the unencrypted upload to a temp file on the way in and the
+decrypted answer on the way out. No test could show it: there is no nginx here. Found by the lane
+reading the proxy's defaults. **The rule:** "never on disk" is a claim about every hop, not the
+code alone - read the proxy's buffering for that path (proxy_request_buffering off,
+proxy_max_temp_file_size 0).
+
+---
+
+### 361 · A file that fails in afterAll shows every test passed, and its leftovers break other files (formIII, 1 October)
+
+The full run failed four tests in four files with two causes. formIII's check-out case pays its
+first night since D27-204; its clean-up then stopped on the payment's row and left its stays at
+Pune, so identity found no free room and bookingReference read a timestamped reference as the
+hotel's highest number. Run alone, formIII said "15 passed". **The rule:** read "Test Files", not
+"Tests"; a test that starts taking money cleans the money up; when unrelated files fail together,
+look for one file's leftovers first.
+
+---
+
+### 360 · A new field read from an answer the device kept from before the release (MEMORY 201 again)
+
+Mounting the desk's ID photo box in the check-in, `q.data.idPhotos` was undefined for a desk
+answer without the field - which is what a clerk's tablet holds from before the release - and the
+check-in dialog fell over. front-desk's own older fixture showed it; the lane's fixtures could
+not. **The rule:** a field added to an answer that is persisted on the device is optional to its
+readers until the old answers have aged out.
+
+---
+
+### 359 · Speed measured with the developer's header hid the path real people take (rates lane)
+
+Every figure I had quoted was taken with a staff uuid as the subject. A person signs in with a
+Firebase uid, and `app.current_user_id()` then took an exception and a staff lookup on every
+policy check: about three times slower on every request. Fixed in withUser (resolve once).
+**The rule:** measure as a signed-in person (`x-dev-staff-id: dev-owner` is the Firebase-uid
+path), and say which path a figure was taken on.
+
+---
+
+### 358 · MINE: I told the owner a reported defect was real before it was proved (1 October)
+
+The booking lane reported "a VAT line's reversal is stored as gst" from reading one insert; I
+passed it to the owner as a real bug. Migration 125's trigger already copies the scheme; the
+lane's own failing-first test passed on the unchanged code, and I had to correct myself.
+**The rule:** a reported defect is a claim until a test fails on it; tell the owner "reported,
+being proved", not "found".
+
+---
+
+### 357 · A rule that lives in one route is lost when the route goes (walk-in cleanup, D27-197)
+
+Removing the dead walk-in route would have dropped three rules that only it enforced: the
+90-night cap, a returning foreign guest staying foreign (Form C), and the hint for a switched-off
+booking source. The one-page path had none of them. **The rule:** before removing a route, list
+what it refuses and find each refusal on the path that replaces it.
+
+---
+
+### 356 · `git checkout -- <file>` during a failing-first check threw away uncommitted work (booking lane, 30 Sep)
+
+To watch a new test fail on the old code, the lane restored a file with `git checkout -- <file>`,
+and its uncommitted edits to that file went with it. A copy saved beforehand brought them back.
+**The rule:** before restoring any file to prove a test fails, commit or copy the work first.
+
+---
+
+### 355 · React 19 logs a nesting warning as a format string (booking lane, REP-15)
+
+The Dashboard's "<div> cannot be a descendant of <p>" arrives as a format string with %s
+arguments; a test matching the raw first argument passed on the broken code. **The rule:**
+format the console arguments before matching, and watch the test fail on the bug.
+
+---
+
+### 354 · A demo whose business date isn't today makes real dates look like bugs (booking lane, D27-193)
+
+The owner's walk-through booked 1 October on a demo still on 25 August. Arrivals looks 14 days
+past the business date, so the booking "vanished", and checking it in moved its arrival back to
+25 August (a 39-night stay). The list was not broken. The lane found it by reading the owner's
+own rows, not by theorising. **The rule:** reproduce from the owner's own rows first. The demo
+now loads on today (`npm run demo` passes --today). Live 5EL's date lagged too (9 Sep on 30 Sep).
+
+---
+
 ### 353 · Build only what the owner has decided (leads lane, LEAD-1)
 
 29 September. The leads lane built a background sync and a Postgres copy of the leads on its

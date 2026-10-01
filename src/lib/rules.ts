@@ -29,9 +29,12 @@ export const CHARGE_CATEGORIES = [
 ] as const;
 export type ChargeCategory = (typeof CHARGE_CATEGORIES)[number];
 
-/** Payment methods the property actually accepts, from the Night Audit. */
+/** Payment methods the property actually accepts, from the Night Audit.
+    Every one must be a method the server takes (finance's PAYMENT_METHOD,
+    paymentMethods.test.ts): "Google Pay" was offered and refused, and went
+    (the owner, 30 September) - it is UPI. */
 export const PAYMENT_METHODS = [
-  "Cash", "UPI", "Credit Card", "Debit Card", "Google Pay", "Bill to company",
+  "Cash", "UPI", "Credit Card", "Debit Card", "Bill to company",
 ] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 

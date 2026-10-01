@@ -6,7 +6,9 @@ import { fileURLToPath } from "node:url";
    THE TWO N8N WORKFLOWS, RUN WITHOUT N8N (D27-168)
 
    deploy/n8n/pms-send-m2r.json and pms-send-crs.json are files the owner
-   imports; nothing here reaches a server. Their decisions are all in Code
+   imports; nothing here reaches a server. Since 30 September (D27-186)
+   the CRS's workflow sends every guest message and the other is not used
+   for now; it is kept tested for the day it is. Their decisions are all in Code
    nodes, so each node's own code is run here against a stand-in for what
    n8n hands it - made-up guests, made-up numbers - and what it decides is
    checked: a retry is not sent twice, the lead the guest's reply will
@@ -94,6 +96,14 @@ describe("the market-to-revenue workflow (WhatsApp)", () => {
     expect(JSON.stringify(graph.template.components)).toContain("482913");
   });
 
+  /* D27-186: the two live hotels, by the leads app's own ids. */
+  it("knows the two live hotels by the leads app's ids", () => {
+    const appId = (code: string) => (run(m2r, "Read the message",
+      { body: message({ action: "mark", hotel: { code, name: "?" } }) })[0]!.json["hotel"] as { id: string } | undefined)?.id;
+    expect(appId("AMR")).toBe("amrapali-kolhapur");
+    expect(appId("GLM")).toBe("grand-lucent-mathura");
+  });
+
   it("refuses a hotel it has no id for, rather than marking the guest under another", () => {
     const [out] = run(m2r, "Read the message", { body: message({ hotel: { code: "XYZ", name: "?" } }) });
     expect(out!.json).toMatchObject({ stop: true, statusCode: 422 });
@@ -145,7 +155,7 @@ describe("the market-to-revenue workflow (WhatsApp)", () => {
   });
 });
 
-describe("the CRS workflow (email and the voucher)", () => {
+describe("the CRS workflow (every guest message, D27-186)", () => {
   const withMailbox = (): Workflow => ({
     ...crs,
     nodes: crs.nodes.map((n) => n.name !== "Read the message" ? n : {
@@ -191,17 +201,63 @@ describe("the CRS workflow (email and the voucher)", () => {
     expect(out!.json["text"], "no file, no word of one").not.toContain("attached");
   });
 
-  it("sends only the voucher on WhatsApp; anything else belongs to the other workflow", () => {
-    const [voucher] = run(crs, "Read the message", { body: message({ kind: "booking-confirmation" }) });
-    expect((voucher!.json["graphBody"] as { template: { name: string } }).template.name).toBe("booking_confirmation");
-    const [other] = run(crs, "Read the message", { body: message({ kind: "guest-link-code" }) });
-    expect(other!.json).toMatchObject({ stop: true, statusCode: 422 });
+  /* D27-207: the check-in code by email, to the address the PMS names. */
+  it("writes the check-in code's email, the code in the letter and not in the subject", () => {
+    const [out] = run(withMailbox(), "Read the message", { body: message({
+      channel: "email", kind: "guest-link-code",
+      data: { code: "482913", reference: "FH-5EL-2610-0001", guestName: "<b>Asha</b>", hotelName: "Test Hotel" },
+    }) });
+    expect(out!.json["stop"]).toBe(false);
+    expect(out!.json["to"]).toBe("asha@example.com");
+    expect(out!.json["subject"]).toBe("Your check-in code for Test Hotel");
+    expect(out!.json["text"]).toContain("Your code is 482913");
+    expect(out!.json["text"]).toContain("10 minutes");
+    expect(out!.json["html"], "a typed name is text").toContain("&lt;b&gt;Asha&lt;/b&gt;");
+    expect(out!.json["attachments"]).toBe("");
+  });
+
+  type Graph ={ to: string; template: { name: string; language: { code: string }; components: { type: string; parameters: { text: string }[] }[] } };
+  const whatsapp = (over: Json) => run(crs, "Read the message", { body: message(over) })[0]!.json;
+
+  /* One Meta template per kind, in English, its fields in the template's
+     own order (docs/go-live/whatsapp-templates.md, IMPORT.md). */
+  it.each([
+    ["booking-confirmation", "booking_confirmation",
+      ["Asha Test", "Test Hotel", "FH-5EL-2610-0001", "01/10/2026", "03/10/2026", "2", "https://example.test/g/x"]],
+    ["arrival-reminder", "stay_reminder",
+      ["Asha Test", "Test Hotel", "01/10/2026", "FH-5EL-2610-0001", "https://example.test/g/x"]],
+    ["checkin-link", "checkin_link",
+      ["Asha Test", "Test Hotel", "01/10/2026", "FH-5EL-2610-0001", "https://example.test/g/x"]],
+    ["review", "review_request", ["Asha Test", "Test Hotel", "https://example.test/g/x"]],
+  ])("sends %s on WhatsApp as the %s template", (kind, template, fields) => {
+    const out = whatsapp({ kind });
+    const graph = out["graphBody"] as Graph;
+    expect(out["graphUrl"], "from the one number the PMS names").toBe("https://graph.facebook.com/v23.0/100000000000001/messages");
+    expect(graph.to).toBe("919876543210");
+    expect(graph.template.name).toBe(template);
+    expect(graph.template.language.code).toBe("en");
+    expect(graph.template.components.map((c) => c.type)).toEqual(["body"]);
+    expect(graph.template.components[0]!.parameters.map((p) => p.text)).toEqual(fields);
+  });
+
+  it("sends the check-in code as guest_page_code, in the body and in the copy button", () => {
+    const graph = whatsapp({ kind: "guest-link-code", data: { code: "482913", reference: "R" } })["graphBody"] as Graph;
+    expect(graph.template.name).toBe("guest_page_code");
+    expect(graph.template.language.code).toBe("en");
+    expect(graph.template.components.map((c) => c.type)).toEqual(["body", "button"]);
+    expect(graph.template.components.map((c) => c.parameters[0]!.text)).toEqual(["482913", "482913"]);
+  });
+
+  it("refuses a kind it has no template for, in a sentence", () => {
+    expect(whatsapp({ kind: "bill" })).toMatchObject({ stop: true, statusCode: 422, answer: { ok: false } });
   });
 
   it("answers a retry of a message it sent already, and sends nothing", () => {
-    const [out] = run(withMailbox(), "Read the message",
-      { body: message({ channel: "email" }) }, { memory: { sent: { [ID]: Date.now() } } });
+    const memory = { sent: { [ID]: Date.now() } };
+    const [out] = run(withMailbox(), "Read the message", { body: message({ channel: "email" }) }, { memory });
     expect(out!.json).toMatchObject({ stop: true, statusCode: 200, answer: { duplicate: true } });
+    const [code] = run(crs, "Read the message", { body: message({ kind: "guest-link-code", data: { code: "482913" } }) }, { memory });
+    expect(code!.json, "a check-in code too").toMatchObject({ stop: true, statusCode: 200, answer: { duplicate: true } });
   });
 
   it("remembers an email only once it went", () => {

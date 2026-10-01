@@ -47,6 +47,59 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+### 2 October, after midnight — read this first
+
+```
+cp6 now              THE ONE LAUNCH (D27-225), fully checked: code at 80d18688 (gates final-1oct:
+                     web 919, api 2,206 of 2,206, database 1,374, replay 176; build passes);
+                     every later commit is notes. Migrations to 176. Everything decided up to
+                     D27-230: the guest's in-stay page (one-tap choices, in-room dining, table
+                     booking, two-way desk messages, the hotel's logo), the voucher's QR, the
+                     group-bill fix (D27-226), FIN-24..26, fees under Room, day use charged at
+                     check-in and booked from New booking (price typed every time).
+the release          NOT RUN. docs/go-live/RELEASE-1OCT.md; the owner types it (D21-50).
+not in it            contracts, loyalty, room systems (paused); online payments; settings
+                     phases 3 to 5.
+progress page        https://claude.ai/artifact/PrxGEtDY9SnfWVSmo1xGk7 (the owner's; its
+                     database is updated with ArtifactData).
+local demo           `fidato` at 176; api 8787, web 5173. Its business date is 30 Sep.
+live                 Still 0b4766e.
+decisions            D27-191 to D27-230.
+```
+
+### 1 October — read this first
+
+```
+cp6 now              THE LAUNCH SET, fully checked at 25842836 (gates launch-1oct-b: web 870,
+                     api 2068 of 2068, database 1311, replay 168; build passes). Migrations to
+                     168. Everything the owner decided up to D27-214 is in.
+not in it            contracts, guest services, loyalty, room systems (paused lanes; the memory
+                     note resume-start-pending-work); online payments; settings phases 3 to 5.
+the release          NOT RUN. The owner types it (D21-50). It now needs: nginx's three new
+                     locations; the settings CRS_N8N_*, WHATSAPP_PHONE_NUMBER_ID, GOOGLE_CLIENT_ID,
+                     M2R_*, ID_PHOTO_*; then each hotel's room and laundry GST, 5EL's night
+                     audit (stuck on 9 Sep), and the made-up ID photo check before photos go on.
+owner steps          deploy/n8n/IMPORT.md, deploy/n8n/OWNER-STEPS.md, src/modules/leads/
+                     OWNER-STEPS.md, src/modules/online-checkin/OWNER-STEPS.md.
+local demo           `fidato` at 168, business date moves with the real day; api 8787, web 5173.
+live                 Still 0b4766e.
+```
+
+### 30 September, later — read this first
+
+```
+cp6 now              Release 2 + the owner's walk-through: rates (162), booking and bill, cash
+                     (163) merged; quick gates green (web 812). Migrations up to 163. NOT yet
+                     run on the combined cp6: the API suite, the database, the replay, a build.
+paused               POS part 2 (pos/tap-variations-30sep, WIP; its 182 becomes 164). The
+                     walk-in route cleanup (cleanup/walk-in-route). The booking lane's e918193
+                     (stays.ts rack read) waits to be merged. The six lanes paused earlier:
+                     the memory note resume-start-pending-work.
+local demo           `fidato` at 163, on today (30 Sep); api 8787, web 5173.
+live                 Still 0b4766e. 5EL's business date 9 Sep (its night audit has not run).
+decisions            D27-187 to D27-196.
+```
+
 ### 30 September — read this first
 
 ```
@@ -356,6 +409,28 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **2 October: the queue.** (1) The owner runs `docs/go-live/RELEASE-1OCT.md` (the tip of cp6;
+> code checked at 80d18688), then Part B (each hotel's room and laundry GST, 5EL's test data
+> cleared, AMR and GLM set up) and Part C (Meta templates first, the CRS's n8n, Google, Drive,
+> the server's settings). (2) Archive and recycle the finished lanes' copies (D24-21): settings
+> design, guest services, POS, rates/table booking, online check-in, booking. (3) Then the three
+> paused lanes (contracts, loyalty, room systems), their migrations after 176.
+
+> **1 October: the queue.** (1) The release steps for the owner, each labelled with where it
+> runs, from section 9's shape (backup, pull, launch.sh, nginx, website, look), then the owner's
+> steps in the four OWNER-STEPS files. (2) Archive and recycle the finished lanes' copies
+> (D24-21). (3) The owner's open questions: is 5 Elements using live; 5EL in the leads map; a
+> logo on the guest's page; fees under Room; day use charged by itself. (4) Then the four paused
+> lanes ("start pending work new pending"), renumbering their migrations after 168.
+
+> **30 September, later: the queue.** (1) On restart: finish POS part 2 and merge it (182 to
+> 164), the booking lane's e918193 plus the walk-in's rack read, and the cleanup lane. (2) Full
+> gates on the combined cp6 (API suite, database, replay) and a build. (3) The words-only sweep:
+> "set GST on Room types" to "System > Administration > Configuration" (postings.ts:216/508 and
+> signedLines.test.ts:92, nightAudit.ts:193/1005, till.ts:2172-2173/2183, desk.ts:266,
+> dayBook.ts:173). (4) The release steps gain: each hotel's laundry GST; 5EL's night audit.
+> (5) Then the six paused lanes ("start pending work new pending").
 
 > **30 September: the queue.** (1) The owner runs the release (release 2 contains release 1;
 > the steps are in the chat, each labelled with where it runs). (2) The owner's connections:

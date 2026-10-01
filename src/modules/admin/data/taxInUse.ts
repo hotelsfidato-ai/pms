@@ -11,7 +11,7 @@ import { api } from "@/lib/api";
 
    The rules belong to FINANCE: its `GET /:code/tax` is the one reader of
    `tax_rules` the front desk and the till are billed from, and its
-   `TaxRulesCard` on Room types is where they are set. This asks that
+   `TaxRulesCard` on Configuration is where they are set. This asks that
    route over HTTP — as Settings already asks finance for the invoice
    series — rather than reading the table a second way. If its shape
    changes, this breaks: `MODULE.md`, "Leans on".
@@ -21,7 +21,7 @@ import { api } from "@/lib/api";
    has not said that (MEMORY 251).
    ══════════════════════════════════════════════════════════════════ */
 
-export type TaxKind = "room" | "restaurant" | "bar" | "banquet" | "spa" | "alcohol" | "other";
+export type TaxKind = "room" | "restaurant" | "bar" | "banquet" | "spa" | "alcohol" | "laundry" | "other";
 
 export interface TaxInUse {
   kind: TaxKind;

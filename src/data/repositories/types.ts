@@ -109,6 +109,10 @@ export interface Folio {
   /** charges + tax − discount − payments. Negative means the guest overpaid. */
   balance: number;
   status: "open" | "settled" | "disputed" | "written-off";
+  /** A group's master bill (D27-226): no stay, the group named. Its nights
+      are the company's and are never in a guest's own figures. */
+  groupId?: string;
+  group?: string | null;
 }
 
 /**

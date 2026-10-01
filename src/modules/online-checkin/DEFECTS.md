@@ -14,11 +14,72 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-None.
+### OCI-10 · Continue with Google runs Google's script on the guest's page
+
+30 September (D27-207; numbered for now). Accepted for the launch by the
+master, and written down so it is a choice and not an oversight. Google
+Identity Services is a script from accounts.google.com, and a script on a
+page can read that page: the link in the address and, on a phone that has
+already been verified, the unlock kept for the day. **What limits it now:**
+the script is not in the bundle and not fetched on opening - only when the
+guest presses "Continue with Google" (`googleSignIn.ts`, pinned by a test);
+a guest who uses a code never runs it; and it comes from Google's own
+address only. **The way with no script:** a full-page redirect to Google
+(OpenID Connect, `response_type=id_token`, a `state` kept in the tab and a
+registered return address). The door's check would not change - it already
+takes Google's signed answer. About two hours, and one more owner step (the
+return address in the Google client). **The rule:** anything loaded from
+outside onto `/g/:token` is loaded on the guest's own press, never on
+opening.
 
 ---
 
 ## Fixed
+
+### OCI-12 · The database guard test asked about an empty stay, so a function that skipped the unlock still passed
+
+1 October, found while proving the desk's replies (D27-224; numbered for
+now). **What happened:** OCI-5's test calls every function behind the code
+with the link's hash and no unlock, and expects nothing back. Broken on
+purpose to take the link alone, `app.guest_desk_thread` still answered
+nothing and the test passed: at that point in the file the stay had no
+messages, so there was nothing for it to leak. `guest_requests_mine` and
+`guest_details_state` were asked the same way, so their checks were weaker
+than they read.
+**Fixed:** the test first gives the stay a message to the desk and a reply,
+then asks. With the thread broken again, it failed.
+**The rule:** a "nothing comes back" test needs something there that could
+come back. Fill the room before you prove the door is shut.
+
+### OCI-11 · A guest's second upload deleted the photo the desk had kept
+
+1 October, found by the master's read-only pre-launch review, before any guest
+used it (numbered for now). **What happened:** `app.guest_id_photo_stored`
+(167) marked EVERY stored photo of the stay and guest as replaced, and the
+door then deleted each from Drive. A guest whose details the desk had
+confirmed could send their details again - a new waiting submission - and any
+JPEG with them: the kept copy was deleted. If the desk then removed the new
+one as "not an ID", no copy was left. The desk's own "add a photo at
+check-in" did the same to a kept photo. That broke D27-210 (only the owner,
+an administrator or the GM delete a kept photo, with a reason) and this
+file's own comment that the guest "adds nothing more" once confirmed.
+**Also found, the same fault's other face:** the desk's list picked the
+stay's latest stored photo for a waiting submission, so new details with no
+photo showed reception the KEPT one - which reception may not open.
+**Why the tests did not catch it:** every photo test began from one waiting
+submission; none sent details twice, and the desk-add test asserted the
+replacement as correct.
+**Fixed:** a replace only replaces the guest's own photo of the SAME waiting
+submission (`link_id is not null and submission_id = …`). A photo added at
+the desk replaces nothing: beside a kept one it is a second kept one ("Add
+another photo", not "Replace"). The list shows a waiting submission's own
+photo (`x.submission_id = d.id`). Three tests, each seen failing on the old
+code; the waiting-photo replace kept its test, seen failing when nothing is
+ever replaced.
+**The rule:** a delete reached by a side road (a "replace", a "tidy") must
+be scoped as narrowly as the front door's own delete. When a table has a
+state that only some people may end, every statement that ends it names
+that state.
 
 ### OCI-1 · The guest was shown "Request failed (503)." where the door had written them a sentence
 

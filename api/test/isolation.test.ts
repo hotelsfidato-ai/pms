@@ -273,3 +273,30 @@ describe("row-level security", () => {
     expect(pune.every((r) => r.staff_id === puneStaffId)).toBe(true);
   });
 });
+
+/* 30 September (the rates lane's measurement): a person signs in with a
+   Firebase uid, and `app.current_user_id()` took its exception path and a
+   staff lookup on EVERY call - once per policy, per query. withUser now
+   resolves the uid once, so the rest of the transaction reads a staff id.
+   An unknown uid stays as it was given, and is still nobody. */
+describe("withUser resolves the person once", () => {
+  it("a Firebase uid becomes the staff id for the rest of the transaction", async () => {
+    const seen = await withUser("dev-owner", async (client) => {
+      const { rows } = await client.query<{ setting: string; me: string | null }>(
+        "select current_setting('app.user_id', true) as setting, app.current_user_id()::text as me");
+      return rows[0]!;
+    });
+    expect(seen.me, "dev-owner is a linked dev identity").toBeTruthy();
+    expect(seen.setting).toBe(seen.me);
+  });
+
+  it("an unknown uid stays as given, and is nobody", async () => {
+    const seen = await withUser("nobody-with-this-uid", async (client) => {
+      const { rows } = await client.query<{ setting: string; me: string | null }>(
+        "select current_setting('app.user_id', true) as setting, app.current_user_id()::text as me");
+      return rows[0]!;
+    });
+    expect(seen.setting).toBe("nobody-with-this-uid");
+    expect(seen.me).toBeNull();
+  });
+});

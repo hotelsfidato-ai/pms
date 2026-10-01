@@ -19,6 +19,9 @@ import { TOKEN_SANDBOX, ok200 } from "./suExamples.ts";
    4. An SU id cannot change once SU has it.
    5. The live account is not reached for a hotel that is not switched on.
    6. Only the owner.
+   7. The postcode and the map point are the HOTEL's (D27-214, migration
+      168), set in Settings: SU's setup no longer writes them, and what a
+      hotel typed there before is still sent until its profile has its own.
 
    The demo's 5 Elements: Superior (SUP, sleeps 2, rack ₹4,099) and Deluxe
    (DLX, sleeps 3, rack ₹3,699), from the real eZee exports.
@@ -35,7 +38,10 @@ let gmId: string;
 let hotelId: string;
 let superiorId: string;
 let deluxeId: string;
-let saved: { phone: string | null; address_line: string | null; email: string | null };
+let saved: {
+  phone: string | null; address_line: string | null; email: string | null;
+  pin: string | null; latitude: string | null; longitude: string | null;
+};
 
 const admin = async () =>
   new (await import("pg")).default.Pool({
@@ -48,10 +54,11 @@ beforeAll(async () => {
   try {
     ownerId = (await db.query<{ id: string }>(
       "select id::text from staff where email = 'owner@fidato.in'")).rows[0]!.id;
-    const h = (await db.query<{ id: string; phone: string | null; address_line: string | null; email: string | null }>(
-      "select id::text, phone, address_line, email::text from hotels where code = '5EL'")).rows[0]!;
+    const h = (await db.query<{ id: string } & typeof saved>(
+      `select id::text, phone, address_line, email::text, pin, latitude::text, longitude::text
+         from hotels where code = '5EL'`)).rows[0]!;
     hotelId = h.id;
-    saved = { phone: h.phone, address_line: h.address_line, email: h.email };
+    saved = h;
     const types = (await db.query<{ id: string; code: string }>(
       "select id::text, code from room_types where hotel_id = $1", [hotelId])).rows;
     superiorId = types.find((t) => t.code === "SUP")!.id;
@@ -73,8 +80,9 @@ const wipe = async () => {
     await db.query("delete from channel_room_types where hotel_id = $1", [hotelId]);
     await db.query("delete from channel_rate_plans where hotel_id = $1", [hotelId]);
     await db.query("delete from channel_hotels where hotel_id = $1", [hotelId]);
-    await db.query("update hotels set phone = $2, address_line = $3, email = $4 where id = $1",
-      [hotelId, saved.phone, saved.address_line, saved.email]);
+    await db.query(
+      "update hotels set phone = $2, address_line = $3, email = $4, pin = $5, latitude = $6, longitude = $7 where id = $1",
+      [hotelId, saved.phone, saved.address_line, saved.email, saved.pin, saved.latitude, saved.longitude]);
   } finally { await db.end(); }
 };
 
@@ -119,8 +127,7 @@ const pretendSu = (reply: (req: SuRequest, body: Record<string, unknown>) => unk
 };
 
 const HOTEL_DETAILS = {
-  suHotelId: "FIDATO-5EL", postalCode: "413216", countryCode: "IN",
-  latitude: 17.5236, longitude: 76.2036,
+  suHotelId: "FIDATO-5EL", countryCode: "IN",
   contactFirstName: "Test", contactLastName: "Contact",
 };
 
@@ -132,7 +139,9 @@ const readyToSend = async () => {
     await db.query(
       /* Written the way a person writes a number: SU gets it without the
          spaces and hyphen, and the hotel record keeps it as typed. */
-      "update hotels set phone = '+91 0000-000 000', address_line = 'Test Road', email = 'test@example.com' where id = $1",
+      `update hotels set phone = '+91 0000-000 000', address_line = 'Test Road', email = 'test@example.com',
+              pin = '413216', latitude = 17.5236, longitude = 76.2036
+        where id = $1`,
       [hotelId]);
   } finally { await db.end(); }
   expect((await call(ownerId, "/hotel", "PUT", HOTEL_DETAILS)).status).toBe(200);
@@ -193,6 +202,69 @@ describe("the mapping", () => {
   });
 });
 
+describe("the postcode and the map point are the hotel's (D27-214)", () => {
+  type Read = { hotel: { postalCode: string | null; latitude: string | null; longitude: string | null } };
+  const place = async () => ((await (await call(ownerId, "/content")).json()) as Read).hotel;
+  const setHotel = async (pin: string | null, latitude: number | null, longitude: number | null) => {
+    const db = await admin();
+    try {
+      await db.query("update hotels set pin = $2, latitude = $3, longitude = $4 where id = $1",
+        [hotelId, pin, latitude, longitude]);
+    } finally { await db.end(); }
+  };
+  /* A row as the SU setup wrote it before 168. */
+  const oldSuRow = async (postalCode: string) => {
+    const db = await admin();
+    try {
+      await db.query(
+        `insert into channel_hotels (hotel_id, su_hotel_id, postal_code, country_code, latitude, longitude,
+                                     contact_first_name, contact_last_name)
+         values ($1, 'FIDATO-5EL', $2, 'IN', 17.5236, 76.2036, 'Test', 'Contact')`, [hotelId, postalCode]);
+    } finally { await db.end(); }
+  };
+
+  it("SU's setup no longer writes them: the hotel's own are read, whatever is sent there", async () => {
+    await setHotel("413216", 17.5236, 76.2036);
+    const res = await call(ownerId, "/hotel", "PUT",
+      { ...HOTEL_DETAILS, postalCode: "999999", latitude: 1, longitude: 1 });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await place()).toMatchObject({ postalCode: "413216", latitude: "17.523600", longitude: "76.203600" });
+    const db = await admin();
+    try {
+      const { rows } = await db.query(
+        "select postal_code, latitude, longitude from channel_hotels where hotel_id = $1", [hotelId]);
+      expect(rows[0]).toEqual({ postal_code: null, latitude: null, longitude: null });
+    } finally { await db.end(); }
+  });
+
+  it("a hotel already on SU still sends its point, until its profile has its own", async () => {
+    setUpSu();
+    await readyToSend();
+    await setHotel(null, null, null);
+    const db = await admin();
+    try {
+      await db.query(
+        "update channel_hotels set postal_code = '413217', latitude = 17.5, longitude = 76.2 where hotel_id = $1",
+        [hotelId]);
+    } finally { await db.end(); }
+
+    const calls = pretendSu();
+    expect((await call(ownerId, "/content/send", "POST")).status).toBe(200);
+    const property = (calls[0]!.body as any).HotelDescriptiveContents.HotelDescriptiveContent;
+    expect(property.HotelInfo.Position).toEqual({ Latitude: "17.500000", Longitude: "76.200000" });
+    expect(property.ContactInfos.ContactInfo[0].Addresses.Address.PostalCode).toBe("413217");
+  });
+
+  it("keeps a postcode 168 could not copy into a six-digit PIN", async () => {
+    await setHotel(null, null, null);
+    await oldSuRow("SW1A 1AA");
+    expect(await place()).toMatchObject({ postalCode: "SW1A 1AA", latitude: "17.523600", longitude: "76.203600" });
+    /* And saving the SU details again does not wipe it. */
+    expect((await call(ownerId, "/hotel", "PUT", HOTEL_DETAILS)).status).toBe(200);
+    expect((await place()).postalCode).toBe("SW1A 1AA");
+  });
+});
+
 describe("sending", () => {
   it("sends nothing while SU is not set up", async () => {
     await readyToSend();
@@ -208,7 +280,9 @@ describe("sending", () => {
     await call(ownerId, "/hotel", "PUT", { suHotelId: "FIDATO-5EL" });
     const db = await admin();
     try {
-      await db.query("update hotels set phone = '02181 220011', address_line = null where id = $1", [hotelId]);
+      await db.query(
+        "update hotels set phone = '02181 220011', address_line = null, pin = null, latitude = null, longitude = null where id = $1",
+        [hotelId]);
     } finally { await db.end(); }
 
     const res = await call(ownerId, "/content/send", "POST");

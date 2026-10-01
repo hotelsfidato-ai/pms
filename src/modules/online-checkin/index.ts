@@ -10,3 +10,9 @@ export { default as MessagesToTheDesk } from "./MessagesToTheDesk";
    booking has details waiting from the guest's own page (the owner, 25
    September). */
 export { default as WaitingDetailsLink } from "./WaitingDetailsLink";
+
+/* The desk adds a guest's ID photo at check-in (D27-210), for a guest who
+   sent none online: front desk's check-in and the stay panel draw this.
+   `<AddIdPhotoAtDesk stayId={reservationId} />`, inside a `/h/:code/...`
+   screen. It shows itself only to the desk's roles. */
+export { default as AddIdPhotoAtDesk } from "./AddIdPhotoAtDesk";

@@ -3,12 +3,12 @@ import { withSession, type Session } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { resolveDate, businessDateFor } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
+import { roomNightsDue, postRoomNight } from "../night-audit/index.ts";
+import { editFolioCharge } from "../finance/index.ts";
 import {
   formIIIRefusal, identityProblem, isForeign, saveIdentity, saveVisit, type Identity, type Visit,
 } from "../guests/index.ts";
-import {
-  countProblem, dateProblem, emailProblem, MAX_NIGHTS, phoneProblem,
-} from "../../validate.ts";
+import { countProblem, dateProblem, MAX_NIGHTS } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE FLOWS THAT WRITE
@@ -115,8 +115,8 @@ const refuse = (
 /** Is somebody still IN this room - app.in_house (129), the one rule - other
     than the stays in `except`? The sentence if so. FD-11's, and the owner's
     rule A (24 September): asked by every route that puts a guest in a room
-    NOW - the check-in, the walk-in, a move or a swap from tonight, a room for
-    a guest already checked in. A room given ahead to a booking that has not
+    NOW - the check-in (a walk-in's too), a move or a swap from tonight, a
+    room for a guest already checked in. A room given ahead to a booking that has not
     arrived is a hold, not a guest in it: its check-in asks again on the day. */
 export async function stillIn(
   client: Client, hotelId: string, roomId: string, roomNumber: string,
@@ -166,6 +166,8 @@ interface CheckInBody {
   user?: string;
   /* D25-39: the guest agreed to offers, asked face to face at check-in. */
   offersAgreed?: boolean;
+  /* D27-193: the clerk saw and confirmed a move of more than a day. */
+  confirmMove?: boolean;
 }
 
 operations.post("/:code/stays/:id/check-in", async (c) => {
@@ -261,6 +263,17 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
           + "to today.",
         );
       }
+      /* MORE THAN A DAY EARLY MOVES A WHOLE BOOKING (D27-193): the owner's
+         1 October booking, checked in on a hotel still on 25 August, became
+         39 nights nobody had seen. Allowed, but only once the screen has
+         shown the move and the clerk confirmed it - a stale screen cannot. */
+      const day = (d: string) => Date.parse(`${d}T00:00:00Z`) / 86_400_000;
+      if (day(stay.check_in) - day(businessDate) > 1 && body.confirmMove !== true) {
+        return refuse(
+          `Checking in now moves the arrival from ${stay.check_in} to ${businessDate}: `
+          + `${day(stay.check_out) - day(businessDate)} nights. Confirm the move first.`,
+        );
+      }
 
       /* ── ARRIVING EARLY ───────────────────────────────────────
          The property sells the night from its check-in time. Before
@@ -341,7 +354,14 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       /* The room must be free for the WHOLE stay, not merely tonight.
          The EXCLUDE constraint on room_assignments would catch an
          overlap anyway — but it would arrive as a constraint name, and
-         a clerk needs a sentence. */
+         a clerk needs a sentence.
+
+         THE WHOLE STAY STARTS TODAY when the arrival moves (FD-24, 30
+         September): this asked about the booking's old dates, and the hold
+         below was written on them, so the nights the guest moved onto were
+         neither checked nor held - somebody else's room tonight, and free
+         to sell again tomorrow. */
+      const arrival = earlyByDays ? businessDate : stay.check_in;
       const { rows: clash } = await client.query<{ reference: string }>(
         `select r.reference
            from room_assignments ra
@@ -352,7 +372,7 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
             and daterange(ra.from_date, greatest(ra.to_date, ra.from_date + 1), '[)')
                 && daterange($3::date, greatest($4::date, $3::date + 1), '[)')
           limit 1`,
-        [room.id, stayId, stay.check_in, stay.check_out],
+        [room.id, stayId, arrival, stay.check_out],
       );
       if (clash[0]) {
         return refuse(`Room ${roomNumber} is held by ${clash[0].reference} for part of that stay.`);
@@ -386,8 +406,13 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       if (wrong) return refuse(wrong);
       /* Form III's own fields, before the first write (MEMORY 243). The
          nationality typed, else the one on file: leaving the field out must
-         not be a way past the rule. */
-      const nationality = identity?.nationality?.trim() || stay.nationality;
+         not be a way past the rule. And "IN" typed - the ID block opens on
+         it - never replaces a foreign nationality on file (D27-197, the
+         owner, FD-23; D27-25's walk-in rule, on every path). A wrong one is
+         corrected on the guest's record. */
+      const typed = identity?.nationality?.trim().toUpperCase();
+      const nationality = typed && !(typed === "IN" && isForeign(stay.nationality))
+        ? typed : stay.nationality;
       const formIII = formIIIRefusal({ ...identity, nationality }, body.visit, captured);
       if (formIII) return refuse(formIII);
 
@@ -446,6 +471,10 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
            a manager deciding not to - asked above, before any write - and
            worth being visible by its absence on the bill. */
         if (!body.waiveEarly && isEarly) {
+          /* PART OF THE ROOM ON THE BILL (the owner's D27-223): its source
+             says what it is, 'early_checkin', and the bill's sections put it
+             under Room. Lines before 1 October say 'front_desk' and stay in
+             Other charges. */
           /* The charge is the property's; the RATE is the room's.
              Letting somebody in at eleven is ancillary to selling them
              the room, so it carries the room's slab — and the room's
@@ -471,7 +500,7 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
                select $1::uuid, f.id, $2::date, 'misc', 'Early check-in',
                       $3::numeric, t.rate,
                       round($3::numeric * t.rate / 100.0, 2),
-                      'front_desk', $4::uuid
+                      'early_checkin', $4::uuid
                  from folios f
                 cross join (select app.gst_rate($1,'room',$6::numeric) as rate) t
                 where f.reservation_id = $5 and f.status = 'open'
@@ -506,10 +535,10 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
          and overwriting a recorded nationality with a default because
          a form field was left empty would remove a foreign national
          from the register entirely. */
-      if (identity?.nationality?.trim()) {
+      if (typed) {
         await client.query(
           "update guests set nationality = $2 where id = $1",
-          [stay.guest_id, identity.nationality.trim().toUpperCase()],
+          [stay.guest_id, nationality],
         );
       }
       if (isForeign(nationality)) {
@@ -523,13 +552,35 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
           where reservation_id = $1 and released_at is null and room_id <> $2`,
         [stayId, room.id],
       );
+      /* A hold given ahead on this room starts on the old arrival: it is
+         stretched back to the day the guest came (FD-24). */
+      await client.query(
+        `update room_assignments set from_date = $3::date
+          where reservation_id = $1 and released_at is null and room_id = $2
+            and from_date > $3::date`,
+        [stayId, room.id, arrival],
+      );
       await client.query(
         `insert into room_assignments
            (hotel_id, reservation_id, room_id, from_date, to_date, reason)
          values ($1, $2, $3, $4, $5, 'arrival')
          on conflict do nothing`,
-        [hotelId, stayId, room.id, stay.check_in, stay.check_out],
+        [hotelId, stayId, room.id, arrival, stay.check_out],
       );
+
+      /* THE FIRST NIGHT IS CHARGED NOW (the owner's D27-204, D27-205): the
+         room charge and its GST, dated today, by the night audit's own code -
+         so the audit finds this night charged and posts each later one. The
+         last write, in the check-in's own transaction, after every refusal
+         (MEMORY 243) and after the hold, which names the room on the line.
+         Nothing for a complimentary room, as the audit. And nothing where the
+         property has no GST rule for rooms: the guest is not kept at the desk
+         for a setting, and the audit - refused until the rule is set - posts
+         this night. */
+      const [night] = await roomNightsDue(client, hotelId, businessDate, stayId);
+      if (night && !night.comp && night.gst !== null) {
+        await postRoomNight(client, hotelId, businessDate, night, "check_in");
+      }
 
       /* No write to rooms.occupancy_status here: the check-in above and
          the assignment re-read it from app.in_house (129), the one rule. */
@@ -693,7 +744,9 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
 
       if (!body.waiveLate) {
         /* Same rule as the early charge above: the room decides the
-           slab, because a late departure is ancillary to the room. */
+           slab, because a late departure is ancillary to the room - and
+           its source, 'late_checkout', puts it under Room on the bill
+           (D27-223). */
         /* ⚠ THIS READ `hotels.business_date` AND POSTED TO IT.
            That column is the property's CONFIGURED date. The real one
            is `app.business_date()` — the last completed night audit
@@ -726,7 +779,7 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
              select $1::uuid, f.id, $2::date, 'misc', 'Late check-out',
                     $3::numeric, t.rate,
                     round($3::numeric * t.rate / 100.0, 2),
-                    'front_desk', $4::uuid
+                    'late_checkout', $4::uuid
                from folios f
               cross join (select app.gst_rate($1,'room',$6::numeric) as rate) t
               where f.reservation_id = $5 and f.status = 'open'
@@ -820,353 +873,6 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
     }
 
     return { ok: true, data: { room: room[0]?.number ?? null } };
-  });
-
-  if (!result) return c.json({ error: "No such property." }, 404);
-  return c.json(result, result.ok ? 200 : 409);
-});
-
-
-/* ── A walk-in ────────────────────────────────────────────────────
-   One act, not a booking followed by a check-in. The guest is at the
-   desk; they arrive checked in, in a room, with the first night on
-   the folio.
-
-   It creates a GUEST too. There is no guest record to look up — that
-   is what "walk-in" means — and the schema requires one, correctly: a
-   reservation without a guest is a room held for nobody.
-   ═══════════════════════════════════════════════════════════════ */
-
-operations.post("/:code/walk-ins", async (c) => {
-  const body = (await c.req.json().catch(() => ({}))) as {
-    guestName?: string; roomNumber?: string; nights?: number;
-    adults?: number; children?: number; ratePlan?: string;
-    rackTariff?: number; offeredTariff?: number;
-    overrideReason?: string; businessDate?: string;
-    /* Where it came from, captured AT THE DESK. This cannot be
-       back-filled — a month later nobody remembers which agent sent a
-       walk-in, and the source-mix report is built from exactly this. */
-    businessSource?: string; marketSegment?: string; salesPerson?: string;
-    isSingleLady?: boolean;
-    /* The CRM's (docs/briefs/crm.md; the owner, 21 September). A phone and
-       an email, both optional, so a returning guest can be suggested, a
-       blacklisted one warned of, and the two ticks below kept against
-       something. `guestId` is the returning guest the clerk confirmed
-       (D21-20), checked again below; `whatsappAgreed` is D21-72;
-       `offersAgreed` is D25-39 (opt-in), kept against the phone and email
-       themselves as D21-22's "no" is. */
-    phone?: string; email?: string; guestId?: string;
-    whatsappAgreed?: boolean; offersAgreed?: boolean;
-    /* Form III (D27-25; the owner, 27 September: a walk-in is asked what
-       check-in asks). A foreign walk-in never reached the register: the
-       form had no nationality, and a guest defaults to IN. */
-    nationality?: string; identity?: Identity; visit?: Visit;
-    idSkipReason?: string;
-  };
-
-  const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
-    const hotelId = await hotelIdFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-
-    const guestName = body.guestName?.trim();
-    if (!guestName) return refuse("A walk-in needs a guest name.");
-    const phone = body.phone?.trim() || null;
-    const email = body.email?.trim() || null;
-
-    const nights = body.nights ?? 1;
-    /* FD-6, FD-7 (QA, 28 September): -2 nights became 1, 400 nights were
-       taken (₹17,21,580), children -1, a phone "abc". The owner: at most
-       90 nights; the phone and email rules are validate.ts's. */
-    const typed = countProblem(nights, "Nights", 1, MAX_NIGHTS)
-      ?? countProblem(body.adults ?? 1, "Adults", 1)
-      ?? countProblem(body.children ?? 0, "Children", 0)
-      ?? phoneProblem(phone) ?? emailProblem(email);
-    if (typed) return refuse(typed);
-
-    /* The nationality typed; for a returning guest typed as Indian, the one
-       on file - the form's default must not take a foreigner off the
-       register. Refused here, above the first write (MEMORY 243). */
-    const typedNationality = body.nationality?.trim().toUpperCase();
-    const onFile = body.guestId && (!typedNationality || typedNationality === "IN")
-      ? (await client.query<{ n: string }>(
-          "select nationality as n from guests where id = $1::uuid", [body.guestId])).rows[0]?.n
-      : undefined;
-    const nationality = onFile ?? typedNationality ?? "IN";
-    const identity: Identity = { ...body.identity, nationality };
-    const idCaptured = Boolean(identity.idType && identity.idNumber?.trim());
-    /* FD-1 (QA, 28 September): the walk-in asked an Indian guest for no ID
-       at all, while the Arrivals check-in insists on one or a reason. The
-       same step now, for every guest. */
-    if (!idCaptured && !body.idSkipReason?.trim()) {
-      return refuse(
-        "Record the guest's ID document - type and number - or give a "
-        + "reason for skipping it.");
-    }
-    if (identity.idType && !identity.idNumber?.trim()) {
-      return refuse(`A ${identity.idType} needs its number.`);
-    }
-    const wrong = identityProblem(identity, body.visit,
-      await resolveDate(client, hotelId, body.businessDate));
-    if (wrong) return refuse(wrong);
-    if (isForeign(nationality)) {
-      const formIII = formIIIRefusal(identity, body.visit, idCaptured);
-      if (formIII) return refuse(formIII);
-    }
-
-    const roomNumber = body.roomNumber?.trim();
-    if (!roomNumber) return refuse("Choose a room.");
-
-    const businessDate = await resolveDate(client, hotelId, body.businessDate);
-
-    /* ⚠ FD-8: "is somebody in it" is the one rule, app.in_house (129) -
-       a checked-in guest in this room now. This read the column
-       rooms.occupancy_status, which 070 set 'occupied' for any room
-       HELD, so a room given in advance to a booking arriving on the 27th
-       refused a one-night walk-in on the 25th while Rooms showed it Free.
-       A booking holding the room later in the stay is the clash check's
-       question below, and it names the booking. */
-    const { rows: roomRows } = await client.query<{
-      id: string; room_type_id: string; housekeeping_status: string;
-      base_rate: string | null;
-      type_name: string; max_occupancy: number;
-    }>(
-      `select rm.id, rm.room_type_id, rm.housekeeping_status,
-              rt.base_rate,
-              rt.name as type_name, rt.max_occupancy
-         from rooms rm
-         join room_types rt on rt.id = rm.room_type_id
-        where rm.hotel_id = $1 and rm.number = $2 and rm.is_active`,
-      [hotelId, roomNumber],
-    );
-    const room = roomRows[0];
-    if (!room) return refuse("That room is not part of this property.");
-    if (room.housekeeping_status === "out_of_service") {
-      return refuse("That room is held out of service.");
-    }
-    if (room.housekeeping_status === "dirty") {
-      return refuse("That room has not been cleaned yet.");
-    }
-    /* ── WILL THEY FIT? ──────────────────────────────────────────
-       The booking form has refused an over-full party since it was
-       written -- "3 people will not fit a Superior, it sleeps 2" -- and
-       the walk-in never asked. So the one path where a clerk is
-       standing in front of the actual family, counting them, was the
-       one that would take five into a double.
-
-       The same question, asked in both places, because a rule enforced
-       on one route and not the other is not a rule. */
-    const party = Math.max(1, Number(body.adults ?? 1))
-      + Math.max(0, Number(body.children ?? 0));
-    if (party > room.max_occupancy) {
-      return refuse(
-        `${party} people will not fit a ${room.type_name} - it sleeps `
-        + `${room.max_occupancy}. Put them in a larger room, or split them `
-        + "across two.",
-      );
-    }
-
-    /* Named, as the check-in names them (rule A, 24 September). */
-    const inRoom = await stillIn(client, hotelId, room.id, roomNumber);
-    if (inRoom) return refuse(inRoom);
-
-    const departure = new Date(`${businessDate}T00:00:00Z`);
-    departure.setUTCDate(departure.getUTCDate() + nights);
-    const checkOut = departure.toISOString().slice(0, 10);
-
-    /* The room must be free for the whole stay, not merely tonight. */
-    const { rows: clash } = await client.query<{ reference: string }>(
-      `select r.reference
-         from room_assignments ra
-         join reservations r on r.id = ra.reservation_id
-        where ra.room_id = $1 and ra.released_at is null
-          and daterange(ra.from_date, greatest(ra.to_date, ra.from_date + 1), '[)')
-              && daterange($2::date, $3::date, '[)')
-        limit 1`,
-      [room.id, businessDate, checkOut],
-    );
-    if (clash[0]) {
-      return refuse(`Room ${roomNumber} is held by ${clash[0].reference} for part of that stay.`);
-    }
-
-    /* ⚠ EVERY REFUSAL GOES ABOVE THE FIRST WRITE. `withSession` commits
-       whatever the callback returns, a refusal included, so a refusal
-       below an insert keeps the insert. The rate check used to sit under
-       the guest insert: a walk-in refused for an unpriced room left a
-       guest behind, and 015's guests_no_delete means nobody can remove
-       one. Defect 243 — found moving the channel check in beside it. */
-
-    /* A NULL RACK RATE MUST REFUSE, NOT DEFAULT TO NOTHING.
-
-       This was `body.offeredTariff ?? Number(room.base_rate)`, which was
-       safe only while base_rate could not be null. 032 made it nullable —
-       the system ships no price and the hotel enters its own — and
-       `Number(null)` is 0, so a walk-in into an unpriced room type would
-       have been checked in free, posted a zero room charge at the night
-       audit, and halved the day's ADR without anything looking wrong. */
-    const rack = room.base_rate === null ? null : Number(room.base_rate);
-    const offered = body.offeredTariff ?? rack;
-
-    if (offered === null || !Number.isFinite(offered)) {
-      return refuse(
-        `That room type has no rate set, so there is ` +
-        `nothing to charge. Enter a tariff for this stay, or set the rate ` +
-        `for the room type first.`,
-      );
-    }
-    /* A skipped ID is kept in the note, as check-in keeps it (FD-1). */
-    const notes = [
-      body.overrideReason?.trim() ? `Rate override - ${body.overrideReason.trim()}` : null,
-      !idCaptured ? `ID not captured - ${body.idSkipReason!.trim()}` : null,
-    ].filter(Boolean).join(" · ") || null;
-
-    /* ⚠ THE CHANNEL. The booking form has required one since 082 and
-       this route never set it, so a walk-in read "Walk-in" on the stay
-       list — the label falls back to the legacy column — and was
-       invisible to everything that counts by channel. Defect 242.
-
-       Not a question for the clerk: a walk-in's channel is the Walk-in
-       source, and 085's app.walk_in_source() is the one place that says
-       which row that is. The commission is stamped the way groups.ts
-       stamps it — this property's rate today, NULL when none is agreed. */
-    const { rows: channel } = await client.query<{
-      id: string; commission_pct: string | null;
-    }>(
-      `select bs.id::text as id, r.commission_pct::text as commission_pct
-         from booking_sources bs
-         left join booking_source_rates r
-                on r.booking_source_id = bs.id and r.hotel_id = $1
-        where bs.id = app.walk_in_source()`,
-      [hotelId],
-    );
-    if (!channel[0]) {
-      return refuse(
-        "There is no Walk-in booking source switched on, so this stay "
-        + "cannot record where it came from. A manager can switch it back "
-        + "on under Configuration → Booking sources.",
-      );
-    }
-
-    /* THE RETURNING GUEST (D21-20), the last refusal. The database asks
-       again whether the phone or email typed still suggests exactly that
-       person; only then does it fill a blank phone or email on their record,
-       and it writes nothing when it refuses - so this is still above the
-       first write. */
-    let guestId: string | null = null;
-    if (body.guestId) {
-      const { rows: same } = await client.query<{ id: string | null }>(
-        "select app.use_returning_guest($1::uuid, $2, $3)::text as id",
-        [body.guestId, phone, email]);
-      if (!same[0]?.id) {
-        return refuse(
-          "That guest no longer matches the phone or email typed. Check the "
-          + "suggestion again, or check them in as a new guest.");
-      }
-      guestId = same[0].id;
-    } else {
-      const { rows: guestRows } = await client.query<{ id: string }>(
-        "insert into guests (full_name, phone, email) values ($1, $2, $3) returning id",
-        [guestName, phone, email],
-      );
-      guestId = guestRows[0]!.id;
-    }
-
-    /* ONE REFERENCE, FROM ONE PLACE (RES-2, migration 092) — the last door to
-       join, 16 September. This was the second inline copy of the generator:
-       no hotel code, the month on the server's clock, no lock (two walk-ins
-       in one second made the same reference and the second failed), and
-       lpad, which CUTS a number past four digits (MEMORY 280). The booking
-       door moved in round 1; this one was missed.
-
-       ⚠ IN THIS TRANSACTION, BEFORE THE INSERT — app.next_reference's lock
-       lasts until the transaction ends, so the next caller waits, then sees
-       this row. */
-    const { rows: refRows } = await client.query<{ reference: string }>(
-      "select app.next_reference($1) as reference", [hotelId]);
-
-    const { rows: made } = await client.query<{ id: string }>(
-      `insert into reservations
-         (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
-          adults, children, occupancy, agreed_rate, status, source,
-          meal_plan, notes,
-          business_source, market_segment, sales_person, is_single_lady,
-          booking_source_id, commission_pct, whatsapp_agreed)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'checked_in','walk_in',$11,$12,
-               $13,$14,$15,$16,$17,$18::numeric,$19)
-       returning id`,
-      [hotelId, refRows[0]?.reference, guestId, room.room_type_id,
-       businessDate, checkOut, body.adults ?? 1, body.children ?? 0,
-       (body.adults ?? 1) + (body.children ?? 0), offered,
-       body.ratePlan === "Room Only" ? "RO" : body.ratePlan ?? null, notes,
-       /* Blank stays NULL. An empty segment must not become the string
-          "" — it would sort and group as its own category in the report
-          and read as a real answer somebody gave. */
-       body.businessSource?.trim() || null,
-       body.marketSegment?.trim() || null,
-       body.salesPerson?.trim() || null,
-       body.isSingleLady === true,
-       channel[0].id, channel[0].commission_pct,
-       body.whatsappAgreed === true],
-    );
-    const stayId = made[0]!.id;
-
-    /* The document for every guest who showed one (FD-1), and Form III's
-       nationality and visit for a foreigner, in the same transaction as
-       the stay. */
-    if (idCaptured) await saveIdentity(client, guestId!, identity);
-    if (isForeign(nationality)) {
-      await client.query(
-        "update guests set nationality = $2 where id = $1 and nationality <> $2",
-        [guestId, nationality]);
-      await saveVisit(client, hotelId, stayId, body.visit ?? {});
-    }
-
-    if (body.offersAgreed === true) {
-      await client.query("select app.record_offers_yes($1, $2)", [phone, email]);
-    }
-
-    /* 'arrival', not 'walk_in'. ra_reason_valid does not list the
-       latter and should not: a walk-in IS an arrival — the guest turns
-       up and is given a room. The reason records what happened to the
-       ROOM, not how the booking was taken.
-
-       (Comment outside the template literal. A backtick inside one
-       ends it — that is the second time, so: no backticks in SQL.) */
-    await client.query(
-      `insert into room_assignments
-         (hotel_id, reservation_id, room_id, from_date, to_date, reason)
-       values ($1,$2,$3,$4,$5,'arrival')`,
-      [hotelId, stayId, room.id, businessDate, checkOut],
-    );
-    /* rooms.occupancy_status follows from the assignment (129's trigger). */
-
-    const { rows: folio } = await client.query<{ id: string }>(
-      `insert into folios (hotel_id, reservation_id, status)
-       values ($1, $2, 'open') returning id`,
-      [hotelId, stayId],
-    );
-
-    const amount = Math.round(offered * nights * 100) / 100;
-
-    /* THE SLAB IS DECIDED PER NIGHT, NOT ON THE TOTAL.
-       A ₹4,000 room for three nights is ₹12,000 on this line and is
-       still a ₹4,000 room. Passing the total to the rule would push a
-       perfectly ordinary walk-in over the ₹7,500 threshold on its third
-       night and bill it at 18% — the boundary being on the wrong side
-       of a multiplication, which is the kind of error that only shows
-       up in somebody's tax return. `offered` is the nightly rate. */
-    await client.query(
-      `insert into folio_postings
-         (hotel_id, folio_id, business_date, category, description,
-          amount, tax_rate, tax_amount)
-       select $1::uuid, $2::uuid, $3::date, 'room', $4::text, $5::numeric,
-              t.rate, round($5::numeric * t.rate / 100.0, 2)
-         from (select app.gst_rate($1, 'room', $6::numeric) as rate) t`,
-      [hotelId, folio[0]?.id, businessDate,
-       `Room ${roomNumber} · ${nights} night${nights === 1 ? "" : "s"}`,
-       amount, offered],
-    );
-
-    return { ok: true, data: { id: stayId, reference: refRows[0]?.reference } };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
@@ -1313,7 +1019,8 @@ operations.post("/:code/stays/:id/move", async (c) => {
   type Body = {
     roomNumber?: string; from?: string; reason?: string;
     /* Optional. Applies to nights not yet posted, which is every night from
-       tonight on — a posted night is history. */
+       tonight on — a posted night is history. On the arrival day tonight IS
+       posted, at check-in (D27-204): that one line is put right too. */
     agreedRate?: number;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
@@ -1372,6 +1079,30 @@ operations.post("/:code/stays/:id/move", async (c) => {
         && from <= await businessDateFor(client, hotelId)) {
       const inRoom = await stillIn(client, hotelId, room[0].id, roomNumber, [stayId]);
       if (inRoom) return refuse(inRoom);
+    }
+
+    /* TONIGHT FOLLOWS THE NEW RATE ON THE ARRIVAL DAY TOO (the owner's
+       D27-205). A new rate has always applied "from tonight forward"; since
+       D27-204 tonight's night is posted at check-in, so the move puts that
+       one line right - finance's Edit: the old line reversed with the reason,
+       the corrected one posted. The desk may do it through the move, though
+       it edits no other charge. Before app.move_room writes: Edit asks all
+       its questions before its first write, so a refusal changes nothing
+       (MEMORY 243). */
+    if (input.agreedRate !== undefined && stay[0].status === "checked_in") {
+      const today = await businessDateFor(client, hotelId);
+      const { rows: tonight } = from > today ? { rows: [] } : await client.query<{ id: string }>(
+        `select fp.id::text from folio_postings fp
+          where fp.hotel_id = $1 and fp.reservation_id = $2 and fp.category = 'room'
+            and fp.source_type = 'check_in' and fp.business_date = $3::date
+            and fp.amount <> $4::numeric and fp.reverses_id is null
+            and not exists (select 1 from folio_postings r where r.reverses_id = fp.id)`,
+        [hotelId, stayId, today, input.agreedRate.toFixed(2)]);
+      if (tonight[0]) {
+        const done = await editFolioCharge(client, hotelId, tonight[0].id,
+          { amount: input.agreedRate, reason: `Room move: ${reason}` }, { reservationId: stayId });
+        if (!done.ok) return refuse(`Tonight is already charged. ${done.reason}`);
+      }
     }
 
     try {
@@ -1471,6 +1202,15 @@ operations.patch("/:code/stays/:id", async (c) => {
     const nights = Math.round((Date.parse(checkOut) - Date.parse(checkIn)) / 86_400_000);
     if (nights > MAX_NIGHTS) {
       return refuse(`A stay is at most ${MAX_NIGHTS} nights. Split a longer one into two bookings.`);
+    }
+    /* A DAY USE STAYS ONE, AND A STAY STAYS A STAY (D27-229): a day use's rate
+       is its typed day price, a stay's is a night's - turned into the other,
+       the same figure would be charged as the wrong thing. */
+    const wasDayUse = now[0].check_in === now[0].check_out;
+    if ((checkIn === checkOut) !== wasDayUse) {
+      return refuse(wasDayUse
+        ? "A day use stays a day use: its price is the day's. To stay the night, book the nights."
+        : "A stay does not become a day use here: book the day use on New booking, with its day price.");
     }
 
     try {

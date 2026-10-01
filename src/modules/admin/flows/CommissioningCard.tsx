@@ -1,6 +1,7 @@
+import { useState, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
-import { Check, AlertCircle, Circle, ChevronRight } from "lucide-react";
+import { Check, AlertCircle, Circle, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Card, CardBody, StatusPill } from "@/components/ui";
 import { getCommissioning, type CommissioningCheck } from "@/modules/admin/data/commissioning";
@@ -29,7 +30,22 @@ import { getCommissioning, type CommissioningCheck } from "@/modules/admin/data/
    that prints on every bill. It is a yes or a no, with the reasons.
    ══════════════════════════════════════════════════════════════════ */
 
+/* A phone: under Tailwind's sm, 640px. Read, not guessed from the width
+   of anything, and followed when the screen turns. */
+const PHONE = "(max-width: 639px)";
+function usePhone() {
+  return useSyncExternalStore(
+    (changed) => {
+      const query = window.matchMedia?.(PHONE);
+      query?.addEventListener("change", changed);
+      return () => query?.removeEventListener("change", changed);
+    },
+    () => window.matchMedia?.(PHONE).matches ?? false,
+  );
+}
+
 export function CommissioningCard({ hotelId }: { hotelId: string }) {
+  const folds = usePhone();
   const q = useQuery({
     queryKey: ["commissioning", hotelId],
     queryFn: () => getCommissioning(hotelId),
@@ -75,24 +91,60 @@ export function CommissioningCard({ hotelId }: { hotelId: string }) {
         <ul className={cn("-mx-4 border-y divide-y",
           blocking.length > 0 ? "border-brand-yellow-100 divide-brand-yellow-100" : "border-grey-100 divide-grey-100")}>
           {outstanding.map((c) => (
-            <Row key={c.id} check={c} hotelId={hotelId} />
+            <Row key={c.id} check={c} hotelId={hotelId} folds={folds} />
           ))}
         </ul>
-
-        {data.done > 0 && (
-          <p className="text-sm text-grey-500">
-            Done: {data.checks.filter((c) => c.done).map((c) => c.label).join(", ")}.
-          </p>
-        )}
+        {/* Only what is missing (the owner's D27-220): what is done is not listed. */}
       </CardBody>
     </Card>
   );
 }
 
-function Row({ check, hotelId }: {
-  check: CommissioningCheck; hotelId: string;
+function Row({ check, hotelId, folds }: {
+  check: CommissioningCheck; hotelId: string; folds: boolean;
 }) {
+  const [open, setOpen] = useState(false);
   const Icon = check.blocking ? AlertCircle : Circle;
+  const to = check.to && (check.to.startsWith("/settings") ? check.to : `/h/${hotelId}${check.to}`);
+  const focus = "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-orange";
+
+  /* ON A PHONE THE REASONS FOLD (the owner's D27-223): one line an item,
+     so the tabs start on the first screen; a tap shows why, and the
+     reason, with its arrow, opens the screen that settles it. */
+  if (folds && check.detail) {
+    const id = `commissioning-${check.id}`;
+    return (
+      <li>
+        <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}
+          className={cn("w-full min-h-14 flex items-center gap-2.5 px-4 py-3 text-left cursor-pointer",
+            "hover:bg-white/60 transition-colors duration-150", focus)}>
+          <Icon aria-hidden className={cn("size-4 shrink-0",
+            check.blocking ? "text-brand-yellow-800" : "text-grey-500")} />
+          <span className="min-w-0 flex-1 text-base text-ink-900">
+            {check.label}
+            {!check.blocking && <span className="text-grey-500 text-sm"> · not blocking</span>}
+          </span>
+          <ChevronDown aria-hidden className={cn("size-4 text-grey-500 shrink-0 transition-transform duration-150",
+            open && "rotate-180")} />
+        </button>
+        <div id={id} hidden={!open}>
+          {/* The reason starts where the label does: a spacer the icon's width. */}
+          <div className="flex gap-2.5 px-4 pb-3">
+            <span className="size-4 shrink-0" aria-hidden />
+            {to ? (
+              <Link to={to} className={cn("min-w-0 flex-1 flex items-start gap-2.5 min-h-11 text-sm text-grey-600",
+                "leading-relaxed hover:underline underline-offset-4", focus)}>
+                <span className="min-w-0 flex-1">{check.detail}</span>
+                <ChevronRight className="size-4 text-grey-500 shrink-0 mt-0.5" aria-hidden />
+              </Link>
+            ) : (
+              <p className="min-w-0 flex-1 text-sm text-grey-600 leading-relaxed">{check.detail}</p>
+            )}
+          </div>
+        </div>
+      </li>
+    );
+  }
 
   const body = (
     <>
@@ -126,10 +178,9 @@ function Row({ check, hotelId }: {
 
   return (
     <li>
-      {check.to ? (
-        <Link to={`/h/${hotelId}${check.to}`}
-              className={cn(shell, "hover:bg-white/60 transition-colors duration-150 cursor-pointer",
-                "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-orange")}>
+      {to ? (
+        <Link to={to}
+              className={cn(shell, "hover:bg-white/60 transition-colors duration-150 cursor-pointer", focus)}>
           {body}
         </Link>
       ) : (

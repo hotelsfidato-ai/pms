@@ -228,9 +228,10 @@ export default function DashboardPage() {
             <div className="grid grid-cols-[80px_auto] gap-4 items-center">
               <Rings seenKey="fidato.dashboard.rings" size="size-20" arcs={[{ value: occ?.today == null ? null : occ.today / 100, color: "var(--color-brand-orange)", track: "rgb(255 255 255 / 0.12)" }]} />
               <div>
-                <p className={cn("text-3xl font-semibold tabular tracking-[-0.03em]", occ?.today == null && !loading && "text-white/55")}>
+                {/* A <div>: while loading it holds the Skeleton, a <div> too. */}
+                <div className={cn("text-3xl font-semibold tabular tracking-[-0.03em]", occ?.today == null && !loading && "text-white/55")}>
                   {fig(pct(occ?.today), "w-28 bg-white/15")}
-                </p>
+                </div>
                 <p className="text-xs text-white/55 mt-0.5">Today</p>
               </div>
             </div>
@@ -256,12 +257,12 @@ export default function DashboardPage() {
                 <IconChip className="-mt-1 max-sm:hidden"><Icon /></IconChip>
                 <span className="min-w-0">{term ? <Term name={term}>{label}</Term> : label}</span>
               </p>
-              <p className={cn(
+              <div className={cn(
                 "text-xl sm:text-2xl leading-[30px] font-semibold tabular tracking-[-0.022em] text-right sm:text-left",
                 f?.today == null && !loading ? "text-grey-500" : "text-ink-900",
               )}>
                 {fig(cash(f?.today))}
-              </p>
+              </div>
               <dl className="col-span-2 mt-2 grid grid-cols-2 gap-x-4 sm:col-span-1 sm:mt-0 sm:grid-cols-1 sm:border-t sm:border-grey-100 sm:pt-1.5">
                 {([["Month so far", f?.ptd], ["Year so far", f?.ytd]] as const).map(([name, v]) => (
                   <div key={name} className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-3 sm:leading-[22px]">

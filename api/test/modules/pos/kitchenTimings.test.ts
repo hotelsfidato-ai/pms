@@ -16,10 +16,9 @@ import { closePool } from "../../../src/db.ts";
    this test is where that would show up — and it would show up as a
    report quietly missing rows, months later.
 
-   ⚠ AND THE PASS CLOCK. `atPassSeconds` is null while a dish is
-   cooking and a number once it is ready, because a dish still in a pan
-   is not waiting on anybody. Nothing showed that number before, and it
-   is the one that ruins food.
+   ⚠ AND THE BOARD'S TWO STAGES (D27-221). A Ready dish leaves the
+   kitchen's board for the waiter's screens - and its ready is still
+   recorded, because the recorder is the trigger and not the board.
    ══════════════════════════════════════════════════════════════════ */
 
 const SUPER =
@@ -33,7 +32,6 @@ interface KitchenLine {
   id: string; name: string; status: string;
   waitedSeconds: number;
   prepMinutes: number | null;
-  atPassSeconds: number | null;
 }
 
 let ownerUid: string;
@@ -150,35 +148,28 @@ describe("a chef pressing a button leaves a timing behind", () => {
       expect(rows[0]!.by).not.toBeNull();
     });
 
-  it("shows the estimate on the pass, and no pass clock while it cooks",
+  it("shows the estimate on the board, ordered and on the fire",
     async () => {
       if (!lineId) return;
 
       let line = (await kitchen()).find((l) => l.id === lineId);
-      expect(line, "the dish is not on the pass").toBeTruthy();
+      expect(line, "the dish is not on the board").toBeTruthy();
       expect(line!.prepMinutes).toBe(11);
-      /* ⚠ NULL, NOT ZERO. A dish still in a pan is not waiting on a
-         waiter, and "0s at the pass" would read as though it were. */
-      expect(line!.atPassSeconds).toBeNull();
 
       expect((await call(`/5EL/kitchen/lines/${lineId}/preparing`, {}))
         .status).toBe(200);
       line = (await kitchen()).find((l) => l.id === lineId);
-      expect(line!.atPassSeconds, "cooking is not waiting").toBeNull();
+      expect(line!.status, "on the fire").toBe("preparing");
     });
 
-  it("starts the pass clock the moment it is ready", async () => {
+  it("a Ready dish leaves the board for the waiter (D27-221)", async () => {
     if (!lineId) return;
 
     expect((await call(`/5EL/kitchen/lines/${lineId}/ready`, {}))
       .status).toBe(200);
 
-    const line = (await kitchen()).find((l) => l.id === lineId);
-    expect(line!.status).toBe("ready");
-    /* A number now, and it may legitimately be 0 seconds — the dish was
-       marked ready this instant. What matters is that it is not null. */
-    expect(line!.atPassSeconds).not.toBeNull();
-    expect(typeof line!.atPassSeconds).toBe("number");
+    expect((await kitchen()).find((l) => l.id === lineId),
+      "a ready dish is still on the kitchen's board").toBeUndefined();
 
     /* THE ASSERTION THIS FILE EXISTS FOR. Three button presses, three
        rows, and not one line of route code was written to record them. */

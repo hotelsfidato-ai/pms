@@ -75,7 +75,14 @@ describe("every write the server mounts", () => {
       "POST /api/channel/su/reservations",
       "POST /api/guest/:token/code",
       "POST /api/guest/:token/details",
+      "POST /api/guest/:token/google",
+      "POST /api/guest/:token/id-photo",
+      /* In-room dining (D27-224): behind the code, each its own definer. */
+      "POST /api/guest/:token/orders",
+      "POST /api/guest/:token/orders/:id/cancel",
       "POST /api/guest/:token/requests",
+      "POST /api/guest/:token/tables",              // a table at the restaurant (D27-224)
+      "POST /api/guest/:token/tables/:id/cancel",
       "POST /api/guest/:token/verify",
       "POST /api/pos/tickets",
       "POST /api/pos/tickets/:ref/void",
@@ -180,6 +187,15 @@ describe("who reads what (D27-140 to D27-147)", () => {
     }
   });
 
+  it("D27-195: the rate before GST inside an inclusive rate is anyone's, as the GST rate is", () => {
+    expect(READ_RULES[`GET ${H}/tax/room/before-gst`]?.kind).toBe("anyone");
+  });
+
+  it("D27-187: View voucher is for exactly the people who may send it", () => {
+    expect(who(`GET ${H}/stays/:id/voucher.pdf`))
+      .toEqual(whoMay(rule(`POST ${H}/stays/:id/confirmation`)));
+  });
+
   it("D27-142: no bookings for the chef or the Inventory Manager", () => {
     expect(who(`GET ${H}/stays`)).not.toContain("chef");
     expect(who(`GET ${H}/stays`)).not.toContain("stores");
@@ -198,6 +214,11 @@ describe("who reads what (D27-140 to D27-147)", () => {
     }
     expect(whoMay(rule(`POST ${H}/banquet/events/:id/invoice`)))
       .toEqual(["owner", "admin", "gm", "finance"]);
+  });
+
+  it("D27-190: the restaurant's day is opened by whoever closes it", () => {
+    expect(whoMay(rule(`POST ${H}/till/day-end/open`)))
+      .toEqual(whoMay(rule(`POST ${H}/till/day-end/close`)));
   });
 
   it("QA AD-1: what the server has set up is the owner's and an administrator's", () => {
@@ -246,6 +267,7 @@ describe("the matrix the server asks", () => {
   it("gives every price write to exactly the rate setters (INV-5)", () => {
     const prices = [
       `PUT ${H}/pricing/basis`, `PUT ${H}/pricing/base`, `PUT ${H}/pricing/offset`,
+      `PUT ${H}/pricing/addon`,
       `PUT ${H}/room-types/:id/rate`, `POST ${H}/rate-plans`, `DELETE ${H}/rate-plans/:id`,
       `POST ${H}/restrictions`, `POST ${H}/cancellation-policies`,
       `DELETE ${H}/cancellation-policies/:id`, `PUT ${H}/cancellation-policies/:id/default`,
@@ -263,7 +285,14 @@ describe("the matrix the server asks", () => {
     /* The restaurant keeps the roles its menu names (pos/nav.ts). */
     expect(allows(rule(`POST ${H}/till/orders`), "pos")).toBe(true);
     expect(allows(rule(`POST ${H}/kitchen/lines/:lineId/:to`), "chef")).toBe(true);
+    /* Taken is the waiter's (D27-222), not the kitchen's. */
+    expect(allows(rule(`POST ${H}/till/orders/:id/taken`), "pos")).toBe(true);
+    expect(allows(rule(`POST ${H}/till/orders/:id/taken`), "chef")).toBe(false);
+    /* In-room dining (D27-224): whoever rings the till accepts and declines. */
+    expect(allows(rule(`POST ${H}/till/guest-orders/:id/decline`), "pos")).toBe(true);
+    expect(allows(rule(`POST ${H}/till/guest-orders/:id/decline`), "housekeeping")).toBe(false);
     expect(allows(rule(`POST ${H}/till/menu/items`), "kitchen_manager")).toBe(true);
+    expect(allows(rule(`PUT ${H}/till/menu/items/:id/variations`), "kitchen_manager")).toBe(true);
     expect(allows(rule(`POST ${H}/till/orders`), "housekeeping")).toBe(false);
   });
 
@@ -314,7 +343,8 @@ describe("the matrix the server asks", () => {
   it("D22-35: the menu - dishes, add-ons, promotions, a dish off - is not the revenue manager's", () => {
     const menu = Object.keys(WRITE_RULES).filter((k) => /\/till\/(menu|promotions|addons)\//.test(k)
       || k.endsWith("/till/promotions"));
-    expect(menu.length).toBeGreaterThanOrEqual(24);
+    /* 23 since D27-192 made the three variation routes one PUT. */
+    expect(menu.length).toBeGreaterThanOrEqual(23);
     for (const key of menu) {
       expect(who(key), key).toEqual(["owner", "admin", "gm", "kitchen_manager"]);
     }
@@ -323,6 +353,18 @@ describe("the matrix the server asks", () => {
   it("D22-34: a repair's writes are the route's, which alone can see whether it names equipment", () => {
     expect(rule(`POST ${H}/work-orders`).kind).toBe("own");
     expect(rule(`PATCH ${H}/work-orders/:id`).kind).toBe("own");
+  });
+
+  it("D27-181: a guest request's read and writes are the route's, which alone knows the request's team", () => {
+    expect(rule(`POST ${H}/requests`).kind).toBe("own");
+    expect(rule(`PATCH ${H}/requests/:id`).kind).toBe("own");
+    expect(READ_RULES[`GET ${H}/requests`]?.kind).toBe("own");
+  });
+
+  it("D27-224: the desk's reply to a guest is the route's own, for the desk's roles", () => {
+    const r = rule(`POST ${H}/online-checkin/messages/:reservationId/reply`);
+    expect(r.kind).toBe("own");
+    expect(JSON.stringify(r)).toContain("DESK_ROLES");
   });
 
   it("says who may, in a sentence a person reads", () => {
@@ -384,6 +426,7 @@ const PRICE_PROBES: [string, string, unknown][] = [
   ["PUT", "/pricing/basis", {}],
   ["PUT", "/pricing/base", {}],
   ["PUT", "/pricing/offset", {}],
+  ["PUT", "/pricing/addon", {}],
   ["PUT", `/room-types/${UUID}/rate`, {}],
   ["POST", "/rate-plans", {}],
   ["DELETE", `/rate-plans/${UUID}`, undefined],
@@ -605,7 +648,9 @@ describe("the reads that hand out a guest's passport or ID number (D25-38)", () 
         || (r.kind === "own" && /DESK_ROLES/.test(r.where)))
       .map(([k]) => k).sort();
     expect(idReads).toEqual([
-      `GET ${H}/form-c`, `GET ${H}/online-checkin`, `GET ${H}/online-checkin/messages`,
+      `GET ${H}/form-c`, `GET ${H}/online-checkin`,
+      `GET ${H}/online-checkin/id-photos`, `GET ${H}/online-checkin/id-photos/:id`,
+      `GET ${H}/online-checkin/messages`,
       `GET ${H}/reports/c-form`,
     ]);
   });
@@ -670,6 +715,19 @@ describe("the reads, as every role (RO-1, D27-140 to D27-147)", () => {
     const bare = path.split("?")[0]!.replace(UUID, ":id");
     return `GET ${H}${bare}`;
   };
+
+  /* The pre-launch review (1 October): Hono answers HEAD with the GET route,
+     but c.req.method is "HEAD", so the gate let it through and a refused person
+     could learn from the status whether a read would succeed. */
+  it("treats HEAD as GET: a read the gate refuses is refused on HEAD too", async () => {
+    const key = keyFor("/reports/manager");
+    const r = READ_RULES[key]!;
+    const refused = websiteMatrix.ASSIGNABLE_ROLES.find(
+      (role) => r.kind === "grant" && !allows(r, role as Parameters<typeof allows>[1]));
+    expect(refused, "some role is refused the manager report").toBeTruthy();
+    expect((await send(as(refused!), "GET", "/reports/manager")).status).toBe(403);
+    expect((await send(as(refused!), "HEAD", "/reports/manager")).status).toBe(403);
+  });
 
   it("refuses exactly the roles the rule leaves out, in the gate's words", async () => {
     const wrong: string[] = [];

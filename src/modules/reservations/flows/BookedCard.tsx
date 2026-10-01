@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
-import { Check, Link2, Send } from "lucide-react";
+import { Check, FileText, Link2, Send } from "lucide-react";
 import { dateShort, moneyPrecise } from "@/lib/format";
 import { Button, Card, CardBody, CardHeader, Input, toast } from "@/components/ui";
 import { getGuestMessages, SendCheckInLink } from "@/modules/guest-messaging";
-import { confirmWaiting, makeGuestLink, sendVoucher } from "@/modules/reservations/data/booking";
+import { confirmWaiting, makeGuestLink, sendVoucher, viewVoucher } from "@/modules/reservations/data/booking";
 
 /* ══════════════════════════════════════════════════════════════════
    BOOKED - what the desk does next, on the booking just made
@@ -32,7 +32,6 @@ export interface Booked {
      stood. Absent when that button did not ask for it. */
   checkedIn?: { room: string } | { failed: string };
   advance?: { amount: number } | { failed: string };
-  extrasFailed?: string[];
 }
 
 export function BookedCard({ hotelId, booked, onAnother }: {
@@ -94,7 +93,7 @@ export function BookedCard({ hotelId, booked, onAnother }: {
         </ul>
 
         {/* Each later step, said: the booking stands whatever they answered. */}
-        {(booked.checkedIn || booked.advance || (booked.extrasFailed ?? []).length > 0) && (
+        {(booked.checkedIn || booked.advance) && (
           <div className="space-y-1 text-base" data-booked-steps>
             {booked.checkedIn && ("room" in booked.checkedIn
               ? <p className="text-grey-600">In house, room {booked.checkedIn.room}.</p>
@@ -102,9 +101,6 @@ export function BookedCard({ hotelId, booked, onAnother }: {
             {booked.advance && ("amount" in booked.advance
               ? <p className="text-grey-600">Advance of {moneyPrecise(booked.advance.amount)} taken, held as the guest's credit.</p>
               : <p className="text-warning-dark">Advance not taken: {booked.advance.failed} Take it on the bill.</p>)}
-            {(booked.extrasFailed ?? []).map((x) => (
-              <p key={x} className="text-warning-dark">Extra not added: {x}</p>
-            ))}
           </div>
         )}
 
@@ -141,9 +137,14 @@ export function BookedCard({ hotelId, booked, onAnother }: {
             {lead && (
               <div className="flex flex-wrap items-start gap-2">
                 <Voucher hotelId={hotelId} stayId={lead} />
-                {!(booked.checkedIn && "room" in booked.checkedIn) && (
+                {!(booked.checkedIn && "room" in booked.checkedIn) && <>
+                  {/* D27-187: the same PDF to look at, print or save; sends nothing. */}
+                  <Button variant="secondary" onClick={() => void viewVoucher(hotelId, lead)
+                    .then((r) => { if (!r.ok) toast.error("No voucher", r.reason); })}>
+                    <FileText className="size-4" /> View voucher
+                  </Button>
                   <SendCheckInLink hotelId={hotelId} stayId={lead} />
-                )}
+                </>}
               </div>
             )}
           </>

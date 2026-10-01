@@ -59,6 +59,14 @@ export async function withUser<T>(
   try {
     await client.query("begin");
     await client.query("select set_config('app.user_id', $1, true)", [staffId]);
+    /* Resolve the person ONCE (30 September, measured by the rates lane). A
+       sign-in's subject is a Firebase uid; app.current_user_id() then took its
+       exception path and a staff lookup on every call - per policy, per query
+       (70 price reads: 3.1 s, 1.1 s after this). Only that function reads the
+       setting, so handing it the staff id is the same answer, faster. An
+       unknown uid resolves to null and stays as given: still nobody. */
+    await client.query(
+      "select set_config('app.user_id', coalesce(app.current_user_id()::text, $1), true)", [staffId]);
     const result = await fn(client);
     await client.query("commit");
     return result;

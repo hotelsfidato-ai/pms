@@ -1,4 +1,4 @@
-import { Receipt, FileText, Wallet, Building2 } from "lucide-react";
+import { Receipt, FileText, Wallet, Building2, PiggyBank } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 import { can } from "@/lib/permissions";
 
@@ -24,6 +24,13 @@ export const nav: ServiceNavEntry[] = [
        the drawer (QA RO-4). */
     canSee: (role) => can(role, "create", "payment"),
     keywords: ["cash drawer", "drawer", "shift", "hand over"] },
+  /* Each morning the GM banks the days before (D27-190). Who sees it is the
+     server's list (D27-191, finance/deposits.ts): the owner, an
+     administrator, the GM, the accountant and the Viewer - not reception. */
+  { section: "finance", order: 45,
+    label: "Cash deposits", to: "/h/:code/cash-deposits", icon: PiggyBank, resource: "payment",
+    canSee: (role) => ["owner", "admin", "gm", "finance", "read_only"].includes(role),
+    keywords: ["bank deposit", "deposit slip", "cash to bank"] },
   { section: "finance", order: 50,
     label: "Company accounts", to: "/h/:code/city-ledger", icon: Building2, resource: "invoice",
     /* Money owed (D27-145): the server asks `invoice` view of it, so the

@@ -28,6 +28,20 @@ export interface GroupLogo {
 interface GroupSettingsRead {
   name: string | null;
   logo: GroupLogo | null;
+  /** The hotel's OWN logo (D27-214), for the hotel that was asked about. */
+  hotelLogo?: GroupLogo | null;
+  /** The group's office details (D27-215): the booking voucher's footer, and
+      its Instagram line. Each null until typed. */
+  office?: GroupOffice;
+}
+
+export type GroupOffice = Record<"address" | "phone" | "email" | "website" | "gstin" | "instagram", string | null>;
+
+/** Sent blank, a field is cleared. */
+export function setGroupOffice(
+  hotelCode: string, office: Record<keyof GroupOffice, string>,
+): Promise<AdminResult<object>> {
+  return put(`/api/hotels/${hotelCode}/group/office`, office);
 }
 
 export interface GroupSettings {
@@ -64,16 +78,32 @@ export function removeGroupLogo(hotelCode: string): Promise<AdminResult<object>>
   return call(`/api/hotels/${hotelCode}/group/logo`, "DELETE");
 }
 
-/** One setting for the group, whichever hotel asks, so one cache entry. */
-export const GROUP_SETTINGS_KEY = ["group-settings"] as const;
+/** A hotel's own logo (D27-214): the same picture rules as the group's. */
+export function setHotelLogo(hotelCode: string, data: string): Promise<AdminResult<{ type: string }>> {
+  return put(`/api/hotels/${hotelCode}/logo`, { data });
+}
 
-/** For every document: the group's name and its logo as an <img src>, each
-    null while loading and when not set - print the hotel's name alone then. */
+export function removeHotelLogo(hotelCode: string): Promise<AdminResult<object>> {
+  return call(`/api/hotels/${hotelCode}/logo`, "DELETE");
+}
+
+/** The group's name and logo are one setting whichever hotel asks; the
+    hotel's own logo rides on the same answer, so the hotel is in the key.
+    Invalidate by this prefix. */
+export const GROUP_SETTINGS_KEY = ["group-settings"] as const;
+export const groupSettingsKey = (hotelCode: string) => [...GROUP_SETTINGS_KEY, hotelCode] as const;
+
+/** For every document: the group's name, and the logo as an <img src> - the
+    HOTEL'S OWN where it has one (D27-214), the group's where it has not.
+    Each null while loading and when not set: print the hotel's name alone. */
 export function useGroupSettings(hotelCode: string): GroupSettings {
   const { data } = useQuery({
-    queryKey: GROUP_SETTINGS_KEY,
+    queryKey: groupSettingsKey(hotelCode),
     queryFn: () => getGroupSettings(hotelCode),
     enabled: Boolean(hotelCode),
   });
-  return { name: data?.name ?? null, logo: logoSrc(data?.logo ?? null) };
+  return {
+    name: data?.name ?? null,
+    logo: logoSrc(data?.hotelLogo ?? null) ?? logoSrc(data?.logo ?? null),
+  };
 }

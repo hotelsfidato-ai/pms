@@ -11,6 +11,225 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-01 · A table at the restaurant, from the guest's page (D27-221, D27-223, D27-224, D27-225)
+
+**Asked for:** section D of `docs/briefs/guest-in-stay-plan.md`. The owner answered Q1–Q5 as recommended:
+- the last seating is half an hour before each meal ends;
+- a guest may book before arrival (confirmed or checked in), any night of the stay;
+- the till's people answer, and the owner, admin and GM set the hours;
+- an empty meal is off;
+- the guest sees the time and the party, not the table.
+
+Also the voucher's Instagram QR (D27-223). Branch `pos/table-booking-1oct`, under the POS lane's claim; cp6 merged in (step 0 `1befb5a4`, quick taps `5fc3b20a`).
+
+**Shipped:**
+- Migration 172 (written as 173; renumbered by the master at merge):
+  - `pos_outlets.table_lunch / table_dinner`: NULL means the default (12:30-15:00, 19:30-23:00), `''` means not offered.
+  - `app.table_slots`: the one definition of a day's slots, in the hotel's zone.
+  - The `table_bookings` table: one hotel per booking by trigger, a reason required on a decline, RLS, audit.
+  - The guest's four definers, each starting from `app.guest_unlocked`.
+- The staff side:
+  - `tableBookings.ts` holds the list, Confirm (a table if known) and Decline (a reason), only while the request waits, plus the hours.
+  - The Table bookings screen shows Waiting, Today and Upcoming, by the hotel's today.
+  - The hours are set on Restaurant setup.
+  - The bell says "N table bookings waiting".
+  - roleGate: TABLE_ANSWER and TABLE_HOURS.
+- The guest side, by online check-in's rule 8:
+  - `api/src/routes/guestTables.ts`, with one mount line in `guestDoor.ts`.
+  - `online-checkin/TableBooking.tsx`, with one line in `Behind`. It hides when it has nothing.
+  - `at` and `withUnlock` are exported from `guestPage.ts`.
+- The voucher's QR: `instagramLink` (a handle, or a URL as typed), drawn beside the Instagram address, with "Scan to connect".
+
+**Found:**
+- `pos` (the waiter) has no bell: the matrix gives it no notification. The waiter reads the screen.
+- `finance` can ring up an order, so it also sees the answer buttons.
+- The answer dialog wrote the date as `2026-10-03`. It now matches the card ("Sat, 3 Oct").
+
+**Proved:**
+- API, one file at a time:
+  - `tableBookings` 16. The two guest-route cases fail with the route's 409s switched off.
+  - `roleGate` 65. The two guest POSTs are added to the person-less-doors pin; the test failed before they were added.
+  - `notifications` 2, `guestDoorBehindTheCode` 32, `voucherDocument` 33 (2 fail with the QR forced off).
+  - strip-check: 175 files load. api `tsc` exit 0.
+- Database: every assertion passes. With the offer switched to `guest_link_stay`, "the link alone" and "another stay's unlock" fail (OCI-5).
+- Web:
+  - `pos/tableBookings.test.tsx` 5; "today" is the hotel's, and that test fails with the device's day.
+  - `online-checkin/tableBooking.test.tsx` 5.
+  - `online-checkin`, `pos`, `components/app`, `App`, `src/test`: 205 of 206. The one failure is migrationNumbers: 173 leaves a gap, and 171/172 are other lanes'.
+  - web `tsc` exit 0.
+- **Opened, 1 October, on `fidato_s45` (migrated to 173):** a made-up stay `TBSCREEN-1` (2–5 Oct), its link unlocked with a code set in the database (sending is not set up locally). The pane was hidden, so buttons were pressed with `element.click()`; the app's own handlers ran.
+  - Guest at 375: Fri–Sun nights, twelve slots 12:30 pm – 10:30 pm, no sideways scroll. Sat 3 Oct, 8:00 pm, 4 people, a note: "Waiting for the restaurant" with Cancel. Stored as 3 Oct 20:00 IST.
+  - Staff at 1280 x 800 as the GM: the request under Waiting. Confirmed on AC2, it moved to Upcoming with "Table AC2 · by Test GM".
+  - Staff at 375: the same, no sideways scroll.
+  - The guest's read then said `confirmed`, with no table in it.
+
+**Left open:**
+- A booking before arrival shows "room -" on the card (the dash rule). Dropping "room" when there is none is the owner's call.
+- The made-up stay `TBSCREEN-1` stays on `fidato_s45`.
+
+## 2026-10-01 · In-room dining from the menu (D27-224, D27-225; the in-stay plan, A)
+
+**Asked for:** a checked-in guest orders from the restaurant's menu on their own page. The order is a SUBMISSION; whoever rings the till accepts it on the Terminal (a room-service order, sent) or declines it with a reason the guest reads. The owner's answers (D27-224):
+- prices with "GST added on your bill";
+- charged to the room at delivery;
+- off while the restaurant or its day is closed;
+- no alcohol.
+The master's approvals Q1-Q6 (1 Oct):
+- the guest's price is kept, and Accept is refused, naming the dish, if it moved;
+- the waiter's pop-up, with no per-dish note;
+- one note for the order;
+- "Room 201" is the stay's room now;
+- the five conditions, checked again at Accept;
+- TILL accepts, and there is a bell.
+Built on step 0's kits (online-checkin MODULE.md rule 8). Branch `pos/room-dining-1oct` from cp6 `1befb5a`.
+**Shipped:**
+- Migration "in-room dining" (171 for now):
+  - `guest_food_orders` (RLS, checks);
+  - `app.guest_dining_outlet` (the five conditions);
+  - `app.guest_dish_price`, the one price rule: the first choice, plus the further ones, plus the sides, as the till prices it. It is null when the dish is off, taken off the card, alcohol, without a GST rate, or a choice does not belong;
+  - the four definers behind the code: `guest_menu`, `guest_food_order_make` (1 to 30 lines, 1 to 20 of each, three waiting at most, a note of 200 at most, each line priced here), `guest_food_orders_mine`, `guest_food_order_cancel`.
+- Server:
+  - `api/src/routes/guestDining.ts`, mounted with one line in `guestDoor.ts`.
+  - `till.ts`: the batch route's `guestOrderId`. The round is the stored basket, priced again; a moved price or a dish gone off refuses the Accept, naming it, and nothing is written. It opens a room_service order for the stay's room, with the note on the first dish, and sends it. The guest order is accepted only `where status = 'waiting'`, otherwise everything rolls back.
+  - `GET /till/guest-orders`, `POST /till/guest-orders/:id/decline`, with their roleGate lines (TILL_READ, TILL) pinned. The guest door's pinned writes gain the two new ones.
+  - `notifications.ts`: the bell, for whoever may ring the till.
+- Screens:
+  - online-checkin `RoomDining.tsx`, one line in `Behind`: the menu, a basket where the same dish joins one line, one note, the total with "GST added on your bill", the guest's orders with Take it back. It hides itself when there is nothing to show.
+  - `pos/components/GuestOrders.tsx` on the Terminal: "Room-service orders waiting", Accept and send, and Decline (asks why).
+  - `DishDialog`'s `guest` hides the per-dish note; pos/index.ts exports it and `MenuItem`; online-checkin's `data/guestPage.ts` exports `at` and `withUnlock` for the feature's data file.
+**Proved:**
+- Database: "room dining" 17/17, all 1,356 assertions. With the menu keyed on the link alone and no alcohol filter, 4 fail: OCI-5, another stay's unlock, no alcohol, a beer ordered.
+- API, one file at a time:
+  - `roomDining` 6; 5 of them fail on step 0's `till.ts` (accept, a second accept, a price changed, a dish off, a cancelled order).
+  - `roleGate` 65 (the guest door's list pinned), `notifications` 2, `guestDoor` 28, `till` 84, `tillBatch` 5.
+  - strip-check: 174 files load.
+- Web: `online-checkin/roomDining.test.tsx` 3 (the no-per-dish-note one fails on step 0's pop-up) and `pos/guestOrders.test.tsx` 2. pos + online-checkin + guards: 25 files, 184 passed. Both tsc clean.
+- **Opened, 1 October, on `fidato_s46` at 171** (migrated after the master's check for other builds). The pane was hidden for most of it, so the screens were read from the page, and the later taps were script clicks on the page's own buttons.
+  - The guest at 375 on a stay in room 201: the menu by section, a dash for dishes sold by their choices, no sideways scroll. Two real taps on Cold Coffee made one line of 2. Paneer Tikka's pop-up had no note section. Large + Extra hot, a note and Order: the total read ₹1,100 (2 x 160 + 280 + 500), then "Waiting for the restaurant · Take it back".
+  - The Terminal at 768 as the GM: "Room-service orders waiting · Room 201 · ₹1,100", the dishes and "Please knock softly". Accept and send opened order 20260825-7 for "Room 201": Cold Coffee 2 x 160, Veg Manchurian 280, Paneer Tikka (Large, Extra hot) 500, all sent (KOT 6). The guest order was accepted.
+  - The Kitchen at 1280: the three dishes under "ROOM 201 · 20260825-7".
+**Left open:** the guest page's screenshots (the pane was hidden; the page was read instead).
+
+## 2026-10-01 · The kitchen has two buttons; Ready goes to the waiter (D27-221, D27-222)
+
+**Asked for:** the owner's D27-221, before the launch. The Kitchen screen has two buttons, Start and Ready, and a ready dish leaves it and shows as "Ready" to the waiter on Tables and the Terminal. D27-222 answered the plan's questions:
+- the waiter taps "Taken": beside each Ready dish on the Terminal, and once on the table's "2 ready" badge for all of them;
+- the kitchen's route takes preparing and ready only;
+- no waiting clock on the waiter's side.
+Branch `pos/kitchen-two-1oct` from cp6 `022e14e`, cp6 `7ada298` merged in; `fidato_s46` migrated to 170 with the master's OK.
+**Shipped:**
+- `till.ts`:
+  - The kitchen read holds sent and preparing only. POS-1 now keeps paid food until it is Ready.
+  - The at-the-pass clock (and its `app.pos_line_timings` call) went with the third column.
+  - The kitchen's move takes preparing and ready ("The kitchen starts a dish or makes it ready.").
+  - The floor read gives each table its ready dishes: `ready`, a count of dishes (quantity, sides not counted), and `readyIds`.
+  - `POST /till/orders/:id/taken {lineIds}` serves Ready dishes only, all checked before the write, and says why otherwise ("… is not ready yet - the kitchen says when it is", "… is already taken"). It works on a settled order too (151 lets the kitchen status move).
+- `roleGate.ts`: the Taken line is TILL (the waiter's), pinned in `roleGate.test.ts`: the waiter may, the chef may not.
+- Screens:
+  - Kitchen: two columns, Ordered and On the fire; By table has no "Done" fallback; a ticket is judged on its wait.
+  - Terminal: a Ready dish reads "Ready" (green) with a Taken button.
+  - Tables: "N ready" in green on the table's tile, a row of its own (POS-31), one tap for all.
+**What was lost:** the kitchen's at-the-pass clock. Nothing else read it: no report or lateness screen uses `app.pos_line_timings` or `app.pos_line_lateness`. 080 still records every status change, and Taken is the served time, so ready → served stays in the timings for anyone who asks later.
+**Proved:**
+- API, one file at a time: `kitchenTwo` 3 (new); `kitchenTimings` 4 and `restaurantFixes` 12 (one case each rewritten). All 5 new or rewritten cases fail on cp6's `till.ts` and `roleGate.ts`. Also `roleGate` 63, `till` 84, `tillBatch` 5, `courses` 3, `prepTimes` 5, `kotStation` 3 and `sameDish` 4. strip-check: 169 files load.
+- Web: `kitchenTwo.test.tsx` 3; all 3 fail on cp6's screens. `src/modules/pos` + `src/test` + primaryAction + repositories + navigation: 20 files, 129 passed.
+- `npx tsc -b --force` exit 0; api `tsc --noEmit` exit 0, both after merging cp6.
+- The database suite's timing and course checks are unchanged (no database change); the master runs the suite in the full gates.
+- **Opened, 1 October, on `fidato_s46`:**
+  - Kitchen at 1280 x 800, as the Kitchen Manager: "Ordered 13" and "On the fire 2", two columns of 640px, no "Picked up". Ready on AC2's Masala Chai took it off the board. By table showed 13 Start and 1 Ready, and no Done.
+  - Tables at 1280 x 800, as the GM: "7 ready" on AC1 (the demo's old at-the-pass food) and "2 ready" on AC2. A real tap on AC2's badge cleared it and opened no pad; the database then read Masala Chai and Chicken 65 served, Veg Manchurian still preparing.
+  - Tables on a 375 phone: "7 ready" on one line, 136 x 44, no sideways scroll.
+  - Terminal at 768 x 1025 on AC1's DH-001: four Ready dishes, each with Taken; a real tap on Veg Manchurian's turned it to "served".
+**Left open:** the Till's bill shows no kitchen status (not asked for, D27-221 names Tables and the Terminal).
+
+---
+
+## 2026-09-30 · D27-189 part 2: a dish's variation types on one form (D27-192, D27-195)
+
+**Asked for:** the owner's D27-189 and their answers of 30 September (D27-192, D27-195). "Add variation" is a simple form: pick a type, Size, Quantity or Option (an Option headed by the manager, "Spice level"); list its choices, each with a price or Free. A dish may have SEVERAL types, each a required single choice. The first type carries the full price; each further type's choices add +₹ or are Free. The same name may be in two types. Add-ons stay the Add-on groups, with the Free tick. A 0 is refused unless ticked Free (D27-120 replaces D21-42). The waiter picks in one pop-up. A carried-over dish sells as "Variation" until its type is picked. The master approved the model before any of it was written. The owner stopped work mid-way; it resumed after merging cp6 (rates 162, cash 163).
+**Shipped:**
+- Migration 164, "several variation types per dish" (written as 182, renumbered at the master's word). `pos_item_variations` gains `type_no` (default 1), `kind` and `heading`, with a check. A name is unique within its type, `(item_id, type_no, label)`. `pos_order_lines` gains `extra_choice_ids`. 045's trigger now asks one choice of every type, all of this dish. The defaults carry every existing variation, the menu import and the demo loader over as "type 1, not picked". The two `on conflict` lines (`till.ts` import, `api/scripts/load-demo.ts`) name the new key.
+- `till.ts`:
+  - One `PUT /till/menu/items/:id/variations` saves the whole set in one transaction. A choice keeps its row by type and name (a removed one comes back), else by its id; one left out is switched off; emptying the set asks for the dish's price. The three per-variation routes, their data functions and their `roleGate.ts` lines are gone.
+  - `addOneLine` takes `moreChoiceIds`: one per further type. The price is the first choice plus the others, worked in paise; the name reads every choice ("Paneer Tikka (Large, Extra hot)"); the match includes them. A + on a sent dish carries them.
+  - Add-on options take `free`; the add-ons file refuses 0.
+  - "No price" now says "Type a price, or tick Free."
+- Screens:
+  - Menu: the form ("Add variation" / "Change variations"). Type buttons; Heading for an Option; names filled in, never prices; "Price" on the first type, "Adds" on the others; Free on each choice; "Remove type" (the next one's figures cleared, to be typed again as the price); "Add another type". Under the dish, one line per type. An add-on option has Free, and a ₹0 one reads "Free".
+  - The pop-up: a row per type under its heading; "+₹20" / "Free"; Add waits for one of each; with two or more types it says "Choose one of each, and any sides."
+  - `pricing.ts` (`typesOf`, `headingOf`, the added price); the pad keeps `moreChoiceIds` (`src/lib/draft.ts`, one optional field, the master's yes).
+**Proved:**
+- Database (before the merge, on the branch): `db/tests/run.sh`, all 1,280 assertions. "pos variation types" 8/8, and 3 of them fail with the trigger section taken out. `db/tests/rerun.sh`: 162 migrations re-runnable. After the merge the master runs both in the full gates.
+- `fidato_s46` migrated to 164 with the master's OK: 116 → 118 tables. The demo's two variations came over as type 1, not picked.
+- API, each file on its own after the merge:
+  - `padTotal` 4, including the new two-type case: the pad's ₹480 agrees with the bill.
+  - `variationTypes` 5; all 5 fail on the pre-PUT `till.ts`.
+  - `menuOptions` 8, `sameDish` 4, `restaurantFixes` 12, `till` 84.
+  - `tillBatch` 5; `roleGate` 63, with the PUT pinned to the kitchen manager and the menu-route floor at 23 (three routes became one).
+  - strip-check: 165 files load.
+- Web: `variationTypes.test.tsx` 2 and `ownerDecisions.test.tsx` 22; the 6 new ones fail on the pre-form client. `src/modules/pos` + `src/test` + primaryAction + repositories + navigation: 125 passed, migration numbers included. `npx tsc -b --force` exit 0; api `tsc --noEmit` exit 0.
+- **Opened, 30 September, as the GM on `fidato_s46`:**
+  - Menu: Bhaaji Pau read "Variation: Oil ₹300.00 · Butter ₹400.00". Its form said "Pick Size, Quantity or Option. It sells as "Variation" until you do", with Save off. Option kept the names and asked for a Heading; "Cooked in" saved, and the dish then read "Cooked in: Oil ₹300.00 · Butter ₹400.00".
+  - Paneer Tikka: Size filled in Small / Medium / Large with blank prices and Save off. It was made Regular ₹320 / Large ₹480, plus an Option "Spice level": Regular ticked Free (the same name as in Size) and Extra hot 20. It saved and read "Size: Regular ₹320.00 · Large ₹480.00", "Spice level: Regular Free · Extra hot +₹20.00", with "-" for its own price.
+  - Tables, AC7: the pop-up showed Size and Spice level rows, "+₹20" and "Free". Large alone was ₹480 with Add off; with Extra hot, ₹500. Two of the same read one line, "Large, Extra hot · 2 · ₹1,000". Large with a Regular spice was its own line. Sent as KOT 5; the Kitchen screen read "2 × Paneer Tikka (Large, Extra hot)" and "1 × Paneer Tikka (Large, Regular)".
+  - The docket: this tab was switched on as the KOT station, with `window.print` recorded. The reprint of KOT 5 put on the paper "KOT - 5 · Dine In · Table No: AC7 · Paneer Tikka (Large, Extra hot) 2 · Paneer Tikka (Large, Regular) 1", with no prices. The station was switched off again.
+  - The Till (a new order, Lane T2): the same choices twice read "2× Paneer Tikka (Large, Extra hot) ₹1,000".
+  - The Terminal at 768 x 1025, AC7: + on the sent "Paneer Tikka (Large, Extra hot)" made one unsent line of 1 (₹500) with the spice carried; + again made it 2; the tile's pop-up with the same choices made it 3 (₹1,500).
+  - Some adds (the second on Tables, the Till's two, the Terminal's tile) were driven by script clicks on the page's own buttons, because the pane's viewport kept jumping. The rest were real clicks.
+**Left open:** the menu import cannot carry a second type (not asked for).
+
+## 2026-09-30 · D27-189 part 1: the same dish tapped again is one more of it (POS-27, POS-28)
+
+**Asked for:** the owner's D27-189, with their answers of 30 September (D27-192, Q7 and Q8). An unsent dish tapped again adds to its quantity, and it has a − to reduce it. Once the kitchen has a dish, more of it is a new line for the next KOT (D27-148). A dish with a variation or sides is the same only when its choices are the same. Branch `pos/tap-variations-30sep` from cp6 `c01b150`, copy `.claude\worktrees\admiring-goldstine-34db29`, database `fidato_s46`, API 8905, web 5305.
+**Found:** reproduced on all three screens first. The full account is in DEFECTS POS-27 and POS-28:
+- Tables' pad appended every tap.
+- `addOneLine` started a new line for any dish with sides.
+- The Terminal's + on a sent dish made a new line on every press.
+- The Till had no −.
+- A dish's quantity changed without its sides.
+**Shipped:**
+- `till.ts`: `addOneLine` matches the variation, the note and the same set of sides, on unsent lines only, and raises the dish and its sides together. The quantity route's "more of a sent dish" calls `addOneLine`, which copies the sides; its own insert and its refusal for a dish with sides are gone. Setting a quantity sets the sides too.
+- `OrderPad.tsx` `put()` joins the same dish.
+- The Till: a − beside each dish; a sent dish asks for a manager's reason.
+- The Terminal: a side sits under its dish, with no −/+ of its own.
+**Proved:**
+- API `sameDish.test.ts`: 4 passed, and 4 failed on cp6's `till.ts`. `restaurantFixes` 12, `till` 84, `tillBatch` 5 and `padTotal` 3 passed, each file run on its own.
+- Web `sameDish.test.tsx`: 4 passed, and 4 failed on cp6's three screens. `src/modules/pos` + `src/test` + primaryAction + repositories: 17 files, 104 passed.
+- `npx tsc -b --force` exit 0; api `tsc --noEmit` exit 0; strip-check: 163 files load.
+- **Opened, 30 September:**
+  - Tables, AC6: three taps read "Butter Roti 3, Rs 120". Bhaaji Pau (Butter) + Onions twice read one line of 2. The second of those two was added by a script click on the pop-up's buttons, because the dialog sat mid-animation. Sent, KOT 4 held Butter Roti 3, Dal Tadka 3, and Bhaaji Pau (Butter) 2 with Onions 2.
+  - The Till, order 20260825-3: − took Butter Roti from 2 to 1. The same Bhaaji Pau choices joined the first line, giving "2× Bhaaji Pau (Butter)" and "2× Sides: Onions".
+  - The Terminal at tablet width (768 x 1024), AC6 all sent: two presses of + on Butter Roti gave one new "Butter Roti 2". + on Bhaaji Pau gave a new Bhaaji Pau (Butter) 1 with its Onions 1. The sides had no −/+.
+**Left open:** part 2, the variation form - done the same day, the entry above.
+
+---
+
+## 2026-09-30 · The cash lane, second round: the outlet's day opens by itself (D27-200, D27-201)
+
+**Asked for:** the owner's D27-200, which replaces the daily "Open the day" of the entry below. The day-end hunks and the settle check's condition only.
+**Shipped:** `app.pos_opening_cash` (165): the day's own row, else the float kept at the outlet's most recent close that kept one, however many days back; null only on the first-ever day. `app.pos_expected_cash` reads it. GET day-end shows it (`opened` = not null); Settle refuses cash only when it is null; the night count writes the day's row with it (it refused "Open the day first"); `POST /till/day-end/open` is for the first-ever day and refuses once a float carries. Nothing is written for a day until its night count. `DayEnd.tsx`: the Open card shows only on that first day; its words.
+**Proved:** `cashCounts.test.ts`: five days after a close that kept 800 the day is open with nothing pressed, takes cash, expects 800 + the bill, refuses day-end/open, and the count writes 800 down; failed with the carry taken out of the function. POS folder run with the rest (finance's entry). On screen: no Open card, float ₹1,000 from 24 Aug's close, expected ₹1,336.
+**Left open:** an expense paid from the tin on a day with no sale and no close shows as a difference at the next close (the owner's yes, D27-201).
+**Commits:** 45c21be9.
+
+---
+
+## 2026-09-30 · The cash lane: Open the day, no cash before it, the float kept at the close (D27-190, D27-191, POS-29)
+
+**Asked for:** the owner's D27-190 at each restaurant outlet, which replaces D27-139's "no open step" (D27-191); the master's yes for the day-end routes and the one cash-tender refusal only, away from the order pad the POS lane works on. Branch `cash/counts-deposits-30sep`; finance's own entry has the whole of it.
+**Shipped:**
+- `POST /till/day-end/open` (roleGate DAY_END, pinned): the float counted once; a blank float refused. `GET /till/day-end` says `opened`.
+- Settle refuses CASH (and a split with cash) until the outlet's day is open, after the function and delivery refusals; bills, card, UPI and room charges go on.
+- The night count needs the opened day, no longer takes or defaults the float, and refuses a closed day in words (it gave a 500).
+- The close asks `keptCash`, the float kept for the next day (0 to counted); `pos_day_ends.kept_cash` (migration 163).
+- `pages/DayEnd.tsx`: an "Open the day" card on the note grid; the count step's float field gone (read-only in the sum, a dash until opened); Finalize asks the float kept and shows To deposit. `data/till.ts`: `openDay`, `opened`, `keptCash`.
+- Tests that take cash at the till open the outlet's day first (`openTillDay` in `api/test/drawer.ts`): till, cashLimit, settleTwice, restaurantFixes (NA-2), finance's alcoholVat (D22-44), reports (one test); web fixtures carry `opened`.
+**Proved:** see finance's entry - `cashCounts.test.ts` guards seen failing without them; POS folder 18 files 190 passed; the screen walked on `fidato_s47`.
+**Left open:** the page still serves one outlet (REST). "To the safe" before the day is opened is not refused (not in the master's yes).
+**Commits:** 0cadb22, c9ba2b4, and the next.
+
+---
+
 ## 2026-09-29 · The folio lane: "Charge to room" on a room with two open bills (POS-26, D27-162)
 
 **Asked for:** the owner's bug of 28 September (a POS charge to a room not on the guest's bill) - root cause, fixed once, one test. Branch `folio/edit-29sep` (from cp6 ca02e37, round F's `fix/leftovers-28sep` merged in), copy `.claude\worktrees\nervous-spence-42dcae`, database `fidato_s31`, API 8871, web 5271.

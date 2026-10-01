@@ -100,6 +100,19 @@ export async function getFolio(hotelId: string, stayId: string): Promise<Folio |
 }
 
 /** Folios still carrying a balance — includes overpayments, which are negative. */
+/** The groups' master bills carrying a balance (the owner's D27-226): the
+    company's nights, listed once under the group, never under each guest. */
+export async function listGroupBills(
+  hotelId: string,
+): Promise<Array<{ groupId: string; group: string | null; balance: number }>> {
+  if (!hotelId) return [];
+  const folios = await api<Folio[]>(`/api/hotels/${hotelId}/folios`).catch((error) => {
+    if (error instanceof ApiError && error.status === 404) return [];
+    throw error;
+  });
+  return folios.flatMap((f) => (f.groupId ? [{ groupId: f.groupId, group: f.group ?? null, balance: f.balance }] : []));
+}
+
 export async function listOpenFolios(
   hotelId: string,
 ): Promise<Array<Folio & { stay: Stay }>> {

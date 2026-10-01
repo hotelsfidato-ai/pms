@@ -35,6 +35,7 @@ import * as reputation from "./modules/reputation/index.ts";
 import * as marketing from "./modules/marketing/index.ts";
 import * as leads from "./modules/leads/index.ts";
 import * as crs from "./modules/crs/index.ts";
+import * as guestServices from "./modules/guest-services/index.ts";
 import * as contracts from "./modules/contracts/index.ts";
 import { live } from "./routes/live.ts";
 import {
@@ -299,6 +300,8 @@ const SERVICES = [
   leads,
   /* The CRS bridge (D27-168): read-only, its own routes and its reader. */
   crs,
+  /* In-stay requests (D27-178, D27-181): work orders that carry a stay. */
+  guestServices,
   /* Contracts (D27-184): company records, contracts, the contract price. */
   contracts,
 ];

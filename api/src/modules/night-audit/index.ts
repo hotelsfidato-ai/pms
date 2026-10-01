@@ -13,3 +13,11 @@ export const mounts: readonly Mount[] = [
 /* A closed day's charge put right, one correction for every caller: the
    Closed days screen and a stay's Change rate (finance, D27-162). */
 export { correctClosedCharge } from "./nightAudit.ts";
+
+/* One night's room charge, one definition (D27-204): the audit's run,
+   the check-in's first night (front desk) and the printed bill's "to be
+   posted tonight" (finance). */
+export { roomNightsDue, postRoomNight, roomNightWords, nightsToCome } from "./roomNight.ts";
+/* Where a line first came from, through corrections (139): the bill's
+   sections place a corrected fee by it (D27-223). */
+export { ORIGIN } from "./nightAudit.ts";

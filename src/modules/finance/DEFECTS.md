@@ -18,6 +18,140 @@ Nothing open.
 
 ## Fixed
 
+### FIN-27 · A guest the group pays for owed the group's nights on their own bill — FIXED 1 October (the owner's D27-226; numbered for now)
+
+**Found** - 1 October, on the group-booking screen for the pre-launch review:
+a room routed to its group ("Host pays"), first night on the group's master,
+read "Balance ₹3,150 Outstanding" over "Nothing posted to this folio yet",
+and the screen's Check out was refused: "₹3,150 is still owed on this bill."
+
+**What was wrong** - the stay's one figure (`FOLIO_SELECT`, `folios.ts`) grouped
+lines by the POSTING's stay, on purpose since 056, so every night on the
+master counted as the guest's: GET /stays/:id/folio (the Bill tab, the
+screen's check-out gate, the In house list), Settle's `owed` with no bill
+named, and the night audit's "In-house folios carrying a balance" (a third
+copy in `checklist.ts`). The server's own check-out summed only the stay's own
+folios, so the screen and the server disagreed.
+
+**The fix** - a line counts for the bill it is ON: the stay whose folio it is,
+or the group whose master it is. GET /folios lists a group's master bill once,
+named for the group (`groupId`, `group`; the web's `Folio` type gains them),
+and the Folios page shows "Group bills" and counts them in its totals.
+
+**Not changed** - `api/src/routes/notifications.ts` (core) has a fourth copy
+(its "owing" and "refund" lists sum by the posting's stay): told to the master.
+
+**Proved** - front desk's `firstNight.test.ts`, "a guest the group pays for owes
+only their own bill": the folio, Settle, the list's group row and the audit's
+count - all four failed on the old code. Web `groupBills.test.tsx` (failed on
+the old page). Screen: the guest's Bill tab "No bill yet", Check out allowed;
+the Folios page's "Group bills: Group Bill Review - 2 rooms ₹3,150".
+
+### FIN-24 · The Bill tab counted a room billed to its group, and a reversed night, as nights still to come — FIXED 1 October (the pre-launch review; numbered for now)
+
+**Found** - 30 September (a reversed night, planning D27-204) and 1 October
+(the master's read-only pre-launch review: a room billed to its group).
+
+**What was wrong** - the charges-to-come box (`useChargesToCome`,
+`flows/FolioPanel.tsx`) worked out the nights to come itself: the stay's
+nights less the room lines on the stay's OWN bills. A room routed to its
+group is charged on the group's master bill, so every night stayed "to come"
+for ever, and the headline and the stay panel's foot showed a Due the company
+was paying - money the desk might collect. And a night somebody reversed
+counted as to come, though the night audit will not charge it again (D27-205).
+
+**The fix** - the page counts nothing. `GET /stays/:id/bill` returns
+`nightsToCome`, counted on the server by the night audit's own rule
+(`nightsToCome` in `night-audit/roomNight.ts`, sharing the run's `CHARGED`
+test): the stay's nights from the business date on that no room line pays
+for yet, on any bill, a reversed line included - and none at all for a room
+whose charge goes to its group's bill, a complimentary or day-use room, or a
+stay not booked or in house. The box, the headline and the panel's foot read
+that number (`useStayDue`).
+
+**Proved** - web `chargesToCome.test.tsx`: a room billed to its group shows
+nothing to come and no Due; a reversed night is not counted (both fail on
+the old panel: "Due", and "3 nights"). API: front desk's `firstNight.test.ts`,
+"the nights still to come on the stay's bill" (1 from today; none for the
+routed room; 2, not 3, after the first night is reversed).
+
+### FIN-25 · The tax invoice gave the odd paisa to SGST, the bill to CGST — FIXED 1 October (the pre-launch review; numbered for now)
+
+**What was wrong** - `issueFolioInvoice` (`api/src/modules/finance/invoices.ts`)
+split the tax as `Math.round(tax * 50) / 100` for SGST and the rest for CGST,
+on a float: ₹0.05 of tax printed CGST 0.02 / SGST 0.03, while the bill
+(`app.stay_bill`, 166) printed 0.03 / 0.02, and its own comment said the odd
+paisa is CGST's.
+
+**The fix** - in whole paise: CGST is `ceil(paise / 2)`, SGST the rest.
+**Only invoices issued from now on**; an invoice already issued is not
+changed (it cannot be).
+
+**Left as it is** - the bill splits PER RATE and the invoice splits its total,
+so a bill with an odd paisa at two rates can still differ from its invoice by
+a paisa in the CGST/SGST split (never in the total). Told to the master.
+
+**Proved** - `invoices.test.ts`, "gives the odd paisa of tax to CGST, as the
+bill does": ₹1.00 at 5% invoices CGST 0.03, SGST 0.02, and the bill agrees
+(0.02 / 0.03 on the old code).
+
+### FIN-26 · "Payment" and "Refund" could be posted through the charges route — FIXED 1 October (the pre-launch review; numbered for now)
+
+**What was wrong** - the charge door (`chargeRefused`/`insertCharge`,
+`api/src/modules/finance/postings.ts`) took "Payment" and "Refund" as charge
+headings: a payment line with no payment record and no drawer, and a refund
+with GST on it. No screen sent either; a direct API call could.
+
+**The fix** - refused above the first write, for the stay's route and every
+service's door alike: "Take a payment through Payments." and "A refund is not
+a charge. Reverse the payment it gives back." (there is no refund route).
+
+**Proved** - `chargeDoor.test.ts`, "refuses a payment or a refund as a
+charge" (on the old code the payment was posted).
+
+### FIN-23 · Edit and Reverse could not find a stay's own room night on its group's bill — FIXED 30 September (D27-204; numbered for now)
+
+**Found** - 30 September, writing D27-204's tests: Change rate on the arrival
+day for a room routed to its group answered "Nothing changed. The night of 26
+August: Posting not found."
+
+**What was wrong** - `reverseFolioCharge` and `editFolioCharge`
+(`api/src/modules/finance/postings.ts`) looked a stay's line up by the FOLIO's
+stay (`f.reservation_id = $2`). A room routed to its group is charged on the
+group's master folio, which belongs to no stay, so the line was never found.
+It could not be met before: only the night audit posted a routed room's night,
+on a day that is closed the moment it is posted, and Change rate corrects a
+closed night another way. D27-204 posts the first night at check-in, on an
+open day.
+
+**The fix** - `coalesce(f.reservation_id, fp.reservation_id) = $2` in both
+lookups: a stay's own folio by the folio, a line on a bill with no stay by the
+stay the line itself names.
+
+**Proved** - front desk's `firstNight.test.ts`, "Change rate on the arrival
+day, for a room on the group's bill": 409 "Posting not found" with
+`postings.ts` put back, 200 and the night at ₹2,500.00 on the master with it.
+
+### FIN-22 · Cashiering told a receptionist their drawer was "handed to nobody" when it had been handed to a colleague — FIXED 30 September (cash lane, D27-202; numbered for now)
+
+**Found** — building D27-202's "both ends on record": the line under Cashiering's closed view read the colleague's name from `staff`, and row security shows a clerk only their own staff row (housekeeping's HK-14, the owner's D27-97). So `handed_to` came back with no name and the screen said "handed to nobody" about a drawer that had a name on it.
+
+**Fixed** — the name comes through `app.hotel_people` (149), as the hand-over list already did; the same line now says the float kept, for whom, and the rest to deposit.
+
+**Proved** — on screen, `fidato_s47`, as Reception: "Your last shift closed … with ₹890 counted: ₹500.00 kept for Test GM, ₹390.00 to deposit."
+
+**The rule** — A colleague's name is read through `app.hotel_people`, never `staff`: a join that returns no row says "nobody", which is a different fact.
+
+### FIN-21 · The desk's drawer opened on a blank float as ₹0 — FIXED 30 September (D27-190, D27-191; numbered for now)
+
+**Found** — the cash lane, reading the drawer for D27-190: Cashiering's "Opening float" sent `Number(opening || 0)` and the server read `input.opening ?? 0`, so an untouched box opened the drawer on ₹0. That is a figure nobody counted, and the close then measured the drawer against it.
+
+**Fixed** — the server refuses a float that is not a typed number ("Count the opening float first - enter 0 if the drawer is empty"); the screen counts it on the note grid the close uses and does not open until something is typed. 0 opens only when somebody types it.
+
+**Proved** — `api/test/modules/finance/cashCounts.test.ts`: a blank float refused and no drawer opened; 0 typed opens. It failed with the old `?? 0` put back.
+
+**The rule** — A count is what somebody counted. Blank is "not counted", never zero.
+
 ### FIN-20 · After a payment, the Settle dialog offered the same money again "as the guest's credit" — FIXED 29 September (the speed lane's finding 7)
 
 **Found** — the speed lane (docs/qa/speed-2026-09-29.md, W-3): Take payment answered 200, balance ₹0, and the dialog stayed up showing "₹1,953 more than the bill". Reproduced on `fidato_s31`, sampling the dialog every 500 ms after a UPI payment of ₹3,286.24: at 1.0 s it was `data-state=closed` but on screen, reading "₹0 outstanding … This is ₹3,286.24 more than the bill; it will be held as the guest's credit". On success it closed and refreshed the bill in the same moment; while it animated out the balance arrived at ₹0 and the typed amount had not moved. On a slow machine or a hidden pane (animations frozen) that frame stays, and a tick and a press take the money again under a new press key. A second way in: `settle()` read the whole bill again after the POST, for a line nobody used; if that read failed the payment stood and the dialog never closed.

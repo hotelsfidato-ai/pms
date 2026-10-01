@@ -97,9 +97,9 @@ async function standInSender(): Promise<{ server: Server; received: string[] }> 
     req.on("end", () => { received.push(body); res.writeHead(200).end("ok"); });
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
-  process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${(server.address() as { port: number }).port}/pms-send`;
+  process.env["CRS_N8N_URL"] = `http://127.0.0.1:${(server.address() as { port: number }).port}/pms-send`;
   process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
-  process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = "only-this-test-run-knows-this";
+  process.env["CRS_N8N_SECRET"] = "only-this-test-run-knows-this";
   return { server, received };
 }
 
@@ -174,6 +174,7 @@ beforeAll(async () => {
 beforeEach(() => { forgetKnocksForTests(); });
 
 afterAll(async () => {
+  await sql("delete from guest_desk_replies where hotel_id = $1", [hotelId]);
   await sql("delete from guest_requests where hotel_id = $1", [hotelId]);
   await sql("delete from guest_detail_submissions where hotel_id = $1", [hotelId]);
   await sql("delete from offer_opt_ins where kind = 'phone' and value = $1", [phone]);
@@ -299,19 +300,31 @@ describe("the code unlocks the phone that answered, not the link (D21-6)", () =>
   it("is asked for in every function behind the code, in the database itself", async () => {
     const hash = hashForTests(link);
     await unlockWith(link);   // the link HAS been answered; its hash alone is still nothing
+    /* Something to leak: a function that skipped the unlock still answers
+       nothing for a stay with nothing in it (seen: the thread, D27-224). */
+    await sql(`insert into guest_requests (hotel_id, reservation_id, kind, what)
+               values ($1, $2, 'desk', 'Guarded: towels')`, [hotelId, stayId]);
+    await sql(`insert into guest_desk_replies (hotel_id, reservation_id, what, sent_by)
+               values ($1, $2, 'Guarded: on the way', $3)`, [hotelId, stayId, deskId]);
 
-    for (const unlock of [null, hashForTests("an-unlock-nobody-was-given")]) {
-      const one = async (text: string) => (await sql(text, [hash, unlock])).rows[0];
-      expect((await one("select app.guest_bill($1, $2) as v")).v, "guest_bill").toBeNull();
-      expect(await one("select * from app.guest_details_state($1, $2)"), "guest_details_state").toBeUndefined();
-      expect(await one("select * from app.guest_requests_mine($1, $2)"), "guest_requests_mine").toBeUndefined();
-      expect((await one(
-        `select app.guest_details_submit($1, $2, '{"idType":"voter","idNumber":"X1"}'::jsonb) as v`)).v,
-        "guest_details_submit").toBe(false);
-      expect((await one("select app.guest_request_make($1, $2, 'spa', 'A massage', null) as v")).v,
-        "guest_request_make").toBe(false);
-      expect((await one("select app.guest_request_make($1, $2, 'desk', 'Towels', null) as v")).v,
-        "guest_request_make, a message to the desk (D23-14)").toBe(false);
+    try {
+      for (const unlock of [null, hashForTests("an-unlock-nobody-was-given")]) {
+        const one = async (text: string) => (await sql(text, [hash, unlock])).rows[0];
+        expect((await one("select app.guest_bill($1, $2) as v")).v, "guest_bill").toBeNull();
+        expect(await one("select * from app.guest_details_state($1, $2)"), "guest_details_state").toBeUndefined();
+        expect(await one("select * from app.guest_requests_mine($1, $2)"), "guest_requests_mine").toBeUndefined();
+        expect((await one(
+          `select app.guest_details_submit($1, $2, '{"idType":"voter","idNumber":"X1"}'::jsonb) as v`)).v,
+          "guest_details_submit").toBe(false);
+        expect((await one("select app.guest_request_make($1, $2, 'spa', 'A massage', null) as v")).v,
+          "guest_request_make").toBe(false);
+        expect((await one("select app.guest_request_make($1, $2, 'desk', 'Towels', null) as v")).v,
+          "guest_request_make, a message to the desk (D23-14)").toBe(false);
+        expect(await one("select * from app.guest_desk_thread($1, $2)"), "guest_desk_thread (D27-224)").toBeUndefined();
+      }
+    } finally {
+      await sql("delete from guest_desk_replies where reservation_id = $1", [stayId]);
+      await sql("delete from guest_requests where reservation_id = $1 and what like 'Guarded:%'", [stayId]);
     }
   });
 
@@ -408,9 +421,41 @@ describe("one fixed card per room", () => {
     } finally { await stopSender(server); }
   });
 
+  /* D27-207: the code by email from a room card. Nothing of the guest is
+     shown before the code (D21-14) - so not even the masked address, on
+     opening or in the answer. */
+  it("sends a code by email to whoever is checked in there, and shows none of the address", async () => {
+    const card = await printCard(roomId);
+    const emailWas = (await sql("select email::text from guests where id = $1", [guestId])).rows[0].email;
+    await sql("update guests set email = 'card.guest@example.com' where id = $1", [guestId]);
+    const { server, received } = await standInSender();
+    try {
+      const opened = await (await asGuest(`/${card}`)).text();
+      expect(JSON.parse(opened).emailHint, "a room card says nothing of the guest").toBeNull();
+      expect(opened).not.toContain("example.com");
+
+      const res = await asGuest(`/${card}/code`, "POST", { by: "email" });
+      expect(received.length).toBe(1);
+      expect((JSON.parse(received[0]!) as { to: { email: string } }).to.email).toBe("card.guest@example.com");
+      const said = await res.text();
+      expect(JSON.parse(said).message).toBe("We sent the code by email to the email on the booking.");
+      expect(said).not.toContain("example.com");
+    } finally {
+      await stopSender(server);
+      await sql("update guests set email = $2 where id = $1", [guestId, emailWas]);
+    }
+  });
+
   it("opens the stay with the unlock, and reaches nothing of it once they have gone", async () => {
     const card = await printCard(roomId);
     const unlock = await unlockWith(card);
+
+    /* A conversation with the desk, from the card (D27-224): the next guest
+       in this room must never see a word of it. */
+    expect((await asGuest(`/${card}/requests`, "POST", { kind: "desk", what: "Changeover: is breakfast at 7?" },
+      unlock)).status).toBe(200);
+    expect((await asStaff(deskId, `/5EL/online-checkin/messages/${stayId}/reply`, "POST",
+      { what: "Changeover: from 7 to 10." })).status).toBe(200);
 
     const open = (await (await asGuest(`/${card}`, "GET", undefined, unlock)).json()) as {
       verified: boolean; booking: { reference: string } | null;
@@ -462,6 +507,15 @@ describe("one fixed card per room", () => {
         expect(theirs.verified, "the last guest's unlock opens nothing of theirs").toBe(false);
         expect(theirs.booking).toBeNull();
         expect((await asGuest(`/${card}/details`, "GET", undefined, unlock)).status).toBe(404);
+        expect((await asGuest(`/${card}/messages`, "GET", undefined, unlock)).status,
+          "the last guest's unlock reads no thread").toBe(404);
+
+        /* The next guest answers the card's code: their thread is their own. */
+        const nextUnlock = await unlockWith(card);
+        const next = await asGuest(`/${card}/messages`, "GET", undefined, nextUnlock);
+        expect(next.status, await next.clone().text()).toBe(200);
+        const words = ((await next.json()) as { thread: { what: string }[] }).thread.map((t) => t.what);
+        expect(words.filter((w) => w.startsWith("Changeover:")), "none of the last guest's thread").toEqual([]);
       } finally {
         await sql("delete from room_assignments where id = $1", [here[0].id]);
         await sql("update room_assignments set released_at = null where id = any($1::uuid[])",
@@ -471,6 +525,8 @@ describe("one fixed card per room", () => {
       await sql("update reservations set status = 'checked_in' where id = $1", [stayId]);
       await sql("update room_assignments set released_at = null where id = any($1::uuid[])",
         [moved.map((r: { id: string }) => r.id)]);
+      await sql("delete from guest_desk_replies where reservation_id = $1", [stayId]);
+      await sql("delete from guest_requests where reservation_id = $1", [stayId]);
     }
   });
 
@@ -680,7 +736,11 @@ describe("the guest's bill", () => {
     const desks = await asStaff(deskId, `/5EL/stays/${stayId}/bill`);
     expect(desks.status).toBe(200);
     const guestBill = (await theirs.json()) as { stay: { reference: string }; balance: number };
-    expect(guestBill).toEqual(await desks.json());
+    /* `nightsToCome` is the desk's Bill-tab count (FIN-24, 1 October), added
+       by the staff route beside the bill; it is not part of the bill. */
+    const { nightsToCome, ...desksBill } = (await desks.json()) as { nightsToCome?: number };
+    expect(typeof nightsToCome).toBe("number");
+    expect(guestBill).toEqual(desksBill);
     expect(guestBill.stay.reference).toBeTruthy();
     expect(typeof guestBill.balance).toBe("number");
   });
@@ -823,5 +883,97 @@ describe("a message to the front desk (D23-14)", () => {
     const unlock = await unlockWith(link);
     const res = await asGuest(`/${link}/requests`, "POST", { kind: "desk", what: "An eleventh" }, unlock);
     expect(res.status).toBe(409);
+  });
+});
+
+/* ── The desk replies (D27-224) ───────────────────────────────────────
+   Replies from the desk's roles, shown to the guest as "Front desk" - never
+   a name; none once the guest has checked out; a reply marks the stay's
+   unread messages handled. The guest reads the thread behind the code. */
+
+describe("the desk's reply to a guest (D27-224)", () => {
+  type Line = Record<string, unknown>;
+  const threadOf = async (token: string, unlock?: string) =>
+    asGuest(`/${token}/messages`, "GET", undefined, unlock);
+  const reply = (who: string, what: unknown, stay = stayId) =>
+    asStaff(who, `/5EL/online-checkin/messages/${stay}/reply`, "POST", { what });
+  const replies = async () => (await sql(
+    "select what from guest_desk_replies where reservation_id = $1 order by sent_at", [stayId])).rows;
+
+  beforeEach(async () => {
+    await sql("delete from guest_desk_replies where reservation_id = $1", [stayId]);
+    await sql("delete from guest_requests where reservation_id = $1", [stayId]);
+  });
+
+  it("reads no thread before the code, nor to the link alone, in the door's one sentence", async () => {
+    await unlockWith(link);
+    for (const holding of [undefined, "an-unlock-nobody-was-given"]) {
+      const res = await threadOf(link, holding);
+      expect(res.status, `with ${holding ?? "the link alone"}`).toBe(404);
+      expect(((await res.json()) as { error: string }).error).toBe(NOTHING);
+    }
+  });
+
+  it("reaches the guest as the front desk, with no name, and marks their messages handled", async () => {
+    const unlock = await unlockWith(link);
+    expect((await asGuest(`/${link}/requests`, "POST", { kind: "desk", what: "Is there a pool?" }, unlock)).status)
+      .toBe(200);
+
+    const sent = await reply(deskId, "  Yes, on the roof, 7 to 7.  ");
+    expect(sent.status, await sent.clone().text()).toBe(200);
+    expect(await replies()).toEqual([{ what: "Yes, on the roof, 7 to 7." }]);
+
+    const res = await threadOf(link, unlock);
+    expect(res.status, await res.clone().text()).toBe(200);
+    const thread = ((await res.json()) as { thread: Line[] }).thread;
+    expect(thread.map((t) => [t["from"], t["what"]]), "newest first").toEqual([
+      ["desk", "Yes, on the roof, 7 to 7."],
+      ["you", "Is there a pool?"],
+    ]);
+    expect(Object.keys(thread[0]!).sort(), "nobody's name reaches the guest").toEqual(["at", "from", "what"]);
+    expect(thread[1]).toMatchObject({ status: "done" });
+    expect(JSON.stringify(thread)).not.toContain(TAG);
+
+    /* The desk sees who replied, on the booking's Guest messages. */
+    const desk = (await (await asStaff(deskId, `/5EL/online-checkin/messages?reservation=${stayId}`)).json()) as {
+      messages: Line[]; replies: Line[]; canReply: boolean;
+    };
+    expect(desk.canReply).toBe(true);
+    expect(desk.replies).toMatchObject([{ what: "Yes, on the roof, 7 to 7.", sentBy: `${TAG} Desk` }]);
+    expect(desk.messages[0]).toMatchObject({ what: "Is there a pool?", handledBy: `${TAG} Desk`, reservationId: stayId });
+  });
+
+  it("is the desk's to send, and housekeeping's reply is not kept", async () => {
+    const res = await reply(housekeeperId, "From housekeeping");
+    expect(res.status).toBe(403);
+    expect(await replies()).toEqual([]);
+  });
+
+  it("is refused once the guest has checked out, and nothing is kept", async () => {
+    await sql("update reservations set status = 'checked_out' where id = $1", [stayId]);
+    try {
+      const res = await reply(deskId, "After they left");
+      expect(res.status).toBe(409);
+      expect(((await res.json()) as { error: string }).error).toBe(
+        "This guest has checked out. Replies stop at check-out.");
+      const desk = (await (await asStaff(deskId, `/5EL/online-checkin/messages?reservation=${stayId}`)).json()) as {
+        canReply: boolean;
+      };
+      expect(desk.canReply, "the screen offers no reply box").toBe(false);
+    } finally {
+      await sql("update reservations set status = 'checked_in' where id = $1", [stayId]);
+    }
+    expect(await replies()).toEqual([]);
+  });
+
+  it("is one to five hundred characters, to a booking of this hotel", async () => {
+    for (const what of ["", "   ", "x".repeat(501), 42]) {
+      expect((await reply(deskId, what)).status, JSON.stringify(what)).toBe(400);
+    }
+    expect((await reply(deskId, "Hello", "not-a-booking")).status).toBe(404);
+    const { rows: elsewhere } = await sql(
+      "select id::text as id from reservations where hotel_id <> $1 limit 1", [hotelId]);
+    if (elsewhere[0]) expect((await reply(deskId, "Hello", elsewhere[0].id)).status).toBe(404);
+    expect((await reply(deskId, "x".repeat(500))).status).toBe(200);
   });
 });

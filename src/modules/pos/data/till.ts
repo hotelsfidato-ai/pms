@@ -62,8 +62,16 @@ export interface MenuItem {
 export interface MenuVariation {
   id: string;
   label: string;
+  /** Type 1: the dish's price. A later type: what it adds (D27-192). */
   price: number;
+  /* Its type. Absent on a menu cached before 30 September: read as type 1
+     with no kind, which is what every choice was then. */
+  typeNo?: number;
+  kind?: VariationKind | null;
+  heading?: string | null;
 }
+
+export type VariationKind = "size" | "quantity" | "option";
 
 export interface AddonGroup {
   id: string;
@@ -151,11 +159,6 @@ export interface KitchenLine {
       a drink — which is not course zero and must not sort ahead of the
       starters. */
   course: number | null;
-  /** ⚠ HOW LONG IT HAS SAT UNDER THE LAMP. Null until the dish is
-      ready, because a dish still cooking is not waiting on anybody.
-      This is the number that ruins food, and nothing showed it before
-      migration 080. */
-  atPassSeconds: number | null;
   /** Struck after the kitchen already had it — stop cooking. */
   cancelled: boolean;
   /** Why, in the manager's words (D27-119). */
@@ -410,9 +413,43 @@ export function addLine(
      one. Sides always start a new line rather than joining one whose
      add-ons nobody checked. */
   variationId?: string, addonIds?: string[],
+  /** The choice of each further type (D27-192). */
+  moreChoiceIds?: string[],
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders/${orderId}/lines`,
-    { itemId, qty, note, variationId, addonIds });
+    { itemId, qty, note, variationId, addonIds, moreChoiceIds });
+}
+
+/* ── In-room dining (D27-224): the guests' orders the Terminal answers ── */
+export interface GuestOrder {
+  id: string; room: string | null; note: string | null; createdAt: string;
+  lines: { name: string; qty: number; unitPrice: number }[];
+}
+
+export async function listGuestOrders(hotelId: string): Promise<GuestOrder[]> {
+  if (!hotelId) return [];
+  return (await api<{ orders: GuestOrder[] }>(`/api/hotels/${hotelId}/till/guest-orders`)).orders;
+}
+
+/** Accept and send: the batch route builds the round from the guest's own
+    basket, a room-service order for their room (Q4), sent at once. */
+export function acceptGuestOrder(hotelId: string, guestOrderId: string): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/batch`, { guestOrderId });
+}
+
+/** Declined, with the reason the guest reads on their page. */
+export function declineGuestOrder(
+  hotelId: string, id: string, reason: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/guest-orders/${id}/decline`, { reason });
+}
+
+/** The waiter carried these Ready dishes out: they are served (D27-222).
+    Only a ready dish; the server says why not. */
+export function takeDishes(
+  hotelId: string, orderId: string, lineIds: string[],
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/taken`, { lineIds });
 }
 
 /** `reason` is required once the kitchen has the dish, and only a manager
@@ -600,7 +637,7 @@ export async function getKitchen(hotelId: string): Promise<KitchenLine[]> {
 }
 
 export async function moveKitchenLine(
-  hotelId: string, lineId: string, to: "preparing" | "ready" | "served",
+  hotelId: string, lineId: string, to: "preparing" | "ready",
 ): Promise<{ ok: boolean; reason?: string }> {
   try {
     await api(`/api/hotels/${hotelId}/kitchen/lines/${lineId}/${to}`,
@@ -829,33 +866,28 @@ export async function putAddonBack(
 }
 
 /* ── Variations and add-on groups, as the kitchen manager keeps them ─
-   The owner's D21-40 to D21-43 (21 September). Every price is the TEXT a
-   person typed: the server refuses a blank rather than reading it as
-   zero, and a typed "0" is a real answer ("No onion", D21-42). */
+   The owner's D21-40 to D21-43 (21 September) and D27-192. Every price is
+   the TEXT a person typed: the server refuses a blank rather than reading
+   it as zero, and a 0 only when it is ticked Free (D27-120). */
 
 type Done = Promise<{ ok: boolean; reason?: string }>;
 const menuPath = (hotelId: string, rest: string) =>
   `/api/hotels/${hotelId}/till/menu/${rest}`;
 
-export function addVariation(
-  hotelId: string, itemId: string, label: string, price: string,
-): Done {
-  return simplePost(menuPath(hotelId, `items/${itemId}/variations`), { label, price });
+export interface VariationSet {
+  types: {
+    kind: VariationKind;
+    heading?: string;
+    choices: { id?: string; label: string; price: string; free: boolean }[];
+  }[];
+  /** Needed when every type is removed: the dish is one price again. */
+  dishPrice?: string;
+  dishFree?: boolean;
 }
 
-export function editVariation(
-  hotelId: string, id: string, label: string, price: string,
-): Done {
-  return simplePost(menuPath(hotelId, `variations/${id}`), { label, price }, "PATCH");
-}
-
-/** `dishPrice` is needed - and refused without - when this is the dish's
-    last variation: it is sold at one price again (the owner, 21 Sep). */
-export function removeVariation(
-  hotelId: string, id: string, dishPrice?: string,
-): Done {
-  return simplePost(menuPath(hotelId, `variations/${id}/remove`),
-    dishPrice === undefined ? undefined : { dishPrice });
+/** A dish's whole set of variation types, saved at once (D27-192). */
+export function saveVariations(hotelId: string, itemId: string, set: VariationSet): Done {
+  return simplePost(menuPath(hotelId, `items/${itemId}/variations`), set, "PUT");
 }
 
 /** Every group the hotel has, with the dishes that offer it — including
@@ -887,15 +919,15 @@ export function setGroupDishes(hotelId: string, id: string, itemIds: string[]): 
 }
 
 export function addAddonOption(
-  hotelId: string, groupId: string, label: string, price: string,
+  hotelId: string, groupId: string, label: string, price: string, free: boolean,
 ): Done {
-  return simplePost(menuPath(hotelId, `addon-groups/${groupId}/addons`), { label, price });
+  return simplePost(menuPath(hotelId, `addon-groups/${groupId}/addons`), { label, price, free });
 }
 
 export function editAddonOption(
-  hotelId: string, id: string, label: string, price: string,
+  hotelId: string, id: string, label: string, price: string, free: boolean,
 ): Done {
-  return simplePost(menuPath(hotelId, `addons/${id}`), { label, price }, "PATCH");
+  return simplePost(menuPath(hotelId, `addons/${id}`), { label, price, free }, "PATCH");
 }
 
 export function removeAddonOption(hotelId: string, id: string): Done {
@@ -954,6 +986,10 @@ export interface FloorTable {
       the room for. Null when nothing is on it. */
   minutes: number | null;
   payable: number | null;
+  /** Dishes the kitchen made Ready that nobody has Taken (D27-221), and
+      their lines. Absent on a floor cached before 1 October: none. */
+  ready?: number;
+  readyIds?: string[];
 }
 
 export interface FloorSection {
@@ -1072,6 +1108,8 @@ export interface SendLine {
   /* A dish WITH variations requires one and the server refuses without
      it; a dish with none must not be sent one. */
   variationId?: string;
+  /** The choice of each further type (D27-192). */
+  moreChoiceIds?: string[];
   addonIds?: string[];
 }
 
@@ -1353,6 +1391,8 @@ export interface DayEnd {
     varianceReason: string | null;
     denominations: { value: number; count: number }[];
   };
+  /** False only on the outlet's first-ever day, before its one count (D27-200). */
+  opened: boolean;
   closedAt: string | null;
   closedBy: string | null;
 }
@@ -1372,12 +1412,19 @@ export async function recordMovement(
   return till(hotelId, "day-end/movements", input);
 }
 
+/** Open the day: an outlet's first float, counted once (D27-200). */
+export async function openDay(
+  hotelId: string, input: { outlet?: string; opening: number },
+): Promise<Refusal> {
+  return till(hotelId, "day-end/open", input);
+}
+
 /** The count, replaced wholesale. Somebody empties the tin and counts
     it — merging a new count into an old one leaves denominations
     nobody typed this time. */
 export async function countDrawer(
   hotelId: string,
-  input: { outlet?: string; opening: number;
+  input: { outlet?: string;
            denominations: { value: number; count: number }[] },
 ): Promise<Refusal> {
   return till(hotelId, "day-end/count", input);
@@ -1385,7 +1432,7 @@ export async function countDrawer(
 
 export async function closeDay(
   hotelId: string,
-  input: { outlet?: string; varianceReason?: string },
+  input: { outlet?: string; varianceReason?: string; keptCash: number },
 ): Promise<Refusal> {
   return till(hotelId, "day-end/close", input);
 }

@@ -10,36 +10,40 @@ export const nav: ServiceNavEntry[] = [
   { section: "across-properties", order: 20,
     label: "People", to: "/people", icon: UserCog, resource: "user",
     keywords: ["staff", "users", "password", "team"], matchPrefix: true },
-  {
-    section: "system", order: 20,
-    label: "Administration", to: "/admin/users", icon: Settings,
-    resource: "user", matchPrefix: true,
-    children: [
-      /* ⚠ "PROPERTIES" WAS HERE TOO, POINTING AT /admin/properties.
-         The two screens were merged on 9 September — /properties now
-         adds, edits, closes and reopens, and /admin/properties
-         renders it — so this was a second door onto one room, and
-         the sidebar said "Properties" twice.
-
-         The reasoning it carried is still true and now lives in the
-         screen: everyone may READ the property list, and creating
-         one is gated by `app.require_provisioning_key()` in the
-         database, which no menu entry can grant or withhold. */
-      { label: "Users", to: "/admin/users", icon: UserCog, resource: "user" },
-      { label: "Roles and permissions", to: "/admin/roles", icon: ShieldCheck, resource: "role" },
-      { label: "Integrations", to: "/admin/integrations", icon: Plug, resource: "integration" },
-      { label: "Audit log", to: "/admin/audit-log", icon: ScrollText, resource: "audit_log" },
-      { label: "Settings", to: "/admin/settings", icon: Settings, resource: "setting" },
-      /* The console CREATES things — properties, people, access. It is
-         the only screen in the system that manufactures a tenant, so it
-         stays out of production builds until the group says otherwise. */
-      {
-        label: "Console", to: "/admin/console", icon: Terminal,
-        resource: "hotel", devOnly: true,
-        canSee: (role) => can(role, "create", "hotel"),
-      },
-    ],
-  },
+  /* D27-213, D27-214: ONE place for settings. "Settings" replaces
+     Administration and its six children; everything they held is on a tab of
+     it. Owner, Admin and GM (`setting`), as Settings and Configuration were. */
+  { section: "system", order: 20,
+    label: "Settings", to: "/settings", icon: Settings, resource: "setting", matchPrefix: true,
+    keywords: ["configuration", "administration", "setup", "modules", "property profile", "address",
+               "GSTIN", "check-in time", "check-out time", "front desk hours", "group name", "logo",
+               "FSSAI", "house policies", "office details", "Instagram", "reservations contact"] },
+  /* The tab other screens point at by address (a refusal's "set it under…",
+     the restaurant's checklist): an entry of its own, so the link is offered
+     only to somebody who may open it, and Find a screen "GST" or "bank"
+     lands on it. D27-220 renamed the tab (Taxes and billing is Rates and
+     taxes); the ADDRESS stays the old one, which Settings redirects, because
+     the till's setup (pos/pages/Setup.tsx) links it and `mayReach` offers a
+     link with no entry to everybody. Move both together. */
+  { section: "system", order: 21, listed: false,
+    label: "Rates and taxes", to: "/settings/taxes-and-billing", icon: Settings, resource: "setting",
+    keywords: ["GST", "VAT", "tax", "tax rules", "bank details", "IFSC", "UPI"] },
+  /* Off the sidebar, on their Settings tab and in Find a screen - nothing
+     lost (the owner's rule of 15 September, and D27-214). */
+  { section: "system", order: 22, listed: false,
+    label: "Users", to: "/admin/users", icon: UserCog, resource: "user" },
+  { section: "system", order: 23, listed: false,
+    label: "Roles and permissions", to: "/admin/roles", icon: ShieldCheck, resource: "role" },
+  { section: "system", order: 24, listed: false,
+    label: "Integrations", to: "/admin/integrations", icon: Plug, resource: "integration" },
+  { section: "system", order: 26, listed: false,
+    label: "Audit log", to: "/admin/audit-log", icon: ScrollText, resource: "audit_log" },
+  /* The console CREATES things - properties, people, access. It is the only
+     screen that manufactures a tenant, so it stays out of production builds. */
+  { section: "system", order: 27, listed: false,
+    label: "Console", to: "/admin/console", icon: Terminal,
+    resource: "hotel", devOnly: true,
+    canSee: (role) => can(role, "create", "hotel") },
   /* D27-91: what the server is doing, for the owner and an administrator -
      exactly the roles that hold `role`, as the server asks (roleGate.ts). */
   { section: "system", order: 25,

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool, withUser } from "../../../src/db.ts";
+import { openTillDay } from "../../drawer.ts";
 import { buildReport, type ReportDoc } from "../../../src/modules/reports/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -291,7 +292,10 @@ describe("the Manager report adds up the way its own page says", () => {
       { outlet, table: "REP-1", lines: [{ itemId: item, qty: 2 }] });
     expect(made.status).toBe(200);
     const order = (await made.json()) as { id: string };
+    /* Cash only once the day is open, its float counted (D27-190). */
+    const putAway = await openTillDay("5EL", outlet);
     const settled = await send("POST", `/5EL/till/orders/${order.id}/settle`, { method: "cash" });
+    await putAway();
     expect(settled.status).toBe(200);
     posBillsMade += 1;
     const after = await managerDoc("?asOn=2026-08-25");

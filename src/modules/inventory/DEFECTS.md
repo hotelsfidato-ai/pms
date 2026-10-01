@@ -20,6 +20,26 @@ Nothing open (26 September).
 
 ## Fixed — the solution is here; do not work it out again
 
+### INV-9 · A base split by a season came back covering two, and choosing a base type re-read older prices as bases - FIXED 30 September (migration 162)
+
+Found while planning D27-188. `app.set_rate` (057) put back the tail of a row it
+split WITHOUT its `covers_persons`, so a one-guest base split by a season became
+a two-guest price after the season. 090 hid it with a trigger that stamped "one
+guest" on every row of the base pair - which also re-read any older two-guest
+price on that pair as a base the moment somebody chose a base type: a silent
+re-price, which D27-194 rules out ("prices typed before the change are kept
+exactly"). **Fix:** 162's `set_rate` keeps `covers_persons` on the tail (and
+`set_offset` its unit); the two triggers are dropped; `app.set_base_price` is
+the only writer of a base and says "one guest" itself. **Held by**
+`db/tests/modules/inventory.sql` 11a ("the base after it still covers one guest",
+"a price typed into a range is a set price, covering two"). **The rule:** a
+function that re-creates a row copies every column that gives it meaning.
+
+Also found on the day, never shipped: the new "older prices" list read `NOT
+(covers_persons = 1 AND …)`, which is NULL on every older price, so it listed
+none. `api/test/modules/inventory/pricing.test.ts` "lists a price typed before
+162 as an older price" failed on it; `coalesce(covers_persons, 0)` fixed it.
+
 ### INV-8 · A price of 0 was saved without a word, and an unset difference sold at the base - FIXED 28 September (QA RT-1..RT-4, X-1)
 
 D27-120: 0 only with a "Free" tick, at every typed price here (rack rate, season,

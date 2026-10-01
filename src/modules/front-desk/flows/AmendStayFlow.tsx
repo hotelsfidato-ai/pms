@@ -100,7 +100,9 @@ export function AmendStayFlow({
     setOpen(false);
     toast.success(
       "Stay amended",
-      result.nightsBefore === result.nightsAfter
+      result.nightsAfter === 0 && result.nightsBefore === 0
+        ? `${result.guest}: still a day use.`
+        : result.nightsBefore === result.nightsAfter
         ? `${result.guest}: ${result.nightsAfter} nights, unchanged in length.`
         : `${result.guest}: ${result.nightsBefore} nights becomes `
           + `${result.nightsAfter}${result.roomHeld
@@ -124,7 +126,8 @@ export function AmendStayFlow({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           title={`Amend ${stay.guest}`}
-          description={`${was} ${was === 1 ? "night" : "nights"}, ${dateShort(stay.arrival)} to ${dateShort(stay.departure)}.`}
+          description={was === 0 ? `Day use, ${dateShort(stay.arrival)}.`
+            : `${was} ${was === 1 ? "night" : "nights"}, ${dateShort(stay.arrival)} to ${dateShort(stay.departure)}.`}
           size="sm"
           footer={
             <div className="flex gap-2 w-full justify-end">
@@ -133,7 +136,7 @@ export function AmendStayFlow({
               </Button>
               <Button variant="primary"
                 size="lg" loading={busy}
-                disabled={!changed || wrong !== null || nights < 1}
+                disabled={!changed || wrong !== null || nights < 0 || (nights === 0) !== (was === 0)}
                 onClick={() => void submit()}
               >
                 Save
@@ -196,6 +199,16 @@ export function AmendStayFlow({
             <p className="text-base" data-amend-summary>
               {wrong ? (
                 <span className="text-danger">{wrong}</span>
+              ) : nights === 0 && was === 0 ? (
+                <span className="text-grey-600">
+                  Day use, in and out on {dateShort(checkIn)}, at its day price.
+                </span>
+              ) : (nights === 0) !== (was === 0) && nights >= 0 ? (
+                <span className="text-danger">
+                  {was === 0
+                    ? "A day use stays a day use: its price is the day's. To stay the night, book the nights."
+                    : "A stay does not become a day use here: book the day use on New booking, with its day price."}
+                </span>
               ) : nights < 1 ? (
                 <span className="text-danger">
                   Departure has to be after arrival. The night of departure is
