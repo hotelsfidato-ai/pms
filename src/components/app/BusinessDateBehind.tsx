@@ -8,12 +8,20 @@ import { mayReach } from "./navigation";
    screen, while the property's business date is behind its real date (the
    server's, in the hotel's own time zone - never this device's clock).
    Hidden when it is not behind, and on a screen with no property chosen. */
+/** How many days a property's business date is behind its real date; 0 when
+    it is not, or either is unknown. The one rule: this line and All
+    properties' "Needs you" (D27-243) both read it. */
+export function daysBehind(hotel: { today?: string; businessDate?: string } | null | undefined): number {
+  if (!hotel?.today || !hotel.businessDate || hotel.businessDate >= hotel.today) return 0;
+  return Math.round(
+    (Date.parse(`${hotel.today}T00:00:00Z`) - Date.parse(`${hotel.businessDate}T00:00:00Z`)) / 86_400_000);
+}
+
 export function BusinessDateBehind() {
   const hotel = useCurrentHotel();
   const role = useRole();
-  if (!hotel?.today || !hotel.businessDate || hotel.businessDate >= hotel.today) return null;
-  const days = Math.round(
-    (Date.parse(`${hotel.today}T00:00:00Z`) - Date.parse(`${hotel.businessDate}T00:00:00Z`)) / 86_400_000);
+  const days = daysBehind(hotel);
+  if (!hotel || !days) return null;
   const audit = mayReach(role, "/h/:code/night-audit");
   return (
     <p className="flex items-start gap-2 px-4 sm:px-5 py-1.5 bg-brand-yellow-50 border-b border-brand-yellow-100 text-sm text-ink-900"

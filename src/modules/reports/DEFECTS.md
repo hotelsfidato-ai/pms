@@ -16,6 +16,14 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Fixed
 
+### REP-16 · Between 1280 and 1439 wide the Dashboard's three figure tiles broke "Month so far" and "Year so far" onto two lines - FIXED 3 October
+
+**Found** - 30 September, measuring the Dashboard-charts render against the running app (numbered for now by that work). At 1280 wide each tile was 178px: "Month so far ₹4,17,293" and "Year so far ₹57,10,112" did not fit beside their labels, the rows measured 42px against 21px, and the three amounts sat at different heights (the Level Rule). The same at 1366; at 1440 they fitted with about 4px to spare.
+
+**Done** (the owner's D27-243) - under 1440 px Occupancy takes its own row and the three figures the full width (`min-[1440px]:col-span-5` / `col-span-7` in `pages/Dashboard.tsx`, was `xl:` = 1280).
+
+**Proved** - measured in the browser pane on the local demo, 3 October: at 1280 each tile is 314px and at 1366 343px, Occupancy on its own row; at 1440, 211px beside Occupancy. At all three every "so far" row is 21px (one line) and the three amounts share one top. Screenshots `.local\screenshots\2026-10-02-dashboard-build\`.
+
 ### REP-15 · The Dashboard put a <div> inside a <p> on every load - FIXED 30 September (by the booking and bill lane; numbered for now)
 
 The occupancy and figure tiles wrapped `fig()` in `<p>`; while loading `fig()` is the Skeleton, a `<div>`, and React logged the nesting. **Fixed:** both wrappers are `<div>`. The test formats React's `%s` message - matching the raw call missed it and passed on the broken code first.

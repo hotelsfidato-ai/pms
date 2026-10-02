@@ -187,4 +187,29 @@ describe("D27-243 - All properties, for the owner", () => {
       expect(within(main).getByText(/1 of 2 properties/)).toBeTruthy();
     } finally { spy.mockRestore(); }
   });
+
+  /* The front-desk lane's rule (D27-237), not a second one: the server's
+     own date per property, `today`, against its business date. */
+  it("puts a property whose business date is behind first in Needs you", async () => {
+    const hotel = (code: string, name: string, businessDate: string, today: string) => ({
+      id: code, code, name, city: "", state: "", gstin: null, timezone: "Asia/Kolkata",
+      currency: "INR", checkInTime: "14:00", checkOutTime: "11:00", businessDate, today,
+    });
+    signedIn({
+      scope: { staffId: "22222222-2222-2222-2222-222222222222", email: "owner@fidato.in", fullName: "Owner",
+        isGroupAdmin: true, hotels: [] },
+      hotels: [hotel(HOTEL, "5 Elements", "2026-08-25", "2026-08-25"), hotel("AGR", "Fidato Agra", "2026-08-22", "2026-08-25")],
+    });
+    const real = apiModule.api;
+    const spy = vi.spyOn(apiModule, "api").mockImplementation(((url: string, init?: RequestInit) =>
+      url.includes("/notifications") ? Promise.resolve([]) : real(url, init)) as typeof real);
+    try {
+      go("/all-properties");
+      render(<App />);
+      const needs = await screen.findByRole("region", { name: "Needs you" });
+      const line = await within(needs).findByText(/Fidato Agra: business date/);
+      expect(line.textContent).toMatch(/3 days behind today/);
+      expect(within(needs).queryByText(/5 Elements: business date/)).toBeNull();
+    } finally { spy.mockRestore(); }
+  });
 });

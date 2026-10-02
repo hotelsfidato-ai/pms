@@ -34,7 +34,7 @@ export const GLOSSARY: Record<TermKey, { term: string; means: string }> = {
     means: "Rooms sold, as a share of the rooms that could be sold. Rooms out of service are left out. A complimentary room counts as sold, as in the group's eZee reports.",
   },
   adr: {
-    term: "Average daily rate (ADR)",
+    term: "Average rate (ARR)",
     means: "Room revenue divided by rooms sold, complimentary rooms included: what a sold room earned, on average. Room charges only. Extras, food and tax are not in it.",
   },
   revpar: {

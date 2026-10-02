@@ -440,12 +440,12 @@ const QUICK_REPORTS: Array<{ label: string; to: string; icon: LucideIcon }> = [
 
 function CardTitle({ title, info, meta }: { title: string; info: string; meta?: string }) {
   return (
-    <div className="flex items-center gap-2 mb-3">
+    /* On a phone the note goes under the heading, so the heading stays on
+       one line (the Breathing Room Rule); beside it from 640 px. */
+    <div className="flex flex-wrap items-center gap-x-2 mb-3">
       <h2 className="text-md font-semibold text-ink-900">{title}</h2>
-      <span className="ml-auto flex items-center gap-2">
-        {meta && <span className="text-xs text-grey-500 tabular">{meta}</span>}
-        <InfoButton className="-mr-1.5">{info}</InfoButton>
-      </span>
+      <InfoButton className="-mr-1.5 ml-auto sm:ml-0 sm:order-3">{info}</InfoButton>
+      {meta && <span className="basis-full sm:basis-auto sm:ml-auto sm:order-2 text-xs text-grey-500 tabular">{meta}</span>}
     </div>
   );
 }
@@ -600,16 +600,17 @@ function WorkTile({ icon: Icon, chip, label, to, count: n, left, state, note, lo
       to={to}
       data-state={state}
       className={cn(
-        "press-tile row-span-3 grid grid-rows-subgrid gap-y-1.5 rounded-lg ring-1 ring-inset px-3.5 py-3 sm:px-[18px] sm:py-4",
+        "press-tile relative row-span-3 grid grid-rows-subgrid gap-y-1.5 rounded-lg ring-1 ring-inset px-3.5 py-3 sm:px-[18px] sm:py-4",
         "transition-[box-shadow] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange",
         TILE[state],
       )}
     >
-      <span className="relative flex items-center gap-2 sm:gap-2.5 pr-5 text-sm font-medium leading-5 text-grey-600 whitespace-nowrap">
+      <span className="sm:relative flex items-center gap-2 sm:gap-2.5 sm:pr-5 text-sm font-medium leading-5 text-grey-600 whitespace-nowrap">
         <IconChip tone={chip} className="max-sm:size-6 max-sm:rounded-[7px] max-sm:[&>svg]:size-3.5"><Icon /></IconChip>
         {label}
-        {/* It opens its list: an arrow says so (the Tappable Rule). */}
-        <ChevronRight className="absolute right-0 size-4 text-grey-500" aria-hidden />
+        {/* It opens its list: an arrow says so (the Tappable Rule). On a phone
+            it sits at the tile's right edge, so "Needs cleaning" fits. */}
+        <ChevronRight className="absolute right-0 size-4 text-grey-500 max-sm:right-3 max-sm:top-1/2 max-sm:-translate-y-1/2" aria-hidden />
       </span>
       <span className={cn(
         "flex items-baseline gap-2 text-xl sm:text-2xl leading-[26px] sm:leading-[30px] font-semibold tabular tracking-[-0.02em]",

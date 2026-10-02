@@ -2,8 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronRight, Hotel, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, dateShort } from "@/lib/format";
-import { useSession } from "@/lib/session";
+import { money, dateShort, dateCompact } from "@/lib/format";
+import { useRole, useSession } from "@/lib/session";
+import { daysBehind } from "@/components/app/BusinessDateBehind";
+import { mayReach } from "@/components/app/navigation";
 import {
   Page, PageHeader, Card, CardBody, DataTable, IconChip, InfoButton, ReadFailed, Skeleton, readError, type Column,
 } from "@/components/ui";
@@ -95,7 +97,19 @@ export default function AllPropertiesPage() {
   const lastYear = add(withLastYear.map((r) => r.lastYear));
   const sameMonthNow = add(withLastYear.map((r) => r.month));
   const vs = change(sameMonthNow?.revenue, lastYear?.revenue);
-  const waiting = rows.flatMap((r) => r.waiting.filter((n) => n.actionRequired).map((n) => ({ row: r, n })));
+  /* Act now first: a property whose business date is behind (the front
+     desk's rule and words, D27-237), then what each property's bell asks. */
+  const audit = mayReach(useRole(), "/h/:code/night-audit");
+  const behind = hotels.filter((h) => daysBehind(h) > 0).map((h) => ({
+    row: { code: h.code, name: h.name } as Row,
+    n: {
+      id: "business-date-behind", hotelId: h.code, category: "system", isRead: false, at: "", actionRequired: true,
+      title: `business date ${dateCompact(h.businessDate)}, ${daysBehind(h)} ${daysBehind(h) === 1 ? "day" : "days"} behind today (${dateCompact(h.today!)})`,
+      body: "Close the days in Night audit",
+      ...(audit ? { link: `/h/${h.code}/night-audit` } : {}),
+    } satisfies Notification,
+  }));
+  const waiting = [...behind, ...rows.flatMap((r) => r.waiting.filter((n) => n.actionRequired).map((n) => ({ row: r, n })))];
 
   return (
     <Page>
@@ -110,13 +124,13 @@ export default function AllPropertiesPage() {
         <div className="grid gap-3">
           {/* ── The group: today, the month so far, the month last year ── */}
           <section aria-label="The group" className="rounded-lg bg-ink-900 text-white px-4 py-3.5 sm:px-[18px] sm:py-4">
-            <div className="flex items-center gap-2.5 mb-3 text-sm font-medium text-white/72">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mb-3 text-sm font-medium text-white/72">
               <IconChip tone="glass"><Hotel /></IconChip>
               The group today
-              <span className="ml-auto text-xs tabular">
+              <span className="max-sm:order-3 max-sm:basis-full sm:ml-auto text-xs tabular">
                 {query.isLoading ? null : `Last year: ${withLastYear.length} of ${rows.length} properties`}
               </span>
-              <InfoButton className="text-white/60 hover:bg-white/10 hover:text-white">
+              <InfoButton className="max-sm:ml-auto text-white/60 hover:bg-white/10 hover:text-white">
                 {"Every property added up, each on its own business date. Last year is the same month a year back, and counts only the properties that sold a room in it."}
               </InfoButton>
             </div>
@@ -146,9 +160,9 @@ export default function AllPropertiesPage() {
           </section>
 
           {/* ── Needs you: what to act on, at every property ─────────── */}
-          <Card>
+          <Card role="region" aria-labelledby="needs-you">
             <CardBody className="sm:px-[18px] sm:py-4">
-              <h2 className="text-md font-semibold text-ink-900 mb-3">Needs you</h2>
+              <h2 id="needs-you" className="text-md font-semibold text-ink-900 mb-3">Needs you</h2>
               {query.isLoading ? <Skeleton className="h-10 w-full" /> : waiting.length === 0 ? (
                 <p className="flex items-center gap-3.5 min-h-14">
                   <IconChip tone="green"><Check /></IconChip>
