@@ -21,7 +21,7 @@ Closing is Opening + Debit - Credit. `manager.ts`'s City Ledger section:
 Opening Balance and Closing Balance (today), Payment Received (today, month,
 year). `reports.test.ts`'s City ledger case follows the new Closing.
 **Proved:** finance's `companyPayments.test.ts` (ledger and Manager lines);
-`test/modules/reports` RESULT.
+`test/modules/reports`: 3 files, 33 tests, passed.
 **Left open:** Outstanding Commission stays "not held".
 
 ---

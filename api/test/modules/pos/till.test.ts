@@ -1955,7 +1955,7 @@ describe("day end", () => {
                  byMethod: Record<string, number> };
       blockers: { id: string; reason: string; detail: string | null }[];
       cash: { opening: number; expected: number; counted: number | null;
-              variance: number | null };
+              variance: number | null; waiting: number };
       movements: { kind: string; amount: number; reason: string }[];
       closedAt: string | null;
     };
@@ -2026,7 +2026,10 @@ describe("day end", () => {
       { kind: "top_up", amount: 500, reason: "change from the safe" });
 
     const after = await dayEnd();
-    expect(after.cash.expected - before.cash.expected).toBeCloseTo(200, 2);
+    /* The paid-out waits for the GM's or the owner's yes before it comes
+       off (D27-242); money in counts at once. */
+    expect(after.cash.expected - before.cash.expected).toBeCloseTo(500, 2);
+    expect(after.cash.waiting - before.cash.waiting).toBeCloseTo(300, 2);
     expect(after.movements.map((m) => m.kind).sort())
       .toEqual(["expense", "top_up"]);
   });

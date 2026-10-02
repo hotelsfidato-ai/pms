@@ -23,6 +23,12 @@ paid-outs do not explain. Close restaurant day shows "Waiting for a yes" by
 the line and in the sums.
 **Proved:** finance's `cashExpenses.test.ts`, the tin case (recorded by the GM
 - reception's till is a per-hotel switch - approved by the owner).
+`till.test.ts`'s "moves the expectation when money goes in and out" failed on
+the new rule (500 against 200: the paid-out no longer comes off at once); it
+now expects +500 in Expected and +300 waiting. `test/modules/pos` before
+that change: 23 files, 224 of 225. Screen: ₹150 for vegetables "Waiting for a
+yes - not taken off the tin yet", Expected unchanged; 375 px, no sideways
+scroll.
 **Left open:** nothing here.
 
 ---
