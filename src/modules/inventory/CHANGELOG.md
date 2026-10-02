@@ -11,6 +11,37 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · Rates always open, in the Calendar's look (D27-237 5.1–5.3)
+
+Branch `rates/always-open-2oct` from cp6 `3336a219`, copy `.claude\worktrees\mystifying-napier-d2f754`, database `fidato_s45` (migrated to cp6's 179 files), API 8903, web 5303.
+
+**Asked for:** the owner's D27-237:
+- 5.1: every room type always open with all its rows, a dash where nothing is set, in the Calendar's look. This replaces D27-206's "closed by default".
+- 5.2: rooms left under each base price; the Rooms left tab stays.
+- 5.3: "How rates are built" below the calendar.
+- At 375, "+ per extra adult" on one line.
+
+**Shipped** (`pages/Rates.tsx`):
+- The card's own toolbar holds the two-week arrows, the range and Today (shown only away from the business date). The business date is the window the server chose first.
+- Each day has a 12px uppercase weekday caption over a 16px day number. The business date's column is navy, and weekends are a grey wash.
+- Each room type is its own `tbody` (named for it):
+  - a grey group row with the base, and "N left" under it (red at 0, a dash where none is held), from the `GET /inventory` read the Rooms left tab already makes;
+  - then every break-up row, 40px tall with 14px labels on one line, in a 152px label column.
+- How the day sold is drawn as the Calendar's footer: paying rooms sold, a 4px orange capsule of occupancy and its percentage, then ADR and Revenue.
+- The setup card sits under the calendar.
+- On a phone the grid's card runs edge to edge, as the Calendar's does. The Rooms left tab shares the same frame.
+
+**Proved:**
+- `freeTick.test.tsx`: 6 tests, 3 of them new or rewritten (always open with its rows and the dash; rooms left under the base; the setup below the grid and Today back on the business date). All 3 failed on the old screen.
+- `src/modules/inventory`: 13. primaryAction, navigation and boundaries: 36 in all, with inventory. Web `tsc` exit 0.
+- **Opened on `fidato_s45` as the GM:**
+  - At 1280 x 800: TUE 25 in navy; Superior "₹3,000 / 4 left"; Deluxe with its extra-adult and extra-child rows; the footer's capsules (41% … 59%); "How rates are built" below.
+  - At 375: "+ per extra adult" is one line (40px tall, 152px column). Every font size is on the ladder, and the page does not scroll sideways.
+
+**Left open:** at 375 the label column takes 152px, so about three days show beside it.
+
+---
+
 ## 2026-09-30 · Rates: the calendar opens to the break-up; Set prices (D27-206)
 
 Branch `rates/base-addons-30sep` (cp6 e350e71b taken in), copy `.claude\worktrees\mystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.
