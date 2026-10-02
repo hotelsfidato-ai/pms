@@ -867,3 +867,9 @@ describe("a write route nobody mapped", () => {
     expect(((await res.json()) as { reason: string }).reason).toBe(UNMAPPED);
   });
 });
+
+describe("the Store's fourteen days (D27-238, D27-242)", () => {
+  it("is the Store's own read: whoever sees the Store; the sales in it are the route's to withhold", () => {
+    expect(READ_RULES[`GET ${H}/stores/days`]).toEqual(READ_RULES[`GET ${H}/stores`]);
+  });
+});

@@ -35,7 +35,8 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
     levels: {}, lowIn: [], low: false, unitCost: null, value: null, byStore: {},
     cylinder: false, empties: 0, emptiesByStore: {}, cylindersOnDeposit: null,
     depositPerCylinder: null, depositHeld: null, inUse: null,
-    lastMovement: null, movements: 0, isActive: true, ...over,
+    lastMovement: null, movements: 0, isActive: true,
+    crockery: false, heldIn: [], today: {}, lastCounted: {}, onOrder: {}, ...over,
   });
   /* The three stores every hotel has (104), the Main store first. */
   const stores = [
@@ -48,10 +49,12 @@ vi.mock("@/modules/stores/data/stores", async (importOriginal) => {
     ...actual,
     getStore: async () => {
       if (control.store === "unreachable") throw unreachable();
-      if (control.store === "empty") return { stores, items: [], outlets };
+      const day = { businessDate: "2026-08-25", people: [], inUse: [] };
+      if (control.store === "empty") return { stores, items: [], outlets, ...day };
       return {
         stores,
         outlets,
+        ...day,
         items: [
           item("towels", "Bath towel", {
             onHand: 58, unitCost: 310, value: 17980, byStore: { main: 50, kitchen: 8 },
@@ -219,7 +222,8 @@ describe("the Store", () => {
 
     expect(screen.getByText(/You can see the store\. Receiving, issuing and adding items is for the Inventory Manager/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Add an item/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Receive/ })).toBeNull();
+    /* On the item: the "Received today" tile above is a filter, not a change. */
+    expect(within(card("Bath towel")).queryByRole("button", { name: /Receive/ })).toBeNull();
     expect(within(card("Bath towel")).getByRole("button", { name: "History" })).toBeTruthy();
   });
 
@@ -324,15 +328,15 @@ describe("the Store", () => {
     expect(await within(dialog).findByText("The history did not load")).toBeTruthy();
     expect(within(dialog).queryByText("Nothing has moved yet")).toBeNull();
   });
-it("D25-14 · the below-level list names the store, what is there and the level - never an item with no level", async () => {
+it("D25-14, D27-242 Q2 · below level names the store, what is there and the level, on the card - never an item with no level", async () => {
     as("stores");
     render(<App />);
     await screen.findByText("Bath towel");
 
-    const list = document.querySelector("[data-below-list]") as HTMLElement;
-    expect(list.textContent).toContain("LPG cylinder - Kitchen store: 1 cylinder, level 2");
-    expect(list.textContent).not.toContain("Toilet roll");
-    expect(list.textContent).not.toContain("Bath towel");        // 50 in Main, level 20
+    /* The Below level tile replaced the yellow list; its card says it. */
+    const lines = [...document.querySelectorAll("[data-below-list]")];
+    expect(lines.map((l) => l.textContent)).toEqual(["Kitchen store: 1 cylinder, level 2"]);
+    expect(within(card("LPG cylinder")).getByText("Kitchen store: 1 cylinder, level 2")).toBeTruthy();
     expect(within(card("Bath towel")).getByText(/Warn at Main 20/)).toBeTruthy();
     expect(within(card("Toilet roll")).getByText(/No level set/)).toBeTruthy();
   });

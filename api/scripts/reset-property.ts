@@ -43,10 +43,11 @@ import { databaseForScript } from "./scriptDatabase.ts";
               Form C filings, room assignments, blocks, work orders,
               restaurant orders, banquet events, night audit runs,
               cashier shifts, spa appointments, laundry dockets, the
-              guests' own links
+              guests' own links, and the Store's movements and counts
      STAYS    the property, its rooms and room types, rates, staff,
-              outlets, the menu, tables, sections, modules, and the
-              hours and charges on the front desk
+              outlets, the menu, tables, sections, modules, the hours
+              and charges on the front desk, and the Store's items,
+              levels, places and suppliers
 
    So what is left is the hotel as it really is, empty, on today's
    date — ready for the first real booking.
@@ -182,6 +183,14 @@ export const CLEAR: [table: string, how: string][] = [
      points at them, so clearing Akkalkot cannot take Pune's group. */
   ["reservation_groups", "not exists (select 1 from reservations r where r.group_id = reservation_groups.id)"],
   ["night_audit_runs",  "hotel_id = $1"],
+
+  /* THE STORE'S TRANSACTIONS (D27-242, the owner, 2 October): every count
+     line, then every movement - deliveries, issues, waste, moves, undos.
+     The items, their levels, the places and the suppliers stay, as setup. A
+     count line points at the correction it wrote, so it goes first; a
+     movement's undo points at the movement, and both go in one statement. */
+  ["stock_count_lines", "hotel_id = $1"],
+  ["stock_movements",   "hotel_id = $1"],
 ];
 
 /* Lifted for these statements only and put back immediately, the way
@@ -211,6 +220,9 @@ const GUARDS: [table: string, trigger: string][] = [
   ["pos_line_events",   "pos_line_events_no_delete"],
   /* 2 October: loyalty's points ledger is append-only (178). */
   ["loyalty_points",    "loyalty_points_append_only"],
+  /* 2 October: the Store's two ledgers are append-only (069, 183). */
+  ["stock_movements",   "stock_movements_append_only"],
+  ["stock_count_lines", "stock_count_lines_append_only"],
 ];
 
 async function main() {
@@ -275,24 +287,27 @@ async function main() {
     }
 
     const { rows: counts } = await client.query<{
-      stays: string; guests: string; postings: string; orders: string;
+      stays: string; guests: string; postings: string; orders: string; stock: string;
     }>(
       `select (select count(*) from reservations where hotel_id = $1)::text as stays,
               (select count(distinct guest_id) from reservations where hotel_id = $1)::text as guests,
               (select count(*) from folio_postings where hotel_id = $1)::text as postings,
-              (select count(*) from pos_orders where hotel_id = $1)::text as orders`,
+              (select count(*) from pos_orders where hotel_id = $1)::text as orders,
+              (select count(*) from stock_movements where hotel_id = $1)::text as stock`,
       [hotel[0].id]);
 
     console.log();
     say(`${hotel[0].name} (${code})`);
     say(`business date ${hotel[0].bd}`);
     say(`${counts[0]!.stays} bookings · ${counts[0]!.guests} guests`
-        + ` · ${counts[0]!.postings} postings · ${counts[0]!.orders} orders`);
+        + ` · ${counts[0]!.postings} postings · ${counts[0]!.orders} orders`
+        + ` · ${counts[0]!.stock} stock movements`);
     console.log();
 
     if (!confirmed) {
-      say("Nothing removed. This deletes every booking, folio, invoice and");
-      say("order at this property and cannot be undone for real data.");
+      say("Nothing removed. This deletes every booking, folio, invoice,");
+      say("order and stock movement at this property and cannot be undone");
+      say("for real data.");
       say(`Run it again with --yes:   npm run reset -- ${code} --yes`);
       console.log();
       return;

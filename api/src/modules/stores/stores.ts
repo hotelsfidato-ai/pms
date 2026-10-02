@@ -311,7 +311,7 @@ stores.get("/:code/stores", async (c) => {
       on_deposit: number | null; per_cylinder: string | null;
       on_hand: string; unit_cost: string | null;
       last_movement: string | null; movements: string;
-      crockery: boolean; received: boolean;
+      crockery: boolean; held_in: string[];
     }>(
       /* On hand and cost come from the FUNCTIONS, not from columns. That
          is the whole design: one definition, and it cannot disagree with
@@ -328,12 +328,12 @@ stores.get("/:code/stores", async (c) => {
               (select count(*)::text
                  from stock_movements m where m.item_id = i.id) as movements,
               i.crockery,
-              /* Ever delivered, and not undone: "Run out" is an item that
-                 had some and holds none (D27-242 Q3). */
-              exists (select 1 from stock_movements m
-                       where m.item_id = i.id and m.kind = 'receipt' and not m.empty
-                         and m.reverses_id is null
-                         and not exists (select 1 from stock_movements r where r.reverses_id = m.id)) as received
+              /* Every place it ever came into, and not undone: "Run out" is
+                 a place that had some and holds none (D27-242 Q3). */
+              array(select distinct m.location_id::text from stock_movements m
+                     where m.item_id = i.id and m.quantity > 0 and not m.empty
+                       and m.reverses_id is null
+                       and not exists (select 1 from stock_movements r where r.reverses_id = m.id)) as held_in
          from stock_items i
         where i.hotel_id = $1
         order by i.category nulls last, i.name`,
@@ -499,11 +499,11 @@ stores.get("/:code/stores", async (c) => {
           lastMovement: r.last_movement,
           movements: Number(r.movements),
           isActive: r.is_active,
-          /* D27-242: crockery and cutlery; ever delivered; what moved today,
-             by kind, as the places it moved in; the business date each place
-             was last counted; what is on order, by store. */
+          /* D27-242: crockery and cutlery; the places it ever came into; what
+             moved today, by kind, as the places it moved in; the business date
+             each place was last counted; what is on order, by store. */
           crockery: r.crockery,
-          received: r.received,
+          heldIn: r.held_in,
           today: todayByItem.get(r.id) ?? {},
           lastCounted: countedByItem.get(r.id) ?? {},
           onOrder: orderedByItem.get(r.id) ?? {},
