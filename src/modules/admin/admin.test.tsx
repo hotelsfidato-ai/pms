@@ -525,6 +525,22 @@ describe("D22-3 and D22-2 - People, for a GM", () => {
     });
   });
 
+  it("lists only the people switched off when asked (D27-243, 5.2)", async () => {
+    as("gm");
+    peopleServer([
+      person({ id: "p-1", name: "Asha" }),
+      person({ id: "p-2", name: "Ravi", email: "ravi@fidato.in", isActive: false }),
+    ]);
+    renderAt("/people", <PeoplePage />);
+
+    await screen.findByText("Asha");
+    fireEvent.click(screen.getByRole("tab", { name: /Switched off/ }));
+    expect(screen.queryByText("Asha")).toBeNull();
+    expect(screen.getByText("Ravi")).toBeDefined();
+    fireEvent.click(screen.getByRole("tab", { name: /Everybody/ }));
+    expect(screen.getByText("Asha")).toBeDefined();
+  });
+
   it("offers on each person only what the server said this GM may do to them", async () => {
     as("gm");
     peopleServer([

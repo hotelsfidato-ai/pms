@@ -8,7 +8,7 @@ import {
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
-  StatusPill, toast,
+  StatusPill, toast, Segmented,
 } from "@/components/ui";
 import { listPeople, createStaff, grantAccess, revokeAccess, deactivateStaff, amendStaff, reactivateStaff, setStaffPassword, setHomeScreen, MIN_PASSWORD, type AdminStaff, type HomeScreen, type RosterPlace } from "@/modules/admin/data/admin";
 import { useSession } from "@/lib/session";
@@ -99,6 +99,8 @@ export default function PeoplePage() {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [granting, setGranting] = useState<AdminStaff | null>(null);
+  /* D27-243 (5.2): the people switched off, on their own. */
+  const [showing, setShowing] = useState<"all" | "off">("all");
   const groupAdmin = useSession((s) => s.scope?.isGroupAdmin ?? false);
 
   const staff = useQuery({
@@ -111,6 +113,8 @@ export default function PeoplePage() {
   const rows = staff.data?.staff ?? [];
   const places = staff.data?.rosterAt ?? [];
   const active = rows.filter((s) => s.isActive);
+  const switchedOff = rows.length - active.length;
+  const listed = showing === "off" ? rows.filter((s) => !s.isActive) : rows;
   /* A group administrator may add somebody with no property yet; anybody
      else adds them AT a property they run, or not at all. */
   const mayAdd = groupAdmin || places.length > 0;
@@ -176,13 +180,20 @@ export default function PeoplePage() {
             : undefined}
         />
       ) : (
+        <>
+        {switchedOff > 0 && (
+          <Segmented className="mb-3" value={showing} onChange={setShowing}
+                     options={[{ value: "all", label: "Everybody" },
+                               { value: "off", label: `Switched off (${switchedOff})` }]} />
+        )}
         <ul className="space-y-3">
-          {rows.map((s) => (
+          {listed.map((s) => (
             <PersonCard key={s.id} person={s} places={places}
                         onGrant={() => setGranting(s)}
                         onChanged={refresh} />
           ))}
         </ul>
+        </>
       )}
 
       <p className="flex items-start gap-2 text-sm text-grey-500 mt-3 leading-relaxed">
