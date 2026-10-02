@@ -212,6 +212,16 @@ describe("D27-227 · a day use from New booking", () => {
     expect(r).toEqual({ day_use: true, rate: "1500.00" });
   });
 
+  /* RES-14 (the owner's D27-239): who made each booking. created_by was
+     never written. */
+  it("records who made it", async () => {
+    const [r] = await sql<{ by: string | null; owner: string }>(
+      `select created_by::text as by,
+              (select id::text from staff where email = 'owner@fidato.in') as owner
+         from reservations where id = $1`, [dayUse]);
+    expect(r!.by).toBe(r!.owner);
+  });
+
   it("can be amended, and keeps its price; it does not turn into nights", async () => {
     const res = await call(`/stays/${dayUse}`, "PATCH", { adults: 2 });
     expect(res.status, await res.clone().text()).toBe(200);

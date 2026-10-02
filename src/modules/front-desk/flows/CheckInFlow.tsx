@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, LogIn, BedDouble } from "lucide-react";
+import { Check, LogIn, BedDouble, Info } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, moneyPrecise, dateShort } from "@/lib/format";
 import {
   Button, Field, Input, NativeSelect, StatusPill, Switch, Tooltip, toast,
   Dialog, DialogContent, DialogTrigger,
 } from "@/components/ui";
-import { checkIn, assignableRooms, checkInAllowed, earlyArrival, mealPlanChoices } from "@/modules/front-desk/data/operations";
+import { checkIn, assignableRooms, checkInAllowed, earlyArrival, expressCheckIn, mealPlanChoices } from "@/modules/front-desk/data/operations";
 import { type Stay } from "@/data/repositories";
 import {
   BookingSiteBlacklist, GuestIdFields, guestIdState, guestIdPayload, noGuestId, type GuestId,
@@ -63,6 +63,20 @@ export function CheckInFlow({
      for a guest booked by phone or a booking site. */
   const [offersAgreed, setOffersAgreed] = useState(false);
   const [ratePlan, setRatePlan] = useState(stay.ratePlan);
+  /* THE ONE PAGE (D27-236 3.1-3.3): the party, the meal plan and the room
+     are shown as they stand, each with Change; the grid opens only when
+     needed. */
+  const [changing, setChanging] = useState<{ party?: boolean; plan?: boolean; room?: boolean }>({});
+  /* EXPRESS (D27-236 3.4, D27-242): the server says whether this stay's ID
+     was confirmed from its own online check-in; "Use a different ID" opens
+     the fields again. */
+  const express = useQuery({
+    queryKey: ["express-check-in", hotelId, stay.id],
+    queryFn: () => expressCheckIn(hotelId, stay.id),
+    enabled: open,
+  });
+  const [otherId, setOtherId] = useState(false);
+  const byExpress = (express.data?.express ?? false) && !otherId;
 
   const permitted = useQuery({
     queryKey: ["checkin-allowed", hotelId, stay.id, stay.status],
@@ -132,14 +146,14 @@ export function CheckInFlow({
     partyWrong
       ?? (!roomNumber || !chosen ? "Pick a room."
         : !chosen.allowed ? `Room ${roomNumber}: ${chosen.reason ?? "not available."}` : null)
-      ?? id.blocked
+      ?? (byExpress ? null : id.blocked)
       ?? (isEarly && !earlyReason.trim() ? "Say why the room is being given early." : null);
 
   const reset = () => {
     setAdults(String(stay.adults)); setChildren(String(stay.children));
     setRoomNumber(stay.roomNumber); setGuestId(noGuestId(stay.nationality ?? "IN"));
     setEarlyReason(""); setWaiveEarly(false); setOffersAgreed(false); setRatePlan(stay.ratePlan);
-    setConfirming(false);
+    setConfirming(false); setChanging({}); setOtherId(false);
   };
 
   const submit = async () => {
@@ -149,7 +163,9 @@ export function CheckInFlow({
       /* The nationality always - with the ID skipped too, or a foreign
          guest never reached the Form III register; the document only when
          a type and a number were both typed. */
-      ...guestIdPayload(guestId),
+      /* By express the nationality only: the server checks the confirmed
+         document itself (D27-242). */
+      ...guestIdPayload(byExpress ? noGuestId(stay.nationality ?? "IN") : guestId),
       businessDate,
       /* Sent since 24 September: without it the server refused every
          check-in before the check-in hour. */
@@ -198,6 +214,7 @@ export function CheckInFlow({
       </DialogTrigger>
 
       <DialogContent
+        size="lg"
         title={`Check in ${stay.guest}`}
         description={`${stay.reference} · ${stay.roomType}`}
         footer={
@@ -235,98 +252,104 @@ export function CheckInFlow({
           <BookingSiteBlacklist hotelId={hotelId} from={stay.arrival} to={stay.arrival} stayIds={[stay.id]} />
         </div>
 
-        <div className="space-y-5">
-          <section className="space-y-3">
-            <p className="text-sm text-grey-600">
-              Who is actually arriving. The booking says{" "}
-              {stay.adults} adult{stay.adults === 1 ? "" : "s"}
-              {stay.children ? `, ${stay.children} child` : ""}.
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Adults">
-                {({ id: f }) => (
-                  <Input id={f} numeric value={adultsText} onChange={(e) => setAdults(e.target.value)} />
-                )}
-              </Field>
-              <Field label="Children">
-                {({ id: f }) => (
-                  <Input id={f} numeric value={childrenText} onChange={(e) => setChildren(e.target.value)} />
-                )}
-              </Field>
-            </div>
-            {partyWrong && (
-              <p className="text-sm text-brand-red-700" data-party-wrong>{partyWrong}</p>
-            )}
-          </section>
-
-          <section className="space-y-3 pt-4 border-t border-grey-200">
-            <p className="text-sm text-grey-600">
-              Room. Only a clean or inspected room can take a guest; the rest are
-              shown with the reason.
-            </p>
-            {/* One column on a phone: two cut "inspected" off at 390 px. */}
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[240px] overflow-y-auto scrollbar-quiet">
-              {(rooms.data ?? []).map((room) => {
-                const selected = room.number === roomNumber;
-                const body = (
-                  <button
-                    type="button"
-                    disabled={!room.allowed}
-                    onClick={() => setRoomNumber(room.number)}
-                    className={cn(
-                      "w-full flex items-center gap-2 px-3 h-11 rounded-lg border text-left transition-colors duration-150",
-                      selected
-                        ? "border-brand-orange bg-brand-orange-50"
-                        : room.allowed
-                          ? "border-grey-200 hover:border-grey-300 bg-white"
-                          : "border-grey-200 bg-grey-50 cursor-not-allowed opacity-60",
-                    )}
-                  >
-                    <BedDouble className="size-4 text-grey-400 shrink-0" />
-                    <span className="tabular font-medium text-ink-900">{room.number}</span>
-                    <span className="ml-auto">
-                      <StatusPill
-                        tone={
-                          room.label ? "warning"
-                            : room.housekeeping === "inspected" ? "success"
-                            : room.housekeeping === "clean" ? "info"
-                            : room.housekeeping === "dirty" ? "warning"
-                            : "neutral"
-                        }
-                      >
-                        {room.label ?? room.housekeeping}
-                      </StatusPill>
-                    </span>
-                  </button>
-                );
-                return (
-                  <li key={room.number}>
-                    {room.reason ? <Tooltip content={room.reason}>{body}</Tooltip> : body}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-
-          <section className="space-y-4 pt-4 border-t border-grey-200">
-            <p className="text-sm text-grey-600">
-              Indian properties must record a guest's identity document. It can
-              be skipped, but the reason is kept in the stay's note.
-            </p>
-            <WaitingDetailsLink reference={stay.reference} />
-            <GuestIdFields value={guestId} onChange={setGuestId} today={businessDate} />
-            {/* D27-210: the desk adds the ID photo for a guest who sent none. */}
-            <AddIdPhotoAtDesk stayId={stay.id} />
-          </section>
-
-          <section className="space-y-4 pt-4 border-t border-grey-200">
-            <Field label="Meal plan">
-              {({ id: f }) => (
-                <NativeSelect id={f} value={ratePlan} onChange={(e) => setRatePlan(e.target.value)}>
-                  {mealPlanChoices(ratePlan).map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </NativeSelect>
+        {/* LAID OUT LIKE NEW BOOKING (the owner's D27-236 3.1-3.3): the room,
+            the ID, an early arrival and offers on the left; the stay - its
+            dates, the party, the meal plan and the rate - on the right. */}
+        <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_260px]">
+          <div className="space-y-5 min-w-0">
+            <section className="space-y-2" data-checkin-room>
+              {chosen && chosen.allowed && !changing.room ? (
+                <>
+                  <div className="flex items-center gap-3">
+                    <p className="text-base text-ink-900">
+                      <span className="font-medium">Room {chosen.number}</span>
+                      <span className="text-grey-600"> · {chosen.label ?? cap(chosen.housekeeping)}</span>
+                    </p>
+                    <Button variant="secondary" size="sm" className="ml-auto"
+                      onClick={() => setChanging((c) => ({ ...c, room: true }))}>
+                      Change room
+                    </Button>
+                  </div>
+                  {/* Who has not left yet - the grid's tooltip said it. */}
+                  {chosen.reason && (
+                    <p className="text-sm text-warning-dark" data-checkin-room-reason>{chosen.reason}</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Explained title="Room">
+                    Only a clean or inspected room can take a guest; the rest are shown with the reason.
+                  </Explained>
+                  {/* One column on a phone: two cut "inspected" off at 390 px. */}
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[240px] overflow-y-auto scrollbar-quiet">
+                    {(rooms.data ?? []).map((room) => {
+                      const selected = room.number === roomNumber;
+                      const body = (
+                        <button
+                          type="button"
+                          disabled={!room.allowed}
+                          onClick={() => { setRoomNumber(room.number); setChanging((c) => ({ ...c, room: false })); }}
+                          className={cn(
+                            "w-full flex items-center gap-2 px-3 h-11 rounded-lg border text-left transition-colors duration-150",
+                            selected
+                              ? "border-brand-orange bg-brand-orange-50"
+                              : room.allowed
+                                ? "border-grey-200 hover:border-grey-300 bg-white"
+                                : "border-grey-200 bg-grey-50 cursor-not-allowed opacity-60",
+                          )}
+                        >
+                          <BedDouble className="size-4 text-grey-400 shrink-0" />
+                          <span className="tabular font-medium text-ink-900">{room.number}</span>
+                          <span className="ml-auto">
+                            <StatusPill
+                              tone={
+                                room.label ? "warning"
+                                  : room.housekeeping === "inspected" ? "success"
+                                  : room.housekeeping === "clean" ? "info"
+                                  : room.housekeeping === "dirty" ? "warning"
+                                  : "neutral"
+                              }
+                            >
+                              {room.label ?? room.housekeeping}
+                            </StatusPill>
+                          </span>
+                        </button>
+                      );
+                      return (
+                        <li key={room.number}>
+                          {room.reason ? <Tooltip content={room.reason}>{body}</Tooltip> : body}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
               )}
-            </Field>
+            </section>
+
+            <section className="space-y-4 pt-4 border-t border-grey-200" data-checkin-id>
+              {byExpress ? (
+                <div className="flex items-center gap-3" data-checkin-express>
+                  <p className="text-base text-ink-900">
+                    ID confirmed from online check-in:{" "}
+                    <span className="font-medium">{idWord(express.data!.document!.type)} {express.data!.document!.number}</span>
+                  </p>
+                  <Button variant="secondary" size="sm" className="ml-auto" onClick={() => setOtherId(true)}>
+                    Use a different ID
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Explained title="ID">
+                    Indian properties must record a guest's identity document. It can be skipped, but the reason is kept in the stay's note.
+                  </Explained>
+                  <WaitingDetailsLink reference={stay.reference} />
+                  <GuestIdFields value={guestId} onChange={setGuestId} today={businessDate} />
+                </>
+              )}
+              {/* D27-210: the desk adds the ID photo for a guest who sent none. */}
+              <AddIdPhotoAtDesk stayId={stay.id} />
+            </section>
+
             {/* ── ARRIVING EARLY ─────────────────────────────────
                 Shown only when the property says so, against the property's
                 clock; the server refuses independently either way. */}
@@ -364,19 +387,60 @@ export function CheckInFlow({
                 )}
               </div>
             )}
-            <div className="rounded-lg bg-grey-50 border border-grey-200 p-3 space-y-1.5">
-              {/* A dash when the room type has no rate - never ₹0 (defect 246). */}
-              <Line label="Rack rate" value={stay.rackTariff === null ? "-" : money(stay.rackTariff)} muted />
-              <Line label="Offered" value={stay.isComplimentary ? "Complimentary" : money(stay.offeredTariff)} bold />
-              <Line label="Nights" value={String(stay.nights)} muted />
-            </div>
+
             <Switch
               checked={offersAgreed}
               onCheckedChange={setOffersAgreed}
               label="Guest agreed to offers"
               description="Ask them. Unticked, no offers are sent. Kept against their phone and email at every hotel of the group."
             />
-          </section>
+          </div>
+
+          <aside className="space-y-3 rounded-lg bg-grey-50 border border-grey-200 p-3 h-fit" data-checkin-stay>
+            <p className="text-sm text-ink-900">
+              {dateShort(stay.arrival)} – {dateShort(stay.departure)}
+              <span className="text-grey-500"> · {stay.isDayUse ? "day use" : `${stay.nights} ${stay.nights === 1 ? "night" : "nights"}`}</span>
+            </p>
+            {changing.party ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Adults">
+                  {({ id: f }) => (
+                    <Input id={f} numeric value={adultsText} onChange={(e) => setAdults(e.target.value)} />
+                  )}
+                </Field>
+                <Field label="Children">
+                  {({ id: f }) => (
+                    <Input id={f} numeric value={childrenText} onChange={(e) => setChildren(e.target.value)} />
+                  )}
+                </Field>
+              </div>
+            ) : (
+              <Changeable what="adults and children" onChange={() => setChanging((c) => ({ ...c, party: true }))}>
+                {adultsText} adult{adults === 1 ? "" : "s"} · {childrenText} {children === 1 ? "child" : "children"}
+              </Changeable>
+            )}
+            {partyWrong && (
+              <p className="text-sm text-brand-red-700" data-party-wrong>{partyWrong}</p>
+            )}
+            {changing.plan ? (
+              <Field label="Meal plan">
+                {({ id: f }) => (
+                  <NativeSelect id={f} value={ratePlan} onChange={(e) => setRatePlan(e.target.value)}>
+                    {mealPlanChoices(ratePlan).map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </NativeSelect>
+                )}
+              </Field>
+            ) : (
+              <Changeable what="meal plan" onChange={() => setChanging((c) => ({ ...c, plan: true }))}>
+                {mealPlanChoices(ratePlan).find((p) => p.value === ratePlan)?.label ?? ratePlan}
+              </Changeable>
+            )}
+            <div className="pt-2 border-t border-grey-200 space-y-1.5">
+              {/* A dash when the room type has no rate - never ₹0 (defect 246). */}
+              <Line label="Rack rate" value={stay.rackTariff === null ? "-" : money(stay.rackTariff)} muted />
+              <Line label="Offered" value={stay.isComplimentary ? "Complimentary" : money(stay.offeredTariff)} bold />
+            </div>
+          </aside>
         </div>
       </DialogContent>
     </Dialog>
@@ -395,3 +459,35 @@ function Line({
     </div>
   );
 }
+
+/** A fact as it stands, with its Change (D27-236 3.1). */
+function Changeable({ what, children, onChange }: { what: string; children: React.ReactNode; onChange: () => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <p className="text-sm text-ink-900 min-w-0">{children}</p>
+      <button type="button" onClick={onChange} aria-label={`Change ${what}`}
+        className="ml-auto text-sm font-medium text-brand underline-offset-2 hover:underline">
+        Change
+      </button>
+    </div>
+  );
+}
+
+/** A section's name, its explanation behind (i) (D27-236 3.3). */
+function Explained({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <details className="group">
+      <summary className="flex items-center gap-1.5 cursor-pointer list-none text-sm font-medium text-ink-900">
+        {title}
+        <Info className="size-3.5 text-grey-400" aria-label={`About ${title.toLowerCase()}`} />
+      </summary>
+      <p className="mt-1 text-sm text-grey-600">{children}</p>
+    </details>
+  );
+}
+
+const cap = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
+const ID_WORDS: Record<string, string> = {
+  aadhaar: "Aadhaar", passport: "Passport", driving_licence: "Driving licence", voter: "Voter ID", other: "ID",
+};
+const idWord = (t: string) => ID_WORDS[t] ?? t;

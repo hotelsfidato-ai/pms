@@ -27,6 +27,7 @@ interface HotelRow {
   check_in_time: string;
   check_out_time: string;
   business_date: string;
+  today: string;
 }
 
 hotels.get("/", async (c) => {
@@ -57,7 +58,10 @@ hotels.get("/", async (c) => {
                  audit and the other has not. Returned per row for
                  exactly that reason - there is no group business
                  date to return instead. */
-              to_char(app.business_date(id), 'YYYY-MM-DD') as business_date
+              to_char(app.business_date(id), 'YYYY-MM-DD') as business_date,
+              /* The property's real date, in its own time zone (D27-237): a
+                 business date behind it is a day nobody closed. */
+              to_char((now() at time zone timezone)::date, 'YYYY-MM-DD') as today
          from hotels
         where is_active
         order by code`,
@@ -80,6 +84,7 @@ hotels.get("/", async (c) => {
         checkInTime: h.check_in_time,
         checkOutTime: h.check_out_time,
         businessDate: h.business_date,
+        today: h.today,
       })),
     };
   });

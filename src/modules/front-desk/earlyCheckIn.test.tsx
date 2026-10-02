@@ -63,7 +63,7 @@ async function toRateStep() {
     </QueryClientProvider>,
   );
   fireEvent.click(await screen.findByRole("button", { name: /Check in/ }));
-  await screen.findByText("204");
+  await screen.findByText("Room 204");
   fireEvent.change(screen.getByLabelText(/Reason for skipping/), { target: { value: "Scanner offline" } });
   fireEvent.change(await screen.findByLabelText(/Why the room is being given early/),
     { target: { value: "Overnight train" } });
@@ -143,7 +143,7 @@ describe("the ID step, when the guest sent their details online", () => {
       </QueryClientProvider>,
     );
     fireEvent.click(await screen.findByRole("button", { name: /Check in/ }));
-    await screen.findByText("204");
+    await screen.findByText("Room 204");
 
     const link = await screen.findByRole("link", { name: "check them on Online check-in" });
     expect(link.getAttribute("href")).toBe("/h/5EL/online-checkin");
@@ -169,7 +169,7 @@ describe("checking in more than a day before the booking's arrival", () => {
       </QueryClientProvider>,
     );
     fireEvent.click(await screen.findByRole("button", { name: /Check in/ }));
-    await screen.findByText("204");
+    await screen.findByText("Room 204");
     fireEvent.change(screen.getByLabelText(/Reason for skipping/), { target: { value: "Scanner offline" } });
     fireEvent.change(await screen.findByLabelText(/Why the room is being given early/),
       { target: { value: "Came early" } });

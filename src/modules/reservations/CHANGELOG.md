@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-02 · Who made a booking is written (RES-14, the owner's D27-239 8.2)
+
+Branch `frontdesk/onepage-2oct`. **Shipped:** `book.ts` writes `created_by = app.current_user_id()` on every booking. **Proved:** front desk's `feesAndDayUse.test.ts` "records who made it".
+
 ## 2026-10-01 · New booking makes a day use, its price typed every time (the owner's D27-227, D27-229)
 
 **Asked for:** through the master. Branch `fix/dayuse-booking-1oct` from cp6 5d049167, the booking and bill lane; migration 176 (front desk's Change dates).
