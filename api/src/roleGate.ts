@@ -498,6 +498,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   /* guest services: in-stay requests - the desk and the team that receives each (D27-181) */
   [`POST ${H}/requests`]: own("guest-services/requests.ts: teamsFor"),
   [`PATCH ${H}/requests/:id`]: own("guest-services/requests.ts: teamsFor"),
+  /* wake-up calls (the desk) and lost property (the desk and housekeeping log; the desk clears), D27-241 */
+  [`POST ${H}/wake-up-calls`]: own("guest-services/wakeAndLost.ts: DESK"),
+  [`PATCH ${H}/wake-up-calls/:id`]: own("guest-services/wakeAndLost.ts: DESK"),
+  [`POST ${H}/lost-property`]: own("guest-services/wakeAndLost.ts: LOST_LOGGERS"),
+  [`PATCH ${H}/lost-property/:id`]: own("guest-services/wakeAndLost.ts: DESK"),
 
   /* equipment */
   [`POST ${H}/equipment`]: own("equipment/grants.ts"),
@@ -742,6 +747,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/work-orders`]: REPAIRS,
   [`GET ${H}/repairable-equipment`]: REPAIRS,
   [`GET ${H}/requests`]: own("guest-services/requests.ts: teamsFor"),
+  [`GET ${H}/wake-up-calls`]: own("guest-services/wakeAndLost.ts: DESK"),
+  [`GET ${H}/lost-property`]: own("guest-services/wakeAndLost.ts: LOST_LOGGERS"),
 
   /* ── The restaurant ── */
   [`GET ${H}/till/menu`]: MENU_READ,
@@ -764,6 +771,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* ── Store, equipment, purchasing, places ── */
   [`GET ${H}/stores`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/stores/items/:id/movements`]: own("stores/stockGrants.ts: mayStock"),
+  [`GET ${H}/stores/days`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/equipment`]: own("equipment/grants.ts"),
   [`GET ${H}/equipment/items/:id`]: own("equipment/grants.ts"),
   [`GET ${H}/equipment/export`]: own("equipment/grants.ts"),

@@ -18,6 +18,9 @@ import {
 import { guestTables } from "./guestTables.ts";
 import { messagesDesk, messagesDoor } from "./guestMessages.ts";
 import { logoDoor } from "./guestLogo.ts";
+import { byRoom } from "./guestDoorByRoom.ts";
+import { digilocker } from "./guestDigilocker.ts";
+import { wakeUpDoor } from "./guestWakeUp.ts";
 import { guestGallery } from "./guestGallery.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -1252,6 +1255,9 @@ guestDoor.route("/", guestTables);   // a table at the restaurant (D27-224)
 guestDoor.route("/", messagesDoor);      // messages with the desk, both ways (D27-224)
 guestLinks.route("/", messagesDesk);
 guestDoor.route("/", logoDoor);          // the hotel's logo, else the group's (D27-223)
+guestDoor.route("/", byRoom);            // the room and the phone, no link (D27-235 2.4)
+guestDoor.route("/", digilocker);        // DigiLocker, a fourth way in - off until set up (D27-235 2.5)
+guestDoor.route("/", wakeUpDoor);        // a wake-up call, asked for by the guest (D27-241)
 guestDoor.route("/", guestGallery);      // the hotel's photos (D27-243)
 
 /* Exported for the test that proves a stolen token is not a key to anything

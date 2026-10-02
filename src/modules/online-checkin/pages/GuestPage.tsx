@@ -25,6 +25,8 @@ import { privacyNoticeFor } from "@/modules/online-checkin/privacyNotice";
 import { MessageTheDesk } from "@/modules/online-checkin/MessageTheDesk";
 import { QuickChoices, hasQuickChoices } from "@/modules/online-checkin/QuickChoices";
 import { TableBookingSection } from "@/modules/online-checkin/TableBooking";
+import { DigiLockerButton } from "@/modules/online-checkin/DigiLockerButton";
+import { WakeUpSection } from "@/modules/online-checkin/WakeUpSection";
 import { GallerySection } from "@/modules/online-checkin/GallerySection";
 import { BillPrint } from "@/modules/finance";
 
@@ -369,6 +371,8 @@ function WithGoogle(
       )}
       {/* Google draws its own button in here. */}
       <div ref={box} className={state === "ready" ? "flex justify-center" : "hidden"} />
+      {/* DigiLocker, a third way in (D27-235, D27-241); shows nothing while it is off. */}
+      <DigiLockerButton token={token} />
       <p className="text-sm text-grey-600 empty:hidden" aria-live="polite">
         {answered.isPending ? "Checking with Google…"
           : answered.error ? messageFrom(answered.error)
@@ -405,6 +409,10 @@ function Behind(
       <TableBookingSection token={token} onUnlockGone={onUnlockGone} />
       <MessageTheDesk token={token} onUnlockGone={onUnlockGone} />
       <RoomDining token={token} onUnlockGone={onUnlockGone} />
+      {view.booking && (
+        <WakeUpSection token={token} checkIn={view.booking.checkIn} checkOut={view.booking.checkOut}
+          onUnlockGone={onUnlockGone} />
+      )}
       <GallerySection token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
     </>
   );

@@ -209,6 +209,60 @@ notifications.get("/:code/notifications", async (c) => {
       }
     }
 
+    /* THE MONTHLY CROCKERY COUNT (D27-242 Q11): for whoever may correct a
+       count, each place holding crockery or cutlery that has not been counted
+       for 30 business days or more - or ever. */
+    if (role !== null && can(role, "edit", "stock")) {
+      const { rows: due } = await client.query<{ place: string; last: string | null }>(
+        `select l.name as place,
+                (select to_char(max(c.business_date), 'FMDD Mon')
+                   from stock_count_lines c join stock_items ci on ci.id = c.item_id
+                  where c.location_id = l.id and ci.crockery) as last
+           from locations l
+          where l.hotel_id = $1 and l.is_active
+            and exists (select 1 from stock_items i
+                         where i.hotel_id = l.hotel_id and i.crockery
+                           and app.stock_on_hand(i.id, l.id) > 0)
+            and not exists (select 1 from stock_count_lines c join stock_items ci on ci.id = c.item_id
+                             where c.location_id = l.id and ci.crockery
+                               and c.business_date > $2::date - 30)
+          order by l.name`, [hotelId, bd]);
+      for (const d of due) {
+        out.push({
+          id: `crockery-count-${d.place}`, hotelId: code, category: "approval",
+          title: `Crockery in ${d.place}: ${d.last ? `last counted ${d.last}` : "never counted"}`,
+          body: "Crockery and cutlery is counted every month. On the Store, Count a store, then choose "
+            + `${d.place}.`,
+          isRead: false, at, link: `/h/${code}/stores`, actionRequired: true,
+        });
+      }
+    }
+
+    /* Wake-up calls (D27-241): due from fifteen minutes before until done,
+       and a guest's ask waiting for the desk - for the desk only. */
+    if (role !== null && ["owner", "admin", "gm", "hotel_manager", "front_desk"].includes(role)) {
+      const { rows: [wake] } = await client.query<{ due: number; asked: number }>(
+        `select count(*) filter (where status = 'set' and call_at <= now() + interval '15 minutes')::int as due,
+                count(*) filter (where status = 'asked')::int as asked
+           from wake_up_calls where hotel_id = $1`, [hotelId]);
+      if (wake!.due) {
+        out.push({
+          id: "wake-up-calls-due", hotelId: code, category: "customer",
+          title: `${wake!.due} wake-up call${wake!.due === 1 ? "" : "s"} due`,
+          body: "Call the room, then mark it done on Wake-up calls.",
+          isRead: false, at, link: `/h/${code}/wake-up-calls`, actionRequired: true,
+        });
+      }
+      if (wake!.asked) {
+        out.push({
+          id: "wake-up-calls-asked", hotelId: code, category: "customer",
+          title: `${wake!.asked} wake-up call${wake!.asked === 1 ? "" : "s"} asked for by guests`,
+          body: "Confirm it on Wake-up calls, or cancel it with a reason.",
+          isRead: false, at, link: `/h/${code}/wake-up-calls`, actionRequired: true,
+        });
+      }
+    }
+
     const reversals = by("reversal");
     if (reversals.length) {
       out.push({

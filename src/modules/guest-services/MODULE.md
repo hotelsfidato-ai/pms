@@ -103,6 +103,29 @@ never an inner join on `staff` (root MEMORY 283).
   open at most for the stay counting both tables; `app.guest_requests_mine`
   lists them. `guestDoor.ts` did not change.
 
+## Wake-up calls and lost property (D27-239, D27-241; migration 183 for now)
+
+| Menu (Front desk) | Address | Page | Working menus |
+|---|---|---|---|
+| Wake-up calls | `/h/:code/wake-up-calls` | `pages/WakeUpCalls.tsx` | reception |
+| Lost property | `/h/:code/lost-property` | `pages/LostProperty.tsx` | reception, housekeeping |
+
+- Wake-up calls: the desk sets one (`POST /:code/wake-up-calls`); a guest asks from their page
+  (`/api/guest/:token/wake-up`, `api/src/routes/guestWakeUp.ts`, rule 8) and it waits "asked"
+  until the desk confirms or cancels (`PATCH …/:id` confirm|done|cancel, a cancel says why).
+  Due from fifteen minutes before until done; no "missed". The hotel's own clock.
+- Lost property: the desk and housekeeping log (`POST /:code/lost-property`); only the desk
+  returns (to whom) or disposes (why) (`PATCH …/:id`). Days kept shown; no auto-disposal; no photo.
+- The bell: "{n} wake-up calls due" and "{n} … asked for by guests", for the desk.
+
+## The guest's door: room and phone, DigiLocker (online-checkin's folder, this lane's files)
+
+- `/g/h/:hotel` (`pages/ByRoom.tsx`, `guestDoorByRoom.ts`, 181): room + phone; the code only to the
+  booking's own number, every answer the same; 5 an hour per address, 3 links an hour per stay.
+- DigiLocker (`guestDigilocker.ts`, `DigiLockerButton.tsx`, `pages/DigiLockerReturn.tsx`, 182):
+  OFF until DIGILOCKER_CLIENT_ID, _SECRET and _REDIRECT_URI are set. Unlocks by the DigiLocker
+  mobile = the booking's; the masked Aadhaar and the name wait for the desk as a submission.
+
 ## Not built, on purpose
 
 - Wake-up calls and lost property (the old Coming soon page named them):

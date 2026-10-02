@@ -147,6 +147,28 @@ describe("the count sheet (D25-15, D25-16, D25-17)", () => {
     expect((await item(soap)).byStore[mainId]).toBe(37);
   });
 
+  it("keeps every counted line, matched or not, with who and the correction it wrote (D27-238)", async () => {
+    const towel = await newItem("towel", "piece");
+    const sheet = await newItem("sheet", "piece");
+    await json(await receive(towel, 20, mainId), 200);
+    await json(await receive(sheet, 8, mainId), 200);
+
+    await json(await call("POST", "/counts", {
+      locationId: mainId,
+      lines: [{ itemId: towel, book: 20, counted: 18 }, { itemId: sheet, book: 8, counted: 8 }],
+    }), 200);
+
+    const kept = (await sql(
+      `select c.item_id::text as item, c.location_id::text as place, c.book::float as book,
+              c.counted::float as counted, c.counted_by::text as by, m.quantity::float as corrected
+         from stock_count_lines c left join stock_movements m on m.id = c.movement_id
+        where c.item_id = any($1) order by c.counted`, [[towel, sheet]])).rows;
+    expect(kept).toEqual([
+      { item: sheet, place: mainId, book: 8, counted: 8, by: keeper, corrected: null },
+      { item: towel, place: mainId, book: 20, counted: 18, by: keeper, corrected: -2 },
+    ]);
+  });
+
   it("refuses the whole save, naming the item, when the book moved since the sheet opened - and writes nothing", async () => {
     const tea = await newItem("tea");
     const sugar = await newItem("sugar");
