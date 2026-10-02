@@ -53,7 +53,7 @@ export default function ByRoomPage() {
               {asked.isPending ? "Sending…" : ticket ? "Send a new code" : "Send me a code"}
             </Button>
             {asked.data && <p className="text-sm text-grey-600" role="status">{asked.data.message}</p>}
-            {asked.data?.devCode && (
+            {import.meta.env.DEV && asked.data?.devCode && (
               <p className="text-sm text-warning-dark">Development only - the code is {asked.data.devCode}</p>
             )}
             {asked.error && <p className="text-sm text-brand-red-700">{messageFrom(asked.error)}</p>}
