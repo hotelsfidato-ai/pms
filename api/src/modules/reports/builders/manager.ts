@@ -196,7 +196,7 @@ export async function managerReport(
 
   /* ── What companies paid on the City ledger (D27-239) ──────────────── */
   /* By the day the money reached the hotel, as the City ledger report
-     counts it (finance's company_payments, 184). Opening is everything
+     counts it (finance's company_payments, 187). Opening is everything
      sent less everything paid before the day - the same rule. */
   const { rows: companyPaid } = await client.query<{ date: string; amount: string }>(
     `select received_on::text as date, sum(amount)::text as amount

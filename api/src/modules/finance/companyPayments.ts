@@ -12,7 +12,7 @@ import { businessDateFor } from "../../businessDate.ts";
    whichever the ledger names - and the City ledger's Opening, Credit and
    Closing fill in. Plain payments: no GST receipt voucher (the CA, B5/C2).
 
-   Append-only (184): a wrong line is reversed by its own line, once, with
+   Append-only (187): a wrong line is reversed by its own line, once, with
    a reason, by the four who may reverse a payment (D27-125). Who may do
    what is roleGate's: record `payment` create, reverse `payment` edit.
    ══════════════════════════════════════════════════════════════════ */

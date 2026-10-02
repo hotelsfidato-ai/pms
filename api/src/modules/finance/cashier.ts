@@ -54,7 +54,7 @@ const refuse = (
 
 /* A PAID-OUT WAITS FOR A YES (the owner's D27-239, D27-242): an expense is
    raised in the approvals inbox and counts in the drawer only once the GM
-   or the owner says yes (app.cash_expense_counts, 184). Its latest
+   or the owner says yes (app.cash_expense_counts, 187). Its latest
    decision, for the screen. */
 const EXPENSE_DECISION = (column: "status" | "decision_note") => `(
   select a.${column} from approvals a

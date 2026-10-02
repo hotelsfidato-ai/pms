@@ -1,5 +1,5 @@
 -- =============================================================================
--- 184 — a company pays what it owes; a cash expense waits for a yes
+-- 187 — a company pays what it owes; a cash expense waits for a yes
 --       (D27-152, D27-239, D27-242)
 -- =============================================================================
 -- A bill settled "Bill to company" is money the account owes: the City

@@ -9,7 +9,7 @@ import { heading, LIVE, type Property } from "../figures.ts";
    owes starts when a bill is settled "Bill to company", a transfer to
    the city ledger (payments.method 'city_ledger'). That is the Debit.
    What the account pays back is recorded on Company accounts (finance's
-   company_payments, 184; D27-239), by the day the money reached the
+   company_payments, 187; D27-239), by the day the money reached the
    hotel: that is the Credit. Opening Balance is everything sent less
    everything paid before the period; Closing Balance is Opening + Debit
    - Credit. A payment names the same account the ledger does: the

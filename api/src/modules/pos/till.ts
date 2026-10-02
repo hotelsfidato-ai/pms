@@ -3715,7 +3715,7 @@ till.post("/:code/till/day-end/movements", async (c) => {
        Number(input.amount).toFixed(2), reason, session.staffId],
     );
     /* A paid-out waits for the GM's or the owner's yes (D27-242); it counts
-       in the tin only once given (app.cash_expense_counts, 184). */
+       in the tin only once given (app.cash_expense_counts, 187). */
     if (input.kind === "expense") {
       await client.query(
         `select app.request_approval($1::uuid, 'cash_expense', 'pos_cash_movements',
