@@ -397,6 +397,22 @@ export interface ApiHotel {
   /** The property's real date in its own time zone (D27-237); absent from an
       older server. */
   today?: string;
+  /** The front desk's rules, set on Settings › Operations (189, the owner's
+      D27-243); absent from an older server. */
+  deskRules?: DeskRules;
+}
+
+export interface DeskRules {
+  /** What the desk's payment screens start on (the till keeps Cash). */
+  defaultPaymentMethod: "Cash" | "UPI" | "Credit Card" | "Debit Card";
+  /** Off: the desk's booking past a full house is refused. */
+  deskMayOverbook: boolean;
+  advanceBeforeCheckIn: "none" | "first_night" | "whole_stay";
+  /** Days of the week shaded, 0 Sunday .. 6 Saturday. */
+  weekendDays: number[];
+  defaultIdType: string | null;
+  defaultNationality: string;
+  defaultTitle: string | null;
 }
 
 /** The first screen after sign-in (087). Set by the GM, changeable by

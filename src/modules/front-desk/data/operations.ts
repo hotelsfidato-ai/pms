@@ -183,6 +183,8 @@ export async function checkIn(
     offersAgreed?: boolean;
     /** D27-193: the clerk confirmed a move of the arrival by more than a day. */
     confirmMove?: boolean;
+    /** D27-246: "Prepaid on the booking site", for a booking site's booking. */
+    prepaidOnSite?: boolean;
     businessDate: string;
     /* ⚠ NO `user`. This sent the literal "front desk", and so did the
        walk-in below (FD-2). Neither route ever read it: the server takes
@@ -458,11 +460,32 @@ export const mealPlanChoices = (current: string) =>
     guest whose ID the desk confirmed from THIS stay's online check-in. The
     server decides; the document comes back masked to its last four. */
 export async function expressCheckIn(
-  hotelId: string, stayId: string,
-): Promise<{ express: boolean; document?: { type: string; number: string } }> {
+  hotelId: string, stayId: string, prepaidOnSite?: boolean,
+): Promise<{
+  express: boolean; document?: { type: string; number: string };
+  /** The advance still owed, in the server's words (D27-243 3.3); null when none. */
+  advance?: { owed: number; words: string } | null;
+  /** A booking-site booking, and its "Prepaid on the booking site" tick (D27-246). */
+  bookingSite?: boolean; prepaidOnSite?: boolean;
+}> {
   try {
-    return await api(`/api/hotels/${hotelId}/stays/${stayId}/express-check-in`);
+    return await api(`/api/hotels/${hotelId}/stays/${stayId}/express-check-in`
+      + (prepaidOnSite === undefined ? "" : `?prepaid=${prepaidOnSite}`));
   } catch {
     return { express: false };
+  }
+}
+
+/** Save the front desk's rules (the owner's D27-243; Settings › Operations).
+    The server refuses a wrong value in a sentence. */
+export async function saveDeskRules(
+  hotelId: string, rules: import("@/lib/api").DeskRules,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  try {
+    await api(`/api/hotels/${hotelId}/front-desk`, { method: "PATCH", body: JSON.stringify(rules) });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) return { ok: false, reason: error.message };
+    throw error;
   }
 }

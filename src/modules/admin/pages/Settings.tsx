@@ -21,6 +21,7 @@ import { ModulesCard, BOOKING_SECTION, SettingRow, SettingValues } from "@/modul
 import { EditPropertyDialog } from "@/modules/admin/pages/Properties";
 import { FssaiCard } from "@/modules/admin/pages/Property";
 import { FrontDeskCard } from "@/modules/inventory";
+import { FrontDeskRulesCard } from "@/modules/front-desk";
 import { TaxRulesCard } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -157,6 +158,7 @@ export default function SettingsPage() {
 
           <TabsContent value="operations" className="flex flex-col gap-3">
             <FrontDeskCard hotelId={hotelId} />
+            <FrontDeskRulesCard hotelId={hotelId} />
             <HousePolicies hotelId={hotelId} />
             {/* D17-36: the switches stay with the owner and an administrator;
                 hidden from the GM, whom the server would refuse. */}

@@ -1,3 +1,4 @@
+import { useCurrentHotel } from "@/lib/session";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, LogIn, BedDouble, Info } from "lucide-react";
@@ -10,7 +11,7 @@ import {
 import { checkIn, assignableRooms, checkInAllowed, earlyArrival, expressCheckIn, mealPlanChoices } from "@/modules/front-desk/data/operations";
 import { type Stay } from "@/data/repositories";
 import {
-  BookingSiteBlacklist, GuestIdFields, guestIdState, guestIdPayload, noGuestId, type GuestId,
+  BookingSiteBlacklist, GuestIdFields, guestIdState, guestIdPayload, noGuestId, deskGuestId, type GuestId,
 } from "@/modules/guests";
 import { countProblem } from "../../../../api/src/validate.ts";
 import { AddIdPhotoAtDesk, WaitingDetailsLink } from "@/modules/online-checkin";
@@ -55,7 +56,10 @@ export function CheckInFlow({
   /* The document, the nationality ON FILE (not "IN": a foreign guest
      checked in with the default left the Form III register, D27-25), and
      Form III - the guests service's one block, the one page's too. */
-  const [guestId, setGuestId] = useState<GuestId>(() => noGuestId(stay.nationality ?? "IN"));
+  /* The hotel's defaults (D27-243 3.6) start the ID; the guest's own
+     nationality on file wins. */
+  const rules = useCurrentHotel()?.deskRules;
+  const [guestId, setGuestId] = useState<GuestId>(() => deskGuestId(rules, stay.nationality));
   const id = guestIdState(guestId, businessDate);
   const [earlyReason, setEarlyReason] = useState("");
   const [waiveEarly, setWaiveEarly] = useState(false);
@@ -70,9 +74,13 @@ export function CheckInFlow({
   /* EXPRESS (D27-236 3.4, D27-242): the server says whether this stay's ID
      was confirmed from its own online check-in; "Use a different ID" opens
      the fields again. */
+  /* D27-246: the desk's answer to "Prepaid on the booking site"; undefined
+     until changed, so the booking's own tick stands. The same read gives the
+     advance still owed (D27-243 3.3), asked again when the tick changes. */
+  const [prepaid, setPrepaid] = useState<boolean | undefined>(undefined);
   const express = useQuery({
-    queryKey: ["express-check-in", hotelId, stay.id],
-    queryFn: () => expressCheckIn(hotelId, stay.id),
+    queryKey: ["express-check-in", hotelId, stay.id, prepaid],
+    queryFn: () => expressCheckIn(hotelId, stay.id, prepaid),
     enabled: open,
   });
   const [otherId, setOtherId] = useState(false);
@@ -147,13 +155,14 @@ export function CheckInFlow({
       ?? (!roomNumber || !chosen ? "Pick a room."
         : !chosen.allowed ? `Room ${roomNumber}: ${chosen.reason ?? "not available."}` : null)
       ?? (byExpress ? null : id.blocked)
-      ?? (isEarly && !earlyReason.trim() ? "Say why the room is being given early." : null);
+      ?? (isEarly && !earlyReason.trim() ? "Say why the room is being given early." : null)
+      ?? express.data?.advance?.words ?? null;
 
   const reset = () => {
     setAdults(String(stay.adults)); setChildren(String(stay.children));
-    setRoomNumber(stay.roomNumber); setGuestId(noGuestId(stay.nationality ?? "IN"));
+    setRoomNumber(stay.roomNumber); setGuestId(deskGuestId(rules, stay.nationality));
     setEarlyReason(""); setWaiveEarly(false); setOffersAgreed(false); setRatePlan(stay.ratePlan);
-    setConfirming(false); setChanging({}); setOtherId(false);
+    setConfirming(false); setChanging({}); setOtherId(false); setPrepaid(undefined);
   };
 
   const submit = async () => {
@@ -170,6 +179,7 @@ export function CheckInFlow({
       /* Sent since 24 September: without it the server refused every
          check-in before the check-in hour. */
       earlyReason, waiveEarly, offersAgreed,
+      ...(prepaid === undefined ? {} : { prepaidOnSite: prepaid }),
       ...(bigMove ? { confirmMove: true } : {}),
     });
     setBusy(false);
@@ -386,6 +396,15 @@ export function CheckInFlow({
                   </label>
                 )}
               </div>
+            )}
+
+            {express.data?.bookingSite && (
+              <Switch
+                checked={prepaid ?? express.data.prepaidOnSite ?? true}
+                onCheckedChange={setPrepaid}
+                label="Prepaid on the booking site"
+                description="Untick when the guest pays at the hotel: the advance before check-in is then asked."
+              />
             )}
 
             <Switch

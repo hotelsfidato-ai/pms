@@ -28,6 +28,14 @@ interface HotelRow {
   check_out_time: string;
   business_date: string;
   today: string;
+  /* The front desk's rules (189, D27-243). */
+  default_payment_method: string;
+  desk_may_overbook: boolean;
+  advance_before_check_in: "none" | "first_night" | "whole_stay";
+  weekend_days: number[];
+  default_id_type: string | null;
+  default_nationality: string;
+  default_title: string | null;
 }
 
 hotels.get("/", async (c) => {
@@ -61,7 +69,12 @@ hotels.get("/", async (c) => {
               to_char(app.business_date(id), 'YYYY-MM-DD') as business_date,
               /* The property's real date, in its own time zone (D27-237): a
                  business date behind it is a day nobody closed. */
-              to_char((now() at time zone timezone)::date, 'YYYY-MM-DD') as today
+              to_char((now() at time zone timezone)::date, 'YYYY-MM-DD') as today,
+              /* The front desk's rules, read by its screens and set on
+                 Settings › Operations (189, D27-243). */
+              default_payment_method, desk_may_overbook, advance_before_check_in,
+              weekend_days::int[] as weekend_days,
+              default_id_type, default_nationality, default_title
          from hotels
         where is_active
         order by code`,
@@ -85,6 +98,15 @@ hotels.get("/", async (c) => {
         checkOutTime: h.check_out_time,
         businessDate: h.business_date,
         today: h.today,
+        deskRules: {
+          defaultPaymentMethod: h.default_payment_method,
+          deskMayOverbook: h.desk_may_overbook,
+          advanceBeforeCheckIn: h.advance_before_check_in,
+          weekendDays: h.weekend_days,
+          defaultIdType: h.default_id_type,
+          defaultNationality: h.default_nationality,
+          defaultTitle: h.default_title,
+        },
       })),
     };
   });

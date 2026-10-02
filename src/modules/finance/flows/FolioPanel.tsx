@@ -5,7 +5,7 @@ import {
   Split as SplitIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { useRole } from "@/lib/session";
+import { useCurrentHotel, useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { money, moneyPrecise, dateShort } from "@/lib/format";
 import {
@@ -1045,7 +1045,8 @@ function SettleDialog({
   const owedOn = (id: string | null) =>
     Math.max(split ? folios.find((f) => f.id === id)?.balance ?? 0 : balance, 0);
   const pick = () => (split ? active ?? folios.find((f) => f.balance > 0)?.id ?? folios[0]!.id : null);
-  const [method, setMethod] = useState<PaymentMethod>("Cash");
+  /* The hotel's default way of paying (D27-243 3.1). */
+  const [method, setMethod] = useState<PaymentMethod>(useCurrentHotel()?.deskRules?.defaultPaymentMethod ?? "Cash");
   const [amount, setAmount] = useState("");
   const [pan, setPan] = useState("");
   const [form97, setForm97] = useState(false);

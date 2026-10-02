@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-03 · The desk may overbook, per hotel; "Prepaid on the booking site" (the owner's D27-243 3.2, D27-246)
+
+Branch `settings/phase3-2oct`. **Shipped:** `makeBooking` refuses the desk's booking - a group's whole - past a full house when the hotel's "The desk may overbook" is off (189; on by default, as D17-43). New booking shows "Prepaid on the booking site" (on) when the source is a booking site and sends it; `book.ts` writes `reservations.prepaid_on_site`. New booking starts on the hotel's title, ID and way of paying an advance. **Proved:** front desk's `frontDeskRules.test.ts` 3.2 cases.
+
 ## 2026-10-02 · Who made a booking is written (RES-14, the owner's D27-239 8.2)
 
 Branch `frontdesk/onepage-2oct`. **Shipped:** `book.ts` writes `created_by = app.current_user_id()` on every booking. **Proved:** front desk's `feesAndDayUse.test.ts` "records who made it".

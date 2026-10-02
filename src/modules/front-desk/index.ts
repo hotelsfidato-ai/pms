@@ -2,6 +2,8 @@
    may import (src/test/boundaries.test.ts). It grows as the service's files
    move in; see MODULE.md. */
 export { StayTable, STAY_LABEL } from "./components/StayTable";
+/* Settings › Operations (the owner's D27-243). */
+export { FrontDeskRulesCard } from "./components/FrontDeskRules";
 export type { StayColumn, StayRow } from "./components/StayTable";
 export { assignRoom, checkOut, checkOutAllowed, earlyArrival } from "./data/operations";
 export type { Posting } from "./data/operations";

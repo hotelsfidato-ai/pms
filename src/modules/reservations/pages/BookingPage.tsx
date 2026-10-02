@@ -5,7 +5,7 @@ import { Plus, Trash2, AlertTriangle, ListPlus, ChevronDown } from "lucide-react
 import { cn } from "@/lib/cn";
 import { money, moneyPrecise, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { useRole, useSession } from "@/lib/session";
+import { useCurrentHotel, useRole, useSession } from "@/lib/session";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/rules";
 import { emailProblem, phoneProblem } from "../../../../api/src/validate.ts";
 import {
@@ -24,7 +24,7 @@ import { BookedCard, type Booked } from "@/modules/reservations/flows/BookedCard
 import { KeepListDialog } from "@/modules/reservations/flows/KeepListDialog";
 import {
   listCompanies, listBookingSources, ReturningGuest,
-  GuestIdFields, guestIdState, guestIdPayload, noGuestId, type GuestId,
+  GuestIdFields, guestIdState, guestIdPayload, deskGuestId, type GuestId,
 } from "@/modules/guests";
 import { getRateBeforeGst, getTaxRate, listBillingCompanies, settle } from "@/modules/finance";
 import { getContractTariff, type ContractTariff } from "@/modules/contracts";
@@ -143,7 +143,10 @@ export default function BookingPage() {
   const leadToken = search.get("lead");
   const [campaign, setCampaign] = useState("");
 
-  const [title, setTitle] = useState("");
+  /* The hotel's defaults (the owner's D27-243 3.1, 3.6): the title, the ID
+     and the way an advance is paid start on them. */
+  const rules = useCurrentHotel()?.deskRules;
+  const [title, setTitle] = useState(rules?.defaultTitle ?? "");
   const [guestName, setGuestName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -158,11 +161,14 @@ export default function BookingPage() {
   const [stateName, setStateName] = useState("");
   const [pincode, setPincode] = useState("");
   const [country, setCountry] = useState("");
-  const [guestId, setGuestId] = useState<GuestId>(() => noGuestId());
+  const [guestId, setGuestId] = useState<GuestId>(() => deskGuestId(rules));
   /* ⚠ TWO QUESTIONS, TWO FIELDS: the CHANNEL (how it reached us, required -
      the owner, 8 September - and nothing pre-chosen except a walk-in's) and
      the ACCOUNT behind it (optional). */
   const [bookingSourceId, setBookingSourceId] = useState("");
+  /* D27-246: a booking site's booking is prepaid there unless the desk
+     unticks it (the guest pays at the hotel). */
+  const [prepaid, setPrepaid] = useState(true);
   const [businessSource, setBusinessSource] = useState("");
   const [marketSegment, setMarketSegment] = useState("");
   const [salesPick, setSalesPick] = useState("");
@@ -184,7 +190,7 @@ export default function BookingPage() {
   const [promotionId, setPromotionId] = useState("");
   const [notes, setNotes] = useState("");
   const [advance, setAdvance] = useState("");
-  const [advanceBy, setAdvanceBy] = useState<PaymentMethod>("Cash");
+  const [advanceBy, setAdvanceBy] = useState<PaymentMethod>(rules?.defaultPaymentMethod ?? "Cash");
   const [earlyReason, setEarlyReason] = useState("");
   const [waiveEarly, setWaiveEarly] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -216,6 +222,7 @@ export default function BookingPage() {
     queryKey: ["booking-sources", hotelId],
     queryFn: () => listBookingSources(hotelId),
   });
+  const siteSource = (channels.data ?? []).find((s) => s.id === bookingSourceId)?.kind === "ota";
   const accounts = useQuery({
     queryKey: ["companies", hotelId],
     queryFn: () => listCompanies(hotelId),
@@ -479,15 +486,15 @@ export default function BookingPage() {
 
   const reset = () => {
     setBooked(null);
-    setTitle(""); setGuestName(""); setPhone(""); setEmail(""); setReturning(null);
+    setTitle(rules?.defaultTitle ?? ""); setGuestName(""); setPhone(""); setEmail(""); setReturning(null);
     setWhatsapp(false); setOffersAgreed(false); setSingleLady(false);
     setAddressLine(""); setCity(""); setStateName(""); setPincode(""); setCountry("");
-    setGuestId(noGuestId());
+    setGuestId(deskGuestId(rules));
     setBookingSourceId(""); setBusinessSource(""); setMarketSegment("");
     setSalesPick(""); setSalesOther(""); setBillTo("guest"); setCompanyId("");
     setWaiting(false); setExpected(""); setExpectedOut(""); setGroupName("");
     setLines([]); setSeeded(false); setDiscountMode("none"); setDiscountPct(""); setDiscountReason("");
-    setPromotionId(""); setNotes(""); setAdvance(""); setAdvanceBy("Cash");
+    setPromotionId(""); setNotes(""); setAdvance(""); setAdvanceBy(rules?.defaultPaymentMethod ?? "Cash"); setPrepaid(true);
     setEarlyReason(""); setWaiveEarly(false); setCampaign("");
     if (today) { setFrom(today); setTo(addDays(today, 1)); }
   };
@@ -500,6 +507,7 @@ export default function BookingPage() {
       phone: phone.trim(),
       ...(email.trim() ? { email: email.trim() } : {}),
       bookingSourceId,
+      ...(siteSource ? { prepaidOnSite: prepaid } : {}),
       ...(businessSource ? { businessSource } : {}),
       ...(marketSegment ? { marketSegment } : {}),
       ...(salesPerson ? { salesPerson } : {}),
@@ -708,6 +716,11 @@ export default function BookingPage() {
                   </NativeSelect>
                 )}
               </Field>
+              {siteSource && (
+                <Switch checked={prepaid} onCheckedChange={setPrepaid}
+                  label="Prepaid on the booking site"
+                  description="Untick when the guest pays at the hotel: the advance before check-in is then asked." />
+              )}
               {totalRooms > 1 && (
                 <Field label="Group name"
                   hint="More than one room becomes a group. Left empty, it is named after the guest.">
