@@ -214,6 +214,7 @@ export function CheckInFlow({
       </DialogTrigger>
 
       <DialogContent
+        size="lg"
         title={`Check in ${stay.guest}`}
         description={`${stay.reference} · ${stay.roomType}`}
         footer={
@@ -258,16 +259,22 @@ export function CheckInFlow({
           <div className="space-y-5 min-w-0">
             <section className="space-y-2" data-checkin-room>
               {chosen && chosen.allowed && !changing.room ? (
-                <div className="flex items-center gap-3">
-                  <p className="text-base text-ink-900">
-                    <span className="font-medium">Room {chosen.number}</span>
-                    <span className="text-grey-600"> · {chosen.label ?? cap(chosen.housekeeping)}</span>
-                  </p>
-                  <Button variant="secondary" size="sm" className="ml-auto"
-                    onClick={() => setChanging((c) => ({ ...c, room: true }))}>
-                    Change room
-                  </Button>
-                </div>
+                <>
+                  <div className="flex items-center gap-3">
+                    <p className="text-base text-ink-900">
+                      <span className="font-medium">Room {chosen.number}</span>
+                      <span className="text-grey-600"> · {chosen.label ?? cap(chosen.housekeeping)}</span>
+                    </p>
+                    <Button variant="secondary" size="sm" className="ml-auto"
+                      onClick={() => setChanging((c) => ({ ...c, room: true }))}>
+                      Change room
+                    </Button>
+                  </div>
+                  {/* Who has not left yet - the grid's tooltip said it. */}
+                  {chosen.reason && (
+                    <p className="text-sm text-warning-dark" data-checkin-room-reason>{chosen.reason}</p>
+                  )}
+                </>
               ) : (
                 <>
                   <Explained title="Room">

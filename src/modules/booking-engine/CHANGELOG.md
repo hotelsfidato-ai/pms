@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · The menu entry leaves (the owner's D27-239 8.1, D27-180)
+
+`nav.ts` offers no entry: the service is not built, and a Coming soon page in the menu is a dead end. **Proved:** `src/components/app/navigation.test.ts` "has no Booking engine entry for anybody" (fails with the entry).
+
 ## 2026-09-16 · its Coming soon page
 
 **Asked for:** the owner, 16 September — "a HMS with all the requested services
