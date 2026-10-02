@@ -11,6 +11,10 @@ import {
 } from "@/modules/reports/pages/Ledgers";
 import ReportsIndexPage from "@/modules/reports/pages/Index";
 import {
+  StockOnHandPage, StockMovementsPage, StockConsumptionPage, StockWastagePage,
+  StockCountDifferencesPage, StockDeadPage, StockCoverPage, SupplierSpendPage, EquipmentReportPage,
+} from "@/modules/reports/pages/Store";
+import {
   GuestLedgerPage, CashierShiftPage, GstSalesPage, CFormPage,
 } from "@/modules/reports/pages/Compliance";
 
@@ -37,6 +41,17 @@ export const routes = (
       path="/reports/c-form"
       element={<RequireAccess path="/reports/c-form" resource="customer"><CFormPage /></RequireAccess>}
     />
+    {/* The Store and equipment (phase 3A): guarded by their own menu
+        entries, which name D27-240's readers. */}
+    <Route path="/reports/stock-on-hand" element={<RequireAccess path="/reports/stock-on-hand" resource="stock"><StockOnHandPage /></RequireAccess>} />
+    <Route path="/reports/stock-movements" element={<RequireAccess path="/reports/stock-movements" resource="stock"><StockMovementsPage /></RequireAccess>} />
+    <Route path="/reports/stock-consumption" element={<RequireAccess path="/reports/stock-consumption" resource="stock"><StockConsumptionPage /></RequireAccess>} />
+    <Route path="/reports/stock-wastage" element={<RequireAccess path="/reports/stock-wastage" resource="stock"><StockWastagePage /></RequireAccess>} />
+    <Route path="/reports/stock-count-differences" element={<RequireAccess path="/reports/stock-count-differences" resource="stock"><StockCountDifferencesPage /></RequireAccess>} />
+    <Route path="/reports/stock-dead" element={<RequireAccess path="/reports/stock-dead" resource="stock"><StockDeadPage /></RequireAccess>} />
+    <Route path="/reports/stock-cover" element={<RequireAccess path="/reports/stock-cover" resource="stock"><StockCoverPage /></RequireAccess>} />
+    <Route path="/reports/supplier-spend" element={<RequireAccess path="/reports/supplier-spend" resource="stock"><SupplierSpendPage /></RequireAccess>} />
+    <Route path="/reports/equipment" element={<RequireAccess path="/reports/equipment" resource="stock"><EquipmentReportPage /></RequireAccess>} />
     <Route path="/reports" element={<RequireAccess path="/reports" resource="report"><ReportsIndexPage /></RequireAccess>} />
   </>
 );

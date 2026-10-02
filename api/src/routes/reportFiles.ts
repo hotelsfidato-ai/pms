@@ -3,7 +3,7 @@ import { withSession } from "../auth.ts";
 import { businessDateFor } from "../businessDate.ts";
 import { can, type Role } from "../permissions.ts";
 import {
-  buildReport, BUILT_KEYS, REPORT_KEYS, type ReportParams,
+  buildReport, BUILT_KEYS, REPORT_KEYS, STORE_REPORT_KEYS, type ReportParams,
 } from "../modules/reports/index.ts";
 import { renderPdf, renderXlsx, renderCsv } from "../reportRender.ts";
 
@@ -35,6 +35,13 @@ export const REPORT_EXPORTERS: readonly string[] = [
    MONEY_REPORT; the owner's D27-147: not the revenue manager). The file
    asks the same, so the download is no way round the screen. */
 const MONEY_REPORTS: readonly string[] = ["city-ledger"];
+
+/* The Store and equipment reports (phase 3A; the owner's D27-240): read by
+   their own readers (roleGate STORE_REPORTS), downloaded by those of them
+   who hold the Store's export. A COPY of that list, held to the matrix by
+   api/test/reportFiles.test.ts. */
+export const STORE_EXPORTERS: readonly string[] = ["owner", "admin", "gm", "stores", "finance"];
+const isStoreReport = (key: string) => (STORE_REPORT_KEYS as readonly string[]).includes(key);
 
 const TYPES = {
   pdf: "application/pdf",
@@ -87,13 +94,17 @@ reportFiles.get("/:code/reports/:file{[a-z0-9-]+\\.(?:pdf|xlsx|csv)}", async (c)
                   where sh.staff_id = s.id and sh.hotel_id = $1 and sh.role = any($2::text[])
               )) as may
          from staff s where s.id = app.current_user_id() and s.is_active`,
-      [hotel.id, MONEY_REPORTS.includes(key)
-        ? REPORT_EXPORTERS.filter((r) => can(r as Role, "view", "invoice"))
-        : REPORT_EXPORTERS]);
+      [hotel.id, isStoreReport(key) ? STORE_EXPORTERS
+        : MONEY_REPORTS.includes(key)
+          ? REPORT_EXPORTERS.filter((r) => can(r as Role, "view", "invoice"))
+          : REPORT_EXPORTERS]);
     if (!me[0]?.may) {
       return {
         status: 403 as const,
-        error: MONEY_REPORTS.includes(key)
+        error: isStoreReport(key)
+          ? "Downloading the store's reports is for the owner, an administrator, the general manager, "
+            + "the Inventory Manager or the accountant. Ask one of them."
+          : MONEY_REPORTS.includes(key)
           ? "Downloading this report is for the owner, an administrator, the general manager, "
             + "the hotel manager or the accountant. Ask one of them."
           : "Downloading reports is for the owner, an administrator, the general manager, "

@@ -241,6 +241,14 @@ describe("who reads what (D27-140 to D27-147)", () => {
     }
     expect(whoMay(rule(`POST ${H}/companies`))).toEqual(["owner", "admin", "gm", "front_desk"]);
   });
+
+  it("D27-240: the Store and equipment reports are the owner's, an administrator's, the GM's, the hotel manager's, the Inventory Manager's, the accountant's and the Viewer's", () => {
+    for (const key of ["stock-on-hand", "stock-movements", "stock-consumption", "stock-wastage",
+      "stock-count-differences", "stock-dead", "stock-cover", "supplier-spend", "equipment"]) {
+      expect(who(`GET ${H}/reports/${key}`), key)
+        .toEqual(["owner", "admin", "gm", "hotel_manager", "stores", "finance", "read_only"]);
+    }
+  });
 });
 
 describe("key cards (D27-178, D27-182)", () => {

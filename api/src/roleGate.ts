@@ -587,6 +587,13 @@ const MONEY_REPORT = see("invoice", "money owed and taken");
 const MONEY = see("payment", "payments and the cash drawer");
 const GUESTS = see("customer", "guests");
 const REPORTS = see("report", "reports");
+/* The Store and equipment reports (phase 3A; the owner's D27-240 R-1): the
+   owner, an administrator, the GM, the Inventory Manager and the accountant
+   (who hold the Store's export), and the hotel manager and the Viewer. Not
+   the kitchen manager, chef or housekeeping (they see the Store, but D27-141
+   took reports from them and these carry costs), the revenue manager or
+   reception. */
+const STORE_REPORTS = grant("stock", "export", "Reading the store's reports", ["hotel_manager", "read_only"]);
 const PRICES = see("rate", "prices");
 const SETUP = see("room_config", "the hotel's setup");
 const LAUNDRY = see("laundry", "laundry");
@@ -704,6 +711,15 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/reports/monthly-statistics`]: REPORTS,
   [`GET ${H}/reports/yearly-statistics`]: REPORTS,
   [`GET ${H}/reports/lodging-tax`]: REPORTS,
+  [`GET ${H}/reports/stock-on-hand`]: STORE_REPORTS,
+  [`GET ${H}/reports/stock-movements`]: STORE_REPORTS,
+  [`GET ${H}/reports/stock-consumption`]: STORE_REPORTS,
+  [`GET ${H}/reports/stock-wastage`]: STORE_REPORTS,
+  [`GET ${H}/reports/stock-count-differences`]: STORE_REPORTS,
+  [`GET ${H}/reports/stock-dead`]: STORE_REPORTS,
+  [`GET ${H}/reports/stock-cover`]: STORE_REPORTS,
+  [`GET ${H}/reports/supplier-spend`]: STORE_REPORTS,
+  [`GET ${H}/reports/equipment`]: STORE_REPORTS,
   [`GET ${H}/reports/gst-sales`]: REPORTS,
   [`GET ${H}/reports/city-ledger`]: MONEY_REPORT,
   [`GET ${H}/reports/guest-ledger`]: MONEY_REPORT,

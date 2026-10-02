@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, FileText, BarChart3, Building2, CalendarCheck, ScrollText, ShieldCheck,
-  BookOpen, Banknote,
+  BookOpen, Banknote, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck, Hourglass,
+  Gauge, Truck, Refrigerator,
 } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 import { can, type Role } from "@/lib/permissions";
@@ -9,6 +10,12 @@ import { can, type Role } from "@/lib/permissions";
    three reports (roleGate MONEY_REPORT), and so does the menu - the owner's
    D27-147: not the revenue manager, who keeps every other report. */
 const seesMoney = (role: Role): boolean => can(role, "view", "invoice");
+
+/* The Store and equipment reports (phase 3A; the owner's D27-240 R-1): whoever
+   holds the Store's export, and the hotel manager and the Viewer - the
+   server's rule (roleGate STORE_REPORTS), asked the same way. */
+export const readsStoreReports = (role: Role): boolean =>
+  can(role, "export", "stock") || role === "hotel_manager" || role === "read_only";
 
 /* Reports' menu entries: the Dashboard at the top of the menu, and the
    Reports section after the night audit. Three are listed for everybody;
@@ -65,4 +72,32 @@ export const nav: ServiceNavEntry[] = [
     label: "Cashier shift", to: "/reports/cashier-shift", icon: Banknote, resource: "report",
     canSee: seesMoney,
     keywords: ["drawer", "takings"], listed: false },
+  /* The Store and equipment (phase 3A): one search away, and in All reports. */
+  { section: "reports", order: 150,
+    label: "Closing stock", to: "/reports/stock-on-hand", icon: Boxes, resource: "stock",
+    canSee: readsStoreReports, keywords: ["stock value", "store value", "inventory value"], listed: false },
+  { section: "reports", order: 160,
+    label: "Stock movement by day", to: "/reports/stock-movements", icon: ArrowLeftRight, resource: "stock",
+    canSee: readsStoreReports, keywords: ["received", "issued", "store"], listed: false },
+  { section: "reports", order: 170,
+    label: "Consumption", to: "/reports/stock-consumption", icon: PackageOpen, resource: "stock",
+    canSee: readsStoreReports, keywords: ["usage", "issued", "outlet", "store"], listed: false },
+  { section: "reports", order: 180,
+    label: "Wastage", to: "/reports/stock-wastage", icon: Trash2, resource: "stock",
+    canSee: readsStoreReports, keywords: ["waste", "spoilage", "store"], listed: false },
+  { section: "reports", order: 190,
+    label: "Count differences", to: "/reports/stock-count-differences", icon: ClipboardCheck, resource: "stock",
+    canSee: readsStoreReports, keywords: ["stock count", "variance", "store"], listed: false },
+  { section: "reports", order: 200,
+    label: "Dead stock", to: "/reports/stock-dead", icon: Hourglass, resource: "stock",
+    canSee: readsStoreReports, keywords: ["slow moving", "unused", "store"], listed: false },
+  { section: "reports", order: 210,
+    label: "Days of cover", to: "/reports/stock-cover", icon: Gauge, resource: "stock",
+    canSee: readsStoreReports, keywords: ["stock cover", "how long", "store"], listed: false },
+  { section: "reports", order: 220,
+    label: "Supplier spend", to: "/reports/supplier-spend", icon: Truck, resource: "stock",
+    canSee: readsStoreReports, keywords: ["purchases", "suppliers", "prices"], listed: false },
+  { section: "reports", order: 230,
+    label: "Equipment report", to: "/reports/equipment", icon: Refrigerator, resource: "stock",
+    canSee: readsStoreReports, keywords: ["warranty", "amc", "under repair", "out of store"], listed: false },
 ];
