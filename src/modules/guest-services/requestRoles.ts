@@ -10,3 +10,9 @@ export const REQUEST_ROLES: readonly Role[] = [
   "owner", "admin", "gm", "hotel_manager", "front_desk",
   "housekeeping", "stores", "kitchen_manager", "chef", "pos",
 ];
+
+/* Wake-up calls: the desk (D27-241). Lost property: the desk and housekeeping
+   log and see; the desk alone returns or disposes. The server's
+   wakeAndLost.ts holds the same lists. */
+export const WAKE_UP_ROLES: readonly Role[] = ["owner", "admin", "gm", "hotel_manager", "front_desk"];
+export const LOST_ROLES: readonly Role[] = [...WAKE_UP_ROLES, "housekeeping"];

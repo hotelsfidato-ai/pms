@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { at, withUnlock } from "@/modules/online-checkin/data/guestPage";
 
 /* Two more ways into the guest's page (D27-235): the room and the phone
    (2.4), and DigiLocker (2.5, off until it is set up). Each ends where the
@@ -34,3 +35,9 @@ export const startDigilocker = (token: string) =>
 
 export const finishDigilocker = (code: string, state: string) =>
   api<{ verified: true; unlock: string }>("/api/guest/digilocker/finish", post({ code, state }));
+
+/* A wake-up call from the guest's page (D27-241), behind the code. */
+export const getWakeUps = (token: string) =>
+  api<{ calls: Array<{ callAt: string; status: string }> }>(at(token, "/wake-up"), withUnlock(token));
+export const askWakeUp = (token: string, day: string, time: string) =>
+  api<{ sent: true }>(at(token, "/wake-up"), withUnlock(token, { method: "POST", body: JSON.stringify({ day, time }) }));
