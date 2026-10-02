@@ -163,6 +163,32 @@ describe("Send check-in link (D27-105)", () => {
     expect(Buffer.from(sent.file!.base64, "base64").subarray(0, 5).toString("latin1")).toBe("%PDF-");
   });
 
+  /* D27-235 (2.1) and D27-241 (Q1): a guest who agreed to WhatsApp and has an
+     email gets the confirmation BOTH ways, then the CRS's voucher with the
+     PDF on WhatsApp - from one press, each recorded once, none of it twice. */
+  it("sends the confirmation both ways and then the WhatsApp voucher, and none of it twice", async () => {
+    const b = await book("Both ways", { whatsappAgreed: true });
+    const res = await call(clerk, "POST", `/stays/${b.id}/confirmation`, {});
+    expect(res.status, await res.clone().text()).toBe(200);
+    const sent = () => received.filter((m) => (m as { action?: string }).action !== "mark");
+    expect(sent().map((m) => `${m.kind} ${m.channel}`).sort()).toEqual([
+      "booking-confirmation email", "booking-confirmation whatsapp", "booking-voucher whatsapp",
+    ]);
+    expect(sent().every((m) => m.sentBy === `${TAG} Desk`), "the clerk's name on each").toBe(true);
+    expect((await sql(
+      `select kind, channel, status, sent_by::text from messages_sent
+        where about_kind = 'reservation' and about_id = $1 order by 1, 2`, [b.id])).rows).toEqual([
+      { kind: "booking-confirmation", channel: "email", status: "sent", sent_by: clerk },
+      { kind: "booking-confirmation", channel: "whatsapp", status: "sent", sent_by: clerk },
+      { kind: "booking-voucher", channel: "whatsapp", status: "sent", sent_by: clerk },
+    ]);
+
+    received = [];
+    const again = await call(clerk, "POST", `/stays/${b.id}/confirmation`, {});
+    expect(again.status).toBe(409);
+    expect(sent(), "nothing goes twice").toEqual([]);
+  });
+
   it("says so, and records nothing, when sending is switched off", async () => {
     const b = await book("Off");
     delete process.env["CRS_N8N_URL"];

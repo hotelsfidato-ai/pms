@@ -41,7 +41,11 @@ beforeEach(() => {
       return { ok: true } as never;
     }
     if (path.includes("/inventory")) {
-      return { from: "2026-08-25", to: "2026-09-07", cells: [], restrictions: [] } as never;
+      /* Rooms left under each base price (D27-237 5.2), from the read the
+         Rooms left tab already makes. */
+      return { from: "2026-08-25", to: "2026-09-07", restrictions: [], cells: [
+        { roomTypeId: "rt-1", roomType: "Superior", date: "2026-08-25", sellable: 5, occupied: 2, sold: 2, available: 3 },
+      ] } as never;
     }
     /* A room type's break-up rows (D27-206), asked for when its line opens.
        MAP is not set: null, a dash. */
@@ -89,22 +93,24 @@ describe("Rates", () => {
     ]));
   });
 
-  it("opens a room type to its full prices, a dash where an add-on is not set (D27-206)", async () => {
+  it("shows every room type open with all its rows, a dash where an add-on is not set (D27-237 5.1)", async () => {
     ratesPage();
-    const line = await screen.findByRole("button", { name: "Superior" });
-    expect(line.getAttribute("aria-expanded"), "closed by default").toBe("false");
-    expect(screen.queryByText("CP · 2 guests")).toBeNull();
-
-    fireEvent.click(line);
-    expect(line.getAttribute("aria-expanded")).toBe("true");
-    const cp = (await screen.findByText("CP · 2 guests")).closest("tr")!;
+    const sup = await screen.findByRole("rowgroup", { name: "Superior" });
+    /* Always open: nothing to open or close (replaces D27-206's "closed by default"). */
+    expect(screen.queryByRole("button", { name: "Superior" })).toBeNull();
+    const cp = within(sup).getByText("CP · 2 guests").closest("tr")!;
     /* The rows show "…" until their figures arrive. */
     expect(await within(cp).findByText("₹4,800"), "the server's figure, as sent").toBeTruthy();
-    const map = screen.getByText("MAP · 2 guests").closest("tr")!;
+    const map = within(sup).getByText("MAP · 2 guests").closest("tr")!;
     expect(within(map).getAllByText("-").length, "not set is a dash, never ₹0").toBeGreaterThan(0);
     expect(within(map).queryByText("₹0")).toBeNull();
-    expect(within(screen.getByText("2 guests").closest("tr")!).getByText("₹3,800")).toBeTruthy();
-    expect(within(screen.getByText("+ per extra adult").closest("tr")!).getByText("₹1,000")).toBeTruthy();
+    expect(within(within(sup).getByText("2 guests").closest("tr")!).getByText("₹3,800")).toBeTruthy();
+    expect(within(within(sup).getByText("+ per extra adult").closest("tr")!).getByText("₹1,000")).toBeTruthy();
+
+    /* Under the base, the rooms left that day (5.2); a dash where none is held. */
+    const base = within(sup).getByText("Superior").closest("tr")!;
+    expect(within(base).getByText("₹3,000")).toBeTruthy();
+    expect(within(base).getByText("3 left")).toBeTruthy();
 
     /* Reception reads the rows and has nothing to press (D27-194, D27-206). */
     expect(screen.queryByRole("button", { name: "Set prices" })).toBeNull();
@@ -114,13 +120,23 @@ describe("Rates", () => {
 
   it("shows no extra-guest rows for a room type no further guest fits in (D27-206)", async () => {
     ratesPage();
-    fireEvent.click(await screen.findByRole("button", { name: "Twin" }));
-    const cp = (await screen.findByText("CP · 2 guests")).closest("tr")!;
-    expect(await within(cp).findByText("₹4,800")).toBeTruthy();
+    const twin = await screen.findByRole("rowgroup", { name: "Twin" });
+    expect(await within(twin).findByText("CP · 2 guests")).toBeTruthy();
     /* The hotel's figures exist (the read sends them), but a guest who can
        never be sold must not show one: the same rule as the dash. */
-    expect(screen.queryByText("+ per extra adult")).toBeNull();
-    expect(screen.queryByText("+ per extra child")).toBeNull();
+    expect(within(twin).queryByText("+ per extra adult")).toBeNull();
+    expect(within(twin).queryByText("+ per extra child")).toBeNull();
+  });
+
+  it("puts How rates are built under the calendar, and Today back on the business date (D27-237 5.3)", async () => {
+    ratesPage();
+    const grid = await screen.findByRole("table");
+    const setup = await screen.findByText("How rates are built");
+    expect(grid.compareDocumentPosition(setup) & Node.DOCUMENT_POSITION_FOLLOWING, "below the calendar").toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Today" }), "already on the business date").toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Next two weeks" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Today" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Today" })).toBeNull());
   });
 
   it("sets a base over a range from Set prices, the same call as a tapped price (D27-206)", async () => {

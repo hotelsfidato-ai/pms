@@ -162,6 +162,8 @@ const GROUP_LOGO = grant("room_config", "edit", "Changing the group's logo");
 /* A hotel's OWN logo (D27-214): the same three, at the hotel in the address;
    the table's policy asks app.manages_hotel behind it (migration 168). */
 const HOTEL_LOGO = grant("room_config", "edit", "Changing the hotel's logo");
+/* A hotel's photo gallery (D27-243): the logo's three, at that hotel. */
+const HOTEL_GALLERY = grant("room_config", "edit", "Changing the hotel's photos");
 /* What the voucher prints (D27-215): a hotel's bank details and the group's
    office details - the same three, and for the bank details the route and the
    table ask app.manages_hotel behind it (migration 169). */
@@ -421,6 +423,10 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`DELETE ${H}/group/logo`]: GROUP_LOGO,
   [`PUT ${H}/logo`]: HOTEL_LOGO,
   [`DELETE ${H}/logo`]: HOTEL_LOGO,
+  [`POST ${H}/gallery`]: HOTEL_GALLERY,
+  [`PATCH ${H}/gallery/:id`]: HOTEL_GALLERY,
+  [`PUT ${H}/gallery/order`]: HOTEL_GALLERY,
+  [`DELETE ${H}/gallery/:id`]: HOTEL_GALLERY,
   [`PUT ${H}/bank-details`]: BANK_DETAILS,
   [`DELETE ${H}/bank-details`]: BANK_DETAILS,
   [`PUT ${H}/group/office`]: GROUP_OFFICE,
@@ -499,6 +505,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   /* guest services: in-stay requests - the desk and the team that receives each (D27-181) */
   [`POST ${H}/requests`]: own("guest-services/requests.ts: teamsFor"),
   [`PATCH ${H}/requests/:id`]: own("guest-services/requests.ts: teamsFor"),
+  /* wake-up calls (the desk) and lost property (the desk and housekeeping log; the desk clears), D27-241 */
+  [`POST ${H}/wake-up-calls`]: own("guest-services/wakeAndLost.ts: DESK"),
+  [`PATCH ${H}/wake-up-calls/:id`]: own("guest-services/wakeAndLost.ts: DESK"),
+  [`POST ${H}/lost-property`]: own("guest-services/wakeAndLost.ts: LOST_LOGGERS"),
+  [`PATCH ${H}/lost-property/:id`]: own("guest-services/wakeAndLost.ts: DESK"),
 
   /* equipment */
   [`POST ${H}/equipment`]: own("equipment/grants.ts"),
@@ -613,6 +624,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/rooms`]: anyone("room numbers and their states: nearly every screen"),
   [`GET ${H}/house-now`]: anyone("which rooms are occupied, blocked or empty - no guest"),
   [`GET ${H}/group`]: anyone("the group's name and logo, on every document"),
+  [`GET ${H}/gallery`]: anyone("the hotel's photos, public on the guest's page"),
+  [`GET ${H}/gallery/:id`]: anyone("one of the hotel's photos, public on the guest's page"),
   [`GET ${H}/bank-details`]: own("admin/bankDetails.ts: app.manages_hotel - the hotel's owner, GM or Admin, or a group administrator (D27-215)"),
   [`GET ${H}/tax`]: anyone("the GST rates in use: neither a guest nor money taken"),
   [`GET ${H}/tax/:kind/rate`]: anyone("the GST rate for an amount"),
@@ -624,6 +637,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* ── Bookings and stays ── */
   [`GET ${H}/stays`]: STAYS,
   [`GET ${H}/stays/:id`]: STAYS,
+  /* Whether a stay checks in by express, its ID masked (D27-236 3.4): the
+     people who check a guest in. */
+  [`GET ${H}/stays/:id/express-check-in`]: CHECK_IN,
   [`GET ${H}/stays/:id/exchangeable`]: STAYS,
   [`GET ${H}/stays/:id/inclusions`]: STAYS,
   [`GET ${H}/stays/:id/guest-marks`]: STAYS,
@@ -743,6 +759,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/work-orders`]: REPAIRS,
   [`GET ${H}/repairable-equipment`]: REPAIRS,
   [`GET ${H}/requests`]: own("guest-services/requests.ts: teamsFor"),
+  [`GET ${H}/wake-up-calls`]: own("guest-services/wakeAndLost.ts: DESK"),
+  [`GET ${H}/lost-property`]: own("guest-services/wakeAndLost.ts: LOST_LOGGERS"),
 
   /* ── The restaurant ── */
   [`GET ${H}/till/menu`]: MENU_READ,
@@ -765,6 +783,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* ── Store, equipment, purchasing, places ── */
   [`GET ${H}/stores`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/stores/items/:id/movements`]: own("stores/stockGrants.ts: mayStock"),
+  [`GET ${H}/stores/days`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/equipment`]: own("equipment/grants.ts"),
   [`GET ${H}/equipment/items/:id`]: own("equipment/grants.ts"),
   [`GET ${H}/equipment/export`]: own("equipment/grants.ts"),

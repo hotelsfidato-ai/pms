@@ -19,3 +19,6 @@ export const mounts: readonly Mount[] = [
    write, because a refusal returned inside `withSession` is a COMMIT
    (MEMORY 243). */
 export { receiveIntoStore, mayDeliverInto } from "./stores.ts";
+/* A delivery's GST and expiry, checked one way for both doors in (D27-238):
+   Purchasing asks it for every line before its first write. */
+export { deliveryFactsProblem } from "./stores.ts";

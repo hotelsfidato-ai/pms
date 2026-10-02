@@ -11,6 +11,47 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · The voucher both ways, and the PDF on WhatsApp (D27-235 2.1 and 2.2, D27-241); CRS bookings agreed to WhatsApp (2.3); the setup notes (8.5)
+
+Branch `messaging/both-channels-2oct`, from cp6 3336a219.
+
+**Asked for** (the owner's answers of 2 October, through the master):
+- 2.1: the voucher goes on WhatsApp AND email.
+- 2.2: the PDF on WhatsApp too, by the CRS's already-approved template.
+- 2.3: CRS bookings arrive ticked "agreed to WhatsApp".
+- 8.5: the out-of-date notes.
+
+**Shipped:**
+- **2.1:** migration 184 (written as 180; renumbered by the master at merge) adds `app.guest_messages_owed`.
+  - It has the same rules as `app.guest_messages_due`, plus `channel`, one row per way. Every try is counted per booking, kind and way.
+  - The sweep, Send voucher and the "no message can reach" list ask it.
+  - Each way is its own message id, record and three tries.
+  - The reminder and the desk's check-in link stay one way (Q3).
+- **2.2:**
+  - The new kind `booking-voucher` goes on WhatsApp after the confirmation (Q1). Its eight fields come from the PDF's own facts (`whatsAppVoucher`): the whole group's rooms and guests (Q5), and a dash for an office phone nobody typed (Q2).
+  - `deploy/n8n/pms-send-crs.json` gains "Upload first?", "Upload PDF to Meta", "Build the voucher message" and "Uploaded?". The template's name is an owner setting, `VOUCHER_TEMPLATE`, refused with a sentence until it is filled.
+  - Nothing was written in D:idato crs.
+- **2.3:** the CRS reader passes `whatsappAgreed: true`; booking sites stay unticked.
+- **8.5:**
+  - whatsapp-templates.md lists five templates (checkin_link added) and the reused voucher template's eight fields;
+  - `GUEST_MESSAGES_PER_MINUTE` is in api/.env.example;
+  - IMPORT.md: the old pms-send is switched OFF before the new one is activated, and the voucher's owner setting is added.
+
+**Proved:**
+- 11 API tests failed on the old code: the sweep 5, the jobs 2, the desk 1, the door's nonce 3.
+- Then each rule was broken on purpose and caught:
+  - tries counted across ways (2 tests);
+  - the old workflow (4 workflow tests);
+  - every channel booking ticked (the booking-site test).
+- Before the merge, 215 of 216 passed. The one failure was a test bug, fixed; its file then passed 34 of 34.
+- After the cp6 merge, roleGate passed 70 of 70.
+- Web: tsc -b is clean, plus primaryAction, navigation, boundaries and online-checkin/guest-messaging. In one starved single-fork run 10 failed on timeouts; those three files pass 19 of 19 run on their own.
+
+**Left open:**
+- The owner fills in `VOUCHER_TEMPLATE` (and `VOUCHER_LANGUAGE` if not `en`).
+- Renumbered by the master at merge: 180 -> 184.
+- The workflow's Meta upload can't be run here; its first run is the owner's.
+
 ## 2026-10-01 · A day use's voucher charges its day (D27-227)
 
 The booking and bill lane, `fix/dayuse-booking-1oct`. `voucherDocument.ts`: a day use (no night) is one day at its typed rate with its GST - it printed ₹0 and no GST - and reads "Day use" where the nights are. `voucherDocument.test.ts` "charges a day use one day at its rate" fails on the old figures.

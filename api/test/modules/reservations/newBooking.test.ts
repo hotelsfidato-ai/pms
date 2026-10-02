@@ -296,7 +296,7 @@ describe("the voucher (D27-35)", () => {
 
     /* The sweep's own sender, as the server runs it - nobody signed in. */
     const sweep = await withUser("", (client) => sendIfOwed(client, messageFor({
-      kind: KIND.confirmation, reservationId: id, reference: made.bookings[0]!.reference,
+      kind: KIND.confirmation, channel: "email", reservationId: id, reference: made.bookings[0]!.reference,
       hotel: { id: hotelId, code: "5EL", name: "5 Elements Akkalkot", phone: null },
       guest: { name: `${TAG} Voucher`, phone: null, email: "p1nb@example.test" },
       whatsappAgreed: false, checkIn: "2029-05-10", checkOut: "2029-05-12", nights: 2, held: false,

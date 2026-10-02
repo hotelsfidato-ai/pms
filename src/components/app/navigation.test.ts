@@ -104,6 +104,8 @@ describe("each person's menu", () => {
       "Online check-in",
       /* 30 September (the owner's D27-181): guests' in-stay requests. */
       "Guest requests",
+      /* 2 October (the owner's D27-241). */
+      "Wake-up calls", "Lost property",
       "All bookings",
       /* 29 September (the owner's D27-174): what the CRS sold, and the
          notes the desk acts on when it changes there. */
@@ -211,7 +213,7 @@ describe("each person's menu", () => {
        hotel has it on (D22-22), and Purchasing once D22-11 let housekeeping
        see it (the owner, 24 September). */
     expect(menu("housekeeping")).toEqual(
-      ["Rooms", "Housekeeping", "Work orders", "Guest requests", "Store", "Equipment", "Purchasing", "Dockets",
+      ["Rooms", "Housekeeping", "Work orders", "Guest requests", "Lost property", "Store", "Equipment", "Purchasing", "Dockets",
        "Notifications"]);
     expect(menu("stores")).toEqual(["Store", "Equipment", "Purchasing", "Notifications"]);
     for (const role of ["housekeeping", "stores", "chef", "kitchen_manager", "pos"] as Role[]) {
@@ -236,6 +238,15 @@ describe("each person's menu", () => {
     const reports = sidebarFor("owner", "5EL", ALL_ON).find((s) => s.label === "Reports");
     expect(reports?.items.map((i) => i.label)).toEqual(["Night audit", "All reports", "Manager report"]);
     expect(searchable("owner")).toContain("Lodging tax");
+  });
+
+  /* D27-180, D27-239 8.1: the channel manager's booking engine is used, so the
+     PMS's own "Booking engine" leaves the menu, for every role. */
+  it("has no Booking engine entry for anybody", () => {
+    for (const role of COMING_SOON_ROLES) {
+      const labels = sidebarFor(role, "5EL", ALL_ON).flatMap((s) => s.items.map((i) => i.label));
+      expect(labels, role).not.toContain("Booking engine");
+    }
   });
 
   it("puts each service not built yet in its own section, marked - for the owner, admins and GMs only", () => {
@@ -290,7 +301,6 @@ describe("each person's menu", () => {
          to mark. */
       /* The channel manager (D27-178) and Contracts (D27-184) are BUILT;
          both stay in Distribution as working screens. */
-      "Distribution": ["Booking engine"],
       "Finance": ["Online payments"],
       "System": ["Room systems"],
     };

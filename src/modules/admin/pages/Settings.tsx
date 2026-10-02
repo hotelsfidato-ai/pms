@@ -14,6 +14,7 @@ import {
 import { getPropertyDetail, PROPERTY_TYPES } from "@/modules/admin/data/admin";
 import { switchesModules } from "@/modules/admin/moduleSwitchRoles";
 import { GroupCard, HotelLogoCard } from "@/modules/admin/components/GroupCard";
+import { HotelGalleryCard } from "@/modules/admin/components/HotelGalleryCard";
 import { BankDetailsCard, HousePoliciesCard } from "@/modules/admin/components/VoucherSettings";
 import { CommissioningCard } from "@/modules/admin/flows/CommissioningCard";
 import { ModulesCard, BOOKING_SECTION, SettingRow, SettingValues } from "@/modules/admin/pages/Admin";
@@ -241,6 +242,7 @@ function PropertyTab({ hotelId }: { hotelId: string }) {
         </CardBody>
       </Card>
       <HotelLogoCard hotelCode={p.code} />
+      <HotelGalleryCard hotelCode={p.code} />
       <FssaiCard code={p.code} value={p.fssaiNumber} onSaved={refresh} />
       <GroupCard hotelCode={p.code} />
       {editing && (

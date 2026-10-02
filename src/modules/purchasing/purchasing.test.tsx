@@ -398,6 +398,32 @@ describe("purchasing", () => {
     }]);
   });
 
+  it("records the bill's GST on a delivered line: the amount filled from the rate, claimable asked (D27-238)", async () => {
+    as("stores");
+    go("/h/PU8/purchasing/ordered");
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Record the delivery" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("What the Basmati rice cost each"), { target: { value: "60" } });
+    fireEvent.change(within(dialog).getByLabelText(/GST rate on the Basmati rice/), { target: { value: "5" } });
+    expect((within(dialog).getByLabelText("GST amount on the Basmati rice") as HTMLInputElement).value)
+      .toBe("150.00");
+    const record = within(dialog).getAllByRole("button", { name: "Record the delivery" })[0]!;
+    fireEvent.click(record);
+    expect(await within(dialog).findByRole("alert")).toBeTruthy();       // claimable not said
+    expect(control.delivered).toHaveLength(0);
+
+    fireEvent.change(within(dialog).getByLabelText(/Can the GST on the Basmati rice be claimed/), { target: { value: "yes" } });
+    fireEvent.click(record);
+    await vi.waitFor(() => expect(control.delivered).toHaveLength(1));
+    expect(control.delivered[0]).toEqual({
+      note: undefined,
+      lines: [{ lineId: "l1", receivedQuantity: 50, receivedUnitCost: 60,
+                gstRate: 5, gstAmount: 150, gstClaimable: true }],
+    });
+  });
+
   it("raises a request, and leaves the price blank where nothing is agreed", async () => {
     as("stores");
     go("/h/PU9/purchasing");

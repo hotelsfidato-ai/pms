@@ -35,6 +35,18 @@ describe("the tape chart at /h/:code/stay", () => {
     await screen.findAllByText(/Superior|Deluxe/i);
   };
 
+  /* THE OWNER'S D27-236, 4.1 (2 October): a room type's rooms are always
+     shown - nothing to fold, so no group head is a toggle. */
+  it("shows every room type's rooms, with no group that folds", async () => {
+    const { container } = render(<App />);
+    await showCalendar();
+    /* The menu's own sections fold; no room type does. */
+    const folding = [...container.querySelectorAll("[aria-expanded]")]
+      .filter((e) => /Superior|Deluxe/i.test(e.textContent ?? ""));
+    expect(folding).toHaveLength(0);
+    expect(container.querySelectorAll("[data-room-row]").length).toBeGreaterThan(0);
+  });
+
   it("opens on Rooms, not the chart", async () => {
     const { container } = render(<App />);
     await screen.findAllByText(/Superior|Deluxe/i);

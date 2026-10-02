@@ -128,7 +128,7 @@ const run = () => runOnce(async () => [{ hotelId, runAs: serviceId }]);
 const row = async (crsId: string) =>
   (await sql("select * from crs_bookings where crs_id = $1", [crsId]))[0];
 const stays = async (crsId: string) =>
-  sql("select id::text, reference, status, sales_person, agreed_rate::text from reservations where ota_reference = $1", [crsId]);
+  sql("select id::text, reference, status, sales_person, agreed_rate::text, whatsapp_agreed from reservations where ota_reference = $1", [crsId]);
 
 beforeAll(async () => {
   Object.assign(process.env, SETTINGS);
@@ -174,6 +174,8 @@ describe("CRS bookings into the PMS", () => {
     expect(made[0]!["status"]).toBe("tentative");
     expect(made[0]!["sales_person"]).toBe("Priya Sales");
     expect(made[0]!["agreed_rate"]).toBe("4200.00");
+    /* D27-235 (2.3): the CRS's guest agreed to WhatsApp when they booked. */
+    expect(made[0]!["whatsapp_agreed"], "a CRS booking arrives ticked").toBe(true);
     const b = await row("crsDocA1");
     expect(b!["outcome"]).toBe("booked");
     expect(b!["crs_reference"]).toBe("FH-2026-00042");

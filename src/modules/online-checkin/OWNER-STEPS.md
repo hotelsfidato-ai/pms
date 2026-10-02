@@ -65,7 +65,15 @@ account is created for a guest, and no guest is added to the staff's sign-in.
 7. **Application type:** **Web application**. **Name:** `PMS guest page`.
 8. Under **Authorised JavaScript origins**, press **+ Add URI** and type
    exactly: `https://pms.fidatohotels.com` (no slash at the end, no path).
-9. Leave **Authorised redirect URIs** empty. Press **Create**.
+9. Under **Authorised redirect URIs**, press **+ Add URI** and type exactly:
+   `https://pms.fidatohotels.com/g-return` (OCI-10: Google sends the guest
+   back to this address, so no script of Google's runs on the guest's page).
+   Press **Create**.
+
+   > **Already made the client before 2 October?** Open it (**Credentials**
+   > → `PMS guest page`), add that same redirect URI, and **Save**. Until it
+   > is there, Google refuses the sign-in with "redirect_uri_mismatch" and
+   > the guest uses a code instead.
 10. Copy the **Client ID**. It ends `.apps.googleusercontent.com`. You may
     tell it to the master: it is not a secret.
 
@@ -132,9 +140,9 @@ its "Google Drive" login):
 
 1. **New → Folder**, name it `ID photos`.
 2. Open it, and inside make one folder per hotel, named by the PMS's code:
-   `AMR` and `GLM`.
-3. Open `AMR`. In the browser's address, the folder's **id** is the last
-   part, after `/folders/`. Copy it. Do the same for `GLM`.
+   `5EL`, `AMR` and `GLM` (5 Elements takes ID photos too, D27-235).
+3. Open `5EL`. In the browser's address, the folder's **id** is the last
+   part, after `/folders/`. Copy it. Do the same for `AMR` and `GLM`.
 4. **Do not share these folders** with anybody. They need no sharing: the
    workflow reaches them through the CRS's own Drive login.
 
@@ -162,7 +170,7 @@ In your password manager, make one password for each hotel:
 ### 3d · The workflow
 
 `deploy/n8n/IMPORT.md`, **part D**: import `pms-id-photos-crs.json` into the
-CRS's n8n, give it its own new secret and the Drive login, paste the two
+CRS's n8n, give it its own new secret and the Drive login, paste the three
 folder ids, switch it Active.
 
 ### 3e · On the release day
@@ -174,6 +182,7 @@ You type the values yourself; they are never pasted into a chat.
 |---|---|
 | `ID_PHOTO_N8N_URL` | the ID photos workflow's Production URL |
 | `ID_PHOTO_N8N_SECRET` | that workflow's secret |
+| `ID_PHOTO_PASSWORD_5EL` | 5 Elements' password from 3c |
 | `ID_PHOTO_PASSWORD_AMR` | Amrapali's password from 3c |
 | `ID_PHOTO_PASSWORD_GLM` | Grand Lucent's password from 3c |
 

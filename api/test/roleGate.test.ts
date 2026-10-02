@@ -75,6 +75,8 @@ describe("every write the server mounts", () => {
       "POST /api/channel/su/reservations",
       "POST /api/guest/:token/code",
       "POST /api/guest/:token/details",
+      /* DigiLocker, a fourth way in - off until set up (D27-235 2.5). */
+      "POST /api/guest/:token/digilocker",
       "POST /api/guest/:token/google",
       "POST /api/guest/:token/id-photo",
       /* In-room dining (D27-224): behind the code, each its own definer. */
@@ -84,6 +86,11 @@ describe("every write the server mounts", () => {
       "POST /api/guest/:token/tables",              // a table at the restaurant (D27-224)
       "POST /api/guest/:token/tables/:id/cancel",
       "POST /api/guest/:token/verify",
+      "POST /api/guest/:token/wake-up",             // a wake-up call, asked by the guest (D27-241)
+      /* The room and the phone, no link (D27-235 2.4), and back from DigiLocker. */
+      "POST /api/guest/by-room/open",
+      "POST /api/guest/by-room/send",
+      "POST /api/guest/digilocker/finish",
       "POST /api/pos/tickets",
       "POST /api/pos/tickets/:ref/void",
     ]);
@@ -250,6 +257,17 @@ describe("who reads what (D27-140 to D27-147)", () => {
   });
 });
 
+describe("the hotel's photos (D27-243)", () => {
+  const who = (key: string) => whoMay(READ_RULES[key]!);
+  it("are changed by the logo's three and read by everybody there - they are public on the guest's page", () => {
+    for (const key of [`POST ${H}/gallery`, `PATCH ${H}/gallery/:id`, `PUT ${H}/gallery/order`, `DELETE ${H}/gallery/:id`]) {
+      expect(whoMay(rule(key)), key).toEqual(whoMay(rule(`PUT ${H}/logo`)));
+    }
+    expect(who(`GET ${H}/gallery/:id`)).toEqual(who(`GET ${H}/gallery`));
+    expect(who(`GET ${H}/gallery`)).toEqual(who(`GET ${H}/group`));
+  });
+});
+
 describe("key cards (D27-178, D27-182)", () => {
   it("are cut by whoever may check a guest in, a lost card too, and read by whoever reads stays", () => {
     const cut = whoMay(rule(`POST ${H}/stays/:id/keys`));
@@ -375,6 +393,15 @@ describe("the matrix the server asks", () => {
     expect(rule(`POST ${H}/requests`).kind).toBe("own");
     expect(rule(`PATCH ${H}/requests/:id`).kind).toBe("own");
     expect(READ_RULES[`GET ${H}/requests`]?.kind).toBe("own");
+  });
+
+  it("D27-241: wake-up calls and lost property are the route's, which knows the desk from housekeeping", () => {
+    for (const key of [`POST ${H}/wake-up-calls`, `PATCH ${H}/wake-up-calls/:id`,
+                       `POST ${H}/lost-property`, `PATCH ${H}/lost-property/:id`]) {
+      expect(rule(key).kind, key).toBe("own");
+    }
+    expect(READ_RULES[`GET ${H}/wake-up-calls`]?.kind).toBe("own");
+    expect(READ_RULES[`GET ${H}/lost-property`]?.kind).toBe("own");
   });
 
   it("D27-224: the desk's reply to a guest is the route's own, for the desk's roles", () => {
@@ -872,5 +899,11 @@ describe("a write route nobody mapped", () => {
     const res = await t.request("/api/hotels/5EL/brand-new", { method: "POST" });
     expect(res.status).toBe(403);
     expect(((await res.json()) as { reason: string }).reason).toBe(UNMAPPED);
+  });
+});
+
+describe("the Store's fourteen days (D27-238, D27-242)", () => {
+  it("is the Store's own read: whoever sees the Store; the sales in it are the route's to withhold", () => {
+    expect(READ_RULES[`GET ${H}/stores/days`]).toEqual(READ_RULES[`GET ${H}/stores`]);
   });
 });

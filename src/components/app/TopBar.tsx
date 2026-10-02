@@ -3,6 +3,7 @@ import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
 import { NotificationBell } from "./NotificationBell";
 import { AccountMenu } from "./AccountMenu";
+import { BusinessDateBehind } from "./BusinessDateBehind";
 
 /* ══════════════════════════════════════════════════════════════════
    TOP BAR
@@ -22,6 +23,7 @@ export function TopBar() {
 
 
   return (
+    <>
     <header className="flex items-center gap-3 h-14 px-4 sm:px-5 bg-white border-b border-grey-200 shrink-0">
       <button
         type="button"
@@ -80,5 +82,8 @@ export function TopBar() {
         <AccountMenu />
       </div>
     </header>
+    {/* D27-237: one line while the business date is behind today. */}
+    <BusinessDateBehind />
+    </>
   );
 }

@@ -594,6 +594,11 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
     null where the booking is not confirmed. Through the definer
     `app.guest_voucher` (162): the sweep has nobody signed in. */
 export async function voucherFile(client: Client, reservationId: string): Promise<SendableFile | null> {
+  const facts = await voucherFacts(client, reservationId);
+  return facts ? fileOf(facts) : null;
+}
+
+async function voucherFacts(client: Client, reservationId: string): Promise<VoucherFacts | null> {
   const { rows } = await client.query<{ facts: VoucherFacts | null }>(
     "select app.guest_voucher($1::uuid) as facts", [reservationId]);
   const facts = rows[0]?.facts;
@@ -603,9 +608,61 @@ export async function voucherFile(client: Client, reservationId: string): Promis
     rate: r.rate === null ? null : Number(r.rate),
     gstRate: r.gstRate === null ? null : Number(r.gstRate),
   });
+  return { ...facts, rooms: (facts.rooms ?? []).map(numbers) };
+}
+
+async function fileOf(facts: VoucherFacts): Promise<SendableFile> {
   return {
     name: `Voucher-${facts.reference.replace(/[^A-Za-z0-9-]/g, "")}.pdf`,
     contentType: "application/pdf",
-    bytes: await voucherPdf({ ...facts, rooms: (facts.rooms ?? []).map(numbers) }),
+    bytes: await voucherPdf(facts),
   };
+}
+
+/* ── The voucher on WhatsApp (D27-235 2.2, D27-241) ────────────────────
+   The CRS's already-approved voucher template: the PDF as its document,
+   and eight fields, named here as the PMS sends facts (the workflow maps
+   them to the template's own names - name_1, hotel_id, hotel, ck_in,
+   ck_out, rm_type, no_guest, crs_nom). All from the SAME facts as the PDF,
+   so the message and the document agree: a group's are the whole group's
+   rooms and guests (Q5). Nothing invented: an office phone nobody typed in
+   Settings is a dash (Q2), as is anything else missing. */
+const dash = (v: string | null | undefined) => (v && v.trim() ? v.trim() : "-");
+
+/** "12 Aug 2026" - the CRS's own way (its voucher's `longDate`). */
+const longDate = (iso: string) => {
+  const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) ? dash(iso)
+    : d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+};
+
+export function voucherFields(f: VoucherFacts): Record<string, string> {
+  const types: string[] = [];
+  const count = new Map<string, number>();
+  for (const r of f.rooms) {
+    if (!count.has(r.roomType)) types.push(r.roomType);
+    count.set(r.roomType, (count.get(r.roomType) ?? 0) + 1);
+  }
+  const adults = f.rooms.reduce((a, r) => a + r.adults, 0);
+  const children = f.rooms.reduce((a, r) => a + r.children, 0);
+  return {
+    guestName: dash(f.guest.name),
+    reference: dash(f.reference),
+    hotelName: dash(f.hotel.name),
+    checkInLong: longDate(f.checkIn),
+    checkOutLong: longDate(f.checkOut),
+    roomTypes: types.length ? types.map((t) => `${count.get(t)} x ${t}`).join(", ") : "-",
+    guests: f.rooms.length
+      ? `${adults} adult${adults === 1 ? "" : "s"}${children ? `, ${children} child${children === 1 ? "" : "ren"}` : ""}`
+      : "-",
+    officePhone: dash(f.group?.phone),
+  };
+}
+
+/** The PDF and its eight fields, or null where the booking is not confirmed. */
+export async function whatsAppVoucher(
+  client: Client, reservationId: string,
+): Promise<{ file: SendableFile; fields: Record<string, string> } | null> {
+  const facts = await voucherFacts(client, reservationId);
+  return facts ? { file: await fileOf(facts), fields: voucherFields(facts) } : null;
 }

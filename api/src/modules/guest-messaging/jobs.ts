@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { withUser, type Client } from "../../db.ts";
 import { env } from "../../env.ts";
 import { canSend, messageIdFor, send, type Message, type SendResult } from "../../sending.ts";
-import { voucherFile } from "./voucherDocument.ts";
+import { voucherFile, whatsAppVoucher } from "./voucherDocument.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TWO MESSAGES THIS SYSTEM SENDS BY ITSELF (D18-11, D18-12)
@@ -50,6 +50,10 @@ import { voucherFile } from "./voucherDocument.ts";
 
 export const KIND = {
   confirmation: "booking-confirmation",
+  /** The CRS's approved voucher template with the PDF, on WhatsApp, after
+      the confirmation (D27-235 2.2, D27-241): its own message, owed and
+      recorded on its own. */
+  voucher: "booking-voucher",
   reminder: "arrival-reminder",
   /** The desk's Send check-in link (D27-105): not the sweep's, never owed. */
   checkInLink: "checkin-link",
@@ -92,6 +96,10 @@ export const SWEEP_EVERY_MS = 60_000;
     the database counts a message about any room as the group's. */
 export interface Due {
   kind: MessageKind;
+  /** The way THIS message goes, as the database decided it (D27-235): the
+      confirmation is owed once per way, the reminder one way (`channelFor`).
+      Null: nowhere to send. */
+  channel: "whatsapp" | "email" | null;
   reservationId: string;
   reference: string;
   hotel: { id: string; code: string; name: string; phone: string | null };
@@ -108,11 +116,18 @@ export interface Due {
   held: boolean;
 }
 
-/* ── Which way it goes (D21-35, D21-72) ────────────────────────────
-   WhatsApp only to a booking TICKED "guest agreed to WhatsApp" that has a
-   number — Meta's own rule, that a business may start a conversation only
-   with somebody who agreed. Otherwise email where there is an address.
-   Never both: one message per guest.
+/* ── Which way it goes (D21-35, D21-72; D27-235) ────────────────────
+   THE CONFIRMATION GOES BOTH WAYS (D27-235, 2.1, replacing D21-35's one or
+   the other): the database answers one row per way it is owed
+   (`app.guest_messages_owed`, migration "the voucher both ways"), and each
+   row's `channel` is its way.
+
+   THE ONE-WAY RULE BELOW stays for the day-before reminder and the desk's
+   check-in link (D27-241, Q3) - the database asks the same rule for the
+   reminder: WhatsApp only to a booking TICKED "guest agreed to WhatsApp"
+   that has a number - Meta's own rule, that a business may start a
+   conversation only with somebody who agreed. Otherwise email where there
+   is an address.
 
    Neither, and NOTHING IS ATTEMPTED — so nothing is recorded, which is
    migration 117's own rule. The sender refuses the same way one step
@@ -138,13 +153,14 @@ const asWritten = (iso: string) => iso.split("-").reverse().join("/");
     the owner drags the one their template wants instead of writing an
     expression. */
 export function messageFor(due: Due, link: string): Message | null {
-  const channel = channelFor(due);
+  const channel = due.channel;
   if (!channel) return null;
   return {
     /* ONE MESSAGE, ONE ID, however many tries (D27-168): the sweep's next
        minute and the desk's Send voucher are the same message, so the
-       workflow sends it once even when the answer to the first was lost. */
-    id: messageIdFor(due.kind, due.reservationId),
+       workflow sends it once even when the answer to the first was lost.
+       Each way is its own message (D27-235), so the way is in the id. */
+    id: messageIdFor(due.kind, due.reservationId, channel),
     channel,
     kind: due.kind,
     hotel: due.hotel,
@@ -158,7 +174,8 @@ export function messageFor(due: Due, link: string): Message | null {
       checkInText: asWritten(due.checkIn),
       checkOutText: asWritten(due.checkOut),
       nights: String(due.nights),
-      link,
+      /* The voucher carries the PDF and its eight fields, not a link. */
+      ...(due.kind === KIND.voucher ? {} : { link }),
     },
     about: { kind: "reservation", id: due.reservationId },
     /* NOBODY PRESSED A BUTTON. Migration 117 keeps `sent_by` null for
@@ -216,7 +233,7 @@ export type ListDue = (client: Client, limits: Limits) => Promise<Due[]>;
 export type MakeLink = (client: Client, due: Due) => Promise<string>;
 
 interface DueRow extends Record<string, unknown> {
-  kind: MessageKind; reservation_id: string; reference: string;
+  kind: MessageKind; channel: "whatsapp" | "email" | null; reservation_id: string; reference: string;
   hotel_id: string; hotel_code: string; hotel_name: string; hotel_phone: string | null;
   guest_name: string; guest_phone: string | null; guest_email: string | null;
   whatsapp_agreed: boolean; check_in: string; check_out: string; nights: number;
@@ -230,16 +247,17 @@ export async function dueFromDatabase(
   client: Client, limits: Limits, hotelId: string | null = null,
 ): Promise<Due[]> {
   const { rows } = await client.query<DueRow>(
-    `select kind, reservation_id::text, reference,
+    `select kind, channel, reservation_id::text, reference,
             hotel_id::text, hotel_code, hotel_name, hotel_phone,
             guest_name, guest_phone, guest_email, whatsapp_agreed,
             check_in, check_out, nights, held
-       from app.guest_messages_due($1::integer, $2::integer, $3::time,
-                                   $4::time, $5::time, $6::uuid)`,
+       from app.guest_messages_owed($1::integer, $2::integer, $3::time,
+                                    $4::time, $5::time, $6::uuid)`,
     [limits.withinHours, limits.mostAttempts, limits.remindFrom,
      limits.catchUpFrom, limits.catchUpUntil, hotelId]);
   return rows.map((r) => ({
     kind: r.kind,
+    channel: r.channel,
     reservationId: r.reservation_id,
     reference: r.reference,
     hotel: { id: r.hotel_id, code: r.hotel_code, name: r.hotel_name, phone: r.hotel_phone },
@@ -299,23 +317,35 @@ export async function claimTurn(
 
 export const NOT_OWED = "It was sent already, so it is not sent again.";
 
-/** The voucher goes with the booking confirmation's email (D27-171,
-    D27-172): the PDF in the CRS's design. WhatsApp sends the text and the
-    link for now (V3). The sweep and the desk's Send voucher both come
-    through here, so it is the same PDF whoever sends it. */
-export async function withVoucher(client: Client, message: Message): Promise<Message> {
-  if (message.kind !== KIND.confirmation || message.channel !== "email" || message.file) return message;
-  const file = await voucherFile(client, message.about?.id ?? "");
+/** The voucher PDF goes with the booking confirmation's email (D27-171,
+    D27-172), and on WhatsApp as the CRS's voucher template, with its eight
+    fields from the same facts as the PDF (D27-235 2.2, D27-241: the whole
+    group's rooms and guests; a dash for an office phone nobody typed). The
+    sweep and the desk's Send voucher both come through here, so it is the
+    same PDF whoever sends it. A WhatsApp voucher with no PDF is not sent. */
+export async function withVoucher(client: Client, message: Message): Promise<Message | null> {
+  if (message.file) return message;
+  const id = message.about?.id ?? "";
+  if (message.kind === KIND.voucher) {
+    const voucher = message.channel === "whatsapp" ? await whatsAppVoucher(client, id) : null;
+    return voucher ? { ...message, file: voucher.file, data: { ...message.data, ...voucher.fields } } : null;
+  }
+  if (message.kind !== KIND.confirmation || message.channel !== "email") return message;
+  const file = await voucherFile(client, id);
   return file ? { ...message, file } : message;
 }
+
+export const NO_VOUCHER = "No voucher could be made for this booking, so nothing went on WhatsApp.";
 
 /** The sweep's sender: the turn, the question again, then the one door out. */
 export async function sendIfOwed(client: Client, message: Message): Promise<SendResult> {
   const id = message.about?.id ?? "";
   await claimTurn(client, message.kind, id);
   const owed = (await dueFromDatabase(client, LIMITS, message.hotel.id))
-    .some((d) => d.kind === message.kind && d.reservationId === id);
-  return owed ? send(client, await withVoucher(client, message)) : { ok: false, reason: NOT_OWED };
+    .some((d) => d.kind === message.kind && d.reservationId === id && d.channel === message.channel);
+  if (!owed) return { ok: false, reason: NOT_OWED };
+  const full = await withVoucher(client, message);
+  return full ? send(client, full) : { ok: false, reason: NO_VOUCHER };
 }
 
 export interface SweepResult {
@@ -361,7 +391,7 @@ export async function runOnce(
      booking nobody can reach is owed for ever, so counted against the
      pace it would take a place every minute and starve the ones that can
      be reached. */
-  const reachable = due.filter((booking) => channelFor(booking));
+  const reachable = due.filter((booking) => booking.channel);
   /* A catch-up outside its hours waits for the morning (D22-42), and like
      the unreachable it takes no place in the pace - or the night's backlog
      would hold up a booking made five minutes ago. */
@@ -372,7 +402,8 @@ export async function runOnce(
 
   for (const booking of now.slice(0, pace)) {
     try {
-      const link = await run((client) => makeLink(client, booking));
+      /* The voucher carries no link: none is minted for it. */
+      const link = booking.kind === KIND.voucher ? "" : await run((client) => makeLink(client, booking));
       const message = messageFor(booking, link);
       if (!message) continue;
       result.attempted += 1;

@@ -41,7 +41,10 @@ const CODES_AN_HOUR = 5;
 /* An ID photo is megabytes, encrypted here and sent on: ten an hour is a
    guest retaking a blurred one, not a stranger filling the hotel's Drive. */
 const PHOTOS_AN_HOUR = 10;
-const knocks = new Map<string, { at: number; opens: number; codes: number; photos: number; hour: number }>();
+/* The hotel's own pictures (D27-243): a gallery of twenty, shown at once,
+   must not use up the page's opens. Counted apart, per minute. */
+const PICTURES_A_MINUTE = 120;
+const knocks = new Map<string, { at: number; opens: number; pictures: number; codes: number; photos: number; hour: number }>();
 
 /* ⚠ AND IT IS SWEPT, WHICH IT WAS NOT (19 September, found by audit).
    A token hash was added on the first knock and never removed, and this is
@@ -59,7 +62,7 @@ function sweep(now: number): void {
   }
 }
 
-export function tooOften(tokenHash: string, kind: "open" | "code" | "photo"): boolean {
+export function tooOften(tokenHash: string, kind: "open" | "picture" | "code" | "photo"): boolean {
   const now = Date.now();
   /* Cheap: this map holds one small object per token seen in the last hour,
      and the sweep only walks that. It runs on the knock rather than on a
@@ -70,7 +73,7 @@ export function tooOften(tokenHash: string, kind: "open" | "code" | "photo"): bo
   const seen = knocks.get(tokenHash);
   if (!seen || seen.at !== minute) {
     knocks.set(tokenHash, {
-      at: minute, opens: 0,
+      at: minute, opens: 0, pictures: 0,
       codes: seen && seen.hour === hour ? seen.codes : 0,
       photos: seen && seen.hour === hour ? seen.photos : 0,
       hour,
@@ -80,6 +83,10 @@ export function tooOften(tokenHash: string, kind: "open" | "code" | "photo"): bo
   if (kind === "open") {
     row.opens += 1;
     return row.opens > OPENS_A_MINUTE;
+  }
+  if (kind === "picture") {
+    row.pictures += 1;
+    return row.pictures > PICTURES_A_MINUTE;
   }
   if (kind === "photo") {
     row.photos += 1;

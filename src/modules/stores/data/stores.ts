@@ -18,7 +18,9 @@ import type { ImportReport } from "@/data/repositories/importReport";
    ══════════════════════════════════════════════════════════════════ */
 
 export type StockKind =
-  | "receipt" | "issue" | "wastage" | "adjustment" | "return";
+  | "receipt" | "issue" | "wastage" | "adjustment" | "return"
+  /** Crockery and cutlery only, with who (D27-242). */
+  | "breakage";
 
 /** Every kind the history reads back: a move between stores too (106). */
 export type MovementKind = StockKind | "transfer";
@@ -41,6 +43,36 @@ export interface StoreList {
   items: StockItem[];
   /** Where an issue can go: the hotel's outlets, switched on (D22-20). */
   outlets: { id: string; name: string }[];
+  /** The hotel's business date: "today" for the tiles (D27-242). */
+  businessDate: string;
+  /** Who may be named as having broken something: the people rostered here.
+      Empty for anybody who does not record a breakage. */
+  people: { id: string; name: string }[];
+  /** Where crockery and cutlery is in use (D27-242): the hotel's restaurants,
+      bars and kitchens in Places and suppliers. Nothing is received into one. */
+  inUse: { id: string; name: string; kind: string; isActive: boolean }[];
+}
+
+/** One group of the fourteen days (D27-238): an item's movements of one kind,
+    in one place, on one day, summed. `value` is null when any of them has no
+    value - a dash, never a part. */
+export interface DayRow {
+  itemId: string; placeId: string; date: string; kind: string;
+  outletId: string | null; quantity: number; value: number | null;
+}
+
+export interface StoreDays {
+  today: string;
+  /** Fourteen business days, the last one `end` (today unless asked). */
+  days: string[];
+  rows: DayRow[];
+  /** Rooms occupied each day, as the reports count them. */
+  occupied: Record<string, number>;
+  /** What each outlet sold, before GST, by outlet id then day - or null for a
+      role that may not read reports (D27-242 Q4). */
+  sales: Record<string, Record<string, number>> | null;
+  /** How the food cost is counted; null shows the % as a dash (Q5). */
+  foodCostBasis: "before_gst" | null;
 }
 
 export interface StockItem {
@@ -76,6 +108,17 @@ export interface StockItem {
   lastMovement: string | null;
   movements: number;
   isActive: boolean;
+  /** Crockery and cutlery: may be in use at a restaurant, bar or kitchen. */
+  crockery: boolean;
+  /** Every place it ever came into (not undone): "Run out" is a place that
+      had some and holds none. */
+  heldIn: string[];
+  /** What moved today, by kind: the places it moved in. */
+  today: Partial<Record<"receipt" | "issue" | "wastage" | "breakage", string[]>>;
+  /** The business date each place last counted it, by place id. */
+  lastCounted: Record<string, string>;
+  /** On an order sent and not yet delivered, by store id (Purchasing). */
+  onOrder: Record<string, number>;
 }
 
 export interface StockMovement {
@@ -106,6 +149,13 @@ export interface StockMovement {
   reversed: boolean;
   /** Empty cylinders, not full ones (D25-18). */
   empty: boolean;
+  /** A delivery's GST as the bill says it; null is not recorded (D27-238). */
+  gst: { rate: number; amount: number; claimable: boolean } | null;
+  expiresOn: string | null;
+  /** An issue's department, as typed. */
+  department: string | null;
+  /** Who broke it; null is not known. */
+  brokenBy: string | null;
 }
 
 type Result<T = unknown> = ({ ok: true } & T) | { ok: false; reason: string };
@@ -116,8 +166,14 @@ type Result<T = unknown> = ({ ok: true } & T) | { ok: false; reason: string };
    first". The screen tells failed from empty now, the way the till (POS-4)
    and Rooms do. */
 export async function getStore(hotelId: string): Promise<StoreList> {
-  if (!hotelId) return { stores: [], items: [], outlets: [] };
+  if (!hotelId) return { stores: [], items: [], outlets: [], businessDate: "", people: [], inUse: [] };
   return api<StoreList>(`/api/hotels/${hotelId}/stores`);
+}
+
+/** The fourteen business days ending `end` (today when not given). Throws,
+    like every read here (STO-2). */
+export async function getStoreDays(hotelId: string, end?: string): Promise<StoreDays> {
+  return api<StoreDays>(`/api/hotels/${hotelId}/stores/days${end ? `?end=${end}` : ""}`);
 }
 
 export async function getStockHistory(
@@ -134,6 +190,7 @@ export async function addStockItem(
   input: {
     name: string; unit: string; category?: string;
     reorderLevel?: number | null;
+    crockery?: boolean;
   },
 ): Promise<Result<{ id: string }>> {
   return call(`/api/hotels/${hotelId}/stores/items`, "POST", input);
@@ -165,6 +222,13 @@ export async function recordStockMovement(
         supplier took on a delivery. Required there; 0 is an answer. */
     emptiesBack?: number;
     emptiesTaken?: number;
+    /** A delivery's GST, all three or none, and its expiry (D27-238). */
+    gstRate?: number; gstAmount?: number; gstClaimable?: boolean;
+    expiresOn?: string;
+    /** An issue's department, as typed (D27-242). */
+    department?: string;
+    /** A breakage's who: a person's id, or null for Not known. */
+    brokenBy?: string | null;
   },
 ): Promise<Result<{
   id: string; onHand: number; onHandHere: number; emptiesHere: number | null;
@@ -181,6 +245,7 @@ export async function setStockItem(
     levels?: Record<string, number | null>;
     cylindersOnDeposit?: number | null;
     depositPerCylinder?: number | null;
+    crockery?: boolean;
   },
 ): Promise<Result> {
   return call(`/api/hotels/${hotelId}/stores/items/${itemId}`, "PATCH", input);

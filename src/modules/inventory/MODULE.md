@@ -57,11 +57,15 @@ each booking.
   occupancy, Monthly statistics and Revenue outlook. Everyone with `rate:
   READ` sees it; only `setsRates` roles (RATE_SETTER_ROLES) get anything to
   press, and every write route asks the gate.
-- **The break-up (D27-206):** each room type's line on the calendar is a button
-  (`aria-expanded`, closed by default) that opens rows under it - "2 guests",
+- **The break-up (D27-206; always open since D27-237 5.1):** each room type is
+  a grey group row - its base each day with the rooms left under it (5.2, from
+  the Rooms left tab's own `GET /inventory`) - and under it, always, "2 guests",
   "CP · 2 guests" … "AI · 2 guests", and "+ per extra adult", "+ per extra child"
   only where a further guest fits the room -
-  read from `GET /pricing?breakup=` when it opens; not set is a dash. **Set
+  read from `GET /pricing?breakup=` per type; not set is a dash. In the
+  Calendar's look: the arrows, range and Today in the card's own toolbar, the
+  business date's column navy, 40px rows, how the day sold as the Calendar's
+  footer with the occupancy capsule; "How rates are built" under it (5.3). **Set
   prices** (setters only) is the tapped price's dialog with a room type and a
   first day - the same `setBasePrice` call; with a base room type chosen only
   it is offered.

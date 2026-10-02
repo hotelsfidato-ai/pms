@@ -93,6 +93,23 @@ describe("the ID photo workflow", () => {
     expect(noFolderYet!.json).toMatchObject({ stop: true, statusCode: 422 });
   });
 
+  /* D27-235 (2.6): 5 Elements takes ID photos like Amrapali and Grand Lucent. */
+  it("names every hotel that takes ID photos - 5EL, AMR and GLM - each with its own folder line", async () => {
+    const code = workflow.nodes.find((n) => n.name === "Read the request")!.parameters.jsCode!;
+    const listed = [...(/const HOTELS = \{([^}]*)\}/.exec(code)?.[1] ?? "").matchAll(/"([A-Z0-9]+)":/g)]
+      .map((m) => m[1]).sort();
+    expect(listed).toEqual(["5EL", "AMR", "GLM"]);
+
+    const fiveElements: Workflow = {
+      ...workflow,
+      nodes: workflow.nodes.map((n) => n.name !== "Read the request" ? n : {
+        ...n, parameters: { ...n.parameters, jsCode: n.parameters.jsCode!.replace('"5EL": ""', `"5EL": "${FOLDER}"`) },
+      }),
+    };
+    const [out] = await run(fiveElements, "Read the request", store({ hotel: "5EL" }));
+    expect(out!.json).toMatchObject({ stop: false, store: true, folderId: FOLDER });
+  });
+
   it("stores an encrypted bundle named by the PMS's record, in that hotel's folder", async () => {
     const [out] = await run(filled, "Read the request", store());
     expect(out!.json).toEqual({ stop: false, store: true, action: "store", folderId: FOLDER, name: NAME });

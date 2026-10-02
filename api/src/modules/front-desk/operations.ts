@@ -172,6 +172,41 @@ interface CheckInBody {
   confirmMove?: boolean;
 }
 
+/** The document THIS stay's online check-in carried, confirmed by the desk -
+    the express check-in's one question (D27-236 3.4, D27-242). Null for a
+    foreign guest (Form III is always the desk's), for a submission waiting
+    or set aside, and for any document kept from an earlier visit. */
+async function expressDocument(
+  client: Client, hotelId: string, stayId: string,
+): Promise<{ type: string; number: string } | null> {
+  const { rows } = await client.query<{ type: string; number: string; nationality: string | null }>(
+    `select s.id_type as type, s.id_number as number, g.nationality
+       from reservations r
+       join guests g on g.id = r.guest_id
+       join guest_detail_submissions s on s.reservation_id = r.id and s.status = 'confirmed'
+      where r.hotel_id = $1 and r.id = $2
+        and nullif(trim(s.id_type), '') is not null
+        and nullif(trim(s.id_number), '') is not null
+      order by s.handled_at desc nulls last
+      limit 1`, [hotelId, stayId]);
+  const d = rows[0];
+  return d && !isForeign(d.nationality ?? "IN") ? { type: d.type, number: d.number } : null;
+}
+
+/* Whether a stay checks in by express, and the document, masked to its last
+   four (D27-236 3.4): what the check-in screen shows in place of the ID. */
+operations.get("/:code/stays/:id/express-check-in", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const d = await expressDocument(client, hotelId, c.req.param("id"));
+    return d
+      ? { express: true, document: { type: d.type, number: `${"•".repeat(Math.max(0, d.number.length - 4))}${d.number.slice(-4)}` } }
+      : { express: false };
+  });
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
 operations.post("/:code/stays/:id/check-in", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as CheckInBody;
   const stayId = c.req.param("id");
@@ -393,7 +428,13 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         identity?.idType && identity.idNumber?.trim(),
       );
 
-      if (!captured && !body.idSkipReason?.trim()) {
+      /* EXPRESS CHECK-IN (the owner's D27-236 3.4, D27-242): an Indian guest
+         whose ID the desk confirmed from THIS stay's online check-in just
+         collects the key - nothing retyped. Asked here, of the server's own
+         records, never of the client; a foreign guest never passes it. */
+      const express = !captured && !body.idSkipReason?.trim()
+        ? await expressDocument(client, hotelId, stayId) : null;
+      if (!captured && !body.idSkipReason?.trim() && !express) {
         return refuse(
           "Record the guest's ID document - type and number - or give a " +
             "reason for skipping it.",
@@ -418,11 +459,21 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       const formIII = formIIIRefusal({ ...identity, nationality }, body.visit, captured);
       if (formIII) return refuse(formIII);
 
-      const notes = captured
+      const notes = captured || express
         ? stay.notes
         : [stay.notes, `ID not captured - ${body.idSkipReason}`]
             .filter(Boolean)
             .join(" · ");
+
+      /* Replace rather than add. A booking pre-assigned to one room and
+         checked into another must not end up holding both. Released BEFORE
+         the stay turns checked_in (FD-10): nobody ever entered the room it
+         was given ahead, so 185's trigger leaves it as clean as it was. */
+      await client.query(
+        `update room_assignments set released_at = now()
+          where reservation_id = $1 and released_at is null and room_id <> $2`,
+        [stayId, room.id],
+      );
 
       await client.query(
         `update reservations
@@ -547,13 +598,6 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         await saveVisit(client, hotelId, stayId, body.visit ?? {});
       }
 
-      /* Replace rather than add. A booking pre-assigned to one room and
-         checked into another must not end up holding both. */
-      await client.query(
-        `update room_assignments set released_at = now()
-          where reservation_id = $1 and released_at is null and room_id <> $2`,
-        [stayId, room.id],
-      );
       /* A hold given ahead on this room starts on the old arrival: it is
          stretched back to the day the guest came (FD-24). */
       await client.query(

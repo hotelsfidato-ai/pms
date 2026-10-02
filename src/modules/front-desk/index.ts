@@ -1,7 +1,7 @@
 /* The front door of the Front desk service — the only file another service
    may import (src/test/boundaries.test.ts). It grows as the service's files
    move in; see MODULE.md. */
-export { StayTable } from "./components/StayTable";
+export { StayTable, STAY_LABEL } from "./components/StayTable";
 export type { StayColumn, StayRow } from "./components/StayTable";
 export { assignRoom, checkOut, checkOutAllowed, earlyArrival } from "./data/operations";
 export type { Posting } from "./data/operations";

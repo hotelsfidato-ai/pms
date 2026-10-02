@@ -61,7 +61,7 @@ describe("a foreign guest's check-in", () => {
       </QueryClientProvider>,
     );
     fireEvent.click(await screen.findByRole("button", { name: /Check in/ }));
-    await screen.findByText("204");
+    await screen.findByText("Room 204");
     const go = () => screen.getAllByRole("button", { name: /Check in/ }).at(-1) as HTMLButtonElement;
 
     expect((screen.getByLabelText("Nationality") as HTMLInputElement).value).toBe("BR");

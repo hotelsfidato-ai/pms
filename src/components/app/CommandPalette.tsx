@@ -2,11 +2,14 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { CornerDownLeft, Search } from "lucide-react";
+import { CalendarDays, CornerDownLeft, Search } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useRole } from "@/lib/session";
-import { getModules } from "@/data/repositories";
+import { can } from "@/lib/permissions";
+import { getModules, queryKeys, type Stay } from "@/data/repositories";
+import { listStays, STAY_LABEL } from "@/modules/front-desk";
 import { navigationFor, sidebarFor, type NavItem } from "./navigation";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -20,8 +23,16 @@ import { navigationFor, sidebarFor, type NavItem } from "./navigation";
    findable by search". This is that search.
 
    It finds SCREENS: every one this person may open, listed in their
-   menu or not. It does not search guests or bookings yet — the label
-   says "Find a screen" so it promises only what it does.
+   menu or not. Since D27-239 it also finds GUESTS AND BOOKINGS, for a
+   role that sees bookings (the owner's answers of 2 October): from three
+   letters, or four digits of a phone, the bookings whose guest, reference
+   or phone match - under the screens, in house first, at most eight, each
+   opening on All bookings (?res=). A guest has no page of their own, so a
+   guest is found as their bookings. The read is All bookings' own
+   (GET /stays, the same cache entry); a phone matches only for a role
+   that also sees guests, as the server's WITHHELD blanks it for the rest.
+   ponytail: the whole list is read, as All bookings reads it; a server
+   search with its own gate line when a hotel's list gets slow.
 
    The retired words still work. Somebody who types "folio", "day end"
    or "floor" lands on Folios, Close restaurant day and Tables, because
@@ -56,6 +67,26 @@ function entriesFor(role: Parameters<typeof navigationFor>[0], code: string, mod
   return out;
 }
 
+/** In the house, then coming, then gone. */
+const when = (s: Stay) =>
+  s.status === "in-house" || s.status === "due-out" ? 0
+    : s.status === "due-in" || s.status === "tentative" ? 1 : 2;
+
+/** The bookings a search finds: from 3 characters by guest or reference, or
+    by 4 digits of a phone where `phones` (a role that sees guests). In the
+    house first, then coming (soonest first), then gone (newest first). */
+export function findBookings(stays: Stay[], query: string, phones: boolean): Stay[] {
+  const q = query.trim().toLowerCase();
+  const digits = q.replace(/\D/g, "");
+  return stays
+    .filter((s) =>
+      (q.length >= 3 && (s.guest.toLowerCase().includes(q) || s.reference.toLowerCase().includes(q)))
+      || (phones && digits.length >= 4 && (s.phone ?? "").replace(/\D/g, "").includes(digits)))
+    .sort((a, b) => when(a) - when(b)
+      || (when(a) === 2 ? b.arrival.localeCompare(a.arrival) : a.arrival.localeCompare(b.arrival)))
+    .slice(0, 8);
+}
+
 /** Closest first: the name itself, then its other words, then its section. */
 function rank(entry: Entry, query: string): number {
   const label = entry.item.label.toLowerCase();
@@ -87,6 +118,21 @@ export function CommandPalette() {
     enabled: Boolean(hotelId),
     staleTime: 5 * 60_000,
   });
+
+  /* Guests and bookings, for a role that sees bookings (D27-239). */
+  const seesBookings = can(role, "view", "reservation");
+  const typed = query.trim().toLowerCase();
+  const asks = seesBookings && (typed.length >= 3 || typed.replace(/\D/g, "").length >= 4);
+  const stays = useQuery({
+    queryKey: queryKeys.stays(hotelId, "book"),
+    queryFn: () => listStays(hotelId),
+    enabled: open && asks && Boolean(hotelId),
+    staleTime: 60_000,
+  });
+  const found = useMemo(
+    () => (asks && stays.data ? findBookings(stays.data, typed, can(role, "view", "customer")) : []),
+    [asks, stays.data, typed, role],
+  );
 
   /* Ctrl K / ⌘K from anywhere — the badge in the top bar has promised it
      since the first checkpoint. */
@@ -133,17 +179,24 @@ export function CommandPalette() {
     close();
     navigate(entry.item.to);
   };
+  /* A booking opens in All bookings' own panel. */
+  const open_ = (stay: Stay) => {
+    close();
+    navigate(`/h/${hotelId}/reservations?res=${stay.id}`);
+  };
+  const count = results.length + found.length;
+  const pick = (i: number) => (i < results.length ? go(results[i]) : found[i - results.length] && open_(found[i - results.length]!));
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActive((i) => Math.min(i + 1, results.length - 1));
+      setActive((i) => Math.min(i + 1, count - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActive((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      go(results[active]);
+      pick(active);
     }
   };
 
@@ -156,7 +209,9 @@ export function CommandPalette() {
                      overflow-hidden rounded-xl bg-white shadow-overlay"
           aria-describedby={undefined}
         >
-          <DialogPrimitive.Title className="sr-only">Find a screen</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">
+            {seesBookings ? "Find a screen, a guest or a booking" : "Find a screen"}
+          </DialogPrimitive.Title>
 
           <div className="flex items-center gap-2.5 px-4 h-14 border-b border-grey-200">
             <Search className="size-4 text-grey-400 shrink-0" aria-hidden />
@@ -165,30 +220,33 @@ export function CommandPalette() {
               value={query}
               onChange={(e) => setQuery(e.currentTarget.value)}
               onKeyDown={onKeyDown}
-              placeholder="Find a screen - try “bill”, “night audit”, “stock”"
+              placeholder={seesBookings ? "Find a screen, a guest or a booking"
+                : "Find a screen - try “bill”, “night audit”, “stock”"}
               aria-label="Find a screen"
               role="combobox"
               aria-expanded
               aria-controls={listId}
-              aria-activedescendant={results[active] ? `${listId}-${active}` : undefined}
+              aria-activedescendant={active < count ? `${listId}-${active}` : undefined}
               className="flex-1 min-w-0 h-full bg-transparent text-md text-ink-900
                          placeholder:text-grey-400 outline-none"
             />
           </div>
 
-          {results.length === 0 ? (
+          {count === 0 ? (stays.isFetching ? null : (
             <div className="px-5 py-10 text-center">
-              <p className="text-base font-medium text-ink-900">No screen called that</p>
+              <p className="text-base font-medium text-ink-900">
+                {seesBookings ? "Nothing called that" : "No screen called that"}
+              </p>
               <p className="text-sm text-grey-500 mt-1">
                 Try a shorter word, or what a guest would call it.
               </p>
             </div>
-          ) : (
+          )) : (
             <ul
               id={listId}
               ref={listRef}
               role="listbox"
-              aria-label="Screens"
+              aria-label={seesBookings ? "Screens and bookings" : "Screens"}
               className="max-h-[min(60vh,26rem)] overflow-y-auto scrollbar-quiet p-1.5"
             >
               {results.map((entry, i) => {
@@ -234,6 +292,50 @@ export function CommandPalette() {
                   </li>
                 );
               })}
+              {found.length > 0 && (
+                <li role="presentation">
+                  <ul role="group" aria-labelledby={`${listId}-bookings`}>
+                    <li role="presentation" id={`${listId}-bookings`}
+                        className="px-3 pt-3 pb-1 text-2xs font-semibold uppercase tracking-[0.025em] text-grey-500">
+                      Bookings
+                    </li>
+                    {found.map((stay, j) => {
+                      const i = results.length + j;
+                      return (
+                        <li
+                          key={stay.id}
+                          id={`${listId}-${i}`}
+                          data-index={i}
+                          role="option"
+                          aria-selected={i === active}
+                          onMouseMove={() => setActive(i)}
+                          onClick={() => open_(stay)}
+                          className={cn(
+                            "flex items-center gap-3 px-3 min-h-14 py-1.5 rounded-md cursor-pointer",
+                            "transition-colors duration-100",
+                            i === active ? "bg-grey-100" : "hover:bg-grey-50",
+                          )}
+                        >
+                          <span className="grid place-items-center size-7 rounded-md bg-grey-100 text-grey-500 shrink-0">
+                            <CalendarDays className="size-4" aria-hidden />
+                          </span>
+                          <span className="flex-1 min-w-0">
+                            <span className="block truncate text-base text-ink-900">{stay.guest}</span>
+                            <span className="block truncate text-xs text-grey-500 tabular">
+                              {stay.reference} · {dateShort(stay.arrival)} – {dateShort(stay.departure)}
+                              {stay.roomNumber ? ` · Room ${stay.roomNumber}` : ""}
+                            </span>
+                          </span>
+                          <span className="text-2xs text-grey-500 shrink-0">{STAY_LABEL[stay.status] ?? stay.status}</span>
+                          {i === active && (
+                            <CornerDownLeft className="size-3.5 text-grey-400 shrink-0" aria-hidden />
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </li>
+              )}
             </ul>
           )}
         </DialogPrimitive.Content>
