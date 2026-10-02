@@ -4,6 +4,7 @@ import { adminLists } from "./adminLists.ts";
 import { admin } from "./admin.ts";
 import { commissioning } from "./commissioning.ts";
 import { groupSettings } from "./groupSettings.ts";
+import { gallery } from "./gallery.ts";
 import { bankDetails } from "./bankDetails.ts";
 import { systemHealth } from "./systemHealth.ts";
 
@@ -16,6 +17,7 @@ export const mounts: readonly Mount[] = [
   ["/api", admin],
   ["/api/hotels", commissioning],
   ["/api/hotels", groupSettings],
+  ["/api/hotels", gallery],
   ["/api/hotels", bankDetails],
   ["/api/hotels", systemHealth],
 ];

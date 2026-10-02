@@ -192,6 +192,12 @@ Coming soon page and its address are gone.
   too: the hotel's own, else the group's, as an `<img>` on the door's
   `/logo`. Decorative (`alt=""`: the name is printed under it); where there
   is none, or it does not load, nothing is drawn.
+- **The hotel's photos (D27-243)** - by rule 8: `GallerySection.tsx`,
+  `api/src/routes/guestGallery.ts`, the definers `app.guest_gallery` (behind
+  the unlock) and `app.guest_gallery_photo` (one picture on the link alone, as
+  the logo is) in 187. Added on Settings → Property (admin). Lazy, cached a
+  day, counted in the door's own bucket for pictures; nginx gives them their
+  own zone. Hidden when the hotel has none.
 - **"A table at the restaurant" (D27-224)** - the POS lane's, by rule 8:
   `TableBooking.tsx`, `api/src/routes/guestTables.ts`, the definers
   `app.guest_table_*` (172). Any night of the stay, a slot the restaurant

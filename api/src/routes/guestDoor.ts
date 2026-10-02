@@ -18,6 +18,7 @@ import {
 import { guestTables } from "./guestTables.ts";
 import { messagesDesk, messagesDoor } from "./guestMessages.ts";
 import { logoDoor } from "./guestLogo.ts";
+import { guestGallery } from "./guestGallery.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S OWN DOOR — one private page per booking (D18-9, D18-10, D18-13)
@@ -1251,6 +1252,7 @@ guestDoor.route("/", guestTables);   // a table at the restaurant (D27-224)
 guestDoor.route("/", messagesDoor);      // messages with the desk, both ways (D27-224)
 guestLinks.route("/", messagesDesk);
 guestDoor.route("/", logoDoor);          // the hotel's logo, else the group's (D27-223)
+guestDoor.route("/", guestGallery);      // the hotel's photos (D27-243)
 
 /* Exported for the test that proves a stolen token is not a key to anything
    else: the hash the door computes is the hash the database holds. */

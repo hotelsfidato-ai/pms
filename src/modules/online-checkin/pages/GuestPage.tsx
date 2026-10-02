@@ -25,6 +25,7 @@ import { privacyNoticeFor } from "@/modules/online-checkin/privacyNotice";
 import { MessageTheDesk } from "@/modules/online-checkin/MessageTheDesk";
 import { QuickChoices, hasQuickChoices } from "@/modules/online-checkin/QuickChoices";
 import { TableBookingSection } from "@/modules/online-checkin/TableBooking";
+import { GallerySection } from "@/modules/online-checkin/GallerySection";
 import { BillPrint } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -404,6 +405,7 @@ function Behind(
       <TableBookingSection token={token} onUnlockGone={onUnlockGone} />
       <MessageTheDesk token={token} onUnlockGone={onUnlockGone} />
       <RoomDining token={token} onUnlockGone={onUnlockGone} />
+      <GallerySection token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
     </>
   );
 }
