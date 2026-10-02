@@ -11,6 +11,26 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · What companies paid, as receipts apart from sales (the owner's D27-239, Q4) - the cash lane's
+
+**Asked for:** the master, with the owner's answer: company and booking-site
+payments in the day book as receipts, kept apart from the day's sales, with a
+clear place for the Tally export.
+**Shipped:** each day gets "Received from companies" (finance's
+`companyReceipts`, through its front door - live lines only, a reversed
+payment and its reversal both out); the CSV and the .xlsx gain the column
+before "Night audit", and the .xlsx a second sheet "Received from companies"
+(date, who, how, reference, amount) - a receipt voucher's shape. The page
+shows the tile "Received from companies · Apart from sales" and the list.
+**Proved:** finance's `companyPayments.test.ts` (the day book's figure and
+list, and after a reversal); `test/modules/accounting` 97 tests with roleGate
+and resetOrder, passed; web `accounting.test.tsx` passed. Screen as the
+Accountant: ₹1,000.00 from Expedia, bank transfer, UTR 4471209; 375 px, no
+sideways scroll.
+**Left open:** the Tally XML formats are still ACC-4.
+
+---
+
 ## 2026-09-29 · A range holding a night with no room GST rate is refused (D27-173) - the leads lane's
 
 **Asked for:** the master: a Tally export never carries a null or a guessed

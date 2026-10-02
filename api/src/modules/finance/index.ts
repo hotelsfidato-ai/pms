@@ -6,6 +6,7 @@ import { billing } from "./billing.ts";
 import { invoices } from "./invoices.ts";
 import { tax } from "./tax.ts";
 import { deposits } from "./deposits.ts";
+import { companyPayments } from "./companyPayments.ts";
 
 /* The front door of the finance service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -19,6 +20,8 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", tax],
   /* D27-190: the float kept at each close, and the cash deposits log. */
   ["/api/hotels", deposits],
+  /* D27-239: a company pays what it owes on the City ledger. */
+  ["/api/hotels", companyPayments],
 ];
 
 /* ⚠ THE DOOR A CHARGE REACHES A ROOM BILL THROUGH — opened 18 September
@@ -53,3 +56,5 @@ export type { PaymentToTake, Payer } from "./postings.ts";
 export { issueFolioInvoice } from "./invoices.ts";
 export type { InvoiceRecipient } from "./invoices.ts";
 export { folioBalance } from "./folios.ts";
+/* D27-242 (Q4): what companies paid, for the accountant's day book. */
+export { companyReceipts, type CompanyReceipt } from "./companyPayments.ts";

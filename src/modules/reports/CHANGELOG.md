@@ -87,6 +87,21 @@ STORES LANE in the builders).
 
 ---
 
+## 2026-10-02 · The City ledger counts what companies paid (the owner's D27-239) - the cash lane's
+
+**Asked for:** the master, with the owner's answer: Opening, Credit and Closing
+in the City ledger from recorded company payments; Opening counts all history.
+**Shipped:** `cityLedger.ts`: Opening is everything sent less everything paid
+before the period, Credit is finance's `company_payments` by the day received,
+Closing is Opening + Debit - Credit. `manager.ts`'s City Ledger section:
+Opening Balance and Closing Balance (today), Payment Received (today, month,
+year). `reports.test.ts`'s City ledger case follows the new Closing.
+**Proved:** finance's `companyPayments.test.ts` (ledger and Manager lines);
+`test/modules/reports`: 3 files, 33 tests, passed.
+**Left open:** Outstanding Commission stays "not held".
+
+---
+
 ## 2026-09-29 · A night not charged yet at a property with no room GST rule: its tax unknown, not a 500 (D27-173) - the leads lane's
 
 **Asked for:** the master, after the leads lane found it: `NIGHTS`' booked

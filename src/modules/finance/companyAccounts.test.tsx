@@ -11,8 +11,11 @@ import { PropertyCityLedgerPage } from "./pages/Billing";
 
    Company accounts showed Agoda owing nothing (its stays' charges less every
    payment) while the City ledger report showed ₹5,999.70 sent to it. The
-   screen reads that report now, and prints a dash for what it cannot know.
+   screen reads that report now. Since D27-239 the report carries what each
+   account paid, so Opening, Received and Balance are figures, not dashes.
    ══════════════════════════════════════════════════════════════════ */
+
+const PAID = { businessDate: "2026-08-25", methods: { bank_transfer: "Bank transfer" }, accounts: [], payments: [] };
 
 const REPORT = {
   report: "city-ledger", title: "City ledger",
@@ -21,8 +24,8 @@ const REPORT = {
   sections: [{
     key: "accounts", title: "City Ledger - Summary", columns: [],
     rows: [
-      { kind: "row", cells: { account: "Agoda", contact: null, phone: null, opening: null, debit: 5999.7, credit: null, closing: null } },
-      { kind: "total", cells: { account: "Total", contact: null, phone: null, opening: null, debit: 5999.7, credit: null, closing: null } },
+      { kind: "row", cells: { account: "Agoda", contact: null, phone: null, opening: 1000, debit: 5999.7, credit: 2500, closing: 4499.7 } },
+      { kind: "total", cells: { account: "Total", contact: null, phone: null, opening: 1000, debit: 5999.7, credit: 2500, closing: 4499.7 } },
     ],
   }],
 };
@@ -31,8 +34,9 @@ beforeEach(startSignedIn);
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("Company accounts (FI-2)", () => {
-  it("shows the City ledger report's figure for each account, and a dash for what is not recorded", async () => {
-    const asked = vi.spyOn(apiModule, "api").mockImplementation(async () => REPORT as never);
+  it("shows the City ledger report's figures for each account: what it owed, was sent, paid and owes (D27-239)", async () => {
+    const asked = vi.spyOn(apiModule, "api").mockImplementation(async (path: string) =>
+      (String(path).includes("/company-payments") ? PAID : REPORT) as never);
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <MemoryRouter initialEntries={["/h/5EL/city-ledger"]}>
@@ -42,8 +46,10 @@ describe("Company accounts (FI-2)", () => {
     );
     const agoda = (await screen.findAllByText("Agoda")).map((e) => e.closest("tr")).find(Boolean)!;
     expect(within(agoda).getByText("₹6,000")).toBeTruthy();
-    expect(within(agoda).getAllByText("-")).toHaveLength(2);
-    expect(String(asked.mock.calls[0]![0])).toMatch(/\/reports\/city-ledger/);
+    expect(within(agoda).getByText("₹2,500")).toBeTruthy();
+    expect(within(agoda).getByText("₹4,500")).toBeTruthy();
+    expect(within(agoda).queryAllByText("-")).toHaveLength(0);
+    expect(asked.mock.calls.some(([path]) => /\/reports\/city-ledger/.test(String(path)))).toBe(true);
     expect(document.body.textContent).not.toMatch(/Total/);
   });
 });

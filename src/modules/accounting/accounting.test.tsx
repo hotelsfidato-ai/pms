@@ -48,15 +48,15 @@ const BOOK: DayBook = {
   to: "2026-08-25",
   days: [
     { date: "2026-08-24", room: 12000, roomTax: 1440, extra: 2500.5, extraTax: 125.03,
-      pos: 0, posTax: 0, discount: 1000, alcohol: 1200, vat: 120, sales: 14700.5, tax: 1565.03, receipt: 9000,
+      pos: 0, posTax: 0, discount: 1000, alcohol: 1200, vat: 120, sales: 14700.5, tax: 1565.03, receipt: 9000, companyReceipt: 0,
       closed: true },
     { date: "2026-08-25", room: 8000, roomTax: 960, extra: 400.25, extraTax: 20.01,
-      pos: 640, posTax: 32, discount: 0, alcohol: 0, vat: 0, sales: 9040.25, tax: 1012.01, receipt: 5000,
+      pos: 640, posTax: 32, discount: 0, alcohol: 0, vat: 0, sales: 9040.25, tax: 1012.01, receipt: 5000, companyReceipt: 0,
       closed: false },
   ],
   total: {
     room: 20000, roomTax: 2400, extra: 2900.75, extraTax: 145.04, pos: 640, posTax: 32,
-    discount: 1000, alcohol: 1200, vat: 120, sales: 23740.75, tax: 2577.04, receipt: 14000,
+    discount: 1000, alcohol: 1200, vat: 120, sales: 23740.75, tax: 2577.04, receipt: 14000, companyReceipt: 0,
   },
   openDays: ["2026-08-25"],
 };
@@ -242,11 +242,11 @@ describe("the export screen", () => {
       ...BOOK,
       days: BOOK.days.map((d) => ({
         ...d, room: 0, roomTax: 0, extra: 0, extraTax: 0, pos: 0, posTax: 0,
-        discount: 0, alcohol: 0, vat: 0, sales: 0, tax: 0, receipt: 0,
+        discount: 0, alcohol: 0, vat: 0, sales: 0, tax: 0, receipt: 0, companyReceipt: 0,
       })),
       total: {
         room: 0, roomTax: 0, extra: 0, extraTax: 0, pos: 0, posTax: 0,
-        discount: 0, alcohol: 0, vat: 0, sales: 0, tax: 0, receipt: 0,
+        discount: 0, alcohol: 0, vat: 0, sales: 0, tax: 0, receipt: 0, companyReceipt: 0,
       },
     } satisfies DayBook;
 

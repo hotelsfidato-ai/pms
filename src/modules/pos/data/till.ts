@@ -1379,6 +1379,8 @@ export interface DayEnd {
     id: string; kind: MovementKind; amount: number;
     /** null: a name the reader may not see (the owner's, to a GM; D27-9). */
     reason: string; recordedBy: string | null; at: string;
+    /** A paid-out's yes (D27-242); null where nobody was asked. */
+    approval?: string | null; approvalNote?: string | null;
   }[];
   cash: {
     opening: number;
@@ -1388,6 +1390,8 @@ export interface DayEnd {
     /** Null until somebody counts. Not zero — nobody counted zero. */
     counted: number | null;
     variance: number | null;
+    /** Paid-outs waiting for a yes, not in `expected` yet (D27-242). */
+    waiting?: number;
     varianceReason: string | null;
     denominations: { value: number; count: number }[];
   };

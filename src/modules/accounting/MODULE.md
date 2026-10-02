@@ -69,7 +69,14 @@ half-open.
 | Sales | room + extras less the discount |
 | Tax | room tax + extra tax |
 | Receipts | `.receipt` - money received; a bill moved to the city ledger is not (D17-74) |
+| Received from companies | what companies and booking sites paid against the City ledger that day, by the day it reached the hotel (D27-242, Q4) - **apart from Sales and from Receipts**: the bill was sales when it was sent. From finance's door (`companyReceipts`), live lines only (a reversed one is out) |
 | Night audit | Closed, or **Not run** |
+
+**Each company receipt is also listed** (date, received from, how, reference,
+amount): under the tiles on the screen, and as the .xlsx's second sheet,
+"Received from companies". It is the shape a Tally **receipt voucher** takes
+(party, bank, amount, narration), so when the XML export is built (ACC-4, the
+CA's ledger names) it reads this list - nothing new to derive.
 
 **A period nobody has closed is still exported, and the screen says so**
 (D18-16). A day the night audit has not run carries every figure it has and is

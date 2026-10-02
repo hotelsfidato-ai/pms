@@ -23,6 +23,8 @@ interface Figures {
   pos: number; posTax: number;
   discount: number; alcohol: number; vat: number; sales: number;
   tax: number; receipt: number;
+  /** What companies paid against the City ledger (D27-242): receipts, apart from sales. */
+  companyReceipt: number;
 }
 
 /* "Restaurant" and "Restaurant tax": what the outlets took in cash, by card
@@ -31,14 +33,15 @@ interface Figures {
 const HEADERS = [
   "Date", "Room revenue", "Room tax", "Extra charges", "Extra tax",
   "Restaurant", "Restaurant tax",
-  "Discount", "Alcohol", "VAT", "Sales", "GST", "Receipts", "Night audit",
+  "Discount", "Alcohol", "VAT", "Sales", "GST", "Receipts",
+  "Received from companies", "Night audit",
 ];
 
 /** A day's row, and the total's, written once so the last line of the
     file is made the same way as every line above it. */
 const figures = (r: Figures) =>
   [r.room, r.roomTax, r.extra, r.extraTax, r.pos, r.posTax, r.discount,
-   r.alcohol, r.vat, r.sales, r.tax, r.receipt];
+   r.alcohol, r.vat, r.sales, r.tax, r.receipt, r.companyReceipt];
 
 /**
  * The day book as a sheet: a row per day, then the total.
@@ -56,4 +59,17 @@ export function dayBookSheet(book: {
   ]);
   rows.push(["Total", ...figures(book.total), ""]);
   return { headers: HEADERS, rows };
+}
+
+/**
+ * Each company receipt, one row each (D27-242): the second sheet of the
+ * .xlsx, and the shape a Tally receipt voucher will take (ACC-4).
+ */
+export function companyReceiptsSheet(book: {
+  companyReceipts: readonly { date: string; account: string; method: string; reference: string | null; amount: number }[];
+}): { headers: string[]; rows: unknown[][] } {
+  return {
+    headers: ["Date", "Received from", "How", "Reference", "Amount"],
+    rows: book.companyReceipts.map((r) => [r.date, r.account, r.method, r.reference ?? "", r.amount]),
+  };
 }
