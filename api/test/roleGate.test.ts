@@ -250,6 +250,17 @@ describe("who reads what (D27-140 to D27-147)", () => {
   });
 });
 
+describe("the hotel's photos (D27-243)", () => {
+  const who = (key: string) => whoMay(READ_RULES[key]!);
+  it("are changed by the logo's three and read by everybody there - they are public on the guest's page", () => {
+    for (const key of [`POST ${H}/gallery`, `PATCH ${H}/gallery/:id`, `PUT ${H}/gallery/order`, `DELETE ${H}/gallery/:id`]) {
+      expect(whoMay(rule(key)), key).toEqual(whoMay(rule(`PUT ${H}/logo`)));
+    }
+    expect(who(`GET ${H}/gallery/:id`)).toEqual(who(`GET ${H}/gallery`));
+    expect(who(`GET ${H}/gallery`)).toEqual(who(`GET ${H}/group`));
+  });
+});
+
 describe("key cards (D27-178, D27-182)", () => {
   it("are cut by whoever may check a guest in, a lost card too, and read by whoever reads stays", () => {
     const cut = whoMay(rule(`POST ${H}/stays/:id/keys`));

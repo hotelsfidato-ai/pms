@@ -157,6 +157,8 @@ const GROUP_LOGO = grant("room_config", "edit", "Changing the group's logo");
 /* A hotel's OWN logo (D27-214): the same three, at the hotel in the address;
    the table's policy asks app.manages_hotel behind it (migration 168). */
 const HOTEL_LOGO = grant("room_config", "edit", "Changing the hotel's logo");
+/* A hotel's photo gallery (D27-243): the logo's three, at that hotel. */
+const HOTEL_GALLERY = grant("room_config", "edit", "Changing the hotel's photos");
 /* What the voucher prints (D27-215): a hotel's bank details and the group's
    office details - the same three, and for the bank details the route and the
    table ask app.manages_hotel behind it (migration 169). */
@@ -414,6 +416,10 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`DELETE ${H}/group/logo`]: GROUP_LOGO,
   [`PUT ${H}/logo`]: HOTEL_LOGO,
   [`DELETE ${H}/logo`]: HOTEL_LOGO,
+  [`POST ${H}/gallery`]: HOTEL_GALLERY,
+  [`PATCH ${H}/gallery/:id`]: HOTEL_GALLERY,
+  [`PUT ${H}/gallery/order`]: HOTEL_GALLERY,
+  [`DELETE ${H}/gallery/:id`]: HOTEL_GALLERY,
   [`PUT ${H}/bank-details`]: BANK_DETAILS,
   [`DELETE ${H}/bank-details`]: BANK_DETAILS,
   [`PUT ${H}/group/office`]: GROUP_OFFICE,
@@ -611,6 +617,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/rooms`]: anyone("room numbers and their states: nearly every screen"),
   [`GET ${H}/house-now`]: anyone("which rooms are occupied, blocked or empty - no guest"),
   [`GET ${H}/group`]: anyone("the group's name and logo, on every document"),
+  [`GET ${H}/gallery`]: anyone("the hotel's photos, public on the guest's page"),
+  [`GET ${H}/gallery/:id`]: anyone("one of the hotel's photos, public on the guest's page"),
   [`GET ${H}/bank-details`]: own("admin/bankDetails.ts: app.manages_hotel - the hotel's owner, GM or Admin, or a group administrator (D27-215)"),
   [`GET ${H}/tax`]: anyone("the GST rates in use: neither a guest nor money taken"),
   [`GET ${H}/tax/:kind/rate`]: anyone("the GST rate for an amount"),

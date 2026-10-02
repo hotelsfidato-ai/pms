@@ -218,7 +218,7 @@ groupSettings.delete("/:code/group/logo", async (c) => {
    room-setup grant at the hotel in the address, and the table's policy
    (app.manages_hotel) behind it - asked here first, so a person who may
    not is told "No such property" and nothing is attempted. */
-const managedHotel = async (client: Client, code: string) =>
+export const managedHotel = async (client: Client, code: string) =>
   (await client.query<{ id: string }>(
     "select id::text from hotels where code = upper($1) and app.manages_hotel(id)",
     [code])).rows[0]?.id ?? null;

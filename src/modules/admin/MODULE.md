@@ -30,7 +30,7 @@ them back. A group administrator sees every property and every person; a GM
 sees their own hotel. **Settings** (D27-213, D27-214, 30 September; D27-220,
 1 October) is the ONE place for how a property is set up, in five tabs, and
 shows ONLY what somebody can change: it mounts the cards that exist (the
-profile, the hotel's logo, FSSAI, the group's name, logo and office details,
+profile, the hotel's logo and photos, FSSAI, the group's name, logo and office details,
 the GST rules, bank details, the front desk's hours, house policies, the
 switches) and links the few screens where a tab's subject is set; what the
 property still needs is a checklist above the tabs, drawn only while something
@@ -68,7 +68,8 @@ properties and people.
   screen still reaches them (Roles and the Audit log also from Settings › People).
 - **Settings' tabs** (`SETTINGS_TABS`, the tab is in the address; D27-220):
   - **Property**: the profile (a grid of label-over-value cells), this hotel's
-    logo, FSSAI, the group's name, logo and office details.
+    logo, its photos (`HotelGalleryCard`, D27-243), FSSAI, the group's name,
+    logo and office details.
   - **Rates and taxes**: finance's GST card, bank details, and links to Rates,
     Room types, Cancellation terms and Booking sources.
   - **Operations**: inventory's front desk card, house policies, and for the
@@ -136,7 +137,7 @@ properties and people.
 
 ---
 
-## Server endpoints — 23
+## Server endpoints — 29
 
 The code is in `api/src/modules/admin/` (moved 15 September): `admin.ts`,
 and the parts split out of three mixed files — `adminLists.ts` (from
@@ -224,6 +225,27 @@ DELETE /:code/logo                the same picture rules; the owner, an administ
                                   or the GM at that hotel (roleGate HOTEL_LOGO, and
                                   app.manages_hotel in the table's policy)
 ```
+
+The hotel's photos (D27-243, D27-244; `gallery.ts`, table `hotel_photos`, 186):
+
+```
+GET    /:code/gallery             { photos: [{ id, caption, width, height }], most: 20 }
+                                  in order; everybody who works there
+GET    /:code/gallery/:id         { type: "image/jpeg", data } - Settings draws it
+POST   /:code/gallery             { data: base64, caption? } - a JPEG by its bytes,
+                                  1600 px and 600 KB at most, Exif taken out,
+                                  20 a hotel; the owner, an administrator or the GM
+                                  at that hotel (roleGate HOTEL_GALLERY)
+PATCH  /:code/gallery/:id         { caption } - 120 characters, blank is none
+PUT    /:code/gallery/order       { ids } - each of the hotel's photos once
+DELETE /:code/gallery/:id
+```
+
+The page shrinks a photo before it is sent (online-checkin's `shrinkPhoto`);
+the server reads the file's segments and does not decode pixels, so no image
+library is needed (D27-244). Kept in Postgres so the nightly dump carries
+them. The guest's page shows them behind the code (online-checkin's
+`GallerySection`, `api/src/routes/guestGallery.ts`). The reset keeps them.
 
 **Which logo a document prints** is decided in ONE place, `useGroupSettings`
 (`data/groupSettings.ts`): the hotel's own where it has one, the group's where
