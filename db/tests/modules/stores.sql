@@ -210,3 +210,205 @@ begin
   perform test.ok('stores cylinders', 'a deposit nobody typed is null, not zero',
     (select cylinders_on_deposit is null and deposit_per_cylinder is null from stock_items where id = gas));
 end $$;
+
+
+-- =============================================================================
+-- GST ON A DELIVERY, EXPIRY, DEPARTMENT, BREAKAGE, THE COUNT'S RECORD (D27-238)
+-- =============================================================================
+do $$
+declare
+  h uuid; other uuid; main uuid; theirs uuid;
+  keeper uuid; rice uuid; plate uuid; theirs_item uuid;
+  req uuid; line uuid; line_no_gst uuid;
+  n bigint;
+begin
+  h     := app.provision_property_unchecked('STG', 'Stores GST', 'Nowhere');
+  other := app.provision_property_unchecked('STH', 'Stores GST Other', 'Nowhere');
+  select id into main   from locations where hotel_id = h and name = 'Main store';
+  select id into theirs from locations where hotel_id = other and name = 'Main store';
+  insert into staff (email, full_name) values ('st-keeper@fidato.in', 'Stores Keeper')
+  on conflict (email) do update set is_active = true returning id into keeper;
+  delete from staff_hotels where staff_id = keeper;
+  insert into staff_hotels (staff_id, hotel_id, role) values (keeper, h, 'stores');
+
+  insert into stock_items (hotel_id, name, unit) values (h, 'Rice', 'kg') returning id into rice;
+  insert into stock_items (hotel_id, name, unit) values (h, 'Dinner plate', 'piece') returning id into plate;
+  insert into stock_items (hotel_id, name, unit) values (other, 'Rice', 'kg') returning id into theirs_item;
+
+  -- ---------- GST on a delivery: rate, amount, claimable - all three or none ----------
+  perform test.allows('stores gst', 'a delivery records its GST: rate, amount, claimable',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity,
+                unit_cost, gst_rate, gst_amount, gst_claimable)
+              values (%L, %L, %L, app.business_date(%L), 'receipt', 10, 100, 5, 50, false)$q$, h, rice, main, h));
+  perform test.allows('stores gst', 'a delivery without GST is not recorded, not zero',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost)
+              values (%L, %L, %L, app.business_date(%L), 'receipt', 10, 100)$q$, h, plate, main, h));
+  perform test.raises('stores gst', 'a rate without its amount is refused',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity,
+                unit_cost, gst_rate, gst_claimable)
+              values (%L, %L, %L, app.business_date(%L), 'receipt', 1, 100, 5, true)$q$, h, rice, main, h), '23514');
+  perform test.raises('stores gst', 'GST without saying whether it can be claimed is refused',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity,
+                unit_cost, gst_rate, gst_amount)
+              values (%L, %L, %L, app.business_date(%L), 'receipt', 1, 100, 5, 5)$q$, h, rice, main, h), '23514');
+  perform test.raises('stores gst', 'a rate over 100 is refused',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity,
+                unit_cost, gst_rate, gst_amount, gst_claimable)
+              values (%L, %L, %L, app.business_date(%L), 'receipt', 1, 100, 101, 5, true)$q$, h, rice, main, h), '23514');
+  perform test.raises('stores gst', 'an amount below zero is refused',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity,
+                unit_cost, gst_rate, gst_amount, gst_claimable)
+              values (%L, %L, %L, app.business_date(%L), 'receipt', 1, 100, 5, -1, true)$q$, h, rice, main, h), '23514');
+  perform test.raises('stores gst', 'GST on anything but a delivery is refused',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity,
+                gst_rate, gst_amount, gst_claimable)
+              values (%L, %L, %L, app.business_date(%L), 'issue', -1, 5, 5, true)$q$, h, rice, main, h), '23514');
+
+  -- ---------- expiry on a delivery, department on an issue ----------
+  perform test.allows('stores gst', 'a delivery may carry an expiry date',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, expires_on)
+              values (%L, %L, %L, app.business_date(%L), 'receipt', 1, '2027-01-31')$q$, h, rice, main, h));
+  perform test.raises('stores gst', 'an expiry on anything but a delivery is refused',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, expires_on)
+              values (%L, %L, %L, app.business_date(%L), 'wastage', -1, '2027-01-31')$q$, h, rice, main, h), '23514');
+  perform test.allows('stores gst', 'an issue may name a department',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, department)
+              values (%L, %L, %L, app.business_date(%L), 'issue', -1, 'Housekeeping')$q$, h, rice, main, h));
+  perform test.raises('stores gst', 'a department on anything but an issue is refused',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, department)
+              values (%L, %L, %L, app.business_date(%L), 'receipt', 1, 'Kitchen')$q$, h, rice, main, h), '23514');
+  perform test.raises('stores gst', 'a blank department is refused - none is null',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, department)
+              values (%L, %L, %L, app.business_date(%L), 'issue', -1, '  ')$q$, h, rice, main, h), '23514');
+
+  -- ---------- breakage, with who ----------
+  perform test.allows('stores breakage', 'a breakage is recorded, with who broke it',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, broken_by)
+              values (%L, %L, %L, app.business_date(%L), 'breakage', -2, %L)$q$, h, plate, main, h, keeper));
+  perform test.ok('stores breakage', 'and takes the broken ones off the shelf',
+    app.stock_on_hand(plate, main) = 8);
+  perform test.allows('stores breakage', 'who broke it may be not known',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity)
+              values (%L, %L, %L, app.business_date(%L), 'breakage', -1)$q$, h, plate, main, h));
+  perform test.raises('stores breakage', 'a breakage that adds stock is refused',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity)
+              values (%L, %L, %L, app.business_date(%L), 'breakage', 1)$q$, h, plate, main, h), '23514');
+  perform test.raises('stores breakage', 'who broke it, on anything but a breakage, is refused',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, broken_by)
+              values (%L, %L, %L, app.business_date(%L), 'wastage', -1, %L)$q$, h, plate, main, h, keeper), '23514');
+  perform test.raises('stores breakage', 'a breakage carries no cost',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost)
+              values (%L, %L, %L, app.business_date(%L), 'breakage', -1, 10)$q$, h, plate, main, h), '23514');
+
+  -- ---------- every line of a count is kept ----------
+  perform test.allows('stores counts', 'a counted line is kept, matched or not',
+    format($q$insert into stock_count_lines (hotel_id, item_id, location_id, book, counted, counted_by, business_date)
+              values (%L, %L, %L, 7, 7, %L, app.business_date(%L))$q$, h, plate, main, keeper, h));
+  perform test.raises('stores counts', 'a counted line cannot be changed',
+    format($q$update stock_count_lines set counted = 9 where item_id = %L$q$, plate), 'P0001');
+  perform test.ok('stores counts', 'the application may not delete a counted line',
+    not has_table_privilege('pms_app', 'stock_count_lines', 'DELETE')
+      and not has_table_privilege('pms_app', 'stock_count_lines', 'UPDATE'));
+  perform test.raises('stores counts', 'a count at another property''s store is refused',
+    format($q$insert into stock_count_lines (hotel_id, item_id, location_id, book, counted, business_date)
+              values (%L, %L, %L, 1, 1, app.business_date(%L))$q$, h, rice, theirs, h), '23514');
+  perform test.raises('stores counts', 'a count of another property''s item is refused',
+    format($q$insert into stock_count_lines (hotel_id, item_id, location_id, book, counted, business_date)
+              values (%L, %L, %L, 1, 1, app.business_date(%L))$q$, h, theirs_item, main, h), '23503');
+  perform test.raises('stores counts', 'a count below zero is refused',
+    format($q$insert into stock_count_lines (hotel_id, item_id, location_id, book, counted, business_date)
+              values (%L, %L, %L, 1, -1, app.business_date(%L))$q$, h, rice, main, h), '23514');
+
+  -- ---------- a purchase line's GST and expiry, set at delivery ----------
+  insert into purchase_requests (hotel_id, reference, store_id, reason, requested_by)
+  values (h, 'PO-STG-TEST', main, 'For the GST check', keeper) returning id into req;
+  insert into purchase_request_lines (hotel_id, request_id, line_no, item_id, quantity, unit_price)
+  values (h, req, 1, rice, 10, 100) returning id into line;
+  insert into purchase_request_lines (hotel_id, request_id, line_no, item_id, quantity, unit_price)
+  values (h, req, 2, plate, 10, 100) returning id into line_no_gst;
+  perform test.allows('stores gst', 'a purchase line takes its GST and expiry at delivery',
+    format($q$update purchase_request_lines
+                 set gst_rate = 5, gst_amount = 50, gst_claimable = true, expires_on = '2027-01-31'
+               where id = %L$q$, line));
+  perform test.raises('stores gst', 'a purchase line with half its GST is refused',
+    format($q$update purchase_request_lines set gst_rate = 18 where id = %L$q$, line_no_gst), '23514');
+end $$;
+
+
+-- =============================================================================
+-- AN ITEM'S COST IS A RUNNING AVERAGE, UPDATED AT EACH DELIVERY (D27-238)
+-- =============================================================================
+-- The all-time average of 069 priced rice bought in June at what was paid in
+-- June, long after it was eaten. The running average moves at each delivery,
+-- by what is on the shelf then; what goes out leaves at the average of its day.
+do $$
+declare
+  h uuid; main uuid; kitchen uuid;
+  dal uuid; ghee uuid; salt uuid; sugar uuid;
+  waste bigint; late bigint; first_issue bigint;
+begin
+  h := app.provision_property_unchecked('STA', 'Stores Average', 'Nowhere');
+  select id into main    from locations where hotel_id = h and name = 'Main store';
+  select id into kitchen from locations where hotel_id = h and name = 'Kitchen store';
+  insert into stock_items (hotel_id, name, unit) values (h, 'Dal', 'kg') returning id into dal;
+  insert into stock_items (hotel_id, name, unit) values (h, 'Ghee', 'kg') returning id into ghee;
+  insert into stock_items (hotel_id, name, unit) values (h, 'Salt', 'kg') returning id into salt;
+  insert into stock_items (hotel_id, name, unit) values (h, 'Sugar', 'kg') returning id into sugar;
+
+  -- 10 at 100, 5 go out, 5 more at 130: (5 x 100 + 5 x 130) / 10 = 115.
+  -- The all-time average said (10 x 100 + 5 x 130) / 15 = 110.
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost)
+  values (h, dal, main, app.business_date(h), 'receipt', 10, 100);
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity)
+  values (h, dal, main, app.business_date(h), 'issue', -5) returning id into first_issue;
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost)
+  values (h, dal, main, app.business_date(h), 'receipt', 5, 130);
+  perform test.ok('stores average', 'a delivery moves the average by what is on the shelf then',
+    app.stock_unit_cost(dal) = 115, 'got ' || coalesce(app.stock_unit_cost(dal)::text, 'null'));
+  perform test.ok('stores average', 'what went out left at the average of its day',
+    (select unit_value from app.stock_movement_costs(dal) where movement_id = first_issue) = 100);
+
+  -- Shelf emptied, then bought again: the new price is the price.
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost)
+  values (h, ghee, main, app.business_date(h), 'receipt', 4, 50);
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity)
+  values (h, ghee, main, app.business_date(h), 'issue', -4);
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost)
+  values (h, ghee, main, app.business_date(h), 'receipt', 4, 80);
+  perform test.ok('stores average', 'once the shelf is empty, the next delivery''s cost is the average',
+    app.stock_unit_cost(ghee) = 80, 'got ' || coalesce(app.stock_unit_cost(ghee)::text, 'null'));
+
+  -- A delivery nobody priced leaves the average as it was.
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost)
+  values (h, salt, main, app.business_date(h), 'receipt', 10, 100);
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity)
+  values (h, salt, main, app.business_date(h), 'receipt', 10);
+  perform test.ok('stores average', 'a delivery with no cost leaves the average as it was',
+    app.stock_unit_cost(salt) = 100);
+  -- 15 go out (5 left, at 100), then 5 at 160: (5 x 100 + 5 x 160) / 10 = 130.
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity)
+  values (h, salt, main, app.business_date(h), 'issue', -15);
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost)
+  values (h, salt, main, app.business_date(h), 'receipt', 5, 160);
+  perform test.ok('stores average', 'and the next priced delivery averages with what is left',
+    app.stock_unit_cost(salt) = 130, 'got ' || coalesce(app.stock_unit_cost(salt)::text, 'null'));
+
+  -- An undone delivery leaves the walk, as it leaves on hand; a move between
+  -- stores does not change what the item cost; waste keeps its day's value.
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost)
+  values (h, sugar, main, app.business_date(h), 'receipt', 10, 40);
+  perform app.transfer_stock(sugar, main, kitchen, 4, null);
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity)
+  values (h, sugar, kitchen, app.business_date(h), 'wastage', -2) returning id into waste;
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost)
+  values (h, sugar, main, app.business_date(h), 'receipt', 8, 70) returning id into late;
+  perform test.ok('stores average', 'a move between stores does not change what an item cost',
+    app.stock_unit_cost(sugar) = 55, 'got ' || coalesce(app.stock_unit_cost(sugar)::text, 'null'));
+  perform test.ok('stores average', 'waste keeps the value of its day',
+    (select unit_value from app.stock_movement_costs(sugar) where movement_id = waste) = 40);
+  perform app.reverse_stock_movement(late, null);
+  perform test.ok('stores average', 'an undone delivery leaves the average',
+    app.stock_unit_cost(sugar) = 40, 'got ' || coalesce(app.stock_unit_cost(sugar)::text, 'null'));
+  perform test.ok('stores average', 'and an undone row has no value of its own',
+    not exists (select 1 from app.stock_movement_costs(sugar) where movement_id = late));
+end $$;
