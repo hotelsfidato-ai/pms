@@ -1,4 +1,4 @@
-# The four WhatsApp templates — drafts for the owner
+# The five WhatsApp templates — drafts for the owner
 
 **21 September 2026 (D21-59). DRAFTS: the wording is the owner's to approve,
 change or reject before it goes to Meta.** Meta only lets a business start a
@@ -96,11 +96,33 @@ If you have a minute, we would be grateful for a review: {{3}}
 | 2 | `hotel.name` | 5 Elements Akkalkot |
 | 3 | `data.link` | the hotel's own Google review link |
 
+## 5 · `checkin_link` — category **Utility**
+
+The guest's own check-in page, when the desk presses **Send check-in link**
+(D27-105) - the guest asked for it, or the booking's voucher went before the
+page existed. The sending workflow already names this template
+(`deploy/n8n/pms-send-crs.json`, `"checkin-link"`), so until Meta approves
+it the desk's press is refused with a sentence and nothing goes.
+
+```
+Hello {{1}}, you can fill in your check-in details for {{2}} (arriving {{3}}) here: {{5}}
+
+Booking: {{4}}
+```
+
+| # | Field | Sample |
+|---|---|---|
+| 1 | `data.guestName` | Rohit Deshpande |
+| 2 | `data.hotelName` | 5 Elements Akkalkot |
+| 3 | `data.checkInText` | 27/08/2026 |
+| 4 | `data.reference` | FH-2608-4866 |
+| 5 | `data.link` | https://pms.fidatohotels.com/g/sample |
+
 ---
 
 ## Answered by the owner, 21 September
 
-- **English only** (D21-73). A second language would be four more templates
+- **English only** (D21-73). A second language would be five more templates
   with the same names, chosen on the booking (D21-74).
 - **The guest's agreement (D21-72):** WhatsApp goes only to a booking ticked
   "guest agreed to WhatsApp"; the desk asks on phone and walk-in bookings.

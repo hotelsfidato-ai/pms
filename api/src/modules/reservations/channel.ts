@@ -50,6 +50,10 @@ export interface ChannelBookingInput {
   tentative?: boolean;
   /** Who sold it - the CRS's salesperson (D27-168). */
   salesPerson?: string;
+  /** "Guest agreed to WhatsApp" (D21-72). Only the CRS sends it: its guest
+      agreed when they booked (D27-235, 2.3). A booking site's guest never
+      agreed to OUR WhatsApp, so left out it is false. */
+  whatsappAgreed?: boolean;
   lines: Array<{
     roomTypeId: string;
     mealPlan?: string;
@@ -111,6 +115,7 @@ export async function createChannelBooking(
     ...(input.expectedArrival === undefined ? {} : { expectedArrival: input.expectedArrival }),
     ...(input.tentative === undefined ? {} : { tentative: input.tentative }),
     ...(input.salesPerson === undefined ? {} : { salesPerson: input.salesPerson }),
+    ...(input.whatsappAgreed === undefined ? {} : { whatsappAgreed: input.whatsappAgreed }),
     lines: input.lines,
     /* The whole point of the difference (D17-80). */
     refuseWhenFull: true,

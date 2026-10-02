@@ -7,8 +7,8 @@ its three rules: numbers you ran, not numbers you remember; a guard is not
 proved until it has refused something; "Left open" is the handover.
 
 Work that touches the core or several services still goes in the root
-`CHANGELOG.md`. **This service is not built — only its Coming soon page
-exists** (`MODULE.md`).
+`CHANGELOG.md`. **This service is live** since the launch of 2 October
+(adc8e846; `MODULE.md`).
 
 ---
 

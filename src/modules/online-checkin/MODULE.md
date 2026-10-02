@@ -3,7 +3,9 @@
 A guest gives their ID and address before they arrive, from a page nobody else
 can open, and the desk checks them against the ID instead of typing them.
 
-**BUILT 21 September, on branch `online-checkin/guest-page`, not deployed.**
+**LIVE since the launch of 2 October (server adc8e846, the launch set D27-232).**
+Built 21 September on branch `online-checkin/guest-page`; everything below,
+the in-stay sections (D27-223 to D27-225) included, is in that release.
 The owner's answers: D18-9 to D18-13 (`docs/briefs/decisions-2026-09-18.md`)
 and D21-6 to D21-19, D21-25, D21-29, D21-59 to D21-63, D21-72, D21-75
 (`docs/briefs/decisions-2026-09-21.md`). The design is
