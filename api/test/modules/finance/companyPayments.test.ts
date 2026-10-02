@@ -64,6 +64,8 @@ beforeAll(async () => {
     hotelId = (await db.query<{ id: string }>(
       "select app.provision_property_unchecked($1,'City Ledger Test','Nowhere')::text as id",
       [CODE])).rows[0]!.id;
+    /* Rooms carry a GST rate here, or the day book refuses the range. */
+    await db.query("insert into tax_rules (hotel_id, kind, over_amount, rate) values ($1, 'room', 0, 5)", [hotelId]);
     ({ d: today, n: tomorrow } = (await db.query<{ d: string; n: string }>(
       "select app.business_date($1)::text as d, (app.business_date($1) + 1)::text as n", [hotelId])).rows[0]!);
     companyId = (await db.query<{ id: string }>(
@@ -174,6 +176,22 @@ describe("recording a company's payment (D27-239)", () => {
     expect(account(await ledger(today, today), sourceName))
       .toEqual({ opening: 0, debit: 0, credit: 500, closing: -500 });
   });
+
+  it("is a receipt in the accountant's day book, apart from sales (D27-242, Q4)", async () => {
+    const res = await call("dev-owner", `/accounting/day-book?from=${today}&to=${today}`);
+    expect(res.status, await res.clone().text()).toBe(200);
+    const book = (await res.json()) as {
+      days: { companyReceipt: number; receipt: number }[];
+      total: { companyReceipt: number; receipt: number };
+      companyReceipts: { account: string; method: string; reference: string | null; amount: number }[];
+    };
+    expect(book.days[0]!.companyReceipt).toBe(800);
+    expect(book.total.companyReceipt).toBe(800);
+    /* Not a guest's receipt, and the bill sent on credit was never one either. */
+    expect(book.total.receipt).toBe(0);
+    expect(book.companyReceipts.map((r) => [r.account, r.method, r.reference, r.amount]).sort())
+      .toEqual([[COMPANY, "Bank transfer", "UTR CLP 1", 300], [sourceName, "Bank transfer", "OTA remit", 500]].sort());
+  });
 });
 
 describe("a wrong payment line (D27-125)", () => {
@@ -190,6 +208,10 @@ describe("a wrong payment line (D27-125)", () => {
     expect(again.status).toBe(409);
     expect(account(await ledger(today, today), COMPANY))
       .toEqual({ opening: 0, debit: 1050, credit: 0, closing: 1050 });
+    /* A reversed receipt leaves the day book too. */
+    const book = (await (await call("dev-owner", `/accounting/day-book?from=${today}&to=${today}`)).json()) as
+      { total: { companyReceipt: number }; companyReceipts: unknown[] };
+    expect([book.total.companyReceipt, book.companyReceipts.length]).toEqual([500, 1]);
 
     const list = (await (await call(people["finance"]!, "/company-payments")).json()) as
       { payments: { id: string; reversed: boolean; reversesId: string | null }[] };

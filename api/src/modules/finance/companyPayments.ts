@@ -38,6 +38,40 @@ async function hotelIdFor(client: Client, code: string) {
 /* The account a line belongs to, named the way the City ledger names it. */
 const ACCOUNT = `coalesce(co.name, bs.name)`;
 
+/** One company receipt, as the accountant's day book lists it (D27-242). */
+export interface CompanyReceipt {
+  date: string; account: string; method: string; reference: string | null; amount: number;
+}
+
+/**
+ * What companies and booking sites paid, by the day it reached the hotel,
+ * for the day book (the owner's D27-242, Q4): receipts, apart from sales.
+ * Only lines that still count: not a reversal, and not reversed - the day
+ * book's rule for every other line (reports' LIVE). One receipt is one
+ * future Tally receipt voucher (ACC-4): party, bank, amount, reference.
+ */
+export async function companyReceipts(
+  client: Client, hotelId: string, from: string, to: string,
+): Promise<CompanyReceipt[]> {
+  const { rows } = await client.query<{
+    date: string; account: string; method: string; reference: string | null; amount: string;
+  }>(
+    `select cp.received_on::text as date, ${ACCOUNT} as account, cp.method, cp.reference,
+            cp.amount::text
+       from company_payments cp
+       left join companies co on co.id = cp.company_id
+       left join booking_sources bs on bs.id = cp.booking_source_id
+      where cp.hotel_id = $1 and cp.received_on between $2::date and $3::date
+        and cp.reverses_id is null
+        and not exists (select 1 from company_payments r where r.reverses_id = cp.id)
+      order by cp.received_on, cp.recorded_at`,
+    [hotelId, from, to]);
+  return rows.map((r) => ({
+    date: r.date, account: r.account, method: COMPANY_PAYMENT_METHODS[r.method] ?? r.method,
+    reference: r.reference, amount: Number(r.amount),
+  }));
+}
+
 companyPayments.get("/:code/company-payments", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));

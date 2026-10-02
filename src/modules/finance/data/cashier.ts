@@ -32,6 +32,10 @@ export interface CashierMovement {
   reason: string;
   recordedBy: string;
   at: string;
+  /** A paid-out's yes (D27-242): pending, clarify, approved, rejected;
+      null where nobody was asked. Optional to the reader (MEMORY 360). */
+  approval?: string | null;
+  approvalNote?: string | null;
 }
 
 export interface CashierDrawer {
@@ -49,6 +53,8 @@ export interface CashierDrawer {
   /** Null until somebody counts. Not zero — nobody counted zero. */
   counted: number | null;
   variance: number | null;
+  /** Paid-outs waiting for a yes, not in `expected` yet (D27-242). */
+  waiting?: number;
   varianceReason: string | null;
   denominations: { value: number; count: number }[];
 }

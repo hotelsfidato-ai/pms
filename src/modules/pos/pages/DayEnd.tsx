@@ -395,7 +395,7 @@ function CashStep({ hotelId, day, onDone }: {
                     value={day.summary.byMethod["cash"] ?? 0} />
               {MOVEMENTS.map((m) => {
                 const total = day.movements
-                  .filter((x) => x.kind === m.kind)
+                  .filter((x) => x.kind === m.kind && !waitsOrRefused(x))
                   .reduce((s, x) => s + x.amount, 0);
                 if (total === 0) return null;
                 return (
@@ -403,6 +403,13 @@ function CashStep({ hotelId, day, onDone }: {
                         value={m.sign * total} signed />
                 );
               })}
+              {/* Not taken off Expected until somebody says yes (D27-242). */}
+              {(day.cash.waiting ?? 0) > 0 && (
+                <div className="flex items-baseline justify-between py-2.5">
+                  <dt className="text-base text-warning-dark">Paid out, waiting for a yes</dt>
+                  <dd className="text-base tabular text-warning-dark">{money(day.cash.waiting ?? 0)}</dd>
+                </div>
+              )}
               <div className="flex items-baseline justify-between py-3">
                 <dt className="text-base font-medium">Expected</dt>
                 <dd className="text-lg font-semibold tabular">
@@ -418,7 +425,7 @@ function CashStep({ hotelId, day, onDone }: {
             </dl>
 
             {/* Loud, and in one place. */}
-            <Variance amount={counted > 0 ? variance : null} />
+            <Variance amount={counted > 0 ? variance : null} waiting={day.cash.waiting ?? 0} />
           </CardBody>
         </Card>
       </div>
@@ -519,7 +526,11 @@ function OpenDay({ hotelId, onDone }: { hotelId: string; onDone: () => void }) {
   );
 }
 
-function Variance({ amount }: { amount: number | null }) {
+/** A paid-out still waiting for a yes, or refused: not taken off the tin. */
+const waitsOrRefused = (m: { approval?: string | null }) =>
+  m.approval === "pending" || m.approval === "clarify" || m.approval === "rejected";
+
+function Variance({ amount, waiting = 0 }: { amount: number | null; waiting?: number }) {
   if (amount === null) {
     return (
       <p className="mt-4 rounded-lg bg-grey-50 border border-grey-200 px-4 py-3 text-base text-grey-600">
@@ -540,6 +551,11 @@ function Variance({ amount }: { amount: number | null }) {
           : <><AlertTriangle className="size-4 text-warning-dark" />
               {amount > 0 ? "Over" : "Short"} by {moneyPrecise(Math.abs(amount))}</>}
       </p>
+      {!balanced && amount < 0 && waiting > 0 && (
+        <p className="mt-1 text-sm text-grey-600">
+          {moneyPrecise(Math.min(waiting, -amount))} of it is paid out and waiting for a yes.
+        </p>
+      )}
       {!balanced && (
         <p className="mt-1 text-sm text-grey-600">
           This does not stop the close. It has to be written down.
@@ -607,6 +623,14 @@ function Movements({ hotelId, day, onDone }: {
                     <p className="text-sm text-grey-500">
                       {spec?.label ?? m.kind} · {m.recordedBy ?? "-"} · {m.at}
                     </p>
+                    {/* A paid-out waits for the GM's or owner's yes (D27-242). */}
+                    {waitsOrRefused(m) && (
+                      <p className={cn("text-sm", m.approval === "rejected" ? "text-danger" : "text-warning-dark")}>
+                        {m.approval === "rejected"
+                          ? `Not approved${m.approvalNote ? `: ${m.approvalNote}` : ""} - not taken off the tin`
+                          : "Waiting for a yes - not taken off the tin yet"}
+                      </p>
+                    )}
                   </div>
                   <span className="text-base font-medium tabular shrink-0">
                     {spec?.sign === 1 ? "+" : "−"}{money(m.amount)}
@@ -717,7 +741,8 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
   }
 
   const variance = day.cash.variance;
-  const needsReason = variance !== null && Math.abs(variance) >= 0.01;
+  /* Paid-outs waiting for a yes explain that much of a shortage (D27-242). */
+  const needsReason = variance !== null && Math.abs(variance + (day.cash.waiting ?? 0)) >= 0.01;
   /* D27-191: the float kept for tomorrow, typed at every close; the rest
      of the count is deposited. Blank is not zero. */
   const counted = day.cash.counted ?? 0;
@@ -782,7 +807,7 @@ function Finalize({ hotelId, hotelName, day, onDone, onBack }: {
             </div>
           </dl>
 
-          <Variance amount={variance} />
+          <Variance amount={variance} waiting={day.cash.waiting ?? 0} />
 
           {needsReason && (
             <Field label="Why" className="mt-4"

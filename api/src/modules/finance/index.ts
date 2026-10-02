@@ -56,3 +56,5 @@ export type { PaymentToTake, Payer } from "./postings.ts";
 export { issueFolioInvoice } from "./invoices.ts";
 export type { InvoiceRecipient } from "./invoices.ts";
 export { folioBalance } from "./folios.ts";
+/* D27-242 (Q4): what companies paid, for the accountant's day book. */
+export { companyReceipts, type CompanyReceipt } from "./companyPayments.ts";

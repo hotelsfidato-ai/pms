@@ -279,6 +279,14 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
                         <p className="text-sm text-grey-500">
                           {spec?.label ?? m.kind} · {m.recordedBy} · {m.at}
                         </p>
+                        {/* A paid-out waits for the GM's or owner's yes (D27-242). */}
+                        {waitsOrRefused(m) && (
+                          <p className={cn("text-sm", m.approval === "rejected" ? "text-danger" : "text-warning-dark")}>
+                            {m.approval === "rejected"
+                              ? `Not approved${m.approvalNote ? `: ${m.approvalNote}` : ""} - not taken off the drawer`
+                              : "Waiting for a yes - not taken off the drawer yet"}
+                          </p>
+                        )}
                       </div>
                       <span className="text-base font-medium tabular shrink-0">
                         {spec?.sign === 1 ? "+" : "−"}{money(m.amount)}
@@ -307,12 +315,19 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
             <Line label="Cash taken" value={cashTaken} />
             {MOVEMENTS.map((m) => {
               const total = shift.movements
-                .filter((x) => x.kind === m.kind)
+                .filter((x) => x.kind === m.kind && !waitsOrRefused(x))
                 .reduce((s, x) => s + x.amount, 0);
               if (total === 0) return null;
               return <Line key={m.kind} label={m.label}
                            value={m.sign * total} signed />;
             })}
+            {/* Not taken off Expected until somebody says yes (D27-242). */}
+            {(shift.waiting ?? 0) > 0 && (
+              <div className="flex items-baseline justify-between py-2.5">
+                <dt className="text-base text-warning-dark">Paid out, waiting for a yes</dt>
+                <dd className="text-base tabular text-warning-dark">{money(shift.waiting ?? 0)}</dd>
+              </div>
+            )}
             <div className="flex items-baseline justify-between py-3">
               <dt className="text-base font-medium">Expected</dt>
               <dd className="text-lg font-semibold tabular">
@@ -327,7 +342,7 @@ function Shift({ hotelId, shift, colleagues, onDone }: {
             </div>
           </dl>
 
-          <Variance amount={counted > 0 ? variance : null} />
+          <Variance amount={counted > 0 ? variance : null} waiting={shift.waiting ?? 0} />
 
           <Button className="mt-4 h-12 w-full text-base"
                   disabled={shift.counted === null}
@@ -406,7 +421,11 @@ function Line({ label, value, signed }: {
   );
 }
 
-function Variance({ amount }: { amount: number | null }) {
+/** A paid-out still waiting for a yes, or refused: not taken off the drawer. */
+const waitsOrRefused = (m: { approval?: string | null }) =>
+  m.approval === "pending" || m.approval === "clarify" || m.approval === "rejected";
+
+function Variance({ amount, waiting = 0 }: { amount: number | null; waiting?: number }) {
   if (amount === null) {
     return (
       <p className="mt-4 rounded-lg bg-grey-50 border border-grey-200 px-4 py-3 text-base text-grey-600">
@@ -424,6 +443,11 @@ function Variance({ amount }: { amount: number | null }) {
           : <><AlertTriangle className="size-4 text-warning-dark" />
               {amount > 0 ? "Over" : "Short"} by {moneyPrecise(Math.abs(amount))}</>}
       </p>
+      {!balanced && amount < 0 && waiting > 0 && (
+        <p className="mt-1 text-sm text-grey-600">
+          {moneyPrecise(Math.min(waiting, -amount))} of it is paid out and waiting for a yes.
+        </p>
+      )}
       {!balanced && (
         <p className="mt-1 text-sm text-grey-600">
           This does not stop the handover. It has to be written down.
@@ -515,7 +539,8 @@ function CloseDialog({ hotelId, shift, colleagues, onClose, onDone }: {
   const [busy, setBusy] = useState(false);
 
   const variance = shift.variance;
-  const needsReason = variance !== null && Math.abs(variance) >= 0.01;
+  /* Paid-outs waiting for a yes explain that much of a shortage (D27-242). */
+  const needsReason = variance !== null && Math.abs(variance + (shift.waiting ?? 0)) >= 0.01;
   /* D27-191, D27-202: the float kept is typed at every close, ₹0 up to the
      count, and the rest is to deposit; above ₹0 it names the next person
      (D27-201). To hand everything over, the whole count is typed. Blank is
@@ -547,7 +572,7 @@ function CloseDialog({ hotelId, shift, colleagues, onClose, onDone }: {
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent title="Close and hand over">
         <div className="space-y-4">
-          <Variance amount={variance} />
+          <Variance amount={variance} waiting={shift.waiting ?? 0} />
 
           {needsReason && (
             <Field label="Why"
