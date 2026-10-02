@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, within, waitFor } from "@testing-library/react";
 import App from "@/App";
 import * as apiModule from "@/lib/api";
-import { HOTEL, startSignedIn, signedIn } from "@/test/app";
+import { HOTEL, go, startSignedIn, signedIn } from "@/test/app";
 import { BUSINESS_DATE, setBusinessDate } from "@/data/repositories/businessDate";
 
 /* Reports' screens, rendered through the whole application — the shell,
@@ -14,8 +14,7 @@ beforeEach(startSignedIn);
 
 /* "Group" became the Dashboard on 14 September, the owner's call: the
    numbers a hotel lives by, and quick reports. The table of every hotel
-   is still there — below the tiles, for somebody who reads more than
-   one; this fixture has one, so the tiles are what these assert. */
+   moved to its own screen, All properties (the owner's D27-243). */
 describe("the dashboard at /", () => {
   it("is called Dashboard and leads with the hotel's own numbers", async () => {
     render(<App />);
@@ -70,17 +69,22 @@ describe("the dashboard at /", () => {
     }
   }, 20000);
 
-  it("reads every property on its own day, not the day of the hotel in view", async () => {
+  it("All properties reads every property on its own day, not the day of the hotel in view", async () => {
     /* Agra is on 2 September; 5 Elements has not closed 25 August. The
        table read every row on the date of the hotel in view, so 5 Elements'
-       month so far was asked for September. */
+       month so far was asked for September. The table moved to All
+       properties (D27-243), for the owner. */
     const hotel = (code: string, name: string, businessDate: string) => ({
       id: code, code, name, city: "", state: "", gstin: null, timezone: "Asia/Kolkata",
       currency: "INR", checkInTime: "14:00", checkOutTime: "11:00", businessDate,
     });
     const before = BUSINESS_DATE;
     setBusinessDate("2026-09-02");
-    signedIn({ hotels: [hotel(HOTEL, "5 Elements", "2026-08-25"), hotel("AGR", "Fidato Agra", "2026-09-02")] });
+    signedIn({
+      scope: { staffId: "22222222-2222-2222-2222-222222222222", email: "owner@fidato.in", fullName: "Owner",
+        isGroupAdmin: true, hotels: [] },
+      hotels: [hotel(HOTEL, "5 Elements", "2026-08-25"), hotel("AGR", "Fidato Agra", "2026-09-02")],
+    });
     const real = apiModule.api;
     const asked: string[] = [];
     const spy = vi.spyOn(apiModule, "api").mockImplementation(((url: string, init?: RequestInit) => {
@@ -88,8 +92,9 @@ describe("the dashboard at /", () => {
       return real(url, init);
     }) as typeof real);
     try {
+      go("/all-properties");
       render(<App />);
-      await screen.findByRole("heading", { name: "Every property" });
+      await screen.findByRole("heading", { level: 1, name: "All properties" });
       await waitFor(() => expect(asked.filter((u) => u.startsWith(`/api/hotels/${HOTEL}/statistics/period`)))
         .toContainEqual(expect.stringMatching(/from=2026-08-01.*to=2026-08-25/)));
     } finally {

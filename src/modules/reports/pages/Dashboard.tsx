@@ -1,28 +1,29 @@
-import { useState, type CSSProperties } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import {
-  ArrowRight, Check, ChevronRight, BedDouble, IndianRupee, TrendingUp, Banknote,
-  LogIn, LogOut, Users, DoorOpen, SprayCan, Wrench, Wallet, ReceiptText,
+  Check, ChevronRight, BedDouble, IndianRupee, TrendingUp, Banknote,
+  LogIn, LogOut, Users, SprayCan, Wallet, ReceiptText,
   Building2, UserX, ClipboardList, ChartColumn, Landmark,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, dateShort, dateLong } from "@/lib/format";
+import { money, dateShort, dateLong, addDays } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { useSession } from "@/lib/session";
+import { useRole, useSession } from "@/lib/session";
+import { can } from "@/lib/permissions";
 import {
-  Page, PageHeader, Section, Card, CardBody, DataTable, Skeleton, NativeSelect, Term,
-  InfoButton, IconChip, Rings, AnchorGauge, ReadFailed, readError, type Column,
+  Page, PageHeader, Card, CardBody, Skeleton, NativeSelect, Term,
+  InfoButton, IconChip, Rings, AnchorGauge, ReadFailed, readError,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
 import type { TermKey } from "@/lib/glossary";
-import { listProperties, BUSINESS_DATE, type Property } from "@/data/repositories";
-import {
-  listArrivalsOutstanding, getStayViewCounts, getStayView, fetchStays, type ChartRoom,
-} from "@/modules/front-desk";
-import { getPeriodStatistics } from "@/modules/reports/data/statistics";
+import { BUSINESS_DATE } from "@/data/repositories";
+import { getStayView, fetchStays, type ChartRoom } from "@/modules/front-desk";
+import type { DayStatistics } from "@/data/repositories";
+import { listDailyStatistics } from "@/modules/reports/data/statistics";
 import { getReport, type ReportDoc } from "@/modules/reports/data/document";
+import { getDueOut } from "@/modules/reports/data/dueOut";
 
 /* ══════════════════════════════════════════════════════════════════
    DASHBOARD — `/`
@@ -41,10 +42,18 @@ import { getReport, type ReportDoc } from "@/modules/reports/data/document";
 
    27 SEPTEMBER, THE FIDATO LOOK (D22-47 to D22-51, the owner's yes to
    each piece that day): the navy Occupancy beside the three figures,
-   Money, Today's run, the house as a strip of rooms over its six counts,
-   then the quick reports. The section notes moved behind an (i), same
-   words. Today's run and the strip count only what the system holds:
-   today's bookings, and the Rooms board's own room states.
+   Money, the house as a strip of rooms, then the quick reports. The
+   section notes moved behind an (i), same words.
+
+   2 OCTOBER, AS SKETCHED (the owner's D27-243): TODAY'S WORK LEADS, four
+   tiles that open their lists (Arrivals, Due out with what departing
+   guests still owe, In house, Needs cleaning), coloured by what staff
+   must do: orange act now, yellow due today, green done, white nothing to
+   do. They replace Today's run and the six small counts. "ARR" on the
+   screen; the nights ahead under the figures; Occupancy on its own row
+   under 1440 px (REP-16). Every property moved to All properties.
+   Everything counted is what the system holds: today's bookings, the
+   Rooms board's room states, the daily statistics, finance's balances.
    ══════════════════════════════════════════════════════════════════ */
 
 const DASH = "-";
@@ -76,8 +85,9 @@ const count = (n: number | null | undefined) => (n == null ? DASH : String(n));
 /* The section notes, word for word as they stood under the headings. */
 const NOTES = {
   today: "Today, then the month so far and the year so far. The year runs from 1 April.",
-  house: "Counts for the business date. Each opens the list behind it.",
+  house: "Every room on the business date, in the Rooms board's colours.",
   money: "From the same figures as the Manager Report. A dash is a figure this system does not hold yet, never a zero.",
+  nights: "Tonight and the 13 nights after it: rooms sold, as a share of the rooms to sell, as the Calendar's footer shows them. A night with no figures shows a dash. Each opens the Calendar.",
 };
 
 export default function DashboardPage() {
@@ -145,28 +155,48 @@ export default function DashboardPage() {
      page tells the owner the business has no figures. */
   const failed = readError(report) ?? readError(view) ?? readError(stays);
 
-  /* TODAY'S RUN — the owner's yes, 27 September: only counts the system
-     holds. Check-ins: today's arrivals checked in, of today's arrivals
-     (no-shows and cancellations are not work). Check-outs: today's
-     departures checked out, of today's departures. Rooms ready: empty
-     rooms not waiting to be cleaned, of the empty rooms. */
-  const run = (() => {
+  /* What departing guests still owe: asked only by whoever sees money
+     (the menu's and the server's `invoice`, D27-147). */
+  const seesMoney = can(useRole(), "view", "invoice");
+  const due = useQuery({
+    queryKey: ["dashboard-due-out", code, date],
+    queryFn: () => getDueOut(code),
+    enabled: Boolean(code) && seesMoney,
+  });
+  const nightsTo = addDays(date, 13);
+  const nights = useQuery({
+    queryKey: ["dashboard-nights", code, date],
+    queryFn: () => listDailyStatistics(code, date, nightsTo),
+    enabled: Boolean(code),
+  });
+
+  /* TODAY'S WORK — only counts the system holds (the owner's yes, 27
+     September, kept in D27-243). Arrivals: today's, of which still to come
+     (no-shows and cancellations are not work). Due out: today's
+     departures, of which still here. In house and Needs cleaning: the
+     Rooms board's own counts. */
+  const today = (() => {
     if (!stays.data || !view.data) return null;
     const all = stays.data;
     const arriving = all.filter((s) => s.arrival === date && s.status !== "cancelled" && s.status !== "no-show");
     const leaving = all.filter((s) => s.departure === date
       && (s.status === "in-house" || s.status === "due-out" || s.status === "checked-out"));
     const empty = rooms.filter((x) => !x.outOfService && !x.state.occupied);
-    return [
-      { key: "in", label: "Check-ins", done: arriving.filter((s) => s.status !== "due-in").length, of: arriving.length, color: "var(--color-brand-orange)", track: "var(--color-brand-orange-100)", dot: "bg-brand-orange" },
-      { key: "out", label: "Check-outs", done: leaving.filter((s) => s.status === "checked-out").length, of: leaving.length, color: "var(--color-brand-yellow)", track: "var(--color-brand-yellow-100)", dot: "bg-brand-yellow" },
-      { key: "ready", label: "Rooms ready", done: empty.filter((x) => !x.state.dirty).length, of: empty.length, color: "var(--color-success)", track: "var(--color-success-100)", dot: "bg-success" },
-    ];
+    return {
+      arriving: arriving.length,
+      toArrive: arriving.filter((s) => s.status === "due-in").length,
+      leaving: leaving.length,
+      toLeave: leaving.filter((s) => s.status !== "checked-out").length,
+      empty: empty.length,
+      ready: empty.filter((x) => !x.state.dirty).length,
+    };
   })();
-  const toGo = run?.reduce((n, x) => n + (x.of - x.done), 0);
+  const owing = seesMoney ? due.data ?? null : null;
 
   const figures: Array<{ icon: LucideIcon; label: string; term?: TermKey; f?: Figure }> = [
-    { icon: IndianRupee, label: "Average rate (ADR)", term: "adr", f: adr },
+    /* "ARR" on the screen (the owner's D27-243); the printed Manager report
+       keeps its "Average Daily Rate (ADR)", which `pick` reads above. */
+    { icon: IndianRupee, label: "Average rate (ARR)", term: "adr", f: adr },
     { icon: TrendingUp, label: "RevPAR", term: "revpar", f: revpar },
     { icon: Banknote, label: "Room revenue", f: roomRev },
   ];
@@ -217,8 +247,50 @@ export default function DashboardPage() {
       ) : null}
 
       <div className="grid grid-cols-12 gap-3">
-        {/* ── The anchor: Occupancy, in navy ───────────────────────── */}
-        <div className="col-span-12 xl:col-span-5 flex flex-col gap-3 rounded-lg bg-ink-900 text-white px-4 py-3.5 sm:px-[18px] sm:py-4">
+        {/* ── Today's work: four tiles that open their lists ───────── */}
+        <section
+          aria-label="Today's work"
+          className="col-span-12 grid grid-cols-2 grid-rows-[repeat(6,auto)] gap-x-3 gap-y-3 xl:grid-cols-4 xl:grid-rows-[auto_auto_auto] xl:gap-y-0"
+        >
+          <WorkTile
+            icon={LogIn} chip="yellow" label="Arrivals" to={`/h/${code}/arrivals`} loading={loading}
+            count={today?.arriving} left={today?.toArrive}
+            state={!today ? "none" : today.arriving === 0 ? "none" : today.toArrive > 0 ? "due" : "done"}
+            note={!today ? [] : today.arriving === 0 ? ["None today"]
+              : today.toArrive > 0
+                ? [<b key="b">{today.toArrive} still to arrive</b>, `${today.arriving - today.toArrive} checked in`]
+                : [`All ${today.arriving} checked in`]}
+          />
+          <WorkTile
+            icon={LogOut} chip="orange" label="Due out" to={`/h/${code}/in-house/due-out`} loading={loading}
+            count={today?.leaving} left={today?.toLeave}
+            state={!today ? "none" : today.leaving === 0 ? "none"
+              : today.toLeave === 0 ? "done" : (owing?.owing ?? 0) > 0 ? "now" : "due"}
+            note={!today ? [] : today.leaving === 0 ? ["None today"]
+              : today.toLeave === 0 ? [`All ${today.leaving} checked out`]
+                : [
+                  owing && owing.owing > 0
+                    ? <b key="b">{owing.owing} owe {money(owing.owed)}</b>
+                    : <b key="b">{today.toLeave} still to leave</b>,
+                  `${today.leaving - today.toLeave} checked out`,
+                ]}
+          />
+          <WorkTile
+            icon={Users} chip="blue" label="In house" to={`/h/${code}/in-house`} loading={loading}
+            count={c?.["Occupied"]} state="none"
+            note={c ? [`${(c["Occupied"] ?? 0) - (c["Due Out"] ?? 0)} staying on`, `${c["Due Out"] ?? 0} leave today`] : []}
+          />
+          <WorkTile
+            icon={SprayCan} chip="green" label="Needs cleaning" to={`/h/${code}/housekeeping`} loading={loading}
+            count={c?.["Dirty"]} state={c?.["Dirty"] == null ? "none" : c["Dirty"] > 0 ? "due" : "done"}
+            note={today ? ["Free rooms ready", `${today.ready} of ${today.empty}`] : []}
+          />
+        </section>
+
+        {/* ── The anchor: Occupancy, in navy. Its own row under 1440 px
+            (REP-16): beside the figures, "Month so far" broke beside its
+            amount between 1280 and 1439. ─────────────────────────────── */}
+        <div className="col-span-12 min-[1440px]:col-span-5 flex flex-col gap-3 rounded-lg bg-ink-900 text-white px-4 py-3.5 sm:px-[18px] sm:py-4">
           <div className="flex items-center gap-2.5 text-sm font-medium text-white/72">
             <IconChip tone="glass"><BedDouble /></IconChip>
             <Term name="occupancy" className="decoration-white/35">Occupancy</Term>
@@ -244,7 +316,7 @@ export default function DashboardPage() {
 
         {/* ── The figures: three tiles levelled by subgrid; on a phone,
             one card of blocks (the Data Rule) ─────────────────────── */}
-        <div className="col-span-12 xl:col-span-7 grid gap-3 sm:grid-cols-3 sm:grid-rows-[auto_auto_auto]
+        <div className="col-span-12 min-[1440px]:col-span-7 grid gap-3 sm:grid-cols-3 sm:grid-rows-[auto_auto_auto]
                         max-sm:gap-0 max-sm:bg-white max-sm:border max-sm:border-grey-200 max-sm:rounded-lg max-sm:divide-y max-sm:divide-grey-200">
           {figures.map(({ icon: Icon, label, term, f }) => (
             <div
@@ -277,6 +349,19 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        {/* ── The nights ahead: a bar under each date (D27-243) ───────── */}
+        <Card className="col-span-12">
+          <CardBody className="sm:px-[18px] sm:py-4">
+            <CardTitle title="Nights ahead" info={NOTES.nights}
+              meta={`${dateShort(date)} to ${dateShort(nightsTo)}`} />
+            {nights.isError ? (
+              <ReadFailed compact error={readError(nights)!} what="the nights ahead" onRetry={() => void nights.refetch()} />
+            ) : (
+              <NightsAhead from={date} days={nights.data} loading={nights.isLoading} to={`/h/${code}/calendar`} />
+            )}
+          </CardBody>
+        </Card>
+
         {/* ── Money ────────────────────────────────────────────────── */}
         <Card className="col-span-12">
           <CardBody className="sm:px-[18px] sm:py-4">
@@ -306,79 +391,16 @@ export default function DashboardPage() {
           </CardBody>
         </Card>
 
-        {/* ── Today's run: the day's jobs, from today's own bookings ─── */}
-        <section
-          aria-label="Today's run"
-          className="col-span-12 rounded-lg bg-brand-orange-50 border border-brand-orange-100 px-4 py-3.5 sm:px-[18px] sm:py-4"
-        >
-          <div className="flex items-center justify-between gap-3 mb-3 sm:mb-2">
-            <h2 className="text-md font-semibold text-ink-900">Today's run</h2>
-            {toGo == null ? null : toGo > 0 ? (
-              <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-brand-orange-600 text-white text-xs font-semibold tabular">
-                {toGo} to go
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 h-6 px-2.5 rounded-full bg-success-50 ring-1 ring-inset ring-success-100 text-success-600 text-xs font-semibold">
-                <Check className="size-3.5" aria-hidden /> Done
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-[112px_minmax(0,1fr)] gap-4 items-center sm:grid-cols-[96px_minmax(0,1fr)] sm:gap-6">
-            <Rings
-              seenKey="fidato.dashboard.rings"
-              size="size-28 sm:size-24"
-              arcs={(run ?? []).map((x) => ({ value: x.of ? x.done / x.of : 0, color: x.color, track: x.track }))}
-            />
-            <dl className="grid divide-y divide-brand-orange-100 sm:grid-cols-3 sm:divide-y-0 sm:divide-x">
-              {(run ?? [{ key: "in", label: "Check-ins" }, { key: "out", label: "Check-outs" }, { key: "ready", label: "Rooms ready" }]
-              ).map((x) => {
-                const done = "done" in x ? x.done : null;
-                const of = "of" in x ? x.of : null;
-                const complete = done != null && of != null && of > 0 && done === of;
-                return (
-                  <div key={x.key} className="flex items-center justify-between gap-2 min-h-10 sm:flex-col sm:items-start sm:justify-center sm:gap-1 sm:px-6 sm:first:pl-0">
-                    <dt className="inline-flex items-center gap-2 text-sm text-grey-700">
-                      <i className={cn("size-2 rounded-full", "dot" in x ? x.dot : "bg-grey-300")} aria-hidden />
-                      {x.label}
-                    </dt>
-                    <dd className={cn("text-md sm:text-xl font-semibold tabular", complete ? "text-success-600 inline-flex items-center gap-1" : "text-ink-900")}>
-                      {complete && <Check className="size-3.5 sm:size-4" aria-hidden />}
-                      {done == null ? <span className="text-grey-500">{DASH}</span> : (
-                        <span>{done}<span className="text-grey-500 font-medium">/{of}</span></span>
-                      )}
-                    </dd>
-                  </div>
-                );
-              })}
-            </dl>
-          </div>
-        </section>
-
-        {/* ── The house, now: one square per room, then the six counts ── */}
+        {/* ── The house, now: one square per room. Its six small counts
+            moved up into Today's work (D27-243). ─────────────────────── */}
         <Card className="col-span-12">
           <CardBody className="sm:px-[18px] sm:py-4">
             <CardTitle
               title="The house now"
               info={NOTES.house}
-              meta={rooms.length ? `${rooms.length} rooms` : undefined}
+              meta={c ? `${rooms.length} rooms · ${c["Vacant"] ?? 0} empty · ${c["Blocked"] ?? 0} out of service` : undefined}
             />
             {rooms.length > 0 && <RoomStrip rooms={rooms} />}
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 mt-3.5">
-              <CountTile icon={LogIn} chip="orange" label="Arrivals" n={c?.["Arrivals"]} loading={loading}
-                         job="orange" to={`/h/${code}/arrivals`} />
-              <CountTile icon={Users} chip="blue" label="In house" n={c?.["Occupied"]} loading={loading}
-                         to={`/h/${code}/in-house`} />
-              <CountTile icon={LogOut} chip="yellow" label="Due out" n={c?.["Due Out"]} loading={loading}
-                         job="yellow" to={`/h/${code}/in-house/due-out`} />
-              <CountTile icon={DoorOpen} label="Empty" n={c?.["Vacant"]} loading={loading}
-                         to={`/h/${code}/stay`} />
-              {/* Warm only when there is something to do about it; a zero
-                  here is good news, so it is green with a check. */}
-              <CountTile icon={SprayCan} chip="green" label="Needs cleaning" n={c?.["Dirty"]} loading={loading}
-                         warn goodAtZero to={`/h/${code}/housekeeping`} />
-              <CountTile icon={Wrench} label="Out of service" n={c?.["Blocked"]} loading={loading}
-                         warn to={`/h/${code}/stay`} />
-            </div>
           </CardBody>
         </Card>
       </div>
@@ -401,8 +423,6 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* ── Every hotel, for somebody who reads more than one ───── */}
-      {hotels.length > 1 && <div className="mt-5"><EveryHotel /></div>}
     </Page>
   );
 }
@@ -543,173 +563,124 @@ function RoomStrip({ rooms }: { rooms: ChartRoom[] }) {
   );
 }
 
-/* ── A count that opens its list ───────────────────────────────────
-   The label comes first in the markup and sits under the count on the
-   screen: a link reads "In house 2", its words then its figure. */
+/* ── Today's work: a tile that opens its list ──────────────────────
+   Stayntouch's big counts, coloured by what staff must do (Mews; the
+   owner's D27-243): orange act now, yellow due today, green done, white
+   nothing to do. The label comes first in the markup, so a link reads
+   "Due out 4 · 3 left …", its words then its figures. Three lines,
+   levelled across the row by subgrid; on a phone the note takes two. */
 
-function CountTile({ icon: Icon, chip = "neutral", label, n, loading, to, job, warn, goodAtZero }: {
-  icon: LucideIcon; chip?: "neutral" | "orange" | "yellow" | "blue" | "green";
-  label: string; n: number | undefined; loading: boolean; to: string;
-  /** Today's job: a warm tile while there is some of it to do. */
-  job?: "orange" | "yellow";
-  /** Orange above zero (the Signal Rule). */
-  warn?: boolean;
-  /** Zero is good news: green, with a check. */
-  goodAtZero?: boolean;
+type TileState = "now" | "due" | "done" | "none";
+
+const TILE: Record<TileState, string> = {
+  now: "bg-brand-orange-50 ring-brand-orange-100 hover:ring-brand-orange-700",
+  due: "bg-brand-yellow-50 ring-brand-yellow-100 hover:ring-brand-yellow-800",
+  done: "bg-white ring-grey-200 hover:ring-grey-400",
+  none: "bg-white ring-grey-200 hover:ring-grey-400",
+};
+const TILE_NOTE: Record<TileState, string> = {
+  now: "[&_b]:text-brand-orange-700",
+  due: "[&_b]:text-brand-yellow-800",
+  done: "",
+  none: "",
+};
+
+function WorkTile({ icon: Icon, chip, label, to, count: n, left, state, note, loading }: {
+  icon: LucideIcon; chip: "orange" | "yellow" | "blue" | "green";
+  label: string; to: string;
+  /** Today's total; null while it is not known (a dash). */
+  count: number | null | undefined;
+  /** Of which still to do, shown "· n left" while some is. */
+  left?: number | null | undefined;
+  state: TileState; note: ReactNode[]; loading: boolean;
 }) {
-  const value = loading ? undefined : n;
-  const busy = (value ?? 0) > 0;
+  const done = state === "done" && n === 0;
   return (
     <Link
       to={to}
+      data-state={state}
       className={cn(
-        "press-tile grid grid-rows-[auto_auto] gap-y-1.5 rounded-[10px] px-3.5 py-3 sm:p-2.5",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange",
-        job && busy
-          ? job === "orange"
-            ? "bg-brand-orange-50 ring-1 ring-inset ring-brand-orange-100"
-            : "bg-brand-yellow-50 ring-1 ring-inset ring-brand-yellow-100"
-          : "hover:bg-grey-50",
+        "press-tile row-span-3 grid grid-rows-subgrid gap-y-1.5 rounded-lg ring-1 ring-inset px-3.5 py-3 sm:px-[18px] sm:py-4",
+        "transition-[box-shadow] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange",
+        TILE[state],
       )}
     >
-      <span className="row-start-2 text-sm leading-[18px] text-grey-600 whitespace-nowrap">{label}</span>
-      <span className="row-start-1 flex items-center gap-2">
-        <IconChip size={24} tone={chip === "green" && busy ? "neutral" : chip}><Icon /></IconChip>
-        <b className={cn(
-          "inline-flex items-center gap-1 text-xl leading-[26px] font-semibold tabular tracking-[-0.02em]",
-          value == null ? "text-grey-500"
-            : warn && busy ? "text-brand-orange-700"
-              : goodAtZero && value === 0 ? "text-success-600" : "text-ink-900",
-        )}>
-          {count(value)}
-          {goodAtZero && value === 0 && <Check className="size-4" aria-hidden />}
-        </b>
-        {/* Each count opens its list (the Tappable Rule). */}
-        <ChevronRight className="ml-auto size-4 text-grey-400 shrink-0" aria-hidden />
+      <span className="relative flex items-center gap-2 sm:gap-2.5 pr-5 text-sm font-medium leading-5 text-grey-600 whitespace-nowrap">
+        <IconChip tone={chip} className="max-sm:size-6 max-sm:rounded-[7px] max-sm:[&>svg]:size-3.5"><Icon /></IconChip>
+        {label}
+        {/* It opens its list: an arrow says so (the Tappable Rule). */}
+        <ChevronRight className="absolute right-0 size-4 text-grey-500" aria-hidden />
+      </span>
+      <span className={cn(
+        "flex items-baseline gap-2 text-xl sm:text-2xl leading-[26px] sm:leading-[30px] font-semibold tabular tracking-[-0.02em]",
+        n == null ? "text-grey-500" : done || state === "done" ? "text-success-600" : "text-ink-900",
+      )}>
+        {loading ? <Skeleton className="h-6 w-12 inline-block" /> : count(n)}
+        {state === "done" && !loading && <Check className="size-4 self-center" aria-hidden />}
+        {!loading && left != null && left > 0 && (
+          <span className="text-sm font-medium tracking-normal text-grey-600">· {left} left</span>
+        )}
+      </span>
+      <span className={cn("text-xs font-medium leading-[17px] text-grey-600 whitespace-nowrap", TILE_NOTE[state])}>
+        {note.map((part, i) => (
+          <span key={i} className={cn(i > 0 && "max-sm:block sm:before:content-['_·_']")}>{part}</span>
+        ))}
       </span>
     </Link>
   );
 }
 
-/* ── Every hotel ─────────────────────────────────────────────────── */
+/* ── The nights ahead (eZee's bar under each date; the owner's D27-243)
+   Tonight and the 13 nights after it, from the daily statistics the
+   Calendar's footer shows: rooms sold of the rooms to sell, a capsule bar,
+   the share as the footer rounds it. A night the statistics do not hold
+   is a dash, never 0%. Tonight in navy; weekends washed, as the Calendar
+   draws them. On a phone the row scrolls inside its card. */
 
-interface Row {
-  property: Property;
-  /** Null when the statistics did not come back. Not zero — a property
-      whose figures failed to load is not one that sold nothing. */
-  occupancyPct: number | null;
-  adr: number | null;
-  revpar: number | null;
-  arrivals: number;
-  dirty: number;
-}
-
-/** Each hotel on ITS OWN operating day and its own month so far. This
-    table read every row on the date of the hotel in view — BUSINESS_DATE
-    and the period that goes with it — so with Agra a day behind Pune,
-    Agra's "arrivals due" were Pune's tomorrow (21 September). */
-async function buildRows(dates: Map<string, string>): Promise<Row[]> {
-  const properties = await listProperties();
-  return Promise.all(
-    properties.map(async (property) => {
-      const date = dates.get(property.id) ?? BUSINESS_DATE;
-      const stats = await getPeriodStatistics(property.id, monthStart(date), date);
-      /* STILL TO COME, not everyone whose date is today. A guest who has
-         already checked in is not due. */
-      const arrivals = await listArrivalsOutstanding(property.id, date);
-      const counts = await getStayViewCounts(property.id, date);
-      /* NULL WHEN THE FIGURES DID NOT COME BACK, not zero. `dirty` is
-         different: the count genuinely IS zero when no room is dirty. */
-      return {
-        property,
-        occupancyPct: stats?.occupancyPct ?? null,
-        adr: stats?.adr ?? null,
-        revpar: stats?.revpar ?? null,
-        arrivals: arrivals.length,
-        dirty: counts.Dirty ?? 0,
-      };
-    }),
-  );
-}
-
-const columns: Column<Row>[] = [
-  {
-    key: "property",
-    header: "Property",
-    cell: (r) => (
-      <Link
-        to={`/h/${r.property.id}/stay`}
-        className="group inline-flex items-center gap-1.5 font-medium text-ink-900 hover:text-brand-orange-700 transition-colors duration-150"
-      >
-        {r.property.name}
-        <ArrowRight className="size-3.5 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-150" aria-hidden />
-      </Link>
-    ),
-  },
-  {
-    key: "rooms", header: "Rooms", numeric: true,
-    cell: (r) => <span className="tabular">{r.property.rooms}</span>,
-  },
-  {
-    key: "occ", header: "Occupancy", numeric: true,
-    cell: (r) => (
-      <span className="tabular font-medium">
-        {r.occupancyPct === null ? DASH : `${r.occupancyPct}%`}
-      </span>
-    ),
-  },
-  {
-    key: "adr", header: "ADR", numeric: true,
-    cell: (r) => <span className="tabular">{r.adr === null ? DASH : money(r.adr)}</span>,
-  },
-  {
-    key: "revpar", header: "RevPAR", numeric: true,
-    cell: (r) => <span className="tabular">{r.revpar === null ? DASH : money(r.revpar)}</span>,
-  },
-  {
-    key: "arrivals", header: "Arrivals due", numeric: true,
-    cell: (r) => <span className="tabular">{r.arrivals}</span>,
-  },
-  {
-    key: "dirty", header: "Needs cleaning", numeric: true,
-    cell: (r) => (
-      <span className={r.dirty > 0 ? "tabular font-medium text-brand-orange-700" : "tabular text-grey-600"}>
-        {r.dirty}
-      </span>
-    ),
-  },
-];
-
-function EveryHotel() {
-  const hotels = useSession((s) => s.hotels);
-  const dates = new Map(hotels.map((h) => [h.code, h.businessDate]));
-  const query = useQuery({
-    queryKey: ["dashboard", [...dates].join()],
-    queryFn: () => buildRows(dates),
-  });
-  const { data, isLoading } = query;
-  const failed = readError(query);
-
+function NightsAhead({ from, days, loading, to }: {
+  from: string; days: DayStatistics[] | undefined; loading: boolean; to: string;
+}) {
+  const byDate = new Map((days ?? []).map((d) => [d.date, d]));
+  const nights = Array.from({ length: 14 }, (_, i) => addDays(from, i));
   return (
-    <Section title="Every property" description="The month so far. Each reconciles to that property's Manager report.">
-      <Card>
-        {failed ? (
-          /* Not an empty table: a group whose figures failed to load is
-             not a group with no hotels. */
-          <ReadFailed compact error={failed} what="every property's figures" onRetry={() => void query.refetch()} />
-        ) : isLoading ? (
-          <CardBody className="space-y-3">
-            <Skeleton className="h-3.5 w-full" />
-            <Skeleton className="h-3.5 w-11/12" />
-          </CardBody>
-        ) : (
-          <DataTable<Row>
-            rows={data ?? []}
-            columns={columns}
-            rowKey={(r) => r.property.id}
-          />
-        )}
-      </Card>
-    </Section>
+    <ul
+      aria-label="Nights ahead: rooms sold"
+      className="grid grid-cols-[repeat(14,minmax(0,1fr))] gap-1
+                 max-sm:grid-cols-none max-sm:grid-flow-col max-sm:auto-cols-[60px] max-sm:overflow-x-auto max-sm:snap-x max-sm:snap-mandatory
+                 max-sm:[mask-image:linear-gradient(90deg,#000_85%,transparent)]"
+    >
+      {nights.map((date, i) => {
+        const d = byDate.get(date);
+        const weekday = new Date(`${date}T00:00:00Z`).toLocaleDateString("en-IN", { weekday: "short", timeZone: "UTC" });
+        const weekend = weekday === "Sat" || weekday === "Sun";
+        const tonight = i === 0;
+        const share = d && d.availableRooms > 0 ? Math.round(d.occupancyPct) : null;
+        return (
+          <li key={date} className="snap-start">
+            <Link
+              to={to}
+              aria-label={`${tonight ? "Tonight" : weekday} ${dateShort(date)}: ${d ? `${d.roomsSold} of ${d.availableRooms} rooms sold` : "no figures"}`}
+              className={cn(
+                "grid gap-1 rounded-[8px] px-1.5 py-2 text-center tabular",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-orange",
+                tonight ? "bg-ink-900 text-white" : weekend ? "bg-grey-50 text-ink-900 hover:bg-grey-100" : "text-ink-900 hover:bg-grey-50",
+              )}
+            >
+              <span className={cn("text-xs leading-[17px]", tonight ? "text-white/72" : "text-grey-500")}>{tonight ? "Tonight" : weekday}</span>
+              <span className="text-sm font-semibold leading-5">{Number(date.slice(8, 10))}</span>
+              <span className={cn("mx-1 my-0.5 h-1 rounded-full overflow-hidden", tonight ? "bg-white/16" : "bg-grey-100")} aria-hidden>
+                <i className={cn("block h-full rounded-full", tonight ? "bg-white" : "bg-info")} style={{ width: `${share ?? 0}%` }} />
+              </span>
+              <span className={cn("text-xs leading-[17px] font-semibold", share == null && (tonight ? "text-white/72" : "text-grey-500"))}>
+                {loading ? <Skeleton className="h-3 w-8 inline-block" /> : share == null ? DASH : `${share}%`}
+              </span>
+              <span className={cn("text-xs leading-[17px]", tonight ? "text-white/72" : "text-grey-500")}>
+                {d ? `${d.roomsSold}/${d.availableRooms}` : DASH}
+              </span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
