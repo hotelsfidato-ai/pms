@@ -149,6 +149,8 @@ export const CLEAR: [table: string, how: string][] = [
      removed there by hand. */
   ["guest_id_photo_views", "hotel_id = $1"],
   ["guest_id_photos",   "hotel_id = $1"],
+  /* A DigiLocker sign-in in flight points at the link (D27-235). */
+  ["guest_digilocker_attempts", "hotel_id = $1"],
   ["guest_links",       "hotel_id = $1"],
 
   ["form_c_filings",    "hotel_id = $1"],
