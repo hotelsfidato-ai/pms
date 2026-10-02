@@ -23,7 +23,11 @@ New booking makes every room of one booking waiting or none, and Confirm
 confirms the whole group, so it cannot happen from the desk today.
 **Noted, not fixed.**
 
-### RES-14 · A booking's created_by is never written (numbered for now)
+---
+
+## Fixed
+
+### RES-14 · A booking's created_by is never written - FIXED 2 October (D27-239; numbered for now)
 
 Found 1 October building the voucher's "Booked by" (D27-215): `book.ts`
 inserts reservations without `created_by`, so every row holds NULL (all 778 in
@@ -31,9 +35,10 @@ the demo). Who made a booking is only in the audit log's INSERT row (016),
 which is where `app.guest_voucher` (169) reads it. **Open, not fixed here**
 (the master, 1 October).
 
----
-
-## Fixed
+**Fixed, 2 October** (the owner's D27-239 8.2): `book.ts` writes
+`created_by = app.current_user_id()` on every booking it makes. Rows made
+before stay NULL; the audit log still holds who made them. Proved:
+`api/test/modules/front-desk/feesAndDayUse.test.ts` "records who made it".
 
 ### RES-11 · A booking made with real dates vanished from Arrivals - FIXED 30 September (D27-187, D27-193; numbered for now)
 

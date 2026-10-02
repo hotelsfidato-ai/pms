@@ -441,3 +441,6 @@ export function StayTable({
     </>
   );
 }
+
+/* The status words, for the other lists of stays (Find a screen, D27-239). */
+export { LABEL as STAY_LABEL };

@@ -16,3 +16,6 @@ export { default as WaitingDetailsLink } from "./WaitingDetailsLink";
    `<AddIdPhotoAtDesk stayId={reservationId} />`, inside a `/h/:code/...`
    screen. It shows itself only to the desk's roles. */
 export { default as AddIdPhotoAtDesk } from "./AddIdPhotoAtDesk";
+
+/* A phone's photo redrawn small before it is sent; Settings' hotel photos use it too (D27-243). */
+export { shrinkPhoto } from "./shrinkPhoto";

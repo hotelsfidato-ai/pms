@@ -684,12 +684,16 @@ export async function makeBooking(
               ota_reference, ota_line, ota_fingerprint, whatsapp_agreed,
               is_complimentary, expected_departure, sales_person, company_id,
               discount_percent, discount_reason, room_promotion_id,
-              notes, is_single_lady, contract_id)
+              notes, is_single_lady, contract_id,
+              -- WHO MADE IT (RES-14, the owner's D27-239): the person signed
+              -- in, or null for a machine's booking. It was never written.
+              created_by)
            values ($1,$2,$3,$4,$5::date,$6::date,$7,$8,$9,$10,$30,$11,
                    $12,$13,$14,$15,$16::time,$17,$18::numeric,
                    $19,$20,$21,$22,
                    $23,$24::time,$25,$26,$27::numeric,$28,$29,
-                   $31,$32,$33::uuid)
+                   $31,$32,$33::uuid,
+                   app.current_user_id())
            returning id::text`,
           [hotelId, ref[0]!.reference, guestId, line.roomTypeId,
            request.checkIn, request.checkOut, adults, children, adults + children,

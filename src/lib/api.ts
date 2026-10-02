@@ -394,6 +394,9 @@ export interface ApiHotel {
      different dates — one has run its night audit and the other has
      not — so it arrives per hotel, not once for the group. */
   businessDate: string;
+  /** The property's real date in its own time zone (D27-237); absent from an
+      older server. */
+  today?: string;
 }
 
 /** The first screen after sign-in (087). Set by the GM, changeable by

@@ -92,14 +92,16 @@ In the CRS's n8n (the CRS's **Admin → Integrations** names its address):
 
 1. **Workflows → Import from file →** `pms-send-crs.json`. It arrives named
    **PMS send · email and WhatsApp (CRS)**.
-   - If you imported the earlier file (named "PMS send · email and voucher"):
-     switch that one off and delete it after this one works, or the address
-     `pms-send` is claimed twice.
+   - ⚠ **If you imported the earlier file (named "PMS send · email and
+     voucher"): switch that one OFF now, BEFORE step 6 switches this one on.**
+     Both answer the same address, `pms-send`: two active at once claim it
+     twice, and a message may go twice or not at all. Keep the old one
+     (switched off) until this one has sent a test message, then delete it.
 2. **PMS message** (the first node) → Credential: **Create new → Header
    Auth**, name `x-fidato-secret`, Value: the secret. Call it `PMS secret`.
 3. **Send the email** → Credential: the CRS's existing **SMTP** login.
-4. **Send on WhatsApp** → Credential: the existing **WhatsApp** login (the
-   Fidato number's app).
+4. **Send on WhatsApp** and **Upload PDF to Meta** → Credential: the existing
+   **WhatsApp** login (the Fidato number's app), the same one for both.
 5. **Read the message** → at the top, under "THE OWNER'S SETTINGS":
    - `FROM` - the mailbox the guest sees, for example
      `Reservations <reservations@your-domain>`; `REPLY_TO` if replies should
@@ -107,12 +109,19 @@ In the CRS's n8n (the CRS's **Admin → Integrations** names its address):
      sentence the desk sees. WhatsApp messages do not need it.
    - `WHATSAPP` / `LANGUAGE`, only if Meta approved other names or another
      language.
+   - **`VOUCHER_TEMPLATE`** (D27-235, D27-241) - the exact name of the CRS's
+     **already approved voucher template** (the one with the PDF and eight
+     fields), as **WhatsApp Manager → Message templates** shows it; and
+     `VOUCHER_LANGUAGE` if it was approved in other than `en`. Until it is
+     filled in, the voucher PDF does not go on WhatsApp (the desk sees why);
+     the confirmation on WhatsApp and the email with the PDF still go.
    - The words of each email are the `EMAILS` drafts just below - change them
      there.
    - There is no list of hotels to fill in: the hotel's name comes with each
      message.
-6. **Save**, switch it **Active**, and copy the **Production URL** of **PMS
-   message** (not the Test URL, which only answers while you watch).
+6. Check the old workflow (step 1) is **off**. Then **Save**, switch this one
+   **Active**, and copy the **Production URL** of **PMS message** (not the
+   Test URL, which only answers while you watch).
 
 ---
 
@@ -160,6 +169,7 @@ folders and their ids). Then, in the CRS's n8n:
 
    ```
    const HOTELS = {
+     "5EL": "<the id of the 5EL folder>",
      "AMR": "<the id of the AMR folder>",
      "GLM": "<the id of the GLM folder>",
    };
@@ -175,6 +185,7 @@ On the PMS server (release day, with the master; never pasted into a chat):
 ```
 ID_PHOTO_N8N_URL=<this workflow's Production URL>
 ID_PHOTO_N8N_SECRET=<its secret>
+ID_PHOTO_PASSWORD_5EL=<the 5EL password>
 ID_PHOTO_PASSWORD_AMR=<the AMR password>
 ID_PHOTO_PASSWORD_GLM=<the GLM password>
 ```

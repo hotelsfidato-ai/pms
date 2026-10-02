@@ -106,7 +106,7 @@ describe("a booking a site has taken", () => {
 
     const { rows } = await sql(
       `select r.status, r.ota_reference, r.commission_amount::text as commission,
-              r.notes, r.agreed_rate::text as rate, bs.name as source,
+              r.notes, r.agreed_rate::text as rate, bs.name as source, r.whatsapp_agreed,
               (select count(*)::int from folios f where f.reservation_id = r.id) as folios
          from reservations r join booking_sources bs on bs.id = r.booking_source_id
         where r.id = $1`, [result.reservationIds[0]]);
@@ -117,6 +117,8 @@ describe("a booking a site has taken", () => {
     expect(rows[0].rate).toBe("4200.00");
     expect(rows[0].source).toBe("Agoda");
     expect(rows[0].folios).toBe(1);
+    /* D27-235 (2.3): a booking site's guest never agreed to OUR WhatsApp. */
+    expect(rows[0].whatsapp_agreed, "a booking site's booking arrives unticked").toBe(false);
   });
 
   it("answers the same push sent twice with the booking already here", async () => {

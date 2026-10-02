@@ -14,7 +14,11 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FD-10 · A room nobody entered is dirtied when its advance booking lets it go
+---
+
+## Fixed — the solution is here; do not work it out again
+
+### FD-10 · A room nobody entered is dirtied when its advance booking lets it go - FIXED 2 October (D27-239, migration 185)
 
 **Found** - 22 September, the same reading. 074 leaves a room clean when a
 booking ends void, no-show or cancelled, and dirties it for every other
@@ -34,7 +38,15 @@ booking's advance room is still dirtied. 130 asks the right question
 (`checked_in` or `checked_out`), which is 074's own question, "did anybody
 actually go in?".
 
-### FD-12 · A room checked out of stays clean while a later booking holds it
+**Fixed, 2 October** (the owner's D27-239 8.3). Migration 185 replaces
+`app.vacated_room_is_dirty`: a released room is dirtied only when the stay had
+arrived (`checked_in` or `checked_out`). Check-in now lets go of the stay's
+other advance room BEFORE it marks the stay checked in, so that release is
+still a booking that never arrived. Proved: `api/test/modules/front-desk/roomCleaning.test.ts`
+(hotel FCL) "when a booking given it ahead lets it go" and "when the guest is
+checked into another room" - both fail on the old trigger.
+
+### FD-12 · A room checked out of stays clean while a later booking holds it - FIXED 2 October (D27-239, migration 185)
 
 **Found** - 22 September, the same reading. 070's trigger dirties a released
 room only if no OTHER live assignment holds it ("somebody else may already be
@@ -52,9 +64,10 @@ moved out of, not for a check-out.
 **The fix, when it is done** - ask whether anybody is IN the room
 (`app.in_house`, or the column now set from it) instead of whether it is held.
 
----
-
-## Fixed — the solution is here; do not work it out again
+**Fixed, 2 October** (the owner's D27-239 8.3). Migration 185: the room is left
+alone only while somebody ELSE is in it (`app.in_house`), never because a later
+booking holds it. Proved: `roomCleaning.test.ts` "is sent to cleaning at
+check-out" (fails on the old trigger).
 
 ### FD-24 · A check-in that moved the arrival left the room hold on the old dates - FIXED 30 September (D27-205, numbered for now)
 

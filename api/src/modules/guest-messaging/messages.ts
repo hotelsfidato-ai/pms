@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { canSend, NOT_CONNECTED } from "../../sending.ts";
-import { channelFor, dueFromDatabase, LIMITS, type Due } from "./jobs.ts";
+import { dueFromDatabase, LIMITS, type Due } from "./jobs.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT WAS SENT TO THIS GUEST — the reading side, and nothing else
@@ -184,8 +184,9 @@ const asMessage = (row: SentRow) => ({
    Nothing is recorded where nothing was attempted (migration 117), so a
    booking with nowhere to send left no trace at all: the desk had no way
    to see that this guest will never get a confirmation. Read from the SAME
-   answer the sweep reads and filtered by the SAME `channelFor`, so this
-   lists exactly what the sweep skips - one rule, not a second copy of it.
+   answer the sweep reads - its rows with no way to go (`channel` null,
+   decided by the database for every way, D27-235) - so this lists exactly
+   what the sweep skips: one rule, not a second copy of it.
 
    Listed whether or not sending is switched on: a booking fixed before the
    switch-on is a guest reached on the day. */
@@ -198,7 +199,7 @@ async function unreachableAt(client: Client, hotelId: string, party: string[] | 
     id: string; reference: string; guest: string; checkIn: string; why: string;
   }>();
   for (const due of await dueFromDatabase(client, LIMITS, hotelId)) {
-    if (channelFor(due) || seen.has(due.reservationId)) continue;
+    if (due.channel || seen.has(due.reservationId)) continue;
     if (party && !party.includes(due.reservationId)) continue;
     seen.set(due.reservationId, {
       id: due.reservationId, reference: due.reference, guest: due.guest.name,

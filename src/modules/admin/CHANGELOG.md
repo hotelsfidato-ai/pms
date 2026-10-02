@@ -11,6 +11,14 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · A photo gallery per hotel (D27-243, D27-244)
+
+**Asked for:** the master's gallery lane: each hotel's photos uploaded on Settings → Property, stored compressed on the PMS server, shown on the guest's in-stay page. Branch `settings/gallery-2oct` from cp6 2493407c, copy `.claude\worktrees\quizzical-bouman-ff2071`, database `fidato_gallery`, API 8911, web 5311. No claim (admin and online-checkin were held by live lanes; the master knew).
+**Shipped:** migration 186 (187 in the copy, renumbered at the merge) - `hotel_photos` (bytea, RLS: read by the hotel, written by `app.manages_hotel`) and the guest door's two definers; `api/src/modules/admin/gallery.ts` (list, one photo, add, caption, order, delete; roleGate `HOTEL_GALLERY`, the logo's three); `HotelGalleryCard` on the Property tab; online-checkin's `GallerySection` in `Behind` and `api/src/routes/guestGallery.ts` (the list behind the code, each picture on the link); the door kit's own per-minute bucket for pictures; `deploy/nginx.conf`'s gallery zone and location (a release step).
+**No new dependency (D27-244):** the browser redraws a photo at 1600 px as a JPEG; the server keeps a JPEG by its segments, at most 1600 px and 600 KB, without APP1/APP13/COM (idPhotos.ts's `withoutLocation`). Ceiling: pixels are not decoded, so a file with good headers and a broken picture would be kept and show as a broken image (image/jpeg, nosniff, sandbox).
+**Proved:** `api/test/modules/admin/gallery.test.ts` 18 (failed first on no table; the 121st picture a minute is refused, the page's opens untouched), `hotelGallery.test.tsx` 4 and `gallerySection.test.tsx` 2 (failed first on no component). On screen at 375 px and 1280 px: three 3000×2000 pictures added through the real input were kept at 1600×1067, 22 to 32 KB; captioned and reordered on Settings; shown under the code on the guest's page. Also passed, each alone: roleGate 70, groupSettings 23, resetOrder 4, guestDoorBehindTheCode 37, tableBookings 16; web primaryAction, boundaries, navigation, admin and online-checkin 158.
+**Left open:** `migrationNumbers.test.ts` fails on this branch alone - 187 leaves the gap 180-186 the master is filling; the nginx location is a release step (launch.sh rewrites fidato.conf from deploy/nginx.conf).
+
 ## 2026-10-01 · The checklist folds its reasons on a phone (D27-223)
 
 Branch `settings/checklist-fold-1oct` (from cp6 a8b261aa), the same copy; web 5391 against the master's API 8787, read-only.

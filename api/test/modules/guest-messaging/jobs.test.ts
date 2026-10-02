@@ -33,6 +33,8 @@ const NOWHERE: Run = (fn) => fn(null as unknown as Client);
 
 const aBooking = (over: Partial<Due> = {}): Due => ({
   kind: KIND.confirmation,
+  /* The way, as the database decides it (D27-235). */
+  channel: "whatsapp",
   reservationId: "11111111-2222-3333-4444-555555555555",
   reference: "FH-2609-5001",
   hotel: { id: "aaaa", code: "5EL", name: "5 Elements Akkalkot", phone: "+911234567890" },
@@ -197,13 +199,30 @@ describe("which way it goes", () => {
     }))).toBe(null);
   });
 
-  it("sends once, not twice, to a guest who has both", async () => {
+  /* D27-235 (2.1, replacing D21-35's one or the other): the confirmation
+     goes BOTH ways. The database owes one row per way; each is its own
+     message, with its own id, so neither way's retry is taken for the other. */
+  it("sends each way the database owes, as its own message with its own id", async () => {
     connected();
     const post = aReceiver();
-    await runOnce(NOWHERE, async () => [aBooking()], aLinkMaker().make, post.send);
+    await runOnce(NOWHERE, async () => [aBooking({ channel: "whatsapp" }), aBooking({ channel: "email" })],
+      aLinkMaker().make, post.send);
 
-    expect(post.seen).toHaveLength(1);
-    expect(post.seen[0]!.channel).toBe("whatsapp");
+    expect(post.seen.map((m) => m.channel)).toEqual(["whatsapp", "email"]);
+    expect(new Set(post.seen.map((m) => m.id)).size, "one id per way").toBe(2);
+  });
+
+  /* D27-241 (Q1): the CRS's voucher template with the PDF is a second
+     WhatsApp, after the confirmation - it carries no link, so none is made. */
+  it("mints no link for the WhatsApp voucher, and sends it as its own kind", async () => {
+    connected();
+    const link = aLinkMaker();
+    const post = aReceiver();
+    await runOnce(NOWHERE, async () => [aBooking({ kind: KIND.voucher, reference: "FH-V" })], link.make, post.send);
+
+    expect(link.asked).toEqual([]);
+    expect(post.seen[0]).toMatchObject({ kind: "booking-voucher", channel: "whatsapp" });
+    expect(post.seen[0]!.data).not.toHaveProperty("link");
   });
 });
 
@@ -216,7 +235,7 @@ describe("a booking with nowhere to send", () => {
     const out = await runOnce(
       NOWHERE,
       async () => [aBooking({
-        reference: "FH-2609-5003",
+        reference: "FH-2609-5003", channel: null,
         guest: { name: "Walk-in", phone: null, email: null },
       })],
       link.make, post.send,
@@ -259,8 +278,8 @@ describe("the owner's pace (D21-34)", () => {
     const out = await runOnce(
       NOWHERE,
       async () => [
-        aBooking({ reference: "FH-1", guest: nobody }),
-        aBooking({ reference: "FH-2", guest: nobody }),
+        aBooking({ reference: "FH-1", guest: nobody, channel: null }),
+        aBooking({ reference: "FH-2", guest: nobody, channel: null }),
         aBooking({ reference: "FH-3" }),
       ],
       aLinkMaker().make, post.send,

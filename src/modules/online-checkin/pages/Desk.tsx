@@ -13,6 +13,7 @@ import {
 } from "@/modules/online-checkin/data/desk";
 import { moreLines } from "@/modules/online-checkin/formIII";
 import { KeptPhotos, WaitingPhoto } from "@/modules/online-checkin/pages/IdPhotosAtDesk";
+import { HotelCard } from "@/modules/online-checkin/HotelCard";
 
 /* ══════════════════════════════════════════════════════════════════
    ONLINE CHECK-IN — THE DESK'S SIDE (/h/:code/online-checkin)
@@ -40,6 +41,7 @@ const KIND_LABEL: Record<string, string> = { spa: "Spa", laundry: "Laundry" };
 
 export default function DeskPage() {
   const code = useParams().code ?? "";
+  const { property } = useDocumentIdentity();
   const qc = useQueryClient();
   const desk = useQuery({ queryKey: ["online-checkin-desk", code], queryFn: () => getDesk(code) });
   const refresh = () => qc.invalidateQueries({ queryKey: ["online-checkin-desk", code] });
@@ -66,6 +68,8 @@ export default function DeskPage() {
           {desk.data!.idPhotos?.keeper && <KeptPhotos code={code} />}
           <Requests code={code} rows={desk.data!.requests} onChanged={refresh} />
           <RoomCards code={code} rooms={desk.data!.rooms} onPrinted={setPrinted} />
+          {/* One card per hotel for "your room and phone" (D27-235). */}
+          <HotelCard code={code} hotel={property} />
         </div>
       )}
     </Page>
@@ -106,7 +110,7 @@ function Waiting(
                 {/* What they typed, under a hairline: label, then value. */}
                 <dl className="mt-3 border-t border-grey-100 pt-2.5 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm">
                   <dt className="text-grey-500">{ID_LABEL[d.idType] ?? d.idType}</dt>
-                  <dd className="font-medium text-ink-900 tabular">{d.idNumber}</dd>
+                  <dd className="font-medium text-ink-900 tabular">{d.idNumber}{d.fromDigilocker && <span className="font-normal text-grey-600"> · from DigiLocker</span>}</dd>
                   {d.passportExpiry && <><dt className="text-grey-500">Passport expires</dt>
                     <dd className="font-medium text-ink-900 tabular">{dateShort(d.passportExpiry)}</dd></>}
                   {d.visaNumber && <><dt className="text-grey-500">Visa</dt>

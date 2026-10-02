@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import {
   Package, Plus, TrendingDown, TrendingUp, Trash2, Undo2, AlertTriangle,
   Upload, CornerUpLeft, ClipboardCheck, History, ArrowLeftRight, Bell,
-  ClipboardList, Printer,
+  ClipboardList, Printer, CircleOff, FileBarChart,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort, timeOnly } from "@/lib/format";
@@ -15,7 +15,7 @@ import { useDocumentIdentity } from "@/lib/documentIdentity";
 import {
   Page, PageHeader, Card, Button, Skeleton, EmptyState, ErrorState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
-  StatusPill, IconChip, InfoButton, toast, Menu, MenuItem, MenuSeparator, Checkbox,
+  StatusPill, InfoButton, toast, Menu, MenuItem, MenuSeparator, Checkbox, Segmented,
 } from "@/components/ui";
 import {
   getStore, getStockHistory, addStockItem, recordStockMovement, moveStock,
@@ -25,6 +25,9 @@ import {
 } from "@/modules/stores/data/stores";
 import { ImportDialog } from "@/components/flows/ImportDialog";
 import { STOCK_SPEC } from "@/lib/importSpec";
+import { StoreTiles } from "@/modules/stores/components/StoreTiles";
+import { TILES, inTile, isTile, type Tile } from "@/modules/stores/lib/tiles";
+import { STOCK_REPORTS, mayReadStockReports } from "@/modules/stores/lib/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STORE
@@ -62,6 +65,7 @@ const KIND_LABEL: Record<MovementKind, string> = {
   adjustment: "Adjusted",
   return: "Returned",
   transfer: "Moved",
+  breakage: "Broken",
 };
 
 /* What a button SAYS WILL HAPPEN — verb first (STO-8, the owner's words of
@@ -72,6 +76,7 @@ const ACTION_LABEL: Record<StockKind, string> = {
   wastage: "Record waste",
   adjustment: "Correct the count",
   return: "Return",
+  breakage: "Record breakage",
 };
 
 /* What an undo undid, as a noun: "Undo this delivery of 60 piece?" and, in
@@ -83,6 +88,7 @@ const NOUN: Record<MovementKind, string> = {
   adjustment: "count correction",
   return: "return",
   transfer: "move",
+  breakage: "breakage",
 };
 const withArticle = (noun: string) => `${/^[aeiou]/.test(noun) ? "an" : "a"} ${noun}`;
 
@@ -128,12 +134,74 @@ const heldText = (n: number | null | undefined) => (n === null || n === undefine
 const unreachable = (error: unknown) =>
   error instanceof ApiError && error.status === 0;
 
+/* THE PLACE PICKED, AND THE TILE, LIVE IN THE ADDRESS (D27-238): the Shelf
+   and the Days view are a pair, like Rooms and the Calendar, and switching
+   keeps both. */
+export function useStorePick() {
+  const [params, setParams] = useSearchParams();
+  const tileParam = params.get("tile");
+  const set = (key: string, value: string | null) => setParams((p) => {
+    const next = new URLSearchParams(p);
+    if (value === null) next.delete(key); else next.set(key, value);
+    return next;
+  }, { replace: true });
+  return {
+    storeId: params.get("store") ?? ALL_STORES,
+    setStoreId: (id: string) => set("store", id === ALL_STORES ? null : id),
+    tile: isTile(tileParam) ? tileParam : null,
+    setTile: (t: Tile | null) => set("tile", t),
+    search: params.toString(),
+  };
+}
+
+/** The stores, then the places crockery is in use (D27-242), as one list a
+    picker reads. A place in use is never the Main store. */
+export function placesOf(data: {
+  stores: StoreSummary[]; inUse: { id: string; name: string; isActive: boolean }[];
+} | undefined): StoreSummary[] {
+  return [
+    ...(data?.stores ?? []),
+    ...(data?.inUse ?? []).map((p) => ({ id: p.id, name: p.name, isActive: p.isActive, isMain: false })),
+  ];
+}
+
+/** Every tile's count, for the place picked. */
+export const tileCounts = (items: StockItem[], picked: StoreSummary | null, today: string) =>
+  Object.fromEntries(TILES.map((t) => [t.key, items.filter((i) => inTile(t.key, i, picked, today)).length])) as Record<Tile, number>;
+
+/** Shelf | Days, the pair's switch, and the Reports menu (D27-240) - for
+    everyone who sees the Store. */
+export function StoreViews({ code, view, search }: { code: string; view: "shelf" | "days"; search: string }) {
+  const navigate = useNavigate();
+  const role = useRole();
+  const tail = search ? `?${search}` : "";
+  return (
+    <>
+      <Segmented<"shelf" | "days">
+        value={view}
+        onChange={(v) => navigate(`/h/${code}/stores${v === "days" ? "/days" : ""}${tail}`)}
+        options={[{ value: "shelf", label: "Shelf" }, { value: "days", label: "Days" }]}
+      />
+      {mayReadStockReports(role) && (
+        <Menu label="Reports">
+          {STOCK_REPORTS.map((r) => (
+            <MenuItem key={r.key} icon={FileBarChart} onSelect={() => navigate(`/reports/${r.key}`)}>
+              {r.label}
+            </MenuItem>
+          ))}
+        </Menu>
+      )}
+    </>
+  );
+}
+
 export default function StoresPage() {
   const { code = "" } = useParams<{ code: string }>();
   const qc = useQueryClient();
   const role = useRole();
   const mayChange = can(role, "create", "stock");
   const mayCorrect = can(role, "edit", "stock");
+  const { storeId, setStoreId, tile, setTile, search } = useStorePick();
 
   const [adding, setAdding] = useState(false);
   const [moving, setMoving] = useState<{ item: StockItem; kind: StockKind } | null>(null);
@@ -142,7 +210,6 @@ export default function StoresPage() {
   const [levelling, setLevelling] = useState<StockItem | null>(null);
   const [counting, setCounting] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [storeId, setStoreId] = useState(ALL_STORES);
 
   const q = useQuery({
     queryKey: ["stores", code],
@@ -153,10 +220,19 @@ export default function StoresPage() {
   const refresh = () => { void qc.invalidateQueries({ queryKey: ["stores", code] }); };
 
   const stores = q.data?.stores ?? [];
-  const items = q.data?.items ?? [];
-  /* The store picked at the top, or null for every store together. A store
-     that has left the list — switched off and emptied — falls back to all. */
-  const picked = stores.find((s) => s.id === storeId) ?? null;
+  const all = q.data?.items ?? [];
+  /* Stores, then where crockery is in use (D27-242). */
+  const places = placesOf(q.data);
+  const inUseIds = new Set((q.data?.inUse ?? []).map((p) => p.id));
+  const placesFor = (i: StockItem) => (i.crockery ? places : stores);
+  /* The place picked at the top, or null for every place together. One that
+     has left the list - switched off and emptied - falls back to all. */
+  const picked = places.find((s) => s.id === storeId) ?? null;
+  const today = q.data?.businessDate ?? "";
+  /* A place in use holds crockery only; a tile narrows to what answers it. */
+  const items = all
+    .filter((i) => !picked || !inUseIds.has(picked.id) || i.crockery)
+    .filter((i) => !tile || inTile(tile, i, picked, today));
 
   /* What the screen shows for an item: the whole hotel, or the picked store.
      Null where the picked store holds none of it — a dash. */
@@ -169,16 +245,6 @@ export default function StoresPage() {
       ? null : Math.round(here * i.unitCost * 100) / 100;
   };
 
-  /* THE BELOW-LEVEL LIST (D25-14): each item at or below its level, in which
-     store - the picked one only, when one is picked. It only shows; buying is
-     Purchasing's screen. */
-  const below = items.flatMap((i) => i.lowIn
-    .filter((s) => !picked || s === picked.id)
-    .flatMap((s) => {
-      const store = stores.find((x) => x.id === s);
-      return store ? [{ item: i, store }] : [];
-    }));
-  const belowItems = new Set(below.map((b) => b.item.id)).size;
   /* Only what has a value. An item nobody has received contributes
      nothing to a total rather than zero — and if EVERYTHING is unpriced
      the total is a dash, not ₹0. */
@@ -222,6 +288,15 @@ export default function StoresPage() {
       return <Skeleton className="h-64" />;
     }
 
+    if (tile && items.length === 0 && all.length > 0) {
+      return (
+        <EmptyState compact icon={<Package />}
+                    title={`Nothing is ${TILES.find((t) => t.key === tile)!.label.toLowerCase()}`}
+                    description={picked ? `In ${picked.name}.` : "In any store."}
+                    action={<Button variant="secondary" onClick={() => setTile(null)}>Show everything</Button>} />
+      );
+    }
+
     if (items.length === 0) {
       return (
         <EmptyState
@@ -255,7 +330,7 @@ export default function StoresPage() {
             <ItemRow
               key={i.id}
               item={i}
-              stores={stores}
+              stores={placesFor(i)}
               picked={picked}
               onHand={shownOnHand(i)}
               value={shownValue(i)}
@@ -275,7 +350,7 @@ export default function StoresPage() {
   /* The count replaces the list, so the sheet prints on its own. */
   if (counting && q.data !== undefined) {
     return (
-      <CountSheet code={code} stores={stores} items={items}
+      <CountSheet code={code} stores={places} inUseIds={inUseIds} items={all}
                   startStoreId={picked?.id ?? null}
                   reload={async () => (await q.refetch()).data?.items ?? items}
                   onDone={(saved) => { setCounting(false); if (saved) refresh(); }} />
@@ -297,27 +372,32 @@ export default function StoresPage() {
                         : "")
                   : " · nothing received yet, so nothing has a value")
         }
-        actions={mayChange && (
+        actions={
           <div className="flex flex-wrap gap-2">
-            {/* A store is a hundred lines long. The same argument the
-                menu import is built on. */}
-            <Button variant="secondary"
-                    onClick={() => setImporting(true)}>
-              <Upload className="size-4" /> Import
-            </Button>
-            {/* THE COUNT (D25-15..17): whoever corrects a count. */}
-            {mayCorrect && items.length > 0 && (
-              <Button variant="secondary" disabled={q.data === undefined}
-                      onClick={() => setCounting(true)}>
-                <ClipboardList className="size-4" /> Count a store
-              </Button>
+            <StoreViews code={code} view="shelf" search={search} />
+            {mayChange && (
+              <>
+                {/* A store is a hundred lines long. The same argument the
+                    menu import is built on. */}
+                <Button variant="secondary"
+                        onClick={() => setImporting(true)}>
+                  <Upload className="size-4" /> Import
+                </Button>
+                {/* THE COUNT (D25-15..17): whoever corrects a count. */}
+                {mayCorrect && all.length > 0 && (
+                  <Button variant="secondary" disabled={q.data === undefined}
+                          onClick={() => setCounting(true)}>
+                    <ClipboardList className="size-4" /> Count a store
+                  </Button>
+                )}
+                {/* The Store's one main action (STO-8). */}
+                <Button variant="primary" onClick={() => setAdding(true)}>
+                  <Plus className="size-4" /> Add an item
+                </Button>
+              </>
             )}
-            {/* The Store's one main action (STO-8). */}
-            <Button variant="primary" onClick={() => setAdding(true)}>
-              <Plus className="size-4" /> Add an item
-            </Button>
           </div>
-        )}
+        }
       />
 
       {!mayChange && (
@@ -328,21 +408,13 @@ export default function StoresPage() {
           each item's total and what each store holds; one store shows only
           what is in it, and its dialogs start there. */}
       {stores.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-5">
-          <label htmlFor="store-picker" className="text-sm font-medium text-grey-700">
-            Store
-          </label>
-          <NativeSelect id="store-picker" className="w-auto min-w-52"
-                        value={picked?.id ?? ALL_STORES}
-                        onChange={(e) => setStoreId(e.target.value)}>
-            <option value={ALL_STORES}>All stores</option>
-            {stores.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.isActive ? s.name : `${s.name} (switched off)`}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
+        <StorePicker places={places} inUseIds={inUseIds} value={picked?.id ?? ALL_STORES} onChange={setStoreId} />
+      )}
+
+      {/* THE TILES (D27-238). Below level replaces the yellow list (Q2): its
+          cards say which store and what level. */}
+      {q.data !== undefined && all.length > 0 && (
+        <StoreTiles counts={tileCounts(all, picked, today)} picked={tile} onPick={setTile} />
       )}
 
       {q.data !== undefined && q.isError && (
@@ -360,31 +432,6 @@ export default function StoresPage() {
                              underline-offset-4 cursor-pointer">
             Try again
           </button>
-        </div>
-      )}
-
-      {/* Something to do (buy it), so the warm tile: the yellow wash, its
-          chip, and the list under the heading. */}
-      {below.length > 0 && (
-        <div className="flex items-start gap-3 mb-5 rounded-lg bg-brand-yellow-50
-                        ring-1 ring-inset ring-brand-yellow-100 px-4 py-3.5">
-          <IconChip tone="yellow"><AlertTriangle /></IconChip>
-          <div className="text-sm text-ink-900 leading-relaxed min-w-0">
-            <p className="font-medium">
-              {/* Items, not lines: one item can be low in two stores. */}
-              {belowItems === 1 ? "One item is" : `${belowItems} items are`} at
-              or below the level set for {picked ? picked.name : "a store"}
-            </p>
-            <ul data-below-list="" className="mt-1 text-grey-600">
-              {below.map(({ item, store }) => (
-                <li key={`${item.id}:${store.id}`} className="tabular">
-                  {item.name} - {store.name}:{" "}
-                  {item.byStore[store.id] === undefined ? "none" : `${item.byStore[store.id]} ${item.unit}`},
-                  level {item.levels[store.id]}
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
       )}
 
@@ -406,14 +453,16 @@ export default function StoresPage() {
       )}
       {moving && (
         <MoveDialog code={code} item={moving.item} kind={moving.kind}
-                    stores={stores} startStoreId={picked?.id ?? null}
+                    stores={stores} inUse={moving.item.crockery ? places.filter((p) => inUseIds.has(p.id)) : []}
+                    people={q.data?.people ?? []}
+                    startStoreId={picked?.id ?? null}
                     outlets={q.data?.outlets ?? []} open
                     onOpenChange={(o) => { if (!o) setMoving(null); }}
                     onDone={() => { setMoving(null); refresh(); }} />
       )}
       {transferring && (
         <TransferDialog code={code} item={transferring}
-                        stores={stores} startFromId={picked?.id ?? null} open
+                        stores={placesFor(transferring)} startFromId={picked?.id ?? null} open
                         onOpenChange={(o) => { if (!o) setTransferring(null); }}
                         onDone={() => { setTransferring(null); refresh(); }} />
       )}
@@ -423,11 +472,38 @@ export default function StoresPage() {
                        onChanged={refresh} />
       )}
       {levelling && (
-        <LevelsDialog code={code} item={levelling} stores={stores} open
+        <LevelsDialog code={code} item={levelling} stores={placesFor(levelling)} open
                       onOpenChange={(o) => { if (!o) setLevelling(null); }}
                       onDone={() => { setLevelling(null); refresh(); }} />
       )}
     </Page>
+  );
+}
+
+/* ── Which place, at the top ──────────────────────────────────────── */
+
+/* WHICH STORE (the owner's layout, 17 September): "All stores" shows each
+   item's total and what each holds; one shows only what is in it, and its
+   dialogs start there. A place where crockery is in use is offered after the
+   stores (D27-242). */
+export function StorePicker({ places, inUseIds, value, onChange }: {
+  places: StoreSummary[]; inUseIds: Set<string>; value: string; onChange: (id: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-5">
+      <label htmlFor="store-picker" className="text-sm font-medium text-grey-700">
+        Store
+      </label>
+      <NativeSelect id="store-picker" className="w-auto min-w-52" value={value}
+                    onChange={(e) => onChange(e.target.value)}>
+        <option value={ALL_STORES}>All stores</option>
+        {places.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name}{inUseIds.has(s.id) ? " (in use)" : ""}{s.isActive ? "" : " (switched off)"}
+          </option>
+        ))}
+      </NativeSelect>
+    </div>
   );
 }
 
@@ -463,6 +539,13 @@ function ItemRow({
         : "Warn at " + stores.filter((s) => item.levels[s.id] !== undefined)
             .map((s) => `${shortName(s.name)} ${item.levels[s.id]}`).join(" · "));
   const emptiesShown = picked ? (item.emptiesByStore[picked.id] ?? null) : item.empties;
+  /* "Last counted" (D27-242): in the picked place, or the latest anywhere. */
+  const lastCounted = picked
+    ? item.lastCounted[picked.id]
+    : Object.values(item.lastCounted).sort().at(-1);
+  /* Below level (D25-14), on the card now that the tile replaces the yellow
+     list (Q2): which store, what it holds, and the level. */
+  const belowIn = stores.filter((s) => item.lowIn.includes(s.id) && (!picked || s.id === picked.id));
 
   return (
     <li>
@@ -483,6 +566,7 @@ function ItemRow({
               {item.lastMovement
                 ? ` · last moved ${dateShort(item.lastMovement)}`
                 : " · never moved"}
+              {lastCounted ? ` · counted ${dateShort(lastCounted)}` : ""}
             </p>
           </div>
 
@@ -562,8 +646,15 @@ function ItemRow({
                             disabled={empty || openStores.length < 2}
                             reason={empty ? NOTHING_ON_HAND : "There is only one store."}
                             onSelect={onTransfer}>
-                    Move to another store
+                    {item.crockery ? "Move into use, or to another store" : "Move to another store"}
                   </MenuItem>
+                  {/* Crockery and cutlery break, with who (D27-242). */}
+                  {item.crockery && (
+                    <MenuItem icon={CircleOff} disabled={empty} reason={NOTHING_ON_HAND}
+                              onSelect={() => onMove("breakage")}>
+                      Broken
+                    </MenuItem>
+                  )}
                   {mayCorrect && (
                     <MenuItem icon={ClipboardCheck} onSelect={() => onMove("adjustment")}>
                       Correct the count
@@ -593,8 +684,14 @@ function ItemRow({
 
         {/* THE ITEM'S ROWS, under one hairline (the Figure Rule): what each
             store holds, the deposit, and why Issue is grey. */}
-        {((!picked && stores.length > 1) || item.cylinder || (mayChange && empty)) && (
+        {((!picked && stores.length > 1) || item.cylinder || (mayChange && empty) || belowIn.length > 0) && (
           <div className="border-t border-grey-100 px-4 py-3 space-y-1">
+            {belowIn.length > 0 && (
+              <p className="text-sm text-brand-yellow-800 tabular" data-below-list="">
+                {belowIn.map((s) => `${s.name}: ${item.byStore[s.id] === undefined
+                  ? "none" : `${item.byStore[s.id]} ${item.unit}`}, level ${item.levels[s.id]}`).join(" · ")}
+              </p>
+            )}
             {/* WHAT EACH STORE HOLDS, on "All stores" — the owner's layout:
                 "Main 30 · Kitchen 8 · Bar -". */}
             {!picked && stores.length > 1 && (
@@ -644,6 +741,7 @@ function AddItemDialog({ code, open, mayLevel, onOpenChange, onAdded }: {
   const [unit, setUnit] = useState("");
   const [category, setCategory] = useState("");
   const [reorder, setReorder] = useState("");
+  const [crockery, setCrockery] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const ready = !!name.trim() && !!unit.trim() && category !== "";
@@ -656,12 +754,13 @@ function AddItemDialog({ code, open, mayLevel, onOpenChange, onAdded }: {
       unit: unit.trim(),
       category: category === NO_CATEGORY ? undefined : category,
       reorderLevel: reorder.trim() === "" ? null : Number(reorder),
+      ...(crockery ? { crockery: true } : {}),
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
     toast.success(`${name.trim()} added`,
       "Receiving a delivery is what gives it a quantity and a value.");
-    setName(""); setUnit(""); setCategory(""); setReorder("");
+    setName(""); setUnit(""); setCategory(""); setReorder(""); setCrockery(false);
     onAdded();
   };
 
@@ -710,6 +809,10 @@ function AddItemDialog({ code, open, mayLevel, onOpenChange, onAdded }: {
               </NativeSelect>
             )}
           </Field>
+          {/* D27-242: crockery and cutlery is in use at an outlet until it
+              breaks or comes back. */}
+          <Checkbox label="Crockery or cutlery - in use at an outlet until it breaks"
+                    checked={crockery} onCheckedChange={setCrockery} />
           {mayLevel && (
             <Field label="Warn me below, in the Main store"
                    hint="Leave blank for no warning. Blank is not zero - zero would mean warn me when it has run out, which is much too late. Other stores' levels are set from the item's More menu.">
@@ -768,15 +871,29 @@ function StoreField({ label, value, onChange, stores, item, hint }: {
 /** The picker's answer for an issue that went to no outlet; sent as null. */
 const NOT_AN_OUTLET = "none";
 
-function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onOpenChange, onDone }: {
+/** The GST rates since 22 September 2025, offered first; 12 and 28 are still
+    typed for an older bill (D27-242 Q6). */
+const GST_RATES = [0, 5, 18, 40];
+/** The picker's answer for a breakage nobody owns up to; sent as null. */
+const NOT_KNOWN = "not-known";
+
+export function MoveDialog({ code, item, kind, stores, inUse = [], people = [], startStoreId, outlets, open, onOpenChange, onDone }: {
   code: string; item: StockItem; kind: StockKind;
-  stores: StoreSummary[]; startStoreId: string | null;
+  stores: StoreSummary[];
+  /** Where a crockery item is in use: it breaks and is counted there too. */
+  inUse?: StoreSummary[];
+  /** Who may be named as having broken it. */
+  people?: { id: string; name: string }[];
+  startStoreId: string | null;
   outlets: { id: string; name: string }[];
   open: boolean; onOpenChange: (o: boolean) => void; onDone: () => void;
 }) {
   /* A switched-off store takes nothing in; what is already in one may still
-     go out, be wasted, returned or counted (the server holds the same rule). */
-  const offered = kind === "receipt" ? stores.filter((s) => s.isActive) : stores;
+     go out, be wasted, returned or counted (the server holds the same rule).
+     Crockery breaks, and is counted, where it is in use too (D27-242). */
+  const offered = kind === "receipt" ? stores.filter((s) => s.isActive)
+    : kind === "breakage" || kind === "adjustment" ? [...stores, ...inUse]
+      : stores;
   const [storeId, setStoreId] = useState(() => startingStore(offered, startStoreId));
   const [qty, setQty] = useState("");
   const [cost, setCost] = useState("");
@@ -786,6 +903,15 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
   const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
   const [outletId, setOutletId] = useState("");
+  /* D27-238: a delivery's GST (all three or none) and expiry; an issue's
+     department; a breakage's who. */
+  const [gstRate, setGstRate] = useState("");
+  const [gstAmount, setGstAmount] = useState("");
+  const [gstTyped, setGstTyped] = useState(false);
+  const [claimable, setClaimable] = useState("");
+  const [expiresOn, setExpiresOn] = useState("");
+  const [department, setDepartment] = useState("");
+  const [brokenBy, setBrokenBy] = useState("");
   const [busy, setBusy] = useState(false);
 
   const store = offered.find((s) => s.id === storeId) ?? null;
@@ -820,9 +946,24 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
     || (emptiesN !== null && Number.isFinite(emptiesN) && emptiesN >= 0);
 
   const quantity = isCount ? difference : (qty.trim() === "" ? null : Number(qty));
+
+  /* THE AMOUNT IS FILLED FROM THE RATE (Q6): how many x cost x rate, until
+     the person types their bill's own figure over it. */
+  const rateN = gstRate.trim() === "" ? null : Number(gstRate);
+  const costN = costFree ? 0 : cost.trim() === "" ? null : Number(cost);
+  const filled = rateN !== null && quantity !== null && costN !== null
+    && Number.isFinite(rateN) && Number.isFinite(costN)
+    ? (Math.round(quantity * costN * rateN) / 100).toFixed(2) : "";
+  const amount = gstTyped ? gstAmount : filled;
+  const gstGiven = [gstRate, amount, claimable].filter((v) => v.trim() !== "").length;
+  const gstOk = !isReceipt || gstGiven === 0
+    || (gstGiven === 3 && rateN !== null && rateN >= 0 && rateN <= 100 && Number(amount) >= 0);
+  const isBreakage = kind === "breakage";
+
   const ready = store !== null && quantity !== null && Number.isFinite(quantity) && quantity !== 0
     && (isCount ? (counted ?? -1) >= 0 : quantity > 0)
-    && (!needsOutlet || outletId !== "") && emptiesOk;
+    && (!needsOutlet || outletId !== "") && emptiesOk && gstOk
+    && (!isBreakage || brokenBy !== "");
 
   const submit = async () => {
     if (busy || !ready || quantity === null || !store) return;
@@ -843,6 +984,11 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
       ...(needsOutlet ? { outletId: outletId === NOT_AN_OUTLET ? null : outletId } : {}),
       ...(asksEmpties && emptiesN !== null
         ? (isReceipt ? { emptiesTaken: emptiesN } : { emptiesBack: emptiesN }) : {}),
+      ...(isReceipt && gstGiven === 3
+        ? { gstRate: rateN!, gstAmount: Number(amount), gstClaimable: claimable === "yes" } : {}),
+      ...(isReceipt && expiresOn ? { expiresOn } : {}),
+      ...(kind === "issue" && department.trim() ? { department: department.trim() } : {}),
+      ...(isBreakage ? { brokenBy: brokenBy === NOT_KNOWN ? null : brokenBy } : {}),
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not recorded", res.reason);
@@ -880,7 +1026,7 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
         }
       >
         <div className="space-y-3">
-          <StoreField label="Which store" value={storeId} onChange={setStoreId}
+          <StoreField label={isBreakage ? "Where it broke" : "Which store"} value={storeId} onChange={setStoreId}
                       stores={offered} item={item} />
 
           <Field label={isCount ? `What the shelf holds now, in ${item.unit}` : `How many ${item.unit}`}
@@ -931,9 +1077,34 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
             </p>
           )}
 
+          {/* WHO BROKE IT, asked every time (D27-242 Q10): a person rostered
+              here, or Not known - nothing is chosen for the person. */}
+          {isBreakage && (
+            <Field label="Who broke it" required>
+              {(f) => (
+                <NativeSelect {...fieldProps(f)} value={brokenBy}
+                              onChange={(e) => setBrokenBy(e.target.value)}>
+                  <option value="">Choose…</option>
+                  {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  <option value={NOT_KNOWN}>Not known</option>
+                </NativeSelect>
+              )}
+            </Field>
+          )}
+
+          {/* WHICH DEPARTMENT, as typed (D27-242 Q8): optional. */}
+          {kind === "issue" && (
+            <Field label="Department" hint="Optional. Housekeeping, Banquets - as you call it.">
+              {(f) => (
+                <Input {...fieldProps(f)} value={department} maxLength={60}
+                       onChange={(e) => setDepartment(e.target.value)} />
+              )}
+            </Field>
+          )}
+
           {isReceipt && (
             <>
-              <Field label={`What it cost, per ${item.unit}`}
+              <Field label={`What it cost, per ${item.unit}, before GST`}
                      hint="Leave blank if the bill has not arrived. A cost can only be added later by undoing this delivery and receiving it again - what it must not be is a guess.">
                 {(f) => (
                   <Input {...fieldProps(f)} value={costFree ? "0" : cost} inputMode="decimal"
@@ -942,6 +1113,45 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
                 )}
               </Field>
               <Checkbox label="Free - it cost nothing" checked={costFree} onCheckedChange={setCostFree} />
+              {/* GST ON THE BILL (D27-238, Q6): the rate, the amount filled
+                  from it and changeable to the bill's own, and whether it can
+                  be claimed. All three, or none - none is not recorded. */}
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="GST rate, %" hint="0, 5, 18 or 40; 12 or 28 on an older bill.">
+                  {(f) => (
+                    <>
+                      <Input {...fieldProps(f)} value={gstRate} inputMode="decimal" list="gst-rates"
+                             onChange={(e) => setGstRate(e.target.value)} />
+                      <datalist id="gst-rates">
+                        {GST_RATES.map((r) => <option key={r} value={r} />)}
+                      </datalist>
+                    </>
+                  )}
+                </Field>
+                <Field label="GST amount" hint="As the bill says.">
+                  {(f) => (
+                    <Input {...fieldProps(f)} value={amount} inputMode="decimal"
+                           onChange={(e) => { setGstTyped(true); setGstAmount(e.target.value); }} />
+                  )}
+                </Field>
+              </div>
+              <Field label="Can this GST be claimed?"
+                     error={gstOk ? undefined : "GST is the rate, the amount and whether it can be claimed - all three, or none."}>
+                {(f) => (
+                  <NativeSelect {...fieldProps(f)} value={claimable}
+                                onChange={(e) => setClaimable(e.target.value)}>
+                    <option value="">Not recorded</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </NativeSelect>
+                )}
+              </Field>
+              <Field label="Use by" hint="Optional.">
+                {(f) => (
+                  <Input {...fieldProps(f)} type="date" value={expiresOn}
+                         onChange={(e) => setExpiresOn(e.target.value)} />
+                )}
+              </Field>
               <Field label="Who from">
                 {(f) => (
                   <Input {...fieldProps(f)} value={supplier}
@@ -973,6 +1183,8 @@ function MoveDialog({ code, item, kind, stores, startStoreId, outlets, open, onO
             <Field label="Why" hint={
               kind === "wastage"
                 ? "Spoiled, broken, past its date. Somebody will ask at the end of the month."
+                : isBreakage
+                  ? "Dropped, chipped, cracked in the wash."
                 : isReturn
                   ? "Damaged, the wrong thing, more than was ordered."
                   : isCount
@@ -1186,6 +1398,17 @@ function HistoryDialog({ code, item, open, mayUndo, onOpenChange, onChanged }: {
                     {m.note && (
                       <p className="text-sm text-grey-600 mt-0.5">{m.note}</p>
                     )}
+                    {/* D27-238: GST, use by, department, who broke it. */}
+                    {(m.gst || m.expiresOn || m.department || m.kind === "breakage") && (
+                      <p className="text-sm text-grey-600 mt-0.5 tabular">
+                        {[
+                          m.gst && `GST ${m.gst.rate}% ${money(m.gst.amount)}, ${m.gst.claimable ? "claimable" : "not claimable"}`,
+                          m.expiresOn && `use by ${dateShort(m.expiresOn)}`,
+                          m.department && `for ${m.department}`,
+                          m.kind === "breakage" && `broken by ${m.brokenBy ?? "not known"}`,
+                        ].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
                   </div>
 
                   {/* Undoing is only offered on a row that is neither an undo
@@ -1337,8 +1560,8 @@ interface SheetLine { key: string; itemId: string; empty: boolean; name: string;
 
 /* The sheet's lines for one store, with the book AS IT STANDS NOW: every item,
    and a second line for a cylinder item's empties (D25-18). */
-const sheetFor = (items: StockItem[], storeId: string): SheetLine[] =>
-  items.filter((i) => i.isActive).flatMap((i) => [
+const sheetFor = (items: StockItem[], storeId: string, crockeryOnly = false): SheetLine[] =>
+  items.filter((i) => i.isActive && (!crockeryOnly || i.crockery)).flatMap((i) => [
     { key: i.id, itemId: i.id, empty: false, name: i.name, unit: i.unit, book: i.byStore[storeId] ?? 0 },
     ...(i.cylinder
       ? [{ key: `${i.id}:empty`, itemId: i.id, empty: true, name: `${i.name} - empty`,
@@ -1356,13 +1579,15 @@ const sheetFor = (items: StockItem[], storeId: string): SheetLine[] =>
    sheet opens; if a line's book has moved by the save, the server refuses the
    whole save and names it, and this sheet takes the new book for those lines
    and clears their counts, so only they are counted again. */
-function CountSheet({ code, stores, items, startStoreId, reload, onDone }: {
-  code: string; stores: StoreSummary[]; items: StockItem[]; startStoreId: string | null;
+function CountSheet({ code, stores, inUseIds, items, startStoreId, reload, onDone }: {
+  code: string; stores: StoreSummary[]; inUseIds: Set<string>; items: StockItem[]; startStoreId: string | null;
   reload: () => Promise<StockItem[]>; onDone: (saved: boolean) => void;
 }) {
   const { property } = useDocumentIdentity();
   const [storeId, setStoreId] = useState(() => startingStore(stores, startStoreId));
-  const [lines, setLines] = useState(() => sheetFor(items, storeId));
+  /* A place in use is counted for its crockery and cutlery (D27-242). */
+  const linesOf = (list: StockItem[], id: string) => sheetFor(list, id, inUseIds.has(id));
+  const [lines, setLines] = useState(() => linesOf(items, storeId));
   const [counts, setCounts] = useState<Record<string, string>>({});
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -1377,7 +1602,7 @@ function CountSheet({ code, stores, items, startStoreId, reload, onDone }: {
   const ready = store !== null && typed.length > 0 && bad.length === 0;
 
   const pickStore = (id: string) => {
-    setStoreId(id); setLines(sheetFor(items, id)); setCounts({}); setReasons({});
+    setStoreId(id); setLines(linesOf(items, id)); setCounts({}); setReasons({});
   };
 
   const save = async () => {
@@ -1390,7 +1615,7 @@ function CountSheet({ code, stores, items, startStoreId, reload, onDone }: {
     const res = await saveStockCount(code, { locationId: store.id, lines: sent });
     if (!res.ok) {
       /* The lines whose book moved take the new book and lose their count. */
-      const fresh = new Map(sheetFor(await reload(), store.id).map((l) => [l.key, l.book]));
+      const fresh = new Map(linesOf(await reload(), store.id).map((l) => [l.key, l.book]));
       const moved = lines.filter((l) => fresh.has(l.key) && fresh.get(l.key) !== l.book).map((l) => l.key);
       if (moved.length > 0) {
         setLines(lines.map((l) => (moved.includes(l.key) ? { ...l, book: fresh.get(l.key)! } : l)));

@@ -1,13 +1,7 @@
-import { CalendarPlus } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
-import { seesComingSoon } from "@/lib/permissions";
 
-/* Booking engine — not built. Its page sits under Distribution, marked
-   "Not built yet" (D27-87), for the owner, admins and general managers only.
-   Assembled by `navigation.ts`. When the service is built its real screens
-   take its place and the mark goes. */
-export const nav: ServiceNavEntry[] = [
-  { section: "distribution", order: 20, notBuilt: true,
-    label: "Booking engine", to: "/coming-soon/booking-engine", icon: CalendarPlus, resource: "integration",
-    canSee: seesComingSoon, keywords: ["direct booking", "website booking", "book now", "web booking"] },
-];
+/* Booking engine — REMOVED FROM THE PLAN (the owner's D27-180): the channel
+   manager's (SU's) booking engine is used instead, and its direct bookings
+   come in like any channel's. So the PMS's own entry has left the menu
+   (D27-239 8.1). Assembled by `navigation.ts`; nothing to add. */
+export const nav: ServiceNavEntry[] = [];

@@ -11,6 +11,54 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · Rates always open, in the Calendar's look (D27-237 5.1–5.3)
+
+Branch `rates/always-open-2oct` from cp6 `3336a219`, copy `.claude\worktrees\mystifying-napier-d2f754`, database `fidato_s45` (migrated to cp6's 179 files), API 8903, web 5303.
+
+**Asked for:** the owner's D27-237:
+- 5.1: every room type always open with all its rows, a dash where nothing is set, in the Calendar's look. This replaces D27-206's "closed by default".
+- 5.2: rooms left under each base price; the Rooms left tab stays.
+- 5.3: "How rates are built" below the calendar.
+- At 375, "+ per extra adult" on one line.
+
+**Shipped** (`pages/Rates.tsx`):
+- The card's own toolbar holds the two-week arrows, the range and Today (shown only away from the business date). The business date is the window the server chose first.
+- Each day has a 12px uppercase weekday caption over a 16px day number. The business date's column is navy, and weekends are a grey wash.
+- Each room type is its own `tbody` (named for it):
+  - a grey group row with the base, and "N left" under it (red at 0, a dash where none is held), from the `GET /inventory` read the Rooms left tab already makes;
+  - then every break-up row, 40px tall with 14px labels on one line, in a 152px label column.
+- How the day sold is drawn as the Calendar's footer: paying rooms sold, a 4px orange capsule of occupancy and its percentage, then ADR and Revenue.
+- The setup card sits under the calendar.
+- On a phone the grid's card runs edge to edge, as the Calendar's does. The Rooms left tab shares the same frame.
+
+**Proved:**
+- `freeTick.test.tsx`: 6 tests, 3 of them new or rewritten (always open with its rows and the dash; rooms left under the base; the setup below the grid and Today back on the business date). All 3 failed on the old screen.
+- `src/modules/inventory`: 13. primaryAction, navigation and boundaries: 36 in all, with inventory. Web `tsc` exit 0.
+- **Opened on `fidato_s45` as the GM:**
+  - At 1280 x 800: TUE 25 in navy; Superior "₹3,000 / 4 left"; Deluxe with its extra-adult and extra-child rows; the footer's capsules (41% … 59%); "How rates are built" below.
+  - At 375: "+ per extra adult" is one line (40px tall, 152px column). Every font size is on the ladder, and the page does not scroll sideways.
+
+**Also in this branch, outside this service: Find a screen finds guests and bookings (D27-239).** The owner answered the plan's three questions as recommended (2 October).
+- `src/components/app/CommandPalette.tsx`: search starts at 3 characters, or 4 digits of a phone.
+  - It matches the guest's name or the booking reference. A phone matches only for a role that also sees guests, as the server's WITHHELD blanks it for the rest.
+  - Results come under the screens: in house first, then upcoming, then past; at most 8.
+  - Each result opens on All bookings at `?res=<id>`.
+  - Only a role that sees bookings searches; the others' palette is as before.
+  - It uses All bookings' own `GET /stays` read and cache entry. ponytail: the whole list is read; a server search with its own gate line comes in when a hotel's list gets slow.
+- Front desk's door exports `STAY_LABEL`, the bookings table's status words.
+- `commandPalette.test.tsx` has 3 tests, all failing on the old palette:
+  - a name finds the guest's bookings and opens one on All bookings;
+  - a reference and 4 phone digits find bookings, and 2 letters ask for nothing;
+  - housekeeping gets no phone match but still a name match, and the chef gets nothing and asks for nothing.
+- After it: primaryAction, navigation, boundaries, `src/components/app`, inventory and front-desk: 21 files, 114 passed; web `tsc` exit 0.
+- Opened on `fidato_s45` as the GM:
+  - At 1280: "asha" found 4 bookings, and Enter opened FH-5EL-2608-5032's panel on All bookings.
+  - At 375: "98123" found 3 by phone; the rows fit, and the page does not scroll sideways.
+
+**Left open:** at 375 the label column takes 152px, so about three days show beside it. In Find a screen at 375, a booking's second line (reference and dates) ends in an ellipsis.
+
+---
+
 ## 2026-09-30 · Rates: the calendar opens to the break-up; Set prices (D27-206)
 
 Branch `rates/base-addons-30sep` (cp6 e350e71b taken in), copy `.claude\worktrees\mystifying-napier-d2f754`, database `fidato_s45`, API 8903, web 5303.
