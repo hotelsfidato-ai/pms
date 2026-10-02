@@ -684,13 +684,13 @@ guestLinks.get("/:code/online-checkin", async (c) => {
     if (!hotelId) return null;
 
     const { rows: waiting } = await client.query<{
-      id: string; guest: string; reference: string; id_type: string; id_number: string;
+      id: string; guest: string; reference: string; id_type: string; id_number: string; source: string;
       passport_expiry: string | null; visa_number: string | null; visa_expiry: string | null;
       address_line: string | null; city: string | null; country: string | null;
       submitted_at: string; more: Record<string, string | boolean | null>;
       photo_id: string | null; photo_sides: string[] | null; photo_at: string | null;
     }>(
-      `select d.id::text, g.full_name as guest, r.reference, d.id_type, d.id_number,
+      `select d.id::text, g.full_name as guest, r.reference, d.id_type, d.id_number, d.source,
               d.passport_expiry::text, d.visa_number, d.visa_expiry::text,
               d.address_line, d.city, d.country, d.submitted_at,
               -- The ID photo sent with them, if any: that it is there, never
@@ -752,6 +752,8 @@ guestLinks.get("/:code/online-checkin", async (c) => {
       waiting: waiting.map((d) => ({
         id: d.id, guest: d.guest, reference: d.reference, idType: d.id_type,
         idNumber: shownNumber(d.id_type, d.id_number),
+        /* D27-247: the desk sees an ID that came from DigiLocker as such. */
+        fromDigilocker: d.source === "digilocker",
         passportExpiry: d.passport_expiry, visaNumber: d.visa_number,
         visaExpiry: d.visa_expiry, addressLine: d.address_line, city: d.city,
         country: d.country, submittedAt: d.submitted_at, more: d.more,
@@ -1028,8 +1030,13 @@ guestLinks.post("/:code/online-checkin/submissions/:id/confirm", async (c) => {
               visa_issue_country, app.current_user_id(), now()
          from d
        on conflict (guest_id) do update set
-         id_type         = excluded.id_type,
-         id_number       = excluded.id_number,
+         /* D27-247: DigiLocker gives a masked Aadhaar (182, 'xxxxxxxx' and
+            the last four). It fills in only when no number is on file; a
+            fuller one already there is kept. */
+         id_type         = case when excluded.id_number like 'xxxxxxxx%' and guest_documents.id_number is not null
+                                then guest_documents.id_type else excluded.id_type end,
+         id_number       = case when excluded.id_number like 'xxxxxxxx%' and guest_documents.id_number is not null
+                                then guest_documents.id_number else excluded.id_number end,
          passport_expiry = coalesce(excluded.passport_expiry, guest_documents.passport_expiry),
          visa_number     = coalesce(excluded.visa_number, guest_documents.visa_number),
          visa_expiry     = coalesce(excluded.visa_expiry, guest_documents.visa_expiry),

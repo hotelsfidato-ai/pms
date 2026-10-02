@@ -630,6 +630,28 @@ describe("the check-in details wait for a clerk", () => {
     expect(again.status, "confirmed once").toBe(409);
   });
 
+  it("keep a fuller number on file when DigiLocker's masked Aadhaar is confirmed, and say where it came from (D27-247)", async () => {
+    const fromDigilocker = async () => (await sql(
+      `insert into guest_detail_submissions (hotel_id, reservation_id, guest_id, id_type, id_number, source)
+       values ($1, $2, $3, 'aadhaar', 'xxxxxxxx0124', 'digilocker') returning id::text`,
+      [hotelId, stayId, guestId])).rows[0].id as string;
+    const confirm = (id: string) => asStaff(deskId, `/5EL/online-checkin/submissions/${id}/confirm`, "POST", {});
+    const onFile = async () => (await sql(
+      "select id_number from guest_documents where guest_id = $1", [guestId])).rows[0]?.id_number;
+
+    let id = await fromDigilocker();
+    const list = await (await asStaff(deskId, "/5EL/online-checkin")).json() as
+      { waiting: { id: string; fromDigilocker: boolean }[] };
+    expect(list.waiting.find((w) => w.id === id)?.fromDigilocker).toBe(true);
+    expect((await confirm(id)).status).toBe(200);
+    expect(await onFile(), "the whole number typed earlier is kept").toBe(AADHAAR);
+
+    await sql("delete from guest_documents where guest_id = $1", [guestId]);
+    id = await fromDigilocker();
+    expect((await confirm(id)).status).toBe(200);
+    expect(await onFile(), "with nothing on file, the masked number fills in").toBe("xxxxxxxx0124");
+  });
+
   it("write nothing when the clerk sets them aside", async () => {
     const unlock = await unlockWith(link);
     await asGuest(`/${link}/details`, "POST", { idType: "voter", idNumber: "WRONG0001" }, unlock);
