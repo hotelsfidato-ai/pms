@@ -14,7 +14,13 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### OCI-10 · Continue with Google runs Google's script on the guest's page
+(none)
+
+---
+
+## Fixed
+
+### OCI-10 · Continue with Google ran Google's script on the guest's page
 
 30 September (D27-207; numbered for now). Accepted for the launch by the
 master, and written down so it is a choice and not an oversight. Google
@@ -31,10 +37,17 @@ takes Google's signed answer. About two hours, and one more owner step (the
 return address in the Google client). **The rule:** anything loaded from
 outside onto `/g/:token` is loaded on the guest's own press, never on
 opening.
-
----
-
-## Fixed
+**Fixed 2 October (D27-239, 8.4), the way with no script:** "Continue
+with Google" sends the whole tab to Google's own sign-in (OpenID Connect,
+`response_type=id_token`, a nonce and a state); Google answers at
+`/g-return` in the address's fragment, which never reaches a server; the
+guest's link, the state and the nonce wait in this tab's sessionStorage and
+never go to Google. `GoogleReturn.tsx` checks the state, takes the answer out
+of the address, and posts it with the nonce; the door checks Google's answer
+as before and the nonce too. `googleSignIn.ts` is gone, and a test fails if
+any file of this module adds a script or names Google's. One owner step: the
+return address in the Google client (OWNER-STEPS, 2b step 9). **The rule
+now:** nothing from outside is loaded onto the guest's page at all.
 
 ### OCI-12 · The database guard test asked about an empty stay, so a function that skipped the unlock still passed
 

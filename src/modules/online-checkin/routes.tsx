@@ -3,6 +3,7 @@ import { RequireAccess } from "@/components/app/RequireAccess";
 import GuestPage from "@/modules/online-checkin/pages/GuestPage";
 import ByRoomPage from "@/modules/online-checkin/pages/ByRoom";
 import DigiLockerReturn from "@/modules/online-checkin/pages/DigiLockerReturn";
+import GoogleReturn from "@/modules/online-checkin/pages/GoogleReturn";
 import DeskPage from "@/modules/online-checkin/pages/Desk";
 import { PropertyScope } from "@/components/app/PropertyScope";
 
@@ -18,6 +19,8 @@ export const publicRoutes = (
     {/* The room and the phone, and back from DigiLocker (D27-235 2.4, 2.5). */}
     <Route path="/g/h/:hotel" element={<ByRoomPage />} />
     <Route path="/g-digilocker" element={<DigiLockerReturn />} />
+    {/* Where Google sends the guest back (OCI-10): outside the gate too. */}
+    <Route path="/g-return" element={<GoogleReturn />} />
   </>
 );
 

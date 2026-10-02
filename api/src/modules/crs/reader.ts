@@ -237,6 +237,9 @@ export async function take(
     ...(str(d["ownerName"]) ? { salesPerson: str(d["ownerName"])! } : {}),
     /* Waiting for the hotel, the room held (D27-35). */
     tentative: true,
+    /* The CRS's guest agreed to WhatsApp when they booked (D27-235, 2.3; the
+       lawyer to confirm it counts as consent). */
+    whatsappAgreed: true,
     lines: plan.lines,
   });
 

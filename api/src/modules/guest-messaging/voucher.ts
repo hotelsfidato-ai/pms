@@ -3,12 +3,17 @@ import { withSession } from "../../auth.ts";
 import { canSend, send, NOT_CONNECTED } from "../../sending.ts";
 import {
   channelFor, claimTurn, dueFromDatabase, linkFromDatabase, messageFor, withVoucher, KIND, LIMITS,
-  type Due,
+  NO_VOUCHER, type Due,
 } from "./jobs.ts";
 import { voucherFile } from "./voucherDocument.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    SEND VOUCHER - the booking confirmation, now, from the desk (D27-35)
+
+   Since D27-235/D27-241: every way the confirmation is still owed -
+   WhatsApp and email - and then the CRS's voucher with the PDF on WhatsApp,
+   each its own message, recorded once. A way already sent is not sent
+   again; one that fails is said, and the others still go.
 
    The owner, 27 September: ONE voucher goes, the same one whoever sends it,
    recorded so it never goes twice. So this is not a second message: it is
@@ -53,27 +58,35 @@ voucher.post("/:code/stays/:id/confirmation", async (c) => {
     }
 
     await claimTurn(client, KIND.confirmation, booking.lead);
-    const due = (await dueFromDatabase(client, LIMITS, booking.hotel_id))
-      .find((d) => d.kind === KIND.confirmation && d.reservationId === booking.lead);
-    if (!due) {
+    await claimTurn(client, KIND.voucher, booking.lead);
+    /* Every way the confirmation is still owed, then the WhatsApp voucher
+       (D27-235, D27-241) - in the database's order. */
+    const owed = (await dueFromDatabase(client, LIMITS, booking.hotel_id))
+      .filter((d) => (d.kind === KIND.confirmation || d.kind === KIND.voucher)
+        && d.reservationId === booking.lead);
+    if (owed.length === 0) {
       /* Not owed: sent already (by anybody), three tries failed, or the stay
          has begun - app.guest_messages_due's three reasons (131). */
       return refuse(
         "The voucher for this booking has gone already, or three tries to send "
         + "it failed. It is sent once, and not again from here.");
     }
-    if (!channelFor(due)) {
+    if (owed.every((d) => !d.channel)) {
       return refuse(
         "There is nowhere to send it: no email address, and no telephone number "
         + "the guest agreed to WhatsApp on.");
     }
-
-    const link = await linkFromDatabase(client, due);
-    const message = await withVoucher(client, messageFor(due, link)!);
-    const answer = await send(client, {
-      ...message, sentBy: { id: session.staffId, name: session.fullName },
-    });
-    return answer.ok ? { ok: true as const } : refuse(answer.reason);
+    const failed: string[] = [];
+    for (const due of owed.filter((d) => d.channel)) {
+      const link = due.kind === KIND.voucher ? "" : await linkFromDatabase(client, due);
+      const message = await withVoucher(client, messageFor(due, link)!);
+      if (!message) { failed.push(NO_VOUCHER); continue; }
+      const answer = await send(client, {
+        ...message, sentBy: { id: session.staffId, name: session.fullName },
+      });
+      if (!answer.ok) failed.push(answer.reason);
+    }
+    return failed.length ? refuse(failed.join(" ")) : { ok: true as const };
   });
 
   if (!result) return c.json({ error: "No such booking." }, 404);
@@ -122,13 +135,15 @@ voucher.post("/:code/stays/:id/checkin-link", async (c) => {
     }
 
     const due: Due = {
-      kind: KIND.checkInLink, reservationId: b.id, reference: b.reference,
+      kind: KIND.checkInLink, channel: null, reservationId: b.id, reference: b.reference,
       hotel: { id: b.hotel_id, code: b.hotel_code, name: b.hotel_name, phone: b.hotel_phone },
       guest: { name: b.guest_name, phone: b.phone, email: b.email },
       whatsappAgreed: b.whatsapp_agreed, checkIn: b.check_in, checkOut: b.check_out,
       nights: b.nights, held: false,
     };
-    if (!channelFor(due)) {
+    /* One way, as before (D27-241, Q3). */
+    due.channel = channelFor(due);
+    if (!due.channel) {
       return refuse(
         "There is nowhere to send it: no email address, and no telephone number "
         + "the guest agreed to WhatsApp on.");

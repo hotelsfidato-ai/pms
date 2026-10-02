@@ -19,7 +19,7 @@ import { guestTables } from "./guestTables.ts";
 import { messagesDesk, messagesDoor } from "./guestMessages.ts";
 import { logoDoor } from "./guestLogo.ts";
 import { byRoom } from "./guestDoorByRoom.ts";
-import { digilocker } from "./guestDigilocker.ts";
+import { digilocker, digilockerOn } from "./guestDigilocker.ts";
 import { wakeUpDoor } from "./guestWakeUp.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -122,6 +122,10 @@ guestDoor.get("/:token", async (c) => {
        id (D27-207). The id is public - it names this system to Google - and
        the same for every link. */
     googleClientId: googleClientId(),
+    /* Continue with DigiLocker, said here so the page asks nothing more
+       before the code (D27-210): on where its settings are, on a link that
+       reaches a stay (D27-235 2.5). */
+    digilocker: digilockerOn() && (it.kind === "booking" || it.occupied),
     /* What this hotel offers behind the code (D21-63): only once unlocked. */
     offers: it.verified ? (it.offers ?? []) : [],
   });
@@ -296,11 +300,16 @@ const NOT_THIS_GOOGLE = "That Google account is not the one on this booking. "
 
 /** The address Google vouches for, or null for anything that fails a check.
     Which check failed is not said: the answer is the same sentence. */
-async function emailGoogleVouchesFor(credential: string, clientId: string): Promise<string | null> {
+async function emailGoogleVouchesFor(
+  credential: string, clientId: string, nonce: string,
+): Promise<string | null> {
   try {
     const ticket = await google.verifyIdToken({ idToken: credential, audience: clientId });
     const p = ticket.getPayload();
     if (!p || p.email_verified !== true || typeof p.email !== "string") return null;
+    /* OCI-10: made for THIS tab's sign-in - the nonce the page sent Google
+       with the redirect, and posts again here. */
+    if (p.nonce !== nonce) return null;
     if (Date.now() / 1000 - p.iat > GOOGLE_ANSWER_LIVES_S) return null;
     return p.email;
   } catch {
@@ -314,9 +323,11 @@ guestDoor.post("/:token/google", async (c) => {
   if (!clientId) return refused(c);
   if (tooOften(hash, "open")) return c.json({ error: NOTHING_HERE }, 429);
 
-  const body = await c.req.json<{ credential?: unknown }>().catch(() => ({}) as { credential?: unknown });
+  const body = await c.req.json<{ credential?: unknown; nonce?: unknown }>()
+    .catch(() => ({}) as { credential?: unknown; nonce?: unknown });
   const email = typeof body.credential === "string" && body.credential.length <= 4096
-    ? await emailGoogleVouchesFor(body.credential, clientId) : null;
+    && typeof body.nonce === "string" && body.nonce.length >= 16 && body.nonce.length <= 128
+    ? await emailGoogleVouchesFor(body.credential, clientId, body.nonce) : null;
 
   /* The unlock, as `verify` makes it: only its hash reaches the database,
      in the same statement that accepts the address. */

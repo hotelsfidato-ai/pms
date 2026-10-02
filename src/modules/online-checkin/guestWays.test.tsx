@@ -91,18 +91,10 @@ describe("the room and the phone (D27-235 2.4)", () => {
 });
 
 describe("DigiLocker (D27-235 2.5)", () => {
-  it("draws nothing while the server says it is off", async () => {
-    const spy = server({ "/api/guest/tok-1/digilocker": () => ({ offered: false }) });
-    mount("/x", <DigiLockerButton token="tok-1" />, "/x");
-    await waitFor(() => expect(spy).toHaveBeenCalled());
-    expect(screen.queryByRole("button")).toBeNull();
-  });
-
   it("keeps the token in this tab only, and goes to DigiLocker", async () => {
     const go = vi.fn();
     server({
-      "/api/guest/tok-1/digilocker": (init) => (init?.method === "POST"
-        ? { url: "https://digilocker.example/authorize?state=s" } : { offered: true }),
+      "/api/guest/tok-1/digilocker": () => ({ url: "https://digilocker.example/authorize?state=s" }),
     });
     mount("/x", <DigiLockerButton token="tok-1" go={go} />, "/x");
     fireEvent.click(await screen.findByRole("button", { name: "Continue with DigiLocker" }));

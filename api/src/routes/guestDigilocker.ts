@@ -51,6 +51,9 @@ function settings() {
   return clientId && clientSecret && redirectUri ? { clientId, clientSecret, redirectUri } : null;
 }
 
+/** Whether the door may offer DigiLocker at all - read by the opening answer. */
+export const digilockerOn = () => settings() !== null;
+
 type Claims = { aud?: unknown; phone_number?: unknown; masked_aadhaar?: unknown; given_name?: unknown; name?: unknown };
 
 /** The id_token's claims, or null for anything that is not a JWT of an object. */

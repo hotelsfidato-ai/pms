@@ -7,10 +7,43 @@ its three rules: numbers you ran, not numbers you remember; a guard is not
 proved until it has refused something; "Left open" is the handover.
 
 Work that touches the core or several services still goes in the root
-`CHANGELOG.md`. **This service is not built — only its Coming soon page
-exists** (`MODULE.md`).
+`CHANGELOG.md`. **This service is live** since the launch of 2 October
+(adc8e846; `MODULE.md`).
 
 ---
+
+## 2026-10-02 · Google with no script of Google's (OCI-10, D27-239 8.4); 5 Elements takes ID photos (D27-235 2.6); the module is live
+
+Branch `messaging/both-channels-2oct`, from cp6 3336a219.
+
+**Asked for** (the master, from D27-235 and D27-239):
+- 8.4: Google's script off the guest's page, with the D27-207 rules kept.
+- 2.6: 5EL in the ID-photo workflow and in every note that lists AMR and GLM.
+- 8.5: MODULE.md says the module is live.
+
+**Shipped:**
+- **OCI-10, fixed.** "Continue with Google" sends the whole tab to Google's own sign-in (OpenID Connect, `response_type=id_token`, a nonce and a state; `googleRedirect.ts`). Google answers at `/g-return` (`pages/GoogleReturn.tsx`, outside the session gate) in the URL fragment.
+  - The guest's link, the state and the nonce wait in this tab's sessionStorage, and the link never goes to Google.
+  - The return checks the state, takes Google's answer out of the address and posts it with the nonce. The door checks the nonce too.
+  - `googleSignIn.ts` is deleted.
+  - The button is its own component, so another way in (DigiLocker) sits beside it as one line.
+  - New owner step, OWNER-STEPS 2b step 9: the redirect URI `https://pms.fidatohotels.com/g-return`.
+- **5EL takes ID photos:** added to the workflow's `HOTELS`, to IMPORT.md part D, to OWNER-STEPS Part 3 (folders and passwords) and to `api/.env.example`.
+- MODULE.md says the module is live (adc8e846) and lists `/g-return`.
+
+**Proved:**
+- The page's Google tests, 7 of 7. They failed first on the missing module.
+- Then each rule was broken on purpose and caught:
+  - the state check skipped;
+  - the nonce not posted;
+  - a script added to a file of this module (a test reads every file).
+- The door: 3 nonce refusals failed on the old door; `guestDoor` now 34 of 34.
+- The 2.6 test failed on the shipped workflow, then 9 of 9.
+- `npx tsc -b` and the API typecheck are clean.
+
+**Left open:**
+- The owner's redirect URI. Until it is added, Google refuses with "redirect_uri_mismatch" and the guest uses a code.
+- A real Google sign-in can't be tried on this machine.
 
 ## 2026-10-01 · The guest's in-stay page: step 0, the desk replies, the hotel's logo (D27-223 to D27-225)
 

@@ -27,9 +27,6 @@ export const sendRoomCode = (hotel: string, room: string, phone: string) =>
 export const openByRoom = (ticket: string, code: string) =>
   api<{ verified: true; unlock: string }>("/api/guest/by-room/open", post({ ticket, code }));
 
-export const digilockerOffered = (token: string) =>
-  api<{ offered: boolean }>(`/api/guest/${encodeURIComponent(token)}/digilocker`);
-
 export const startDigilocker = (token: string) =>
   api<{ url: string }>(`/api/guest/${encodeURIComponent(token)}/digilocker`, { method: "POST" });
 

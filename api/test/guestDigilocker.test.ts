@@ -112,6 +112,7 @@ afterAll(async () => {
 describe("DigiLocker, switched off", () => {
   it("offers nothing and answers every route like an unknown link", async () => {
     expect(await (await call(`/${TOKEN}/digilocker`)).json()).toEqual({ offered: false });
+    expect(((await (await call(`/${TOKEN}`)).json()) as { digilocker: boolean }).digilocker).toBe(false);
     const begun = await call(`/${TOKEN}/digilocker`, "POST");
     expect([begun.status, await begun.json()]).toEqual([404, { error: NOTHING }]);
     const finished = await call("/digilocker/finish", "POST", { code: "x", state: "y" });
@@ -124,6 +125,8 @@ describe("DigiLocker, switched on (a stand-in DigiLocker)", () => {
 
   it("is offered on a live link, and sends the guest to DigiLocker with PKCE", async () => {
     expect(await (await call(`/${TOKEN}/digilocker`)).json()).toEqual({ offered: true });
+    /* The page's opening answer says it too, so the page asks nothing more before the code (D27-210). */
+    expect(((await (await call(`/${TOKEN}`)).json()) as { digilocker: boolean }).digilocker).toBe(true);
     const url = await start();
     expect(url.origin + url.pathname).toBe("https://digilocker.meripehchaan.gov.in/public/oauth2/1/authorize");
     expect(Object.fromEntries(url.searchParams)).toMatchObject({
