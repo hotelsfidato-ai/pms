@@ -72,7 +72,7 @@ export default function ApprovalsPage() {
           icon={<CheckCircle2 />}
           title={tab === "pending" ? "Nothing is waiting on you" : "Nothing has been asked for yet"}
           description={tab === "pending"
-            ? "When somebody raises a purchase request or asks to take equipment out of the store, it appears here."
+            ? "When somebody raises a purchase request, asks to take equipment out of the store, or pays a cash expense from a drawer or the restaurant tin, it appears here."
             : "Decided requests stay here so you can see what was approved and by whom."}
         /></Card>
       )}
