@@ -78,9 +78,11 @@ put back (CHANGELOG, 21 September).
    (`app.guest_google_answer`). A match hands out the same unlock as a right
    code and nothing else: no session, no guest role, and NO Firebase user -
    no guest ever sits in the project staff sign in to. Every failure reads
-   the same sentence. Google's script is not in the bundle: the page fetches
-   it from accounts.google.com only when the guest presses the button
-   (`googleSignIn.ts`). Offered only where the server has the client id and,
+   the same sentence. **No script of Google's runs on the page (OCI-10,
+   2 October):** the press sends the whole tab to Google's own sign-in with a
+   nonce and a state (`googleRedirect.ts`); Google answers at `/g-return` in
+   the fragment, the guest's link never goes to Google, and the door checks
+   the nonce too (`pages/GoogleReturn.tsx`). Offered only where the server has the client id and,
    on a booking's link, the booking an email.
 5. **Every refusal takes the same shape** — behind the code, a refused call
    answers what an unknown link answers: 404 and one sentence.
@@ -140,6 +142,7 @@ put back (CHANGELOG, 21 September).
 | Name | Address | Page file | Who |
 |---|---|---|---|
 | — (no menu entry, ever) | `/g/:token` | `pages/GuestPage.tsx` | **the guest**, signed out; mounted outside `RequireSession` (`publicRoutes`) |
+| — (no menu entry, ever) | `/g-return` | `pages/GoogleReturn.tsx` | **the guest**, signed out: where Google sends them back after "Continue with Google" (OCI-10); outside `RequireSession` too |
 | Online check-in (Front desk) | `/h/:code/online-checkin` | `pages/Desk.tsx` | exactly `DESK_ROLES` — the menu's `canSee` in `nav.ts`, also in reception's own menu (D21-89, the master, `d6cef4a`); behind `RequireAccess` |
 
 ⚠ **`DESK_ROLES` is written twice and must stay one list:** the server's in

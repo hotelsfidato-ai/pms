@@ -125,10 +125,14 @@ export async function verifyCode(token: string, code: string): Promise<{ verifie
 /** Continue with Google (D27-207): Google's signed answer, posted as it
     came. The door checks it and compares its address with the booking's;
     a match hands back the same unlock as a right code. */
-export async function verifyWithGoogle(token: string, credential: string): Promise<{ verified: boolean }> {
+/** Google's signed answer and the nonce THIS tab sent with the sign-in
+    (OCI-10: it comes back by a redirect, pages/GoogleReturn.tsx). */
+export async function verifyWithGoogle(
+  token: string, credential: string, nonce: string,
+): Promise<{ verified: boolean }> {
   const answer = await api<{ verified: boolean; unlock?: string }>(at(token, "/google"), {
     method: "POST",
-    body: JSON.stringify({ credential }),
+    body: JSON.stringify({ credential, nonce }),
   });
   if (answer.verified && answer.unlock) keepUnlock(token, answer.unlock);
   return { verified: answer.verified };

@@ -638,13 +638,17 @@ describe("Continue with Google (D27-207)", () => {
     const head = b64({ alg: signed ? "RS256" : "none", kid: "this-run", typ: "JWT" });
     const body = b64({
       iss: "https://accounts.google.com", aud: CLIENT, sub: "1234567890",
-      email: BOOKED, email_verified: true, iat: now() - 5, exp: now() + 3600, ...over,
+      email: BOOKED, email_verified: true, iat: now() - 5, exp: now() + 3600, nonce: NONCE, ...over,
     });
     const signature = signed
       ? createSign("RSA-SHA256").update(`${head}.${body}`).sign(key).toString("base64url") : "";
     return `${head}.${body}.${signature}`;
   };
-  const withGoogle = (credential: unknown) => asGuest(`/${link}/google`, "POST", { credential });
+  /* OCI-10: Google's answer comes back to the guest's own tab by a redirect,
+     carrying the nonce that tab sent; the page posts both. */
+  const NONCE = "this-tabs-own-nonce-0123456789";
+  const withGoogle = (credential: unknown, nonce: unknown = NONCE) =>
+    asGuest(`/${link}/google`, "POST", { credential, nonce });
   const unlocks = async () => Number((await sql(
     `select count(*) as n from guest_unlocks u join guest_links l on l.id = u.link_id
       where l.reservation_id = $1`, [stayId])).rows[0].n);
@@ -690,6 +694,9 @@ describe("Continue with Google (D27-207)", () => {
     ["an answer signed by somebody else", () => answer({}, somebodyElses.privateKey)],
     ["an unsigned answer", () => answer({}, ours.privateKey, false)],
     ["something that is not an answer at all", () => "not.a.token"],
+    /* OCI-10: an answer Google made for another sign-in, replayed here. */
+    ["an answer made for another tab's sign-in (its nonce is not this one)", () => answer({ nonce: "another-tabs-nonce-0000000000" })],
+    ["an answer with no nonce at all", () => answer({ nonce: undefined })],
   ])("refuses %s, in one sentence, and unlocks nothing", async (_what, make) => {
     const before = await unlocks();
     const res = await withGoogle(make());
@@ -699,6 +706,16 @@ describe("Continue with Google (D27-207)", () => {
       error: "That Google account is not the one on this booking. "
         + "Use the email the booking was made with, or ask for a code.",
     });
+    expect(await unlocks(), "nothing unlocked").toBe(before);
+  });
+
+  it("refuses the right answer when the page sends no nonce, or another one (OCI-10)", async () => {
+    const before = await unlocks();
+    for (const sent of [undefined, "", "another-tabs-nonce-0000000000", 42]) {
+      /* Straight to the door: `withGoogle` would fill in the right nonce. */
+      const res = await asGuest(`/${link}/google`, "POST", { credential: answer(), nonce: sent });
+      expect(res.status, JSON.stringify(sent)).toBe(401);
+    }
     expect(await unlocks(), "nothing unlocked").toBe(before);
   });
 

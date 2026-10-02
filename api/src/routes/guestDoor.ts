@@ -293,11 +293,16 @@ const NOT_THIS_GOOGLE = "That Google account is not the one on this booking. "
 
 /** The address Google vouches for, or null for anything that fails a check.
     Which check failed is not said: the answer is the same sentence. */
-async function emailGoogleVouchesFor(credential: string, clientId: string): Promise<string | null> {
+async function emailGoogleVouchesFor(
+  credential: string, clientId: string, nonce: string,
+): Promise<string | null> {
   try {
     const ticket = await google.verifyIdToken({ idToken: credential, audience: clientId });
     const p = ticket.getPayload();
     if (!p || p.email_verified !== true || typeof p.email !== "string") return null;
+    /* OCI-10: made for THIS tab's sign-in - the nonce the page sent Google
+       with the redirect, and posts again here. */
+    if (p.nonce !== nonce) return null;
     if (Date.now() / 1000 - p.iat > GOOGLE_ANSWER_LIVES_S) return null;
     return p.email;
   } catch {
@@ -311,9 +316,11 @@ guestDoor.post("/:token/google", async (c) => {
   if (!clientId) return refused(c);
   if (tooOften(hash, "open")) return c.json({ error: NOTHING_HERE }, 429);
 
-  const body = await c.req.json<{ credential?: unknown }>().catch(() => ({}) as { credential?: unknown });
+  const body = await c.req.json<{ credential?: unknown; nonce?: unknown }>()
+    .catch(() => ({}) as { credential?: unknown; nonce?: unknown });
   const email = typeof body.credential === "string" && body.credential.length <= 4096
-    ? await emailGoogleVouchesFor(body.credential, clientId) : null;
+    && typeof body.nonce === "string" && body.nonce.length >= 16 && body.nonce.length <= 128
+    ? await emailGoogleVouchesFor(body.credential, clientId, body.nonce) : null;
 
   /* The unlock, as `verify` makes it: only its hash reaches the database,
      in the same statement that accepts the address. */

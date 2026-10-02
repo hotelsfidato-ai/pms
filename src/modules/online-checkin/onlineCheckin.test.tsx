@@ -5,8 +5,11 @@ import { MemoryRouter, Routes, Route } from "react-router";
 import QRCode from "qrcode";
 import * as apiModule from "@/lib/api";
 import * as notice from "@/modules/online-checkin/privacyNotice";
-import * as google from "@/modules/online-checkin/googleSignIn";
+import * as googleRedirect from "@/modules/online-checkin/googleRedirect";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import GuestPage from "@/modules/online-checkin/pages/GuestPage";
+import GoogleReturn from "@/modules/online-checkin/pages/GoogleReturn";
 import DeskPage from "@/modules/online-checkin/pages/Desk";
 import { MessagesToTheDesk, WaitingDetailsLink } from "@/modules/online-checkin";
 import { signedIn, AGRA_HOTEL } from "@/test/app";
@@ -308,22 +311,23 @@ describe("the code, the way the guest chooses (D27-207, D27-210)", () => {
   });
 });
 
-describe("Continue with Google (D27-207)", () => {
+describe("Continue with Google (D27-207), with no script of Google's (OCI-10)", () => {
   const CLIENT = "made-up-client.apps.googleusercontent.test";
   const WITH_GOOGLE = { ...BOOKING, googleClientId: CLIENT };
   const CONTINUE = { name: "Continue with Google" };
   const UNLOCK = "an-unlock-from-a-google-answer-0123456789";
+  const KEPT = "google-sign-in";
 
-  /** Google's script, stood in for: it keeps what the page gave it, so the
-      test can answer as Google would. */
-  function googleStandIn() {
-    const given: { clientId?: string; answer?: (a: { credential?: string }) => void; drawn: number } = { drawn: 0 };
-    const load = vi.spyOn(google, "loadGoogleSignIn").mockResolvedValue({
-      initialize: (o) => { given.clientId = o.client_id; given.answer = o.callback; },
-      renderButton: () => { given.drawn += 1; },
-    });
-    return { load, given };
+  /** The browser leaving for Google, stood in for: the address it was sent to. */
+  const leaving = () => vi.spyOn(googleRedirect.browser, "leaveFor").mockImplementation(() => undefined);
+
+  /** Google's answer arriving back at /g-return, in the address's fragment. */
+  function comeBack(hash: string) {
+    window.history.replaceState(null, "", `/g-return${hash}`);
+    open("/g-return", "/g-return", <GoogleReturn />);
   }
+
+  afterEach(() => { window.history.replaceState(null, "", "/"); });
 
   it("is offered only where the server has its client id and the booking an email", async () => {
     server({ [OPEN]: () => WITH_GOOGLE });
@@ -343,43 +347,81 @@ describe("Continue with Google (D27-207)", () => {
     expect(screen.queryByRole("button", CONTINUE), "no email on the booking to match").toBeNull();
   });
 
-  it("fetches Google's script only on the press, posts Google's answer as it came, and opens on a match", async () => {
-    const { load, given } = googleStandIn();
-    const spy = server({
-      [OPEN]: (init) => ({ ...WITH_GOOGLE, verified: unlockSent(init) === UNLOCK }),
-      [`${OPEN}/google`]: () => ({ verified: true, unlock: UNLOCK }),
-      [`${OPEN}/details`]: () => ({ sent: null }),
-    });
+  it("sends the guest to Google's own page with this system's id, the return address, a nonce and a state - and adds no script", async () => {
+    const left = leaving();
+    server({ [OPEN]: () => WITH_GOOGLE });
     open();
-    const button = await screen.findByRole("button", CONTINUE);
-    expect(load, "nothing of Google's runs until the guest asks").not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", CONTINUE));
 
-    fireEvent.click(button);
-    await waitFor(() => expect(given.drawn).toBe(1));
-    expect(given.clientId).toBe(CLIENT);
+    expect(left).toHaveBeenCalledTimes(1);
+    const to = new URL(left.mock.calls[0]![0]);
+    expect(`${to.origin}${to.pathname}`).toBe("https://accounts.google.com/o/oauth2/v2/auth");
+    const q = Object.fromEntries(to.searchParams);
+    expect(q).toMatchObject({
+      client_id: CLIENT, redirect_uri: `${window.location.origin}/g-return`,
+      response_type: "id_token", scope: "openid email",
+    });
+    expect(q["nonce"]!.length, "a nonce of its own").toBeGreaterThanOrEqual(16);
+    expect(q["state"]!.length, "a state of its own").toBeGreaterThanOrEqual(16);
+    expect(to.href, "the guest's link never goes to Google").not.toContain(TOKEN);
 
-    given.answer!({ credential: "googles-signed-answer" });
+    /* Kept in THIS tab only, for the return. */
+    expect(JSON.parse(sessionStorage.getItem(KEPT)!)).toEqual({ state: q["state"], nonce: q["nonce"], token: TOKEN });
+    expect(document.querySelectorAll("script").length, "nothing of Google's runs on the page").toBe(0);
+  });
+
+  it("posts Google's answer with this tab's nonce, keeps the unlock and opens the booking", async () => {
+    sessionStorage.setItem(KEPT, JSON.stringify({ state: "state-of-this-tab-0001", nonce: "nonce-of-this-tab-0001", token: TOKEN }));
+    const spy = server({
+      [`${OPEN}/google`]: () => ({ verified: true, unlock: UNLOCK }),
+      [OPEN]: (init) => ({ ...WITH_GOOGLE, verified: unlockSent(init) === UNLOCK }),
+      [`${OPEN}/details`]: () => ({ sent: null }),
+      [`${OPEN}/messages`]: () => ({ thread: [] }),
+      [`${OPEN}/requests`]: () => ({ offers: [], requests: [] }),
+    });
+    window.history.replaceState(null, "", "/g-return#state=state-of-this-tab-0001&id_token=googles-signed-answer");
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={["/g-return"]}>
+          <Routes>
+            <Route path="/g-return" element={<GoogleReturn />} />
+            <Route path="/g/:token" element={<GuestPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
     expect(await screen.findByText("Verified on this phone")).toBeTruthy();
     const posted = spy.mock.calls.find((c) => c[0] === `${OPEN}/google`);
-    expect(posted![1]?.body).toBe('{"credential":"googles-signed-answer"}');
+    expect(JSON.parse(String(posted![1]?.body))).toEqual({ credential: "googles-signed-answer", nonce: "nonce-of-this-tab-0001" });
     expect(localStorage.getItem(`guest-unlock:${TOKEN.slice(0, 12)}`), "the same unlock as a code").toBe(UNLOCK);
+    expect(sessionStorage.getItem(KEPT), "used once").toBeNull();
+    expect(window.location.hash, "Google's answer does not stay in the address").toBe("");
+  });
+
+  it("posts nothing when the answer's state is not this tab's, or the tab kept nothing", async () => {
+    const spy = server({});
+    sessionStorage.setItem(KEPT, JSON.stringify({ state: "state-of-this-tab-0001", nonce: "nonce-of-this-tab-0001", token: TOKEN }));
+    comeBack("#state=somebody-elses-state&id_token=googles-signed-answer");
+    expect(await screen.findByText(/Google sign-in did not finish/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Back to your booking" }).getAttribute("href")).toBe(`/g/${TOKEN}`);
+    cleanup();
+
+    comeBack("#state=state-of-this-tab-0001&id_token=googles-signed-answer");   // nothing kept: a new tab
+    expect(await screen.findByText(/Google sign-in did not finish/)).toBeTruthy();
+    expect(spy, "nothing was posted").not.toHaveBeenCalled();
   });
 
   it("prints the door's refusal of another account, and stays shut", async () => {
-    const { given } = googleStandIn();
     const refusal = "That Google account is not the one on this booking. "
       + "Use the email the booking was made with, or ask for a code.";
-    server({
-      [OPEN]: () => WITH_GOOGLE,
-      [`${OPEN}/google`]: () => { throw new apiModule.ApiError(401, refusal); },
-    });
-    open();
-    fireEvent.click(await screen.findByRole("button", CONTINUE));
-    await waitFor(() => expect(given.answer).toBeTruthy());
-    given.answer!({ credential: "somebody-elses-answer" });
+    server({ [`${OPEN}/google`]: () => { throw new apiModule.ApiError(401, refusal); } });
+    sessionStorage.setItem(KEPT, JSON.stringify({ state: "state-of-this-tab-0001", nonce: "nonce-of-this-tab-0001", token: TOKEN }));
+    comeBack("#state=state-of-this-tab-0001&id_token=somebody-elses-answer");
 
     expect(await screen.findByText(refusal)).toBeTruthy();
-    expect(screen.queryByText(/Verified/)).toBeNull();
+    expect(screen.getByRole("link", { name: "Back to your booking" }).getAttribute("href")).toBe(`/g/${TOKEN}`);
     expect(localStorage.getItem(`guest-unlock:${TOKEN.slice(0, 12)}`)).toBeNull();
   });
 
@@ -391,6 +433,20 @@ describe("Continue with Google (D27-207)", () => {
     expect(screen.getByText(cannot)).toBeTruthy();
     expect(screen.queryByRole("button", ON_WHATSAPP)).toBeNull();
     expect(screen.queryByLabelText("The six digits")).toBeNull();
+  });
+
+  /* OCI-10's rule: nothing from outside is loaded onto the guest's page.
+     Asked of the module's own source, so a script tag added later fails here. */
+  it("has no code that adds a script to the page, or names Google's script", () => {
+    const folder = join(process.cwd(), "src/modules/online-checkin");
+    const files = (readdirSync(folder, { recursive: true }) as string[])
+      .filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\.tsx?$/.test(f));
+    expect(files.length).toBeGreaterThan(5);
+    for (const f of files) {
+      const text = readFileSync(join(folder, f), "utf8");
+      expect(text, f).not.toMatch(/createElement\(\s*["']script["']/);
+      expect(text, f).not.toContain("accounts.google.com/gsi");
+    }
   });
 });
 

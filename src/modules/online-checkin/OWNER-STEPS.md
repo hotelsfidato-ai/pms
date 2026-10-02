@@ -65,7 +65,15 @@ account is created for a guest, and no guest is added to the staff's sign-in.
 7. **Application type:** **Web application**. **Name:** `PMS guest page`.
 8. Under **Authorised JavaScript origins**, press **+ Add URI** and type
    exactly: `https://pms.fidatohotels.com` (no slash at the end, no path).
-9. Leave **Authorised redirect URIs** empty. Press **Create**.
+9. Under **Authorised redirect URIs**, press **+ Add URI** and type exactly:
+   `https://pms.fidatohotels.com/g-return` (OCI-10: Google sends the guest
+   back to this address, so no script of Google's runs on the guest's page).
+   Press **Create**.
+
+   > **Already made the client before 2 October?** Open it (**Credentials**
+   > → `PMS guest page`), add that same redirect URI, and **Save**. Until it
+   > is there, Google refuses the sign-in with "redirect_uri_mismatch" and
+   > the guest uses a code instead.
 10. Copy the **Client ID**. It ends `.apps.googleusercontent.com`. You may
     tell it to the master: it is not a secret.
 

@@ -100,8 +100,8 @@ In the CRS's n8n (the CRS's **Admin → Integrations** names its address):
 2. **PMS message** (the first node) → Credential: **Create new → Header
    Auth**, name `x-fidato-secret`, Value: the secret. Call it `PMS secret`.
 3. **Send the email** → Credential: the CRS's existing **SMTP** login.
-4. **Send on WhatsApp** → Credential: the existing **WhatsApp** login (the
-   Fidato number's app).
+4. **Send on WhatsApp** and **Upload PDF to Meta** → Credential: the existing
+   **WhatsApp** login (the Fidato number's app), the same one for both.
 5. **Read the message** → at the top, under "THE OWNER'S SETTINGS":
    - `FROM` - the mailbox the guest sees, for example
      `Reservations <reservations@your-domain>`; `REPLY_TO` if replies should
@@ -109,6 +109,12 @@ In the CRS's n8n (the CRS's **Admin → Integrations** names its address):
      sentence the desk sees. WhatsApp messages do not need it.
    - `WHATSAPP` / `LANGUAGE`, only if Meta approved other names or another
      language.
+   - **`VOUCHER_TEMPLATE`** (D27-235, D27-241) - the exact name of the CRS's
+     **already approved voucher template** (the one with the PDF and eight
+     fields), as **WhatsApp Manager → Message templates** shows it; and
+     `VOUCHER_LANGUAGE` if it was approved in other than `en`. Until it is
+     filled in, the voucher PDF does not go on WhatsApp (the desk sees why);
+     the confirmation on WhatsApp and the email with the PDF still go.
    - The words of each email are the `EMAILS` drafts just below - change them
      there.
    - There is no list of hotels to fill in: the hotel's name comes with each

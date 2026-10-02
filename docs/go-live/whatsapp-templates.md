@@ -20,7 +20,9 @@ templates serves all seven hotels (D21-27).
 
 ## 1 · `booking_confirmation` — category **Utility**
 
-Sent once per booking (D21-33, D21-35).
+Sent once per booking (D21-33) - on WhatsApp where the guest agreed, AND by
+email where there is an address (D27-235; the email carries the voucher PDF).
+After it, on WhatsApp, the voucher itself goes by the CRS's template below.
 
 ```
 Hello {{1}}, your stay at {{2}} is confirmed.
@@ -119,6 +121,25 @@ Booking: {{4}}
 | 5 | `data.link` | https://pms.fidatohotels.com/g/sample |
 
 ---
+
+## The voucher PDF on WhatsApp — the CRS's own template, already approved
+
+**Not a sixth template to submit** (D27-235 2.2, D27-241): the PMS reuses the
+CRS's voucher template, already approved by Meta, as a second WhatsApp after
+`booking_confirmation`. Its header is the voucher PDF; its body has eight
+NAMED fields. Type its exact name into the sending workflow
+(`deploy/n8n/IMPORT.md`, part B, step 5, `VOUCHER_TEMPLATE`).
+
+| Field | What the PMS sends | Sample |
+|---|---|---|
+| `name_1` | `data.guestName` | Rohit Deshpande |
+| `hotel_id` | `data.reference` (the booking reference, as the CRS sends it) | FH-2608-4866 |
+| `hotel` | `data.hotelName` | 5 Elements Akkalkot |
+| `ck_in` | `data.checkInLong` | 27 Aug 2026 |
+| `ck_out` | `data.checkOutLong` | 29 Aug 2026 |
+| `rm_type` | `data.roomTypes` - a group's every room | 2 x Deluxe Room |
+| `no_guest` | `data.guests` - a group's every guest | 4 adults, 1 child |
+| `crs_nom` | `data.officePhone` - the group's office phone (Settings), a dash until it is typed | +91 20 1234 5678 |
 
 ## Answered by the owner, 21 September
 

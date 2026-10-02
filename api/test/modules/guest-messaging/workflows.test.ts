@@ -248,6 +248,80 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     expect(graph.template.components.map((c) => c.parameters[0]!.text)).toEqual(["482913", "482913"]);
   });
 
+  /* D27-235 (2.2), D27-241: the voucher PDF on WhatsApp, by the CRS's own
+     approved template - uploaded to Meta first, then sent as its document,
+     with the template's eight NAMED fields from the PMS's facts. */
+  const voucher = (data: Json = {}) => message({
+    kind: "booking-voucher",
+    file: { name: "Voucher-FH-5EL-2610-0001.pdf", contentType: "application/pdf",
+      base64: Buffer.from("%PDF-1.4 made up").toString("base64") },
+    data: { guestName: "Asha Test", reference: "FH-5EL-2610-0001", hotelName: "Test Hotel",
+      checkInLong: "01 Oct 2026", checkOutLong: "03 Oct 2026", roomTypes: "1 x Deluxe",
+      guests: "2 adults", officePhone: "-", ...data },
+  });
+  const withVoucherTemplate = (): Workflow => ({
+    ...crs,
+    nodes: crs.nodes.map((n) => n.name !== "Read the message" ? n : {
+      ...n, parameters: { ...n.parameters, jsCode: n.parameters.jsCode!.replace('const VOUCHER_TEMPLATE = "";', 'const VOUCHER_TEMPLATE = "fidato_voucher";') },
+    }),
+  });
+
+  it("refuses the WhatsApp voucher until the owner names the approved template", () => {
+    const [out] = run(crs, "Read the message", { body: voucher() });
+    expect(out!.json).toMatchObject({ stop: true, statusCode: 503, answer: { ok: false } });
+  });
+
+  it("uploads the voucher PDF to Meta first, then sends the CRS template with it and the eight named fields", () => {
+    const [read] = run(withVoucherTemplate(), "Read the message", { body: voucher() });
+    expect(read!.json).toMatchObject({
+      stop: false, email: false, upload: true,
+      mediaUrl: "https://graph.facebook.com/v23.0/100000000000001/media",
+    });
+    expect((read!.binary as Json)["data"]).toMatchObject({
+      mimeType: "application/pdf", fileName: "Voucher-FH-5EL-2610-0001.pdf" });
+
+    const [built] = run(crs, "Build the voucher message", { statusCode: 200, body: { id: "MEDIA-1" } },
+      { earlier: { "Read the message": read!.json } });
+    expect(built!.json).toMatchObject({ stop: false, graphUrl: "https://graph.facebook.com/v23.0/100000000000001/messages" });
+    const graph = built!.json["graphBody"] as { to: string; template: { name: string; language: { code: string }; components: Json[] } };
+    expect(graph.to).toBe("919876543210");
+    expect(graph.template.name).toBe("fidato_voucher");
+    expect(graph.template.language.code).toBe("en");
+    expect(graph.template.components).toEqual([
+      { type: "header", parameters: [{ type: "document", document: { id: "MEDIA-1", filename: "Voucher-FH-5EL-2610-0001.pdf" } }] },
+      { type: "body", parameters: [
+        { type: "text", parameter_name: "name_1", text: "Asha Test" },
+        { type: "text", parameter_name: "hotel_id", text: "FH-5EL-2610-0001" },
+        { type: "text", parameter_name: "hotel", text: "Test Hotel" },
+        { type: "text", parameter_name: "ck_in", text: "01 Oct 2026" },
+        { type: "text", parameter_name: "ck_out", text: "03 Oct 2026" },
+        { type: "text", parameter_name: "rm_type", text: "1 x Deluxe" },
+        { type: "text", parameter_name: "no_guest", text: "2 adults" },
+        { type: "text", parameter_name: "crs_nom", text: "-" },
+      ] },
+    ]);
+  });
+
+  it("refuses a voucher with no PDF, and answers the PMS when Meta refused the upload", () => {
+    const [noFile] = run(withVoucherTemplate(), "Read the message", { body: { ...voucher(), file: null } });
+    expect(noFile!.json).toMatchObject({ stop: true, statusCode: 422 });
+    const [read] = run(withVoucherTemplate(), "Read the message", { body: voucher() });
+    const [refused] = run(crs, "Build the voucher message", { statusCode: 400, body: { error: { message: "Bad file" } } },
+      { earlier: { "Read the message": read!.json } });
+    expect(refused!.json).toMatchObject({ stop: true, statusCode: 502, answer: { ok: false } });
+  });
+
+  it("is wired: the voucher goes through the upload to the send, a refused upload straight to the answer", () => {
+    const next = (from: string, i = 0) => (crs.connections[from]?.main[i] ?? []).map((t) => t.node);
+    expect(next("Email?", 1)).toEqual(["Upload first?"]);
+    expect(next("Upload first?", 0)).toEqual(["Upload PDF to Meta"]);
+    expect(next("Upload first?", 1)).toEqual(["Send on WhatsApp"]);
+    expect(next("Upload PDF to Meta")).toEqual(["Build the voucher message"]);
+    expect(next("Build the voucher message")).toEqual(["Uploaded?"]);
+    expect(next("Uploaded?", 0)).toEqual(["Send on WhatsApp"]);
+    expect(next("Uploaded?", 1)).toEqual(["Answer the PMS"]);
+  });
+
   it("refuses a kind it has no template for, in a sentence", () => {
     expect(whatsapp({ kind: "bill" })).toMatchObject({ stop: true, statusCode: 422, answer: { ok: false } });
   });
