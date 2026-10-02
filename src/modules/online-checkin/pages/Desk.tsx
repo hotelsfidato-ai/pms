@@ -110,7 +110,7 @@ function Waiting(
                 {/* What they typed, under a hairline: label, then value. */}
                 <dl className="mt-3 border-t border-grey-100 pt-2.5 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm">
                   <dt className="text-grey-500">{ID_LABEL[d.idType] ?? d.idType}</dt>
-                  <dd className="font-medium text-ink-900 tabular">{d.idNumber}</dd>
+                  <dd className="font-medium text-ink-900 tabular">{d.idNumber}{d.fromDigilocker && <span className="font-normal text-grey-600"> · from DigiLocker</span>}</dd>
                   {d.passportExpiry && <><dt className="text-grey-500">Passport expires</dt>
                     <dd className="font-medium text-ink-900 tabular">{dateShort(d.passportExpiry)}</dd></>}
                   {d.visaNumber && <><dt className="text-grey-500">Visa</dt>

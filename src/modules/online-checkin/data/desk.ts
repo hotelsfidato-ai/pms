@@ -14,6 +14,8 @@ export interface WaitingDetails {
       the server for a screen (D21-18). A passport arrives whole, because
       the clerk compares it with the passport in their hand. */
   idNumber: string;
+  /** The ID came from DigiLocker, not typed (D27-247). */
+  fromDigilocker: boolean;
   passportExpiry: string | null;
   visaNumber: string | null;
   visaExpiry: string | null;
