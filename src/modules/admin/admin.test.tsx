@@ -258,7 +258,7 @@ describe("D27-220 - Settings, five tabs, only what can be changed", () => {
     settingsServer();
     renderSettings("people");
     await screen.findByRole("tab", { name: "People" });
-    expect(rowNames()).toEqual(["People", "Roles and permissions", "Audit log", "Activity"]);
+    expect(rowNames()).toEqual(["People", "Roles and permissions", "Audit log", "Activity", "Sign-ins"]);
     cleanup();
 
     renderSettings("rates-and-taxes");

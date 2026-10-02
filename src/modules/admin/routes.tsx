@@ -9,6 +9,7 @@ import SystemHealthPage from "@/modules/admin/pages/SystemHealth";
 import SettingsPage from "@/modules/admin/pages/Settings";
 import { PropertiesPage } from "@/modules/admin/pages/Properties";
 import ActivityPage from "@/modules/admin/pages/Activity";
+import SignInsPage from "@/modules/admin/pages/SignIns";
 import {
   UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
 } from "@/modules/admin/pages/Admin";
@@ -91,6 +92,15 @@ export const routes = (
       element={
         <RequireAccess path="/admin/activity" resource="audit_log">
           <ActivityPage />
+        </RequireAccess>
+      }
+    />
+    {/* D27-243 (5.4): sign-ins, for the owner and an Admin. */}
+    <Route
+      path="/admin/sign-ins"
+      element={
+        <RequireAccess path="/admin/sign-ins" resource="user">
+          <SignInsPage />
         </RequireAccess>
       }
     />

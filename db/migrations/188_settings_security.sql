@@ -1,5 +1,5 @@
 -- =============================================================================
--- 188 · Signing in: a manager's longer password (D27-243 5.3, D27-245)
+-- 188 · Signing in: a manager's longer password, and the sign-in history (D27-243 5.3, 5.4)
 -- =============================================================================
 -- The owner, 2 October: the owner, an Admin and a GM have at least 10
 -- characters; everybody else 8 (the length itself is asked by the API,
@@ -76,3 +76,92 @@ $$;
 
 revoke all on function app.note_password_set(uuid, boolean) from public;
 grant execute on function app.note_password_set(uuid, boolean) to pms_app;
+
+
+-- =============================================================================
+-- The sign-in history (D27-243 5.4, D27-245 Q-B)
+-- =============================================================================
+-- One row per sign-in (Firebase's auth_time), written by the API the first
+-- time it sees that sign-in's token (api/src/signIns.ts): when, the browser's
+-- own description of the device, and the network address. Kept 90 days. The
+-- time and device are shown to the owner (everybody) and an Admin (the people
+-- at a hotel where they hold Admin); the address is kept for the record and
+-- never shown. No policy lets the application read or write the table: the two
+-- functions below are the only ways in.
+-- =============================================================================
+
+create table if not exists sign_ins (
+  id         bigserial primary key,
+  staff_id   uuid not null references staff(id),
+  auth_time  timestamptz not null,
+  at         timestamptz not null default now(),
+  device     text check (device is null or char_length(device) <= 300),
+  address    inet,
+  unique (staff_id, auth_time)
+);
+create index if not exists sign_ins_at_idx on sign_ins (at);
+
+alter table sign_ins enable row level security;
+alter table sign_ins force row level security;
+revoke all on sign_ins from pms_app;
+
+comment on table sign_ins is
+  'Each sign-in the API has seen, 90 days (D27-243 5.4). Read through '
+  'app.sign_ins_of (time and device only); written by app.note_sign_in.';
+
+create or replace function app.note_sign_in(
+  p_uid text, p_auth_time timestamptz, p_device text, p_address text)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_address inet;
+begin
+  begin
+    v_address := nullif(btrim(p_address), '')::inet;
+  exception when others then
+    v_address := null;                  -- not an address: kept as nothing
+  end;
+  insert into sign_ins (staff_id, auth_time, device, address)
+  select s.id, p_auth_time, left(nullif(btrim(p_device), ''), 300), v_address
+    from staff s where s.firebase_uid = p_uid and s.is_active
+  on conflict (staff_id, auth_time) do nothing;
+  delete from sign_ins where at < now() - interval '90 days';
+end
+$$;
+
+revoke all on function app.note_sign_in(text, timestamptz, text, text) from public;
+grant execute on function app.note_sign_in(text, timestamptz, text, text) to pms_app;
+
+-- The owner (a group administrator) reads anybody's; an owner or Admin at a
+-- hotel reads the people rostered there. Time and device only.
+create or replace function app.sign_ins_of(p_staff uuid)
+returns table (signed_in timestamptz, device text)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if not exists (
+       select 1 from staff me
+        where me.id = app.current_user_id() and me.is_active
+          and (me.is_group_admin or exists (
+                 select 1 from staff_hotels mine
+                   join staff_hotels theirs on theirs.hotel_id = mine.hotel_id
+                  where mine.staff_id = me.id and mine.role in ('owner', 'admin')
+                    and theirs.staff_id = p_staff))) then
+    raise exception 'Sign-ins are for the owner, and an administrator for the people at their hotel.'
+      using errcode = '42501';
+  end if;
+  return query
+    select si.auth_time, si.device from sign_ins si
+     where si.staff_id = p_staff and si.at >= now() - interval '90 days'
+     order by si.auth_time desc;
+end
+$$;
+
+revoke all on function app.sign_ins_of(uuid) from public;
+grant execute on function app.sign_ins_of(uuid) to pms_app;

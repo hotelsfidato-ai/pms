@@ -2,6 +2,7 @@ import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { env } from "./env.ts";
 import { withUser, type Client } from "./db.ts";
+import { noteSignIn } from "./signIns.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    AUTHENTICATION
@@ -88,6 +89,7 @@ export async function subjectFor(headers: Headers): Promise<string> {
 
   try {
     const decoded = await getAuth(app).verifyIdToken(token, true);
+    void noteSignIn(decoded.uid, decoded.auth_time, headers); // D27-243 5.4: the sign-in history
     return decoded.uid;
   } catch (error) {
     /* Never echo the library's message back to the CALLER — it

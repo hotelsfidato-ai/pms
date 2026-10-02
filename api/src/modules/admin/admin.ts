@@ -766,6 +766,26 @@ admin.put("/admin/staff/:id/home-screen", async (c) => {
   return c.json({ ok: true as const, homeScreen: input.homeScreen });
 });
 
+/* Somebody's sign-ins, 90 days: when, and on what device (D27-243 5.4). The
+   owner reads anybody's; an Admin the people at a hotel where they hold Admin
+   (D27-245 Q-B). The address is kept and never sent: the function does not
+   return it. Who may is `app.sign_ins_of`'s answer. */
+admin.get("/admin/staff/:id/sign-ins", async (c) => {
+  const id = c.req.param("id");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return c.json({ error: "No such person." }, 404);
+  try {
+    const signIns = await withSession(c.get("subject"), async (client) =>
+      (await client.query<{ at: string; device: string | null }>(
+        "select signed_in::text as at, device from app.sign_ins_of($1)", [id])).rows);
+    return c.json({ signIns });
+  } catch (error) {
+    if ((error as { code?: string }).code === "42501") {
+      return c.json(refuse((error as Error).message), 403);
+    }
+    throw error;
+  }
+});
+
 /* A person's own: must they set a longer password before going on (D27-245),
    and how long. The screen asks this once after signing in. */
 admin.get("/me/password", async (c) => {

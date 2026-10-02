@@ -468,3 +468,8 @@ export function setHomeScreen(
 ): Promise<AdminResult<{ homeScreen: HomeScreen }>> {
   return put(`/api/admin/staff/${staffId}/home-screen`, { homeScreen });
 }
+
+/** Somebody's sign-ins, 90 days: when and on what device (D27-243 5.4). The
+    owner reads anybody's; an Admin the people at their hotel. */
+export const listSignIns = (staffId: string) =>
+  api<{ signIns: { at: string; device: string | null }[] }>(`/api/admin/staff/${staffId}/sign-ins`);

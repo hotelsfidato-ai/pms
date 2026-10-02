@@ -900,3 +900,11 @@ describe("the Store's fourteen days (D27-238, D27-242)", () => {
     expect(READ_RULES[`GET ${H}/stores/days`]).toEqual(READ_RULES[`GET ${H}/stores`]);
   });
 });
+
+describe("Settings, security (D27-243 phase 5, D27-245)", () => {
+  it("leaves the activity log and sign-ins to their routes' own answers, and the password check to the person", () => {
+    expect(READ_RULES[`GET ${H}/activity`]).toMatchObject({ kind: "own" });
+    expect(READ_RULES[`GET /api/admin/staff/:id/sign-ins`]).toMatchObject({ kind: "own" });
+    expect(READ_RULES[`GET /api/me/password`]).toEqual({ kind: "self" });
+  });
+});
