@@ -134,7 +134,8 @@ describe("a paid-out from the desk's drawer (D27-242)", () => {
 
 describe("a paid-out from a restaurant's tin (D27-242)", () => {
   it("waits for a yes too, and the day's expected leaves it out until then", async () => {
-    const desk = people["front_desk"]!;
+    /* The GM: reception's use of the till is a per-hotel switch (14 Sep). */
+    const desk = people["gm"]!;
     const before = (await (await as(desk, "GET", "/till/day-end?outlet=REST")).json()) as
       { cash: { expected: number; waiting: number } };
     const res = await as(desk, "POST", "/till/day-end/movements",
@@ -149,7 +150,8 @@ describe("a paid-out from a restaurant's tin (D27-242)", () => {
          join pos_cash_movements m on m.id = a.subject_id and a.subject_table = 'pos_cash_movements'
         where m.reason = $1`, [`${TAG} vegetables`]);
     expect(ap!.reason).toMatch(new RegExp(`tin: ${TAG} vegetables$`));
-    expect((await decide(people["gm"]!, ap!.id, "approved")).status).toBe(200);
+    /* The GM paid it, so the owner says yes. */
+    expect((await decide("dev-owner", ap!.id, "approved")).status).toBe(200);
     const yes = (await (await as(desk, "GET", "/till/day-end?outlet=REST")).json()) as
       { cash: { expected: number } };
     expect(yes.cash.expected).toBe(before.cash.expected - 120);

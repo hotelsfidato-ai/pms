@@ -200,10 +200,14 @@ companyPayments.post("/:code/company-payments/:id/reverse", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    /* One reversal of a line at a time. Not FOR UPDATE: the table is
+       insert-only (187), and a row lock needs the right to update it. The
+       unique reverses_id is the backstop. */
+    await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [`company-payment:${id}`]);
     const { rows } = await client.query<{ reverses_id: string | null; reversed: boolean }>(
       `select reverses_id::text,
               exists (select 1 from company_payments r where r.reverses_id = cp.id) as reversed
-         from company_payments cp where cp.id = $1::uuid and cp.hotel_id = $2 for update`,
+         from company_payments cp where cp.id = $1::uuid and cp.hotel_id = $2`,
       [id, hotelId]);
     const line = rows[0];
     if (!line) return refuse("No such payment.");
