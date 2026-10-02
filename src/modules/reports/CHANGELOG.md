@@ -11,6 +11,42 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · The Store's reports on migration 180: costs at their moment, GST, expiry, departments, breakage (D27-242)
+
+Branch `reports/stock-3a-2oct`, after merging cp6 f6eee640 (8a1d3964) and
+7a074245.
+
+**Asked for:** the master: wire the stores lane's 180 - `stock_movement_costs`,
+`food_cost_basis` 'before_gst' (the owner's D27-242), outlet sales, crockery,
+department as free text; and swap the Store's copy of the menu for this
+service's exports.
+
+**Shipped:** `builders/stock.ts` values every movement with
+`app.stock_movement_costs` (the weighted average of deliveries is gone).
+Closing stock adds "Near expiry" (30 days, or past, while still held).
+Movement by day adds Broken. Consumption adds till sales and the food cost
+per outlet, both before GST, to readers holding `report` only, and "Per
+department" ("(not said)" last). Wastage and breakage are two sections; a
+breakage names who broke it. Count differences read `stock_count_lines`, with
+"Last counted". Dead stock counts a breakage as out. Supplier spend adds GST
+and GST claimable. `STOCK_REPORT_LINKS` joins `mayReadStockReports` and
+`STOCK_REPORTS_PATH` in `@/modules/reports` for the Store's Reports menu. The
+Store's own files are back as cp6 has them: the master swaps its copy at
+merge (their word of 2 Oct, after 2a8f924b had swapped it; that commit's
+stores half can be cherry-picked).
+
+**Found:** the test run sat in the DB queue behind another lane and loaded
+the new builder, so it never ran red against the old one. The old builder has
+none of the sections the new test asserts (`expiry`, `departments`,
+`breakage`, `last`), so it could not have passed.
+
+**Proved:** stockReports 11; tsc 0 (api and web); strip-check 193; web
+reports, stores, navigation, src/test (11 files, 64) and primaryAction.
+
+**Left open:** nothing of the 180 wiring.
+
+---
+
 ## 2026-10-02 · The Store and equipment reports (phase 3A; D27-238, D27-240)
 
 Branch `reports/stock-3a-2oct` (from cp6 3336a219), copy

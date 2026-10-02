@@ -65,11 +65,15 @@ most export CSV.
 `api/src/modules/reports/builders/stock.ts` and `equipment.ts`, from the
 Store's ledger and the equipment register. Read by the owner, admin, GM, hotel
 manager, Inventory Manager, accountant and Viewer (roleGate `STORE_REPORTS`;
-the menu's `readsStoreReports`); downloaded by those holding the Store's
-export (reportFiles `STORE_EXPORTERS`). Costs are as recorded, a missing one
-a dash. Places marked **STORES LANE** wait for the stores lane's columns: GST
-on purchases, the running-average cost, a department on issues, expiry dates,
-breakage.
+the menu's `mayReadStockReports`, exported with `STOCK_REPORT_LINKS` for the
+Store's Reports menu, which the master points at them at merge); downloaded by those holding the Store's export
+(reportFiles `STORE_EXPORTERS`). Every value is its moment's, from the Store's
+one running average, `app.stock_movement_costs` (migration 180): a delivery at
+what was paid, everything else at the average then; prices before GST, a
+missing one a dash. Till sales and the food cost (before GST, D27-242) show
+only to a reader holding `report`, as on the Store. A department not given is
+"(not said)". Count differences read `stock_count_lines`, not the
+adjustments.
 
 - **The eight in the owner's layout** (D17-62) are Night audit, Manager, City
   ledger, No show, Monthly occupancy, Monthly statistics, Yearly statistics and
