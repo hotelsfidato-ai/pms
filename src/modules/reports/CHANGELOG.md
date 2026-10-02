@@ -34,8 +34,20 @@ accounting export (navigation.test caught both; renamed "Closing stock" and
 (9) failed first and passes; roleGate, reportFiles, reports; web reports,
 navigation, src/test and primaryAction; screens.
 
-**Left open:** the stores lane's columns (marked STORES LANE); a "Reports"
-link on the Store page for the Inventory Manager (the stores lane, T-1).
+**Then (resumed, 2 Oct):** `STOCK_REPORTS_PATH` ("/reports/store", a "Store
+reports" page with the nine, open to the Inventory Manager, who cannot open All
+reports) and `mayReadStockReports(role)` exported from `@/modules/reports` for the
+Store page's button (storeReports.test failed first, passes). Proved after the
+commit: stockReports 9, roleGate 70, reportFiles 15, reports 31 (API, one file at
+a time); tsc 0; web reports and navigation. The earlier "no tests" failure was a
+crashed worker under memory pressure (the same crash hit web runs that day; the
+file passes alone). Screens on fidato_s41 at 179 with a few items received,
+issued, wasted and counted through the Store's own API: all nine as the Owner,
+figures checked by hand; Store reports as the Inventory Manager, All reports
+refused to them.
+
+**Left open:** the stores lane's columns (their 183, not on cp6 yet; marked
+STORES LANE in the builders).
 
 ---
 
