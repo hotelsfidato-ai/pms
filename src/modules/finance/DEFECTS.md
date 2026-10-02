@@ -18,6 +18,19 @@ Nothing open.
 
 ## Fixed
 
+### FIN-28 · Reversing a company's payment answered 500 — FIXED 2 October, before it left the branch (D27-239; numbered for now)
+
+**Found** - 2 October, by `companyPayments.test.ts`: the reversal route locked
+the line with `select … for update`. `company_payments` is append-only - the
+app may insert and select, nothing else - and `FOR UPDATE` needs the UPDATE
+privilege, so Postgres refused and the route answered 500.
+
+**The fix** - `pg_advisory_xact_lock` on the line's id, then a plain select;
+the unique `reverses_id` is the backstop if two presses still race.
+
+**The rule** - on an insert-only table, lock with an advisory lock, never
+`FOR UPDATE` (and not `FOR SHARE` either: it needs a privilege too).
+
 ### FIN-27 · A guest the group pays for owed the group's nights on their own bill — FIXED 1 October (the owner's D27-226; numbered for now)
 
 **Found** - 1 October, on the group-booking screen for the pre-launch review:

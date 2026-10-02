@@ -11,6 +11,22 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · A paid-out from the tin waits for a yes (the owner's D27-242) - the cash lane's
+
+**Asked for:** the master, with the owner's answer: every cash paid-out needs
+the GM's or the owner's approval - an outlet's tin as the desk's drawer.
+**Shipped:** `till.ts`: a paid-out raises a `cash_expense` approval ("<outlet>
+tin: <reason>"); the day's expected cash leaves it out until approved
+(finance's migration 187, `app.cash_expense_counts`); the day end returns
+`cash.waiting` and the close asks a reason only for what the waiting
+paid-outs do not explain. Close restaurant day shows "Waiting for a yes" by
+the line and in the sums.
+**Proved:** finance's `cashExpenses.test.ts`, the tin case (recorded by the GM
+- reception's till is a per-hotel switch - approved by the owner).
+**Left open:** nothing here.
+
+---
+
 ## 2026-10-01 · A table at the restaurant, from the guest's page (D27-221, D27-223, D27-224, D27-225)
 
 **Asked for:** section D of `docs/briefs/guest-in-stay-plan.md`. The owner answered Q1–Q5 as recommended:
