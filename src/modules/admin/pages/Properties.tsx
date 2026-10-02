@@ -5,6 +5,7 @@ import { ArrowRight, Info } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Page, PageHeader, Card, CardBody, StatusPill, Skeleton, ErrorState, Button, Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, toast } from "@/components/ui";
 import { listProperties } from "@/data/repositories";
+import { useSession } from "@/lib/session";
 import {
   listAdminProperties, amendProperty, setPropertyOpen, PROPERTY_TYPES,
   type AdminProperty, type PropertyProfile,
@@ -60,7 +61,12 @@ export function PropertiesPage() {
     void qc.invalidateQueries({ queryKey: ["admin-properties"] });
   };
 
-  const isAdmin = (admin.data ?? []).length > 0;
+  /* The session says who is a group admin. The admin list alone cannot:
+     it is empty for anybody else AND for a group admin before the first
+     property exists - a fresh system (D27-248) - and the form to add one
+     must show then above all. */
+  const groupAdmin = useSession((s) => s.scope?.isGroupAdmin ?? false);
+  const isAdmin = groupAdmin || (admin.data ?? []).length > 0;
   const rows = admin.data ?? [];
   const open = rows.filter((h) => h.isActive);
   const closed = rows.filter((h) => !h.isActive);

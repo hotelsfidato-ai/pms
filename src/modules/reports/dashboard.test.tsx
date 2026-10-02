@@ -234,3 +234,44 @@ describe("D27-243 - All properties, for the owner", () => {
     } finally { spy.mockRestore(); }
   });
 });
+
+/* A FRESH SYSTEM, NO PROPERTY AT ALL (the owner's D27-248, 3 October). The
+   Dashboard threw on the missing business date (a blank page) and Properties
+   hid its form, since "admin" was read off a list that is empty until the
+   first property exists. Both seen in the browser on an emptied copy. */
+describe("a fresh system with no property", () => {
+  const owner = () => signedIn({
+    scope: { staffId: "22222222-2222-2222-2222-222222222222", email: "owner@fidato.in", fullName: "Owner",
+      isGroupAdmin: true, hotels: [] },
+    hotels: [],
+  });
+
+  it("the Dashboard says to add one, and nothing is asked of a hotel", async () => {
+    owner();
+    const real = apiModule.api;
+    const asked: string[] = [];
+    const spy = vi.spyOn(apiModule, "api").mockImplementation(((url: string, init?: RequestInit) => {
+      asked.push(url);
+      return real(url, init);
+    }) as typeof real);
+    try {
+      go("/");
+      render(<App />);
+      expect(await screen.findByText("No property yet")).toBeTruthy();
+      expect(screen.getByRole("link", { name: "Add a property" }).getAttribute("href")).toBe("/admin/properties");
+      expect(asked.filter((u) => u.startsWith("/api/hotels/"))).toEqual([]);
+    } finally { spy.mockRestore(); }
+  });
+
+  it("Properties offers a group admin the form, though the admin list is empty", async () => {
+    owner();
+    const real = apiModule.api;
+    const spy = vi.spyOn(apiModule, "api").mockImplementation(((url: string, init?: RequestInit) =>
+      url === "/api/admin/hotels" ? Promise.resolve({ hotels: [] }) : real(url, init)) as typeof real);
+    try {
+      go("/properties");
+      render(<App />);
+      expect(await screen.findByRole("button", { name: "Create the property" })).toBeTruthy();
+    } finally { spy.mockRestore(); }
+  });
+});

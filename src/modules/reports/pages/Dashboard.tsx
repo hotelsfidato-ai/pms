@@ -13,7 +13,7 @@ import { useUi } from "@/lib/ui";
 import { useRole, useSession } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import {
-  Page, PageHeader, Card, CardBody, Skeleton, NativeSelect, Term,
+  Page, PageHeader, Card, CardBody, Skeleton, NativeSelect, Term, EmptyState, Button,
   InfoButton, IconChip, Rings, AnchorGauge, ReadFailed, readError,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
@@ -109,11 +109,16 @@ export default function DashboardPage() {
      session's list only adds its name and date. Looking the code up in
      that list and falling back to its first entry put AGR's tiles under
      a 5EL menu whenever the two lists disagreed. */
-  const code = picked ?? uiCode ?? hotels[0]?.code ?? "";
+  /* No property at all (a fresh system, D27-248): no code, even one this
+     device remembers from before - nothing is asked for a hotel that is gone. */
+  const code = hotels.length ? picked ?? uiCode ?? hotels[0]?.code ?? "" : "";
   const hotel = hotels.find((h) => h.code === code);
   /* That hotel's OWN operating day — two properties are routinely on
      different dates, one audited and one not. */
-  const date = hotel?.businessDate ?? BUSINESS_DATE;
+  const date = hotel?.businessDate || BUSINESS_DATE
+    /* No property at all - a fresh system (D27-248): any real day, so the
+       date arithmetic below cannot throw; the page says to add one. */
+    || new Date().toISOString().slice(0, 10);
 
   const report = useQuery({
     queryKey: ["dashboard-manager", code, date],
@@ -194,6 +199,20 @@ export default function DashboardPage() {
     };
   })();
   const owing = seesMoney ? due.data ?? null : null;
+
+  if (!code) {
+    return (
+      <Page>
+        <PageHeader title="Dashboard" />
+        <Card><EmptyState
+          icon={<Building2 />}
+          title="No property yet"
+          description="Add your first property; its day's work and figures appear here."
+          action={<Button asChild variant="primary"><Link to="/admin/properties">Add a property</Link></Button>}
+        /></Card>
+      </Page>
+    );
+  }
 
   const figures: Array<{ icon: LucideIcon; label: string; term?: TermKey; f?: Figure }> = [
     /* "ARR" on the screen (the owner's D27-243); the printed Manager report
