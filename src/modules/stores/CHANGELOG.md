@@ -11,6 +11,99 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · The Store like the Calendar: tiles, Days, by outlet, GST, running average, crockery (D27-238, D27-242)
+
+**Asked for:** the master, 2 October (D27-238): tiles across the top; a Days
+view, items x 14 business days, with a footer per day; group by outlet against
+the till's sales; GST on purchases (amount, rate, claimable) on the Store's
+Receive and Purchasing's lines; a running-average cost; a department on issues
+and an expiry on deliveries; phase 2A crockery (breakage with who, par per
+outlet, last counted and a monthly reminder); a Reports link (D27-240). Plan
+first; the owner answered the twelve questions (D27-242):
+- Q1 a cell is +in over -out, blank when nothing moved, 14 days to today;
+- Q2 the Below level tile replaces the yellow list;
+- Q3 the tile meanings as planned;
+- Q4 sales only for roles that may read reports;
+- Q5 CHANGED: food cost = costs before GST over sales before GST, set now for
+  every hotel;
+- Q6 cost before GST, then rate (0/5/18/40 offered), amount filled and
+  editable, claimable; Purchasing at delivery;
+- Q7 the running-average rules as planned;
+- Q8 CHANGED: department is free text;
+- Q9 expiry shown in History only;
+- Q10 crockery uses Places (restaurant, bar, kitchen), none created; breakage
+  asks who or Not known;
+- Q11 the bell for crockery places 30+ days uncounted;
+- Q12 CHANGED: the reset clears the Store's transactions too.
+Branch `stores/calendar-look-2oct` from cp6 `3336a219`.
+
+**Shipped:**
+- Migration "183" `183_store_days_gst_and_crockery.sql`:
+  - stock_movements.gst_rate / gst_amount / gst_claimable (a delivery's, all
+    three or none), expires_on, department (an issue's), broken_by, and the
+    kind `breakage` (crockery only);
+  - the same GST three and expires_on on purchase_request_lines;
+  - stock_items.crockery, with 112's place trigger replaced so crockery may sit
+    at a restaurant, bar or kitchen place;
+  - stock_count_lines (every counted line, append-only);
+  - hotels.food_cost_basis = 'before_gst';
+  - app.stock_movement_costs, the running-average walk; app.stock_unit_cost
+    reads it.
+- Server:
+  - GET /stores carries the tiles' data and the in-use places;
+  - GET /stores/days (roleGate pinned);
+  - movements take GST, expiry, department and breakage;
+  - counts keep every line;
+  - moves, counts and levels work at crockery places;
+  - the crockery-count bell (notifications.ts);
+  - Purchasing's delivery takes each line's GST and use-by;
+  - the doors: purchasing awaitingDelivery, pos outletSales;
+  - reset-property.ts clears stock_count_lines then stock_movements, lifting
+    both append-only guards.
+- Screens:
+  - the eight tiles (Below level replaces the yellow list);
+  - Shelf | Days;
+  - the fourteen-day grid (opens on today, footer pinned, Outlet grouping with
+    sales and %);
+  - Receive's GST and Use by; Department on Issue;
+  - Broken; the crockery tick;
+  - the Reports menu (seven roles, a pinned copy);
+  - Purchasing's delivery GST columns.
+
+**Found:** the frozen suite's weighted-average checks (63.60, then 62) give
+the same answers under the running average, so it needed no change.
+
+**Proved:**
+- Database: stores.sql 78/78 on fidato_s46. With 069's all-time average put
+  back, the four average checks fail (110, 65, 120, 53.33).
+- API, one scratch run of 13 files: 340/341. Its one failure, purchasingGrants,
+  timed out at 20 s under load; run alone it passed 8/8. New: daysAndCrockery 6,
+  doors 2, the count-lines test, Purchasing's GST test; roleGate 70,
+  resetOrder 4, notifications 3.
+- Web: stores + purchasing + guards (primaryAction, navigation, boundaries)
+  62/63. The one failure is migrationNumbers: "183 for now" leaves a gap the
+  master closes by renumbering.
+- Opened on fidato_s46 (demo stock loaded):
+  - The Inventory Manager at 1280: the tiles (Below level 1, Received, Issued
+    and Wasted today 1 each, Not counted 4).
+  - The Days grid, opening on Tue 25, with its footer (received ₹2.5k, issued
+    ₹741, wasted ₹185 on the 23rd, occupied rooms).
+  - By outlet, sales and % a dash for the Inventory Manager. For the GM after
+    one ₹2,160 bill: 741 / 2.2k / 34.3%.
+  - Receive: 20 kg at ₹96, 5% filled ₹96.00, not claimable, use by 28 Feb; it
+    saved as typed.
+  - At 375: the Shelf and Days, no sideways page scroll.
+  - Purchasing's delivery: 40 kg x ₹95 x 5% = ₹190.00 filled.
+  - The bell: "Crockery in Restaurant: never counted".
+  - Script clicks were used where the pane would not draw.
+
+**Left open:**
+- `lib/reports.ts` waits for the reports lane's export.
+- The import has no crockery column.
+- The migration number is the master's at merge.
+
+---
+
 ## 2026-09-25/26 · The Store's second part: levels per store, the count sheet, cylinders full and empty (D22-38)
 
 **Asked for:** the master's card, 25 September: D22-38 - par levels per store and

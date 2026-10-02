@@ -636,7 +636,9 @@ stores.get("/:code/stores/items/:id/movements", async (c) => {
    A move between stores has none: nothing was bought or used.
 
    SALES are revenue, shown only to a role that may read reports (Q4); the
-   food cost basis is the hotel's (Q5). */
+   food cost basis is the hotel's (Q5).
+   ponytail: walks every item's whole history per read; keep a running value
+   per movement if a hotel's Store ever reads slowly. */
 stores.get("/:code/stores/days", async (c) => {
   const endParam = c.req.query("end");
   if (endParam !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(endParam)) {

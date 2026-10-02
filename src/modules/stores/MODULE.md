@@ -110,10 +110,46 @@ and both stay. A list can be imported from a file.
   of their working menu, and they have no Dashboard (`workingHomeFor`,
   `navigation.ts`; pinned in `navigation.test.ts` — `["Store", "Notifications"]`).
 - No `flows/`; the page carries its own dialogs.
+- **Like the Calendar (D27-238; the owner's answers D27-242, 2 October):**
+  - **Shelf | Days**, a pair like Rooms and Calendar: `/h/:code/stores` and
+    `/h/:code/stores/days` (`pages/StoreDays.tsx`), one menu entry, the same
+    guard. The place picked and the tile live in the address (`?store=`,
+    `?tile=`), so switching keeps both.
+  - **Eight tiles** (`components/StoreTiles.tsx`, rules in `lib/tiles.ts`, one
+    definition for both views): Below level · Run out (had some, holds none) ·
+    Received / Issued / Wasted today (waste and breakage) · Awaiting delivery
+    (Purchasing's door) · Not valued (held, no cost) · Not counted in 30 days
+    (held where it was never counted, or 30+ days ago). Warm when there is a job
+    (Below, Run out, Not valued, Not counted); a tap filters, a second clears.
+    **Below level replaces the yellow list** (Q2): the card says
+    "Kitchen store: 6 kg, level 10".
+  - **Days**: items x 14 business days ending today (opens scrolled to today),
+    grouped by category with count pills; today navy, weekends grey; a cell is
+    +in over -out in the item's unit, blank when nothing moved (Q1); with "All
+    stores" a move between places is left out. Footer per day: Received,
+    Issued, Wasted (waste only) in rupees at the running average, and Occupied
+    rooms (reports' `dailyFigures`). A tap on today's cell offers Receive or
+    Issue. **Group by Outlet**: issued rupees to each outlet over what it sold
+    before GST, and the food cost % - sales and % are a dash for a role that
+    may not read reports (Q4).
+  - **Receive** asks the cost BEFORE GST, then the bill's GST: rate (0, 5, 18,
+    40 offered; 12 and 28 typed for old bills), the amount filled from it and
+    changeable, Claimable yes/no - all three or none (Q6) - and Use by.
+    **Issue** asks a Department, free text, optional (Q8).
+  - **Crockery and cutlery** (Q10): a tick on Add an item. It may be moved
+    into use at a restaurant, bar or kitchen place (Places and suppliers; none
+    created here), has a par there (Set levels), is counted there (Count a
+    store lists those places, crockery only), and More -> **Broken** asks where
+    and who (a person rostered here, or Not known).
+  - **Reports** (D27-240): a menu of the nine stock and equipment reports at
+    `/reports/<key>`, for the owner, admin, GM, hotel manager, Inventory
+    Manager, accountant and viewer. ⚠ `lib/reports.ts` is a COPY until the
+    reports lane exports its addresses and `mayReadStockReports`; pinned by
+    `storeDays.test.tsx`.
 
 ---
 
-## Server endpoints — 9
+## Server endpoints — 10
 
 The code is in `api/src/modules/stores/stores.ts` (moved 15 September); the
 door `index.ts` mounts it at `/api/hotels`. There is no module switch for the
@@ -126,6 +162,12 @@ GET    /:code/stores                          view     `stores` (Main first) and
                                                        `levels` and `lowIn` per store (140); for a
                                                        cylinder item `empties`, `emptiesByStore`, the
                                                        deposit, `depositHeld` and `inUse`
+GET    /:code/stores/days?end=YYYY-MM-DD      view     fourteen business days to `end` (today): per item,
+                                                       place, day and kind what moved and its value (the
+                                                       running average; null if any part has none);
+                                                       occupied rooms; `sales` per outlet before GST, or
+                                                       null for a role without `report` view (Q4);
+                                                       `foodCostBasis` (D27-238, D27-242)
 GET    /:code/stores/items/:id/movements      view     one item's history; each row's `store`; a move
                                                        (and its undo) as ONE row with `fromStore`,
                                                        `toStore`; `who` named for the Inventory
@@ -215,6 +257,22 @@ stock per store, moves between stores 112_stock_held_per_store.sql
                                        only and staff-scope guards lifted for that one statement
 ```
 
+GST, expiry, department, breakage,  183_store_days_gst_and_crockery.sql ("183" for now - the master renumbers)
+crockery, the count's record,        stock_movements.gst_rate, gst_amount, gst_claimable: a delivery's, all three
+the running average                    or none; expires_on (a delivery's); department (an issue's, free text);
+                                       broken_by (a breakage's; null = not known); kind 'breakage' (out,
+                                       crockery only - trigger)
+                                     purchase_request_lines: the same GST three and expires_on, at delivery
+                                     stock_items.crockery: may be at a restaurant, bar or kitchen place too
+                                       (112's place trigger replaced, for stock_levels and count lines too)
+                                     stock_count_lines: every counted line, matched or not, append-only;
+                                       "last counted" is its latest per item and place
+                                     hotels.food_cost_basis: 'before_gst' everywhere (Q5); null shows a dash
+                                     app.stock_movement_costs(item): THE running-average walk - each movement's
+                                       value per unit at its moment, and the average after it. A priced
+                                       delivery moves it by what is held then; an unpriced one leaves it;
+                                       out-movements leave at it. app.stock_unit_cost reads it (same name)
+
 levels, count, cylinders             140_store_levels_counts_and_cylinders.sql
   a level per item per store           stock_levels (unique item + store; composite key to the item;
                                        112's store check; no DELETE for the app); NULL or no row is no
@@ -252,13 +310,20 @@ one. Never edit 046, 069 or 094.
 
 `src/modules/stores/index.ts` exports nothing yet (`export {};`). No other
 service imports this one. The server's door, `api/src/modules/stores/index.ts`,
-exports only `mounts`, read by `api/src/server.ts`.
+exports `mounts`; `receiveIntoStore` and `mayDeliverInto` for Purchasing's
+delivery (116); and `deliveryFactsProblem` (D27-238), the one check of a
+delivery's GST and expiry, which Purchasing asks before its first write.
 
 ---
 
 ## Leans on
 
-No other service's door is imported by this folder (checked 15 September).
+Since D27-238 the server reads three other doors, read only:
+- **purchasing**: `awaitingDelivery` - lines on orders sent and not delivered
+  (the Awaiting delivery tile).
+- **pos**: `outletSales` - each outlet's settled sales per day before GST, room
+  and function bills included (the Outlet grouping).
+- **reports**: `dailyFigures` - rooms occupied per day, the one definition.
 
 - **pos**, at the database only: `stock_movements.to_outlet` references
   `pos_outlets` — where an issue went, when it went to a till outlet (069).
@@ -335,8 +400,18 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
     They are two rows; each is undone on its own line in History.
   - **Empties cannot be moved between stores**: they sit in the store the
     full cylinder was issued from. The count sheet corrects them.
-  - **No "last counted" date per store**, and nothing reminds anybody of the
-    monthly count (S6). Not asked for.
+  - ~~No "last counted" date per store~~ - since D27-242 every counted line is
+    kept (`stock_count_lines`), the card says when, and the bell reminds
+    whoever corrects counts of a place holding crockery not counted for 30
+    business days.
+- Left by the Calendar look (2 October, D27-242):
+  - **The import has no crockery column**; the tick is set on Add an item or
+    by `PATCH /items/:id` (`crockery`). Not asked for.
+  - **`lib/reports.ts` is a copy** of the reports lane's nine addresses and
+    seven roles until that lane exports them; then it goes.
+  - **The Days view walks every item's history** (`app.stock_movement_costs`
+    per item, per read). ponytail: fine for a hotel's few hundred items; keep
+    a running total per movement if it ever reads slowly.
 
 ---
 

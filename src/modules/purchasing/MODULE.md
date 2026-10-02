@@ -64,6 +64,19 @@ A control another endpoint can walk around is not a control (076's own words).
 "-", and the order cannot be sent. An order with one unpriced line has **no
 total at all** rather than a total of the rest.
 
+## GST and use-by at delivery (D27-238, 2 October; the Store lane)
+
+The delivery dialog takes, per line, the bill's **GST** - rate (0, 5, 18, 40
+offered; 12 and 28 typed for old bills), the amount filled from
+came x cost x rate and changeable, Claimable yes/no: all three or none - and a
+**Use by** date. Stored on `purchase_request_lines` (gst_rate, gst_amount,
+gst_claimable, expires_on, migration "183") and carried onto the Store's
+receipt through `receiveIntoStore`. Checked by the Store's own
+`deliveryFactsProblem` before the first write. The cost each is before GST.
+`awaitingDelivery` (this door) feeds the Store's Awaiting delivery tile.
+
+---
+
 ## What it does NOT do, on purpose
 
 Said on screen where somebody would look for them:

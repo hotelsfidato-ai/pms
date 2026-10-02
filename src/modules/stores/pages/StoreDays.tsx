@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { ChevronDown, ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from "lucide-react";
@@ -73,6 +73,9 @@ export default function StoreDaysPage() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [choosing, setChoosing] = useState<StockItem | null>(null);
   const [moving, setMoving] = useState<{ item: StockItem; kind: StockKind } | null>(null);
+  /* TODAY IS THE LAST COLUMN, and the one that matters: the grid opens
+     scrolled to it, as the Calendar opens on the business date. */
+  const scroller = useRef<HTMLDivElement>(null);
 
   /* The Shelf's own read, so the two share it. */
   const store = useQuery({ queryKey: ["stores", code], queryFn: () => getStore(code), enabled: !!code });
@@ -109,6 +112,11 @@ export default function StoreDaysPage() {
   const ofKind = (kind: string, date: string) => rows.filter((r) => r.kind === kind && r.date === date);
 
   const days = q.data?.days ?? [];
+  const lastDay = days.at(-1);
+  useEffect(() => {
+    const el = scroller.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, [lastDay, group, store.data === undefined]);
   const sales = q.data?.sales ?? null;
   const basis = q.data?.foodCostBasis ?? null;
 
@@ -177,8 +185,8 @@ export default function StoreDaysPage() {
       {items.length === 0 && group === "category" ? (
         <EmptyState compact title="Nothing to show" description={tile ? "Nothing answers that tile here." : "Nothing in this store."} />
       ) : (
-        <div className="overflow-auto overscroll-x-contain scrollbar-quiet rounded-lg ring-1 ring-grey-200 bg-white
-                        max-sm:[mask-image:linear-gradient(to_right,#000_calc(100%-16px),transparent)]"
+        <div ref={scroller}
+             className="max-h-[calc(100dvh-220px)] overflow-auto overscroll-x-contain scrollbar-quiet rounded-lg ring-1 ring-grey-200 bg-white"
              data-store-days="">
           <div className={FRAME}>
             {/* The days */}
@@ -210,10 +218,11 @@ export default function StoreDaysPage() {
                         <button type="button" aria-expanded={!shut}
                                 onClick={() => setCollapsed({ ...collapsed, [category]: !shut })}
                                 className={cn(FIRST, "z-20 bg-grey-50 flex items-center gap-1.5 px-3 h-10 text-left hover:bg-grey-100")}>
-                          {shut ? <ChevronRight className="size-3.5 text-grey-500 shrink-0" />
-                            : <ChevronDown className="size-3.5 text-grey-500 shrink-0" />}
-                          <span className="text-sm font-semibold text-ink-900 truncate">{category}</span>
-                          <span className="ml-auto h-5 px-[7px] rounded-full bg-white ring-1 ring-inset ring-grey-200 text-xs font-semibold leading-5 text-grey-600 tabular">
+                          {/* On a phone the name gets the room, as on the Calendar. */}
+                          {shut ? <ChevronRight className="size-3.5 text-grey-500 shrink-0 max-sm:hidden" />
+                            : <ChevronDown className="size-3.5 text-grey-500 shrink-0 max-sm:hidden" />}
+                          <span className="text-sm max-sm:text-xs font-semibold text-ink-900 truncate">{category}</span>
+                          <span className="ml-auto h-5 px-[7px] rounded-full bg-white ring-1 ring-inset ring-grey-200 text-xs font-semibold leading-5 text-grey-600 tabular max-sm:hidden">
                             {list.length}
                           </span>
                         </button>
