@@ -232,7 +232,7 @@ function GridShell({ dates, nav, children, corner }: {
 }) {
   const { from, today, onMove } = nav;
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden max-sm:-mx-5 max-sm:rounded-none max-sm:border-x-0">
       <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-3 sm:py-2.5 border-b border-grey-200">
         <Button variant="secondary" size="icon" aria-label="Previous two weeks"
           onClick={() => onMove(addDays(from, -DAYS))}>
