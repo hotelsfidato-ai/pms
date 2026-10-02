@@ -30,7 +30,7 @@ const over = (report: ReportKey, title: string, what: string) => () => {
 export const StockOnHandPage = asOn("stock-on-hand", "Closing stock", "the closing stock");
 export const StockMovementsPage = over("stock-movements", "Stock movement by day", "the stock movement");
 export const StockConsumptionPage = over("stock-consumption", "Consumption", "the consumption report");
-export const StockWastagePage = over("stock-wastage", "Wastage", "the wastage report");
+export const StockWastagePage = over("stock-wastage", "Wastage and breakage", "the wastage and breakage report");
 export const StockCountDifferencesPage = over("stock-count-differences", "Count differences", "the count differences");
 export const StockDeadPage = asOn("stock-dead", "Dead stock", "the dead stock report");
 export const StockCoverPage = asOn("stock-cover", "Days of cover", "the days of cover");

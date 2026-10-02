@@ -91,7 +91,7 @@ export const nav: ServiceNavEntry[] = [
     label: "Consumption", to: "/reports/stock-consumption", icon: PackageOpen, resource: "stock",
     canSee: mayReadStockReports, keywords: ["usage", "issued", "outlet", "store"], listed: false },
   { section: "reports", order: 180,
-    label: "Wastage", to: "/reports/stock-wastage", icon: Trash2, resource: "stock",
+    label: "Wastage and breakage", to: "/reports/stock-wastage", icon: Trash2, resource: "stock",
     canSee: mayReadStockReports, keywords: ["waste", "spoilage", "store"], listed: false },
   { section: "reports", order: 190,
     label: "Count differences", to: "/reports/stock-count-differences", icon: ClipboardCheck, resource: "stock",
@@ -109,3 +109,9 @@ export const nav: ServiceNavEntry[] = [
     label: "Equipment report", to: "/reports/equipment", icon: Refrigerator, resource: "stock",
     canSee: mayReadStockReports, keywords: ["warranty", "amc", "under repair", "out of store"], listed: false },
 ];
+
+/** The nine Store and equipment reports, by the menu's own words (one name
+    everywhere, HANDOVER § 6): the Store's Reports menu lists these. */
+export const STOCK_REPORT_LINKS: { path: string; label: string }[] = nav
+  .filter((e) => e.canSee === mayReadStockReports && e.to !== STOCK_REPORTS_PATH)
+  .map((e) => ({ path: e.to, label: e.label }));

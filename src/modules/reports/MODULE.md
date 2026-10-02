@@ -54,7 +54,7 @@ most export CSV.
 | Closing stock | `/reports/stock-on-hand` | `pages/Store.tsx` | search only |
 | Stock movement by day | `/reports/stock-movements` | `pages/Store.tsx` | search only |
 | Consumption | `/reports/stock-consumption` | `pages/Store.tsx` | search only |
-| Wastage | `/reports/stock-wastage` | `pages/Store.tsx` | search only |
+| Wastage and breakage | `/reports/stock-wastage` | `pages/Store.tsx` | search only |
 | Count differences | `/reports/stock-count-differences` | `pages/Store.tsx` | search only |
 | Dead stock | `/reports/stock-dead` | `pages/Store.tsx` | search only |
 | Days of cover | `/reports/stock-cover` | `pages/Store.tsx` | search only |
