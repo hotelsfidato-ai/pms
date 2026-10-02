@@ -86,11 +86,15 @@ describe("In house and Empty, on every screen that prints them", () => {
     expect([h.inHouse, h.empty]).toEqual([2, 15]);
   });
 
-  it("the Dashboard's The house now", async () => {
+  /* The Dashboard of 3 October (D27-243): In house is a work tile, and the
+     empty rooms are Needs cleaning's "Free rooms ready … of 15". */
+  it("the Dashboard's In house tile and its free rooms", async () => {
     render(<App />);
     const main = await screen.findByRole("main");
-    expect(await countOn("link", "In house", main)).toBe("2");
-    expect(await countOn("link", "Empty", main)).toBe("15");
+    const tile = (label: string) =>
+      within(main).getAllByRole("link").find((l) => (l.textContent ?? "").startsWith(label));
+    await waitFor(() => expect(tile("In house")?.children[1]?.textContent?.trim()).toBe("2"), { timeout: 10000 });
+    await waitFor(() => expect(tile("Needs cleaning")?.textContent).toContain("of 15"), { timeout: 10000 });
   }, 20000);
 
   it("the Rooms board's counts", async () => {

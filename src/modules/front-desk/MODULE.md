@@ -129,7 +129,7 @@ refinement).
 
 | File | What it does |
 |---|---|
-| `stays.ts` | reads stays over HTTP and slices one list three ways — arrivals, in house, departures — plus `listArrivalsOutstanding` (still to come, for the Dashboard) and `fetchStays` (the raw read other services reuse) |
+| `stays.ts` | reads stays over HTTP and slices one list three ways — arrivals, in house, departures — plus `fetchStays` (the raw read other services reuse) |
 | `operations.ts` | the writes behind the desk's flows: check in and out, assign, move, unassign, amend, void, and the early-arrival read; check-in and check-out ask `src/lib/rules.ts` first |
 | `stayExtras.ts` | exchanging two rooms, and inclusions |
 | `stayview.ts` | the Calendar's data — a fourteen-day window, bars and their tones, room rates from the room type (null when unpriced) — and the counts the Dashboard shows |
@@ -180,7 +180,7 @@ What `index.ts` exports, and who uses each (grep of `@/modules/front-desk`,
 | `getStay` | finance (`data/postings.ts`); the core test `repositories.test.ts` |
 | `listStays` | housekeeping (`data/housekeeping.ts`), reservations (`pages/Reservations.tsx`); the core test |
 | `listArrivals`, `listInHouse`, `listDepartures` | the core test `repositories.test.ts` only |
-| `listArrivalsOutstanding`, `getStayViewCounts` | reports (`pages/Dashboard.tsx`) |
+| `getStayView`, `fetchStays`, type `ChartRoom` | reports (`pages/Dashboard.tsx`, 3 October) |
 | `getHouseNow`, types `HouseNow`, `HouseNowRoom` | admin (`pages/Property.tsx`), housekeeping (`data/housekeeping.ts`) - 22 September |
 | `LateCheckOutFlow` | finance (`flows/FolioPanel.tsx`) |
 

@@ -220,7 +220,7 @@ The server's door, `api/src/modules/reports/index.ts`, exports only `mounts`
 
 ## Leans on
 
-- **front desk** — `listArrivalsOutstanding` and `getStayViewCounts`
+- **front desk** — `getStayView`, `fetchStays` and type `ChartRoom`
   through `@/modules/front-desk`, on the Dashboard.
 - Everything else, read only, at the database: the tables listed above belong
   to finance, the front desk, reservations, guests and inventory.

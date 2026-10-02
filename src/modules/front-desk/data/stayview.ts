@@ -334,12 +334,3 @@ export async function getStayView(
 
   return { dates, roomTypes, footer, counts };
 }
-
-/** Live counts for the filter pills across the top. */
-export async function getStayViewCounts(
-  hotelId: string,
-  date: string,
-): Promise<Record<string, number>> {
-  const view = await getStayView(hotelId, date, date);
-  return view?.counts ?? {};
-}

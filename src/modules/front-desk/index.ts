@@ -7,9 +7,9 @@ export { FrontDeskRulesCard } from "./components/FrontDeskRules";
 export type { StayColumn, StayRow } from "./components/StayTable";
 export { assignRoom, checkOut, checkOutAllowed, earlyArrival } from "./data/operations";
 export type { Posting } from "./data/operations";
-export { fetchStays, getHouseNow, getStay, listArrivals, listArrivalsOutstanding, listDepartures, listInHouse, listStays } from "./data/stays";
+export { fetchStays, getHouseNow, getStay, listArrivals, listDepartures, listInHouse, listStays } from "./data/stays";
 export type { HouseNow, HouseNowRoom } from "./data/stays";
-export { getStayView, getStayViewCounts } from "./data/stayview";
+export { getStayView } from "./data/stayview";
 export type { ChartRoom } from "./data/stayview";
 export { LateCheckOutFlow } from "./flows/LateCheckOutFlow";
 /* D27-163: the one page (reservations' New booking) checks a guest in and
