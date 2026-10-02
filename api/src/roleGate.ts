@@ -617,6 +617,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* ── Bookings and stays ── */
   [`GET ${H}/stays`]: STAYS,
   [`GET ${H}/stays/:id`]: STAYS,
+  /* Whether a stay checks in by express, its ID masked (D27-236 3.4): the
+     people who check a guest in. */
+  [`GET ${H}/stays/:id/express-check-in`]: CHECK_IN,
   [`GET ${H}/stays/:id/exchangeable`]: STAYS,
   [`GET ${H}/stays/:id/inclusions`]: STAYS,
   [`GET ${H}/stays/:id/guest-marks`]: STAYS,
