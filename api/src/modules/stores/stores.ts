@@ -6,6 +6,10 @@ import {
   mayStock, actionForKind, isInventoryManagerAt, STOCK_REFUSED, type StockAction,
 } from "./stockGrants.ts";
 import { priceProblem } from "../../validate.ts";
+import { can, type Role } from "../../permissions.ts";
+import { awaitingDelivery } from "../purchasing/index.ts";
+import { outletSales } from "../pos/index.ts";
+import { dailyFigures } from "../reports/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STORE
@@ -49,7 +53,7 @@ async function hotelFor(client: Client, code: string): Promise<string | null> {
 
 /* What a person may RECORD through /movements. A move between stores is its own
    route, because it is two rows written as one act (106). */
-const KINDS = ["receipt", "issue", "wastage", "adjustment", "return"] as const;
+const KINDS = ["receipt", "issue", "wastage", "adjustment", "return", "breakage"] as const;
 type Kind = (typeof KINDS)[number];
 /* Every kind the ledger holds, as it reads back. */
 type StoredKind = Kind | "transfer";
@@ -62,6 +66,8 @@ const DIRECTION: Record<Kind, "in" | "out" | "either"> = {
   wastage: "out",
   return: "out",
   adjustment: "either",
+  /* Crockery and cutlery only (D27-242), with who. */
+  breakage: "out",
 };
 
 /** How a refusal names the row somebody tried to undo. */
@@ -72,21 +78,30 @@ const UNDONE_NOUN: Record<StoredKind, string> = {
   return: "return",
   adjustment: "count correction",
   transfer: "move",
+  breakage: "breakage",
 };
 
 /* A figure a person reads: no trailing zeros from numeric(12,3). */
 const figure = (n: number) => String(Math.round(n * 1000) / 1000);
 
-interface StoreRow { id: string; name: string; is_active: boolean }
+interface StoreRow { id: string; name: string; is_active: boolean; kind: string }
+
+/** The places where crockery and cutlery is IN USE (D27-242): a restaurant, a
+    bar or a kitchen the hotel added in Places and suppliers. */
+const IN_USE_KINDS = ["restaurant", "bar", "kitchen"];
 
 /** A store at this hotel, as a request names it — or null. Only a place of kind
-    `store` holds stock (094); the database says so too (106). */
-async function storeAt(client: Client, hotelId: string, id: unknown): Promise<StoreRow | null> {
+    `store` holds stock (094); the database says so too (106). With `inUse`, a
+    crockery item's restaurant, bar or kitchen place too (D27-242). */
+async function storeAt(
+  client: Client, hotelId: string, id: unknown, inUse = false,
+): Promise<StoreRow | null> {
   if (typeof id !== "string" || id === "") return null;
   const { rows } = await client.query<StoreRow>(
-    `select id::text, name, is_active from locations
-      where id::text = $1 and hotel_id = $2 and kind = 'store'`,
-    [id, hotelId]);
+    `select id::text, name, is_active, kind from locations
+      where id::text = $1 and hotel_id = $2
+        and (kind = 'store' or ($3 and kind = any($4::text[])))`,
+    [id, hotelId, inUse, IN_USE_KINDS]);
   return rows[0] ?? null;
 }
 
@@ -108,22 +123,73 @@ async function writeMovement(
     reference?: string | null; note?: string | null; outletId?: string | null;
     /** Empty cylinders, not full ones (D25-18). */
     empty?: boolean;
+    /** A delivery's own facts (D27-238): its GST, all three or none, and its
+        expiry. */
+    gst?: Gst | null; expiresOn?: string | null;
+    /** An issue's department, as typed (D27-242: free text). */
+    department?: string | null;
+    /** Who broke it; null is "Not known". */
+    brokenBy?: string | null;
   },
 ): Promise<string> {
   const businessDate = await businessDateFor(client, hotelId);
   const { rows } = await client.query<{ id: string }>(
     `insert into stock_movements
        (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost,
-        supplier, reference, note, to_outlet, moved_by, empty)
-     values ($1,$2,$3,$4::date,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+        supplier, reference, note, to_outlet, moved_by, empty,
+        gst_rate, gst_amount, gst_claimable, expires_on, department, broken_by)
+     values ($1,$2,$3,$4::date,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::date,$18,$19)
      returning id::text`,
     [hotelId, m.itemId, m.storeId, businessDate, m.kind, m.signed,
      m.unitCost ?? null, m.supplier?.trim() || null,
      m.reference?.trim() || null, m.note?.trim() || null,
-     m.outletId || null, staffId, m.empty === true],
+     m.outletId || null, staffId, m.empty === true,
+     m.gst?.rate ?? null, m.gst?.amount ?? null, m.gst?.claimable ?? null,
+     m.expiresOn || null, m.department?.trim() || null, m.brokenBy || null],
   );
   return rows[0]!.id;
 }
+
+/** A delivery's GST as the supplier's bill says it (D27-238, D27-242 Q6). */
+export interface Gst { rate: number; amount: number; claimable: boolean }
+
+/** The GST and expiry a delivery carries, checked: all three GST figures or
+    none (none is "not recorded", a dash), and an expiry that is a date. The
+    refusal in a sentence, or null. Purchasing's delivery asks the same, so the
+    two cannot disagree. */
+export function deliveryFactsProblem(
+  input: { gstRate?: unknown; gstAmount?: unknown; gstClaimable?: unknown; expiresOn?: unknown },
+): string | null {
+  const given = [input.gstRate, input.gstAmount, input.gstClaimable]
+    .filter((v) => v !== undefined && v !== null).length;
+  if (given !== 0 && given !== 3) {
+    return "GST is the rate, the amount and whether it can be claimed - all three, or none.";
+  }
+  if (given === 3) {
+    const rate = Number(input.gstRate);
+    const amount = Number(input.gstAmount);
+    if (typeof input.gstRate !== "number" || !Number.isFinite(rate) || rate < 0 || rate > 100) {
+      return "A GST rate is between 0 and 100 per cent.";
+    }
+    if (typeof input.gstAmount !== "number" || !Number.isFinite(amount) || amount < 0) {
+      return "A GST amount is zero or more.";
+    }
+    if (typeof input.gstClaimable !== "boolean") {
+      return "Can this GST be claimed back? Yes or no.";
+    }
+  }
+  if (input.expiresOn !== undefined && input.expiresOn !== null
+      && (typeof input.expiresOn !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(input.expiresOn)
+          || Number.isNaN(Date.parse(input.expiresOn)))) {
+    return "An expiry is a date.";
+  }
+  return null;
+}
+
+/** The checked facts, as writeMovement takes them. */
+export const gstOf = (input: { gstRate?: unknown; gstAmount?: unknown; gstClaimable?: unknown }): Gst | null =>
+  input.gstRate === undefined || input.gstRate === null ? null
+    : { rate: Number(input.gstRate), amount: Number(input.gstAmount), claimable: input.gstClaimable === true };
 
 async function emptiesIn(client: Client, itemId: string, storeId: string): Promise<number> {
   const { rows } = await client.query<{ n: string }>(
@@ -187,6 +253,9 @@ export async function receiveIntoStore(
     itemId: string; storeId: string; quantity: number;
     unitCost?: number | null; supplier?: string | null;
     reference?: string | null; note?: string | null;
+    /** The bill's GST, all three or none, and the expiry (D27-238). */
+    gstRate?: number | null; gstAmount?: number | null; gstClaimable?: boolean | null;
+    expiresOn?: string | null;
   },
 ): Promise<
   | { ok: true; id: string; item: string; unit: string; store: string; onHandHere: number }
@@ -212,11 +281,14 @@ export async function receiveIntoStore(
       && (!Number.isFinite(input.unitCost) || input.unitCost < 0)) {
     return { ok: false, reason: "A unit cost is zero or more." };
   }
+  const facts = deliveryFactsProblem(input);
+  if (facts) return { ok: false, reason: facts };
 
   const id = await writeMovement(client, hotelId, staffId, {
     itemId: input.itemId, storeId: store.id, kind: "receipt", signed: qty,
     unitCost: input.unitCost ?? null, supplier: input.supplier ?? null,
     reference: input.reference ?? null, note: input.note ?? null,
+    gst: gstOf(input), expiresOn: input.expiresOn ?? null,
   });
 
   return {
@@ -239,6 +311,7 @@ stores.get("/:code/stores", async (c) => {
       on_deposit: number | null; per_cylinder: string | null;
       on_hand: string; unit_cost: string | null;
       last_movement: string | null; movements: string;
+      crockery: boolean; held_in: string[];
     }>(
       /* On hand and cost come from the FUNCTIONS, not from columns. That
          is the whole design: one definition, and it cannot disagree with
@@ -253,7 +326,14 @@ stores.get("/:code/stores", async (c) => {
               (select max(m.business_date)::text
                  from stock_movements m where m.item_id = i.id) as last_movement,
               (select count(*)::text
-                 from stock_movements m where m.item_id = i.id) as movements
+                 from stock_movements m where m.item_id = i.id) as movements,
+              i.crockery,
+              /* Every place it ever came into, and not undone: "Run out" is
+                 a place that had some and holds none (D27-242 Q3). */
+              array(select distinct m.location_id::text from stock_movements m
+                     where m.item_id = i.id and m.quantity > 0 and not m.empty
+                       and m.reverses_id is null
+                       and not exists (select 1 from stock_movements r where r.reverses_id = m.id)) as held_in
          from stock_items i
         where i.hotel_id = $1
         order by i.category nulls last, i.name`,
@@ -281,9 +361,58 @@ stores.get("/:code/stores", async (c) => {
               app.stock_on_hand(i.id, l.id)::text as n,
               app.stock_empties(i.id, l.id)::text as e
          from stock_items i
-         join locations l on l.hotel_id = i.hotel_id and l.kind = 'store'
+         join locations l on l.hotel_id = i.hotel_id
+                         and (l.kind = 'store' or (i.crockery and l.kind = any($2::text[])))
         where i.hotel_id = $1`,
+      [hotelId, IN_USE_KINDS]);
+
+    /* WHERE CROCKERY IS IN USE (D27-242): the hotel's restaurants, bars and
+       kitchens in Places and suppliers - switched on, or still holding some. */
+    const { rows: inUsePlaces } = await client.query<{ id: string; name: string; kind: string; is_active: boolean }>(
+      `select id::text, name, kind, is_active from locations
+        where hotel_id = $1 and kind = any($2::text[]) order by name`,
+      [hotelId, IN_USE_KINDS]);
+
+    /* THE TILES (D27-242 Q3), per item and per place: what moved today, the
+       last count, and what is on order (Purchasing's door). */
+    const businessDate = await businessDateFor(client, hotelId);
+    const { rows: todays } = await client.query<{ item: string; store: string; kind: string }>(
+      `select distinct m.item_id::text as item, m.location_id::text as store, m.kind
+         from stock_movements m
+        where m.hotel_id = $1 and m.business_date = $2::date and not m.empty
+          and m.kind in ('receipt', 'issue', 'wastage', 'breakage')
+          and m.reverses_id is null
+          and not exists (select 1 from stock_movements r where r.reverses_id = m.id)`,
+      [hotelId, businessDate]);
+    const { rows: counted } = await client.query<{ item: string; store: string; day: string }>(
+      `select item_id::text as item, location_id::text as store, max(business_date)::text as day
+         from stock_count_lines where hotel_id = $1 and not empty group by 1, 2`,
       [hotelId]);
+    const onOrder = await awaitingDelivery(client, hotelId);
+    const countedByItem = new Map<string, Record<string, string>>();
+    for (const r of counted) countedByItem.set(r.item, { ...(countedByItem.get(r.item) ?? {}), [r.store]: r.day });
+    const todayByItem = new Map<string, Record<string, string[]>>();
+    for (const t of todays) {
+      const mine = todayByItem.get(t.item) ?? {};
+      mine[t.kind] = [...(mine[t.kind] ?? []), t.store];
+      todayByItem.set(t.item, mine);
+    }
+    const orderedByItem = new Map<string, Record<string, number>>();
+    for (const o of onOrder) {
+      const mine = orderedByItem.get(o.itemId) ?? {};
+      mine[o.storeId] = (mine[o.storeId] ?? 0) + o.quantity;
+      orderedByItem.set(o.itemId, mine);
+    }
+
+    /* WHO BROKE IT (D27-242 Q10): the people rostered here, for those who
+       record a breakage - a name, through app.colleague_name (096). */
+    const { rows: people } = (await mayStock(client, hotelId, "create"))
+      ? await client.query<{ id: string; name: string }>(
+          `select sh.staff_id::text as id, app.colleague_name(sh.staff_id, $1) as name
+             from staff_hotels sh join staff s on s.id = sh.staff_id
+            where sh.hotel_id = $1 and s.is_active
+            order by 2`, [hotelId])
+      : { rows: [] };
     /* Per item, per store, what is not zero: full stock, and empty cylinders. */
     const byItem = new Map<string, Record<string, number>>();
     const emptiesByItem = new Map<string, Record<string, number>>();
@@ -302,7 +431,7 @@ stores.get("/:code/stores", async (c) => {
     for (const l of levelRows) {
       levelsByItem.set(l.item, { ...(levelsByItem.get(l.item) ?? {}), [l.store]: Number(l.level) });
     }
-    const open = new Set(places.filter((p) => p.is_active).map((p) => p.id));
+    const open = new Set([...places, ...inUsePlaces].filter((p) => p.is_active).map((p) => p.id));
 
     /* WHERE AN ISSUE CAN GO (D22-20): the outlets the hotel already has — the
        till's own list, which 069's `to_outlet` has always pointed at. */
@@ -312,9 +441,16 @@ stores.get("/:code/stores", async (c) => {
 
     return {
       outlets,
+      businessDate,
+      people: people.filter((p) => p.name),
       stores: places
         .filter((p) => p.is_active || holding.has(p.id))
         .map((p) => ({ id: p.id, name: p.name, isActive: p.is_active, isMain: p.main })),
+      /* Where crockery is in use (D27-242). Not stores: nothing is received
+         into one, and only crockery is held there. */
+      inUse: inUsePlaces
+        .filter((p) => p.is_active || holding.has(p.id))
+        .map((p) => ({ id: p.id, name: p.name, kind: p.kind, isActive: p.is_active })),
       items: rows.map((r) => {
         const onHand = Number(r.on_hand);
         const byStore = byItem.get(r.id) ?? {};
@@ -363,6 +499,14 @@ stores.get("/:code/stores", async (c) => {
           lastMovement: r.last_movement,
           movements: Number(r.movements),
           isActive: r.is_active,
+          /* D27-242: crockery and cutlery; the places it ever came into; what
+             moved today, by kind, as the places it moved in; the business date
+             each place was last counted; what is on order, by store. */
+          crockery: r.crockery,
+          heldIn: r.held_in,
+          today: todayByItem.get(r.id) ?? {},
+          lastCounted: countedByItem.get(r.id) ?? {},
+          onOrder: orderedByItem.get(r.id) ?? {},
         };
       }),
     };
@@ -389,6 +533,8 @@ stores.get("/:code/stores/items/:id/movements", async (c) => {
       outlet: string | null; who: string | null; store: string;
       reverses_id: string | null; reverses_kind: string | null;
       undone_quantity: string | null; partner_store: string | null; reversed: boolean; empty: boolean;
+      gst_rate: string | null; gst_amount: string | null; gst_claimable: boolean | null;
+      expires_on: string | null; department: string | null; broken_by: string | null;
     }>(
       /* WHO: through `staff` as before, and for the Inventory Manager through
          `app.colleague_name` too (STO-4) — a name, of somebody rostered here.
@@ -398,6 +544,9 @@ stores.get("/:code/stores/items/:id/movements", async (c) => {
          move, or the undo of one, the store at the other end of it. */
       `select m.id::text, m.business_date::text, m.kind, m.quantity::text,
               m.unit_cost::text, m.supplier, m.reference, m.note, m.empty,
+              m.gst_rate::text, m.gst_amount::text, m.gst_claimable,
+              m.expires_on::text, m.department,
+              app.colleague_name(m.broken_by, $1) as broken_by,
               o.name as outlet,
               coalesce(s.full_name,
                        case when $3::boolean
@@ -454,9 +603,115 @@ stores.get("/:code/stores/items/:id/movements", async (c) => {
             reversesKind: m.reverses_kind,
             /* An empty cylinder, not a full one (D25-18). */
             empty: m.empty,
+            /* D27-238: a delivery's GST (null = not recorded) and expiry; an
+               issue's department; who broke it (null = not known). */
+            gst: m.gst_rate === null ? null : {
+              rate: Number(m.gst_rate), amount: Number(m.gst_amount), claimable: m.gst_claimable === true,
+            },
+            expiresOn: m.expires_on,
+            department: m.department,
+            brokenBy: m.broken_by,
             reversed: m.reversed,
           };
         }),
+    };
+  });
+
+  if (!body) return c.json({ error: "No such property." }, 404);
+  if ("forbidden" in body) return c.json(forbidden(body.forbidden), 403);
+  return c.json(body);
+});
+
+/* ── Fourteen days (D27-238, D27-242) ─────────────────────────────── */
+
+/* THE DAYS VIEW: what moved, per item, place and day, over the fourteen
+   business days ending `end` (today when not given). Grouped here, shaped on
+   the screen: a cell is +in over -out; the footer adds received, issued and
+   wasted rupees and the rooms occupied; by outlet, what was issued to each
+   against what it sold.
+
+   VALUES come from the running-average walk (app.stock_movement_costs): a
+   delivery at what was paid, anything going out at the average of its moment.
+   A group holding one unvalued row has no value - a dash, never a partial sum.
+   A move between stores has none: nothing was bought or used.
+
+   SALES are revenue, shown only to a role that may read reports (Q4); the
+   food cost basis is the hotel's (Q5).
+   ponytail: walks every item's whole history per read; keep a running value
+   per movement if a hotel's Store ever reads slowly. */
+stores.get("/:code/stores/days", async (c) => {
+  const endParam = c.req.query("end");
+  if (endParam !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(endParam)) {
+    return c.json(refuse("Which day? A date, as 2026-10-02."), 409);
+  }
+
+  const body = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    if (!(await mayStock(client, hotelId, "view"))) return forbid("view");
+
+    const today = await businessDateFor(client, hotelId);
+    const end = endParam ?? today;
+    const { rows: [span] } = await client.query<{ from: string; days: string[] }>(
+      `select to_char($1::date - 13, 'YYYY-MM-DD') as from,
+              array(select to_char(d, 'YYYY-MM-DD')
+                      from generate_series($1::date - 13, $1::date, interval '1 day') d) as days`,
+      [end]);
+    const from = span!.from;
+
+    const { rows } = await client.query<{
+      item: string; place: string; date: string; kind: string; outlet: string | null;
+      qty: string; value: string | null;
+    }>(
+      `with moved as (
+         select m.item_id, m.location_id, m.business_date, m.kind, m.to_outlet, m.quantity,
+                abs(m.quantity) * c.unit_value as value
+           from stock_items i
+           cross join lateral app.stock_movement_costs(i.id) c
+           join stock_movements m on m.id = c.movement_id
+          where i.hotel_id = $1 and m.business_date between $2::date and $3::date
+         union all
+         select m.item_id, m.location_id, m.business_date, m.kind, null, m.quantity, null
+           from stock_movements m
+          where m.hotel_id = $1 and m.kind = 'transfer'
+            and m.business_date between $2::date and $3::date
+            and not exists (select 1 from stock_movements r where r.reverses_id = m.id)
+       )
+       select item_id::text as item, location_id::text as place,
+              to_char(business_date, 'YYYY-MM-DD') as date, kind, to_outlet::text as outlet,
+              sum(quantity)::text as qty,
+              case when bool_or(value is null) then null else round(sum(value), 2) end::text as value
+         from moved
+        group by 1, 2, 3, 4, 5`,
+      [hotelId, from, end]);
+
+    const occupied: Record<string, number> = {};
+    for (const d of await dailyFigures(client, hotelId, from, end)) occupied[d.date] = d.sold;
+
+    const role: Role | null = session.isGroupAdmin ? "owner"
+      : ((await client.query<{ role: Role }>(
+          "select role from staff_hotels where staff_id = $1 and hotel_id = $2",
+          [session.staffId, hotelId])).rows[0]?.role ?? null);
+    let sales: Record<string, Record<string, number>> | null = null;
+    if (role !== null && can(role, "view", "report")) {
+      sales = {};
+      for (const s of await outletSales(client, hotelId, from, end)) {
+        sales[s.outletId] = { ...(sales[s.outletId] ?? {}), [s.date]: s.net };
+      }
+    }
+    const { rows: [hotel] } = await client.query<{ basis: string | null }>(
+      "select food_cost_basis as basis from hotels where id = $1", [hotelId]);
+
+    return {
+      today,
+      days: span!.days,
+      rows: rows.map((r) => ({
+        itemId: r.item, placeId: r.place, date: r.date, kind: r.kind, outletId: r.outlet,
+        quantity: Number(r.qty), value: r.value === null ? null : Number(r.value),
+      })),
+      occupied,
+      sales,
+      foodCostBasis: hotel?.basis ?? null,
     };
   });
 
@@ -471,6 +726,8 @@ stores.post("/:code/stores/items", async (c) => {
   type Body = {
     name?: string; unit?: string; category?: string;
     reorderLevel?: number | null;
+    /** Crockery and cutlery (D27-242). */
+    crockery?: boolean;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
@@ -504,14 +761,14 @@ stores.post("/:code/stores/items", async (c) => {
     }
 
     const { rows } = await client.query<{ id: string }>(
-      `insert into stock_items (hotel_id, name, unit, category)
-       values ($1,$2,$3,$4)
+      `insert into stock_items (hotel_id, name, unit, category, crockery)
+       values ($1,$2,$3,$4,$5)
        on conflict (hotel_id, name) do update
          set unit          = excluded.unit,
              category      = excluded.category,
              is_active     = true
        returning id::text`,
-      [hotelId, name, unit, input.category?.trim() || null],
+      [hotelId, name, unit, input.category?.trim() || null, input.crockery === true],
     );
     /* "Warn me below" is the MAIN store's level (D25-12). Re-adding an item
        sets it as the form says, blank clearing it, as before. */
@@ -551,10 +808,36 @@ stores.post("/:code/stores/movements", async (c) => {
         the supplier took back. */
     emptiesBack?: number;
     emptiesTaken?: number;
+    /** A delivery's GST, all three or none, and its expiry (D27-238). */
+    gstRate?: number | null; gstAmount?: number | null; gstClaimable?: boolean | null;
+    expiresOn?: string | null;
+    /** An issue's department, free text (D27-242 Q8). */
+    department?: string | null;
+    /** A breakage's who: a person rostered here, or null for "Not known".
+        Asked every time, so it is required on a breakage. */
+    brokenBy?: string | null;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   if (!input.itemId) return c.json(refuse("Which item?"), 409);
+  const facts = [input.gstRate, input.gstAmount, input.gstClaimable, input.expiresOn]
+    .some((v) => v !== undefined && v !== null);
+  if (facts && input.kind !== "receipt") {
+    return c.json(refuse("GST and an expiry are a delivery's."), 409);
+  }
+  const factsProblem = deliveryFactsProblem(input);
+  if (factsProblem) return c.json(refuse(factsProblem), 409);
+  const department = typeof input.department === "string" ? input.department.trim() : "";
+  if (department && input.kind !== "issue") {
+    return c.json(refuse("A department is an issue's."), 409);
+  }
+  if (department.length > 60) return c.json(refuse("A department is 60 letters at most."), 409);
+  if (input.brokenBy !== undefined && input.kind !== "breakage") {
+    return c.json(refuse("Who broke it is a breakage's."), 409);
+  }
+  if (input.kind === "breakage" && input.brokenBy === undefined) {
+    return c.json(refuse("Who broke it? Choose Not known if nobody knows."), 409);
+  }
   if (!input.kind || !KINDS.includes(input.kind)) {
     return c.json(refuse("That is not something that happens to stock."), 409);
   }
@@ -601,14 +884,27 @@ stores.post("/:code/stores/movements", async (c) => {
     const action = actionForKind(input.kind!);
     if (!(await mayStock(client, hotelId, action))) return forbid(action);
 
-    const { rows: item } = await client.query<{ name: string; unit: string; cylinder: boolean }>(
-      `select name, unit, app.counted_in_cylinders(unit) as cylinder
+    const { rows: item } = await client.query<{
+      name: string; unit: string; cylinder: boolean; crockery: boolean;
+    }>(
+      `select name, unit, app.counted_in_cylinders(unit) as cylinder, crockery
          from stock_items where id = $1 and hotel_id = $2`,
       [input.itemId, hotelId],
     );
     if (!item[0]) return refuse("No such item in this store.");
+    if (input.kind === "breakage" && !item[0].crockery) {
+      return refuse("Breakage is recorded for crockery and cutlery. Anything else is waste.");
+    }
+    if (input.brokenBy) {
+      const { rows: here } = await client.query(
+        "select 1 from staff_hotels where staff_id::text = $1 and hotel_id = $2", [input.brokenBy, hotelId]);
+      if (!here[0]) return refuse("That person does not work here. Choose Not known if nobody knows.");
+    }
 
-    const store = await storeAt(client, hotelId, input.locationId);
+    /* Crockery IN USE at a restaurant, bar or kitchen (D27-242) breaks there
+       and is counted there; everything else happens in a store. */
+    const inUse = item[0].crockery && (input.kind === "breakage" || input.kind === "adjustment");
+    const store = await storeAt(client, hotelId, input.locationId, inUse);
     if (!store) return refuse("That is not a store at this property.");
     /* A SWITCHED-OFF STORE TAKES NOTHING IN. What is already in it may still
        go out, be wasted, returned or counted — or it could never be emptied. */
@@ -683,6 +979,8 @@ stores.post("/:code/stores/movements", async (c) => {
       unitCost: input.unitCost ?? null, supplier: input.supplier ?? null,
       reference: input.reference ?? null, note: input.note ?? null,
       outletId: input.outletId ?? null,
+      gst: gstOf(input), expiresOn: input.expiresOn ?? null,
+      department: department || null, brokenBy: input.brokenBy ?? null,
     });
     /* The empties, as their own row in the same store: back in on an issue,
        out to the supplier on a delivery. Nothing is written for 0. */
@@ -802,12 +1100,15 @@ stores.patch("/:code/stores/items/:id", async (c) => {
     levels?: Record<string, number | null>;
     cylindersOnDeposit?: number | null;
     depositPerCylinder?: number | null;
+    /** Crockery and cutlery (D27-242). */
+    crockery?: boolean;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
   const levels = Object.entries(input.levels ?? {});
   const deposit = "cylindersOnDeposit" in input || "depositPerCylinder" in input;
+  const crockery = typeof input.crockery === "boolean" ? input.crockery : null;
 
-  if (levels.length === 0 && !deposit) return c.json(refuse("Nothing to change."), 409);
+  if (levels.length === 0 && !deposit && crockery === null) return c.json(refuse("Nothing to change."), 409);
   if (levels.some(([, n]) => n !== null && !isCount(n))) {
     return c.json(refuse("A level is zero or more, or blank for none."), 409);
   }
@@ -826,16 +1127,27 @@ stores.patch("/:code/stores/items/:id", async (c) => {
     if (!hotelId) return null;
     if (!(await mayStock(client, hotelId, "edit"))) return forbid("edit");
 
-    const { rows: item } = await client.query<{ id: string; cylinder: boolean }>(
-      `select id::text, app.counted_in_cylinders(unit) as cylinder
-         from stock_items where id::text = $1 and hotel_id = $2`,
-      [c.req.param("id"), hotelId]);
+    const { rows: item } = await client.query<{ id: string; cylinder: boolean; crockery: boolean; in_use: boolean }>(
+      `select i.id::text, app.counted_in_cylinders(i.unit) as cylinder, i.crockery,
+              exists (select 1 from locations l
+                       where l.hotel_id = i.hotel_id and l.kind = any($3::text[])
+                         and app.stock_on_hand(i.id, l.id) <> 0) as in_use
+         from stock_items i where i.id::text = $1 and i.hotel_id = $2`,
+      [c.req.param("id"), hotelId, IN_USE_KINDS]);
     if (!item[0]) return refuse("No such item in this store.");
     if (deposit && !item[0].cylinder) {
       return refuse("Only an item counted in cylinders has a deposit.");
     }
+    if (crockery === false && item[0].in_use) {
+      return refuse("Some of it is in use at an outlet. Move it back to a store first.");
+    }
+    /* A par at a restaurant, bar or kitchen is crockery's (D27-242). */
+    const isCrockery = crockery ?? item[0].crockery;
     for (const [storeId] of levels) {
-      if (!(await storeAt(client, hotelId, storeId))) return refuse("That is not a store at this property.");
+      if (!(await storeAt(client, hotelId, storeId, isCrockery))) return refuse("That is not a store at this property.");
+    }
+    if (crockery !== null) {
+      await client.query("update stock_items set crockery = $2 where id = $1", [item[0].id, crockery]);
     }
 
     for (const [storeId, level] of levels) {
@@ -896,13 +1208,14 @@ stores.post("/:code/stores/counts", async (c) => {
     if (!hotelId) return null;
     if (!(await mayStock(client, hotelId, "edit"))) return forbid("edit");
 
-    const store = await storeAt(client, hotelId, input.locationId);
+    /* A restaurant, bar or kitchen is counted for its crockery (D27-242). */
+    const store = await storeAt(client, hotelId, input.locationId, true);
     if (!store) return refuse("That is not a store at this property.");
 
     const { rows: items } = await client.query<{
-      id: string; name: string; cylinder: boolean; full: string; empties: string;
+      id: string; name: string; cylinder: boolean; crockery: boolean; full: string; empties: string;
     }>(
-      `select id::text, name, app.counted_in_cylinders(unit) as cylinder,
+      `select id::text, name, app.counted_in_cylinders(unit) as cylinder, crockery,
               app.stock_on_hand(id, $3)::text as full,
               app.stock_empties(id, $3)::text as empties
          from stock_items where hotel_id = $1 and id::text = any($2)`,
@@ -913,6 +1226,9 @@ stores.post("/:code/stores/counts", async (c) => {
     for (const l of lines) {
       const it = byId.get(l.itemId!);
       if (!it) return refuse("An item on the sheet is not in this store.");
+      if (store.kind !== "store" && !it.crockery) {
+        return refuse(`Only crockery and cutlery is counted at ${store.name}.`);
+      }
       if (l.empty && !it.cylinder) return refuse("Only an item counted in cylinders has empties.");
       const now = Number(l.empty ? it.empties : it.full);
       if (now !== l.book) moved.push(l.empty ? `${it.name} (empty)` : it.name);
@@ -923,16 +1239,25 @@ stores.post("/:code/stores/counts", async (c) => {
         + `count ${moved.length === 1 ? "it" : "them"} again. Nothing was saved.`);
     }
 
+    /* EVERY LINE IS KEPT (D27-238), matched or not: a count that matched
+       wrote nothing, so nothing said the shelf had been counted at all.
+       "Last counted" and the count-difference report read these. */
+    const businessDate = await businessDateFor(client, hotelId);
     let recorded = 0;
     for (const l of lines) {
       const difference = Math.round((l.counted! - l.book!) * 1000) / 1000;
-      if (difference === 0) continue;
-      await writeMovement(client, hotelId, session.staffId, {
+      const movementId = difference === 0 ? null : await writeMovement(client, hotelId, session.staffId, {
         itemId: l.itemId!, storeId: store.id, kind: "adjustment", signed: difference,
         empty: l.empty === true,
         note: `Count of ${store.name}` + (l.reason?.trim() ? ` - ${l.reason.trim()}` : ""),
       });
-      recorded += 1;
+      await client.query(
+        `insert into stock_count_lines
+           (hotel_id, item_id, location_id, empty, book, counted, counted_by, business_date, movement_id)
+         values ($1, $2, $3, $4, $5, $6, $7, $8::date, $9)`,
+        [hotelId, l.itemId, store.id, l.empty === true, l.book, l.counted,
+         session.staffId, businessDate, movementId]);
+      if (movementId) recorded += 1;
     }
     return { ok: true as const, recorded, matched: lines.length - recorded, store: store.name };
   });
@@ -968,13 +1293,15 @@ stores.post("/:code/stores/transfers", async (c) => {
     if (!hotelId) return null;
     if (!(await mayStock(client, hotelId, "create"))) return forbid("create");
 
-    const { rows: item } = await client.query<{ name: string; unit: string }>(
-      "select name, unit from stock_items where id = $1 and hotel_id = $2",
+    const { rows: item } = await client.query<{ name: string; unit: string; crockery: boolean }>(
+      "select name, unit, crockery from stock_items where id = $1 and hotel_id = $2",
       [input.itemId, hotelId]);
     if (!item[0]) return refuse("No such item in this store.");
 
-    const from = await storeAt(client, hotelId, input.fromId);
-    const to = await storeAt(client, hotelId, input.toId);
+    /* Crockery moves into use at a restaurant, bar or kitchen, and back
+       (D27-242); everything else moves between stores. */
+    const from = await storeAt(client, hotelId, input.fromId, item[0].crockery);
+    const to = await storeAt(client, hotelId, input.toId, item[0].crockery);
     if (!from || !to) return refuse("That is not a store at this property.");
     if (!to.is_active) {
       return refuse(

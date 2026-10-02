@@ -495,8 +495,27 @@ function DeliveryDialog({
   const [cost, setCost] = useState<Record<string, string>>(
     Object.fromEntries(lines.map((l) => [l.id, l.unitPrice ?? ""])));
   const [note, setNote] = useState("");
+  /* The bill's GST per line (D27-238, Q6): the rate, the amount filled from
+     it until typed over, and whether it can be claimed; and the use-by. */
+  const [rate, setRate] = useState<Record<string, string>>({});
+  const [typedAmount, setTypedAmount] = useState<Record<string, string>>({});
+  const [claimable, setClaimable] = useState<Record<string, string>>({});
+  const [useBy, setUseBy] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+
+  const amountOf = (id: string) => {
+    if (typedAmount[id] !== undefined) return typedAmount[id]!;
+    const r = Number(rate[id]); const q = Number(came[id]); const c = Number(cost[id]);
+    return (rate[id] ?? "").trim() === "" || (cost[id] ?? "").trim() === ""
+      || ![r, q, c].every(Number.isFinite) ? "" : (Math.round(q * c * r) / 100).toFixed(2);
+  };
+  const gstOf = (id: string) => {
+    const given = [rate[id] ?? "", amountOf(id), claimable[id] ?? ""].filter((v) => v.trim() !== "").length;
+    return given === 3
+      ? { gstRate: Number(rate[id]), gstAmount: Number(amountOf(id)), gstClaimable: claimable[id] === "yes" }
+      : given === 0 ? {} : null;
+  };
 
   const submit = async () => {
     setProblem(null);
@@ -513,6 +532,10 @@ function DeliveryDialog({
         setProblem(`The cost of the ${l.item} is zero or more, or nothing at all.`);
         return;
       }
+      if (gstOf(l.id) === null) {
+        setProblem(`GST on the ${l.item} is the rate, the amount and whether it can be claimed - all three, or none.`);
+        return;
+      }
     }
 
     setSaving(true);
@@ -522,6 +545,8 @@ function DeliveryDialog({
         lineId: l.id,
         receivedQuantity: Number(came[l.id]),
         receivedUnitCost: (cost[l.id]?.trim() ?? "") === "" ? null : Number(cost[l.id]),
+        ...gstOf(l.id),
+        ...(useBy[l.id] ? { expiresOn: useBy[l.id] } : {}),
       })),
     });
     setSaving(false);
@@ -539,7 +564,7 @@ function DeliveryDialog({
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent
         title="Record the delivery"
-        className="max-w-2xl"
+        className="max-w-4xl"
         footer={
           <>
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
@@ -551,8 +576,9 @@ function DeliveryDialog({
       >
         <div className="space-y-4">
           <p className="text-sm text-grey-600">
-            What actually came, and what it actually cost. It may differ from
-            what was ordered - both stay on the record. The stock lands in{" "}
+            What actually came, and what it actually cost before GST, with the
+            bill's GST. It may differ from what was ordered - both stay on the
+            record. The stock lands in{" "}
             <span className="font-medium text-ink-900">{store}</span>.
           </p>
 
@@ -566,6 +592,10 @@ function DeliveryDialog({
                   <th className="h-10 text-right">Ordered</th>
                   <th className="h-10 text-right">Came</th>
                   <th className="h-10 text-right">Cost each</th>
+                  <th className="h-10 text-right">GST %</th>
+                  <th className="h-10 text-right">GST amount</th>
+                  <th className="h-10 text-left pl-2">Claimable</th>
+                  <th className="h-10 text-left pl-2">Use by</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-grey-100">
@@ -592,10 +622,56 @@ function DeliveryDialog({
                         placeholder="-"
                       />
                     </td>
+                    <td className="py-2 pl-2">
+                      <Input
+                        aria-label={`GST rate on the ${l.item}, per cent`}
+                        inputMode="decimal" list="delivery-gst-rates"
+                        className="w-[72px] text-right"
+                        value={rate[l.id] ?? ""}
+                        onChange={(e) => setRate((all) => ({ ...all, [l.id]: e.target.value }))}
+                        placeholder="-"
+                      />
+                    </td>
+                    <td className="py-2 pl-2">
+                      <Input
+                        aria-label={`GST amount on the ${l.item}`}
+                        inputMode="decimal"
+                        className="w-[100px] text-right"
+                        value={amountOf(l.id)}
+                        onChange={(e) => setTypedAmount((all) => ({ ...all, [l.id]: e.target.value }))}
+                        placeholder="-"
+                      />
+                    </td>
+                    <td className="py-2 pl-2">
+                      <NativeSelect
+                        aria-label={`Can the GST on the ${l.item} be claimed`}
+                        className="w-[96px]"
+                        value={claimable[l.id] ?? ""}
+                        onChange={(e) => setClaimable((all) => ({ ...all, [l.id]: e.target.value }))}
+                      >
+                        <option value="">-</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </NativeSelect>
+                    </td>
+                    <td className="py-2 pl-2">
+                      <Input
+                        aria-label={`Use by, the ${l.item}`}
+                        type="date"
+                        className="w-[150px]"
+                        value={useBy[l.id] ?? ""}
+                        onChange={(e) => setUseBy((all) => ({ ...all, [l.id]: e.target.value }))}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {/* The GST rates since 22 September 2025; 12 and 28 still typed
+                for an older bill. */}
+            <datalist id="delivery-gst-rates">
+              {[0, 5, 18, 40].map((r) => <option key={r} value={r} />)}
+            </datalist>
           </div>
 
           <Field

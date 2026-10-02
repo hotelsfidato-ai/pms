@@ -193,7 +193,12 @@ export async function recordDelivery(
   hotelId: string, requestId: string,
   input: {
     note?: string;
-    lines: { lineId: string; receivedQuantity: number; receivedUnitCost?: number | null }[];
+    lines: {
+      lineId: string; receivedQuantity: number; receivedUnitCost?: number | null;
+      /** The bill's GST for the line, all three or none, and its use-by
+          (D27-238, D27-242 Q6). */
+      gstRate?: number; gstAmount?: number; gstClaimable?: boolean; expiresOn?: string;
+    }[];
   },
 ): Promise<Result<{
   received: { item: string; quantity: number; store: string; onHandHere: number }[];
