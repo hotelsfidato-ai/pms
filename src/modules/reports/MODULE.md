@@ -51,6 +51,25 @@ most export CSV.
 | Form F / C-Form | `/reports/c-form` | `pages/Compliance.tsx` | search only |
 | Guest ledger | `/reports/guest-ledger` | `pages/Compliance.tsx` | search only |
 | Cashier shift | `/reports/cashier-shift` | `pages/Compliance.tsx` | search only |
+| Closing stock | `/reports/stock-on-hand` | `pages/Store.tsx` | search only |
+| Stock movement by day | `/reports/stock-movements` | `pages/Store.tsx` | search only |
+| Consumption | `/reports/stock-consumption` | `pages/Store.tsx` | search only |
+| Wastage | `/reports/stock-wastage` | `pages/Store.tsx` | search only |
+| Count differences | `/reports/stock-count-differences` | `pages/Store.tsx` | search only |
+| Dead stock | `/reports/stock-dead` | `pages/Store.tsx` | search only |
+| Days of cover | `/reports/stock-cover` | `pages/Store.tsx` | search only |
+| Supplier spend | `/reports/supplier-spend` | `pages/Store.tsx` | search only |
+| Equipment report | `/reports/equipment` | `pages/Store.tsx` | search only |
+
+**The Store and equipment reports (phase 3A; D27-238, D27-240)** are built in
+`api/src/modules/reports/builders/stock.ts` and `equipment.ts`, from the
+Store's ledger and the equipment register. Read by the owner, admin, GM, hotel
+manager, Inventory Manager, accountant and Viewer (roleGate `STORE_REPORTS`;
+the menu's `readsStoreReports`); downloaded by those holding the Store's
+export (reportFiles `STORE_EXPORTERS`). Costs are as recorded, a missing one
+a dash. Places marked **STORES LANE** wait for the stores lane's columns: GST
+on purchases, the running-average cost, a department on issues, expiry dates,
+breakage.
 
 - **The eight in the owner's layout** (D17-62) are Night audit, Manager, City
   ledger, No show, Monthly occupancy, Monthly statistics, Yearly statistics and

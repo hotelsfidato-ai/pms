@@ -11,6 +11,34 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · The Store and equipment reports (phase 3A; D27-238, D27-240)
+
+Branch `reports/stock-3a-2oct` (from cp6 3336a219), copy
+`.claudeworktreeslaughing-jepsen-2b2ea7`, database `fidato_s41`, API 8891, web 5291.
+
+**Asked for:** phase 3A of docs/STOCK-AND-EQUIPMENT-PLAN.md, planned first;
+the owner's answers D27-240 (R-1 readers, R-2 costs as recorded, R-3 dead
+means nothing went out, R-4 days of cover at the last 7 days' use).
+
+**Shipped:** nine builders (`builders/stock.ts`, `builders/equipment.ts`)
+and their keys, routes, read rules (`STORE_REPORTS`), downloads
+(`reportFiles.ts` `STORE_EXPORTERS`, the master's T-2), pages
+(`pages/Store.tsx`), menu entries and the "Store and equipment" group in
+All reports.
+
+**Found:** two labels too long for the sidebar and an order taken by the
+accounting export (navigation.test caught both; renamed "Closing stock" and
+"Supplier spend", orders 150-230).
+
+**Proved:** see the root report of 2 Oct to the master: stockReports.test
+(9) failed first and passes; roleGate, reportFiles, reports; web reports,
+navigation, src/test and primaryAction; screens.
+
+**Left open:** the stores lane's columns (marked STORES LANE); a "Reports"
+link on the Store page for the Inventory Manager (the stores lane, T-1).
+
+---
+
 ## 2026-09-29 · A night not charged yet at a property with no room GST rule: its tax unknown, not a 500 (D27-173) - the leads lane's
 
 **Asked for:** the master, after the leads lane found it: `NIGHTS`' booked
