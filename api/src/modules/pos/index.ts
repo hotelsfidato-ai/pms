@@ -21,3 +21,6 @@ export { outletFor, hashKey, issueKey, addOutlet, type Outlet } from "./pos.ts";
 /* The night audit's restaurant figures name the dishes struck after the
    kitchen had them, from the same list Close restaurant day shows (D27-119). */
 export { struckAfterKitchen } from "./till.ts";
+/* What each outlet sold per day, before GST: the Store's Days view sets the
+   stock issued to an outlet against it (D27-238). */
+export { outletSales } from "./till.ts";

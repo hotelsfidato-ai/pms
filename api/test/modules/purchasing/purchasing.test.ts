@@ -318,6 +318,42 @@ describe("a purchase, end to end", () => {
     expect(await onHandIn(riceId), "nothing reached the shelf").toBe(before);
   });
 
+  it("keeps each line's GST and expiry, on the order and on the Store's receipt; half the GST is refused (D27-238)", async () => {
+    const raised = await call(keeperId, "/purchasing/requests", "POST", {
+      storeId, reason: `${TAG} with GST`,
+      lines: [{ itemId: riceId, quantity: 10, unitPrice: 60 }],
+    });
+    const { request } = await raised.json() as { request: { id: string } };
+    const { rows } = await sql(
+      "select approval_id::text as id from purchase_requests where id = $1", [request.id]);
+    await app.request(`/api/hotels/${HOTEL}/approvals/${rows[0].id}/approved`,
+      { method: "POST", headers: { "x-dev-staff-id": gmId, "content-type": "application/json" }, body: "{}" });
+    await call(keeperId, `/purchasing/requests/${request.id}/order`, "POST", { supplierId });
+    const { rows: ls } = await sql(
+      "select id::text from purchase_request_lines where request_id = $1", [request.id]);
+    const lineId = ls[0]!.id;
+
+    const half = await call(keeperId, `/purchasing/requests/${request.id}/delivery`, "POST", {
+      lines: [{ lineId, receivedQuantity: 10, receivedUnitCost: 60, gstRate: 5 }],
+    });
+    expect(half.status).toBe(409);
+    expect((await half.json() as { reason: string }).reason)
+      .toBe("GST is the rate, the amount and whether it can be claimed - all three, or none.");
+
+    const res = await call(keeperId, `/purchasing/requests/${request.id}/delivery`, "POST", {
+      lines: [{ lineId, receivedQuantity: 10, receivedUnitCost: 60,
+                gstRate: 5, gstAmount: 30, gstClaimable: true, expiresOn: "2027-03-31" }],
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const facts = "gst_rate::text as rate, gst_amount::text as amount, gst_claimable as claimable, expires_on::text as expires";
+    expect((await sql(`select ${facts} from purchase_request_lines where id = $1`, [lineId])).rows[0])
+      .toEqual({ rate: "5.00", amount: "30.00", claimable: true, expires: "2027-03-31" });
+    expect((await sql(
+      `select ${facts} from stock_movements
+        where item_id = $1 and kind = 'receipt' order by id desc limit 1`, [riceId])).rows[0])
+      .toEqual({ rate: "5.00", amount: "30.00", claimable: true, expires: "2027-03-31" });
+  });
+
   it("records nothing coming as 0, not as a receipt of nothing", async () => {
     const raised = await call(keeperId, "/purchasing/requests", "POST", {
       storeId, reason: `${TAG} nothing turned up`,

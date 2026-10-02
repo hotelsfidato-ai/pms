@@ -209,6 +209,35 @@ notifications.get("/:code/notifications", async (c) => {
       }
     }
 
+    /* THE MONTHLY CROCKERY COUNT (D27-242 Q11): for whoever may correct a
+       count, each place holding crockery or cutlery that has not been counted
+       for 30 business days or more - or ever. */
+    if (role !== null && can(role, "edit", "stock")) {
+      const { rows: due } = await client.query<{ place: string; last: string | null }>(
+        `select l.name as place,
+                (select to_char(max(c.business_date), 'FMDD Mon')
+                   from stock_count_lines c join stock_items ci on ci.id = c.item_id
+                  where c.location_id = l.id and ci.crockery) as last
+           from locations l
+          where l.hotel_id = $1 and l.is_active
+            and exists (select 1 from stock_items i
+                         where i.hotel_id = l.hotel_id and i.crockery
+                           and app.stock_on_hand(i.id, l.id) > 0)
+            and not exists (select 1 from stock_count_lines c join stock_items ci on ci.id = c.item_id
+                             where c.location_id = l.id and ci.crockery
+                               and c.business_date > $2::date - 30)
+          order by l.name`, [hotelId, bd]);
+      for (const d of due) {
+        out.push({
+          id: `crockery-count-${d.place}`, hotelId: code, category: "approval",
+          title: `Crockery in ${d.place}: ${d.last ? `last counted ${d.last}` : "never counted"}`,
+          body: "Crockery and cutlery is counted every month. On the Store, Count a store, then choose "
+            + `${d.place}.`,
+          isRead: false, at, link: `/h/${code}/stores`, actionRequired: true,
+        });
+      }
+    }
+
     const reversals = by("reversal");
     if (reversals.length) {
       out.push({

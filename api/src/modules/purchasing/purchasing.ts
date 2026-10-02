@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { renderPdf } from "../../reportRender.ts";
-import { mayDeliverInto, receiveIntoStore } from "../stores/index.ts";
+import { mayDeliverInto, receiveIntoStore, deliveryFactsProblem } from "../stores/index.ts";
 import { orderDocument, type OrderLine } from "./orderDocument.ts";
 import {
   VIEW_ROLES, SETTING_KEEPERS, PURCHASING_REFUSED, hasRoleAt, mayRaise,
@@ -88,6 +88,26 @@ export const STATE_WORDS: Record<PurchaseState, string> = {
   received: "Delivered",
   cancelled: "Cancelled",
 };
+
+/** What is on its way: each line of an order sent and not yet delivered.
+    The Store's "Awaiting delivery" tile reads it (D27-238); its caller has
+    asked its own grant first. Read only. */
+export async function awaitingDelivery(
+  client: Client, hotelId: string,
+): Promise<{ itemId: string; storeId: string; quantity: number; reference: string }[]> {
+  const { rows } = await client.query<{
+    item_id: string; store_id: string; quantity: string; reference: string;
+  }>(
+    `select pl.item_id::text, r.store_id::text, pl.quantity::text, r.reference
+       from purchase_requests r
+       join purchase_request_lines pl on pl.request_id = r.id
+      where r.hotel_id = $1 and r.status = 'ordered'
+      order by r.ordered_at, r.reference, pl.line_no`,
+    [hotelId]);
+  return rows.map((r) => ({
+    itemId: r.item_id, storeId: r.store_id, quantity: Number(r.quantity), reference: r.reference,
+  }));
+}
 
 interface RequestRow {
   id: string; reference: string; status: string; reason: string;
@@ -587,7 +607,12 @@ purchasing.post("/:code/purchasing/requests/:id/cancel", async (c) => {
 purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
   type Body = {
     note?: string;
-    lines?: { lineId?: string; receivedQuantity?: number; receivedUnitCost?: number | null }[];
+    lines?: {
+      lineId?: string; receivedQuantity?: number; receivedUnitCost?: number | null;
+      /** The bill's GST for the line, all three or none, and its expiry (D27-238). */
+      gstRate?: number | null; gstAmount?: number | null; gstClaimable?: boolean | null;
+      expiresOn?: string | null;
+    }[];
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
   const lines = input.lines ?? [];
@@ -605,6 +630,9 @@ purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
         && (!Number.isFinite(Number(l.receivedUnitCost)) || Number(l.receivedUnitCost) < 0)) {
       return c.json(refuse("A cost is zero or more, or nothing at all."), 409);
     }
+    /* The Store's own check, before anything is written (MEMORY 243). */
+    const facts = deliveryFactsProblem(l);
+    if (facts) return c.json(refuse(facts), 409);
   }
 
   const result = await withSession(c.get("subject"), async (client, session) => {
@@ -671,11 +699,14 @@ purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
 
       /* BOTH FIGURES STAY. `quantity` is what was ordered and is never
          written over; this is what turned up beside it. */
+      const gst = l.gstRate === undefined || l.gstRate === null ? null : l;
       await client.query(
         `update purchase_request_lines
-            set received_quantity = $1, received_unit_cost = $2
+            set received_quantity = $1, received_unit_cost = $2,
+                gst_rate = $4, gst_amount = $5, gst_claimable = $6, expires_on = $7::date
           where id = $3`,
-        [qty, cost, l.lineId]);
+        [qty, cost, l.lineId, gst?.gstRate ?? null, gst?.gstAmount ?? null,
+         gst?.gstClaimable ?? null, l.expiresOn || null]);
 
       /* Nothing came of this one: recorded as 0 above, and no movement -
          a receipt of nothing is not a receipt. */
@@ -688,6 +719,8 @@ purchasing.post("/:code/purchasing/requests/:id/delivery", async (c) => {
         unitCost: cost,
         supplier: order.supplier,
         reference: order.reference,
+        gstRate: gst?.gstRate ?? null, gstAmount: gst?.gstAmount ?? null,
+        gstClaimable: gst?.gstClaimable ?? null, expiresOn: l.expiresOn || null,
       });
       /* Everything that can refuse a whole delivery was asked above, so
          a refusal here is a fault, not a decision. THROWN, so the
