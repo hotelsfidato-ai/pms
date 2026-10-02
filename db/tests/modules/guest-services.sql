@@ -140,3 +140,142 @@ end $$;
 
 select set_config('app.user_id',
        (select id::text from staff where email = 'owner@fidato.in'), false);
+
+-- =============================================================================
+-- THE ROOM AND THE PHONE (D27-235 2.4) and DIGILOCKER (D27-235 2.5)
+-- =============================================================================
+-- Refers to its migrations by what they do - "the room and the phone",
+-- "DigiLocker". Every function is called here directly (OCI-5).
+do $$
+declare
+  h uuid; other uuid; clerk uuid; guest uuid; stay uuid; booked uuid; stay_other uuid;
+  r101 uuid; r102 uuid; o101 uuid; link uuid;
+  n int; ok boolean; v text;
+  t1 text := repeat('a', 64); t2 text := repeat('b', 64); t3 text := repeat('c', 64);
+  t4 text := repeat('d', 64); t5 text := repeat('e', 64);
+begin
+  h     := app.provision_property_unchecked('GRP','Room Phone Test','Nowhere');
+  other := app.provision_property_unchecked('GRQ','Room Phone Other','Nowhere');
+  perform app.bulk_create_rooms(h,     'STD', 1::smallint, 101, 102);
+  perform app.bulk_create_rooms(other, 'STD', 1::smallint, 101, 101);
+  select id into r101 from rooms where hotel_id = h and number = '101';
+  select id into r102 from rooms where hotel_id = h and number = '102';
+  select id into o101 from rooms where hotel_id = other and number = '101';
+
+  insert into staff (email, full_name) values ('grp-clerk@fidato.in', 'Room Phone Clerk')
+  on conflict (email) do update set is_active = true returning id into clerk;
+  delete from staff_hotels where staff_id = clerk;
+  insert into staff_hotels (staff_id, hotel_id, role) values (clerk, h, 'front_desk'), (clerk, other, 'front_desk');
+  perform set_config('app.user_id', clerk::text, true);
+
+  insert into guests (full_name, phone) values ('Room Phone Guest', '+91 98765 43210') returning id into guest;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+  values (h, app.next_reference(h), guest, (select id from room_types where hotel_id = h limit 1),
+          app.business_date(h), app.business_date(h) + 2, 2000, 'checked_in') returning id into stay;
+  insert into room_assignments (hotel_id, reservation_id, room_id, from_date, to_date, reason)
+  values (h, stay, r101, app.business_date(h), app.business_date(h) + 2, 'arrival');
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+  values (h, app.next_reference(h), guest, (select id from room_types where hotel_id = h limit 1),
+          app.business_date(h), app.business_date(h) + 1, 2000, 'confirmed') returning id into booked;
+  insert into room_assignments (hotel_id, reservation_id, room_id, from_date, to_date, reason)
+  values (h, booked, r102, app.business_date(h), app.business_date(h) + 1, 'arrival');
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+  values (other, app.next_reference(other), guest,
+          (select id from room_types where hotel_id = other limit 1),
+          app.business_date(other), app.business_date(other) + 1, 2000, 'checked_in') returning id into stay_other;
+  insert into room_assignments (hotel_id, reservation_id, room_id, from_date, to_date, reason)
+  values (other, stay_other, o101, app.business_date(other), app.business_date(other) + 1, 'arrival');
+
+  -- ---------- the room and the phone ----------------------------------------
+  ok := app.guest_room_phone_link('GRP', '101', '98765 43210', t1);
+  select count(*) into n from guest_links
+   where token_hash = t1 and reservation_id = stay and origin = 'room-phone';
+  perform test.ok('guest-services', 'the room and the booking''s phone make a link for that stay',
+    ok and n = 1, coalesce(ok::text, 'null') || ', ' || n || ' links');
+
+  select phone into v from app.guest_code_make(t1);
+  perform test.ok('guest-services', 'and its code goes to the booking''s own number',
+    v = '+91 98765 43210', coalesce(v, 'no number'));
+
+  ok := app.guest_room_phone_link('GRP', '101', '98765 43211', t2);
+  select count(*) into n from guest_links where token_hash = t2;
+  perform test.ok('guest-services', 'a wrong phone makes nothing', not ok and n = 0, n || ' links');
+
+  ok := app.guest_room_phone_link('GRP', '102', '98765 43210', t2);
+  select count(*) into n from guest_links where token_hash = t2;
+  perform test.ok('guest-services', 'a room whose guest has not checked in makes nothing',
+    not ok and n = 0, n || ' links');
+
+  ok := app.guest_room_phone_link('GRQ', '102', '98765 43210', t2);
+  select count(*) into n from guest_links where token_hash = t2;
+  perform test.ok('guest-services', 'a room the hotel does not have makes nothing',
+    not ok and n = 0, n || ' links');
+
+  ok := app.guest_room_phone_link('GRP', '101', '43210', t2);
+  perform test.ok('guest-services', 'a number shorter than ten digits makes nothing', not ok, 'accepted');
+
+  perform app.guest_room_phone_link('GRP', '101', '9876543210', t2);
+  perform app.guest_room_phone_link('GRP', '101', '9876543210', t3);
+  ok := app.guest_room_phone_link('GRP', '101', '9876543210', t4);
+  select count(*) into n from guest_links where token_hash = t4;
+  perform test.ok('guest-services', 'three links an hour for a stay, then nothing',
+    not ok and n = 0, n || ' links');
+
+  ok := app.guest_code_answer(t5, '123456', repeat('f', 64));
+  perform test.ok('guest-services', 'a ticket that matched nothing opens nothing', not ok, 'opened');
+
+  -- ---------- DigiLocker ------------------------------------------------------
+  select id into link from guest_links where token_hash = t1;
+  ok := app.guest_digilocker_begin(t5, repeat('1', 64), repeat('v', 43));
+  perform test.ok('guest-services', 'DigiLocker: a dead link begins nothing', not ok, 'began');
+
+  ok := app.guest_digilocker_begin(t1, repeat('1', 64), repeat('v', 43));
+  perform test.ok('guest-services', 'DigiLocker: a live link begins an attempt', ok, 'refused');
+  ok := app.guest_digilocker_answer(repeat('1', 64), '9876543210', 'xxxxxxxx1234', 'R Guest', repeat('9', 64));
+  perform test.ok('guest-services', 'DigiLocker: an answer before the verifier is taken is refused',
+    not ok, 'answered');
+
+  ok := app.guest_digilocker_begin(t1, repeat('2', 64), repeat('v', 43));
+  v := app.guest_digilocker_take(repeat('2', 64));
+  perform test.ok('guest-services', 'DigiLocker: the verifier comes back once',
+    v = repeat('v', 43) and app.guest_digilocker_take(repeat('2', 64)) is null, coalesce(v, 'null'));
+  ok := app.guest_digilocker_answer(repeat('2', 64), '+91 99999 00000', 'xxxxxxxx1234', 'R Guest', repeat('8', 64));
+  select count(*) into n from guest_unlocks where unlock_hash = repeat('8', 64);
+  perform test.ok('guest-services', 'DigiLocker: another mobile unlocks nothing',
+    not ok and n = 0, n || ' unlocks');
+  ok := app.guest_digilocker_answer(repeat('2', 64), '9876543210', 'xxxxxxxx1234', 'R Guest', repeat('8', 64));
+  perform test.ok('guest-services', 'DigiLocker: an attempt answers once', not ok, 'answered twice');
+
+  insert into guest_detail_submissions (hotel_id, reservation_id, guest_id, id_type, id_number, address_line)
+  values (h, stay, guest, 'voter', 'ABC1234567', '12 MG Road');
+  ok := app.guest_digilocker_begin(t1, repeat('3', 64), repeat('v', 43));
+  perform app.guest_digilocker_take(repeat('3', 64));
+  ok := app.guest_digilocker_answer(repeat('3', 64), '+919876543210', 'xxxx-xxxx-1234', ' R Guest ', repeat('7', 64));
+  select count(*) into n from guest_unlocks where unlock_hash = repeat('7', 64) and link_id = link;
+  perform test.ok('guest-services', 'DigiLocker: the booking''s mobile unlocks this phone',
+    ok and n = 1, n || ' unlocks');
+  select count(*) into n from guest_detail_submissions
+   where reservation_id = stay and status = 'waiting' and id_type = 'aadhaar'
+     and id_number = 'xxxxxxxx1234' and source = 'digilocker' and id_name = 'R Guest'
+     and address_line = '12 MG Road';
+  perform test.ok('guest-services', 'DigiLocker: the masked ID waits for the desk, the typed address kept',
+    n = 1, n || ' such submissions');
+
+  -- ---------- clean up --------------------------------------------------------
+  delete from guest_digilocker_attempts where hotel_id in (h, other);
+  delete from guest_detail_submissions where hotel_id in (h, other);
+  delete from guest_unlocks where link_id in (select id from guest_links where hotel_id in (h, other));
+  delete from guest_link_codes where link_id in (select id from guest_links where hotel_id in (h, other));
+  delete from guest_links where hotel_id in (h, other);
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id in (h, other);
+  alter table hotels enable trigger hotels_no_delete;
+  delete from staff_hotels where staff_id = clerk;
+  update staff set is_active = false where id = clerk;
+  select count(*) into n from hotels where code in ('GRP', 'GRQ');
+  perform test.ok('guest-services', 'the room-and-phone fixtures do not outlive the test',
+    n = 0, n || ' left');
+end $$;
+
+select set_config('app.user_id',
+       (select id::text from staff where email = 'owner@fidato.in'), false);
