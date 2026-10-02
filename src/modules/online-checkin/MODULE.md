@@ -3,7 +3,9 @@
 A guest gives their ID and address before they arrive, from a page nobody else
 can open, and the desk checks them against the ID instead of typing them.
 
-**BUILT 21 September, on branch `online-checkin/guest-page`, not deployed.**
+**LIVE since the launch of 2 October (server adc8e846, the launch set D27-232).**
+Built 21 September on branch `online-checkin/guest-page`; everything below,
+the in-stay sections (D27-223 to D27-225) included, is in that release.
 The owner's answers: D18-9 to D18-13 (`docs/briefs/decisions-2026-09-18.md`)
 and D21-6 to D21-19, D21-25, D21-29, D21-59 to D21-63, D21-72, D21-75
 (`docs/briefs/decisions-2026-09-21.md`). The design is
@@ -76,9 +78,11 @@ put back (CHANGELOG, 21 September).
    (`app.guest_google_answer`). A match hands out the same unlock as a right
    code and nothing else: no session, no guest role, and NO Firebase user -
    no guest ever sits in the project staff sign in to. Every failure reads
-   the same sentence. Google's script is not in the bundle: the page fetches
-   it from accounts.google.com only when the guest presses the button
-   (`googleSignIn.ts`). Offered only where the server has the client id and,
+   the same sentence. **No script of Google's runs on the page (OCI-10,
+   2 October):** the press sends the whole tab to Google's own sign-in with a
+   nonce and a state (`googleRedirect.ts`); Google answers at `/g-return` in
+   the fragment, the guest's link never goes to Google, and the door checks
+   the nonce too (`pages/GoogleReturn.tsx`). Offered only where the server has the client id and,
    on a booking's link, the booking an email.
 5. **Every refusal takes the same shape** — behind the code, a refused call
    answers what an unknown link answers: 404 and one sentence.
@@ -138,6 +142,7 @@ put back (CHANGELOG, 21 September).
 | Name | Address | Page file | Who |
 |---|---|---|---|
 | — (no menu entry, ever) | `/g/:token` | `pages/GuestPage.tsx` | **the guest**, signed out; mounted outside `RequireSession` (`publicRoutes`) |
+| — (no menu entry, ever) | `/g-return` | `pages/GoogleReturn.tsx` | **the guest**, signed out: where Google sends them back after "Continue with Google" (OCI-10); outside `RequireSession` too |
 | Online check-in (Front desk) | `/h/:code/online-checkin` | `pages/Desk.tsx` | exactly `DESK_ROLES` — the menu's `canSee` in `nav.ts`, also in reception's own menu (D21-89, the master, `d6cef4a`); behind `RequireAccess` |
 
 ⚠ **`DESK_ROLES` is written twice and must stay one list:** the server's in
@@ -192,6 +197,12 @@ Coming soon page and its address are gone.
   too: the hotel's own, else the group's, as an `<img>` on the door's
   `/logo`. Decorative (`alt=""`: the name is printed under it); where there
   is none, or it does not load, nothing is drawn.
+- **The hotel's photos (D27-243)** - by rule 8: `GallerySection.tsx`,
+  `api/src/routes/guestGallery.ts`, the definers `app.guest_gallery` (behind
+  the unlock) and `app.guest_gallery_photo` (one picture on the link alone, as
+  the logo is) in 187. Added on Settings → Property (admin). Lazy, cached a
+  day, counted in the door's own bucket for pictures; nginx gives them their
+  own zone. Hidden when the hotel has none.
 - **"A table at the restaurant" (D27-224)** - the POS lane's, by rule 8:
   `TableBooking.tsx`, `api/src/routes/guestTables.ts`, the definers
   `app.guest_table_*` (172). Any night of the stay, a slot the restaurant

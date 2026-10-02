@@ -2493,6 +2493,28 @@ export async function struckAfterKitchen(
   }));
 }
 
+/** What each outlet sold per business day, BEFORE GST - the till's own
+    `taxable` (lines less discount), settled bills only. The Store sets the
+    stock issued to an outlet against it (D27-238). Unlike reports' posSales,
+    a bill charged to a room or to a function COUNTS: it was food sold here,
+    whichever folio it went to. Read only. */
+export async function outletSales(
+  client: Client, hotelId: string, from: string, to: string,
+): Promise<{ outletId: string; date: string; net: number }[]> {
+  const { rows } = await client.query<{ outlet_id: string; date: string; net: string }>(
+    `select o.outlet_id::text, to_char(o.business_date, 'YYYY-MM-DD') as date,
+            sum(t.taxable)::text as net
+       from pos_orders o
+       cross join lateral app.pos_order_total(o.id) t
+      where o.hotel_id = $1 and o.status = 'settled'
+        and o.business_date between $2::date and $3::date
+      group by 1, 2
+      order by 2, 1`,
+    [hotelId, from, to],
+  );
+  return rows.map((r) => ({ outletId: r.outlet_id, date: r.date, net: Number(r.net) }));
+}
+
 till.post("/:code/till/orders/:id/lines/:lineId/void", async (c) => {
   const input = await c.req.json<{ reason?: string }>().catch(() => ({}) as { reason?: string });
   const reason = input.reason?.trim() || undefined;

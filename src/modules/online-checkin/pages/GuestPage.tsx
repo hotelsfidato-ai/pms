@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import RoomDining from "@/modules/online-checkin/RoomDining";
 import { useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,9 +11,9 @@ import {
 } from "@/components/ui";
 import {
   dropUnlock, getBill, getDetails, getIdPhoto, getRequests, logoAddress, makeRequest, openGuestPage,
-  sendCode, sendDetails, sendIdPhoto, verifyCode, verifyWithGoogle, type Details, type GuestPageView,
+  sendCode, sendDetails, sendIdPhoto, verifyCode, type Details, type GuestPageView,
 } from "@/modules/online-checkin/data/guestPage";
-import { loadGoogleSignIn } from "@/modules/online-checkin/googleSignIn";
+import { continueWithGoogle } from "@/modules/online-checkin/googleRedirect";
 import { IdPhotoInputs, type ChosenPhotos } from "@/modules/online-checkin/IdPhotoInputs";
 import { idPhotoNotice } from "@/modules/online-checkin/idPhotoNotice";
 import { shrinkPhoto } from "@/modules/online-checkin/shrinkPhoto";
@@ -25,6 +25,9 @@ import { privacyNoticeFor } from "@/modules/online-checkin/privacyNotice";
 import { MessageTheDesk } from "@/modules/online-checkin/MessageTheDesk";
 import { QuickChoices, hasQuickChoices } from "@/modules/online-checkin/QuickChoices";
 import { TableBookingSection } from "@/modules/online-checkin/TableBooking";
+import { DigiLockerButton } from "@/modules/online-checkin/DigiLockerButton";
+import { WakeUpSection } from "@/modules/online-checkin/WakeUpSection";
+import { GallerySection } from "@/modules/online-checkin/GallerySection";
 import { BillPrint } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -280,7 +283,9 @@ function ProveIt(
               Send the code by email
             </Button>
           )}
-          {byGoogle && <WithGoogle token={token} clientId={view.googleClientId!} onVerified={onVerified} />}
+          {byGoogle && <WithGoogle token={token} clientId={view.googleClientId!} />}
+          {/* DigiLocker, another way in (D27-235); shows nothing while it is off. */}
+          {view.digilocker && <DigiLockerButton token={token} />}
           {/* The door's sentence, printed as it came. */}
           <p className="text-sm text-grey-600 empty:hidden" aria-live="polite">
             {asked.isPending ? "Sending the code…"
@@ -322,60 +327,19 @@ function ProveIt(
   );
 }
 
-/* ── Continue with Google (D27-207) ──────────────────────────────────
-   Our button first; Google's script is fetched only when it is pressed
-   (googleSignIn.ts) and then draws Google's own button in its place, which
-   opens Google's window. What Google hands back goes to the door as it
-   came; the door decides. */
-function WithGoogle(
-  { token, clientId, onVerified }:
-  { token: string; clientId: string; onVerified: () => void },
-) {
-  const box = useRef<HTMLDivElement>(null);
-  const [state, setState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
-  const answered = useMutation({
-    mutationFn: (credential: string) => verifyWithGoogle(token, credential),
-    onSuccess: (r) => { if (r.verified) onVerified(); },
-  });
-  const { mutate: check } = answered;
-
-  const show = async () => {
-    setState("loading");
-    try {
-      const google = await loadGoogleSignIn();
-      google.initialize({
-        client_id: clientId,
-        callback: (answer) => { if (answer.credential) check(answer.credential); },
-      });
-      google.renderButton(box.current!, {
-        type: "standard", theme: "outline", size: "large", text: "continue_with",
-        /* Google's limits are 200 to 400; the box itself is hidden until the
-           button is in it, so its parent is measured. */
-        width: Math.min(400, Math.max(200, box.current!.parentElement!.clientWidth)),
-      });
-      setState("ready");
-    } catch {
-      setState("failed");
-    }
-  };
-
+/* ── Continue with Google (D27-207; OCI-10) ──────────────────────────
+   Our button, and the whole tab goes to Google's own sign-in page
+   (googleRedirect.ts). No script of Google's ever runs here. The answer
+   comes back to /g-return (pages/GoogleReturn.tsx), which posts it to the
+   door; the door decides. A way in of its own, so another (DigiLocker) sits
+   beside it as one more line. */
+function WithGoogle({ token, clientId }: { token: string; clientId: string }) {
+  const [leaving, setLeaving] = useState(false);
   return (
-    <div className="flex flex-col gap-3">
-      {state !== "ready" && (
-        <Button variant="secondary" disabled={state === "loading"} onClick={() => void show()}>
-          {state === "loading" ? "Opening Google…" : "Continue with Google"}
-        </Button>
-      )}
-      {/* Google draws its own button in here. */}
-      <div ref={box} className={state === "ready" ? "flex justify-center" : "hidden"} />
-      <p className="text-sm text-grey-600 empty:hidden" aria-live="polite">
-        {answered.isPending ? "Checking with Google…"
-          : answered.error ? messageFrom(answered.error)
-          : state === "ready" ? "Press the Google button and choose the account with the email on the booking."
-          : state === "failed" ? "Google could not be reached. Try again, or use a code."
-          : null}
-      </p>
-    </div>
+    <Button variant="secondary" disabled={leaving}
+      onClick={() => { setLeaving(true); continueWithGoogle(token, clientId); }}>
+      {leaving ? "Opening Google…" : "Continue with Google"}
+    </Button>
   );
 }
 
@@ -404,6 +368,11 @@ function Behind(
       <TableBookingSection token={token} onUnlockGone={onUnlockGone} />
       <MessageTheDesk token={token} onUnlockGone={onUnlockGone} />
       <RoomDining token={token} onUnlockGone={onUnlockGone} />
+      {view.booking && (
+        <WakeUpSection token={token} checkIn={view.booking.checkIn} checkOut={view.booking.checkOut}
+          onUnlockGone={onUnlockGone} />
+      )}
+      <GallerySection token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
     </>
   );
 }

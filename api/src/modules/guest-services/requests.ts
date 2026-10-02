@@ -53,7 +53,7 @@ export const requests = new Hono<{ Variables: { subject: string } }>();
 type Session = { staffId: string; isGroupAdmin: boolean };
 
 /** The property, and the person's role there - `owner` for a group administrator. */
-async function placeAndRole(client: Client, session: Session, code: string) {
+export async function placeAndRole(client: Client, session: Session, code: string) {
   const { rows } = await client.query<{ id: string; role: Role | null }>(
     `select h.id::text,
             (select role from staff_hotels where staff_id = $2 and hotel_id = h.id) as role

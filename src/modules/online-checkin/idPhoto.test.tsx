@@ -32,7 +32,7 @@ const BOOKING = {
   room: null, occupied: true,
   booking: { reference: "FH-2609-5001", guestName: "A. Guest", checkIn: "2026-08-25", checkOut: "2026-08-27", status: "confirmed" },
   verified: true, phoneHint: "…4321", emailHint: null, canSendCodes: true, cannotSend: null,
-  googleClientId: null, offers: [] as string[],
+  googleClientId: null, digilocker: false, offers: [] as string[],
 };
 const DETAILS_WAITING = { sent: { status: "waiting", submittedAt: "2026-08-24T09:00:00Z", idType: "passport", idLastFour: "0001" } };
 const PHOTO = { offered: true, maySend: true, contact: "02181 000000", sent: null as unknown, removed: null as string | null };

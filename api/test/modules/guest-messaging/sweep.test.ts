@@ -47,7 +47,10 @@ const guests: string[] = [];
 const booking = new Map<string, string>();
 
 let server: Server;
-let received: Array<{ kind: string; channel: string; data: Record<string, string> }> = [];
+let received: Array<{ kind: string; channel: string; data: Record<string, string>;
+  messageId: string; file?: { name: string; base64: string } }> = [];
+/** D27-235: the receiver refuses every email while this is set. */
+let refuseEmail = false;
 /** The sales inbox told first (D27-104): a WhatsApp the CRS sends is marked
     booked in the market-to-revenue workflow before it goes. */
 let marks: string[] = [];
@@ -112,6 +115,7 @@ beforeAll(async () => {
       const body = JSON.parse(raw);
       if (body.action === "mark") marks.push(body.data?.reference);
       else received.push(body);
+      if (refuseEmail && body.channel === "email" && body.action !== "mark") { res.writeHead(500).end("no"); return; }
       res.writeHead(200).end("sent");
     });
   });
@@ -147,6 +151,7 @@ afterAll(async () => {
 beforeEach(async () => {
   received = [];
   marks = [];
+  refuseEmail = false;
   process.env["CRS_N8N_URL"] = process.env["M2R_N8N_URL"] = `http://127.0.0.1:${(server.address() as AddressInfo).port}/pms-send`;
   process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
   process.env["CRS_N8N_SECRET"] = process.env["M2R_N8N_SECRET"] = SECRET;
@@ -168,15 +173,21 @@ describe("the sweep, as the server runs it", () => {
   it("sends each owed confirmation once, with a link that opens that guest's page", async () => {
     const out = await runOnce(asTheSweep, mine);
 
-    expect(out).toEqual({ due: 3, attempted: 3, sent: 3, nowhereToSend: 0, waiting: 0 });
-    expect(received.map((m) => m.data["reference"])).toEqual(["GMW-1", "GMW-2", "GMW-3"]);
-    expect(marks, "each guest marked booked in the sales inbox first").toEqual(["GMW-1", "GMW-2", "GMW-3"]);
-    expect(received.every((m) => m.kind === KIND.confirmation && m.channel === "whatsapp"))
-      .toBe(true);
+    /* Each WhatsApp guest: the confirmation, then the CRS's voucher with the
+       PDF (D27-241) - six messages for three bookings. */
+    expect(out).toEqual({ due: 6, attempted: 6, sent: 6, nowhereToSend: 0, waiting: 0 });
+    expect(received.map((m) => `${m.data["reference"]} ${m.kind}`)).toEqual([
+      "GMW-1 booking-confirmation", "GMW-1 booking-voucher",
+      "GMW-2 booking-confirmation", "GMW-2 booking-voucher",
+      "GMW-3 booking-confirmation", "GMW-3 booking-voucher",
+    ]);
+    expect(marks, "each WhatsApp marked booked in the sales inbox first")
+      .toEqual(["GMW-1", "GMW-1", "GMW-2", "GMW-2", "GMW-3", "GMW-3"]);
+    expect(received.every((m) => m.channel === "whatsapp")).toBe(true);
 
     /* The link is the guest's only way in, and the database holds only its
        hash: opening it proves the two match. */
-    const token = received[0]!.data["link"]!.split("/g/")[1]!;
+    const token = received.find((m) => m.kind === KIND.confirmation)!.data["link"]!.split("/g/")[1]!;
     const page = await app.request(`/api/guest/${token}`);
     expect(page.status).toBe(200);
     const body = await page.json() as { kind: string; booking: { reference: string } };
@@ -205,14 +216,15 @@ describe("the sweep, as the server runs it", () => {
 
     const out = await runOnce(asTheSweep, mine, makeLink);
 
-    expect(out).toEqual({ due: 3, attempted: 2, sent: 2, nowhereToSend: 0, waiting: 0 });
-    expect((await recorded()).map((r) => r.about_id).sort())
+    /* GMW-2's confirmation fell over; its voucher, which needs no link, went. */
+    expect(out).toEqual({ due: 6, attempted: 5, sent: 5, nowhereToSend: 0, waiting: 0 });
+    expect((await recorded()).filter((r) => r.kind === KIND.confirmation).map((r) => r.about_id).sort())
       .toEqual([booking.get("GMW-1"), booking.get("GMW-3")].sort());
 
     /* So the next minute sends only the one that failed - not all three. */
     received = [];
     await runOnce(asTheSweep, mine);
-    expect(received.map((m) => m.data["reference"])).toEqual(["GMW-2"]);
+    expect(received.map((m) => `${m.data["reference"]} ${m.kind}`)).toEqual(["GMW-2 booking-confirmation"]);
   });
 
   it("is refused a link for a booking that stopped being confirmed", async () => {
@@ -251,7 +263,12 @@ describe("the sweep, as the server runs it", () => {
     try {
       await runOnce(asTheSweep, mine);
       const forTheGroup = received.filter((m) => m.data["reference"]!.startsWith("GMW-G"));
-      expect(forTheGroup.map((m) => m.data["reference"])).toEqual(["GMW-G1"]);
+      expect(forTheGroup.map((m) => `${m.data["reference"]} ${m.kind}`))
+        .toEqual(["GMW-G1 booking-confirmation", "GMW-G1 booking-voucher"]);
+      /* D27-241 (Q5): the group's WhatsApp voucher lists the whole group. */
+      const voucher = forTheGroup.find((m) => m.kind === "booking-voucher")!;
+      expect(voucher.data["roomTypes"]).toMatch(/^3 x /);
+      expect(voucher.data["guests"]).toBe("3 adults");
 
       /* Covered: the next minute owes the group nothing - not even once the
          room the message was about is cancelled. */
@@ -264,6 +281,81 @@ describe("the sweep, as the server runs it", () => {
       await sql("delete from messages_sent where about_id = any($1::text[])", [rooms]);
       await sql("delete from reservations where id = any($1::uuid[])", [rooms]);
       await sql("delete from reservation_groups where id = $1", [group]);
+    }
+  });
+});
+
+/* ── Both ways, and the voucher on WhatsApp (D27-235, D27-241) ──────── */
+
+describe("the voucher both ways (D27-235, D27-241)", () => {
+  const office = async () => ((await sql("select phone from group_settings where id = 1")).rows[0]?.phone ?? null) as string | null;
+
+  it("confirms a guest who agreed to WhatsApp and has an email BOTH ways, then the WhatsApp voucher - each once", async () => {
+    await sql("update guests set email = 'sweep.guest1@example.test' where id = $1", [guests[0]]);
+    try {
+      await runOnce(asTheSweep, mine);
+      const one = received.filter((m) => m.data["reference"] === "GMW-1");
+      expect(one.map((m) => `${m.kind} ${m.channel}`).sort()).toEqual([
+        "booking-confirmation email", "booking-confirmation whatsapp", "booking-voucher whatsapp",
+      ]);
+      expect(new Set(one.map((m) => m.messageId)).size, "each its own message").toBe(3);
+
+      /* The email carries the PDF; the WhatsApp voucher the PDF and its eight
+         fields, from the same facts; the WhatsApp confirmation the link. */
+      const email = one.find((m) => m.channel === "email")!;
+      expect(Buffer.from(email.file!.base64, "base64").subarray(0, 5).toString("latin1")).toBe("%PDF-");
+      const voucher = one.find((m) => m.kind === "booking-voucher")!;
+      expect(Buffer.from(voucher.file!.base64, "base64").subarray(0, 5).toString("latin1")).toBe("%PDF-");
+      const type = (await sql(
+        "select rt.name from reservations r join room_types rt on rt.id = r.room_type_id where r.id = $1",
+        [booking.get("GMW-1")])).rows[0].name as string;
+      expect(voucher.data).toMatchObject({
+        guestName: "Sweep Guest 1", reference: "GMW-1", hotelName: "Sweep Test",
+        roomTypes: `1 x ${type}`, guests: "1 adult", officePhone: (await office()) ?? "-",
+      });
+      expect(voucher.data["checkInLong"]).toMatch(/^\d{2} [A-Z][a-z]{2,3} \d{4}$/);
+      expect(voucher.data).not.toHaveProperty("link");
+      expect(one.find((m) => m.kind === "booking-confirmation" && m.channel === "whatsapp")!.data["link"])
+        .toContain("/g/");
+
+      /* And the next minute, none of them again. */
+      received = [];
+      await runOnce(asTheSweep, mine);
+      expect(received.filter((m) => m.data["reference"] === "GMW-1")).toEqual([]);
+    } finally {
+      await sql("update guests set email = null where id = $1", [guests[0]]);
+    }
+  });
+
+  it("counts each way's tries on its own: a refused email stops at three, and WhatsApp went once", async () => {
+    await sql("update guests set email = 'sweep.guest1@example.test' where id = $1", [guests[0]]);
+    refuseEmail = true;
+    try {
+      for (let i = 0; i < 4; i += 1) await runOnce(asTheSweep, mine);
+      const tries = (await sql(
+        `select kind, channel, status, count(*)::int as n from messages_sent
+          where hotel_id = $1 and about_id = $2 group by 1, 2, 3 order by 1, 2, 3`,
+        [hotelId, booking.get("GMW-1")])).rows;
+      expect(tries).toEqual([
+        { kind: "booking-confirmation", channel: "email", status: "failed", n: 3 },
+        { kind: "booking-confirmation", channel: "whatsapp", status: "sent", n: 1 },
+        { kind: "booking-voucher", channel: "whatsapp", status: "sent", n: 1 },
+      ]);
+    } finally {
+      await sql("update guests set email = null where id = $1", [guests[0]]);
+    }
+  });
+
+  it("confirms an unticked guest by email only, and sends no WhatsApp voucher", async () => {
+    await sql("update guests set email = 'sweep.guest2@example.test' where id = $1", [guests[1]]);
+    await sql("update reservations set whatsapp_agreed = false where id = $1", [booking.get("GMW-2")]);
+    try {
+      await runOnce(asTheSweep, mine);
+      expect(received.filter((m) => m.data["reference"] === "GMW-2").map((m) => `${m.kind} ${m.channel}`))
+        .toEqual(["booking-confirmation email"]);
+    } finally {
+      await sql("update guests set email = null where id = $1", [guests[1]]);
+      await sql("update reservations set whatsapp_agreed = true where id = $1", [booking.get("GMW-2")]);
     }
   });
 });

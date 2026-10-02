@@ -44,7 +44,7 @@ engine is how direct bookings — which pay no commission — would grow.
 
 | Menu name | Address (`routes.tsx`) | Page file | Who sees it (`nav.ts`) |
 |---|---|---|---|
-| Booking engine | `/coming-soon/booking-engine` | `pages/BookingEngine.tsx` | owner, admin, GM — the Coming soon section (`seesComingSoon`) |
+| - | - | - | none: removed from the plan (D27-180); the Coming soon page, its menu entry and its address went on 2 October (D27-239 8.1) |
 
 The page is the shared Coming soon page (`src/pages/ComingSoon.tsx`) with
 this service's words: what it will do, what it needs, where it stands.

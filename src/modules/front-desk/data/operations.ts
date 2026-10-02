@@ -453,3 +453,16 @@ export const mealPlanChoices = (current: string) =>
   current === "Room Only"
     ? [...MEAL_PLAN_CHOICES, { value: "Room Only", label: "RO · Room only" }]
     : MEAL_PLAN_CHOICES;
+
+/** Whether this stay checks in by express (D27-236 3.4, D27-242): an Indian
+    guest whose ID the desk confirmed from THIS stay's online check-in. The
+    server decides; the document comes back masked to its last four. */
+export async function expressCheckIn(
+  hotelId: string, stayId: string,
+): Promise<{ express: boolean; document?: { type: string; number: string } }> {
+  try {
+    return await api(`/api/hotels/${hotelId}/stays/${stayId}/express-check-in`);
+  } catch {
+    return { express: false };
+  }
+}

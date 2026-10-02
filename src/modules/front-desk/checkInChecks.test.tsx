@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import * as apiModule from "@/lib/api";
@@ -58,8 +58,9 @@ describe("the check-in, on one page", () => {
     );
     const cont = () => screen.getAllByRole("button", { name: /Check in/ }).at(-1) as HTMLButtonElement;
     fireEvent.click(await screen.findByRole("button", { name: /Check in/ }));
-    await screen.findByText("204");
+    await screen.findByText("Room 204");
 
+    fireEvent.click(screen.getByRole("button", { name: "Change adults and children" }));
     fireEvent.change(screen.getByLabelText("Adults"), { target: { value: "0" } });
     expect(cont().disabled).toBe(true);
     expect(document.querySelector("[data-party-wrong]")?.textContent)
@@ -94,6 +95,64 @@ describe("the check-in, on one page", () => {
     fireEvent.click(await screen.findByText("204"));
     expect(cont().disabled).toBe(false);
     expect(document.querySelector("[data-checkin-blocked]")).toBeNull();
+  });
+});
+
+/* THE OWNER'S D27-236 (2 October): the check-in laid out like New booking -
+   the room given on one line with Change room, the grid only when needed;
+   the party and the meal plan as they stand, each with Change. D27-242:
+   an Indian guest whose ID this stay's own online check-in confirmed is not
+   asked again; the server decides. */
+describe("the check-in, laid out like New booking", () => {
+  async function open() {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>
+          <CheckInFlow hotelId="5EL" stay={STAY} businessDate="2026-08-25" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /Check in/ }));
+  }
+
+  it("shows the given room on one line, and the rooms only after Change room", async () => {
+    await open();
+    expect((await screen.findByText("Room 204")).closest("[data-checkin-room]")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /^204/ })).toBeNull();
+    expect(document.querySelector("[data-checkin-stay]")?.textContent).toContain("2 adults · 0 children");
+    fireEvent.click(screen.getByRole("button", { name: "Change room" }));
+    expect(screen.getByRole("button", { name: /^204/ })).toBeTruthy();
+  });
+
+  const express = () => vi.spyOn(operations, "expressCheckIn").mockResolvedValue({
+    express: true, document: { type: "aadhaar", number: "••••••••9012" },
+  });
+
+  it("takes the ID confirmed online for this stay, and sends none", async () => {
+    express();
+    let sent: Parameters<typeof operations.checkIn>[2] | null = null;
+    vi.spyOn(operations, "checkIn").mockImplementation(async (_h, _s, input) => {
+      sent = input;
+      return { ok: true, data: STAY };
+    });
+    await open();
+    expect((await screen.findByText(/ID confirmed from online check-in/)).textContent)
+      .toContain("Aadhaar ••••••••9012");
+    expect(screen.queryByLabelText("Document")).toBeNull();
+    const buttons = screen.getAllByRole("button", { name: /Check in/ });
+    fireEvent.click(buttons[buttons.length - 1]!);
+    await waitFor(() => expect(sent).not.toBeNull());
+    expect(sent!.identity).toEqual({ nationality: "IN" });
+    expect(sent!.idSkipReason).toBe("");
+  });
+
+  it("asks for the ID again on Use a different ID", async () => {
+    express();
+    await open();
+    fireEvent.click(await screen.findByRole("button", { name: "Use a different ID" }));
+    expect(screen.getByLabelText("Document")).toBeTruthy();
+    expect(screen.queryByText(/ID confirmed from online check-in/)).toBeNull();
   });
 });
 

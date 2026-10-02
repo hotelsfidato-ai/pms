@@ -24,7 +24,7 @@ const VIEW = {
   booking: { reference: "FH-2609-5001", guestName: "A. Guest",
              checkIn: "2026-08-25", checkOut: "2026-08-27", status: "checked_in" },
   verified: true, phoneHint: "…4321", emailHint: null, canSendCodes: true,
-  cannotSend: null, googleClientId: null,
+  cannotSend: null, googleClientId: null, digilocker: false,
   offers: ["housekeeping", "maintenance", "fnb"],
 };
 

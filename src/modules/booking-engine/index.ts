@@ -1,6 +1,5 @@
-/* Booking engine — NOT BUILT. A Coming soon page only (the owner's decision,
-   16 September): `pages/BookingEngine.tsx`, its menu entry (`nav.ts`) and its address
-   (`routes.tsx`). No other service uses anything from here yet, so this
-   front door exports nothing. What the service will be, and what it needs,
-   is in MODULE.md beside this file. */
+/* Booking engine — REMOVED FROM THE PLAN (the owner's D27-180, 2 October):
+   the channel manager's booking engine is used instead. Its Coming soon page,
+   menu entry and address are gone (D27-239 8.1); `nav.ts` and `routes.tsx`
+   stay empty so the menu and App.tsx need no change. MODULE.md says why. */
 export {};

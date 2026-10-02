@@ -403,7 +403,10 @@ The server's door, `api/src/modules/pos/index.ts`, exports `mounts` and
 `outletFor` through it. `api/scripts/pos-outlet.ts` and `api/test/modules/pos/pos.test.ts`
 import `hashKey` and `issueKey` through it as well (the script `addOutlet` too).
 It also exports `struckAfterKitchen` (28 September), which the night audit reads
-for its restaurant figures - the same list Close restaurant day shows.
+for its restaurant figures - the same list Close restaurant day shows - and
+`outletSales` (2 October, D27-238, added by the Store lane): each outlet's
+settled sales per business day before GST (`pos_order_total`'s `taxable`),
+room and function bills included, which the Store sets its issues against.
 
 ---
 
