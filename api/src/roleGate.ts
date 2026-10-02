@@ -756,6 +756,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* ── Store, equipment, purchasing, places ── */
   [`GET ${H}/stores`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/stores/items/:id/movements`]: own("stores/stockGrants.ts: mayStock"),
+  [`GET ${H}/stores/days`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/equipment`]: own("equipment/grants.ts"),
   [`GET ${H}/equipment/items/:id`]: own("equipment/grants.ts"),
   [`GET ${H}/equipment/export`]: own("equipment/grants.ts"),

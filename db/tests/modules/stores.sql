@@ -217,7 +217,7 @@ end $$;
 -- =============================================================================
 do $$
 declare
-  h uuid; other uuid; main uuid; theirs uuid;
+  h uuid; other uuid; main uuid; theirs uuid; restaurant uuid; lobby uuid;
   keeper uuid; rice uuid; plate uuid; theirs_item uuid;
   req uuid; line uuid; line_no_gst uuid;
   n bigint;
@@ -232,8 +232,10 @@ begin
   insert into staff_hotels (staff_id, hotel_id, role) values (keeper, h, 'stores');
 
   insert into stock_items (hotel_id, name, unit) values (h, 'Rice', 'kg') returning id into rice;
-  insert into stock_items (hotel_id, name, unit) values (h, 'Dinner plate', 'piece') returning id into plate;
+  insert into stock_items (hotel_id, name, unit, crockery) values (h, 'Dinner plate', 'piece', true) returning id into plate;
   insert into stock_items (hotel_id, name, unit) values (other, 'Rice', 'kg') returning id into theirs_item;
+  insert into locations (hotel_id, name, kind) values (h, 'Restaurant', 'restaurant') returning id into restaurant;
+  insert into locations (hotel_id, name, kind) values (h, 'GST lobby', 'public_area') returning id into lobby;
 
   -- ---------- GST on a delivery: rate, amount, claimable - all three or none ----------
   perform test.allows('stores gst', 'a delivery records its GST: rate, amount, claimable',
@@ -299,6 +301,28 @@ begin
   perform test.raises('stores breakage', 'a breakage carries no cost',
     format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost)
               values (%L, %L, %L, app.business_date(%L), 'breakage', -1, 10)$q$, h, plate, main, h), '23514');
+  perform test.raises('stores breakage', 'breakage is crockery''s - anything else is waste',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity)
+              values (%L, %L, %L, app.business_date(%L), 'breakage', -1)$q$, h, rice, main, h), '23514');
+
+  -- ---------- crockery in use at an outlet place ----------
+  perform app.transfer_stock(plate, main, restaurant, 4, keeper, 'Into use');
+  perform test.ok('stores crockery', 'crockery moves into use at a restaurant place',
+    app.stock_on_hand(plate, restaurant) = 4 and app.stock_on_hand(plate, main) = 3);
+  perform test.allows('stores crockery', 'and breaks there, with who',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, broken_by)
+              values (%L, %L, %L, app.business_date(%L), 'breakage', -1, %L)$q$, h, plate, restaurant, h, keeper));
+  perform test.allows('stores crockery', 'its par is a level at that place',
+    format($q$insert into stock_levels (hotel_id, item_id, location_id, reorder_level)
+              values (%L, %L, %L, 6)$q$, h, plate, restaurant));
+  perform test.raises('stores crockery', 'anything else at a restaurant place is refused',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity)
+              values (%L, %L, %L, app.business_date(%L), 'adjustment', 1)$q$, h, rice, restaurant, h), '23514');
+  perform test.raises('stores crockery', 'and crockery is not kept in a lobby',
+    format($q$insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity)
+              values (%L, %L, %L, app.business_date(%L), 'adjustment', 1)$q$, h, plate, lobby, h), '23514');
+  perform test.ok('stores crockery', 'every hotel counts food cost before GST (Q5)',
+    (select food_cost_basis from hotels where id = h) = 'before_gst');
 
   -- ---------- every line of a count is kept ----------
   perform test.allows('stores counts', 'a counted line is kept, matched or not',

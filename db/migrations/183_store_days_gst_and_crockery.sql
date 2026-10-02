@@ -16,6 +16,9 @@
 --     broken_by (a breakage's), and the kind `breakage` (out, like waste)
 --   * purchase_request_lines: the same GST three and expires_on, set when the
 --     delivery is received
+--   * stock_items.crockery: crockery and cutlery, which may be in use at a
+--     restaurant, a bar or a kitchen place; breakage is only theirs
+--   * hotels.food_cost_basis = 'before_gst' everywhere (the owner's Q5)
 --   * stock_count_lines: every counted line, matched or not, append-only
 --   * app.stock_movement_costs(item): the running-average walk, ONE function so
 --     a change to its rules is one change; app.stock_unit_cost(item) keeps its
@@ -96,6 +99,87 @@ drop trigger if exists stock_movements_broken_by_scope on stock_movements;
 create trigger stock_movements_broken_by_scope
   before insert on stock_movements
   for each row execute function app.assert_staff_has_hotel('broken_by');
+
+
+-- -----------------------------------------------------------------------------
+-- Crockery and cutlery (2A; the owner's answers of 2 October, D27-242)
+-- -----------------------------------------------------------------------------
+-- A plate issued to the restaurant is not used up: it is IN USE there until it
+-- breaks or comes back. So a crockery item may also sit at a place of kind
+-- restaurant, bar or kitchen - a place the hotel adds in Places and suppliers;
+-- this creates none. A move puts it there, a level there is its par, the count
+-- sheet counts it there, and a breakage is written where it broke.
+alter table stock_items
+  add column if not exists crockery boolean not null default false;
+
+comment on column stock_items.crockery is
+  'Crockery and cutlery (D27-242): may be in use at a restaurant, a bar or a '
+  'kitchen as well as kept in a store; it leaves by breakage, with who.';
+
+-- 112's check, with that one exception. It serves stock_levels and
+-- stock_count_lines too (140, above), so a par and a count may be at the place.
+create or replace function app.stock_movement_place()
+returns trigger
+language plpgsql
+as $$
+declare v_hotel uuid; v_kind text;
+begin
+  if new.location_id is null then
+    new.location_id := app.main_store(new.hotel_id);
+  end if;
+
+  select l.hotel_id, l.kind into v_hotel, v_kind
+    from locations l where l.id = new.location_id;
+  if v_hotel is null or v_hotel <> new.hotel_id then
+    raise exception 'That store is not at this property.' using errcode = 'check_violation';
+  end if;
+  if v_kind <> 'store' then
+    if v_kind in ('restaurant', 'bar', 'kitchen')
+       and exists (select 1 from stock_items i where i.id = new.item_id and i.crockery) then
+      return new;
+    end if;
+    raise exception 'Stock is kept only in a store.' using errcode = 'check_violation';
+  end if;
+  return new;
+end $$;
+
+-- Breakage is crockery's (Q10). Anything else that spoils is waste.
+create or replace function app.stock_breakage_is_crockery()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.kind = 'breakage' and not exists (
+       select 1 from stock_items i where i.id = new.item_id and i.crockery) then
+    raise exception 'Breakage is recorded for crockery and cutlery. Anything else is waste.'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists stock_movements_breakage_crockery on stock_movements;
+create trigger stock_movements_breakage_crockery
+  before insert on stock_movements
+  for each row execute function app.stock_breakage_is_crockery();
+
+
+-- -----------------------------------------------------------------------------
+-- How the food cost is counted (Q5, the owner: costs before GST over sales
+-- before GST)
+-- -----------------------------------------------------------------------------
+-- Set for every hotel, and every new one, so the % shows. Kept as a column so
+-- the CA can change it; null shows the % as a dash. Another basis is another
+-- value here, built when it is chosen.
+alter table hotels
+  add column if not exists food_cost_basis text default 'before_gst';
+
+comment on column hotels.food_cost_basis is
+  'How the Store counts food cost % (D27-242): before_gst is the stock issued, '
+  'valued before GST, over the till''s sales before GST. Null shows a dash.';
+
+alter table hotels drop constraint if exists hotels_food_cost_basis_known;
+alter table hotels add constraint hotels_food_cost_basis_known check (
+  food_cost_basis is null or food_cost_basis = 'before_gst');
 
 
 -- -----------------------------------------------------------------------------

@@ -12,3 +12,6 @@ export const mounts: readonly Mount[] = [
    Equipment starts receiving against an order (phase 1B's other half),
    what it needs goes here. */
 export { stateOf, STATE_WORDS, type PurchaseState } from "./purchasing.ts";
+/* What is on order and not yet delivered: the Store's "Awaiting delivery"
+   tile (D27-238). */
+export { awaitingDelivery } from "./purchasing.ts";
