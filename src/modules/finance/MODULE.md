@@ -47,7 +47,7 @@ a screen (Ctrl K).
 | Payments (Finance) | `/h/:code/payments` | `pages/Billing.tsx` (`PaymentsPage`) | none |
 | Cashiering (Finance) | `/h/:code/cashiering` | `pages/Cashiering.tsx` | Reception |
 | Cash deposits (Finance) | `/h/:code/cash-deposits` | `pages/CashDeposits.tsx` | none (owner, Admin, GM, accountant, Viewer; D27-191) |
-| Company accounts (Finance) | `/h/:code/city-ledger` | `pages/Billing.tsx` (`PropertyCityLedgerPage`) | none |
+| Company accounts (Finance) | `/h/:code/city-ledger` | `pages/Billing.tsx` (`PropertyCityLedgerPage`) + `flows/CompanyPayments.tsx` | none - Opening, Sent, Received, Balance (the City ledger report's); Record payment (desk or accounts) and Payments received with Reverse (D27-239, D27-242) |
 
 Six addresses, five page files. Menu gates (`nav.ts`): Folios and Invoices
 `invoice`; Payments and Cashiering `payment`; Company accounts `commission`.
@@ -111,9 +111,19 @@ of the old `inventorySetup.ts` (`3ca215d`).
 |---|---|---|
 | GET | `/:code/cashier-shift` | the drawer this person is holding (`app.cashier_expected_cash`), with `received` - the kept floats it took up and from whose close; with none open, `waiting` - the float handed to them by name (`app.cashier_float_waiting`) - and their last close's count, float kept and for whom (D27-202). A read opens nothing |
 | POST | `/:code/cashier-shift/open` | open it BY HAND on a counted float - blank refused, 0 only when typed (D27-190, FIN-21). How a desk's first float gets in; every other drawer opens by itself (D27-200). What was handed to the person is taken up by it, never added on top |
-| POST | `/:code/cashier-shift/movements` | money in or out of the drawer; opens the drawer by itself if none is open (D27-200) |
+| POST | `/:code/cashier-shift/movements` | money in or out of the drawer; opens the drawer by itself if none is open (D27-200). A paid-out (`expense`) is raised in the approvals inbox (kind `cash_expense`) and counts only once the GM or the owner says yes (D27-242); GET shows each one's decision and `waiting`, and the close asks a reason only beyond what waits |
 | POST | `/:code/cashier-shift/count` | count it, by denomination |
 | POST | `/:code/cashier-shift/close` | close and hand over, with `keptCash` - the float kept, always typed, 0 to counted; above 0 it needs `handOverTo`, the next person's name (D27-201, D27-202); the rest is to deposit. If that person's drawer is already open the float is added to its opening and taken up at once |
+
+**`api/src/modules/finance/companyPayments.ts`** (2 October, D27-239, D27-242)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/:code/company-payments` | what companies and booking sites paid (reversals beside their lines), the ledger's accounts for the picker, and the ways to pay. `invoice` view |
+| POST | `/:code/company-payments` | record one against a company OR a booking site (the account the City ledger names): amount, received on (not after the business date), bank transfer / cheque / UPI / card (never cash, D27-242), reference, note. `payment` create - the desk or accounts |
+| POST | `/:code/company-payments/:id/reverse` | a line of its own, once, with a reason. `payment` edit - the owner, an administrator, the GM, the accountant (D27-125) |
+
+Its front door also exports `companyReceipts` (the day book's receipts, D27-242 Q4).
 
 **`api/src/modules/finance/deposits.ts`** (30 September, D27-190, D27-191)
 
@@ -187,6 +197,7 @@ migrations that made or changed them:
 | `vat_bills`, `vat_bill_series` | VAT bills for alcohol and their credit notes (D22-44): their own series per hotel, `VAT/5EL/2026-27/0001`, opened by the year's first bill so it restarts each 1 April | "a separate VAT bill for alcohol" (135 in this branch: `app.next_vat_bill_number`, `app.issue_vat_bill`; 025's immutability trigger) |
 | `invoices`, `invoice_series` | tax invoices and credit notes, numbered from a statutory series | created `011_model_additions.sql` (`app.next_invoice_number`); `013_policies.sql` (numbering protected), `014_simulation_fixes.sql` (the first invoice at a property), `016_audit_coverage.sql` (a series only moves forward), `025_invoices_form_c.sql` (the GST fields, credit notes, never edited, a series opened for each new property); "the FSSAI number on the invoice" (145 in this branch: `fssai_number`, copied from the hotel at issue and printed from there, D27-3) |
 | `cashier_shifts`, `cashier_movements`, `cashier_denominations` | the desk's drawer | created `059_cashier_shift.sql` (`app.cashier_expected_cash`; a closed shift is final); "the cash deposits log" (163: `kept_cash`, the float kept at the close) |
+| `company_payments` | what a company or booking site paid against the City ledger (D27-239): append-only (insert/read; a reversal is its own line, once); bank, cheque, UPI or card | "company payments and cash expenses" (184 for now). The same migration seeds every hotel's `cash_expense` approval rule (the GM, also the owner, every amount, a trigger for new hotels) and `app.cash_expense_counts`, which both drawers' expected-cash functions now ask |
 | `cashier_float_claims` | which drawer took up the float a close kept (D27-200): the primary key is the close, so a float is carried into one drawer, once | "cash opens by itself" (165: `app.cashier_float_waiting`; also `app.pos_opening_cash` for the till, and `app.pos_expected_cash` reading it). **A close that kept a float with nobody named - made before D27-201 - is never carried: it stays unclaimed** |
 | `cash_deposits`, `cash_deposit_notes` | cash banked per business day, and why a day's deposits differ (D27-190) | "the cash deposits log" (163: append-only - insert and read, the verification stamp once; `app.cash_to_deposit`, also over `pos_day_ends.kept_cash`) |
 | `tax_rules` | GST as rules, one set for the desk and the till — and VAT on alcohol (kind `alcohol`) | created `067_tax_rules.sql` (`app.gst_rate`; the tax kind on outlets and menu categories); `119_the_spa.sql` (`spa`); "alcohol, a switch per property, and the VAT it is taxed under" (126 in this branch: `alcohol` as a kind and a menu heading, `folio_postings.tax_scheme` and `pos_order_lines.tax_scheme` gst/vat, a reversal takes its original's scheme, `app.pos_order_by_tax`, `app.stay_bill`'s `vat` rows) |

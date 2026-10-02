@@ -225,7 +225,7 @@ floor       GET    /:code/till/floor
 day end     GET    /:code/till/day-end
             POST   /:code/till/day-end/open       (an outlet's FIRST-EVER float, counted once; every day after opens by
                                                    itself on the float the last close kept - app.pos_opening_cash, D27-200)
-            POST   /:code/till/day-end/movements
+            POST   /:code/till/day-end/movements    (a paid-out waits for the GM's or owner's yes, D27-242)
             POST   /:code/till/day-end/count
             POST   /:code/till/day-end/close
 setup       GET    /:code/till/setup                        D22-6 (25 Sep): the restaurant (the REST outlet), its
