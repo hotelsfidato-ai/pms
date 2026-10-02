@@ -1,13 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { Building2, Wallet } from "lucide-react";
+import { Building2, Wallet, Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateTime, dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
-  Page, PageHeader, Card, DataTable, StatusPill, Skeleton, EmptyState, FigureRow, FigureTile,
+  Page, PageHeader, Card, DataTable, StatusPill, Skeleton, EmptyState, FigureRow, FigureTile, Button,
   type Column,
 } from "@/components/ui";
+import { can } from "@/lib/permissions";
+import { useRole } from "@/lib/session";
+import { getCompanyPayments } from "@/modules/finance/data/companyPayments";
+import { RecordCompanyPayment, PaymentsReceived } from "@/modules/finance/flows/CompanyPayments";
 import { listPayments, paymentsByMethod, type PaymentRow } from "@/modules/finance/data/billing";
 import { BUSINESS_DATE, PTD_FROM } from "@/data/repositories";
 import { getReport } from "@/modules/reports";
@@ -160,38 +165,62 @@ export function PaymentsPage() {
    payment, the guest's own included - so Agoda owed ₹0 here while the City
    ledger report said ₹5,999.70 had been sent to it "Bill to company". It now
    shows that report's own figures, read through reports' door: what was sent
-   to each company or booking site in the period. What each has paid back is
-   not recorded by this system yet, so Received and Balance are a dash - the
-   report's rule, never a zero. */
-interface LedgerRow { account: string; debit: number }
+   to each company or booking site in the period. What each paid back is
+   recorded here now (D27-239): Opening, Received and Balance are the
+   report's own, so the two can never disagree. */
+interface LedgerRow { account: string; opening: number; debit: number; credit: number; closing: number }
 
+const amount = (v: number) => <span className="tabular">{money(v)}</span>;
 const LEDGER_COLUMNS: Column<LedgerRow>[] = [
   { key: "account", header: "Account", cell: (r) => <span className="font-medium">{r.account}</span> },
-  { key: "debit", header: "Sent to the account", numeric: true, cell: (r) => <span className="tabular">{money(r.debit)}</span> },
-  { key: "credit", header: "Received", numeric: true, cell: () => <span className="text-grey-500">-</span> },
-  { key: "closing", header: "Balance", numeric: true, cell: () => <span className="text-grey-500">-</span> },
+  { key: "opening", header: "Opening", numeric: true, hideBelow: "md", cell: (r) => amount(r.opening) },
+  { key: "debit", header: "Sent to the account", numeric: true, cell: (r) => amount(r.debit) },
+  { key: "credit", header: "Received", numeric: true, cell: (r) => amount(r.credit) },
+  { key: "closing", header: "Balance", numeric: true, cell: (r) => <span className="tabular font-medium">{money(r.closing)}</span> },
 ];
 
 export function PropertyCityLedgerPage() {
   const hotelId = useHotel();
+  const role = useRole();
+  const qc = useQueryClient();
+  const [recording, setRecording] = useState(false);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["city-ledger", hotelId, PTD_FROM, BUSINESS_DATE],
     queryFn: () => getReport(hotelId, "city-ledger", { from: PTD_FROM, asOn: BUSINESS_DATE }),
   });
+  const paid = useQuery({
+    queryKey: ["company-payments", hotelId],
+    queryFn: () => getCompanyPayments(hotelId),
+  });
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ["city-ledger", hotelId] });
+    void qc.invalidateQueries({ queryKey: ["company-payments", hotelId] });
+  };
 
   const section = data?.sections.find((s) => s.key === "accounts");
+  const figure = (v: unknown) => Number(v ?? 0);
   const rows: LedgerRow[] = (section?.rows ?? [])
     .filter((r) => r.kind === "row")
-    .map((r) => ({ account: String(r.cells["account"] ?? "-"), debit: Number(r.cells["debit"] ?? 0) }));
-  const sent = rows.reduce((t, r) => t + r.debit, 0);
+    .map((r) => ({
+      account: String(r.cells["account"] ?? "-"), opening: figure(r.cells["opening"]),
+      debit: figure(r.cells["debit"]), credit: figure(r.cells["credit"]), closing: figure(r.cells["closing"]),
+    }));
+  const owed = rows.reduce((t, r) => t + r.closing, 0);
+  /* The desk or accounts records (D27-239); the four of D27-125 reverse. */
+  const mayRecord = can(role, "create", "payment");
 
   return (
     <Page>
       <PageHeader
         title="Company accounts"
-        description={`Bills sent to a company or booking site, ${dateLong(PTD_FROM)} to ${dateLong(BUSINESS_DATE)}.`}
-        badge={data ? <StatusPill tone={sent ? "warning" : "success"}>{money(sent)} sent to accounts</StatusPill> : undefined}
+        description={`What each company or booking site owes and paid, ${dateLong(PTD_FROM)} to ${dateLong(BUSINESS_DATE)}.`}
+        badge={data ? <StatusPill tone={owed > 0 ? "warning" : "success"}>{money(owed)} owed</StatusPill> : undefined}
+        actions={mayRecord && paid.data ? (
+          <Button variant="primary" className="h-11" onClick={() => setRecording(true)}>
+            <Plus className="size-4" /> Record payment
+          </Button>
+        ) : undefined}
       />
       <Card>
         <DataTable<LedgerRow>
@@ -208,9 +237,17 @@ export function PropertyCityLedgerPage() {
         />
       </Card>
       <p className="text-xs text-grey-500 mt-4 leading-relaxed">
-        The same figures as the City ledger report under Reports. Received and Balance
-        show "-": this system does not record a company's payment yet.
+        The same figures as the City ledger report under Reports. Opening is what was owed
+        before {dateLong(PTD_FROM)}; Received is what the account paid, by the day it reached the hotel.
       </p>
+      {paid.data && (
+        <PaymentsReceived hotelId={hotelId} view={paid.data}
+                          mayReverse={can(role, "edit", "payment")} onDone={refresh} />
+      )}
+      {recording && paid.data && (
+        <RecordCompanyPayment hotelId={hotelId} view={paid.data}
+                              onClose={() => setRecording(false)} onDone={refresh} />
+      )}
     </Page>
   );
 }

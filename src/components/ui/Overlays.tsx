@@ -29,6 +29,8 @@ export interface DialogContentProps {
   /** sm 420 · md 560 · lg 760 · xl 980 */
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
+  /** False for a dialog that must be answered: no close button. */
+  closable?: boolean;
 }
 
 const DIALOG_SIZES = {
@@ -39,7 +41,7 @@ const DIALOG_SIZES = {
 };
 
 export function DialogContent({
-  title, description, children, footer, size = "md", className,
+  title, description, children, footer, size = "md", className, closable = true,
 }: DialogContentProps) {
   return (
     <DialogPrimitive.Portal>
@@ -64,12 +66,12 @@ export function DialogContent({
               </DialogPrimitive.Description>
             )}
           </div>
-          <DialogPrimitive.Close
+          {closable && <DialogPrimitive.Close
             className="text-grey-500 hover:text-ink-900 hover:bg-grey-100 rounded-sm p-1 -m-1 pointer-coarse:p-3.5 pointer-coarse:-m-3.5 transition-colors duration-150"
             aria-label="Close"
           >
             <X className="size-4" />
-          </DialogPrimitive.Close>
+          </DialogPrimitive.Close>}
         </div>
 
         <div className="px-5 py-4 overflow-y-auto scrollbar-quiet">{children}</div>

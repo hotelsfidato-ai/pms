@@ -94,8 +94,16 @@ export interface DayBookRow {
   /** GST on everything. VAT is `vat`. */
   tax: number;
   receipt: number;
+  /** What companies and booking sites paid against the City ledger that
+      day (D27-242): receipts, apart from sales and from `receipt`. */
+  companyReceipt: number;
   /** Whether the night audit has closed this day. */
   closed: boolean;
+}
+
+/** One company receipt (D27-242): what a Tally receipt voucher will be made from. */
+export interface CompanyReceiptLine {
+  date: string; account: string; method: string; reference: string | null; amount: number;
 }
 
 export type DayBookTotal = Omit<DayBookRow, "date" | "closed">;
@@ -112,6 +120,9 @@ export interface DayBook {
   days: DayBookRow[];
   total: DayBookTotal;
   openDays: string[];
+  /** Optional to the reader: an answer kept on a device from before
+      D27-242 has none (MEMORY 360). */
+  companyReceipts?: CompanyReceiptLine[];
 }
 
 /**

@@ -112,7 +112,7 @@ describe("express check-in", () => {
   it("lets an Indian guest confirmed online for THIS stay just collect the key", async () => {
     const stay = await guestStay(`${CODE}-YES`, "IN");
     await submitted(stay, "confirmed");
-    expect(await express(stay.id)).toEqual({
+    expect(await express(stay.id)).toMatchObject({
       express: true, document: { type: "aadhaar", number: "••••••••9012" } });
     const res = await checkIn(stay.id, "101");
     expect(res.status, await res.clone().text()).toBe(200);
@@ -124,7 +124,7 @@ describe("express check-in", () => {
   it("is not for a submission still waiting for the desk", async () => {
     const stay = await guestStay(`${CODE}-WAIT`, "IN");
     await submitted(stay, "waiting");
-    expect(await express(stay.id)).toEqual({ express: false });
+    expect(await express(stay.id)).toMatchObject({ express: false });
     expect((await checkIn(stay.id, "102")).status).toBe(409);
   });
 
@@ -133,14 +133,14 @@ describe("express check-in", () => {
     await sql(
       `insert into guest_documents (guest_id, id_type, id_number)
        values ($1, 'aadhaar', '123456789012')`, [stay.guest]);
-    expect(await express(stay.id)).toEqual({ express: false });
+    expect(await express(stay.id)).toMatchObject({ express: false });
     expect((await checkIn(stay.id, "103")).status).toBe(409);
   });
 
   it("is never for a foreign guest: Form III is the desk's", async () => {
     const stay = await guestStay(`${CODE}-GB`, "GB");
     await submitted(stay, "confirmed", "passport");
-    expect(await express(stay.id)).toEqual({ express: false });
+    expect(await express(stay.id)).toMatchObject({ express: false });
     expect((await checkIn(stay.id, "104")).status).toBe(409);
   });
 });

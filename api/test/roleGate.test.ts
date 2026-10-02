@@ -223,6 +223,13 @@ describe("who reads what (D27-140 to D27-147)", () => {
       .toEqual(["owner", "admin", "gm", "finance"]);
   });
 
+  it("D27-239: a company's payment is the desk's or accounts', reversed by the four of D27-125", () => {
+    expect(whoMay(rule(`POST ${H}/company-payments`)))
+      .toEqual(["owner", "admin", "gm", "hotel_manager", "front_desk", "finance"]);
+    expect(whoMay(rule(`POST ${H}/company-payments/:id/reverse`)))
+      .toEqual(["owner", "admin", "gm", "finance"]);
+  });
+
   it("D27-190: the restaurant's day is opened by whoever closes it", () => {
     expect(whoMay(rule(`POST ${H}/till/day-end/open`)))
       .toEqual(whoMay(rule(`POST ${H}/till/day-end/close`)));
@@ -247,6 +254,14 @@ describe("who reads what (D27-140 to D27-147)", () => {
       expect(whoMay(rule(key)), key).toEqual(["owner", "admin", "gm"]);
     }
     expect(whoMay(rule(`POST ${H}/companies`))).toEqual(["owner", "admin", "gm", "front_desk"]);
+  });
+
+  it("D27-240: the Store and equipment reports are the owner's, an administrator's, the GM's, the hotel manager's, the Inventory Manager's, the accountant's and the Viewer's", () => {
+    for (const key of ["stock-on-hand", "stock-movements", "stock-consumption", "stock-wastage",
+      "stock-count-differences", "stock-dead", "stock-cover", "supplier-spend", "equipment"]) {
+      expect(who(`GET ${H}/reports/${key}`), key)
+        .toEqual(["owner", "admin", "gm", "hotel_manager", "stores", "finance", "read_only"]);
+    }
   });
 });
 
@@ -898,5 +913,13 @@ describe("a write route nobody mapped", () => {
 describe("the Store's fourteen days (D27-238, D27-242)", () => {
   it("is the Store's own read: whoever sees the Store; the sales in it are the route's to withhold", () => {
     expect(READ_RULES[`GET ${H}/stores/days`]).toEqual(READ_RULES[`GET ${H}/stores`]);
+  });
+});
+
+describe("Settings, security (D27-243 phase 5, D27-245)", () => {
+  it("leaves the activity log and sign-ins to their routes' own answers, and the password check to the person", () => {
+    expect(READ_RULES[`GET ${H}/activity`]).toMatchObject({ kind: "own" });
+    expect(READ_RULES[`GET /api/admin/staff/:id/sign-ins`]).toMatchObject({ kind: "own" });
+    expect(READ_RULES[`GET /api/me/password`]).toEqual({ kind: "self" });
   });
 });

@@ -31,6 +31,18 @@ export const noGuestId = (nationality = "IN"): GuestId => ({
   particulars: NO_PARTICULARS, expiredOk: false,
 });
 
+/** The desk's empty ID started on the hotel's defaults (the owner's D27-243
+    3.6): its nationality, and its ID type for a guest of that nationality -
+    never an Aadhaar for a guest from abroad. */
+export const deskGuestId = (
+  rules?: { defaultNationality: string; defaultIdType: string | null } | null,
+  nationality?: string | null,
+): GuestId => {
+  const home = rules?.defaultNationality ?? "IN";
+  const n = nationality ?? home;
+  return { ...noGuestId(n), idType: n === home ? rules?.defaultIdType ?? "" : "" };
+};
+
 /** What the boxes say, and the one reason a check-in cannot go yet
     (null when it can). `today` is the hotel's business date. */
 export function guestIdState(id: GuestId, today: string) {

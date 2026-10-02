@@ -85,7 +85,17 @@ export type ReportKey =
   | "monthly-occupancy"
   | "monthly-statistics"
   | "yearly-statistics"
-  | "lodging-tax";
+  | "lodging-tax"
+  /* The Store and the equipment register (phase 3A, D27-238, D27-240). */
+  | "stock-on-hand"
+  | "stock-movements"
+  | "stock-consumption"
+  | "stock-wastage"
+  | "stock-count-differences"
+  | "stock-dead"
+  | "stock-cover"
+  | "supplier-spend"
+  | "equipment";
 
 export const REPORT_KEYS: readonly ReportKey[] = [
   "night-audit",
@@ -96,6 +106,22 @@ export const REPORT_KEYS: readonly ReportKey[] = [
   "monthly-statistics",
   "yearly-statistics",
   "lodging-tax",
+  "stock-on-hand",
+  "stock-movements",
+  "stock-consumption",
+  "stock-wastage",
+  "stock-count-differences",
+  "stock-dead",
+  "stock-cover",
+  "supplier-spend",
+  "equipment",
+];
+
+/** The Store and equipment reports (phase 3A): read by D27-240's readers,
+    not by the `report` grant (api/src/roleGate.ts STORE_REPORTS). */
+export const STORE_REPORT_KEYS: readonly ReportKey[] = [
+  "stock-on-hand", "stock-movements", "stock-consumption", "stock-wastage",
+  "stock-count-differences", "stock-dead", "stock-cover", "supplier-spend", "equipment",
 ];
 
 export interface ReportParams {

@@ -15,12 +15,14 @@ import { getPropertyDetail, PROPERTY_TYPES } from "@/modules/admin/data/admin";
 import { switchesModules } from "@/modules/admin/moduleSwitchRoles";
 import { GroupCard, HotelLogoCard } from "@/modules/admin/components/GroupCard";
 import { HotelGalleryCard } from "@/modules/admin/components/HotelGalleryCard";
+import { SigningIn } from "@/modules/admin/components/SigningIn";
 import { BankDetailsCard, HousePoliciesCard } from "@/modules/admin/components/VoucherSettings";
 import { CommissioningCard } from "@/modules/admin/flows/CommissioningCard";
 import { ModulesCard, BOOKING_SECTION, SettingRow, SettingValues } from "@/modules/admin/pages/Admin";
 import { EditPropertyDialog } from "@/modules/admin/pages/Properties";
 import { FssaiCard } from "@/modules/admin/pages/Property";
 import { FrontDeskCard } from "@/modules/inventory";
+import { FrontDeskRulesCard } from "@/modules/front-desk";
 import { TaxRulesCard } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -81,7 +83,9 @@ const LINKS: Partial<Record<TabKey, { to: string; note: string }[]>> = {
   "people": [
     { to: "/people", note: "Everybody who works here: add, change, set a password, switch off." },
     { to: "/admin/roles", note: "What each role may see and do." },
-    { to: "/admin/audit-log", note: "Who changed what, and when." },
+    { to: "/admin/audit-log", note: "Charges, payments and reversals, and who made them." },
+    { to: "/admin/activity", note: "Every change: who, when, which record and what changed." },
+    { to: "/admin/sign-ins", note: "When each person signed in, and on what device. Kept 90 days." },
   ],
   "connections": [
     { to: "/h/:code/channels", note: "The booking sites: rooms, prices and availability sent out." },
@@ -157,6 +161,7 @@ export default function SettingsPage() {
 
           <TabsContent value="operations" className="flex flex-col gap-3">
             <FrontDeskCard hotelId={hotelId} />
+            <FrontDeskRulesCard hotelId={hotelId} />
             <HousePolicies hotelId={hotelId} />
             {/* D17-36: the switches stay with the owner and an administrator;
                 hidden from the GM, whom the server would refuse. */}
@@ -174,8 +179,9 @@ export default function SettingsPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="people">
+          <TabsContent value="people" className="flex flex-col gap-3">
             <LinkRows rows={rows("people")} />
+            <SigningIn />
           </TabsContent>
 
           <TabsContent value="connections">

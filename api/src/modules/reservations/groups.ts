@@ -319,6 +319,8 @@ groups.post("/:code/bookings", async (c) => {
     guestId?: string;
     whatsappAgreed?: boolean;
     offersAgreed?: boolean;
+    /* D27-246: "Prepaid on the booking site", for a booking site's booking. */
+    prepaidOnSite?: boolean;
     /* The desk's, from Phase 1 (D27-33): each checked in makeBooking. */
     tentative?: boolean; expectedDeparture?: string; salesPerson?: string;
     companyId?: string; discount?: BookingDiscount;
@@ -372,6 +374,7 @@ groups.post("/:code/bookings", async (c) => {
     lines: input.lines ?? [],
     ...(typeof input.guestId === "string" && input.guestId ? { guestId: input.guestId } : {}),
     whatsappAgreed: input.whatsappAgreed === true,
+    ...(typeof input.prepaidOnSite === "boolean" ? { prepaidOnSite: input.prepaidOnSite } : {}),
     tentative: input.tentative === true,
     ...(typeof input.expectedDeparture === "string" ? { expectedDeparture: input.expectedDeparture } : {}),
     ...(typeof input.salesPerson === "string" ? { salesPerson: input.salesPerson } : {}),

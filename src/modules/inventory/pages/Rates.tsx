@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Ban, LogIn, LogOut, Check } from "lucide-rea
 import { cn } from "@/lib/cn";
 import { money, dateShort, percent } from "@/lib/format";
 import { useUi } from "@/lib/ui";
-import { useRole } from "@/lib/session";
+import { useRole, useSession } from "@/lib/session";
 import { setsRates } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardHeader, CardBody, Button, Skeleton, EmptyState, toast,
@@ -60,7 +60,9 @@ const dayLabel = (s: string) => {
   return {
     dow: d.toLocaleDateString("en-IN", { weekday: "short", timeZone: "UTC" }),
     day: d.getUTCDate(),
-    weekend: d.getUTCDay() === 0 || d.getUTCDay() === 6,
+    /* The hotel's own weekend (D27-243 3.4), shading only. */
+    weekend: (useSession.getState().hotels.find((h) => h.id === useSession.getState().hotelId)
+      ?.deskRules?.weekendDays ?? [0, 6]).includes(d.getUTCDay()),
   };
 };
 

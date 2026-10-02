@@ -737,7 +737,7 @@ describe("the no show report", () => {
 });
 
 describe("the city ledger, as the owner decided", () => {
-  it("debits the bills transferred to an account, and claims no balance it cannot know", async () => {
+  it("debits the bills transferred to an account, and its balance adds up (D27-239)", async () => {
     const db = await admin();
     let stay = "";
     try {
@@ -761,10 +761,11 @@ describe("the city ledger, as the owner decided", () => {
     expect(totalRow.cells["debit"] as number).toBeCloseTo(
       accounts.reduce((t, r) => t + (r.cells["debit"] as number), 0), 2);
     expect(accounts.some((r) => r.cells["debit"] === 1234.5)).toBe(true);
+    /* What a company paid is recorded now (company_payments): every row's
+       Closing is its Opening + Debit - Credit. */
     for (const r of rows) {
-      expect(r.cells["opening"]).toBeNull();
-      expect(r.cells["credit"]).toBeNull();
-      expect(r.cells["closing"]).toBeNull();
+      const [o, d, c, cl] = ["opening", "debit", "credit", "closing"].map((k) => r.cells[k] as number);
+      expect(cl!, String(r.cells["account"])).toBeCloseTo(o! + d! - c!, 2);
     }
 
     /* A transfer is not money received: the day's Receipt did not move. */

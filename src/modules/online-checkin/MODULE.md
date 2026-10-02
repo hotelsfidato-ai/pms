@@ -200,7 +200,7 @@ Coming soon page and its address are gone.
 - **The hotel's photos (D27-243)** - by rule 8: `GallerySection.tsx`,
   `api/src/routes/guestGallery.ts`, the definers `app.guest_gallery` (behind
   the unlock) and `app.guest_gallery_photo` (one picture on the link alone, as
-  the logo is) in 187. Added on Settings → Property (admin). Lazy, cached a
+  the logo is) in 186. Added on Settings → Property (admin). Lazy, cached a
   day, counted in the door's own bucket for pictures; nginx gives them their
   own zone. Hidden when the hotel has none.
 - **"A table at the restaurant" (D27-224)** - the POS lane's, by rule 8:

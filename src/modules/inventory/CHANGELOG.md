@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-03 · The front desk's rules ride on PATCH /:code/front-desk (the owner's D27-243)
+
+Branch `settings/phase3-2oct`. **Shipped:** the PATCH takes the front desk's rules (187: way of paying, the desk may overbook, the advance before check-in, weekend days, the ID, nationality and title the forms start on), each refused in a sentence before anything is written; front desk's card sets them. Rates shades the hotel's own weekend. **Proved:** front desk's `frontDeskRules.test.ts`.
+
 ## 2026-10-02 · Rates always open, in the Calendar's look (D27-237 5.1–5.3)
 
 Branch `rates/always-open-2oct` from cp6 `3336a219`, copy `.claude\worktrees\mystifying-napier-d2f754`, database `fidato_s45` (migrated to cp6's 179 files), API 8903, web 5303.

@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import type { Client } from "../../db.ts";
-import { dayBookSheet } from "./sheet.ts";
+import { dayBookSheet, companyReceiptsSheet } from "./sheet.ts";
+import { companyReceipts, type CompanyReceipt } from "../finance/index.ts";
 import {
   dailyFigures, sumDays, heading, posSales,
   type DayFigures, type PosDay, type Property,
@@ -70,6 +71,11 @@ export interface DayBookRow {
   /** Money actually received. A bill moved to the city ledger is not
       money received - the reports door already takes it out (D17-74). */
   receipt: number;
+  /** What companies and booking sites paid against the City ledger that
+      day (the owner's D27-242, Q4): receipts, APART from sales and from
+      `receipt` - the bill was sales when it was sent, and counting the
+      payment again would sell it twice. From finance's door. */
+  companyReceipt: number;
   /** Whether the night audit has closed this day. A day it has not run
       is exported all the same (D18-16) and SAID SO - never quietly
       treated as zero. */
@@ -91,6 +97,10 @@ export interface DayBook {
   /** Every day of the range the night audit has not closed, in order.
       The screen names them; the file carries the column. */
   openDays: string[];
+  /** Each company receipt (D27-242): the line a Tally receipt voucher will
+      be made from when the XML export is built (ACC-4, the CA's ledger
+      names) - party, bank, amount, reference. */
+  companyReceipts: CompanyReceipt[];
 }
 
 /** The days the night audit has completed, of those asked for.
@@ -143,7 +153,7 @@ const columns = (
   f: Pick<DayFigures, "room" | "extra" | "extraTax" | "alcohol" | "vat" | "discount" | "receipt">
     & { roomTax: number },
   pos: Outlets,
-): DayBookTotal => ({
+): Omit<DayBookTotal, "companyReceipt"> => ({
   room: f.room,
   roomTax: f.roomTax,
   extra: round2(f.extra - f.alcohol),
@@ -187,10 +197,14 @@ export async function dayBook(
   const closed = await closedDays(client, property.id, from, to);
   const outlets = new Map(
     (await posSales(client, property.id, from, to)).map((p) => [p.date, p]));
+  const received = await companyReceipts(client, property.id, from, to);
+  const receivedOn = (date: string) =>
+    round2(received.filter((r) => r.date === date).reduce((t, r) => t + r.amount, 0));
 
   const days: DayBookRow[] = figures.map((f) => ({
     date: f.date,
     ...columns(f, outlets.get(f.date) ?? NO_POS),
+    companyReceipt: receivedOn(f.date),
     closed: closed.has(f.date),
   }));
 
@@ -216,8 +230,12 @@ export async function dayBook(
     to,
     days,
     /* Every day is priced (above), so their total is too. */
-    total: columns({ ...t, roomTax: t.roomTax! }, posTotal),
+    total: {
+      ...columns({ ...t, roomTax: t.roomTax! }, posTotal),
+      companyReceipt: round2(received.reduce((s, r) => s + r.amount, 0)),
+    },
     openDays: days.filter((d) => !d.closed).map((d) => d.date),
+    companyReceipts: received,
   };
 }
 
@@ -230,5 +248,13 @@ export async function dayBookXlsx(book: DayBook): Promise<Buffer> {
   const sheet = workbook.addWorksheet("Day book");
   sheet.addRow(headers).font = { bold: true };
   sheet.addRows(rows);
+  /* Each company receipt on its own sheet (D27-242), for the accountant to
+     match against the bank - and what a Tally receipt voucher is made from. */
+  if (book.companyReceipts.length) {
+    const r = companyReceiptsSheet(book);
+    const second = workbook.addWorksheet("Received from companies");
+    second.addRow(r.headers).font = { bold: true };
+    second.addRows(r.rows);
+  }
   return Buffer.from((await workbook.xlsx.writeBuffer()) as ArrayBuffer);
 }

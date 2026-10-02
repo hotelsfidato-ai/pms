@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import ExcelJS from "exceljs";
 import { app } from "../src/server.ts";
 import { closePool } from "../src/db.ts";
-import { REPORT_EXPORTERS } from "../src/routes/reportFiles.ts";
+import { REPORT_EXPORTERS, STORE_EXPORTERS } from "../src/routes/reportFiles.ts";
 import { REPORT_KEYS, BUILT_KEYS } from "../src/modules/reports/index.ts";
 import {
   inr, formatCell, dateReport, dateTimeReport, renderPdf, renderXlsx, renderCsv,
@@ -201,6 +201,21 @@ describe("who may download", () => {
     const csv = await (await get(uid.gm, "/5EL/reports/monthly-statistics.csv?month=2026-08")).text();
     expect(csv).toContain("Printed ");
     expect(csv, "the footer names who printed it").toContain(`${TAG} gm`);
+  });
+
+  /* D27-240: the Store and equipment reports are downloaded by those of
+     their readers who hold the Store's export. */
+  it("gives the store's reports to the Store's exporters only, the Inventory Manager included", async () => {
+    const matrix = ["owner", ...ROLES.filter((r) => r !== "owner" && grantsFor(r, "stock").includes("export"))];
+    expect([...STORE_EXPORTERS].sort()).toEqual([...new Set(matrix)].sort());
+    expect(STORE_EXPORTERS).toContain("stores");
+    const res = await get(uid.gm, "/5EL/reports/stock-on-hand.csv");
+    expect(res.status, await res.clone().text()).toBe(200);
+    const desk = await get(uid.front_desk, "/5EL/reports/stock-on-hand.csv");
+    expect(desk.status).toBe(403);
+    expect(((await desk.json()) as { error: string }).error)
+      .toBe("Downloading the store's reports is for the owner, an administrator, the general manager, "
+        + "the Inventory Manager or the accountant. Ask one of them.");
   });
 
   it("refuses the front desk, in a sentence", async () => {

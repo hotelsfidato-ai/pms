@@ -90,6 +90,8 @@ export interface BookingRequest {
   /** "Guest agreed to WhatsApp" (D21-72). A booking from a channel arrives
       unticked; the desk asks on phone and walk-in bookings. */
   whatsappAgreed?: boolean;
+  /** D27-246: a booking-site booking prepaid there (absent = yes, 187's default). */
+  prepaidOnSite?: boolean;
 
   /* ── The desk's, from Phase 1 (D27-33). Left out of the fingerprint like
      guestId: a sender's retry is judged on what a sender sends. ── */
@@ -136,7 +138,8 @@ export interface BookingMade {
 
 export interface BookingRefused {
   ok: false;
-  /** "no_room" only ever comes back to a machine - see refuseWhenFull. */
+  /** "no_room": a machine's booking past a full house, or the desk's where
+      the hotel says the desk may not overbook (187, D27-243). */
   kind: "refused" | "no_room" | "unpriced";
   reason: string;
 }
@@ -423,7 +426,13 @@ export async function makeBooking(
       + "no longer than 100 characters.");
   }
 
-  if (request.refuseWhenFull) {
+  /* THE HOTEL MAY TAKE THE DESK'S OVERBOOKING AWAY (the owner's D27-243 3.2):
+     on by default, as D17-43 had it; off, the desk's booking - a group's
+     too, whole or not at all - is refused past a full house like a
+     machine's. */
+  const deskMayOverbook = request.refuseWhenFull ? false : (await client.query<{ yes: boolean }>(
+    "select desk_may_overbook as yes from hotels where id = $1", [request.hotelId])).rows[0]?.yes ?? true;
+  if (request.refuseWhenFull || !deskMayOverbook) {
     const full = await noRoomFor(client, { ...request, lines });
     if (full) return { ok: false, kind: "no_room", reason: full };
   }
@@ -684,7 +693,7 @@ export async function makeBooking(
               ota_reference, ota_line, ota_fingerprint, whatsapp_agreed,
               is_complimentary, expected_departure, sales_person, company_id,
               discount_percent, discount_reason, room_promotion_id,
-              notes, is_single_lady, contract_id,
+              notes, is_single_lady, contract_id, prepaid_on_site,
               -- WHO MADE IT (RES-14, the owner's D27-239): the person signed
               -- in, or null for a machine's booking. It was never written.
               created_by)
@@ -692,7 +701,7 @@ export async function makeBooking(
                    $12,$13,$14,$15,$16::time,$17,$18::numeric,
                    $19,$20,$21,$22,
                    $23,$24::time,$25,$26,$27::numeric,$28,$29,
-                   $31,$32,$33::uuid,
+                   $31,$32,$33::uuid, coalesce($34::boolean, true),
                    app.current_user_id())
            returning id::text`,
           [hotelId, ref[0]!.reference, guestId, line.roomTypeId,
@@ -729,7 +738,8 @@ export async function makeBooking(
            line.complimentary === true || rate === 0 ? null : terms.discount?.reason ?? null,
            line.complimentary === true || rate === 0 ? null : terms.discount?.promotionId ?? null,
            request.tentative === true ? "tentative" : "confirmed",
-           text(request.notes), request.isSingleLady === true, contract?.id ?? null],
+           text(request.notes), request.isSingleLady === true, contract?.id ?? null,
+           typeof request.prepaidOnSite === "boolean" ? request.prepaidOnSite : null],
         );
 
         /* A BOOKING NEEDS SOMEWHERE TO PUT MONEY, from the moment it

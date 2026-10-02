@@ -3,7 +3,7 @@ import { UserPlus, Building2, KeyRound } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Card, CardBody, Button, StatusPill, IconChip, Input, NativeSelect, toast } from "@/components/ui";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/lib/permissions";
-import { createStaff, grantAccess, revokeAccess, deactivateStaff, createProperty, type AdminStaff, MIN_PASSWORD } from "@/modules/admin/data/admin";
+import { createStaff, grantAccess, revokeAccess, deactivateStaff, createProperty, type AdminStaff, minPasswordFor as minFor } from "@/modules/admin/data/admin";
 
 /* ══════════════════════════════════════════════════════════════════
    ADDING A PERSON, AND SAYING WHAT THEY CAN REACH
@@ -74,6 +74,8 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
+  /* D27-243 (5.3): a group administrator's is 10 characters. */
+  const min = minFor([], isAdmin);
 
   const submit = async () => {
     setBusy(true);
@@ -112,7 +114,7 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
   };
 
   const ready = email.trim() && name.trim()
-    && password.length >= MIN_PASSWORD
+    && password.length >= min
     && (!isAdmin || key.trim());
 
   return (
@@ -134,7 +136,7 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
               to read it back to them. */}
           <Field label="Password" value={password} onChange={setPassword}
             placeholder="something they will remember"
-            hint={`At least ${MIN_PASSWORD} characters. Tell it to them - nothing is emailed.`} />
+            hint={`At least ${min} characters. Tell it to them - nothing is emailed.`} />
 
           <label className="flex items-start gap-2.5 py-1 cursor-pointer">
             <input

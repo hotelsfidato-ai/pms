@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, FileText, BarChart3, Building2, CalendarCheck, ScrollText, ShieldCheck,
-  BookOpen, Banknote, Hotel,
+  BookOpen, Banknote, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck, Hourglass,
+  Gauge, Truck, Refrigerator, Warehouse, Hotel,
 } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 import { can, type Role } from "@/lib/permissions";
@@ -9,6 +10,17 @@ import { can, type Role } from "@/lib/permissions";
    three reports (roleGate MONEY_REPORT), and so does the menu - the owner's
    D27-147: not the revenue manager, who keeps every other report. */
 const seesMoney = (role: Role): boolean => can(role, "view", "invoice");
+
+/* The Store and equipment reports (phase 3A; the owner's D27-240 R-1): whoever
+   holds the Store's export, and the hotel manager and the Viewer - the
+   server's rule (roleGate STORE_REPORTS), asked the same way. */
+export const mayReadStockReports = (role: Role): boolean =>
+  can(role, "export", "stock") || role === "hotel_manager" || role === "read_only";
+
+/* Where the Store page's "Reports" button lands (D27-240; the master's T-1):
+   the nine on one page, for the Inventory Manager too, who cannot open
+   All reports (no `report`, D27-141). */
+export const STOCK_REPORTS_PATH = "/reports/store";
 
 /* Reports' menu entries: the Dashboard at the top of the menu, and the
    Reports section after the night audit. Three are listed for everybody;
@@ -67,4 +79,41 @@ export const nav: ServiceNavEntry[] = [
     label: "Cashier shift", to: "/reports/cashier-shift", icon: Banknote, resource: "report",
     canSee: seesMoney,
     keywords: ["drawer", "takings"], listed: false },
+  /* The Store and equipment (phase 3A): one search away, and in All reports. */
+  { section: "reports", order: 145,
+    label: "Store reports", to: STOCK_REPORTS_PATH, icon: Warehouse, resource: "stock",
+    canSee: mayReadStockReports, keywords: ["stock reports", "store", "equipment"], listed: false },
+  { section: "reports", order: 150,
+    label: "Closing stock", to: "/reports/stock-on-hand", icon: Boxes, resource: "stock",
+    canSee: mayReadStockReports, keywords: ["stock value", "store value", "inventory value"], listed: false },
+  { section: "reports", order: 160,
+    label: "Stock movement by day", to: "/reports/stock-movements", icon: ArrowLeftRight, resource: "stock",
+    canSee: mayReadStockReports, keywords: ["received", "issued", "store"], listed: false },
+  { section: "reports", order: 170,
+    label: "Consumption", to: "/reports/stock-consumption", icon: PackageOpen, resource: "stock",
+    canSee: mayReadStockReports, keywords: ["usage", "issued", "outlet", "store"], listed: false },
+  { section: "reports", order: 180,
+    label: "Wastage and breakage", to: "/reports/stock-wastage", icon: Trash2, resource: "stock",
+    canSee: mayReadStockReports, keywords: ["waste", "spoilage", "store"], listed: false },
+  { section: "reports", order: 190,
+    label: "Count differences", to: "/reports/stock-count-differences", icon: ClipboardCheck, resource: "stock",
+    canSee: mayReadStockReports, keywords: ["stock count", "variance", "store"], listed: false },
+  { section: "reports", order: 200,
+    label: "Dead stock", to: "/reports/stock-dead", icon: Hourglass, resource: "stock",
+    canSee: mayReadStockReports, keywords: ["slow moving", "unused", "store"], listed: false },
+  { section: "reports", order: 210,
+    label: "Days of cover", to: "/reports/stock-cover", icon: Gauge, resource: "stock",
+    canSee: mayReadStockReports, keywords: ["stock cover", "how long", "store"], listed: false },
+  { section: "reports", order: 220,
+    label: "Supplier spend", to: "/reports/supplier-spend", icon: Truck, resource: "stock",
+    canSee: mayReadStockReports, keywords: ["purchases", "suppliers", "prices"], listed: false },
+  { section: "reports", order: 230,
+    label: "Equipment report", to: "/reports/equipment", icon: Refrigerator, resource: "stock",
+    canSee: mayReadStockReports, keywords: ["warranty", "amc", "under repair", "out of store"], listed: false },
 ];
+
+/** The nine Store and equipment reports, by the menu's own words (one name
+    everywhere, HANDOVER § 6): the Store's Reports menu lists these. */
+export const STOCK_REPORT_LINKS: { path: string; label: string }[] = nav
+  .filter((e) => e.canSee === mayReadStockReports && e.to !== STOCK_REPORTS_PATH)
+  .map((e) => ({ path: e.to, label: e.label }));

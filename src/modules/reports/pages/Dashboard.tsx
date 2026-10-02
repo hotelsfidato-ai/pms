@@ -145,6 +145,8 @@ export default function DashboardPage() {
   const noShow = pick(r, "room-summary", "No Show Rooms");
   const owedByGuests = pick(r, "guest-ledger", "Closing Balance*");
   const cityLedger = pick(r, "city-ledger", "Closing Balance");
+  /* Company payments are recorded since 189 (the cash lane, D27-239). */
+  const companyPaid = pick(r, "city-ledger", "Payment Received");
   const c = view.data?.counts;
   const rooms = (view.data?.roomTypes ?? []).flatMap((t) => t.rooms)
     .sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }));
@@ -379,7 +381,7 @@ export default function DashboardPage() {
               />
               <MoneyItem
                 icon={Building2} label="City ledger" term="cityLedger" loading={loading}
-                value={cash(cityLedger?.today)} note={["Shows a dash until company payments are recorded."]}
+                value={cash(cityLedger?.today)} note={[`Paid today ${cash(companyPaid?.today)}`]}
               />
               <MoneyItem
                 icon={UserX} tone={(noShow?.today ?? 0) > 0 ? "orange" : "neutral"}

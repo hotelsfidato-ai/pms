@@ -105,6 +105,27 @@ describe("D27-243 - what departing guests still owe, on the Due out tile", () =>
   });
 });
 
+/* The City ledger has real company payments since migration 189 (the cash
+   lane, D27-239): the tile reads the Manager report's Closing Balance and
+   Payment Received, and no longer says it "shows a dash". */
+describe("D27-239 - the City ledger tile reads company payments", () => {
+  it("shows the closing balance and what companies paid today", async () => {
+    const doc = { sections: [{ key: "city-ledger", rows: [
+      { kind: "row", cells: { label: "Payment Received", today: 15000, ptd: 40000, ytd: 90000 } },
+      { kind: "total", cells: { label: "Closing Balance", today: 52000, ptd: null, ytd: null } },
+    ] }] };
+    const { spy } = spyApi({ [`/api/hotels/${HOTEL}/reports/manager`]: doc });
+    try {
+      renderDashboard();
+      /* The Money tile, not the quick report's link of the same name. */
+      const tile = (await screen.findAllByText("City ledger")).find((e) => !e.closest("a"))!.closest("div.grid") as HTMLElement;
+      await waitFor(() => expect(tile.textContent).toContain("₹52,000"));
+      expect(tile.textContent).toContain("Paid today ₹15,000");
+      expect(tile.textContent).not.toMatch(/shows a dash/i);
+    } finally { spy.mockRestore(); }
+  });
+});
+
 describe("D27-243 - the nights ahead", () => {
   it("asks for tonight and the 13 nights after it, and shows a dash for a night with no figures", async () => {
     const { asked, spy } = spyApi();

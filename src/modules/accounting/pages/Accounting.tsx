@@ -166,7 +166,7 @@ const cash = (v: number) => moneyPrecise(v);
     Not the same as "no rows": there is always a row per day. */
 const quiet = (book: DayBook) =>
   book.total.sales === 0 && book.total.tax === 0 && book.total.vat === 0
-  && book.total.receipt === 0;
+  && book.total.receipt === 0 && (book.total.companyReceipt ?? 0) === 0;
 
 const COLUMNS: Column<DayBookRow>[] = [
   /* One line: fourteen columns since D24-24, and a date broken over three
@@ -186,6 +186,10 @@ const COLUMNS: Column<DayBookRow>[] = [
   { key: "sales", header: "Sales", numeric: true, cell: (d) => cash(d.sales) },
   { key: "tax", header: "GST", numeric: true, cell: (d) => cash(d.tax) },
   { key: "receipt", header: "Receipts", numeric: true, cell: (d) => cash(d.receipt) },
+  /* What companies paid on the City ledger (D27-242): receipts, apart
+     from sales and from the guests' receipts. */
+  { key: "companyReceipt", header: "Received from companies", numeric: true, hideBelow: "lg",
+    cell: (d) => cash(d.companyReceipt ?? 0) },
   /* The one column that is not a figure, and the reason this screen
      can be trusted: a day the night audit has not run is exported
      with everything it has and SAYS SO. Never quietly a zero. */
@@ -246,11 +250,32 @@ function DayBookTable({ book, loading }: { book: DayBook | null; loading: boolea
       {/* The range's totals, on the Figure Rule: level tiles, label with
           its chip over the figure. */}
       {book && book.days.length > 0 && (
-        <FigureRow className="sm:grid-cols-3 mt-3">
+        <FigureRow className="sm:grid-cols-2 lg:grid-cols-4 mt-3">
           <FigureTile icon={<ReceiptText />} label="Sales" value={cash(book.total.sales)} />
           <FigureTile icon={<Landmark />} label="Tax" value={cash(book.total.tax)} />
           <FigureTile icon={<Wallet />} label="Receipts" value={cash(book.total.receipt)} />
+          <FigureTile icon={<Wallet />} label="Received from companies"
+                      value={cash(book.total.companyReceipt ?? 0)} note="Apart from sales" />
         </FigureRow>
+      )}
+
+      {/* Each company receipt (D27-242): what the accountant matches against
+          the bank, and what a Tally receipt voucher will be made from. */}
+      {book && (book.companyReceipts ?? []).length > 0 && (
+        <div className="mt-3 rounded-lg border border-grey-200 bg-white">
+          <p className="px-4 pt-3 text-base font-medium">Received from companies</p>
+          <ul className="divide-y divide-grey-200 px-4">
+            {book.companyReceipts!.map((r, i) => (
+              <li key={`${r.date}-${i}`} className="flex items-baseline gap-3 py-2.5">
+                <span className="text-sm text-grey-600 whitespace-nowrap">{dateShort(r.date)}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {r.account} · {r.method}{r.reference ? ` · ${r.reference}` : ""}
+                </span>
+                <span className="tabular">{cash(r.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </>
   );

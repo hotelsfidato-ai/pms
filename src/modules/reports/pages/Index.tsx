@@ -3,7 +3,8 @@ import { Link } from "react-router";
 import {
   Star, Search, ArrowRight, ClipboardList, CalendarDays, ChartColumn,
   ChartNoAxesColumn, Building2, UserX, ReceiptText, Wallet, Landmark,
-  FileSpreadsheet, Plane, ScrollText, type LucideIcon,
+  FileSpreadsheet, Plane, ScrollText, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck,
+  Hourglass, Gauge, Truck, Refrigerator, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
@@ -132,9 +133,57 @@ const GROUPS: Group[] = [
       },
     ],
   },
+  /* Phase 3A (D27-238). Their readers are the owner's D27-240: each row is
+     offered only to whom its menu entry is (mayReach, below). */
+  {
+    title: "Store and equipment",
+    note: "What the stores hold and use, and where the equipment is. Costs as recorded.",
+    reports: [
+      { title: "Closing stock", icon: Boxes, path: "/reports/stock-on-hand",
+        description: "Each store's stock on a date, at the average cost as recorded." },
+      { title: "Stock movement by day", icon: ArrowLeftRight, path: "/reports/stock-movements",
+        description: "Received, issued, wasted and counted, one row a day." },
+      { title: "Consumption", icon: PackageOpen, path: "/reports/stock-consumption",
+        description: "What was issued, per item and per outlet." },
+      { title: "Wastage and breakage", icon: Trash2, path: "/reports/stock-wastage",
+        description: "Every wastage, and every breakage with who broke it." },
+      { title: "Count differences", icon: ClipboardCheck, path: "/reports/stock-count-differences",
+        description: "What each count corrected, and why." },
+      { title: "Dead stock", icon: Hourglass, path: "/reports/stock-dead",
+        description: "Stock that has not gone out for 30, 60 or 90 days." },
+      { title: "Days of cover", icon: Gauge, path: "/reports/stock-cover",
+        description: "How long each item lasts at the last 7 days' use." },
+      { title: "Supplier spend", icon: Truck, path: "/reports/supplier-spend",
+        description: "Deliveries per supplier, and each item's first and last price." },
+      { title: "Equipment report", icon: Refrigerator, path: "/reports/equipment",
+        description: "What is out of the store, under repair, and when warranties and AMCs end." },
+    ],
+  },
 ];
 
 const BUILT = GROUPS.flatMap((g) => g.reports).filter((r) => r.path).length;
+
+/** The Store and equipment group alone, at its own address (STOCK_REPORTS_PATH):
+    the Store page's "Reports" button lands here, open to D27-240's readers,
+    the Inventory Manager included, who cannot open All reports. */
+export function StoreReportsPage() {
+  const favourites = useUi((s) => s.favouriteReports);
+  const toggle = useUi((s) => s.toggleFavouriteReport);
+  const role = useRole();
+  const group = GROUPS.find((g) => g.title === "Store and equipment")!;
+  const reports = group.reports.filter((r) => r.path && mayReach(role, r.path));
+  return (
+    <Page>
+      <PageHeader title="Store reports" description={group.note} />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {reports.map((r) => (
+          <ReportCard key={r.title} report={r} starred={favourites.includes(r.path!)}
+            onToggle={() => toggle(r.path!)} />
+        ))}
+      </div>
+    </Page>
+  );
+}
 const TOTAL = GROUPS.flatMap((g) => g.reports).length;
 
 export default function ReportsIndexPage() {

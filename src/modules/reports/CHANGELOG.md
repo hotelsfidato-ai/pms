@@ -26,6 +26,96 @@ Branch `design/dashboard-2oct` (from cp6 8c2860a7; 2493407c and 76f38f2a merged 
 **On screen** (`.local\screenshots\2026-10-02-dashboard-build\`): owner at 1280 (tiles level, Occupancy 966px on its own row, figure tiles 314px, every row 21px), 1366 (343px), 1440 (211px beside Occupancy, amounts on one top), 375 (no size off the ladder, nothing sideways, labels whole, notes on two lines, 4 nights whole and a fifth peeking); All properties at 1280 and 375 (its figures equal the Dashboard's; "Last year: 0 of 1 properties"; the business-date line first). GM and reception: the Dashboard's tiles; All properties not in their menu, and its address refuses them.
 **Left open:** "Needs you" colours every bell notice that asks for action orange; a notice that is due today rather than late (an arrival still to come) is orange too until the bell says which is which. The reports MODULE.md does not yet describe the tiles and All properties (left for the stock lane's merge to settle first).
 
+---
+
+## 2026-10-02 · The Store's reports on migration 180: costs at their moment, GST, expiry, departments, breakage (D27-242)
+
+Branch `reports/stock-3a-2oct`, after merging cp6 f6eee640 (8a1d3964) and
+7a074245.
+
+**Asked for:** the master: wire the stores lane's 180 - `stock_movement_costs`,
+`food_cost_basis` 'before_gst' (the owner's D27-242), outlet sales, crockery,
+department as free text; and swap the Store's copy of the menu for this
+service's exports.
+
+**Shipped:** `builders/stock.ts` values every movement with
+`app.stock_movement_costs` (the weighted average of deliveries is gone).
+Closing stock adds "Near expiry" (30 days, or past, while still held).
+Movement by day adds Broken. Consumption adds till sales and the food cost
+per outlet, both before GST, to readers holding `report` only, and "Per
+department" ("(not said)" last). Wastage and breakage are two sections; a
+breakage names who broke it. Count differences read `stock_count_lines`, with
+"Last counted". Dead stock counts a breakage as out. Supplier spend adds GST
+and GST claimable. `STOCK_REPORT_LINKS` joins `mayReadStockReports` and
+`STOCK_REPORTS_PATH` in `@/modules/reports` for the Store's Reports menu. The
+Store's own files are back as cp6 has them: the master swaps its copy at
+merge (their word of 2 Oct, after 2a8f924b had swapped it; that commit's
+stores half can be cherry-picked).
+
+**Found:** the test run sat in the DB queue behind another lane and loaded
+the new builder, so it never ran red against the old one. The old builder has
+none of the sections the new test asserts (`expiry`, `departments`,
+`breakage`, `last`), so it could not have passed.
+
+**Proved:** stockReports 11; tsc 0 (api and web); strip-check 193; web
+reports, stores, navigation, src/test (11 files, 64) and primaryAction.
+
+**Left open:** nothing of the 180 wiring.
+
+---
+
+## 2026-10-02 · The Store and equipment reports (phase 3A; D27-238, D27-240)
+
+Branch `reports/stock-3a-2oct` (from cp6 3336a219), copy
+`.claudeworktreeslaughing-jepsen-2b2ea7`, database `fidato_s41`, API 8891, web 5291.
+
+**Asked for:** phase 3A of docs/STOCK-AND-EQUIPMENT-PLAN.md, planned first;
+the owner's answers D27-240 (R-1 readers, R-2 costs as recorded, R-3 dead
+means nothing went out, R-4 days of cover at the last 7 days' use).
+
+**Shipped:** nine builders (`builders/stock.ts`, `builders/equipment.ts`)
+and their keys, routes, read rules (`STORE_REPORTS`), downloads
+(`reportFiles.ts` `STORE_EXPORTERS`, the master's T-2), pages
+(`pages/Store.tsx`), menu entries and the "Store and equipment" group in
+All reports.
+
+**Found:** two labels too long for the sidebar and an order taken by the
+accounting export (navigation.test caught both; renamed "Closing stock" and
+"Supplier spend", orders 150-230).
+
+**Proved:** see the root report of 2 Oct to the master: stockReports.test
+(9) failed first and passes; roleGate, reportFiles, reports; web reports,
+navigation, src/test and primaryAction; screens.
+
+**Then (resumed, 2 Oct):** `STOCK_REPORTS_PATH` ("/reports/store", a "Store
+reports" page with the nine, open to the Inventory Manager, who cannot open All
+reports) and `mayReadStockReports(role)` exported from `@/modules/reports` for the
+Store page's button (storeReports.test failed first, passes). Proved after the
+commit: stockReports 9, roleGate 70, reportFiles 15, reports 31 (API, one file at
+a time); tsc 0; web reports and navigation. The earlier "no tests" failure was a
+crashed worker under memory pressure (the same crash hit web runs that day; the
+file passes alone). Screens on fidato_s41 at 179 with a few items received,
+issued, wasted and counted through the Store's own API: all nine as the Owner,
+figures checked by hand; Store reports as the Inventory Manager, All reports
+refused to them.
+
+**Left open:** the stores lane's columns (their 183, not on cp6 yet; marked
+STORES LANE in the builders).
+
+---
+
+## 2026-10-02 · The City ledger counts what companies paid (the owner's D27-239) - the cash lane's
+
+**Asked for:** the master, with the owner's answer: Opening, Credit and Closing
+in the City ledger from recorded company payments; Opening counts all history.
+**Shipped:** `cityLedger.ts`: Opening is everything sent less everything paid
+before the period, Credit is finance's `company_payments` by the day received,
+Closing is Opening + Debit - Credit. `manager.ts`'s City Ledger section:
+Opening Balance and Closing Balance (today), Payment Received (today, month,
+year). `reports.test.ts`'s City ledger case follows the new Closing.
+**Proved:** finance's `companyPayments.test.ts` (ledger and Manager lines);
+`test/modules/reports`: 3 files, 33 tests, passed.
+**Left open:** Outstanding Commission stays "not held".
 
 ---
 

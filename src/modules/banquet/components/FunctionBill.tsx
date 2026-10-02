@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import { money, moneyPrecise } from "@/lib/format";
 import { can } from "@/lib/permissions";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/rules";
-import { useRole } from "@/lib/session";
+import { useCurrentHotel, useRole } from "@/lib/session";
 import {
   Card, CardHeader, CardBody, Button, toast, Checkbox,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input, NativeSelect, Textarea,
@@ -240,7 +240,8 @@ function PayDialog({
   onClose: () => void; onDone: () => void;
 }) {
   const owed = Math.max(e.bill?.balance ?? 0, 0);
-  const [method, setMethod] = useState<PaymentMethod>("Cash");
+  /* The hotel's default way of paying (D27-243 3.1). */
+  const [method, setMethod] = useState<PaymentMethod>(useCurrentHotel()?.deskRules?.defaultPaymentMethod ?? "Cash");
   const [amount, setAmount] = useState(advance ? "" : String(owed));
   const [pan, setPan] = useState("");
   const [form97, setForm97] = useState(false);

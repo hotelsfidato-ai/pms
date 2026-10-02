@@ -9,7 +9,7 @@ proved until it has refused something; "Left open" is the handover.
 Work that touches the core or several services still goes in the root
 `CHANGELOG.md`. **This service is live** since the launch of 2 October
 (adc8e846; `MODULE.md`).
-
+
 ---
 
 ## 2026-10-02 · DigiLocker at the desk, and asked for before the code (D27-247, D27-210) - the master, at merges

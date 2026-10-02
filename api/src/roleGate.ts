@@ -133,6 +133,11 @@ const CORRECT_DAY = grant("reservation", "approve", "Correcting a closed day");
 /* Editing a charge and changing a stay's rate: the same three (D27-157). */
 const EDIT_BILL = grant("reservation", "approve", "Editing a charge on a bill");
 const PAYMENT = grant("payment", "create", "Taking a payment");
+/* A company's payment on the City ledger (D27-239): recorded by the desk or
+   accounts - `payment` create; reversed by the four who may reverse any
+   payment (D27-125) - exactly `payment` edit. */
+const COMPANY_PAYMENT = grant("payment", "create", "Recording a company's payment");
+const COMPANY_PAYMENT_REVERSE = grant("payment", "edit", "Reversing a company's payment");
 const DRAWER = grant("payment", "create", "Running the cashier's drawer");
 
 /* Rooms on the floor: `inventory`, which reception and housekeeping hold. */
@@ -300,6 +305,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
      administrator and the GM; verify - the owner and the accountant. No grant
      in the matrix is exactly either, so the route asks. */
   [`POST ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM"),
+  [`POST ${H}/company-payments`]: COMPANY_PAYMENT,
+  [`POST ${H}/company-payments/:id/reverse`]: COMPANY_PAYMENT_REVERSE,
   [`POST ${H}/cash-deposits/:id/reverse`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/cash-deposits/days/:date/explain`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/cash-deposits/:id/verify`]: own("finance/deposits.ts: owner, accountant"),
@@ -598,6 +605,13 @@ const MONEY_REPORT = see("invoice", "money owed and taken");
 const MONEY = see("payment", "payments and the cash drawer");
 const GUESTS = see("customer", "guests");
 const REPORTS = see("report", "reports");
+/* The Store and equipment reports (phase 3A; the owner's D27-240 R-1): the
+   owner, an administrator, the GM, the Inventory Manager and the accountant
+   (who hold the Store's export), and the hotel manager and the Viewer. Not
+   the kitchen manager, chef or housekeeping (they see the Store, but D27-141
+   took reports from them and these carry costs), the revenue manager or
+   reception. */
+const STORE_REPORTS = grant("stock", "export", "Reading the store's reports", ["hotel_manager", "read_only"]);
 const PRICES = see("rate", "prices");
 const SETUP = see("room_config", "the hotel's setup");
 const LAUNDRY = see("laundry", "laundry");
@@ -710,6 +724,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/cashier-shift`]: MONEY,
   /* D27-191: the owner, an administrator, the GM, the accountant and the Viewer. */
   [`GET ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM, accountant, viewer"),
+  /* What companies paid: whoever reads Company accounts (D27-145, `invoice`). */
+  [`GET ${H}/company-payments`]: see("invoice", "what companies paid"),
   [`GET ${H}/accounting/:file{day-book(?:\\.xlsx)?}`]: own("accounting/routes.ts: MAY_EXPORT (D27-122)"),
 
   /* ── Reports ── */
@@ -722,6 +738,15 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/reports/monthly-statistics`]: REPORTS,
   [`GET ${H}/reports/yearly-statistics`]: REPORTS,
   [`GET ${H}/reports/lodging-tax`]: REPORTS,
+  [`GET ${H}/reports/stock-on-hand`]: STORE_REPORTS,
+  [`GET ${H}/reports/stock-movements`]: STORE_REPORTS,
+  [`GET ${H}/reports/stock-consumption`]: STORE_REPORTS,
+  [`GET ${H}/reports/stock-wastage`]: STORE_REPORTS,
+  [`GET ${H}/reports/stock-count-differences`]: STORE_REPORTS,
+  [`GET ${H}/reports/stock-dead`]: STORE_REPORTS,
+  [`GET ${H}/reports/stock-cover`]: STORE_REPORTS,
+  [`GET ${H}/reports/supplier-spend`]: STORE_REPORTS,
+  [`GET ${H}/reports/equipment`]: STORE_REPORTS,
   [`GET ${H}/reports/gst-sales`]: REPORTS,
   [`GET ${H}/reports/city-ledger`]: MONEY_REPORT,
   [`GET ${H}/reports/guest-ledger`]: MONEY_REPORT,
@@ -823,8 +848,14 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET /api/admin/hotels`]: own("admin/admin.ts: a group administrator"),
   [`GET /api/admin/hotels/:code`]: own("admin/admin.ts: app.require_hotel_admin"),
   [`GET /api/admin/staff`]: own("admin/admin.ts: row security on staff, app.may_manage_person"),
+  /* D27-243 5.4, D27-245 Q-B: the owner anybody's, an Admin their hotel's people. */
+  [`GET /api/admin/staff/:id/sign-ins`]: own("admin/admin.ts: app.sign_ins_of"),
+  /* D27-245: a person's own "set a longer password" check. */
+  [`GET /api/me/password`]: SELF,
   [`GET ${H}/staff`]: see("user", "the staff list"),
   [`GET ${H}/audit-log`]: own("admin/adminLists.ts: mayRead"),
+  /* D27-243 5.1, D27-245: the hotel's to owner/Admin/GM; scope=group to owner/Admin. */
+  [`GET ${H}/activity`]: own("admin/activity.ts: mayRead, and maySeeGroupActivity for the group"),
   [`GET ${H}/settings`]: own("admin/adminLists.ts: mayRead"),
   /* QA AD-1: what this server has set up, for whoever holds `integration`. */
   [`GET ${H}/integrations`]: see("integration", "the integrations"),
