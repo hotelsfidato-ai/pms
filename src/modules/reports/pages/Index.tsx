@@ -162,6 +162,28 @@ const GROUPS: Group[] = [
 ];
 
 const BUILT = GROUPS.flatMap((g) => g.reports).filter((r) => r.path).length;
+
+/** The Store and equipment group alone, at its own address (STOCK_REPORTS_PATH):
+    the Store page's "Reports" button lands here, open to D27-240's readers,
+    the Inventory Manager included, who cannot open All reports. */
+export function StoreReportsPage() {
+  const favourites = useUi((s) => s.favouriteReports);
+  const toggle = useUi((s) => s.toggleFavouriteReport);
+  const role = useRole();
+  const group = GROUPS.find((g) => g.title === "Store and equipment")!;
+  const reports = group.reports.filter((r) => r.path && mayReach(role, r.path));
+  return (
+    <Page>
+      <PageHeader title="Store reports" description={group.note} />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {reports.map((r) => (
+          <ReportCard key={r.title} report={r} starred={favourites.includes(r.path!)}
+            onToggle={() => toggle(r.path!)} />
+        ))}
+      </div>
+    </Page>
+  );
+}
 const TOTAL = GROUPS.flatMap((g) => g.reports).length;
 
 export default function ReportsIndexPage() {

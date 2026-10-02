@@ -9,7 +9,7 @@ import {
 import {
   CityLedgerPage, NoShowPage, LodgingTaxPage,
 } from "@/modules/reports/pages/Ledgers";
-import ReportsIndexPage from "@/modules/reports/pages/Index";
+import ReportsIndexPage, { StoreReportsPage } from "@/modules/reports/pages/Index";
 import {
   StockOnHandPage, StockMovementsPage, StockConsumptionPage, StockWastagePage,
   StockCountDifferencesPage, StockDeadPage, StockCoverPage, SupplierSpendPage, EquipmentReportPage,
@@ -43,6 +43,7 @@ export const routes = (
     />
     {/* The Store and equipment (phase 3A): guarded by their own menu
         entries, which name D27-240's readers. */}
+    <Route path="/reports/store" element={<RequireAccess path="/reports/store" resource="stock"><StoreReportsPage /></RequireAccess>} />
     <Route path="/reports/stock-on-hand" element={<RequireAccess path="/reports/stock-on-hand" resource="stock"><StockOnHandPage /></RequireAccess>} />
     <Route path="/reports/stock-movements" element={<RequireAccess path="/reports/stock-movements" resource="stock"><StockMovementsPage /></RequireAccess>} />
     <Route path="/reports/stock-consumption" element={<RequireAccess path="/reports/stock-consumption" resource="stock"><StockConsumptionPage /></RequireAccess>} />
