@@ -90,6 +90,11 @@ function recordOf(table: string, row: Json): string | null {
   return null;
 }
 
+/* A column that holds a person ("late checkout by", "staff id"): their name,
+   as the Who column has it, never the raw id; "-" where it is not theirs to see. */
+const STAFF_FIELD = /(^| )(by|staff id)$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const ACTIONS: Record<string, string> = { INSERT: "Added", UPDATE: "Changed", DELETE: "Removed" };
 
 async function hotelIdFor(client: Client, code: string) {
@@ -154,8 +159,7 @@ activity.get("/:code/activity", async (c) => {
                 where ${scope} and a.actor is not null) p
         order by 2 nulls last`, [hotelId]);
 
-    return {
-      entries: rows.map((r) => ({
+    const entries = rows.map((r) => ({
         id: r.id,
         at: r.at,
         actor: r.actor_name,
@@ -164,7 +168,24 @@ activity.get("/:code/activity", async (c) => {
         record: recordOf(r.table_name, r.after ?? r.before),
         action: ACTIONS[r.action] ?? r.action,
         changes: r.action === "UPDATE" ? changesOf(r.table_name, r.before, r.after) : [],
-      })),
+      }));
+    const staffIds = [...new Set(entries.flatMap((e) => e.changes
+      .filter((ch) => STAFF_FIELD.test(ch.field)).flatMap((ch) => [ch.from, ch.to])
+      .filter((v): v is string => !!v && UUID.test(v))))];
+    if (staffIds.length) {
+      const { rows: names } = await client.query<{ id: string; name: string | null }>(
+        "select x::text as id, app.colleague_name(x, $1::uuid) as name from unnest($2::uuid[]) x",
+        [hotelId, staffIds]);
+      const nameOf = new Map(names.map((n) => [n.id, n.name ?? "-"]));
+      for (const ch of entries.flatMap((e) => e.changes)) {
+        if (!STAFF_FIELD.test(ch.field)) continue;
+        if (ch.from && nameOf.has(ch.from)) ch.from = nameOf.get(ch.from)!;
+        if (ch.to && nameOf.has(ch.to)) ch.to = nameOf.get(ch.to)!;
+      }
+    }
+
+    return {
+      entries,
       kinds: kinds.map((k) => ({ key: k.t, label: kindOf(k.t) })),
       people: people.filter((p) => p.name).map((p) => ({ id: p.id, name: p.name! })),
     };

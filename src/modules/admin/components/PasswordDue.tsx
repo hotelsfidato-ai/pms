@@ -47,6 +47,7 @@ export function PasswordDue() {
         title="Set a longer password"
         description={`Your role now reaches more, so your password is at least ${min} characters. Set one to go on.`}
         size="sm"
+        closable={false}
         footer={
           <Button variant="primary" size="lg" loading={busy}
                   disabled={value.length < min} onClick={() => void submit()}>

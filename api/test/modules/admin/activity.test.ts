@@ -98,6 +98,18 @@ describe("across the group (Q-A)", () => {
     expect(phone).toEqual({ field: "phone", masked: true });
   });
 
+  it("names the person in a column that holds one, never their id", async () => {
+    await sql(
+      `update reservations set late_checkout_by = $1
+        where id = (select r.id from reservations r join hotels h on h.id = r.hotel_id
+                     where h.code = '5EL' order by r.created_at limit 1)`, [gm]);
+    const text = await (await read(owner, "?kind=reservations&limit=50")).text();
+    expect(text).not.toContain(gm);
+    const by = (JSON.parse(text) as { entries: Entry[] }).entries
+      .flatMap((e) => e.changes).find((c) => c.field === "late checkout by");
+    expect(by?.to).toBe("ACT gm");
+  });
+
   it("pages", async () => {
     const res = await read(owner, "?limit=1");
     expect((await res.json() as { entries: Entry[] }).entries).toHaveLength(1);

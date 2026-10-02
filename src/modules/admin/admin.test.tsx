@@ -753,6 +753,8 @@ describe("D27-245 - a manager's role with a short password", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Set a longer password")).toBeDefined();
+    /* It must be answered: no close button that does nothing. */
+    expect(within(dialog).queryByRole("button", { name: "Close" })).toBeNull();
     const box = within(dialog).getByLabelText(/A new password/);
     const set = within(dialog).getByRole("button", { name: "Set it" }) as HTMLButtonElement;
     fireEvent.change(box, { target: { value: "nine-char" } });
