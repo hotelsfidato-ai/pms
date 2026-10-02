@@ -238,6 +238,31 @@ notifications.get("/:code/notifications", async (c) => {
       }
     }
 
+    /* Wake-up calls (D27-241): due from fifteen minutes before until done,
+       and a guest's ask waiting for the desk - for the desk only. */
+    if (role !== null && ["owner", "admin", "gm", "hotel_manager", "front_desk"].includes(role)) {
+      const { rows: [wake] } = await client.query<{ due: number; asked: number }>(
+        `select count(*) filter (where status = 'set' and call_at <= now() + interval '15 minutes')::int as due,
+                count(*) filter (where status = 'asked')::int as asked
+           from wake_up_calls where hotel_id = $1`, [hotelId]);
+      if (wake!.due) {
+        out.push({
+          id: "wake-up-calls-due", hotelId: code, category: "customer",
+          title: `${wake!.due} wake-up call${wake!.due === 1 ? "" : "s"} due`,
+          body: "Call the room, then mark it done on Wake-up calls.",
+          isRead: false, at, link: `/h/${code}/wake-up-calls`, actionRequired: true,
+        });
+      }
+      if (wake!.asked) {
+        out.push({
+          id: "wake-up-calls-asked", hotelId: code, category: "customer",
+          title: `${wake!.asked} wake-up call${wake!.asked === 1 ? "" : "s"} asked for by guests`,
+          body: "Confirm it on Wake-up calls, or cancel it with a reason.",
+          isRead: false, at, link: `/h/${code}/wake-up-calls`, actionRequired: true,
+        });
+      }
+    }
+
     const reversals = by("reversal");
     if (reversals.length) {
       out.push({

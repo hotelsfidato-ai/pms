@@ -75,6 +75,8 @@ describe("every write the server mounts", () => {
       "POST /api/channel/su/reservations",
       "POST /api/guest/:token/code",
       "POST /api/guest/:token/details",
+      /* DigiLocker, a fourth way in - off until set up (D27-235 2.5). */
+      "POST /api/guest/:token/digilocker",
       "POST /api/guest/:token/google",
       "POST /api/guest/:token/id-photo",
       /* In-room dining (D27-224): behind the code, each its own definer. */
@@ -84,6 +86,11 @@ describe("every write the server mounts", () => {
       "POST /api/guest/:token/tables",              // a table at the restaurant (D27-224)
       "POST /api/guest/:token/tables/:id/cancel",
       "POST /api/guest/:token/verify",
+      "POST /api/guest/:token/wake-up",             // a wake-up call, asked by the guest (D27-241)
+      /* The room and the phone, no link (D27-235 2.4), and back from DigiLocker. */
+      "POST /api/guest/by-room/open",
+      "POST /api/guest/by-room/send",
+      "POST /api/guest/digilocker/finish",
       "POST /api/pos/tickets",
       "POST /api/pos/tickets/:ref/void",
     ]);
@@ -368,6 +375,15 @@ describe("the matrix the server asks", () => {
     expect(rule(`POST ${H}/requests`).kind).toBe("own");
     expect(rule(`PATCH ${H}/requests/:id`).kind).toBe("own");
     expect(READ_RULES[`GET ${H}/requests`]?.kind).toBe("own");
+  });
+
+  it("D27-241: wake-up calls and lost property are the route's, which knows the desk from housekeeping", () => {
+    for (const key of [`POST ${H}/wake-up-calls`, `PATCH ${H}/wake-up-calls/:id`,
+                       `POST ${H}/lost-property`, `PATCH ${H}/lost-property/:id`]) {
+      expect(rule(key).kind, key).toBe("own");
+    }
+    expect(READ_RULES[`GET ${H}/wake-up-calls`]?.kind).toBe("own");
+    expect(READ_RULES[`GET ${H}/lost-property`]?.kind).toBe("own");
   });
 
   it("D27-224: the desk's reply to a guest is the route's own, for the desk's roles", () => {

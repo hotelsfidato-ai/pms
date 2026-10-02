@@ -150,6 +150,8 @@ export const CLEAR: [table: string, how: string][] = [
      removed there by hand. */
   ["guest_id_photo_views", "hotel_id = $1"],
   ["guest_id_photos",   "hotel_id = $1"],
+  /* A DigiLocker sign-in in flight points at the link (D27-235). */
+  ["guest_digilocker_attempts", "hotel_id = $1"],
   ["guest_links",       "hotel_id = $1"],
 
   ["form_c_filings",    "hotel_id = $1"],
@@ -175,6 +177,9 @@ export const CLEAR: [table: string, how: string][] = [
      the completeness test the day it was written (21 September). */
   ["work_order_costs",  "hotel_id = $1"],
   ["work_orders",       "hotel_id = $1"],
+  /* A wake-up call points at the stay and the room; a lost item at a room (D27-241). */
+  ["wake_up_calls",     "hotel_id = $1"],
+  ["lost_items",        "hotel_id = $1"],
   ["room_blocks",       "hotel_id = $1"],
 
   ["banquet_events",    "hotel_id = $1"],

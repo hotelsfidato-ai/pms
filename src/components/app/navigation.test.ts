@@ -104,6 +104,8 @@ describe("each person's menu", () => {
       "Online check-in",
       /* 30 September (the owner's D27-181): guests' in-stay requests. */
       "Guest requests",
+      /* 2 October (the owner's D27-241). */
+      "Wake-up calls", "Lost property",
       "All bookings",
       /* 29 September (the owner's D27-174): what the CRS sold, and the
          notes the desk acts on when it changes there. */
@@ -211,7 +213,7 @@ describe("each person's menu", () => {
        hotel has it on (D22-22), and Purchasing once D22-11 let housekeeping
        see it (the owner, 24 September). */
     expect(menu("housekeeping")).toEqual(
-      ["Rooms", "Housekeeping", "Work orders", "Guest requests", "Store", "Equipment", "Purchasing", "Dockets",
+      ["Rooms", "Housekeeping", "Work orders", "Guest requests", "Lost property", "Store", "Equipment", "Purchasing", "Dockets",
        "Notifications"]);
     expect(menu("stores")).toEqual(["Store", "Equipment", "Purchasing", "Notifications"]);
     for (const role of ["housekeeping", "stores", "chef", "kitchen_manager", "pos"] as Role[]) {

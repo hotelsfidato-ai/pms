@@ -11,6 +11,44 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · Room and phone, DigiLocker (off), wake-up calls and lost property (D27-235, D27-239, D27-241)
+
+**Asked for:** D27-235 2.4 (a guest types their room and phone; the code goes only to
+the booking's own number, every answer the same), 2.5 (DigiLocker through API Setu,
+prepared and switched off), and D27-239's wake-up calls and lost property. The owner's
+answers: Q1.1 /g/h/<hotel> and a QR card per hotel; Q2.1 DigiLocker unlocks like Google
+by the mobile; Q2.2 only the masked number and the name, no eAadhaar XML; Q2.3 the
+button beside Google; D27-241 wake-up calls from the desk AND the guest's page (a
+request the desk confirms), the bell from 15 minutes before until done, lost items
+logged by the desk and housekeeping and cleared by the desk, menus as planned.
+
+**Shipped** (branch `guest/room-phone-digilocker-2oct`; migrations 181, 182, 183 for now)
+- 181 `app.guest_room_phone_link`; `api/src/routes/guestDoorByRoom.ts`; `pages/ByRoom.tsx`
+  (online-checkin) at /g/h/:hotel; `HotelCard.tsx` (the master places it in Desk.tsx)
+- 182 `guest_digilocker_attempts`, begin/take/answer, submissions' `source` and `id_name`;
+  `api/src/routes/guestDigilocker.ts` (OAuth 2.0 + PKCE per DigiLocker's Authorized Partner
+  API v2.2, Oct 2022); `DigiLockerButton.tsx` (the master places it beside Google) and
+  `pages/DigiLockerReturn.tsx` at /g-digilocker; settings names in api/.env.example
+- 183 `wake_up_calls`, `lost_items`, the guest's ask and list; `wakeAndLost.ts` (desk
+  routes), `api/src/routes/guestWakeUp.ts` (the door), `WakeUpSection.tsx` (online-checkin;
+  the master adds its line in Behind); `pages/WakeUpCalls.tsx`, `pages/LostProperty.tsx`;
+  the bell (due, and guests' asks); menus; roleGate lines; reset-property lines
+
+**Proved** (see the report to the master for the numbers run on the final tree)
+- db checks 41/41 on fidato_s40; each new set seen failing before its migration, and the
+  two phone checks broken -> failing
+- API: guestDoorByRoom 5/5; guestDigilocker 5/5 (5/5 failing with its routes unmounted)
+- web: guestWays 6/6
+
+**Left open**
+- The desk's Online check-in card does not yet say "from DigiLocker" (Desk.tsx and the
+  door's GET /online-checkin are online-checkin's); a DigiLocker submission confirmed by
+  the desk writes the MASKED number to guest_documents (the owner's Q2.2) over any fuller
+  one on file - the confirm route's, worth a question
+- DigiLocker stays off until the partner keys and the lawyer's answers (D27-235)
+
+---
+
 ## 2026-10-01 · One-tap choices on the guest's page (D27-224, D27-225)
 
 **Asked for:** section C of `docs/briefs/guest-in-stay-plan.md`, as the owner
