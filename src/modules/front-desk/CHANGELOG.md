@@ -8,6 +8,19 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-03 · The front desk's rules, per hotel (the owner's D27-243 Settings phase 3, D27-246)
+
+**Asked for:** through the master; plan for 3.3 agreed. Branch `settings/phase3-2oct` from cp6 f6eee640 (76f38f2a merged); migration 189, 187 at the merge.
+**Shipped:** one "Front desk rules" card on Settings › Operations (`components/FrontDeskRules.tsx`, through `index.ts`; one line in admin's `Settings.tsx`), saved by inventory's `PATCH /:code/front-desk` and read by every screen from `GET /api/hotels` (`deskRules`), fetched again after a save. Each rule starts on what the code did:
+- 3.1 the way of paying the desk's screens start on: the bill (finance's `FolioPanel`), a function's bill (banquet's `FunctionBill`), New booking's advance. The till keeps Cash.
+- 3.2 "The desk may overbook" (on): off, the desk's booking - a group's, whole or not at all - is refused past a full house like a machine's (`makeBooking`).
+- 3.3 the advance before check-in: none / the first night / the whole stay. Check-in refuses with the amount: "An advance of ₹2,100 is owed before check-in (the first night ₹2,100, paid ₹0). Take it on the Bill tab." Asked: the agreed rate and its GST per night (no GST rule for rooms: the rate alone); paid: payments less refunds on the stay's own bill (New booking's advance counts). Never asked of a company's booking, a room the group's host pays for, a complimentary room, or a booking-site booking "Prepaid on the booking site" (D27-246: ticked by default; the desk unticks it on New booking or on the check-in). No override. The check-in dialog holds Check in with the server's own figure (the express read gains `advance`, `bookingSite`, `prepaidOnSite`, and `?prepaid=false`).
+- 3.4 the weekend days, shading only: the Calendar (`isWeekend(iso, days)`) and inventory's Rates.
+- 3.6 what the ID, the nationality and the title start on: check-in and New booking (guests' `deskGuestId`: the ID type only for a guest of the hotel's nationality, never an Aadhaar from abroad).
+**Proved:** API `frontDeskRules.test.ts` (FRL): 8 cases; on the old code the 6 that are new fail (the 2 that keep today's behaviour pass both times). Web `frontDeskRules.test.tsx`: 4 cases, all fail on the old code. The folders touched and the guards (front desk, guests, reservations, banquet, admin, inventory, finance's flows, primaryAction, navigation, boundaries, App): 42 files, 291 tests. Web and API tsc 0.
+**Screens** (the app's own pane, as the owner, `fidato_s44` at 189 (187 on cp6); 1280 and 375 px): the card under the front desk's hours, its editor (way of paying, advance, the overbook switch, the seven weekend days, ID, nationality, title); saved UPI, the first night, Friday and Saturday, Aadhaar - the card read them back at once. The Calendar shaded Fri 9 and Sat 10 Oct, not Sunday. Rohan Desai's check-in (direct, no payment): the ID started on Aadhaar, and after the ID and the early reason Check in held with "An advance of ₹3,150 is owed before check-in (the first night ₹3,150, paid ₹0). Take it on the Bill tab." At 375 px "Advance before check-in" ran into "Weekend" - the card's labels now wrap. The rules were put back to their defaults afterwards.
+**Files outside front desk:** `db/migrations/189_front_desk_rules.sql`; core `api/src/routes/hotels.ts`, `src/lib/api.ts`; inventory `inventorySetup.ts`, `pages/Rates.tsx`; reservations `book.ts`, `groups.ts`, `data/groups.ts`, `pages/BookingPage.tsx`; finance `flows/FolioPanel.tsx`; banquet `components/FunctionBill.tsx`; guests `components/GuestIdFields.tsx`, `index.ts`; admin `pages/Settings.tsx`.
+
 ## 2026-10-02 · The check-in laid out like New booking; express check-in; a room dirtied only by a guest (the owner's D27-236, D27-237, D27-239, D27-242)
 
 **Asked for:** through the master, plan first for the server pieces. Branch `frontdesk/onepage-2oct` from cp6 3336a219; migration 182; database `fidato_s44`.

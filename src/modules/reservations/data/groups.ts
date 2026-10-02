@@ -170,6 +170,8 @@ export async function createBooking(
         it again against the phone and email typed. */
     guestId?: string;
     /** "Guest agreed to WhatsApp" (D21-72). */
+    /** D27-246: a booking site's booking, prepaid there (on by default). */
+    prepaidOnSite?: boolean;
     whatsappAgreed?: boolean;
     /** "Guest agreed to offers" - kept against the phone and email (D25-39). */
     offersAgreed?: boolean;

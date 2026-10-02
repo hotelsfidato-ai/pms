@@ -94,10 +94,10 @@ export function windowFrom(start: string, length = 14): string[] {
   return Array.from({ length }, (_, i) => addDays(start, i));
 }
 
-/** Saturday or Sunday — the live system marks both. */
-export function isWeekend(iso: string): boolean {
-  const day = new Date(`${iso}T00:00:00Z`).getUTCDay();
-  return day === 0 || day === 6;
+/** One of the hotel's weekend days (D27-243 3.4: its own, Saturday and
+    Sunday until it says otherwise). Shading only - no price reads it. */
+export function isWeekend(iso: string, days: readonly number[] = [0, 6]): boolean {
+  return days.includes(new Date(`${iso}T00:00:00Z`).getUTCDay());
 }
 
 /* ── Bars ─────────────────────────────────────────────────────────── */

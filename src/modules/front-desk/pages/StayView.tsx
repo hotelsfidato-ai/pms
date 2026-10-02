@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { useRole, useSession } from "@/lib/session";
+import { useCurrentHotel, useRole, useSession } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import {
   ChevronRight, ChevronLeft, Globe, User, Building2,
@@ -179,6 +179,8 @@ export default function StayViewPage({ view }: {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get("res");
+  /* The hotel's own weekend, shaded (D27-243 3.4). */
+  const weekend = useCurrentHotel()?.deskRules?.weekendDays;
 
   /* Open on the business date so the chart shows today first. */
   const [start, setStart] = useState(BUSINESS_DATE);
@@ -624,7 +626,7 @@ export default function StayViewPage({ view }: {
                 data-date-col={d}
                 className={cn(
                   "grid place-content-center text-center h-[50px] border-r border-grey-100 last:border-r-0 max-sm:snap-start",
-                  isWeekend(d) && "bg-grey-50",
+                  isWeekend(d, weekend) && "bg-grey-50",
                   d === BUSINESS_DATE && "bg-ink-900 text-white",
                 )}
               >
@@ -740,7 +742,7 @@ export default function StayViewPage({ view }: {
                     {dates.map((d, i) => {
                       const cell = cn(
                         "h-10 border-r border-grey-100 last:border-r-0 transition-colors duration-150",
-                        isWeekend(d) && "bg-grey-50",
+                        isWeekend(d, weekend) && "bg-grey-50",
                         d === BUSINESS_DATE && "bg-ink-900/[0.035]",
                       );
                       /* gridRow 1, like the bars: with a column alone,

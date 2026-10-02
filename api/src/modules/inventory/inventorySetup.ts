@@ -279,8 +279,18 @@ inventorySetup.patch("/:code/front-desk", async (c) => {
     checkInTime?: string; checkOutTime?: string;
     earlyCheckinCharge?: number | null;
     lateCheckoutCharge?: number | null;
+    /* The front desk's rules (187, the owner's D27-243): absent = unchanged. */
+    defaultPaymentMethod?: string;
+    deskMayOverbook?: boolean;
+    advanceBeforeCheckIn?: string;
+    weekendDays?: number[];
+    defaultIdType?: string | null;
+    defaultNationality?: string;
+    defaultTitle?: string | null;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
+  const rule = rulesProblem(input);
+  if (rule) return c.json(refuse(rule), 409);
 
   const clock = /^([01]\d|2[0-3]):[0-5]\d$/;
   for (const [label, value] of [
@@ -318,6 +328,21 @@ inventorySetup.patch("/:code/front-desk", async (c) => {
        input.checkInTime ?? null, input.checkOutTime ?? null,
        Object.hasOwn(input, "earlyCheckinCharge"), input.earlyCheckinCharge ?? null,
        Object.hasOwn(input, "lateCheckoutCharge"), input.lateCheckoutCharge ?? null]);
+    await client.query(
+      `update hotels set
+         default_payment_method  = coalesce($2, default_payment_method),
+         desk_may_overbook       = coalesce($3, desk_may_overbook),
+         advance_before_check_in = coalesce($4, advance_before_check_in),
+         weekend_days            = coalesce($5::smallint[], weekend_days),
+         default_id_type = case when $6::boolean then $7 else default_id_type end,
+         default_nationality     = coalesce($8, default_nationality),
+         default_title   = case when $9::boolean then $10 else default_title end
+       where id = $1`,
+      [hotelId, input.defaultPaymentMethod ?? null, input.deskMayOverbook ?? null,
+       input.advanceBeforeCheckIn ?? null, input.weekendDays ?? null,
+       Object.hasOwn(input, "defaultIdType"), input.defaultIdType || null,
+       input.defaultNationality?.trim().toUpperCase() ?? null,
+       Object.hasOwn(input, "defaultTitle"), input.defaultTitle || null]);
     return { ok: true as const };
   });
 
@@ -326,6 +351,39 @@ inventorySetup.patch("/:code/front-desk", async (c) => {
 });
 
 
+
+/* The front desk's rules, refused in a sentence before anything is written
+   (187 refuses them again). */
+function rulesProblem(input: {
+  defaultPaymentMethod?: string; deskMayOverbook?: boolean; advanceBeforeCheckIn?: string;
+  weekendDays?: number[]; defaultIdType?: string | null; defaultNationality?: string;
+  defaultTitle?: string | null;
+}): string | null {
+  const one = (v: unknown, of: readonly unknown[]) => v === undefined || of.includes(v);
+  if (!one(input.defaultPaymentMethod, ["Cash", "UPI", "Credit Card", "Debit Card"])) {
+    return "The default way of paying is Cash, UPI, Credit Card or Debit Card.";
+  }
+  if (input.deskMayOverbook !== undefined && typeof input.deskMayOverbook !== "boolean") {
+    return "Whether the desk may overbook is a yes or a no.";
+  }
+  if (!one(input.advanceBeforeCheckIn, ["none", "first_night", "whole_stay"])) {
+    return "The advance before check-in is none, the first night or the whole stay.";
+  }
+  if (input.weekendDays !== undefined && !(Array.isArray(input.weekendDays)
+      && input.weekendDays.every((d) => Number.isInteger(d) && d >= 0 && d <= 6))) {
+    return "Weekend days are days of the week, Sunday to Saturday.";
+  }
+  if (!one(input.defaultIdType || null, [null, "aadhaar", "passport", "driving_licence", "voter", "other"])) {
+    return "The default ID is Aadhaar, Passport, Driving licence, Voter ID, Other, or none.";
+  }
+  if (input.defaultNationality !== undefined && !/^[A-Za-z]{2}$/.test(input.defaultNationality.trim())) {
+    return "The default nationality is two letters, IN for India.";
+  }
+  if (!one(input.defaultTitle || null, [null, "Mr", "Ms", "Mrs", "Dr"])) {
+    return "The default title is Mr, Ms, Mrs, Dr, or none.";
+  }
+  return null;
+}
 
 /* ══════════════════════════════════════════════════════════════════
    ROOM TYPES AND ROOMS, FROM A FILE

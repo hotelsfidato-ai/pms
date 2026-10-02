@@ -170,7 +170,58 @@ interface CheckInBody {
   offersAgreed?: boolean;
   /* D27-193: the clerk saw and confirmed a move of more than a day. */
   confirmMove?: boolean;
+  /* D27-246: the desk's answer to "Prepaid on the booking site" for a
+     booking-site booking; absent = as the booking says (on by default). */
+  prepaidOnSite?: boolean;
 }
+
+/** What THIS stay still owes before it checks in, by the hotel's rule (the
+    owner's D27-243 3.3, D27-246), or null when nothing is asked: the rule is
+    "none"; the booking is billed to a company; its room is on the group's
+    bill (the host pays); it came from a booking site and is prepaid there;
+    it is complimentary or has no agreed rate. ASKED: the first night's - or
+    every night's - agreed rate with its GST, as check-in and the night audit
+    post it (no GST rule for rooms: the rate alone, as nothing posts its tax
+    yet, D27-205). PAID: payments less refunds on the stay's own bill, where
+    New booking's advance lands. `arrival` is the day the stay starts if it
+    checks in now. No override: the hotel sets "none" instead. */
+async function advanceOwed(
+  client: Client, hotelId: string, stayId: string, arrival: string, prepaidOnSite?: boolean,
+): Promise<{ rule: "first_night" | "whole_stay"; asked: number; paid: number; owed: number } | null> {
+  const { rows } = await client.query<{
+    rule: "none" | "first_night" | "whole_stay"; exempt: boolean; asked: string | null; paid: string;
+  }>(
+    `select h.advance_before_check_in as rule,
+            (r.company_id is not null
+             or (r.route_room_to_group and r.group_id is not null)
+             or r.is_complimentary
+             or (coalesce(bs.kind, r.source) = 'ota' and coalesce($4::boolean, r.prepaid_on_site))) as exempt,
+            ((case when h.advance_before_check_in = 'whole_stay'
+                   then greatest(r.check_out - $3::date, 1) else 1 end)
+             * (r.agreed_rate + coalesce(round(r.agreed_rate
+                 * app.gst_rate_or_null(h.id, 'room', r.agreed_rate) / 100.0, 2), 0)))::text as asked,
+            coalesce((select -sum(fp.amount)
+                        from folio_postings fp join folios f on f.id = fp.folio_id
+                       where f.reservation_id = r.id and fp.category in ('payment', 'refund')
+                         and fp.reverses_id is null
+                         and not exists (select 1 from folio_postings v where v.reverses_id = fp.id)),
+                     0)::text as paid
+       from reservations r
+       join hotels h on h.id = r.hotel_id
+       left join booking_sources bs on bs.id = r.booking_source_id
+      where r.hotel_id = $1 and r.id = $2`,
+    [hotelId, stayId, arrival, prepaidOnSite ?? null]);
+  const a = rows[0];
+  if (!a || a.rule === "none" || a.exempt || a.asked === null) return null;
+  const asked = Number(a.asked), paid = Number(a.paid);
+  return { rule: a.rule, asked, paid, owed: Math.max(0, Math.round((asked - paid) * 100) / 100) };
+}
+
+/** The refusal's sentence: the amount owed, what was asked and what is paid. */
+const advanceWords = (a: { rule: string; asked: number; paid: number; owed: number }) =>
+  `An advance of ${money(a.owed)} is owed before check-in `
+  + `(${a.rule === "whole_stay" ? "the whole stay" : "the first night"} ${money(a.asked)}, `
+  + `paid ${money(a.paid)}). Take it on the Bill tab.`;
 
 /** The document THIS stay's online check-in carried, confirmed by the desk -
     the express check-in's one question (D27-236 3.4, D27-242). Null for a
@@ -200,9 +251,27 @@ operations.get("/:code/stays/:id/express-check-in", async (c) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
     const d = await expressDocument(client, hotelId, c.req.param("id"));
+    /* And the advance still owed, so the screen holds Check in with the
+       server's own figure (D27-243 3.3): the arrival as it stands, or the
+       business date for an arrival that moves. */
+    const { rows: s } = await client.query<{ arrival: string }>(
+      `select to_char(least(r.check_in, app.business_date($1)), 'YYYY-MM-DD') as arrival
+         from reservations r where r.hotel_id = $1 and r.id = $2`, [hotelId, c.req.param("id")]);
+    /* ?prepaid=false: the desk has unticked "Prepaid on the booking site". */
+    const q = c.req.query("prepaid");
+    const prepaid = q === "false" ? false : q === "true" ? true : undefined;
+    const a = s[0] ? await advanceOwed(client, hotelId, c.req.param("id"), s[0].arrival, prepaid) : null;
+    const advance = a && a.owed > 0 ? { ...a, words: advanceWords(a) } : null;
+    /* Whether the booking came from a booking site, and its tick (D27-246). */
+    const { rows: site } = await client.query<{ site: boolean; prepaid: boolean }>(
+      `select coalesce(bs.kind, r.source) = 'ota' as site, r.prepaid_on_site as prepaid
+         from reservations r left join booking_sources bs on bs.id = r.booking_source_id
+        where r.hotel_id = $1 and r.id = $2`, [hotelId, c.req.param("id")]);
+    const bookingSite = site[0]?.site ?? false;
+    const prepaidOnSite = site[0]?.prepaid ?? true;
     return d
-      ? { express: true, document: { type: d.type, number: `${"•".repeat(Math.max(0, d.number.length - 4))}${d.number.slice(-4)}` } }
-      : { express: false };
+      ? { express: true, document: { type: d.type, number: `${"•".repeat(Math.max(0, d.number.length - 4))}${d.number.slice(-4)}` }, advance, bookingSite, prepaidOnSite }
+      : { express: false, advance, bookingSite, prepaidOnSite };
   });
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
@@ -459,6 +528,13 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       const formIII = formIIIRefusal({ ...identity, nationality }, body.visit, captured);
       if (formIII) return refuse(formIII);
 
+      /* AN ADVANCE BEFORE CHECK-IN (the owner's D27-243 3.3, D27-246): the
+         last refusal, before the first write. The desk's untick of "Prepaid
+         on the booking site" counts here and is saved below. */
+      const owed = await advanceOwed(client, hotelId, stayId,
+        earlyByDays ? businessDate : stay.check_in, body.prepaidOnSite);
+      if (owed && owed.owed > 0) return refuse(advanceWords(owed));
+
       const notes = captured || express
         ? stay.notes
         : [stay.notes, `ID not captured - ${body.idSkipReason}`]
@@ -482,10 +558,12 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
                 children = coalesce($4, children),
                 occupancy = coalesce($3, adults) + coalesce($4, children),
                 meal_plan = coalesce($5, meal_plan),
-                notes = $6
+                notes = $6,
+                prepaid_on_site = coalesce($7, prepaid_on_site)
           where hotel_id = $1 and id = $2`,
         [hotelId, stayId, body.adults ?? null, body.children ?? null,
-         body.ratePlan === "Room Only" ? "RO" : body.ratePlan ?? null, notes],
+         body.ratePlan === "Room Only" ? "RO" : body.ratePlan ?? null, notes,
+         typeof body.prepaidOnSite === "boolean" ? body.prepaidOnSite : null],
       );
 
       /* AND A FOLIO, IF THERE IS NOT ONE. Bookings now open theirs at
