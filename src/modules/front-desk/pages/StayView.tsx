@@ -4,7 +4,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useRole, useSession } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import {
-  ChevronDown, ChevronRight, ChevronLeft, Globe, User, Building2,
+  ChevronRight, ChevronLeft, Globe, User, Building2,
   Sparkle, Wrench, AlertTriangle, CloudOff, RotateCw,
   BedDouble, DoorOpen, Users, LogIn, LogOut, CalendarDays, SprayCan, Check,
 } from "lucide-react";
@@ -212,7 +212,6 @@ export default function StayViewPage({ view }: {
     navigate(`/h/${hotelId}/${next === "calendar" ? "calendar" : "stay"}${
       searchParams.toString() ? `?${searchParams.toString()}` : ""}`);
   };
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const queryClient = useQueryClient();
 
   const chart = useQuery({
@@ -649,7 +648,6 @@ export default function StayViewPage({ view }: {
 
           {/* Room type groups */}
           {groups.map((group) => {
-            const isCollapsed = collapsed[group.type] ?? false;
             const visibleRooms = group.rooms.filter(roomVisible);
             if (visibleRooms.length === 0) return null;
 
@@ -658,30 +656,22 @@ export default function StayViewPage({ view }: {
                 {/* Group row — availability over rate, per date, on two
                     levelled lines */}
                 <div className={cn("grid bg-grey-50 border-b border-grey-200", GRID)}>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCollapsed((c) => ({ ...c, [group.type]: !isCollapsed }))
-                    }
+                  {/* ALWAYS OPEN (the owner's D27-236, 4.1): a room type's rooms
+                      are never folded away, so the head is a label, not a
+                      button. */}
+                  <div
                     className={cn(
                       "flex items-center gap-1 px-3 max-sm:px-2.5 h-11 text-left border-r border-grey-200",
-                      "hover:bg-grey-100 transition-colors duration-150",
                       ROOM_COL, "z-20 bg-grey-50",
                     )}
-                    aria-expanded={!isCollapsed}
                   >
-                    {isCollapsed ? (
-                      <ChevronRight className="size-3.5 text-grey-500 shrink-0 max-sm:hidden" />
-                    ) : (
-                      <ChevronDown className="size-3.5 text-grey-500 shrink-0 max-sm:hidden" />
-                    )}
                     <span className="text-sm max-sm:text-xs font-semibold text-ink-900 truncate">
                       {group.type}
                     </span>
                     <span className="ml-auto h-5 px-[7px] rounded-full bg-white ring-1 ring-inset ring-grey-200 text-xs font-semibold leading-5 text-grey-600 tabular max-sm:hidden">
                       {visibleRooms.length}
                     </span>
-                  </button>
+                  </div>
 
                   {group.perDate.map((cell) => (
                     <div
@@ -708,7 +698,7 @@ export default function StayViewPage({ view }: {
                 </div>
 
                 {/* Room rows */}
-                {!isCollapsed && visibleRooms.map((room) => (
+                {visibleRooms.map((room) => (
                   <div
                     key={room.number}
                     data-room-row={room.number}

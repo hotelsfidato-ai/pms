@@ -238,6 +238,15 @@ describe("each person's menu", () => {
     expect(searchable("owner")).toContain("Lodging tax");
   });
 
+  /* D27-180, D27-239 8.1: the channel manager's booking engine is used, so the
+     PMS's own "Booking engine" leaves the menu, for every role. */
+  it("has no Booking engine entry for anybody", () => {
+    for (const role of COMING_SOON_ROLES) {
+      const labels = sidebarFor(role, "5EL", ALL_ON).flatMap((s) => s.items.map((i) => i.label));
+      expect(labels, role).not.toContain("Booking engine");
+    }
+  });
+
   it("puts each service not built yet in its own section, marked - for the owner, admins and GMs only", () => {
     /* ⚠ NO COMING SOON SECTION SINCE 28 SEPTEMBER (the owner, D27-87). Each
        service not built yet sits where it will belong, marked "Not built
@@ -290,7 +299,6 @@ describe("each person's menu", () => {
          to mark. */
       /* The channel manager (D27-178) and Contracts (D27-184) are BUILT;
          both stay in Distribution as working screens. */
-      "Distribution": ["Booking engine"],
       "Finance": ["Online payments"],
       "System": ["Room systems"],
     };
