@@ -27,7 +27,7 @@ import { ImportDialog } from "@/components/flows/ImportDialog";
 import { STOCK_SPEC } from "@/lib/importSpec";
 import { StoreTiles } from "@/modules/stores/components/StoreTiles";
 import { TILES, inTile, isTile, type Tile } from "@/modules/stores/lib/tiles";
-import { STOCK_REPORT_LINKS, mayReadStockReports } from "@/modules/reports";
+import { STOCK_REPORTS, mayReadStockReports } from "@/modules/stores/lib/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STORE
@@ -184,8 +184,8 @@ export function StoreViews({ code, view, search }: { code: string; view: "shelf"
       />
       {mayReadStockReports(role) && (
         <Menu label="Reports">
-          {STOCK_REPORT_LINKS.map((r) => (
-            <MenuItem key={r.path} icon={FileBarChart} onSelect={() => navigate(r.path)}>
+          {STOCK_REPORTS.map((r) => (
+            <MenuItem key={r.key} icon={FileBarChart} onSelect={() => navigate(`/reports/${r.key}`)}>
               {r.label}
             </MenuItem>
           ))}

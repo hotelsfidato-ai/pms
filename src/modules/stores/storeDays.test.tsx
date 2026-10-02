@@ -2,8 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
 import App from "@/App";
 import { HOTEL, go, startSignedIn, signedIn, AGRA_HOTEL } from "@/test/app";
-import { ROLES } from "@/lib/permissions";
-import { mayReadStockReports } from "@/modules/reports";
+import { STOCK_REPORT_ROLES } from "@/modules/stores/lib/reports";
 
 /* ══════════════════════════════════════════════════════════════════
    THE STORE LIKE THE CALENDAR (D27-238; the owner's answers D27-242)
@@ -173,7 +172,7 @@ describe("a delivery's GST, an issue's department, a breakage's who (D27-238, Q6
 
 describe("the Reports menu (D27-240)", () => {
   it("is pinned to the seven roles, and shown to the Inventory Manager but not the kitchen manager", async () => {
-    expect(ROLES.filter(mayReadStockReports).sort()).toEqual(
+    expect([...STOCK_REPORT_ROLES].sort()).toEqual(
       ["admin", "finance", "gm", "hotel_manager", "owner", "read_only", "stores"]);
     as("stores");
     const { unmount } = render(<App />);

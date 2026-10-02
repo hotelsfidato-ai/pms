@@ -143,9 +143,9 @@ and both stay. A list can be imported from a file.
     and who (a person rostered here, or Not known).
   - **Reports** (D27-240): a menu of the nine stock and equipment reports at
     `/reports/<key>`, for the owner, admin, GM, hotel manager, Inventory
-    Manager, accountant and viewer: `STOCK_REPORT_LINKS` and
-    `mayReadStockReports` from `@/modules/reports` (the reports lane, 2 Oct;
-    the copy in `lib/reports.ts` went); pinned by `storeDays.test.tsx`.
+    Manager, accountant and viewer. ⚠ `lib/reports.ts` is a COPY until the
+    reports lane exports its addresses and `mayReadStockReports`; pinned by
+    `storeDays.test.tsx`.
 
 ---
 
@@ -407,6 +407,8 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
 - Left by the Calendar look (2 October, D27-242):
   - **The import has no crockery column**; the tick is set on Add an item or
     by `PATCH /items/:id` (`crockery`). Not asked for.
+  - **`lib/reports.ts` is a copy** of the reports lane's nine addresses and
+    seven roles until that lane exports them; then it goes.
   - **The Days view walks every item's history** (`app.stock_movement_costs`
     per item, per read). ponytail: fine for a hotel's few hundred items; keep
     a running total per movement if it ever reads slowly.
