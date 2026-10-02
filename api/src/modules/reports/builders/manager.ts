@@ -194,6 +194,33 @@ export async function managerReport(
   }
   const method = (k: string) => threeOf(w, payBy.get(k) ?? new Map());
 
+  /* ── What companies paid on the City ledger (D27-239) ──────────────── */
+  /* By the day the money reached the hotel, as the City ledger report
+     counts it (finance's company_payments, 184). Opening is everything
+     sent less everything paid before the day - the same rule. */
+  const { rows: companyPaid } = await client.query<{ date: string; amount: string }>(
+    `select received_on::text as date, sum(amount)::text as amount
+       from company_payments
+      where hotel_id = $1 and received_on between $2::date and $3::date
+      group by 1`,
+    [hotelId, w.ytd, asOn],
+  );
+  const companyBy = new Map<string, number>();
+  for (const p of companyPaid) bump(companyBy, p.date, Number(p.amount));
+  const companyReceived = threeOf(w, companyBy);
+  const { rows: [owedBefore] } = await client.query<{ sent: string; paid: string }>(
+    `select coalesce((select sum(-fp.amount)
+                        from folio_postings fp
+                        join payments p on p.posting_id = fp.id and p.method = 'city_ledger'
+                       where fp.hotel_id = $1 and fp.category = 'payment' and ${LIVE}
+                         and fp.business_date < $2::date), 0)::text as sent,
+            coalesce((select sum(amount) from company_payments
+                       where hotel_id = $1 and received_on < $2::date), 0)::text as paid`,
+    [hotelId, asOn],
+  );
+  const cityOpening = round2(Number(owedBefore!.sent) - Number(owedBefore!.paid));
+  const cityClosing = round2(cityOpening + method("city_ledger").today - companyReceived.today);
+
   /* ── The two ledgers, for today ────────────────────────────────────── */
   const { rows: [ledgers] } = await client.query<Record<string, string>>(
     `with pay as (
@@ -341,11 +368,11 @@ export async function managerReport(
     ]),
     section("payment", "Payment", [...paymentRows, sumLine("Total Payment", add(...payments))]),
     section("city-ledger", "City Ledger", [
-      line("Opening Balance", NOT_HELD),
-      line("Payment Received", NOT_HELD),
+      line("Opening Balance", TODAY_ONLY(cityOpening)),
+      line("Payment Received", companyReceived),
       line("Charges Raised", method("city_ledger")),
       line("Outstanding Commission", NOT_HELD),
-      sumLine("Closing Balance", NOT_HELD),
+      sumLine("Closing Balance", TODAY_ONLY(cityClosing)),
     ]),
     section("advance-deposit-ledger", "Advance Deposit Ledger", [
       line("Opening Balance", TODAY_ONLY(L["adv_opening"]!)),

@@ -8,10 +8,12 @@ import { heading, LIVE, type Property } from "../figures.ts";
    The owner's decision of 17 September: money a company or booking site
    owes starts when a bill is settled "Bill to company", a transfer to
    the city ledger (payments.method 'city_ledger'). That is the Debit.
-   Nothing in this system records the company paying it later, so
-   Opening Balance, Credit and Closing Balance print "-" until Finance
-   can record it. A balance built on the guess that nobody has paid would
-   be wrong the day somebody does.
+   What the account pays back is recorded on Company accounts (finance's
+   company_payments, 184; D27-239), by the day the money reached the
+   hotel: that is the Credit. Opening Balance is everything sent less
+   everything paid before the period; Closing Balance is Opening + Debit
+   - Credit. A payment names the same account the ledger does: the
+   company, or the booking site a booking came through.
 
    The account is the one the bill was sent to: the bill's own company,
    else the booking's, else where the booking came from
@@ -23,7 +25,8 @@ export async function cityLedgerReport(
   client: Client, property: Property, from: string, to: string, ignoreZero: boolean,
 ): Promise<ReportDoc> {
   const { rows } = await client.query<{
-    account: string | null; contact: string | null; phone: string | null; debit: string;
+    account: string | null; contact: string | null; phone: string | null;
+    opening: string; debit: string; credit: string;
   }>(
     `with transfers as (
        select coalesce(fc.name, app.booking_source_label(bs.name, rc.name, r.source)) as account,
@@ -41,12 +44,27 @@ export async function cityLedgerReport(
           and fp.category = 'payment'
           and ${LIVE}
           and fp.business_date <= $3::date
+     ),
+     paid as (
+       select coalesce(co.name, bs.name) as account, cp.company_id,
+              cp.received_on as business_date, cp.amount
+         from company_payments cp
+         left join companies co on co.id = cp.company_id
+         left join booking_sources bs on bs.id = cp.booking_source_id
+        where cp.hotel_id = $1 and cp.received_on <= $3::date
+     ),
+     moves as (
+       select account, company_id, business_date, amount as debit, 0 as credit from transfers
+       union all
+       select account, company_id, business_date, 0, amount from paid
      )
      select t.account,
             max(co.contact_name) filter (where co.name = t.account) as contact,
             max(co.phone)        filter (where co.name = t.account) as phone,
-            coalesce(sum(t.amount) filter (where t.business_date between $2::date and $3::date), 0)::text as debit
-       from transfers t
+            coalesce(sum(t.debit - t.credit) filter (where t.business_date < $2::date), 0)::text as opening,
+            coalesce(sum(t.debit)  filter (where t.business_date between $2::date and $3::date), 0)::text as debit,
+            coalesce(sum(t.credit) filter (where t.business_date between $2::date and $3::date), 0)::text as credit
+       from moves t
        left join companies co on co.id = t.company_id
       group by t.account
       order by t.account`,
@@ -54,25 +72,29 @@ export async function cityLedgerReport(
   );
 
   const accounts = rows
-    .map((r) => ({ ...r, debit: round2(Number(r.debit)) }))
-    .filter((r) => !ignoreZero || r.debit !== 0);
+    .map((r) => {
+      const opening = round2(Number(r.opening));
+      const debit = round2(Number(r.debit));
+      const credit = round2(Number(r.credit));
+      return { ...r, opening, debit, credit, closing: round2(opening + debit - credit) };
+    })
+    .filter((r) => !ignoreZero || [r.opening, r.debit, r.credit, r.closing].some((x) => x !== 0));
 
+  const sum = (k: "opening" | "debit" | "credit" | "closing") =>
+    round2(accounts.reduce((t, r) => t + r[k], 0));
   const lines: ReportRow[] = accounts.map((r) => row({
     account: r.account,
     contact: r.contact,
     phone: r.phone,
-    opening: null,
+    opening: r.opening,
     debit: r.debit,
-    credit: null,
-    closing: null,
+    credit: r.credit,
+    closing: r.closing,
   }));
   if (lines.length > 0) {
     lines.push(total({
       account: "Total", contact: null, phone: null,
-      opening: null,
-      debit: round2(accounts.reduce((t, r) => t + r.debit, 0)),
-      credit: null,
-      closing: null,
+      opening: sum("opening"), debit: sum("debit"), credit: sum("credit"), closing: sum("closing"),
     }));
   }
 
@@ -99,11 +121,12 @@ export async function cityLedgerReport(
         col("closing", "Closing Balance", "money"),
       ],
       rows: lines,
-      empty: "No bill was transferred to a company or booking site in this period.",
+      empty: "No company or booking site owed or paid anything in this period.",
     }],
     footnotes: [
       "Debit is the bills transferred to the account (settled \"Bill to company\") in the period.",
-      "Opening Balance, Credit and Closing Balance show \"-\": this system does not record a company's payment yet.",
+      "Credit is what the account paid, recorded on Company accounts, by the date it reached the hotel.",
+      "Opening Balance is everything sent less everything paid before the period; Closing Balance is Opening + Debit - Credit.",
     ],
   };
 }

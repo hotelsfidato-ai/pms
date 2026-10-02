@@ -52,6 +52,22 @@ const refuse = (
    hotel take turns so neither misses the other.
    ══════════════════════════════════════════════════════════════════ */
 
+/* A PAID-OUT WAITS FOR A YES (the owner's D27-239, D27-242): an expense is
+   raised in the approvals inbox and counts in the drawer only once the GM
+   or the owner says yes (app.cash_expense_counts, 184). Its latest
+   decision, for the screen. */
+const EXPENSE_DECISION = (column: "status" | "decision_note") => `(
+  select a.${column} from approvals a
+   where a.subject_table = 'cashier_movements' and a.subject_id = m.id
+   order by a.requested_at desc limit 1)`;
+/** Paid-outs on this drawer still waiting for a yes: they explain that
+    much of a shortage until they are decided. */
+const WAITING = `
+  select coalesce(sum(m.amount), 0)::text as waiting
+    from cashier_movements m
+   where m.shift_id = $1 and m.kind = 'expense'
+     and ${EXPENSE_DECISION("status")} in ('pending', 'clarify')`;
+
 /** One opening or handover at a time per hotel, to the end of the transaction. */
 const drawerTurn = (client: Client, hotelId: string) =>
   client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [`cash-drawer:${hotelId}`]);
@@ -176,14 +192,17 @@ cashier.get("/:code/cashier-shift", async (c) => {
 
     const { rows: movements } = await client.query<{
       id: string; kind: string; amount: string; reason: string;
-      recorded_by: string; at: string;
+      recorded_by: string; at: string; approval: string | null; approval_note: string | null;
     }>(
       `select m.id::text, m.kind, m.amount::text, m.reason,
-              s.full_name as recorded_by, to_char(m.recorded_at,'HH24:MI') as at
+              s.full_name as recorded_by, to_char(m.recorded_at,'HH24:MI') as at,
+              ${EXPENSE_DECISION("status")} as approval,
+              ${EXPENSE_DECISION("decision_note")} as approval_note
          from cashier_movements m join staff s on s.id = m.recorded_by
         where m.shift_id = $1 order by m.recorded_at`,
       [shiftId],
     );
+    const { rows: [waiting] } = await client.query<{ waiting: string }>(WAITING, [shiftId]);
 
     const { rows: denoms } = await client.query<{ value: string; count: number }>(
       `select value::text, count from cashier_denominations
@@ -231,7 +250,12 @@ cashier.get("/:code/cashier-shift", async (c) => {
         movements: movements.map((m) => ({
           id: m.id, kind: m.kind, amount: Number(m.amount),
           reason: m.reason, recordedBy: m.recorded_by, at: m.at,
+          /* A paid-out's yes (D27-242): pending, clarify, approved,
+             rejected; null where nobody was asked. */
+          approval: m.approval, approvalNote: m.approval_note,
         })),
+        /* Paid-outs waiting for a yes: not in Expected yet. */
+        waiting: Number(waiting!.waiting),
         expected: exp,
         counted: counted === null ? null : Number(counted),
         variance: counted === null ? null : Number(counted) - exp,
@@ -323,12 +347,21 @@ cashier.post("/:code/cashier-shift/movements", async (c) => {
       [hotelId, session.staffId]);
     if (!shift[0]) return refuse("You have no drawer open.");
 
-    await client.query(
+    const { rows: made } = await client.query<{ id: string }>(
       `insert into cashier_movements (hotel_id, shift_id, kind, amount,
                                       reason, recorded_by)
-       values ($1,$2,$3,$4,$5,$6)`,
+       values ($1,$2,$3,$4,$5,$6)
+       returning id::text`,
       [hotelId, shift[0].id, input.kind, Number(input.amount).toFixed(2),
        reason, session.staffId]);
+    /* A paid-out waits for the GM's or the owner's yes (D27-242). */
+    if (input.kind === "expense") {
+      await client.query(
+        `select app.request_approval($1::uuid, 'cash_expense', 'cashier_movements',
+                $2::uuid, $3, $4, $5::uuid)`,
+        [hotelId, made[0]!.id, `Front desk drawer: ${reason}`,
+         Number(input.amount).toFixed(2), session.staffId]);
+    }
     return { ok: true as const };
   });
 
@@ -405,14 +438,20 @@ cashier.post("/:code/cashier-shift/close", async (c) => {
     const { rows: expected } = await client.query<{ amount: string }>(
       `select app.cashier_expected_cash($1)::text as amount`, [shift[0].id]);
     const variance = Number(shift[0].counted) - Number(expected[0]!.amount);
+    /* Paid-outs waiting for a yes explain that much of a shortage
+       (D27-242): a reason is asked only for the rest. */
+    const { rows: [waits] } = await client.query<{ waiting: string }>(WAITING, [shift[0].id]);
+    const unexplained = variance + Number(waits!.waiting);
 
     /* A difference is RECORDED, not refused. The money is already whatever
        it is, and a desk that cannot hand over is worse than a difference
        written down — the same rule the POS close uses. */
-    if (Math.abs(variance) >= 0.01 && !input.varianceReason?.trim()) {
+    if (Math.abs(unexplained) >= 0.01 && !input.varianceReason?.trim()) {
       return refuse(
-        `The drawer is ${variance > 0 ? "over" : "short"} by `
-        + `${Math.abs(variance).toFixed(2)}. Say why, and it closes.`);
+        `The drawer is ${unexplained > 0 ? "over" : "short"} by `
+        + `${Math.abs(unexplained).toFixed(2)}`
+        + (Number(waits!.waiting) > 0 ? ", beyond the paid-outs waiting for a yes" : "")
+        + ". Say why, and it closes.");
     }
 
     /* THE FLOAT KEPT (D27-191, D27-202): typed at every close, 0 up to the

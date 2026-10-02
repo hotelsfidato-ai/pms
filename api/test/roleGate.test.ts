@@ -216,6 +216,13 @@ describe("who reads what (D27-140 to D27-147)", () => {
       .toEqual(["owner", "admin", "gm", "finance"]);
   });
 
+  it("D27-239: a company's payment is the desk's or accounts', reversed by the four of D27-125", () => {
+    expect(whoMay(rule(`POST ${H}/company-payments`)))
+      .toEqual(["owner", "admin", "gm", "hotel_manager", "front_desk", "finance"]);
+    expect(whoMay(rule(`POST ${H}/company-payments/:id/reverse`)))
+      .toEqual(["owner", "admin", "gm", "finance"]);
+  });
+
   it("D27-190: the restaurant's day is opened by whoever closes it", () => {
     expect(whoMay(rule(`POST ${H}/till/day-end/open`)))
       .toEqual(whoMay(rule(`POST ${H}/till/day-end/close`)));

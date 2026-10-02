@@ -133,6 +133,11 @@ const CORRECT_DAY = grant("reservation", "approve", "Correcting a closed day");
 /* Editing a charge and changing a stay's rate: the same three (D27-157). */
 const EDIT_BILL = grant("reservation", "approve", "Editing a charge on a bill");
 const PAYMENT = grant("payment", "create", "Taking a payment");
+/* A company's payment on the City ledger (D27-239): recorded by the desk or
+   accounts - `payment` create; reversed by the four who may reverse any
+   payment (D27-125) - exactly `payment` edit. */
+const COMPANY_PAYMENT = grant("payment", "create", "Recording a company's payment");
+const COMPANY_PAYMENT_REVERSE = grant("payment", "edit", "Reversing a company's payment");
 const DRAWER = grant("payment", "create", "Running the cashier's drawer");
 
 /* Rooms on the floor: `inventory`, which reception and housekeeping hold. */
@@ -298,6 +303,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
      administrator and the GM; verify - the owner and the accountant. No grant
      in the matrix is exactly either, so the route asks. */
   [`POST ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM"),
+  [`POST ${H}/company-payments`]: COMPANY_PAYMENT,
+  [`POST ${H}/company-payments/:id/reverse`]: COMPANY_PAYMENT_REVERSE,
   [`POST ${H}/cash-deposits/:id/reverse`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/cash-deposits/days/:date/explain`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/cash-deposits/:id/verify`]: own("finance/deposits.ts: owner, accountant"),
@@ -694,6 +701,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/cashier-shift`]: MONEY,
   /* D27-191: the owner, an administrator, the GM, the accountant and the Viewer. */
   [`GET ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM, accountant, viewer"),
+  /* What companies paid: whoever reads Company accounts (D27-145, `invoice`). */
+  [`GET ${H}/company-payments`]: see("invoice", "what companies paid"),
   [`GET ${H}/accounting/:file{day-book(?:\\.xlsx)?}`]: own("accounting/routes.ts: MAY_EXPORT (D27-122)"),
 
   /* ── Reports ── */

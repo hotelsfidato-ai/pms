@@ -130,6 +130,8 @@ export const CLEAR: [table: string, how: string][] = [
   /* D27-190: the banked cash, and why a day's deposits differ. */
   ["cash_deposit_notes", "hotel_id = $1"],
   ["cash_deposits",     "hotel_id = $1"],
+  /* D27-239: what companies paid on the City ledger (its reversals point at it, one table). */
+  ["company_payments",  "hotel_id = $1"],
 
   /* ⚠ ADDED 21 SEPTEMBER: THREE SERVICES BUILT AFTER THIS LIST WAS WRITTEN.
      A treatment and a laundry bag each point at a stay AND at the line they

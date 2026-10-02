@@ -1959,6 +1959,24 @@ const DAY_CLOSED =
    count, nothing to press. Null only on the outlet's FIRST-EVER day, when
    no close has kept a float yet: that one float is counted once (Open the
    day), and until it is no CASH is taken. */
+/* A PAID-OUT WAITS FOR A YES (the owner's D27-239, D27-242): its latest
+   decision in the approvals inbox, for the screen. */
+const PAID_OUT_DECISION = (column: "status" | "decision_note") => `(
+  select a.${column} from approvals a
+   where a.subject_table = 'pos_cash_movements' and a.subject_id = m.id
+   order by a.requested_at desc limit 1)`;
+
+/** Paid-outs from the tin that day still waiting for a yes. */
+async function paidOutsWaiting(client: Client, outletId: string, date: string): Promise<number> {
+  const { rows } = await client.query<{ waiting: string }>(
+    `select coalesce(sum(m.amount), 0)::text as waiting
+       from pos_cash_movements m
+      where m.outlet_id = $1 and m.business_date = $2::date and m.kind = 'expense'
+        and ${PAID_OUT_DECISION("status")} in ('pending', 'clarify')`,
+    [outletId, date]);
+  return Number(rows[0]!.waiting);
+}
+
 async function openingCash(client: Client, outletId: string, date: string): Promise<number | null> {
   const { rows } = await client.query<{ opening: string | null }>(
     `select app.pos_opening_cash($1, $2::date)::text as opening`, [outletId, date]);
@@ -3481,12 +3499,15 @@ till.get("/:code/till/day-end", async (c) => {
     const { rows: movements } = await client.query<{
       id: string; kind: string; amount: string; reason: string;
       recorded_by_name: string | null; recorded_at: string;
+      approval: string | null; approval_note: string | null;
     }>(
       /* A LEFT join (D27-9): a name the reader may not see - the group
          owner's, to a GM (MEMORY 283) - is null, not the whole movement. */
       `select m.id::text, m.kind, m.amount::text, m.reason,
               s.full_name as recorded_by_name,
-              to_char(m.recorded_at, 'HH24:MI') as recorded_at
+              to_char(m.recorded_at, 'HH24:MI') as recorded_at,
+              ${PAID_OUT_DECISION("status")} as approval,
+              ${PAID_OUT_DECISION("decision_note")} as approval_note
          from pos_cash_movements m
          left join staff s on s.id = m.recorded_by
         where m.outlet_id = $1 and m.business_date = $2::date
@@ -3524,6 +3545,7 @@ till.get("/:code/till/day-end", async (c) => {
     const counted = day[0]?.counted_cash;
     const expectedCash = Number(expected[0]!.amount);
     const opening = await openingCash(client, outlet[0].id, businessDate);
+    const waiting = await paidOutsWaiting(client, outlet[0].id, businessDate);
 
     return {
       outlet: { code: outletCode, name: outlet[0].name },
@@ -3546,10 +3568,14 @@ till.get("/:code/till/day-end", async (c) => {
       movements: movements.map((m) => ({
         id: m.id, kind: m.kind, amount: Number(m.amount),
         reason: m.reason, recordedBy: m.recorded_by_name, at: m.recorded_at,
+        /* A paid-out's yes (D27-242); null where nobody was asked. */
+        approval: m.approval, approvalNote: m.approval_note,
       })),
       cash: {
         opening: opening ?? 0,
         expected: expectedCash,
+        /* Paid-outs waiting for a yes: not in Expected yet (D27-242). */
+        waiting,
         counted: counted === null || counted === undefined ? null : Number(counted),
         /* The one figure anybody argues about, worked out in one place
            and shown BEFORE the close rather than discovered after it. */
@@ -3638,8 +3664,8 @@ till.post("/:code/till/day-end/movements", async (c) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
 
-    const { rows: outlet } = await client.query<{ id: string }>(
-      `select id::text from pos_outlets
+    const { rows: outlet } = await client.query<{ id: string; name: string }>(
+      `select id::text, name from pos_outlets
         where hotel_id = $1 and code = $2 and is_active`,
       [hotelId, (input.outlet ?? "REST").toUpperCase()],
     );
@@ -3658,13 +3684,23 @@ till.post("/:code/till/day-end/movements", async (c) => {
         "That day is closed. Record it against today instead.");
     }
 
-    await client.query(
+    const { rows: made } = await client.query<{ id: string }>(
       `insert into pos_cash_movements
          (hotel_id, outlet_id, business_date, kind, amount, reason, recorded_by)
-       values ($1,$2,$3,$4,$5,$6,$7)`,
+       values ($1,$2,$3,$4,$5,$6,$7)
+       returning id::text`,
       [hotelId, outlet[0].id, businessDate, input.kind,
        Number(input.amount).toFixed(2), reason, session.staffId],
     );
+    /* A paid-out waits for the GM's or the owner's yes (D27-242); it counts
+       in the tin only once given (app.cash_expense_counts, 184). */
+    if (input.kind === "expense") {
+      await client.query(
+        `select app.request_approval($1::uuid, 'cash_expense', 'pos_cash_movements',
+                $2::uuid, $3, $4, $5::uuid)`,
+        [hotelId, made[0]!.id, `${outlet[0].name} tin: ${reason}`,
+         Number(input.amount).toFixed(2), session.staffId]);
+    }
 
     return { ok: true as const };
   });
@@ -3790,14 +3826,20 @@ till.post("/:code/till/day-end/close", async (c) => {
     );
     const variance =
       Number(day[0].counted_cash) - Number(expected[0]!.amount);
+    /* Paid-outs waiting for a yes explain that much of a shortage
+       (D27-242): a reason is asked only for the rest. */
+    const waiting = await paidOutsWaiting(client, outlet[0].id, businessDate);
+    const unexplained = variance + waiting;
 
     /* A difference is RECORDED, not refused — but it must say why. The
        money is already whatever it is; what a manager needs tomorrow is
        the sentence, not the number on its own. */
-    if (Math.abs(variance) >= 0.01 && !input.varianceReason?.trim()) {
+    if (Math.abs(unexplained) >= 0.01 && !input.varianceReason?.trim()) {
       return refuse(
-        `The drawer is ${variance > 0 ? "over" : "short"} by ` +
-        `₹${Math.abs(variance).toFixed(2)}. Say why, and it closes.`);
+        `The drawer is ${unexplained > 0 ? "over" : "short"} by ` +
+        `₹${Math.abs(unexplained).toFixed(2)}` +
+        (waiting > 0 ? ", beyond the paid-outs waiting for a yes" : "") +
+        ". Say why, and it closes.");
     }
 
     /* THE FLOAT KEPT (D27-191): typed at every close; the rest of the count
