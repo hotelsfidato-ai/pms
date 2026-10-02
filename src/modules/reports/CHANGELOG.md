@@ -11,6 +11,82 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · The Store's reports on migration 180: costs at their moment, GST, expiry, departments, breakage (D27-242)
+
+Branch `reports/stock-3a-2oct`, after merging cp6 f6eee640 (8a1d3964) and
+7a074245.
+
+**Asked for:** the master: wire the stores lane's 180 - `stock_movement_costs`,
+`food_cost_basis` 'before_gst' (the owner's D27-242), outlet sales, crockery,
+department as free text; and swap the Store's copy of the menu for this
+service's exports.
+
+**Shipped:** `builders/stock.ts` values every movement with
+`app.stock_movement_costs` (the weighted average of deliveries is gone).
+Closing stock adds "Near expiry" (30 days, or past, while still held).
+Movement by day adds Broken. Consumption adds till sales and the food cost
+per outlet, both before GST, to readers holding `report` only, and "Per
+department" ("(not said)" last). Wastage and breakage are two sections; a
+breakage names who broke it. Count differences read `stock_count_lines`, with
+"Last counted". Dead stock counts a breakage as out. Supplier spend adds GST
+and GST claimable. `STOCK_REPORT_LINKS` joins `mayReadStockReports` and
+`STOCK_REPORTS_PATH` in `@/modules/reports` for the Store's Reports menu. The
+Store's own files are back as cp6 has them: the master swaps its copy at
+merge (their word of 2 Oct, after 2a8f924b had swapped it; that commit's
+stores half can be cherry-picked).
+
+**Found:** the test run sat in the DB queue behind another lane and loaded
+the new builder, so it never ran red against the old one. The old builder has
+none of the sections the new test asserts (`expiry`, `departments`,
+`breakage`, `last`), so it could not have passed.
+
+**Proved:** stockReports 11; tsc 0 (api and web); strip-check 193; web
+reports, stores, navigation, src/test (11 files, 64) and primaryAction.
+
+**Left open:** nothing of the 180 wiring.
+
+---
+
+## 2026-10-02 · The Store and equipment reports (phase 3A; D27-238, D27-240)
+
+Branch `reports/stock-3a-2oct` (from cp6 3336a219), copy
+`.claudeworktreeslaughing-jepsen-2b2ea7`, database `fidato_s41`, API 8891, web 5291.
+
+**Asked for:** phase 3A of docs/STOCK-AND-EQUIPMENT-PLAN.md, planned first;
+the owner's answers D27-240 (R-1 readers, R-2 costs as recorded, R-3 dead
+means nothing went out, R-4 days of cover at the last 7 days' use).
+
+**Shipped:** nine builders (`builders/stock.ts`, `builders/equipment.ts`)
+and their keys, routes, read rules (`STORE_REPORTS`), downloads
+(`reportFiles.ts` `STORE_EXPORTERS`, the master's T-2), pages
+(`pages/Store.tsx`), menu entries and the "Store and equipment" group in
+All reports.
+
+**Found:** two labels too long for the sidebar and an order taken by the
+accounting export (navigation.test caught both; renamed "Closing stock" and
+"Supplier spend", orders 150-230).
+
+**Proved:** see the root report of 2 Oct to the master: stockReports.test
+(9) failed first and passes; roleGate, reportFiles, reports; web reports,
+navigation, src/test and primaryAction; screens.
+
+**Then (resumed, 2 Oct):** `STOCK_REPORTS_PATH` ("/reports/store", a "Store
+reports" page with the nine, open to the Inventory Manager, who cannot open All
+reports) and `mayReadStockReports(role)` exported from `@/modules/reports` for the
+Store page's button (storeReports.test failed first, passes). Proved after the
+commit: stockReports 9, roleGate 70, reportFiles 15, reports 31 (API, one file at
+a time); tsc 0; web reports and navigation. The earlier "no tests" failure was a
+crashed worker under memory pressure (the same crash hit web runs that day; the
+file passes alone). Screens on fidato_s41 at 179 with a few items received,
+issued, wasted and counted through the Store's own API: all nine as the Owner,
+figures checked by hand; Store reports as the Inventory Manager, All reports
+refused to them.
+
+**Left open:** the stores lane's columns (their 183, not on cp6 yet; marked
+STORES LANE in the builders).
+
+---
+
 ## 2026-09-29 · A night not charged yet at a property with no room GST rule: its tax unknown, not a 500 (D27-173) - the leads lane's
 
 **Asked for:** the master, after the leads lane found it: `NIGHTS`' booked

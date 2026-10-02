@@ -51,6 +51,29 @@ most export CSV.
 | Form F / C-Form | `/reports/c-form` | `pages/Compliance.tsx` | search only |
 | Guest ledger | `/reports/guest-ledger` | `pages/Compliance.tsx` | search only |
 | Cashier shift | `/reports/cashier-shift` | `pages/Compliance.tsx` | search only |
+| Closing stock | `/reports/stock-on-hand` | `pages/Store.tsx` | search only |
+| Stock movement by day | `/reports/stock-movements` | `pages/Store.tsx` | search only |
+| Consumption | `/reports/stock-consumption` | `pages/Store.tsx` | search only |
+| Wastage and breakage | `/reports/stock-wastage` | `pages/Store.tsx` | search only |
+| Count differences | `/reports/stock-count-differences` | `pages/Store.tsx` | search only |
+| Dead stock | `/reports/stock-dead` | `pages/Store.tsx` | search only |
+| Days of cover | `/reports/stock-cover` | `pages/Store.tsx` | search only |
+| Supplier spend | `/reports/supplier-spend` | `pages/Store.tsx` | search only |
+| Equipment report | `/reports/equipment` | `pages/Store.tsx` | search only |
+
+**The Store and equipment reports (phase 3A; D27-238, D27-240)** are built in
+`api/src/modules/reports/builders/stock.ts` and `equipment.ts`, from the
+Store's ledger and the equipment register. Read by the owner, admin, GM, hotel
+manager, Inventory Manager, accountant and Viewer (roleGate `STORE_REPORTS`;
+the menu's `mayReadStockReports`, exported with `STOCK_REPORT_LINKS` for the
+Store's Reports menu, which the master points at them at merge); downloaded by those holding the Store's export
+(reportFiles `STORE_EXPORTERS`). Every value is its moment's, from the Store's
+one running average, `app.stock_movement_costs` (migration 180): a delivery at
+what was paid, everything else at the average then; prices before GST, a
+missing one a dash. Till sales and the food cost (before GST, D27-242) show
+only to a reader holding `report`, as on the Store. A department not given is
+"(not said)". Count differences read `stock_count_lines`, not the
+adjustments.
 
 - **The eight in the owner's layout** (D17-62) are Night audit, Manager, City
   ledger, No show, Monthly occupancy, Monthly statistics, Yearly statistics and
