@@ -10,6 +10,7 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { OfflineBar } from "./OfflineBar";
 import { CommandPalette } from "./CommandPalette";
+import { PasswordDue } from "@/modules/admin";
 import { Toaster, TooltipProvider } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -118,6 +119,7 @@ export function AppShell() {
                 invoice does not carry the desk's sync state. */}
             <div className="print:hidden"><OfflineBar /></div>
             <Outlet />
+            <PasswordDue />
           </main>
         </div>
 

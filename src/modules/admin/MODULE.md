@@ -55,6 +55,8 @@ properties and people.
 | — (Find a screen, and Settings › People) Roles and permissions | `/admin/roles` | `pages/Admin.tsx` (`RolesPage`) | none |
 | — (Find a screen) Integrations | `/admin/integrations` | `pages/Admin.tsx` (`IntegrationsPage`) | none |
 | — (Find a screen, and Settings › People) Audit log | `/admin/audit-log` | `pages/Admin.tsx` (`AuditLogPage`) | none |
+| — (Find a screen, and Settings › People) Activity | `/admin/activity` | `pages/Activity.tsx`: every change `audit_log` holds (D27-243 5.1); "Across the group" for the owner and an Admin (D27-245 Q-A); a guest's details read "changed", masked on the server | none |
+| — (Find a screen, and Settings › People) Sign-ins | `/admin/sign-ins` | `pages/SignIns.tsx`: a person's sign-ins, 90 days, time and device (5.4); owner and Admin only (Q-B) | none |
 | — (Find a screen) Rates and taxes | `/settings/taxes-and-billing` (redirects to `/settings/rates-and-taxes`) | the tab; a menu entry of its own so "GST" or "bank" finds it and a pointer to it is offered only to who may open it. The address is the old one because the till's setup links it and `mayReach` offers a link with no entry to everybody; move both together | none |
 | — (redirects) | `/admin/settings` → `/settings`; `/admin/configuration` → `/settings/taxes-and-billing`; the eight tabs of 30 September → the tab their things moved to (`MOVED` in `pages/Settings.tsx`) | — | old links, kept working |
 | — (Find a screen) Console | `/admin/console` | `pages/Console.tsx` | none — development builds only |
@@ -163,7 +165,10 @@ POST   /api/admin/hotels/:code/:state        close or reopen
 GET    /api/admin/staff
 POST   /api/admin/staff                      add somebody — creates their sign-in account
 PATCH  /api/admin/staff/:id                  name or phone
-POST   /api/admin/staff/:id/password
+POST   /api/admin/staff/:id/password     10 characters for a group admin or anybody holding owner,
+                                             admin or gm; 8 otherwise (D27-243 5.3); records whether it was long
+GET    /api/admin/staff/:id/sign-ins     time and device, 90 days (5.4): app.sign_ins_of decides who
+GET    /api/me/password                  the signed-in person's own: is a longer password due (D27-245)
 POST   /api/admin/staff/:id/access           give a property and a role
 DELETE /api/admin/staff/:id/access/:code
 POST   /api/admin/staff/:id/deactivate
@@ -180,6 +185,8 @@ GET    /api/admin/overview                   the Console's figures
 ```
 GET    /:code/staff        Users
 GET    /:code/audit-log    Audit log — owner, admin, GM only; 403 otherwise (D17-15)
+GET    /:code/activity     activity.ts: every change, paged (scope, who, kind, from, to); scope=group
+                           for owner and admin only (D27-243 5.1, D27-245)
 GET    /:code/settings     Settings  — owner, admin, GM (D17-36); 403 otherwise (D17-15)
 ```
 

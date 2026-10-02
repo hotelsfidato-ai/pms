@@ -7,6 +7,7 @@ import { groupSettings } from "./groupSettings.ts";
 import { gallery } from "./gallery.ts";
 import { bankDetails } from "./bankDetails.ts";
 import { systemHealth } from "./systemHealth.ts";
+import { activity } from "./activity.ts";
 
 /* The front door of the administration service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -20,4 +21,6 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", gallery],
   ["/api/hotels", bankDetails],
   ["/api/hotels", systemHealth],
+  /* D27-243 (5.1): the full activity log. */
+  ["/api/hotels", activity],
 ];

@@ -35,9 +35,19 @@ import { firebaseApp } from "./auth.ts";
     terminal password is the property code. */
 export const MIN_PASSWORD = 8;
 
-export function passwordProblem(password: string): string | null {
-  if (password.length < MIN_PASSWORD) {
-    return `A password is at least ${MIN_PASSWORD} characters. It is typed `
+/* D27-243 (5.3): the owner, an Admin and a GM reach the most, so theirs is
+   longer. ⚠ A COPY in `src/modules/admin/data/admin.ts` (the forms). */
+export const MIN_MANAGER_PASSWORD = 10;
+export const MANAGER_ROLES: readonly string[] = ["owner", "admin", "gm"];
+
+/** The shortest password this person may have: 10 for a group
+    administrator or anybody holding owner, admin or gm anywhere. */
+export const minPasswordFor = (roles: readonly string[], isGroupAdmin = false): number =>
+  isGroupAdmin || roles.some((r) => MANAGER_ROLES.includes(r)) ? MIN_MANAGER_PASSWORD : MIN_PASSWORD;
+
+export function passwordProblem(password: string, min = MIN_PASSWORD): string | null {
+  if (password.length < min) {
+    return `A password is at least ${min} characters. It is typed `
       + "at a terminal in front of guests, so make it something they can "
       + "remember rather than something they will write on the monitor.";
   }

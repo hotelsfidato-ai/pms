@@ -95,6 +95,15 @@ async function holdsRoleHere(
 export const mayRead = (client: Client, hotelId: string, what: AdminRead) =>
   holdsRoleHere(client, hotelId, ADMIN_READ_ROLES[what]);
 
+/* D27-245 (Q-A): changes that belong to no single hotel - a guest record, a
+   person, a company, the group's settings - are the owner's and an Admin's,
+   under "Across the group". Never the GM's: they would show other hotels' work. */
+export const GROUP_ACTIVITY_ROLES: readonly string[] = ["owner", "admin"];
+export const GROUP_ACTIVITY_REFUSED =
+  "Changes across the group are for the owner and an administrator. Ask one of them.";
+export const maySeeGroupActivity = (client: Client, hotelId: string) =>
+  holdsRoleHere(client, hotelId, GROUP_ACTIVITY_ROLES);
+
 /** May the signed-in person switch this hotel's modules? */
 export const maySwitchModules = (client: Client, hotelId: string) =>
   holdsRoleHere(client, hotelId, MODULE_SWITCH_ROLES);

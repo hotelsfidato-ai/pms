@@ -190,6 +190,16 @@ export function createStaff(
     demanded eight would refuse after the manager had typed it. */
 export const MIN_PASSWORD = 8;
 
+/* D27-243 (5.3): the owner, an Admin and a GM, 10. ⚠ A COPY of
+   api/src/identity.ts (minPasswordFor); passwordRules.test.ts holds the server. */
+export const MIN_MANAGER_PASSWORD = 10;
+export const minPasswordFor = (roles: readonly string[], isGroupAdmin = false): number =>
+  isGroupAdmin || roles.some((r) => r === "owner" || r === "admin" || r === "gm")
+    ? MIN_MANAGER_PASSWORD : MIN_PASSWORD;
+
+/** Must the signed-in person set a longer password before going on (D27-245)? */
+export const getPasswordDue = () => api<{ due: boolean; min: number }>("/api/me/password");
+
 /** Sets or resets somebody's password. Yourself always; a group
     administrator anybody; a property manager anybody rostered at a
     hotel they run — never a group administrator, because that is how a
@@ -458,3 +468,8 @@ export function setHomeScreen(
 ): Promise<AdminResult<{ homeScreen: HomeScreen }>> {
   return put(`/api/admin/staff/${staffId}/home-screen`, { homeScreen });
 }
+
+/** Somebody's sign-ins, 90 days: when and on what device (D27-243 5.4). The
+    owner reads anybody's; an Admin the people at their hotel. */
+export const listSignIns = (staffId: string) =>
+  api<{ signIns: { at: string; device: string | null }[] }>(`/api/admin/staff/${staffId}/sign-ins`);

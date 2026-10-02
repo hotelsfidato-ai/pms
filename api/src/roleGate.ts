@@ -821,8 +821,14 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET /api/admin/hotels`]: own("admin/admin.ts: a group administrator"),
   [`GET /api/admin/hotels/:code`]: own("admin/admin.ts: app.require_hotel_admin"),
   [`GET /api/admin/staff`]: own("admin/admin.ts: row security on staff, app.may_manage_person"),
+  /* D27-243 5.4, D27-245 Q-B: the owner anybody's, an Admin their hotel's people. */
+  [`GET /api/admin/staff/:id/sign-ins`]: own("admin/admin.ts: app.sign_ins_of"),
+  /* D27-245: a person's own "set a longer password" check. */
+  [`GET /api/me/password`]: SELF,
   [`GET ${H}/staff`]: see("user", "the staff list"),
   [`GET ${H}/audit-log`]: own("admin/adminLists.ts: mayRead"),
+  /* D27-243 5.1, D27-245: the hotel's to owner/Admin/GM; scope=group to owner/Admin. */
+  [`GET ${H}/activity`]: own("admin/activity.ts: mayRead, and maySeeGroupActivity for the group"),
   [`GET ${H}/settings`]: own("admin/adminLists.ts: mayRead"),
   /* QA AD-1: what this server has set up, for whoever holds `integration`. */
   [`GET ${H}/integrations`]: see("integration", "the integrations"),

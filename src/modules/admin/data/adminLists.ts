@@ -127,6 +127,30 @@ export async function listAuditLog(
   return fetchOr<AuditEntry[]>(`/api/hotels/${hotelId}/audit-log${qs ? `?${qs}` : ""}`, []);
 }
 
+/* ── The full activity log (D27-243 5.1) ─────────────────────────── */
+
+export interface ActivityChange { field: string; from?: string | null; to?: string | null; masked?: true }
+export interface ActivityEntry {
+  id: string; at: string; actor: string | null; kind: string; table: string;
+  record: string | null; action: string; changes: ActivityChange[];
+}
+export interface ActivityPage {
+  entries: ActivityEntry[];
+  kinds: { key: string; label: string }[];
+  people: { id: string; name: string }[];
+}
+/** "group" is the changes that belong to no hotel: the owner's and an Admin's (D27-245). */
+export function listActivity(
+  hotelId: string,
+  q: { scope?: "hotel" | "group"; who?: string; kind?: string; from?: string; to?: string;
+       offset?: number; limit?: number } = {},
+): Promise<ActivityPage> {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "") params.set(k, String(v));
+  const qs = params.toString();
+  return api<ActivityPage>(`/api/hotels/${hotelId}/activity${qs ? `?${qs}` : ""}`);
+}
+
 /* ── Integrations ────────────────────────────────────────────────── */
 
 export interface Integration {
