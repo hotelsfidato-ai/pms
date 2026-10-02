@@ -11,6 +11,62 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-03 · Settings, security: activity, sign-ins, passwords by role (D27-243 phase 5, D27-245)
+
+**Asked for:** phase 5 of the settings plan with the owner's answers: 5.1 the full
+activity log (owner/Admin every hotel, GM their own; a guest's details only
+"changed"; Q-A: changes of no hotel to owner and Admin only, "Across the group"),
+5.2 a Switched off filter on People, 5.3 passwords of 10 for owner/Admin/GM and 8
+for others, plus "given a manager's role with a shorter password, set a 10-character
+one at the next sign-in", 5.4 a sign-in history kept 90 days (Q-B: the owner
+everybody's, an Admin the people at their hotel; the address kept, not shown).
+5.5 (two-step) is after this release and not built.
+
+**Shipped**
+- 5.2: People's Everybody / Switched off (n).
+- 5.3: `identity.ts` minPasswordFor (copy in `data/admin.ts`), used by the create
+  and reset routes and every form. Migration 188: `staff.long_password`,
+  `staff.must_change_password`, a trigger that sets it when owner/admin/gm (or group
+  admin) is given to a password not known to be long, `app.note_password_set`.
+  `GET /api/me/password` (SELF) and `components/PasswordDue`, mounted once in the
+  core `AppShell.tsx` (one import, one line).
+- 5.1: `activity.ts`, `GET /:code/activity` (scope, who, kind, from, to, paged);
+  guest records and a guest's name/phone/email/address/ID, a site's payload and the
+  CRS's copy are masked on the server. `pages/Activity.tsx`; the Audit log's note
+  now says it is the money's.
+- 5.4: migration 188 `sign_ins` (RLS forced, no policy), `app.note_sign_in`
+  (once per sign-in, purges past 90 days), `app.sign_ins_of` (time and device).
+  Core `api/src/auth.ts`: one import and one line after verifyIdToken, calling
+  `api/src/signIns.ts` (never throws into the request; dev sign-ins aren't recorded).
+  `GET /api/admin/staff/:id/sign-ins`; `pages/SignIns.tsx` (owner and Admin).
+- Settings → People: Activity and Sign-ins links, the read-only `SigningIn` card.
+- roleGate: three READ lines (activity own, sign-ins own, me/password SELF), pinned.
+
+**Proved** - fidato_s48 at 188; every API run through `.local/dbq.sh`.
+- API: passwordRules 3/3, activity 4/4, signIns 4/4, addPerson, adminWrites, grants
+  35/35, roleGate 73/73, resetOrder 4/4 (137 tests, 8 files).
+- Red: the six server files put back to cp6 and 188 set aside, the three new files
+  11/11 failed, each on its own line (403/200 for 404; 409 for 200; the due check;
+  sign_ins missing).
+- Web: admin 41/41 then 90 with navigation and boundaries; primaryAction passes;
+  the Switched off test was red before the filter. tsc web and api 0; strip-check
+  193 files. migrationNumbers fails only on the gap at 187 (the cash lane's; the
+  master renumbers 188).
+- Screens (8885/5285): as the owner, Settings → People with Activity, Sign-ins and
+  the card; Activity by booking (who, FH reference, each field) and Across the group
+  guests ("phone changed"); Sign-ins showing time and device and not the address;
+  People's Switched off (39, all switched off). As the GM: no Sign-ins link, no
+  Across the group, 50 rows; the "Set a longer password" prompt over the Dashboard
+  when due. Display rows in s48 put back.
+
+**Left open**
+- The prompt's dialog shows the shared Dialog's close button, which does nothing
+  there (closing is ignored on purpose); hiding it needs a prop on the core Dialog.
+- Activity shows a staff id raw where a column holds one (e.g. late checkout by).
+- 5.5 two-step sign-in, after the release and the owner's Firebase upgrade.
+
+---
+
 ## 2026-10-02 · A photo gallery per hotel (D27-243, D27-244)
 
 **Asked for:** the master's gallery lane: each hotel's photos uploaded on Settings → Property, stored compressed on the PMS server, shown on the guest's in-stay page. Branch `settings/gallery-2oct` from cp6 2493407c, copy `.claude\worktrees\quizzical-bouman-ff2071`, database `fidato_gallery`, API 8911, web 5311. No claim (admin and online-checkin were held by live lanes; the master knew).
