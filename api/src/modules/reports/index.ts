@@ -2,6 +2,7 @@ import type { Mount } from "../../mount.ts";
 import { statistics } from "./statistics.ts";
 import { reports } from "./reports.ts";
 import { documents } from "./documents.ts";
+import { dueOut } from "./dueOut.ts";
 
 /* The front door of the reports service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -13,6 +14,7 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", documents],
   ["/api/hotels", statistics],
   ["/api/hotels", reports],
+  ["/api/hotels", dueOut],
 ];
 
 export { buildReport, BUILT_KEYS } from "./build.ts";

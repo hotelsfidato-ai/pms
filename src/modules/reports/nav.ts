@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, BarChart3, Building2, CalendarCheck, ScrollText, ShieldCheck,
   BookOpen, Banknote, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck, Hourglass,
-  Gauge, Truck, Refrigerator, Warehouse,
+  Gauge, Truck, Refrigerator, Warehouse, Hotel,
 } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 import { can, type Role } from "@/lib/permissions";
@@ -28,6 +28,8 @@ export const STOCK_REPORTS_PATH = "/reports/store";
 export const nav: ServiceNavEntry[] = [
   { section: "home", order: 10, workingMenus: ["front_desk"],
     label: "Dashboard", to: "/", icon: LayoutDashboard, resource: "dashboard" },
+  /* Every property on one page, for the owner (D27-243): who adds properties. */
+  { section: "across-properties", order: 5, label: "All properties", to: "/all-properties", icon: Hotel, resource: "report", canSee: (role) => can(role, "create", "hotel"), keywords: ["group", "every property", "every hotel"] },
   /* The index first — it is the taxonomy, and the seven below are
      the shortcuts a manager pins for themselves. */
   { section: "reports", order: 20,

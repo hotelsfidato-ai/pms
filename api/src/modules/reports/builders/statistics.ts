@@ -123,9 +123,25 @@ export async function monthlyStatistics(
       columns: GRID(col("label", "Date", "text")),
       rows,
     }],
+    /* The month's occupancy as bars, above the grid (the owner's D27-243:
+       it left the Dashboard, which shows the nights ahead instead). */
+    chart: occupancyChart(w.name, days),
     footnotes: [...FOOTNOTES, countedFrom(opened)],
   };
 }
+
+/** One bar per night: rooms sold, complimentary ones included, of the rooms
+    to sell. Monthly occupancy and Monthly statistics draw the same one. */
+const occupancyChart = (name: string, days: Awaited<ReturnType<typeof dailyFigures>>): NonNullable<ReportDoc["chart"]> => ({
+  kind: "bar",
+  title: `Monthly Occupancy - ${name}`,
+  x: days.map((d) => String(Number(d.date.slice(8, 10)))),
+  unit: "percent",
+  series: [{
+    label: "Occupancy %",
+    values: days.map((d) => pct(d.paying + d.complimentary, d.available)),
+  }],
+});
 
 export async function monthlyOccupancy(
   client: Client, property: Property, month: string,
@@ -141,16 +157,7 @@ export async function monthlyOccupancy(
     orientation: "landscape",
     facts: [{ label: "Month", value: w.name, kind: "text" }],
     sections: [],
-    chart: {
-      kind: "bar",
-      title: `Monthly Occupancy - ${w.name}`,
-      x: days.map((d) => String(Number(d.date.slice(8, 10)))),
-      unit: "percent",
-      series: [{
-        label: "Occupancy %",
-        values: days.map((d) => pct(d.paying + d.complimentary, d.available)),
-      }],
-    },
+    chart: occupancyChart(w.name, days),
     footnotes: [FOOTNOTES[0]!, countedFrom(opened)],
   };
 }

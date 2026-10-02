@@ -34,7 +34,7 @@ export const GLOSSARY: Record<TermKey, { term: string; means: string }> = {
     means: "Rooms sold, as a share of the rooms that could be sold. Rooms out of service are left out. A complimentary room counts as sold, as in the group's eZee reports.",
   },
   adr: {
-    term: "Average daily rate (ADR)",
+    term: "Average rate (ARR)",
     means: "Room revenue divided by rooms sold, complimentary rooms included: what a sold room earned, on average. Room charges only. Extras, food and tax are not in it.",
   },
   revpar: {
@@ -51,7 +51,7 @@ export const GLOSSARY: Record<TermKey, { term: string; means: string }> = {
   },
   cityLedger: {
     term: "City ledger",
-    means: "Money owed by companies and booking sites for stays billed to them, not paid by the guest. Those accounts are settled outside this system today, so the figures show a dash.",
+    means: "Money owed by companies and booking sites for stays billed to them, not paid by the guest. The balance is what they still owe on their accounts; Paid today is what they paid that day.",
   },
   guestLedger: {
     term: "Guest ledger",

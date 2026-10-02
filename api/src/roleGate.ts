@@ -729,6 +729,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/accounting/:file{day-book(?:\\.xlsx)?}`]: own("accounting/routes.ts: MAY_EXPORT (D27-122)"),
 
   /* ── Reports ── */
+  /* The Dashboard's Due out tile: what departing guests still owe (D27-243). */
+  [`GET ${H}/due-out`]: MONEY_REPORT,
   [`GET ${H}/reports/manager`]: REPORTS,
   [`GET ${H}/reports/night-audit`]: REPORTS,
   [`GET ${H}/reports/no-show`]: REPORTS,
