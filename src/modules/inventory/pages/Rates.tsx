@@ -1,4 +1,4 @@
-import { Fragment, useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { ChevronLeft, ChevronRight, Ban, LogIn, LogOut, Check } from "lucide-react";
@@ -82,6 +82,8 @@ export default function RatesPage() {
   const qc = useQueryClient();
   const mayEdit = setsRates(useRole());
   const [from, setFrom] = useState<string | null>(null);
+  /* The business date: the window the server chose first, where Today returns. */
+  const [today, setToday] = useState<string | null>(null);
   const [view, setView] = useState<"prices" | "rooms">("prices");
   /* "Set prices" (D27-206): the same dialog and call as a tapped price. */
   const [setting, setSetting] = useState(false);
@@ -95,7 +97,7 @@ export default function RatesPage() {
   /* The window the SERVER chose on the first load (the business date)
      becomes the window the arrows move. */
   useEffect(() => {
-    if (!from && inventory.data) setFrom(inventory.data.from);
+    if (!from && inventory.data) { setFrom(inventory.data.from); setToday(inventory.data.from); }
   }, [from, inventory.data]);
 
   const pricing = useQuery({
@@ -153,25 +155,6 @@ export default function RatesPage() {
         description="Each day's price, and how the day sold. The add-ons follow the base."
         actions={
           <>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary" size="icon"
-              aria-label="Previous two weeks"
-              onClick={() => setFrom(addDays(from, -DAYS))}
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <span className="text-sm font-medium text-ink-900 tabular whitespace-nowrap">
-              {dateShort(from)} – {dateShort(addDays(from, DAYS - 1))}
-            </span>
-            <Button
-              variant="secondary" size="icon"
-              aria-label="Next two weeks"
-              onClick={() => setFrom(addDays(from, DAYS))}
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
           <Segmented<"prices" | "rooms">
             value={view}
             onChange={setView}
@@ -192,6 +175,7 @@ export default function RatesPage() {
         <InventoryGrid
           hotelId={hotelId}
           dates={dates}
+          nav={{ from, today: today ?? from, onMove: setFrom }}
           cells={inventory.data.cells}
           restrictions={inventory.data.restrictions}
           mayEdit={mayEdit}
@@ -201,15 +185,18 @@ export default function RatesPage() {
         <Skeleton className="h-96" />
       ) : (
         <div className="flex flex-col gap-5">
-          <SetupCard hotelId={hotelId} pricing={pricing.data} mayEdit={mayEdit} onDone={refresh} />
           <BaseGrid
             hotelId={hotelId}
             dates={dates}
+            nav={{ from, today: today ?? from, onMove: setFrom }}
             pricing={pricing.data}
+            left={inventory.data.cells}
             days={days.data ?? []}
             mayEdit={mayEdit}
             onDone={refresh}
           />
+          {/* Below the calendar (D27-237 5.3): the calendar is what is read daily. */}
+          <SetupCard hotelId={hotelId} pricing={pricing.data} mayEdit={mayEdit} onDone={refresh} />
           <OlderPrices hotelId={hotelId} pricing={pricing.data} mayEdit={mayEdit} onDone={refresh} />
           <ReportLinks hotelId={hotelId} />
         </div>
@@ -224,33 +211,67 @@ export default function RatesPage() {
 }
 
 /* ── A scrolling grid, shared by both tabs ────────────────────────
-   The room-type column is sticky because the dates run off the right
-   of every screen this is used on, and a number with no row label is
-   not information. */
-function GridShell({ dates, children, corner }: {
-  dates: string[]; corner: string; children: React.ReactNode;
+   In the Calendar's look (D27-237 5.1): the fortnight's arrows, its range
+   and Today in the card's own toolbar; a weekday caption over each day,
+   the business date in navy, weekends a grey wash. The label column is
+   sticky because the dates run off the right of every screen this is used
+   on, and a number with no row label is not information. */
+
+/** The window the arrows move, and the business date Today returns to. */
+interface Nav { from: string; today: string; onMove: (from: string) => void }
+
+/** The wash a body cell takes from its day: a weekend, or the business date. */
+const dayWash = (d: string, today: string) =>
+  d === today ? "bg-ink-900/[0.035]" : dayLabel(d).weekend ? "bg-grey-50" : "";
+
+/** The row-label column: one line, wide enough for "+ per extra adult". */
+const LABEL = "sticky left-0 z-10 border-r border-grey-200 px-3.5 max-sm:px-2.5 text-left whitespace-nowrap min-w-38";
+
+function GridShell({ dates, nav, children, corner }: {
+  dates: string[]; nav: Nav; corner: string; children: React.ReactNode;
 }) {
+  const { from, today, onMove } = nav;
   return (
     <Card className="overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-3 sm:py-2.5 border-b border-grey-200">
+        <Button variant="secondary" size="icon" aria-label="Previous two weeks"
+          onClick={() => onMove(addDays(from, -DAYS))}>
+          <ChevronLeft className="size-4" />
+        </Button>
+        <Button variant="secondary" size="icon" aria-label="Next two weeks"
+          onClick={() => onMove(addDays(from, DAYS))}>
+          <ChevronRight className="size-4" />
+        </Button>
+        <span className="ml-1.5 text-md font-semibold text-ink-900 tabular whitespace-nowrap">
+          {dateShort(from)} – {dateShort(addDays(from, DAYS - 1))}
+        </span>
+        {from !== today && (
+          <Button variant="ghost" size="sm" onClick={() => onMove(today)}>Today</Button>
+        )}
+      </div>
       <div className="overflow-x-auto scrollbar-quiet">
-        <table className="w-full border-collapse text-base">
+        <table className="w-full border-collapse text-sm">
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 bg-white border-b border-r border-grey-200 px-3 py-2 text-left text-2xs font-semibold uppercase tracking-wide text-grey-500 whitespace-nowrap min-w-36">
+              <th className={cn(LABEL, "bg-white border-b h-[50px] text-xs font-semibold uppercase tracking-[0.025em] text-grey-500 whitespace-normal leading-4")}>
                 {corner}
               </th>
               {dates.map((d) => {
                 const { dow, day, weekend } = dayLabel(d);
+                const isToday = d === today;
                 return (
                   <th
                     key={d}
                     className={cn(
-                      "border-b border-grey-200 px-2 py-2 text-center font-medium min-w-18",
+                      "border-b border-r border-grey-200 border-r-grey-100 last:border-r-0 h-[50px] px-2 text-center min-w-18",
                       weekend && "bg-grey-50",
+                      isToday && "bg-ink-900",
                     )}
                   >
-                    <span className="block text-xs text-grey-500">{dow}</span>
-                    <span className="block text-md font-semibold text-ink-900 tabular">{day}</span>
+                    <span className={cn("block text-xs font-semibold uppercase tracking-[0.025em]",
+                      isToday ? "text-white/70" : "text-grey-500")}>{dow}</span>
+                    <span className={cn("block text-md font-semibold tabular",
+                      isToday ? "text-white" : "text-ink-900")}>{day}</span>
                   </th>
                 );
               })}
@@ -265,8 +286,8 @@ function GridShell({ dates, children, corner }: {
 
 /* ── Inventory ────────────────────────────────────────────────── */
 
-function InventoryGrid({ hotelId, dates, cells, restrictions, mayEdit, onDone }: {
-  hotelId: string; dates: string[];
+function InventoryGrid({ hotelId, dates, nav, cells, restrictions, mayEdit, onDone }: {
+  hotelId: string; dates: string[]; nav: Nav;
   cells: InventoryCell[]; restrictions: Restriction[];
   /* Restrictions are set by the rate setters only, as prices are. */
   mayEdit: boolean;
@@ -302,26 +323,22 @@ function InventoryGrid({ hotelId, dates, cells, restrictions, mayEdit, onDone }:
 
   return (
     <>
-      <GridShell dates={dates} corner="Room type">
+      <GridShell dates={dates} nav={nav} corner="Room type">
         <tbody>
           {types.map((t) => (
             <tr key={t.id}>
-              <th className="sticky left-0 z-10 bg-white border-b border-r border-grey-200 px-3 py-2 text-left text-sm font-medium text-ink-900">
+              <th className={cn(LABEL, "bg-white border-b text-sm font-medium text-ink-900")}>
                 {t.name}
               </th>
               {dates.map((d) => {
                 const cell = at.get(`${t.id}/${d}`);
                 const rule = ruleAt.get(`${t.id}/${d}`);
-                const { weekend } = dayLabel(d);
                 const closed = rule?.stopSell === true;
                 const none = cell && cell.available === 0;
                 return (
                   <td
                     key={d}
-                    className={cn(
-                      "border-b border-grey-200 p-0 text-center",
-                      weekend && "bg-grey-50",
-                    )}
+                    className={cn("border-b border-grey-200 p-0 text-center", dayWash(d, nav.today))}
                   >
                     <button
                       type="button"
@@ -594,19 +611,14 @@ function SetupDialog({ hotelId, pricing, onClose, onDone }: {
 
 /* ── The calendar: each type's base, and each day's performance ───── */
 
-function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
-  hotelId: string; dates: string[]; pricing: Pricing; days: RateDay[];
-  mayEdit: boolean; onDone: () => void;
+function BaseGrid({ hotelId, dates, nav, pricing, left, days, mayEdit, onDone }: {
+  hotelId: string; dates: string[]; nav: Nav; pricing: Pricing;
+  /** The Rooms left tab's own read: what is left of each type on each day (5.2). */
+  left: InventoryCell[];
+  days: RateDay[]; mayEdit: boolean; onDone: () => void;
 }) {
   const [editing, setEditing] = useState<
     { roomTypeId: string; roomType: string; date: string; price: number | null } | null>(null);
-  /* Which room types are opened to their break-up rows; closed by default. */
-  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
-  const toggle = (id: string) => setOpen((was) => {
-    const next = new Set(was);
-    if (!next.delete(id)) next.add(id);
-    return next;
-  });
   const plan = "EP";            // the base: one guest, room only (D27-188)
 
   const at = useMemo(() => {
@@ -614,6 +626,7 @@ function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
     for (const c of pricing.cells) if (c.mealPlan === plan) m.set(`${c.roomTypeId}/${c.date}`, c);
     return m;
   }, [pricing.cells, plan]);
+  const leftAt = useMemo(() => new Map(left.map((c) => [`${c.roomTypeId}/${c.date}`, c.available])), [left]);
   const dayAt = useMemo(() => new Map(days.map((d) => [d.date, d])), [days]);
 
   if (pricing.roomTypes.length === 0) {
@@ -622,53 +635,53 @@ function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
 
   /* Mode b: only the base room type's base is typed here; the rest follow it. */
   const editable = (id: string) => mayEdit && (!pricing.basis || pricing.basis.roomTypeId === id);
-  const PERFORMANCE: { label: string; show: (d: RateDay) => string }[] = [
-    { label: "Paying rooms sold", show: (d) => String(d.paidSold) },
-    { label: "Occupancy", show: (d) => (d.occupancy === null ? "-" : percent(d.occupancy, 0)) },
+  const MORE: { label: string; show: (d: RateDay) => string }[] = [
     { label: "ADR", show: (d) => (d.adr === null ? "-" : money(d.adr)) },
     { label: "Revenue", show: (d) => money(d.revenue) },
   ];
 
   return (
     <>
-      <GridShell dates={dates} corner="Base, one guest, room only">
-        <tbody>
-          {pricing.roomTypes.map((t) => (
-            <Fragment key={t.id}>
-            <tr>
-              <th className="sticky left-0 z-10 bg-white border-b border-r border-grey-200 p-0 text-left text-sm font-medium text-ink-900">
-                <button
-                  type="button"
-                  aria-expanded={open.has(t.id)}
-                  onClick={() => toggle(t.id)}
-                  className="w-full min-h-14 px-3 py-2 flex items-center gap-1.5 text-left cursor-pointer transition-colors duration-150 hover:bg-grey-100"
-                >
-                  <ChevronRight aria-hidden
-                    className={cn("size-4 shrink-0 text-grey-500 transition-transform duration-150", open.has(t.id) && "rotate-90")} />
-                  {t.name}
-                </button>
+      <GridShell dates={dates} nav={nav} corner="Base, one guest, room only">
+        {/* Every room type always open, with all its rows (D27-237 5.1). */}
+        {pricing.roomTypes.map((t) => (
+          <tbody key={t.id} aria-label={t.name}>
+            <tr className="bg-grey-50">
+              <th className={cn(LABEL, "bg-grey-50 border-b h-11 text-sm font-semibold text-ink-900")}>
+                {t.name}
               </th>
               {dates.map((d) => {
                 const cell = at.get(`${t.id}/${d}`);
-                const { weekend } = dayLabel(d);
+                const rooms = leftAt.get(`${t.id}/${d}`);
                 const older = cell?.source === "rack" || (cell?.covers ?? 1) > 1;
                 const derived = cell?.source === "derived";
-                const content = cell?.price === null || cell?.price === undefined ? (
-                  <span className="block text-base text-grey-500">-</span>
-                ) : (
-                  <span className={cn(
-                    "block text-base tabular",
-                    older ? "text-grey-500 italic"
-                      : derived ? "text-grey-600" : "text-ink-900 font-semibold",
-                  )}>
-                    {money(cell.price)}
+                /* Two levelled lines, as the Calendar's type row: the base,
+                   and under it the rooms left that day (5.2). */
+                const content = (
+                  <span className="grid grid-rows-[20px_16px] place-content-center">
+                    {cell?.price === null || cell?.price === undefined ? (
+                      <span className="text-sm text-grey-500">-</span>
+                    ) : (
+                      <span className={cn(
+                        "text-sm tabular",
+                        older ? "text-grey-500 italic"
+                          : derived ? "text-grey-600" : "text-ink-900 font-semibold",
+                      )}>
+                        {money(cell.price)}
+                      </span>
+                    )}
+                    <span className={cn("text-xs leading-4 tabular",
+                      rooms === 0 ? "text-brand-red-700" : "text-grey-500")}>
+                      {rooms === undefined ? "-" : `${rooms} left`}
+                    </span>
                   </span>
                 );
                 const title = older
                   ? `A price set before, covering ${cell?.covers ?? 2} guests`
                   : derived ? `From ${pricing.basis?.roomType ?? "the base room type"}` : undefined;
                 return (
-                  <td key={d} className={cn("border-b border-grey-200 p-0 text-center", weekend && "bg-grey-50")}>
+                  <td key={d} className={cn("border-b border-r border-grey-200 border-r-grey-100 last:border-r-0 p-0 text-center",
+                    d === nav.today && "bg-ink-900/[0.035]")}>
                     {editable(t.id) ? (
                       <button
                         type="button"
@@ -677,33 +690,55 @@ function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
                           price: older || derived ? null : cell?.price ?? null,
                         })}
                         title={title}
-                        className="w-full min-h-14 px-1 py-2 cursor-pointer transition-colors duration-150 hover:bg-grey-100"
+                        className="w-full h-11 px-1 cursor-pointer transition-colors duration-150 hover:bg-grey-100"
                         aria-label={`${t.name} on ${d}`}
                       >
                         {content}
                       </button>
                     ) : (
-                      <div className="min-h-14 px-1 py-2 grid place-items-center" title={title}>{content}</div>
+                      <div className="h-11 px-1 grid place-items-center" title={title}>{content}</div>
                     )}
                   </td>
                 );
               })}
             </tr>
-            {open.has(t.id) && (
-              <BreakupRows hotelId={hotelId} roomTypeId={t.id} sleeps={t.maxOccupancy} dates={dates} />
-            )}
-            </Fragment>
-          ))}
-          {PERFORMANCE.map((p, i) => (
-            <tr key={p.label} className={cn(i === 0 && "border-t-2 border-grey-300")}>
-              <th className="sticky left-0 z-10 bg-white border-b border-r border-grey-200 px-3 py-1.5 text-left text-xs font-medium text-grey-600">
-                {p.label}
-              </th>
+            <BreakupRows hotelId={hotelId} roomTypeId={t.id} sleeps={t.maxOccupancy} dates={dates} today={nav.today} />
+          </tbody>
+        ))}
+        {/* How each day sold, as the Calendar's footer: the figure, a 4px
+            capsule of occupancy, and its percentage under it. */}
+        <tbody aria-label="How the day sold">
+          <tr className="border-t border-grey-300">
+            <th className={cn(LABEL, "bg-white border-b h-[58px]")}>
+              <span className="block text-sm font-semibold text-ink-900">Paying rooms sold</span>
+              <span className="block text-xs text-grey-600">Occupancy</span>
+            </th>
+            {dates.map((d) => {
+              const day = dayAt.get(d);
+              return (
+                <td key={d} className={cn("border-b border-r border-grey-100 last:border-r-0 px-2.5", dayWash(d, nav.today))}>
+                  <div className="grid grid-rows-[20px_4px_16px] content-center justify-items-center gap-1">
+                    <span className="text-sm font-semibold text-ink-900 tabular">{day ? day.paidSold : "-"}</span>
+                    <span className="w-full h-1 rounded-full bg-grey-100 overflow-hidden">
+                      <span className="block h-full bg-brand-orange rounded-full"
+                        style={{ width: `${Math.min(day?.occupancy ?? 0, 100)}%` }} />
+                    </span>
+                    <span className="text-xs leading-4 text-grey-500 tabular">
+                      {day?.occupancy === null || day?.occupancy === undefined ? "-" : percent(day.occupancy, 0)}
+                    </span>
+                  </div>
+                </td>
+              );
+            })}
+          </tr>
+          {MORE.map((p) => (
+            <tr key={p.label}>
+              <th className={cn(LABEL, "bg-white border-b h-10 text-sm font-medium text-grey-600")}>{p.label}</th>
               {dates.map((d) => {
                 const day = dayAt.get(d);
                 return (
-                  <td key={d} className={cn("border-b border-grey-200 px-1 py-1.5 text-center text-sm tabular text-grey-700",
-                    dayLabel(d).weekend && "bg-grey-50")}>
+                  <td key={d} className={cn("border-b border-r border-grey-100 last:border-r-0 px-1 text-center text-sm tabular text-grey-700",
+                    dayWash(d, nav.today))}>
                     {day ? p.show(day) : "-"}
                   </td>
                 );
@@ -723,6 +758,7 @@ function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
         <span className="text-grey-600">4,000 from the base room type</span>
         <span className="text-grey-500 italic">4,000 a price set before (covers 2)</span>
         <span className="text-grey-500">- not priced</span>
+        <span className="text-grey-500">3 left: rooms of the type still to sell that day</span>
         <span className="text-grey-500">
           Paying rooms sold, ADR and revenue leave complimentary rooms and day use out;
           occupancy counts complimentary rooms, as the reports do.
@@ -737,14 +773,14 @@ function BaseGrid({ hotelId, dates, pricing, days, mayEdit, onDone }: {
   );
 }
 
-/* ── A room type's break-up (D27-206) ────────────────────────────────
+/* ── A room type's break-up (D27-206, always open since D27-237) ─────
    What the room really sells for on each day: for two guests on room only
    and on each meal plan, and what a further guest adds. EVERY FIGURE IS
    THE SERVER'S - app.tariff_for's, through GET /pricing?breakup= - so an
    older "covers 2" price shows what it sells for and nothing is added up
-   here. Not set is a dash, never a zero. Read when the line is opened. */
-function BreakupRows({ hotelId, roomTypeId, sleeps, dates }: {
-  hotelId: string; roomTypeId: string; sleeps: number; dates: string[];
+   here. Not set is a dash, never a zero. */
+function BreakupRows({ hotelId, roomTypeId, sleeps, dates, today }: {
+  hotelId: string; roomTypeId: string; sleeps: number; dates: string[]; today: string;
 }) {
   const q = useQuery({
     queryKey: ["pricing-breakup", hotelId, dates[0], roomTypeId],
@@ -771,13 +807,14 @@ function BreakupRows({ hotelId, roomTypeId, sleeps, dates }: {
     <>
       {ROWS.map((r) => (
         <tr key={r.label}>
-          <th className="sticky left-0 z-10 bg-grey-50 border-b border-r border-grey-200 pl-9 pr-3 py-1.5 text-left text-xs font-medium text-grey-600">
+          <th className={cn(LABEL, "bg-white border-b h-10 text-sm font-medium text-grey-600")}>
             {r.label}
           </th>
           {dates.map((d) => {
             const day = at.get(d);
             return (
-              <td key={d} className="bg-grey-50 border-b border-grey-200 px-1 py-1.5 text-center text-sm tabular text-grey-700">
+              <td key={d} className={cn("border-b border-r border-grey-100 last:border-r-0 px-1 text-center text-sm tabular text-grey-700",
+                dayWash(d, today))}>
                 {q.isLoading ? "…" : figure(day ? r.pick(day) : null)}
               </td>
             );
