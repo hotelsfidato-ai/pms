@@ -1,17 +1,6 @@
-import { Route } from "react-router";
-import { RequireAccess } from "@/components/app/RequireAccess";
-import BookingEnginePage from "@/modules/booking-engine/pages/BookingEngine";
-
-/* Booking engine's one address — its Coming soon page. Mounted by App.tsx inside
-   the signed-in shell. The guard asks the navigation (`mayReach`), so the
-   page is refused to exactly the people the menu does not show it to. */
-export const routes = (
-  <Route
-    path="/coming-soon/booking-engine"
-    element={
-      <RequireAccess path="/coming-soon/booking-engine" resource="integration">
-        <BookingEnginePage />
-      </RequireAccess>
-    }
-  />
-);
+/* Booking engine — REMOVED FROM THE PLAN (the owner's D27-180). Its menu
+   entry left (D27-239 8.1), and its Coming soon address left with it: a
+   route guarded by `RequireAccess` with no menu entry is open to every role,
+   because `mayReach` fails open (App.test "every guarded route is one the
+   navigation knows"). Mounted by App.tsx; nothing to mount. */
+export const routes = null;

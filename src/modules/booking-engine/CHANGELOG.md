@@ -13,7 +13,7 @@ Work that touches the core or several services still goes in the root
 
 ## 2026-10-02 · The menu entry leaves (the owner's D27-239 8.1, D27-180)
 
-`nav.ts` offers no entry: the service is not built, and a Coming soon page in the menu is a dead end. **Proved:** `src/components/app/navigation.test.ts` "has no Booking engine entry for anybody" (fails with the entry).
+`nav.ts` offers no entry (D27-180: the channel manager's booking engine is used instead). Its address `/coming-soon/booking-engine` and `pages/BookingEngine.tsx` went with it: guarded by `RequireAccess` with no menu entry, the page was open to every role (`mayReach` fails open) - caught by `App.test.tsx` "every guarded route is one the navigation knows". **Proved:** `src/components/app/navigation.test.ts` "has no Booking engine entry for anybody" (fails with the entry).
 
 ## 2026-09-16 · its Coming soon page
 
