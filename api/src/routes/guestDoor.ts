@@ -20,6 +20,7 @@ import { messagesDesk, messagesDoor } from "./guestMessages.ts";
 import { logoDoor } from "./guestLogo.ts";
 import { byRoom } from "./guestDoorByRoom.ts";
 import { digilocker } from "./guestDigilocker.ts";
+import { wakeUpDoor } from "./guestWakeUp.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GUEST'S OWN DOOR — one private page per booking (D18-9, D18-10, D18-13)
@@ -1255,6 +1256,7 @@ guestLinks.route("/", messagesDesk);
 guestDoor.route("/", logoDoor);          // the hotel's logo, else the group's (D27-223)
 guestDoor.route("/", byRoom);            // the room and the phone, no link (D27-235 2.4)
 guestDoor.route("/", digilocker);        // DigiLocker, a fourth way in - off until set up (D27-235 2.5)
+guestDoor.route("/", wakeUpDoor);        // a wake-up call, asked for by the guest (D27-241)
 
 /* Exported for the test that proves a stolen token is not a key to anything
    else: the hash the door computes is the hash the database holds. */

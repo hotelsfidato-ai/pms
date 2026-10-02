@@ -176,6 +176,9 @@ export const CLEAR: [table: string, how: string][] = [
      the completeness test the day it was written (21 September). */
   ["work_order_costs",  "hotel_id = $1"],
   ["work_orders",       "hotel_id = $1"],
+  /* A wake-up call points at the stay and the room; a lost item at a room (D27-241). */
+  ["wake_up_calls",     "hotel_id = $1"],
+  ["lost_items",        "hotel_id = $1"],
   ["room_blocks",       "hotel_id = $1"],
 
   ["banquet_events",    "hotel_id = $1"],

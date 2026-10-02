@@ -370,6 +370,15 @@ describe("the matrix the server asks", () => {
     expect(READ_RULES[`GET ${H}/requests`]?.kind).toBe("own");
   });
 
+  it("D27-241: wake-up calls and lost property are the route's, which knows the desk from housekeeping", () => {
+    for (const key of [`POST ${H}/wake-up-calls`, `PATCH ${H}/wake-up-calls/:id`,
+                       `POST ${H}/lost-property`, `PATCH ${H}/lost-property/:id`]) {
+      expect(rule(key).kind, key).toBe("own");
+    }
+    expect(READ_RULES[`GET ${H}/wake-up-calls`]?.kind).toBe("own");
+    expect(READ_RULES[`GET ${H}/lost-property`]?.kind).toBe("own");
+  });
+
   it("D27-224: the desk's reply to a guest is the route's own, for the desk's roles", () => {
     const r = rule(`POST ${H}/online-checkin/messages/:reservationId/reply`);
     expect(r.kind).toBe("own");
