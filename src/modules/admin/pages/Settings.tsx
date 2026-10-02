@@ -81,7 +81,8 @@ const LINKS: Partial<Record<TabKey, { to: string; note: string }[]>> = {
   "people": [
     { to: "/people", note: "Everybody who works here: add, change, set a password, switch off." },
     { to: "/admin/roles", note: "What each role may see and do." },
-    { to: "/admin/audit-log", note: "Who changed what, and when." },
+    { to: "/admin/audit-log", note: "Charges, payments and reversals, and who made them." },
+    { to: "/admin/activity", note: "Every change: who, when, which record and what changed." },
   ],
   "connections": [
     { to: "/h/:code/channels", note: "The booking sites: rooms, prices and availability sent out." },

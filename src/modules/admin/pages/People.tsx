@@ -10,7 +10,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
   StatusPill, toast, Segmented,
 } from "@/components/ui";
-import { listPeople, createStaff, grantAccess, revokeAccess, deactivateStaff, amendStaff, reactivateStaff, setStaffPassword, setHomeScreen, MIN_PASSWORD, type AdminStaff, type HomeScreen, type RosterPlace } from "@/modules/admin/data/admin";
+import { listPeople, createStaff, grantAccess, revokeAccess, deactivateStaff, amendStaff, reactivateStaff, setStaffPassword, setHomeScreen, minPasswordFor, type AdminStaff, type HomeScreen, type RosterPlace } from "@/modules/admin/data/admin";
 import { useSession } from "@/lib/session";
 import { HOME_SCREENS } from "@/lib/homeScreen";
 import { ConfirmRemoveAccess } from "@/modules/admin/flows/ConfirmRemoveAccess";
@@ -437,7 +437,9 @@ function PasswordDialog({ person, onClose, onSaved }: {
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const short = value.length > 0 && value.length < MIN_PASSWORD;
+  /* D27-243 (5.3): 10 for the owner, an Admin or a GM; 8 for anybody else. */
+  const min = minPasswordFor(person.access.map((a) => a.role), person.isGroupAdmin);
+  const short = value.length > 0 && value.length < min;
 
   const submit = async () => {
     setBusy(true);
@@ -470,7 +472,7 @@ function PasswordDialog({ person, onClose, onSaved }: {
               Cancel
             </Button>
             <Button variant="primary" size="lg" loading={busy}
-                    disabled={value.length < MIN_PASSWORD}
+                    disabled={value.length < min}
                     onClick={() => void submit()}>
               Set it
             </Button>
@@ -481,8 +483,8 @@ function PasswordDialog({ person, onClose, onSaved }: {
           <Field
             label="Password"
             required
-            hint={`At least ${MIN_PASSWORD} characters. They type it at a terminal in front of guests, so something they can remember.`}
-            error={short ? `At least ${MIN_PASSWORD} characters.` : undefined}
+            hint={`At least ${min} characters. They type it at a terminal in front of guests, so something they can remember.`}
+            error={short ? `At least ${min} characters.` : undefined}
           >
             {(f) => (
               <PasswordBox {...fieldProps(f)} value={value} autoFocus
@@ -611,6 +613,7 @@ function AddPersonDialog({ open, places, placeRequired, onOpenChange, onAdded }:
   const roles = place?.roles ?? [];
   const chosenRole = roles.includes(role) ? role
     : roles.includes("front_desk") ? "front_desk" : roles[0] ?? "";
+  const min = minPasswordFor(placeRequired ? [chosenRole] : []);
 
   const submit = async () => {
     if (busy) return;
@@ -632,7 +635,7 @@ function AddPersonDialog({ open, places, placeRequired, onOpenChange, onAdded }:
   };
 
   const ready = name.trim() && email.trim().includes("@")
-    && password.length >= MIN_PASSWORD
+    && password.length >= min
     && (!placeRequired || (place && chosenRole));
 
   return (
@@ -675,9 +678,9 @@ function AddPersonDialog({ open, places, placeRequired, onOpenChange, onAdded }:
           </Field>
           <Field
             label="A password for them" required
-            hint={`At least ${MIN_PASSWORD} characters. Tell it to them - nothing is emailed.`}
-            error={password.length > 0 && password.length < MIN_PASSWORD
-              ? `At least ${MIN_PASSWORD} characters.` : undefined}
+            hint={`At least ${min} characters. Tell it to them - nothing is emailed.`}
+            error={password.length > 0 && password.length < min
+              ? `At least ${min} characters.` : undefined}
           >
             {(f) => (
               <PasswordBox {...fieldProps(f)} value={password}

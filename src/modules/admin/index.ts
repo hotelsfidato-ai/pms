@@ -6,3 +6,6 @@ export { CommissioningCard } from "./flows/CommissioningCard";
    for "by <group name>" and the logo as an <img src>, each null when not set -
    print the hotel's name alone then. Never inline the logo as markup. */
 export { useGroupSettings, type GroupSettings } from "./data/groupSettings";
+/* D27-245: the signed-in person's "set a longer password" prompt, mounted
+   once by the app shell. */
+export { PasswordDue } from "./components/PasswordDue";

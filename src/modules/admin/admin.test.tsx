@@ -11,6 +11,7 @@ import { flatNavigationFor, sidebarFor } from "@/components/app/navigation";
 import { PropertiesPage } from "@/modules/admin/pages/Properties";
 import { taxLine } from "@/modules/admin/components/TaxInUse";
 import PeoplePage from "@/modules/admin/pages/People";
+import { PasswordDue } from "@/modules/admin/components/PasswordDue";
 import type { Role } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -257,7 +258,7 @@ describe("D27-220 - Settings, five tabs, only what can be changed", () => {
     settingsServer();
     renderSettings("people");
     await screen.findByRole("tab", { name: "People" });
-    expect(rowNames()).toEqual(["People", "Roles and permissions", "Audit log"]);
+    expect(rowNames()).toEqual(["People", "Roles and permissions", "Audit log", "Activity"]);
     cleanup();
 
     renderSettings("rates-and-taxes");
@@ -269,7 +270,7 @@ describe("D27-220 - Settings, five tabs, only what can be changed", () => {
     as("gm");
     renderSettings("people");
     await screen.findByRole("tab", { name: "People" });
-    expect(rowNames()).toEqual(["People", "Audit log"]);
+    expect(rowNames()).toEqual(["People", "Audit log", "Activity"]);
     cleanup();
 
     renderSettings("connections");
@@ -731,5 +732,36 @@ describe("D27-214 - the hotel's profile", () => {
       expect(Object.keys(JSON.parse(String(write![1]!.body))).sort())
         .toEqual(["addressLine", "city", "email", "gstin", "name", "phone", "state"]);
     });
+  });
+});
+
+describe("D27-245 - a manager's role with a short password", () => {
+  it("asks for a 10-character password before going on, and stops asking once it is set", async () => {
+    as("gm");
+    let due = true;
+    const sent: unknown[] = [];
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
+      if ((init?.method ?? "GET") === "GET" && url === "/api/me/password") return { due, min: 10 } as never;
+      if (init?.method === "POST" && url === "/api/admin/staff/22222222-2222-2222-2222-222222222222/password") {
+        sent.push(JSON.parse(String(init.body)));
+        due = false;
+        return { ok: true, linked: false } as never;
+      }
+      throw new ApiError(500, "Request failed (500).");
+    });
+    renderAt("/", <PasswordDue />);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Set a longer password")).toBeDefined();
+    const box = within(dialog).getByLabelText(/A new password/);
+    const set = within(dialog).getByRole("button", { name: "Set it" }) as HTMLButtonElement;
+    fireEvent.change(box, { target: { value: "nine-char" } });
+    expect(set.disabled).toBe(true);
+    fireEvent.change(box, { target: { value: "ten-chars!" } });
+    expect(set.disabled).toBe(false);
+    fireEvent.click(set);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(sent).toEqual([{ password: "ten-chars!" }]);
   });
 });

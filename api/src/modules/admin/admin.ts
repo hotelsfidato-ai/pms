@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { createHash, randomUUID } from "node:crypto";
 import { withSession } from "../../auth.ts";
 import {
-  ensureAccount, setAccountPassword, passwordProblem,
+  ensureAccount, setAccountPassword, passwordProblem, minPasswordFor, MIN_MANAGER_PASSWORD,
 } from "../../identity.ts";
 import type { PoolClient as Client } from "pg";
 import { env } from "../../env.ts";
@@ -766,6 +766,19 @@ admin.put("/admin/staff/:id/home-screen", async (c) => {
   return c.json({ ok: true as const, homeScreen: input.homeScreen });
 });
 
+/* A person's own: must they set a longer password before going on (D27-245),
+   and how long. The screen asks this once after signing in. */
+admin.get("/me/password", async (c) => {
+  const body = await withSession(c.get("subject"), async (client, session) => {
+    const { rows } = await client.query<{ due: boolean; is_group_admin: boolean; roles: string[] }>(
+      `select s.must_change_password as due, s.is_group_admin,
+              array(select sh.role from staff_hotels sh where sh.staff_id = s.id) as roles
+         from staff s where s.id = $1`, [session.staffId]);
+    return { due: rows[0]!.due, min: minPasswordFor(rows[0]!.roles, rows[0]!.is_group_admin) };
+  });
+  return c.json(body);
+});
+
 /* A person's own — the first screen and how they like the house grouped.
    Either may be sent alone; what is not sent is left as it was. */
 admin.put("/me/preferences", async (c) => {
@@ -946,11 +959,11 @@ admin.post("/admin/staff", async (c) => {
       "Set them a password. Without one there is no way for them to sign "
       + "in, and they will find that out standing at a terminal."), 409);
   }
-  const bad = passwordProblem(password);
-  if (bad) return c.json(refuse(bad), 409);
-
   const hotelCode = input.hotelCode?.trim().toUpperCase();
   const role = input.role?.trim();
+  /* D27-243 (5.3): the length follows the role they are given. */
+  const bad = passwordProblem(password, minPasswordFor(role ? [role] : [], input.isGroupAdmin === true));
+  if (bad) return c.json(refuse(bad), 409);
   if (hotelCode && !role) {
     return c.json(refuse("Which role at that property?"), 409);
   }
@@ -1047,15 +1060,16 @@ admin.post("/admin/staff", async (c) => {
          the caller may manage, so the update sees them; the insert asks
          only the insert policy, with an id made here. */
       const { rows: known } = await client.query<{ id: string }>(
-        `update staff set full_name = $2, is_active = true, firebase_uid = $3
+        `update staff set full_name = $2, is_active = true, firebase_uid = $3,
+                          long_password = $4, must_change_password = false
           where email = $1 returning id::text`,
-        [email, name, account.uid]);
+        [email, name, account.uid, password.length >= MIN_MANAGER_PASSWORD]);
       const id = known[0]?.id ?? randomUUID();
       if (!known[0]) {
         await client.query(
-          `insert into staff (id, email, full_name, is_group_admin, firebase_uid)
-           values ($1, $2, $3, $4, $5)`,
-          [id, email, name, wantsAdmin, account.uid]);
+          `insert into staff (id, email, full_name, is_group_admin, firebase_uid, long_password)
+           values ($1, $2, $3, $4, $5, $6)`,
+          [id, email, name, wantsAdmin, account.uid, password.length >= MIN_MANAGER_PASSWORD]);
       }
 
       if (hotelId) {
@@ -1110,18 +1124,24 @@ admin.post("/admin/staff/:id/password", async (c) => {
 
   const password = input.password ?? "";
   if (!password) return c.json(refuse("What should it be?"), 409);
-  const bad = passwordProblem(password);
-  if (bad) return c.json(refuse(bad), 409);
 
   const result = await withSession(c.get("subject"), async (client) => {
     const { rows } = await client.query<{
       email: string; full_name: string; uid: string | null; allowed: boolean;
+      is_group_admin: boolean; roles: string[];
     }>(
       `select s.email::text, s.full_name, s.firebase_uid as uid,
-              app.may_set_password(s.id) as allowed
+              app.may_set_password(s.id) as allowed, s.is_group_admin,
+              array(select sh.role from staff_hotels sh where sh.staff_id = s.id) as roles
          from staff s where s.id = $1`,
       [c.req.param("id")]);
     if (!rows[0]) return refuse("No such person.");
+    /* D27-243 (5.3): the length follows THEIR role, so it is asked here. */
+    const bad = passwordProblem(password, minPasswordFor(rows[0].roles, rows[0].is_group_admin));
+    if (bad) return refuse(bad);
+    /* Whether it is long enough for a manager's role, and nothing more (D27-245). */
+    const noteSet = (cl: typeof client) => cl.query("select app.note_password_set($1, $2)",
+      [c.req.param("id"), password.length >= MIN_MANAGER_PASSWORD]);
     if (!rows[0].allowed) {
       return refuse(
         "You can set a password for yourself, and for somebody who works only "
@@ -1141,10 +1161,12 @@ admin.post("/admin/staff/:id/password", async (c) => {
           rows[0].email, rows[0].full_name, password);
         await client.query("update staff set firebase_uid = $2 where id = $1",
           [c.req.param("id"), account.uid]);
+        await noteSet(client);
         return { ok: true as const, linked: true };
       }
 
       await setAccountPassword(rows[0].uid, password);
+      await noteSet(client);
       return { ok: true as const, linked: false };
     } catch (e) {
       if (!env.firebaseServiceAccount) return refuse(NO_SIGN_IN);

@@ -38,6 +38,10 @@ export const nav: ServiceNavEntry[] = [
     label: "Integrations", to: "/admin/integrations", icon: Plug, resource: "integration" },
   { section: "system", order: 26, listed: false,
     label: "Audit log", to: "/admin/audit-log", icon: ScrollText, resource: "audit_log" },
+  /* D27-243 (5.1): every change, on Settings → People and in Find a screen. */
+  { section: "system", order: 28, listed: false,
+    label: "Activity", to: "/admin/activity", icon: ScrollText, resource: "audit_log",
+    keywords: ["changes", "who changed", "history", "activity log"] },
   /* The console CREATES things - properties, people, access. It is the only
      screen that manufactures a tenant, so it stays out of production builds. */
   { section: "system", order: 27, listed: false,

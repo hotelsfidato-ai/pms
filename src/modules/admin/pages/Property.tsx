@@ -10,7 +10,7 @@ import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, toast,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, StatusPill,
 } from "@/components/ui";
-import { getPropertyDetail, createStaff, revokeAccess, setStaffPassword, setHomeScreen, setFssai, MIN_PASSWORD, type PropertyTeamMember, type HomeScreen } from "@/modules/admin/data/admin";
+import { getPropertyDetail, createStaff, revokeAccess, setStaffPassword, setHomeScreen, setFssai, minPasswordFor as minFor, type PropertyTeamMember, type HomeScreen } from "@/modules/admin/data/admin";
 import { getTodaySnapshot, getPeriodStatistics } from "@/modules/reports";
 import { getHouseNow } from "@/modules/front-desk";
 import { HOME_SCREENS, homeScreenLabel } from "@/lib/homeScreen";
@@ -394,9 +394,11 @@ function AddHereDialog({ code, roles, onClose, onSaved }: {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState(roles[0] ?? "");
   const [busy, setBusy] = useState(false);
+  /* D27-243 (5.3): 10 for the owner, an Admin or a GM; 8 for anybody else. */
+  const min = minFor([role]);
 
   const ready = name.trim() && email.includes("@")
-    && password.length >= MIN_PASSWORD && role;
+    && password.length >= min && role;
 
   const submit = async () => {
     setBusy(true);
@@ -448,9 +450,9 @@ function AddHereDialog({ code, roles, onClose, onSaved }: {
           </Field>
           <Field
             label="A password for them" required
-            hint={`At least ${MIN_PASSWORD} characters. Tell it to them - nothing is emailed.`}
-            error={password.length > 0 && password.length < MIN_PASSWORD
-              ? `At least ${MIN_PASSWORD} characters.` : undefined}
+            hint={`At least ${min} characters. Tell it to them - nothing is emailed.`}
+            error={password.length > 0 && password.length < min
+              ? `At least ${min} characters.` : undefined}
           >
             {/* Not masked: you are setting it FOR them and have to read
                 it back. A masked box gets written on a sticky note. */}
@@ -481,6 +483,7 @@ function SetPasswordDialog({ person, onClose, onSaved }: {
 }) {
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
+  const min = minFor([person.role]);
 
   const submit = async () => {
     setBusy(true);
@@ -509,7 +512,7 @@ function SetPasswordDialog({ person, onClose, onSaved }: {
               Cancel
             </Button>
             <Button variant="primary" size="lg" loading={busy}
-                    disabled={value.length < MIN_PASSWORD}
+                    disabled={value.length < min}
                     onClick={() => void submit()}>
               Set it
             </Button>
@@ -518,7 +521,7 @@ function SetPasswordDialog({ person, onClose, onSaved }: {
       >
         <Field
           label="Password" required
-          hint={`At least ${MIN_PASSWORD} characters.`}
+          hint={`At least ${min} characters.`}
         >
           {(f) => (
             <Input {...fieldProps(f)} value={value} autoFocus
