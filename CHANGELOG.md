@@ -50,6 +50,42 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-03 · the fresh start on live (D27-248), rehearsed before it is run
+
+**Asked for:** the owner, before the release: delete all the old, pre-seeded data on live and start
+fresh with no hotel; they add their one hotel; keep only rozariojaison7@gmail.com and
+influvateseo@gmail.com.
+
+**Shipped**
+- RELEASE-3OCT.md Part F (F1-F9) and the release page: reset 5EL, delete it, switch off every other
+  login, make the provisioning key (live had none: no hotel could be created), add the hotel, add
+  rozariojaison7 and make them a super admin.
+- e856cc4e: with no property the Dashboard says "No property yet" (it threw and left a blank page),
+  and Properties shows its add form to a group admin (it was hidden until a property existed).
+
+**Found** (by a rehearsal on an emptied copy of the demo database, end to end in the browser)
+- The two screens above (MEMORY 379). The reset command RELEASE-1OCT gave for live
+  (`sudo -u fidato npm run reset`) could not have worked: `fidato` does not own the tables and
+  cannot lift their guards; Part F runs it as postgres with plain node (MEMORY 380).
+
+**Proved**
+- On the copy: reset 6,090 rows; delete_property('5EL'); all 189 migrations replayed with no hotel
+  coming back; one active login left; a hotel refused without the key and created with it, from the
+  form. On live, read-only: the F1 preview ran as postgres and found 6 bookings, 6 guests.
+- Website gates `fresh-3oct` and both builds on e856cc4e.
+
+**What happened** (read-only checks on live, 3 October about 04:00)
+- The owner ran A1-A9 and F1-F6 at 03:30 from `release/all-3oct` as it then stood (e35a510e, code
+  9b4d6d5c) - cut BEFORE e856cc4e. Live is as planned: code e35a510e, backups at 03:31 and 03:32,
+  no hotel, only influvateseo@gmail.com active, the provisioning key stored, no booking, nothing
+  stuck or running, no API error. But the website lacked e856cc4e: with no hotel the Dashboard threw
+  "Invalid time value" and Properties hid its form (MEMORY 381).
+- The branch is re-cut at these notes (e856cc4e's code; no server file changed since e35a510e), the
+  website rebuilt from it; the owner publishes it (`firebase deploy --only hosting:app`), then F7-F9.
+
+**Left open**
+- The owner publishes the rebuilt website, then F7-F9 (add the hotel, add rozariojaison7, super admin).
+
 ## 2026-10-03 · every plan of 2 October built, merged and checked; one release with everything
 
 **Asked for:** the owner, 2 October: build all the plans' work, question them on every decision

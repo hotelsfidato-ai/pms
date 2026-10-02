@@ -6539,6 +6539,38 @@ copy will see of theirs.**
 
 ---
 
+### 381 · MINE: the release branch stayed at a commit the plan had moved past (3 October)
+
+I cut `release/all-3oct` and called it ready; the owner then asked for the fresh start, I fixed two
+screens it needed (e856cc4e) and changed the page - but left the branch where it was. The owner ran
+the release from it at 03:30; the website had neither fix, and with no hotel it showed a blank page
+("Invalid time value") and no way to add the hotel. The server side was right. **The rule:** the
+moment the plan changes, move or delete the release branch and mark the page unusable in the SAME
+step - never leave a branch that looks ready.
+
+---
+
+### 380 · A server command written for live and never run would have failed (3 October)
+
+RELEASE-1OCT's Part B2 gave the owner `sudo -u fidato npm run reset -- 5EL --yes`. Never run, never
+rehearsed. Checked read-only before the fresh start: the tables belong to `pms_migrate`, `fidato` is
+not a member, so it could not disable the append-only guards; `postgres` could not run `tsx`.
+Part F runs it as postgres with plain `node --experimental-strip-types`, and its preview was run
+read-only on live first. **The rule:** a command handed to the owner for the server is run there in
+its read-only form first, as the user it names.
+
+---
+
+### 379 · A system with no property at all was never opened (3 October)
+
+The owner's fresh start leaves no hotel. Rehearsed on an emptied copy: the new Dashboard threw on the
+empty business date (a blank page after sign-in), and Properties hid its add form because "admin"
+was read off a list that is empty until the first property exists - so the owner could not have
+added the hotel. Every test signed in with hotels. **The rule:** the empty system is a state a
+release can reach; open it before calling a wipe safe.
+
+---
+
 ### 378 · The gates passed and the build refused: a development code outside the DEV guard (3 October)
 
 The guest lane's room-and-phone page (`ByRoom.tsx`, D27-235 2.4) drew `asked.data.devCode` without

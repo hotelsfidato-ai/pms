@@ -440,6 +440,11 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **3 October, later: the fresh start (D27-248).** RELEASE-3OCT.md now has Part F: 5 Elements
+> and all its test data go during the release; only influvateseo@gmail.com and
+> rozariojaison7@gmail.com stay; the owner makes the provisioning key and adds the hotel.
+> Rehearsed end to end; code checked at e856cc4e.
+
 > **3 October: the queue.** (1) The owner runs `docs/go-live/RELEASE-3OCT.md` and its Part B,
 > then RELEASE-1OCT Part B2 (5EL reset to today) and Part C (connections). (2) Archive and
 > recycle the finished lanes' copies (D24-21). (3) Left open: All properties' colours, reports

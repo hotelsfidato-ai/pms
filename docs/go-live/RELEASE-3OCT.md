@@ -5,10 +5,14 @@ checked). It replaces `RELEASE-2OCT.md`, which was never run. **You type every c
 (D21-50). Nothing here was run by Claude. Each step says where it runs. Stop at the first red ✗
 and send me the output.
 
-The release: **the branch `release/all-3oct`**. Its code was fully checked at **`9b4d6d5c`**
-(gates `all-merged-3oct`: server 2,352 of 2,352, database 1,490, all 189 migrations re-runnable (full run on 651aa8a4, whose server code is unchanged since); website 982 of 982 on 109cb495; npm run build and build:app pass on 9b4d6d5c). Every commit after it is notes only.
+The release: **the branch `release/all-3oct`**. Its code was fully checked at **`e856cc4e`**
+(gates `all-merged-3oct`: server 2,352 of 2,352, database 1,490, all 189 migrations re-runnable
+(full run on 651aa8a4; no server change since); website gates and `npm run build` / `build:app`
+on e856cc4e, see `fresh-3oct`). Every commit after it is notes only.
 Live today: `adc8e846` (the launch release, 2 October). This is a fast-forward from it (checked).
-Database changes **177 to 189** run in A6, in one go.
+Database changes **177 to 189** run in A6, in one go. **Then the fresh start (D27-248), Part F:**
+everything on live is test data, so 5 Elements and all its data go, two super admins stay, and you
+add your hotel yourself. Rehearsed on a copy of the demo database on 3 October, end to end.
 
 What it holds:
 
@@ -28,11 +32,11 @@ What it holds:
 
 ---
 
-## Part A · The release itself (about 30 minutes, never during a night audit)
+## Part A · The release itself (about 30 minutes, never during a night audit; Part F adds about 20)
 
 **A1 · your PC, PowerShell**
 ```powershell
-cd "D:\fidato pms"; git checkout release/all-3oct; git status --short; git diff --stat 9b4d6d5c HEAD
+cd "D:\fidato pms"; git checkout release/all-3oct; git status --short; git diff --stat e856cc4e HEAD
 ```
 Expect no files from the first part (your design chat's files may show), then only `.md` files.
 
@@ -80,9 +84,64 @@ cd "D:\fidato pms"; $env:API_URL="https://api.fidatohotels.com"; npm run build:a
 firebase deploy --only hosting:app
 ```
 
-**A10 · look at it**: the Dashboard (and All properties); Settings › Operations (the front desk
-rules card) and Settings › Property (Photos); a check-in on one page; Store › Days; Reports ›
-Store reports; Company accounts.
+## Part F · The fresh start (D27-248), right after A9
+
+Everything on live is test data (5 Elements: 6 bookings, 6 guests, 2 invoices). A4's backup holds it.
+Steps F1-F4 and F6, F9 run in the ssh window from A3 (open it again with A3 if you closed it).
+
+**F1 · the server** — see what will go (nothing is removed)
+```bash
+cd /opt/fidato/api && sudo -u postgres env SUPER_DATABASE_URL='postgres:///fidato?host=/var/run/postgresql' node --experimental-strip-types scripts/reset-property.ts 5EL
+```
+Expect `6 bookings · 6 guests` and "Nothing removed". (A warning line about an experimental feature is normal.)
+
+**F2 · the server** — clear 5 Elements
+```bash
+cd /opt/fidato/api && sudo -u postgres env SUPER_DATABASE_URL='postgres:///fidato?host=/var/run/postgresql' node --experimental-strip-types scripts/reset-property.ts 5EL --yes
+```
+Expect "The property is empty and on today."
+
+**F3 · the server** — delete the hotel itself
+```bash
+sudo -u postgres psql -d fidato -c "select * from app.delete_property('5EL')"
+```
+Expect one row: `5EL | 18 | ...` (its rooms, room types and staff links went with it). Refused: stop and send me the output.
+
+**F4 · the server** — keep only the two super admins
+```bash
+sudo -u postgres psql -d fidato -c "update staff set is_active = false where lower(email) not in ('influvateseo@gmail.com', 'rozariojaison7@gmail.com') and is_active"
+```
+Expect `UPDATE 1` (demo@fidatohotels.com; the other two were already off).
+
+**F5 · your PC, PowerShell** — make your provisioning key (the lock on creating a hotel; live has none)
+```powershell
+$b = New-Object byte[] 24; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); $key = ([Convert]::ToBase64String($b) -replace '[+/=]',''); Set-Clipboard $key; $sha = [Security.Cryptography.SHA256]::Create(); (($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($key)) | ForEach-Object { $_.ToString('x2') }) -join '')
+```
+Expect one line of 64 letters and digits: that is the key's fingerprint, not the key. **The key is now
+copied: paste it into your password manager at once.** Never send the key to anyone, Claude included.
+
+**F6 · the server** — store the fingerprint (paste F5's 64-character line in place of FINGERPRINT)
+```bash
+sudo -u postgres psql -d fidato -c "insert into provisioning_keys (label, key_hash) values ('owner, 3 October', 'FINGERPRINT')"
+```
+Expect `INSERT 0 1`.
+
+**F7 · the live PMS** — add your hotel: sign in (Ctrl+Shift+R first). The Dashboard says "No property
+yet": press **Add a property**, fill the code (2–8 letters or digits — it is in every invoice number
+and cannot change), name, city, state, GSTIN, paste the key, **Create the property**.
+
+**F8 · the live PMS** — People: add `rozariojaison7@gmail.com` as the new hotel's Admin. They get a
+link to set their own password (at least 10 characters).
+
+**F9 · the server** — make them a super admin, like you
+```bash
+sudo -u postgres psql -d fidato -c "update staff set is_group_admin = true where email = 'rozariojaison7@gmail.com'"
+```
+Expect `UPDATE 1`.
+
+**A10 · look at it**: the Dashboard (your hotel; as the owner, All properties); Settings ›
+Operations (the Front desk rules card) and Settings › Property (Photos); Store; Reports › Store
+reports; Company accounts; Contracts and Loyalty. The hotel is empty until its rooms are added.
 
 **A11 · your PC, PowerShell**
 ```powershell
@@ -108,7 +167,8 @@ cd "D:\fidato pms"; git checkout cp6
 6. **Loyalty and contracts** (from the second release): your rules on the Loyalty screen, switched
    on per hotel in Settings; each contract's rates (before GST), and the GM ticks credit for each
    booking site that pays later (D27-185).
-7. **Photos**: Settings › Property › Photos, per hotel (up to 20).
+7. **Your hotel's setup**: rooms and room types, rates, tax rules, menu, photos (Settings › Property ›
+   Photos, up to 20) — there are no default rooms or prices.
 8. **Nothing to do yet**: key cards (until a lock is connected) and DigiLocker (until the partner
    keys and the lawyer's answers, D27-235).
 
