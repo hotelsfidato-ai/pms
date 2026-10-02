@@ -424,6 +424,16 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
             .filter(Boolean)
             .join(" · ");
 
+      /* Replace rather than add. A booking pre-assigned to one room and
+         checked into another must not end up holding both. Released BEFORE
+         the stay turns checked_in (FD-10): nobody ever entered the room it
+         was given ahead, so 182's trigger leaves it as clean as it was. */
+      await client.query(
+        `update room_assignments set released_at = now()
+          where reservation_id = $1 and released_at is null and room_id <> $2`,
+        [stayId, room.id],
+      );
+
       await client.query(
         `update reservations
             set status = 'checked_in',
@@ -547,13 +557,6 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
         await saveVisit(client, hotelId, stayId, body.visit ?? {});
       }
 
-      /* Replace rather than add. A booking pre-assigned to one room and
-         checked into another must not end up holding both. */
-      await client.query(
-        `update room_assignments set released_at = now()
-          where reservation_id = $1 and released_at is null and room_id <> $2`,
-        [stayId, room.id],
-      );
       /* A hold given ahead on this room starts on the old arrival: it is
          stretched back to the day the guest came (FD-24). */
       await client.query(
