@@ -12,6 +12,21 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-02 · DigiLocker at the desk, and asked for before the code (D27-247, D27-210) - the master, at merges
+
+**Asked for:** the owner's D27-247 - a DigiLocker ID never replaces a fuller number on file.
+**Shipped:** the desk's confirm keeps a fuller ID number already in guest_documents when the
+submission is DigiLocker's masked Aadhaar ('xxxxxxxx' and the last four, 182); with nothing on
+file the masked number fills in. The desk's Online check-in card says "· from DigiLocker"
+(`fromDigilocker` on GET /online-checkin). At the messaging merge: the door's opening answer
+says `digilocker`, so Continue with DigiLocker no longer asks the server before the code.
+**Proved:** guestDoorBehindTheCode's new D27-247 case (desk list flag, fuller number kept,
+masked fills an empty file); guestDigilocker's opening-answer checks off and on; web
+online-checkin 79/79; both type checks.
+**Left open:** DigiLocker stays off until the partner keys and the lawyer's answers (D27-235).
+
+---
+
 ## 2026-10-02 · Google with no script of Google's (OCI-10, D27-239 8.4); 5 Elements takes ID photos (D27-235 2.6); the module is live
 
 Branch `messaging/both-channels-2oct`, from cp6 3336a219.
