@@ -38,7 +38,24 @@ Branch `rates/always-open-2oct` from cp6 `3336a219`, copy `.claude\worktrees\mys
   - At 1280 x 800: TUE 25 in navy; Superior "₹3,000 / 4 left"; Deluxe with its extra-adult and extra-child rows; the footer's capsules (41% … 59%); "How rates are built" below.
   - At 375: "+ per extra adult" is one line (40px tall, 152px column). Every font size is on the ladder, and the page does not scroll sideways.
 
-**Left open:** at 375 the label column takes 152px, so about three days show beside it.
+**Also in this branch, outside this service: Find a screen finds guests and bookings (D27-239).** The owner answered the plan's three questions as recommended (2 October).
+- `src/components/app/CommandPalette.tsx`: search starts at 3 characters, or 4 digits of a phone.
+  - It matches the guest's name or the booking reference. A phone matches only for a role that also sees guests, as the server's WITHHELD blanks it for the rest.
+  - Results come under the screens: in house first, then upcoming, then past; at most 8.
+  - Each result opens on All bookings at `?res=<id>`.
+  - Only a role that sees bookings searches; the others' palette is as before.
+  - It uses All bookings' own `GET /stays` read and cache entry. ponytail: the whole list is read; a server search with its own gate line comes in when a hotel's list gets slow.
+- Front desk's door exports `STAY_LABEL`, the bookings table's status words.
+- `commandPalette.test.tsx` has 3 tests, all failing on the old palette:
+  - a name finds the guest's bookings and opens one on All bookings;
+  - a reference and 4 phone digits find bookings, and 2 letters ask for nothing;
+  - housekeeping gets no phone match but still a name match, and the chef gets nothing and asks for nothing.
+- After it: primaryAction, navigation, boundaries, `src/components/app`, inventory and front-desk: 21 files, 114 passed; web `tsc` exit 0.
+- Opened on `fidato_s45` as the GM:
+  - At 1280: "asha" found 4 bookings, and Enter opened FH-5EL-2608-5032's panel on All bookings.
+  - At 375: "98123" found 3 by phone; the rows fit, and the page does not scroll sideways.
+
+**Left open:** at 375 the label column takes 152px, so about three days show beside it. In Find a screen at 375, a booking's second line (reference and dates) ends in an ellipsis.
 
 ---
 
