@@ -50,6 +50,49 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-03 · every plan of 2 October built, merged and checked; one release with everything
+
+**Asked for:** the owner, 2 October: build all the plans' work, question them on every decision
+(D27-235 to D27-247), then ONE release with everything (D27-234); "tell me when all is merged and
+checked"; after the usage reset, "complete what was pending".
+
+**Shipped** (merged into cp6, each lane's own tests re-run on the merged code)
+- Guest page: room and phone code during the stay, wake-up calls, lost property, DigiLocker (off)
+  (36d89892); D27-247 by me (7a074245): a DigiLocker ID never replaces a fuller number on file,
+  the desk sees "from DigiLocker".
+- Messages (944c2ff3, 180->184): the voucher on WhatsApp and email, the PDF through the CRS
+  template, Google by redirect. At the merge the door's opening answer says `digilocker`, so the
+  page asks nothing before the code (D27-210).
+- Front desk (69e69eb7, 182->185): check-in on one page, express check-in, the business-date line.
+- Gallery (f6eee640, 187->186); Settings rules (9e9e21e3, 189->187); Settings security (75789d8b,
+  188) and my follow-ups (a87128b0: names in the activity log, no dead close on the password
+  prompt); stores (71f5f88f); rates (7c7cec1f); reports (faa2129c, the Store page uses reports'
+  exported links); cash (65c014d7, 187->189); the Dashboard (651aa8a4, the glossary's City ledger
+  line corrected).
+- `docs/go-live/RELEASE-3OCT.md` replaces RELEASE-2OCT (never run); branch `release/all-3oct`.
+- `.local/dbq.sh`: one database build at a time across every lane (2 October), no take-over of a
+  turn under 30 s old (3 October).
+
+**Found**
+- Tests a lane did not re-run after its own change failed on the merged tree (MEMORY 376).
+- I gave the lanes a commit hash I had already amended away (MEMORY 374).
+- The booking lane removed a menu entry without its route (MEMORY 375).
+- An insert-only table cannot take FOR UPDATE (FIN-28; MEMORY 377).
+- The full run on the merged tree: two web tests left by the new Dashboard (two functions nothing
+  called, the In house rule's old links; 109cb495). Then `npm run build` refused the bundle: the
+  room-and-phone page showed the development code without the DEV guard (9b4d6d5c; MEMORY 378).
+
+**Proved**
+- Full gates `all-merged-3oct` on 9b4d6d5c: server 2,352 of 2,352, database 1,490, all 189 migrations re-runnable (full run on 651aa8a4; no server change since); website 982 of 982 on 109cb495; npm run build and build:app pass on 9b4d6d5c.
+
+**Left open**
+- The owner runs RELEASE-3OCT.md, then its Part B; RELEASE-1OCT Parts B2 (5EL reset) and C.
+- "Needs you" on All properties colours every action-required notice orange; reports MODULE.md does
+  not describe the new Dashboard tiles yet; 5.5 two-step sign-in after the Firebase upgrade.
+- Archive the finished lanes' copies (D24-21).
+
+**Commits:** `36d89892 … 9b4d6d5c`, then notes.
+
 ## 2026-10-02 · the launch release went live; contracts, loyalty and room systems merged and checked for a second release
 
 **Asked for:** the owner, 2 October: release the checked launch set now (D27-232, replacing

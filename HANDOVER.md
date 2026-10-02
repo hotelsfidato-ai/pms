@@ -47,6 +47,20 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+### 3 October, about 3 am — read this first
+
+```
+live                 Still the launch set, adc8e846 (2 October).
+cp6 now              EVERY PLAN OF 2 OCTOBER, merged and fully checked at 9b4d6d5c
+                     (gates all-merged-3oct: server 2,352 of 2,352, database 1,490, all 189 migrations re-runnable (full run on 651aa8a4; no server change since); website 982 of 982 on 109cb495; npm run build and build:app pass on 9b4d6d5c). Migrations up to 189.
+the release          docs/go-live/RELEASE-3OCT.md, branch release/all-3oct (replaces
+                     RELEASE-2OCT, never run). The owner types every step.
+pages                tracker https://claude.ai/artifact/PrxGEtDY9SnfWVSmo1xGk7.
+local demo           `fidato` at 189.
+decisions            D27-191 to D27-247.
+the database queue   every migrate and API test: bash "/d/fidato pms/.local/dbq.sh" <command>.
+```
+
 ### 2 October, about 2 am — read this first
 
 ```
@@ -425,6 +439,11 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **3 October: the queue.** (1) The owner runs `docs/go-live/RELEASE-3OCT.md` and its Part B,
+> then RELEASE-1OCT Part B2 (5EL reset to today) and Part C (connections). (2) Archive and
+> recycle the finished lanes' copies (D24-21). (3) Left open: All properties' colours, reports
+> MODULE.md for the Dashboard, 5.5 two-step sign-in after the Firebase upgrade.
 
 > **2 October, 2 am: the queue.** (1) The owner runs the second release (RELEASE-2OCT.md), then
 > RELEASE-1OCT Part B2 (5EL reset to today) and Part C (connections). (2) The owner's answers to

@@ -1,5 +1,7 @@
 # The second release: contracts, loyalty and room systems
 
+> **SUPERSEDED 3 October - do not run.** Everything here is in `RELEASE-3OCT.md` (D27-234).
+
 Written 2 October 2026 (D27-232). **You type every command** (D21-50). Nothing here was run by
 Claude. Each step says where it runs. Stop at the first red ✗ and send me the output.
 The same steps, with copy buttons and ticks: https://claude.ai/artifact/E2je4qa2vYqEdHUQ4gJcAn

@@ -6539,6 +6539,55 @@ copy will see of theirs.**
 
 ---
 
+### 378 · The gates passed and the build refused: a development code outside the DEV guard (3 October)
+
+The guest lane's room-and-phone page (`ByRoom.tsx`, D27-235 2.4) drew `asked.data.devCode` without
+`import.meta.env.DEV`, unlike GuestPage. Every test passed - devCodeNeverShips proves the build
+check, not each page - and `scripts/gates.sh` does not build. `npm run build` refused the bundle
+("devCode"). **The rule:** a tree is checked when the gates AND `npm run build` pass; a page that
+shows the development code puts `import.meta.env.DEV &&` first, as GuestPage does.
+
+---
+
+### 377 · An insert-only table cannot take FOR UPDATE (cash lane, FIN-28, 3 October)
+
+`company_payments` is append-only: the app's role may insert and read, never update. A row lock
+(`select ... for update`) needs the right to update, so the reversal's "once" check could not lock
+the line it reverses. **The rule:** to serialise writes against an insert-only table, take a
+transaction advisory lock on the row's id (`pg_advisory_xact_lock`), not FOR UPDATE.
+
+---
+
+### 376 · A lane's new tests green, an older test in the same folder red (3 October)
+
+Settings phase 3 widened the express check-in answer (the advance, the booking-site tick) and ran
+only its own new test file; `expressCheckIn.test.ts` still compared the whole answer with
+`toEqual` and failed on the merged tree. Its `frontDeskRules.test.ts` passed every case and failed
+in `afterAll` (payments and a group left behind), which MEMORY 361 already warns reads as green.
+**The rule:** after changing what a route answers, run every test that calls that route, not only
+the new file; and a file is green only when its suite passes, not its cases.
+
+---
+
+### 375 · A menu entry removed without its route opened the page to every role (booking lane, 2 October)
+
+The Booking engine's menu entry went (D27-239 8.1); its page stayed in RequireAccess with no entry,
+so `mayReach` let every role in (MEMORY "mayReach fails open"). The full web run's App test caught
+it before the merge (d8f26a88 removed the page and its address). **The rule:** a menu entry and its
+route leave together, and the App test runs before a lane reports.
+
+---
+
+### 374 · MINE: I gave the lanes a commit hash I had already amended away (3 October)
+
+I amended my D27-247 commit (76f38f2a -> 7a074245) to fix a line-ending slip, then told four lanes
+"merge cp6 (now 76f38f2a)". They merged the orphan; the next merge conflicted on the file the
+amend had fixed. Fixed with `git merge -s ours 76f38f2a` on cp6 (1a5e9951, no content change).
+**The rule:** never amend a commit once its hash may have been given out, and never quote a hash
+from memory: read `git rev-parse --short cp6` at the moment of writing it.
+
+---
+
 ### 373 · MINE: I ran an API test with plain vitest, against the demo database, again (2 October)
 
 Checking the loyalty and room-systems merge, I ran `npx vitest run test/roleGate.test.ts` in api/.
