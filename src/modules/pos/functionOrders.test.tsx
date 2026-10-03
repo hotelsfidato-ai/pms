@@ -114,7 +114,7 @@ async function padWith(attachable: () => unknown) {
   });
   vi.spyOn(window, "open").mockReturnValue({} as Window);
   const sent = vi.fn();
-  renderAt(`/h/${HOTEL}/floor`, "/h/:code/floor", (
+  renderAt(`/pos/${HOTEL}/tables`, "/pos/:code/tables", (
     <OrderPad hotelId={HOTEL} outlet="REST" tableId="t-7" tableLabel="Table 7"
               open onOpenChange={() => {}} onSent={sent} />
   ));
@@ -186,7 +186,7 @@ function terminalWith(order: Order) {
     [`POST ${API}/till/orders/o-5/settle`]: () =>
       ({ ...order, ok: true, status: "settled", paymentMethod: "function" }),
   });
-  renderAt(`/h/${HOTEL}/till/terminal`, "/h/:code/till/terminal", <TerminalPage />);
+  renderAt(`/pos/${HOTEL}/terminal`, "/pos/:code/terminal", <TerminalPage />);
   return calls;
 }
 
@@ -234,7 +234,7 @@ describe("the Till - an order on a function", () => {
       [`GET ${API}/till/promotions`]: () => ({ freehandCapPercent: 10, promotions: [] }),
       [`GET ${ATTACHABLE}`]: functionsOn,
     });
-    renderAt(`/h/${HOTEL}/till?order=o-5`, "/h/:code/till", <TillPage />);
+    renderAt(`/pos/${HOTEL}/till?order=o-5`, "/pos/:code/till", <TillPage />);
 
     const charge = await screen.findByRole("button", { name: "Charge to Sharma wedding" });
     expect(charge.getAttribute("data-variant")).toBe("primary");
@@ -263,7 +263,7 @@ describe("Close restaurant day - a bill on a function", () => {
       closedAt: null, closedBy: null, opened: true,
     };
     server({ [`GET ${API}/till/day-end`]: () => day });
-    renderAt(`/h/${HOTEL}/till/day-end`, "/h/:code/till/day-end", <DayEndPage />);
+    renderAt(`/pos/${HOTEL}/day-end`, "/pos/:code/day-end", <DayEndPage />);
 
     expect(await screen.findByText("To a function")).toBeTruthy();
     expect(screen.getByText(/the host pays for it on the function's bill/)).toBeTruthy();
@@ -288,7 +288,7 @@ describe("Close restaurant day - cash the owner paid in, read by a GM (D27-9)", 
       closedAt: null, closedBy: null, opened: true,
     };
     server({ [`GET ${API}/till/day-end`]: () => day });
-    renderAt(`/h/${HOTEL}/till/day-end`, "/h/:code/till/day-end", <DayEndPage />);
+    renderAt(`/pos/${HOTEL}/day-end`, "/pos/:code/day-end", <DayEndPage />);
 
     fireEvent.click(await screen.findByText("What is in the tin"));
     expect(await screen.findByText("Change from the safe")).toBeTruthy();

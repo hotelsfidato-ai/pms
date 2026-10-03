@@ -11,6 +11,15 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-03 · The Restaurant, its own space at /pos/:code/... (D27-249, D27-256) - the design lane's
+
+Branch `settings/console-3oct`, with the Settings console (admin's entry of the same day). Claimed pos.
+**Asked for:** the restaurant's screens in a space of their own, with their own menu; the old /h/:code/... addresses redirecting; restaurant roles landing there; the full-screen layer for Terminal and Kitchen kept (Q4).
+**Shipped:** `routes.tsx` at /pos/:code/tables, table-bookings, till, terminal, kitchen, menu, day-end, room-charges, setup, bill/:id; every old address redirects (`OLD`, `Moved`), its question, hash and bill id kept. `nav.ts` entries moved with them; the point-of-sale section is the Restaurant's menu (`space: "pos"` in navigation.ts). The links inside Floor, Kitchen, Terminal, Till and Setup, the start-here cards, `WORKING_HOME` and KOT-STATION-SETUP.md say /pos. The waiter, chef and kitchen manager have the Restaurant alone, their whole menu in it, no switcher (Q3); reception has it where "Reception can use the POS" is on (Q6); finance and read-only have both (Q2). The switcher (Front office · Restaurant · Settings) is in the top bar from 640px and at the top of the menu drawer on a phone (Q5).
+**Found:** (1) On a phone the three names at 14px measured 276px in a 224px drawer: 12px with tighter padding, 224px. (2) No dev tester holds the waiter's role; the chef stood in for "restaurant only".
+**Proved:** red first - `spaces.test.tsx` 41 of 42 failed before the build, `settingsConsole.test.ts` failed with no module. The touched folders (src/components/app, admin, pos, App.test, boundaries, channel-manager): 31 files, 268 tests pass. The whole web suite: 146 files, 1025 of 1026; the one, `reservations/newBookingFields.test.tsx`, timed out at 20s under load and passes alone (1/1). Web tsc and oxlint clean. No API or database change; the API suite not run. On screen (5391 on the master's 8787, read-only; `.local\screenshots6-10-03-console\`): owner at 1280 (console, Restaurant, Front office without the restaurant or Settings) and 375 (drawer switcher 224px); GM at 1280 (no Modules, Roles, Sign-ins, Integrations, System health; Modules' address goes to Profile) and 375 (Bank details, nothing sideways, 14/16/26px); reception at 1280 and 375 (Front office and Restaurant; four restaurant entries; Settings refused); the chef at 375 (lands on /pos/5EL/kitchen, no switcher).
+**Left open:** the API's links still name /h/:code/... restaurant and settings addresses; they redirect. MODULE.md lists the new addresses.
+
 ## 2026-10-02 · A paid-out from the tin waits for a yes (the owner's D27-242) - the cash lane's
 
 **Asked for:** the master, with the owner's answer: every cash paid-out needs

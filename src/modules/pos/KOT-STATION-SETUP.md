@@ -31,7 +31,7 @@ The KOT is laid out for an 80 mm roll (D27-161).
 2. In "Type the location of the item", paste this, all on one line:
 
    ```text
-   "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing --user-data-dir="C:\KOT-Chrome" --app=https://pms.fidatohotels.com/h/5EL/kitchen
+   "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing --user-data-dir="C:\KOT-Chrome" --app=https://pms.fidatohotels.com/pos/5EL/kitchen
    ```
 
 3. Next → name it **KOT station** → Finish.
@@ -50,7 +50,7 @@ What the three parts do:
   always starts fresh with it. And Chrome prints to the printer used **last**
   unless told otherwise, so a Chrome that has only ever printed KOTs always
   picks the KOT printer.
-- `--app=…/h/5EL/kitchen` - opens the Kitchen screen in its own window,
+- `--app=…/pos/5EL/kitchen` - opens the Kitchen screen in its own window,
   without tabs.
 
 ## 3 · Sign in and switch it on

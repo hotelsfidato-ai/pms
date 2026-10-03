@@ -93,6 +93,15 @@ export interface Addon {
     where the property serves it (D21-90). */
 export type SectionHeading = "restaurant" | "bar" | "banquet" | "alcohol" | "other";
 
+/** The Bar side of the menu (D27-267): sections sold under Bar or Alcohol.
+    They get the bar notes and the order screen's Bar tab. */
+export const isBarSection = (c: { taxKind?: SectionHeading | null }) =>
+  c.taxKind === "bar" || c.taxKind === "alcohol";
+
+/** Whether this dish sits in a Bar section of this menu. */
+export const isBarDish = (menu: MenuCategory[] | undefined, itemId: string | undefined) =>
+  !!itemId && (menu ?? []).some((c) => isBarSection(c) && c.items.some((i) => i.id === itemId));
+
 export interface MenuCategory {
   id: string;
   name: string;

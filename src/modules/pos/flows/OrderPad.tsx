@@ -9,10 +9,10 @@ import {
   draftTotal, draftCount, type Draft, type DraftLine,
 } from "@/lib/draft";
 import {
-  Button, Dialog, DialogContent, Input, StatusPill, toast,
+  Button, Dialog, DialogContent, Input, Segmented, StatusPill, toast,
 } from "@/components/ui";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
-import { getMenu, getOrder, sendOrder, type MenuItem } from "@/modules/pos/data/till";
+import { getMenu, getOrder, sendOrder, isBarSection, isBarDish, type MenuItem } from "@/modules/pos/data/till";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { ReadFailed } from "@/components/ui";
 
@@ -65,6 +65,10 @@ export function OrderPad({
   const [lines, setLines] = useState<DraftLine[]>([]);
   const [asking, setAsking] = useState<MenuItem | null>(null);
   const [search, setSearch] = useState("");
+  /* D27-267: the menu in two - Restaurant and Bar - and one section at a
+     time when its button is tapped (tapped again, all of them). */
+  const [side, setSide] = useState<"restaurant" | "bar">("restaurant");
+  const [section, setSection] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [canKeep, setCanKeep] = useState(true);
@@ -129,9 +133,16 @@ export function OrderPad({
 
   const categories = menu.data ?? [];
 
+  /* Two tabs only when the menu has both sides: a hotel with no bar sees none. */
+  const split = categories.some(isBarSection) && categories.some((c) => !isBarSection(c));
+  const onSide = useMemo(() => split
+    ? categories.filter((c) => isBarSection(c) === (side === "bar")) : categories,
+  [categories, split, side]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return categories;
+    if (!q) return section ? onSide.filter((c) => c.id === section) : onSide;
+    /* A search looks across the whole menu, whichever tab is open. */
     return categories
       .map((c) => ({
         ...c,
@@ -140,7 +151,7 @@ export function OrderPad({
           || (i.shortCode ?? "").toLowerCase().includes(q)),
       }))
       .filter((c) => c.items.length > 0);
-  }, [categories, search]);
+  }, [categories, onSide, search, section]);
 
   const total = draftTotal(lines);
   const count = draftCount(lines);
@@ -336,6 +347,38 @@ export function OrderPad({
                 />
               </div>
 
+              {!search.trim() && (split || onSide.length > 1) && (
+                <div className="mb-4 space-y-3">
+                  {split && (
+                    <Segmented
+                      value={side}
+                      onChange={(v) => { setSide(v); setSection(null); }}
+                      options={[{ value: "restaurant", label: "Restaurant" }, { value: "bar", label: "Bar" }]}
+                    />
+                  )}
+                  {onSide.length > 1 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {[{ id: null, name: "All" }, ...onSide].map((c) => (
+                        <button
+                          key={c.id ?? "all"}
+                          type="button"
+                          aria-pressed={section === c.id}
+                          onClick={() => setSection(section === c.id ? null : c.id)}
+                          className={cn(
+                            "press min-h-11 px-3.5 rounded-full border text-base font-medium cursor-pointer",
+                            section === c.id
+                              ? "border-brand-orange bg-brand-orange-50 text-brand-orange-700"
+                              : "border-grey-300 bg-white text-grey-700 hover:border-grey-400 hover:bg-grey-50",
+                          )}
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {noMenu && (
                 <p className="text-sm text-grey-600 leading-relaxed">
                   There is no menu yet. Nothing can be sold until the hotel
@@ -415,7 +458,9 @@ export function OrderPad({
             </div>
 
             {/* ── The round ──────────────────────────────────── */}
-            <div className="min-w-0 order-1 lg:order-2">
+            {/* D27-267: the round stays in view while the menu scrolls, and
+                scrolls on its own once it is longer than the screen. */}
+            <div className="min-w-0 order-1 lg:order-2 lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-15rem)] lg:overflow-y-auto scrollbar-quiet">
               <div className="flex items-center justify-between gap-2 mb-3">
                 <h3 className="text-md font-semibold text-ink-900">
                   This round
@@ -527,6 +572,7 @@ export function OrderPad({
           are all already written and already tested. */}
       <DishDialog
         item={asking}
+        bar={isBarDish(categories, asking?.id)}
         open={asking !== null}
         onOpenChange={(o) => { if (!o) setAsking(null); }}
         onAdd={(id, qty, note, variationId, addonIds, moreChoiceIds) => {

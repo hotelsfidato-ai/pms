@@ -180,12 +180,12 @@ function ReadyToOpen({ hotelId, setup, menu }: {
         : "None yet - below" },
     { done: dishes.length > 0, label: "Dishes on the menu",
       detail: menuSaid(dishes.length ? plural(dishes.length, "dish", "dishes") : "None yet"),
-      to: "/h/:code/menu", open: "Open Menu" },
+      to: "/pos/:code/menu", open: "Open Menu" },
     { done: dishes.length > 0 && noRate === 0, label: "A GST rate for every dish",
       detail: menuSaid(!dishes.length ? "Checked once there are dishes"
         : noRate ? `${plural(noRate, "dish has", "dishes have")} none - they cannot be rung`
         : "Every dish has one"),
-      to: "/settings/taxes-and-billing", open: "Open Settings" },
+      to: "/settings/rates/taxes", open: "Open Settings" },
     { done: setup.waiters > 0, label: "A waiter",
       detail: setup.waiters ? plural(setup.waiters, "person", "people") + " with the Waiter role"
         : "Nobody has the Waiter role yet",
@@ -194,7 +194,7 @@ function ReadyToOpen({ hotelId, setup, menu }: {
        restaurant is switched off (the owner kept it on the list). */
     { done: true, label: "Restaurant switched on",
       detail: "On - this screen opens only when it is",
-      to: "/settings/modules-and-connections", asks: "/settings", open: "Open Settings" },
+      to: "/settings/connections/modules", open: "Open Settings" },
   ];
 
   return (
