@@ -108,7 +108,7 @@ describe("Tables: the pad", () => {
         ({ id: "o-9", orderNo: "12", lines: [], ok: true, opened: true, sent: 1, kotNo: 7 }),
     });
     const sent = vi.fn();
-    renderAt(`/h/${HOTEL}/floor`, "/h/:code/floor", (
+    renderAt(`/pos/${HOTEL}/tables`, "/pos/:code/tables", (
       <OrderPad hotelId={HOTEL} outlet="REST" tableId="t-7" tableLabel="Table 7"
                 open onOpenChange={() => {}} onSent={sent} />
     ));
@@ -128,7 +128,7 @@ describe("Tables: the pad", () => {
 describe("the Till's −", () => {
   it("takes one off an unsent dish; its side has none of its own", async () => {
     const calls = anOrder("pending");
-    renderAt(`/h/${HOTEL}/till?order=o-5`, "/h/:code/till", <TillPage />);
+    renderAt(`/pos/${HOTEL}/till?order=o-5`, "/pos/:code/till", <TillPage />);
 
     fireEvent.click(await screen.findByRole("button", { name: "One fewer Paneer Tikka" }));
     expect(screen.queryByRole("button", { name: "One fewer Sides: Onions" })).toBeNull();
@@ -138,7 +138,7 @@ describe("the Till's −", () => {
 
   it("asks why before one comes off a dish the kitchen has (D27-119)", async () => {
     const calls = anOrder("sent");
-    renderAt(`/h/${HOTEL}/till?order=o-5`, "/h/:code/till", <TillPage />);
+    renderAt(`/pos/${HOTEL}/till?order=o-5`, "/pos/:code/till", <TillPage />);
 
     fireEvent.click(await screen.findByRole("button", { name: "One fewer Paneer Tikka" }));
     expect((await screen.findByRole("dialog")).textContent).toContain("Why is it coming off?");
@@ -150,7 +150,7 @@ describe("the Terminal", () => {
   it("a side follows its dish: no −/+ of its own", async () => {
     localStorage.setItem("fidato.terminal-outlet", "REST");
     anOrder("pending");
-    renderAt(`/h/${HOTEL}/till/terminal`, "/h/:code/till/terminal", <TerminalPage />);
+    renderAt(`/pos/${HOTEL}/terminal`, "/pos/:code/terminal", <TerminalPage />);
 
     fireEvent.click(await screen.findByRole("button", { name: /20260825-5/ }));
     await screen.findByRole("button", { name: "One more Paneer Tikka" });

@@ -41,12 +41,12 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("the FSSAI licence number", () => {
   it("is on every restaurant bill", async () => {
-    open("/h/5EL/till/bill/o-1", "/h/:code/till/bill/:id", <BillPage />, order(FSSAI));
+    open("/pos/5EL/bill/o-1", "/pos/:code/bill/:id", <BillPage />, order(FSSAI));
     expect((await screen.findByText(`FSSAI licence ${FSSAI}`)).hasAttribute("data-bill-fssai")).toBe(true);
   });
 
   it("is a dash on a restaurant bill until the hotel types it", async () => {
-    open("/h/5EL/till/bill/o-1", "/h/:code/till/bill/:id", <BillPage />, order(null));
+    open("/pos/5EL/bill/o-1", "/pos/:code/bill/:id", <BillPage />, order(null));
     expect(await screen.findByText("FSSAI licence -")).toBeTruthy();
   });
 });

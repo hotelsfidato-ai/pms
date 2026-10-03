@@ -25,7 +25,7 @@ describe("the till in the navigation", () => {
     for (const role of ["owner", "gm", "front_desk", "finance"] as const) {
       const paths = flatNavigationFor(role, HOTEL).map((i) => i.to);
       expect(paths, `${role} cannot reach the till`)
-        .toContain(`/h/${HOTEL}/till`);
+        .toContain(`/pos/${HOTEL}/till`);
     }
   });
 
@@ -35,8 +35,8 @@ describe("the till in the navigation", () => {
        accident it means the till was hung off a resource housekeeping
        holds. */
     const paths = flatNavigationFor("housekeeping", HOTEL).map((i) => i.to);
-    expect(paths).not.toContain(`/h/${HOTEL}/till`);
-    expect(paths).not.toContain(`/h/${HOTEL}/menu`);
+    expect(paths).not.toContain(`/pos/${HOTEL}/till`);
+    expect(paths).not.toContain(`/pos/${HOTEL}/menu`);
   });
 
   it("keeps the menu behind the same permission as rates", () => {
@@ -47,9 +47,9 @@ describe("the till in the navigation", () => {
     const desk = flatNavigationFor("front_desk", HOTEL).map((i) => i.to);
     const owner = flatNavigationFor("owner", HOTEL).map((i) => i.to);
 
-    expect(owner).toContain(`/h/${HOTEL}/menu`);
+    expect(owner).toContain(`/pos/${HOTEL}/menu`);
     expect(
-      desk.includes(`/h/${HOTEL}/menu`),
+      desk.includes(`/pos/${HOTEL}/menu`),
       "the menu and the rate screen disagree about who may set a price",
     ).toBe(desk.includes(`/h/${HOTEL}/rates`));
   });
@@ -92,17 +92,18 @@ describe("point of sale as a category", () => {
 
   it("carries the till, the terminal, the menu and the bridge", () => {
     const paths = flatNavigationFor("owner", HOTEL).map((i) => i.to);
-    for (const p of ["till", "till/terminal", "menu", "pos"]) {
+    /* The Restaurant's own addresses since D27-249. */
+    for (const p of ["till", "terminal", "menu", "room-charges"]) {
       expect(paths, `the POS section is missing ${p}`)
-        .toContain(`/h/${HOTEL}/${p}`);
+        .toContain(`/pos/${HOTEL}/${p}`);
     }
   });
 
   it("keeps the terminal behind the same permission as the till", () => {
     /* A terminal that a role could reach but not use would be a screen
        that refuses everything it offers. */
-    const till = navItemFor("/h/:code/till");
-    const terminal = navItemFor("/h/:code/till/terminal");
+    const till = navItemFor("/pos/:code/till");
+    const terminal = navItemFor("/pos/:code/terminal");
     expect(till, "no till entry").toBeTruthy();
     expect(terminal, "no terminal entry").toBeTruthy();
     expect(terminal!.resource).toBe(till!.resource);
@@ -110,6 +111,6 @@ describe("point of sale as a category", () => {
 
   it("does not offer the terminal to housekeeping", () => {
     const paths = flatNavigationFor("housekeeping", HOTEL).map((i) => i.to);
-    expect(paths).not.toContain(`/h/${HOTEL}/till/terminal`);
+    expect(paths).not.toContain(`/pos/${HOTEL}/terminal`);
   });
 });

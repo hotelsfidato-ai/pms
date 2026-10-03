@@ -1141,7 +1141,7 @@ function OrderPanel({
                 size="lg"
                 className="w-full"
                 onClick={() => window.open(
-                  `/h/${hotelId}/till/bill/${order.id}`, "_blank",
+                  `/pos/${hotelId}/bill/${order.id}`, "_blank",
                 )}
               >
                 <Printer className="size-4" />

@@ -58,13 +58,14 @@ function renderAt(path: string, element: ReactElement) {
   );
 }
 
-/** Settings, opened on one of its tabs (D27-213): the tab is in the address. */
-function renderSettings(tab: string) {
+/** The Settings console, opened on one of its pages (D27-249):
+    /settings/<group>/<slug>. */
+function renderSettings(page: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[`/settings/${tab}`]}>
-        <Routes><Route path="/settings/:tab" element={<SettingsPage />} /></Routes>
+      <MemoryRouter initialEntries={[`/settings/${page}`]}>
+        <Routes><Route path="/settings/*" element={<SettingsPage />} /></Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -194,7 +195,7 @@ describe("D17-36 - the switches are the owner's and an administrator's", () => {
   ] as const)("%s sees the switches", async (_who, role) => {
     as(role);
     settingsServer();
-    renderSettings("operations");
+    renderSettings("connections/modules");
     expect((await screen.findAllByRole("switch")).length).toBe(3);
   });
 
@@ -212,21 +213,21 @@ describe("D17-36 - the switches are the owner's and an administrator's", () => {
       ] }),
       "GET /api/hotels/5EL/tax": () => TAX,
     });
-    renderSettings("operations");
+    renderSettings("connections/modules");
     const notes = await screen.findByRole("switch", { name: /Notes section/ });
     const card = notes.closest(".rounded-lg.border-grey-200")?.textContent ?? "";
     expect(card).toContain("New booking");
     expect(card).not.toContain("Point of sale");
   });
 
-  it("the general manager opens Settings and sees no switch, on any tab", async () => {
+  it("the general manager opens Settings and sees no switch, on any page", async () => {
     as("gm");
     settingsServer();
-    for (const tab of ["Property", "Rates and taxes", "Operations"]) {
-      renderSettings(tab.toLowerCase().split(" ").join("-"));
-      expect((await screen.findByRole("tab", { name: tab })).getAttribute("aria-selected"), tab).toBe("true");
-      expect(screen.queryAllByRole("switch"), tab).toHaveLength(0);
-      expect(screen.queryByText("Modules"), tab).toBeNull();
+    for (const [page, title] of [["property/profile", "Profile"], ["rates/taxes", "Taxes"],
+      ["front-desk/times-and-rules", "Times and rules"], ["connections/modules", "Profile"]]) {
+      renderSettings(page!);
+      expect(await screen.findByRole("heading", { level: 1, name: title }), page).toBeTruthy();
+      expect(screen.queryAllByRole("switch"), page).toHaveLength(0);
       cleanup();
     }
   });
@@ -234,70 +235,28 @@ describe("D17-36 - the switches are the owner's and an administrator's", () => {
 
 /* ══════════════════════════════════════════════════════════════════
    ONE PLACE FOR SETTINGS (D27-213, D27-214), ONLY WHAT CAN BE CHANGED
-   (the owner's D27-220, 1 October)
+   (D27-220), ITS OWN SPACE (D27-249, 3 October)
 
-   Five tabs. Every screen a tab links to is one the person may open; the
-   rest are not shown. The eight tabs' old addresses open the tab their
-   things moved to. Nothing is lost from Find a screen.
+   The five tabs are the console's pages now; who sees which group, and its
+   links, is pinned in src/components/app/spaces.test.tsx. The old tabs'
+   addresses open the page their things are on. Nothing is lost from Find
+   a screen.
    ══════════════════════════════════════════════════════════════════ */
-describe("D27-220 - Settings, five tabs, only what can be changed", () => {
-  const TABS = ["Property", "Rates and taxes", "Operations", "People", "Connections"];
-  const rowNames = (inside: HTMLElement = document.body) =>
-    within(inside).getAllByRole("link").map((a) => a.querySelector("span span")?.textContent);
-
-  it("has the owner's five tabs, in order", async () => {
-    as("group-admin");
-    settingsServer();
-    renderSettings("property");
-    const tabs = await screen.findAllByRole("tab");
-    expect(tabs.map((t) => t.textContent)).toEqual(TABS);
-  });
-
-  it("links each person only to the screens they may open", async () => {
-    as("group-admin");
-    settingsServer();
-    renderSettings("people");
-    await screen.findByRole("tab", { name: "People" });
-    expect(rowNames()).toEqual(["People", "Roles and permissions", "Audit log", "Activity", "Sign-ins"]);
-    cleanup();
-
-    renderSettings("rates-and-taxes");
-    const own = (await screen.findByText("Set on their own screens")).closest(".rounded-lg") as HTMLElement;
-    expect(rowNames(own)).toEqual(["Rates", "Room types", "Cancellation terms", "Booking sources"]);
-    cleanup();
-
-    /* The GM holds no grant on the roles matrix: the row is not drawn. */
-    as("gm");
-    renderSettings("people");
-    await screen.findByRole("tab", { name: "People" });
-    expect(rowNames()).toEqual(["People", "Audit log", "Activity"]);
-    cleanup();
-
-    renderSettings("connections");
-    await screen.findByRole("tab", { name: "Connections" });
-    /* Channel manager stays: its menu entry is the GM's today (seesComingSoon). */
-    expect(rowNames()).toContain("Channel manager");
-    for (const gone of ["Users", "Integrations", "System health", "Leads and WhatsApp"]) {
-      expect(rowNames(), gone).not.toContain(gone);
-    }
-  });
-
-  /* The rows nobody can change went (D27-220); where each is now is in
-     Settings.tsx's header. */
+describe("D27-249 - the Settings console, only what can be changed", () => {
+  /* The rows nobody can change went (D27-220). */
   it("shows no row nobody can change", async () => {
     as("group-admin");
     settingsServer();
-    renderSettings("property");
-    await screen.findByRole("tab", { name: "Property" });
+    renderSettings("property/profile");
+    await screen.findByRole("heading", { level: 1, name: "Profile" });
     for (const fixed of ["Code", "Currency", "Time zone", "Financial year starts", "Tax and billing", "Getting started"]) {
       expect(screen.queryByText(fixed), fixed).toBeNull();
     }
   });
 
-  it("is one menu entry: Settings, where Administration and its children were", () => {
+  it("is not in the Front office menu: the switcher opens it, and nothing of Administration is back", () => {
     const sidebar = sidebarFor("owner", HOTEL).flatMap((s) => s.items).map((i) => i.label);
-    expect(sidebar).toContain("Settings");
-    for (const gone of ["Administration", "Configuration", "Users", "Roles and permissions", "Integrations", "Audit log"]) {
+    for (const gone of ["Settings", "Administration", "Configuration", "Users", "Roles and permissions", "Integrations", "Audit log"]) {
       expect(sidebar, gone).not.toContain(gone);
     }
   });
@@ -309,34 +268,28 @@ describe("D27-220 - Settings, five tabs, only what can be changed", () => {
     }
     const settings = found.find((i) => i.to === "/settings")!;
     expect(settings.keywords).toEqual(expect.arrayContaining(["configuration", "administration", "house policies"]));
-    /* "GST" and "bank" find the tab the refusals and the till point at. Its
-       address is the old one, which redirects (nav.ts says why). */
-    const taxes = found.find((i) => i.label === "Rates and taxes")!;
-    expect(taxes.to).toBe("/settings/taxes-and-billing");
-    expect(taxes.keywords).toEqual(expect.arrayContaining(["GST", "bank details"]));
+    /* "GST" and "bank" find the console's pages the refusals and the till point at. */
+    expect(found.find((i) => i.to === "/settings/rates/taxes")!.keywords).toEqual(expect.arrayContaining(["GST"]));
+    expect(found.find((i) => i.to === "/settings/money/bank")!.keywords).toEqual(expect.arrayContaining(["bank"]));
   });
 
   it.each([
-    ["/admin/settings", "Property"],
-    ["/admin/configuration", "Rates and taxes"],
-    ["/settings/rooms-and-rates", "Rates and taxes"],
-    ["/settings/taxes-and-billing", "Rates and taxes"],
-    ["/settings/reservations-and-front-desk", "Operations"],
-    ["/settings/departments", "Operations"],
-    ["/settings/modules-and-connections", "Operations"],
-    ["/settings/people-and-access", "People"],
-    ["/settings/getting-started", "Property"],
-  ])("opens from the old address %s, on the tab its things moved to", async (old, tab) => {
+    ["/settings/rooms-and-rates", "/settings/rates/taxes"],
+    ["/settings/reservations-and-front-desk", "/settings/front-desk/times-and-rules"],
+    ["/settings/departments", "/settings/front-desk/times-and-rules"],
+    ["/settings/people-and-access", "/settings/people/signing-in"],
+    ["/settings/getting-started", "/settings/property/profile"],
+    ["/settings/connections", "/settings/connections/modules"],
+  ])("opens from the old address %s, on the page its things are on", async (old, now) => {
     as("group-admin");
     settingsServer();
     go(old);
     render(<App />);
-    expect(await screen.findByRole("heading", { level: 1, name: "Settings" })).toBeTruthy();
-    expect((await screen.findByRole("tab", { name: tab })).getAttribute("aria-selected")).toBe("true");
+    await waitFor(() => expect(window.location.pathname).toBe(now));
     cleanup();
   });
 
-  it("the checklist sits above the tabs, lists only what is missing, and each row opens its tab", async () => {
+  it("the checklist sits on the console's first page, lists only what is missing, and each row opens its page", async () => {
     as("group-admin");
     server({
       "GET /api/hotels/5EL/commissioning": () => ({
@@ -348,13 +301,14 @@ describe("D27-220 - Settings, five tabs, only what can be changed", () => {
         ],
       }),
     });
-    renderSettings("property");
+    renderSettings("property/profile");
     const gst = (await screen.findByText("A GST rule for rooms")).closest("a")!;
+    /* The server's old tab address: the console opens its page (above). */
     expect(gst.getAttribute("href")).toBe("/settings/rates-and-taxes");
     expect(screen.getByText("A tariff on every room type").closest("a")!.getAttribute("href")).toBe("/h/5EL/rates");
     expect(screen.queryByText(/A real GSTIN|Done:/)).toBeNull();
-    const list = screen.getByRole("tablist");
-    expect(gst.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const title = screen.getByRole("heading", { level: 1, name: "Profile" });
+    expect(title.compareDocumentPosition(gst) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
@@ -374,7 +328,7 @@ describe("D27-223 - the checklist folds its reasons on a phone", () => {
         checks: [{ id: "gstin", label: "A real GSTIN", done: false, detail: REASON, blocking: true, to: "/settings/property" }],
       }),
     });
-    renderSettings("property");
+    renderSettings("property/profile");
   };
 
   it("one line an item; a tap shows why, and the reason opens its fix", async () => {
@@ -679,24 +633,30 @@ describe("D27-214 - the hotel's profile", () => {
   it("shows what is set, and a dash for what nobody has said", async () => {
     as("gm");
     profileServer();
-    renderSettings("property");
+    renderSettings("property/profile");
     /* The Profile card's own rows: the group's office details, on the same
        tab since D27-220, have a Website too. */
-    const profile = (await screen.findByText("Profile")).closest(".rounded-lg") as HTMLElement;
+    /* The card, not the page's heading of the same name (D27-249). */
+    const profile = (await screen.findByRole("button", { name: "Edit" })).closest(".rounded-lg") as HTMLElement;
     const value = (label: string) => within(profile).getByText(label).parentElement!.lastElementChild!.textContent;
     expect(await within(profile).findByText("413216")).toBeTruthy();
     expect(value("Property type")).toBe("Boutique hotel");
     for (const unset of ["Stars", "Map point", "PAN", "Reservations phone", "Website", "Address line 2"]) {
       expect(value(unset), unset).toBe("-");
     }
-    expect(screen.getByText("This hotel's logo")).toBeTruthy();
-    expect(screen.getByText("Group name and logo")).toBeTruthy();
+    /* The logo and the group's card are pages of their own in the console (D27-249). */
+    cleanup();
+    renderSettings("property/photos");
+    expect(await screen.findByText("This hotel's logo")).toBeTruthy();
+    cleanup();
+    renderSettings("property/group");
+    expect(await screen.findByText("Group name and logo")).toBeTruthy();
   });
 
   it("Edit sends the profile's fields as typed", async () => {
     as("gm");
     profileServer();
-    renderSettings("property");
+    renderSettings("property/profile");
     fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
     fireEvent.change(screen.getByLabelText(/^PAN/), { target: { value: "aagcf5655f" } });
     fireEvent.change(screen.getByLabelText(/^Stars/), { target: { value: "4" } });

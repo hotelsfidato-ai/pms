@@ -79,7 +79,7 @@ const TILE: Record<TableState, string> = {
 const TILE_ACTION = "press size-11 grid place-items-center rounded-full border border-grey-300 bg-white text-grey-600 hover:text-ink-900 hover:border-grey-400 cursor-pointer";
 
 /** Restaurant setup (D22-6), where tables are laid out. */
-const SETUP = "/h/:code/till/setup";
+const SETUP = "/pos/:code/setup";
 
 export default function FloorPage() {
   const hotelId = useHotel();
@@ -148,7 +148,7 @@ export default function FloorPage() {
     const res = await markPrinted(hotelId, table.orderId);
     setBusy(null);
     if (!res.ok) return toast.error("Not printed", res.reason);
-    window.open(`/h/${hotelId}/till/bill/${table.orderId}`, "_blank");
+    window.open(`/pos/${hotelId}/bill/${table.orderId}`, "_blank");
     refresh();
   };
 
@@ -410,7 +410,7 @@ export default function FloorPage() {
                               type="button"
                               aria-label={`Open ${t.label}`}
                               onClick={() => navigate(
-                                `/h/${hotelId}/till?order=${t.orderId}`)}
+                                `/pos/${hotelId}/till?order=${t.orderId}`)}
                               className={TILE_ACTION}
                             >
                               <Eye className="size-4" />
