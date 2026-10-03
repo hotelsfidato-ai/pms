@@ -9,7 +9,6 @@ import SystemHealthPage from "@/modules/admin/pages/SystemHealth";
 import SettingsPage from "@/modules/admin/pages/Settings";
 import { PropertiesPage } from "@/modules/admin/pages/Properties";
 import ActivityPage from "@/modules/admin/pages/Activity";
-import SignInsPage from "@/modules/admin/pages/SignIns";
 import {
   UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
 } from "@/modules/admin/pages/Admin";
@@ -95,15 +94,9 @@ export const routes = (
         </RequireAccess>
       }
     />
-    {/* D27-243 (5.4): sign-ins, for the owner and an Admin. */}
-    <Route
-      path="/admin/sign-ins"
-      element={
-        <RequireAccess path="/admin/sign-ins" resource="user">
-          <SignInsPage />
-        </RequireAccess>
-      }
-    />
+    {/* D27-255: Sign-ins and devices moved into the Settings console
+        (people.settings.ts); the old address goes there (MEMORY 375). */}
+    <Route path="/admin/sign-ins" element={<Navigate to="/settings/people/devices" replace />} />
     <Route
       path="/admin/integrations"
       element={

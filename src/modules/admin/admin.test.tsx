@@ -13,6 +13,8 @@ import { taxLine } from "@/modules/admin/components/TaxInUse";
 import PeoplePage from "@/modules/admin/pages/People";
 import { PasswordDue } from "@/modules/admin/components/PasswordDue";
 import SignInsPage from "@/modules/admin/pages/SignIns";
+import { settingsPages as peoplePages } from "@/modules/admin/people.settings";
+import { problems as consoleProblems } from "@/components/app/settingsConsole";
 import type { Role } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -259,7 +261,7 @@ describe("D27-220 - Settings, five tabs, only what can be changed", () => {
     settingsServer();
     renderSettings("people");
     await screen.findByRole("tab", { name: "People" });
-    expect(rowNames()).toEqual(["People", "Roles and permissions", "Audit log", "Activity", "Sign-ins and devices"]);
+    expect(rowNames()).toEqual(["People", "Roles and permissions", "Audit log", "Activity"]);
     cleanup();
 
     renderSettings("rates-and-taxes");
@@ -815,5 +817,16 @@ describe("D27-255 - sign-ins and devices", () => {
     await waitFor(() => expect(sent).toEqual(["/api/admin/sign-ins/7/sign-out"]));
     await waitFor(() => expect(screen.queryAllByRole("button", { name: "Sign out this device" })).toHaveLength(0));
     expect(screen.getAllByText(/Signed out .* by Test Administrator/).length).toBeGreaterThan(0);
+  });
+});
+
+describe("D27-255 - People and security in the Settings console", () => {
+  it("registers roles, the audit log, activity and devices, devices for the owner and an Admin only", () => {
+    expect(peoplePages.map((p) => `${p.group}/${p.slug}`))
+      .toEqual(["people/roles", "people/audit-log", "people/activity", "people/devices"]);
+    expect(consoleProblems(peoplePages)).toEqual([]);
+    const devices = peoplePages.find((p) => p.slug === "devices")!;
+    expect(["owner", "admin", "gm", "front_desk"].map((r) => devices.canSee!(r as Role)))
+      .toEqual([true, true, false, false]);
   });
 });

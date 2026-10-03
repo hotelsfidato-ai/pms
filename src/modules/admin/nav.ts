@@ -1,4 +1,4 @@
-import { Hotel, UserCog, Settings, ShieldCheck, Plug, ScrollText, Terminal, Activity, LogIn } from "lucide-react";
+import { Hotel, UserCog, Settings, ShieldCheck, Plug, ScrollText, Terminal, Activity } from "lucide-react";
 import { can } from "@/lib/permissions";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 
@@ -42,11 +42,6 @@ export const nav: ServiceNavEntry[] = [
   { section: "system", order: 28, listed: false,
     label: "Activity", to: "/admin/activity", icon: ScrollText, resource: "audit_log",
     keywords: ["changes", "who changed", "history", "activity log"] },
-  /* D27-243 (5.4), D27-245 Q-B: the owner and an Admin; the server asks again. */
-  { section: "system", order: 29, listed: false,
-    label: "Sign-ins and devices", to: "/admin/sign-ins", icon: LogIn, resource: "user",
-    canSee: (role) => role === "owner" || role === "admin",
-    keywords: ["sign-in history", "devices", "logins", "security"] },
   /* The console CREATES things - properties, people, access. It is the only
      screen that manufactures a tenant, so it stays out of production builds. */
   { section: "system", order: 27, listed: false,
