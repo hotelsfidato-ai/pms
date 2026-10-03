@@ -67,6 +67,15 @@ everybody's, an Admin the people at their hotel; the address kept, not shown).
 
 ---
 
+## 2026-10-03 · Phase 2, Property: numbers, highlights, amenities, policies, child ages (D27-249, D27-257)
+
+**Asked for:** the settings plan's phase 2 (`.local/settings-plan-lanes.md`). Branch `settings/property-3oct` from cp6 8181f452, cp6 106e819b (the console contract) merged in; online-checkin claimed; admin shared by file.
+**Shipped:** migration 190 (numbered for now): four more registration numbers on `hotels`, the child ages (words only, D27-257: no price reads them), `hotel_texts` (five highlights, three policy texts, plain), ONE group list `amenities` with 20 names seeded and `hotel_amenities`, audit triggers, `app.keeps_amenities`, `app.guest_about`. `property.ts` (routes above), roleGate `PROPERTY` and its reads. Console pages Photos, Highlights, Amenities, Policies (house policies, three texts, child ages, the way to cancellation terms) registered in `property.settings.ts`; `RegistrationsCard` for the Profile page. online-checkin's `AboutTheHotel` behind the code.
+**Proved:** API `property.test.ts` 15 (14 failed first); web `propertyPages.test.tsx` 5 and online-checkin's `aboutTheHotel.test.tsx` 2 (failed first on no pages). The primaryAction guard caught an Add beside a Cancel with no variant - fixed.
+**Left open:** Profile waits for phase 1's exported profile card; the console pages open only once phase 1's frame renders `SETTINGS_PAGES`.
+
+---
+
 ## 2026-10-02 · A photo gallery per hotel (D27-243, D27-244)
 
 **Asked for:** the master's gallery lane: each hotel's photos uploaded on Settings → Property, stored compressed on the PMS server, shown on the guest's in-stay page. Branch `settings/gallery-2oct` from cp6 2493407c, copy `.claude\worktrees\quizzical-bouman-ff2071`, database `fidato_gallery`, API 8911, web 5311. No claim (admin and online-checkin were held by live lanes; the master knew).

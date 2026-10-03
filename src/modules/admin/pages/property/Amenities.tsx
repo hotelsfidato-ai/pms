@@ -63,7 +63,7 @@ export default function Amenities() {
             }}>
               <Input autoFocus maxLength={40} aria-label="New amenity" placeholder="Rooftop garden"
                 value={adding} onChange={(e) => setAdding(e.target.value)} />
-              <Button type="submit" disabled={!adding.trim()}>Add</Button>
+              <Button type="submit" variant="primary" disabled={!adding.trim()}>Add</Button>
               <Button type="button" variant="ghost" onClick={() => setAdding(null)}>Cancel</Button>
             </form>
           )}

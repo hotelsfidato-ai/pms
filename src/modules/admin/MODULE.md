@@ -139,7 +139,7 @@ properties and people.
 
 ---
 
-## Server endpoints — 29
+## Server endpoints — 39
 
 The code is in `api/src/modules/admin/` (moved 15 September): `admin.ts`,
 and the parts split out of three mixed files — `adminLists.ts` (from
@@ -232,6 +232,28 @@ DELETE /:code/logo                the same picture rules; the owner, an administ
                                   or the GM at that hotel (roleGate HOTEL_LOGO, and
                                   app.manages_hotel in the table's policy)
 ```
+
+The property's profile (phase 2 of the settings plan; D27-249, D27-257; `property.ts`, 190):
+
+```
+GET    /:code/property-profile    { registrations, texts, childFreeAge, childMaxAge, map }
+PUT    /:code/registrations       { registrations: [{ label, number }] } at most 4
+PUT    /:code/texts/:kind         { body } plain, 2000; blank removes. Kinds: about,
+                                  attractions, directions, activities, landmarks,
+                                  parking, family, reservation_terms
+PUT    /:code/child-ages          { free, max } words only - no price reads them
+GET    /:code/amenities           ONE group list + this hotel's on + used + mayKeep
+PUT    /:code/amenities/:id       { on } this hotel's switch (the logo's three)
+POST   /:code/amenities           { name } the owner or an Admin (app.keeps_amenities)
+PATCH  /:code/amenities/:id       { name?, isActive? } the same
+PUT    /:code/amenities/order     { ids } the same
+DELETE /:code/amenities/:id       the same; refused while a hotel has it on
+```
+
+The console pages (`property.settings.ts`): property/photos, /highlights,
+/amenities, /policies (`pages/property/`); Profile joins when phase 1 exports
+today's profile card, with `RegistrationsCard` (4 numbers + Open on map) under
+it. Phase 3 points room_type_amenities at `amenities`.
 
 The hotel's photos (D27-243, D27-244; `gallery.ts`, table `hotel_photos`, 186):
 
