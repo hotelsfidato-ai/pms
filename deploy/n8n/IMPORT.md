@@ -41,7 +41,7 @@ from its own settings.
 
    | Template | Category | For |
    |---|---|---|
-   | the CRS's voucher template (already approved) | Utility | the booking voucher, its PDF printing the check-in link (`VOUCHER_TEMPLATE`, below) |
+   | the CRS's `reservation_confirmation` (already approved) | Utility | the booking voucher with its PDF (`VOUCHER_TEMPLATE`, below) |
    | `guest_page_code` | Authentication (Copy code, 10 minutes) | the check-in code |
    | `review_request` | Meta decides | the review request |
    | `tax_invoice` | Utility | the tax invoice, its PDF (`INVOICE_TEMPLATE`, below) |
@@ -49,6 +49,8 @@ from its own settings.
    **Not used since D27-264**: `booking_confirmation`, `stay_reminder` and
    `checkin_link`. The voucher is the confirmation, the check-in link is in
    its PDF, and there is no day-before reminder. Do not submit them.
+   **D27-266: nothing new goes to Meta for now** - `booking_voucher` is on
+   hold, `review_request` later, `tax_invoice` pending the owner.
 
    A template approved under another name or language: change `WHATSAPP` and
    `LANGUAGE` at the top of the workflow's **Read the message** node. Nothing
@@ -102,12 +104,12 @@ In the CRS's n8n (the CRS's **Admin → Integrations** names its address):
      template, its text in `docs/go-live/whatsapp-templates.md` section 6. Change
      it only if Meta approved it under another name. It uses the same
      **Upload PDF to Meta** node as the voucher.
-   - **`VOUCHER_TEMPLATE`** (D27-235, D27-241) - the exact name of the CRS's
-     **already approved voucher template** (the one with the PDF and eight
-     fields), as **WhatsApp Manager → Message templates** shows it; and
-     `VOUCHER_LANGUAGE` if it was approved in other than `en`. Until it is
-     filled in, the voucher PDF does not go on WhatsApp (the desk sees why);
-     the confirmation on WhatsApp and the email with the PDF still go.
+   - **`VOUCHER_TEMPLATE`** (D27-235, D27-241, D27-266) - already
+     `reservation_confirmation`, the CRS's approved voucher template, with
+     `VOUCHER_LANGUAGE` `en`, as the owner runs it live. Emptied, the voucher
+     PDF does not go on WhatsApp (the desk sees why); the email still goes.
+   - `FROM` and `REPLY_TO` are already the CRS's mailbox,
+     `Fidato Hotels <crs@fidatohotels.com>` (D27-266).
    - The words of each email are the `EMAILS` drafts just below - change them
      there.
    - There is no list of hotels to fill in: the hotel's name comes with each

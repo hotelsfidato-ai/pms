@@ -72,6 +72,14 @@ the live-inventory app separate, and the PMS only shows its leads.)
 
 ## The booking voucher (D27-171, D27-172, D27-264)
 
+**D27-266 (3 Oct): WhatsApp goes only through the CRS's approved
+`reservation_confirmation`** (eight named fields, `voucherFields`); our own
+`booking_voucher` (D27-265) is on hold and was reverted. **Online check-in is a
+switch, OFF by default**: off, no guest page is minted (`linkFromDatabase` asks
+`app.online_checkin_on`), so the voucher prints no link or QR, the email has no
+link line, and the desk's Send check-in link is hidden (the guest-messages read
+says `onlineCheckIn`). The review request is off until switched on.
+
 **Since D27-264 the voucher IS the confirmation**, sent once, both ways: by
 email (kind `booking-confirmation`, the voucher email) and on WhatsApp (kind
 `booking-voucher`, the CRS's template). One switch, `booking-voucher`. Its PDF

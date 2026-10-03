@@ -1,9 +1,11 @@
 # The WhatsApp templates — drafts for the owner
 
-**Since 3 October (D27-264) three templates go to Meta:** 3 `guest_page_code`,
-4 `review_request` and 6 `tax_invoice`. The booking voucher goes by the CRS's
-own template, already approved (the last section). **1 `booking_confirmation`,
-2 `stay_reminder` and 5 `checkin_link` are not used.**
+**3 October (D27-266): nothing new goes to Meta for now.** WhatsApp goes
+through the CRS's Meta account and its already-approved templates: the booking
+voucher by the CRS's `reservation_confirmation` (the last section). **7
+`booking_voucher` is on hold; 4 `review_request` is later; 6 `tax_invoice` is
+pending the owner. 1 `booking_confirmation`, 2 `stay_reminder` and 5
+`checkin_link` are not used (D27-264).**
 
 **21 September 2026 (D21-59). DRAFTS: the wording is the owner's to approve,
 change or reject before it goes to Meta.** Meta only lets a business start a
@@ -88,7 +90,10 @@ template itself** — you do not type a sentence. When creating it choose:
 |---|---|---|
 | 1 | `data.code` | 482913 |
 
-## 4 · `review_request` — category: **Meta decides**
+## 4 · `review_request` — **later (D27-266)**
+
+**Later (D27-266).** The review request comes later: its switch in Settings →
+Messages is off until a hotel turns it on. Category: **Meta decides**.
 
 After check-out, when a clerk presses the button (D18-14, D21-30). Meta may
 class a review request as **Marketing** rather than Utility; if it does, it
@@ -133,7 +138,12 @@ Booking: {{4}}
 
 ---
 
-## 6 · `tax_invoice` — category **Utility**, header **Document**
+## 6 · `tax_invoice` — **pending the owner (D27-266)**
+
+**Pending the owner (D27-266).** The owner said to use a CRS template for the
+invoice for now; which one, and its field names, is the owner's to give. The
+invoice is built and its switch is off. The draft below stands until then.
+Category **Utility**, header **Document**.
 
 The guest's tax invoice as a PDF (D27-252, D27-261): when the hotel has
 "Tax invoice" switched on (Settings → Messages) it goes by itself as soon as
@@ -163,14 +173,66 @@ The sending workflow already names it (`INVOICE_TEMPLATE = "tax_invoice"`,
 `deploy/n8n/pms-send-crs.json`). If Meta approves it under another name, change
 that one line.
 
-## The voucher PDF on WhatsApp — the CRS's own template, already approved
+## 7 · `booking_voucher` — **on hold (D27-266)**
 
-**Not a template to submit** (D27-235 2.2, D27-241, D27-264): the PMS reuses
-the CRS's voucher template, already approved by Meta, and it IS the booking's
-confirmation on WhatsApp, sent once. Its header is the voucher PDF, which
-prints the guest's check-in link and its QR code; its body has eight NAMED
-fields. The desk's "Send check-in link" sends it again. Type its exact name into the sending workflow
-(`deploy/n8n/IMPORT.md`, part B, step 5, `VOUCHER_TEMPLATE`).
+**On hold (D27-266). Do not submit it.** Meta refused a new template in the WhatsApp
+account ("Cannot create message template"), so the voucher goes by the CRS's
+approved `reservation_confirmation` (the last section). Kept here, as the owner
+approved it for D27-265, for when it is taken up again. Category **Utility**,
+header **Document**, a URL button.
+
+The booking voucher, which IS the confirmation (D27-264, D27-265): sent once
+when the booking is made, on WhatsApp where the guest agreed, with the voucher
+email beside it; the desk's **Send check-in link** sends it again. The PDF also
+prints the guest's check-in link and its QR code.
+
+**When creating it choose:** category **Utility**; language **English**;
+**Header: Document** (Meta asks for a sample PDF - any one-page PDF will do);
+**body variables: Number** ({{1}} to {{10}}, as below); **one button: Visit
+website**, its text `Check in online`, URL type **Dynamic**,
+`https://pms.fidatohotels.com/g/{{1}}`. The words between asterisks show bold
+on WhatsApp, as in the owner's sample.
+
+```
+*Booking confirmed*
+
+Dear {{1}},
+Thank you for choosing {{2}}. Your booking is confirmed.
+
+*Booking ID:* {{3}}
+*Check-in:* {{4}} · from {{5}}
+*Check-out:* {{6}} · by {{7}}
+*Room:* {{8}}
+*Guests:* {{9}}
+
+Your voucher is attached. Check in online before you arrive and simply collect your key at the desk.
+
+For any help, call {{10}}.
+```
+
+| # | Field n8n receives | Sample for Meta |
+|---|---|---|
+| 1 | `data.guestName` | Rohit Deshpande |
+| 2 | `data.hotelName` | Hotel Amrapali Resort By Fidato Hotels |
+| 3 | `data.reference` | FH-2608-4866 |
+| 4 | `data.checkInDay` - the day and date | Sat, 10 Oct 2026 |
+| 5 | `data.checkInFrom` - the hotel's check-in time | 2:00 PM |
+| 6 | `data.checkOutDay` | Mon, 12 Oct 2026 |
+| 7 | `data.checkOutBy` - the hotel's check-out time | 11:00 AM |
+| 8 | `data.room` - a group's every room | 1 × Deluxe A/C |
+| 9 | `data.guests` - a group's every guest | 2 adults |
+| 10 | `data.hotelPhone` - the hotel's phone | +91 74900 39008 |
+| Button {{1}} | the guest's own token, the end of `data.link` | `sample-token` (the sample URL is `https://pms.fidatohotels.com/g/sample-token`) |
+
+## The voucher PDF on WhatsApp — the CRS's `reservation_confirmation`, already approved
+
+**Not a template to submit** (D27-235 2.2, D27-241, D27-264, D27-266): the PMS
+reuses the CRS's voucher template `reservation_confirmation` (language `en`),
+already approved by Meta, and it IS the booking's confirmation on WhatsApp,
+sent once. Its header is the voucher PDF; its body has eight NAMED fields. The
+PDF prints the guest's check-in link and its QR code only where the hotel has
+online check-in on (D27-266: off for now). The sending workflow carries its
+name already (`VOUCHER_TEMPLATE`, `deploy/n8n/IMPORT.md` part B, step 5).
 
 | Field | What the PMS sends | Sample |
 |---|---|---|
