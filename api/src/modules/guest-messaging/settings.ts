@@ -1,35 +1,31 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
-import { CATCH_UP_FROM, CATCH_UP_UNTIL, REMIND_FROM } from "./jobs.ts";
+import { CATCH_UP_FROM, CATCH_UP_UNTIL } from "./jobs.ts";
 import { REPORT_TITLES } from "./reportEmails.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    SETTINGS → MESSAGES (Settings phase 6; the owner's D27-261)
 
      GET  /:code/guest-message-settings         each switchable message, on or
-                                                off here, and the reminder's timing
-     PUT  /:code/guest-message-settings/:kind   switch one; the reminder's days
-                                                (1 to 7) and the time it starts
+                                                off here
+     PUT  /:code/guest-message-settings/:kind   switch one
      GET  /:code/report-emails                  the six reports, the hotel's
                                                 people, and who gets which
      PUT  /:code/report-emails                  who gets which, as a whole
 
    The owner, an administrator or the GM (the role gate's room_config; the
-   database's app.manages_hotel). No saved switch is today's behaviour: on,
-   the reminder 1 day before from 10:00 - the invoice off until switched on.
-   The check-in code and the desk's check-in link have no switch (Q1).
+   database's app.manages_hotel). No saved switch is today's behaviour: on -
+   the invoice off until switched on. The voucher IS the confirmation, one
+   switch for both ways; there is no reminder (D27-264). The check-in code and
+   the desk's button (which resends the voucher) have no switch (Q1).
    ══════════════════════════════════════════════════════════════════ */
 
 export const messageSettings = new Hono<{ Variables: { subject: string } }>();
 
 export const SWITCHES = [
-  { kind: "booking-confirmation", label: "Booking confirmation", on: true,
-    when: "At once when a booking is confirmed, on WhatsApp and by email." },
-  { kind: "booking-voucher", label: "Voucher PDF on WhatsApp", on: true,
-    when: "Right after the confirmation, on WhatsApp." },
-  { kind: "arrival-reminder", label: "Reminder before arrival", on: true,
-    when: "Before arrival, at the time below, one way." },
+  { kind: "booking-voucher", label: "Booking voucher", on: true,
+    when: "Once, when a booking is confirmed: the voucher PDF with the check-in link, on WhatsApp and by email." },
   { kind: "invoice", label: "Tax invoice", on: false,
     when: "When the invoice is issued, on WhatsApp and by email. Only invoices issued after it is switched on." },
   { kind: "review", label: "Review request", on: true,
@@ -49,11 +45,9 @@ messageSettings.get("/:code/guest-message-settings", async (c) => {
     const hotelId = await hotelManaged(client, c.req.param("code"));
     if (!hotelId) return null;
     const { rows } = await client.query<{
-      kind: string; is_on: boolean; days_before: number | null; send_from: string | null;
-      switched_on_at: string | null; changed_by: string | null; changed_at: string;
+      kind: string; is_on: boolean; switched_on_at: string | null; changed_by: string | null; changed_at: string;
     }>(
-      `select s.kind, s.is_on, s.days_before, to_char(s.send_from, 'HH24:MI') as send_from,
-              s.switched_on_at, p.full_name as changed_by, s.changed_at
+      `select s.kind, s.is_on, s.switched_on_at, p.full_name as changed_by, s.changed_at
          from guest_message_settings s left join staff p on p.id = s.changed_by
         where s.hotel_id = $1`, [hotelId]);
     const saved = new Map(rows.map((r) => [r.kind, r]));
@@ -63,8 +57,6 @@ messageSettings.get("/:code/guest-message-settings", async (c) => {
         return {
           kind: m.kind, label: m.label, when: m.when,
           isOn: s ? s.is_on : m.on,
-          ...(m.kind === "arrival-reminder"
-            ? { daysBefore: s?.days_before ?? 1, sendFrom: s?.send_from ?? REMIND_FROM } : {}),
           ...(m.kind === "invoice" ? { switchedOnAt: s?.switched_on_at ?? null } : {}),
           changedBy: s?.changed_by ?? null, changedAt: s?.changed_at ?? null,
         };
@@ -81,18 +73,6 @@ messageSettings.put("/:code/guest-message-settings/:kind", async (c) => {
   if (!SWITCHES.some((m) => m.kind === kind)) return c.json({ error: "No such message." }, 404);
   const input = await c.req.json<Record<string, unknown>>().catch(() => ({}) as Record<string, unknown>);
   if (typeof input["isOn"] !== "boolean") return c.json({ error: "Say whether it is on or off." }, 400);
-  const reminder = kind === "arrival-reminder";
-  const days = input["daysBefore"];
-  const from = input["sendFrom"];
-  if (!reminder && (days !== undefined || from !== undefined)) {
-    return c.json({ error: "Only the reminder has a timing." }, 400);
-  }
-  if (days !== undefined && !(Number.isInteger(days) && (days as number) >= 1 && (days as number) <= 7)) {
-    return c.json({ error: "The reminder goes 1 to 7 days before arrival." }, 400);
-  }
-  if (from !== undefined && !(typeof from === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(from))) {
-    return c.json({ error: "The time it starts is HH:MM, for example 10:00." }, 400);
-  }
   const done = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelManaged(client, c.req.param("code"));
     if (!hotelId) return false;
@@ -100,17 +80,15 @@ messageSettings.put("/:code/guest-message-settings/:kind", async (c) => {
        invoice issued while it was off never goes by itself (Q3). */
     await client.query(
       `insert into guest_message_settings
-         (hotel_id, kind, is_on, days_before, send_from, switched_on_at, changed_by, changed_at)
-       values ($1, $2, $3, $4, $5::time, case when $2 = 'invoice' and $3 then now() end, $6, now())
+         (hotel_id, kind, is_on, switched_on_at, changed_by, changed_at)
+       values ($1, $2, $3, case when $2 = 'invoice' and $3 then now() end, $4, now())
        on conflict (hotel_id, kind) do update set
          is_on = excluded.is_on,
-         days_before = coalesce(excluded.days_before, guest_message_settings.days_before),
-         send_from = coalesce(excluded.send_from, guest_message_settings.send_from),
          switched_on_at = case
            when excluded.kind = 'invoice' and excluded.is_on and not guest_message_settings.is_on then now()
            else guest_message_settings.switched_on_at end,
          changed_by = excluded.changed_by, changed_at = now()`,
-      [hotelId, kind, input["isOn"], days ?? null, from ?? null, session.staffId]);
+      [hotelId, kind, input["isOn"], session.staffId]);
     return true;
   });
   return done ? c.json({ ok: true }) : c.json(NO_SUCH, 404);

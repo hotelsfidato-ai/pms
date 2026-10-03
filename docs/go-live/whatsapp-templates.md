@@ -1,4 +1,9 @@
-# The six WhatsApp templates — drafts for the owner
+# The WhatsApp templates — drafts for the owner
+
+**Since 3 October (D27-264) three templates go to Meta:** 3 `guest_page_code`,
+4 `review_request` and 6 `tax_invoice`. The booking voucher goes by the CRS's
+own template, already approved (the last section). **1 `booking_confirmation`,
+2 `stay_reminder` and 5 `checkin_link` are not used.**
 
 **21 September 2026 (D21-59). DRAFTS: the wording is the owner's to approve,
 change or reject before it goes to Meta.** Meta only lets a business start a
@@ -18,7 +23,9 @@ templates serves all seven hotels (D21-27).
 
 ---
 
-## 1 · `booking_confirmation` — category **Utility**
+## 1 · `booking_confirmation` — **not used (D27-264)**
+
+**Not used (D27-264). Do not submit it.** The voucher is the confirmation, its PDF prints the check-in link and its QR code, and there is no reminder. Kept here only as the record of what it was.
 
 Sent once per booking (D21-33) - on WhatsApp where the guest agreed, AND by
 email where there is an address (D27-235; the email carries the voucher PDF).
@@ -44,7 +51,9 @@ To save time at the desk, you can fill in your check-in details here: {{7}}
 | 6 | `data.nights` | 2 |
 | 7 | `data.link` | https://pms.fidatohotels.com/g/sample |
 
-## 2 · `stay_reminder` — category **Utility**
+## 2 · `stay_reminder` — **not used (D27-264)**
+
+**Not used (D27-264). Do not submit it.** The voucher is the confirmation, its PDF prints the check-in link and its QR code, and there is no reminder. Kept here only as the record of what it was.
 
 Sent the day before arrival (D18-11).
 
@@ -98,7 +107,9 @@ If you have a minute, we would be grateful for a review: {{3}}
 | 2 | `hotel.name` | 5 Elements Akkalkot |
 | 3 | `data.link` | the hotel's own Google review link |
 
-## 5 · `checkin_link` — category **Utility**
+## 5 · `checkin_link` — **not used (D27-264)**
+
+**Not used (D27-264). Do not submit it.** The voucher is the confirmation, its PDF prints the check-in link and its QR code, and the desk's "Send check-in link" sends the voucher again. Kept here only as the record of what it was.
 
 The guest's own check-in page, when the desk presses **Send check-in link**
 (D27-105) - the guest asked for it, or the booking's voucher went before the
@@ -154,10 +165,11 @@ that one line.
 
 ## The voucher PDF on WhatsApp — the CRS's own template, already approved
 
-**Not a sixth template to submit** (D27-235 2.2, D27-241): the PMS reuses the
-CRS's voucher template, already approved by Meta, as a second WhatsApp after
-`booking_confirmation`. Its header is the voucher PDF; its body has eight
-NAMED fields. Type its exact name into the sending workflow
+**Not a template to submit** (D27-235 2.2, D27-241, D27-264): the PMS reuses
+the CRS's voucher template, already approved by Meta, and it IS the booking's
+confirmation on WhatsApp, sent once. Its header is the voucher PDF, which
+prints the guest's check-in link and its QR code; its body has eight NAMED
+fields. The desk's "Send check-in link" sends it again. Type its exact name into the sending workflow
 (`deploy/n8n/IMPORT.md`, part B, step 5, `VOUCHER_TEMPLATE`).
 
 | Field | What the PMS sends | Sample |
@@ -173,7 +185,7 @@ NAMED fields. Type its exact name into the sending workflow
 
 ## Answered by the owner, 21 September
 
-- **English only** (D21-73). A second language would be six more templates
+- **English only** (D21-73). A second language would be as many more templates
   with the same names, chosen on the booking (D21-74).
 - **The guest's agreement (D21-72):** WhatsApp goes only to a booking ticked
   "guest agreed to WhatsApp"; the desk asks on phone and walk-in bookings.

@@ -149,6 +149,7 @@ describe("the voucher's blocks (D27-215)", () => {
       policies: ["This booking carries no cancellation terms.", "Check-in from 14:00; check-out by 11:00."],
       instagram: null,
       qr: null,
+      checkIn: null,
       footer: { name: "TEST GROUP", address: "1 Test Road",
         lines: ["+91 00000 00000", "desk@example.test", "GSTIN 27AAAAA0000A1Z5"] },
     });

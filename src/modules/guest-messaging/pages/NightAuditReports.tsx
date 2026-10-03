@@ -33,7 +33,7 @@ export default function NightAuditReports() {
 
   return (
     <Page>
-      <PageHeader title="Reports after the night audit"
+      <PageHeader title="Night audit reports"
         description="Each report goes as a PDF to the people ticked, to their own sign-in email, when the night audit completes." />
       {q.isError && <ReadFailed error={q.error} what="who gets the reports" onRetry={() => void q.refetch()} />}
       {q.data && (

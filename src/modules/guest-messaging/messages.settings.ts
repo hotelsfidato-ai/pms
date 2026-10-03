@@ -11,7 +11,7 @@ export const settingsPages: SettingsPage[] = [
     load: () => import("./pages/MessageSwitches"),
   },
   {
-    group: "messages", slug: "night-audit-reports", label: "Reports after the night audit", icon: FileText, order: 50,
+    group: "messages", slug: "night-audit-reports", label: "Night audit reports", icon: FileText, order: 50,
     keywords: ["report", "email", "night audit", "manager summary", "city ledger"],
     load: () => import("./pages/NightAuditReports"),
   },

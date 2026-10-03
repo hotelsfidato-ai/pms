@@ -1,17 +1,17 @@
-import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, Input, Page, PageHeader, ReadFailed, Switch, toast } from "@/components/ui";
+import { Card, Page, PageHeader, ReadFailed, Switch, toast } from "@/components/ui";
 import { useUi } from "@/lib/ui";
 import { getMessageSwitches, setMessageSwitch, type MessageSwitch } from "../data/settings";
 
 /* ══════════════════════════════════════════════════════════════════
-   SETTINGS → MESSAGES → GUEST MESSAGES ON/OFF (D27-261, Q1 and Q2)
+   SETTINGS → MESSAGES → GUEST MESSAGES ON/OFF (D27-261, D27-264)
 
-   One row per message the guest gets by itself: its switch, when it goes,
-   and - for the reminder - its days and start time. The check-in code and
-   the desk's check-in link have no switch: the first is how a guest gets
-   in, the second a button a clerk presses. A switch changes only this
-   hotel. Nothing here sends anything; sending itself still needs the
+   One row per message the guest gets by itself: its switch and when it
+   goes - the voucher (the confirmation, both ways), the tax invoice, the
+   review request. No reminder (D27-264). The check-in code and the desk's
+   "Send check-in link" (which resends the voucher) have no switch: the first
+   is how a guest gets in, the second a button a clerk presses. A switch
+   changes only this hotel. Nothing here sends anything; sending itself still needs the
    server's connection settings.
    ══════════════════════════════════════════════════════════════════ */
 
@@ -20,7 +20,7 @@ export default function MessageSwitches() {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["message-switches", hotel], queryFn: () => getMessageSwitches(hotel), enabled: !!hotel });
   const save = useMutation({
-    mutationFn: ({ kind, ...body }: { kind: string; isOn: boolean; daysBefore?: number; sendFrom?: string }) =>
+    mutationFn: ({ kind, ...body }: { kind: string; isOn: boolean }) =>
       setMessageSwitch(hotel, kind, body),
     onSuccess: () => { toast.success("Saved"); void qc.invalidateQueries({ queryKey: ["message-switches", hotel] }); },
     onError: (e) => toast.error("Not saved", e instanceof Error ? e.message : undefined),
@@ -36,7 +36,7 @@ export default function MessageSwitches() {
           <ul className="divide-y divide-grey-100">
             {q.data.messages.map((m) => (
               <Row key={m.kind} m={m} busy={save.isPending}
-                onSave={(v) => save.mutate({ kind: m.kind, ...v })} />
+                onSave={(isOn) => save.mutate({ kind: m.kind, isOn })} />
             ))}
           </ul>
           <p className="px-4 py-3 text-sm text-grey-600 border-t border-grey-100">
@@ -49,16 +49,9 @@ export default function MessageSwitches() {
   );
 }
 
-function Row({ m, busy, onSave }: {
-  m: MessageSwitch; busy: boolean;
-  onSave: (v: { isOn: boolean; daysBefore?: number; sendFrom?: string }) => void;
-}) {
-  const [days, setDays] = useState(String(m.daysBefore ?? 1));
-  const [from, setFrom] = useState(m.sendFrom ?? "10:00");
-  const reminder = m.kind === "arrival-reminder";
-  const daysOk = /^[1-7]$/.test(days);
+function Row({ m, busy, onSave }: { m: MessageSwitch; busy: boolean; onSave: (isOn: boolean) => void }) {
   return (
-    <li className="px-4 py-3.5 flex flex-col gap-3">
+    <li className="px-4 py-3.5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-base font-medium text-ink-900">{m.label}</p>
@@ -69,27 +62,8 @@ function Row({ m, busy, onSave }: {
           {m.changedBy && <p className="text-xs text-grey-500 mt-0.5">Last changed by {m.changedBy}</p>}
         </div>
         <Switch checked={m.isOn} disabled={busy} label={<span className="sr-only">{m.label}</span>}
-          onCheckedChange={(isOn) => onSave({ isOn })} />
+          onCheckedChange={onSave} />
       </div>
-      {reminder && (
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="text-sm text-grey-700">
-            Days before arrival (1 to 7)
-            <Input className="mt-1 w-24" inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} />
-          </label>
-          <label className="text-sm text-grey-700">
-            From (hotel's time)
-            <Input className="mt-1 w-28" type="time" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </label>
-          <Button variant="secondary" disabled={busy || !daysOk || !from}
-            onClick={() => onSave({ isOn: m.isOn, daysBefore: Number(days), sendFrom: from })}>
-            Save timing
-          </Button>
-          <p className="basis-full text-sm text-grey-600">
-            For example 1 and 10:00: a guest arriving on the 5th gets it on the 4th, from 10 in the morning.
-          </p>
-        </div>
-      )}
     </li>
   );
 }

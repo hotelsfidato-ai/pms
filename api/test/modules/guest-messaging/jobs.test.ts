@@ -148,7 +148,7 @@ describe("which booking is due", () => {
     });
   });
 
-  it("sends the confirmation and the reminder, each to its own booking", async () => {
+  it("sends the voucher email and the WhatsApp voucher, each to its own booking", async () => {
     connected();
     const link = aLinkMaker();
     const post = aReceiver();
@@ -157,14 +157,14 @@ describe("which booking is due", () => {
       NOWHERE,
       async () => [
         aBooking({ kind: KIND.confirmation, reference: "FH-2609-5001" }),
-        aBooking({ kind: KIND.reminder, reference: "FH-2609-5002" }),
+        aBooking({ kind: KIND.voucher, reference: "FH-2609-5002" }),
       ],
       link.make, post.send,
     );
 
     expect(out).toEqual({ due: 2, attempted: 2, sent: 2, nowhereToSend: 0, waiting: 0 });
     expect(post.seen.map((m) => m.kind))
-      .toEqual(["booking-confirmation", "arrival-reminder"]);
+      .toEqual(["booking-confirmation", "booking-voucher"]);
   });
 });
 

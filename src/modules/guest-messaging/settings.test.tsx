@@ -7,8 +7,8 @@ import { SendInvoice } from "@/modules/guest-messaging";
 import MessageSwitches from "@/modules/guest-messaging/pages/MessageSwitches";
 import NightAuditReports from "@/modules/guest-messaging/pages/NightAuditReports";
 
-/* Settings → Messages (D27-252, D27-261): the switches and the reminder's
-   timing, who gets the reports, and Send invoice. The server decides; these
+/* Settings → Messages (D27-252, D27-261, D27-264): the switches, who gets the
+   reports, and Send invoice. The server decides; these
    say each screen sends exactly what was chosen, to its own route. */
 
 type Answer = (init?: RequestInit) => unknown;
@@ -29,10 +29,9 @@ const bodyOf = (spy: ReturnType<typeof serve>, url: string) =>
 const SWITCHES = "/api/hotels/5EL/guest-message-settings";
 const switches = {
   messages: [
-    { kind: "booking-confirmation", label: "Booking confirmation", when: "At once.", isOn: true, changedBy: null, changedAt: null },
-    { kind: "arrival-reminder", label: "Reminder before arrival", when: "Before arrival.", isOn: true,
-      daysBefore: 1, sendFrom: "10:00", changedBy: null, changedAt: null },
+    { kind: "booking-voucher", label: "Booking voucher", when: "Once, when confirmed.", isOn: true, changedBy: null, changedAt: null },
     { kind: "invoice", label: "Tax invoice", when: "When issued.", isOn: false, switchedOnAt: null, changedBy: null, changedAt: null },
+    { kind: "review", label: "Review request", when: "When a clerk asks.", isOn: true, changedBy: null, changedAt: null },
   ],
   catchUp: { from: "09:00", until: "21:00" },
 };
@@ -49,20 +48,6 @@ describe("Guest messages on/off", () => {
     await waitFor(() => expect(bodyOf(spy, `${SWITCHES}/invoice`)).toEqual({ isOn: true }));
     expect(spy.mock.calls.find((c) => c[0] === `${SWITCHES}/invoice`)?.[1]?.method).toBe("PUT");
     expect(screen.getByText(/only from 09:00 to 21:00/)).toBeTruthy();
-  });
-
-  it("saves the reminder's days and start time, and not a day count outside 1 to 7", async () => {
-    const spy = serve({ [SWITCHES]: () => switches, [`${SWITCHES}/arrival-reminder`]: () => ({ ok: true }) });
-    mount(<MessageSwitches />);
-    const days = await screen.findByLabelText("Days before arrival (1 to 7)");
-    const save = screen.getByRole("button", { name: "Save timing" }) as HTMLButtonElement;
-    fireEvent.change(days, { target: { value: "9" } });
-    expect(save.disabled, "9 days is not offered").toBe(true);
-    fireEvent.change(days, { target: { value: "2" } });
-    fireEvent.change(screen.getByLabelText("From (hotel's time)"), { target: { value: "08:30" } });
-    fireEvent.click(save);
-    await waitFor(() => expect(bodyOf(spy, `${SWITCHES}/arrival-reminder`))
-      .toEqual({ isOn: true, daysBefore: 2, sendFrom: "08:30" }));
   });
 });
 

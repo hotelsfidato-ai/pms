@@ -10,10 +10,11 @@ import { voucherFile } from "./voucherDocument.ts";
 /* ══════════════════════════════════════════════════════════════════
    SEND VOUCHER - the booking confirmation, now, from the desk (D27-35)
 
-   Since D27-235/D27-241: every way the confirmation is still owed -
-   WhatsApp and email - and then the CRS's voucher with the PDF on WhatsApp,
-   each its own message, recorded once. A way already sent is not sent
-   again; one that fails is said, and the others still go.
+   Since D27-264 the voucher IS the confirmation: every way it is still owed
+   - the voucher email and the CRS's voucher on WhatsApp, each with the PDF
+   printing the guest's check-in link - each its own message, recorded once.
+   A way already sent is not sent again; one that fails is said, and the
+   others still go.
 
    The owner, 27 September: ONE voucher goes, the same one whoever sends it,
    recorded so it never goes twice. So this is not a second message: it is
@@ -59,8 +60,8 @@ voucher.post("/:code/stays/:id/confirmation", async (c) => {
 
     await claimTurn(client, KIND.confirmation, booking.lead);
     await claimTurn(client, KIND.voucher, booking.lead);
-    /* Every way the confirmation is still owed, then the WhatsApp voucher
-       (D27-235, D27-241) - in the database's order. */
+    /* Every way the voucher is still owed (D27-235, D27-264) - in the
+       database's order. */
     const owed = (await dueFromDatabase(client, LIMITS, booking.hotel_id))
       .filter((d) => (d.kind === KIND.confirmation || d.kind === KIND.voucher)
         && d.reservationId === booking.lead);
@@ -78,7 +79,7 @@ voucher.post("/:code/stays/:id/confirmation", async (c) => {
     }
     const failed: string[] = [];
     for (const due of owed.filter((d) => d.channel)) {
-      const link = due.kind === KIND.voucher ? "" : await linkFromDatabase(client, due);
+      const link = await linkFromDatabase(client, due);
       const message = await withVoucher(client, messageFor(due, link)!);
       if (!message) { failed.push(NO_VOUCHER); continue; }
       const answer = await send(client, {
@@ -94,15 +95,15 @@ voucher.post("/:code/stays/:id/confirmation", async (c) => {
 });
 
 /* ══════════════════════════════════════════════════════════════════
-   SEND CHECK-IN LINK - the guest's own page, on its own (D27-105)
+   SEND CHECK-IN LINK - the voucher again, which carries the link (D27-105,
+   D27-264)
 
-   Before this the link rode only inside the voucher and the reminder, or
-   was copied by hand. The clerk presses it when a guest asks; it goes the
-   way every message to this guest goes (`channelFor`: WhatsApp only on the
-   tick, else email) with a fresh page for THIS booking - a room of a group
-   has its own guest and its own page. Each press is a new message with a
-   new id: a clerk who sends it again means it. The day-before send is the
-   sweep's arrival reminder, which already carries the link.
+   The clerk presses it when a guest asks. Since D27-264 there is no
+   check-in-link message: it RESENDS THE VOUCHER, every way the guest can be
+   reached (WhatsApp on the tick and a number, as `channelFor` says; email
+   where there is an address), its PDF printing a fresh page for THIS
+   booking - a room of a group has its own guest and its own page. Each
+   press is a new message with a new id: a clerk who sends it again means it.
    ══════════════════════════════════════════════════════════════════ */
 voucher.post("/:code/stays/:id/checkin-link", async (c) => {
   if (!canSend()) return c.json(refuse(NOT_CONNECTED), 503);
@@ -135,26 +136,35 @@ voucher.post("/:code/stays/:id/checkin-link", async (c) => {
     }
 
     const due: Due = {
-      kind: KIND.checkInLink, channel: null, reservationId: b.id, reference: b.reference,
+      kind: KIND.voucher, channel: null, reservationId: b.id, reference: b.reference,
       hotel: { id: b.hotel_id, code: b.hotel_code, name: b.hotel_name, phone: b.hotel_phone },
       guest: { name: b.guest_name, phone: b.phone, email: b.email },
       whatsappAgreed: b.whatsapp_agreed, checkIn: b.check_in, checkOut: b.check_out,
       nights: b.nights, held: false,
     };
-    /* One way, as before (D27-241, Q3). */
-    due.channel = channelFor(due);
-    if (!due.channel) {
+    const ways = [
+      channelFor(due) === "whatsapp" ? "whatsapp" as const : null,
+      b.email?.trim() ? "email" as const : null,
+    ].filter((way) => way !== null);
+    if (ways.length === 0) {
       return refuse(
         "There is nowhere to send it: no email address, and no telephone number "
         + "the guest agreed to WhatsApp on.");
     }
-    const link = await linkFromDatabase(client, due);
-    /* Not the voucher's once-only id: a new press is a new message. */
-    const { id: _once, ...message } = messageFor(due, link)!;
-    const answer = await send(client, {
-      ...message, sentBy: { id: session.staffId, name: session.fullName },
-    });
-    return answer.ok ? { ok: true as const } : refuse(answer.reason);
+    const failed: string[] = [];
+    for (const channel of ways) {
+      const way: Due = { ...due, channel, kind: channel === "whatsapp" ? KIND.voucher : KIND.confirmation };
+      const link = await linkFromDatabase(client, way);
+      /* Not the sweep's once-only id: a new press is a new message. */
+      const { id: _once, ...fresh } = messageFor(way, link)!;
+      const message = await withVoucher(client, fresh);
+      if (!message) { failed.push(NO_VOUCHER); continue; }
+      const answer = await send(client, {
+        ...message, sentBy: { id: session.staffId, name: session.fullName },
+      });
+      if (!answer.ok) failed.push(answer.reason);
+    }
+    return failed.length ? refuse(failed.join(" ")) : { ok: true as const };
   });
 
   if (!result) return c.json({ error: "No such booking." }, 404);

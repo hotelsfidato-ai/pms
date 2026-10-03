@@ -4,15 +4,19 @@
 -- =============================================================================
 -- Refer to it by what it does - "messages and reports" - never by its number.
 --
---   1  guest_message_settings   each guest message On/Off per hotel, and the
---                               reminder's timing. NO ROW IS TODAY: every
---                               message on, the reminder 1 day before from
---                               10:00 - EXCEPT the invoice, which is new and
---                               goes only once a hotel switches it on.
+--   1  guest_message_settings   each guest message On/Off per hotel: the
+--                               voucher (the confirmation, D27-264), the
+--                               invoice, the review request. NO ROW IS TODAY:
+--                               on - EXCEPT the invoice, which is new and goes
+--                               only once a hotel switches it on.
 --   2  report_emails            which reports go to which of the hotel's
 --                               people after each night audit (Q7)
---   3  "what the guest is owed" (184) reads the switches and the timing -
---                               the same arguments and columns (MEMORY 317)
+--   3  "what the guest is owed" (184), as the owner's D27-264 has it: the
+--                               VOUCHER is the confirmation - by email the
+--                               voucher email, on WhatsApp the CRS's voucher,
+--                               each carrying the check-in link - and NO
+--                               reminder. The voucher's switch is asked. The
+--                               same arguments and columns (MEMORY 317)
 --   4  app.guest_invoices_owed  the tax invoices owed to their guests, each way
 --   5  app.report_emails_owed   the night-audit reports owed to their people
 -- =============================================================================
@@ -21,16 +25,13 @@
 -- -----------------------------------------------------------------------------
 -- 1 · Each guest message, per hotel (D27-261, Q1 and Q2)
 -- -----------------------------------------------------------------------------
--- The check-in code and the desk's check-in link have NO switch: the first is
--- how a guest gets in, the second a button a clerk presses (Q1).
+-- The check-in code and the desk's button (which resends the voucher, D27-264)
+-- have NO switch: the first is how a guest gets in, the second a button a
+-- clerk presses (Q1). The reminder is gone (D27-264).
 create table if not exists guest_message_settings (
   hotel_id    uuid     not null references hotels(id) on delete cascade,
   kind        text     not null,
   is_on       boolean  not null,
-  -- The reminder only (Q2): how many days before arrival, from what time on
-  -- the hotel's clock. NULL is today's: 1 day, 10:00 (D18-11, D22-39).
-  days_before smallint,
-  send_from   time,
   -- The invoice only (Q3): the moment it was last switched on. An invoice
   -- issued before it - or while it was off - never goes by itself.
   switched_on_at timestamptz,
@@ -38,17 +39,13 @@ create table if not exists guest_message_settings (
   changed_at  timestamptz not null default now(),
 
   primary key (hotel_id, kind),
-  constraint gms_kind_known check (kind in (
-    'booking-confirmation', 'booking-voucher', 'arrival-reminder', 'invoice', 'review')),
-  constraint gms_days_before check (days_before is null or days_before between 1 and 7),
-  constraint gms_timing_is_the_reminders check (
-    kind = 'arrival-reminder' or (days_before is null and send_from is null))
+  constraint gms_kind_known check (kind in ('booking-voucher', 'invoice', 'review'))
 );
 
 comment on table guest_message_settings is
-  'Each guest message switched On or Off for one hotel, and the reminder''s '
-  'timing (D27-261). No row: as before this table - on, 1 day, 10:00 - except '
-  'the invoice, which is off until switched on.';
+  'Each guest message switched On or Off for one hotel (D27-261, D27-264): the '
+  'voucher, the invoice, the review request. No row: on - except the invoice, '
+  'which is off until switched on.';
 
 alter table guest_message_settings enable row level security;
 alter table guest_message_settings force  row level security;
@@ -102,11 +99,15 @@ create trigger report_emails_audit after insert or update or delete on report_em
 
 
 -- -----------------------------------------------------------------------------
--- 3 · What the guest is owed, as 184 - each message asked its hotel's switch
+-- 3 · What the guest is owed (D27-264): the voucher, both ways, once
 -- -----------------------------------------------------------------------------
--- Word for word 184's function, but for the four lines marked SWITCH. The same
--- arguments and the same columns, so a replay of 184 then this one is the
--- same function (MEMORY 317).
+-- The same arguments and columns as 184, so a replay of 184 then this one is
+-- the same function (MEMORY 317). p_remind_from is no longer read: there is no
+-- reminder (D27-264), and arrival-reminder rows are never answered again.
+-- The voucher by EMAIL keeps its kind 'booking-confirmation' (the voucher
+-- email, the PDF attached); on WhatsApp it is 'booking-voucher' (the CRS's
+-- voucher template, the PDF as its document). One switch, 'booking-voucher',
+-- for both. No way at all: one row with no channel (the desk's MSG-3 list).
 create or replace function app.guest_messages_owed(
   p_within_hours    integer,
   p_most_attempts   integer,
@@ -149,17 +150,9 @@ as $fn$
              as catch_up,
            p_within_hours is null
              or r.created_at > now() - make_interval(hours => p_within_hours) as recent,
-           -- SWITCH: each message's own switch at this hotel; no row is on.
+           -- The voucher's switch at this hotel; no row is on (D27-261).
            coalesce((select s.is_on from guest_message_settings s
-                      where s.hotel_id = r.hotel_id and s.kind = 'booking-confirmation'), true) as confirm_on,
-           coalesce((select s.is_on from guest_message_settings s
-                      where s.hotel_id = r.hotel_id and s.kind = 'booking-voucher'), true) as voucher_on,
-           coalesce((select s.is_on from guest_message_settings s
-                      where s.hotel_id = r.hotel_id and s.kind = 'arrival-reminder'), true) as remind_on,
-           (select s.days_before from guest_message_settings s
-             where s.hotel_id = r.hotel_id and s.kind = 'arrival-reminder') as remind_days,
-           (select s.send_from from guest_message_settings s
-             where s.hotel_id = r.hotel_id and s.kind = 'arrival-reminder') as remind_time
+                      where s.hotel_id = r.hotel_id and s.kind = 'booking-voucher'), true) as voucher_on
       from lead l
       join reservations r on r.id = l.id
       join hotels h on h.id = r.hotel_id
@@ -175,12 +168,14 @@ as $fn$
       from messages_sent m
       join reservations x on x.hotel_id = m.hotel_id and x.id::text = m.about_id
      where m.about_kind = 'reservation'
-       and m.kind in ('booking-confirmation', 'booking-voucher', 'arrival-reminder')
+       and m.kind in ('booking-confirmation', 'booking-voucher')
        and coalesce(x.group_id, x.id) in (select party from booking)
      group by 1, 2, 3
   ),
+  -- Every way the voucher goes, and its kind on that way.
   way as (
-    select b.party, w.channel
+    select b.party, w.channel,
+           case when w.channel = 'whatsapp' then 'booking-voucher' else 'booking-confirmation' end as kind
       from booking b
       cross join lateral (
         select 'whatsapp'::text as channel where b.by_whatsapp
@@ -188,58 +183,31 @@ as $fn$
         union all select null where not b.by_whatsapp and not b.by_email
       ) w
   ),
-  confirm as (
-    select w.party, w.channel,
-           t.sent_at is null and coalesce(t.failed, 0) < p_most_attempts and b.recent as owed
+  due as (
+    select w.kind, w.channel, b.*
       from way w
       join booking b on b.party = w.party
-      left join tried t on t.party = w.party and t.kind = 'booking-confirmation'
+      left join tried t on t.party = w.party and t.kind = w.kind
                        and t.channel is not distinct from w.channel
-  ),
-  remind as (
-    select b.party,
-           case when b.by_whatsapp then 'whatsapp' when b.by_email then 'email' end as channel,
-           max(t.sent_at) filter (where t.kind = 'arrival-reminder') as reminded_at,
-           coalesce(sum(t.failed) filter (where t.kind = 'arrival-reminder'), 0) as failed,
-           max(t.sent_at) filter (where t.kind = 'booking-confirmation') as confirmed_at
-      from booking b
-      left join tried t on t.party = b.party
-     group by b.party, b.by_whatsapp, b.by_email
-  ),
-  due as (
-    select 'booking-confirmation' as kind, c.channel, b.*
-      from confirm c join booking b on b.party = c.party
-     where c.owed
-       and b.confirm_on                                                   -- SWITCH
-    union all
-    select 'booking-voucher', 'whatsapp', b.*
-      from booking b
-      left join tried t on t.party = b.party and t.kind = 'booking-voucher' and t.channel = 'whatsapp'
-     where b.by_whatsapp
-       and t.sent_at is null
+     where t.sent_at is null
        and coalesce(t.failed, 0) < p_most_attempts
        and b.recent
-       and b.voucher_on                                                   -- SWITCH
-    union all
-    select 'arrival-reminder', r.channel, b.*
-      from remind r join booking b on b.party = r.party
-     where r.reminded_at is null
-       and r.failed < p_most_attempts
-       and b.remind_on                                                    -- SWITCH
-       and b.check_in = b.here::date + coalesce(b.remind_days, 1)         -- SWITCH: Q2
-       and b.here::time >= coalesce(b.remind_time, p_remind_from)         -- SWITCH: Q2
-       and not exists (select 1 from confirm c where c.party = b.party and c.owed and b.confirm_on)
-       and (r.confirmed_at is null or r.confirmed_at < now() - interval '24 hours')
+       and b.voucher_on
   )
   select d.kind, d.channel, d.id, d.reference,
          d.hotel_id, d.code, d.hotel_name, d.hotel_phone,
          d.full_name, d.phone, d.email, d.whatsapp_agreed,
          d.check_in::text, d.check_out::text, (d.check_out - d.check_in)::int,
-         d.kind <> 'arrival-reminder' and d.catch_up
+         d.catch_up
            and not (d.here::time >= p_catch_up_from and d.here::time < p_catch_up_until)
     from due d
    order by d.check_in, d.created_at, d.kind, d.channel nulls last
 $fn$;
+
+comment on function app.guest_messages_owed(integer, integer, time, time, time, uuid) is
+  'The voucher owed to each confirmed booking (D27-264): by email (kind '
+  'booking-confirmation) and on WhatsApp (booking-voucher), each way once, while '
+  'the hotel''s voucher switch is on. No reminder. p_remind_from is not read.';
 
 
 -- -----------------------------------------------------------------------------

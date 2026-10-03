@@ -9,9 +9,6 @@ export interface MessageSwitch {
   label: string;
   when: string;
   isOn: boolean;
-  /** The reminder only. */
-  daysBefore?: number;
-  sendFrom?: string;
   /** The invoice only: invoices issued before it never go by themselves. */
   switchedOnAt?: string | null;
   changedBy: string | null;
@@ -27,7 +24,7 @@ export const getMessageSwitches = (hotel: string) =>
   api<MessageSwitches>(`/api/hotels/${hotel}/guest-message-settings`);
 
 export const setMessageSwitch = (
-  hotel: string, kind: string, body: { isOn: boolean; daysBefore?: number; sendFrom?: string },
+  hotel: string, kind: string, body: { isOn: boolean },
 ) => api<{ ok: true }>(`/api/hotels/${hotel}/guest-message-settings/${kind}`, {
   method: "PUT", body: JSON.stringify(body),
 });
