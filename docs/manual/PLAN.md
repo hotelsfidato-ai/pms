@@ -51,6 +51,6 @@ why, the edge cases, and what the tests prove. Answers (3 Oct): **two parts**, a
 | B9 | Running it | Releases (and the 3 October lesson: build only from the release copy, with the sign-in settings), server settings, backups and restore, what to do when something breaks |
 | - | Appendices | Glossary, the decision index (number to one line), the screen index |
 
-## Open for the owner
+## Answered by the owner (3 Oct)
 
-Approve or change the chapter list; English only; the demo hotel's name in screenshots.
+The chapter list as planned; screenshots show the test hotel, 5 Elements Akkalkot, with made-up guests.
