@@ -71,7 +71,7 @@ beforeAll(async () => {
   }
   const [stay] = await sql<{ id: string; guest: string }>(
     `select r.id::text, r.guest_id::text as guest from reservations r join hotels h on h.id = r.hotel_id
-      where h.code = '5EL' and r.status = 'checked_in' order by r.reference limit 1`);
+      where h.code = '5EL' and r.status = 'confirmed' order by r.reference desc limit 1`);
   ({ id: stayId, guest: guestId } = stay!);
   phoneWas = (await sql<{ phone: string | null }>("select phone from guests where id = $1", [guestId]))[0]!.phone;
   await sql("update guests set phone = '9876500066' where id = $1", [guestId]);
