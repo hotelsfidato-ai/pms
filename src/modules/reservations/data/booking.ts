@@ -43,7 +43,8 @@ async function send<T>(path: string, method: string, body: unknown): Promise<Ans
 }
 
 export interface SalesPerson { id: string; name: string }
-export interface RoomPromotion { id: string; name: string; percent: number }
+/** % or ₹ off each night, one of the two (191); kept on Money › Discounts. */
+export interface RoomPromotion { id: string; name: string; percent: number | null; amount: number | null }
 
 export const listSalesPeople = (hotelId: string): Promise<SalesPerson[]> =>
   api<SalesPerson[]>(`/api/hotels/${hotelId}/sales-people`);
@@ -54,10 +55,6 @@ export const saveSalesPeople = (hotelId: string, names: string[]) =>
 
 export const listRoomPromotions = (hotelId: string): Promise<RoomPromotion[]> =>
   api<RoomPromotion[]>(`/api/hotels/${hotelId}/room-promotions`);
-
-export const saveRoomPromotions = (
-  hotelId: string, promotions: { name: string; percent: number }[],
-) => send(`/api/hotels/${hotelId}/room-promotions`, "PUT", { promotions });
 
 /** Waiting for the hotel -> confirmed, for every room booked with it. */
 export const confirmWaiting = (hotelId: string, stayId: string) =>

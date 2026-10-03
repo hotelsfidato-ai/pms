@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-03 · The way of paying is set on Money (the owner's D27-259 Q1) - the cash lane's
+
+**Shipped:** Front desk rules shows the default way of paying and no longer edits or sends it; it is set on Settings › Money › Payment methods. **Proved:** `frontDeskRules.test.tsx` - the save carries no `defaultPaymentMethod`.
+
 ## 2026-10-03 · The front desk's rules, per hotel (the owner's D27-243 Settings phase 3, D27-246)
 
 **Asked for:** through the master; plan for 3.3 agreed. Branch `settings/phase3-2oct` from cp6 f6eee640 (76f38f2a merged); migration 189, 187 at the merge.

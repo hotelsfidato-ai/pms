@@ -185,6 +185,7 @@ const TERMS = grant("rate", "edit", "Setting the cancellation terms");
 /* A source's commission: the owner, an administrator and the GM, in the
    matrix (D22-30). */
 const COMMISSION = grant("commission", "edit", "Setting a booking source's commission");
+const MONEY_SETTING = grant("room_config", "edit", "Changing the hotel's money settings");
 
 /* Laundry: its own resource (D18-8, reception and housekeeping). */
 const LAUNDRY_TAKE = grant("laundry", "create", "Taking in laundry");
@@ -290,7 +291,6 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/stays/:id/cancel`]: grant("reservation", "cancel", "Cancelling a booking"),
   [`POST ${H}/stays/:id/confirmation`]: grant("reservation", "create", "Sending a booking's voucher"),
   [`PUT ${H}/sales-people`]: own("reservations/desk.ts: owner, admin, GM"),
-  [`PUT ${H}/room-promotions`]: own("reservations/desk.ts: owner, admin, GM"),
 
   /* finance */
   [`POST ${H}/stays/:id/folios`]: CHARGE,
@@ -310,6 +310,20 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/company-payments`]: COMPANY_PAYMENT,
   [`POST ${H}/company-payments/:id/reverse`]: COMPANY_PAYMENT_REVERSE,
+  /* Money in the settings console (191, the owner's D27-259): the owner, an
+     administrator and the GM. */
+  [`POST ${H}/payment-methods`]: MONEY_SETTING,
+  [`PATCH ${H}/payment-methods/:id`]: MONEY_SETTING,
+  [`DELETE ${H}/payment-methods/:id`]: MONEY_SETTING,
+  [`POST ${H}/payment-methods/:id/default`]: MONEY_SETTING,
+  [`PUT ${H}/payment-methods/order`]: MONEY_SETTING,
+  [`POST ${H}/extra-charges`]: MONEY_SETTING,
+  [`PATCH ${H}/extra-charges/:id`]: MONEY_SETTING,
+  [`DELETE ${H}/extra-charges/:id`]: MONEY_SETTING,
+  [`PUT ${H}/extra-charges/order`]: MONEY_SETTING,
+  [`POST ${H}/discounts`]: MONEY_SETTING,
+  [`PATCH ${H}/discounts/:id`]: MONEY_SETTING,
+  [`DELETE ${H}/discounts/:id`]: MONEY_SETTING,
   [`POST ${H}/cash-deposits/:id/reverse`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/cash-deposits/days/:date/explain`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/cash-deposits/:id/verify`]: own("finance/deposits.ts: owner, accountant"),
@@ -741,6 +755,10 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM, accountant, viewer"),
   /* What companies paid: whoever reads Company accounts (D27-145, `invoice`). */
   [`GET ${H}/company-payments`]: see("invoice", "what companies paid"),
+  [`GET ${H}/payment-methods`]: see("setting", "the money settings"),
+  [`GET ${H}/extra-charges`]: see("setting", "the money settings"),
+  [`GET ${H}/discounts`]: see("setting", "the money settings"),
+  [`GET ${H}/commission`]: see("setting", "the money settings"),
   [`GET ${H}/accounting/:file{day-book(?:\\.xlsx)?}`]: own("accounting/routes.ts: MAY_EXPORT (D27-122)"),
 
   /* ── Reports ── */

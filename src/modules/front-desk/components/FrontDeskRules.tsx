@@ -17,7 +17,6 @@ import { saveDeskRules } from "@/modules/front-desk/data/operations";
    which is fetched again after a save so the screens use it at once.
    ══════════════════════════════════════════════════════════════════ */
 
-const PAYING = ["Cash", "UPI", "Credit Card", "Debit Card"] as const;
 const ADVANCE = [
   ["none", "None"], ["first_night", "The first night"], ["whole_stay", "The whole stay"],
 ] as const;
@@ -78,7 +77,10 @@ function RulesDialog({ hotelId, current, onClose }: {
 
   const submit = async () => {
     setBusy(true);
-    const res = await saveDeskRules(hotelId, r);
+    /* The way of paying is set on Money › Payment methods (the owner's
+       D27-259 Q1); shown here, not sent. */
+    const { defaultPaymentMethod: _onMoney, paymentMethods: _list, ...rest } = r;
+    const res = await saveDeskRules(hotelId, rest as DeskRules);
     if (res.ok) {
       /* The screens read the hotel list: fetch it again so they use it now. */
       const { hotels } = await getSession().catch(() => ({ hotels: null }));
@@ -106,14 +108,6 @@ function RulesDialog({ hotelId, current, onClose }: {
       >
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Way of paying" hint="The bill, a function's bill and New booking's advance. The till keeps Cash.">
-              {(f) => (
-                <NativeSelect {...fieldProps(f)} value={r.defaultPaymentMethod}
-                  onChange={(e) => set({ defaultPaymentMethod: e.target.value as DeskRules["defaultPaymentMethod"] })}>
-                  {PAYING.map((m) => <option key={m} value={m}>{m}</option>)}
-                </NativeSelect>
-              )}
-            </Field>
             <Field label="Advance before check-in" hint="Never asked of a company's booking, a room the group's host pays for, or a booking prepaid on a booking site.">
               {(f) => (
                 <NativeSelect {...fieldProps(f)} value={r.advanceBeforeCheckIn}
