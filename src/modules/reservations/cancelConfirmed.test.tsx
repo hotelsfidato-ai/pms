@@ -19,8 +19,13 @@ const sent: Array<Record<string, unknown>> = [];
 
 beforeEach(() => {
   startSignedIn();
+
+  /* Phase 5 (D27-260): the hotel's lists are their own read. */
+  const five = ["Corporate", "Leisure", "Group", "Crew", "Government"]
+    .map((label, i) => ({ id: String(i), label, colour: null, sort: i, active: true }));
   sent.length = 0;
-  vi.spyOn(apiModule, "api").mockImplementation(async (_path: string, init?: RequestInit) => {
+  vi.spyOn(apiModule, "api").mockImplementation(async (path: string, init?: RequestInit) => {
+    if (String(path).includes("/lists/")) return (String(path).endsWith("market_segment") ? five : []) as never;
     const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
     if (body["dryRun"]) {
       return { ok: true, preview: { terms: "Free until 24 hours", charge: 3000 } } as never;

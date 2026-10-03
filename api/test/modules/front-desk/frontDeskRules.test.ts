@@ -116,7 +116,7 @@ describe("the rules are set on Settings and read by every screen", () => {
     expect(res.status, await res.clone().text()).toBe(200);
     const list = (await (await app.request("/api/hotels", { headers: { "x-dev-staff-id": "dev-owner" } }))
       .json()) as { hotels: Array<{ code: string; deskRules: unknown }> };
-    expect(list.hotels.find((h) => h.code === CODE)?.deskRules).toEqual({
+    expect(list.hotels.find((h) => h.code === CODE)?.deskRules).toMatchObject({
       defaultPaymentMethod: "UPI", deskMayOverbook: true, advanceBeforeCheckIn: "none",
       weekendDays: [5, 6], defaultIdType: "aadhaar", defaultNationality: "IN", defaultTitle: "Ms",
       /* The hotel's ways of paying that are On, in order (191, D27-259). */

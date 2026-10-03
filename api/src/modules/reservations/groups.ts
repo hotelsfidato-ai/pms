@@ -272,6 +272,24 @@ groups.post("/:code/stays/:id/routing", async (c) => {
 });
 
 
+/* What a booking at this hotel must carry, the hotel's own list (192). */
+const FIELD_WORDS: Record<string, string> = {
+  phone: "The phone number", email: "The email", nationality: "The nationality",
+  address: "The address", expectedArrival: "The expected arrival time",
+  marketSegment: "The market segment", businessSource: "The business source",
+  salesPerson: "The sales person",
+};
+async function missingField(
+  client: Client, hotelId: string, input: Record<string, unknown>,
+): Promise<string | null> {
+  const { rows } = await client.query<{ f: string[] }>(
+    "select required_booking_fields as f from hotels where id = $1", [hotelId]);
+  const blank = (v: unknown): boolean => v == null || (typeof v === "string" ? !v.trim()
+    : typeof v === "object" && Object.values(v as object).every(blank));
+  const f = (rows[0]?.f ?? []).find((k) => blank(input[k]));
+  return f ? `${FIELD_WORDS[f]} is needed for a booking at this hotel.` : null;
+}
+
 /* ── Booking several rooms at once ─────────────────────────────────
    A wedding party wants four Deluxes and two Superiors for the same three
    nights. Six bookings typed one at a time is six chances to mistype a date,
@@ -391,6 +409,10 @@ groups.post("/:code/bookings", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    /* THE HOTEL'S REQUIRED FIELDS (the owner's D27-260 Q2): the desk's New
+       booking only - a channel's booking never comes this way. */
+    const missing = await missingField(client, hotelId, input as Record<string, unknown>);
+    if (missing) return { ok: false as const, kind: "refused" as const, reason: missing };
     const made = await makeBooking(client, build(hotelId));
     /* In the booking's own transaction, after it is made: a refused booking
        records nothing, and a repeat was recorded the first time. */

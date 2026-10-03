@@ -374,11 +374,15 @@ guestDoor.get("/:token/details", async (c) => {
     status: string; submitted_at: string; id_type: string; id_last_four: string;
   }>("select * from app.guest_details_state($1, $2)", [door.hash, door.unlock]);
   const d = rows[0];
+  /* The IDs this hotel does not take leave the form (192, D27-260 Q8). */
+  const off = await ask<{ ids: string[] | null }>(
+    "select app.guest_ids_off($1, $2) as ids", [door.hash, door.unlock]);
   return c.json({
     sent: d ? {
       status: d.status, submittedAt: d.submitted_at,
       idType: d.id_type, idLastFour: d.id_last_four,
     } : null,
+    idTypesOff: off[0]?.ids ?? [],
   });
 });
 
@@ -392,6 +396,11 @@ guestDoor.post("/:token/details", async (c) => {
   const text = (v: unknown, max: number) => typeof v === "string" && v.trim().length <= max;
   if (typeof b.idType !== "string" || !ID_TYPES.includes(b.idType)) {
     return c.json({ error: "Choose which ID this is." }, 400);
+  }
+  const off = await ask<{ ids: string[] | null }>(
+    "select app.guest_ids_off($1, $2) as ids", [door.hash, door.unlock]);
+  if ((off[0]?.ids ?? []).includes(b.idType)) {
+    return c.json({ error: "This hotel does not take that ID. Choose another." }, 400);
   }
   if (typeof b.idNumber !== "string" || b.idNumber.trim() === "" || !text(b.idNumber, 40)) {
     return c.json({ error: "Type the number on the ID." }, 400);

@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-03 · The housekeeping switches (the owner's D27-260 Q3)
+
+Branch `settings/frontdesk-3oct`. A room back from a block comes back dirty (as before) or, when the hotel says so, as it was before the block (`room_blocks.was_status`, 192); a room moved out of follows `hk_dirty_after_move` (192 rewrites 130's and 137's triggers); the night audit can send stay-over rooms for the daily clean (off). The block's note offers the hotel's ready reasons. Proved by front desk's `deskSettings.test.ts`.
+
 ## 2026-09-28 · "The buttons are not working" - HK-12, HK-13, HK-14
 
 **Asked for:** the owner, 28 September: "check housekeeping because the

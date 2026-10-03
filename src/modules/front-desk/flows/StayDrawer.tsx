@@ -1,3 +1,4 @@
+import { vipLevels } from "@/modules/front-desk/data/lists";
 import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Phone, Mail, Globe, LogOut } from "lucide-react";
@@ -459,10 +460,14 @@ function VipToggle({ hotelId, stay }: { hotelId: string; stay: Stay }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
 
-  const toggle = async () => {
+  /* The group's VIP levels (192, D27-260 Q7): with any, marking asks which. */
+  const levels = useQuery({ queryKey: ["vip-levels", hotelId], queryFn: () => vipLevels(hotelId) });
+  const active = (levels.data ?? []).filter((l) => l.active);
+
+  const toggle = async (levelId?: string) => {
     if (!stay.guestId) return;
     setBusy(true);
-    const result = await setGuestVip(hotelId, stay.guestId, !stay.isVip);
+    const result = await setGuestVip(hotelId, stay.guestId, !stay.isVip, levelId);
     setBusy(false);
     if (!result.ok) return toast.error("Not changed", result.reason);
     toast.success(
@@ -470,6 +475,17 @@ function VipToggle({ hotelId, stay }: { hotelId: string; stay: Stay }) {
       `${result.guest} - this holds for their next visit too.`);
     void queryClient.invalidateQueries();
   };
+
+  if (!stay.isVip && active.length > 0) {
+    return (
+      <select aria-label="Mark VIP" disabled={busy} value=""
+        onChange={(e) => e.target.value && void toggle(e.target.value)}
+        className="min-h-8 px-1 text-sm font-medium text-grey-600 bg-transparent underline underline-offset-4 cursor-pointer rounded-sm">
+        <option value="">Mark VIP</option>
+        {active.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+      </select>
+    );
+  }
 
   return (
     <button

@@ -194,6 +194,8 @@ export interface DetailsState {
     /** The last four digits only, on this screen as on every other (D21-18). */
     idLastFour: string;
   } | null;
+  /** The IDs this hotel does not take, left off the form (192, D27-260). */
+  idTypesOff?: string[];
 }
 
 export const getDetails = (token: string): Promise<DetailsState> =>

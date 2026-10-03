@@ -2949,6 +2949,13 @@ till.post("/:code/till/orders/:id/round-off", async (c) => {
       return refuse(`This order is ${order[0].status} and cannot be changed.`);
     }
 
+    /* THE HOTEL'S ROUND-OFF (192, the owner's D27-260 Q4): Off, the button
+       is refused; taking one off still works. */
+    if (input.apply !== false && (await client.query<{ r: string }>(
+      "select pos_round_off as r from hotels where id = $1", [hotelId])).rows[0]?.r === "off") {
+      return refuse("Round-off is off at this hotel (Settings, Front desk).");
+    }
+
     if (input.apply === false) {
       await client.query(
         `update pos_orders set round_off = 0, updated_at = now() where id = $1`,
@@ -4068,9 +4075,14 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
        stay exact to the paisa. Written with the settle, after every
        refusal below (MEMORY 243). */
     const allCash = tenders ? tenders.every((x) => x.method === "cash") : method === "cash";
+    /* AUTOMATIC ROUND-OFF (192, the owner's D27-260 Q4): every bill paid at
+       the restaurant to the rupee; one charged to a room or a function stays
+       exact, as room bills and invoices do. */
+    const autoRound = method !== "room" && method !== "function" && (await client.query<{ r: string }>(
+      "select pos_round_off as r from hotels where id = $1", [hotelId])).rows[0]?.r === "automatic";
     const gross = Number(t[0]!.gross);
-    const cashRoundOff = allCash ? (Math.round(gross) - gross).toFixed(2) : null;
-    const payable = allCash ? Math.round(gross) : Number(t[0]!.payable);
+    const cashRoundOff = allCash || autoRound ? (Math.round(gross) - gross).toFixed(2) : null;
+    const payable = allCash || autoRound ? Math.round(gross) : Number(t[0]!.payable);
 
     /* An empty bill is not a sale. Settling one would put a zero-value
        ticket on a folio and a zero row in the shift count, which is

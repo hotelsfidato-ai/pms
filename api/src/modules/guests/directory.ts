@@ -154,9 +154,12 @@ const DIRECT = ["Walk-in", "Fidato Hotels"];
    visit was one last visit, which is the whole reason the column is on
    `guests` and not on `reservations`. */
 directory.post("/:code/guests/:id/vip", async (c) => {
-  const input = await c.req.json<{ isVip?: boolean }>()
-    .catch(() => ({}) as { isVip?: boolean });
+  const input = await c.req.json<{ isVip?: boolean; levelId?: string | null }>()
+    .catch(() => ({}) as { isVip?: boolean; levelId?: string | null });
   const isVip = input.isVip === true;
+  /* A level from the group's list (192, the owner's D27-260 Q7); VIP is any. */
+  const levelId = isVip && typeof input.levelId === "string" && /^[0-9a-f-]{36}$/i.test(input.levelId)
+    ? input.levelId : null;
 
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
@@ -167,12 +170,13 @@ directory.post("/:code/guests/:id/vip", async (c) => {
        check is therefore "has this guest ever stayed with us", which RLS
        already answers through `reservations`. */
     const { rows } = await client.query<{ name: string }>(
-      `update guests set is_vip = $1
+      `update guests set is_vip = $1,
+              vip_level_id = (select id from vip_levels where id = $4::uuid and active)
         where id = $2
           and exists (select 1 from reservations r
                        where r.guest_id = guests.id and r.hotel_id = $3)
        returning full_name as name`,
-      [isVip, c.req.param("id"), hotelId],
+      [isVip, c.req.param("id"), hotelId, levelId],
     );
     if (!rows[0]) {
       return { ok: false as const,

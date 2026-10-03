@@ -1,3 +1,4 @@
+import { ReadyReasons } from "@/modules/front-desk";
 import { useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -650,6 +651,8 @@ function EditButton({
                   onChange={(e) => setReason(e.target.value)} />
               )}
             </Field>
+            {/* The hotel's ready reasons (D27-260). */}
+            <ReadyReasons kind="reason_correction" onPick={setReason} />
           </div>
         </DialogContent>
       </Dialog>
@@ -762,6 +765,8 @@ export function ChangeRateDialog({
                 onChange={(e) => setReason(e.target.value)} />
             )}
           </Field>
+          {/* The hotel's ready reasons (D27-260). */}
+          <ReadyReasons kind="reason_correction" onPick={setReason} />
         </div>
       </DialogContent>
     </Dialog>
@@ -858,6 +863,8 @@ function ReverseButton({
                   placeholder="Posted to the wrong room" />
               )}
             </Field>
+            {/* The hotel's ready reasons (D27-260). */}
+            <ReadyReasons kind="reason_correction" onPick={setReason} />
           </div>
         </DialogContent>
       </Dialog>

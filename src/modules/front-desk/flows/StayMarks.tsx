@@ -77,7 +77,7 @@ export function StayMarks({ stay }: { stay: Stay }) {
           desk: the room is checked ahead of a VIP, and a woman
           travelling alone is placed away from stairwells and service
           corridors. Neither is read out at the counter. */}
-      {stay.isVip && <StatusPill tone="accent">VIP</StatusPill>}
+      {stay.isVip && <StatusPill tone="accent">{stay.vipLevel ? `VIP · ${stay.vipLevel}` : "VIP"}</StatusPill>}
       {stay.isSingleLady && (
         <StatusPill tone="info">Single lady - placement</StatusPill>
       )}

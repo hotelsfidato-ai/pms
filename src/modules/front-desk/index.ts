@@ -4,6 +4,9 @@
 export { StayTable, STAY_LABEL } from "./components/StayTable";
 /* Settings › Operations (the owner's D27-243). */
 export { FrontDeskRulesCard } from "./components/FrontDeskRules";
+/* Phase 5 (D27-260): the hotel's lists, read by other services' screens. */
+export { ReadyReasons } from "./components/ReadyReasons";
+export { listOf, holidaysOf, vipLevels, type ListItem, type Holiday } from "./data/lists";
 export type { StayColumn, StayRow } from "./components/StayTable";
 export { assignRoom, checkOut, checkOutAllowed, earlyArrival } from "./data/operations";
 export type { Posting } from "./data/operations";
