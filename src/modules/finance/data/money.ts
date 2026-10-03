@@ -61,7 +61,7 @@ export const getChargeList = (h: string) =>
 
 export type Result = { ok: true; id?: string } | { ok: false; reason: string };
 
-export async function send(path: string, method: string, body?: unknown): Promise<Result> {
+async function send(path: string, method: string, body?: unknown): Promise<Result> {
   try {
     return await api<Result>(path, {
       method, ...(body === undefined ? {} : { body: JSON.stringify(body) }),
