@@ -40,6 +40,24 @@ day it goes.
 
 ## Fixed — the solution is here; do not work it out again
 
+### ADM-20 · Migration 195 made the next deploy fail on its own replay - FIXED 3 October (numbered for now)
+
+**Found** - 3 October, migrating my copy's database (fidato_s48) a second time after
+merging cp6: "188_settings_security.sql:164: ERROR: cannot change return type of
+existing function", run rolled back. Migrations replay from 001 on every deploy; 195
+had dropped and re-made `app.sign_ins_of` with a wider return type, and on the next
+replay 188's `create or replace` met that wider function and could not narrow it.
+The test databases are built from zero once, so no test saw it; a second migrate does.
+
+**Fixed** - `7f58f3cc`: 195 leaves 188's function alone and adds `app.devices_of`
+(id, time, device, signed out when and by whom); the route reads it.
+
+**Proved** - fidato_s48 migrated twice in a row through dbq, both "190 migrations
+applied"; signIns 6/6 and roleGate 75/75 on a fresh database.
+
+**The rule** - a later migration never changes what an earlier one's function
+returns; give the new shape a new name. Migrate twice before calling a migration done.
+
 ### ADM-9 · At phone width Settings cut a long value off at the card's edge - FIXED 30 September
 
 **Found** - 27 September, opening Settings at 375 px (the group-logo session): the GSTIN `27AAAAA0000A1Z5` needs 131 px and its `<dd>` got 86, so it ran past the card's right edge and was cut. The page itself does not scroll sideways, so nothing flagged it. Left open then as "a look decision"; the one Settings place (D27-213) gave it three more rows (PAN, email, website).
