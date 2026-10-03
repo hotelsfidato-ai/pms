@@ -1,21 +1,18 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUi } from "@/lib/ui";
-import { useRole, useSession } from "@/lib/session";
+import { useRole } from "@/lib/session";
 import { useDocumentIdentity } from "@/lib/documentIdentity";
-import {
-  Page, PageHeader, Card, CardBody, CardHeader, Button, Skeleton,
-} from "@/components/ui";
-import { getPropertyDetail, PROPERTY_TYPES } from "@/modules/admin/data/admin";
+import { Page, PageHeader, Skeleton } from "@/components/ui";
+import { getPropertyDetail } from "@/modules/admin/data/admin";
 import { switchesModules } from "@/modules/admin/moduleSwitchRoles";
 import { GroupCard, HotelLogoCard } from "@/modules/admin/components/GroupCard";
 import { HotelGalleryCard } from "@/modules/admin/components/HotelGalleryCard";
 import { SigningIn } from "@/modules/admin/components/SigningIn";
 import { BankDetailsCard, HousePoliciesCard } from "@/modules/admin/components/VoucherSettings";
-import { ModulesCard, BOOKING_SECTION, SettingRow, SettingValues } from "@/modules/admin/pages/Admin";
+import { ModulesCard, BOOKING_SECTION } from "@/modules/admin/pages/Admin";
 import { CommissioningCard } from "@/modules/admin/flows/CommissioningCard";
-import { EditPropertyDialog } from "@/modules/admin/pages/Properties";
-import { FssaiCard } from "@/modules/admin/pages/Property";
+import { PropertyProfileCard } from "@/modules/admin/components/PropertyProfileCard";
 import { FrontDeskCard } from "@/modules/inventory";
 import { FrontDeskRulesCard } from "@/modules/front-desk";
 import { TaxRulesCard } from "@/modules/finance";
@@ -47,61 +44,16 @@ function useProperty(hotelId: string) {
   });
 }
 
-/* The hotel's own details, grouped the way the edit form asks: who, where,
-   how to reach, the tax numbers. A long value takes two cells. */
+/* The hotel's own details and FSSAI (PropertyProfileCard, which phase 2's
+   page shows too), under what the property still needs. */
 export function ProfileSettings() {
   const hotelId = useHotel();
-  const qc = useQueryClient();
-  const groupAdmin = useSession((s) => s.scope?.isGroupAdmin === true);
-  const [editing, setEditing] = useState(false);
-  const q = useProperty(hotelId);
-  const refresh = () => {
-    void qc.invalidateQueries({ queryKey: ["property-detail", hotelId] });
-    void qc.invalidateQueries({ queryKey: ["commissioning", hotelId] });
-  };
-  const p = q.data?.property;
-  const type = PROPERTY_TYPES.find(([word]) => word === p?.propertyType)?.[1];
-
   return (
     <ConsolePage title="Profile">
       {/* What the property still needs, drawn only while something is: on
           the console's first page, as it was above Settings' tabs. */}
       <CommissioningCard hotelId={hotelId} />
-      {q.isLoading && <Skeleton className="h-64 w-full" />}
-      {p && (
-        <>
-          <Card>
-            <CardHeader title="Profile" description="The name, address, GSTIN, phone and email print on this property's invoices."
-              actions={<Button variant="secondary" onClick={() => setEditing(true)}>Edit</Button>} />
-            <CardBody>
-              <SettingValues>
-                <SettingRow wide label="Name" value={p.name} />
-                <SettingRow label="Property type" value={type ?? "-"} />
-                <SettingRow label="Stars" value={p.starRating?.toString() ?? "-"} />
-                <SettingRow wide label="Address" value={p.addressLine ?? "-"} />
-                <SettingRow wide label="Address line 2" value={p.addressLine2 ?? "-"} />
-                <SettingRow label="City" value={p.city ?? "-"} />
-                <SettingRow label="State" value={p.state ?? "-"} />
-                <SettingRow label="PIN code" value={p.pin ?? "-"} />
-                <SettingRow label="Map point"
-                  value={p.latitude && p.longitude ? `${p.latitude}, ${p.longitude}` : "-"} />
-                <SettingRow label="Phone" value={p.phone ?? "-"} />
-                <SettingRow label="Reservations phone" value={p.reservationsPhone ?? "-"} />
-                <SettingRow wide label="Reservations contact" value={p.reservationsContact ?? "-"} />
-                <SettingRow wide label="Email" value={p.email ?? "-"} />
-                <SettingRow wide label="Website" value={p.website ?? "-"} />
-                <SettingRow label="GSTIN" value={p.gstin ?? "-"} />
-                <SettingRow label="PAN" value={p.pan ?? "-"} />
-              </SettingValues>
-            </CardBody>
-          </Card>
-          <FssaiCard code={p.code} value={p.fssaiNumber} onSaved={refresh} />
-          {editing && (
-            <EditPropertyDialog hotel={p} nameLocked={!groupAdmin}
-              onClose={() => setEditing(false)} onSaved={refresh} />
-          )}
-        </>
-      )}
+      <PropertyProfileCard hotelId={hotelId} />
     </ConsolePage>
   );
 }
