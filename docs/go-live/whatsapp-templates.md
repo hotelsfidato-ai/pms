@@ -1,4 +1,4 @@
-# The five WhatsApp templates — drafts for the owner
+# The six WhatsApp templates — drafts for the owner
 
 **21 September 2026 (D21-59). DRAFTS: the wording is the owner's to approve,
 change or reject before it goes to Meta.** Meta only lets a business start a
@@ -122,6 +122,36 @@ Booking: {{4}}
 
 ---
 
+## 6 · `tax_invoice` — category **Utility**, header **Document**
+
+The guest's tax invoice as a PDF (D27-252, D27-261): when the hotel has
+"Tax invoice" switched on (Settings → Messages) it goes by itself as soon as
+the invoice is issued, and the desk can send it with **Send invoice**. Not a
+credit note. The same PDF goes by email.
+
+**When creating it choose:** category **Utility**; language **English**;
+**Header: Document** (Meta asks for a sample PDF - any one-page PDF will do);
+**body variables: Named** (not numbered) - type them exactly as below. No
+buttons.
+
+```
+Hello {{guest_name}}, thank you for staying at {{hotel}}.
+
+Your tax invoice {{invoice_no}} dated {{invoice_date}} for {{amount}} is attached.
+```
+
+| Name | Field n8n receives | Sample |
+|---|---|---|
+| `guest_name` | `data.guestName` | Rohit Deshpande |
+| `hotel` | `data.hotelName` | 5 Elements Akkalkot |
+| `invoice_no` | `data.invoiceNumber` | 5EL/2026-27/0042 |
+| `invoice_date` | `data.invoiceDate` | 03 Oct 2026 |
+| `amount` | `data.total` | INR 4,725.00 |
+
+The sending workflow already names it (`INVOICE_TEMPLATE = "tax_invoice"`,
+`deploy/n8n/pms-send-crs.json`). If Meta approves it under another name, change
+that one line.
+
 ## The voucher PDF on WhatsApp — the CRS's own template, already approved
 
 **Not a sixth template to submit** (D27-235 2.2, D27-241): the PMS reuses the
@@ -143,7 +173,7 @@ NAMED fields. Type its exact name into the sending workflow
 
 ## Answered by the owner, 21 September
 
-- **English only** (D21-73). A second language would be five more templates
+- **English only** (D21-73). A second language would be six more templates
   with the same names, chosen on the booking (D21-74).
 - **The guest's agreement (D21-72):** WhatsApp goes only to a booking ticked
   "guest agreed to WhatsApp"; the desk asks on phone and walk-in bookings.

@@ -109,6 +109,10 @@ In the CRS's n8n (the CRS's **Admin → Integrations** names its address):
      sentence the desk sees. WhatsApp messages do not need it.
    - `WHATSAPP` / `LANGUAGE`, only if Meta approved other names or another
      language.
+   - `INVOICE_TEMPLATE` is already `tax_invoice` (D27-252): the PMS's own new
+     template, its text in `docs/go-live/whatsapp-templates.md` section 6. Change
+     it only if Meta approved it under another name. It uses the same
+     **Upload PDF to Meta** node as the voucher.
    - **`VOUCHER_TEMPLATE`** (D27-235, D27-241) - the exact name of the CRS's
      **already approved voucher template** (the one with the PDF and eight
      fields), as **WhatsApp Manager → Message templates** shows it; and

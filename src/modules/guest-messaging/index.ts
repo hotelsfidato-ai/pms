@@ -5,3 +5,4 @@ export { getGuestMessages, type GuestMessages, type SentMessage } from "./data/g
 /* Send check-in link (D27-105): the button, for the booking's own screens
    to place - the lane that owns each screen adds the one line. */
 export { SendCheckInLink } from "./SendCheckInLink";
+export { SendInvoice } from "./SendInvoice";

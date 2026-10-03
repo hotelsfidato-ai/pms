@@ -322,6 +322,50 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     expect(next("Uploaded?", 1)).toEqual(["Answer the PMS"]);
   });
 
+  /* D27-252, D27-261: the tax invoice - on WhatsApp by the PMS's own new
+     template `tax_invoice` (its PDF as the document, five named fields), and
+     by email with the PDF; a report by email to one of the hotel's people. */
+  const pdf = { name: "Invoice-5EL-2026-27-0001.pdf", contentType: "application/pdf",
+    base64: Buffer.from("%PDF-1.4 made up").toString("base64") };
+  const invoice = (over: Json = {}) => message({
+    kind: "invoice", file: pdf,
+    data: { guestName: "Asha Test", hotelName: "Test Hotel", invoiceNumber: "5EL/2026-27/0001",
+      invoiceDate: "03 Oct 2026", total: "INR 1,050.00", reference: "FH-5EL-2610-0001" },
+    ...over,
+  });
+
+  it("sends the invoice on WhatsApp by tax_invoice, its PDF uploaded first, with five named fields", () => {
+    const [read] = run(crs, "Read the message", { body: invoice() });
+    expect(read!.json).toMatchObject({ stop: false, upload: true });
+    const [built] = run(crs, "Build the voucher message", { statusCode: 200, body: { id: "MEDIA-2" } },
+      { earlier: { "Read the message": read!.json } });
+    const graph = built!.json["graphBody"] as { template: { name: string; components: Json[] } };
+    expect(graph.template.name).toBe("tax_invoice");
+    expect(graph.template.components).toEqual([
+      { type: "header", parameters: [{ type: "document", document: { id: "MEDIA-2", filename: pdf.name } }] },
+      { type: "body", parameters: [
+        { type: "text", parameter_name: "guest_name", text: "Asha Test" },
+        { type: "text", parameter_name: "hotel", text: "Test Hotel" },
+        { type: "text", parameter_name: "invoice_no", text: "5EL/2026-27/0001" },
+        { type: "text", parameter_name: "invoice_date", text: "03 Oct 2026" },
+        { type: "text", parameter_name: "amount", text: "INR 1,050.00" },
+      ] },
+    ]);
+  });
+
+  it("writes the invoice's email with the PDF attached, and the report's to the person it is for", () => {
+    const [mail] = run(withMailbox(), "Read the message", { body: invoice({ channel: "email" }) });
+    expect(mail!.json).toMatchObject({ stop: false, email: true, attachments: "data", to: "asha@example.com" });
+    expect(mail!.json["subject"]).toBe("Your tax invoice from Test Hotel (5EL/2026-27/0001)");
+    expect(mail!.json["text"]).toContain("Your tax invoice 5EL/2026-27/0001, dated 03 Oct 2026, for INR 1,050.00 is attached.");
+
+    const [report] = run(withMailbox(), "Read the message", { body: message({
+      channel: "email", kind: "report", file: pdf, to: { name: "Ravi GM", email: "ravi@fidato.in" },
+      data: { reportTitle: "Manager summary", hotelName: "Test Hotel", businessDate: "02/10/2026" } }) });
+    expect(report!.json).toMatchObject({ stop: false, to: "ravi@fidato.in", attachments: "data",
+      subject: "Manager summary - Test Hotel - 02/10/2026" });
+  });
+
   it("refuses a kind it has no template for, in a sentence", () => {
     expect(whatsapp({ kind: "bill" })).toMatchObject({ stop: true, statusCode: 422, answer: { ok: false } });
   });
