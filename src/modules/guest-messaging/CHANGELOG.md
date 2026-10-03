@@ -25,7 +25,7 @@ contract) and 16c88766 (D27-264) merged in.
 - D27-266: WhatsApp only through the CRS's approved `reservation_confirmation`. Online check-in, the review request and the invoice's WhatsApp template come later.
 
 **Shipped:**
-- Migration 194 "messages and reports":
+- Migration 193 "messages and reports":
   - `guest_message_settings` (booking-voucher, online-checkin, invoice, review) and `report_emails`, each with row security and the activity log;
   - `app.guest_messages_owed` re-bodied with the same arguments and columns (MEMORY 317): the voucher once each way under one switch (email kind booking-confirmation, WhatsApp booking-voucher), no reminder;
   - `app.guest_invoices_owed`, `app.report_emails_owed` and `app.online_checkin_on`.
@@ -49,7 +49,7 @@ contract) and 16c88766 (D27-264) merged in.
 
 **Proved:**
 - P6's red run failed on the old code.
-- Two break builds of 194 were each caught: the switch-on moment and a report chosen after its audit; a company's bill sent by itself.
+- Two break builds of 193 were each caught: the switch-on moment and a report chosen after its audit; a company's bill sent by itself.
 - D27-264: red 19 failed / 94 passed. Green 270/270 over 11 files.
 - D27-266: red 9 failed, plus 18 skipped (their setup could not save the new switch). The web button test also failed red.
 - Green: 291/291 over 12 API files (the whole guest-messaging suite, reputation, newBooking, roleGate, sending); web 205/205 over 34 files; both typechecks; strip-check 201.

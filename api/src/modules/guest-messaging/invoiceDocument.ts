@@ -13,7 +13,7 @@ import type { SendableFile } from "../../sending.ts";
    supplied, the two parties, the lines, the rate-wise tax where there is
    more than one rate, the amount in words, CGST and SGST, the signature
    line and the footer. A tax invoice only: credit notes are never sent
-   (Q6), and an invoice since credited is not owed (194).
+   (Q6), and an invoice since credited is not owed (193).
 
    Plain text the PDF's own fonts can draw, as the voucher's: "INR 12,345.00",
    no rupee sign.

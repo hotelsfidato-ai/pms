@@ -1,5 +1,5 @@
 -- =============================================================================
--- 194 · Each guest message switched per hotel; the invoice; reports by email
+-- 193 · Each guest message switched per hotel; the invoice; reports by email
 --       (Settings phase 6; the owner's D27-252, D27-261; numbered for now)
 -- =============================================================================
 -- Refer to it by what it does - "messages and reports" - never by its number.
