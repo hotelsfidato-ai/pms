@@ -11,6 +11,7 @@ import Highlights from "./pages/property/Highlights";
 import Amenities from "./pages/property/Amenities";
 import Policies from "./pages/property/Policies";
 import { RegistrationsCard } from "./pages/property/RegistrationsCard";
+import Profile from "./pages/property/Profile";
 
 /* The property's pages in the Settings console (phase 2; D27-257). The
    hotel is the top bar's (useUi), never the address. */
@@ -129,5 +130,15 @@ describe("the registration numbers", () => {
       path: "/api/hotels/AGR/registrations", method: "PUT",
       body: { registrations: [{ label: "Trade licence", number: "TL-42" }, { label: "Fire NOC", number: "FN-7" }] },
     }));
+  });
+});
+
+describe("Profile", () => {
+  it("keeps the setup checklist and the profile card, with the registration numbers under them", async () => {
+    as("gm"); serve();
+    show(<Profile />);
+    expect(await screen.findByRole("heading", { name: "Profile" })).toBeTruthy();
+    expect(await screen.findByText("More registration numbers")).toBeTruthy();
+    expect(await screen.findByDisplayValue("TL-42")).toBeTruthy();
   });
 });
