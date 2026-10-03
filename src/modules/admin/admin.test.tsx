@@ -12,6 +12,7 @@ import { PropertiesPage } from "@/modules/admin/pages/Properties";
 import { taxLine } from "@/modules/admin/components/TaxInUse";
 import PeoplePage from "@/modules/admin/pages/People";
 import { PasswordDue } from "@/modules/admin/components/PasswordDue";
+import SignInsPage from "@/modules/admin/pages/SignIns";
 import type { Role } from "@/lib/permissions";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -258,7 +259,7 @@ describe("D27-220 - Settings, five tabs, only what can be changed", () => {
     settingsServer();
     renderSettings("people");
     await screen.findByRole("tab", { name: "People" });
-    expect(rowNames()).toEqual(["People", "Roles and permissions", "Audit log", "Activity", "Sign-ins"]);
+    expect(rowNames()).toEqual(["People", "Roles and permissions", "Audit log", "Activity", "Sign-ins and devices"]);
     cleanup();
 
     renderSettings("rates-and-taxes");
@@ -765,5 +766,54 @@ describe("D27-245 - a manager's role with a short password", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(sent).toEqual([{ password: "ten-chars!" }]);
+  });
+});
+
+describe("D27-255 - sign-ins and devices", () => {
+  it("names the device in words, and signs out one device after asking", async () => {
+    as("admin");
+    let out = false;
+    const sent: string[] = [];
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (method === "GET" && url === "/api/admin/staff") {
+        return { staff: [{ id: "p-1", name: "Asha", email: "asha@fidato.in", access: [] }], rosterAt: [] } as never;
+      }
+      if (method === "GET" && url === "/api/admin/staff/p-1/sign-ins") {
+        return { signIns: [
+          { id: "7", at: "2026-10-02T10:00:00Z", signedOutAt: out ? "2026-10-03T09:00:00Z" : null,
+            signedOutBy: out ? "Test Administrator" : null,
+            device: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/129.0 Safari/537.36" },
+          { id: "6", at: "2026-10-01T10:00:00Z", signedOutAt: "2026-10-01T12:00:00Z", signedOutBy: "The Owner",
+            device: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Version/17.0 Mobile Safari/604.1" },
+        ] } as never;
+      }
+      if (method === "POST" && url === "/api/admin/sign-ins/7/sign-out") {
+        sent.push(url);
+        out = true;
+        return { ok: true } as never;
+      }
+      throw new ApiError(500, "Request failed (500).");
+    });
+    renderAt("/admin/sign-ins", <SignInsPage />);
+
+    await screen.findByRole("option", { name: "Asha" });
+    fireEvent.change(screen.getByLabelText(/Whose/), { target: { value: "p-1" } });
+    /* The table draws each row twice (desk and phone layouts): counted, not singled. */
+    const chrome = await screen.findAllByText("Chrome on Windows");
+    expect(screen.getAllByText("Safari on iPhone").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Signed out .* by The Owner/).length).toBeGreaterThan(0);
+
+    /* Only the device still signed in offers it, and nothing happens before Sign out. */
+    const buttons = screen.getAllByRole("button", { name: "Sign out this device" });
+    expect(buttons).toHaveLength(chrome.length);
+    fireEvent.click(buttons[0]!);
+    const dialog = await screen.findByRole("dialog");
+    expect(sent).toEqual([]);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Sign out" }));
+
+    await waitFor(() => expect(sent).toEqual(["/api/admin/sign-ins/7/sign-out"]));
+    await waitFor(() => expect(screen.queryAllByRole("button", { name: "Sign out this device" })).toHaveLength(0));
+    expect(screen.getAllByText(/Signed out .* by Test Administrator/).length).toBeGreaterThan(0);
   });
 });

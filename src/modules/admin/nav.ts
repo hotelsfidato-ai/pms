@@ -44,7 +44,7 @@ export const nav: ServiceNavEntry[] = [
     keywords: ["changes", "who changed", "history", "activity log"] },
   /* D27-243 (5.4), D27-245 Q-B: the owner and an Admin; the server asks again. */
   { section: "system", order: 29, listed: false,
-    label: "Sign-ins", to: "/admin/sign-ins", icon: LogIn, resource: "user",
+    label: "Sign-ins and devices", to: "/admin/sign-ins", icon: LogIn, resource: "user",
     canSee: (role) => role === "owner" || role === "admin",
     keywords: ["sign-in history", "devices", "logins", "security"] },
   /* The console CREATES things - properties, people, access. It is the only
