@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-03 · New booking starts on the hotel's settings (the owner's D27-260)
+
+Branch `settings/frontdesk-3oct`. The guarantee (Confirmed/Tentative) and bill-to start on the hotel's; the market segments are the hotel's own list; a field the hotel requires is said before Save and refused by `groups.ts` (the desk's route only, never a channel's). The cancel flows offer the hotel's ready reasons. Proved by front desk's `deskSettings` tests.
+
 ## 2026-10-03 · The desk may overbook, per hotel; "Prepaid on the booking site" (the owner's D27-243 3.2, D27-246)
 
 Branch `settings/phase3-2oct`. **Shipped:** `makeBooking` refuses the desk's booking - a group's whole - past a full house when the hotel's "The desk may overbook" is off (187; on by default, as D17-43). New booking shows "Prepaid on the booking site" (on) when the source is a booking site and sends it; `book.ts` writes `reservations.prepaid_on_site`. New booking starts on the hotel's title, ID and way of paying an advance. **Proved:** front desk's `frontDeskRules.test.ts` 3.2 cases.

@@ -1,3 +1,5 @@
+import * as listsModule from "@/modules/front-desk/data/lists";
+import * as frontDeskModule from "@/modules/front-desk";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -19,6 +21,12 @@ const sent: Array<Record<string, unknown>> = [];
 
 beforeEach(() => {
   startSignedIn();
+
+  /* Phase 5 (D27-260): the hotel's lists are their own read. */
+  const five = ["Corporate", "Leisure", "Group", "Crew", "Government"]
+    .map((label, i) => ({ id: String(i), label, colour: null, sort: i, active: true }));
+  vi.spyOn(listsModule, "listOf").mockImplementation(async (_h, kind) => (kind === "market_segment" ? five : []));
+  vi.spyOn(frontDeskModule, "listOf").mockImplementation(async (_h, kind) => (kind === "market_segment" ? five : []));
   sent.length = 0;
   vi.spyOn(apiModule, "api").mockImplementation(async (_path: string, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;

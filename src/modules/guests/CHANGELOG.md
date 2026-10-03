@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-03 · VIP levels and the IDs a hotel takes (the owner's D27-260 Q7, Q8)
+
+Branch `settings/frontdesk-3oct`. The group's VIP levels (193): Mark VIP asks the level, `POST /:code/guests/:id/vip` takes `levelId`. `GuestIdFields` leaves out the IDs the hotel switched Off (one already chosen stays). Proved by front desk's `deskSettings` tests.
+
 ## 2026-09-29 · The guest's ID asked once: GuestIdFields (D27-163)
 
 Branch `frontdesk/one-page-29sep` (from cp6 7980862; cp6 59df358, round F, merged in), copy `.claude\worktrees\modest-wilson-2807a1`, database `fidato_s32`, API 8873, web 5273.

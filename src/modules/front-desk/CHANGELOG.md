@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-03 · Phase 5 of the settings plan: the front desk's settings and the lists (the owner's D27-260)
+
+**Asked for:** through the master, plan first (approved with every recommendation, D27-260). Branch `settings/frontdesk-3oct` from cp6 8181f452, console contract 106e819b merged; migration 193 (renumbered at the merge).
+**Shipped:** migration 193: `hotel_lists` (market segments seeded with today's five; ready reasons for block, cancel, void, bill correction), `hotel_holidays`, `vip_levels` (one list for the group; `guests.vip_level_id`), `room_blocks.was_status`, and the hotel's settings (default guarantee and bill-to, required booking fields, three housekeeping switches, ID types Off, state colours, the restaurant's round-off, how a complimentary room and a day use count). `lists.ts`: the lists, holidays, VIP levels and `PATCH /:code/desk-settings` (roleGate: reads `anyone`, changes `SETUP_CHANGE`). Every screen reads the settings and holidays from `GET /api/hotels` `deskRules`. Console pages (`desk.settings.ts`): front-desk/front-desk (taking over the stand-in) and lists/market-segments, reservation-types, reasons, holidays, id-types, vip, built on one `ListEditor`. On the desk: New booking starts on the guarantee and bill-to, offers the hotel's segments and says a missing required field (the server refuses it, the desk's route only); the ready reasons as chips under the cancel, void, block and three bill-correction reason boxes; the Calendar shades holidays (the name on hover) and takes the state colours; Rates shades holidays; IDs that are Off leave the desk's choice and the guest's online form; Mark VIP asks the level, and the stay shows "VIP · Gold".
+**Found:** a day use is not counted in "Sold Room" today (it has its own line) - the master was told "one room"; the switch's Off keeps today's zero and On adds half a room.
+**Proved:** see the master's report (deskSettings API and web tests).
+**Files outside front desk:** db/migrations/193; core `api/src/routes/hotels.ts`, `routes/guestDoor.ts`, `src/lib/api.ts`, `roleGate.ts`, `src/data/repositories/types.ts`; reservations `groups.ts`, `pages/BookingPage.tsx`, cancel flows; housekeeping `roomStatus.ts`, `flows/OutOfOrderFlow.tsx`; guests `directory.ts`, `GuestIdFields.tsx`, `data/directory.ts`; one-line edits: reports `figures.ts`, `builders/manager.ts`; pos `till.ts` (round-off); finance `flows/FolioPanel.tsx` (three reason chips); inventory `pages/Rates.tsx`; night-audit `nightAudit.ts`; online-checkin `GuestPage.tsx`, `data/guestPage.ts`.
+
 ## 2026-10-03 · The front desk's rules, per hotel (the owner's D27-243 Settings phase 3, D27-246)
 
 **Asked for:** through the master; plan for 3.3 agreed. Branch `settings/phase3-2oct` from cp6 f6eee640 (76f38f2a merged); migration 189, 187 at the merge.
