@@ -11,6 +11,37 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-03 · Sign-ins and devices: sign out one device (settings phase 7, D27-255)
+
+**Asked for:** phase 7 of the settings plan (D27-249 to D27-254): the people pages
+ready as console pages (group "people"), and devices with "sign out this device".
+The owner (D27-255): one page "Sign-ins and devices"; the owner and Admin only sign a
+device out; no "sign out everywhere"; no device blocking; the Audit log stays beside
+Activity.
+
+**Shipped**
+- Migration 195 (190 at the merge): sign_ins.signed_out_at/by; app.may_see_sign_ins (one who-may);
+  app.sign_ins_of re-made (id, status); app.sign_out_device; app.signed_out_sign_ins.
+  The 90-day purge keeps signed-out rows (a Firebase refresh token never expires) and
+  clears old addresses.
+- api/src/signIns.ts: the signed-out list, read once per process (one systemd process),
+  added to on sign-out, fail-open if unreadable. Core api/src/auth.ts: one line after
+  the token check refuses a signed-out sign-in.
+- POST /api/admin/sign-ins/:id/sign-out (roleGate WRITE own, pinned).
+- pages/SignIns.tsx: "Sign-ins and devices", the device in words, Signed in / Signed
+  out when and by whom, a confirmed "Sign out this device".
+
+**Proved** - API through dbq: signIns 6/6, roleGate 75/75; red with the route, the
+auth line, the roleGate line and 195 set aside: the 3 new assertions failed. Web: admin
+42/42 (the new test red before the page), navigation, boundaries, App. tsc 0;
+strip-check 197. Screens at 1280 and 375 on fidato_s48 at 195: two devices in words;
+the Chrome one signed out after asking, the iPhone still signed in.
+
+**Left open** - the console pages (group people: people, roles, audit-log, activity,
+devices) wait for phase 1's registration contract. A person's own "my devices" later.
+
+---
+
 ## 2026-10-03 · Phase 1 of the settings plan: the Settings console, its own space (D27-249, D27-254, D27-256) - the design lane's
 
 Branch `settings/console-3oct` (cp6 1da6b02a, fbc29b75 merged), copy `.claude\worktrees\competent-leakey-110512`. Claimed pos; admin by file (the master's split with P2 and P7); the frame files cleared by the master.
