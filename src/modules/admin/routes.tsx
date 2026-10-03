@@ -8,9 +8,8 @@ import AdminConsolePage from "@/modules/admin/pages/Console";
 import SystemHealthPage from "@/modules/admin/pages/SystemHealth";
 import SettingsPage, { SettingsForHotel } from "@/modules/admin/pages/Settings";
 import { PropertiesPage } from "@/modules/admin/pages/Properties";
-import ActivityPage from "@/modules/admin/pages/Activity";
 import {
-  UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
+  UsersPage, IntegrationsPage,
 } from "@/modules/admin/pages/Admin";
 
 /* Administration's screen addresses. Mounted by App.tsx inside the
@@ -69,33 +68,11 @@ export const routes = (
         </RequireAccess>
       }
     />
-    <Route
-      path="/admin/roles"
-      element={
-        <RequireAccess path="/admin/roles" resource="role">
-          <RolesPage />
-        </RequireAccess>
-      }
-    />
-    <Route
-      path="/admin/audit-log"
-      element={
-        <RequireAccess path="/admin/audit-log" resource="audit_log">
-          <AuditLogPage />
-        </RequireAccess>
-      }
-    />
-    {/* D27-243 (5.1): every change, not only the money's. */}
-    <Route
-      path="/admin/activity"
-      element={
-        <RequireAccess path="/admin/activity" resource="audit_log">
-          <ActivityPage />
-        </RequireAccess>
-      }
-    />
-    {/* D27-255: Sign-ins and devices moved into the Settings console
-        (people.settings.ts); the old address goes there (MEMORY 375). */}
+    {/* D27-255: People and security moved into the Settings console
+        (people.settings.ts); each old address goes there (MEMORY 375). */}
+    <Route path="/admin/roles" element={<Navigate to="/settings/people/roles" replace />} />
+    <Route path="/admin/audit-log" element={<Navigate to="/settings/people/audit-log" replace />} />
+    <Route path="/admin/activity" element={<Navigate to="/settings/people/activity" replace />} />
     <Route path="/admin/sign-ins" element={<Navigate to="/settings/people/devices" replace />} />
     <Route
       path="/admin/integrations"

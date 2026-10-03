@@ -1,4 +1,4 @@
-import { Hotel, UserCog, Settings, ShieldCheck, Plug, ScrollText, Terminal, Activity } from "lucide-react";
+import { Hotel, UserCog, Settings, Plug, Terminal, Activity } from "lucide-react";
 import { can } from "@/lib/permissions";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 
@@ -28,16 +28,10 @@ export const nav: ServiceNavEntry[] = [
      lost (the owner's rule of 15 September, and D27-214). */
   { section: "system", order: 22, listed: false,
     label: "Users", to: "/admin/users", icon: UserCog, resource: "user" },
-  { section: "system", order: 23, listed: false,
-    label: "Roles and permissions", to: "/admin/roles", icon: ShieldCheck, resource: "role" },
   { section: "system", order: 24, listed: false,
     label: "Integrations", to: "/admin/integrations", icon: Plug, resource: "integration" },
-  { section: "system", order: 26, listed: false,
-    label: "Audit log", to: "/admin/audit-log", icon: ScrollText, resource: "audit_log" },
-  /* D27-243 (5.1): every change, on Settings → People and in Find a screen. */
-  { section: "system", order: 28, listed: false,
-    label: "Activity", to: "/admin/activity", icon: ScrollText, resource: "audit_log",
-    keywords: ["changes", "who changed", "history", "activity log"] },
+  /* Roles and permissions, Audit log and Activity are the Settings console's
+     (people.settings.ts, D27-255); their old addresses redirect there. */
   /* The console CREATES things - properties, people, access. It is the only
      screen that manufactures a tenant, so it stays out of production builds. */
   { section: "system", order: 27, listed: false,
