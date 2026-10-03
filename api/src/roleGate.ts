@@ -312,6 +312,12 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/cash-deposits/:id/verify`]: own("finance/deposits.ts: owner, accountant"),
   [`POST ${H}/stays/:id/invoice`]: TAX_INVOICE,
   [`POST ${H}/invoices/:number{.+}/credit-note`]: CREDIT_NOTE,
+  /* Send invoice (D27-252, D27-261): whoever may issue it may send it. */
+  [`POST ${H}/invoices/:number{.+}/send`]: TAX_INVOICE,
+  /* Settings → Messages (D27-261): the people who set the hotel up; the
+     database asks app.manages_hotel too. */
+  [`PUT ${H}/guest-message-settings/:kind`]: grant("room_config", "edit", "Switching a guest message"),
+  [`PUT ${H}/report-emails`]: grant("room_config", "edit", "Choosing who gets the reports by email"),
   [`POST ${H}/vat-bills/:number{.+}/cancel`]: VAT_CANCEL,
   [`PUT ${H}/tax/:kind`]: GST,
   [`PATCH ${H}/menu-categories/:name/tax-kind`]: GST,
@@ -690,6 +696,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/online-checkin/id-photos`]: own("routes/guestDoor.ts: KEEPER_ROLES, a narrowing of DESK_ROLES"),
   [`GET ${H}/online-checkin/id-photos/:id`]: own("routes/guestDoor.ts: DESK_ROLES while the details wait, then KEEPER_ROLES"),
   [`GET ${H}/guest-messages`]: own("guest-messaging/messages.ts: VIEW_ROLES, `customer` view (D27-144)"),
+  [`GET ${H}/guest-message-settings`]: see("room_config", "the guest messages' switches"),
+  [`GET ${H}/report-emails`]: see("room_config", "who gets the reports by email"),
   [`GET ${H}/reviews`]: own("reputation/reputation.ts: VIEW_ROLES"),
   /* D27-170: whoever sees guests sees the leads app's leads, read live. */
   [`GET ${H}/leads`]: GUESTS,

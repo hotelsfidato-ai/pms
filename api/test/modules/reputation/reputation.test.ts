@@ -290,6 +290,22 @@ describe("when a guest may be asked", () => {
     await asOwner("/reviews/link", "PUT", { url: "https://g.page/r/example-review-link/review" });
   });
 
+  /* Settings → Messages (D27-261): a hotel may switch review requests off. */
+  it("sends nothing while the hotel has review requests switched off", async () => {
+    connected();
+    await sql(`insert into guest_message_settings (hotel_id, kind, is_on) values ($1, 'review', false)
+               on conflict (hotel_id, kind) do update set is_on = false`, [hotelId]);
+    try {
+      const res = await asOwner(`/reviews/${departedId}/ask`, "POST", { channel: "whatsapp" });
+      expect(res.status).toBe(409);
+      expect((await res.json() as { reason: string }).reason)
+        .toBe("Review requests are switched off for this hotel (Settings, Messages).");
+      expect(seen, "nothing reached the receiver").toBeNull();
+    } finally {
+      await sql("delete from guest_message_settings where hotel_id = $1 and kind = 'review'", [hotelId]);
+    }
+  });
+
   it("refuses a stay that is still in the room", async () => {
     connected();
     const res = await asOwner(`/reviews/${inHouseId}/ask`, "POST", { channel: "whatsapp" });

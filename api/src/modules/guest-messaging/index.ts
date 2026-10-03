@@ -1,6 +1,8 @@
 import type { Mount } from "../../mount.ts";
 import { guestMessages } from "./messages.ts";
 import { voucher } from "./voucher.ts";
+import { invoiceSends } from "./invoices.ts";
+import { messageSettings } from "./settings.ts";
 
 /* The front door of this service on the server - the only file the core or
    another service may import (src/test/boundaries.test.ts).
@@ -15,6 +17,9 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", guestMessages],
   /* Send voucher (D27-35): the booking confirmation, now, from the desk. */
   ["/api/hotels", voucher],
+  /* Settings phase 6 (D27-261): Send invoice, and Settings → Messages. */
+  ["/api/hotels", invoiceSends],
+  ["/api/hotels", messageSettings],
 ];
 
 /* THE SWEEP, and it is NOT started here. `server.ts` (the master's file)
