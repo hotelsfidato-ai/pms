@@ -1,7 +1,7 @@
 import type { Posting } from "@/modules/front-desk";
 import { api, ApiError } from "@/lib/api";
 import { getFolio } from "./folios";
-import type { ChargeCategory, PaymentMethod } from "@/lib/rules";
+import type { ChargeCategory } from "@/lib/rules";
 import type { OperationResult } from "@/data/repositories/result";
 import { getStay } from "@/modules/front-desk";
 import { refuse } from "@/data/repositories/result";
@@ -170,7 +170,7 @@ export async function settle(
   hotelId: string,
   stayId: string,
   input: {
-    method: PaymentMethod; amount: number; businessDate: string;
+    method: string; amount: number; businessDate: string;
     /** D25-40: more than ₹1,00,000 in cash at once needs one of these. */
     pan?: string; form97?: boolean;
     /** D27-4: the desk confirmed a payment larger than the bill. */

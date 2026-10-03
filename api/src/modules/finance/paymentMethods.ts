@@ -1,15 +1,10 @@
-/* THE PAYMENT METHODS THE SERVER TAKES: the word a clerk reads, and the value
-   the database stores (payments_method_valid). The payment door
-   (postings.ts, takeFolioPayment) refuses anything not named here.
-
-   In a file of its own, with nothing imported, so the website's test can read
-   it beside the list the screens offer (src/lib/rules.ts PAYMENT_METHODS,
-   src/modules/finance/paymentMethods.test.ts): the screens offered
-   "Google Pay", which was never here, and the advance was refused after the
-   booking had saved (the owner, 30 September). */
-export const PAYMENT_METHOD: Record<string, string> = {
-  Cash: "cash", UPI: "upi", "Credit Card": "card", "Debit Card": "card",
-  "Net Banking": "netbanking", Wallet: "wallet", Cheque: "cheque",
-  "Bank Transfer": "bank_transfer", "Bill to company": "city_ledger",
-  "Room Posting": "city_ledger",
+/* WHAT A PAYMENT IS IN THE BOOKS: the kinds payments_method_valid takes (011),
+   in the words a clerk reads. Each hotel's own methods (payment_methods, 191,
+   the owner's D27-259) name one of these: "Agoda" is Bill to company, and the
+   reports count it there. The payment door (postings.ts, takeFolioPayment)
+   takes only a method on the hotel's list that is On. */
+export const PAYMENT_KINDS: Record<string, string> = {
+  cash: "Cash", card: "Card", upi: "UPI", bank_transfer: "Bank transfer",
+  cheque: "Cheque", wallet: "Wallet", netbanking: "Net banking",
+  city_ledger: "Bill to company",
 };

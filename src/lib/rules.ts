@@ -29,14 +29,20 @@ export const CHARGE_CATEGORIES = [
 ] as const;
 export type ChargeCategory = (typeof CHARGE_CATEGORIES)[number];
 
-/** Payment methods the property actually accepts, from the Night Audit.
-    Every one must be a method the server takes (finance's PAYMENT_METHOD,
-    paymentMethods.test.ts): "Google Pay" was offered and refused, and went
-    (the owner, 30 September) - it is UPI. */
-export const PAYMENT_METHODS = [
-  "Cash", "UPI", "Credit Card", "Debit Card", "Bill to company",
-] as const;
-export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+/** The hotel's own ways of paying that are On, in its order (191, the
+    owner's D27-259), from GET /api/hotels: the screens and the payment door
+    read the same list. `credit: false` leaves out what goes to the books as
+    Bill to company - an advance is money in hand. An older server sends no
+    list: the five every hotel started with (191's seed). */
+const STARTING_WAYS = [
+  { label: "Cash", kind: "cash" }, { label: "UPI", kind: "upi" }, { label: "Credit Card", kind: "card" },
+  { label: "Debit Card", kind: "card" }, { label: "Bill to company", kind: "city_ledger" },
+];
+export const payingWays = (
+  rules?: { paymentMethods?: { label: string; kind: string }[] }, credit = true,
+): string[] =>
+  (rules?.paymentMethods ?? STARTING_WAYS)
+    .filter((m) => credit || m.kind !== "city_ledger").map((m) => m.label);
 
 /** Housekeeping states. Independent of whether anyone is in the room. */
 export const HOUSEKEEPING_STATES = ["dirty", "clean", "inspected", "out-of-service"] as const;

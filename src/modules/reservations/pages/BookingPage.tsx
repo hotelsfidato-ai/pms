@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 import { money, moneyPrecise, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useCurrentHotel, useRole, useSession } from "@/lib/session";
-import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/rules";
+import { payingWays } from "@/lib/rules";
 import { emailProblem, phoneProblem } from "../../../../api/src/validate.ts";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Field, fieldProps,
@@ -17,7 +17,7 @@ import { getInventory, getTariff, type Tariff } from "@/modules/inventory";
 import { createBooking } from "@/modules/reservations/data/groups";
 import {
   MARKET_SEGMENTS, TITLES, LIST_KEEPERS, FREEHAND_CAP,
-  listSalesPeople, saveSalesPeople, listRoomPromotions, saveRoomPromotions,
+  listSalesPeople, saveSalesPeople, listRoomPromotions,
 } from "@/modules/reservations/data/booking";
 import { fetchLeadForBooking } from "@/modules/leads";
 import { BookedCard, type Booked } from "@/modules/reservations/flows/BookedCard";
@@ -75,8 +75,6 @@ const PLANS = [
   { code: "AI", name: "AI · Everything charged to the room" },
 ];
 
-/* Money received at the desk; "Bill to company" is not an advance. */
-const ADVANCE_METHODS = PAYMENT_METHODS.filter((m) => m !== "Bill to company");
 
 interface Line {
   key: number;
@@ -184,19 +182,19 @@ export default function BookingPage() {
   const [to, setTo] = useState<string | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [seeded, setSeeded] = useState(false);
-  const [discountMode, setDiscountMode] = useState<"none" | "hand" | "promotion">("none");
+  const [discountMode, setDiscountMode] = useState<"none" | "hand" | "rupees" | "promotion">("none");
   const [discountPct, setDiscountPct] = useState("");
   const [discountReason, setDiscountReason] = useState("");
   const [promotionId, setPromotionId] = useState("");
   const [notes, setNotes] = useState("");
   const [advance, setAdvance] = useState("");
-  const [advanceBy, setAdvanceBy] = useState<PaymentMethod>(rules?.defaultPaymentMethod ?? "Cash");
+  const [advanceBy, setAdvanceBy] = useState(rules?.defaultPaymentMethod ?? "Cash");
   const [earlyReason, setEarlyReason] = useState("");
   const [waiveEarly, setWaiveEarly] = useState(false);
   const [saving, setSaving] = useState(false);
   const [nextKey, setNextKey] = useState(1);
   const [booked, setBooked] = useState<Booked | null>(null);
-  const [keeping, setKeeping] = useState<"sales" | "promotions" | null>(null);
+  const [keeping, setKeeping] = useState<"sales" | null>(null);
 
   const lead = useQuery({
     queryKey: ["lead-for-booking", hotelId, leadToken],
@@ -318,9 +316,17 @@ export default function BookingPage() {
   const handPct = Number(discountPct);
   const pct = discountMode === "hand" && Number.isFinite(handPct) && handPct > 0
     ? handPct
-    : discountMode === "promotion" && promotion ? promotion.percent : 0;
+    : discountMode === "promotion" && promotion ? promotion.percent ?? 0 : 0;
+  /* ₹ OFF EACH NIGHT (191, the owner's D27-259 Q4): by hand up to the cap's
+     share of the night with a reason, or a promotion in rupees. */
+  const rupeesOff = discountMode === "rupees" && handPct > 0 ? handPct
+    : discountMode === "promotion" && promotion ? promotion.amount ?? 0 : 0;
+  const discounted = (rate: number) => Math.max(0, afterDiscount(rate, pct) - rupeesOff);
   const discountProblem =
-    discountMode === "hand" && discountPct.trim() !== ""
+    discountMode === "rupees" && discountPct.trim() !== ""
+      ? !(handPct > 0) ? "A discount in rupees is above ₹0."
+        : !discountReason.trim() ? "Say why the discount is given." : null
+    : discountMode === "hand" && discountPct.trim() !== ""
       ? !(handPct > 0) ? "A discount is a percentage above 0."
         : handPct > FREEHAND_CAP
           ? `Over ${FREEHAND_CAP}% only through a named promotion.`
@@ -383,7 +389,7 @@ export default function BookingPage() {
       const typed = !l.inclusive || !(Number(l.rate) > 0) ? Number(l.rate)
         : s?.ok ? s.pre : null;
       if (typed === null) return { nightly: null, unpriced: null, differs: false };
-      return { nightly: typed > 0 ? afterDiscount(typed, pct) : typed, unpriced: null, differs: false };
+      return { nightly: typed > 0 ? discounted(typed) : typed, unpriced: null, differs: false };
     }
     const t = tariffs[i]?.data;
     if (!t) return { nightly: null, unpriced: null, differs: false };
@@ -396,7 +402,7 @@ export default function BookingPage() {
     const split = inclusive(l, i) ? splits[i]?.data : undefined;
     if (inclusive(l, i) && !split?.ok) return { nightly: null, unpriced: null, differs: false };
     return {
-      nightly: afterDiscount(split?.ok ? split.pre : first, pct), unpriced: null,
+      nightly: discounted(split?.ok ? split.pre : first), unpriced: null,
       differs: t.nights.some((n) => n.total !== first), ...terms,
     };
   });
@@ -522,6 +528,8 @@ export default function BookingPage() {
       ...(show.company && billTo === "company" && companyId ? { companyId } : {}),
       ...(discountMode === "hand" && discountPct.trim()
         ? { discount: { percent: handPct, reason: discountReason.trim() } } : {}),
+      ...(discountMode === "rupees" && discountPct.trim()
+        ? { discount: { amount: handPct, reason: discountReason.trim() } } : {}),
       ...(discountMode === "promotion" && promotionId ? { discount: { promotionId } } : {}),
       ...(title ? { title } : {}),
       ...(guestId.nationality.trim() ? { nationality: guestId.nationality.trim() } : {}),
@@ -813,9 +821,10 @@ export default function BookingPage() {
                 <Field label="Paid by">
                   {(f) => (
                     <NativeSelect {...fieldProps(f)} value={advanceBy}
-                      onChange={(e) => setAdvanceBy(e.target.value as PaymentMethod)}
+                      onChange={(e) => setAdvanceBy(e.target.value)}
                       className="h-12 text-base">
-                      {ADVANCE_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                      {/* Money received at the desk; Bill to company is not an advance. */}
+                      {payingWays(rules, false).map((m) => <option key={m} value={m}>{m}</option>)}
                     </NativeSelect>
                   )}
                 </Field>
@@ -965,7 +974,6 @@ export default function BookingPage() {
               reason={discountReason} onReason={setDiscountReason}
               promotionId={promotionId} onPromotion={setPromotionId}
               promotions={promotions.data ?? []}
-              keeper={keeper} onKeep={() => setKeeping("promotions")}
               problem={discountProblem}
             />
           </Fold>
@@ -1062,19 +1070,6 @@ export default function BookingPage() {
         onSave={async (items) => {
           const r = await saveSalesPeople(hotelId, items.map((i) => i.name));
           if (r.ok) void qc.invalidateQueries({ queryKey: ["sales-people", hotelId] });
-          return r;
-        }}
-      />
-      <KeepListDialog
-        open={keeping === "promotions"} onOpenChange={(o) => setKeeping(o ? "promotions" : null)}
-        title="Room promotions"
-        description={`This hotel's named discounts. Over ${FREEHAND_CAP}% a discount is only ever one of these.`}
-        withPercent
-        items={(promotions.data ?? []).map((p) => ({ name: p.name, percent: p.percent }))}
-        onSave={async (items) => {
-          const r = await saveRoomPromotions(hotelId,
-            items.map((i) => ({ name: i.name, percent: i.percent ?? 0 })));
-          if (r.ok) void qc.invalidateQueries({ queryKey: ["room-promotions", hotelId] });
           return r;
         }}
       />
@@ -1289,14 +1284,13 @@ function Counter({ label, value, min, onChange }: {
    through a named promotion. The server decides. */
 function Discount({
   mode, onMode, pct, onPct, reason, onReason, promotionId, onPromotion,
-  promotions, keeper, onKeep, problem,
+  promotions, problem,
 }: {
-  mode: "none" | "hand" | "promotion"; onMode: (m: "none" | "hand" | "promotion") => void;
+  mode: "none" | "hand" | "rupees" | "promotion"; onMode: (m: "none" | "hand" | "rupees" | "promotion") => void;
   pct: string; onPct: (v: string) => void;
   reason: string; onReason: (v: string) => void;
   promotionId: string; onPromotion: (v: string) => void;
-  promotions: { id: string; name: string; percent: number }[];
-  keeper: boolean; onKeep: () => void;
+  promotions: { id: string; name: string; percent: number | null; amount: number | null }[];
   problem: string | null;
 }) {
   return (
@@ -1307,14 +1301,16 @@ function Discount({
             options={[
               { value: "none", label: "None" },
               { value: "hand", label: `Up to ${FREEHAND_CAP}%` },
+              { value: "rupees", label: "₹ off" },
               { value: "promotion", label: "Promotion" },
             ]} />
         )}
       </Field>
-      {mode === "hand" && (
+      {(mode === "hand" || mode === "rupees") && (
         <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-2">
-          <Input type="number" inputMode="decimal" min={0} max={FREEHAND_CAP}
-            aria-label="Discount percent" placeholder="%"
+          <Input type="number" inputMode="decimal" min={0} max={mode === "hand" ? FREEHAND_CAP : undefined}
+            aria-label={mode === "hand" ? "Discount percent" : "Rupees off each night"}
+            placeholder={mode === "hand" ? "%" : "₹ a night"}
             value={pct} onChange={(e) => onPct(e.target.value)} className="h-11 text-base tabular" />
           <Input aria-label="Why" placeholder="Why"
             value={reason} onChange={(e) => onReason(e.target.value)} className="h-11 text-base" />
@@ -1326,15 +1322,11 @@ function Discount({
             onChange={(e) => onPromotion(e.target.value)} className="h-11 text-base flex-1 min-w-0">
             <option value="">{promotions.length ? "Choose one…" : "No promotions yet"}</option>
             {promotions.map((p) => (
-              <option key={p.id} value={p.id}>{p.name} ({p.percent}%)</option>
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.percent !== null ? `${p.percent}%` : `₹${p.amount} a night`})
+              </option>
             ))}
           </NativeSelect>
-          {keeper && (
-            <Button variant="secondary" className="h-11 w-11 p-0 shrink-0"
-              aria-label="Change the promotions list" onClick={onKeep}>
-              <ListPlus className="size-4" />
-            </Button>
-          )}
         </div>
       )}
       {problem && <p className="text-sm text-warning-dark">{problem}</p>}
