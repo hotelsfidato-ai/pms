@@ -11,7 +11,7 @@ import { voucherFile } from "./voucherDocument.ts";
    SEND VOUCHER - the booking confirmation, now, from the desk (D27-35)
 
    Since D27-264 the voucher IS the confirmation: every way it is still owed
-   - the voucher email and booking_voucher on WhatsApp, each with the PDF
+   - the voucher email and the CRS's voucher on WhatsApp, each with the PDF
    printing the guest's check-in link - each its own message, recorded once.
    A way already sent is not sent again; one that fails is said, and the
    others still go.

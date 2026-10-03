@@ -263,7 +263,7 @@ describe("the sweep, as the server runs it", () => {
         .toEqual(["GMW-G1 booking-voucher"]);
       /* D27-241 (Q5): the group's WhatsApp voucher lists the whole group. */
       const voucher = forTheGroup.find((m) => m.kind === "booking-voucher")!;
-      expect(voucher.data["room"]).toMatch(/^3 × /);
+      expect(voucher.data["roomTypes"]).toMatch(/^3 x /);
       expect(voucher.data["guests"]).toBe("3 adults");
 
       /* Covered: the next minute owes the group nothing - not even once the
