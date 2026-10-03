@@ -5,20 +5,20 @@
 -- Refer to it by what it does - "messages and reports" - never by its number.
 --
 --   1  guest_message_settings   each guest message On/Off per hotel: the
---                               voucher (the confirmation, D27-264), the
---                               invoice, the review request. NO ROW IS TODAY:
---                               on - EXCEPT the invoice, which is new and goes
---                               only once a hotel switches it on.
+--                               voucher (the confirmation, D27-264), online
+--                               check-in, the invoice, the review request. NO
+--                               ROW: the voucher on; the other three OFF until
+--                               a hotel switches them on (D27-261, D27-266).
 --   2  report_emails            which reports go to which of the hotel's
 --                               people after each night audit (Q7)
 --   3  "what the guest is owed" (184), as the owner's D27-264 has it: the
 --                               VOUCHER is the confirmation - by email the
---                               voucher email, on WhatsApp the CRS's voucher,
---                               each carrying the check-in link - and NO
---                               reminder. The voucher's switch is asked. The
+--                               voucher email, on WhatsApp the CRS's voucher -
+--                               and NO reminder. The voucher's switch is asked. The
 --                               same arguments and columns (MEMORY 317)
 --   4  app.guest_invoices_owed  the tax invoices owed to their guests, each way
 --   5  app.report_emails_owed   the night-audit reports owed to their people
+--   6  app.online_checkin_on    whether a hotel has online check-in on (D27-266)
 -- =============================================================================
 
 
@@ -39,13 +39,13 @@ create table if not exists guest_message_settings (
   changed_at  timestamptz not null default now(),
 
   primary key (hotel_id, kind),
-  constraint gms_kind_known check (kind in ('booking-voucher', 'invoice', 'review'))
+  constraint gms_kind_known check (kind in ('booking-voucher', 'online-checkin', 'invoice', 'review'))
 );
 
 comment on table guest_message_settings is
-  'Each guest message switched On or Off for one hotel (D27-261, D27-264): the '
-  'voucher, the invoice, the review request. No row: on - except the invoice, '
-  'which is off until switched on.';
+  'Each guest message switched On or Off for one hotel (D27-261, D27-264, D27-266): '
+  'the voucher, online check-in, the invoice, the review request. No row: the '
+  'voucher on, the other three off until switched on.';
 
 alter table guest_message_settings enable row level security;
 alter table guest_message_settings force  row level security;
@@ -336,3 +336,25 @@ comment on function app.report_emails_owed(integer, uuid) is
 
 revoke all on function app.report_emails_owed(integer, uuid) from public;
 grant execute on function app.report_emails_owed(integer, uuid) to pms_app;
+
+
+-- -----------------------------------------------------------------------------
+-- 6 · Is online check-in on at this hotel? (D27-266)
+-- -----------------------------------------------------------------------------
+-- Online check-in comes later: until a hotel switches it on, no guest page is
+-- minted for the voucher, so its PDF prints no link and no QR and the email has
+-- no link line; the desk's Send check-in link is hidden. No saved switch: OFF.
+-- A definer, because the sweep has nobody signed in.
+create or replace function app.online_checkin_on(p_hotel uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = pg_catalog, public
+as $fn$
+  select coalesce((select s.is_on from guest_message_settings s
+                    where s.hotel_id = p_hotel and s.kind = 'online-checkin'), false)
+$fn$;
+
+revoke all on function app.online_checkin_on(uuid) from public;
+grant execute on function app.online_checkin_on(uuid) to pms_app;

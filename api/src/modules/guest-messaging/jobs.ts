@@ -168,8 +168,9 @@ export function messageFor(due: Due, link: string): Message | null {
       checkInText: asWritten(due.checkIn),
       checkOutText: asWritten(due.checkOut),
       nights: String(due.nights),
-      /* Printed in the voucher's PDF, as a link and a QR code (D27-264). */
-      link,
+      /* Printed in the voucher's PDF, as a link and a QR code (D27-264) -
+         none at all while online check-in is off (D27-266). */
+      ...(link ? { link } : {}),
     },
     about: { kind: "reservation", id: due.reservationId },
     /* NOBODY PRESSED A BUTTON. Migration 117 keeps `sent_by` null for
@@ -287,6 +288,12 @@ export async function owedNow(
    ponytail: a copy of `linkFor` in guestDoor.ts, which is not exported —
    the master's file. Import it instead once it is. */
 export async function linkFromDatabase(client: Client, due: Due): Promise<string> {
+  /* D27-266: online check-in comes later. While the hotel has it off, no
+     page is minted and the message carries no link - so the voucher prints
+     none and the email has no link line. */
+  const { rows: on } = await client.query<{ on: boolean }>(
+    "select app.online_checkin_on($1::uuid) as on", [due.hotel.id]);
+  if (!on[0]?.on) return "";
   const token = randomBytes(32).toString("base64url");
   const hash = createHash("sha256").update(token, "utf8").digest("hex");
   const { rows } = await client.query<{ made: boolean }>(

@@ -14,7 +14,8 @@ import { getGuestMessages, sendCheckInLink } from "./data/guestMessages";
    a booking still waiting for the hotel. Each press sends it again: a clerk
    who presses twice means it. Where nothing can send, the button is off and
    the sender's own sentence says why (D21-25), never a button that was
-   never going to work.
+   never going to work. HIDDEN while the hotel has online check-in off
+   (D27-266): it comes later.
    ══════════════════════════════════════════════════════════════════ */
 
 export function SendCheckInLink({ hotelId, stayId }: { hotelId: string; stayId: string }) {
@@ -26,6 +27,7 @@ export function SendCheckInLink({ hotelId, stayId }: { hotelId: string; stayId: 
     queryFn: () => getGuestMessages(hotelId, stayId),
   });
   const connected = sent.data?.connected ?? false;
+  if (!sent.data?.onlineCheckIn) return null;
 
   const send = async () => {
     setBusy(true);

@@ -56,6 +56,9 @@ export interface GuestMessages {
   /** The sender's own sentence for why, where it cannot. One wording, so
       the desk reads the same thing wherever it meets this. */
   notConnected: string | null;
+  /** Whether this hotel has online check-in on (D27-266): off, the desk's
+      Send check-in link is hidden. */
+  onlineCheckIn: boolean;
   messages: SentMessage[];
   /** Future bookings no message can reach (MSG-3): no email, and no
       number the guest agreed to WhatsApp on (D21-72). Nothing is recorded
