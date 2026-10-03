@@ -650,21 +650,32 @@ async function fileOf(facts: VoucherFacts): Promise<SendableFile> {
   };
 }
 
-/* ── The voucher on WhatsApp (D27-235 2.2, D27-241) ────────────────────
-   The CRS's already-approved voucher template: the PDF as its document,
-   and eight fields, named here as the PMS sends facts (the workflow maps
-   them to the template's own names - name_1, hotel_id, hotel, ck_in,
-   ck_out, rm_type, no_guest, crs_nom). All from the SAME facts as the PDF,
-   so the message and the document agree: a group's are the whole group's
-   rooms and guests (Q5). Nothing invented: an office phone nobody typed in
-   Settings is a dash (Q2), as is anything else missing. */
+/* ── The voucher on WhatsApp: our own template, booking_voucher (D27-265) ──
+   The PDF as its document, and ten numbered fields (the workflow sends them
+   in this order) from the SAME facts as the PDF, so the message and the
+   document agree: a group's are the whole group's rooms and guests (Q5).
+   Written as the owner's sample writes them - "Sat, 10 Oct 2026", the
+   hotel's own times as "2:00 PM", the hotel's phone. Nothing invented:
+   anything missing is a dash. The "Check in online" button is the message's
+   own link (`data.link`), which the workflow cuts to its token. */
 const dash = (v: string | null | undefined) => (v && v.trim() ? v.trim() : "-");
 
-/** "12 Aug 2026" - the CRS's own way (its voucher's `longDate`). */
-const longDate = (iso: string) => {
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "Sat, 10 Oct 2026" - spelt out here, so no locale writes "Sept". */
+const dayDate = (iso: string) => {
   const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
   return Number.isNaN(d.getTime()) ? dash(iso)
-    : d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+    : `${DAYS[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+};
+
+/** The hotel's "14:00" as "2:00 PM"; a dash where no time is set. */
+const clock = (hhmm: string | null) => {
+  const t = /^(\d{1,2}):(\d{2})/.exec(hhmm ?? "");
+  if (!t) return "-";
+  const h = Number(t[1]);
+  return `${h % 12 || 12}:${t[2]} ${h < 12 ? "AM" : "PM"}`;
 };
 
 export function voucherFields(f: VoucherFacts): Record<string, string> {
@@ -678,19 +689,21 @@ export function voucherFields(f: VoucherFacts): Record<string, string> {
   const children = f.rooms.reduce((a, r) => a + r.children, 0);
   return {
     guestName: dash(f.guest.name),
-    reference: dash(f.reference),
     hotelName: dash(f.hotel.name),
-    checkInLong: longDate(f.checkIn),
-    checkOutLong: longDate(f.checkOut),
-    roomTypes: types.length ? types.map((t) => `${count.get(t)} x ${t}`).join(", ") : "-",
+    reference: dash(f.reference),
+    checkInDay: dayDate(f.checkIn),
+    checkInFrom: clock(f.hotel.checkInTime),
+    checkOutDay: dayDate(f.checkOut),
+    checkOutBy: clock(f.hotel.checkOutTime),
+    room: types.length ? types.map((t) => `${count.get(t)} × ${t}`).join(", ") : "-",
     guests: f.rooms.length
       ? `${adults} adult${adults === 1 ? "" : "s"}${children ? `, ${children} child${children === 1 ? "" : "ren"}` : ""}`
       : "-",
-    officePhone: dash(f.group?.phone),
+    hotelPhone: dash(f.hotel.phone),
   };
 }
 
-/** The PDF and its eight fields, or null where the booking is not confirmed. */
+/** The PDF and its ten fields, or null where the booking is not confirmed. */
 export async function whatsAppVoucher(
   client: Client, reservationId: string, checkInLink: string | null = null,
 ): Promise<{ file: SendableFile; fields: Record<string, string> } | null> {

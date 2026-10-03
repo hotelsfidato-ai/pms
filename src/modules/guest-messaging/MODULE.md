@@ -46,7 +46,7 @@ the live-inventory app separate, and the PMS only shows its leads.)
 
 | Message | Sent by | Its settings |
 |---|---|---|
-| every email; on WhatsApp the voucher (`booking-voucher`, the CRS's template), the check-in code (`guest-link-code`), the tax invoice (`invoice`) and the review request (`review`). Since D27-264 no `booking_confirmation`, `stay_reminder` or `checkin_link` | the CRS's n8n, workflow `deploy/n8n/pms-send-crs.json` | `CRS_N8N_URL`, `CRS_N8N_SECRET` |
+| every email; on WhatsApp the voucher (`booking-voucher`, our own template `booking_voucher`, D27-265), the check-in code (`guest-link-code`), the tax invoice (`invoice`) and the review request (`review`). Since D27-264 no `booking_confirmation`, `stay_reminder` or `checkin_link` | the CRS's n8n, workflow `deploy/n8n/pms-send-crs.json` | `CRS_N8N_URL`, `CRS_N8N_SECRET` |
 | the one number they go from (D27-101) | a setting, sent in every WhatsApp as `from.phoneNumberId` | `WHATSAPP_PHONE_NUMBER_ID` |
 | not used for now: the sales inbox's "booked guest" mark (D27-104) | the market-to-revenue n8n, `deploy/n8n/pms-send-m2r.json` | `M2R_N8N_URL`, `M2R_N8N_SECRET`, both empty |
 
@@ -74,7 +74,7 @@ the live-inventory app separate, and the PMS only shows its leads.)
 
 **Since D27-264 the voucher IS the confirmation**, sent once, both ways: by
 email (kind `booking-confirmation`, the voucher email) and on WhatsApp (kind
-`booking-voucher`, the CRS's template). One switch, `booking-voucher`. Its PDF
+`booking-voucher`, our own template `booking_voucher`, D27-265). One switch, `booking-voucher`. Its PDF
 prints the guest's own check-in page - the link minted for that message - as
 a link and a QR code ("Check in online"); the desk's View voucher has none.
 There is no day-before reminder; old `arrival-reminder` and `checkin-link`
@@ -182,8 +182,8 @@ one-line change):
 | Every future confirmed booking is owed its confirmation, however long ago it was made | `CONFIRM_WITHIN_HOURS = null` | the owner, **D21-33** |
 | Soonest arrival first | the function's `order by` | the owner, **D21-34** |
 | No more than the owner's pace in a minute, and **nothing at all until it is given** | `GUEST_MESSAGES_PER_MINUTE`, a server setting | the owner, **D21-34** - the number is still to come |
-| **The voucher is the confirmation and goes BOTH ways, once**: on WhatsApp where the booking is ticked "guest agreed to WhatsApp" and has a number (kind `booking-voucher`, the CRS's template), AND by email where there is an address (kind `booking-confirmation`); each way is its own message, its own record and its own three tries. Its PDF prints the check-in link and a QR code | `app.guest_messages_owed` (migration "messages and reports") | the owner, **D27-264; D27-235, D21-72** |
-| **The voucher on WhatsApp**: the CRS's already approved template - the PDF as its document and eight named fields from the PDF's own facts (a group's every room and guest; a dash for the group office phone until it is typed). Not sent without its PDF | `KIND.voucher`, `whatsAppVoucher` (voucherDocument.ts), the workflow's `VOUCHER_TEMPLATE` | the owner, **D27-235 (2.2), D27-241** |
+| **The voucher is the confirmation and goes BOTH ways, once**: on WhatsApp where the booking is ticked "guest agreed to WhatsApp" and has a number (kind `booking-voucher`, our own `booking_voucher`), AND by email where there is an address (kind `booking-confirmation`); each way is its own message, its own record and its own three tries. Its PDF prints the check-in link and a QR code | `app.guest_messages_owed` (migration "messages and reports") | the owner, **D27-264; D27-235, D21-72** |
+| **The voucher on WhatsApp**: our own template `booking_voucher` - the PDF as its document, ten numbered fields from the PDF's own facts as the owner's sample writes them ("Sat, 10 Oct 2026", the hotel's times as "2:00 PM", its phone; a group's every room and guest; a dash for anything missing), and a "Check in online" URL button whose dynamic part is the guest's token. Not sent without its PDF or its link | `KIND.voucher`, `voucherFields` and `whatsAppVoucher` (voucherDocument.ts), the workflow's `VOUCHER_FIELDS` | the owner, **D27-235 (2.2), D27-265** |
 | No day-before reminder, and no separate confirmation (D22-39, D22-40 and D27-241's Q3 are spent) | the function | the owner, **D27-264** |
 | **One voucher per group, each way**, about its lead booking - the room the desk assigned on the group's screen, else the group's room booked first; either only while it still stands - to that booking's guest, by that booking's tick. A message about any room covers them all, so no other room is ever owed on its own, even if the lead is cancelled or changed after it went. A booking in no group is unchanged | the function (`coalesce(group_id, id)`, the key app.guest_visits uses); the lead is `app.group_lead`, which the review request asks too | the owner, **D22-41, D22-52** |
 | **A catch-up confirmation** - a booking made before sending was first switched on - goes only from 09:00 until 21:00 on the property's clock; a booking made after is confirmed at once, any hour. Outside those hours it is still OWED (the MSG-3 list does not change with the clock), and the sweep leaves it without spending a place in the pace | `CATCH_UP_FROM`, `CATCH_UP_UNTIL`; the function's `held` | the owner, **D22-42** |
@@ -202,7 +202,7 @@ recording anything: looking is not switching on. A restart, a second pass or a
 later settings change leaves the moment where it is.
 
 English only (D21-73): nothing is built for a second language (D21-74). n8n
-sends the WhatsApp voucher by the CRS's template and the voucher email with its
+sends the WhatsApp voucher by `booking_voucher` and the voucher email with its
 PDF (`docs/go-live/whatsapp-templates.md`). Every field either reads is in `data`.
 
 **The bill after check-out is not here and is not going to be** (D17-34,

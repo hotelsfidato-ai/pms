@@ -10,7 +10,8 @@ import { voucherFile, whatsAppVoucher } from "./voucherDocument.ts";
      THE VOUCHER, once, when a booking is confirmed - its PDF printing the
      guest's own check-in link and its QR code:
        by email     kind booking-confirmation, the voucher email
-       on WhatsApp  kind booking-voucher, the CRS's approved voucher template
+       on WhatsApp  kind booking-voucher, our own template booking_voucher
+                    (D27-265), with a "Check in online" button
 
    There is no separate confirmation and no day-before reminder any more
    (the owner, D27-264); their old records stay. The fields each message
@@ -51,8 +52,8 @@ import { voucherFile, whatsAppVoucher } from "./voucherDocument.ts";
 export const KIND = {
   /** The voucher by EMAIL, the PDF attached (D27-264). */
   confirmation: "booking-confirmation",
-  /** The voucher on WHATSAPP: the CRS's approved voucher template with the
-      PDF (D27-235 2.2, D27-241). Each way owed and recorded on its own. */
+  /** The voucher on WHATSAPP: our own template booking_voucher with the PDF
+      (D27-235 2.2, D27-265). Each way owed and recorded on its own. */
   voucher: "booking-voucher",
 } as const;
 
@@ -312,9 +313,9 @@ export async function claimTurn(
 export const NOT_OWED = "It was sent already, so it is not sent again.";
 
 /** The voucher PDF goes with the voucher email (D27-171, D27-172), and on
-    WhatsApp as the CRS's voucher template, with its eight fields from the
-    same facts as the PDF (D27-235 2.2, D27-241: the whole group's rooms and
-    guests; a dash for an office phone nobody typed). Both PDFs print the
+    WhatsApp as our own template booking_voucher, with its ten fields from
+    the same facts as the PDF (D27-235 2.2, D27-265: the whole group's rooms
+    and guests; a dash for anything missing). Both PDFs print the
     message's own check-in link and its QR code (D27-264). The sweep and the
     desk's buttons all come through here, so it is the same PDF whoever sends
     it. A WhatsApp voucher with no PDF is not sent. */

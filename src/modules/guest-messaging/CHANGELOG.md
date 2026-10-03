@@ -11,6 +11,65 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-03 · Settings phase 6: Messages and reports (D27-252, D27-261, D27-262), fewer guest messages (D27-264), our own booking_voucher (D27-265)
+
+Branch `settings/messages-3oct`, from cp6 8181f452; cp6 106e819b (the console
+contract) and 16c88766 (D27-264) merged in.
+
+**Asked for:**
+- Each guest message On/Off per hotel (Q1).
+- The tax invoice on WhatsApp and email with its PDF: by itself when issued, only after switch-on, plus a button (Q3, Q4). Not a company's by itself (Q5), never a credit note (Q6).
+- Six reports as PDF after the night audit to chosen staff's own email (Q7, D27-262).
+- Then D27-264: the voucher IS the confirmation, sent once both ways, the check-in link and a QR code in its PDF. No reminder. The desk's button resends the voucher.
+- Then D27-265: the WhatsApp voucher uses OUR OWN template `booking_voucher`, matching the owner's sample, with a "Check in online" URL button. Not the CRS's template.
+
+**Shipped:**
+- Migration 194 "messages and reports":
+  - `guest_message_settings` (booking-voucher, invoice, review) and `report_emails`, each with row security and the activity log;
+  - `app.guest_messages_owed` re-bodied with the same arguments and columns (MEMORY 317): the voucher once each way under one switch, and no reminder;
+  - `app.guest_invoices_owed` and `app.report_emails_owed`.
+- API:
+  - `settings.ts`: the switches and the report choices;
+  - `invoices.ts` and `invoiceDocument.ts`: the invoice PDF from finance's `invoiceFacts` (T1). The sweep sends it as the clerk who issued it. `POST /:code/invoices/:number/send`;
+  - `reportEmails.ts`: each report built under the recipient's own session;
+  - reputation's review route asks the `review` switch.
+- D27-264:
+  - a link is minted for every voucher, and the PDF draws "Check in online" with the link and a vector QR;
+  - `POST /stays/:id/checkin-link` resends the voucher every way the guest can be reached.
+- D27-265:
+  - `voucherFields` gives the ten fields as the sample writes them. "Sat, 10 Oct 2026" is spelt out, so no locale writes "Sept". Times read "2:00 PM". Rooms read "1 × Deluxe A/C". The hotel's phone. A dash for anything missing;
+  - the workflow sends `booking_voucher` with the PDF header, ten numbered fields and the button, whose dynamic part is the token after `/g/`. A voucher with no link is refused. `VOUCHER_TEMPLATE` is gone;
+  - the template's text, with a sample for every blank, is section 7 of `docs/go-live/whatsapp-templates.md`.
+- Web:
+  - `messages/switches` and `messages/night-audit-reports` registered in the Settings console;
+  - Send invoice on finance's Invoice page (T2).
+  - The second page's label is "Night audit reports": the sidebar's 21-character rule failed on the longer one once cp6 listed console pages.
+- n8n (`pms-send-crs.json`):
+  - the `tax_invoice` document path, and the invoice and report emails;
+  - `booking_confirmation`, `stay_reminder`, `checkin_link` and the reminder and check-in-link emails removed.
+  - `docs/go-live/whatsapp-templates.md` marks those three "not used (D27-264)" and drafts `tax_invoice`.
+
+**Proved:**
+- P6's red run failed on the old code.
+- Two break builds of 194 were each caught:
+  - the switch-on moment and a report chosen after its audit;
+  - a company's bill sent by itself.
+- D27-264's red run: 19 failed, 94 passed (6 files).
+- D27-265's red run: 6 failed, 73 passed (3 files).
+- Green: 270 of 270 across 11 API files (the guest-messaging suite, reputation, newBooking, roleGate, sending).
+- Web: 125 + 84 (App, navigation, boundaries, primaryAction, the finance folder, guest-messaging).
+- Both typechecks clean; strip-check 201.
+
+**Left open:**
+- The owner submits `booking_voucher` and `tax_invoice` to Meta, with `guest_page_code` and `review_request`.
+- A one-digit day is written "Sat, 5 Sep 2026", with no leading zero. The sample only shows a two-digit day.
+- `docs/go-live/RELEASE-1OCT.md`, `GO-LIVE-PLAN.md` and the two prompts in `docs/go-live/` still mention the retired templates. They are the master's files.
+- `pms-send-m2r.json` still names the retired kinds. It is unused for guest messages.
+
+**Commits:** f1c86924, 51d39a3f, c008f8d2 (merge), 8cb815a2, f83bc0e4, d52f2c82 (merge), daa55052 (tests first), 848ff5a1, be49e772 (tests first), and the D27-265 commit.
+
+---
+
 ## 2026-10-02 · The voucher both ways, and the PDF on WhatsApp (D27-235 2.1 and 2.2, D27-241); CRS bookings agreed to WhatsApp (2.3); the setup notes (8.5)
 
 Branch `messaging/both-channels-2oct`, from cp6 3336a219.
