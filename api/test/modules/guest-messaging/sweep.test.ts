@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { app } from "../../../src/server.ts";
 import { closePool, withUser, type Client } from "../../../src/db.ts";
 import {
-  runOnce, owedNow, linkFromDatabase, KIND, LIMITS, type Due, type Limits,
+  runOnce, owedNow, linkFromDatabase, LIMITS, type Due, type Limits,
 } from "../../../src/modules/guest-messaging/jobs.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -87,6 +87,9 @@ beforeAll(async () => {
   hotelId = (await sql(
     "select app.provision_property_unchecked($1, 'Sweep Test', 'Nowhere')::text as id",
     [CODE])).rows[0].id as string;
+  /* Online check-in on here, so the link tests below have a link; it is off
+     by default (D27-266), which has its own test. */
+  await sql("insert into guest_message_settings (hotel_id, kind, is_on) values ($1, 'online-checkin', true)", [hotelId]);
 
   /* Three guests who agreed to WhatsApp, arriving in 5, 6 and 7 days on the
      property's clock - soonest first, so the order is known. */
@@ -129,6 +132,7 @@ afterAll(async () => {
     await db.query("delete from guest_messaging_began");
     await db.query("delete from guest_links where hotel_id = $1", [hotelId]);
     await db.query("delete from messages_sent where hotel_id = $1", [hotelId]);
+    await db.query("delete from guest_message_settings where hotel_id = $1", [hotelId]);
     await db.query("delete from reservations where hotel_id = $1", [hotelId]);
     await db.query("delete from reservation_groups where name like 'GMW %'");
     await db.query("alter table guests disable trigger guests_no_delete");
@@ -170,24 +174,37 @@ const recorded = async () => (await sql(
   [hotelId])).rows as Array<{ about_id: string; kind: string; status: string }>;
 
 describe("the sweep, as the server runs it", () => {
+  /* D27-266: online check-in comes later. Until a hotel switches it on, no
+     guest page is minted for the voucher and none goes with it - so its PDF
+     prints no link and no QR, and the email has no link line. */
+  it("mints no guest page and sends no link while online check-in is off, as it is by default", async () => {
+    await sql("delete from guest_message_settings where hotel_id = $1 and kind = 'online-checkin'", [hotelId]);
+    try {
+      const out = await runOnce(asTheSweep, mine);
+      expect(out.sent).toBe(3);
+      expect(received.map((m) => m.kind)).toEqual(["booking-voucher", "booking-voucher", "booking-voucher"]);
+      expect(received.every((m) => !("link" in m.data)), "no link in any message").toBe(true);
+      expect((await sql("select 1 from guest_links where hotel_id = $1", [hotelId])).rows).toHaveLength(0);
+    } finally {
+      await sql("insert into guest_message_settings (hotel_id, kind, is_on) values ($1, 'online-checkin', true)", [hotelId]);
+    }
+  });
+
   it("sends each owed confirmation once, with a link that opens that guest's page", async () => {
     const out = await runOnce(asTheSweep, mine);
 
-    /* Each WhatsApp guest: the confirmation, then the CRS's voucher with the
-       PDF (D27-241) - six messages for three bookings. */
-    expect(out).toEqual({ due: 6, attempted: 6, sent: 6, nowhereToSend: 0, waiting: 0 });
+    /* D27-264: the voucher IS the confirmation - one WhatsApp per guest, the
+       CRS's voucher with the PDF, which carries the check-in link. */
+    expect(out).toEqual({ due: 3, attempted: 3, sent: 3, nowhereToSend: 0, waiting: 0 });
     expect(received.map((m) => `${m.data["reference"]} ${m.kind}`)).toEqual([
-      "GMW-1 booking-confirmation", "GMW-1 booking-voucher",
-      "GMW-2 booking-confirmation", "GMW-2 booking-voucher",
-      "GMW-3 booking-confirmation", "GMW-3 booking-voucher",
+      "GMW-1 booking-voucher", "GMW-2 booking-voucher", "GMW-3 booking-voucher",
     ]);
-    expect(marks, "each WhatsApp marked booked in the sales inbox first")
-      .toEqual(["GMW-1", "GMW-1", "GMW-2", "GMW-2", "GMW-3", "GMW-3"]);
+    expect(marks, "each guest marked booked in the sales inbox first").toEqual(["GMW-1", "GMW-2", "GMW-3"]);
     expect(received.every((m) => m.channel === "whatsapp")).toBe(true);
 
     /* The link is the guest's only way in, and the database holds only its
        hash: opening it proves the two match. */
-    const token = received.find((m) => m.kind === KIND.confirmation)!.data["link"]!.split("/g/")[1]!;
+    const token = received[0]!.data["link"]!.split("/g/")[1]!;
     const page = await app.request(`/api/guest/${token}`);
     expect(page.status).toBe(200);
     const body = await page.json() as { kind: string; booking: { reference: string } };
@@ -216,15 +233,14 @@ describe("the sweep, as the server runs it", () => {
 
     const out = await runOnce(asTheSweep, mine, makeLink);
 
-    /* GMW-2's confirmation fell over; its voucher, which needs no link, went. */
-    expect(out).toEqual({ due: 6, attempted: 5, sent: 5, nowhereToSend: 0, waiting: 0 });
-    expect((await recorded()).filter((r) => r.kind === KIND.confirmation).map((r) => r.about_id).sort())
+    expect(out).toEqual({ due: 3, attempted: 2, sent: 2, nowhereToSend: 0, waiting: 0 });
+    expect((await recorded()).map((r) => r.about_id).sort())
       .toEqual([booking.get("GMW-1"), booking.get("GMW-3")].sort());
 
     /* So the next minute sends only the one that failed - not all three. */
     received = [];
     await runOnce(asTheSweep, mine);
-    expect(received.map((m) => `${m.data["reference"]} ${m.kind}`)).toEqual(["GMW-2 booking-confirmation"]);
+    expect(received.map((m) => `${m.data["reference"]} ${m.kind}`)).toEqual(["GMW-2 booking-voucher"]);
   });
 
   it("is refused a link for a booking that stopped being confirmed", async () => {
@@ -264,7 +280,7 @@ describe("the sweep, as the server runs it", () => {
       await runOnce(asTheSweep, mine);
       const forTheGroup = received.filter((m) => m.data["reference"]!.startsWith("GMW-G"));
       expect(forTheGroup.map((m) => `${m.data["reference"]} ${m.kind}`))
-        .toEqual(["GMW-G1 booking-confirmation", "GMW-G1 booking-voucher"]);
+        .toEqual(["GMW-G1 booking-voucher"]);
       /* D27-241 (Q5): the group's WhatsApp voucher lists the whole group. */
       const voucher = forTheGroup.find((m) => m.kind === "booking-voucher")!;
       expect(voucher.data["roomTypes"]).toMatch(/^3 x /);
@@ -295,10 +311,12 @@ describe("the voucher both ways (D27-235, D27-241)", () => {
     try {
       await runOnce(asTheSweep, mine);
       const one = received.filter((m) => m.data["reference"] === "GMW-1");
+      /* D27-264: the voucher both ways - the voucher email and the CRS's
+         WhatsApp voucher - and no separate confirmation. */
       expect(one.map((m) => `${m.kind} ${m.channel}`).sort()).toEqual([
-        "booking-confirmation email", "booking-confirmation whatsapp", "booking-voucher whatsapp",
+        "booking-confirmation email", "booking-voucher whatsapp",
       ]);
-      expect(new Set(one.map((m) => m.messageId)).size, "each its own message").toBe(3);
+      expect(new Set(one.map((m) => m.messageId)).size, "each its own message").toBe(2);
 
       /* The email carries the PDF; the WhatsApp voucher the PDF and its eight
          fields, from the same facts; the WhatsApp confirmation the link. */
@@ -314,9 +332,10 @@ describe("the voucher both ways (D27-235, D27-241)", () => {
         roomTypes: `1 x ${type}`, guests: "1 adult", officePhone: (await office()) ?? "-",
       });
       expect(voucher.data["checkInLong"]).toMatch(/^\d{2} [A-Z][a-z]{2,3} \d{4}$/);
-      expect(voucher.data).not.toHaveProperty("link");
-      expect(one.find((m) => m.kind === "booking-confirmation" && m.channel === "whatsapp")!.data["link"])
-        .toContain("/g/");
+      /* Its PDF prints the check-in link and its QR code (D27-264): the link
+         rides with it, and with the email too. */
+      expect(voucher.data["link"]).toContain("/g/");
+      expect(email.data["link"]).toContain("/g/");
 
       /* And the next minute, none of them again. */
       received = [];
@@ -338,11 +357,30 @@ describe("the voucher both ways (D27-235, D27-241)", () => {
         [hotelId, booking.get("GMW-1")])).rows;
       expect(tries).toEqual([
         { kind: "booking-confirmation", channel: "email", status: "failed", n: 3 },
-        { kind: "booking-confirmation", channel: "whatsapp", status: "sent", n: 1 },
         { kind: "booking-voucher", channel: "whatsapp", status: "sent", n: 1 },
       ]);
     } finally {
       await sql("update guests set email = null where id = $1", [guests[0]]);
+    }
+  });
+
+  /* D27-264: no day-before reminder, on WhatsApp or by email. */
+  it("owes no reminder the day before, whatever the hour", async () => {
+    await sql(`update reservations set check_in = (now() at time zone 'Asia/Kolkata')::date + 1,
+                                       check_out = (now() at time zone 'Asia/Kolkata')::date + 3
+                where id = $1`, [booking.get("GMW-1")]);
+    await sql(`insert into messages_sent (hotel_id, channel, kind, about_kind, about_id, status, sent_at)
+               values ($1, 'whatsapp', 'booking-voucher', 'reservation', $2, 'sent', now() - interval '2 days')`,
+      [hotelId, booking.get("GMW-1")]);
+    try {
+      const owed = (await sql(
+        `select kind from app.guest_messages_owed(null, 3, '00:00', '00:00', '23:59', $1)
+          where reservation_id = $2`, [hotelId, booking.get("GMW-1")])).rows;
+      expect(owed.map((r) => r.kind)).toEqual([]);
+    } finally {
+      await sql(`update reservations set check_in = (now() at time zone 'Asia/Kolkata')::date + 5,
+                                         check_out = (now() at time zone 'Asia/Kolkata')::date + 7
+                  where id = $1`, [booking.get("GMW-1")]);
     }
   });
 

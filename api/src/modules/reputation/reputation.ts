@@ -357,6 +357,16 @@ reputation.post("/:code/reviews/:id/ask", async (c) => {
       return { status: 503 as const, body: refuse(NOT_CONNECTED) };
     }
 
+    /* Settings → Messages (D27-261): review requests go only where the hotel
+       switched them on - they come later (D27-266), so no saved switch is off. */
+    const { rows: on } = await client.query(
+      `select 1 from guest_message_settings
+        where hotel_id = $1 and kind = 'review' and is_on`, [hotel.id]);
+    if (!on.length) {
+      return { status: 409 as const, body: refuse(
+        "Review requests are switched off for this hotel (Settings, Messages).") };
+    }
+
     const result = await send(client, {
       channel,
       kind: "review",

@@ -5,16 +5,16 @@ import { canSend, messageIdFor, send, type Message, type SendResult } from "../.
 import { voucherFile, whatsAppVoucher } from "./voucherDocument.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   THE TWO MESSAGES THIS SYSTEM SENDS BY ITSELF (D18-11, D18-12)
+   THE ONE MESSAGE THIS SYSTEM SENDS BY ITSELF FOR A BOOKING (D27-264)
 
-     booking-confirmation   the booking's details and the guest's own
-                            link, when a booking is confirmed
-     arrival-reminder       the same link again, the day before arrival
+     THE VOUCHER, once, when a booking is confirmed - its PDF printing the
+     guest's own check-in link and its QR code:
+       by email     kind booking-confirmation, the voucher email
+       on WhatsApp  kind booking-voucher, the CRS's approved voucher template
 
-   n8n turns these kinds into the two WhatsApp templates the owner is
-   putting to Meta (docs/go-live/whatsapp-templates.md):
-   booking-confirmation → `booking_confirmation`, arrival-reminder →
-   `stay_reminder`. The fields each template reads are all in `data`.
+   There is no separate confirmation and no day-before reminder any more
+   (the owner, D27-264); their old records stay. The fields each message
+   reads are all in `data` (docs/go-live/whatsapp-templates.md).
 
    ⚠ A SWEEP, NOT A HOOK INSIDE `makeBooking`, and both halves of that
    are deliberate.
@@ -49,14 +49,11 @@ import { voucherFile, whatsAppVoucher } from "./voucherDocument.ts";
    ══════════════════════════════════════════════════════════════════ */
 
 export const KIND = {
+  /** The voucher by EMAIL, the PDF attached (D27-264). */
   confirmation: "booking-confirmation",
-  /** The CRS's approved voucher template with the PDF, on WhatsApp, after
-      the confirmation (D27-235 2.2, D27-241): its own message, owed and
-      recorded on its own. */
+  /** The voucher on WHATSAPP: the CRS's approved voucher template with the
+      PDF (D27-235 2.2, D27-241). Each way owed and recorded on its own. */
   voucher: "booking-voucher",
-  reminder: "arrival-reminder",
-  /** The desk's Send check-in link (D27-105): not the sweep's, never owed. */
-  checkInLink: "checkin-link",
 } as const;
 
 export type MessageKind = (typeof KIND)[keyof typeof KIND];
@@ -68,10 +65,9 @@ export type MessageKind = (typeof KIND)[keyof typeof KIND];
       window: null.
    2. Three attempts and no more. A number that is wrong is wrong every
       minute, and a row per minute for ever is a log of one fault.
-   3. D22-39 (22 September): the reminder goes the day before arrival
-      (D18-11) from 10:00 on the PROPERTY's clock - not at one minute past
-      midnight, the first sweep of "the day before". And never within a
-      day of the confirmation (D22-40), which the database decides.
+   3. D22-39's reminder hour. There is no reminder since D27-264; the
+      database's function still takes the argument (MEMORY 317) and does
+      not read it.
    4. D22-42: a CATCH-UP confirmation - for a booking made before sending
       was first switched on - goes only from 09:00 until 21:00 on the
       property's clock. A booking made after is confirmed at once, at any
@@ -91,14 +87,13 @@ export const SWEEP_EVERY_MS = 60_000;
     booking is a second thing to go wrong in a loop.
 
     FOR A GROUP IT IS THE LEAD BOOKING (D22-41): several rooms booked
-    together are owed ONE confirmation and one reminder, about the group's
+    together are owed ONE voucher each way, about the group's
     room booked first, to its guest. The other rooms never appear here -
     the database counts a message about any room as the group's. */
 export interface Due {
   kind: MessageKind;
   /** The way THIS message goes, as the database decided it (D27-235): the
-      confirmation is owed once per way, the reminder one way (`channelFor`).
-      Null: nowhere to send. */
+      voucher is owed once per way. Null: nowhere to send. */
   channel: "whatsapp" | "email" | null;
   reservationId: string;
   reference: string;
@@ -122,12 +117,11 @@ export interface Due {
    (`app.guest_messages_owed`, migration "the voucher both ways"), and each
    row's `channel` is its way.
 
-   THE ONE-WAY RULE BELOW stays for the day-before reminder and the desk's
-   check-in link (D27-241, Q3) - the database asks the same rule for the
-   reminder: WhatsApp only to a booking TICKED "guest agreed to WhatsApp"
-   that has a number - Meta's own rule, that a business may start a
-   conversation only with somebody who agreed. Otherwise email where there
-   is an address.
+   THE RULE BELOW is the one the database asks too: WhatsApp only to a
+   booking TICKED "guest agreed to WhatsApp" that has a number - Meta's own
+   rule, that a business may start a conversation only with somebody who
+   agreed. Otherwise email where there is an address. The desk's button
+   (voucher.ts) asks it for its WhatsApp half.
 
    Neither, and NOTHING IS ATTEMPTED — so nothing is recorded, which is
    migration 117's own rule. The sender refuses the same way one step
@@ -174,8 +168,9 @@ export function messageFor(due: Due, link: string): Message | null {
       checkInText: asWritten(due.checkIn),
       checkOutText: asWritten(due.checkOut),
       nights: String(due.nights),
-      /* The voucher carries the PDF and its eight fields, not a link. */
-      ...(due.kind === KIND.voucher ? {} : { link }),
+      /* Printed in the voucher's PDF, as a link and a QR code (D27-264) -
+         none at all while online check-in is off (D27-266). */
+      ...(link ? { link } : {}),
     },
     about: { kind: "reservation", id: due.reservationId },
     /* NOBODY PRESSED A BUTTON. Migration 117 keeps `sent_by` null for
@@ -293,6 +288,12 @@ export async function owedNow(
    ponytail: a copy of `linkFor` in guestDoor.ts, which is not exported —
    the master's file. Import it instead once it is. */
 export async function linkFromDatabase(client: Client, due: Due): Promise<string> {
+  /* D27-266: online check-in comes later. While the hotel has it off, no
+     page is minted and the message carries no link - so the voucher prints
+     none and the email has no link line. */
+  const { rows: on } = await client.query<{ on: boolean }>(
+    "select app.online_checkin_on($1::uuid) as on", [due.hotel.id]);
+  if (!on[0]?.on) return "";
   const token = randomBytes(32).toString("base64url");
   const hash = createHash("sha256").update(token, "utf8").digest("hex");
   const { rows } = await client.query<{ made: boolean }>(
@@ -317,21 +318,23 @@ export async function claimTurn(
 
 export const NOT_OWED = "It was sent already, so it is not sent again.";
 
-/** The voucher PDF goes with the booking confirmation's email (D27-171,
-    D27-172), and on WhatsApp as the CRS's voucher template, with its eight
-    fields from the same facts as the PDF (D27-235 2.2, D27-241: the whole
-    group's rooms and guests; a dash for an office phone nobody typed). The
-    sweep and the desk's Send voucher both come through here, so it is the
-    same PDF whoever sends it. A WhatsApp voucher with no PDF is not sent. */
+/** The voucher PDF goes with the voucher email (D27-171, D27-172), and on
+    WhatsApp as the CRS's voucher template, with its eight fields from the
+    same facts as the PDF (D27-235 2.2, D27-241: the whole group's rooms and
+    guests; a dash for an office phone nobody typed). Both PDFs print the
+    message's own check-in link and its QR code (D27-264). The sweep and the
+    desk's buttons all come through here, so it is the same PDF whoever sends
+    it. A WhatsApp voucher with no PDF is not sent. */
 export async function withVoucher(client: Client, message: Message): Promise<Message | null> {
   if (message.file) return message;
   const id = message.about?.id ?? "";
+  const link = message.data?.["link"] ?? null;
   if (message.kind === KIND.voucher) {
-    const voucher = message.channel === "whatsapp" ? await whatsAppVoucher(client, id) : null;
+    const voucher = message.channel === "whatsapp" ? await whatsAppVoucher(client, id, link) : null;
     return voucher ? { ...message, file: voucher.file, data: { ...message.data, ...voucher.fields } } : null;
   }
   if (message.kind !== KIND.confirmation || message.channel !== "email") return message;
-  const file = await voucherFile(client, id);
+  const file = await voucherFile(client, id, link);
   return file ? { ...message, file } : message;
 }
 
@@ -402,8 +405,7 @@ export async function runOnce(
 
   for (const booking of now.slice(0, pace)) {
     try {
-      /* The voucher carries no link: none is minted for it. */
-      const link = booking.kind === KIND.voucher ? "" : await run((client) => makeLink(client, booking));
+      const link = await run((client) => makeLink(client, booking));
       const message = messageFor(booking, link);
       if (!message) continue;
       result.attempted += 1;
@@ -431,7 +433,12 @@ export const jobs = {
     if (timer) return;
     timer = setInterval(() => {
       if (running) return;
+      /* Then the tax invoices and the night-audit reports (Settings phase 6,
+         D27-261) - loaded when the timer runs, so those files may import this
+         one without a loop. */
       running = runOnce((fn) => withUser("", fn))
+        .then(async () => (await import("./invoices.ts")).runInvoices())
+        .then(async () => (await import("./reportEmails.ts")).runReportEmails())
         .catch((error) => console.error("[guest-messaging] sweep failed",
           error instanceof Error ? error.message : error))
         .finally(() => { running = null; });

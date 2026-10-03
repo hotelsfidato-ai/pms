@@ -13,6 +13,7 @@ import {
 import { CreditNoteFlow } from "@/modules/finance/flows/CreditNoteFlow";
 import { getInvoice } from "@/modules/finance/data/billing";
 import { placeAfter } from "@/modules/finance/place";
+import { SendInvoice } from "@/modules/guest-messaging";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PRINTED TAX INVOICE
@@ -177,6 +178,7 @@ export default function InvoicePage() {
                 total={moneyPrecise(data.total)}
               />
             )}
+            {!isCreditNote && !data.creditedBy && <SendInvoice hotelId={hotelId} number={data.number} />}
             <Button onClick={() => window.print()}>
               <Printer className="size-4" />
               Print

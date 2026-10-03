@@ -148,7 +148,7 @@ describe("which booking is due", () => {
     });
   });
 
-  it("sends the confirmation and the reminder, each to its own booking", async () => {
+  it("sends the voucher email and the WhatsApp voucher, each to its own booking", async () => {
     connected();
     const link = aLinkMaker();
     const post = aReceiver();
@@ -157,14 +157,14 @@ describe("which booking is due", () => {
       NOWHERE,
       async () => [
         aBooking({ kind: KIND.confirmation, reference: "FH-2609-5001" }),
-        aBooking({ kind: KIND.reminder, reference: "FH-2609-5002" }),
+        aBooking({ kind: KIND.voucher, reference: "FH-2609-5002" }),
       ],
       link.make, post.send,
     );
 
     expect(out).toEqual({ due: 2, attempted: 2, sent: 2, nowhereToSend: 0, waiting: 0 });
     expect(post.seen.map((m) => m.kind))
-      .toEqual(["booking-confirmation", "arrival-reminder"]);
+      .toEqual(["booking-confirmation", "booking-voucher"]);
   });
 });
 
@@ -212,17 +212,29 @@ describe("which way it goes", () => {
     expect(new Set(post.seen.map((m) => m.id)).size, "one id per way").toBe(2);
   });
 
-  /* D27-241 (Q1): the CRS's voucher template with the PDF is a second
-     WhatsApp, after the confirmation - it carries no link, so none is made. */
-  it("mints no link for the WhatsApp voucher, and sends it as its own kind", async () => {
+  /* D27-264: the voucher IS the confirmation, and its PDF prints the guest's
+     check-in link and its QR code - so the voucher gets the link too. */
+  it("mints the guest's link for the WhatsApp voucher, which prints it", async () => {
     connected();
     const link = aLinkMaker();
     const post = aReceiver();
     await runOnce(NOWHERE, async () => [aBooking({ kind: KIND.voucher, reference: "FH-V" })], link.make, post.send);
 
-    expect(link.asked).toEqual([]);
+    expect(link.asked).toEqual(["FH-V"]);
     expect(post.seen[0]).toMatchObject({ kind: "booking-voucher", channel: "whatsapp" });
-    expect(post.seen[0]!.data).not.toHaveProperty("link");
+    expect(post.seen[0]!.data?.["link"]).toBe("http://localhost:5173/g/token-for-FH-V");
+  });
+});
+
+/* D27-266: with online check-in off, no page is minted (the link maker
+   answers nothing) and the message carries no link at all - not an empty one. */
+describe("online check-in off", () => {
+  it("sends the voucher with no link key", async () => {
+    connected();
+    const post = aReceiver();
+    await runOnce(NOWHERE, async () => [aBooking({ kind: KIND.voucher })], async () => "", post.send);
+    expect(post.seen).toHaveLength(1);
+    expect(post.seen[0]!.data && "link" in post.seen[0]!.data).toBe(false);
   });
 });
 

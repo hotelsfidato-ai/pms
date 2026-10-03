@@ -267,6 +267,9 @@ guestMessages.get("/:code/guest-messages", async (c) => {
          differently without a deploy. */
       connected: canSend(),
       notConnected: canSend() ? null : NOT_CONNECTED,
+      /* D27-266: the desk's Send check-in link shows only where it is on. */
+      onlineCheckIn: (await client.query<{ on: boolean }>(
+        "select app.online_checkin_on($1::uuid) as on", [hotelId])).rows[0]?.on ?? false,
       messages: rows.map(asMessage),
       unreachable: await unreachableAt(client, hotelId, party),
     };

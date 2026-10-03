@@ -56,7 +56,8 @@ const book = async (name: string, over: Record<string, unknown> = {}) => {
 
 const recorded = async (id: string) => (await sql(
   `select status, channel, sent_by::text from messages_sent
-    where about_kind = 'reservation' and about_id = $1 and kind = 'checkin-link'`,
+    where about_kind = 'reservation' and about_id = $1
+      and kind in ('booking-confirmation', 'booking-voucher')`,
   [id])).rows as Array<{ status: string; channel: string; sent_by: string | null }>;
 
 beforeAll(async () => {
@@ -74,6 +75,9 @@ beforeAll(async () => {
   await sql("delete from staff_hotels where staff_id = $1", [clerk]);
   await sql("insert into staff_hotels (staff_id, hotel_id, role) values ($1, $2, 'front_desk')",
     [clerk, hotelId]);
+  /* Online check-in on, for the link tests; off is the default (D27-266). */
+  await sql(`insert into guest_message_settings (hotel_id, kind, is_on) values ($1, 'online-checkin', true)
+             on conflict (hotel_id, kind) do update set is_on = true`, [hotelId]);
 
   server = createServer((req, res) => {
     let raw = "";
@@ -112,19 +116,24 @@ afterAll(async () => {
   } finally {
     await sql("alter table guests enable trigger guests_no_delete");
   }
+  await sql("delete from guest_message_settings where hotel_id = $1 and kind = 'online-checkin'", [hotelId]);
   await sql("delete from staff_hotels where staff_id = $1", [clerk]);
   await sql("update staff set is_active = false where id = $1", [clerk]);
   await closePool();
 });
 
 describe("Send check-in link (D27-105)", () => {
-  it("sends the booking's own page the guest's way, with the clerk's name", async () => {
+  /* D27-264: the button resends the VOUCHER, which carries the check-in link
+     and its QR code in its PDF - no checkin_link template any more. */
+  it("resends the voucher, with the booking's own page, the guest's way, with the clerk's name", async () => {
     const b = await book("Sent");
     const res = await call(clerk, "POST", `/stays/${b.id}/checkin-link`, {});
     expect(res.status, await res.clone().text()).toBe(200);
 
     expect(received).toHaveLength(1);
-    expect(received[0]).toMatchObject({ kind: "checkin-link", channel: "email", sentBy: `${TAG} Desk` });
+    expect(received[0]).toMatchObject({ kind: "booking-confirmation", channel: "email", sentBy: `${TAG} Desk` });
+    const file = (received[0] as unknown as { file?: { base64: string } }).file;
+    expect(Buffer.from(file!.base64, "base64").subarray(0, 5).toString("latin1"), "the voucher PDF").toBe("%PDF-");
     expect(received[0]!.data.link).toMatch(/\/g\/[A-Za-z0-9_-]{40,}$/);
     expect(received[0]!.data.reference).toBe(b.reference);
     expect(await recorded(b.id)).toEqual([{ status: "sent", channel: "email", sent_by: clerk }]);
@@ -171,15 +180,15 @@ describe("Send check-in link (D27-105)", () => {
     const res = await call(clerk, "POST", `/stays/${b.id}/confirmation`, {});
     expect(res.status, await res.clone().text()).toBe(200);
     const sent = () => received.filter((m) => (m as { action?: string }).action !== "mark");
+    /* D27-264: the voucher both ways, and no separate confirmation. */
     expect(sent().map((m) => `${m.kind} ${m.channel}`).sort()).toEqual([
-      "booking-confirmation email", "booking-confirmation whatsapp", "booking-voucher whatsapp",
+      "booking-confirmation email", "booking-voucher whatsapp",
     ]);
     expect(sent().every((m) => m.sentBy === `${TAG} Desk`), "the clerk's name on each").toBe(true);
     expect((await sql(
       `select kind, channel, status, sent_by::text from messages_sent
         where about_kind = 'reservation' and about_id = $1 order by 1, 2`, [b.id])).rows).toEqual([
       { kind: "booking-confirmation", channel: "email", status: "sent", sent_by: clerk },
-      { kind: "booking-confirmation", channel: "whatsapp", status: "sent", sent_by: clerk },
       { kind: "booking-voucher", channel: "whatsapp", status: "sent", sent_by: clerk },
     ]);
 
@@ -187,6 +196,21 @@ describe("Send check-in link (D27-105)", () => {
     const again = await call(clerk, "POST", `/stays/${b.id}/confirmation`, {});
     expect(again.status).toBe(409);
     expect(sent(), "nothing goes twice").toEqual([]);
+  });
+
+  /* D27-266: while online check-in is off, the voucher goes with no link -
+     and no guest page is minted for it. */
+  it("sends the voucher with no check-in link while online check-in is off", async () => {
+    await sql("update guest_message_settings set is_on = false where hotel_id = $1 and kind = 'online-checkin'", [hotelId]);
+    try {
+      const b = await book("No link");
+      expect((await call(clerk, "POST", `/stays/${b.id}/confirmation`, {})).status).toBe(200);
+      expect(received).toHaveLength(1);
+      expect("link" in received[0]!.data, "no link").toBe(false);
+      expect((await sql("select 1 from guest_links where reservation_id = $1", [b.id])).rows).toHaveLength(0);
+    } finally {
+      await sql("update guest_message_settings set is_on = true where hotel_id = $1 and kind = 'online-checkin'", [hotelId]);
+    }
   });
 
   it("says so, and records nothing, when sending is switched off", async () => {

@@ -55,8 +55,8 @@ export type { ChargeToPost } from "./postings.ts";
    a refusal as {ok:false, reason} (MEMORY 243). */
 export { takeFolioPayment, postFolioCharge, reverseFolioCharge, editFolioCharge } from "./postings.ts";
 export type { PaymentToTake, Payer } from "./postings.ts";
-export { issueFolioInvoice } from "./invoices.ts";
-export type { InvoiceRecipient } from "./invoices.ts";
+export { issueFolioInvoice, invoiceFacts } from "./invoices.ts";
+export type { InvoiceRecipient, InvoiceFacts } from "./invoices.ts";
 export { folioBalance } from "./folios.ts";
 /* D27-242 (Q4): what companies paid, for the accountant's day book. */
 export { companyReceipts, type CompanyReceipt } from "./companyPayments.ts";

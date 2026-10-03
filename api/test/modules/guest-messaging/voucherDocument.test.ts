@@ -149,6 +149,7 @@ describe("the voucher's blocks (D27-215)", () => {
       policies: ["This booking carries no cancellation terms.", "Check-in from 14:00; check-out by 11:00."],
       instagram: null,
       qr: null,
+      checkIn: null,
       footer: { name: "TEST GROUP", address: "1 Test Road",
         lines: ["+91 00000 00000", "desk@example.test", "GSTIN 27AAAAA0000A1Z5"] },
     });
@@ -265,6 +266,24 @@ describe("the Instagram QR code", () => {
     /* The modules are many small squares: the page's drawing grows by them. */
     expect(withCode.byteLength).toBeGreaterThan(without.byteLength + 500);
     expect((Buffer.from(withCode).toString("latin1").match(/\/Type \/Page\b(?!s)/g) ?? []).length).toBe(1);
+  });
+});
+
+/* D27-264: the voucher IS the confirmation, and it carries the guest's own
+   check-in page - the link written out and its QR code. */
+describe("the check-in link in the voucher", () => {
+  const LINK = "https://pms.fidatohotels.com/g/a-made-up-token-0123456789abcdefghijklmnop";
+
+  it("is on the voucher only when the message carries one (the desk's View voucher has none)", () => {
+    expect(voucherBlocks({ ...facts([room()]), checkInLink: LINK }).checkIn).toBe(LINK);
+    expect(voucherBlocks(facts([room()])).checkIn).toBeNull();
+  });
+
+  it("is drawn in the PDF with its QR code, and the voucher stays one page", async () => {
+    const withLink = await voucherPdf({ ...facts([room()]), checkInLink: LINK });
+    const without = await voucherPdf(facts([room()]));
+    expect(withLink.byteLength).toBeGreaterThan(without.byteLength + 500);
+    expect((Buffer.from(withLink).toString("latin1").match(/\/Type \/Page\b(?!s)/g) ?? []).length).toBe(1);
   });
 });
 

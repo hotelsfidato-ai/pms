@@ -10,9 +10,8 @@ secret in the PMS server's settings.
 ```
 pms-send-crs.json   into the CRS's n8n     EVERY guest message: every email, and
                                            on WhatsApp the booking voucher, the
-                                           check-in code, the check-in link, the
-                                           stay reminder and the review request
-                                           - part B below
+                                           check-in code, the tax invoice and
+                                           the review request - part B below
 
 pms-id-photos-crs.json  into the CRS's n8n  guests' ID photos, ENCRYPTED, kept in
                                            Google Drive (D27-209) - part D below;
@@ -36,30 +35,22 @@ from its own settings.
 1. **The WhatsApp number on Meta's Cloud API**, and its **Phone number ID**
    (Meta → WhatsApp Manager → Phone numbers). The CRS n8n's WhatsApp login
    must be for the Meta app that owns this number.
-2. **Five templates, approved by Meta, in English (`en`)** (WhatsApp Manager →
+2. **The templates, approved by Meta, in English (`en`)** (WhatsApp Manager →
    Message templates). The words are the drafts in
    `docs/go-live/whatsapp-templates.md`:
 
    | Template | Category | For |
    |---|---|---|
-   | `booking_confirmation` | Utility | the booking voucher |
-   | `stay_reminder` | Utility | the day before arrival |
+   | the CRS's `reservation_confirmation` (already approved) | Utility | the booking voucher with its PDF (`VOUCHER_TEMPLATE`, below) |
    | `guest_page_code` | Authentication (Copy code, 10 minutes) | the check-in code |
-   | `checkin_link` | Utility | the desk's "Send check-in link" - words below |
    | `review_request` | Meta decides | the review request |
+   | `tax_invoice` | Utility | the tax invoice, its PDF (`INVOICE_TEMPLATE`, below) |
 
-   `checkin_link` (draft, yours to change):
-
-   ```
-   Hello {{1}}, here is your check-in page for {{2}}, arriving {{3}}.
-
-   Booking: {{4}}
-
-   Fill in your details before you arrive: {{5}}
-   ```
-
-   Its fields, in order: `data.guestName`, `data.hotelName`,
-   `data.checkInText`, `data.reference`, `data.link`.
+   **Not used since D27-264**: `booking_confirmation`, `stay_reminder` and
+   `checkin_link`. The voucher is the confirmation, the check-in link is in
+   its PDF, and there is no day-before reminder. Do not submit them.
+   **D27-266: nothing new goes to Meta for now** - `booking_voucher` is on
+   hold, `review_request` later, `tax_invoice` pending the owner.
 
    A template approved under another name or language: change `WHATSAPP` and
    `LANGUAGE` at the top of the workflow's **Read the message** node. Nothing
@@ -109,12 +100,16 @@ In the CRS's n8n (the CRS's **Admin → Integrations** names its address):
      sentence the desk sees. WhatsApp messages do not need it.
    - `WHATSAPP` / `LANGUAGE`, only if Meta approved other names or another
      language.
-   - **`VOUCHER_TEMPLATE`** (D27-235, D27-241) - the exact name of the CRS's
-     **already approved voucher template** (the one with the PDF and eight
-     fields), as **WhatsApp Manager → Message templates** shows it; and
-     `VOUCHER_LANGUAGE` if it was approved in other than `en`. Until it is
-     filled in, the voucher PDF does not go on WhatsApp (the desk sees why);
-     the confirmation on WhatsApp and the email with the PDF still go.
+   - `INVOICE_TEMPLATE` is already `tax_invoice` (D27-252): the PMS's own new
+     template, its text in `docs/go-live/whatsapp-templates.md` section 6. Change
+     it only if Meta approved it under another name. It uses the same
+     **Upload PDF to Meta** node as the voucher.
+   - **`VOUCHER_TEMPLATE`** (D27-235, D27-241, D27-266) - already
+     `reservation_confirmation`, the CRS's approved voucher template, with
+     `VOUCHER_LANGUAGE` `en`, as the owner runs it live. Emptied, the voucher
+     PDF does not go on WhatsApp (the desk sees why); the email still goes.
+   - `FROM` and `REPLY_TO` are already the CRS's mailbox,
+     `Fidato Hotels <crs@fidatohotels.com>` (D27-266).
    - The words of each email are the `EMAILS` drafts just below - change them
      there.
    - There is no list of hotels to fill in: the hotel's name comes with each
@@ -209,12 +204,13 @@ should not be needed.
   own saved data) and answers a repeat "already sent" without sending, so a
   retry after a timeout never reaches the guest twice. A message that failed
   is not remembered: the PMS's next try really tries.
-- **The voucher (D27-171, D27-172)**: the booking confirmation's email
-  carries the PMS's voucher, a PDF in the CRS's design, made by the PMS from
-  the booking's own figures; this workflow only writes the short letter
-  around it (in the CRS's colours) and attaches it. On WhatsApp the voucher
-  is the `booking_confirmation` text with the check-in link; a PDF on
-  WhatsApp needs a template with a document header, and comes later.
+- **The voucher (D27-171, D27-172, D27-264)** is the confirmation, sent
+  once. Its email carries the PMS's voucher, a PDF in the CRS's design, made
+  by the PMS from the booking's own figures and printing the guest's check-in
+  link and its QR code; this workflow only writes the short letter around it
+  (in the CRS's colours) and attaches it. On WhatsApp it is the CRS's voucher
+  template with the same PDF. The desk's "Send check-in link" sends the
+  voucher again.
 - **The check-in code** goes the way the guest chooses on their page
   (D27-207). On WhatsApp it is the `guest_page_code` template: the six digits
   in the message and in its **Copy code** button; Meta writes that template's
