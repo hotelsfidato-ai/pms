@@ -770,7 +770,7 @@ admin.put("/admin/staff/:id/home-screen", async (c) => {
 /* Somebody's sign-ins, 90 days: when, and on what device (D27-243 5.4). The
    owner reads anybody's; an Admin the people at a hotel where they hold Admin
    (D27-245 Q-B). The address is kept and never sent: the function does not
-   return it. Who may is `app.sign_ins_of`'s answer. */
+   return it. Who may is `app.devices_of` (195)'s answer. */
 admin.get("/admin/staff/:id/sign-ins", async (c) => {
   const id = c.req.param("id");
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.json({ error: "No such person." }, 404);
@@ -782,7 +782,7 @@ admin.get("/admin/staff/:id/sign-ins", async (c) => {
       }>(
         `select id::text, signed_in::text as at, device,
                 signed_out_at::text as "signedOutAt", signed_out_by as "signedOutBy"
-           from app.sign_ins_of($1)`, [id])).rows);
+           from app.devices_of($1)`, [id])).rows);
     return c.json({ signIns });
   } catch (error) {
     if ((error as { code?: string }).code === "42501") {
