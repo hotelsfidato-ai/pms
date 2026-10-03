@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 import { dateLong, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { toast, Button, StatusPill } from "@/components/ui";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, type MenuItem, type CashId } from "@/modules/pos/data/till";
+import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, isBarDish, type MenuItem, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
@@ -1048,6 +1048,7 @@ export default function TerminalPage() {
       </footer>
       <DishDialog
         item={asking}
+        bar={isBarDish(menu.data, asking?.id)}
         open={asking !== null}
         onOpenChange={(o) => { if (!o) setAsking(null); }}
         onAdd={(id, qty, text, variationId, addonIds, moreChoiceIds) =>
