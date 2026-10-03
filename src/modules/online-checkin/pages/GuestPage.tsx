@@ -28,6 +28,7 @@ import { TableBookingSection } from "@/modules/online-checkin/TableBooking";
 import { DigiLockerButton } from "@/modules/online-checkin/DigiLockerButton";
 import { WakeUpSection } from "@/modules/online-checkin/WakeUpSection";
 import { GallerySection } from "@/modules/online-checkin/GallerySection";
+import { AboutTheHotel } from "@/modules/online-checkin/AboutTheHotel";
 import { BillPrint } from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -372,6 +373,7 @@ function Behind(
         <WakeUpSection token={token} checkIn={view.booking.checkIn} checkOut={view.booking.checkOut}
           onUnlockGone={onUnlockGone} />
       )}
+      <AboutTheHotel token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
       <GallerySection token={token} hotel={view.hotel.name} onUnlockGone={onUnlockGone} />
     </>
   );

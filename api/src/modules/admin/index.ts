@@ -5,6 +5,7 @@ import { admin } from "./admin.ts";
 import { commissioning } from "./commissioning.ts";
 import { groupSettings } from "./groupSettings.ts";
 import { gallery } from "./gallery.ts";
+import { property } from "./property.ts";
 import { bankDetails } from "./bankDetails.ts";
 import { systemHealth } from "./systemHealth.ts";
 import { activity } from "./activity.ts";
@@ -19,6 +20,7 @@ export const mounts: readonly Mount[] = [
   ["/api/hotels", commissioning],
   ["/api/hotels", groupSettings],
   ["/api/hotels", gallery],
+  ["/api/hotels", property],
   ["/api/hotels", bankDetails],
   ["/api/hotels", systemHealth],
   /* D27-243 (5.1): the full activity log. */

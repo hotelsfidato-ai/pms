@@ -164,6 +164,9 @@ const GROUP_LOGO = grant("room_config", "edit", "Changing the group's logo");
 const HOTEL_LOGO = grant("room_config", "edit", "Changing the hotel's logo");
 /* A hotel's photo gallery (D27-243): the logo's three, at that hotel. */
 const HOTEL_GALLERY = grant("room_config", "edit", "Changing the hotel's photos");
+/* The property's profile (D27-257): the logo's three; the amenities LIST is
+   narrowed to the owner and an Admin by property.ts and its table's policy. */
+const PROPERTY = grant("room_config", "edit", "Changing the property's profile");
 /* What the voucher prints (D27-215): a hotel's bank details and the group's
    office details - the same three, and for the bank details the route and the
    table ask app.manages_hotel behind it (migration 169). */
@@ -447,6 +450,14 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/gallery/:id`]: HOTEL_GALLERY,
   [`PUT ${H}/gallery/order`]: HOTEL_GALLERY,
   [`DELETE ${H}/gallery/:id`]: HOTEL_GALLERY,
+  [`PUT ${H}/registrations`]: PROPERTY,
+  [`PUT ${H}/texts/:kind`]: PROPERTY,
+  [`PUT ${H}/child-ages`]: PROPERTY,
+  [`PUT ${H}/amenities/order`]: PROPERTY,
+  [`PUT ${H}/amenities/:id`]: PROPERTY,
+  [`POST ${H}/amenities`]: PROPERTY,
+  [`PATCH ${H}/amenities/:id`]: PROPERTY,
+  [`DELETE ${H}/amenities/:id`]: PROPERTY,
   [`PUT ${H}/bank-details`]: BANK_DETAILS,
   [`DELETE ${H}/bank-details`]: BANK_DETAILS,
   [`PUT ${H}/group/office`]: GROUP_OFFICE,
@@ -667,6 +678,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/group`]: anyone("the group's name and logo, on every document"),
   [`GET ${H}/gallery`]: anyone("the hotel's photos, public on the guest's page"),
   [`GET ${H}/gallery/:id`]: anyone("one of the hotel's photos, public on the guest's page"),
+  [`GET ${H}/property-profile`]: anyone("the property's numbers, texts and child ages"),
+  [`GET ${H}/amenities`]: anyone("the amenities list and this hotel's"),
   [`GET ${H}/bank-details`]: own("admin/bankDetails.ts: app.manages_hotel - the hotel's owner, GM or Admin, or a group administrator (D27-215)"),
   [`GET ${H}/tax`]: anyone("the GST rates in use: neither a guest nor money taken"),
   [`GET ${H}/tax/:kind/rate`]: anyone("the GST rate for an amount"),
