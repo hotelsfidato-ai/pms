@@ -162,16 +162,20 @@ describe("the group's office details on Settings", () => {
    Settings opens for THAT hotel whichever one was open. */
 describe("Settings, opened for a named hotel", () => {
   /* The bell's link still says taxes-and-billing (api notifications.ts): since
-     D27-220 it opens Rates and taxes, where the bank details are, for the
-     same hotel. */
-  it("reads that hotel's bank details, on the tab the address names", async () => {
+     D27-249 the top bar takes the hotel and the console opens the page the
+     tab's things are on. The bank details are under Money now, and the GST
+     card's page is where the tab was. */
+  it("reads that hotel's bank details, from the page the address names", async () => {
     as("group-admin");
     serve({ "/api/hotels/AGR/bank-details": () => ({ bank: BANK }) });
     go("/h/AGR/settings/taxes-and-billing");
     render(<App />);
-    expect(await screen.findByRole("heading", { level: 1, name: "Settings" })).toBeTruthy();
-    expect((await screen.findByRole("tab", { name: "Rates and taxes" })).getAttribute("aria-selected")).toBe("true");
-    expect(window.location.pathname).toBe("/h/AGR/settings/rates-and-taxes");
+    expect(await screen.findByRole("heading", { level: 1, name: "Taxes" })).toBeTruthy();
+    expect(window.location.pathname).toBe("/settings/rates/taxes");
+    cleanup();
+    go("/settings/money/bank");
+    render(<App />);
+    expect(await screen.findByRole("heading", { level: 1, name: "Bank details" })).toBeTruthy();
     await waitFor(() => expect(vi.mocked(apiModule.api).mock.calls.map(([path]) => path))
       .toContain("/api/hotels/AGR/bank-details"));
     expect(await screen.findByText("TEST0001234")).toBeTruthy();

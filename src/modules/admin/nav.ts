@@ -13,21 +13,17 @@ export const nav: ServiceNavEntry[] = [
   /* D27-213, D27-214: ONE place for settings. "Settings" replaces
      Administration and its six children; everything they held is on a tab of
      it. Owner, Admin and GM (`setting`), as Settings and Configuration were. */
-  { section: "system", order: 20,
+  /* D27-249: Settings is its own space, reached from the top bar's switcher,
+     so it leaves the menu; its address and Find a screen stay. */
+  { section: "system", order: 20, listed: false,
     label: "Settings", to: "/settings", icon: Settings, resource: "setting", matchPrefix: true,
     keywords: ["configuration", "administration", "setup", "modules", "property profile", "address",
                "GSTIN", "check-in time", "check-out time", "front desk hours", "group name", "logo",
                "FSSAI", "house policies", "office details", "Instagram", "reservations contact"] },
-  /* The tab other screens point at by address (a refusal's "set it under…",
-     the restaurant's checklist): an entry of its own, so the link is offered
-     only to somebody who may open it, and Find a screen "GST" or "bank"
-     lands on it. D27-220 renamed the tab (Taxes and billing is Rates and
-     taxes); the ADDRESS stays the old one, which Settings redirects, because
-     the till's setup (pos/pages/Setup.tsx) links it and `mayReach` offers a
-     link with no entry to everybody. Move both together. */
-  { section: "system", order: 21, listed: false,
-    label: "Rates and taxes", to: "/settings/taxes-and-billing", icon: Settings, resource: "setting",
-    keywords: ["GST", "VAT", "tax", "tax rules", "bank details", "IFSC", "UPI"] },
+  /* "Rates and taxes" (/settings/taxes-and-billing) went with the tabs
+     (D27-249): the console's Taxes and Bank details pages are in Find a
+     screen under "GST" and "bank" (console.settings.ts), and the till's
+     setup links the page itself. The old address redirects. */
   /* Off the sidebar, on their Settings tab and in Find a screen - nothing
      lost (the owner's rule of 15 September, and D27-214). */
   { section: "system", order: 22, listed: false,

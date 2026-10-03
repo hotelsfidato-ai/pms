@@ -50,35 +50,25 @@ properties and people.
 |---|---|---|---|
 | Properties | `/properties` | `pages/Properties.tsx` (`PropertiesPage`) | none |
 | People | `/people` | `pages/People.tsx` | none |
-| Settings | `/settings`, `/settings/:tab`, `/h/:code/settings/:tab` | `pages/Settings.tsx` (five tabs; resource `setting`: owner, Admin, GM) | none |
+| Settings console | `/settings/<group>/<slug>`, its own space (D27-249) | `pages/Settings.tsx` opens the page registered at the address (`src/components/app/settingsConsole.ts`); phase 1's stand-ins are `console.settings.ts` + `pages/ConsolePages.tsx` (resource `setting`: owner, Admin, GM; then each page's own rule) | none: reached by the top bar's space switcher |
 | — (Find a screen) Users | `/admin/users` | `pages/Admin.tsx` (`UsersPage`) | none |
 | — (Find a screen, and Settings › People) Roles and permissions | `/admin/roles` | `pages/Admin.tsx` (`RolesPage`) | none |
 | — (Find a screen) Integrations | `/admin/integrations` | `pages/Admin.tsx` (`IntegrationsPage`) | none |
 | — (Find a screen, and Settings › People) Audit log | `/admin/audit-log` | `pages/Admin.tsx` (`AuditLogPage`) | none |
 | — (Find a screen, and Settings › People) Activity | `/admin/activity` | `pages/Activity.tsx`: every change `audit_log` holds (D27-243 5.1); "Across the group" for the owner and an Admin (D27-245 Q-A); a guest's details read "changed", masked on the server | none |
 | — (Find a screen, and Settings › People) Sign-ins | `/admin/sign-ins` | `pages/SignIns.tsx`: a person's sign-ins, 90 days, time and device (5.4); owner and Admin only (Q-B) | none |
-| — (Find a screen) Rates and taxes | `/settings/taxes-and-billing` (redirects to `/settings/rates-and-taxes`) | the tab; a menu entry of its own so "GST" or "bank" finds it and a pointer to it is offered only to who may open it. The address is the old one because the till's setup links it and `mayReach` offers a link with no entry to everybody; move both together | none |
-| — (redirects) | `/admin/settings` → `/settings`; `/admin/configuration` → `/settings/taxes-and-billing`; the eight tabs of 30 September → the tab their things moved to (`MOVED` in `pages/Settings.tsx`) | — | old links, kept working |
+| — (redirects) | `/settings`, a bare group and every old tab (`/settings/:tab`, `/h/:code/settings/:tab`, the five of 1 October and the eight of 30 September) → its console page (`MOVED` in `pages/Settings.tsx`); `/admin/settings` → `/settings`; `/admin/configuration` → `/settings/rates/taxes` | — | old links, kept working |
 | — (Find a screen) Console | `/admin/console` | `pages/Console.tsx` | none — development builds only |
 | System health | `/admin/system-health` | `pages/SystemHealth.tsx` | none — the owner and an administrator (`role`) |
 | — (not in the menu) one property | `/properties/:code` | `pages/Property.tsx` | reached from Properties |
 | — (redirect) | `/admin/properties` → `/properties` | — | an old link, kept working |
 
 - Properties and People sit in the menu's **Across properties** section;
-  Settings and System health in **System**. "Administration" and its children
+  System health in **System**; Settings is a space of its own (the top bar's
+  switcher, D27-249). "Administration" and its children
   left the sidebar on 30 September (D27-214): `listed: false`, so Find a
   screen still reaches them (Roles and the Audit log also from Settings › People).
-- **Settings' tabs** (`SETTINGS_TABS`, the tab is in the address; D27-220):
-  - **Property**: the profile (a grid of label-over-value cells), this hotel's
-    logo, its photos (`HotelGalleryCard`, D27-243), FSSAI, the group's name,
-    logo and office details.
-  - **Rates and taxes**: finance's GST card, bank details, and links to Rates,
-    Room types, Cancellation terms and Booking sources.
-  - **Operations**: inventory's front desk card, house policies, and for the
-    owner and an administrator the Modules and New booking switches.
-  - **People**: links to People, Roles and permissions, Audit log.
-  - **Connections**: links to Channel manager, CRS bookings, Guest messages,
-    Reviews, Online check-in.
+- **The Settings console** (D27-249, D27-256): a navy menu of nine groups (Property, Rooms, Rates and tax, Money, Lists, Front desk, Messages, People and security, Modules and connections) and "Back to front office"; a group is drawn only when it holds something for the person. Phase 1 re-homed the five tabs unchanged (`console.settings.ts`): Property › Profile (the profile, FSSAI, and the commissioning checklist while something is missing), Logo and photos, Policies, Group; Rates and tax › Taxes; Money › Bank details; Front desk › Times and rules (the front desk card and rules); People and security › Signing in; Modules and connections › Modules (owner and Admin). The screens the tabs linked are links (↗) under the menu's own names. A phase takes a stand-in over by registering the same group and slug in its own `*.settings.ts`.
 
   Not drawn, because nobody can change them: the code, currency, time zone
   (Properties, every address and invoice number; currency and time zone are

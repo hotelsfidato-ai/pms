@@ -4,6 +4,7 @@ import { useUi } from "@/lib/ui";
 import { NotificationBell } from "./NotificationBell";
 import { AccountMenu } from "./AccountMenu";
 import { BusinessDateBehind } from "./BusinessDateBehind";
+import { SpaceSwitcher } from "./SpaceSwitcher";
 
 /* ══════════════════════════════════════════════════════════════════
    TOP BAR
@@ -74,6 +75,9 @@ export function TopBar() {
             than no control: somebody presses it, gets the nav, and learns
             not to trust the header. It comes back when there is a panel
             behind it. */}
+
+        {/* D27-249: from 640px; on a phone it is in the menu drawer. */}
+        <SpaceSwitcher className="hidden sm:flex mr-1.5" />
 
         <NotificationBell />
 

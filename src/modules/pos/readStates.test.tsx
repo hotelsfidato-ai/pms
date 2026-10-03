@@ -127,7 +127,7 @@ describe("the till's reads", () => {
 
 const KITCHEN = `/api/hotels/${HOTEL}/kitchen`;
 const kitchenAt = () =>
-  renderAt(`/h/${HOTEL}/kitchen`, "/h/:code/kitchen", <KitchenPage />);
+  renderAt(`/pos/${HOTEL}/kitchen`, "/pos/:code/kitchen", <KitchenPage />);
 
 describe("the Kitchen screen", () => {
   it("has a heading and a tab title that say what the menu says (POS-3)", async () => {
@@ -183,7 +183,7 @@ describe("the Kitchen screen", () => {
 
 const DAY_END = `/api/hotels/${HOTEL}/till/day-end`;
 const dayEndAt = () =>
-  renderAt(`/h/${HOTEL}/till/day-end`, "/h/:code/till/day-end", <DayEndPage />);
+  renderAt(`/pos/${HOTEL}/day-end`, "/pos/:code/day-end", <DayEndPage />);
 
 const A_DAY: DayEnd = {
   outlet: { code: "REST", name: "Fidato Restaurant" },
@@ -245,7 +245,7 @@ describe("the Terminal", () => {
       [`/api/hotels/${HOTEL}/till/orders`]: () =>
         ({ businessDate: "2026-08-25", orders: [] }),
     });
-    renderAt(`/h/${HOTEL}/till/terminal`, "/h/:code/till/terminal", <TerminalPage />);
+    renderAt(`/pos/${HOTEL}/terminal`, "/pos/:code/terminal", <TerminalPage />);
 
     expect(await screen.findByText("0 open · Tuesday, 25 August 2026")).toBeTruthy();
     expect(screen.queryByText(/2026-08-25/)).toBeNull();
@@ -253,7 +253,7 @@ describe("the Terminal", () => {
 
   it("does not say 'No outlet is configured' when the outlets failed to load", async () => {
     server({});
-    renderAt(`/h/${HOTEL}/till/terminal`, "/h/:code/till/terminal", <TerminalPage />);
+    renderAt(`/pos/${HOTEL}/terminal`, "/pos/:code/terminal", <TerminalPage />);
 
     expect(await screen.findByText("The outlets did not load")).toBeTruthy();
     expect(screen.queryByText("No outlet is configured")).toBeNull();

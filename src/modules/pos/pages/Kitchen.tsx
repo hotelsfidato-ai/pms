@@ -213,7 +213,7 @@ export default function KitchenPage() {
         <KotPrinterPanel hotelId={hotelId} />
         {toTill && (
           <Link
-            to={`/h/${hotelId}/till`}
+            to={`/pos/${hotelId}/till`}
             className="press inline-flex items-center gap-2 h-12 px-4 rounded-full border border-grey-300 bg-white text-base font-medium text-ink-900 hover:bg-grey-50 hover:border-grey-400"
           >
             <ArrowLeft className="size-4" />

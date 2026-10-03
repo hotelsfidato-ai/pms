@@ -60,18 +60,18 @@ export const START_HERE: Partial<Record<Role, { intro: string; tasks: StartTask[
   pos: {
     intro: "Your three jobs. Each one opens the screen it happens on.",
     tasks: [
-      { job: "Open a table", to: "/h/:code/floor", icon: LayoutGrid,
+      { job: "Open a table", to: "/pos/:code/tables", icon: LayoutGrid,
         how: "Tap the table - its order pad opens right there." },
-      { job: "Send an order to the kitchen", to: "/h/:code/floor", icon: Send,
+      { job: "Send an order to the kitchen", to: "/pos/:code/tables", icon: Send,
         how: "Add the dishes on the table's pad, then Send." },
-      { job: "Settle a bill", to: "/h/:code/till", icon: Receipt,
+      { job: "Settle a bill", to: "/pos/:code/till", icon: Receipt,
         how: "Open the order and tap how they pay: cash, card, UPI, or Charge to room." },
     ],
   },
   chef: {
     intro: "Your one screen. Everything waiting for the kitchen is on it.",
     tasks: [
-      { job: "See what is waiting", to: "/h/:code/kitchen", icon: Flame,
+      { job: "See what is waiting", to: "/pos/:code/kitchen", icon: Flame,
         how: "Start a dish when you begin it, Ready when it goes out." },
     ],
   },
@@ -82,6 +82,6 @@ export const START_HERE: Partial<Record<Role, { intro: string; tasks: StartTask[
 export const START_HERE_ON: Partial<Record<Role, string[]>> = {
   front_desk: ["/", "/h/:code/stay", "/h/:code/calendar"],
   housekeeping: ["/h/:code/housekeeping"],
-  pos: ["/h/:code/floor", "/h/:code/till"],
-  chef: ["/h/:code/kitchen"],
+  pos: ["/pos/:code/tables", "/pos/:code/till"],
+  chef: ["/pos/:code/kitchen"],
 };

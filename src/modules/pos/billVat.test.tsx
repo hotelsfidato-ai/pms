@@ -43,8 +43,8 @@ function open() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/h/5EL/till/bill/o-1"]}>
-        <Routes><Route path="/h/:code/till/bill/:id" element={<BillPage />} /></Routes>
+      <MemoryRouter initialEntries={["/pos/5EL/bill/o-1"]}>
+        <Routes><Route path="/pos/:code/bill/:id" element={<BillPage />} /></Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );
