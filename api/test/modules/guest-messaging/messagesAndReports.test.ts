@@ -26,7 +26,6 @@ const sql = async (text: string, params: unknown[] = []) => {
 };
 
 let hotelId: string;
-let ownerId: string;
 let gmId: string;
 let deskId: string;
 let outsiderId: string;
@@ -63,8 +62,9 @@ async function person(email: string, role: string | null): Promise<string> {
 async function anInvoice(folio: string, number: string, issuedAt = "now()", credits: string | null = null) {
   const [row] = await sql(
     `insert into invoices (hotel_id, folio_id, fin_year, number, total, tax_total, taxable_value,
-                           cgst_total, sgst_total, recipient_name, place_of_supply, issued_at, issued_by, credits_id)
-     values ($1, $2, '2026-27', $3, 1050, 50, 1000, 25, 25, $4, 'Maharashtra', ${issuedAt}, $5, $6)
+                           cgst_total, sgst_total, recipient_name, place_of_supply, issued_at, issued_by, credits_id, reason)
+     values ($1, $2, '2026-27', $3, 1050, 50, 1000, 25, 25, $4, 'Maharashtra', ${issuedAt}, $5, $6,
+             case when $6::uuid is null then null else 'A test credit note' end)
      returning id::text as id`,
     [hotelId, folio, number, `${TAG} Guest`, deskId, credits]);
   return row!.id as string;
@@ -72,7 +72,6 @@ async function anInvoice(folio: string, number: string, issuedAt = "now()", cred
 
 beforeAll(async () => {
   hotelId = (await sql("select id::text as id from hotels where code = '5EL'"))[0]!.id;
-  ownerId = (await sql("select id::text as id from staff where email = 'owner@fidato.in'"))[0]!.id;
   gmId = await person("p6msg-gm@fidato.in", "gm");
   deskId = await person("p6msg-desk@fidato.in", "front_desk");
   outsiderId = await person("p6msg-outsider@fidato.in", null);
@@ -114,8 +113,6 @@ beforeEach(async () => {
   await sql("delete from guest_message_settings where hotel_id = $1", [hotelId]);
   await sql("delete from report_emails where hotel_id = $1", [hotelId]);
   await sql("delete from messages_sent where hotel_id = $1 and about_kind in ('invoice', 'night-audit')", [hotelId]);
-  await sql("delete from invoices where hotel_id = $1 and number like 'P6MSG-%' and credits_id is not null", [hotelId]);
-  await sql("delete from invoices where hotel_id = $1 and number like 'P6MSG-%'", [hotelId]);
 });
 
 afterAll(async () => {
@@ -124,15 +121,9 @@ afterAll(async () => {
   await sql("delete from guest_message_settings where hotel_id = $1", [hotelId]);
   await sql("delete from report_emails where hotel_id = $1", [hotelId]);
   await sql("delete from messages_sent where hotel_id = $1 and about_kind in ('invoice', 'night-audit')", [hotelId]);
-  await sql("delete from invoices where hotel_id = $1 and number like 'P6MSG-%' and credits_id is not null", [hotelId]);
-  await sql("delete from invoices where hotel_id = $1 and number like 'P6MSG-%'", [hotelId]);
+  /* An issued tax invoice is immutable, so its bill, stay and guest stay too:
+     this run's database is its own and is dropped after it. */
   await sql("delete from night_audit_runs where hotel_id = $1 and business_date < '2001-01-01'", [hotelId]);
-  await sql("delete from folios where id = any($1::uuid[])", [[folioId, companyFolioId]]);
-  await sql("delete from reservations where id = $1", [stayId]);
-  await sql("delete from companies where name = $1", [`${TAG} Co`]);
-  await sql("alter table guests disable trigger guests_no_delete");
-  await sql("delete from guests where id = $1", [guestId]);
-  await sql("alter table guests enable trigger guests_no_delete");
   await sql("delete from staff_hotels where staff_id = any($1::uuid[])", [[gmId, deskId, outsiderId]]);
   await sql("update staff set is_active = false where id = any($1::uuid[])", [[gmId, deskId, outsiderId]]);
   await closePool();

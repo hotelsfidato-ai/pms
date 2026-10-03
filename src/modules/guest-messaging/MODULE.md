@@ -133,6 +133,33 @@ is for the lanes that own them** (New booking's Booked card, the booking
 panel) - one line each. The day-before send is the arrival reminder, which
 already carries the link (D27-169).
 
+## Settings → Messages (Settings phase 6; D27-252, D27-261, D27-262)
+
+- **Each guest message On/Off per hotel** (`guest_message_settings`, migration
+  "messages and reports"): booking confirmation, voucher PDF on WhatsApp,
+  reminder before arrival (its days 1 to 7 and its start time), tax invoice,
+  review request. No saved switch is today's behaviour - on, 1 day, 10:00 -
+  except the invoice, off until switched on. The check-in code and the
+  desk's check-in link have no switch (Q1). The confirmation's catch-up
+  hours are shown, not changed (Q2). Routes in `settings.ts`; the page
+  `pages/MessageSwitches.tsx` (`/settings/messages/switches`).
+- **The tax invoice with its PDF** (`invoices.ts`, `invoiceDocument.ts`):
+  by itself, both ways, for a guest's invoice issued after the hotel's switch
+  was last turned on (Q3, Q4); a company's only by the desk's **Send invoice**
+  (`SendInvoice`, on finance's Invoice page; `POST /:code/invoices/:number/send`,
+  whoever may issue one); never a credit note (Q6). The PDF is drawn from
+  finance's `invoiceFacts` - the screen's own query. The sweep sends each as
+  the clerk who issued it. WhatsApp template `tax_invoice`
+  (docs/go-live/whatsapp-templates.md, the owner submits it).
+- **Reports after the night audit** (`reportEmails.ts`, `report_emails`):
+  Night audit, Manager summary, City ledger, No-shows, Lodging tax, Monthly
+  occupancy (D27-262) as PDF to the hotel's chosen people's own sign-in email,
+  once each completed audit, built under that person's own session; an audit
+  completed before the choice is not sent. The page
+  `pages/NightAuditReports.tsx` (`/settings/messages/night-audit-reports`).
+- The review request (reputation's route) asks the hotel's `review` switch.
+- Both passes run after the guest sweep, on its timer.
+
 ## What is built
 
 | | |
