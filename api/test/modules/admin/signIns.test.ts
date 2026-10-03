@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
-import { noteSignIn } from "../../../src/signIns.ts";
+import { noteSignIn, isSignedOut, forgetSignedOutForTests } from "../../../src/signIns.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE SIGN-IN HISTORY (D27-243 5.4, D27-245 Q-B)
@@ -87,5 +87,38 @@ describe("who reads the history (Q-B)", () => {
   it("is refused to the GM and to an Admin of another hotel", async () => {
     expect((await read(ids["gm"]!)).status).toBe(403);
     expect((await read(ids["elsewhere"]!)).status).toBe(403);
+  });
+});
+
+/* D27-255: one device signed out, by the owner or the hotel's Admin. */
+describe("signing out one device (P7)", () => {
+  const A = Math.floor(RUN / 1000) + 600;
+  const B = Math.floor(RUN / 1000) + 1200;
+  type Row = { id: string; device: string | null; signedOutAt: string | null; signedOutBy: string | null };
+  const rowsOf = async () => ((await (await read(owner)).json()) as { signIns: Row[] }).signIns;
+  const signOut = (by: string, id: string) =>
+    app.request(`/api/admin/sign-ins/${id}/sign-out`, { method: "POST", headers: { "x-dev-staff-id": by } });
+
+  it("refuses that device's sign-in and no other, and says so on the list", async () => {
+    await noteSignIn(uid("clerk"), A, new Headers({ "user-agent": "Device A" }));
+    await noteSignIn(uid("clerk"), B, new Headers({ "user-agent": "Device B" }));
+    const a = (await rowsOf()).find((r) => r.device === "Device A");
+    expect(a?.signedOutAt).toBeNull();
+
+    expect((await signOut(ids["gm"]!, a!.id)).status, "the GM").toBe(403);
+    expect((await signOut(ids["elsewhere"]!, a!.id)).status, "an Admin of another hotel").toBe(403);
+    expect((await signOut(ids["admin"]!, a!.id)).status, "the hotel's Admin").toBe(200);
+
+    expect(await isSignedOut(uid("clerk"), A)).toBe(true);
+    expect(await isSignedOut(uid("clerk"), B)).toBe(false);
+    const after = (await rowsOf()).find((r) => r.id === a!.id)!;
+    expect(after.signedOutAt).not.toBeNull();
+    expect(after.signedOutBy).toBe("SI admin");
+  });
+
+  it("is remembered by a fresh server, from the database", async () => {
+    forgetSignedOutForTests();
+    expect(await isSignedOut(uid("clerk"), A)).toBe(true);
+    expect(await isSignedOut(uid("clerk"), B)).toBe(false);
   });
 });

@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { NavLink, useLocation } from "react-router";
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronDown, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
 import { useRole } from "@/lib/session";
-import { navigationFor, sidebarFor, type NavItem } from "./navigation";
+import { navigationFor, sidebarFor, spaceOf, spacesFor, type NavItem } from "./navigation";
+import { SpaceSwitcher } from "./SpaceSwitcher";
 import { Tooltip } from "@/components/ui";
 import { getModules } from "@/data/repositories";
 
@@ -64,7 +65,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   /* WHAT THIS PERSON WORKS FROM (the clarity plan, step 3) — not
      everything they are allowed. The rest is one search away, and the
      button at the foot of the menu says so. */
-  const sections = sidebarFor(role, hotelId, modules.data);
+  /* THE SPACE'S OWN MENU (D27-249): the address says which, among the ones
+     this person has; somebody with one space always sees its menu. */
+  const spaces = spacesFor(role, hotelId, modules.data);
+  const here = spaceOf(location.pathname);
+  const space = spaces.includes(here) ? here : spaces[0]!;
+  const sections = sidebarFor(role, hotelId, modules.data, space);
   const hidden =
     navigationFor(role, hotelId, modules.data).reduce(
       (n, s) => n + s.items.reduce((m, i) => m + 1 + (i.children?.length ?? 0), 0), 0)
@@ -130,13 +136,24 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto scrollbar-quiet py-3 px-2.5">
+        {/* On a phone the switcher is here, at the top of the drawer (Q5). */}
+        {onNavigate && <SpaceSwitcher dark className="sm:hidden mb-4" onNavigate={onNavigate} />}
+        {space === "settings" && (
+          <ul className="mb-4">
+            <SidebarItem
+              item={{ label: "Back to front office", to: "/", icon: ArrowLeft, resource: "dashboard" }}
+              collapsed={collapsed} currentPath={location.pathname} onNavigate={onNavigate} />
+          </ul>
+        )}
         {sections.map((section, i) => {
           const key = section.key ?? section.label ?? `section-${i}`;
           /* The section holding the screen in view is never folded. */
           const holdsCurrent = section.items.some((it) =>
             location.pathname === it.to ||
             (it.matchPrefix && location.pathname.startsWith(it.to.split(":")[0]!)));
-          const asItComes = FOLDED_AS_IT_COMES.has(key);
+          /* Only the Front office folds: the Restaurant and the console are
+             short menus that are all the work of their space. */
+          const asItComes = space === "front" && FOLDED_AS_IT_COMES.has(key);
           const isFolded = !collapsed && !holdsCurrent && section.label
             ? (folded[key] ?? asItComes)
             : false;
@@ -284,6 +301,13 @@ function SidebarItem({
       ) : (
         <span className="truncate">{item.label}</span>
       ))}
+      {/* A console link to a Front office screen: it leaves the console. */}
+      {item.leaves && !collapsed && (
+        <>
+          <ArrowUpRight className="size-3.5 shrink-0 ml-auto text-white/40" aria-hidden />
+          <span className="sr-only">(opens in Front office)</span>
+        </>
+      )}
     </NavLink>
   );
 

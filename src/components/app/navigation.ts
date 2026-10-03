@@ -1,6 +1,7 @@
 import { CheckCircle2, Bell, MapPin, Palette, type LucideIcon } from "lucide-react";
 import { canAccess, type Resource, type Role } from "@/lib/permissions";
 import { decidesSomething } from "@/data/repositories/approvals";
+import { SETTINGS_GROUPS, SETTINGS_PAGES, addressOf } from "./settingsConsole";
 /* Each service's own menu entries (docs/SERVICE-FOLDERS-PLAN.md). */
 import { nav as frontDesk } from "@/modules/front-desk/nav";
 import { nav as reservations } from "@/modules/reservations/nav";
@@ -80,6 +81,8 @@ export interface NavItem {
   /** A service not built yet: its entry opens the page saying what it will
       do, and the menu and Find a screen mark it "Not built yet" (D27-87). */
   notBuilt?: true;
+  /** A Settings console link to a Front office screen (↗): it leaves the console. */
+  leaves?: true;
 }
 
 /** True in `vite dev` and in the test runner, false in a production build. */
@@ -125,6 +128,9 @@ export function mayReach(role: Role, path: string): boolean {
   return true;
 }
 
+/** The three spaces, each with its own menu (D27-249). */
+export type Space = "front" | "pos" | "settings";
+
 export interface NavSection {
   /** ⚠ CARRIED THROUGH SINCE 19 SEPTEMBER, when sections became
       foldable. The layout used to strip it and the sidebar had only the
@@ -140,6 +146,8 @@ export interface NavSection {
       stops offering a door that would be refused. */
   receptionNeeds?: string;
   label?: string;
+  /** The space whose menu holds it. Absent: the Front office. */
+  space?: Space;
   items: NavItem[];
 }
 
@@ -267,7 +275,9 @@ const SECTION_LAYOUT: Array<Omit<NavSection, "items"> & { key: SectionKey }> = [
      The API refuses these routes independently, so this is the tidy half
      of the feature and not the enforcement. A hidden nav entry is still
      a URL anybody can type. */
-  { key: "point-of-sale", label: "Point of sale", module: "pos", receptionNeeds: "reception_pos" },
+  /* ⚠ AND ITS OWN SPACE SINCE 3 OCTOBER (D27-249): the Restaurant, at
+     /pos/:code/..., with its own menu - this section. */
+  { key: "point-of-sale", label: "Point of sale", module: "pos", receptionNeeds: "reception_pos", space: "pos" },
   /* Absent, not greyed, at a property with no hall — the same rule the
      point of sale follows. A clerk cannot act on "your hotel has no
      banquet hall", so showing it disabled is noise.
@@ -366,11 +376,29 @@ function asItem(entry: NavItem): NavItem {
   return item;
 }
 
-const SECTIONS: NavSection[] = SECTION_LAYOUT.map(({ key, ...section }) => ({
-  ...section,
-  key,
-  items: entriesIn(key).map(asItem),
+/* THE SETTINGS CONSOLE'S PAGES (D27-249), one section a group, from what
+   the services register (settingsConsole.ts). In mayReach and Find a screen
+   like any entry. Its links (`to`) are not here: each is the Front office
+   entry it points at. The console needs `setting` before a page's own rule. */
+const CONSOLE_SECTIONS: NavSection[] = SETTINGS_GROUPS.map(({ key, label }) => ({
+  key: `settings-${key}`, label, space: "settings",
+  items: SETTINGS_PAGES.flatMap((page) => page.group !== key || !("load" in page) ? [] : [{
+    label: page.label, to: addressOf(page), icon: page.icon, matchPrefix: true,
+    resource: page.resource ?? "setting",
+    ...(page.keywords ? { keywords: page.keywords } : {}),
+    canSee: (role: Role) => canAccess(role, "setting")
+      && (page.canSee ? page.canSee(role) : canAccess(role, page.resource ?? "setting")),
+  }]),
 }));
+
+const SECTIONS: NavSection[] = [
+  ...SECTION_LAYOUT.map(({ key, ...section }) => ({
+    ...section,
+    key,
+    items: entriesIn(key).map(asItem),
+  })),
+  ...CONSOLE_SECTIONS,
+];
 
 /** Every declared entry and where it asked to sit — for the tests that
     refuse an entry the menu would silently drop. */
@@ -515,16 +543,62 @@ const WORKING_MENUS: Partial<Record<Role, readonly string[]>> = (() => {
   return out;
 })();
 
-/** The sidebar: what this person WORKS from, in the navigation's order. */
-export function sidebarFor(
+/* ══════════════════════════════════════════════════════════════════
+   THE THREE SPACES (D27-249, D27-256)
+
+   The address says which: /settings... the Settings console, /pos/... the
+   Restaurant, anything else the Front office. The owner, an Admin and the GM
+   have all three; whoever may open a restaurant screen has the Restaurant
+   (reception only where "Reception can use the POS" is on); the waiter, the
+   chef and the kitchen manager have the Restaurant ONLY, and their menu
+   there is their whole working menu, as the owner chose it (Q3). Nothing
+   here changes who may open a screen.
+   ══════════════════════════════════════════════════════════════════ */
+
+const RESTAURANT_ONLY: readonly Role[] = ["pos", "chef", "kitchen_manager"];
+
+export const spaceOf = (path: string): Space =>
+  path === "/settings" || path.startsWith("/settings/") ? "settings"
+    : path.startsWith("/pos/") ? "pos" : "front";
+
+/** The spaces this person may switch between, in the switcher's order. */
+export function spacesFor(
   role: Role, code = "", modules?: Record<string, boolean>,
+): Space[] {
+  if (RESTAURANT_ONLY.includes(role)) return ["pos"];
+  const has = new Set(navigationFor(role, code, modules).map((s) => s.space ?? "front"));
+  return (["front", "pos", "settings"] as const).filter((s) => s === "front" || has.has(s));
+}
+
+/* The console's menu: its groups in order, each page or link the person may
+   open. A link keeps the menu's own name and glyph for its screen (one name
+   for one thing) and is marked as leaving. A group with nothing is not drawn. */
+function consoleMenu(role: Role, code: string, modules?: Record<string, boolean>): NavSection[] {
+  const reach = new Map(flatNavigationFor(role, code, modules).map((item) => [item.to, item]));
+  return CONSOLE_SECTIONS.map((section, i) => ({
+    ...section,
+    items: SETTINGS_PAGES.flatMap((page) => {
+      if (page.group !== SETTINGS_GROUPS[i]!.key) return [];
+      const item = reach.get("to" in page ? resolve(page.to, code) : addressOf(page));
+      return item ? [{ ...item, ...("to" in page ? { leaves: true as const } : {}) }] : [];
+    }),
+  })).filter((section) => section.items.length > 0);
+}
+
+/** The sidebar: what this person WORKS from, in the navigation's order -
+    in one space (the Front office unless said). */
+export function sidebarFor(
+  role: Role, code = "", modules?: Record<string, boolean>, space: Space = "front",
 ): NavSection[] {
+  if (space === "settings") return consoleMenu(role, code, modules);
+  const only = RESTAURANT_ONLY.includes(role);
   const working = WORKING_MENUS[role];
   const keep = (item: NavItem) =>
     item.listed !== false
     && (!working || working.some((path) => resolve(path, code) === item.to));
 
   return navigationFor(role, code, modules)
+    .filter((section) => only || (section.space ?? "front") === space)
     .map((section) => ({
       ...section,
       items: section.items
@@ -539,11 +613,11 @@ export function sidebarFor(
    starts, so both still land on their own work (15 September). */
 const WORKING_HOME: Partial<Record<Role, string>> = {
   housekeeping: "/h/:code/housekeeping",
-  kitchen_manager: "/h/:code/kitchen",
+  kitchen_manager: "/pos/:code/kitchen",
   /* Guest requests joined their menus in the Front desk section, above the
      restaurant's (D27-181); they still land on their own work (GS-1). */
-  chef: "/h/:code/kitchen",
-  pos: "/h/:code/floor",
+  chef: "/pos/:code/kitchen",
+  pos: "/pos/:code/tables",
 };
 
 /**

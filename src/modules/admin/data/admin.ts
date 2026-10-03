@@ -471,5 +471,14 @@ export function setHomeScreen(
 
 /** Somebody's sign-ins, 90 days: when and on what device (D27-243 5.4). The
     owner reads anybody's; an Admin the people at their hotel. */
+export interface SignIn {
+  id: string; at: string; device: string | null;
+  /** Null while that device is still signed in (D27-255). */
+  signedOutAt: string | null; signedOutBy: string | null;
+}
 export const listSignIns = (staffId: string) =>
-  api<{ signIns: { at: string; device: string | null }[] }>(`/api/admin/staff/${staffId}/sign-ins`);
+  api<{ signIns: SignIn[] }>(`/api/admin/staff/${staffId}/sign-ins`);
+
+/** Sign out the device of one sign-in (D27-255). The password still works. */
+export const signOutDevice = (signInId: string): Promise<AdminResult<{ ok: true }>> =>
+  write(`/api/admin/sign-ins/${signInId}/sign-out`, {});
