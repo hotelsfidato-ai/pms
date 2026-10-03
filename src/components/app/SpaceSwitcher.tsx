@@ -47,9 +47,10 @@ export function SpaceSwitcher({ dark, className, onNavigate }: {
         <Link key={space} to={home(space)} onClick={onNavigate}
           aria-current={space === here ? "page" : undefined}
           className={cn(
-            "flex-1 flex items-center justify-center whitespace-nowrap rounded-full px-3 font-medium",
+            "flex-1 flex items-center justify-center whitespace-nowrap rounded-full font-medium",
             "transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-brand-orange",
-            dark ? "h-11 text-sm" : "h-8 text-sm",
+            /* The drawer is 224px inside: three names at 14px do not fit it. */
+            dark ? "h-11 px-1.5 text-xs" : "h-8 px-3 text-sm",
             space === here
               ? (dark ? "bg-white text-ink-900" : "bg-white text-ink-900 shadow-sm")
               : (dark ? "text-white/70 hover:text-white" : "text-grey-600 hover:text-ink-900"),
