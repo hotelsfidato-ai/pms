@@ -286,13 +286,22 @@ export async function dailyFigures(
     [hotelId, from, to, opened],
   );
 
+  /* HOW THE HOTEL COUNTS A ROOM SOLD (193, the owner's D27-260 Q5): a
+     complimentary room is sold (on, as the owner's eZee reports), and a day
+     use is half a room when the hotel says so (off: not counted, as before -
+     it has its own line). One definition, so every report agrees. */
+  const { rows: rule } = await client.query<{ comp: boolean; half: boolean }>(
+    "select kpi_comp_as_sold as comp, kpi_day_use_half as half from hotels where id = $1", [hotelId]);
+  const compSold = rule[0]?.comp ?? true, dayUseHalf = rule[0]?.half ?? false;
+
   return rows.map((r) => ({
     date: r.date,
     available: Number(r.available),
     blocked: Number(r.blocked),
     paying: Number(r.paying),
     complimentary: Number(r.complimentary),
-    sold: Number(r.paying) + Number(r.complimentary),
+    sold: Number(r.paying) + (compSold ? Number(r.complimentary) : 0)
+      + (dayUseHalf ? Number(r.day_use) / 2 : 0),
     dayUse: Number(r.day_use),
     adults: Number(r.adults),
     children: Number(r.children),

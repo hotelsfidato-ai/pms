@@ -1,3 +1,4 @@
+import { ReadyReasons } from "@/modules/front-desk/components/ReadyReasons";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Ban } from "lucide-react";
@@ -126,6 +127,8 @@ export function VoidFlow({
                 />
               )}
             </Field>
+            {/* The hotel's ready reasons (D27-260). */}
+            <ReadyReasons kind="reason_void" onPick={setReason} />
           </div>
         </DialogContent>
       </Dialog>

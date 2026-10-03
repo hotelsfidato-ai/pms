@@ -55,14 +55,16 @@ const addDays = (s: string, n: number) => {
   d.setUTCDate(d.getUTCDate() + n);
   return iso(d);
 };
+const rules = () =>
+  useSession.getState().hotels.find((h) => h.id === useSession.getState().hotelId)?.deskRules;
 const dayLabel = (s: string) => {
   const d = new Date(`${s}T00:00:00Z`);
   return {
     dow: d.toLocaleDateString("en-IN", { weekday: "short", timeZone: "UTC" }),
     day: d.getUTCDate(),
-    /* The hotel's own weekend (D27-243 3.4), shading only. */
-    weekend: (useSession.getState().hotels.find((h) => h.id === useSession.getState().hotelId)
-      ?.deskRules?.weekendDays ?? [0, 6]).includes(d.getUTCDay()),
+    /* The hotel's own weekend (D27-243 3.4) and its holidays (193), shading only. */
+    weekend: (rules()?.weekendDays ?? [0, 6]).includes(d.getUTCDay())
+      || (rules()?.holidays ?? []).some((h) => h.day === s),
   };
 };
 

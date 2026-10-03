@@ -458,7 +458,8 @@ function DetailsSection(
                   onChange={(e) => set("idType")(e.target.value)}
                 >
                   <option value="" disabled>Choose one</option>
-                  {ID_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  {ID_TYPES.filter((t) => !state.data?.idTypesOff?.includes(t.value))
+                    .map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </NativeSelect>
               )}
             </Field>

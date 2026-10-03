@@ -179,8 +179,9 @@ export default function StayViewPage({ view }: {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get("res");
-  /* The hotel's own weekend, shaded (D27-243 3.4). */
+  /* The hotel's own weekend, shaded (D27-243 3.4), and its holidays (193). */
   const weekend = useCurrentHotel()?.deskRules?.weekendDays;
+  const holiday = new Map((useCurrentHotel()?.deskRules?.holidays ?? []).map((h) => [h.day, h]));
 
   /* Open on the business date so the chart shows today first. */
   const [start, setStart] = useState(BUSINESS_DATE);
@@ -624,9 +625,11 @@ export default function StayViewPage({ view }: {
               <div
                 key={d}
                 data-date-col={d}
+                title={holiday.get(d)?.name}
+                style={holiday.get(d)?.colour ? { backgroundColor: `${holiday.get(d)!.colour}26` } : undefined}
                 className={cn(
                   "grid place-content-center text-center h-[50px] border-r border-grey-100 last:border-r-0 max-sm:snap-start",
-                  isWeekend(d, weekend) && "bg-grey-50",
+                  (isWeekend(d, weekend) || holiday.has(d)) && "bg-grey-50",
                   d === BUSINESS_DATE && "bg-ink-900 text-white",
                 )}
               >
@@ -742,7 +745,7 @@ export default function StayViewPage({ view }: {
                     {dates.map((d, i) => {
                       const cell = cn(
                         "h-10 border-r border-grey-100 last:border-r-0 transition-colors duration-150",
-                        isWeekend(d, weekend) && "bg-grey-50",
+                        (isWeekend(d, weekend) || holiday.has(d)) && "bg-grey-50",
                         d === BUSINESS_DATE && "bg-ink-900/[0.035]",
                       );
                       /* gridRow 1, like the bars: with a column alone,
@@ -1038,6 +1041,13 @@ function StaleRooms({ failure, shownAt, missingWindow, refreshing, onRetry }: {
   );
 }
 
+/** White or ink, whichever reads on a chosen colour. */
+const readableOn = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  const lum = 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+  return lum > 150 ? "#031728" : "#ffffff";
+};
+
 function BookingBar({ bar, onOpen }: { bar: ChartBar; onOpen: () => void }) {
   /* A globe for anything not recognised, INCLUDING null. There is no
      icon meaning "we do not know where this came from", and a walk-in
@@ -1045,6 +1055,8 @@ function BookingBar({ bar, onOpen }: { bar: ChartBar; onOpen: () => void }) {
      was wired in. */
   const Icon = SOURCE_ICON[bar.stay.source ?? ""] ?? Globe;
   const nights = bar.stay.isDayUse ? "day use" : `${bar.stay.nights} night${bar.stay.nights === 1 ? "" : "s"}`;
+  /* The hotel's own colour for this state, when it chose one (193, D27-260 Q6). */
+  const colour = useCurrentHotel()?.deskRules?.statusColours?.[bar.tone];
 
   return (
     <Tooltip
@@ -1066,7 +1078,8 @@ function BookingBar({ bar, onOpen }: { bar: ChartBar; onOpen: () => void }) {
         type="button"
         data-booking-bar={bar.stay.id}
         onClick={onOpen}
-        style={{ gridColumn: `${bar.startIndex + 2} / span ${bar.span}`, gridRow: 1 }}
+        style={{ gridColumn: `${bar.startIndex + 2} / span ${bar.span}`, gridRow: 1,
+          ...(colour ? { backgroundColor: colour, color: readableOn(colour) } : {}) }}
         className={cn(
           "relative z-10 self-center mx-0.5 h-6 rounded-sm px-1.5",
           "flex items-center gap-1 min-w-0 text-2xs font-medium",

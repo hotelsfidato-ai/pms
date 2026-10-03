@@ -1,3 +1,4 @@
+import { ReadyReasons } from "@/modules/front-desk";
 import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Wrench, RotateCcw } from "lucide-react";
@@ -213,6 +214,8 @@ export function OutOfOrderFlow({
                     />
                   )}
                 </Field>
+                {/* The hotel's ready reasons (D27-260). */}
+                <ReadyReasons kind="reason_block" onPick={setNote} />
 
                 <div className="flex items-center justify-between gap-3 pt-1">
                   <StatusPill tone="neutral">

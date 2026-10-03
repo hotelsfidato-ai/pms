@@ -1,4 +1,5 @@
 import { Field, Input, NativeSelect, Switch, Term, fieldProps } from "@/components/ui";
+import { useCurrentHotel } from "@/lib/session";
 import {
   ForeignGuestFields, formIIIMissing, idExpired, idProblem, particularsPayload,
   ID_TYPES, NO_PARTICULARS, type Particulars,
@@ -85,6 +86,8 @@ export function GuestIdFields({ value, onChange, today, withDocument = true }: {
       at check-in, so only the nationality is asked (and kept). */
   withDocument?: boolean;
 }) {
+  const idsOff = useCurrentHotel()?.deskRules?.idTypesOff ?? [];
+
   const set = (patch: Partial<GuestId>) => onChange({ ...value, ...patch });
   const s = guestIdState(value, today);
 
@@ -113,7 +116,10 @@ export function GuestIdFields({ value, onChange, today, withDocument = true }: {
                 <NativeSelect {...fieldProps(f)} value={value.idType}
                   onChange={(e) => set({ idType: e.target.value })}>
                   <option value="">Not recorded</option>
-                  {ID_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  {/* The IDs this hotel does not take are left out (193, D27-260);
+                      one already chosen stays, so nothing is silently changed. */}
+                  {ID_TYPES.filter(([v]) => v === value.idType || !idsOff.includes(v))
+                    .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </NativeSelect>
               )}
             </Field>

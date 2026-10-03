@@ -73,6 +73,8 @@ export interface Stay {
      it drives room placement away from stairwells and service
      corridors. It is not announced at the desk. */
   isVip: boolean;
+  /** The group's VIP level, when one was given (193). */
+  vipLevel?: string | null;
   /** VIP travels with the GUEST, so setting it needs the guest's id
       rather than the booking's. */
   guestId?: string;

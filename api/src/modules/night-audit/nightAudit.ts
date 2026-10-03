@@ -465,6 +465,16 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
       [runId, roomsPosted, revenuePosted, noShows],
     );
 
+    /* THE DAILY CLEAN (193, the owner's D27-260 Q3c; off unless the hotel
+       says so): a room with a guest staying on is dirty for the new day. */
+    await client.query(
+      `update rooms rm set housekeeping_status = 'dirty'
+         from hotels h
+        where h.id = $1 and h.hk_stayover_dirty_at_audit and rm.hotel_id = h.id
+          and rm.housekeeping_status in ('clean', 'inspected')
+          and exists (select 1 from app.in_house($1) i where i.room_id = rm.id)`,
+      [hotelId]);
+
     /* ── What the day actually took, from both drawers ──────────
        The audit used to report rooms and no-shows and stop there, which
        described a hotel with no restaurant in it. The owner asked for

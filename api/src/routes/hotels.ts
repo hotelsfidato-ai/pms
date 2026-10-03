@@ -36,6 +36,19 @@ interface HotelRow {
   default_id_type: string | null;
   default_nationality: string;
   default_title: string | null;
+  /* Phase 5 (193, D27-260). */
+  default_guarantee: "confirmed" | "tentative";
+  default_bill_to: "guest" | "company";
+  required_booking_fields: string[];
+  hk_dirty_after_move: boolean;
+  hk_dirty_after_unblock: boolean;
+  hk_stayover_dirty_at_audit: boolean;
+  id_types_off: string[];
+  status_colours: Record<string, string> | null;
+  pos_round_off: "off" | "manual" | "automatic";
+  kpi_day_use_half: boolean;
+  kpi_comp_as_sold: boolean;
+  holidays: Array<{ day: string; name: string; colour: string | null }>;
 }
 
 hotels.get("/", async (c) => {
@@ -74,7 +87,16 @@ hotels.get("/", async (c) => {
                  Settings › Operations (187, D27-243). */
               default_payment_method, desk_may_overbook, advance_before_check_in,
               weekend_days::int[] as weekend_days,
-              default_id_type, default_nationality, default_title
+              default_id_type, default_nationality, default_title,
+              /* Phase 5 (193, D27-260). */
+              default_guarantee, default_bill_to, required_booking_fields,
+              hk_dirty_after_move, hk_dirty_after_unblock, hk_stayover_dirty_at_audit,
+              id_types_off, status_colours, pos_round_off, kpi_day_use_half, kpi_comp_as_sold,
+              /* Shaded like a weekend on the Calendar and Rates (193). */
+              (select coalesce(json_agg(json_build_object(
+                        'day', to_char(hh.day, 'YYYY-MM-DD'), 'name', hh.name, 'colour', hh.colour)
+                        order by hh.day), '[]'::json)
+                 from hotel_holidays hh where hh.hotel_id = hotels.id) as holidays
          from hotels
         where is_active
         order by code`,
@@ -106,6 +128,18 @@ hotels.get("/", async (c) => {
           defaultIdType: h.default_id_type,
           defaultNationality: h.default_nationality,
           defaultTitle: h.default_title,
+          defaultGuarantee: h.default_guarantee,
+          defaultBillTo: h.default_bill_to,
+          requiredBookingFields: h.required_booking_fields,
+          hkDirtyAfterMove: h.hk_dirty_after_move,
+          hkDirtyAfterUnblock: h.hk_dirty_after_unblock,
+          hkStayoverDirtyAtAudit: h.hk_stayover_dirty_at_audit,
+          idTypesOff: h.id_types_off,
+          statusColours: h.status_colours,
+          posRoundOff: h.pos_round_off,
+          kpiDayUseHalf: h.kpi_day_use_half,
+          kpiCompAsSold: h.kpi_comp_as_sold,
+          holidays: h.holidays,
         },
       })),
     };

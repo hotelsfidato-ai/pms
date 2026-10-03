@@ -460,6 +460,18 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/rooms/:number`]: SETUP_CHANGE,
   /* The front desk's hours and its early and late charges: setup. */
   [`PATCH ${H}/front-desk`]: SETUP_CHANGE,
+  /* Phase 5 of the settings plan (D27-260): the lists, holidays, the group's
+     VIP levels (row security also asks app.sets_group_settings) and the front
+     desk's settings - changed from the Settings console. */
+  [`POST ${H}/lists/:kind`]: SETUP_CHANGE,
+  [`PATCH ${H}/lists/:kind/:id`]: SETUP_CHANGE,
+  [`DELETE ${H}/lists/:kind/:id`]: SETUP_CHANGE,
+  [`POST ${H}/holidays`]: SETUP_CHANGE,
+  [`DELETE ${H}/holidays/:id`]: SETUP_CHANGE,
+  [`POST ${H}/vip-levels`]: SETUP_CHANGE,
+  [`PATCH ${H}/vip-levels/:id`]: SETUP_CHANGE,
+  [`DELETE ${H}/vip-levels/:id`]: SETUP_CHANGE,
+  [`PATCH ${H}/desk-settings`]: SETUP_CHANGE,
   [`POST ${H}/room-types/import`]: SETUP_ADD,
   [`POST ${H}/rooms/import`]: SETUP_ADD,
 
@@ -647,6 +659,10 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* Whether a stay checks in by express, its ID masked (D27-236 3.4): the
      people who check a guest in. */
   [`GET ${H}/stays/:id/express-check-in`]: CHECK_IN,
+  /* The pickers on every desk screen read these (D27-260). */
+  [`GET ${H}/lists/:kind`]: anyone("the hotel's lists: segments and ready reasons, offered on the desk's screens"),
+  [`GET ${H}/holidays`]: anyone("the hotel's holidays, shaded on the Calendar and Rates"),
+  [`GET ${H}/vip-levels`]: anyone("the group's VIP levels, offered on a guest"),
   [`GET ${H}/stays/:id/exchangeable`]: STAYS,
   [`GET ${H}/stays/:id/inclusions`]: STAYS,
   [`GET ${H}/stays/:id/guest-marks`]: STAYS,

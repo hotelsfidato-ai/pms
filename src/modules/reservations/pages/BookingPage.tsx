@@ -15,6 +15,7 @@ import {
 import { listAllRooms, getModules } from "@/data/repositories";
 import { getInventory, getTariff, type Tariff } from "@/modules/inventory";
 import { createBooking } from "@/modules/reservations/data/groups";
+import { listOf } from "@/modules/front-desk";
 import {
   MARKET_SEGMENTS, TITLES, LIST_KEEPERS, FREEHAND_CAP,
   listSalesPeople, saveSalesPeople, listRoomPromotions, saveRoomPromotions,
@@ -173,10 +174,11 @@ export default function BookingPage() {
   const [marketSegment, setMarketSegment] = useState("");
   const [salesPick, setSalesPick] = useState("");
   const [salesOther, setSalesOther] = useState("");
-  const [billTo, setBillTo] = useState<"guest" | "company">("guest");
+  /* The hotel's defaults (193, the owner's D27-260 Q1). */
+  const [billTo, setBillTo] = useState<"guest" | "company">(rules?.defaultBillTo ?? "guest");
   const [companyId, setCompanyId] = useState("");
   /* Waiting for the hotel holds the room and sends nothing (D27-35). */
-  const [waiting, setWaiting] = useState(false);
+  const [waiting, setWaiting] = useState(rules?.defaultGuarantee === "tentative");
   const [expected, setExpected] = useState("");
   const [expectedOut, setExpectedOut] = useState("");
   const [groupName, setGroupName] = useState("");
@@ -221,6 +223,10 @@ export default function BookingPage() {
   const channels = useQuery({
     queryKey: ["booking-sources", hotelId],
     queryFn: () => listBookingSources(hotelId),
+  });
+  const segments = useQuery({
+    queryKey: ["lists", hotelId, "market_segment"],
+    queryFn: () => listOf(hotelId, "market_segment"),
   });
   const siteSource = (channels.data ?? []).find((s) => s.id === bookingSourceId)?.kind === "ota";
   const accounts = useQuery({
@@ -454,10 +460,21 @@ export default function BookingPage() {
     ? "An advance is an amount above 0." : null;
 
   /* RULE 6: a button that cannot be used says why, under it. */
+  /* THE HOTEL'S REQUIRED FIELDS (193, D27-260 Q2), said before Save; the
+     server refuses them too. */
+  const required: Record<string, [string, string]> = {
+    phone: ["The phone number", phone], email: ["The email", email],
+    nationality: ["The nationality", guestId.nationality], address: ["The address", addressLine],
+    expectedArrival: ["The expected arrival time", expected], marketSegment: ["The market segment", marketSegment],
+    businessSource: ["The business source", businessSource], salesPerson: ["The sales person", salesPerson],
+  };
+  const missing = (rules?.requiredBookingFields ?? []).find((k) => !required[k]?.[1]?.trim());
+
   const saveReason =
     !guestName.trim() ? "Type the guest's name."
       /* X-2 (round D): the server's own phone and email rules, said first. */
-      : phoneProblem(phone) ?? emailProblem(email)
+      : (missing ? `${required[missing]![0]} is needed for a booking at this hotel.` : null)
+      ?? phoneProblem(phone) ?? emailProblem(email)
       ?? (!bookingSourceId ? "Choose the booking source."
         : lines.length === 0 ? "Add a room."
           : (dayUse && lines.some((l) => !l.comp && !(Number(l.rate) > 0)) ? "Type the day-use price." : null)
@@ -491,8 +508,8 @@ export default function BookingPage() {
     setAddressLine(""); setCity(""); setStateName(""); setPincode(""); setCountry("");
     setGuestId(deskGuestId(rules));
     setBookingSourceId(""); setBusinessSource(""); setMarketSegment("");
-    setSalesPick(""); setSalesOther(""); setBillTo("guest"); setCompanyId("");
-    setWaiting(false); setExpected(""); setExpectedOut(""); setGroupName("");
+    setSalesPick(""); setSalesOther(""); setBillTo(rules?.defaultBillTo ?? "guest"); setCompanyId("");
+    setWaiting(rules?.defaultGuarantee === "tentative"); setExpected(""); setExpectedOut(""); setGroupName("");
     setLines([]); setSeeded(false); setDiscountMode("none"); setDiscountPct(""); setDiscountReason("");
     setPromotionId(""); setNotes(""); setAdvance(""); setAdvanceBy(rules?.defaultPaymentMethod ?? "Cash"); setPrepaid(true);
     setEarlyReason(""); setWaiveEarly(false); setCampaign("");
@@ -925,7 +942,9 @@ export default function BookingPage() {
                   <NativeSelect {...fieldProps(f)} value={marketSegment}
                     onChange={(e) => setMarketSegment(e.target.value)} className="h-12 text-base">
                     <option value="">-</option>
-                    {MARKET_SEGMENTS.map((m) => <option key={m} value={m}>{m}</option>)}
+                    {/* The hotel's own list (193, D27-260); the five built in until it loads. */}
+                    {(segments.data?.filter((m) => m.active).map((m) => m.label) ?? [...MARKET_SEGMENTS])
+                      .map((m) => <option key={m} value={m}>{m}</option>)}
                   </NativeSelect>
                 )}
               </Field>
