@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  instagramLink, money, plain, voucherBlocks, voucherFigures, voucherHeight, voucherPdf, voucherPolicies,
+  instagramLink, money, plain, voucherBlocks, voucherFields, voucherFigures, voucherHeight, voucherPdf, voucherPolicies,
   type VoucherFacts, type VoucherRoom,
 } from "../../../src/modules/guest-messaging/voucherDocument.ts";
 
@@ -284,6 +284,33 @@ describe("the check-in link in the voucher", () => {
     const without = await voucherPdf(facts([room()]));
     expect(withLink.byteLength).toBeGreaterThan(without.byteLength + 500);
     expect((Buffer.from(withLink).toString("latin1").match(/\/Type \/Page\b(?!s)/g) ?? []).length).toBe(1);
+  });
+});
+
+/* D27-265: the voucher on WhatsApp is our own template, booking_voucher -
+   ten numbered fields, written as the owner's sample writes them: "Sat, 10
+   Oct 2026", the hotel's own times as "2:00 PM", its phone, a dash where a
+   figure is missing. */
+describe("the WhatsApp voucher's ten fields (booking_voucher, D27-265)", () => {
+  it("writes each as the owner's sample does", () => {
+    expect(voucherFields({ ...facts([room({ roomType: "Deluxe A/C" })]), checkIn: "2026-10-10", checkOut: "2026-10-12" }))
+      .toEqual({
+        guestName: "Asha Test", hotelName: "Test Hotel", reference: "FH-TST-2610-0001",
+        checkInDay: "Sat, 10 Oct 2026", checkInFrom: "2:00 PM",
+        checkOutDay: "Mon, 12 Oct 2026", checkOutBy: "11:00 AM",
+        room: "1 × Deluxe A/C", guests: "2 adults", hotelPhone: "+91 00000 00000",
+      });
+  });
+
+  it("counts a group's rooms by type, says noon and midnight right, and writes a dash for what is missing", () => {
+    const f = facts([room(), room(), room({ roomType: "Suite", adults: 1, children: 1 })]);
+    expect(voucherFields({ ...f, checkIn: "2026-09-05",
+      hotel: { ...f.hotel, phone: null, checkInTime: "12:00", checkOutTime: "00:30" } })).toMatchObject({
+      checkInDay: "Sat, 5 Sep 2026", checkInFrom: "12:00 PM", checkOutBy: "12:30 AM",
+      room: "2 × Superior, 1 × Suite", guests: "5 adults, 1 child", hotelPhone: "-",
+    });
+    expect(voucherFields({ ...f, hotel: { ...f.hotel, checkInTime: null, checkOutTime: null } }))
+      .toMatchObject({ checkInFrom: "-", checkOutBy: "-" });
   });
 });
 
