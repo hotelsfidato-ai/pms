@@ -4,7 +4,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-/* The amenities list's icon keys (190's seed), drawn here; a key nobody
+/* The amenities list's icon keys (194's seed), drawn here; a key nobody
    knows - every amenity added by hand - is a plain tick. */
 const ICONS: Record<string, LucideIcon> = {
   "front-desk": ConciergeBell, ac: Snowflake, wifi: Wifi, parking: SquareParking,

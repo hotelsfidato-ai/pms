@@ -1,5 +1,5 @@
 -- =============================================================================
--- 190 · The property's profile: numbers, texts, amenities, child ages
+-- 194 · The property's profile: numbers, texts, amenities, child ages
 --       (D27-249, D27-257; phase 2 of the settings plan; numbered for now)
 -- =============================================================================
 -- The owner, 3 October, every recommendation accepted (D27-257):

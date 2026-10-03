@@ -223,7 +223,7 @@ DELETE /:code/logo                the same picture rules; the owner, an administ
                                   app.manages_hotel in the table's policy)
 ```
 
-The property's profile (phase 2 of the settings plan; D27-249, D27-257; `property.ts`, 190):
+The property's profile (phase 2 of the settings plan; D27-249, D27-257; `property.ts`, 194):
 
 ```
 GET    /:code/property-profile    { registrations, texts, childFreeAge, childMaxAge, map }

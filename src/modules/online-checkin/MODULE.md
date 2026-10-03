@@ -198,7 +198,7 @@ Coming soon page and its address are gone.
   `/logo`. Decorative (`alt=""`: the name is printed under it); where there
   is none, or it does not load, nothing is drawn.
 - **About the hotel (D27-257)** - by rule 8: `AboutTheHotel.tsx`,
-  `api/src/routes/guestAbout.ts`, the definer `app.guest_about` (190): the
+  `api/src/routes/guestAbout.ts`, the definer `app.guest_about` (194): the
   highlights written on Settings, the amenities switched on, and the map point
   as a plain Google Maps link (`mapLink`, on the front door). Never the policy
   texts. Hidden when there is nothing.

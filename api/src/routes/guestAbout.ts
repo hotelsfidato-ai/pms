@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { ask, openedHere, refused } from "./guestDoorKit.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   ABOUT THE HOTEL, ON THE GUEST'S PAGE (D27-249, D27-257, migration 190)
+   ABOUT THE HOTEL, ON THE GUEST'S PAGE (D27-249, D27-257, migration 194)
 
    GET /api/guest/:token/about   behind this phone's unlock (rule 8): the
                                  hotel's highlights (about, attractions,

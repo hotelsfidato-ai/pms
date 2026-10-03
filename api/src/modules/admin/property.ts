@@ -22,7 +22,7 @@ import { managedHotel } from "./groupSettings.ts";
    in each table's policy); the amenities list is the owner's or an
    Admin's (app.keeps_amenities), said in words before the database would
    refuse it. The child ages are WORDS ONLY: no price reads them (D27-257).
-   Every change is recorded by the tables' audit triggers (190).
+   Every change is recorded by the tables' audit triggers (194).
    ══════════════════════════════════════════════════════════════════ */
 
 export const property = new Hono<{ Variables: { subject: string } }>();
