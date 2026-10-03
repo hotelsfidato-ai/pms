@@ -67,7 +67,8 @@ export function MoneyList<T extends Row>({
                 <GripVertical aria-hidden
                   className={cn("size-4 shrink-0 text-grey-400", canDrag ? "cursor-grab" : "opacity-30")} />
               )}
-              <Switch checked={row.isActive} onCheckedChange={(on) => onToggle(row, on)} />
+              <Switch checked={row.isActive} onCheckedChange={(on) => onToggle(row, on)}
+                      label={<span className="sr-only">{name(row)}</span>} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-medium">{name(row)}</p>
                 <p className="truncate text-sm text-grey-500">{detail(row)}</p>

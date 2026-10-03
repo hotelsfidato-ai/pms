@@ -57,14 +57,18 @@ async function reorder(client: Client, table: string, hotelId: string, ids: unkn
 
 /* ── Payment methods ─────────────────────────────────────────────── */
 
+/* A payment taken this way: by its word since 192; before 192 no word was
+   kept, so such a payment counts against every method of its kind - Off,
+   never deleted, is the safe side. */
+const TAKEN = `(p.method_label = pm.label or (p.method_label is null and p.method = pm.kind))`;
+
 money.get("/:code/payment-methods", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
     const { rows } = await client.query(
       `select pm.id::text, pm.label, pm.kind, pm.is_active as "isActive",
-              exists (select 1 from payments p
-                       where p.hotel_id = pm.hotel_id and p.method_label = pm.label) as used
+              exists (select 1 from payments p where p.hotel_id = pm.hotel_id and ${TAKEN}) as used
          from payment_methods pm where pm.hotel_id = $1
         order by pm.sort_order, lower(pm.label)`, [hotelId]);
     const { rows: [h] } = await client.query<{ d: string }>(
@@ -128,8 +132,7 @@ money.delete("/:code/payment-methods/:id", async (c) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
     const { rows } = await client.query(
-      `select 1 from payment_methods pm join payments p
-          on p.hotel_id = pm.hotel_id and p.method_label = pm.label
+      `select 1 from payment_methods pm join payments p on p.hotel_id = pm.hotel_id and ${TAKEN}
         where pm.id = $2 and pm.hotel_id = $1 limit 1`, [hotelId, id]);
     if (rows.length) return refuse("Payments were taken this way. Switch it Off instead.");
     try {
