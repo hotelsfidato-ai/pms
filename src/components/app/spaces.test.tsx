@@ -84,7 +84,7 @@ describe("each space's menu", () => {
     ]);
     const people = owner.find((s) => s.label === "People and security")!.items;
     expect(people.map((i) => i.label)).toEqual(
-      ["People", "Roles and permissions", "Audit log", "Activity", "Sign-ins", "Signing in"]);
+      ["People", "Roles and permissions", "Audit log", "Activity", "Sign-ins and devices", "Signing in"]);
     /* A link to a Front office screen is marked and keeps its address. */
     const roomTypes = owner.find((s) => s.label === "Rooms")!.items[0]!;
     expect(roomTypes).toMatchObject({ to: "/h/5EL/room-types", leaves: true });
