@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-03 · The early and late fees are set on Money (the owner's D27-259 Q3) - the cash lane's
+
+**Shipped:** the front desk card shows the early arrival and late departure fees; its dialog edits only the hours and points to Settings › Money › Extra charges, which saves them through the same PATCH /:code/front-desk.
+
 ## 2026-10-03 · The front desk's rules ride on PATCH /:code/front-desk (the owner's D27-243)
 
 Branch `settings/phase3-2oct`. **Shipped:** the PATCH takes the front desk's rules (187: way of paying, the desk may overbook, the advance before check-in, weekend days, the ID, nationality and title the forms start on), each refused in a sentence before anything is written; front desk's card sets them. Rates shades the hotel's own weekend. **Proved:** front desk's `frontDeskRules.test.ts`.

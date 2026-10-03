@@ -8,6 +8,13 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-03 · Money in the settings console: payment methods, extra charges, % or ₹ discounts, commission, pickup and drop (the owner's D27-259) - P4, the cash lane
+
+Branch `settings/money-3oct`. **Asked for:** phase 4 of the settings plan; the owner took every recommendation (D27-259 Q1-Q6).
+**Shipped:** migration `192_money_settings.sql` - `payment_methods` per hotel (the word, what it is in the books, On/Off, order; seeded with the five the screens offered, new hotels too; triggers keep the default On and carry it through a rename), `payments.method_label`, `inclusions.is_transport`, `room_promotions.amount`, `reservations.discount_amount`. `money.ts`: GET/POST/PATCH/DELETE/order for payment methods, extra charges (the inclusions list) and discounts, the default, commission. The payment door takes only a method that is On and keeps its word ("Transferred to city ledger - Agoda"). Pages registered in `money.settings.ts` (money/payment-methods, extra-charges, discounts, commission, pickup) on one shared list (`MoneyList`: search, add, drag to order, On/Off, edit, delete only when unused, a plain-words panel in each editor). The bill's Add charge picks from the list; the screens' payment lists come from GET /api/hotels (`payingWays`, the starting five when an older server sends none). A payment from before 192 kept no word, so it counts against every method of its kind: such a method is switched Off, never deleted.
+**Proved:** API `money.test.ts` (payment methods, the door, the default, extra charges, discounts, commission) and `newBooking.test.ts`'s ₹ cases; each of five guards removed made its test fail (the door's On check, the default's trigger, the 10% cap, the payload's On filter, delete-when-used). Folders: finance 130, reservations 56, banquet 41, inventory 84, front-desk 101. Web `moneySettings.test.tsx`, `frontDeskRules.test.tsx`.
+**Left open:** the activity log does not see a change of default (hotels has no audit trigger - as Front desk rules today); migrationNumbers fails on the 190-191 gap until the master renumbers.
+
 ## 2026-10-02 · Company payments in the City ledger (the owner's D27-239); a cash paid-out waits for the GM's or owner's yes (D27-242)
 
 Branch `finance/cityledger-expenses-2oct`, the cash lane. **Asked for:** the master, with the owner's answers: (1) a company's or booking site's payment recorded and reversed on Company accounts, and the City ledger's Opening, Credit and Closing counting it; (2) every cash paid-out - the desk's drawer and an outlet's tin - waits for the GM's or the owner's approval; (Q4) the accountant's day book shows company payments as receipts, apart from sales, ready for Tally.

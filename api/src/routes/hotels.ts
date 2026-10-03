@@ -36,6 +36,7 @@ interface HotelRow {
   default_id_type: string | null;
   default_nationality: string;
   default_title: string | null;
+  payment_methods: { label: string; kind: string }[];
 }
 
 hotels.get("/", async (c) => {
@@ -74,7 +75,12 @@ hotels.get("/", async (c) => {
                  Settings › Operations (187, D27-243). */
               default_payment_method, desk_may_overbook, advance_before_check_in,
               weekend_days::int[] as weekend_days,
-              default_id_type, default_nationality, default_title
+              default_id_type, default_nationality, default_title,
+              /* The hotel's own ways of paying that are On, in its order (192). */
+              coalesce((select json_agg(json_build_object('label', pm.label, 'kind', pm.kind)
+                                        order by pm.sort_order, lower(pm.label))
+                          from payment_methods pm
+                         where pm.hotel_id = hotels.id and pm.is_active), '[]') as payment_methods
          from hotels
         where is_active
         order by code`,
@@ -106,6 +112,7 @@ hotels.get("/", async (c) => {
           defaultIdType: h.default_id_type,
           defaultNationality: h.default_nationality,
           defaultTitle: h.default_title,
+          paymentMethods: h.payment_methods,
         },
       })),
     };
