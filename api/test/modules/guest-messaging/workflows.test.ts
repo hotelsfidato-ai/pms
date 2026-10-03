@@ -222,12 +222,6 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
   /* One Meta template per kind, in English, its fields in the template's
      own order (docs/go-live/whatsapp-templates.md, IMPORT.md). */
   it.each([
-    ["booking-confirmation", "booking_confirmation",
-      ["Asha Test", "Test Hotel", "FH-5EL-2610-0001", "01/10/2026", "03/10/2026", "2", "https://example.test/g/x"]],
-    ["arrival-reminder", "stay_reminder",
-      ["Asha Test", "Test Hotel", "01/10/2026", "FH-5EL-2610-0001", "https://example.test/g/x"]],
-    ["checkin-link", "checkin_link",
-      ["Asha Test", "Test Hotel", "01/10/2026", "FH-5EL-2610-0001", "https://example.test/g/x"]],
     ["review", "review_request", ["Asha Test", "Test Hotel", "https://example.test/g/x"]],
   ])("sends %s on WhatsApp as the %s template", (kind, template, fields) => {
     const out = whatsapp({ kind });
@@ -238,6 +232,23 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     expect(graph.template.language.code).toBe("en");
     expect(graph.template.components.map((c) => c.type)).toEqual(["body"]);
     expect(graph.template.components[0]!.parameters.map((p) => p.text)).toEqual(fields);
+  });
+
+  /* D27-264: fewer messages - the voucher is the confirmation, the check-in
+     link is in its PDF, and there is no reminder. Their templates and emails
+     are gone, so anything still asking for them is refused in a sentence. */
+  it.each(["booking-confirmation", "arrival-reminder", "checkin-link"])(
+    "refuses %s on WhatsApp: its template is not used (D27-264)", (kind) => {
+      expect(whatsapp({ kind })).toMatchObject({ stop: true, statusCode: 422, answer: { ok: false } });
+    });
+
+  it("keeps the voucher's email, and has no reminder or check-in-link email (D27-264)", () => {
+    const [voucherMail] = run(withMailbox(), "Read the message", { body: message({ channel: "email", kind: "booking-confirmation" }) });
+    expect(voucherMail!.json).toMatchObject({ stop: false, email: true });
+    for (const kind of ["arrival-reminder", "checkin-link"]) {
+      const [out] = run(withMailbox(), "Read the message", { body: message({ channel: "email", kind }) });
+      expect(out!.json, kind).toMatchObject({ stop: true, statusCode: 422 });
+    }
   });
 
   it("sends the check-in code as guest_page_code, in the body and in the copy button", () => {

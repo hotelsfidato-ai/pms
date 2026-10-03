@@ -131,16 +131,17 @@ afterAll(async () => {
 
 /* ── 1 · The switches and the timing (Q1, Q2) ─────────────────────── */
 
-describe("each guest message, switched per hotel (D27-261)", () => {
-  it("is today's behaviour until somebody saves: on, 1 day before from 10:00 - the invoice off", async () => {
+describe("each guest message, switched per hotel (D27-261, D27-264)", () => {
+  /* D27-264: the voucher is the confirmation (both ways), the invoice, the
+     review request - and nothing else: no reminder, no timing. */
+  it("is today's behaviour until somebody saves - the voucher and the review on, the invoice off", async () => {
     const res = await call(gmId, "GET", "/guest-message-settings");
     expect(res.status, await res.clone().text()).toBe(200);
     const body = (await res.json()) as { messages: Record<string, unknown>[]; catchUp: unknown };
     expect(body.messages.map((m) => [m["kind"], m["isOn"]])).toEqual([
-      ["booking-confirmation", true], ["booking-voucher", true], ["arrival-reminder", true],
-      ["invoice", false], ["review", true],
+      ["booking-voucher", true], ["invoice", false], ["review", true],
     ]);
-    expect(body.messages[2]).toMatchObject({ daysBefore: 1, sendFrom: "10:00" });
+    expect(body.messages.some((m) => "daysBefore" in m || "sendFrom" in m), "no timing").toBe(false);
     expect(body.catchUp, "shown, not changed").toEqual({ from: "09:00", until: "21:00" });
   });
 
@@ -152,34 +153,21 @@ describe("each guest message, switched per hotel (D27-261)", () => {
       [hotelId])).toEqual([{ is_on: false, changed_by: gmId }]);
   });
 
-  it("takes the reminder's days (1 to 7) and start time, and a timing for nothing else", async () => {
-    for (const [kind, body] of [
-      ["arrival-reminder", { isOn: true, daysBefore: 8 }], ["arrival-reminder", { isOn: true, daysBefore: 0 }],
-      ["arrival-reminder", { isOn: true, sendFrom: "25:00" }], ["booking-confirmation", { isOn: true, daysBefore: 2 }],
-      ["arrival-reminder", { daysBefore: 2 }], ["check-in-code", { isOn: false }],
-    ] as const) {
-      expect((await call(gmId, "PUT", `/guest-message-settings/${kind}`, body)).status, JSON.stringify([kind, body]))
-        .toBeGreaterThanOrEqual(400);
+  it("has no reminder, no separate confirmation and no check-in code to switch", async () => {
+    for (const kind of ["arrival-reminder", "booking-confirmation", "check-in-code"]) {
+      expect((await call(gmId, "PUT", `/guest-message-settings/${kind}`, { isOn: false })).status, kind).toBe(404);
     }
-    expect((await call(gmId, "PUT", "/guest-message-settings/arrival-reminder", { isOn: true, daysBefore: 3, sendFrom: "08:30" })).status).toBe(200);
-    const got = (await (await call(gmId, "GET", "/guest-message-settings")).json()) as { messages: Record<string, unknown>[] };
-    expect(got.messages[2]).toMatchObject({ isOn: true, daysBefore: 3, sendFrom: "08:30" });
+    expect((await call(gmId, "PUT", "/guest-message-settings/review", {})).status, "on or off, said").toBe(400);
   });
 
-  it("is asked by the sweep: a switched-off confirmation and voucher are not owed, and the reminder goes on its days", async () => {
+  it("is asked by the sweep: the voucher goes both ways while on, and neither way when off", async () => {
     const owed = async () => (await sql(
       `select kind, channel from app.guest_messages_owed(null, 3, '10:00', '00:00', '23:59', $1)
         where reservation_id = $2 order by kind, channel`, [hotelId, stayId]));
     expect((await owed()).map((r) => `${r.kind} ${r.channel}`)).toEqual([
-      "booking-confirmation email", "booking-confirmation whatsapp", "booking-voucher whatsapp"]);
+      "booking-confirmation email", "booking-voucher whatsapp"]);
 
-    await call(gmId, "PUT", "/guest-message-settings/booking-confirmation", { isOn: false });
     await call(gmId, "PUT", "/guest-message-settings/booking-voucher", { isOn: false });
-    /* Arriving in 3 days: a 3-day reminder from 00:00 is owed now. */
-    await call(gmId, "PUT", "/guest-message-settings/arrival-reminder", { isOn: true, daysBefore: 3, sendFrom: "00:00" });
-    expect((await owed()).map((r) => `${r.kind} ${r.channel}`)).toEqual(["arrival-reminder whatsapp"]);
-
-    await call(gmId, "PUT", "/guest-message-settings/arrival-reminder", { isOn: false });
     expect(await owed()).toEqual([]);
   });
 });

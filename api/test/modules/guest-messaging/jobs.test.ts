@@ -212,17 +212,17 @@ describe("which way it goes", () => {
     expect(new Set(post.seen.map((m) => m.id)).size, "one id per way").toBe(2);
   });
 
-  /* D27-241 (Q1): the CRS's voucher template with the PDF is a second
-     WhatsApp, after the confirmation - it carries no link, so none is made. */
-  it("mints no link for the WhatsApp voucher, and sends it as its own kind", async () => {
+  /* D27-264: the voucher IS the confirmation, and its PDF prints the guest's
+     check-in link and its QR code - so the voucher gets the link too. */
+  it("mints the guest's link for the WhatsApp voucher, which prints it", async () => {
     connected();
     const link = aLinkMaker();
     const post = aReceiver();
     await runOnce(NOWHERE, async () => [aBooking({ kind: KIND.voucher, reference: "FH-V" })], link.make, post.send);
 
-    expect(link.asked).toEqual([]);
+    expect(link.asked).toEqual(["FH-V"]);
     expect(post.seen[0]).toMatchObject({ kind: "booking-voucher", channel: "whatsapp" });
-    expect(post.seen[0]!.data).not.toHaveProperty("link");
+    expect(post.seen[0]!.data?.["link"]).toBe("http://localhost:5173/g/token-for-FH-V");
   });
 });
 

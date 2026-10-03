@@ -268,6 +268,24 @@ describe("the Instagram QR code", () => {
   });
 });
 
+/* D27-264: the voucher IS the confirmation, and it carries the guest's own
+   check-in page - the link written out and its QR code. */
+describe("the check-in link in the voucher", () => {
+  const LINK = "https://pms.fidatohotels.com/g/a-made-up-token-0123456789abcdefghijklmnop";
+
+  it("is on the voucher only when the message carries one (the desk's View voucher has none)", () => {
+    expect(voucherBlocks({ ...facts([room()]), checkInLink: LINK }).checkIn).toBe(LINK);
+    expect(voucherBlocks(facts([room()])).checkIn).toBeNull();
+  });
+
+  it("is drawn in the PDF with its QR code, and the voucher stays one page", async () => {
+    const withLink = await voucherPdf({ ...facts([room()]), checkInLink: LINK });
+    const without = await voucherPdf(facts([room()]));
+    expect(withLink.byteLength).toBeGreaterThan(without.byteLength + 500);
+    expect((Buffer.from(withLink).toString("latin1").match(/\/Type \/Page\b(?!s)/g) ?? []).length).toBe(1);
+  });
+});
+
 describe("the PDF, with everything the reference has", () => {
   const pages = (bytes: Uint8Array) =>
     (Buffer.from(bytes).toString("latin1").match(/\/Type \/Page\b(?!s)/g) ?? []).length;
