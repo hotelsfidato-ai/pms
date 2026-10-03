@@ -133,6 +133,9 @@ beforeAll(async () => {
     hotelId = (await q(
       "select app.provision_property_unchecked($1,'Reviews Test','Nowhere')::text as id",
       [CODE])).rows[0]!.id as string;
+    /* Review requests switched on here: off is the default (D27-266), and
+       has its own test. */
+    await q("insert into guest_message_settings (hotel_id, kind, is_on) values ($1, 'review', true)", [hotelId]);
 
     /* Stays written directly: making a booking is the reservations
        service's job and this file is about reviews. */
@@ -302,7 +305,23 @@ describe("when a guest may be asked", () => {
         .toBe("Review requests are switched off for this hotel (Settings, Messages).");
       expect(seen, "nothing reached the receiver").toBeNull();
     } finally {
-      await sql("delete from guest_message_settings where hotel_id = $1 and kind = 'review'", [hotelId]);
+      await sql("update guest_message_settings set is_on = true where hotel_id = $1 and kind = 'review'", [hotelId]);
+    }
+  });
+
+  /* D27-266: the review request comes later - a hotel that never switched
+     it on sends none. */
+  it("sends nothing while the hotel has never switched review requests on", async () => {
+    connected();
+    await sql("delete from guest_message_settings where hotel_id = $1 and kind = 'review'", [hotelId]);
+    try {
+      const res = await asOwner(`/reviews/${departedId}/ask`, "POST", { channel: "whatsapp" });
+      expect(res.status).toBe(409);
+      expect((await res.json() as { reason: string }).reason)
+        .toBe("Review requests are switched off for this hotel (Settings, Messages).");
+      expect(seen, "nothing reached the receiver").toBeNull();
+    } finally {
+      await sql("insert into guest_message_settings (hotel_id, kind, is_on) values ($1, 'review', true)", [hotelId]);
     }
   });
 

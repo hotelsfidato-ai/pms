@@ -156,6 +156,13 @@ describe("the market-to-revenue workflow (WhatsApp)", () => {
 });
 
 describe("the CRS workflow (every guest message, D27-186)", () => {
+  /* The file with one line of "Read the message" changed. */
+  const edited = (from: string, to: string): Workflow => ({
+    ...crs,
+    nodes: crs.nodes.map((n) => n.name !== "Read the message" ? n : {
+      ...n, parameters: { ...n.parameters, jsCode: n.parameters.jsCode!.replace(from, to) },
+    }),
+  });
   const withMailbox = (): Workflow => ({
     ...crs,
     nodes: crs.nodes.map((n) => n.name !== "Read the message" ? n : {
@@ -163,9 +170,26 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     }),
   });
 
-  it("refuses every email until the owner names the mailbox", () => {
-    const [out] = run(crs, "Read the message", { body: message({ channel: "email" }) });
+  /* D27-266: the owner's live settings, carried in the file. */
+  it("sends from the CRS's mailbox, and the voucher by the CRS's reservation_confirmation", () => {
+    const [mail] = run(crs, "Read the message", { body: message({ channel: "email", kind: "booking-confirmation" }) });
+    expect(mail!.json).toMatchObject({ stop: false, email: true,
+      from: "Fidato Hotels <crs@fidatohotels.com>", replyTo: "crs@fidatohotels.com" });
+    const [read] = run(crs, "Read the message", { body: voucher() });
+    expect((read!.json["template"] as { name: string }).name).toBe("reservation_confirmation");
+  });
+
+  it("refuses every email when the mailbox is emptied", () => {
+    const [out] = run(edited('const FROM = "Fidato Hotels <crs@fidatohotels.com>";', 'const FROM = "";'),
+      "Read the message", { body: message({ channel: "email" }) });
     expect(out!.json).toMatchObject({ stop: true, statusCode: 503 });
+  });
+
+  it("writes the voucher email with no check-in line when no link came (online check-in off)", () => {
+    const body = message({ channel: "email", kind: "booking-confirmation" }) as { data: Json };
+    delete body.data["link"];
+    const [mail] = run(crs, "Read the message", { body });
+    expect(String(mail!.json["text"])).not.toContain("check-in details");
   });
 
   it("writes the email itself, with a typed name as text and never HTML", () => {
@@ -270,20 +294,14 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
       checkInLong: "01 Oct 2026", checkOutLong: "03 Oct 2026", roomTypes: "1 x Deluxe",
       guests: "2 adults", officePhone: "-", ...data },
   });
-  const withVoucherTemplate = (): Workflow => ({
-    ...crs,
-    nodes: crs.nodes.map((n) => n.name !== "Read the message" ? n : {
-      ...n, parameters: { ...n.parameters, jsCode: n.parameters.jsCode!.replace('const VOUCHER_TEMPLATE = "";', 'const VOUCHER_TEMPLATE = "fidato_voucher";') },
-    }),
-  });
-
-  it("refuses the WhatsApp voucher until the owner names the approved template", () => {
-    const [out] = run(crs, "Read the message", { body: voucher() });
+  it("refuses the WhatsApp voucher when its template's name is emptied", () => {
+    const [out] = run(edited('const VOUCHER_TEMPLATE = "reservation_confirmation";', 'const VOUCHER_TEMPLATE = "";'),
+      "Read the message", { body: voucher() });
     expect(out!.json).toMatchObject({ stop: true, statusCode: 503, answer: { ok: false } });
   });
 
   it("uploads the voucher PDF to Meta first, then sends the CRS template with it and the eight named fields", () => {
-    const [read] = run(withVoucherTemplate(), "Read the message", { body: voucher() });
+    const [read] = run(crs, "Read the message", { body: voucher() });
     expect(read!.json).toMatchObject({
       stop: false, email: false, upload: true,
       mediaUrl: "https://graph.facebook.com/v23.0/100000000000001/media",
@@ -296,7 +314,7 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     expect(built!.json).toMatchObject({ stop: false, graphUrl: "https://graph.facebook.com/v23.0/100000000000001/messages" });
     const graph = built!.json["graphBody"] as { to: string; template: { name: string; language: { code: string }; components: Json[] } };
     expect(graph.to).toBe("919876543210");
-    expect(graph.template.name).toBe("fidato_voucher");
+    expect(graph.template.name).toBe("reservation_confirmation");
     expect(graph.template.language.code).toBe("en");
     expect(graph.template.components).toEqual([
       { type: "header", parameters: [{ type: "document", document: { id: "MEDIA-1", filename: "Voucher-FH-5EL-2610-0001.pdf" } }] },
@@ -314,9 +332,9 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
   });
 
   it("refuses a voucher with no PDF, and answers the PMS when Meta refused the upload", () => {
-    const [noFile] = run(withVoucherTemplate(), "Read the message", { body: { ...voucher(), file: null } });
+    const [noFile] = run(crs, "Read the message", { body: { ...voucher(), file: null } });
     expect(noFile!.json).toMatchObject({ stop: true, statusCode: 422 });
-    const [read] = run(withVoucherTemplate(), "Read the message", { body: voucher() });
+    const [read] = run(crs, "Read the message", { body: voucher() });
     const [refused] = run(crs, "Build the voucher message", { statusCode: 400, body: { error: { message: "Bad file" } } },
       { earlier: { "Read the message": read!.json } });
     expect(refused!.json).toMatchObject({ stop: true, statusCode: 502, answer: { ok: false } });

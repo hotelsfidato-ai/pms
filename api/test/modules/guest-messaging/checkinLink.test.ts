@@ -75,6 +75,9 @@ beforeAll(async () => {
   await sql("delete from staff_hotels where staff_id = $1", [clerk]);
   await sql("insert into staff_hotels (staff_id, hotel_id, role) values ($1, $2, 'front_desk')",
     [clerk, hotelId]);
+  /* Online check-in on, for the link tests; off is the default (D27-266). */
+  await sql(`insert into guest_message_settings (hotel_id, kind, is_on) values ($1, 'online-checkin', true)
+             on conflict (hotel_id, kind) do update set is_on = true`, [hotelId]);
 
   server = createServer((req, res) => {
     let raw = "";
@@ -113,6 +116,7 @@ afterAll(async () => {
   } finally {
     await sql("alter table guests enable trigger guests_no_delete");
   }
+  await sql("delete from guest_message_settings where hotel_id = $1 and kind = 'online-checkin'", [hotelId]);
   await sql("delete from staff_hotels where staff_id = $1", [clerk]);
   await sql("update staff set is_active = false where id = $1", [clerk]);
   await closePool();
@@ -192,6 +196,21 @@ describe("Send check-in link (D27-105)", () => {
     const again = await call(clerk, "POST", `/stays/${b.id}/confirmation`, {});
     expect(again.status).toBe(409);
     expect(sent(), "nothing goes twice").toEqual([]);
+  });
+
+  /* D27-266: while online check-in is off, the voucher goes with no link -
+     and no guest page is minted for it. */
+  it("sends the voucher with no check-in link while online check-in is off", async () => {
+    await sql("update guest_message_settings set is_on = false where hotel_id = $1 and kind = 'online-checkin'", [hotelId]);
+    try {
+      const b = await book("No link");
+      expect((await call(clerk, "POST", `/stays/${b.id}/confirmation`, {})).status).toBe(200);
+      expect(received).toHaveLength(1);
+      expect("link" in received[0]!.data, "no link").toBe(false);
+      expect((await sql("select 1 from guest_links where reservation_id = $1", [b.id])).rows).toHaveLength(0);
+    } finally {
+      await sql("update guest_message_settings set is_on = true where hotel_id = $1 and kind = 'online-checkin'", [hotelId]);
+    }
   });
 
   it("says so, and records nothing, when sending is switched off", async () => {

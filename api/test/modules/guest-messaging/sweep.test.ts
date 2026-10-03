@@ -87,6 +87,9 @@ beforeAll(async () => {
   hotelId = (await sql(
     "select app.provision_property_unchecked($1, 'Sweep Test', 'Nowhere')::text as id",
     [CODE])).rows[0].id as string;
+  /* Online check-in on here, so the link tests below have a link; it is off
+     by default (D27-266), which has its own test. */
+  await sql("insert into guest_message_settings (hotel_id, kind, is_on) values ($1, 'online-checkin', true)", [hotelId]);
 
   /* Three guests who agreed to WhatsApp, arriving in 5, 6 and 7 days on the
      property's clock - soonest first, so the order is known. */
@@ -129,6 +132,7 @@ afterAll(async () => {
     await db.query("delete from guest_messaging_began");
     await db.query("delete from guest_links where hotel_id = $1", [hotelId]);
     await db.query("delete from messages_sent where hotel_id = $1", [hotelId]);
+    await db.query("delete from guest_message_settings where hotel_id = $1", [hotelId]);
     await db.query("delete from reservations where hotel_id = $1", [hotelId]);
     await db.query("delete from reservation_groups where name like 'GMW %'");
     await db.query("alter table guests disable trigger guests_no_delete");
@@ -170,6 +174,22 @@ const recorded = async () => (await sql(
   [hotelId])).rows as Array<{ about_id: string; kind: string; status: string }>;
 
 describe("the sweep, as the server runs it", () => {
+  /* D27-266: online check-in comes later. Until a hotel switches it on, no
+     guest page is minted for the voucher and none goes with it - so its PDF
+     prints no link and no QR, and the email has no link line. */
+  it("mints no guest page and sends no link while online check-in is off, as it is by default", async () => {
+    await sql("delete from guest_message_settings where hotel_id = $1 and kind = 'online-checkin'", [hotelId]);
+    try {
+      const out = await runOnce(asTheSweep, mine);
+      expect(out.sent).toBe(3);
+      expect(received.map((m) => m.kind)).toEqual(["booking-voucher", "booking-voucher", "booking-voucher"]);
+      expect(received.every((m) => !("link" in m.data)), "no link in any message").toBe(true);
+      expect((await sql("select 1 from guest_links where hotel_id = $1", [hotelId])).rows).toHaveLength(0);
+    } finally {
+      await sql("insert into guest_message_settings (hotel_id, kind, is_on) values ($1, 'online-checkin', true)", [hotelId]);
+    }
+  });
+
   it("sends each owed confirmation once, with a link that opens that guest's page", async () => {
     const out = await runOnce(asTheSweep, mine);
 

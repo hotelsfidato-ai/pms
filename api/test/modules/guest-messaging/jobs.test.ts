@@ -226,6 +226,18 @@ describe("which way it goes", () => {
   });
 });
 
+/* D27-266: with online check-in off, no page is minted (the link maker
+   answers nothing) and the message carries no link at all - not an empty one. */
+describe("online check-in off", () => {
+  it("sends the voucher with no link key", async () => {
+    connected();
+    const post = aReceiver();
+    await runOnce(NOWHERE, async () => [aBooking({ kind: KIND.voucher })], async () => "", post.send);
+    expect(post.seen).toHaveLength(1);
+    expect(post.seen[0]!.data && "link" in post.seen[0]!.data).toBe(false);
+  });
+});
+
 describe("a booking with nowhere to send", () => {
   it("mints no link and attempts nothing", async () => {
     connected();
