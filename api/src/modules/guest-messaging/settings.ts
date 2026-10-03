@@ -26,7 +26,7 @@ export const messageSettings = new Hono<{ Variables: { subject: string } }>();
 
 export const SWITCHES = [
   { kind: "booking-voucher", label: "Booking voucher", on: true,
-    when: "Once, when a booking is confirmed: the voucher PDF with the check-in link, on WhatsApp and by email." },
+    when: "Once, when a booking is confirmed: the voucher PDF, on WhatsApp and by email. It carries the check-in link only while Online check-in is on." },
   { kind: "online-checkin", label: "Online check-in", on: false,
     when: "The guest's own check-in page: its link and QR code in the voucher, and the desk's Send check-in link." },
   { kind: "invoice", label: "Tax invoice", on: false,
