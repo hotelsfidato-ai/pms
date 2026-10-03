@@ -284,6 +284,7 @@ describe("the sweep, as the server runs it", () => {
 /* ── Both ways, and the voucher on WhatsApp (D27-235, D27-241) ──────── */
 
 describe("the voucher both ways (D27-235, D27-241)", () => {
+  const office = async () => ((await sql("select phone from group_settings where id = 1")).rows[0]?.phone ?? null) as string | null;
 
   it("confirms a guest who agreed to WhatsApp and has an email BOTH ways, then the WhatsApp voucher - each once", async () => {
     await sql("update guests set email = 'sweep.guest1@example.test' where id = $1", [guests[0]]);
@@ -297,8 +298,8 @@ describe("the voucher both ways (D27-235, D27-241)", () => {
       ]);
       expect(new Set(one.map((m) => m.messageId)).size, "each its own message").toBe(2);
 
-      /* The email carries the PDF; the WhatsApp voucher the PDF and the ten
-         fields of our own booking_voucher (D27-265), from the same facts. */
+      /* The email carries the PDF; the WhatsApp voucher the PDF and its eight
+         fields, from the same facts; the WhatsApp confirmation the link. */
       const email = one.find((m) => m.channel === "email")!;
       expect(Buffer.from(email.file!.base64, "base64").subarray(0, 5).toString("latin1")).toBe("%PDF-");
       const voucher = one.find((m) => m.kind === "booking-voucher")!;
@@ -306,12 +307,11 @@ describe("the voucher both ways (D27-235, D27-241)", () => {
       const type = (await sql(
         "select rt.name from reservations r join room_types rt on rt.id = r.room_type_id where r.id = $1",
         [booking.get("GMW-1")])).rows[0].name as string;
-      const phone = (await sql("select phone from hotels where id = $1", [hotelId])).rows[0].phone as string | null;
       expect(voucher.data).toMatchObject({
         guestName: "Sweep Guest 1", reference: "GMW-1", hotelName: "Sweep Test",
-        room: `1 × ${type}`, guests: "1 adult", hotelPhone: phone?.trim() || "-",
+        roomTypes: `1 x ${type}`, guests: "1 adult", officePhone: (await office()) ?? "-",
       });
-      expect(voucher.data["checkInDay"]).toMatch(/^[A-Z][a-z]{2}, \d{1,2} [A-Z][a-z]{2} \d{4}$/);
+      expect(voucher.data["checkInLong"]).toMatch(/^\d{2} [A-Z][a-z]{2,3} \d{4}$/);
       /* Its PDF prints the check-in link and its QR code (D27-264): the link
          rides with it, and with the email too. */
       expect(voucher.data["link"]).toContain("/g/");

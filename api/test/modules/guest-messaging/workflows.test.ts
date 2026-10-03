@@ -259,28 +259,31 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     expect(graph.template.components.map((c) => c.parameters[0]!.text)).toEqual(["482913", "482913"]);
   });
 
-  /* D27-235 (2.2), D27-265: the voucher PDF on WhatsApp, by OUR OWN template
-     booking_voucher (not the CRS's) - uploaded to Meta first, then sent as
-     its document, with ten numbered fields and a "Check in online" button
-     whose link ends in the guest's own token. */
-  const TOKEN = "AbC_dEf-0123456789abcdefghijklmnopqrstuvwxyz";
+  /* D27-235 (2.2), D27-241: the voucher PDF on WhatsApp, by the CRS's own
+     approved template - uploaded to Meta first, then sent as its document,
+     with the template's eight NAMED fields from the PMS's facts. */
   const voucher = (data: Json = {}) => message({
     kind: "booking-voucher",
     file: { name: "Voucher-FH-5EL-2610-0001.pdf", contentType: "application/pdf",
       base64: Buffer.from("%PDF-1.4 made up").toString("base64") },
-    data: { guestName: "Asha Test", hotelName: "Test Hotel", reference: "FH-5EL-2610-0001",
-      checkInDay: "Sat, 10 Oct 2026", checkInFrom: "2:00 PM", checkOutDay: "Mon, 12 Oct 2026",
-      checkOutBy: "11:00 AM", room: "1 × Deluxe", guests: "2 adults", hotelPhone: "-",
-      link: `https://pms.fidatohotels.com/g/${TOKEN}`, ...data },
+    data: { guestName: "Asha Test", reference: "FH-5EL-2610-0001", hotelName: "Test Hotel",
+      checkInLong: "01 Oct 2026", checkOutLong: "03 Oct 2026", roomTypes: "1 x Deluxe",
+      guests: "2 adults", officePhone: "-", ...data },
+  });
+  const withVoucherTemplate = (): Workflow => ({
+    ...crs,
+    nodes: crs.nodes.map((n) => n.name !== "Read the message" ? n : {
+      ...n, parameters: { ...n.parameters, jsCode: n.parameters.jsCode!.replace('const VOUCHER_TEMPLATE = "";', 'const VOUCHER_TEMPLATE = "fidato_voucher";') },
+    }),
   });
 
-  it("refuses a WhatsApp voucher with no check-in link: its button would open nothing", () => {
-    const [out] = run(crs, "Read the message", { body: voucher({ link: "" }) });
-    expect(out!.json).toMatchObject({ stop: true, statusCode: 422, answer: { ok: false } });
+  it("refuses the WhatsApp voucher until the owner names the approved template", () => {
+    const [out] = run(crs, "Read the message", { body: voucher() });
+    expect(out!.json).toMatchObject({ stop: true, statusCode: 503, answer: { ok: false } });
   });
 
-  it("uploads the voucher PDF to Meta first, then sends booking_voucher with ten fields and the guest's button", () => {
-    const [read] = run(crs, "Read the message", { body: voucher() });
+  it("uploads the voucher PDF to Meta first, then sends the CRS template with it and the eight named fields", () => {
+    const [read] = run(withVoucherTemplate(), "Read the message", { body: voucher() });
     expect(read!.json).toMatchObject({
       stop: false, email: false, upload: true,
       mediaUrl: "https://graph.facebook.com/v23.0/100000000000001/media",
@@ -293,20 +296,27 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     expect(built!.json).toMatchObject({ stop: false, graphUrl: "https://graph.facebook.com/v23.0/100000000000001/messages" });
     const graph = built!.json["graphBody"] as { to: string; template: { name: string; language: { code: string }; components: Json[] } };
     expect(graph.to).toBe("919876543210");
-    expect(graph.template.name).toBe("booking_voucher");
+    expect(graph.template.name).toBe("fidato_voucher");
     expect(graph.template.language.code).toBe("en");
     expect(graph.template.components).toEqual([
       { type: "header", parameters: [{ type: "document", document: { id: "MEDIA-1", filename: "Voucher-FH-5EL-2610-0001.pdf" } }] },
-      { type: "body", parameters: ["Asha Test", "Test Hotel", "FH-5EL-2610-0001", "Sat, 10 Oct 2026", "2:00 PM",
-        "Mon, 12 Oct 2026", "11:00 AM", "1 × Deluxe", "2 adults", "-"].map((text) => ({ type: "text", text })) },
-      { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: TOKEN }] },
+      { type: "body", parameters: [
+        { type: "text", parameter_name: "name_1", text: "Asha Test" },
+        { type: "text", parameter_name: "hotel_id", text: "FH-5EL-2610-0001" },
+        { type: "text", parameter_name: "hotel", text: "Test Hotel" },
+        { type: "text", parameter_name: "ck_in", text: "01 Oct 2026" },
+        { type: "text", parameter_name: "ck_out", text: "03 Oct 2026" },
+        { type: "text", parameter_name: "rm_type", text: "1 x Deluxe" },
+        { type: "text", parameter_name: "no_guest", text: "2 adults" },
+        { type: "text", parameter_name: "crs_nom", text: "-" },
+      ] },
     ]);
   });
 
   it("refuses a voucher with no PDF, and answers the PMS when Meta refused the upload", () => {
-    const [noFile] = run(crs, "Read the message", { body: { ...voucher(), file: null } });
+    const [noFile] = run(withVoucherTemplate(), "Read the message", { body: { ...voucher(), file: null } });
     expect(noFile!.json).toMatchObject({ stop: true, statusCode: 422 });
-    const [read] = run(crs, "Read the message", { body: voucher() });
+    const [read] = run(withVoucherTemplate(), "Read the message", { body: voucher() });
     const [refused] = run(crs, "Build the voucher message", { statusCode: 400, body: { error: { message: "Bad file" } } },
       { earlier: { "Read the message": read!.json } });
     expect(refused!.json).toMatchObject({ stop: true, statusCode: 502, answer: { ok: false } });
