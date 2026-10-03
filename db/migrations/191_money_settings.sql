@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════
--- 192 — the hotel's own ways of paying, its extra charges, a ₹ discount
+-- 191 — the hotel's own ways of paying, its extra charges, a ₹ discount
 --       (the settings plan's Money, the owner's D27-259)
 --
 --   1 payment_methods     each hotel's list: the word on the bill, what it is
@@ -143,7 +143,7 @@ create trigger payment_methods_default_follows
 -- 2 · The word on the payment ------------------------------------------------
 alter table payments add column if not exists method_label text;
 comment on column payments.method_label is
-  'The payment method as the clerk picked it (192): "Agoda" where method is '
+  'The payment method as the clerk picked it (191): "Agoda" where method is '
   'city_ledger. NULL on payments before 192.';
 
 -- 3 · Extra charges: the inclusions list (065) --------------------------------
@@ -183,5 +183,5 @@ alter table reservations add constraint reservations_discount_rule check (
            or nullif(btrim(discount_reason), '') is not null))
 );
 comment on column reservations.discount_amount is
-  '₹ taken off each night''s rate at booking (192): up to the free-hand cap of the '
+  '₹ taken off each night''s rate at booking (191): up to the free-hand cap of the '
   'night with a reason (book.ts), more only with room_promotion_id.';

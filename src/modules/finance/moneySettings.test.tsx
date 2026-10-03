@@ -9,7 +9,7 @@ import PaymentMethodsPage from "./pages/money/PaymentMethods";
 import ExtraChargesPage from "./pages/money/ExtraCharges";
 
 /* ══════════════════════════════════════════════════════════════════
-   MONEY IN THE SETTINGS CONSOLE - the owner's D27-259 (192)
+   MONEY IN THE SETTINGS CONSOLE - the owner's D27-259 (191)
    ══════════════════════════════════════════════════════════════════ */
 
 const METHODS = {

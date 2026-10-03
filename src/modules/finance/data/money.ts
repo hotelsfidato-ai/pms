@@ -1,5 +1,5 @@
 import { api, ApiError } from "@/lib/api";
-/* Money in the settings console (192, the owner's D27-259): the hotel's ways
+/* Money in the settings console (191, the owner's D27-259): the hotel's ways
    of paying, its extra charges, its room discounts and the commission each
    source and agent contract carries. */
 

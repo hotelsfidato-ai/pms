@@ -119,7 +119,7 @@ describe("the rules are set on Settings and read by every screen", () => {
     expect(list.hotels.find((h) => h.code === CODE)?.deskRules).toEqual({
       defaultPaymentMethod: "UPI", deskMayOverbook: true, advanceBeforeCheckIn: "none",
       weekendDays: [5, 6], defaultIdType: "aadhaar", defaultNationality: "IN", defaultTitle: "Ms",
-      /* The hotel's ways of paying that are On, in order (192, D27-259). */
+      /* The hotel's ways of paying that are On, in order (191, D27-259). */
       paymentMethods: [
         { label: "Cash", kind: "cash" }, { label: "UPI", kind: "upi" },
         { label: "Credit Card", kind: "card" }, { label: "Debit Card", kind: "card" },

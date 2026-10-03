@@ -13,7 +13,7 @@ Work that touches the core or several services still goes in the root
 
 ## 2026-10-03 · A function's bill offers the hotel's own payment methods (the owner's D27-259) - the cash lane's
 
-**Shipped:** `FunctionBill.tsx` lists the hotel's ways of paying that are On (`payingWays`, migration 192) instead of the fixed five; the payment door takes only those.
+**Shipped:** `FunctionBill.tsx` lists the hotel's ways of paying that are On (`payingWays`, migration 191) instead of the fixed five; the payment door takes only those.
 
 ## 2026-09-29 · Fix round F (QA leftovers, D27-149), part D: a billed function keeps its hall (migration 156)
 

@@ -222,7 +222,7 @@ describe("the discount (D27-36)", () => {
   });
 
   it("over 10% only through a named promotion, which the GM keeps", async () => {
-    /* Kept on Money › Discounts since D27-259 (192). */
+    /* Kept on Money › Discounts since D27-259 (191). */
     const saved = await call(staff.get("gm")!, "POST", "/discounts",
       { name: `${TAG} Wedding`, percent: 25 });
     expect(saved.status, await saved.clone().text()).toBe(200);
@@ -335,7 +335,7 @@ describe("the two lists (the owner, 27 September)", () => {
   });
 });
 
-describe("a discount in rupees off each night (192, the owner's D27-259 Q4)", () => {
+describe("a discount in rupees off each night (191, the owner's D27-259 Q4)", () => {
   /* Its own dates: the cancel test below counts the rooms left on 10 May. */
   const JUNE = { checkIn: "2029-06-10", checkOut: "2029-06-12" };
 

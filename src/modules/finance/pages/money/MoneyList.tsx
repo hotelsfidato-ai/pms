@@ -7,7 +7,7 @@ import { Button, Card, EmptyState, SearchInput, Switch } from "@/components/ui";
    THE SETTINGS LIST (plan § 3): search, "+", and per row drag to order,
    On/Off, edit, and delete only when nothing used it. Shared by Money's
    payment methods, extra charges and discounts. Every change reaches the
-   activity log through the tables' audit triggers (192).
+   activity log through the tables' audit triggers (191).
    ══════════════════════════════════════════════════════════════════ */
 
 type Row = { id: string; isActive: boolean; used: boolean };

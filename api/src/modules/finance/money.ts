@@ -4,7 +4,7 @@ import type { Client } from "../../db.ts";
 import { PAYMENT_KINDS } from "./paymentMethods.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   MONEY, IN THE SETTINGS CONSOLE (the owner's D27-259, migration 192)
+   MONEY, IN THE SETTINGS CONSOLE (the owner's D27-259, migration 191)
 
    Each hotel's own lists: its ways of paying (a word on the bill, what it
    is in the books, On/Off, the default), its extra charges (the inclusions
@@ -57,7 +57,7 @@ async function reorder(client: Client, table: string, hotelId: string, ids: unkn
 
 /* ── Payment methods ─────────────────────────────────────────────── */
 
-/* A payment taken this way: by its word since 192; before 192 no word was
+/* A payment taken this way: by its word since 191; before 191 no word was
    kept, so such a payment counts against every method of its kind - Off,
    never deleted, is the safe side. */
 const TAKEN = `(p.method_label = pm.label or (p.method_label is null and p.method = pm.kind))`;
@@ -277,7 +277,7 @@ money.put("/:code/extra-charges/order", async (c) => {
   }));
 });
 
-/* ── Room discounts: % or ₹ off each night (146, 192) ────────────── */
+/* ── Room discounts: % or ₹ off each night (146, 191) ────────────── */
 
 money.get("/:code/discounts", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
@@ -296,7 +296,7 @@ money.get("/:code/discounts", async (c) => {
 
 type DiscountBody = { name?: string; percent?: number | null; amount?: number | null; isActive?: boolean };
 
-/* Exactly one of % or ₹ (192's room_promotions_percent_sane). */
+/* Exactly one of % or ₹ (191's room_promotions_percent_sane). */
 function discountProblem(input: DiscountBody, partial: boolean) {
   if ((!partial || input.name !== undefined) && !input.name?.trim()) return "What is it called?";
   if (partial && input.percent === undefined && input.amount === undefined) return null;

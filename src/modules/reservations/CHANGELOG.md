@@ -10,7 +10,7 @@ project, still goes in the root `CHANGELOG.md`.
 
 ## 2026-10-03 · A discount in rupees off each night; the promotions list moves to Money (the owner's D27-259 Q4) - the cash lane's
 
-**Shipped:** `book.ts` takes `discount.amount` (₹ off each night) beside the percent, in its own blocks: by hand up to 10% of the night with a reason, more only through a named promotion, which may now be ₹ (migration 192: `reservations.discount_amount`, `room_promotions.amount`). `desk.ts`: GET room-promotions returns `amount`; its PUT went - the list is kept on Settings › Money › Discounts (finance's `/discounts`). New booking: "₹ off" beside "Up to 10%", the price preview takes it off, and the promotions keeper button and dialog went. The advance's "Paid by" is the hotel's own list without Bill to company (`payingWays`).
+**Shipped:** `book.ts` takes `discount.amount` (₹ off each night) beside the percent, in its own blocks: by hand up to 10% of the night with a reason, more only through a named promotion, which may now be ₹ (migration 191: `reservations.discount_amount`, `room_promotions.amount`). `desk.ts`: GET room-promotions returns `amount`; its PUT went - the list is kept on Settings › Money › Discounts (finance's `/discounts`). New booking: "₹ off" beside "Up to 10%", the price preview takes it off, and the promotions keeper button and dialog went. The advance's "Paid by" is the hotel's own list without Bill to company (`payingWays`).
 **Proved:** `newBooking.test.ts` - ₹500 off a ₹4,000 night by hand refused, ₹400 kept (3600, discount_amount 400), a ₹1,500 promotion gives 2500; the promotions cases now use POST /discounts.
 
 ## 2026-10-03 · The desk may overbook, per hotel; "Prepaid on the booking site" (the owner's D27-243 3.2, D27-246)

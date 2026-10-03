@@ -317,7 +317,7 @@ export default function BookingPage() {
   const pct = discountMode === "hand" && Number.isFinite(handPct) && handPct > 0
     ? handPct
     : discountMode === "promotion" && promotion ? promotion.percent ?? 0 : 0;
-  /* ₹ OFF EACH NIGHT (192, the owner's D27-259 Q4): by hand up to the cap's
+  /* ₹ OFF EACH NIGHT (191, the owner's D27-259 Q4): by hand up to the cap's
      share of the night with a reason, or a promotion in rupees. */
   const rupeesOff = discountMode === "rupees" && handPct > 0 ? handPct
     : discountMode === "promotion" && promotion ? promotion.amount ?? 0 : 0;

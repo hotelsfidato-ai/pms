@@ -43,7 +43,7 @@ async function send<T>(path: string, method: string, body: unknown): Promise<Ans
 }
 
 export interface SalesPerson { id: string; name: string }
-/** % or ₹ off each night, one of the two (192); kept on Money › Discounts. */
+/** % or ₹ off each night, one of the two (191); kept on Money › Discounts. */
 export interface RoomPromotion { id: string; name: string; percent: number | null; amount: number | null }
 
 export const listSalesPeople = (hotelId: string): Promise<SalesPerson[]> =>

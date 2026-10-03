@@ -307,7 +307,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/company-payments`]: COMPANY_PAYMENT,
   [`POST ${H}/company-payments/:id/reverse`]: COMPANY_PAYMENT_REVERSE,
-  /* Money in the settings console (192, the owner's D27-259): the owner, an
+  /* Money in the settings console (191, the owner's D27-259): the owner, an
      administrator and the GM. */
   [`POST ${H}/payment-methods`]: MONEY_SETTING,
   [`PATCH ${H}/payment-methods/:id`]: MONEY_SETTING,

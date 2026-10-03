@@ -76,7 +76,7 @@ hotels.get("/", async (c) => {
               default_payment_method, desk_may_overbook, advance_before_check_in,
               weekend_days::int[] as weekend_days,
               default_id_type, default_nationality, default_title,
-              /* The hotel's own ways of paying that are On, in its order (192). */
+              /* The hotel's own ways of paying that are On, in its order (191). */
               coalesce((select json_agg(json_build_object('label', pm.label, 'kind', pm.kind)
                                         order by pm.sort_order, lower(pm.label))
                           from payment_methods pm

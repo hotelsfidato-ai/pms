@@ -3,7 +3,7 @@ import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   MONEY IN THE SETTINGS CONSOLE - the owner's D27-259, migration 192
+   MONEY IN THE SETTINGS CONSOLE - the owner's D27-259, migration 191
 
    Each hotel's ways of paying (the word on the bill, what it is in the
    books, On/Off, the default), its extra charges (a pickup marked so) and

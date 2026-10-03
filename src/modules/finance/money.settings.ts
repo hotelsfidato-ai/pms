@@ -1,7 +1,7 @@
 import { BadgePercent, Car, CreditCard, HandCoins, ReceiptText } from "lucide-react";
 import type { SettingsPage } from "@/components/app/settingsConsole";
 
-/* Money in the settings console (the owner's D27-259, migration 192). */
+/* Money in the settings console (the owner's D27-259, migration 191). */
 export const settingsPages: SettingsPage[] = [
   { group: "money", slug: "payment-methods", label: "Payment methods", icon: CreditCard, order: 10,
     keywords: ["ways of paying", "default", "UPI", "card", "Agoda"],

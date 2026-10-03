@@ -698,7 +698,7 @@ export async function takeFolioPayment(
   if (!input.amount || input.amount <= 0) {
     return { ok: false, reason: "A payment must be greater than zero." };
   }
-  /* THE HOTEL'S OWN LIST (192, the owner's D27-259): a method that is On;
+  /* THE HOTEL'S OWN LIST (191, the owner's D27-259): a method that is On;
      none named, the hotel's default. */
   const { rows: [way] } = await client.query<{ label: string; kind: string }>(
     `select pm.label, pm.kind from payment_methods pm

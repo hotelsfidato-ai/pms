@@ -88,7 +88,7 @@ desk.get("/:code/room-promotions", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
-    /* % or ₹ off each night (192); kept on Money › Discounts. */
+    /* % or ₹ off each night (191); kept on Money › Discounts. */
     const { rows } = await client.query<{ id: string; name: string; percent: number | null; amount: number | null }>(
       `select id::text, name, percent::float8 as percent, amount::float8 as amount
          from room_promotions

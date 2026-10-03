@@ -47,7 +47,7 @@ export const TITLES = ["Mr", "Ms", "Mrs", "Dr"] as const;
     up to the free-hand cap with a reason, or a named promotion. */
 export interface BookingDiscount {
   percent?: number;
-  /** ₹ off each night instead of a percent (192, the owner's D27-259 Q4). */
+  /** ₹ off each night instead of a percent (191, the owner's D27-259 Q4). */
   amount?: number;
   reason?: string;
   promotionId?: string;
@@ -286,7 +286,7 @@ interface DeskTerms {
   /** The percent taken off every paid night, and how it was allowed. */
   discount: {
     percent: number | null; reason: string | null; promotionId: string | null;
-    /* ₹ off each night (192); free-hand up to `cap`% of the night. */
+    /* ₹ off each night (191); free-hand up to `cap`% of the night. */
     amount?: number | null; cap?: number;
   } | null;
   companyId: string | null;
@@ -352,7 +352,7 @@ async function deskTerms(
     if (!text(d.reason)) return refuse("Say why the discount is given.");
     discount = { percent, reason: text(d.reason), promotionId: null };
   } else if (d?.amount !== undefined && d.amount !== null) {
-    /* ₹ OFF EACH NIGHT (192, the owner's D27-259 Q4): the cap is checked
+    /* ₹ OFF EACH NIGHT (191, the owner's D27-259 Q4): the cap is checked
        against each night's rate below, where the rate is known. */
     const amount = Number(d.amount);
     if (!Number.isFinite(amount) || amount <= 0) return refuse("A discount in rupees is above ₹0.");
@@ -612,7 +612,7 @@ export async function makeBooking(
          paisa by Postgres, so the audit, the tax slab and finance's bill
          (app.stay_bill) all follow from it with no second sum (D27-36). */
       if (terms.discount?.amount != null && rate > 0) {
-        /* ₹ OFF EACH NIGHT (192, D27-259 Q4): free-hand up to the cap's share
+        /* ₹ OFF EACH NIGHT (191, D27-259 Q4): free-hand up to the cap's share
            of the night with a reason; more only by a named promotion. */
         const off = terms.discount.amount;
         if (terms.discount.cap !== undefined && off > rate * terms.discount.cap / 100) {

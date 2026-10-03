@@ -405,7 +405,7 @@ export interface ApiHotel {
 export interface DeskRules {
   /** What the desk's payment screens start on (the till keeps Cash). */
   defaultPaymentMethod: string;
-  /** The hotel's own ways of paying that are On, in its order (192, the
+  /** The hotel's own ways of paying that are On, in its order (191, the
       owner's D27-259); absent from an older server. */
   paymentMethods?: { label: string; kind: string }[];
   /** Off: the desk's booking past a full house is refused. */
