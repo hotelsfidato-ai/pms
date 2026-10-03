@@ -78,8 +78,8 @@ function till({
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[`/h/${HOTEL}/till?order=o-5`]}>
-        <Routes><Route path="/h/:code/till" element={<TillPage />} /></Routes>
+      <MemoryRouter initialEntries={[`/pos/${HOTEL}/till?order=o-5`]}>
+        <Routes><Route path="/pos/:code/till" element={<TillPage />} /></Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );

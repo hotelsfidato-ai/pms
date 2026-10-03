@@ -106,7 +106,7 @@ async function sendARound(answer: (body: unknown) => unknown) {
   const opened = vi.spyOn(window, "open").mockReturnValue({} as Window);
   const sent = vi.fn();
 
-  renderAt(`/h/${HOTEL}/floor`, "/h/:code/floor", (
+  renderAt(`/pos/${HOTEL}/tables`, "/pos/:code/tables", (
     <OrderPad hotelId={HOTEL} outlet="REST" tableId="t-7" tableLabel="Table 7"
               open onOpenChange={() => {}} onSent={sent} />
   ));
@@ -168,7 +168,7 @@ describe("a send opens no kitchen slip on this device (D27-159)", () => {
     localStorage.setItem("fidato.terminal-outlet", "REST");
     const calls = tillWithAnUnsentDish();
     const opened = vi.spyOn(window, "open").mockReturnValue({} as Window);
-    renderAt(`/h/${HOTEL}/till/terminal`, "/h/:code/till/terminal", <TerminalPage />);
+    renderAt(`/pos/${HOTEL}/terminal`, "/pos/:code/terminal", <TerminalPage />);
 
     fireEvent.click(await screen.findByRole("button", { name: /20260825-5/ }));
     fireEvent.click(await screen.findByRole("button", { name: /Send to the kitchen/ }));
@@ -183,7 +183,7 @@ describe("a send opens no kitchen slip on this device (D27-159)", () => {
 describe("the Till's Send to the kitchen (D27-166)", () => {
   it("sends the order's unsent dishes, as the Terminal does", async () => {
     const calls = tillWithAnUnsentDish();
-    renderAt(`/h/${HOTEL}/till?order=o-5`, "/h/:code/till", <TillPage />);
+    renderAt(`/pos/${HOTEL}/till?order=o-5`, "/pos/:code/till", <TillPage />);
 
     fireEvent.click(await screen.findByRole("button", { name: /Send to the kitchen/ }));
 
@@ -222,7 +222,7 @@ function menuWithSides() {
   });
 }
 
-const menuAt = () => renderAt(`/h/${HOTEL}/menu`, "/h/:code/menu", <MenuPage />);
+const menuAt = () => renderAt(`/pos/${HOTEL}/menu`, "/pos/:code/menu", <MenuPage />);
 
 describe("the Menu screen's add-ons (D17-19)", () => {
   it("switches an add-on off for a while, through its own route", async () => {
@@ -311,7 +311,7 @@ function atFiveElements() {
 }
 
 const dayEndAt = () =>
-  renderAt(`/h/${HOTEL}/till/day-end`, "/h/:code/till/day-end", <DayEndPage />);
+  renderAt(`/pos/${HOTEL}/day-end`, "/pos/:code/day-end", <DayEndPage />);
 
 describe("Close restaurant day (D17-20)", () => {
   it("names the hotel and the day in words on the close button", async () => {
@@ -513,7 +513,7 @@ describe("the dish dialog holds a waiter to the group's rule (D21-41)", () => {
         }] satisfies MenuCategory[],
       }),
     });
-    renderAt(`/h/${HOTEL}/floor`, "/h/:code/floor", (
+    renderAt(`/pos/${HOTEL}/tables`, "/pos/:code/tables", (
       <OrderPad hotelId={HOTEL} outlet="REST" tableId="t-7" tableLabel="Table 7"
                 open onOpenChange={() => {}} onSent={() => {}} />
     ));
@@ -565,7 +565,7 @@ describe("the Terminal rings a dish sold by variation (the owner, 21 Sep)", () =
       [`GET /api/hotels/${HOTEL}/till/orders/o-5`]: () => ORDER,
       [`POST /api/hotels/${HOTEL}/till/orders/o-5/lines`]: () => ({ ...ORDER, ok: true }),
     });
-    renderAt(`/h/${HOTEL}/till/terminal`, "/h/:code/till/terminal", <TerminalPage />);
+    renderAt(`/pos/${HOTEL}/terminal`, "/pos/:code/terminal", <TerminalPage />);
 
     fireEvent.click(await screen.findByRole("button", { name: /20260825-5/ }));
     const tile = await screen.findByRole("button", { name: /^Chicken Biryani/ });
@@ -641,7 +641,7 @@ describe("a dish's GST reads its section's rate, or a dash (D21-94, POS-15)", ()
       [`GET /api/hotels/${HOTEL}/till/orders`]: () => ORDERS,
       [`GET /api/hotels/${HOTEL}/till/orders/o-5`]: () => ORDER,
     });
-    renderAt(`/h/${HOTEL}/till/terminal`, "/h/:code/till/terminal", <TerminalPage />);
+    renderAt(`/pos/${HOTEL}/terminal`, "/pos/:code/terminal", <TerminalPage />);
     fireEvent.click(await screen.findByRole("button", { name: /20260825-5/ }));
     expect(await text("tile", "Follows Dish")).toMatch(/^Follows Dish5%₹/);
     expect(await text("tile", "Unset Dish")).toMatch(/^Unset Dish-₹/);
@@ -656,7 +656,7 @@ describe("a dish's GST reads its section's rate, or a dash (D21-94, POS-15)", ()
       [`GET /api/hotels/${HOTEL}/till/rooms`]: () => ({ rooms: [] }),
       [`GET ${PROMOTIONS}`]: () => ({ freehandCapPercent: 10, promotions: [] }),
     });
-    renderAt(`/h/${HOTEL}/till?order=o-5`, "/h/:code/till", <TillPage />);
+    renderAt(`/pos/${HOTEL}/till?order=o-5`, "/pos/:code/till", <TillPage />);
     /* The Till prints the price first and the rate under it. */
     expect(await text("tile", "Follows Dish")).toMatch(/₹200 ?5%$/);
     expect(await text("tile", "Unset Dish")).toMatch(/₹200 ?-$/);

@@ -130,8 +130,8 @@ Expect `INSERT 0 1`.
 yet": press **Add a property**, fill the code (2–8 letters or digits — it is in every invoice number
 and cannot change), name, city, state, GSTIN, paste the key, **Create the property**.
 
-**F8 · the live PMS** — People: add `rozariojaison7@gmail.com` as the new hotel's Admin. They get a
-link to set their own password (at least 10 characters).
+**F8 · the live PMS** — People: add `rozariojaison7@gmail.com` as the new hotel's Admin. You type
+their first password (at least 10 characters) and give it to them.
 
 **F9 · the server** — make them a super admin, like you
 ```bash

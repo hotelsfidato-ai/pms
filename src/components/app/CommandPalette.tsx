@@ -10,7 +10,7 @@ import { useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { getModules, queryKeys, type Stay } from "@/data/repositories";
 import { listStays, STAY_LABEL } from "@/modules/front-desk";
-import { navigationFor, sidebarFor, type NavItem } from "./navigation";
+import { navigationFor, sidebarFor, spacesFor, type NavItem } from "./navigation";
 
 /* ══════════════════════════════════════════════════════════════════
    FIND A SCREEN — the other half of a shorter menu
@@ -48,8 +48,9 @@ interface Entry {
 
 /** Every screen this role may open, in the navigation's order, once each. */
 function entriesFor(role: Parameters<typeof navigationFor>[0], code: string, modules?: Record<string, boolean>): Entry[] {
+  /* In the menu of any space this person has (D27-249). */
   const listed = new Set(
-    sidebarFor(role, code, modules).flatMap((s) =>
+    spacesFor(role, code, modules).flatMap((space) => sidebarFor(role, code, modules, space)).flatMap((s) =>
       s.items.flatMap((i) => [i.to, ...(i.children ?? []).map((c) => c.to)]),
     ),
   );
@@ -60,7 +61,10 @@ function entriesFor(role: Parameters<typeof navigationFor>[0], code: string, mod
       for (const entry of [item, ...(item.children ?? [])]) {
         if (seen.has(entry.to)) continue;
         seen.add(entry.to);
-        out.push({ item: entry, section: section.label ?? "", listed: listed.has(entry.to) });
+        /* A console group says it is Settings': "Front desk" is a section of the
+           Front office too. */
+        const name = section.space === "settings" ? `Settings · ${section.label}` : section.label ?? "";
+        out.push({ item: entry, section: name, listed: listed.has(entry.to) });
       }
     }
   }

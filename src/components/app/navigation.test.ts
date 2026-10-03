@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   navigationFor, sidebarFor, flatNavigationFor, workingHomeFor, type NavItem,
-  declaredEntries, sectionKeys, mayReach,
+  declaredEntries, sectionKeys, mayReach, type Space,
 } from "./navigation";
 import { ROLES, COMING_SOON_ROLES, can, type Role } from "@/lib/permissions";
 
@@ -15,8 +15,9 @@ import { ROLES, COMING_SOON_ROLES, can, type Role } from "@/lib/permissions";
    reviewing a single change sees the whole menu. These tests do.
    ══════════════════════════════════════════════════════════════════ */
 
-/** Every label the owner's menu can show — sections, items, children. */
-function everyLabel(): string[] {
+/** Every label the owner's menu can show in one space (D27-249) — sections
+    (unless `items` only), items, children. */
+function everyLabel(space: Space, items = false): string[] {
   const labels: string[] = [];
   const walk = (items: NavItem[]) => {
     for (const item of items) {
@@ -24,8 +25,8 @@ function everyLabel(): string[] {
       walk(item.children ?? []);
     }
   };
-  for (const section of navigationFor("owner", "5EL")) {
-    if (section.label) labels.push(section.label);
+  for (const section of navigationFor("owner", "5EL").filter((s) => (s.space ?? "front") === space)) {
+    if (section.label && !items) labels.push(section.label);
     walk(section.items);
   }
   return labels;
@@ -34,11 +35,13 @@ function everyLabel(): string[] {
 /* Words that keep their capitals wherever they fall: acronyms, and the
    names of statutory forms. Anything else capitalised after the first
    word is Title Case creeping back. */
+const SPACES: readonly Space[] = ["front", "pos", "settings"];
+
 const PROPER = new Set(["GST", "Form", "III", "Fidato", "POS", "CRS", "CRM", "WhatsApp"]);
 
 describe("the menu speaks one way", () => {
   it("writes every label in sentence case", () => {
-    const offenders = everyLabel().filter((label) =>
+    const offenders = SPACES.flatMap((space) => everyLabel(space)).filter((label) =>
       label
         .split(/[\s/]+/)
         .slice(1)
@@ -52,7 +55,10 @@ describe("the menu speaks one way", () => {
        16 September "Contracts and allotments" (24 characters) showed as
        "Contracts and allotm…" — found by opening the screen, not by a
        test. The longest label that fits is 21 characters today. */
-    expect(everyLabel().filter((label) => label.length > 21)).toEqual([]);
+    /* Entries only: a section's name is a heading of its own line and is
+       not cut - "Modules and connections" (23), the console group the
+       owner's plan names (D27-254), fits it. */
+    expect(SPACES.flatMap((space) => everyLabel(space, true)).filter((label) => label.length > 21)).toEqual([]);
   });
 
   it("never gives two places the same name", () => {
@@ -60,12 +66,16 @@ describe("the menu speaks one way", () => {
        the report when they wanted the accounts. A parent that opens the
        same page as its first child is allowed to share its name only
        if they are genuinely the same destination — none do today. */
-    const seen = new Map<string, number>();
-    for (const label of everyLabel()) {
-      seen.set(label.toLowerCase(), (seen.get(label.toLowerCase()) ?? 0) + 1);
+    /* In one space: the console's "Front desk" group and the Front office's
+       "Front desk" section are never on screen together (D27-249). */
+    for (const space of SPACES) {
+      const seen = new Map<string, number>();
+      for (const label of everyLabel(space)) {
+        seen.set(label.toLowerCase(), (seen.get(label.toLowerCase()) ?? 0) + 1);
+      }
+      const duplicates = [...seen].filter(([, n]) => n > 1).map(([label]) => label);
+      expect(duplicates, space).toEqual([]);
     }
-    const duplicates = [...seen].filter(([, n]) => n > 1).map(([label]) => label);
-    expect(duplicates).toEqual([]);
   });
 });
 
@@ -122,12 +132,9 @@ describe("each person's menu", () => {
     /* Laundry's Dockets where the hotel has laundry on (D22-22). */
     expect(menu("front_desk", { ...ALL_ON, reception_pos: false }))
       .toEqual([...core, "Dockets", "Notifications"]);
-    expect(menu("front_desk")).toEqual([
-      ...core,
-      "Tables", "Till", "Terminal", "Close restaurant day",
-      "Dockets",
-      "Notifications",
-    ]);
+    /* Since D27-249 (Q6) the restaurant's four are in the Restaurant space,
+       not here; spaces.test.tsx pins that menu. */
+    expect(menu("front_desk")).toEqual([...core, "Dockets", "Notifications"]);
   });
 
   it("puts laundry in the working menus only where the hotel has it on (D22-22)", () => {
@@ -194,9 +201,9 @@ describe("each person's menu", () => {
   });
 
   it("keeps the revenue manager out of the restaurant's menu (D22-35)", () => {
-    expect(mayReach("revenue_manager", "/h/:code/menu")).toBe(false);
+    expect(mayReach("revenue_manager", "/pos/:code/menu")).toBe(false);
     for (const role of ["owner", "admin", "gm", "kitchen_manager", "hotel_manager", "front_desk"] as const) {
-      expect(mayReach(role, "/h/:code/menu"), role).toBe(true);
+      expect(mayReach(role, "/pos/:code/menu"), role).toBe(true);
     }
   });
 
@@ -224,12 +231,12 @@ describe("each person's menu", () => {
   it("lands them on their own work instead of the Dashboard", () => {
     /* Still, with Rooms and the Store now above their own work (D22-19). */
     expect(workingHomeFor("housekeeping", "5EL")).toBe("/h/5EL/housekeeping");
-    expect(workingHomeFor("kitchen_manager", "5EL")).toBe("/h/5EL/kitchen");
-    expect(workingHomeFor("chef", "5EL")).toBe("/h/5EL/kitchen");
+    expect(workingHomeFor("kitchen_manager", "5EL")).toBe("/pos/5EL/kitchen");
+    expect(workingHomeFor("chef", "5EL")).toBe("/pos/5EL/kitchen");
     /* The chef and the waiter still land on the Kitchen and Tables, with
        Guest requests above them in their menus (D27-181, GS-1: without
        WORKING_HOME naming them, both landed on Guest requests). */
-    expect(workingHomeFor("pos", "5EL")).toBe("/h/5EL/floor");
+    expect(workingHomeFor("pos", "5EL")).toBe("/pos/5EL/tables");
     expect(workingHomeFor("front_desk", "5EL")).toBeNull();
     expect(workingHomeFor("owner", "5EL")).toBeNull();
   });

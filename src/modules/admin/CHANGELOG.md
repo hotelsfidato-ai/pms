@@ -11,6 +11,19 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-03 · Phase 1 of the settings plan: the Settings console, its own space (D27-249, D27-254, D27-256) - the design lane's
+
+Branch `settings/console-3oct` (cp6 1da6b02a, fbc29b75 merged), copy `.claude\worktrees\competent-leakey-110512`. Claimed pos; admin by file (the master's split with P2 and P7); the frame files cleared by the master.
+**Asked for:** three spaces, one sign-in, no feature, database or permission change: the Settings console at /settings/... with its own grouped menu, the Restaurant at /pos/..., the switcher; and FIRST the registration contract P2 to P7 build on.
+**Shipped:**
+- The contract, its own commit a485a357: `src/components/app/settingsConsole.ts`. A service registers a console page in a file of its own, `src/modules/<module>/<name>.settings.ts` (`settingsPages`, found by `import.meta.glob`); the page is at /settings/<group>/<slug>, loaded when opened; the nine groups are the brief's; a stand-in yields to a page registered at its address.
+- `pages/Settings.tsx` is the console route (`/settings/*`, `setting`, then each page's rule through `mayReach`): the page at the address, or for an old tab (`MOVED`, the five of 1 October and the eight of 30 September), a bare group or a page the person may not see, the page that answers it. `/h/:code/settings/:tab` sets the hotel and goes there (the bell's GST link); `/admin/configuration` → `/settings/rates/taxes`.
+- Phase 1's stand-ins (`console.settings.ts`, `pages/ConsolePages.tsx`), the five tabs' cards unchanged: Property › Profile (with FSSAI and the commissioning checklist), Logo and photos, Policies, Group; Rates and tax › Taxes; Money › Bank details; Front desk › Times and rules; People and security › Signing in; Modules and connections › Modules (owner and Admin). The screens the tabs linked are links (↗) under the menu's own names, plus Integrations and System health (D27-256 Q1).
+- `nav.ts`: Settings leaves the menu (the switcher opens it; Find a screen keeps it); the "Rates and taxes" entry went - Taxes and Bank details answer "GST" and "bank".
+**Found:** (1) The checklist was above every tab; a page draws its own `<Page>`, so it is on Profile, the console's first page. (2) The till's setup offered the GM "Open Settings" for the module switch, which they cannot use (D17-36); the link now goes to Modules and is not offered to the GM.
+**Proved:** see the pos entry (one run for both).
+**Left open:** a phase that takes over Property › Profile should keep `<CommissioningCard>` on its page.
+
 ## 2026-10-03 · Settings, security: activity, sign-ins, passwords by role (D27-243 phase 5, D27-245)
 
 **Asked for:** phase 5 of the settings plan with the owner's answers: 5.1 the full
