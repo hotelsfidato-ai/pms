@@ -222,9 +222,10 @@ describe("the discount (D27-36)", () => {
   });
 
   it("over 10% only through a named promotion, which the GM keeps", async () => {
-    const saved = await call(staff.get("gm")!, "PUT", "/room-promotions",
-      { promotions: [{ name: `${TAG} Wedding`, percent: 25 }] });
-    expect(saved.status).toBe(200);
+    /* Kept on Money › Discounts since D27-259 (192). */
+    const saved = await call(staff.get("gm")!, "POST", "/discounts",
+      { name: `${TAG} Wedding`, percent: 25 });
+    expect(saved.status, await saved.clone().text()).toBe(200);
     const list = (await (await call(ownerId, "GET", "/room-promotions")).json()) as
       Array<{ id: string; name: string; percent: number }>;
     const promo = list.find((p) => p.name === `${TAG} Wedding`)!;
@@ -328,9 +329,44 @@ describe("the two lists (the owner, 27 September)", () => {
   });
 
   it("reception may not change the promotions", async () => {
-    const res = await call(staff.get("front_desk")!, "PUT", "/room-promotions",
-      { promotions: [{ name: `${TAG} Sneaky`, percent: 50 }] });
+    const res = await call(staff.get("front_desk")!, "POST", "/discounts",
+      { name: `${TAG} Sneaky`, percent: 50 });
     expect(res.status).toBe(403);
+  });
+});
+
+describe("a discount in rupees off each night (192, the owner's D27-259 Q4)", () => {
+  /* Its own dates: the cancel test below counts the rooms left on 10 May. */
+  const JUNE = { checkIn: "2029-06-10", checkOut: "2029-06-12" };
+
+  it("by hand is at most 10% of the night, with a reason", async () => {
+    const over = await call(ownerId, "POST", "/bookings", booking("Rupees over",
+      { ...JUNE, discount: { amount: 500, reason: "Regular guest" } }));
+    expect(over.status).toBe(409);
+    expect(await reasonOf(over)).toMatch(/more than 10% of the night's ₹4000/);
+    const res = await call(staff.get("front_desk")!, "POST", "/bookings", booking("Rupees off",
+      { ...JUNE, discount: { amount: 400, reason: "Regular guest" } }));
+    expect(res.status, await res.clone().text()).toBe(200);
+    const made = (await res.json()) as Made;
+    expect(made.bookings[0]!.rate).toBe(3600);
+    const { rows: [r] } = await sql(
+      "select discount_amount::text, discount_percent from reservations where id = $1",
+      [made.bookings[0]!.id]);
+    expect([r.discount_amount, r.discount_percent]).toEqual(["400.00", null]);
+  });
+
+  it("more only through a named promotion in rupees", async () => {
+    const saved = await call(staff.get("gm")!, "POST", "/discounts",
+      { name: `${TAG} Corporate 1500`, amount: 1500 });
+    expect(saved.status, await saved.clone().text()).toBe(200);
+    const promo = ((await (await call(ownerId, "GET", "/room-promotions")).json()) as
+      Array<{ id: string; name: string; amount: number | null }>)
+      .find((p) => p.name === `${TAG} Corporate 1500`)!;
+    expect(promo.amount).toBe(1500);
+    const res = await call(staff.get("front_desk")!, "POST", "/bookings", booking("Corporate",
+      { ...JUNE, discount: { promotionId: promo.id } }));
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(((await res.json()) as Made).bookings[0]!.rate).toBe(2500);
   });
 });
 

@@ -88,45 +88,14 @@ desk.get("/:code/room-promotions", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
-    const { rows } = await client.query<{ id: string; name: string; percent: string }>(
-      `select id::text, name, percent::text from room_promotions
+    /* % or ₹ off each night (192); kept on Money › Discounts. */
+    const { rows } = await client.query<{ id: string; name: string; percent: number | null; amount: number | null }>(
+      `select id::text, name, percent::float8 as percent, amount::float8 as amount
+         from room_promotions
         where hotel_id = $1 and is_active order by lower(name)`, [hotelId]);
-    return rows.map((r) => ({ id: r.id, name: r.name, percent: Number(r.percent) }));
+    return rows;
   });
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
-});
-
-desk.put("/:code/room-promotions", async (c) => {
-  const input = await c.req.json<{ promotions?: unknown }>()
-    .catch(() => ({}) as { promotions?: unknown });
-  const result = await withSession(c.get("subject"), async (client) => {
-    const hotelId = await hotelFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-    if (!(await holdsRoleAt(client, hotelId, COMP_ROLES))) return { forbidden: KEEPERS_ONLY };
-
-    const list = Array.isArray(input.promotions) ? input.promotions as unknown[] : null;
-    const names = cleanNames(list?.map((p) => (p as { name?: unknown })?.name));
-    const percents = (list ?? []).map((p) => Number((p as { percent?: unknown })?.percent));
-    if (!list || !names || names.length !== list.length
-        || percents.some((p) => !Number.isFinite(p) || p <= 0 || p > 100)) {
-      return refuse("Each promotion has its own name and a percentage above 0, at most 100.");
-    }
-
-    await client.query(
-      `update room_promotions set is_active = false
-        where hotel_id = $1 and is_active and lower(btrim(name)) <> all($2::text[])`,
-      [hotelId, names.map((n) => n.toLowerCase())]);
-    await client.query(
-      `insert into room_promotions (hotel_id, name, percent)
-       select $1, n, p from unnest($2::text[], $3::numeric[]) as t(n, p)
-       on conflict (hotel_id, (lower(btrim(name)))) do update
-         set is_active = true, name = excluded.name, percent = excluded.percent`,
-      [hotelId, names, percents]);
-    return { ok: true as const, count: names.length };
-  });
-  if (!result) return c.json({ error: "No such property." }, 404);
-  if ("forbidden" in result) return c.json(refuse(result.forbidden), 403);
-  return c.json(result, result.ok ? 200 : 409);
 });
 
 /* ── Confirming a booking that was waiting for the hotel ──────────────

@@ -47,6 +47,8 @@ export const TITLES = ["Mr", "Ms", "Mrs", "Dr"] as const;
     up to the free-hand cap with a reason, or a named promotion. */
 export interface BookingDiscount {
   percent?: number;
+  /** ₹ off each night instead of a percent (192, the owner's D27-259 Q4). */
+  amount?: number;
   reason?: string;
   promotionId?: string;
 }
@@ -282,7 +284,11 @@ async function noRoomFor(client: Client, request: BookingRequest): Promise<strin
 
 interface DeskTerms {
   /** The percent taken off every paid night, and how it was allowed. */
-  discount: { percent: number; reason: string | null; promotionId: string | null } | null;
+  discount: {
+    percent: number | null; reason: string | null; promotionId: string | null;
+    /* ₹ off each night (192); free-hand up to `cap`% of the night. */
+    amount?: number | null; cap?: number;
+  } | null;
   companyId: string | null;
   title: string | null;
   nationality: string | null;
@@ -323,12 +329,13 @@ async function deskTerms(
   let discount: DeskTerms["discount"] = null;
   const d = request.discount;
   if (d?.promotionId) {
-    const { rows } = await client.query<{ percent: string }>(
-      `select percent::text from room_promotions
+    const { rows } = await client.query<{ percent: number | null; amount: number | null }>(
+      `select percent::float8 as percent, amount::float8 as amount from room_promotions
         where id = $1 and hotel_id = $2 and is_active`,
       [d.promotionId, hotelId]);
     if (!rows[0]) return refuse("That promotion is not on this hotel's list any more.");
-    discount = { percent: Number(rows[0].percent), reason: text(d.reason), promotionId: d.promotionId };
+    discount = { percent: rows[0].percent, amount: rows[0].amount,
+                 reason: text(d.reason), promotionId: d.promotionId };
   } else if (d?.percent !== undefined && d.percent !== null) {
     const percent = Number(d.percent);
     const { rows } = await client.query<{ cap: string }>(
@@ -344,6 +351,15 @@ async function deskTerms(
     }
     if (!text(d.reason)) return refuse("Say why the discount is given.");
     discount = { percent, reason: text(d.reason), promotionId: null };
+  } else if (d?.amount !== undefined && d.amount !== null) {
+    /* ₹ OFF EACH NIGHT (192, the owner's D27-259 Q4): the cap is checked
+       against each night's rate below, where the rate is known. */
+    const amount = Number(d.amount);
+    if (!Number.isFinite(amount) || amount <= 0) return refuse("A discount in rupees is above ₹0.");
+    if (!text(d.reason)) return refuse("Say why the discount is given.");
+    const { rows } = await client.query<{ cap: string }>(
+      "select app.pos_freehand_discount_cap()::text as cap");
+    discount = { percent: null, amount, cap: Number(rows[0]!.cap), reason: text(d.reason), promotionId: null };
   }
 
   let companyId: string | null = null;
@@ -595,7 +611,18 @@ export async function makeBooking(
       /* THE DISCOUNT LOWERS THE ONE FIGURE THE BOOKING KEEPS, rounded to the
          paisa by Postgres, so the audit, the tax slab and finance's bill
          (app.stay_bill) all follow from it with no second sum (D27-36). */
-      if (terms.discount && rate > 0) {
+      if (terms.discount?.amount != null && rate > 0) {
+        /* ₹ OFF EACH NIGHT (192, D27-259 Q4): free-hand up to the cap's share
+           of the night with a reason; more only by a named promotion. */
+        const off = terms.discount.amount;
+        if (terms.discount.cap !== undefined && off > rate * terms.discount.cap / 100) {
+          return refuse(
+            `₹${off} off is more than ${terms.discount.cap}% of the night's ₹${rate}. `
+            + "More is given only through a named promotion.");
+        }
+        if (off >= rate) return refuse(`₹${off} off would leave nothing of the night's ₹${rate}.`);
+        rate = Math.round((rate - off) * 100) / 100;
+      } else if (terms.discount && rate > 0) {
         const { rows: after } = await client.query<{ rate: string }>(
           "select round($1::numeric * (100 - $2::numeric) / 100, 2)::text as rate",
           [rate, terms.discount.percent]);
@@ -692,7 +719,7 @@ export async function makeBooking(
               expected_arrival, booking_source_id, commission_pct,
               ota_reference, ota_line, ota_fingerprint, whatsapp_agreed,
               is_complimentary, expected_departure, sales_person, company_id,
-              discount_percent, discount_reason, room_promotion_id,
+              discount_percent, discount_reason, room_promotion_id, discount_amount,
               notes, is_single_lady, contract_id, prepaid_on_site,
               -- WHO MADE IT (RES-14, the owner's D27-239): the person signed
               -- in, or null for a machine's booking. It was never written.
@@ -700,7 +727,7 @@ export async function makeBooking(
            values ($1,$2,$3,$4,$5::date,$6::date,$7,$8,$9,$10,$30,$11,
                    $12,$13,$14,$15,$16::time,$17,$18::numeric,
                    $19,$20,$21,$22,
-                   $23,$24::time,$25,$26,$27::numeric,$28,$29,
+                   $23,$24::time,$25,$26,$27::numeric,$28,$29,$35::numeric,
                    $31,$32,$33::uuid, coalesce($34::boolean, true),
                    app.current_user_id())
            returning id::text`,
@@ -739,7 +766,8 @@ export async function makeBooking(
            line.complimentary === true || rate === 0 ? null : terms.discount?.promotionId ?? null,
            request.tentative === true ? "tentative" : "confirmed",
            text(request.notes), request.isSingleLady === true, contract?.id ?? null,
-           typeof request.prepaidOnSite === "boolean" ? request.prepaidOnSite : null],
+           typeof request.prepaidOnSite === "boolean" ? request.prepaidOnSite : null,
+           line.complimentary === true || rate === 0 ? null : terms.discount?.amount ?? null],
         );
 
         /* A BOOKING NEEDS SOMEWHERE TO PUT MONEY, from the moment it

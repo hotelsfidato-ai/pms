@@ -57,10 +57,11 @@ describe("the Front desk rules card", () => {
     render(<FrontDeskRulesCard hotelId="AGR" />);
     expect(document.querySelector("[data-desk-rules]")?.textContent).toContain("The first night");
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
-    fireEvent.change(screen.getByLabelText("Way of paying"), { target: { value: "UPI" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(save).toHaveBeenCalled());
-    expect(save.mock.calls[0]![1]).toMatchObject({ defaultPaymentMethod: "UPI", weekendDays: [5, 6] });
+    expect(save.mock.calls[0]![1]).toMatchObject({ weekendDays: [5, 6] });
+    /* Set on Money › Payment methods since D27-259: shown, never sent. */
+    expect(save.mock.calls[0]![1]).not.toHaveProperty("defaultPaymentMethod");
   });
 });
 

@@ -230,6 +230,14 @@ describe("who reads what (D27-140 to D27-147)", () => {
       .toEqual(["owner", "admin", "gm", "finance"]);
   });
 
+  it("D27-259: Money's lists are the owner's, an administrator's and the GM's", () => {
+    for (const path of ["POST /payment-methods", "PATCH /payment-methods/:id",
+      "POST /payment-methods/:id/default", "POST /extra-charges", "DELETE /discounts/:id"]) {
+      const [verb, rest] = path.split(" ");
+      expect(whoMay(rule(`${verb} ${H}${rest}`)), path).toEqual(["owner", "admin", "gm"]);
+    }
+  });
+
   it("D27-190: the restaurant's day is opened by whoever closes it", () => {
     expect(whoMay(rule(`POST ${H}/till/day-end/open`)))
       .toEqual(whoMay(rule(`POST ${H}/till/day-end/close`)));
