@@ -54,7 +54,8 @@ describe("Money › Payment methods", () => {
   it("says what each is in the books, marks the default, and deletes only one never used", async () => {
     vi.spyOn(apiModule, "api").mockResolvedValue(METHODS as never);
     show(<PaymentMethodsPage />);
-    expect(await screen.findByText("Agoda")).toBeTruthy();
+    /* Each row's switch says whose it is, for a screen reader. */
+    expect(await screen.findByRole("switch", { name: "Agoda" })).toBeTruthy();
     expect(screen.getByText("Bill to company")).toBeTruthy();
     expect(screen.getByText("Default").closest("p")?.textContent).toContain("UPI");
     expect(screen.queryByRole("button", { name: "Delete Cash" })).toBeNull();
@@ -66,12 +67,12 @@ describe("Money › Extra charges and Pickup and drop", () => {
   it("shows an unpriced charge as included, never ₹0, and keeps pickups on their own page", async () => {
     vi.spyOn(apiModule, "api").mockResolvedValue(CHARGES as never);
     show(<ExtraChargesPage />);
-    expect(await screen.findByText("Welcome drink")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Edit Welcome drink" })).toBeTruthy();
     expect(screen.getByText(/Included, no charge/)).toBeTruthy();
-    expect(screen.queryByText("Airport pickup")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit Airport pickup" })).toBeNull();
     cleanup();
     show(<ExtraChargesPage transport />);
-    expect(await screen.findByText("Airport pickup")).toBeTruthy();
-    expect(screen.queryByText("Welcome drink")).toBeNull();
+    expect(await screen.findByRole("button", { name: "Edit Airport pickup" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Edit Welcome drink" })).toBeNull();
   });
 });
