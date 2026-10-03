@@ -40,11 +40,11 @@ export default function FrontDeskPage() {
     if (!res.ok) return toast.error("Not saved", res.reason);
     await refreshHotels();
   };
-  if (!r) return <Page><PageHeader title="Front desk" /></Page>;
+  if (!r) return <Page><PageHeader title="Front desk rules" /></Page>;
 
   return (
     <Page>
-      <PageHeader title="Front desk" />
+      <PageHeader title="Front desk rules" />
       <Explain>What the desk's screens start on and what they allow, at this hotel.</Explain>
       <div className="space-y-3" data-desk-settings>
         <FrontDeskRulesCard hotelId={hotelId} />

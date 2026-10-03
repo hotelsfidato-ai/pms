@@ -7,7 +7,7 @@ import type { SettingsPage } from "@/components/app/settingsConsole";
 const lists = () => import("./settings/ListPages");
 
 export const settingsPages: SettingsPage[] = [
-  { group: "front-desk", slug: "front-desk", label: "Front desk", icon: ConciergeBell, order: 10,
+  { group: "front-desk", slug: "front-desk", label: "Front desk rules", icon: ConciergeBell, order: 10,
     keywords: ["guarantee", "bill to", "required fields", "housekeeping", "round off", "occupancy", "ADR", "RevPAR"],
     load: () => import("./settings/FrontDeskPage") },
   { group: "lists", slug: "market-segments", label: "Market segments", icon: ListChecks, order: 20,
