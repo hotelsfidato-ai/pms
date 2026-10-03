@@ -25,6 +25,10 @@ import type { Stay } from "@/data/repositories";
 const RULES: apiModule.DeskRules = {
   defaultPaymentMethod: "Cash", deskMayOverbook: true, advanceBeforeCheckIn: "first_night",
   weekendDays: [5, 6], defaultIdType: "aadhaar", defaultNationality: "IN", defaultTitle: null,
+  defaultGuarantee: "confirmed", defaultBillTo: "guest", requiredBookingFields: [],
+  hkDirtyAfterMove: true, hkDirtyAfterUnblock: true, hkStayoverDirtyAtAudit: false,
+  idTypesOff: [], statusColours: null, posRoundOff: "manual",
+  kpiDayUseHalf: false, kpiCompAsSold: true, holidays: [],
 };
 
 beforeEach(() => {

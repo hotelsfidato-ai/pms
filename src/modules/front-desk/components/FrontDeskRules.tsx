@@ -30,6 +30,11 @@ const TITLES = ["", "Mr", "Ms", "Mrs", "Dr"];
 const START: DeskRules = {
   defaultPaymentMethod: "Cash", deskMayOverbook: true, advanceBeforeCheckIn: "none",
   weekendDays: [0, 6], defaultIdType: null, defaultNationality: "IN", defaultTitle: null,
+  /* Phase 5's own, as 192 sets them for a hotel nobody has touched. */
+  defaultGuarantee: "confirmed", defaultBillTo: "guest", requiredBookingFields: [],
+  hkDirtyAfterMove: true, hkDirtyAfterUnblock: true, hkStayoverDirtyAtAudit: false,
+  idTypesOff: [], statusColours: null, posRoundOff: "manual",
+  kpiDayUseHalf: false, kpiCompAsSold: true, holidays: [],
 };
 
 export function FrontDeskRulesCard({ hotelId }: { hotelId: string }) {
