@@ -45,7 +45,8 @@ describe("the screens' ways of paying (Q1, Q2)", () => {
     const rules = { paymentMethods: [{ label: "Cash", kind: "cash" }, { label: "Agoda", kind: "city_ledger" }] };
     expect(payingWays(rules)).toEqual(["Cash", "Agoda"]);
     expect(payingWays(rules, false)).toEqual(["Cash"]);
-    expect(payingWays(undefined)).toEqual([]);
+    /* An older server sends no list: the five every hotel started with. */
+    expect(payingWays(undefined, false)).toEqual(["Cash", "UPI", "Credit Card", "Debit Card"]);
   });
 });
 

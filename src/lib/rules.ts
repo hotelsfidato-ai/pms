@@ -32,11 +32,17 @@ export type ChargeCategory = (typeof CHARGE_CATEGORIES)[number];
 /** The hotel's own ways of paying that are On, in its order (192, the
     owner's D27-259), from GET /api/hotels: the screens and the payment door
     read the same list. `credit: false` leaves out what goes to the books as
-    Bill to company - an advance is money in hand. */
+    Bill to company - an advance is money in hand. An older server sends no
+    list: the five every hotel started with (192's seed). */
+const STARTING_WAYS = [
+  { label: "Cash", kind: "cash" }, { label: "UPI", kind: "upi" }, { label: "Credit Card", kind: "card" },
+  { label: "Debit Card", kind: "card" }, { label: "Bill to company", kind: "city_ledger" },
+];
 export const payingWays = (
   rules?: { paymentMethods?: { label: string; kind: string }[] }, credit = true,
 ): string[] =>
-  (rules?.paymentMethods ?? []).filter((m) => credit || m.kind !== "city_ledger").map((m) => m.label);
+  (rules?.paymentMethods ?? STARTING_WAYS)
+    .filter((m) => credit || m.kind !== "city_ledger").map((m) => m.label);
 
 /** Housekeeping states. Independent of whether anyone is in the room. */
 export const HOUSEKEEPING_STATES = ["dirty", "clean", "inspected", "out-of-service"] as const;
