@@ -6,6 +6,7 @@ import {
 } from "../../identity.ts";
 import type { PoolClient as Client } from "pg";
 import { env } from "../../env.ts";
+import { markSignedOut } from "../../signIns.ts";
 import { phoneProblem } from "../../validate.ts";
 
 /* No Firebase service account on this server (QA AD-5): the account calls
@@ -769,15 +770,41 @@ admin.put("/admin/staff/:id/home-screen", async (c) => {
 /* Somebody's sign-ins, 90 days: when, and on what device (D27-243 5.4). The
    owner reads anybody's; an Admin the people at a hotel where they hold Admin
    (D27-245 Q-B). The address is kept and never sent: the function does not
-   return it. Who may is `app.sign_ins_of`'s answer. */
+   return it. Who may is `app.devices_of` (190)'s answer. */
 admin.get("/admin/staff/:id/sign-ins", async (c) => {
   const id = c.req.param("id");
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.json({ error: "No such person." }, 404);
   try {
     const signIns = await withSession(c.get("subject"), async (client) =>
-      (await client.query<{ at: string; device: string | null }>(
-        "select signed_in::text as at, device from app.sign_ins_of($1)", [id])).rows);
+      (await client.query<{
+        id: string; at: string; device: string | null;
+        signedOutAt: string | null; signedOutBy: string | null;
+      }>(
+        `select id::text, signed_in::text as at, device,
+                signed_out_at::text as "signedOutAt", signed_out_by as "signedOutBy"
+           from app.devices_of($1)`, [id])).rows);
     return c.json({ signIns });
+  } catch (error) {
+    if ((error as { code?: string }).code === "42501") {
+      return c.json(refuse((error as Error).message), 403);
+    }
+    throw error;
+  }
+});
+
+/* Sign out the device of one sign-in (P7, D27-255). The server refuses that
+   sign-in's tokens from the next request (api/src/signIns.ts); the password
+   still works. Who may is `app.sign_out_device`'s answer, the same as reading. */
+admin.post("/admin/sign-ins/:id/sign-out", async (c) => {
+  const id = c.req.param("id");
+  if (!/^[0-9]+$/.test(id)) return c.json({ error: "No such sign-in." }, 404);
+  try {
+    const row = await withSession(c.get("subject"), async (client) =>
+      (await client.query<{ firebase_uid: string | null; t: string }>(
+        `select firebase_uid, extract(epoch from auth_time)::bigint::text as t
+           from app.sign_out_device($1)`, [id])).rows[0]);
+    if (row?.firebase_uid) await markSignedOut(row.firebase_uid, Number(row.t));
+    return c.json({ ok: true as const });
   } catch (error) {
     if ((error as { code?: string }).code === "42501") {
       return c.json(refuse((error as Error).message), 403);

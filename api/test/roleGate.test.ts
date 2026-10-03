@@ -921,5 +921,7 @@ describe("Settings, security (D27-243 phase 5, D27-245)", () => {
     expect(READ_RULES[`GET ${H}/activity`]).toMatchObject({ kind: "own" });
     expect(READ_RULES[`GET /api/admin/staff/:id/sign-ins`]).toMatchObject({ kind: "own" });
     expect(READ_RULES[`GET /api/me/password`]).toEqual({ kind: "self" });
+    /* D27-255: signing a device out is the route's own answer. */
+    expect(WRITE_RULES[`POST /api/admin/sign-ins/:id/sign-out`]).toMatchObject({ kind: "own" });
   });
 });

@@ -67,7 +67,7 @@ const kitchenLine = (id: string, status: string) => ({
 describe("the Kitchen: two buttons, Start and Ready", () => {
   it("has Ordered and On the fire, and nothing after Ready", async () => {
     server({ [`GET ${API}/kitchen`]: () => ({ lines: [kitchenLine("l-1", "sent"), kitchenLine("l-2", "preparing")] }) });
-    renderAt(`/h/${HOTEL}/kitchen`, "/h/:code/kitchen", <KitchenPage />);
+    renderAt(`/pos/${HOTEL}/kitchen`, "/pos/:code/kitchen", <KitchenPage />);
 
     expect(await screen.findByRole("heading", { name: "Ordered" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "On the fire" })).toBeTruthy();
@@ -102,7 +102,7 @@ describe("the Terminal: a Ready dish, and Taken", () => {
       [`GET ${API}/till/rooms`]: () => ({ rooms: [] }),
       [`POST ${API}/till/orders/o-5/taken`]: () => ({ ...order, ok: true }),
     });
-    renderAt(`/h/${HOTEL}/till/terminal`, "/h/:code/till/terminal", <TerminalPage />);
+    renderAt(`/pos/${HOTEL}/terminal`, "/pos/:code/terminal", <TerminalPage />);
 
     fireEvent.click(await screen.findByRole("button", { name: /20260825-5/ }));
     expect(await screen.findByText("Ready")).toBeTruthy();
@@ -126,7 +126,7 @@ describe("Tables: the table's ready dishes, one tap for all", () => {
       [`GET ${API}/till/access`]: () => ({ ok: true }),
       [`POST ${API}/till/orders/o-5/taken`]: () => ({ ok: true, id: "o-5", lines: [] }),
     });
-    renderAt(`/h/${HOTEL}/floor`, "/h/:code/floor", <FloorPage />);
+    renderAt(`/pos/${HOTEL}/tables`, "/pos/:code/tables", <FloorPage />);
 
     const badge = await screen.findByRole("button", { name: "Taken: the 2 ready at AC7" });
     expect(badge.textContent).toBe("2 ready");

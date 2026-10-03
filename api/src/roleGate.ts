@@ -437,6 +437,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST /api/admin/staff/:id/reactivate`]: own("admin/admin.ts: app.may_switch_person (D22-3)"),
   [`POST /api/admin/staff`]: own("admin/admin.ts: app.require_hotel_admin and the grantable roles (D22-2)"),
   [`POST /api/admin/staff/:id/password`]: own("admin/admin.ts: app.may_set_password"),
+  /* D27-255: one device signed out, by whoever may read the person's sign-ins. */
+  [`POST /api/admin/sign-ins/:id/sign-out`]: own("admin/admin.ts: app.sign_out_device"),
   [`POST /api/admin/staff/:id/access`]: own("admin/admin.ts: app.require_hotel_admin and the grantable roles"),
   [`DELETE /api/admin/staff/:id/access/:code`]: own("admin/admin.ts: app.require_hotel_admin"),
   [`POST /api/admin/staff/:id/deactivate`]: own("admin/admin.ts: app.may_switch_person (D22-3)"),
@@ -865,7 +867,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET /api/admin/hotels/:code`]: own("admin/admin.ts: app.require_hotel_admin"),
   [`GET /api/admin/staff`]: own("admin/admin.ts: row security on staff, app.may_manage_person"),
   /* D27-243 5.4, D27-245 Q-B: the owner anybody's, an Admin their hotel's people. */
-  [`GET /api/admin/staff/:id/sign-ins`]: own("admin/admin.ts: app.sign_ins_of"),
+  [`GET /api/admin/staff/:id/sign-ins`]: own("admin/admin.ts: app.devices_of (195)"),
   /* D27-245: a person's own "set a longer password" check. */
   [`GET /api/me/password`]: SELF,
   [`GET ${H}/staff`]: see("user", "the staff list"),
