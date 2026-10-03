@@ -75,7 +75,7 @@ const menu = (...items: ReturnType<typeof dish>[]): { categories: MenuCategory[]
 describe("who may set the restaurant up", () => {
   it("is the owner, an administrator and the GM - nobody else sees the menu entry", () => {
     const may = (["owner", "admin", "gm", "hotel_manager", "kitchen_manager", "front_desk", "pos"] as Role[])
-      .filter((r) => mayReach(r, "/h/:code/till/setup"));
+      .filter((r) => mayReach(r, "/pos/:code/setup"));
     expect(may).toEqual(["owner", "admin", "gm"]);
   });
 });
@@ -88,7 +88,7 @@ describe("the ready-to-open list", () => {
       [`/api/hotels/${HOTEL}/till/menu`]: () => menu(...dishes),
       [`/api/hotels/${HOTEL}/till/access`]: () => ({ ok: true }),
     });
-    renderAt(`/h/${HOTEL}/till/setup`, "/h/:code/till/setup", <SetupPage />);
+    renderAt(`/pos/${HOTEL}/setup`, "/pos/:code/setup", <SetupPage />);
   };
 
   it("waits for a GST rate on every dish: one with none cannot be rung", async () => {
@@ -104,11 +104,13 @@ describe("the ready-to-open list", () => {
     expect(screen.getAllByLabelText("Done")).toHaveLength(6);
   });
 
-  it("sends GST and the module switch to their Settings tab (D27-213)", async () => {
+  /* The Settings console's pages since D27-249. The module switch is the
+     owner's and an Admin's (D17-36), so the GM is not offered its page. */
+  it("sends GST to its Settings page, and the module switch only to who may use it (D27-249)", async () => {
     renderSetup([dish("Dal Tadka", 5)]);
     await screen.findByText("Every dish has one");
     expect(screen.getAllByRole("link", { name: "Open Settings" }).map((a) => a.getAttribute("href")))
-      .toEqual(["/settings/taxes-and-billing", "/settings/modules-and-connections"]);
+      .toEqual(["/settings/rates/taxes"]);
   });
 });
 
@@ -119,7 +121,7 @@ describe("an empty Tables screen", () => {
       [`/api/hotels/${HOTEL}/till/floor`]: () => ({ outlet: null, sections: [] }),
       [`/api/hotels/${HOTEL}/till/access`]: () => ({ ok: true }),
     });
-    renderAt(`/h/${HOTEL}/floor`, "/h/:code/floor", <FloorPage />);
+    renderAt(`/pos/${HOTEL}/tables`, "/pos/:code/tables", <FloorPage />);
   };
 
   it("offers the GM \"Set up tables\"", async () => {

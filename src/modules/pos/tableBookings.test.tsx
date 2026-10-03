@@ -70,14 +70,14 @@ const section = (title: string) => screen.getByRole("heading", { name: title }).
 
 describe("the Table bookings screen", () => {
   it("is in the menu for whoever may ring an order, and not for the housekeeper", () => {
-    expect(mayReach("pos", "/h/:code/table-bookings")).toBe(true);
-    expect(mayReach("housekeeping", "/h/:code/table-bookings")).toBe(false);
+    expect(mayReach("pos", "/pos/:code/table-bookings")).toBe(true);
+    expect(mayReach("housekeeping", "/pos/:code/table-bookings")).toBe(false);
   });
 
   it("puts what waits first, then today and upcoming by the hotel's today", async () => {
     as("pos");
     serve({ [`/api/hotels/${HOTEL}/table-bookings`]: () => LIST });
-    renderAt(`/h/${HOTEL}/table-bookings`, "/h/:code/table-bookings", <TableBookingsPage />);
+    renderAt(`/pos/${HOTEL}/table-bookings`, "/pos/:code/table-bookings", <TableBookingsPage />);
     await screen.findByText("A quiet corner, please", { exact: false });
     expect(within(section("Waiting")).getByText(/20:00/)).toBeTruthy();
     expect(within(section("Today")).getByText("Table G1 · by Ravi")).toBeTruthy();
@@ -89,7 +89,7 @@ describe("the Table bookings screen", () => {
   it("confirms with the table chosen, and declines only with the reason typed", async () => {
     as("pos");
     serve({ [`/api/hotels/${HOTEL}/table-bookings`]: () => LIST });
-    renderAt(`/h/${HOTEL}/table-bookings`, "/h/:code/table-bookings", <TableBookingsPage />);
+    renderAt(`/pos/${HOTEL}/table-bookings`, "/pos/:code/table-bookings", <TableBookingsPage />);
     await screen.findByText("A quiet corner, please", { exact: false });
 
     fireEvent.click(within(section("Waiting")).getByRole("button", { name: "Confirm" }));
@@ -110,7 +110,7 @@ describe("the Table bookings screen", () => {
   it("offers no answer to somebody who may not ring an order", async () => {
     as("read_only");
     serve({ [`/api/hotels/${HOTEL}/table-bookings`]: () => LIST });
-    renderAt(`/h/${HOTEL}/table-bookings`, "/h/:code/table-bookings", <TableBookingsPage />);
+    renderAt(`/pos/${HOTEL}/table-bookings`, "/pos/:code/table-bookings", <TableBookingsPage />);
     await screen.findByText("A quiet corner, please", { exact: false });
     expect(screen.queryByRole("button", { name: /Confirm|Decline/ })).toBeNull();
   });
@@ -128,7 +128,7 @@ describe("the hours on Restaurant setup", () => {
         slots: ["12:30", "13:00", "13:30", "14:00", "14:30", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00", "22:30"],
       }] }),
     });
-    renderAt(`/h/${HOTEL}/till/setup`, "/h/:code/till/setup", <SetupPage />);
+    renderAt(`/pos/${HOTEL}/setup`, "/pos/:code/setup", <SetupPage />);
     expect(await screen.findByText(/^Slots: 12:30, 13:00/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText(/^Lunch/), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Save hours" }));

@@ -46,18 +46,18 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 
 | Menu name | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
 |---|---|---|---|
-| Tables | `/h/:code/floor` | `pages/Floor.tsx` | waiter (`pos`), Reception |
-| Table bookings | `/h/:code/table-bookings` | `pages/TableBookings.tsx` | none - whoever may ring an order (`mayRingUp`); hotel guests' table requests, Waiting / Today / Upcoming, Confirm (a table if known) or Decline with a reason (D27-221, D27-224) |
-| Till | `/h/:code/till` | `pages/Till.tsx` | waiter, Reception |
-| Terminal | `/h/:code/till/terminal` | `pages/Terminal.tsx` | waiter, Reception |
-| Kitchen | `/h/:code/kitchen` | `pages/Kitchen.tsx` | chef, kitchen manager |
-| Menu | `/h/:code/menu` | `pages/Menu.tsx` | kitchen manager |
-| Close restaurant day | `/h/:code/till/day-end` | `pages/DayEnd.tsx` | waiter, kitchen manager, Reception |
-| Charges to rooms | `/h/:code/pos` | `pages/Pos.tsx` | none |
-| Restaurant setup | `/h/:code/till/setup` | `pages/Setup.tsx` | none - the owner, an administrator and the GM see it (`room_config` edit; D22-6, D25-20 to D25-26, 25 Sep) |
+| Tables | `/pos/:code/tables` | `pages/Floor.tsx` | waiter (`pos`), Reception |
+| Table bookings | `/pos/:code/table-bookings` | `pages/TableBookings.tsx` | none - whoever may ring an order (`mayRingUp`); hotel guests' table requests, Waiting / Today / Upcoming, Confirm (a table if known) or Decline with a reason (D27-221, D27-224) |
+| Till | `/pos/:code/till` | `pages/Till.tsx` | waiter, Reception |
+| Terminal | `/pos/:code/terminal` | `pages/Terminal.tsx` | waiter, Reception |
+| Kitchen | `/pos/:code/kitchen` | `pages/Kitchen.tsx` | chef, kitchen manager |
+| Menu | `/pos/:code/menu` | `pages/Menu.tsx` | kitchen manager |
+| Close restaurant day | `/pos/:code/day-end` | `pages/DayEnd.tsx` | waiter, kitchen manager, Reception |
+| Charges to rooms | `/pos/:code/room-charges` | `pages/Pos.tsx` | none |
+| Restaurant setup | `/pos/:code/setup` | `pages/Setup.tsx` | none - the owner, an administrator and the GM see it (`room_config` edit; D22-6, D25-20 to D25-26, 25 Sep) |
 | — (not in the menu) kitchen docket | none since 29 Sep | `components/DocketSlip.tsx` | printed by the outlet's KOT station alone (D27-159, D27-161); the page every send opened in a new tab (D17-18) is retired; never shows prices |
 | — KOT printer panel | on the Kitchen screen | `components/KotStation.tsx` | "This device prints KOTs" with a typed name, for the owner, an administrator, the GM and the kitchen manager; on the station, the last 20 KOTs with Reprint |
-| — (not in the menu) printed bill | `/h/:code/till/bill/:id` | `pages/Bill.tsx` | opened from an order |
+| — (not in the menu) printed bill | `/pos/:code/bill/:id` | `pages/Bill.tsx` | opened from an order |
 
 - Reception's four entries show only while the hotel's "Reception can use the
   POS" switch is on.

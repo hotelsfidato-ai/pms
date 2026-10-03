@@ -17,25 +17,25 @@ export const nav: ServiceNavEntry[] = [
   /* The FLOOR first, because that is where a shift starts: a waiter
      walks to a table before there is a bill to stand at. */
   { section: "point-of-sale", order: 10, workingMenus: ["front_desk", "pos"],
-    label: "Tables", to: "/h/:code/floor", icon: LayoutGrid, resource: "payment",
+    label: "Tables", to: "/pos/:code/tables", icon: LayoutGrid, resource: "payment",
     keywords: ["floor", "restaurant"],
     canSee: (role) => mayRingUp(role) },
   /* Hotel guests' requests for a table (D27-221, D27-224): answered by the
      till's people, as the server asks (roleGate TABLE_ANSWER). */
   { section: "point-of-sale", order: 15,
-    label: "Table bookings", to: "/h/:code/table-bookings", icon: CalendarClock, resource: "payment",
+    label: "Table bookings", to: "/pos/:code/table-bookings", icon: CalendarClock, resource: "payment",
     keywords: ["table booking", "reservation", "restaurant booking", "dinner", "lunch"],
     canSee: (role) => mayRingUp(role) },
   /* The till, the one somebody stands at. */
   { section: "point-of-sale", order: 20, workingMenus: ["front_desk", "pos"],
-    label: "Till", to: "/h/:code/till", icon: Receipt, resource: "payment",
+    label: "Till", to: "/pos/:code/till", icon: Receipt, resource: "payment",
     keywords: ["pos", "order", "restaurant bill"],
     canSee: (role) => mayRingUp(role) },
   /* A dedicated screen for a fixed terminal: no sidebar, no chrome,
      one outlet, targets sized for a thumb rather than a mouse. */
   {
     section: "point-of-sale", order: 30, workingMenus: ["front_desk", "pos"],
-    label: "Terminal", to: "/h/:code/till/terminal",
+    label: "Terminal", to: "/pos/:code/terminal",
     icon: MonitorSmartphone, resource: "payment",
     keywords: ["pos terminal"],
     canSee: (role) => mayRingUp(role),
@@ -49,7 +49,7 @@ export const nav: ServiceNavEntry[] = [
      know the address. The server has always let them in (till.ts
      refuses only reception). Fixed 15 September, owner's yes. */
   { section: "point-of-sale", order: 40, workingMenus: ["chef", "kitchen_manager"],
-    label: "Kitchen", to: "/h/:code/kitchen", icon: Flame, resource: "payment",
+    label: "Kitchen", to: "/pos/:code/kitchen", icon: Flame, resource: "payment",
     keywords: ["kot", "pass", "orders"],
     canSee: (role) =>
       canAccess(role, "payment") || role === "chef" || role === "kitchen_manager" },
@@ -59,7 +59,7 @@ export const nav: ServiceNavEntry[] = [
      manager, who sets room prices only, out of it (D22-35). The kitchen
      manager holds it in the matrix now rather than by name. */
   { section: "point-of-sale", order: 50, workingMenus: ["kitchen_manager"],
-    label: "Menu", to: "/h/:code/menu", icon: UtensilsCrossed, resource: "menu",
+    label: "Menu", to: "/pos/:code/menu", icon: UtensilsCrossed, resource: "menu",
     keywords: ["dishes", "items"] },
   /* Where the shift ends. Last, because it is — and beside the
      till rather than under Finance, for the same reason the till
@@ -67,7 +67,7 @@ export const nav: ServiceNavEntry[] = [
      restaurant work, not the front office's. */
   {
     section: "point-of-sale", order: 60, workingMenus: ["front_desk", "pos", "kitchen_manager"],
-    label: "Close restaurant day", to: "/h/:code/till/day-end",
+    label: "Close restaurant day", to: "/pos/:code/day-end",
     icon: Banknote, resource: "payment",
     keywords: ["day end", "restaurant close"],
     canSee: (role) => mayRingUp(role) || role === "kitchen_manager",
@@ -75,14 +75,14 @@ export const nav: ServiceNavEntry[] = [
   /* What an OUTSIDE till sent and what was refused. Read-only, and
      named so nobody mistakes it for the till above. */
   { section: "point-of-sale", order: 70,
-    label: "Charges to rooms", to: "/h/:code/pos", icon: Plug, resource: "invoice",
+    label: "Charges to rooms", to: "/pos/:code/room-charges", icon: Plug, resource: "invoice",
     keywords: ["bridge", "pos charges"] },
   /* Setting a hotel's restaurant up (D22-6): its name, its sections and
      tables, and what is left before the first order. The owner, an
      administrator and the GM - room setup's grant (the owner, 25 Sep) - and
      last, because it is done once and before any of the above. */
   { section: "point-of-sale", order: 80,
-    label: "Restaurant setup", to: "/h/:code/till/setup", icon: SlidersHorizontal,
+    label: "Restaurant setup", to: "/pos/:code/setup", icon: SlidersHorizontal,
     resource: "room_config", keywords: ["tables", "sections", "outlet", "set up restaurant"],
     canSee: (role) => can(role, "edit", "room_config") },
 ];
