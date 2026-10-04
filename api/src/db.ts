@@ -18,10 +18,12 @@ import { env } from "./env.ts";
    wait (under nginx's timeouts), and a statement cap so a runaway query
    frees its connection. ponytail: 120 s, not the check's 30 s, because
    /api/ allows 300 s for imports and the night audit; lower it when a
-   measured long operation says it can. */
+   measured long operation says it can. The 20 is DB_POOL_MAX's default
+   (D27-278): one server shared by several customers' APIs divides
+   Postgres's connections between them. */
 export const pool = new pg.Pool({
   connectionString: env.databaseUrl,
-  max: 20,
+  max: env.dbPoolMax,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 30_000,
   statement_timeout: 120_000,

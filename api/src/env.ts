@@ -30,6 +30,16 @@ function required(name: string): string {
   return value;
 }
 
+/** DB_POOL_MAX: a whole number from 1 to 100; 20 when unset. Anything else refuses to start. */
+export function poolSize(value: string | undefined): number {
+  if (value === undefined || value === "") return 20;
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 1 || n > 100) {
+    throw new Error(`[config] DB_POOL_MAX must be a whole number from 1 to 100, not "${value}".`);
+  }
+  return n;
+}
+
 const nodeEnv = process.env["NODE_ENV"] ?? "development";
 const isProduction = nodeEnv === "production";
 
@@ -60,6 +70,12 @@ export const env = {
      drop. Connecting as pms_migrate or postgres would bypass RLS and
      make every isolation guarantee in the schema decorative. */
   databaseUrl: required("DATABASE_URL"),
+
+  /* How many database connections this API may hold (D27-278, the owner, 4
+     Oct: a database per customer on one shared server). Postgres allows 100
+     in all, so each customer's API gets its share; 20 when unset, the size
+     D27-165 found a Dashboard burst needs. */
+  dbPoolMax: poolSize(process.env["DB_POOL_MAX"]),
 
   /* A JSON service account, as a single-line string. Unlike the web
      config in src/lib/firebase.ts, this IS a secret. */
