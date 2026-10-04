@@ -23,10 +23,11 @@ import { floorProblem, roomNumberProblem } from "../../validate.ts";
    hotel had chosen, and a "create room type" form with a rate field
    pre-filled at 3500 is the same fault wearing a different hat.
 
-   A ROOM TYPE IS NOT DELETED. Reservations, rates and folio history
-   all point at it, and removing one would either fail on a foreign key
-   or orphan a year of bookings. It is deactivated, like everything
-   else here — the same rule `hotels_no_delete` enforces one level up.
+   A ROOM TYPE IN USE IS NOT DELETED. Reservations, rates and folio
+   history point at it, and removing one would either fail on a foreign
+   key or orphan a year of bookings. It is switched Off. One that nothing
+   uses - no room, booking, price or difference - may be Removed (the
+   owner, D27-263: a new hotel starts empty and types are added by hand).
    ══════════════════════════════════════════════════════════════════ */
 
 /* Split by service on 15 September (docs/SERVICE-FOLDERS-PLAN.md); this
@@ -104,6 +105,10 @@ inventorySetup.patch("/:code/room-types/:id", async (c) => {
   type Body = {
     name?: string; baseOccupancy?: number; maxOccupancy?: number;
     sortOrder?: number; isActive?: boolean;
+    /* The Settings console's room type (D27-258): null clears each. */
+    baseChildren?: number; maxAdults?: number | null; maxChildren?: number | null;
+    beds?: string | null; viewType?: string | null; sizeSqft?: number | null;
+    colour?: string | null;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
@@ -149,9 +154,77 @@ inventorySetup.patch("/:code/room-types/:id", async (c) => {
        where id = $1 and hotel_id = $2`,
       [c.req.param("id"), hotelId, input.name?.trim() || null,
        base, max, input.sortOrder ?? null, input.isActive ?? null]);
+
+    /* Each one only when sent; the database keeps them fitting each other
+       (room_types_people_fit, room_types_words_fit). */
+    const MORE: [keyof Body, string, (v: unknown) => unknown][] = [
+      ["baseChildren", "base_children", (v) => v],
+      ["maxAdults", "max_adults", (v) => v],
+      ["maxChildren", "max_children", (v) => v],
+      ["beds", "beds", (v) => (typeof v === "string" ? v.trim() || null : null)],
+      ["viewType", "view_type", (v) => (typeof v === "string" ? v.trim() || null : null)],
+      ["sizeSqft", "size_sqft", (v) => v],
+      ["colour", "colour", (v) => (typeof v === "string" ? v.toLowerCase() || null : null)],
+    ];
+    const sent = MORE.filter(([key]) => Object.hasOwn(input, key));
+    if (sent.length > 0) {
+      try {
+        await client.query("savepoint fit");
+        await client.query(
+          `update room_types set ${sent.map(([, col], i) => `${col} = $${i + 3}`).join(", ")}
+            where id = $1 and hotel_id = $2`,
+          [c.req.param("id"), hotelId, ...sent.map(([key, , clean]) => clean(input[key]) ?? null)]);
+      } catch (error) {
+        await client.query("rollback to savepoint fit");
+        const e = error as { code?: string; constraint?: string };
+        if (e.code === "23514" && e.constraint === "room_types_people_fit") {
+          return refuse("Adults and children must fit the total: children fewer than the "
+            + "total, and the base guests within it.");
+        }
+        if (e.code === "23514" || e.code === "22P02") {
+          return refuse("Beds and view up to 60 letters, a size in square feet, a colour like #1f6f5c.");
+        }
+        throw error;
+      }
+    }
     return { ok: true as const };
   });
 
+  if (result === null) return c.json({ error: "No such property." }, 404);
+  if (result === "missing") return c.json({ error: "No such room type." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+inventorySetup.delete("/:code/room-types/:id", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const id = c.req.param("id");
+    const { rows } = await client.query<{ found: boolean; uses: string | null }>(
+      `select exists (select 1 from room_types where id = $1 and hotel_id = $2) as found,
+              case
+                when exists (select 1 from rooms where room_type_id = $1) then 'rooms'
+                when exists (select 1 from reservations where room_type_id = $1) then 'bookings'
+                when exists (select 1 from rates where room_type_id = $1) then 'prices'
+                when exists (select 1 from rate_offsets where room_type_id = $1) then 'a difference from the base'
+                when exists (select 1 from pricing_basis where room_type_id = $1) then 'the base for the other types'
+              end as uses`, [id, hotelId]);
+    if (!rows[0]!.found) return "missing" as const;
+    if (rows[0]!.uses) {
+      return refuse(`This room type has ${rows[0]!.uses}, so it cannot be removed. Switch it Off instead.`);
+    }
+    try {
+      await client.query("savepoint gone");
+      await client.query("delete from room_types where id = $1 and hotel_id = $2", [id, hotelId]);
+    } catch (error) {
+      await client.query("rollback to savepoint gone");
+      if ((error as { code?: string }).code === "23503") {
+        return refuse("Something still uses this room type, so it cannot be removed. Switch it Off instead.");
+      }
+      throw error;
+    }
+    return { ok: true as const };
+  });
   if (result === null) return c.json({ error: "No such property." }, 404);
   if (result === "missing") return c.json({ error: "No such room type." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
@@ -263,6 +336,27 @@ inventorySetup.patch("/:code/rooms/:number", async (c) => {
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
+
+/* Rooms in the order the owner drags them (D27-258). */
+inventorySetup.put("/:code/rooms/order", async (c) => {
+  const input = await c.req.json<{ numbers?: unknown }>().catch(() => ({}) as { numbers?: unknown });
+  const numbers = Array.isArray(input.numbers) && input.numbers.every((n) => typeof n === "string")
+    ? (input.numbers as string[]) : null;
+  if (!numbers || numbers.length === 0 || numbers.length > 1000) {
+    return c.json(refuse("Send the room numbers in their new order."), 409);
+  }
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    await client.query(
+      `update rooms r set position = o.n
+         from unnest($2::text[]) with ordinality o(number, n)
+        where r.hotel_id = $1 and r.number = o.number`, [hotelId, numbers]);
+    return { ok: true as const };
+  });
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result);
+});
 
 /* ── The property's own clock and its exception charges ───────────
    063 gave the system an opinion about the hour a guest arrives, and
@@ -667,10 +761,14 @@ inventorySetup.get("/:code/room-setup", async (c) => {
     const { rows: types } = await client.query<{
       id: string; code: string; name: string; base: number; max: number;
       sort: number; active: boolean; rate: string | null; rooms: number;
-      sellable: number;
+      sellable: number; base_children: number; max_adults: number | null;
+      max_children: number | null; beds: string | null; view_type: string | null;
+      size_sqft: number | null; colour: string | null;
     }>(
       `select rt.id::text, rt.code, rt.name,
               rt.base_occupancy as base, rt.max_occupancy as max,
+              rt.base_children, rt.max_adults, rt.max_children, rt.beds,
+              rt.view_type, rt.size_sqft, rt.colour,
               rt.sort_order as sort, rt.is_active as active,
               rt.base_rate::text as rate,
               count(r.id)::int as rooms,
@@ -685,14 +783,14 @@ inventorySetup.get("/:code/room-setup", async (c) => {
     const { rows: rooms } = await client.query<{
       id: string; number: string; type_id: string; type: string;
       floor: number | null; smoking: boolean; active: boolean;
-      occupied: boolean;
+      occupied: boolean; position: number;
     }>(
       `select r.id::text, r.number, rt.id::text as type_id, rt.name as type,
               r.floor, r.smoking, r.is_active as active,
-              r.occupancy_status <> 'vacant' as occupied
+              r.occupancy_status <> 'vacant' as occupied, r.position
          from rooms r join room_types rt on rt.id = r.room_type_id
         where r.hotel_id = $1
-        order by r.number`,
+        order by r.position, r.number`,
       [hotelId]);
 
     const { rows: h } = await client.query<{
@@ -721,11 +819,13 @@ inventorySetup.get("/:code/room-setup", async (c) => {
            the seventh place that rule is enforced. */
         rackRate: t.rate === null ? null : Number(t.rate),
         rooms: t.rooms, sellable: t.sellable,
+        baseChildren: t.base_children, maxAdults: t.max_adults, maxChildren: t.max_children,
+        beds: t.beds, viewType: t.view_type, sizeSqft: t.size_sqft, colour: t.colour,
       })),
       rooms: rooms.map((r) => ({
         id: r.id, number: r.number, roomTypeId: r.type_id, roomType: r.type,
         floor: r.floor, smoking: r.smoking, isActive: r.active,
-        occupied: r.occupied,
+        occupied: r.occupied, position: r.position,
       })),
     };
   });

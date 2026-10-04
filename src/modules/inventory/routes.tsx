@@ -1,6 +1,5 @@
 import { Navigate, Route } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
-import RoomSetupPage from "@/modules/inventory/pages/RoomSetup";
 import CancellationTermsPage from "@/modules/inventory/pages/CancellationTerms";
 import RatesPage from "@/modules/inventory/pages/Rates";
 
@@ -8,10 +7,8 @@ import RatesPage from "@/modules/inventory/pages/Rates";
    signed-in shell. */
 export const routes = (
   <>
-    <Route
-      path="/h/:code/room-types"
-      element={<><PropertyScope /><RoomSetupPage /></>}
-    />
+    {/* In the settings console since D27-258 (P3). */}
+    <Route path="/h/:code/room-types" element={<Navigate to="/settings/rooms/room-types" replace />} />
     <Route
       path="/h/:code/cancellation-terms"
       element={<><PropertyScope /><CancellationTermsPage /></>}

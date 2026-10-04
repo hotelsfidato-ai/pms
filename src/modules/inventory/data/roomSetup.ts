@@ -33,6 +33,14 @@ export interface RoomTypeSetup {
   rooms: number;
   /** Physical rooms minus the ones switched off. */
   sellable: number;
+  /* The Settings console (D27-258): null where nobody said. */
+  baseChildren: number;
+  maxAdults: number | null;
+  maxChildren: number | null;
+  beds: string | null;
+  viewType: string | null;
+  sizeSqft: number | null;
+  colour: string | null;
 }
 
 export interface RoomSetup {
@@ -46,6 +54,8 @@ export interface RoomSetup {
   /** Somebody is in it. Such a room cannot be retired — it is blocked,
       which carries dates and a reason. */
   occupied: boolean;
+  /** The order the rooms are dragged into (D27-258). */
+  position: number;
 }
 
 export interface FrontDeskSettings {
@@ -93,10 +103,40 @@ export async function amendRoomType(
   input: {
     name?: string; baseOccupancy?: number; maxOccupancy?: number;
     sortOrder?: number; isActive?: boolean;
+    baseChildren?: number; maxAdults?: number | null; maxChildren?: number | null;
+    beds?: string | null; viewType?: string | null; sizeSqft?: number | null; colour?: string | null;
   },
 ): Promise<Result> {
   return call(`/api/hotels/${hotelId}/room-types/${id}`, "PATCH", input);
 }
+
+/** Only a type nothing uses (D27-263); the server says what does. */
+export const removeRoomType = (hotelId: string, id: string): Promise<Result> =>
+  call(`/api/hotels/${hotelId}/room-types/${id}`, "DELETE");
+
+export const orderRooms = (hotelId: string, numbers: string[]): Promise<Result> =>
+  call(`/api/hotels/${hotelId}/rooms/order`, "PUT", { numbers });
+
+export interface TypePhoto { id: string; caption: string | null; width: number; height: number }
+export const getTypePhotos = (hotelId: string, typeId: string) =>
+  api<{ photos: TypePhoto[]; most: number }>(`/api/hotels/${hotelId}/room-types/${typeId}/photos`);
+export const getTypePhoto = (hotelId: string, typeId: string, photoId: string) =>
+  api<{ type: string; data: string }>(`/api/hotels/${hotelId}/room-types/${typeId}/photos/${photoId}`);
+export const addTypePhoto = (hotelId: string, typeId: string, data: string): Promise<Result> =>
+  call(`/api/hotels/${hotelId}/room-types/${typeId}/photos`, "POST", { data });
+export const removeTypePhoto = (hotelId: string, typeId: string, photoId: string): Promise<Result> =>
+  call(`/api/hotels/${hotelId}/room-types/${typeId}/photos/${photoId}`, "DELETE");
+export const orderTypePhotos = (hotelId: string, typeId: string, ids: string[]): Promise<Result> =>
+  call(`/api/hotels/${hotelId}/room-types/${typeId}/photos/order`, "PUT", { ids });
+
+export interface Amenity { id: string; name: string; isActive: boolean }
+/** P2's one catalogue (GET /amenities), and the ones this type has. */
+export const getAmenities = (hotelId: string) =>
+  api<{ amenities: Amenity[] }>(`/api/hotels/${hotelId}/amenities`);
+export const getTypeAmenities = (hotelId: string, typeId: string) =>
+  api<{ amenityIds: string[] }>(`/api/hotels/${hotelId}/room-types/${typeId}/amenities`);
+export const setTypeAmenities = (hotelId: string, typeId: string, amenityIds: string[]): Promise<Result> =>
+  call(`/api/hotels/${hotelId}/room-types/${typeId}/amenities`, "PUT", { amenityIds });
 
 export async function addRoom(
   hotelId: string,

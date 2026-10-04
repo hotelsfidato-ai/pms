@@ -337,6 +337,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PUT ${H}/report-emails`]: grant("room_config", "edit", "Choosing who gets the reports by email"),
   [`POST ${H}/vat-bills/:number{.+}/cancel`]: VAT_CANCEL,
   [`PUT ${H}/tax/:kind`]: GST,
+  [`PUT ${H}/tax/:kind/sac`]: GST,   // D27-258 Q6
   [`PATCH ${H}/menu-categories/:name/tax-kind`]: GST,
 
   /* guests */
@@ -487,10 +488,21 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PUT ${H}/pricing/base`]: PRICE,
   [`PUT ${H}/pricing/offset`]: PRICE,
   [`PUT ${H}/pricing/addon`]: PRICE,
+  /* D27-258: a rate plan's Off, place and sources, and meal plans by day. */
+  [`PUT ${H}/plan-settings/order`]: PRICE,
+  [`PUT ${H}/plan-settings/:roomTypeId/:mealPlan`]: PRICE,
+  [`PUT ${H}/meal-days/:mealPlan`]: PRICE,
   [`POST ${H}/room-types`]: SETUP_ADD,
   [`PATCH ${H}/room-types/:id`]: SETUP_CHANGE,
   [`POST ${H}/rooms`]: SETUP_ADD,
   [`PATCH ${H}/rooms/:number`]: SETUP_CHANGE,
+  /* D27-258, D27-263: Remove a room type nothing uses; rooms in order. */
+  [`DELETE ${H}/room-types/:id`]: SETUP_CHANGE,
+  [`PUT ${H}/rooms/order`]: SETUP_CHANGE,
+  [`POST ${H}/room-types/:id/photos`]: SETUP_CHANGE,
+  [`PUT ${H}/room-types/:id/photos/order`]: SETUP_CHANGE,
+  [`DELETE ${H}/room-types/:id/photos/:photoId`]: SETUP_CHANGE,
+  [`PUT ${H}/room-types/:id/amenities`]: SETUP_CHANGE,
   /* The front desk's hours and its early and late charges: setup. */
   [`PATCH ${H}/front-desk`]: SETUP_CHANGE,
   /* Phase 5 of the settings plan (D27-260): the lists, holidays, the group's
@@ -820,12 +832,16 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
 
   /* ── Rooms, rates and setup ── */
   [`GET ${H}/pricing`]: PRICES,
+  [`GET ${H}/plan-settings`]: PRICES,
   [`GET ${H}/rates`]: PRICES,
   [`GET ${H}/rate-grid`]: PRICES,
   [`GET ${H}/rate-plans`]: PRICES,
   [`GET ${H}/cancellation-policies`]: PRICES,
   [`GET ${H}/room-types`]: see(["room_config", "rate", "reservation"], "room types"),
   [`GET ${H}/room-setup`]: SETUP,
+  [`GET ${H}/room-types/:id/photos`]: SETUP,
+  [`GET ${H}/room-types/:id/photos/:photoId`]: SETUP,
+  [`GET ${H}/room-types/:id/amenities`]: SETUP,
   [`GET ${H}/commissioning`]: SETUP,
   [`GET ${H}/till/setup`]: SETUP,
   [`GET ${H}/table-bookings/hours`]: SETUP,

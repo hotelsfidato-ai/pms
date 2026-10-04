@@ -11,6 +11,45 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-04 · Settings phase 3: rooms, rates and tax (D27-251, D27-258, D27-263)
+
+Branch `settings/rates-3oct` from cp6 8181f452, cp6 85d2bb7a merged in; migration **195** for now (the master renumbers); `fidato_s45` migrated twice.
+
+**Asked for:** P3 of the settings plan, with the owner's answers D27-258 (all seven as recommended) and D27-263:
+- room types with base and maximum adults and children, beds, view, size, colour, photos and amenities, and rooms in order;
+- the rate plan tree over the one pricing, with a 3-step editor and a summary;
+- meal plans by day;
+- which sources sell each plan;
+- tax validity dates and a SAC code per service;
+- a new hotel starts with no room types, and a room type can be removed when unused or switched off.
+
+**Shipped:**
+- 195: the room type columns with their fitting checks; `rooms.position`; `room_type_photos`; `room_type_amenities` (linked to P2's `amenities` when it exists); `rate_plan_settings`; `rate_plan_sources`; `hotel_meal_days`; `tax_rules.valid_from/valid_to`; `tax_sac`; provisioning with the set "none", which the Add a hotel door now always uses.
+- API (inventory):
+  - room types take the new fields; `DELETE /room-types/:id` only when the type is unused; `PUT /rooms/order`;
+  - `roomTypeExtras.ts` for photos and amenities, using `readPhoto` through admin's door;
+  - `planSettings.ts` (`/plan-settings`, `/meal-days`).
+- API elsewhere:
+  - finance's tax files: the SAC per kind (`PUT /tax/:kind/sac`; `GET /tax` gives it);
+  - reservations/book.ts: the booking checks for Q1, Q3 and Q4.
+- Gate lines are pinned.
+- Web: Room types, Rate plans and Meal plans as console pages; Rates lets an Independent type type its own base; the tax card shows and saves the SAC.
+
+**Found:** the room type edit's placeholders lost a `$` to String.replace and set literal numbers. The API test caught it before any commit.
+
+**Proved:**
+- Database suite: 1499 passed. The new-hotel checks failed without its section.
+- API `settingsP3`: 9, each new block failing first (on cp6's routes, with the routes unmounted, or on cp6's book.ts). `roleGate` pins pass.
+- Web: Room types 3, Rate plans and Meal plans 4, SAC 2, all failing first; inventory 22; finance 83; App, navigation, components/app, primaryAction and boundaries 121.
+- Opened at 1280 and 375 on `fidato_s45`. No page scrolls sideways; plan names wrap whole; the meal headings fit on one line.
+
+**Left open (asked the master):**
+- the SAC printed per invoice LINE needs finance's invoices.ts;
+- tax periods for the same slab need the `tax_rules` key widened, which touches three other tests;
+- the voucher's meal-days line is guest-messaging's file (P6).
+
+---
+
 ## 2026-10-03 · The early and late fees are set on Money (the owner's D27-259 Q3) - the cash lane's
 
 **Shipped:** the front desk card shows the early arrival and late departure fees; its dialog edits only the hours and points to Settings › Money › Extra charges, which saves them through the same PATCH /:code/front-desk.

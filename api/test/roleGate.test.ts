@@ -356,11 +356,36 @@ describe("the matrix the server asks", () => {
       `POST ${H}/room-types`, `PATCH ${H}/room-types/:id`, `POST ${H}/rooms`,
       `PATCH ${H}/rooms/:number`, `PATCH ${H}/front-desk`, `POST ${H}/room-types/import`,
       `POST ${H}/rooms/import`, `POST ${H}/banquet/venues`, `PATCH ${H}/banquet/venues/:id`,
+      /* D27-258, D27-263: Remove an unused room type; rooms in order. */
+      `DELETE ${H}/room-types/:id`, `PUT ${H}/rooms/order`,
       `POST ${H}/banquet/packages`,
     ]) {
       expect(who(key), key).toEqual(["owner", "admin", "gm"]);
       expect(byName(key), key).toEqual([]);
     }
+  });
+
+  it("D27-258: a rate plan's settings and meal days are set as a price is, and read as prices are", () => {
+    for (const key of [`PUT ${H}/plan-settings/order`, `PUT ${H}/plan-settings/:roomTypeId/:mealPlan`,
+                       `PUT ${H}/meal-days/:mealPlan`]) {
+      expect(rule(key), key).toEqual(rule(`PUT ${H}/pricing/addon`));
+    }
+    expect(READ_RULES[`GET ${H}/plan-settings`]).toEqual(READ_RULES[`GET ${H}/pricing`]);
+  });
+
+  it("D27-258: a room type's photos and amenities are changed as its setup is, and read as it is", () => {
+    for (const key of [`POST ${H}/room-types/:id/photos`, `PUT ${H}/room-types/:id/photos/order`,
+                       `DELETE ${H}/room-types/:id/photos/:photoId`, `PUT ${H}/room-types/:id/amenities`]) {
+      expect(rule(key), key).toEqual(rule(`PATCH ${H}/room-types/:id`));
+    }
+    for (const key of [`GET ${H}/room-types/:id/photos`, `GET ${H}/room-types/:id/photos/:photoId`,
+                       `GET ${H}/room-types/:id/amenities`]) {
+      expect(READ_RULES[key], key).toEqual(READ_RULES[`GET ${H}/room-setup`]);
+    }
+  });
+
+  it("D27-258: a tax kind's SAC is set as its rates are", () => {
+    expect(rule(`PUT ${H}/tax/:kind/sac`)).toEqual(rule(`PUT ${H}/tax/:kind`));
   });
 
   it("D22-30: an administrator and the GM set a commission - in the matrix", () => {

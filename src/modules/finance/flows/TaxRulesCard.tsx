@@ -7,7 +7,7 @@ import {
   Card, CardBody, Button, Dialog, DialogContent, Field, fieldProps,
   Input, NativeSelect, StatusPill, toast,
 } from "@/components/ui";
-import { getTaxSetup, setTaxRules, setCategoryTaxKind, type TaxKind, type TaxKindRules, type TaxSlab } from "@/modules/finance/data/tax";
+import { getTaxSetup, setTaxRules, setCategoryTaxKind, setTaxSac, sacShown, type TaxKind, type TaxKindRules, type TaxSlab } from "@/modules/finance/data/tax";
 
 /* ══════════════════════════════════════════════════════════════════
    GST, IN ONE PLACE, FOR THE DESK AND THE TILL
@@ -195,6 +195,7 @@ function KindTile({ rules, onEdit }: {
       <p className="text-sm text-grey-500 mt-1.5 leading-relaxed">
         {WHAT[rules.kind]}
       </p>
+      <p className="text-sm text-grey-600 mt-1 tabular">SAC {sacShown(rules)}</p>
 
       <Button variant="secondary" className="h-11 w-full mt-2.5"
               onClick={onEdit}>
@@ -227,6 +228,7 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
       : [{ overAmount: "0", rate: "", note: "" }],
   );
   const [busy, setBusy] = useState(false);
+  const [sac, setSac] = useState(rules.sac ?? "");
 
   const set = (i: number, patch: Partial<Draft>) =>
     setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)));
@@ -244,8 +246,12 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
           note: r.note.trim() || null,
         })),
     );
+    if (!res.ok) { setBusy(false); return toast.error("Not saved", res.reason); }
+    if ((sac.trim() || null) !== rules.sac) {
+      const said = await setTaxSac(hotelId, rules.kind, sac.trim() || null);
+      if (!said.ok) { setBusy(false); return toast.error("SAC not saved", said.reason); }
+    }
     setBusy(false);
-    if (!res.ok) return toast.error("Not saved", res.reason);
     toast.success(
       `${LABEL[rules.kind]} ${TAX_NAME(rules.kind)} saved`,
       res.slabs === 0
@@ -349,6 +355,17 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
               <Plus className="size-4" /> Add the rate
             </Button>
           )}
+
+          <Field label="SAC code"
+                 hint={rules.kind === "room"
+                   ? "Six digits, printed on each line of this kind. Empty: 996311, as before."
+                   : "Six digits, printed on each line of this kind - your CA's code. Empty: a dash."}>
+            {(f) => (
+              <Input {...fieldProps(f)} value={sac} inputMode="numeric" maxLength={6}
+                     placeholder={rules.kind === "room" ? "996311" : "-"}
+                     onChange={(e) => setSac(e.target.value.replace(/\D/g, ""))} />
+            )}
+          </Field>
 
           {rows.length === 0 && (
             <p className="text-sm text-grey-600 rounded-md border border-grey-200

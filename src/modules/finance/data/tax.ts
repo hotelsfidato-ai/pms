@@ -42,8 +42,15 @@ export interface TaxSlab {
 
 export interface TaxKindRules {
   kind: TaxKind;
+  /** The SAC printed on its lines (D27-258 Q6). Null: not said - rooms keep
+      996311 as every invoice has, the others are a dash. */
+  sac: string | null;
   slabs: TaxSlab[];
 }
+
+/** Rooms' code when nobody has said another: what invoices have always carried. */
+export const sacShown = (rules: Pick<TaxKindRules, "kind" | "sac">): string =>
+  rules.sac ?? (rules.kind === "room" ? "996311" : "-");
 
 export interface MenuCategoryTax {
   name: string;
@@ -84,6 +91,11 @@ export async function setTaxRules(
   slabs: { overAmount: number; rate: number; note?: string | null }[],
 ): Promise<Result<{ slabs: number }>> {
   return call(`/api/hotels/${hotelId}/tax/${kind}`, "PUT", { slabs });
+}
+
+/** Six digits, or null to clear it (the CA's code, never suggested). */
+export async function setTaxSac(hotelId: string, kind: TaxKind, sacCode: string | null): Promise<Result> {
+  return call(`/api/hotels/${hotelId}/tax/${kind}/sac`, "PUT", { sacCode });
 }
 
 export async function setCategoryTaxKind(
