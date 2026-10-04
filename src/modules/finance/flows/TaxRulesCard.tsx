@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, X, Receipt, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money } from "@/lib/format";
+import { money, dateShort } from "@/lib/format";
 import {
   Card, CardBody, Button, Dialog, DialogContent, Field, fieldProps,
   Input, NativeSelect, StatusPill, toast,
@@ -184,9 +184,16 @@ function KindTile({ rules, onEdit }: {
               </span>
               <span className="text-sm text-grey-500">
                 {s.overAmount === 0
-                  ? rules.slabs.length > 1 ? "up to the next band" : "on everything"
+                  ? rules.slabs.some((o) => o.overAmount > 0) ? "up to the next band" : "on everything"
                   : `above ${money(s.overAmount)}`}
               </span>
+              {/* When it applies (D27-258 Q7); no dates: always. */}
+              {(s.validFrom || s.validTo) && (
+                <span className="text-sm text-grey-500">
+                  {[s.validFrom && `from ${dateShort(s.validFrom)}`,
+                    s.validTo && `until ${dateShort(dayBefore(s.validTo))}`].filter(Boolean).join(" ")}
+                </span>
+              )}
             </li>
           ))}
         </ul>
@@ -205,6 +212,14 @@ function KindTile({ rules, onEdit }: {
   );
 }
 
+const shift = (day: string, n: number) => {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+const dayBefore = (day: string) => shift(day, -1);
+const dayAfter = (day: string) => shift(day, 1);
+
 /* ── The slabs of one kind, edited together ───────────────────────── */
 
 function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
@@ -217,15 +232,18 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
   /* VAT on alcohol is one rate on everything (D21-91): no bands, and the
      server refuses a second. */
   const single = rules.kind === "alcohol";
-  type Draft = { overAmount: string; rate: string; note: string };
+  type Draft = { overAmount: string; rate: string; note: string; validFrom: string; lastDay: string };
   const [rows, setRows] = useState<Draft[]>(
     rules.slabs.length > 0
       ? rules.slabs.map((s: TaxSlab) => ({
           overAmount: String(s.overAmount),
           rate: String(s.rate),
           note: s.note ?? "",
+          validFrom: s.validFrom ?? "",
+          /* Shown as the last day it applies; kept as the first day it does not. */
+          lastDay: s.validTo ? dayBefore(s.validTo) : "",
         }))
-      : [{ overAmount: "0", rate: "", note: "" }],
+      : [{ overAmount: "0", rate: "", note: "", validFrom: "", lastDay: "" }],
   );
   const [busy, setBusy] = useState(false);
   const [sac, setSac] = useState(rules.sac ?? "");
@@ -244,6 +262,8 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
           overAmount: Number(r.overAmount) || 0,
           rate: Number(r.rate),
           note: r.note.trim() || null,
+          validFrom: r.validFrom || null,
+          validTo: r.lastDay ? dayAfter(r.lastDay) : null,
         })),
     );
     if (!res.ok) { setBusy(false); return toast.error("Not saved", res.reason); }
@@ -329,6 +349,20 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
                     <X className="size-4" />
                   </button>
                 </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="From" hint="Empty: always.">
+                    {(f) => (
+                      <Input {...fieldProps(f)} type="date" value={r.validFrom}
+                             onChange={(e) => set(i, { validFrom: e.target.value })} />
+                    )}
+                  </Field>
+                  <Field label="Last day" hint="Empty: current.">
+                    {(f) => (
+                      <Input {...fieldProps(f)} type="date" value={r.lastDay}
+                             onChange={(e) => set(i, { lastDay: e.target.value })} />
+                    )}
+                  </Field>
+                </div>
                 <Field label="Note"
                        hint={single ? "Who confirmed it, and when. It shows on this card."
                                     : "Why this band exists. It shows on this card."}>
@@ -345,13 +379,13 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
           {!single && (
             <Button variant="secondary" className="h-11 w-full"
                     onClick={() => setRows((r) => [
-                      ...r, { overAmount: "7500", rate: "", note: "" }])}>
+                      ...r, { overAmount: "7500", rate: "", note: "", validFrom: "", lastDay: "" }])}>
               <Plus className="size-4" /> Add a band
             </Button>
           )}
           {single && rows.length === 0 && (
             <Button variant="secondary" className="h-11 w-full"
-                    onClick={() => setRows([{ overAmount: "0", rate: "", note: "" }])}>
+                    onClick={() => setRows([{ overAmount: "0", rate: "", note: "", validFrom: "", lastDay: "" }])}>
               <Plus className="size-4" /> Add the rate
             </Button>
           )}

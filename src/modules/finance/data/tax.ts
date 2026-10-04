@@ -38,6 +38,10 @@ export interface TaxSlab {
   rate: number;
   note: string | null;
   setBy: string | null;
+  /** Half-open by the business date (D27-258 Q7): null from = always,
+      null to = current. */
+  validFrom: string | null;
+  validTo: string | null;
 }
 
 export interface TaxKindRules {
@@ -88,7 +92,8 @@ export async function getTaxRate(
 export async function setTaxRules(
   hotelId: string,
   kind: TaxKind,
-  slabs: { overAmount: number; rate: number; note?: string | null }[],
+  slabs: { overAmount: number; rate: number; note?: string | null;
+           validFrom?: string | null; validTo?: string | null }[],
 ): Promise<Result<{ slabs: number }>> {
   return call(`/api/hotels/${hotelId}/tax/${kind}`, "PUT", { slabs });
 }

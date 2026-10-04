@@ -64,3 +64,31 @@ describe("a SAC code per tax kind", () => {
       { path: `/api/hotels/${HOTEL}/tax/restaurant/sac`, method: "PUT", body: { sacCode: "996332" } }));
   });
 });
+
+describe("a tax rate that changes on a date (D27-258 Q7)", () => {
+  it("says when each rate applies, and sends a new rate's start date", async () => {
+    vi.mocked(apiModule.api).mockImplementation(async (path: string, init?: RequestInit) => {
+      if (init?.method && init.method !== "GET") {
+        sent.push({ path, method: init.method, body: init.body ? JSON.parse(String(init.body)) : undefined });
+        return { ok: true, slabs: 2 } as never;
+      }
+      return { servesAlcohol: false, categories: [], kinds: [
+        { kind: "room", sac: null, slabs: [
+          { ...slab, rate: 12, validFrom: null, validTo: "2026-09-22" },
+          { ...slab, id: "t2", rate: 5, validFrom: "2026-09-22", validTo: null }] },
+      ] } as never;
+    });
+    card();
+    expect(await screen.findByText("until 21 Sep 2026")).toBeTruthy();
+    expect(screen.getByText("from 22 Sep 2026")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getAllByLabelText(/^From/)[1]!, { target: { value: "2026-10-01" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(sent[0]).toEqual({ path: `/api/hotels/${HOTEL}/tax/room`, method: "PUT", body: { slabs: [
+      { overAmount: 0, rate: 12, note: null, validFrom: null, validTo: "2026-09-22" },
+      { overAmount: 0, rate: 5, note: null, validFrom: "2026-10-01", validTo: null },
+    ] } }));
+  });
+});
