@@ -2,12 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { Lightbulb, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { dateShort, percent } from "@/lib/format";
+import { addDays, dateShort, money, percent } from "@/lib/format";
 import {
   Page, PageHeader, Card, CardBody, DataTable, EmptyState, ErrorState,
   IconChip, Skeleton, StatusPill, type Column,
 } from "@/components/ui";
-import { getOutlook, getPace, getPickup } from "@/modules/revenue-management/data/outlook";
+import {
+  getOutlook, getPace, getPickup, WINDOW_NIGHTS,
+} from "@/modules/revenue-management/data/outlook";
+import { getNearby, nearbySummary, type CheckedNight } from "@/modules/market-rates";
 import {
   aheadBy, softestFirst, suggest, temperOf, type DateAhead,
 } from "@/modules/revenue-management/logic/outlook";
@@ -77,6 +80,16 @@ export default function OutlookPage() {
   });
   const picked = pickup.data ?? null;
   const noPickup = pickup.isLoading ? null : whyNoPickup(picked);
+
+  /* RIVALS' PRICES (D27-270), beside each suggestion: read through
+     market-rates' front door, one GET. Its own query, so the outlook stands
+     without it; a night nobody checked is a dash. */
+  const nearby = useQuery({
+    queryKey: ["revenue-nearby", code, today],
+    queryFn: () => getNearby(code, today, addDays(today, WINDOW_NIGHTS)),
+    enabled: Boolean(today),
+  });
+  const nearbyOn = new Map((nearby.data?.nights ?? []).map((n) => [n.date, n]));
 
   const days = outlook.data?.days ?? [];
   const soft = softestFirst(days);
@@ -174,6 +187,7 @@ export default function OutlookPage() {
                 <li key={s.date} className="flex flex-col gap-0.5 py-3 first:pt-0">
                   <span className="text-sm font-medium text-ink-900">{s.text}</span>
                   <span className="text-sm text-grey-600">{s.reason}</span>
+                  {!nearby.isLoading && <Nearby night={nearbyOn.get(s.date)} failed={nearby.isError} />}
                 </li>
               ))}
             </ul>
@@ -251,6 +265,33 @@ function Pace({
           : { note: `${now.roomsSold - weekAgo} rooms booked since, still on the books.` })}
       />
     </div>
+  );
+}
+
+/* The nearby hotels' lowest public prices that night (D27-270): a line,
+   opening to the list. Prices other hotels showed on Google, never a price
+   this hotel sells at, and nothing here sets one. */
+function Nearby({ night, failed }: { night: CheckedNight | undefined; failed: boolean }) {
+  if (failed) return <span className="text-sm text-grey-600">Nearby: could not be read.</span>;
+  const sum = nearbySummary(night);
+  if (!sum || !night) return <span className="text-sm text-grey-600">Nearby: -</span>;
+  return (
+    <details className="text-sm text-grey-600">
+      <summary className="cursor-pointer">
+        {`Nearby: lowest ${money(sum.lowest)}, middle ${money(sum.middle)} `
+          + `(${sum.count} ${sum.count === 1 ? "hotel" : "hotels"}, checked ${dateShort(sum.checkedAt)})`}
+      </summary>
+      <ul className="mt-1.5 max-w-md">
+        {night.hotels.map((h) => (
+          <li key={h.name} className="flex justify-between gap-3 py-0.5">
+            <span className="min-w-0 truncate">{h.name}</span>
+            <span className="tabular-nums whitespace-nowrap">
+              {`${money(h.price)}${h.source ? ` on ${h.source}` : ""}`}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 

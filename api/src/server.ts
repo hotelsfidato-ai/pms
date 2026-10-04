@@ -39,6 +39,7 @@ import * as guestServices from "./modules/guest-services/index.ts";
 import * as loyalty from "./modules/loyalty/index.ts";
 import * as roomSystems from "./modules/room-systems/index.ts";
 import * as contracts from "./modules/contracts/index.ts";
+import * as marketRates from "./modules/market-rates/index.ts";
 import { live } from "./routes/live.ts";
 import {
   startListening, stopListening, watcherCount, isListening,
@@ -310,6 +311,8 @@ const SERVICES = [
   roomSystems,
   /* Contracts (D27-184): company records, contracts, the contract price. */
   contracts,
+  /* Rivals' prices for revenue management (D27-270). */
+  marketRates,
 ];
 /* Every router, with the prefix it hangs from. Exported so that
    api/test/apiGate.test.ts can hold /api/channel - the one prefix that
@@ -364,6 +367,9 @@ if (process.argv[1]?.endsWith("server.ts")) {
   /* The CRS bridge's five-minute read (D27-168). Reads nothing until the
      four CRS settings are on the server and a hotel is switched on. */
   crs.jobs.start();
+  /* Rivals' prices, Mondays and Thursdays from 06:00 (D27-270). Searches
+     nothing until SERPAPI_KEY is on the server and a hotel is switched on. */
+  marketRates.jobs.start();
 
   const server = serve({ fetch: app.fetch, port: env.port }, (info) => {
     console.log(
@@ -395,6 +401,7 @@ if (process.argv[1]?.endsWith("server.ts")) {
     await channelManager.jobs.stop();
     await guestMessaging.jobs.stop();
     await crs.jobs.stop();
+    await marketRates.jobs.stop();
     await stopListening();
     await closePool();
     process.exit(0);

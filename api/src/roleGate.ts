@@ -335,6 +335,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
      database asks app.manages_hotel too. */
   [`PUT ${H}/guest-message-settings/:kind`]: grant("room_config", "edit", "Switching a guest message"),
   [`PUT ${H}/report-emails`]: grant("room_config", "edit", "Choosing who gets the reports by email"),
+  /* Rivals' prices (D27-270): switched by the people who set the hotel up; the
+     table asks app.manages_hotel too. */
+  [`PUT ${H}/market-rates/switch`]: grant("room_config", "edit", "Switching rivals' prices"),
   [`POST ${H}/vat-bills/:number{.+}/cancel`]: VAT_CANCEL,
   [`PUT ${H}/tax/:kind`]: GST,
   [`PATCH ${H}/menu-categories/:name/tax-kind`]: GST,
@@ -814,6 +817,10 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/statistics/period`]: see(["report", "rate"], "occupancy and ADR"),
   [`GET ${H}/statistics/snapshot`]: see(["report", "rate"], "occupancy and ADR"),
   [`GET ${H}/revenue/pickup`]: PRICES,
+  /* Rivals' prices beside revenue management's suggestions (D27-270): the
+     people who see prices; the switch, the people who set the hotel up. */
+  [`GET ${H}/market-rates`]: PRICES,
+  [`GET ${H}/market-rates/switch`]: see("room_config", "the rivals' prices switch"),
   [`GET ${H}/night-audit`]: REPORTS,
   [`GET ${H}/night-audit/runs`]: REPORTS,
   [`GET ${H}/night-audit/days/:date/charges`]: REPORTS,
