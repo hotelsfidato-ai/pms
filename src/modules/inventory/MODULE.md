@@ -78,6 +78,19 @@ each booking.
 
 ---
 
+
+### In the settings console (P3; the owner's D27-251, D27-258, D27-263)
+
+Registered in `rooms.settings.ts` (P1's contract, rule 5):
+
+| Console address | Page | What |
+|---|---|---|
+| `/settings/rooms/room-types` | `pages/RoomSetup.tsx` | took P1's stand-in over; `/h/:code/room-types` redirects here. Adults the rate covers and children it covers, adults / children / total at most, beds, view, size, colour (the database keeps them fitting); tabs Amenities (P2's one catalogue) and Photos (ten a type, the gallery's check); Remove only a type nothing uses (no rooms, bookings, prices or difference - D27-263); rooms dragged into order |
+| `/settings/rates/plans` | `pages/RatePlans.tsx` | the rate plans as a TREE over the one pricing (D27-251): every active room type on room only and on each meal plan sold, named "Room type · Meal plan"; Master (the base type, EP), Derived (a difference, or a meal add-on), Independent (no difference: its own base on Rates, Q2); the server's break-up for two guests on the business date and the green offset from the master; On/Off (Off: not offered for NEW bookings, Q3), drag to order; the 3-step editor (what it is, its price, who sells it) writes only today's pricing calls and the plan's sources (none chosen = every source, Q4) |
+| `/settings/rates/meal-plans` | `pages/MealPlans.tsx` | on which days each meal of a plan is served (check-in, stay-over, check-out; Q5) |
+
+A new hotel starts with NO room types (D27-263): the Add a hotel door asks for template set "none"; the fixtures and the demo keep theirs. New bookings keep to a type's adults and children, and refuse a plan switched Off or not sold by the booking's source (reservations/book.ts, Q1/Q3/Q4).
+
 ## Server endpoints — 28
 
 The code is in `api/src/modules/inventory/` (moved 15 September):
