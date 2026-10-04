@@ -110,3 +110,61 @@ describe("a rate plan's settings and its meal days", () => {
       .toMatchObject({ breakfast: ["stay", "departure"], dinner: ["arrival", "stay"] });
   });
 });
+
+/* A JPEG's headers as a camera writes them (as admin's gallery test makes
+   one): the server reads segments, not pixels. */
+function jpeg(width: number, height: number): Buffer {
+  const seg = (marker: number, body: Buffer) => {
+    const head = Buffer.from([0xff, marker, 0, 0]);
+    head.writeUInt16BE(body.length + 2, 2);
+    return Buffer.concat([head, body]);
+  };
+  const frame = Buffer.from([8, 0, 0, 0, 0, 1, 1, 0x11, 0]);
+  frame.writeUInt16BE(height, 1);
+  frame.writeUInt16BE(width, 3);
+  return Buffer.concat([
+    Buffer.from([0xff, 0xd8]),
+    seg(0xe0, Buffer.from("JFIF\0\x01\x01\0\0\x01\0\x01\0\0", "latin1")),
+    seg(0xc0, frame),
+    seg(0xda, Buffer.from([1, 1, 0, 0, 63, 0])),
+    Buffer.alloc(64, 0x2a),
+    Buffer.from([0xff, 0xd9]),
+  ]);
+}
+
+describe("a room type's photos and amenities", () => {
+  it("keeps ten photos at most, in the order dragged, and deletes one", async () => {
+    const data = jpeg(800, 600).toString("base64");
+    const ids: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const res = await call("POST", `/room-types/${typeId}/photos`, { data, caption: `View ${i}` });
+      expect(res.status, await res.clone().text()).toBe(200);
+      ids.push((await json<{ id: string }>(res)).id);
+    }
+    const eleventh = await call("POST", `/room-types/${typeId}/photos`, { data });
+    expect(eleventh.status).toBe(409);
+    expect((await json<{ reason: string }>(eleventh)).reason).toMatch(/10 photos, the most/);
+    expect((await call("POST", `/room-types/${typeId}/photos`, { data: "bm90IGEgcGhvdG8=" })).status, "not a JPEG").toBe(409);
+
+    expect((await call("PUT", `/room-types/${typeId}/photos/order`, { ids: [...ids].reverse() })).status).toBe(200);
+    const listed = await json<{ photos: { id: string }[] }>(await call("GET", `/room-types/${typeId}/photos`));
+    expect(listed.photos.map((p) => p.id)).toEqual([...ids].reverse());
+    expect((await call("DELETE", `/room-types/${typeId}/photos/${ids[0]}`)).status).toBe(200);
+    expect((await json<{ photos: unknown[] }>(await call("GET", `/room-types/${typeId}/photos`))).photos).toHaveLength(9);
+  });
+
+  it("takes its amenities from the one catalogue, switched-on ones only", async () => {
+    const [on] = await sql<{ id: string }>(
+      "insert into amenities (name) values ('P3 Test Kettle') on conflict do nothing returning id::text");
+    const [off] = await sql<{ id: string }>(
+      "insert into amenities (name, is_active) values ('P3 Test Off', false) on conflict do nothing returning id::text");
+    try {
+      expect((await call("PUT", `/room-types/${typeId}/amenities`, { amenityIds: [on!.id, off!.id] })).status).toBe(200);
+      expect((await json<{ amenityIds: string[] }>(await call("GET", `/room-types/${typeId}/amenities`))).amenityIds)
+        .toEqual([on!.id]);
+    } finally {
+      await sql("delete from room_type_amenities where room_type_id = $1", [typeId]);
+      await sql("delete from amenities where id = any($1::uuid[])", [[on!.id, off!.id]]);
+    }
+  });
+});

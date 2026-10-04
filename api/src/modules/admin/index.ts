@@ -13,6 +13,8 @@ import { activity } from "./activity.ts";
 /* The front door of the administration service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
    Its routers, and where each is mounted (see ../../mount.ts). */
+/* P3 (D27-258): the gallery's photo check, for a room type's photos (inventory). */
+export { readPhoto } from "./gallery.ts";
 export const mounts: readonly Mount[] = [
   ["/api/hotels", moduleSwitches],
   ["/api/hotels", adminLists],

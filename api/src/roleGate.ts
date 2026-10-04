@@ -498,6 +498,10 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   /* D27-258, D27-263: Remove a room type nothing uses; rooms in order. */
   [`DELETE ${H}/room-types/:id`]: SETUP_CHANGE,
   [`PUT ${H}/rooms/order`]: SETUP_CHANGE,
+  [`POST ${H}/room-types/:id/photos`]: SETUP_CHANGE,
+  [`PUT ${H}/room-types/:id/photos/order`]: SETUP_CHANGE,
+  [`DELETE ${H}/room-types/:id/photos/:photoId`]: SETUP_CHANGE,
+  [`PUT ${H}/room-types/:id/amenities`]: SETUP_CHANGE,
   /* The front desk's hours and its early and late charges: setup. */
   [`PATCH ${H}/front-desk`]: SETUP_CHANGE,
   /* Phase 5 of the settings plan (D27-260): the lists, holidays, the group's
@@ -834,6 +838,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/cancellation-policies`]: PRICES,
   [`GET ${H}/room-types`]: see(["room_config", "rate", "reservation"], "room types"),
   [`GET ${H}/room-setup`]: SETUP,
+  [`GET ${H}/room-types/:id/photos`]: SETUP,
+  [`GET ${H}/room-types/:id/photos/:photoId`]: SETUP,
+  [`GET ${H}/room-types/:id/amenities`]: SETUP,
   [`GET ${H}/commissioning`]: SETUP,
   [`GET ${H}/till/setup`]: SETUP,
   [`GET ${H}/table-bookings/hours`]: SETUP,

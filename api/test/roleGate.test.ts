@@ -373,6 +373,17 @@ describe("the matrix the server asks", () => {
     expect(READ_RULES[`GET ${H}/plan-settings`]).toEqual(READ_RULES[`GET ${H}/pricing`]);
   });
 
+  it("D27-258: a room type's photos and amenities are changed as its setup is, and read as it is", () => {
+    for (const key of [`POST ${H}/room-types/:id/photos`, `PUT ${H}/room-types/:id/photos/order`,
+                       `DELETE ${H}/room-types/:id/photos/:photoId`, `PUT ${H}/room-types/:id/amenities`]) {
+      expect(rule(key), key).toEqual(rule(`PATCH ${H}/room-types/:id`));
+    }
+    for (const key of [`GET ${H}/room-types/:id/photos`, `GET ${H}/room-types/:id/photos/:photoId`,
+                       `GET ${H}/room-types/:id/amenities`]) {
+      expect(READ_RULES[key], key).toEqual(READ_RULES[`GET ${H}/room-setup`]);
+    }
+  });
+
   it("D22-30: an administrator and the GM set a commission - in the matrix", () => {
     const key = `PUT ${H}/booking-sources/:id/commission`;
     expect(who(key)).toEqual(["owner", "admin", "gm"]);
