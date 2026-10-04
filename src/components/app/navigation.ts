@@ -19,7 +19,6 @@ import { nav as channelManager } from "@/modules/channel-manager/nav";
 /* The services not built yet: each an explanation page, in the section it
    will belong to, marked "Not built yet" (D27-87, 28 September). */
 import { nav as accounting } from "@/modules/accounting/nav";
-import { nav as bookingEngine } from "@/modules/booking-engine/nav";
 import { nav as crm } from "@/modules/crm/nav";
 import { nav as contracts } from "@/modules/contracts/nav";
 import { nav as crs } from "@/modules/crs/nav";
@@ -359,7 +358,7 @@ const CORE_ENTRIES: ServiceNavEntry[] = [
 const ENTRIES: readonly ServiceNavEntry[] = [
   ...CORE_ENTRIES, ...frontDesk, ...reservations, ...housekeeping, ...inventory, ...guests,
   ...finance, ...nightAudit, ...pos, ...banquet, ...stores, ...reports, ...admin, ...channelManager,
-  ...accounting, ...bookingEngine, ...crm, ...contracts, ...crs, ...guestMessaging, ...guestServices, ...equipment, ...purchasing, ...roomSystems, ...laundry, ...leads, ...loyalty, ...marketing, ...onlineCheckin, ...payments, ...revenueManagement, ...reputation, ...spa,
+  ...accounting, ...crm, ...contracts, ...crs, ...guestMessaging, ...guestServices, ...equipment, ...purchasing, ...roomSystems, ...laundry, ...leads, ...loyalty, ...marketing, ...onlineCheckin, ...payments, ...revenueManagement, ...reputation, ...spa,
 ];
 
 /** Every entry in a section, in its declared order. */

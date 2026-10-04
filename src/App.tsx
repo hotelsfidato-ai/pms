@@ -49,7 +49,6 @@ import { routes as channelManagerRoutes } from "@/modules/channel-manager/routes
 /* The services not built yet — each a Coming soon page (16 September),
    reached from its own section of the menu since 28 September (D27-87). */
 import { routes as accountingRoutes } from "@/modules/accounting/routes";
-import { routes as bookingEngineRoutes } from "@/modules/booking-engine/routes";
 import { routes as crmRoutes } from "@/modules/crm/routes";
 import { routes as contractsRoutes } from "@/modules/contracts/routes";
 import { routes as crsRoutes } from "@/modules/crs/routes";
@@ -292,7 +291,6 @@ export default function App() {
             {channelManagerRoutes}
             {/* Coming soon: one page each for the services not built yet. */}
             {accountingRoutes}
-            {bookingEngineRoutes}
             {crmRoutes}
             {contractsRoutes}
             {crsRoutes}
