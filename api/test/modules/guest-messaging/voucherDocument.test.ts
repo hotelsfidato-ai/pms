@@ -145,6 +145,7 @@ describe("the voucher's blocks (D27-215)", () => {
       hotelRows: [["Phone", "+91 00000 00000"], ["Email", "desk@example.test"]],
       guestRows: [["Email", "asha@example.test"]],
       extras: [""],
+      meals: [""],   // D27-258 Q5: nothing said, no line
       bank: null,
       policies: ["This booking carries no cancellation terms.", "Check-in from 14:00; check-out by 11:00."],
       instagram: null,
@@ -325,5 +326,19 @@ describe("the PDF, with everything the reference has", () => {
   it("runs onto a second page, whole, only when it is longer than the smallest drawing holds", async () => {
     const many = facts(Array.from({ length: 20 }, () => room()));
     expect(pages(await voucherPdf(many))).toBe(2);
+  });
+});
+
+/* D27-258 Q5: on which days the plan's meals are served, under the room's
+   line - only where the hotel has said, and the PDF still one A4. */
+describe("the meal days under a room", () => {
+  it("says them where the hotel has, and nothing where it has not", async () => {
+    const said = facts([
+      room({ mealPlan: "CP · Room + breakfast", mealDays: "Breakfast on stay-over and check-out days" }),
+      room(),
+    ]);
+    expect(voucherBlocks(said).meals).toEqual(["Breakfast on stay-over and check-out days", ""]);
+    const bytes = await voucherPdf(said);
+    expect(Buffer.from(bytes.slice(0, 5)).toString("latin1")).toBe("%PDF-");
   });
 });

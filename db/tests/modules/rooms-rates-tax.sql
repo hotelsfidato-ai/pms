@@ -7,7 +7,7 @@
 -- =============================================================================
 do $$
 declare
-  h uuid; h2 uuid; rt uuid; refused boolean; r21 numeric; r22 numeric;
+  h uuid; h2 uuid; rt uuid; refused boolean; r21 numeric; r22 numeric; g uuid; stay uuid; said text;
 begin
   h := app.provision_property_unchecked('RRT', 'Rooms Rates Tax Test', 'Nowhere');
   insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy, base_rate)
@@ -89,6 +89,20 @@ begin
   r22 := app.gst_rate(h, 'room', 4000);
   perform test.ok('rooms rates tax', 'the 21st on the old rate and the 22nd on the new, in one stay (D27-258)',
     r21 = 12 and r22 = 5, r21 || ' then ' || r22);
+
+  /* D27-258 Q5: the voucher reads the booking hotel's meal days through a
+     definer (the sweep has nobody signed in). */
+  insert into hotel_meal_days (hotel_id, meal_plan, breakfast) values (h, 'CP', array['stay', 'departure']);
+  insert into guests (full_name) values ('Meal Days Guest') returning id into g;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+    values (h, 'RRT-MEAL-1', g, rt, date '2026-09-21', date '2026-09-23', 1000, 'confirmed') returning id into stay;
+  select array_to_string(breakfast, ',') into said from app.voucher_meal_days(stay) where meal_plan = 'CP';
+  perform test.ok('rooms rates tax', 'the voucher reads the hotel''s meal days for the booking (D27-258 Q5)',
+    said = 'stay,departure', coalesce(said, 'none'));
+  delete from reservations where id = stay;
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = g;
+  alter table guests enable trigger guests_no_delete;
 
   -- ---------- and the fixtures go ----------
   alter table hotels disable trigger hotels_no_delete;

@@ -293,3 +293,22 @@ as $$
    order by over_amount desc, valid_from desc nulls last
    limit 1
 $$;
+
+-- 11 · meal days on the voucher (D27-258 Q5) ----------------------------------
+-- The voucher is drawn by the sweep with nobody signed in, so its meal days
+-- come through a definer, as app.guest_voucher's facts do: the hotel's meal
+-- days for the booking's hotel, and nothing else.
+create or replace function app.voucher_meal_days(p_reservation uuid)
+returns table (meal_plan text, breakfast text[], lunch text[], dinner text[])
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select d.meal_plan, d.breakfast, d.lunch, d.dinner
+    from hotel_meal_days d
+    join reservations r on r.hotel_id = d.hotel_id
+   where r.id = p_reservation
+$$;
+revoke all on function app.voucher_meal_days(uuid) from public;
+grant execute on function app.voucher_meal_days(uuid) to pms_app;
