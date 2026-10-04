@@ -75,7 +75,13 @@ function PlanCard({ hotelId, code, name, days, mayEdit }: {
           <thead>
             <tr>
               <th className="text-left font-medium text-grey-500 py-1.5"><span className="sr-only">Meal</span></th>
-              {DAYS.map((d) => <th key={d.day} className="font-medium text-grey-500 py-1.5 text-center">{d.label}</th>)}
+              {DAYS.map((d) => (
+                <th key={d.day} className="font-medium text-grey-500 py-1.5 text-center whitespace-nowrap">
+                  {/* One line on a phone: the short word (the Breathing Room rule). */}
+                  <span className="sm:hidden">{d.label.split(" ")[0]}</span>
+                  <span className="max-sm:hidden">{d.label}</span>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>

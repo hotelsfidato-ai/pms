@@ -126,11 +126,11 @@ export default function RatePlansPage() {
                     onDragOver={(e) => { if (mayEdit) e.preventDefault(); }} onDrop={() => void drop(r.key)}
                     className={cn("flex items-center gap-3 px-3 sm:px-4 min-h-14 py-2",
                       r.plan !== "EP" || r.kind === "derived" ? "sm:pl-10" : "")}>
-                  {mayEdit && <GripVertical className="size-4 text-grey-300 shrink-0 cursor-grab" aria-hidden />}
+                  {mayEdit && <GripVertical className="size-4 text-grey-300 shrink-0 cursor-grab max-sm:hidden" aria-hidden />}
                   <Switch checked={r.setting?.isActive ?? true} disabled={!mayEdit}
                           onCheckedChange={(on) => void toggle(r, on)} aria-label={`${r.name} offered`} />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium text-ink-900 truncate">{r.name}</span>
+                    <span className="block text-sm font-medium text-ink-900 break-words">{r.name}</span>
                     <span className={cn("inline-block mt-0.5 rounded-full px-2 text-xs font-semibold",
                       r.kind === "master" ? "bg-brand-orange-50 text-brand-orange-700"
                         : r.kind === "derived" ? "bg-success-50 text-success" : "bg-grey-100 text-grey-600")}>
