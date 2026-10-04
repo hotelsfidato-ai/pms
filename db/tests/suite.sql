@@ -43,7 +43,7 @@ select h.id, v.kind, v.over_amount, v.rate, v.note
                ('restaurant', 0::numeric,    5::numeric, 'Food and soft drink')
        ) as v(kind, over_amount, rate, note)
  where h.code in ('AGR','PUN')
-on conflict (hotel_id, kind, over_amount) do nothing;
+on conflict do nothing;   -- any key: a slab may have periods (D27-258 Q7)
 
 insert into guests (full_name, phone) values ('Fixture Guest','9000000001')
 on conflict do nothing;

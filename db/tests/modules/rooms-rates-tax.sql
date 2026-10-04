@@ -7,7 +7,7 @@
 -- =============================================================================
 do $$
 declare
-  h uuid; h2 uuid; rt uuid; refused boolean;
+  h uuid; h2 uuid; rt uuid; refused boolean; r21 numeric; r22 numeric;
 begin
   h := app.provision_property_unchecked('RRT', 'Rooms Rates Tax Test', 'Nowhere');
   insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy, base_rate)
@@ -69,6 +69,26 @@ begin
   perform test.ok('rooms rates tax', 'the Add a hotel door asks for no template (D27-263)',
     pg_get_functiondef('app.provision_property(text,text,text,text,text,text,text,text)'::regprocedure)
       like '%p_template_set => ''none''%', '');
+
+  /* D27-258 Q7: a rule applies on the business dates it is valid for - one
+     ended, one current, one not begun, all for the same slab. */
+  insert into tax_rules (hotel_id, kind, over_amount, rate, valid_to)   values (h, 'other', 0, 12, app.business_date(h));
+  insert into tax_rules (hotel_id, kind, over_amount, rate, valid_from) values (h, 'other', 0, 18, app.business_date(h));
+  insert into tax_rules (hotel_id, kind, over_amount, rate, valid_from) values (h, 'other', 0, 28, app.business_date(h) + 1);
+  perform test.ok('rooms rates tax', 'a tax rule applies on the business dates it is valid for (D27-258)',
+    app.gst_rate_or_null(h, 'other', 100) = 18, coalesce(app.gst_rate_or_null(h, 'other', 100)::text, 'none'));
+
+  /* The edge (the master, D27-258): one stay - its night of the 21st on the
+     old rate, its night of the 22nd on the new one. The night audit posts each
+     night on that night's business date. */
+  insert into tax_rules (hotel_id, kind, over_amount, rate, valid_to)   values (h, 'room', 0, 12, date '2026-09-22');
+  insert into tax_rules (hotel_id, kind, over_amount, rate, valid_from) values (h, 'room', 0, 5, date '2026-09-22');
+  update hotels set business_date = date '2026-09-21' where id = h;
+  r21 := app.gst_rate(h, 'room', 4000);
+  update hotels set business_date = date '2026-09-22' where id = h;
+  r22 := app.gst_rate(h, 'room', 4000);
+  perform test.ok('rooms rates tax', 'the 21st on the old rate and the 22nd on the new, in one stay (D27-258)',
+    r21 = 12 and r22 = 5, r21 || ' then ' || r22);
 
   -- ---------- and the fixtures go ----------
   alter table hotels disable trigger hotels_no_delete;

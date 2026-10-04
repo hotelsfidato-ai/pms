@@ -409,7 +409,7 @@ describe("a guest's bag, charged to the room", () => {
     await db.query(
       `insert into tax_rules (hotel_id, kind, over_amount, rate, note)
        values ($1, 'room', 0, 5, 'laundry test fixture')
-       on conflict (hotel_id, kind, over_amount) do nothing`, [hotelId]);
+       on conflict do nothing`, [hotelId]);   // any key: a slab may have periods (D27-258)
     await db.end();
 
     const items = (await (await get(`/${CODE}/laundry/price-list`)).json() as
@@ -437,7 +437,7 @@ describe("a guest's bag, charged to the room", () => {
     await db.query(
       `insert into tax_rules (hotel_id, kind, over_amount, rate, note)
        values ($1, 'laundry', 0, 18, 'laundry test fixture')
-       on conflict (hotel_id, kind, over_amount) do nothing`, [hotelId]);
+       on conflict do nothing`, [hotelId]);   // any key: a slab may have periods (D27-258)
     await db.end();
   });
 

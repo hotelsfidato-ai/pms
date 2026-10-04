@@ -262,3 +262,34 @@ begin
     p_timezone     => p_timezone
   );
 end $$;
+
+-- 10 · tax rules by the business date (D27-258 Q7) ---------------------------
+-- A slab may now have periods: the same kind and threshold, one rate until a
+-- date and another from it (a GST change). One row per slab per start date;
+-- the lookup takes the rows valid on the hotel's business date. A rule with no
+-- dates is valid always, as every rule before this was. gst_rate_or_null keeps
+-- its signature and stays the one place the slab is written (067).
+alter table tax_rules drop constraint if exists tax_rules_hotel_id_kind_over_amount_key;
+create unique index if not exists tax_rules_one_slab_a_period
+  on tax_rules (hotel_id, kind, over_amount, coalesce(valid_from, '-infinity'::date));
+
+create or replace function app.gst_rate_or_null(
+  p_hotel uuid,
+  p_kind  text,
+  p_value numeric
+) returns numeric
+language sql
+stable
+as $$
+  select rate
+    from tax_rules
+   where hotel_id = p_hotel
+     and kind = p_kind
+     and (valid_from is null or valid_from <= app.business_date(p_hotel))
+     and (valid_to is null or app.business_date(p_hotel) < valid_to)
+     -- The base row (0) always applies; a higher slab applies only when the
+     -- value is strictly above it (067).
+     and (over_amount = 0 or coalesce(p_value, 0) > over_amount)
+   order by over_amount desc, valid_from desc nulls last
+   limit 1
+$$;
