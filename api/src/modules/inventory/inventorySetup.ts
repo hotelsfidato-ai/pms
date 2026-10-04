@@ -171,7 +171,7 @@ inventorySetup.patch("/:code/room-types/:id", async (c) => {
       try {
         await client.query("savepoint fit");
         await client.query(
-          `update room_types set ${sent.map(([, col], i) => `${col} = ${i + 3}`).join(", ")}
+          `update room_types set ${sent.map(([, col], i) => `${col} = $${i + 3}`).join(", ")}
             where id = $1 and hotel_id = $2`,
           [c.req.param("id"), hotelId, ...sent.map(([key, , clean]) => clean(input[key]) ?? null)]);
       } catch (error) {
