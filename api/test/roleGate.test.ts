@@ -356,6 +356,8 @@ describe("the matrix the server asks", () => {
       `POST ${H}/room-types`, `PATCH ${H}/room-types/:id`, `POST ${H}/rooms`,
       `PATCH ${H}/rooms/:number`, `PATCH ${H}/front-desk`, `POST ${H}/room-types/import`,
       `POST ${H}/rooms/import`, `POST ${H}/banquet/venues`, `PATCH ${H}/banquet/venues/:id`,
+      /* D27-258, D27-263: Remove an unused room type; rooms in order. */
+      `DELETE ${H}/room-types/:id`, `PUT ${H}/rooms/order`,
       `POST ${H}/banquet/packages`,
     ]) {
       expect(who(key), key).toEqual(["owner", "admin", "gm"]);

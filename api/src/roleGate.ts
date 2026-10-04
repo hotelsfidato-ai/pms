@@ -491,6 +491,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/room-types/:id`]: SETUP_CHANGE,
   [`POST ${H}/rooms`]: SETUP_ADD,
   [`PATCH ${H}/rooms/:number`]: SETUP_CHANGE,
+  /* D27-258, D27-263: Remove a room type nothing uses; rooms in order. */
+  [`DELETE ${H}/room-types/:id`]: SETUP_CHANGE,
+  [`PUT ${H}/rooms/order`]: SETUP_CHANGE,
   /* The front desk's hours and its early and late charges: setup. */
   [`PATCH ${H}/front-desk`]: SETUP_CHANGE,
   /* Phase 5 of the settings plan (D27-260): the lists, holidays, the group's
