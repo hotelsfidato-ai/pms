@@ -1230,7 +1230,8 @@ admin.post("/admin/staff/:id/password", async (c) => {
    reset it later" — over the option that offered both. Half of a
    hotel's staff have no address they read, and this deployment has no
    mail server, so a link would have been an endpoint nobody called.
-   `identity.ts` keeps `passwordSetLink` for the day it is asked for.
+   Firebase's generatePasswordResetLink is the whole of it, the day it is
+   asked for.
    ═══════════════════════════════════════════════════════════════════ */
 
 /* ── Who may see which property ───────────────────────────────────── */
