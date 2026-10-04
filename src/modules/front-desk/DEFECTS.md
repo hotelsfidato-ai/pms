@@ -14,7 +14,7 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FD-26 · A price saved on Rates does not reach the Calendar until something else refreshes it
+### FD-26 · A price saved on Rates did not reach the Calendar until something else refreshed it - FIXED 4 October (Rates refreshes the Calendar)
 
 **Found** - 4 October, opening the Calendar after setting a night's price on
 Rates (D27-271 item 3): the Calendar still showed the old figure. Its window

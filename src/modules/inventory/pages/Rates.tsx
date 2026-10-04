@@ -122,6 +122,8 @@ export default function RatesPage() {
     void qc.invalidateQueries({ queryKey: ["pricing", hotelId] });
     void qc.invalidateQueries({ queryKey: ["pricing-breakup", hotelId] });
     void qc.invalidateQueries({ queryKey: ["rate-days", hotelId] });
+    /* FD-26: the Calendar prints each night's price (D27-271), so it reads again too. */
+    void qc.invalidateQueries({ queryKey: ["stay-view", hotelId] });
   };
 
   const dates = useMemo(
