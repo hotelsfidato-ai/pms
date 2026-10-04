@@ -220,7 +220,7 @@ describe("serves alcohol - a switch per property, off by default (D21-90)", () =
 
     const tax = await json<{ servesAlcohol: boolean; kinds: { kind: string; slabs: unknown[] }[] }>(await as("/tax"));
     expect(tax.servesAlcohol).toBe(true);
-    expect(tax.kinds.find((k) => k.kind === "alcohol"), "the Alcohol heading").toEqual({ kind: "alcohol", slabs: [] });
+    expect(tax.kinds.find((k) => k.kind === "alcohol"), "the Alcohol heading").toEqual({ kind: "alcohol", slabs: [], sac: null }); // 195: a SAC per kind, none set
 
     const bands = await send("PUT", "/tax/alcohol",
       { slabs: [{ overAmount: 0, rate: VAT_RATE }, { overAmount: 5000, rate: 20 }] });
