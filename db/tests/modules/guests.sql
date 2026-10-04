@@ -124,3 +124,63 @@ begin
   delete from hotels where id = h;
   alter table hotels enable trigger hotels_no_delete;
 end $$;
+
+
+-- =============================================================================
+-- WHO MAY ADD AND CHANGE A BOOKING SOURCE (082; D27-275 part 2)
+-- =============================================================================
+-- booking_sources' insert and update policies ask app.is_manager(), which
+-- answered for a group administrator, the owner and the GM and refused the
+-- Administrator. D27-275: an Administrator counts as a manager, as everywhere
+-- else. Reception still does not.
+-- =============================================================================
+do $$
+declare
+  h uuid; adm uuid; desk uuid; src uuid; n int;
+begin
+  h := app.provision_property_unchecked('GBS', 'Booking Source Test', 'Nowhere');
+  insert into staff (email, full_name) values ('d275-admin@fidato.in', 'D275 Administrator')
+  on conflict (email) do update set is_active = true returning id into adm;
+  insert into staff (email, full_name) values ('d275-desk@fidato.in', 'D275 Reception')
+  on conflict (email) do update set is_active = true returning id into desk;
+  delete from staff_hotels where staff_id in (adm, desk);
+  insert into staff_hotels (staff_id, hotel_id, role) values (adm, h, 'admin'), (desk, h, 'front_desk');
+
+  -- ---------- the Administrator adds one and changes it ----------
+  perform set_config('app.user_id', adm::text, true);
+  perform test.ok('guests', 'an Administrator is a manager (D27-275)', app.is_manager());
+  begin
+    set local role pms_app;
+    insert into booking_sources (name, kind) values ('D275 Admin Agent', 'other') returning id into src;
+    update booking_sources set channel_code = 'D275' where id = src;
+    get diagnostics n = row_count;
+    reset role;
+  exception when others then
+    reset role;
+    src := null; n := 0;
+  end;
+  perform test.ok('guests', 'an Administrator adds a booking source (D27-275)', src is not null);
+  perform test.ok('guests', 'and changes it', n = 1, n || ' rows');
+
+  -- ---------- reception does neither ----------
+  perform set_config('app.user_id', desk::text, true);
+  perform test.ok('guests', 'reception is not a manager', not app.is_manager());
+  perform test.raises('guests', 'reception does not add a booking source',
+    $q$set local role pms_app; insert into booking_sources (name, kind) values ('D275 Desk Agent', 'other')$q$,
+    '42501');
+  if src is not null then
+    set local role pms_app;
+    update booking_sources set channel_code = 'DESK' where id = src;
+    get diagnostics n = row_count;
+    reset role;
+    perform test.ok('guests', 'nor change one', n = 0, n || ' rows');
+  end if;
+  perform set_config('app.user_id', '', true);
+
+  -- ---------- clean up ----------
+  delete from booking_sources where name in ('D275 Admin Agent', 'D275 Desk Agent');
+  delete from staff_hotels where hotel_id = h;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+end $$;
