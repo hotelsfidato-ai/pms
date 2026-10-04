@@ -119,10 +119,17 @@ sideways scroll and no console error; Reception is refused by name.
    available rooms start on the property's first trading day. On the demo that
    is every window, and RM-3 in `DEFECTS.md` says exactly why.
 
+5. **Rivals' prices**, added 4 October (D27-269, D27-270). Under each
+   suggestion: "Nearby: lowest ₹x, middle ₹y (n hotels, checked <date>)",
+   opening to each nearby hotel and its price. Read from the **market-rates**
+   service through its front door (`getNearby`, one GET), never its files. A
+   night nobody checked is "Nearby: -", never a nought. These are other
+   hotels' public prices on Google; nothing here sets a price from them.
+
 ## What it does not show
 
-Competitor rates, automatic rules, forecasting past the comparison above, and
-anything that writes: **not in the first version**, by the brief.
+Automatic rules, forecasting past the comparison above, and anything that
+writes: **not in the first version**, by the brief.
 
 ---
 
@@ -189,6 +196,8 @@ Nothing below is decided, and nothing below is deployed.
 
 - **reports** (`@/modules/reports`) for every figure. Its front door, never its
   files.
+- **market-rates** (`@/modules/market-rates`) for rivals' prices: its door,
+  one GET. It owns the check, the table and the switch.
 - **inventory** owns the Rate calendar, which is where a rate is actually
   changed. This service links nobody to it and calls nothing in it.
 

@@ -12,6 +12,32 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-04 · rivals' prices beside each suggestion (D27-269, D27-270)
+
+**Asked for:** beside each night's suggestion, the nearby hotels' lowest
+public prices for that night, read from the new market-rates service. Still
+suggest-only (D18-15).
+
+**Shipped**
+- `pages/Outlook.tsx`: one more query, `getNearby` through
+  `@/modules/market-rates` (a GET); under each suggestion "Nearby: lowest ₹x,
+  middle ₹y (n hotels, checked <date>)", a native `<details>` opening to the
+  hotels and their prices; "Nearby: -" for a night nobody checked, "Nearby:
+  could not be read." when the read fails. Its own query, so the outlook
+  stands without it.
+- `rivalsPrices.test.tsx`: the dash without data, the line and the list with
+  it, and only GETs.
+
+**Proved:** `npx vitest run src/modules/revenue-management`: 4 files, 33 of
+33, `neverWritesARate.test.ts` unchanged and passing. The new test failed
+first (2 of 2) before the line existed. On the screen at 5EL (own database,
+made-up rivals): the line under each of the five suggestions, a dash on the
+unchecked night, the list opening; no sideways scroll at 375.
+
+**Commits:** in the master's merge of the market-rates branch.
+
+---
+
 ## 2026-09-19 · pickup, and the week-ago column of pace (RM-1 closed)
 
 **Asked for:** the two things the first version deliberately did not build,
