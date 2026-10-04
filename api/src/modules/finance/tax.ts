@@ -105,10 +105,17 @@ inventorySetup.get("/:code/tax", async (c) => {
        back with the switch. */
     const alcohol = await servesAlcohol(client, hotelId);
 
+    /* The SAC printed on a line of each kind (D27-258 Q6). Null: not said -
+       rooms keep the invoice's 996311, the others show a dash. */
+    const { rows: sacs } = await client.query<{ kind: string; sac_code: string }>(
+      "select kind, sac_code from tax_sac where hotel_id = $1", [hotelId]);
+    const sacOf = new Map(sacs.map((r) => [r.kind, r.sac_code]));
+
     return {
       servesAlcohol: alcohol,
       kinds: TAX_KINDS.filter((kind) => kind !== "alcohol" || alcohol).map((kind) => ({
         kind,
+        sac: sacOf.get(kind) ?? null,
         slabs: (byKind.get(kind) ?? []).map((r) => ({
           id: r.id,
           overAmount: Number(r.over_amount),
@@ -209,6 +216,34 @@ inventorySetup.put("/:code/tax/:kind", async (c) => {
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/** A tax kind's SAC code (D27-258 Q6): six digits, or null to clear it.
+    The codes are the CA's - nothing here suggests one. */
+inventorySetup.put("/:code/tax/:kind/sac", async (c) => {
+  const kind = c.req.param("kind") as TaxKind;
+  if (!TAX_KINDS.includes(kind)) {
+    return c.json(refuse(`${kind} is not something this system taxes.`), 409);
+  }
+  const input = await c.req.json<{ sacCode?: unknown }>().catch(() => ({}) as { sacCode?: unknown });
+  const sac = input.sacCode === null ? null : typeof input.sacCode === "string" ? input.sacCode.trim() : undefined;
+  if (sac === undefined || (sac !== null && !/^\d{6}$/.test(sac))) {
+    return c.json(refuse("A SAC code is six digits, like 996311."), 409);
+  }
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    if (sac === null) {
+      await client.query("delete from tax_sac where hotel_id = $1 and kind = $2", [hotelId, kind]);
+    } else {
+      await client.query(
+        `insert into tax_sac (hotel_id, kind, sac_code) values ($1, $2, $3)
+         on conflict (hotel_id, kind) do update set sac_code = excluded.sac_code`, [hotelId, kind, sac]);
+    }
+    return { ok: true as const };
+  });
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result);
 });
 
 /** Which tax kind a menu category sells under — the till's half of the

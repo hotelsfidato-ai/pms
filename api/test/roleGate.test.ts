@@ -384,6 +384,10 @@ describe("the matrix the server asks", () => {
     }
   });
 
+  it("D27-258: a tax kind's SAC is set as its rates are", () => {
+    expect(rule(`PUT ${H}/tax/:kind/sac`)).toEqual(rule(`PUT ${H}/tax/:kind`));
+  });
+
   it("D22-30: an administrator and the GM set a commission - in the matrix", () => {
     const key = `PUT ${H}/booking-sources/:id/commission`;
     expect(who(key)).toEqual(["owner", "admin", "gm"]);

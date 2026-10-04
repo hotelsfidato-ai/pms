@@ -193,3 +193,16 @@ describe("a new booking keeps to the room type and its plans (D27-258 Q1, Q3, Q4
     }
   });
 });
+
+describe("a SAC code per tax kind (D27-258 Q6)", () => {
+  it("keeps six digits per kind, refuses anything else, and clears to the default", async () => {
+    type Kinds = { kinds: { kind: string; sac: string | null }[] };
+    expect((await call("PUT", "/tax/restaurant/sac", { sacCode: "99633" })).status, "five digits").toBe(409);
+    expect((await call("PUT", "/tax/restaurant/sac", { sacCode: "996331" })).status).toBe(200);
+    let got = await json<Kinds>(await call("GET", "/tax"));
+    expect(got.kinds.find((k) => k.kind === "restaurant")?.sac).toBe("996331");
+    expect((await call("PUT", "/tax/restaurant/sac", { sacCode: null })).status).toBe(200);
+    got = await json<Kinds>(await call("GET", "/tax"));
+    expect(got.kinds.find((k) => k.kind === "restaurant")?.sac, "not said: the screen shows a dash").toBeNull();
+  });
+});

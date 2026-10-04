@@ -337,6 +337,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PUT ${H}/report-emails`]: grant("room_config", "edit", "Choosing who gets the reports by email"),
   [`POST ${H}/vat-bills/:number{.+}/cancel`]: VAT_CANCEL,
   [`PUT ${H}/tax/:kind`]: GST,
+  [`PUT ${H}/tax/:kind/sac`]: GST,   // D27-258 Q6
   [`PATCH ${H}/menu-categories/:name/tax-kind`]: GST,
 
   /* guests */
