@@ -73,13 +73,15 @@ inventorySetup.get("/:code/tax", async (c) => {
     const { rows } = await client.query<{
       id: string; kind: string; over_amount: string; rate: string;
       note: string | null; set_by: string | null;
+      valid_from: string | null; valid_to: string | null;
     }>(
       `select t.id::text, t.kind, t.over_amount::text, t.rate::text, t.note,
-              s.full_name as set_by
+              s.full_name as set_by,
+              t.valid_from::text as valid_from, t.valid_to::text as valid_to
          from tax_rules t
          left join staff s on s.id = t.set_by
         where t.hotel_id = $1
-        order by t.kind, t.over_amount`,
+        order by t.kind, t.over_amount, t.valid_from nulls first`,
       [hotelId]);
 
     /* Which menu categories sell under which kind, so the screen can say
@@ -122,6 +124,9 @@ inventorySetup.get("/:code/tax", async (c) => {
           rate: Number(r.rate),
           note: r.note,
           setBy: r.set_by,
+          /* D27-258 Q7: by the business date; null from = always, null to = current. */
+          validFrom: r.valid_from,
+          validTo: r.valid_to,
         })),
       })),
       categories: cats.map((x) => ({
@@ -146,7 +151,8 @@ inventorySetup.put("/:code/tax/:kind", async (c) => {
     return c.json(refuse(`${kind} is not something this system taxes.`), 409);
   }
 
-  type Slab = { overAmount?: number; rate?: number; note?: string | null };
+  type Slab = { overAmount?: number; rate?: number; note?: string | null;
+                validFrom?: string | null; validTo?: string | null };
   const input = await c.req.json<{ slabs?: Slab[] }>()
     .catch(() => ({}) as { slabs?: Slab[] });
   const slabs = input.slabs ?? [];
@@ -177,14 +183,31 @@ inventorySetup.put("/:code/tax/:kind", async (c) => {
     return c.json(refuse("VAT on alcohol is one rate, on everything."), 409);
   }
 
-  const seen = new Set<number>();
+  /* A band may have periods (D27-258 Q7): one rate until a date, another
+     from it. The same band twice is refused only where the periods overlap. */
+  const A_DATE = /^\d{4}-\d{2}-\d{2}$/;
   for (const s of slabs) {
-    const over = s.overAmount ?? 0;
-    if (seen.has(over)) {
-      return c.json(refuse(
-        `Two slabs both start above ₹${over}. One boundary, one rate.`), 409);
+    for (const d of [s.validFrom, s.validTo]) {
+      if (d !== undefined && d !== null && (typeof d !== "string" || !A_DATE.test(d))) {
+        return c.json(refuse("A date is a day, like 2026-09-22."), 409);
+      }
     }
-    seen.add(over);
+    if (s.validFrom && s.validTo && s.validTo <= s.validFrom) {
+      return c.json(refuse("A rate ends after it starts."), 409);
+    }
+  }
+  for (let i = 0; i < slabs.length; i++) {
+    for (let j = i + 1; j < slabs.length; j++) {
+      const [a, b] = [slabs[i]!, slabs[j]!];
+      if ((a.overAmount ?? 0) !== (b.overAmount ?? 0)) continue;
+      /* Half-open periods [from, to): they overlap unless one ends by the other's start. */
+      const apart = (a.validTo && b.validFrom && a.validTo <= b.validFrom)
+        || (b.validTo && a.validFrom && b.validTo <= a.validFrom);
+      if (!apart) {
+        return c.json(refuse(
+          `Two rates above ₹${a.overAmount ?? 0} overlap in time. End one on the day the next begins.`), 409);
+      }
+    }
   }
 
   const result = await withSession(c.get("subject"), async (client) => {
@@ -206,9 +229,10 @@ inventorySetup.put("/:code/tax/:kind", async (c) => {
 
     for (const s of slabs) {
       await client.query(
-        `insert into tax_rules (hotel_id, kind, over_amount, rate, note, set_by)
-         values ($1,$2,$3,$4,$5, app.current_user_id())`,
-        [hotelId, kind, s.overAmount ?? 0, s.rate, s.note?.trim() || null]);
+        `insert into tax_rules (hotel_id, kind, over_amount, rate, note, set_by, valid_from, valid_to)
+         values ($1,$2,$3,$4,$5, app.current_user_id(), $6::date, $7::date)`,
+        [hotelId, kind, s.overAmount ?? 0, s.rate, s.note?.trim() || null,
+         s.validFrom ?? null, s.validTo ?? null]);
     }
 
     return { ok: true as const, slabs: slabs.length };

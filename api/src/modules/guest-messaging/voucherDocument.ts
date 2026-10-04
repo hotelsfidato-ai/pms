@@ -62,6 +62,9 @@ export interface VoucherRoom {
       (app.tariff_for); absent on facts from before 169. */
   extraAdults?: number | null;
   extraChildren?: number | null;
+  /** On which days its plan's meals are served, in words (D27-258 Q5:
+      "Breakfast on stay-over and check-out days"); absent where unsaid. */
+  mealDays?: string | null;
 }
 
 export interface VoucherFacts {
@@ -199,6 +202,8 @@ export interface VoucherBlocks {
   guestRows: [string, string][];
   /** Per room, in order: "1 extra adult, 1 extra child", or "" for none. */
   extras: string[];
+  /** Per room, in order: its meal days in words, or "" where unsaid (D27-258 Q5). */
+  meals: string[];
   bank: [string, string][] | null;
   policies: string[];
   instagram: string | null;
@@ -261,6 +266,7 @@ export function voucherBlocks(f: VoucherFacts, figures: VoucherFigures = voucher
       ["GSTIN", office ? f.hotel.gstin : null],
     ]),
     guestRows: rows([["Email", f.guest.email], ["Phone", f.guest.phone], ["Booked by", f.bookedBy]]),
+    meals: f.rooms.map((r) => r.mealDays ?? ""),
     extras: f.rooms.map((r) => [
       r.extraAdults ? count(r.extraAdults, "extra adult", "extra adults") : null,
       r.extraChildren ? count(r.extraChildren, "extra child", "extra children") : null,
@@ -480,7 +486,7 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
   label("Amount", RIGHT, y, "right");
   y += 2.4;
   figures.lines.forEach((l, i) => {
-    room(blocks.extras[i] ? 15.1 : 12);
+    room(12 + (blocks.extras[i] ? 3.1 : 0) + (blocks.meals[i] ? 3.1 : 0));
     rule(y);
     y += 4.4;
     text(`Room ${i + 1} - ${l.roomType}`, M, y, { size: 8.6, bold: true, width: cNights - M - 6 });
@@ -494,6 +500,11 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
     if (blocks.extras[i]) {
       y += 3.1;
       text(blocks.extras[i], M, y, { size: 7, color: GREY, width: cNights - M - 6 });
+    }
+    /* On which days the plan's meals are served (D27-258 Q5). */
+    if (blocks.meals[i]) {
+      y += 3.1;
+      text(blocks.meals[i], M, y, { size: 7, color: GREY, width: cNights - M - 6 });
     }
     y += 4;
   });
@@ -634,12 +645,32 @@ async function voucherFacts(client: Client, reservationId: string): Promise<Vouc
     "select app.guest_voucher($1::uuid) as facts", [reservationId]);
   const facts = rows[0]?.facts;
   if (!facts) return null;
+  /* The hotel's meal days (D27-258 Q5), through a definer as the facts are:
+     the sweep has nobody signed in. Keyed by the plan's code. */
+  const { rows: days } = await client.query<{ meal_plan: string; breakfast: string[]; lunch: string[]; dinner: string[] }>(
+    "select meal_plan, breakfast, lunch, dinner from app.voucher_meal_days($1::uuid)", [reservationId]);
+  const said = new Map(days.map((d) => [d.meal_plan, mealDaysInWords(d)]));
   const numbers = (r: VoucherRoom) => ({
     ...r,
     rate: r.rate === null ? null : Number(r.rate),
     gstRate: r.gstRate === null ? null : Number(r.gstRate),
+    mealDays: said.get((r.mealPlan ?? "").split(" ")[0] ?? "") ?? null,
   });
   return { ...facts, rooms: (facts.rooms ?? []).map(numbers) };
+}
+
+const DAY_WORDS: Record<string, string> = { arrival: "check-in", stay: "stay-over", departure: "check-out" };
+/** "Breakfast on stay-over and check-out days; dinner on check-in and
+    stay-over days" - the Meal plans page says the same (inventory). */
+export function mealDaysInWords(d: { breakfast: string[]; lunch: string[]; dinner: string[] }): string | null {
+  const parts = (["breakfast", "lunch", "dinner"] as const)
+    .filter((m) => d[m].length > 0)
+    .map((m, i) => {
+      const words = ["arrival", "stay", "departure"].filter((x) => d[m].includes(x)).map((x) => DAY_WORDS[x]!);
+      const list = words.length > 1 ? `${words.slice(0, -1).join(", ")} and ${words.at(-1)}` : words[0];
+      return `${i === 0 ? m[0]!.toUpperCase() + m.slice(1) : m} on ${list} days`;
+    });
+  return parts.length ? parts.join("; ") : null;
 }
 
 async function fileOf(facts: VoucherFacts): Promise<SendableFile> {

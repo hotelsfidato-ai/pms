@@ -43,10 +43,12 @@ Branch `settings/rates-3oct` from cp6 8181f452, cp6 85d2bb7a merged in; migratio
 - Web: Room types 3, Rate plans and Meal plans 4, SAC 2, all failing first; inventory 22; finance 83; App, navigation, components/app, primaryAction and boundaries 121.
 - Opened at 1280 and 375 on `fidato_s45`. No page scrolls sideways; plan names wrap whole; the meal headings fit on one line.
 
-**Left open (asked the master):**
-- the SAC printed per invoice LINE needs finance's invoices.ts;
-- tax periods for the same slab need the `tax_rules` key widened, which touches three other tests;
-- the voucher's meal-days line is guest-messaging's file (P6).
+**Then, with the master's yes (4 October):**
+- tax rules by date, one band's periods entered in advance;
+- a SAC on each invoice line, from the kind each posting now keeps, frozen on the invoice when it is issued;
+- the voucher's meal-days line.
+
+All three are in migration 197; 195 is back to cp6's merged version. See finance's and guest-messaging's changelogs.
 
 ---
 

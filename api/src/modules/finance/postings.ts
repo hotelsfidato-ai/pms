@@ -232,9 +232,11 @@ async function insertCharge(
   const { rows: made } = await client.query<{ id: string }>(
     `insert into folio_postings
        (hotel_id, folio_id, business_date, category, description,
-        amount, tax_rate, tax_amount, idempotency_key)
+        amount, tax_rate, tax_amount, idempotency_key, tax_kind)
      select $1::uuid, $2::uuid, $3::date, $4::text, $5::text, $6::numeric,
-            t.rate, round($6::numeric * t.rate / 100.0, 2), $9::uuid
+            t.rate, round($6::numeric * t.rate / 100.0, 2), $9::uuid,
+            /* The kind it is taxed by, kept for its invoice line's SAC (D27-258 Q6). */
+            $8::text
        from (select case when $7::boolean
                          then app.gst_rate($1, $8::text, $6::numeric)
                          else 0::numeric end as rate) t
@@ -470,11 +472,11 @@ export async function editFolioCharge(
     folio_id: string; reservation_id: string | null; business_date: string;
     category: string; description: string; amount: string; tax_rate: string;
     tax_scheme: string; source_type: string | null; source_id: string | null;
-    nights: number; vat_bill: string | null;
+    nights: number; vat_bill: string | null; tax_kind: string | null;
   }>(
     `select fp.folio_id::text, fp.reservation_id::text, fp.business_date::text,
             fp.category, fp.description, fp.amount::text, fp.tax_rate::text,
-            fp.tax_scheme, fp.source_type, fp.source_id::text,
+            fp.tax_scheme, fp.source_type, fp.source_id::text, fp.tax_kind,
             ${POSTING_NIGHTS} as nights,
             (select v.number from vat_bills v
               where fp.tax_scheme = 'vat' and v.folio_id = fp.folio_id and v.cancels_id is null
@@ -523,12 +525,12 @@ export async function editFolioCharge(
   const { rows: made } = await client.query<{ id: string }>(
     `insert into folio_postings
        (hotel_id, folio_id, reservation_id, business_date, category, description,
-        amount, tax_rate, tax_amount, tax_scheme, source_type, source_id)
+        amount, tax_rate, tax_amount, tax_scheme, source_type, source_id, tax_kind)
      values ($1, $2, $3, $4::date, $5, $6, $7::numeric, $8::numeric,
-             round($7::numeric * $8::numeric / 100.0, 2), $9, $10, $11::uuid)
+             round($7::numeric * $8::numeric / 100.0, 2), $9, $10, $11::uuid, $12)
      returning id::text`,
     [hotelId, p.folio_id, p.reservation_id, p.business_date, p.category, description,
-     amount, rate, p.tax_scheme, p.source_type, p.source_id],
+     amount, rate, p.tax_scheme, p.source_type, p.source_id, p.tax_kind],
   );
   return { ok: true, id: made[0]!.id };
 }

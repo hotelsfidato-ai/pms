@@ -317,6 +317,8 @@ export default function InvoicePage() {
           <tr>
             <th className={cn(DOC_TH, "text-left pr-2")}>Description</th>
             <th className={cn(DOC_TH, "text-left px-2 w-32")}>Date</th>
+            {/* Each line's own SAC (D27-258 Q6). */}
+            <th className={cn(DOC_TH, "text-left px-2 w-20")}>SAC</th>
             <th className={cn(DOC_TH, "text-right pl-2 w-32")}>Taxable value</th>
           </tr>
         </thead>
@@ -325,6 +327,7 @@ export default function InvoicePage() {
             <tr key={`${l.description}-${i}`}>
               <td className={cn(DOC_TD, "pr-2 font-semibold")}>{l.description}</td>
               <td className={cn(DOC_TD, "px-2 tabular text-grey-500")}>{dateLong(l.date)}</td>
+              <td className={cn(DOC_TD, "px-2 tabular text-grey-500")}>{l.sac ?? "-"}</td>
               <td className={cn(DOC_TD, "pl-2 text-right tabular font-semibold")}>
                 {/* The document's sign. The lines are read from the folio,
                     where they are positive, and the first version printed
@@ -338,7 +341,7 @@ export default function InvoicePage() {
           ))}
           {data.lines.length === 0 && (
             <tr>
-              <td colSpan={3} className={cn(DOC_TD, "text-grey-500")}>No chargeable lines.</td>
+              <td colSpan={4} className={cn(DOC_TD, "text-grey-500")}>No chargeable lines.</td>
             </tr>
           )}
         </tbody>

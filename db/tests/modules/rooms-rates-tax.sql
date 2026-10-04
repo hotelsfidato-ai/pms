@@ -7,7 +7,7 @@
 -- =============================================================================
 do $$
 declare
-  h uuid; h2 uuid; rt uuid; refused boolean;
+  h uuid; h2 uuid; rt uuid; refused boolean; r21 numeric; r22 numeric; g uuid; stay uuid; said text;
 begin
   h := app.provision_property_unchecked('RRT', 'Rooms Rates Tax Test', 'Nowhere');
   insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy, base_rate)
@@ -69,6 +69,40 @@ begin
   perform test.ok('rooms rates tax', 'the Add a hotel door asks for no template (D27-263)',
     pg_get_functiondef('app.provision_property(text,text,text,text,text,text,text,text)'::regprocedure)
       like '%p_template_set => ''none''%', '');
+
+  /* D27-258 Q7: a rule applies on the business dates it is valid for - one
+     ended, one current, one not begun, all for the same slab. */
+  insert into tax_rules (hotel_id, kind, over_amount, rate, valid_to)   values (h, 'other', 0, 12, app.business_date(h));
+  insert into tax_rules (hotel_id, kind, over_amount, rate, valid_from) values (h, 'other', 0, 18, app.business_date(h));
+  insert into tax_rules (hotel_id, kind, over_amount, rate, valid_from) values (h, 'other', 0, 28, app.business_date(h) + 1);
+  perform test.ok('rooms rates tax', 'a tax rule applies on the business dates it is valid for (D27-258)',
+    app.gst_rate_or_null(h, 'other', 100) = 18, coalesce(app.gst_rate_or_null(h, 'other', 100)::text, 'none'));
+
+  /* The edge (the master, D27-258): one stay - its night of the 21st on the
+     old rate, its night of the 22nd on the new one. The night audit posts each
+     night on that night's business date. */
+  insert into tax_rules (hotel_id, kind, over_amount, rate, valid_to)   values (h, 'room', 0, 12, date '2026-09-22');
+  insert into tax_rules (hotel_id, kind, over_amount, rate, valid_from) values (h, 'room', 0, 5, date '2026-09-22');
+  update hotels set business_date = date '2026-09-21' where id = h;
+  r21 := app.gst_rate(h, 'room', 4000);
+  update hotels set business_date = date '2026-09-22' where id = h;
+  r22 := app.gst_rate(h, 'room', 4000);
+  perform test.ok('rooms rates tax', 'the 21st on the old rate and the 22nd on the new, in one stay (D27-258)',
+    r21 = 12 and r22 = 5, r21 || ' then ' || r22);
+
+  /* D27-258 Q5: the voucher reads the booking hotel's meal days through a
+     definer (the sweep has nobody signed in). */
+  insert into hotel_meal_days (hotel_id, meal_plan, breakfast) values (h, 'CP', array['stay', 'departure']);
+  insert into guests (full_name) values ('Meal Days Guest') returning id into g;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+    values (h, 'RRT-MEAL-1', g, rt, date '2026-09-21', date '2026-09-23', 1000, 'confirmed') returning id into stay;
+  select array_to_string(breakfast, ',') into said from app.voucher_meal_days(stay) where meal_plan = 'CP';
+  perform test.ok('rooms rates tax', 'the voucher reads the hotel''s meal days for the booking (D27-258 Q5)',
+    said = 'stay,departure', coalesce(said, 'none'));
+  delete from reservations where id = stay;
+  alter table guests disable trigger guests_no_delete;
+  delete from guests where id = g;
+  alter table guests enable trigger guests_no_delete;
 
   -- ---------- and the fixtures go ----------
   alter table hotels disable trigger hotels_no_delete;

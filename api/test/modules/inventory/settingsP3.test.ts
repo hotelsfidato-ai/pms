@@ -206,3 +206,25 @@ describe("a SAC code per tax kind (D27-258 Q6)", () => {
     expect(got.kinds.find((k) => k.kind === "restaurant")?.sac, "not said: the screen shows a dash").toBeNull();
   });
 });
+
+describe("a tax rate that changes on a date (D27-258 Q7)", () => {
+  it("keeps one band's two periods, gives their dates back, and refuses periods that overlap", async () => {
+    type Kinds = { kinds: { kind: string; slabs: { overAmount: number; rate: number; validFrom: string | null; validTo: string | null }[] }[] };
+    const before = await json<Kinds>(await call("GET", "/tax"));
+    const spa = before.kinds.find((k) => k.kind === "spa")?.slabs ?? [];
+    try {
+      const overlap = await call("PUT", "/tax/spa", { slabs: [
+        { overAmount: 0, rate: 12, validTo: "2027-01-10" }, { overAmount: 0, rate: 18, validFrom: "2027-01-05" }] });
+      expect(overlap.status).toBe(409);
+      expect((await json<{ reason: string }>(overlap)).reason).toMatch(/overlap/);
+
+      expect((await call("PUT", "/tax/spa", { slabs: [
+        { overAmount: 0, rate: 12, validTo: "2027-01-10" }, { overAmount: 0, rate: 18, validFrom: "2027-01-10" }] })).status).toBe(200);
+      const got = await json<Kinds>(await call("GET", "/tax"));
+      expect(got.kinds.find((k) => k.kind === "spa")?.slabs.map((s) => [s.rate, s.validFrom, s.validTo]))
+        .toEqual([[12, null, "2027-01-10"], [18, "2027-01-10", null]]);
+    } finally {
+      await call("PUT", "/tax/spa", { slabs: spa.map((s) => ({ overAmount: s.overAmount, rate: s.rate })) });
+    }
+  });
+});

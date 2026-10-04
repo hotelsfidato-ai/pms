@@ -60,12 +60,13 @@ describe("the bill as it stands", () => {
 
         /* The hotel's own number, and two rates this file sets itself. */
         await client.query("update hotels set gstin = $2 where id = $1", [stay!.hotel, TEST_GSTIN]);
+        /* Delete, then insert: a slab may have periods now (D27-258), so the
+           old upsert key is gone. */
         await client.query(
-          `insert into tax_rules (hotel_id, kind, over_amount, rate) values ($1, 'room', 0, 5)
-           on conflict (hotel_id, kind, over_amount) do update set rate = 5`, [stay!.hotel]);
+          "delete from tax_rules where hotel_id = $1 and kind in ('room', 'spa') and over_amount = 0", [stay!.hotel]);
         await client.query(
-          `insert into tax_rules (hotel_id, kind, over_amount, rate) values ($1, 'spa', 0, 18)
-           on conflict (hotel_id, kind, over_amount) do update set rate = 18`, [stay!.hotel]);
+          `insert into tax_rules (hotel_id, kind, over_amount, rate) values ($1, 'room', 0, 5), ($1, 'spa', 0, 18)`,
+          [stay!.hotel]);
 
         const laundry = await postCharge(client, stay!.hotel, stay!.stay,
           { description: "Stay bill test: laundry", amount: 1000, category: "Laundry" });
