@@ -11,6 +11,64 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-03 · Settings phase 6: Messages and reports (D27-252, D27-261, D27-262), fewer guest messages (D27-264), re-cut to D27-266
+
+Branch `settings/messages-3oct`, from cp6 8181f452; cp6 106e819b (the console
+contract) and 16c88766 (D27-264) merged in.
+
+**Asked for:**
+- Each guest message On/Off per hotel (Q1).
+- The tax invoice on WhatsApp and email with its PDF: by itself when issued, only after switch-on, plus a button (Q3, Q4). Not a company's by itself (Q5), never a credit note (Q6).
+- Six reports as PDF after the night audit to chosen staff's own email (Q7, D27-262).
+- D27-264: the voucher IS the confirmation, sent once both ways. No reminder.
+- D27-265, our own `booking_voucher` template: built, then put ON HOLD by D27-266 and reverted.
+- D27-266: WhatsApp only through the CRS's approved `reservation_confirmation`. Online check-in, the review request and the invoice's WhatsApp template come later.
+
+**Shipped:**
+- Migration 193 "messages and reports":
+  - `guest_message_settings` (booking-voucher, online-checkin, invoice, review) and `report_emails`, each with row security and the activity log;
+  - `app.guest_messages_owed` re-bodied with the same arguments and columns (MEMORY 317): the voucher once each way under one switch (email kind booking-confirmation, WhatsApp booking-voucher), no reminder;
+  - `app.guest_invoices_owed`, `app.report_emails_owed` and `app.online_checkin_on`.
+- API:
+  - `settings.ts` (the switches: no row is ON for the voucher only), the invoice PDF and sending (`invoices.ts`, `invoiceDocument.ts`, from finance's `invoiceFacts`, T1), the night-audit report emails (`reportEmails.ts`).
+  - Reputation's review route asks the `review` switch. It is OFF until switched on (D27-266).
+- D27-266, online check-in, OFF by default:
+  - while off, `linkFromDatabase` mints no page, so a message carries no link;
+  - the voucher PDF prints "Check in online" with the link and a vector QR only when a link came;
+  - the email's link line drops;
+  - the guest-messages read says `onlineCheckIn`, and `SendCheckInLink` is hidden while it is off. When on, the button resends the voucher.
+- Web:
+  - `messages/switches` and `messages/night-audit-reports` registered in the Settings console;
+  - Send invoice on finance's Invoice page (T2);
+  - the label "Night audit reports" (the sidebar's 21-character rule).
+- n8n (`pms-send-crs.json`), as the owner runs it live:
+  - FROM `Fidato Hotels <crs@fidatohotels.com>`, REPLY_TO `crs@fidatohotels.com`, `VOUCHER_TEMPLATE = "reservation_confirmation"`;
+  - no booking_confirmation, stay_reminder or checkin_link, and no reminder or check-in-link email;
+  - the `tax_invoice` document path and the invoice and report emails.
+- `docs/go-live/whatsapp-templates.md`: booking_voucher on hold, review_request later, tax_invoice pending the owner.
+
+**Proved:**
+- P6's red run failed on the old code.
+- Two break builds of 193 were each caught: the switch-on moment and a report chosen after its audit; a company's bill sent by itself.
+- D27-264: red 19 failed / 94 passed. Green 270/270 over 11 files.
+- D27-266: red 9 failed, plus 18 skipped (their setup could not save the new switch). The web button test also failed red.
+- Green: 291/291 over 12 API files (the whole guest-messaging suite, reputation, newBooking, roleGate, sending); web 205/205 over 34 files; both typechecks; strip-check 201.
+
+**Found:** one queue run failed at fixture load: `index "hotel_photos_pkey" contains unexpected zero page`. The retry loaded fine. Told the master.
+
+**Left open:**
+- The invoice's WhatsApp template is the owner's to choose (D27-266). Its switch is off.
+- The review request and online check-in are later; both switches are off.
+- `docs/go-live/RELEASE-1OCT.md`, `GO-LIVE-PLAN.md` and the two prompts in `docs/go-live/` still name the retired templates. They are the master's files.
+
+**Commits:**
+- f1c86924, 51d39a3f, c008f8d2 (merge), 8cb815a2, f83bc0e4, d52f2c82 (merge);
+- daa55052 and 848ff5a1 (D27-264);
+- be49e772 and 9d3e0ac5 (D27-265), reverted by 4f4cbc7e and e95e6b55;
+- 6cdbe1bb (tests first), 0a4e22a2, e2d9f55b (D27-266).
+
+---
+
 ## 2026-10-02 · The voucher both ways, and the PDF on WhatsApp (D27-235 2.1 and 2.2, D27-241); CRS bookings agreed to WhatsApp (2.3); the setup notes (8.5)
 
 Branch `messaging/both-channels-2oct`, from cp6 3336a219.

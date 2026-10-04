@@ -11,6 +11,50 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-03 · Sign-ins and devices: sign out one device (settings phase 7, D27-255)
+
+**Asked for:** phase 7 of the settings plan (D27-249 to D27-254): the people pages
+ready as console pages (group "people"), and devices with "sign out this device".
+The owner (D27-255): one page "Sign-ins and devices"; the owner and Admin only sign a
+device out; no "sign out everywhere"; no device blocking; the Audit log stays beside
+Activity.
+
+**Shipped**
+- Migration 195 (190 at the merge): sign_ins.signed_out_at/by; app.may_see_sign_ins (one who-may);
+  app.sign_ins_of re-made (id, status); app.sign_out_device; app.signed_out_sign_ins.
+  The 90-day purge keeps signed-out rows (a Firebase refresh token never expires) and
+  clears old addresses.
+- api/src/signIns.ts: the signed-out list, read once per process (one systemd process),
+  added to on sign-out, fail-open if unreadable. Core api/src/auth.ts: one line after
+  the token check refuses a signed-out sign-in.
+- POST /api/admin/sign-ins/:id/sign-out (roleGate WRITE own, pinned).
+- pages/SignIns.tsx: "Sign-ins and devices", the device in words, Signed in / Signed
+  out when and by whom, a confirmed "Sign out this device".
+
+**Proved** - API through dbq: signIns 6/6, roleGate 75/75; red with the route, the
+auth line, the roleGate line and 195 set aside: the 3 new assertions failed. Web: admin
+42/42 (the new test red before the page), navigation, boundaries, App. tsc 0;
+strip-check 197. Screens at 1280 and 375 on fidato_s48 at 195: two devices in words;
+the Chrome one signed out after asking, the iPhone still signed in.
+
+**Left open** - the console pages (group people: people, roles, audit-log, activity,
+devices) wait for phase 1's registration contract. A person's own "my devices" later.
+
+---
+
+## 2026-10-03 · Phase 1 of the settings plan: the Settings console, its own space (D27-249, D27-254, D27-256) - the design lane's
+
+Branch `settings/console-3oct` (cp6 1da6b02a, fbc29b75 merged), copy `.claude\worktrees\competent-leakey-110512`. Claimed pos; admin by file (the master's split with P2 and P7); the frame files cleared by the master.
+**Asked for:** three spaces, one sign-in, no feature, database or permission change: the Settings console at /settings/... with its own grouped menu, the Restaurant at /pos/..., the switcher; and FIRST the registration contract P2 to P7 build on.
+**Shipped:**
+- The contract, its own commit a485a357: `src/components/app/settingsConsole.ts`. A service registers a console page in a file of its own, `src/modules/<module>/<name>.settings.ts` (`settingsPages`, found by `import.meta.glob`); the page is at /settings/<group>/<slug>, loaded when opened; the nine groups are the brief's; a stand-in yields to a page registered at its address.
+- `pages/Settings.tsx` is the console route (`/settings/*`, `setting`, then each page's rule through `mayReach`): the page at the address, or for an old tab (`MOVED`, the five of 1 October and the eight of 30 September), a bare group or a page the person may not see, the page that answers it. `/h/:code/settings/:tab` sets the hotel and goes there (the bell's GST link); `/admin/configuration` → `/settings/rates/taxes`.
+- Phase 1's stand-ins (`console.settings.ts`, `pages/ConsolePages.tsx`), the five tabs' cards unchanged: Property › Profile (with FSSAI and the commissioning checklist), Logo and photos, Policies, Group; Rates and tax › Taxes; Money › Bank details; Front desk › Times and rules; People and security › Signing in; Modules and connections › Modules (owner and Admin). The screens the tabs linked are links (↗) under the menu's own names, plus Integrations and System health (D27-256 Q1).
+- `nav.ts`: Settings leaves the menu (the switcher opens it; Find a screen keeps it); the "Rates and taxes" entry went - Taxes and Bank details answer "GST" and "bank".
+**Found:** (1) The checklist was above every tab; a page draws its own `<Page>`, so it is on Profile, the console's first page. (2) The till's setup offered the GM "Open Settings" for the module switch, which they cannot use (D17-36); the link now goes to Modules and is not offered to the GM.
+**Proved:** see the pos entry (one run for both).
+**Left open:** a phase that takes over Property › Profile should keep `<CommissioningCard>` on its page.
+
 ## 2026-10-03 · Settings, security: activity, sign-ins, passwords by role (D27-243 phase 5, D27-245)
 
 **Asked for:** phase 5 of the settings plan with the owner's answers: 5.1 the full
@@ -64,6 +108,15 @@ everybody's, an Admin the people at their hotel; the address kept, not shown).
   there (closing is ignored on purpose); hiding it needs a prop on the core Dialog.
 - Activity shows a staff id raw where a column holds one (e.g. late checkout by).
 - 5.5 two-step sign-in, after the release and the owner's Firebase upgrade.
+
+---
+
+## 2026-10-03 · Phase 2, Property: numbers, highlights, amenities, policies, child ages (D27-249, D27-257)
+
+**Asked for:** the settings plan's phase 2 (`.local/settings-plan-lanes.md`). Branch `settings/property-3oct` from cp6 8181f452, cp6 106e819b (the console contract) merged in; online-checkin claimed; admin shared by file.
+**Shipped:** migration 194 (numbered for now): four more registration numbers on `hotels`, the child ages (words only, D27-257: no price reads them), `hotel_texts` (five highlights, three policy texts, plain), ONE group list `amenities` with 20 names seeded and `hotel_amenities`, audit triggers, `app.keeps_amenities`, `app.guest_about`. `property.ts` (routes above), roleGate `PROPERTY` and its reads. Console pages Photos, Highlights, Amenities, Policies (house policies, three texts, child ages, the way to cancellation terms) registered in `property.settings.ts`; `RegistrationsCard` for the Profile page. online-checkin's `AboutTheHotel` behind the code.
+**Proved:** API `property.test.ts` 15 (14 failed first); web `propertyPages.test.tsx` 5 and online-checkin's `aboutTheHotel.test.tsx` 2 (failed first on no pages). The primaryAction guard caught an Add beside a Cancel with no variant - fixed.
+**Left open:** Profile waits for phase 1's exported profile card; the console pages open only once phase 1's frame renders `SETTINGS_PAGES`.
 
 ---
 

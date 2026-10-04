@@ -197,6 +197,11 @@ Coming soon page and its address are gone.
   too: the hotel's own, else the group's, as an `<img>` on the door's
   `/logo`. Decorative (`alt=""`: the name is printed under it); where there
   is none, or it does not load, nothing is drawn.
+- **About the hotel (D27-257)** - by rule 8: `AboutTheHotel.tsx`,
+  `api/src/routes/guestAbout.ts`, the definer `app.guest_about` (194): the
+  highlights written on Settings, the amenities switched on, and the map point
+  as a plain Google Maps link (`mapLink`, on the front door). Never the policy
+  texts. Hidden when there is nothing.
 - **The hotel's photos (D27-243)** - by rule 8: `GallerySection.tsx`,
   `api/src/routes/guestGallery.ts`, the definers `app.guest_gallery` (behind
   the unlock) and `app.guest_gallery_photo` (one picture on the link alone, as

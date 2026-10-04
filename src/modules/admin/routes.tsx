@@ -6,12 +6,10 @@ import PropertyPage from "@/modules/admin/pages/Property";
 import PeoplePage from "@/modules/admin/pages/People";
 import AdminConsolePage from "@/modules/admin/pages/Console";
 import SystemHealthPage from "@/modules/admin/pages/SystemHealth";
-import SettingsPage from "@/modules/admin/pages/Settings";
+import SettingsPage, { SettingsForHotel } from "@/modules/admin/pages/Settings";
 import { PropertiesPage } from "@/modules/admin/pages/Properties";
-import ActivityPage from "@/modules/admin/pages/Activity";
-import SignInsPage from "@/modules/admin/pages/SignIns";
 import {
-  UsersPage, RolesPage, AuditLogPage, IntegrationsPage,
+  UsersPage, IntegrationsPage,
 } from "@/modules/admin/pages/Admin";
 
 /* Administration's screen addresses. Mounted by App.tsx inside the
@@ -70,40 +68,12 @@ export const routes = (
         </RequireAccess>
       }
     />
-    <Route
-      path="/admin/roles"
-      element={
-        <RequireAccess path="/admin/roles" resource="role">
-          <RolesPage />
-        </RequireAccess>
-      }
-    />
-    <Route
-      path="/admin/audit-log"
-      element={
-        <RequireAccess path="/admin/audit-log" resource="audit_log">
-          <AuditLogPage />
-        </RequireAccess>
-      }
-    />
-    {/* D27-243 (5.1): every change, not only the money's. */}
-    <Route
-      path="/admin/activity"
-      element={
-        <RequireAccess path="/admin/activity" resource="audit_log">
-          <ActivityPage />
-        </RequireAccess>
-      }
-    />
-    {/* D27-243 (5.4): sign-ins, for the owner and an Admin. */}
-    <Route
-      path="/admin/sign-ins"
-      element={
-        <RequireAccess path="/admin/sign-ins" resource="user">
-          <SignInsPage />
-        </RequireAccess>
-      }
-    />
+    {/* D27-255: People and security moved into the Settings console
+        (people.settings.ts); each old address goes there (MEMORY 375). */}
+    <Route path="/admin/roles" element={<Navigate to="/settings/people/roles" replace />} />
+    <Route path="/admin/audit-log" element={<Navigate to="/settings/people/audit-log" replace />} />
+    <Route path="/admin/activity" element={<Navigate to="/settings/people/activity" replace />} />
+    <Route path="/admin/sign-ins" element={<Navigate to="/settings/people/devices" replace />} />
     <Route
       path="/admin/integrations"
       element={
@@ -136,34 +106,31 @@ export const routes = (
         </RequireAccess>
       }
     />
-    {/* D27-213, D27-214: ONE place for settings, its tab in the address.
-        Asked as "/settings" whichever tab: the menu entry is the rule. */}
-    {["/settings", "/settings/:tab"].map((path) => (
-      <Route
-        key={path}
-        path={path}
-        element={
-          <RequireAccess path="/settings" resource="setting">
-            <SettingsPage />
-          </RequireAccess>
-        }
-      />
-    ))}
+    {/* THE SETTINGS CONSOLE (D27-249): /settings/<group>/<slug>, its own
+        space. Asked as "/settings" whichever page, then each page's own rule
+        (pages/Settings.tsx). Its old addresses land there too. */}
+    <Route
+      path="/settings/*"
+      element={
+        <RequireAccess path="/settings" resource="setting">
+          <SettingsPage />
+        </RequireAccess>
+      }
+    />
     {/* With the hotel in the address (D27-216): the group owner's bell links to
-        the hotel whose bank details changed, whichever one is open. The
-        top bar's hotel follows the address (PropertyScope), as on every
-        /h/:code screen. */}
+        the hotel whose bank details changed, whichever one is open. The top
+        bar takes the hotel, then the console opens the tab's page. */}
     <Route
       path="/h/:code/settings/:tab"
       element={
         <RequireAccess path="/settings" resource="setting">
-          <PropertyScope /><SettingsPage />
+          <PropertyScope /><SettingsForHotel />
         </RequireAccess>
       }
     />
-    {/* The two screens it replaced: their addresses open it. Configuration
-        was where the refusals sent people to set GST. */}
+    {/* Two screens Settings replaced: their addresses open the console.
+        Configuration was where the refusals sent people to set GST. */}
     <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
-    <Route path="/admin/configuration" element={<Navigate to="/settings/taxes-and-billing" replace />} />
+    <Route path="/admin/configuration" element={<Navigate to="/settings/rates/taxes" replace />} />
   </>
 );

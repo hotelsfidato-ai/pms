@@ -380,7 +380,7 @@ describe("the module switches", () => {
         hotels: [{ hotelId: AGRA_HOTEL, role: "owner" }],
       },
     });
-    go("/settings/operations");
+    go("/settings/connections/modules");
   });
 
   it("gives every module a switch a person can actually press", async () => {

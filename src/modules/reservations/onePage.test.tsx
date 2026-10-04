@@ -215,8 +215,8 @@ describe("the advance", () => {
     fireEvent.click(button("Save booking"));
 
     await screen.findByText(/Advance of ₹2,000.00 taken/);
-    /* The check-in link beside the voucher (D27-105), for a guest not yet in. */
-    expect(screen.getByRole("button", { name: /Send check-in link/ })).toBeTruthy();
+    /* D27-266: hidden while the hotel's "Online check-in" switch is off, as it is by default. */
+    expect(screen.queryByRole("button", { name: /Send check-in link/ })).toBeNull();
     const paid = calls.find((c) => c.path.endsWith("/stays/r-1/payments"));
     expect(paid?.body).toMatchObject({ method: "UPI", amount: 2000, heldAsCredit: true });
   });

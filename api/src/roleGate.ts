@@ -164,6 +164,9 @@ const GROUP_LOGO = grant("room_config", "edit", "Changing the group's logo");
 const HOTEL_LOGO = grant("room_config", "edit", "Changing the hotel's logo");
 /* A hotel's photo gallery (D27-243): the logo's three, at that hotel. */
 const HOTEL_GALLERY = grant("room_config", "edit", "Changing the hotel's photos");
+/* The property's profile (D27-257): the logo's three; the amenities LIST is
+   narrowed to the owner and an Admin by property.ts and its table's policy. */
+const PROPERTY = grant("room_config", "edit", "Changing the property's profile");
 /* What the voucher prints (D27-215): a hotel's bank details and the group's
    office details - the same three, and for the bank details the route and the
    table ask app.manages_hotel behind it (migration 169). */
@@ -182,6 +185,7 @@ const TERMS = grant("rate", "edit", "Setting the cancellation terms");
 /* A source's commission: the owner, an administrator and the GM, in the
    matrix (D22-30). */
 const COMMISSION = grant("commission", "edit", "Setting a booking source's commission");
+const MONEY_SETTING = grant("room_config", "edit", "Changing the hotel's money settings");
 
 /* Laundry: its own resource (D18-8, reception and housekeeping). */
 const LAUNDRY_TAKE = grant("laundry", "create", "Taking in laundry");
@@ -287,7 +291,6 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/stays/:id/cancel`]: grant("reservation", "cancel", "Cancelling a booking"),
   [`POST ${H}/stays/:id/confirmation`]: grant("reservation", "create", "Sending a booking's voucher"),
   [`PUT ${H}/sales-people`]: own("reservations/desk.ts: owner, admin, GM"),
-  [`PUT ${H}/room-promotions`]: own("reservations/desk.ts: owner, admin, GM"),
 
   /* finance */
   [`POST ${H}/stays/:id/folios`]: CHARGE,
@@ -307,11 +310,31 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/company-payments`]: COMPANY_PAYMENT,
   [`POST ${H}/company-payments/:id/reverse`]: COMPANY_PAYMENT_REVERSE,
+  /* Money in the settings console (191, the owner's D27-259): the owner, an
+     administrator and the GM. */
+  [`POST ${H}/payment-methods`]: MONEY_SETTING,
+  [`PATCH ${H}/payment-methods/:id`]: MONEY_SETTING,
+  [`DELETE ${H}/payment-methods/:id`]: MONEY_SETTING,
+  [`POST ${H}/payment-methods/:id/default`]: MONEY_SETTING,
+  [`PUT ${H}/payment-methods/order`]: MONEY_SETTING,
+  [`POST ${H}/extra-charges`]: MONEY_SETTING,
+  [`PATCH ${H}/extra-charges/:id`]: MONEY_SETTING,
+  [`DELETE ${H}/extra-charges/:id`]: MONEY_SETTING,
+  [`PUT ${H}/extra-charges/order`]: MONEY_SETTING,
+  [`POST ${H}/discounts`]: MONEY_SETTING,
+  [`PATCH ${H}/discounts/:id`]: MONEY_SETTING,
+  [`DELETE ${H}/discounts/:id`]: MONEY_SETTING,
   [`POST ${H}/cash-deposits/:id/reverse`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/cash-deposits/days/:date/explain`]: own("finance/deposits.ts: owner, admin, GM"),
   [`POST ${H}/cash-deposits/:id/verify`]: own("finance/deposits.ts: owner, accountant"),
   [`POST ${H}/stays/:id/invoice`]: TAX_INVOICE,
   [`POST ${H}/invoices/:number{.+}/credit-note`]: CREDIT_NOTE,
+  /* Send invoice (D27-252, D27-261): whoever may issue it may send it. */
+  [`POST ${H}/invoices/:number{.+}/send`]: TAX_INVOICE,
+  /* Settings → Messages (D27-261): the people who set the hotel up; the
+     database asks app.manages_hotel too. */
+  [`PUT ${H}/guest-message-settings/:kind`]: grant("room_config", "edit", "Switching a guest message"),
+  [`PUT ${H}/report-emails`]: grant("room_config", "edit", "Choosing who gets the reports by email"),
   [`POST ${H}/vat-bills/:number{.+}/cancel`]: VAT_CANCEL,
   [`PUT ${H}/tax/:kind`]: GST,
   [`PATCH ${H}/menu-categories/:name/tax-kind`]: GST,
@@ -427,6 +450,14 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/gallery/:id`]: HOTEL_GALLERY,
   [`PUT ${H}/gallery/order`]: HOTEL_GALLERY,
   [`DELETE ${H}/gallery/:id`]: HOTEL_GALLERY,
+  [`PUT ${H}/registrations`]: PROPERTY,
+  [`PUT ${H}/texts/:kind`]: PROPERTY,
+  [`PUT ${H}/child-ages`]: PROPERTY,
+  [`PUT ${H}/amenities/order`]: PROPERTY,
+  [`PUT ${H}/amenities/:id`]: PROPERTY,
+  [`POST ${H}/amenities`]: PROPERTY,
+  [`PATCH ${H}/amenities/:id`]: PROPERTY,
+  [`DELETE ${H}/amenities/:id`]: PROPERTY,
   [`PUT ${H}/bank-details`]: BANK_DETAILS,
   [`DELETE ${H}/bank-details`]: BANK_DETAILS,
   [`PUT ${H}/group/office`]: GROUP_OFFICE,
@@ -437,6 +468,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST /api/admin/staff/:id/reactivate`]: own("admin/admin.ts: app.may_switch_person (D22-3)"),
   [`POST /api/admin/staff`]: own("admin/admin.ts: app.require_hotel_admin and the grantable roles (D22-2)"),
   [`POST /api/admin/staff/:id/password`]: own("admin/admin.ts: app.may_set_password"),
+  /* D27-255: one device signed out, by whoever may read the person's sign-ins. */
+  [`POST /api/admin/sign-ins/:id/sign-out`]: own("admin/admin.ts: app.sign_out_device"),
   [`POST /api/admin/staff/:id/access`]: own("admin/admin.ts: app.require_hotel_admin and the grantable roles"),
   [`DELETE /api/admin/staff/:id/access/:code`]: own("admin/admin.ts: app.require_hotel_admin"),
   [`POST /api/admin/staff/:id/deactivate`]: own("admin/admin.ts: app.may_switch_person (D22-3)"),
@@ -460,6 +493,18 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/rooms/:number`]: SETUP_CHANGE,
   /* The front desk's hours and its early and late charges: setup. */
   [`PATCH ${H}/front-desk`]: SETUP_CHANGE,
+  /* Phase 5 of the settings plan (D27-260): the lists, holidays, the group's
+     VIP levels (row security also asks app.sets_group_settings) and the front
+     desk's settings - changed from the Settings console. */
+  [`POST ${H}/lists/:kind`]: SETUP_CHANGE,
+  [`PATCH ${H}/lists/:kind/:id`]: SETUP_CHANGE,
+  [`DELETE ${H}/lists/:kind/:id`]: SETUP_CHANGE,
+  [`POST ${H}/holidays`]: SETUP_CHANGE,
+  [`DELETE ${H}/holidays/:id`]: SETUP_CHANGE,
+  [`POST ${H}/vip-levels`]: SETUP_CHANGE,
+  [`PATCH ${H}/vip-levels/:id`]: SETUP_CHANGE,
+  [`DELETE ${H}/vip-levels/:id`]: SETUP_CHANGE,
+  [`PATCH ${H}/desk-settings`]: SETUP_CHANGE,
   [`POST ${H}/room-types/import`]: SETUP_ADD,
   [`POST ${H}/rooms/import`]: SETUP_ADD,
 
@@ -633,6 +678,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/group`]: anyone("the group's name and logo, on every document"),
   [`GET ${H}/gallery`]: anyone("the hotel's photos, public on the guest's page"),
   [`GET ${H}/gallery/:id`]: anyone("one of the hotel's photos, public on the guest's page"),
+  [`GET ${H}/property-profile`]: anyone("the property's numbers, texts and child ages"),
+  [`GET ${H}/amenities`]: anyone("the amenities list and this hotel's"),
   [`GET ${H}/bank-details`]: own("admin/bankDetails.ts: app.manages_hotel - the hotel's owner, GM or Admin, or a group administrator (D27-215)"),
   [`GET ${H}/tax`]: anyone("the GST rates in use: neither a guest nor money taken"),
   [`GET ${H}/tax/:kind/rate`]: anyone("the GST rate for an amount"),
@@ -647,6 +694,10 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* Whether a stay checks in by express, its ID masked (D27-236 3.4): the
      people who check a guest in. */
   [`GET ${H}/stays/:id/express-check-in`]: CHECK_IN,
+  /* The pickers on every desk screen read these (D27-260). */
+  [`GET ${H}/lists/:kind`]: anyone("the hotel's lists: segments and ready reasons, offered on the desk's screens"),
+  [`GET ${H}/holidays`]: anyone("the hotel's holidays, shaded on the Calendar and Rates"),
+  [`GET ${H}/vip-levels`]: anyone("the group's VIP levels, offered on a guest"),
   [`GET ${H}/stays/:id/exchangeable`]: STAYS,
   [`GET ${H}/stays/:id/inclusions`]: STAYS,
   [`GET ${H}/stays/:id/guest-marks`]: STAYS,
@@ -690,6 +741,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/online-checkin/id-photos`]: own("routes/guestDoor.ts: KEEPER_ROLES, a narrowing of DESK_ROLES"),
   [`GET ${H}/online-checkin/id-photos/:id`]: own("routes/guestDoor.ts: DESK_ROLES while the details wait, then KEEPER_ROLES"),
   [`GET ${H}/guest-messages`]: own("guest-messaging/messages.ts: VIEW_ROLES, `customer` view (D27-144)"),
+  [`GET ${H}/guest-message-settings`]: see("room_config", "the guest messages' switches"),
+  [`GET ${H}/report-emails`]: see("room_config", "who gets the reports by email"),
   [`GET ${H}/reviews`]: own("reputation/reputation.ts: VIEW_ROLES"),
   /* D27-170: whoever sees guests sees the leads app's leads, read live. */
   [`GET ${H}/leads`]: GUESTS,
@@ -726,6 +779,10 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/cash-deposits`]: own("finance/deposits.ts: owner, admin, GM, accountant, viewer"),
   /* What companies paid: whoever reads Company accounts (D27-145, `invoice`). */
   [`GET ${H}/company-payments`]: see("invoice", "what companies paid"),
+  [`GET ${H}/payment-methods`]: see("setting", "the money settings"),
+  [`GET ${H}/extra-charges`]: see("setting", "the money settings"),
+  [`GET ${H}/discounts`]: see("setting", "the money settings"),
+  [`GET ${H}/commission`]: see("setting", "the money settings"),
   [`GET ${H}/accounting/:file{day-book(?:\\.xlsx)?}`]: own("accounting/routes.ts: MAY_EXPORT (D27-122)"),
 
   /* ── Reports ── */
@@ -849,7 +906,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET /api/admin/hotels/:code`]: own("admin/admin.ts: app.require_hotel_admin"),
   [`GET /api/admin/staff`]: own("admin/admin.ts: row security on staff, app.may_manage_person"),
   /* D27-243 5.4, D27-245 Q-B: the owner anybody's, an Admin their hotel's people. */
-  [`GET /api/admin/staff/:id/sign-ins`]: own("admin/admin.ts: app.sign_ins_of"),
+  [`GET /api/admin/staff/:id/sign-ins`]: own("admin/admin.ts: app.devices_of (195)"),
   /* D27-245: a person's own "set a longer password" check. */
   [`GET /api/me/password`]: SELF,
   [`GET ${H}/staff`]: see("user", "the staff list"),

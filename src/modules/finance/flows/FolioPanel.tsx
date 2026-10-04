@@ -1,3 +1,4 @@
+import { ReadyReasons } from "@/modules/front-desk";
 import { useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -9,8 +10,8 @@ import { useCurrentHotel, useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { money, moneyPrecise, dateShort } from "@/lib/format";
 import {
-  CHARGE_CATEGORIES, PAYMENT_METHODS,
-  type ChargeCategory, type PaymentMethod,
+  CHARGE_CATEGORIES, payingWays,
+  type ChargeCategory,
 } from "@/lib/rules";
 import { getRateBeforeGst, getTaxRate } from "@/modules/finance/data/tax";
 import {
@@ -25,6 +26,7 @@ import { type Posting, type Stay } from "@/data/repositories";
 import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type StayFolio } from "@/modules/finance/data/folios";
 import { LateCheckOutFlow } from "@/modules/front-desk";
 import { getStayBill } from "@/modules/finance/data/bill";
+import { getChargeList } from "@/modules/finance/data/money";
 import { billSections, sectionsTotal } from "@/modules/finance/sections";
 import { BillPrint } from "./BillPrint";
 import { useGroupSettings } from "@/modules/admin";
@@ -649,6 +651,8 @@ function EditButton({
                   onChange={(e) => setReason(e.target.value)} />
               )}
             </Field>
+            {/* The hotel's ready reasons (D27-260). */}
+            <ReadyReasons kind="reason_correction" onPick={setReason} />
           </div>
         </DialogContent>
       </Dialog>
@@ -761,6 +765,8 @@ export function ChangeRateDialog({
                 onChange={(e) => setReason(e.target.value)} />
             )}
           </Field>
+          {/* The hotel's ready reasons (D27-260). */}
+          <ReadyReasons kind="reason_correction" onPick={setReason} />
         </div>
       </DialogContent>
     </Dialog>
@@ -857,12 +863,20 @@ function ReverseButton({
                   placeholder="Posted to the wrong room" />
               )}
             </Field>
+            {/* The hotel's ready reasons (D27-260). */}
+            <ReadyReasons kind="reason_correction" onPick={setReason} />
           </div>
         </DialogContent>
       </Dialog>
     </>
   );
 }
+
+/* An extra charge's bill column (065) as Add charge names it. */
+const FROM_LIST: Record<string, ChargeCategory> = {
+  food: "Food", beverage: "Beverages", laundry: "Laundry", room: "Room posting",
+  misc: "Miscellaneous", spa: "Miscellaneous", minibar: "Miscellaneous", telephone: "Miscellaneous",
+};
 
 function AddChargeDialog({
   hotelId, stay, businessDate, onDone,
@@ -883,6 +897,12 @@ function AddChargeDialog({
   const [pressKey, setPressKey] = useState(() => crypto.randomUUID());
 
   const value = Number(amount) || 0;
+
+  /* THE HOTEL'S EXTRA CHARGES (the owner's D27-259 Q3): a pick fills the
+     words, the price and the column; each can still be changed. */
+  const listed = useQuery({
+    queryKey: ["charge-list", hotelId], queryFn: () => getChargeList(hotelId), enabled: open,
+  }).data?.inclusions.filter((i) => i.rate !== null) ?? [];
 
   /* THE RATE THIS CHARGE WILL REALLY CARRY, from the server's one slab rule.
      Everything the desk posts follows the room's GST (postings.ts), and a
@@ -921,6 +941,23 @@ function AddChargeDialog({
         description={`Room ${stay.roomNumber} · ${stay.guest}`}
       >
         <div className="space-y-4">
+          {listed.length > 0 && (
+            <Field label="From the hotel's list">
+              {({ id }) => (
+                <NativeSelect id={id} value=""
+                  onChange={(e) => {
+                    const pick = listed.find((i) => i.id === e.target.value);
+                    if (!pick) return;
+                    setDescription(pick.name);
+                    setAmount(String(pick.rate));
+                    setCategory(FROM_LIST[pick.category] ?? "Miscellaneous");
+                  }}>
+                  <option value="">Choose, or type below</option>
+                  {listed.map((i) => <option key={i.id} value={i.id}>{i.name} · {money(i.rate ?? 0)}</option>)}
+                </NativeSelect>
+              )}
+            </Field>
+          )}
           <Field label="Category">
             {({ id }) => (
               <NativeSelect
@@ -1046,7 +1083,8 @@ function SettleDialog({
     Math.max(split ? folios.find((f) => f.id === id)?.balance ?? 0 : balance, 0);
   const pick = () => (split ? active ?? folios.find((f) => f.balance > 0)?.id ?? folios[0]!.id : null);
   /* The hotel's default way of paying (D27-243 3.1). */
-  const [method, setMethod] = useState<PaymentMethod>(useCurrentHotel()?.deskRules?.defaultPaymentMethod ?? "Cash");
+  const desk = useCurrentHotel()?.deskRules;
+  const [method, setMethod] = useState(desk?.defaultPaymentMethod ?? "Cash");
   const [amount, setAmount] = useState("");
   const [pan, setPan] = useState("");
   const [form97, setForm97] = useState(false);
@@ -1116,9 +1154,9 @@ function SettleDialog({
               <NativeSelect
                 id={id}
                 value={method}
-                onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+                onChange={(e) => setMethod(e.target.value)}
               >
-                {PAYMENT_METHODS.map((m) => <option key={m}>{m}</option>)}
+                {payingWays(desk).map((m) => <option key={m}>{m}</option>)}
               </NativeSelect>
             )}
           </Field>

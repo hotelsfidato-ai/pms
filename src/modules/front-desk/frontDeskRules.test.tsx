@@ -25,6 +25,10 @@ import type { Stay } from "@/data/repositories";
 const RULES: apiModule.DeskRules = {
   defaultPaymentMethod: "Cash", deskMayOverbook: true, advanceBeforeCheckIn: "first_night",
   weekendDays: [5, 6], defaultIdType: "aadhaar", defaultNationality: "IN", defaultTitle: null,
+  defaultGuarantee: "confirmed", defaultBillTo: "guest", requiredBookingFields: [],
+  hkDirtyAfterMove: true, hkDirtyAfterUnblock: true, hkStayoverDirtyAtAudit: false,
+  idTypesOff: [], statusColours: null, posRoundOff: "manual",
+  kpiDayUseHalf: false, kpiCompAsSold: true, holidays: [],
 };
 
 beforeEach(() => {
@@ -57,10 +61,11 @@ describe("the Front desk rules card", () => {
     render(<FrontDeskRulesCard hotelId="AGR" />);
     expect(document.querySelector("[data-desk-rules]")?.textContent).toContain("The first night");
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
-    fireEvent.change(screen.getByLabelText("Way of paying"), { target: { value: "UPI" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(save).toHaveBeenCalled());
-    expect(save.mock.calls[0]![1]).toMatchObject({ defaultPaymentMethod: "UPI", weekendDays: [5, 6] });
+    expect(save.mock.calls[0]![1]).toMatchObject({ weekendDays: [5, 6] });
+    /* Set on Money › Payment methods since D27-259: shown, never sent. */
+    expect(save.mock.calls[0]![1]).not.toHaveProperty("defaultPaymentMethod");
   });
 });
 

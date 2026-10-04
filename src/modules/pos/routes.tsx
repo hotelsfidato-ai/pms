@@ -1,4 +1,4 @@
-import { Route } from "react-router";
+import { Navigate, Route, useLocation, useParams } from "react-router";
 import { PropertyScope } from "@/components/app/PropertyScope";
 import { RequireAccess } from "@/components/app/RequireAccess";
 import { PosGate } from "@/modules/pos/components/PosGate";
@@ -14,64 +14,91 @@ import SetupPage from "@/modules/pos/pages/Setup";
 import TableBookingsPage from "@/modules/pos/pages/TableBookings";
 
 /* The restaurant's screen addresses. Mounted by App.tsx inside the
-   signed-in shell. */
+   signed-in shell.
+
+   ⚠ THE RESTAURANT'S OWN SPACE SINCE 3 OCTOBER (D27-249): /pos/:code/...,
+   with its own menu. Every /h/:code/... address it had redirects (OLD, at
+   the foot), its question and its bill id kept: a bookmark, a printed QR,
+   the bell's links. A menu entry and its route move together (nav.ts). */
+
+/** An old address, sent on to its new one with the hotel, id and question. */
+function Moved({ to }: { to: string }) {
+  const { code = "", id = "" } = useParams();
+  const { search, hash } = useLocation();
+  return <Navigate to={`${to.replace(":code", code).replace(":id", id)}${search}${hash}`} replace />;
+}
+
+const OLD: Array<[from: string, to: string]> = [
+  ["/h/:code/floor", "/pos/:code/tables"],
+  ["/h/:code/table-bookings", "/pos/:code/table-bookings"],
+  ["/h/:code/menu", "/pos/:code/menu"],
+  ["/h/:code/till", "/pos/:code/till"],
+  ["/h/:code/till/day-end", "/pos/:code/day-end"],
+  ["/h/:code/kitchen", "/pos/:code/kitchen"],
+  ["/h/:code/till/setup", "/pos/:code/setup"],
+  ["/h/:code/till/terminal", "/pos/:code/terminal"],
+  ["/h/:code/till/bill/:id", "/pos/:code/bill/:id"],
+  ["/h/:code/pos", "/pos/:code/room-charges"],
+];
+
 export const routes = (
   <>
     {/* The till writes; /pos reads what an outside one sent. */}
     <Route
-      path="/h/:code/till"
+      path="/pos/:code/till"
       element={<><PropertyScope /><PosGate><TillPage /></PosGate></>}
     />
     {/* The room, before the bill. A waiter opens an order by
         tapping a table, not by typing its name. */}
     <Route
-      path="/h/:code/floor"
+      path="/pos/:code/tables"
       element={<><PropertyScope /><PosGate><FloorPage /></PosGate></>}
     />
     {/* Hotel guests' table requests, answered here (D27-224). */}
     <Route
-      path="/h/:code/table-bookings"
+      path="/pos/:code/table-bookings"
       element={<><PropertyScope /><PosGate><TableBookingsPage /></PosGate></>}
     />
     <Route
-      path="/h/:code/menu"
+      path="/pos/:code/menu"
       element={<><PropertyScope /><PosGate><MenuPage /></PosGate></>}
     />
     {/* Before /till/bill/:id and /till/orders/:id — a literal
         segment beats a parameter, but the order makes it read
         that way to a person too. */}
     <Route
-      path="/h/:code/till/day-end"
+      path="/pos/:code/day-end"
       element={<><PropertyScope /><PosGate><DayEndPage /></PosGate></>}
     />
     {/* Before /till/bill/:id, and both before /till itself —
         react-router picks the most specific, but keeping them in
         this order makes the intent readable. */}
     <Route
-      path="/h/:code/kitchen"
+      path="/pos/:code/kitchen"
       element={<><PropertyScope /><PosGate><KitchenPage /></PosGate></>}
     />
     {/* Restaurant setup (D22-6): the owner, an administrator and the GM,
         asked of the menu entry itself; the server asks the same. */}
     <Route
-      path="/h/:code/till/setup"
+      path="/pos/:code/setup"
       element={
-        <RequireAccess path="/h/:code/till/setup" resource="room_config">
+        <RequireAccess path="/pos/:code/setup" resource="room_config">
           <PropertyScope /><PosGate><SetupPage /></PosGate>
         </RequireAccess>
       }
     />
     <Route
-      path="/h/:code/till/terminal"
+      path="/pos/:code/terminal"
       element={<><PropertyScope /><PosGate><TerminalPage /></PosGate></>}
     />
     <Route
-      path="/h/:code/till/bill/:id"
+      path="/pos/:code/bill/:id"
       element={<><PropertyScope /><BillPage /></>}
     />
     <Route
-      path="/h/:code/pos"
+      path="/pos/:code/room-charges"
       element={<><PropertyScope /><PosPage /></>}
     />
+    {OLD.map(([from, to]) => <Route key={from} path={from} element={<Moved to={to} />} />)}
   </>
 );

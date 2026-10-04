@@ -19,3 +19,6 @@ export { default as AddIdPhotoAtDesk } from "./AddIdPhotoAtDesk";
 
 /* A phone's photo redrawn small before it is sent; Settings' hotel photos use it too (D27-243). */
 export { shrinkPhoto } from "./shrinkPhoto";
+
+/* A plain Google Maps link to a hotel's map point; Settings' Profile uses it too (D27-257). */
+export { mapLink } from "./AboutTheHotel";

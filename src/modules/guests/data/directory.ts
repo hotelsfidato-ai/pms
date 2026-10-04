@@ -84,11 +84,11 @@ export async function listCompanies(hotelId: string): Promise<CompanyRecord[]> {
  * half a feature, with the visible half the wrong half.
  */
 export async function setGuestVip(
-  hotelId: string, guestId: string, isVip: boolean,
+  hotelId: string, guestId: string, isVip: boolean, levelId?: string,
 ): Promise<{ ok: true; guest: string } | { ok: false; reason: string }> {
   try {
     return await api(`/api/hotels/${hotelId}/guests/${guestId}/vip`, {
-      method: "POST", body: JSON.stringify({ isVip }),
+      method: "POST", body: JSON.stringify({ isVip, ...(levelId ? { levelId } : {}) }),
     });
   } catch (error) {
     if (error instanceof ApiError) {

@@ -105,6 +105,9 @@ export interface VoucherFacts {
     website: string | null; gstin: string | null; instagram: string | null;
   } | null;
   housePolicies?: string[] | null;
+  /** The guest's own check-in page (D27-264): on the voucher a guest is SENT,
+      never on the desk's View voucher - the link is minted for one message. */
+  checkInLink?: string | null;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -201,6 +204,8 @@ export interface VoucherBlocks {
   instagram: string | null;
   /** What the "Scan to connect" code opens (D27-223), or null for none. */
   qr: string | null;
+  /** The guest's check-in page, printed and as a QR code (D27-264), or null. */
+  checkIn: string | null;
   footer: { name: string; address: string | null; lines: string[] };
 }
 
@@ -267,6 +272,7 @@ export function voucherBlocks(f: VoucherFacts, figures: VoucherFigures = voucher
     policies: voucherPolicies(f),
     instagram: g?.instagram ? `Instagram: ${g.instagram}` : null,
     qr: instagramLink(g?.instagram ?? null),
+    checkIn: f.checkInLink ?? null,
     footer,
   };
 }
@@ -364,6 +370,23 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
       if (c.hint) text(c.hint, x, y + 13, { size: 6.6, color: GREY, align, width: colW - 8 });
     });
     return y + 15;
+  };
+
+  /* A QR code, drawn square by square in vector, as the rest of the voucher
+     is (D27-223). */
+  const QR = 22;
+  const qrCode = (value: string, left: number, top: number) => {
+    const code = QRCode.create(value, { errorCorrectionLevel: "M" });
+    const n = code.modules.size;
+    const cell = QR / n;
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        /* A hair wider than the cell, so no seam shows between two dark ones. */
+        if (code.modules.get(r, c)) pdf.rect(at(left + c * cell), at(top + r * cell), at(cell + 0.02), at(cell + 0.02));
+      }
+    }
+    pdf.fillColor(INK).fill();
+    pdf.link(at(left), at(top), at(QR), at(QR), value);
   };
 
   let y = M;
@@ -510,6 +533,23 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
   });
   y += 22;
 
+  /* ── Check in online (D27-264): the guest's own page, as its link and a QR
+     code - only on a voucher that is sent, which carries a link minted for it ── */
+  if (blocks.checkIn) {
+    const h = QR + 6;
+    const words = CONTENT - QR - 16;
+    room(h);
+    pdf.rect(at(M), at(y), at(CONTENT), at(h)).lineWidth(at(0.2)).strokeColor(LINE).stroke();
+    label("Check in online", M + 5, y + 6);
+    text("Fill in your details and ID before you arrive, on your own page for this booking:",
+      M + 5, y + 11.5, { size: 8, width: words });
+    const linkTop = y + 17.5;
+    const tall = text(blocks.checkIn, M + 5, linkTop, { size: 7.4, color: ORANGE, bold: true, width: words });
+    pdf.link(at(M + 5), at(linkTop - 3), at(words), at(tall + 1), blocks.checkIn);
+    qrCode(blocks.checkIn, RIGHT - QR - 3, y + 3);
+    y += h + 5;
+  }
+
   /* ── Bank details (D27-215): when the hotel has set them. In three columns,
      the figures in Courier as the CRS draws them - an account number is
      copied by hand into a banking app, and a monospaced face is read right. ── */
@@ -535,7 +575,6 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
   const footerHeight = 4.5 + Math.max(12, blocks.footer.lines.length * 3.4 + 4) + 3;
   const numbered = blocks.policies.map((p, i) => plain(`${i + 1}.  ${p}`));
   /* With a QR code, the policies keep clear of its column on the right. */
-  const QR = 22;
   const wide = blocks.qr ? CONTENT - QR - 8 : CONTENT;
   const lineHeight = (line: string, bold = false) =>
     pdf.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(7).heightOfString(line, { width: at(wide) }) / MM;
@@ -543,21 +582,10 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
   label("Hotel policies", M, y);
   const qrTop = y - 2;
   y += 4;
-  /* The Instagram QR code (D27-223): drawn square by square in vector, as the
-     rest of the voucher is, with "Scan to connect" under it. */
+  /* The Instagram QR code (D27-223), with "Scan to connect" under it. */
   if (blocks.qr) {
-    const code = QRCode.create(blocks.qr, { errorCorrectionLevel: "M" });
-    const n = code.modules.size;
-    const cell = QR / n;
-    const left = RIGHT - QR;
-    for (let r = 0; r < n; r++) {
-      for (let c = 0; c < n; c++) {
-        /* A hair wider than the cell, so no seam shows between two dark ones. */
-        if (code.modules.get(r, c)) pdf.rect(at(left + c * cell), at(qrTop + r * cell), at(cell + 0.02), at(cell + 0.02));
-      }
-    }
-    pdf.fillColor(INK).fill();
-    text("Scan to connect", left + QR / 2, qrTop + QR + 3.6, { size: 6.6, color: GREY, align: "center", width: QR + 8 });
+    qrCode(blocks.qr, RIGHT - QR, qrTop);
+    text("Scan to connect", RIGHT - QR / 2, qrTop + QR + 3.6, { size: 6.6, color: GREY, align: "center", width: QR + 8 });
   }
   for (const line of numbered) {
     room(lineHeight(line));
@@ -592,10 +620,13 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
 
 /** The voucher for a confirmed booking, ready to go with its message - or
     null where the booking is not confirmed. Through the definer
-    `app.guest_voucher` (162): the sweep has nobody signed in. */
-export async function voucherFile(client: Client, reservationId: string): Promise<SendableFile | null> {
+    `app.guest_voucher` (162): the sweep has nobody signed in. A message's
+    check-in link is printed in it (D27-264); the desk's View voucher has none. */
+export async function voucherFile(
+  client: Client, reservationId: string, checkInLink: string | null = null,
+): Promise<SendableFile | null> {
   const facts = await voucherFacts(client, reservationId);
-  return facts ? fileOf(facts) : null;
+  return facts ? fileOf({ ...facts, checkInLink }) : null;
 }
 
 async function voucherFacts(client: Client, reservationId: string): Promise<VoucherFacts | null> {
@@ -661,8 +692,8 @@ export function voucherFields(f: VoucherFacts): Record<string, string> {
 
 /** The PDF and its eight fields, or null where the booking is not confirmed. */
 export async function whatsAppVoucher(
-  client: Client, reservationId: string,
+  client: Client, reservationId: string, checkInLink: string | null = null,
 ): Promise<{ file: SendableFile; fields: Record<string, string> } | null> {
   const facts = await voucherFacts(client, reservationId);
-  return facts ? { file: await fileOf(facts), fields: voucherFields(facts) } : null;
+  return facts ? { file: await fileOf({ ...facts, checkInLink }), fields: voucherFields(facts) } : null;
 }

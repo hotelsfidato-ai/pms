@@ -182,7 +182,7 @@ export async function createBooking(
     salesPerson?: string;
     /** Bill to this company. */
     companyId?: string;
-    discount?: { percent?: number; reason?: string; promotionId?: string };
+    discount?: { percent?: number; amount?: number; reason?: string; promotionId?: string };
     title?: string;
     nationality?: string;
     address?: {

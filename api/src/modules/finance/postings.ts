@@ -5,7 +5,6 @@ import { resolveDate } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
 import { inr } from "../../reportRender.ts";
 import { roomRateBeforeGst } from "./tax.ts";
-import { PAYMENT_METHOD } from "./paymentMethods.ts";
 import { overCashLimit, panFor } from "./cashLimit.ts";
 import { openOwnDrawer } from "./cashier.ts";
 import { FOLIO_SELECT, STANDING_INVOICE, folioBalance } from "./folios.ts";
@@ -699,8 +698,15 @@ export async function takeFolioPayment(
   if (!input.amount || input.amount <= 0) {
     return { ok: false, reason: "A payment must be greater than zero." };
   }
-  const method = PAYMENT_METHOD[input.method ?? "Cash"];
-  if (!method) return { ok: false, reason: `"${input.method}" is not a payment method.` };
+  /* THE HOTEL'S OWN LIST (191, the owner's D27-259): a method that is On;
+     none named, the hotel's default. */
+  const { rows: [way] } = await client.query<{ label: string; kind: string }>(
+    `select pm.label, pm.kind from payment_methods pm
+      where pm.hotel_id = $1 and pm.is_active
+        and pm.label = coalesce($2, (select default_payment_method from hotels where id = $1))`,
+    [hotelId, input.method ?? null]);
+  if (!way) return { ok: false, reason: `"${input.method}" is not a payment method this hotel takes.` };
+  const method = way.kind;
   const amount = Math.round(input.amount * 100) / 100;
 
   if (folioId) {
@@ -783,14 +789,16 @@ export async function takeFolioPayment(
      values ($1,$2,$3,'payment',$4,$5,0,0,$6)
      returning id::text`,
     [hotelId, folio, businessDate,
-     method === "city_ledger" ? "Transferred to city ledger" : `Received - ${input.method ?? "Cash"}`,
+     method !== "city_ledger" ? `Received - ${way.label}`
+       : way.label === "Bill to company" ? "Transferred to city ledger"
+       : `Transferred to city ledger - ${way.label}`,
      -amount, input.idempotencyKey ?? null],
   );
 
   await client.query(
-    `insert into payments (hotel_id, posting_id, method, amount, pan, form_97)
-     values ($1, $2::bigint, $3, $4, $5, $6)`,
-    [hotelId, made[0]!.id, method, amount, pan, form97],
+    `insert into payments (hotel_id, posting_id, method, method_label, amount, pan, form_97)
+     values ($1, $2::bigint, $3, $4, $5, $6, $7)`,
+    [hotelId, made[0]!.id, method, way.label, amount, pan, form97],
   );
 
   return { ok: true, id: made[0]!.id };

@@ -202,6 +202,11 @@ property.post("/:code/rooms/:number/block", async (c) => {
        — the board reads `housekeeping_status`, the chart reads the
        block, and the two disagreeing is how a room gets sold twice. */
     if (from <= (await businessDateFor(client, hotel.id))) {
+      /* What it was, for a hotel that takes it back as it was (192, D27-260). */
+      await client.query(
+        `update room_blocks set was_status = (select housekeeping_status from rooms where id = $2)
+          where id = $1::uuid and (select housekeeping_status from rooms where id = $2) <> 'out_of_service'`,
+        [rows[0]!.id, room[0].id]);
       await client.query(
         `update rooms set housekeeping_status = 'out_of_service' where id = $1`,
         [room[0].id],
@@ -237,8 +242,8 @@ property.delete("/:code/rooms/:number/block/:id", async (c) => {
        `block_id`, set by "Report a repair" since 17 September). The room is
        back, so the repair no longer takes it out — and a pointer left in
        place would refuse this delete. */
-    const { rows: block } = await client.query<{ id: string }>(
-      `select id::text from room_blocks
+    const { rows: block } = await client.query<{ id: string; was_status: string | null }>(
+      `select id::text, was_status from room_blocks
         where id::text = $1 and room_id = $2 and hotel_id = $3 for update`,
       [c.req.param("id"), room[0].id, hotel.id],
     );
@@ -258,10 +263,14 @@ property.delete("/:code/rooms/:number/block/:id", async (c) => {
     /* Back into inventory DIRTY, never clean. A room that has been out
        for a fortnight of refurbishment needs looking at before somebody
        sleeps in it, and "clean" is a claim nobody has checked. */
+    /* ...unless the hotel takes it back as it was before the block (192,
+       the owner's D27-260 Q3b); a block with nothing remembered: dirty. */
     await client.query(
-      `update rooms set housekeeping_status = 'dirty'
+      `update rooms set housekeeping_status =
+         case when (select hk_dirty_after_unblock from hotels where id = $2) then 'dirty'
+              else coalesce($3, 'dirty') end
         where id = $1 and housekeeping_status = 'out_of_service'`,
-      [room[0].id],
+      [room[0].id, hotel.id, block[0].was_status ?? null],
     );
 
     return { ok: true as const };

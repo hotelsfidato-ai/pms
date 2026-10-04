@@ -30,7 +30,7 @@ import type { MenuItem } from "@/modules/pos/data/till";
    ══════════════════════════════════════════════════════════════════ */
 
 export function DishDialog({
-  item, open, onOpenChange, onAdd, busy, guest = false,
+  item, open, onOpenChange, onAdd, busy, guest = false, bar = false,
 }: {
   item: MenuItem | null;
   open: boolean;
@@ -43,6 +43,8 @@ export function DishDialog({
   /** The guest's own page (D27-224): no note per dish - the guest's one
       note is for the whole order (the door's rule: the only typing is a note). */
   guest?: boolean;
+  /** A drink from the Bar side (D27-267): bar notes, not the kitchen's. */
+  bar?: boolean;
 }) {
   /* One choice per type: type number → the choice's id. */
   const [picked, setPicked] = useState<Record<number, string>>({});
@@ -251,13 +253,13 @@ export function DishDialog({
 
           {!guest && (<section>
             <h4 className="text-2xs font-semibold uppercase tracking-wide text-grey-500 mb-3">
-              Note for the kitchen
+              {bar ? "Note for the bar" : "Note for the kitchen"}
             </h4>
             {/* The list first, because it is what gets used, and because a
                 picked note prints the same way every time. Free text
                 stays underneath for the thing nobody anticipated. */}
             <div className="flex gap-2 flex-wrap mb-2">
-              {PRESET_NOTES.map((n) => (
+              {(bar ? BAR_NOTES : PRESET_NOTES).map((n) => (
                 <button
                   key={n}
                   type="button"
@@ -319,3 +321,6 @@ const PRESET_NOTES = [
   "Crispy", "Extra Garlic", "Less Butter",
   "Less Garlic", "Less Spicy", "Less Sugar",
 ];
+
+/* D27-267: a drink gets the bar's words - "Crispy" means nothing on a brandy. */
+const BAR_NOTES = ["Neat", "On the rocks", "With soda", "With water"];

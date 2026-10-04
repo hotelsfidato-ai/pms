@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-03 · A discount in rupees off each night; the promotions list moves to Money (the owner's D27-259 Q4) - the cash lane's
+
+**Shipped:** `book.ts` takes `discount.amount` (₹ off each night) beside the percent, in its own blocks: by hand up to 10% of the night with a reason, more only through a named promotion, which may now be ₹ (migration 191: `reservations.discount_amount`, `room_promotions.amount`). `desk.ts`: GET room-promotions returns `amount`; its PUT went - the list is kept on Settings › Money › Discounts (finance's `/discounts`). New booking: "₹ off" beside "Up to 10%", the price preview takes it off, and the promotions keeper button and dialog went. The advance's "Paid by" is the hotel's own list without Bill to company (`payingWays`).
+**Proved:** `newBooking.test.ts` - ₹500 off a ₹4,000 night by hand refused, ₹400 kept (3600, discount_amount 400), a ₹1,500 promotion gives 2500; the promotions cases now use POST /discounts.
+## 2026-10-03 · New booking starts on the hotel's settings (the owner's D27-260)
+
+Branch `settings/frontdesk-3oct`. The guarantee (Confirmed/Tentative) and bill-to start on the hotel's; the market segments are the hotel's own list; a field the hotel requires is said before Save and refused by `groups.ts` (the desk's route only, never a channel's). The cancel flows offer the hotel's ready reasons. Proved by front desk's `deskSettings` tests.
+
 ## 2026-10-03 · The desk may overbook, per hotel; "Prepaid on the booking site" (the owner's D27-243 3.2, D27-246)
 
 Branch `settings/phase3-2oct`. **Shipped:** `makeBooking` refuses the desk's booking - a group's whole - past a full house when the hotel's "The desk may overbook" is off (187; on by default, as D17-43). New booking shows "Prepaid on the booking site" (on) when the source is a booking site and sends it; `book.ts` writes `reservations.prepaid_on_site`. New booking starts on the hotel's title, ID and way of paying an advance. **Proved:** front desk's `frontDeskRules.test.ts` 3.2 cases.

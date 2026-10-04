@@ -1,3 +1,4 @@
+import { ReadyReasons } from "@/modules/front-desk";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -91,6 +92,8 @@ export function CancelConfirmedFlow({ hotelId, stayId, reference, open, onOpenCh
                 onChange={(e) => setReason(e.target.value)} className="h-11" />
             )}
           </Field>
+          {/* The hotel's ready reasons (D27-260). */}
+          <ReadyReasons kind="reason_cancel" onPick={setReason} />
         </div>
       </DialogContent>
     </Dialog>

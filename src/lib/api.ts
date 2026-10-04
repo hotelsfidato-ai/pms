@@ -404,7 +404,10 @@ export interface ApiHotel {
 
 export interface DeskRules {
   /** What the desk's payment screens start on (the till keeps Cash). */
-  defaultPaymentMethod: "Cash" | "UPI" | "Credit Card" | "Debit Card";
+  defaultPaymentMethod: string;
+  /** The hotel's own ways of paying that are On, in its order (191, the
+      owner's D27-259); absent from an older server. */
+  paymentMethods?: { label: string; kind: string }[];
   /** Off: the desk's booking past a full house is refused. */
   deskMayOverbook: boolean;
   advanceBeforeCheckIn: "none" | "first_night" | "whole_stay";
@@ -413,6 +416,23 @@ export interface DeskRules {
   defaultIdType: string | null;
   defaultNationality: string;
   defaultTitle: string | null;
+  /* Phase 5 of the settings plan (192, the owner's D27-260). */
+  defaultGuarantee: "confirmed" | "tentative";
+  defaultBillTo: "guest" | "company";
+  /** Fields New booking asks for at this hotel (the desk only). */
+  requiredBookingFields: string[];
+  hkDirtyAfterMove: boolean;
+  hkDirtyAfterUnblock: boolean;
+  hkStayoverDirtyAtAudit: boolean;
+  /** ID types this hotel does not take. */
+  idTypesOff: string[];
+  /** Calendar colours per booking state; null = the built-in ones. */
+  statusColours: Record<string, string> | null;
+  posRoundOff: "off" | "manual" | "automatic";
+  kpiDayUseHalf: boolean;
+  kpiCompAsSold: boolean;
+  /** Shaded like a weekend on the Calendar and Rates; no price reads them. */
+  holidays: Array<{ day: string; name: string; colour: string | null }>;
 }
 
 /** The first screen after sign-in (087). Set by the GM, changeable by

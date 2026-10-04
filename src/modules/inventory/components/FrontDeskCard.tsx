@@ -77,21 +77,12 @@ function FrontDeskDialog({
 }) {
   const [cin, setCin] = useState(current.checkInTime);
   const [cout, setCout] = useState(current.checkOutTime);
-  /* Empty string is a CLEARED charge, not zero. Kept as text for
-     exactly that reason: a number input cannot tell "nothing typed"
-     from "typed a zero", and here those are different answers. */
-  const [early, setEarly] = useState(
-    current.earlyCheckinCharge === null ? "" : String(current.earlyCheckinCharge));
-  const [late, setLate] = useState(
-    current.lateCheckoutCharge === null ? "" : String(current.lateCheckoutCharge));
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
     setBusy(true);
     const res = await amendFrontDesk(hotelId, {
       checkInTime: cin, checkOutTime: cout,
-      earlyCheckinCharge: early.trim() === "" ? null : Number(early),
-      lateCheckoutCharge: late.trim() === "" ? null : Number(late),
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not saved", res.reason);
@@ -131,23 +122,10 @@ function FrontDeskDialog({
               )}
             </Field>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Early arrival charge"
-                   hint="Blank if the property does not charge for one.">
-              {(f) => (
-                <Input {...fieldProps(f)} value={early} inputMode="decimal"
-                       placeholder="-"
-                       onChange={(e) => setEarly(e.target.value)} />
-              )}
-            </Field>
-            <Field label="Late departure charge" hint="Blank for none.">
-              {(f) => (
-                <Input {...fieldProps(f)} value={late} inputMode="decimal"
-                       placeholder="-"
-                       onChange={(e) => setLate(e.target.value)} />
-              )}
-            </Field>
-          </div>
+          {/* The fees are set on Money › Extra charges (the owner's D27-259 Q3). */}
+          <p className="text-sm text-grey-600">
+            The early arrival and late departure fees are set on Settings › Money › Extra charges.
+          </p>
           <p className="text-sm text-grey-500 leading-relaxed">
             A guest arriving before the first time, or leaving after the
             second, needs a reason and somebody to allow it. The charge

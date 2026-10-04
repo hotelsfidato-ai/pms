@@ -11,10 +11,10 @@ const READ = "/api/hotels/5EL/guest-messages";
 const SEND = "/api/hotels/5EL/stays/stay-1/checkin-link";
 const NOT_SET_UP = "Sending is not set up yet.";
 
-function mount(connected: boolean) {
+function mount(connected: boolean, onlineCheckIn = true) {
   const spy = vi.spyOn(apiModule, "api").mockImplementation(async (url: string) => {
     if (url.startsWith(READ)) {
-      return { connected, notConnected: connected ? null : NOT_SET_UP, messages: [], unreachable: [] } as never;
+      return { connected, notConnected: connected ? null : NOT_SET_UP, onlineCheckIn, messages: [], unreachable: [] } as never;
     }
     if (url === SEND) return { ok: true } as never;
     throw new apiModule.ApiError(500, `called ${url}`);
@@ -32,6 +32,15 @@ describe("Send check-in link", () => {
     expect(await screen.findByText(NOT_SET_UP)).toBeTruthy();
     expect((screen.getByRole("button", { name: /Send check-in link/ }) as HTMLButtonElement).disabled).toBe(true);
     expect(spy.mock.calls.map((c) => c[0])).not.toContain(SEND);
+  });
+
+  /* D27-266: online check-in comes later - the button is hidden until the
+     hotel switches it on. */
+  it("is hidden while the hotel has online check-in off", async () => {
+    const spy = mount(true, false);
+    await waitFor(() => expect(spy.mock.calls.some((c) => String(c[0]).startsWith(READ))).toBe(true));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByRole("button", { name: /Send check-in link/ })).toBeNull();
   });
 
   it("sends the booking's page through its own route", async () => {

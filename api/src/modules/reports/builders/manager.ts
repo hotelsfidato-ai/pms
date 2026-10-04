@@ -447,7 +447,7 @@ export async function managerReport(
       "PMS Revenue = Total PMS Revenue without Tax",
       "POS Revenue = All Outlet's Total Revenue without Tax",
       "Total Revenue = PMS Revenue + POS Revenue",
-      "Sold Room, occupancy and the average rate count complimentary rooms, as the owner's eZee reports do. A night's room charge is shown on that night.",
+      "Sold Room, occupancy and the average rate count rooms as this hotel says (Settings, Front desk: complimentary rooms, day use). A night's room charge is shown on that night.",
       "City Ledger: Charges Raised is the bills transferred to a company or booking site. The other rows show \"-\": this system does not record a company's payment, or commission paid, yet.",
       "Opening, Payment received and Closing need a company's payment, which this system does not record yet.",
       countedFrom(opened),

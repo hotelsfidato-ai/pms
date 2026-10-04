@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 import { dateLong, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { toast, Button, StatusPill } from "@/components/ui";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, type MenuItem, type CashId } from "@/modules/pos/data/till";
+import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, isBarDish, type MenuItem, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
@@ -409,7 +409,7 @@ export default function TerminalPage() {
           )}
 
           <Link
-            to={`/h/${hotelId}/till`}
+            to={`/pos/${hotelId}/till`}
             className="inline-flex items-center mt-8 min-h-11 text-base font-medium text-brand-orange-700 hover:underline underline-offset-4"
           >
             ← Back to the console
@@ -437,7 +437,7 @@ export default function TerminalPage() {
           </p>
         </div>
         <Link
-          to={`/h/${hotelId}/till`}
+          to={`/pos/${hotelId}/till`}
           className="press inline-flex items-center gap-2 h-12 px-4 rounded-full border border-grey-300 bg-white text-base font-medium text-ink-900 hover:bg-grey-50 hover:border-grey-400"
         >
           <ArrowLeft className="size-4" />
@@ -868,7 +868,7 @@ export default function TerminalPage() {
                       <button
                         type="button"
                         onClick={() => window.open(
-                          `/h/${hotelId}/till/bill/${order.id}`, "_blank",
+                          `/pos/${hotelId}/bill/${order.id}`, "_blank",
                         )}
                         className={cn(OUTLINE, "w-full h-14 text-base font-medium inline-flex items-center justify-center gap-2")}
                       >
@@ -1048,6 +1048,7 @@ export default function TerminalPage() {
       </footer>
       <DishDialog
         item={asking}
+        bar={isBarDish(menu.data, asking?.id)}
         open={asking !== null}
         onOpenChange={(o) => { if (!o) setAsking(null); }}
         onAdd={(id, qty, text, variationId, addonIds, moreChoiceIds) =>

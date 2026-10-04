@@ -70,6 +70,7 @@ interface StayRow {
   group_name: string | null;
   group_rooms: string | null;
   is_vip: boolean;
+  vip_level: string | null;
   guest_id: string;
   is_single_lady: boolean;
   business_source: string | null;
@@ -114,7 +115,8 @@ const SELECT = `
             GUEST - somebody who is one this visit was one last visit - 
             and the single-lady flag sits on the RESERVATION, because the
             same person travelling with family is a different allocation. */
-         gu.is_vip, gu.id::text as guest_id, r.is_single_lady,
+         gu.is_vip, (select vl.label from vip_levels vl where vl.id = gu.vip_level_id) as vip_level,
+         gu.id::text as guest_id, r.is_single_lady,
          r.business_source, r.market_segment, r.sales_person,
          r.void_reason,
          /* How to reach the guest, for the stay panel's header. The
@@ -231,6 +233,8 @@ function toStay(row: StayRow, hotelCode: string, businessDate: string) {
        when true: a screen that has to distinguish "not a VIP" from
        "the field is missing" ends up doing both badly. */
     isVip: row.is_vip,
+    /* The group's level for this guest (192, D27-260 Q7). */
+    vipLevel: row.vip_level,
     /* VIP is set on the GUEST, so the screen needs to know which one. */
     guestId: row.guest_id,
     isSingleLady: row.is_single_lady,

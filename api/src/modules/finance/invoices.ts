@@ -375,138 +375,146 @@ function halfRate(lines: { tax_rate: string }[]): number | null {
 invoices.get("/:code/invoices/:number{.+}", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
-    if (!hotelId) return null;
-
-    const { rows } = await client.query<Record<string, string | null>>(
-      `select i.id::text, i.number, i.fin_year,
-              to_char(i.issued_at, 'DD Mon YYYY, HH24:MI') as issued_at,
-              to_char(i.business_date, 'YYYY-MM-DD') as business_date,
-              i.gstin, i.recipient_name, i.recipient_gstin,
-              i.recipient_address, i.place_of_supply, i.sac_code,
-              i.taxable_value::text, i.cgst_total::text, i.sgst_total::text,
-              i.tax_total::text, i.total::text,
-              i.credits_id::text, i.reason,
-              -- The NUMBER of the invoice this note cancels. The id is a
-              -- uuid, and "cancels 7f3a-..." on a printed document tells
-              -- a guest nothing.
-              (select o.number from invoices o where o.id = i.credits_id)
-                as credits_number,
-              -- D22-44: the VAT bill issued with it, for the alcohol - or,
-              -- on an invoice issued again after a credit note, the VAT bill
-              -- still standing for the same bill, which was not issued twice
-              -- (the owner, 24 September). A credit note names none.
-              coalesce(
-                (select v.number from vat_bills v where v.invoice_id = i.id),
-                (select v.number from vat_bills v
-                  where i.credits_id is null and v.folio_id = i.folio_id
-                    and not exists (select 1 from vat_bills c where c.cancels_id = v.id)))
-                as vat_bill,
-              i.folio_id::text,
-              h.name as hotel_name, h.address_line as hotel_address,
-              h.city as hotel_city, h.state as hotel_state,
-              i.fssai_number,
-              s.full_name as issued_by
-         from invoices i
-         join hotels h on h.id = i.hotel_id
-         left join staff s on s.id = i.issued_by
-        where i.hotel_id = $1 and i.number = $2`,
-      [hotelId, c.req.param("number")],
-    );
-
-    const i = rows[0];
-    if (!i) return null;
-
-    /* The lines. Read from the ledger rather than stored on the
-       invoice, because they ARE the ledger — and an invoice that
-       carried its own copy could drift from the folio it bills. The
-       totals are stored; the detail is derived from immutable rows. */
-    const { rows: lines } = await client.query<{
-      description: string; category: string; amount: string;
-      tax_rate: string; tax_amount: string; business_date: string;
-    }>(
-      `select fp.description, fp.category, fp.amount::text,
-              fp.tax_rate::text, fp.tax_amount::text,
-              to_char(fp.business_date,'YYYY-MM-DD') as business_date
-         from folio_postings fp
-        where fp.folio_id = $1
-          and fp.category not in ('payment','refund')
-          -- The invoice's own supplies: GST only, as its totals (D21-91).
-          and fp.tax_scheme = 'gst'
-          and fp.reverses_id is null
-          and not exists (
-            select 1 from folio_postings rev where rev.reverses_id = fp.id
-          )
-        order by fp.business_date, fp.id`,
-      [i["folio_id"]],
-    );
-
-    const { rows: credit } = await client.query<{ number: string }>(
-      "select number from invoices where credits_id = $1::uuid", [i["id"]],
-    );
-
-    return {
-      number: i["number"],
-      finYear: i["fin_year"],
-      issuedAt: i["issued_at"],
-      issuedBy: i["issued_by"],
-      businessDate: i["business_date"],
-      supplier: {
-        name: i["hotel_name"], address: i["hotel_address"],
-        city: i["hotel_city"], state: i["hotel_state"], gstin: i["gstin"],
-        /* A16: printed when the invoice carries food - the number the
-           invoice was issued with, frozen like the GSTIN (D27-3). */
-        fssai: i["fssai_number"],
-      },
-      recipient: {
-        name: i["recipient_name"], gstin: i["recipient_gstin"],
-        address: i["recipient_address"],
-      },
-      /* Printed on the document. It is the property's state, always. */
-      placeOfSupply: i["place_of_supply"],
-      sacCode: i["sac_code"],
-      /* A 'tax' posting is shown as tax, not as a line of supply —
-         the same split the totals use. Presenting it as a taxable line
-         would make the printed document disagree with its own footer. */
-      lines: lines
-        .filter((l) => l.category !== "tax")
-        .map((l) => ({
-          description: l.description,
-          category: l.category,
-          amount: Number(l.amount),
-          taxRate: Number(l.tax_rate),
-          taxAmount: Number(l.tax_amount),
-          date: l.business_date,
-        })),
-      taxableValue: Number(i["taxable_value"]),
-      /* THE HEADER RATE COMES FROM THE LINES, OR IT IS NOT SHOWN.
-         This used to print `hotels.cgst_rate` and `hotels.sgst_rate` —
-         the property's single configured pair — beside totals summed
-         from postings that each carry their own rate. That was already
-         a second source of truth; since 067 it is also wrong in a way a
-         guest can see, because a bill can now hold a ₹4,000 room at 5%
-         and a ₹9,000 suite at 18%.
-
-         One rate across every line is the ordinary case and is shown.
-         Where they differ there is no single rate to name, and a GST
-         invoice states the rate-wise breakdown instead — which the
-         lines above already carry, each with its own. Null here, and
-         the document shows the split rather than inventing an average
-         nobody was charged. */
-      cgst: { rate: halfRate(lines), amount: Number(i["cgst_total"]) },
-      sgst: { rate: halfRate(lines), amount: Number(i["sgst_total"]) },
-      taxTotal: Number(i["tax_total"]),
-      total: Number(i["total"]),
-      /* A credit note has these; a tax invoice does not. */
-      creditsInvoiceId: i["credits_id"],
-      creditsNumber: i["credits_number"],
-      reason: i["reason"],
-      creditedBy: credit[0]?.number ?? null,
-      vatBill: i["vat_bill"],
-    };
+    return hotelId ? invoiceFacts(client, hotelId, c.req.param("number")) : null;
   });
 
   return body ? c.json(body) : c.json({ error: "No such invoice." }, 404);
 });
+
+/** One invoice as the printed document shows it - the screen's route above
+    and the invoice sent to the guest (guest-messaging, D27-252) read this
+    one query, so the two cannot disagree. Null: no such invoice that this
+    person may read. */
+export async function invoiceFacts(client: Client, hotelId: string, number: string) {
+  const { rows } = await client.query<Record<string, string | null>>(
+    `select i.id::text, i.number, i.fin_year,
+            to_char(i.issued_at, 'DD Mon YYYY, HH24:MI') as issued_at,
+            to_char(i.business_date, 'YYYY-MM-DD') as business_date,
+            i.gstin, i.recipient_name, i.recipient_gstin,
+            i.recipient_address, i.place_of_supply, i.sac_code,
+            i.taxable_value::text, i.cgst_total::text, i.sgst_total::text,
+            i.tax_total::text, i.total::text,
+            i.credits_id::text, i.reason,
+            -- The NUMBER of the invoice this note cancels. The id is a
+            -- uuid, and "cancels 7f3a-..." on a printed document tells
+            -- a guest nothing.
+            (select o.number from invoices o where o.id = i.credits_id)
+              as credits_number,
+            -- D22-44: the VAT bill issued with it, for the alcohol - or,
+            -- on an invoice issued again after a credit note, the VAT bill
+            -- still standing for the same bill, which was not issued twice
+            -- (the owner, 24 September). A credit note names none.
+            coalesce(
+              (select v.number from vat_bills v where v.invoice_id = i.id),
+              (select v.number from vat_bills v
+                where i.credits_id is null and v.folio_id = i.folio_id
+                  and not exists (select 1 from vat_bills c where c.cancels_id = v.id)))
+              as vat_bill,
+            i.folio_id::text,
+            h.name as hotel_name, h.address_line as hotel_address,
+            h.city as hotel_city, h.state as hotel_state,
+            i.fssai_number,
+            s.full_name as issued_by
+       from invoices i
+       join hotels h on h.id = i.hotel_id
+       left join staff s on s.id = i.issued_by
+      where i.hotel_id = $1 and i.number = $2`,
+    [hotelId, number],
+  );
+
+  const i = rows[0];
+  if (!i) return null;
+
+  /* The lines. Read from the ledger rather than stored on the
+     invoice, because they ARE the ledger — and an invoice that
+     carried its own copy could drift from the folio it bills. The
+     totals are stored; the detail is derived from immutable rows. */
+  const { rows: lines } = await client.query<{
+    description: string; category: string; amount: string;
+    tax_rate: string; tax_amount: string; business_date: string;
+  }>(
+    `select fp.description, fp.category, fp.amount::text,
+            fp.tax_rate::text, fp.tax_amount::text,
+            to_char(fp.business_date,'YYYY-MM-DD') as business_date
+       from folio_postings fp
+      where fp.folio_id = $1
+        and fp.category not in ('payment','refund')
+        -- The invoice's own supplies: GST only, as its totals (D21-91).
+        and fp.tax_scheme = 'gst'
+        and fp.reverses_id is null
+        and not exists (
+          select 1 from folio_postings rev where rev.reverses_id = fp.id
+        )
+      order by fp.business_date, fp.id`,
+    [i["folio_id"]],
+  );
+
+  const { rows: credit } = await client.query<{ number: string }>(
+    "select number from invoices where credits_id = $1::uuid", [i["id"]],
+  );
+
+  return {
+    number: i["number"],
+    finYear: i["fin_year"],
+    issuedAt: i["issued_at"],
+    issuedBy: i["issued_by"],
+    businessDate: i["business_date"],
+    supplier: {
+      name: i["hotel_name"], address: i["hotel_address"],
+      city: i["hotel_city"], state: i["hotel_state"], gstin: i["gstin"],
+      /* A16: printed when the invoice carries food - the number the
+         invoice was issued with, frozen like the GSTIN (D27-3). */
+      fssai: i["fssai_number"],
+    },
+    recipient: {
+      name: i["recipient_name"], gstin: i["recipient_gstin"],
+      address: i["recipient_address"],
+    },
+    /* Printed on the document. It is the property's state, always. */
+    placeOfSupply: i["place_of_supply"],
+    sacCode: i["sac_code"],
+    /* A 'tax' posting is shown as tax, not as a line of supply —
+       the same split the totals use. Presenting it as a taxable line
+       would make the printed document disagree with its own footer. */
+    lines: lines
+      .filter((l) => l.category !== "tax")
+      .map((l) => ({
+        description: l.description,
+        category: l.category,
+        amount: Number(l.amount),
+        taxRate: Number(l.tax_rate),
+        taxAmount: Number(l.tax_amount),
+        date: l.business_date,
+      })),
+    taxableValue: Number(i["taxable_value"]),
+    /* THE HEADER RATE COMES FROM THE LINES, OR IT IS NOT SHOWN.
+       This used to print `hotels.cgst_rate` and `hotels.sgst_rate` —
+       the property's single configured pair — beside totals summed
+       from postings that each carry their own rate. That was already
+       a second source of truth; since 067 it is also wrong in a way a
+       guest can see, because a bill can now hold a ₹4,000 room at 5%
+       and a ₹9,000 suite at 18%.
+
+       One rate across every line is the ordinary case and is shown.
+       Where they differ there is no single rate to name, and a GST
+       invoice states the rate-wise breakdown instead — which the
+       lines above already carry, each with its own. Null here, and
+       the document shows the split rather than inventing an average
+       nobody was charged. */
+    cgst: { rate: halfRate(lines), amount: Number(i["cgst_total"]) },
+    sgst: { rate: halfRate(lines), amount: Number(i["sgst_total"]) },
+    taxTotal: Number(i["tax_total"]),
+    total: Number(i["total"]),
+    /* A credit note has these; a tax invoice does not. */
+    creditsInvoiceId: i["credits_id"],
+    creditsNumber: i["credits_number"],
+    reason: i["reason"],
+    creditedBy: credit[0]?.number ?? null,
+    vatBill: i["vat_bill"],
+  };
+}
+
+export type InvoiceFacts = NonNullable<Awaited<ReturnType<typeof invoiceFacts>>>;
 
 /* ── List ─────────────────────────────────────────────────────────── */
 
