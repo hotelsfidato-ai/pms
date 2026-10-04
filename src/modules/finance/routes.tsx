@@ -55,10 +55,11 @@ export const routes = (
       path="/h/:code/invoices/vat/*"
       element={<><PropertyScope /><VatBillPage /></>}
     />
-    {/* The interim bill, printable (QA FI-8): opened from the Bill tab. */}
+    {/* The interim bill, printable (QA FI-8): opened from the Bill tab.
+        Guarded by In house's rule, its list (the owner's D27-279). */}
     <Route
       path="/h/:code/stays/:id/bill"
-      element={<><PropertyScope /><InterimBillPage /></>}
+      element={<RequireAccess path="/h/:code/stays/:id/bill" resource="invoice"><PropertyScope /><InterimBillPage /></RequireAccess>}
     />
     <Route
       path="/h/:code/city-ledger"
