@@ -148,7 +148,6 @@ create table if not exists tax_sac (
   kind      text not null,
   sac_code  text not null,
   unique (hotel_id, kind),
-  constraint tax_sac_kind check (kind in ('room', 'restaurant', 'bar', 'banquet', 'other')),
   constraint tax_sac_code check (sac_code ~ '^[0-9]{6}$')
 );
 comment on table tax_sac is
