@@ -2,7 +2,7 @@ import { listAllRooms } from "@/data/repositories/rooms";
 import { listStays, getHouseNow } from "./stays";
 import type { Stay } from "@/data/repositories/types";
 import { listOpenFolios } from "@/modules/finance";
-import { ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 
 /* ══════════════════════════════════════════════════════════════════
    STAY VIEW — the tape chart's data
@@ -19,8 +19,8 @@ import { ApiError } from "@/lib/api";
    prices had a frontend constant quietly disagreeing with its own
    database.
 
-   The rate now comes from the room type, through the rooms endpoint,
-   and is null when the hotel has not set one. */
+   The rate now comes from the server, and is null when the hotel has not
+   set one. Since D27-271 (item 3) it is each night's own: see nightPrices. */
 
 /* ⚠ "departed" WAS CALLED "tentative", and it only ever meant checked
    out — see barTone below. The stay panel printed the name, so every
@@ -136,6 +136,19 @@ const SOLD = new Set<Stay["status"]>(["due-in", "in-house", "due-out", "checked-
 
 /* ── The chart ────────────────────────────────────────────────────── */
 
+/** Each room type's price on each night of the window, in one read: the
+    Rates screen's main row (app.price_for on EP) - the night's own price,
+    else the type's standard price, else null (D27-271 item 3). */
+async function nightPrices(hotelId: string, from: string, days: number) {
+  try {
+    return await api<Array<{ type: string; date: string; price: number | null }>>(
+      `/api/hotels/${hotelId}/calendar-prices?from=${from}&days=${days}`);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
 export async function getStayView(
   hotelId: string,
   start: string,
@@ -152,7 +165,7 @@ export async function getStayView(
      for the transport inside the per-room loop would have made this
      eighteen requests, and eighteen chances for the chart to disagree
      with itself halfway down. */
-  const [allRooms, allStays, openFolios, houseNow] = await Promise.all([
+  const [allRooms, allStays, openFolios, houseNow, prices] = await Promise.all([
     listAllRooms(hotelId),
     listStays(hotelId),
     /* Refused to a role that reads bookings but not bills (D27-143): the
@@ -162,6 +175,7 @@ export async function getStayView(
       throw error;
     }),
     getHouseNow(hotelId),
+    nightPrices(hotelId, first, length),
   ]);
 
   if (allRooms.length === 0) return null;
@@ -258,10 +272,7 @@ export async function getStayView(
   /* Group by room type, in the order the property declares them. */
   const types = [...new Set(allRooms.map((r) => r.type))];
 
-  /* One rate per type, taken from the rooms themselves. Every room of a
-     type carries the same one, so the first is the answer. */
-  const rackFor = (type: string): number | null =>
-    allRooms.find((r) => r.type === type)?.rackRate ?? null;
+  const priceOn = new Map((prices ?? []).map((p) => [`${p.type}/${p.date}`, p.price]));
   const roomTypes: ChartRoomType[] = types.map((type) => {
     const ofType = rooms.filter((r) => r.type === type);
     return {
@@ -277,13 +288,9 @@ export async function getStayView(
         return {
           date,
           available: sellable.length - taken.length,
-          /* The type's own rack rate, or null. A published rate CALENDAR
-             — different rates on different dates — is still Stage 9;
-             this is the one rate the property has set, repeated across
-             the window, which is the truth until a calendar exists.
-
-             Null and not 0: the chart prints a dash. */
-          rate: rackFor(type),
+          /* That night's own price (D27-271 item 3). Null and not 0: the
+             chart prints a dash. */
+          rate: priceOn.get(`${type}/${date}`) ?? null,
         };
       }),
     };
