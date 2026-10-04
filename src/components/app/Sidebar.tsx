@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { NavLink, useLocation } from "react-router";
 import { ArrowLeft, ArrowUpRight, ChevronDown, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
@@ -78,6 +79,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       (n, s) => n + s.items.reduce((m, i) => m + 1 + (i.children?.length ?? 0), 0), 0);
   const setCommandOpen = useUi((s) => s.setCommandOpen);
 
+  /* The open page's entry in view: the Settings console's menu is longer
+     than the window, and a page near its foot opened on the menu's top. */
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    navRef.current?.querySelector('a[aria-current="page"]')
+      ?.scrollIntoView?.({ block: "nearest" });
+  }, [location.pathname]);
+
   return (
     <aside
       className={cn(
@@ -135,7 +144,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto scrollbar-quiet py-3 px-2.5">
+      {/* min-h-0: a flex child keeps its content's height unless told it may
+          shrink. The Settings console's menu is longer than the window, so
+          without it the menu pushed past the frame and the browser scrolled
+          the whole frame to show the open page (the owner, 4 October). */}
+      {/* relative: the links' screen-reader words (sr-only, position absolute)
+          belong to this scroll box. Without it they hung from <body> at their
+          place in the long console menu and made the WINDOW 2,108px tall. */}
+      <nav ref={navRef} className="relative flex-1 min-h-0 overflow-y-auto scrollbar-quiet py-3 px-2.5">
         {/* On a phone the switcher is here, at the top of the drawer (Q5). */}
         {onNavigate && <SpaceSwitcher dark className="sm:hidden mb-4" onNavigate={onNavigate} />}
         {space === "settings" && (
