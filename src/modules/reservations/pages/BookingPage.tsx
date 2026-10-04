@@ -175,6 +175,11 @@ export default function BookingPage() {
   /* The hotel's defaults (192, the owner's D27-260 Q1). */
   const [billTo, setBillTo] = useState<"guest" | "company">(rules?.defaultBillTo ?? "guest");
   const [companyId, setCompanyId] = useState("");
+  /* OVER THE COMPANY'S CREDIT LIMIT (D27-275): the server's sentence, and
+     which button was pressed; the owner, an administrator or the GM may
+     allow it with a reason. */
+  const [overLimit, setOverLimit] = useState<{ reason: string; now: boolean } | null>(null);
+  const [allowReason, setAllowReason] = useState("");
   /* Waiting for the hotel holds the room and sends nothing (D27-35). */
   const [waiting, setWaiting] = useState(rules?.defaultGuarantee === "tentative");
   const [expected, setExpected] = useState("");
@@ -522,10 +527,12 @@ export default function BookingPage() {
     if (today) { setFrom(today); setTo(addDays(today, 1)); }
   };
 
-  const submit = async (now: boolean) => {
+  const submit = async (now: boolean, overLimitReason?: string) => {
     if (!from || !to || !today) return;
     setSaving(true);
+    setOverLimit(null);
     const res = await createBooking(hotelId, {
+      ...(overLimitReason ? { overLimitReason } : {}),
       guestName: guestName.trim(),
       phone: phone.trim(),
       ...(email.trim() ? { email: email.trim() } : {}),
@@ -568,6 +575,8 @@ export default function BookingPage() {
 
     if (!res.ok) {
       setSaving(false);
+      /* Over the credit limit: said under the buttons, with the allow. */
+      if (res.needs === "credit-limit") return setOverLimit({ reason: res.reason, now });
       /* The server's sentence: the unpriced party, the rule a gift or a
          discount broke. Nothing was written. */
       return toast.error("Not booked", res.reason);
@@ -1079,6 +1088,11 @@ export default function BookingPage() {
             </>
           )}
         </div>
+        {overLimit && (
+          <OverLimit reason={overLimit.reason} mayAllow={keeper} allowReason={allowReason}
+            onReason={setAllowReason} saving={saving}
+            onAllow={() => void submit(overLimit.now, allowReason.trim())} />
+        )}
       </div>
 
       <KeepListDialog
@@ -1093,6 +1107,35 @@ export default function BookingPage() {
         }}
       />
     </Page>
+  );
+}
+
+/* ── Over the company's credit limit (D27-275) ────────────────────
+   The server's sentence. The owner, an administrator or the GM may book it
+   anyway with a reason, which the activity log keeps; anybody else is told
+   who can. */
+function OverLimit({ reason, mayAllow, allowReason, onReason, saving, onAllow }: {
+  reason: string; mayAllow: boolean; allowReason: string;
+  onReason: (v: string) => void; saving: boolean; onAllow: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-grey-200 bg-grey-50 p-3 space-y-2" data-over-limit>
+      <p className="text-base text-ink-900">{reason}</p>
+      {mayAllow ? (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input aria-label="Why it is allowed" placeholder="Why it is allowed"
+            value={allowReason} onChange={(e) => onReason(e.target.value)} />
+          <Button variant="secondary" loading={saving} disabled={saving || !allowReason.trim()}
+            onClick={onAllow}>
+            Allow, with reason
+          </Button>
+        </div>
+      ) : (
+        <p className="text-sm text-grey-600">
+          The owner, an administrator or the general manager can allow it.
+        </p>
+      )}
+    </div>
   );
 }
 

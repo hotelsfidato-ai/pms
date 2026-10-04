@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-04 · An Administrator adds and changes booking sources (the owner's D27-275 part 2)
+
+Migration `198_administrator_is_a_manager.sql` (the master's sequence): `app.is_manager()` now answers for the `admin` role too, so `booking_sources`' insert and update policies (082) let the Administrator in. Its other live readers already did (the staff insert policy through `manages_hotel`, `is_crm_manager`). **Proved:** `db/tests/modules/guests.sql`, five new checks (the Administrator is a manager, adds a source, changes it; reception is not, cannot add); three failed before 198, all 1508 pass after; `rerun.sh`: all 198 re-runnable.
+
 ## 2026-10-03 · VIP levels and the IDs a hotel takes (the owner's D27-260 Q7, Q8)
 
 Branch `settings/frontdesk-3oct`. The group's VIP levels (192): Mark VIP asks the level, `POST /:code/guests/:id/vip` takes `levelId`. `GuestIdFields` leaves out the IDs the hotel switched Off (one already chosen stays). Proved by front desk's `deskSettings` tests.

@@ -186,9 +186,10 @@ export function grantAccess(
   return write(`/api/admin/staff/${staffId}/access`, { code, role });
 }
 
+/** `warning`: deactivated, but their sign-in could not be switched off (D27-275). */
 export function deactivateStaff(
   staffId: string,
-): Promise<AdminResult> {
+): Promise<AdminResult<{ warning?: string }>> {
   return write(`/api/admin/staff/${staffId}/deactivate`, {});
 }
 

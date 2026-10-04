@@ -340,10 +340,10 @@ describe("each person's menu", () => {
   it("refuses a page of a service not built yet to exactly the people the menu hides it from", () => {
     /* ⚠ THIS USED /coming-soon/spa AND HAD TO MOVE, 19 September. The spa
        and the laundry were built, so their Coming soon pages are gone —
-       and `mayReach` answers TRUE for a path the navigation has never
-       heard of, deliberately (a stay view, a printed invoice). So an
-       assertion naming a DELETED path does not test a refusal at all; it
-       passes for the opposite reason and would go on passing for ever.
+       and `mayReach` answered TRUE for a path the navigation had never
+       heard of (until D27-275, 4 October: it now refuses one). So an
+       assertion naming a DELETED path did not test a refusal at all; it
+       passed for the opposite reason and would have gone on passing.
 
        Named a page that is still Coming soon instead. When room systems
        is built, this line moves again — and that is the point: it is only
@@ -352,6 +352,52 @@ describe("each person's menu", () => {
     expect(mayReach("front_desk", "/coming-soon/room-systems")).toBe(false);
     expect(mayReach("owner", "/h/:code/channels")).toBe(true);
     expect(mayReach("front_desk", "/h/:code/channels")).toBe(false);
+  });
+});
+
+/* THE CHECK FOLLOWS THE NEAREST MENU ENTRY (the owner's D27-275 part 3).
+   A page with no entry of its own (a record) takes its list's rule: the
+   longest entry above its address, or the two lists AccountMenu names
+   (D27-271). An address no entry covers is refused: mayReach failed open. */
+describe("a page with no menu entry of its own", () => {
+  const each = (list: string) => ({
+    allowed: ROLES.filter((r) => mayReach(r, list)),
+    refused: ROLES.filter((r) => !mayReach(r, list)),
+  });
+
+  it("is let through for whoever may open its list", () => {
+    for (const [record, list] of [
+      ["/h/:code/stays/:id/bill", "/h/:code/in-house"],
+      ["/pos/:code/bill/:id", "/pos/:code/till"],
+      ["/h/:code/groups/:id", "/h/:code/groups"],
+    ] as const) {
+      const { allowed } = each(list);
+      expect(allowed.length, list).toBeGreaterThan(0);
+      for (const role of allowed) expect(mayReach(role, record), `${role} ${record}`).toBe(true);
+    }
+  });
+
+  it("is refused to whoever may not open its list", () => {
+    for (const [record, list] of [
+      ["/h/:code/stays/:id/bill", "/h/:code/in-house"],
+      ["/pos/:code/bill/:id", "/pos/:code/till"],
+      ["/h/:code/groups/:id", "/h/:code/groups"],
+    ] as const) {
+      const { refused } = each(list);
+      expect(refused.length, list).toBeGreaterThan(0);
+      for (const role of refused) expect(mayReach(role, record), `${role} ${record}`).toBe(false);
+    }
+  });
+
+  it("reads a real address as its menu address", () => {
+    for (const role of ROLES) {
+      expect(mayReach(role, "/pos/5EL/bill/abc"), role).toBe(mayReach(role, "/pos/:code/till"));
+      expect(mayReach(role, "/h/5EL/in-house"), role).toBe(mayReach(role, "/h/:code/in-house"));
+    }
+  });
+
+  it("is refused to everybody when no menu entry covers it", () => {
+    for (const role of ROLES) expect(mayReach(role, "/nowhere/at/all"), role).toBe(false);
   });
 });
 

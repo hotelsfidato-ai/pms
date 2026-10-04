@@ -245,7 +245,8 @@ function Person({ person, codes, onDone }: {
   const deactivate = async () => {
     const res = await deactivateStaff(person.id);
     if (!res.ok) return toast.error("Not deactivated", res.reason);
-    toast.success(`${person.name} deactivated`,
+    if (res.warning) toast.error(`${person.name} is deactivated`, res.warning);
+    else toast.success(`${person.name} deactivated`,
       "Their account is closed. Their name stays on everything they did.");
     onDone();
   };

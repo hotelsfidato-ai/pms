@@ -277,7 +277,9 @@ function PersonCard({ person, places, onGrant, onChanged }: {
     const res = await deactivateStaff(person.id);
     setBusy(false);
     if (!res.ok) return toast.error("Not deactivated", res.reason);
-    toast.success(
+    /* Shown, not swallowed: their sign-in may still be on (D27-275). */
+    if (res.warning) toast.error(`${person.name} is deactivated`, res.warning);
+    else toast.success(
       `${person.name} can no longer sign in`,
       "Their name stays on everything they did - the audit log would be "
       + "unreadable without it.");

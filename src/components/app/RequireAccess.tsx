@@ -3,7 +3,7 @@ import { ShieldOff } from "lucide-react";
 import { useRole } from "@/lib/session";
 import { useUi } from "@/lib/ui";
 import { ROLE_LABELS, type Resource } from "@/lib/permissions";
-import { flatNavigationFor, mayReach, navItemFor, workingHomeFor } from "./navigation";
+import { entryFor, flatNavigationFor, mayReach, workingHomeFor } from "./navigation";
 import { Page } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -63,6 +63,9 @@ export function RequireAccess({
      from too. */
   const home = workingHomeFor(role, code) ?? "/";
   const homeLabel = flatNavigationFor(role, code).find((i) => i.to === home)?.label ?? "Dashboard";
+  /* A record is named by its list (D27-275); an address no entry covers is
+     nobody's, and a change of role would not open it. */
+  const entry = entryFor(path);
 
   return (
     <Page>
@@ -73,12 +76,18 @@ export function RequireAccess({
         <h1 className="text-lg font-semibold text-ink-900">
           This page is not part of your role
         </h1>
-        <p className="text-base text-grey-600 mt-2 leading-relaxed">
-          You are signed in as{" "}
-          <span className="font-medium text-ink-900">{ROLE_LABELS[role]}</span>,
-          which does not include {navItemFor(path)?.label ?? "this page"}. If you need it,
-          the person who set up your account can change your role.
-        </p>
+        {entry ? (
+          <p className="text-base text-grey-600 mt-2 leading-relaxed">
+            You are signed in as{" "}
+            <span className="font-medium text-ink-900">{ROLE_LABELS[role]}</span>,
+            which does not include {entry.label}. If you need it,
+            the person who set up your account can change your role.
+          </p>
+        ) : (
+          <p className="text-base text-grey-600 mt-2 leading-relaxed">
+            No screen in the menu has this address, so it is not open to any role.
+          </p>
+        )}
         <Link
           to={home}
           className="inline-block mt-5 text-sm text-brand hover:underline"

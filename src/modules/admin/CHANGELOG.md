@@ -11,6 +11,17 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-04 · Deactivating switches off sign-in (the owner's D27-275 part 4)
+
+**Asked for:** deactivating a person also switches off their Firebase sign-in; reactivating turns it back on.
+
+**Shipped:**
+- `api/src/identity.ts` (shared core): `setSignIn(uid, on)`, one `updateUser(uid, { disabled })`. `ensureAccount`'s adopt branch (the Add person form re-adding somebody) now also sets `disabled: false`, or a deactivated person added again would stay switched off in Firebase.
+- `api/src/modules/admin/admin.ts`: Deactivate and Reactivate write the database, commit, then switch the sign-in (`switchSignIn`). No Firebase service account: skipped with a log line, the request still succeeds. Firebase fails: the person stays as the database has them and the answer carries a `warning` saying the sign-in could not be switched off (or back on).
+- Web: `deactivateStaff` returns the `warning`; People and the console's StaffAdmin show it as an error toast instead of "can no longer sign in".
+
+**Proved:** `api/test/modules/admin/signInSwitch.test.ts` (Firebase stood in, as `lastSeen.test.ts`): off then on, a failing Firebase leaves the person deactivated with the warning, and a re-added person is switched on. All three failed before the change. `propertyAdmin.test.ts` (no Firebase) still passes: the skip does not fail the request.
+
 ## 2026-10-03 · Sign-ins and devices: sign out one device (settings phase 7, D27-255)
 
 **Asked for:** phase 7 of the settings plan (D27-249 to D27-254): the people pages

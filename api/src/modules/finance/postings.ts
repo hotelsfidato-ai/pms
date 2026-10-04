@@ -8,6 +8,8 @@ import { roomRateBeforeGst } from "./tax.ts";
 import { overCashLimit, panFor } from "./cashLimit.ts";
 import { openOwnDrawer } from "./cashier.ts";
 import { FOLIO_SELECT, STANDING_INVOICE, folioBalance } from "./folios.ts";
+import { RECIPIENT_COMPANY } from "./invoices.ts";
+import { overCreditLimit, type OverLimit } from "./creditLimit.ts";
 import { POSTING_NIGHTS } from "../reports/index.ts";
 /* A closed day's charge is put right by the night audit's one correction
    (D27-162), for a stay's Change rate. */
@@ -40,7 +42,7 @@ type Outcome<T = unknown> =
      refusals have no `needs`: "the room is occupied" is not a form to
      fill in. */
   | { ok: false; reason: string; needs?: Needs };
-type Needs = "late-reason" | "early-reason" | "pan" | "credit";
+type Needs = "late-reason" | "early-reason" | "pan" | "credit" | "credit-limit";
 
 const PAYMENT_REVERSAL_WHO =
   "Reversing a payment is for the owner, an administrator, the general manager or the accountant. Ask one of them.";
@@ -115,13 +117,26 @@ export interface ChargeToPost {
   taxKind?: string;
   /** The desk's `idempotency-key` (011's column): a repeat of one press. */
   idempotencyKey?: string | null;
+  /** Allowed over the company's credit limit, and why (D27-275): the owner,
+      an administrator or the GM only. */
+  overLimitReason?: string | undefined;
 }
+
+type ChargeOutcome = { ok: true; id: string } | ({ ok: false; reason: string } & Partial<OverLimit>);
 
 export async function postCharge(
   client: Client, hotelId: string, stayId: string, input: ChargeToPost,
-): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
-  const { rows } = await client.query<{ status: string }>(
-    "select status from reservations where hotel_id = $1 and id = $2",
+): Promise<ChargeOutcome> {
+  /* The company its bill is addressed to (D27-275): the bill folioFor will
+     post on - the same lookup, word for word - or, with none yet, the
+     booking's company. */
+  const { rows } = await client.query<{ status: string; reference: string; company: string | null }>(
+    `select r.status, r.reference,
+            case when f.id is null then r.company_id else ${RECIPIENT_COMPANY} end::text as company
+       from reservations r
+       left join folios f
+              on f.id = (select id from folios where hotel_id = $1 and reservation_id = $2 limit 1)
+      where r.hotel_id = $1 and r.id = $2`,
     [hotelId, stayId],
   );
   const stay = rows[0];
@@ -133,6 +148,9 @@ export async function postCharge(
 
   const refused = await chargeRefused(client, hotelId, input);
   if (refused) return { ok: false, reason: refused };
+  const over = await overCreditLimit(client, hotelId, stay.company, await chargeTotal(client, hotelId, input),
+    { reason: input.overLimitReason, title: `${input.description.trim()} on ${stay.reference}` });
+  if (over) return { ok: false, ...over };
 
   /* The FIRST WRITE: `folioFor` opens a folio where the stay has none. It
      sat above the rate check, so a charge refused for a missing rate left
@@ -151,13 +169,29 @@ export async function postCharge(
     function not cancelled) is the caller's to ask first. */
 export async function postFolioCharge(
   client: Client, hotelId: string, folioId: string, input: ChargeToPost,
-): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
-  const { rows } = await client.query(
-    "select 1 from folios where id = $1::uuid and hotel_id = $2", [folioId, hotelId]);
+): Promise<ChargeOutcome> {
+  const { rows } = await client.query<{ company: string | null }>(
+    `select ${RECIPIENT_COMPANY}::text as company
+       from folios f left join reservations r on r.id = f.reservation_id
+      where f.id = $1::uuid and f.hotel_id = $2`, [folioId, hotelId]);
   if (!rows.length) return { ok: false, reason: "No such bill." };
   const refused = await chargeRefused(client, hotelId, input);
   if (refused) return { ok: false, reason: refused };
+  const over = await overCreditLimit(client, hotelId, rows[0]!.company, await chargeTotal(client, hotelId, input),
+    { reason: input.overLimitReason, title: input.description.trim() });
+  if (over) return { ok: false, ...over };
   return { ok: true, id: await insertCharge(client, hotelId, folioId, input) };
+}
+
+/** What a charge bills, with its GST: insertCharge's own sum. Asked after
+    chargeRefused, which has made sure a taxable charge has its rate. */
+async function chargeTotal(client: Client, hotelId: string, input: ChargeToPost): Promise<number> {
+  const amount = Math.round(input.amount * 100) / 100;
+  if (input.taxable === false) return amount;
+  const { rows } = await client.query<{ total: string }>(
+    `select ($2::numeric + round($2::numeric * app.gst_rate_or_null($1, $3::text, $2::numeric) / 100.0, 2))::text as total`,
+    [hotelId, amount, input.taxKind ?? "room"]);
+  return Number(rows[0]!.total);
 }
 
 /** Why a charge may not be posted, or null. Reads only - it sits above
@@ -263,7 +297,7 @@ async function postedWith(client: Client, hotelId: string, key: string | null) {
 postings.post("/:code/stays/:id/charges", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as {
     category?: string; description?: string; amount?: number;
-    taxable?: boolean; businessDate?: string;
+    taxable?: boolean; businessDate?: string; overLimitReason?: string;
   };
 
   const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
@@ -283,8 +317,9 @@ postings.post("/:code/stays/:id/charges", async (c) => {
       taxable: body.taxable,
       businessDate: body.businessDate,
       idempotencyKey: key,
+      ...(typeof body.overLimitReason === "string" ? { overLimitReason: body.overLimitReason } : {}),
     });
-    return posted.ok ? { ok: true, data: { id: posted.id } } : refuse(posted.reason);
+    return posted.ok ? { ok: true, data: { id: posted.id } } : refuse(posted.reason, posted.needs);
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

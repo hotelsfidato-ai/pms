@@ -182,6 +182,8 @@ export async function createBooking(
     salesPerson?: string;
     /** Bill to this company. */
     companyId?: string;
+    /** A GM's allow over the company's credit limit, with why (D27-275). */
+    overLimitReason?: string;
     discount?: { percent?: number; amount?: number; reason?: string; promotionId?: string };
     title?: string;
     nationality?: string;
@@ -201,7 +203,7 @@ export async function createBooking(
           queued offline before Phase 1 was answered without one. */
       bookings: { id?: string; reference: string; roomType: string; rate: number }[];
       nightly: number; status?: "confirmed" | "tentative" }
-  | { ok: false; reason: string }
+  | { ok: false; reason: string; needs?: "credit-limit" }
 > {
   try {
     return await api(`/api/hotels/${hotelId}/bookings`, {
@@ -209,8 +211,8 @@ export async function createBooking(
     });
   } catch (error) {
     if (error instanceof ApiError) {
-      const p = error.body as { reason?: string } | undefined;
-      return { ok: false, reason: p?.reason ?? error.message };
+      const p = error.body as { reason?: string; needs?: "credit-limit" } | undefined;
+      return { ok: false, reason: p?.reason ?? error.message, ...(p?.needs ? { needs: p.needs } : {}) };
     }
     throw error;
   }

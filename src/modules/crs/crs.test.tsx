@@ -82,6 +82,9 @@ describe("CRS bookings", () => {
     go("/h/CR2/crs-bookings");
     const { unmount } = render(<App />);
     expect(await screen.findByText("Connection to the CRS")).toBeTruthy();
+    /* D27-275 (1): a CRS room type has no address of its own; its id is read
+       in the CRS's Firebase console, Firestore, roomTypes. */
+    expect(screen.getByText(/Firebase console, Firestore, roomTypes/)).toBeTruthy();
     unmount();
 
     as("front_desk");

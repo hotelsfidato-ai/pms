@@ -101,7 +101,9 @@ export async function ensureAccount(
        endpoint existed. Refusing here would send a manager to a
        terminal on the server, which is the workflow being replaced. */
     const user = await auth.getUserByEmail(email);
-    if (password) await auth.updateUser(user.uid, { password });
+    /* Switched back on as well: a person deactivated had their sign-in
+       switched off (D27-275), and being added again makes them active. */
+    await auth.updateUser(user.uid, { ...(password ? { password } : {}), disabled: false });
     return { uid: user.uid, existed: true };
   }
 }
@@ -111,4 +113,9 @@ export async function setAccountPassword(
   uid: string, password: string,
 ): Promise<void> {
   await getAuth(firebaseApp()).updateUser(uid, { password });
+}
+
+/** Switches a person's sign-in off or back on (the owner's D27-275 part 4). */
+export async function setSignIn(uid: string, on: boolean): Promise<void> {
+  await getAuth(firebaseApp()).updateUser(uid, { disabled: !on });
 }

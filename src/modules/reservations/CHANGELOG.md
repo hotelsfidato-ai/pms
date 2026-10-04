@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-04 · A booking over its company's credit limit (the owner's D27-275 part 5)
+
+`makeBooking` asks finance's `overCreditLimit` as its last refusal, for a booking naming a company: every room's nights at its rate with the room's GST, plus what the company owes now, against its limit. Refused with `needs: "credit-limit"`; `overLimitReason` from the owner, an administrator or the GM books it and records the allowance. Only the desk's booking names a company, so a channel's is never asked. New booking shows the sentence under the buttons, with "Allow, with reason" for the three (`keeper`). **Proved:** `api/test/modules/finance/creditLimit.test.ts` (refused, writing no guest; the GM's allow books); `overCreditLimit.test.tsx` (reception told who can; the GM's reason is sent), both failing with the page's branch broken.
+
 ## 2026-10-03 · A discount in rupees off each night; the promotions list moves to Money (the owner's D27-259 Q4) - the cash lane's
 
 **Shipped:** `book.ts` takes `discount.amount` (₹ off each night) beside the percent, in its own blocks: by hand up to 10% of the night with a reason, more only through a named promotion, which may now be ₹ (migration 191: `reservations.discount_amount`, `room_promotions.amount`). `desk.ts`: GET room-promotions returns `amount`; its PUT went - the list is kept on Settings › Money › Discounts (finance's `/discounts`). New booking: "₹ off" beside "Up to 10%", the price preview takes it off, and the promotions keeper button and dialog went. The advance's "Paid by" is the hotel's own list without Bill to company (`payingWays`).

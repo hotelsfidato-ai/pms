@@ -112,19 +112,41 @@ const visible = (role: Role, item: NavItem): boolean => {
  * reachable: the exact disagreement a guard exists to remove,
  * reintroduced by the guard.
  *
- * Unknown paths return TRUE. This answers "does the navigation forbid
- * this", and a path the navigation has never heard of — a stay view, a
- * printed invoice — is not forbidden by it.
+ * A path with no entry of its own (a record: a stay's bill, a group) takes
+ * the rule of the entry that answers for it, `entryFor`. A path no entry
+ * covers is REFUSED (the owner's D27-275 part 3): this answered true, so a
+ * guarded route whose entry was deleted or renamed opened to every role
+ * (MEMORY 227, 375).
  */
 export function mayReach(role: Role, path: string): boolean {
-  for (const section of SECTIONS) {
-    for (const item of section.items) {
-      for (const entry of [item, ...(item.children ?? [])]) {
-        if (entry.to === path) return visible(role, entry);
-      }
-    }
-  }
-  return true;
+  const entry = entryFor(path);
+  return entry ? visible(role, entry) : false;
+}
+
+/* The two records whose list is not above them in the address (D27-271). */
+const LIST_OF: Record<string, string> = {
+  /* A stay's interim bill. */
+  "/h/:code/stays": "/h/:code/in-house",
+  /* A restaurant bill: it was /h/:code/till/bill/:id. */
+  "/pos/:code/bill": "/pos/:code/till",
+};
+
+/**
+ * The menu entry that answers for a path: its own; else the list it sits
+ * under - LIST_OF's, or the LONGEST entry whose address is above it (the
+ * owner's D27-271 Q1, D27-275). A real address is read with ":code" for its
+ * property. Undefined where no entry covers it.
+ */
+export function entryFor(path: string): NavItem | undefined {
+  const pattern = path.replace(/^\/(h|pos)\/[^/]+/, "/$1/:code");
+  const own = navItemFor(pattern);
+  if (own) return own;
+  const under = Object.entries(LIST_OF).find(([at]) => pattern.startsWith(`${at}/`))?.[1];
+  if (under) return navItemFor(under);
+  const all = (items: NavItem[]): NavItem[] => items.flatMap((i) => [i, ...all(i.children ?? [])]);
+  return SECTIONS.flatMap((s) => all(s.items))
+    .filter((e) => pattern.startsWith(`${e.to}/`))
+    .sort((a, b) => b.to.length - a.to.length)[0];
 }
 
 /** The three spaces, each with its own menu (D27-249). */
