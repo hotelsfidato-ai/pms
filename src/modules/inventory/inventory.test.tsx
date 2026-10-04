@@ -9,6 +9,7 @@ import { ASSIGNABLE_ROLES, canAccess } from "@/lib/permissions";
 import { HOTEL, go, signedIn, startSignedIn } from "@/test/app";
 import { nav } from "@/modules/inventory/nav";
 import RoomSetupPage from "@/modules/inventory/pages/RoomSetup";
+import { settingsPages } from "@/modules/inventory/rooms.settings";
 
 const menuName = (to: string) => nav.find((e) => e.to === to)!.label;
 
@@ -78,6 +79,7 @@ describe("Room types is headed with its menu name (INV-2)", () => {
 
     await screen.findByText(new RegExp(`^${shows}`));
     expect(screen.getByRole("heading", { level: 1 }).textContent)
-      .toBe(menuName("/h/:code/room-types"));
+      /* Since D27-258 its name is the settings console's (rooms.settings.ts). */
+      .toBe(settingsPages.find((p) => p.slug === "room-types")!.label);
   });
 });

@@ -1,12 +1,10 @@
-import { LayoutDashboard, ShieldAlert, IndianRupee } from "lucide-react";
+import { ShieldAlert, IndianRupee } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 
 /* Inventory and rates — how this hotel is set up to sell (Configuration)
    and what it is selling today (Rooms and rates). Assembled by
    `navigation.ts`. */
 export const nav: ServiceNavEntry[] = [
-  { section: "configuration", order: 10,
-    label: "Room types", to: "/h/:code/room-types", icon: LayoutDashboard, resource: "room_config" },
   { section: "configuration", order: 30,
     label: "Cancellation terms", to: "/h/:code/cancellation-terms", icon: ShieldAlert, resource: "rate" },
   /* D27-188, D27-194: one screen replaces Pricing, Rate plans, the Rate

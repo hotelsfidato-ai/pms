@@ -87,7 +87,7 @@ describe("each space's menu", () => {
       ["People", "Roles and permissions", "Audit log", "Activity", "Sign-ins and devices", "Signing in"]);
     /* A link to a Front office screen is marked and keeps its address. */
     const roomTypes = owner.find((s) => s.label === "Rooms")!.items[0]!;
-    expect(roomTypes).toMatchObject({ to: "/h/5EL/room-types", leaves: true });
+    expect(roomTypes).toMatchObject({ to: "/settings/rooms/room-types" });   // P3 took it over (D27-258)
     expect(owner.flatMap((s) => s.items).find((i) => i.label === "Taxes"))
       .toMatchObject({ to: "/settings/rates/taxes" });
 
