@@ -18,6 +18,22 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-25 · With the wifi up and the line down, In house lost its rows to the read's error - FIXED 4 October (D27-271)
+
+**Found** - 4 October, building the owner's D27-271 (4): "offline, In house
+and Due out keep guests' balances". With the browser offline the re-check of
+the balances PAUSES and the rows stay. With the browser online and the server
+unreachable (the commonest hotel failure, `offline.ts`) the re-check FAILS,
+and `StayTable` hands the error to `DataTable`, which draws it in place of the
+rows: the list the desk needed was gone.
+**Fixed** - `pages/InHouse.tsx`: while `isOnline()` is false and the list has
+loaded, the error is not passed on; the rows stay, and "Balances as of 4:36 PM,
+may be out of date." says how old they are.
+**Proved** - `menuWordsOfflineBalances.test.tsx`, "stay on screen when a read
+fails for want of the server": fails with `error={active.error}` put back.
+**Rule** - offline is `isOnline()`, not `navigator.onLine`; a screen that keeps
+its last load has to be tried with the line down, not only with the browser off.
+
 ### FD-10 · A room nobody entered is dirtied when its advance booking lets it go - FIXED 2 October (D27-239, migration 185)
 
 **Found** - 22 September, the same reading. 074 leaves a room clean when a
