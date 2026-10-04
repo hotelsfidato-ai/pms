@@ -944,6 +944,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/integrations`]: see("integration", "the integrations"),
   /* D27-91: the server's health, for the owner and an administrator. */
   [`GET ${H}/system-health`]: SYSTEM_HEALTH,
+  /* D27-276: every outside connection's health, for the console's three
+     (`setting`: the owner, an administrator, the GM). */
+  [`GET ${H}/connections-health`]: see("setting", "the connections' health"),
 };
 
 /* ── What a read withholds (D27-143) ─────────────────────────────────
