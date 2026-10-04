@@ -39,7 +39,7 @@ Branch `settings/rates-3oct` from cp6 8181f452, cp6 85d2bb7a merged in; migratio
 
 **Proved:**
 - Database suite: 1499 passed. The new-hotel checks failed without its section.
-- API `settingsP3`: 10, each new block failing first (on cp6's routes, with the routes unmounted, or on cp6's book.ts). `roleGate` pins pass.
+- API `settingsP3`: 9, each new block failing first (on cp6's routes, with the routes unmounted, or on cp6's book.ts). `roleGate` pins pass.
 - Web: Room types 3, Rate plans and Meal plans 4, SAC 2, all failing first; inventory 22; finance 83; App, navigation, components/app, primaryAction and boundaries 121.
 - Opened at 1280 and 375 on `fidato_s45`. No page scrolls sideways; plan names wrap whole; the meal headings fit on one line.
 
