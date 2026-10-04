@@ -76,7 +76,8 @@ export default function ArrivalsPage() {
             className="max-sm:flex max-sm:w-full max-sm:[&>button]:flex-1"
             options={[
               { value: "today", label: <>Today<Count n={today.data?.length} /></> },
-              { value: "upcoming", label: <>Next fourteen days<Count n={ahead.data?.length} /></> },
+              /* The menu's word (D27-271): one name for one screen. */
+              { value: "upcoming", label: <>Upcoming<Count n={ahead.data?.length} /></> },
             ]}
           />
         }

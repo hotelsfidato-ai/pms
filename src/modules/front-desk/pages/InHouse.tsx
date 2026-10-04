@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation, useNavigate } from "react-router";
-import { dateLong, money } from "@/lib/format";
+import { dateLong, money, timeOnly } from "@/lib/format";
+import { isOnline, watchConnection } from "@/lib/offline";
 import { useUi } from "@/lib/ui";
 import { Page, PageHeader, Segmented, StatusPill } from "@/components/ui";
 import { StayTable, type StayColumn, type StayRow } from "@/modules/front-desk/components/StayTable";
@@ -72,6 +74,14 @@ export default function InHousePage() {
   const active = dueOut ? departures : inHouse;
   const rooms = dueOut ? departures.data?.length : house.data?.inHouse;
 
+  /* OFFLINE, THE LAST LOAD STAYS AND SAYS HOW OLD IT IS (D27-271, the
+     owner). A read that fails for want of the server keeps the rows rather
+     than putting its error in their place; the balances are marked. */
+  const [online, setOnline] = useState(isOnline);
+  useEffect(() => watchConnection(() => setOnline(isOnline())), []);
+  const kept = !online && active.data !== undefined;
+  const asOf = kept && bills ? timeOnly(new Date(active.dataUpdatedAt)) : null;
+
   /* What a clerk needs to know before the queue forms at 11am. */
   const outstanding = (departures.data ?? []).filter((s) => (s.balance ?? 0) > 0);
   const owed = outstanding.reduce((t, s) => t + (s.balance ?? 0), 0);
@@ -98,12 +108,19 @@ export default function InHousePage() {
             onChange={(v) => navigate(v === "due-out" ? `/h/${hotelId}/in-house/due-out` : `/h/${hotelId}/in-house`)}
             className="max-sm:flex max-sm:w-full max-sm:[&>button]:flex-1"
             options={[
-              { value: "now", label: <>Current stays<Count n={inHouse.data?.length} /></> },
+              /* The menu's word (D27-271): one name for one screen. */
+              { value: "now", label: <>In house now<Count n={inHouse.data?.length} /></> },
               { value: "due-out", label: <>Due out<Count n={departures.data?.length} /></> },
             ]}
           />
         }
       />
+
+      {asOf && (
+        <p className="text-sm text-grey-600 mb-3">
+          Balances as of {asOf}, may be out of date.
+        </p>
+      )}
 
       {dueOut && outstanding.length > 0 && (
         <div className="flex items-start gap-3 rounded-lg border border-brand-red-100 bg-brand-red-50 px-4 py-3.5 mb-5">
@@ -125,7 +142,7 @@ export default function InHousePage() {
         businessDate={BUSINESS_DATE}
         rows={active.data}
         isLoading={active.isLoading}
-        error={active.error}
+        error={kept ? undefined : active.error}
         onRetry={() => active.refetch()}
         columns={COLUMNS}
         defaultTab={dueOut ? "folio" : "stay"}

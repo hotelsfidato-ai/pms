@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router";
 
 /* ══════════════════════════════════════════════════════════════════
    SIGNING OUT OF A SHARED DESK MACHINE (28 September, the release review)
@@ -49,7 +50,8 @@ describe("sign-out on a shared machine", () => {
   it("empties the lists in memory from the account menu", async () => {
     const qc = new QueryClient();
     qc.setQueryData(["arrivals", "AGR"], [{ guest: "The last clerk's guest" }]);
-    render(<QueryClientProvider client={qc}><AccountMenu /></QueryClientProvider>);
+    /* In a router: picking a property moves the address (D27-271). */
+    render(<QueryClientProvider client={qc}><MemoryRouter><AccountMenu /></MemoryRouter></QueryClientProvider>);
 
     fireEvent.keyDown(screen.getByRole("button", { name: /Account and property/ }), { key: "Enter" });
     fireEvent.click(await screen.findByText("Sign out"));

@@ -1,16 +1,19 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "react-router";
 import { Check, ChevronDown, Compass, LogOut, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
-  useSession, useRole, useCurrentHotel, useWorkableHotels,
+  useSession, useRole, useCurrentHotel, useWorkableHotels, roleFor,
 } from "@/lib/session";
+import { useUi } from "@/lib/ui";
 import { devAuth, getDevSubject, type HomeScreen } from "@/lib/api";
 import { DEV_IDENTITIES } from "@/lib/devIdentities";
-import { HOME_SCREENS } from "@/lib/homeScreen";
+import { HOME_SCREENS, homePath } from "@/lib/homeScreen";
 import { queryPersister } from "@/lib/persist";
-import { setMyPreferences } from "@/data/repositories";
-import { ROLE_LABELS } from "@/lib/permissions";
+import { getModules, setMyPreferences } from "@/data/repositories";
+import { ROLE_LABELS, type Role } from "@/lib/permissions";
 import { START_HERE } from "./startHereCards";
+import { flatNavigationFor, navItemFor, workingHomeFor } from "./navigation";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem, Avatar,
@@ -43,12 +46,58 @@ import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu";
        under NODE_ENV=production even if a build carried it
    ══════════════════════════════════════════════════════════════════ */
 
+/* PICKING A PROPERTY OPENS THE SAME SCREEN FOR IT (D27-271, the owner,
+   4 October). It changed only the business date: the address kept the old
+   property, so its lists showed under the new one's date.
+
+   The property in /h/:code/... or /pos/:code/... is swapped, the rest and
+   the query kept. A record (a bill, one equipment item: an address that is
+   no menu entry) belongs to its own property, so it is the list it sits
+   under there, the longest menu entry above it (the owner, D27-271 Q1).
+   Where the person may not open that screen there - their role at that
+   property or a module it does not have: mayReach's question, asked of the
+   menu built with its modules - or no list is above the record, it is that
+   property's first screen, worked out as the landing after sign-in does
+   (App.tsx). Null where the address names no property (/settings, the
+   Dashboard): only the property changes. */
+export function addressAt(
+  pathname: string, search: string, code: string, role: Role,
+  modules: Record<string, boolean>, homeScreen: HomeScreen | undefined,
+): string | null {
+  const at = /^\/(h|pos)\/[^/]+/.exec(pathname);
+  if (!at) return null;
+  const pattern = `/${at[1]}/:code${pathname.slice(at[0].length)}`;
+  /* What this person may open there, as addresses with ":code" in them. */
+  const menu = flatNavigationFor(role, ":code", modules).map((i) => i.to);
+  const there = (to: string) => to.replace(":code", code);
+  if (menu.includes(pattern)) return there(pattern) + search;
+  if (!navItemFor(pattern)) {
+    const list = Object.entries(LIST_OF).find(([under]) => pattern.startsWith(`${under}/`))?.[1]
+      ?? menu.filter((to) => pattern.startsWith(`${to}/`)).sort((a, b) => b.length - a.length)[0];
+    if (list && menu.includes(list)) return there(list);
+  }
+  const home = homePath(homeScreen, code);
+  return home !== "/" ? home : workingHomeFor(role, code) ?? "/";
+}
+
+/* The two records whose list is not above them in the address. */
+const LIST_OF: Record<string, string> = {
+  /* A stay's interim bill. */
+  "/h/:code/stays": "/h/:code/in-house",
+  /* A restaurant bill: it was /h/:code/till/bill/:id. */
+  "/pos/:code/bill": "/pos/:code/till",
+};
+
 export function AccountMenu() {
   const scope = useSession((s) => s.scope);
   const signOut = useSession((s) => s.signOut);
   const signInAsDev = useSession((s) => s.signInAsDev);
   const setHotelId = useSession((s) => s.setHotelId);
   const hotelId = useSession((s) => s.hotelId);
+  /* The property every screen reads, the Settings pages included. */
+  const showHotel = useUi((s) => s.setHotelId);
+  const navigate = useNavigate();
+  const { pathname, search } = useLocation();
   const role = useRole();
   const current = useCurrentHotel();
   const workable = useWorkableHotels();
@@ -57,6 +106,18 @@ export function AccountMenu() {
   if (!scope) return null;
 
   const devSubject = devAuth ? getDevSubject() : null;
+
+  /* Its modules first (the sidebar's own read and key), so the address, the
+     lists and the date then move together. */
+  const pickHotel = async (id: string, code: string) => {
+    const modules = await queryClient.fetchQuery({
+      queryKey: ["modules", code], queryFn: () => getModules(code), staleTime: 5 * 60_000,
+    });
+    const to = addressAt(pathname, search, code, roleFor(scope, id), modules, scope.homeScreen);
+    setHotelId(id);
+    showHotel(code);
+    if (to) navigate(to);
+  };
 
   /* Another person's screens must not show through: the in-memory cache
      AND the offline copy of it are dropped before the new identity
@@ -142,7 +203,7 @@ export function AccountMenu() {
             {workable.map((h) => (
               <DropdownPrimitive.Item
                 key={h.id}
-                onSelect={() => setHotelId(h.id)}
+                onSelect={() => void pickHotel(h.id, h.code)}
                 className={cn(
                   "flex items-center gap-2.5 px-2.5 py-2 rounded-sm cursor-pointer select-none outline-none",
                   "transition-colors duration-150 data-[highlighted]:bg-grey-100",

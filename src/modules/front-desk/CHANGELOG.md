@@ -8,6 +8,21 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-04 · The property picker opens the same screen; the menu's words; offline balances marked (the owner's D27-271, 1, 2 and 4)
+
+**Asked for:** through the master, from the manual's questions. Branch `worktree-agent-afd6a66305910bfb0` from cp6 877ea67a. Item 3 (the Calendar's prices) is not this lane's. `AccountMenu.tsx` (core) edited for item 1 with the master's leave.
+**Shipped:**
+- (1) Picking a property in the account menu sets the property every screen reads (`useUi`) as well as the session's, and moves the address to the same screen for it: the code in `/h/:code/...` or `/pos/:code/...` swapped, the rest and the query kept. Where the role there may not open that screen (`mayReach`) or the property does not have its module (the menu built with its modules, the sidebar's own `["modules", code]` read), it opens that property's first screen, worked out as the landing after sign-in does (`homePath`, then `workingHomeFor`). An address with no property (`/settings/...`, the Dashboard) stays where it is. TopBar has no property picker of its own; this is the only one.
+- (2) Arrivals' switch says "Today / Upcoming" and In house's "In house now / Due out", the menu's words. Page titles already matched the menu ("Arrivals", "In house", "Due out"). "current stays" stays a Find a screen keyword.
+- (4) While `isOnline()` is false, In house and Due out show "Balances as of 4:36 PM, may be out of date." under the header (the query's `dataUpdatedAt`, `timeOnly`), for a role that sees balances. Online, nothing changes.
+**Found:**
+- The account menu never changed the property the Settings pages and most screens read (`useUi.hotelId`): only the session's id and so the business date. On `/settings/...` picking a property changed nothing on the page. Now it does (for the master: a root MEMORY entry).
+- FD-25: with the line down and the wifi up, the balances' re-check failed and the list's error replaced the rows. Fixed with item 4.
+**Proved:** written first and seen failing: `src/components/app/accountMenu.test.tsx` 7 (the address for `/h/` and `/pos/`, Settings and the Dashboard left alone, the role and the module refusing, the menu moving the address and both properties, Settings staying put) and `menuWordsOfflineBalances.test.tsx` 5 (both words, the note offline only, on Due out, the rows kept with the line down). Broken on purpose: `opens` forced true fails 2; the error passed on again fails 1. `signOut.test.tsx` now renders the menu in a router. Web tsc 0. App.test, src/components/app, boundaries, primaryAction, front-desk, reservations, signOut: 36 files, 238 tests.
+**Screens** (the app's own pane, this copy's preview build on the demo snapshot, as the Owner, 1280 px): Arrivals › Upcoming at 5EL, Agra picked: `/h/AGR/arrivals/upcoming`, "Arrivals · Fidato Agra", Agra's dates (3 to 16 April 2027) and its empty list. Settings › Profile at Agra, 5 Elements picked: the address stayed, the page became 5 Elements'. In house: 8 rows and no note; offline, "Balances as of 4:36 PM, may be out of date." with the rows; Due out the same with its 3 rows and "3 departures still owing ₹11,495"; online again, no note.
+**Left open:** a record's address (`/h/:code/equipment/:id`, `/h/:code/stays/:id/bill`) opens at the new property as asked, so it shows that property has no such record. The manual (`docs/manual`) still says "Next fourteen days" and "Current stays": the manual's lane.
+**Files outside front desk:** core `src/components/app/AccountMenu.tsx`, `src/components/app/accountMenu.test.tsx` (new), `src/lib/signOut.test.tsx`.
+
 ## 2026-10-03 · The way of paying is set on Money (the owner's D27-259 Q1) - the cash lane's
 
 **Shipped:** Front desk rules shows the default way of paying and no longer edits or sends it; it is set on Settings › Money › Payment methods. **Proved:** `frontDeskRules.test.tsx` - the save carries no `defaultPaymentMethod`.
