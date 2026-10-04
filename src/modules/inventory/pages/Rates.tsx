@@ -130,7 +130,7 @@ export default function RatesPage() {
 
   /* With a base room type chosen, only its base is typed; the rest follow. */
   const offered = (pricing.data?.roomTypes ?? []).filter((t) =>
-    !pricing.data?.basis || pricing.data.basis.roomTypeId === t.id);
+    !pricing.data?.basis || pricing.data.basis.roomTypeId === t.id || t.difference === null);
 
   if (inventory.isLoading || !from) {
     return (
@@ -638,7 +638,9 @@ function BaseGrid({ hotelId, dates, nav, pricing, left, days, mayEdit, onDone }:
   }
 
   /* Mode b: only the base room type's base is typed here; the rest follow it. */
-  const editable = (id: string) => mayEdit && (!pricing.basis || pricing.basis.roomTypeId === id);
+  /* An Independent type (no difference from the master, D27-258 Q2) types its own base too. */
+  const editable = (id: string) => mayEdit && (!pricing.basis || pricing.basis.roomTypeId === id
+    || pricing.roomTypes.find((t) => t.id === id)?.difference === null);
   const MORE: { label: string; show: (d: RateDay) => string }[] = [
     { label: "ADR", show: (d) => (d.adr === null ? "-" : money(d.adr)) },
     { label: "Revenue", show: (d) => money(d.revenue) },
