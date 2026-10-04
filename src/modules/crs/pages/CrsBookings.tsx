@@ -118,9 +118,10 @@ function Setup({ code }: { code: string }) {
     <Card className="mb-5">
       <CardHeader
         title="Connection to the CRS"
-        description={"The ids come from the CRS: open the property or the room type there, and "
-          + "the last part of the address is its id. A CRS room type with no match here is "
-          + "not booked by itself."}
+        description={"The ids come from the CRS. The property's is the last part of its address "
+          + "there. A room type has no address of its own: its id is in the CRS's Firebase "
+          + "console, Firestore, roomTypes (the one whose hotelId is the property's). A CRS "
+          + "room type with no match here is not booked by itself."}
       />
       <CardBody className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">

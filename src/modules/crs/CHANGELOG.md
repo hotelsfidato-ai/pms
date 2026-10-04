@@ -11,6 +11,20 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-04 · the connection card's hint (D27-275 part 1)
+
+**Asked for:** the owner's D27-275 (1): the hint said a room type's id is the last part of
+its address in the CRS. A CRS room type has no address; it is a document in the CRS's
+Firestore collection `roomTypes` (auto id, with a `hotelId` field).
+
+**Shipped:** `pages/CrsBookings.tsx`, words only: the property's id is still the last part
+of its address (`/hotels/:id` in the CRS); a room type's id is read in the CRS's Firebase
+console, Firestore, roomTypes.
+
+**Proved:** `crs.test.tsx` asks for the new words; it failed before the change, passes after.
+
+---
+
 ## 2026-09-29 · the CRS bridge (D27-168, D27-171)
 
 **Asked for:** the master, 29 September, lane 2 of the one face plan (D27-168), settled by
