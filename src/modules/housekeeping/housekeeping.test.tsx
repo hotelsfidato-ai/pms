@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, within, fireEvent, act, waitFor } from "@testing-library/react";
 import App from "@/App";
-import { HOTEL, go, startSignedIn } from "@/test/app";
+import { HOTEL, go, startSignedIn, withDemoHotel } from "@/test/app";
 import {
   COST_RECORDERS, COST_VIEWERS, REPAIR_REPORTERS, recordsCosts, seesCosts,
 } from "@/modules/housekeeping/repairRoles";
@@ -18,7 +18,7 @@ import {
    The stub serves the demo rooms, every one clean but 308, which is out.
    ══════════════════════════════════════════════════════════════════ */
 
-beforeEach(startSignedIn);
+beforeEach(() => { startSignedIn(); withDemoHotel(); });
 
 /* The board's room list, counted, and made to fail on demand — a refresh
    on a stairwell with the signal gone. Everything else passes through. */

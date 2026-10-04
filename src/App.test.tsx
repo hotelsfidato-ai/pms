@@ -7,7 +7,7 @@ import {
 import App from "./App";
 import { useSession } from "@/lib/session";
 import { navigationFor, flatNavigationFor, navItemFor } from "@/components/app/navigation";
-import { HOTEL, go, AGRA_HOTEL, signedIn, startSignedIn } from "@/test/app";
+import { HOTEL, go, AGRA_HOTEL, signedIn, startSignedIn, withDemoHotel } from "@/test/app";
 
 /* ══════════════════════════════════════════════════════════════════
    THE SHELL AND THE CORE
@@ -20,7 +20,7 @@ import { HOTEL, go, AGRA_HOTEL, signedIn, startSignedIn } from "@/test/app";
    signedIn and the hook below) is `src/test/app.ts`.
    ══════════════════════════════════════════════════════════════════ */
 
-beforeEach(startSignedIn);
+beforeEach(() => { startSignedIn(); withDemoHotel(); });
 
 describe("navigation is driven by the permission matrix", () => {
   it("gives an owner strictly more than a housekeeper", () => {
@@ -380,6 +380,7 @@ describe("the module switches", () => {
         hotels: [{ hotelId: AGRA_HOTEL, role: "owner" }],
       },
     });
+    withDemoHotel();
     go("/settings/connections/modules");
   });
 
@@ -457,7 +458,7 @@ describe("find a screen", () => {
    none for the GM or the owner — on the person's own landing screens,
    until they tap "Got it"; the account menu brings it back. */
 describe("start here", () => {
-  const as = (role: string) =>
+  const as = (role: string) => {
     signedIn({
       scope: {
         staffId: "22222222-2222-2222-2222-222222222222",
@@ -467,6 +468,8 @@ describe("start here", () => {
         hotels: [{ hotelId: AGRA_HOTEL, role }],
       },
     });
+    withDemoHotel();
+  };
 
   it("gives a receptionist five first jobs on their first screen, each opening where it happens", async () => {
     render(<App />);

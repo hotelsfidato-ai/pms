@@ -47,6 +47,22 @@ export function AppShell() {
     });
   }, [pathname, queryClient]);
 
+  /* THE REMEMBERED HOTEL MUST BE ONE OF THIS PERSON'S (4 October). The
+     browser keeps the last hotel, and the store starts on "5EL"; after the
+     fresh start (D27-248) 5 Elements was gone from live, so Settings and
+     every screen reading it asked for a hotel that does not exist and drew
+     nothing. Once the person's hotels are known, a remembered hotel that is
+     not among them becomes their first. */
+  const hotels = useSession((s) => s.hotels);
+  const remembered = useUi((s) => s.hotelId);
+  const remember = useUi((s) => s.setHotelId);
+  useEffect(() => {
+    const first = hotels[0];
+    if (first && !hotels.some((h) => h.code === remembered || h.id === remembered)) {
+      remember(first.code);
+    }
+  }, [hotels, remembered, remember]);
+
   return (
     <TooltipProvider delayDuration={400}>
       <div className="flex h-screen overflow-hidden bg-grey-50 print:block print:h-auto print:overflow-visible">

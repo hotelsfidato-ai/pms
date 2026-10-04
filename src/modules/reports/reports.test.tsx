@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, within, waitFor } from "@testing-library/react";
 import App from "@/App";
 import * as apiModule from "@/lib/api";
-import { HOTEL, go, startSignedIn, signedIn } from "@/test/app";
+import { HOTEL, go, startSignedIn, signedIn, withDemoHotel } from "@/test/app";
 import { BUSINESS_DATE, setBusinessDate } from "@/data/repositories/businessDate";
 
 /* Reports' screens, rendered through the whole application — the shell,
@@ -10,7 +10,7 @@ import { BUSINESS_DATE, setBusinessDate } from "@/data/repositories/businessDate
    when the screen tests were split by service; where every test starts
    is `src/test/app.ts`. */
 
-beforeEach(startSignedIn);
+beforeEach(() => { startSignedIn(); withDemoHotel(); });
 
 /* "Group" became the Dashboard on 14 September, the owner's call: the
    numbers a hotel lives by, and quick reports. The table of every hotel

@@ -60,6 +60,24 @@ export const signedIn = (overrides: Partial<ReturnType<typeof useSession.getStat
    address at /, the demo property chosen, a signed-in clerk. Each test
    file registers it with `beforeEach(startSignedIn)` at the top, so a
    describe block's own beforeEach still runs after it, as it did. */
+/* The demo property as one of the person's own hotels. The app keeps the
+   remembered hotel among the person's (AppShell, 4 October), so a screen
+   opened on 5 Elements needs the person to hold it, as staff there do. */
+export const DEMO_HOTEL_ID = "33333333-3333-3333-3333-333333333333";
+const idOf = (code: string) => (code === HOTEL ? DEMO_HOTEL_ID : `demo-${code}`);
+export const withDemoHotel = (code: string = HOTEL) => useSession.setState((s) => ({
+  /* The same role there as at their first hotel. */
+  ...(s.scope ? { scope: { ...s.scope, hotels: [
+    ...s.scope.hotels.filter((h) => h.hotelId !== idOf(code)),
+    { hotelId: idOf(code), role: s.scope.hotels[0]?.role ?? "front_desk" },
+  ] } } : {}),
+  hotels: [...s.hotels.filter((h) => h.code !== code), {
+    id: idOf(code), code, name: code === HOTEL ? "5 Elements Akkalkot" : code,
+    city: "Akkalkot", state: "MH", gstin: null, timezone: "Asia/Kolkata", currency: "INR",
+    checkInTime: "14:00", checkOutTime: "11:00", businessDate: "2026-08-25",
+  }],
+}));
+
 export const startSignedIn = () => {
   go("/");
   useUi.setState({ hotelId: HOTEL, sidebarCollapsed: false });

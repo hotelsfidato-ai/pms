@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router";
 import App from "@/App";
 import DashboardPage from "@/modules/reports/pages/Dashboard";
 import * as apiModule from "@/lib/api";
-import { AGRA_HOTEL, HOTEL, go, startSignedIn, signedIn } from "@/test/app";
+import { AGRA_HOTEL, HOTEL, go, startSignedIn, signedIn, withDemoHotel } from "@/test/app";
 import { flatNavigationFor, sidebarFor } from "@/components/app/navigation";
 import type { Role } from "@/lib/permissions";
 
@@ -19,7 +19,7 @@ import type { Role } from "@/lib/permissions";
    Real figures only: a figure the system does not hold is a dash.
    ══════════════════════════════════════════════════════════════════ */
 
-beforeEach(startSignedIn);
+beforeEach(() => { startSignedIn(); withDemoHotel(); });
 
 const as = (role: Role) => signedIn({
   scope: {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
 import App from "@/App";
-import { go, startSignedIn, signedIn, AGRA_HOTEL } from "@/test/app";
+import { go, startSignedIn, signedIn, AGRA_HOTEL, withDemoHotel } from "@/test/app";
 import { useUi } from "@/lib/ui";
 import { mayReach, navigationFor } from "@/components/app/navigation";
 import { dayBookSheet, FORMATS, type DayBook } from "@/modules/accounting/data/accounting";
@@ -63,7 +63,7 @@ const BOOK: DayBook = {
 
 /** The general manager at the demo property - one of the three the
     brief names. `startSignedIn` seeds a receptionist at Agra. */
-const asGm = () =>
+const asGm = () => {
   signedIn({
     scope: {
       staffId: "33333333-3333-3333-3333-333333333333",
@@ -71,9 +71,11 @@ const asGm = () =>
       hotels: [{ hotelId: AGRA_HOTEL, role: "gm" }],
     },
   });
+  withDemoHotel();
+};
 
 beforeEach(() => {
-  startSignedIn();
+  startSignedIn(); withDemoHotel();
   control.book = BOOK;
 });
 
@@ -158,6 +160,7 @@ describe("the export screen", () => {
      at the top of `src/modules/purchasing/purchasing.test.tsx`. */
   const open = (code: string) => {
     asGm();
+    withDemoHotel(code);
     useUi.setState({ hotelId: code });
     go("/reports/accounting");
     return render(<App />);

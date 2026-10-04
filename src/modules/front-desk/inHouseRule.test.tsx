@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, within, cleanup, waitFor } from "@testing-library/react";
 import App from "@/App";
 import * as apiModule from "@/lib/api";
-import { HOTEL, go, signedIn, startSignedIn } from "@/test/app";
+import { HOTEL, go, signedIn, startSignedIn, withDemoHotel } from "@/test/app";
 
 /* ══════════════════════════════════════════════════════════════════
    EVERY SCREEN COUNTS IN HOUSE AND EMPTY BY ONE RULE (D21-36, D21-37)
@@ -40,7 +40,7 @@ const houseNow = async (real: typeof apiModule.api) => {
 };
 
 beforeEach(() => {
-  startSignedIn();
+  startSignedIn(); withDemoHotel();
   const real = apiModule.api;
   vi.spyOn(apiModule, "api").mockImplementation(((url: string, init?: RequestInit) => {
     const path = url.split("?")[0]!;
