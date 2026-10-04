@@ -137,6 +137,23 @@ waits for `GUEST_MESSAGES_PER_MINUTE`, your pace (D21-34).
 
 `M2R_N8N_URL` and `M2R_N8N_SECRET` stay **empty** for now (part A).
 
+**The connection alert (D27-276):** `HEALTH_ALERT_EMAIL=<your own email>` in
+the same file. When a connection on Settings → Modules and connections →
+Connection health turns red, the PMS emails that address once (at most once
+an hour per connection). Empty: no alert emails. It needs the
+`health-alert` draft in the workflow, below.
+
+### ⚠ The live workflow needs the `health-alert` draft (4 October)
+
+The workflow running in the CRS's n8n was imported before this draft
+existed. **Until you add it, every alert email is refused** ("No email for
+"health-alert" in this workflow") and Connection health records that. Either
+import `pms-send-crs.json` again (step 1, then steps 2-6), or, quicker: in the
+live workflow open **Read the message**, find `const EMAILS = {`, and paste
+the `"health-alert": (d) => ({ ... }),` entry from this file's **Read the
+message** node just before the `};` that closes `EMAILS`. **Save**. The words
+are drafts: change them there.
+
 ---
 
 ## D · The ID photos workflow (`pms-id-photos-crs.json`)

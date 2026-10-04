@@ -82,7 +82,19 @@ tell() {                        # tell true|false
     -d "{\"check\":\"backup\",\"ok\":$1,\"server\":\"$(hostname)\"}" \
     "$ALERT_URL" >/dev/null || echo "    (could not reach ALERT_URL - nobody was told)"
 }
-trap 'rc=$?; cleanup; if [ $rc -eq 0 ]; then tell true; else tell false; fi' EXIT
+# ── One line a program can read (Connection health, D27-276) ─────────────────
+# The last line of every run, into the same log cron writes:
+#
+#   backup-status 2026-10-04T21:30:05Z ok uploaded=yes
+#
+# when (UTC), ok or failed, and whether the copy reached the bucket. The API
+# reads the last such line from /var/log/fidato-backup.log; the words above
+# it are for people and may change, this line may not.
+UPLOADED=no
+status() {                      # status ok|failed
+  echo "backup-status $(date -u +%Y-%m-%dT%H:%M:%SZ) $1 uploaded=$UPLOADED"
+}
+trap 'rc=$?; cleanup; if [ $rc -eq 0 ]; then status ok; tell true; else status failed; tell false; fi' EXIT
 
 # ── The figures a restore must give back ─────────────────────────────────────
 # One list, read from the source and from the restore alike.
@@ -131,6 +143,8 @@ if [ -z "$FILE" ]; then
   BEFORE=$(figures "$DB")
   bash "${BACKUP_SH:-$ROOT/db/backup.sh}" "$OUTDIR" \
     || { red "  x the backup itself failed - see above"; exit 1; }
+  # backup.sh fails when a named bucket did not take the copy, so here it did.
+  if [ -n "${BACKUP_UPLOAD_URL:-}" ]; then UPLOADED=yes; fi
   AFTER=$(figures "$DB")
   FILE=$(ls -1t "$OUTDIR/$DB"-*.dump 2>/dev/null | head -1)
 fi
