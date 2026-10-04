@@ -11,6 +11,20 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-04 · The voucher says on which days the meals are served (P3, the owner's D27-258 Q5; guest-messaging claimed by the rates lane)
+
+**Shipped:**
+- Under each room's meal plan, the voucher shows "Breakfast on stay-over and check-out days", only where the hotel has said, and still on one A4.
+- The facts read the hotel's meal days through `app.voucher_meal_days` (197), because the sweep has nobody signed in.
+- `voucherFields` is untouched (the CRS template's eight).
+
+**Proved:**
+- `voucherDocument` 37 (the new test failed first).
+- The database check failed without the definer.
+- check-in link 7, jobs 22, messages and reports 10, sweep 11, view voucher 14.
+
+---
+
 ## 2026-10-03 · Settings phase 6: Messages and reports (D27-252, D27-261, D27-262), fewer guest messages (D27-264), re-cut to D27-266
 
 Branch `settings/messages-3oct`, from cp6 8181f452; cp6 106e819b (the console

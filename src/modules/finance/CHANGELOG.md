@@ -8,6 +8,25 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-04 · Tax by date and a SAC on each invoice line (P3, the owner's D27-258 Q6/Q7; finance claimed by the rates lane)
+
+**Asked for:** tax rules valid from and until a date, one band's periods entered in advance, and a SAC per service printed on each invoice line, with rooms keeping 996311 and the others a dash until the CA gives their codes. Branch `settings/rates-3oct`.
+
+**Shipped:**
+- Migration 197: `tax_rules` keyed with `valid_from`; `gst_rate_or_null` uses the hotel's business date (same signature); `folio_postings.tax_kind`; `invoices.sac_by_kind`.
+- `postings.ts`: postCharge keeps its taxKind; a corrected charge keeps the original's.
+- `invoices.ts`: issue freezes each kind's SAC from `tax_sac`; each line gets a `sac` (`sacOf`).
+- `tax.ts`: `PUT /tax/:kind` takes per-slab `validFrom`/`validTo` and refuses overlapping periods of one band; `PUT /tax/:kind/sac`; `GET /tax` gives both.
+- Web: the tax card shows "from"/"until" and each kind's SAC; the invoice print has a SAC column.
+
+**Proved (each failed first):**
+- Database: one stay's 21st on the old rate and 22nd on the new.
+- API `invoiceSac`: the bar and the restaurant keep their kinds; an issued invoice keeps its codes after `tax_sac` changes; old invoices print 996311 on room lines and a dash on the rest.
+- Web: the SAC column; the tax card's dates and SAC.
+- Other lanes' tests changed for the wider key: `db/tests/suite.sql:46` and `api/test/modules/laundry/laundry.test.ts:412/440` now use `on conflict do nothing`; `api/test/modules/finance/stayBill.test.ts:65/68` deletes, then inserts.
+
+---
+
 ## 2026-10-03 · Money in the settings console: payment methods, extra charges, % or ₹ discounts, commission, pickup and drop (the owner's D27-259) - P4, the cash lane
 
 Branch `settings/money-3oct`. **Asked for:** phase 4 of the settings plan; the owner took every recommendation (D27-259 Q1-Q6).
