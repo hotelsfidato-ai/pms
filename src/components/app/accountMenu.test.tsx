@@ -42,6 +42,24 @@ describe("the address at the picked property", () => {
   it("and where that property does not have the module", () => {
     expect(addressAt("/pos/5EL/tables", "", "AGR", "gm", { pos: false }, undefined)).toBe("/");
   });
+
+  /* The owner, D27-271 Q1: a record belongs to its own hotel, so the pick
+     lands on the matching list at the new one. */
+  it("opens a record's list: the menu entry above it", () => {
+    expect(addressAt("/h/5EL/equipment/abc", "?tab=log", "AGR", "owner", {}, undefined))
+      .toBe("/h/AGR/equipment");
+  });
+
+  it("opens In house for a stay's bill, and the Till for a restaurant bill", () => {
+    expect(addressAt("/h/5EL/stays/abc/bill", "?print=1", "AGR", "front_desk", {}, undefined))
+      .toBe("/h/AGR/in-house");
+    expect(addressAt("/pos/5EL/bill/abc", "", "AGR", "owner", {}, undefined))
+      .toBe("/pos/AGR/till");
+  });
+
+  it("opens that property's first screen when no list is above the address", () => {
+    expect(addressAt("/h/5EL/nothing/abc", "", "AGR", "front_desk", {}, "rooms")).toBe("/h/AGR/stay");
+  });
 });
 
 const FIVE_EL = "33333333-3333-3333-3333-333333333333";

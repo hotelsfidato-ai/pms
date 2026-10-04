@@ -13,7 +13,7 @@ import { queryPersister } from "@/lib/persist";
 import { getModules, setMyPreferences } from "@/data/repositories";
 import { ROLE_LABELS, type Role } from "@/lib/permissions";
 import { START_HERE } from "./startHereCards";
-import { flatNavigationFor, mayReach, navItemFor, workingHomeFor } from "./navigation";
+import { flatNavigationFor, navItemFor, workingHomeFor } from "./navigation";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem, Avatar,
@@ -51,9 +51,12 @@ import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu";
    property, so its lists showed under the new one's date.
 
    The property in /h/:code/... or /pos/:code/... is swapped, the rest and
-   the query kept. Where the person may not open that screen there - their
-   role at that property (mayReach, the route guard's own question) or a
-   module it does not have (the menu built with its modules) - it is that
+   the query kept. A record (a bill, one equipment item: an address that is
+   no menu entry) belongs to its own property, so it is the list it sits
+   under there, the longest menu entry above it (the owner, D27-271 Q1).
+   Where the person may not open that screen there - their role at that
+   property or a module it does not have: mayReach's question, asked of the
+   menu built with its modules - or no list is above the record, it is that
    property's first screen, worked out as the landing after sign-in does
    (App.tsx). Null where the address names no property (/settings, the
    Dashboard): only the property changes. */
@@ -63,17 +66,27 @@ export function addressAt(
 ): string | null {
   const at = /^\/(h|pos)\/[^/]+/.exec(pathname);
   if (!at) return null;
-  const rest = pathname.slice(at[0].length);
-  const path = `/${at[1]}/${code}${rest}`;
-  const pattern = `/${at[1]}/:code${rest}`;
-  /* ponytail: a record's address (/h/:code/equipment/:id) is no menu entry,
-     so it is not checked and opens as asked; check its parent if one refuses. */
-  const opens = mayReach(role, pattern)
-    && (!navItemFor(pattern) || flatNavigationFor(role, code, modules).some((i) => i.to === path));
-  if (opens) return path + search;
+  const pattern = `/${at[1]}/:code${pathname.slice(at[0].length)}`;
+  /* What this person may open there, as addresses with ":code" in them. */
+  const menu = flatNavigationFor(role, ":code", modules).map((i) => i.to);
+  const there = (to: string) => to.replace(":code", code);
+  if (menu.includes(pattern)) return there(pattern) + search;
+  if (!navItemFor(pattern)) {
+    const list = Object.entries(LIST_OF).find(([under]) => pattern.startsWith(`${under}/`))?.[1]
+      ?? menu.filter((to) => pattern.startsWith(`${to}/`)).sort((a, b) => b.length - a.length)[0];
+    if (list && menu.includes(list)) return there(list);
+  }
   const home = homePath(homeScreen, code);
   return home !== "/" ? home : workingHomeFor(role, code) ?? "/";
 }
+
+/* The two records whose list is not above them in the address. */
+const LIST_OF: Record<string, string> = {
+  /* A stay's interim bill. */
+  "/h/:code/stays": "/h/:code/in-house",
+  /* A restaurant bill: it was /h/:code/till/bill/:id. */
+  "/pos/:code/bill": "/pos/:code/till",
+};
 
 export function AccountMenu() {
   const scope = useSession((s) => s.scope);
