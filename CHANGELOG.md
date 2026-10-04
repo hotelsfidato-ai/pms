@@ -50,6 +50,32 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-04 · the architecture aligned, one database per customer decided, and the road to the full launch
+
+**Asked for:** align the architecture (D27-276) and build what it needs (a release script that checks itself, a connection health page, the backup check); the small gaps (D27-275); decide one shared database or one per customer, tested; a test on PostgreSQL 16; then "finish everything and one release", with the setup explained in full and a progress bar.
+
+**Shipped**
+- `scripts/release.mjs`: refuses a release without a full, clean, green gates run on its exact commit; builds the website in the release copy with the sign-in settings and checks it; warns about cp6 commits the release lacks; prints the owner's steps. `scripts/gates.sh` records the commit on its first line.
+- The 4 October release withdrawn (D27-277): branch and copy deleted, `docs/go-live/RELEASE-4OCT.md` and its page marked.
+- Migration 200: the DigiLocker table's nobody policy, so the nightly restore check stops its false alarm; `db/tests/modules/shared.sql` asks every hotel table for a policy.
+- `DB_POOL_MAX` (D27-278): the API's database pool as a setting, default 20.
+- `db/tests/pg16.sh` and a `pg16` gates step: the suite and the replay on PostgreSQL 16.15, the live version (EnterpriseDB binaries in `.local/pg16`).
+- Merged: the small gaps (198, 199) and connection health (its 199 renumbered 201).
+- Decisions D27-277, D27-278 (B: a database per customer on one server; own server a paid extra; Firebase per customer open), D27-279 (shared login plus a start-up check; spare logins NOLOGIN; credit limit group-wide; bill pages guarded).
+- Pages: "How your system is set up" and "Launch progress" (artifacts).
+
+**Found**
+- Live (read-only): backups never leave the server (BACKUP_UPLOAD_URL empty); `pms_migrate` and `pms_readonly` can log in, nothing uses them; Postgres 16.15 while tests ran on 17; memory at 20.0%, on Oracle's idle-reclamation line; one hotel on live.
+- The gates' database and replay steps do not take the database queue: a replay collided with a helper's migrate ("tuple concurrently updated" on a shared role). `scripts/*.mjs` is not in `.gitattributes`, so a fresh checkout gets CRLF and `release.test.mjs` will not load there.
+
+**Proved**
+- Full gates at 7c16002f: web types, api types, strip, web 1099-test suite, database (1503+), pg16 (16.15: all 1503 assertions, 198 migrations re-runnable) green; api 2484 of 2485 (finance/noBill, a stay picked with no order); replay red on the collision above. Not yet a green run.
+
+**Left open**
+- Morning: migration 202, `.gitattributes` for `.mjs`, the noBill test and the queue for the gates' database steps, merge the group-wide credit limit (203) and B's set-up, the WhatsApp voucher on booking_confirmation (waiting for the template's details from the owner), full gates, cut release/all-5oct. Owner: Oracle account type, the off-site backup bucket.
+
+**Commits:** `b23af300 … 40d4d232`
+
 ## 2026-10-03 · the fresh start on live (D27-248), rehearsed before it is run
 
 **Asked for:** the owner, before the release: delete all the old, pre-seeded data on live and start
