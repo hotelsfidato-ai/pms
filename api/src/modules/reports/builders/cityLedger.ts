@@ -25,10 +25,11 @@ import { heading, LIVE, type Property } from "../figures.ts";
  * THE LEDGER'S MOVES, one line each, as common table expressions ending in
  * `moves` (account, company_id, business_date, debit, credit) for the hotel
  * `hotel` up to the day `to` (SQL expressions, e.g. "$1" and "$3::date").
- * The report sums them by account; finance's credit limit (D27-275) sums one
- * company's to what it owes now. One text, so the two cannot disagree.
+ * ⚠ A TWIN: app.company_owes (migration 203) is the same closing balance for
+ * one company over every hotel, for its credit limit (D27-279). A change to
+ * what counts here is a change there.
  */
-export const cityLedgerMoves = (hotel: string, to: string) =>
+const cityLedgerMoves = (hotel: string, to: string) =>
     `with transfers as (
        select coalesce(fc.name, app.booking_source_label(bs.name, rc.name, r.source)) as account,
               coalesce(fc.id, rc.id)                                                  as company_id,

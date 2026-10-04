@@ -171,4 +171,34 @@ describe("a company's credit limit (D27-275)", () => {
     expect(allowed.status, await allowed.clone().text()).toBe(200);
     expect((await allowances()).map((a) => a.reason)).toContain("Group booking agreed by the owner");
   });
+
+  /* D27-279 (6): the limit is the group's, so is what it owes. Reception
+     here holds no grant at Agra and is still answered for it (203). */
+  it("counts what the company owes at another hotel", async () => {
+    /* ₹1,000 fits here: it owes only the first bill at this hotel. */
+    await limit(sent + 1001);
+    const agra = (await sql("select id::text from hotels where code = 'AGR'")).rows[0].id;
+    /* ₹2,000 sent to it at Agra. */
+    await sql(
+      `with g as (insert into guests (full_name) values ($2) returning id),
+            r as (insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                                            agreed_rate, status, company_id)
+                  select $1, app.next_reference($1), g.id,
+                         (select id from room_types where hotel_id = $1 order by id limit 1),
+                         app.business_date($1), app.business_date($1) + 1, 2000, 'confirmed', $3
+                    from g returning id),
+            f as (insert into folios (hotel_id, reservation_id, status)
+                  select $1, r.id, 'open' from r returning id),
+            fp as (insert into folio_postings (hotel_id, folio_id, business_date, category, description,
+                                               amount, tax_rate, tax_amount)
+                   select $1, f.id, app.business_date($1), 'payment', 'Transferred to city ledger', -2000, 0, 0
+                     from f returning id)
+       insert into payments (hotel_id, posting_id, method, method_label, amount)
+       select $1, fp.id, 'city_ledger', 'Bill to company', 2000 from fp`,
+      [agra, `${TAG} At Agra`, company]);
+
+    const res = await charge("front_desk");
+    expect(res.status).toBe(409);
+    expect((await answer(res)).reason).toBe(`${TAG} Travels is over its credit limit by ₹1,999.00.`);
+  });
 });
