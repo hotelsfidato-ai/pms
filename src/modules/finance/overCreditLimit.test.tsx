@@ -27,7 +27,7 @@ const STAY = {
   rackTariff: null, offeredTariff: 0, isVip: false, isSingleLady: false,
 } as unknown as Stay;
 
-let sent: ReturnType<typeof vi.spyOn<typeof postings, "postCharge">>;
+let sent: { mock: { calls: unknown[][] } };
 
 beforeEach(() => {
   startSignedIn();
