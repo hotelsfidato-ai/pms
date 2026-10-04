@@ -88,6 +88,13 @@ function main() {
     refuse(`origin/main (${live.slice(0, 8)}) is not behind ${branch}, so the push would not be a fast-forward.`);
   }
   ok("the push will be a fast-forward");
+  // MEMORY 381: a release branch the plan has moved past. Warns, never refuses (D27-277).
+  const lacks = git("log", "--format=%s", `${commit}..refs/heads/cp6`);
+  const subjects = lacks.status === 0 ? lacks.stdout.split("\n").filter(Boolean) : [];
+  if (subjects.length) {
+    console.log(`  !  cp6 has ${subjects.length} commit${subjects.length === 1 ? "" : "s"} this release does not include`);
+    for (const s of subjects.slice(0, 10)) console.log(`       ${s}`);
+  }
 
   // 2 · a full, clean, green gates run on exactly this commit, in any copy
   const copies = out("worktree", "list", "--porcelain").split("\n")
