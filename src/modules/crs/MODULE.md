@@ -81,7 +81,8 @@ It holds the property's CRS id, the source, the room types and the switch; the s
 refuses anybody else.
 
 `CrsFacts` (the front door) shows a booking's CRS number, salesperson, company and any
-open change. It is for the booking panel; front desk places it.
+open change. Front desk's stay panel (`StayDrawer`, the Stay tab, under the booking's
+facts) draws it since 4 October; `front-desk/stayPanelCrs.test.tsx` holds it there.
 
 ## Endpoints
 
@@ -118,4 +119,4 @@ read and the account to read as.
 
 - **reservations**: `createChannelBooking` passes `tentative` and `salesPerson`
   through. Made in this branch and told to the master.
-- **front desk**: place `CrsFacts` on the booking panel. Waiting on the master.
+- **front desk**: place `CrsFacts` on the booking panel. Done 4 October (StayDrawer).

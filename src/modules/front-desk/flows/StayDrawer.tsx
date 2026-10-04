@@ -16,6 +16,7 @@ import { StayActions } from "@/modules/front-desk/flows/StayActions";
 import { FolioPanel } from "@/modules/finance";
 import { StayMarks } from "@/modules/front-desk/flows/StayMarks";
 import { AddIdPhotoAtDesk } from "@/modules/online-checkin";
+import { CrsFacts } from "@/modules/crs";
 import { GuestMarks } from "@/modules/front-desk/flows/GuestMarks";
 import { GroupRoomsList } from "@/modules/reservations";
 import { KeyCards } from "@/modules/room-systems";
@@ -216,6 +217,9 @@ function StayBody({
           <TabsContent value="stay">
             <div className="flex flex-col gap-6">
               <StayFacts stay={stay} />
+              {/* D27-168: the CRS number, salesperson, company and any change
+                  made in the CRS since; nothing for a booking the CRS did not sell. */}
+              <CrsFacts code={hotelId} reservationId={stay.id} />
               {/* D27-210: the desk adds the ID photo here too; it draws nothing for anybody else. */}
               <AddIdPhotoAtDesk stayId={stay.id} />
               {arrived && <KeyCards hotelId={hotelId} stay={stay} />}
