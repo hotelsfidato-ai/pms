@@ -168,3 +168,28 @@ describe("a room type's photos and amenities", () => {
     }
   });
 });
+
+describe("a new booking keeps to the room type and its plans (D27-258 Q1, Q3, Q4)", () => {
+  const book = async (line: Record<string, unknown>, sourceId = source) => {
+    const res = await call("POST", "/bookings", {
+      guestName: "P3 Limits Guest", checkIn: "2027-11-10", checkOut: "2027-11-11", bookingSourceId: sourceId,
+      lines: [{ roomTypeId: typeId, mealPlan: "EP", adults: 1, rooms: 1, agreedRate: 4000, ...line }],
+    });
+    return [res.status, ((await res.json()) as { reason?: string }).reason ?? ""] as const;
+  };
+
+  it("refuses more adults or children than the type takes, a plan switched off, and a source that does not sell it", async () => {
+    expect(await book({ adults: 4 })).toEqual([409, "A P3 Test Suite takes 3 adults at most."]);
+    expect(await book({ adults: 1, children: 3 })).toEqual([409, "A P3 Test Suite takes 2 children at most."]);
+    /* CP was switched off above. */
+    expect(await book({ mealPlan: "CP" })).toEqual([409, "P3 Test Suite on CP is switched off for new bookings."]);
+
+    const other = (await sql<{ id: string }>("select id::text from booking_sources where id <> $1 limit 1", [source]))[0]!.id;
+    expect((await call("PUT", `/plan-settings/${typeId}/EP`, { sources: [other] })).status).toBe(200);
+    try {
+      expect(await book({})).toEqual([409, "P3 Test Suite on EP is not sold through this source."]);
+    } finally {
+      await call("PUT", `/plan-settings/${typeId}/EP`, { sources: [] });
+    }
+  });
+});

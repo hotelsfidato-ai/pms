@@ -537,9 +537,19 @@ export async function makeBooking(
 
     for (const line of lines) {
       const { rows: rt } = await client.query<{
-        name: string; max: number;
-      }>(`select name, max_occupancy as max from room_types
-           where id = $1 and hotel_id = $2`, [line.roomTypeId, hotelId]);
+        name: string; max: number; max_adults: number | null; max_children: number | null;
+        off: boolean; not_sold: boolean;
+      }>(`select rt.name, rt.max_occupancy as max, rt.max_adults, rt.max_children,
+                /* P3 (D27-258 Q3, Q4): a plan switched Off is not offered for new
+                   bookings, and one whose sources are chosen is sold by those only. */
+                coalesce((select not s.is_active from rate_plan_settings s
+                           where s.room_type_id = rt.id and s.meal_plan = $3), false) as off,
+                exists (select 1 from rate_plan_sources p where p.room_type_id = rt.id and p.meal_plan = $3)
+                  and not exists (select 1 from rate_plan_sources p where p.room_type_id = rt.id
+                                     and p.meal_plan = $3 and p.booking_source_id = $4::uuid) as not_sold
+           from room_types rt
+          where rt.id = $1 and rt.hotel_id = $2`,
+        [line.roomTypeId, hotelId, line.mealPlan ?? "EP", sourceId ?? null]);
       if (!rt[0]) return refuse("One of those room types is not here.");
 
       const adults = line.adults ?? 1;
@@ -552,6 +562,19 @@ export async function makeBooking(
         return refuse(
           `${adults + children} people will not fit a ${rt[0].name} - it `
           + `sleeps ${rt[0].max}.`);
+      }
+      /* P3 (D27-258 Q1): the type's own limits for adults and children. */
+      if (rt[0].max_adults !== null && adults > rt[0].max_adults) {
+        return refuse(`A ${rt[0].name} takes ${rt[0].max_adults} adults at most.`);
+      }
+      if (rt[0].max_children !== null && children > rt[0].max_children) {
+        return refuse(`A ${rt[0].name} takes ${rt[0].max_children} ${rt[0].max_children === 1 ? "child" : "children"} at most.`);
+      }
+      if (rt[0].off) {
+        return refuse(`${rt[0].name} on ${line.mealPlan ?? "EP"} is switched off for new bookings.`);
+      }
+      if (rt[0].not_sold) {
+        return refuse(`${rt[0].name} on ${line.mealPlan ?? "EP"} is not sold through this source.`);
       }
 
       /* The FIRST night's tariff, and the clerk sees the whole breakdown
