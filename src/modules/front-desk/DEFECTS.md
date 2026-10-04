@@ -14,6 +14,16 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### FD-26 · A price saved on Rates does not reach the Calendar until something else refreshes it
+
+**Found** - 4 October, opening the Calendar after setting a night's price on
+Rates (D27-271 item 3): the Calendar still showed the old figure. Its window
+(`stay-view`) is kept with `staleTime: Infinity` and persisted, and Rates'
+`refresh()` invalidates only its own reads. It was so for the old rack rate
+too. **The fix** is one line in inventory's `pages/Rates.tsx` `refresh()`:
+`qc.invalidateQueries({ queryKey: ["stay-view", hotelId] })`. Not made here:
+the file is inventory's (on `MODULE.md`'s Requests).
+
 ---
 
 ## Fixed — the solution is here; do not work it out again

@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import * as apiModule from "@/lib/api";
 import { getStayView, addDays, isWeekend } from "@/modules/front-desk/data/stayview";
 import { listStays } from "@/modules/front-desk/data/stays";
 import { defaultPropertyId, BUSINESS_DATE } from "@/data/repositories";
@@ -204,5 +205,50 @@ describe("tape chart - room type groups", () => {
 
   it("is reachable through the default property", async () => {
     expect(await defaultPropertyId()).toBe(HOTEL);
+  });
+});
+
+/* D27-271 item 3: each night's own price, from the server's one read for the
+   window (app.price_for, EP: the night's price, else the standard price, else
+   null). The stub's rooms say Deluxe 3699 - the business date's price - which
+   is what every night used to repeat. */
+describe("tape chart - each night's own price (D27-271)", () => {
+  const PRICES = `/api/hotels/${HOTEL}/calendar-prices`;
+  let asked: string[] = [];
+
+  beforeEach(() => {
+    asked = [];
+    const stub = apiModule.api;
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.split("?")[0] !== PRICES) return stub(url, init);
+      asked.push(url);
+      return [
+        { type: "Deluxe", date: BUSINESS_DATE, price: 5200 },
+        { type: "Deluxe", date: addDays(BUSINESS_DATE, 1), price: 3500 },
+        { type: "Deluxe", date: addDays(BUSINESS_DATE, 2), price: null },
+      ] as never;
+    });
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  const deluxe = async () => (await chart()).roomTypes.find((t) => t.type === "Deluxe")!.perDate;
+
+  it("a night with a date price shows that price", async () => {
+    expect((await deluxe())[0]).toMatchObject({ date: BUSINESS_DATE, rate: 5200 });
+  });
+
+  it("a night without one shows the standard price the server falls back to", async () => {
+    expect((await deluxe())[1]!.rate).toBe(3500);
+  });
+
+  it("no price shows a dash (null), never the business date's price or a zero", async () => {
+    expect((await deluxe())[2]!.rate).toBeNull();
+    const superior = (await chart()).roomTypes.find((t) => t.type === "Superior")!.perDate;
+    expect(superior.every((c) => c.rate === null)).toBe(true);
+  });
+
+  it("the window loads with one read", async () => {
+    await chart();
+    expect(asked).toEqual([`${PRICES}?from=${BUSINESS_DATE}&days=14`]);
   });
 });

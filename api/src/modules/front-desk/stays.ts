@@ -337,6 +337,39 @@ stays.get("/:code/house-now", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
+/* ── The Calendar's price on each night (the owner's D27-271, item 3) ──
+   Each room type on each night of the window: the figure the Rates
+   screen's main row shows, app.price_for on EP - the night's own price
+   (a base, or the master's plus a difference), else the type's standard
+   (rack) price, else null, a dash. The one definition, read once for the
+   whole window; nothing is worked out here. */
+stays.get("/:code/calendar-prices", async (c) => {
+  const from = c.req.query("from") ?? "";
+  const days = Math.min(Math.max(Number(c.req.query("days") ?? 14), 1), 62);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !Number.isInteger(days)) {
+    return c.json({ ok: false, reason: "From which date, for how many nights?" }, 409);
+  }
+
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+
+    const { rows } = await client.query<{ type: string; date: string; price: string | null }>(
+      `select rt.name as type, d::date::text as date, p.price::text
+         from room_types rt
+         cross join generate_series($2::date, $2::date + ($3::int - 1), interval '1 day') d
+         left join lateral app.price_for(rt.id, 'EP', d::date) p on true
+        where rt.hotel_id = $1
+        order by rt.sort_order, rt.name, d`,
+      [hotelId, from, days],
+    );
+    /* null, not 0: zero would say the room is free. */
+    return rows.map((r) => ({ type: r.type, date: r.date, price: r.price === null ? null : Number(r.price) }));
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
 /* ── Groups ──────────────────────────────────────────────────────── */
 
 stays.get("/:code/groups", async (c) => {

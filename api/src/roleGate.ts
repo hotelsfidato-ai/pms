@@ -712,6 +712,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* The pickers on every desk screen read these (D27-260). */
   [`GET ${H}/lists/:kind`]: anyone("the hotel's lists: segments and ready reasons, offered on the desk's screens"),
   [`GET ${H}/holidays`]: anyone("the hotel's holidays, shaded on the Calendar and Rates"),
+  /* Each night's price on the Calendar (D27-271 item 3): whoever opens the
+     Calendar, as every night showed the business date's price to before. */
+  [`GET ${H}/calendar-prices`]: see("reservation", "the Calendar's prices"),
   [`GET ${H}/vip-levels`]: anyone("the group's VIP levels, offered on a guest"),
   [`GET ${H}/stays/:id/exchangeable`]: STAYS,
   [`GET ${H}/stays/:id/inclusions`]: STAYS,
