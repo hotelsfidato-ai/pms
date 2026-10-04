@@ -32,6 +32,18 @@
 # correct, and is wrong — dev auth left on, demo properties present, a service
 # account from the wrong project. Better to stop here than to be found by a
 # guest at the desk.
+#
+# A CUSTOMER (D27-278): its own database on this same server, its own
+# checkout, service, port, nginx file and backup. Fidato is set up first; then,
+# from the customer's own checkout:
+#
+#     cd /opt/fidato-abc && sudo CUSTOMER=abc PORT=8801 DOMAIN=… APP_ORIGIN=… EMAIL=… deploy/launch.sh
+#
+# deploy/customer.sh has the names, deploy/README.md "Add a customer" the
+# steps. A customer's run changes nothing of Fidato's and nothing the whole
+# server shares: no packages, firewall, Postgres sizing (that restarts
+# Postgres under every customer), logs, clock or pms_app password. Those are
+# Fidato's run's. With no CUSTOMER everything below is exactly as it was.
 # =============================================================================
 
 set -euo pipefail
@@ -41,8 +53,6 @@ EMAIL="${EMAIL:?set EMAIL=you@example.com — certbot needs it for expiry warnin
 APP_ORIGIN="${APP_ORIGIN:?set APP_ORIGIN=https://pms.example.com — where the frontend is served.
   This is the origin the browser sends and the only one CORS will accept. Get it
   wrong and every screen goes empty with no error a clerk can report.}"
-APP_DIR="${APP_DIR:-/opt/fidato}"
-DB_NAME="${DB_NAME:-fidato}"
 DB_USER="${DB_USER:-pms_app}"
 NODE_MAJOR="${NODE_MAJOR:-22}"
 
@@ -50,6 +60,18 @@ say() { printf "\n\033[1m── %s\033[0m\n" "$1"; }
 die() { printf "\n\033[31m✗ %s\033[0m\n\n" "$1" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "Run with sudo."
+
+# APP_DIR, DB_NAME, UPLOAD_DIR, PORT, SERVICE and the rest (deploy/customer.sh).
+CUSTOMER="${CUSTOMER:-}"
+. "$(dirname "$0")/customer.sh"
+customer_names || die "Nothing was changed."
+# A customer's run must be its own checkout's, or it would set the customer
+# up with one version's script and another version's migrations.
+if [ -n "$CUSTOMER" ] && [ "$(cd "$(dirname "$0")/.." && pwd)" != "$APP_DIR" ]; then
+  die "Run the launch.sh in $APP_DIR for $CUSTOMER: cd $APP_DIR && sudo CUSTOMER=$CUSTOMER … deploy/launch.sh"
+fi
+
+if [ -z "$CUSTOMER" ]; then   # ── the whole server: Fidato's run only (D27-278) ──
 
 # -----------------------------------------------------------------------------
 say "Packages"
@@ -222,6 +244,7 @@ if command -v iptables >/dev/null; then
     iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT || true
   command -v netfilter-persistent >/dev/null && netfilter-persistent save || true
 fi
+fi   # the whole server
 
 # -----------------------------------------------------------------------------
 say "The service account (unix)"
@@ -243,6 +266,7 @@ if ! id -u fidato >/dev/null 2>&1; then
 fi
 chown -R fidato:fidato "$APP_DIR"
 
+if [ -z "$CUSTOMER" ]; then   # ── the whole server: Fidato's run only ──
 # -----------------------------------------------------------------------------
 say "Who Postgres will listen to"
 # -----------------------------------------------------------------------------
@@ -266,10 +290,31 @@ if [ -f "$HBA" ]; then
 else
   echo "  could not locate pg_hba.conf; leaving authentication as found"
 fi
+fi   # the whole server
+
+# -----------------------------------------------------------------------------
+say "Connections"
+# -----------------------------------------------------------------------------
+# Every API on this server shares Postgres's connections (D27-278): each holds
+# its pool (DB_POOL_MAX) and one LISTEN connection. Checked BEFORE anything is
+# changed for this API, so a refusal leaves the server as it was. A port given
+# to two APIs is refused here too.
+MAXC="$(sudo -u postgres psql -tAc 'show max_connections')"
+RESV="$(sudo -u postgres psql -tAc 'show superuser_reserved_connections')"
+{ installed_apis /etc/systemd/system "$SERVICE"
+  echo "$SERVICE $PORT $(env_value "$APP_DIR/api/.env" DB_POOL_MAX "$POOL")"
+} | budget "$MAXC" "$RESV" \
+  || die "Not enough database connections for every API on this server; see the line above. Nothing was changed."
+# A re-run keeps the port the customer was set up with: nginx is rewritten
+# below, and the API reads its port from its api/.env, which is never rewritten.
+if [ -n "$CUSTOMER" ] && [ "$(env_value "$APP_DIR/api/.env" PORT "$PORT")" != "$PORT" ]; then
+  die "$CUSTOMER's api/.env has PORT=$(env_value "$APP_DIR/api/.env" PORT ""), not $PORT. Use that, or change both."
+fi
 
 # -----------------------------------------------------------------------------
 say "The database"
 # -----------------------------------------------------------------------------
+if [ -z "$CUSTOMER" ]; then
 # The password is generated here and written only to api/.env, root-readable.
 # A password in this script would be a password in git.
 DB_PASS_FILE="$APP_DIR/api/.db-password"
@@ -285,6 +330,15 @@ sudo -u postgres psql -tAc \
     "create role $DB_USER login password '$DB_PASS'"
 sudo -u postgres psql -qc \
   "alter role $DB_USER password '$DB_PASS'"
+else
+  # ⚠ A CUSTOMER SHARES FIDATO'S LOGIN, AND NEVER SETS ITS PASSWORD (D27-278,
+  # option a). pms_app is one role for the whole server: setting a new
+  # password here would lock Fidato's API out of its own database within
+  # minutes, as its pool's connections were replaced.
+  DB_PASS_FILE="$FIDATO_DIR/api/.db-password"
+  [ -f "$DB_PASS_FILE" ] || die "No $DB_PASS_FILE: set Fidato up on this server first."
+  DB_PASS="$(cat "$DB_PASS_FILE")"
+fi
 
 # ── The identity the PREFLIGHT reads with ───────────────────────────────────
 # ⚠ THIS USED TO BE `postgres` OVER A PEER-AUTHENTICATED SOCKET, AND NOTHING
@@ -308,14 +362,26 @@ sudo -u postgres psql -qc \
 # It has no business changing anything, and cannot.
 DB_USER_ADMIN="${DB_USER_ADMIN:-fidato}"
 
+if [ -z "$CUSTOMER" ]; then   # one role for the whole server, made by Fidato's run
 sudo -u postgres psql -tAc   "select 1 from pg_roles where rolname='$DB_USER_ADMIN'" | grep -q 1 ||   sudo -u postgres psql -qc "create role $DB_USER_ADMIN login bypassrls"
 sudo -u postgres psql -qc "alter role $DB_USER_ADMIN bypassrls"
 sudo -u postgres psql -qc "grant pg_read_all_data to $DB_USER_ADMIN"
+fi
 
 
 sudo -u postgres psql -tAc \
   "select 1 from pg_database where datname='$DB_NAME'" | grep -q 1 || \
   sudo -u postgres createdb -O postgres "$DB_NAME"
+
+# THE CUSTOMER'S MARK. Every API logs in as the same pms_app, so nothing in
+# Postgres stops a customer's API reaching another customer's database. The
+# API refuses to start unless its CUSTOMER equals this mark (Fidato's database
+# has none, and Fidato sets no CUSTOMER). Set on every run, so a database
+# restored from a dump, which does not carry it, is marked again.
+if [ -n "$CUSTOMER" ]; then
+  sudo -u postgres psql -qc "alter database $DB_NAME set app.customer = '$CUSTOMER'"
+  echo "  $DB_NAME is marked as $CUSTOMER's"
+fi
 
 # The version actually running, said out loud. The module enable above is
 # best-effort, so without this a silent fall back to PostgreSQL 13 would only
@@ -327,6 +393,7 @@ if [ "$PGVER" -lt 14 ]; then
   echo "  ⚠ PostgreSQL $PGVER — the suite was proven on 17.6. It will run, but this is a version nobody has tested this schema against."
 fi
 
+if [ -z "$CUSTOMER" ]; then   # ── the whole server: Fidato's run only ──
 # -----------------------------------------------------------------------------
 say "Sizing Postgres for the box"
 # -----------------------------------------------------------------------------
@@ -423,6 +490,7 @@ sleep 2
 chronyc -n tracking 2>/dev/null | grep -E "^(Reference ID|Leap status)" | sed 's/^/  /' \
   || echo "  ⚠ chrony is not answering - the clock is NOT known to be right"
 echo "  time zone: $(timedatectl show -p Timezone --value 2>/dev/null || echo unknown) (every log records its zone)"
+fi   # the whole server
 
 say "Migrations"
 # ⚠ THIS WAS ITS OWN LOOP, ONE psql PER FILE, AND THAT BROKE THE LIVE APP ON
@@ -454,13 +522,17 @@ if [ ! -f "$ENV_FILE" ]; then
   cat > "$ENV_FILE" <<ENVEOF
 DATABASE_URL=postgres://$DB_USER:$DB_PASS@127.0.0.1:5432/$DB_NAME
 ADMIN_DATABASE_URL=postgres://$DB_USER_ADMIN@/$DB_NAME?host=/var/run/postgresql
-PORT=8787
+PORT=$PORT
 NODE_ENV=production
 CORS_ORIGIN=$APP_ORIGIN
-FIREBASE_PROJECT_ID=poms-fad05
+FIREBASE_PROJECT_ID=$FIREBASE_PROJECT
 # Paste the WHOLE service account JSON on one line. Not a path to it.
 FIREBASE_SERVICE_ACCOUNT=
 ENVEOF
+  # What the API checks its database's mark against, and its smaller pool.
+  if [ -n "$CUSTOMER" ]; then
+    printf 'CUSTOMER=%s\nDB_POOL_MAX=%s\n' "$CUSTOMER" "$POOL" >> "$ENV_FILE"
+  fi
   chmod 600 "$ENV_FILE"
   echo "  wrote api/.env — FIREBASE_SERVICE_ACCOUNT is still empty"
 else
@@ -487,8 +559,8 @@ fi
 # backup carries: a copy that dies in the same fire is not a copy. The Drive
 # mirror (n8n) and Object Storage are both answers to that, and the
 # `attachments` row records WHICH store holds each file so either can arrive
-# without a migration.
-UPLOAD_DIR="${UPLOAD_DIR:-/var/lib/fidato/uploads}"
+# without a migration. UPLOAD_DIR is set by deploy/customer.sh: a customer's
+# bills are in a folder of its own.
 install -d -o fidato -g fidato -m 700 "$UPLOAD_DIR"
 if ! grep -q '^UPLOAD_DIR=' "$ENV_FILE"; then
   echo "UPLOAD_DIR=$UPLOAD_DIR" >> "$ENV_FILE"
@@ -510,9 +582,14 @@ chown -R fidato:fidato "$APP_DIR"
 # -----------------------------------------------------------------------------
 say "nginx and TLS"
 # -----------------------------------------------------------------------------
-sed "s/__DOMAIN__/$DOMAIN/g" \
-  "$APP_DIR/deploy/nginx.conf" > /etc/nginx/conf.d/fidato.conf
-nginx -t || die "nginx rejected the configuration."
+# Fidato's file is fidato.conf; a customer's is its own (deploy/customer.sh).
+render_nginx "$APP_DIR/deploy/nginx.conf" > "$NGINX_SITE"
+# ⚠ A customer's rejected file must not stay in conf.d: every later reload
+# would fail for every site on the box, Fidato's included.
+if ! nginx -t; then
+  [ -z "$CUSTOMER" ] || rm -f "$NGINX_SITE"
+  die "nginx rejected the configuration."
+fi
 systemctl reload nginx
 
 # Certbot edits the file in place and installs its own renewal timer.
@@ -624,14 +701,14 @@ fi
 say "The service"
 # -----------------------------------------------------------------------------
 # UPLOAD_DIR is the folder made above: the unit lets the API write there.
-sed -e "s#__APP_DIR__#$APP_DIR#g" -e "s#__UPLOAD_DIR__#$UPLOAD_DIR#g" \
-  "$APP_DIR/deploy/fidato-api.service" > /etc/systemd/system/fidato-api.service
+# SERVICE is fidato-api for Fidato, fidato-api-<code> for a customer.
+render_unit "$APP_DIR/deploy/fidato-api.service" > "/etc/systemd/system/$SERVICE.service"
 systemctl daemon-reload
-systemctl enable fidato-api
-systemctl restart fidato-api
+systemctl enable "$SERVICE"
+systemctl restart "$SERVICE"
 sleep 3
-systemctl is-active --quiet fidato-api \
-  || die "The API did not start. journalctl -u fidato-api -n 50"
+systemctl is-active --quiet "$SERVICE" \
+  || die "The API did not start. journalctl -u $SERVICE -n 50"
 
 # -----------------------------------------------------------------------------
 say "Backups"
@@ -642,6 +719,10 @@ say "Backups"
 # What runs is verify-backup: it takes the backup (which copies it off the
 # box), restores it into a scratch database, checks what came back, and tells
 # the owner pass or fail (D27-15). A backup that is never restored is a belief.
+#
+# The two programs and the settings file are the whole server's, installed by
+# Fidato's run only; a customer's run adds a nightly line for its database.
+if [ -z "$CUSTOMER" ]; then
 install -m 755 "$APP_DIR/db/backup.sh"        /usr/local/bin/fidato-backup
 install -m 755 "$APP_DIR/db/verify-backup.sh" /usr/local/bin/fidato-verify-backup
 
@@ -659,6 +740,7 @@ ENVEOF
 fi
 chown postgres:postgres /etc/fidato-backup.env
 chmod 600 /etc/fidato-backup.env
+fi
 
 # Runs as `postgres`, NOT root. The script reaches the database over the unix
 # socket under peer authentication, and root is not postgres. Scheduled as root
@@ -666,6 +748,7 @@ chmod 600 /etc/fidato-backup.env
 # system spent its first weeks believing it had backups.
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/fidato}"
 install -d -o postgres -g postgres -m 700 "$BACKUP_DIR"
+if [ -z "$CUSTOMER" ]; then
 # Kept, not emptied: this used to be `: >` on every run, so each deploy erased
 # the record of every night before it.
 touch /var/log/fidato-backup.log
@@ -678,6 +761,20 @@ CRONEOF
 # backup and its copy off the box. The restore test is 03:00's job.
 runuser -u postgres -- /usr/local/bin/fidato-backup "$BACKUP_DIR"   || die "The nightly backup failed on its very first run. Fix this before
   anything else - every other failure here is recoverable and this one is not."
+else
+# A CUSTOMER: its own line, log and scratch database, at 03:30, after
+# Fidato's. flock runs the customers one after another, so two restore checks
+# never share the box's two cores. The files share the folder and the bucket:
+# each starts with its database's name (fidato_abc-…), which is also how the
+# bucket tells customers apart.
+touch "$BACKUP_LOG"
+chown postgres:postgres "$BACKUP_LOG"
+cat > "/etc/cron.d/fidato-backup-$CUSTOMER" <<CRONEOF
+30 3 * * * postgres DB=$DB_NAME SCRATCH=${DB_NAME}_restore_check BACKUP_DIR=$BACKUP_DIR BACKUP_SH=/usr/local/bin/fidato-backup flock -w 7200 $BACKUP_DIR/.customers.lock /usr/local/bin/fidato-verify-backup >> $BACKUP_LOG 2>&1
+CRONEOF
+runuser -u postgres -- env DB="$DB_NAME" /usr/local/bin/fidato-backup "$BACKUP_DIR" \
+  || die "$CUSTOMER's backup failed on its very first run. Fix this before anything else."
+fi
 if grep -q "^BACKUP_UPLOAD_URL='..*'" /etc/fidato-backup.env; then
   echo "  nightly at 03:00, copied off the box, restored and checked"
 else

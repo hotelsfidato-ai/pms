@@ -2,7 +2,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { env } from "./env.ts";
-import { healthCheck, closePool } from "./db.ts";
+import { healthCheck, closePool, type Client } from "./db.ts";
 import { subjectFor, Unauthenticated } from "./auth.ts";
 import { roleGate } from "./roleGate.ts";
 import { telemetry, routeOf, errorKind } from "./telemetry.ts";
@@ -351,9 +351,31 @@ app.notFound((c) => c.json({ error: `No route for ${c.req.path}` }, 404));
 
 export { app };
 
+/* ── Whose database (D27-278, option a) ──────────────────────────
+   Every customer's API logs in as the same pms_app, so Postgres would
+   let a wrong DATABASE_URL open another customer's hotels. launch.sh
+   marks each customer's database (app.customer); Fidato's has no mark
+   and Fidato sets no CUSTOMER. Null when the two agree. */
+export async function wrongDatabase(client: Client, customer: string): Promise<string | null> {
+  const { rows } = await client.query<{ mark: string }>(
+    "select coalesce(current_setting('app.customer', true), '') as mark");
+  const mark = rows[0]?.mark ?? "";
+  return mark === customer ? null
+    : `this database is ${mark ? `${mark}'s` : "Fidato's"}, and CUSTOMER is ${customer || "unset (Fidato)"}`;
+}
+
 /* Started only when run directly, so the tests can import `app`
    without binding a port. */
 if (process.argv[1]?.endsWith("server.ts")) {
+  /* A database that cannot be reached is no answer: the API starts as it
+     always has and waits for it. Only a database marked for someone else
+     stops it, before the port opens. */
+  const wrong = await healthCheck((client) => wrongDatabase(client, env.customer)).catch(() => null);
+  if (wrong) {
+    console.error(`\n  Refusing to start: ${wrong}. Check DATABASE_URL and CUSTOMER in api/.env.\n`);
+    process.exit(1);
+  }
+
   /* One connection LISTENing for order changes, fanned out in memory
      to every kitchen and till screen. Started before the port opens so
      the first screen to connect finds it already live. */

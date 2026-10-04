@@ -43,8 +43,10 @@ DB="${DB:-fidato}"
 # launch.sh already creates /var/backups/fidato owned by postgres for the
 # nightly dump. That is the right home on a server; the repo's own folder
 # stays the default so nothing changes on a development machine.
-BACKUP_DIR="${BACKUP_DIR:-$ROOT/db/backups}"
+# ROOT first: the other way round, with no BACKUP_DIR set, `set -u` stopped
+# the script at its first line of work with "ROOT: unbound variable".
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BACKUP_DIR="${BACKUP_DIR:-$ROOT/db/backups}"
 
 # ⚠ THIS HARDCODED `psql.exe` AND `pg_restore.exe`, so it could only ever run
 # on Windows -- and the machine it exists FOR is a Linux server. The one time
