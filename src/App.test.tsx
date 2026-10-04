@@ -134,6 +134,11 @@ describe("the session guard", () => {
 
    This asserts the property itself rather than one path: every guarded
    route is a route the navigation knows about.
+
+   SINCE D27-275 (4 October) IT FAILS CLOSED: a path with no entry takes
+   the nearest entry above it, and a path none covers is refused to every
+   role. So a lost entry now locks the page rather than opening it, and this
+   still names it before anybody at a hotel finds it.
    ══════════════════════════════════════════════════════════════════ */
 describe("every guarded route is one the navigation knows", () => {
   it("has no RequireAccess path that mayReach would wave through", () => {
@@ -160,8 +165,8 @@ describe("every guarded route is one the navigation knows", () => {
     const wideOpen = guarded.filter((path) => !known.has(path));
     expect(
       wideOpen,
-      "these are wrapped in RequireAccess and the navigation has never "
-      + "heard of them, so mayReach returns true and every role gets in: "
+      "these are wrapped in RequireAccess and have no menu entry of their own, "
+      + "so they take another entry's rule or are refused to every role: "
       + wideOpen.join(", "),
     ).toEqual([]);
   });

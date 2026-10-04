@@ -13,7 +13,7 @@ import { queryPersister } from "@/lib/persist";
 import { getModules, setMyPreferences } from "@/data/repositories";
 import { ROLE_LABELS, type Role } from "@/lib/permissions";
 import { START_HERE } from "./startHereCards";
-import { flatNavigationFor, navItemFor, workingHomeFor } from "./navigation";
+import { entryFor, flatNavigationFor, navItemFor, workingHomeFor } from "./navigation";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem, Avatar,
@@ -72,21 +72,13 @@ export function addressAt(
   const there = (to: string) => to.replace(":code", code);
   if (menu.includes(pattern)) return there(pattern) + search;
   if (!navItemFor(pattern)) {
-    const list = Object.entries(LIST_OF).find(([under]) => pattern.startsWith(`${under}/`))?.[1]
-      ?? menu.filter((to) => pattern.startsWith(`${to}/`)).sort((a, b) => b.length - a.length)[0];
+    /* mayReach's own lookup (D27-275): one answer to "which list is this under". */
+    const list = entryFor(pattern)?.to;
     if (list && menu.includes(list)) return there(list);
   }
   const home = homePath(homeScreen, code);
   return home !== "/" ? home : workingHomeFor(role, code) ?? "/";
 }
-
-/* The two records whose list is not above them in the address. */
-const LIST_OF: Record<string, string> = {
-  /* A stay's interim bill. */
-  "/h/:code/stays": "/h/:code/in-house",
-  /* A restaurant bill: it was /h/:code/till/bill/:id. */
-  "/pos/:code/bill": "/pos/:code/till",
-};
 
 export function AccountMenu() {
   const scope = useSession((s) => s.scope);
