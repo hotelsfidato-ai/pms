@@ -296,15 +296,15 @@ fi   # the whole server
 say "Connections"
 # -----------------------------------------------------------------------------
 # Every API on this server shares Postgres's connections (D27-278): each holds
-# its pool (DB_POOL_MAX) and one LISTEN connection. Checked BEFORE anything is
-# changed for this API, so a refusal leaves the server as it was. A port given
-# to two APIs is refused here too.
+# its pool (DB_POOL_MAX) and one LISTEN connection. Checked BEFORE this API's
+# database, settings, nginx file or service are touched, so a refusal leaves
+# them as they were. A port given to two APIs is refused here too.
 MAXC="$(sudo -u postgres psql -tAc 'show max_connections')"
 RESV="$(sudo -u postgres psql -tAc 'show superuser_reserved_connections')"
 { installed_apis /etc/systemd/system "$SERVICE"
   echo "$SERVICE $PORT $(env_value "$APP_DIR/api/.env" DB_POOL_MAX "$POOL")"
 } | budget "$MAXC" "$RESV" \
-  || die "Not enough database connections for every API on this server; see the line above. Nothing was changed."
+  || die "Not enough database connections for every API on this server; see the line above. This API's database, settings, nginx file and service were not touched."
 # A re-run keeps the port the customer was set up with: nginx is rewritten
 # below, and the API reads its port from its api/.env, which is never rewritten.
 if [ -n "$CUSTOMER" ] && [ "$(env_value "$APP_DIR/api/.env" PORT "$PORT")" != "$PORT" ]; then
