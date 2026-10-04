@@ -30,7 +30,7 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const API = "https://api.fidatohotels.com";
-const FULL = ["web types", "api types", "strip", "web tests", "api tests", "database", "replay"];
+const FULL = ["web types", "api types", "strip", "web tests", "api tests", "database", "replay", "pg16"];
 
 /** release/all-5oct -> release-all-5oct, the release copy's folder. */
 export const copyName = (branch) => branch.replaceAll("/", "-");

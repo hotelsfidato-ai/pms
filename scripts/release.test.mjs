@@ -6,7 +6,7 @@ import { copyName, gatesRefusal, firebaseSettings } from "./release.mjs";
 
 const C = "6f12b0e4" + "a".repeat(32);
 const steps = (codes) =>
-  ["web types", "api types", "strip", "web tests", "api tests", "database", "replay"]
+  ["web types", "api types", "strip", "web tests", "api tests", "database", "replay", "pg16"]
     .map((s, i) => `  ${s.padEnd(10)} exit ${codes[i] ?? 0}  ${i}s`).join("\n");
 
 it("names the release copy after the branch", () => {
@@ -26,7 +26,7 @@ it("accepts only a full, clean, green, finished run on exactly this commit", () 
   expect(gatesRefusal(`commit ${C} full\n${steps([0, 0, 0, 0, 1])}`, C)).toBe("is red: api tests");
   // a run still in flight has only its first steps
   expect(gatesRefusal(`commit ${C} full\n${steps([]).split("\n").slice(0, 4).join("\n")}`, C))
-    .toBe("has not finished: no api tests, database, replay yet");
+    .toBe("has not finished: no api tests, database, replay, pg16 yet");
 });
 
 it("takes only the VITE_FIREBASE_ lines of a .env, quotes off the values", () => {
