@@ -300,3 +300,24 @@ begin
   perform test.ok('ownership', 'every app function is pms_migrate''s after one run',
     stray_functions is null, coalesce(stray_functions, ''));
 end $$;
+
+
+-- =============================================================================
+-- EVERY HOTEL TABLE HAS A WRITTEN RULE (200, the owner, 4 October)
+-- =============================================================================
+-- The same question db/verify-backup.sh asks of every nightly restore. Asked
+-- only there, guest_digilocker_attempts (182) went live with none and the
+-- check reported it every night; asked here, a new table without one is red
+-- before it ships. A table nobody may read says so with a policy of its own.
+do $$
+declare
+  bare text;
+begin
+  select string_agg(distinct c.table_name, ', ') into bare
+    from information_schema.columns c
+   where c.table_schema = 'public' and c.column_name = 'hotel_id'
+     and not exists (select 1 from pg_policies p
+                      where p.schemaname = 'public' and p.tablename = c.table_name);
+  perform test.ok('row security', 'every hotel-scoped table has a policy',
+    bare is null, coalesce(bare, ''));
+end $$;
