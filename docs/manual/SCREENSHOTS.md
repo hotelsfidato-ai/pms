@@ -39,7 +39,7 @@ and the numbered list under it.
 | A0-9 | any page; Ctrl K, type three letters of a test guest on today's Arrivals | Reception | 1280 × 800 | 1 the "Bookings" heading · 2 one booking line (name, reference, dates, room) · 3 its status word, right | - |
 | A0-10 | `/` | General Manager | 375 × 812 | 1 menu button ☰ · 2 magnifying glass · 3 bell · 4 avatar | - |
 | A0-11 | `/`, tap ☰ | General Manager | 375 × 812 | 1 the space switcher at the top of the drawer · 2 the menu · 3 Find a screen at the drawer's foot | - |
-| A0-12 | `/h/5EL/arrivals` | Reception | 375 × 812 | 1 Today / Next fourteen days switch · 2 a card's room and status · 3 guest and reference · 4 the labelled rows | At least one arrival on the business date |
+| A0-12 | `/h/5EL/arrivals` | Reception | 375 × 812 | 1 Today / Upcoming switch · 2 a card's room and status · 3 guest and reference · 4 the labelled rows | At least one arrival on the business date |
 | A0-13 | `/h/5EL/stay` | Reception | 1280 × 800 | 1 the yellow bar "No connection. Working offline…" · 2 the line "No connection - these rooms are as they were at …" | Load Rooms, stop the api, open Arrivals and come back; restart the api after |
 | A0-14 | `/h/5EL/housekeeping` | Housekeeping | 1280 × 800 | 1 the bar "No connection. 1 change held: Housekeeping. They go when the line is back." | Stop the api, tap the sparkle on a dirty room; restart the api after (it sends by itself) |
 
@@ -51,10 +51,10 @@ and the numbered list under it.
 | A1-2 | `/` (top of page) | General Manager | 1280 × 800 | 1 "Business date · …" · 2 hotel name · month so far line · 3 the four tiles · 4 a "· n left" · 5 the dark Occupancy card · 6 ARR, RevPAR, Room revenue · 7 one (i) button | Best with an arrival still to come and a departure owing, so yellow and orange show |
 | A1-3 | `/`, scrolled down | General Manager | 1280 × 800 | 1 Nights ahead, on "Tonight" · 2 Money · 3 the arrow by No-shows · 4 The house now and its key · 5 Quick reports | - |
 | A1-4 | `/` | Reception | 375 × 812 | 1 the tiles, two across · 2 the Occupancy card | Put Start here away first (Got it), bring it back after |
-| A1-5 | `/h/5EL/arrivals` | Reception | 1280 × 800 | 1 Today / Next fourteen days · 2 "n expected" pill · 3 the search box · 4 "n of m" · 5 table / cards buttons · 6 a guest name with its reference · 7 a "Due in" status | Table view; a few arrivals, one still due in |
+| A1-5 | `/h/5EL/arrivals` | Reception | 1280 × 800 | 1 Today / Upcoming · 2 "n expected" pill · 3 the search box · 4 "n of m" · 5 table / cards buttons · 6 a guest name with its reference · 7 a "Due in" status | Table view; a few arrivals, one still due in |
 | A1-6 | `/h/5EL/arrivals`, click a Due in row | Reception | 1280 × 800 | 1 name, reference, phone · 2 orange Check in · 3 More options · 4 Stay and Bill tabs · 5 the Room line · 6 Charged / Paid / Balance at the foot | - |
 | A1-7 | `/h/5EL/in-house`, click a guest, open More options | Reception | 1280 × 800 | 1 the list under "The booking" · 2 a greyed option with its reason | - |
-| A1-8 | `/h/5EL/in-house` | Reception | 1280 × 800 | 1 Current stays / Due out switch with counts · 2 "n rooms" pill · 3 the Balance column on a red and a green figure | Table view |
+| A1-8 | `/h/5EL/in-house` | Reception | 1280 × 800 | 1 In house now / Due out switch with counts · 2 "n rooms" pill · 3 the Balance column on a red and a green figure | Table view |
 | A1-9 | `/h/5EL/in-house/due-out` | Reception | 1280 × 800 | 1 the line "… Check-out unlocks when the bill reaches zero." · 2 the red "still owing" box · 3 a row with a red balance | A departure today with money owed |
 | A1-10 | `/h/5EL/in-house`, click a guest due out (Stay tab) | Reception | 1280 × 800 | 1 orange Settle and check out · 2 the Bill tab · 3 the amount at the foot | - |
 | A1-11 | `/h/5EL/stay` | Reception | 1280 × 800 | 1 Calendar / Rooms switch · 2 Room type / Floor · 3 Assign room · 4 the count tiles · 5 an In house tile · 6 a Due out tile ("out today") · 7 a Free tile and its arrow · 8 a room type heading and count | Put Start here away first, bring it back after |
