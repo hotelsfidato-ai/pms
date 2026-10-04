@@ -23,7 +23,11 @@ cd "$ROOT" || exit 9
 label="${1:-gates}"
 mode="${2:-full}"
 P="$S/progress.txt"
-: > "$P"
+# The first line names the commit this run judged and the mode, plus "dirty"
+# when the copy had changes git had not committed: scripts/release.mjs refuses
+# a release whose exact commit has no full, clean, green run here (D27-276).
+dirty=$(git status --porcelain | head -1)
+echo "commit $(git rev-parse HEAD) $mode${dirty:+ dirty}" > "$P"
 
 strip() { sed -e 's/\x1b\[[0-9;]*m//g' "$1"; }
 
