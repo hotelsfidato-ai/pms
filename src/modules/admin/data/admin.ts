@@ -1,5 +1,4 @@
 import { api, ApiError, type HomeScreen, type RoomGrouping } from "@/lib/api";
-import { BUSINESS_DATE } from "@/data/repositories/businessDate";
 
 export type { HomeScreen, RoomGrouping };
 import {
@@ -24,16 +23,6 @@ export interface RoleSummary {
   assignable: boolean;
 }
 
-export interface AdminSettings {
-  businessDate: string;
-  financialYearStart: string;
-  currency: string;
-  defaultRole: Role;
-  /* Stage 1 has no sign-in, so the role picker stands in for identity
-     and is always available. It disappears when real auth arrives. */
-  allowRoleSwitching: boolean;
-}
-
 export async function listRoles(): Promise<RoleSummary[]> {
   return ROLES.map((role) => ({
     role,
@@ -43,27 +32,8 @@ export async function listRoles(): Promise<RoleSummary[]> {
   }));
 }
 
-/** Only roles a person may actually be given — never the service account. */
-export async function listAssignableRoles(): Promise<RoleSummary[]> {
-  return (await listRoles()).filter((r) => r.assignable);
-}
-
 export async function getMatrix() {
   return permissionMatrix();
-}
-
-export async function getAdminSettings(): Promise<AdminSettings> {
-  return {
-    /* The property's own operating day, not a literal. This was the
-       last "2026-08-25" left in src/ after CP11 — an admin screen
-       showing 5 Elements' date while sitting in Agra, which is exactly
-       the failure CP11 removed everywhere else. */
-    businessDate: BUSINESS_DATE,
-    financialYearStart: "04-01",
-    currency: "INR",
-    defaultRole: "front_desk",
-    allowRoleSwitching: true,
-  };
 }
 
 /* ══════════════════════════════════════════════════════════════════

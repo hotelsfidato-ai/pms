@@ -51,18 +51,6 @@ export function CardBody({ className, ...props }: HTMLAttributes<HTMLDivElement>
   return <div className={cn("px-4 py-3.5", className)} {...props} />;
 }
 
-export function CardFooter({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-end gap-2 px-4 py-3.5 border-t border-grey-200 bg-grey-50 rounded-b-lg",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
 /* ── Definition list — the standard detail-screen field layout ─── */
 
 export function DetailList({ className, ...props }: HTMLAttributes<HTMLDListElement>) {

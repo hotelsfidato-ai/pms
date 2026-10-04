@@ -9,10 +9,8 @@
    ⚠ A CHANGE OF WORDS IS A NEW VERSION. The server writes the version on
    every photo's row (api/src/routes/idPhotos.ts, NOTICE_VERSION), so what
    an earlier guest agreed to is not rewritten by a later edit. Change the
-   words here and the date in both places.
+   words here and the date there.
    ══════════════════════════════════════════════════════════════════ */
-
-export const ID_PHOTO_NOTICE_VERSION = "2026-09-30";
 
 /** The one sentence every screen that takes an ID photo shows, the desk's
     included: Aadhaar only with its first 8 digits hidden. */

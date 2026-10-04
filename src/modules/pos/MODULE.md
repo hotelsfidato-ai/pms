@@ -280,9 +280,8 @@ data/till.ts        Every call the till, floor, pad, terminal, kitchen,
                     as { ok: false, reason }, not an exception. A READ that
                     fails THROWS (POS-4, 16 Sep) — never catch it into an
                     empty list; the screen decides what to say.
-                    `openOrderOnTable` has no caller — on KNOWN_UNREACHABLE in
-                    src/data/repositories/repositories.test.ts ("superseded by the
-                    order pad; safe to delete").
+                    `openOrderOnTable` (superseded by the order pad) was deleted
+                    on 4 October.
 data/posBridge.ts   What an outside till sent: listPosOutlets, listPosTickets.
                     Split out of the old billing.ts on 15 September.
 lib/addonSpec.ts    ADDON_SPEC - the add-ons file's columns (D21-43). Here and
@@ -558,7 +557,6 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
 - **"Which room was this stay in" is written by hand** in
   `api/src/modules/pos/pos.ts` (the tickets list) — one of seven copies that could
   move onto `app.stay_room()` (PENDING § 6).
-- **`openOrderOnTable`** has no caller (PENDING § 4).
 - Found while writing this brief (15 September), not yet elsewhere:
   - Bill, Docket and Terminal set no browser-tab title — none uses
     `PageHeader` or `useDocumentTitle`. Kitchen does since 16 September (POS-3).

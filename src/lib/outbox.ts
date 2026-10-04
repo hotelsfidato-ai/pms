@@ -122,18 +122,6 @@ async function tx<T>(
   });
 }
 
-/** Is IndexedDB usable at all? Private windows and locked-down browsers
-    both refuse it, and a queue that cannot persist must say so rather
-    than pretend. */
-export async function outboxAvailable(): Promise<boolean> {
-  try {
-    await open();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export async function enqueue(
   entry: Omit<OutboxEntry, "id" | "queuedAt" | "attempts" | "status" | "idempotencyKey">,
 ): Promise<OutboxEntry> {
@@ -174,10 +162,6 @@ export async function rejected(): Promise<OutboxEntry[]> {
 
 export async function waiting(): Promise<OutboxEntry[]> {
   return (await list()).filter((e) => e.status === "waiting");
-}
-
-export async function clearRejected(): Promise<void> {
-  for (const e of await rejected()) await remove(e.id);
 }
 
 /* ── Telling the interface something changed ──────────────────────

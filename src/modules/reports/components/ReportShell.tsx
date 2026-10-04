@@ -238,20 +238,6 @@ export function ReportHead({ columns }: {
   );
 }
 
-/** A section band across the full width, as the real exports use. */
-export function ReportBand({ label, span }: { label: ReactNode; span: number }) {
-  return (
-    <tr>
-      <td
-        colSpan={span}
-        className="px-4 py-2 bg-brand-orange-50 text-2xs font-semibold uppercase tracking-wide text-brand-orange-700 border-y border-grey-200"
-      >
-        {label}
-      </td>
-    </tr>
-  );
-}
-
 /**
  * A money cell. Negatives are real and stay visible — never blank,
  * never in brackets. A null is a figure this system cannot derive,

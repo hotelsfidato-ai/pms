@@ -1091,12 +1091,6 @@ export function takeTableAway(hotelId: string, id: string): Done {
   return simplePost(setupPath(hotelId, `tables/${id}/off`));
 }
 
-export function openOrderOnTable(
-  hotelId: string, outlet: string, tableId: string,
-): Promise<TillResult> {
-  return write(`/api/hotels/${hotelId}/till/orders`, { outlet, tableId });
-}
-
 /* ══════════════════════════════════════════════════════════════════
    A WHOLE ROUND, IN ONE REQUEST
 

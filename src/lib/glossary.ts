@@ -82,23 +82,3 @@ export const GLOSSARY: Record<TermKey, { term: string; means: string }> = {
     means: "The report of a foreign guest to the FRRO portal: within 24 hours of arrival, and the departure within 24 hours of leaving. Anybody whose nationality is not Indian needs one. It was called Form C until September 2025.",
   },
 };
-
-/** Report rows and headings arrive as text from the API; these are the
-    ones with an entry. Exact labels — a near miss shows no explanation
-    rather than the wrong one. */
-const BY_LABEL: Record<string, TermKey> = {
-  "Occupancy Rate (%)": "occupancy",
-  "Average Daily Rate (ADR)": "adr",
-  "Revenue Per Available Room": "revpar",
-  "No Show Rooms": "noShow",
-  "Day Use Room": "dayUse",
-  "Complimentary Room": "complimentary",
-  "City Ledger": "cityLedger",
-  "Guest Ledger": "guestLedger",
-  "PTD": "ptd",
-  "PTD (₹)": "ptd",
-  "YTD": "ytd",
-  "YTD (₹)": "ytd",
-};
-
-export const termFor = (label: string): TermKey | undefined => BY_LABEL[label];
