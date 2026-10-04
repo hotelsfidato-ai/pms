@@ -487,6 +487,10 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PUT ${H}/pricing/base`]: PRICE,
   [`PUT ${H}/pricing/offset`]: PRICE,
   [`PUT ${H}/pricing/addon`]: PRICE,
+  /* D27-258: a rate plan's Off, place and sources, and meal plans by day. */
+  [`PUT ${H}/plan-settings/order`]: PRICE,
+  [`PUT ${H}/plan-settings/:roomTypeId/:mealPlan`]: PRICE,
+  [`PUT ${H}/meal-days/:mealPlan`]: PRICE,
   [`POST ${H}/room-types`]: SETUP_ADD,
   [`PATCH ${H}/room-types/:id`]: SETUP_CHANGE,
   [`POST ${H}/rooms`]: SETUP_ADD,
@@ -823,6 +827,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
 
   /* ── Rooms, rates and setup ── */
   [`GET ${H}/pricing`]: PRICES,
+  [`GET ${H}/plan-settings`]: PRICES,
   [`GET ${H}/rates`]: PRICES,
   [`GET ${H}/rate-grid`]: PRICES,
   [`GET ${H}/rate-plans`]: PRICES,

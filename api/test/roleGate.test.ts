@@ -365,6 +365,14 @@ describe("the matrix the server asks", () => {
     }
   });
 
+  it("D27-258: a rate plan's settings and meal days are set as a price is, and read as prices are", () => {
+    for (const key of [`PUT ${H}/plan-settings/order`, `PUT ${H}/plan-settings/:roomTypeId/:mealPlan`,
+                       `PUT ${H}/meal-days/:mealPlan`]) {
+      expect(rule(key), key).toEqual(rule(`PUT ${H}/pricing/addon`));
+    }
+    expect(READ_RULES[`GET ${H}/plan-settings`]).toEqual(READ_RULES[`GET ${H}/pricing`]);
+  });
+
   it("D22-30: an administrator and the GM set a commission - in the matrix", () => {
     const key = `PUT ${H}/booking-sources/:id/commission`;
     expect(who(key)).toEqual(["owner", "admin", "gm"]);
