@@ -260,12 +260,15 @@ export async function issueFolioInvoice(
        (hotel_id, folio_id, fin_year, number, gstin, fssai_number,
         recipient_name, recipient_gstin, recipient_address,
         place_of_supply, taxable_value, cgst_total, sgst_total,
-        tax_total, total, business_date, issued_by${sac ? ", sac_code" : ""})
+        tax_total, total, business_date, issued_by, sac_by_kind${sac ? ", sac_code" : ""})
      values ($1,$2,$3,$4,
              (select gstin from hotels where id = $1),
              (select fssai_number from hotels where id = $1),
              $5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
-             app.current_user_id()${sac ? ", $15" : ""})
+             app.current_user_id(),
+             /* Each kind's SAC as it is now, frozen with the invoice (D27-258 Q6, 197). */
+             (select coalesce(jsonb_object_agg(t.kind, t.sac_code), '{}'::jsonb)
+                from tax_sac t where t.hotel_id = $1)${sac ? ", $15" : ""})
      returning id::text`,
     [hotelId, folioId, finYear.rows[0]!.y, number.rows[0]!.n,
      recipient.name, recipient.gstin, recipient.address,
@@ -359,6 +362,13 @@ invoices.post("/:code/stays/:id/invoice", async (c) => {
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
+/** A line's SAC: its kind's, frozen on the invoice; a room line falls back to
+    the invoice's own code; anything else unsaid is null (a dash). */
+export function sacOf(kind: string | null, byKind: Record<string, string> | null, invoiceSac: string): string | null {
+  if (kind && byKind?.[kind]) return byKind[kind]!;
+  return kind === "room" ? invoiceSac : null;
+}
+
 /* ── Read one, with the lines it was made from ────────────────────── */
 
 
@@ -391,7 +401,7 @@ export async function invoiceFacts(client: Client, hotelId: string, number: stri
             to_char(i.issued_at, 'DD Mon YYYY, HH24:MI') as issued_at,
             to_char(i.business_date, 'YYYY-MM-DD') as business_date,
             i.gstin, i.recipient_name, i.recipient_gstin,
-            i.recipient_address, i.place_of_supply, i.sac_code,
+            i.recipient_address, i.place_of_supply, i.sac_code, i.sac_by_kind,
             i.taxable_value::text, i.cgst_total::text, i.sgst_total::text,
             i.tax_total::text, i.total::text,
             i.credits_id::text, i.reason,
@@ -431,10 +441,10 @@ export async function invoiceFacts(client: Client, hotelId: string, number: stri
      totals are stored; the detail is derived from immutable rows. */
   const { rows: lines } = await client.query<{
     description: string; category: string; amount: string;
-    tax_rate: string; tax_amount: string; business_date: string;
+    tax_rate: string; tax_amount: string; business_date: string; tax_kind: string | null;
   }>(
     `select fp.description, fp.category, fp.amount::text,
-            fp.tax_rate::text, fp.tax_amount::text,
+            fp.tax_rate::text, fp.tax_amount::text, fp.tax_kind,
             to_char(fp.business_date,'YYYY-MM-DD') as business_date
        from folio_postings fp
       where fp.folio_id = $1
@@ -485,6 +495,11 @@ export async function invoiceFacts(client: Client, hotelId: string, number: stri
         taxRate: Number(l.tax_rate),
         taxAmount: Number(l.tax_amount),
         date: l.business_date,
+        /* The SAC of the kind it was taxed under, as the invoice was issued
+           (D27-258 Q6): a room line with none is the invoice's own (996311);
+           any other with none - or an invoice from before - is null, a dash. */
+        sac: sacOf(l.tax_kind ?? (l.category === "room" ? "room" : null),
+                   i["sac_by_kind"] as Record<string, string> | null, i["sac_code"] as string),
       })),
     taxableValue: Number(i["taxable_value"]),
     /* THE HEADER RATE COMES FROM THE LINES, OR IT IS NOT SHOWN.

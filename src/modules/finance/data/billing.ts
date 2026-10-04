@@ -164,6 +164,8 @@ export interface InvoiceLine {
   taxRate: number;
   taxAmount: number;
   date: string;
+  /** Its kind's SAC as the invoice was issued (D27-258 Q6); null: a dash. */
+  sac?: string | null;
 }
 
 export interface InvoiceDetail {
