@@ -7,7 +7,7 @@
 -- =============================================================================
 do $$
 declare
-  h uuid; rt uuid; refused boolean;
+  h uuid; h2 uuid; rt uuid; refused boolean;
 begin
   h := app.provision_property_unchecked('RRT', 'Rooms Rates Tax Test', 'Nowhere');
   insert into room_types (hotel_id, code, name, base_occupancy, max_occupancy, base_rate)
@@ -61,8 +61,17 @@ begin
   end;
   perform test.ok('rooms rates tax', 'a tax rule ends after it starts', refused, '');
 
+  /* D27-263: a new hotel starts empty - no automatic STD/DLX/EXE/STE. The
+     fixtures and the demo still name a template; the door names none. */
+  h2 := app.provision_property_unchecked('RRN', 'Rooms Empty Test', 'Nowhere', p_template_set => 'none');
+  perform test.ok('rooms rates tax', 'a property with no template starts with no room types (D27-263)',
+    not exists (select 1 from room_types where hotel_id = h2), '');
+  perform test.ok('rooms rates tax', 'the Add a hotel door asks for no template (D27-263)',
+    pg_get_functiondef('app.provision_property(text,text,text,text,text,text,text,text)'::regprocedure)
+      like '%p_template_set => ''none''%', '');
+
   -- ---------- and the fixtures go ----------
   alter table hotels disable trigger hotels_no_delete;
-  delete from hotels where id = h;
+  delete from hotels where id in (h, h2);
   alter table hotels enable trigger hotels_no_delete;
 end $$;

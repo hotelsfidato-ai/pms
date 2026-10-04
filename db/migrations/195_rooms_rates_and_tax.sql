@@ -1,6 +1,6 @@
 -- =============================================================================
--- 191 · Rooms, rates and tax in the Settings console (P3; D27-249 to D27-254,
---       the owner's answers D27-258) - "191 for now", the master renumbers
+-- 195 · Rooms, rates and tax in the Settings console (P3; D27-249 to D27-254,
+--       the owner's answers D27-258) - "195 for now", the master renumbers
 -- =============================================================================
 -- Additive only: new columns, new tables. Nothing earlier changes its return
 -- type (MEMORY 317), and nothing here prices anything by itself.
@@ -10,7 +10,7 @@
 --      total, as every reader already takes them)
 --   2  rooms in the order the owner drags them
 --   3  a room type's own photos (186's checks; ten a type, the API counts)
---   4  a room type's amenities, from P2's one catalogue (`amenities`, 190)
+--   4  a room type's amenities, from P2's one catalogue (`amenities`, 194)
 --   5  a rate plan ("Room type · Meal plan", D27-251) switched Off, and its
 --      place in the tree - prices stay where they are (090, 162)
 --   6  which booking sources sell a plan: no rows = every source (Q4)
@@ -74,7 +74,7 @@ create table if not exists room_type_amenities (
   amenity_id    uuid not null,
   unique (room_type_id, amenity_id)
 );
-/* P2's catalogue (190) comes first on every replay; on a copy without it yet,
+/* P2's catalogue (194) comes first on every replay; on a copy without it yet,
    the link waits for it. */
 do $$
 begin
@@ -173,4 +173,93 @@ begin
     execute format('create trigger %I after insert or update or delete on %I
                       for each row execute function app.write_audit()', t || '_audit', t);
   end loop;
+end $$;
+
+-- 9 · a new hotel starts empty (D27-263) ---------------------------------------
+-- The owner, 3 October: no automatic STD/DLX/EXE/STE. The mechanism keeps its
+-- templates for the migrations, the demo loader and the tests' fixtures, which
+-- name one; the set 'none' copies nothing. The door (Add a hotel) always asks
+-- for 'none' - its p_template_set stays only so its signature does not move
+-- (MEMORY 317). Room types are then added by hand, on Settings → Rooms.
+create or replace function app.provision_property_unchecked(
+  p_code          text,
+  p_name          text,
+  p_city          text,
+  p_state         text default null,
+  p_gstin         text default null,
+  p_template_set  text default 'standard',
+  p_timezone      text default 'Asia/Kolkata'
+)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_hotel_id uuid;
+  v_types    integer := 0;
+begin
+  perform app.require_group_admin();
+
+  insert into hotels (code, name, city, state, gstin, timezone)
+  values (upper(p_code), p_name, p_city, p_state, p_gstin, p_timezone)
+  returning id into v_hotel_id;
+
+  if p_template_set is distinct from 'none' then
+    /* base_rate is deliberately absent from this column list. The room types
+       arrive named and sized; the hotel prices them. */
+    insert into room_types (hotel_id, code, name, base_occupancy,
+                            max_occupancy, sort_order)
+    select v_hotel_id, t.code, t.name, t.base_occupancy,
+           t.max_occupancy, t.sort_order
+      from room_type_templates t
+     where t.template_set = p_template_set;
+
+    get diagnostics v_types = row_count;
+
+    if v_types = 0 then
+      raise exception 'No room type templates found for set "%"', p_template_set
+        using hint = 'Check room_type_templates, or pass a different p_template_set.';
+    end if;
+  end if;
+
+  -- S1: without this the property cannot issue its first invoice.
+  -- `on conflict` because 025 opens one from a trigger on hotels as well.
+  insert into invoice_series (hotel_id, fin_year, prefix, next_number)
+  values (v_hotel_id, app.current_fin_year(), upper(p_code), 1)
+  on conflict (hotel_id, fin_year) do nothing;
+
+  raise notice 'Provisioned % (%) with % room types and no prices.',
+               p_name, upper(p_code), v_types;
+  return v_hotel_id;
+end
+$$;
+
+create or replace function app.provision_property(
+  p_code          text,
+  p_name          text,
+  p_city          text,
+  p_key_hash      text,
+  p_state         text default null,
+  p_gstin         text default null,
+  p_template_set  text default 'standard',
+  p_timezone      text default 'Asia/Kolkata'
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform app.require_group_admin();
+  perform app.require_provisioning_key(p_key_hash);
+
+  /* D27-263: a new hotel starts with no room types, whatever was asked. */
+  return app.provision_property_unchecked(
+    p_code         => p_code,
+    p_name         => p_name,
+    p_city         => p_city,
+    p_state        => p_state,
+    p_gstin        => p_gstin,
+    p_template_set => 'none',
+    p_timezone     => p_timezone
+  );
 end $$;
