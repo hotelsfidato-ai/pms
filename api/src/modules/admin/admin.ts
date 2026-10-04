@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { createHash, randomUUID } from "node:crypto";
 import { withSession } from "../../auth.ts";
 import {
-  ensureAccount, setAccountPassword, passwordProblem, minPasswordFor, MIN_MANAGER_PASSWORD,
+  ensureAccount, setAccountPassword, setSignIn, passwordProblem, minPasswordFor, MIN_MANAGER_PASSWORD,
 } from "../../identity.ts";
 import type { PoolClient as Client } from "pg";
 import { env } from "../../env.ts";
@@ -43,6 +43,30 @@ const NO_SIGN_IN =
 export const admin = new Hono<{ Variables: { subject: string } }>();
 
 const refuse = (reason: string) => ({ ok: false as const, reason });
+
+/* SIGN-IN FOLLOWS ACTIVE (the owner's D27-275 part 4). Asked AFTER the
+   database has committed: Firebase is not in the transaction, so a failure
+   leaves the person as the database has them and the answer says the
+   sign-in did not follow. No Firebase on this server (a developer's copy):
+   nothing to switch, and the request still succeeds. */
+async function switchSignIn(uid: string | null, on: boolean): Promise<string | undefined> {
+  if (!uid) return undefined;
+  if (!env.firebaseServiceAccount) {
+    console.log(`[admin] no Firebase service account: sign-in not switched ${on ? "on" : "off"}`);
+    return undefined;
+  }
+  try {
+    await setSignIn(uid, on);
+    return undefined;
+  } catch (e) {
+    console.error("[admin] sign-in not switched:", e instanceof Error ? e.message : e);
+    return on
+      ? "They are active again, but their sign-in could not be switched back on. "
+        + "Ask whoever runs the server to enable their account in Firebase."
+      : "They are deactivated, and the system refuses them, but their sign-in could not "
+        + "be switched off. Ask whoever runs the server to disable their account in Firebase.";
+  }
+}
 
 const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 
@@ -886,10 +910,13 @@ admin.post("/admin/staff/:id/reactivate", async (c) => {
           "reach a sign-in page that accepts nothing.",
       };
     }
-    return { ok: true as const };
+    return { ok: true as const, uid: rows[0].uid };
   });
 
-  return c.json(result!, "ok" in result! && result!.ok ? 200 : 409);
+  if (!("ok" in result! && result!.ok)) return c.json(result!, 409);
+  /* Their sign-in back on (D27-275), after the commit. */
+  const warning = "uid" in result ? await switchSignIn(result.uid, true) : result.warning;
+  return c.json(warning ? { ok: true as const, warning } : { ok: true as const });
 });
 
 admin.get("/admin/staff", async (c) => {
@@ -1398,15 +1425,18 @@ admin.post("/admin/staff/:id/deactivate", async (c) => {
       /* Deactivated, never deleted. Their name is on folio postings,
          invoices and the audit log, and a deleted row makes every one
          of those unattributable. */
-      const { rowCount } = await client.query(
-        "update staff set is_active = false where id = $1 and is_active",
+      const { rows } = await client.query<{ uid: string | null }>(
+        "update staff set is_active = false where id = $1 and is_active returning firebase_uid as uid",
         [c.req.param("id")],
       );
-      if (!rowCount) return refuse("That account is already inactive.");
+      if (!rows[0]) return refuse("That account is already inactive.");
 
-      return { ok: true as const };
+      return { ok: true as const, uid: rows[0].uid };
     });
-    return c.json(result, "ok" in result && result.ok ? 200 : 409);
+    if (!("ok" in result && result.ok)) return c.json(result, 409);
+    /* Their sign-in off too (D27-275), after the commit: the database first. */
+    const warning = await switchSignIn(result.uid, false);
+    return c.json(warning ? { ok: true as const, warning } : { ok: true as const });
   } catch (error) {
     const reason = reasonFor(error);
     if (reason) return c.json(refuse(reason), 403);
