@@ -1,5 +1,10 @@
 # Release of 4 October 2026 (release/all-4oct, 6f12b0e4)
 
+> **WITHDRAWN, 4 October, the owner: never run this.** The owner chose to skip it and cut one
+> newer release after the small gaps (D27-275) and the health page, made and checked by
+> `node scripts/release.mjs`. The branch `release/all-4oct` and its release copy are deleted
+> (MEMORY 381). Its contents are all in cp6 and go out with that release.
+
 **Only after the master says the final full check is green.** About 30 minutes. Never during a
 night audit. The website is already built in its own release copy
 (`D:\fidato pms\.claude\worktrees\release-all-4oct`): publish it from THERE, never from
