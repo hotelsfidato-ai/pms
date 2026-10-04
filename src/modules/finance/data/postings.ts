@@ -58,11 +58,9 @@ export async function postCharge(
   /** One per press of Post charge, kept until it lands: a repeat posts once. */
   idempotencyKey?: string,
 ): Promise<OperationResult<Posting>> {
-  /* The tax rate comes from the PROPERTY, server-side — `taxOn()` in
-     src/lib/rules.ts still shows the clerk what will be charged, but
-     the figure that lands in the ledger is computed where the rate
-     lives. GST is a state subject; a constant in the browser is the
-     wrong place for it. */
+  /* The tax rate comes from the PROPERTY, server-side: the figure that
+     lands in the ledger is computed where the rate lives. GST is a
+     state subject; a constant in the browser is the wrong place for it. */
   /* The browser's copy of the rule answers instantly and without a
      round trip. It is not the enforcement — the server refuses too —
      but a clerk should not wait on the network to be told a closed

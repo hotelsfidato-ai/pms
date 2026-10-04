@@ -127,35 +127,6 @@ export function DocParties({ children, className }: { children: ReactNode; class
   );
 }
 
-export function DocParty({ label, name, lines, rows }: {
-  label: string;
-  name: ReactNode;
-  lines?: ReactNode[];
-  rows?: Array<[string, ReactNode]>;
-}) {
-  return (
-    <div className="min-w-0">
-      <DocLabel className="mb-1.5">{label}</DocLabel>
-      <p className="text-md font-extrabold text-ink-700">{name}</p>
-      {lines?.filter(Boolean).map((l, i) => (
-        <p key={i} className="text-xs leading-[1.5] text-grey-500 mt-0.5">{l}</p>
-      ))}
-      {rows && rows.length > 0 && (
-        <table className="mt-2">
-          <tbody>
-            {rows.map(([k, v]) => (
-              <tr key={k}>
-                <td className="py-0.5 pr-4 text-xs text-grey-500 whitespace-nowrap align-top">{k}</td>
-                <td className="py-0.5 text-xs font-semibold text-ink-700">{v}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-}
-
 /** A table's header cell: the voucher's label over a 2px ink rule. */
 export const DOC_TH = "pb-1.5 border-b-2 border-ink-700 text-xs font-bold uppercase tracking-[0.08em] text-grey-500";
 /** A table's body cell: on a hairline. */

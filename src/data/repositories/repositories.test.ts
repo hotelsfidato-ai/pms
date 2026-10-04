@@ -244,21 +244,18 @@ describe("Rule 2b - a function nobody calls is a capability nobody can reach", (
   /* Known unreachable on 8 September 2026. Every line here is work
      somebody paid for that nobody can use. */
   const KNOWN_UNREACHABLE = [
-    /* Superseded TODAY by the order pad, which opens the order in its
-       batch send instead. Safe to delete. */
-    "openOrderOnTable",
     /* Helpers overtaken by later screens. */
     /* ⚠ `getFolio` WAS ON THIS LIST AND DID NOT BELONG. `getFolioBalance`
        has called it all along, one module further into the seam. The
        shrink-only test below caught it the moment the gate learned to
        follow that edge — the list's first correction came from the
        gate, not from me re-reading it. */
-    "addInclusion", "defaultPropertyId", "getAdminSettings",
+    "addInclusion", "defaultPropertyId",
     /* ⚠ `getTodaySnapshot` CAME OFF ON 9 SEPTEMBER. The property screen
        shows a hotel's own numbers, which is what it was written for —
        it had simply never had a screen. The gate noticed before I did:
        the shrink-only test failed the moment the caller appeared. */
-    "getProperty", "listAssignableRoles",
+    "getProperty",
     "listGroupMembers", "listRoles",
     "listSellableRooms", "listVacant", "windowFrom",
   ];

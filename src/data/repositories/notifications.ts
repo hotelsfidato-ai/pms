@@ -81,8 +81,3 @@ export const notificationsRepo = {
    */
   create: async (): Promise<null> => null,
 };
-
-export const useNotifications = (hotelId: string) => ({
-  queryKey: ["notifications", hotelId],
-  queryFn: () => notificationsRepo.list(hotelId),
-});

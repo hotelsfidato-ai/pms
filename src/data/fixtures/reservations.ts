@@ -625,21 +625,3 @@ function toReservation(s: Stay): Reservation {
 }
 
 export const reservations: Reservation[] = stays.map(toReservation);
-
-export function getReservationsForDateRange(from: string, to: string): Reservation[] {
-  return reservations.filter((r) => r.checkOut >= from && r.checkIn <= to);
-}
-
-export function getArrivalsForDate(date: string): Reservation[] {
-  return reservations.filter((r) => r.checkIn === date && r.status !== "cancelled");
-}
-
-export function getDeparturesForDate(date: string): Reservation[] {
-  return reservations.filter((r) => r.checkOut === date && r.status !== "cancelled");
-}
-
-export function getInHouseForDate(date: string): Reservation[] {
-  return reservations.filter(
-    (r) => r.status !== "cancelled" && !r.isDayUse && r.checkIn <= date && r.checkOut > date,
-  );
-}

@@ -1,7 +1,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
-import { Check, AlertCircle, Circle, ChevronDown, ChevronRight } from "lucide-react";
+import { AlertCircle, Circle, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Card, CardBody, StatusPill } from "@/components/ui";
 import { getCommissioning, type CommissioningCheck } from "@/modules/admin/data/commissioning";
@@ -187,26 +187,5 @@ function Row({ check, hotelId, folds }: {
         <div className={shell}>{body}</div>
       )}
     </li>
-  );
-}
-
-/** The green half, for a property that is finished. Shown on the
-    properties list rather than here — a hotel that is ready should say
-    so once, somewhere it is being compared with the others, not on the
-    screen its own manager opens daily. */
-export function ReadyPill({ hotelId }: { hotelId: string }) {
-  const q = useQuery({
-    queryKey: ["commissioning", hotelId],
-    queryFn: () => getCommissioning(hotelId),
-    enabled: !!hotelId,
-  });
-
-  if (!q.data) return null;
-  return q.data.canTakeABooking ? (
-    <StatusPill tone="success"><Check className="size-3" /> Ready</StatusPill>
-  ) : (
-    <StatusPill tone="warning">
-      {q.data.blockedBy.length} to settle
-    </StatusPill>
   );
 }

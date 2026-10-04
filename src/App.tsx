@@ -31,7 +31,6 @@ import { NotificationsPage } from "@/pages/Notifications";
 import PlacesAndSuppliersPage from "@/pages/PlacesAndSuppliers";
 import SignInPage from "@/pages/SignIn";
 import DesignSystemPage from "@/pages/DesignSystem";
-import PlaceholderPage from "@/pages/Placeholder";
 /* Every service's screen addresses, from its own routes file
    (docs/SERVICE-FOLDERS-PLAN.md). */
 import { routes as frontDeskRoutes } from "@/modules/front-desk/routes";
@@ -50,7 +49,6 @@ import { routes as channelManagerRoutes } from "@/modules/channel-manager/routes
 /* The services not built yet — each a Coming soon page (16 September),
    reached from its own section of the menu since 28 September (D27-87). */
 import { routes as accountingRoutes } from "@/modules/accounting/routes";
-import { routes as bookingEngineRoutes } from "@/modules/booking-engine/routes";
 import { routes as crmRoutes } from "@/modules/crm/routes";
 import { routes as contractsRoutes } from "@/modules/contracts/routes";
 import { routes as crsRoutes } from "@/modules/crs/routes";
@@ -229,24 +227,6 @@ function RequireSession() {
   return <AppShell />;
 }
 
-/* What is left unbuilt, and honestly labelled.
-
-   Cashiering and POS are not placeholders for want of time. Neither
-   has been specified: Sattva runs live in eZee today, so POS here is
-   a migration off a working system rather than a new build, and
-   guessing at either would put a screen in front of someone that
-   contradicts what they use every day.                             */
-/* EMPTY, AND THAT IS THE POINT. Every route in the application now has a
-   screen behind it.
-
-   Cashiering was the last entry and its note said why it was here:
-   "unspecified — placeholder until the live flow is observed". It has now
-   been observed — a front-desk shift close — and it is built.
-
-   The machinery stays because the next unobserved thing belongs here rather
-   than as a route that renders nothing. */
-const PROPERTY: Array<[segment: string, title: string, carries: string, cp: string]> = [];
-
 export default function App() {
   return (
     <PersistQueryClientProvider
@@ -311,7 +291,6 @@ export default function App() {
             {channelManagerRoutes}
             {/* Coming soon: one page each for the services not built yet. */}
             {accountingRoutes}
-            {bookingEngineRoutes}
             {crmRoutes}
             {contractsRoutes}
             {crsRoutes}
@@ -364,18 +343,6 @@ export default function App() {
               path="/h/:code"
               element={<><PropertyScope /><PropertyIndex /></>}
             />
-            {PROPERTY.map(([segment, title, carries, cp]) => (
-              <Route
-                key={segment}
-                path={`/h/:code/${segment}`}
-                element={
-                  <>
-                    <PropertyScope />
-                    <PlaceholderPage title={title} carries={carries} checkpoint={cp} />
-                  </>
-                }
-              />
-            ))}
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

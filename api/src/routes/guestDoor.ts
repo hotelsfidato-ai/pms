@@ -1,7 +1,7 @@
 import { guestDining } from "./guestDining.ts";
 import { Hono } from "hono";
 import { OAuth2Client } from "google-auth-library";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { withSession } from "../auth.ts";
 import { pool } from "../db.ts";
 import { env } from "../env.ts";
@@ -1293,5 +1293,3 @@ guestDoor.route("/", guestAbout);        // highlights, amenities, the map (D27-
    else: the hash the door computes is the hash the database holds. */
 export { forgetKnocksForTests } from "./guestDoorKit.ts";
 export const hashForTests = sha256;
-export const constantTimeEqualForTests = (a: string, b: string) =>
-  a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));

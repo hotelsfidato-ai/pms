@@ -44,7 +44,6 @@ each booking.
 | Room types | `/h/:code/room-types` | `pages/RoomSetup.tsx` | none |
 | Cancellation terms | `/h/:code/cancellation-terms` | `pages/CancellationTerms.tsx` | none |
 | Rates | `/h/:code/rates` | `pages/Rates.tsx` | none |
-| — routed nowhere | — | `pages/UnroutedLists.tsx` (`RoomTypesPage`, `RatePlansPage`) | kept, pending the owner |
 
 - **Rates (30 September, D27-188, D27-194)** replaces Pricing, Rate plans, the
   Rate calendar and Rate performance; `/h/:code/pricing`, `/rate-plans` and
@@ -198,8 +197,6 @@ data/rateSetup.ts      setRackRate, removeRate (clearing an older price); cancel
 data/rateGrid.ts       getRateDays - each day's performance on Rates.
 data/roomSetup.ts      getRoomSetup, addRoomType, amendRoomType, addRoom, amendRoom,
                        amendFrontDesk, importSetup.
-data/unroutedLists.ts  listRoomTypes, listRatePlans — for the two screens no address
-                       reaches. Split out of the old directory.ts.
 ```
 
 `components/FrontDeskCard.tsx` - the front desk's hours and charges, on admin's
@@ -334,8 +331,6 @@ From `PENDING.md` and `PROGRESS.md`, as of 15 September:
   Akkalkot is configured (PROGRESS "Still needing a person" 10).
 - **Cancellation terms per property, if any** — the screen is built and ships
   empty (PROGRESS "Still needing a person" 11).
-- **`RoomTypesPage` and `RatePlansPage` are routed nowhere** — kept, not
-  deleted, pending the owner (PENDING § 5a).
 - **The same chart icon on six menu entries** — Rate performance is one of
   them (PENDING § 5a).
 - The plan's table lists "promotions" under this service. The only promotions

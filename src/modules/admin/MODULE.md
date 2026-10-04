@@ -337,9 +337,8 @@ Every endpoint above has a caller in the web app (checked 15 September).
 
 ```
 data/admin.ts          375 lines. Roles and the permission matrix, read from
-                       src/lib/permissions.ts (listRoles, listAssignableRoles,
-                       getMatrix, getAdminSettings — three of those have no caller,
-                       see Open items); and every write above: create a property or a
+                       src/lib/permissions.ts (listRoles, getMatrix — listRoles
+                       has no caller, see Open items); and every write above: create a property or a
                        person, password, access, deactivate, reactivate, amend,
                        close/reopen, home screen; MIN_PASSWORD = 8.
 data/adminLists.ts     212 lines. listStaff, roleDescription, listAuditLog,
@@ -376,8 +375,8 @@ data/admin.ts          PropertyProfile and PROPERTY_TYPES (the owner's list: the
 moduleSwitchRoles.ts   MODULE_SWITCH_ROLES (owner, admin) — who sees the switches (D17-36);
                        the server's copy is in api/src/modules/admin/grants.ts.
 flows/StaffAdmin.tsx   NewPerson, People, NewProperty.
-flows/CommissioningCard.tsx   CommissioningCard (the door's export) and ReadyPill,
-                       which nothing imports (checked 15 September).
+flows/CommissioningCard.tsx   CommissioningCard (the door's export). ReadyPill,
+                       which nothing imported, was deleted on 4 October.
 ```
 
 ---
@@ -560,8 +559,8 @@ From `PENDING.md`, `PROGRESS.md` and `HANDOVER.md`, as of 15 September:
   caller** — how four admin endpoints sat unreachable (PENDING § 5; MEMORY 224).
 - **`hotels.address_line` duplicates city and state** in the demo data —
   editable on Properties (PENDING § 6).
-- **`listRoles`, `listAssignableRoles`, `getAdminSettings`** have no caller
-  (PENDING § 4, KNOWN_UNREACHABLE).
+- **`listRoles`** has no caller (PENDING § 4, KNOWN_UNREACHABLE).
+  `listAssignableRoles` and `getAdminSettings` were deleted on 4 October.
 - **"Which room was this stay in"** is written by hand in the Audit log's
   query (`directory.ts`) — one of seven copies (PENDING § 6).
 - Found while writing this brief (15 September):
