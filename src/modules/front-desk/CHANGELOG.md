@@ -8,6 +8,22 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-04 · The Calendar shows each night's own price (the owner's D27-271, item 3)
+
+**Asked for:** through the master. Branch `worktree-agent-acc5dbcb7470b128c` from cp6 62fa2c30; database `fidato_cal271` (migrated to 196, demo loaded).
+**Shipped:**
+- `GET /:code/calendar-prices?from&days` in `api/src/modules/front-desk/stays.ts`: each room type on each night, `app.price_for(type, 'EP', night)` - the Rates screen's main row. The night's own price (a base, or the master's plus a difference), else the standard (rack) price, else null. No price worked out here.
+- `data/stayview.ts`: `getStayView` asks it once for the whole window, beside the rooms and stays; each night's figure replaces the business date's price repeated across the fortnight (`rackFor`, and its "Stage 9" comment, are gone). A 404 reads as no prices, as `getHouseNow` does.
+- Core, one entry: `api/src/roleGate.ts` - the read is for the Calendar's readers (`reservation` view), who all saw a price on every night before.
+**Found (FD-25, open):** a price saved on Rates does not reach the Calendar until something else refreshes its cached window (`stay-view`: `staleTime: Infinity`, persisted). The fix is one line in inventory's `Rates.tsx`; written on Requests in `MODULE.md`, not made.
+**Proved:**
+- Each new test seen failing on the old code first, then passing.
+- API `calendarPrices.test.ts` (FCP), 5: a night with its own price shows it (2,500); the nights either side show the standard 3,000; an unpriced type is null every night; every figure equals `GET /pricing?plan=EP`'s cell; a bad date is refused. With `roleGate.test.ts`: 2 files, 84 passed.
+- Web `data/stayview.test.ts`, 26 (4 new): the night's price, the standard price, null for none, and one read `?from=<start>&days=14`.
+- App, components/app, boundaries, front-desk and reservations: 32 files, 226 tests, exit 0. Web and API tsc exit 0; strip-check 210 files.
+- Screen, 1280 px, `fidato_cal271`: set Superior's base for Tue 6 Oct to ₹5,200 on Rates; the Calendar showed 5.2k that night and 4.1k (the standard) on the others, from one `calendar-prices?from=2026-10-04&days=14`. With Deluxe's standard price cleared, every Deluxe night showed "-".
+**Left open:** the Rates refresh above; the owner's question on base occupancy (the master's report).
+
 ## 2026-10-03 · The way of paying is set on Money (the owner's D27-259 Q1) - the cash lane's
 
 **Shipped:** Front desk rules shows the default way of paying and no longer edits or sends it; it is set on Settings › Money › Payment methods. **Proved:** `frontDeskRules.test.tsx` - the save carries no `defaultPaymentMethod`.

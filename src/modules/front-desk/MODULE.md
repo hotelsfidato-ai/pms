@@ -81,6 +81,7 @@ They moved there in the server split of 15 September (`3424882`, `b772047`).
 | GET | `/:code/stays/:id` | one stay |
 | GET | `/:code/stays/:id/express-check-in` | `{ express, document: { type, number } }`: whether THIS stay's own online check-in was confirmed with an ID type and number, for a guest who is not foreign - the number masked to its last four (D27-242). A document kept from an earlier visit never counts. Also `advance` (the amount still owed before check-in, in the refusal's words, or null), `bookingSite` and `prepaidOnSite`; `?prepaid=false` asks as if the desk had unticked it (D27-243 3.3, D27-246) |
 | GET | `/:code/house-now` | every room on the business date - in house, out of order or Empty - and the In house and Empty counts (rooms), from `app.house_now` (the one in-house rule, D21-36 and D21-37). Rooms, the Dashboard, In house, the property page and the housekeeping board read this and nothing else for either number |
+| GET | `/:code/calendar-prices?from&days` | each room type's price on each night of the window, `[{ type, date, price }]`: `app.price_for` on EP, the Rates screen's main row - the night's own price, else the standard (rack) price, else null (a dash). One read for the Calendar's whole window (D27-271 item 3). Gate: `reservation` view, the Calendar's readers |
 | GET | `/:code/groups` | the groups list that reservations' Groups screen reads — see the warning below |
 
 ⚠ `GET /:code/groups` lives in `stays.ts`, not in reservations' `groups.ts`.
@@ -401,6 +402,11 @@ the front-desk chat; each also told to the owner.
   line, and `flows/FolioPanel.tsx:38` sends `const USER = "front desk"` that
   its routes do not read (they use `app.current_user_id()`). MEMORY 256 and
   266's shape: a name nobody gave.
+- **To inventory — `pages/Rates.tsx`, `refresh()`** (4 October, D27-271
+  item 3): a price saved on Rates does not reach the Calendar's window until
+  something else refreshes it, because `stay-view` is kept with
+  `staleTime: Infinity` and persisted. One line there -
+  `qc.invalidateQueries({ queryKey: ["stay-view", hotelId] })` - fixes it.
 - **To the master, a lesson for the root `MEMORY.md`** — React Query's
   `placeholderData` is shown only while a query is pending and dropped when it
   fails, so it cannot keep old data on screen through an error (FD-6). Any
