@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-04 · The City ledger's moves, opened for the credit limit (D27-275 part 5)
+
+`builders/cityLedger.ts`: the transfers, payments and moves the report sums are `cityLedgerMoves(hotel, to)` now, exported from the front door, so finance's credit limit sums one company's moves rather than a second calculation. The report's query is otherwise unchanged. **Proved:** the report's own tests in the API run of this session.
+
 ## 2026-10-03 · The Dashboard as sketched: today's work leads; All properties for the owner (D27-243) - the design lane's
 
 Branch `design/dashboard-2oct` (from cp6 8c2860a7; 2493407c and 76f38f2a merged in), copy `.claude\worktrees\competent-leakey-110512`. Reports co-claimed BY FILE with the stock lane (the master's Q1, option B): Dashboard.tsx, AllProperties.tsx, Statistics builder, DEFECTS.md, dueOut.ts and its test, one line each in nav.ts, routes.tsx, the api index.ts and roleGate.ts. Screens read-only on the master's API (8787, `fidato`) from web 5391.

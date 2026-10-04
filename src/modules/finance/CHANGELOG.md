@@ -8,6 +8,19 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-04 · A company over its credit limit (the owner's D27-275 part 5)
+
+**Asked for:** a booking or charge billed to a company whose outstanding plus this amount is over its `credit_limit` is refused, "<Company> is over its credit limit by ₹x."; the owner, an administrator or the GM may allow it with a reason, kept in the activity log; no limit, no check.
+
+**Shipped:**
+- `creditLimit.ts`: `overCreditLimit(client, hotel, company, amount, { reason, title })`, the one check. Outstanding is the City ledger's own moves for that company at this hotel up to the business date (`cityLedgerMoves`, opened on reports' front door; no second sum). Refused: `{ reason, needs: "credit-limit" }`. Allowed: a row of `credit_limit_allowances` (migration 199, audited, insert only for `app.manages_hotel`), which the Activity screen lists as "Over the credit limit".
+- `postings.ts`: `postCharge` (the desk, laundry and spa) and `postFolioCharge` (banquet) ask it last among their refusals, for the company the bill is addressed to (`RECIPIENT_COMPANY`), with the charge's GST. `ChargeToPost.overLimitReason`; the charges route passes it and answers `needs`.
+- Web: the charge dialog shows the sentence; for the owner, an administrator or the GM a "Why it is allowed" box, and Post charge becomes "Allow, with reason". `OperationResult.needs` (core `src/data/repositories/result.ts`) gains "credit-limit".
+
+**Proved:** `api/test/modules/finance/creditLimit.test.ts` (no limit, under, outstanding counted, reception refused and its allow refused, a blank reason refused, the GM's allow logged with the actor, a booking refused writing nothing and allowed by the GM): three failed before the change. `db/tests/modules/finance.sql`: four checks on the table (reception refused by the policy, the GM writes, the audit names them, no update or delete). `overCreditLimit.test.tsx` (web): both failed with the dialog's branch broken.
+
+**Left open (questions for the owner):** the balance is this hotel's City ledger, though the limit is the group's (C-9); a group balance needs a database function. A booking counts its nights with the room's GST, a hotel with no GST rule counting none. Laundry, spa and banquet charges are refused too, with no allow on their screens. The till's room charges do not pass this door and are not checked.
+
 ## 2026-10-04 · Tax by date and a SAC on each invoice line (P3, the owner's D27-258 Q6/Q7; finance claimed by the rates lane)
 
 **Asked for:** tax rules valid from and until a date, one band's periods entered in advance, and a SAC per service printed on each invoice line, with rooms keeping 996311 and the others a dash until the CA gives their codes. Branch `settings/rates-3oct`.

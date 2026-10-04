@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Client } from "../../db.ts";
 import { countProblem, countryProblem, dateProblem, MAX_NIGHTS } from "../../validate.ts";
-import { roomRateBeforeGst } from "../finance/index.ts";
+import { roomRateBeforeGst, overCreditLimit } from "../finance/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    MAKING A BOOKING - the one place a reservation is created
@@ -106,6 +106,9 @@ export interface BookingRequest {
   salesPerson?: string;
   /** Bill to a company: reservations.company_id (CRS-12). */
   companyId?: string;
+  /** Allowed over the company's credit limit, and why (D27-275): the owner,
+      an administrator or the GM only. */
+  overLimitReason?: string;
   discount?: BookingDiscount;
   title?: string;
   /** Two letters, IN for India - the check-in's own shape. */
@@ -144,6 +147,8 @@ export interface BookingRefused {
       the hotel says the desk may not overbook (187, D27-243). */
   kind: "refused" | "no_room" | "unpriced";
   reason: string;
+  /** "credit-limit": the company is over its limit; a GM may allow it (D27-275). */
+  needs?: "credit-limit";
 }
 
 export type BookingResult = BookingMade | BookingRefused;
@@ -676,6 +681,25 @@ export async function makeBooking(
       }
       guestId = same[0].id;
       guestName = same[0].name ?? guestName;
+    }
+
+    /* ── OVER THE COMPANY'S CREDIT LIMIT (the owner's D27-275), the last
+       refusal: an allowance is written when a GM allows it (MEMORY 243).
+       What the booking bills: every room's nights at its rate, with the
+       room's GST. ponytail: no GST rule set counts as none here. */
+    if (terms.companyId) {
+      const nights = dayUse ? 1
+        : Math.round((Date.parse(request.checkOut) - Date.parse(request.checkIn)) / 86_400_000);
+      const { rows: [bill] } = await client.query<{ total: string }>(
+        `select coalesce(sum(l.rooms * $2::int * (l.rate
+                  + round(l.rate * coalesce(app.gst_rate_or_null($1, 'room', l.rate), 0) / 100.0, 2))), 0)::text as total
+           from jsonb_to_recordset($3::jsonb) as l(rooms int, rate numeric)`,
+        [hotelId, nights, JSON.stringify(planned.map((p) => ({ rooms: Math.max(1, p.line.rooms ?? 1), rate: p.rate })))]);
+      const over = await overCreditLimit(client, hotelId, terms.companyId, Number(bill!.total), {
+        reason: request.overLimitReason,
+        title: `booking for ${guestName}, ${request.checkIn} to ${request.checkOut}`,
+      });
+      if (over) return { ok: false, kind: "refused", ...over };
     }
 
     /* ── Nothing below this line refuses. ─────────────────────────────── */

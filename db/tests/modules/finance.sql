@@ -361,3 +361,53 @@ begin
       and (select count(*) from vat_bills where pos_order_id = ord2) = 0
       and app.next_vat_bill_number(h, fy) = 'VAT/VATB/' || fy || '/0006');
 end $$;
+
+
+-- =============================================================================
+-- OVER THE CREDIT LIMIT, ALLOWED WITH A REASON (199; the owner's D27-275)
+-- =============================================================================
+-- The owner, an Administrator or the GM may allow it; the database asks the
+-- role too, and the allowance is in the audit log under their name.
+-- =============================================================================
+do $$
+declare
+  h uuid; co uuid; gm uuid; desk uuid; n int;
+begin
+  h := app.provision_property_unchecked('FCL', 'Credit Limit Test', 'Nowhere');
+  insert into companies (name, credit_allowed, credit_limit) values ('D275 Credit Co', true, 1000)
+  returning id into co;
+  insert into staff (email, full_name) values ('d275-cl-gm@fidato.in', 'D275 GM')
+  on conflict (email) do update set is_active = true returning id into gm;
+  insert into staff (email, full_name) values ('d275-cl-desk@fidato.in', 'D275 Desk')
+  on conflict (email) do update set is_active = true returning id into desk;
+  delete from staff_hotels where staff_id in (gm, desk);
+  insert into staff_hotels (staff_id, hotel_id, role) values (gm, h, 'gm'), (desk, h, 'front_desk');
+
+  perform set_config('app.user_id', desk::text, true);
+  perform test.raises('finance credit limit', 'reception cannot record an allowance over the limit',
+    format($q$set local role pms_app;
+             insert into credit_limit_allowances (hotel_id, company_id, title, amount, over_by, reason)
+             values (%L, %L, 'x', 100, 50, 'because')$q$, h, co), '42501');
+
+  perform set_config('app.user_id', gm::text, true);
+  set local role pms_app;
+  insert into credit_limit_allowances (hotel_id, company_id, title, amount, over_by, reason)
+  values (h, co, 'D275 Credit Co: a charge', 100, 50, 'Cleared by the owner');
+  get diagnostics n = row_count;
+  reset role;
+  perform set_config('app.user_id', '', true);
+  perform test.ok('finance credit limit', 'the GM records one', n = 1, n || ' rows');
+  perform test.ok('finance credit limit', 'and the audit log names the GM',
+    exists (select 1 from audit_log where table_name = 'credit_limit_allowances' and actor = gm
+              and after->>'reason' = 'Cleared by the owner'));
+  perform test.ok('finance credit limit', 'the app cannot change or remove one',
+    not has_table_privilege('pms_app', 'credit_limit_allowances', 'update')
+      and not has_table_privilege('pms_app', 'credit_limit_allowances', 'delete'));
+
+  delete from credit_limit_allowances where hotel_id = h;
+  delete from companies where id = co;
+  delete from staff_hotels where hotel_id = h;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+end $$;

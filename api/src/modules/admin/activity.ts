@@ -37,6 +37,7 @@ const KINDS: Record<string, string> = {
   hotel_modules: "Module switch", reservation_groups: "Group booking",
   work_orders: "Work order", channel_bookings: "Booking-site booking",
   crs_bookings: "CRS booking", table_bookings: "Table booking",
+  credit_limit_allowances: "Over the credit limit",
 };
 const kindOf = (table: string) =>
   KINDS[table] ?? table.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());

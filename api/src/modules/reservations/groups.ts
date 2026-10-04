@@ -342,6 +342,8 @@ groups.post("/:code/bookings", async (c) => {
     /* The desk's, from Phase 1 (D27-33): each checked in makeBooking. */
     tentative?: boolean; expectedDeparture?: string; salesPerson?: string;
     companyId?: string; discount?: BookingDiscount;
+    /* D27-275: a GM's "allow, with reason" over the company's credit limit. */
+    overLimitReason?: string;
     title?: string; nationality?: string; address?: BookingAddress;
     /* D27-163: the one page's Notes box and the walk-in's tick. */
     notes?: string; isSingleLady?: boolean;
@@ -397,6 +399,7 @@ groups.post("/:code/bookings", async (c) => {
     ...(typeof input.expectedDeparture === "string" ? { expectedDeparture: input.expectedDeparture } : {}),
     ...(typeof input.salesPerson === "string" ? { salesPerson: input.salesPerson } : {}),
     ...(typeof input.companyId === "string" && input.companyId ? { companyId: input.companyId } : {}),
+    ...(typeof input.overLimitReason === "string" ? { overLimitReason: input.overLimitReason } : {}),
     ...(input.discount && typeof input.discount === "object" ? { discount: input.discount } : {}),
     ...(typeof input.title === "string" ? { title: input.title } : {}),
     ...(typeof input.nationality === "string" ? { nationality: input.nationality } : {}),
@@ -454,7 +457,10 @@ groups.post("/:code/bookings", async (c) => {
      them is addressed by the stay's id) and the `status` it was made with.
      A repeat answers the same ids as the first time: it IS the first answer
      (RES-3). `duplicate` still appears, as it always did, only when true. */
-  if (!result.ok) return c.json({ ok: false, reason: result.reason }, 409);
+  if (!result.ok) {
+    return c.json({ ok: false, reason: result.reason,
+                    ...("needs" in result && result.needs ? { needs: result.needs } : {}) }, 409);
+  }
   return c.json({
     ok: true as const,
     ...(result.duplicate ? { duplicate: true as const } : {}),

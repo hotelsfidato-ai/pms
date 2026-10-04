@@ -21,13 +21,14 @@ import { heading, LIVE, type Property } from "../figures.ts";
    record, on the company's own row only (MEMORY 266); a dash elsewhere.
    ══════════════════════════════════════════════════════════════════ */
 
-export async function cityLedgerReport(
-  client: Client, property: Property, from: string, to: string, ignoreZero: boolean,
-): Promise<ReportDoc> {
-  const { rows } = await client.query<{
-    account: string | null; contact: string | null; phone: string | null;
-    opening: string; debit: string; credit: string;
-  }>(
+/**
+ * THE LEDGER'S MOVES, one line each, as common table expressions ending in
+ * `moves` (account, company_id, business_date, debit, credit) for the hotel
+ * `hotel` up to the day `to` (SQL expressions, e.g. "$1" and "$3::date").
+ * The report sums them by account; finance's credit limit (D27-275) sums one
+ * company's to what it owes now. One text, so the two cannot disagree.
+ */
+export const cityLedgerMoves = (hotel: string, to: string) =>
     `with transfers as (
        select coalesce(fc.name, app.booking_source_label(bs.name, rc.name, r.source)) as account,
               coalesce(fc.id, rc.id)                                                  as company_id,
@@ -40,10 +41,10 @@ export async function cityLedgerReport(
          left join reservations r on r.id = coalesce(fp.reservation_id, f.reservation_id)
          left join companies rc on rc.id = r.company_id
          left join booking_sources bs on bs.id = r.booking_source_id
-        where fp.hotel_id = $1
+        where fp.hotel_id = ${hotel}
           and fp.category = 'payment'
           and ${LIVE}
-          and fp.business_date <= $3::date
+          and fp.business_date <= ${to}
      ),
      paid as (
        select coalesce(co.name, bs.name) as account, cp.company_id,
@@ -51,13 +52,22 @@ export async function cityLedgerReport(
          from company_payments cp
          left join companies co on co.id = cp.company_id
          left join booking_sources bs on bs.id = cp.booking_source_id
-        where cp.hotel_id = $1 and cp.received_on <= $3::date
+        where cp.hotel_id = ${hotel} and cp.received_on <= ${to}
      ),
      moves as (
        select account, company_id, business_date, amount as debit, 0 as credit from transfers
        union all
        select account, company_id, business_date, 0, amount from paid
-     )
+     )`;
+
+export async function cityLedgerReport(
+  client: Client, property: Property, from: string, to: string, ignoreZero: boolean,
+): Promise<ReportDoc> {
+  const { rows } = await client.query<{
+    account: string | null; contact: string | null; phone: string | null;
+    opening: string; debit: string; credit: string;
+  }>(
+    `${cityLedgerMoves("$1", "$3::date")}
      select t.account,
             max(co.contact_name) filter (where co.name = t.account) as contact,
             max(co.phone)        filter (where co.name = t.account) as phone,

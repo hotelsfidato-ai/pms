@@ -895,6 +895,11 @@ function AddChargeDialog({
      sent, and a repeat carries the same key until one has landed. */
   const [saving, setSaving] = useState(false);
   const [pressKey, setPressKey] = useState(() => crypto.randomUUID());
+  /* OVER THE COMPANY'S CREDIT LIMIT (D27-275): the server's sentence; the
+     owner, an administrator or the GM may post it with a reason. */
+  const [overLimit, setOverLimit] = useState<string | null>(null);
+  const [allowReason, setAllowReason] = useState("");
+  const mayAllow = (["owner", "admin", "gm"] as string[]).includes(useRole());
 
   const value = Number(amount) || 0;
 
@@ -1023,6 +1028,20 @@ function AddChargeDialog({
             </div>
           )}
 
+          {overLimit && (
+            <div className="rounded-lg border border-grey-200 bg-grey-50 p-3 space-y-2" data-over-limit>
+              <p className="text-base text-ink-900">{overLimit}</p>
+              {mayAllow ? (
+                <Input aria-label="Why it is allowed" placeholder="Why it is allowed"
+                  value={allowReason} onChange={(e) => setAllowReason(e.target.value)} />
+              ) : (
+                <p className="text-sm text-grey-600">
+                  The owner, an administrator or the general manager can allow it.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
             <Button variant="primary"
@@ -1034,15 +1053,18 @@ function AddChargeDialog({
                 try {
                   const res = await postCharge(hotelId, stay.id, {
                     category, description, amount: value, taxable, businessDate,
+                    ...(overLimit && allowReason.trim() ? { overLimitReason: allowReason.trim() } : {}),
                   }, pressKey);
                   if (res.ok) {
                     setPressKey(crypto.randomUUID());
                     /* What was STORED, not the preview (FI-11). */
                     toast.success("Charge posted", `${res.data
                       ? money(res.data.amount + res.data.tax) : money(value + (tax ?? 0))} on room ${stay.roomNumber}`);
-                    setDescription(""); setAmount("");
+                    setDescription(""); setAmount(""); setOverLimit(null); setAllowReason("");
                     setOpen(false);
                     onDone();
+                  } else if (res.needs === "credit-limit") {
+                    setOverLimit(res.reason ?? null);
                   } else {
                     toast.error("Could not post", res.reason);
                   }
@@ -1051,7 +1073,7 @@ function AddChargeDialog({
                 }
               }}
             >
-              Post charge
+              {overLimit && mayAllow ? "Allow, with reason" : "Post charge"}
             </Button>
           </div>
         </div>

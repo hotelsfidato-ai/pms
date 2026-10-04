@@ -54,6 +54,8 @@ export async function postCharge(
     amount: number;
     taxable: boolean;
     businessDate: string;
+    /** A GM's allow over the company's credit limit, with why (D27-275). */
+    overLimitReason?: string;
   },
   /** One per press of Post charge, kept until it lands: a repeat posts once. */
   idempotencyKey?: string,
@@ -83,7 +85,11 @@ export async function postCharge(
       ...(idempotencyKey ? { headers: { "idempotency-key": idempotencyKey } } : {}),
     });
   } catch (error) {
-    if (error instanceof ApiError) return refuse(error.message);
+    if (error instanceof ApiError) {
+      /* Over the company's credit limit (D27-275): the dialog offers a GM the allow. */
+      const body = error.body as { needs?: "credit-limit" } | undefined;
+      return body?.needs ? { ok: false, reason: error.message, needs: body.needs } : refuse(error.message);
+    }
     throw error;
   }
 
