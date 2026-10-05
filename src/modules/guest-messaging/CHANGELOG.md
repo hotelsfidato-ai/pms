@@ -11,6 +11,23 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-05 · Online check-in on for every hotel; the hotel's own phone in the message (the owner's D27-281 (3) and (4); worked under the master's exception while the D27-280 helper holds the claim)
+
+**Shipped:**
+- Migration 206: `app.online_checkin_on` answers ON where a hotel saved no switch (193's function, one word changed). A hotel that saved OFF stays off. Settings → Messages shows it on by default.
+- `voucherFields` adds `hotelPhone`: the hotel's own phone, else the group office's, else a dash. `officePhone` is unchanged, because the CRS's template still reads it.
+- The "comes later / OFF" comments, MODULE.md and `docs/go-live/whatsapp-templates.md` now say on by default.
+
+**Proved:**
+- API guest-messaging: 8 files, 154 tests passed (sweep 12, voucherDocument 38, messages and reports 10, check-in link 7).
+- Database suite: all 1517 assertions passed.
+- Web guest-messaging: 3 files, 18 tests passed.
+- Seen to fail: `hotelPhone` without its fallback failed the new test; 206 set back to `false` failed 7 tests, the new no-saved-switch test among them.
+
+**Left open:**
+- 206 follows 203 in this copy, so `migrationNumbers.test.ts` fails on the gap until 204 and 205 are merged.
+- The n8n side (the owner's booking_confirmation template reading `hotelPhone`) is the master's.
+
 ## 2026-10-04 · The voucher says on which days the meals are served (P3, the owner's D27-258 Q5; guest-messaging claimed by the rates lane)
 
 **Shipped:**

@@ -134,14 +134,14 @@ afterAll(async () => {
 describe("each guest message, switched per hotel (D27-261, D27-264)", () => {
   /* D27-264: the voucher is the confirmation (both ways), the invoice, the
      review request - and nothing else: no reminder, no timing. */
-  it("is today's behaviour until somebody saves - the voucher and the review on, the invoice off", async () => {
+  it("is today's behaviour until somebody saves - the voucher and online check-in on, the invoice and the review off", async () => {
     const res = await call(gmId, "GET", "/guest-message-settings");
     expect(res.status, await res.clone().text()).toBe(200);
     const body = (await res.json()) as { messages: Record<string, unknown>[]; catchUp: unknown };
-    /* D27-266: online check-in and the review request come later - off
-       until switched on, like the invoice. */
+    /* D27-281: online check-in is on for every hotel until switched off.
+       D27-266: the review request comes later - off, like the invoice. */
     expect(body.messages.map((m) => [m["kind"], m["isOn"]])).toEqual([
-      ["booking-voucher", true], ["online-checkin", false], ["invoice", false], ["review", false],
+      ["booking-voucher", true], ["online-checkin", true], ["invoice", false], ["review", false],
     ]);
     expect(body.messages.some((m) => "daysBefore" in m || "sendFrom" in m), "no timing").toBe(false);
     expect(body.catchUp, "shown, not changed").toEqual({ from: "09:00", until: "21:00" });
@@ -155,19 +155,15 @@ describe("each guest message, switched per hotel (D27-261, D27-264)", () => {
       [hotelId])).toEqual([{ is_on: false, changed_by: gmId }]);
   });
 
-  it("has online check-in off until switched on, and the desk's read says which (D27-266)", async () => {
+  it("has online check-in on until switched off, and the desk's read says which (D27-281)", async () => {
     const read = async () => {
       const res = await call(gmId, "GET", "/guest-messages");
       expect(res.status, await res.clone().text()).toBe(200);
       return ((await res.json()) as { onlineCheckIn: unknown }).onlineCheckIn;
     };
+    expect(await read()).toBe(true);
+    expect((await call(gmId, "PUT", "/guest-message-settings/online-checkin", { isOn: false })).status).toBe(200);
     expect(await read()).toBe(false);
-    expect((await call(gmId, "PUT", "/guest-message-settings/online-checkin", { isOn: true })).status).toBe(200);
-    try {
-      expect(await read()).toBe(true);
-    } finally {
-      await call(gmId, "PUT", "/guest-message-settings/online-checkin", { isOn: false });
-    }
   });
 
   it("has no reminder, no separate confirmation and no check-in code to switch", async () => {
