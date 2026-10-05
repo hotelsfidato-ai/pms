@@ -44,10 +44,10 @@ from its own settings.
    | the CRS's `reservation_confirmation` (already approved) | Utility | the booking voucher with its PDF (`VOUCHER_TEMPLATE`, below) |
    | `guest_page_code` | Authentication (Copy code, 10 minutes) | the check-in code |
    | `review_request` | Meta decides | the review request |
-   | `tax_invoice` | Utility | the tax invoice, its PDF (`INVOICE_TEMPLATE`, below) |
+   | the owner's `booking_confirmation` (D27-281, with Meta again) | Utility | the voucher with its PDF and a **Check in online** button, once `OWN_TEMPLATE_READY` is `true` |
+   | `tax_invoice` | Utility | the tax invoice - not in the workflow now (part B, step 5) |
 
-   **Not used since D27-264**: `booking_confirmation`, `stay_reminder` and
-   `checkin_link`. The voucher is the confirmation, the check-in link is in
+   **Not used since D27-264**: `stay_reminder` and `checkin_link`. The voucher is the confirmation, the check-in link is in
    its PDF, and there is no day-before reminder. Do not submit them.
    **D27-266: nothing new goes to Meta for now** - `booking_voucher` is on
    hold, `review_request` later, `tax_invoice` pending the owner.
@@ -100,10 +100,11 @@ In the CRS's n8n (the CRS's **Admin → Integrations** names its address):
      sentence the desk sees. WhatsApp messages do not need it.
    - `WHATSAPP` / `LANGUAGE`, only if Meta approved other names or another
      language.
-   - `INVOICE_TEMPLATE` is already `tax_invoice` (D27-252): the PMS's own new
-     template, its text in `docs/go-live/whatsapp-templates.md` section 6. Change
-     it only if Meta approved it under another name. It uses the same
-     **Upload PDF to Meta** node as the voucher.
+   - There is no tax invoice in the workflow (5 October paste: the owner's live
+     code never had it; which template it goes on is the owner's, D27-266). An
+     invoice is refused with a sentence the desk sees.
+   - `OWN_TEMPLATE_READY` stays `false` until Meta shows the owner's
+     `booking_confirmation` Active (the 5 October paste, part C).
    - **`VOUCHER_TEMPLATE`** (D27-235, D27-241, D27-266) - already
      `reservation_confirmation`, the CRS's approved voucher template, with
      `VOUCHER_LANGUAGE` `en`, as the owner runs it live. Emptied, the voucher
@@ -143,36 +144,35 @@ Connection health turns red, the PMS emails that address once (at most once
 an hour per connection). Empty: no alert emails. It needs the
 `health-alert` draft in the workflow, below.
 
-### ⚠ The live workflow needs the `health-alert` draft (4 October)
+### ⚠ The 5 October paste: two nodes, the whole code of each
 
-The workflow running in the CRS's n8n was imported before this draft
-existed. **Until you add it, every alert email is refused** ("No email for
-"health-alert" in this workflow") and Connection health records that. Either
-import `pms-send-crs.json` again (step 1, then steps 2-6), or, quicker: in the
-live workflow open **Read the message**, find `const EMAILS = {`, and paste
-the `"health-alert": (d) => ({ ... }),` entry from this file's **Read the
-message** node just before the `};` that closes `EMAILS`. **Save**. The words
-are drafts: change them there.
+The live workflow lacks the `health-alert` email (D27-276) and the
+`daily-report` email (D27-280, its figures as a table): **until it has them,
+every alert and every daily report is refused** ("No email for … in this
+workflow") and Guest messages shows why. The same paste brings the voucher on
+the owner's `booking_confirmation` (D27-281), switched off until Meta
+approves it. **Paste it now, right after the release.**
 
-### ⚠ The live workflow needs the `daily-report` draft (D27-280, 5 October)
-
-The daily report emails (Settings → Messages → Daily report emails) go as a
-new kind, `daily-report`: the key figures as a small table, the whole report
-as a PDF. **Until the live workflow has it, every daily report is refused**
-("No email for "daily-report" in this workflow"), three tries, and Guest
-messages shows why. It is more than one entry (the table needs the letter
-changed too), so replace the node's whole code:
-
-1. **Your PC** - open `D:\fidato pms\.local\n8n\read-the-message.js` in
-   Notepad, **Ctrl+A**, **Ctrl+C**.
+1. **Your PC** - open `D:\fidato pms\.local\n8n\paste-5oct\read-the-message.js`
+   in Notepad, **Ctrl+A**, **Ctrl+C**.
 2. **The CRS's n8n, in the browser** - open the live workflow **PMS send ·
    email and WhatsApp (CRS)** → double-click **Read the message** → click in
-   its code → **Ctrl+A**, **Ctrl+V** → close the node → **Save**.
+   its code → **Ctrl+A**, **Ctrl+V** → close the node.
+3. The same for **Build the voucher message**, with
+   `D:\fidato pms\.local\n8n\paste-5oct\build-the-voucher-message.js`.
+4. **Save**.
 
-The settings at its top are the ones running live (`FROM`, `REPLY_TO`,
-`VOUCHER_TEMPLATE`, `INVOICE_TEMPLATE`); if you had changed any of them in
-n8n, type them in again before **Save**. This also brings the `health-alert`
-draft above. Or import `pms-send-crs.json` again (part B).
+The settings at the top of **Read the message** are the ones running live
+(`FROM`, `REPLY_TO`, `VOUCHER_TEMPLATE`); if you had changed any of them in
+n8n, type them in again before **Save**.
+
+**Later, once WhatsApp Manager shows `booking_confirmation` Active again
+(D27-281):** in **Read the message**, change `const OWN_TEMPLATE_READY = false;`
+to `true` and **Save**. Until then every voucher goes on the CRS's
+`reservation_confirmation`, as today; after it, a voucher with a check-in link
+goes on `booking_confirmation` with its **Check in online** button, and one
+without a link still goes on the CRS's. The alert and daily report emails work
+either way.
 
 ---
 
