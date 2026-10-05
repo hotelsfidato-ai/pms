@@ -91,9 +91,10 @@ export const routes = (
       path="/pos/:code/terminal"
       element={<><PropertyScope /><PosGate><TerminalPage /></PosGate></>}
     />
+    {/* Guarded by the Till's rule, its list (the owner's D27-279). */}
     <Route
       path="/pos/:code/bill/:id"
-      element={<><PropertyScope /><BillPage /></>}
+      element={<RequireAccess path="/pos/:code/bill/:id" resource="payment"><PropertyScope /><BillPage /></RequireAccess>}
     />
     <Route
       path="/pos/:code/room-charges"

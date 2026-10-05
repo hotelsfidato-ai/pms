@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-05 · The City ledger's moves are the report's own again (D27-279 (6))
+
+The credit limit counts the whole group now, through `app.company_owes` (migration 203), so `cityLedgerMoves` left the front door and is the report's own. Its comment names 203 as its twin: one meaning written twice, kept together.
+
 ## 2026-10-04 · The City ledger's moves, opened for the credit limit (D27-275 part 5)
 
 `builders/cityLedger.ts`: the transfers, payments and moves the report sums are `cityLedgerMoves(hotel, to)` now, exported from the front door, so finance's credit limit sums one company's moves rather than a second calculation. The report's query is otherwise unchanged. **Proved:** the report's own tests in the API run of this session.

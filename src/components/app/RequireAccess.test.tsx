@@ -55,3 +55,44 @@ describe("a page with no menu entry of its own", () => {
     expect(screen.getByText(/No screen in the menu has this address/)).toBeTruthy();
   });
 });
+
+/* D27-279 (8): the two bill pages are guarded, each by its list's rule - a
+   stay's bill by In house, a restaurant bill by the Till. Opened as the app
+   opens them, at their real addresses. */
+describe("the two bill pages", () => {
+  const as = (role: string) => signedIn({
+    scope: {
+      staffId: "22222222-2222-2222-2222-222222222222", email: "agra@fidato.in",
+      fullName: "Agra Clerk", isGroupAdmin: false,
+      hotels: [{ hotelId: "11111111-1111-1111-1111-111111111111", role }],
+    },
+  });
+  const open = async (path: string, role: string) => {
+    vi.spyOn(apiModule, "api").mockImplementation(() => new Promise(() => {}));
+    go(path);
+    as(role);
+    render(<App />);
+  };
+
+  it("refuses a stay's bill to a role In house refuses, by In house's name", async () => {
+    await open("/h/AGR/stays/abc/bill", "chef");
+    await screen.findByRole("heading", { name: /not part of your role/i });
+    expect(screen.getByText(/which does not include/).textContent).toContain("which does not include In house.");
+  });
+
+  it("refuses a restaurant bill to a role the Till refuses, by the Till's name", async () => {
+    await open("/pos/AGR/bill/abc", "housekeeping");
+    await screen.findByRole("heading", { name: /not part of your role/i });
+    expect(screen.getByText(/which does not include/).textContent).toContain("which does not include Till.");
+  });
+
+  it("opens both for reception", async () => {
+    for (const path of ["/h/AGR/stays/abc/bill", "/pos/AGR/bill/abc"]) {
+      await open(path, "front_desk");
+      await new Promise((r) => setTimeout(r, 50));
+      expect(screen.queryByRole("heading", { name: /not part of your role/i }), path).toBeNull();
+      cleanup();
+      vi.restoreAllMocks();
+    }
+  });
+});

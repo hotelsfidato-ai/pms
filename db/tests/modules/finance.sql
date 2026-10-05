@@ -411,3 +411,76 @@ begin
   delete from hotels where id = h;
   alter table hotels enable trigger hotels_no_delete;
 end $$;
+
+
+-- =============================================================================
+-- WHAT A COMPANY OWES ACROSS THE GROUP (203; the owner's D27-279 (6))
+-- =============================================================================
+-- The City ledger's closing balance for the company, summed over every hotel:
+-- bills sent "Bill to company" that still stand, less what it paid. Read by
+-- reception at one hotel, it still counts the other's, as one number.
+-- Scratch rows: the run's database is dropped after.
+-- =============================================================================
+do $$
+declare
+  h1 uuid; h2 uuid; t1 uuid; t2 uuid; g uuid; co uuid; desk uuid;
+  r1 uuid; r2 uuid; f1 uuid; f2 uuid; p bigint; owes numeric;
+begin
+  h1 := app.provision_property_unchecked('FG1', 'Group Owes One', 'Nowhere');
+  h2 := app.provision_property_unchecked('FG2', 'Group Owes Two', 'Nowhere');
+  select id into t1 from room_types where hotel_id = h1 and code = 'STD';
+  select id into t2 from room_types where hotel_id = h2 and code = 'STD';
+  insert into companies (name, credit_allowed, credit_limit) values ('D279 Group Co', true, 10000)
+  returning id into co;
+  perform test.ok('finance group owes', 'a company that was never sent a bill owes nothing',
+    app.company_owes(co) = 0, app.company_owes(co)::text);
+
+  insert into staff (email, full_name) values ('d279-desk@fidato.in', 'D279 Desk')
+  on conflict (email) do update set is_active = true returning id into desk;
+  delete from staff_hotels where staff_id = desk;
+  insert into staff_hotels (staff_id, hotel_id, role) values (desk, h1, 'front_desk');
+
+  insert into guests (full_name) values ('D279 Group Guest') returning id into g;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                            agreed_rate, status, company_id)
+  values (h1, app.next_reference(h1), g, t1, app.business_date(h1), app.business_date(h1) + 1, 2000, 'confirmed', co)
+  returning id into r1;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                            agreed_rate, status, company_id)
+  values (h2, app.next_reference(h2), g, t2, app.business_date(h2), app.business_date(h2) + 1, 2000, 'confirmed', co)
+  returning id into r2;
+  insert into folios (hotel_id, reservation_id, status) values (h1, r1, 'open') returning id into f1;
+  insert into folios (hotel_id, reservation_id, status) values (h2, r2, 'open') returning id into f2;
+
+  -- ₹1,500 sent at the first hotel, ₹2,500 at the second.
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+  values (h1, f1, app.business_date(h1), 'payment', 'Transferred to city ledger', -1500, 0, 0) returning id into p;
+  insert into payments (hotel_id, posting_id, method, method_label, amount)
+  values (h1, p, 'city_ledger', 'Bill to company', 1500);
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+  values (h2, f2, app.business_date(h2), 'payment', 'Transferred to city ledger', -2500, 0, 0) returning id into p;
+  insert into payments (hotel_id, posting_id, method, method_label, amount)
+  values (h2, p, 'city_ledger', 'Bill to company', 2500);
+  -- ₹700 sent at the second and reversed: not owed.
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+  values (h2, f2, app.business_date(h2), 'payment', 'Transferred to city ledger', -700, 0, 0) returning id into p;
+  insert into payments (hotel_id, posting_id, method, method_label, amount)
+  values (h2, p, 'city_ledger', 'Bill to company', 700);
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount,
+                              reverses_id)
+  values (h2, f2, app.business_date(h2), 'payment', 'Reversal - Transferred to city ledger (why: test)', 700, 0, 0, p);
+  -- ₹1,000 paid at the first.
+  insert into company_payments (hotel_id, company_id, amount, received_on, method, recorded_by)
+  values (h1, co, 1000, app.business_date(h1), 'bank_transfer', desk);
+
+  perform test.ok('finance group owes', 'what it owes is every hotel''s bills less what it paid (1,500 + 2,500 - 1,000)',
+    app.company_owes(co) = 3000, app.company_owes(co)::text);
+
+  perform set_config('app.user_id', desk::text, true);
+  set local role pms_app;
+  owes := app.company_owes(co);
+  reset role;
+  perform set_config('app.user_id', '', true);
+  perform test.ok('finance group owes', 'reception at one hotel is answered for the whole group',
+    owes = 3000, owes::text);
+end $$;

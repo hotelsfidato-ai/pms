@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-05 · The credit limit counts the whole group; the interim bill is guarded (the owner's D27-279 (6), (8))
+
+**Shipped:**
+- Migration `203_company_owes_across_the_group.sql`: `app.company_owes(company)`, a definer returning one number, the City ledger's closing balance for the company summed over every hotel (bills sent "Bill to company" still standing, less its payments, each up to its hotel's business date). `creditLimit.ts` asks it instead of this hotel's moves, so reception at one hotel is answered for the group.
+- `routes.tsx`: the interim bill (`/h/:code/stays/:id/bill`) is in `RequireAccess`, which takes In house's rule (D27-275's `entryFor`).
+
+**Proved:** `db/tests/modules/finance.sql`, three checks (nothing owed, 1,500 + 2,500 - 1,000 across two hotels with a reversed transfer left out, reception at one hotel answered 3,000); `api/test/modules/finance/creditLimit.test.ts` adds a ₹2,000 bill at Agra that tips a ₹1,000 charge here, failing before 203 is asked, passing after. `RequireAccess.test.tsx`: the chef refused a stay's bill by In house's name, reception let through; both refusals failed before the guard. Opened in the browser on the copy's own database: the chef saw "which does not include In house", reception the bill; the booking page as reception and as the GM, the GM's allow booked it and the allowance names the Test GM.
+
 ## 2026-10-04 · A company over its credit limit (the owner's D27-275 part 5)
 
 **Asked for:** a booking or charge billed to a company whose outstanding plus this amount is over its `credit_limit` is refused, "<Company> is over its credit limit by ₹x."; the owner, an administrator or the GM may allow it with a reason, kept in the activity log; no limit, no check.

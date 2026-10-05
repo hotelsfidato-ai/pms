@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-05 · The restaurant bill page is guarded (the owner's D27-279 (8))
+
+`routes.tsx`: `/pos/:code/bill/:id` is in `RequireAccess`, which takes the Till's rule (D27-275's `entryFor`); the Till, Tables and Terminal that open it have the same roles. **Proved:** `src/components/app/RequireAccess.test.tsx` (housekeeping refused by the Till's name, failing before the guard); in the browser, housekeeping saw "which does not include Till" and the GM the bill.
+
 ## 2026-10-03 · The Restaurant, its own space at /pos/:code/... (D27-249, D27-256) - the design lane's
 
 Branch `settings/console-3oct`, with the Settings console (admin's entry of the same day). Claimed pos.

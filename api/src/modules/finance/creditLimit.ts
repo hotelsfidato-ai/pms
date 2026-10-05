@@ -1,15 +1,16 @@
 import type { Client } from "../../db.ts";
 import { inr } from "../../reportRender.ts";
-import { cityLedgerMoves } from "../reports/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    A COMPANY OVER ITS CREDIT LIMIT (the owner's D27-275 part 5)
 
    credit_limit was shown and never asked (177). A booking or a charge
-   billed to a company is now refused where what the company owes now - its
-   City ledger balance at this hotel, the report's own moves - plus this
-   amount is over its limit: "<Company> is over its credit limit by ₹x."
-   No limit set (NULL): nothing is asked.
+   billed to a company is now refused where what the company owes now plus
+   this amount is over its limit: "<Company> is over its credit limit by
+   ₹x." What it owes is the group's, as the limit is (the owner's D27-279):
+   app.company_owes (203), the City ledger's closing balance for it summed
+   over every hotel, one number through a definer. No limit set (NULL):
+   nothing is asked.
 
    The owner, an administrator or the GM may allow it with a reason. The
    allowance is a row of credit_limit_allowances (199), audited, so it is
@@ -18,8 +19,6 @@ import { cityLedgerMoves } from "../reports/index.ts";
 
    ⚠ CALL IT LAST AMONG THE CALLER'S REFUSALS. An allowance is a write, and
    a refusal returned after a write keeps the write (MEMORY 243).
-   ponytail: this hotel's ledger only, though the limit is the group's (C-9);
-   a group-wide balance needs a definer function, if the owner wants it.
    ══════════════════════════════════════════════════════════════════ */
 
 export type OverLimit = { reason: string; needs: "credit-limit" };
@@ -30,12 +29,9 @@ export async function overCreditLimit(
 ): Promise<OverLimit | null> {
   if (!companyId || !(amount > 0)) return null;
   const { rows: [co] } = await client.query<{ name: string; over: string | null }>(
-    `${cityLedgerMoves("$1", "app.business_date($1)")}
-     select co.name,
-            ((select coalesce(sum(m.debit - m.credit), 0) from moves m where m.company_id = co.id)
-              + $3::numeric - co.credit_limit)::text as over
-       from companies co where co.id = $2`,
-    [hotelId, companyId, amount]);
+    `select co.name, (app.company_owes(co.id) + $2::numeric - co.credit_limit)::text as over
+       from companies co where co.id = $1`,
+    [companyId, amount]);
   if (!co || co.over === null || !(Number(co.over) > 0)) return null;
 
   const said = `${co.name} is over its credit limit by ₹${inr(Number(co.over))}.`;

@@ -56,10 +56,6 @@ export {
   posSales,
 } from "./figures.ts";
 export type { DayFigures, Property, StayNight, PosDay } from "./figures.ts";
-/* What a company owes, opened 4 October for finance's credit limit (D27-275):
-   the City ledger's own moves, so the limit and the report cannot disagree. */
-export { cityLedgerMoves } from "./builders/cityLedger.ts";
-
 export type {
   ReportDoc, ReportKey, ReportParams, ReportSection, ReportRow, ReportColumn,
   ReportFact, ReportChart, CellKind, Cell,
