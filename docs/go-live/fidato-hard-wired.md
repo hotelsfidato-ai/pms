@@ -100,7 +100,7 @@ from settings. The Fidato addresses in `deploy/` (`n8n.sh:105`, the default
 | 33 | `src/lib/api.ts:77`, `draft.ts:36`, `outbox.ts:34`, `persist.ts:25`, `session.ts:269`, `ui.ts:84` (all `src/lib/`), `src/modules/front-desk/components/StayTable.tsx:45`, `src/modules/pos/pages/Terminal.tsx:48` | Names of what the browser keeps, all starting `fidato` (8 places) | Nothing needed. Renaming signs everybody out and loses unsent work |
 | 34 | `src/styles/theme.css:295-393` | Animation names start `fidato-` | Nothing needed |
 | 35 | `api/src/server.ts:321` | The server's start-up line says "Fidato PMS API" | A neutral name |
-| 36 | `scripts/claim.mjs:36`, `scripts/artifact-wrap.mjs:31`, `scripts/check-no-dev-login.mjs:31` | Development tools: the claims folder, a fallback page title, and the check that matches item 33's key | Nothing needed before a sale |
+| 36 | `scripts/claim.mjs:36`, `scripts/check-no-dev-login.mjs:31` | Development tools: the claims folder, and the check that matches item 33's key | Nothing needed before a sale |
 
 ---
 
@@ -119,8 +119,6 @@ login.
 - `src/data/fixtures/property.ts`, `src/data/fixtures/reservations.ts` — the
   web tests' stand-in hotel (5 Elements, `akkalkot@fidatohotels.com`, `FH-`
   references).
-- `src/data/demo-snapshot.json` — the demo build only; a production build
-  swaps in an empty file (`vite.config.ts:160-161`).
 - `db/migrations/008_seed.sql:27-33` — seven placeholder hotels `FH01`…`FH07`,
   removed again by `017_production_readiness.sql:97` on every run.
 - Outside the six places: `db/dev/*.sql` (test logins at `@fidato.in`) and

@@ -4,6 +4,7 @@ import { readFile, stat, statfs } from "node:fs/promises";
 import { withSession } from "../../auth.ts";
 import { pool, type Client } from "../../db.ts";
 import { STEPS_MS } from "../../telemetry.ts";
+import { readBackupStatus, BACKUP_LOG } from "../connections-health/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    SYSTEM HEALTH (the owner's D27-91, 28 September)
@@ -36,32 +37,31 @@ const VERSION = (() => {
   }
 })();
 
-/* The nightly check's log (deploy/launch.sh, "Backups"). */
-export const BACKUP_LOG = "/var/log/fidato-backup.log";
-
 export type BackupState = {
   state: "passed" | "failed" | "unknown" | "none" | "unreadable";
   at: string | null;
   offsite: "copied" | "failed" | "this disk only" | null;
 };
 
-/** The last night's run, read from what db/verify-backup.sh prints. */
-export function readBackupLog(text: string, at: string): BackupState {
-  const plain = text.replace(/\x1b\[[0-9;]*m/g, "");
-  const start = plain.lastIndexOf("-- taking a fresh backup first");
-  const run = start === -1 ? plain.slice(-20_000) : plain.slice(start);
-  const state = /^\s*x /m.test(run) || run.includes("Do not rely on it") ? "failed"
-    : run.includes("It is a backup.") ? "passed" : "unknown";
-  const offsite = run.includes("copied off the box, checksum matched") ? "copied"
-    : run.includes("copy off the box FAILED") ? "failed"
-    : run.includes("no BACKUP_UPLOAD_URL") ? "this disk only" : null;
-  return { state, at, offsite };
+/** The last night's run, from the nightly check's `backup-status` line, read by
+    Connection health's reader (D27-279 (5), D27-284 (5)): one reader, one format.
+    A log from before that line: "unknown", at the log's own time. A failed run
+    that copied nothing leaves `offsite` blank: the line cannot tell a failed copy
+    from a server with no bucket. `fileTime` is the log's last change. */
+export function backupFromLog(text: string, fileTime: string): BackupState {
+  const { last } = readBackupStatus(text);
+  if (!last) return { state: "unknown", at: fileTime, offsite: null };
+  return {
+    state: last.ok ? "passed" : "failed",
+    at: last.at,
+    offsite: last.uploaded ? "copied" : last.ok ? "this disk only" : null,
+  };
 }
 
 async function lastBackup(): Promise<BackupState> {
   try {
     const [text, info] = await Promise.all([readFile(BACKUP_LOG, "utf8"), stat(BACKUP_LOG)]);
-    return readBackupLog(text, info.mtime.toISOString());
+    return backupFromLog(text, info.mtime.toISOString());
   } catch (error) {
     const code = (error as { code?: string }).code;
     return { state: code === "ENOENT" ? "none" : "unreadable", at: null, offsite: null };

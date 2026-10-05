@@ -11,6 +11,16 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-05 · System health reads the backup status line (D27-279 (5), D27-284 (5))
+
+**Asked for:** System health reads the nightly check's new `backup-status` line, with the same meaning, so there is one reader and one format.
+
+**Shipped:**
+- `api/src/modules/admin/systemHealth.ts`: `readBackupLog` and its word-matching and admin's own `BACKUP_LOG` are gone. `backupFromLog(text, fileTime)` takes Connection health's `readBackupStatus` (through its front door) and maps the last line: ok → passed, failed → failed, the line's time; uploaded=yes → copied; ok with uploaded=no → this disk only; failed with uploaded=no → blank (a failed copy and no bucket read the same). A log from before the line → "unknown" at the log's own time. The API's shape and the page are unchanged; the page's "Failed" copy value is no longer produced.
+- `api/src/modules/connections-health/index.ts`: the export, the master's one-line change (that service's CHANGELOG).
+
+**Proved:** `api/test/modules/admin/systemHealth.test.ts`: the four combinations of the line, the last line winning over the words around it, and an old log (and an empty one) reading "unknown".
+
 ## 2026-10-04 · Deactivating switches off sign-in (the owner's D27-275 part 4)
 
 **Asked for:** deactivating a person also switches off their Firebase sign-in; reactivating turns it back on.

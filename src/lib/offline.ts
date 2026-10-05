@@ -25,9 +25,8 @@ import { enqueue, list, remove, update, subscribe, NO_STORE, type OutboxEntry } 
    rather than done, and a rejection is loud.
 
    ── refuse ───────────────────────────────────────────────────────
-   Not "queue it and hope". Refused, with a reason, the same shape the
-   demo build already uses: "a write that silently does nothing is the
-   exact defect this project keeps finding".
+   Not "queue it and hope". Refused, with a reason: a write that
+   silently does nothing is the exact defect this project keeps finding.
 
    A GST INVOICE NUMBER IS STATUTORY. `5EL/2026-27/00042` comes from a
    per-property, per-financial-year series. Two clerks offline both

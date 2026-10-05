@@ -47,7 +47,6 @@ export async function registerServiceWorker() {
       },
     });
   } catch {
-    /* No worker in this build. Not an error — the demo and artifact
-       builds deliberately have none. */
+    /* No worker in this build. Not an error. */
   }
 }
