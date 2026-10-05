@@ -60,9 +60,12 @@ if [ "$mode" = "quick" ]; then
   a=0; d=0; r=0; p=0
   echo "  (quick: the API suite, the database, the replay and PostgreSQL 16 were not run)" >> "$P"
 else
-  step "api tests" "$S/g-api.log"   "Test Files +[0-9]+ passed" -- bash -c 'cd api && npm test'; a=$?
-  step "database"  "$S/g-db.log"    "all [0-9]+ assertions passed" -- bash db/tests/run.sh; d=$?
-  step "replay"    "$S/g-rerun.log" "all [0-9]+ migrations are re-runnable" -- bash db/tests/rerun.sh; r=$?
+  # Every step that builds a database waits its turn in the queue: roles are
+  # shared by the whole cluster, and a replay beside a helper's migrate failed
+  # with "tuple concurrently updated" on one (4 Oct).
+  step "api tests" "$S/g-api.log"   "Test Files +[0-9]+ passed" -- bash "/d/fidato pms/.local/dbq.sh" bash -c 'cd api && npm test'; a=$?
+  step "database"  "$S/g-db.log"    "all [0-9]+ assertions passed" -- bash "/d/fidato pms/.local/dbq.sh" bash db/tests/run.sh; d=$?
+  step "replay"    "$S/g-rerun.log" "all [0-9]+ migrations are re-runnable" -- bash "/d/fidato pms/.local/dbq.sh" bash db/tests/rerun.sh; r=$?
   # The live server's PostgreSQL 16 (the owner, 4 Oct). Its own cluster, shared
   # by every copy, so it waits its turn in the database queue.
   step "pg16"      "$S/g-pg16.log"  "all [0-9]+ migrations are re-runnable" -- bash "/d/fidato pms/.local/dbq.sh" bash db/tests/pg16.sh; p=$?
