@@ -11,6 +11,26 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-05 · The tax invoice by email only; its n8n email back; report_emails dropped (the owner's D27-284 (1), (5); helper copy on cp6 bdb6937b)
+
+**Asked for:** the tax invoice to the guest BY EMAIL ONLY - by itself when issued with the "Tax invoice" switch on, and by Send invoice; never WhatsApp, no Meta template; a company's still not by itself. The n8n `invoice` email back in the 5 October paste. Drop the unused `report_emails` and its function (D27-282 (1)).
+
+**Shipped:**
+- `invoices.ts`: `invoicesOwed` keeps only `app.guest_invoices_owed`'s email rows (`where channel = 'email'`) - the one place the sweep, the turn's re-check and Send invoice all read. The function itself is unchanged. Send invoice's refusal now says "by email already, or the guest has no email address".
+- `settings.ts`: the switch reads "When the invoice is issued, by email. ..." (it said "on WhatsApp and by email").
+- n8n: an `invoice` entry in `EMAILS` (subject "Your tax invoice from <hotel> (<number>)", a four-line letter, the PDF attached, from crs@) - the words of the draft the paste dropped. In `deploy/n8n/pms-send-crs.json`; every other path unchanged. The paste file `.local\n8n\paste-5oct\read-the-message.js` is written in this copy's `.local` (the copy may not write the main folder's) - byte-equal to the json's code.
+- Migration 206: `drop function if exists app.report_emails_owed(integer, uuid); drop table if exists report_emails;` - nothing read either.
+- Docs: IMPORT.md (the list, the templates table, part B step 5, the 5 October paste: the invoice email is in it, paste again if pasted before); whatsapp-templates.md § 6 `tax_invoice` not used (D27-284); MODULE.md.
+
+**Proved:**
+- API guest-messaging (8 files): 157 of 159; the 2 failures are `workflows.test.ts`'s check-in-link pins (D27-264), failing on cp6 since the 5 October paste (1a12d68c) put the owner's live `checkin-link` entries back - not this change (the cp6 json run directly accepts `checkin-link` both ways).
+- Seen to fail: with WhatsApp put back in `invoicesOwed`, "one email, nothing else" and "no WhatsApp (D27-284)" failed (12 of 14); restored.
+- `deploy/n8n/dryrun.test.mjs` 12 of 12 (the new invoice case: the email with its PDF; on WhatsApp refused). cp6's code refuses the invoice email ("No email for \"invoice\""), so the case fails on it.
+- Database suite: 206 migrations applied, all 1531 assertions passed.
+- Quick gates `d27-284-quick`: web types, API types and strip (214 files) exit 0; website 166 files, 1122 tests passed. Not run: the full API suite, the replay, PostgreSQL 16.
+
+**Left open:** the two check-in-link pins (the helper's report asks); copying the paste file to the main folder's `.local` (the master).
+
 ## 2026-10-05 · Daily report emails after the night audit (the owner's D27-280; helper copy, cp6 4649fd97 merged in)
 
 **Asked for:**

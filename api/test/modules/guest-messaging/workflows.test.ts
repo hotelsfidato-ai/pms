@@ -351,9 +351,8 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     expect(next("Uploaded?", 1)).toEqual(["Answer the PMS"]);
   });
 
-  /* D27-252, D27-261: the tax invoice - on WhatsApp by the PMS's own new
-     template `tax_invoice` (its PDF as the document, five named fields), and
-     by email with the PDF; a report by email to one of the hotel's people. */
+  /* D27-284: the tax invoice by email only, with the PDF - no WhatsApp, no
+     Meta template; a report by email to one of the hotel's people. */
   const pdf = { name: "Invoice-5EL-2026-27-0001.pdf", contentType: "application/pdf",
     base64: Buffer.from("%PDF-1.4 made up").toString("base64") };
   const invoice = (over: Json = {}) => message({
@@ -363,23 +362,8 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     ...over,
   });
 
-  it("sends the invoice on WhatsApp by tax_invoice, its PDF uploaded first, with five named fields", () => {
-    const [read] = run(crs, "Read the message", { body: invoice() });
-    expect(read!.json).toMatchObject({ stop: false, upload: true });
-    const [built] = run(crs, "Build the voucher message", { statusCode: 200, body: { id: "MEDIA-2" } },
-      { earlier: { "Read the message": read!.json } });
-    const graph = built!.json["graphBody"] as { template: { name: string; components: Json[] } };
-    expect(graph.template.name).toBe("tax_invoice");
-    expect(graph.template.components).toEqual([
-      { type: "header", parameters: [{ type: "document", document: { id: "MEDIA-2", filename: pdf.name } }] },
-      { type: "body", parameters: [
-        { type: "text", parameter_name: "guest_name", text: "Asha Test" },
-        { type: "text", parameter_name: "hotel", text: "Test Hotel" },
-        { type: "text", parameter_name: "invoice_no", text: "5EL/2026-27/0001" },
-        { type: "text", parameter_name: "invoice_date", text: "03 Oct 2026" },
-        { type: "text", parameter_name: "amount", text: "INR 1,050.00" },
-      ] },
-    ]);
+  it("refuses the invoice on WhatsApp: there is no template for it (D27-284)", () => {
+    expect(whatsapp(invoice())).toMatchObject({ stop: true, statusCode: 422, answer: { ok: false } });
   });
 
   it("writes the invoice's email with the PDF attached, and the daily report's with its key figures (D27-280)", () => {

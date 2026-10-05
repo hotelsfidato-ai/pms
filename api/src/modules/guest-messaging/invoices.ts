@@ -8,18 +8,18 @@ import { invoiceFile } from "./invoiceDocument.ts";
 import { claimTurn, MOST_ATTEMPTS, perSweep, NOT_OWED } from "./jobs.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   THE TAX INVOICE TO THE GUEST, WITH ITS PDF (D27-252, D27-261)
+   THE TAX INVOICE TO THE GUEST, WITH ITS PDF (D27-252, D27-261, D27-284)
 
    By itself: once a hotel switches "Invoice" on (Settings → Messages), every
    tax invoice issued after that - made out to the GUEST, for a stay - goes to
-   that guest both ways: WhatsApp where they agreed and have a number, email
-   where there is an address (Q3, Q4). A company's invoice is not sent by
-   itself (Q5), and a credit note never (Q6). Each way is one message, sent
-   once, three tries (app.guest_invoices_owed, migration "messages and
-   reports").
+   that guest BY EMAIL ONLY, where there is an address (D27-284: no WhatsApp,
+   no Meta template; `invoicesOwed` keeps only the function's email rows). A
+   company's invoice is not sent by itself (Q5), and a credit note never
+   (Q6). One message, sent once, three tries (app.guest_invoices_owed,
+   migration "messages and reports").
 
    POST /api/hotels/:code/invoices/:number/send - the desk's "Send invoice":
-   that one invoice, each way not sent yet, under the clerk's name; whether
+   that one invoice by email if not sent yet, under the clerk's name; whether
    the hotel's switch is on or not, and a company's too (Q5). Never a credit
    note.
 
@@ -43,7 +43,8 @@ export async function invoicesOwed(
   const { rows } = await client.query<Record<string, string>>(
     `select invoice_id::text, number, channel, issued_by::text, hotel_id::text, hotel_code,
             hotel_name, hotel_phone, reservation_id::text, reference, guest_name, guest_phone, guest_email
-       from app.guest_invoices_owed($1, $2::uuid, $3::uuid)`,
+       from app.guest_invoices_owed($1, $2::uuid, $3::uuid)
+      where channel = 'email'`,
     [MOST_ATTEMPTS, hotelId, invoiceId]);
   return rows.map((r) => ({
     invoiceId: r["invoice_id"]!, number: r["number"]!, channel: r["channel"] as "whatsapp" | "email",
@@ -132,8 +133,7 @@ invoiceSends.post("/:code/invoices/:number{.+}/send", async (c) => {
     if (invoice.is_note) return refuse("A credit note is not sent to the guest.");
     const owed = await invoicesOwed(client, invoice.hotel_id, invoice.id);
     if (owed.length === 0) {
-      return refuse("It has gone to the guest already each way they can be reached, or there is "
-        + "no way to reach them: no email address, and no number they agreed to WhatsApp on.");
+      return refuse("It has gone to the guest by email already, or the guest has no email address.");
     }
     const failed: string[] = [];
     for (const o of owed) {
