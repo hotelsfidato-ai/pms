@@ -43,6 +43,24 @@ the master's word.
 **The rule:** an answer about several things waits until each of them has one, and a
 mixed result is an answer of its own, not silence.
 
+### CRS-2 · Switched on before there was an account to read as - GUARDED 5 October (D27-284)
+
+**Found** 5 October, reading `setup.ts` while writing `deploy/crs-run-as.sql`. The card
+lets the owner switch a hotel on before it has a `run_as`, and `connected_at` is stamped
+at that moment. Nothing is read until `run_as` is set (`app.crs_due()`), so the desk
+types those CRS bookings in by hand meanwhile, as the card itself tells them. Given an
+account later, the reader starts from the OLD `connected_at` and books every one of
+them a second time: they carry no CRS id, so neither guard sees the repeat.
+
+**What was done:** the script refuses a hotel that is switched on with no `run_as`,
+and says how: switch off on the card, run it, switch on. Switching on again stamps a
+new `connected_at` (the card's own rule), so only bookings made from then are read.
+The owner's steps (`deploy/README.md`, "Connect the CRS") follow that order. The guard
+is `crsRunAs.test.ts`, "is not given an account while switched on".
+
+**The rule:** a "from now on" stamp is taken when reading can actually start, not when
+somebody first meant it to.
+
 ---
 
 ## Adding one

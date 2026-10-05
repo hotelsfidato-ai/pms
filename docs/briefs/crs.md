@@ -6,6 +6,11 @@
 > Your local run is the only proof there is now, so it is not optional.
 
 
+> **5 October: this brief is history.** The bridge was BUILT on 29 September
+> (D27-168, D27-171) as a READER, not the API poll below: `src/modules/crs/MODULE.md`
+> is the current brief. Going live, per hotel: `deploy/README.md`, "Connect the CRS"
+> (D27-284), with `deploy/crs-run-as.sql`.
+
 **Read `docs/briefs/README.md` and `docs/briefs/coming-soon.md` first.** This
 service is **not built**. This file is what is specific to the CRS bridge.
 
