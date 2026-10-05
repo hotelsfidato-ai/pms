@@ -89,10 +89,9 @@ not unique (several people can be owner). The setting is explicit.
 1. Emails and WhatsApp judged apart (above) - confirm.
 2. Red after **3** failures in a row, CRS stale after **30** minutes, backups
    stale after **26** hours - confirm the numbers.
-3. System health (admin) reads the same backup log with its own reader of the
-   human words; this service reads only the `backup-status` line. One reader
-   would be better: admin could read the status line too (a request for the
-   admin service, not made here).
+3. Done 5 October (D27-284 (5)): System health (admin) reads the same
+   `backup-status` line through this service's front door (`readBackupStatus`,
+   `BACKUP_LOG` in `index.ts`). One reader, one format.
 
 ## Requests from other services
 

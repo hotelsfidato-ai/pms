@@ -321,9 +321,12 @@ server.ts) into `telemetry_requests` and `telemetry_events` (its migration:
 "telemetry"): per minute, by route PATTERN, errors by kind, slow queries (over
 1 s) by value-free SQL name; nothing with an id, a name or a value. Read under
 RLS by `app.reads_system_health()`; written and pruned to 180 days only by
-`app.record_telemetry()`. The last backup is read from
-`/var/log/fidato-backup.log` (the 03:00 check's output); on a machine without
-it the screen says so.
+`app.record_telemetry()`. The last backup is the last `backup-status` line in
+`/var/log/fidato-backup.log` (the 03:00 check's output), read by Connection
+health's `readBackupStatus` through its front door (D27-279 (5), D27-284 (5)):
+ok/failed, its time, and copied / this disk only (blank on failed with nothing
+copied). A log from before that line reads "unknown"; on a machine without the
+log the screen says so.
 
 `PATCH /:code/front-desk` (the front desk's hours), which the plan gave to
 this service, went to inventory in the server split, beside the Room types

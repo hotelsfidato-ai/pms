@@ -3,7 +3,7 @@ import { app } from "../../../src/server.ts";
 import { closePool, pool } from "../../../src/db.ts";
 import { READ_RULES, whoMay } from "../../../src/roleGate.ts";
 import { flush, queryName } from "../../../src/telemetry.ts";
-import { readBackupLog, p95 } from "../../../src/modules/admin/systemHealth.ts";
+import { backupFromLog, p95 } from "../../../src/modules/admin/systemHealth.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    SYSTEM HEALTH AND TELEMETRY (the owner's D27-91 and D27-92, 28 September)
@@ -135,30 +135,41 @@ describe("the System health screen's API", () => {
   });
 });
 
-describe("reading the nightly backup's log", () => {
-  /* As db/verify-backup.sh and db/backup.sh print it, colours and all. */
-  const night = (end: string, copy: string) =>
+describe("reading the nightly backup's status line (D27-279 (5))", () => {
+  /* The people's words db/verify-backup.sh prints, colours and all, then its
+     `backup-status` line: the only part read. */
+  const night = (line: string) =>
     "-- taking a fresh backup first -----------------------------\n"
-    + "-- backing up fidato ------------------------------------------\n"
-    + "\x1b[32m  ✓ fidato-20260928-030001.dump  (812 KB)\x1b[0m\n" + copy
-    + "\n-- restoring into fidato_restore_check ---------------------------------\n"
-    + "\x1b[32m  ✓ restored\x1b[0m\n" + end;
-  const passed = "\x1b[32m  this backup has been restored and checked. It is a backup.\x1b[0m\n";
-  const failed = "\x1b[31m  2 check(s) failed. RESTORING THIS FILE WOULD NOT GIVE YOU\x1b[0m\n"
-    + "\x1b[31m  YOUR HOTEL BACK. Do not rely on it.\x1b[0m\n";
-  const copied = "\x1b[32m  ✓ copied off the box, checksum matched\x1b[0m";
-  const local = "    (no BACKUP_UPLOAD_URL - this copy is on this disk only)";
+    + "\x1b[32m  ✓ fidato-20261004-033001.dump  (812 KB)\x1b[0m\n"
+    + "\x1b[32m  this backup has been restored and checked. It is a backup.\x1b[0m\n"
+    + line + "\n";
+  const at = "2026-10-04T21:30:05Z";
 
-  it("reads the LAST night: passed, and where the copy went", () => {
-    expect(readBackupLog(night(failed, local) + night(passed, copied), "t"))
-      .toEqual({ state: "passed", at: "t", offsite: "copied" });
-    expect(readBackupLog(night(passed, local), "t").offsite).toBe("this disk only");
+  it("reads the four results of the line", () => {
+    expect(backupFromLog(night(`backup-status ${at} ok uploaded=yes`), "file"))
+      .toEqual({ state: "passed", at, offsite: "copied" });
+    expect(backupFromLog(night(`backup-status ${at} ok uploaded=no`), "file"))
+      .toEqual({ state: "passed", at, offsite: "this disk only" });
+    expect(backupFromLog(night(`backup-status ${at} failed uploaded=yes`), "file"))
+      .toEqual({ state: "failed", at, offsite: "copied" });
+    /* A failed copy and no bucket at all read the same, so nothing is guessed. */
+    expect(backupFromLog(night(`backup-status ${at} failed uploaded=no`), "file"))
+      .toEqual({ state: "failed", at, offsite: null });
   });
 
-  it("says a failed night failed, even after an earlier good one", () => {
-    expect(readBackupLog(night(passed, copied) + night(failed, copied), "t").state).toBe("failed");
-    const noCopy = "\x1b[31m  x the copy off the box FAILED (HTTP 403). The file on this disk\x1b[0m";
-    expect(readBackupLog(night(passed, noCopy), "t")).toMatchObject({ state: "failed", offsite: "failed" });
+  it("goes by the LAST line, not the words around it", () => {
+    const text = night("backup-status 2026-10-03T21:30:01Z ok uploaded=yes")
+      + "\x1b[31m  x 1 check(s) failed\x1b[0m\n" + `backup-status ${at} failed uploaded=no\n`;
+    expect(backupFromLog(text, "file")).toEqual({ state: "failed", at, offsite: null });
+  });
+
+  it("says unknown, not broken, for a log from before the status line", () => {
+    const old = "-- taking a fresh backup first -----------------------------\n"
+      + "    (no BACKUP_UPLOAD_URL - this copy is on this disk only)\n"
+      + "\x1b[32m  this backup has been restored and checked. It is a backup.\x1b[0m\n";
+    expect(backupFromLog(old, "2026-10-04T21:31:00.000Z"))
+      .toEqual({ state: "unknown", at: "2026-10-04T21:31:00.000Z", offsite: null });
+    expect(backupFromLog("", "t").state).toBe("unknown");
   });
 });
 

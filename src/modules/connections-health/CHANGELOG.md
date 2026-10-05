@@ -1,5 +1,12 @@
 # Changelog - connections-health
 
+## 5 October 2026 - the backup reader shared (D27-284 (5), the master's change)
+
+- `api/src/modules/connections-health/index.ts` now also exports
+  `readBackupStatus` and `BACKUP_LOG` from `health.ts`, so System health
+  (admin) reads the `backup-status` line with this service's reader instead
+  of its own reader of the log's words. Nothing in `health.ts` changed.
+
 ## 4 October 2026 - built (D27-276, point 3)
 
 A new small service: one page with the health of every outside connection,
