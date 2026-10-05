@@ -3,9 +3,9 @@
 **3 October (D27-266): nothing new goes to Meta for now.** WhatsApp goes
 through the CRS's Meta account and its already-approved templates: the booking
 voucher by the CRS's `reservation_confirmation` (the last section). **7
-`booking_voucher` is on hold; 4 `review_request` is later; 6 `tax_invoice` is
-pending the owner. 1 `booking_confirmation`, 2 `stay_reminder` and 5
-`checkin_link` are not used (D27-264).**
+`booking_voucher` is on hold; 4 `review_request` is later. 1 `booking_confirmation`, 2 `stay_reminder` and 5
+`checkin_link` are not used (D27-264); 6 `tax_invoice` is not used either -
+the invoice goes by email only (D27-284).**
 
 **21 September 2026 (D21-59). DRAFTS: the wording is the owner's to approve,
 change or reject before it goes to Meta.** Meta only lets a business start a
@@ -138,17 +138,14 @@ Booking: {{4}}
 
 ---
 
-## 6 · `tax_invoice` — **pending the owner (D27-266)**
+## 6 · `tax_invoice` — **not used (D27-284)**
 
-**Pending the owner (D27-266).** The owner said to use a CRS template for the
-invoice for now; which one, and its field names, is the owner's to give. The
-invoice is built and its switch is off. The draft below stands until then.
-Category **Utility**, header **Document**.
-
-The guest's tax invoice as a PDF (D27-252, D27-261): when the hotel has
-"Tax invoice" switched on (Settings → Messages) it goes by itself as soon as
-the invoice is issued, and the desk can send it with **Send invoice**. Not a
-credit note. The same PDF goes by email.
+**Not used (D27-284, 5 October). Do not submit it.** The tax invoice goes to
+the guest BY EMAIL ONLY, its PDF attached (the workflow's `invoice` email, from
+crs@): by itself when issued while the hotel's "Tax invoice" switch is on
+(Settings → Messages), and by the desk's **Send invoice**. The PMS never sends
+it on WhatsApp, so no Meta template is needed. A company's invoice is not sent
+by itself; a credit note never. Kept here only as the record of what it was.
 
 **When creating it choose:** category **Utility**; language **English**;
 **Header: Document** (Meta asks for a sample PDF - any one-page PDF will do);
@@ -169,9 +166,8 @@ Your tax invoice {{invoice_no}} dated {{invoice_date}} for {{amount}} is attache
 | `invoice_date` | `data.invoiceDate` | 03 Oct 2026 |
 | `amount` | `data.total` | INR 4,725.00 |
 
-The sending workflow already names it (`INVOICE_TEMPLATE = "tax_invoice"`,
-`deploy/n8n/pms-send-crs.json`). If Meta approves it under another name, change
-that one line.
+The sending workflow does not name it (no `INVOICE_TEMPLATE` since the 5
+October paste): an invoice on WhatsApp would be refused with a sentence.
 
 ## 7 · `booking_voucher` — **on hold (D27-266)**
 

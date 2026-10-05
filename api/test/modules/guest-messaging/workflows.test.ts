@@ -247,6 +247,9 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
      own order (docs/go-live/whatsapp-templates.md, IMPORT.md). */
   it.each([
     ["review", "review_request", ["Asha Test", "Test Hotel", "https://example.test/g/x"]],
+    /* The owner's live code keeps checkin-link (the 5 October paste); the PMS
+       has not sent that kind since D27-264, so the path is dead but harmless. */
+    ["checkin-link", "checkin_link", ["Asha Test", "Test Hotel", "01/10/2026", "FH-5EL-2610-0001", "https://example.test/g/x"]],
   ])("sends %s on WhatsApp as the %s template", (kind, template, fields) => {
     const out = whatsapp({ kind });
     const graph = out["graphBody"] as Graph;
@@ -261,18 +264,19 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
   /* D27-264: fewer messages - the voucher is the confirmation, the check-in
      link is in its PDF, and there is no reminder. Their templates and emails
      are gone, so anything still asking for them is refused in a sentence. */
-  it.each(["booking-confirmation", "arrival-reminder", "checkin-link"])(
+  it.each(["booking-confirmation", "arrival-reminder"])(
     "refuses %s on WhatsApp: its template is not used (D27-264)", (kind) => {
       expect(whatsapp({ kind })).toMatchObject({ stop: true, statusCode: 422, answer: { ok: false } });
     });
 
-  it("keeps the voucher's email, and has no reminder or check-in-link email (D27-264)", () => {
+  it("keeps the voucher's email and the live code's check-in-link email, and has no reminder email (D27-264)", () => {
     const [voucherMail] = run(withMailbox(), "Read the message", { body: message({ channel: "email", kind: "booking-confirmation" }) });
     expect(voucherMail!.json).toMatchObject({ stop: false, email: true });
-    for (const kind of ["arrival-reminder", "checkin-link"]) {
-      const [out] = run(withMailbox(), "Read the message", { body: message({ channel: "email", kind }) });
-      expect(out!.json, kind).toMatchObject({ stop: true, statusCode: 422 });
-    }
+    const [linkMail] = run(withMailbox(), "Read the message", { body: message({ channel: "email", kind: "checkin-link" }) });
+    expect(linkMail!.json).toMatchObject({ stop: false, email: true,
+      subject: "Your check-in page for Test Hotel (FH-5EL-2610-0001)" });
+    const [reminder] = run(withMailbox(), "Read the message", { body: message({ channel: "email", kind: "arrival-reminder" }) });
+    expect(reminder!.json).toMatchObject({ stop: true, statusCode: 422 });
   });
 
   it("sends the check-in code as guest_page_code, in the body and in the copy button", () => {
@@ -351,9 +355,8 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     expect(next("Uploaded?", 1)).toEqual(["Answer the PMS"]);
   });
 
-  /* D27-252, D27-261: the tax invoice - on WhatsApp by the PMS's own new
-     template `tax_invoice` (its PDF as the document, five named fields), and
-     by email with the PDF; a report by email to one of the hotel's people. */
+  /* D27-284: the tax invoice by email only, with the PDF - no WhatsApp, no
+     Meta template; a report by email to one of the hotel's people. */
   const pdf = { name: "Invoice-5EL-2026-27-0001.pdf", contentType: "application/pdf",
     base64: Buffer.from("%PDF-1.4 made up").toString("base64") };
   const invoice = (over: Json = {}) => message({
@@ -363,23 +366,8 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     ...over,
   });
 
-  it("sends the invoice on WhatsApp by tax_invoice, its PDF uploaded first, with five named fields", () => {
-    const [read] = run(crs, "Read the message", { body: invoice() });
-    expect(read!.json).toMatchObject({ stop: false, upload: true });
-    const [built] = run(crs, "Build the voucher message", { statusCode: 200, body: { id: "MEDIA-2" } },
-      { earlier: { "Read the message": read!.json } });
-    const graph = built!.json["graphBody"] as { template: { name: string; components: Json[] } };
-    expect(graph.template.name).toBe("tax_invoice");
-    expect(graph.template.components).toEqual([
-      { type: "header", parameters: [{ type: "document", document: { id: "MEDIA-2", filename: pdf.name } }] },
-      { type: "body", parameters: [
-        { type: "text", parameter_name: "guest_name", text: "Asha Test" },
-        { type: "text", parameter_name: "hotel", text: "Test Hotel" },
-        { type: "text", parameter_name: "invoice_no", text: "5EL/2026-27/0001" },
-        { type: "text", parameter_name: "invoice_date", text: "03 Oct 2026" },
-        { type: "text", parameter_name: "amount", text: "INR 1,050.00" },
-      ] },
-    ]);
+  it("refuses the invoice on WhatsApp: there is no template for it (D27-284)", () => {
+    expect(whatsapp(invoice())).toMatchObject({ stop: true, statusCode: 422, answer: { ok: false } });
   });
 
   it("writes the invoice's email with the PDF attached, and the daily report's with its key figures (D27-280)", () => {

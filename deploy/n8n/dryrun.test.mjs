@@ -147,6 +147,21 @@ it("the check-in code by email", () => {
   expect(out.json.text).toBe("Hello Asha Rao,\n\nYour code is 482913\n\nIt works for 10 minutes. Do not share it with anyone.\n\nBooking: 5EL-1001");
 });
 
+it("the tax invoice by email, its PDF attached; never on WhatsApp (D27-284)", () => {
+  const data = { guestName: "Asha Rao", hotelName: "5 Elements", invoiceNumber: "5EL/26-27/0042",
+    invoiceDate: "06/10/2026", total: "INR 1,050.00", reference: "5EL-1001" };
+  const out = read({ channel: "email", kind: "invoice", hotel, to: { email: "asha@example.com" },
+    file: { ...pdf, name: "invoice.pdf" }, data });
+  expect(out.json).toMatchObject({ stop: false, email: true, to: "asha@example.com", attachments: "data",
+    from: "Fidato Hotels <crs@fidatohotels.com>", subject: "Your tax invoice from 5 Elements (5EL/26-27/0042)" });
+  expect(out.binary.data.fileName).toBe("invoice.pdf");
+  expect(out.json.text).toBe("Hello Asha Rao,\n\nYour tax invoice 5EL/26-27/0042, dated 06/10/2026, for INR 1,050.00 is attached.\n\n"
+    + "Booking: 5EL-1001\n\nThank you for staying at 5 Elements.");
+  expect(read({ channel: "whatsapp", kind: "invoice", hotel, to: { phone: "9876543210" },
+    from: { phoneNumberId: "1234567890" }, data, file: pdf }).json)
+    .toEqual({ stop: true, statusCode: 422, answer: { ok: false, error: 'No WhatsApp template for "invoice" in this workflow.' } });
+});
+
 it("refuses a message without a proper id", () => {
   const out = new Function("$input", "$getWorkflowStaticData", READ)(
     { first: () => ({ json: { body: { messageId: "x", channel: "email" } } }) }, () => ({}))[0];

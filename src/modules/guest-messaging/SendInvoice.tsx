@@ -8,8 +8,8 @@ import { sendInvoice } from "./data/settings";
 /* ══════════════════════════════════════════════════════════════════
    SEND INVOICE (D27-252, D27-261) - one button, for the Invoice page
 
-   The tax invoice with its PDF to the stay's guest, each way they can be
-   reached that it has not gone yet - a company's too (Q5), never a credit
+   The tax invoice with its PDF to the stay's guest, by email only (D27-284),
+   if it has not gone yet - a company's too (Q5), never a credit
    note (Q6). Where nothing can send, the button is off and the sender's own
    sentence says why, as Send check-in link does.
    ══════════════════════════════════════════════════════════════════ */

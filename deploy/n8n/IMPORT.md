@@ -10,8 +10,8 @@ secret in the PMS server's settings.
 ```
 pms-send-crs.json   into the CRS's n8n     EVERY guest message: every email, and
                                            on WhatsApp the booking voucher, the
-                                           check-in code, the tax invoice and
-                                           the review request - part B below
+                                           check-in code and the review
+                                           request - part B below
 
 pms-id-photos-crs.json  into the CRS's n8n  guests' ID photos, ENCRYPTED, kept in
                                            Google Drive (D27-209) - part D below;
@@ -45,12 +45,13 @@ from its own settings.
    | `guest_page_code` | Authentication (Copy code, 10 minutes) | the check-in code |
    | `review_request` | Meta decides | the review request |
    | the owner's `booking_confirmation` (D27-281, with Meta again) | Utility | the voucher with its PDF and a **Check in online** button, once `OWN_TEMPLATE_READY` is `true` |
-   | `tax_invoice` | Utility | the tax invoice - not in the workflow now (part B, step 5) |
+   | ~~`tax_invoice`~~ | - | not used (D27-284): the tax invoice goes by email only |
 
    **Not used since D27-264**: `stay_reminder` and `checkin_link`. The voucher is the confirmation, the check-in link is in
    its PDF, and there is no day-before reminder. Do not submit them.
    **D27-266: nothing new goes to Meta for now** - `booking_voucher` is on
-   hold, `review_request` later, `tax_invoice` pending the owner.
+   hold, `review_request` later. **D27-284: no `tax_invoice`** - the invoice
+   goes by email only.
 
    A template approved under another name or language: change `WHATSAPP` and
    `LANGUAGE` at the top of the workflow's **Read the message** node. Nothing
@@ -100,9 +101,9 @@ In the CRS's n8n (the CRS's **Admin → Integrations** names its address):
      sentence the desk sees. WhatsApp messages do not need it.
    - `WHATSAPP` / `LANGUAGE`, only if Meta approved other names or another
      language.
-   - There is no tax invoice in the workflow (5 October paste: the owner's live
-     code never had it; which template it goes on is the owner's, D27-266). An
-     invoice is refused with a sentence the desk sees.
+   - The tax invoice goes **by email only** (D27-284): the `invoice` draft in
+     `EMAILS`, its PDF attached, from the same mailbox. There is no WhatsApp
+     template for it, and the PMS never sends it on WhatsApp.
    - `OWN_TEMPLATE_READY` stays `false` until Meta shows the owner's
      `booking_confirmation` Active (the 5 October paste, part C).
    - **`VOUCHER_TEMPLATE`** (D27-235, D27-241, D27-266) - already
@@ -146,10 +147,13 @@ an hour per connection). Empty: no alert emails. It needs the
 
 ### ⚠ The 5 October paste: two nodes, the whole code of each
 
-The live workflow lacks the `health-alert` email (D27-276) and the
-`daily-report` email (D27-280, its figures as a table): **until it has them,
-every alert and every daily report is refused** ("No email for … in this
-workflow") and Guest messages shows why. The same paste brings the voucher on
+The live workflow lacks the `health-alert` email (D27-276), the
+`daily-report` email (D27-280, its figures as a table) and the tax
+`invoice` email (D27-284, its PDF attached): **until it has them, every
+alert, every daily report and every tax invoice is refused** ("No email for
+… in this workflow") and Guest messages shows why. Pasted **Read the
+message** before it had the `invoice` email? Paste it again (steps 1, 2 and
+4). The same paste brings the voucher on
 the owner's `booking_confirmation` (D27-281), switched off until Meta
 approves it. **Paste it now, right after the release.**
 

@@ -202,15 +202,17 @@ describe("the tax invoice to the guest, with its PDF", () => {
     await runInvoices();
     expect(sent(), "issued before the switch: never by itself").toEqual([]);
 
+    /* D27-284: by email only - this guest has a number and agreed to
+       WhatsApp, and still gets no WhatsApp. */
     await anInvoice(folioId, "P6MSG-NEW");
     await runInvoices();
-    expect(sent().map((m) => `${m.kind} ${m.channel}`).sort()).toEqual(["invoice email", "invoice whatsapp"]);
-    expect(sent().every(isPdf), "each with its PDF").toBe(true);
+    expect(received.map((m) => `${m.kind} ${m.channel}`), "one email, nothing else").toEqual(["invoice email"]);
+    expect(isPdf(sent()[0]), "with its PDF").toBe(true);
     expect(sent()[0]!.data).toMatchObject({ guestName: `${TAG} Guest`, invoiceNumber: "P6MSG-NEW", total: "INR 1,050.00" });
 
     received = [];
     await runInvoices();
-    expect(sent(), "once each way").toEqual([]);
+    expect(sent(), "once").toEqual([]);
   });
 
   it("is not sent by itself for a company's bill, nor ever as a credit note", async () => {
@@ -226,15 +228,15 @@ describe("the tax invoice to the guest, with its PDF", () => {
     expect(((await note.json()) as { reason: string }).reason).toBe("A credit note is not sent to the guest.");
   });
 
-  it("is sent by the desk's button, a company's too, each way once, under the clerk's name", async () => {
+  it("is sent by the desk's button, a company's too, by email once, under the clerk's name", async () => {
     await anInvoice(companyFolioId, "P6MSG-BTN");
     const res = await call(deskId, "POST", "/invoices/P6MSG-BTN/send", {});
     expect(res.status, await res.clone().text()).toBe(200);
-    expect(sent().map((m) => m.channel).sort()).toEqual(["email", "whatsapp"]);
+    expect(received.map((m) => m.channel), "no WhatsApp (D27-284)").toEqual(["email"]);
     expect(await sql(
       `select channel, sent_by::text from messages_sent where about_kind = 'invoice'
         and about_id = (select id::text from invoices where number = 'P6MSG-BTN') order by channel`)).toEqual([
-      { channel: "email", sent_by: deskId }, { channel: "whatsapp", sent_by: deskId }]);
+      { channel: "email", sent_by: deskId }]);
     expect((await call(deskId, "POST", "/invoices/P6MSG-BTN/send", {})).status, "not twice").toBe(409);
     expect((await call(deskId, "POST", "/invoices/NO-SUCH/send", {})).status).toBe(404);
   });

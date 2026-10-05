@@ -46,7 +46,7 @@ the live-inventory app separate, and the PMS only shows its leads.)
 
 | Message | Sent by | Its settings |
 |---|---|---|
-| every email; on WhatsApp the voucher (`booking-voucher`, the CRS's template), the check-in code (`guest-link-code`), the tax invoice (`invoice`) and the review request (`review`). Since D27-264 no `booking_confirmation`, `stay_reminder` or `checkin_link` | the CRS's n8n, workflow `deploy/n8n/pms-send-crs.json` | `CRS_N8N_URL`, `CRS_N8N_SECRET` |
+| every email; on WhatsApp the voucher (`booking-voucher`, the CRS's template), the check-in code (`guest-link-code`) and the review request (`review`); the tax invoice (`invoice`) by email only (D27-284). Since D27-264 no `booking_confirmation`, `stay_reminder` or `checkin_link` | the CRS's n8n, workflow `deploy/n8n/pms-send-crs.json` | `CRS_N8N_URL`, `CRS_N8N_SECRET` |
 | the one number they go from (D27-101) | a setting, sent in every WhatsApp as `from.phoneNumberId` | `WHATSAPP_PHONE_NUMBER_ID` |
 | not used for now: the sales inbox's "booked guest" mark (D27-104) | the market-to-revenue n8n, `deploy/n8n/pms-send-m2r.json` | `M2R_N8N_URL`, `M2R_N8N_SECRET`, both empty |
 
@@ -159,13 +159,14 @@ booking's Booked card, the booking panel) - one line each.
   switch (Q1). The catch-up hours are shown, not changed (Q2). Routes in `settings.ts`; the page
   `pages/MessageSwitches.tsx` (`/settings/messages/switches`).
 - **The tax invoice with its PDF** (`invoices.ts`, `invoiceDocument.ts`):
-  by itself, both ways, for a guest's invoice issued after the hotel's switch
+  **by email only** (D27-284: no WhatsApp, no Meta template; `invoicesOwed`
+  keeps only `app.guest_invoices_owed`'s email rows), by itself for a guest's
+  invoice issued after the hotel's switch
   was last turned on (Q3, Q4); a company's only by the desk's **Send invoice**
   (`SendInvoice`, on finance's Invoice page; `POST /:code/invoices/:number/send`,
   whoever may issue one); never a credit note (Q6). The PDF is drawn from
   finance's `invoiceFacts` - the screen's own query. The sweep sends each as
-  the clerk who issued it. WhatsApp template `tax_invoice`
-  (docs/go-live/whatsapp-templates.md, the owner submits it).
+  the clerk who issued it. The words are the workflow's `invoice` email.
 - **Daily report emails** (D27-280, 5 October; `reportEmails.ts`,
   `daily_report_emails`, migration "daily report emails"): per hotel, four
   reports, each On/Off with its own typed addresses - the Night audit report
@@ -181,8 +182,8 @@ booking's Booked card, the booking panel) - one line each.
   Administrator or GM (role gate `room_config`, `app.manages_hotel`, and the
   table's `hotel_isolation` policy). The page `pages/DailyReportEmails.tsx`
   (`/settings/messages/daily-report-emails`). Replaces D27-261's reports to
-  staff's own sign-in emails (`report_emails`, `app.report_emails_owed`: left
-  in the database, unread, never released).
+  staff's own sign-in emails (`report_emails`, `app.report_emails_owed`:
+  never released, dropped by migration 206, D27-282 (1)).
 - The review request (reputation's route) asks the hotel's `review` switch.
 - Both passes run after the guest sweep, on its timer.
 
