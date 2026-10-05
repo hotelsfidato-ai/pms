@@ -426,3 +426,133 @@ begin
   select count(*) into n from hotels where code = 'GMU';
   perform test.ok('guest-messaging', 'the group fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- DAILY REPORT EMAILS (the owner's D27-280) - who may set them, what is owed
+-- =============================================================================
+-- Refers to its migration by what it does - "daily report emails". The table
+-- is written by the hotel's owner, Administrator or GM only (the API asks
+-- too); the sweep reads through app.daily_reports_owed with nobody signed in.
+do $$
+declare
+  h uuid; gm uuid; desk uuid; n int; v text; refused boolean;
+  d date := (now() at time zone 'Asia/Kolkata')::date;
+begin
+  h := app.provision_property_unchecked('GMR', 'Reports Test', 'Nowhere');
+  insert into staff (email, full_name) values ('gmr-gm@fidato.in', 'GMR Manager')
+  on conflict (email) do update set is_active = true returning id into gm;
+  insert into staff (email, full_name) values ('gmr-desk@fidato.in', 'GMR Desk')
+  on conflict (email) do update set is_active = true returning id into desk;
+  delete from staff_hotels where staff_id in (gm, desk);
+  insert into staff_hotels (staff_id, hotel_id, role) values (gm, h, 'gm'), (desk, h, 'front_desk');
+
+  -- ---------- the table: forced row security, the shared policy name ----------
+  perform test.ok('daily report emails', 'row security is forced',
+    exists (select 1 from pg_class where relname = 'daily_report_emails'
+             and relrowsecurity and relforcerowsecurity));
+  perform test.ok('daily report emails', 'under the shared policy name',
+    (select string_agg(policyname, ',') from pg_policies where tablename = 'daily_report_emails') = 'hotel_isolation');
+
+  -- ---------- reception may not write it; the GM may ----------
+  perform set_config('app.user_id', desk::text, true);
+  refused := false;
+  begin
+    set local role pms_app;
+    insert into daily_report_emails (hotel_id, report, is_on, addresses, changed_by)
+    values (h, 'manager', true, '{desk@example.com}', desk);
+    reset role;
+  exception when insufficient_privilege then reset role; refused := true;
+  end;
+  perform test.ok('daily report emails', 'reception cannot switch a report on', refused);
+
+  perform set_config('app.user_id', gm::text, true);
+  begin
+    set local role pms_app;
+    insert into daily_report_emails (hotel_id, report, is_on, addresses, changed_by, changed_at)
+    values (h, 'night-audit', true, '{owner@example.com,gm@example.com}', gm, now() - interval '1 hour'),
+           (h, 'manager', false, '{owner@example.com}', gm, now() - interval '1 hour');
+    reset role;
+  exception when insufficient_privilege then reset role;
+  end;
+  select count(*) into n from daily_report_emails where hotel_id = h;
+  perform test.ok('daily report emails', 'the GM can', n = 2, n || ' rows');
+
+  perform set_config('app.user_id', desk::text, true);
+  refused := false;
+  begin
+    set local role pms_app;
+    update daily_report_emails set addresses = '{desk@example.com}' where hotel_id = h;
+    reset role;
+  exception when insufficient_privilege then reset role; refused := true;
+  end;
+  perform test.ok('daily report emails', 'nor change the addresses', refused);
+  refused := false;
+  begin
+    set local role pms_app;
+    delete from daily_report_emails where hotel_id = h;
+    reset role;
+  exception when insufficient_privilege then reset role; refused := true;
+  end;
+  perform test.ok('daily report emails', 'and nobody deletes one: off is a switch, not a gap', refused);
+
+  refused := false;
+  begin
+    insert into daily_report_emails (hotel_id, report, is_on) values (h, 'lodging-tax', true);
+  exception when check_violation then refused := true;
+  end;
+  perform test.ok('daily report emails', 'only the four reports', refused);
+
+  -- ---------- what is owed after the audit ----------
+  insert into night_audit_runs (hotel_id, business_date, status, started_at, completed_at)
+  values (h, d - 2, 'completed', now() - interval '2 hours', now() - interval '2 hours'),
+         (h, d - 1, 'completed', now(), now());
+  perform set_config('app.user_id', '', true);
+  begin
+    set local role pms_app;
+    select string_agg(o.business_date || ' ' || o.report || ' ' || o.address || ' ' || (o.built_by = gm), ', '
+                      order by o.address)
+      into v from app.daily_reports_owed(3, h) o;
+    reset role;
+  exception when insufficient_privilege then reset role;
+  end;
+  perform test.ok('daily report emails',
+    'after the audit, with nobody signed in: each address of each report on, built as the GM - not the one off, not an audit before the choice',
+    v = format('%s night-audit gm@example.com true, %s night-audit owner@example.com true', d - 1, d - 1),
+    coalesce(v, 'nothing'));
+
+  insert into messages_sent (hotel_id, channel, kind, about_kind, about_id, status)
+  values (h, 'email', 'daily-report', 'night-audit', (d - 1)::text || '/night-audit/owner@example.com', 'sent'),
+         (h, 'email', 'daily-report', 'night-audit', (d - 1)::text || '/night-audit/gm@example.com', 'failed'),
+         (h, 'email', 'daily-report', 'night-audit', (d - 1)::text || '/night-audit/gm@example.com', 'failed');
+  select string_agg(o.address, ', ') into v from app.daily_reports_owed(3, h) o;
+  perform test.ok('daily report emails', 'once per business date and address; two failures, still owed',
+    v = 'gm@example.com', coalesce(v, 'nothing'));
+  select count(*) into n from app.daily_reports_owed(2, h);
+  perform test.ok('daily report emails', 'and not after the last try', n = 0, n || ' owed');
+
+  update staff set is_active = false where id = gm;
+  select count(*) into n from app.daily_reports_owed(3, h) o where o.built_by is not null and o.built_by <> gm;
+  perform test.ok('daily report emails', 'the GM who saved it leaves: whoever runs the hotel now builds it', n = 1, n || ' owed');
+  update staff set is_active = true where id = gm;
+
+  update daily_report_emails set addresses = '{}' where hotel_id = h and report = 'night-audit';
+  update daily_report_emails set changed_at = now() - interval '1 hour' where hotel_id = h;
+  select count(*) into n from app.daily_reports_owed(3, h);
+  perform test.ok('daily report emails', 'no address, nothing owed', n = 0, n || ' owed');
+
+  perform test.ok('daily report emails', 'the API role may ask what is owed, the read-only role may not',
+    has_function_privilege('pms_app', 'app.daily_reports_owed(integer, uuid)', 'execute')
+    and not has_function_privilege('pms_readonly', 'app.daily_reports_owed(integer, uuid)', 'execute'));
+
+  -- ---------- clean up ----------
+  perform set_config('app.user_id', '', true);
+  delete from messages_sent where hotel_id = h;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+  delete from staff_hotels where staff_id in (gm, desk);
+  update staff set is_active = false where id in (gm, desk);
+  select count(*) into n from hotels where code = 'GMR';
+  perform test.ok('daily report emails', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;

@@ -92,6 +92,7 @@ export const KIND_WORDS: Record<string, string> = {
   "checkin-link": "Check-in link",
   bill: "Bill",
   voucher: "Voucher",
+  "daily-report": "Daily report",
 };
 
 export const kindWords = (kind: string): string => KIND_WORDS[kind] ?? kind;

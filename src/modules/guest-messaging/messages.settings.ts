@@ -1,7 +1,7 @@
 import { BellRing, FileText } from "lucide-react";
 import type { SettingsPage } from "@/components/app/settingsConsole";
 
-/* Settings → Messages (Settings phase 6; D27-252, D27-261). The owner, an
+/* Settings → Messages (Settings phase 6; D27-252, D27-261, D27-280). The owner, an
    administrator and the GM (the console's default `setting`); the server asks
    again on every call. */
 export const settingsPages: SettingsPage[] = [
@@ -11,8 +11,10 @@ export const settingsPages: SettingsPage[] = [
     load: () => import("./pages/MessageSwitches"),
   },
   {
-    group: "messages", slug: "night-audit-reports", label: "Night audit reports", icon: FileText, order: 50,
-    keywords: ["report", "email", "night audit", "manager summary", "city ledger"],
-    load: () => import("./pages/NightAuditReports"),
+    /* D27-280: each report On/Off and its own typed addresses, after the
+       night audit. Replaced "Night audit reports" (D27-261), never released. */
+    group: "messages", slug: "daily-report-emails", label: "Daily report emails", icon: FileText, order: 50,
+    keywords: ["report", "email", "night audit", "manager report", "money owed", "ledger", "restaurant", "stock"],
+    load: () => import("./pages/DailyReportEmails"),
   },
 ];

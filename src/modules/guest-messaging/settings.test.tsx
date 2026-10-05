@@ -5,10 +5,10 @@ import * as apiModule from "@/lib/api";
 import { useUi } from "@/lib/ui";
 import { SendInvoice } from "@/modules/guest-messaging";
 import MessageSwitches from "@/modules/guest-messaging/pages/MessageSwitches";
-import NightAuditReports from "@/modules/guest-messaging/pages/NightAuditReports";
+import DailyReportEmails from "@/modules/guest-messaging/pages/DailyReportEmails";
 
-/* Settings → Messages (D27-252, D27-261, D27-264): the switches, who gets the
-   reports, and Send invoice. The server decides; these
+/* Settings → Messages (D27-252, D27-261, D27-264, D27-280): the switches, the
+   daily report emails, and Send invoice. The server decides; these
    say each screen sends exactly what was chosen, to its own route. */
 
 type Answer = (init?: RequestInit) => unknown;
@@ -51,23 +51,45 @@ describe("Guest messages on/off", () => {
   });
 });
 
-describe("Reports after the night audit", () => {
-  it("saves exactly the reports ticked for each person", async () => {
-    const URL = "/api/hotels/5EL/report-emails";
+describe("Daily report emails (D27-280)", () => {
+  const URL = "/api/hotels/5EL/report-emails";
+  const report = (key: string, title: string, isOn: boolean, addresses: string[] = []) =>
+    ({ key, title, contains: `What the ${title} holds.`, isOn, addresses, changedBy: null, changedAt: null });
+
+  it("saves each report's switch and its own typed addresses, all four at once", async () => {
     const spy = serve({
       [URL]: (init) => (init?.method === "PUT" ? { ok: true } : {
-        reports: [{ key: "night-audit", title: "Night audit" }, { key: "manager", title: "Manager summary" }],
-        people: [{ id: "p-1", name: "Ravi GM", email: "ravi@fidato.in" }],
-        chosen: [{ report: "night-audit", staffId: "p-1" }],
+        reports: [
+          report("night-audit", "Night audit report", true),
+          report("manager", "Manager report", false),
+          report("money-owed", "Money owed", false, ["accounts@example.com"]),
+          report("restaurant-stock", "Restaurant and stock", false),
+        ],
+        notConnected: null,
       }),
     });
-    mount(<NightAuditReports />);
-    fireEvent.click(await screen.findByLabelText("Manager summary to Ravi GM"));
-    fireEvent.click(screen.getByLabelText("Night audit to Ravi GM"));
+    mount(<DailyReportEmails />);
+    const audit = await screen.findByLabelText("Send the Night audit report to");
+    expect(screen.getByText("On, but nobody gets it until an address is typed.")).toBeTruthy();
+    fireEvent.change(audit, { target: { value: "owner@example.com\ngm@example.com, " } });
+    const manager = screen.getByText("Manager report", { selector: "p" }).closest("li")!;
+    fireEvent.click(within(manager).getByRole("switch"));
+    fireEvent.change(screen.getByLabelText("Send the Manager report to"), { target: { value: "owner@example.com" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(spy.mock.calls.some((c) => c[1]?.method === "PUT")).toBe(true));
     const put = spy.mock.calls.find((c) => c[1]?.method === "PUT")!;
-    expect(JSON.parse(String(put[1]!.body))).toEqual({ chosen: [{ report: "manager", staffId: "p-1" }] });
+    expect(JSON.parse(String(put[1]!.body))).toEqual({ reports: [
+      { key: "night-audit", isOn: true, addresses: ["owner@example.com", "gm@example.com"] },
+      { key: "manager", isOn: true, addresses: ["owner@example.com"] },
+      { key: "money-owed", isOn: false, addresses: ["accounts@example.com"] },
+      { key: "restaurant-stock", isOn: false, addresses: [] },
+    ] });
+  });
+
+  it("says so, in the sender's words, where nothing can be sent yet", async () => {
+    serve({ [URL]: () => ({ reports: [report("night-audit", "Night audit report", true)], notConnected: "Sending is not set up yet." }) });
+    mount(<DailyReportEmails />);
+    expect(await screen.findByText("Sending is not set up yet.", { exact: false })).toBeTruthy();
   });
 });
 

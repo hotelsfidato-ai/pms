@@ -29,16 +29,28 @@ export const setMessageSwitch = (
   method: "PUT", body: JSON.stringify(body),
 });
 
+/** Daily report emails (D27-280): each report On/Off and its own addresses. */
+export interface DailyReportEmail {
+  key: string;
+  title: string;
+  contains: string;
+  isOn: boolean;
+  addresses: string[];
+  changedBy: string | null;
+  changedAt: string | null;
+}
+
 export interface ReportEmails {
-  reports: { key: string; title: string }[];
-  people: { id: string; name: string; email: string }[];
-  chosen: { report: string; staffId: string }[];
+  reports: DailyReportEmail[];
+  /** The sender's sentence where nothing can be sent yet; null when it can. */
+  notConnected: string | null;
 }
 
 export const getReportEmails = (hotel: string) => api<ReportEmails>(`/api/hotels/${hotel}/report-emails`);
 
-export const setReportEmails = (hotel: string, chosen: ReportEmails["chosen"]) =>
-  api<{ ok: true }>(`/api/hotels/${hotel}/report-emails`, { method: "PUT", body: JSON.stringify({ chosen }) });
+export const setReportEmails = (
+  hotel: string, reports: Pick<DailyReportEmail, "key" | "isOn" | "addresses">[],
+) => api<{ ok: true }>(`/api/hotels/${hotel}/report-emails`, { method: "PUT", body: JSON.stringify({ reports }) });
 
 export const sendInvoice = (hotel: string, number: string) =>
   api<{ ok: true }>(`/api/hotels/${hotel}/invoices/${number}/send`, { method: "POST", body: "{}" });

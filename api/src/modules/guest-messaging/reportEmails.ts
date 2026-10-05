@@ -1,49 +1,167 @@
 import { withUser, type Client } from "../../db.ts";
 import { canSend, messageIdFor, send } from "../../sending.ts";
-import { dateReport, renderPdf } from "../../reportRender.ts";
-import { buildReport } from "../reports/index.ts";
+import { dateReport, formatCell, inr, kindOf, renderPdf } from "../../reportRender.ts";
+import { buildReport, type CellKind, type ReportDoc, type ReportSection } from "../reports/index.ts";
 import { MOST_ATTEMPTS } from "./jobs.ts";
 
 /* ══════════════════════════════════════════════════════════════════
-   REPORTS BY EMAIL AFTER THE NIGHT AUDIT (D27-261, Q7)
+   DAILY REPORT EMAILS (the owner's D27-280, 5 October)
 
-   After each completed night audit, each report the hotel chose goes as a
-   PDF to each person chosen for it - to their own sign-in email, never a
-   typed address (Settings → Messages → Reports by email). Once each; three
-   tries (app.report_emails_owed, migration "messages and reports").
+   After a hotel's night audit closes the day, each report switched on
+   goes to each address typed for it (Settings → Messages → Daily report
+   emails): its KEY FIGURES in the email, the WHOLE REPORT as a PDF. Once
+   per business date, report and address; three tries
+   (app.daily_reports_owed, migration "daily report emails").
 
-   BUILT UNDER THAT PERSON'S OWN SESSION: the report holds only what they
-   may read, exactly as if they opened it themselves - the same builder and
-   the same PDF as the Reports screen's (buildReport, renderPdf).
+   NOBODY GETS ANYTHING UNTIL AN ADDRESS IS TYPED. The night audit report
+   is on until switched off; the other three are off until switched on.
 
-   Nothing in the night audit's own files changes: this asks for audits
-   that have completed, a minute later.
+   NO SECOND CALCULATION. Every report is the Reports screen's own builder
+   (buildReport), drawn by the same PDF renderer; the two that the owner
+   named by what they hold are put together from those builders' own
+   sections. The key figures are read OUT OF THAT SAME DOCUMENT, so the
+   email and its PDF cannot disagree.
+
+   Built under the session of the person who saved it while they still
+   run the hotel, else of whoever runs it now (the database answers which).
+
+   Replaces D27-261's "reports by email" to the hotel's own people's
+   sign-in emails; its table is left in the database, unread.
    ══════════════════════════════════════════════════════════════════ */
 
-export const REPORT_TITLES: Record<string, string> = {
-  "night-audit": "Night audit",
-  manager: "Manager summary",
-  "city-ledger": "City ledger",
-  "no-show": "No-shows",
-  "lodging-tax": "Lodging tax",
-  "monthly-occupancy": "Monthly occupancy",
-};
+export const DAILY_REPORTS = [
+  { key: "night-audit", title: "Night audit report", on: true,
+    contains: "The day the audit closed: rooms charged, check-outs, sales, receipts, room and guest counts, and the restaurant." },
+  { key: "manager", title: "Manager report", on: false,
+    contains: "Revenue, payments, the ledgers, occupancy, ADR and RevPAR: the day, the month so far and the year so far." },
+  { key: "money-owed", title: "Money owed", on: false,
+    contains: "The guest ledger and the city ledger: what guests and companies owe at the end of the day." },
+  { key: "restaurant-stock", title: "Restaurant and stock", on: false,
+    contains: "The restaurant's day, the closing stock in each store, and the day's wastage and breakage." },
+] as const;
 
-interface OwedReport {
-  runId: string; hotelId: string; hotelCode: string; hotelName: string; timezone: string; businessDate: string;
-  report: string; staffId: string; staffName: string; staffEmail: string;
+export type DailyReport = (typeof DAILY_REPORTS)[number]["key"];
+
+export const isDailyReport = (key: unknown): key is DailyReport =>
+  DAILY_REPORTS.some((r) => r.key === key);
+
+const titleOf = (key: DailyReport) => DAILY_REPORTS.find((r) => r.key === key)!.title;
+
+/* ── The document ──────────────────────────────────────────────── */
+
+const sectionsOf = (doc: ReportDoc, ...keys: string[]) => doc.sections.filter((s) => keys.includes(s.key));
+/** The Manager report's ledgers carry only today's figure: PTD and YTD would print dashes. */
+const todayOnly = (s: ReportSection): ReportSection =>
+  ({ ...s, columns: s.columns.filter((c) => c.key !== "ptd" && c.key !== "ytd") });
+
+export async function dailyReport(
+  client: Client, hotelId: string, report: DailyReport, asOn: string,
+): Promise<ReportDoc> {
+  if (report === "night-audit" || report === "manager") return buildReport(client, hotelId, report, { asOn });
+  const facts: ReportDoc["facts"] = [{ label: "As On Date", value: asOn, kind: "date" }];
+  if (report === "money-owed") {
+    const manager = await buildReport(client, hotelId, "manager", { asOn });
+    const city = await buildReport(client, hotelId, "city-ledger", { asOn });
+    return {
+      ...city, title: titleOf(report), facts,
+      sections: [...sectionsOf(manager, "guest-ledger").map(todayOnly), ...city.sections],
+      footnotes: [
+        ...manager.footnotes.filter((f) => f.startsWith("Guest Ledger") || f.startsWith("Transfer From Advance Deposit")),
+        ...city.footnotes,
+      ],
+    };
+  }
+  const audit = await buildReport(client, hotelId, "night-audit", { asOn });
+  const stock = await buildReport(client, hotelId, "stock-on-hand", { asOn });
+  const wasted = await buildReport(client, hotelId, "stock-wastage", { asOn, from: asOn });
+  return {
+    ...stock, title: titleOf(report), facts,
+    sections: [...sectionsOf(audit, "pos-summary", "pos-payment-summary"), ...stock.sections, ...wasted.sections],
+    footnotes: [...new Set([...stock.footnotes, ...wasted.footnotes])],
+  };
 }
 
-export async function reportsOwed(client: Client, hotelId: string | null = null): Promise<OwedReport[]> {
+/* ── The key figures, read out of the document ─────────────────── */
+
+export interface Figure { label: string; value: string }
+
+/** One cell as the report prints it, with the rupee sign on money. In
+    section `key`, column `column`: the row labelled `label` in the first
+    column, else the section's total, else its one row. A section that
+    printed no rows printed its own "nothing happened" sentence - a counted
+    nothing, so 0. A section or cell the report does not hold: "-". */
+export function cell(doc: ReportDoc, key: string, column: string, label?: string): string {
+  const section = doc.sections.find((s) => s.key === key);
+  const col = section?.columns.find((c) => c.key === column);
+  if (!section || !col) return "-";
+  const first = section.columns[0]!.key;
+  const row = label !== undefined
+    ? section.rows.find((r) => r.cells[first] === label)
+    : section.rows.findLast((r) => r.kind === "total") ?? section.rows.findLast((r) => r.kind === "row");
+  const tz = doc.property.timezone ?? "Asia/Kolkata";
+  if (!row) return label === undefined && section.rows.length === 0 ? shown(0, col.kind, tz) : "-";
+  return shown(row.cells[column] ?? null, kindOf(col, row), tz);
+}
+
+/** The rows a section listed (its total and its bands not counted). */
+const counted = (doc: ReportDoc, key: string): string => {
+  const section = doc.sections.find((s) => s.key === key);
+  return section ? String(section.rows.filter((r) => r.kind === "row").length) : "-";
+};
+
+const shown = (value: string | number | null, kind: CellKind, tz: string): string =>
+  kind === "money" && typeof value === "number"
+    ? `${value < 0 ? "-" : ""}₹${inr(Math.abs(value))}`
+    : formatCell(value, kind, tz);
+
+/* The owner's draft (D27-280 asks for "the key figures"): which ones is a
+   question in this change's report. Each is a cell of the PDF attached. */
+const FIGURES: Record<DailyReport, (doc: ReportDoc) => Figure[]> = {
+  "night-audit": (d) => [
+    { label: "Rooms occupied", value: `${cell(d, "room-status", "occupied")} of ${cell(d, "room-status", "rooms")}` },
+    { label: "Room revenue with tax", value: cell(d, "room-charges", "rent") },
+    { label: "Rooms given free", value: counted(d, "complimentary") },
+    { label: "Checked out", value: counted(d, "checked-out") },
+    { label: "Money taken", value: cell(d, "receipt-by-method", "amount") },
+    { label: "Restaurant with tax", value: cell(d, "pos-summary", "total") },
+  ],
+  manager: (d) => [
+    { label: "Occupancy", value: cell(d, "statistics", "today", "Occupancy Rate (%)") },
+    { label: "ADR", value: cell(d, "statistics", "today", "Average Daily Rate (ADR)") },
+    { label: "RevPAR", value: cell(d, "statistics", "today", "Revenue Per Available Room") },
+    { label: "Room revenue without tax", value: cell(d, "room-charges", "today", "Total") },
+    { label: "Total revenue without tax", value: cell(d, "revenue-summary", "today", "Total Revenue") },
+    { label: "Payments received", value: cell(d, "payment", "today", "Total Payment") },
+  ],
+  "money-owed": (d) => [
+    { label: "Guests owe", value: cell(d, "guest-ledger", "today", "Closing Balance*") },
+    { label: "Companies owe", value: cell(d, "accounts", "closing") },
+  ],
+  "restaurant-stock": (d) => [
+    { label: "Restaurant sales with tax", value: cell(d, "pos-summary", "total") },
+    { label: "Closing stock value", value: cell(d, "all", "value") },
+    { label: "Wastage", value: cell(d, "wastage", "value") },
+    { label: "Breakage", value: cell(d, "breakage", "value") },
+  ],
+};
+
+export const keyFigures = (report: DailyReport, doc: ReportDoc): Figure[] => FIGURES[report](doc);
+
+/* ── The sweep ─────────────────────────────────────────────────── */
+
+interface Owed {
+  hotelId: string; hotelCode: string; hotelName: string; timezone: string; businessDate: string;
+  report: DailyReport; address: string; builtBy: string;
+}
+
+export async function reportsOwed(client: Client, hotelId: string | null = null): Promise<Owed[]> {
   const { rows } = await client.query<Record<string, string>>(
-    `select run_id::text, hotel_id::text, hotel_code, hotel_name, timezone, business_date, report,
-            staff_id::text, staff_name, staff_email
-       from app.report_emails_owed($1, $2::uuid)`, [MOST_ATTEMPTS, hotelId]);
+    `select hotel_id::text, hotel_code, hotel_name, timezone, business_date, report, address, built_by::text
+       from app.daily_reports_owed($1, $2::uuid)`, [MOST_ATTEMPTS, hotelId]);
   return rows.map((r) => ({
-    runId: r["run_id"]!, hotelId: r["hotel_id"]!, hotelCode: r["hotel_code"]!, hotelName: r["hotel_name"]!,
-    timezone: r["timezone"]!,
-    businessDate: r["business_date"]!, report: r["report"]!, staffId: r["staff_id"]!,
-    staffName: r["staff_name"]!, staffEmail: r["staff_email"]!,
+    hotelId: r["hotel_id"]!, hotelCode: r["hotel_code"]!, hotelName: r["hotel_name"]!, timezone: r["timezone"]!,
+    businessDate: r["business_date"]!, report: r["report"] as DailyReport, address: r["address"]!,
+    builtBy: r["built_by"]!,
   }));
 }
 
@@ -55,28 +173,45 @@ export async function runReportEmails(
   if (!canSend()) return result;
   const owed = await asNobody((c) => reportsOwed(c));
   result.due = owed.length;
+
+  /* Built once for all its addresses; each address its own message. */
+  const builds = new Map<string, Owed[]>();
   for (const o of owed) {
+    const key = [o.hotelId, o.businessDate, o.report, o.builtBy].join("/");
+    builds.set(key, [...(builds.get(key) ?? []), o]);
+  }
+  for (const list of builds.values()) {
+    const o = list[0]!;
     try {
-      const sent = await asPerson(o.staffId, async (client) => {
-        const doc = await buildReport(client, o.hotelId, o.report, { asOn: o.businessDate });
-        const bytes = await renderPdf(doc, { name: "Fidato PMS, after the night audit", at: new Date(), timezone: o.timezone });
-        const title = REPORT_TITLES[o.report] ?? o.report;
-        return send(client, {
-          id: messageIdFor("report", o.runId, o.report, o.staffId),
-          channel: "email",
-          kind: "report",
-          hotel: { id: o.hotelId, code: o.hotelCode, name: o.hotelName },
-          to: { name: o.staffName, email: o.staffEmail },
-          data: { reportTitle: title, hotelName: o.hotelName, businessDate: dateReport(o.businessDate) },
-          file: { name: `${title.replace(/[^A-Za-z0-9]+/g, "-")}-${o.hotelCode}-${o.businessDate}.pdf`,
-            contentType: "application/pdf", bytes },
-          about: { kind: "night-audit", id: `${o.runId}/${o.report}/${o.staffId}` },
-          sentBy: null,
-        });
+      const { bytes, figures } = await asPerson(o.builtBy, async (client) => {
+        const doc = await dailyReport(client, o.hotelId, o.report, o.businessDate);
+        return {
+          bytes: await renderPdf(doc, { name: "Sent after the night audit", at: new Date(), timezone: o.timezone }),
+          figures: keyFigures(o.report, doc),
+        };
       });
-      if (sent.ok) result.sent += 1;
+      const title = titleOf(o.report);
+      for (const to of list) {
+        const sent = await asNobody((client) => send(client, {
+          id: messageIdFor("daily-report", to.hotelId, to.businessDate, to.report, to.address),
+          channel: "email",
+          kind: "daily-report",
+          hotel: { id: to.hotelId, code: to.hotelCode, name: to.hotelName },
+          to: { email: to.address },
+          data: {
+            reportTitle: title, hotelName: to.hotelName, businessDate: dateReport(to.businessDate),
+            /* One "Label: value" a line; the workflow sets them out as a table. */
+            keyFigures: figures.map((f) => `${f.label}: ${f.value}`).join("\n"),
+          },
+          file: { name: `${title.replace(/[^A-Za-z0-9]+/g, "-")}-${to.hotelCode}-${to.businessDate}.pdf`,
+            contentType: "application/pdf", bytes },
+          about: { kind: "night-audit", id: `${to.businessDate}/${to.report}/${to.address}` },
+          sentBy: null,
+        }));
+        if (sent.ok) result.sent += 1;
+      }
     } catch (error) {
-      console.error("[guest-messaging] could not email report", o.report, o.businessDate,
+      console.error("[guest-messaging] could not email the daily report", o.report, o.businessDate,
         error instanceof Error ? error.message : error);
     }
   }

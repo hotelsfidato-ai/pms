@@ -433,9 +433,9 @@ export const jobs = {
     if (timer) return;
     timer = setInterval(() => {
       if (running) return;
-      /* Then the tax invoices and the night-audit reports (Settings phase 6,
-         D27-261) - loaded when the timer runs, so those files may import this
-         one without a loop. */
+      /* Then the tax invoices (D27-261) and the daily report emails after the
+         night audit (D27-280) - loaded when the timer runs, so those files may
+         import this one without a loop. */
       running = runOnce((fn) => withUser("", fn))
         .then(async () => (await import("./invoices.ts")).runInvoices())
         .then(async () => (await import("./reportEmails.ts")).runReportEmails())

@@ -5,13 +5,15 @@ import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
 import { runInvoices } from "../../../src/modules/guest-messaging/invoices.ts";
 import { runReportEmails } from "../../../src/modules/guest-messaging/reportEmails.ts";
+import { inr } from "../../../src/reportRender.ts";
+import type { ReportDoc } from "../../../src/modules/reports/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    SETTINGS → MESSAGES (Settings phase 6; the owner's D27-252, D27-261)
 
    Each guest message switched per hotel with the reminder's timing; the
    tax invoice to the guest with its PDF, by itself and by the desk's
-   button; reports by email after the night audit. A stand-in receiver for
+   button; the daily report emails after the night audit (D27-280). A stand-in receiver for
    the CRS's n8n keeps what it was sent; nothing leaves this machine.
    ══════════════════════════════════════════════════════════════════ */
 
@@ -37,6 +39,8 @@ let server: Server;
 type Sent = { kind: string; channel: string; action?: string; to: Record<string, string | null>;
   data: Record<string, string>; file?: { name: string; base64: string } };
 let received: Sent[] = [];
+/** A demo day with rooms on it and no night audit of its own, audited here. */
+let auditedDay: string | null = null;
 
 const call = (who: string, method: string, path: string, body?: unknown) =>
   app.request(`/api/hotels/5EL${path}`, {
@@ -111,7 +115,7 @@ beforeEach(async () => {
   process.env["WHATSAPP_PHONE_NUMBER_ID"] = "100000000000001";
   process.env["GUEST_MESSAGES_PER_MINUTE"] = "50";
   await sql("delete from guest_message_settings where hotel_id = $1", [hotelId]);
-  await sql("delete from report_emails where hotel_id = $1", [hotelId]);
+  await sql("delete from daily_report_emails where hotel_id = $1", [hotelId]);
   await sql("delete from messages_sent where hotel_id = $1 and about_kind in ('invoice', 'night-audit')", [hotelId]);
 });
 
@@ -119,11 +123,12 @@ afterAll(async () => {
   await new Promise<void>((done) => server.close(() => done()));
   for (const k of ["CRS_N8N_URL", "CRS_N8N_SECRET", "WHATSAPP_PHONE_NUMBER_ID", "GUEST_MESSAGES_PER_MINUTE"]) delete process.env[k];
   await sql("delete from guest_message_settings where hotel_id = $1", [hotelId]);
-  await sql("delete from report_emails where hotel_id = $1", [hotelId]);
+  await sql("delete from daily_report_emails where hotel_id = $1", [hotelId]);
   await sql("delete from messages_sent where hotel_id = $1 and about_kind in ('invoice', 'night-audit')", [hotelId]);
   /* An issued tax invoice is immutable, so its bill, stay and guest stay too:
      this run's database is its own and is dropped after it. */
-  await sql("delete from night_audit_runs where hotel_id = $1 and business_date < '2001-01-01'", [hotelId]);
+  await sql("delete from night_audit_runs where hotel_id = $1 and (business_date < '2001-01-01' or business_date = $2::date)",
+    [hotelId, auditedDay ?? "1999-01-01"]);
   await sql("delete from staff_hotels where staff_id = any($1::uuid[])", [[gmId, deskId, outsiderId]]);
   await sql("update staff set is_active = false where id = any($1::uuid[])", [[gmId, deskId, outsiderId]]);
   await closePool();
@@ -235,41 +240,151 @@ describe("the tax invoice to the guest, with its PDF", () => {
   });
 });
 
-/* ── 3 · Reports by email after the night audit (Q7) ─────────────── */
+/* ── 3 · Daily report emails after the night audit (D27-280) ─────── */
 
-describe("reports by email after the night audit", () => {
-  it("are chosen from the six, for the hotel's own people only", async () => {
-    const got = (await (await call(gmId, "GET", "/report-emails")).json()) as {
-      reports: { key: string }[]; people: { id: string }[];
-    };
-    expect(got.reports.map((r) => r.key)).toEqual(
-      ["night-audit", "manager", "city-ledger", "no-show", "lodging-tax", "monthly-occupancy"]);
-    expect(got.people.map((p) => p.id)).toContain(deskId);
-    expect(got.people.map((p) => p.id), "not somebody from no hotel of ours").not.toContain(outsiderId);
+describe("daily report emails after the night audit (D27-280)", () => {
+  const ALL = ["night-audit", "manager", "money-owed", "restaurant-stock"];
+  const save = (who: string, reports: { key: string; isOn: boolean; addresses: string[] }[]) =>
+    call(who, "PUT", "/report-emails", { reports });
+  const audit = (day: string, completed = "now()") => sql(
+    `insert into night_audit_runs (hotel_id, business_date, status, started_at, completed_at)
+     values ($1, $2::date, 'completed', ${completed}, ${completed})`, [hotelId, day]);
+  type Got = { reports: { key: string; isOn: boolean; addresses: string[] }[]; notConnected: string | null };
 
-    expect((await call(gmId, "PUT", "/report-emails", { chosen: [{ report: "manager", staffId: outsiderId }] })).status).toBe(400);
-    expect((await call(deskId, "PUT", "/report-emails", { chosen: [] })).status).toBe(403);
-    expect((await call(gmId, "PUT", "/report-emails", { chosen: [{ report: "manager", staffId: gmId }] })).status).toBe(200);
-    expect(await sql("select report, staff_id::text from report_emails where hotel_id = $1", [hotelId]))
-      .toEqual([{ report: "manager", staff_id: gmId }]);
+  it("start with the night audit report on and the rest off, and no address anywhere", async () => {
+    const res = await call(gmId, "GET", "/report-emails");
+    expect(res.status, await res.clone().text()).toBe(200);
+    const got = (await res.json()) as Got;
+    expect(got.reports.map((r) => [r.key, r.isOn, r.addresses])).toEqual([
+      ["night-audit", true, []], ["manager", false, []], ["money-owed", false, []], ["restaurant-stock", false, []]]);
+    expect(got.notConnected, "connected in this test").toBeNull();
   });
 
-  it("go once, as PDF, to each chosen person's own email after a completed audit - not for one before the choice", async () => {
-    await sql(`insert into night_audit_runs (hotel_id, business_date, status, started_at, completed_at)
-               values ($1, '2000-01-01', 'completed', now() - interval '1 hour', now() - interval '1 hour')`, [hotelId]);
-    await call(gmId, "PUT", "/report-emails", { chosen: [{ report: "manager", staffId: gmId }] });
-    await runReportEmails();
-    expect(sent(), "the audit came before the choice").toEqual([]);
+  it("are switched and addressed by the owner, an Administrator or the GM - and refused to reception by the server", async () => {
+    expect((await save(deskId, [{ key: "manager", isOn: true, addresses: ["x@example.com"] }])).status).toBe(403);
+    expect((await call(deskId, "GET", "/report-emails")).status, "nor read").not.toBe(200);
+    expect(await sql("select count(*)::int as n from daily_report_emails where hotel_id = $1", [hotelId]))
+      .toEqual([{ n: 0 }]);
 
-    await sql(`insert into night_audit_runs (hotel_id, business_date, status, started_at, completed_at)
-               values ($1, '2000-01-02', 'completed', now(), now())`, [hotelId]);
+    const res = await save(gmId, [
+      { key: "manager", isOn: true, addresses: [" Owner@Example.com ", "owner@example.com", "gm@example.com"] },
+      { key: "night-audit", isOn: false, addresses: [] },
+    ]);
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await sql(
+      `select report, is_on, addresses, changed_by::text from daily_report_emails
+        where hotel_id = $1 order by report`, [hotelId])).toEqual([
+      { report: "manager", is_on: true, addresses: ["owner@example.com", "gm@example.com"], changed_by: gmId },
+      { report: "night-audit", is_on: false, addresses: [], changed_by: gmId },
+    ]);
+    const got = (await (await call(gmId, "GET", "/report-emails")).json()) as Got;
+    expect(got.reports.find((r) => r.key === "night-audit")!.isOn, "switched off, and it stays off").toBe(false);
+  });
+
+  it("refuse what is not an address, an unknown report, and a report twice", async () => {
+    for (const reports of [
+      [{ key: "manager", isOn: true, addresses: ["not an address"] }],
+      [{ key: "lodging-tax", isOn: true, addresses: ["a@example.com"] }],
+      [{ key: "manager", isOn: true, addresses: [] }, { key: "manager", isOn: false, addresses: [] }],
+      [{ key: "manager", isOn: "yes", addresses: [] }],
+    ]) {
+      expect((await call(gmId, "PUT", "/report-emails", { reports })).status, JSON.stringify(reports)).toBe(400);
+    }
+    expect(await sql("select count(*)::int as n from daily_report_emails where hotel_id = $1", [hotelId])).toEqual([{ n: 0 }]);
+  });
+
+  it("send nothing to nobody: on with no address, or an address with the report off", async () => {
+    await save(gmId, [{ key: "manager", isOn: false, addresses: ["gm@example.com"] }]);
+    await audit("2000-02-01");
+    const ran = await runReportEmails();
+    expect(ran.due).toBe(0);
+    expect(sent()).toEqual([]);
+  });
+
+  it("go once per business date, report and address, right after the audit - not for an audit before the choice", async () => {
+    await audit("2000-02-02", "now() - interval '1 hour'");
+    await save(gmId, [{ key: "night-audit", isOn: true, addresses: ["owner@example.com", "gm@example.com"] }]);
     await runReportEmails();
-    expect(sent().map((m) => `${m.kind} ${m.channel} ${m.to["email"]}`)).toEqual(["report email p6msg-gm@fidato.in"]);
-    expect(isPdf(sent()[0])).toBe(true);
-    expect(sent()[0]!.data).toMatchObject({ reportTitle: "Manager summary" });
+    expect(sent(), "the audit came before the addresses").toEqual([]);
+
+    await audit("2000-02-03");
+    await runReportEmails();
+    expect(sent().map((m) => `${m.kind} ${m.channel} ${m.to["email"]}`).sort()).toEqual([
+      "daily-report email gm@example.com", "daily-report email owner@example.com"]);
+    expect(sent().every(isPdf), "each with the whole report as a PDF").toBe(true);
+    expect(sent()[0]!.data).toMatchObject({ reportTitle: "Night audit report", businessDate: "03/02/2000" });
+    expect(sent()[0]!.file?.name).toBe("Night-audit-report-5EL-2000-02-03.pdf");
 
     received = [];
     await runReportEmails();
-    expect(sent(), "once").toEqual([]);
+    expect(sent(), "a retry sends nothing twice").toEqual([]);
+    /* The GM corrects the closed day's record (D17-12): its audit completes again. */
+    const db = new (await import("pg")).default.Client({ connectionString: SUPER });
+    await db.connect();
+    try {
+      await db.query("begin");
+      await db.query("select set_config('app.user_id', $1, true)", [gmId]);
+      await db.query("update night_audit_runs set completed_at = now() where hotel_id = $1 and business_date = '2000-02-03'", [hotelId]);
+      await db.query("commit");
+    } finally { await db.end(); }
+    await runReportEmails();
+    expect(sent(), "nor does the day audited again").toEqual([]);
+    expect(await sql(
+      `select count(*)::int as n from messages_sent where hotel_id = $1 and kind = 'daily-report' and status = 'sent'`,
+      [hotelId])).toEqual([{ n: 2 }]);
+  });
+
+  it("carry the report's own key figures in the email, on a day with rooms on it", async () => {
+    auditedDay = (await sql(
+      `select d::text as d from (select distinct business_date as d from folio_postings
+                                  where hotel_id = $1 and category = 'room') x
+        where not exists (select 1 from night_audit_runs n where n.hotel_id = $1 and n.business_date = x.d)
+        order by d desc limit 1`, [hotelId]))[0]!.d as string;
+    await save(gmId, ALL.map((key) => ({ key, isOn: true, addresses: ["owner@example.com"] })));
+    await audit(auditedDay);
+    await runReportEmails();
+    const got = new Map(sent().map((m) => [m.data["reportTitle"], m]));
+    expect([...got.keys()].sort()).toEqual(["Manager report", "Money owed", "Night audit report", "Restaurant and stock"]);
+    expect(sent().every(isPdf)).toBe(true);
+
+    const figures = (title: string) => Object.fromEntries(got.get(title)!.data["keyFigures"]!.split("\n")
+      .map((l) => [l.slice(0, l.indexOf(": ")), l.slice(l.indexOf(": ") + 2)]));
+    const report = async (path: string) => {
+      const res = await call(gmId, "GET", path);
+      expect(res.status, path).toBe(200);
+      return (await res.json()) as ReportDoc;
+    };
+    const rows = (doc: ReportDoc, key: string) => doc.sections.find((s) => s.key === key)!.rows;
+    const rupees = (n: unknown) => `₹${inr(Number(n))}`;
+
+    /* The Night audit report, as the Reports screen draws it. */
+    const night = await report(`/reports/night-audit?asOn=${auditedDay}`);
+    const status = rows(night, "room-status")[0]!.cells;
+    const charged = rows(night, "room-charges");
+    expect(charged.length, "a day with rooms charged").toBeGreaterThan(0);
+    expect(figures("Night audit report")).toMatchObject({
+      "Rooms occupied": `${status["occupied"]} of ${status["rooms"]}`,
+      "Room revenue with tax": rupees(charged.at(-1)!.cells["rent"]),
+      "Checked out": String(rows(night, "checked-out").filter((r) => r.kind === "row").length),
+    });
+
+    /* The Manager report's Today column. */
+    const manager = await report(`/reports/manager?asOn=${auditedDay}`);
+    const today = (key: string, label: string) => rows(manager, key).find((r) => r.cells["label"] === label)!.cells["today"];
+    expect(figures("Manager report")).toMatchObject({
+      "Occupancy": `${Number(today("statistics", "Occupancy Rate (%)")).toFixed(2)}%`,
+      "Room revenue without tax": rupees(today("room-charges", "Total")),
+      "Payments received": rupees(today("payment", "Total Payment")),
+    });
+
+    /* Money owed: the Manager report's guest ledger and the City ledger. */
+    const city = await report(`/reports/city-ledger?asOn=${auditedDay}`);
+    const cityTotal = rows(city, "accounts").find((r) => r.kind === "total");
+    expect(figures("Money owed")).toEqual({
+      "Guests owe": rupees(today("guest-ledger", "Closing Balance*")),
+      "Companies owe": rupees(cityTotal ? cityTotal.cells["closing"] : 0),
+    });
+    expect(Object.keys(figures("Restaurant and stock"))).toEqual(
+      ["Restaurant sales with tax", "Closing stock value", "Wastage", "Breakage"]);
   });
 });

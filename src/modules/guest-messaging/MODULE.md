@@ -166,12 +166,23 @@ booking's Booked card, the booking panel) - one line each.
   finance's `invoiceFacts` - the screen's own query. The sweep sends each as
   the clerk who issued it. WhatsApp template `tax_invoice`
   (docs/go-live/whatsapp-templates.md, the owner submits it).
-- **Reports after the night audit** (`reportEmails.ts`, `report_emails`):
-  Night audit, Manager summary, City ledger, No-shows, Lodging tax, Monthly
-  occupancy (D27-262) as PDF to the hotel's chosen people's own sign-in email,
-  once each completed audit, built under that person's own session; an audit
-  completed before the choice is not sent. The page
-  `pages/NightAuditReports.tsx` (`/settings/messages/night-audit-reports`).
+- **Daily report emails** (D27-280, 5 October; `reportEmails.ts`,
+  `daily_report_emails`, migration "daily report emails"): per hotel, four
+  reports, each On/Off with its own typed addresses - the Night audit report
+  (on when nothing is saved), the Manager report, Money owed (the Manager
+  report's guest ledger and the City ledger) and Restaurant and stock (the
+  Night audit report's restaurant sections, Closing stock, Wastage and
+  breakage), the last three off. **Nobody gets anything until an address is
+  typed.** After each completed night audit (the sweep, within a minute): each
+  report on, to each address, once per business date (`app.daily_reports_owed`),
+  kind `daily-report` - the key figures in `data.keyFigures`, read out of the
+  same document as the PDF attached. Built under the session of whoever saved
+  it while they still run the hotel, else whoever runs it now. Owner,
+  Administrator or GM (role gate `room_config`, `app.manages_hotel`, and the
+  table's `hotel_isolation` policy). The page `pages/DailyReportEmails.tsx`
+  (`/settings/messages/daily-report-emails`). Replaces D27-261's reports to
+  staff's own sign-in emails (`report_emails`, `app.report_emails_owed`: left
+  in the database, unread, never released).
 - The review request (reputation's route) asks the hotel's `review` switch.
 - Both passes run after the guest sweep, on its timer.
 
