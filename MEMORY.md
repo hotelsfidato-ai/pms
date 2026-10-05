@@ -6539,6 +6539,104 @@ copy will see of theirs.**
 
 ---
 
+### 387 · MINE: my brief sent a helper to write over my own unfinished n8n draft (5 October)
+
+I was writing the n8n code for the WhatsApp voucher on booking_confirmation (D27-281) in
+`.local\n8n\read-the-message.js` and `build-the-voucher-message.js`: outside git, not finished.
+The helper building the daily report emails (D27-280) wrote its own version over
+`read-the-message.js`, because my brief told it to add its draft to that very file. About two
+minutes later it put mine back byte for byte; the one paste was then made in a new folder,
+`.local\n8n\paste-5oct\`. Nothing was lost, but git could not have brought it back: `.local\` is
+ignored. **The rule:** a `.local` file named in a brief may be somebody's unfinished work. Compare
+before writing (size, time, `cmp`) and write new files into a new folder. A brief that names such a
+file says whose it is and that it is read-only.
+
+---
+
+### 386 · `.mjs` had no line-ending rule, so a fresh copy got CRLF and a test would not load (4-5 October)
+
+`.gitattributes` fixed the line endings of `.sh`, `.sql`, `.json` and the rest, but not `.mjs`. Git
+here has `core.autocrlf=true` (in Git's own `etc/gitconfig`), so a fresh checkout got
+`scripts/release.mjs` with CRLF, and vitest would not load `release.test.mjs` in that copy. Every
+helper's copy and every release copy is a fresh checkout, so a release copy would have failed its
+own check. Found by the helpers in their own copies on the night of 4 October and the morning of 5 October. Fixed in ac4f6417
+(`*.mjs text eol=lf`). In the release copy, `git ls-files --eol scripts/release.mjs` now reads
+`i/lf w/lf`. **The rule:** when a test fails only in a copy, run `git ls-files --eol <file>` there
+and in the main folder before anything else. A file type with no line in `.gitattributes` gets
+whatever line endings each machine gives it. (Counting carriage returns: MEMORY 241's way,
+`tr -cd '\r' | wc -c`.)
+
+---
+
+### 385 · MINE: I told the owner the off-site backup was "set but not loaded"; it was empty (4 October)
+
+The backup check on live, read-only, on the night of 4 October. The 03:00 job takes the backup and
+restores it into `fidato_restore_check`, and the figures match. But the copy off the server was
+never set up: `/etc/fidato-backup.env` has `BACKUP_UPLOAD_URL=''`, and `ALERT_URL` is empty too. I
+saw the line and told the owner it was "set but not loaded". It was empty. I corrected it in the
+same turn, before they acted on it. The cost was one wrong sentence about the only thing that
+protects their data if the server is lost. The backup's own log says it every night: "no
+BACKUP_UPLOAD_URL - this copy is on this disk only". **The rule:** read whether a setting's value is
+empty, not whether its line is there:
+`grep -c "^BACKUP_UPLOAD_URL='\?[^'[:space:]]" /etc/fidato-backup.env` gives 1 when it is set and 0
+when it is empty. Never print the value: here it is a link that can write to the bucket. The owner's
+steps are in deploy/README.md, Backups, steps 1, 3 and 4.
+
+---
+
+### 384 · A remembered hotel that no longer existed drew a white Settings on live (4 October)
+
+The ui store starts on "5EL" (`src/lib/ui.ts`), and the browser keeps the last hotel chosen. The
+fresh start (D27-248) deleted 5 Elements from live, but the owner's browser still remembered it. So
+Settings, and every screen that reads the remembered hotel, asked for a hotel that does not exist and
+drew nothing. The owner saw a white screen on the evening of 4 October, and the server log showed
+`/api/hotels/5EL/...` answering 404. The workaround given that evening was to open
+https://pms.fidatohotels.com/h/AMR/settings/property. Fixed in cp6 in 33dca109: AppShell replaces a
+remembered hotel the person does not hold with their first one. `rememberedHotel.test.tsx` fails
+without the fix, and six test files that opened 5 Elements as a clerk who held only Agra now hold
+it too (`withDemoHotel`). The fix reaches live with release/all-5oct. The store still starts on
+"5EL"; the AppShell check makes that harmless. **The rule:** never
+hard-code a default hotel. Before anything reads a remembered or default choice, check it against
+what exists for this person. Rehearse a wipe in a browser that still remembers the old data
+(MEMORY 201: a remembered value outlives the thing it pointed at).
+
+---
+
+### 383 · MINE: a release copy's website was built without sign-in (3 October)
+
+The website-only release `release/pos-3oct` (bb0f4895) was built in its own copy,
+`.claude\worktrees\release-pos-3oct`. A copy has no root `.env` because `.env` is not in git. So the
+bundle had no `VITE_FIREBASE_` settings, and once it was published, live sign-in said "Firebase is
+not configured". I rebuilt it with the `VITE_FIREBASE_` lines copied into the copy's
+`.env.production.local` (removed afterwards) and it was published again; live then served
+`index-CQ9rcqy2.js`, which I checked. The cost: no one could sign in to live until the rebuild was
+published. Both builds succeeded. That is MEMORY 193 again: a build that
+succeeds says nothing about what it contains. **The rule, now in `scripts/release.mjs`:** the
+website is built in the release copy with only the `VITE_FIREBASE_` lines in
+`.env.production.local`. The release is refused unless the built JS holds the Firebase project id
+and API key from `.env`, the live API address, and no test sign-in. (release.mjs's own comment says
+"4 October"; the running log puts it on 3 October, about 13:30 IST. Correct the comment when the
+file is next touched.)
+
+---
+
+### 382 · MINE: a failed `cd` let `git reset --hard` run in the main folder (4 October)
+
+To put a helper's copy back on cp6, I ran
+`cd ".claude/worktrees/agent-…" && git status; git log; git reset -q --hard cp6`. The copy was
+gone: an Agent worktree with no commits is removed when the agent stops. So the `cd` failed, the `;`
+ran the rest anyway, and `git reset --hard cp6` ran in `D:\fidato pms`. It wiped the design chat's
+uncommitted edits to six files: `.gitignore`, `CHANGELOG.md`, `DESIGN.md`, `HANDOVER.md`,
+`MEMORY.md` and `docs/briefs/ui-transformation.md`. Its untracked files survived, because `reset`
+leaves untracked files alone. I restored all six byte for byte from `~/.claude/file-history` (the
+newest `@vN` copy of each). The diff counts, 7/262/80/40/70/27, matched the `git diff --stat` taken
+before the reset. This worked only because each file had a copy there; a file edited outside Claude
+would have been lost. **The rule:** never `cd <copy>` and then run a destructive command. Use
+`git -C "<path>"`. First check that `git -C "<path>" rev-parse --show-toplevel` prints that path,
+and chain with `&&` only. The main folder always holds someone's uncommitted work (D22-5).
+
+---
+
 ### 381 · MINE: the release branch stayed at a commit the plan had moved past (3 October)
 
 I cut `release/all-3oct` and called it ready; the owner then asked for the fresh start, I fixed two
@@ -6937,6 +7035,15 @@ settled order's lines, the kitchen status included. Migration 151 lets the kitch
 nothing else, change. **The rule:** when a screen starts showing rows it used to hide, press
 every button it has on one of the new rows before calling it fixed.
 
+**Again, 4 October, in the gates themselves.** The full gates at 7c16002f ran the replay while a
+helper was migrating its own database. 029 failed with "tuple concurrently updated" on
+`alter role pms_provisioner`, and the run went red. In `scripts/gates.sh` only the pg16 step waited
+in `.local/dbq.sh`; the API, database and replay steps built their databases outside the queue.
+Fixed in ac4f6417: every gates step that builds a database (API tests, database, replay, pg16) now
+waits in the queue, and on 5 October the replay was seen waiting behind a helper's migrate.
+**The rule, widened:** anything that builds or migrates a database on this Postgres goes through
+dbq, the gates included. "Wait and run it again" is for a one-off command, not for a script.
+
 ---
 
 ### 339 · The local Postgres dies when sessions are stopped
@@ -6953,6 +7060,15 @@ minutes (the scratch databases make the sync long).
 tell the sessions. Keep scratch databases few; drop leftovers with no connections.
 **The fix to ask the owner for:** run it as a Windows service (`pg_ctl register`), so no
 console signal reaches it and it also comes back after a reboot.
+
+**Again, 5 October, 00:05.** At the owner's graceful stop, while the helpers were stopping their
+processes, a backend running an API's `listen pos_changed` was "terminated by exception 0xC000013A"
+and the postmaster went down (pg.log, 00:05:57). The System log has no disk drop-out (event 157) in
+that window, so this was not MEMORY 345's cause. It stayed down overnight. The next morning I
+restarted it under the keeper at 09:29, and it had recovered and was accepting connections at 09:35,
+about 5 minutes later. **The rule stands, and covers helpers as well as sessions:** after any stop of
+sessions or helpers, run `pg_isready -h 127.0.0.1 -p 55432`, and restart Postgres under the keeper
+(memory note local-postgres-start) before calling the stop done.
 
 ---
 
