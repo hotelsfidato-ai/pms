@@ -87,9 +87,9 @@ beforeAll(async () => {
   hotelId = (await sql(
     "select app.provision_property_unchecked($1, 'Sweep Test', 'Nowhere')::text as id",
     [CODE])).rows[0].id as string;
-  /* Online check-in on here, so the link tests below have a link; it is off
-     by default (D27-266), which has its own test. */
-  await sql("insert into guest_message_settings (hotel_id, kind, is_on) values ($1, 'online-checkin', true)", [hotelId]);
+  /* No online check-in switch saved here: it is on by default (D27-281), so
+     the link tests below have a link. A hotel that saved it off has its own
+     test. */
 
   /* Three guests who agreed to WhatsApp, arriving in 5, 6 and 7 days on the
      property's clock - soonest first, so the order is known. */
@@ -174,11 +174,11 @@ const recorded = async () => (await sql(
   [hotelId])).rows as Array<{ about_id: string; kind: string; status: string }>;
 
 describe("the sweep, as the server runs it", () => {
-  /* D27-266: online check-in comes later. Until a hotel switches it on, no
-     guest page is minted for the voucher and none goes with it - so its PDF
-     prints no link and no QR, and the email has no link line. */
-  it("mints no guest page and sends no link while online check-in is off, as it is by default", async () => {
-    await sql("delete from guest_message_settings where hotel_id = $1 and kind = 'online-checkin'", [hotelId]);
+  /* D27-281: online check-in is on unless a hotel switches it off. Where it
+     did, no guest page is minted for the voucher and none goes with it - so
+     its PDF prints no link and no QR, and the email has no link line. */
+  it("mints no guest page and sends no link where the hotel switched online check-in off", async () => {
+    await sql("insert into guest_message_settings (hotel_id, kind, is_on) values ($1, 'online-checkin', false)", [hotelId]);
     try {
       const out = await runOnce(asTheSweep, mine);
       expect(out.sent).toBe(3);
@@ -186,8 +186,19 @@ describe("the sweep, as the server runs it", () => {
       expect(received.every((m) => !("link" in m.data)), "no link in any message").toBe(true);
       expect((await sql("select 1 from guest_links where hotel_id = $1", [hotelId])).rows).toHaveLength(0);
     } finally {
-      await sql("insert into guest_message_settings (hotel_id, kind, is_on) values ($1, 'online-checkin', true)", [hotelId]);
+      await sql("delete from guest_message_settings where hotel_id = $1 and kind = 'online-checkin'", [hotelId]);
     }
+  });
+
+  it("sends the link on every voucher where the hotel saved no switch (D27-281)", async () => {
+    expect((await sql("select 1 from guest_message_settings where hotel_id = $1 and kind = 'online-checkin'",
+      [hotelId])).rows, "no switch saved").toHaveLength(0);
+    await runOnce(asTheSweep, mine);
+    expect(received.map((m) => m.kind)).toEqual(["booking-voucher", "booking-voucher", "booking-voucher"]);
+    expect(received.every((m) => /\/g\/[\w-]{20,}$/.test(m.data["link"] ?? "")), "a link in each").toBe(true);
+    expect(received.every((m) => Buffer.from(m.file!.base64, "base64").subarray(0, 5).toString("latin1") === "%PDF-"),
+      "each with its voucher PDF").toBe(true);
+    expect((await sql("select 1 from guest_links where hotel_id = $1", [hotelId])).rows).toHaveLength(3);
   });
 
   it("sends each owed confirmation once, with a link that opens that guest's page", async () => {

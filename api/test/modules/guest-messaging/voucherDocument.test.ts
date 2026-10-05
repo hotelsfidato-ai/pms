@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  instagramLink, money, plain, voucherBlocks, voucherFigures, voucherHeight, voucherPdf, voucherPolicies,
+  instagramLink, money, plain, voucherBlocks, voucherFields, voucherFigures, voucherHeight, voucherPdf, voucherPolicies,
   type VoucherFacts, type VoucherRoom,
 } from "../../../src/modules/guest-messaging/voucherDocument.ts";
 
@@ -340,5 +340,27 @@ describe("the meal days under a room", () => {
     expect(voucherBlocks(said).meals).toEqual(["Breakfast on stay-over and check-out days", ""]);
     const bytes = await voucherPdf(said);
     expect(Buffer.from(bytes.slice(0, 5)).toString("latin1")).toBe("%PDF-");
+  });
+});
+
+/* D27-281 (4): the phone in the WhatsApp message is the hotel's own, the
+   group office's where the hotel has none, a dash where neither is set -
+   never a number nobody typed. officePhone is untouched: the CRS's
+   template still reads it. */
+describe("the hotel's phone in the WhatsApp voucher (D27-281)", () => {
+  const office = { name: null, address: null, phone: "+91 20 0000 0000", email: null,
+    website: null, gstin: null, instagram: null };
+  const withPhone = (phone: string | null, group: typeof office | null): VoucherFacts => {
+    const f = facts([room()]);
+    return { ...f, hotel: { ...f.hotel, phone }, group };
+  };
+
+  it("is the hotel's own, else the group office's, else a dash", () => {
+    expect(voucherFields(withPhone("+91 00000 00000", office)))
+      .toMatchObject({ hotelPhone: "+91 00000 00000", officePhone: "+91 20 0000 0000" });
+    expect(voucherFields(withPhone(null, office)).hotelPhone).toBe("+91 20 0000 0000");
+    expect(voucherFields(withPhone("  ", office)).hotelPhone, "blank is none").toBe("+91 20 0000 0000");
+    expect(voucherFields(withPhone(null, null)))
+      .toMatchObject({ hotelPhone: "-", officePhone: "-" });
   });
 });

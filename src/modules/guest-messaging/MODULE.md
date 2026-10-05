@@ -75,7 +75,8 @@ the live-inventory app separate, and the PMS only shows its leads.)
 **D27-266 (3 Oct): WhatsApp goes only through the CRS's approved
 `reservation_confirmation`** (eight named fields, `voucherFields`); our own
 `booking_voucher` (D27-265) is on hold and was reverted. **Online check-in is a
-switch, OFF by default**: off, no guest page is minted (`linkFromDatabase` asks
+switch, ON by default since D27-281** (5 Oct, migration 205; D27-266 had it
+off): where a hotel switches it off, no guest page is minted (`linkFromDatabase` asks
 `app.online_checkin_on`), so the voucher prints no link or QR, the email has no
 link line, and the desk's Send check-in link is hidden (the guest-messages read
 says `onlineCheckIn`). The review request is off until switched on.
@@ -150,9 +151,10 @@ booking's Booked card, the booking panel) - one line each.
 ## Settings → Messages (Settings phase 6; D27-252, D27-261, D27-262)
 
 - **Each guest message On/Off per hotel** (`guest_message_settings`, migration
-  "messages and reports"): the booking voucher (both ways, D27-264), the tax
-  invoice, the review request. No saved switch is today's behaviour - on -
-  except the invoice, off until switched on. No reminder and no timing
+  "messages and reports"): the booking voucher (both ways, D27-264), online
+  check-in, the tax invoice, the review request. No saved switch: the voucher
+  and online check-in on (D27-281); the invoice and the review request off
+  until switched on. No reminder and no timing
   (D27-264). The check-in code and the desk's Send check-in link have no
   switch (Q1). The catch-up hours are shown, not changed (Q2). Routes in `settings.ts`; the page
   `pages/MessageSwitches.tsx` (`/settings/messages/switches`).
@@ -191,7 +193,7 @@ one-line change):
 | Soonest arrival first | the function's `order by` | the owner, **D21-34** |
 | No more than the owner's pace in a minute, and **nothing at all until it is given** | `GUEST_MESSAGES_PER_MINUTE`, a server setting | the owner, **D21-34** - the number is still to come |
 | **The voucher is the confirmation and goes BOTH ways, once**: on WhatsApp where the booking is ticked "guest agreed to WhatsApp" and has a number (kind `booking-voucher`, the CRS's template), AND by email where there is an address (kind `booking-confirmation`); each way is its own message, its own record and its own three tries. Its PDF prints the check-in link and a QR code | `app.guest_messages_owed` (migration "messages and reports") | the owner, **D27-264; D27-235, D21-72** |
-| **The voucher on WhatsApp**: the CRS's already approved template - the PDF as its document and eight named fields from the PDF's own facts (a group's every room and guest; a dash for the group office phone until it is typed). Not sent without its PDF | `KIND.voucher`, `whatsAppVoucher` (voucherDocument.ts), the workflow's `VOUCHER_TEMPLATE` | the owner, **D27-235 (2.2), D27-241** |
+| **The voucher on WhatsApp**: the CRS's already approved template - the PDF as its document and eight named fields from the PDF's own facts (a group's every room and guest; a dash for the group office phone until it is typed). Also `hotelPhone` for the owner's booking_confirmation (D27-281): the hotel's own phone, else the group office's, else a dash; `officePhone` stays for the CRS's template until then. Not sent without its PDF | `KIND.voucher`, `whatsAppVoucher` (voucherDocument.ts), the workflow's `VOUCHER_TEMPLATE` | the owner, **D27-235 (2.2), D27-241** |
 | No day-before reminder, and no separate confirmation (D22-39, D22-40 and D27-241's Q3 are spent) | the function | the owner, **D27-264** |
 | **One voucher per group, each way**, about its lead booking - the room the desk assigned on the group's screen, else the group's room booked first; either only while it still stands - to that booking's guest, by that booking's tick. A message about any room covers them all, so no other room is ever owed on its own, even if the lead is cancelled or changed after it went. A booking in no group is unchanged | the function (`coalesce(group_id, id)`, the key app.guest_visits uses); the lead is `app.group_lead`, which the review request asks too | the owner, **D22-41, D22-52** |
 | **A catch-up confirmation** - a booking made before sending was first switched on - goes only from 09:00 until 21:00 on the property's clock; a booking made after is confirmed at once, any hour. Outside those hours it is still OWED (the MSG-3 list does not change with the clock), and the sweep leaves it without spending a place in the pace | `CATCH_UP_FROM`, `CATCH_UP_UNTIL`; the function's `held` | the owner, **D22-42** |
