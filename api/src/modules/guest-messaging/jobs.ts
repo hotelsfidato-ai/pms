@@ -169,7 +169,7 @@ export function messageFor(due: Due, link: string): Message | null {
       checkOutText: asWritten(due.checkOut),
       nights: String(due.nights),
       /* Printed in the voucher's PDF, as a link and a QR code (D27-264) -
-         none at all while online check-in is off (D27-266). */
+         none at all where the hotel switched online check-in off (D27-281). */
       ...(link ? { link } : {}),
     },
     about: { kind: "reservation", id: due.reservationId },
@@ -288,7 +288,7 @@ export async function owedNow(
    ponytail: a copy of `linkFor` in guestDoor.ts, which is not exported —
    the master's file. Import it instead once it is. */
 export async function linkFromDatabase(client: Client, due: Due): Promise<string> {
-  /* D27-266: online check-in comes later. While the hotel has it off, no
+  /* D27-281: online check-in is on unless the hotel switched it off. Off, no
      page is minted and the message carries no link - so the voucher prints
      none and the email has no link line. */
   const { rows: on } = await client.query<{ on: boolean }>(

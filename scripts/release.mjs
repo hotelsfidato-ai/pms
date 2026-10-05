@@ -18,7 +18,8 @@
         lines go into .env.production.local, removed again afterwards;
      5. the build has the live API address, the sign-in settings and no
         test sign-in.
-   Then it PRINTS the owner's steps (RELEASE-4OCT.md Part A). It never
+   Then it PRINTS the owner's steps (RELEASE-4OCT.md Part A), and after
+   Fidato's each customer's in deploy/customers.txt, the pilot first. It never
    pushes, deploys or touches the server: nothing leaves this machine (19
    September). It never prints a value from .env.
    ══════════════════════════════════════════════════════════════════ */
@@ -30,6 +31,7 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const API = "https://api.fidatohotels.com";
+const EMAIL = "influvateseo@gmail.com";
 const FULL = ["web types", "api types", "strip", "web tests", "api tests", "database", "replay", "pg16"];
 
 /** release/all-5oct -> release-all-5oct, the release copy's folder. */
@@ -63,6 +65,37 @@ export function firebaseSettings(envText) {
     return line ? line.slice(key.length + 1).trim().replace(/^(["'])(.*)\1$/, "$2") : "";
   };
   return { lines, value };
+}
+
+/** deploy/customers.txt (D27-278): "<code> <API address> <app origin> <port>" a
+    line, # and blank lines skipped, in order: the first is the pilot. */
+export function parseCustomers(text) {
+  return text.split(/\r?\n/).map((l) => l.replace(/#.*/, "").trim()).filter(Boolean).map((l) => {
+    const f = l.split(/\s+/);
+    if (f.length !== 4) throw new Error(`deploy/customers.txt: "${l}" is not <code> <API address> <app origin> <port>`);
+    const [code, domain, origin, port] = f;
+    return { code, domain, origin, port };
+  });
+}
+
+/** Each customer's server steps after Fidato's, the pilot first, pinned to
+    this release's commit so a customer done days later gets the same code
+    (deploy/README.md, "Add a customer"). "" when there are none. */
+export function customerSteps(customers, commit) {
+  if (!customers.length) return "";
+  return `
+  B · the customers on the shared server, after A6 answers, in this order
+      (deploy/customers.txt). The first is the pilot: do it, use it, and do
+      the others only once it is right.
+` + customers.map((c, i) => `
+  B${i + 1} · ${c.code}${i === 0 ? " (the pilot)" : ""}, the server (A2 to open it)
+       sudo -u postgres env DB=fidato_${c.code} /usr/local/bin/fidato-backup /var/backups/fidato
+       sudo GIT_SSH_COMMAND="ssh -i /home/opc/.ssh/fidato_deploy -o IdentitiesOnly=yes" git -C /opt/fidato-${c.code} fetch
+       sudo git -C /opt/fidato-${c.code} merge --ff-only ${commit}
+       cd /opt/fidato-${c.code} && sudo CUSTOMER=${c.code} PORT=${c.port} DOMAIN=${c.domain} APP_ORIGIN=${c.origin} EMAIL=${EMAIL} deploy/launch.sh
+       Expect green: https://${c.domain} is live. A red x: stop, send the master the output. Then type exit.
+       Your PC, PowerShell: curl.exe -s https://${c.domain}/health
+`).join("");
 }
 
 const git = (...args) => spawnSync("git", args, { encoding: "utf8" });
@@ -127,6 +160,14 @@ function main() {
     if (!existsSync(join(copy, nm))) symlinkSync(join(root, nm), join(copy, nm), "junction");
   }
   ok(`the release copy holds ${commit.slice(0, 8)}: ${copy}`);
+  // The customers this release then goes to, from the release's own list (D27-278).
+  const listed = join(copy, "deploy", "customers.txt");
+  let customers = [];
+  try {
+    customers = parseCustomers(existsSync(listed) ? readFileSync(listed, "utf8") : "");
+  } catch (error) {
+    refuse(error.message);
+  }
 
   // 4 · the build, with the sign-in settings and the live API address
   const fb = firebaseSettings(readFileSync(join(root, ".env"), "utf8"));
@@ -198,7 +239,7 @@ function main() {
        Expect "Fast-forward" to ${s}.
 
   A5 · the server: the database changes, then the API restarts
-       cd /opt/fidato && sudo DOMAIN=api.fidatohotels.com APP_ORIGIN=https://pms.fidatohotels.com EMAIL=influvateseo@gmail.com deploy/launch.sh
+       cd /opt/fidato && sudo DOMAIN=api.fidatohotels.com APP_ORIGIN=https://pms.fidatohotels.com EMAIL=${EMAIL} deploy/launch.sh
        Expect green: ${API} is live. A red x: stop, send the master the output. Then type exit.
 
   A6 · your PC, PowerShell: the API answers
@@ -207,7 +248,7 @@ function main() {
   A7 · your PC, PowerShell: publish the website FROM THE RELEASE COPY
        cd "${copy}"; firebase deploy --only hosting:app
        Expect "Deploy complete!". The live site should then load ${bundle}.
-`);
+${customerSteps(customers, commit)}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

@@ -6,7 +6,7 @@ import {
 } from "@testing-library/react";
 import App from "./App";
 import { useSession } from "@/lib/session";
-import { navigationFor, flatNavigationFor, navItemFor } from "@/components/app/navigation";
+import { navigationFor, flatNavigationFor, navItemFor, entryFor } from "@/components/app/navigation";
 import { HOTEL, go, AGRA_HOTEL, signedIn, startSignedIn, withDemoHotel } from "@/test/app";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -157,7 +157,10 @@ describe("every guarded route is one the navigation knows", () => {
     const guarded = routeFiles.flatMap((file) =>
       [...readFileSync(file, "utf8").matchAll(/<RequireAccess\s+path="([^"]+)"/g)]
         .map((m) => m[1]!));
-    const known = new Set(guarded.filter((path) => navItemFor(path) !== undefined));
+    /* A record (an address with an :id) is known through its list, as the
+       two bill pages are since D27-279; anything else needs its own entry. */
+    const known = new Set(guarded.filter((path) => navItemFor(path) !== undefined
+      || (path.includes("/:id") && entryFor(path) !== undefined)));
 
     expect(guarded.length, "no guarded routes found - the regex has rotted")
       .toBeGreaterThan(0);

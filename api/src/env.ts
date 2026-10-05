@@ -77,6 +77,11 @@ export const env = {
      D27-165 found a Dashboard burst needs. */
   dbPoolMax: poolSize(process.env["DB_POOL_MAX"]),
 
+  /* Whose database this API serves (D27-278): unset for Fidato, a
+     customer's code (deploy/customer.sh) for anyone else. The API refuses
+     to start on a database marked for someone else (server.ts). */
+  customer: process.env["CUSTOMER"] ?? "",
+
   /* A JSON service account, as a single-line string. Unlike the web
      config in src/lib/firebase.ts, this IS a secret. */
   firebaseServiceAccount: process.env["FIREBASE_SERVICE_ACCOUNT"] ?? null,

@@ -231,7 +231,7 @@ reuses the CRS's voucher template `reservation_confirmation` (language `en`),
 already approved by Meta, and it IS the booking's confirmation on WhatsApp,
 sent once. Its header is the voucher PDF; its body has eight NAMED fields. The
 PDF prints the guest's check-in link and its QR code only where the hotel has
-online check-in on (D27-266: off for now). The sending workflow carries its
+online check-in on (D27-281: on by default; a hotel can switch it off). The sending workflow carries its
 name already (`VOUCHER_TEMPLATE`, `deploy/n8n/IMPORT.md` part B, step 5).
 
 | Field | What the PMS sends | Sample |

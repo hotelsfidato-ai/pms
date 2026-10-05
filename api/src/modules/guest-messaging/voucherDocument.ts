@@ -717,11 +717,15 @@ export function voucherFields(f: VoucherFacts): Record<string, string> {
     guests: f.rooms.length
       ? `${adults} adult${adults === 1 ? "" : "s"}${children ? `, ${children} child${children === 1 ? "" : "ren"}` : ""}`
       : "-",
+    /* The CRS's template reads this until the owner's is approved. */
     officePhone: dash(f.group?.phone),
+    /* D27-281 (4): the owner's template - the hotel's own phone, the group
+       office's where it has none, a dash where neither is typed. */
+    hotelPhone: dash(f.hotel.phone?.trim() || f.group?.phone),
   };
 }
 
-/** The PDF and its eight fields, or null where the booking is not confirmed. */
+/** The PDF and its fields, or null where the booking is not confirmed. */
 export async function whatsAppVoucher(
   client: Client, reservationId: string, checkInLink: string | null = null,
 ): Promise<{ file: SendableFile; fields: Record<string, string> } | null> {

@@ -73,13 +73,17 @@ cleanup() {
 #   ALERT_SECRET='<long random>'                        n8n drops calls without it
 #
 # Unset (a laptop) means nobody is told, which is right for a laptop.
+#
+# "db" names the database, because one server backs up every customer's
+# (D27-278): the workflow keeps a last good night for each, so one customer's
+# success cannot hide another's silence.
 BACKUP_ENV="${BACKUP_ENV:-/etc/fidato-backup.env}"
 [ -r "$BACKUP_ENV" ] && . "$BACKUP_ENV"
 tell() {                        # tell true|false
   [ -n "${ALERT_URL:-}" ] || return 0
   curl -fsS -m 20 -H "x-alert-secret: ${ALERT_SECRET:-}" \
     -H "content-type: application/json" \
-    -d "{\"check\":\"backup\",\"ok\":$1,\"server\":\"$(hostname)\"}" \
+    -d "{\"check\":\"backup\",\"ok\":$1,\"server\":\"$(hostname)\",\"db\":\"$DB\"}" \
     "$ALERT_URL" >/dev/null || echo "    (could not reach ALERT_URL - nobody was told)"
 }
 # ── One line a program can read (Connection health, D27-276) ─────────────────

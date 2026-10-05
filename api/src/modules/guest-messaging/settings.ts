@@ -16,9 +16,9 @@ import { DAILY_REPORTS, isDailyReport } from "./reportEmails.ts";
      PUT  /:code/report-emails                  all four, as a whole (D27-280)
 
    The owner, an administrator or the GM (the role gate's room_config; the
-   database's app.manages_hotel). No saved switch: the voucher on; online
-   check-in, the invoice and the review request off until switched on - they
-   come later (D27-266). The voucher IS the confirmation, one
+   database's app.manages_hotel). No saved switch: the voucher and online
+   check-in on (D27-281); the invoice and the review request off until
+   switched on (D27-266). The voucher IS the confirmation, one
    switch for both ways; there is no reminder (D27-264). The check-in code and
    the desk's button (which resends the voucher) have no switch (Q1).
    ══════════════════════════════════════════════════════════════════ */
@@ -28,7 +28,7 @@ export const messageSettings = new Hono<{ Variables: { subject: string } }>();
 export const SWITCHES = [
   { kind: "booking-voucher", label: "Booking voucher", on: true,
     when: "Once, when a booking is confirmed: the voucher PDF, on WhatsApp and by email. It carries the check-in link only while Online check-in is on." },
-  { kind: "online-checkin", label: "Online check-in", on: false,
+  { kind: "online-checkin", label: "Online check-in", on: true,
     when: "The guest's own check-in page: its link and QR code in the voucher, and the desk's Send check-in link." },
   { kind: "invoice", label: "Tax invoice", on: false,
     when: "When the invoice is issued, on WhatsApp and by email. Only invoices issued after it is switched on." },

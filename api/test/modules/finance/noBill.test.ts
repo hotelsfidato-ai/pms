@@ -49,10 +49,18 @@ describe("a stay's bill", () => {
   });
 
   it("is unchanged for a stay that has been billed", async () => {
+    /* A stay whose OWN folio holds a line still standing, the route's own
+       meaning (D27-226). "Any posting naming the stay" also caught a stay
+       whose lines were reversed or sit on a group's master bill - truly no
+       bill of its own - and which one `limit 1` found depended on what the
+       other test files had written by then (4 Oct gates). */
     const { rows } = await sql(
       `select r.id::text from reservations r join hotels h on h.id = r.hotel_id
         where h.code = '5EL'
-          and exists (select 1 from folio_postings fp where fp.reservation_id = r.id)
+          and exists (select 1 from folio_postings fp join folios f on f.id = fp.folio_id
+                       where f.reservation_id = r.id and fp.reverses_id is null
+                         and not exists (select 1 from folio_postings rev where rev.reverses_id = fp.id))
+        order by r.id
         limit 1`);
     const res = await asOwner(`/5EL/stays/${rows[0].id}/folio`);
     expect(res.status).toBe(200);

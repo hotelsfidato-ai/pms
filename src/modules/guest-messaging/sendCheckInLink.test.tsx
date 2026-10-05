@@ -34,8 +34,8 @@ describe("Send check-in link", () => {
     expect(spy.mock.calls.map((c) => c[0])).not.toContain(SEND);
   });
 
-  /* D27-266: online check-in comes later - the button is hidden until the
-     hotel switches it on. */
+  /* D27-281: online check-in is on unless the hotel switches it off - and
+     then the button is hidden. */
   it("is hidden while the hotel has online check-in off", async () => {
     const spy = mount(true, false);
     await waitFor(() => expect(spy.mock.calls.some((c) => String(c[0]).startsWith(READ))).toBe(true));

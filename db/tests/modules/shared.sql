@@ -321,3 +321,19 @@ begin
   perform test.ok('row security', 'every hotel-scoped table has a policy',
     bare is null, coalesce(bare, ''));
 end $$;
+
+
+-- =============================================================================
+-- THE SPARE LOGINS CANNOT SIGN IN (202, the owner's D27-279, 4 October)
+-- =============================================================================
+-- pms_migrate owns everything and bypasses row security; both it and
+-- pms_readonly were created with the placeholder passwords printed in 010.
+do $$
+declare
+  open_ text;
+begin
+  select string_agg(rolname, ', ') into open_
+    from pg_roles where rolname in ('pms_migrate', 'pms_readonly') and rolcanlogin;
+  perform test.ok('row security', 'pms_migrate and pms_readonly cannot log in',
+    open_ is null, coalesce(open_, ''));
+end $$;

@@ -1,0 +1,11 @@
+# deploy/customers.txt — every customer on the shared server (D27-278).
+#
+# One a line:   <code>  <its API address>  <where its app is served>  <its API port>
+# For example:  abc     api.abc.example     https://pms.abc.example     8801
+#
+# The FIRST line is the pilot. scripts/release.mjs prints its server steps
+# right after Fidato's, and the others after it, in this order.
+# Fidato is not listed: it is the server's own, set up with no CUSTOMER.
+# Ports from 8801 up, one each; 8787 is Fidato's. deploy/customer.sh says
+# what each customer is named on the server.
+# In git, so: no passwords, keys or addresses of anything private.
