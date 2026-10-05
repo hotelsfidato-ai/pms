@@ -25,9 +25,8 @@
 
      API_URL=https://api.example.com npm run build:app
 
-   Written into dist/ rather than public/, because public/ is copied
-   into every build — including the demo and the single-file artifact,
-   which run on fixtures and must not carry a real hotel's address.
+   Written into dist/ rather than public/, because public/ is also
+   served by the dev server, which must not point at a real hotel.
    ══════════════════════════════════════════════════════════════════ */
 import { writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";

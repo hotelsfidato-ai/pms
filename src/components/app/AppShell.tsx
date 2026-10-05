@@ -1,5 +1,3 @@
-import { Eye } from "lucide-react";
-import { DEMO } from "@/lib/demo";
 import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -97,21 +95,6 @@ export function AppShell() {
           </div>
           {/* `overflow-y-auto` clips to the viewport, which on paper means
              ONE page and the rest silently gone. Released for print. */}
-          {/* Said plainly, once, at the top. A reviewer who does not
-              know this is a snapshot will read an unchanging occupancy
-              figure as a bug, and a refused save as a broken button. */}
-          {DEMO && (
-            <div className="no-print shrink-0 flex items-center gap-2 px-4 py-2 bg-brand-yellow-50 border-b border-brand-yellow-100">
-              <Eye className="size-4 text-[#8a6300] shrink-0" />
-              <p className="text-sm text-[#8a6300]">
-                <span className="font-semibold">Preview.</span>{" "}
-                Real screens and real figures from the calibrated demo
-                property - nothing saves, because there is no server behind
-                this build yet.
-              </p>
-            </div>
-          )}
-
           {/* `relative`, and it is not cosmetic. An absolutely positioned
               element is clipped only by an ancestor that is its CONTAINING
               BLOCK, and a static ancestor's `overflow` does not apply to it.

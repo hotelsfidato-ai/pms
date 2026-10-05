@@ -2,7 +2,6 @@ import {
   ruleFor, enqueue, noteReachable, noteUnreachable,
 } from "./offline";
 import { auth } from "./firebase";
-import { DEMO, recorded, DEMO_REFUSAL } from "./demo";
 
 /* ══════════════════════════════════════════════════════════════════
    THE API CLIENT
@@ -25,8 +24,8 @@ import { DEMO, recorded, DEMO_REFUSAL } from "./demo";
    editing one file and redeploying static assets: seconds, no rebuild,
    no DNS wait.
 
-   The build-time value remains the fallback, so local development and
-   the demo build need no extra file and behave exactly as before. */
+   The build-time value remains the fallback, so local development
+   needs no extra file. */
 const FALLBACK_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8787";
 
 let baseResolution: Promise<string> | null = null;
@@ -189,25 +188,6 @@ export async function authHeaders(): Promise<HeadersInit> {
 }
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
-  /* ── The preview build ──────────────────────────────────────────
-     No server exists, so requests are answered from the snapshot.
-     Placed before the fetch rather than around it: a build that tried
-     the network first would sit through a timeout on every screen. */
-  if (DEMO) {
-    const method = (init.method ?? "GET").toUpperCase();
-    if (method !== "GET") {
-      /* Refused, not ignored. A write that silently does nothing is the
-         exact defect this project keeps finding; 409 is the status the
-         seam already reads as "a refusal a person acts on". */
-      throw new ApiError(409, DEMO_REFUSAL, { reason: DEMO_REFUSAL });
-    }
-    const hit = recorded(path);
-    if (hit !== undefined) return hit as T;
-    /* Nothing recorded. Named honestly rather than pretending to be a
-       network fault, so the gap is findable rather than mysterious. */
-    throw new ApiError(404, "Not part of this preview snapshot.");
-  }
-
   const base = await apiBase();
 
   let response: Response;
@@ -258,10 +238,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     );
 
     if (rule.tier === "refuse") {
-      /* REFUSED, not silently dropped and not optimistically queued.
-         The demo build takes the same position for the same reason:
-         "a write that silently does nothing is the exact defect this
-         project keeps finding". The sentence says why and what to do
+      /* REFUSED, not silently dropped and not optimistically queued:
+         a write that silently does nothing is the exact defect this
+         project keeps finding. The sentence says why and what to do
          instead, because a refusal a person cannot act on is just a
          failure with better manners. */
       throw new ApiError(503, rule.reason!, { reason: rule.reason });
@@ -322,8 +301,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
    without that the browser hides it).
 
    A download is a read, but there is no cached copy of a file, so when the
-   server cannot be reached it is refused in a sentence rather than held.
-   The preview build has no files at all. */
+   server cannot be reached it is refused in a sentence rather than held. */
 
 /** The file name in a Content-Disposition header, or null. */
 export function filenameFrom(disposition: string | null): string | null {
@@ -333,9 +311,6 @@ export function filenameFrom(disposition: string | null): string | null {
 
 /** Fetches `path` with the sign-in and saves it. Resolves to the file's name. */
 export async function downloadFile(path: string): Promise<string> {
-  if (DEMO) {
-    throw new ApiError(409, "Files cannot be downloaded in the preview.");
-  }
   const base = await apiBase();
   let response: Response;
   try {

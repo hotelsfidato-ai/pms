@@ -11,7 +11,6 @@ import {
 } from "./api";
 import { waiting } from "./outbox";
 import { queryPersister } from "./persist";
-import { DEMO } from "./demo";
 import { ROLES, type Role } from "./permissions";
 import { useUi } from "./ui";
 import { registerBusinessDates, selectProperty }
@@ -241,15 +240,6 @@ export const useSession = create<SessionState>()((set, get) => ({
   },
 
   restore: () => {
-    /* The preview build has no server and no Firebase, and asking a
-       client to sign in to a demo that cannot authenticate anybody
-       would be a dead end. `/api/hotels` is in the snapshot, so this
-       loads the real scope straight out of it. */
-    if (DEMO) {
-      loadOrRecall(set, () => set({ status: "signed-out" }));
-      return;
-    }
-
     /* A dev session left in this tab. Checked before Firebase, because
        the dev path is the one in use when there is no service account. */
     const dev = getDevSubject();

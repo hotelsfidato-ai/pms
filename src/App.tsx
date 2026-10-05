@@ -1,20 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation,
+  BrowserRouter, Routes, Route, Navigate, useLocation,
 } from "react-router";
-
-/* Hash routing belongs to the SINGLE-FILE build, not to demo data.
-   That file is opened with no server and no rewrite rule, so a path
-   route 404s the moment anybody reloads or deep-links, and a hash
-   route cannot because the server never sees it.
-
-   Firebase Hosting rewrites every path to index.html, so the build
-   that goes there keeps real paths — which are the URLs a client will
-   bookmark. Keying this to DEMO instead put a hash on the hosted
-   build too, and only clicking a nav link showed it. */
-const Router = import.meta.env.VITE_SINGLE_FILE === "1"
-  ? HashRouter
-  : BrowserRouter;
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { queryPersister } from "@/lib/persist";
@@ -256,7 +243,7 @@ export default function App() {
         },
       }}
     >
-      <Router>
+      <BrowserRouter>
         <Routes>
           <Route path="/signin" element={<SignInRoute />} />
           {/* ⚠ THE GUEST'S OWN PAGE, OUTSIDE THE SESSION GATE — mounted 21
@@ -347,7 +334,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
-      </Router>
+      </BrowserRouter>
     </PersistQueryClientProvider>
   );
 }
