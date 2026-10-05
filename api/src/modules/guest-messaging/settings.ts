@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { CATCH_UP_FROM, CATCH_UP_UNTIL } from "./jobs.ts";
-import { REPORT_TITLES } from "./reportEmails.ts";
+import { canSend, NOT_CONNECTED } from "../../sending.ts";
+import { DAILY_REPORTS, isDailyReport } from "./reportEmails.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    SETTINGS → MESSAGES (Settings phase 6; the owner's D27-261)
@@ -10,9 +11,9 @@ import { REPORT_TITLES } from "./reportEmails.ts";
      GET  /:code/guest-message-settings         each switchable message, on or
                                                 off here
      PUT  /:code/guest-message-settings/:kind   switch one
-     GET  /:code/report-emails                  the six reports, the hotel's
-                                                people, and who gets which
-     PUT  /:code/report-emails                  who gets which, as a whole
+     GET  /:code/report-emails                  the four daily report emails:
+                                                each on or off, its addresses
+     PUT  /:code/report-emails                  all four, as a whole (D27-280)
 
    The owner, an administrator or the GM (the role gate's room_config; the
    database's app.manages_hotel). No saved switch: the voucher on; online
@@ -97,63 +98,75 @@ messageSettings.put("/:code/guest-message-settings/:kind", async (c) => {
   return done ? c.json({ ok: true }) : c.json(NO_SUCH, 404);
 });
 
+/* ── Daily report emails (D27-280) ──────────────────────────────────
+   Each report On/Off and its own addresses, for this hotel. No saved row:
+   the night audit report on, the rest off, and no address - so nothing
+   goes until somebody types one. Saved as a whole; a report whose switch
+   and addresses did not change keeps who saved it and when. */
+
+/** One address: the workflow's own test, and nothing that separates two. */
+const EMAIL = /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;
+const MOST_ADDRESSES = 20;
+
 messageSettings.get("/:code/report-emails", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelManaged(client, c.req.param("code"));
     if (!hotelId) return null;
-    const { rows: people } = await client.query<{ id: string; name: string; email: string }>(
-      `select s.id::text, s.full_name as name, s.email::text as email
-         from staff s
-        where s.is_active
-          and (s.is_group_admin or exists (select 1 from staff_hotels sh
-                                            where sh.staff_id = s.id and sh.hotel_id = $1))
-        order by s.full_name`, [hotelId]);
-    const { rows: chosen } = await client.query<{ report: string; staff_id: string }>(
-      "select report, staff_id::text from report_emails where hotel_id = $1 order by report", [hotelId]);
+    const { rows } = await client.query<{
+      report: string; is_on: boolean; addresses: string[]; changed_by: string | null; changed_at: string;
+    }>(
+      `select e.report, e.is_on, e.addresses, p.full_name as changed_by, e.changed_at
+         from daily_report_emails e left join staff p on p.id = e.changed_by
+        where e.hotel_id = $1`, [hotelId]);
+    const saved = new Map(rows.map((r) => [r.report, r]));
     return {
-      reports: Object.entries(REPORT_TITLES).map(([key, title]) => ({ key, title })),
-      people,
-      chosen: chosen.map((r) => ({ report: r.report, staffId: r.staff_id })),
+      reports: DAILY_REPORTS.map((r) => {
+        const s = saved.get(r.key);
+        return {
+          key: r.key, title: r.title, contains: r.contains,
+          isOn: s ? s.is_on : r.on, addresses: s?.addresses ?? [],
+          changedBy: s?.changed_by ?? null, changedAt: s?.changed_at ?? null,
+        };
+      }),
+      notConnected: canSend() ? null : NOT_CONNECTED,
     };
   });
   return body ? c.json(body) : c.json(NO_SUCH, 404);
 });
 
 messageSettings.put("/:code/report-emails", async (c) => {
-  const input = await c.req.json<{ chosen?: unknown }>().catch(() => ({}) as { chosen?: unknown });
-  const list = Array.isArray(input.chosen) ? input.chosen : null;
-  if (!list || list.some((x) => typeof x !== "object" || x === null
-    || !(String((x as Record<string, unknown>)["report"]) in REPORT_TITLES)
-    || typeof (x as Record<string, unknown>)["staffId"] !== "string")) {
-    return c.json({ error: "A list of reports and people, please." }, 400);
+  const input = await c.req.json<{ reports?: unknown }>().catch(() => ({}) as { reports?: unknown });
+  const list = Array.isArray(input.reports) ? (input.reports as Record<string, unknown>[]) : null;
+  if (!list || list.some((r) => typeof r !== "object" || r === null || !isDailyReport(r["key"])
+    || typeof r["isOn"] !== "boolean" || !Array.isArray(r["addresses"])
+    || (r["addresses"] as unknown[]).some((a) => typeof a !== "string"))
+    || new Set(list.map((r) => r["key"])).size !== list.length) {
+    return c.json({ error: "A list of reports, each switched on or off with its addresses, please." }, 400);
   }
-  const wanted = list as { report: string; staffId: string }[];
-  const result = await withSession(c.get("subject"), async (client, session) => {
+  const wanted = list.map((r) => ({
+    key: r["key"] as string, isOn: r["isOn"] as boolean,
+    addresses: [...new Set((r["addresses"] as string[]).map((a) => a.trim().toLowerCase()).filter(Boolean))],
+  }));
+  const bad = wanted.flatMap((w) => w.addresses).find((a) => !EMAIL.test(a));
+  if (bad !== undefined) return c.json({ error: `"${bad}" is not an email address.` }, 400);
+  if (wanted.some((w) => w.addresses.length > MOST_ADDRESSES)) {
+    return c.json({ error: `At most ${MOST_ADDRESSES} addresses for one report.` }, 400);
+  }
+  const done = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelManaged(client, c.req.param("code"));
-    if (!hotelId) return 404 as const;
-    /* Only the hotel's own people: their sign-in email, nobody typed (Q7). */
-    const { rows: ok } = await client.query<{ id: string }>(
-      `select s.id::text from staff s
-        where s.id = any($2::uuid[]) and s.is_active
-          and (s.is_group_admin or exists (select 1 from staff_hotels sh
-                                            where sh.staff_id = s.id and sh.hotel_id = $1))`,
-      [hotelId, [...new Set(wanted.map((w) => w.staffId))].filter((id) => /^[0-9a-f-]{36}$/i.test(id))]);
-    const allowed = new Set(ok.map((r) => r.id));
-    if (wanted.some((w) => !allowed.has(w.staffId))) return 400 as const;
-    await client.query(
-      `delete from report_emails e where e.hotel_id = $1
-          and not exists (select 1 from jsonb_to_recordset($2::jsonb) as w(report text, "staffId" uuid)
-                           where w.report = e.report and w."staffId" = e.staff_id)`,
-      [hotelId, JSON.stringify(wanted)]);
-    await client.query(
-      `insert into report_emails (hotel_id, report, staff_id, added_by)
-       select $1, w.report, w."staffId", $3
-         from jsonb_to_recordset($2::jsonb) as w(report text, "staffId" uuid)
-       on conflict do nothing`,
-      [hotelId, JSON.stringify(wanted), session.staffId]);
-    return 200 as const;
+    if (!hotelId) return false;
+    for (const w of wanted) {
+      await client.query(
+        `insert into daily_report_emails (hotel_id, report, is_on, addresses, changed_by)
+         values ($1, $2, $3, $4::text[], $5)
+         on conflict (hotel_id, report) do update set
+           is_on = excluded.is_on, addresses = excluded.addresses,
+           changed_by = excluded.changed_by, changed_at = now()
+         where daily_report_emails.is_on is distinct from excluded.is_on
+            or daily_report_emails.addresses is distinct from excluded.addresses`,
+        [hotelId, w.key, w.isOn, w.addresses, session.staffId]);
+    }
+    return true;
   });
-  if (result === 404) return c.json(NO_SUCH, 404);
-  if (result === 400) return c.json({ error: "Only this hotel's own people can be chosen." }, 400);
-  return c.json({ ok: true });
+  return done ? c.json({ ok: true }) : c.json(NO_SUCH, 404);
 });

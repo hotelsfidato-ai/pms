@@ -154,6 +154,26 @@ the `"health-alert": (d) => ({ ... }),` entry from this file's **Read the
 message** node just before the `};` that closes `EMAILS`. **Save**. The words
 are drafts: change them there.
 
+### ⚠ The live workflow needs the `daily-report` draft (D27-280, 5 October)
+
+The daily report emails (Settings → Messages → Daily report emails) go as a
+new kind, `daily-report`: the key figures as a small table, the whole report
+as a PDF. **Until the live workflow has it, every daily report is refused**
+("No email for "daily-report" in this workflow"), three tries, and Guest
+messages shows why. It is more than one entry (the table needs the letter
+changed too), so replace the node's whole code:
+
+1. **Your PC** - open `D:\fidato pms\.local\n8n\read-the-message.js` in
+   Notepad, **Ctrl+A**, **Ctrl+C**.
+2. **The CRS's n8n, in the browser** - open the live workflow **PMS send ·
+   email and WhatsApp (CRS)** → double-click **Read the message** → click in
+   its code → **Ctrl+A**, **Ctrl+V** → close the node → **Save**.
+
+The settings at its top are the ones running live (`FROM`, `REPLY_TO`,
+`VOUCHER_TEMPLATE`, `INVOICE_TEMPLATE`); if you had changed any of them in
+n8n, type them in again before **Save**. This also brings the `health-alert`
+draft above. Or import `pms-send-crs.json` again (part B).
+
 ---
 
 ## D · The ID photos workflow (`pms-id-photos-crs.json`)
