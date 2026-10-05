@@ -47,6 +47,28 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+### 5 October, 18:00 — read this first (the owner is away 5 days, working from a laptop)
+
+- **LIVE since 5 Oct ~17:45: the full release** `release/full-5oct` at `0c5e51cd` (D27-285: one
+  deployment). Server code 0c5e51cd, database changes up to **206**, website `index-CbA5sped.js`,
+  HEALTH_ALERT_EMAIL set. Checked read-only after each step. Everything from 4 Oct (Settings console,
+  rivals' prices off, SAC per line, D27-271 to 274) plus: small gaps (D27-275, credit limit across the
+  group), connection health, daily report emails (D27-280/282), online check-in on for every hotel
+  (D27-281), tax invoice by email (D27-284), the CRS run_as script (D27-284/286), spare logins
+  NOLOGIN (202), DigiLocker policy (200), demo build removed, B's per-customer set-up (D27-278/279).
+- **Gates on 0c5e51cd, clean release copy:** web 1122, api 2507, database 1531 assertions, replay 206,
+  PostgreSQL 16.15 the same; `node scripts/release.mjs release/full-5oct` passed.
+- **Live, as the owner saw it after step 8:** Emails amber (n8n lacks health-alert until the paste),
+  CRS bridge red (card switched ON before the reader settings and the script: switch it OFF first),
+  Backups amber until tonight's 03:00, WhatsApp amber from a 3 Oct test. Business date 3 Oct: the
+  night audit must run for 3 and 4 Oct.
+- **The owner's checklist page:** https://claude.ai/artifact/HKWCtFL6TvFzv4xk27a2Lq ; the release
+  page: https://claude.ai/artifact/P65CNgj7foFRaF7ihNBKMb (docs/go-live/RELEASE-5OCT-FULL.md).
+- **The laptop (D27-287):** cp6 pushed to the PRIVATE GitHub (hotelsfidato-ai/pms) by the owner;
+  secrets (server key, `.env`, `api\.env`) on the owner's USB only; `.local\travel-kit\` holds the
+  n8n paste files, the design chat's uncommitted notes and the memory notes. This PC is off; its
+  local Postgres was stopped cleanly.
+
 ### 3 October, about 3 am — read this first
 
 ```
@@ -439,6 +461,21 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **5 October, 18:00: to launch, all the owner's steps (no building).** (9) the n8n paste
+> (`.local\n8n\paste-5oct\`, deploy/n8n/IMPORT.md "The 5 October paste"); (10) Guest messages:
+> voucher, online check-in, tax invoice ON, review off; (11) night audit for 3 Oct and 4 Oct;
+> (12-17) connect the CRS — the card OFF first, the reading login and ids, the four CRS_* settings
+> (CRS_API_KEY, CRS_PROJECT_ID, CRS_AUTOMATION_EMAIL, CRS_AUTOMATION_PASSWORD) then restart, the
+> "Fidato CRS" source, a backup, `deploy/crs-run-as.sql`, the card ON, one test booking (voucher
+> unticked, "PMS" as Confirmed by, D27-286); (18) tell staff and sales; (19) remove
+> `/opt/fidato/api/.env.save*`. The master checks each read-only.
+> **After the launch (owner):** other hotels; daily report addresses; drinks headings. **On hold:**
+> booking_confirmation (then OWN_TEMPLATE_READY = true), the authentication template (Meta's
+> messaging limit), the off-site backup bucket. **Oracle stays Always Free** (D27-285, risk noted).
+> **To build, small:** Guest messages hides health-alert and labels "booking-voucher"/"health-alert";
+> the manual (A2-B9); the CRS n8n parts 2-3 (later); Money owed per guest (if wanted); before a first
+> customer, a per-customer backup log (health.ts/systemHealth.ts read one fixed log).
 
 > **3 October, later: the fresh start (D27-248).** RELEASE-3OCT.md now has Part F: 5 Elements
 > and all its test data go during the release; only influvateseo@gmail.com and
