@@ -382,17 +382,22 @@ describe("the CRS workflow (every guest message, D27-186)", () => {
     ]);
   });
 
-  it("writes the invoice's email with the PDF attached, and the report's to the person it is for", () => {
+  it("writes the invoice's email with the PDF attached, and the daily report's with its key figures (D27-280)", () => {
     const [mail] = run(withMailbox(), "Read the message", { body: invoice({ channel: "email" }) });
     expect(mail!.json).toMatchObject({ stop: false, email: true, attachments: "data", to: "asha@example.com" });
     expect(mail!.json["subject"]).toBe("Your tax invoice from Test Hotel (5EL/2026-27/0001)");
     expect(mail!.json["text"]).toContain("Your tax invoice 5EL/2026-27/0001, dated 03 Oct 2026, for INR 1,050.00 is attached.");
 
     const [report] = run(withMailbox(), "Read the message", { body: message({
-      channel: "email", kind: "report", file: pdf, to: { name: "Ravi GM", email: "ravi@fidato.in" },
-      data: { reportTitle: "Manager summary", hotelName: "Test Hotel", businessDate: "02/10/2026" } }) });
-    expect(report!.json).toMatchObject({ stop: false, to: "ravi@fidato.in", attachments: "data",
-      subject: "Manager summary - Test Hotel - 02/10/2026" });
+      channel: "email", kind: "daily-report", file: pdf, to: { email: "owner@example.com" },
+      data: { reportTitle: "Night audit report", hotelName: "Test Hotel", businessDate: "02/10/2026",
+        keyFigures: "Rooms occupied: 12 of 18\nRoom revenue with tax: ₹1,23,456.00\nMoney <taken>: -" } }) });
+    expect(report!.json).toMatchObject({ stop: false, to: "owner@example.com", attachments: "data",
+      subject: "Night audit report - Test Hotel - 02/10/2026" });
+    expect(report!.json["text"]).toContain("Rooms occupied: 12 of 18\nRoom revenue with tax: ₹1,23,456.00");
+    const html = String(report!.json["html"]);
+    expect(html).toMatch(/<td[^>]*>Room revenue with tax<\/td><td[^>]*>₹1,23,456.00<\/td>/);
+    expect(html, "a figure is text, never markup").toContain("Money &lt;taken&gt;");
   });
 
   it("refuses a kind it has no template for, in a sentence", () => {

@@ -11,6 +11,31 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-05 · Daily report emails after the night audit (the owner's D27-280; helper copy, cp6 4649fd97 merged in)
+
+**Asked for:**
+- Per hotel, a list of reports, each On/Off with its own typed addresses: the Night audit report ON, the Manager report, Money owed (guest ledger and city ledger) and Restaurant and stock (the restaurant's day, closing stock, wastage) OFF. Nobody gets anything until an address is typed.
+- Sent right after that hotel's night audit closes the day, once per business date per report: the key figures in the email, the whole report as a PDF. Owner, Administrator and GM manage it; the server refuses the rest. Through the existing n8n email path, a new kind.
+
+**Shipped:**
+- Migration 204 "daily report emails": `daily_report_emails` (FORCE row security, the shared `hotel_isolation` policy: read by the hotel's people, written only where `app.manages_hotel`, no delete), and `app.daily_reports_owed` (a definer: each completed audit of the last two days, each report on whose addresses were saved before that audit, each address not sent yet for that business date, under three tries; built by the saver while they still run the hotel, else whoever runs it now).
+- `reportEmails.ts` rewritten: the four reports from the Reports screen's own builders (`buildReport`; Money owed = the Manager report's Guest Ledger + the City ledger; Restaurant and stock = the Night audit report's POS sections + Closing stock + Wastage and breakage for the day); the key figures read out of the same document as the PDF; one email per address, kind `daily-report`, `data.keyFigures` as "Label: value" lines.
+- `settings.ts`: `GET/PUT /:code/report-emails` reshaped (the role gate's entries unchanged); addresses trimmed, lower-cased, de-duplicated, one address each, at most 20.
+- Web: `pages/DailyReportEmails.tsx` at `/settings/messages/daily-report-emails` ("Daily report emails"), replacing "Night audit reports".
+- n8n (`deploy/n8n/pms-send-crs.json`, Read the message): the `daily-report` draft - subject, the figures as a two-column table, the PDF attached - in place of D27-261's `report`; IMPORT.md says how to paste it into the live workflow.
+- Replaces D27-261's reports to staff's own sign-in emails (never released). `report_emails` and `app.report_emails_owed` stay in the database, unread, until the owner says.
+
+**Proved:**
+- API guest-messaging (after merging cp6): 8 files, 158 tests passed (messages and reports 14, workflows 33).
+- Database suite (after the merge): all 1531 assertions passed, 14 of them daily report emails.
+- Quick gates `drm-quick-2` (after the merge): web types, API types and strip exit 0; website 165 files, 1110 tests passed.
+- Seen to fail: the figure picker reading the first row instead of the total failed "carry the report's own key figures"; the addresses split on spaces only failed the web save test.
+- Opened at 1280 and 375 (and the pane's own 279): saved four reports through the screen, a bad address refused in a sentence; a completed audit for 4 October in this copy's database sent five emails within the minute and none on the next pass. The rendered emails and PDFs are in this copy's `.local/daily-report-demo/`.
+
+**Left open (questions for the owner, in the helper's report):**
+- Drop D27-261's `report_emails` and its function?
+- Which figures are "key", the wording of the email, what Money owed and Restaurant and stock hold (no server-built guest-by-guest guest ledger exists: `/reports/guest-ledger` is SQL inside its route).
+
 ## 2026-10-05 · Online check-in on for every hotel; the hotel's own phone in the message (the owner's D27-281 (3) and (4); worked under the master's exception while the D27-280 helper holds the claim)
 
 **Shipped:**

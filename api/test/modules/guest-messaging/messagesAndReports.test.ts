@@ -318,7 +318,15 @@ describe("daily report emails after the night audit (D27-280)", () => {
     received = [];
     await runReportEmails();
     expect(sent(), "a retry sends nothing twice").toEqual([]);
-    await sql("update night_audit_runs set completed_at = now() where hotel_id = $1 and business_date = '2000-02-03'", [hotelId]);
+    /* The GM corrects the closed day's record (D17-12): its audit completes again. */
+    const db = new (await import("pg")).default.Client({ connectionString: SUPER });
+    await db.connect();
+    try {
+      await db.query("begin");
+      await db.query("select set_config('app.user_id', $1, true)", [gmId]);
+      await db.query("update night_audit_runs set completed_at = now() where hotel_id = $1 and business_date = '2000-02-03'", [hotelId]);
+      await db.query("commit");
+    } finally { await db.end(); }
     await runReportEmails();
     expect(sent(), "nor does the day audited again").toEqual([]);
     expect(await sql(
