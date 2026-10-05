@@ -373,19 +373,25 @@ WhatsApp node sends a template, for example `system_alert` with one variable.
 
 - **Backups.** A *Webhook* node: POST, path `pms-backup`, authentication
   *Header Auth* with the name `x-alert-secret` and your secret. It receives
-  `{"check":"backup","ok":true|false,"server":"…"}`. When `ok` is false: send
-  the WhatsApp ("Last night's backup on {server} FAILED. Look at
-  /var/log/fidato-backup.log"). When true: a *Code* node records the time in
-  `$getWorkflowStaticData('global').lastBackup`.
-- **A night with no report.** A *Schedule* node, daily at 04:30: if
-  `lastBackup` is more than 26 hours old, send the WhatsApp ("No backup report
-  last night"). This catches cron itself having stopped.
+  `{"check":"backup","ok":true|false,"server":"…","db":"…"}`. When `ok` is
+  false: send the WhatsApp ("Last night's backup of {db} on {server} FAILED.
+  Look at /var/log/fidato-backup.log", or `fidato-backup-<code>.log` for a
+  customer). When true: a *Code* node records the time **for that database**,
+  in `$getWorkflowStaticData('global').lastBackup[db]`. `db` is `fidato` for
+  Fidato and `fidato_<code>` for a customer (D27-278); one time for all would
+  let one customer's good night hide another's silence.
+- **A night with no report.** A *Schedule* node, daily at 05:30 (the
+  customers' backups start at 03:30 and run one after another): for each
+  database in `lastBackup` older than 26 hours, send the WhatsApp ("No backup
+  report last night for {db}"). This catches cron itself having stopped. A
+  customer appears in `lastBackup` after its first night.
 - **The system answering.** A *Schedule* node every 5 minutes: an *HTTP
   Request* GET to `https://api.fidatohotels.com/health` (timeout 20 s; "Never
   error" and "Include response headers and status" on). Down is anything but
   a 200 with `"ok": true`. Keep the last state in static data and send the
   WhatsApp **only when it changes** ("PMS is DOWN" / "PMS is back"), not every
-  5 minutes.
+  5 minutes. With customers: one request per API address in
+  `deploy/customers.txt` as well, each with its own last state.
 
 **3 · The server's settings:** *the server, over ssh as `opc`*
 
@@ -467,6 +473,115 @@ The second line should say `journald`; if it does not, n8n's own log is not
 in the journal and is not kept a year. `chronyc tracking` should name
 `169.254.169.254` (Oracle's time service, which CERT-In's FAQ Q42 allows)
 and say `Leap status : Normal`.
+
+---
+
+## Add a customer
+
+The owner, 4 October (D27-278): when the PMS is sold, each customer gets **its
+own database**, all on this one server. Fidato stays exactly as it is: its
+database `fidato`, `/opt/fidato`, `fidato-api` on port 8787,
+`conf.d/fidato.conf`. A customer gets its own of each, named from a short code
+(`deploy/customer.sh` has the table):
+
+| | Fidato | customer `abc` |
+|---|---|---|
+| database | `fidato` | `fidato_abc` |
+| checkout | `/opt/fidato` | `/opt/fidato-abc` |
+| service, its log | `fidato-api` | `fidato-api-abc` (`journalctl -u fidato-api-abc`) |
+| port | 8787 | its own, from 8801 up |
+| nginx | `conf.d/fidato.conf` | `conf.d/pms-abc.conf`, its own certificate |
+| uploads | `/var/lib/fidato/uploads` | `/var/lib/fidato-abc/uploads` |
+| backup | 03:00, `/var/log/fidato-backup.log` | 03:30, one customer after another, `/var/log/fidato-backup-abc.log` |
+| pool (`DB_POOL_MAX`) | 20 | 10 |
+
+**What every customer shares with Fidato, by the owner's choice (option a):**
+the `pms_app` login and its password, the `fidato` unix account, Postgres and
+its settings, the backup programs, `/etc/fidato-backup.env` (the same bucket;
+each file starts with its database's name, `fidato_abc-…`) and n8n. ⚠ So a
+break-in at one customer's API can reach every customer's data. What stops a
+*mistake* is the database's mark: `launch.sh` sets `app.customer = 'abc'` on
+`fidato_abc`, the customer's `api/.env` says `CUSTOMER=abc`, and an API whose
+two disagree refuses to start ("Refusing to start: this database is …"). Fidato
+sets neither, so its API refuses a customer's database too.
+
+**1 · The address:** *the customer's DNS*. An `A` record for its API address,
+for example `api.abc.example` → this server's public IP (step 3 above).
+
+**2 · The list:** *your PC*. Add a line to `deploy/customers.txt`: code
+(2 to 16 small letters and digits), API address, where its app is served, a
+free port. The first line is the pilot. Commit it; it goes out with the next
+release.
+
+**3 · Its own checkout:** *the server, over ssh as `opc`*
+
+```bash
+sudo GIT_SSH_COMMAND="ssh -i /home/opc/.ssh/fidato_deploy -o IdentitiesOnly=yes" git clone "$(sudo git -C /opt/fidato remote get-url origin)" /opt/fidato-abc
+sudo git config --global --add safe.directory /opt/fidato-abc
+```
+
+The second line because `launch.sh` hands the folder to `fidato`, and git
+refuses to work as root in a folder somebody else owns.
+
+**4 · Set it up:** *the server*, from **its own** checkout (the script refuses
+another's):
+
+```bash
+cd /opt/fidato-abc && sudo CUSTOMER=abc PORT=8801 DOMAIN=api.abc.example APP_ORIGIN=https://pms.abc.example EMAIL=you@fidatohotels.com deploy/launch.sh
+```
+
+It prints the connection budget first and refuses, before changing anything,
+if every API's pool plus one would pass what Postgres allows (100, less its
+reserve and 5 for scripts), or if the port is another API's. The first run
+then stops at *"The API did not start"*: `/opt/fidato-abc/api/.env` has no
+Firebase settings yet. Which Firebase project a customer uses is still the
+owner's to decide (D27-278 (4)); once decided, put `FIREBASE_PROJECT_ID` and
+`FIREBASE_SERVICE_ACCOUNT` there (step 4 above) and run the same line again.
+
+It does **not** touch what the whole server shares: packages, firewall,
+Postgres's sizing (that restarts Postgres, under every customer), the logs,
+the clock, the `pms_app` password, the backup programs. Those are Fidato's
+run's.
+
+**5 · Prove it:** *your PC, PowerShell*
+
+```powershell
+curl.exe -s https://api.abc.example/health
+```
+
+`"ok": true`. Then add the address to n8n's "system answering" check and to
+UptimeRobot (*Watching it*, below). Its backup reports from its first night.
+
+**Updating.** `scripts/release.mjs` prints each customer's steps after
+Fidato's, the pilot first, each pinned to the release's commit, so the pilot
+can run a release for days before the others take it. Each customer's own
+`launch.sh` run migrates its own database from its own checkout. Which
+version a customer runs: `git -C /opt/fidato-abc log -1 --format=%h`.
+
+⚠ **Roles belong to the whole server, not to a database.** A migration that
+changes a role (its password, `LOGIN`, `BYPASSRLS`) changes it for every
+customer the moment the first database is migrated, the pilot's included.
+Such a migration must also work with the code the other customers still run.
+
+**More connections.** Lower a customer's `DB_POOL_MAX` in its `api/.env` and
+restart its service, or raise `max_connections` in `postgresql.conf`, which
+needs a Postgres restart: every customer's API, Fidato's included.
+
+**Restoring one customer.** *The server*: the others keep running.
+
+```bash
+sudo -u postgres env DB=fidato_abc BACKUP_DIR=/var/backups/fidato PGHOST=/var/run/postgresql PGPORT=5432 SUPERPASS= bash /opt/fidato-abc/db/restore.sh --latest
+cd /opt/fidato-abc && sudo CUSTOMER=abc PORT=8801 DOMAIN=api.abc.example APP_ORIGIN=https://pms.abc.example EMAIL=you@fidatohotels.com deploy/launch.sh
+```
+
+The second line because a restored database has neither `pms_app`'s rights
+nor its mark (a dump carries neither): its migrations give the first, the
+same run gives the second and restarts its API, which would refuse to start
+on an unmarked database.
+
+**Not built** until asked: removing, exporting or moving a customer to its
+own server; the customer's website (waits on the Firebase decision); a
+screen across customers (D27-278 (3)); a standby.
 
 ---
 

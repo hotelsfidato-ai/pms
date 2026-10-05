@@ -16,7 +16,8 @@ const DEPLOY = join(__dirname, "..", "..", "deploy");
 
 it("the unit lets the API write to the upload folder launch.sh makes, and stays strict", () => {
   const unit = readFileSync(join(DEPLOY, "fidato-api.service"), "utf8");
-  const launch = readFileSync(join(DEPLOY, "launch.sh"), "utf8");
+  // launch.sh renders the unit through deploy/customer.sh (D27-278).
+  const launch = readFileSync(join(DEPLOY, "customer.sh"), "utf8");
 
   expect(unit).toMatch(/^ProtectSystem=strict$/m);
   const writable = unit.match(/^ReadWritePaths=(.*)$/m)?.[1]?.split(/\s+/) ?? [];
