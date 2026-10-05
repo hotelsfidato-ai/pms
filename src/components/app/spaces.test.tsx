@@ -170,7 +170,8 @@ describe("the addresses", () => {
     as("group-admin");
     go("/settings/rates/taxes");
     render(<App />);
-    expect(await screen.findByRole("heading", { level: 1, name: "Taxes" })).toBeTruthy();
+    /* A lazy Settings page, first loaded under the full gates' load: past 5 s on this disk (5 Oct). */
+    expect(await screen.findByRole("heading", { level: 1, name: "Taxes" }, { timeout: 10000 })).toBeTruthy();
     cleanup();
 
     as("gm");
@@ -181,7 +182,7 @@ describe("the addresses", () => {
     as("group-admin");
     go("/settings/rates/taxes");
     render(<App />);
-    const spaces = await screen.findByRole("navigation", { name: "Spaces" });
+    const spaces = await screen.findByRole("navigation", { name: "Spaces" }, { timeout: 10000 });
     expect(within(spaces).getAllByRole("link").map((a) => a.textContent))
       .toEqual(["Front office", "Restaurant", "Settings"]);
     expect(within(spaces).getByRole("link", { name: "Settings" }).getAttribute("aria-current")).toBe("page");
