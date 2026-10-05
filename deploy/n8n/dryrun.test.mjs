@@ -105,17 +105,27 @@ it("a connection health alert", () => {
   expect(out.binary).toBeUndefined();
 });
 
-it("the booking-confirmation email, unchanged: no link line even when a link came", () => {
-  const out = read({
-    channel: "email", kind: "booking-confirmation", hotel, to: { email: "asha@example.com" }, file: pdf,
-    data: { guestName: "Asha Rao", hotelName: "5 Elements", reference: "5EL-1001", checkInText: "06/10/2026",
-      checkOutText: "08/10/2026", nights: "2", link: LINK },
-  });
+const confirmation = (extra) => read({
+  channel: "email", kind: "booking-confirmation", hotel, to: { email: "asha@example.com" }, file: pdf,
+  data: { guestName: "Asha Rao", hotelName: "5 Elements", reference: "5EL-1001", checkInText: "06/10/2026",
+    checkOutText: "08/10/2026", nights: "2", ...extra },
+});
+const confirmationText = "Hello Asha Rao,\n\nYour stay at 5 Elements is confirmed.\n\nBooking: 5EL-1001\n\n"
+  + "Check-in: 06/10/2026\n\nCheck-out: 08/10/2026 (2 nights)\n\nYour reservation voucher is attached.";
+
+it("the voucher email with a link: the check-in line after the voucher line (D27-282)", () => {
+  const out = confirmation({ link: LINK });
   expect(out.json.subject).toBe("Your booking at 5 Elements is confirmed (5EL-1001)");
-  expect(out.json.text).toBe("Hello Asha Rao,\n\nYour stay at 5 Elements is confirmed.\n\nBooking: 5EL-1001\n\n"
-    + "Check-in: 06/10/2026\n\nCheck-out: 08/10/2026 (2 nights)\n\nYour reservation voucher is attached.");
+  expect(out.json.text).toBe(`${confirmationText}\n\nTo save time at the desk, you can fill in your check-in details here: ${LINK}`);
+  expect(out.json.html).toContain(`<a href="${LINK}" style="color:#FE611F">${LINK}</a>`);
   expect(out.json).toMatchObject({ from: "Fidato Hotels <crs@fidatohotels.com>", replyTo: "crs@fidatohotels.com", attachments: "data" });
   expect(out.json.html).not.toContain("<table");
+});
+
+it("the voucher email without a link: no check-in line", () => {
+  const out = confirmation({});
+  expect(out.json.text).toBe(confirmationText);
+  expect(out.json.html).not.toContain("check-in details");
 });
 
 it("the check-in code on WhatsApp: guest_page_code, the code in the body and the button", () => {
