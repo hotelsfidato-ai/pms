@@ -50,6 +50,112 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-05 · the morning's fixes, five merges, the WhatsApp voucher on the owner's template, and the release ready to cut
+
+**Asked for:** the owner, 4 October at night: "graceful stop, continue from morning". The goal is
+the full launch: finish everything and ONE release (`release/all-5oct`, made by
+`node scripts/release.mjs`), which the owner then runs. In the morning the owner also asked for
+the WhatsApp voucher on their own approved template `booking_confirmation` with a "Check in
+online" button, online check-in on for every hotel, the hotel's own phone in the message (D27-281),
+and daily report emails: a list of reports per hotel, each with an on/off switch and its own email
+addresses (D27-280).
+
+**Shipped**
+- ac4f6417, what 4 October found:
+  - migration 202: `pms_migrate` and `pms_readonly` can no longer log in (D27-279 (4)), with a
+    database check;
+  - `scripts/gates.sh`: the API, database and replay steps now wait in the database queue
+    (`.local/dbq.sh`), as pg16 already did;
+  - `finance/noBill.test.ts`: picks a stay whose own folio holds a standing line;
+  - `.gitattributes`: `*.mjs text eol=lf`.
+- Merged d4542806 (cc1fb4d6, 69db03e0): a company's credit limit counts what it owes across the
+  whole group (203, `app.company_owes`, D27-279 (6)). A stay's bill page follows In house's rule
+  and a restaurant bill follows the Till's (D27-279 (8)).
+- Merged a1ca352b (69c304f3, 41aefa71), B's server set-up (D27-278, D27-279), with no migration:
+  - `deploy/customer.sh` gives each customer its own database, checkout, service, port, nginx
+    file and backup on the shared server;
+  - one shared `pms_app`, and the API will not start on a database marked for another customer;
+  - a connection-budget check on every `launch.sh` run;
+  - `scripts/release.mjs` prints each customer's steps after Fidato's, the pilot first
+    (`deploy/customers.txt`, empty for now);
+  - `db/restore.sh`'s ROOT fault fixed.
+- Merged 4649fd97 (03fc21b5), online check-in on by default and the hotel's own phone (D27-281 (3)
+  and (4)), with its migration renumbered 206 -> 205:
+  - `app.online_checkin_on` answers ON wherever a hotel has saved nothing. This reverses
+    D27-266's "later"; a hotel can still switch it off;
+  - the WhatsApp voucher's fields gain `hotelPhone`: the hotel's own phone, else the group
+    office's, else a dash.
+- Merged 134abbde (93676065 decision, ba60afa4, 8fe60e10), daily report emails (D27-280), migration
+  204, in Settings > Messages > Daily report emails:
+  - per hotel, four reports. The night audit report is on; the Manager report, Money owed, and
+    Restaurant and stock are off;
+  - nobody is sent anything until an address is typed;
+  - sent after each completed night audit, once per business date, with the key figures in the
+    email and the whole report as a PDF, through the CRS n8n (kind `daily-report`);
+  - the owner, an Administrator or the GM manages the list;
+  - it replaces D27-261's reports to staff's sign-in emails, which were never released
+    (D27-282 (1)).
+- a60020b4: the Guest messages list shows guests' messages only. Daily report emails stay out of it,
+  and their sends stay recorded in `messages_sent` (D27-282 (4)).
+- Decisions D27-280 (93676065), D27-281 (86579bdf) and D27-282 (900120fc).
+- The WhatsApp voucher on `booking_confirmation` (D27-281 (1) and (2)) as ONE n8n paste (merged
+  d4ef0243 and 3df0cb1a): `.local\n8n\paste-5oct\` holds Read the message and Build the voucher
+  message, and `deploy/n8n/pms-send-crs.json` equals them byte for byte. The owner's template sits
+  behind `OWN_TEMPLATE_READY = false` until Meta shows the edited template Active; until then
+  vouchers stay on the CRS's `reservation_confirmation`. The same paste brings the health-alert and
+  daily-report emails and the voucher email's check-in link line (D27-283).
+  `deploy/n8n/dryrun.test.mjs` 11 of 11.
+
+**Found**
+- Meta refused the authentication template (`guest_page_code`, the check-in code). The business is
+  verified and the owner has been added to the WhatsApp account, so the most likely cause is the
+  number's messaging limit. Still open; the code still goes by email.
+- The local Postgres died at 00:05 with 0xC000013A while the helpers stopped their processes at the
+  graceful stop. It was restarted under the keeper at 09:29 and was ready at 09:35 (addition to
+  MEMORY 339).
+- The daily report helper wrote over my unfinished `.local\n8n\read-the-message.js` because my
+  brief named that file; it put it back byte for byte (MEMORY 387).
+- Lessons from 3 and 4 October, numbered now: the failed `cd` and `git reset --hard` in the main
+  folder (382), the release copy built without sign-in (383), the remembered hotel 5EL (384), the
+  empty BACKUP_UPLOAD_URL (385), `.mjs` line endings (386). The gates outside the queue is an
+  addition to MEMORY 341.
+
+**Proved**
+- Full gates `merge-5oct-a` on 4649fd97 (2,240 s). The run was in the main folder, which holds the
+  design chat's uncommitted notes, so it is marked dirty:
+  - web types, api types and strip (214 files) green;
+  - api 2489 of 2489;
+  - database: 204 migrations, all 1517 assertions;
+  - replay: all 204 re-runnable;
+  - pg16 (16.15): 1517 assertions, 204 re-runnable;
+  - web 1108 passed, 1 skipped, 1 failed. The failure is `migrations are numbered ... with no
+    gaps`, on the 204 gap, expected until 204 merged.
+- ac4f6417: noBill.test 3 of 3; the database suite with 202, all 1514 assertions passed.
+- 8fe60e10, the helper's run after merging cp6 at 4649fd97: guest-messaging API 158 of 158; database
+  1531 assertions; quick gates, web 1110 of 1110. Seen to fail first: the figure picker reading the
+  first row, and the address list split on spaces only.
+- a60020b4: messages.test 19 of 19; the new test fails without the filter.
+- The release copy's full, clean gates on a60020b4: web 1110 of 1110, api 2494 of 2494, database 205 migrations and all 1531 assertions, replay all 205 re-runnable, pg16 (16.15) the same; then `node scripts/release.mjs release/all-5oct` passed: fast-forward from bb0f4895, the build has the live API address, the Firebase project id and key, no test sign-in, bundle index-CPiCz1OH.js. Release page: docs/go-live/RELEASE-5OCT.md.
+
+**Left open**
+- The release: `node scripts/release.mjs release/all-5oct` (your PC, in D:\fidato pms) once the
+  release copy's gates are green, then the release page. The owner types every step.
+- After Meta approves `booking_confirmation`: the owner pastes the voucher's n8n code.
+- The owner: HEALTH_ALERT_EMAIL on the server; the off-site backup bucket (deploy/README.md,
+  Backups, steps 1, 3 and 4); Oracle account type; add the other hotels; SAC codes; drinks
+  headings (Bar or Alcohol); daily report addresses.
+- Open questions for the owner: Firebase per customer (D27-278 (4)); a backup log per customer
+  before the first customer (the API reads one fixed `/var/log/fidato-backup.log`, while
+  `customer.sh` gives each customer its own); the authentication template.
+- The unused `report_emails` table goes in a later migration (D27-282 (1)).
+- Done: the merged helpers' copies recycled (junctions out first) and their scratch databases
+  dropped. The local demo database `fidato` is behind cp6; migrate it before the next local demo.
+
+**Commits:** `ac4f6417 … a60020b4` on cp6 (with the merged branches' cc1fb4d6, 69db03e0, 69c304f3,
+41aefa71, 03fc21b5, ba60afa4, 8fe60e10; decisions 93676065, 86579bdf, 900120fc).
+Then MEMORY 382-387 (4271347e), the n8n paste (d4ef0243, 3df0cb1a), D27-283 (6021d429). The
+release: `release/all-5oct` at a60020b4.
+
 ## 2026-10-04 · the architecture aligned, one database per customer decided, and the road to the full launch
 
 **Asked for:** align the architecture (D27-276) and build what it needs (a release script that checks itself, a connection health page, the backup check); the small gaps (D27-275); decide one shared database or one per customer, tested; a test on PostgreSQL 16; then "finish everything and one release", with the setup explained in full and a progress bar.
