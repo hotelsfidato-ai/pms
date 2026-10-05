@@ -1,4 +1,6 @@
-# Release of 5 October 2026 (release/all-5oct, a60020b4)
+# Release of 5 October 2026 (release/all-5oct, a60020b4) - WITHDRAWN, replaced by the full release
+
+> **WITHDRAWN 14:20, 5 October: never run this.** The owner chose ONE full deployment (this release plus the CRS connection, tax invoice by email and the clean-ups), around 17:30. release/all-5oct and its copy are deleted (MEMORY 381); the full release gets its own branch, made by `node scripts/release.mjs`.
 
 **Checked: `node scripts/release.mjs release/all-5oct` passed at 12:40 on 5 October; the website bundle is `index-CPiCz1OH.js`.** About 40 minutes. Never during a night
 audit. Made and checked by `node scripts/release.mjs release/all-5oct`: a full gates run green on
