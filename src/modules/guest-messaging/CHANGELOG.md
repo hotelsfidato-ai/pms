@@ -29,7 +29,9 @@ Work that touches the core or several services still goes in the root
 - Database suite: 206 migrations applied, all 1531 assertions passed.
 - Quick gates `d27-284-quick`: web types, API types and strip (214 files) exit 0; website 166 files, 1122 tests passed. Not run: the full API suite, the replay, PostgreSQL 16.
 
-**Left open:** the two check-in-link pins (the helper's report asks); copying the paste file to the main folder's `.local` (the master).
+- Then (the master's yes): `workflows.test.ts`'s two check-in-link pins now check what the live code does - `checkin-link` on WhatsApp as `checkin_link` with its five fields, its email written; the reminder still refused. The entries stay (dead since D27-264, harmless).
+
+**Left open:** copying the paste file to the main folder's `.local` (the master, doing it).
 
 ## 2026-10-05 · Daily report emails after the night audit (the owner's D27-280; helper copy, cp6 4649fd97 merged in)
 
