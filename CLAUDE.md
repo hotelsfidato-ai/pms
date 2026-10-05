@@ -30,7 +30,7 @@ NOTHING LEAVES THIS MACHINE.**
 - A service chat's own push is refused the same way. They commit; the master
   merges locally.
 
-This lifts only when the owner says so in their own words. Until then, a green
+This lifts only when the owner says so in their own words. **5 October (D27-287): the owner chose to push cp6 to the private GitHub project (hotelsfidato-ai/pms) to work from a laptop for five days; the owner types the push. Releases, deploys and server writes still need the owner's yes and are typed by the owner.** Until then, a green
 local gate run is the whole of the bar, and the standing rule that a push is
 not finished until its Action is green (MEMORY 300) is suspended because there
 are no pushes.
