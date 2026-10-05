@@ -11,6 +11,62 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-05 · the account the reader works as, and the owner's steps (D27-284 (3))
+
+**Asked for:** the master, 5 October: the one-off script the owner runs on the server
+after a backup so the CRS can book at Hotel Amrapali (AMR): a staff row for the
+reader, its access at the hotel, then `crs_hotels.run_as`. Widened the same day by the
+owner: the CRS-to-PMS connection complete on the PMS side, one ordered set of steps,
+n8n left for later.
+
+**Shipped:**
+- `deploy/crs-run-as.sql` (psql, `-v hotel=AMR`): one transaction, re-runnable.
+  Makes `crs+<code>@fidatohotels.com` (no sign-in, not a group administrator),
+  `read_only` at that hotel alone (the least role: the machine door asks none, row
+  security asks only that it works there, and 160's `assert_staff_has_hotel('run_as')`
+  needs the row first), then `run_as`. Refuses, changing nothing: no hotel named, no
+  such hotel, hotel off, no bridge, not connected, switched on with nobody to read as
+  (CRS-2), the address not exactly this service account, or already reading as
+  somebody else. Prints what it did and the state.
+- `api/test/modules/crs/crsRunAs.test.ts`: the script run with psql, as the owner will.
+- `deploy/README.md`, "Connect the CRS": the owner's steps in order (Firebase console,
+  CRS, server, PMS card, backup, script, switch on, test booking, where to see it, what
+  a failure says, undo).
+- `api/.env.example`: the six CRS settings had no entry.
+- `OWNER-STEPS.md` points at that order (parts 2 and 3, n8n, later); `MODULE.md`
+  named 163 for 160 and "the master" for the script; `docs/briefs/crs.md` said "not
+  built".
+
+**Found:**
+- **CRS-2:** switching on before there is an account stamps `connected_at` then, and
+  the first read would book again every CRS booking the desk typed in by hand
+  meanwhile. Guarded by the script's refusal and the steps' order.
+- Read-only look at `D:\fidato crs`: `updatedAt`/`createdAt` are Firestore timestamps
+  (`serverTimestamp()`), so the reader's timestamp query matches; `automation` may
+  read `reservations` (rules line 361); a line's `children` is per line, as the reader
+  splits it. The CRS's New reservation demands a "Hotel confirmation" even for the
+  owner's hotels (question for the owner).
+- 57 files in this copy came out of the fast-forward to `cp6` as zero bytes (49 whole,
+  8 mostly) while `git status` stayed clean; restored from git. The main folder's
+  copies were sampled and are fine.
+
+**Proved** (scratch databases `fidato_crsrun_*`, built through the queue, dropped):
+- `crsRunAs.test.ts` 12/12, with `crsReader.test.ts` 13 and `crsAnswerWorkflow.test.ts`
+  7: 32/32.
+- The script by hand on AGR: first run, second run ("Nothing to change"), the undo, the
+  switched-on refusal (exit 3), the re-run reusing the account, no hotel named (exit 3).
+- **The guards refused broken code**, each on its own database: the switched-on
+  refusal taken out failed "is not given an account while switched on" (and the first
+  run after it): 2 failed, 10 passed; `run_as` rewritten on every run failed "writes
+  nothing and says so": 1 failed, 11 passed. The file was restored from git after each.
+- `api tsc --noEmit` clean; web `src/modules/crs` and `src/test` 9/9.
+
+**Left open:** the questions in the master's report (the source, the CRS's voucher and
+"Hotel confirmation" until n8n part 2). The script reaches the server with the next
+release.
+
+---
+
 ## 2026-10-04 · the connection card's hint (D27-275 part 1)
 
 **Asked for:** the owner's D27-275 (1): the hint said a room type's id is the last part of

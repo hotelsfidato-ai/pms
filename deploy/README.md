@@ -476,6 +476,146 @@ and say `Leap status : Normal`.
 
 ---
 
+## Connect the CRS
+
+**For the owner** (D27-284, 5 October). Once a hotel is connected, the PMS reads the
+CRS's bookings for it every five minutes and makes each one a **waiting booking with
+the room held**, on **Bookings → CRS bookings**. The PMS never writes to the CRS. One
+hotel at a time: Hotel Amrapali (`AMR`) first. Steps 1–3 are done once for the whole
+group; steps 4–9 once per hotel.
+
+**Needs** the release that carries `deploy/crs-run-as.sql` on the server (the master
+says which). **Later, with the n8n changes** (`deploy/n8n/OWNER-STEPS.md` parts 2 and
+3): holding the CRS's own voucher for your hotels, and writing the hotel's answer back
+into the CRS's Register. Until then the salesperson does not see the hotel's answer in
+the Register, and **a CRS booking saved with "Send the confirmation to the guest"
+ticked still sends the CRS's voucher at once**, before the hotel has confirmed.
+
+**1 · The CRS's Firebase console, in your browser** — the PMS's reading login, once.
+Open https://console.firebase.google.com and pick **the CRS's project** (not `poms-fad05`,
+which is the PMS).
+1. **Build → Authentication → Users → Add user.** An email you control, for example
+   `crs-reader@fidatohotels.com` (it never receives mail), and a random password of
+   40 characters or more from your password manager. **Add user**, then copy the new
+   line's **User UID**.
+2. **Build → Firestore Database → Data → `users` → Add document.** Document ID: the
+   User UID, exactly. Fields, all of type string: `authUid` = the User UID, `name` =
+   `PMS reader`, `email` = the login's email, `role` = `automation`, `status` =
+   `active`, and `phone`, `branch`, `department` empty. **Save.**
+3. **The gear → Project settings → General.** Note the **Project ID**, and under
+   **Your apps** the web app's **Web API key** (its `apiKey`).
+
+What this login may do, and why it is accepted (D27-171): `OWNER-STEPS.md` part 1.
+
+**2 · The CRS, in your browser** — the hotel's ids, for step 4.
+- **Properties →** open Hotel Amrapali. The last part of the address bar
+  (`…/hotels/AbC123xyz`) is its **CRS property id**.
+- In the Firebase console from step 1: **Firestore Database → Data → `roomTypes`**. The
+  documents whose `hotelId` is that id are its room types: note each one's **Document
+  ID** and `name`.
+
+**3 · The server, over ssh** — the reading login's four settings, once. Open the server
+(*your PC, PowerShell*):
+```powershell
+ssh -i "$HOME\Downloads\ssh-key-2026-09-01.key" opc@130.210.49.220
+```
+then (*the server*):
+```bash
+sudo nano /opt/fidato/api/.env
+```
+Add four lines with the values from step 1 (type them in; never paste one into a chat):
+```
+CRS_PROJECT_ID=
+CRS_API_KEY=
+CRS_AUTOMATION_EMAIL=
+CRS_AUTOMATION_PASSWORD=
+```
+Save (Ctrl+O, Enter, Ctrl+X), then (*the server*):
+```bash
+sudo systemctl restart fidato-api
+```
+
+**4 · The live PMS** (owner or Administrator) — connect the hotel, **switched off**.
+pms.fidatohotels.com → Hotel Amrapali → **Bookings → CRS bookings** → the card
+**Connection to the CRS**:
+- **The property's id in the CRS**: from step 2.
+- **File CRS bookings under**: the source CRS bookings count under in the reports.
+- **Add a CRS room type** for each one from step 2: its id, and the room type it is
+  here. A CRS room type left unmatched is never booked by itself; it waits under
+  "Needs attention".
+- Leave **Read bookings from the CRS** **off**, and press **Save the connection**.
+
+The card says "No service account to read as yet".
+
+**5 · The server** — a backup first:
+```bash
+sudo -u postgres /usr/local/bin/fidato-backup /var/backups/fidato
+```
+
+**6 · The server** — the account the reader works as at this hotel:
+```bash
+sudo -u postgres psql -d fidato -v hotel=AMR -f /opt/fidato/deploy/crs-run-as.sql
+```
+Success prints this (the last number is however many room types you matched):
+```
+psql:/opt/fidato/deploy/crs-run-as.sql:187: NOTICE:  Made the service account crs+amr@fidatohotels.com (no sign-in).
+psql:/opt/fidato/deploy/crs-run-as.sql:187: NOTICE:  Gave it Viewer (read_only) at AMR, and nothing anywhere else.
+psql:/opt/fidato/deploy/crs-run-as.sql:187: NOTICE:  The CRS reader at AMR now runs as crs+amr@fidatohotels.com.
+psql:/opt/fidato/deploy/crs-run-as.sql:187: NOTICE:  Reading is switched OFF at AMR: switch on "Read bookings from the CRS" on the card when ready.
+ hotel |         reads_as         |   role    | switched_on | room_types_matched
+-------+--------------------------+-----------+-------------+--------------------
+ AMR   | crs+amr@fidatohotels.com | read_only | f           |                  3
+(1 row)
+```
+Run again, it prints `Nothing to change: the CRS reader at AMR already runs as …` and
+writes nothing. **An `ERROR:` line** means nothing was changed: it says what to do (for
+example, switch the card off first); otherwise send it to the master. The account has
+no sign-in; it shows under People as a Viewer at this hotel. Then type `exit`.
+
+**7 · The live PMS** — the same card: switch **Read bookings from the CRS** **on**, and
+**Save the connection**. The card now says "Reads as CRS reader (AMR, service
+account)". Only bookings the CRS makes **from this moment** are read; any made before
+are typed in by hand, as now.
+
+**8 · The CRS, in your browser** — one test booking. **New reservation**: Hotel
+Amrapali; a room type you matched in step 4; a meal plan the hotel sells; dates from
+the hotel's business date onwards; a rate; **yourself** as the guest. **Untick "Send
+the confirmation to the guest"** (the CRS's voucher is not held yet). Under **Hotel
+confirmation** type `PMS test` in **Confirmed by**. Save.
+
+**9 · The live PMS** — within about five minutes, Ctrl+Shift+R:
+- **Bookings → CRS bookings**: a line with the CRS number (`FH-2026-…`), **Booked
+  here**, and its booking, **Waiting for the hotel**.
+- **Bookings → All bookings**: the same booking, waiting, with the room held and the
+  salesperson as its sales person; its panel shows the CRS facts.
+- **Settings → Modules and connections → Connection health**: the CRS bridge green.
+
+It is a test: cancel the booking in the PMS and the reservation in the CRS. The CRS's
+cancellation then shows on CRS bookings as a note; press **Done**.
+
+**If step 9 shows nothing:**
+- CRS bookings says *"The CRS login is not in the server's settings yet"*: a line in
+  step 3 is missing or misspelt, or the API was not restarted.
+- *"The last read from the CRS failed: The CRS answered 400: INVALID_LOGIN_CREDENTIALS"*
+  (or `INVALID_PASSWORD`, `EMAIL_NOT_FOUND`): step 1's email or password differs from
+  step 3's.
+- *"… 403: Missing or insufficient permissions."*: the `users` document in step 1 (its
+  ID must be the User UID, `role` `automation`, `status` `active`).
+- *"… 403: Requests from referer … are blocked."*: the CRS's Web API key only works
+  from its own website. Send the master that line; do not change the key yourself.
+- The booking is under **Needs attention**: the line says why (an unmatched room type,
+  no rate, a date before the hotel's business date). Fix the card or book it by hand.
+
+**Undo** (*the live PMS, then the server*): switch **Read bookings from the CRS** off
+and Save; reading stops at the next turn. Then:
+```bash
+sudo -u postgres psql -d fidato -c "update crs_hotels set run_as = null where hotel_id = (select id from hotels where code = 'AMR')"
+```
+Expect `UPDATE 1`. The account stays, unused and unable to sign in; running step 6
+again later reuses it. Bookings already made stay, as bookings.
+
+---
+
 ## Add a customer
 
 The owner, 4 October (D27-278): when the PMS is sold, each customer gets **its

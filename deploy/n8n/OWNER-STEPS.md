@@ -5,11 +5,14 @@ every five minutes, makes each one a waiting booking with the room held, and wri
 answer back into the CRS's booking register. This page covers the parts only you can do.
 Nothing here changes the CRS app or its security rules.
 
-There are five parts, in this order:
+**The order to follow is `deploy/README.md`, "Connect the CRS"** (5 October, D27-284): the
+login, the server's settings, the card, the account the reader works as, and one test booking,
+in that order. Parts 1, 4 and 5 below are its background. **Parts 2 and 3 are the CRS's n8n,
+and come later** (the owner, 5 October: n8n changes later).
 
 1. The "automation" login.
-2. The existing voucher workflow holds vouchers for your hotels.
-3. The answer workflow.
+2. The existing voucher workflow holds vouchers for your hotels. *Later.*
+3. The answer workflow. *Later.*
 4. The server's settings.
 5. Connecting the hotel in the PMS.
 
@@ -175,8 +178,10 @@ CRS_ANSWER_N8N_SECRET=<the answer workflow's secret, part 3>
 - **Until the last two are set**, answers wait. Every answer owed is sent on the first read after
   they are in.
 
-The master also sets, at go-live, the **service account** the reader works as at each hotel. It is
-the same kind of account the channel manager uses, never a person's login.
+The **service account** the reader works as at each hotel is made by `deploy/crs-run-as.sql`, run on
+the server once per hotel after a backup (`deploy/README.md`, "Connect the CRS", steps 5 and 6). It
+is the same kind of account a POS outlet's is: a Viewer at that one hotel, with no sign-in, never a
+person's login. Without it nothing is read at that hotel, whatever the card's switch says.
 
 ---
 
@@ -196,6 +201,10 @@ the same kind of account the channel manager uses, never a person's login.
    A CRS booking for a room type with no match is **not booked by itself**. The desk sees it under
    "Needs attention", with the reason.
 5. Switch **Read bookings from the CRS** on, and press **Save the connection**.
+
+**The first time at a hotel, save the card with the switch OFF**, run `deploy/crs-run-as.sql`, and
+only then switch it on (`deploy/README.md`, "Connect the CRS", steps 4 to 7). The script refuses a
+hotel already switched on with nobody to read as.
 
 **From the moment you switch it on**, every booking the CRS makes for that hotel arrives within
 about five minutes as a **waiting booking with the room held**.

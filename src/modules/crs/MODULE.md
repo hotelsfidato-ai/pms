@@ -9,9 +9,11 @@ decisions that bind it: D27-35, D27-98, D27-99, D27-102, D27-103, D27-106, D27-1
 ```
 src/modules/crs/          the CRS bookings screen, its mapping card, CrsFacts
 api/src/modules/crs/      the reader, its routes, its timer, the answer's sender
-db/migrations/163_crs_bridge.sql   its three tables and app.crs_due()
-deploy/n8n/crs-pms-answer.json     the answer workflow, for the CRS's n8n
-deploy/n8n/OWNER-STEPS.md          what only the owner can do
+db/migrations/160_crs_bridge.sql   its three tables and app.crs_due()
+deploy/crs-run-as.sql              the account the reader works as at a hotel (run on the server)
+deploy/README.md "Connect the CRS" the owner's steps, in order, to a first test booking
+deploy/n8n/crs-pms-answer.json     the answer workflow, for the CRS's n8n (later)
+deploy/n8n/OWNER-STEPS.md          background to those steps; its n8n parts 2 and 3 come later
 ```
 
 ---
@@ -95,8 +97,13 @@ PUT  /api/hotels/:code/crs/setup                         owner, admin (setup.ts)
 
 ## Tables (160)
 
-- `crs_hotels`: the CRS property id, the source, `run_as` (a service account set by
-  the master at go-live), `is_on`, `connected_at`, and the read cursor.
+- `crs_hotels`: the CRS property id, the source, `run_as`, `is_on`, `connected_at`, and
+  the read cursor. `run_as` is the account the reader works as there, made by
+  `deploy/crs-run-as.sql` (D27-284): `crs+<code>@fidatohotels.com`, a Viewer
+  (`read_only`) at that one hotel and nowhere else, no sign-in. The least role works
+  because the machine door asks none; row security asks only that it works there.
+  Null: the hotel is never read, whatever `is_on` says. The script refuses a hotel
+  switched on with nobody to read as (CRS-2).
 - `crs_room_types`: each CRS room type id and its room type here.
 - `crs_bookings`: one row per CRS booking acted on, holding:
   - its outcome (booked, full or needs_attention);
@@ -111,6 +118,9 @@ read and the account to read as.
 
 - `api/test/modules/crs/crsReader.test.ts`: the reader against a faked Firestore with
   made-up CRS-shaped bookings.
+- `api/test/modules/crs/crsRunAs.test.ts`: `deploy/crs-run-as.sql` run with psql on a hotel
+  made as live's AMR was; the reader then books as its account; a second run writes
+  nothing; every refusal changes nothing.
 - `api/test/modules/crs/crsAnswerWorkflow.test.ts`: the answer workflow's code nodes,
   without n8n.
 - `src/modules/crs/crs.test.tsx`: the screen.
