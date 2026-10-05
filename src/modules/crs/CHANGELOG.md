@@ -55,6 +55,10 @@ n8n left for later.
   7: 32/32.
 - The script by hand on AGR: first run, second run ("Nothing to change"), the undo, the
   switched-on refusal (exit 3), the re-run reusing the account, no hotel named (exit 3).
+- **The guards refused broken code**, each on its own database: the switched-on
+  refusal taken out failed "is not given an account while switched on" (and the first
+  run after it): 2 failed, 10 passed; `run_as` rewritten on every run failed "writes
+  nothing and says so": 1 failed, 11 passed. The file was restored from git after each.
 - `api tsc --noEmit` clean; web `src/modules/crs` and `src/test` 9/9.
 
 **Left open:** the questions in the master's report (the source, the CRS's voucher and
