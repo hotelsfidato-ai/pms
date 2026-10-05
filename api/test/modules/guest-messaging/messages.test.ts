@@ -225,6 +225,15 @@ describe("what was sent", () => {
      `sent_by` itself is on `messages_sent`, which this reader can already
      see, so the fact that A person sent it is not a widening - only the
      name is withheld, exactly as it was before. */
+  it("lists guests' messages only, never a daily report email (the owner, 5 Oct)", async () => {
+    await recordOne({ kind: "daily-report", aboutKind: "hotel", aboutId: hotelId });
+    const res = await call(staffByRole.get("front_desk")!, "/guest-messages");
+    const body = await res.json() as { messages: Array<{ kind: string }> };
+
+    expect(res.status).toBe(200);
+    expect(body.messages.some((m) => m.kind === "daily-report")).toBe(false);
+  });
+
   it("says a person sent it even where it cannot say which person", async () => {
     const hidden = staffByRole.get("chef")!;
     await recordOne({ kind: "bill", sentBy: hidden });

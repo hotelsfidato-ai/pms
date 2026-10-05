@@ -257,8 +257,11 @@ guestMessages.get("/:code/guest-messages", async (c) => {
             order by m.sent_at desc limit 200`,
           [hotelId, party])
       : await client.query<SentRow>(
+          /* Guests' messages only (the owner, 5 Oct): a daily report email
+             is about the hotel's figures, not a guest, and reception reads
+             this list. Its sends stay in messages_sent for the managers. */
           `${SENT_SELECT}
-            where m.hotel_id = $1
+            where m.hotel_id = $1 and m.kind <> 'daily-report'
             order by m.sent_at desc limit 200`,
           [hotelId]);
 
