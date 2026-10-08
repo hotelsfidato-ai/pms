@@ -113,3 +113,21 @@ begin
 
   raise notice 'dev-testers: one sign-in per role at 5EL';
 end $$;
+
+-- -----------------------------------------------------------------------------
+-- No "Set a longer password" in front of a test sign-in (9 October)
+-- -----------------------------------------------------------------------------
+-- 188 (D27-245) marks anybody given the owner's, an Admin's or a GM's role
+-- without a password known to be long: they set one at their next sign-in, in
+-- a dialog that cannot be closed. On a database built from nothing - a new
+-- machine - the Test GM above is rostered AFTER 188, so General Manager came
+-- up behind that dialog, and it cannot be answered locally: the password is
+-- Firebase's, and a local copy has none. The old laptop never met it because
+-- its GM row (14 September) is older than 188 (2 October).
+--
+-- A test sign-in has no password at all, so there is nothing to lengthen.
+-- Every dev-* sign-in, not only the GM, so one given a manager's role later
+-- is let through too; a real person's flag is never touched. Last in this
+-- file because the GM above is marked the moment it is rostered.
+update staff set must_change_password = false
+ where firebase_uid like 'dev-%' and must_change_password;
