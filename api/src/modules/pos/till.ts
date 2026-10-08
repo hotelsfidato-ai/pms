@@ -3232,8 +3232,8 @@ till.get("/:code/till/floor", async (c) => {
         id: r.table_id, label: r.label, seats: r.seats,
         row: r.row_no, col: r.col_no,
         orderId: r.order_id, orderNo: r.order_no,
-        /* blank · running · kot · printed · paid. Derived, so the tile
-           cannot disagree with the bill behind it. */
+        /* blank · running · kot · printed · paid · closed (closed unpaid,
+           207). Derived, so the tile cannot disagree with the bill behind it. */
         state: r.state,
         minutes: r.minutes,
         payable: r.payable === null ? null : Number(r.payable),
@@ -3308,8 +3308,18 @@ till.post("/:code/till/orders/:id/clear", async (c) => {
         "unpaid with a reason.");
     }
 
+    /* A TABLE IS FREE OR IT IS NOT (POS-33). Clearing frees it of every
+       finished bill still on it, not only this one: a bill closed unpaid
+       under a later one, typed for the same table, otherwise came back as
+       the table's own the moment the later one was cleared - old amount and
+       all. Only finished ones; an open bill is refused above, and one on
+       no table is only itself. */
     await client.query(
-      `update pos_orders set cleared_at = now() where id = $1`, [orderId]);
+      `update pos_orders set cleared_at = now()
+        where cleared_at is null and status <> 'open'
+          and (id = $1
+               or table_id = (select table_id from pos_orders where id = $1))`,
+      [orderId]);
 
     return { ok: true as const, orderNo: rows[0].order_no };
   });

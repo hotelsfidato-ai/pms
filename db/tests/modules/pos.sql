@@ -437,3 +437,63 @@ begin
   select count(*) into n from hotels where code = 'GDN';
   perform test.ok('room dining', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- A BILL CLOSED UNPAID IS FINISHED ON THE FLOOR (POS-33, the owner, 9 October)
+-- =============================================================================
+-- Close unpaid leaves the bill on its table, as a paid one is left, until
+-- somebody clears it. The floor called it `running` or `kot`, with the bill's
+-- total, and Tables offers Clear only on a finished tile, so the table could
+-- never be freed. Refers to its migration by what it does, "a bill closed
+-- unpaid shows as closed unpaid", never by its number.
+--
+-- Uses the suite's AGR property and its clerk; makes its own outlet, section,
+-- table and order, and removes them.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_section uuid; v_table uuid;
+  v_order uuid; bd date; st text; amt numeric; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'FLCLS', 'Floor Closed Test', 'food', v_staff)
+  returning id into v_outlet;
+  insert into pos_sections (hotel_id, outlet_id, name)
+  values (a, v_outlet, 'Closed test') returning id into v_section;
+  insert into pos_tables (hotel_id, section_id, label)
+  values (a, v_section, 'CT1') returning id into v_table;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by, table_id, table_ref)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff, v_table, 'CT1')
+  returning id into v_order;
+
+  select f.state into st from app.pos_floor(v_outlet) f where f.label = 'CT1';
+  perform test.ok('pos floor', 'an open bill with nothing sent is running', st = 'running', st);
+
+  -- ---------- closed unpaid -------------------------------------------------------
+  update pos_orders set status = 'abandoned', abandoned_reason = 'walked out - test'
+   where id = v_order;
+  select f.state, f.payable into st, amt from app.pos_floor(v_outlet) f where f.label = 'CT1';
+  perform test.ok('pos floor', 'a bill closed unpaid is closed, not running', st = 'closed', st);
+  perform test.ok('pos floor', 'and its tile shows no amount', amt is null, coalesce(amt::text, ''));
+
+  update pos_orders set printed_at = now() where id = v_order;
+  select f.state into st from app.pos_floor(v_outlet) f where f.label = 'CT1';
+  perform test.ok('pos floor', 'printed afterwards, it is still closed - not green', st = 'closed', st);
+
+  update pos_orders set cleared_at = now() where id = v_order;
+  select f.state into st from app.pos_floor(v_outlet) f where f.label = 'CT1';
+  perform test.ok('pos floor', 'cleared, the table is free', st = 'blank', st);
+
+  -- ---------- and the fixtures go ----------------------------------------------
+  delete from pos_orders where id = v_order;
+  delete from pos_tables where id = v_table;
+  delete from pos_sections where id = v_section;
+  delete from pos_outlets where id = v_outlet;
+  select count(*) into n from pos_outlets where code = 'FLCLS';
+  perform test.ok('pos floor', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;

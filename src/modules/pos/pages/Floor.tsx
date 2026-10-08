@@ -65,6 +65,7 @@ const LEGEND: { state: TableState; label: string; swatch: string }[] = [
   { state: "kot",     label: "In the kitchen", swatch: "bg-brand-orange-50 ring-brand-orange" },
   { state: "printed", label: "Bill printed",   swatch: "bg-success-50 ring-success" },
   { state: "paid",    label: "Paid - clear it", swatch: "bg-brand-yellow-50 ring-brand-yellow" },
+  { state: "closed",  label: "Closed unpaid - clear it", swatch: "bg-grey-100 ring-grey-400" },
 ];
 
 const TILE: Record<TableState, string> = {
@@ -73,7 +74,12 @@ const TILE: Record<TableState, string> = {
   kot:     "bg-brand-orange-50 ring-brand-orange-100 hover:ring-brand-orange",
   printed: "bg-success-50 ring-success-100 hover:ring-success",
   paid:    "bg-brand-yellow-50 ring-brand-yellow-100 hover:ring-brand-yellow",
+  closed:  "bg-grey-100 ring-grey-200 hover:ring-grey-400",
 };
+
+/** A bill that is over - paid, or closed unpaid (POS-33) - takes no more
+    dishes, and Clear is what its table needs. */
+const finished = (s: TableState) => s === "paid" || s === "closed";
 
 /* The tile's two small actions: 44px capsules, white on the tint. */
 const TILE_ACTION = "press size-11 grid place-items-center rounded-full border border-grey-300 bg-white text-grey-600 hover:text-ink-900 hover:border-grey-400 cursor-pointer";
@@ -333,16 +339,17 @@ export default function FloorPage() {
                           means one thing across the whole floor, and the
                           pad opens over this screen either way.
 
-                          A settled bill is the exception: it takes no more
-                          dishes, and Clear is what that table needs. */}
+                          A finished bill - settled, or closed unpaid - is the
+                          exception: it takes no more dishes, and Clear is
+                          what that table needs. */}
                       <button
                         type="button"
-                        disabled={t.state === "paid" || Boolean(closed)}
+                        disabled={finished(t.state) || Boolean(closed)}
                         onClick={() => addRound(t)}
                         aria-label={`Add a round to ${t.label}`}
                         className={cn(
                           "flex-1 flex flex-col items-start text-left w-full",
-                          t.state === "paid" || closed
+                          finished(t.state) || closed
                             ? "cursor-not-allowed"
                             : "cursor-pointer press-tile",
                         )}
@@ -357,12 +364,20 @@ export default function FloorPage() {
                           {t.label}
                         </span>
                         <span className="mt-auto w-full flex items-center justify-between gap-2">
-                          <span className="tabular text-md font-semibold text-ink-900">
-                            {t.payable === null ? "-" : money(t.payable)}
-                          </span>
+                          {/* Closed unpaid: nobody is collecting an amount,
+                              so the tile says what happened instead (POS-33). */}
+                          {t.state === "closed" ? (
+                            <span className="text-sm font-medium text-grey-700">
+                              Closed unpaid
+                            </span>
+                          ) : (
+                            <span className="tabular text-md font-semibold text-ink-900">
+                              {t.payable === null ? "-" : money(t.payable)}
+                            </span>
+                          )}
                           {/* It opens the pad for another round: the arrow.
-                              A paid table takes no more, so none. */}
-                          {t.state !== "paid" && !closed && (
+                              A finished bill takes no more, so none. */}
+                          {!finished(t.state) && !closed && (
                             <ChevronRight className="size-4 shrink-0 text-grey-400" aria-hidden />
                           )}
                         </span>
@@ -385,7 +400,7 @@ export default function FloorPage() {
                         </button>
                       )}
                       <div className="flex gap-2 mt-2">
-                        {t.state === "paid" ? (
+                        {finished(t.state) ? (
                           <Button
                             variant="secondary"
                             size="sm"

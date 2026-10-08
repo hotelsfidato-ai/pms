@@ -977,10 +977,11 @@ async function simplePost(
    that fetched a tile at a time would flicker as it filled, and a
    waiter reads the whole room at once or not at all. */
 
-/** blank · running · kot · printed · paid — DERIVED from the order,
-    never stored. A stored colour is a sixth thing to keep in step, and
-    the one that will be wrong on the night a manager is watching. */
-export type TableState = "blank" | "running" | "kot" | "printed" | "paid";
+/** blank · running · kot · printed · paid · closed — DERIVED from the
+    order, never stored. A stored colour is a sixth thing to keep in step,
+    and the one that will be wrong on the night a manager is watching.
+    `closed` is a bill closed unpaid whose table is not yet cleared (POS-33). */
+export type TableState = "blank" | "running" | "kot" | "printed" | "paid" | "closed";
 
 export interface FloorTable {
   id: string;
