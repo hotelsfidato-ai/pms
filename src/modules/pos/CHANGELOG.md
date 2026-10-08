@@ -11,6 +11,45 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-09 · Close unpaid frees its table through Clear (POS-33), and the restaurant's open issues listed
+
+**Asked for:** the owner, 9 October: "list out all the issues present right now with POS"; "when we
+are closing without payment it still remains in the blue screen, I'm not able to get rid of the table,
+and the amount still stays" (and again with N2's screenshots: "I want it to close fully"); and a plan
+for numbered add-ons. Their answer on the fix: a Clear button, as a paid table has.
+
+**Shipped**
+- 82a173b3: migration 207 (`app.pos_floor`'s sixth state, `closed`, with no amount); `Floor.tsx`'s
+  "Closed unpaid" tile with Clear and its legend entry; the Clear route frees the table of every
+  finished bill on it. POS-33 in `DEFECTS.md`.
+- POS-32 recorded: `KotStation.test.tsx`'s print test loses a race under the full suite's load.
+
+**Found**
+- POS-33, the owner's report, reproduced on AC3 and seen on their N2 (DH-005). Fixed.
+- POS-32, from the first full gates on the new PC. Open: the one-line test fix waits for the owner.
+- Not yet run, from reading `till.ts` while mapping options for the add-ons plan: lowering the
+  quantity of a sent dish copies the line without `extra_choice_ids`, which 164's trigger may refuse
+  for a dish with two or more variation types. To prove or clear before it is numbered.
+- The Manager report puts side ("Add-on groups") revenue under "Other": side lines carry no
+  `item_id`.
+
+**Proved**
+- In the copy: web types and api types clean; `closedUnpaid.test.tsx`, `kitchenTwo.test.tsx`,
+  `tillSetup.test.tsx` 10 of 10; `till.test.ts` 86 of 86 on a scratch database at 207; the database
+  suite with 207, all 1,537 assertions (pos floor 6 of 6).
+- Each guard failed first: without 207, "pos floor" 3 of 6 fail (`running`, `0.00`, `printed`) and
+  `till.test.ts` "expected 'kot' to be 'closed'"; with the one-order Clear, "expected 'closed' to be
+  'blank'"; on the old tile, "expected '38 minN2-' to contain 'Closed unpaid'".
+- Opened on the local demo after `migrate.sh`: AC3 and N2 read "Closed unpaid" with Clear; AC3's
+  Clear freed it; no console error after a reload.
+- The full gates on the merged cp6: in the root `CHANGELOG.md` (9 October).
+
+**Left open**
+- POS-32's fix (the owner's yes). The add-ons plan: built after the owner's answers to its eight
+  questions (the root `CHANGELOG.md`, 9 October). Live has POS-33 until the owner releases 207.
+
+**Commits:** `82a173b3`, and these notes.
+
 ## 2026-10-05 · The restaurant bill page is guarded (the owner's D27-279 (8))
 
 `routes.tsx`: `/pos/:code/bill/:id` is in `RequireAccess`, which takes the Till's rule (D27-275's `entryFor`); the Till, Tables and Terminal that open it have the same roles. **Proved:** `src/components/app/RequireAccess.test.tsx` (housekeeping refused by the Till's name, failing before the guard); in the browser, housekeeping saw "which does not include Till" and the GM the bill.

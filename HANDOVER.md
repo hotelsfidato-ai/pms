@@ -1,6 +1,6 @@
 # Handover — current state
 
-**Last updated: 15 September 2026**, branch `cp6`. **This top section is
+**Last updated: 9 October 2026** (§§ 2, 3 and 7; a new PC), branch `cp6`. **This top section is
 current.** Everything under "Archive" at the bottom is the 28 August state,
 kept for the record and superseded.
 
@@ -46,6 +46,26 @@ seam); a test enforces it.
 ---
 
 ## 2 · Where it stands
+
+### 9 October — read this first: A NEW PC
+
+```
+the folder           C:\Users\rozar.ROZARIO\pms (the owner's, 9 Oct; D: on this PC has no
+                     space). Cloned from GitHub's main (0c5e51cd, the 5 Oct tip). Local branch
+                     cp6 made from it; origin/cp6 is the stale 18 Sep one. Nothing is pushed.
+cp6 now              + 29fd6465 (dev-testers: the GM test sign-in no longer meets "Set a longer
+                     password"), 13460f7e (gates.sh and pg16.sh find the main checkout through
+                     git), 82a173b3 (POS-33: a bill closed unpaid shows "Closed unpaid - clear
+                     it" with Clear; migration 207). Migrations up to 207.
+gates                13460f7e: all green but web 1,121 of 1,122 (POS-32, a race in one test;
+                     alone 5 of 5) - api 2,507, database 1,531, replay 206, pg16 1,531/206,
+                     build passes. On the notes commit after 82a173b3: the next notes commit says.
+local demo           `fidato` at 207, 5EL on 9 Oct, built by docs/briefs/README.md's recipe.
+                     Postgres 17.11 in .local\pg, PostgreSQL 16.15 in .local\pg16 (§ 7).
+waiting on the owner the add-ons plan's answers (§ 3); POS-32's fix; any release.
+live                 Unchecked from this PC. RELEASE-5OCT was withdrawn on 5 Oct; POS-33 is on
+                     live until 207 is released.
+```
 
 ### 3 October, about 3 am — read this first
 
@@ -439,6 +459,18 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **9 October: the queue (the new PC).** (1) The owner's answers to the numbered add-ons plan
+> (a menu tab of numbered add-ons, each name and price; a Customise button on each dish on the
+> pad, Till and Terminal; "Veg Biryani with add-on Kebab" as ONE line, priced together; the
+> existing Add-on groups and variations untouched) - eight questions, recommendations given:
+> the names (relabel the old "Add-on groups" as "Sides"?), every dish or by category, before
+> Send only, the same add-on twice, one bill line, numbers typed and never reused, not on the
+> guest's page yet. Then build it (its migration takes 208). (2) POS-32's one-line test fix, on
+> the owner's yes. (3) A release with 207 (POS-33), when the owner says - nothing leaves this
+> machine until then. (4) The rest of the scripts' `PGBIN` default (MEMORY 390). The 5 October
+> release (release/all-5oct) was withdrawn; what replaced it and what live runs now are unchecked
+> from this PC.
 
 > **3 October, later: the fresh start (D27-248).** RELEASE-3OCT.md now has Part F: 5 Elements
 > and all its test data go during the release; only influvateseo@gmail.com and
@@ -1342,11 +1374,17 @@ hold `const USER = "front desk"`** (MEMORY 256) — named, not yet fixed.
 ## 7 · Working on this machine — the traps
 
 ```
-Postgres        D:\fidato pms\.local\pg (since 22 Sep, D22-1; was D:\fidato-pg), port
-                55432, password pw. Does NOT restart after a reboot. Start (PowerShell
-                on this PC):
-                & "D:\fidato pms\.local\pg\pgsql\bin\pg_ctl.exe" -D "D:\fidato pms\.local\pg\data" -l "D:\fidato pms\.local\pg\pg.log" start
+this PC         Since 9 Oct the project is C:\Users\rozar.ROZARIO\pms (was D:\fidato pms).
+                Docs still say D:; read them with this folder in its place. The database
+                scripts default PGBIN to D: (MEMORY 390): by hand, run them with
+                PGBIN=C:/Users/rozar.ROZARIO/pms/.local/pg/pgsql/bin; the gates set it.
+                git is C:\Program Files\Git (not on PowerShell's PATH; Git Bash has it).
+Postgres        .local\pg, 17.11, port 55432, password pw, UTF8, C collation. Does NOT
+                restart after a reboot. Start it through WMI (MEMORY 325), PowerShell on
+                this PC, then pg_isready -h 127.0.0.1 -p 55432:
+                Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = '"C:\Users\rozar.ROZARIO\pms\.local\pg\pgsql\bin\pg_ctl.exe" -D "C:\Users\rozar.ROZARIO\pms\.local\pg\data" -l "C:\Users\rozar.ROZARIO\pms\.local\pg\pg.log" -w -t 120 start' }
                 From Git Bash pg_ctl never returns — the server IS up; check with psql.
+                PostgreSQL 16.15 for the pg16 gate: .local\pg16 (its own cluster, 55433).
 servers         In the Claude desktop app, start them with the Browser pane's
                 preview_start: "api" (8787) then "web" (5173, or the next free
                 port). Never `npm run dev` in a shell there.

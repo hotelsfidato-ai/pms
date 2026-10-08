@@ -50,6 +50,70 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-09 · the project set up on a new machine, the gates made to find their own folder, and Close unpaid fixed (POS-33)
+
+**Asked for:** the owner, 8-9 October: clone the repository into the folder they assigned
+(`C:\Users\rozar.ROZARIO\pms`), read the handover, install what it needs and start it locally;
+"add the dev fix and run the tests"; "tell me if you are aligned with all the handover"; after a
+restart, "start this in local for testing"; "go with your recommendations" (keep C:, a local `cp6`
+made from `main`, the gates made to find their own folder, commits as Jaison Rozario); "run the
+tests now and tell me if there is any pending issue"; then the POS: list its issues, fix "closing
+without payment leaves the table blue with its amount" (their answer: a Clear button), and plan
+numbered add-ons.
+
+**Shipped**
+- The new PC: Git for Windows, the VC++ 2015+ x64 runtime (EnterpriseDB's Postgres will not start
+  without it), PostgreSQL 17.11 portable in `.local\pg` (port 55432, UTF8, C collation, postgres/pw,
+  `synchronous_commit = off`), PostgreSQL 16.15 in `.local\pg16`, both npm installs, `.env` and
+  `api/.env` from their examples (development settings only; no Firebase key on this machine).
+- `fidato` by the documented recipe (`docs/briefs/README.md`): the migrations, the three staff,
+  `npm run demo` (5EL on 9 October, calibration ✓), `dev-identities.sql`, `dev-testers.sql`.
+- 29fd6465: `db/dev/dev-testers.sql` clears `must_change_password` on `dev-*` sign-ins (MEMORY 389).
+- 13460f7e: `scripts/gates.sh` and `db/tests/pg16.sh` find the main checkout through git instead of
+  `/d/fidato pms` (MEMORY 390).
+- 82a173b3: POS-33, a bill closed unpaid shows "Closed unpaid - clear it" with Clear (migration 207;
+  `src/modules/pos/DEFECTS.md` and its `CHANGELOG.md`).
+- Local branch `cp6`, made from `main` (0c5e51cd, the 5 October tip GitHub had); `origin/cp6` is
+  the stale 18 September one. Commit identity set in this repository only.
+
+**Found** (numbered in `MEMORY.md` and the POS `DEFECTS.md`)
+- 388 (mine): I first built `fidato` from `db/tests/suite.sql`, on an `en-US` cluster. Rebuilt by
+  the recipe, C collation, before any commit.
+- 389: on a database built from nothing, the General Manager test sign-in opens behind "Set a
+  longer password", which cannot be answered locally. Fixed.
+- 390: the gates could not run their database steps anywhere but `D:\fidato pms`. Fixed for the
+  gates; the other scripts still default `PGBIN` to D: (listed in 390).
+- POS-33 (the owner's report): Close unpaid left the table stuck. Fixed. POS-32: a KOT-station test
+  loses a race under load. Open.
+
+**Proved**
+- Opened: Owner's Dashboard (9 October, ARR ₹2,939, RevPAR ₹1,037) and Rooms; General Manager by
+  View as, no dialog; Tables after 207 (AC3 and N2 "Closed unpaid", AC3 cleared to free). No
+  console or API error after a reload.
+- 29fd6465: HEAD's `dev-testers.sql` left `gm@fidato.in` flagged; the fixed file leaves none; a
+  second run changes nothing (13 dev sign-ins, 0 flagged).
+- 13460f7e: the main checkout resolves to `C:/Users/rozar.ROZARIO/pms` from the main folder and
+  from a throwaway worktree.
+- Full gates `cp6-9oct` on 13460f7e, clean (1,865 s): web types, api types and strip (213 files)
+  green; web 1,121 of 1,122 - the one is POS-32, and that file alone passed 5 runs of 5; api 188
+  files, 2,507 of 2,507; database 206 migrations, all 1,531 assertions; replay all 206 re-runnable;
+  pg16 (16.15) all 1,531 assertions and 206 re-runnable - run on its own, same commit, once its
+  binaries were unzipped (the gates' own pg16 step found none). `npm run build` passes, no test
+  sign-in in dist.
+- 82a173b3: the guards and their failures first are in the POS `CHANGELOG.md`. The full gates on
+  the commit carrying these notes: HANDOVER § 2, 9 October.
+
+**Left open**
+- The owner's decisions: the add-ons plan's eight questions (numbered add-ons as their own menu tab,
+  folded into one line, "Biryani with add-on Kebab"; the plan is in this session's reply of
+  9 October); POS-32's one-line test fix.
+- Releasing anything (207 included) is the owner's: nothing is pushed or deployed (19 September).
+- The rest of the scripts' `PGBIN` default (MEMORY 390); Postgres here does not restart after a
+  reboot (start command: HANDOVER § 7).
+- The impeccable and taste skills are not on this PC: their source was never written down.
+
+**Commits:** `29fd6465`, `13460f7e`, `82a173b3`, and these notes.
+
 ## 2026-10-05 · the morning's fixes, five merges, the WhatsApp voucher on the owner's template, and the release ready to cut
 
 **Asked for:** the owner, 4 October at night: "graceful stop, continue from morning". The goal is

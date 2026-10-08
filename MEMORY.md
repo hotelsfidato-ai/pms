@@ -6539,6 +6539,58 @@ copy will see of theirs.**
 
 ---
 
+### 390 · The gates named the old machine's folder, so a new machine could run none of its database steps (9 October)
+
+`scripts/gates.sh` called `bash "/d/fidato pms/.local/dbq.sh"` for the API, database, replay and
+pg16 steps, and `db/tests/pg16.sh` had `PG16="D:/fidato pms/.local/pg16"`. When the project was
+cloned onto a new PC at `C:\Users\rozar.ROZARIO\pms` (the owner's folder, 9 October; D: there has
+no free space), every database step failed on a folder that was not there, and the queue script
+itself is not in git. Fixed in 13460f7e: both find the MAIN checkout through
+`git rev-parse --git-common-dir`, so a helper's copy under `.claude\worktrees` still shares the one
+Postgres, PostgreSQL 16 and queue; `PGBIN` defaults to it; with no `.local\dbq.sh` a step simply
+runs. Proved from the main folder and from a throwaway worktree (both resolve
+`C:/Users/rozar.ROZARIO/pms`). **Still open:** `db/migrate.sh`, `db/tests/run.sh`, `rerun.sh`,
+`backup.sh`, `restore.sh`, `verify-backup.sh`, `api/scripts/with-test-db.sh` and
+`api/test/modules/crs/crsRunAs.test.ts` default `PGBIN` to `D:/fidato pms/...`; run by hand on this
+machine they need `PGBIN` set (the gates set it). **The rule:** a path to this project is found, never
+written down. D22-1 said nothing lives outside `D:\fidato pms`; the folder can still move, and a
+script that names it breaks on the day it does. (188 was the same fault for the server.)
+
+---
+
+### 389 · On a database built from nothing, the Test GM signs in behind a dialog nobody can answer (9 October)
+
+Migration 188 (D27-245) marks anybody rostered as owner, admin or gm without a password known to be
+long: `must_change_password`, and at the next sign-in `PasswordDue.tsx` shows "Set a longer
+password", which cannot be closed. `db/dev/dev-testers.sql` rosters Test GM, so on a fresh `fidato`
+the General Manager button led to that dialog, and it cannot be answered locally: the password is
+Firebase's and a local copy has none. The old laptop never met it because its GM row (14 September)
+was older than 188 (2 October); the trigger fires only on a new roster row. Found by opening the
+screen on the new machine. Fixed in 29fd6465 (owner's yes, 9 October): the file ends by clearing the
+flag on `dev-*` sign-ins only. Proved: HEAD's version left `gm@fidato.in` flagged, the fixed one
+leaves none, a second run changes nothing, and the General Manager view opens with no dialog.
+**The rule:** a development fixture is proved only on a database built from nothing. A long-lived
+local database hides every rule added after its rows were made.
+
+---
+
+### 388 · MINE: I built the new machine's `fidato` from the test suite, on the wrong collation (9 October)
+
+Setting the project up on the new PC, I made the Postgres 17 cluster `en-US` and loaded the three
+demo staff by running `db/tests/harness.sql` and `suite.sql` into `fidato`, copying what
+`api/scripts/with-test-db.sh` does for a scratch database. Both were wrong:
+`db/tests/pg16.sh` says the cluster is "UTF8, C collation", and `docs/briefs/README.md` gives the
+fresh-database recipe (insert the three staff, `npm run demo`, `dev-identities.sql`,
+`dev-testers.sql`) and says `suite.sql` is something "a real database never runs". The suite left
+test staff behind (`t088-gm@`, `t84-gm@`, a row with the owner's own address) and flagged owner,
+agra and pune for a new password, so I first told the owner four test sign-ins were blocked when the
+repository's own recipe blocks one (389). Rebuilt the cluster with `--locale=C` and `fidato` by the
+recipe before anything was committed. **The rule:** on a new machine, the recipe is the documented
+one, found before the first command; a test harness's way of seeding is for the database it drops,
+and what it leaves behind looks like real data.
+
+---
+
 ### 387 · MINE: my brief sent a helper to write over my own unfinished n8n draft (5 October)
 
 I was writing the n8n code for the WhatsApp voucher on booking_confirmation (D27-281) in
