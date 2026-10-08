@@ -83,7 +83,10 @@ describe("the KOT station prints (D27-159)", () => {
     expect(onPaper[0]).not.toContain("₹");
     /* The claim came before the paper, and the slip left the page after. */
     expect(calls.indexOf(`POST ${BASE}/orders/o-3/kot/3/printed`)).toBeGreaterThan(-1);
-    expect(document.querySelector(".kot-print")).toBeNull();
+    /* Waited for, not asserted at once (POS-32): the slip goes in React's
+       next render after print() returns, which a busy machine has not
+       reached yet - the full suite failed here while the file alone passed. */
+    await vi.waitFor(() => expect(document.querySelector(".kot-print")).toBeNull());
     await vi.waitFor(() => expect(asks).toBeGreaterThan(1));
     expect(print).toHaveBeenCalledTimes(1);
   });

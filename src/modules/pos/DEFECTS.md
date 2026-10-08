@@ -14,23 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### POS-32 · The KOT station's print test loses a race on a busy machine (9 October) — OPEN, the owner's to approve
-
-**Found** — the first full gates on the new PC (`cp6-9oct`, 13460f7e): web 1 failed of 1,122,
-`KotStation.test.tsx` › "prints a new KOT once, with the slip in the page while it prints",
-`expected <div class="kot-print">… to be null`. Alone the file passed 5 runs of 5. `KotStation.tsx`
-draws the slip with `flushSync(() => setSlip(d))`, calls `window.print()`, then `setSlip(null)`
-WITHOUT `flushSync`, so the slip leaves the page on React's next render. The test waits for
-`print` and then asserts at once (line 86) that the slip is gone, outside any wait: under the full
-suite's load the render has not happened yet. On the desk nothing is wrong (`print()` blocks the
-page; the slip goes as soon as it returns).
-
-**The fix waiting** — in the test: `await vi.waitFor(() => expect(document.querySelector(".kot-print")).toBeNull())`
-in place of line 86. Then put the bare assertion back and run the file under load to see the
-guard was the race.
-
----
-
 ### POS-18 · A typed address kept the role of the property chosen at sign-in — FIXED 26 September (the shell's)
 
 **Found** — 25 September, proving Restaurant setup end to end. The Reception test sign-in was rostered as a Waiter (`pos`) at a second property and opened `/h/SEC/floor` by its address: the page was that property's (the tab read "Tables · Second Hotel (test)"), but the sidebar was Reception's and Restaurant setup refused them "signed in as Reception". `PropertyScope` sets the property in view (`useUi.hotelId`, the code), while `useRole` reads `useSession.hotelId`, the property chosen at sign-in or in the switcher (`src/lib/session.ts`, `roleFor`). The server asks the role at the property in the address (`roleGate.ts`), so it rang the order as a waiter - nothing wrong was written; the website showed another property's role.
@@ -45,6 +28,25 @@ fails "expected 'front_desk' to be 'pos'".
 ---
 
 ## Fixed
+
+### POS-32 · The KOT station's print test lost a race on a busy machine - FIXED 9 October (the owner's yes, D27-289)
+
+**Found** — the first full gates on the new PC (`cp6-9oct`, 13460f7e): web 1 failed of 1,122,
+`KotStation.test.tsx` › "prints a new KOT once, with the slip in the page while it prints",
+`expected <div class="kot-print">… to be null`. Alone the file passed 5 runs of 5. `KotStation.tsx`
+draws the slip with `flushSync(() => setSlip(d))`, calls `window.print()`, then `setSlip(null)`
+WITHOUT `flushSync`, so the slip leaves the page on React's next render. The test waited for
+`print` and then asserted at once that the slip was gone, outside any wait: under the full suite's
+load the render had not happened yet. On the desk nothing was wrong (`print()` blocks the page; the
+slip goes as soon as it returns).
+
+**What was done** — the test waits for the slip to leave (`vi.waitFor`) instead of asserting at
+once; the component is unchanged. It passes 6 of 6, and with the slip never removed (`finally {}` in
+`KotStation.tsx`) it still fails "expected <div class="kot-print">… to be null": it guards what it
+guarded, minus the race. (The full gates on 876bc94b, race and all, happened to pass it - a race
+shows when it likes, which is why it is gone rather than waited out.)
+
+---
 
 ### POS-33 · "Close unpaid" never freed the table: it stayed blue (or orange, or green) with its amount, and nothing on Tables cleared it - FIXED 9 October (82a173b3, the owner's answer: a Clear button)
 
