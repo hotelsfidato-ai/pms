@@ -62,6 +62,14 @@ export function DocketSlip({ d }: { d: Docket }) {
                   {dish.qty}
                 </span>
               </div>
+              {/* The numbered add-ons ON this dish (D27-289), each on a line
+                  of its own and bold - the owner: "+ Kebab" under the dish,
+                  so a cook does not read past it. Per one of the dish. */}
+              {(dish.plus ?? []).map((p) => (
+                <div key={p.name} className="pl-4 font-bold">
+                  + {p.name}{p.qty > 1 ? ` ×${p.qty}` : ""}
+                </div>
+              ))}
               {/* Indented, which is the whole reason this is printed
                   rather than listed. Flat, a chef plates the sides as
                   separate dishes. */}

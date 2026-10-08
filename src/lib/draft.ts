@@ -57,8 +57,14 @@ export interface DraftLine {
 
   /** What one of this dish costs, sides included, AT THE MOMENT IT WENT
       ON. Display only — the server prices the bill from its own menu
-      and its figure wins. */
+      and its figure wins. Numbered add-ons included too, once chosen. */
   unitPrice: number;
+
+  /** The numbered Add-ons chosen with Customise (D27-289), and what one of
+      the dish cost before them. Optional: a pad saved on this device before
+      them reads as a dish with none, as it was. */
+  numberedAddons?: { id: string; number: number; name: string; price: number; qty: number }[];
+  baseUnitPrice?: number;
 }
 
 export interface Draft {

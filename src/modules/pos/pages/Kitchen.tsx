@@ -441,6 +441,13 @@ function Ticket({ line, action, busy, onMove }: {
         <p className="text-lg text-ink-900 mt-1.5 line-through">
           {line.qty} × {line.name}
         </p>
+        {/* The numbered add-ons ON this dish (D27-289): "+ Kebab", each on its
+           own line, as the docket prints them. */}
+        {(line.plus ?? []).map((p) => (
+          <p key={p.name} className="text-base text-ink-900 line-through">
+            + {p.name}{p.qty > 1 ? ` ×${p.qty}` : ""}
+          </p>
+        ))}
         {/* Said loudly, because the food may already be in a pan. */}
         <p className="text-base text-grey-600 mt-1">
           {line.orderNo} · stop cooking this
@@ -468,6 +475,13 @@ function Ticket({ line, action, busy, onMove }: {
           <p className="text-xl font-semibold text-ink-900 mt-0.5 leading-tight">
             {line.qty} × {line.name}
           </p>
+          {/* The numbered add-ons ON this dish (D27-289): "+ Kebab", each on its
+             own line, as the docket prints them. */}
+          {(line.plus ?? []).map((p) => (
+            <p key={p.name} className="text-md font-semibold text-ink-900 mt-0.5">
+              + {p.name}{p.qty > 1 ? ` ×${p.qty}` : ""}
+            </p>
+          ))}
           {line.note && (
             /* A modifier the kitchen must not miss. Same weight as the
                dish, because "no chilli" sent back is a whole plate. */

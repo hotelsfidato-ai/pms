@@ -105,3 +105,46 @@ export function chosenLabels(
     .map((a) => a.label);
   return { ...(variationLabel ? { variationLabel } : {}), addonLabels };
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   THE NUMBERED ADD-ONS ON A DISH (D27-289)
+
+   ⚠ THE SAME RULE AS THE SERVER'S `api/src/modules/pos/numberedAddons.ts`
+   (`priceWithAddons`, `nameWithAddons`), for the same reason as above: the
+   waiter sees "₹430" before Send. `padTotal.test.ts` prices and names the
+   same choices both ways. The server's figure wins on the bill.
+   ══════════════════════════════════════════════════════════════════ */
+
+/** One of a dish with its numbered add-ons: each add-on's price times how
+    many, worked in paise as the server does, so the two round alike. */
+export function priceWithAddons(
+  base: number, addons: readonly { price: number; qty: number }[],
+): number {
+  const paise = (rupees: number) => Math.round(rupees * 100);
+  return (paise(base) + addons.reduce((sum, a) => sum + paise(a.price) * a.qty, 0)) / 100;
+}
+
+/** "Veg Biryani with add-on Kebab"; "… with add-ons Kebab ×2, Raita". In
+    number order, as the server keeps them. */
+export function nameWithAddons(
+  dish: string, addons: readonly { name: string; qty: number }[],
+): string {
+  if (addons.length === 0) return dish;
+  const parts = addons.map((a) => (a.qty > 1 ? `${a.name} ×${a.qty}` : a.name));
+  return `${dish} with add-on${addons.length > 1 ? "s" : ""} ${parts.join(", ")}`;
+}
+
+/** The bill's small line under a dish with numbered add-ons (the owner's
+    choice, D27-289): "Veg Biryani 310 · Kebab +120", "… · Kebab ×2 +240".
+    One of the dish; the line above carries the quantity and the total. */
+export function addonBreakdown(kept: {
+  dish: string; base: number;
+  addons: readonly { name: string; price: number; qty: number }[];
+}): string {
+  const n = (rupees: number) => rupees.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  return [
+    `${kept.dish} ${n(kept.base)}`,
+    ...kept.addons.map((a) => `${a.name}${a.qty > 1 ? ` ×${a.qty}` : ""} ${
+      a.price === 0 ? "Free" : `+${n(a.price * a.qty)}`}`),
+  ].join(" · ");
+}

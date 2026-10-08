@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Minus, Trash2, WifiOff, Search } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
-import { unitPriceOf, chosenLabels } from "@/modules/pos/lib/pricing";
+import { unitPriceOf, chosenLabels, priceWithAddons, nameWithAddons } from "@/modules/pos/lib/pricing";
 import {
   draftKey, loadDraft, saveDraft, clearDraft, draftsUsable,
   draftTotal, draftCount, type Draft, type DraftLine,
@@ -12,7 +12,8 @@ import {
   Button, Dialog, DialogContent, Input, Segmented, StatusPill, toast,
 } from "@/components/ui";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
-import { getMenu, getOrder, sendOrder, isBarSection, isBarDish, type MenuItem } from "@/modules/pos/data/till";
+import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
+import { getMenu, getOrder, sendOrder, isBarSection, isBarDish, getNumberedAddons, type MenuItem } from "@/modules/pos/data/till";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { ReadFailed } from "@/components/ui";
 
@@ -64,6 +65,8 @@ export function OrderPad({
 
   const [lines, setLines] = useState<DraftLine[]>([]);
   const [asking, setAsking] = useState<MenuItem | null>(null);
+  /* The pad line Customise is open on (D27-289). */
+  const [customising, setCustomising] = useState<DraftLine | null>(null);
   const [search, setSearch] = useState("");
   /* D27-267: the menu in two - Restaurant and Bar - and one section at a
      time when its button is tapped (tapped again, all of them). */
@@ -76,6 +79,13 @@ export function OrderPad({
   const menu = useQuery({
     queryKey: ["till-menu", hotelId],
     queryFn: () => getMenu(hotelId),
+    enabled: Boolean(hotelId),
+  });
+  /* The numbered Add-ons (D27-289), kept with the menu for a floor with no
+     signal (App.tsx PERSISTED). */
+  const numbered = useQuery({
+    queryKey: ["till-addons", hotelId],
+    queryFn: () => getNumberedAddons(hotelId),
     enabled: Boolean(hotelId),
   });
 
@@ -195,7 +205,10 @@ export function OrderPad({
       const same = prev.find((l) => l.itemId === item.id
         && l.variationId === line.variationId && l.note.trim() === note.trim()
         && (l.moreChoiceIds ?? []).join() === (line.moreChoiceIds ?? []).join()
-        && [...l.addonIds].sort().join() === sides);
+        && [...l.addonIds].sort().join() === sides
+        /* A plain tap is one more of the plain dish, never of the one with
+           Kebab (D27-289): Customise is chosen on a line, not on a tap. */
+        && !(l.numberedAddons?.length));
       return same
         ? prev.map((l) => (l === same ? { ...l, qty: l.qty + qty } : l))
         : [...prev, line];
@@ -217,6 +230,21 @@ export function OrderPad({
   const drop = (uid: string) =>
     setLines((prev) => prev.filter((l) => l.uid !== uid));
 
+  /* Customise (D27-289): the numbered add-ons on THIS pad line, priced on
+     what one of it cost before them. Nothing is sent until Send. */
+  const customise = (uid: string, chosen: NonNullable<DraftLine["numberedAddons"]>) => {
+    setLines((prev) => prev.map((l) => {
+      if (l.uid !== uid) return l;
+      const base = l.baseUnitPrice ?? l.unitPrice;
+      const { numberedAddons: _gone, baseUnitPrice: _was, ...rest } = l;
+      return chosen.length === 0
+        ? { ...rest, unitPrice: base }
+        : { ...rest, numberedAddons: chosen, baseUnitPrice: base,
+            unitPrice: priceWithAddons(base, chosen) };
+    }));
+    setCustomising(null);
+  };
+
   /* ── Send ─────────────────────────────────────────────────────── */
   const send = async () => {
     if (lines.length === 0 || sending) return;
@@ -230,6 +258,9 @@ export function OrderPad({
         ...(l.variationId ? { variationId: l.variationId } : {}),
         ...(l.moreChoiceIds?.length ? { moreChoiceIds: l.moreChoiceIds } : {}),
         ...(l.addonIds.length ? { addonIds: l.addonIds } : {}),
+        ...(l.numberedAddons?.length
+          ? { numberedAddons: l.numberedAddons.map((a) => ({ id: a.id, qty: a.qty })) }
+          : {}),
       })),
       send: true,
       ...(eventChoice !== undefined ? { eventId: eventChoice } : {}),
@@ -498,7 +529,7 @@ export function OrderPad({
                       <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">
                           <span className="block text-base text-ink-900">
-                            {l.name}
+                            {nameWithAddons(l.name, l.numberedAddons ?? [])}
                           </span>
                           {(l.variationLabel || l.addonLabels.length > 0) && (
                             <span className="block text-2xs text-grey-600">
@@ -537,6 +568,15 @@ export function OrderPad({
                         >
                           <Plus className="size-4" />
                         </button>
+                        {/* The numbered Add-ons on this dish (D27-289). */}
+                        <button
+                          type="button"
+                          aria-label={`Customise ${l.name}`}
+                          onClick={() => setCustomising(l)}
+                          className="press h-11 px-4 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer"
+                        >
+                          Customise
+                        </button>
                         <div className="flex-1" />
                         <button
                           type="button"
@@ -570,6 +610,16 @@ export function OrderPad({
           network, so the pad reuses it as it stands — variations, sides,
           minimum and maximum selections, quantity and the kitchen note
           are all already written and already tested. */}
+      <CustomiseDialog
+        open={customising !== null}
+        onOpenChange={(o) => { if (!o) setCustomising(null); }}
+        dish={customising?.name ?? ""}
+        base={customising ? customising.baseUnitPrice ?? customising.unitPrice : 0}
+        addons={numbered.data ?? []}
+        chosen={customising?.numberedAddons ?? []}
+        onDone={(chosen) => { if (customising) customise(customising.uid, chosen); }}
+      />
+
       <DishDialog
         item={asking}
         bar={isBarDish(categories, asking?.id)}

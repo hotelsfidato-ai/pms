@@ -6,6 +6,8 @@ import {
   CreditCard, Smartphone, Printer, Percent, Split, CalendarHeart, Flame,
 } from "lucide-react";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
+import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
+import { addonBreakdown } from "@/modules/pos/lib/pricing";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { OrderHeaderPanel } from "@/modules/pos/flows/OrderHeaderPanel";
 import { cn } from "@/lib/cn";
@@ -17,7 +19,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, type Order, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, getNumberedAddons, setNumberedAddons, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -83,6 +85,12 @@ export default function TillPage() {
     queryKey: ["till-menu", hotelId],
     queryFn: () => getMenu(hotelId),
   });
+  /* The numbered Add-ons (D27-289) for Customise. */
+  const numbered = useQuery({
+    queryKey: ["till-addons", hotelId],
+    queryFn: () => getNumberedAddons(hotelId),
+  });
+  const [customising, setCustomising] = useState<OrderLine | null>(null);
   const current = useQuery({
     queryKey: ["till-order", hotelId, openId],
     queryFn: () => (openId ? getOrder(hotelId, openId) : null),
@@ -160,6 +168,19 @@ export default function TillPage() {
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
     setAsking(null);
+    applyOrder(res.order);
+  };
+
+  /* Customise (D27-289): the numbered add-ons on a dish the kitchen does not
+     have yet. The server refuses once it has (only before Send). */
+  const customise = async (chosen: LineAddon[]) => {
+    if (!openId || !customising) return;
+    setBusy(true);
+    const res = await setNumberedAddons(hotelId, openId, customising.id,
+      chosen.map((a) => ({ id: a.id, qty: a.qty })));
+    setBusy(false);
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    setCustomising(null);
     applyOrder(res.order);
   };
 
@@ -385,6 +406,7 @@ export default function TillPage() {
               setBusy={setBusy}
               onStrike={askStrike}
               onFewer={fewer}
+              onCustomise={setCustomising}
               /* Settling or abandoning FINISHES a bill, so the panel
                  closes. Discounting it does not — the biller is still
                  standing at the same order and about to take payment. */
@@ -420,6 +442,17 @@ export default function TillPage() {
           )}
         </div>
       </div>
+      <CustomiseDialog
+        open={customising !== null}
+        onOpenChange={(o) => { if (!o) setCustomising(null); }}
+        dish={customising?.numberedAddons?.dish ?? customising?.name ?? ""}
+        base={customising ? customising.numberedAddons?.base ?? customising.unitPrice : 0}
+        addons={numbered.data ?? []}
+        chosen={customising?.numberedAddons?.addons ?? []}
+        busy={busy}
+        onDone={(chosen) => void customise(chosen)}
+      />
+
       <DishDialog
         item={asking}
         bar={isBarDish(menu.data, asking?.id)}
@@ -876,7 +909,7 @@ function SplitPanel({
 }
 
 function OrderPanel({
-  order, hotelId, busy, setBusy, onStrike, onFewer, onDone, onChanged,
+  order, hotelId, busy, setBusy, onStrike, onFewer, onCustomise, onDone, onChanged,
 }: {
   order: Order;
   hotelId: string;
@@ -884,6 +917,8 @@ function OrderPanel({
   setBusy: (b: boolean) => void;
   onStrike: (lineId: string) => void;
   onFewer: (lineId: string) => void;
+  /** Customise a dish not yet sent (D27-289). */
+  onCustomise: (line: OrderLine) => void;
   /** The bill is finished — settled or closed unpaid. */
   onDone: () => void;
   /** The bill changed but is still open. */
@@ -1056,20 +1091,40 @@ function OrderPanel({
                 )}>
                   {line.qty}×
                 </span>
-                <span
-                  className={cn(
-                    "flex-1 min-w-0 truncate",
-                    line.isAddon
-                      ? "text-sm text-grey-600"
-                      : "text-base text-ink-900",
-                    line.voided && "line-through",
+                <span className="flex-1 min-w-0">
+                  <span
+                    className={cn(
+                      "block truncate",
+                      line.isAddon
+                        ? "text-sm text-grey-600"
+                        : "text-base text-ink-900",
+                      line.voided && "line-through",
+                    )}
+                  >
+                    {line.name}
+                  </span>
+                  {/* The owner's breakdown (D27-289): what the dish and each
+                      numbered add-on cost, under the one line. */}
+                  {line.numberedAddons && (
+                    <span className="block truncate text-2xs text-grey-600 tabular">
+                      {addonBreakdown(line.numberedAddons)}
+                    </span>
                   )}
-                >
-                  {line.name}
                 </span>
                 <span className="tabular text-base text-ink-900 shrink-0">
                   {money(line.qty * line.unitPrice)}
                 </span>
+                {/* Customise: before Send only (D27-289). */}
+                {!settled && !line.voided && !line.isAddon && line.kotStatus === "pending" && (
+                  <button
+                    type="button"
+                    onClick={() => onCustomise(line)}
+                    aria-label={`Customise ${line.name}`}
+                    className="press h-11 px-3 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 shrink-0 cursor-pointer"
+                  >
+                    Customise
+                  </button>
+                )}
                 {/* A side follows its dish (D27-192, Q8): only the dish has a −. */}
                 {!settled && !line.voided && !line.isAddon && (
                   <button

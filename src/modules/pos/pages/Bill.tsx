@@ -4,6 +4,7 @@ import { Printer } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { moneyPrecise, dateLong } from "@/lib/format";
 import { getOrder } from "@/modules/pos/data/till";
+import { addonBreakdown } from "@/modules/pos/lib/pricing";
 import { useGroupSettings } from "@/modules/admin";
 import {
   ReadFailed, Button, DocMasthead, DocFacts, DocTotals, DocPanel, DocFooter, DOC_TD,
@@ -126,6 +127,13 @@ export default function BillPage() {
                 <td className={cn(DOC_TD, "tabular pr-1.5 w-6 whitespace-nowrap")}>{l.qty}×</td>
                 <td className={DOC_TD}>
                   {l.name}
+                  {/* The owner's breakdown (D27-289): the one line, and under
+                      it what the dish and each numbered add-on cost. */}
+                  {l.numberedAddons && (
+                    <span className="block text-xs text-grey-500 tabular">
+                      {addonBreakdown(l.numberedAddons)}
+                    </span>
+                  )}
                   {l.note && (
                     <span className="block text-xs text-grey-500">{l.note}</span>
                   )}

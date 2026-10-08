@@ -147,7 +147,46 @@ export interface OrderLine {
   parentLineId: string | null;
   isAddon: boolean;
   variationId: string | null;
+  /** The numbered Add-ons folded into this dish (D27-289), as chosen: the
+      bill prints "Veg Biryani 310 · Kebab +120" under the line, and
+      Customise opens on them. Null or absent when it has none. */
+  numberedAddons?: LineAddons | null;
 }
+
+/** One numbered Add-on (D27-289): "2 · Kebab · ₹120". The number is what
+    staff remember; it never changes. */
+export interface NumberedAddon {
+  id: string;
+  number: number;
+  name: string;
+  /** A line on what it is - "two pieces of seekh kebab". */
+  description: string | null;
+  price: number;
+  /** A 0 that somebody chose (D27-120); a blank is never a 0. */
+  free: boolean;
+  isActive: boolean;
+  offUntil: string | null;
+  offReason: string | null;
+}
+
+/** One add-on as a dish's line keeps it - copied when chosen. */
+export interface LineAddon {
+  id: string; number: number; name: string; price: number;
+  /** How many on ONE of the dish: "Kebab ×2". */
+  qty: number;
+}
+
+/** What a dish's line keeps of its numbered add-ons (208). */
+export interface LineAddons {
+  /** The dish as named before them: "Veg Biryani". */
+  dish: string;
+  /** One of it before them, in rupees. */
+  base: number;
+  addons: LineAddon[];
+}
+
+/** What a screen sends: which add-on, how many on one of the dish. */
+export interface NumberedChoice { id: string; qty: number }
 
 export interface KitchenLine {
   id: string;
@@ -170,6 +209,8 @@ export interface KitchenLine {
   course: number | null;
   /** Struck after the kitchen already had it — stop cooking. */
   cancelled: boolean;
+  /** The dish's numbered add-ons, read under it: "+ Kebab" (D27-289). */
+  plus?: { name: string; qty: number }[];
   /** Why, in the manager's words (D27-119). */
   cancelReason?: string | null;
 }
@@ -502,6 +543,58 @@ export function setLineQty(
     `/api/hotels/${hotelId}/till/orders/${orderId}/lines/${lineId}/qty`,
     { qty, ...(reason ? { reason } : {}) },
   );
+}
+
+/** Customise (D27-289): the numbered add-ons on a dish the kitchen does not
+    have yet. The whole set each time; empty takes them all off. */
+export function setNumberedAddons(
+  hotelId: string, orderId: string, lineId: string, choices: NumberedChoice[],
+): Promise<TillResult> {
+  return write(
+    `/api/hotels/${hotelId}/till/orders/${orderId}/lines/${lineId}/numbered-addons`,
+    { numberedAddons: choices },
+  );
+}
+
+/** The numbered Add-ons: the ones in use, or every one for the Menu tab. */
+export async function getNumberedAddons(hotelId: string, all = false): Promise<NumberedAddon[]> {
+  if (!hotelId) return [];
+  return (await api<{ addons: NumberedAddon[] }>(
+    `/api/hotels/${hotelId}/till/numbered-addons${all ? "?all=1" : ""}`)).addons;
+}
+
+export interface NumberedAddonInput {
+  number?: number;
+  name?: string;
+  description?: string | null;
+  price?: number | null;
+  free?: boolean;
+  active?: boolean;
+}
+
+export function addNumberedAddon(
+  hotelId: string, input: NumberedAddonInput,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/numbered-addons`, input);
+}
+
+export function changeNumberedAddon(
+  hotelId: string, id: string, input: NumberedAddonInput,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/numbered-addons/${id}`, input, "PATCH");
+}
+
+export function numberedAddonOff(
+  hotelId: string, id: string, until: OffFor, reason?: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/numbered-addons/${id}/off`,
+    { until, ...(reason ? { reason } : {}) });
+}
+
+export function numberedAddonOn(
+  hotelId: string, id: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/numbered-addons/${id}/on`);
 }
 
 /**
@@ -1115,6 +1208,8 @@ export interface SendLine {
   /** The choice of each further type (D27-192). */
   moreChoiceIds?: string[];
   addonIds?: string[];
+  /** The numbered Add-ons on this dish (D27-289). */
+  numberedAddons?: NumberedChoice[];
 }
 
 /**
@@ -1267,6 +1362,8 @@ export interface Docket {
     qty: number;
     note: string | null;
     isAddon: boolean;
+    /** "+ Kebab" under the dish (D27-289). Absent on an older docket. */
+    plus?: { name: string; qty: number }[];
   }[];
   /** Taken off this docket after it was sent, and why (D27-119). */
   struck?: { name: string; qty: number; reason: string | null }[];

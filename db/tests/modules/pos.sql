@@ -497,3 +497,81 @@ begin
   select count(*) into n from pos_outlets where code = 'FLCLS';
   perform test.ok('pos floor', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- NUMBERED ADD-ONS (the owner's D27-289, 9 October)
+-- =============================================================================
+-- A numbered list any dish can take, folded into the dish's own line. What
+-- the database itself holds to: a price is typed (0 only when Free), one
+-- add-on per number while it is in use, the kept add-ons sit on a dish and
+-- never on a side, and a dish the kitchen has keeps what it was sent with.
+-- Refers to its migration by what it does, "numbered add-ons", never by its
+-- number. Uses the suite's AGR property and its clerk; removes what it makes.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_order uuid; bd date;
+  v_dish bigint; v_side bigint; v_group uuid; v_option uuid; n int;
+  kept text := '{"dish":"Dal","base":200,"addons":[{"id":"00000000-0000-0000-0000-000000000001","number":2,"name":"Kebab","price":120,"qty":1}]}';
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  -- ---------- the list ------------------------------------------------------------
+  perform test.raises('pos numbered addons', 'a 0 nobody ticked Free is refused',
+    format($q$insert into pos_numbered_addons (hotel_id, number, name, price)
+              values (%L, 2, 'Kebab', 0)$q$, a));
+  perform test.allows('pos numbered addons', 'a 0 ticked Free is kept',
+    format($q$insert into pos_numbered_addons (hotel_id, number, name, price, is_free)
+              values (%L, 3, 'Onions', 0, true)$q$, a));
+  perform test.allows('pos numbered addons', 'a typed price is kept',
+    format($q$insert into pos_numbered_addons (hotel_id, number, name, price)
+              values (%L, 2, 'Kebab', 120)$q$, a));
+  perform test.raises('pos numbered addons', 'one add-on per number while it is in use',
+    format($q$insert into pos_numbered_addons (hotel_id, number, name, price)
+              values (%L, 2, 'Paneer', 90)$q$, a), '23505');
+  update pos_numbered_addons set is_active = false where hotel_id = a and number = 2;
+  perform test.allows('pos numbered addons', 'switched off, its number is free for another',
+    format($q$insert into pos_numbered_addons (hotel_id, number, name, price)
+              values (%L, 2, 'Paneer', 90)$q$, a));
+
+  -- ---------- on a line -------------------------------------------------------------
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'NUMAD', 'Numbered Add-on Test', 'food', v_staff) returning id into v_outlet;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff) returning id into v_order;
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, 'Dal', 1, 200, 5, v_staff) returning id into v_dish;
+  -- A real side, as the app makes one: a group and its option.
+  insert into pos_addon_groups (hotel_id, label) values (a, 'Numbered test sides')
+  returning id into v_group;
+  insert into pos_addons (hotel_id, group_id, label, price) values (a, v_group, 'Onions', 25)
+  returning id into v_option;
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by, parent_line_id, addon_id)
+  values (v_order, a, 'Sides: Onions', 1, 25, 5, v_staff, v_dish, v_option) returning id into v_side;
+
+  perform test.allows('pos numbered addons', 'a dish not yet sent takes them',
+    format($q$update pos_order_lines set numbered_addons = %L::jsonb where id = %s$q$, kept, v_dish));
+  perform test.raises('pos numbered addons', 'a side never carries them',
+    format($q$update pos_order_lines set numbered_addons = %L::jsonb where id = %s$q$, kept, v_side), '23514');
+  perform test.raises('pos numbered addons', 'an empty set is not a set: none is null',
+    format($q$update pos_order_lines set numbered_addons = '{"dish":"Dal","base":200,"addons":[]}'::jsonb where id = %s$q$, v_dish), '23514');
+
+  update pos_order_lines set kot_status = 'sent', kot_sent_at = now(), kot_no = 1 where id = v_dish;
+  perform test.raises('pos numbered addons', 'a dish the kitchen has keeps what it was sent with',
+    format($q$update pos_order_lines set numbered_addons = null where id = %s$q$, v_dish), '23514');
+  perform test.allows('pos numbered addons', 'and anything else about it still moves along',
+    format($q$update pos_order_lines set kot_status = 'preparing' where id = %s$q$, v_dish));
+
+  -- ---------- and the fixtures go ----------------------------------------------
+  delete from pos_order_lines where order_id = v_order;
+  delete from pos_orders where id = v_order;
+  delete from pos_outlets where id = v_outlet;
+  delete from pos_addons where id = v_option;
+  delete from pos_addon_groups where id = v_group;
+  delete from pos_numbered_addons where hotel_id = a;
+  select count(*) into n from pos_outlets where code = 'NUMAD';
+  perform test.ok('pos numbered addons', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;

@@ -7,8 +7,9 @@ import { money, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, CardBody, Button, StatusPill, Skeleton, EmptyState, toast,
-  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, Checkbox,
+  Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, Checkbox, Segmented,
 } from "@/components/ui";
+import { NumberedAddonsTab } from "@/modules/pos/components/NumberedAddonsTab";
 import { getModules } from "@/data/repositories";
 import { getMenu, addCategory, addItem, toggleItem, takeItemOff, putItemBack, takeAddonOff, putAddonBack, importMenu, importAddons, setItemPrepMinutes, setCategoryPrepMinutes, setItemCourse, setCategoryCourse, setCategoryTaxKind, type SectionHeading, listPromotions, addPromotion, amendPromotion, saveVariations, listAddonGroups, addAddonGroup, editAddonGroup, setGroupDishes, addAddonOption, editAddonOption, removeAddonOption, type OffFor, type Promotion, type MenuCategory, type MenuItem, type VariationKind, type Addon, type AddonGroupSetup } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
@@ -48,6 +49,9 @@ export default function MenuPage() {
   const [category, setCategory] = useState("");
   const [busy, setBusy] = useState(false);
   const [importing, setImporting] = useState<"menu" | "addons" | null>(null);
+  /* Two tabs (the owner's D27-289): the dishes as they were, and the
+     numbered Add-ons any dish can take. */
+  const [view, setView] = useState<"dishes" | "addons">("dishes");
 
   const menu = useQuery({
     queryKey: ["till-menu", hotelId],
@@ -104,7 +108,7 @@ export default function MenuPage() {
             </StatusPill>
           ) : undefined
         }
-        actions={
+        actions={view === "addons" ? undefined : (
           /* A real card is two hundred dishes across a dozen sections.
              Typing that into a dialog one at a time is not something
              anybody will do, so the file route sits beside the manual
@@ -114,15 +118,24 @@ export default function MenuPage() {
           <>
             <Button variant="secondary" className="h-11"
                     onClick={() => setImporting("addons")}>
-              <Upload className="size-4" /> Import add-ons
+              <Upload className="size-4" /> Import sides
             </Button>
             <Button variant="secondary" className="h-11"
                     onClick={() => setImporting("menu")}>
               <Upload className="size-4" /> Import the menu
             </Button>
           </>
-        }
+        )}
       />
+
+      <Segmented
+        className="mb-5"
+        value={view}
+        onChange={setView}
+        options={[{ value: "dishes", label: "Dishes" }, { value: "addons", label: "Add-ons" }]}
+      />
+
+      {view === "addons" ? <NumberedAddonsTab hotelId={hotelId} /> : (<>
 
       <div className="flex items-start gap-3 rounded-lg border border-grey-200 bg-grey-50 px-4 py-3.5 mb-5">
         <UtensilsCrossed className="size-4 text-grey-400 shrink-0 mt-0.5" />
@@ -232,6 +245,7 @@ export default function MenuPage() {
           onImported={refresh}
         />
       )}
+      </>)}
     </Page>
   );
 }
@@ -1302,10 +1316,13 @@ function AddonGroups({ hotelId, categories, onChanged }: {
   return (
     <section className="mt-5">
       <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-        <h2 className="text-md font-semibold text-ink-900">Add-on groups</h2>
+        {/* "Sides" since D27-289 - the label only: the numbered Add-ons are
+            their own tab now, and two things called add-ons on one screen
+            is one too many. */}
+        <h2 className="text-md font-semibold text-ink-900">Sides</h2>
         <Button variant="secondary" className="h-11"
                 onClick={() => setEditing("new")}>
-          <Plus className="size-4" /> Add an add-on group
+          <Plus className="size-4" /> Add a group of sides
         </Button>
       </div>
 
@@ -1317,7 +1334,7 @@ function AddonGroups({ hotelId, categories, onChanged }: {
       {q.data === undefined ? (
         q.error ? (
           <Card>
-            <ReadFailed compact error={q.error} what="the add-on groups"
+            <ReadFailed compact error={q.error} what="the sides"
                         onRetry={() => void q.refetch()} />
           </Card>
         ) : (
@@ -1468,7 +1485,7 @@ function GroupDialog({ hotelId, group, onClose, onSaved }: {
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent
-        title={group ? `Edit ${group.label}` : "Add an add-on group"}
+        title={group ? `Edit ${group.label}` : "Add a group of sides"}
         description="A list a dish offers, and how many of it a guest may choose."
         size="sm"
         footer={

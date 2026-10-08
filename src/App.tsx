@@ -128,6 +128,10 @@ const PERSISTED = new Set([
      not is a guest database — no documents, no folios, no history. Those
      stay off the device, and the reason above still holds for them. */
   "till-menu",
+  /* The numbered Add-ons (D27-289), with the menu and for the same reason:
+     Customise on a floor with no signal. An add-on taken off since is
+     refused by the server with a reason, as a dish is. */
+  "till-addons",
   "till-rooms",
 ]);
 
