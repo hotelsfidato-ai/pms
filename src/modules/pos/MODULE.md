@@ -85,12 +85,28 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
   are the dish's, a further type's add to it; each choice is priced or ticked
   Free; removing every type asks for the dish's own price. Under the dish, one
   line per type ("Size: Small ₹200 · Large ₹400", "Crust: Cheese burst +₹80 ·
-  Thin Free"); a dish with variations shows "-" for its own price. An
-  **Add-on groups** section - each group's rule, its options with Change and
+  Thin Free"); a dish with variations shows "-" for its own price. A
+  **Sides** section (045's add-on groups; labelled "Add-on groups" until
+  D27-289, the label only) - each group's rule, its options with Change and
   Remove, "Add option" (a price or Free), "Dishes" to choose which dishes
-  offer it; **Import add-ons** and **Import the menu**, two files, add-ons
-  first. A blank price is refused, and a 0 unless ticked Free (D27-120; a file
+  offer it; **Import sides** and **Import the menu**, two files, sides
+  first (the file's own "Add-on groups" column keeps its name).
+  Since D27-289 the Menu has two tabs, **Dishes** (all of the above) and
+  **Add-ons** (`components/NumberedAddonsTab.tsx`): the numbered list any dish
+  can take - number, name, what it is, price or Free; Change (never the
+  number), Off for a while, Switch off / Bring back; a number is not given to
+  a second add-on while the first is in use. A blank price is refused, and a 0 unless ticked Free (D27-120; a file
   cannot tick Free, so a file's 0 is refused).
+- **Customise (`flows/CustomiseDialog.tsx`, D27-289)**: beside every dish not
+  yet sent - on Tables' pad, the Till and the Terminal - the numbered Add-ons as
+  64px buttons, number first; a tap adds one, another makes it ×2, × takes one
+  off; an add-on off today shows but cannot be tapped. The dish stays ONE line,
+  "Veg Biryani with add-on Kebab", its price the dish's and the add-ons'
+  (`lib/pricing.ts`, held to the server by padTotal.test.ts). Only before Send
+  (the Till and Terminal hide the button on a sent dish; the server and 208's
+  trigger refuse). The bill, Till and Terminal print "Veg Biryani 310 · Kebab
+  +120" under the line; the KOT and the Kitchen read the dish with "+ Kebab"
+  under it. Taxed at the dish's own rate. Not on the guest's page yet.
 - **The dish pop-up (`DishDialog`)**: one row per variation type under its
   heading ("Variation" for a type carried over from before 30 September, until
   the manager picks one); a later type reads "+₹80" or "Free"; Add waits for
@@ -179,6 +195,13 @@ add-ons     GET    /:code/till/menu/addon-groups           every group, its opti
             PATCH  /:code/till/menu/addons/:id             rename and reprice, both sent
             POST   /:code/till/menu/addons/:id/remove      switched off, never deleted
             POST   /:code/till/menu/addon-groups/import    the add-ons file (D21-43), dry run first
+numbered    GET    /:code/till/numbered-addons              D27-289: the ones in use; ?all=1 for the Menu tab
+add-ons     POST   /:code/till/numbered-addons              number, name, description, a TYPED price or free
+            PATCH  /:code/till/numbered-addons/:id          name, description, price, free, active - never the number
+            POST   /:code/till/numbered-addons/:id/off      for a while, the dish's choices
+            POST   /:code/till/numbered-addons/:id/on
+            POST   /:code/till/orders/:id/lines/:lineId/numbered-addons
+                                                           Customise a dish not yet sent: the whole set
 outlet      POST   /:code/till/outlet/:outlet/closed        "we are closed" for a while
 rooms       GET    /:code/till/rooms                        rooms a bill may be charged to
 orders      GET    /:code/till/orders
@@ -341,6 +364,9 @@ pos_orders, pos_order_lines
   discount, round off; pos_order_tenders       038_pos_discount_and_tenders.sql
   percent or fixed discount                    039_discount_percent_or_fixed.sql
   app.pos_order_by_rate — tax split, once      040_pos_by_rate.sql
+pos_numbered_addons;                           "numbered add-ons" (208, D27-289)
+  pos_order_lines.numbered_addons (what the dish
+  was sent with: dish, base, each add-on)
 pos_item_variations, pos_addon_groups,         045_variations_and_addons.sql
 pos_addons, pos_item_addon_groups
   an item or add-on off until a time           045, 046

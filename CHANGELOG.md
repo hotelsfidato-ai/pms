@@ -59,7 +59,8 @@ restart, "start this in local for testing"; "go with your recommendations" (keep
 made from `main`, the gates made to find their own folder, commits as Jaison Rozario); "run the
 tests now and tell me if there is any pending issue"; then the POS: list its issues, fix "closing
 without payment leaves the table blue with its amount" (their answer: a Clear button), and plan
-numbered add-ons.
+numbered add-ons; then "ask me all the questions before going with the recommendations" - twelve
+answers (D27-289) - and build them, with POS-32's test fix.
 
 **Shipped**
 - The new PC: Git for Windows, the VC++ 2015+ x64 runtime (EnterpriseDB's Postgres will not start
@@ -73,6 +74,11 @@ numbered add-ons.
   `/d/fidato pms` (MEMORY 390).
 - 82a173b3: POS-33, a bill closed unpaid shows "Closed unpaid - clear it" with Clear (migration 207;
   `src/modules/pos/DEFECTS.md` and its `CHANGELOG.md`).
+- 6f377522: decisions D27-287 (the new PC), D27-288 (POS-33) and D27-289 (numbered add-ons).
+- e7a0a184 POS-32's test fix; 8d01590a numbered add-ons (migration 208: a numbered list any dish
+  can take, folded into the dish's ONE line, Customise on the Tables pad, the Till and the Terminal,
+  "+ Kebab" on the KOT, the breakdown on the bill, the Menu's Add-ons tab, the old groups shown as
+  Sides); 9664dfd5 the same at phone width. Detail in the POS `CHANGELOG.md`.
 - Local branch `cp6`, made from `main` (0c5e51cd, the 5 October tip GitHub had); `origin/cp6` is
   the stale 18 September one. Commit identity set in this repository only.
 
@@ -100,19 +106,24 @@ numbered add-ons.
   pg16 (16.15) all 1,531 assertions and 206 re-runnable - run on its own, same commit, once its
   binaries were unzipped (the gates' own pg16 step found none). `npm run build` passes, no test
   sign-in in dist.
-- 82a173b3: the guards and their failures first are in the POS `CHANGELOG.md`. The full gates on
-  the commit carrying these notes: HANDOVER § 2, 9 October.
+- 82a173b3: the guards and their failures first are in the POS `CHANGELOG.md`.
+- Full gates `cp6-9oct-pos33` on 876bc94b (POS-33 and its notes), clean (1,812 s): ALL GREEN, the
+  first on this PC - web 1,123 of 1,123; api 188 files, 2,509 of 2,509; database 207 migrations, all
+  1,537 assertions; replay all 207 re-runnable; pg16 (16.15) the same; build passes, no test sign-in.
+- The add-ons (8d01590a, 9664dfd5): API 189 of 189 on the files they touch, database 1,548, web
+  1,129 of 1,129, five guards each seen failing first, and the whole flow opened on the demo - all
+  in the POS `CHANGELOG.md`. The full gates on the commit carrying these notes: HANDOVER § 2.
 
 **Left open**
-- The owner's decisions: the add-ons plan's eight questions (numbered add-ons as their own menu tab,
-  folded into one line, "Biryani with add-on Kebab"; the plan is in this session's reply of
-  9 October); POS-32's one-line test fix.
+- Numbered add-ons on the guest's own page (the owner: not yet); a report of add-ons sold (not
+  asked). The `extra_choice_ids` suspicion (the POS `CHANGELOG.md`), unproved.
 - Releasing anything (207 included) is the owner's: nothing is pushed or deployed (19 September).
 - The rest of the scripts' `PGBIN` default (MEMORY 390); Postgres here does not restart after a
   reboot (start command: HANDOVER § 7).
 - The impeccable and taste skills are not on this PC: their source was never written down.
 
-**Commits:** `29fd6465`, `13460f7e`, `82a173b3`, and these notes.
+**Commits:** `29fd6465`, `13460f7e`, `82a173b3`, `876bc94b` (notes), `6f377522` (decisions),
+`e7a0a184`, `8d01590a`, `9664dfd5`, and these notes.
 
 ## 2026-10-05 · the morning's fixes, five merges, the WhatsApp voucher on the owner's template, and the release ready to cut
 

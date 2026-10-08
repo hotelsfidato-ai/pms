@@ -56,13 +56,19 @@ the folder           C:\Users\rozar.ROZARIO\pms (the owner's, 9 Oct; D: on this 
 cp6 now              + 29fd6465 (dev-testers: the GM test sign-in no longer meets "Set a longer
                      password"), 13460f7e (gates.sh and pg16.sh find the main checkout through
                      git), 82a173b3 (POS-33: a bill closed unpaid shows "Closed unpaid - clear
-                     it" with Clear; migration 207). Migrations up to 207.
-gates                13460f7e: all green but web 1,121 of 1,122 (POS-32, a race in one test;
-                     alone 5 of 5) - api 2,507, database 1,531, replay 206, pg16 1,531/206,
-                     build passes. On the notes commit after 82a173b3: the next notes commit says.
-local demo           `fidato` at 207, 5EL on 9 Oct, built by docs/briefs/README.md's recipe.
+                     it" with Clear; migration 207), 6f377522 (decisions D27-287..289),
+                     e7a0a184 (POS-32), 8d01590a + 9664dfd5 (NUMBERED ADD-ONS, D27-289,
+                     migration 208: Customise on the Tables pad, Till and Terminal; "Veg
+                     Biryani with add-on Kebab" as one line; the Menu's Add-ons tab).
+                     Migrations up to 208.
+gates                876bc94b (POS-33 + notes): ALL GREEN, the first full run on this PC -
+                     web 1,123, api 2,509, database 1,537, replay 207, pg16 (16.15) 1,537/207,
+                     build passes. The add-ons' own runs are in the POS CHANGELOG; the full
+                     gates on the add-ons' notes commit: the CHANGELOG entry after it.
+local demo           `fidato` at 208, 5EL on 9 Oct, built by docs/briefs/README.md's recipe;
+                     add-on 2 = Kebab ₹120 made on it, AC7 has a Biryani with Kebab sent.
                      Postgres 17.11 in .local\pg, PostgreSQL 16.15 in .local\pg16 (§ 7).
-waiting on the owner the add-ons plan's answers (§ 3); POS-32's fix; any release.
+waiting on the owner any release (207 and 208 included): nothing leaves this PC until they say.
 live                 Unchecked from this PC. RELEASE-5OCT was withdrawn on 5 Oct; POS-33 is on
                      live until 207 is released.
 ```
@@ -460,17 +466,15 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
-> **9 October: the queue (the new PC).** (1) The owner's answers to the numbered add-ons plan
-> (a menu tab of numbered add-ons, each name and price; a Customise button on each dish on the
-> pad, Till and Terminal; "Veg Biryani with add-on Kebab" as ONE line, priced together; the
-> existing Add-on groups and variations untouched) - eight questions, recommendations given:
-> the names (relabel the old "Add-on groups" as "Sides"?), every dish or by category, before
-> Send only, the same add-on twice, one bill line, numbers typed and never reused, not on the
-> guest's page yet. Then build it (its migration takes 208). (2) POS-32's one-line test fix, on
-> the owner's yes. (3) A release with 207 (POS-33), when the owner says - nothing leaves this
-> machine until then. (4) The rest of the scripts' `PGBIN` default (MEMORY 390). The 5 October
-> release (release/all-5oct) was withdrawn; what replaced it and what live runs now are unchecked
-> from this PC.
+> **9 October: the queue (the new PC).** Done today: POS-33 (Close unpaid, Clear), POS-32 and
+> NUMBERED ADD-ONS (D27-289) - all on cp6, checked, opened on the demo. Next: (1) a release with
+> 207 and 208, when the owner says - nothing leaves this machine until then; live still has
+> POS-33's stuck tables. (2) The owner tries the add-ons on the demo (Menu → Add-ons, then
+> Customise on Tables). (3) Prove or clear the `extra_choice_ids` suspicion (lowering a sent dish
+> with two variation types; POS CHANGELOG 9 Oct). (4) The rest of the scripts' `PGBIN` default
+> (MEMORY 390). Not yet asked for: add-ons on the guest's page, a report of add-ons sold. The 5
+> October release (release/all-5oct) was withdrawn; what replaced it and what live runs now are
+> unchecked from this PC.
 
 > **3 October, later: the fresh start (D27-248).** RELEASE-3OCT.md now has Part F: 5 Elements
 > and all its test data go during the release; only influvateseo@gmail.com and

@@ -11,6 +11,60 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-09 · Numbered add-ons (D27-289), and POS-32's test fix
+
+**Asked for:** the owner, 9 October: "a new section called add-ons, separate from the current
+system - don't change anything in the variations - where I can add add-on one or add-on five or
+add-on nine; it automatically calculates the price and adds it to the dish: biryani with add-on
+kebab, one dish." Asked question by question (D27-289): Add-ons, the old groups relabelled Sides;
+a Customise button; every dish; before Send only; ×2 allowed; one bill line plus a breakdown; the
+KOT shows "+ Kebab" under the dish; the dish's GST rate; numbers typed, never reused; whoever edits
+the menu; the Tables pad, the Till and the Terminal; not on the guest's page yet. POS-32's fix: yes.
+
+**Shipped**
+- e7a0a184: POS-32 - the KOT station's print test waits for the slip to leave.
+- 8d01590a: numbered add-ons.
+  - Migration 208: `pos_numbered_addons` and `pos_order_lines.numbered_addons`; a trigger
+    refuses changing them once the kitchen has the dish.
+  - `api/src/modules/pos/numberedAddons.ts` holds the rules. `addOneLine` folds the add-ons in,
+    and the same-dish merge compares them.
+  - Customise on a dish not yet sent; the list's routes; the KOT and the Kitchen read "+ Kebab".
+  - More or fewer of a sent dish keep its add-ons.
+  - `flows/CustomiseDialog.tsx` on the pad, the Till and the Terminal; the breakdown on the bill,
+    the Till and the Terminal; "+ Kebab" on the slip and the Kitchen.
+  - The Menu's Dishes and Add-ons tabs (`components/NumberedAddonsTab.tsx`); "Sides" for the old
+    groups (labels only); `till-addons` kept offline beside the menu.
+- 9664dfd5: phone width, seen at 300px on the demo. The tab's heading stacks over its button,
+  Customise's footer wraps, and the add-ons sit in one column with ×n beside the price.
+
+**Found**
+- On the way: lowering a sent dish's quantity copies the line without `extra_choice_ids` (the
+  suspicion of the morning). Not proved either way yet.
+
+**Proved**
+- API on a scratch database at 208: numberedAddons 12, padTotal 5 (the pad and the bill, price
+  and name), roleGate, till, sameDish and kotStation - 189 of 189. Database: all 1,548 assertions
+  ("pos numbered addons" 11 of 11, "pos floor" 6 of 6). Web: the whole suite, 1,129 of 1,129.
+- Each guard failed first:
+  - the merge ignoring them: "… to deeply equal … ['Veg Biryani', 1]";
+  - no trigger: "pos numbered addons" 1 failed;
+  - the pad's price ignoring ×2: "expected 1546.5 to be 1908";
+  - the slip without "+ Kebab": "Unable to find … + Kebab ×2";
+  - Send dropping them: "expected { … } to match object { lines: [ … ] }".
+- Opened on the local demo after `migrate.sh`:
+  - Menu → Add-ons: added 2 = Kebab ₹120.
+  - Tables: AC7, Veg Biryani, Customise, 2, Done read "Veg Biryani with add-on Kebab" ₹430; Send.
+  - Kitchen: "1 × Veg Biryani + Kebab", one ticket. Floor: AC7 ₹451.50 (5% on ₹430).
+  - Till: the breakdown, and no Customise on the sent dish. Bill: "Veg Biryani with add-on Kebab /
+    Veg Biryani 310 · Kebab +120 / ₹430.00".
+  - No console error after a reload.
+
+**Left open**
+- The guest's in-room dining page (the owner: not yet). A report of add-ons sold (not asked).
+- The `extra_choice_ids` suspicion above. Live has none of this until the owner releases it.
+
+**Commits:** `e7a0a184`, `8d01590a`, `9664dfd5`, and these notes.
+
 ## 2026-10-09 · Close unpaid frees its table through Clear (POS-33), and the restaurant's open issues listed
 
 **Asked for:** the owner, 9 October: "list out all the issues present right now with POS"; "when we

@@ -6539,6 +6539,21 @@ copy will see of theirs.**
 
 ---
 
+### 391 · MINE: text pushed through the shell lost its backslashes, so four "proofs" and two doc edits matched nothing (9 October)
+
+Proving the numbered add-ons' guards fail first (AGENTS habit 2), I mutated files with one-line
+`node` calls and heredocs typed through the agent's Bash tool. A doubled backslash arrived as
+one, and a `\n` meant as two characters arrived as something else: the search text never matched
+the file (`.localpg` against `.local\pg`, found only by diffing character by character). Each
+helper refused on zero matches and every file was restored byte for byte, so nothing was proved
+wrongly - but four rounds and two HANDOVER edits went nowhere before the cause was seen. Files on
+this PC also mix CRLF and LF lines (`core.autocrlf=true`), which hid it behind a second suspect.
+**The rule:** a script that changes files is written with the Write tool, not typed through a
+shell; it matches on line-ending-normalised text; and it REFUSES when it matches zero times or
+twice. A mutation that did not apply proves nothing - say so, never count it.
+
+---
+
 ### 390 · The gates named the old machine's folder, so a new machine could run none of its database steps (9 October)
 
 `scripts/gates.sh` called `bash "/d/fidato pms/.local/dbq.sh"` for the API, database, replay and
