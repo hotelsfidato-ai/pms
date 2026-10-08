@@ -71,7 +71,7 @@ export function NumberedAddonsTab({ hotelId }: { hotelId: string }) {
 
   return (
     <section>
-      <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
         <div className="min-w-0">
           <h2 className="text-md font-semibold text-ink-900">Add-ons</h2>
           <p className="text-sm text-grey-600 mt-0.5 leading-relaxed">

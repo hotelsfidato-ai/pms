@@ -65,9 +65,8 @@ export function CustomiseDialog({
         title={`Customise ${dish}`}
         description="Tap a number to add it to this dish. Tap again for two."
         footer={
-          <div className="flex items-center gap-3 w-full">
-            <span className="tabular text-md font-semibold text-ink-900">{money(unit)}</span>
-            <div className="flex-1" />
+          <div className="flex flex-wrap items-center justify-end gap-3 w-full">
+            <span className="tabular text-md font-semibold text-ink-900 mr-auto">{money(unit)}</span>
             <Button variant="secondary" size="lg" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
@@ -88,7 +87,7 @@ export function CustomiseDialog({
               No add-ons yet. Whoever edits the menu adds them on the Menu screen, under Add-ons.
             </p>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {addons.map((a) => {
                 const off = Boolean(a.offUntil && Date.parse(a.offUntil) > Date.now());
                 const n = chosen.find((c) => c.id === a.id)?.qty ?? 0;
@@ -118,13 +117,13 @@ export function CustomiseDialog({
                         off ? "text-grey-500 line-through" : "text-ink-900")}>
                         {a.name}
                       </span>
-                      <span className="block tabular text-sm text-grey-600">
+                      <span className="block tabular text-sm text-grey-600 whitespace-nowrap">
                         {off ? "off today" : a.price === 0 ? "Free" : `+${money(a.price)}`}
+                        {n > 0 && (
+                          <span className="ml-2 font-semibold text-success-600">×{n}</span>
+                        )}
                       </span>
                     </span>
-                    {n > 0 && (
-                      <span className="tabular text-sm font-semibold text-success-600">×{n}</span>
-                    )}
                   </button>
                 );
               })}
