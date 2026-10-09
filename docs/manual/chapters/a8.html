@@ -1,0 +1,624 @@
+<!-- ══════════════════════════════ CHAPTER A8 ══════════════════════════════ -->
+<section class="chapter" id="a8">
+  <div class="chapter-head">
+    <span class="num">Chapter A8</span>
+    <h1>Restaurant</h1>
+    <p>For waiters, cashiers, the kitchen and the restaurant manager. How an order goes from the table to the kitchen and onto the bill, how add-ons and custom add-ons are put on a dish, how the bill is printed and paid, how the cash drawer is opened, counted and closed, and how the restaurant and its KOT printers are set up.</p>
+  </div>
+
+  <!-- A8.1 -->
+  <h2 id="a8-1"><span class="n">A8.1</span>The restaurant's screens</h2>
+  <p>The restaurant has its own space. Click <span class="ui">Restaurant</span> in the switcher at the top (A0.4). Its menu, <span class="ui">Point of sale</span>, holds these screens. You see the ones your role uses.</p>
+  <table>
+    <thead><tr><th style="width:22%">Screen</th><th style="width:26%">Who uses it</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td>Tables</td><td>Waiters, Reception (if allowed)</td><td>The room as it stands. Tap a table to take an order on a pad; print a table's bill; clear a table.</td></tr>
+      <tr><td>Till</td><td>Waiters, the cashier</td><td>The cash register: the bill line by line, discounts, sending to the kitchen, payment, the day's paid bills.</td></tr>
+      <tr><td>Terminal</td><td>Waiters</td><td>The same work on a fixed tablet or screen, one outlet. Also where room-service orders from guests arrive.</td></tr>
+      <tr><td>Kitchen</td><td>Chef, kitchen manager</td><td>Every dish the kitchen holds, oldest first: <span class="ui">Start</span>, then <span class="ui">Ready</span>.</td></tr>
+      <tr><td>Menu</td><td>Kitchen manager</td><td>Dishes, prices, variations, Sides, the numbered Add-ons, what is off today.</td></tr>
+      <tr><td>Close restaurant day</td><td>Cashier, waiters, kitchen manager</td><td>The cash drawer: open the day with a float, money in and out, the count, the close.</td></tr>
+      <tr><td>Table bookings</td><td>Whoever takes orders</td><td>Hotel guests' requests for a table: confirm or decline.</td></tr>
+      <tr><td>Charges to rooms</td><td>Accounts</td><td>Bills an outside till sent to guests' rooms.</td></tr>
+      <tr><td>Restaurant setup</td><td>Owner, Admin, GM; the kitchen manager for the KOT section only</td><td>The restaurant's name, sections and tables, which computer prints which KOT, table-booking hours.</td></tr>
+    </tbody>
+  </table>
+  <p>At the top of Tables, the Till, the Terminal and the Kitchen, one line for each kind of KOT says whether it is printing, for example <span class="msg">“Kitchen KOTs: Kitchen PC - online”</span>. When it is not printing, the line is red and says why (A8.4).</p>
+
+  <!-- A8.2 -->
+  <h2 id="a8-2"><span class="n">A8.2</span>Taking an order at a table</h2>
+  <p>Open <span class="ui">Tables</span>. Each section of the room (A/C, Non A/C, the bar) shows its tables. A table's colour says where it stands.</p>
+
+  <figure class="shot" id="fig-A8-01">
+    <img src="img/A8-01.png" alt="The Tables screen: sections of tables, the colour key and the KOT printing lines">
+    <figcaption><b>Figure A8-01.</b> Tables: the room as it stands.</figcaption>
+    <ol class="callouts">
+      <li>Whether the KOTs are printing, one line per kind</li>
+      <li>The colour key: Free, Running, In the kitchen, Bill printed, Paid - clear it, Closed unpaid - clear it</li>
+      <li>A running table: minutes since it opened, its name, what it owes. Tap it to add another round</li>
+      <li>Print the table's bill (A8.6); the eye opens it on the Till</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:30%">Colour</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td>Free (white)</td><td>Nobody is at it. Tap it to start an order.</td></tr>
+      <tr><td>Running (blue)</td><td>An order is open; nothing has gone to the kitchen yet.</td></tr>
+      <tr><td>In the kitchen (orange)</td><td>Dishes have gone to the kitchen.</td></tr>
+      <tr><td>Bill printed (green)</td><td>The guest has the bill in front of them.</td></tr>
+      <tr><td>Paid - clear it (yellow)</td><td>Paid. Tap <span class="ui">Clear</span> when the guests leave, so the table is free for the next ones.</td></tr>
+      <tr><td>Closed unpaid - clear it (grey)</td><td>Closed without payment, with a reason (A8.7). Tap <span class="ui">Clear</span> too.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>To take an order</h3>
+  <ol class="steps">
+    <li>Tap a free table. The <b>order pad</b> opens over the room (Figure A8-02).</li>
+    <li>Tap a dish to add it. Tap it again for two. To find a dish, type in <span class="ui">Search the menu</span>, or tap a section button (<span class="ui">Starters</span>, <span class="ui">Main course</span>…); tap it again to see all.</li>
+    <li>A dish with a choice to make (a size, a crust, Sides) opens a small window first: choose, add a note for the kitchen if needed (“no chilli”), and tap <span class="ui">Add</span>.</li>
+    <li>Check <span class="ui">This round</span> on the right. Use <span class="ui">−</span> and <span class="ui">+</span> for the number, the bin to take a dish off, <span class="ui">Customise</span> for add-ons (A8.3).</li>
+    <li>Tap <span class="ui">Send</span>. The message <span class="msg">“N4 sent · Kitchen docket 14.”</span> means the kitchen has it and the KOTs are printing (A8.4).</li>
+  </ol>
+
+  <figure class="shot" id="fig-A8-02">
+    <img src="img/A8-02.png" alt="The order pad open on table N4: search, sections, dishes, This round and Send">
+    <figcaption><b>Figure A8-02.</b> The order pad on a free table.</figcaption>
+    <ol class="callouts">
+      <li>Search the whole menu by name or short code</li>
+      <li>One section at a time</li>
+      <li>A dish and its price. A dash means it is priced by its choices</li>
+      <li>This round: what you are about to send</li>
+      <li>Send: the round goes to the kitchen and onto the bill</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A8-03">
+    <img src="img/A8-03.png" alt="Two dishes on the round, with the note Masala Chai added and its Customise button">
+    <figcaption><b>Figure A8-03.</b> Two dishes on the round.</figcaption>
+    <ol class="callouts">
+      <li>One more of this dish</li>
+      <li>Customise: add-ons for this dish (A8.3)</li>
+      <li>Take it off the pad</li>
+      <li>After each tap, the note “… added” with its own Customise, so it is easy to find on a phone</li>
+    </ol>
+  </figure>
+
+  <p>To add a round to a table that already has an order, tap the table again. The pad says <span class="msg">“Another round on this table's bill.”</span> and lists the dishes <span class="ui">Already sent</span> at the top (A8.3).</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Nothing reaches the kitchen until you tap Send.</b> The round is kept on your device while you build it. A round left on a pad shows on the table's tile as a dashed border with <span class="msg">“not sent”</span>.</li>
+      <li><b>No connection?</b> Send says <span class="msg">“N4 is held. The kitchen does not have it yet. It goes as soon as the connection is back.”</span> The kitchen is not cooking it yet: tell them, or wait for the line.</li>
+      <li><b>A dish refused</b> (off the menu today, a choice not made, the restaurant closed): nothing at all is sent, the round stays on the pad, and the message names the dish. Fix that dish and Send again.</li>
+      <li>The total at the foot of the pad is what the dishes cost before tax. The bill (A8.6) has the tax.</li>
+      <li>The same dish again is one more of it, but only until the kitchen has it. After that, more of it is a new line, so the kitchen gets a new KOT for it.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The pad works with no network until Send, so a waiter at the table never waits on the internet; the whole round is sent at once, all of it or none, so the kitchen never cooks half an order. The same dish is one more of it: <span class="d">D27-189</span>. The note after each tap: <span class="d">D27-290</span>.</p>
+  </div>
+
+  <!-- A8.3 -->
+  <h2 id="a8-3"><span class="n">A8.3</span>Add-ons: numbered, and custom</h2>
+  <p>A guest wants something extra on a dish. There are two ways, both under <span class="ui">Customise</span>:</p>
+  <ul>
+    <li><b>A numbered add-on</b>, from the restaurant's list: “2 is Kebab, ₹120”. Staff remember the number.</li>
+    <li><b>A custom add-on</b>, typed on the spot: something not on the list, with a name and a price, or Free.</li>
+  </ul>
+
+  <h3>A numbered add-on, before the dish is sent</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">Customise</span> beside the dish (on the pad, the Till or the Terminal).</li>
+    <li>Tap the add-on's number. Tap it again for two of it; <span class="ui">×</span> takes one off. An add-on that is off today shows, but cannot be tapped.</li>
+    <li>The top of the window shows what the line will read, for example <span class="msg">“Veg Biryani with add-on Kebab”</span>, and the price moves as you tap.</li>
+    <li>On a line of several of the dish, choose <span class="ui">All 3</span> (the add-on on each) or <span class="ui">Just 1</span> (one of them, as its own line). <span class="ui">Done</span> waits until you choose.</li>
+    <li>Tap <span class="ui">Done</span>.</li>
+  </ol>
+  <p>The dish stays one line, taxed at its own rate. The bill shows the breakdown under it (“Veg Biryani 310 · Kebab +120”), and the KOT prints <span class="msg">“+ Kebab”</span> under the dish so the cook does not miss it.</p>
+
+  <figure class="shot" id="fig-A8-04">
+    <img src="img/A8-04.png" alt="The Customise window: numbered add-on tiles, the Custom add-on button and Done">
+    <figcaption><b>Figure A8-04.</b> Customise on a dish not yet sent.</figcaption>
+    <ol class="callouts">
+      <li>A numbered add-on: its number, name and price</li>
+      <li>Custom add-on: something not on the list</li>
+      <li>Done</li>
+    </ol>
+  </figure>
+
+  <h3>A custom add-on</h3>
+  <ol class="steps">
+    <li>In <span class="ui">Customise</span>, tap <span class="ui">Custom add-on</span>.</li>
+    <li>Type its <span class="ui">Name</span>, as the kitchen should read it: “Extra papad”.</li>
+    <li>Type its <span class="ui">Price</span> in rupees (40, or 40.50), or tick <span class="ui">Free</span>. There is no default: a blank price, or 0 without Free, is not accepted.</li>
+    <li>Set <span class="ui">How many</span> with − and +. It starts at 1 and is its own number: one papad for two thalis is one.</li>
+    <li>Tap <span class="ui">Add</span>. It is listed under the add-ons as <span class="msg">“+ Extra papad ×1”</span> with its price. Add more if you need to; × takes one away.</li>
+    <li>Tap <span class="ui">Done</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A8-05">
+    <img src="img/A8-05.png" alt="The custom add-on form filled in: Extra papad, 40, How many 1, and Add">
+    <figcaption><b>Figure A8-05.</b> A custom add-on.</figcaption>
+    <ol class="callouts">
+      <li>Name</li>
+      <li>Price, in rupees</li>
+      <li>Free, instead of a price</li>
+      <li>How many</li>
+      <li>Add</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A8-06">
+    <img src="img/A8-06.png" alt="The custom add-on listed in the Customise window, and Done">
+    <figcaption><b>Figure A8-06.</b> Added: it is its own line, with its price.</figcaption>
+    <ol class="callouts"><li>The custom add-ons for this dish</li><li>Done</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A8-07">
+    <img src="img/A8-07.png" alt="The round with + Extra papad ×1 under Paneer Tikka, ready to Send">
+    <figcaption><b>Figure A8-07.</b> The round, ready to send.</figcaption>
+    <ol class="callouts"><li>The custom add-on, under its dish</li><li>Send</li></ol>
+  </figure>
+
+  <p>A custom add-on is always its own line under its dish: <span class="msg">“Paneer Tikka ₹320 / + Extra papad ₹40”</span> on the bill. It is taxed at the dish's rate, and it goes to the kitchen with its dish.</p>
+
+  <h3>On a dish the kitchen already has</h3>
+  <p>The thali has reached the table, and the guest wants one more thing with it.</p>
+  <ol class="steps">
+    <li><b>On Tables:</b> tap the table. The pad lists the dishes <span class="ui">Already sent</span>; tap <span class="ui">Customise</span> beside the dish.<br>
+        <b>On the Till or the Terminal:</b> tap <span class="ui">Customise</span> beside the dish.</li>
+    <li>The window is called <span class="msg">“Add to Paneer Tikka”</span>. Tap numbered add-ons, or add a custom one, as above.</li>
+    <li>Tap <span class="ui">Done</span>. Each add-on goes on as its own line under the dish.</li>
+    <li><b>Send</b> it, like any new dish: the pad's <span class="ui">Send</span>, or the Till's <span class="ui">Send to the kitchen</span>. Its KOT names the dish it is for: <span class="msg">“+ Extra papad · for: Paneer Tikka (KOT 12)”</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A8-16">
+    <img src="img/A8-16.png" alt="The Add to Masala Chai window, opened from the Till on a dish already sent">
+    <figcaption><b>Figure A8-16.</b> Customise on a dish the kitchen has: the window is “Add to …”.</figcaption>
+    <ol class="callouts"><li>Add to the dish: everything here is a line of its own</li><li>Custom add-on</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>An add-on's number is set when it goes on. To change it, strike it (× on the Till) and add it again.</li>
+      <li>Taking off an add-on the kitchen already has is like taking off a dish: only the owner, an Admin, the GM, the hotel manager or the kitchen manager can, and they must say why (A8.7). Striking a dish strikes its add-ons, with the same reason.</li>
+      <li>Customise needs the connection on the Till and the Terminal: a change held offline could reach the dish after the kitchen has it.</li>
+      <li>Whoever takes orders can add a custom add-on. Each one records who added it and when.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The numbered list, one line per dish, the breakdown on the bill and “+ Kebab” on the KOT: <span class="d">D27-289</span>. “All 3 / Just 1”: <span class="d">D27-290</span>. Custom add-ons, add-ons on a dish already sent, Free never a default, the dish's own tax, their own number: <span class="d">D27-291</span>. The common custom add-ons can be given a number in the Menu (A8.11).</p>
+  </div>
+
+  <!-- A8.4 -->
+  <h2 id="a8-4"><span class="n">A8.4</span>Sending to the kitchen: the KOTs</h2>
+  <p>When you tap <span class="ui">Send</span>, the round gets one KOT number. The kitchen's dishes print at the kitchen's printer and the drinks at the bar's: one slip for each <b>kind</b> of KOT, each saying in big letters what it is.</p>
+
+  <figure class="shot" id="fig-A8-08">
+    <img src="img/A8-08.png" alt="Tables after Send: the message N4 sent, Kitchen docket, and N4 running">
+    <figcaption><b>Figure A8-08.</b> Sent.</figcaption>
+    <ol class="callouts"><li>The message: the table and the KOT number</li><li>The table is now in the kitchen</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A8-09">
+    <img src="img/A8-09.png" alt="Two printed slips from one Send: KITCHEN KOT 14 with Paneer Tikka and + Extra papad, BAR KOT 14 with Masala Chai">
+    <figcaption><b>Figure A8-09.</b> One Send, one number, two slips. (Printed here by the test printers of A8.13.)</figcaption>
+    <ol class="callouts"><li>KITCHEN KOT 14: the kitchen's dishes</li><li>The custom add-on, under its dish</li><li>BAR KOT 14: the drinks, at the bar</li></ol>
+  </figure>
+
+  <ul>
+    <li><b>What a KOT shows:</b> the time, what it is (<b>KITCHEN KOT 14</b>), dine in or take away, the table, each dish with its number, its add-ons and Sides under it, and the kitchen note. Never a price.</li>
+    <li><b>Which kind a dish is</b> depends on its menu section: Bar and Alcohol sections print at the bar, the rest in the kitchen, unless the manager chose otherwise (A8.10). It is decided when the dish is sent, so a reprint goes where the first slip went.</li>
+    <li><b>A dish taken off after it was sent</b> prints, on a reprint of its KOT, under <span class="msg">“STOP - TAKEN OFF”</span>, with the reason.</li>
+    <li><b>A lost or torn KOT:</b> on the computer that printed it, open <span class="ui">Restaurant setup</span>, the KOT section, <span class="ui">This computer's last 20 KOTs</span>, and tap <span class="ui">Reprint</span>. The slip says <b>REPRINT</b>.</li>
+  </ul>
+
+  <h3>The printing lines</h3>
+  <table>
+    <thead><tr><th style="width:44%">The line says</th><th>What to do</th></tr></thead>
+    <tbody>
+      <tr><td><span class="msg">“Kitchen KOTs: Kitchen PC - online”</span> (grey)</td><td>Nothing. It is printing.</td></tr>
+      <tr><td><span class="msg">“Bar KOTs wait: Bar PC not seen since 8:42”</span> (red)</td><td>The bar's computer is off, asleep, or its screen is closed. Its KOTs wait for it and print when it is back, oldest first, the same day. Turn it on and open a restaurant screen on it.</td></tr>
+      <tr><td><span class="msg">“No computer prints Bar KOTs - they are not printing”</span> (red)</td><td>Nobody has chosen a computer for that kind. A manager taps <span class="ui">Set up</span> on the line (A8.10).</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>One computer prints each kind and no other device prints a KOT: <span class="d">D27-159</span>, <span class="d">D27-161</span>. A missed KOT prints when its computer is back, the same business day only: <span class="d">D27-167</span>. Kinds, one number with a slip per kind, the heading in big letters, REPRINT, the red line only for a kind something is sent to: <span class="d">D27-292</span>. The website cannot reach a printer by its address on the hotel's network, so a printer is always reached through the computer it is connected to.</p>
+  </div>
+
+  <!-- A8.5 -->
+  <h2 id="a8-5"><span class="n">A8.5</span>The Kitchen screen</h2>
+  <p>The Kitchen screen stays open on a screen in the kitchen (and one at the bar). Every dish the kitchen holds is a ticket, oldest first.</p>
+
+  <figure class="shot" id="fig-A8-10">
+    <img src="img/A8-10.png" alt="The Kitchen screen on a wall screen: Ordered and On the fire columns, tickets with Start">
+    <figcaption><b>Figure A8-10.</b> The Kitchen screen.</figcaption>
+    <ol class="callouts">
+      <li>A ticket: how many, the dish, the table</li>
+      <li>A custom add-on sent on its own says which dish it is for</li>
+      <li>All, Kitchen or Bar: which KOTs this screen shows</li>
+      <li>By stage (two columns) or By table</li>
+    </ol>
+  </figure>
+
+  <ol class="steps">
+    <li>When you begin a dish, tap <span class="ui">Start</span>. It moves to <span class="ui">On the fire</span>.</li>
+    <li>When it goes out, tap <span class="ui">Ready</span>. It leaves the screen and is the waiters': the table's tile on Tables says <span class="msg">“2 ready”</span>.</li>
+    <li>The waiter carries it out and taps <span class="msg">“2 ready”</span> on the tile (or <span class="ui">Taken</span> on the Terminal). It is served.</li>
+  </ol>
+  <ul>
+    <li>A ticket's edge turns <b>yellow</b> after 5 minutes and <b>red</b> after 10. Under the wait, <span class="msg">“12 min est”</span> is how long the dish should take; <span class="msg">“- est”</span> means nobody has timed it.</li>
+    <li>A dish taken off after it was sent turns into a red <b>CANCELLED</b> ticket with <span class="msg">“stop cooking this”</span> and the manager's reason.</li>
+    <li><span class="ui">By table</span> shows one card per table, its dishes grouped by course, so you can see whether a whole table is ready.</li>
+    <li><span class="ui">All</span> / <span class="ui">Kitchen</span> / <span class="ui">Bar</span> shows one kind's tickets. Each screen remembers its choice: set the bar's screen to Bar once.</li>
+    <li><b>LIVE</b> in the header means new dishes arrive at once; <b>RECONNECTING</b> means it is checking every few seconds instead.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A8-11">
+    <img src="img/A8-11.png" alt="The Kitchen screen showing only Bar tickets">
+    <figcaption><b>Figure A8-11.</b> The bar's screen: Bar only.</figcaption>
+    <ol class="callouts"><li>Bar chosen</li><li>Only the drinks</li></ol>
+  </figure>
+
+  <figure class="shot phone" id="fig-A8-12">
+    <img src="img/A8-12.png" alt="The Kitchen screen on a phone: the header in two rows">
+    <figcaption><b>Figure A8-12.</b> On a phone the header takes two rows; the choices slide sideways.</figcaption>
+    <ol class="callouts"><li>By stage / By table and All / Kitchen / Bar</li></ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Two buttons, Start and Ready; a Ready dish is the waiter's to carry out: <span class="d">D27-221</span>, <span class="d">D27-222</span>. The All / Kitchen / Bar filter in place of the old KOT printer button, and the two-row header on a phone: <span class="d">D27-292</span>, <span class="d">D27-293</span>.</p>
+  </div>
+
+  <!-- A8.6 -->
+  <h2 id="a8-6"><span class="n">A8.6</span>Printing the bill</h2>
+  <p>Each printed bill says at the top what it is:</p>
+  <table>
+    <thead><tr><th style="width:32%">Heading</th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td>INTERIM BILL</td><td>Printed before payment, for the guest to check. It says <b>NOT PAID</b>.</td></tr>
+      <tr><td>BILL</td><td>The first print after payment. It says how it was paid.</td></tr>
+      <tr><td>BILL · DUPLICATE</td><td>A paid bill printed again.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Before payment, from Tables</h3>
+  <ol class="steps">
+    <li>Tap the printer under the table.</li>
+    <li>The message says where it went: <span class="msg">“Interim bill sent to Bar PC”</span>. The table turns green, <b>Bill printed</b>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A8-13">
+    <img src="img/A8-13.png" alt="Tables: the printer button under N4 and the message Interim bill sent to Virtual Bar">
+    <figcaption><b>Figure A8-13.</b> Printing the bill from Tables.</figcaption>
+    <ol class="callouts"><li>Print the table's bill</li><li>Where it went</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A8-14">
+    <img src="img/A8-14.png" alt="An INTERIM BILL printed, saying NOT PAID">
+    <figcaption><b>Figure A8-14.</b> The interim bill.</figcaption>
+    <ol class="callouts"><li>INTERIM BILL</li><li>NOT PAID</li></ol>
+  </figure>
+
+  <h3>Where the bill prints</h3>
+  <ul>
+    <li><b>A bill printer is chosen</b> (A8.10): it prints there by itself, and the screen says where it went.</li>
+    <li><b>The bill printer is off</b>: the screen says <span class="msg">“Bar PC is offline”</span> and offers <span class="ui">Print here</span>. Print here opens the bill on your device; tap <span class="ui">Print here</span> on it. A bill printed here does not print again at the bill printer later. If you choose to wait instead, it prints there when it is back.</li>
+    <li><b>No bill printer is chosen</b>: the bill opens on your device, as it always did. Tap <span class="ui">Print here</span>.</li>
+  </ul>
+
+  <p>The bill shows the hotel, the restaurant, the table and the date, every line with its add-ons, the net, CGST and SGST for each rate (alcohol's VAT on its own line, and on its own VAT bill), the total, and how it was paid. It says <span class="msg">“This is a restaurant bill, not a tax invoice.”</span> The GST invoice is issued on the guest's room bill at checkout.</p>
+
+  <figure class="shot" id="fig-A8-19">
+    <img src="img/A8-19.png" alt="A paid bill printed twice: BILL, then BILL · DUPLICATE">
+    <figcaption><b>Figure A8-19.</b> After payment: BILL, and when printed again BILL · DUPLICATE (newest on top).</figcaption>
+    <ol class="callouts"><li>BILL · DUPLICATE</li><li>BILL</li></ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The headings, the bill printer, Print here, and the bill opening as before when no bill printer is chosen: <span class="d">D27-292</span>. Alcohol's VAT apart from GST: <span class="d">D21-91</span>.</p>
+  </div>
+
+  <!-- A8.7 -->
+  <h2 id="a8-7"><span class="n">A8.7</span>The Till: the cash register</h2>
+  <p>The Till is where a bill is checked and paid. The menu is on the left: tapping a dish adds it to the open order at once. The bill is on the right. Under it are <span class="ui">Open orders</span> and <span class="ui">Settled today</span>.</p>
+
+  <h3>To open an order on the Till</h3>
+  <ol class="steps">
+    <li>From Tables, tap the eye under the table. Or on the Till, tap the order under <span class="ui">Open orders</span>.</li>
+    <li>For a new order without Tables, type the table in <span class="ui">Start an order</span> and open it.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A8-15">
+    <img src="img/A8-15.png" alt="The Till with N4's bill: lines with Customise, the custom add-on, Kitchen has it all, discounts, room, Cash Card UPI, Part - pay two ways">
+    <figcaption><b>Figure A8-15.</b> The Till: the bill, and how it is paid.</figcaption>
+    <ol class="callouts">
+      <li>A custom add-on, under its dish</li>
+      <li>Customise any dish (A8.3)</li>
+      <li>Send to the kitchen (it reads “Kitchen has it all” when nothing is waiting)</li>
+      <li>Cash, Card, UPI: paid at once</li>
+      <li>Part - pay two ways</li>
+    </ol>
+  </figure>
+
+  <h3>What each button does</h3>
+  <table>
+    <thead><tr><th style="width:28%">Button</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>Covers, waiter, customer</td><td>Optional: people eating, who served, a customer's mobile, name and address (for take away and delivery). <span class="ui">Hold</span> keeps an order aside; <span class="ui">Resume</span> brings it back.</td></tr>
+      <tr><td>Customise</td><td>Add-ons on the dish (A8.3).</td></tr>
+      <tr><td>−</td><td>One fewer. For a dish the kitchen has, a manager and a reason (below).</td></tr>
+      <tr><td>×</td><td>Strike the line. It stays on the record, struck through.</td></tr>
+      <tr><td>Send to the kitchen</td><td>Sends every dish not yet sent, as Send does on the pad.</td></tr>
+      <tr><td>Discount</td><td>A percentage or a fixed amount, always with a reason. Up to 10% freely; more is a named promotion.</td></tr>
+      <tr><td>Round off</td><td>Rounds the total to the rupee. <span class="ui">Undo round off</span> takes it back.</td></tr>
+      <tr><td>Room and Charge to room</td><td>Type the room number and tap <span class="ui">Charge to room</span>. It asks first, naming the guest: <span class="msg">“Charge ₹441 to room 201?”</span>. A room with two open bills asks whose.</td></tr>
+      <tr><td>Cash, Card, UPI</td><td>Paid that way, at once. The bill moves to <span class="ui">Settled today</span>.</td></tr>
+      <tr><td>Part - pay two ways</td><td>Split the payment: each way with its amount. For cash, type the <span class="ui">Cash given</span> and the change is shown. <span class="ui">Settle</span> appears only when the parts add up.</td></tr>
+      <tr><td>Close unpaid</td><td>Closes the bill without payment. It always asks why. The table then reads “Closed unpaid - clear it”.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>To take payment</h3>
+  <ol class="steps">
+    <li>Check the lines and the <span class="ui">Total</span> with the guest. Print the interim bill if they want to see it (A8.6).</li>
+    <li>Tap <span class="ui">Cash</span>, <span class="ui">Card</span> or <span class="ui">UPI</span>; or type the room and tap <span class="ui">Charge to room</span>; or <span class="ui">Part - pay two ways</span>.</li>
+    <li>The bill closes and moves under <span class="ui">Settled today</span>. To print it, tap it there, then <span class="ui">Print the bill</span>.</li>
+    <li>When the guests leave, tap <span class="ui">Clear</span> on the table in Tables.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A8-26">
+    <img src="img/A8-26.png" alt="The Till: a bill for table N5 with its Total and the Cash button">
+    <figcaption><b>Figure A8-26.</b> Taking cash for a bill.</figcaption>
+    <ol class="callouts"><li>The total the guest pays</li><li>Cash</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A8-27">
+    <img src="img/A8-27.png" alt="The settled bill reopened from Settled today: Paid by cash">
+    <figcaption><b>Figure A8-27.</b> Paid in cash.</figcaption>
+    <ol class="callouts"><li>How it was paid, and who took it</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A8-17">
+    <img src="img/A8-17.png" alt="A settled bill on the Till with Print the bill">
+    <figcaption><b>Figure A8-17.</b> A paid bill: Print the bill.</figcaption>
+    <ol class="callouts"><li>Paid by UPI</li><li>Print the bill (A8.6)</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Food the kitchen already has</b> comes off only for the owner, an Admin, the GM, the hotel manager or the kitchen manager, and they type why: <span class="msg">“The kitchen already has this. Why is it coming off?”</span>. The reason prints on the KOT, shows on the Kitchen screen and in the day's list of dishes struck after the kitchen had them. The same goes for one fewer of a sent dish, and for closing unpaid a bill any of which was sent.</li>
+      <li><b>Cash before the first float</b> is refused: <span class="msg">“Count this outlet's first float once (Close restaurant day, Open the day): cash is taken after it.”</span> Card, UPI and room charges go on. See A8.9.</li>
+      <li>A bill paid wholly in cash is rounded to the rupee.</li>
+      <li>Cash over ₹1,00,000 on one bill asks for the guest's PAN or another identity.</li>
+      <li><b>No connection:</b> cash, card and UPI are refused until the line is back. A <b>room charge</b> can be made with no connection: it is held and sent when the line is back.</li>
+      <li>Once the day is closed (A8.9), new bills and payments wait for the night audit.</li>
+      <li>An order on a banquet function is paid on the function's bill only; cash, card, UPI and rooms are switched off for it, with the reason.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>.</p>
+  </div>
+
+  <!-- A8.8 -->
+  <h2 id="a8-8"><span class="n">A8.8</span>The Terminal</h2>
+  <p>The Terminal is for a fixed tablet or screen in one outlet. The first time it is opened on a device it asks which outlet it is in, and remembers that on the device.</p>
+
+  <figure class="shot" id="fig-A8-33">
+    <img src="img/A8-33.png" alt="The Terminal: Start an order, Open the order, the open orders list, Change outlet">
+    <figcaption><b>Figure A8-33.</b> The Terminal.</figcaption>
+    <ol class="callouts"><li>The table, for a new order</li><li>Open the order</li><li>An open order: tap to open it</li><li>Change outlet</li></ol>
+  </figure>
+
+  <ul>
+    <li>Open an order, tap dishes to add them (each with a <span class="ui">Customise</span>), and send them to the kitchen.</li>
+    <li>A dish the kitchen made Ready shows <b>Ready</b> with <span class="ui">Taken</span>: tap it when you carry it out.</li>
+    <li><b>Room-service orders waiting</b>: a checked-in guest's order from their own page. <span class="ui">Accept</span> makes it a room-service order for their room and sends it to the kitchen; <span class="ui">Decline</span> asks a reason, which the guest reads. It is charged to the room at delivery.</li>
+    <li>Payment and printing work as on the Till.</li>
+  </ul>
+
+  <!-- A8.9 -->
+  <h2 id="a8-9"><span class="n">A8.9</span>The cash drawer: Close restaurant day</h2>
+  <p><span class="ui">Close restaurant day</span> is where the cashier opens the drawer with a float, records money that was not a sale, counts the drawer, and closes the day.</p>
+
+  <h3>Once, before the first cash: open the day</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">Close restaurant day</span>. The card <span class="ui">Open the day</span> shows a row for each note and coin.</li>
+    <li>Count the float in the tin and type how many of each: <span class="ui">₹500 × 4</span>, <span class="ui">₹100 × 10</span>. The total shows on the button.</li>
+    <li>Tap <span class="ui">Open the day - ₹3,000</span>.</li>
+  </ol>
+  <p>From then on each day opens by itself, on the float the last close kept.</p>
+
+  <figure class="shot" id="fig-A8-24">
+    <img src="img/A8-24.png" alt="Close restaurant day: Open the day, the note counts and the Open the day button">
+    <figcaption><b>Figure A8-24.</b> Counting the first float.</figcaption>
+    <ol class="callouts"><li>How many of each note</li><li>Open the day, with the total</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A8-25">
+    <img src="img/A8-25.png" alt="Close restaurant day open: Overview, Cash and Finalize steps, and the day's figures">
+    <figcaption><b>Figure A8-25.</b> The day is open: three steps.</figcaption>
+    <ol class="callouts"><li>Overview: what the shift did</li><li>Cash: what is in the tin</li><li>Finalize: close the day</li><li>How the money arrived: cash, card, UPI, rooms</li></ol>
+  </figure>
+
+  <h3>During the day: money that was not a sale</h3>
+  <ol class="steps">
+    <li>Open the <span class="ui">Cash</span> step. Under <span class="ui">In and out of the drawer</span>, tap <span class="ui">Record</span>.</li>
+    <li>Choose <span class="ui">What happened</span>: <b>Expense</b> (paid out, such as milk), <b>Cash in</b> (a top-up), <b>To the safe</b>, or <b>Due paid</b> (money owed, collected).</li>
+    <li>Type <span class="ui">How much</span> and <span class="ui">What was it for</span>. This line is what somebody asks about tomorrow, so say it plainly.</li>
+    <li>Tap <span class="ui">Record</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A8-29">
+    <img src="img/A8-29.png" alt="The Money in or out window: What happened, How much, What was it for, Record">
+    <figcaption><b>Figure A8-29.</b> Money out of the drawer: an expense.</figcaption>
+    <ol class="callouts"><li>What happened</li><li>How much</li><li>What was it for</li><li>Record</li></ol>
+  </figure>
+
+  <p>An expense may wait for a manager's yes: it shows <span class="msg">“Waiting for a yes - not taken off the tin yet”</span> and is not taken off what the drawer should hold until it is approved (A12).</p>
+
+  <h3>At the end of the shift: count the drawer</h3>
+  <ol class="steps">
+    <li>Open the <span class="ui">Cash</span> step. Under <span class="ui">Count the drawer</span>, type how many of each note and coin come out of the tin.</li>
+    <li>Look at <span class="ui">The sum</span>: the opening float, plus the cash taken, plus or minus the money in and out, is what the drawer is <span class="ui">Expected</span> to hold. Under it, <span class="ui">Counted</span>.</li>
+    <li>If they differ, a yellow box says <span class="msg">“Short by ₹217”</span> or over, and how much of it is a paid-out waiting for a yes.</li>
+    <li>Tap <span class="ui">Save the count - ₹3,140</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A8-28">
+    <img src="img/A8-28.png" alt="The Cash step: Count the drawer, In and out of the drawer, The sum">
+    <figcaption><b>Figure A8-28.</b> The Cash step.</figcaption>
+    <ol class="callouts"><li>Count the drawer</li><li>In and out of the drawer</li><li>The sum</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A8-30">
+    <img src="img/A8-30.png" alt="The count typed, the Save the count button, and The sum with Expected, Counted and Short by">
+    <figcaption><b>Figure A8-30.</b> The count, and what the drawer should hold.</figcaption>
+    <ol class="callouts"><li>Save the count</li><li>Expected: what the drawer should hold</li></ol>
+  </figure>
+
+  <h3>Close the day</h3>
+  <ol class="steps">
+    <li>Open the <span class="ui">Finalize</span> step. <span class="ui">Before it closes</span> lists what a person must decide first: bills still open (settle them, or close them unpaid with a reason), tables never cleared after payment.</li>
+    <li>Under <span class="ui">The drawer</span>, if the count is short or over, type <span class="ui">Why</span>. It does not stop the close; it has to be written down.</li>
+    <li>Type the <span class="ui">Float kept for the next day</span>. The rest is deposited.</li>
+    <li>Tap <span class="ui">Close</span> with the date. <span class="msg">“A closed day cannot be edited.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A8-31">
+    <img src="img/A8-31.png" alt="Finalize: Before it closes, with open bills and uncleared tables; The drawer with Why">
+    <figcaption><b>Figure A8-31.</b> Finalize: what stops the close, and the drawer.</figcaption>
+    <ol class="callouts"><li>What must be decided first</li><li>The drawer: expected and counted</li><li>Why it is short or over</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A8-32">
+    <img src="img/A8-32.png" alt="Finalize: Float kept for the next day and the Close button with the date">
+    <figcaption><b>Figure A8-32.</b> The float kept, and Close.</figcaption>
+    <ol class="callouts"><li>The float kept for the next day</li><li>Close the day</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Close restaurant day refuses while any bill is still open. It will not decide for you whether a bill is paid or closed unpaid.</li>
+      <li>After the close, new bills and payments wait for the night audit (A7), which starts the next business day.</li>
+      <li>Close restaurant day needs the connection.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The first float is counted once; after that each day opens on the float the last close kept, so nobody types it again every morning. A closed day is closed: the owner, 28 September. A paid-out is not taken off the drawer until somebody says yes: <span class="d">D27-242</span>. A difference never stops the close but must have a sentence, because a manager needs the sentence, not the number.</p>
+  </div>
+
+  <!-- A8.10 -->
+  <h2 id="a8-10"><span class="n">A8.10</span>Setting up the restaurant and its printers</h2>
+  <p><span class="ui">Restaurant setup</span> is for the owner, an Admin and the GM. The kitchen manager sees its KOT section only.</p>
+
+  <figure class="shot" id="fig-A8-35">
+    <img src="img/A8-35.png" alt="Restaurant setup: Ready to open checklist, the restaurant's name, Sections and tables">
+    <figcaption><b>Figure A8-35.</b> Restaurant setup.</figcaption>
+    <ol class="callouts"><li>Ready to open: what a first order needs, each line opening the screen that does it</li><li>A line not done yet</li><li>The restaurant's name, printed on every bill</li><li>Sections and tables</li></ol>
+  </figure>
+
+  <ul>
+    <li><b>Sections and tables:</b> add a section (A/C, Non A/C, the bar), then its tables, one or a numbered run, four to a row. Taking one away switches it off; it is refused while a bill sits on it. Nothing is deleted.</li>
+    <li><b>Table booking hours:</b> when hotel guests may ask for a table from their own page.</li>
+  </ul>
+
+  <h3>The KOT section</h3>
+  <figure class="shot" id="fig-A8-20">
+    <img src="img/A8-20.png" alt="The KOT section: This computer, its name, Prints Kitchen KOTs, Prints Bar KOTs, Prints the bills">
+    <figcaption><b>Figure A8-20.</b> The KOT section: this computer.</figcaption>
+    <ol class="callouts"><li>This computer</li><li>Its name</li><li>The KOT kinds it prints</li><li>Whether it prints the bills</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A8-21">
+    <img src="img/A8-21.png" alt="The KOT kinds with their computers, the computers that print, and which section prints where">
+    <figcaption><b>Figure A8-21.</b> KOT kinds, computers, and which section prints where.</figcaption>
+    <ol class="callouts"><li>KOT kinds: Kitchen and Bar to start; add more (Tandoor)</li><li>Computers that print, online or not</li><li>Which section prints where</li></ol>
+  </figure>
+
+  <h3>To make a computer print (once, on that computer)</h3>
+  <ol class="steps">
+    <li>On the computer next to the printer, set that printer as the computer's default printer, on 80 mm paper.</li>
+    <li>Start Chrome there with the <b>KOT station</b> shortcut, which prints without asking (<code>src/modules/pos/KOT-STATION-SETUP.md</code> has the exact shortcut).</li>
+    <li>Sign in, open <span class="ui">Restaurant setup</span> (or tap <span class="ui">Set up</span> on a red printing line).</li>
+    <li>Under <span class="ui">This computer</span>, type its name (“Bar PC”), tick what it prints (<span class="ui">Prints Bar KOTs</span>, and <span class="ui">Prints the bills</span> if it does), and tap <span class="ui">Save</span>.</li>
+    <li>Go back to the Kitchen screen and leave it open. The printing line on every till now reads <span class="msg">“Bar KOTs: Bar PC - online”</span>.</li>
+  </ol>
+  <ul>
+    <li><b>One computer per kind.</b> Ticking a kind on another computer moves it there; the old one stops printing it by itself.</li>
+    <li><b>One computer can print everything:</b> tick every kind and the bills on it. Each slip still says what it is.</li>
+    <li><b>KOT kinds:</b> Kitchen and Bar can be renamed (“Restaurant”) but never switched off; add a kind (Tandoor, Desserts) with <span class="ui">Add a KOT</span>. Its name heads its slip: <b>TANDOOR KOT 14</b>.</li>
+    <li><b>Which section prints where:</b> each menu section starts with its tax heading's KOT (Bar and Alcohol to the Bar, the rest to the Kitchen); change the odd one, such as Mocktails to the Bar.</li>
+    <li><b>A computer replaced:</b> tick its kinds on the new one. The old one then prints nothing and can be <span class="ui">Removed</span> from the list.</li>
+    <li>Every computer that prints keeps its last 20 KOTs here, with <span class="ui">Reprint</span>.</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Restaurant setup without a developer: <span class="d">D22-6</span>. The KOT section, its kinds, one computer per kind, the routing by section and the bill printer: <span class="d">D27-292</span>. The kitchen manager may open the KOT section: <span class="d">D27-292</span>.</p>
+  </div>
+
+  <!-- A8.11 -->
+  <h2 id="a8-11"><span class="n">A8.11</span>The menu and the add-ons list</h2>
+  <figure class="shot" id="fig-A8-34">
+    <img src="img/A8-34.png" alt="The Menu screen: Dishes and Add-ons tabs, Import the menu, Add a part of the menu, a dish with variations and Sides">
+    <figcaption><b>Figure A8-34.</b> The Menu.</figcaption>
+    <ol class="callouts"><li>Dishes</li><li>Add-ons: the numbered list</li><li>Import the menu from a file</li><li>Add a part of the menu (a section)</li><li>A dish's variations: sizes, quantities, options</li><li>Take a dish off for a while</li></ol>
+  </figure>
+  <ul>
+    <li><b>Prices are yours.</b> Nothing was shipped with the system. A price changed today applies to the next order; bills already printed keep the price they were sold at.</li>
+    <li>Each section has a tax heading (Restaurant, Bar, Alcohol, Banquet). A dish is taxed by its section's rule unless it has its own rate.</li>
+    <li><b>Variations</b> (a size, a crust): the first type's prices are the dish's; a further type's add to it, or are Free.</li>
+    <li><b>Sides</b>: groups of options linked dish by dish, with how many a guest may choose.</li>
+    <li><b>Take off</b> a dish until a time (“out of paneer”): the pad shows it, and refuses it, until then.</li>
+  </ul>
+  <h3>The Add-ons tab</h3>
+  <ul>
+    <li>The numbered list: number, name, what it is, price or Free. <span class="ui">Change</span> (never the number), <span class="ui">Off for a while</span>, <span class="ui">Switch off</span> / <span class="ui">Bring back</span>. A number is never given to a second add-on while the first is in use.</li>
+    <li><b>Custom add-ons used</b>: what staff typed in the last 30 days, most used first, with who. <span class="ui">Number it</span> opens a new numbered add-on with its name and price filled in.</li>
+  </ul>
+  <figure class="shot" id="fig-A8-22">
+    <img src="img/A8-22.png" alt="The Add-ons tab: Custom add-ons used, with Number it">
+    <figcaption><b>Figure A8-22.</b> The custom add-ons used.</figcaption>
+    <ol class="callouts"><li>Custom add-ons used</li><li>Number it: make it a numbered add-on</li></ol>
+  </figure>
+
+  <!-- A8.12 -->
+  <h2 id="a8-12"><span class="n">A8.12</span>Your shift in short</h2>
+  <table>
+    <thead><tr><th style="width:28%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>The first day only</td><td>Count the first float: Close restaurant day, Open the day.</td><td>A8.9</td></tr>
+      <tr><td>Before service</td><td>Check the printing lines are grey. Open the Kitchen screen on the kitchen's and the bar's computers.</td><td>A8.4</td></tr>
+      <tr><td>A table sits down</td><td>Tables, tap the table, tap the dishes, Send.</td><td>A8.2</td></tr>
+      <tr><td>Something extra</td><td>Customise: a number, or a Custom add-on.</td><td>A8.3</td></tr>
+      <tr><td>A dish is ready</td><td>Carry it out; tap “ready” on the table's tile.</td><td>A8.5</td></tr>
+      <tr><td>The guest asks for the bill</td><td>The printer under the table: INTERIM BILL.</td><td>A8.6</td></tr>
+      <tr><td>The guest pays</td><td>The Till: Cash, Card, UPI, Charge to room, or two ways. Print the bill if asked.</td><td>A8.7</td></tr>
+      <tr><td>The guests leave</td><td>Tables: Clear.</td><td>A8.2</td></tr>
+      <tr><td>Money that was not a sale</td><td>Close restaurant day, Cash, Record.</td><td>A8.9</td></tr>
+      <tr><td>End of the shift</td><td>Settle or close every bill, clear the tables, count the drawer, write why if it differs, keep the float, Close.</td><td>A8.9</td></tr>
+    </tbody>
+  </table>
+
+  <!-- A8.13 -->
+  <h2 id="a8-13"><span class="n">A8.13</span>Trying it without a KOT printer</h2>
+  <p>On the test computer only, two <b>virtual printers</b> stand in for real ones, so everything in this chapter can be tried with no printer: “Virtual Kitchen” prints Kitchen KOTs, and “Virtual Bar” prints Bar KOTs and the bills, onto a page instead of paper (Figures A8-09, A8-14 and A8-19 were printed this way). They are a testing tool kept on that computer only: they are never part of the live system, and they cannot reach it. How to start them is in <code>.local/virtual-printer/README.md</code> on that computer.</p>
+</section>

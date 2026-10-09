@@ -102,9 +102,13 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
   64px buttons, number first; a tap adds one, another makes it ×2, × takes one
   off; an add-on off today shows but cannot be tapped. The dish stays ONE line,
   "Veg Biryani with add-on Kebab", its price the dish's and the add-ons'
-  (`lib/pricing.ts`, held to the server by padTotal.test.ts). Only before Send
-  (the Till and Terminal hide the button on a sent dish; the server and 208's
-  trigger refuse). Since D27-290: after each tap the pad shows "<dish> added"
+  (`lib/pricing.ts`, held to the server by padTotal.test.ts). The FOLD is only
+  before Send (208's trigger refuses it after). Since D27-291 Customise is on
+  every dish: a **Custom add-on** (a typed name, a price or Free, its own
+  number) is a line of its own under the dish, before or after Send; on a dish
+  the kitchen has, the window is "Add to …" and numbered add-ons too go on as
+  lines of their own, for the next Send; the Tables pad lists the table's
+  dishes "Already sent" with Customise. Since D27-290: after each tap the pad shows "<dish> added"
   with its own Customise beside the footer, staying until the next dish, and on
   a narrow screen scrolls the new line into view; a line of several asks "All
   N" or "Just 1" (Just 1 splits one off with the add-ons); Customise offline is

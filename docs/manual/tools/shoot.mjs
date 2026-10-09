@@ -80,6 +80,8 @@ const js = async (expression) => {
   return r.result.value;
 };
 await cdp("Page.enable");
+/* The book is printed on white: the light look, whatever this PC prefers. */
+await cdp("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "light" }] });
 await cdp("Runtime.enable");
 
 /* ── Finding things on the page, as a person would name them ─────────── */
@@ -141,7 +143,7 @@ async function click(spec, nth) {
 
 async function type(spec, text) {
   await click(spec);
-  await js(`document.activeElement && document.activeElement.select && document.activeElement.select()`);
+  await js(`(() => { try { document.activeElement.select(); } catch { /* not every field selects */ } })()`);
   await cdp("Input.insertText", { text });
   await sleep(250);
 }
@@ -218,10 +220,15 @@ for (const shot of wanted) {
     await cdp("Emulation.setTouchEmulationEnabled", { enabled: phone });
     if (shot.as && shot.as !== who) { await signInAs(shot.as); who = shot.as; }
     if (shot.path) {
-      await cdp("Page.navigate", { url: `${APP}${shot.path}` });
+      await cdp("Page.navigate", { url: /^(https?|file):/.test(shot.path) ? shot.path : `${APP}${shot.path}` });
       await settle();
     }
     for (const step of shot.steps ?? []) {
+      /* Only if it is there - a "Got it" already pressed, say. */
+      if (step.clickIf) {
+        await sleep(400);
+        if (await js(`${FIND}; !!window.__find(${JSON.stringify(step.clickIf)})`)) await click(step.clickIf, step.nth);
+      }
       if (step.click) await click(step.click, step.nth);
       if (step.type) await type(step.type[0], step.type[1]);
       if (step.key) await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: step.key });
@@ -232,6 +239,11 @@ for (const shot of wanted) {
       if (step.settle) await settle();
     }
     await sleep(shot.pause ?? 300);
+    /* A step of the run with no picture of its own. */
+    if (shot.noShot) { console.log(`  · ${shot.id}  ${shot.title ?? ""}`); continue; }
+    /* Every arrow's target on the page first: a page still drawing is not a
+       page without it. */
+    for (const m of shot.marks ?? []) await waitFor(m.at).catch(() => {});
     const missing = await js(`${FIND}; ${DRAW}; window.__draw(${JSON.stringify(shot.marks ?? [])})`);
     if (missing.length) throw new Error(`arrow targets not on the page: ${missing.join(" | ")}`);
     await sleep(120);

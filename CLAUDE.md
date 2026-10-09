@@ -51,6 +51,9 @@ The rules that are never negotiable, in short — the full list is
 - Never commit, print or echo `api/.env`.
 - No default prices; a missing figure is a dash, never a zero.
 - Open the screen before claiming it works; run the gates you quote.
+- The manual moves with the screen (D27-293): a screen changed updates its
+  chapter in `docs/manual/chapters/`, its pictures and the build, in the same
+  commit (AGENTS.md, "Definition of done").
 - Every mistake goes into `MEMORY.md`, numbered.
 - Production deploys and writes on the server need the owner's explicit yes.
 - Every command given to the owner is labelled with where it runs.

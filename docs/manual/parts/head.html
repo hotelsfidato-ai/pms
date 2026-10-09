@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fidato PMS manual</title>
+<!--
+  THE FIDATO PMS MANUAL (D27-268). One print-ready book: open it in Chrome,
+  press Ctrl+P, choose "Save as PDF", paper A4, margins "Default".
+  No JavaScript, no network: Inter is read from this machine
+  (node_modules/@fontsource-variable/inter) and falls back to the system font.
+  BUILT, NOT WRITTEN BY HAND (D27-293): each chapter is its own file in
+  chapters/, and node docs/manual/tools/build.mjs puts the cover, the contents
+  and the chapters together into this file. Edit a chapter, then build.
+  Pictures: node docs/manual/tools/shoot.mjs <chapter> (shots/<chapter>.mjs).
+  A picture not taken yet is a dashed box naming what it must show.
+-->
+<style>
+@font-face {
+  font-family: "Inter Manual";
+  src: local("Inter Variable"), local("Inter"),
+       url("../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+:root {
+  --ink: #142B3A;
+  --ink-soft: #3d5566;
+  --grey: #66798a;
+  --line: #d6dee4;
+  --wash: #f3f6f8;
+  --orange: #FE611F;
+  --orange-dark: #c4470f;
+  --orange-wash: #fff2eb;
+  --why-wash: #eef3f7;
+  /* The system's own state colours, so the swatches match the screens. */
+  --s-blue: #2b6cb0;
+  --s-blue-wash: #ebf2f9;
+  --s-yellow: #ffb600;
+  --s-yellow-wash: #fff8e6;
+  --s-orange: #c4521d;
+  --s-orange-wash: #fdf1eb;
+  --s-red: #e0301e;
+  --s-red-wash: #fdeceb;
+  --s-rose: #b84659;
+  --s-grey: #eef0f2;
+  --s-grey-2: #e2e5e8;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+body {
+  margin: 0;
+  font-family: "Inter Manual", Inter, "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.5;
+  color: var(--ink);
+  background: #fff;
+}
+
+/* ── Pages ─────────────────────────────────────────────────────────── */
+
+@page {
+  size: A4;
+  margin: 18mm 17mm 20mm 17mm;
+  @bottom-left { content: "Fidato PMS · The manual · Part A"; font-size: 8pt; color: #66798a; }
+  @bottom-right { content: counter(page); font-size: 8pt; color: #66798a; }
+}
+@page cover {
+  margin: 0;
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }
+}
+
+@media screen {
+  body { background: #e6ebef; }
+  .book { max-width: 210mm; margin: 24px auto; }
+  .sheet, .chapter { background: #fff; padding: 18mm 17mm; margin-bottom: 24px;
+                     box-shadow: 0 1px 3px rgb(20 43 58 / 0.15); }
+  .cover { margin-bottom: 24px; }
+}
+
+.cover { page: cover; }
+.sheet, .chapter { break-before: page; }
+.cover + .sheet { break-before: page; }
+
+/* ── Cover ─────────────────────────────────────────────────────────── */
+
+.cover {
+  height: 297mm;
+  background: var(--ink);
+  color: #fff;
+  padding: 30mm 22mm 24mm;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.cover .brand { font-size: 10pt; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: rgb(255 255 255 / 0.85); }
+.cover .bar { width: 28mm; height: 2.2mm; background: var(--orange); margin: 26mm 0 10mm; }
+.cover h1 { color: #fff; font-size: 40pt; line-height: 1.05; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+.cover .sub { font-size: 16pt; font-weight: 500; margin: 6mm 0 0; color: rgb(255 255 255 / 0.85); }
+.cover .part { margin-top: 18mm; font-size: 13pt; font-weight: 600; }
+.cover .part span { color: var(--orange); }
+.cover .draft { margin-top: 4mm; font-size: 11pt; color: rgb(255 255 255 / 0.75); }
+.cover .foot { margin-top: auto; font-size: 9pt; color: rgb(255 255 255 / 0.6); line-height: 1.6; }
+.cover .ring { position: absolute; right: -40mm; bottom: -40mm; width: 140mm; height: 140mm;
+               border: 14mm solid rgb(254 97 31 / 0.10); border-radius: 50%; }
+
+/* ── Headings and text ─────────────────────────────────────────────── */
+
+h1, h2, h3, h4 { color: var(--ink); line-height: 1.2; break-after: avoid; }
+.chapter-head { border-bottom: 1.2mm solid var(--orange); padding-bottom: 5mm; margin-bottom: 7mm; }
+.chapter-head .num { display: block; font-size: 11pt; font-weight: 700; color: var(--orange-dark); letter-spacing: 0.08em; text-transform: uppercase; }
+.chapter-head h1 { font-size: 26pt; margin: 2mm 0 0; letter-spacing: -0.015em; }
+.chapter-head p { margin: 3mm 0 0; color: var(--ink-soft); font-size: 11pt; }
+h2 { font-size: 15pt; margin: 9mm 0 3mm; padding-top: 2mm; }
+h2 .n { color: var(--orange-dark); margin-right: 2mm; }
+h3 { font-size: 11.5pt; margin: 6mm 0 2mm; }
+p { margin: 0 0 2.6mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+li { margin-bottom: 1.2mm; }
+a { color: inherit; }
+
+.ui { font-weight: 650; color: var(--ink); white-space: nowrap; }
+.msg { background: var(--wash); border-radius: 1mm; padding: 0 1.2mm; font-style: normal; }
+code { font-family: Consolas, "Cascadia Mono", monospace; font-size: 9pt; background: var(--wash); padding: 0 1mm; border-radius: 1mm; }
+kbd { font-family: inherit; font-size: 9pt; font-weight: 600; border: 0.3mm solid var(--line); border-bottom-width: 0.6mm; border-radius: 1mm; padding: 0 1.4mm; background: #fff; }
+.d { font-weight: 650; color: var(--ink); white-space: nowrap; }
+.muted { color: var(--grey); }
+
+/* ── Steps ─────────────────────────────────────────────────────────── */
+
+ol.steps { list-style: none; padding: 0; counter-reset: step; margin: 2mm 0 4mm; }
+ol.steps > li { counter-increment: step; position: relative; padding-left: 9mm; margin-bottom: 2mm; min-height: 6mm; }
+ol.steps > li::before {
+  content: counter(step); position: absolute; left: 0; top: -0.3mm;
+  width: 6mm; height: 6mm; border-radius: 50%; background: var(--orange); color: #fff;
+  font-weight: 700; font-size: 9pt; display: grid; place-items: center; line-height: 6mm; text-align: center;
+}
+
+/* ── Boxes ─────────────────────────────────────────────────────────── */
+
+.box { border-radius: 2mm; padding: 3.5mm 4.5mm; margin: 4mm 0; break-inside: avoid; }
+.box h4 { margin: 0 0 1.6mm; font-size: 10pt; letter-spacing: 0.04em; text-transform: uppercase; }
+.box p:last-child, .box ul:last-child { margin-bottom: 0; }
+.box ul { padding-left: 5mm; }
+.why { background: var(--why-wash); border-left: 1.4mm solid var(--ink); }
+.why h4 { color: var(--ink); }
+.watch { background: var(--orange-wash); border-left: 1.4mm solid var(--orange); }
+.watch h4 { color: var(--orange-dark); }
+.open { background: #fff; border: 0.4mm dashed var(--grey); }
+.open h4 { color: var(--grey); }
+
+/* ── Tables ────────────────────────────────────────────────────────── */
+
+table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9.5pt; break-inside: avoid; }
+th, td { text-align: left; vertical-align: top; padding: 1.8mm 2.2mm; border-bottom: 0.3mm solid var(--line); }
+th { font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); border-bottom: 0.5mm solid var(--ink); }
+td:first-child { font-weight: 600; }
+.sw { display: inline-block; width: 4.2mm; height: 3.2mm; border-radius: 0.8mm; vertical-align: -0.4mm; margin-right: 1.5mm; border: 0.25mm solid rgb(20 43 58 / 0.15); }
+
+/* ── Screenshot placeholders ───────────────────────────────────────── */
+
+figure.shot { margin: 5mm 0; break-inside: avoid; }
+.shot-plan {
+  border: 0.5mm dashed var(--orange); border-radius: 2mm; background: #fffaf7;
+  padding: 3.5mm 4.5mm; min-height: 38mm;
+}
+.shot-plan.phone { max-width: 95mm; min-height: 70mm; }
+.shot-id { font-weight: 700; color: var(--orange-dark); margin: 0 0 2mm; font-size: 9.5pt; letter-spacing: 0.04em; text-transform: uppercase; }
+.shot-plan dl { display: grid; grid-template-columns: 30mm 1fr; gap: 1mm 3mm; margin: 0; font-size: 9pt; }
+.shot-plan dt { color: var(--grey); font-weight: 600; }
+.shot-plan dd { margin: 0; }
+figcaption { margin-top: 2mm; font-size: 9.5pt; color: var(--ink-soft); }
+figcaption b { color: var(--ink); }
+ol.callouts { list-style: none; counter-reset: c; padding: 0; margin: 1.5mm 0 0; font-size: 9pt; display: grid; grid-template-columns: 1fr 1fr; column-gap: 8mm; }
+ol.callouts li { counter-increment: c; position: relative; padding-left: 6.5mm; margin-bottom: 1mm; break-inside: avoid; }
+ol.callouts li::before {
+  content: counter(c); position: absolute; left: 0; top: 0.2mm; width: 4.6mm; height: 4.6mm; border-radius: 50%;
+  border: 0.4mm solid var(--orange); color: var(--orange-dark); font-weight: 700; font-size: 7.5pt;
+  display: grid; place-items: center; line-height: 4.2mm; text-align: center;
+}
+
+/* ── Screenshots taken (docs/manual/tools/shoot.mjs) ───────────────── */
+
+figure.shot img { display: block; width: 100%; height: auto; border: 0.3mm solid var(--line); border-radius: 1.5mm; }
+figure.shot.phone img { max-width: 72mm; }
+
+/* ── Contents ──────────────────────────────────────────────────────── */
+
+.toc h1 { font-size: 22pt; margin: 0 0 6mm; }
+.toc h2 { font-size: 12pt; margin: 6mm 0 2mm; padding: 0; }
+.toc ol { list-style: none; padding: 0; margin: 0; }
+.toc li { display: grid; grid-template-columns: 12mm 1fr auto; gap: 2mm; padding: 1.4mm 0; border-bottom: 0.25mm solid var(--line); margin: 0; }
+.toc li .c { font-weight: 700; color: var(--orange-dark); }
+.toc li .t { font-weight: 600; }
+.toc li .s { grid-column: 2 / 4; font-size: 8.8pt; color: var(--ink-soft); font-weight: 400; }
+.toc li .state { font-size: 8.5pt; color: var(--grey); }
+.toc li.here .state { color: var(--orange-dark); font-weight: 600; }
+.legend { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; margin-top: 3mm; }
+.legend .box { margin: 0; }
+
+/* Read on a phone: the A4 measurements give way. Last, so it wins.
+   Printing is unaffected. */
+@media screen and (max-width: 840px) {
+  .book { margin: 0; }
+  .sheet, .chapter { padding: 20px 16px; }
+  .cover { height: auto; min-height: 100vh; padding: 40px 16px; }
+  .cover .ring { display: none; }
+  .cover h1 { font-size: 30pt; }
+  .legend { grid-template-columns: 1fr; }
+  .shot-plan dl { grid-template-columns: 1fr; }
+  ol.callouts { grid-template-columns: 1fr; }
+  table { display: block; overflow-x: auto; }
+  .ui, .d { white-space: normal; }
+}
+</style>
+</head>
+<body>
+<div class="book">
+
