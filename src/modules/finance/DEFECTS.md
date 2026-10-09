@@ -18,6 +18,20 @@ Nothing open.
 
 ## Fixed
 
+### FIN-29 · editCharge.test picked a stay another test file had just invoiced - FIXED 9 October (the master, the new PC's gates)
+
+**Found** — the full gates on bda47784 (9 October): `editCharge.test.ts` 2 failed, "This bill has
+tax invoice 5EL/2026-27/00011. Only a credit note corrects it now." Its `aStayInHouse()` took the
+first checked-in 5EL stay by reference, and the API files share one scratch database: when another
+file (invoices, invoiceRecipient, perBill …) had committed a tax invoice on that stay first, Edit
+refused - correctly. Passed on 876bc94b; the POS's two new test files changed the order the files
+ran in. The product was right; the test chose its stay by luck.
+
+**What was done** — `aStayInHouse()` picks an in-house stay with no invoice on any of its folios. A
+test-only change, by the master, with the gates that found it.
+
+---
+
 ### FIN-28 · Reversing a company's payment answered 500 — FIXED 2 October, before it left the branch (D27-239; numbered for now)
 
 **Found** - 2 October, by `companyPayments.test.ts`: the reversal route locked
