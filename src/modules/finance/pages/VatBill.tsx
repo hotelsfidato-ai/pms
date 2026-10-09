@@ -12,6 +12,8 @@ import { getVatBill } from "@/modules/finance/data/billing";
 import { placeLine } from "@/modules/finance/place";
 import { useDocumentTitle } from "@/lib/documentTitle";
 import { useGroupSettings } from "@/modules/admin";
+import { useIsTestHotel } from "@/lib/testHotel";
+import { TestDocumentMark } from "@/components/app/TestHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PRINTED VAT BILL FOR ALCOHOL (the owner's D22-44)
@@ -36,6 +38,8 @@ export default function VatBillPage() {
   /* The tab names the document (the owner, 27 September). */
   useDocumentTitle(data ? (data.cancelsNumber !== null ? "VAT credit note" : "VAT bill") : null);
   const group = useGroupSettings(hotelId);
+  /* A test hotel's VAT bill (the owner's D27-296 (8)): TEST · NOT VALID across its head. */
+  const test = useIsTestHotel(hotelId);
 
   if (isLoading) {
     return (
@@ -83,6 +87,7 @@ export default function VatBillPage() {
         </>
       }
     >
+      {test && <TestDocumentMark />}
       <DocMasthead
         name={data.supplier.name}
         group={group.name}

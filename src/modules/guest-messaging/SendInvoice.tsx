@@ -4,6 +4,7 @@ import { Send } from "lucide-react";
 import { Button, toast } from "@/components/ui";
 import { getGuestMessages } from "./data/guestMessages";
 import { sendInvoice } from "./data/settings";
+import { NOTHING_SENT, useIsTestHotel } from "@/lib/testHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    SEND INVOICE (D27-252, D27-261) - one button, for the Invoice page
@@ -18,6 +19,9 @@ export function SendInvoice({ hotelId, number }: { hotelId: string; number: stri
   const [busy, setBusy] = useState(false);
   const state = useQuery({ queryKey: ["guest-messages", hotelId], queryFn: () => getGuestMessages(hotelId) });
   const connected = state.data?.connected ?? false;
+  /* NOTHING LEAVES A TEST HOTEL (the owner's D27-296 (4)): off, with the
+     sentence the server refuses a send with (409). */
+  const test = useIsTestHotel(hotelId);
 
   const send = async () => {
     setBusy(true);
@@ -33,10 +37,12 @@ export function SendInvoice({ hotelId, number }: { hotelId: string; number: stri
 
   return (
     <div className="space-y-1 print:hidden">
-      <Button variant="secondary" loading={busy} disabled={!connected} onClick={() => void send()}>
+      <Button variant="secondary" loading={busy} disabled={!connected || test} onClick={() => void send()}>
         <Send className="size-4" /> Send invoice
       </Button>
-      {state.data && !connected && <p className="text-sm text-grey-500">{state.data.notConnected}</p>}
+      {test ? (
+        <p className="text-sm text-grey-500">{NOTHING_SENT}</p>
+      ) : state.data && !connected && <p className="text-sm text-grey-500">{state.data.notConnected}</p>}
     </div>
   );
 }

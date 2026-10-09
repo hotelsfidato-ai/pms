@@ -8,10 +8,13 @@ import {
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect,
-  StatusPill, toast, Segmented,
+  StatusPill, toast, Segmented, Switch,
 } from "@/components/ui";
 import { listPeople, createStaff, grantAccess, revokeAccess, deactivateStaff, amendStaff, reactivateStaff, setStaffPassword, setHomeScreen, minPasswordFor, type AdminStaff, type HomeScreen, type RosterPlace } from "@/modules/admin/data/admin";
 import { useSession } from "@/lib/session";
+import type { ApiHotel } from "@/lib/api";
+import { hotelLabel, isTestHotel, useTestCodes } from "@/lib/testHotel";
+import { TestTag } from "@/components/app/TestHotel";
 import { HOME_SCREENS } from "@/lib/homeScreen";
 import { ConfirmRemoveAccess } from "@/modules/admin/flows/ConfirmRemoveAccess";
 
@@ -87,6 +90,20 @@ const ROLES: { value: Role; label: string; what: string }[] =
 const roleLabel = (r: string) =>
   ROLES.find((x) => x.value === r)?.label ?? r;
 
+/** The test hotels a group administrator may put somebody in: the server's
+    roster places that are test hotels, and any test hotel the session knows
+    that the roster does not list yet, with its real hotel's roles. */
+function testPlacesOf(rosterAt: RosterPlace[], hotels: ApiHotel[]): RosterPlace[] {
+  const tests = hotels.filter(isTestHotel);
+  const out = rosterAt.filter((p) => tests.some((h) => h.code === p.code));
+  for (const h of tests) {
+    if (out.some((p) => p.code === h.code)) continue;
+    const real = rosterAt.find((p) => p.code === h.testOf);
+    if (real) out.push({ code: h.code, name: h.name, roles: real.roles });
+  }
+  return out;
+}
+
 /* ⚠ THE GM'S TOO, SINCE 22 SEPTEMBER (D22-3): "People works for the GM, for
    their own hotel only". Every button below asks what the SERVER said this
    person may do to that one (`mayEdit`, `maySwitch`, `maySetPassword`), and
@@ -111,7 +128,16 @@ export default function PeoplePage() {
   const refresh = () => { void qc.invalidateQueries({ queryKey: ["people"] }); };
 
   const rows = staff.data?.staff ?? [];
-  const places = staff.data?.rosterAt ?? [];
+  /* TEST HOTELS (the owner's D27-296 (6), (10)): only a group administrator
+     puts somebody in one, so only theirs are offered, each with TEST; for
+     anybody else the places are the real hotels, as before. Which places
+     are test hotels is GET /api/hotels's `testOf`. */
+  const testCodes = useTestCodes();
+  const sessionHotels = useSession((s) => s.hotels);
+  const rosterAt = staff.data?.rosterAt ?? [];
+  const realPlaces = rosterAt.filter((p) => !testCodes.has(p.code));
+  const testPlaces = groupAdmin ? testPlacesOf(rosterAt, sessionHotels) : [];
+  const places = [...realPlaces, ...testPlaces];
   const active = rows.filter((s) => s.isActive);
   const switchedOff = rows.length - active.length;
   const listed = showing === "off" ? rows.filter((s) => !s.isActive) : rows;
@@ -188,7 +214,7 @@ export default function PeoplePage() {
         )}
         <ul className="space-y-3">
           {listed.map((s) => (
-            <PersonCard key={s.id} person={s} places={places}
+            <PersonCard key={s.id} person={s} places={places} testCodes={testCodes}
                         onGrant={() => setGranting(s)}
                         onChanged={refresh} />
           ))}
@@ -214,12 +240,13 @@ export default function PeoplePage() {
       </p>
 
       {adding && (
-        <AddPersonDialog open places={places} placeRequired={!groupAdmin}
+        <AddPersonDialog open places={realPlaces} placeRequired={!groupAdmin}
+                         testPlaces={groupAdmin ? testPlaces : null}
                          onOpenChange={(o) => { if (!o) setAdding(false); }}
                          onAdded={() => { setAdding(false); refresh(); }} />
       )}
       {granting && (
-        <GrantDialog person={granting} open places={places}
+        <GrantDialog person={granting} open places={places} testCodes={testCodes}
                      onOpenChange={(o) => { if (!o) setGranting(null); }}
                      onGranted={() => { setGranting(null); refresh(); }} />
       )}
@@ -229,8 +256,10 @@ export default function PeoplePage() {
 
 /* ── One person, and what they can reach ──────────────────────────── */
 
-function PersonCard({ person, places, onGrant, onChanged }: {
+function PersonCard({ person, places, testCodes, onGrant, onChanged }: {
   person: AdminStaff; places: RosterPlace[];
+  /** Test hotels' codes: their chips carry TEST (D27-296). */
+  testCodes: Set<string>;
   onGrant: () => void; onChanged: () => void;
 }) {
   /* A property of theirs the signed-in person runs, in a role they could
@@ -393,6 +422,7 @@ function PersonCard({ person, places, onGrant, onChanged }: {
                     <span className="tabular font-medium">{a.code}</span>
                     <span className="text-grey-500"> · {roleLabel(a.role)}</span>
                   </span>
+                  {testCodes.has(a.code) && <TestTag />}
                   {mayTake(a) && <button
                     type="button"
                     aria-label={`Remove ${a.code} from ${person.name}`}
@@ -595,40 +625,59 @@ function EditPersonDialog({ person, onClose, onSaved }: {
 
 /* ── Adding somebody ──────────────────────────────────────────────── */
 
-function AddPersonDialog({ open, places, placeRequired, onOpenChange, onAdded }: {
+function AddPersonDialog({ open, places: realPlaces, placeRequired, testPlaces, onOpenChange, onAdded }: {
   open: boolean;
-  /** Where the signed-in person may roster, and as what. */
+  /** Where the signed-in person may roster, and as what: real hotels. */
   places: RosterPlace[];
   /** A GM adds somebody AT their property, in one act (D22-3). A group
       administrator may add somebody and give them a property afterwards. */
   placeRequired: boolean;
+  /** THE TEST SWITCH (the owner's D27-296 (6)): a group administrator's
+      test hotels, which draws the switch; null for anybody else, who has
+      none. On, the person is added AT a test hotel and works only there. */
+  testPlaces: RosterPlace[] | null;
   onOpenChange: (o: boolean) => void; onAdded: () => void;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [test, setTest] = useState(false);
+  const places = test ? testPlaces ?? [] : realPlaces;
+  /* With Test on, the place is asked whoever adds: a test-only person is
+     made AT their test hotel, in one act. */
+  const needsPlace = placeRequired || test;
   const [code, setCode] = useState(places.length === 1 ? places[0]!.code : "");
   const [role, setRole] = useState("");
   const [busy, setBusy] = useState(false);
+
+  /* Switching starts the place again, from the list now shown. */
+  const switchTest = (on: boolean) => {
+    const list = on ? testPlaces ?? [] : realPlaces;
+    setTest(on);
+    setCode(list.length === 1 ? list[0]!.code : "");
+    setRole("");
+  };
 
   const place = places.find((p) => p.code === code);
   const roles = place?.roles ?? [];
   const chosenRole = roles.includes(role) ? role
     : roles.includes("front_desk") ? "front_desk" : roles[0] ?? "";
-  const min = minPasswordFor(placeRequired ? [chosenRole] : []);
+  const min = minPasswordFor(needsPlace ? [chosenRole] : []);
 
   const submit = async () => {
     if (busy) return;
     setBusy(true);
     const res = await createStaff({
       email: email.trim().toLowerCase(), name: name.trim(), password,
-      ...(placeRequired ? { hotelCode: code, role: chosenRole } : {}),
+      ...(needsPlace ? { hotelCode: code, role: chosenRole } : {}),
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
     toast.success(
       res.existed ? `${name.trim()} was already here` : `${name.trim()} added`,
-      placeRequired
+      test
+        ? `They can sign in now, and they work at ${code} as ${roleLabel(chosenRole).toLowerCase()}, in the test hotel only.`
+        : placeRequired
         ? `They can sign in now, and they work at ${code} as ${roleLabel(chosenRole).toLowerCase()}.`
         : "They can sign in now. Give them a property next - until then the "
           + "app opens empty for them.");
@@ -638,7 +687,7 @@ function AddPersonDialog({ open, places, placeRequired, onOpenChange, onAdded }:
 
   const ready = name.trim() && email.trim().includes("@")
     && password.length >= min
-    && (!placeRequired || (place && chosenRole));
+    && (!needsPlace || (place && chosenRole));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -690,15 +739,24 @@ function AddPersonDialog({ open, places, placeRequired, onOpenChange, onAdded }:
                            onChange={(e) => setPassword(e.target.value)} />
             )}
           </Field>
-          {placeRequired && (
+          {testPlaces && (
+            <Switch checked={test} onCheckedChange={switchTest} label="Test"
+                    description="For practising in a test hotel, never a real one." />
+          )}
+          {needsPlace && (
             <>
-              <Field label="Where they work" required>
+              <Field label="Where they work" required
+                     {...(test && places.length === 0
+                       ? { hint: "There is no test hotel yet. Make one on Properties first." }
+                       : {})}>
                 {(f) => (
                   <NativeSelect {...fieldProps(f)} value={code}
                                 onChange={(e) => setCode(e.target.value)}>
                     {places.length > 1 && <option value="">Choose…</option>}
                     {places.map((p) => (
-                      <option key={p.code} value={p.code}>{p.code} · {p.name}</option>
+                      <option key={p.code} value={p.code}>
+                        {test ? `${p.code} · ${hotelLabel({ name: p.name, testOf: p.code })}` : `${p.code} · ${p.name}`}
+                      </option>
                     ))}
                   </NativeSelect>
                 )}
@@ -717,7 +775,10 @@ function AddPersonDialog({ open, places, placeRequired, onOpenChange, onAdded }:
             </>
           )}
           <p className="text-sm text-grey-600 rounded-lg bg-grey-50 px-3.5 py-3 leading-relaxed">
-            {placeRequired
+            {test
+              /* D27-296 (6): a test-only person, in the owner's terms. */
+              ? "Works only in the test hotel, never the real one."
+              : placeRequired
               /* D22-2, D27-140: the picker holds no Admin for a GM or a
                  hotel's Admin, and the server refuses one in the same words. */
               ? "They see this property only."
@@ -739,22 +800,30 @@ function AddPersonDialog({ open, places, placeRequired, onOpenChange, onAdded }:
 
 /* ── Giving somebody a property ───────────────────────────────────── */
 
-function GrantDialog({ person, open, places, onOpenChange, onGranted }: {
+function GrantDialog({ person, open, places, testCodes, onOpenChange, onGranted }: {
   person: AdminStaff; open: boolean;
   /** Where the signed-in person may roster, with the roles they may give
       there - the server's list, so a GM is offered their own hotels and no
-      Owner or Admin (D22-2, D22-3). */
+      Owner or Admin (D22-2, D22-3). A group administrator's test hotels
+      are among them (D27-296 (10)). */
   places: RosterPlace[];
+  /** Test hotels' codes: listed with TEST. */
+  testCodes: Set<string>;
   onOpenChange: (o: boolean) => void; onGranted: () => void;
 }) {
   const [code, setCode] = useState("");
   const [picked, setPicked] = useState("front_desk");
   const [busy, setBusy] = useState(false);
 
+  /* SOMEBODY WHO WORKS ONLY IN TEST HOTELS (D27-296 (6): added with Test
+     on) is never given a real one, so only test hotels are offered them. A
+     real member of staff may be given a test hotel as a second place. */
+  const testOnly = person.access.length > 0 && person.access.every((a) => testCodes.has(a.code));
   /* Only properties they do not already hold. Offering one they have
      invites a grant that silently replaces their role. */
   const available = places
-    .filter((p) => !person.access.some((a) => a.code === p.code));
+    .filter((p) => !person.access.some((a) => a.code === p.code))
+    .filter((p) => !testOnly || testCodes.has(p.code));
   const roles = ROLES.filter((r) =>
     (available.find((p) => p.code === code)?.roles ?? []).includes(r.value));
   const role = roles.some((r) => r.value === picked) ? picked : roles[0]?.value ?? "";
@@ -807,12 +876,19 @@ function GrantDialog({ person, open, places, onOpenChange, onGranted }: {
                   <option value="">Choose…</option>
                   {available.map((p) => (
                     <option key={p.code} value={p.code}>
-                      {p.code} · {p.name}
+                      {testCodes.has(p.code)
+                        ? `${p.code} · ${hotelLabel({ name: p.name, testOf: p.code })}`
+                        : <>{p.code} · {p.name}</>}
                     </option>
                   ))}
                 </NativeSelect>
               )}
             </Field>
+            {testOnly && (
+              <p className="text-sm text-grey-600">
+                {person.name} works only in test hotels, so only test hotels are offered.
+              </p>
+            )}
             <Field label="Doing what" required>
               {(f) => (
                 <NativeSelect {...fieldProps(f)} value={role} disabled={!code}

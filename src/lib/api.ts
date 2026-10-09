@@ -375,6 +375,10 @@ export interface ApiHotel {
   /** The front desk's rules, set on Settings › Operations (189, the owner's
       D27-243); absent from an older server. */
   deskRules?: DeskRules;
+  /** A TEST HOTEL's real hotel, by CODE (the owner's D27-296): a practice
+      copy of that hotel's setup. Null for a real hotel; absent from an older
+      server, which has none. `isTestHotel` in src/lib/testHotel.ts reads it. */
+  testOf?: string | null;
 }
 
 export interface DeskRules {

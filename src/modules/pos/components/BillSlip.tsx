@@ -5,6 +5,8 @@ import { BILL_TITLE, type BillHeading, type Order } from "@/modules/pos/data/til
 import {
   DocMasthead, DocFacts, DocTotals, DocPanel, DocFooter, DOC_TD,
 } from "@/components/ui";
+import { useIsTestHotel } from "@/lib/testHotel";
+import { TestDocumentMark } from "@/components/app/TestHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BILL ON PAPER — what the guest is handed
@@ -34,6 +36,11 @@ export function BillSlip({ order: o, group, heading }: {
   heading: BillHeading;
 }) {
   const live = o.lines.filter((l) => !l.voided);
+  /* A TEST HOTEL'S BILL (the owner's D27-296 (8)): TEST · NOT VALID at its
+     head and foot, and no GSTIN. The bill is printed in the hotel in view:
+     the bill page's and the bill printer's own address. A real hotel's
+     paper is unchanged - both are drawn only in a test hotel. */
+  const test = useIsTestHotel();
 
   /* PAISE, not rupees. `money()` rounds to the whole rupee, which is
      right on a dashboard and wrong here: the first version of this bill
@@ -60,6 +67,7 @@ export function BillSlip({ order: o, group, heading }: {
   return (
     <article className="mx-auto bg-white text-ink-700 px-3 py-4" style={{ maxWidth: "80mm" }}
              data-bill-heading={heading}>
+      {test && <TestDocumentMark slip />}
       <DocMasthead name={o.hotelName} group={group.name} logo={group.logo}
                    title={BILL_TITLE[heading]} number={o.orderNo} />
       <p className="-mt-2 mb-3 text-xs text-grey-500">
@@ -148,7 +156,7 @@ export function BillSlip({ order: o, group, heading }: {
         name={o.hotelName}
         left={
           <>
-            {o.hotelGstin && <p className="tabular">GSTIN {o.hotelGstin}</p>}
+            {o.hotelGstin && !test && <p className="tabular">GSTIN {o.hotelGstin}</p>}
             {/* A16: on every food bill since January 2022; a dash until typed. */}
             <p className="tabular" data-bill-fssai>FSSAI licence {o.hotelFssai ?? "-"}</p>
           </>
@@ -156,6 +164,7 @@ export function BillSlip({ order: o, group, heading }: {
         /* Cheaper to say than to be asked. */
         note="This is a restaurant bill, not a tax invoice. A GST invoice is issued against the room folio at checkout."
       />
+      {test && <TestDocumentMark slip />}
     </article>
   );
 }

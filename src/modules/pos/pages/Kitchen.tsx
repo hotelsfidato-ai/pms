@@ -8,6 +8,7 @@ import { useLiveOrders } from "@/lib/useLiveOrders";
 import { useDocumentTitle } from "@/lib/documentTitle";
 import { toast } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
+import { TestHotelStripe } from "@/components/app/TestHotel";
 import { getKitchen, moveKitchenLine, type KitchenLine, type KotKind } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { useRole } from "@/lib/session";
@@ -203,6 +204,9 @@ export default function KitchenPage() {
 
   return (
     <div className="fixed inset-0 z-50 bg-grey-100 flex flex-col">
+      {/* A TEST HOTEL'S STRIPE (D27-296 (9)): this screen covers the
+          shell's, so it draws its own, above everything. */}
+      <TestHotelStripe code={hotelId} />
       {/* TWO ROWS ON A PHONE (the owner's D27-293): the name, the count and
           Console, then the two choices under them. A wall screen keeps its
           one row of 64px. At phone width the choices ran off the right edge

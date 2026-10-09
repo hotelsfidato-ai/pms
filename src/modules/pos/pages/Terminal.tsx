@@ -24,6 +24,7 @@ import { addonBreakdown } from "@/modules/pos/lib/pricing";
 import { GuestOrders } from "@/modules/pos/components/GuestOrders";
 import { AskDialog, SENT_STRIKE, roomAsk, type Ask } from "@/modules/pos/components/AskDialog";
 import { useDocumentTitle } from "@/lib/documentTitle";
+import { TestHotelStripe } from "@/components/app/TestHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TERMINAL
@@ -1135,10 +1136,13 @@ export default function TerminalPage() {
   );
 }
 
-/** Full screen, no console chrome. A terminal has one job. */
+/** Full screen, no console chrome. A terminal has one job. In a test hotel
+    the orange stripe is above it (D27-296 (9)): this covers the shell's. */
 function Shell({ children }: { children: React.ReactNode }) {
+  const hotelId = useHotel();
   return (
     <div className="fixed inset-0 z-50 bg-grey-50 flex flex-col">
+      <TestHotelStripe code={hotelId} />
       {children}
     </div>
   );

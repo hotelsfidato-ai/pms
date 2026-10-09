@@ -12,7 +12,9 @@ import { HOME_SCREENS, homePath } from "@/lib/homeScreen";
 import { queryPersister } from "@/lib/persist";
 import { getModules, setMyPreferences } from "@/data/repositories";
 import { ROLE_LABELS, type Role } from "@/lib/permissions";
+import { isTestHotel, plainName } from "@/lib/testHotel";
 import { START_HERE } from "./startHereCards";
+import { TestTag } from "./TestHotel";
 import { entryFor, flatNavigationFor, navItemFor, workingHomeFor } from "./navigation";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -208,7 +210,15 @@ export function AccountMenu() {
                   )}
                 />
                 <span className="min-w-0">
-                  <span className="block text-base text-ink-900 truncate">{h.name}</span>
+                  {/* TEST beside a test hotel's name (D27-296 (9)). */}
+                  {isTestHotel(h) ? (
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <span className="block text-base text-ink-900 truncate">{plainName(h)}</span>
+                      <TestTag />
+                    </span>
+                  ) : (
+                    <span className="block text-base text-ink-900 truncate">{h.name}</span>
+                  )}
                   <span className="block text-2xs text-grey-500">
                     {h.code} · {h.city}
                   </span>
@@ -220,7 +230,9 @@ export function AccountMenu() {
           <div className="px-2.5 py-2">
             <p className="text-2xs text-grey-500">Property</p>
             <p className="text-base text-ink-900 mt-0.5">
-              {current?.name ?? "None assigned"}
+              {current && isTestHotel(current)
+                ? <span className="flex items-center gap-1.5">{plainName(current)}<TestTag /></span>
+                : current?.name ?? "None assigned"}
             </p>
             {current && (
               <p className="text-2xs text-grey-500 mt-0.5">

@@ -8,6 +8,7 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { OfflineBar } from "./OfflineBar";
 import { CommandPalette } from "./CommandPalette";
+import { TestHotelStripe, TestPrintWatermark } from "./TestHotel";
 import { PasswordDue } from "@/modules/admin";
 import { Toaster, TooltipProvider } from "@/components/ui";
 
@@ -63,7 +64,16 @@ export function AppShell() {
 
   return (
     <TooltipProvider delayDuration={400}>
-      <div className="flex h-screen overflow-hidden bg-grey-50 print:block print:h-auto print:overflow-visible">
+      {/* A TEST HOTEL (the owner's D27-296 (9)): the orange stripe across
+          the top of every screen, above the rail and the top bar, so it
+          never scrolls away; nothing closes it. A real hotel draws none of
+          it. The full-screen pages that cover the shell (the Kitchen's wall
+          screen, the Terminal) draw their own. On paper, TEST · NOT VALID
+          across every page printed from here, whatever the page. */}
+      <div className="flex flex-col h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
+      <TestHotelStripe />
+      <TestPrintWatermark />
+      <div className="flex flex-1 min-h-0 overflow-hidden bg-grey-50 print:block print:h-auto print:overflow-visible">
         {/* Desktop rail. `no-print` because a printed tax invoice with a
             navigation sidebar down its left edge is not a tax invoice —
             and the invoice page cannot hide the shell from inside it. */}
@@ -123,6 +133,7 @@ export function AppShell() {
         </div>
 
         <Toaster />
+      </div>
       </div>
     </TooltipProvider>
   );

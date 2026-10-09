@@ -238,6 +238,36 @@ export interface AdminProperty {
   roomTypes: string[];
   /** Why Close would refuse, said before the button is pressed. */
   checkedIn: number;
+  /** A TEST HOTEL's real hotel, by code (D27-296), when this list says so.
+      GET /api/hotels says it in any case, and Properties reads both. */
+  testOf?: string | null;
+}
+
+/* ── Test hotels (the owner's D27-296) ─────────────────────────────
+   One per real hotel: a practice copy of its whole setup, inside the live
+   system. Made, reset and re-copied by the owner and group administrators
+   only - the server refuses anybody else, in a sentence. A reset and a
+   re-copy each take the word typed into the dialog, sent as `confirm`, and
+   the server checks it too. `call`, not `write`: these answer with their
+   own figures and no `ok`. */
+
+/** Makes `realCode`'s test hotel (201 { code, name }; 409 if it has one). */
+export function makeTestHotel(realCode: string): Promise<AdminResult<{ code: string; name: string }>> {
+  return call(`/api/admin/hotels/${encodeURIComponent(realCode)}/test-hotel`, "POST", {});
+}
+
+/** Deletes everything done in a test hotel, keeping its setup and testers. */
+export function resetTestHotel(
+  testCode: string, confirm: string,
+): Promise<AdminResult<{ removed: number }>> {
+  return call(`/api/admin/hotels/${encodeURIComponent(testCode)}/test-reset`, "POST", { confirm });
+}
+
+/** Deletes the test activity, then copies the real hotel's setup again. */
+export function recopyTestHotel(
+  testCode: string, confirm: string,
+): Promise<AdminResult<{ removed: number; copied: number }>> {
+  return call(`/api/admin/hotels/${encodeURIComponent(testCode)}/test-recopy`, "POST", { confirm });
 }
 
 /** ⚠ EVERY PROPERTY, CLOSED ONES INCLUDED. `listProperties()` reads

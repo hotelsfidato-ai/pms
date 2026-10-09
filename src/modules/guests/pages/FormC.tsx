@@ -6,6 +6,8 @@ import { cn } from "@/lib/cn";
 import { dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useGroupSettings } from "@/modules/admin";
+import { useIsTestHotel } from "@/lib/testHotel";
+import { TestDocumentMark } from "@/components/app/TestHotel";
 import {
   Page, PageHeader, Card, CardBody, DataTable, StatusPill, EmptyState,
   Button, Input, Dialog, DialogContent, DocPage, DocMasthead, DocLabel, type Column,
@@ -304,6 +306,9 @@ function FormIIICard({
   hotelId, row: r, premises, onBack,
 }: { hotelId: string; row: FormCRow; premises: FormCRegister["premises"]; onBack: () => void }) {
   const group = useGroupSettings(hotelId);
+  /* A test hotel's Form III (the owner's D27-296 (8)): TEST · NOT VALID
+     across its head, so a practice guest's card is never filed. */
+  const test = useIsTestHotel(hotelId);
   const v = (x: unknown) => (x === null || x === undefined || x === "" ? "-" : String(x));
   const date = (x: unknown) => (typeof x === "string" && x ? dateShort(x) : "-");
   const [arrivedDate, arrivedTime] = (r.arrivedAt ?? "").split(" ");
@@ -372,6 +377,7 @@ function FormIIICard({
       }
     >
       <div data-form-iii-card>
+        {test && <TestDocumentMark />}
         <DocMasthead name={premises?.name ?? "-"} group={group.name} logo={group.logo} title="Form III" />
         <p className="text-sm text-grey-600 mb-4">
           Report on a foreigner accommodated (Immigration and Foreigners Rules

@@ -6,6 +6,7 @@ import { dateShort, moneyPrecise } from "@/lib/format";
 import { Button, Card, CardBody, CardHeader, Input, toast } from "@/components/ui";
 import { getGuestMessages, SendCheckInLink } from "@/modules/guest-messaging";
 import { confirmWaiting, makeGuestLink, sendVoucher, viewVoucher } from "@/modules/reservations/data/booking";
+import { NOTHING_SENT, useIsTestHotel } from "@/lib/testHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    BOOKED - what the desk does next, on the booking just made
@@ -181,6 +182,9 @@ function Voucher({ hotelId, stayId }: { hotelId: string; stayId: string }) {
     queryKey: ["guest-messages", hotelId, stayId],
     queryFn: () => getGuestMessages(hotelId, stayId),
   });
+  /* NOTHING LEAVES A TEST HOTEL (the owner's D27-296 (4)): off, with the
+     sentence the server refuses a send with (409). */
+  const test = useIsTestHotel(hotelId);
   if (!sent.data) return <p className="text-sm text-grey-500">{sent.isError ? "-" : "Checking the voucher…"}</p>;
 
   const went = sent.data.messages.find((m) =>
@@ -207,11 +211,13 @@ function Voucher({ hotelId, stayId }: { hotelId: string; stayId: string }) {
 
   return (
     <div className="space-y-1">
-      <Button variant="secondary" loading={busy} disabled={!sent.data.connected}
+      <Button variant="secondary" loading={busy} disabled={!sent.data.connected || test}
         onClick={() => void send()}>
         <Send className="size-4" /> Send voucher
       </Button>
-      {!sent.data.connected && (
+      {test ? (
+        <p className="text-sm text-grey-500">{NOTHING_SENT}</p>
+      ) : !sent.data.connected && (
         <p className="text-sm text-grey-500">{sent.data.notConnected}</p>
       )}
     </div>

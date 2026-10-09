@@ -12,6 +12,8 @@ import {
   DocMasthead, DocFacts, DOC_TH, DOC_TD,
 } from "@/components/ui";
 import { useGroupSettings } from "@/modules/admin";
+import { useIsTestHotel } from "@/lib/testHotel";
+import { TestDocumentMark } from "@/components/app/TestHotel";
 import {
   getDocket, returnDocket, cancelDocket, chargeDocket,
   SERVICE_WORDS, type DocketLine,
@@ -79,6 +81,8 @@ export default function LaundryDocketPage() {
      code itself where it has none, because the code is still true. */
   const group = useGroupSettings(code);
   const hotelName = useSession((s) => s.hotels.find((h) => h.code === code)?.name) ?? code;
+  /* A test hotel's docket (the owner's D27-296 (8)): TEST · NOT VALID across its head. */
+  const test = useIsTestHotel(code);
 
   const state = d && (
     <StatusPill tone={d.status === "open" ? "info" : d.status === "returned" ? "success" : "danger"}>
@@ -151,6 +155,7 @@ export default function LaundryDocketPage() {
             the sheet loses its frame and everything around it goes. */}
         <section className="bg-white text-ink-700 border border-grey-200 rounded-lg px-4 py-3.5 sm:p-6
                             print:border-0 print:rounded-none print:p-0">
+          {test && <TestDocumentMark />}
           <DocMasthead
             logo={group.logo}
             name={hotelName}

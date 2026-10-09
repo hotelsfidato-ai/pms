@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { ArrowRight, Info } from "lucide-react";
@@ -11,6 +11,9 @@ import {
   type AdminProperty, type PropertyProfile,
 } from "@/modules/admin/data/admin";
 import { NewProperty } from "@/modules/admin/flows/StaffAdmin";
+import { TestHotelControls, type TestHotelOf } from "@/modules/admin/components/TestHotelControls";
+import { plainName } from "@/lib/testHotel";
+import { TestTag } from "@/components/app/TestHotel";
 import { TaxInUseRows } from "@/modules/admin/components/TaxInUse";
 import { placeLine } from "@/modules/finance";
 
@@ -67,7 +70,24 @@ export function PropertiesPage() {
      must show then above all. */
   const groupAdmin = useSession((s) => s.scope?.isGroupAdmin ?? false);
   const isAdmin = groupAdmin || (admin.data ?? []).length > 0;
-  const rows = admin.data ?? [];
+  /* TEST HOTELS (the owner's D27-296) are not properties of their own
+     here: each is under its real hotel, on that hotel's card, for a group
+     administrator. Which hotels are test ones, and whose: GET /api/hotels's
+     `testOf` (the session), or the admin list's where it says. */
+  const sessionHotels = useSession((s) => s.hotels);
+  const all = admin.data;
+  const testOf = useMemo(() => {
+    const byReal = new Map<string, TestHotelOf>();
+    for (const h of sessionHotels) {
+      if (h.testOf) byReal.set(h.testOf, { code: h.code, name: h.name, id: h.id });
+    }
+    for (const h of all ?? []) {
+      if (h.testOf) byReal.set(h.testOf, { code: h.code, name: h.name, id: h.id });
+    }
+    return byReal;
+  }, [sessionHotels, all]);
+  const testCodes = new Set([...testOf.values()].map((t) => t.code));
+  const rows = (all ?? []).filter((h) => !testCodes.has(h.code));
   const open = rows.filter((h) => h.isActive);
   const closed = rows.filter((h) => !h.isActive);
 
@@ -107,7 +127,8 @@ export function PropertiesPage() {
             {open.map((h) => (
               <AdminPropertyCard key={h.id} hotel={h}
                                  onEdit={() => setEditing(h)}
-                                 onToggle={() => void toggle(h)} />
+                                 onToggle={() => void toggle(h)}
+                                 test={groupAdmin ? { of: testOf.get(h.code) ?? null, onChanged: refresh } : undefined} />
             ))}
           </div>
 
@@ -131,7 +152,14 @@ export function PropertiesPage() {
           {(plain.data ?? []).map((p) => (
             <Card key={p.id}>
               <CardBody>
-                <p className="text-md font-semibold text-ink-900">{p.name}</p>
+                {/* A test hotel this person also works in, with TEST (D27-296 (9)). */}
+                {testCodes.has(p.id) ? (
+                  <p className="flex items-center gap-2 text-md font-semibold text-ink-900">
+                    {plainName({ name: p.name, testOf: p.id })}<TestTag />
+                  </p>
+                ) : (
+                  <p className="text-md font-semibold text-ink-900">{p.name}</p>
+                )}
                 <p className="text-sm text-grey-500 mt-0.5">{p.address}</p>
                 <dl className="mt-3 border-t border-grey-100 pt-1.5">
                   <Line label="Rooms" value={String(p.rooms)} />
@@ -183,8 +211,11 @@ export function PropertiesPage() {
   );
 }
 
-function AdminPropertyCard({ hotel, onEdit, onToggle }: {
+function AdminPropertyCard({ hotel, onEdit, onToggle, test }: {
   hotel: AdminProperty; onEdit: () => void; onToggle: () => void;
+  /** Its test hotel's controls: an open hotel's card, for a group
+      administrator only (D27-296 (10)). Absent, none are drawn. */
+  test?: { of: TestHotelOf | null; onChanged: () => void };
 }) {
   return (
     <Card className={cn(!hotel.isActive && "opacity-60")}>
@@ -256,6 +287,11 @@ function AdminPropertyCard({ hotel, onEdit, onToggle }: {
             {hotel.isActive ? "Close" : "Reopen"}
           </Button>
         </div>
+
+        {test && (
+          <TestHotelControls real={{ code: hotel.code, name: hotel.name }}
+                             test={test.of} onChanged={test.onChanged} />
+        )}
       </CardBody>
     </Card>
   );

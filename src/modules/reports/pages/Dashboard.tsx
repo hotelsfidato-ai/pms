@@ -11,6 +11,7 @@ import { cn } from "@/lib/cn";
 import { money, dateShort, dateLong, addDays } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useRole, useSession } from "@/lib/session";
+import { hotelLabel } from "@/lib/testHotel";
 import { can } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardBody, Skeleton, NativeSelect, Term, EmptyState, Button,
@@ -247,8 +248,9 @@ export default function DashboardPage() {
               onChange={(e) => setPicked(e.currentTarget.value)}
               className="w-auto"
             >
+              {/* A test hotel with TEST beside its name (D27-296 (9)). */}
               {hotels.map((h) => (
-                <option key={h.code} value={h.code}>{h.name}</option>
+                <option key={h.code} value={h.code}>{hotelLabel(h)}</option>
               ))}
             </NativeSelect>
           </label>

@@ -11,6 +11,8 @@ import { toCsv, downloadCsv, reportFilename } from "@/lib/csv";
 import { useDocumentIdentity } from "@/lib/documentIdentity";
 import { useUi } from "@/lib/ui";
 import { useGroupSettings } from "@/modules/admin";
+import { useIsTestHotel } from "@/lib/testHotel";
+import { TestDocumentMark } from "@/components/app/TestHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    REPORT SHELL
@@ -79,6 +81,9 @@ export function ReportShell({
      accountant reading a stamp needs the person, and the session has
      had their name all along. */
   const ranBy = identity.user ?? DASH;
+  /* A test hotel's report (the owner's D27-296 (8)): TEST · NOT VALID on
+     the report itself, on screen and on paper. */
+  const test = useIsTestHotel();
 
   const stamp = new Date().toLocaleString("en-IN", {
     day: "2-digit", month: "2-digit", year: "numeric",
@@ -135,6 +140,7 @@ export function ReportShell({
       <Card className="px-4 py-4 sm:px-6 sm:py-5 print:border-0 print:p-0">
         {/* The report's own header, as the exports carry it: the property,
             then the report and its period behind the orange bar. */}
+        {test && <TestDocumentMark />}
         <DocMasthead name={propertyName} group={group.name} logo={group.logo} title={title} number={period} />
         {meta && (
           <p className="text-sm text-grey-600 tabular mb-4">{meta}</p>

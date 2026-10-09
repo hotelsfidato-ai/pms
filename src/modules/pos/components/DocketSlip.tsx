@@ -1,4 +1,6 @@
 import type { Docket } from "@/modules/pos/data/till";
+import { useIsTestHotel } from "@/lib/testHotel";
+import { TestDocumentMark } from "@/components/app/TestHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    THE KITCHEN DOCKET — what the chef is handed
@@ -26,8 +28,13 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 export function DocketSlip({ d }: { d: Docket }) {
+  /* A TEST HOTEL'S KOT (the owner's D27-296 (8)): TEST · NOT VALID at its
+     head and foot, so a practice docket on a real rail is never cooked.
+     Nothing else changes, in a test hotel or a real one. */
+  const test = useIsTestHotel();
   return (
     <div className="mx-auto px-3 py-4 w-[80mm] font-mono text-[13px] leading-snug bg-white text-ink-900">
+      {test && <TestDocumentMark slip />}
       <p className="text-center tabular">{d.sentAt}</p>
       {/* The number, biggest thing on the paper. A chef finds a docket
           on a rail of twenty by its number and nothing else. */}
@@ -145,6 +152,7 @@ export function DocketSlip({ d }: { d: Docket }) {
       <p className="mt-3 text-center text-[11px]">
         {d.outlet} · {d.orderNo}
       </p>
+      {test && <TestDocumentMark slip />}
     </div>
   );
 }

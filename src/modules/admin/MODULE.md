@@ -126,6 +126,25 @@ properties and people.
   On a phone (under 640px, read with `matchMedia`) each row is one line,
   a button with `aria-expanded`; a tap shows the reason, which links to the
   fix (D27-223). Wider screens show the reasons, the row a link, as before.
+- **Test hotels (the owner's D27-296, 10 October; the screens' half).** A
+  test hotel is the hotel GET /api/hotels gives a `testOf` (its real hotel's
+  code); `src/lib/testHotel.ts` reads it, the shell draws the stripe
+  (`src/components/app/TestHotel.tsx`). Here: **Properties** puts a real
+  hotel's test hotel on that hotel's card, never a card of its own, and only
+  for a group administrator (`components/TestHotelControls.tsx`): "Make a
+  test hotel" with its one sentence, then its name with TEST, Open (switches
+  to it and opens its Rooms), Reset (typed RESET) and Re-copy setup (typed
+  RE-COPY), each saying what is deleted and what stays and, after, the
+  server's figures ("Removed N records"); a refusal is the server's
+  sentence. The calls are `makeTestHotel`, `resetTestHotel`,
+  `recopyTestHotel` (`data/admin.ts`, `POST /api/admin/hotels/:code/test-hotel
+  | test-reset | test-recopy`). **People**: Add somebody has a Test switch
+  for a group administrator (on: only test hotels, "Works only in the test
+  hotel, never the real one"; off: only real hotels, as before); Give a
+  property lists test hotels with TEST for a group administrator, and only
+  test hotels to somebody who works only in them; a person's test-hotel
+  place carries TEST. Anybody else is never offered a test hotel. Tests:
+  `testHotels.test.tsx`.
 
 ---
 
