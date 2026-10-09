@@ -498,6 +498,20 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **9 October, night: THE RELEASE IN FLIGHT (D27-295), stopped by the usage limit.** The owner said
+> yes: one release of everything on cp6, the owner types each step, the 19 September rule lifted
+> for this release only. Branch `release/all-9oct` at d76a5e1a (22 commits on GitHub's main
+> 0c5e51cd, fetched 9 Oct: a fast-forward; migrations 207-211; no server setting or nginx change).
+> Its clean copy `.claude\worktrees\release-all-9oct` (junctions to node_modules) is running the
+> full gates (`.local\gates\progress.txt` there). Next: (1) when they are green, `node
+> scripts/release.mjs release/all-9oct` in the main checkout; (2) write docs/go-live/RELEASE-9OCT.md
+> from its printed steps; (3) guide the owner through A1-A7 one at a time. Live before (read only,
+> 9 Oct): API up since 5 Oct 17:46 IST, healthy; website `index-CbA5sped.js`. After: tick the
+> printing computers in Restaurant setup → KOT section (211 keeps today's KOT computer printing
+> every kind). PAUSED: the video series (C:\videos\RESUME.md); the book's writers in
+> `.claude\worktrees\manual-rest` (stopped mid-way, nothing committed: B1-B9 written, the rest
+> partly; review, build, test, merge).
+
 > **9 October, evening: the queue.** Done since: CUSTOM ADD-ONS (D27-291, 210) and THE KOT
 > SECTION (D27-292, 211), on cp6, each guard proven to fail first, both opened on the demo (see
 > § 2). Next: (1) a release with 207-211 when the owner says - nothing leaves this machine until
