@@ -136,7 +136,10 @@ not coming for me in the table view; audit the new code", then D27-290, then aft
 - Proved: API 230 of 230 on the files touched; database 1,553; POS web 130 of 130; every new guard
   seen failing first.
 - Live on the demo at 209: the note, "All 3 | Just 1", the split.
-- The full gates on the commit carrying these notes: HANDOVER § 2.
+- Full gates `cp6-9oct-audit` on 4648f5d6, clean (1,990 s): ALL GREEN - web types, api types,
+  strip (214 files); web 168 files, 1,137 of 1,137; api 189 files, 2,528 of 2,528; database 209
+  migrations, all 1,553 assertions; replay all 209 re-runnable; pg16 (16.15) the same. `npm run
+  build` passes, no test sign-in in dist.
 
 **Commits:** `29fd6465`, `13460f7e`, `82a173b3`, `876bc94b` (notes), `6f377522` (decisions),
 `e7a0a184`, `8d01590a`, `9664dfd5`, `bda47784` (notes), `49155d4a`, `544cc6d2`, `c841a7bb`,

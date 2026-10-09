@@ -67,8 +67,10 @@ cp6 now              + 29fd6465 (dev-testers: the GM test sign-in no longer meet
 gates                876bc94b (POS-33 + notes): ALL GREEN, the first full run on this PC -
                      web 1,123, api 2,509, database 1,537, replay 207, pg16 (16.15) 1,537/207,
                      build passes. bda47784's run met FIN-29 (a finance test's luck, fixed)
-                     and was cut off by a restart. The full gates on the commit carrying the
-                     audit's notes: started 9 Oct afternoon, the result in the next notes.
+                     and was cut off by a restart. 4648f5d6 (everything, with its notes):
+                     ALL GREEN, clean (1,990 s) - web 1,137, api 2,528, database 209
+                     migrations and 1,553 assertions, replay 209, pg16 (16.15) 1,553/209,
+                     build passes with no test sign-in.
 local demo           `fidato` at 209, 5EL on 9 Oct, built by docs/briefs/README.md's recipe;
                      add-on 2 = Kebab ₹120 made on it, AC7 has a Biryani with Kebab sent.
                      Postgres 17.11 in .local\pg, PostgreSQL 16.15 in .local\pg16 (§ 7).
