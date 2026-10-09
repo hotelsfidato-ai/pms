@@ -1,11 +1,12 @@
-# Release of 9 October 2026 (release/all-9oct, bd2eb560)
+# Release of 9-10 October 2026 (release/all-9oct, fe07c3fd)
 
 **The owner's yes: D27-295.** One release of everything on cp6. The owner types each step, one at a
 time, and sends the master each output (D21-50). The 19 September rule ("nothing leaves this
 machine") is lifted for this release only and comes back after it.
 
-**Checked by `node scripts/release.mjs release/all-9oct`:** _(filled in when it passes: the time and
-the website bundle)_. About 30 minutes. **Never during a night audit.** Publish the website from the
+**Checked by `node scripts/release.mjs release/all-9oct`:** READY at about 5 am on 10 October, after a full
+gates run green on exactly fe07c3fd in the release copy (web 1,215, api 2,615, database 1,665 over 212
+migrations, replay, PostgreSQL 16). The website bundle is `index-DWU1f94S.js`. About 30 minutes. **Never during a night audit.** Publish the website from the
 release copy `C:\Users\rozar.ROZARIO\pms\.claude\worktrees\release-all-9oct`, never from the main
 folder.
 
@@ -29,7 +30,13 @@ website `index-CbA5sped.js`; GitHub's main `0c5e51cd`. This release is a fast-fo
 - **The Kitchen header on a phone (D27-293):** two rows.
 - **The fixes:** POS-32, POS-34 and the audit's guards, FIN-29 (a test), the SU door test's clock
   (MEMORY 395, a test).
-- **Database changes 207 to 211** (five), run by launch.sh.
+- **Test hotels (D27-296, D27-297):** a practice copy of each real hotel, made from Properties by a group
+  admin; the Test switch on People; Reset (RESET) and Re-copy (RE-COPY); nothing leaves a test hotel;
+  its guests kept apart; TEST · NOT VALID documents without GSTIN; the orange stripe.
+- **Four old migrations made safe to replay** (112, 121, 146, 187; MEMORY 403): each could have stopped
+  A5 on a live database holding a breakage, a room-phone link, a rupee-promotion booking or a hotel's own
+  default payment method.
+- **Database changes 207 to 212** (six), run by launch.sh.
 - No server setting, no nginx change, no new secret.
 
 **The owner's step-by-step page:** https://claude.ai/artifact/31rmDP8fBcNoFwAmvdfmCE (private). It
@@ -65,7 +72,7 @@ GitHub. Sign in as the account that owns `hotelsfidato-ai/pms`.
 ```powershell
 cd "C:\Users\rozar.ROZARIO\pms"; git push origin release/all-9oct:main
 ```
-Expect a fast-forward from `0c5e51cd` to `bd2eb560`.
+Expect a fast-forward from `0c5e51cd` to `fe07c3fd`.
 
 **A2 · your PC, PowerShell:** open the server.
 ```powershell
@@ -81,7 +88,7 @@ sudo -u postgres /usr/local/bin/fidato-backup /var/backups/fidato
 ```bash
 sudo GIT_SSH_COMMAND="ssh -i /home/opc/.ssh/fidato_deploy -o IdentitiesOnly=yes" git -C /opt/fidato pull
 ```
-Expect "Fast-forward" to `bd2eb560`.
+Expect "Fast-forward" to `fe07c3fd`.
 
 **A5 · the server:** the database changes; then the API restarts.
 ```bash
@@ -100,7 +107,7 @@ Expect `"ok":true` and a `startedAt` of today.
 ```powershell
 cd "C:\Users\rozar.ROZARIO\pms\.claude\worktrees\release-all-9oct"; firebase deploy --only hosting:app
 ```
-Expect "Deploy complete!". The live site should then load _(the bundle, filled in)_.
+Expect "Deploy complete!". The live site should then load `index-DWU1f94S.js`.
 
 ## Part B · After it, in the restaurant
 

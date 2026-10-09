@@ -50,6 +50,37 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-10 · the launch (D27-295), test hotels built into it (D27-296/297), and the book and videos paused
+
+**Asked for:** "a graceful stop" of the video series, then deploy the system; "make me an artifact to do this step by step" (new PC, no Firebase keys); then "a testing mode - the same system, a test toggle when I add people, reset or delete all the test data - build it now so the full launch includes it"; a tracker of what is done and how long is left; a notification when ready.
+
+**Shipped**
+- The release, D27-295: branch `release/all-9oct`, now at `fe07c3fd`, in its clean copy `.claude\worktrees\release-all-9oct` (website built there, `index-DWU1f94S.js`). Steps: `docs/go-live/RELEASE-9OCT.md` and the owner's page https://claude.ai/artifact/31rmDP8fBcNoFwAmvdfmCE (Firebase sign-in, the settings helper `.local\release-9oct\fill-firebase-env.mjs`, the server with or without the old key - Oracle Bastion - A1-A7, after it). Tracker: https://claude.ai/artifact/RwsmvofDrUWqCAAHnDsxzg.
+- Test hotels, D27-296 (twelve answers) and D27-297 (four more): migration `212_test_hotels.sql`; `api/src/testHotels.ts`, `api/src/modules/admin/testHotelRoutes.ts`; the screens (stripe, TEST labels, Make/Reset/Re-copy, the Test switch, TEST · NOT VALID documents). Two helpers in `test-hotels-core` (c46c6e31) and `test-hotels-web` (1b1323af), merged at 42ed4247.
+- Four replay-unsafe migrations guarded (112, 121, 146, 187) and `db/tests/rerun.sh` seeded with the rows that catch them (fe07c3fd, MEMORY 403).
+- The SU door test's clock held still (bd2eb560, MEMORY 395); decisions D27-294..297; the manual's A0.5 "A test hotel" and A8.1 paragraph (rebuilt, a8d6a2f2).
+
+**Found**
+- MEMORY 395: "refuses a flood" failed 1 run in ~50 (the per-minute limit's boundary). Fixed in the test.
+- MEMORY 396: I told the owner no Firebase keys were needed from the names in `.env`; every value was empty. release.mjs refused; the helper fills them.
+- MEMORY 403: 112, 121, 146 and 187 re-added rules later migrations widened; a replay on live with one breakage, room-phone link, rupee-promotion booking or own payment default would have rolled step A5 back. Found bringing the demo to 212. Fixed and proven.
+- MEMORY 397-402: the helpers' own (shell edits, PL/pgSQL traps).
+
+**Proved**
+- Full gates on `fe07c3fd` in the release copy (1,811 s): web types, api types, strip (218 files), web 177 files / 1,215 tests, api 191 files / 2,615 tests, database 212 migrations / 1,665 assertions, replay 212, pg16 16.15 - all exit 0. `node scripts/release.mjs release/all-9oct`: READY (fast-forward from 0c5e51cd; build with the live API, the Firebase settings, no test sign-in).
+- Fails first: the flood test (clock let run across a minute: 409); the replay (the four old files: fails on exactly 112, 121, 146, 187; guarded: all 212 re-runnable); the helpers' 55 web and 69 api/database guards (their reports).
+- Opened on the local demo: Make a test hotel (all 131 hotel tables equal to 5EL's, no GSTIN), the stripe, guests 0 in test / 445 in real, a practice order on N4, Reset ("Removed 3 records", 5EL untouched), Re-copy ("Removed 108, copied 109", every table equal), the Test switch on Add somebody; audit entries TEST_CREATE and TEST_RESET by the Group Owner.
+
+**Left open**
+- The release itself: the owner types Part 2 (into the server) and A1-A7, one at a time (D21-50). The 19 September rule returns after it.
+- The book's pictures of test hotels (the stripe, TEST in the switcher, the Test switch, a TEST bill) - text is in A0.5/A8.1; pictures after the launch. The book's other chapters (manual-rest copy) stopped mid-way at the usage limit; B1-B9 written; review, build, merge.
+- The video series (C:\videos\RESUME.md): paused.
+- Not opened on screen: a printed TEST · NOT VALID bill (covered by the screens helper's snapshot tests).
+
+**Commits:** `d76a5e1a … fe07c3fd` (and the notes after it)
+
+---
+
 ## 2026-10-09 (evening) · custom add-ons (D27-291) and the KOT section of Restaurant setup (D27-292)
 
 **Asked for:** the owner: "a guest wants a custom thing - type its name and price and add it to

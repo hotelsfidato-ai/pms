@@ -47,6 +47,27 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+### 10 October, about 5 am — read this first
+
+```
+cp6 now              fe07c3fd + notes. Since 9 Oct evening: D27-294 (videos, C:\videos, paused),
+                     D27-295 (the release), bd2eb560 (SU flood test's clock, MEMORY 395),
+                     D27-296/297 TEST HOTELS (1b1323af screens, c46c6e31 database+API, merged
+                     42ed4247; migration 212: hotels.test_of, staff.test_only, guests/companies/
+                     groups split by test_hotel_id with RLS, the mixing guard, nothing leaves,
+                     app.create/reset/recopy_test_hotel with the guards' test-reset bypass),
+                     fe07c3fd (112/121/146/187 guarded, rerun.sh seeded - MEMORY 403).
+gates                fe07c3fd, full, clean, in the release copy: ALL GREEN - web 1,215, api 2,615,
+                     database 1,665 / 212, replay 212, pg16 (16.15), types, strip (1,811 s).
+release              READY, not pushed: release/all-9oct = fe07c3fd; website built in the
+                     release copy (index-DWU1f94S.js); the owner types Part 2 and A1-A7 (§ 3).
+local demo           fidato at 212; a test hotel 5ELT ("5 Elements Akkalkot · TEST") made from
+                     5EL, reset and re-copied on screen; fidato_replay = a scratch copy of the
+                     demo for replay tests (drop it when done).
+paused               the book's other chapters (.claude\worktrees\manual-rest, B1-B9 written, the
+                     rest part-written, nothing committed); the videos (C:\videos\RESUME.md).
+```
+
 ### 9 October — read this first: A NEW PC
 
 ```
@@ -498,19 +519,24 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
-> **9 October, night: THE RELEASE IN FLIGHT (D27-295), stopped by the usage limit.** The owner said
-> yes: one release of everything on cp6, the owner types each step, the 19 September rule lifted
-> for this release only. Branch `release/all-9oct` at d76a5e1a (22 commits on GitHub's main
-> 0c5e51cd, fetched 9 Oct: a fast-forward; migrations 207-211; no server setting or nginx change).
-> Its clean copy `.claude\worktrees\release-all-9oct` (junctions to node_modules) is running the
-> full gates (`.local\gates\progress.txt` there). Next: (1) when they are green, `node
-> scripts/release.mjs release/all-9oct` in the main checkout; (2) write docs/go-live/RELEASE-9OCT.md
-> from its printed steps; (3) guide the owner through A1-A7 one at a time. Live before (read only,
-> 9 Oct): API up since 5 Oct 17:46 IST, healthy; website `index-CbA5sped.js`. After: tick the
-> printing computers in Restaurant setup → KOT section (211 keeps today's KOT computer printing
-> every kind). PAUSED: the video series (C:\videos\RESUME.md); the book's writers in
-> `.claude\worktrees\manual-rest` (stopped mid-way, nothing committed: B1-B9 written, the rest
-> partly; review, build, test, merge).
+> **10 October, about 5 am: THE RELEASE IS READY (D27-295), the owner's to type.** Release
+> `release/all-9oct` at **fe07c3fd** (cp6's tip): everything to 211, **test hotels** (D27-296/297,
+> migration 212) and the four replay-unsafe migrations guarded (MEMORY 403). Full gates green on
+> exactly it in `.claude\worktrees\release-all-9oct` (web 1,215, api 2,615, database 1,665 / 212,
+> replay, pg16); `node scripts/release.mjs release/all-9oct` READY - website built there,
+> `index-DWU1f94S.js`. The owner's page: https://claude.ai/artifact/31rmDP8fBcNoFwAmvdfmCE (now
+> shared by link - no secrets on it; tell them to make it private after); tracker
+> https://claude.ai/artifact/RwsmvofDrUWqCAAHnDsxzg (its db rows: update them as steps finish).
+> The owner did Part 1 (Firebase settings filled: 7 of 7). Next: (1) Part 2, into the server - the
+> old key file `ssh-key-2026-09-01.key` is NOT on this PC; the page has the Oracle Bastion way in
+> and adds this PC's own key `~/.ssh/fidato_server`; (2) A1-A7 one at a time, reading each output
+> (A1 expects 0c5e51cd..fe07c3fd; A5's launch.sh replays all 212; A6 a fresh startedAt; A7 from the
+> release copy with `firebase.cmd`, then check live loads index-DWU1f94S.js); (3) after: the owner
+> makes the test hotel and testers (B2-T), ticks KOT computers if wanted; the 19 September rule is
+> back. Live before (read only): API up since 5 Oct 17:46 IST; website `index-CbA5sped.js`.
+> THEN: the book's test-hotel pictures (A0.5, A8.1 have the words); the book's other chapters in
+> `.claude\worktrees\manual-rest` (stopped mid-way; B1-B9 written); the videos (C:\videos\RESUME.md).
+> Release the admin claim (`npm run release -- admin`) when the launch is done.
 
 > **9 October, evening: the queue.** Done since: CUSTOM ADD-ONS (D27-291, 210) and THE KOT
 > SECTION (D27-292, 211), on cp6, each guard proven to fail first, both opened on the demo (see
