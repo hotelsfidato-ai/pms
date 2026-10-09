@@ -6539,6 +6539,19 @@ copy will see of theirs.**
 
 ---
 
+### 396 · MINE: I told the owner "no Firebase keys are needed" from the names in .env, and every value was empty (9 October)
+
+Asked for the release steps on the new PC, I counted the `VITE_FIREBASE_` lines in `.env` (seven)
+and told the owner, in chat and on the release page, that this PC already held the website's
+sign-in settings. `scripts/release.mjs` then refused: all seven lines are `NAME=` with nothing after
+them (the new PC's `.env` came from the example, not from the old PC). Nothing was built or sent;
+the owner's steps gained one (1d: `fill-firebase-env.mjs` fills them from the Firebase tool after
+sign-in, printing lengths, never values). **The rule:** a setting is "there" when its value is,
+checked by length without printing it; a line's name proves nothing. Say "I checked the names" or
+check the values; never report the second having done the first.
+
+---
+
 ### 395 · A test counted on the clock's minute, so the 9 October release's gates went red by bad timing (9 October)
 
 The SU booking door refuses more than 120 pushes a minute, counting by the clock's minute
