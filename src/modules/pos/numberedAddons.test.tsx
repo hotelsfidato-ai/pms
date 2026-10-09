@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { ReactElement } from "react";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
@@ -257,6 +257,24 @@ describe("a line of several: all of them, or just one (the owner's D27-290)", ()
       { itemId: "i-9", qty: 2 },
       { itemId: "i-9", qty: 1, numberedAddons: [{ id: "na-2", qty: 1 }] },
     ] });
+  });
+
+  it("the note stays until the next dish - not gone while the waiter looks up", async () => {
+    /* The clock is faked BEFORE the tap, so a timer the pad sets on it is one
+       this test can run out; faked after, a real timer is never reached and
+       the test passes whatever the pad does (seen: it passed with the old
+       8-second timer put back). */
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      pad();
+      fireEvent.click(await screen.findByRole("button", { name: /Veg Biryani/ }));
+      expect((await screen.findByRole("status")).textContent).toContain("Veg Biryani added");
+      act(() => { vi.advanceTimersByTime(9000); });
+      expect(screen.queryByRole("status")?.textContent ?? "", "gone after 9 seconds")
+        .toContain("Veg Biryani added");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("a note after each tap names the dish and opens Customise on it", async () => {

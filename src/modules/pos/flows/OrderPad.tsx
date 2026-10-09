@@ -69,7 +69,10 @@ export function OrderPad({
   const [customising, setCustomising] = useState<DraftLine | null>(null);
   /* The dish just tapped, for the note beside the footer - "<dish> added"
      with its own Customise - so the button is found on a narrow screen too
-     (the owner's D27-290). Cleared after a while, on Send and on Close. */
+     (the owner's D27-290). It STAYS until the next dish, until its line goes,
+     or until the pad is sent or closed: it went after 8 seconds at first, and
+     a waiter who looked up from the table found it gone (seen on the demo,
+     9 October). */
   const [justAdded, setJustAdded] = useState<{ uid: string; name: string } | null>(null);
   useEffect(() => {
     if (!justAdded) return;
@@ -79,9 +82,8 @@ export function OrderPad({
       document.querySelector(`[data-pad-line="${justAdded.uid}"]`)
         ?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
     }
-    const t = window.setTimeout(() => setJustAdded(null), 8000);
-    return () => window.clearTimeout(t);
   }, [justAdded]);
+  useEffect(() => { if (!open) setJustAdded(null); }, [open]);
   const [search, setSearch] = useState("");
   /* D27-267: the menu in two - Restaurant and Bar - and one section at a
      time when its button is tapped (tapped again, all of them). */
