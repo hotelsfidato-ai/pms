@@ -90,13 +90,36 @@ in D27-291 and D27-292.
   order moved to yesterday kept today's number).
 
 **Proved**
-- (filled in below with the runs)
+- Full gates `cp6-9oct-kot` on 74cf0ee4: web types, api types, strip (216 files) clean; api 190
+  files, 2,546 of 2,546; database 211 migrations, all 1,578 assertions (+11 "pos custom addons",
+  +14 "pos kot section"); replay all 211 re-runnable; pg16 (16.15) the same; `npm run build`
+  passes, no test sign-in in dist. Web: 1 of 1,158 failed - Rule 2b, `markPrinted` on the seam was
+  no longer called (Tables asks bill-print now). Deleted; the whole web suite again: 169 of 169
+  files, exit 0; web types clean.
+- Each guard failed first (prove.cjs: mutate, run, restore the bytes): custom add-ons 6 server
+  (merge, a dish's number moving its add-ons, the bill's order, the cascade's reason, the struck
+  list, the KOT's "for") and 5 screen; the KOT section 7 server (starting afresh, the claim per
+  kind, the kind's slip, DUPLICATE, Print here, the stamp, the business date) and 6 screen. One
+  mutation first PASSED: Print here cleared the waiting bills twice, so removing one proved
+  nothing - folded into one statement, then proven.
+- Opened on the demo: the pad's "Already sent" → Customise → Custom add-on → Send ("+ Extra papad"
+  on KOT 7, "for: Veg Biryani (KOT 4)", the Kitchen's "for Veg Biryani", the Add-ons tab's list);
+  the KOT section (sections routed, "This computer" ticked), BAR KOT 9 and an INTERIM BILL printed
+  by the preview browser, the Kitchen's filter.
+
+**Then, the owner:** "I don't have a KOT machine - a virtual printer for testing, a separate file
+that does not go to production, in the ignore file." Asked three questions (two printers: Kitchen,
+and Bar + bills; the slips on a page; in `.local\virtual-printer`). Built there - never committed:
+a Node program that registers "Virtual Kitchen" and "Virtual Bar" in the KOT section through the
+LOCAL API's test sign-in, asks every 3 seconds, claims and "prints" onto
+http://localhost:5199. `.gitignore` names the folder. Tried from Tables on B3: KITCHEN KOT 11 and
+BAR KOT 11 from one Send, then INTERIM BILL ₹399.00 NOT PAID on Virtual Bar.
 
 **Left open**
 - Printing by printer IP through an installed helper (D27-292 said: a later phase, if ever asked).
 - Any release: nothing leaves this PC until the owner says.
 
-**Commits:** `ea150bfb`
+**Commits:** `ea150bfb`, `74cf0ee4`, and the notes after them
 
 ---
 

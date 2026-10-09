@@ -63,18 +63,44 @@ cp6 now              + 29fd6465 (dev-testers: the GM test sign-in no longer meet
                      then the audit of the new code: 49155d4a..07eea56d (POS-34, 209's three
                      guards, the add-on list and menu asked again on open, D27-290's
                      "added - Customise" note and "All N / Just 1", FIN-29's test).
-                     Migrations up to 209.
+                     Then, asked question by question (26 questions, D27-291 and D27-292):
+                     ea150bfb CUSTOM ADD-ONS (migration 210: a typed name and a price or
+                     Free, its own line under the dish; on a dish already sent, custom and
+                     numbered add-ons as lines of their own for the next Send, that KOT naming
+                     the dish; the Tables pad's "Already sent"; "Custom add-ons used" on the
+                     Add-ons tab) and 74cf0ee4 THE KOT SECTION of Restaurant setup (migration
+                     211: KOT kinds Kitchen/Bar/added, one computer per kind ticked on the
+                     computer, routing per menu section, "BAR KOT 14" slips, REPRINT, the bill
+                     printer with INTERIM BILL / BILL / BILL · DUPLICATE and Print here, the
+                     red line per kind, the Kitchen's All/Kitchen/Bar filter, the kitchen
+                     manager into Restaurant setup for its KOT section).
+                     Migrations up to 211.
 gates                876bc94b (POS-33 + notes): ALL GREEN, the first full run on this PC -
                      web 1,123, api 2,509, database 1,537, replay 207, pg16 (16.15) 1,537/207,
                      build passes. bda47784's run met FIN-29 (a finance test's luck, fixed)
                      and was cut off by a restart. 4648f5d6 (everything, with its notes):
                      ALL GREEN, clean (1,990 s) - web 1,137, api 2,528, database 209
                      migrations and 1,553 assertions, replay 209, pg16 (16.15) 1,553/209,
-                     build passes with no test sign-in.
-local demo           `fidato` at 209, 5EL on 9 Oct, built by docs/briefs/README.md's recipe;
-                     add-on 2 = Kebab ₹120 made on it, AC7 has a Biryani with Kebab sent.
+                     build passes with no test sign-in. 74cf0ee4 (custom add-ons + the KOT
+                     section): green but web - 1 of 1,158, `markPrinted` no longer called
+                     (Rule 2b); deleted in the notes commit, the whole web suite again 169 of
+                     169 files, exit 0. api 2,546, database 1,578 / 211, replay 211, pg16,
+                     build passes.
+virtual printers     `.local\virtual-printer` (ignored, never committed): "Virtual Kitchen"
+                     and "Virtual Bar" (+ bills) for testing without a KOT machine; slips at
+                     http://localhost:5199. Start: start-virtual-printers.cmd there, or
+                     `node .local/virtual-printer/printer.mjs`. Running on the demo now: the
+                     red line reads "online" while it runs.
+local demo           `fidato` at 211, 5EL on 9 Oct, built by docs/briefs/README.md's recipe;
+                     add-on 2 = Kebab ₹120 made on it, AC7 has a Biryani with Kebab sent and an
+                     "Extra papad" on KOT 7; Beverages prints on the Bar KOT; B2 has a Paneer
+                     Tikka and 2 Masala Chai (BAR KOT 9 and an interim bill printed by the
+                     preview browser as "Bar PC", which was then taken off: no computer prints
+                     KOTs on the demo now, so the red line shows).
                      Postgres 17.11 in .local\pg, PostgreSQL 16.15 in .local\pg16 (§ 7).
-waiting on the owner any release (207 and 208 included): nothing leaves this PC until they say.
+waiting on the owner any release (207 to 211 included): nothing leaves this PC until they say.
+                     On live, the KOT printer that exists today becomes a computer printing
+                     every kind (211 moves it), so nothing stops printing on the day.
 live                 Unchecked from this PC. RELEASE-5OCT was withdrawn on 5 Oct; POS-33 is on
                      live until 207 is released.
 ```
@@ -471,6 +497,16 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **9 October, evening: the queue.** Done since: CUSTOM ADD-ONS (D27-291, 210) and THE KOT
+> SECTION (D27-292, 211), on cp6, each guard proven to fail first, both opened on the demo (see
+> § 2). Next: (1) a release with 207-211 when the owner says - nothing leaves this machine until
+> then; on the day, each printing computer is ticked in Restaurant setup → KOT section on that
+> computer (KOT-STATION-SETUP.md, rewritten). (2) The owner tries both on the demo. (3) Open,
+> not asked for: printing by printer IP through an installed helper (D27-292: a later phase if
+> ever); the Kitchen header is crowded at phone width (wall screen, fine wide); the Till's menu
+> panel scrolls sideways at phone width (older); `scripts/lane.mjs` compares with the stale
+> origin/cp6 on this PC; the rest of the scripts' `PGBIN` default (MEMORY 390).
 
 > **9 October: the queue (the new PC).** Done today, all on cp6, checked and opened on the demo:
 > POS-33 (Close unpaid, Clear), POS-32, NUMBERED ADD-ONS (D27-289), POS-34, the audit of the new

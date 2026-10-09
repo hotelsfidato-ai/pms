@@ -58,3 +58,8 @@ skills-lock.json
 # the local Postgres (program and data), screenshots, gate logs.
 # Inside the project on purpose (D22-1): nothing about the PMS lives outside it.
 .local/
+
+# The virtual KOT and bill printers for testing without a KOT machine (the
+# owner, 9 October): a local demo, never committed and never in production.
+# Already inside .local/ above; named here so nobody has to wonder.
+.local/virtual-printer/

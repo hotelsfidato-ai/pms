@@ -1366,12 +1366,6 @@ export async function sendOrder(
   }
 }
 
-export function markPrinted(
-  hotelId: string, orderId: string,
-): Promise<TillResult> {
-  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/printed`);
-}
-
 /** Frees the table. Refused while the bill is unsettled — clearing one
     takes a live order off the floor with money on it. */
 export async function clearTable(
