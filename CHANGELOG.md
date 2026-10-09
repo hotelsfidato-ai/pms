@@ -122,8 +122,25 @@ answers (D27-289) - and build them, with POS-32's test fix.
   reboot (start command: HANDOVER § 7).
 - The impeccable and taste skills are not on this PC: their source was never written down.
 
+**Later the same day** - the owner: "check the extra_choice_ids bug and fix it; the options are
+not coming for me in the table view; audit the new code", then D27-290, then after a restart
+"make this live in local".
+- POS-34 proved (a 500 lowering a sent multi-type dish) and fixed; 209 (three guards).
+- The add-ons "not coming": a new read inherited the app's trust-forever cache (MEMORY 392); the
+  list and, on D27-290, the menu are asked again on open.
+- An audit by two read-only reviewers, every finding checked, about a dozen fixed (POS
+  `CHANGELOG.md`, 9 October later).
+- D27-290: the pad's "added · Customise" note, "All N / Just 1".
+- FIN-29: a finance test that picked an invoiced stay, met by the full gates on bda47784 (that run
+  was cut off by a restart after its database step).
+- Proved: API 230 of 230 on the files touched; database 1,553; POS web 130 of 130; every new guard
+  seen failing first.
+- Live on the demo at 209: the note, "All 3 | Just 1", the split.
+- The full gates on the commit carrying these notes: HANDOVER § 2.
+
 **Commits:** `29fd6465`, `13460f7e`, `82a173b3`, `876bc94b` (notes), `6f377522` (decisions),
-`e7a0a184`, `8d01590a`, `9664dfd5`, and these notes.
+`e7a0a184`, `8d01590a`, `9664dfd5`, `bda47784` (notes), `49155d4a`, `544cc6d2`, `c841a7bb`,
+`c169fcb5`, `07eea56d`, and these notes.
 
 ## 2026-10-05 · the morning's fixes, five merges, the WhatsApp voucher on the owner's template, and the release ready to cut
 

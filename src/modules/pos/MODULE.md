@@ -104,7 +104,12 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
   "Veg Biryani with add-on Kebab", its price the dish's and the add-ons'
   (`lib/pricing.ts`, held to the server by padTotal.test.ts). Only before Send
   (the Till and Terminal hide the button on a sent dish; the server and 208's
-  trigger refuse). The bill, Till and Terminal print "Veg Biryani 310 · Kebab
+  trigger refuse). Since D27-290: after each tap the pad shows "<dish> added"
+  with its own Customise beside the footer, staying until the next dish, and on
+  a narrow screen scrolls the new line into view; a line of several asks "All
+  N" or "Just 1" (Just 1 splits one off with the add-ons); Customise offline is
+  refused, never held; the add-on list and the menu are asked again whenever an
+  order screen opens or comes back into view. The bill, Till and Terminal print "Veg Biryani 310 · Kebab
   +120" under the line; the KOT and the Kitchen read the dish with "+ Kebab"
   under it. Taxed at the dish's own rate. Not on the guest's page yet.
 - **The dish pop-up (`DishDialog`)**: one row per variation type under its
@@ -201,7 +206,8 @@ add-ons     POST   /:code/till/numbered-addons              number, name, descri
             POST   /:code/till/numbered-addons/:id/off      for a while, the dish's choices
             POST   /:code/till/numbered-addons/:id/on
             POST   /:code/till/orders/:id/lines/:lineId/numbered-addons
-                                                           Customise a dish not yet sent: the whole set
+                                                           Customise a dish not yet sent: the whole set;
+                                                           just: 1 splits one off a line of several (D27-290)
 outlet      POST   /:code/till/outlet/:outlet/closed        "we are closed" for a while
 rooms       GET    /:code/till/rooms                        rooms a bill may be charged to
 orders      GET    /:code/till/orders
@@ -367,6 +373,9 @@ pos_orders, pos_order_lines
 pos_numbered_addons;                           "numbered add-ons" (208, D27-289)
   pos_order_lines.numbered_addons (what the dish
   was sent with: dish, base, each add-on)
+  Free is 0; the kept add-ons' list; a line     "three guards from the audit" (209)
+  struck as it is written stands aside from
+  today's variation types (POS-34)
 pos_item_variations, pos_addon_groups,         045_variations_and_addons.sql
 pos_addons, pos_item_addon_groups
   an item or add-on off until a time           045, 046

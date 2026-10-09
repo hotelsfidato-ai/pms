@@ -11,6 +11,73 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-09 (later) · POS-34, an audit of the new code, and the owner's D27-290
+
+**Asked for:** the owner: "check the extra_choice_ids bug and fix it; the options are not coming
+for me in the table view, so fix this; and audit the new code for any issues and errors." Then
+three answers (D27-290): Customise found after each tap; "All N / Just 1" on a line of several; the
+menu asked again like the add-ons. After a restart: "make this live in local".
+
+**Shipped** (`49155d4a … 07eea56d`)
+- POS-34: one fewer of a sent dish with several variation types answered 500. The struck copy
+  carries `extra_choice_ids`; 209 lets a line struck as it is written stand aside from today's menu.
+- "The options are not coming": the add-on list (and, D27-290, the menu) inherited the app's
+  trust-forever read; a device that read an empty list kept it for a week. Asked again on open, on
+  focus and when Customise opens (root MEMORY 392).
+- The audit (two read-only reviewers, each finding checked before it was fixed):
+  - Free stores 0, and 209 holds it;
+  - a same-moment duplicate number is a sentence, not a 500;
+  - a Customise with no set is refused;
+  - Clear never clears a newer bill;
+  - 209 closes the kept add-ons' shape gap;
+  - Customise says "Reading" or "could not be read", never "No add-ons yet";
+  - a fresh panel per line;
+  - a customised pad line joins its twin;
+  - Customise offline is refused, not held;
+  - finished tiles and Clear name their table;
+  - kitchen keys by place;
+  - the Add-ons tab wraps on a phone and wants rupees and paise.
+- D27-290: the "<dish> added · Customise" note beside the pad's footer, staying until the next
+  dish (an 8-second version was gone before it could be pressed on the demo); the new line scrolled
+  into view on a narrow screen; "All N / Just 1", Just 1 split off on the pad and by the server
+  (`just: 1`).
+
+**Found**
+- POS-34 (above). FIN-29 (finance): `editCharge.test` picked a stay another file had just invoiced,
+  met by the full gates on bda47784; test only.
+- Not taken: Customise does not fold into an identical line on the Till (cosmetic, both sides of the
+  bill agree); a lowered sent dish's sides still get no struck copy of their own (as before).
+
+**Proved**
+- API 230 of 230 on the files touched, through 209; database all 1,553 assertions ("pos audit
+  guards" 5, "pos numbered addons" 11, "pos floor" 6); the POS web files and the offline rules, 130
+  of 130; web and api types clean.
+- Each guard failed first:
+  - P1 Free (a 500 without the API fix - 209's own check refuses);
+  - P2 no set "expected 200 to be 409";
+  - P3 Clear "expected ['blank', null] to deeply equal ['paid', …]";
+  - P4–P6 the three 209 guards, one failure each;
+  - P7 Just 1;
+  - POS-34 the 500 itself;
+  - the stale list "Unable to find … Add-on 2, Kebab";
+  - the menu, the note, the pad's split and the Till's `just`, one failure each;
+  - the note's 8 seconds "gone after 9 seconds".
+  - A first version of that last test passed with the timer put back - the clock was faked after
+    the tap - and was rewritten before it counted.
+- Live on the demo after `migrate.sh` to 209:
+  - AC9: a tap gave "Veg Biryani added · Customise", Kebab listed;
+  - three on a line gave "All 3 | Just 1", and Just 1 left "Veg Biryani ×2" and "… with add-on
+    Kebab ×1";
+  - AC10: the note still there after 10 seconds;
+  - test lines taken off again; no server error.
+
+**Left open**
+- Customise folding into an identical Till line (cosmetic). Live has none of this until the owner
+  releases 207-209.
+
+**Commits:** `49155d4a`, `544cc6d2`, `c841a7bb` (FIN-29), `c169fcb5` (D27-290, MEMORY 392), `07eea56d`,
+and these notes.
+
 ## 2026-10-09 · Numbered add-ons (D27-289), and POS-32's test fix
 
 **Asked for:** the owner, 9 October: "a new section called add-ons, separate from the current

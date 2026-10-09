@@ -59,13 +59,17 @@ cp6 now              + 29fd6465 (dev-testers: the GM test sign-in no longer meet
                      it" with Clear; migration 207), 6f377522 (decisions D27-287..289),
                      e7a0a184 (POS-32), 8d01590a + 9664dfd5 (NUMBERED ADD-ONS, D27-289,
                      migration 208: Customise on the Tables pad, Till and Terminal; "Veg
-                     Biryani with add-on Kebab" as one line; the Menu's Add-ons tab).
-                     Migrations up to 208.
+                     Biryani with add-on Kebab" as one line; the Menu's Add-ons tab),
+                     then the audit of the new code: 49155d4a..07eea56d (POS-34, 209's three
+                     guards, the add-on list and menu asked again on open, D27-290's
+                     "added - Customise" note and "All N / Just 1", FIN-29's test).
+                     Migrations up to 209.
 gates                876bc94b (POS-33 + notes): ALL GREEN, the first full run on this PC -
                      web 1,123, api 2,509, database 1,537, replay 207, pg16 (16.15) 1,537/207,
-                     build passes. The add-ons' own runs are in the POS CHANGELOG; the full
-                     gates on the add-ons' notes commit: the CHANGELOG entry after it.
-local demo           `fidato` at 208, 5EL on 9 Oct, built by docs/briefs/README.md's recipe;
+                     build passes. bda47784's run met FIN-29 (a finance test's luck, fixed)
+                     and was cut off by a restart. The full gates on the commit carrying the
+                     audit's notes: started 9 Oct afternoon, the result in the next notes.
+local demo           `fidato` at 209, 5EL on 9 Oct, built by docs/briefs/README.md's recipe;
                      add-on 2 = Kebab ₹120 made on it, AC7 has a Biryani with Kebab sent.
                      Postgres 17.11 in .local\pg, PostgreSQL 16.15 in .local\pg16 (§ 7).
 waiting on the owner any release (207 and 208 included): nothing leaves this PC until they say.
@@ -466,15 +470,15 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
-> **9 October: the queue (the new PC).** Done today: POS-33 (Close unpaid, Clear), POS-32 and
-> NUMBERED ADD-ONS (D27-289) - all on cp6, checked, opened on the demo. Next: (1) a release with
-> 207 and 208, when the owner says - nothing leaves this machine until then; live still has
-> POS-33's stuck tables. (2) The owner tries the add-ons on the demo (Menu → Add-ons, then
-> Customise on Tables). (3) Prove or clear the `extra_choice_ids` suspicion (lowering a sent dish
-> with two variation types; POS CHANGELOG 9 Oct). (4) The rest of the scripts' `PGBIN` default
-> (MEMORY 390). Not yet asked for: add-ons on the guest's page, a report of add-ons sold. The 5
-> October release (release/all-5oct) was withdrawn; what replaced it and what live runs now are
-> unchecked from this PC.
+> **9 October: the queue (the new PC).** Done today, all on cp6, checked and opened on the demo:
+> POS-33 (Close unpaid, Clear), POS-32, NUMBERED ADD-ONS (D27-289), POS-34, the audit of the new
+> code, D27-290 (the "added - Customise" note, "All N / Just 1", the menu asked again), FIN-29.
+> Next: (1) a release with 207, 208 and 209, when the owner says - nothing leaves this machine
+> until then; live still has POS-33's stuck tables. (2) The owner tries Customise on the demo
+> (Tables: tap a dish, then Customise on the note). (3) The rest of the scripts' `PGBIN` default
+> (MEMORY 390). Not yet asked for: add-ons on the guest's page, a report of add-ons sold,
+> Customise folding into an identical Till line. The 5 October release (release/all-5oct) was
+> withdrawn; what replaced it and what live runs now are unchecked from this PC.
 
 > **3 October, later: the fresh start (D27-248).** RELEASE-3OCT.md now has Part F: 5 Elements
 > and all its test data go during the release; only influvateseo@gmail.com and
