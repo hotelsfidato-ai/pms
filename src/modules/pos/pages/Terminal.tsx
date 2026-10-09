@@ -19,6 +19,7 @@ import { ReadFailed, ReadStale } from "@/components/ui";
 import { KotStatus } from "@/modules/pos/components/KotStation";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
+import { useBillPrint } from "@/modules/pos/flows/printBill";
 import { addonBreakdown } from "@/modules/pos/lib/pricing";
 import { GuestOrders } from "@/modules/pos/components/GuestOrders";
 import { AskDialog, SENT_STRIKE, roomAsk, type Ask } from "@/modules/pos/components/AskDialog";
@@ -112,6 +113,8 @@ export default function TerminalPage() {
   const menu = useQuery(tillMenuQuery(hotelId));
   /* The numbered Add-ons (D27-289) for Customise. */
   const numbered = useQuery(numberedAddonsQuery(hotelId));
+  /* To the bill printer, or here when none is chosen (D27-292). */
+  const bill = useBillPrint(hotelId);
   const [customising, setCustomising] = useState<OrderLine | null>(null);
   const orders = useQuery({
     queryKey: ["till-orders", hotelId, BUSINESS_DATE],
@@ -924,15 +927,14 @@ export default function TerminalPage() {
                     {order.status === "settled" && (
                       <button
                         type="button"
-                        onClick={() => window.open(
-                          `/pos/${hotelId}/bill/${order.id}`, "_blank",
-                        )}
+                        onClick={() => void bill.print(order.id)}
                         className={cn(OUTLINE, "w-full h-14 text-base font-medium inline-flex items-center justify-center gap-2")}
                       >
                         <Printer className="size-4" />
                         Print the bill
                       </button>
                     )}
+                    {bill.dialog}
                     <button
                       type="button"
                       onClick={() => setOrderId(null)}

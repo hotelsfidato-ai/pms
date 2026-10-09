@@ -722,3 +722,106 @@ begin
   select count(*) into n from pos_outlets where code = 'CUSAD';
   perform test.ok('pos custom addons', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- THE KOT SECTION OF RESTAURANT SETUP (D27-292)
+-- =============================================================================
+-- Every hotel starts with Kitchen and Bar, never switched off; one computer
+-- prints the bills; a line takes its kind when it is sent - its section's own,
+-- else by its heading, and an add-on its dish's; a slip is claimed once per
+-- kind. Refers to its migration by what it does, never by its number. Uses the
+-- suite's AGR property and its clerk; removes what it makes.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_order uuid; v_cat uuid; v_drinks uuid;
+  v_item uuid; v_drink uuid; v_dish bigint; v_lime bigint; v_extra bigint;
+  v_kitchen uuid; v_bar uuid; v_tandoor uuid; v_s1 uuid; v_s2 uuid; bd date; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  -- ---------- the kinds every hotel starts with -----------------------------------
+  select id into v_kitchen from pos_kot_kinds where hotel_id = a and role = 'food';
+  select id into v_bar from pos_kot_kinds where hotel_id = a and role = 'bar';
+  perform test.ok('pos kot section', 'a hotel starts with Kitchen and Bar',
+    v_kitchen is not null and v_bar is not null, 'missing');
+  perform test.raises('pos kot section', 'Kitchen is never switched off',
+    format($q$update pos_kot_kinds set is_active = false where id = %L$q$, v_kitchen), '23514');
+  perform test.raises('pos kot section', 'two KOTs of one name are refused',
+    format($q$insert into pos_kot_kinds (hotel_id, name) values (%L, ' kitchen ')$q$, a), '23505');
+  insert into pos_kot_kinds (hotel_id, name, sort) values (a, 'Tandoor', 3) returning id into v_tandoor;
+
+  -- ---------- one bill printer -------------------------------------------------
+  insert into pos_kot_stations (hotel_id, device, name, prints_bills, bills_since)
+  values (a, 'device-dbtest-0001', 'Bar PC', true, now()) returning id into v_s1;
+  perform test.raises('pos kot section', 'one computer prints the bills',
+    format($q$insert into pos_kot_stations (hotel_id, device, name, prints_bills, bills_since)
+              values (%L, 'device-dbtest-0002', 'Till PC', true, now())$q$, a), '23505');
+  insert into pos_kot_stations (hotel_id, device, name) values (a, 'device-dbtest-0002', 'Kitchen PC')
+  returning id into v_s2;
+  perform test.raises('pos kot section', 'a kind on a computer says since when',
+    format($q$update pos_kot_kinds set station_id = %L where id = %L$q$, v_s2, v_kitchen), '23514');
+
+  -- ---------- stamped when sent ------------------------------------------------
+  insert into pos_menu_categories (hotel_id, name, tax_kind) values (a, 'KOT test food', 'restaurant')
+  returning id into v_cat;
+  insert into pos_menu_categories (hotel_id, name, tax_kind, kot_kind_id)
+  values (a, 'KOT test tandoor', 'restaurant', v_tandoor) returning id into v_drinks;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_cat, 'KOT test dal', 200, 5) returning id into v_item;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_drinks, 'KOT test naan', 50, 5) returning id into v_drink;
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'KOTSC', 'KOT Section Test', 'food', v_staff) returning id into v_outlet;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff) returning id into v_order;
+  insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, v_item, 'KOT test dal', 1, 200, 5, v_staff) returning id into v_dish;
+  insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, v_drink, 'KOT test naan', 2, 50, 5, v_staff) returning id into v_lime;
+  insert into pos_order_lines (order_id, hotel_id, parent_line_id, extra_kind, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, v_dish, 'custom', 'Extra papad', 1, 40, 5, v_staff) returning id into v_extra;
+
+  update pos_order_lines set kot_status = 'sent', kot_sent_at = now(), kot_no = 1 where order_id = v_order;
+  select count(*) into n from pos_order_lines where id = v_dish and kot_kind_id = v_kitchen;
+  perform test.ok('pos kot section', 'a dish takes its heading''s kind when sent', n = 1, 'not the Kitchen');
+  select count(*) into n from pos_order_lines where id = v_lime and kot_kind_id = v_tandoor;
+  perform test.ok('pos kot section', 'a section''s own kind wins over its heading', n = 1, 'not the Tandoor');
+  select count(*) into n from pos_order_lines where id = v_extra and kot_kind_id = v_kitchen;
+  perform test.ok('pos kot section', 'an add-on goes with its dish', n = 1, 'not with its dish');
+
+  update pos_menu_categories set kot_kind_id = null where id = v_drinks;
+  perform test.ok('pos kot section', 'a sent line keeps its kind when the section moves',
+    app.pos_line_kot_kind(v_lime) = v_tandoor, 'it moved');
+
+  -- ---------- one claim per kind -----------------------------------------------
+  perform test.allows('pos kot section', 'the kitchen''s slip is claimed',
+    format($q$insert into pos_kot_prints (hotel_id, order_id, kot_no, kind_id) values (%L, %L, 1, %L)$q$,
+           a, v_order, v_kitchen));
+  perform test.allows('pos kot section', 'and the tandoor''s, apart',
+    format($q$insert into pos_kot_prints (hotel_id, order_id, kot_no, kind_id) values (%L, %L, 1, %L)$q$,
+           a, v_order, v_tandoor));
+  perform test.raises('pos kot section', 'never the same slip twice',
+    format($q$insert into pos_kot_prints (hotel_id, order_id, kot_no, kind_id) values (%L, %L, 1, %L)$q$,
+           a, v_order, v_kitchen), '23505');
+
+  -- ---------- a new hotel -------------------------------------------------------
+  select count(*) into n from information_schema.triggers where trigger_name = 'hotels_kot_kinds';
+  perform test.ok('pos kot section', 'a hotel made later starts with them too', n = 1, 'no trigger');
+
+  -- ---------- and the fixtures go ----------------------------------------------
+  delete from pos_kot_prints where order_id = v_order;
+  delete from pos_order_lines where order_id = v_order;
+  delete from pos_orders where id = v_order;
+  delete from pos_outlets where id = v_outlet;
+  delete from pos_menu_items where id in (v_item, v_drink);
+  delete from pos_menu_categories where id in (v_cat, v_drinks);
+  update pos_kot_kinds set station_id = null, station_since = null where hotel_id = a;
+  delete from pos_kot_kinds where id = v_tandoor;
+  delete from pos_kot_stations where id in (v_s1, v_s2);
+  select count(*) into n from pos_outlets where code = 'KOTSC';
+  perform test.ok('pos kot section', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;

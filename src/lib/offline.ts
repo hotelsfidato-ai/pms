@@ -160,6 +160,14 @@ const RULES: Rule[] = [
       "Add-ons are changed while connected: the dish could reach the kitchen "
       + "before a held change was sent. Customise again when the connection is back.",
   },
+  /* A BILL TO PRINT is not held (D27-292): printed later, at the bill
+     printer, it reaches nobody who is waiting for it. */
+  {
+    test: /\/till\/orders\/[^/]+\/bill-print(\/here)?$/,
+    tier: "refuse",
+    label: "Print the bill",
+    reason: "The bill printer is reached through the server. Print it again when the connection is back.",
+  },
   { test: /\/till\/orders(\/|$)/, tier: "queue", label: "Order" },
   { test: /\/till\/menu\/items\/[^/]+\/(on|off|toggle)$/, tier: "queue", label: "Menu availability" },
   /* HOW LONG A DISH TAKES. No scarce resource and no money: two managers

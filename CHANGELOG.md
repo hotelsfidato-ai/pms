@@ -50,6 +50,56 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-09 (evening) · custom add-ons (D27-291) and the KOT section of Restaurant setup (D27-292)
+
+**Asked for:** the owner: "a guest wants a custom thing - type its name and price and add it to
+the dish, even a dish already placed"; and "one KOT machine prints everything - bar, restaurant,
+bills. Remove the KOT toggle; put a KOT section in Restaurant setup where I configure several,
+by place; in a single machine, each slip says what it is - bill, bar KOT, restaurant KOT,
+interim." "Ask me all the questions before building": 26 questions in seven rounds, every answer
+in D27-291 and D27-292.
+
+**Shipped** (worktree `pos-custom-kot`, merged into cp6 locally; nothing pushed or deployed)
+- D27-291, custom add-ons (`ea150bfb`, migration 210): in Customise, **Custom add-on** - a name,
+  a price or Free (never a default), its own number - its own line under the dish ("+ Extra
+  papad"), at the dish's tax. On a dish already sent, Customise adds custom AND numbered add-ons as
+  lines of their own, waiting for the next Send; that KOT and the Kitchen screen name the dish
+  ("for: Veg Thali (KOT 12)"). The Tables pad lists the table's dishes already sent, each with
+  Customise. A sent add-on struck asks who and why; a struck dish carries its reason to its
+  add-ons; the day's struck list names them. The Add-ons tab lists "Custom add-ons used" (30 days)
+  with Number it. `api/src/modules/pos/extras.ts`, `flows/CustomiseDialog.tsx`,
+  `flows/OrderPad.tsx`.
+- D27-292, the KOT section (migration 211): KOT kinds (Kitchen and Bar for every hotel, renamed,
+  never switched off; more added); computers that print them, one computer per kind, ticked on
+  the computer itself ("This computer"), moving and starting afresh; routing per menu section,
+  pre-filled from the tax heading and stamped on each line when sent; one Send = one number = one
+  slip per kind, headed in big letters "BAR KOT 14", REPRINT on a reprint; the bill printer:
+  INTERIM BILL / BILL / BILL · DUPLICATE, Print here when it is offline, the bill page as before
+  when none is chosen; the red line per kind something prints to, with Set up; the Kitchen
+  screen's "KOT printer" button gone and an All / Kitchen / Bar filter in its place; the kitchen
+  manager opens Restaurant setup for its KOT section only. `api/src/modules/pos/kotSection.ts`,
+  `components/KotSection.tsx`, `components/KotStation.tsx`, `components/BillSlip.tsx`,
+  `flows/printBill.tsx`, `KOT-STATION-SETUP.md`.
+
+**Found**
+- The lane script (`scripts/lane.mjs`) compares with `origin/cp6`, which is the stale 18 Sep
+  branch on this PC (D27-287): it lists ~1,280 files. Compared with local cp6 instead, by hand.
+- The Till scrolls sideways in a phone-width window: its menu panel's dish grid is wider than
+  the pane. Not from this work; not fixed.
+- MEMORY 393, 394: two test mistakes of mine (a settled bill's tenders in a cleanup, again; an
+  order moved to yesterday kept today's number).
+
+**Proved**
+- (filled in below with the runs)
+
+**Left open**
+- Printing by printer IP through an installed helper (D27-292 said: a later phase, if ever asked).
+- Any release: nothing leaves this PC until the owner says.
+
+**Commits:** `ea150bfb`
+
+---
+
 ## 2026-10-09 · the project set up on a new machine, the gates made to find their own folder, and Close unpaid fixed (POS-33)
 
 **Asked for:** the owner, 8-9 October: clone the repository into the folder they assigned

@@ -15,7 +15,8 @@ import { mayReach } from "@/components/app/navigation";
 import { useRole } from "@/lib/session";
 import { OrderPad } from "@/modules/pos/flows/OrderPad";
 import { draftedTables } from "@/lib/draft";
-import { getFloor, markPrinted, clearTable, setOutletClosed, takeDishes, type FloorTable, type TableState, type OffFor } from "@/modules/pos/data/till";
+import { getFloor, clearTable, setOutletClosed, takeDishes, type FloorTable, type TableState, type OffFor } from "@/modules/pos/data/till";
+import { useBillPrint } from "@/modules/pos/flows/printBill";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { KotStatus } from "@/modules/pos/components/KotStation";
 
@@ -148,14 +149,14 @@ export default function FloorPage() {
     setPad({ table, orderId: table.orderId });
   };
 
+  /* The interim bill: to the bill printer, or here when none is chosen
+     (D27-292). Asking marks the table "Bill printed", as before. */
+  const bill = useBillPrint(hotelId);
   const print = async (table: FloorTable) => {
     if (!table.orderId) return;
     setBusy(table.id);
-    const res = await markPrinted(hotelId, table.orderId);
+    await bill.print(table.orderId, refresh);
     setBusy(null);
-    if (!res.ok) return toast.error("Not printed", res.reason);
-    window.open(`/pos/${hotelId}/bill/${table.orderId}`, "_blank");
-    refresh();
   };
 
   const clear = async (table: FloorTable) => {
@@ -444,6 +445,8 @@ export default function FloorPage() {
           </section>
         ))
       )}
+
+      {bill.dialog}
 
       {/* Over the floor, never instead of it. The pad closes and the
           waiter is looking at the same room they were looking at. */}

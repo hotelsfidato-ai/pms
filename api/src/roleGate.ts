@@ -429,8 +429,19 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders/:id/taken`]: TILL,  // the waiter's Taken, D27-222
   [`POST ${H}/till/guest-orders/:id/decline`]: TILL,  // in-room dining, D27-224
   [`POST ${H}/till/orders/:id/kot/:no/printed`]: KOT_PRINT,
-  [`POST ${H}/till/kot-station/:outlet/poll`]: KOT_PRINT,
-  [`POST ${H}/till/kot-station/:outlet`]: KOT_SWITCH,
+  /* The KOT section (D27-292): set up by Restaurant setup's people and the
+     kitchen manager; the station's asks and claims are the printing's. */
+  [`POST ${H}/till/kot-stations/poll`]: KOT_PRINT,
+  [`POST ${H}/till/bill-prints/:id/printed`]: KOT_PRINT,
+  [`POST ${H}/till/kot-setup/kinds`]: KOT_SWITCH,
+  [`PATCH ${H}/till/kot-setup/kinds/:id`]: KOT_SWITCH,
+  [`POST ${H}/till/kot-setup/kinds/:id/off`]: KOT_SWITCH,
+  [`POST ${H}/till/kot-setup/sections/:id`]: KOT_SWITCH,
+  [`POST ${H}/till/kot-setup/this-computer`]: KOT_SWITCH,
+  [`POST ${H}/till/kot-setup/stations/:id/remove`]: KOT_SWITCH,
+  /* A bill asked of the bill printer, or printed here: whoever prints one. */
+  [`POST ${H}/till/orders/:id/bill-print`]: TILL,
+  [`POST ${H}/till/orders/:id/bill-print/here`]: TILL,
   /* Open the day, the float counted (D27-190): whoever closes it. */
   [`POST ${H}/till/day-end/open`]: DAY_END,
   [`POST ${H}/till/day-end/movements`]: DAY_END,
@@ -883,7 +894,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/till/orders/:id`]: TILL_READ,
   /* The docket and the KOT printer: the kitchen too, which prints them. */
   [`GET ${H}/till/orders/:id/kot/:no`]: KOT_READ,
-  [`GET ${H}/till/kot-station`]: KOT_READ,
+  [`GET ${H}/till/kot-setup`]: KOT_READ,
   [`GET ${H}/till/floor`]: TILL_READ,
   [`GET ${H}/table-bookings`]: TILL_READ,
   [`GET ${H}/till/rooms`]: TILL_READ,

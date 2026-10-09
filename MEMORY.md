@@ -6539,6 +6539,29 @@ copy will see of theirs.**
 
 ---
 
+### 394 · MINE: a test moved an order to yesterday, and the next order took its number (9 October)
+
+The KOT section's catch-up test (D27-292) moved an order back a business day with `update
+pos_orders set business_date = business_date - 1`. The order's number stayed today's
+(`20261009-7`), but `app.pos_next_order_no` works today's next number from TODAY's orders - so the
+next test opened an order with the same number, and the unique key answered 500 "Something went
+wrong". Two tests failed for a reason in the test. Fixed: the moved order is renamed (`order_no ||
+'-Y'`). **The rule:** an order number is per business date and derived from what is there; a test
+that moves an order across dates moves its number out of the way too.
+
+---
+
+### 393 · MINE: the same cleanup mistake twice - a paid bill's tenders cannot be deleted (9 October)
+
+The KOT section's API test cleaned up by deleting `pos_order_tenders` first, and the database
+refused: "tenders on a settled order cannot be removed". I met exactly this on 9 October's POS-33
+tests and fixed it then by deleting the orders only - and wrote it into the new file again. All
+seven tests had passed; the file failed in its afterAll. **The rule:** cleaning up POS test orders,
+delete the lines (frozen trigger off) and the orders; never the tenders. Copy the cleanup from a
+file that already passes, not from memory.
+
+---
+
 ### 392 · MINE: the add-on list I added trusted its first read for a week, so the owner's screens never saw the add-ons (9 October)
 
 D27-289 gave the order screens a new read, `["till-addons", hotel]`, and put it in App.tsx's

@@ -31,9 +31,16 @@ export function DocketSlip({ d }: { d: Docket }) {
       <p className="text-center tabular">{d.sentAt}</p>
       {/* The number, biggest thing on the paper. A chef finds a docket
           on a rail of twenty by its number and nothing else. */}
-      <p className="text-center text-[19px] font-bold tracking-wide mt-1">
-        KOT - {d.kotNo}
+      {/* WHAT IT IS, BIG, between two rules (the owner's D27-292): one
+          printer may take every kind, so the slip says which - "BAR KOT 14"
+          - and a reprint says so too. A docket from before kinds is "KOT". */}
+      <p className="mt-1 border-y-2 border-ink-900 py-1 text-center text-[22px] font-bold tracking-wide"
+         data-kot-heading>
+        {d.kind ? `${d.kind.name.toUpperCase()} KOT ${d.kotNo}` : `KOT - ${d.kotNo}`}
       </p>
+      {d.reprint && (
+        <p className="text-center font-bold tracking-wide mt-0.5">REPRINT</p>
+      )}
       <p className="text-center font-bold mt-1">
         {TYPE_LABEL[d.orderType] ?? d.orderType}
       </p>

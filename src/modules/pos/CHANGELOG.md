@@ -11,6 +11,37 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-09 (evening) · custom add-ons (D27-291) and the KOT section (D27-292)
+
+**Asked for:** the owner: a "custom add-on" in Customise - type a name and a price and add it to
+a dish, even one already placed (a thali at the table, one more thing it does not offer); and a
+KOT section in Restaurant setup instead of the KOT toggle - several KOT machines by place (bar,
+restaurant), and on one machine each slip saying what it is (bill, bar KOT, restaurant KOT,
+interim). Every question asked first: 26, in seven rounds (D27-291, D27-292).
+
+**Shipped**
+- Custom add-ons (`ea150bfb`, 210): its own line under the dish, its own number, the dish's tax,
+  a price or Free; on a sent dish custom and numbered add-ons go on as lines of their own for the
+  next Send, and that KOT names the dish; the pad's "Already sent"; the Till's and the Terminal's
+  Customise on every dish; strike with a reason; the struck list; "Custom add-ons used" with
+  Number it.
+- The KOT section (211): kinds; computers, one per kind, ticked on the computer; routing per
+  section, stamped when sent; a slip per kind, "BAR KOT 14", REPRINT; the bill printer (INTERIM
+  BILL / BILL / BILL · DUPLICATE; Print here; none chosen = the bill page as before); the red line
+  per kind; the Kitchen's filter in place of its KOT printer button; the kitchen manager's way
+  into Restaurant setup. D27-159's one-device-per-outlet routes and their test are gone.
+
+**Found**
+- Nothing broken in the service. The Till's menu panel is wider than a phone-width pane (it
+  scrolls sideways); left. The lane script compares with the stale origin/cp6.
+
+**Proved** - see the root CHANGELOG's entry of the same evening.
+
+**Left open**
+- Printing by IP through an installed helper: a later phase only if the owner asks.
+
+---
+
 ## 2026-10-09 (later) · POS-34, an audit of the new code, and the owner's D27-290
 
 **Asked for:** the owner: "check the extra_choice_ids bug and fix it; the options are not coming

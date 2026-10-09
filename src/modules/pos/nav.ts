@@ -83,6 +83,7 @@ export const nav: ServiceNavEntry[] = [
      last, because it is done once and before any of the above. */
   { section: "point-of-sale", order: 80,
     label: "Restaurant setup", to: "/pos/:code/setup", icon: SlidersHorizontal,
-    resource: "room_config", keywords: ["tables", "sections", "outlet", "set up restaurant"],
-    canSee: (role) => can(role, "edit", "room_config") },
+    resource: "room_config", keywords: ["tables", "sections", "outlet", "set up restaurant", "kot", "printer"],
+    /* And the kitchen manager, for its KOT section only (D27-292). */
+    canSee: (role) => can(role, "edit", "room_config") || can(role, "edit", "menu") },
 ];

@@ -8,10 +8,10 @@ import { useLiveOrders } from "@/lib/useLiveOrders";
 import { useDocumentTitle } from "@/lib/documentTitle";
 import { toast } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { getKitchen, moveKitchenLine, type KitchenLine } from "@/modules/pos/data/till";
+import { getKitchen, moveKitchenLine, type KitchenLine, type KotKind } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { useRole } from "@/lib/session";
-import { KotPrinterPanel, KotStatus } from "@/modules/pos/components/KotStation";
+import { KotStatus, useKotSetup } from "@/modules/pos/components/KotStation";
 import { mayRingUp } from "@/modules/pos/nav";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -70,6 +70,38 @@ const EMPTY_COLUMN: Record<(typeof COLUMNS)[number]["key"], string> = {
    meanings, in each colour's readable step (yellow itself is 1.7:1 on
    white, the kit's warning ink is its text). The edges stay full colour. */
 const WAIT_INK = { late: "text-brand-red-700", warm: "text-brand-yellow-800" } as const;
+
+/** This computer's choice of the board's filter (D27-292). */
+const KIND_KEY = "pms.kitchen-kind";
+
+/* All, or one KOT kind: "Kitchen", "Bar" (the owner's D27-292). The kit's
+   segmented look at a wall screen's height, as By stage / By table. */
+function KindFilter({ kinds, value, onChange }: {
+  kinds: KotKind[]; value: string; onChange: (v: string) => void;
+}) {
+  if (kinds.length < 2) return null;
+  return (
+    <div className="flex items-center gap-0.5 p-[3px] rounded-md bg-grey-100 shrink-0"
+         role="group" aria-label="Which KOTs">
+      {[{ id: "", name: "All" }, ...kinds].map((k) => (
+        <button
+          key={k.id || "all"}
+          type="button"
+          onClick={() => onChange(k.id)}
+          aria-pressed={value === k.id}
+          className={cn(
+            "press-tile h-10 pointer-coarse:min-h-11 px-3.5 rounded-[7px] text-base font-medium whitespace-nowrap cursor-pointer",
+            value === k.id
+              ? "bg-white text-ink-900 shadow-[0_1px_2px_rgb(3_23_40/0.08)]"
+              : "text-grey-600 hover:text-ink-900",
+          )}
+        >
+          {k.name}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /** Minutes and seconds, because a kitchen counts in both. */
 function waited(seconds: number): string {
@@ -147,7 +179,20 @@ export default function KitchenPage() {
     void qc.invalidateQueries({ queryKey: ["kitchen"] });
   };
 
-  const lines = board.data ?? [];
+  /* ALL / KITCHEN / BAR (the owner's D27-292): the bar's screen shows the
+     bar's lines, remembered on this computer. A kind that is gone reads as
+     All. */
+  const setupRead = useKotSetup(hotelId);
+  const kinds = setupRead.data?.kinds ?? [];
+  const [chosen, setChosen] = useState<string>(() => {
+    try { return localStorage.getItem(KIND_KEY) ?? ""; } catch { return ""; }
+  });
+  const kind = kinds.some((k) => k.id === chosen) ? chosen : "";
+  const chooseKind = (v: string) => {
+    setChosen(v);
+    try { localStorage.setItem(KIND_KEY, v); } catch { /* this device keeps none */ }
+  };
+  const lines = (board.data ?? []).filter((l) => !kind || l.kindId === kind);
 
   /* POS-3. The one screen of 89 with no heading and no tab of its own:
      the board drew "The pass" in a paragraph, so a screen reader found no
@@ -210,7 +255,7 @@ export default function KitchenPage() {
               </button>
             ))}
         </div>
-        <KotPrinterPanel hotelId={hotelId} />
+        <KindFilter kinds={kinds} value={kind} onChange={chooseKind} />
         {toTill && (
           <Link
             to={`/pos/${hotelId}/till`}

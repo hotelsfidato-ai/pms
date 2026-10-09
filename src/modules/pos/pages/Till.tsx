@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
+import { useBillPrint } from "@/modules/pos/flows/printBill";
 import { addonBreakdown } from "@/modules/pos/lib/pricing";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { OrderHeaderPanel } from "@/modules/pos/flows/OrderHeaderPanel";
@@ -941,6 +942,8 @@ function OrderPanel({
   const [splitting, setSplitting] = useState(false);
   const [cashId, setCashId] = useState<CashId>({});
   const [ask, setAsk] = useState<Ask | null>(null);
+  /* To the bill printer, or here when none is chosen (D27-292). */
+  const bill = useBillPrint(hotelId);
 
   const rooms = useQuery({
     queryKey: ["till-rooms", hotelId],
@@ -1211,14 +1214,13 @@ function OrderPanel({
                 variant="secondary"
                 size="lg"
                 className="w-full"
-                onClick={() => window.open(
-                  `/pos/${hotelId}/bill/${order.id}`, "_blank",
-                )}
+                onClick={() => void bill.print(order.id)}
               >
                 <Printer className="size-4" />
                 Print the bill
               </Button>
             )}
+            {bill.dialog}
           </div>
         ) : splitting ? (
           <SplitPanel

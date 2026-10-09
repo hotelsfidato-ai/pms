@@ -238,6 +238,8 @@ export interface KitchenLine {
   plus?: { name: string; qty: number }[];
   /** On an add-on line of its own (D27-291): the dish it goes with. */
   forDish?: string | null;
+  /** The KOT kind it printed on (D27-292): the board's filter. */
+  kindId?: string | null;
   /** Why, in the manager's words (D27-119). */
   cancelReason?: string | null;
 }
@@ -273,6 +275,8 @@ export interface Order {
   /** The VAT bill issued for the alcohol when it was paid here (D22-44).
       Optional: an answer from before it existed has no such key. */
   vatBill?: string | null;
+  /** Bills printed after payment (D27-292): the next one is BILL · DUPLICATE. */
+  billsPrinted?: number;
   lines: OrderLine[];
 
   net: number;
@@ -1437,6 +1441,11 @@ export async function listWaiters(
    on a rail above a hotplate. */
 export interface Docket {
   kotNo: number;
+  /** Which slip of the docket (D27-292): its name heads the paper, "BAR KOT
+      14". Null or absent: the whole docket, headed "KOT". */
+  kind?: { id: string; name: string } | null;
+  /** Printed again from the list: the paper says REPRINT (D27-292). */
+  reprint?: boolean;
   orderNo: string;
   table: string | null;
   orderType: string;
@@ -1464,32 +1473,55 @@ export interface Docket {
 
 export async function getDocket(
   hotelId: string, orderId: string, kotNo: number,
+  /** One kind's slip (D27-292). */
+  kindId?: string,
 ): Promise<Docket | null> {
   if (!hotelId || !orderId || !Number.isInteger(kotNo)) return null;
   return api<Docket>(
-    `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}`);
+    `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}${kindId ? `?kind=${kindId}` : ""}`);
 }
 
-/* ── The KOT station (D27-159) ────────────────────────────────────
-   One device per outlet prints every KOT. `device` is this browser's own
-   id (components/KotStation.tsx); the server says whether it is the one. */
-export interface KotStationOutlet {
-  code: string;
+/* ── The KOT section of Restaurant setup (D27-292) ────────────────
+   KOT kinds (Kitchen, Bar, and any added), the computers that print them -
+   one computer per kind - which menu section prints on which, and the bill
+   printer. `device` is this browser's own id (components/KotStation.tsx). */
+export interface KotStationRef {
+  id: string; name: string; mine: boolean; online: boolean; seenAt: string | null;
+}
+
+export interface KotKind {
+  id: string;
   name: string;
-  station: { name: string; mine: boolean; seenAt: string | null; online: boolean } | null;
+  role: "food" | "bar" | null;
+  /** Kitchen and Bar: renamed, never switched off. */
+  fixed: boolean;
+  station: KotStationRef | null;
+  /** Sections with a dish on sale that print on it: the red line shows only
+      for a kind something prints to (the owner). */
+  sections: number;
 }
 
-export async function getKotStations(
-  hotelId: string, device: string,
-): Promise<KotStationOutlet[]> {
-  if (!hotelId) return [];
-  return (await api<{ outlets: KotStationOutlet[] }>(
-    `/api/hotels/${hotelId}/till/kot-station?device=${encodeURIComponent(device)}`)).outlets;
+export interface KotSetup {
+  kinds: KotKind[];
+  stations: (KotStationRef & { printsBills: boolean; kinds: string[] })[];
+  /** Each menu section: the kind it names (`own`, or null to follow its
+      heading) and the kind it prints on. */
+  sections: { id: string; name: string; heading: SectionHeading | null; own: string | null; kind: string | null }[];
+  billPrinter: KotStationRef | null;
+  /** This computer's station, when it is one. */
+  me: string | null;
 }
 
-async function plainPost<T>(path: string, body: unknown): Promise<T | { ok: false; reason: string }> {
+export async function getKotSetup(hotelId: string, device: string): Promise<KotSetup> {
+  return api<KotSetup>(
+    `/api/hotels/${hotelId}/till/kot-setup?device=${encodeURIComponent(device)}`);
+}
+
+async function plainPost<T>(
+  path: string, body: unknown, method = "POST",
+): Promise<T | { ok: false; reason: string }> {
   try {
-    return await api<T>(path, { method: "POST", body: JSON.stringify(body) });
+    return await api<T>(path, { method, body: JSON.stringify(body) });
   } catch (error) {
     if (error instanceof ApiError) {
       const p = error.body as { reason?: string } | undefined;
@@ -1499,37 +1531,96 @@ async function plainPost<T>(path: string, body: unknown): Promise<T | { ok: fals
   }
 }
 
-/** On: this device prints the outlet's KOTs, moved from wherever it was.
-    Off: only from the station itself. */
-export function setKotStation(
-  hotelId: string, outlet: string, device: string, on: boolean, name = "",
-): Promise<{ ok: true } | { ok: false; reason: string }> {
-  return plainPost(`/api/hotels/${hotelId}/till/kot-station/${outlet}`, { device, name, on });
-}
+type Plain = Promise<{ ok: true } | { ok: false; reason: string }>;
+const KOT = (hotelId: string) => `/api/hotels/${hotelId}/till/kot-setup`;
 
-export interface KotDocketRef {
+export const addKotKind = (hotelId: string, name: string): Plain =>
+  plainPost(`${KOT(hotelId)}/kinds`, { name });
+export const renameKotKind = (hotelId: string, id: string, name: string): Plain =>
+  plainPost(`${KOT(hotelId)}/kinds/${id}`, { name }, "PATCH");
+export const kotKindOff = (hotelId: string, id: string): Plain =>
+  plainPost(`${KOT(hotelId)}/kinds/${id}/off`, {});
+/** Null sends the section back to its heading. */
+export const setSectionKot = (hotelId: string, sectionId: string, kindId: string | null): Plain =>
+  plainPost(`${KOT(hotelId)}/sections/${sectionId}`, { kindId });
+/** The kinds and the bills this computer prints, under its name. Ticked
+    here, they move here from any other computer. Nothing ticked: it stops. */
+export const setThisComputer = (
+  hotelId: string, device: string, name: string, kindIds: string[], bills: boolean,
+): Plain => plainPost(`${KOT(hotelId)}/this-computer`, { device, name, kindIds, bills });
+export const removeKotStation = (hotelId: string, id: string): Plain =>
+  plainPost(`${KOT(hotelId)}/stations/${id}/remove`, {});
+
+/** One kind's slip of a docket, as the station's list carries it. */
+export interface KotSlipRef {
   orderId: string;
   kotNo: number;
+  kindId: string;
+  kind: string;
   table: string | null;
   sentAt: string;
   printedAt: string | null;
 }
 
+export interface BillJob {
+  id: string;
+  orderId: string;
+  heading: BillHeading;
+  table: string | null;
+}
+
 /** The station's ask: it is also its "last seen". `due` oldest first. */
 export async function pollKotStation(
-  hotelId: string, outlet: string, device: string,
-): Promise<{ station: false } | { station: true; due: KotDocketRef[]; recent: KotDocketRef[] }> {
-  return api(`/api/hotels/${hotelId}/till/kot-station/${outlet}/poll`,
+  hotelId: string, device: string,
+): Promise<
+  | { station: false }
+  | { station: { id: string; name: string; kinds: { id: string; name: string }[]; printsBills: boolean };
+      due: KotSlipRef[]; recent: KotSlipRef[]; bills: BillJob[] }
+> {
+  return api(`/api/hotels/${hotelId}/till/kot-stations/poll`,
     { method: "POST", body: JSON.stringify({ device }) });
 }
 
 /** The claim before the paper: true means print it; false, another tab
-    has, or this device is no longer the station. */
+    has, or this computer no longer prints that kind. */
 export async function claimKot(
-  hotelId: string, orderId: string, kotNo: number, device: string,
+  hotelId: string, orderId: string, kotNo: number, kindId: string, device: string,
 ): Promise<boolean> {
   const res = await plainPost<{ ok: true; claimed: boolean }>(
-    `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}/printed`, { device });
+    `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}/printed`, { device, kind: kindId });
+  return res.ok && res.claimed;
+}
+
+/** What a printed bill says it is (D27-292). */
+export type BillHeading = "interim" | "bill" | "duplicate";
+
+/** The words at the top of the paper. */
+export const BILL_TITLE: Record<BillHeading, string> = {
+  interim: "Interim bill", bill: "Bill", duplicate: "Bill · duplicate",
+};
+
+/** The heading the next print of this order would carry, before asking. */
+export const nextBillHeading = (o: Pick<Order, "status" | "billsPrinted">): BillHeading =>
+  o.status !== "settled" ? "interim" : (o.billsPrinted ?? 0) > 0 ? "duplicate" : "bill";
+
+/** Print bill (D27-292): asked of the bill printer. `sentTo` null - none is
+    chosen - and the screen opens the bill as it always did. */
+export const askBillPrint = (hotelId: string, orderId: string) =>
+  plainPost<{
+    ok: true; heading: BillHeading; jobId?: string;
+    sentTo: { name: string; online: boolean } | null;
+  }>(`/api/hotels/${hotelId}/till/orders/${orderId}/bill-print`, {});
+
+/** Printed on this device - the bill page's Print here. A bill waiting at
+    the bill printer comes off its list, and this is that print. */
+export const printBillHere = (hotelId: string, orderId: string) =>
+  plainPost<{ ok: true; heading: BillHeading }>(
+    `/api/hotels/${hotelId}/till/orders/${orderId}/bill-print/here`, {});
+
+/** The bill printer's claim before the paper. */
+export async function claimBill(hotelId: string, jobId: string, device: string): Promise<boolean> {
+  const res = await plainPost<{ ok: true; claimed: boolean }>(
+    `/api/hotels/${hotelId}/till/bill-prints/${jobId}/printed`, { device });
   return res.ok && res.claimed;
 }
 
