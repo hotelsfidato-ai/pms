@@ -203,13 +203,17 @@ export default function KitchenPage() {
 
   return (
     <div className="fixed inset-0 z-50 bg-grey-100 flex flex-col">
-      <header className="flex items-center gap-4 px-5 h-16 border-b border-grey-300 bg-white shrink-0">
+      {/* TWO ROWS ON A PHONE (the owner's D27-293): the name, the count and
+          Console, then the two choices under them. A wall screen keeps its
+          one row of 64px. At phone width the choices ran off the right edge
+          and "22 dishes working" broke over three lines. */}
+      <header className="flex flex-wrap md:flex-nowrap items-center gap-x-4 gap-y-2 px-5 py-2 md:py-0 md:h-16 border-b border-grey-300 bg-white shrink-0">
         <Flame className="size-5 text-brand-orange shrink-0" />
         <div className="min-w-0 flex-1">
           <h1 className="text-lg font-semibold text-ink-900 leading-tight">
             Kitchen
           </h1>
-          <p className="text-2xs text-grey-500 tabular flex items-center gap-2">
+          <p className="text-2xs text-grey-500 tabular flex items-center gap-2 whitespace-nowrap">
             {/* A dash until the board has loaded — "0 dishes working" over
                 a board that never arrived is the empty-list lie again. */}
             {board.data ? lines.filter((l) => !l.cancelled).length : "-"} dishes working
@@ -236,6 +240,8 @@ export default function KitchenPage() {
         {/* The kit's segmented control, at a wall screen's height: a
             grey-100 track, the pressed option white with the one small
             lift the look allows. */}
+        <div data-kitchen-choices
+             className="order-last md:order-none w-full md:w-auto flex items-center gap-2 overflow-x-auto scrollbar-quiet">
         <div className="flex items-center gap-0.5 p-[3px] rounded-md bg-grey-100 shrink-0">
           {([["stage", "By stage"], ["table", "By table"]] as const).map(
             ([v, label]) => (
@@ -256,10 +262,11 @@ export default function KitchenPage() {
             ))}
         </div>
         <KindFilter kinds={kinds} value={kind} onChange={chooseKind} />
+        </div>
         {toTill && (
           <Link
             to={`/pos/${hotelId}/till`}
-            className="press inline-flex items-center gap-2 h-12 px-4 rounded-full border border-grey-300 bg-white text-base font-medium text-ink-900 hover:bg-grey-50 hover:border-grey-400"
+            className="press inline-flex items-center gap-2 h-12 px-4 rounded-full border border-grey-300 bg-white text-base font-medium text-ink-900 hover:bg-grey-50 hover:border-grey-400 shrink-0"
           >
             <ArrowLeft className="size-4" />
             Console
