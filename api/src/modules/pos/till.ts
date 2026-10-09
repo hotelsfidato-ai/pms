@@ -3171,6 +3171,10 @@ const numberedOut = (r: NumberedRow) => ({
 const NUMBERED_COLS = `id::text, number, name, description, price::text, is_free,
                        is_active, off_until::text, off_reason`;
 
+/** The same, when the number went to somebody else's save a moment ago. */
+const NUMBER_RACE = (n: number) =>
+  `Add-on ${n} was just given to another add-on on another screen. Choose another number.`;
+
 /** Who already has this number, in a sentence - or null. */
 async function numberTaken(client: Client, hotelId: string, n: number, notId?: string) {
   const { rows } = await client.query<{ name: string }>(
@@ -3227,12 +3231,22 @@ till.post("/:code/till/numbered-addons", async (c) => {
     if (!hotelId) return null;
     const taken = await numberTaken(client, hotelId, number);
     if (taken) return refuse(taken);
-    const { rows } = await client.query<NumberedRow>(
-      `insert into pos_numbered_addons (hotel_id, number, name, description, price, is_free)
-       values ($1, $2, $3, $4, $5, $6)
-       returning ${NUMBERED_COLS}`,
-      [hotelId, number, name, description, price ?? 0, free]);
-    return { ok: true as const, addon: numberedOut(rows[0]!) };
+    try {
+      const { rows } = await client.query<NumberedRow>(
+        `insert into pos_numbered_addons (hotel_id, number, name, description, price, is_free)
+         values ($1, $2, $3, $4, $5, $6)
+         returning ${NUMBERED_COLS}`,
+        /* Free is 0, whatever else was sent: a tile reading Free must not
+           bill a price (the audit of 9 October). */
+        [hotelId, number, name, description, free ? 0 : price ?? 0, free]);
+      return { ok: true as const, addon: numberedOut(rows[0]!) };
+    } catch (error) {
+      /* Two people saving the same number at the same moment: the second
+         meets the one-per-number index after the check above. A sentence,
+         not a 500 - and nothing was written. */
+      if ((error as { code?: string }).code === "23505") return refuse(NUMBER_RACE(number));
+      throw error;
+    }
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
@@ -3273,13 +3287,18 @@ till.patch("/:code/till/numbered-addons/:id", async (c) => {
       if (taken) return refuse(taken);
     }
 
-    const { rows } = await client.query<NumberedRow>(
-      `update pos_numbered_addons
-          set name = $1, description = $2, price = $3, is_free = $4, is_active = $5
-        where id = $6
-        returning ${NUMBERED_COLS}`,
-      [name, description, price ?? 0, free, active, was[0].id]);
-    return { ok: true as const, addon: numberedOut(rows[0]!) };
+    try {
+      const { rows } = await client.query<NumberedRow>(
+        `update pos_numbered_addons
+            set name = $1, description = $2, price = $3, is_free = $4, is_active = $5
+          where id = $6
+          returning ${NUMBERED_COLS}`,
+        [name, description, free ? 0 : price ?? 0, free, active, was[0].id]);
+      return { ok: true as const, addon: numberedOut(rows[0]!) };
+    } catch (error) {
+      if ((error as { code?: string }).code === "23505") return refuse(NUMBER_RACE(was[0].number));
+      throw error;
+    }
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
@@ -3522,11 +3541,15 @@ till.post("/:code/till/orders/:id/clear", async (c) => {
        the table's own the moment the later one was cleared - old amount and
        all. Only finished ones; an open bill is refused above, and one on
        no table is only itself. */
+    /* No NEWER bill than the one pressed (the audit of 9 October): a tablet
+       showing an old tile must not clear a bill settled after it, whose
+       guests may still be seated. Older ones are what POS-33 is about. */
     await client.query(
       `update pos_orders set cleared_at = now()
         where cleared_at is null and status <> 'open'
           and (id = $1
-               or table_id = (select table_id from pos_orders where id = $1))`,
+               or (table_id = (select table_id from pos_orders where id = $1)
+                   and opened_at <= (select opened_at from pos_orders where id = $1)))`,
       [orderId]);
 
     return { ok: true as const, orderNo: rows[0].order_no };
@@ -4690,11 +4713,14 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
            (order_id, hotel_id, item_id, variation_id, name, qty, unit_price,
             tax_rate, tax_scheme, note, added_by, added_at, kot_status,
             kot_sent_at, kot_no, voided, voided_by, voided_at, void_reason,
-            was_sent_when_voided, numbered_addons)
+            was_sent_when_voided, numbered_addons, extra_choice_ids)
          select order_id, hotel_id, item_id, variation_id, name, qty - $2,
                 unit_price, tax_rate, tax_scheme, note, added_by, added_at,
                 kot_status, kot_sent_at, kot_no, true, $3, now(), $4, true,
-                numbered_addons
+                /* What the dish WAS, every part of it (POS-34): without its
+                   further choices, 164's trigger refused a Pizza with no
+                   crust and the manager got "Something went wrong". */
+                numbered_addons, extra_choice_ids
            from pos_order_lines where id = $1`,
         [c.req.param("lineId"), qty, session.staffId, reason],
       );
@@ -4729,10 +4755,13 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
    worked again from what the line kept before its add-ons, so Customising
    twice never adds the Kebab twice. */
 till.post("/:code/till/orders/:id/lines/:lineId/numbered-addons", async (c) => {
-  type Body = { numberedAddons?: NumberedChoice[] };
+  /* `just: 1` (the owner's D27-290): on a line of several, the add-ons go
+     on ONE of them - "3 Biryani, one with Kebab" - which is split off as
+     its own line; the rest stay as they were. Absent: every one. */
+  type Body = { numberedAddons?: NumberedChoice[]; just?: number };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
-  const result = await withSession(c.get("subject"), async (client) => {
+  const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
     const orderId = c.req.param("id");
@@ -4749,12 +4778,16 @@ till.post("/:code/till/orders/:id/lines/:lineId/numbered-addons", async (c) => {
     const { rows: line } = await client.query<{
       name: string; unit_price: string; kot_status: string;
       numbered_addons: LineAddons | null; item_id: string | null;
-      parent_line_id: string | null;
+      parent_line_id: string | null; qty: string; variation_id: string | null;
+      extra_choice_ids: string[]; note: string | null; addon_ids: string[];
     }>(
-      `select name, unit_price::text, kot_status, numbered_addons,
-              item_id::text, parent_line_id::text
-         from pos_order_lines
-        where id = $1 and order_id = $2 and not voided
+      `select l.name, l.unit_price::text, l.kot_status, l.numbered_addons,
+              l.item_id::text, l.parent_line_id::text, l.qty::text,
+              l.variation_id::text, l.extra_choice_ids::text[], l.note,
+              array(select a.addon_id::text from pos_order_lines a
+                     where a.parent_line_id = l.id and not a.voided) as addon_ids
+         from pos_order_lines l
+        where l.id = $1 and l.order_id = $2 and not l.voided
         for update`,
       [c.req.param("lineId"), orderId],
     );
@@ -4767,7 +4800,36 @@ till.post("/:code/till/orders/:id/lines/:lineId/numbered-addons", async (c) => {
       return refuse(`The kitchen already has ${dish}. Add a fresh line for its add-ons.`);
     }
 
-    const numbered = await numberedFor(client, hotelId, input.numberedAddons ?? []);
+    /* The set, always: an empty one is the deliberate way to take them all
+       off; a body that is missing or did not parse is not, and must not
+       quietly reprice the dish (the audit of 9 October). */
+    if (!Array.isArray(input.numberedAddons)) return refuse("Which add-ons?");
+    if (input.just !== undefined && input.just !== 1) return refuse("Just one, or all of them?");
+
+    /* JUST ONE of several: through the one place a dish goes on, so it is
+       priced, named and merged as any dish is - with this line's variation,
+       choices, sides and note - and the line it came from is one fewer,
+       with its sides. Every refusal is addOneLine's, before its first write
+       (root MEMORY 243); the one fewer comes only after it went on. */
+    const l = line[0];
+    if (input.just === 1 && Number(l.qty) > 1) {
+      const refused = await addOneLine(client, session, hotelId, orderId, {
+        ...(l.item_id ? { itemId: l.item_id } : {}), qty: 1,
+        ...(l.variation_id ? { variationId: l.variation_id } : {}),
+        moreChoiceIds: l.extra_choice_ids,
+        addonIds: l.addon_ids,
+        ...(l.note ? { note: l.note } : {}),
+        numberedAddons: input.numberedAddons,
+      });
+      if (refused) return refused;
+      await client.query(
+        `update pos_order_lines set qty = qty - 1
+          where (id = $1 or parent_line_id = $1) and not voided`,
+        [c.req.param("lineId")]);
+      return { ok: true as const, ...(await readOrder(client, orderId))! };
+    }
+
+    const numbered = await numberedFor(client, hotelId, input.numberedAddons);
     if (!numbered.ok) return numbered;
     const base = line[0].numbered_addons ? String(line[0].numbered_addons.base) : line[0].unit_price;
     const kept = lineAddons(dish, base, numbered.addons);

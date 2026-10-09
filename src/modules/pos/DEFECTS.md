@@ -29,6 +29,26 @@ fails "expected 'front_desk' to be 'pos'".
 
 ## Fixed
 
+### POS-34 · One fewer of a sent dish with several variation types failed: "Something went wrong" - FIXED 9 October (the owner's "check it and fix it")
+
+**Found** — suspected on 9 October while mapping the add-ons (the struck copy named its columns and
+left out `extra_choice_ids`), confirmed by reading 164's trigger, then proved: a Pizza (Large,
+Cheese burst) ×3 sent, a manager lowering it to 2 with a reason got `500 {"error":"Something went
+wrong. Nothing was changed."}`. 164's `app.pos_line_names_its_variation` fires on every INSERT
+(its column list limits only UPDATE) and requires one choice of each further type; the struck copy
+carried `'{}'`. Striking the whole line still worked (`voided` is not in the trigger's list), so a
+manager could only take all three off and ring two again - a new docket for food already cooking.
+Reachable since 30 September (164).
+
+**What was done** — the struck copy carries `extra_choice_ids` (and `numbered_addons`, D27-289), so
+it is what the dish was. And 209: a line STRUCK AS IT IS WRITTEN is not checked against today's
+menu - a dish that gained a Crust after it was rung would otherwise still refuse its own struck copy
+- while every line that sells is checked as before. Guarded: `variationTypes.test.ts` "one fewer of
+a sent dish with several types (POS-34)" (failed with the 500 first); the database's "pos audit
+guards" (a struck copy with no crust goes in; a sold one is still refused).
+
+---
+
 ### POS-32 · The KOT station's print test lost a race on a busy machine - FIXED 9 October (the owner's yes, D27-289)
 
 **Found** — the first full gates on the new PC (`cp6-9oct`, 13460f7e): web 1 failed of 1,122,

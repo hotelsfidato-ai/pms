@@ -575,3 +575,72 @@ begin
   select count(*) into n from pos_outlets where code = 'NUMAD';
   perform test.ok('pos numbered addons', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- THREE GUARDS FROM THE AUDIT OF 9 OCTOBER (POS-34, D27-289)
+-- =============================================================================
+-- A struck copy is what the dish WAS, so the variation rule stands aside for a
+-- line struck as it is written and holds for everything sold; Free is 0; the
+-- kept add-ons must be a list. Refers to its migration by what it does, "three
+-- guards from the audit", never by its number. Uses the suite's AGR property and
+-- its clerk; removes what it makes.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_order uuid; bd date;
+  v_cat uuid; v_item uuid; v_large uuid; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  -- ---------- Free is 0 ------------------------------------------------------------
+  perform test.raises('pos audit guards', 'an add-on ticked Free carries no price',
+    format($q$insert into pos_numbered_addons (hotel_id, number, name, price, is_free)
+              values (%L, 41, 'Onions', 50, true)$q$, a), '23514');
+
+  -- ---------- the kept add-ons are a list ------------------------------------------
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'AUDGD', 'Audit Guards Test', 'food', v_staff) returning id into v_outlet;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff) returning id into v_order;
+  perform test.raises('pos audit guards', 'kept add-ons with no list are refused',
+    format($q$insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by, numbered_addons)
+              values (%L, %L, 'Dal', 1, 200, 5, %L, '{"dish":"Dal","base":200}'::jsonb)$q$, v_order, a, v_staff), '23514');
+
+  -- ---------- a struck copy is what the dish was -------------------------------------
+  -- A Pizza that has a Crust type now, rung before it had one: its struck copy
+  -- carries no crust, and goes in; a SOLD line with no crust is still refused.
+  insert into pos_menu_categories (hotel_id, name) values (a, 'Audit guards') returning id into v_cat;
+  insert into pos_menu_items (hotel_id, category_id, name, price)
+  values (a, v_cat, 'Audit Pizza', 1) returning id into v_item;
+  insert into pos_item_variations (hotel_id, item_id, label, price, type_no)
+  values (a, v_item, 'Large', 400, 1) returning id into v_large;
+  insert into pos_item_variations (hotel_id, item_id, label, price, type_no)
+  values (a, v_item, 'Cheese burst', 80, 2);
+
+  perform test.allows('pos audit guards', 'a struck copy with no crust goes in: it is what the dish was',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, variation_id, name, qty, unit_price,
+                                          tax_rate, added_by, voided, voided_by, voided_at, void_reason)
+              values (%L, %L, %L, %L, 'Audit Pizza (Large)', 1, 400, 5, %L, true, %L, now(), 'audit test')$q$,
+           v_order, a, v_item, v_large, v_staff, v_staff));
+  perform test.raises('pos audit guards', 'but a sold line with no crust is still refused',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, variation_id, name, qty, unit_price,
+                                          tax_rate, added_by)
+              values (%L, %L, %L, %L, 'Audit Pizza (Large)', 1, 400, 5, %L)$q$,
+           v_order, a, v_item, v_large, v_staff));
+
+  -- ---------- and the fixtures go ----------------------------------------------
+  alter table pos_order_lines disable trigger pos_order_lines_frozen;
+  delete from pos_order_lines where order_id = v_order;
+  alter table pos_order_lines enable trigger pos_order_lines_frozen;
+  delete from pos_orders where id = v_order;
+  delete from pos_outlets where id = v_outlet;
+  delete from pos_item_variations where item_id = v_item;
+  delete from pos_menu_items where id = v_item;
+  delete from pos_menu_categories where id = v_cat;
+  delete from pos_numbered_addons where hotel_id = a and number = 41;
+  select count(*) into n from pos_outlets where code = 'AUDGD';
+  perform test.ok('pos audit guards', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;

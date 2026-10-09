@@ -127,6 +127,25 @@ describe("the numbered add-ons list", () => {
     expect([free.price, free.free]).toEqual([0, true]);
   });
 
+  it("Free is 0, whatever price is sent with it (the audit of 9 October)", async () => {
+    const made = await post(`${H}/numbered-addons`, { number: 707, name: "Lettuce", price: 50, free: true });
+    expect(made.status, await made.clone().text()).toBe(200);
+    const lettuce = ((await made.json()) as { addon: Addon }).addon;
+    expect([lettuce.price, lettuce.free]).toEqual([0, true]);
+
+    const kept = await addon(708, "Cheese", 30);
+    const res = await post(`${H}/numbered-addons/${kept.id}`, { free: true }, "PATCH");
+    expect(res.status, await res.clone().text()).toBe(200);
+    const after = ((await res.json()) as { addon: Addon }).addon;
+    expect([after.price, after.free], "ticked Free, its old ₹30 does not stay").toEqual([0, true]);
+  });
+
+  it("five saving the same number at once: one gets it, four are told - never a 500", async () => {
+    const all = await Promise.all([1, 2, 3, 4, 5].map((n) =>
+      post(`${H}/numbered-addons`, { number: 709, name: `Race ${n}`, price: 10 })));
+    expect(all.map((r) => r.status).sort()).toEqual([200, 409, 409, 409, 409]);
+  });
+
   it("keeps its number when changed, and frees it when switched off", async () => {
     const lime = await addon(705, "Lime", 10);
     const changed = await post(`${H}/numbered-addons/${lime.id}`, { name: "Lemon", price: 15, number: 799 }, "PATCH");
@@ -204,6 +223,34 @@ describe("a dish with numbered add-ons", () => {
     await post(`${H}/orders/${id}/lines/${line.id}/numbered-addons`, { numberedAddons: [] });
     l = live(await order(id))[0]!;
     expect([l.name, l.unitPrice, l.numberedAddons]).toEqual(["Veg Biryani", biryani.price, null]);
+  });
+
+  it("refuses a Customise with no set, rather than taking the add-ons off (the audit of 9 October)", async () => {
+    const id = await openOrder("9");
+    await post(`${H}/orders/${id}/lines`, { itemId: biryani.id, qty: 1,
+      numberedAddons: [{ id: kebab.id, qty: 1 }] });
+    const line = live(await order(id))[0]!;
+    const res = await post(`${H}/orders/${id}/lines/${line.id}/numbered-addons`, {});
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { reason: string }).reason).toBe("Which add-ons?");
+    expect(live(await order(id))[0]!.name, "nothing changed").toBe("Veg Biryani with add-on Kebab");
+  });
+
+  it("Just 1 of a line of 3: one split off with Kebab, two stay plain (the owner's D27-290)", async () => {
+    const id = await openOrder("10");
+    await post(`${H}/orders/${id}/lines`, { itemId: biryani.id, qty: 3 });
+    const line = live(await order(id))[0]!;
+    const res = await post(`${H}/orders/${id}/lines/${line.id}/numbered-addons`,
+      { numberedAddons: [{ id: kebab.id, qty: 1 }], just: 1 });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(live(await order(id)).map((l) => [l.name, l.qty, l.unitPrice])).toEqual([
+      ["Veg Biryani", 2, biryani.price],
+      ["Veg Biryani with add-on Kebab", 1, biryani.price + 120],
+    ]);
+    const odd = await post(`${H}/orders/${id}/lines/${line.id}/numbered-addons`,
+      { numberedAddons: [{ id: kebab.id, qty: 1 }], just: 2 });
+    expect(odd.status).toBe(409);
+    expect(((await odd.json()) as { reason: string }).reason).toBe("Just one, or all of them?");
   });
 
   it("refuses Customise once the kitchen has the dish (before Send only)", async () => {
