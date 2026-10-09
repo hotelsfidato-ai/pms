@@ -1,5 +1,6 @@
 import { withUser } from "../../db.ts";
 import { send, type Message, type SendResult } from "../../sending.ts";
+import { realHotelsOnly } from "../../testHotels.ts";
 import {
   alertAddress, hotelFacts, judge, serverFacts, PER_HOTEL,
   type HotelFacts, type Key, type Row, type ServerFacts,
@@ -67,9 +68,14 @@ export interface Deps {
   now?: Date;
 }
 
+/** The hotels a sweep looks at: every active one but a test hotel, which
+    raises no alert (D27-296 (4), (11)). */
+export const alertHotels = (): Promise<HotelFacts[]> =>
+  withUser("", async (client) => realHotelsOnly(client, await hotelFacts(client, null)));
+
 /** One pass: the connections it emailed about. */
 export async function runOnce({
-  hotels = () => withUser("", (client) => hotelFacts(client, null)),
+  hotels = alertHotels,
   server = serverFacts,
   send: sender = (message) => withUser("", (client) => send(client, message)),
   memory = wasRed,

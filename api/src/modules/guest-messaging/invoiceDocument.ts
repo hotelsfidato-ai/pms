@@ -1,6 +1,6 @@
 import PDFDocument from "pdfkit";
 import type { InvoiceFacts } from "../finance/index.ts";
-import { dateReport, inr } from "../../reportRender.ts";
+import { dateReport, inr, TEST_MARK } from "../../reportRender.ts";
 import type { SendableFile } from "../../sending.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -72,7 +72,12 @@ export function rateWise(lines: { taxRate: number; amount: number; taxAmount: nu
   return [...bands.values()].sort((a, b) => a.rate - b.rate);
 }
 
-export async function invoicePdf(f: InvoiceFacts): Promise<Buffer> {
+export async function invoicePdf(given: InvoiceFacts, test = false): Promise<Buffer> {
+  /* D27-296 (8): a test hotel's invoice is not a valid one, and carries no
+     GSTIN - neither the hotel's nor the company's it is made out to. */
+  const f: InvoiceFacts = test
+    ? { ...given, supplier: { ...given.supplier, gstin: null }, recipient: { ...given.recipient, gstin: null } }
+    : given;
   const pdf = new PDFDocument({ size: "A4", margin: 48, info: { Title: `Tax Invoice ${f.number}` } });
   const chunks: Buffer[] = [];
   pdf.on("data", (c: Buffer) => chunks.push(c));
@@ -89,7 +94,8 @@ export async function invoicePdf(f: InvoiceFacts): Promise<Buffer> {
 
   /* ── Masthead ── */
   pdf.font("Helvetica-Bold").fontSize(15).fillColor(ink).text(f.supplier.name ?? "-", L, 48, { width: W * 0.6 });
-  pdf.font("Helvetica-Bold").fontSize(13).text("Tax Invoice", L, 48, { width: W, align: "right" });
+  pdf.font("Helvetica-Bold").fontSize(13).fillColor(test ? "#fe611f" : ink)
+    .text(test ? TEST_MARK : "Tax Invoice", L, 48, { width: W, align: "right" });
   pdf.font("Helvetica").fontSize(9).fillColor(grey)
     .text(f.number ?? "-", L, 66, { width: W, align: "right" })
     .text(f.issuedAt ?? "-", L, 78, { width: W, align: "right" });
@@ -148,7 +154,7 @@ export async function invoicePdf(f: InvoiceFacts): Promise<Buffer> {
   }
   pdf.font("Helvetica").fontSize(8).fillColor(grey).text("GSTIN", rx, ry + 3);
   pdf.font(f.recipient.gstin ? "Helvetica-Bold" : "Helvetica").fillColor(f.recipient.gstin ? ink : grey)
-    .text(f.recipient.gstin ?? "not registered", rx + 60, ry + 3);
+    .text(f.recipient.gstin ?? (test ? "-" : "not registered"), rx + 60, ry + 3);
   y = Math.max(ly, ry + 14) + 12;
 
   /* ── Lines ── */
@@ -235,10 +241,10 @@ export async function invoicePdf(f: InvoiceFacts): Promise<Buffer> {
 }
 
 /** The invoice as a file to go with its message. */
-export async function invoiceFile(f: InvoiceFacts): Promise<SendableFile> {
+export async function invoiceFile(f: InvoiceFacts, test = false): Promise<SendableFile> {
   return {
     name: `Invoice-${(f.number ?? "").replace(/[^A-Za-z0-9-]/g, "-")}.pdf`,
     contentType: "application/pdf",
-    bytes: await invoicePdf(f),
+    bytes: await invoicePdf(f, test),
   };
 }

@@ -781,6 +781,7 @@ purchasing.get("/:code/purchasing/orders/:file{[0-9a-f-]+\\.pdf}", async (c) => 
       ordered_on: string | null; today: string;
       hotel_code: string; hotel_name: string;
       hotel_address: string | null; hotel_gstin: string | null; hotel_tz: string;
+      hotel_test: boolean;
     }>(
       `select r.reference, r.reason, l.name as store,
               sup.name as supplier, sup.contact as sup_contact, sup.phone as sup_phone,
@@ -791,6 +792,7 @@ purchasing.get("/:code/purchasing/orders/:file{[0-9a-f-]+\\.pdf}", async (c) => 
               app.hotel_day(r.hotel_id, now())::text as today,
               h.code as hotel_code, h.name as hotel_name,
               h.address_line as hotel_address, h.gstin as hotel_gstin,
+              h.test_of is not null as hotel_test,
               h.timezone as hotel_tz
          from purchase_requests r
          join hotels h on h.id = r.hotel_id
@@ -830,6 +832,8 @@ purchasing.get("/:code/purchasing/orders/:file{[0-9a-f-]+\\.pdf}", async (c) => 
       property: {
         code: r.hotel_code, name: r.hotel_name, address: r.hotel_address,
         gstin: r.hotel_gstin, timezone: r.hotel_tz,
+        /* D27-296: a test hotel's order is marked TEST · NOT VALID. */
+        ...(r.hotel_test ? { test: true } : {}),
       },
       lines: lines.map((l): OrderLine => ({
         lineNo: l.line_no, item: l.item, unit: l.unit,

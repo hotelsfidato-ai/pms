@@ -486,6 +486,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`DELETE ${H}/bank-details`]: BANK_DETAILS,
   [`PUT ${H}/group/office`]: GROUP_OFFICE,
   [`POST /api/admin/hotels/:code/:state`]: own("admin/admin.ts: a group administrator"),
+  /* D27-296: test hotels - the owner or a group administrator (testHotels.ts, and the
+     database: app.create_test_hotel, app.reset_test_hotel, app.recopy_test_hotel). */
+  [`POST /api/admin/hotels/:code/test-hotel`]: own("admin/testHotelRoutes.ts: a group administrator (D27-296)"),
+  [`POST /api/admin/hotels/:code/test-reset`]: own("admin/testHotelRoutes.ts: a group administrator, typed RESET (D27-296)"),
+  [`POST /api/admin/hotels/:code/test-recopy`]: own("admin/testHotelRoutes.ts: a group administrator, typed RE-COPY (D27-296)"),
   [`PATCH /api/admin/staff/:id`]: own("admin/admin.ts: app.manages_person (D22-3)"),
   [`PUT /api/admin/staff/:id/home-screen`]: own("admin/admin.ts: app.set_home_screen asks app.may_manage_person"),
   [`PUT /api/me/preferences`]: SELF,

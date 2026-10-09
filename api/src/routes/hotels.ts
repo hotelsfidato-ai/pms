@@ -18,6 +18,7 @@ export const hotels = new Hono<{ Variables: { subject: string } }>();
 interface HotelRow {
   id: string;
   code: string;
+  test_of: string | null;
   name: string;
   city: string;
   state: string | null;
@@ -73,6 +74,9 @@ hotels.get("/", async (c) => {
        anybody reads. */
     const { rows } = await client.query<HotelRow>(
       `select id, code, name, city, state, gstin, timezone, currency,
+              /* D27-296: a test hotel names the real hotel it copies, by code.
+                 Through a definer: its testers cannot read the real hotel's row. */
+              app.real_hotel_code(id) as test_of,
               to_char(check_in_time,  'HH24:MI') as check_in_time,
               to_char(check_out_time, 'HH24:MI') as check_out_time,
               /* Each property's OWN operating day. Two hotels are
@@ -117,6 +121,8 @@ hotels.get("/", async (c) => {
         id: h.id,
         code: h.code,
         name: h.name,
+        /* D27-296: the real hotel's code for a test hotel; null for a real one. */
+        testOf: h.test_of,
         city: h.city,
         state: h.state,
         gstin: h.gstin,
@@ -171,6 +177,10 @@ async function scopeFor(
     home_screen: string; room_grouping: string;
   }>(`select home_screen, room_grouping from app.my_preferences()`);
 
+  /* D27-296: added for testing - works only in test hotels. */
+  const { rows: me } = await client.query<{ test_only: boolean }>(
+    `select test_only from staff where id = $1`, [session.staffId]);
+
   /* Whether this person has put their Start here card away (089). */
   const { rows: startHere } = await client.query<{ dismissed: boolean }>(
     `select app.my_start_here_dismissed() as dismissed`);
@@ -180,6 +190,7 @@ async function scopeFor(
     email: session.email,
     fullName: session.fullName,
     isGroupAdmin: session.isGroupAdmin,
+    testOnly: me[0]?.test_only ?? false,
     /* A group admin holds no staff_hotels rows and still reaches
        everything — `auth_hotel_ids()` accounts for that. Reporting the
        empty list alongside the flag keeps the interface from reading

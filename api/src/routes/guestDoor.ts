@@ -20,6 +20,7 @@ import { messagesDesk, messagesDoor } from "./guestMessages.ts";
 import { logoDoor } from "./guestLogo.ts";
 import { byRoom } from "./guestDoorByRoom.ts";
 import { digilocker, digilockerOn } from "./guestDigilocker.ts";
+import { isTestHotelCode, NOTHING_SENT } from "../testHotels.ts";
 import { wakeUpDoor } from "./guestWakeUp.ts";
 import { guestGallery } from "./guestGallery.ts";
 import { guestAbout } from "./guestAbout.ts";
@@ -95,10 +96,12 @@ guestDoor.get("/:token", async (c) => {
      the booking has none. */
   const ways = await ask<{ email_hint: string | null }>(
     "select * from app.guest_link_ways($1)", [hash]);
+  const test = await isTestHotelCode(it.hotel_code);
 
   return c.json({
     kind: it.kind,
-    hotel: { code: it.hotel_code, name: it.hotel_name },
+    /* D27-296: a test hotel's page says so (its documents are TEST · NOT VALID). */
+    hotel: { code: it.hotel_code, name: it.hotel_name, test },
     /* A room card's own number; null on a booking's link. */
     room: it.room_number,
     /* A room card with nobody checked in says only that (D21-15). */
@@ -127,7 +130,9 @@ guestDoor.get("/:token", async (c) => {
     /* Continue with DigiLocker, said here so the page asks nothing more
        before the code (D27-210): on where its settings are, on a link that
        reaches a stay (D27-235 2.5). */
-    digilocker: digilockerOn() && (it.kind === "booking" || it.occupied),
+    digilocker: digilockerOn() && (it.kind === "booking" || it.occupied)
+      /* D27-296: never from a test hotel - DigiLocker is outside. */
+      && !test,
     /* What this hotel offers behind the code (D21-63): only once unlocked. */
     offers: it.verified ? (it.offers ?? []) : [],
   });
@@ -532,8 +537,9 @@ guestDoor.get("/:token/id-photo", async (c) => {
   const it = rows[0];
   if (!it) return refused(c);
   return c.json({
-    /* Whether this hotel takes them at all: its password and the store. */
-    offered: idPhotosOn(door.it.hotel_code),
+    /* Whether this hotel takes them at all: its password and the store -
+       never a test hotel, whose photos would go to Drive (D27-296). */
+    offered: idPhotosOn(door.it.hotel_code) && !(await isTestHotelCode(door.it.hotel_code)),
     maySend: it.may_send,
     notice: NOTICE_VERSION,
     /* The hotel's own number, for the notice's "to have it deleted, contact". */
@@ -549,6 +555,8 @@ guestDoor.post("/:token/id-photo", async (c) => {
   if (!door) return refused(c);
   /* From here the caller is behind the code, so a plain sentence is safe. */
   const code = door.it.hotel_code;
+  /* D27-296: a test hotel's photo would go to Drive. */
+  if (await isTestHotelCode(code)) return c.json({ error: NOTHING_SENT }, 409);
   if (!idPhotosOn(code)) return c.json({ error: PHOTO_NOT_OFFERED }, 409);
   if (tooOften(door.hash, "photo")) return c.json({ error: PHOTO_TOO_OFTEN }, 429);
 

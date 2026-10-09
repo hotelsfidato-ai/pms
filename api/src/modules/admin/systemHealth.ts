@@ -163,6 +163,8 @@ systemHealth.get("/:code/system-health", async (c) => {
                   where na.hotel_id = h.id order by na.started_at desc limit 1) as last_run
            from hotels h
           where h.id in (select app.auth_hotel_ids()) and h.is_active
+            /* D27-296: kept apart from everything real. */
+            and h.test_of is null
           order by h.code`);
 
       /* The leads app's reads (D27-168, D27-170), by Google's own day: the

@@ -5,6 +5,7 @@ import { canSend, messageIdFor, send, NOT_CONNECTED, type Message, type SendResu
 import { inr } from "../../reportRender.ts";
 import { invoiceFacts } from "../finance/index.ts";
 import { invoiceFile } from "./invoiceDocument.ts";
+import { isTestHotelId } from "../../testHotels.ts";
 import { claimTurn, MOST_ATTEMPTS, perSweep, NOT_OWED } from "./jobs.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -73,7 +74,9 @@ export async function invoiceMessage(client: Client, owed: OwedInvoice): Promise
       total: `INR ${inr(facts.total)}`,
       reference: owed.reference,
     },
-    file: await invoiceFile(facts),
+    /* D27-296: never sent from a test hotel (sending.ts refuses), and its
+       PDF is marked even so. */
+    file: await invoiceFile(facts, await isTestHotelId(client, owed.hotel.id)),
     about: { kind: "invoice", id: owed.invoiceId },
     sentBy: null,
   };

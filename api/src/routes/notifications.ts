@@ -308,6 +308,8 @@ notifications.get("/:code/notifications", async (c) => {
            join hotels h on h.id = a.hotel_id
            left join staff s on s.id = a.actor
           where a.table_name = 'hotel_bank_details' and a.at > now() - interval '7 days'
+            /* D27-296: a test hotel's are practice, kept apart. */
+            and h.test_of is null
           order by a.hotel_id, a.at desc`);
       const DID: Record<string, string> = { INSERT: "set", UPDATE: "changed", DELETE: "removed" };
       for (const b of changed) {

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { createHash, randomBytes } from "node:crypto";
 import { ask, refused, sha256, tooOften } from "./guestDoorKit.ts";
+import { NOTHING_SENT } from "../testHotels.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    DIGILOCKER - a fourth way in, prepared and switched off (D27-235 2.5)
@@ -69,6 +70,10 @@ function claimsOf(idToken: unknown): Claims | null {
 
 const text = (v: unknown) => (typeof v === "string" ? v : "");
 
+/** Is this link a test hotel's (D27-296)? */
+const isTestLink = async (hash: string): Promise<boolean> =>
+  (await ask<{ test: boolean }>("select app.guest_link_is_test($1) as test", [hash]))[0]?.test === true;
+
 digilocker.get("/:token/digilocker", async (c) => {
   if (!settings()) return c.json({ offered: false });
   const hash = sha256(c.req.param("token"));
@@ -76,6 +81,8 @@ digilocker.get("/:token/digilocker", async (c) => {
   const rows = await ask<{ kind: string; occupied: boolean }>(
     "select kind, occupied from app.guest_link_open($1)", [hash]);
   const it = rows[0];
+  /* D27-296: never from a test hotel - DigiLocker is outside. */
+  if (await isTestLink(hash)) return c.json({ offered: false });
   return c.json({ offered: !!it && (it.kind === "booking" || it.occupied) });
 });
 
@@ -84,6 +91,8 @@ digilocker.post("/:token/digilocker", async (c) => {
   if (!s) return refused(c);
   const hash = sha256(c.req.param("token"));
   if (tooOften(hash, "code")) return refused(c);
+  /* D27-296: a test hotel's guest is never sent to DigiLocker. */
+  if (await isTestLink(hash)) return c.json({ error: NOTHING_SENT }, 409);
 
   const state = randomBytes(32).toString("base64url");
   const verifier = randomBytes(48).toString("base64url");

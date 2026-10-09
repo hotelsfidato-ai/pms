@@ -111,6 +111,8 @@ export interface VoucherFacts {
   /** The guest's own check-in page (D27-264): on the voucher a guest is SENT,
       never on the desk's View voucher - the link is minted for one message. */
   checkInLink?: string | null;
+  /** D27-296 (8): a test hotel's - TEST · NOT VALID, no GSTIN. */
+  test?: boolean;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -415,7 +417,9 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
     text(f.hotel.name, M, y + 6, { size: 13, bold: true, width: 110 });
     if (f.groupName) text(`by ${f.groupName}`, M, y + 11, { size: 8, color: GREY, width: 110 });
   }
-  text("RESERVATION VOUCHER", RIGHT, y + 5.5, { size: 11, bold: true, align: "right" });
+  /* D27-296: a test hotel's voucher says so where the title is. */
+  text(f.test ? "TEST · NOT VALID" : "RESERVATION VOUCHER", RIGHT, y + 5.5,
+    { size: 11, bold: true, align: "right", ...(f.test ? { color: ORANGE } : {}) });
   text(f.reference, RIGHT, y + 10.5, { size: 9, color: GREY, align: "right" });
   y += 16;
   pdf.rect(at(M), at(y), at(CONTENT), at(1.1)).fill(ORANGE);
@@ -424,7 +428,7 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
   /* ── Status, and the payment (D27-215) ── */
   y = strip(y, [
     { label: "Booked on", value: dateReport(f.bookedOn) },
-    { label: "Status", value: "CONFIRMED" },
+    { label: "Status", value: f.test ? "TEST" : "CONFIRMED" },
     { label: "Payment", value: blocks.payment.value, hint: blocks.payment.hint },
     { label: "Total", value: money(figures.total), right: true },
   ]) + 6;
@@ -623,7 +627,9 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
     fy += 3.4;
   }
   const last = Math.max(y + 12, fy + 4);
-  text("This voucher confirms the booking described above. Please present it at check in.",
+  text(f.test
+    ? "A test hotel's practice voucher: it confirms no booking and is not valid."
+    : "This voucher confirms the booking described above. Please present it at check in.",
     W / 2, last, { size: 6.6, color: GREY, align: "center", width: CONTENT });
   /* The closing sentence, and the margin `room` keeps under the footer. */
   return above + last + 7;
@@ -640,11 +646,20 @@ export async function voucherFile(
   return facts ? fileOf({ ...facts, checkInLink }) : null;
 }
 
-async function voucherFacts(client: Client, reservationId: string): Promise<VoucherFacts | null> {
+export async function voucherFacts(client: Client, reservationId: string): Promise<VoucherFacts | null> {
   const { rows } = await client.query<{ facts: VoucherFacts | null }>(
     "select app.guest_voucher($1::uuid) as facts", [reservationId]);
   const facts = rows[0]?.facts;
   if (!facts) return null;
+  /* D27-296 (8): a test hotel's voucher is marked, and carries no GSTIN - not
+     the hotel's (it has none) and not the group office's. */
+  const { rows: test } = await client.query<{ test: boolean }>(
+    "select app.reservation_is_test($1::uuid) as test", [reservationId]);
+  if (test[0]?.test) {
+    facts.test = true;
+    facts.hotel = { ...facts.hotel, gstin: null };
+    if (facts.group) facts.group = { ...facts.group, gstin: null };
+  }
   /* The hotel's meal days (D27-258 Q5), through a definer as the facts are:
      the sweep has nobody signed in. Keyed by the plan's code. */
   const { rows: days } = await client.query<{ meal_plan: string; breakfast: string[]; lunch: string[]; dinner: string[] }>(
