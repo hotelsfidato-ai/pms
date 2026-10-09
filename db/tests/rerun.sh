@@ -117,6 +117,13 @@ green "  all migrations applied to an empty database"
 # AND A RESTAURANT BILL SETTLED TO THAT FUNCTION (28 September). 038 put back
 # a payment list without 'function' over 099's, and the first bill settled to
 # a banquet would have stopped every deploy after it at 038.
+#
+# AND FOUR MORE, found 10 October on the local demo before a release (MEMORY
+# 403): a BREAKAGE of crockery (112 put back a kind list without 180's
+# 'breakage'), a room's PHONE link (121 without 181's 'room-phone'), a booking
+# with a promotion in RUPEES (146's discount rule without 191's discount_amount)
+# and a hotel whose default payment method is ITS OWN (187's four-word check,
+# which 191 took away). Each would have stopped the next release at that file.
 if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 \
      -c "insert into hotels (code, name, city) values ('RRN','Rerun Property','Nowhere')" \
      -c "insert into hotel_modules (hotel_id, module, is_enabled)
@@ -160,7 +167,33 @@ if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 \
                                  event_id, opened_by)
          select outlet.hotel_id, outlet.id, 'RRN-1', current_date,
                 'settled', who.id, now(), 'function', e.id, who.id
-           from outlet, who, banquet_events e where e.reference = 'BQ-RERUN-1'" 2>&1); then
+           from outlet, who, banquet_events e where e.reference = 'BQ-RERUN-1'" \
+     -c "with h as (select id from hotels where code = 'RRN'),
+         item as (insert into stock_items (hotel_id, name, unit, crockery)
+                  select id, 'Rerun Plate', 'piece', true from h returning id, hotel_id)
+         insert into stock_movements (hotel_id, item_id, business_date, kind, quantity, location_id)
+         select item.hotel_id, item.id, current_date, 'breakage', -1,
+                (select l.id from locations l where l.hotel_id = item.hotel_id and l.kind = 'store' limit 1)
+           from item" \
+     -c "with h as (select id from hotels where code = 'RRN'),
+         rt as (insert into room_types (hotel_id, code, name)
+                select id, 'RRT', 'Rerun Type' from h returning id, hotel_id),
+         rm as (insert into rooms (hotel_id, room_type_id, number)
+                select hotel_id, id, '901' from rt returning id, hotel_id)
+         insert into guest_links (hotel_id, token_hash, origin, room_id, expires_at)
+         select hotel_id, 'rerun-room-phone', 'room-phone', id, now() + interval '1 day' from rm" \
+     -c "with h as (select id from hotels where code = 'RRN'),
+         promo as (insert into room_promotions (hotel_id, name, amount)
+                   select id, 'Rerun Rupees Off', 100 from h returning id, hotel_id),
+         g as (insert into guests (full_name) values ('Rerun Guest') returning id)
+         insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                                   agreed_rate, room_promotion_id, discount_amount)
+         select promo.hotel_id, 'RRN-RES-1', g.id, rt.id, current_date + 30, current_date + 31,
+                1000, promo.id, 100
+           from promo, g, room_types rt where rt.code = 'RRT' and rt.hotel_id = promo.hotel_id" \
+     -c "insert into payment_methods (hotel_id, label, kind)
+         select id, 'Rerun Wallet', 'wallet' from hotels where code = 'RRN'" \
+     -c "update hotels set default_payment_method = 'Rerun Wallet' where code = 'RRN'" 2>&1); then
   red "  x could not create a property between the passes"
   echo "$out" | grep -m1 "ERROR" | sed 's/^/      /'
   exit 1

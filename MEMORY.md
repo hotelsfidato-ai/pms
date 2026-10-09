@@ -6539,6 +6539,27 @@ copy will see of theirs.**
 
 ---
 
+### 403 · Four old migrations would have stopped the release on live: rules widened later, re-added narrow on every replay (10 October)
+
+Every release replays every migration from 001 (launch.sh). Bringing the local demo up to 212 for test hotels
+failed at 112: it dropped and re-added `stock_movements_kind_known` with its own list, and 180 had since added
+`breakage` - the demo has one breakage, so the replay rolled back. Looking for the same shape found three more,
+none guarded as MEMORY 284 said they must be: 121 (`guest_links_origin_check` without 181's `room-phone`), 146
+(`reservations_discount_rule` without 191's `discount_amount`, and its own unguarded drop above it), 187
+(`hotels_default_payment_method_valid`, which 191 took away, re-added over a hotel's own default). Live had
+been replayed on 5 October before any such row existed; one breakage, one room-phone link, one rupee promotion
+on a booking or one hotel default of its own since then, and tonight's A5 would have rolled back. The replay
+gate stayed green throughout: its scratch property had none of those rows. **Fixed:** each of the four
+rewrites is guarded by what it adds (or, for 187, skipped once 191's trigger exists); `db/tests/rerun.sh` now
+seeds a breakage, a room-phone link, a rupee-promotion booking and an own default between its passes - seen
+failing on exactly 112, 121, 146 and 187 with the old files, all 212 re-runnable with the new. **The rule
+(284's, again):** a migration that rewrites a constraint is guarded by what it adds; and every widened value
+gets a row in rerun.sh's seed in the same commit that widens it. Six earlier rewrites were checked and found
+guarded (087, 119, 125, 038, 056, 095/096) or harmless (016, 060 - the later one is stricter, 146's
+percent rule - a null passes a check, 151 - NOT VALID).
+
+---
+
 ### 402 · MINE: 391 again - an edit typed through the shell instead of written (10 October)
 
 With a dozen file-editing scripts already written with the Write tool for test hotels, I typed

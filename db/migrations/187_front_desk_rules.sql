@@ -22,9 +22,19 @@
 -- ════════════════════════════════════════════════════════════════════
 
 alter table hotels add column if not exists default_payment_method text not null default 'Cash';
-alter table hotels drop constraint if exists hotels_default_payment_method_valid;
-alter table hotels add constraint hotels_default_payment_method_valid
-  check (default_payment_method in ('Cash', 'UPI', 'Credit Card', 'Debit Card'));
+-- Guarded (MEMORY 284, 403): 191 took this four-word check away for good (the
+-- default must be On in the hotel's own list of payment methods, its trigger
+-- app.default_payment_method_on_list). On a replay, re-adding it refused a
+-- hotel whose default was a method of its own and the whole replay rolled back,
+-- so it is written only before 191 has run.
+do $$
+begin
+  if to_regprocedure('app.default_payment_method_on_list()') is null then
+    alter table hotels drop constraint if exists hotels_default_payment_method_valid;
+    alter table hotels add constraint hotels_default_payment_method_valid
+      check (default_payment_method in ('Cash', 'UPI', 'Credit Card', 'Debit Card'));
+  end if;
+end $$;
 
 alter table hotels add column if not exists desk_may_overbook boolean not null default true;
 
