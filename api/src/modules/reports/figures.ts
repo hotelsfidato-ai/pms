@@ -456,6 +456,8 @@ export interface Property {
   currency: string;
   timezone: string;
   businessDate: string;
+  /** D27-296: a test hotel's report is marked TEST · NOT VALID. */
+  test: boolean;
 }
 
 /** By code (a route) or by id (the master's PDF route, which has the id). */
@@ -470,9 +472,9 @@ export async function propertyById(client: Client, id: string): Promise<Property
 async function propertyWhere(client: Client, where: string, value: string): Promise<Property | null> {
   const { rows } = await client.query<{
     id: string; code: string; name: string; address: string | null; gstin: string | null;
-    currency: string; timezone: string; bd: string;
+    currency: string; timezone: string; bd: string; test: boolean;
   }>(
-    `select id, code, name,
+    `select id, code, name, test_of is not null as test,
             nullif(btrim(address_line), '') as address,
             gstin, currency, coalesce(timezone, 'Asia/Kolkata') as timezone,
             to_char(app.business_date(id), 'YYYY-MM-DD') as bd
@@ -484,13 +486,15 @@ async function propertyWhere(client: Client, where: string, value: string): Prom
     ? {
         id: h.id, code: h.code, name: h.name, address: h.address, gstin: h.gstin,
         currency: h.currency.trim(), timezone: h.timezone, businessDate: h.bd,
+        test: h.test,
       }
     : null;
 }
 
 /** The property as a report heads it. */
 export const heading = (p: Property) =>
-  ({ code: p.code, name: p.name, address: p.address, gstin: p.gstin, timezone: p.timezone });
+  ({ code: p.code, name: p.name, address: p.address, gstin: p.gstin, timezone: p.timezone,
+     ...(p.test ? { test: true } : {}) });
 
 /** A date sent in a query string, or null if it is not one. */
 export function isoDateParam(value: string | undefined): string | null {

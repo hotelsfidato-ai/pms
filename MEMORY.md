@@ -6539,6 +6539,64 @@ copy will see of theirs.**
 
 ---
 
+### 402 · MINE: 391 again - an edit typed through the shell instead of written (10 October)
+
+With a dozen file-editing scripts already written with the Write tool for test hotels, I typed
+one more as `node -e "..."` with quotes and `\n` escaped for the shell. It matched nothing and
+refused (the script checks for exactly one match), so nothing was harmed - and nothing was done
+until it was redone with the Edit tool. **The rule (391's, unchanged):** an edit is written with
+the Write or Edit tool, never typed through a shell; a refusal on zero matches is the guard
+working, not a reason to retry the same way.
+
+---
+
+### 401 · MINE: a refusal keyed on a row the caller cannot read never fired (10 October)
+
+Test hotels (D27-296): "only a group administrator adds somebody to a test hotel - 403". The
+route looked the hotel up first (`select id from hotels where code = $1`) and then asked whether
+it was a test hotel. A real hotel's GM cannot read the test hotel's row, so the lookup came back
+empty and the GM got the old 409 "No property with code THAT" - never the 403 the rule promised.
+The API test caught it the first time it ran. Fixed by asking through the definer
+(`app.is_test_hotel_code`) BEFORE the lookup the caller can do. **The rule:** a check about a
+row the caller may not be able to see is asked through a definer, before the caller's own read
+decides there is nothing there.
+
+---
+
+### 400 · MINE: PL/pgSQL named NEW's columns that only some of a trigger's tables have - the trap 097 already wrote down (10 October)
+
+Test hotels' two shared trigger functions (`app.refuse_in_test_hotel`, `app.test_side_rules`)
+read `new.left_hotel_id`, `new.joined_into`, `new.company_id` behind `tg_table_name` tests.
+PL/pgSQL resolves every field an expression names when it plans it, so the first insert into a
+table without the column failed - "record new has no field ..." - exactly what
+`app.assert_staff_has_hotel`'s own comment (097) warns about. Caught by the database tests, twice,
+one function after the other. Fixed by reading those columns through `to_jsonb(new)`. **The
+rule:** a trigger function shared by several tables reads any column not on all of them through
+`to_jsonb(new) ->> 'name'`; read the comments of the functions you are copying the shape of.
+
+---
+
+### 399 · MINE: a PL/pgSQL variable named like a query's alias (10 October)
+
+`app.copy_hotel_setup` declared record variables `a` and `k`, and its catalog queries used `k`
+as an alias for `pg_constraint`. Inside the function the variable shadowed the alias: "record k
+is not assigned yet" on the first query. **The rule:** PL/pgSQL variables carry a `v_` prefix;
+never a one-letter name a query in the same function could use as an alias.
+
+---
+
+### 398 · MINE: a function with side effects called in a WHERE clause ran once per row (10 October)
+
+`POST /api/admin/hotels/:code/test-hotel` made the test hotel with `select code, name from
+hotels where id = app.create_test_hotel($1)`. The planner calls a function in a WHERE clause for
+each row it looks at: the first call made the hotel, the second refused ("already has a test
+hotel"), the error rolled the first back, and the route answered 409 for a hotel it had never
+kept. The API test's first run caught it. Fixed: `select app.create_test_hotel($1)` in a
+statement of its own, then the read. **The rule:** a function that writes is called alone,
+`select f(...)`; never in a WHERE, a JOIN or a select list over a table.
+
+---
+
 ### 396 · MINE: I told the owner "no Firebase keys are needed" from the names in .env, and every value was empty (9 October)
 
 Asked for the release steps on the new PC, I counted the `VITE_FIREBASE_` lines in `.env` (seven)

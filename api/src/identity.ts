@@ -67,9 +67,21 @@ export interface AccountResult {
   existed: boolean;
 }
 
+/** D27-296: an address that already has a sign-in account, where adopting it
+    is not allowed - a tester is never made by changing somebody's password. */
+export class AccountExists extends Error {
+  constructor(email: string) {
+    super(`${email} already has a sign-in account.`);
+    this.name = "AccountExists";
+  }
+}
+
 /**
  * Creates the Firebase account for an email, or adopts the one that is
  * already there, and sets the password when one is given.
+ *
+ * `adopt: false` (a person added at a test hotel, D27-296): an account that
+ * is already there is refused with AccountExists, untouched.
  *
  * Returns the uid. THE CALLER MUST STORE IT: an account whose uid
  * never reaches `staff.firebase_uid` authenticates fine and resolves
@@ -78,6 +90,7 @@ export interface AccountResult {
  */
 export async function ensureAccount(
   email: string, displayName: string, password?: string,
+  options: { adopt?: boolean } = {},
 ): Promise<AccountResult> {
   const auth = getAuth(firebaseApp());
 
@@ -95,6 +108,7 @@ export async function ensureAccount(
   } catch (e) {
     const code = (e as { code?: string }).code;
     if (code !== "auth/email-already-exists") throw e;
+    if (options.adopt === false) throw new AccountExists(email);
 
     /* ⚠ ADOPTED, NOT REFUSED. A person re-invited is the common case;
        so is one whose account was made in the console before this

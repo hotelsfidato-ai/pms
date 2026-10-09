@@ -11,6 +11,47 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-10 · Test hotels: the database and the API (D27-296)
+
+**Asked for:** the master's brief for the DATABASE and API half of the owner's twelve
+answers (D27-296): a test hotel per real hotel, inside the live system; test-only
+people; reset and re-copy; nothing leaves; test guests kept apart; the whole setup
+copied; TEST documents without a GSTIN; kept out of everything real; group admins
+only. The screens are the other helper's (`test-hotels-web`).
+
+**Shipped:**
+- Migration "test hotels" (`212_test_hotels.sql`): `hotels.test_of`, `staff.test_only`,
+  `test_hotel_id` on guests, companies, booking groups and the offer answers; the side in
+  view (`app.hotel_code`, set by the API from the address) and every row policy and
+  definer door on the group's guests rebuilt on it; the mixing guard attached from the
+  catalog; the setup, trading, never and group classes; `app.copy_hotel_setup`,
+  `app.create_test_hotel`, `app.reset_test_hotel`, `app.recopy_test_hotel`; the
+  append-only guards' way past for a test hotel's own reset only; SU, the CRS, rivals'
+  prices, report emails and loyalty refused for a test hotel.
+- API: `testHotelRoutes.ts` (make, reset, re-copy), the people rules in `admin.ts`,
+  `testOf`/`testOnly`/`testHotel` on the hotel, property and people answers,
+  `api/src/testHotels.ts` (the desk buttons that would send or reach outside, 409 for a
+  test hotel), `sending.ts`'s refusal, the guest's page (`hotel.test`, no DigiLocker, no
+  ID photo), health alerts and System health and the bank-details bell without test
+  hotels, and TEST · NOT VALID on the report files, the voucher, the tax invoice PDF
+  and the purchase order. Shared core touched, the master's to see: `db.ts` (the
+  hotel in the address), `server.ts` (two middlewares), `identity.ts` (`adopt: false`),
+  `sending.ts`, `reportRender.ts`, `roleGate.ts`, `routes/hotels.ts`,
+  `routes/guestDoor.ts`, `routes/guestDigilocker.ts`, `routes/notifications.ts`.
+
+**Proved:** `db/tests/modules/test-hotels.sql`, 87 assertions (classes complete, the
+mixing guard on every table, the two sides for ten people-and-place pairs, the copy row
+for row with every key pointing at the test hotel's own copy, a reset of a test hotel
+holding a settled bill with a struck KOT line, a closed day, an issued invoice, key cards
+and stock, the re-copy); `api/test/modules/admin/testHotels.test.ts`, 69 tests. Every
+guard put back the old way and seen to fail: 41 in the database (a scratch database
+built from the migrations each time), 28 in the API (`prove.cjs`). The database suite
+(1,665), the replay (212 migrations), PostgreSQL 16, and 114 API test files around what
+was touched, all run here, all green.
+
+**Left open:** see `MODULE.md` → Test hotels, and the report's questions for the owner
+(the provisioning key for a test hotel, equipment, contracts, online check-in's code).
+
 ## 2026-10-05 · System health reads the backup status line (D27-279 (5), D27-284 (5))
 
 **Asked for:** System health reads the nightly check's new `backup-status` line, with the same meaning, so there is one reader and one format.

@@ -158,6 +158,9 @@ export function columnLayout(
   return { widths: fitted.map((w) => w + (width - used) * (w / used)), scale };
 }
 
+/** D27-296 (8): what a test hotel's documents say of themselves. */
+export const TEST_MARK = "TEST · NOT VALID";
+
 export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> {
   const tz = by.timezone;
   const pdf = new PDFDocument({
@@ -178,8 +181,14 @@ export async function renderPdf(doc: ReportDoc, by: PrintedBy): Promise<Buffer> 
     const top = pdf.page.margins.top;
     pdf.font("Helvetica-Bold").fontSize(13).fillColor(INK)
       .text(doc.property.name, left, top, { width: width * 0.55 });
+    /* D27-296: a test hotel's document is not a real one, and carries no GSTIN. */
+    if (doc.property.test) {
+      pdf.font("Helvetica-Bold").fontSize(10).fillColor(ACCENT)
+        .text(TEST_MARK, left, pdf.y + 1, { width: width * 0.55 });
+    }
     pdf.font("Helvetica").fontSize(8).fillColor(MUTED);
-    const sub = [doc.property.address, doc.property.gstin ? `GSTIN ${doc.property.gstin}` : null]
+    const sub = [doc.property.address,
+      doc.property.gstin && !doc.property.test ? `GSTIN ${doc.property.gstin}` : null]
       .filter(Boolean).join("  ·  ");
     if (sub) pdf.text(sub, left, pdf.y + 2, { width: width * 0.55 });
     const leftEnd = pdf.y;
@@ -378,6 +387,8 @@ export async function renderXlsx(doc: ReportDoc, by: PrintedBy): Promise<Buffer>
 
   const title = sheet.addRow([doc.property.name]);
   title.font = { bold: true, size: 14, color: { argb: "FF031728" } };
+  /* D27-296: a test hotel's. */
+  if (doc.property.test) sheet.addRow([TEST_MARK]).font = { bold: true, color: { argb: "FFC4521D" } };
   const reportRow = sheet.addRow([doc.title]);
   reportRow.font = { bold: true, size: 12, color: { argb: "FFC4521D" } };
   for (const f of doc.facts) {
@@ -470,7 +481,9 @@ function xlsxValue(value: Cell | undefined, kind: CellKind, tz: string): string 
 export function renderCsv(doc: ReportDoc, by: PrintedBy): string {
   const tz = by.timezone;
   const esc = (v: string) => (/[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  const lines: string[] = [esc(doc.property.name), esc(doc.title)];
+  const lines: string[] = [esc(doc.property.name),
+    /* D27-296: a test hotel's. */
+    ...(doc.property.test ? [esc(TEST_MARK)] : []), esc(doc.title)];
   for (const f of doc.facts) lines.push(`${esc(f.label)},${esc(formatCell(f.value, f.kind, tz))}`);
   lines.push("");
   for (const section of doc.sections) {

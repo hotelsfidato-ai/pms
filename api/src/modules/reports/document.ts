@@ -148,7 +148,11 @@ export interface ReportDoc {
   title: string;
   /** From the database, never a literal (MEMORY 256). */
   /** timezone: where "datetime" cells are printed, e.g. "Asia/Kolkata"; India when absent. */
-  property: { code: string; name: string; address: string | null; gstin: string | null; timezone?: string };
+  property: {
+    code: string; name: string; address: string | null; gstin: string | null; timezone?: string;
+    /** D27-296: a test hotel's - every renderer prints TEST · NOT VALID. Absent for a real one. */
+    test?: boolean;
+  };
   orientation: "portrait" | "landscape";
   facts: ReportFact[];
   sections: ReportSection[];

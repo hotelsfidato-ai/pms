@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { maySwitchModules, MODULE_SWITCH_REFUSED } from "./grants.ts";
+import { isTestHotelId } from "../../testHotels.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE MODULES A PROPERTY CAN SWITCH ON — ONE LIST, READ BY BOTH ENDS
@@ -142,6 +143,17 @@ property.post("/:code/modules/:module", async (c) => {
       return { ok: false as const, reason: MODULE_SWITCH_REFUSED };
     }
 
+    /* D27-296 (4), (11): loyalty and the channel manager are never on in a
+       test hotel (the database refuses the switch too; this says so). */
+    if (input.enabled && (module === "loyalty" || module === "channel_manager")
+        && await isTestHotelId(client, hotelId)) {
+      return {
+        ok: false as const, inTestHotel: true as const,
+        reason: `This is a test hotel: ${module === "loyalty" ? "loyalty" : "the channel manager"} `
+          + "cannot be switched on here.",
+      };
+    }
+
     /* Who and when. A module that quietly stopped working is a support
        call; one somebody switched off on a date is an answer. */
     await client.query(
@@ -158,6 +170,7 @@ property.post("/:code/modules/:module", async (c) => {
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
-  /* A refusal is not a 200 — defect 231. */
-  return c.json(result, result.ok ? 200 : 403);
+  /* A refusal is not a 200 — defect 231. A test hotel's is 409, not 403. */
+  const { inTestHotel, ...answer } = result as typeof result & { inTestHotel?: true };
+  return c.json(answer, answer.ok ? 200 : inTestHotel ? 409 : 403);
 });

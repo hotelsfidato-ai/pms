@@ -2,9 +2,10 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { env } from "./env.ts";
-import { healthCheck, closePool, type Client } from "./db.ts";
+import { healthCheck, closePool, hotelInView, type Client } from "./db.ts";
 import { subjectFor, Unauthenticated } from "./auth.ts";
 import { roleGate } from "./roleGate.ts";
+import { nothingLeavesTestHotels } from "./testHotels.ts";
 import { telemetry, routeOf, errorKind } from "./telemetry.ts";
 import { hotels } from "./routes/hotels.ts";
 import { property } from "./routes/property.ts";
@@ -250,11 +251,26 @@ app.use("/api/*", async (c, next) => {
   await next();
 });
 
+/* ── The hotel in the address (D27-296, test hotels) ───────────────
+   Every person's route under /api/hotels/:code runs with that code in
+   hotelInView, so each transaction tells Postgres which hotel it is for
+   (db.ts) and the group's guests are read on that hotel's side only: a
+   test hotel's own, or the real ones. Anywhere else, the real side. ═══ */
+app.use("/api/hotels/*", async (c, next) => {
+  const code = decodeURIComponent(c.req.path.split("/")[3] ?? "").toUpperCase();
+  return code ? hotelInView.run(code, next) : next();
+});
+
 /* ── Every staff write asks the person's role (PMS-2, D21-88) ─────
    After the gate above, so there is a subject; before every router, so
    no route can be reached without it. The doors with no person (guest,
    pos, channel) pass straight through. See roleGate.ts.            ═══ */
 app.use("/api/*", roleGate);
+
+/* ── Nothing leaves a test hotel (D27-296 (4)) ─────────────────────
+   Every desk button that would send or reach outside, answered 409 for
+   a test hotel before its route runs. The list is testHotels.ts's.  ═══ */
+app.use("/api/*", nothingLeavesTestHotels);
 
 /* The core's own routes: the session, the property, the live stream,
    approvals and attachments belong to no one service. */
