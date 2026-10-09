@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Hash } from "lucide-react";
+import { Plus, Hash, PenLine } from "lucide-react";
 import { moneyPrecise } from "@/lib/format";
 import {
   Card, Button, StatusPill, Skeleton, EmptyState, toast,
@@ -8,7 +8,8 @@ import {
 } from "@/components/ui";
 import {
   getNumberedAddons, addNumberedAddon, changeNumberedAddon,
-  numberedAddonOff, numberedAddonOn, type NumberedAddon, type OffFor,
+  numberedAddonOff, numberedAddonOn, getCustomAddonsUsed,
+  type NumberedAddon, type OffFor, type CustomAddonUsed,
 } from "@/modules/pos/data/till";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -47,6 +48,9 @@ export function NumberedAddonsTab({ hotelId }: { hotelId: string }) {
     enabled: Boolean(hotelId),
   });
   const [editing, setEditing] = useState<NumberedAddon | "new" | null>(null);
+  /* A custom add-on staff typed, to be numbered (D27-291): the dialog opens
+     with its name and price. */
+  const [preset, setPreset] = useState<{ name: string; price: number } | null>(null);
   const [offing, setOffing] = useState<NumberedAddon | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -157,12 +161,16 @@ export function NumberedAddonsTab({ hotelId }: { hotelId: string }) {
         </Card>
       )}
 
+      <CustomUsed hotelId={hotelId}
+                  onNumber={(u) => { setPreset({ name: u.name, price: u.price }); setEditing("new"); }} />
+
       {editing !== null && (
         <AddonDialog
           hotelId={hotelId}
           addon={editing === "new" ? undefined : editing}
+          {...(editing === "new" && preset ? { preset } : {})}
           suggested={next}
-          onClose={() => setEditing(null)}
+          onClose={() => { setEditing(null); setPreset(null); }}
           onSaved={refresh}
         />
       )}
@@ -181,16 +189,20 @@ export function NumberedAddonsTab({ hotelId }: { hotelId: string }) {
   );
 }
 
-function AddonDialog({ hotelId, addon, suggested, onClose, onSaved }: {
+function AddonDialog({ hotelId, addon, suggested, onClose, onSaved, preset }: {
   hotelId: string; addon?: NumberedAddon; suggested: number;
   onClose: () => void; onSaved: () => void;
+  /** A custom add-on staff typed (D27-291), to number: its name and price. */
+  preset?: { name: string; price: number };
 }) {
   const [number, setNumber] = useState(addon ? String(addon.number) : String(suggested));
-  const [name, setName] = useState(addon?.name ?? "");
+  const [name, setName] = useState(addon?.name ?? preset?.name ?? "");
   const [description, setDescription] = useState(addon?.description ?? "");
-  /* No default price (D27-120): blank until typed; 0 only when Free. */
-  const [price, setPrice] = useState(addon && !addon.free ? String(addon.price) : "");
-  const [free, setFree] = useState(addon?.free ?? false);
+  /* No default price (D27-120): blank until typed; 0 only when Free. A
+     custom add-on's own price is what staff charged, not a default. */
+  const [price, setPrice] = useState(addon && !addon.free ? String(addon.price)
+    : !addon && preset && preset.price > 0 ? String(preset.price) : "");
+  const [free, setFree] = useState(addon?.free ?? (preset ? preset.price === 0 : false));
   const [busy, setBusy] = useState(false);
 
   const n = Number(number.trim());
@@ -276,6 +288,67 @@ function AddonDialog({ hotelId, addon, suggested, onClose, onSaved }: {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ── The custom add-ons used (the owner's D27-291) ────────────────────
+   What staff typed in Customise these thirty days, most used first, with
+   who: the common ones are the ones worth a number. Nothing joins the list
+   above by itself - "Number it" opens the dialog with its name and price.
+   Four states, as every list. */
+function CustomUsed({ hotelId, onNumber }: {
+  hotelId: string; onNumber: (u: CustomAddonUsed) => void;
+}) {
+  const q = useQuery({
+    queryKey: ["till-custom-used", hotelId],
+    queryFn: () => getCustomAddonsUsed(hotelId),
+    enabled: Boolean(hotelId),
+    staleTime: 0,
+  });
+  const days = q.data?.days ?? 30;
+  return (
+    <div className="mt-6">
+      <h3 className="text-md font-semibold text-ink-900">Custom add-ons used</h3>
+      <p className="text-sm text-grey-600 mt-0.5 mb-3 leading-relaxed">
+        What staff typed under Customise in the last {days} days. Give the common ones a number.
+      </p>
+      {q.isPending ? (
+        <Card><div className="p-4"><Skeleton className="h-12" /></div></Card>
+      ) : q.isError && !q.data ? (
+        <Card><ReadFailed compact error={q.error} what="the custom add-ons" onRetry={() => void q.refetch()} /></Card>
+      ) : q.data.used.length === 0 ? (
+        <Card>
+          <EmptyState
+            compact
+            icon={<PenLine />}
+            title="None typed yet"
+            description="When a guest asks for something that is not on the list, staff type it under Customise, Custom add-on. It shows here."
+          />
+        </Card>
+      ) : (
+        <Card>
+          <ul className="divide-y divide-grey-100">
+            {q.data.used.map((u) => (
+              <li key={`${u.name}-${u.price}`} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-base text-ink-900">{u.name}</p>
+                  <p className="text-sm text-grey-600 truncate">
+                    {u.times} {u.times === 1 ? "time" : "times"}, {u.qty} in all
+                    {u.by ? ` · by ${u.by}` : ""}
+                  </p>
+                </div>
+                <span className="tabular text-base text-ink-900 shrink-0">
+                  {u.price === 0 ? "Free" : moneyPrecise(u.price)}
+                </span>
+                <Button variant="secondary" size="sm" className="h-11 shrink-0" onClick={() => onNumber(u)}>
+                  Number it
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+    </div>
   );
 }
 

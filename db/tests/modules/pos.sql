@@ -644,3 +644,81 @@ begin
   select count(*) into n from pos_outlets where code = 'AUDGD';
   perform test.ok('pos audit guards', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- CUSTOM ADD-ONS, AND ADD-ONS ON A DISH ALREADY SENT (D27-291)
+-- =============================================================================
+-- An add-on line of its own hangs under a dish, names no menu item and is no
+-- side; a numbered one says which. A sent one struck says why, and a dish
+-- struck carries its reason to them. Refers to its migration by what it does,
+-- never by its number. Uses the suite's AGR property and its clerk; removes
+-- what it makes.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_order uuid; v_dish bigint; v_extra bigint;
+  v_numbered uuid; bd date; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'CUSAD', 'Custom Add-on Test', 'food', v_staff) returning id into v_outlet;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff) returning id into v_order;
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, 'Veg Thali', 2, 300, 5, v_staff) returning id into v_dish;
+  insert into pos_numbered_addons (hotel_id, number, name, price)
+  values (a, 42, 'Kebab', 120) returning id into v_numbered;
+
+  -- ---------- its shape ----------------------------------------------------------
+  perform test.allows('pos custom addons', 'a typed add-on under a dish, with its own number',
+    format($q$insert into pos_order_lines (order_id, hotel_id, parent_line_id, extra_kind, name, qty,
+                                          unit_price, tax_rate, added_by)
+              values (%L, %L, %s, 'custom', 'Extra papad', 1, 40, 5, %L)$q$, v_order, a, v_dish, v_staff));
+  perform test.raises('pos custom addons', 'a child line that is neither a side nor an add-on is refused',
+    format($q$insert into pos_order_lines (order_id, hotel_id, parent_line_id, name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %s, 'Stray', 1, 40, 5, %L)$q$, v_order, a, v_dish, v_staff), '23514');
+  perform test.raises('pos custom addons', 'an add-on line hangs under a dish',
+    format($q$insert into pos_order_lines (order_id, hotel_id, extra_kind, name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, 'custom', 'Extra papad', 1, 40, 5, %L)$q$, v_order, a, v_staff), '23514');
+  perform test.raises('pos custom addons', 'a numbered one says which',
+    format($q$insert into pos_order_lines (order_id, hotel_id, parent_line_id, extra_kind, name, qty,
+                                          unit_price, tax_rate, added_by)
+              values (%L, %L, %s, 'numbered', 'Kebab', 1, 120, 5, %L)$q$, v_order, a, v_dish, v_staff), '23514');
+  perform test.allows('pos custom addons', 'and with it, goes in',
+    format($q$insert into pos_order_lines (order_id, hotel_id, parent_line_id, extra_kind, numbered_addon_id,
+                                          name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %s, 'numbered', %L, 'Kebab', 1, 120, 5, %L)$q$, v_order, a, v_dish, v_numbered, v_staff));
+  perform test.raises('pos custom addons', 'a kind nobody named is refused',
+    format($q$insert into pos_order_lines (order_id, hotel_id, parent_line_id, extra_kind, name, qty,
+                                          unit_price, tax_rate, added_by)
+              values (%L, %L, %s, 'other', 'Ghee', 1, 20, 5, %L)$q$, v_order, a, v_dish, v_staff), '23514');
+
+  -- ---------- sent, struck -------------------------------------------------------
+  update pos_order_lines set kot_status = 'sent', kot_sent_at = now(), kot_no = 1
+   where order_id = v_order;
+  select id into v_extra from pos_order_lines where parent_line_id = v_dish and extra_kind = 'custom';
+  perform test.raises('pos custom addons', 'a sent add-on struck with no reason is refused',
+    format($q$update pos_order_lines set voided = true, voided_by = %L, voided_at = now() where id = %s$q$,
+           v_staff, v_extra), '23514');
+  perform test.allows('pos custom addons', 'a sent dish struck with a reason strikes its add-ons with it',
+    format($q$update pos_order_lines set voided = true, voided_by = %L, voided_at = now(),
+                                         void_reason = 'wrong table' where id = %s$q$, v_staff, v_dish));
+  select count(*) into n from pos_order_lines
+   where parent_line_id = v_dish and voided and void_reason = 'wrong table';
+  perform test.ok('pos custom addons', 'its add-ons carry the reason', n = 2, n || ' carry it');
+  select count(*) into n from app.pos_struck_after_kitchen(a, bd)
+   where name = '+ Extra papad (for Veg Thali)';
+  perform test.ok('pos custom addons', 'the day''s struck list names the dish', n = 1, n || ' listed');
+
+  -- ---------- and the fixtures go ----------------------------------------------
+  delete from pos_order_lines where order_id = v_order;
+  delete from pos_orders where id = v_order;
+  delete from pos_outlets where id = v_outlet;
+  delete from pos_numbered_addons where id = v_numbered;
+  select count(*) into n from pos_outlets where code = 'CUSAD';
+  perform test.ok('pos custom addons', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;

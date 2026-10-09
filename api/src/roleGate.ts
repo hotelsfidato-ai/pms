@@ -422,6 +422,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders/:id/lines/:lineId/qty`]: TILL,
   /* Customise: the numbered add-ons on a dish not yet sent (D27-289). */
   [`POST ${H}/till/orders/:id/lines/:lineId/numbered-addons`]: TILL,
+  /* Anyone who takes orders adds a custom add-on (the owner's D27-291). */
+  [`POST ${H}/till/orders/:id/lines/:lineId/extras`]: TILL,
   [`POST ${H}/till/orders/batch`]: TILL,
   [`POST ${H}/till/orders/:id/kot`]: TILL,
   [`POST ${H}/till/orders/:id/taken`]: TILL,  // the waiter's Taken, D27-222
@@ -874,6 +876,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/till/menu`]: MENU_READ,
   [`GET ${H}/till/menu/addon-groups`]: MENU_READ,
   [`GET ${H}/till/numbered-addons`]: MENU_READ,
+  [`GET ${H}/till/custom-addons-used`]: MENU_READ,
   [`GET ${H}/till/promotions`]: MENU_READ,
   [`GET ${H}/till/orders`]: TILL_READ,
   [`GET ${H}/till/guest-orders`]: TILL_READ,  // in-room dining, D27-224

@@ -439,8 +439,11 @@ function Ticket({ line, action, busy, onMove }: {
           <p className="text-md font-semibold text-brand-red-700">CANCELLED</p>
         </div>
         <p className="text-lg text-ink-900 mt-1.5 line-through">
-          {line.qty} × {line.name}
+          {line.qty} × {line.forDish ? `+ ${line.name}` : line.name}
         </p>
+        {line.forDish && (
+          <p className="text-base text-ink-900 line-through">for {line.forDish}</p>
+        )}
         {/* The numbered add-ons ON this dish (D27-289): "+ Kebab", each on its
            own line, as the docket prints them. */}
         {(line.plus ?? []).map((p, i) => (
@@ -473,8 +476,12 @@ function Ticket({ line, action, busy, onMove }: {
             {line.table ?? line.orderType.replace(/_/g, " ")} · {line.orderNo}
           </p>
           <p className="text-xl font-semibold text-ink-900 mt-0.5 leading-tight">
-            {line.qty} × {line.name}
+            {line.qty} × {line.forDish ? `+ ${line.name}` : line.name}
           </p>
+          {/* An add-on line of its own (D27-291): which dish it goes with. */}
+          {line.forDish && (
+            <p className="text-md text-grey-700 mt-0.5">for {line.forDish}</p>
+          )}
           {/* The numbered add-ons ON this dish (D27-289): "+ Kebab", each on its
              own line, as the docket prints them. */}
           {(line.plus ?? []).map((p, i) => (

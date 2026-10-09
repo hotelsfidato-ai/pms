@@ -151,7 +151,32 @@ export interface OrderLine {
       bill prints "Veg Biryani 310 · Kebab +120" under the line, and
       Customise opens on them. Null or absent when it has none. */
   numberedAddons?: LineAddons | null;
+  /** An add-on as a line of its own under parentLineId (D27-291): custom
+      (typed by staff) or numbered (put on a dish already sent). Its own
+      quantity; the bill reads "+ Extra papad". Null or absent otherwise. */
+  extra?: "custom" | "numbered" | null;
 }
+
+/** A custom add-on as Customise and the pad hold it (D27-291): typed by
+    staff, its own quantity. A price of 0 is one somebody ticked Free -
+    there is no default. */
+export interface CustomAddon { name: string; price: number; qty: number }
+
+/** What a screen sends for one add-on line (D27-291): one of the numbered
+    list, or a typed one. */
+export interface ExtraInput {
+  numberedId?: string;
+  name?: string;
+  price?: number;
+  free?: boolean;
+  qty: number;
+}
+
+/** Typed add-ons as the server takes them: a 0 goes as Free, never as a price. */
+export const customInputs = (customs: readonly CustomAddon[]): ExtraInput[] =>
+  customs.map((c) => (c.price === 0
+    ? { name: c.name, free: true, qty: c.qty }
+    : { name: c.name, price: c.price, qty: c.qty }));
 
 /** One numbered Add-on (D27-289): "2 · Kebab · ₹120". The number is what
     staff remember; it never changes. */
@@ -211,6 +236,8 @@ export interface KitchenLine {
   cancelled: boolean;
   /** The dish's numbered add-ons, read under it: "+ Kebab" (D27-289). */
   plus?: { name: string; qty: number }[];
+  /** On an add-on line of its own (D27-291): the dish it goes with. */
+  forDish?: string | null;
   /** Why, in the manager's words (D27-119). */
   cancelReason?: string | null;
 }
@@ -551,11 +578,37 @@ export function setNumberedAddons(
   hotelId: string, orderId: string, lineId: string, choices: NumberedChoice[],
   /** On a line of several, only ONE of them (D27-290): split off. */
   just?: 1,
+  /** Typed add-ons chosen in the same Customise (D27-291): lines of their
+      own under the dish, or under the one split off. */
+  extras?: ExtraInput[],
 ): Promise<TillResult> {
   return write(
     `/api/hotels/${hotelId}/till/orders/${orderId}/lines/${lineId}/numbered-addons`,
-    { numberedAddons: choices, ...(just ? { just } : {}) },
+    { numberedAddons: choices, ...(just ? { just } : {}),
+      ...(extras?.length ? { extras } : {}) },
   );
+}
+
+/** Add-ons as lines of their own under a dish already on the bill, sent or
+    not (D27-291). They wait for the next Send like any new dish. */
+export function addExtras(
+  hotelId: string, orderId: string, lineId: string, extras: ExtraInput[],
+): Promise<TillResult> {
+  return write(
+    `/api/hotels/${hotelId}/till/orders/${orderId}/lines/${lineId}/extras`, { extras });
+}
+
+/** What staff typed as custom add-ons lately (D27-291): the Add-ons tab
+    lists it, so the common ones can be numbered. */
+export interface CustomAddonUsed {
+  name: string; price: number; times: number; qty: number;
+  lastAt: string; by: string | null;
+}
+
+export async function getCustomAddonsUsed(
+  hotelId: string,
+): Promise<{ days: number; used: CustomAddonUsed[] }> {
+  return api(`/api/hotels/${hotelId}/till/custom-addons-used`);
 }
 
 /** The order screens' read of the menu: asked again whenever a screen opens
@@ -1230,7 +1283,8 @@ export function takeTableAway(hotelId: string, id: string): Done {
    ══════════════════════════════════════════════════════════════════ */
 
 export interface SendLine {
-  itemId: string;
+  /** The dish. Absent on add-ons for a dish already on the bill (extraFor). */
+  itemId?: string;
   qty: number;
   note?: string;
   /* A dish WITH variations requires one and the server refuses without
@@ -1241,6 +1295,10 @@ export interface SendLine {
   addonIds?: string[];
   /** The numbered Add-ons on this dish (D27-289). */
   numberedAddons?: NumberedChoice[];
+  /** Add-ons as lines of their own (D27-291): under this dish, or with
+      extraFor under a dish already on the bill. */
+  extras?: ExtraInput[];
+  extraFor?: string;
 }
 
 /**
@@ -1395,6 +1453,10 @@ export interface Docket {
     isAddon: boolean;
     /** "+ Kebab" under the dish (D27-289). Absent on an older docket. */
     plus?: { name: string; qty: number }[];
+    /** An add-on as a line of its own, with its own number (D27-291). */
+    extra?: boolean;
+    /** Its dish, when that went on an earlier KOT (D27-291). */
+    for?: { name: string; kotNo: number | null };
   }[];
   /** Taken off this docket after it was sent, and why (D27-119). */
   struck?: { name: string; qty: number; reason: string | null }[];

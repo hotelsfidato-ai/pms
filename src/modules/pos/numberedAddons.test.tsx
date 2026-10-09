@@ -193,13 +193,17 @@ describe("Tables: a list read before the add-on was made", () => {
 });
 
 describe("the Till: Customise before Send, and the breakdown", () => {
-  it("shows the dish's breakdown, offers Customise only on what the kitchen does not have yet, and saves the set", async () => {
+  it("shows the dish's breakdown, folds add-ons into what the kitchen does not have yet, and saves the set", async () => {
     const calls = anOrder();
     renderAt(`/pos/${HOTEL}/till?order=o-5`, "/pos/:code/till", <TillPage />);
 
     expect(await screen.findByText("Veg Biryani 310 · Kebab +120")).toBeTruthy();
     const customise = await screen.findByRole("button", { name: "Customise Veg Biryani with add-on Kebab" });
-    expect(screen.queryByRole("button", { name: "Customise Paneer Tikka" }), "the kitchen has it").toBeNull();
+    /* D27-291: the kitchen has the Tikka, so Customise there adds lines of
+       their own (customAddons.test.tsx) - it no longer hides. */
+    fireEvent.click(screen.getByRole("button", { name: "Customise Paneer Tikka" }));
+    expect(await screen.findByRole("dialog", { name: "Add to Paneer Tikka" }), "the kitchen has it").toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     fireEvent.click(customise);
     const panel = await screen.findByRole("dialog", { name: "Customise Veg Biryani" });
@@ -361,14 +365,17 @@ describe("the Till: all, or just one", () => {
   });
 });
 
-describe("the Terminal: Customise before Send", () => {
-  it("offers Customise on the dish not yet sent, not on the one the kitchen has", async () => {
+describe("the Terminal: Customise on every dish", () => {
+  it("folds add-ons into the dish not yet sent, and adds lines of their own to the one the kitchen has (D27-291)", async () => {
     localStorage.setItem("fidato.terminal-outlet", "REST");
     anOrder();
     renderAt(`/pos/${HOTEL}/terminal`, "/pos/:code/terminal", <TerminalPage />);
     fireEvent.click(await screen.findByRole("button", { name: /20260825-5/ }));
-    expect(await screen.findByRole("button", { name: "Customise Veg Biryani with add-on Kebab" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Customise Paneer Tikka" })).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Customise Veg Biryani with add-on Kebab" }));
+    expect(await screen.findByRole("dialog", { name: "Customise Veg Biryani" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "Customise Paneer Tikka" }));
+    expect(await screen.findByRole("dialog", { name: "Add to Paneer Tikka" })).toBeTruthy();
     expect(screen.getByText("Veg Biryani 310 · Kebab +120")).toBeTruthy();
   });
 });

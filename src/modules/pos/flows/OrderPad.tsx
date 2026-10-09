@@ -13,7 +13,7 @@ import {
 } from "@/components/ui";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
-import { getOrder, sendOrder, isBarSection, isBarDish, numberedAddonsQuery, tillMenuQuery, type MenuItem } from "@/modules/pos/data/till";
+import { getOrder, sendOrder, isBarSection, isBarDish, numberedAddonsQuery, tillMenuQuery, customInputs, type CustomAddon, type LineAddon, type MenuItem, type OrderLine } from "@/modules/pos/data/till";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { ReadFailed } from "@/components/ui";
 
@@ -67,6 +67,9 @@ export function OrderPad({
   const [asking, setAsking] = useState<MenuItem | null>(null);
   /* The pad line Customise is open on (D27-289). */
   const [customising, setCustomising] = useState<DraftLine | null>(null);
+  /* A dish already sent that Customise is open on (D27-291): its add-ons
+     join this round as lines of their own. */
+  const [addingTo, setAddingTo] = useState<OrderLine | null>(null);
   /* The dish just tapped, for the note beside the footer - "<dish> added"
      with its own Customise - so the button is found on a narrow screen too
      (the owner's D27-290). It STAYS until the next dish, until its line goes,
@@ -107,7 +110,14 @@ export function OrderPad({
     queryKey: ["till-order", hotelId, orderId],
     queryFn: () => getOrder(hotelId, orderId!),
     enabled: open && Boolean(orderId),
+    /* Asked each time the pad opens: it lists the dishes already sent
+       (D27-291), and one struck on the Till since must not be offered. */
+    staleTime: 0,
   });
+  /* The table's dishes the kitchen already has (the owner's D27-291): each
+     takes add-ons, which join this round. */
+  const sentDishes = (existing.data?.lines ?? []).filter((l) =>
+    !l.voided && l.parentLineId === null && l.kotStatus !== "pending");
   const [eventChoice, setEventChoice] = useState<string | null | undefined>(undefined);
   useEffect(() => { if (!open) setEventChoice(undefined); }, [open]);
   const eventId = eventChoice !== undefined
@@ -215,8 +225,9 @@ export function OrderPad({
       && (l.moreChoiceIds ?? []).join() === (line.moreChoiceIds ?? []).join()
       && [...l.addonIds].sort().join() === sides
       /* A plain tap is one more of the plain dish, never of the one with
-         Kebab (D27-289): Customise is chosen on a line, not on a tap. */
-      && !(l.numberedAddons?.length);
+         Kebab (D27-289) or a typed add-on (D27-291): Customise is chosen on
+         a line, not on a tap. Nor of an add-on for a dish already sent. */
+      && !(l.numberedAddons?.length) && !(l.customAddons?.length) && !l.extraFor;
     setLines((prev) => {
       const same = prev.find(isSame);
       return same
@@ -245,30 +256,39 @@ export function OrderPad({
      what one of it cost before them. Nothing is sent until Send. */
   const customise = (
     uid: string, chosen: NonNullable<DraftLine["numberedAddons"]>, scope: "all" | "one" = "all",
+    customs: CustomAddon[] = [],
   ) => {
-    const withAddons = (l: DraftLine): DraftLine => {
+    const withAddons = (l: DraftLine, typed: CustomAddon[]): DraftLine => {
       const base = l.baseUnitPrice ?? l.unitPrice;
-      const { numberedAddons: _gone, baseUnitPrice: _was, ...rest } = l;
+      const { numberedAddons: _gone, baseUnitPrice: _was, customAddons: _typed, ...rest } = l;
+      const kept = typed.length > 0 ? { customAddons: typed } : {};
       return chosen.length === 0
-        ? { ...rest, unitPrice: base }
-        : { ...rest, numberedAddons: chosen, baseUnitPrice: base,
+        ? { ...rest, ...kept, unitPrice: base }
+        : { ...rest, ...kept, numberedAddons: chosen, baseUnitPrice: base,
             unitPrice: priceWithAddons(base, chosen) };
     };
     setLines((prev) => {
       /* JUST 1 of several (the owner's D27-290): one of them, split off as a
-         line of its own with the add-ons; the rest stay as they were. */
+         line of its own with the add-ons; the rest stay as they were. The
+         typed add-ons chosen now go with the one split off, as the Till's do
+         (D27-291); those it had before stay where they were. */
       const next = prev.flatMap((l) => {
         if (l.uid !== uid) return [l];
         if (scope === "one" && l.qty > 1) {
-          return [{ ...l, qty: l.qty - 1 },
-                  withAddons({ ...l, uid: `${l.uid}-1-${Date.now()}`, qty: 1 })];
+          const had = l.customAddons ?? [];
+          const kept = had.filter((c) => customs.includes(c));
+          const { customAddons: _typed, ...rest } = l;
+          return [{ ...rest, ...(kept.length ? { customAddons: kept } : {}), qty: l.qty - 1 },
+                  withAddons({ ...l, uid: `${l.uid}-1-${Date.now()}`, qty: 1 },
+                    customs.filter((c) => !had.includes(c)))];
         }
-        return [withAddons(l)];
+        return [withAddons(l, customs)];
       });
       /* Now the same as a line already on the pad? One line of both, as
          the server joins them on Send - the pad and the bill must not
-         disagree about how many lines there are (the audit of 9 October). */
-      const same = (l: DraftLine) => JSON.stringify([
+         disagree about how many lines there are (the audit of 9 October).
+         A line with typed add-ons is its own plate, never joined (D27-291). */
+      const same = (l: DraftLine) => (l.customAddons?.length || l.extraFor) ? l.uid : JSON.stringify([
         l.itemId, l.variationId ?? null, l.note.trim(), l.moreChoiceIds ?? [],
         [...l.addonIds].sort(), (l.numberedAddons ?? []).map((a) => [a.id, a.qty]),
       ]);
@@ -284,13 +304,38 @@ export function OrderPad({
     setCustomising(null);
   };
 
+  /* Add-ons for a dish the kitchen already has (D27-291): each a pad line of
+     its own, "+ Extra papad, for Veg Biryani", sent with this round. */
+  const addTo = (dish: OrderLine, chosen: LineAddon[], customs: CustomAddon[]) => {
+    const name = dish.numberedAddons?.dish ?? dish.name;
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const extra = (i: number, line: Pick<DraftLine, "name" | "qty" | "unitPrice">, numberedId?: string): DraftLine => ({
+      uid: `x-${dish.id}-${stamp}-${i}`, itemId: "", note: "", addonIds: [], addonLabels: [],
+      ...line,
+      extraFor: { lineId: dish.id, dish: name, ...(numberedId ? { numberedId } : {}) },
+    });
+    setLines((prev) => [
+      ...prev,
+      ...chosen.map((a, i) => extra(i, { name: a.name, qty: a.qty, unitPrice: a.price }, a.id)),
+      ...customs.map((c, i) => extra(chosen.length + i, { name: c.name, qty: c.qty, unitPrice: c.price })),
+    ]);
+    setAddingTo(null);
+  };
+
   /* ── Send ─────────────────────────────────────────────────────── */
   const send = async () => {
     if (lines.length === 0 || sending) return;
     setSending(true);
     const result = await sendOrder(hotelId, {
       ...(orderId ? { orderId } : { outlet, tableId }),
-      lines: lines.map((l) => ({
+      lines: lines.map((l) => l.extraFor ? {
+        /* An add-on for a dish already sent (D27-291), under that dish. */
+        qty: l.qty,
+        extraFor: l.extraFor.lineId,
+        extras: l.extraFor.numberedId
+          ? [{ numberedId: l.extraFor.numberedId, qty: l.qty }]
+          : customInputs([{ name: l.name, price: l.unitPrice, qty: l.qty }]),
+      } : {
         itemId: l.itemId,
         qty: l.qty,
         ...(l.note ? { note: l.note } : {}),
@@ -300,7 +345,8 @@ export function OrderPad({
         ...(l.numberedAddons?.length
           ? { numberedAddons: l.numberedAddons.map((a) => ({ id: a.id, qty: a.qty })) }
           : {}),
-      })),
+        ...(l.customAddons?.length ? { extras: customInputs(l.customAddons) } : {}),
+      }),
       send: true,
       ...(eventChoice !== undefined ? { eventId: eventChoice } : {}),
     });
@@ -576,6 +622,34 @@ export function OrderPad({
                 onChange={setEventChoice}
               />
 
+              {/* THE TABLE'S DISHES ALREADY SENT (the owner's D27-291): a
+                  thali at the table, and the guest wants one thing more -
+                  Customise on it, and the add-on joins this round. */}
+              {sentDishes.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-2xs uppercase tracking-wide text-grey-500 mb-1.5">
+                    Already sent
+                  </p>
+                  <ul className="divide-y divide-grey-100 border-y border-grey-100">
+                    {sentDishes.map((d) => (
+                      <li key={d.id} className="flex items-center gap-2 py-1.5">
+                        <span className="flex-1 min-w-0 truncate text-sm text-ink-900">
+                          {d.qty}× {d.name}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Customise ${d.name}`}
+                          onClick={() => { setAddingTo(d); void numbered.refetch(); }}
+                          className="press h-11 px-3.5 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer shrink-0"
+                        >
+                          Customise
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {lines.length === 0 ? (
                 <p className="text-sm text-grey-600 leading-relaxed py-3">
                   Tap a dish to start. Nothing reaches the kitchen until you
@@ -588,8 +662,13 @@ export function OrderPad({
                       <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">
                           <span className="block text-base text-ink-900">
-                            {nameWithAddons(l.name, l.numberedAddons ?? [])}
+                            {l.extraFor ? `+ ${l.name}` : nameWithAddons(l.name, l.numberedAddons ?? [])}
                           </span>
+                          {l.extraFor && (
+                            <span className="block text-2xs text-grey-600">
+                              for {l.extraFor.dish}, already sent
+                            </span>
+                          )}
                           {(l.variationLabel || l.addonLabels.length > 0) && (
                             <span className="block text-2xs text-grey-600">
                               {[l.variationLabel, ...l.addonLabels]
@@ -603,9 +682,20 @@ export function OrderPad({
                           )}
                         </div>
                         <span className="tabular text-base text-ink-900 shrink-0">
-                          {money(l.unitPrice * l.qty)}
+                          {l.unitPrice === 0 && l.extraFor ? "Free" : money(l.unitPrice * l.qty)}
                         </span>
                       </div>
+                      {/* Its typed add-ons, each a line of its own (D27-291). */}
+                      {(l.customAddons ?? []).map((c, i) => (
+                        <div key={i} className="flex items-start gap-2 pl-3 mt-1">
+                          <span className="min-w-0 flex-1 text-sm text-grey-700">
+                            + {c.name} ×{c.qty}
+                          </span>
+                          <span className="tabular text-sm text-grey-700 shrink-0">
+                            {c.price === 0 ? "Free" : money(c.price * c.qty)}
+                          </span>
+                        </div>
+                      ))}
 
                       <div className="flex items-center gap-1.5 mt-2">
                         <button
@@ -627,15 +717,18 @@ export function OrderPad({
                         >
                           <Plus className="size-4" />
                         </button>
-                        {/* The numbered Add-ons on this dish (D27-289). */}
-                        <button
-                          type="button"
-                          aria-label={`Customise ${l.name}`}
-                          onClick={() => { setCustomising(l); void numbered.refetch(); }}
-                          className="press h-11 px-4 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer"
-                        >
-                          Customise
-                        </button>
+                        {/* The numbered Add-ons on this dish (D27-289), and typed
+                            ones (D27-291). Not on an add-on line itself. */}
+                        {!l.extraFor && (
+                          <button
+                            type="button"
+                            aria-label={`Customise ${l.name}`}
+                            onClick={() => { setCustomising(l); void numbered.refetch(); }}
+                            className="press h-11 px-4 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer"
+                          >
+                            Customise
+                          </button>
+                        )}
                         <div className="flex-1" />
                         <button
                           type="button"
@@ -681,7 +774,26 @@ export function OrderPad({
         base={customising ? customising.baseUnitPrice ?? customising.unitPrice : 0}
         addons={numbered.data ?? []}
         chosen={customising?.numberedAddons ?? []}
-        onDone={(chosen, scope) => { if (customising) customise(customising.uid, chosen, scope); }}
+        customs={customising?.customAddons ?? []}
+        onDone={(chosen, scope, customs) => {
+          if (customising) customise(customising.uid, chosen, scope, customs);
+        }}
+      />
+
+      {/* On a dish the kitchen already has (D27-291). */}
+      <CustomiseDialog
+        key={`sent-${addingTo?.id ?? "none"}`}
+        sent
+        loading={numbered.isFetching}
+        failed={numbered.isError}
+        onRetry={() => void numbered.refetch()}
+        open={addingTo !== null}
+        onOpenChange={(o) => { if (!o) setAddingTo(null); }}
+        dish={addingTo?.numberedAddons?.dish ?? addingTo?.name ?? ""}
+        base={addingTo?.unitPrice ?? 0}
+        addons={numbered.data ?? []}
+        chosen={[]}
+        onDone={(chosen, _scope, customs) => { if (addingTo) addTo(addingTo, chosen, customs); }}
       />
 
       <DishDialog

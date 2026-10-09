@@ -126,7 +126,8 @@ export default function BillPage() {
               <tr key={l.id}>
                 <td className={cn(DOC_TD, "tabular pr-1.5 w-6 whitespace-nowrap")}>{l.qty}×</td>
                 <td className={DOC_TD}>
-                  {l.name}
+                  {/* An add-on line under its dish (D27-291): "+ Extra papad". */}
+                  {l.extra ? `+ ${l.name}` : l.name}
                   {/* The owner's breakdown (D27-289): the one line, and under
                       it what the dish and each numbered add-on cost. */}
                   {l.numberedAddons && (

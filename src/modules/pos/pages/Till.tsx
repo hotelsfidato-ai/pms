@@ -19,7 +19,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -166,14 +166,20 @@ export default function TillPage() {
   };
 
   /* Customise (D27-289): the numbered add-ons on a dish the kitchen does not
-     have yet. The server refuses once it has (only before Send). */
-  const customise = async (chosen: LineAddon[], scope: "all" | "one") => {
+     have yet, folded in; typed ones as lines of their own (D27-291). On a
+     dish the kitchen HAS, every add-on is a line of its own under it, for
+     the next Send (D27-291). */
+  const customise = async (chosen: LineAddon[], scope: "all" | "one", customs: CustomAddon[]) => {
     if (!openId || !customising) return;
     setBusy(true);
     let res: Awaited<ReturnType<typeof setNumberedAddons>>;
     try {
-      res = await setNumberedAddons(hotelId, openId, customising.id,
-        chosen.map((a) => ({ id: a.id, qty: a.qty })), scope === "one" ? 1 : undefined);
+      res = customising.kotStatus !== "pending"
+        ? await addExtras(hotelId, openId, customising.id, [
+          ...chosen.map((a) => ({ numberedId: a.id, qty: a.qty })), ...customInputs(customs)])
+        : await setNumberedAddons(hotelId, openId, customising.id,
+          chosen.map((a) => ({ id: a.id, qty: a.qty })), scope === "one" ? 1 : undefined,
+          customInputs(customs));
     } catch {
       return toast.error("Not changed", "Try Customise again when the connection is back.");
     } finally {
@@ -454,8 +460,9 @@ export default function TillPage() {
         base={customising ? customising.numberedAddons?.base ?? customising.unitPrice : 0}
         addons={numbered.data ?? []}
         chosen={customising?.numberedAddons?.addons ?? []}
+        sent={Boolean(customising && customising.kotStatus !== "pending")}
         busy={busy}
-        onDone={(chosen, scope) => void customise(chosen, scope)}
+        onDone={(chosen, scope, customs) => void customise(chosen, scope, customs)}
       />
 
       <DishDialog
@@ -922,7 +929,7 @@ function OrderPanel({
   setBusy: (b: boolean) => void;
   onStrike: (lineId: string) => void;
   onFewer: (lineId: string) => void;
-  /** Customise a dish not yet sent (D27-289). */
+  /** Customise a dish: its add-ons (D27-289), or after Send lines of their own (D27-291). */
   onCustomise: (line: OrderLine) => void;
   /** The bill is finished — settled or closed unpaid. */
   onDone: () => void;
@@ -1086,13 +1093,14 @@ function OrderPanel({
                   line.voided && "opacity-45",
                   /* A side is indented under its dish, exactly as the
                      printed kitchen docket has it. Flat, the bill reads
-                     "Bhaaji Pau / Sides: Onions" as two dishes. */
-                  line.isAddon && "pl-5",
+                     "Bhaaji Pau / Sides: Onions" as two dishes. An add-on
+                     line (D27-291) the same. */
+                  line.parentLineId !== null && "pl-5",
                 )}
               >
                 <span className={cn(
                   "tabular text-sm shrink-0",
-                  line.isAddon ? "w-6 text-grey-500" : "w-7 text-grey-500",
+                  line.parentLineId !== null ? "w-6 text-grey-500" : "w-7 text-grey-500",
                 )}>
                   {line.qty}×
                 </span>
@@ -1100,13 +1108,13 @@ function OrderPanel({
                   <span
                     className={cn(
                       "block truncate",
-                      line.isAddon
+                      line.parentLineId !== null
                         ? "text-sm text-grey-600"
                         : "text-base text-ink-900",
                       line.voided && "line-through",
                     )}
                   >
-                    {line.name}
+                    {line.extra ? `+ ${line.name}` : line.name}
                   </span>
                   {/* The owner's breakdown (D27-289): what the dish and each
                       numbered add-on cost, under the one line. */}
@@ -1119,8 +1127,9 @@ function OrderPanel({
                 <span className="tabular text-base text-ink-900 shrink-0">
                   {money(line.qty * line.unitPrice)}
                 </span>
-                {/* Customise: before Send only (D27-289). */}
-                {!settled && !line.voided && !line.isAddon && line.kotStatus === "pending" && (
+                {/* Customise on any dish (D27-289); once the kitchen has it, its
+                    add-ons are lines of their own for the next Send (D27-291). */}
+                {!settled && !line.voided && line.parentLineId === null && (
                   <button
                     type="button"
                     onClick={() => onCustomise(line)}
@@ -1130,8 +1139,9 @@ function OrderPanel({
                     Customise
                   </button>
                 )}
-                {/* A side follows its dish (D27-192, Q8): only the dish has a −. */}
-                {!settled && !line.voided && !line.isAddon && (
+                {/* A side follows its dish (D27-192, Q8), and an add-on line's
+                    number is set when it goes on (D27-291): only the dish has a −. */}
+                {!settled && !line.voided && line.parentLineId === null && (
                   <button
                     type="button"
                     onClick={() => onFewer(line.id)}

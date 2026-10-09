@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 import { dateLong, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { toast, Button, StatusPill } from "@/components/ui";
-import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, type MenuItem, type OrderLine, type LineAddon, type CashId } from "@/modules/pos/data/till";
+import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type MenuItem, type OrderLine, type LineAddon, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
@@ -199,14 +199,20 @@ export default function TerminalPage() {
   };
 
   /* Customise (D27-289): the numbered add-ons on a dish the kitchen does not
-     have yet. The server refuses once it has (only before Send). */
-  const customise = async (chosen: LineAddon[], scope: "all" | "one") => {
+     have yet, folded in; typed ones as lines of their own (D27-291). On a
+     dish the kitchen HAS, every add-on is a line of its own under it, for
+     the next Send (D27-291). */
+  const customise = async (chosen: LineAddon[], scope: "all" | "one", customs: CustomAddon[]) => {
     if (!orderId || !customising) return;
     setBusy(true);
     let res: Awaited<ReturnType<typeof setNumberedAddons>>;
     try {
-      res = await setNumberedAddons(hotelId, orderId, customising.id,
-        chosen.map((a) => ({ id: a.id, qty: a.qty })), scope === "one" ? 1 : undefined);
+      res = customising.kotStatus !== "pending"
+        ? await addExtras(hotelId, orderId, customising.id, [
+          ...chosen.map((a) => ({ numberedId: a.id, qty: a.qty })), ...customInputs(customs)])
+        : await setNumberedAddons(hotelId, orderId, customising.id,
+          chosen.map((a) => ({ id: a.id, qty: a.qty })), scope === "one" ? 1 : undefined,
+          customInputs(customs));
     } catch {
       return toast.error("Not changed", "Try Customise again when the connection is back.");
     } finally {
@@ -772,15 +778,16 @@ export default function TerminalPage() {
                   <li key={l.id} className={cn(
                     "py-1", l.voided && "opacity-45",
                     /* A side sits under its dish and follows its quantity
-                       (D27-192, Q8), as on the Till. */
-                    l.isAddon && "pl-5",
+                       (D27-192, Q8), as on the Till; an add-on line too
+                       (D27-291), with its own. */
+                    l.parentLineId !== null && "pl-5",
                   )}>
                     <div className="flex items-center gap-2">
                       <span className={cn(
                         "flex-1 min-w-0 text-base text-ink-900 truncate",
                         l.voided && "line-through",
                       )}>
-                        {l.name}
+                        {l.extra ? `+ ${l.name}` : l.name}
                       </span>
                       <span className="tabular text-base text-ink-900">
                         {moneyPrecise(l.qty * l.unitPrice)}
@@ -825,7 +832,7 @@ export default function TerminalPage() {
                       </p>
                     )}
 
-                    {!l.voided && order.status === "open" && !l.isAddon ? (
+                    {!l.voided && order.status === "open" && l.parentLineId === null ? (
                       /* A STEPPER, not a strike-and-retype. "Make that two
                          rather than three" used to mean cancelling the line
                          and adding it again, which left a struck row on the
@@ -851,17 +858,16 @@ export default function TerminalPage() {
                         >
                           <Plus className="size-4" />
                         </button>
-                        {/* Customise: before Send only (D27-289). */}
-                        {l.kotStatus === "pending" && (
-                          <button
-                            type="button"
-                            onClick={() => { setCustomising(l); void numbered.refetch(); }}
-                            aria-label={`Customise ${l.name}`}
-                            className="press h-11 px-4 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer"
-                          >
-                            Customise
-                          </button>
-                        )}
+                        {/* Customise on any dish (D27-289); once the kitchen
+                            has it, add-ons are lines of their own (D27-291). */}
+                        <button
+                          type="button"
+                          onClick={() => { setCustomising(l); void numbered.refetch(); }}
+                          aria-label={`Customise ${l.name}`}
+                          className="press h-11 px-4 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer"
+                        >
+                          Customise
+                        </button>
                         <button
                           type="button"
                           onClick={() => takeOff(l, 0)}
@@ -872,9 +878,22 @@ export default function TerminalPage() {
                         </button>
                       </div>
                     ) : (
-                      <p className="text-2xs text-grey-500 tabular mt-0.5">
-                        {l.qty} × {moneyPrecise(l.unitPrice)}
-                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-2xs text-grey-500 tabular">
+                          {l.qty} × {l.extra && l.unitPrice === 0 ? "Free" : moneyPrecise(l.unitPrice)}
+                        </p>
+                        {/* An add-on line comes off by itself (D27-291). */}
+                        {l.extra && !l.voided && order.status === "open" && (
+                          <button
+                            type="button"
+                            onClick={() => takeOff(l, 0)}
+                            aria-label={`Strike ${l.name}`}
+                            className="press size-11 grid place-items-center rounded-full text-grey-500 hover:text-brand-red-700 hover:bg-brand-red-50 ml-auto cursor-pointer"
+                          >
+                            <X className="size-4" />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </li>
                 ))}
@@ -1096,8 +1115,9 @@ export default function TerminalPage() {
         base={customising ? customising.numberedAddons?.base ?? customising.unitPrice : 0}
         addons={numbered.data ?? []}
         chosen={customising?.numberedAddons?.addons ?? []}
+        sent={Boolean(customising && customising.kotStatus !== "pending")}
         busy={busy}
-        onDone={(chosen, scope) => void customise(chosen, scope)}
+        onDone={(chosen, scope, customs) => void customise(chosen, scope, customs)}
       />
 
       <DishDialog

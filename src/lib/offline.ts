@@ -153,7 +153,7 @@ const RULES: Rule[] = [
      sent after it has, and the Till sat "busy" on the held error. Refused,
      with the reason, ahead of the orders rule below. */
   {
-    test: /\/till\/orders\/[^/]+\/lines\/[^/]+\/numbered-addons$/,
+    test: /\/till\/orders\/[^/]+\/lines\/[^/]+\/(numbered-addons|extras)$/,
     tier: "refuse",
     label: "Customise",
     reason:

@@ -14,6 +14,7 @@ import {
   numberedFor, nameWithAddons, priceWithAddons, lineAddons,
   type NumberedChoice, type LineAddons,
 } from "./numberedAddons.ts";
+import { extrasFor, insertExtras, type ExtraInput } from "./extras.ts";
 import { phoneProblem, priceProblem } from "../../validate.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -1728,16 +1729,19 @@ async function readOrder(client: Client, orderId: string) {
     parent_line_id: string | null;
     variation_id: string | null; addon_id: string | null;
     numbered_addons: LineAddons | null;
+    extra_kind: "custom" | "numbered" | null;
   }>(
     `select l.id::text, l.name, l.qty::text, l.unit_price::text,
             l.tax_rate::text, l.tax_scheme, l.note, l.voided, l.kot_status,
             s.full_name as added_by_name,
             l.parent_line_id::text, l.variation_id::text, l.addon_id::text,
-            l.numbered_addons
+            l.numbered_addons, l.extra_kind
        from pos_order_lines l
        left join staff s on s.id = l.added_by
       where l.order_id = $1
-      order by l.id`,
+      /* Each dish, then what hangs under it: an add-on put on a dish after
+         three more dishes (D27-291) still reads under ITS dish. */
+      order by coalesce(l.parent_line_id, l.id), l.parent_line_id nulls first, l.id`,
     [orderId],
   );
 
@@ -1832,6 +1836,10 @@ async function readOrder(client: Client, orderId: string) {
          the bill prints "Veg Biryani 310 · Kebab +120" under the line, and
          Customise opens on them. Null when it has none. */
       numberedAddons: l.numbered_addons,
+      /* An add-on as a line of its own under parentLineId (D27-291): custom
+         (typed) or numbered (on a dish already sent). Null on a dish or a
+         side. Its own quantity; the bill reads "+ Extra papad". */
+      extra: l.extra_kind,
     })),
     net: Number(total[0]!.net),
     /* The discount as APPLIED, which is what the arithmetic used. type and
@@ -2129,6 +2137,12 @@ export interface LineInput {
       Biryani with add-on Kebab". Optional: a round queued offline before
       them carries none, and goes on as it was. */
   numberedAddons?: NumberedChoice[];
+  /** Add-ons as lines of their own under the dish (D27-291): typed ones,
+      or numbered ones. With `extraFor`, under a dish already on this
+      order instead of a new one - a dish the kitchen may already have. */
+  extras?: ExtraInput[];
+  /** The line, already on this order, that `extras` go under (D27-291). */
+  extraFor?: string;
 }
 
 async function addOneLine(
@@ -2146,7 +2160,9 @@ async function addOneLine(
   if (!Number.isFinite(qty) || qty <= 0) {
     return { ok: false, reason: "A quantity must be more than nothing." };
   }
-  if (!input.itemId) return { ok: false, reason: "Which item?" };
+  if (!input.itemId && input.extraFor === undefined) {
+    return { ok: false, reason: "Which item?" };
+  }
 
 
     /* Refuse in the API as well as the database. The trigger is the
@@ -2163,6 +2179,11 @@ async function addOneLine(
         `This order is ${order[0].status}. A bill that has been paid cannot ` +
           `take another item - correct it with a credit, not by editing it.`,
       );
+    }
+
+    /* Add-ons on a dish already on this bill (D27-291), sent or not. */
+    if (input.extraFor !== undefined) {
+      return extrasUnder(client, session, hotelId, orderId, input.extraFor, input.extras);
     }
 
     const { rows: item } = await client.query<{
@@ -2374,6 +2395,9 @@ async function addOneLine(
        read from what was chosen, not from today's list. */
     const numbered = await numberedFor(client, hotelId, input.numberedAddons);
     if (!numbered.ok) return numbered;
+    /* And the add-ons as lines of their own (D27-291), also before. */
+    const extras = await extrasFor(client, hotelId, input.extras);
+    if (!extras.ok) return extras;
     const kept: LineAddons | null = lineAddons(name, unitPrice, numbered.addons);
     name = nameWithAddons(name, numbered.addons);
     unitPrice = priceWithAddons(unitPrice, numbered.addons);
@@ -2387,7 +2411,9 @@ async function addOneLine(
          onions is one more of it - with sides, this started a new line
          every time, so the same dish ordered twice read as two. The dish
          and its sides go up together. */
-      const { rows: same } = await client.query<{ id: string }>(
+      /* A dish with a custom add-on of its own (D27-291) is never "one more"
+         of anything: the papad is for this plate. */
+      const { rows: same } = extras.extras.length > 0 ? { rows: [] } : await client.query<{ id: string }>(
         `update pos_order_lines
             set qty = qty + $1
           where id = (
@@ -2406,8 +2432,13 @@ async function addOneLine(
                and l.extra_choice_ids = $7::uuid[]
                and array(select a.addon_id from pos_order_lines a
                           where a.parent_line_id = l.id and not a.voided
+                            and a.addon_id is not null
                           order by 1)
                  = array(select unnest($6::uuid[]) order by 1)
+               /* Nor one carrying add-ons of its own (D27-291). */
+               and not exists (select 1 from pos_order_lines x
+                                where x.parent_line_id = l.id and not x.voided
+                                  and x.extra_kind is not null)
                /* And exactly these numbered add-ons (D27-289): a Biryani with
                   Kebab is one more of a Biryani with Kebab, never of a plain
                   one. Kept in number order, so the same choice compares equal. */
@@ -2421,7 +2452,7 @@ async function addOneLine(
       if (same[0]) {
         await client.query(
           `update pos_order_lines set qty = qty + $1
-            where parent_line_id = $2 and not voided`,
+            where parent_line_id = $2 and not voided and addon_id is not null`,
           [qty, same[0].id]);
       }
       const bumped = same.length;
@@ -2472,8 +2503,53 @@ async function addOneLine(
            item[0].tax_rate, session.staffId, item[0].tax_scheme],
         );
       }
+      /* Its add-ons as lines of their own (D27-291), each with its own
+         quantity, at the dish's tax. */
+      await insertExtras(client, {
+        orderId, hotelId, parentId, taxRate: item[0].tax_rate!,
+        taxScheme: item[0].tax_scheme, staffId: session.staffId,
+      }, extras.extras);
     }
 
+  return null;
+}
+
+/* ── Add-ons under a dish already on the bill (D27-291) ─────────────
+   The owner: "a thali comes to the table; they want one more thing from it
+   that we don't offer" - a typed add-on, or one of the numbered list, under
+   the dish, sent or not. It waits for the next Send like any new dish, and
+   that KOT names the dish it is for. At the dish's own tax. Every refusal
+   before the first write (root MEMORY 243). */
+async function extrasUnder(
+  client: Client, session: { staffId: string }, hotelId: string, orderId: string,
+  lineId: unknown, wanted: unknown,
+): Promise<{ ok: false; reason: string } | null> {
+  if (typeof lineId !== "string" || !/^\d+$/.test(lineId)) return refuse("Which dish is it for?");
+  const extras = await extrasFor(client, hotelId, wanted);
+  if (!extras.ok) return extras;
+  if (extras.extras.length === 0) return refuse("Which add-ons?");
+
+  const { rows } = await client.query<{
+    name: string; item_id: string | null; parent_line_id: string | null; voided: boolean;
+    tax_rate: string; tax_scheme: string; numbered_addons: LineAddons | null;
+  }>(
+    `select name, item_id::text, parent_line_id::text, voided, tax_rate::text,
+            tax_scheme, numbered_addons
+       from pos_order_lines where id = $1 and order_id = $2
+       for update`,
+    [lineId, orderId],
+  );
+  const dish = rows[0];
+  if (!dish) return refuse("That dish is not on this bill.");
+  if (dish.parent_line_id || !dish.item_id) return refuse("Add-ons go on a dish, not on a side.");
+  if (dish.voided) {
+    return refuse(`${dish.numbered_addons?.dish ?? dish.name} was struck. Nothing was added to it.`);
+  }
+
+  await insertExtras(client, {
+    orderId, hotelId, parentId: lineId, taxRate: dish.tax_rate,
+    taxScheme: dish.tax_scheme, staffId: session.staffId,
+  }, extras.extras);
   return null;
 }
 
@@ -3205,6 +3281,45 @@ till.get("/:code/till/numbered-addons", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
+/* ── The custom add-ons used (the owner's D27-291) ──────────────────
+   What staff typed in Customise these thirty days, one row per name and
+   price, most used first, with who: the Add-ons tab lists them so the
+   common ones can become numbered add-ons. Read only; nothing joins the menu
+   by itself. Struck lines are not counted - they were not sold. */
+const CUSTOM_DAYS = 30;
+
+till.get("/:code/till/custom-addons-used", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{
+      name: string; price: string; times: number; qty: string;
+      last_at: string; who: string | null;
+    }>(
+      `select min(l.name) as name, l.unit_price::text as price,
+              count(*)::int as times, sum(l.qty)::text as qty,
+              max(l.added_at)::text as last_at,
+              string_agg(distinct s.full_name, ', ') as who
+         from pos_order_lines l
+         left join staff s on s.id = l.added_by
+        where l.hotel_id = $1 and l.extra_kind = 'custom' and not l.voided
+          and l.added_at >= now() - make_interval(days => $2)
+        group by lower(l.name), l.unit_price
+        order by count(*) desc, max(l.added_at) desc
+        limit 100`,
+      [hotelId, CUSTOM_DAYS],
+    );
+    return {
+      days: CUSTOM_DAYS,
+      used: rows.map((r) => ({
+        name: r.name, price: Number(r.price), times: r.times, qty: Number(r.qty),
+        lastAt: r.last_at, by: r.who,
+      })),
+    };
+  });
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
 till.post("/:code/till/numbered-addons", async (c) => {
   type Body = { number?: number; name?: string; description?: string; price?: number | string | null; free?: boolean };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
@@ -3423,14 +3538,17 @@ till.get("/:code/till/floor", async (c) => {
               payable::text,
               /* Dishes the kitchen has made Ready and nobody has Taken
                  (D27-221): what the waiter walks to the pass for. Dishes,
-                 not their sides. */
+                 not their sides - but an add-on line (D27-291) is carried
+                 out on its own, so it counts. */
               (select coalesce(sum(l.qty), 0) from pos_order_lines l
                 where l.order_id = f.order_id and l.kot_status = 'ready'
-                  and not l.voided and l.parent_line_id is null)::text as ready,
+                  and not l.voided
+                  and (l.parent_line_id is null or l.extra_kind is not null))::text as ready,
               /* The same dishes, for the badge's one-tap Taken (D27-222). */
               array(select l.id::text from pos_order_lines l
                      where l.order_id = f.order_id and l.kot_status = 'ready'
-                       and not l.voided and l.parent_line_id is null) as ready_ids
+                       and not l.voided
+                       and (l.parent_line_id is null or l.extra_kind is not null)) as ready_ids
          from app.pos_floor($1) f`,
       [outlet[0].id],
     );
@@ -4651,19 +4769,25 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
     const { rows: line } = await client.query<{
       qty: string; sent: boolean; addon_ids: string[]; extra_choice_ids: string[];
       item_id: string | null; variation_id: string | null; note: string | null;
-      numbered_addons: LineAddons | null;
+      numbered_addons: LineAddons | null; extra_kind: string | null;
     }>(
       `select qty::text, kot_status <> 'pending' as sent,
               array(select a.addon_id::text from pos_order_lines a
-                     where a.parent_line_id = l.id and not a.voided) as addon_ids,
+                     where a.parent_line_id = l.id and not a.voided
+                       and a.addon_id is not null) as addon_ids,
               item_id::text, variation_id::text, note, extra_choice_ids::text[],
-              numbered_addons
+              numbered_addons, extra_kind
          from pos_order_lines l
         where id = $1 and order_id = $2 and not voided
         for update`,
       [c.req.param("lineId"), orderId],
     );
     if (!line[0]) return refuse("That line is struck, or is not here.");
+    /* An add-on line's number is set when it goes on (D27-291): strike it,
+       and add it again with the right number. */
+    if (line[0].extra_kind && qty > 0) {
+      return refuse("An add-on's number is set when it goes on. Strike it and add it again.");
+    }
     /* MORE of a dish the kitchen has is a new line, for the next docket -
        the same as tapping it again (the owner, 28 September), sides and
        all (D27-192, Q7). */
@@ -4724,16 +4848,19 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
            from pos_order_lines where id = $1`,
         [c.req.param("lineId"), qty, session.staffId, reason],
       );
-      /* Its sides go with it (D27-189): two plates, two lots of onions. */
+      /* Its sides go with it (D27-189): two plates, two lots of onions.
+         Its add-on lines keep their own number (D27-291). */
       await client.query(
         `update pos_order_lines set qty = $1
-          where (id = $2 or parent_line_id = $2) and not voided`,
+          where (id = $2 or (parent_line_id = $2 and addon_id is not null))
+            and not voided`,
         [qty, c.req.param("lineId")],
       );
     } else {
       const { rowCount } = await client.query(
         `update pos_order_lines set qty = $1
-          where (id = $2 or parent_line_id = $2) and order_id = $3 and not voided`,
+          where (id = $2 or (parent_line_id = $2 and addon_id is not null))
+            and order_id = $3 and not voided`,
         [qty, c.req.param("lineId"), orderId],
       );
       if (!rowCount) return refuse("That line is struck, or is not here.");
@@ -4758,7 +4885,7 @@ till.post("/:code/till/orders/:id/lines/:lineId/numbered-addons", async (c) => {
   /* `just: 1` (the owner's D27-290): on a line of several, the add-ons go
      on ONE of them - "3 Biryani, one with Kebab" - which is split off as
      its own line; the rest stay as they were. Absent: every one. */
-  type Body = { numberedAddons?: NumberedChoice[]; just?: number };
+  type Body = { numberedAddons?: NumberedChoice[]; just?: number; extras?: ExtraInput[] };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
   const result = await withSession(c.get("subject"), async (client, session) => {
@@ -4780,12 +4907,15 @@ till.post("/:code/till/orders/:id/lines/:lineId/numbered-addons", async (c) => {
       numbered_addons: LineAddons | null; item_id: string | null;
       parent_line_id: string | null; qty: string; variation_id: string | null;
       extra_choice_ids: string[]; note: string | null; addon_ids: string[];
+      tax_rate: string; tax_scheme: string;
     }>(
       `select l.name, l.unit_price::text, l.kot_status, l.numbered_addons,
               l.item_id::text, l.parent_line_id::text, l.qty::text,
               l.variation_id::text, l.extra_choice_ids::text[], l.note,
+              l.tax_rate::text, l.tax_scheme,
               array(select a.addon_id::text from pos_order_lines a
-                     where a.parent_line_id = l.id and not a.voided) as addon_ids
+                     where a.parent_line_id = l.id and not a.voided
+                       and a.addon_id is not null) as addon_ids
          from pos_order_lines l
         where l.id = $1 and l.order_id = $2 and not l.voided
         for update`,
@@ -4805,6 +4935,10 @@ till.post("/:code/till/orders/:id/lines/:lineId/numbered-addons", async (c) => {
        quietly reprice the dish (the audit of 9 October). */
     if (!Array.isArray(input.numberedAddons)) return refuse("Which add-ons?");
     if (input.just !== undefined && input.just !== 1) return refuse("Just one, or all of them?");
+    /* Typed add-ons chosen in the same Customise (D27-291): lines of their
+       own under the dish - or under the one split off, on Just 1. */
+    const extras = await extrasFor(client, hotelId, input.extras);
+    if (!extras.ok) return extras;
 
     /* JUST ONE of several: through the one place a dish goes on, so it is
        priced, named and merged as any dish is - with this line's variation,
@@ -4820,11 +4954,12 @@ till.post("/:code/till/orders/:id/lines/:lineId/numbered-addons", async (c) => {
         addonIds: l.addon_ids,
         ...(l.note ? { note: l.note } : {}),
         numberedAddons: input.numberedAddons,
+        ...(input.extras ? { extras: input.extras } : {}),
       });
       if (refused) return refused;
       await client.query(
         `update pos_order_lines set qty = qty - 1
-          where (id = $1 or parent_line_id = $1) and not voided`,
+          where (id = $1 or (parent_line_id = $1 and addon_id is not null)) and not voided`,
         [c.req.param("lineId")]);
       return { ok: true as const, ...(await readOrder(client, orderId))! };
     }
@@ -4841,7 +4976,36 @@ till.post("/:code/till/orders/:id/lines/:lineId/numbered-addons", async (c) => {
       [nameWithAddons(dish, numbered.addons), priceWithAddons(base, numbered.addons),
        kept === null ? null : JSON.stringify(kept), c.req.param("lineId")],
     );
+    await insertExtras(client, {
+      orderId, hotelId, parentId: c.req.param("lineId"), taxRate: l.tax_rate,
+      taxScheme: l.tax_scheme, staffId: session.staffId,
+    }, extras.extras);
 
+    return { ok: true as const, ...(await readOrder(client, orderId))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── Add-ons under a dish on the bill, from the Till and the Terminal ──
+   (the owner's D27-291). The dish may already be with the kitchen: each
+   add-on is a line of its own under it and waits for the next Send. The pad
+   sends the same through the batch, with the round (extraFor). Its own
+   address, so it is refused offline as Customise is (src/lib/offline.ts):
+   held, a retry would add it twice. */
+till.post("/:code/till/orders/:id/lines/:lineId/extras", async (c) => {
+  const input = await c.req.json<{ extras?: ExtraInput[] }>()
+    .catch(() => ({}) as { extras?: ExtraInput[] });
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+    const refused = await addOneLine(client, session, hotelId, orderId, {
+      extraFor: c.req.param("lineId"), ...(input.extras ? { extras: input.extras } : {}),
+    });
+    if (refused) return refused;
     return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
 
@@ -5353,14 +5517,29 @@ till.get("/:code/till/orders/:id/kot/:no", async (c) => {
     );
     const numberedOf = new Map(numberedRows.map((r) => [r.id, r.numbered_addons]));
 
+    /* AN ADD-ON FOR A DISH ON AN EARLIER KOT (D27-291): its dish is not on
+       this slip, so the slip says which it is for - "+ Extra papad, for Veg
+       Thali (KOT 12)". */
+    const here = new Set(rows.map((r) => r.line_id));
+    const away = [...new Set(rows.flatMap((r) =>
+      r.parent_id && !r.is_addon && !here.has(r.parent_id) ? [r.parent_id] : []))];
+    const { rows: dishes } = away.length === 0 ? { rows: [] } : await client.query<{
+      id: string; name: string; kot_no: number | null;
+    }>(
+      `select id::text, coalesce(numbered_addons ->> 'dish', name) as name, kot_no
+         from pos_order_lines where id = any($1::bigint[])`,
+      [away]);
+    const dishOf = new Map(dishes.map((d) => [d.id, d]));
+
     /* What came off this docket after it was sent, and why (D27-119): a
        reprint tells the kitchen to stop, with the manager's reason. */
     const { rows: struck } = await client.query<{
       name: string; qty: string; reason: string | null;
     }>(
-      `select name, qty::text, void_reason as reason from pos_order_lines
+      `select case when extra_kind is null then name else '+ ' || name end as name,
+              qty::text, void_reason as reason from pos_order_lines
         where order_id = $1 and kot_no = $2 and voided and was_sent_when_voided
-          and parent_line_id is null
+          and (parent_line_id is null or extra_kind is not null)
         order by voided_at`,
       [orderId, kotNo],
     );
@@ -5384,6 +5563,12 @@ till.get("/:code/till/orders/:id/kot/:no", async (c) => {
           isAddon: r.is_addon,
           /* "+ Kebab", "+ Kebab ×2": per ONE of the dish, as chosen. */
           plus: (numbered?.addons ?? []).map((a) => ({ name: a.name, qty: a.qty })),
+          /* An add-on as a line of its own (D27-291), with its own number. */
+          extra: r.parent_id !== null && !r.is_addon,
+          /* Its dish, when that went on an earlier KOT. */
+          ...(r.parent_id && dishOf.has(r.parent_id) ? {
+            for: { name: dishOf.get(r.parent_id)!.name, kotNo: dishOf.get(r.parent_id)!.kot_no },
+          } : {}),
         };
       }),
       struck: struck.map((r) => ({ name: r.name, qty: Number(r.qty), reason: r.reason })),
@@ -5596,10 +5781,15 @@ till.get("/:code/kitchen", async (c) => {
       prep_minutes: number | null;
       course: number | null;
       numbered_addons: LineAddons | null;
+      for_dish: string | null;
     }>(
       `select l.id::text, o.order_no, o.table_ref, o.order_type,
               ou.code as outlet, l.name, l.qty::text, l.note,
               l.kot_status, l.numbered_addons,
+              /* An add-on line's dish (D27-291): "+ Extra papad, for Veg Thali". */
+              case when l.extra_kind is not null
+                   then (select coalesce(p.numbered_addons ->> 'dish', p.name)
+                           from pos_order_lines p where p.id = l.parent_line_id) end as for_dish,
               extract(epoch from (now() - l.kot_sent_at))::int::text as waited,
               l.voided, l.was_sent_when_voided, l.void_reason,
               /* What this dish SHOULD take, from 079. Null when nobody
@@ -5637,6 +5827,8 @@ till.get("/:code/kitchen", async (c) => {
            docket prints them - one ticket, the "+ Kebab" not lost in a name. */
         name: r.numbered_addons?.dish ?? r.name,
         plus: (r.numbered_addons?.addons ?? []).map((a) => ({ name: a.name, qty: a.qty })),
+        /* An add-on as a line of its own (D27-291): the dish it goes with. */
+        forDish: r.for_dish,
         qty: Number(r.qty),
         note: r.note,
         status: r.kot_status,

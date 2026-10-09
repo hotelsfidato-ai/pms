@@ -59,6 +59,10 @@ describe("what must never happen offline", () => {
     const customise = ruleFor(`${P}/till/orders/abc/lines/42/numbered-addons`, "POST");
     expect(customise.tier).toBe("refuse");
     expect(customise.reason).toMatch(/Customise again when the connection is back/);
+    /* An add-on on a dish from the Till (D27-291): held, a retry adds it
+       twice. The pad's go with its round, through the batch, and queue. */
+    expect(ruleFor(`${P}/till/orders/abc/lines/42/extras`, "POST").tier).toBe("refuse");
+    expect(ruleFor(`${P}/till/orders/batch`, "POST").tier).toBe("queue");
   });
 
   it("refuses confirming a banquet function, but not the enquiry", () => {

@@ -52,8 +52,24 @@ export function DocketSlip({ d }: { d: Docket }) {
       </div>
 
       <ul className="mt-1.5">
-        {d.lines.filter((l) => !l.isAddon).map((dish) => {
-          const sides = d.lines.filter((l) => l.parentId === dish.id);
+        {/* Each dish with what hangs under it. An add-on line whose dish
+            went on an earlier KOT (D27-291) stands on its own, naming it. */}
+        {d.lines.filter((l) => l.parentId === null || l.for).map((dish) => {
+          if (dish.for) {
+            return (
+              <li key={dish.id} className="mb-2">
+                <div className="flex">
+                  <span className="flex-1 font-bold">+ {dish.name}</span>
+                  <span className="w-10 text-right font-bold tabular">{dish.qty}</span>
+                </div>
+                <div className="pl-4">
+                  for: {dish.for.name}{dish.for.kotNo !== null ? ` (KOT ${dish.for.kotNo})` : ""}
+                </div>
+              </li>
+            );
+          }
+          const sides = d.lines.filter((l) => l.parentId === dish.id && !l.extra);
+          const extras = d.lines.filter((l) => l.parentId === dish.id && l.extra);
           return (
             <li key={dish.id} className="mb-2">
               <div className="flex">
@@ -76,6 +92,13 @@ export function DocketSlip({ d }: { d: Docket }) {
               {sides.map((s) => (
                 <div key={s.id} className="pl-4 italic">
                   {s.name} - {s.qty}
+                </div>
+              ))}
+              {/* Its add-on lines (D27-291), bold, each with its own number. */}
+              {extras.map((x) => (
+                <div key={x.id} className="flex pl-4 font-bold">
+                  <span className="flex-1">+ {x.name}</span>
+                  <span className="w-10 text-right tabular">{x.qty}</span>
                 </div>
               ))}
               {dish.note && (
