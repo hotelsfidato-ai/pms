@@ -6539,6 +6539,23 @@ copy will see of theirs.**
 
 ---
 
+### 392 · MINE: the add-on list I added trusted its first read for a week, so the owner's screens never saw the add-ons (9 October)
+
+D27-289 gave the order screens a new read, `["till-addons", hotel]`, and put it in App.tsx's
+PERSISTED beside the menu. The app's default is `staleTime: Infinity` with a week's `gcTime`, and
+the saved copy is restored on reload. A browser that opened Tables before the first add-on existed
+kept an EMPTY list; the add-on was made from another browser (the agent's own), which refreshed only
+its own copy; the owner's Customise said "No add-ons yet" after every reload - "the options are not
+coming for me". Every gate was green: each test made a fresh QueryClient. Fixed by
+`numberedAddonsQuery` (asked again on open and on focus, re-asked when Customise opens) and, on the
+owner's D27-290, the same for the menu, which had the same fault for dishes. Guarded by a test that
+seeds the cache with the old list first, and fails without the fix. **The rule:** a new query that
+another device can change is not "data like the rest": decide its staleness out loud, and test it
+with a cache that already holds yesterday's answer - a fresh QueryClient proves nothing about a
+device that has been open for a week.
+
+---
+
 ### 391 · MINE: text pushed through the shell lost its backslashes, so four "proofs" and two doc edits matched nothing (9 October)
 
 Proving the numbered add-ons' guards fail first (AGENTS habit 2), I mutated files with one-line
