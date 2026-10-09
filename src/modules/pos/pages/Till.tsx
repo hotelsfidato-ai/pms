@@ -19,7 +19,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, getNumberedAddons, setNumberedAddons, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -81,15 +81,9 @@ export default function TillPage() {
     queryKey: ["till-orders", hotelId, BUSINESS_DATE],
     queryFn: () => listOrders(hotelId),
   });
-  const menu = useQuery({
-    queryKey: ["till-menu", hotelId],
-    queryFn: () => getMenu(hotelId),
-  });
+  const menu = useQuery(tillMenuQuery(hotelId));
   /* The numbered Add-ons (D27-289) for Customise. */
-  const numbered = useQuery({
-    queryKey: ["till-addons", hotelId],
-    queryFn: () => getNumberedAddons(hotelId),
-  });
+  const numbered = useQuery(numberedAddonsQuery(hotelId));
   const [customising, setCustomising] = useState<OrderLine | null>(null);
   const current = useQuery({
     queryKey: ["till-order", hotelId, openId],
@@ -173,12 +167,18 @@ export default function TillPage() {
 
   /* Customise (D27-289): the numbered add-ons on a dish the kitchen does not
      have yet. The server refuses once it has (only before Send). */
-  const customise = async (chosen: LineAddon[]) => {
+  const customise = async (chosen: LineAddon[], scope: "all" | "one") => {
     if (!openId || !customising) return;
     setBusy(true);
-    const res = await setNumberedAddons(hotelId, openId, customising.id,
-      chosen.map((a) => ({ id: a.id, qty: a.qty })));
-    setBusy(false);
+    let res: Awaited<ReturnType<typeof setNumberedAddons>>;
+    try {
+      res = await setNumberedAddons(hotelId, openId, customising.id,
+        chosen.map((a) => ({ id: a.id, qty: a.qty })), scope === "one" ? 1 : undefined);
+    } catch {
+      return toast.error("Not changed", "Try Customise again when the connection is back.");
+    } finally {
+      setBusy(false);
+    }
     if (!res.ok) return toast.error("Not changed", res.reason);
     setCustomising(null);
     applyOrder(res.order);
@@ -406,7 +406,7 @@ export default function TillPage() {
               setBusy={setBusy}
               onStrike={askStrike}
               onFewer={fewer}
-              onCustomise={setCustomising}
+              onCustomise={(line) => { setCustomising(line); void numbered.refetch(); }}
               /* Settling or abandoning FINISHES a bill, so the panel
                  closes. Discounting it does not — the biller is still
                  standing at the same order and about to take payment. */
@@ -443,6 +443,11 @@ export default function TillPage() {
         </div>
       </div>
       <CustomiseDialog
+        key={customising?.id ?? "none"}
+        qty={customising?.qty ?? 1}
+        loading={numbered.isFetching}
+        failed={numbered.isError}
+        onRetry={() => void numbered.refetch()}
         open={customising !== null}
         onOpenChange={(o) => { if (!o) setCustomising(null); }}
         dish={customising?.numberedAddons?.dish ?? customising?.name ?? ""}
@@ -450,7 +455,7 @@ export default function TillPage() {
         addons={numbered.data ?? []}
         chosen={customising?.numberedAddons?.addons ?? []}
         busy={busy}
-        onDone={(chosen) => void customise(chosen)}
+        onDone={(chosen, scope) => void customise(chosen, scope)}
       />
 
       <DishDialog

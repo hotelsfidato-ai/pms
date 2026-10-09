@@ -163,6 +163,35 @@ describe("Tables: Customise on the pad", () => {
   });
 });
 
+describe("Tables: a list read before the add-on was made", () => {
+  it("is asked again, so Customise offers the add-on (the owner: \"the options are not coming\")", async () => {
+    server({
+      [`GET ${API}/till/menu`]: () => ({ categories: [{
+        id: "c-1", name: "Main course", prepMinutes: null, course: null, items: [biryani] }] }),
+      [`GET ${API}/till/numbered-addons`]: () => ({ addons: [KEBAB] }),
+    });
+    /* This device read the list while it was empty - made on another device
+       since - and the app trusts a read forever (staleTime Infinity). */
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    qc.setQueryData(["till-addons", HOTEL], []);
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={[`/pos/${HOTEL}/tables`]}>
+          <Routes><Route path="/pos/:code/tables" element={
+            <OrderPad hotelId={HOTEL} outlet="REST" tableId="t-7" tableLabel="Table 7"
+                      open onOpenChange={() => {}} onSent={() => {}} />
+          } /></Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /Veg Biryani/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Customise Veg Biryani" }));
+    const panel = await screen.findByRole("dialog", { name: "Customise Veg Biryani" });
+    expect(await within(panel).findByRole("button", { name: /Add-on 2, Kebab/ })).toBeTruthy();
+    expect(panel.textContent).not.toContain("No add-ons yet");
+  });
+});
+
 describe("the Till: Customise before Send, and the breakdown", () => {
   it("shows the dish's breakdown, offers Customise only on what the kitchen does not have yet, and saves the set", async () => {
     const calls = anOrder();
@@ -178,6 +207,139 @@ describe("the Till: Customise before Send, and the breakdown", () => {
     fireEvent.click(within(panel).getByRole("button", { name: "Done" }));
     await vi.waitFor(() => expect(calls.find((c) => c.path.endsWith("/numbered-addons") && c.method === "POST"))
       .toMatchObject({ body: { numberedAddons: [{ id: "na-2", qty: 1 }, { id: "na-3", qty: 1 }] } }));
+  });
+});
+
+describe("a line of several: all of them, or just one (the owner's D27-290)", () => {
+  const pad = (calls = server({
+    [`GET ${API}/till/menu`]: () => ({ categories: [{
+      id: "c-1", name: "Main course", prepMinutes: null, course: null, items: [biryani] }] }),
+    [`GET ${API}/till/numbered-addons`]: () => ({ addons: [KEBAB] }),
+    [`POST ${API}/till/orders/batch`]: () =>
+      ({ id: "o-9", orderNo: "12", lines: [], ok: true, opened: true, sent: 1, kotNo: 7 }),
+  })) => {
+    renderAt(`/pos/${HOTEL}/tables`, "/pos/:code/tables", (
+      <OrderPad hotelId={HOTEL} outlet="REST" tableId="t-7" tableLabel="Table 7"
+                open onOpenChange={() => {}} onSent={() => {}} />
+    ));
+    return calls;
+  };
+
+  it("asks which - Done waits - and 'All 3' says it goes on each of the 3", async () => {
+    pad();
+    const tile = await screen.findByRole("button", { name: /Veg Biryani/ });
+    for (let tap = 0; tap < 3; tap++) fireEvent.click(tile);
+    fireEvent.click(await screen.findByRole("button", { name: "Customise Veg Biryani" }));
+    const panel = await screen.findByRole("dialog", { name: "Customise Veg Biryani" });
+    fireEvent.click(await within(panel).findByRole("button", { name: /Add-on 2, Kebab/ }));
+    expect(within(panel).getByRole("button", { name: "Done" }), "nothing chosen for them")
+      .toHaveProperty("disabled", true);
+    fireEvent.click(within(panel).getByRole("radio", { name: "All 3" }));
+    expect(panel.textContent).toContain("On each of the 3: ₹430 each, ₹1,290 in all.");
+    expect(within(panel).getByRole("button", { name: "Done" })).toHaveProperty("disabled", false);
+  });
+
+  it("'Just 1' splits one off: 2 plain and 1 with Kebab, and Send carries both", async () => {
+    const calls = pad();
+    const tile = await screen.findByRole("button", { name: /Veg Biryani/ });
+    for (let tap = 0; tap < 3; tap++) fireEvent.click(tile);
+    fireEvent.click(await screen.findByRole("button", { name: "Customise Veg Biryani" }));
+    const panel = await screen.findByRole("dialog", { name: "Customise Veg Biryani" });
+    fireEvent.click(await within(panel).findByRole("button", { name: /Add-on 2, Kebab/ }));
+    fireEvent.click(within(panel).getByRole("radio", { name: "Just 1" }));
+    expect(panel.textContent).toContain("One of them, ₹430, as its own line; the other 2 stay as they are.");
+    fireEvent.click(within(panel).getByRole("button", { name: "Done" }));
+
+    expect(await screen.findByText("Veg Biryani with add-on Kebab")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await vi.waitFor(() => expect(calls.find((c) => c.method === "POST")).toBeTruthy());
+    expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({ lines: [
+      { itemId: "i-9", qty: 2 },
+      { itemId: "i-9", qty: 1, numberedAddons: [{ id: "na-2", qty: 1 }] },
+    ] });
+  });
+
+  it("a note after each tap names the dish and opens Customise on it", async () => {
+    pad();
+    fireEvent.click(await screen.findByRole("button", { name: /Veg Biryani/ }));
+    const note = await screen.findByRole("status");
+    expect(note.textContent).toContain("Veg Biryani added");
+    fireEvent.click(within(note).getByRole("button", { name: "Customise" }));
+    expect(await screen.findByRole("dialog", { name: "Customise Veg Biryani" })).toBeTruthy();
+  });
+});
+
+describe("the menu, read again when an order screen opens (D27-290)", () => {
+  it("shows a dish made on another device, though an older menu was saved here", async () => {
+    server({
+      [`GET ${API}/till/menu`]: () => ({ categories: [{
+        id: "c-1", name: "Main course", prepMinutes: null, course: null,
+        items: [biryani, { ...biryani, id: "i-10", name: "Mutton Biryani", price: 450 }] }] }),
+      [`GET ${API}/till/numbered-addons`]: () => ({ addons: [] }),
+    });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    qc.setQueryData(["till-menu", HOTEL], [{ id: "c-1", name: "Main course", prepMinutes: null,
+      course: null, items: [biryani] }]);
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={[`/pos/${HOTEL}/tables`]}>
+          <Routes><Route path="/pos/:code/tables" element={
+            <OrderPad hotelId={HOTEL} outlet="REST" tableId="t-7" tableLabel="Table 7"
+                      open onOpenChange={() => {}} onSent={() => {}} />
+          } /></Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByRole("button", { name: /Mutton Biryani/ })).toBeTruthy();
+  });
+});
+
+describe("the Till: all, or just one", () => {
+  const tillWith = (qty: number) => {
+    const order = {
+      id: "o-6", orderNo: "20260825-6", outlet: "REST", outletName: "Fidato Restaurant",
+      table: "5", status: "open", businessDate: "2026-08-25", paymentMethod: null,
+      openedBy: "Owner", eventId: null, eventTitle: null, tenders: [],
+      abandonedReason: null, discount: 0, roundOff: 0, net: 310 * qty, taxable: 310 * qty,
+      tax: 0, gross: 310 * qty, payable: 310 * qty,
+      lines: [{ id: "l-9", name: "Veg Biryani", qty, unitPrice: 310, taxRate: 5, note: null,
+        voided: false, kotStatus: "pending", addedBy: "Owner", parentLineId: null,
+        isAddon: false, variationId: null, numberedAddons: null }],
+    } as unknown as Order;
+    const calls = server({
+      [`GET ${API}/till/menu`]: () => ({ categories: [] }),
+      [`GET ${API}/till/numbered-addons`]: () => ({ addons: [KEBAB] }),
+      [`GET ${API}/till/orders`]: () => ({ businessDate: "2026-08-25", orders: [] }),
+      [`GET ${API}/till/orders/o-6`]: () => order,
+      [`GET ${API}/till/rooms`]: () => ({ rooms: [] }),
+      [`GET ${API}/till/promotions`]: () => ({ freehandCapPercent: 10, promotions: [] }),
+      [`POST ${API}/till/orders/o-6/lines/l-9/numbered-addons`]: () => ({ ...order, ok: true }),
+    });
+    renderAt(`/pos/${HOTEL}/till?order=o-6`, "/pos/:code/till", <TillPage />);
+    return calls;
+  };
+  const saved = (calls: Call[]) =>
+    calls.find((c) => c.method === "POST" && c.path.endsWith("/l-9/numbered-addons"))?.body;
+
+  it("on a line of 3, Just 1 sends just: 1 with the add-ons", async () => {
+    const calls = tillWith(3);
+    fireEvent.click(await screen.findByRole("button", { name: "Customise Veg Biryani" }));
+    const panel = await screen.findByRole("dialog", { name: "Customise Veg Biryani" });
+    fireEvent.click(await within(panel).findByRole("button", { name: /Add-on 2, Kebab/ }));
+    fireEvent.click(within(panel).getByRole("radio", { name: "Just 1" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "Done" }));
+    await vi.waitFor(() => expect(saved(calls)).toEqual(
+      { numberedAddons: [{ id: "na-2", qty: 1 }], just: 1 }));
+  });
+
+  it("on a line of 1, nothing to ask, and no just:", async () => {
+    const calls = tillWith(1);
+    fireEvent.click(await screen.findByRole("button", { name: "Customise Veg Biryani" }));
+    const panel = await screen.findByRole("dialog", { name: "Customise Veg Biryani" });
+    expect(within(panel).queryByRole("radio", { name: /Just 1/ })).toBeNull();
+    fireEvent.click(await within(panel).findByRole("button", { name: /Add-on 2, Kebab/ }));
+    fireEvent.click(within(panel).getByRole("button", { name: "Done" }));
+    await vi.waitFor(() => expect(saved(calls)).toEqual({ numberedAddons: [{ id: "na-2", qty: 1 }] }));
   });
 });
 

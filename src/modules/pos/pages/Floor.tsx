@@ -346,7 +346,9 @@ export default function FloorPage() {
                         type="button"
                         disabled={finished(t.state) || Boolean(closed)}
                         onClick={() => addRound(t)}
-                        aria-label={`Add a round to ${t.label}`}
+                        aria-label={finished(t.state)
+                          ? `${t.label}, ${t.state === "paid" ? "paid" : "closed unpaid"}`
+                          : `Add a round to ${t.label}`}
                         className={cn(
                           "flex-1 flex flex-col items-start text-left w-full",
                           finished(t.state) || closed
@@ -406,6 +408,7 @@ export default function FloorPage() {
                             size="sm"
                             className="flex-1"
                             loading={busy === t.id}
+                            aria-label={`Clear ${t.label}`}
                             onClick={() => void clear(t)}
                           >
                             Clear

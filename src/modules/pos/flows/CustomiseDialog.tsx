@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money } from "@/lib/format";
@@ -27,6 +27,7 @@ const MOST_OF_ONE = 9;
 
 export function CustomiseDialog({
   open, onOpenChange, dish, base, addons, chosen: initial, busy, onDone,
+  qty = 1, loading = false, failed = false, onRetry,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,11 +40,24 @@ export function CustomiseDialog({
   /** What the dish already carries. */
   chosen: readonly LineAddon[];
   busy?: boolean;
-  onDone: (chosen: LineAddon[]) => void;
+  /** `one` on a line of several: the add-ons go on ONE of them, split off
+      (the owner's D27-290). `all` otherwise. */
+  onDone: (chosen: LineAddon[], scope: "all" | "one") => void;
+  /** How many of the dish are on this line. */
+  qty?: number;
+  /** The list is being read, or could not be: neither is "no add-ons yet"
+      (every list draws four states - the audit of 9 October). */
+  loading?: boolean;
+  failed?: boolean;
+  onRetry?: () => void;
 }) {
+  /* Starts from what the dish carries. Each caller keys this by its line,
+     so a different dish is a fresh dialog - never the last one's choices
+     for a frame (the audit of 9 October). */
   const [chosen, setChosen] = useState<LineAddon[]>([...initial]);
-  /* Fresh each time it opens, on what the dish carries now. */
-  useEffect(() => { if (open) setChosen([...initial]); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* On a line of several the panel ASKS - all of them, or just one (the
+     owner's D27-290). Neither is chosen for them: Done waits. */
+  const [scope, setScope] = useState<"all" | "one" | null>(qty > 1 ? null : "all");
 
   const add = (a: NumberedAddon) => setChosen((prev) => {
     const have = prev.find((c) => c.id === a.id);
@@ -66,11 +80,14 @@ export function CustomiseDialog({
         description="Tap a number to add it to this dish. Tap again for two."
         footer={
           <div className="flex flex-wrap items-center justify-end gap-3 w-full">
-            <span className="tabular text-md font-semibold text-ink-900 mr-auto">{money(unit)}</span>
+            <span className="tabular text-md font-semibold text-ink-900 mr-auto">
+              {money(scope === "one" ? unit : unit * qty)}
+            </span>
             <Button variant="secondary" size="lg" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button variant="primary" size="lg" loading={busy} onClick={() => onDone(chosen)}>
+            <Button variant="primary" size="lg" loading={busy} disabled={scope === null}
+                    onClick={() => scope && onDone(chosen, scope)}>
               Done
             </Button>
           </div>
@@ -81,8 +98,58 @@ export function CustomiseDialog({
           <p className="text-base text-ink-900" aria-live="polite">
             {nameWithAddons(dish, chosen)}
           </p>
+          {/* A line of several: which of them (the owner's D27-290). */}
+          {qty > 1 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-ink-900">
+                There are {qty} on this line. Put these add-ons on:
+              </p>
+              <div className="flex gap-2" role="radiogroup" aria-label="Which of them">
+                {([["all", `All ${qty}`], ["one", "Just 1"]] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={scope === value}
+                    onClick={() => setScope(value)}
+                    className={
+                      "press h-11 px-4 rounded-full border text-sm font-medium cursor-pointer "
+                      + (scope === value
+                        ? "border-success bg-success-50 text-ink-900"
+                        : "border-grey-300 bg-white text-ink-900 hover:border-grey-400")
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {scope === "all" && (
+                <p className="text-sm text-brand-orange-700">
+                  On each of the {qty}: {money(unit)} each, {money(unit * qty)} in all.
+                </p>
+              )}
+              {scope === "one" && (
+                <p className="text-sm text-brand-orange-700">
+                  One of them, {money(unit)}, as its own line; the other {qty - 1} stay as they are.
+                </p>
+              )}
+            </div>
+          )}
 
-          {addons.length === 0 ? (
+          {addons.length === 0 && loading ? (
+            <p className="text-sm text-grey-600">Reading the add-ons…</p>
+          ) : addons.length === 0 && failed ? (
+            <div className="flex items-center gap-3">
+              <p className="text-sm text-brand-red-700 flex-1">
+                The add-ons could not be read. Check the connection.
+              </p>
+              {onRetry && (
+                <Button variant="secondary" size="sm" className="h-11" onClick={onRetry}>
+                  Try again
+                </Button>
+              )}
+            </div>
+          ) : addons.length === 0 ? (
             <p className="text-sm text-grey-600 leading-relaxed">
               No add-ons yet. Whoever edits the menu adds them on the Menu screen, under Add-ons.
             </p>

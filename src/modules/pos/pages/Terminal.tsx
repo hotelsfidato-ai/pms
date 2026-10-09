@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 import { dateLong, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { toast, Button, StatusPill } from "@/components/ui";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, isBarDish, getNumberedAddons, setNumberedAddons, type MenuItem, type OrderLine, type LineAddon, type CashId } from "@/modules/pos/data/till";
+import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, type MenuItem, type OrderLine, type LineAddon, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
@@ -109,15 +109,9 @@ export default function TerminalPage() {
     queryKey: ["pos-outlets", hotelId],
     queryFn: () => listPosOutlets(hotelId),
   });
-  const menu = useQuery({
-    queryKey: ["till-menu", hotelId],
-    queryFn: () => getMenu(hotelId),
-  });
+  const menu = useQuery(tillMenuQuery(hotelId));
   /* The numbered Add-ons (D27-289) for Customise. */
-  const numbered = useQuery({
-    queryKey: ["till-addons", hotelId],
-    queryFn: () => getNumberedAddons(hotelId),
-  });
+  const numbered = useQuery(numberedAddonsQuery(hotelId));
   const [customising, setCustomising] = useState<OrderLine | null>(null);
   const orders = useQuery({
     queryKey: ["till-orders", hotelId, BUSINESS_DATE],
@@ -206,12 +200,18 @@ export default function TerminalPage() {
 
   /* Customise (D27-289): the numbered add-ons on a dish the kitchen does not
      have yet. The server refuses once it has (only before Send). */
-  const customise = async (chosen: LineAddon[]) => {
+  const customise = async (chosen: LineAddon[], scope: "all" | "one") => {
     if (!orderId || !customising) return;
     setBusy(true);
-    const res = await setNumberedAddons(hotelId, orderId, customising.id,
-      chosen.map((a) => ({ id: a.id, qty: a.qty })));
-    setBusy(false);
+    let res: Awaited<ReturnType<typeof setNumberedAddons>>;
+    try {
+      res = await setNumberedAddons(hotelId, orderId, customising.id,
+        chosen.map((a) => ({ id: a.id, qty: a.qty })), scope === "one" ? 1 : undefined);
+    } catch {
+      return toast.error("Not changed", "Try Customise again when the connection is back.");
+    } finally {
+      setBusy(false);
+    }
     if (!res.ok) return toast.error("Not changed", res.reason);
     setCustomising(null);
     refresh();
@@ -855,7 +855,7 @@ export default function TerminalPage() {
                         {l.kotStatus === "pending" && (
                           <button
                             type="button"
-                            onClick={() => setCustomising(l)}
+                            onClick={() => { setCustomising(l); void numbered.refetch(); }}
                             aria-label={`Customise ${l.name}`}
                             className="press h-11 px-4 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer"
                           >
@@ -1085,6 +1085,11 @@ export default function TerminalPage() {
         </button>
       </footer>
       <CustomiseDialog
+        key={customising?.id ?? "none"}
+        qty={customising?.qty ?? 1}
+        loading={numbered.isFetching}
+        failed={numbered.isError}
+        onRetry={() => void numbered.refetch()}
         open={customising !== null}
         onOpenChange={(o) => { if (!o) setCustomising(null); }}
         dish={customising?.numberedAddons?.dish ?? customising?.name ?? ""}
@@ -1092,7 +1097,7 @@ export default function TerminalPage() {
         addons={numbered.data ?? []}
         chosen={customising?.numberedAddons?.addons ?? []}
         busy={busy}
-        onDone={(chosen) => void customise(chosen)}
+        onDone={(chosen, scope) => void customise(chosen, scope)}
       />
 
       <DishDialog

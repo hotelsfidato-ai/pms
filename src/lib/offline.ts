@@ -148,6 +148,18 @@ const RULES: Rule[] = [
   { test: /\/rooms\/[^/]+\/housekeeping$/, tier: "queue", label: "Housekeeping" },
   { test: /\/work-orders(\/|$)/, tier: "queue", label: "Work order" },
   { test: /\/guests\/[^/]+\/vip$/, tier: "queue", label: "VIP" },
+  /* CUSTOMISE IS NOT HELD (D27-289; the audit of 9 October). Add-ons go on
+     a dish only before the kitchen has it; a change held offline could be
+     sent after it has, and the Till sat "busy" on the held error. Refused,
+     with the reason, ahead of the orders rule below. */
+  {
+    test: /\/till\/orders\/[^/]+\/lines\/[^/]+\/numbered-addons$/,
+    tier: "refuse",
+    label: "Customise",
+    reason:
+      "Add-ons are changed while connected: the dish could reach the kitchen "
+      + "before a held change was sent. Customise again when the connection is back.",
+  },
   { test: /\/till\/orders(\/|$)/, tier: "queue", label: "Order" },
   { test: /\/till\/menu\/items\/[^/]+\/(on|off|toggle)$/, tier: "queue", label: "Menu availability" },
   /* HOW LONG A DISH TAKES. No scarce resource and no money: two managers

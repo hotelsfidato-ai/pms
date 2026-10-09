@@ -103,7 +103,7 @@ export function NumberedAddonsTab({ hotelId }: { hotelId: string }) {
             {[...inUse, ...switchedOff].map((a) => {
               const off = isOffNow(a);
               return (
-                <li key={a.id} className="flex items-center gap-4 px-4 py-3">
+                <li key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
                   <span className={`tabular text-2xl font-semibold w-10 text-center ${a.isActive ? "text-ink-900" : "text-grey-400"}`}>
                     {a.number}
                   </span>
@@ -116,7 +116,7 @@ export function NumberedAddonsTab({ hotelId }: { hotelId: string }) {
                   <span className="tabular text-base text-ink-900 shrink-0">
                     {a.free ? "Free" : `+${moneyPrecise(a.price)}`}
                   </span>
-                  <span className="shrink-0 w-36 text-right">
+                  <span className="shrink-0 sm:w-36 sm:text-right">
                     {!a.isActive ? (
                       <StatusPill tone="neutral">Switched off</StatusPill>
                     ) : off ? (
@@ -196,7 +196,9 @@ function AddonDialog({ hotelId, addon, suggested, onClose, onSaved }: {
   const n = Number(number.trim());
   const numberBad = !addon && (!/^\d+$/.test(number.trim()) || n < 1 || n > 999);
   const priceN = price.trim() === "" ? null : Number(price.trim());
-  const priceBad = !free && (priceN === null || !Number.isFinite(priceN) || priceN <= 0);
+  /* Rupees and paise, as typed: "120" or "120.50" - not "12.345", which the
+     database would round, nor "1e2" (the audit of 9 October). */
+  const priceBad = !free && (priceN === null || !/^\d+(\.\d{1,2})?$/.test(price.trim()) || priceN <= 0);
   const ready = name.trim() !== "" && !numberBad && !priceBad;
 
   const submit = async () => {
@@ -260,7 +262,7 @@ function AddonDialog({ hotelId, addon, suggested, onClose, onSaved }: {
           <div className="flex items-end gap-3">
             <Field label="Price" required={!free} className="flex-1"
                    hint="Added to the dish. Taxed at the dish's own rate."
-                   error={!free && price.trim() !== "" && priceBad ? "More than 0, or tick Free." : undefined}>
+                   error={!free && price.trim() !== "" && priceBad ? "Rupees, more than 0 - like 120 or 120.50. Or tick Free." : undefined}>
               {(f) => (
                 <Input {...fieldProps(f)} value={free ? "" : price} inputMode="decimal"
                        disabled={free} placeholder={free ? "Free" : "120"}

@@ -443,8 +443,8 @@ function Ticket({ line, action, busy, onMove }: {
         </p>
         {/* The numbered add-ons ON this dish (D27-289): "+ Kebab", each on its
            own line, as the docket prints them. */}
-        {(line.plus ?? []).map((p) => (
-          <p key={p.name} className="text-base text-ink-900 line-through">
+        {(line.plus ?? []).map((p, i) => (
+          <p key={i} className="text-base text-ink-900 line-through">
             + {p.name}{p.qty > 1 ? ` ×${p.qty}` : ""}
           </p>
         ))}
@@ -477,8 +477,8 @@ function Ticket({ line, action, busy, onMove }: {
           </p>
           {/* The numbered add-ons ON this dish (D27-289): "+ Kebab", each on its
              own line, as the docket prints them. */}
-          {(line.plus ?? []).map((p) => (
-            <p key={p.name} className="text-md font-semibold text-ink-900 mt-0.5">
+          {(line.plus ?? []).map((p, i) => (
+            <p key={i} className="text-md font-semibold text-ink-900 mt-0.5">
               + {p.name}{p.qty > 1 ? ` ×${p.qty}` : ""}
             </p>
           ))}

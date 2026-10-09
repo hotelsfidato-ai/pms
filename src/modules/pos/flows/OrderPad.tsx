@@ -13,7 +13,7 @@ import {
 } from "@/components/ui";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
-import { getMenu, getOrder, sendOrder, isBarSection, isBarDish, getNumberedAddons, type MenuItem } from "@/modules/pos/data/till";
+import { getOrder, sendOrder, isBarSection, isBarDish, numberedAddonsQuery, tillMenuQuery, type MenuItem } from "@/modules/pos/data/till";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { ReadFailed } from "@/components/ui";
 
@@ -67,6 +67,21 @@ export function OrderPad({
   const [asking, setAsking] = useState<MenuItem | null>(null);
   /* The pad line Customise is open on (D27-289). */
   const [customising, setCustomising] = useState<DraftLine | null>(null);
+  /* The dish just tapped, for the note beside the footer - "<dish> added"
+     with its own Customise - so the button is found on a narrow screen too
+     (the owner's D27-290). Cleared after a while, on Send and on Close. */
+  const [justAdded, setJustAdded] = useState<{ uid: string; name: string } | null>(null);
+  useEffect(() => {
+    if (!justAdded) return;
+    /* On a narrow screen This round sits above the menu: its new line is
+       brought into view (D27-290). */
+    if (window.matchMedia?.("(max-width: 1023px)").matches) {
+      document.querySelector(`[data-pad-line="${justAdded.uid}"]`)
+        ?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+    }
+    const t = window.setTimeout(() => setJustAdded(null), 8000);
+    return () => window.clearTimeout(t);
+  }, [justAdded]);
   const [search, setSearch] = useState("");
   /* D27-267: the menu in two - Restaurant and Bar - and one section at a
      time when its button is tapped (tapped again, all of them). */
@@ -76,18 +91,10 @@ export function OrderPad({
   const [loaded, setLoaded] = useState(false);
   const [canKeep, setCanKeep] = useState(true);
 
-  const menu = useQuery({
-    queryKey: ["till-menu", hotelId],
-    queryFn: () => getMenu(hotelId),
-    enabled: Boolean(hotelId),
-  });
+  const menu = useQuery(tillMenuQuery(hotelId));
   /* The numbered Add-ons (D27-289), kept with the menu for a floor with no
      signal (App.tsx PERSISTED). */
-  const numbered = useQuery({
-    queryKey: ["till-addons", hotelId],
-    queryFn: () => getNumberedAddons(hotelId),
-    enabled: Boolean(hotelId),
-  });
+  const numbered = useQuery(numberedAddonsQuery(hotelId));
 
   /* ── Which banquet function (D17-21) ──────────────────────────
      A second round on an open bill shows the function it is already on;
@@ -201,18 +208,20 @@ export function OrderPad({
        variation, note and sides - as the server matches them on Send.
        Everything on the pad is unsent, so it always joins. */
     const sides = [...line.addonIds].sort().join();
+    const isSame = (l: DraftLine) => l.itemId === item.id
+      && l.variationId === line.variationId && l.note.trim() === note.trim()
+      && (l.moreChoiceIds ?? []).join() === (line.moreChoiceIds ?? []).join()
+      && [...l.addonIds].sort().join() === sides
+      /* A plain tap is one more of the plain dish, never of the one with
+         Kebab (D27-289): Customise is chosen on a line, not on a tap. */
+      && !(l.numberedAddons?.length);
     setLines((prev) => {
-      const same = prev.find((l) => l.itemId === item.id
-        && l.variationId === line.variationId && l.note.trim() === note.trim()
-        && (l.moreChoiceIds ?? []).join() === (line.moreChoiceIds ?? []).join()
-        && [...l.addonIds].sort().join() === sides
-        /* A plain tap is one more of the plain dish, never of the one with
-           Kebab (D27-289): Customise is chosen on a line, not on a tap. */
-        && !(l.numberedAddons?.length));
+      const same = prev.find(isSame);
       return same
         ? prev.map((l) => (l === same ? { ...l, qty: l.qty + qty } : l))
         : [...prev, line];
     });
+    setJustAdded({ uid: lines.find(isSame)?.uid ?? line.uid, name: item.name });
     setAsking(null);
   };
 
@@ -232,16 +241,44 @@ export function OrderPad({
 
   /* Customise (D27-289): the numbered add-ons on THIS pad line, priced on
      what one of it cost before them. Nothing is sent until Send. */
-  const customise = (uid: string, chosen: NonNullable<DraftLine["numberedAddons"]>) => {
-    setLines((prev) => prev.map((l) => {
-      if (l.uid !== uid) return l;
+  const customise = (
+    uid: string, chosen: NonNullable<DraftLine["numberedAddons"]>, scope: "all" | "one" = "all",
+  ) => {
+    const withAddons = (l: DraftLine): DraftLine => {
       const base = l.baseUnitPrice ?? l.unitPrice;
       const { numberedAddons: _gone, baseUnitPrice: _was, ...rest } = l;
       return chosen.length === 0
         ? { ...rest, unitPrice: base }
         : { ...rest, numberedAddons: chosen, baseUnitPrice: base,
             unitPrice: priceWithAddons(base, chosen) };
-    }));
+    };
+    setLines((prev) => {
+      /* JUST 1 of several (the owner's D27-290): one of them, split off as a
+         line of its own with the add-ons; the rest stay as they were. */
+      const next = prev.flatMap((l) => {
+        if (l.uid !== uid) return [l];
+        if (scope === "one" && l.qty > 1) {
+          return [{ ...l, qty: l.qty - 1 },
+                  withAddons({ ...l, uid: `${l.uid}-1-${Date.now()}`, qty: 1 })];
+        }
+        return [withAddons(l)];
+      });
+      /* Now the same as a line already on the pad? One line of both, as
+         the server joins them on Send - the pad and the bill must not
+         disagree about how many lines there are (the audit of 9 October). */
+      const same = (l: DraftLine) => JSON.stringify([
+        l.itemId, l.variationId ?? null, l.note.trim(), l.moreChoiceIds ?? [],
+        [...l.addonIds].sort(), (l.numberedAddons ?? []).map((a) => [a.id, a.qty]),
+      ]);
+      /* The changed line - the split-off one, on Just 1 - joins its twin. */
+      const changed = scope === "one"
+        ? next.find((l) => l.uid.startsWith(`${uid}-1-`)) ?? next.find((l) => l.uid === uid)
+        : next.find((l) => l.uid === uid);
+      const twin = changed && next.find((l) => l.uid !== changed.uid && same(l) === same(changed));
+      return changed && twin
+        ? next.filter((l) => l.uid !== changed.uid).map((l) => (l === twin ? { ...l, qty: l.qty + changed.qty } : l))
+        : next;
+    });
     setCustomising(null);
   };
 
@@ -333,6 +370,25 @@ export function OrderPad({
               : "A new order. Nothing is sent until you press Send."
           }
           footer={
+            <div className="w-full space-y-2">
+            {justAdded && lines.some((l) => l.uid === justAdded.uid) && (
+              <div className="flex items-center gap-3 rounded-md bg-success-50 px-3 py-1.5" role="status">
+                <span className="flex-1 min-w-0 truncate text-sm text-ink-900">
+                  {justAdded.name} added
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const l = lines.find((x) => x.uid === justAdded.uid);
+                    if (l) { setCustomising(l); void numbered.refetch(); }
+                    setJustAdded(null);
+                  }}
+                  className="press h-11 px-4 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 cursor-pointer"
+                >
+                  Customise
+                </button>
+              </div>
+            )}
             <div className="flex items-center gap-3 w-full">
               <div className="min-w-0">
                 {/* ⚠ THE PAD'S OWN ARITHMETIC, and labelled as such.
@@ -362,6 +418,7 @@ export function OrderPad({
               >
                 Send
               </Button>
+            </div>
             </div>
           }
         >
@@ -525,7 +582,7 @@ export function OrderPad({
               ) : (
                 <ul className="divide-y divide-grey-100 border-y border-grey-100">
                   {lines.map((l) => (
-                    <li key={l.uid} className="py-3">
+                    <li key={l.uid} data-pad-line={l.uid} className="py-3">
                       <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">
                           <span className="block text-base text-ink-900">
@@ -572,7 +629,7 @@ export function OrderPad({
                         <button
                           type="button"
                           aria-label={`Customise ${l.name}`}
-                          onClick={() => setCustomising(l)}
+                          onClick={() => { setCustomising(l); void numbered.refetch(); }}
                           className="press h-11 px-4 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer"
                         >
                           Customise
@@ -611,13 +668,18 @@ export function OrderPad({
           minimum and maximum selections, quantity and the kitchen note
           are all already written and already tested. */}
       <CustomiseDialog
+        key={customising?.uid ?? "none"}
+        qty={customising?.qty ?? 1}
+        loading={numbered.isFetching}
+        failed={numbered.isError}
+        onRetry={() => void numbered.refetch()}
         open={customising !== null}
         onOpenChange={(o) => { if (!o) setCustomising(null); }}
         dish={customising?.name ?? ""}
         base={customising ? customising.baseUnitPrice ?? customising.unitPrice : 0}
         addons={numbered.data ?? []}
         chosen={customising?.numberedAddons ?? []}
-        onDone={(chosen) => { if (customising) customise(customising.uid, chosen); }}
+        onDone={(chosen, scope) => { if (customising) customise(customising.uid, chosen, scope); }}
       />
 
       <DishDialog

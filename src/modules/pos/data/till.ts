@@ -549,12 +549,27 @@ export function setLineQty(
     have yet. The whole set each time; empty takes them all off. */
 export function setNumberedAddons(
   hotelId: string, orderId: string, lineId: string, choices: NumberedChoice[],
+  /** On a line of several, only ONE of them (D27-290): split off. */
+  just?: 1,
 ): Promise<TillResult> {
   return write(
     `/api/hotels/${hotelId}/till/orders/${orderId}/lines/${lineId}/numbered-addons`,
-    { numberedAddons: choices },
+    { numberedAddons: choices, ...(just ? { just } : {}) },
   );
 }
+
+/** The order screens' read of the menu: asked again whenever a screen opens
+    or comes back into view (the owner's D27-290), as the add-ons are - a
+    dish added or repriced on another device reached a device's pad only
+    when its saved copy was replaced, up to a week later. The saved copy
+    still answers with no signal. */
+export const tillMenuQuery = (hotelId: string) => ({
+  queryKey: ["till-menu", hotelId],
+  queryFn: () => getMenu(hotelId),
+  enabled: Boolean(hotelId),
+  staleTime: 0,
+  refetchOnWindowFocus: true,
+});
 
 /** The numbered Add-ons: the ones in use, or every one for the Menu tab. */
 export async function getNumberedAddons(hotelId: string, all = false): Promise<NumberedAddon[]> {
@@ -562,6 +577,22 @@ export async function getNumberedAddons(hotelId: string, all = false): Promise<N
   return (await api<{ addons: NumberedAddon[] }>(
     `/api/hotels/${hotelId}/till/numbered-addons${all ? "?all=1" : ""}`)).addons;
 }
+
+/** The order screens' read of the Add-ons, ONE definition for the pad, the
+    Till and the Terminal. ASKED AGAIN whenever a screen opens or comes back
+    into view: the app's default trusts a read forever and keeps it a week,
+    so a device that read the list before an add-on was made - on another
+    device - offered none, and Customise said "No add-ons yet" (the owner, 9
+    October: "the options are not coming for me"). The saved copy
+    (App.tsx PERSISTED) still answers when there is no signal; a refusal for
+    an add-on taken off since comes from the server, with its reason. */
+export const numberedAddonsQuery = (hotelId: string) => ({
+  queryKey: ["till-addons", hotelId],
+  queryFn: () => getNumberedAddons(hotelId),
+  enabled: Boolean(hotelId),
+  staleTime: 0,
+  refetchOnWindowFocus: true,
+});
 
 export interface NumberedAddonInput {
   number?: number;

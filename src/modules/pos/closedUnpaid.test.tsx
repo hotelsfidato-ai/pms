@@ -72,14 +72,14 @@ describe("Tables: a bill closed unpaid", () => {
     });
     renderAt(`/pos/${HOTEL}/tables`, "/pos/:code/tables", <FloorPage />);
 
-    const round = await screen.findByRole("button", { name: "Add a round to N2" });
+    const round = await screen.findByRole("button", { name: "N2, closed unpaid" });
     expect(round.textContent).toContain("Closed unpaid");
     expect(round.textContent, "no amount on a bill nobody is collecting").not.toContain("₹");
     expect((round as HTMLButtonElement).disabled, "a finished bill takes no more").toBe(true);
     expect(screen.queryByRole("button", { name: "Print the bill for N2" })).toBeNull();
     expect(screen.getByText("Closed unpaid - clear it"), "the legend names it").toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear N2" }));
     await vi.waitFor(() => expect(calls.find((c) => c.path.endsWith("/clear")))
       .toMatchObject({ method: "POST", path: `${API}/till/orders/o-5/clear` }));
   });
