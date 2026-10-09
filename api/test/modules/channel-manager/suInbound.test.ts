@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
 import { useTransportForTests } from "../../../src/modules/channel-manager/su/runtime.ts";
@@ -256,12 +256,22 @@ describe("the key", () => {
   });
 
   it("refuses a flood", async () => {
-    /* The cheap path: a hotel SU does not know. Every one still counts. */
-    const none = { reservations: [{ hotel_id: "NOT-CONNECTED", id: "x_1", reservation_notif_id: "n1", status: "new", rooms: [] }] };
-    for (let i = 0; i < PUSHES_A_MINUTE; i += 1) {
-      expect((await push(none)).status).toBe(409);
+    /* The limit counts by the clock's minute, and 121 pushes take about a
+       second: one run in fifty crossed a minute, the count started again and
+       the last push got 409 (MEMORY 395). So the clock - Date alone, never the
+       timers - is held at the start of a minute. */
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-09T10:00:00.000Z"));
+    try {
+      /* The cheap path: a hotel SU does not know. Every one still counts. */
+      const none = { reservations: [{ hotel_id: "NOT-CONNECTED", id: "x_1", reservation_notif_id: "n1", status: "new", rooms: [] }] };
+      for (let i = 0; i < PUSHES_A_MINUTE; i += 1) {
+        expect((await push(none)).status).toBe(409);
+      }
+      expect((await push(none)).status).toBe(429);
+    } finally {
+      vi.useRealTimers();
     }
-    expect((await push(none)).status).toBe(429);
   });
 });
 

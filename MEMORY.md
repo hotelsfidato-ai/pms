@@ -6539,6 +6539,20 @@ copy will see of theirs.**
 
 ---
 
+### 395 · A test counted on the clock's minute, so the 9 October release's gates went red by bad timing (9 October)
+
+The SU booking door refuses more than 120 pushes a minute, counting by the clock's minute
+(`Math.floor(now / 60_000)`, door.ts). Its test, "refuses a flood", sends 121 and expects the last
+to be 429. They take about a second, so roughly one run in fifty straddles a minute boundary, the
+count starts again, and the last push gets 409. The release copy's full gates on d76a5e1a met it
+(api 2,545 of 2,546) on a code path this release does not touch; alone the file passed 3 of 3.
+Fixed in the test only: the clock (`Date` alone, not the timers) is held at the start of a minute
+for that test. Seen failing first with the clock let run from 0.8 s before a boundary.
+**The rule:** a test of anything counted per minute, hour or day holds the clock still, at a known
+point; the wall clock reaches every boundary sooner or later.
+
+---
+
 ### 394 · MINE: a test moved an order to yesterday, and the next order took its number (9 October)
 
 The KOT section's catch-up test (D27-292) moved an order back a business day with `update
