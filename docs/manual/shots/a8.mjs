@@ -180,10 +180,13 @@ export const SHOTS = [
     steps: [
       { click: "text:Cancel" }, { click: "text:UPI" }, { waitFor: "text:· N4", ms: 10000 },
       { click: "text:· N4" }, { waitFor: "text:Print the bill", ms: 10000 },
+      /* 10 October: the paid bill opened scrolled up, "Paid by upi" off the
+         top of the screen - arrow 1 was drawn where nobody could see it. */
+      { scroll: "text:Paid by upi" }, { wait: 500 },
     ],
     marks: [
-      { n: 1, at: "text:Paid by upi", side: "top" },
-      { n: 2, at: "text:Print the bill", side: "top" },
+      { n: 1, at: "text:Paid by upi", side: "left" },
+      { n: 2, at: "text:Print the bill", side: "left" },
     ],
   },
   { id: "A8-18", title: "Print the bill, twice", as: "General Manager", noShot: true,
