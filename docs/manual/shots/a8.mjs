@@ -245,8 +245,13 @@ export const SHOTS = [
   },
   {
     id: "A8-27", title: "Paid in cash", as: "General Manager",
-    steps: [{ click: "text:Cash" }, { waitFor: "text:· N5", ms: 10000 }, { click: "text:· N5" }, { waitFor: "text:Paid by cash", ms: 10000 }],
-    marks: [{ n: 1, at: "text:Paid by cash", side: "top" }],
+    steps: [
+      { click: "text:Cash" }, { waitFor: "text:· N5", ms: 10000 }, { click: "text:· N5" }, { waitFor: "text:Paid by cash", ms: 10000 },
+      /* 10 October: as A8-17 - the paid bill opened scrolled up and arrow 1
+         was drawn at the very top, off its target. To be retaken. */
+      { scroll: "text:Paid by cash" }, { wait: 500 },
+    ],
+    marks: [{ n: 1, at: "text:Paid by cash", side: "left" }],
   },
   {
     id: "A8-28", title: "Close restaurant day, Cash: count, money in and out, the sum", as: "General Manager",
