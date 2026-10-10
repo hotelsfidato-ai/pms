@@ -169,8 +169,14 @@ export const CLEAR: [table: string, how: string][] = [
   ["folio_postings",    "hotel_id = $1"],
   ["folios",            "hotel_id = $1"],
 
-  /* A guest's papers go with the stay they were taken for. */
-  ["guest_documents",   "guest_id in (select guest_id from reservations where hotel_id = $1)"],
+  /* A guest's papers go with the stay they were taken for - but a guest is a
+     PERSON for the whole group (guest_documents is one row per person), so
+     only the papers of a guest who has no stay at any OTHER property. It said
+     "every guest who stayed here", and clearing one hotel took the papers a
+     guest still needed at another (found 10 October, D27-298). */
+  ["guest_documents",   "guest_id in (select guest_id from reservations where hotel_id = $1)"
+                        + " and not exists (select 1 from reservations r"
+                        + " where r.guest_id = guest_documents.guest_id and r.hotel_id <> $1)"],
 
   ["housekeeping_assignments", "hotel_id = $1"],
   ["room_assignments",  "hotel_id = $1"],
@@ -230,11 +236,56 @@ const GUARDS: [table: string, trigger: string][] = [
   /* 2 October: the Store's two ledgers are append-only (069, 183). */
   ["stock_movements",   "stock_movements_append_only"],
   ["stock_count_lines", "stock_count_lines_append_only"],
+  /* 10 October: key cards go with their booking (ON DELETE CASCADE, 179), and
+     this append-only guard refused every one - a hotel that had issued a card
+     could not be cleared. Missing since 179; found by the test-hotel survey. */
+  ["key_cards",         "key_cards_append_only"],
+];
+
+/* --fresh-start (D27-298, the owner, 10 October: "a fresh launch - delete all
+   the old data"): on top of a property's activity, its practice paperwork and
+   the lists that point at practice bookings. Purchase requests and approvals
+   go; the equipment register (each asset and its tag) stays as setup, only its
+   moves and history go; the CRS and OTA booking records and the messages-sent
+   log go. The audit trail stays. Children first: a move and a request each
+   point at their approval. */
+export const FRESH: [table: string, where: string][] = [
+  ["equipment_moves",        "hotel_id = $1"],
+  ["equipment_history",      "hotel_id = $1"],
+  ["purchase_request_lines", "hotel_id = $1"],
+  ["purchase_requests",      "hotel_id = $1"],
+  ["approvals",              "hotel_id = $1"],
+  ["crs_bookings",           "hotel_id = $1"],
+  ["channel_bookings",       "hotel_id = $1"],
+  ["messages_sent",          "hotel_id = $1"],
+];
+const FRESH_GUARDS: [table: string, trigger: string][] = [
+  ["equipment_moves",   "equipment_moves_append_only"],
+  ["equipment_history", "equipment_history_append_only"],
+];
+
+/* A guest who now has no stay and no function anywhere goes - and first
+   everything that points at them with no cascade, read out of pg_constraint
+   on 10 October (D27-298): before this the delete stopped at the first such
+   guest with a loyalty card, a join, a "not the same person" mark or an online
+   check-in form, and rolled the whole clear back. Their ID papers go by
+   cascade. Each is [what, the statement]; $orphans is the set of such guests. */
+export const ORPHAN_FIRST: [what: string, sql: string][] = [
+  ["loyalty points",  "delete from loyalty_points where member_id in (select id from loyalty_members where guest_id in (select id from orphans))"],
+  ["loyalty members", "delete from loyalty_members where guest_id in (select id from orphans)"],
+  ["joins",           "delete from guest_joins where joined_id in (select id from orphans) or kept_id in (select id from orphans)"],
+  ["not-same marks",  "delete from guest_not_same where a in (select id from orphans) or b in (select id from orphans)"],
+  ["check-in forms",  "delete from guest_detail_submissions where guest_id in (select id from orphans)"],
+  ["Form C filings",  "delete from form_c_filings where guest_id in (select id from orphans)"],
+  /* A guest kept elsewhere who was joined INTO one of these points at them. */
+  ["join pointers",   "update guests set joined_into = null where joined_into in (select id from orphans) and id not in (select id from orphans)"],
 ];
 
 async function main() {
   const code = (process.argv[2] ?? "").toUpperCase();
   const confirmed = process.argv.includes("--yes");
+  const fresh = process.argv.includes("--fresh-start");
+  const guards = fresh ? [...GUARDS, ...FRESH_GUARDS] : GUARDS;
 
   if (!code) {
     console.error("\n  Which property?   npm run reset -- 5EL --yes\n");
@@ -311,17 +362,27 @@ async function main() {
         + ` · ${counts[0]!.stock} stock movements`);
     console.log();
 
+    if (fresh) {
+      const extra: string[] = [];
+      for (const [table] of FRESH) {
+        const { rows } = await client.query<{ n: string }>(
+          `select count(*)::text as n from ${table} where hotel_id = $1`, [hotel[0].id]);
+        extra.push(`${rows[0]!.n} ${table.replaceAll("_", " ")}`);
+      }
+      say(`and, for a fresh start: ${extra.join(" · ")}`);
+      say("(the equipment register itself and the audit trail stay)");
+      console.log();
+    }
     if (!confirmed) {
       say("Nothing removed. This deletes every booking, folio, invoice,");
       say("order and stock movement at this property and cannot be undone");
       say("for real data.");
-      say(`Run it again with --yes:   npm run reset -- ${code} --yes`);
+      say(`Run it again with --yes:   npm run reset -- ${code}${fresh ? " --fresh-start" : ""} --yes`);
       console.log();
       return;
     }
-
     await client.query("begin");
-    for (const [table, trigger] of GUARDS) {
+    for (const [table, trigger] of guards) {
       await client.query(`alter table ${table} disable trigger ${trigger}`);
     }
 
@@ -335,15 +396,27 @@ async function main() {
         : await client.query(`delete from ${table} where ${where}`);
       removed += r.rowCount ?? 0;
     }
+    if (fresh) {
+      for (const [table, where] of FRESH) {
+        const r = await client.query(`delete from ${table} where ${where}`, [hotel[0].id]);
+        removed += r.rowCount ?? 0;
+      }
+    }
 
     /* Guests are group-wide and have no hotel_id — a guest is a PERSON,
        and the same passport can be presented at another property. Only
        the ones now belonging to no stay anywhere are removed, so
        clearing Akkalkot cannot take a guest Pune still has. */
-    const orphaned = await client.query(
-      `delete from guests g
-        where not exists (select 1 from reservations r where r.guest_id = g.id)
-          and not exists (select 1 from banquet_events b where b.guest_id = g.id)`);
+    await client.query(
+      `create temp table orphans on commit drop as
+         select g.id from guests g
+          where not exists (select 1 from reservations r where r.guest_id = g.id)
+            and not exists (select 1 from banquet_events b where b.guest_id = g.id)`);
+    for (const [, sql] of ORPHAN_FIRST) {
+      const r = await client.query(sql);
+      removed += r.rowCount ?? 0;
+    }
+    const orphaned = await client.query(`delete from guests where id in (select id from orphans)`);
     removed += orphaned.rowCount ?? 0;
 
     /* Every room comes back vacant and clean. A room left dirty by a
@@ -362,7 +435,7 @@ async function main() {
           set business_date = (now() at time zone timezone)::date
         where id = $1`, [hotel[0].id]);
 
-    for (const [table, trigger] of GUARDS) {
+    for (const [table, trigger] of guards) {
       await client.query(`alter table ${table} enable trigger ${trigger}`);
     }
     await client.query("commit");

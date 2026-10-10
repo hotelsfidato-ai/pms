@@ -6539,6 +6539,22 @@ copy will see of theirs.**
 
 ---
 
+### 404 · The property reset could not have cleared a live hotel: three faults found before the fresh launch (10 October)
+
+`api/scripts/reset-property.ts` - the 3 October fresh start's tool - had three faults the test-hotel survey
+named, each able to stop it halfway on live: **key_cards_append_only** was never lifted (a hotel that ever issued
+a card refused, "key_cards is append-only"); deleting guests left with no stay **stopped at the first one with a
+loyalty card, a join, a "not the same person" mark or an online check-in form** (all point at the guest with
+no cascade); and it took the ID papers of **every guest who had stayed here**, though a guest is one person for
+the whole group. Proven on a copy of the demo with one of each planted: the old tool failed ("key_cards is
+append-only") and rolled back; the fixed one cleared 6,187 rows, every activity table at the property empty,
+every setup table equal to the untouched demo. `--fresh-start` (D27-298) adds purchase requests, approvals,
+equipment moves and history, the CRS/OTA booking records and the messages log. **The rule:** a teardown is
+proven on data that has every kind of row it must remove - plant the rare ones; and when a migration adds an
+append-only guard or a link to guests, the reset's lists are part of the same change.
+
+---
+
 ### 403 · Four old migrations would have stopped the release on live: rules widened later, re-added narrow on every replay (10 October)
 
 Every release replays every migration from 001 (launch.sh). Bringing the local demo up to 212 for test hotels
