@@ -60,11 +60,15 @@ since 5 am           D27-298 the fresh start (reset-property.ts fixed, MEMORY 40
                      fidato-before-fresh-start-10oct.dump); D27-299 the one-click KOT computer
                      setup + sign-in returns to the page asked for (e2fe4cab, gates green:
                      web 1,223, api 2,615, db 1,665/212, replay, pg16).
-owner's next         (1) the FRESH START ON LIVE: on the server `git pull` first (brings the fixed
-                     tool; no restart needed), a backup, the dry run (send its output), then
-                     --fresh-start --yes per hotel - release page Part 3b (skip R1/R2's copy:
-                     the tool is in the checkout after the pull; run scripts/reset-property.ts).
-                     (2) Amrapali's KOT computer with Download the setup file (the PDF
+fresh start (live)   DONE 10 Oct ~16:35 by the owner (D27-298): the server pulled e2fe4cab (its
+                     checkout now matches GitHub; the API not restarted - it runs the same code),
+                     a backup, the dry run (AMR: 6 bookings, 6 guests, 12 postings, 13 orders, 26
+                     messages), then --fresh-start --yes: 155 rows removed, 16 rooms vacant and
+                     clean, business date 2026-10-10. Checked: 0 bookings, 0 guests; 7 orders
+                     left, all the test hotel AMRT's (made by the owner; its own Reset clears
+                     them). The restaurant's drawer starts afresh: Open the day before the first
+                     cash bill.
+owner's next         (2) Amrapali's KOT computer with Download the setup file (the PDF
                      .local/release-9oct/KOT-printer-quick-setup.pdf; the online guide
                      https://claude.ai/artifact/At8tQLKr8RMUCXNonMd235). (3) The test hotel and
                      testers. (4) Make the release page private. The 19 September rule is back.
