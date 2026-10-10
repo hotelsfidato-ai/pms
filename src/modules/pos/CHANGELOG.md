@@ -11,6 +11,30 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-10 · the one-click KOT computer setup (D27-299)
+
+**Asked for:** "make it simple - the team just connects the KOT device, instead of the extra work."
+
+**Shipped**
+- Restaurant setup → KOT section → This computer: **Set up this computer for printing** with **Download the setup file** (`components/KotSection.tsx`, `OneClickSetup`).
+- `lib/kotSetupFile.ts` writes `KOT-station-setup-<CODE>.cmd` for the hotel in view. It finds Chrome, lists the printers, and makes the typed one the default (Windows stops changing it). It puts the **KOT station** shortcut (`--kiosk-printing`, its own profile, that hotel's Kitchen screen) on the desktop and in Startup, stops sleep while plugged in, and opens the KOT station window on `/pos/<CODE>/setup#kot`. The file is ASCII and CRLF; an odd code or address is refused; `/check` changes nothing; the printer is asked for at most five times.
+- The KOT section scrolls into view when opened at `#kot`. Signing in now returns to the page asked for (`App.tsx`, `returnPath`), not the Dashboard.
+- KOT-STATION-SETUP.md has "The quick way"; the manual's A8.10 has the one-click steps, and Figure A8-20 is retaken.
+
+**Found**
+- A wrong printer number asked again forever once input ran out (MEMORY 405). Capped at five before it was committed.
+- Signing in always went to the Dashboard, so the file's last step would have ended there.
+
+**Proved**
+- 6 file and button tests, and 2 return-to tests. Each guard was seen failing first: no button, no cap, LF line ends, any code accepted, sleep left on, Windows managing the default printer, sign-in forgetting the page, and following `//` addresses.
+- Ran on this PC: `/check` with a right answer, and with wrong answers through closed input (stops after five). The shortcut command ran into a temporary folder, with the right target and arguments.
+- Opened on the demo: signed out → `/pos/5EL/setup#kot` → sign in → back on the KOT section with the block.
+- Related suites 60/60; web types clean.
+
+**Left open:** not run for real on a hotel computer (it would change this PC's printer and power settings); the paper size stays a by-hand step; the release needs the owner's yes.
+
+---
+
 ## 2026-10-09 (evening) · custom add-ons (D27-291) and the KOT section (D27-292)
 
 **Asked for:** the owner: a "custom add-on" in Customise - type a name and a price and add it to

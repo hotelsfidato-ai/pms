@@ -147,9 +147,21 @@ const PERSISTED = new Set([
  * form they just completed — the session changed and nothing moved,
  * which reads as a failure even though it worked.
  */
+/* BACK TO WHERE YOU WERE GOING (10 October, D27-299). A signed-out visit to
+   /pos/AMR/setup#kot - the one-click KOT setup opens exactly that, in a new
+   window - is sent to sign in carrying where it was going, and after signing
+   in lands THERE, not on the Dashboard. Only a path inside this app is
+   followed: one "/", never "//" (another site), never back to /signin. */
+export function returnPath(state: unknown): string {
+  const from = (state as { from?: unknown } | null)?.from;
+  return typeof from === "string" && from.startsWith("/") && !from.startsWith("//")
+    && !from.startsWith("/signin") ? from : "/";
+}
+
 function SignInRoute() {
   const status = useSession((s) => s.status);
-  if (status === "signed-in") return <Navigate to="/" replace />;
+  const location = useLocation();
+  if (status === "signed-in") return <Navigate to={returnPath(location.state)} replace />;
   return <SignInPage />;
 }
 
@@ -213,7 +225,10 @@ function RequireSession() {
     );
   }
 
-  if (status === "signed-out") return <Navigate to="/signin" replace />;
+  if (status === "signed-out") {
+    return <Navigate to="/signin" replace
+                     state={{ from: location.pathname + location.search + location.hash }} />;
+  }
 
   return <AppShell />;
 }

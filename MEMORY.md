@@ -6539,6 +6539,17 @@ copy will see of theirs.**
 
 ---
 
+### 405 · MINE: a setup file that asked "which printer?" for ever once its input ran out (10 October)
+
+The one-click KOT setup (D27-299) asked for the receipt printer's number and, on a wrong answer, went back and
+asked again - with no limit. Tested with answers piped in, `set /p` read them all at once, every later question
+got an empty answer at once, and cmd looped until killed. On a staff computer that is a window spinning on
+"That is not one of the numbers above" if anything closes its input. Capped at five answers, then it stops with
+"Nothing was changed" - seen looping before, stopping after, before any commit. **The rule:** every "ask again"
+has a count; test an interactive script with closed or exhausted input, not only with the right answer.
+
+---
+
 ### 404 · The property reset could not have cleared a live hotel: three faults found before the fresh launch (10 October)
 
 `api/scripts/reset-property.ts` - the 3 October fresh start's tool - had three faults the test-hotel survey

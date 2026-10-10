@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Printer, Receipt } from "lucide-react";
+import { Download, Plus, Printer, Receipt } from "lucide-react";
+import { downloadKotSetup } from "@/modules/pos/lib/kotSetupFile";
 import { cn } from "@/lib/cn";
 import {
   Section, Card, CardBody, Button, Checkbox, Skeleton, StatusPill, toast,
@@ -56,6 +57,16 @@ export function KotSection({ hotelId }: { hotelId: string }) {
     return true;
   };
 
+  /* The one-click setup (D27-299) opens the KOT station window on
+     /pos/<code>/setup#kot: once the section has drawn, it is brought into
+     view, as a link to #kot would on a page drawn by the server. */
+  const scrolled = useRef(false);
+  useEffect(() => {
+    if (scrolled.current || !setup.data || window.location.hash !== "#kot") return;
+    scrolled.current = true;
+    document.getElementById("kot")?.scrollIntoView?.({ block: "start" });
+  }, [setup.data]);
+
   return (
     <div id="kot" className="scroll-mt-20">
       <Section
@@ -87,6 +98,40 @@ export function KotSection({ hotelId }: { hotelId: string }) {
 
 type Run = (write: Promise<Done>, done: string) => Promise<boolean>;
 
+/* ── 1a. The one-click setup (D27-299) ────────────────────────────── */
+/* One Windows file, made for this hotel, does the computer's side: the KOT
+   station shortcut, the receipt printer as the default, Startup, no sleep -
+   then opens this section in the KOT station window. lib/kotSetupFile.ts. */
+function OneClickSetup({ code }: { code: string }) {
+  const get = () => {
+    try {
+      const name = downloadKotSetup(window.location.origin, code);
+      toast.success(`${name} downloaded`, "Open it on the computer the printer is plugged into.");
+    } catch (error) {
+      toast.error("The setup file could not be made", (error as Error).message);
+    }
+  };
+  return (
+    <div className="rounded-lg border border-grey-200 bg-grey-50 p-3.5 space-y-2" aria-label="Set up this computer for printing" role="group">
+      <p className="text-sm font-semibold text-ink-900">Set up this computer for printing</p>
+      <p className="text-sm text-grey-600 leading-relaxed">
+        On the Windows computer the printer is plugged into, one file does it all: it makes the
+        KOT station shortcut for this hotel, makes your receipt printer the default (you pick it
+        from a list), starts it with Windows and keeps the computer awake. Then it opens this
+        section, where you name the computer and tick what it prints.
+      </p>
+      <Button variant="secondary" onClick={get} className="w-full sm:w-auto">
+        <Download className="size-4" aria-hidden /> Download the setup file
+      </Button>
+      <p className="text-2xs text-grey-600 leading-relaxed">
+        Chrome may ask whether to keep the file: choose Keep. When it runs, Windows may say
+        "Windows protected your PC": press More info, then Run anyway. It changes only this
+        computer's default printer, startup and sleep, and adds the shortcut.
+      </p>
+    </div>
+  );
+}
+
 /* ── 1. This computer ─────────────────────────────────────────────── */
 function ThisComputer({ hotelId, setup, run }: { hotelId: string; setup: KotSetup; run: Run }) {
   const me = setup.stations.find((s) => s.mine) ?? null;
@@ -116,6 +161,7 @@ function ThisComputer({ hotelId, setup, run }: { hotelId: string; setup: KotSetu
               : "Open this on the computer that has the printer - at the bar, in the kitchen - and tick what it prints."}
           </p>
         </div>
+        <OneClickSetup code={hotelId} />
         <Field label="This computer's name" required={!nothing} hint="For example Bar PC or Kitchen PC.">
           {(f) => (
             <Input {...fieldProps(f)} value={name} placeholder="Bar PC"

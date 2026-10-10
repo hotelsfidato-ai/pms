@@ -29,6 +29,26 @@ on it, its printer connected and installed, and a sign-in that can open
 Restaurant setup's KOT section (the owner, an administrator, the GM or the
 kitchen manager).
 
+## The quick way: one setup file (D27-299, 10 October)
+
+**Where: that computer.** Sign in, open **Restaurant setup → KOT section**,
+and under **Set up this computer for printing** press **Download the setup
+file** (Chrome may ask whether to keep it: **Keep**). Open the file,
+`KOT-station-setup-<CODE>.cmd`; if Windows says "Windows protected your PC",
+press **More info**, then **Run anyway**. It lists the computer's printers:
+type the receipt printer's number. It then does steps 1, 2 and 5 below for
+you - the default printer (and stops Windows changing it), the **KOT
+station** shortcut on the desktop and in Startup, no sleep while plugged in -
+and opens the KOT station window on the KOT section. Sign in (you come back
+to the KOT section), then do step 3: name the computer, tick what it prints,
+**Save**. Paper size is the one thing it cannot set for every printer: if
+slips come out too wide, set 80 mm once (step 1, point 4).
+
+`KOT-station-setup-<CODE>.cmd /check` changes nothing and says what it would
+do. Made by `src/modules/pos/lib/kotSetupFile.ts`.
+
+The steps below do the same by hand.
+
 ---
 
 ## 1 · Make its printer the computer's default printer
