@@ -47,6 +47,32 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+### 10 October, 4 pm — read this first (supersedes the 5 am block below)
+
+```
+live                 THE LAUNCH IS LIVE (13:03 IST): GitHub main e2fe4cab. The SERVER runs
+                     fe07c3fd (API restarted 07:33 UTC, migrations to 212); the WEBSITE runs
+                     e2fe4cab's build, index-DEVsbHgU.js (the owner's choice: the KOT release
+                     was website-only, D27-299; the server's checkout is one commit behind -
+                     only api/scripts/reset-property.ts and notes differ, nothing the API runs).
+since 5 am           D27-298 the fresh start (reset-property.ts fixed, MEMORY 404, rehearsed;
+                     run on the LOCAL demo - its old data is in .local/backups/
+                     fidato-before-fresh-start-10oct.dump); D27-299 the one-click KOT computer
+                     setup + sign-in returns to the page asked for (e2fe4cab, gates green:
+                     web 1,223, api 2,615, db 1,665/212, replay, pg16).
+owner's next         (1) the FRESH START ON LIVE: on the server `git pull` first (brings the fixed
+                     tool; no restart needed), a backup, the dry run (send its output), then
+                     --fresh-start --yes per hotel - release page Part 3b (skip R1/R2's copy:
+                     the tool is in the checkout after the pull; run scripts/reset-property.ts).
+                     (2) Amrapali's KOT computer with Download the setup file (the PDF
+                     .local/release-9oct/KOT-printer-quick-setup.pdf; the online guide
+                     https://claude.ai/artifact/At8tQLKr8RMUCXNonMd235). (3) The test hotel and
+                     testers. (4) Make the release page private. The 19 September rule is back.
+server access        This PC's own key ~/.ssh/fidato_server is in opc's authorized_keys
+                     (added through Oracle Bastion; the old ssh-key-2026-09-01.key is not here).
+                     The bastion `fidatorelease` and its 0.0.0.0/0 allowlist can be deleted.
+```
+
 ### 10 October, about 5 am — read this first
 
 ```
