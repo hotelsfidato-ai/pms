@@ -3,6 +3,10 @@
 This is a live hotel system (pms.fidatohotels.com). The owner does not want to
 re-explain it, and they should not have to.
 
+**12 OCTOBER: THE OWNER MOVED TO A LAPTOP. Read `LAPTOP-HANDOVER.md` first**:
+how the laptop is set up, what is done, what is next, the questions waiting
+for the owner (D27-302).
+
 1. **Read the top section of `HANDOVER.md` to the end before your first
    write.** It is the current brief: where things stand, what to do next and
    in what order, every decision the owner has made, and their standing rules.

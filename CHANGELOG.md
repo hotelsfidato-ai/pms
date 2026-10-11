@@ -50,6 +50,53 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-12 · the move to the laptop (D27-302); before it, 10 Oct afternoon: the fresh start on live, the one-click KOT setup, the videos (D27-298 to D27-301)
+
+**Asked for:**
+- 10 Oct:
+  - "do the fresh start on live step by step";
+  - "make it simple - the team just connects the KOT device";
+  - "fix the missing arrows and re-render";
+  - "cover end to end, from the start of the day to the end of the day, and check if all are proper";
+  - "start all the videos and run in parallel".
+- 12 Oct: "my system has come - an updated roadmap of what was completed and what needs to be done, commit and push the relevant stuff to GitHub, the handover file as the laptop thing, so I can continue there".
+
+**Shipped**
+- **The one-click KOT computer setup** (D27-299, e2fe4cab): `src/modules/pos/lib/kotSetupFile.ts`, the KOT section's "Download the setup file", sign-in back to the page asked for (`src/App.tsx`). It is **live** as a website-only release, index-DEVsbHgU.js. The staff PDF is `KOT-printer-quick-setup.pdf`.
+- **The fresh start on live** (D27-298): `api/scripts/reset-property.ts` was fixed (MEMORY 404) and rehearsed. Then the owner ran it on live: 155 rows removed from AMR.
+- **The video series:**
+  - A8 Restaurant complete, with every arrow found (`C:\videos\out\a8\`, not committed, D27-294). The book's Figure A8-17 was retaken, and `docs/manual/shots/a8.mjs` scrolls the paid bill into view (d7db7a86, d9d5df18).
+  - D27-300 (the day check) and D27-301 (all chapters at once) were decided and started.
+- **The laptop handover** (12 Oct): `LAPTOP-HANDOVER.md`. The CLAUDE.md pointer, HANDOVER § 2 and decision D27-302 were added.
+  - The book drafts were committed on `manual-rest` (319d0fa6): chapters A0-A17 and B1-B9, picture plans, 246 pictures. They are unreviewed.
+  - Two zips for the owner to carry by hand are in `.local\laptop\`: the local-only files, and C:\videos without node_modules.
+  - `cp6` and `manual-rest` were pushed to GitHub, once (D27-302).
+
+**Found**
+- MEMORY 405: the KOT setup file looped for ever once its input ran out. Fixed before commit.
+- MEMORY 406: fifteen helpers at once, and the usage limit stopped them all mid-work. That included the day check.
+- The chapter helpers' questions for the owner are in LAPTOP-HANDOVER.md § 6. There are eleven, and none of them is fixed.
+
+**Proved**
+- e2fe4cab, full gates all green: web 1,223, api 2,615, database 1,665 / 212, replay, pg16, types.
+- Nothing after it changed code: notes, the book's shots file and drafts only, so no gates were run for this handover.
+
+**Left open** (LAPTOP-HANDOVER.md § 5)
+- Set up the laptop and run the gates there.
+- The owner's steps: delete the bastion, make the release page private, set up Amrapali's KOT computer, the test hotel and the testers.
+- The eleven questions.
+- Finish D27-301: twelve chapters part-done, and the engine half-changed.
+- Rerun the D27-300 day check from its backup. Step 46h is not yet judged.
+- Pictures for A1, A3, A5 and A13, and the A8-27 retake.
+- Review and merge `manual-rest`.
+
+**Commits:**
+- 4b3f4618 (D27-301);
+- manual-rest 319d0fa6;
+- this handover's commit.
+
+---
+
 ## 2026-10-10 · the launch (D27-295), test hotels built into it (D27-296/297), and the book and videos paused
 
 **Asked for:** "a graceful stop" of the video series, then deploy the system; "make me an artifact to do this step by step" (new PC, no Firebase keys); then "a testing mode - the same system, a test toggle when I add people, reset or delete all the test data - build it now so the full launch includes it"; a tracker of what is done and how long is left; a notification when ready.

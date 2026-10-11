@@ -1,6 +1,7 @@
 # Handover — current state
 
-**Last updated: 9 October 2026** (§§ 2, 3 and 7; a new PC), branch `cp6`. **This top section is
+**Last updated: 12 October 2026** (§ 2; the move to the laptop — read
+`LAPTOP-HANDOVER.md` first), branch `cp6`. **This top section is
 current.** Everything under "Archive" at the bottom is the 28 August state,
 kept for the record and superseded.
 
@@ -46,6 +47,22 @@ seam); a test enforces it.
 ---
 
 ## 2 · Where it stands
+
+### 12 October — THE LAPTOP. Read `LAPTOP-HANDOVER.md` first
+
+```
+the move             The owner moved from the PC to a laptop. LAPTOP-HANDOVER.md has the
+                     set-up step by step, what is done, what is next and the questions
+                     waiting for the owner. D27-302: cp6 and manual-rest pushed to GitHub,
+                     once; the 19 September rule is back afterwards. main (live) untouched.
+in flight, stopped   10 Oct: 15 helpers (D27-301 video chapters + engine) and the day check
+                     (D27-300) were all stopped mid-work by the usage limit (MEMORY 406).
+                     A7, A13, A14 finished; the rest left part-done in C:\videos and on
+                     manual-rest (unreviewed drafts, 246 pictures). Nothing on live changed.
+live                 unchanged since 10 Oct 16:35 (the fresh start; § the 4 pm block below).
+next                 LAPTOP-HANDOVER.md § 5: laptop set-up and gates, the owner's steps,
+                     the open questions, then the videos 3-4 helpers at a time.
+```
 
 ### 10 October, 4 pm — read this first (supersedes the 5 am block below)
 

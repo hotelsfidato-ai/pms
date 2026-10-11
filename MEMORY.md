@@ -6539,6 +6539,24 @@ copy will see of theirs.**
 
 ---
 
+### 406 · MINE: fifteen helpers at once, and the usage limit stopped every one of them mid-work (10 October)
+
+For D27-301 the master chat started fifteen helpers together: fourteen video chapters and the engine. The day
+check was already running beside them. All of them share one usage allowance. Three chapters (A7, A13, A14)
+finished. Then the limit was reached, and the other twelve AND the day check stopped in mid-step, with no report.
+What they left behind:
+- scripts with no arrows, and one with no voice;
+- half-changed engine tools (`tools\lib.mjs`, `render-all.mjs`);
+- chapter files of unknown completeness;
+- a demo database stopped in the middle of a hotel day.
+
+The owner had chosen "all at once" and had been told the PC might slow. Nobody had told them that the allowance
+could run out and stop every helper. Found when the notifications arrived together, 12 Oct. **The rule:** before
+starting more than a few helpers, say what happens if the usage runs out (all of them stop, files half-written).
+Run 3 to 4 at a time. Each helper writes its state to a file as it goes, so that a cut-off one can be picked up.
+
+---
+
 ### 405 · MINE: a setup file that asked "which printer?" for ever once its input ran out (10 October)
 
 The one-click KOT setup (D27-299) asked for the receipt printer's number and, on a wrong answer, went back and
