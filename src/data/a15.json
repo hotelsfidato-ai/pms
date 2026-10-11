@@ -1,0 +1,1175 @@
+{
+  "chapter": "A15",
+  "title": "Rates, revenue and distribution",
+  "manualShots": "a15",
+  "videos": [
+    {
+      "id": "A15-01",
+      "slug": "A15-01-the-screens-for-rates-and-selling",
+      "section": "A15.1",
+      "title": "The screens for rates and selling",
+      "intro": {
+        "text": "This chapter is about prices, and selling the rooms. In this video you will see its four screens, and who uses each.",
+        "voice": "a15/voice/A15-01/01.wav",
+        "dur": 7.211
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A15-01",
+          "focus": null,
+          "line": {
+            "text": "Rates is under Rooms and rates in the menu. It shows each day's price for every room type, and how the day sold.",
+            "voice": "a15/voice/A15-01/02.wav",
+            "dur": 6.433
+          }
+        },
+        {
+          "shot": "A15-01",
+          "focus": 2,
+          "line": {
+            "text": "Everyone who reads prices can open it. Only the owner, an Admin, the G M and the Revenue Manager can change a price.",
+            "voice": "a15/voice/A15-01/03.wav",
+            "dur": 7.385
+          }
+        },
+        {
+          "shot": "A15-05",
+          "focus": 6,
+          "line": {
+            "text": "Under the calendar, links open the reports, and the Revenue outlook.",
+            "voice": "a15/voice/A15-01/04.wav",
+            "dur": 3.826
+          }
+        },
+        {
+          "shot": "A15-10",
+          "focus": null,
+          "line": {
+            "text": "The Revenue outlook looks at the coming ninety nights, and says what to consider. It never changes a price. The owner, an Admin, the G M and the Revenue Manager see it.",
+            "voice": "a15/voice/A15-01/05.wav",
+            "dur": 10.804
+          }
+        },
+        {
+          "shot": "A15-15",
+          "focus": null,
+          "line": {
+            "text": "The Channel manager, under Distribution, is the connection to the booking sites, through S U. The owner, an Admin and the G M open it.",
+            "voice": "a15/voice/A15-01/06.wav",
+            "dur": 8.546
+          }
+        },
+        {
+          "shot": "A15-16",
+          "focus": null,
+          "line": {
+            "text": "And Contracts holds the companies and travel agents, with the rates each has agreed with this hotel.",
+            "voice": "a15/voice/A15-01/07.wav",
+            "dur": 5.823
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "The next videos take each screen in turn, starting with the Rates calendar.",
+        "voice": "a15/voice/A15-01/08.wav",
+        "dur": 4.279
+      },
+      "next": "Reading the Rates calendar"
+    },
+    {
+      "id": "A15-02",
+      "slug": "A15-02-reading-the-rates-calendar",
+      "section": "A15.2",
+      "title": "Reading the Rates calendar",
+      "intro": {
+        "text": "In this video you will read the Rates calendar: each day's price, and how the day sold.",
+        "voice": "a15/voice/A15-02/01.wav",
+        "dur": 5.207
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A15-01",
+          "focus": 1,
+          "line": {
+            "text": "Prices is the calendar of prices. Rooms left, beside it, comes in a later video.",
+            "voice": "a15/voice/A15-02/02.wav",
+            "dur": 6.05
+          }
+        },
+        {
+          "shot": "A15-01",
+          "focus": 3,
+          "line": {
+            "text": "The calendar shows two weeks. The arrows move two weeks back or forward, and Today brings you back.",
+            "voice": "a15/voice/A15-02/03.wav",
+            "dur": 6.305
+          }
+        },
+        {
+          "shot": "A15-01",
+          "focus": 4,
+          "line": {
+            "text": "The dark column is the hotel's own business date.",
+            "voice": "a15/voice/A15-02/04.wav",
+            "dur": 2.92
+          }
+        },
+        {
+          "shot": "A15-01",
+          "focus": 5,
+          "line": {
+            "text": "Each room type's grey line is its base: the price for one guest, room only. Under it, how many rooms of that type are left that day.",
+            "voice": "a15/voice/A15-02/05.wav",
+            "dur": 8.859
+          }
+        },
+        {
+          "shot": "A15-01",
+          "focus": 6,
+          "line": {
+            "text": "The rows under the base are what the room really sells for: two guests on room only, then with breakfast, and on the other meal plans.",
+            "voice": "a15/voice/A15-02/06.wav",
+            "dur": 8.005
+          }
+        },
+        {
+          "shot": "A15-02",
+          "focus": 1,
+          "line": {
+            "text": "Where a room sleeps more, the last rows say what one more adult or child adds. A dash means nobody set it, so it is not sold.",
+            "voice": "a15/voice/A15-02/07.wav",
+            "dur": 8.348
+          }
+        },
+        {
+          "shot": "A15-02",
+          "focus": 2,
+          "line": {
+            "text": "At the foot is how each day sold: the paying rooms sold, with the occupancy under it.",
+            "voice": "a15/voice/A15-02/08.wav",
+            "dur": 4.824
+          }
+        },
+        {
+          "shot": "A15-02",
+          "focus": 3,
+          "line": {
+            "text": "A D R is the average rate of the paying rooms.",
+            "voice": "a15/voice/A15-02/09.wav",
+            "dur": 3.06
+          }
+        },
+        {
+          "shot": "A15-02",
+          "focus": 4,
+          "line": {
+            "text": "Revenue is what the paying rooms brought that night, before tax. Complimentary rooms and day use are left out of these rows. The occupancy counts complimentary rooms, as the reports do.",
+            "voice": "a15/voice/A15-02/10.wav",
+            "dur": 11.361
+          }
+        },
+        {
+          "shot": "A15-02",
+          "focus": 5,
+          "line": {
+            "text": "The key explains the figures. A figure in bold is a base.",
+            "voice": "a15/voice/A15-02/11.wav",
+            "dur": 3.902
+          }
+        },
+        {
+          "shot": "A15-02",
+          "focus": 6,
+          "line": {
+            "text": "A figure in grey italics is a price set before, covering two guests. On this demo every price is still the old rack rate, so they are all in italics.",
+            "voice": "a15/voice/A15-02/12.wav",
+            "dur": 9.265
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A dash anywhere means not priced. The system never puts a zero in its place.",
+        "voice": "a15/voice/A15-02/13.wav",
+        "dur": 5.098
+      },
+      "next": "Changing a price"
+    },
+    {
+      "id": "A15-03",
+      "slug": "A15-03-changing-a-price",
+      "section": "A15.3",
+      "title": "Changing a price",
+      "intro": {
+        "text": "In this video you will change a price: one day with a tap, or a run of days with Set prices. Only the base is typed. The rest follows it.",
+        "voice": "a15/voice/A15-03/01.wav",
+        "dur": 9.202
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A15-03",
+          "focus": 1,
+          "line": {
+            "text": "Tap a room type's base on the day. The window names the room type.",
+            "voice": "a15/voice/A15-03/02.wav",
+            "dur": 4.529
+          }
+        },
+        {
+          "shot": "A15-03",
+          "focus": 2,
+          "line": {
+            "text": "Type the base per night: one guest, room only. The add-ons follow it.",
+            "voice": "a15/voice/A15-03/03.wav",
+            "dur": 4.784
+          }
+        },
+        {
+          "shot": "A15-03",
+          "focus": 3,
+          "line": {
+            "text": "Tick Free only if it really is free. A zero without Free is refused, and a blank is simply not priced.",
+            "voice": "a15/voice/A15-03/04.wav",
+            "dur": 6.595
+          }
+        },
+        {
+          "shot": "A15-03",
+          "focus": 4,
+          "line": {
+            "text": "Through is the last day this base applies to. Leave it on the same day for that day only.",
+            "voice": "a15/voice/A15-03/05.wav",
+            "dur": 5.214
+          }
+        },
+        {
+          "shot": "A15-03",
+          "focus": 5,
+          "line": {
+            "text": "The line under it says which days it covers. Here, 12 October only.",
+            "voice": "a15/voice/A15-03/06.wav",
+            "dur": 5.028
+          }
+        },
+        {
+          "shot": "A15-03",
+          "focus": 6,
+          "line": {
+            "text": "Tap Set base.",
+            "voice": "a15/voice/A15-03/07.wav",
+            "dur": 1.492
+          }
+        },
+        {
+          "shot": "A15-04",
+          "focus": null,
+          "line": {
+            "text": "For a run of days, tap Set prices at the top of the calendar.",
+            "voice": "a15/voice/A15-03/08.wav",
+            "dur": 3.64
+          }
+        },
+        {
+          "shot": "A15-04",
+          "focus": 1,
+          "line": {
+            "text": "Choose the room type.",
+            "voice": "a15/voice/A15-03/09.wav",
+            "dur": 1.365
+          }
+        },
+        {
+          "shot": "A15-04",
+          "focus": 2,
+          "line": {
+            "text": "From is the first day.",
+            "voice": "a15/voice/A15-03/10.wav",
+            "dur": 1.515
+          }
+        },
+        {
+          "shot": "A15-04",
+          "focus": 3,
+          "line": {
+            "text": "Type the base per night, or tick Free.",
+            "voice": "a15/voice/A15-03/11.wav",
+            "dur": 2.537
+          }
+        },
+        {
+          "shot": "A15-04",
+          "focus": 4,
+          "line": {
+            "text": "Through is the last day.",
+            "voice": "a15/voice/A15-03/12.wav",
+            "dur": 1.608
+          }
+        },
+        {
+          "shot": "A15-04",
+          "focus": 5,
+          "line": {
+            "text": "Set base stays grey until a price is typed, or Free is ticked.",
+            "voice": "a15/voice/A15-03/13.wav",
+            "dur": 3.733
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "On a date with a base, the old rack rate is no longer used. Each plan then needs its add-on, so set the add-ons first. That is the next video.",
+        "voice": "a15/voice/A15-03/14.wav",
+        "dur": 9.632
+      },
+      "next": "How rates are built, and prices set before"
+    },
+    {
+      "id": "A15-04",
+      "slug": "A15-04-how-rates-are-built-and-prices-set-before",
+      "section": "A15.4",
+      "title": "How rates are built, and prices set before",
+      "intro": {
+        "text": "In this video you will see how every price is built from the base, and what happens to the prices set before.",
+        "voice": "a15/voice/A15-04/01.wav",
+        "dur": 6.229
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A15-05",
+          "focus": 1,
+          "line": {
+            "text": "How rates are built sits under the calendar. Here, each room type has its own base, and the add-ons ride on every base.",
+            "voice": "a15/voice/A15-04/02.wav",
+            "dur": 6.967
+          }
+        },
+        {
+          "shot": "A15-05",
+          "focus": 3,
+          "line": {
+            "text": "Each add-on is set once for the hotel. The meal plans are per guest. Double occupancy is the second guest. Extra adult and extra child start from the third. A dash is not set, and nothing that needs it is sold.",
+            "voice": "a15/voice/A15-04/03.wav",
+            "dur": 13.649
+          }
+        },
+        {
+          "shot": "A15-05",
+          "focus": 2,
+          "line": {
+            "text": "Edit opens them, for the owner, an Admin, the G M and the Revenue Manager.",
+            "voice": "a15/voice/A15-04/04.wav",
+            "dur": 5.184
+          }
+        },
+        {
+          "shot": "A15-06",
+          "focus": 1,
+          "line": {
+            "text": "Room types chooses how the bases work: each room type its own base, or all derived from one room type.",
+            "voice": "a15/voice/A15-04/05.wav",
+            "dur": 6.392
+          }
+        },
+        {
+          "shot": "A15-06",
+          "focus": 2,
+          "line": {
+            "text": "Derived, each other room type is the base room type plus a difference. Type how much more.",
+            "voice": "a15/voice/A15-04/06.wav",
+            "dur": 5.759
+          }
+        },
+        {
+          "shot": "A15-06",
+          "focus": 3,
+          "line": {
+            "text": "In rupees, or as a percentage, rounded to the whole rupee.",
+            "voice": "a15/voice/A15-04/07.wav",
+            "dur": 4.267
+          }
+        },
+        {
+          "shot": "A15-06",
+          "focus": 4,
+          "line": {
+            "text": "Type each add-on in rupees.",
+            "voice": "a15/voice/A15-04/08.wav",
+            "dur": 1.91
+          }
+        },
+        {
+          "shot": "A15-06",
+          "focus": 5,
+          "line": {
+            "text": "Or tick Free. Nothing is filled in for you. Then tap Save.",
+            "voice": "a15/voice/A15-04/09.wav",
+            "dur": 4.477
+          }
+        },
+        {
+          "shot": "A15-05",
+          "focus": 4,
+          "line": {
+            "text": "Prices set before keeps the prices typed before this way of pricing began, exactly as they were.",
+            "voice": "a15/voice/A15-04/10.wav",
+            "dur": 6.252
+          }
+        },
+        {
+          "shot": "A15-05",
+          "focus": 5,
+          "line": {
+            "text": "An old rack rate is used only on dates no base covers. Remove takes it away.",
+            "voice": "a15/voice/A15-04/11.wav",
+            "dur": 5.26
+          }
+        },
+        {
+          "shot": "A15-07",
+          "focus": 1,
+          "line": {
+            "text": "It asks first.",
+            "voice": "a15/voice/A15-04/12.wav",
+            "dur": 1.423
+          }
+        },
+        {
+          "shot": "A15-07",
+          "focus": 2,
+          "line": {
+            "text": "Its dates then take the base and the add-ons, or a dash where there is no base. Bookings already made keep their rate.",
+            "voice": "a15/voice/A15-04/13.wav",
+            "dur": 7.582
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "So: set the add-ons once, and from then on the daily work is only the base.",
+        "voice": "a15/voice/A15-04/14.wav",
+        "dur": 4.789
+      },
+      "next": "Rooms left and the restrictions"
+    },
+    {
+      "id": "A15-05",
+      "slug": "A15-05-rooms-left-and-the-restrictions",
+      "section": "A15.5",
+      "title": "Rooms left and the restrictions",
+      "intro": {
+        "text": "In this video you will see what is left to sell each day, and close a date or set a minimum stay.",
+        "voice": "a15/voice/A15-05/01.wav",
+        "dur": 5.939
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A15-08",
+          "focus": 1,
+          "line": {
+            "text": "Tap Rooms left at the top of Rates.",
+            "voice": "a15/voice/A15-05/02.wav",
+            "dur": 2.305
+          }
+        },
+        {
+          "shot": "A15-08",
+          "focus": 2,
+          "line": {
+            "text": "The large figure is the rooms of that type still to sell. Under it, paying rooms sold over the rooms that can be sold. Here, on the fourteenth, six Deluxe rooms are left, and one of seven is sold.",
+            "voice": "a15/voice/A15-05/03.wav",
+            "dur": 12.232
+          }
+        },
+        {
+          "shot": "A15-08",
+          "focus": 5,
+          "line": {
+            "text": "Complimentary and tentative rooms hold a room, but are left out of the small figure.",
+            "voice": "a15/voice/A15-05/04.wav",
+            "dur": 4.987
+          }
+        },
+        {
+          "shot": "A15-08",
+          "focus": 3,
+          "line": {
+            "text": "A day on stop sell shows red. A day with nothing left shows yellow.",
+            "voice": "a15/voice/A15-05/05.wav",
+            "dur": 4.726
+          }
+        },
+        {
+          "shot": "A15-08",
+          "focus": 4,
+          "line": {
+            "text": "Small marks show a day closed to arrival or departure, with the minimum and maximum nights.",
+            "voice": "a15/voice/A15-05/06.wav",
+            "dur": 5.312
+          }
+        },
+        {
+          "shot": "A15-09",
+          "focus": null,
+          "line": {
+            "text": "To set a restriction, tap the day. The window names the room type and the date.",
+            "voice": "a15/voice/A15-05/07.wav",
+            "dur": 4.784
+          }
+        },
+        {
+          "shot": "A15-09",
+          "focus": 1,
+          "line": {
+            "text": "Stop sell: nothing may be booked at all.",
+            "voice": "a15/voice/A15-05/08.wav",
+            "dur": 2.665
+          }
+        },
+        {
+          "shot": "A15-09",
+          "focus": 2,
+          "line": {
+            "text": "Closed to arrival: a stay may not begin on this day. It protects a long weekend.",
+            "voice": "a15/voice/A15-05/09.wav",
+            "dur": 5.55
+          }
+        },
+        {
+          "shot": "A15-09",
+          "focus": 3,
+          "line": {
+            "text": "Closed to departure: a stay may not end on this day.",
+            "voice": "a15/voice/A15-05/10.wav",
+            "dur": 3.315
+          }
+        },
+        {
+          "shot": "A15-09",
+          "focus": 4,
+          "line": {
+            "text": "Minimum and maximum nights. A minimum above the maximum is refused, because it would accept no booking at all.",
+            "voice": "a15/voice/A15-05/11.wav",
+            "dur": 6.711
+          }
+        },
+        {
+          "shot": "A15-09",
+          "focus": 5,
+          "line": {
+            "text": "Through applies the same rules to every day up to that date.",
+            "voice": "a15/voice/A15-05/12.wav",
+            "dur": 3.454
+          }
+        },
+        {
+          "shot": "A15-09",
+          "focus": 6,
+          "line": {
+            "text": "Tap Apply. To take a rule off, clear everything, and tap Apply.",
+            "voice": "a15/voice/A15-05/13.wav",
+            "dur": 4.401
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Restrictions are set per room type, and go to the booking sites through S U. A booking made at the desk is not checked against them.",
+        "voice": "a15/voice/A15-05/14.wav",
+        "dur": 7.536
+      },
+      "next": "The Revenue outlook"
+    },
+    {
+      "id": "A15-06",
+      "slug": "A15-06-the-revenue-outlook",
+      "section": "A15.6",
+      "title": "The Revenue outlook",
+      "intro": {
+        "text": "The Revenue outlook looks at the coming ninety nights, and says what to consider. It never changes a price.",
+        "voice": "a15/voice/A15-06/01.wav",
+        "dur": 6.2
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A15-10",
+          "focus": 1,
+          "line": {
+            "text": "This month, on the books: the occupancy, the rooms sold, and the room nights the hotel can sell this month.",
+            "voice": "a15/voice/A15-06/02.wav",
+            "dur": 6.624
+          }
+        },
+        {
+          "shot": "A15-10",
+          "focus": 2,
+          "line": {
+            "text": "Against last year compares the same month last year. A dash says the property was not selling then.",
+            "voice": "a15/voice/A15-06/03.wav",
+            "dur": 6.305
+          }
+        },
+        {
+          "shot": "A15-10",
+          "focus": 3,
+          "line": {
+            "text": "A week ago is where the month stood seven days back. Here the records do not reach back a week, so it is a dash.",
+            "voice": "a15/voice/A15-06/04.wav",
+            "dur": 6.723
+          }
+        },
+        {
+          "shot": "A15-10",
+          "focus": 4,
+          "line": {
+            "text": "What to consider lists up to five nights, each as a sentence with its reason.",
+            "voice": "a15/voice/A15-06/05.wav",
+            "dur": 4.302
+          }
+        },
+        {
+          "shot": "A15-10",
+          "focus": 5,
+          "line": {
+            "text": "A night fourteen days out or nearer, and half sold or less, is soft: consider a lower rate. Here, Sunday the eleventh is two days out, with 9 of 17 rooms left.",
+            "voice": "a15/voice/A15-06/06.wav",
+            "dur": 10.798
+          }
+        },
+        {
+          "shot": "A15-10",
+          "focus": null,
+          "line": {
+            "text": "A night 85 percent sold or more is filling well: consider holding or raising the rate.",
+            "voice": "a15/voice/A15-06/07.wav",
+            "dur": 5.498
+          }
+        },
+        {
+          "shot": "A15-10",
+          "focus": 6,
+          "line": {
+            "text": "Nearby shows the lowest prices of hotels nearby that night, where Rivals' prices is switched on in Settings. A dash means nothing was checked.",
+            "voice": "a15/voice/A15-06/08.wav",
+            "dur": 8.58
+          }
+        },
+        {
+          "shot": "A15-11",
+          "focus": 1,
+          "line": {
+            "text": "A suggestion never names a price. Rates is where a price is changed.",
+            "voice": "a15/voice/A15-06/09.wav",
+            "dur": 4.668
+          }
+        },
+        {
+          "shot": "A15-11",
+          "focus": 2,
+          "line": {
+            "text": "Dates worth a look lists the soft nights, the emptiest and the nearest first.",
+            "voice": "a15/voice/A15-06/10.wav",
+            "dur": 4.476
+          }
+        },
+        {
+          "shot": "A15-11",
+          "focus": 3,
+          "line": {
+            "text": "Rooms left, out of the rooms that can be sold, and how much is sold.",
+            "voice": "a15/voice/A15-06/11.wav",
+            "dur": 4.383
+          }
+        },
+        {
+          "shot": "A15-11",
+          "focus": 4,
+          "line": {
+            "text": "New 1 day, 7 days and 30 days: how many of the rooms sold for that night were booked in that time. On this demo they are dashes: its records do not reach back that far.",
+            "voice": "a15/voice/A15-06/12.wav",
+            "dur": 10.972
+          }
+        },
+        {
+          "shot": "A15-11",
+          "focus": 5,
+          "line": {
+            "text": "Soft marks a night worth a look.",
+            "voice": "a15/voice/A15-06/13.wav",
+            "dur": 2.084
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "The owner, an Admin, the G M and the Revenue Manager see it. The change itself is made on Rates.",
+        "voice": "a15/voice/A15-06/14.wav",
+        "dur": 6.526
+      },
+      "next": "The Channel manager"
+    },
+    {
+      "id": "A15-07",
+      "slug": "A15-07-the-channel-manager",
+      "section": "A15.7",
+      "title": "The Channel manager",
+      "intro": {
+        "text": "The Channel manager connects this system to the booking sites, through S U. In this video you will see what it does, and the bookings the sites send.",
+        "voice": "a15/voice/A15-07/01.wav",
+        "dur": 8.372
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A15-15",
+          "focus": null,
+          "line": {
+            "text": "This is the Channel manager as the G M sees it. Nothing is sent or taken until S U is set up and this hotel is switched on.",
+            "voice": "a15/voice/A15-07/02.wav",
+            "dur": 7.327
+          }
+        },
+        {
+          "shot": "A15-15",
+          "focus": 1,
+          "line": {
+            "text": "Rooms left are sent out, so the same room is not sold twice. The rate calendar's prices and closures go to S U as they change. A date with no price goes to S U closed.",
+            "voice": "a15/voice/A15-07/03.wav",
+            "dur": 11.582
+          }
+        },
+        {
+          "shot": "A15-15",
+          "focus": null,
+          "line": {
+            "text": "And a booking site's booking arrives as a booking. Its cancellation cancels it.",
+            "voice": "a15/voice/A15-07/04.wav",
+            "dur": 4.714
+          }
+        },
+        {
+          "shot": "A15-15",
+          "focus": 2,
+          "line": {
+            "text": "What it still needs before it goes live: S U's account and its certification, the room types and meal plans matched, each site's code, and this hotel switched on.",
+            "voice": "a15/voice/A15-07/05.wav",
+            "dur": 10.107
+          }
+        },
+        {
+          "shot": "A15-15",
+          "focus": 3,
+          "line": {
+            "text": "Booking sites and their S U codes. Each code is picked on Booking sources.",
+            "voice": "a15/voice/A15-07/06.wav",
+            "dur": 4.796
+          }
+        },
+        {
+          "shot": "A15-15",
+          "focus": 4,
+          "line": {
+            "text": "Here, Agoda's code is not one of S U's, so its bookings would wait for a person.",
+            "voice": "a15/voice/A15-07/07.wav",
+            "dur": 5.091
+          }
+        },
+        {
+          "shot": "A15-14",
+          "focus": 4,
+          "line": {
+            "text": "Bookings from the booking sites lists every booking S U sent, and what became of it.",
+            "voice": "a15/voice/A15-07/08.wav",
+            "dur": 5.254
+          }
+        },
+        {
+          "shot": "A15-14",
+          "focus": 4,
+          "line": {
+            "text": "A booking for a room no longer free is refused, and the site is told there is nothing left. Settle it with the site and the guest, then tap I have dealt with this.",
+            "voice": "a15/voice/A15-07/09.wav",
+            "dur": 9.196
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "The owner and an Admin also see the S U setup. That is the next video.",
+        "voice": "a15/voice/A15-07/10.wav",
+        "dur": 4.807
+      },
+      "next": "Setting up S U"
+    },
+    {
+      "id": "A15-08",
+      "slug": "A15-08-setting-up-s-u",
+      "section": "A15.8",
+      "title": "Setting up S U",
+      "intro": {
+        "text": "This video is for the owner and an Admin: the S U setup, in the order it is needed. Nothing is guessed from a name, and saving sends nothing.",
+        "voice": "a15/voice/A15-08/01.wav",
+        "dur": 8.766
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A15-12",
+          "focus": 1,
+          "line": {
+            "text": "First, the S U login. Here it is not set up: the owner adds S U's keys to the server's settings.",
+            "voice": "a15/voice/A15-08/02.wav",
+            "dur": 6.746
+          }
+        },
+        {
+          "shot": "A15-12",
+          "focus": 2,
+          "line": {
+            "text": "Check the login then asks S U whether the keys work.",
+            "voice": "a15/voice/A15-08/03.wav",
+            "dur": 3.176
+          }
+        },
+        {
+          "shot": "A15-12",
+          "focus": 4,
+          "line": {
+            "text": "This hotel on S U: its S U hotel id, which cannot change once S U has it, its country, and a contact's name.",
+            "voice": "a15/voice/A15-08/04.wav",
+            "dur": 8.226
+          }
+        },
+        {
+          "shot": "A15-12",
+          "focus": 3,
+          "line": {
+            "text": "The address comes from the hotel record. The PIN code and map point are set in Settings, on the Property tab.",
+            "voice": "a15/voice/A15-08/05.wav",
+            "dur": 7.176
+          }
+        },
+        {
+          "shot": "A15-13",
+          "focus": 1,
+          "line": {
+            "text": "Room types: each goes to S U under the id you give it, with its rack rate and its rooms.",
+            "voice": "a15/voice/A15-08/06.wav",
+            "dur": 5.567
+          }
+        },
+        {
+          "shot": "A15-13",
+          "focus": 2,
+          "line": {
+            "text": "Type its S U room id.",
+            "voice": "a15/voice/A15-08/07.wav",
+            "dur": 1.957
+          }
+        },
+        {
+          "shot": "A15-13",
+          "focus": 3,
+          "line": {
+            "text": "Pick its S U room type. A wrong match oversells the wrong room.",
+            "voice": "a15/voice/A15-08/08.wav",
+            "dur": 4.366
+          }
+        },
+        {
+          "shot": "A15-13",
+          "focus": 4,
+          "line": {
+            "text": "Type how many children it takes, at most.",
+            "voice": "a15/voice/A15-08/09.wav",
+            "dur": 2.653
+          }
+        },
+        {
+          "shot": "A15-13",
+          "focus": 5,
+          "line": {
+            "text": "Tick Send to S U.",
+            "voice": "a15/voice/A15-08/10.wav",
+            "dur": 1.608
+          }
+        },
+        {
+          "shot": "A15-13",
+          "focus": 6,
+          "line": {
+            "text": "And save it. The meal plans below are matched the same way.",
+            "voice": "a15/voice/A15-08/11.wav",
+            "dur": 3.844
+          }
+        },
+        {
+          "shot": "A15-14",
+          "focus": 1,
+          "line": {
+            "text": "Send to S U says what S U still needs first. Then it sends the hotel, its room types and its meal plans.",
+            "voice": "a15/voice/A15-08/12.wav",
+            "dur": 7.303
+          }
+        },
+        {
+          "shot": "A15-14",
+          "focus": 2,
+          "line": {
+            "text": "Send a year sends the rooms left, prices and closures for a year, when the hotel first goes on S U.",
+            "voice": "a15/voice/A15-08/13.wav",
+            "dur": 6.368
+          }
+        },
+        {
+          "shot": "A15-14",
+          "focus": 3,
+          "line": {
+            "text": "After that only what changed is sent, on its own every minute once the hotel is switched on.",
+            "voice": "a15/voice/A15-08/14.wav",
+            "dur": 5.161
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Where a meal plan has no price of its own, the rack rate goes to S U, so the room keeps selling. Where there is no price at all, the date goes closed.",
+        "voice": "a15/voice/A15-08/15.wav",
+        "dur": 9.149
+      },
+      "next": "Contracts: companies and their rates"
+    },
+    {
+      "id": "A15-09",
+      "slug": "A15-09-contracts-companies-and-their-rates",
+      "section": "A15.9",
+      "title": "Contracts: companies and their rates",
+      "intro": {
+        "text": "In this video you will add a company, and give it a contract with its own rates.",
+        "voice": "a15/voice/A15-09/01.wav",
+        "dur": 4.441
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A15-16",
+          "focus": null,
+          "line": {
+            "text": "Open Contracts, under Distribution. Each row is a company, with its G S T I N, its city, its credit, and its contract here.",
+            "voice": "a15/voice/A15-09/02.wav",
+            "dur": 8.29
+          }
+        },
+        {
+          "shot": "A15-16",
+          "focus": 2,
+          "line": {
+            "text": "Credit says whether it may be billed to pay later.",
+            "voice": "a15/voice/A15-09/03.wav",
+            "dur": 2.851
+          }
+        },
+        {
+          "shot": "A15-16",
+          "focus": 3,
+          "line": {
+            "text": "Contract here names the contract at this hotel. A dash means none.",
+            "voice": "a15/voice/A15-09/04.wav",
+            "dur": 4.726
+          }
+        },
+        {
+          "shot": "A15-16",
+          "focus": 1,
+          "line": {
+            "text": "Add company adds one. The owner, an Admin, the G M and Reception can.",
+            "voice": "a15/voice/A15-09/05.wav",
+            "dur": 5.202
+          }
+        },
+        {
+          "shot": "A15-19",
+          "focus": 1,
+          "line": {
+            "text": "One record serves the whole group. Choose its kind: corporate, or travel agent.",
+            "voice": "a15/voice/A15-09/06.wav",
+            "dur": 4.83
+          }
+        },
+        {
+          "shot": "A15-19",
+          "focus": 2,
+          "line": {
+            "text": "Its G S T I N, from its G S T certificate. It prints on the company's tax invoices.",
+            "voice": "a15/voice/A15-09/07.wav",
+            "dur": 6.27
+          }
+        },
+        {
+          "shot": "A15-19",
+          "focus": 3,
+          "line": {
+            "text": "A contact person, a phone and an email.",
+            "voice": "a15/voice/A15-09/08.wav",
+            "dur": 3.06
+          }
+        },
+        {
+          "shot": "A15-19",
+          "focus": 4,
+          "line": {
+            "text": "Credit allowed means a bill may be sent to the company, to pay later. Reception adds only the name, G S T I N and address.",
+            "voice": "a15/voice/A15-09/09.wav",
+            "dur": 8.325
+          }
+        },
+        {
+          "shot": "A15-19",
+          "focus": 5,
+          "line": {
+            "text": "Tap Add company.",
+            "voice": "a15/voice/A15-09/10.wav",
+            "dur": 1.399
+          }
+        },
+        {
+          "shot": "A15-17",
+          "focus": 4,
+          "line": {
+            "text": "With no contract at this hotel, the company's bookings take the rate calendar's price.",
+            "voice": "a15/voice/A15-09/11.wav",
+            "dur": 5.173
+          }
+        },
+        {
+          "shot": "A15-17",
+          "focus": 5,
+          "line": {
+            "text": "Add contract. The owner, an Admin and the G M can.",
+            "voice": "a15/voice/A15-09/12.wav",
+            "dur": 4.285
+          }
+        },
+        {
+          "shot": "A15-18",
+          "focus": 1,
+          "line": {
+            "text": "Name it, and choose the dates it is valid from, and to.",
+            "voice": "a15/voice/A15-09/13.wav",
+            "dur": 3.652
+          }
+        },
+        {
+          "shot": "A15-18",
+          "focus": 3,
+          "line": {
+            "text": "Fixed rates are per room per night, before tax: a single and a double rate for each room type and meal plan.",
+            "voice": "a15/voice/A15-09/14.wav",
+            "dur": 6.891
+          }
+        },
+        {
+          "shot": "A15-18",
+          "focus": 5,
+          "line": {
+            "text": "A blank is not agreed: the booking takes the day's price.",
+            "voice": "a15/voice/A15-09/15.wav",
+            "dur": 3.547
+          }
+        },
+        {
+          "shot": "A15-18",
+          "focus": 4,
+          "line": {
+            "text": "Or choose a discount off the day's rate, as a percentage.",
+            "voice": "a15/voice/A15-09/16.wav",
+            "dur": 3.501
+          }
+        },
+        {
+          "shot": "A15-18",
+          "focus": 6,
+          "line": {
+            "text": "Tap Add contract. The contract in force on the arrival date prices the booking. Bookings already made keep their rate.",
+            "voice": "a15/voice/A15-09/17.wav",
+            "dur": 7.658
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A travel agent's contract also carries its commission. A contract rate is always before G S T.",
+        "voice": "a15/voice/A15-09/18.wav",
+        "dur": 6.375
+      },
+      "next": "Rate work in short"
+    },
+    {
+      "id": "A15-10",
+      "slug": "A15-10-rate-work-in-short",
+      "section": "A15.10",
+      "title": "Rate work in short",
+      "intro": {
+        "text": "Here is the rate work, in short.",
+        "voice": "a15/voice/A15-10/01.wav",
+        "dur": 2.154
+      },
+      "record": null,
+      "scenes": [],
+      "checklist": [
+        {
+          "text": "Checking the fortnight: open Rates. Each day's price, the rooms left, and how it sold.",
+          "voice": "a15/voice/A15-10/02.wav",
+          "dur": 5.945
+        },
+        {
+          "text": "A price changes: tap the base on the day, or Set prices for a run of days.",
+          "voice": "a15/voice/A15-10/03.wav",
+          "dur": 5.161
+        },
+        {
+          "text": "A plan or a second guest shows a dash: How rates are built, Edit, and set its add-on.",
+          "voice": "a15/voice/A15-10/04.wav",
+          "dur": 5.788
+        },
+        {
+          "text": "A date to close, or a minimum stay: Rooms left, tap the day, and Apply.",
+          "voice": "a15/voice/A15-10/05.wav",
+          "dur": 5.184
+        },
+        {
+          "text": "Which nights are soft: the Revenue outlook. Then change the price on Rates.",
+          "voice": "a15/voice/A15-10/06.wav",
+          "dur": 4.761
+        },
+        {
+          "text": "A booking site's booking refused: the Channel manager. Settle it, then I have dealt with this.",
+          "voice": "a15/voice/A15-10/07.wav",
+          "dur": 5.829
+        },
+        {
+          "text": "A site's bookings waiting for a person: pick its S U code on Booking sources.",
+          "voice": "a15/voice/A15-10/08.wav",
+          "dur": 4.801
+        },
+        {
+          "text": "A company agrees a rate: Contracts. Open the company, and Add contract.",
+          "voice": "a15/voice/A15-10/09.wav",
+          "dur": 5.19
+        }
+      ],
+      "outro": {
+        "text": "That is rates, revenue and distribution. Thank you for watching.",
+        "voice": "a15/voice/A15-10/10.wav",
+        "dur": 4.122
+      },
+      "next": null
+    }
+  ]
+}

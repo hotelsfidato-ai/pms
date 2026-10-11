@@ -1,0 +1,397 @@
+{
+  "chapter": "A13",
+  "title": "Banquets, spa and laundry",
+  "manualShots": "a13",
+  "videos": [
+    {
+      "id": "A13-01",
+      "slug": "A13-01-switching-banquets-spa-and-laundry-on",
+      "section": "A13.1",
+      "title": "Switching banquets, spa and laundry on",
+      "intro": {
+        "text": "Banquets, the spa and the laundry are switched on hotel by hotel. In this video you will see where, and what staff see while one is off.",
+        "voice": "a13/voice/A13-01/01.wav",
+        "dur": 8.813
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A13-x1",
+          "focus": null,
+          "line": {
+            "text": "The switches are in Settings, under Modules. Only the owner or an administrator sees this page.",
+            "voice": "a13/voice/A13-01/02.wav",
+            "dur": 5.829
+          }
+        },
+        {
+          "shot": "A13-x1",
+          "focus": null,
+          "line": {
+            "text": "Each line says what it runs. Banquet hall is the diary, the halls and their packages. A hall cannot be sold twice for the same session.",
+            "voice": "a13/voice/A13-01/03.wav",
+            "dur": 8.621
+          }
+        },
+        {
+          "shot": "A13-x1",
+          "focus": null,
+          "line": {
+            "text": "Laundry is a guest's laundry, charged to their room, and the hotel's own linen going out and coming back.",
+            "voice": "a13/voice/A13-01/04.wav",
+            "dur": 5.776
+          }
+        },
+        {
+          "shot": "A13-x1",
+          "focus": null,
+          "line": {
+            "text": "Spa is treatments and the day's diary. Today, every treatment goes on the guest's room bill.",
+            "voice": "a13/voice/A13-01/05.wav",
+            "dur": 5.678
+          }
+        },
+        {
+          "shot": "A13-x1",
+          "focus": null,
+          "line": {
+            "text": "Each one starts off. Tap its switch to turn it on, and its part of the menu appears at once.",
+            "voice": "a13/voice/A13-01/06.wav",
+            "dur": 5.864
+          }
+        },
+        {
+          "shot": "A13-x2",
+          "focus": null,
+          "line": {
+            "text": "While one is off, its part of the menu is not there. A screen opened by its address says it is not available, like this Diary.",
+            "voice": "a13/voice/A13-01/07.wav",
+            "dur": 7.512
+          }
+        },
+        {
+          "shot": "A13-x5",
+          "focus": null,
+          "line": {
+            "text": "Halls and packages says the same. Nothing can be booked or changed, even by typing the address. The server refuses it too.",
+            "voice": "a13/voice/A13-01/08.wav",
+            "dur": 8.54
+          }
+        },
+        {
+          "shot": "A13-x3",
+          "focus": null,
+          "line": {
+            "text": "The message says to turn it on in the property's settings. Only the owner or an administrator can, so ask one of them.",
+            "voice": "a13/voice/A13-01/09.wav",
+            "dur": 7.164
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Each part starts empty: no hall, no treatment, no price. The next videos show what each one does.",
+        "voice": "a13/voice/A13-01/10.wav",
+        "dur": 7.64
+      },
+      "next": "Banquets: booking and billing a function"
+    },
+    {
+      "id": "A13-02",
+      "slug": "A13-02-banquets-booking-and-billing-a-function",
+      "section": "A13.2",
+      "title": "Banquets: booking and billing a function",
+      "intro": {
+        "text": "This video is for the general manager: a banquet function, from the first call to its bill.",
+        "voice": "a13/voice/A13-02/01.wav",
+        "dur": 5.335
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A13-x5",
+          "focus": null,
+          "line": {
+            "text": "Here the banquet hall is switched off. Where it is on, Halls and packages is where the hotel's halls and food packages are entered. Nothing is made for you.",
+            "voice": "a13/voice/A13-02/02.wav",
+            "dur": 9.539
+          }
+        },
+        {
+          "shot": "A13-x2",
+          "focus": null,
+          "line": {
+            "text": "The Diary shows each hall over thirty days, with its functions. An empty hall says Free for the whole window.",
+            "voice": "a13/voice/A13-02/03.wav",
+            "dur": 6.491
+          }
+        },
+        {
+          "shot": "A13-x2",
+          "focus": null,
+          "line": {
+            "text": "Tap Register a function: the hall, what it is, from when until when, and the host. Leave the price blank if it is not agreed. It shows a dash.",
+            "voice": "a13/voice/A13-02/04.wav",
+            "dur": 9.713
+          }
+        },
+        {
+          "shot": "A13-x2",
+          "focus": null,
+          "line": {
+            "text": "A new function is an enquiry, and holds nothing. Confirm and hold the hall takes it. If the hall is taken, the message names the function in the way.",
+            "voice": "a13/voice/A13-02/05.wav",
+            "dur": 9.272
+          }
+        },
+        {
+          "shot": "A13-x2",
+          "focus": null,
+          "line": {
+            "text": "Add a course from a package, or off-menu, with the plates and the rate a head. Food from the restaurant is put on the function at the Till.",
+            "voice": "a13/voice/A13-02/06.wav",
+            "dur": 7.396
+          }
+        },
+        {
+          "shot": "A13-x2",
+          "focus": null,
+          "line": {
+            "text": "Confirming opens the function's bill. Take an advance, then Bill the function. It is refused while anything is unpriced, or while the banquet tax is not set.",
+            "voice": "a13/voice/A13-02/07.wav",
+            "dur": 9.748
+          }
+        },
+        {
+          "shot": "A13-x2",
+          "focus": null,
+          "line": {
+            "text": "Then Settle, and Issue tax invoice. The owner, an administrator and the GM take the money. The accountant may also issue the invoice.",
+            "voice": "a13/voice/A13-02/08.wav",
+            "dur": 8.482
+          }
+        },
+        {
+          "shot": "A13-x2",
+          "focus": null,
+          "line": {
+            "text": "To cancel, type why. A billed function cannot be cancelled. Before its invoice, Reopen the bill takes the hall and courses off, with a reason.",
+            "voice": "a13/voice/A13-02/09.wav",
+            "dur": 9.167
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A hall cannot be sold twice: only a confirmed function holds it.",
+        "voice": "a13/voice/A13-02/10.wav",
+        "dur": 4.418
+      },
+      "next": "The spa diary"
+    },
+    {
+      "id": "A13-03",
+      "slug": "A13-03-the-spa-diary",
+      "section": "A13.5",
+      "title": "The spa diary",
+      "intro": {
+        "text": "This video is for reception: booking a spa treatment, and putting it on the room bill.",
+        "voice": "a13/voice/A13-03/01.wav",
+        "dur": 4.929
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A13-x1",
+          "focus": null,
+          "line": {
+            "text": "The spa is switched on in Modules, by the owner or an administrator. At this hotel it is off.",
+            "voice": "a13/voice/A13-03/02.wav",
+            "dur": 6.189
+          }
+        },
+        {
+          "shot": "A13-x3",
+          "focus": null,
+          "line": {
+            "text": "So the Spa diary says it is not available. Where it is on, the diary shows one day, therapist by therapist.",
+            "voice": "a13/voice/A13-03/03.wav",
+            "dur": 6.932
+          }
+        },
+        {
+          "shot": "A13-x3",
+          "focus": null,
+          "line": {
+            "text": "First, on Treatments, the owner, an administrator or the GM enter each treatment, how long it takes, and its price. And each therapist, by name.",
+            "voice": "a13/voice/A13-03/04.wav",
+            "dur": 9.765
+          }
+        },
+        {
+          "shot": "A13-x3",
+          "focus": null,
+          "line": {
+            "text": "To book, move the diary to the day, and tap Book a treatment. Choose the guest, the treatment, the therapist, and the time.",
+            "voice": "a13/voice/A13-03/05.wav",
+            "dur": 8.058
+          }
+        },
+        {
+          "shot": "A13-x3",
+          "focus": null,
+          "line": {
+            "text": "The treatment's length places it in the day. One therapist is never in two places at once: if the time is taken, the message names who is in the way.",
+            "voice": "a13/voice/A13-03/06.wav",
+            "dur": 9.103
+          }
+        },
+        {
+          "shot": "A13-x3",
+          "focus": null,
+          "line": {
+            "text": "Every treatment is for a guest's stay, on a day from their arrival to their departure.",
+            "voice": "a13/voice/A13-03/07.wav",
+            "dur": 4.813
+          }
+        },
+        {
+          "shot": "A13-x3",
+          "focus": null,
+          "line": {
+            "text": "When it is given, tap Charge to room. It goes on the guest's bill as its own line, at the spa's own GST rate. The guest must be checked in.",
+            "voice": "a13/voice/A13-03/08.wav",
+            "dur": 9.039
+          }
+        },
+        {
+          "shot": "A13-x3",
+          "focus": null,
+          "line": {
+            "text": "Price the treatment before you book it. The price is copied when it is booked, and a booking with no price cannot be charged.",
+            "voice": "a13/voice/A13-03/09.wav",
+            "dur": 6.99
+          }
+        },
+        {
+          "shot": "A13-x3",
+          "focus": null,
+          "line": {
+            "text": "To cancel, type why, and the hour is free again. Housekeeping can see the diary, but not book.",
+            "voice": "a13/voice/A13-03/10.wav",
+            "dur": 6.189
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Settling at the spa itself is not built yet. Every treatment goes on the room bill.",
+        "voice": "a13/voice/A13-03/11.wav",
+        "dur": 5.19
+      },
+      "next": "The laundry dockets"
+    },
+    {
+      "id": "A13-04",
+      "slug": "A13-04-the-laundry-dockets",
+      "section": "A13.6",
+      "title": "The laundry dockets",
+      "intro": {
+        "text": "This video is for reception and housekeeping: the laundry dockets.",
+        "voice": "a13/voice/A13-04/01.wav",
+        "dur": 4.058
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A13-x1",
+          "focus": null,
+          "line": {
+            "text": "The laundry is switched on in Modules too. At this hotel it is off.",
+            "voice": "a13/voice/A13-04/02.wav",
+            "dur": 4.424
+          }
+        },
+        {
+          "shot": "A13-x4",
+          "focus": null,
+          "line": {
+            "text": "So Dockets says the laundry is not available. Where it is on, Dockets lists every bag, a guest's and the hotel's own, with what is still out first.",
+            "voice": "a13/voice/A13-04/03.wav",
+            "dur": 9.149
+          }
+        },
+        {
+          "shot": "A13-x4",
+          "focus": null,
+          "line": {
+            "text": "First, the price list: one line for each thing and service, such as a shirt, washed. With no price decided, it reads a dash.",
+            "voice": "a13/voice/A13-04/04.wav",
+            "dur": 8.766
+          }
+        },
+        {
+          "shot": "A13-x4",
+          "focus": null,
+          "line": {
+            "text": "A docket is one bag. Tap Collect a bag, and say first whose it is: a guest's bag, or the hotel's own linen.",
+            "voice": "a13/voice/A13-04/05.wav",
+            "dur": 7.71
+          }
+        },
+        {
+          "shot": "A13-x4",
+          "focus": null,
+          "line": {
+            "text": "A guest's bag names their stay. Only a checked-in guest can hand one in.",
+            "voice": "a13/voice/A13-04/06.wav",
+            "dur": 5.005
+          }
+        },
+        {
+          "shot": "A13-x4",
+          "focus": null,
+          "line": {
+            "text": "Pick each thing from the price list, and how many. The prices are copied onto the docket, so price the list first.",
+            "voice": "a13/voice/A13-04/07.wav",
+            "dur": 7.129
+          }
+        },
+        {
+          "shot": "A13-x4",
+          "focus": null,
+          "line": {
+            "text": "When it comes back, tap Record what came back, and type how many of each have come back in total. When nothing is still out, it marks itself Back.",
+            "voice": "a13/voice/A13-04/08.wav",
+            "dur": 8.627
+          }
+        },
+        {
+          "shot": "A13-x4",
+          "focus": null,
+          "line": {
+            "text": "For a guest's bag, tap Charge to the room. It goes on their bill as its own line, under laundry's own GST rate.",
+            "voice": "a13/voice/A13-04/09.wav",
+            "dur": 7.152
+          }
+        },
+        {
+          "shot": "A13-x4",
+          "focus": null,
+          "line": {
+            "text": "The hotel's own linen is counted out and back, and never charged to anybody. A docket can be cancelled until it is on a bill.",
+            "voice": "a13/voice/A13-04/10.wav",
+            "dur": 7.803
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Every docket says whose it is, so the hotel's sheets never reach a guest's bill.",
+        "voice": "a13/voice/A13-04/11.wav",
+        "dur": 4.824
+      },
+      "next": null
+    }
+  ]
+}

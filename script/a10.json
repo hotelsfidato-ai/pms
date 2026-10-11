@@ -1,0 +1,517 @@
+{
+  "chapter": "A10",
+  "title": "Guests and guest messages",
+  "manualShots": "a10",
+  "videos": [
+    {
+      "id": "A10-01",
+      "section": "A10.1",
+      "title": "The Guests and CRM screens",
+      "intro": "Guests and C R M is the part of the Front office menu that holds what the system knows about a person, rather than a booking. In this video you will see its screens, and who uses which.",
+      "scenes": [
+        {
+          "shot": "A10-01",
+          "focus": 1,
+          "say": "Guests lists everyone booked at this hotel, one line per name, with their stays, what they spent and what they owe."
+        },
+        {
+          "shot": "A10-04",
+          "focus": 1,
+          "say": "Companies and agents shows where the bookings came from, and what each source was worth. Add company is here too."
+        },
+        {
+          "shot": "A10-12",
+          "focus": 2,
+          "say": "Guest messages shows what the system sent to guests, and whether it went. Messages that guests write to the desk wait here too."
+        },
+        {
+          "shot": "A10-14",
+          "focus": 4,
+          "say": "Reviews asks a guest who has left for a review, and shows who was asked."
+        },
+        {
+          "shot": "A10-06",
+          "say": "Guest 360 shows one guest across every hotel of the group. Only the owner, an Admin and the GM see it."
+        },
+        {
+          "shot": "A10-10",
+          "say": "Possible same person lists guest records that share a phone number or an email. The same three people join them, or keep them apart."
+        },
+        {
+          "shot": "A10-12",
+          "focus": 1,
+          "say": "Reception's own menu shows Guests and Guest messages. Companies and agents, and Reviews, are reached with Find a screen."
+        },
+        {
+          "shot": "A10-11",
+          "say": "Which messages go out by themselves is switched on or off in Settings, under Messages."
+        }
+      ],
+      "outro": "You see the screens your role may open. The next videos take each one step by step."
+    },
+    {
+      "id": "A10-02",
+      "section": "A10.2",
+      "title": "The guest list",
+      "intro": "In this video you will read the Guests screen: everyone booked at this hotel, one line per name.",
+      "scenes": [
+        {
+          "shot": "A10-01",
+          "focus": 1,
+          "say": "Open Guests, under Guests and C R M. The pill beside the heading counts the guests."
+        },
+        {
+          "shot": "A10-01",
+          "say": "Each line is put together from the bookings, by the name typed on them. Repeat guests come first."
+        },
+        {
+          "shot": "A10-01",
+          "say": "Stays and Nights count every booking under the name, cancelled and future ones too. Last stay says when the last stay ended, or first visit."
+        },
+        {
+          "shot": "A10-01",
+          "say": "Booked via lists every source their stays came through. Total spend is what their stays were charged."
+        },
+        {
+          "shot": "A10-01",
+          "say": "Balance is what they still owe, in red, or what they are owed, in blue. A dash means nothing."
+        },
+        {
+          "shot": "A10-01",
+          "focus": 2,
+          "say": "To find someone, type part of their name here. The search finds names only."
+        },
+        {
+          "shot": "A10-01",
+          "focus": 3,
+          "say": "This yellow box counts the names whose stays overlap. One person cannot be in two rooms on the same night."
+        },
+        {
+          "shot": "A10-01",
+          "focus": 4,
+          "say": "So a name marked overlapping stays is two people sharing a name, or something entered twice. It is shown, never merged."
+        },
+        {
+          "shot": "A10-01",
+          "say": "A row does not open. To correct a guest, use Edit guest on their booking."
+        }
+      ],
+      "outro": "The guest list goes by the name typed. To tell one person from another, the system uses the phone and email instead."
+    },
+    {
+      "id": "A10-03",
+      "section": "A10.3",
+      "title": "A guest's record: the marks and Edit guest",
+      "intro": "A guest's own record belongs to the person, not to one booking. In this video you will mark a guest, and correct their record, from a booking's panel.",
+      "scenes": [
+        {
+          "shot": "A10-02",
+          "say": "Open the booking from Arrivals, In house or All bookings. The marks sit on the line under the guest's name."
+        },
+        {
+          "shot": "A10-02",
+          "focus": 1,
+          "say": "Mark V I P makes the guest a V I P, on this visit and the next. Where the group has V I P levels, choose which."
+        },
+        {
+          "shot": "A10-02",
+          "focus": 3,
+          "say": "Tick Agreed to WhatsApp only when the guest says yes. The voucher goes on WhatsApp only with this tick and a phone number."
+        },
+        {
+          "shot": "A10-02",
+          "focus": 4,
+          "say": "Guest 360 opens the guest's whole history. Only the owner, an Admin and the GM have it."
+        },
+        {
+          "shot": "A10-02",
+          "say": "A guest who has stayed with the group before carries a blue mark, such as Stayed with the group 3 times. The desk is shown nothing more."
+        },
+        {
+          "shot": "A10-02",
+          "focus": 2,
+          "say": "To correct the guest, tap Edit guest."
+        },
+        {
+          "shot": "A10-03",
+          "focus": 1,
+          "say": "This is the guest's own record: the same on every booking of theirs, at every hotel. Change what is wrong, such as the name."
+        },
+        {
+          "shot": "A10-03",
+          "focus": 2,
+          "say": "Or the phone and email. Messages go to them from then on."
+        },
+        {
+          "shot": "A10-03",
+          "focus": 3,
+          "say": "Nationality is two letters: I N for India. Anything else puts the guest on the Form three register."
+        },
+        {
+          "shot": "A10-03",
+          "focus": 4,
+          "say": "Save stays grey until something has changed and everything typed is right. The message says Guest updated."
+        }
+      ],
+      "outro": "Every change is kept in the audit log. Only the owner, an Admin, the GM, the Hotel Manager and Reception see Edit guest, Mark V I P and the WhatsApp tick."
+    },
+    {
+      "id": "A10-04",
+      "section": "A10.4",
+      "title": "Companies and agents",
+      "intro": "Companies and agents answers one question: where did the business come from, and what was each source worth?",
+      "scenes": [
+        {
+          "shot": "A10-04",
+          "focus": 2,
+          "say": "Three tiles sit at the top. Through an agent is the revenue from the booking sites, and its share of the whole."
+        },
+        {
+          "shot": "A10-04",
+          "say": "Direct is the revenue that came straight to the property."
+        },
+        {
+          "shot": "A10-04",
+          "focus": 3,
+          "say": "Owed to the property adds up what every source still owes."
+        },
+        {
+          "shot": "A10-04",
+          "focus": 4,
+          "say": "Then one table for each kind. Travel agents are booked through a channel, and charged a commission for it."
+        },
+        {
+          "shot": "A10-04",
+          "say": "Each table shows bookings, room nights, revenue, commission and what is owed. Commission prints as a dash: it is charged outside this system today."
+        },
+        {
+          "shot": "A10-04",
+          "focus": 1,
+          "say": "To add a company, tap Add company."
+        },
+        {
+          "shot": "A10-05",
+          "focus": 1,
+          "say": "It is one record for the group: the same company at every hotel. Type its name."
+        },
+        {
+          "shot": "A10-05",
+          "focus": 2,
+          "say": "Choose its kind: Corporate or Travel agent."
+        },
+        {
+          "shot": "A10-05",
+          "focus": 3,
+          "say": "Type its G S T I N from the company's G S T certificate. It prints on the company's tax invoices."
+        },
+        {
+          "shot": "A10-05",
+          "focus": 4,
+          "say": "If the company may pay later, switch on Credit allowed, and type the credit days and the limit."
+        },
+        {
+          "shot": "A10-05",
+          "focus": 5,
+          "say": "Add company stays grey until the form is right. The message says Company added."
+        }
+      ],
+      "outro": "Reception gets a shorter window: the name, G S T I N and address only. Credit is set by the owner, an Admin or the GM."
+    },
+    {
+      "id": "A10-05",
+      "section": "A10.5",
+      "title": "Guest 360: one guest, every hotel",
+      "intro": "Guest 360 is for the owner, an Admin and the GM. It shows one person across every hotel of the group.",
+      "scenes": [
+        {
+          "shot": "A10-06",
+          "focus": 1,
+          "say": "Open Guest 360. Type two letters of a name, or a whole phone number or email."
+        },
+        {
+          "shot": "A10-06",
+          "focus": 2,
+          "say": "Each guest record found is a row, with its phone and email. A dash means none."
+        },
+        {
+          "shot": "A10-06",
+          "focus": 3,
+          "say": "The row says how many times they stayed with the group. Tap it to open the guest."
+        },
+        {
+          "shot": "A10-07",
+          "focus": 1,
+          "say": "Who they are: the name, V I P or Blacklisted, phone and email, nationality, and whether an I D is on file. The I D itself is never shown."
+        },
+        {
+          "shot": "A10-07",
+          "focus": 2,
+          "say": "Edit guest corrects the record here too."
+        },
+        {
+          "shot": "A10-07",
+          "focus": 3,
+          "say": "What they are worth: visits, nights, what they were charged, and their first and last stay. Visits counts the times they checked in."
+        },
+        {
+          "shot": "A10-07",
+          "focus": 4,
+          "say": "Every stay, at every hotel, lists each booking with its dates, room type, source, status and charge."
+        },
+        {
+          "shot": "A10-08",
+          "focus": 1,
+          "say": "Loyalty shows their points, or says they are not a member."
+        },
+        {
+          "shot": "A10-08",
+          "focus": 2,
+          "say": "What was sent to them lists every message, from any hotel."
+        },
+        {
+          "shot": "A10-08",
+          "focus": 3,
+          "say": "To blacklist a guest, type the reason and tap Blacklist. The desk is shown the reason when they book again. It warns; it never refuses."
+        },
+        {
+          "shot": "A10-08",
+          "focus": 4,
+          "say": "Offers says whether offers may be sent to them. Record their yes, or Record no offers, shows when the record has a phone or an email."
+        }
+      ],
+      "outro": "Clear the blacklist takes a blacklist off. And no offers go to a guest who has not said yes."
+    },
+    {
+      "id": "A10-06",
+      "section": "A10.6",
+      "title": "The same person twice",
+      "intro": "A guest is one record for the whole group. The system knows a returning guest by an exact phone number or email, never by a name, and a person always confirms.",
+      "scenes": [
+        {
+          "shot": "A10-09",
+          "focus": 1,
+          "say": "On New booking, type the guest's phone or email."
+        },
+        {
+          "shot": "A10-09",
+          "focus": 2,
+          "say": "If it matches a guest on file, a grey box asks: same person? Ask the guest. If it is them, tap Same person, and the booking goes on their record."
+        },
+        {
+          "shot": "A10-09",
+          "say": "Not them? Do nothing, or tap Not them to undo your choice. The booking then makes a new guest record."
+        },
+        {
+          "shot": "A10-09",
+          "focus": 3,
+          "say": "While you are here, ask about WhatsApp. Tick Guest agreed to WhatsApp only with their yes."
+        },
+        {
+          "shot": "A10-10",
+          "say": "Older bookings made a new record each time. Possible same person lists every two records that share a phone number or an email."
+        },
+        {
+          "shot": "A10-10",
+          "focus": 1,
+          "say": "Each card says what the two share."
+        },
+        {
+          "shot": "A10-10",
+          "focus": 2,
+          "say": "If they are one person, tap Keep this record on the one whose name, phone and email should stand. It now reads This record stands."
+        },
+        {
+          "shot": "A10-10",
+          "focus": 3,
+          "say": "Read the strip, and tap Join into one. The stays move; nothing is deleted."
+        },
+        {
+          "shot": "A10-10",
+          "focus": 4,
+          "say": "A family on one mobile is two people. Tap Not the same person, and the pair is not listed again."
+        },
+        {
+          "shot": "A10-10",
+          "focus": 5,
+          "say": "Every join is listed under Joined, with Undo. Not the same person answers are listed the same way."
+        }
+      ],
+      "outro": "When unsure, do not join. A wrong join is worse than a missed one."
+    },
+    {
+      "id": "A10-07",
+      "section": "A10.7",
+      "title": "What goes out to guests",
+      "intro": "The system sends a guest only a few messages. In this video you will see which, when, and the desk's own buttons.",
+      "scenes": [
+        {
+          "shot": "A10-11",
+          "focus": 1,
+          "say": "The booking voucher is the confirmation. It goes once, when a booking is confirmed: by email where there is an address, and on WhatsApp where the booking is ticked and has a phone."
+        },
+        {
+          "shot": "A10-11",
+          "focus": 2,
+          "say": "While online check-in is on, the voucher carries the guest's own check-in link and a Q R code."
+        },
+        {
+          "shot": "A10-11",
+          "focus": 3,
+          "say": "The tax invoice goes by email, with its P D F, only once this is switched on."
+        },
+        {
+          "shot": "A10-11",
+          "focus": 4,
+          "say": "The review request goes when a clerk asks, after check-out. It is off until switched on."
+        },
+        {
+          "shot": "A10-11",
+          "focus": 5,
+          "say": "A booking made before sending was first switched on is confirmed only from nine in the morning to nine at night, the hotel's time."
+        },
+        {
+          "shot": "A10-11",
+          "say": "These switches are for the owner, an Admin and the GM, for this hotel only. Nothing here sends anything."
+        },
+        {
+          "shot": "A10-09",
+          "focus": 3,
+          "say": "WhatsApp needs the guest's yes. Unticked, messages go by email if there is one, else not at all."
+        },
+        {
+          "shot": "A10-02",
+          "say": "View voucher opens the P D F to print or save, and sends nothing. It is under More options on a booking's panel."
+        },
+        {
+          "shot": "A10-12",
+          "focus": 2,
+          "say": "After a booking is made, Send voucher and Send check-in link send it now. Until sending is set up, they are grey, with this same sentence."
+        }
+      ],
+      "outro": "There is no day-before reminder. The voucher is the confirmation, sent once."
+    },
+    {
+      "id": "A10-08",
+      "section": "A10.8",
+      "title": "Guest messages: did the guest get it?",
+      "intro": "Guest messages answers the question: did the guest get their voucher? It is a record. Nothing on it sends.",
+      "scenes": [
+        {
+          "shot": "A10-12",
+          "focus": 1,
+          "say": "Open Guest messages, under Guests and C R M. Reception has it in its own menu."
+        },
+        {
+          "shot": "A10-12",
+          "focus": 2,
+          "say": "While sending is not set up, a yellow notice says so, and why."
+        },
+        {
+          "shot": "A10-12",
+          "focus": 3,
+          "say": "Next come the bookings no message can reach. Nothing was tried for them, so nothing failed, and they show nowhere else."
+        },
+        {
+          "shot": "A10-12",
+          "focus": 4,
+          "say": "Each says what is missing. No telephone number and no email address: ask the guest, and add an email with Edit guest, or a phone and the WhatsApp tick if they agree."
+        },
+        {
+          "shot": "A10-13",
+          "focus": 2,
+          "say": "Not agreed to WhatsApp, and no email address: ask whether WhatsApp is all right. If yes, tick it. If not, add an email."
+        },
+        {
+          "shot": "A10-13",
+          "focus": 1,
+          "say": "The same screen for one booking reads What this system sent about this booking."
+        },
+        {
+          "shot": "A10-13",
+          "focus": 3,
+          "say": "An empty record says which is true. Here, nothing has been sent, because nothing can be yet. That is not a fault."
+        },
+        {
+          "shot": "A10-13",
+          "say": "Once messages go, each is a row: when, what, the booking, where it went, its state, who sent it, and what came back."
+        },
+        {
+          "shot": "A10-13",
+          "say": "Delivered to the sender, in green, means the sending service took it. It does not mean the guest has read it."
+        },
+        {
+          "shot": "A10-13",
+          "say": "Did not go, in red: the voucher is tried again a minute later, up to three times each way. Then hand the guest the voucher from View voucher, and tell the manager."
+        },
+        {
+          "shot": "A10-12",
+          "say": "When guests have written to the desk, their messages come first. Reply opens that booking's messages, and the guest reads your reply on their page. Or tap Mark handled."
+        }
+      ],
+      "outro": "Never tick Agreed to WhatsApp to make a message go. The tick is the guest's yes."
+    },
+    {
+      "id": "A10-09",
+      "section": "A10.10",
+      "title": "Asking a guest for a review",
+      "intro": "Reviews asks a guest who has left for a review, and shows who was asked. Reviews themselves are not read in from Google or the booking sites.",
+      "scenes": [
+        {
+          "shot": "A10-14",
+          "focus": 1,
+          "say": "Nothing can be sent until sending is set up. Here, it is not yet."
+        },
+        {
+          "shot": "A10-14",
+          "focus": 2,
+          "say": "This property sends shows the hotel's review link. A dash means none has been set."
+        },
+        {
+          "shot": "A10-14",
+          "focus": 3,
+          "say": "The owner or an Admin pastes the hotel's own Google review link, a full web address, and taps Save the link."
+        },
+        {
+          "shot": "A10-14",
+          "focus": 4,
+          "say": "Departures lists the guests who left in the last 30 days, and whether each was asked. A dash means not asked yet."
+        },
+        {
+          "shot": "A10-14",
+          "say": "To ask, tap WhatsApp or Email on the guest's row. WhatsApp is grey when the guest has no phone, Email when there is no email address."
+        },
+        {
+          "shot": "A10-14",
+          "say": "The row then reads Asked, with the time, or Did not go, with the reason."
+        },
+        {
+          "shot": "A10-14",
+          "say": "The buttons appear only when the hotel has a link, sending is set up, and your role may ask."
+        },
+        {
+          "shot": "A10-14",
+          "say": "A group is asked once, at its lead guest's room."
+        }
+      ],
+      "outro": "A guest is asked only after check-out, and only while the hotel's Review request switch is on."
+    },
+    {
+      "id": "A10-10",
+      "section": "A10.11",
+      "title": "In short",
+      "intro": "Here is the chapter in short: what to do, and when.",
+      "checklist": [
+        "Taking a booking: type the phone and email. If same person appears, ask, and tap Same person if so.",
+        "Ask about WhatsApp and offers, and tick them only with a yes.",
+        "A name, phone or email is wrong: the booking's panel, Edit guest, Save.",
+        "Did my voucher come? Guest messages: find the booking's reference, then read State and What came back.",
+        "A booking no message can reach: add an email, or tick WhatsApp with the guest's yes.",
+        "A message from a guest: Guest messages. Reply, or Mark handled.",
+        "A new company at the desk: Companies and agents, Add company.",
+        "A guest has left: Reviews, then WhatsApp or Email on their row.",
+        "Managers, now and then: Possible same person, to join or keep apart. Guest 360, for the blacklist and offers."
+      ],
+      "outro": "That is guests and guest messages. Thank you for watching."
+    }
+  ]
+}

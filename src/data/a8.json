@@ -1,0 +1,1204 @@
+{
+  "chapter": "A8",
+  "title": "Restaurant",
+  "manualShots": "a8",
+  "videos": [
+    {
+      "id": "A8-01",
+      "slug": "A8-01-the-restaurants-screens",
+      "section": "A8.1",
+      "title": "The restaurant's screens",
+      "intro": {
+        "text": "The restaurant has its own space in Fidato PMS. In this video you will see each of its screens, and who uses which.",
+        "voice": "a8/voice/A8-01/01.wav",
+        "dur": 7.512
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A8-01",
+          "focus": null,
+          "line": {
+            "text": "Click Restaurant in the switcher at the top. The first screen is Tables: the room as it stands, every table in its section.",
+            "voice": "a8/voice/A8-01/02.wav",
+            "dur": 7.269
+          }
+        },
+        {
+          "shot": "A8-01",
+          "focus": 1,
+          "line": {
+            "text": "At the top of each restaurant screen, one line for each kind of KOT says whether it is printing. Grey means all is well.",
+            "voice": "a8/voice/A8-01/03.wav",
+            "dur": 7.303
+          }
+        },
+        {
+          "shot": "A8-15",
+          "focus": null,
+          "line": {
+            "text": "The Till is the cash register. The menu is on the left, the bill on the right, with discounts and every way to pay.",
+            "voice": "a8/voice/A8-01/04.wav",
+            "dur": 7.06
+          }
+        },
+        {
+          "shot": "A8-33",
+          "focus": null,
+          "line": {
+            "text": "The Terminal does the same work on a fixed tablet in one outlet. Room service orders from guests arrive here too.",
+            "voice": "a8/voice/A8-01/05.wav",
+            "dur": 6.897
+          }
+        },
+        {
+          "shot": "A8-10",
+          "focus": null,
+          "line": {
+            "text": "The Kitchen screen shows every dish the kitchen holds, oldest first. The cook taps Start, then Ready.",
+            "voice": "a8/voice/A8-01/06.wav",
+            "dur": 6.804
+          }
+        },
+        {
+          "shot": "A8-34",
+          "focus": null,
+          "line": {
+            "text": "The Menu holds dishes, prices, variations, sides and the numbered add-ons. The kitchen manager keeps it.",
+            "voice": "a8/voice/A8-01/07.wav",
+            "dur": 7.002
+          }
+        },
+        {
+          "shot": "A8-25",
+          "focus": null,
+          "line": {
+            "text": "Close restaurant day is the cash drawer: open the day with a float, record money in and out, count the drawer, and close.",
+            "voice": "a8/voice/A8-01/08.wav",
+            "dur": 7.332
+          }
+        },
+        {
+          "shot": "A8-35",
+          "focus": null,
+          "line": {
+            "text": "And Restaurant setup is where the owner names the restaurant, lays out its tables, and chooses which computer prints which KOT.",
+            "voice": "a8/voice/A8-01/09.wav",
+            "dur": 7.982
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "That is the restaurant at a glance. The next videos take each screen step by step.",
+        "voice": "a8/voice/A8-01/10.wav",
+        "dur": 5.028
+      },
+      "next": "Taking an order at a table"
+    },
+    {
+      "id": "A8-02",
+      "slug": "A8-02-taking-an-order-at-a-table",
+      "section": "A8.2",
+      "title": "Taking an order at a table",
+      "intro": {
+        "text": "In this video you will take an order at a table, from the first tap to Send.",
+        "voice": "a8/voice/A8-02/01.wav",
+        "dur": 4.406
+      },
+      "record": {
+        "shots": [
+          "A8-02",
+          "A8-03"
+        ],
+        "line": {
+          "text": "Watch it done first. The waiter taps table N4, then taps a Paneer Tikka and a Masala Chai.",
+          "voice": "a8/voice/A8-02/02.wav",
+          "dur": 6.514
+        }
+      },
+      "scenes": [
+        {
+          "shot": "A8-01",
+          "focus": 2,
+          "line": {
+            "text": "Each table's colour says where it stands. White is free. Blue is running. Orange means dishes have gone to the kitchen. Green, the bill is printed. Yellow and grey mean the bill is finished, and the table needs Clear.",
+            "voice": "a8/voice/A8-02/03.wav",
+            "dur": 13.806
+          }
+        },
+        {
+          "shot": "A8-02",
+          "focus": null,
+          "line": {
+            "text": "Tap a free table. The order pad opens over the room.",
+            "voice": "a8/voice/A8-02/04.wav",
+            "dur": 3.704
+          }
+        },
+        {
+          "shot": "A8-02",
+          "focus": 1,
+          "line": {
+            "text": "Search the whole menu by name or short code.",
+            "voice": "a8/voice/A8-02/05.wav",
+            "dur": 2.816
+          }
+        },
+        {
+          "shot": "A8-02",
+          "focus": 2,
+          "line": {
+            "text": "Or tap a section to see only its dishes. Tap it again to see them all.",
+            "voice": "a8/voice/A8-02/06.wav",
+            "dur": 4.459
+          }
+        },
+        {
+          "shot": "A8-02",
+          "focus": 3,
+          "line": {
+            "text": "Tap a dish to add it. Tap it again for two. A dish with a choice, such as a size, asks first.",
+            "voice": "a8/voice/A8-02/07.wav",
+            "dur": 6.462
+          }
+        },
+        {
+          "shot": "A8-02",
+          "focus": 4,
+          "line": {
+            "text": "This round, on the right, is what you are about to send.",
+            "voice": "a8/voice/A8-02/08.wav",
+            "dur": 3.327
+          }
+        },
+        {
+          "shot": "A8-03",
+          "focus": 1,
+          "line": {
+            "text": "Use plus and minus to change the number.",
+            "voice": "a8/voice/A8-02/09.wav",
+            "dur": 2.746
+          }
+        },
+        {
+          "shot": "A8-03",
+          "focus": 3,
+          "line": {
+            "text": "The bin takes a dish off the pad. Nothing has been sent yet, so nothing is struck.",
+            "voice": "a8/voice/A8-02/10.wav",
+            "dur": 5.156
+          }
+        },
+        {
+          "shot": "A8-03",
+          "focus": 4,
+          "line": {
+            "text": "After each tap, a note says the dish was added, with its own Customise button. It stays until the next dish.",
+            "voice": "a8/voice/A8-02/11.wav",
+            "dur": 7.141
+          }
+        },
+        {
+          "shot": "A8-02",
+          "focus": 5,
+          "line": {
+            "text": "When the round is ready, tap Send. Nothing reaches the kitchen until you do.",
+            "voice": "a8/voice/A8-02/12.wav",
+            "dur": 4.842
+          }
+        },
+        {
+          "shot": "A8-08",
+          "focus": 1,
+          "line": {
+            "text": "The message names the table and the kitchen docket. If the connection is down, it says the table is held instead, and the kitchen does not have it yet.",
+            "voice": "a8/voice/A8-02/13.wav",
+            "dur": 8.267
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "To add another round later, just tap the table again.",
+        "voice": "a8/voice/A8-02/14.wav",
+        "dur": 3.536
+      },
+      "next": "Add-ons, numbered and custom"
+    },
+    {
+      "id": "A8-03",
+      "slug": "A8-03-add-ons-numbered-and-custom",
+      "section": "A8.3",
+      "title": "Add-ons, numbered and custom",
+      "intro": {
+        "text": "A guest wants something extra on a dish. In this video you will add a numbered add-on, and a custom one that is not on the list.",
+        "voice": "a8/voice/A8-03/01.wav",
+        "dur": 7.431
+      },
+      "record": {
+        "shots": [
+          "A8-04",
+          "A8-05",
+          "A8-06",
+          "A8-07"
+        ],
+        "line": {
+          "text": "Here it is done on the pad: Customise on the Paneer Tikka, a custom add-on called Extra papad at forty rupees, Add, and Done.",
+          "voice": "a8/voice/A8-03/02.wav",
+          "dur": 8.075
+        }
+      },
+      "scenes": [
+        {
+          "shot": "A8-04",
+          "focus": null,
+          "line": {
+            "text": "Tap Customise beside the dish. The window shows the restaurant's numbered add-ons.",
+            "voice": "a8/voice/A8-03/03.wav",
+            "dur": 5.504
+          }
+        },
+        {
+          "shot": "A8-04",
+          "focus": 1,
+          "line": {
+            "text": "Tap a number to add it to the dish. Tap it again for two. The dish stays one line, and the price moves as you tap.",
+            "voice": "a8/voice/A8-03/04.wav",
+            "dur": 7.101
+          }
+        },
+        {
+          "shot": "A8-04",
+          "focus": 2,
+          "line": {
+            "text": "For something not on the list, tap Custom add-on.",
+            "voice": "a8/voice/A8-03/05.wav",
+            "dur": 3.222
+          }
+        },
+        {
+          "shot": "A8-05",
+          "focus": 1,
+          "line": {
+            "text": "Type its name, the way the kitchen should read it.",
+            "voice": "a8/voice/A8-03/06.wav",
+            "dur": 2.665
+          }
+        },
+        {
+          "shot": "A8-05",
+          "focus": 2,
+          "line": {
+            "text": "Type its price in rupees.",
+            "voice": "a8/voice/A8-03/07.wav",
+            "dur": 1.864
+          }
+        },
+        {
+          "shot": "A8-05",
+          "focus": 3,
+          "line": {
+            "text": "Or tick Free. There is no default price. A blank, or a zero without Free, is not accepted.",
+            "voice": "a8/voice/A8-03/08.wav",
+            "dur": 6.439
+          }
+        },
+        {
+          "shot": "A8-05",
+          "focus": 4,
+          "line": {
+            "text": "Set how many. It starts at one, and it is its own number.",
+            "voice": "a8/voice/A8-03/09.wav",
+            "dur": 3.728
+          }
+        },
+        {
+          "shot": "A8-05",
+          "focus": 5,
+          "line": {
+            "text": "Tap Add.",
+            "voice": "a8/voice/A8-03/10.wav",
+            "dur": 0.97
+          }
+        },
+        {
+          "shot": "A8-06",
+          "focus": 1,
+          "line": {
+            "text": "It is listed with its price. Add more if you need to, then tap Done.",
+            "voice": "a8/voice/A8-03/11.wav",
+            "dur": 4.796
+          }
+        },
+        {
+          "shot": "A8-07",
+          "focus": 1,
+          "line": {
+            "text": "On the pad, the custom add-on sits under its dish. It goes to the kitchen with it, and onto the bill as its own line.",
+            "voice": "a8/voice/A8-03/12.wav",
+            "dur": 6.909
+          }
+        },
+        {
+          "shot": "A8-16",
+          "focus": 1,
+          "line": {
+            "text": "If the kitchen already has the dish, Customise opens as Add to. Each add-on is then its own line under the dish, and goes to the kitchen with the next Send. On Tables, those dishes are listed as Already sent at the top of the pad.",
+            "voice": "a8/voice/A8-03/13.wav",
+            "dur": 14.194
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "An add-on the kitchen already has comes off only for a manager, with a reason, just like a dish.",
+        "voice": "a8/voice/A8-03/14.wav",
+        "dur": 5.591
+      },
+      "next": "Sending to the kitchen: the KOTs"
+    },
+    {
+      "id": "A8-04",
+      "slug": "A8-04-sending-to-the-kitchen-the-kots",
+      "section": "A8.4",
+      "title": "Sending to the kitchen: the KOTs",
+      "intro": {
+        "text": "When you tap Send, the round goes to the kitchen and the bar on KOTs. Here is how they print.",
+        "voice": "a8/voice/A8-04/01.wav",
+        "dur": 6.026
+      },
+      "record": {
+        "shots": [
+          "A8-08",
+          "A8-09"
+        ],
+        "line": {
+          "text": "The waiter taps Send. A moment later, two slips print: one in the kitchen, one at the bar.",
+          "voice": "a8/voice/A8-04/02.wav",
+          "dur": 6.305
+        }
+      },
+      "scenes": [
+        {
+          "shot": "A8-08",
+          "focus": 2,
+          "line": {
+            "text": "The table turns orange: its dishes are with the kitchen.",
+            "voice": "a8/voice/A8-04/03.wav",
+            "dur": 3.431
+          }
+        },
+        {
+          "shot": "A8-09",
+          "focus": 1,
+          "line": {
+            "text": "One Send keeps one KOT number. The kitchen's dishes print on a slip headed Kitchen KOT, in big letters.",
+            "voice": "a8/voice/A8-04/04.wav",
+            "dur": 7.315
+          }
+        },
+        {
+          "shot": "A8-09",
+          "focus": 2,
+          "line": {
+            "text": "An add-on prints under its dish, so the cook does not miss it.",
+            "voice": "a8/voice/A8-04/05.wav",
+            "dur": 3.884
+          }
+        },
+        {
+          "shot": "A8-09",
+          "focus": 3,
+          "line": {
+            "text": "The drinks print at the bar, on Bar KOT, with the same number. Which slip a dish goes on depends on its menu section.",
+            "voice": "a8/voice/A8-04/06.wav",
+            "dur": 7.675
+          }
+        },
+        {
+          "shot": "A8-01",
+          "focus": 1,
+          "line": {
+            "text": "If a printing line turns red, a computer is off, or no computer prints that kind. Its KOTs wait, and print when it is back, the same day.",
+            "voice": "a8/voice/A8-04/07.wav",
+            "dur": 9.335
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A lost KOT can be printed again from Restaurant setup, on the computer that printed it. The slip then says Reprint.",
+        "voice": "a8/voice/A8-04/08.wav",
+        "dur": 7.547
+      },
+      "next": "The Kitchen screen"
+    },
+    {
+      "id": "A8-05",
+      "slug": "A8-05-the-kitchen-screen",
+      "section": "A8.5",
+      "title": "The Kitchen screen",
+      "intro": {
+        "text": "This video is for the kitchen and the bar: the Kitchen screen.",
+        "voice": "a8/voice/A8-05/01.wav",
+        "dur": 3.791
+      },
+      "record": {
+        "shots": [
+          "A8-10",
+          "A8-11"
+        ],
+        "line": {
+          "text": "The chef's screen shows every ticket. Tapping Bar shows the bar's tickets only.",
+          "voice": "a8/voice/A8-05/02.wav",
+          "dur": 4.889
+        }
+      },
+      "scenes": [
+        {
+          "shot": "A8-10",
+          "focus": 1,
+          "line": {
+            "text": "Each ticket shows how many, the dish, and the table. The oldest is first.",
+            "voice": "a8/voice/A8-05/03.wav",
+            "dur": 4.575
+          }
+        },
+        {
+          "shot": "A8-10",
+          "focus": 2,
+          "line": {
+            "text": "A custom add-on sent on its own says which dish it is for.",
+            "voice": "a8/voice/A8-05/04.wav",
+            "dur": 3.861
+          }
+        },
+        {
+          "shot": "A8-10",
+          "focus": null,
+          "line": {
+            "text": "Tap Start when you begin a dish. Tap Ready when it goes out. A ticket turns yellow after five minutes, and red after ten.",
+            "voice": "a8/voice/A8-05/05.wav",
+            "dur": 8.227
+          }
+        },
+        {
+          "shot": "A8-10",
+          "focus": 4,
+          "line": {
+            "text": "By stage shows two columns. By table shows one card per table, so you can see when a whole table is ready.",
+            "voice": "a8/voice/A8-05/06.wav",
+            "dur": 7.303
+          }
+        },
+        {
+          "shot": "A8-11",
+          "focus": 1,
+          "line": {
+            "text": "All, Kitchen or Bar chooses which tickets this screen shows. Each screen remembers its choice, so set the bar's screen to Bar once.",
+            "voice": "a8/voice/A8-05/07.wav",
+            "dur": 8.464
+          }
+        },
+        {
+          "shot": "A8-12",
+          "focus": 1,
+          "line": {
+            "text": "On a phone, the choices sit in a second row.",
+            "voice": "a8/voice/A8-05/08.wav",
+            "dur": 3.106
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "When a dish is ready, the waiter sees it on the table's tile, carries it out, and taps it as taken.",
+        "voice": "a8/voice/A8-05/09.wav",
+        "dur": 5.916
+      },
+      "next": "Printing the bill"
+    },
+    {
+      "id": "A8-06",
+      "slug": "A8-06-printing-the-bill",
+      "section": "A8.6",
+      "title": "Printing the bill",
+      "intro": {
+        "text": "In this video you will print a bill, before and after payment.",
+        "voice": "a8/voice/A8-06/01.wav",
+        "dur": 3.687
+      },
+      "record": {
+        "shots": [
+          "A8-13",
+          "A8-14"
+        ],
+        "line": {
+          "text": "The waiter taps the printer under table N4. The interim bill prints at the bill printer.",
+          "voice": "a8/voice/A8-06/02.wav",
+          "dur": 5.492
+        }
+      },
+      "scenes": [
+        {
+          "shot": "A8-13",
+          "focus": 1,
+          "line": {
+            "text": "Before payment, tap the printer under the table.",
+            "voice": "a8/voice/A8-06/03.wav",
+            "dur": 2.781
+          }
+        },
+        {
+          "shot": "A8-13",
+          "focus": 2,
+          "line": {
+            "text": "The message says where it went. The table turns green: bill printed.",
+            "voice": "a8/voice/A8-06/04.wav",
+            "dur": 4.517
+          }
+        },
+        {
+          "shot": "A8-14",
+          "focus": 1,
+          "line": {
+            "text": "A bill printed before payment is an Interim bill.",
+            "voice": "a8/voice/A8-06/05.wav",
+            "dur": 2.827
+          }
+        },
+        {
+          "shot": "A8-14",
+          "focus": 2,
+          "line": {
+            "text": "It says Not paid, so nobody takes it for a receipt.",
+            "voice": "a8/voice/A8-06/06.wav",
+            "dur": 3.443
+          }
+        },
+        {
+          "shot": "A8-19",
+          "focus": 2,
+          "line": {
+            "text": "After payment, the first print says Bill.",
+            "voice": "a8/voice/A8-06/07.wav",
+            "dur": 2.862
+          }
+        },
+        {
+          "shot": "A8-19",
+          "focus": 1,
+          "line": {
+            "text": "Printed again, it says Bill, duplicate.",
+            "voice": "a8/voice/A8-06/08.wav",
+            "dur": 2.746
+          }
+        },
+        {
+          "shot": "A8-14",
+          "focus": null,
+          "line": {
+            "text": "If the bill printer is off, the screen offers Print here, which opens the bill on your own device. With no bill printer chosen, the bill always opens on your device.",
+            "voice": "a8/voice/A8-06/09.wav",
+            "dur": 9.811
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Every bill shows the lines, the tax for each rate, the total, and how it was paid. It is a restaurant bill, not a tax invoice.",
+        "voice": "a8/voice/A8-06/10.wav",
+        "dur": 8.337
+      },
+      "next": "The Till: the cash register"
+    },
+    {
+      "id": "A8-07",
+      "slug": "A8-07-the-till-the-cash-register",
+      "section": "A8.7",
+      "title": "The Till: the cash register",
+      "intro": {
+        "text": "The Till is where a bill is checked and paid. In this video you will take a payment.",
+        "voice": "a8/voice/A8-07/01.wav",
+        "dur": 4.691
+      },
+      "record": {
+        "shots": [
+          "A8-15",
+          "A8-16",
+          "A8-17"
+        ],
+        "line": {
+          "text": "The cashier opens table N4's bill on the Till, takes payment by UPI, and opens the paid bill to print it.",
+          "voice": "a8/voice/A8-07/02.wav",
+          "dur": 7.1
+        }
+      },
+      "scenes": [
+        {
+          "shot": "A8-15",
+          "focus": null,
+          "line": {
+            "text": "From Tables, tap the eye under a table to open its bill on the Till.",
+            "voice": "a8/voice/A8-07/03.wav",
+            "dur": 3.919
+          }
+        },
+        {
+          "shot": "A8-15",
+          "focus": 1,
+          "line": {
+            "text": "Every line is on the bill, including custom add-ons under their dish.",
+            "voice": "a8/voice/A8-07/04.wav",
+            "dur": 4.197
+          }
+        },
+        {
+          "shot": "A8-15",
+          "focus": 2,
+          "line": {
+            "text": "Customise works on any dish here too.",
+            "voice": "a8/voice/A8-07/05.wav",
+            "dur": 2.607
+          }
+        },
+        {
+          "shot": "A8-15",
+          "focus": 3,
+          "line": {
+            "text": "Send to the kitchen sends anything not yet sent. When nothing is waiting, it reads Kitchen has it all.",
+            "voice": "a8/voice/A8-07/06.wav",
+            "dur": 6.27
+          }
+        },
+        {
+          "shot": "A8-15",
+          "focus": null,
+          "line": {
+            "text": "Discount always asks for a reason. Up to ten percent is allowed freely; more is a named promotion. Round off rounds the total to the rupee.",
+            "voice": "a8/voice/A8-07/07.wav",
+            "dur": 8.947
+          }
+        },
+        {
+          "shot": "A8-15",
+          "focus": 4,
+          "line": {
+            "text": "To be paid, tap Cash, Card or U P I. Or type a room number and tap Charge to room; it asks first, naming the guest.",
+            "voice": "a8/voice/A8-07/08.wav",
+            "dur": 9.207
+          }
+        },
+        {
+          "shot": "A8-15",
+          "focus": 5,
+          "line": {
+            "text": "Part, pay two ways, splits the payment. For cash, type the cash given and the change is shown.",
+            "voice": "a8/voice/A8-07/09.wav",
+            "dur": 6.526
+          }
+        },
+        {
+          "shot": "A8-26",
+          "focus": 2,
+          "line": {
+            "text": "Here a bill is paid in cash.",
+            "voice": "a8/voice/A8-07/10.wav",
+            "dur": 2.34
+          }
+        },
+        {
+          "shot": "A8-17",
+          "focus": 1,
+          "line": {
+            "text": "A paid bill moves under Settled today. Open it there to see how it was paid, and who took it.",
+            "voice": "a8/voice/A8-07/11.wav",
+            "dur": 5.933
+          }
+        },
+        {
+          "shot": "A8-17",
+          "focus": 2,
+          "line": {
+            "text": "And tap Print the bill to print it.",
+            "voice": "a8/voice/A8-07/12.wav",
+            "dur": 2.096
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Food the kitchen already has comes off only for a manager, with a reason. And when the guests leave, clear the table on Tables.",
+        "voice": "a8/voice/A8-07/13.wav",
+        "dur": 7.756
+      },
+      "next": "The Terminal"
+    },
+    {
+      "id": "A8-08",
+      "slug": "A8-08-the-terminal",
+      "section": "A8.8",
+      "title": "The Terminal",
+      "intro": {
+        "text": "The Terminal is for a fixed tablet or screen in one outlet.",
+        "voice": "a8/voice/A8-08/01.wav",
+        "dur": 3.478
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A8-33",
+          "focus": 1,
+          "line": {
+            "text": "Type the table for a new order.",
+            "voice": "a8/voice/A8-08/02.wav",
+            "dur": 1.98
+          }
+        },
+        {
+          "shot": "A8-33",
+          "focus": 2,
+          "line": {
+            "text": "And tap Open the order. Then tap dishes to add them, and send them to the kitchen.",
+            "voice": "a8/voice/A8-08/03.wav",
+            "dur": 5.121
+          }
+        },
+        {
+          "shot": "A8-33",
+          "focus": 3,
+          "line": {
+            "text": "Open orders are listed below. Tap one to open it. A dish the kitchen made ready shows Ready, with Taken.",
+            "voice": "a8/voice/A8-08/04.wav",
+            "dur": 6.752
+          }
+        },
+        {
+          "shot": "A8-33",
+          "focus": 4,
+          "line": {
+            "text": "The first time, the Terminal asks which outlet it is in, and remembers it on the device. Change outlet is here.",
+            "voice": "a8/voice/A8-08/05.wav",
+            "dur": 7.036
+          }
+        },
+        {
+          "shot": "A8-33",
+          "focus": null,
+          "line": {
+            "text": "A checked-in guest's room service order arrives here, waiting. Accept sends it to the kitchen, charged to the room. Decline asks for a reason, which the guest reads.",
+            "voice": "a8/voice/A8-08/06.wav",
+            "dur": 10.293
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Payment and printing work on the Terminal just as on the Till.",
+        "voice": "a8/voice/A8-08/07.wav",
+        "dur": 3.35
+      },
+      "next": "The cash drawer: Close restaurant day"
+    },
+    {
+      "id": "A8-09",
+      "slug": "A8-09-the-cash-drawer-close-restaurant-day",
+      "section": "A8.9",
+      "title": "The cash drawer: Close restaurant day",
+      "intro": {
+        "text": "In this video the cashier opens the drawer with a float, records money that was not a sale, counts the drawer, and closes the day.",
+        "voice": "a8/voice/A8-09/01.wav",
+        "dur": 7.495
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A8-24",
+          "focus": null,
+          "line": {
+            "text": "Once, before the first cash, open the day. Open Close restaurant day. The card Open the day shows a row for each note.",
+            "voice": "a8/voice/A8-09/02.wav",
+            "dur": 8.122
+          }
+        },
+        {
+          "shot": "A8-24",
+          "focus": 1,
+          "line": {
+            "text": "Count the float in the tin, and type how many of each note. Here, four five hundreds and ten hundreds.",
+            "voice": "a8/voice/A8-09/03.wav",
+            "dur": 6.328
+          }
+        },
+        {
+          "shot": "A8-24",
+          "focus": 2,
+          "line": {
+            "text": "Tap Open the day. From then on, each day opens by itself on the float the last close kept.",
+            "voice": "a8/voice/A8-09/04.wav",
+            "dur": 6.003
+          }
+        },
+        {
+          "shot": "A8-25",
+          "focus": null,
+          "line": {
+            "text": "The day has three steps. Overview is what the shift did. Cash is what is in the tin. Finalize closes the day.",
+            "voice": "a8/voice/A8-09/05.wav",
+            "dur": 8.024
+          }
+        },
+        {
+          "shot": "A8-29",
+          "focus": null,
+          "line": {
+            "text": "Money that was not a sale is recorded under In and out of the drawer. Tap Record, choose what happened, type how much and what it was for, and tap Record. An expense may wait for a manager's yes.",
+            "voice": "a8/voice/A8-09/06.wav",
+            "dur": 11.977
+          }
+        },
+        {
+          "shot": "A8-30",
+          "focus": null,
+          "line": {
+            "text": "At the end of the shift, open Cash and count the drawer, note by note.",
+            "voice": "a8/voice/A8-09/07.wav",
+            "dur": 4.522
+          }
+        },
+        {
+          "shot": "A8-30",
+          "focus": 2,
+          "line": {
+            "text": "The sum shows what the drawer should hold: the float, plus cash taken, plus or minus money in and out. If the count differs, it says short or over, and by how much.",
+            "voice": "a8/voice/A8-09/08.wav",
+            "dur": 10.264
+          }
+        },
+        {
+          "shot": "A8-30",
+          "focus": 1,
+          "line": {
+            "text": "Tap Save the count.",
+            "voice": "a8/voice/A8-09/09.wav",
+            "dur": 1.504
+          }
+        },
+        {
+          "shot": "A8-31",
+          "focus": 1,
+          "line": {
+            "text": "Finalize lists what must be decided first: bills still open, and tables never cleared.",
+            "voice": "a8/voice/A8-09/10.wav",
+            "dur": 5.939
+          }
+        },
+        {
+          "shot": "A8-31",
+          "focus": 3,
+          "line": {
+            "text": "If the drawer is short or over, write why. It does not stop the close, but it must be written down.",
+            "voice": "a8/voice/A8-09/11.wav",
+            "dur": 6.212
+          }
+        },
+        {
+          "shot": "A8-32",
+          "focus": 1,
+          "line": {
+            "text": "Type the float kept for the next day. The rest is deposited.",
+            "voice": "a8/voice/A8-09/12.wav",
+            "dur": 3.971
+          }
+        },
+        {
+          "shot": "A8-32",
+          "focus": 2,
+          "line": {
+            "text": "Then tap Close. A closed day cannot be edited.",
+            "voice": "a8/voice/A8-09/13.wav",
+            "dur": 3.693
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "After the close, new bills and payments wait for the night audit.",
+        "voice": "a8/voice/A8-09/14.wav",
+        "dur": 3.942
+      },
+      "next": "Setting up the restaurant and its printers"
+    },
+    {
+      "id": "A8-10",
+      "slug": "A8-10-setting-up-the-restaurant-and-its-printers",
+      "section": "A8.10",
+      "title": "Setting up the restaurant and its printers",
+      "intro": {
+        "text": "This video is for the owner, the GM and the kitchen manager: Restaurant setup, and the KOT printers.",
+        "voice": "a8/voice/A8-10/01.wav",
+        "dur": 6.601
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A8-35",
+          "focus": 1,
+          "line": {
+            "text": "Ready to open lists what a first order needs. Each line opens the screen that does it.",
+            "voice": "a8/voice/A8-10/02.wav",
+            "dur": 5.457
+          }
+        },
+        {
+          "shot": "A8-35",
+          "focus": 3,
+          "line": {
+            "text": "The restaurant's name is printed on every bill.",
+            "voice": "a8/voice/A8-10/03.wav",
+            "dur": 2.537
+          }
+        },
+        {
+          "shot": "A8-35",
+          "focus": 4,
+          "line": {
+            "text": "Sections and tables lay out the room. Nothing is deleted: a table taken away is switched off.",
+            "voice": "a8/voice/A8-10/04.wav",
+            "dur": 5.887
+          }
+        },
+        {
+          "shot": "A8-20",
+          "focus": null,
+          "line": {
+            "text": "The KOT section chooses which computer prints which KOT. Do it on the computer next to the printer.",
+            "voice": "a8/voice/A8-10/05.wav",
+            "dur": 6.409
+          }
+        },
+        {
+          "shot": "A8-20",
+          "focus": 1,
+          "line": {
+            "text": "The quick way: press Download the setup file, and open the file. Type the number of the receipt printer. It makes that printer the default, puts a KOT station shortcut on the desktop, starts it with Windows, and keeps the computer awake. Then it opens this section.",
+            "voice": "a8/voice/A8-10/06.wav",
+            "dur": 16.279
+          }
+        },
+        {
+          "shot": "A8-20",
+          "focus": 2,
+          "line": {
+            "text": "Type this computer's name, such as Bar P C.",
+            "voice": "a8/voice/A8-10/07.wav",
+            "dur": 3.187
+          }
+        },
+        {
+          "shot": "A8-20",
+          "focus": 3,
+          "line": {
+            "text": "Tick the kinds of KOT it prints.",
+            "voice": "a8/voice/A8-10/08.wav",
+            "dur": 2.456
+          }
+        },
+        {
+          "shot": "A8-20",
+          "focus": 4,
+          "line": {
+            "text": "And tick Prints the bills if it does. Then Save.",
+            "voice": "a8/voice/A8-10/09.wav",
+            "dur": 3.588
+          }
+        },
+        {
+          "shot": "A8-21",
+          "focus": 1,
+          "line": {
+            "text": "Kitchen and Bar are the KOT kinds to start. You can rename them, or add more, such as Tandoor. Each name heads its slip.",
+            "voice": "a8/voice/A8-10/10.wav",
+            "dur": 8.204
+          }
+        },
+        {
+          "shot": "A8-21",
+          "focus": 2,
+          "line": {
+            "text": "Each kind prints on one computer. Ticking it on another computer moves it there.",
+            "voice": "a8/voice/A8-10/11.wav",
+            "dur": 5.039
+          }
+        },
+        {
+          "shot": "A8-21",
+          "focus": 3,
+          "line": {
+            "text": "Each menu section prints on its tax heading's KOT to start: bar and alcohol to the bar, the rest to the kitchen. Change the odd one here.",
+            "voice": "a8/voice/A8-10/12.wav",
+            "dur": 9.057
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Leave the Kitchen screen open on each printing computer, and its printing line stays grey.",
+        "voice": "a8/voice/A8-10/13.wav",
+        "dur": 5.115
+      },
+      "next": "The menu and the add-ons list"
+    },
+    {
+      "id": "A8-11",
+      "slug": "A8-11-the-menu-and-the-add-ons-list",
+      "section": "A8.11",
+      "title": "The menu and the add-ons list",
+      "intro": {
+        "text": "This video is for the kitchen manager: the Menu.",
+        "voice": "a8/voice/A8-11/01.wav",
+        "dur": 3.245
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A8-34",
+          "focus": null,
+          "line": {
+            "text": "The prices are yours: nothing was shipped with the system. A price changed today applies to the next order.",
+            "voice": "a8/voice/A8-11/02.wav",
+            "dur": 6.259
+          }
+        },
+        {
+          "shot": "A8-34",
+          "focus": 4,
+          "line": {
+            "text": "Add a part of the menu, such as Starters.",
+            "voice": "a8/voice/A8-11/03.wav",
+            "dur": 2.63
+          }
+        },
+        {
+          "shot": "A8-34",
+          "focus": 5,
+          "line": {
+            "text": "A dish can have variations: a size, a crust. The first type's prices are the dish's; the next add to it.",
+            "voice": "a8/voice/A8-11/04.wav",
+            "dur": 6.885
+          }
+        },
+        {
+          "shot": "A8-34",
+          "focus": 6,
+          "line": {
+            "text": "Take a dish off for a while when it runs out. The pad shows it, and refuses it, until then.",
+            "voice": "a8/voice/A8-11/05.wav",
+            "dur": 5.933
+          }
+        },
+        {
+          "shot": "A8-34",
+          "focus": 2,
+          "line": {
+            "text": "The Add-ons tab holds the numbered list: number, name, price or free.",
+            "voice": "a8/voice/A8-11/06.wav",
+            "dur": 4.743
+          }
+        },
+        {
+          "shot": "A8-22",
+          "focus": 1,
+          "line": {
+            "text": "Below it, Custom add-ons used shows what staff typed in the last thirty days, most used first.",
+            "voice": "a8/voice/A8-11/07.wav",
+            "dur": 6.101
+          }
+        },
+        {
+          "shot": "A8-22",
+          "focus": 2,
+          "line": {
+            "text": "Number it makes a common one a numbered add-on, with its name and price filled in.",
+            "voice": "a8/voice/A8-11/08.wav",
+            "dur": 4.952
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "That is the menu. The restaurant series ends with your shift in short.",
+        "voice": "a8/voice/A8-11/09.wav",
+        "dur": 4.726
+      },
+      "next": "Your shift in short"
+    },
+    {
+      "id": "A8-12",
+      "slug": "A8-12-your-shift-in-short",
+      "section": "A8.12",
+      "title": "Your shift in short",
+      "intro": {
+        "text": "Here is a restaurant shift, from start to close.",
+        "voice": "a8/voice/A8-12/01.wav",
+        "dur": 3.118
+      },
+      "record": null,
+      "scenes": [],
+      "checklist": [
+        {
+          "text": "First day only: count the first float. Close restaurant day, Open the day.",
+          "voice": "a8/voice/A8-12/02.wav",
+          "dur": 4.923
+        },
+        {
+          "text": "Before service: check the printing lines are grey.",
+          "voice": "a8/voice/A8-12/03.wav",
+          "dur": 3.187
+        },
+        {
+          "text": "A table sits down: Tables, tap the table, tap the dishes, Send.",
+          "voice": "a8/voice/A8-12/04.wav",
+          "dur": 4.848
+        },
+        {
+          "text": "Something extra: Customise. A number, or a custom add-on.",
+          "voice": "a8/voice/A8-12/05.wav",
+          "dur": 4.691
+        },
+        {
+          "text": "A dish is ready: carry it out, and tap it as taken.",
+          "voice": "a8/voice/A8-12/06.wav",
+          "dur": 3.396
+        },
+        {
+          "text": "The guest asks for the bill: the printer under the table.",
+          "voice": "a8/voice/A8-12/07.wav",
+          "dur": 3.083
+        },
+        {
+          "text": "The guest pays: the Till. Cash, card, U P I, room, or two ways.",
+          "voice": "a8/voice/A8-12/08.wav",
+          "dur": 5.724
+        },
+        {
+          "text": "The guests leave: Tables, Clear.",
+          "voice": "a8/voice/A8-12/09.wav",
+          "dur": 2.955
+        },
+        {
+          "text": "End of the shift: settle every bill, clear the tables, count the drawer, keep the float, Close.",
+          "voice": "a8/voice/A8-12/10.wav",
+          "dur": 5.985
+        }
+      ],
+      "outro": {
+        "text": "That is the restaurant. Thank you for watching.",
+        "voice": "a8/voice/A8-12/11.wav",
+        "dur": 3.054
+      },
+      "next": null
+    }
+  ]
+}

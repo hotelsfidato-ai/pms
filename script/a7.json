@@ -1,0 +1,87 @@
+{
+  "chapter": "A7",
+  "title": "Night audit",
+  "manualShots": "a7",
+  "videos": [
+    {
+      "id": "A7-01",
+      "section": "A7.1",
+      "title": "The night audit and its checks",
+      "intro": "At the end of the hotel's day, a person closes it with the night audit. In this video you will read the Night audit screen and its six checks.",
+      "scenes": [
+        { "shot": "A7-01", "say": "Night audit is the first screen under Reports. If your menu does not show it, find it with Find a screen." },
+        { "shot": "A7-01", "focus": 1, "say": "This line names the day being closed, and the day that will open. The business date moves on only when the audit runs." },
+        { "shot": "A7-01", "say": "When it runs, the audit charges tonight's room to every guest in house, marks arrivals who never came as no-shows, and moves the date on. It never checks anybody out." },
+        { "shot": "A7-01", "focus": 2, "say": "The badge counts the checks that have something to look at." },
+        { "shot": "A7-01", "focus": 3, "say": "A yellow sign means look at this one." },
+        { "shot": "A7-01", "focus": 4, "say": "The number beside it is how many." },
+        { "shot": "A7-01", "focus": 6, "say": "Open takes you to the screen where it is dealt with." },
+        { "shot": "A7-01", "focus": 5, "say": "A green tick means there is nothing there." },
+        { "shot": "A7-01", "say": "Arrivals still outstanding are guests due today who have not come. When the day closes, each one becomes a no-show." },
+        { "shot": "A7-01", "focus": 3, "say": "Departures not yet checked out are guests due out today who are still in. This is the one check that stops the audit." },
+        { "shot": "A7-01", "say": "Folios carrying a balance roll forward, and that is normal. Room charges to post is how many rooms the audit will charge tonight." },
+        { "shot": "A7-01", "say": "Rooms still marked dirty, and postings reversed today, are there to read before the day closes. They never stop it." }
+      ],
+      "outro": "Next: what stops the audit, and how to clear it."
+    },
+    {
+      "id": "A7-02",
+      "section": "A7.3",
+      "title": "What stops the audit",
+      "intro": "The night audit will not close a day while a person still has something to decide. In this video you will see what stops it, and how to clear it.",
+      "scenes": [
+        { "shot": "A7-02", "focus": 1, "say": "Below the checks is the Run card. It names the day the hotel moves to." },
+        { "shot": "A7-02", "focus": 2, "say": "While anything stops the audit, the reason is written here. Here, four rooms are still showing due out, and the till has not been closed for today." },
+        { "shot": "A7-02", "focus": 3, "say": "Run night audit stays grey until every reason is cleared. It is never hidden." },
+        { "shot": "A7-02", "focus": 2, "say": "Four things stop it: a guest still due out, a front desk cash drawer still open, a restaurant with orders today and no day end, and no GST rule for rooms." },
+        { "shot": "A7-01", "focus": 6, "say": "To clear the guests due out, tap Open on Departures not yet checked out." },
+        { "shot": "A7-03", "focus": 1, "say": "Due out lists the guests leaving today. Check-out unlocks when the bill reaches zero." },
+        { "shot": "A7-03", "focus": 2, "say": "The red box says how many still owe, and how much in all." },
+        { "shot": "A7-03", "focus": 3, "say": "Each guest's balance is in the last column. Tap the guest, and the panel opens on the Bill tab." },
+        { "shot": "A7-03", "say": "If the guest has left, take the payment and check them out. If they are staying on, use Change dates or guests to move the departure." },
+        { "shot": "A7-02", "focus": 2, "say": "For the drawers, close the shift on Cashiering, and close the restaurant day. The audit will not decide any of this for you." }
+      ],
+      "outro": "When the card shows no reason, the audit is ready to run. That is the next video."
+    },
+    {
+      "id": "A7-03",
+      "section": "A7.4",
+      "title": "Running the audit, and the closed days",
+      "intro": "In this video you will run the night audit, read what it did, and find the days it closed.",
+      "scenes": [
+        { "shot": "A7-02", "focus": 3, "say": "When nothing stops it, tap Run night audit." },
+        { "shot": "A7-02", "focus": 3, "say": "It asks first. It says the property moves to the next day, and that a closed day cannot be edited, only corrected. Tap Close with the date." },
+        { "shot": "A7-02", "say": "A green card then says the day is closed, and which day the property is now in. It shows the rooms posted and their revenue, the rooms given free, and the no-shows." },
+        { "shot": "A7-02", "say": "If the restaurant sold something, the card shows its day too. And it shows the two drawers side by side, the front desk and the till, never added together." },
+        { "shot": "A7-02", "say": "Pressed twice, or on two desks, the day still closes once. The second press changes nothing, and shows the record that was made." },
+        { "shot": "A7-02", "focus": 4, "say": "Closed days lists every audit run here, newest first: who ran it, when, the rooms and room revenue it posted, and the no-shows." },
+        { "shot": "A7-02", "focus": 4, "say": "The owner, an Admin and the GM can correct a closed day, from the first of last month on. Tap Correct, choose the charge, type the right figure or take it off, and say why." },
+        { "shot": "A7-02", "focus": 4, "say": "Nothing is rewritten. The wrong charge stays, with the reversal and the right charge beside it, on the same day." }
+      ],
+      "outro": "With no connection, the audit cannot run. It needs the server, so wait for the line."
+    },
+    {
+      "id": "A7-04",
+      "section": "A7.6",
+      "title": "The report emails, and your night in short",
+      "intro": "Right after the night audit closes the day, reports can go by email. In this video the owner, an Admin or the GM sets them up.",
+      "scenes": [
+        { "shot": "A7-04", "say": "Open Settings, then Messages, then Daily report emails. Each email has the key figures, and the whole report as a PDF." },
+        { "shot": "A7-04", "focus": 1, "say": "The Night audit report holds rooms charged, check-outs, sales, receipts, room and guest counts, and the restaurant." },
+        { "shot": "A7-04", "focus": 2, "say": "It is on to start. Each report has its own switch." },
+        { "shot": "A7-04", "focus": 3, "say": "Type each address on its own line, at most twenty. Nobody gets anything until an address is typed. Then tap Save at the foot." },
+        { "shot": "A7-04", "focus": 4, "say": "The Manager report, Money owed, and Restaurant and stock start off. Switch on the ones you want." },
+        { "shot": "A7-04", "say": "A yellow box saying Nothing is sent yet means sending is not set up on the server, so no email goes." }
+      ],
+      "checklist": [
+        "Before the audit: close the restaurant day, and close the desk's cash shift.",
+        "Open Night audit. Read the day being closed, and the checks.",
+        "A guest still due out: settle and check out, or change the dates.",
+        "An arrival who came: check them in. The rest become no-shows.",
+        "The card shows no reason: Run night audit, then Close with the date.",
+        "Read the green card. A wrong charge later: Closed days, Correct, with a reason."
+      ],
+      "outro": "That is the night audit. Thank you for watching."
+    }
+  ]
+}

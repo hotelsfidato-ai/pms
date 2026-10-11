@@ -1,0 +1,981 @@
+{
+  "chapter": "A4",
+  "title": "The guest's bill",
+  "manualShots": "a4",
+  "videos": [
+    {
+      "id": "A4-01",
+      "slug": "A4-01-the-finance-screens",
+      "section": "A4.1",
+      "title": "The Finance screens",
+      "intro": {
+        "text": "At the desk, a guest's money is called the bill. In Finance, the same thing is called a folio. In this video you will see the Finance screens, and what each one is for.",
+        "voice": "a4/voice/A4-01/01.wav",
+        "dur": 10.189
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A4-01",
+          "focus": null,
+          "line": {
+            "text": "This is Folios, as the GM sees it. It lists every bill that still owes money, or is owed money back.",
+            "voice": "a4/voice/A4-01/02.wav",
+            "dur": 6.421
+          }
+        },
+        {
+          "shot": "A4-01",
+          "focus": 1,
+          "line": {
+            "text": "Folios is under Finance, in the menu.",
+            "voice": "a4/voice/A4-01/03.wav",
+            "dur": 2.467
+          }
+        },
+        {
+          "shot": "A4-01",
+          "focus": 2,
+          "line": {
+            "text": "Outstanding is what guests owe, and on how many bills.",
+            "voice": "a4/voice/A4-01/04.wav",
+            "dur": 3.64
+          }
+        },
+        {
+          "shot": "A4-01",
+          "focus": 3,
+          "line": {
+            "text": "Overpaid is money the hotel owes back to guests.",
+            "voice": "a4/voice/A4-01/05.wav",
+            "dur": 3.176
+          }
+        },
+        {
+          "shot": "A4-01",
+          "focus": 4,
+          "line": {
+            "text": "Overpaid guests are listed first. Nobody chases these, so they sort first.",
+            "voice": "a4/voice/A4-01/06.wav",
+            "dur": 5.306
+          }
+        },
+        {
+          "shot": "A4-01",
+          "focus": 5,
+          "line": {
+            "text": "Click a guest's row to open their bill, straight on the Bill tab.",
+            "voice": "a4/voice/A4-01/07.wav",
+            "dur": 3.663
+          }
+        },
+        {
+          "shot": "A4-02",
+          "focus": null,
+          "line": {
+            "text": "Under Folios come Invoices, for the tax invoices after check-out, and Payments, every receipt, newest first.",
+            "voice": "a4/voice/A4-01/08.wav",
+            "dur": 7.704
+          }
+        },
+        {
+          "shot": "A4-02",
+          "focus": 1,
+          "line": {
+            "text": "Cashiering is your own cash drawer. It is the one Finance screen in reception's menu.",
+            "voice": "a4/voice/A4-01/09.wav",
+            "dur": 5.655
+          }
+        },
+        {
+          "shot": "A4-02",
+          "focus": 2,
+          "line": {
+            "text": "Cash deposits shows each day's cash to bank, what was banked, and who verified it.",
+            "voice": "a4/voice/A4-01/10.wav",
+            "dur": 5.347
+          }
+        },
+        {
+          "shot": "A4-02",
+          "focus": 3,
+          "line": {
+            "text": "Company accounts shows what each company or booking site owes, and what it paid.",
+            "voice": "a4/voice/A4-01/11.wav",
+            "dur": 4.592
+          }
+        },
+        {
+          "shot": "A4-02",
+          "focus": 4,
+          "line": {
+            "text": "Form three reports foreign guests. The check-in chapter explains it.",
+            "voice": "a4/voice/A4-01/12.wav",
+            "dur": 4.25
+          }
+        },
+        {
+          "shot": "A4-02",
+          "focus": 5,
+          "line": {
+            "text": "Online payments is not built yet. It opens a page saying what it will do.",
+            "voice": "a4/voice/A4-01/13.wav",
+            "dur": 5.121
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Reception reaches the other Finance screens with Find a screen. The next video opens a guest's bill.",
+        "voice": "a4/voice/A4-01/14.wav",
+        "dur": 6.026
+      },
+      "next": "Reading the guest's bill"
+    },
+    {
+      "id": "A4-02",
+      "slug": "A4-02-reading-the-guests-bill",
+      "section": "A4.2",
+      "title": "Reading the guest's bill",
+      "intro": {
+        "text": "In this video you will open a guest's bill and read it, from the top line to the buttons at the foot.",
+        "voice": "a4/voice/A4-02/01.wav",
+        "dur": 5.486
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A4-03",
+          "focus": null,
+          "line": {
+            "text": "Open In house and click the guest. Their panel opens. Click the Bill tab.",
+            "voice": "a4/voice/A4-02/02.wav",
+            "dur": 5.034
+          }
+        },
+        {
+          "shot": "A4-03",
+          "focus": 1,
+          "line": {
+            "text": "Due, at the top, is what the guest owes, with the nights still to come counted.",
+            "voice": "a4/voice/A4-02/03.wav",
+            "dur": 4.395
+          }
+        },
+        {
+          "shot": "A4-03",
+          "focus": 2,
+          "line": {
+            "text": "Each posted line shows its date, what it is, and who posted it. The first night is posted at check-in.",
+            "voice": "a4/voice/A4-02/04.wav",
+            "dur": 6.584
+          }
+        },
+        {
+          "shot": "A4-03",
+          "focus": 3,
+          "line": {
+            "text": "Charges to come are the nights the night audit has not posted yet, with their GST. If no GST rule covers the rate, it shows a dash.",
+            "voice": "a4/voice/A4-02/05.wav",
+            "dur": 8.708
+          }
+        },
+        {
+          "shot": "A4-03",
+          "focus": 4,
+          "line": {
+            "text": "At the foot of the panel, Charged is what is posted so far, with tax. Then Paid, and Due.",
+            "voice": "a4/voice/A4-02/06.wav",
+            "dur": 6.317
+          }
+        },
+        {
+          "shot": "A4-06",
+          "focus": 2,
+          "line": {
+            "text": "The bill is in sections: Room, Restaurant, Bar, then Other charges. Each section has its subtotal and its tax.",
+            "voice": "a4/voice/A4-02/07.wav",
+            "dur": 7.42
+          }
+        },
+        {
+          "shot": "A4-06",
+          "focus": 3,
+          "line": {
+            "text": "Every line shows its amount before tax. Under the sections come the total, the payments received, and what is due.",
+            "voice": "a4/voice/A4-02/08.wav",
+            "dur": 6.862
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": 1,
+          "line": {
+            "text": "Total charges is everything posted, with tax.",
+            "voice": "a4/voice/A4-02/09.wav",
+            "dur": 3.152
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": 2,
+          "line": {
+            "text": "Add charge posts a new charge.",
+            "voice": "a4/voice/A4-02/10.wav",
+            "dur": 2.398
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": 3,
+          "line": {
+            "text": "Settle takes a payment. It is orange while money is owed.",
+            "voice": "a4/voice/A4-02/11.wav",
+            "dur": 3.298
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": 4,
+          "line": {
+            "text": "Interim bill prints the bill as it stands.",
+            "voice": "a4/voice/A4-02/12.wav",
+            "dur": 2.618
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": 5,
+          "line": {
+            "text": "Split the bill opens a second bill, for a company.",
+            "voice": "a4/voice/A4-02/13.wav",
+            "dur": 2.92
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": 6,
+          "line": {
+            "text": "Check out stays grey until nothing is owed. The line under it says why.",
+            "voice": "a4/voice/A4-02/14.wav",
+            "dur": 4.215
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A button you cannot use yet is grey. Point at it, and it says why.",
+        "voice": "a4/voice/A4-02/15.wav",
+        "dur": 4.529
+      },
+      "next": "Posting a charge"
+    },
+    {
+      "id": "A4-03",
+      "slug": "A4-03-posting-a-charge",
+      "section": "A4.3",
+      "title": "Posting a charge",
+      "intro": {
+        "text": "A guest sent three shirts to the laundry. In this video you will post the charge on their bill.",
+        "voice": "a4/voice/A4-03/01.wav",
+        "dur": 5.144
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A4-04",
+          "focus": 2,
+          "line": {
+            "text": "On the Bill tab, click Add charge.",
+            "voice": "a4/voice/A4-03/02.wav",
+            "dur": 2.572
+          }
+        },
+        {
+          "shot": "A4-05",
+          "focus": null,
+          "line": {
+            "text": "The window Post a charge names the room and the guest.",
+            "voice": "a4/voice/A4-03/03.wav",
+            "dur": 2.978
+          }
+        },
+        {
+          "shot": "A4-05",
+          "focus": 1,
+          "line": {
+            "text": "Choose the category. Here, Laundry.",
+            "voice": "a4/voice/A4-03/04.wav",
+            "dur": 2.752
+          }
+        },
+        {
+          "shot": "A4-05",
+          "focus": 2,
+          "line": {
+            "text": "Type the description. These are the words the guest reads on the bill.",
+            "voice": "a4/voice/A4-03/05.wav",
+            "dur": 3.983
+          }
+        },
+        {
+          "shot": "A4-05",
+          "focus": 3,
+          "line": {
+            "text": "Type the amount, before tax.",
+            "voice": "a4/voice/A4-03/06.wav",
+            "dur": 2.119
+          }
+        },
+        {
+          "shot": "A4-05",
+          "focus": 4,
+          "line": {
+            "text": "Leave Taxable ticked. It shows the GST rate this amount carries. Untick it only for a charge that bears no GST.",
+            "voice": "a4/voice/A4-03/07.wav",
+            "dur": 8.157
+          }
+        },
+        {
+          "shot": "A4-05",
+          "focus": 5,
+          "line": {
+            "text": "The box shows the tax in its two halves, central and state, and the total.",
+            "voice": "a4/voice/A4-03/08.wav",
+            "dur": 4.534
+          }
+        },
+        {
+          "shot": "A4-05",
+          "focus": 6,
+          "line": {
+            "text": "Click Post charge. The button waits while the charge is sent, so one press is one charge.",
+            "voice": "a4/voice/A4-03/09.wav",
+            "dur": 5.852
+          }
+        },
+        {
+          "shot": "A4-05",
+          "focus": null,
+          "line": {
+            "text": "If the hotel has set no GST rule, the rate shows a dash, and the charge is refused. A missing rate is never taken as zero.",
+            "voice": "a4/voice/A4-03/10.wav",
+            "dur": 8.186
+          }
+        },
+        {
+          "shot": "A4-06",
+          "focus": 1,
+          "line": {
+            "text": "The new line is on the bill, with the date, the category, and who posted it.",
+            "voice": "a4/voice/A4-03/11.wav",
+            "dur": 4.139
+          }
+        },
+        {
+          "shot": "A4-06",
+          "focus": 2,
+          "line": {
+            "text": "A food charge, such as coffee from room service, goes under Restaurant.",
+            "voice": "a4/voice/A4-03/12.wav",
+            "dur": 4.29
+          }
+        },
+        {
+          "shot": "A4-06",
+          "focus": 3,
+          "line": {
+            "text": "Laundry and the rest go under Other charges.",
+            "voice": "a4/voice/A4-03/13.wav",
+            "dur": 2.804
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "There is no discount button on the bill. A wrong charge is taken off with Reverse, in the next video.",
+        "voice": "a4/voice/A4-03/14.wav",
+        "dur": 5.841
+      },
+      "next": "Taking a wrong charge off"
+    },
+    {
+      "id": "A4-04",
+      "slug": "A4-04-taking-a-wrong-charge-off",
+      "section": "A4.4",
+      "title": "Taking a wrong charge off",
+      "intro": {
+        "text": "A minibar water was posted to the wrong room. A charge is never edited or deleted at the desk: it is reversed. In this video you will reverse it.",
+        "voice": "a4/voice/A4-04/01.wav",
+        "dur": 9.098
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A4-06",
+          "focus": 4,
+          "line": {
+            "text": "Click the curved arrow at the end of the wrong line.",
+            "voice": "a4/voice/A4-04/02.wav",
+            "dur": 2.769
+          }
+        },
+        {
+          "shot": "A4-07",
+          "focus": 1,
+          "line": {
+            "text": "The window asks: Reverse this charge? It names the line, and its amount with tax.",
+            "voice": "a4/voice/A4-04/03.wav",
+            "dur": 6.084
+          }
+        },
+        {
+          "shot": "A4-07",
+          "focus": 2,
+          "line": {
+            "text": "Type why. It is required. It is kept on the reversal's line, and the guest's bill never shows it.",
+            "voice": "a4/voice/A4-04/04.wav",
+            "dur": 6.427
+          }
+        },
+        {
+          "shot": "A4-07",
+          "focus": 3,
+          "line": {
+            "text": "Click Reverse. Keep it leaves the line as it is.",
+            "voice": "a4/voice/A4-04/05.wav",
+            "dur": 3.472
+          }
+        },
+        {
+          "shot": "A4-08",
+          "focus": 1,
+          "line": {
+            "text": "The wrong line stays on the bill, struck through.",
+            "voice": "a4/voice/A4-04/06.wav",
+            "dur": 2.92
+          }
+        },
+        {
+          "shot": "A4-08",
+          "focus": 2,
+          "line": {
+            "text": "The reversal is its own line, in red, with the reason. The subtotal and the tax come down with it.",
+            "voice": "a4/voice/A4-04/07.wav",
+            "dur": 5.748
+          }
+        },
+        {
+          "shot": "A4-08",
+          "focus": null,
+          "line": {
+            "text": "A line is reversed once, and a reversal cannot itself be reversed. If the charge was right after all, post it again.",
+            "voice": "a4/voice/A4-04/08.wav",
+            "dur": 7.06
+          }
+        },
+        {
+          "shot": "A4-08",
+          "focus": null,
+          "line": {
+            "text": "A line from a day the night audit has closed is corrected on Closed days instead. Once a tax invoice stands on the bill, only a credit note corrects it.",
+            "voice": "a4/voice/A4-04/09.wav",
+            "dur": 9.068
+          }
+        },
+        {
+          "shot": "A4-08",
+          "focus": null,
+          "line": {
+            "text": "A payment is reversed only by the owner, an administrator, the GM or the accountant.",
+            "voice": "a4/voice/A4-04/10.wav",
+            "dur": 5.242
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "If the curved arrow is grey, point at it to read why.",
+        "voice": "a4/voice/A4-04/11.wav",
+        "dur": 3.396
+      },
+      "next": "A manager corrects a charge, or the rate"
+    },
+    {
+      "id": "A4-05",
+      "slug": "A4-05-a-manager-corrects-a-charge-or-the-rate",
+      "section": "A4.5",
+      "title": "A manager corrects a charge, or the rate",
+      "intro": {
+        "text": "This video is for the owner, administrators and the GM. You will correct a charge, and change the rate of a stay.",
+        "voice": "a4/voice/A4-05/01.wav",
+        "dur": 7.118
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A4-09",
+          "focus": 1,
+          "line": {
+            "text": "On a manager's bill, each charge has a pencil.",
+            "voice": "a4/voice/A4-05/02.wav",
+            "dur": 3.129
+          }
+        },
+        {
+          "shot": "A4-09",
+          "focus": 2,
+          "line": {
+            "text": "Beside it is Reverse, as reception has it.",
+            "voice": "a4/voice/A4-05/03.wav",
+            "dur": 2.781
+          }
+        },
+        {
+          "shot": "A4-10",
+          "focus": null,
+          "line": {
+            "text": "Click the pencil. The window Edit this charge names the line and its amount with tax.",
+            "voice": "a4/voice/A4-05/04.wav",
+            "dur": 5.167
+          }
+        },
+        {
+          "shot": "A4-10",
+          "focus": 1,
+          "line": {
+            "text": "You can change the words the line says,",
+            "voice": "a4/voice/A4-05/05.wav",
+            "dur": 2.491
+          }
+        },
+        {
+          "shot": "A4-10",
+          "focus": 2,
+          "line": {
+            "text": "or the price before tax, or both. The tax stays at the rate it was charged.",
+            "voice": "a4/voice/A4-05/06.wav",
+            "dur": 5.109
+          }
+        },
+        {
+          "shot": "A4-10",
+          "focus": 3,
+          "line": {
+            "text": "Type why. It is required.",
+            "voice": "a4/voice/A4-05/07.wav",
+            "dur": 2.52
+          }
+        },
+        {
+          "shot": "A4-10",
+          "focus": 4,
+          "line": {
+            "text": "Click Correct the charge. The old line is reversed with the reason, and the corrected one is posted, in one step.",
+            "voice": "a4/voice/A4-05/08.wav",
+            "dur": 6.827
+          }
+        },
+        {
+          "shot": "A4-09",
+          "focus": null,
+          "line": {
+            "text": "There is no pencil on a payment, or on a reversed line. On a closed day, or once a tax invoice stands, the pencil is grey.",
+            "voice": "a4/voice/A4-05/09.wav",
+            "dur": 7.861
+          }
+        },
+        {
+          "shot": "A4-09b",
+          "focus": 1,
+          "line": {
+            "text": "To give the whole stay a new rate, click Change rate.",
+            "voice": "a4/voice/A4-05/10.wav",
+            "dur": 3.176
+          }
+        },
+        {
+          "shot": "A4-11",
+          "focus": 1,
+          "line": {
+            "text": "Type the new rate a night, before tax. The room's GST slab follows it.",
+            "voice": "a4/voice/A4-05/11.wav",
+            "dur": 5.051
+          }
+        },
+        {
+          "shot": "A4-11",
+          "focus": 2,
+          "line": {
+            "text": "If the figure you typed includes GST, tick Includes GST. The window then shows how it splits.",
+            "voice": "a4/voice/A4-05/12.wav",
+            "dur": 6.816
+          }
+        },
+        {
+          "shot": "A4-11",
+          "focus": 3,
+          "line": {
+            "text": "Type why. It is kept with every night it corrects.",
+            "voice": "a4/voice/A4-05/13.wav",
+            "dur": 3.46
+          }
+        },
+        {
+          "shot": "A4-11",
+          "focus": null,
+          "line": {
+            "text": "Click Change the rate. Nights already charged are corrected to it, and nights still to come are charged at it.",
+            "voice": "a4/voice/A4-05/14.wav",
+            "dur": 6.421
+          }
+        },
+        {
+          "shot": "A4-11",
+          "focus": null,
+          "line": {
+            "text": "It is all or nothing: if one night cannot be corrected, nothing changes, and the message names that night.",
+            "voice": "a4/voice/A4-05/15.wav",
+            "dur": 6.322
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A room night's price can be corrected, but not its words: they count its nights.",
+        "voice": "a4/voice/A4-05/16.wav",
+        "dur": 4.94
+      },
+      "next": "Settle, split and print"
+    },
+    {
+      "id": "A4-06",
+      "slug": "A4-06-settle-split-and-print",
+      "section": "A4.7",
+      "title": "Settle, split and print",
+      "intro": {
+        "text": "In this video the guest pays. You will take a payment, split the bill with a company, and print the interim bill.",
+        "voice": "a4/voice/A4-06/01.wav",
+        "dur": 6.421
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A4-04",
+          "focus": 3,
+          "line": {
+            "text": "Click Settle. The window Settle bill says what is outstanding, and whose bill it is.",
+            "voice": "a4/voice/A4-06/02.wav",
+            "dur": 5.376
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": null,
+          "line": {
+            "text": "Choose the method. The list is the hotel's own ways of paying, with its default first. The amount is filled in with what is owed.",
+            "voice": "a4/voice/A4-06/03.wav",
+            "dur": 7.704
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": null,
+          "line": {
+            "text": "Change the amount for a part payment. Check what remains, and click Take payment.",
+            "voice": "a4/voice/A4-06/04.wav",
+            "dur": 5.214
+          }
+        },
+        {
+          "shot": "A4-03",
+          "focus": null,
+          "line": {
+            "text": "The payment is listed under Payments received. At the foot of the panel, Paid goes up and Due comes down.",
+            "voice": "a4/voice/A4-06/05.wav",
+            "dur": 5.655
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": null,
+          "line": {
+            "text": "More than the bill is held as the guest's credit, but only after you tick that it is.",
+            "voice": "a4/voice/A4-06/06.wav",
+            "dur": 5.115
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": null,
+          "line": {
+            "text": "Cash above one lakh rupees at once asks for the guest's PAN, or Form 97.",
+            "voice": "a4/voice/A4-06/07.wav",
+            "dur": 5.544
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": 5,
+          "line": {
+            "text": "When a company pays the room, click Split the bill. Choose the company, and click Open the second bill.",
+            "voice": "a4/voice/A4-06/08.wav",
+            "dur": 6.108
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": null,
+          "line": {
+            "text": "The bills then show side by side: Everything, Guest, and the company. The two-arrow button on a line moves it to the other bill.",
+            "voice": "a4/voice/A4-06/09.wav",
+            "dur": 7.872
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": null,
+          "line": {
+            "text": "Settle each bill on its own. For the company's, choose Bill to company. The amount goes to the company's account.",
+            "voice": "a4/voice/A4-06/10.wav",
+            "dur": 6.706
+          }
+        },
+        {
+          "shot": "A4-02",
+          "focus": 3,
+          "line": {
+            "text": "When the company pays, record it on Company accounts, with Record payment. Never in cash.",
+            "voice": "a4/voice/A4-06/11.wav",
+            "dur": 5.666
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": 4,
+          "line": {
+            "text": "Interim bill opens the print preview. Click Print, and the bill opens on a page of its own, to print.",
+            "voice": "a4/voice/A4-06/12.wav",
+            "dur": 6.224
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": null,
+          "line": {
+            "text": "The interim bill is not a tax invoice, and has no number.",
+            "voice": "a4/voice/A4-06/13.wav",
+            "dur": 3.582
+          }
+        },
+        {
+          "shot": "A4-04",
+          "focus": 6,
+          "line": {
+            "text": "When nothing is owed, Check out opens. The check-out chapter goes on from there.",
+            "voice": "a4/voice/A4-06/14.wav",
+            "dur": 4.83
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "After check-out, the numbered tax invoice is issued on Invoices. A wrong invoice is corrected with a credit note.",
+        "voice": "a4/voice/A4-06/15.wav",
+        "dur": 7.06
+      },
+      "next": "Your cash drawer"
+    },
+    {
+      "id": "A4-07",
+      "slug": "A4-07-your-cash-drawer",
+      "section": "A4.10",
+      "title": "Your cash drawer",
+      "intro": {
+        "text": "In this video you will see your cash drawer at the desk: how it opens, what goes in and out, and how you hand it over.",
+        "voice": "a4/voice/A4-07/01.wav",
+        "dur": 7.262
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A4-02",
+          "focus": 1,
+          "line": {
+            "text": "Open Cashiering, under Finance in the menu.",
+            "voice": "a4/voice/A4-07/02.wav",
+            "dur": 3.071
+          }
+        },
+        {
+          "shot": "A4-20",
+          "focus": null,
+          "line": {
+            "text": "Before your first cash, it says No drawer open.",
+            "voice": "a4/voice/A4-07/03.wav",
+            "dur": 3.385
+          }
+        },
+        {
+          "shot": "A4-20",
+          "focus": 1,
+          "line": {
+            "text": "There is no step to open. Your drawer opens by itself the first time you take cash. With nothing handed to you, it opens at zero.",
+            "voice": "a4/voice/A4-07/04.wav",
+            "dur": 8.749
+          }
+        },
+        {
+          "shot": "A4-20",
+          "focus": null,
+          "line": {
+            "text": "If the last person handed you a float by name, it says so, and your drawer opens on it.",
+            "voice": "a4/voice/A4-07/05.wav",
+            "dur": 5.335
+          }
+        },
+        {
+          "shot": "A4-20",
+          "focus": 2,
+          "line": {
+            "text": "Only when a float is given to you by hand, type how many of each note.",
+            "voice": "a4/voice/A4-07/06.wav",
+            "dur": 3.919
+          }
+        },
+        {
+          "shot": "A4-20",
+          "focus": 3,
+          "line": {
+            "text": "Then click the button. It reads Count a float to open by hand, and changes to Open the drawer, with the amount.",
+            "voice": "a4/voice/A4-07/07.wav",
+            "dur": 6.386
+          }
+        },
+        {
+          "shot": "A4-20",
+          "focus": null,
+          "line": {
+            "text": "During the shift, Taken this shift lists what you took, by method. Only cash reaches the drawer.",
+            "voice": "a4/voice/A4-07/08.wav",
+            "dur": 6.584
+          }
+        },
+        {
+          "shot": "A4-20",
+          "focus": null,
+          "line": {
+            "text": "Money that was not a payment, such as a taxi paid from the drawer, is recorded under In and out of the drawer. A paid out waits for the GM's or the owner's yes.",
+            "voice": "a4/voice/A4-07/09.wav",
+            "dur": 9.277
+          }
+        },
+        {
+          "shot": "A4-20",
+          "focus": null,
+          "line": {
+            "text": "At the end of your shift, count the drawer note by note, and click Save the count. It says if the drawer balances, or is over or short.",
+            "voice": "a4/voice/A4-07/10.wav",
+            "dur": 7.745
+          }
+        },
+        {
+          "shot": "A4-20",
+          "focus": null,
+          "line": {
+            "text": "Click Close and hand over. If the count differs, write why. Choose who takes the drawer, type the float kept, and click Close the shift.",
+            "voice": "a4/voice/A4-07/11.wav",
+            "dur": 8.83
+          }
+        },
+        {
+          "shot": "A4-02",
+          "focus": 2,
+          "line": {
+            "text": "The rest is to deposit. The GM records the deposit on Cash deposits, and the owner or the accountant verifies it.",
+            "voice": "a4/voice/A4-07/12.wav",
+            "dur": 7.303
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A difference never stops the hand-over, but it must be written down.",
+        "voice": "a4/voice/A4-07/13.wav",
+        "dur": 3.884
+      },
+      "next": "The bill in short"
+    },
+    {
+      "id": "A4-08",
+      "slug": "A4-08-the-bill-in-short",
+      "section": "A4.12",
+      "title": "The bill in short",
+      "intro": {
+        "text": "Here is the guest's bill in short: what to do, and when.",
+        "voice": "a4/voice/A4-08/01.wav",
+        "dur": 3.791
+      },
+      "record": null,
+      "scenes": [],
+      "checklist": [
+        {
+          "text": "To see what a guest owes: In house, the guest, the Bill tab.",
+          "voice": "a4/voice/A4-08/02.wav",
+          "dur": 4.43
+        },
+        {
+          "text": "Something to add: Add charge, then Post charge.",
+          "voice": "a4/voice/A4-08/03.wav",
+          "dur": 3.547
+        },
+        {
+          "text": "A charge is wrong: the curved arrow, Why, Reverse.",
+          "voice": "a4/voice/A4-08/04.wav",
+          "dur": 3.733
+        },
+        {
+          "text": "Managers: the pencil for a charge, Change rate for the stay.",
+          "voice": "a4/voice/A4-08/05.wav",
+          "dur": 4.035
+        },
+        {
+          "text": "The guest asks for the bill: Interim bill, then Print.",
+          "voice": "a4/voice/A4-08/06.wav",
+          "dur": 3.617
+        },
+        {
+          "text": "A company pays part: Split the bill, and move the lines.",
+          "voice": "a4/voice/A4-08/07.wav",
+          "dur": 3.698
+        },
+        {
+          "text": "The guest pays: Settle, the method, Take payment. Then Check out.",
+          "voice": "a4/voice/A4-08/08.wav",
+          "dur": 4.703
+        },
+        {
+          "text": "Money that was not a payment: Cashiering, In and out of the drawer, Record.",
+          "voice": "a4/voice/A4-08/09.wav",
+          "dur": 4.372
+        },
+        {
+          "text": "End of your shift: Cashiering. Count, Save the count, Close and hand over.",
+          "voice": "a4/voice/A4-08/10.wav",
+          "dur": 4.97
+        },
+        {
+          "text": "After check-out: Invoices, Issue. A wrong invoice needs a credit note.",
+          "voice": "a4/voice/A4-08/11.wav",
+          "dur": 5.388
+        }
+      ],
+      "outro": {
+        "text": "That is the guest's bill. Thank you for watching.",
+        "voice": "a4/voice/A4-08/12.wav",
+        "dur": 3.437
+      },
+      "next": null
+    }
+  ]
+}

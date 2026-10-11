@@ -1,0 +1,460 @@
+{
+  "chapter": "A14",
+  "title": "Sales, marketing and loyalty",
+  "manualShots": "a14",
+  "videos": [
+    {
+      "id": "A14-01",
+      "slug": "A14-01-the-sales-and-marketing-screens",
+      "section": "A14.1",
+      "title": "The Sales and marketing screens",
+      "intro": {
+        "text": "Sales and marketing is the part of the menu for enquiries, marketing figures and loyalty. In this video you will see its three screens, and who reaches each one.",
+        "voice": "a14/voice/A14-01/01.wav",
+        "dur": 9.231
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A14-01",
+          "focus": null,
+          "line": {
+            "text": "In the Front office menu, Sales and marketing sits under Guests and CRM. Both are about people.",
+            "voice": "a14/voice/A14-01/02.wav",
+            "dur": 6.166
+          }
+        },
+        {
+          "shot": "A14-01",
+          "focus": 1,
+          "line": {
+            "text": "Leads and WhatsApp shows the hotel's enquiries from the leads app. Everyone who sees guests can open it.",
+            "voice": "a14/voice/A14-01/03.wav",
+            "dur": 6.514
+          }
+        },
+        {
+          "shot": "A14-01",
+          "focus": 2,
+          "line": {
+            "text": "Marketing shows one month: what each campaign cost, and the bookings and revenue it brought. Only the owner, an Admin and the GM see it.",
+            "voice": "a14/voice/A14-01/04.wav",
+            "dur": 8.615
+          }
+        },
+        {
+          "shot": "A14-01",
+          "focus": 3,
+          "line": {
+            "text": "Loyalty is where members earn points on their stays, and use them. Everyone who sees guests can open it.",
+            "voice": "a14/voice/A14-01/05.wav",
+            "dur": 6.874
+          }
+        },
+        {
+          "shot": "A14-06",
+          "focus": null,
+          "line": {
+            "text": "Reception's own menu has none of the three. Reception reaches Leads and WhatsApp, and Loyalty, with Find a screen, or Control K.",
+            "voice": "a14/voice/A14-01/06.wav",
+            "dur": 8.244
+          }
+        },
+        {
+          "shot": "A14-06",
+          "focus": 1,
+          "line": {
+            "text": "Type what you are looking for: loyalty, or leads.",
+            "voice": "a14/voice/A14-01/07.wav",
+            "dur": 3.57
+          }
+        },
+        {
+          "shot": "A14-06",
+          "focus": 2,
+          "line": {
+            "text": "The screen is marked Not in your menu. It is yours to open, just not listed: tap it.",
+            "voice": "a14/voice/A14-01/08.wav",
+            "dur": 5.399
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "No module switch hides these three screens. Loyalty has its own switch at each hotel, and a later video shows it.",
+        "voice": "a14/voice/A14-01/09.wav",
+        "dur": 7.28
+      },
+      "next": "Leads and Marketing"
+    },
+    {
+      "id": "A14-02",
+      "slug": "A14-02-leads-and-marketing",
+      "section": "A14.2",
+      "title": "Leads and Marketing",
+      "intro": {
+        "text": "Enquiries from WhatsApp, the website and ads arrive in the leads app. In this video you will see how the PMS shows them, how a lead becomes a booking, and the month's marketing figures.",
+        "voice": "a14/voice/A14-02/01.wav",
+        "dur": 11.367
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A14-01",
+          "focus": 1,
+          "line": {
+            "text": "Leads and WhatsApp reads the enquiries from the leads app as you open the page. Staff reply in the leads app, not here.",
+            "voice": "a14/voice/A14-02/02.wav",
+            "dur": 6.897
+          }
+        },
+        {
+          "shot": "A14-01",
+          "focus": 4,
+          "line": {
+            "text": "Here the leads app is not connected yet. Until the owner sets up its read-only login on the server, nothing is read.",
+            "voice": "a14/voice/A14-02/03.wav",
+            "dur": 7.315
+          }
+        },
+        {
+          "shot": "A14-01",
+          "focus": null,
+          "line": {
+            "text": "Once it is connected, the enquiries are listed newest message first, fifty at a time. Tap one to read its conversation, and Reply in the leads app to answer there.",
+            "voice": "a14/voice/A14-02/04.wav",
+            "dur": 10.009
+          }
+        },
+        {
+          "shot": "A14-01",
+          "focus": null,
+          "line": {
+            "text": "To book a lead, tap Book this lead. New booking opens with the guest's name and phone, a booking source by the lead's channel, and the lead's campaign.",
+            "voice": "a14/voice/A14-02/05.wav",
+            "dur": 9.324
+          }
+        },
+        {
+          "shot": "A14-01",
+          "focus": null,
+          "line": {
+            "text": "Each look reads the leads app live, at most 5,000 times a day. Nothing is copied into the PMS.",
+            "voice": "a14/voice/A14-02/06.wav",
+            "dur": 6.967
+          }
+        },
+        {
+          "shot": "A14-02",
+          "focus": null,
+          "line": {
+            "text": "Marketing is for the owner, an Admin and the GM. It shows one month, by the stays' arrival date.",
+            "voice": "a14/voice/A14-02/07.wav",
+            "dur": 6.526
+          }
+        },
+        {
+          "shot": "A14-02",
+          "focus": 1,
+          "line": {
+            "text": "It opens on this month. Choose another in Month.",
+            "voice": "a14/voice/A14-02/08.wav",
+            "dur": 3.135
+          }
+        },
+        {
+          "shot": "A14-02",
+          "focus": 2,
+          "line": {
+            "text": "Campaigns gives each campaign's spend, beside the bookings and revenue it brought. A booking carries its campaign only when it was made with Book this lead.",
+            "voice": "a14/voice/A14-02/09.wav",
+            "dur": 9.022
+          }
+        },
+        {
+          "shot": "A14-02",
+          "focus": 3,
+          "line": {
+            "text": "Spend comes from the leads app, and a dash means nobody has the figure. This line says why: here, the leads app is not connected yet.",
+            "voice": "a14/voice/A14-02/10.wav",
+            "dur": 8.859
+          }
+        },
+        {
+          "shot": "A14-02",
+          "focus": 4,
+          "line": {
+            "text": "By booking source counts every stay arriving this month. Revenue is room charges before tax, and cancelled and no-show stays are left out.",
+            "voice": "a14/voice/A14-02/11.wav",
+            "dur": 8.453
+          }
+        },
+        {
+          "shot": "A14-02",
+          "focus": 5,
+          "line": {
+            "text": "No source recorded holds the stays whose booking named no source.",
+            "voice": "a14/voice/A14-02/12.wav",
+            "dur": 4.244
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Remember, the month is by arrival: a stay booked in September for October counts in October.",
+        "voice": "a14/voice/A14-02/13.wav",
+        "dur": 5.823
+      },
+      "next": "Loyalty: switching it on and the rules"
+    },
+    {
+      "id": "A14-03",
+      "slug": "A14-03-loyalty-switching-it-on-and-the-rules",
+      "section": "A14.4",
+      "title": "Loyalty: switching it on and the rules",
+      "intro": {
+        "text": "Members earn points on their stays at every hotel of the group, and use them on their room charges. One point is one rupee off. In this video you will switch loyalty on and set its rules.",
+        "voice": "a14/voice/A14-03/01.wav",
+        "dur": 10.967
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A14-03",
+          "focus": 1,
+          "line": {
+            "text": "The line under the heading gives the programme's name and its earn rate. Here neither is set, so stays earn nothing.",
+            "voice": "a14/voice/A14-03/02.wav",
+            "dur": 6.595
+          }
+        },
+        {
+          "shot": "A14-03",
+          "focus": 2,
+          "line": {
+            "text": "And loyalty is off at this hotel: nobody joins, earns or uses points here.",
+            "voice": "a14/voice/A14-03/03.wav",
+            "dur": 5.242
+          }
+        },
+        {
+          "shot": "A14-07",
+          "focus": null,
+          "line": {
+            "text": "The owner or an Admin switches it on: Settings, then Modules and connections, then Modules.",
+            "voice": "a14/voice/A14-03/04.wav",
+            "dur": 6.276
+          }
+        },
+        {
+          "shot": "A14-07",
+          "focus": 1,
+          "line": {
+            "text": "Find Loyalty. Its switch is on the right of the line, and each hotel has its own.",
+            "voice": "a14/voice/A14-03/05.wav",
+            "dur": 5.306
+          }
+        },
+        {
+          "shot": "A14-07",
+          "focus": 2,
+          "line": {
+            "text": "The note says what it does. Off means nobody joins, earns or uses points at this hotel.",
+            "voice": "a14/voice/A14-03/06.wav",
+            "dur": 6.502
+          }
+        },
+        {
+          "shot": "A14-05",
+          "focus": null,
+          "line": {
+            "text": "Then the owner, an Admin or the GM sets the rules, on the Loyalty screen. They are for every hotel of the group.",
+            "voice": "a14/voice/A14-03/07.wav",
+            "dur": 6.793
+          }
+        },
+        {
+          "shot": "A14-05",
+          "focus": 1,
+          "line": {
+            "text": "Type the Programme name, at most 40 letters. It goes into the words a guest agrees to.",
+            "voice": "a14/voice/A14-03/08.wav",
+            "dur": 5.492
+          }
+        },
+        {
+          "shot": "A14-05",
+          "focus": 2,
+          "line": {
+            "text": "Type the Points per ₹100 before GST, at most 100. Left empty, stays earn nothing.",
+            "voice": "a14/voice/A14-03/09.wav",
+            "dur": 7.06
+          }
+        },
+        {
+          "shot": "A14-05",
+          "focus": 3,
+          "line": {
+            "text": "Tap Save the rules. The message says Rules saved.",
+            "voice": "a14/voice/A14-03/10.wav",
+            "dur": 3.762
+          }
+        },
+        {
+          "shot": "A14-05",
+          "focus": 4,
+          "line": {
+            "text": "Points by hotel shows each hotel's points earned and used in a month, in rupees. Only the owner, an Admin and the GM see it.",
+            "voice": "a14/voice/A14-03/11.wav",
+            "dur": 7.93
+          }
+        },
+        {
+          "shot": "A14-05",
+          "focus": 5,
+          "line": {
+            "text": "Choose the month here. Points earned at one hotel may be used at another, so the hotels can settle between themselves.",
+            "voice": "a14/voice/A14-03/12.wav",
+            "dur": 7.28
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Once the switch is on and the rules are saved, the desk can start joining guests. That is the next video.",
+        "voice": "a14/voice/A14-03/13.wav",
+        "dur": 6.305
+      },
+      "next": "Loyalty: joining, earning and using points"
+    },
+    {
+      "id": "A14-04",
+      "slug": "A14-04-loyalty-joining-earning-and-using-points",
+      "section": "A14.4",
+      "title": "Loyalty: joining, earning and using points",
+      "intro": {
+        "text": "A guest in house wants to join. In this video you will join them with their yes, and see how points are earned, used and given up.",
+        "voice": "a14/voice/A14-04/01.wav",
+        "dur": 8.012
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A14-03",
+          "focus": 3,
+          "line": {
+            "text": "In house lists every guest checked in, with their points, or Not a member.",
+            "voice": "a14/voice/A14-04/02.wav",
+            "dur": 4.522
+          }
+        },
+        {
+          "shot": "A14-03",
+          "focus": 4,
+          "line": {
+            "text": "Ask the guest first. Then tap Join on their line.",
+            "voice": "a14/voice/A14-04/03.wav",
+            "dur": 3.855
+          }
+        },
+        {
+          "shot": "A14-04",
+          "focus": 1,
+          "line": {
+            "text": "Read this to the guest. Joining is not a yes to offers; that is a separate question.",
+            "voice": "a14/voice/A14-04/04.wav",
+            "dur": 5.283
+          }
+        },
+        {
+          "shot": "A14-04",
+          "focus": 2,
+          "line": {
+            "text": "The words to read appear here, with the programme's name, and that the guest is 18 or over. Here no name is set yet, so there is nothing to agree to.",
+            "voice": "a14/voice/A14-04/05.wav",
+            "dur": 9.196
+          }
+        },
+        {
+          "shot": "A14-04",
+          "focus": 3,
+          "line": {
+            "text": "A member needs a mobile number. If the guest has none on file, add it to the guest first.",
+            "voice": "a14/voice/A14-04/06.wav",
+            "dur": 5.457
+          }
+        },
+        {
+          "shot": "A14-04",
+          "focus": 4,
+          "line": {
+            "text": "If the guest agrees, tick The guest agrees.",
+            "voice": "a14/voice/A14-04/07.wav",
+            "dur": 2.711
+          }
+        },
+        {
+          "shot": "A14-04",
+          "focus": 5,
+          "line": {
+            "text": "Join stays grey until they do. Tap it, and the message says they joined.",
+            "voice": "a14/voice/A14-04/08.wav",
+            "dur": 5.016
+          }
+        },
+        {
+          "shot": "A14-03",
+          "focus": null,
+          "line": {
+            "text": "Points are earned by themselves when a member checks out, on everything on the stay's bills before GST. Alcohol, refunds and payments earn nothing.",
+            "voice": "a14/voice/A14-04/09.wav",
+            "dur": 9.533
+          }
+        },
+        {
+          "shot": "A14-03",
+          "focus": null,
+          "line": {
+            "text": "On a booking from a booking site or an agent, the room earns nothing, but the extras do. Points are whole, rounded down, once per stay.",
+            "voice": "a14/voice/A14-04/10.wav",
+            "dur": 8.441
+          }
+        },
+        {
+          "shot": "A14-03",
+          "focus": null,
+          "line": {
+            "text": "To use points, tap Use points on the member's line. It shows on direct bookings only.",
+            "voice": "a14/voice/A14-04/11.wav",
+            "dur": 5.899
+          }
+        },
+        {
+          "shot": "A14-03",
+          "focus": null,
+          "line": {
+            "text": "Type the points, from 500 at a time. They come off the room charges as a discount line, and the guest signs the bill.",
+            "voice": "a14/voice/A14-04/12.wav",
+            "dur": 7.57
+          }
+        },
+        {
+          "shot": "A14-03",
+          "focus": null,
+          "line": {
+            "text": "To leave, tap Leave. Their points lapse, their history stays with the bills, and they can join again later, with no points.",
+            "voice": "a14/voice/A14-04/13.wav",
+            "dur": 7.687
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A member is one person across the group. The owner, an Admin and the GM see their statement on Guest 360, and add or take points there, with a reason.",
+        "voice": "a14/voice/A14-04/14.wav",
+        "dur": 10.264
+      },
+      "next": null
+    }
+  ]
+}

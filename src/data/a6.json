@@ -1,0 +1,1119 @@
+{
+  "chapter": "A6",
+  "title": "Housekeeping",
+  "manualShots": "a6",
+  "videos": [
+    {
+      "id": "A6-01",
+      "slug": "A6-01-the-housekeeping-screens",
+      "section": "A6.1",
+      "title": "The housekeeping screens",
+      "intro": {
+        "text": "This series is for housekeepers, their supervisors and the desk. In this video you will see the housekeeping screens, and who uses which.",
+        "voice": "a6/voice/A6-01/01.wav",
+        "dur": 8.151
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A6-01",
+          "focus": null,
+          "line": {
+            "text": "A housekeeper signs in and lands on the Housekeeping board. Their menu is short. Every other screen they may use is one search away.",
+            "voice": "a6/voice/A6-01/02.wav",
+            "dur": 7.762
+          }
+        },
+        {
+          "shot": "A6-01",
+          "focus": 2,
+          "line": {
+            "text": "Housekeeping is the board: every room, what it needs, and who is cleaning it.",
+            "voice": "a6/voice/A6-01/03.wav",
+            "dur": 4.673
+          }
+        },
+        {
+          "shot": "A6-01",
+          "focus": 3,
+          "line": {
+            "text": "Work orders is the list of what needs fixing, and who is fixing it.",
+            "voice": "a6/voice/A6-01/04.wav",
+            "dur": 4.151
+          }
+        },
+        {
+          "shot": "A6-01",
+          "focus": 4,
+          "line": {
+            "text": "Guest requests holds what guests in house have asked for, such as towels, or a broken tap.",
+            "voice": "a6/voice/A6-01/05.wav",
+            "dur": 6.218
+          }
+        },
+        {
+          "shot": "A6-01",
+          "focus": 5,
+          "line": {
+            "text": "Lost property is what was found, kept until it goes back to its owner.",
+            "voice": "a6/voice/A6-01/06.wav",
+            "dur": 4.151
+          }
+        },
+        {
+          "shot": "A6-01",
+          "focus": 1,
+          "line": {
+            "text": "Rooms shows the house today, as the desk sees it.",
+            "voice": "a6/voice/A6-01/07.wav",
+            "dur": 3.187
+          }
+        },
+        {
+          "shot": "A6-01",
+          "focus": 6,
+          "line": {
+            "text": "The Store and the hotel's equipment have a chapter of their own.",
+            "voice": "a6/voice/A6-01/08.wav",
+            "dur": 3.512
+          }
+        },
+        {
+          "shot": "A6-27",
+          "focus": null,
+          "line": {
+            "text": "The desk also has Wake-up calls: calls to make to guests, on the hotel's clock.",
+            "voice": "a6/voice/A6-01/09.wav",
+            "dur": 5.254
+          }
+        },
+        {
+          "shot": "A6-01",
+          "focus": 7,
+          "line": {
+            "text": "The first time, a Start here card lists the housekeeper's three jobs. Each one opens the screen it happens on. Tap Got it to put it away.",
+            "voice": "a6/voice/A6-01/10.wav",
+            "dur": 8.854
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "The next videos take each screen, step by step.",
+        "voice": "a6/voice/A6-01/11.wav",
+        "dur": 3.478
+      },
+      "next": "The board, and whose rooms are whose"
+    },
+    {
+      "id": "A6-02",
+      "slug": "A6-02-the-board-and-whose-rooms-are-whose",
+      "section": "A6.2",
+      "title": "The board, and whose rooms are whose",
+      "intro": {
+        "text": "In this video you will read the Housekeeping board, and give rooms to a housekeeper.",
+        "voice": "a6/voice/A6-02/01.wav",
+        "dur": 4.499
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A6-02",
+          "focus": null,
+          "line": {
+            "text": "Under its title, the board says what it is for: tap a room to move it on. Clean, then inspected.",
+            "voice": "a6/voice/A6-02/02.wav",
+            "dur": 6.653
+          }
+        },
+        {
+          "shot": "A6-02",
+          "focus": 1,
+          "line": {
+            "text": "Empty rooms shows how many rooms with no guest are clean, out of all of them, and how many are inspected.",
+            "voice": "a6/voice/A6-02/03.wav",
+            "dur": 6.38
+          }
+        },
+        {
+          "shot": "A6-02",
+          "focus": 2,
+          "line": {
+            "text": "Beside it are six counts: needs cleaning, clean, inspected, in house, due out, and out of service. Tap a count to jump to its rooms.",
+            "voice": "a6/voice/A6-02/04.wav",
+            "dur": 8.801
+          }
+        },
+        {
+          "shot": "A6-02",
+          "focus": 4,
+          "line": {
+            "text": "Each room is a card: its number, type and floor, who is cleaning it, and three buttons. Clean, Inspected, and Repair.",
+            "voice": "a6/voice/A6-02/05.wav",
+            "dur": 8.743
+          }
+        },
+        {
+          "shot": "A6-02",
+          "focus": 5,
+          "line": {
+            "text": "Online means the board is connected. It refreshes by itself, so nobody needs to reload it.",
+            "voice": "a6/voice/A6-02/06.wav",
+            "dur": 6.026
+          }
+        },
+        {
+          "shot": "A6-06",
+          "focus": 1,
+          "line": {
+            "text": "To give a room to somebody, choose their name on the room's card. It is saved at once.",
+            "voice": "a6/voice/A6-02/07.wav",
+            "dur": 5.318
+          }
+        },
+        {
+          "shot": "A6-06",
+          "focus": 2,
+          "line": {
+            "text": "The names along the top count the rooms on each person's sheet.",
+            "voice": "a6/voice/A6-02/08.wav",
+            "dur": 3.454
+          }
+        },
+        {
+          "shot": "A6-07",
+          "focus": 1,
+          "line": {
+            "text": "On a phone, a housekeeper taps their own name, and sees only their rooms.",
+            "voice": "a6/voice/A6-02/09.wav",
+            "dur": 4.464
+          }
+        },
+        {
+          "shot": "A6-02",
+          "focus": 3,
+          "line": {
+            "text": "All rooms shows every room again. Rooms are given for the business day, so each new day starts unassigned.",
+            "voice": "a6/voice/A6-02/10.wav",
+            "dur": 6.642
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A room with a guest leaving today is yellow, and says Due out.",
+        "voice": "a6/voice/A6-02/11.wav",
+        "dur": 3.779
+      },
+      "next": "Clean, then inspected"
+    },
+    {
+      "id": "A6-03",
+      "slug": "A6-03-clean-then-inspected",
+      "section": "A6.4",
+      "title": "Clean, then inspected",
+      "intro": {
+        "text": "In this video you will mark a room clean, then inspected, with a signal and without one.",
+        "voice": "a6/voice/A6-03/01.wav",
+        "dur": 5.788
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A6-07",
+          "focus": 2,
+          "line": {
+            "text": "When the room is clean, tap Clean on its card.",
+            "voice": "a6/voice/A6-03/02.wav",
+            "dur": 3.152
+          }
+        },
+        {
+          "shot": "A6-04",
+          "focus": 1,
+          "line": {
+            "text": "A message says so at once, and the room moves to the Clean group.",
+            "voice": "a6/voice/A6-03/03.wav",
+            "dur": 3.779
+          }
+        },
+        {
+          "shot": "A6-04",
+          "focus": 2,
+          "line": {
+            "text": "Now Inspected is ready. When the room has been checked, tap it.",
+            "voice": "a6/voice/A6-03/04.wav",
+            "dur": 4.227
+          }
+        },
+        {
+          "shot": "A6-05",
+          "focus": 1,
+          "line": {
+            "text": "The message says the room is inspected.",
+            "voice": "a6/voice/A6-03/05.wav",
+            "dur": 2.375
+          }
+        },
+        {
+          "shot": "A6-05",
+          "focus": 2,
+          "line": {
+            "text": "And the room moves under Inspected, ready for the next guest.",
+            "voice": "a6/voice/A6-03/06.wav",
+            "dur": 3.605
+          }
+        },
+        {
+          "shot": "A6-03",
+          "focus": 1,
+          "line": {
+            "text": "A grey button cannot be used yet. Tap it anyway, and the card says why.",
+            "voice": "a6/voice/A6-03/07.wav",
+            "dur": 5.179
+          }
+        },
+        {
+          "shot": "A6-03",
+          "focus": 2,
+          "line": {
+            "text": "Here, the room needs cleaning first. A room is always cleaned before it is inspected.",
+            "voice": "a6/voice/A6-03/08.wav",
+            "dur": 5.272
+          }
+        },
+        {
+          "shot": "A6-08",
+          "focus": 1,
+          "line": {
+            "text": "On a stairwell with no signal, the board says Offline. Carry on.",
+            "voice": "a6/voice/A6-03/09.wav",
+            "dur": 4.354
+          }
+        },
+        {
+          "shot": "A6-08",
+          "focus": 3,
+          "line": {
+            "text": "Tap Clean as usual. The message says it is saved on this phone, and will be sent when the connection is back.",
+            "voice": "a6/voice/A6-03/10.wav",
+            "dur": 6.526
+          }
+        },
+        {
+          "shot": "A6-08",
+          "focus": 2,
+          "line": {
+            "text": "Under the title, the board counts the changes waiting to sync.",
+            "voice": "a6/voice/A6-03/11.wav",
+            "dur": 3.582
+          }
+        },
+        {
+          "shot": "A6-09",
+          "focus": 1,
+          "line": {
+            "text": "And the room's card says what is queued. When the signal returns, it is sent by itself.",
+            "voice": "a6/voice/A6-03/12.wav",
+            "dur": 5.69
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "There is no button to send a room for cleaning. A check-out does that by itself.",
+        "voice": "a6/voice/A6-03/13.wav",
+        "dur": 5.039
+      },
+      "next": "Something broken, and a room out of service"
+    },
+    {
+      "id": "A6-04",
+      "slug": "A6-04-something-broken-and-a-room-out-of-service",
+      "section": "A6.6",
+      "title": "Something broken, and a room out of service",
+      "intro": {
+        "text": "Something in a room is broken. In this video you will report a repair, and take a room out of service when it cannot be sold.",
+        "voice": "a6/voice/A6-04/01.wav",
+        "dur": 7.431
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A6-10",
+          "focus": null,
+          "line": {
+            "text": "On the room's card, tap Repair. Report a repair opens, for that room.",
+            "voice": "a6/voice/A6-04/02.wav",
+            "dur": 4.958
+          }
+        },
+        {
+          "shot": "A6-10",
+          "focus": 1,
+          "line": {
+            "text": "Type what needs fixing, in a few words.",
+            "voice": "a6/voice/A6-04/03.wav",
+            "dur": 2.862
+          }
+        },
+        {
+          "shot": "A6-10",
+          "focus": 2,
+          "line": {
+            "text": "If it is a tagged piece of equipment, choose it here. It then shows as under repair until the repair is closed.",
+            "voice": "a6/voice/A6-04/04.wav",
+            "dur": 6.375
+          }
+        },
+        {
+          "shot": "A6-10",
+          "focus": 4,
+          "line": {
+            "text": "Choose the kind of work, and how urgent it is.",
+            "voice": "a6/voice/A6-04/05.wav",
+            "dur": 3.002
+          }
+        },
+        {
+          "shot": "A6-11",
+          "focus": 1,
+          "line": {
+            "text": "Most repairs do not take the room out of service. If this one must, tick Take the room out of service too.",
+            "voice": "a6/voice/A6-04/06.wav",
+            "dur": 6.804
+          }
+        },
+        {
+          "shot": "A6-11",
+          "focus": 2,
+          "line": {
+            "text": "Then say why it is coming out, from which date, and until when. Leave Until empty if nobody knows.",
+            "voice": "a6/voice/A6-04/07.wav",
+            "dur": 6.34
+          }
+        },
+        {
+          "shot": "A6-11",
+          "focus": 3,
+          "line": {
+            "text": "Tap Raise it. The repair goes on Work orders.",
+            "voice": "a6/voice/A6-04/08.wav",
+            "dur": 3.321
+          }
+        },
+        {
+          "shot": "A6-11",
+          "focus": 4,
+          "line": {
+            "text": "A room that must come out with no repair, for a refurbishment or for house use, uses Out of service without a repair.",
+            "voice": "a6/voice/A6-04/09.wav",
+            "dur": 7.216
+          }
+        },
+        {
+          "shot": "A6-12",
+          "focus": 1,
+          "line": {
+            "text": "Choose why it is coming out, set the dates, and write what is actually wrong.",
+            "voice": "a6/voice/A6-04/10.wav",
+            "dur": 4.859
+          }
+        },
+        {
+          "shot": "A6-12",
+          "focus": 5,
+          "line": {
+            "text": "Then tap Take out of service. A room with a guest in it cannot be taken out.",
+            "voice": "a6/voice/A6-04/11.wav",
+            "dur": 5.144
+          }
+        },
+        {
+          "shot": "A6-13",
+          "focus": 1,
+          "line": {
+            "text": "The room moves to Out of service, and is not sold.",
+            "voice": "a6/voice/A6-04/12.wav",
+            "dur": 3.048
+          }
+        },
+        {
+          "shot": "A6-13",
+          "focus": 2,
+          "line": {
+            "text": "When it is ready again, tap Put back.",
+            "voice": "a6/voice/A6-04/13.wav",
+            "dur": 2.642
+          }
+        },
+        {
+          "shot": "A6-14",
+          "focus": 1,
+          "line": {
+            "text": "The window lists each period the room is out, with its dates.",
+            "voice": "a6/voice/A6-04/14.wav",
+            "dur": 3.559
+          }
+        },
+        {
+          "shot": "A6-14",
+          "focus": 2,
+          "line": {
+            "text": "Tap Put back beside the one that is over. The room comes back needing cleaning, unless the hotel has chosen otherwise.",
+            "voice": "a6/voice/A6-04/15.wav",
+            "dur": 7.396
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A repair can wait on the phone with no signal. Taking a room out, and putting it back, need the connection.",
+        "voice": "a6/voice/A6-04/16.wav",
+        "dur": 6.409
+      },
+      "next": "Work orders"
+    },
+    {
+      "id": "A6-05",
+      "slug": "A6-05-work-orders",
+      "section": "A6.8",
+      "title": "Work orders",
+      "intro": {
+        "text": "Work orders is the list of what needs fixing. In this video you will start a repair, record what it cost, and close it.",
+        "voice": "a6/voice/A6-05/01.wav",
+        "dur": 7.524
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A6-15",
+          "focus": 2,
+          "line": {
+            "text": "Open lists what is still to fix: the most urgent first, and the oldest first within that.",
+            "voice": "a6/voice/A6-05/02.wav",
+            "dur": 5.765
+          }
+        },
+        {
+          "shot": "A6-15",
+          "focus": 3,
+          "line": {
+            "text": "Each one says what needs fixing, and how urgent it is.",
+            "voice": "a6/voice/A6-05/03.wav",
+            "dur": 3.884
+          }
+        },
+        {
+          "shot": "A6-15",
+          "focus": 4,
+          "line": {
+            "text": "Under it: the room, the kind, who raised it and when, how long it has been open, and who has it.",
+            "voice": "a6/voice/A6-05/04.wav",
+            "dur": 5.498
+          }
+        },
+        {
+          "shot": "A6-15",
+          "focus": 1,
+          "line": {
+            "text": "Raise one opens the same form as the room's Repair button.",
+            "voice": "a6/voice/A6-05/05.wav",
+            "dur": 3.71
+          }
+        },
+        {
+          "shot": "A6-16",
+          "focus": 1,
+          "line": {
+            "text": "Here you type the room. Leave it empty for anything that is not a room, such as a lift or the lobby.",
+            "voice": "a6/voice/A6-05/06.wav",
+            "dur": 6.015
+          }
+        },
+        {
+          "shot": "A6-15",
+          "focus": 5,
+          "line": {
+            "text": "When somebody begins the work, tap Start.",
+            "voice": "a6/voice/A6-05/07.wav",
+            "dur": 2.897
+          }
+        },
+        {
+          "shot": "A6-17",
+          "focus": 1,
+          "line": {
+            "text": "The repair now says Being fixed.",
+            "voice": "a6/voice/A6-05/08.wav",
+            "dur": 2.119
+          }
+        },
+        {
+          "shot": "A6-18",
+          "focus": 2,
+          "line": {
+            "text": "Costs records what the repair cost, in rupees.",
+            "voice": "a6/voice/A6-05/09.wav",
+            "dur": 3.536
+          }
+        },
+        {
+          "shot": "A6-18",
+          "focus": 3,
+          "line": {
+            "text": "Every cost needs its proof: a photo or screenshot of the bill, the payment or the transaction. Without it, the cost is not recorded.",
+            "voice": "a6/voice/A6-05/10.wav",
+            "dur": 8.383
+          }
+        },
+        {
+          "shot": "A6-18",
+          "focus": 4,
+          "line": {
+            "text": "Then tap Record the cost. A wrong cost is cancelled with a reason, never deleted.",
+            "voice": "a6/voice/A6-05/11.wav",
+            "dur": 5.748
+          }
+        },
+        {
+          "shot": "A6-19",
+          "focus": 1,
+          "line": {
+            "text": "When the work is finished, tap Close, and write what was done. It is the line somebody reads the next time this breaks.",
+            "voice": "a6/voice/A6-05/12.wav",
+            "dur": 7.234
+          }
+        },
+        {
+          "shot": "A6-19",
+          "focus": 3,
+          "line": {
+            "text": "Then tap Fixed. Or Not needed, if it needed no fixing after all.",
+            "voice": "a6/voice/A6-05/13.wav",
+            "dur": 5.074
+          }
+        },
+        {
+          "shot": "A6-20",
+          "focus": 1,
+          "line": {
+            "text": "Closed keeps every closed repair.",
+            "voice": "a6/voice/A6-05/14.wav",
+            "dur": 2.375
+          }
+        },
+        {
+          "shot": "A6-20",
+          "focus": 3,
+          "line": {
+            "text": "With what was done. A bill that arrives after the close can still be recorded here, with Costs.",
+            "voice": "a6/voice/A6-05/15.wav",
+            "dur": 5.829
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Costs are recorded by the owner, an administrator, the G M, the hotel manager or the Inventory Manager. Everybody else sees the repair without the money.",
+        "voice": "a6/voice/A6-05/16.wav",
+        "dur": 9.8
+      },
+      "next": "Guest requests"
+    },
+    {
+      "id": "A6-06",
+      "slug": "A6-06-guest-requests",
+      "section": "A6.9",
+      "title": "Guest requests",
+      "intro": {
+        "text": "A guest asks for towels, or says the tap is broken. In this video you will raise a request, take it, and mark it done.",
+        "voice": "a6/voice/A6-06/01.wav",
+        "dur": 7.942
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A6-21",
+          "focus": 1,
+          "line": {
+            "text": "Tap New request, and choose the room. Only guests in house now are listed.",
+            "voice": "a6/voice/A6-06/02.wav",
+            "dur": 4.981
+          }
+        },
+        {
+          "shot": "A6-21",
+          "focus": 2,
+          "line": {
+            "text": "Choose the team it is for: Housekeeping, Something broken, or Food and drink.",
+            "voice": "a6/voice/A6-06/03.wav",
+            "dur": 4.801
+          }
+        },
+        {
+          "shot": "A6-21",
+          "focus": 3,
+          "line": {
+            "text": "Say what is wanted.",
+            "voice": "a6/voice/A6-06/04.wav",
+            "dur": 1.504
+          }
+        },
+        {
+          "shot": "A6-21",
+          "focus": 4,
+          "line": {
+            "text": "And when, only if the guest said.",
+            "voice": "a6/voice/A6-06/05.wav",
+            "dur": 2.769
+          }
+        },
+        {
+          "shot": "A6-21",
+          "focus": 5,
+          "line": {
+            "text": "Then tap Raise it.",
+            "voice": "a6/voice/A6-06/06.wav",
+            "dur": 1.376
+          }
+        },
+        {
+          "shot": "A6-22",
+          "focus": 2,
+          "line": {
+            "text": "The request waits under Open, with the room, who raised it, how long it has waited, and who has it.",
+            "voice": "a6/voice/A6-06/07.wav",
+            "dur": 6.067
+          }
+        },
+        {
+          "shot": "A6-23",
+          "focus": 1,
+          "line": {
+            "text": "A housekeeper sees only their own teams: housekeeping, and something broken.",
+            "voice": "a6/voice/A6-06/08.wav",
+            "dur": 4.639
+          }
+        },
+        {
+          "shot": "A6-23",
+          "focus": 2,
+          "line": {
+            "text": "They tap Take it.",
+            "voice": "a6/voice/A6-06/09.wav",
+            "dur": 1.411
+          }
+        },
+        {
+          "shot": "A6-24",
+          "focus": 1,
+          "line": {
+            "text": "It now says Being done.",
+            "voice": "a6/voice/A6-06/10.wav",
+            "dur": 1.852
+          }
+        },
+        {
+          "shot": "A6-24",
+          "focus": 2,
+          "line": {
+            "text": "And everyone can see who has it.",
+            "voice": "a6/voice/A6-06/11.wav",
+            "dur": 2.154
+          }
+        },
+        {
+          "shot": "A6-24",
+          "focus": 3,
+          "line": {
+            "text": "When it is done, tap Done. A housekeeping request closes with one tap. Something broken asks what was done, and is also on Work orders.",
+            "voice": "a6/voice/A6-06/12.wav",
+            "dur": 9.098
+          }
+        },
+        {
+          "shot": "A6-25",
+          "focus": 1,
+          "line": {
+            "text": "Done, last 24 hours, lists what was finished.",
+            "voice": "a6/voice/A6-06/13.wav",
+            "dur": 3.721
+          }
+        },
+        {
+          "shot": "A6-25",
+          "focus": 2,
+          "line": {
+            "text": "With how long each took, and who did it. There are no time targets: nothing turns red.",
+            "voice": "a6/voice/A6-06/14.wav",
+            "dur": 5.399
+          }
+        },
+        {
+          "shot": "A6-22",
+          "focus": 5,
+          "line": {
+            "text": "A request no longer wanted is cancelled with Cancel it, and a reason.",
+            "voice": "a6/voice/A6-06/15.wav",
+            "dur": 4.255
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Guests can also ask from their own page while they are checked in. Their requests arrive here in the same way.",
+        "voice": "a6/voice/A6-06/16.wav",
+        "dur": 6.526
+      },
+      "next": "Wake-up calls"
+    },
+    {
+      "id": "A6-07",
+      "slug": "A6-07-wake-up-calls",
+      "section": "A6.10",
+      "title": "Wake-up calls",
+      "intro": {
+        "text": "Wake-up calls are for the desk. In this video you will set a call, and mark it done.",
+        "voice": "a6/voice/A6-07/01.wav",
+        "dur": 5.179
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A6-26",
+          "focus": 1,
+          "line": {
+            "text": "Tap Set a call, and choose the room. Only guests in house now are listed.",
+            "voice": "a6/voice/A6-07/02.wav",
+            "dur": 4.749
+          }
+        },
+        {
+          "shot": "A6-26",
+          "focus": 2,
+          "line": {
+            "text": "Choose the day. Today is filled in.",
+            "voice": "a6/voice/A6-07/03.wav",
+            "dur": 2.764
+          }
+        },
+        {
+          "shot": "A6-26",
+          "focus": 3,
+          "line": {
+            "text": "And the time, on the hotel's clock.",
+            "voice": "a6/voice/A6-07/04.wav",
+            "dur": 2.467
+          }
+        },
+        {
+          "shot": "A6-26",
+          "focus": 4,
+          "line": {
+            "text": "Add a note only if there is something to say on the call.",
+            "voice": "a6/voice/A6-07/05.wav",
+            "dur": 3.164
+          }
+        },
+        {
+          "shot": "A6-26",
+          "focus": 5,
+          "line": {
+            "text": "Then tap Set the call.",
+            "voice": "a6/voice/A6-07/06.wav",
+            "dur": 1.597
+          }
+        },
+        {
+          "shot": "A6-27",
+          "focus": 1,
+          "line": {
+            "text": "From fifteen minutes before the time, the call says Due, and the bell reminds the desk.",
+            "voice": "a6/voice/A6-07/07.wav",
+            "dur": 5.068
+          }
+        },
+        {
+          "shot": "A6-27",
+          "focus": 2,
+          "line": {
+            "text": "The note is under the room and the guest's name.",
+            "voice": "a6/voice/A6-07/08.wav",
+            "dur": 2.433
+          }
+        },
+        {
+          "shot": "A6-27",
+          "focus": 3,
+          "line": {
+            "text": "Make the call, then tap Done. A call stays due until it is done.",
+            "voice": "a6/voice/A6-07/09.wav",
+            "dur": 4.459
+          }
+        },
+        {
+          "shot": "A6-27",
+          "focus": 4,
+          "line": {
+            "text": "Cancel it asks why, and keeps the reason.",
+            "voice": "a6/voice/A6-07/10.wav",
+            "dur": 2.862
+          }
+        },
+        {
+          "shot": "A6-28",
+          "focus": 1,
+          "line": {
+            "text": "Done, last 24 hours, lists the calls made.",
+            "voice": "a6/voice/A6-07/11.wav",
+            "dur": 3.408
+          }
+        },
+        {
+          "shot": "A6-28",
+          "focus": 2,
+          "line": {
+            "text": "With who set each call, and who made it.",
+            "voice": "a6/voice/A6-07/12.wav",
+            "dur": 2.386
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A guest can also ask for a call from their own page. It shows as Asked, and waits until the desk taps Confirm.",
+        "voice": "a6/voice/A6-07/13.wav",
+        "dur": 7.57
+      },
+      "next": "Lost property"
+    },
+    {
+      "id": "A6-08",
+      "slug": "A6-08-lost-property",
+      "section": "A6.11",
+      "title": "Lost property",
+      "intro": {
+        "text": "Something was left behind. In this video you will log it, keep it, and mark it returned or disposed of.",
+        "voice": "a6/voice/A6-08/01.wav",
+        "dur": 6.456
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A6-29",
+          "focus": 1,
+          "line": {
+            "text": "Tap Log an item, and say what it is.",
+            "voice": "a6/voice/A6-08/02.wav",
+            "dur": 2.804
+          }
+        },
+        {
+          "shot": "A6-29",
+          "focus": 2,
+          "line": {
+            "text": "Where it was found.",
+            "voice": "a6/voice/A6-08/03.wav",
+            "dur": 1.306
+          }
+        },
+        {
+          "shot": "A6-29",
+          "focus": 3,
+          "line": {
+            "text": "The room, if it was in one.",
+            "voice": "a6/voice/A6-08/04.wav",
+            "dur": 2.038
+          }
+        },
+        {
+          "shot": "A6-29",
+          "focus": 4,
+          "line": {
+            "text": "And where it is kept now.",
+            "voice": "a6/voice/A6-08/05.wav",
+            "dur": 1.98
+          }
+        },
+        {
+          "shot": "A6-29",
+          "focus": 5,
+          "line": {
+            "text": "Then tap Log it.",
+            "voice": "a6/voice/A6-08/06.wav",
+            "dur": 1.423
+          }
+        },
+        {
+          "shot": "A6-30",
+          "focus": 1,
+          "line": {
+            "text": "The item is listed under Kept.",
+            "voice": "a6/voice/A6-08/07.wav",
+            "dur": 2.003
+          }
+        },
+        {
+          "shot": "A6-30",
+          "focus": 2,
+          "line": {
+            "text": "With where it was found, when, by whom, and how many days it has been kept.",
+            "voice": "a6/voice/A6-08/08.wav",
+            "dur": 5.091
+          }
+        },
+        {
+          "shot": "A6-31",
+          "focus": 1,
+          "line": {
+            "text": "Housekeeping can log an item, and see the list.",
+            "voice": "a6/voice/A6-08/09.wav",
+            "dur": 2.874
+          }
+        },
+        {
+          "shot": "A6-31",
+          "focus": 2,
+          "line": {
+            "text": "But only the desk marks an item returned, or disposed of.",
+            "voice": "a6/voice/A6-08/10.wav",
+            "dur": 3.663
+          }
+        },
+        {
+          "shot": "A6-30",
+          "focus": 4,
+          "line": {
+            "text": "When the owner comes back for it, the desk taps Returned.",
+            "voice": "a6/voice/A6-08/11.wav",
+            "dur": 3.211
+          }
+        },
+        {
+          "shot": "A6-32",
+          "focus": 1,
+          "line": {
+            "text": "Type who it went to.",
+            "voice": "a6/voice/A6-08/12.wav",
+            "dur": 1.562
+          }
+        },
+        {
+          "shot": "A6-32",
+          "focus": 2,
+          "line": {
+            "text": "And tap Mark returned.",
+            "voice": "a6/voice/A6-08/13.wav",
+            "dur": 1.817
+          }
+        },
+        {
+          "shot": "A6-33",
+          "focus": 3,
+          "line": {
+            "text": "It moves to Returned or disposed, saying to whom, by whom, and when.",
+            "voice": "a6/voice/A6-08/14.wav",
+            "dur": 4.894
+          }
+        },
+        {
+          "shot": "A6-34",
+          "focus": 1,
+          "line": {
+            "text": "If nobody claims it, tap Disposed, and say why.",
+            "voice": "a6/voice/A6-08/15.wav",
+            "dur": 3.791
+          }
+        },
+        {
+          "shot": "A6-34",
+          "focus": 2,
+          "line": {
+            "text": "Then Mark disposed.",
+            "voice": "a6/voice/A6-08/16.wav",
+            "dur": 1.759
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Nothing is disposed of by itself. The days kept are shown, so the desk can decide.",
+        "voice": "a6/voice/A6-08/17.wav",
+        "dur": 5.69
+      },
+      "next": "Your day in short"
+    },
+    {
+      "id": "A6-09",
+      "slug": "A6-09-your-day-in-short",
+      "section": "A6.12",
+      "title": "Your day in short",
+      "intro": {
+        "text": "Here is a housekeeping day, from the first room to the last.",
+        "voice": "a6/voice/A6-09/01.wav",
+        "dur": 3.803
+      },
+      "record": null,
+      "scenes": [],
+      "checklist": [
+        {
+          "text": "Start of the shift: the supervisor gives each room to somebody, on its card.",
+          "voice": "a6/voice/A6-09/02.wav",
+          "dur": 4.778
+        },
+        {
+          "text": "Your rooms: tap your own name at the top of the board.",
+          "voice": "a6/voice/A6-09/03.wav",
+          "dur": 3.245
+        },
+        {
+          "text": "A room is clean: tap Clean.",
+          "voice": "a6/voice/A6-09/04.wav",
+          "dur": 2.386
+        },
+        {
+          "text": "A room is checked: tap Inspected.",
+          "voice": "a6/voice/A6-09/05.wav",
+          "dur": 2.421
+        },
+        {
+          "text": "No signal: carry on. Your taps wait on the phone, and go when the line is back.",
+          "voice": "a6/voice/A6-09/06.wav",
+          "dur": 5.666
+        },
+        {
+          "text": "Something broken: tap Repair on the room.",
+          "voice": "a6/voice/A6-09/07.wav",
+          "dur": 3.036
+        },
+        {
+          "text": "A room cannot be sold: take it out of service, with a reason. Put it back when it is ready.",
+          "voice": "a6/voice/A6-09/08.wav",
+          "dur": 5.736
+        },
+        {
+          "text": "A repair: Work orders. Start it, then Close it with what was done.",
+          "voice": "a6/voice/A6-09/09.wav",
+          "dur": 4.796
+        },
+        {
+          "text": "A guest asks for something: Guest requests. Take it, then Done.",
+          "voice": "a6/voice/A6-09/10.wav",
+          "dur": 4.842
+        },
+        {
+          "text": "Something left behind: Lost property, Log an item.",
+          "voice": "a6/voice/A6-09/11.wav",
+          "dur": 3.849
+        }
+      ],
+      "outro": {
+        "text": "That is housekeeping. Thank you for watching.",
+        "voice": "a6/voice/A6-09/12.wav",
+        "dur": 2.834
+      },
+      "next": null
+    }
+  ]
+}

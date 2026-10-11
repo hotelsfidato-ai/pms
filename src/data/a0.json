@@ -1,0 +1,769 @@
+{
+  "chapter": "A0",
+  "title": "Getting started",
+  "manualShots": "a0",
+  "videos": [
+    {
+      "id": "A0-01",
+      "slug": "A0-01-signing-in-and-out",
+      "section": "A0.1",
+      "title": "Signing in and out",
+      "intro": {
+        "text": "Fidato PMS runs in a web browser, on a desk computer, a tablet or a phone. Nothing needs to be installed. In this video you will sign in, and sign out.",
+        "voice": "a0/voice/A0-01/01.wav",
+        "dur": 10.444
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A0-1",
+          "focus": null,
+          "line": {
+            "text": "Open the browser and go to PMS dot fidato hotels dot com. Your property gives you an email and a password. Use only your own: everything you do is saved under your name.",
+            "voice": "a0/voice/A0-01/02.wav",
+            "dur": 11.164
+          }
+        },
+        {
+          "shot": "A0-1",
+          "focus": 1,
+          "line": {
+            "text": "Type your email in the Email box.",
+            "voice": "a0/voice/A0-01/03.wav",
+            "dur": 2.305
+          }
+        },
+        {
+          "shot": "A0-1",
+          "focus": 2,
+          "line": {
+            "text": "Type your password. To see what you typed, click the eye at the end of the box, and click it again to hide it. It starts hidden, because the desk screen faces the lobby.",
+            "voice": "a0/voice/A0-01/04.wav",
+            "dur": 9.782
+          }
+        },
+        {
+          "shot": "A0-1",
+          "focus": 3,
+          "line": {
+            "text": "Click Sign in. A small spinner turns on the button, then your first screen opens.",
+            "voice": "a0/voice/A0-01/05.wav",
+            "dur": 5.597
+          }
+        },
+        {
+          "shot": "A0-1",
+          "focus": null,
+          "line": {
+            "text": "If the email or the password is wrong, the message is the same for both: That email and password do not match. So check both.",
+            "voice": "a0/voice/A0-01/06.wav",
+            "dur": 8.453
+          }
+        },
+        {
+          "shot": "A0-1",
+          "focus": null,
+          "line": {
+            "text": "If it says No active staff record for this account, your password was right, but your account is switched off or not set up. Ask your general manager.",
+            "voice": "a0/voice/A0-01/07.wav",
+            "dur": 8.546
+          }
+        },
+        {
+          "shot": "A0-1",
+          "focus": 4,
+          "line": {
+            "text": "Forgot your password? The page tells you: your general manager can reset it from the People screen.",
+            "voice": "a0/voice/A0-01/08.wav",
+            "dur": 6.224
+          }
+        },
+        {
+          "shot": "A0-2",
+          "focus": 1,
+          "line": {
+            "text": "On a phone, the group's band is at the top, and the form comes first.",
+            "voice": "a0/voice/A0-01/09.wav",
+            "dur": 3.907
+          }
+        },
+        {
+          "shot": "A0-2",
+          "focus": 4,
+          "line": {
+            "text": "The line about who to ask is under the form.",
+            "voice": "a0/voice/A0-01/10.wav",
+            "dur": 2.735
+          }
+        },
+        {
+          "shot": "A0-5",
+          "focus": 4,
+          "line": {
+            "text": "To sign out, click your name at the top right, then Sign out. The sign-in page opens.",
+            "voice": "a0/voice/A0-01/11.wav",
+            "dur": 5.539
+          }
+        },
+        {
+          "shot": "A0-5",
+          "focus": 4,
+          "line": {
+            "text": "Closing the browser or the tab does not sign you out. On a computer other people use, always sign out when you leave. It clears the lists kept on the computer, so the next person does not open on your screens.",
+            "voice": "a0/voice/A0-01/12.wav",
+            "dur": 12.755
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "If your role was raised to owner, Admin or GM, and your password is shorter than ten characters, you will be asked to set a longer one right after you sign in. Everybody else needs at least eight.",
+        "voice": "a0/voice/A0-01/13.wav",
+        "dur": 11.483
+      },
+      "next": "Your first screen and Start here"
+    },
+    {
+      "id": "A0-02",
+      "slug": "A0-02-your-first-screen-and-start-here",
+      "section": "A0.2",
+      "title": "Your first screen and Start here",
+      "intro": {
+        "text": "After you sign in, you land on your own first screen. In this video: where you start, and the Start here card.",
+        "voice": "a0/voice/A0-02/01.wav",
+        "dur": 7.106
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A0-3",
+          "focus": null,
+          "line": {
+            "text": "For most people the first screen is the Dashboard. It can also be Rooms or Calendar. Your general manager sets it for each person.",
+            "voice": "a0/voice/A0-02/02.wav",
+            "dur": 7.89
+          }
+        },
+        {
+          "shot": "A0-5",
+          "focus": 3,
+          "line": {
+            "text": "You can change your own. Click your name, and under Start on, pick Dashboard, Rooms or Calendar. A tick shows the one chosen. It counts from your next sign-in, on any device.",
+            "voice": "a0/voice/A0-02/03.wav",
+            "dur": 11.681
+          }
+        },
+        {
+          "shot": "A0-7",
+          "focus": null,
+          "line": {
+            "text": "Housekeeping, the kitchen, the waiter and the store have no Dashboard, because it shows the hotel's revenue. They start on their own work: Housekeeping, Kitchen, Tables, or the Store.",
+            "voice": "a0/voice/A0-02/04.wav",
+            "dur": 11.599
+          }
+        },
+        {
+          "shot": "A0-3",
+          "focus": 1,
+          "line": {
+            "text": "Reception, housekeeping, the waiter and the chef see a card called Start here on their first screen. It lists the jobs they will do most.",
+            "voice": "a0/voice/A0-02/05.wav",
+            "dur": 8.255
+          }
+        },
+        {
+          "shot": "A0-3",
+          "focus": 2,
+          "line": {
+            "text": "Each one opens the screen where the job is done, and says which button finishes it. Check a guest in opens today's arrivals: pick the guest, then Check in.",
+            "voice": "a0/voice/A0-02/06.wav",
+            "dur": 9.556
+          }
+        },
+        {
+          "shot": "A0-3",
+          "focus": 3,
+          "line": {
+            "text": "When you know your way, click Got it. The card goes away.",
+            "voice": "a0/voice/A0-02/07.wav",
+            "dur": 3.844
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "To bring the card back, open your account menu and click Show Start here again.",
+        "voice": "a0/voice/A0-02/08.wav",
+        "dur": 4.511
+      },
+      "next": "The screen at a glance"
+    },
+    {
+      "id": "A0-03",
+      "slug": "A0-03-the-screen-at-a-glance",
+      "section": "A0.3",
+      "title": "The screen at a glance",
+      "intro": {
+        "text": "Every screen in Fidato PMS has the same frame. Learn it once, and you will find your way on any screen.",
+        "voice": "a0/voice/A0-03/01.wav",
+        "dur": 6.793
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A0-3",
+          "focus": null,
+          "line": {
+            "text": "The dark menu on the left is your working menu, in sections such as Front desk and Bookings. Click a section's name to fold it or open it. The section you are in never folds.",
+            "voice": "a0/voice/A0-03/02.wav",
+            "dur": 10.108
+          }
+        },
+        {
+          "shot": "A0-3",
+          "focus": null,
+          "line": {
+            "text": "The heading says which screen you are on. On the Dashboard, Rooms and Calendar, the business date is just above it, and the hotel's name just under it.",
+            "voice": "a0/voice/A0-03/03.wav",
+            "dur": 9.219
+          }
+        },
+        {
+          "shot": "A0-11",
+          "focus": 3,
+          "line": {
+            "text": "Your menu is short on purpose: it lists the screens you work from. When it leaves anything out, a Find a screen button sits at its foot, and finds the rest.",
+            "voice": "a0/voice/A0-03/04.wav",
+            "dur": 9.474
+          }
+        },
+        {
+          "shot": "A0-8",
+          "focus": 1,
+          "line": {
+            "text": "Find a screen is also at the top of every page. Click it, or press Control and K, and type.",
+            "voice": "a0/voice/A0-03/05.wav",
+            "dur": 5.991
+          }
+        },
+        {
+          "shot": "A0-6",
+          "focus": 1,
+          "line": {
+            "text": "At the top right, the switcher moves you between the Front office, the Restaurant and Settings. It shows only if you have two or more.",
+            "voice": "a0/voice/A0-03/06.wav",
+            "dur": 7.977
+          }
+        },
+        {
+          "shot": "A0-10",
+          "focus": 3,
+          "line": {
+            "text": "The bell holds your notifications: things the system or a colleague wants you to know.",
+            "voice": "a0/voice/A0-03/07.wav",
+            "dur": 5.103
+          }
+        },
+        {
+          "shot": "A0-5",
+          "focus": 1,
+          "line": {
+            "text": "Your name and role open the account menu: who is signed in, your property, where you start, and Sign out.",
+            "voice": "a0/voice/A0-03/08.wav",
+            "dur": 6.415
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Two more things. Collapse, at the foot of the menu, shrinks it to icons. And if the hotel's business date is ever behind the real date, a yellow line under the top bar says so, on every screen.",
+        "voice": "a0/voice/A0-03/09.wav",
+        "dur": 12.151
+      },
+      "next": "The three spaces"
+    },
+    {
+      "id": "A0-04",
+      "slug": "A0-04-the-three-spaces",
+      "section": "A0.4",
+      "title": "The three spaces",
+      "intro": {
+        "text": "Fidato PMS has three parts, each with its own menu: the Front office, the Restaurant, and Settings. They are called spaces.",
+        "voice": "a0/voice/A0-04/01.wav",
+        "dur": 8.139
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A0-3",
+          "focus": null,
+          "line": {
+            "text": "The Front office is the hotel's work: rooms, bookings, guests, bills, housekeeping and reports. It opens on the Dashboard.",
+            "voice": "a0/voice/A0-04/02.wav",
+            "dur": 8.662
+          }
+        },
+        {
+          "shot": "A0-7",
+          "focus": 1,
+          "line": {
+            "text": "Click a space's name in the switcher to move to it. The highlighted name is the space you are in. Here, the Restaurant.",
+            "voice": "a0/voice/A0-04/03.wav",
+            "dur": 6.961
+          }
+        },
+        {
+          "shot": "A0-7",
+          "focus": 2,
+          "line": {
+            "text": "The Restaurant has its own menu, Point of sale: Tables, the Till, the Kitchen, the Menu and the rest. Each person sees their own share.",
+            "voice": "a0/voice/A0-04/04.wav",
+            "dur": 9.01
+          }
+        },
+        {
+          "shot": "A0-7",
+          "focus": null,
+          "line": {
+            "text": "Reception has the Restaurant only where the hotel lets reception use the point of sale. A hotel without a restaurant has no Restaurant space at all.",
+            "voice": "a0/voice/A0-04/05.wav",
+            "dur": 8.871
+          }
+        },
+        {
+          "shot": "A0-6",
+          "focus": 1,
+          "line": {
+            "text": "Settings is for the owner, Admin and the GM. It is how the hotel is set up.",
+            "voice": "a0/voice/A0-04/06.wav",
+            "dur": 4.854
+          }
+        },
+        {
+          "shot": "A0-6",
+          "focus": 3,
+          "line": {
+            "text": "Its menu is in groups: Property, Rooms, Rates and tax, Money, and more.",
+            "voice": "a0/voice/A0-04/07.wav",
+            "dur": 5.416
+          }
+        },
+        {
+          "shot": "A0-6",
+          "focus": 4,
+          "line": {
+            "text": "An entry with a small arrow, like Rates, opens a Front office screen, and takes you out of Settings.",
+            "voice": "a0/voice/A0-04/08.wav",
+            "dur": 6.02
+          }
+        },
+        {
+          "shot": "A0-6",
+          "focus": 2,
+          "line": {
+            "text": "Back to front office, at the top of the menu, takes you back too.",
+            "voice": "a0/voice/A0-04/09.wav",
+            "dur": 3.965
+          }
+        },
+        {
+          "shot": "A0-11",
+          "focus": 1,
+          "line": {
+            "text": "On a phone, the switcher is at the top of the menu drawer.",
+            "voice": "a0/voice/A0-04/10.wav",
+            "dur": 3.559
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "No switcher at all? You have one space only. The waiter, the chef and the kitchen manager work in the Restaurant alone; housekeeping, the Inventory Manager and the Revenue Manager in the Front office alone. The spaces change only how the menu is grouped, never who may open a screen.",
+        "voice": "a0/voice/A0-04/11.wav",
+        "dur": 16.499
+      },
+      "next": "Choosing the hotel"
+    },
+    {
+      "id": "A0-05",
+      "slug": "A0-05-choosing-the-hotel",
+      "section": "A0.5",
+      "title": "Choosing the hotel",
+      "intro": {
+        "text": "Every screen works on one property at a time. Here is how to see which one, and how to choose another.",
+        "voice": "a0/voice/A0-05/01.wav",
+        "dur": 6.386
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A0-3",
+          "focus": null,
+          "line": {
+            "text": "The property's name is under the heading of the Dashboard, Rooms and Calendar. Here, 5 Elements Akkalkot. Most screens also carry its short code in their address.",
+            "voice": "a0/voice/A0-05/02.wav",
+            "dur": 10.177
+          }
+        },
+        {
+          "shot": "A0-5",
+          "focus": 2,
+          "line": {
+            "text": "Your account menu shows it under Property: its name, then its code and its city.",
+            "voice": "a0/voice/A0-05/03.wav",
+            "dur": 4.871
+          }
+        },
+        {
+          "shot": "A0-5",
+          "focus": 2,
+          "line": {
+            "text": "If you work at more than one property, each one is listed there, with a tick on the one chosen. Click another, and the same screen opens for that hotel: its address, its lists and its business date change together.",
+            "voice": "a0/voice/A0-05/04.wav",
+            "dur": 12.447
+          }
+        },
+        {
+          "shot": "A0-5",
+          "focus": null,
+          "line": {
+            "text": "The Dashboard then has a Property box of its own. It picks which hotel the Dashboard's figures are for, and changes the Dashboard only. The owner and Admin also have All properties: every property on one page.",
+            "voice": "a0/voice/A0-05/05.wav",
+            "dur": 13.579
+          }
+        },
+        {
+          "shot": "A0-5",
+          "focus": null,
+          "line": {
+            "text": "Each property has its own business date, so two hotels can be on different days. And your role can be different at each one.",
+            "voice": "a0/voice/A0-05/06.wav",
+            "dur": 7.431
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A practice hotel has TEST beside its name, and an orange stripe across the top of every screen: Test hotel, practice only, nothing here is real. Nothing is sent from it.",
+        "voice": "a0/voice/A0-05/07.wav",
+        "dur": 10.914
+      },
+      "next": "Find a screen"
+    },
+    {
+      "id": "A0-06",
+      "slug": "A0-06-find-a-screen",
+      "section": "A0.6",
+      "title": "Find a screen",
+      "intro": {
+        "text": "Find a screen is the quickest way to anywhere. It finds every screen you may open, and, if you work with bookings, guests and bookings too.",
+        "voice": "a0/voice/A0-06/01.wav",
+        "dur": 8.592
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A0-8",
+          "focus": 1,
+          "line": {
+            "text": "Press Control and K together, or click Find a screen at the top. On a phone, tap the magnifying glass. Then type.",
+            "voice": "a0/voice/A0-06/02.wav",
+            "dur": 7.553
+          }
+        },
+        {
+          "shot": "A0-8",
+          "focus": null,
+          "line": {
+            "text": "Type the screen's name, or the word you would say. Old words work too: folio finds Folios, and floor finds Tables.",
+            "voice": "a0/voice/A0-06/03.wav",
+            "dur": 7.803
+          }
+        },
+        {
+          "shot": "A0-8",
+          "focus": 2,
+          "line": {
+            "text": "Here, reception typed audit. Night audit is not in reception's menu, so the line says Not in your menu. It is still theirs to open.",
+            "voice": "a0/voice/A0-06/04.wav",
+            "dur": 8.761
+          }
+        },
+        {
+          "shot": "A0-8",
+          "focus": 3,
+          "line": {
+            "text": "On the right, the section it belongs to: Reports.",
+            "voice": "a0/voice/A0-06/05.wav",
+            "dur": 3.373
+          }
+        },
+        {
+          "shot": "A0-8",
+          "focus": 4,
+          "line": {
+            "text": "Move with the up and down arrows, and press Enter to open the highlighted line. Or just click it.",
+            "voice": "a0/voice/A0-06/06.wav",
+            "dur": 6.026
+          }
+        },
+        {
+          "shot": "A0-9",
+          "focus": 1,
+          "line": {
+            "text": "To find a guest, type at least three letters of their name or of the booking reference, or four digits of their phone. Bookings are listed under the screens.",
+            "voice": "a0/voice/A0-06/07.wav",
+            "dur": 8.755
+          }
+        },
+        {
+          "shot": "A0-9",
+          "focus": 2,
+          "line": {
+            "text": "Each line shows the guest, the reference, the dates and the room. Guests in the house come first, then those coming, then those gone. Up to eight.",
+            "voice": "a0/voice/A0-06/08.wav",
+            "dur": 8.366
+          }
+        },
+        {
+          "shot": "A0-9",
+          "focus": 3,
+          "line": {
+            "text": "On the right, the booking's status: here, Due in. Click the line, and it opens in All bookings, with its panel open.",
+            "voice": "a0/voice/A0-06/09.wav",
+            "dur": 7.768
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Find a screen lists only what your role may open. If nothing matches, try a shorter word, or what a guest would call it.",
+        "voice": "a0/voice/A0-06/10.wav",
+        "dur": 7.211
+      },
+      "next": "At the desk and on a phone"
+    },
+    {
+      "id": "A0-07",
+      "slug": "A0-07-at-the-desk-and-on-a-phone",
+      "section": "A0.7",
+      "title": "At the desk and on a phone",
+      "intro": {
+        "text": "It is the same system, at the same address, on every device. Only the layout changes with the width of the screen.",
+        "voice": "a0/voice/A0-07/01.wav",
+        "dur": 6.897
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A0-10",
+          "focus": 1,
+          "line": {
+            "text": "On a phone, or a tablet held upright, the menu is hidden. Open it with the menu button at the top left.",
+            "voice": "a0/voice/A0-07/02.wav",
+            "dur": 6.514
+          }
+        },
+        {
+          "shot": "A0-10",
+          "focus": 2,
+          "line": {
+            "text": "The magnifying glass is Find a screen.",
+            "voice": "a0/voice/A0-07/03.wav",
+            "dur": 2.351
+          }
+        },
+        {
+          "shot": "A0-10",
+          "focus": 3,
+          "line": {
+            "text": "The bell is your notifications.",
+            "voice": "a0/voice/A0-07/04.wav",
+            "dur": 1.899
+          }
+        },
+        {
+          "shot": "A0-10",
+          "focus": 4,
+          "line": {
+            "text": "And the round badge with your initials opens your account menu.",
+            "voice": "a0/voice/A0-07/05.wav",
+            "dur": 3.431
+          }
+        },
+        {
+          "shot": "A0-11",
+          "focus": 1,
+          "line": {
+            "text": "In the drawer, the space switcher is at the top. On a tablet, it stays in the top bar.",
+            "voice": "a0/voice/A0-07/06.wav",
+            "dur": 5.539
+          }
+        },
+        {
+          "shot": "A0-11",
+          "focus": 2,
+          "line": {
+            "text": "Your menu is under it, the same as at the desk.",
+            "voice": "a0/voice/A0-07/07.wav",
+            "dur": 2.827
+          }
+        },
+        {
+          "shot": "A0-11",
+          "focus": 3,
+          "line": {
+            "text": "And Find a screen is at the foot.",
+            "voice": "a0/voice/A0-07/08.wav",
+            "dur": 2.038
+          }
+        },
+        {
+          "shot": "A0-12",
+          "focus": 1,
+          "line": {
+            "text": "On a phone, lists such as Arrivals are always cards. Today and Upcoming switch between today and the next fortnight.",
+            "voice": "a0/voice/A0-07/09.wav",
+            "dur": 6.955
+          }
+        },
+        {
+          "shot": "A0-12",
+          "focus": 2,
+          "line": {
+            "text": "Each card shows the room and its status.",
+            "voice": "a0/voice/A0-07/10.wav",
+            "dur": 2.781
+          }
+        },
+        {
+          "shot": "A0-12",
+          "focus": 3,
+          "line": {
+            "text": "Then the guest and the booking reference.",
+            "voice": "a0/voice/A0-07/11.wav",
+            "dur": 2.05
+          }
+        },
+        {
+          "shot": "A0-12",
+          "focus": 4,
+          "line": {
+            "text": "Then the rest, one per line: type, plan, source, departure, nights and rate.",
+            "voice": "a0/voice/A0-07/12.wav",
+            "dur": 6.159
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "At a desk or a tablet, two small buttons beside a list's search box show it as a table or as cards, and the device remembers. Where you start, and how Rooms are grouped, follow you to every device.",
+        "voice": "a0/voice/A0-07/13.wav",
+        "dur": 11.564
+      },
+      "next": "When the connection drops"
+    },
+    {
+      "id": "A0-08",
+      "slug": "A0-08-when-the-connection-drops",
+      "section": "A0.8",
+      "title": "When the connection drops",
+      "intro": {
+        "text": "Hotels lose the internet. Fidato PMS keeps working wherever that is safe, and a bar at the top of the page says what is happening.",
+        "voice": "a0/voice/A0-08/01.wav",
+        "dur": 8.337
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A0-13",
+          "focus": 1,
+          "line": {
+            "text": "When the line drops, a yellow bar says: No connection. Working offline. Anything you can still do will be held. Nothing is waiting yet, so carry on.",
+            "voice": "a0/voice/A0-08/02.wav",
+            "dur": 10.613
+          }
+        },
+        {
+          "shot": "A0-13",
+          "focus": null,
+          "line": {
+            "text": "It goes by whether the last request reached the server, not by the wifi sign. The wifi can be up while the line behind it is down.",
+            "voice": "a0/voice/A0-08/03.wav",
+            "dur": 7.803
+          }
+        },
+        {
+          "shot": "A0-13",
+          "focus": 2,
+          "line": {
+            "text": "Screens you opened before keep a copy on the device for a week. Rooms shows its last copy, and the time it is from. It refreshes by itself when the line is back.",
+            "voice": "a0/voice/A0-08/04.wav",
+            "dur": 10.015
+          }
+        },
+        {
+          "shot": "A0-13",
+          "focus": 2,
+          "line": {
+            "text": "A room that reads Free on an old copy may have been sold since. Check it again before you promise it to a guest.",
+            "voice": "a0/voice/A0-08/05.wav",
+            "dur": 6.584
+          }
+        },
+        {
+          "shot": "A0-14",
+          "focus": 1,
+          "line": {
+            "text": "Some work is held. Here, housekeeping marked room 208 inspected with no connection. The bar says one change is held, and it goes by itself when the line is back.",
+            "voice": "a0/voice/A0-08/06.wav",
+            "dur": 10.433
+          }
+        },
+        {
+          "shot": "A0-14",
+          "focus": null,
+          "line": {
+            "text": "Held like this: rooms marked clean or inspected, work orders, a guest marked V I P, restaurant orders and the kitchen, and a dish on or off the menu.",
+            "voice": "a0/voice/A0-08/07.wav",
+            "dur": 10.444
+          }
+        },
+        {
+          "shot": "A0-14",
+          "focus": null,
+          "line": {
+            "text": "A check-in is held too, with a warning: it is not confirmed until it is sent, because another desk could take the room in the meantime.",
+            "voice": "a0/voice/A0-08/08.wav",
+            "dur": 7.506
+          }
+        },
+        {
+          "shot": "A0-14",
+          "focus": null,
+          "line": {
+            "text": "Refused, with a reason: an invoice, a payment, the cash drawer, check-out, the night audit, and a restaurant bill paid in cash, card or UPI. Take it on paper, and enter it when the connection is back.",
+            "voice": "a0/voice/A0-08/09.wav",
+            "dur": 14.014
+          }
+        },
+        {
+          "shot": "A0-14",
+          "focus": null,
+          "line": {
+            "text": "When the line is back, the bar turns blue while held changes go. Send now sends them at once. If the server refuses one, a red line says why: put it right, then Discard the line.",
+            "voice": "a0/voice/A0-08/10.wav",
+            "dur": 12.476
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Guests' documents, bills and reports are never kept on the device. With no connection, treat any balance on screen as possibly old.",
+        "voice": "a0/voice/A0-08/11.wav",
+        "dur": 8.569
+      },
+      "next": null
+    }
+  ]
+}

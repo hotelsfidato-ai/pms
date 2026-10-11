@@ -1,0 +1,195 @@
+{
+  "chapter": "A6",
+  "title": "Housekeeping",
+  "manualShots": "a6",
+  "videos": [
+    {
+      "id": "A6-01",
+      "section": "A6.1",
+      "title": "The housekeeping screens",
+      "intro": "This series is for housekeepers, their supervisors and the desk. In this video you will see the housekeeping screens, and who uses which.",
+      "scenes": [
+        { "shot": "A6-01", "say": "A housekeeper signs in and lands on the Housekeeping board. Their menu is short. Every other screen they may use is one search away." },
+        { "shot": "A6-01", "focus": 2, "say": "Housekeeping is the board: every room, what it needs, and who is cleaning it." },
+        { "shot": "A6-01", "focus": 3, "say": "Work orders is the list of what needs fixing, and who is fixing it." },
+        { "shot": "A6-01", "focus": 4, "say": "Guest requests holds what guests in house have asked for, such as towels, or a broken tap." },
+        { "shot": "A6-01", "focus": 5, "say": "Lost property is what was found, kept until it goes back to its owner." },
+        { "shot": "A6-01", "focus": 1, "say": "Rooms shows the house today, as the desk sees it." },
+        { "shot": "A6-01", "focus": 6, "say": "The Store and the hotel's equipment have a chapter of their own." },
+        { "shot": "A6-27", "say": "The desk also has Wake-up calls: calls to make to guests, on the hotel's clock." },
+        { "shot": "A6-01", "focus": 7, "say": "The first time, a Start here card lists the housekeeper's three jobs. Each one opens the screen it happens on. Tap Got it to put it away." }
+      ],
+      "outro": "The next videos take each screen, step by step."
+    },
+    {
+      "id": "A6-02",
+      "section": "A6.2",
+      "title": "The board, and whose rooms are whose",
+      "intro": "In this video you will read the Housekeeping board, and give rooms to a housekeeper.",
+      "scenes": [
+        { "shot": "A6-02", "say": "Under its title, the board says what it is for: tap a room to move it on. Clean, then inspected." },
+        { "shot": "A6-02", "focus": 1, "say": "Empty rooms shows how many rooms with no guest are clean, out of all of them, and how many are inspected." },
+        { "shot": "A6-02", "focus": 2, "say": "Beside it are six counts: needs cleaning, clean, inspected, in house, due out, and out of service. Tap a count to jump to its rooms." },
+        { "shot": "A6-02", "focus": 4, "say": "Each room is a card: its number, type and floor, who is cleaning it, and three buttons. Clean, Inspected, and Repair." },
+        { "shot": "A6-02", "focus": 5, "say": "Online means the board is connected. It refreshes by itself, so nobody needs to reload it." },
+        { "shot": "A6-06", "focus": 1, "say": "To give a room to somebody, choose their name on the room's card. It is saved at once." },
+        { "shot": "A6-06", "focus": 2, "say": "The names along the top count the rooms on each person's sheet." },
+        { "shot": "A6-07", "focus": 1, "say": "On a phone, a housekeeper taps their own name, and sees only their rooms." },
+        { "shot": "A6-02", "focus": 3, "say": "All rooms shows every room again. Rooms are given for the business day, so each new day starts unassigned." }
+      ],
+      "outro": "A room with a guest leaving today is yellow, and says Due out."
+    },
+    {
+      "id": "A6-03",
+      "section": "A6.4",
+      "title": "Clean, then inspected",
+      "intro": "In this video you will mark a room clean, then inspected, with a signal and without one.",
+      "scenes": [
+        { "shot": "A6-07", "focus": 2, "say": "When the room is clean, tap Clean on its card." },
+        { "shot": "A6-04", "focus": 1, "say": "A message says so at once, and the room moves to the Clean group." },
+        { "shot": "A6-04", "focus": 2, "say": "Now Inspected is ready. When the room has been checked, tap it." },
+        { "shot": "A6-05", "focus": 1, "say": "The message says the room is inspected." },
+        { "shot": "A6-05", "focus": 2, "say": "And the room moves under Inspected, ready for the next guest." },
+        { "shot": "A6-03", "focus": 1, "say": "A grey button cannot be used yet. Tap it anyway, and the card says why." },
+        { "shot": "A6-03", "focus": 2, "say": "Here, the room needs cleaning first. A room is always cleaned before it is inspected." },
+        { "shot": "A6-08", "focus": 1, "say": "On a stairwell with no signal, the board says Offline. Carry on." },
+        { "shot": "A6-08", "focus": 3, "say": "Tap Clean as usual. The message says it is saved on this phone, and will be sent when the connection is back." },
+        { "shot": "A6-08", "focus": 2, "say": "Under the title, the board counts the changes waiting to sync." },
+        { "shot": "A6-09", "focus": 1, "say": "And the room's card says what is queued. When the signal returns, it is sent by itself." }
+      ],
+      "outro": "There is no button to send a room for cleaning. A check-out does that by itself."
+    },
+    {
+      "id": "A6-04",
+      "section": "A6.6",
+      "title": "Something broken, and a room out of service",
+      "intro": "Something in a room is broken. In this video you will report a repair, and take a room out of service when it cannot be sold.",
+      "scenes": [
+        { "shot": "A6-10", "say": "On the room's card, tap Repair. Report a repair opens, for that room." },
+        { "shot": "A6-10", "focus": 1, "say": "Type what needs fixing, in a few words." },
+        { "shot": "A6-10", "focus": 2, "say": "If it is a tagged piece of equipment, choose it here. It then shows as under repair until the repair is closed." },
+        { "shot": "A6-10", "focus": 4, "say": "Choose the kind of work, and how urgent it is." },
+        { "shot": "A6-11", "focus": 1, "say": "Most repairs do not take the room out of service. If this one must, tick Take the room out of service too." },
+        { "shot": "A6-11", "focus": 2, "say": "Then say why it is coming out, from which date, and until when. Leave Until empty if nobody knows." },
+        { "shot": "A6-11", "focus": 3, "say": "Tap Raise it. The repair goes on Work orders." },
+        { "shot": "A6-11", "focus": 4, "say": "A room that must come out with no repair, for a refurbishment or for house use, uses Out of service without a repair." },
+        { "shot": "A6-12", "focus": 1, "say": "Choose why it is coming out, set the dates, and write what is actually wrong." },
+        { "shot": "A6-12", "focus": 5, "say": "Then tap Take out of service. A room with a guest in it cannot be taken out." },
+        { "shot": "A6-13", "focus": 1, "say": "The room moves to Out of service, and is not sold." },
+        { "shot": "A6-13", "focus": 2, "say": "When it is ready again, tap Put back." },
+        { "shot": "A6-14", "focus": 1, "say": "The window lists each period the room is out, with its dates." },
+        { "shot": "A6-14", "focus": 2, "say": "Tap Put back beside the one that is over. The room comes back needing cleaning, unless the hotel has chosen otherwise." }
+      ],
+      "outro": "A repair can wait on the phone with no signal. Taking a room out, and putting it back, need the connection."
+    },
+    {
+      "id": "A6-05",
+      "section": "A6.8",
+      "title": "Work orders",
+      "intro": "Work orders is the list of what needs fixing. In this video you will start a repair, record what it cost, and close it.",
+      "scenes": [
+        { "shot": "A6-15", "focus": 2, "say": "Open lists what is still to fix: the most urgent first, and the oldest first within that." },
+        { "shot": "A6-15", "focus": 3, "say": "Each one says what needs fixing, and how urgent it is." },
+        { "shot": "A6-15", "focus": 4, "say": "Under it: the room, the kind, who raised it and when, how long it has been open, and who has it." },
+        { "shot": "A6-15", "focus": 1, "say": "Raise one opens the same form as the room's Repair button." },
+        { "shot": "A6-16", "focus": 1, "say": "Here you type the room. Leave it empty for anything that is not a room, such as a lift or the lobby." },
+        { "shot": "A6-15", "focus": 5, "say": "When somebody begins the work, tap Start." },
+        { "shot": "A6-17", "focus": 1, "say": "The repair now says Being fixed." },
+        { "shot": "A6-18", "focus": 2, "say": "Costs records what the repair cost, in rupees." },
+        { "shot": "A6-18", "focus": 3, "say": "Every cost needs its proof: a photo or screenshot of the bill, the payment or the transaction. Without it, the cost is not recorded." },
+        { "shot": "A6-18", "focus": 4, "say": "Then tap Record the cost. A wrong cost is cancelled with a reason, never deleted." },
+        { "shot": "A6-19", "focus": 1, "say": "When the work is finished, tap Close, and write what was done. It is the line somebody reads the next time this breaks." },
+        { "shot": "A6-19", "focus": 3, "say": "Then tap Fixed. Or Not needed, if it needed no fixing after all." },
+        { "shot": "A6-20", "focus": 1, "say": "Closed keeps every closed repair." },
+        { "shot": "A6-20", "focus": 3, "say": "With what was done. A bill that arrives after the close can still be recorded here, with Costs." }
+      ],
+      "outro": "Costs are recorded by the owner, an administrator, the G M, the hotel manager or the Inventory Manager. Everybody else sees the repair without the money."
+    },
+    {
+      "id": "A6-06",
+      "section": "A6.9",
+      "title": "Guest requests",
+      "intro": "A guest asks for towels, or says the tap is broken. In this video you will raise a request, take it, and mark it done.",
+      "scenes": [
+        { "shot": "A6-21", "focus": 1, "say": "Tap New request, and choose the room. Only guests in house now are listed." },
+        { "shot": "A6-21", "focus": 2, "say": "Choose the team it is for: Housekeeping, Something broken, or Food and drink." },
+        { "shot": "A6-21", "focus": 3, "say": "Say what is wanted." },
+        { "shot": "A6-21", "focus": 4, "say": "And when, only if the guest said." },
+        { "shot": "A6-21", "focus": 5, "say": "Then tap Raise it." },
+        { "shot": "A6-22", "focus": 2, "say": "The request waits under Open, with the room, who raised it, how long it has waited, and who has it." },
+        { "shot": "A6-23", "focus": 1, "say": "A housekeeper sees only their own teams: housekeeping, and something broken." },
+        { "shot": "A6-23", "focus": 2, "say": "They tap Take it." },
+        { "shot": "A6-24", "focus": 1, "say": "It now says Being done." },
+        { "shot": "A6-24", "focus": 2, "say": "And everyone can see who has it." },
+        { "shot": "A6-24", "focus": 3, "say": "When it is done, tap Done. A housekeeping request closes with one tap. Something broken asks what was done, and is also on Work orders." },
+        { "shot": "A6-25", "focus": 1, "say": "Done, last 24 hours, lists what was finished." },
+        { "shot": "A6-25", "focus": 2, "say": "With how long each took, and who did it. There are no time targets: nothing turns red." },
+        { "shot": "A6-22", "focus": 5, "say": "A request no longer wanted is cancelled with Cancel it, and a reason." }
+      ],
+      "outro": "Guests can also ask from their own page while they are checked in. Their requests arrive here in the same way."
+    },
+    {
+      "id": "A6-07",
+      "section": "A6.10",
+      "title": "Wake-up calls",
+      "intro": "Wake-up calls are for the desk. In this video you will set a call, and mark it done.",
+      "scenes": [
+        { "shot": "A6-26", "focus": 1, "say": "Tap Set a call, and choose the room. Only guests in house now are listed." },
+        { "shot": "A6-26", "focus": 2, "say": "Choose the day. Today is filled in." },
+        { "shot": "A6-26", "focus": 3, "say": "And the time, on the hotel's clock." },
+        { "shot": "A6-26", "focus": 4, "say": "Add a note only if there is something to say on the call." },
+        { "shot": "A6-26", "focus": 5, "say": "Then tap Set the call." },
+        { "shot": "A6-27", "focus": 1, "say": "From fifteen minutes before the time, the call says Due, and the bell reminds the desk." },
+        { "shot": "A6-27", "focus": 2, "say": "The note is under the room and the guest's name." },
+        { "shot": "A6-27", "focus": 3, "say": "Make the call, then tap Done. A call stays due until it is done." },
+        { "shot": "A6-27", "focus": 4, "say": "Cancel it asks why, and keeps the reason." },
+        { "shot": "A6-28", "focus": 1, "say": "Done, last 24 hours, lists the calls made." },
+        { "shot": "A6-28", "focus": 2, "say": "With who set each call, and who made it." }
+      ],
+      "outro": "A guest can also ask for a call from their own page. It shows as Asked, and waits until the desk taps Confirm."
+    },
+    {
+      "id": "A6-08",
+      "section": "A6.11",
+      "title": "Lost property",
+      "intro": "Something was left behind. In this video you will log it, keep it, and mark it returned or disposed of.",
+      "scenes": [
+        { "shot": "A6-29", "focus": 1, "say": "Tap Log an item, and say what it is." },
+        { "shot": "A6-29", "focus": 2, "say": "Where it was found." },
+        { "shot": "A6-29", "focus": 3, "say": "The room, if it was in one." },
+        { "shot": "A6-29", "focus": 4, "say": "And where it is kept now." },
+        { "shot": "A6-29", "focus": 5, "say": "Then tap Log it." },
+        { "shot": "A6-30", "focus": 1, "say": "The item is listed under Kept." },
+        { "shot": "A6-30", "focus": 2, "say": "With where it was found, when, by whom, and how many days it has been kept." },
+        { "shot": "A6-31", "focus": 1, "say": "Housekeeping can log an item, and see the list." },
+        { "shot": "A6-31", "focus": 2, "say": "But only the desk marks an item returned, or disposed of." },
+        { "shot": "A6-30", "focus": 4, "say": "When the owner comes back for it, the desk taps Returned." },
+        { "shot": "A6-32", "focus": 1, "say": "Type who it went to." },
+        { "shot": "A6-32", "focus": 2, "say": "And tap Mark returned." },
+        { "shot": "A6-33", "focus": 3, "say": "It moves to Returned or disposed, saying to whom, by whom, and when." },
+        { "shot": "A6-34", "focus": 1, "say": "If nobody claims it, tap Disposed, and say why." },
+        { "shot": "A6-34", "focus": 2, "say": "Then Mark disposed." }
+      ],
+      "outro": "Nothing is disposed of by itself. The days kept are shown, so the desk can decide."
+    },
+    {
+      "id": "A6-09",
+      "section": "A6.12",
+      "title": "Your day in short",
+      "intro": "Here is a housekeeping day, from the first room to the last.",
+      "checklist": [
+        "Start of the shift: the supervisor gives each room to somebody, on its card.",
+        "Your rooms: tap your own name at the top of the board.",
+        "A room is clean: tap Clean.",
+        "A room is checked: tap Inspected.",
+        "No signal: carry on. Your taps wait on the phone, and go when the line is back.",
+        "Something broken: tap Repair on the room.",
+        "A room cannot be sold: take it out of service, with a reason. Put it back when it is ready.",
+        "A repair: Work orders. Start it, then Close it with what was done.",
+        "A guest asks for something: Guest requests. Take it, then Done.",
+        "Something left behind: Lost property, Log an item."
+      ],
+      "outro": "That is housekeeping. Thank you for watching."
+    }
+  ]
+}

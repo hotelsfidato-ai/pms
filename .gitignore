@@ -1,0 +1,21 @@
+node_modules
+dist
+.DS_Store
+.env
+
+# Ignore the output video from Git but not videos you import into src/.
+out
+
+# D27-303: only the code and scripts are on GitHub (branch `videos`).
+# The large generated files travel by hand in videos-generated.zip.
+public
+tools/piper
+tools/piper-download
+.chrome
+.bundle
+day/check
+day/check.log
+day/tmp
+day/downloads
+day/look
+day/.state.json

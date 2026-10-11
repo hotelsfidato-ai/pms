@@ -1,0 +1,1495 @@
+{
+  "chapter": "A9",
+  "title": "Stores and purchasing",
+  "manualShots": "a9",
+  "videos": [
+    {
+      "id": "A9-01",
+      "slug": "A9-01-the-store-and-equipment-screens",
+      "section": "A9.1",
+      "title": "The Store and equipment screens",
+      "intro": {
+        "text": "The Store and equipment section of Fidato PMS holds four screens. In this video you will see each of them, and who uses which.",
+        "voice": "a9/voice/A9-01/01.wav",
+        "dur": 7.745
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A9-06",
+          "focus": null,
+          "line": {
+            "text": "The Store is what the property keeps: rice, gas, linen, soap. Each item shows what is on hand, and what it is worth.",
+            "voice": "a9/voice/A9-01/02.wav",
+            "dur": 8.046
+          }
+        },
+        {
+          "shot": "A9-06",
+          "focus": 1,
+          "line": {
+            "text": "It has two views. Shelf is the store as it stands.",
+            "voice": "a9/voice/A9-01/03.wav",
+            "dur": 3.751
+          }
+        },
+        {
+          "shot": "A9-18",
+          "focus": 1,
+          "line": {
+            "text": "Days shows fourteen days of the store, one column for each day.",
+            "voice": "a9/voice/A9-01/04.wav",
+            "dur": 4.395
+          }
+        },
+        {
+          "shot": "A9-37",
+          "focus": null,
+          "line": {
+            "text": "Equipment is the register of durable things: an AC, a TV, a fridge. Taking one out of the store waits for the Inventory Manager.",
+            "voice": "a9/voice/A9-01/05.wav",
+            "dur": 9.091
+          }
+        },
+        {
+          "shot": "A9-01",
+          "focus": null,
+          "line": {
+            "text": "Places and suppliers holds the stores, the other places where things stand, and who the property buys from.",
+            "voice": "a9/voice/A9-01/06.wav",
+            "dur": 6.45
+          }
+        },
+        {
+          "shot": "A9-22",
+          "focus": 1,
+          "line": {
+            "text": "And Purchasing is where something is asked for, approved by the GM, ordered from a supplier, and received into a store.",
+            "voice": "a9/voice/A9-01/07.wav",
+            "dur": 7.564
+          }
+        },
+        {
+          "shot": "A9-06",
+          "focus": null,
+          "line": {
+            "text": "The Inventory Manager's menu is Store, Equipment and Purchasing, and they land on the Store after signing in. Places and suppliers is one search away, in Find a screen.",
+            "voice": "a9/voice/A9-01/08.wav",
+            "dur": 10.426
+          }
+        },
+        {
+          "shot": "A9-06",
+          "focus": 4,
+          "line": {
+            "text": "Adding items, receiving and issuing are for the Inventory Manager, the kitchen manager and the managers. Others may look only.",
+            "voice": "a9/voice/A9-01/09.wav",
+            "dur": 7.582
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "That is the section at a glance. The next videos take each screen step by step.",
+        "voice": "a9/voice/A9-01/10.wav",
+        "dur": 5.121
+      },
+      "next": "Places, suppliers and items"
+    },
+    {
+      "id": "A9-02",
+      "slug": "A9-02-places-suppliers-and-items",
+      "section": "A9.2",
+      "title": "Places, suppliers and items",
+      "intro": {
+        "text": "Before anything can be received, the property needs its stores, its suppliers, and the items it keeps. Here is how each one is added.",
+        "voice": "a9/voice/A9-02/01.wav",
+        "dur": 7.988
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A9-01",
+          "focus": 1,
+          "line": {
+            "text": "Open Places and suppliers. Add a place for each store: a main store, a kitchen store, a bar store.",
+            "voice": "a9/voice/A9-02/02.wav",
+            "dur": 7.234
+          }
+        },
+        {
+          "shot": "A9-01",
+          "focus": 2,
+          "line": {
+            "text": "A place's kind says what it is. A Store is where stock is kept. Rooms are already known, and are not added here.",
+            "voice": "a9/voice/A9-02/03.wav",
+            "dur": 7.728
+          }
+        },
+        {
+          "shot": "A9-01",
+          "focus": 3,
+          "line": {
+            "text": "A place no longer used is switched off. Nothing is ever deleted.",
+            "voice": "a9/voice/A9-02/04.wav",
+            "dur": 3.948
+          }
+        },
+        {
+          "shot": "A9-01",
+          "focus": 4,
+          "line": {
+            "text": "To add a supplier, tap Add a supplier.",
+            "voice": "a9/voice/A9-02/05.wav",
+            "dur": 2.932
+          }
+        },
+        {
+          "shot": "A9-02",
+          "focus": 1,
+          "line": {
+            "text": "Only the name is needed now.",
+            "voice": "a9/voice/A9-02/06.wav",
+            "dur": 2.05
+          }
+        },
+        {
+          "shot": "A9-02",
+          "focus": 2,
+          "line": {
+            "text": "The person to call, the phone and the supplier's GST number can be added when you have them.",
+            "voice": "a9/voice/A9-02/07.wav",
+            "dur": 5.521
+          }
+        },
+        {
+          "shot": "A9-02",
+          "focus": 3,
+          "line": {
+            "text": "Tap Add.",
+            "voice": "a9/voice/A9-02/08.wav",
+            "dur": 1.051
+          }
+        },
+        {
+          "shot": "A9-03",
+          "focus": 1,
+          "line": {
+            "text": "Then, on the Store, tap Add an item, and type what it is.",
+            "voice": "a9/voice/A9-02/09.wav",
+            "dur": 4.36
+          }
+        },
+        {
+          "shot": "A9-03",
+          "focus": 2,
+          "line": {
+            "text": "And what it is counted in: kilos, litres, pieces or cylinders.",
+            "voice": "a9/voice/A9-02/10.wav",
+            "dur": 4.534
+          }
+        },
+        {
+          "shot": "A9-03",
+          "focus": 3,
+          "line": {
+            "text": "Choose where it belongs. Nothing is chosen for you.",
+            "voice": "a9/voice/A9-02/11.wav",
+            "dur": 3.646
+          }
+        },
+        {
+          "shot": "A9-03",
+          "focus": 4,
+          "line": {
+            "text": "Tick crockery or cutlery for cups, plates and spoons.",
+            "voice": "a9/voice/A9-02/12.wav",
+            "dur": 3.582
+          }
+        },
+        {
+          "shot": "A9-03",
+          "focus": 5,
+          "line": {
+            "text": "For a warning when it runs low, type a level for the main store. Blank means no warning. Zero would warn only when it has run out.",
+            "voice": "a9/voice/A9-02/13.wav",
+            "dur": 8.726
+          }
+        },
+        {
+          "shot": "A9-03",
+          "focus": 6,
+          "line": {
+            "text": "Tap Add. There is no price here: a delivery brings the price.",
+            "voice": "a9/voice/A9-02/14.wav",
+            "dur": 4.32
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Adding and changing places and suppliers is for the owner, an Admin, the GM, the hotel manager and the Inventory Manager.",
+        "voice": "a9/voice/A9-02/15.wav",
+        "dur": 7.82
+      },
+      "next": "Receiving a delivery"
+    },
+    {
+      "id": "A9-03",
+      "slug": "A9-03-receiving-a-delivery",
+      "section": "A9.4",
+      "title": "Receiving a delivery",
+      "intro": {
+        "text": "A delivery is where the quantity and the cost come from. In this video you will receive one, with the bill in your hand.",
+        "voice": "a9/voice/A9-03/01.wav",
+        "dur": 6.723
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A9-07",
+          "focus": null,
+          "line": {
+            "text": "On the item, tap Receive.",
+            "voice": "a9/voice/A9-03/02.wav",
+            "dur": 2.026
+          }
+        },
+        {
+          "shot": "A9-04",
+          "focus": 1,
+          "line": {
+            "text": "Choose which store it went into.",
+            "voice": "a9/voice/A9-03/03.wav",
+            "dur": 2.154
+          }
+        },
+        {
+          "shot": "A9-04",
+          "focus": 2,
+          "line": {
+            "text": "Type how many.",
+            "voice": "a9/voice/A9-03/04.wav",
+            "dur": 1.132
+          }
+        },
+        {
+          "shot": "A9-04",
+          "focus": 3,
+          "line": {
+            "text": "Type what one kilo cost, before GST. If the bill has not come, leave it blank. A blank is better than a guess.",
+            "voice": "a9/voice/A9-03/05.wav",
+            "dur": 7.739
+          }
+        },
+        {
+          "shot": "A9-04",
+          "focus": 4,
+          "line": {
+            "text": "If it cost nothing, tick Free.",
+            "voice": "a9/voice/A9-03/06.wav",
+            "dur": 2.444
+          }
+        },
+        {
+          "shot": "A9-04",
+          "focus": 5,
+          "line": {
+            "text": "From the bill, choose the GST rate.",
+            "voice": "a9/voice/A9-03/07.wav",
+            "dur": 2.56
+          }
+        },
+        {
+          "shot": "A9-04",
+          "focus": 6,
+          "line": {
+            "text": "The GST amount is worked out for you. Change it to what the bill says.",
+            "voice": "a9/voice/A9-03/08.wav",
+            "dur": 4.668
+          }
+        },
+        {
+          "shot": "A9-05",
+          "focus": 1,
+          "line": {
+            "text": "Say whether this GST can be claimed. The rate, the amount and claimable go together: all three, or none.",
+            "voice": "a9/voice/A9-03/09.wav",
+            "dur": 6.642
+          }
+        },
+        {
+          "shot": "A9-05",
+          "focus": 2,
+          "line": {
+            "text": "Add a use by date, if it has one.",
+            "voice": "a9/voice/A9-03/10.wav",
+            "dur": 2.456
+          }
+        },
+        {
+          "shot": "A9-05",
+          "focus": 3,
+          "line": {
+            "text": "Who it came from.",
+            "voice": "a9/voice/A9-03/11.wav",
+            "dur": 1.365
+          }
+        },
+        {
+          "shot": "A9-05",
+          "focus": 4,
+          "line": {
+            "text": "And the delivery note or bill number. It is what somebody holds when they ask why the count is what it is.",
+            "voice": "a9/voice/A9-03/12.wav",
+            "dur": 6.293
+          }
+        },
+        {
+          "shot": "A9-05",
+          "focus": 5,
+          "line": {
+            "text": "Tap Receive.",
+            "voice": "a9/voice/A9-03/13.wav",
+            "dur": 1.156
+          }
+        },
+        {
+          "shot": "A9-07",
+          "focus": 3,
+          "line": {
+            "text": "What the shelf is worth is the average of what was actually paid.",
+            "voice": "a9/voice/A9-03/14.wav",
+            "dur": 3.64
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A cost cannot be added to a delivery later. It can only be undone, and received again with the cost.",
+        "voice": "a9/voice/A9-03/15.wav",
+        "dur": 6.305
+      },
+      "next": "The shelf, and issuing"
+    },
+    {
+      "id": "A9-04",
+      "slug": "A9-04-the-shelf-and-issuing",
+      "section": "A9.5",
+      "title": "The shelf, and issuing",
+      "intro": {
+        "text": "In this video you will read the Store's shelf, and give stock out to the kitchen.",
+        "voice": "a9/voice/A9-04/01.wav",
+        "dur": 4.43
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A9-06",
+          "focus": 5,
+          "line": {
+            "text": "Choose all stores, or one store. With one store, each card shows only what is there.",
+            "voice": "a9/voice/A9-04/02.wav",
+            "dur": 5.875
+          }
+        },
+        {
+          "shot": "A9-06",
+          "focus": 6,
+          "line": {
+            "text": "The tiles count items: below level, run out, received, issued and wasted today, awaiting delivery, not valued, and not counted in thirty days. Tap a tile to see only those items. Tap it again to see all.",
+            "voice": "a9/voice/A9-04/03.wav",
+            "dur": 14.786
+          }
+        },
+        {
+          "shot": "A9-07",
+          "focus": 1,
+          "line": {
+            "text": "Each card shows the item, its level, and when it last moved.",
+            "voice": "a9/voice/A9-04/04.wav",
+            "dur": 4.012
+          }
+        },
+        {
+          "shot": "A9-07",
+          "focus": 2,
+          "line": {
+            "text": "What is on hand.",
+            "voice": "a9/voice/A9-04/05.wav",
+            "dur": 1.237
+          }
+        },
+        {
+          "shot": "A9-07",
+          "focus": 3,
+          "line": {
+            "text": "What it is worth.",
+            "voice": "a9/voice/A9-04/06.wav",
+            "dur": 1.179
+          }
+        },
+        {
+          "shot": "A9-07",
+          "focus": 5,
+          "line": {
+            "text": "And what each store holds. A dash means none.",
+            "voice": "a9/voice/A9-04/07.wav",
+            "dur": 3.356
+          }
+        },
+        {
+          "shot": "A9-08",
+          "focus": null,
+          "line": {
+            "text": "To give stock out, tap Issue.",
+            "voice": "a9/voice/A9-04/08.wav",
+            "dur": 2.317
+          }
+        },
+        {
+          "shot": "A9-08",
+          "focus": 1,
+          "line": {
+            "text": "Check which store it comes from.",
+            "voice": "a9/voice/A9-04/09.wav",
+            "dur": 2.038
+          }
+        },
+        {
+          "shot": "A9-08",
+          "focus": 2,
+          "line": {
+            "text": "Type how many.",
+            "voice": "a9/voice/A9-04/10.wav",
+            "dur": 1.144
+          }
+        },
+        {
+          "shot": "A9-08",
+          "focus": 3,
+          "line": {
+            "text": "Choose which outlet it went to, or Not an outlet, for housekeeping or a floor. It is chosen every time.",
+            "voice": "a9/voice/A9-04/11.wav",
+            "dur": 6.676
+          }
+        },
+        {
+          "shot": "A9-08",
+          "focus": 4,
+          "line": {
+            "text": "The department is optional, in your own words.",
+            "voice": "a9/voice/A9-04/12.wav",
+            "dur": 2.885
+          }
+        },
+        {
+          "shot": "A9-08",
+          "focus": 5,
+          "line": {
+            "text": "Why: where it went.",
+            "voice": "a9/voice/A9-04/13.wav",
+            "dur": 1.852
+          }
+        },
+        {
+          "shot": "A9-08",
+          "focus": 6,
+          "line": {
+            "text": "Tap Issue. Stock going out needs nobody's approval.",
+            "voice": "a9/voice/A9-04/14.wav",
+            "dur": 3.333
+          }
+        },
+        {
+          "shot": "A9-20",
+          "focus": 1,
+          "line": {
+            "text": "On a phone, the tiles slide sideways.",
+            "voice": "a9/voice/A9-04/15.wav",
+            "dur": 2.955
+          }
+        },
+        {
+          "shot": "A9-20",
+          "focus": 2,
+          "line": {
+            "text": "And Receive, Issue and More fit one row.",
+            "voice": "a9/voice/A9-04/16.wav",
+            "dur": 3.071
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "An issue cannot take more than that store holds. And the Store needs the connection: with none, it records nothing.",
+        "voice": "a9/voice/A9-04/17.wav",
+        "dur": 6.746
+      },
+      "next": "Moves, levels, history and undo"
+    },
+    {
+      "id": "A9-05",
+      "slug": "A9-05-moves-levels-history-and-undo",
+      "section": "A9.7",
+      "title": "Moves, levels, history and undo",
+      "intro": {
+        "text": "The rarer acts are under More. In this video you will move stock between stores, set its levels, and undo a mistake.",
+        "voice": "a9/voice/A9-05/01.wav",
+        "dur": 7.745
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A9-09",
+          "focus": 1,
+          "line": {
+            "text": "Waste takes spoiled stock off, with the reason.",
+            "voice": "a9/voice/A9-05/02.wav",
+            "dur": 3.002
+          }
+        },
+        {
+          "shot": "A9-09",
+          "focus": 2,
+          "line": {
+            "text": "Return to supplier takes off what went back.",
+            "voice": "a9/voice/A9-05/03.wav",
+            "dur": 3.06
+          }
+        },
+        {
+          "shot": "A9-09",
+          "focus": 3,
+          "line": {
+            "text": "Move to another store moves stock, such as from the main store to the kitchen store.",
+            "voice": "a9/voice/A9-05/04.wav",
+            "dur": 4.801
+          }
+        },
+        {
+          "shot": "A9-10",
+          "focus": 1,
+          "line": {
+            "text": "Choose where it comes from.",
+            "voice": "a9/voice/A9-05/05.wav",
+            "dur": 1.817
+          }
+        },
+        {
+          "shot": "A9-10",
+          "focus": 2,
+          "line": {
+            "text": "Where it goes.",
+            "voice": "a9/voice/A9-05/06.wav",
+            "dur": 1.341
+          }
+        },
+        {
+          "shot": "A9-10",
+          "focus": 3,
+          "line": {
+            "text": "And how many.",
+            "voice": "a9/voice/A9-05/07.wav",
+            "dur": 1.156
+          }
+        },
+        {
+          "shot": "A9-10",
+          "focus": 4,
+          "line": {
+            "text": "Tap Move. A move needs nobody's approval.",
+            "voice": "a9/voice/A9-05/08.wav",
+            "dur": 3.31
+          }
+        },
+        {
+          "shot": "A9-09",
+          "focus": 5,
+          "line": {
+            "text": "Set levels gives each store its own warning level.",
+            "voice": "a9/voice/A9-05/09.wav",
+            "dur": 3.187
+          }
+        },
+        {
+          "shot": "A9-13",
+          "focus": 2,
+          "line": {
+            "text": "Type a level for each store. Blank is no warning, not zero. Then tap Save.",
+            "voice": "a9/voice/A9-05/10.wav",
+            "dur": 5.812
+          }
+        },
+        {
+          "shot": "A9-20",
+          "focus": null,
+          "line": {
+            "text": "When a store is at or below its level, the card says so in yellow, and the item is on the Below level tile.",
+            "voice": "a9/voice/A9-05/11.wav",
+            "dur": 6.067
+          }
+        },
+        {
+          "shot": "A9-09",
+          "focus": 6,
+          "line": {
+            "text": "History shows every movement, newest first.",
+            "voice": "a9/voice/A9-05/12.wav",
+            "dur": 3.106
+          }
+        },
+        {
+          "shot": "A9-11",
+          "focus": 1,
+          "line": {
+            "text": "A delivery, with its cost, the supplier and the bill.",
+            "voice": "a9/voice/A9-05/13.wav",
+            "dur": 3.652
+          }
+        },
+        {
+          "shot": "A9-11",
+          "focus": 3,
+          "line": {
+            "text": "An issue, with its outlet and why.",
+            "voice": "a9/voice/A9-05/14.wav",
+            "dur": 2.56
+          }
+        },
+        {
+          "shot": "A9-11",
+          "focus": 4,
+          "line": {
+            "text": "A move is one line, naming both stores.",
+            "voice": "a9/voice/A9-05/15.wav",
+            "dur": 2.816
+          }
+        },
+        {
+          "shot": "A9-11",
+          "focus": 5,
+          "line": {
+            "text": "Nothing is edited. A mistake is undone with this arrow.",
+            "voice": "a9/voice/A9-05/16.wav",
+            "dur": 3.832
+          }
+        },
+        {
+          "shot": "A9-12",
+          "focus": 1,
+          "line": {
+            "text": "It asks first. An undo cannot be taken back.",
+            "voice": "a9/voice/A9-05/17.wav",
+            "dur": 3.53
+          }
+        },
+        {
+          "shot": "A9-12",
+          "focus": 2,
+          "line": {
+            "text": "Tap Undo, then record it again, correctly. Both rows stay on the history.",
+            "voice": "a9/voice/A9-05/18.wav",
+            "dur": 5.225
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Correcting a count, setting levels and undoing are for the owner, an Admin, the GM, the hotel manager and the Inventory Manager.",
+        "voice": "a9/voice/A9-05/19.wav",
+        "dur": 8.284
+      },
+      "next": "Gas cylinders, crockery and cutlery"
+    },
+    {
+      "id": "A9-06",
+      "slug": "A9-06-gas-cylinders-crockery-and-cutlery",
+      "section": "A9.8",
+      "title": "Gas cylinders, crockery and cutlery",
+      "intro": {
+        "text": "Gas cylinders, and crockery and cutlery, are kept a little differently. Here is how.",
+        "voice": "a9/voice/A9-06/01.wav",
+        "dur": 5.492
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A9-15",
+          "focus": 1,
+          "line": {
+            "text": "An item counted in cylinders shows the full ones.",
+            "voice": "a9/voice/A9-06/02.wav",
+            "dur": 3.431
+          }
+        },
+        {
+          "shot": "A9-15",
+          "focus": 2,
+          "line": {
+            "text": "And the empty ones.",
+            "voice": "a9/voice/A9-06/03.wav",
+            "dur": 1.539
+          }
+        },
+        {
+          "shot": "A9-14",
+          "focus": 1,
+          "line": {
+            "text": "When you issue full cylinders to the kitchen, type how many.",
+            "voice": "a9/voice/A9-06/04.wav",
+            "dur": 3.721
+          }
+        },
+        {
+          "shot": "A9-14",
+          "focus": 2,
+          "line": {
+            "text": "It also asks how many empties came back. Type it every time: zero is an answer. Receiving asks how many empties the supplier took back.",
+            "voice": "a9/voice/A9-06/05.wav",
+            "dur": 9.225
+          }
+        },
+        {
+          "shot": "A9-15",
+          "focus": 3,
+          "line": {
+            "text": "The deposit line shows the cylinders on deposit with the supplier, the deposit on each, the money held, and how many are in use at the kitchen. The deposit is typed in More, Set levels and deposit.",
+            "voice": "a9/voice/A9-06/06.wav",
+            "dur": 11.982
+          }
+        },
+        {
+          "shot": "A9-16",
+          "focus": null,
+          "line": {
+            "text": "Crockery and cutlery are ticked when the item is added. When a cup breaks, open More, and tap Broken.",
+            "voice": "a9/voice/A9-06/07.wav",
+            "dur": 6.363
+          }
+        },
+        {
+          "shot": "A9-16",
+          "focus": 1,
+          "line": {
+            "text": "Choose where it broke.",
+            "voice": "a9/voice/A9-06/08.wav",
+            "dur": 1.527
+          }
+        },
+        {
+          "shot": "A9-16",
+          "focus": 2,
+          "line": {
+            "text": "How many.",
+            "voice": "a9/voice/A9-06/09.wav",
+            "dur": 1.016
+          }
+        },
+        {
+          "shot": "A9-16",
+          "focus": 3,
+          "line": {
+            "text": "And who broke it: a person working here, or Not known. Nothing is chosen for you.",
+            "voice": "a9/voice/A9-06/10.wav",
+            "dur": 5.446
+          }
+        },
+        {
+          "shot": "A9-16",
+          "focus": 4,
+          "line": {
+            "text": "Say why: dropped, chipped, cracked in the wash.",
+            "voice": "a9/voice/A9-06/11.wav",
+            "dur": 3.745
+          }
+        },
+        {
+          "shot": "A9-16",
+          "focus": 5,
+          "line": {
+            "text": "Tap Record breakage.",
+            "voice": "a9/voice/A9-06/12.wav",
+            "dur": 1.91
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Crockery can also be moved into use at a restaurant, a bar or a kitchen, with its own level there, and it is counted there.",
+        "voice": "a9/voice/A9-06/13.wav",
+        "dur": 7.564
+      },
+      "next": "Counting a store, and the Days view"
+    },
+    {
+      "id": "A9-07",
+      "slug": "A9-07-counting-a-store-and-the-days-view",
+      "section": "A9.9",
+      "title": "Counting a store, and the Days view",
+      "intro": {
+        "text": "In this video you will count a store, and read fourteen days of it at a glance.",
+        "voice": "a9/voice/A9-07/01.wav",
+        "dur": 4.476
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A9-06",
+          "focus": 3,
+          "line": {
+            "text": "Tap Count a store.",
+            "voice": "a9/voice/A9-07/02.wav",
+            "dur": 1.504
+          }
+        },
+        {
+          "shot": "A9-17",
+          "focus": 1,
+          "line": {
+            "text": "Choose the store to count.",
+            "voice": "a9/voice/A9-07/03.wav",
+            "dur": 1.666
+          }
+        },
+        {
+          "shot": "A9-17",
+          "focus": 5,
+          "line": {
+            "text": "Print the sheet. The paper has each item and an empty box, but no figure from the system: you write what is really there.",
+            "voice": "a9/voice/A9-07/04.wav",
+            "dur": 7.176
+          }
+        },
+        {
+          "shot": "A9-17",
+          "focus": 2,
+          "line": {
+            "text": "Count the shelves, then type the counts in straight away.",
+            "voice": "a9/voice/A9-07/05.wav",
+            "dur": 3.152
+          }
+        },
+        {
+          "shot": "A9-17",
+          "focus": 3,
+          "line": {
+            "text": "Once you type a count, the line shows the book and the difference.",
+            "voice": "a9/voice/A9-07/06.wav",
+            "dur": 3.64
+          }
+        },
+        {
+          "shot": "A9-17",
+          "focus": 4,
+          "line": {
+            "text": "Where it differs, say why, if you know.",
+            "voice": "a9/voice/A9-07/07.wav",
+            "dur": 2.584
+          }
+        },
+        {
+          "shot": "A9-17",
+          "focus": 6,
+          "line": {
+            "text": "Tap Save the count. Each difference is saved with your name. A line left blank is not counted, and is never taken as zero.",
+            "voice": "a9/voice/A9-07/08.wav",
+            "dur": 7.913
+          }
+        },
+        {
+          "shot": "A9-18",
+          "focus": 1,
+          "line": {
+            "text": "Days shows fourteen days, one row for each item.",
+            "voice": "a9/voice/A9-07/09.wav",
+            "dur": 3.536
+          }
+        },
+        {
+          "shot": "A9-18",
+          "focus": 4,
+          "line": {
+            "text": "Today is the dark column. A cell shows what came in, in green, over what went out. Tap a cell in today's column to receive or issue.",
+            "voice": "a9/voice/A9-07/10.wav",
+            "dur": 8.552
+          }
+        },
+        {
+          "shot": "A9-18",
+          "focus": 3,
+          "line": {
+            "text": "This arrow goes back fourteen days. The next one comes forward again.",
+            "voice": "a9/voice/A9-07/11.wav",
+            "dur": 4.68
+          }
+        },
+        {
+          "shot": "A9-18",
+          "focus": 5,
+          "line": {
+            "text": "The footer gives each day in rupees: received, issued and wasted. And the rooms occupied.",
+            "voice": "a9/voice/A9-07/12.wav",
+            "dur": 5.945
+          }
+        },
+        {
+          "shot": "A9-19",
+          "focus": 1,
+          "line": {
+            "text": "Tap Outlet to see what was issued to each outlet, each day.",
+            "voice": "a9/voice/A9-07/13.wav",
+            "dur": 3.849
+          }
+        },
+        {
+          "shot": "A9-19",
+          "focus": 2,
+          "line": {
+            "text": "What the outlet sold, and the food cost percentage, are shown only to those who read reports.",
+            "voice": "a9/voice/A9-07/14.wav",
+            "dur": 5.869
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "The store is not locked while you count. If something moved since the sheet opened, the save names it, and you count that line again.",
+        "voice": "a9/voice/A9-07/15.wav",
+        "dur": 7.628
+      },
+      "next": "Buying: asking and approving"
+    },
+    {
+      "id": "A9-08",
+      "slug": "A9-08-buying-asking-and-approving",
+      "section": "A9.11",
+      "title": "Buying: asking and approving",
+      "intro": {
+        "text": "In this video you will ask to buy something, and the general manager will approve it.",
+        "voice": "a9/voice/A9-08/01.wav",
+        "dur": 4.662
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A9-22",
+          "focus": 1,
+          "line": {
+            "text": "Open Purchasing, and tap Ask to buy.",
+            "voice": "a9/voice/A9-08/02.wav",
+            "dur": 2.827
+          }
+        },
+        {
+          "shot": "A9-21",
+          "focus": 1,
+          "line": {
+            "text": "Choose which store it is for.",
+            "voice": "a9/voice/A9-08/03.wav",
+            "dur": 2.003
+          }
+        },
+        {
+          "shot": "A9-21",
+          "focus": 2,
+          "line": {
+            "text": "Say what it is for. The general manager reads this before approving.",
+            "voice": "a9/voice/A9-08/04.wav",
+            "dur": 4.087
+          }
+        },
+        {
+          "shot": "A9-21",
+          "focus": 3,
+          "line": {
+            "text": "Pick the item, from the Store.",
+            "voice": "a9/voice/A9-08/05.wav",
+            "dur": 2.096
+          }
+        },
+        {
+          "shot": "A9-21",
+          "focus": 4,
+          "line": {
+            "text": "Type how much.",
+            "voice": "a9/voice/A9-08/06.wav",
+            "dur": 1.237
+          }
+        },
+        {
+          "shot": "A9-21",
+          "focus": 5,
+          "line": {
+            "text": "Type the price only if one has been agreed. A blank reads as a dash, never zero.",
+            "voice": "a9/voice/A9-08/07.wav",
+            "dur": 5.272
+          }
+        },
+        {
+          "shot": "A9-21",
+          "focus": 6,
+          "line": {
+            "text": "Tap Send for approval.",
+            "voice": "a9/voice/A9-08/08.wav",
+            "dur": 1.666
+          }
+        },
+        {
+          "shot": "A9-22",
+          "focus": 2,
+          "line": {
+            "text": "The request is listed with its state: waiting for approval.",
+            "voice": "a9/voice/A9-08/09.wav",
+            "dur": 3.57
+          }
+        },
+        {
+          "shot": "A9-23",
+          "focus": 1,
+          "line": {
+            "text": "Open it. It waits for the general manager.",
+            "voice": "a9/voice/A9-08/10.wav",
+            "dur": 2.845
+          }
+        },
+        {
+          "shot": "A9-23",
+          "focus": 2,
+          "line": {
+            "text": "Nobody approves a purchase they asked for themselves.",
+            "voice": "a9/voice/A9-08/11.wav",
+            "dur": 3.303
+          }
+        },
+        {
+          "shot": "A9-23",
+          "focus": 3,
+          "line": {
+            "text": "When a price is agreed, type it on the line.",
+            "voice": "a9/voice/A9-08/12.wav",
+            "dur": 2.851
+          }
+        },
+        {
+          "shot": "A9-24",
+          "focus": 4,
+          "line": {
+            "text": "The general manager opens the request, and reads the total.",
+            "voice": "a9/voice/A9-08/13.wav",
+            "dur": 3.814
+          }
+        },
+        {
+          "shot": "A9-24",
+          "focus": 1,
+          "line": {
+            "text": "And taps Approve this purchase.",
+            "voice": "a9/voice/A9-08/14.wav",
+            "dur": 1.968
+          }
+        },
+        {
+          "shot": "A9-24",
+          "focus": 2,
+          "line": {
+            "text": "Or refuses it, saying why.",
+            "voice": "a9/voice/A9-08/15.wav",
+            "dur": 2.363
+          }
+        },
+        {
+          "shot": "A9-24",
+          "focus": 3,
+          "line": {
+            "text": "Or sends it back, for something to be cleared up.",
+            "voice": "a9/voice/A9-08/16.wav",
+            "dur": 3.013
+          }
+        },
+        {
+          "shot": "A9-30",
+          "focus": 1,
+          "line": {
+            "text": "Who may ask to buy is a setting for each role. The owner or an Admin switches a role on or off, and it takes effect at once.",
+            "voice": "a9/voice/A9-08/17.wav",
+            "dur": 7.35
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "The general manager approves every purchase, whoever asked.",
+        "voice": "a9/voice/A9-08/18.wav",
+        "dur": 3.721
+      },
+      "next": "Buying: the order and the delivery"
+    },
+    {
+      "id": "A9-09",
+      "slug": "A9-09-buying-the-order-and-the-delivery",
+      "section": "A9.11",
+      "title": "Buying: the order and the delivery",
+      "intro": {
+        "text": "The purchase is approved. In this video you will send the order, and record the delivery.",
+        "voice": "a9/voice/A9-09/01.wav",
+        "dur": 5.248
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A9-25",
+          "focus": 1,
+          "line": {
+            "text": "Approved, the request is ready to order.",
+            "voice": "a9/voice/A9-09/02.wav",
+            "dur": 2.63
+          }
+        },
+        {
+          "shot": "A9-25",
+          "focus": 2,
+          "line": {
+            "text": "It shows who decided.",
+            "voice": "a9/voice/A9-09/03.wav",
+            "dur": 1.666
+          }
+        },
+        {
+          "shot": "A9-25",
+          "focus": 4,
+          "line": {
+            "text": "Every line needs an agreed price. Then tap Send the order.",
+            "voice": "a9/voice/A9-09/04.wav",
+            "dur": 4.204
+          }
+        },
+        {
+          "shot": "A9-26",
+          "focus": 1,
+          "line": {
+            "text": "Choose the supplier to order it from.",
+            "voice": "a9/voice/A9-09/05.wav",
+            "dur": 2.259
+          }
+        },
+        {
+          "shot": "A9-26",
+          "focus": 2,
+          "line": {
+            "text": "This records the order and makes it a PDF. It is sent by hand: printed, or attached to a message. Nothing is sent automatically.",
+            "voice": "a9/voice/A9-09/06.wav",
+            "dur": 8.413
+          }
+        },
+        {
+          "shot": "A9-26",
+          "focus": 3,
+          "line": {
+            "text": "Tap Send the order.",
+            "voice": "a9/voice/A9-09/07.wav",
+            "dur": 1.457
+          }
+        },
+        {
+          "shot": "A9-27",
+          "focus": 1,
+          "line": {
+            "text": "Its state is now Ordered.",
+            "voice": "a9/voice/A9-09/08.wav",
+            "dur": 1.864
+          }
+        },
+        {
+          "shot": "A9-27",
+          "focus": 3,
+          "line": {
+            "text": "Download the order, and print it, or send it to the supplier.",
+            "voice": "a9/voice/A9-09/09.wav",
+            "dur": 3.617
+          }
+        },
+        {
+          "shot": "A9-27",
+          "focus": 4,
+          "line": {
+            "text": "When the goods come, tap Record the delivery.",
+            "voice": "a9/voice/A9-09/10.wav",
+            "dur": 2.723
+          }
+        },
+        {
+          "shot": "A9-28",
+          "focus": 1,
+          "line": {
+            "text": "Type what came.",
+            "voice": "a9/voice/A9-09/11.wav",
+            "dur": 1.388
+          }
+        },
+        {
+          "shot": "A9-28",
+          "focus": 2,
+          "line": {
+            "text": "What it cost each, before GST.",
+            "voice": "a9/voice/A9-09/12.wav",
+            "dur": 2.816
+          }
+        },
+        {
+          "shot": "A9-28",
+          "focus": 3,
+          "line": {
+            "text": "The bill's GST rate.",
+            "voice": "a9/voice/A9-09/13.wav",
+            "dur": 1.875
+          }
+        },
+        {
+          "shot": "A9-28",
+          "focus": 4,
+          "line": {
+            "text": "And whether that GST can be claimed.",
+            "voice": "a9/voice/A9-09/14.wav",
+            "dur": 2.375
+          }
+        },
+        {
+          "shot": "A9-28",
+          "focus": 5,
+          "line": {
+            "text": "Note anything about the delivery: a short delivery, a damaged case, a different brand.",
+            "voice": "a9/voice/A9-09/15.wav",
+            "dur": 6.241
+          }
+        },
+        {
+          "shot": "A9-28",
+          "focus": 6,
+          "line": {
+            "text": "Tap Record the delivery.",
+            "voice": "a9/voice/A9-09/16.wav",
+            "dur": 1.678
+          }
+        },
+        {
+          "shot": "A9-29",
+          "focus": 1,
+          "line": {
+            "text": "The order is delivered.",
+            "voice": "a9/voice/A9-09/17.wav",
+            "dur": 1.457
+          }
+        },
+        {
+          "shot": "A9-29",
+          "focus": 2,
+          "line": {
+            "text": "With who received it, and when.",
+            "voice": "a9/voice/A9-09/18.wav",
+            "dur": 2.259
+          }
+        },
+        {
+          "shot": "A9-29",
+          "focus": 3,
+          "line": {
+            "text": "The goods are now in the store, as a delivery at that cost.",
+            "voice": "a9/voice/A9-09/19.wav",
+            "dur": 3.559
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "If less came than was ordered, type what came. Both stay on the record.",
+        "voice": "a9/voice/A9-09/20.wav",
+        "dur": 4.842
+      },
+      "next": "Equipment"
+    },
+    {
+      "id": "A9-10",
+      "slug": "A9-10-equipment",
+      "section": "A9.13",
+      "title": "Equipment",
+      "intro": {
+        "text": "Equipment is the register of durable things. In this video you will add an AC, ask for it to leave the store, and approve it.",
+        "voice": "a9/voice/A9-10/01.wav",
+        "dur": 8.035
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A9-31",
+          "focus": null,
+          "line": {
+            "text": "Open Equipment, tap Add an item, and type what it is.",
+            "voice": "a9/voice/A9-10/02.wav",
+            "dur": 4.081
+          }
+        },
+        {
+          "shot": "A9-31",
+          "focus": 2,
+          "line": {
+            "text": "Its category: one this property already uses, or a new one.",
+            "voice": "a9/voice/A9-10/03.wav",
+            "dur": 4.012
+          }
+        },
+        {
+          "shot": "A9-31",
+          "focus": 3,
+          "line": {
+            "text": "Keep track of it one by one, with a tag. Cheaper things can be a count in one place.",
+            "voice": "a9/voice/A9-10/04.wav",
+            "dur": 5.388
+          }
+        },
+        {
+          "shot": "A9-31",
+          "focus": 4,
+          "line": {
+            "text": "The next free tag number is offered.",
+            "voice": "a9/voice/A9-10/05.wav",
+            "dur": 2.189
+          }
+        },
+        {
+          "shot": "A9-31",
+          "focus": 5,
+          "line": {
+            "text": "Say where it is: a room, or another place, such as the main store.",
+            "voice": "a9/voice/A9-10/06.wav",
+            "dur": 4.766
+          }
+        },
+        {
+          "shot": "A9-32",
+          "focus": 3,
+          "line": {
+            "text": "Add the cost if you know it. A blank shows a dash, never zero.",
+            "voice": "a9/voice/A9-10/07.wav",
+            "dur": 4.378
+          }
+        },
+        {
+          "shot": "A9-32",
+          "focus": 4,
+          "line": {
+            "text": "And the warranty and service contract dates, if you have them.",
+            "voice": "a9/voice/A9-10/08.wav",
+            "dur": 3.466
+          }
+        },
+        {
+          "shot": "A9-32",
+          "focus": 6,
+          "line": {
+            "text": "Tap Add. Its page opens.",
+            "voice": "a9/voice/A9-10/09.wav",
+            "dur": 2.613
+          }
+        },
+        {
+          "shot": "A9-33",
+          "focus": 6,
+          "line": {
+            "text": "What has happened to it is listed here, newest first.",
+            "voice": "a9/voice/A9-10/10.wav",
+            "dur": 3.408
+          }
+        },
+        {
+          "shot": "A9-34",
+          "focus": 2,
+          "line": {
+            "text": "Report a repair raises a repair. The item shows as under repair until the repair is closed.",
+            "voice": "a9/voice/A9-10/11.wav",
+            "dur": 6.015
+          }
+        },
+        {
+          "shot": "A9-35",
+          "focus": 1,
+          "line": {
+            "text": "Anybody who can see it may ask for it to leave the store. Here, reception taps Ask to take out.",
+            "voice": "a9/voice/A9-10/12.wav",
+            "dur": 6.003
+          }
+        },
+        {
+          "shot": "A9-36",
+          "focus": 2,
+          "line": {
+            "text": "Choose the room.",
+            "voice": "a9/voice/A9-10/13.wav",
+            "dur": 1.109
+          }
+        },
+        {
+          "shot": "A9-36",
+          "focus": 3,
+          "line": {
+            "text": "It stays in the store until the Inventory Manager approves it.",
+            "voice": "a9/voice/A9-10/14.wav",
+            "dur": 3.443
+          }
+        },
+        {
+          "shot": "A9-36",
+          "focus": 4,
+          "line": {
+            "text": "Say why. Then tap Ask.",
+            "voice": "a9/voice/A9-10/15.wav",
+            "dur": 2.497
+          }
+        },
+        {
+          "shot": "A9-37",
+          "focus": 1,
+          "line": {
+            "text": "On Equipment, the Inventory Manager sees the request waiting.",
+            "voice": "a9/voice/A9-10/16.wav",
+            "dur": 3.965
+          }
+        },
+        {
+          "shot": "A9-37",
+          "focus": 2,
+          "line": {
+            "text": "And taps Approve. Or Refuse, saying why.",
+            "voice": "a9/voice/A9-10/17.wav",
+            "dur": 3.646
+          }
+        },
+        {
+          "shot": "A9-38",
+          "focus": 1,
+          "line": {
+            "text": "Approved, it is now in room 205.",
+            "voice": "a9/voice/A9-10/18.wav",
+            "dur": 3.187
+          }
+        },
+        {
+          "shot": "A9-38",
+          "focus": 3,
+          "line": {
+            "text": "Its history shows the request, who approved it, and when.",
+            "voice": "a9/voice/A9-10/19.wav",
+            "dur": 3.733
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A move between rooms, or back into a store, needs nobody's approval. That is the Store and purchasing. Thank you for watching.",
+        "voice": "a9/voice/A9-10/20.wav",
+        "dur": 8.691
+      },
+      "next": null
+    }
+  ]
+}

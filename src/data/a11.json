@@ -1,0 +1,1149 @@
+{
+  "chapter": "A11",
+  "title": "Reports",
+  "manualShots": "a11",
+  "videos": [
+    {
+      "id": "A11-01",
+      "slug": "A11-01-finding-a-report",
+      "section": "A11.1",
+      "title": "Finding a report",
+      "intro": {
+        "text": "Every report in Fidato PMS is a few clicks away. In this video you will find a report, star the ones you use, and search for one that is not in your menu.",
+        "voice": "a11/voice/A11-01/01.wav",
+        "dur": 9.312
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A11-01",
+          "focus": null,
+          "line": {
+            "text": "In the Front office menu, the part called Reports lists three screens.",
+            "voice": "a11/voice/A11-01/02.wav",
+            "dur": 4.348
+          }
+        },
+        {
+          "shot": "A11-01",
+          "focus": 1,
+          "line": {
+            "text": "Night audit is the screen that closes the day. It is not a report: it has its own chapter.",
+            "voice": "a11/voice/A11-01/03.wav",
+            "dur": 6.142
+          }
+        },
+        {
+          "shot": "A11-01",
+          "focus": 2,
+          "line": {
+            "text": "All reports holds every report your role may open.",
+            "voice": "a11/voice/A11-01/04.wav",
+            "dur": 3.292
+          }
+        },
+        {
+          "shot": "A11-01",
+          "focus": 3,
+          "line": {
+            "text": "Manager report is the one most opened, so it is in the menu itself.",
+            "voice": "a11/voice/A11-01/05.wav",
+            "dur": 4.058
+          }
+        },
+        {
+          "shot": "A11-01",
+          "focus": 5,
+          "line": {
+            "text": "All reports puts them in four groups: The day, Money owed, Statutory, and Store and equipment.",
+            "voice": "a11/voice/A11-01/06.wav",
+            "dur": 6.02
+          }
+        },
+        {
+          "shot": "A11-01",
+          "focus": 4,
+          "line": {
+            "text": "To find one, type part of its name, or a word from its description.",
+            "voice": "a11/voice/A11-01/07.wav",
+            "dur": 4.569
+          }
+        },
+        {
+          "shot": "A11-01",
+          "focus": 7,
+          "line": {
+            "text": "Click Open on a card to read the report.",
+            "voice": "a11/voice/A11-01/08.wav",
+            "dur": 2.444
+          }
+        },
+        {
+          "shot": "A11-01",
+          "focus": 6,
+          "line": {
+            "text": "Tap the star to keep a report at the top.",
+            "voice": "a11/voice/A11-01/09.wav",
+            "dur": 2.259
+          }
+        },
+        {
+          "shot": "A11-02",
+          "focus": 1,
+          "line": {
+            "text": "Your starred reports then sit under Starred, above the groups.",
+            "voice": "a11/voice/A11-01/10.wav",
+            "dur": 3.687
+          }
+        },
+        {
+          "shot": "A11-02",
+          "focus": 2,
+          "line": {
+            "text": "Tap a filled star again to take it off. Stars are kept in this browser only.",
+            "voice": "a11/voice/A11-01/11.wav",
+            "dur": 4.703
+          }
+        },
+        {
+          "shot": "A11-03",
+          "focus": 1,
+          "line": {
+            "text": "A report not in your menu is one search away. Press Control K, or click Find a screen, and type a word, such as G S T.",
+            "voice": "a11/voice/A11-01/12.wav",
+            "dur": 8.302
+          }
+        },
+        {
+          "shot": "A11-03",
+          "focus": 2,
+          "line": {
+            "text": "Not in your menu only means it is not listed for you. You may open it: click it, or press Enter.",
+            "voice": "a11/voice/A11-01/13.wav",
+            "dur": 5.655
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "That is where the reports are. The next video shows what every report has in common.",
+        "voice": "a11/voice/A11-01/14.wav",
+        "dur": 4.842
+      },
+      "next": "Every report works the same way"
+    },
+    {
+      "id": "A11-02",
+      "slug": "A11-02-every-report-works-the-same-way",
+      "section": "A11.2",
+      "title": "Every report works the same way",
+      "intro": {
+        "text": "Every report is laid out like a printed page, and works the same way. Here is what to look for.",
+        "voice": "a11/voice/A11-02/01.wav",
+        "dur": 6.154
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A11-04",
+          "focus": 1,
+          "line": {
+            "text": "Print prints the report alone, without the menu or the buttons.",
+            "voice": "a11/voice/A11-02/02.wav",
+            "dur": 3.733
+          }
+        },
+        {
+          "shot": "A11-04",
+          "focus": 2,
+          "line": {
+            "text": "PDF saves it as a file, made on the server from the same figures.",
+            "voice": "a11/voice/A11-02/03.wav",
+            "dur": 4.197
+          }
+        },
+        {
+          "shot": "A11-04",
+          "focus": 3,
+          "line": {
+            "text": "Excel saves a real Excel workbook.",
+            "voice": "a11/voice/A11-02/04.wav",
+            "dur": 2.676
+          }
+        },
+        {
+          "shot": "A11-04",
+          "focus": 4,
+          "line": {
+            "text": "And CSV saves a plain file that any spreadsheet opens. The buttons wait until the report has loaded.",
+            "voice": "a11/voice/A11-02/05.wav",
+            "dur": 6.467
+          }
+        },
+        {
+          "shot": "A11-04",
+          "focus": 5,
+          "line": {
+            "text": "Under the hotel's name, one line of facts says which day, or which period, the report covers.",
+            "voice": "a11/voice/A11-02/06.wav",
+            "dur": 6.322
+          }
+        },
+        {
+          "shot": "A11-22",
+          "focus": 1,
+          "line": {
+            "text": "Each report is for the hotel's business date, or its month, or its year. There is no date to choose.",
+            "voice": "a11/voice/A11-02/07.wav",
+            "dur": 6.119
+          }
+        },
+        {
+          "shot": "A11-22",
+          "focus": 2,
+          "line": {
+            "text": "A report with nothing in it still prints, and says so in words.",
+            "voice": "a11/voice/A11-02/08.wav",
+            "dur": 3.849
+          }
+        },
+        {
+          "shot": "A11-22",
+          "focus": 3,
+          "line": {
+            "text": "At the foot, Printed says when this copy was made.",
+            "voice": "a11/voice/A11-02/09.wav",
+            "dur": 3.245
+          }
+        },
+        {
+          "shot": "A11-22",
+          "focus": 4,
+          "line": {
+            "text": "And this is who made it.",
+            "voice": "a11/voice/A11-02/10.wav",
+            "dur": 1.469
+          }
+        },
+        {
+          "shot": "A11-12",
+          "focus": 4,
+          "line": {
+            "text": "A figure in red is below zero. It is real, not a mistake.",
+            "voice": "a11/voice/A11-02/11.wav",
+            "dur": 4.227
+          }
+        },
+        {
+          "shot": "A11-10",
+          "focus": 4,
+          "line": {
+            "text": "A dash is not a zero. It means the system does not hold that figure, and the notes under the report say which.",
+            "voice": "a11/voice/A11-02/12.wav",
+            "dur": 6.688
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Until the night audit has run, today's figures can still change. A report opened at noon is the day so far.",
+        "voice": "a11/voice/A11-02/13.wav",
+        "dur": 7.28
+      },
+      "next": "The Manager report"
+    },
+    {
+      "id": "A11-03",
+      "slug": "A11-03-the-manager-report",
+      "section": "A11.3",
+      "title": "The Manager report",
+      "intro": {
+        "text": "The Manager report is the day in three columns. It is the one an owner opens first.",
+        "voice": "a11/voice/A11-03/01.wav",
+        "dur": 5.039
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A11-04",
+          "focus": null,
+          "line": {
+            "text": "Open Manager report in the menu. It is read afresh every time it opens.",
+            "voice": "a11/voice/A11-03/02.wav",
+            "dur": 4.784
+          }
+        },
+        {
+          "shot": "A11-04",
+          "focus": 6,
+          "line": {
+            "text": "Every line has three figures. Today. Then P T D, the period to date, from the 1st of this month. And Y T D, the year to date, from 1 April.",
+            "voice": "a11/voice/A11-03/03.wav",
+            "dur": 10.636
+          }
+        },
+        {
+          "shot": "A11-04",
+          "focus": 5,
+          "line": {
+            "text": "The facts line shows the date, where each column starts, and the currency.",
+            "voice": "a11/voice/A11-03/04.wav",
+            "dur": 4.639
+          }
+        },
+        {
+          "shot": "A11-04",
+          "focus": 7,
+          "line": {
+            "text": "The report runs in bands: room charges, extra charges, tax, revenue, payment, the ledgers, and more.",
+            "voice": "a11/voice/A11-03/05.wav",
+            "dur": 7.309
+          }
+        },
+        {
+          "shot": "A11-05",
+          "focus": 1,
+          "line": {
+            "text": "In the room summary, Sold Room counts the rooms sold. A complimentary room counts as sold.",
+            "voice": "a11/voice/A11-03/06.wav",
+            "dur": 6.026
+          }
+        },
+        {
+          "shot": "A11-05",
+          "focus": 2,
+          "line": {
+            "text": "Occupancy is the rooms sold, as a share of the rooms that could be sold.",
+            "voice": "a11/voice/A11-03/07.wav",
+            "dur": 4.592
+          }
+        },
+        {
+          "shot": "A11-05",
+          "focus": 3,
+          "line": {
+            "text": "The average daily rate is the room charges divided by the rooms sold. Extras, food and tax are not in it.",
+            "voice": "a11/voice/A11-03/08.wav",
+            "dur": 6.92
+          }
+        },
+        {
+          "shot": "A11-05",
+          "focus": 4,
+          "line": {
+            "text": "Revenue per available room divides the room charges by every room that could be sold. It falls when rooms stay empty.",
+            "voice": "a11/voice/A11-03/09.wav",
+            "dur": 7.628
+          }
+        },
+        {
+          "shot": "A11-05",
+          "focus": 5,
+          "line": {
+            "text": "Below the statistics, the POS summary is the restaurant, outlet by outlet.",
+            "voice": "a11/voice/A11-03/10.wav",
+            "dur": 4.94
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A complimentary room lifts the occupancy and lowers the average rate, because it earns nothing.",
+        "voice": "a11/voice/A11-03/11.wav",
+        "dur": 5.811
+      },
+      "next": "The Night audit report"
+    },
+    {
+      "id": "A11-04",
+      "slug": "A11-04-the-night-audit-report",
+      "section": "A11.4",
+      "title": "The Night audit report",
+      "intro": {
+        "text": "The Night audit report is one day, to the paisa. It only reads the day: the night audit itself is run on its own screen.",
+        "voice": "a11/voice/A11-04/01.wav",
+        "dur": 7.57
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A11-06",
+          "focus": null,
+          "line": {
+            "text": "Open All reports, then Night audit report. It is wider than the screen, so it scrolls sideways. Here it is drawn smaller, to show every column.",
+            "voice": "a11/voice/A11-04/02.wav",
+            "dur": 9.039
+          }
+        },
+        {
+          "shot": "A11-06",
+          "focus": 1,
+          "line": {
+            "text": "Room Charges lists every room charged for the night: the booking, the guest, where the booking came from, and the rate.",
+            "voice": "a11/voice/A11-04/03.wav",
+            "dur": 6.682
+          }
+        },
+        {
+          "shot": "A11-06",
+          "focus": 2,
+          "line": {
+            "text": "Var % is how far the rate given is below the room's normal rate.",
+            "voice": "a11/voice/A11-04/04.wav",
+            "dur": 3.837
+          }
+        },
+        {
+          "shot": "A11-06",
+          "focus": 3,
+          "line": {
+            "text": "Checkin By names who checked the guest in. A dash means it was not recorded.",
+            "voice": "a11/voice/A11-04/05.wav",
+            "dur": 4.796
+          }
+        },
+        {
+          "shot": "A11-06",
+          "focus": 4,
+          "line": {
+            "text": "Complimentary lists the rooms given free.",
+            "voice": "a11/voice/A11-04/06.wav",
+            "dur": 2.839
+          }
+        },
+        {
+          "shot": "A11-06",
+          "focus": 5,
+          "line": {
+            "text": "Checked Out is who left today, with their bill. A balance below zero means the guest paid more than the bill came to.",
+            "voice": "a11/voice/A11-04/07.wav",
+            "dur": 7.199
+          }
+        },
+        {
+          "shot": "A11-07",
+          "focus": 1,
+          "line": {
+            "text": "Daily Sales shows the day's sales by type, with their tax.",
+            "voice": "a11/voice/A11-04/08.wav",
+            "dur": 4.139
+          }
+        },
+        {
+          "shot": "A11-07",
+          "focus": 2,
+          "line": {
+            "text": "Receipt Detail lists every payment taken, by method.",
+            "voice": "a11/voice/A11-04/09.wav",
+            "dur": 3.536
+          }
+        },
+        {
+          "shot": "A11-07",
+          "focus": 3,
+          "line": {
+            "text": "Then the receipts by user.",
+            "voice": "a11/voice/A11-04/10.wav",
+            "dur": 1.922
+          }
+        },
+        {
+          "shot": "A11-07",
+          "focus": 4,
+          "line": {
+            "text": "And by payment method.",
+            "voice": "a11/voice/A11-04/11.wav",
+            "dur": 1.574
+          }
+        },
+        {
+          "shot": "A11-08",
+          "focus": 1,
+          "line": {
+            "text": "Room Status counts the rooms: occupied, due out, vacant, departed, reserved and blocked. Occupied means checked in.",
+            "voice": "a11/voice/A11-04/12.wav",
+            "dur": 8.511
+          }
+        },
+        {
+          "shot": "A11-08",
+          "focus": 2,
+          "line": {
+            "text": "Pax Status counts the guests who arrived, checked out, and stayed over.",
+            "voice": "a11/voice/A11-04/13.wav",
+            "dur": 4.453
+          }
+        },
+        {
+          "shot": "A11-08",
+          "focus": 3,
+          "line": {
+            "text": "Pax Analysis splits the guests by rate type.",
+            "voice": "a11/voice/A11-04/14.wav",
+            "dur": 2.978
+          }
+        },
+        {
+          "shot": "A11-08",
+          "focus": 4,
+          "line": {
+            "text": "And the POS summary is the restaurant's day.",
+            "voice": "a11/voice/A11-04/15.wav",
+            "dur": 2.816
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Before the audit runs, a guest who has not arrived is still in Room Charges. They go when the night audit marks the no-show.",
+        "voice": "a11/voice/A11-04/16.wav",
+        "dur": 7.42
+      },
+      "next": "Occupancy and statistics"
+    },
+    {
+      "id": "A11-05",
+      "slug": "A11-05-occupancy-and-statistics",
+      "section": "A11.5",
+      "title": "Occupancy and statistics",
+      "intro": {
+        "text": "Three reports show the month and the year: Monthly occupancy, Monthly statistics, and Yearly statistics.",
+        "voice": "a11/voice/A11-05/01.wav",
+        "dur": 6.856
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A11-09",
+          "focus": 1,
+          "line": {
+            "text": "Monthly occupancy covers the business date's month.",
+            "voice": "a11/voice/A11-05/02.wav",
+            "dur": 2.92
+          }
+        },
+        {
+          "shot": "A11-09",
+          "focus": 2,
+          "line": {
+            "text": "One bar per day shows the occupancy, in percent. Full houses and empty days both stand out.",
+            "voice": "a11/voice/A11-05/03.wav",
+            "dur": 6.212
+          }
+        },
+        {
+          "shot": "A11-10",
+          "focus": null,
+          "line": {
+            "text": "Monthly statistics is the same month as a grid, one row per day.",
+            "voice": "a11/voice/A11-05/04.wav",
+            "dur": 4.29
+          }
+        },
+        {
+          "shot": "A11-10",
+          "focus": 1,
+          "line": {
+            "text": "Night Sold is the rooms sold that night.",
+            "voice": "a11/voice/A11-05/05.wav",
+            "dur": 2.444
+          }
+        },
+        {
+          "shot": "A11-10",
+          "focus": 2,
+          "line": {
+            "text": "Next to it, the occupancy. Complimentary rooms count with the rooms sold.",
+            "voice": "a11/voice/A11-05/06.wav",
+            "dur": 5.167
+          }
+        },
+        {
+          "shot": "A11-10",
+          "focus": 3,
+          "line": {
+            "text": "Then the average daily rate, and the revenue per available room.",
+            "voice": "a11/voice/A11-05/07.wav",
+            "dur": 3.803
+          }
+        },
+        {
+          "shot": "A11-10",
+          "focus": 4,
+          "line": {
+            "text": "Expense is not recorded in this system, so it is a dash, never a zero.",
+            "voice": "a11/voice/A11-05/08.wav",
+            "dur": 5.149
+          }
+        },
+        {
+          "shot": "A11-10",
+          "focus": null,
+          "line": {
+            "text": "Days after today have figures too: the nights already booked, at the booking's rate. They change if the booking changes.",
+            "voice": "a11/voice/A11-05/09.wav",
+            "dur": 7.129
+          }
+        },
+        {
+          "shot": "A11-10",
+          "focus": null,
+          "line": {
+            "text": "Yearly statistics has the same columns, one row per month from January to December, with a grand total for the year.",
+            "voice": "a11/voice/A11-05/10.wav",
+            "dur": 7.019
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Rooms are counted from the day the hotel first traded. Earlier days show nothing.",
+        "voice": "a11/voice/A11-05/11.wav",
+        "dur": 5.051
+      },
+      "next": "Money owed"
+    },
+    {
+      "id": "A11-06",
+      "slug": "A11-06-money-owed",
+      "section": "A11.6",
+      "title": "Money owed",
+      "intro": {
+        "text": "Four reports show money still owed, and money taken: City ledger, No show, Guest ledger and Cashier shift.",
+        "voice": "a11/voice/A11-06/01.wav",
+        "dur": 7.228
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A11-11",
+          "focus": null,
+          "line": {
+            "text": "City ledger is the bills sent to a company or a booking site, account by account, for the business date.",
+            "voice": "a11/voice/A11-06/02.wav",
+            "dur": 5.649
+          }
+        },
+        {
+          "shot": "A11-11",
+          "focus": 1,
+          "line": {
+            "text": "Ignore zero balance account is on when it opens. Turn it off to see every account, even those with nothing on them.",
+            "voice": "a11/voice/A11-06/03.wav",
+            "dur": 6.862
+          }
+        },
+        {
+          "shot": "A11-11",
+          "focus": 2,
+          "line": {
+            "text": "The facts line says the day, and whether zero balances are left out.",
+            "voice": "a11/voice/A11-06/04.wav",
+            "dur": 4.221
+          }
+        },
+        {
+          "shot": "A11-11",
+          "focus": 3,
+          "line": {
+            "text": "Each account shows its opening balance, the bills sent to it, what it paid, and its closing balance.",
+            "voice": "a11/voice/A11-06/05.wav",
+            "dur": 6.113
+          }
+        },
+        {
+          "shot": "A11-22",
+          "focus": 2,
+          "line": {
+            "text": "No show lists the bookings that never arrived on the day. When everybody came, it still prints, and says so.",
+            "voice": "a11/voice/A11-06/06.wav",
+            "dur": 7.42
+          }
+        },
+        {
+          "shot": "A11-12",
+          "focus": 3,
+          "line": {
+            "text": "Guest ledger is every guest's bill that moved from the 1st of the month to the business date: opening, charges, received and closing.",
+            "voice": "a11/voice/A11-06/07.wav",
+            "dur": 7.286
+          }
+        },
+        {
+          "shot": "A11-12",
+          "focus": 4,
+          "line": {
+            "text": "A closing in red is below zero: more was received than charged.",
+            "voice": "a11/voice/A11-06/08.wav",
+            "dur": 4.418
+          }
+        },
+        {
+          "shot": "A11-12",
+          "focus": 1,
+          "line": {
+            "text": "This report has Print and CSV only.",
+            "voice": "a11/voice/A11-06/09.wav",
+            "dur": 2.688
+          }
+        },
+        {
+          "shot": "A11-13",
+          "focus": 1,
+          "line": {
+            "text": "Cashier shift is what each cashier took on the business date, by method.",
+            "voice": "a11/voice/A11-06/10.wav",
+            "dur": 4.151
+          }
+        },
+        {
+          "shot": "A11-13",
+          "focus": 2,
+          "line": {
+            "text": "Not on record means the payment was taken before the system recorded who took it. Nobody's name is guessed.",
+            "voice": "a11/voice/A11-06/11.wav",
+            "dur": 6.166
+          }
+        },
+        {
+          "shot": "A11-13",
+          "focus": 3,
+          "line": {
+            "text": "Each method is its own row, with how many receipts and how much.",
+            "voice": "a11/voice/A11-06/12.wav",
+            "dur": 3.547
+          }
+        },
+        {
+          "shot": "A11-13",
+          "focus": 4,
+          "line": {
+            "text": "A receipt that was reversed is not money the cashier holds, so it is left out.",
+            "voice": "a11/voice/A11-06/13.wav",
+            "dur": 4.592
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "The revenue manager does not see City ledger, Guest ledger or Cashier shift.",
+        "voice": "a11/voice/A11-06/14.wav",
+        "dur": 4.755
+      },
+      "next": "The statutory reports"
+    },
+    {
+      "id": "A11-07",
+      "slug": "A11-07-the-statutory-reports",
+      "section": "A11.7",
+      "title": "The statutory reports",
+      "intro": {
+        "text": "Three reports are for filing with the government: Lodging tax, the GST sales register, and the Form 3 register. This system files nothing itself.",
+        "voice": "a11/voice/A11-07/01.wav",
+        "dur": 9.556
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A11-14",
+          "focus": 1,
+          "line": {
+            "text": "Lodging tax covers the whole month.",
+            "voice": "a11/voice/A11-07/02.wav",
+            "dur": 2.433
+          }
+        },
+        {
+          "shot": "A11-14",
+          "focus": 3,
+          "line": {
+            "text": "Check Out Bills has one row for each day a bill was issued, with that day's first and last bill number.",
+            "voice": "a11/voice/A11-07/03.wav",
+            "dur": 6.032
+          }
+        },
+        {
+          "shot": "A11-14",
+          "focus": 2,
+          "line": {
+            "text": "CGST and SGST are each half the tax the bills carried, on the room rent less its discount.",
+            "voice": "a11/voice/A11-07/04.wav",
+            "dur": 6.055
+          }
+        },
+        {
+          "shot": "A11-14",
+          "focus": 4,
+          "line": {
+            "text": "Bill numbers run on with no gap. A gap is an audit finding.",
+            "voice": "a11/voice/A11-07/05.wav",
+            "dur": 4.122
+          }
+        },
+        {
+          "shot": "A11-14",
+          "focus": 5,
+          "line": {
+            "text": "The group's accountant confirms this sheet before anything is filed from it.",
+            "voice": "a11/voice/A11-07/06.wav",
+            "dur": 4.197
+          }
+        },
+        {
+          "shot": "A11-15",
+          "focus": 3,
+          "line": {
+            "text": "The GST sales register lists every invoice and credit note issued this month, as the GST return wants them.",
+            "voice": "a11/voice/A11-07/07.wav",
+            "dur": 6.995
+          }
+        },
+        {
+          "shot": "A11-15",
+          "focus": 4,
+          "line": {
+            "text": "The total line counts the documents.",
+            "voice": "a11/voice/A11-07/08.wav",
+            "dur": 2.293
+          }
+        },
+        {
+          "shot": "A11-15",
+          "focus": 5,
+          "line": {
+            "text": "A credit note is its own row, below zero. The place of supply is always the hotel's own state.",
+            "voice": "a11/voice/A11-07/09.wav",
+            "dur": 6.642
+          }
+        },
+        {
+          "shot": "A11-15",
+          "focus": 2,
+          "line": {
+            "text": "CSV saves the columns the GST return upload wants.",
+            "voice": "a11/voice/A11-07/10.wav",
+            "dur": 4.035
+          }
+        },
+        {
+          "shot": "A11-16",
+          "focus": 1,
+          "line": {
+            "text": "The Form 3 register lists the foreign guests who arrived this month, and how many still await an FRRO number.",
+            "voice": "a11/voice/A11-07/11.wav",
+            "dur": 6.635
+          }
+        },
+        {
+          "shot": "A11-16",
+          "focus": 2,
+          "line": {
+            "text": "This system does not file with the FRRO. Filing happens on the government portal.",
+            "voice": "a11/voice/A11-07/12.wav",
+            "dur": 5.411
+          }
+        },
+        {
+          "shot": "A11-16",
+          "focus": 3,
+          "line": {
+            "text": "The portal's numbers are typed on the Form 3 screen, and show here.",
+            "voice": "a11/voice/A11-07/13.wav",
+            "dur": 4.232
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "The Form 3 register shows passports, so only the people who check guests in can open it.",
+        "voice": "a11/voice/A11-07/14.wav",
+        "dur": 5.474
+      },
+      "next": "The accounting export"
+    },
+    {
+      "id": "A11-08",
+      "slug": "A11-08-the-accounting-export",
+      "section": "A11.8",
+      "title": "The accounting export",
+      "intro": {
+        "text": "The Accounting export hands your accountant the hotel's days as a file. It reads the same figures the reports print, and changes nothing.",
+        "voice": "a11/voice/A11-08/01.wav",
+        "dur": 8.267
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A11-17",
+          "focus": null,
+          "line": {
+            "text": "Open it with Find a screen: type tally, or export. It is for the owner, an admin, the GM and the accountant.",
+            "voice": "a11/voice/A11-08/02.wav",
+            "dur": 7.466
+          }
+        },
+        {
+          "shot": "A11-17",
+          "focus": 1,
+          "line": {
+            "text": "From starts on the 1st of the month. This day is included.",
+            "voice": "a11/voice/A11-08/03.wav",
+            "dur": 3.844
+          }
+        },
+        {
+          "shot": "A11-17",
+          "focus": 2,
+          "line": {
+            "text": "To is the business date. This day is included too.",
+            "voice": "a11/voice/A11-08/04.wav",
+            "dur": 3.298
+          }
+        },
+        {
+          "shot": "A11-17",
+          "focus": 3,
+          "line": {
+            "text": "Choose the day book, as a CSV or as an Excel file: one row a day.",
+            "voice": "a11/voice/A11-08/05.wav",
+            "dur": 4.743
+          }
+        },
+        {
+          "shot": "A11-17",
+          "focus": 4,
+          "line": {
+            "text": "The two Tally choices make no file yet. They wait for the ledger names in your own books.",
+            "voice": "a11/voice/A11-08/06.wav",
+            "dur": 5.434
+          }
+        },
+        {
+          "shot": "A11-17",
+          "focus": 5,
+          "line": {
+            "text": "Check the table below, then tap Export.",
+            "voice": "a11/voice/A11-08/07.wav",
+            "dur": 2.665
+          }
+        },
+        {
+          "shot": "A11-18",
+          "focus": 1,
+          "line": {
+            "text": "If the night audit has not run for some of the days, a yellow note says so. Their figures may still change.",
+            "voice": "a11/voice/A11-08/08.wav",
+            "dur": 6.885
+          }
+        },
+        {
+          "shot": "A11-18",
+          "focus": 2,
+          "line": {
+            "text": "The Night audit column says Closed, or Not run, for each day.",
+            "voice": "a11/voice/A11-08/09.wav",
+            "dur": 4.163
+          }
+        },
+        {
+          "shot": "A11-18",
+          "focus": 3,
+          "line": {
+            "text": "Received from companies is kept apart from sales and receipts.",
+            "voice": "a11/voice/A11-08/10.wav",
+            "dur": 3.768
+          }
+        },
+        {
+          "shot": "A11-18",
+          "focus": 4,
+          "line": {
+            "text": "This counts what was charged and received each day. Lodging tax counts the bills issued, so a stay still in house is here and not there.",
+            "voice": "a11/voice/A11-08/11.wav",
+            "dur": 8.302
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Tell your accountant before you send a month that is not closed.",
+        "voice": "a11/voice/A11-08/12.wav",
+        "dur": 3.605
+      },
+      "next": "The Store and equipment reports"
+    },
+    {
+      "id": "A11-09",
+      "slug": "A11-09-the-store-and-equipment-reports",
+      "section": "A11.9",
+      "title": "The Store and equipment reports",
+      "intro": {
+        "text": "Nine reports show what the stores hold and use, and where the equipment is.",
+        "voice": "a11/voice/A11-09/01.wav",
+        "dur": 4.685
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A11-19",
+          "focus": 1,
+          "line": {
+            "text": "On the Store, tap Reports.",
+            "voice": "a11/voice/A11-09/02.wav",
+            "dur": 2.096
+          }
+        },
+        {
+          "shot": "A11-19",
+          "focus": 2,
+          "line": {
+            "text": "Choose a report. Closing stock is the first of the nine.",
+            "voice": "a11/voice/A11-09/03.wav",
+            "dur": 3.449
+          }
+        },
+        {
+          "shot": "A11-20",
+          "focus": 1,
+          "line": {
+            "text": "Or find Store reports with Find a screen: all nine on one page.",
+            "voice": "a11/voice/A11-09/04.wav",
+            "dur": 4.325
+          }
+        },
+        {
+          "shot": "A11-20",
+          "focus": 2,
+          "line": {
+            "text": "Click Open on a card.",
+            "voice": "a11/voice/A11-09/05.wav",
+            "dur": 1.527
+          }
+        },
+        {
+          "shot": "A11-20",
+          "focus": null,
+          "line": {
+            "text": "They cover closing stock, movement by day, consumption, wastage and breakage, count differences, dead stock, days of cover, supplier spend, and the equipment.",
+            "voice": "a11/voice/A11-09/06.wav",
+            "dur": 10.873
+          }
+        },
+        {
+          "shot": "A11-21",
+          "focus": 1,
+          "line": {
+            "text": "Closing stock is as on the business date.",
+            "voice": "a11/voice/A11-09/07.wav",
+            "dur": 2.247
+          }
+        },
+        {
+          "shot": "A11-21",
+          "focus": 2,
+          "line": {
+            "text": "Each store lists its items: on hand, the unit cost, and the value, as recorded.",
+            "voice": "a11/voice/A11-09/08.wav",
+            "dur": 5.718
+          }
+        },
+        {
+          "shot": "A11-21",
+          "focus": 3,
+          "line": {
+            "text": "Then the store's total.",
+            "voice": "a11/voice/A11-09/09.wav",
+            "dur": 1.539
+          }
+        },
+        {
+          "shot": "A11-21",
+          "focus": 4,
+          "line": {
+            "text": "All stores sums up every store.",
+            "voice": "a11/voice/A11-09/10.wav",
+            "dur": 2.398
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Costs are as recorded: delivery prices before GST, at the running average. A price nobody recorded is a dash.",
+        "voice": "a11/voice/A11-09/11.wav",
+        "dur": 7.57
+      },
+      "next": "Which report answers which question"
+    },
+    {
+      "id": "A11-10",
+      "slug": "A11-10-which-report-answers-which-question",
+      "section": "A11.10",
+      "title": "Which report answers which question",
+      "intro": {
+        "text": "Here is which report answers which question.",
+        "voice": "a11/voice/A11-10/01.wav",
+        "dur": 2.967
+      },
+      "record": null,
+      "scenes": [],
+      "checklist": [
+        {
+          "text": "How did today go? The Manager report.",
+          "voice": "a11/voice/A11-10/02.wav",
+          "dur": 2.926
+        },
+        {
+          "text": "One whole day, to the paisa? The Night audit report.",
+          "voice": "a11/voice/A11-10/03.wav",
+          "dur": 3.716
+        },
+        {
+          "text": "How full were we? Monthly occupancy, or Monthly statistics.",
+          "voice": "a11/voice/A11-10/04.wav",
+          "dur": 4.296
+        },
+        {
+          "text": "What do companies owe? City ledger.",
+          "voice": "a11/voice/A11-10/05.wav",
+          "dur": 2.961
+        },
+        {
+          "text": "Who did not come? No show.",
+          "voice": "a11/voice/A11-10/06.wav",
+          "dur": 2.439
+        },
+        {
+          "text": "What did each cashier take? Cashier shift.",
+          "voice": "a11/voice/A11-10/07.wav",
+          "dur": 3.286
+        },
+        {
+          "text": "The month's tax? Lodging tax, and the GST sales register.",
+          "voice": "a11/voice/A11-10/08.wav",
+          "dur": 5.016
+        },
+        {
+          "text": "Foreign guests filed? The Form 3 register.",
+          "voice": "a11/voice/A11-10/09.wav",
+          "dur": 3.368
+        },
+        {
+          "text": "The month for the accountant? Accounting export.",
+          "voice": "a11/voice/A11-10/10.wav",
+          "dur": 2.938
+        },
+        {
+          "text": "What is in the stores? Closing stock.",
+          "voice": "a11/voice/A11-10/11.wav",
+          "dur": 2.671
+        }
+      ],
+      "outro": {
+        "text": "That is the reports. Thank you for watching.",
+        "voice": "a11/voice/A11-10/12.wav",
+        "dur": 2.973
+      },
+      "next": null
+    }
+  ]
+}

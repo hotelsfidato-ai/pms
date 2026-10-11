@@ -1,0 +1,205 @@
+{
+  "chapter": "A11",
+  "title": "Reports",
+  "manualShots": "a11",
+  "videos": [
+    {
+      "id": "A11-01",
+      "section": "A11.1",
+      "title": "Finding a report",
+      "intro": "Every report in Fidato PMS is a few clicks away. In this video you will find a report, star the ones you use, and search for one that is not in your menu.",
+      "scenes": [
+        { "shot": "A11-01", "say": "In the Front office menu, the part called Reports lists three screens." },
+        { "shot": "A11-01", "focus": 1, "say": "Night audit is the screen that closes the day. It is not a report: it has its own chapter." },
+        { "shot": "A11-01", "focus": 2, "say": "All reports holds every report your role may open." },
+        { "shot": "A11-01", "focus": 3, "say": "Manager report is the one most opened, so it is in the menu itself." },
+        { "shot": "A11-01", "focus": 5, "say": "All reports puts them in four groups: The day, Money owed, Statutory, and Store and equipment." },
+        { "shot": "A11-01", "focus": 4, "say": "To find one, type part of its name, or a word from its description." },
+        { "shot": "A11-01", "focus": 7, "say": "Click Open on a card to read the report." },
+        { "shot": "A11-01", "focus": 6, "say": "Tap the star to keep a report at the top." },
+        { "shot": "A11-02", "focus": 1, "say": "Your starred reports then sit under Starred, above the groups." },
+        { "shot": "A11-02", "focus": 2, "say": "Tap a filled star again to take it off. Stars are kept in this browser only." },
+        { "shot": "A11-03", "focus": 1, "say": "A report not in your menu is one search away. Press Control K, or click Find a screen, and type a word, such as G S T." },
+        { "shot": "A11-03", "focus": 2, "say": "Not in your menu only means it is not listed for you. You may open it: click it, or press Enter." }
+      ],
+      "outro": "That is where the reports are. The next video shows what every report has in common."
+    },
+    {
+      "id": "A11-02",
+      "section": "A11.2",
+      "title": "Every report works the same way",
+      "intro": "Every report is laid out like a printed page, and works the same way. Here is what to look for.",
+      "scenes": [
+        { "shot": "A11-04", "focus": 1, "say": "Print prints the report alone, without the menu or the buttons." },
+        { "shot": "A11-04", "focus": 2, "say": "PDF saves it as a file, made on the server from the same figures." },
+        { "shot": "A11-04", "focus": 3, "say": "Excel saves a real Excel workbook." },
+        { "shot": "A11-04", "focus": 4, "say": "And CSV saves a plain file that any spreadsheet opens. The buttons wait until the report has loaded." },
+        { "shot": "A11-04", "focus": 5, "say": "Under the hotel's name, one line of facts says which day, or which period, the report covers." },
+        { "shot": "A11-22", "focus": 1, "say": "Each report is for the hotel's business date, or its month, or its year. There is no date to choose." },
+        { "shot": "A11-22", "focus": 2, "say": "A report with nothing in it still prints, and says so in words." },
+        { "shot": "A11-22", "focus": 3, "say": "At the foot, Printed says when this copy was made." },
+        { "shot": "A11-22", "focus": 4, "say": "And this is who made it." },
+        { "shot": "A11-12", "focus": 4, "say": "A figure in red is below zero. It is real, not a mistake." },
+        { "shot": "A11-10", "focus": 4, "say": "A dash is not a zero. It means the system does not hold that figure, and the notes under the report say which." }
+      ],
+      "outro": "Until the night audit has run, today's figures can still change. A report opened at noon is the day so far."
+    },
+    {
+      "id": "A11-03",
+      "section": "A11.3",
+      "title": "The Manager report",
+      "intro": "The Manager report is the day in three columns. It is the one an owner opens first.",
+      "scenes": [
+        { "shot": "A11-04", "say": "Open Manager report in the menu. It is read afresh every time it opens." },
+        { "shot": "A11-04", "focus": 6, "say": "Every line has three figures. Today. Then P T D, the period to date, from the 1st of this month. And Y T D, the year to date, from 1 April." },
+        { "shot": "A11-04", "focus": 5, "say": "The facts line shows the date, where each column starts, and the currency." },
+        { "shot": "A11-04", "focus": 7, "say": "The report runs in bands: room charges, extra charges, tax, revenue, payment, the ledgers, and more." },
+        { "shot": "A11-05", "focus": 1, "say": "In the room summary, Sold Room counts the rooms sold. A complimentary room counts as sold." },
+        { "shot": "A11-05", "focus": 2, "say": "Occupancy is the rooms sold, as a share of the rooms that could be sold." },
+        { "shot": "A11-05", "focus": 3, "say": "The average daily rate is the room charges divided by the rooms sold. Extras, food and tax are not in it." },
+        { "shot": "A11-05", "focus": 4, "say": "Revenue per available room divides the room charges by every room that could be sold. It falls when rooms stay empty." },
+        { "shot": "A11-05", "focus": 5, "say": "Below the statistics, the POS summary is the restaurant, outlet by outlet." }
+      ],
+      "outro": "A complimentary room lifts the occupancy and lowers the average rate, because it earns nothing."
+    },
+    {
+      "id": "A11-04",
+      "section": "A11.4",
+      "title": "The Night audit report",
+      "intro": "The Night audit report is one day, to the paisa. It only reads the day: the night audit itself is run on its own screen.",
+      "scenes": [
+        { "shot": "A11-06", "say": "Open All reports, then Night audit report. It is wider than the screen, so it scrolls sideways. Here it is drawn smaller, to show every column." },
+        { "shot": "A11-06", "focus": 1, "say": "Room Charges lists every room charged for the night: the booking, the guest, where the booking came from, and the rate." },
+        { "shot": "A11-06", "focus": 2, "say": "Var % is how far the rate given is below the room's normal rate." },
+        { "shot": "A11-06", "focus": 3, "say": "Checkin By names who checked the guest in. A dash means it was not recorded." },
+        { "shot": "A11-06", "focus": 4, "say": "Complimentary lists the rooms given free." },
+        { "shot": "A11-06", "focus": 5, "say": "Checked Out is who left today, with their bill. A balance below zero means the guest paid more than the bill came to." },
+        { "shot": "A11-07", "focus": 1, "say": "Daily Sales shows the day's sales by type, with their tax." },
+        { "shot": "A11-07", "focus": 2, "say": "Receipt Detail lists every payment taken, by method." },
+        { "shot": "A11-07", "focus": 3, "say": "Then the receipts by user." },
+        { "shot": "A11-07", "focus": 4, "say": "And by payment method." },
+        { "shot": "A11-08", "focus": 1, "say": "Room Status counts the rooms: occupied, due out, vacant, departed, reserved and blocked. Occupied means checked in." },
+        { "shot": "A11-08", "focus": 2, "say": "Pax Status counts the guests who arrived, checked out, and stayed over." },
+        { "shot": "A11-08", "focus": 3, "say": "Pax Analysis splits the guests by rate type." },
+        { "shot": "A11-08", "focus": 4, "say": "And the POS summary is the restaurant's day." }
+      ],
+      "outro": "Before the audit runs, a guest who has not arrived is still in Room Charges. They go when the night audit marks the no-show."
+    },
+    {
+      "id": "A11-05",
+      "section": "A11.5",
+      "title": "Occupancy and statistics",
+      "intro": "Three reports show the month and the year: Monthly occupancy, Monthly statistics, and Yearly statistics.",
+      "scenes": [
+        { "shot": "A11-09", "focus": 1, "say": "Monthly occupancy covers the business date's month." },
+        { "shot": "A11-09", "focus": 2, "say": "One bar per day shows the occupancy, in percent. Full houses and empty days both stand out." },
+        { "shot": "A11-10", "say": "Monthly statistics is the same month as a grid, one row per day." },
+        { "shot": "A11-10", "focus": 1, "say": "Night Sold is the rooms sold that night." },
+        { "shot": "A11-10", "focus": 2, "say": "Next to it, the occupancy. Complimentary rooms count with the rooms sold." },
+        { "shot": "A11-10", "focus": 3, "say": "Then the average daily rate, and the revenue per available room." },
+        { "shot": "A11-10", "focus": 4, "say": "Expense is not recorded in this system, so it is a dash, never a zero." },
+        { "shot": "A11-10", "say": "Days after today have figures too: the nights already booked, at the booking's rate. They change if the booking changes." },
+        { "shot": "A11-10", "say": "Yearly statistics has the same columns, one row per month from January to December, with a grand total for the year." }
+      ],
+      "outro": "Rooms are counted from the day the hotel first traded. Earlier days show nothing."
+    },
+    {
+      "id": "A11-06",
+      "section": "A11.6",
+      "title": "Money owed",
+      "intro": "Four reports show money still owed, and money taken: City ledger, No show, Guest ledger and Cashier shift.",
+      "scenes": [
+        { "shot": "A11-11", "say": "City ledger is the bills sent to a company or a booking site, account by account, for the business date." },
+        { "shot": "A11-11", "focus": 1, "say": "Ignore zero balance account is on when it opens. Turn it off to see every account, even those with nothing on them." },
+        { "shot": "A11-11", "focus": 2, "say": "The facts line says the day, and whether zero balances are left out." },
+        { "shot": "A11-11", "focus": 3, "say": "Each account shows its opening balance, the bills sent to it, what it paid, and its closing balance." },
+        { "shot": "A11-22", "focus": 2, "say": "No show lists the bookings that never arrived on the day. When everybody came, it still prints, and says so." },
+        { "shot": "A11-12", "focus": 3, "say": "Guest ledger is every guest's bill that moved from the 1st of the month to the business date: opening, charges, received and closing." },
+        { "shot": "A11-12", "focus": 4, "say": "A closing in red is below zero: more was received than charged." },
+        { "shot": "A11-12", "focus": 1, "say": "This report has Print and CSV only." },
+        { "shot": "A11-13", "focus": 1, "say": "Cashier shift is what each cashier took on the business date, by method." },
+        { "shot": "A11-13", "focus": 2, "say": "Not on record means the payment was taken before the system recorded who took it. Nobody's name is guessed." },
+        { "shot": "A11-13", "focus": 3, "say": "Each method is its own row, with how many receipts and how much." },
+        { "shot": "A11-13", "focus": 4, "say": "A receipt that was reversed is not money the cashier holds, so it is left out." }
+      ],
+      "outro": "The revenue manager does not see City ledger, Guest ledger or Cashier shift."
+    },
+    {
+      "id": "A11-07",
+      "section": "A11.7",
+      "title": "The statutory reports",
+      "intro": "Three reports are for filing with the government: Lodging tax, the GST sales register, and the Form 3 register. This system files nothing itself.",
+      "scenes": [
+        { "shot": "A11-14", "focus": 1, "say": "Lodging tax covers the whole month." },
+        { "shot": "A11-14", "focus": 3, "say": "Check Out Bills has one row for each day a bill was issued, with that day's first and last bill number." },
+        { "shot": "A11-14", "focus": 2, "say": "CGST and SGST are each half the tax the bills carried, on the room rent less its discount." },
+        { "shot": "A11-14", "focus": 4, "say": "Bill numbers run on with no gap. A gap is an audit finding." },
+        { "shot": "A11-14", "focus": 5, "say": "The group's accountant confirms this sheet before anything is filed from it." },
+        { "shot": "A11-15", "focus": 3, "say": "The GST sales register lists every invoice and credit note issued this month, as the GST return wants them." },
+        { "shot": "A11-15", "focus": 4, "say": "The total line counts the documents." },
+        { "shot": "A11-15", "focus": 5, "say": "A credit note is its own row, below zero. The place of supply is always the hotel's own state." },
+        { "shot": "A11-15", "focus": 2, "say": "CSV saves the columns the GST return upload wants." },
+        { "shot": "A11-16", "focus": 1, "say": "The Form 3 register lists the foreign guests who arrived this month, and how many still await an FRRO number." },
+        { "shot": "A11-16", "focus": 2, "say": "This system does not file with the FRRO. Filing happens on the government portal." },
+        { "shot": "A11-16", "focus": 3, "say": "The portal's numbers are typed on the Form 3 screen, and show here." }
+      ],
+      "outro": "The Form 3 register shows passports, so only the people who check guests in can open it."
+    },
+    {
+      "id": "A11-08",
+      "section": "A11.8",
+      "title": "The accounting export",
+      "intro": "The Accounting export hands your accountant the hotel's days as a file. It reads the same figures the reports print, and changes nothing.",
+      "scenes": [
+        { "shot": "A11-17", "say": "Open it with Find a screen: type tally, or export. It is for the owner, an admin, the GM and the accountant." },
+        { "shot": "A11-17", "focus": 1, "say": "From starts on the 1st of the month. This day is included." },
+        { "shot": "A11-17", "focus": 2, "say": "To is the business date. This day is included too." },
+        { "shot": "A11-17", "focus": 3, "say": "Choose the day book, as a CSV or as an Excel file: one row a day." },
+        { "shot": "A11-17", "focus": 4, "say": "The two Tally choices make no file yet. They wait for the ledger names in your own books." },
+        { "shot": "A11-17", "focus": 5, "say": "Check the table below, then tap Export." },
+        { "shot": "A11-18", "focus": 1, "say": "If the night audit has not run for some of the days, a yellow note says so. Their figures may still change." },
+        { "shot": "A11-18", "focus": 2, "say": "The Night audit column says Closed, or Not run, for each day." },
+        { "shot": "A11-18", "focus": 3, "say": "Received from companies is kept apart from sales and receipts." },
+        { "shot": "A11-18", "focus": 4, "say": "This counts what was charged and received each day. Lodging tax counts the bills issued, so a stay still in house is here and not there." }
+      ],
+      "outro": "Tell your accountant before you send a month that is not closed."
+    },
+    {
+      "id": "A11-09",
+      "section": "A11.9",
+      "title": "The Store and equipment reports",
+      "intro": "Nine reports show what the stores hold and use, and where the equipment is.",
+      "scenes": [
+        { "shot": "A11-19", "focus": 1, "say": "On the Store, tap Reports." },
+        { "shot": "A11-19", "focus": 2, "say": "Choose a report. Closing stock is the first of the nine." },
+        { "shot": "A11-20", "focus": 1, "say": "Or find Store reports with Find a screen: all nine on one page." },
+        { "shot": "A11-20", "focus": 2, "say": "Click Open on a card." },
+        { "shot": "A11-20", "say": "They cover closing stock, movement by day, consumption, wastage and breakage, count differences, dead stock, days of cover, supplier spend, and the equipment." },
+        { "shot": "A11-21", "focus": 1, "say": "Closing stock is as on the business date." },
+        { "shot": "A11-21", "focus": 2, "say": "Each store lists its items: on hand, the unit cost, and the value, as recorded." },
+        { "shot": "A11-21", "focus": 3, "say": "Then the store's total." },
+        { "shot": "A11-21", "focus": 4, "say": "All stores sums up every store." }
+      ],
+      "outro": "Costs are as recorded: delivery prices before GST, at the running average. A price nobody recorded is a dash."
+    },
+    {
+      "id": "A11-10",
+      "section": "A11.10",
+      "title": "Which report answers which question",
+      "intro": "Here is which report answers which question.",
+      "checklist": [
+        "How did today go? The Manager report.",
+        "One whole day, to the paisa? The Night audit report.",
+        "How full were we? Monthly occupancy, or Monthly statistics.",
+        "What do companies owe? City ledger.",
+        "Who did not come? No show.",
+        "What did each cashier take? Cashier shift.",
+        "The month's tax? Lodging tax, and the GST sales register.",
+        "Foreign guests filed? The Form 3 register.",
+        "The month for the accountant? Accounting export.",
+        "What is in the stores? Closing stock."
+      ],
+      "outro": "That is the reports. Thank you for watching."
+    }
+  ]
+}

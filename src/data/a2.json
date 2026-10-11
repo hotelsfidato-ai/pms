@@ -1,0 +1,1090 @@
+{
+  "chapter": "A2",
+  "title": "Bookings",
+  "manualShots": "a2",
+  "videos": [
+    {
+      "id": "A2-01",
+      "slug": "A2-01-finding-a-booking",
+      "section": "A2.1",
+      "title": "Finding a booking",
+      "intro": {
+        "text": "Every booking on the file is in one list, whatever its state. In this video you will find a booking, and open it.",
+        "voice": "a2/voice/A2-01/01.wav",
+        "dur": 6.804
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A2-01",
+          "focus": null,
+          "line": {
+            "text": "Open All bookings, under Bookings in the menu. It shows every booking on the file, with the business date at the top.",
+            "voice": "a2/voice/A2-01/02.wav",
+            "dur": 6.851
+          }
+        },
+        {
+          "shot": "A2-01",
+          "focus": 1,
+          "line": {
+            "text": "Type in the search box: part of the guest's name, the reference, a room number, or a few digits of the phone.",
+            "voice": "a2/voice/A2-01/03.wav",
+            "dur": 6.508
+          }
+        },
+        {
+          "shot": "A2-01",
+          "focus": 2,
+          "line": {
+            "text": "Or tap a tile to see one state. Due in is every confirmed booking still to arrive, on any date. Each tile shows its count.",
+            "voice": "a2/voice/A2-01/04.wav",
+            "dur": 8.169
+          }
+        },
+        {
+          "shot": "A2-01",
+          "focus": 4,
+          "line": {
+            "text": "The status says where each booking stands: due in, in house, due out, checked out, or waiting for the hotel.",
+            "voice": "a2/voice/A2-01/05.wav",
+            "dur": 7.402
+          }
+        },
+        {
+          "shot": "A2-01",
+          "focus": 3,
+          "line": {
+            "text": "Cancelled, void and no-show bookings are never deleted. They are kept here, under their own tile.",
+            "voice": "a2/voice/A2-01/06.wav",
+            "dur": 5.782
+          }
+        },
+        {
+          "shot": "A2-16",
+          "focus": null,
+          "line": {
+            "text": "Click a row, and the booking opens in the stay panel. Its More options holds every change to a booking.",
+            "voice": "a2/voice/A2-01/07.wav",
+            "dur": 5.945
+          }
+        },
+        {
+          "shot": "A2-01",
+          "focus": null,
+          "line": {
+            "text": "The Bookings menu also holds New booking and CRS bookings. Groups is found with Find a screen, Ctrl K.",
+            "voice": "a2/voice/A2-01/08.wav",
+            "dur": 7.35
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "The next videos take a booking from the first call to the guest's voucher.",
+        "voice": "a2/voice/A2-01/09.wav",
+        "dur": 3.675
+      },
+      "next": "A booking on the phone: the guest and the dates"
+    },
+    {
+      "id": "A2-02",
+      "slug": "A2-02-a-booking-on-the-phone-the-guest-and-the-dates",
+      "section": "A2.2",
+      "title": "A booking on the phone: the guest and the dates",
+      "intro": {
+        "text": "A guest calls to book a room. In this video you will fill in who is coming, and for which nights.",
+        "voice": "a2/voice/A2-02/01.wav",
+        "dur": 5.643
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A2-02",
+          "focus": null,
+          "line": {
+            "text": "Open New booking. It is one page, and it opens on today's business date, for one night and one room.",
+            "voice": "a2/voice/A2-02/02.wav",
+            "dur": 6.665
+          }
+        },
+        {
+          "shot": "A2-02",
+          "focus": 1,
+          "line": {
+            "text": "Type the guest's name, or the company's. It is the only guest detail that must be filled in.",
+            "voice": "a2/voice/A2-02/03.wav",
+            "dur": 5.574
+          }
+        },
+        {
+          "shot": "A2-02",
+          "focus": 2,
+          "line": {
+            "text": "Type the phone number. It is needed for online check-in and for WhatsApp. Add the email if the guest gives one.",
+            "voice": "a2/voice/A2-02/04.wav",
+            "dur": 7.066
+          }
+        },
+        {
+          "shot": "A2-02",
+          "focus": null,
+          "line": {
+            "text": "If the system knows that phone, a line asks: same person? Press Same person only if it really is them.",
+            "voice": "a2/voice/A2-02/05.wav",
+            "dur": 6.92
+          }
+        },
+        {
+          "shot": "A2-02",
+          "focus": 3,
+          "line": {
+            "text": "Ask the guest if they agree to WhatsApp, and switch it on if they do. Unticked, messages go by email if there is one.",
+            "voice": "a2/voice/A2-02/06.wav",
+            "dur": 7.478
+          }
+        },
+        {
+          "shot": "A2-02",
+          "focus": 4,
+          "line": {
+            "text": "Set the arrival and departure dates. The nights are counted under them. The night of departure is not charged.",
+            "voice": "a2/voice/A2-02/07.wav",
+            "dur": 6.3
+          }
+        },
+        {
+          "shot": "A2-03",
+          "focus": 1,
+          "line": {
+            "text": "Choose the booking source: how the booking reached the hotel. Nothing is chosen for you, and it cannot be filled in later.",
+            "voice": "a2/voice/A2-02/08.wav",
+            "dur": 7.269
+          }
+        },
+        {
+          "shot": "A2-02",
+          "focus": 5,
+          "line": {
+            "text": "On the right, The booking adds it all up as you type: the nights, the rooms, the room charges, the GST, and what is due.",
+            "voice": "a2/voice/A2-02/09.wav",
+            "dur": 7.553
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Next: the room, and its price.",
+        "voice": "a2/voice/A2-02/10.wav",
+        "dur": 2.769
+      },
+      "next": "The room and its price"
+    },
+    {
+      "id": "A2-03",
+      "slug": "A2-03-the-room-and-its-price",
+      "section": "A2.2",
+      "title": "The room and its price",
+      "intro": {
+        "text": "The guest asks what it will cost. In this video you will choose the room, and read its price.",
+        "voice": "a2/voice/A2-03/01.wav",
+        "dur": 5.841
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A2-03",
+          "focus": 2,
+          "line": {
+            "text": "Choose the room type.",
+            "voice": "a2/voice/A2-03/02.wav",
+            "dur": 1.434
+          }
+        },
+        {
+          "shot": "A2-03",
+          "focus": 3,
+          "line": {
+            "text": "Choose the meal plan: room only, with breakfast, with one more meal, with all meals, or everything charged to the room.",
+            "voice": "a2/voice/A2-03/03.wav",
+            "dur": 7.019
+          }
+        },
+        {
+          "shot": "A2-03",
+          "focus": null,
+          "line": {
+            "text": "Then set how many rooms, adults and children.",
+            "voice": "a2/voice/A2-03/04.wav",
+            "dur": 2.816
+          }
+        },
+        {
+          "shot": "A2-03",
+          "focus": 4,
+          "line": {
+            "text": "Leave the rate empty, and the price comes from the rate calendar. Type a number only for a rate agreed with the guest.",
+            "voice": "a2/voice/A2-03/05.wav",
+            "dur": 6.676
+          }
+        },
+        {
+          "shot": "A2-03",
+          "focus": 5,
+          "line": {
+            "text": "Tick Rate includes GST when the rate you typed already has the tax in it. It stays off unless you tick it.",
+            "voice": "a2/voice/A2-03/06.wav",
+            "dur": 6.839
+          }
+        },
+        {
+          "shot": "A2-03",
+          "focus": 6,
+          "line": {
+            "text": "Picking a room is optional. Assign later is fine. A room you pick is kept.",
+            "voice": "a2/voice/A2-03/07.wav",
+            "dur": 5.278
+          }
+        },
+        {
+          "shot": "A2-03",
+          "focus": 7,
+          "line": {
+            "text": "This says how many rooms of the type are free on every night of the stay. You may book more. You decide.",
+            "voice": "a2/voice/A2-03/08.wav",
+            "dur": 6.578
+          }
+        },
+        {
+          "shot": "A2-03",
+          "focus": 8,
+          "line": {
+            "text": "The price line shows the rate a night, the tax and its rate, and the nights. Read it to the guest.",
+            "voice": "a2/voice/A2-03/09.wav",
+            "dur": 5.887
+          }
+        },
+        {
+          "shot": "A2-03",
+          "focus": null,
+          "line": {
+            "text": "If there is no price for the party, the line says so, and the total stays a dash. The system never guesses a price.",
+            "voice": "a2/voice/A2-03/10.wav",
+            "dur": 6.955
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Next: the ID, the advance, and saving the booking.",
+        "voice": "a2/voice/A2-03/11.wav",
+        "dur": 3.849
+      },
+      "next": "The advance, the details and Save booking"
+    },
+    {
+      "id": "A2-04",
+      "slug": "A2-04-the-advance-the-details-and-save-booking",
+      "section": "A2.3",
+      "title": "The advance, the details and Save booking",
+      "intro": {
+        "text": "In this video you will finish the form: the ID, an advance, the folded details, and the three buttons.",
+        "voice": "a2/voice/A2-04/01.wav",
+        "dur": 6.821
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A2-04",
+          "focus": 1,
+          "line": {
+            "text": "For a booking still to come, only the nationality is asked, as a two-letter code. The document is taken at check-in.",
+            "voice": "a2/voice/A2-04/02.wav",
+            "dur": 7.187
+          }
+        },
+        {
+          "shot": "A2-04",
+          "focus": 2,
+          "line": {
+            "text": "If the guest pays an advance now, type the amount and how it was paid. It is held as the guest's credit until the nights are charged.",
+            "voice": "a2/voice/A2-04/03.wav",
+            "dur": 7.803
+          }
+        },
+        {
+          "shot": "A2-04",
+          "focus": 3,
+          "line": {
+            "text": "Four sections are folded. More about the guest holds the address, the offers tick, and woman travelling alone.",
+            "voice": "a2/voice/A2-04/04.wav",
+            "dur": 6.491
+          }
+        },
+        {
+          "shot": "A2-05",
+          "focus": 1,
+          "line": {
+            "text": "Booking details holds whether the booking is confirmed, or waiting for the hotel.",
+            "voice": "a2/voice/A2-04/05.wav",
+            "dur": 4.859
+          }
+        },
+        {
+          "shot": "A2-05",
+          "focus": 2,
+          "line": {
+            "text": "The expected check-in and check-out times, if the guest said.",
+            "voice": "a2/voice/A2-04/06.wav",
+            "dur": 3.849
+          }
+        },
+        {
+          "shot": "A2-05",
+          "focus": 3,
+          "line": {
+            "text": "The business source: the company or agent behind the booking, if there is one.",
+            "voice": "a2/voice/A2-04/07.wav",
+            "dur": 4.43
+          }
+        },
+        {
+          "shot": "A2-05",
+          "focus": 4,
+          "line": {
+            "text": "And the sales person.",
+            "voice": "a2/voice/A2-04/08.wav",
+            "dur": 1.55
+          }
+        },
+        {
+          "shot": "A2-05",
+          "focus": 5,
+          "line": {
+            "text": "A discount: up to ten percent by hand, or rupees off a night, each with a reason. More than that only through a named promotion.",
+            "voice": "a2/voice/A2-04/09.wav",
+            "dur": 7.872
+          }
+        },
+        {
+          "shot": "A2-04",
+          "focus": null,
+          "line": {
+            "text": "Company is for a booking billed to a company. Notes is for a note on the booking.",
+            "voice": "a2/voice/A2-04/10.wav",
+            "dur": 4.459
+          }
+        },
+        {
+          "shot": "A2-04",
+          "focus": 4,
+          "line": {
+            "text": "Then tap Save booking. On a phone booking, it is the one filled button.",
+            "voice": "a2/voice/A2-04/11.wav",
+            "dur": 5.051
+          }
+        },
+        {
+          "shot": "A2-04",
+          "focus": 5,
+          "line": {
+            "text": "A button that cannot be used yet says why, under the buttons. Here, Save and assign room waits for a room, and Check in now is only for an arrival today.",
+            "voice": "a2/voice/A2-04/12.wav",
+            "dur": 9.927
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Next: what to do once it is booked.",
+        "voice": "a2/voice/A2-04/13.wav",
+        "dur": 2.479
+      },
+      "next": "Booked: the reference and the voucher"
+    },
+    {
+      "id": "A2-05",
+      "slug": "A2-05-booked-the-reference-and-the-voucher",
+      "section": "A2.4",
+      "title": "Booked: the reference and the voucher",
+      "intro": {
+        "text": "The booking is saved. In this video you will see what the desk does next, in the order you do it on the phone.",
+        "voice": "a2/voice/A2-05/01.wav",
+        "dur": 6.63
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A2-06",
+          "focus": 1,
+          "line": {
+            "text": "The page says Booked, with the booking's reference. Read it to the guest.",
+            "voice": "a2/voice/A2-05/02.wav",
+            "dur": 4.645
+          }
+        },
+        {
+          "shot": "A2-06",
+          "focus": 2,
+          "line": {
+            "text": "The guest's page link shows a link to the guest's own page, to copy.",
+            "voice": "a2/voice/A2-05/03.wav",
+            "dur": 4.279
+          }
+        },
+        {
+          "shot": "A2-06",
+          "focus": 3,
+          "line": {
+            "text": "Send voucher sends the booking's one voucher. It goes once. After that, the page says when it went, and who sent it.",
+            "voice": "a2/voice/A2-05/04.wav",
+            "dur": 8.227
+          }
+        },
+        {
+          "shot": "A2-06",
+          "focus": null,
+          "line": {
+            "text": "Here the sending buttons are grey, and say why: on this demo hotel, sending is not set up. A button that cannot work always says why.",
+            "voice": "a2/voice/A2-05/05.wav",
+            "dur": 9.068
+          }
+        },
+        {
+          "shot": "A2-06",
+          "focus": 4,
+          "line": {
+            "text": "View voucher opens the same voucher to look at, print or save. It sends nothing.",
+            "voice": "a2/voice/A2-05/06.wav",
+            "dur": 5.26
+          }
+        },
+        {
+          "shot": "A2-06",
+          "focus": 5,
+          "line": {
+            "text": "Send check-in link sends the voucher again, with the guest's check-in link.",
+            "voice": "a2/voice/A2-05/07.wav",
+            "dur": 4.035
+          }
+        },
+        {
+          "shot": "A2-06",
+          "focus": 6,
+          "line": {
+            "text": "Open the booking opens it in All bookings. Another booking clears the page for the next call.",
+            "voice": "a2/voice/A2-05/08.wav",
+            "dur": 5.341
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "If a step after the save is refused, the booking still stands, and this page says which step, and why.",
+        "voice": "a2/voice/A2-05/09.wav",
+        "dur": 6.914
+      },
+      "next": "A walk-in, checked in at once"
+    },
+    {
+      "id": "A2-06",
+      "slug": "A2-06-a-walk-in-checked-in-at-once",
+      "section": "A2.5",
+      "title": "A walk-in, checked in at once",
+      "intro": {
+        "text": "A guest at the desk, with no booking. In this video you will book them and check them in, on one page.",
+        "voice": "a2/voice/A2-06/01.wav",
+        "dur": 6.526
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A2-07",
+          "focus": null,
+          "line": {
+            "text": "Start from the room, not from the menu. Open Rooms.",
+            "voice": "a2/voice/A2-06/02.wav",
+            "dur": 3.553
+          }
+        },
+        {
+          "shot": "A2-07",
+          "focus": 1,
+          "line": {
+            "text": "Tap a free room. New booking opens on that room, for tonight, one night.",
+            "voice": "a2/voice/A2-06/03.wav",
+            "dur": 5.063
+          }
+        },
+        {
+          "shot": "A2-08",
+          "focus": 1,
+          "line": {
+            "text": "The booking source is already Walk-in.",
+            "voice": "a2/voice/A2-06/04.wav",
+            "dur": 2.317
+          }
+        },
+        {
+          "shot": "A2-08",
+          "focus": 2,
+          "line": {
+            "text": "The room is the one you tapped, with its state. This one is clean.",
+            "voice": "a2/voice/A2-06/05.wav",
+            "dur": 3.82
+          }
+        },
+        {
+          "shot": "A2-08",
+          "focus": 3,
+          "line": {
+            "text": "Type the guest's name and phone, and check the price: one night, with its tax.",
+            "voice": "a2/voice/A2-06/06.wav",
+            "dur": 5.196
+          }
+        },
+        {
+          "shot": "A2-09",
+          "focus": 1,
+          "line": {
+            "text": "For an arrival today, the ID is asked here. Choose the document.",
+            "voice": "a2/voice/A2-06/07.wav",
+            "dur": 4.471
+          }
+        },
+        {
+          "shot": "A2-09",
+          "focus": 2,
+          "line": {
+            "text": "And type its number. Check in now records them.",
+            "voice": "a2/voice/A2-06/08.wav",
+            "dur": 3.31
+          }
+        },
+        {
+          "shot": "A2-31",
+          "focus": 1,
+          "line": {
+            "text": "On a walk-in, the one filled button is Check in now. Tap it.",
+            "voice": "a2/voice/A2-06/09.wav",
+            "dur": 4.006
+          }
+        },
+        {
+          "shot": "A2-31",
+          "focus": 2,
+          "line": {
+            "text": "Save booking would book the room without checking the guest in.",
+            "voice": "a2/voice/A2-06/10.wav",
+            "dur": 3.594
+          }
+        },
+        {
+          "shot": "A2-10",
+          "focus": 1,
+          "line": {
+            "text": "The page says Checked in.",
+            "voice": "a2/voice/A2-06/11.wav",
+            "dur": 2.003
+          }
+        },
+        {
+          "shot": "A2-10",
+          "focus": 2,
+          "line": {
+            "text": "And the guest is in house, in room 301.",
+            "voice": "a2/voice/A2-06/12.wav",
+            "dur": 3.141
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Check in now uses the same checks as Arrivals. If it refuses, the booking still stands, and you check the guest in from Arrivals.",
+        "voice": "a2/voice/A2-06/13.wav",
+        "dur": 8.313
+      },
+      "next": "A group of rooms"
+    },
+    {
+      "id": "A2-07",
+      "slug": "A2-07-a-group-of-rooms",
+      "section": "A2.6",
+      "title": "A group of rooms",
+      "intro": {
+        "text": "A wedding, or a family: one guest, one set of dates, several rooms. In this video you will book a group, and open its page.",
+        "voice": "a2/voice/A2-07/01.wav",
+        "dur": 8.279
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A2-11",
+          "focus": 2,
+          "line": {
+            "text": "On New booking, set the number of rooms. More than one room becomes a group by itself.",
+            "voice": "a2/voice/A2-07/02.wav",
+            "dur": 5.841
+          }
+        },
+        {
+          "shot": "A2-11",
+          "focus": 1,
+          "line": {
+            "text": "Give the group a name. Left empty, it is named after the guest.",
+            "voice": "a2/voice/A2-07/03.wav",
+            "dur": 4.111
+          }
+        },
+        {
+          "shot": "A2-11",
+          "focus": 3,
+          "line": {
+            "text": "The booking on the right says the rooms are booked as one group. Save it.",
+            "voice": "a2/voice/A2-07/04.wav",
+            "dur": 4.122
+          }
+        },
+        {
+          "shot": "A2-12",
+          "focus": 1,
+          "line": {
+            "text": "Each room gets its own reference.",
+            "voice": "a2/voice/A2-07/05.wav",
+            "dur": 2.061
+          }
+        },
+        {
+          "shot": "A2-12",
+          "focus": 3,
+          "line": {
+            "text": "Open the booking opens the group's page.",
+            "voice": "a2/voice/A2-07/06.wav",
+            "dur": 2.653
+          }
+        },
+        {
+          "shot": "A2-13",
+          "focus": 1,
+          "line": {
+            "text": "Every group is listed on Groups. Here and coming shows the groups in the house or due. All adds the past ones.",
+            "voice": "a2/voice/A2-07/07.wav",
+            "dur": 6.926
+          }
+        },
+        {
+          "shot": "A2-13",
+          "focus": 2,
+          "line": {
+            "text": "Tap a group to see its rooms, with its room-nights and its dates.",
+            "voice": "a2/voice/A2-07/08.wav",
+            "dur": 3.617
+          }
+        },
+        {
+          "shot": "A2-13",
+          "focus": 3,
+          "line": {
+            "text": "Two figures are kept apart: what the rooms owe, and what the host owes. A dash means there is no host account.",
+            "voice": "a2/voice/A2-07/09.wav",
+            "dur": 6.526
+          }
+        },
+        {
+          "shot": "A2-13",
+          "focus": 4,
+          "line": {
+            "text": "Open the group for its page.",
+            "voice": "a2/voice/A2-07/10.wav",
+            "dur": 2.096
+          }
+        },
+        {
+          "shot": "A2-14",
+          "focus": 1,
+          "line": {
+            "text": "With no host account, every room settles its own bill. Open a host account when the host pays.",
+            "voice": "a2/voice/A2-07/11.wav",
+            "dur": 6.247
+          }
+        },
+        {
+          "shot": "A2-14",
+          "focus": 2,
+          "line": {
+            "text": "The guests shows what the rooms owe on their own bills.",
+            "voice": "a2/voice/A2-07/12.wav",
+            "dur": 3.176
+          }
+        },
+        {
+          "shot": "A2-14",
+          "focus": 3,
+          "line": {
+            "text": "Tick Host pays on a room to put its accommodation on the host's account. Nights already charged stay where they were posted.",
+            "voice": "a2/voice/A2-07/13.wav",
+            "dur": 6.793
+          }
+        },
+        {
+          "shot": "A2-14",
+          "focus": 4,
+          "line": {
+            "text": "The lead guest gets the group's one confirmation. It starts on the room booked first.",
+            "voice": "a2/voice/A2-07/14.wav",
+            "dur": 4.923
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A group's rooms are given their room numbers later, from Arrivals or the Calendar.",
+        "voice": "a2/voice/A2-07/15.wav",
+        "dur": 4.453
+      },
+      "next": "Waiting for the hotel"
+    },
+    {
+      "id": "A2-08",
+      "slug": "A2-08-waiting-for-the-hotel",
+      "section": "A2.7",
+      "title": "Waiting for the hotel",
+      "intro": {
+        "text": "Sometimes the hotel must accept a booking first. In this video you will hold a booking, and confirm it.",
+        "voice": "a2/voice/A2-08/01.wav",
+        "dur": 6.363
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A2-05",
+          "focus": 1,
+          "line": {
+            "text": "In Booking details, choose Waiting for the hotel. The room is held, and nothing goes to the guest.",
+            "voice": "a2/voice/A2-08/02.wav",
+            "dur": 6.317
+          }
+        },
+        {
+          "shot": "A2-15",
+          "focus": 1,
+          "line": {
+            "text": "After saving, the page says Held, waiting for the hotel.",
+            "voice": "a2/voice/A2-08/03.wav",
+            "dur": 3.965
+          }
+        },
+        {
+          "shot": "A2-15",
+          "focus": 2,
+          "line": {
+            "text": "No voucher and no link go to the guest until the booking is confirmed.",
+            "voice": "a2/voice/A2-08/04.wav",
+            "dur": 3.849
+          }
+        },
+        {
+          "shot": "A2-15",
+          "focus": 3,
+          "line": {
+            "text": "When the hotel accepts it, tap Confirm the booking.",
+            "voice": "a2/voice/A2-08/05.wav",
+            "dur": 3.478
+          }
+        },
+        {
+          "shot": "A2-20",
+          "focus": 1,
+          "line": {
+            "text": "Or do it later: open the booking, tap More options, then Confirm the booking.",
+            "voice": "a2/voice/A2-08/06.wav",
+            "dur": 4.801
+          }
+        },
+        {
+          "shot": "A2-21",
+          "focus": 1,
+          "line": {
+            "text": "The message says Confirmed: the voucher can go now. Every waiting room booked with it is confirmed together.",
+            "voice": "a2/voice/A2-08/07.wav",
+            "dur": 6.479
+          }
+        },
+        {
+          "shot": "A2-20",
+          "focus": 2,
+          "line": {
+            "text": "If the hotel does not accept it, choose Cancel this booking. It was never confirmed, so there is no charge, and nothing is sent.",
+            "voice": "a2/voice/A2-08/08.wav",
+            "dur": 8.139
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Bookings sold by the CRS arrive the same way: waiting, with the room held, for the hotel to confirm.",
+        "voice": "a2/voice/A2-08/09.wav",
+        "dur": 7.065
+      },
+      "next": "Changing dates, and moving rooms"
+    },
+    {
+      "id": "A2-09",
+      "slug": "A2-09-changing-dates-and-moving-rooms",
+      "section": "A2.8",
+      "title": "Changing dates, and moving rooms",
+      "intro": {
+        "text": "Plans change. In this video you will change a booking's dates, and move a guest to another room.",
+        "voice": "a2/voice/A2-09/01.wav",
+        "dur": 5.991
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A2-16",
+          "focus": null,
+          "line": {
+            "text": "Open the booking, and tap More options. The choices are listed by when they happen.",
+            "voice": "a2/voice/A2-09/02.wav",
+            "dur": 4.912
+          }
+        },
+        {
+          "shot": "A2-16",
+          "focus": 1,
+          "line": {
+            "text": "Change dates or guests changes the arrival, the departure, the adults and the children.",
+            "voice": "a2/voice/A2-09/03.wav",
+            "dur": 4.94
+          }
+        },
+        {
+          "shot": "A2-16",
+          "focus": 3,
+          "line": {
+            "text": "Move to another room is grey until the guest has arrived, and it says why. Before arrival, change the room on the Calendar.",
+            "voice": "a2/voice/A2-09/04.wav",
+            "dur": 7.42
+          }
+        },
+        {
+          "shot": "A2-16",
+          "focus": 4,
+          "line": {
+            "text": "What this booking includes lists its extras.",
+            "voice": "a2/voice/A2-09/05.wav",
+            "dur": 2.885
+          }
+        },
+        {
+          "shot": "A2-17",
+          "focus": 1,
+          "line": {
+            "text": "Here is Change dates or guests. The arrival stays as it is.",
+            "voice": "a2/voice/A2-09/06.wav",
+            "dur": 4.192
+          }
+        },
+        {
+          "shot": "A2-17",
+          "focus": 2,
+          "line": {
+            "text": "The departure moves one day later.",
+            "voice": "a2/voice/A2-09/07.wav",
+            "dur": 2.27
+          }
+        },
+        {
+          "shot": "A2-17",
+          "focus": 3,
+          "line": {
+            "text": "The line below says the change in words: two nights become three, with the room charges at the rate agreed.",
+            "voice": "a2/voice/A2-09/08.wav",
+            "dur": 6.125
+          }
+        },
+        {
+          "shot": "A2-17",
+          "focus": 4,
+          "line": {
+            "text": "Tap Save. If the room is taken on a night being added, nothing changes at all, and you are told.",
+            "voice": "a2/voice/A2-09/09.wav",
+            "dur": 6.084
+          }
+        },
+        {
+          "shot": "A2-18",
+          "focus": 1,
+          "line": {
+            "text": "The message says the stay was amended: two nights become three.",
+            "voice": "a2/voice/A2-09/10.wav",
+            "dur": 4.325
+          }
+        },
+        {
+          "shot": "A2-19",
+          "focus": 1,
+          "line": {
+            "text": "For a guest in the house, choose Move to another room. Type the new room.",
+            "voice": "a2/voice/A2-09/11.wav",
+            "dur": 4.482
+          }
+        },
+        {
+          "shot": "A2-19",
+          "focus": 2,
+          "line": {
+            "text": "Choose from which night. It starts on the business date.",
+            "voice": "a2/voice/A2-09/12.wav",
+            "dur": 3.495
+          }
+        },
+        {
+          "shot": "A2-19",
+          "focus": 3,
+          "line": {
+            "text": "Choose why they moved: they asked, an upgrade, a downgrade, or something wrong with the room.",
+            "voice": "a2/voice/A2-09/13.wav",
+            "dur": 5.776
+          }
+        },
+        {
+          "shot": "A2-19",
+          "focus": 4,
+          "line": {
+            "text": "Type a new rate only if the price changes. Left empty, nothing about the money changes.",
+            "voice": "a2/voice/A2-09/14.wav",
+            "dur": 5.724
+          }
+        },
+        {
+          "shot": "A2-19",
+          "focus": 6,
+          "line": {
+            "text": "Then tap Move. The nights before stay with the old room.",
+            "voice": "a2/voice/A2-09/15.wav",
+            "dur": 3.774
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Exchange with another guest swaps the rooms of two guests who are both in the house.",
+        "voice": "a2/voice/A2-09/16.wav",
+        "dur": 4.708
+      },
+      "next": "Cancel, void and no-show"
+    },
+    {
+      "id": "A2-10",
+      "slug": "A2-10-cancel-void-and-no-show",
+      "section": "A2.9",
+      "title": "Cancel, void and no-show",
+      "intro": {
+        "text": "Three ways a booking does not happen: cancelled, void, and no-show. None of them deletes the booking.",
+        "voice": "a2/voice/A2-10/01.wav",
+        "dur": 6.398
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A2-16",
+          "focus": 5,
+          "line": {
+            "text": "If the guest cancelled, open the booking, tap More options, then Cancel this booking.",
+            "voice": "a2/voice/A2-10/02.wav",
+            "dur": 5.149
+          }
+        },
+        {
+          "shot": "A2-22",
+          "focus": 1,
+          "line": {
+            "text": "The window first says what the booking's cancellation terms charge. This booking carries no terms, so nothing is charged.",
+            "voice": "a2/voice/A2-10/03.wav",
+            "dur": 7.652
+          }
+        },
+        {
+          "shot": "A2-22",
+          "focus": 2,
+          "line": {
+            "text": "Type why the guest cancelled. It must be filled in.",
+            "voice": "a2/voice/A2-10/04.wav",
+            "dur": 3.519
+          }
+        },
+        {
+          "shot": "A2-22",
+          "focus": 3,
+          "line": {
+            "text": "Keep it closes the window, and changes nothing.",
+            "voice": "a2/voice/A2-10/05.wav",
+            "dur": 2.978
+          }
+        },
+        {
+          "shot": "A2-22",
+          "focus": 4,
+          "line": {
+            "text": "Cancel the booking cancels this room only.",
+            "voice": "a2/voice/A2-10/06.wav",
+            "dur": 2.885
+          }
+        },
+        {
+          "shot": "A2-23",
+          "focus": 1,
+          "line": {
+            "text": "The message says the room is free again, and what was charged. Here, no charge.",
+            "voice": "a2/voice/A2-10/07.wav",
+            "dur": 5.608
+          }
+        },
+        {
+          "shot": "A2-24",
+          "focus": 1,
+          "line": {
+            "text": "The booking is not deleted. It is under Cancelled, void and no-show.",
+            "voice": "a2/voice/A2-10/08.wav",
+            "dur": 4.32
+          }
+        },
+        {
+          "shot": "A2-24",
+          "focus": 2,
+          "line": {
+            "text": "Here it is, marked Cancelled.",
+            "voice": "a2/voice/A2-10/09.wav",
+            "dur": 2.375
+          }
+        },
+        {
+          "shot": "A2-16",
+          "focus": 6,
+          "line": {
+            "text": "Void this booking is for one that should never have existed: entered twice, or the wrong property. A voided booking is left out of revenue, and out of cancellation figures.",
+            "voice": "a2/voice/A2-10/10.wav",
+            "dur": 10.322
+          }
+        },
+        {
+          "shot": "A2-24",
+          "focus": null,
+          "line": {
+            "text": "A confirmed guest who never comes is marked a no-show by the night audit. The booking's terms decide what is kept.",
+            "voice": "a2/voice/A2-10/11.wav",
+            "dur": 6.607
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Cancel and void are only for a booking that has not arrived. A guest in the house is checked out instead. That is bookings. Thank you for watching.",
+        "voice": "a2/voice/A2-10/12.wav",
+        "dur": 8.709
+      },
+      "next": null
+    }
+  ]
+}

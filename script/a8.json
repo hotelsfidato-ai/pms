@@ -1,0 +1,229 @@
+{
+  "chapter": "A8",
+  "title": "Restaurant",
+  "manualShots": "a8",
+  "videos": [
+    {
+      "id": "A8-01",
+      "section": "A8.1",
+      "title": "The restaurant's screens",
+      "intro": "The restaurant has its own space in Fidato PMS. In this video you will see each of its screens, and who uses which.",
+      "scenes": [
+        { "shot": "A8-01", "say": "Click Restaurant in the switcher at the top. The first screen is Tables: the room as it stands, every table in its section." },
+        { "shot": "A8-01", "focus": 1, "say": "At the top of each restaurant screen, one line for each kind of KOT says whether it is printing. Grey means all is well." },
+        { "shot": "A8-15", "say": "The Till is the cash register. The menu is on the left, the bill on the right, with discounts and every way to pay." },
+        { "shot": "A8-33", "say": "The Terminal does the same work on a fixed tablet in one outlet. Room service orders from guests arrive here too." },
+        { "shot": "A8-10", "say": "The Kitchen screen shows every dish the kitchen holds, oldest first. The cook taps Start, then Ready." },
+        { "shot": "A8-34", "say": "The Menu holds dishes, prices, variations, sides and the numbered add-ons. The kitchen manager keeps it." },
+        { "shot": "A8-25", "say": "Close restaurant day is the cash drawer: open the day with a float, record money in and out, count the drawer, and close." },
+        { "shot": "A8-35", "say": "And Restaurant setup is where the owner names the restaurant, lays out its tables, and chooses which computer prints which KOT." }
+      ],
+      "outro": "That is the restaurant at a glance. The next videos take each screen step by step."
+    },
+    {
+      "id": "A8-02",
+      "section": "A8.2",
+      "title": "Taking an order at a table",
+      "intro": "In this video you will take an order at a table, from the first tap to Send.",
+      "record": ["A8-02", "A8-03"],
+      "recordSay": "Watch it done first. The waiter taps table N4, then taps a Paneer Tikka and a Masala Chai.",
+      "scenes": [
+        { "shot": "A8-01", "focus": 2, "say": "Each table's colour says where it stands. White is free. Blue is running. Orange means dishes have gone to the kitchen. Green, the bill is printed. Yellow and grey mean the bill is finished, and the table needs Clear." },
+        { "shot": "A8-02", "say": "Tap a free table. The order pad opens over the room." },
+        { "shot": "A8-02", "focus": 1, "say": "Search the whole menu by name or short code." },
+        { "shot": "A8-02", "focus": 2, "say": "Or tap a section to see only its dishes. Tap it again to see them all." },
+        { "shot": "A8-02", "focus": 3, "say": "Tap a dish to add it. Tap it again for two. A dish with a choice, such as a size, asks first." },
+        { "shot": "A8-02", "focus": 4, "say": "This round, on the right, is what you are about to send." },
+        { "shot": "A8-03", "focus": 1, "say": "Use plus and minus to change the number." },
+        { "shot": "A8-03", "focus": 3, "say": "The bin takes a dish off the pad. Nothing has been sent yet, so nothing is struck." },
+        { "shot": "A8-03", "focus": 4, "say": "After each tap, a note says the dish was added, with its own Customise button. It stays until the next dish." },
+        { "shot": "A8-02", "focus": 5, "say": "When the round is ready, tap Send. Nothing reaches the kitchen until you do." },
+        { "shot": "A8-08", "focus": 1, "say": "The message names the table and the kitchen docket. If the connection is down, it says the table is held instead, and the kitchen does not have it yet." }
+      ],
+      "outro": "To add another round later, just tap the table again."
+    },
+    {
+      "id": "A8-03",
+      "section": "A8.3",
+      "title": "Add-ons, numbered and custom",
+      "intro": "A guest wants something extra on a dish. In this video you will add a numbered add-on, and a custom one that is not on the list.",
+      "record": ["A8-04", "A8-05", "A8-06", "A8-07"],
+      "recordSay": "Here it is done on the pad: Customise on the Paneer Tikka, a custom add-on called Extra papad at forty rupees, Add, and Done.",
+      "scenes": [
+        { "shot": "A8-04", "say": "Tap Customise beside the dish. The window shows the restaurant's numbered add-ons." },
+        { "shot": "A8-04", "focus": 1, "say": "Tap a number to add it to the dish. Tap it again for two. The dish stays one line, and the price moves as you tap." },
+        { "shot": "A8-04", "focus": 2, "say": "For something not on the list, tap Custom add-on." },
+        { "shot": "A8-05", "focus": 1, "say": "Type its name, the way the kitchen should read it." },
+        { "shot": "A8-05", "focus": 2, "say": "Type its price in rupees." },
+        { "shot": "A8-05", "focus": 3, "say": "Or tick Free. There is no default price. A blank, or a zero without Free, is not accepted." },
+        { "shot": "A8-05", "focus": 4, "say": "Set how many. It starts at one, and it is its own number." },
+        { "shot": "A8-05", "focus": 5, "say": "Tap Add." },
+        { "shot": "A8-06", "focus": 1, "say": "It is listed with its price. Add more if you need to, then tap Done." },
+        { "shot": "A8-07", "focus": 1, "say": "On the pad, the custom add-on sits under its dish. It goes to the kitchen with it, and onto the bill as its own line." },
+        { "shot": "A8-16", "focus": 1, "say": "If the kitchen already has the dish, Customise opens as Add to. Each add-on is then its own line under the dish, and goes to the kitchen with the next Send. On Tables, those dishes are listed as Already sent at the top of the pad." }
+      ],
+      "outro": "An add-on the kitchen already has comes off only for a manager, with a reason, just like a dish."
+    },
+    {
+      "id": "A8-04",
+      "section": "A8.4",
+      "title": "Sending to the kitchen: the KOTs",
+      "intro": "When you tap Send, the round goes to the kitchen and the bar on KOTs. Here is how they print.",
+      "record": ["A8-08", "A8-09"],
+      "recordSay": "The waiter taps Send. A moment later, two slips print: one in the kitchen, one at the bar.",
+      "scenes": [
+        { "shot": "A8-08", "focus": 2, "say": "The table turns orange: its dishes are with the kitchen." },
+        { "shot": "A8-09", "focus": 1, "say": "One Send keeps one KOT number. The kitchen's dishes print on a slip headed Kitchen KOT, in big letters." },
+        { "shot": "A8-09", "focus": 2, "say": "An add-on prints under its dish, so the cook does not miss it." },
+        { "shot": "A8-09", "focus": 3, "say": "The drinks print at the bar, on Bar KOT, with the same number. Which slip a dish goes on depends on its menu section." },
+        { "shot": "A8-01", "focus": 1, "say": "If a printing line turns red, a computer is off, or no computer prints that kind. Its KOTs wait, and print when it is back, the same day." }
+      ],
+      "outro": "A lost KOT can be printed again from Restaurant setup, on the computer that printed it. The slip then says Reprint."
+    },
+    {
+      "id": "A8-05",
+      "section": "A8.5",
+      "title": "The Kitchen screen",
+      "intro": "This video is for the kitchen and the bar: the Kitchen screen.",
+      "record": ["A8-10", "A8-11"],
+      "recordSay": "The chef's screen shows every ticket. Tapping Bar shows the bar's tickets only.",
+      "scenes": [
+        { "shot": "A8-10", "focus": 1, "say": "Each ticket shows how many, the dish, and the table. The oldest is first." },
+        { "shot": "A8-10", "focus": 2, "say": "A custom add-on sent on its own says which dish it is for." },
+        { "shot": "A8-10", "say": "Tap Start when you begin a dish. Tap Ready when it goes out. A ticket turns yellow after five minutes, and red after ten." },
+        { "shot": "A8-10", "focus": 4, "say": "By stage shows two columns. By table shows one card per table, so you can see when a whole table is ready." },
+        { "shot": "A8-11", "focus": 1, "say": "All, Kitchen or Bar chooses which tickets this screen shows. Each screen remembers its choice, so set the bar's screen to Bar once." },
+        { "shot": "A8-12", "focus": 1, "say": "On a phone, the choices sit in a second row." }
+      ],
+      "outro": "When a dish is ready, the waiter sees it on the table's tile, carries it out, and taps it as taken."
+    },
+    {
+      "id": "A8-06",
+      "section": "A8.6",
+      "title": "Printing the bill",
+      "intro": "In this video you will print a bill, before and after payment.",
+      "record": ["A8-13", "A8-14"],
+      "recordSay": "The waiter taps the printer under table N4. The interim bill prints at the bill printer.",
+      "scenes": [
+        { "shot": "A8-13", "focus": 1, "say": "Before payment, tap the printer under the table." },
+        { "shot": "A8-13", "focus": 2, "say": "The message says where it went. The table turns green: bill printed." },
+        { "shot": "A8-14", "focus": 1, "say": "A bill printed before payment is an Interim bill." },
+        { "shot": "A8-14", "focus": 2, "say": "It says Not paid, so nobody takes it for a receipt." },
+        { "shot": "A8-19", "focus": 2, "say": "After payment, the first print says Bill." },
+        { "shot": "A8-19", "focus": 1, "say": "Printed again, it says Bill, duplicate." },
+        { "shot": "A8-14", "say": "If the bill printer is off, the screen offers Print here, which opens the bill on your own device. With no bill printer chosen, the bill always opens on your device." }
+      ],
+      "outro": "Every bill shows the lines, the tax for each rate, the total, and how it was paid. It is a restaurant bill, not a tax invoice."
+    },
+    {
+      "id": "A8-07",
+      "section": "A8.7",
+      "title": "The Till: the cash register",
+      "intro": "The Till is where a bill is checked and paid. In this video you will take a payment.",
+      "record": ["A8-15", "A8-16", "A8-17"],
+      "recordSay": "The cashier opens table N4's bill on the Till, takes payment by UPI, and opens the paid bill to print it.",
+      "scenes": [
+        { "shot": "A8-15", "say": "From Tables, tap the eye under a table to open its bill on the Till." },
+        { "shot": "A8-15", "focus": 1, "say": "Every line is on the bill, including custom add-ons under their dish." },
+        { "shot": "A8-15", "focus": 2, "say": "Customise works on any dish here too." },
+        { "shot": "A8-15", "focus": 3, "say": "Send to the kitchen sends anything not yet sent. When nothing is waiting, it reads Kitchen has it all." },
+        { "shot": "A8-15", "say": "Discount always asks for a reason. Up to ten percent is allowed freely; more is a named promotion. Round off rounds the total to the rupee." },
+        { "shot": "A8-15", "focus": 4, "say": "To be paid, tap Cash, Card or U P I. Or type a room number and tap Charge to room; it asks first, naming the guest." },
+        { "shot": "A8-15", "focus": 5, "say": "Part, pay two ways, splits the payment. For cash, type the cash given and the change is shown." },
+        { "shot": "A8-26", "focus": 2, "say": "Here a bill is paid in cash." },
+        { "shot": "A8-17", "focus": 1, "say": "A paid bill moves under Settled today. Open it there to see how it was paid, and who took it." },
+        { "shot": "A8-17", "focus": 2, "say": "And tap Print the bill to print it." }
+      ],
+      "outro": "Food the kitchen already has comes off only for a manager, with a reason. And when the guests leave, clear the table on Tables."
+    },
+    {
+      "id": "A8-08",
+      "section": "A8.8",
+      "title": "The Terminal",
+      "intro": "The Terminal is for a fixed tablet or screen in one outlet.",
+      "scenes": [
+        { "shot": "A8-33", "focus": 1, "say": "Type the table for a new order." },
+        { "shot": "A8-33", "focus": 2, "say": "And tap Open the order. Then tap dishes to add them, and send them to the kitchen." },
+        { "shot": "A8-33", "focus": 3, "say": "Open orders are listed below. Tap one to open it. A dish the kitchen made ready shows Ready, with Taken." },
+        { "shot": "A8-33", "focus": 4, "say": "The first time, the Terminal asks which outlet it is in, and remembers it on the device. Change outlet is here." },
+        { "shot": "A8-33", "say": "A checked-in guest's room service order arrives here, waiting. Accept sends it to the kitchen, charged to the room. Decline asks for a reason, which the guest reads." }
+      ],
+      "outro": "Payment and printing work on the Terminal just as on the Till."
+    },
+    {
+      "id": "A8-09",
+      "section": "A8.9",
+      "title": "The cash drawer: Close restaurant day",
+      "intro": "In this video the cashier opens the drawer with a float, records money that was not a sale, counts the drawer, and closes the day.",
+      "scenes": [
+        { "shot": "A8-24", "say": "Once, before the first cash, open the day. Open Close restaurant day. The card Open the day shows a row for each note." },
+        { "shot": "A8-24", "focus": 1, "say": "Count the float in the tin, and type how many of each note. Here, four five hundreds and ten hundreds." },
+        { "shot": "A8-24", "focus": 2, "say": "Tap Open the day. From then on, each day opens by itself on the float the last close kept." },
+        { "shot": "A8-25", "say": "The day has three steps. Overview is what the shift did. Cash is what is in the tin. Finalize closes the day." },
+        { "shot": "A8-29", "say": "Money that was not a sale is recorded under In and out of the drawer. Tap Record, choose what happened, type how much and what it was for, and tap Record. An expense may wait for a manager's yes." },
+        { "shot": "A8-30", "say": "At the end of the shift, open Cash and count the drawer, note by note." },
+        { "shot": "A8-30", "focus": 2, "say": "The sum shows what the drawer should hold: the float, plus cash taken, plus or minus money in and out. If the count differs, it says short or over, and by how much." },
+        { "shot": "A8-30", "focus": 1, "say": "Tap Save the count." },
+        { "shot": "A8-31", "focus": 1, "say": "Finalize lists what must be decided first: bills still open, and tables never cleared." },
+        { "shot": "A8-31", "focus": 3, "say": "If the drawer is short or over, write why. It does not stop the close, but it must be written down." },
+        { "shot": "A8-32", "focus": 1, "say": "Type the float kept for the next day. The rest is deposited." },
+        { "shot": "A8-32", "focus": 2, "say": "Then tap Close. A closed day cannot be edited." }
+      ],
+      "outro": "After the close, new bills and payments wait for the night audit."
+    },
+    {
+      "id": "A8-10",
+      "section": "A8.10",
+      "title": "Setting up the restaurant and its printers",
+      "intro": "This video is for the owner, the GM and the kitchen manager: Restaurant setup, and the KOT printers.",
+      "scenes": [
+        { "shot": "A8-35", "focus": 1, "say": "Ready to open lists what a first order needs. Each line opens the screen that does it." },
+        { "shot": "A8-35", "focus": 3, "say": "The restaurant's name is printed on every bill." },
+        { "shot": "A8-35", "focus": 4, "say": "Sections and tables lay out the room. Nothing is deleted: a table taken away is switched off." },
+        { "shot": "A8-20", "say": "The KOT section chooses which computer prints which KOT. Do it on the computer next to the printer." },
+        { "shot": "A8-20", "focus": 1, "say": "The quick way: press Download the setup file, and open the file. Type the number of the receipt printer. It makes that printer the default, puts a KOT station shortcut on the desktop, starts it with Windows, and keeps the computer awake. Then it opens this section." },
+        { "shot": "A8-20", "focus": 2, "say": "Type this computer's name, such as Bar P C." },
+        { "shot": "A8-20", "focus": 3, "say": "Tick the kinds of KOT it prints." },
+        { "shot": "A8-20", "focus": 4, "say": "And tick Prints the bills if it does. Then Save." },
+        { "shot": "A8-21", "focus": 1, "say": "Kitchen and Bar are the KOT kinds to start. You can rename them, or add more, such as Tandoor. Each name heads its slip." },
+        { "shot": "A8-21", "focus": 2, "say": "Each kind prints on one computer. Ticking it on another computer moves it there." },
+        { "shot": "A8-21", "focus": 3, "say": "Each menu section prints on its tax heading's KOT to start: bar and alcohol to the bar, the rest to the kitchen. Change the odd one here." }
+      ],
+      "outro": "Leave the Kitchen screen open on each printing computer, and its printing line stays grey."
+    },
+    {
+      "id": "A8-11",
+      "section": "A8.11",
+      "title": "The menu and the add-ons list",
+      "intro": "This video is for the kitchen manager: the Menu.",
+      "scenes": [
+        { "shot": "A8-34", "say": "The prices are yours: nothing was shipped with the system. A price changed today applies to the next order." },
+        { "shot": "A8-34", "focus": 4, "say": "Add a part of the menu, such as Starters." },
+        { "shot": "A8-34", "focus": 5, "say": "A dish can have variations: a size, a crust. The first type's prices are the dish's; the next add to it." },
+        { "shot": "A8-34", "focus": 6, "say": "Take a dish off for a while when it runs out. The pad shows it, and refuses it, until then." },
+        { "shot": "A8-34", "focus": 2, "say": "The Add-ons tab holds the numbered list: number, name, price or free." },
+        { "shot": "A8-22", "focus": 1, "say": "Below it, Custom add-ons used shows what staff typed in the last thirty days, most used first." },
+        { "shot": "A8-22", "focus": 2, "say": "Number it makes a common one a numbered add-on, with its name and price filled in." }
+      ],
+      "outro": "That is the menu. The restaurant series ends with your shift in short."
+    },
+    {
+      "id": "A8-12",
+      "section": "A8.12",
+      "title": "Your shift in short",
+      "intro": "Here is a restaurant shift, from start to close.",
+      "checklist": [
+        "First day only: count the first float. Close restaurant day, Open the day.",
+        "Before service: check the printing lines are grey.",
+        "A table sits down: Tables, tap the table, tap the dishes, Send.",
+        "Something extra: Customise. A number, or a custom add-on.",
+        "A dish is ready: carry it out, and tap it as taken.",
+        "The guest asks for the bill: the printer under the table.",
+        "The guest pays: the Till. Cash, card, U P I, room, or two ways.",
+        "The guests leave: Tables, Clear.",
+        "End of the shift: settle every bill, clear the tables, count the drawer, keep the float, Close."
+      ],
+      "outro": "That is the restaurant. Thank you for watching."
+    }
+  ]
+}

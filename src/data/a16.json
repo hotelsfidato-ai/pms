@@ -1,0 +1,901 @@
+{
+  "chapter": "A16",
+  "title": "Across properties",
+  "manualShots": "a16",
+  "videos": [
+    {
+      "id": "A16-01",
+      "slug": "A16-01-all-properties-the-group-today",
+      "section": "A16.2",
+      "title": "All properties: the group today",
+      "intro": {
+        "text": "Across properties holds three screens that sit above any one hotel: All properties, Properties and People. This first video is All properties, for the owner and Admin.",
+        "voice": "a16/voice/A16-01/01.wav",
+        "dur": 10.647
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A16-01",
+          "focus": null,
+          "line": {
+            "text": "Open All properties, under Across properties in the menu. Each property is shown on its own business date.",
+            "voice": "a16/voice/A16-01/02.wav",
+            "dur": 6.514
+          }
+        },
+        {
+          "shot": "A16-01",
+          "focus": 1,
+          "line": {
+            "text": "The dark panel is the group today: occupancy, average rate, RevPAR and room revenue, every property added up.",
+            "voice": "a16/voice/A16-01/03.wav",
+            "dur": 8.017
+          }
+        },
+        {
+          "shot": "A16-01",
+          "focus": 2,
+          "line": {
+            "text": "Under each figure, the month so far, and the same month last year.",
+            "voice": "a16/voice/A16-01/04.wav",
+            "dur": 4.36
+          }
+        },
+        {
+          "shot": "A16-01",
+          "focus": 3,
+          "line": {
+            "text": "Last year counts only the properties that sold a room in that month a year back. Here it reads 0 of 1, so the last year figures are a dash.",
+            "voice": "a16/voice/A16-01/05.wav",
+            "dur": 8.499
+          }
+        },
+        {
+          "shot": "A16-01",
+          "focus": 4,
+          "line": {
+            "text": "Needs you lists what to act on, at every property. A property whose business date is behind comes first.",
+            "voice": "a16/voice/A16-01/06.wav",
+            "dur": 6.862
+          }
+        },
+        {
+          "shot": "A16-01",
+          "focus": 5,
+          "line": {
+            "text": "Each line names the property and what is waiting, such as an arrival not yet checked in. Click it to open the screen that deals with it.",
+            "voice": "a16/voice/A16-01/07.wav",
+            "dur": 7.454
+          }
+        },
+        {
+          "shot": "A16-02",
+          "focus": 1,
+          "line": {
+            "text": "Below, there is a row for each property, with its business date. Click its name to open its Rooms.",
+            "voice": "a16/voice/A16-01/08.wav",
+            "dur": 5.736
+          }
+        },
+        {
+          "shot": "A16-02",
+          "focus": 2,
+          "line": {
+            "text": "Each figure shows today on top, and the month so far under it.",
+            "voice": "a16/voice/A16-01/09.wav",
+            "dur": 3.954
+          }
+        },
+        {
+          "shot": "A16-02",
+          "focus": 3,
+          "line": {
+            "text": "The last column compares this month's room revenue so far with the same month last year.",
+            "voice": "a16/voice/A16-01/10.wav",
+            "dur": 5.184
+          }
+        },
+        {
+          "shot": "A16-02",
+          "focus": 4,
+          "line": {
+            "text": "A property with nothing to compare says No last year yet.",
+            "voice": "a16/voice/A16-01/11.wav",
+            "dur": 3.373
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A figure that did not come back is a dash, never a zero. And test hotels are never counted here.",
+        "voice": "a16/voice/A16-01/12.wav",
+        "dur": 6.386
+      },
+      "next": "Properties: a card per property"
+    },
+    {
+      "id": "A16-02",
+      "slug": "A16-02-properties-a-card-per-property",
+      "section": "A16.3",
+      "title": "Properties: a card per property",
+      "intro": {
+        "text": "Properties shows a card for each hotel. The owner sees more on it than everyone else. Here are both.",
+        "voice": "a16/voice/A16-02/01.wav",
+        "dur": 6.3
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A16-03",
+          "focus": null,
+          "line": {
+            "text": "This is the owner's view. The line under the title counts the properties open, and any closed.",
+            "voice": "a16/voice/A16-02/02.wav",
+            "dur": 5.771
+          }
+        },
+        {
+          "shot": "A16-03",
+          "focus": 1,
+          "line": {
+            "text": "Each card shows the property's name and its code.",
+            "voice": "a16/voice/A16-02/03.wav",
+            "dur": 3.083
+          }
+        },
+        {
+          "shot": "A16-03",
+          "focus": 2,
+          "line": {
+            "text": "Then its rooms, its room types, and its G S T I N, which prints on every invoice. Under it, the G S T in use for rooms, the restaurant and the rest.",
+            "voice": "a16/voice/A16-02/04.wav",
+            "dur": 10.415
+          }
+        },
+        {
+          "shot": "A16-03",
+          "focus": 4,
+          "line": {
+            "text": "Open shows the property's own page, with its figures and its team.",
+            "voice": "a16/voice/A16-02/05.wav",
+            "dur": 4.348
+          }
+        },
+        {
+          "shot": "A16-03",
+          "focus": 5,
+          "line": {
+            "text": "Calendar switches to the property, and opens its Rooms screen.",
+            "voice": "a16/voice/A16-02/06.wav",
+            "dur": 4.023
+          }
+        },
+        {
+          "shot": "A16-03",
+          "focus": 6,
+          "line": {
+            "text": "Edit changes its details. The next video shows how.",
+            "voice": "a16/voice/A16-02/07.wav",
+            "dur": 4.029
+          }
+        },
+        {
+          "shot": "A16-03",
+          "focus": 7,
+          "line": {
+            "text": "Close takes a property out of every picker. Nothing is deleted, and Reopen brings it back. Close does not ask first.",
+            "voice": "a16/voice/A16-02/08.wav",
+            "dur": 7.46
+          }
+        },
+        {
+          "shot": "A16-03",
+          "focus": 3,
+          "line": {
+            "text": "While guests are checked in, Close is off, and the card says why.",
+            "voice": "a16/voice/A16-02/09.wav",
+            "dur": 4.081
+          }
+        },
+        {
+          "shot": "A16-06",
+          "focus": null,
+          "line": {
+            "text": "Everyone else sees a simpler card. Here, the general manager's.",
+            "voice": "a16/voice/A16-02/10.wav",
+            "dur": 4.413
+          }
+        },
+        {
+          "shot": "A16-06",
+          "focus": 1,
+          "line": {
+            "text": "Only the properties you can reach are listed.",
+            "voice": "a16/voice/A16-02/11.wav",
+            "dur": 2.723
+          }
+        },
+        {
+          "shot": "A16-06",
+          "focus": 2,
+          "line": {
+            "text": "Each shows the check in and check out times.",
+            "voice": "a16/voice/A16-02/12.wav",
+            "dur": 2.827
+          }
+        },
+        {
+          "shot": "A16-06",
+          "focus": 3,
+          "line": {
+            "text": "And the G S T in use, one line for each kind.",
+            "voice": "a16/voice/A16-02/13.wav",
+            "dur": 3.199
+          }
+        },
+        {
+          "shot": "A16-06",
+          "focus": 4,
+          "line": {
+            "text": "Open the Calendar takes you into that property, on its Rooms screen.",
+            "voice": "a16/voice/A16-02/14.wav",
+            "dur": 4.035
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Under each card, the owner can also make a test hotel: a practice copy of that hotel's setup, with no guests or money.",
+        "voice": "a16/voice/A16-02/15.wav",
+        "dur": 7.704
+      },
+      "next": "Editing and adding a property"
+    },
+    {
+      "id": "A16-03",
+      "slug": "A16-03-editing-and-adding-a-property",
+      "section": "A16.4",
+      "title": "Editing and adding a property",
+      "intro": {
+        "text": "This video is for the owner: changing a property's details, and adding a new property.",
+        "voice": "a16/voice/A16-03/01.wav",
+        "dur": 5.196
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A16-04",
+          "focus": null,
+          "line": {
+            "text": "On the property's card, click Edit. These details print on the property's invoices.",
+            "voice": "a16/voice/A16-03/02.wav",
+            "dur": 5.469
+          }
+        },
+        {
+          "shot": "A16-04",
+          "focus": 1,
+          "line": {
+            "text": "The code is shown, greyed out.",
+            "voice": "a16/voice/A16-03/03.wav",
+            "dur": 2.259
+          }
+        },
+        {
+          "shot": "A16-04",
+          "focus": 2,
+          "line": {
+            "text": "It is in every web address and every invoice number, so it cannot be changed.",
+            "voice": "a16/voice/A16-03/04.wav",
+            "dur": 4.894
+          }
+        },
+        {
+          "shot": "A16-04",
+          "focus": null,
+          "line": {
+            "text": "Change the name, city, state, address, phone or email as needed.",
+            "voice": "a16/voice/A16-03/05.wav",
+            "dur": 4.453
+          }
+        },
+        {
+          "shot": "A16-04",
+          "focus": 3,
+          "line": {
+            "text": "The G S T I N is fifteen characters, the two-digit state code first.",
+            "voice": "a16/voice/A16-03/06.wav",
+            "dur": 4.917
+          }
+        },
+        {
+          "shot": "A16-04",
+          "focus": 4,
+          "line": {
+            "text": "Click Save. If something is wrong, the message says why, and nothing is saved.",
+            "voice": "a16/voice/A16-03/07.wav",
+            "dur": 5.504
+          }
+        },
+        {
+          "shot": "A16-05",
+          "focus": 1,
+          "line": {
+            "text": "To add a property, scroll down to Add a property.",
+            "voice": "a16/voice/A16-03/08.wav",
+            "dur": 3.454
+          }
+        },
+        {
+          "shot": "A16-05",
+          "focus": 2,
+          "line": {
+            "text": "Type its code, two to eight letters or digits. Choose it with care: it can never be changed.",
+            "voice": "a16/voice/A16-03/09.wav",
+            "dur": 5.864
+          }
+        },
+        {
+          "shot": "A16-05",
+          "focus": null,
+          "line": {
+            "text": "Then its name and its city, and if you have them, its state and G S T I N.",
+            "voice": "a16/voice/A16-03/10.wav",
+            "dur": 4.836
+          }
+        },
+        {
+          "shot": "A16-05",
+          "focus": 3,
+          "line": {
+            "text": "Type the provisioning key, the key for this system. Being signed in is not enough on its own.",
+            "voice": "a16/voice/A16-03/11.wav",
+            "dur": 5.539
+          }
+        },
+        {
+          "shot": "A16-05",
+          "focus": 4,
+          "line": {
+            "text": "Click Create the property. The new property has its room types, but no rooms yet. Add its rooms next.",
+            "voice": "a16/voice/A16-03/12.wav",
+            "dur": 6.95
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "The rest of a property's profile, such as its PIN code and website, is kept in Settings.",
+        "voice": "a16/voice/A16-03/13.wav",
+        "dur": 5.985
+      },
+      "next": "One property and its team"
+    },
+    {
+      "id": "A16-04",
+      "slug": "A16-04-one-property-and-its-team",
+      "section": "A16.5",
+      "title": "One property and its team",
+      "intro": {
+        "text": "Each property has its own page, with its figures and the people who work there. The owner opens it with Open, on the property's card.",
+        "voice": "a16/voice/A16-04/01.wav",
+        "dur": 7.361
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A16-07",
+          "focus": 2,
+          "line": {
+            "text": "The first row is today: rooms sold, occupancy, rooms empty, and guests in house now.",
+            "voice": "a16/voice/A16-04/02.wav",
+            "dur": 6.009
+          }
+        },
+        {
+          "shot": "A16-07",
+          "focus": 3,
+          "line": {
+            "text": "The second is the month to date: room revenue, average rate, RevPAR, and the rooms the property has. A figure not measured yet is a dash.",
+            "voice": "a16/voice/A16-04/03.wav",
+            "dur": 8.952
+          }
+        },
+        {
+          "shot": "A16-07",
+          "focus": 4,
+          "line": {
+            "text": "The F S S A I licence number prints on food bills. The owner, an Admin or the GM clicks Change to type it.",
+            "voice": "a16/voice/A16-04/04.wav",
+            "dur": 7.408
+          }
+        },
+        {
+          "shot": "A16-07",
+          "focus": 5,
+          "line": {
+            "text": "Who works here lists everyone at this property, with their role.",
+            "voice": "a16/voice/A16-04/05.wav",
+            "dur": 3.652
+          }
+        },
+        {
+          "shot": "A16-07",
+          "focus": 6,
+          "line": {
+            "text": "Starts on is the first screen after they sign in: Dashboard, Rooms or Calendar. It saves as soon as you choose.",
+            "voice": "a16/voice/A16-04/06.wav",
+            "dur": 7.28
+          }
+        },
+        {
+          "shot": "A16-07",
+          "focus": 7,
+          "line": {
+            "text": "The key sets a new password for them.",
+            "voice": "a16/voice/A16-04/07.wav",
+            "dur": 2.363
+          }
+        },
+        {
+          "shot": "A16-07",
+          "focus": 8,
+          "line": {
+            "text": "Remove takes them off this property. It asks first, and their account stays.",
+            "voice": "a16/voice/A16-04/08.wav",
+            "dur": 5.028
+          }
+        },
+        {
+          "shot": "A16-07",
+          "focus": 1,
+          "line": {
+            "text": "To add somebody, click Add somebody here.",
+            "voice": "a16/voice/A16-04/09.wav",
+            "dur": 2.92
+          }
+        },
+        {
+          "shot": "A16-08",
+          "focus": 1,
+          "line": {
+            "text": "Type their name.",
+            "voice": "a16/voice/A16-04/10.wav",
+            "dur": 1.167
+          }
+        },
+        {
+          "shot": "A16-08",
+          "focus": 2,
+          "line": {
+            "text": "And the email they sign in with. A typo here means they cannot sign in at all.",
+            "voice": "a16/voice/A16-04/11.wav",
+            "dur": 5.248
+          }
+        },
+        {
+          "shot": "A16-08",
+          "focus": 3,
+          "line": {
+            "text": "Type a password for them, at least eight characters. It shows as you type, so you can read it back.",
+            "voice": "a16/voice/A16-04/12.wav",
+            "dur": 6.537
+          }
+        },
+        {
+          "shot": "A16-08",
+          "focus": 4,
+          "line": {
+            "text": "Choose what they do here.",
+            "voice": "a16/voice/A16-04/13.wav",
+            "dur": 1.724
+          }
+        },
+        {
+          "shot": "A16-08",
+          "focus": 5,
+          "line": {
+            "text": "Click Add. They can sign in straight away, and see this property only. Tell them the password yourself: nothing is emailed.",
+            "voice": "a16/voice/A16-04/14.wav",
+            "dur": 7.6
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A GM or Admin can open their own property's page too. Anybody else is told it is not theirs to manage.",
+        "voice": "a16/voice/A16-04/15.wav",
+        "dur": 6.874
+      },
+      "next": "People: everyone, and where they work"
+    },
+    {
+      "id": "A16-05",
+      "slug": "A16-05-people-everyone-and-where-they-work",
+      "section": "A16.6",
+      "title": "People: everyone, and where they work",
+      "intro": {
+        "text": "People lists everybody who can sign in: where they work, and as what. In this video you will read the list, take a property away, and switch somebody off.",
+        "voice": "a16/voice/A16-05/01.wav",
+        "dur": 9.231
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A16-10",
+          "focus": null,
+          "line": {
+            "text": "Open People. The line under the title counts the people active, and how many reach every property.",
+            "voice": "a16/voice/A16-05/02.wav",
+            "dur": 5.852
+          }
+        },
+        {
+          "shot": "A16-10",
+          "focus": 2,
+          "line": {
+            "text": "A yellow note names anybody who can sign in and see nothing. Give them a property, or the system looks broken to them.",
+            "voice": "a16/voice/A16-05/03.wav",
+            "dur": 7.118
+          }
+        },
+        {
+          "shot": "A16-09",
+          "focus": 1,
+          "line": {
+            "text": "Every property marks a group administrator. They reach every property, including ones added later.",
+            "voice": "a16/voice/A16-05/04.wav",
+            "dur": 6.224
+          }
+        },
+        {
+          "shot": "A16-09",
+          "focus": 2,
+          "line": {
+            "text": "Everyone else has a chip for each property they work at, with their role there.",
+            "voice": "a16/voice/A16-05/05.wav",
+            "dur": 4.197
+          }
+        },
+        {
+          "shot": "A16-09",
+          "focus": 4,
+          "line": {
+            "text": "No property yet means this account opens empty.",
+            "voice": "a16/voice/A16-05/06.wav",
+            "dur": 3.118
+          }
+        },
+        {
+          "shot": "A16-09",
+          "focus": 5,
+          "line": {
+            "text": "Give a property fixes that. The next video shows how.",
+            "voice": "a16/voice/A16-05/07.wav",
+            "dur": 3.774
+          }
+        },
+        {
+          "shot": "A16-09",
+          "focus": 3,
+          "line": {
+            "text": "The cross on a chip takes that property away.",
+            "voice": "a16/voice/A16-05/08.wav",
+            "dur": 2.932
+          }
+        },
+        {
+          "shot": "A16-13",
+          "focus": 1,
+          "line": {
+            "text": "It asks first, naming who and where.",
+            "voice": "a16/voice/A16-05/09.wav",
+            "dur": 2.897
+          }
+        },
+        {
+          "shot": "A16-13",
+          "focus": 2,
+          "line": {
+            "text": "They can no longer work there. Their account stays, and their name stays on everything they did.",
+            "voice": "a16/voice/A16-05/10.wav",
+            "dur": 5.562
+          }
+        },
+        {
+          "shot": "A16-13",
+          "focus": 3,
+          "line": {
+            "text": "Click Remove, or Cancel.",
+            "voice": "a16/voice/A16-05/11.wav",
+            "dur": 1.933
+          }
+        },
+        {
+          "shot": "A16-09",
+          "focus": 6,
+          "line": {
+            "text": "Deactivate switches somebody off: they can no longer sign in. It does not ask first. Bring them back undoes it.",
+            "voice": "a16/voice/A16-05/12.wav",
+            "dur": 7.739
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Nobody is ever deleted. Somebody who has left is switched off, so their name stays on everything they did.",
+        "voice": "a16/voice/A16-05/13.wav",
+        "dur": 6.735
+      },
+      "next": "Adding somebody, and giving them a property"
+    },
+    {
+      "id": "A16-06",
+      "slug": "A16-06-adding-somebody-and-giving-them-a-property",
+      "section": "A16.7",
+      "title": "Adding somebody, and giving them a property",
+      "intro": {
+        "text": "Access is given property by property. That is what stops one hotel seeing another's guests. Here is how to add somebody, as the owner and as the GM.",
+        "voice": "a16/voice/A16-06/01.wav",
+        "dur": 9.655
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A16-10",
+          "focus": 1,
+          "line": {
+            "text": "On People, click Add somebody.",
+            "voice": "a16/voice/A16-06/02.wav",
+            "dur": 2.398
+          }
+        },
+        {
+          "shot": "A16-11",
+          "focus": 1,
+          "line": {
+            "text": "Type their name.",
+            "voice": "a16/voice/A16-06/03.wav",
+            "dur": 1.132
+          }
+        },
+        {
+          "shot": "A16-11",
+          "focus": 2,
+          "line": {
+            "text": "And the email they will sign in with. A typo here means they cannot sign in at all.",
+            "voice": "a16/voice/A16-06/04.wav",
+            "dur": 5.423
+          }
+        },
+        {
+          "shot": "A16-11",
+          "focus": 3,
+          "line": {
+            "text": "Type a password for them, at least eight characters.",
+            "voice": "a16/voice/A16-06/05.wav",
+            "dur": 3.315
+          }
+        },
+        {
+          "shot": "A16-11",
+          "focus": 4,
+          "line": {
+            "text": "It is hidden. Show lets you read it back to them.",
+            "voice": "a16/voice/A16-06/06.wav",
+            "dur": 3.135
+          }
+        },
+        {
+          "shot": "A16-11",
+          "focus": 5,
+          "line": {
+            "text": "This adds an ordinary member of staff. Making somebody a group administrator, who reaches every property, takes the provisioning key.",
+            "voice": "a16/voice/A16-06/07.wav",
+            "dur": 7.849
+          }
+        },
+        {
+          "shot": "A16-11",
+          "focus": 6,
+          "line": {
+            "text": "Click Add. They can sign in now, but see nothing until they have a property.",
+            "voice": "a16/voice/A16-06/08.wav",
+            "dur": 4.529
+          }
+        },
+        {
+          "shot": "A16-12",
+          "focus": 1,
+          "line": {
+            "text": "So on their card, click Give a property, and choose which property.",
+            "voice": "a16/voice/A16-06/09.wav",
+            "dur": 4.174
+          }
+        },
+        {
+          "shot": "A16-12",
+          "focus": 2,
+          "line": {
+            "text": "Choose what they do there.",
+            "voice": "a16/voice/A16-06/10.wav",
+            "dur": 1.829
+          }
+        },
+        {
+          "shot": "A16-12",
+          "focus": 3,
+          "line": {
+            "text": "The line underneath says what that role does.",
+            "voice": "a16/voice/A16-06/11.wav",
+            "dur": 2.735
+          }
+        },
+        {
+          "shot": "A16-12",
+          "focus": 4,
+          "line": {
+            "text": "Click Give access.",
+            "voice": "a16/voice/A16-06/12.wav",
+            "dur": 1.399
+          }
+        },
+        {
+          "shot": "A16-16",
+          "focus": 1,
+          "line": {
+            "text": "A GM adds somebody at their own property, in one step. Where they work offers their own hotel.",
+            "voice": "a16/voice/A16-06/13.wav",
+            "dur": 6.038
+          }
+        },
+        {
+          "shot": "A16-16",
+          "focus": 2,
+          "line": {
+            "text": "Doing what offers every role but Owner and Admin.",
+            "voice": "a16/voice/A16-06/14.wav",
+            "dur": 3.129
+          }
+        },
+        {
+          "shot": "A16-16",
+          "focus": 3,
+          "line": {
+            "text": "They see this property only. Only the owner can make somebody an Admin.",
+            "voice": "a16/voice/A16-06/15.wav",
+            "dur": 4.413
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A password for an Owner, Admin or GM is at least ten characters. Nothing is emailed: tell them the password and the address yourself.",
+        "voice": "a16/voice/A16-06/16.wav",
+        "dur": 8.627
+      },
+      "next": "A new password, and a person's details"
+    },
+    {
+      "id": "A16-07",
+      "slug": "A16-07-a-new-password-and-a-persons-details",
+      "section": "A16.8",
+      "title": "A new password, and a person's details",
+      "intro": {
+        "text": "Somebody forgot their password, or their name is spelt wrong. In this video you will fix both, on People.",
+        "voice": "a16/voice/A16-07/01.wav",
+        "dur": 6.746
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A16-10",
+          "focus": 3,
+          "line": {
+            "text": "On their card, click Password.",
+            "voice": "a16/voice/A16-07/02.wav",
+            "dur": 2.154
+          }
+        },
+        {
+          "shot": "A16-14",
+          "focus": 1,
+          "line": {
+            "text": "The window names the person. Their old password stops working immediately.",
+            "voice": "a16/voice/A16-07/03.wav",
+            "dur": 4.912
+          }
+        },
+        {
+          "shot": "A16-14",
+          "focus": null,
+          "line": {
+            "text": "Type the new one. They type it at a terminal in front of guests, so make it something they can remember.",
+            "voice": "a16/voice/A16-07/04.wav",
+            "dur": 6.2
+          }
+        },
+        {
+          "shot": "A16-14",
+          "focus": 2,
+          "line": {
+            "text": "Show lets you read it back.",
+            "voice": "a16/voice/A16-07/05.wav",
+            "dur": 1.794
+          }
+        },
+        {
+          "shot": "A16-14",
+          "focus": 3,
+          "line": {
+            "text": "It names the address they sign in with. Nothing is emailed: tell them yourself.",
+            "voice": "a16/voice/A16-07/06.wav",
+            "dur": 5.098
+          }
+        },
+        {
+          "shot": "A16-14",
+          "focus": 4,
+          "line": {
+            "text": "Click Set it.",
+            "voice": "a16/voice/A16-07/07.wav",
+            "dur": 1.132
+          }
+        },
+        {
+          "shot": "A16-10",
+          "focus": 4,
+          "line": {
+            "text": "To change a person's details, click Edit.",
+            "voice": "a16/voice/A16-07/08.wav",
+            "dur": 2.676
+          }
+        },
+        {
+          "shot": "A16-15",
+          "focus": 1,
+          "line": {
+            "text": "Correct their name. It is on everything they have done.",
+            "voice": "a16/voice/A16-07/09.wav",
+            "dur": 3.577
+          }
+        },
+        {
+          "shot": "A16-15",
+          "focus": 2,
+          "line": {
+            "text": "Add or change their phone.",
+            "voice": "a16/voice/A16-07/10.wav",
+            "dur": 1.91
+          }
+        },
+        {
+          "shot": "A16-15",
+          "focus": 3,
+          "line": {
+            "text": "Starts on chooses the first screen after they sign in. They can change it themselves.",
+            "voice": "a16/voice/A16-07/11.wav",
+            "dur": 5.295
+          }
+        },
+        {
+          "shot": "A16-15",
+          "focus": 4,
+          "line": {
+            "text": "Click Save. The email cannot be changed here: it is how they sign in.",
+            "voice": "a16/voice/A16-07/12.wav",
+            "dur": 4.61
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "That is Across properties. Thank you for watching.",
+        "voice": "a16/voice/A16-07/13.wav",
+        "dur": 3.17
+      },
+      "next": null
+    }
+  ]
+}

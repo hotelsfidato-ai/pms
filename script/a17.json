@@ -1,0 +1,309 @@
+{
+  "chapter": "A17",
+  "title": "Settings",
+  "manualShots": "a17",
+  "videos": [
+    {
+      "id": "A17-01",
+      "section": "A17.1",
+      "title": "The Settings space",
+      "intro": "Settings is where the hotel is set up. In this video you will see the Settings space, its menu, and who sees what.",
+      "scenes": [
+        { "shot": "A17-01", "focus": 1, "say": "Click Settings in the switcher at the top. Settings is a space of its own, with its own menu." },
+        { "shot": "A17-01", "focus": 2, "say": "Back to front office, at the top of the menu, takes you back to the hotel's daily work." },
+        { "shot": "A17-01", "focus": 3, "say": "The menu has nine groups, starting with Property. A group shows only when it holds something you may open." },
+        { "shot": "A17-01", "focus": 4, "say": "An entry with a small arrow opens a Front office screen. Cancellation terms is one." },
+        { "shot": "A17-01", "focus": 5, "say": "Then come Rooms, Rates and tax, Money, Lists, Front desk, Messages, People and security, and Modules and connections." },
+        { "shot": "A17-01", "say": "Settings is for the owner, an Admin and the GM. A page changes the hotel chosen in the top bar, so check it first." },
+        { "shot": "A17-50", "focus": 1, "say": "The GM sees a little less. Under People and security: People, Audit log, Activity and Signing in." },
+        { "shot": "A17-50", "focus": 2, "say": "Under Modules and connections there is no Modules page and no Integrations. Those are for the owner and an Admin." },
+        { "shot": "A17-07", "focus": 3, "say": "Many switches in Settings save the moment you tap them, with no Save button. Change them only when you mean to." }
+      ],
+      "outro": "That is the Settings space. The next videos take each group in turn, starting with the hotel's profile."
+    },
+    {
+      "id": "A17-02",
+      "section": "A17.2",
+      "title": "The hotel's profile",
+      "intro": "This video is for the owner, an Admin and the GM: the Profile page, where the hotel's details and numbers are kept.",
+      "scenes": [
+        { "shot": "A17-02", "say": "Profile is the first page in Settings. While something is missing, a yellow card at the top says what the hotel still needs before it can take a guest." },
+        { "shot": "A17-02", "focus": 1, "say": "It counts the checks that are settled: here, eight of ten. Nothing on it is ticked by hand; the system checks each line itself." },
+        { "shot": "A17-02", "focus": 2, "say": "A line like this one blocks: until it is settled, a booking, a bill or the night audit will refuse and say so. Here, the GST number is still the standard dummy number." },
+        { "shot": "A17-02", "focus": 3, "say": "A line marked not blocking is worth doing, but stops nothing. Tap any line to open the screen that settles it." },
+        { "shot": "A17-02", "focus": 4, "say": "Below, the Profile card holds what prints on the hotel's invoices. Tap Edit to change it." },
+        { "shot": "A17-03", "focus": 1, "say": "The code is in every address and every invoice number. It cannot be changed." },
+        { "shot": "A17-03", "focus": 2, "say": "The hotel's name is the group owner's. For anybody else, this box is locked." },
+        { "shot": "A17-03", "focus": 3, "say": "The GST number is fifteen characters, the two-digit state code first. It prints on every invoice." },
+        { "shot": "A17-03", "focus": 4, "say": "Change what is wrong, and tap Save." },
+        { "shot": "A17-04", "focus": 1, "say": "Lower down is the food safety licence number. Tap Change and type the fourteen digits from the licence; it prints on food bills." },
+        { "shot": "A17-04", "focus": 2, "say": "More registration numbers keeps up to four others, each with its own name. They are kept here, never printed." },
+        { "shot": "A17-04", "focus": 3, "say": "Tap Add, type the name and the number, then Save." }
+      ],
+      "outro": "When every check is settled, the yellow card goes by itself. It comes back if anything stops being true."
+    },
+    {
+      "id": "A17-03",
+      "section": "A17.3",
+      "title": "Logo, photos, highlights and amenities",
+      "intro": "In this video you will set what the hotel shows: its logo on its documents, and its photos, texts and amenities on the guest's own page.",
+      "scenes": [
+        { "shot": "A17-05", "focus": 1, "say": "On Logo and photos, this hotel's logo prints on its bills and documents, in place of the group's logo." },
+        { "shot": "A17-05", "focus": 2, "say": "Tap Upload and choose a PNG or an SVG file, 200 kilobytes at most. The voucher prints a PNG logo." },
+        { "shot": "A17-05", "focus": 3, "say": "Add photos puts up to twenty photos on the guest's page during the stay. Never a guest in one." },
+        { "shot": "A17-06", "focus": 1, "say": "Highlights are five texts guests read about the hotel, one tab each: the property, local attractions, directions, activities nearby and famous landmarks." },
+        { "shot": "A17-06", "focus": 2, "say": "Type in plain words; a blank line starts a new paragraph. A text left blank is not shown." },
+        { "shot": "A17-06", "focus": 3, "say": "Tap Save on each text." },
+        { "shot": "A17-07", "focus": 3, "say": "Amenities is one list for every hotel in the group. Switch on what this hotel has, and guests see it on their page." },
+        { "shot": "A17-07", "focus": 1, "say": "The list itself is kept by the owner and an Admin. Add puts a new amenity on it, for every hotel." },
+        { "shot": "A17-07", "focus": 2, "say": "Find an amenity by typing part of its name." },
+        { "shot": "A17-07", "focus": 4, "say": "The pencil renames it." },
+        { "shot": "A17-07", "focus": 5, "say": "Turn Off takes it off for every hotel." },
+        { "shot": "A17-07", "focus": 6, "say": "And the bin deletes it, but only while no hotel has it on." }
+      ],
+      "outro": "Each room type picks its own amenities from the same list, as the room types video shows."
+    },
+    {
+      "id": "A17-04",
+      "section": "A17.4",
+      "title": "The group and the policies",
+      "intro": "This video covers two pages under Property: Group, and Policies.",
+      "scenes": [
+        { "shot": "A17-08", "focus": 1, "say": "The group's name and logo are one for every hotel. Every bill prints the hotel's name, then by, and the group's name." },
+        { "shot": "A17-08", "focus": 2, "say": "Tap Change to type the group's name; blank means none. The group's logo prints at every hotel with no logo of its own." },
+        { "shot": "A17-08", "focus": 3, "say": "Office details are the footer of every booking voucher. Until one is typed, a voucher's footer is the hotel's own." },
+        { "shot": "A17-09", "focus": 1, "say": "On Policies, the house policies print on this hotel's booking voucher. Tap Edit, and type one policy a line, at most eight." },
+        { "shot": "A17-09", "focus": 2, "say": "The policy texts are the hotel's own words on parking and arrival, families and extra guests, and the terms of a reservation. Each has its own Save." },
+        { "shot": "A17-10", "focus": 1, "say": "Under Child ages, type up to what age a child stays free," },
+        { "shot": "A17-10", "focus": 2, "say": "and up to what age a guest is a child." },
+        { "shot": "A17-10", "focus": 3, "say": "Then Save. The ages are words only: prices do not change with them." },
+        { "shot": "A17-10", "focus": 4, "say": "Cancellation terms, what a guest pays when they cancel, are set with the rates. This line opens that screen." }
+      ],
+      "outro": "The house policies and the office details print on the vouchers from the moment they are saved."
+    },
+    {
+      "id": "A17-05",
+      "section": "A17.5",
+      "title": "Room types and rooms",
+      "intro": "In this video you will add a room type and a room, and put the rooms in order.",
+      "scenes": [
+        { "shot": "A17-11", "say": "Room types shows what the hotel sells, and the rooms it sells it in. No price is asked here: a new room type has none until it is priced on Rates." },
+        { "shot": "A17-11", "focus": 2, "say": "To add a type, tap Add a room type." },
+        { "shot": "A17-12", "focus": 1, "say": "Type a short code, two to ten letters or digits. It prints on the tape chart." },
+        { "shot": "A17-12", "focus": 2, "say": "Then its name." },
+        { "shot": "A17-12", "focus": 3, "say": "Adults the rate covers is how many the price is for, before an extra-person charge." },
+        { "shot": "A17-12", "focus": 4, "say": "Sleeps at most is the most people the room takes. The details below it are optional." },
+        { "shot": "A17-12", "focus": 5, "say": "Tap Save." },
+        { "shot": "A17-13", "focus": 1, "say": "Edit opens a room type. Basic holds its numbers and words," },
+        { "shot": "A17-13", "focus": 2, "say": "Amenities ticks what it has, from the group's list," },
+        { "shot": "A17-13", "focus": 3, "say": "and Photos takes up to ten pictures of it." },
+        { "shot": "A17-13", "focus": 4, "say": "Remove is only for a room type with no rooms, bookings or prices. One in use is switched off instead, by unticking Sold at this property." },
+        { "shot": "A17-11", "focus": 3, "say": "To add a room, tap Add a room." },
+        { "shot": "A17-14", "focus": 1, "say": "Type its number, at most ten letters and digits." },
+        { "shot": "A17-14", "focus": 2, "say": "Choose its type. Type the floor, or leave it blank if the hotel has one floor." },
+        { "shot": "A17-14", "focus": 3, "say": "Tick Smoking room if it is one, and Save." },
+        { "shot": "A17-11", "focus": 5, "say": "Drag a room to put the rooms in order. Tap a room to change it, or untick Sellable to take it out of the house." },
+        { "shot": "A17-11", "focus": 1, "say": "Import brings in room types, and then rooms, from a file." }
+      ],
+      "outro": "Nothing in use is ever deleted. A room type or a room is switched off instead, and its history stays."
+    },
+    {
+      "id": "A17-06",
+      "section": "A17.6",
+      "title": "Rate plans and meal plans",
+      "intro": "Prices are set on Rates, in the Front office. In this video you will see how rate plans and meal plans offer those prices.",
+      "scenes": [
+        { "shot": "A17-15", "say": "Rate plans lists each room type on each meal plan, named by itself, such as Superior, Room only." },
+        { "shot": "A17-15", "focus": 1, "say": "The master is the base room on room only. A derived plan follows it; an independent plan has its own base, typed on Rates." },
+        { "shot": "A17-15", "focus": 3, "say": "Each plan says how it is priced." },
+        { "shot": "A17-15", "focus": 4, "say": "And its price for two guests on the business date. A dash means it is not priced." },
+        { "shot": "A17-15", "focus": 2, "say": "Switch a plan off and it is not offered for new bookings. Its prices and bookings stay." },
+        { "shot": "A17-15", "focus": 5, "say": "Tap Edit to change a plan." },
+        { "shot": "A17-16", "focus": 1, "say": "The editor has three steps. Step one says what the plan is; step two, its price." },
+        { "shot": "A17-16", "focus": 2, "say": "Choose how it is priced. A derived plan asks how much more than the master, in rupees or percent." },
+        { "shot": "A17-16", "focus": 3, "say": "The summary follows your choices." },
+        { "shot": "A17-16", "focus": 4, "say": "Tap Next. Step three ticks the booking sources that sell it, none meaning every source. Then tap Update." },
+        { "shot": "A17-17", "focus": 1, "say": "Meal plans says on which days each meal is served. Here, the breakfast plan." },
+        { "shot": "A17-17", "focus": 2, "say": "Tick each meal on the check-in day, the stay-over days and the check-out day." },
+        { "shot": "A17-17", "focus": 3, "say": "Then Save. The days show on the plan's summary and on the guest's voucher." }
+      ],
+      "outro": "A meal's price is its add-on, on Rates. One price is set there, and every plan follows it."
+    },
+    {
+      "id": "A17-07",
+      "section": "A17.7",
+      "title": "Taxes",
+      "intro": "In this video you will set the GST rules. One set of rules serves the front desk and the till.",
+      "scenes": [
+        { "shot": "A17-18", "say": "Taxes has a heading for each kind of sale: rooms, restaurant, bar, banquet, spa, laundry and everything else. Alcohol has its own, where the hotel serves it." },
+        { "shot": "A17-18", "focus": 1, "say": "A heading can have more than one rate. Here, a higher rate applies above a figure." },
+        { "shot": "A17-18", "focus": 2, "say": "The SAC code prints on each line of this kind. Your accountant gives it." },
+        { "shot": "A17-18", "focus": 4, "say": "A heading with no rate says Not set, with a dash, never a zero. Nothing under it can be billed until a rate is set." },
+        { "shot": "A17-18", "focus": 3, "say": "To set or change a heading's rates, tap Edit, or Set it." },
+        { "shot": "A17-20", "focus": 1, "say": "One row is one rate. Leave the first row's figure at zero, so it applies to everything." },
+        { "shot": "A17-20", "focus": 3, "say": "Type its GST percent." },
+        { "shot": "A17-20", "focus": 2, "say": "To charge more above a figure, add a second row with the figure and its rate. A row may also have dates, and a note saying why." },
+        { "shot": "A17-20", "focus": 4, "say": "Then Save." },
+        { "shot": "A17-19", "focus": 1, "say": "Lower down is the till's half: which heading each part of the menu sells under." },
+        { "shot": "A17-19", "focus": 2, "say": "Choose the heading for each section. A dish under a heading with no rate is refused at the till." }
+      ],
+      "outro": "No rate is built in. Every rate here is the hotel's own, confirmed by its accountant."
+    },
+    {
+      "id": "A17-08",
+      "section": "A17.8",
+      "title": "Bank details and payment methods",
+      "intro": "In this video you will set the hotel's bank details, and the ways guests may pay.",
+      "scenes": [
+        { "shot": "A17-21", "say": "Bank details print on the hotel's booking voucher; with none set, it prints none. The group's owner is told whenever they change." },
+        { "shot": "A17-21", "focus": 1, "say": "Type the name the account is in." },
+        { "shot": "A17-21", "focus": 2, "say": "Then the account number, digits only." },
+        { "shot": "A17-21", "focus": 3, "say": "The bank, the branch, and the I F S C: eleven characters, the fifth a zero." },
+        { "shot": "A17-21", "focus": 4, "say": "A UPI ID, if guests may pay to one." },
+        { "shot": "A17-21", "focus": 5, "say": "Then Save." },
+        { "shot": "A17-22", "say": "Payment methods is how guests pay here: what the bill, New booking and a function's bill offer." },
+        { "shot": "A17-22", "focus": 2, "say": "Each method is on or off, and the switch saves at once. One that is off is not offered or taken." },
+        { "shot": "A17-22", "focus": 3, "say": "The default is what the desk's payment screens start on. To change it, open a method and tap Make default." },
+        { "shot": "A17-22", "focus": 4, "say": "The pencil edits a method." },
+        { "shot": "A17-22", "focus": 5, "say": "The bin shows only for a method never used." },
+        { "shot": "A17-22", "focus": 1, "say": "To add one, tap Add a method." },
+        { "shot": "A17-23", "focus": 1, "say": "Its name is what the bill and the receipt print." },
+        { "shot": "A17-23", "focus": 2, "say": "In the books is where the reports count it. A booking site that collected the money is Bill to company, owed by that site in the city ledger." },
+        { "shot": "A17-23", "focus": 3, "say": "Tap Save." }
+      ],
+      "outro": "The default way of paying also shows on Times and rules, in the Front desk group."
+    },
+    {
+      "id": "A17-09",
+      "section": "A17.9",
+      "title": "Charges, discounts and commission",
+      "intro": "In this video you will set the extra charges, the named discounts, the commission, and pickup and drop.",
+      "scenes": [
+        { "shot": "A17-24", "focus": 1, "say": "Extra charges starts with the early check-in fee," },
+        { "shot": "A17-24", "focus": 2, "say": "and the late check-out fee. Blank means no fee, never a zero." },
+        { "shot": "A17-24", "focus": 3, "say": "Tap Save fees." },
+        { "shot": "A17-24", "focus": 4, "say": "Below is the list of what a booking may add; the bill's Add charge picks from it. Tap Add a charge." },
+        { "shot": "A17-25", "focus": 1, "say": "Type its name." },
+        { "shot": "A17-25", "focus": 2, "say": "And its price. Leave it blank when the rate includes it at no charge, such as a welcome drink." },
+        { "shot": "A17-25", "focus": 3, "say": "The bill's column is where the money lands in the reports: a cake under Food, a pickup under Other charges." },
+        { "shot": "A17-25", "focus": 4, "say": "This switch marks a pickup or a drop." },
+        { "shot": "A17-25", "focus": 5, "say": "Then Save." },
+        { "shot": "A17-26", "say": "Discounts are named discounts on rooms, for New booking. By hand the desk may give up to ten percent of a night, with a reason; more only by picking one of these." },
+        { "shot": "A17-26", "focus": 1, "say": "Type its name," },
+        { "shot": "A17-26", "focus": 2, "say": "choose percent or rupees," },
+        { "shot": "A17-26", "focus": 3, "say": "type how much off each night, and Save." },
+        { "shot": "A17-27", "focus": 1, "say": "Commission is what each booking source takes. Blank means no commission agreed: a dash, not zero." },
+        { "shot": "A17-27", "focus": 2, "say": "Type a source's percent," },
+        { "shot": "A17-27", "focus": 3, "say": "and Save that row. A change applies to bookings made after it." },
+        { "shot": "A17-28", "focus": 1, "say": "Pickup and drop holds the airport, station and bus stand runs. The time goes in the booking's note." }
+      ],
+      "outro": "On each of these lists, the switch turns one on or off, the pencil edits it, and the bin shows only for one never used."
+    },
+    {
+      "id": "A17-10",
+      "section": "A17.10",
+      "title": "The lists",
+      "intro": "The lists are what the desk picks from instead of typing. In this video you will see how every list works.",
+      "scenes": [
+        { "shot": "A17-29", "say": "Market segments say who the guest is, for the reports. They are offered on New booking." },
+        { "shot": "A17-29", "focus": 1, "say": "Search finds one." },
+        { "shot": "A17-29", "focus": 2, "say": "Type a new one, and tap Add." },
+        { "shot": "A17-29", "focus": 3, "say": "The arrows move it up or down." },
+        { "shot": "A17-29", "focus": 4, "say": "Tap a name to rename it. A booking keeps the words it was made with." },
+        { "shot": "A17-29", "focus": 5, "say": "The tick switches it on or off." },
+        { "shot": "A17-29", "focus": 6, "say": "The bin deletes it. One that a booking uses cannot be deleted, only switched off." },
+        { "shot": "A17-30", "focus": 1, "say": "Reservation types are the Calendar's colours for each kind of booking. Tap a colour to choose another." },
+        { "shot": "A17-30", "focus": 3, "say": "Back to the built-in colours puts them all back." },
+        { "shot": "A17-31", "focus": 1, "say": "Ready reasons are what the desk taps instead of typing: for a block, a cancel, a void, and a bill correction." },
+        { "shot": "A17-31", "focus": 3, "say": "Type a new reason and add it. Typing your own reason at the desk still works." },
+        { "shot": "A17-32", "focus": 1, "say": "For a holiday, choose the day," },
+        { "shot": "A17-32", "focus": 4, "say": "type its name, pick a colour, and tap Add. The Calendar and Rates shade it like a weekend; no price reads it." },
+        { "shot": "A17-33", "focus": 1, "say": "ID types are the documents the hotel takes. One switched off leaves the check-in, New booking and the guest's online form." },
+        { "shot": "A17-34", "focus": 1, "say": "VIP levels are one list for the whole group, because a guest is one record at every hotel. Only the owner or an Admin changes it." }
+      ],
+      "outro": "Booking sources, the first entry under Lists, opens its own Front office screen."
+    },
+    {
+      "id": "A17-11",
+      "section": "A17.11",
+      "title": "The front desk's times and rules",
+      "intro": "In this video you will set the front desk's hours, and the rules its screens start on.",
+      "scenes": [
+        { "shot": "A17-35", "say": "Times and rules has two cards: the front desk's hours, and its rules." },
+        { "shot": "A17-35", "focus": 2, "say": "The early arrival and late departure fees show here; a dash means none." },
+        { "shot": "A17-35", "focus": 3, "say": "Edit opens the hours." },
+        { "shot": "A17-36", "focus": 1, "say": "Type when rooms are ready from," },
+        { "shot": "A17-36", "focus": 2, "say": "and when they are due back. A guest earlier or later needs a reason and somebody to allow it." },
+        { "shot": "A17-36", "focus": 3, "say": "The fees themselves are set on Extra charges, under Money." },
+        { "shot": "A17-35", "focus": 4, "say": "In the rules card, Way of paying is the default payment method, set on Payment methods." },
+        { "shot": "A17-35", "focus": 5, "say": "Edit opens the rules." },
+        { "shot": "A17-37", "focus": 1, "say": "Advance before check-in: none, the first night, or the whole stay. It is never asked of a company's booking, or one prepaid on a booking site." },
+        { "shot": "A17-37", "focus": 2, "say": "With The desk may overbook off, a booking past a full house is refused." },
+        { "shot": "A17-37", "focus": 3, "say": "The weekend days are shaded on the Calendar and Rates. No price reads them." },
+        { "shot": "A17-38", "focus": 1, "say": "The Front desk rules page goes further, and each choice saves the moment it is made. A new booking starts as confirmed or tentative, billed to the guest or a company." },
+        { "shot": "A17-38", "focus": 2, "say": "Tick what a booking must carry; New booking will not save without it. A booking from a booking site is never held for it." },
+        { "shot": "A17-38", "focus": 3, "say": "Housekeeping decides which rooms are sent for cleaning, besides every room left at check-out." },
+        { "shot": "A17-39", "focus": 1, "say": "The restaurant's round-off is manual, automatic, or off. Room bills and invoices are never rounded." },
+        { "shot": "A17-39", "focus": 2, "say": "How the figures count explains occupancy, ADR and RevPAR in plain words." },
+        { "shot": "A17-39", "focus": 3, "say": "Two switches decide whether a complimentary room counts as sold, and whether a day use counts as half a room." }
+      ],
+      "outro": "The desk can still change a new booking's guarantee and bill-to, booking by booking."
+    },
+    {
+      "id": "A17-12",
+      "section": "A17.12",
+      "title": "Guest messages and report emails",
+      "intro": "In this video you will choose which messages guests get by themselves, and who gets the daily reports.",
+      "scenes": [
+        { "shot": "A17-40", "focus": 1, "say": "This page lists each message a guest gets by itself. The booking voucher goes once, when a booking is confirmed, on WhatsApp and by email." },
+        { "shot": "A17-40", "focus": 2, "say": "Its switch saves at once, for this hotel only." },
+        { "shot": "A17-40", "say": "Online check-in puts the guest's check-in link and QR code in the voucher. The review request goes when a clerk presses Ask for a review." },
+        { "shot": "A17-40", "focus": 3, "say": "The tax invoice goes by email when it is issued, but only for invoices issued after it is switched on." },
+        { "shot": "A17-41", "focus": 1, "say": "Daily report emails go right after the night audit closes the day. Here, nothing is sent yet: sending is not set up on the server." },
+        { "shot": "A17-41", "focus": 2, "say": "There are four reports, each with its own switch. The night audit report starts on; the others start off." },
+        { "shot": "A17-41", "focus": 3, "say": "Type who gets it, one email address a line, and tap Save at the foot. Nobody gets anything until an address is typed." }
+      ],
+      "outro": "Guest messages, Reviews and Online check-in, with their small arrows, open their own Front office screens."
+    },
+    {
+      "id": "A17-13",
+      "section": "A17.13",
+      "title": "People and security",
+      "intro": "This video covers People and security: who may do what, who did what, and how people sign in.",
+      "scenes": [
+        { "shot": "A17-42", "say": "People, the first entry, opens the Front office screen where people are added. For the owner, Add somebody has a Test switch: that person works only in a test hotel, made on Properties." },
+        { "shot": "A17-42", "focus": 1, "say": "Roles and permissions shows the fourteen roles. It is read only." },
+        { "shot": "A17-42", "focus": 2, "say": "Each row says what each role may do. The menus, the buttons and the server all read this same table." },
+        { "shot": "A17-43", "say": "The audit log is the money's record. Nothing in it is edited or deleted: a wrong posting is reversed, and the reversal is its own entry." },
+        { "shot": "A17-43", "focus": 1, "say": "Find entries by part of a name," },
+        { "shot": "A17-43", "focus": 2, "say": "or between two dates." },
+        { "shot": "A17-43", "focus": 3, "say": "Older and Newer turn the pages." },
+        { "shot": "A17-44", "say": "Activity is every change: who made it, when, and to which record." },
+        { "shot": "A17-44", "focus": 1, "say": "Across the group shows changes that belong to no single hotel. It is for the owner and an Admin." },
+        { "shot": "A17-44", "focus": 2, "say": "Choose one person," },
+        { "shot": "A17-44", "focus": 3, "say": "or one kind of record." },
+        { "shot": "A17-44", "focus": 4, "say": "What changed shows each field, from and to. A guest's details only read changed." },
+        { "shot": "A17-45", "focus": 1, "say": "Sign-ins and devices shows when each person signed in, and on what device, for ninety days. Sign out this device makes that device sign in again." },
+        { "shot": "A17-46", "say": "Signing in states the rules. A password is at least ten characters for the owner, an Admin and a GM, and at least eight for everybody else." }
+      ],
+      "outro": "Two-step sign-in, for the owner, Admins and GMs, comes after this release."
+    },
+    {
+      "id": "A17-14",
+      "section": "A17.14",
+      "title": "Modules and connections",
+      "intro": "This last video covers Modules and connections: what the hotel runs, and its outside connections.",
+      "scenes": [
+        { "shot": "A17-47", "focus": 1, "say": "Modules is for the owner and an Admin only. Each module is a part of the system this property runs, such as Point of sale." },
+        { "shot": "A17-47", "focus": 2, "say": "Its switch saves at once. For most, off means the screens go and the server refuses them." },
+        { "shot": "A17-47", "focus": 3, "say": "Reception can use the P O S lets Reception take, bill and settle orders at the till. Off hides it from Reception only." },
+        { "shot": "A17-48", "focus": 1, "say": "Rivals' prices checks nearby hotels' lowest prices on Google Hotels, twice a week, for the next thirty nights. Nothing here changes a price." },
+        { "shot": "A17-48", "focus": 2, "say": "Here the server has no search key yet, so nothing is checked." },
+        { "shot": "A17-49", "focus": 1, "say": "Connection health lists every outside connection: emails, WhatsApp, the CRS, sign-in, backups and rivals' prices." },
+        { "shot": "A17-49", "focus": 2, "say": "Each says Working, Needs a look, Not working, or Not set up." },
+        { "shot": "A17-49", "focus": 3, "say": "And when it last worked. Nothing is changed here: a connection is set up on the server." }
+      ],
+      "outro": "Channel manager, CRS bookings and Integrations open their own Front office screens. That is Settings. Thank you for watching."
+    }
+  ]
+}

@@ -1,0 +1,194 @@
+{
+  "chapter": "A2",
+  "title": "Bookings",
+  "manualShots": "a2",
+  "videos": [
+    {
+      "id": "A2-01",
+      "section": "A2.1",
+      "title": "Finding a booking",
+      "intro": "Every booking on the file is in one list, whatever its state. In this video you will find a booking, and open it.",
+      "scenes": [
+        { "shot": "A2-01", "say": "Open All bookings, under Bookings in the menu. It shows every booking on the file, with the business date at the top." },
+        { "shot": "A2-01", "focus": 1, "say": "Type in the search box: part of the guest's name, the reference, a room number, or a few digits of the phone." },
+        { "shot": "A2-01", "focus": 2, "say": "Or tap a tile to see one state. Due in is every confirmed booking still to arrive, on any date. Each tile shows its count." },
+        { "shot": "A2-01", "focus": 4, "say": "The status says where each booking stands: due in, in house, due out, checked out, or waiting for the hotel." },
+        { "shot": "A2-01", "focus": 3, "say": "Cancelled, void and no-show bookings are never deleted. They are kept here, under their own tile." },
+        { "shot": "A2-16", "say": "Click a row, and the booking opens in the stay panel. Its More options holds every change to a booking." },
+        { "shot": "A2-01", "say": "The Bookings menu also holds New booking and CRS bookings. Groups is found with Find a screen, Ctrl K." }
+      ],
+      "outro": "The next videos take a booking from the first call to the guest's voucher."
+    },
+    {
+      "id": "A2-02",
+      "section": "A2.2",
+      "title": "A booking on the phone: the guest and the dates",
+      "intro": "A guest calls to book a room. In this video you will fill in who is coming, and for which nights.",
+      "scenes": [
+        { "shot": "A2-02", "say": "Open New booking. It is one page, and it opens on today's business date, for one night and one room." },
+        { "shot": "A2-02", "focus": 1, "say": "Type the guest's name, or the company's. It is the only guest detail that must be filled in." },
+        { "shot": "A2-02", "focus": 2, "say": "Type the phone number. It is needed for online check-in and for WhatsApp. Add the email if the guest gives one." },
+        { "shot": "A2-02", "say": "If the system knows that phone, a line asks: same person? Press Same person only if it really is them." },
+        { "shot": "A2-02", "focus": 3, "say": "Ask the guest if they agree to WhatsApp, and switch it on if they do. Unticked, messages go by email if there is one." },
+        { "shot": "A2-02", "focus": 4, "say": "Set the arrival and departure dates. The nights are counted under them. The night of departure is not charged." },
+        { "shot": "A2-03", "focus": 1, "say": "Choose the booking source: how the booking reached the hotel. Nothing is chosen for you, and it cannot be filled in later." },
+        { "shot": "A2-02", "focus": 5, "say": "On the right, The booking adds it all up as you type: the nights, the rooms, the room charges, the GST, and what is due." }
+      ],
+      "outro": "Next: the room, and its price."
+    },
+    {
+      "id": "A2-03",
+      "section": "A2.2",
+      "title": "The room and its price",
+      "intro": "The guest asks what it will cost. In this video you will choose the room, and read its price.",
+      "scenes": [
+        { "shot": "A2-03", "focus": 2, "say": "Choose the room type." },
+        { "shot": "A2-03", "focus": 3, "say": "Choose the meal plan: room only, with breakfast, with one more meal, with all meals, or everything charged to the room." },
+        { "shot": "A2-03", "say": "Then set how many rooms, adults and children." },
+        { "shot": "A2-03", "focus": 4, "say": "Leave the rate empty, and the price comes from the rate calendar. Type a number only for a rate agreed with the guest." },
+        { "shot": "A2-03", "focus": 5, "say": "Tick Rate includes GST when the rate you typed already has the tax in it. It stays off unless you tick it." },
+        { "shot": "A2-03", "focus": 6, "say": "Picking a room is optional. Assign later is fine. A room you pick is kept." },
+        { "shot": "A2-03", "focus": 7, "say": "This says how many rooms of the type are free on every night of the stay. You may book more. You decide." },
+        { "shot": "A2-03", "focus": 8, "say": "The price line shows the rate a night, the tax and its rate, and the nights. Read it to the guest." },
+        { "shot": "A2-03", "say": "If there is no price for the party, the line says so, and the total stays a dash. The system never guesses a price." }
+      ],
+      "outro": "Next: the ID, the advance, and saving the booking."
+    },
+    {
+      "id": "A2-04",
+      "section": "A2.3",
+      "title": "The advance, the details and Save booking",
+      "intro": "In this video you will finish the form: the ID, an advance, the folded details, and the three buttons.",
+      "scenes": [
+        { "shot": "A2-04", "focus": 1, "say": "For a booking still to come, only the nationality is asked, as a two-letter code. The document is taken at check-in." },
+        { "shot": "A2-04", "focus": 2, "say": "If the guest pays an advance now, type the amount and how it was paid. It is held as the guest's credit until the nights are charged." },
+        { "shot": "A2-04", "focus": 3, "say": "Four sections are folded. More about the guest holds the address, the offers tick, and woman travelling alone." },
+        { "shot": "A2-05", "focus": 1, "say": "Booking details holds whether the booking is confirmed, or waiting for the hotel." },
+        { "shot": "A2-05", "focus": 2, "say": "The expected check-in and check-out times, if the guest said." },
+        { "shot": "A2-05", "focus": 3, "say": "The business source: the company or agent behind the booking, if there is one." },
+        { "shot": "A2-05", "focus": 4, "say": "And the sales person." },
+        { "shot": "A2-05", "focus": 5, "say": "A discount: up to ten percent by hand, or rupees off a night, each with a reason. More than that only through a named promotion." },
+        { "shot": "A2-04", "say": "Company is for a booking billed to a company. Notes is for a note on the booking." },
+        { "shot": "A2-04", "focus": 4, "say": "Then tap Save booking. On a phone booking, it is the one filled button." },
+        { "shot": "A2-04", "focus": 5, "say": "A button that cannot be used yet says why, under the buttons. Here, Save and assign room waits for a room, and Check in now is only for an arrival today." }
+      ],
+      "outro": "Next: what to do once it is booked."
+    },
+    {
+      "id": "A2-05",
+      "section": "A2.4",
+      "title": "Booked: the reference and the voucher",
+      "intro": "The booking is saved. In this video you will see what the desk does next, in the order you do it on the phone.",
+      "scenes": [
+        { "shot": "A2-06", "focus": 1, "say": "The page says Booked, with the booking's reference. Read it to the guest." },
+        { "shot": "A2-06", "focus": 2, "say": "The guest's page link shows a link to the guest's own page, to copy." },
+        { "shot": "A2-06", "focus": 3, "say": "Send voucher sends the booking's one voucher. It goes once. After that, the page says when it went, and who sent it." },
+        { "shot": "A2-06", "say": "Here the sending buttons are grey, and say why: on this demo hotel, sending is not set up. A button that cannot work always says why." },
+        { "shot": "A2-06", "focus": 4, "say": "View voucher opens the same voucher to look at, print or save. It sends nothing." },
+        { "shot": "A2-06", "focus": 5, "say": "Send check-in link sends the voucher again, with the guest's check-in link." },
+        { "shot": "A2-06", "focus": 6, "say": "Open the booking opens it in All bookings. Another booking clears the page for the next call." }
+      ],
+      "outro": "If a step after the save is refused, the booking still stands, and this page says which step, and why."
+    },
+    {
+      "id": "A2-06",
+      "section": "A2.5",
+      "title": "A walk-in, checked in at once",
+      "intro": "A guest at the desk, with no booking. In this video you will book them and check them in, on one page.",
+      "scenes": [
+        { "shot": "A2-07", "say": "Start from the room, not from the menu. Open Rooms." },
+        { "shot": "A2-07", "focus": 1, "say": "Tap a free room. New booking opens on that room, for tonight, one night." },
+        { "shot": "A2-08", "focus": 1, "say": "The booking source is already Walk-in." },
+        { "shot": "A2-08", "focus": 2, "say": "The room is the one you tapped, with its state. This one is clean." },
+        { "shot": "A2-08", "focus": 3, "say": "Type the guest's name and phone, and check the price: one night, with its tax." },
+        { "shot": "A2-09", "focus": 1, "say": "For an arrival today, the ID is asked here. Choose the document." },
+        { "shot": "A2-09", "focus": 2, "say": "And type its number. Check in now records them." },
+        { "shot": "A2-31", "focus": 1, "say": "On a walk-in, the one filled button is Check in now. Tap it." },
+        { "shot": "A2-31", "focus": 2, "say": "Save booking would book the room without checking the guest in." },
+        { "shot": "A2-10", "focus": 1, "say": "The page says Checked in." },
+        { "shot": "A2-10", "focus": 2, "say": "And the guest is in house, in room 301." }
+      ],
+      "outro": "Check in now uses the same checks as Arrivals. If it refuses, the booking still stands, and you check the guest in from Arrivals."
+    },
+    {
+      "id": "A2-07",
+      "section": "A2.6",
+      "title": "A group of rooms",
+      "intro": "A wedding, or a family: one guest, one set of dates, several rooms. In this video you will book a group, and open its page.",
+      "scenes": [
+        { "shot": "A2-11", "focus": 2, "say": "On New booking, set the number of rooms. More than one room becomes a group by itself." },
+        { "shot": "A2-11", "focus": 1, "say": "Give the group a name. Left empty, it is named after the guest." },
+        { "shot": "A2-11", "focus": 3, "say": "The booking on the right says the rooms are booked as one group. Save it." },
+        { "shot": "A2-12", "focus": 1, "say": "Each room gets its own reference." },
+        { "shot": "A2-12", "focus": 3, "say": "Open the booking opens the group's page." },
+        { "shot": "A2-13", "focus": 1, "say": "Every group is listed on Groups. Here and coming shows the groups in the house or due. All adds the past ones." },
+        { "shot": "A2-13", "focus": 2, "say": "Tap a group to see its rooms, with its room-nights and its dates." },
+        { "shot": "A2-13", "focus": 3, "say": "Two figures are kept apart: what the rooms owe, and what the host owes. A dash means there is no host account." },
+        { "shot": "A2-13", "focus": 4, "say": "Open the group for its page." },
+        { "shot": "A2-14", "focus": 1, "say": "With no host account, every room settles its own bill. Open a host account when the host pays." },
+        { "shot": "A2-14", "focus": 2, "say": "The guests shows what the rooms owe on their own bills." },
+        { "shot": "A2-14", "focus": 3, "say": "Tick Host pays on a room to put its accommodation on the host's account. Nights already charged stay where they were posted." },
+        { "shot": "A2-14", "focus": 4, "say": "The lead guest gets the group's one confirmation. It starts on the room booked first." }
+      ],
+      "outro": "A group's rooms are given their room numbers later, from Arrivals or the Calendar."
+    },
+    {
+      "id": "A2-08",
+      "section": "A2.7",
+      "title": "Waiting for the hotel",
+      "intro": "Sometimes the hotel must accept a booking first. In this video you will hold a booking, and confirm it.",
+      "scenes": [
+        { "shot": "A2-05", "focus": 1, "say": "In Booking details, choose Waiting for the hotel. The room is held, and nothing goes to the guest." },
+        { "shot": "A2-15", "focus": 1, "say": "After saving, the page says Held, waiting for the hotel." },
+        { "shot": "A2-15", "focus": 2, "say": "No voucher and no link go to the guest until the booking is confirmed." },
+        { "shot": "A2-15", "focus": 3, "say": "When the hotel accepts it, tap Confirm the booking." },
+        { "shot": "A2-20", "focus": 1, "say": "Or do it later: open the booking, tap More options, then Confirm the booking." },
+        { "shot": "A2-21", "focus": 1, "say": "The message says Confirmed: the voucher can go now. Every waiting room booked with it is confirmed together." },
+        { "shot": "A2-20", "focus": 2, "say": "If the hotel does not accept it, choose Cancel this booking. It was never confirmed, so there is no charge, and nothing is sent." }
+      ],
+      "outro": "Bookings sold by the CRS arrive the same way: waiting, with the room held, for the hotel to confirm."
+    },
+    {
+      "id": "A2-09",
+      "section": "A2.8",
+      "title": "Changing dates, and moving rooms",
+      "intro": "Plans change. In this video you will change a booking's dates, and move a guest to another room.",
+      "scenes": [
+        { "shot": "A2-16", "say": "Open the booking, and tap More options. The choices are listed by when they happen." },
+        { "shot": "A2-16", "focus": 1, "say": "Change dates or guests changes the arrival, the departure, the adults and the children." },
+        { "shot": "A2-16", "focus": 3, "say": "Move to another room is grey until the guest has arrived, and it says why. Before arrival, change the room on the Calendar." },
+        { "shot": "A2-16", "focus": 4, "say": "What this booking includes lists its extras." },
+        { "shot": "A2-17", "focus": 1, "say": "Here is Change dates or guests. The arrival stays as it is." },
+        { "shot": "A2-17", "focus": 2, "say": "The departure moves one day later." },
+        { "shot": "A2-17", "focus": 3, "say": "The line below says the change in words: two nights become three, with the room charges at the rate agreed." },
+        { "shot": "A2-17", "focus": 4, "say": "Tap Save. If the room is taken on a night being added, nothing changes at all, and you are told." },
+        { "shot": "A2-18", "focus": 1, "say": "The message says the stay was amended: two nights become three." },
+        { "shot": "A2-19", "focus": 1, "say": "For a guest in the house, choose Move to another room. Type the new room." },
+        { "shot": "A2-19", "focus": 2, "say": "Choose from which night. It starts on the business date." },
+        { "shot": "A2-19", "focus": 3, "say": "Choose why they moved: they asked, an upgrade, a downgrade, or something wrong with the room." },
+        { "shot": "A2-19", "focus": 4, "say": "Type a new rate only if the price changes. Left empty, nothing about the money changes." },
+        { "shot": "A2-19", "focus": 6, "say": "Then tap Move. The nights before stay with the old room." }
+      ],
+      "outro": "Exchange with another guest swaps the rooms of two guests who are both in the house."
+    },
+    {
+      "id": "A2-10",
+      "section": "A2.9",
+      "title": "Cancel, void and no-show",
+      "intro": "Three ways a booking does not happen: cancelled, void, and no-show. None of them deletes the booking.",
+      "scenes": [
+        { "shot": "A2-16", "focus": 5, "say": "If the guest cancelled, open the booking, tap More options, then Cancel this booking." },
+        { "shot": "A2-22", "focus": 1, "say": "The window first says what the booking's cancellation terms charge. This booking carries no terms, so nothing is charged." },
+        { "shot": "A2-22", "focus": 2, "say": "Type why the guest cancelled. It must be filled in." },
+        { "shot": "A2-22", "focus": 3, "say": "Keep it closes the window, and changes nothing." },
+        { "shot": "A2-22", "focus": 4, "say": "Cancel the booking cancels this room only." },
+        { "shot": "A2-23", "focus": 1, "say": "The message says the room is free again, and what was charged. Here, no charge." },
+        { "shot": "A2-24", "focus": 1, "say": "The booking is not deleted. It is under Cancelled, void and no-show." },
+        { "shot": "A2-24", "focus": 2, "say": "Here it is, marked Cancelled." },
+        { "shot": "A2-16", "focus": 6, "say": "Void this booking is for one that should never have existed: entered twice, or the wrong property. A voided booking is left out of revenue, and out of cancellation figures." },
+        { "shot": "A2-24", "say": "A confirmed guest who never comes is marked a no-show by the night audit. The booking's terms decide what is kept." }
+      ],
+      "outro": "Cancel and void are only for a booking that has not arrived. A guest in the house is checked out instead. That is bookings. Thank you for watching."
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "chapter": "A14",
+  "title": "Sales, marketing and loyalty",
+  "manualShots": "a14",
+  "videos": [
+    {
+      "id": "A14-01",
+      "section": "A14.1",
+      "title": "The Sales and marketing screens",
+      "intro": "Sales and marketing is the part of the menu for enquiries, marketing figures and loyalty. In this video you will see its three screens, and who reaches each one.",
+      "scenes": [
+        { "shot": "A14-01", "say": "In the Front office menu, Sales and marketing sits under Guests and CRM. Both are about people." },
+        { "shot": "A14-01", "focus": 1, "say": "Leads and WhatsApp shows the hotel's enquiries from the leads app. Everyone who sees guests can open it." },
+        { "shot": "A14-01", "focus": 2, "say": "Marketing shows one month: what each campaign cost, and the bookings and revenue it brought. Only the owner, an Admin and the GM see it." },
+        { "shot": "A14-01", "focus": 3, "say": "Loyalty is where members earn points on their stays, and use them. Everyone who sees guests can open it." },
+        { "shot": "A14-06", "say": "Reception's own menu has none of the three. Reception reaches Leads and WhatsApp, and Loyalty, with Find a screen, or Control K." },
+        { "shot": "A14-06", "focus": 1, "say": "Type what you are looking for: loyalty, or leads." },
+        { "shot": "A14-06", "focus": 2, "say": "The screen is marked Not in your menu. It is yours to open, just not listed: tap it." }
+      ],
+      "outro": "No module switch hides these three screens. Loyalty has its own switch at each hotel, and a later video shows it."
+    },
+    {
+      "id": "A14-02",
+      "section": "A14.2",
+      "title": "Leads and Marketing",
+      "intro": "Enquiries from WhatsApp, the website and ads arrive in the leads app. In this video you will see how the PMS shows them, how a lead becomes a booking, and the month's marketing figures.",
+      "scenes": [
+        { "shot": "A14-01", "focus": 1, "say": "Leads and WhatsApp reads the enquiries from the leads app as you open the page. Staff reply in the leads app, not here." },
+        { "shot": "A14-01", "focus": 4, "say": "Here the leads app is not connected yet. Until the owner sets up its read-only login on the server, nothing is read." },
+        { "shot": "A14-01", "say": "Once it is connected, the enquiries are listed newest message first, fifty at a time. Tap one to read its conversation, and Reply in the leads app to answer there." },
+        { "shot": "A14-01", "say": "To book a lead, tap Book this lead. New booking opens with the guest's name and phone, a booking source by the lead's channel, and the lead's campaign." },
+        { "shot": "A14-01", "say": "Each look reads the leads app live, at most 5,000 times a day. Nothing is copied into the PMS." },
+        { "shot": "A14-02", "say": "Marketing is for the owner, an Admin and the GM. It shows one month, by the stays' arrival date." },
+        { "shot": "A14-02", "focus": 1, "say": "It opens on this month. Choose another in Month." },
+        { "shot": "A14-02", "focus": 2, "say": "Campaigns gives each campaign's spend, beside the bookings and revenue it brought. A booking carries its campaign only when it was made with Book this lead." },
+        { "shot": "A14-02", "focus": 3, "say": "Spend comes from the leads app, and a dash means nobody has the figure. This line says why: here, the leads app is not connected yet." },
+        { "shot": "A14-02", "focus": 4, "say": "By booking source counts every stay arriving this month. Revenue is room charges before tax, and cancelled and no-show stays are left out." },
+        { "shot": "A14-02", "focus": 5, "say": "No source recorded holds the stays whose booking named no source." }
+      ],
+      "outro": "Remember, the month is by arrival: a stay booked in September for October counts in October."
+    },
+    {
+      "id": "A14-03",
+      "section": "A14.4",
+      "title": "Loyalty: switching it on and the rules",
+      "intro": "Members earn points on their stays at every hotel of the group, and use them on their room charges. One point is one rupee off. In this video you will switch loyalty on and set its rules.",
+      "scenes": [
+        { "shot": "A14-03", "focus": 1, "say": "The line under the heading gives the programme's name and its earn rate. Here neither is set, so stays earn nothing." },
+        { "shot": "A14-03", "focus": 2, "say": "And loyalty is off at this hotel: nobody joins, earns or uses points here." },
+        { "shot": "A14-07", "say": "The owner or an Admin switches it on: Settings, then Modules and connections, then Modules." },
+        { "shot": "A14-07", "focus": 1, "say": "Find Loyalty. Its switch is on the right of the line, and each hotel has its own." },
+        { "shot": "A14-07", "focus": 2, "say": "The note says what it does. Off means nobody joins, earns or uses points at this hotel." },
+        { "shot": "A14-05", "say": "Then the owner, an Admin or the GM sets the rules, on the Loyalty screen. They are for every hotel of the group." },
+        { "shot": "A14-05", "focus": 1, "say": "Type the Programme name, at most 40 letters. It goes into the words a guest agrees to." },
+        { "shot": "A14-05", "focus": 2, "say": "Type the Points per ₹100 before GST, at most 100. Left empty, stays earn nothing." },
+        { "shot": "A14-05", "focus": 3, "say": "Tap Save the rules. The message says Rules saved." },
+        { "shot": "A14-05", "focus": 4, "say": "Points by hotel shows each hotel's points earned and used in a month, in rupees. Only the owner, an Admin and the GM see it." },
+        { "shot": "A14-05", "focus": 5, "say": "Choose the month here. Points earned at one hotel may be used at another, so the hotels can settle between themselves." }
+      ],
+      "outro": "Once the switch is on and the rules are saved, the desk can start joining guests. That is the next video."
+    },
+    {
+      "id": "A14-04",
+      "section": "A14.4",
+      "title": "Loyalty: joining, earning and using points",
+      "intro": "A guest in house wants to join. In this video you will join them with their yes, and see how points are earned, used and given up.",
+      "scenes": [
+        { "shot": "A14-03", "focus": 3, "say": "In house lists every guest checked in, with their points, or Not a member." },
+        { "shot": "A14-03", "focus": 4, "say": "Ask the guest first. Then tap Join on their line." },
+        { "shot": "A14-04", "focus": 1, "say": "Read this to the guest. Joining is not a yes to offers; that is a separate question." },
+        { "shot": "A14-04", "focus": 2, "say": "The words to read appear here, with the programme's name, and that the guest is 18 or over. Here no name is set yet, so there is nothing to agree to." },
+        { "shot": "A14-04", "focus": 3, "say": "A member needs a mobile number. If the guest has none on file, add it to the guest first." },
+        { "shot": "A14-04", "focus": 4, "say": "If the guest agrees, tick The guest agrees." },
+        { "shot": "A14-04", "focus": 5, "say": "Join stays grey until they do. Tap it, and the message says they joined." },
+        { "shot": "A14-03", "say": "Points are earned by themselves when a member checks out, on everything on the stay's bills before GST. Alcohol, refunds and payments earn nothing." },
+        { "shot": "A14-03", "say": "On a booking from a booking site or an agent, the room earns nothing, but the extras do. Points are whole, rounded down, once per stay." },
+        { "shot": "A14-03", "say": "To use points, tap Use points on the member's line. It shows on direct bookings only." },
+        { "shot": "A14-03", "say": "Type the points, from 500 at a time. They come off the room charges as a discount line, and the guest signs the bill." },
+        { "shot": "A14-03", "say": "To leave, tap Leave. Their points lapse, their history stays with the bills, and they can join again later, with no points." }
+      ],
+      "outro": "A member is one person across the group. The owner, an Admin and the GM see their statement on Guest 360, and add or take points there, with a reason."
+    }
+  ]
+}

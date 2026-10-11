@@ -1,0 +1,173 @@
+{
+  "chapter": "A4",
+  "title": "The guest's bill",
+  "manualShots": "a4",
+  "videos": [
+    {
+      "id": "A4-01",
+      "section": "A4.1",
+      "title": "The Finance screens",
+      "intro": "At the desk, a guest's money is called the bill. In Finance, the same thing is called a folio. In this video you will see the Finance screens, and what each one is for.",
+      "scenes": [
+        { "shot": "A4-01", "say": "This is Folios, as the GM sees it. It lists every bill that still owes money, or is owed money back." },
+        { "shot": "A4-01", "focus": 1, "say": "Folios is under Finance, in the menu." },
+        { "shot": "A4-01", "focus": 2, "say": "Outstanding is what guests owe, and on how many bills." },
+        { "shot": "A4-01", "focus": 3, "say": "Overpaid is money the hotel owes back to guests." },
+        { "shot": "A4-01", "focus": 4, "say": "Overpaid guests are listed first. Nobody chases these, so they sort first." },
+        { "shot": "A4-01", "focus": 5, "say": "Click a guest's row to open their bill, straight on the Bill tab." },
+        { "shot": "A4-02", "say": "Under Folios come Invoices, for the tax invoices after check-out, and Payments, every receipt, newest first." },
+        { "shot": "A4-02", "focus": 1, "say": "Cashiering is your own cash drawer. It is the one Finance screen in reception's menu." },
+        { "shot": "A4-02", "focus": 2, "say": "Cash deposits shows each day's cash to bank, what was banked, and who verified it." },
+        { "shot": "A4-02", "focus": 3, "say": "Company accounts shows what each company or booking site owes, and what it paid." },
+        { "shot": "A4-02", "focus": 4, "say": "Form three reports foreign guests. The check-in chapter explains it." },
+        { "shot": "A4-02", "focus": 5, "say": "Online payments is not built yet. It opens a page saying what it will do." }
+      ],
+      "outro": "Reception reaches the other Finance screens with Find a screen. The next video opens a guest's bill."
+    },
+    {
+      "id": "A4-02",
+      "section": "A4.2",
+      "title": "Reading the guest's bill",
+      "intro": "In this video you will open a guest's bill and read it, from the top line to the buttons at the foot.",
+      "scenes": [
+        { "shot": "A4-03", "say": "Open In house and click the guest. Their panel opens. Click the Bill tab." },
+        { "shot": "A4-03", "focus": 1, "say": "Due, at the top, is what the guest owes, with the nights still to come counted." },
+        { "shot": "A4-03", "focus": 2, "say": "Each posted line shows its date, what it is, and who posted it. The first night is posted at check-in." },
+        { "shot": "A4-03", "focus": 3, "say": "Charges to come are the nights the night audit has not posted yet, with their GST. If no GST rule covers the rate, it shows a dash." },
+        { "shot": "A4-03", "focus": 4, "say": "At the foot of the panel, Charged is what is posted so far, with tax. Then Paid, and Due." },
+        { "shot": "A4-06", "focus": 2, "say": "The bill is in sections: Room, Restaurant, Bar, then Other charges. Each section has its subtotal and its tax." },
+        { "shot": "A4-06", "focus": 3, "say": "Every line shows its amount before tax. Under the sections come the total, the payments received, and what is due." },
+        { "shot": "A4-04", "focus": 1, "say": "Total charges is everything posted, with tax." },
+        { "shot": "A4-04", "focus": 2, "say": "Add charge posts a new charge." },
+        { "shot": "A4-04", "focus": 3, "say": "Settle takes a payment. It is orange while money is owed." },
+        { "shot": "A4-04", "focus": 4, "say": "Interim bill prints the bill as it stands." },
+        { "shot": "A4-04", "focus": 5, "say": "Split the bill opens a second bill, for a company." },
+        { "shot": "A4-04", "focus": 6, "say": "Check out stays grey until nothing is owed. The line under it says why." }
+      ],
+      "outro": "A button you cannot use yet is grey. Point at it, and it says why."
+    },
+    {
+      "id": "A4-03",
+      "section": "A4.3",
+      "title": "Posting a charge",
+      "intro": "A guest sent three shirts to the laundry. In this video you will post the charge on their bill.",
+      "scenes": [
+        { "shot": "A4-04", "focus": 2, "say": "On the Bill tab, click Add charge." },
+        { "shot": "A4-05", "say": "The window Post a charge names the room and the guest." },
+        { "shot": "A4-05", "focus": 1, "say": "Choose the category. Here, Laundry." },
+        { "shot": "A4-05", "focus": 2, "say": "Type the description. These are the words the guest reads on the bill." },
+        { "shot": "A4-05", "focus": 3, "say": "Type the amount, before tax." },
+        { "shot": "A4-05", "focus": 4, "say": "Leave Taxable ticked. It shows the GST rate this amount carries. Untick it only for a charge that bears no GST." },
+        { "shot": "A4-05", "focus": 5, "say": "The box shows the tax in its two halves, central and state, and the total." },
+        { "shot": "A4-05", "focus": 6, "say": "Click Post charge. The button waits while the charge is sent, so one press is one charge." },
+        { "shot": "A4-05", "say": "If the hotel has set no GST rule, the rate shows a dash, and the charge is refused. A missing rate is never taken as zero." },
+        { "shot": "A4-06", "focus": 1, "say": "The new line is on the bill, with the date, the category, and who posted it." },
+        { "shot": "A4-06", "focus": 2, "say": "A food charge, such as coffee from room service, goes under Restaurant." },
+        { "shot": "A4-06", "focus": 3, "say": "Laundry and the rest go under Other charges." }
+      ],
+      "outro": "There is no discount button on the bill. A wrong charge is taken off with Reverse, in the next video."
+    },
+    {
+      "id": "A4-04",
+      "section": "A4.4",
+      "title": "Taking a wrong charge off",
+      "intro": "A minibar water was posted to the wrong room. A charge is never edited or deleted at the desk: it is reversed. In this video you will reverse it.",
+      "scenes": [
+        { "shot": "A4-06", "focus": 4, "say": "Click the curved arrow at the end of the wrong line." },
+        { "shot": "A4-07", "focus": 1, "say": "The window asks: Reverse this charge? It names the line, and its amount with tax." },
+        { "shot": "A4-07", "focus": 2, "say": "Type why. It is required. It is kept on the reversal's line, and the guest's bill never shows it." },
+        { "shot": "A4-07", "focus": 3, "say": "Click Reverse. Keep it leaves the line as it is." },
+        { "shot": "A4-08", "focus": 1, "say": "The wrong line stays on the bill, struck through." },
+        { "shot": "A4-08", "focus": 2, "say": "The reversal is its own line, in red, with the reason. The subtotal and the tax come down with it." },
+        { "shot": "A4-08", "say": "A line is reversed once, and a reversal cannot itself be reversed. If the charge was right after all, post it again." },
+        { "shot": "A4-08", "say": "A line from a day the night audit has closed is corrected on Closed days instead. Once a tax invoice stands on the bill, only a credit note corrects it." },
+        { "shot": "A4-08", "say": "A payment is reversed only by the owner, an administrator, the GM or the accountant." }
+      ],
+      "outro": "If the curved arrow is grey, point at it to read why."
+    },
+    {
+      "id": "A4-05",
+      "section": "A4.5",
+      "title": "A manager corrects a charge, or the rate",
+      "intro": "This video is for the owner, administrators and the GM. You will correct a charge, and change the rate of a stay.",
+      "scenes": [
+        { "shot": "A4-09", "focus": 1, "say": "On a manager's bill, each charge has a pencil." },
+        { "shot": "A4-09", "focus": 2, "say": "Beside it is Reverse, as reception has it." },
+        { "shot": "A4-10", "say": "Click the pencil. The window Edit this charge names the line and its amount with tax." },
+        { "shot": "A4-10", "focus": 1, "say": "You can change the words the line says," },
+        { "shot": "A4-10", "focus": 2, "say": "or the price before tax, or both. The tax stays at the rate it was charged." },
+        { "shot": "A4-10", "focus": 3, "say": "Type why. It is required." },
+        { "shot": "A4-10", "focus": 4, "say": "Click Correct the charge. The old line is reversed with the reason, and the corrected one is posted, in one step." },
+        { "shot": "A4-09", "say": "There is no pencil on a payment, or on a reversed line. On a closed day, or once a tax invoice stands, the pencil is grey." },
+        { "shot": "A4-09b", "focus": 1, "say": "To give the whole stay a new rate, click Change rate." },
+        { "shot": "A4-11", "focus": 1, "say": "Type the new rate a night, before tax. The room's GST slab follows it." },
+        { "shot": "A4-11", "focus": 2, "say": "If the figure you typed includes GST, tick Includes GST. The window then shows how it splits." },
+        { "shot": "A4-11", "focus": 3, "say": "Type why. It is kept with every night it corrects." },
+        { "shot": "A4-11", "say": "Click Change the rate. Nights already charged are corrected to it, and nights still to come are charged at it." },
+        { "shot": "A4-11", "say": "It is all or nothing: if one night cannot be corrected, nothing changes, and the message names that night." }
+      ],
+      "outro": "A room night's price can be corrected, but not its words: they count its nights."
+    },
+    {
+      "id": "A4-06",
+      "section": "A4.7",
+      "title": "Settle, split and print",
+      "intro": "In this video the guest pays. You will take a payment, split the bill with a company, and print the interim bill.",
+      "scenes": [
+        { "shot": "A4-04", "focus": 3, "say": "Click Settle. The window Settle bill says what is outstanding, and whose bill it is." },
+        { "shot": "A4-04", "say": "Choose the method. The list is the hotel's own ways of paying, with its default first. The amount is filled in with what is owed." },
+        { "shot": "A4-04", "say": "Change the amount for a part payment. Check what remains, and click Take payment." },
+        { "shot": "A4-03", "say": "The payment is listed under Payments received. At the foot of the panel, Paid goes up and Due comes down." },
+        { "shot": "A4-04", "say": "More than the bill is held as the guest's credit, but only after you tick that it is." },
+        { "shot": "A4-04", "say": "Cash above one lakh rupees at once asks for the guest's PAN, or Form 97." },
+        { "shot": "A4-04", "focus": 5, "say": "When a company pays the room, click Split the bill. Choose the company, and click Open the second bill." },
+        { "shot": "A4-04", "say": "The bills then show side by side: Everything, Guest, and the company. The two-arrow button on a line moves it to the other bill." },
+        { "shot": "A4-04", "say": "Settle each bill on its own. For the company's, choose Bill to company. The amount goes to the company's account." },
+        { "shot": "A4-02", "focus": 3, "say": "When the company pays, record it on Company accounts, with Record payment. Never in cash." },
+        { "shot": "A4-04", "focus": 4, "say": "Interim bill opens the print preview. Click Print, and the bill opens on a page of its own, to print." },
+        { "shot": "A4-04", "say": "The interim bill is not a tax invoice, and has no number." },
+        { "shot": "A4-04", "focus": 6, "say": "When nothing is owed, Check out opens. The check-out chapter goes on from there." }
+      ],
+      "outro": "After check-out, the numbered tax invoice is issued on Invoices. A wrong invoice is corrected with a credit note."
+    },
+    {
+      "id": "A4-07",
+      "section": "A4.10",
+      "title": "Your cash drawer",
+      "intro": "In this video you will see your cash drawer at the desk: how it opens, what goes in and out, and how you hand it over.",
+      "scenes": [
+        { "shot": "A4-02", "focus": 1, "say": "Open Cashiering, under Finance in the menu." },
+        { "shot": "A4-20", "say": "Before your first cash, it says No drawer open." },
+        { "shot": "A4-20", "focus": 1, "say": "There is no step to open. Your drawer opens by itself the first time you take cash. With nothing handed to you, it opens at zero." },
+        { "shot": "A4-20", "say": "If the last person handed you a float by name, it says so, and your drawer opens on it." },
+        { "shot": "A4-20", "focus": 2, "say": "Only when a float is given to you by hand, type how many of each note." },
+        { "shot": "A4-20", "focus": 3, "say": "Then click the button. It reads Count a float to open by hand, and changes to Open the drawer, with the amount." },
+        { "shot": "A4-20", "say": "During the shift, Taken this shift lists what you took, by method. Only cash reaches the drawer." },
+        { "shot": "A4-20", "say": "Money that was not a payment, such as a taxi paid from the drawer, is recorded under In and out of the drawer. A paid out waits for the GM's or the owner's yes." },
+        { "shot": "A4-20", "say": "At the end of your shift, count the drawer note by note, and click Save the count. It says if the drawer balances, or is over or short." },
+        { "shot": "A4-20", "say": "Click Close and hand over. If the count differs, write why. Choose who takes the drawer, type the float kept, and click Close the shift." },
+        { "shot": "A4-02", "focus": 2, "say": "The rest is to deposit. The GM records the deposit on Cash deposits, and the owner or the accountant verifies it." }
+      ],
+      "outro": "A difference never stops the hand-over, but it must be written down."
+    },
+    {
+      "id": "A4-08",
+      "section": "A4.12",
+      "title": "The bill in short",
+      "intro": "Here is the guest's bill in short: what to do, and when.",
+      "checklist": [
+        "To see what a guest owes: In house, the guest, the Bill tab.",
+        "Something to add: Add charge, then Post charge.",
+        "A charge is wrong: the curved arrow, Why, Reverse.",
+        "Managers: the pencil for a charge, Change rate for the stay.",
+        "The guest asks for the bill: Interim bill, then Print.",
+        "A company pays part: Split the bill, and move the lines.",
+        "The guest pays: Settle, the method, Take payment. Then Check out.",
+        "Money that was not a payment: Cashiering, In and out of the drawer, Record.",
+        "End of your shift: Cashiering. Count, Save the count, Close and hand over.",
+        "After check-out: Invoices, Issue. A wrong invoice needs a credit note."
+      ],
+      "outro": "That is the guest's bill. Thank you for watching."
+    }
+  ]
+}

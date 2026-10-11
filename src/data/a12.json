@@ -1,0 +1,678 @@
+{
+  "chapter": "A12",
+  "title": "Approvals, cash expenses, notifications",
+  "manualShots": "a12",
+  "videos": [
+    {
+      "id": "A12-01",
+      "slug": "A12-01-the-system-part-of-the-menu",
+      "section": "A12.1",
+      "title": "The System part of the menu",
+      "intro": {
+        "text": "The System part of the menu holds the screens that belong to no single department. In this video you will see each one, and who uses it.",
+        "voice": "a12/voice/A12-01/01.wav",
+        "dur": 7.849
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A12-01",
+          "focus": null,
+          "line": {
+            "text": "System is the last section of the menu. This is how the owner sees it.",
+            "voice": "a12/voice/A12-01/02.wav",
+            "dur": 4.157
+          }
+        },
+        {
+          "shot": "A12-01",
+          "focus": 1,
+          "line": {
+            "text": "Approvals is everything waiting on you, from every part of the system. You approve or refuse it right there.",
+            "voice": "a12/voice/A12-01/03.wav",
+            "dur": 6.491
+          }
+        },
+        {
+          "shot": "A12-01",
+          "focus": 2,
+          "line": {
+            "text": "Notifications is the bell's list, on a page of its own.",
+            "voice": "a12/voice/A12-01/04.wav",
+            "dur": 3.872
+          }
+        },
+        {
+          "shot": "A12-01",
+          "focus": 3,
+          "line": {
+            "text": "System health shows what the server is doing, from its own records. Only the owner and administrators see it.",
+            "voice": "a12/voice/A12-01/05.wav",
+            "dur": 6.723
+          }
+        },
+        {
+          "shot": "A12-01",
+          "focus": 4,
+          "line": {
+            "text": "Design system is a tool for the people who build the system. It is only on the test computer.",
+            "voice": "a12/voice/A12-01/06.wav",
+            "dur": 5.841
+          }
+        },
+        {
+          "shot": "A12-01",
+          "focus": 5,
+          "line": {
+            "text": "Room systems is marked Not built yet. Door locks, room phones and minibars will live here.",
+            "voice": "a12/voice/A12-01/07.wav",
+            "dur": 5.91
+          }
+        },
+        {
+          "shot": "A12-01",
+          "focus": 6,
+          "line": {
+            "text": "Settings is the third space, in the switcher at the top.",
+            "voice": "a12/voice/A12-01/08.wav",
+            "dur": 3.234
+          }
+        },
+        {
+          "shot": "A12-07",
+          "focus": 1,
+          "line": {
+            "text": "Your own menu may be shorter. Every screen you may open is still one search away. Click Find a screen, or press Control K, and type the first letters of its name.",
+            "voice": "a12/voice/A12-01/09.wav",
+            "dur": 9.55
+          }
+        },
+        {
+          "shot": "A12-07",
+          "focus": 2,
+          "line": {
+            "text": "Here the Inventory Manager finds Approvals. It says Not in your menu, but it is still theirs to open.",
+            "voice": "a12/voice/A12-01/10.wav",
+            "dur": 6.27
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Users and Integrations are not in the menu either. Those allowed to open them find them the same way.",
+        "voice": "a12/voice/A12-01/11.wav",
+        "dur": 6.131
+      },
+      "next": "Who approves what"
+    },
+    {
+      "id": "A12-02",
+      "slug": "A12-02-who-approves-what",
+      "section": "A12.2",
+      "title": "Who approves what",
+      "intro": {
+        "text": "Some things wait for a second person's yes before they count. In this video you will see what they are, and who says yes.",
+        "voice": "a12/voice/A12-02/01.wav",
+        "dur": 7.036
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A12-05",
+          "focus": null,
+          "line": {
+            "text": "Every request goes to the same Approvals screen. Somebody asks, with a reason, and somebody else decides.",
+            "voice": "a12/voice/A12-02/02.wav",
+            "dur": 7.373
+          }
+        },
+        {
+          "shot": "A12-02",
+          "focus": 2,
+          "line": {
+            "text": "A purchase request is raised on Purchasing. The general manager approves every purchase, whatever the amount.",
+            "voice": "a12/voice/A12-02/03.wav",
+            "dur": 6.351
+          }
+        },
+        {
+          "shot": "A12-04",
+          "focus": 1,
+          "line": {
+            "text": "A cash expense is money paid out of a drawer: the front desk's, or a restaurant's tin. The general manager or the owner decides it. Never an administrator.",
+            "voice": "a12/voice/A12-02/04.wav",
+            "dur": 9.341
+          }
+        },
+        {
+          "shot": "A12-05",
+          "focus": null,
+          "line": {
+            "text": "Equipment leaving the store waits for the Inventory Manager. When they are away, the owner, an administrator or the general manager decides instead. Retiring a tagged item can wait for them too.",
+            "voice": "a12/voice/A12-02/05.wav",
+            "dur": 11.756
+          }
+        },
+        {
+          "shot": "A12-04",
+          "focus": 2,
+          "line": {
+            "text": "Nobody approves their own request. The general manager asked for this cash expense, so it waits for the owner.",
+            "voice": "a12/voice/A12-02/06.wav",
+            "dur": 6.92
+          }
+        },
+        {
+          "shot": "A12-06",
+          "focus": 3,
+          "line": {
+            "text": "A decision stays. An approved or refused request cannot be decided again. To go ahead after a refusal, raise a new request.",
+            "voice": "a12/voice/A12-02/07.wav",
+            "dur": 8.68
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "The group owner may decide any request. Next, the general manager decides two of them.",
+        "voice": "a12/voice/A12-02/08.wav",
+        "dur": 5.899
+      },
+      "next": "Approving or refusing"
+    },
+    {
+      "id": "A12-03",
+      "slug": "A12-03-approving-or-refusing",
+      "section": "A12.3",
+      "title": "Approving or refusing",
+      "intro": {
+        "text": "In this video the general manager decides two purchase requests from the Inventory Manager. One is refused, and one is approved.",
+        "voice": "a12/voice/A12-03/01.wav",
+        "dur": 7.988
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A12-02",
+          "focus": null,
+          "line": {
+            "text": "Open Approvals, in the System part of the menu.",
+            "voice": "a12/voice/A12-03/02.wav",
+            "dur": 2.932
+          }
+        },
+        {
+          "shot": "A12-02",
+          "focus": 1,
+          "line": {
+            "text": "Waiting lists every request that still needs a decision, newest first.",
+            "voice": "a12/voice/A12-03/03.wav",
+            "dur": 4.372
+          }
+        },
+        {
+          "shot": "A12-02",
+          "focus": 2,
+          "line": {
+            "text": "Each card says what kind of request it is. In orange, it opens the whole request on its own screen.",
+            "voice": "a12/voice/A12-03/04.wav",
+            "dur": 6.444
+          }
+        },
+        {
+          "shot": "A12-02",
+          "focus": 3,
+          "line": {
+            "text": "Under it, what it is for, in the words of the person who asked.",
+            "voice": "a12/voice/A12-03/05.wav",
+            "dur": 3.977
+          }
+        },
+        {
+          "shot": "A12-02",
+          "focus": 4,
+          "line": {
+            "text": "Then the amount, who asked, and when.",
+            "voice": "a12/voice/A12-03/06.wav",
+            "dur": 2.665
+          }
+        },
+        {
+          "shot": "A12-02",
+          "focus": 5,
+          "line": {
+            "text": "To refuse, a note is required. To approve, it is not.",
+            "voice": "a12/voice/A12-03/07.wav",
+            "dur": 4.331
+          }
+        },
+        {
+          "shot": "A12-03",
+          "focus": 1,
+          "line": {
+            "text": "Here the manager types why the gas cylinders are refused: four are on deposit already.",
+            "voice": "a12/voice/A12-03/08.wav",
+            "dur": 5.591
+          }
+        },
+        {
+          "shot": "A12-03",
+          "focus": 3,
+          "line": {
+            "text": "Then taps Refuse. The message says it is refused, and they have been told why.",
+            "voice": "a12/voice/A12-03/09.wav",
+            "dur": 5.539
+          }
+        },
+        {
+          "shot": "A12-03",
+          "focus": 2,
+          "line": {
+            "text": "To approve, tap Approve. The tea cups were approved this way, and can now be ordered from a supplier.",
+            "voice": "a12/voice/A12-03/10.wav",
+            "dur": 6.444
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Refuse with no note is not accepted. Neither button can be undone, so read the card first.",
+        "voice": "a12/voice/A12-03/11.wav",
+        "dur": 6.293
+      },
+      "next": "Not yours to decide, and what was decided"
+    },
+    {
+      "id": "A12-04",
+      "slug": "A12-04-not-yours-to-decide-and-what-was-decided",
+      "section": "A12.4",
+      "title": "Not yours to decide, and what was decided",
+      "intro": {
+        "text": "In this video you will see a request you may not decide, and where to find what was decided, and by whom.",
+        "voice": "a12/voice/A12-04/01.wav",
+        "dur": 6.659
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A12-04",
+          "focus": 1,
+          "line": {
+            "text": "Approvals lists every request waiting at the hotel. This one is a cash expense: milk for the kitchen, from the restaurant's tin.",
+            "voice": "a12/voice/A12-04/02.wav",
+            "dur": 8.406
+          }
+        },
+        {
+          "shot": "A12-04",
+          "focus": 2,
+          "line": {
+            "text": "There are no buttons. The general manager asked for it, so the sentence says they cannot be the one who approves it. It waits for the owner.",
+            "voice": "a12/voice/A12-04/03.wav",
+            "dur": 8.134
+          }
+        },
+        {
+          "shot": "A12-05",
+          "focus": 1,
+          "line": {
+            "text": "To see the decided requests too, tap Everything at the top right. Those still waiting come first.",
+            "voice": "a12/voice/A12-04/04.wav",
+            "dur": 6.7
+          }
+        },
+        {
+          "shot": "A12-05",
+          "focus": 2,
+          "line": {
+            "text": "The gas cylinders are marked Refused.",
+            "voice": "a12/voice/A12-04/05.wav",
+            "dur": 2.653
+          }
+        },
+        {
+          "shot": "A12-05",
+          "focus": 3,
+          "line": {
+            "text": "Under them, who refused them, and the note they wrote.",
+            "voice": "a12/voice/A12-04/06.wav",
+            "dur": 3.083
+          }
+        },
+        {
+          "shot": "A12-05",
+          "focus": 4,
+          "line": {
+            "text": "The tea cups are marked Approved, by the general manager.",
+            "voice": "a12/voice/A12-04/07.wav",
+            "dur": 3.187
+          }
+        },
+        {
+          "shot": "A12-05",
+          "focus": null,
+          "line": {
+            "text": "Equipment requests show here too. This one, the air conditioner for room 205, was approved by the Inventory Manager.",
+            "voice": "a12/voice/A12-04/08.wav",
+            "dur": 8.441
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "The person who decides sees who asked, and the person who asked sees who decided.",
+        "voice": "a12/voice/A12-04/09.wav",
+        "dur": 5.126
+      },
+      "next": "When you asked: reading the answer"
+    },
+    {
+      "id": "A12-05",
+      "slug": "A12-05-when-you-asked-reading-the-answer",
+      "section": "A12.6",
+      "title": "When you asked: reading the answer",
+      "intro": {
+        "text": "You asked for something. In this video you will see where to read the answer.",
+        "voice": "a12/voice/A12-05/01.wav",
+        "dur": 4.749
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A12-06",
+          "focus": null,
+          "line": {
+            "text": "The Inventory Manager opens Purchasing, and clicks the request for the gas cylinders.",
+            "voice": "a12/voice/A12-05/02.wav",
+            "dur": 5.161
+          }
+        },
+        {
+          "shot": "A12-06",
+          "focus": null,
+          "line": {
+            "text": "The request keeps it all: what it was for, the store it goes to, the total, who asked, when, and who decided.",
+            "voice": "a12/voice/A12-05/03.wav",
+            "dur": 7.251
+          }
+        },
+        {
+          "shot": "A12-06",
+          "focus": 1,
+          "line": {
+            "text": "Refused shows beside the request's number.",
+            "voice": "a12/voice/A12-05/04.wav",
+            "dur": 2.885
+          }
+        },
+        {
+          "shot": "A12-06",
+          "focus": 2,
+          "line": {
+            "text": "Under it, who refused it, and their note.",
+            "voice": "a12/voice/A12-05/05.wav",
+            "dur": 2.595
+          }
+        },
+        {
+          "shot": "A12-06",
+          "focus": 3,
+          "line": {
+            "text": "A decision stays on the record. To go ahead after this, raise a new request.",
+            "voice": "a12/voice/A12-05/06.wav",
+            "dur": 4.877
+          }
+        },
+        {
+          "shot": "A12-07",
+          "focus": 1,
+          "line": {
+            "text": "The Inventory Manager decides equipment requests, but Approvals is not in their shorter menu. Click Find a screen, and type the first letters of Approvals.",
+            "voice": "a12/voice/A12-05/07.wav",
+            "dur": 9.37
+          }
+        },
+        {
+          "shot": "A12-07",
+          "focus": 2,
+          "line": {
+            "text": "Approvals is found. It says Not in your menu, and it is still theirs to open. Press Enter.",
+            "voice": "a12/voice/A12-05/08.wav",
+            "dur": 6.241
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "A request still waiting says Waiting for the general manager. A cash expense shows its answer on its drawer's line.",
+        "voice": "a12/voice/A12-05/09.wav",
+        "dur": 6.56
+      },
+      "next": "Cash expenses"
+    },
+    {
+      "id": "A12-06",
+      "slug": "A12-06-cash-expenses",
+      "section": "A12.7",
+      "title": "Cash expenses",
+      "intro": {
+        "text": "Money paid out of a drawer, for milk, a taxi or a repair, is a cash expense. Every one waits for a yes.",
+        "voice": "a12/voice/A12-06/01.wav",
+        "dur": 7.118
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A12-04",
+          "focus": null,
+          "line": {
+            "text": "To record one, open Cashiering at the front desk, or Close restaurant day in a restaurant. Under In and out of the drawer, tap Record. Choose Paid out, or Expense, type how much and what it was for, and tap Record.",
+            "voice": "a12/voice/A12-06/02.wav",
+            "dur": 13.149
+          }
+        },
+        {
+          "shot": "A12-04",
+          "focus": 1,
+          "line": {
+            "text": "It arrives in Approvals as a cash expense, named by its drawer and your own words.",
+            "voice": "a12/voice/A12-06/03.wav",
+            "dur": 5.207
+          }
+        },
+        {
+          "shot": "A12-04",
+          "focus": 2,
+          "line": {
+            "text": "The general manager or the owner decides it. Never the person who paid it out.",
+            "voice": "a12/voice/A12-06/04.wav",
+            "dur": 4.761
+          }
+        },
+        {
+          "shot": "A12-01",
+          "focus": null,
+          "line": {
+            "text": "While it waits, the drawer's line says Waiting for a yes, not taken off the drawer yet. The drawer is still expected to hold that money.",
+            "voice": "a12/voice/A12-06/05.wav",
+            "dur": 7.57
+          }
+        },
+        {
+          "shot": "A12-03",
+          "focus": 2,
+          "line": {
+            "text": "Approved, it is taken off what the drawer should hold, even if the drawer has closed since.",
+            "voice": "a12/voice/A12-06/06.wav",
+            "dur": 5.184
+          }
+        },
+        {
+          "shot": "A12-03",
+          "focus": 3,
+          "line": {
+            "text": "Refused, the line says Not approved, with the note. The money is a shortage on that drawer, and nothing more.",
+            "voice": "a12/voice/A12-06/07.wav",
+            "dur": 6.351
+          }
+        },
+        {
+          "shot": "A12-04",
+          "focus": null,
+          "line": {
+            "text": "A waiting expense does not stop the close. The part of a shortage it explains needs no reason. Only the rest does.",
+            "voice": "a12/voice/A12-06/08.wav",
+            "dur": 7.391
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Record an expense as soon as the money leaves the drawer, in plain words. It is the line somebody asks about tomorrow.",
+        "voice": "a12/voice/A12-06/09.wav",
+        "dur": 7.013
+      },
+      "next": "The bell and Notifications"
+    },
+    {
+      "id": "A12-07",
+      "slug": "A12-07-the-bell-and-notifications",
+      "section": "A12.8",
+      "title": "The bell and Notifications",
+      "intro": {
+        "text": "The bell tells you what needs attention. In this video you will read it, and its page, Notifications.",
+        "voice": "a12/voice/A12-07/01.wav",
+        "dur": 6.467
+      },
+      "record": null,
+      "scenes": [
+        {
+          "shot": "A12-08",
+          "focus": 1,
+          "line": {
+            "text": "Click the bell at the top. The list opens on the right, with how many you have not read.",
+            "voice": "a12/voice/A12-07/02.wav",
+            "dur": 5.144
+          }
+        },
+        {
+          "shot": "A12-08",
+          "focus": 2,
+          "line": {
+            "text": "Each notice says what needs attention, and where. Here, an arrival not yet checked in. Click it to open its screen.",
+            "voice": "a12/voice/A12-07/03.wav",
+            "dur": 7.565
+          }
+        },
+        {
+          "shot": "A12-08",
+          "focus": null,
+          "line": {
+            "text": "A notice goes by itself when the thing is done. Check the guest in, and it is gone.",
+            "voice": "a12/voice/A12-07/04.wav",
+            "dur": 5.237
+          }
+        },
+        {
+          "shot": "A12-08",
+          "focus": 3,
+          "line": {
+            "text": "Mark all as read clears the count in this window, until the page is reloaded.",
+            "voice": "a12/voice/A12-07/05.wav",
+            "dur": 4.395
+          }
+        },
+        {
+          "shot": "A12-09",
+          "focus": null,
+          "line": {
+            "text": "Notifications, in the System part of the menu, is the same list on a page. Open, on the right of each notice, goes to the screen it is about.",
+            "voice": "a12/voice/A12-07/06.wav",
+            "dur": 8.615
+          }
+        },
+        {
+          "shot": "A12-09",
+          "focus": 1,
+          "line": {
+            "text": "You see what your role may see. The Inventory Manager reads that a balance is outstanding, without the amount or the guest's name. Here, a crockery count is due.",
+            "voice": "a12/voice/A12-07/07.wav",
+            "dur": 10.142
+          }
+        },
+        {
+          "shot": "A12-09",
+          "focus": 2,
+          "line": {
+            "text": "Its kind is approval: something for a manager to look at. It is not a request in Approvals.",
+            "voice": "a12/voice/A12-07/08.wav",
+            "dur": 5.515
+          }
+        }
+      ],
+      "checklist": [],
+      "outro": {
+        "text": "Remember: requests waiting on you are not on the bell. Open Approvals to see them.",
+        "voice": "a12/voice/A12-07/09.wav",
+        "dur": 5.051
+      },
+      "next": "Approvals in short"
+    },
+    {
+      "id": "A12-08",
+      "slug": "A12-08-approvals-in-short",
+      "section": "A12.10",
+      "title": "Approvals in short",
+      "intro": {
+        "text": "Here are approvals, cash expenses and notifications, in short.",
+        "voice": "a12/voice/A12-08/01.wav",
+        "dur": 4.43
+      },
+      "record": null,
+      "scenes": [],
+      "checklist": [
+        {
+          "text": "You need something bought: Purchasing, Ask to buy, say what it is for, Send for approval.",
+          "voice": "a12/voice/A12-08/02.wav",
+          "dur": 5.8
+        },
+        {
+          "text": "You pay cash out of a drawer: record it. Paid out at the desk, Expense in a restaurant.",
+          "voice": "a12/voice/A12-08/03.wav",
+          "dur": 5.713
+        },
+        {
+          "text": "Something waits on you: Approvals, Waiting. Approve, or type a note and Refuse.",
+          "voice": "a12/voice/A12-08/04.wav",
+          "dur": 5.841
+        },
+        {
+          "text": "You asked for it: you cannot decide it. Read the answer on the request, or on the drawer's line.",
+          "voice": "a12/voice/A12-08/05.wav",
+          "dur": 5.98
+        },
+        {
+          "text": "Who decided that? Approvals, Everything.",
+          "voice": "a12/voice/A12-08/06.wav",
+          "dur": 3.089
+        },
+        {
+          "text": "Refused, and still needed: raise a new request. The first decision stays.",
+          "voice": "a12/voice/A12-08/07.wav",
+          "dur": 5.527
+        },
+        {
+          "text": "The bell shows a number: click it, click a notice, and do the work. The notice goes by itself.",
+          "voice": "a12/voice/A12-08/08.wav",
+          "dur": 5.782
+        }
+      ],
+      "outro": {
+        "text": "That is approvals, cash expenses and notifications. Thank you for watching.",
+        "voice": "a12/voice/A12-08/09.wav",
+        "dur": 5.156
+      },
+      "next": null
+    }
+  ]
+}
