@@ -1,0 +1,564 @@
+<!-- ══════════════════════════════ CHAPTER A10 ══════════════════════════════ -->
+<section class="chapter" id="a10">
+  <div class="chapter-head">
+    <span class="num">Chapter A10</span>
+    <h1>Guests and guest messages</h1>
+    <p>For reception, managers and the owner. Who has stayed, the companies and agents bookings come through, correcting a guest's record, one guest across the whole group (Guest 360) and the same person entered twice, what the system sends to guests by itself, the Guest messages screen and what to do when a message did not go, and asking a guest for a review.</p>
+  </div>
+
+  <!-- A10.1 -->
+  <h2 id="a10-1"><span class="n">A10.1</span>The Guests &amp; CRM screens</h2>
+  <p>In the Front office menu, the part called <span class="ui">Guests &amp; CRM</span> holds everything the system knows about a <b>person</b> rather than a booking. You see the screens your role may open.</p>
+  <table>
+    <thead><tr><th style="width:22%">Screen</th><th style="width:30%">Who sees it</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td>Guests</td><td>Owner, Admin, General Manager, Hotel Manager, Reception, Accountant, Viewer</td><td>Everyone booked at this hotel, grouped by name, with their stays, nights, spend and what they owe (A10.2).</td></tr>
+      <tr><td>Companies and agents</td><td>The same people</td><td>Where the bookings came from - booking sites, direct, companies - and what each was worth. <span class="ui">Add company</span> (A10.4).</td></tr>
+      <tr><td>Guest messages</td><td>The same people</td><td>What the system sent guests and whether it went, the bookings no message can reach, and messages guests wrote to the desk (A10.8).</td></tr>
+      <tr><td>Reviews</td><td>The same people (only the owner, an Admin, the GM, the Hotel Manager and Reception may ask)</td><td>Ask a guest who has left for a review; the hotel's review link (A10.10).</td></tr>
+      <tr><td>Guest 360</td><td>Owner, Admin, General Manager</td><td>One guest across every hotel of the group: every stay, what they were charged, what was sent to them, the blacklist, offers, loyalty (A10.5).</td></tr>
+      <tr><td>Possible same person</td><td>Owner, Admin, General Manager</td><td>Guest records that share a phone number or an email: join two that are one person, or say they are not (A10.6).</td></tr>
+    </tbody>
+  </table>
+  <p>Reception's own menu shows <span class="ui">Guests</span> and <span class="ui">Guest messages</span>. <span class="ui">Companies and agents</span> and <span class="ui">Reviews</span> are reached with <span class="ui">Find a screen</span> (Ctrl K, A0), where they read <span class="msg">“Not in your menu”</span>. Which messages go out by themselves is set in Settings, under <span class="ui">Messages</span>, <span class="ui">Guest messages on/off</span> (A10.7).</p>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>One part of the menu for what is known about a person - the guest list, companies and agents, what was sent to them, the reviews asked for - and the CRM's screens joining it as they were built: <span class="d">D21-79</span>. Guest 360 and the same-person list are for the owner, an Admin and the GM only, because a person's whole history across the group is more than any one desk needs: <span class="d">D21-4</span>.</p>
+  </div>
+
+  <!-- A10.2 -->
+  <h2 id="a10-2"><span class="n">A10.2</span>Guests</h2>
+  <p>Open <span class="ui">Guests</span>. Every guest booked at this hotel is one line, put together from their bookings by the name on the booking. Repeat guests come first. The pill beside the heading counts them.</p>
+
+  <figure class="shot" id="fig-A10-01">
+    <img src="img/A10-01.png" alt="The Guests screen: the guest count, Find a guest by name, the yellow box about overlapping stays, and the list with a name marked overlapping stays">
+    <figcaption><b>Figure A10-01.</b> Guests: everyone who has stayed, grouped by name.</figcaption>
+    <ol class="callouts">
+      <li>Guests, in the Guests &amp; CRM part of the menu</li>
+      <li>Find a guest by name: type part of the name</li>
+      <li>How many names have stays that overlap - shown, never merged</li>
+      <li>A name with overlapping stays</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:22%">Column</th><th>What it shows</th></tr></thead>
+    <tbody>
+      <tr><td>Guest</td><td>The name. <span class="msg">“overlapping stays”</span> under it means two of its stays share a night (see Watch out).</td></tr>
+      <tr><td>Stays, Nights</td><td>How many bookings under the name - cancelled and future ones count too - and how many nights they cover.</td></tr>
+      <tr><td>Last stay</td><td>When the last stay ended; <span class="msg">“first visit”</span> when none has. <span class="msg">“back 14 Dec 2026”</span> under it: they are booked to come again.</td></tr>
+      <tr><td>Booked via</td><td>Every source their stays came through: Agoda, Walk-in, the hotel's own site…</td></tr>
+      <tr><td>Total spend</td><td>What their stays were charged. It is worked out as <span class="ui">Charged</span> on Guest 360 is, for this hotel only.</td></tr>
+      <tr><td>Balance</td><td>What they still owe, in red; what they are owed, in blue; a dash for nothing.</td></tr>
+    </tbody>
+  </table>
+  <p>On a narrower screen Booked via is hidden first, then Last stay, then Nights. A row does not open: to correct a guest, use <span class="ui">Edit guest</span> (A10.3).</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>The list goes by the name typed on the booking.</b> Two people called “Rohan Mehta” are one line; one person typed two ways is two lines. A name with <span class="msg">“overlapping stays”</span> is either two people sharing a name or something entered twice: <span class="msg">“Shown, not merged - a wrong merge is far harder to undo than a visible duplicate.”</span> To tell one person from another the system uses their phone and email instead (Guest 360 and Possible same person, A10.5 and A10.6).</li>
+      <li>The search finds names only. Nothing found: <span class="msg">“No guest by that name”</span>, <span class="msg">“Try part of the surname.”</span></li>
+      <li>A guest appears here the first time they are booked. A guest record is never deleted.</li>
+    </ul>
+  </div>
+
+  <!-- A10.3 -->
+  <h2 id="a10-3"><span class="n">A10.3</span>A guest's record: the marks on a booking, and Edit guest</h2>
+  <p>A guest's own record - name, phone, email, address, nationality, VIP - belongs to the person, not to one booking. It is changed from a booking's panel (open the booking from Arrivals, In house or All bookings), on the line under the guest's name.</p>
+
+  <figure class="shot" id="fig-A10-02">
+    <img src="img/A10-02.png" alt="A booking's panel for A10 Test Ravi Kumar: Due in, Mark VIP, Edit guest, the Agreed to WhatsApp tick and the Guest 360 link">
+    <figcaption><b>Figure A10-02.</b> A booking's panel: the guest's marks.</figcaption>
+    <ol class="callouts">
+      <li>Mark VIP: the guest is a VIP from now on, on this visit and the next</li>
+      <li>Edit guest: correct the guest's own record</li>
+      <li>Agreed to WhatsApp: tick it only when the guest says yes</li>
+      <li>Guest 360: the guest's whole history (owner, Admin, GM only)</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>Mark VIP.</b> Tap it. Where the group has VIP levels, choose which. The message says <span class="msg">“Marked VIP”</span>, <span class="msg">“… - this holds for their next visit too.”</span> <span class="ui">Remove VIP</span> takes it off.</li>
+    <li><b>Stayed before.</b> A guest who has stayed with the group before carries a blue mark, <span class="msg">“Stayed with the group 3 times”</span>. That is all the desk is shown: no hotels, dates or amounts.</li>
+    <li><b>Agreed to WhatsApp.</b> The voucher goes on WhatsApp only when this is ticked and the booking has a phone number (A10.7). You may tick or untick it at any time; the audit log keeps who did.</li>
+  </ul>
+
+  <h3>To correct a guest</h3>
+  <ol class="steps">
+    <li>On the booking's panel, tap <span class="ui">Edit guest</span>. (The owner, an Admin and the GM also have it on Guest 360, A10.5.)</li>
+    <li>The window says <span class="msg">“The guest's own record: it is the same on every booking of theirs, at every hotel.”</span></li>
+    <li>Change what is wrong: <span class="ui">Title</span>, <span class="ui">Name</span>, <span class="ui">Phone</span>, <span class="ui">Email</span>, <span class="ui">Address</span>, <span class="ui">City</span>, <span class="ui">State</span>, <span class="ui">PIN code</span>, <span class="ui">Country</span>, <span class="ui">Nationality</span>.</li>
+    <li>Tap <span class="ui">Save</span>. It stays grey until something has changed and everything typed is right. The message says <span class="msg">“Guest updated”</span>, <span class="msg">“A10 Test Ravi Kumar: the change is on every booking of theirs.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A10-03">
+    <img src="img/A10-03.png" alt="The Edit guest window: Title, Name, Phone, Email, Address, City, State, PIN code, Country, Nationality, Cancel and Save">
+    <figcaption><b>Figure A10-03.</b> Edit guest.</figcaption>
+    <ol class="callouts">
+      <li>Name</li>
+      <li>Phone, then Email beside it</li>
+      <li>Nationality, two letters: IN for India; anything else puts the guest on the Form III register</li>
+      <li>Save</li>
+    </ol>
+  </figure>
+
+  <p>What stops Save, in red under the form: <span class="msg">“A guest has a name.”</span>; <span class="msg">“"12345" is not a phone number. Type 10 to 15 digits, e.g. +91 98765 43210.”</span>; <span class="msg">“"ravi@" is not an email address, e.g. name@example.com.”</span>; <span class="msg">“Nationality is a two-letter country code, e.g. IN.”</span>; <span class="msg">“"XX" is not a country code. Type the two letters, e.g. IN, GB or US.”</span></p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>You are changing the person, not this booking.</b> The new phone or email is on every booking of theirs, at every hotel of the group, and messages go to it from then on. Every change is kept in the audit log.</li>
+      <li>A box emptied is cleared on the record - except Name and Nationality, which a guest always has.</li>
+      <li>A nationality other than IN puts the guest on the Form III register (chapter A3).</li>
+      <li>Only the people who may edit guests see Edit guest, Mark VIP and the WhatsApp tick: the owner, an Admin, the GM, the Hotel Manager and Reception.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>No screen could correct a guest's record until the owner asked for this one, from the booking panel and Guest 360: the owner, 28 September. WhatsApp goes only to a guest who agreed, ticked on each booking: <span class="d">D21-72</span>; the desk may change the tick at any time: the owner, 21 September. The desk sees “stayed with the group before” and nothing more: <span class="d">D21-13</span>.</p>
+  </div>
+
+  <!-- A10.4 -->
+  <h2 id="a10-4"><span class="n">A10.4</span>Companies and agents</h2>
+  <p><span class="ui">Companies and agents</span> answers “where did the business come from, and what was each worth?”. Three tiles at the top, then one table for each kind of source.</p>
+
+  <figure class="shot" id="fig-A10-04">
+    <img src="img/A10-04.png" alt="Companies and agents: Add company, the tiles Through an agent, Direct, Owed to the property, and the Travel agents table">
+    <figcaption><b>Figure A10-04.</b> Companies and agents.</figcaption>
+    <ol class="callouts">
+      <li>Add company</li>
+      <li>Through an agent: revenue from booking sites and agents, and its share of the whole</li>
+      <li>Owed to the property: what every source still owes</li>
+      <li>Each kind says what it is</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:24%">Kind</th><th>What it says</th></tr></thead>
+    <tbody>
+      <tr><td>Travel agents</td><td><span class="msg">“Booked through a channel, and charged a commission for it.”</span> Agoda, Booking.com, Expedia and go-MMT.</td></tr>
+      <tr><td>Direct</td><td><span class="msg">“Straight to the property. No commission on any of it.”</span> Walk-in and Fidato Hotels.</td></tr>
+      <tr><td>Corporate accounts</td><td><span class="msg">“A firm booking for its own people, settled on the city ledger.”</span> Every other source is listed here too - a travel agent added with Add company among them.</td></tr>
+    </tbody>
+  </table>
+  <p>Each table: <b>Source</b>, <b>Bookings</b>, <b>Room nights</b>, <b>Revenue</b>, <b>Commission</b>, <b>Owed</b>. The heading line of each kind adds up its revenue and bookings. Under the tables: <span class="msg">“Commission is charged outside this system today and prints as a dash rather than a zero. It fills once a channel manager is connected.”</span></p>
+
+  <h3>To add a company</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">Add company</span>. The window says <span class="msg">“One record for the group: the same company at every hotel.”</span></li>
+    <li>Type its <span class="ui">Name</span>. Choose its <span class="ui">Kind</span>: <span class="ui">Corporate</span> or <span class="ui">Travel agent</span>.</li>
+    <li>Type its <span class="ui">GSTIN</span> from the company's GST certificate - it prints on the company's tax invoices - and its <span class="ui">Billing address</span>, <span class="ui">City</span>, <span class="ui">State</span>, <span class="ui">PIN code</span>.</li>
+    <li>Optionally the <span class="ui">Contact person</span>, <span class="ui">Phone</span>, <span class="ui">Email</span>.</li>
+    <li>If the company may pay later, switch on <span class="ui">Credit allowed</span> (<span class="msg">“A bill may be sent to the company to pay later (Bill to company).”</span>) and type <span class="ui">Credit days</span> and <span class="ui">Credit limit (₹)</span>.</li>
+    <li>Tap <span class="ui">Add company</span> at the foot. The message says <span class="msg">“Company added”</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A10-05">
+    <img src="img/A10-05.png" alt="The Add company window as the owner sees it: Name, Kind Corporate or Travel agent, GSTIN, Billing address, City, State, PIN code, Contact person, Phone, Email, Credit allowed, Cancel and Add company">
+    <figcaption><b>Figure A10-05.</b> Add company, as the owner, an Admin or the GM sees it.</figcaption>
+    <ol class="callouts">
+      <li>Name</li>
+      <li>Kind: Corporate or Travel agent</li>
+      <li>GSTIN: it prints on the company's tax invoices</li>
+      <li>Credit allowed: the company may be sent the bill</li>
+      <li>Add company: grey until the form is right</li>
+    </ol>
+  </figure>
+
+  <p><b>Reception</b> gets a shorter window: Name, GSTIN, Billing address, City, State and PIN code, and the line <span class="msg">“Its name, GSTIN and address, for the tax invoice. Credit and contracts are set by the owner, an administrator or the GM.”</span></p>
+  <p>What stops it: <span class="msg">“A company has a name.”</span>; <span class="msg">“A GSTIN is 15 characters: 2 digits, the 10-character PAN, then 3 more, e.g. 27AAPFU0939F1ZV.”</span>; <span class="msg">“That GSTIN is not right - a character is mistyped. Check it against the company's GST certificate.”</span>; <span class="msg">“A PIN code is 6 digits, e.g. 413216.”</span>; <span class="msg">“Credit days is a whole number from 1 to 365.”</span>; <span class="msg">“A credit limit is an amount above 0, in rupees.”</span></p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A company is one record for the whole group. The same name or GSTIN twice is refused: <span class="msg">“… is already on the list. Edit that company instead.”</span>, <span class="msg">“… already has GSTIN …. Edit that company instead.”</span></li>
+      <li>Credit days and the limit are <span class="msg">“Shown, not enforced, until the company's payments are recorded. Blank is not set.”</span></li>
+      <li>The Hotel Manager, the Accountant and a Viewer see the list but not <span class="ui">Add company</span>.</li>
+      <li>This is not <span class="ui">Booking sources</span> under Property setup, which is the list a booking's source is picked from, with each one's commission.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The heading says what the menu says, “Companies and agents”, because it once said “Booking sources” - the name of a different screen: <span class="d">D17-22</span>. Add company here as well as on Contracts, with Reception limited to the name, GSTIN and address and never credit: <span class="d">D27-184</span>.</p>
+  </div>
+
+  <!-- A10.5 -->
+  <h2 id="a10-5"><span class="n">A10.5</span>Guest 360: one guest, every hotel</h2>
+  <p>For the owner, an Admin and the GM. Guest 360 shows one person across every hotel of the group.</p>
+
+  <h3>To find a guest</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">Guest 360</span>.</li>
+    <li>Type two letters of a name, or a whole phone number or email, in <span class="ui">Name, phone or email</span>.</li>
+    <li>Each guest record found is a row: the name, <span class="msg">“Blacklisted”</span> if so, the phone and email, and how many times they stayed. Tap the row.</li>
+  </ol>
+  <p>Nobody found: <span class="msg">“Nobody found”</span>, <span class="msg">“No guest record has that name, phone or email.”</span> The booking panel's <span class="ui">Guest 360</span> link (Figure A10-02) opens the guest's page directly.</p>
+
+  <figure class="shot" id="fig-A10-06">
+    <img src="img/A10-06.png" alt="Guest 360's search: Rekha typed, and one guest found, Rekha Gaikwad, Stayed with the group 3 times">
+    <figcaption><b>Figure A10-06.</b> Guest 360: find a guest.</figcaption>
+    <ol class="callouts">
+      <li>Name, phone or email</li>
+      <li>A guest record, with its phone and email (a dash where none)</li>
+      <li>How many times they stayed with the group</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A10-07">
+    <img src="img/A10-07.png" alt="Guest 360 for Rekha Gaikwad: Who they are with Edit guest, What they are worth, and Every stay, at every hotel">
+    <figcaption><b>Figure A10-07.</b> Guest 360: one guest, every stay.</figcaption>
+    <ol class="callouts">
+      <li>Who they are: the name, VIP or Blacklisted, phone and email, nationality, whether an ID is on file, the companies they book under</li>
+      <li>Edit guest (A10.3)</li>
+      <li>What they are worth: Visits, Nights, Charged, First stay, Last stay</li>
+      <li>Every stay, at every hotel: Hotel, Booking, Dates, Room type, Booked via, Status, Charged</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A10-08">
+    <img src="img/A10-08.png" alt="The lower half of Guest 360: Loyalty, What was sent to them, Blacklist with its Reason box, and Offers">
+    <figcaption><b>Figure A10-08.</b> Guest 360: loyalty, what was sent, the blacklist, offers.</figcaption>
+    <ol class="callouts">
+      <li>Loyalty: their points and statement, or <span class="msg">“Not a member”</span> (A14.4)</li>
+      <li>What was sent to them, from any hotel: the date, what it was, the way, whether it went, the hotel</li>
+      <li>Blacklist: a reason, which the desk is shown when they book again</li>
+      <li>Offers: whether offers may be sent to them</li>
+    </ol>
+  </figure>
+
+  <h3>To blacklist a guest</h3>
+  <ol class="steps">
+    <li>On the guest's Guest 360, under <span class="ui">Blacklist</span>, type the <span class="ui">Reason</span>. <span class="msg">“The desk is shown this when they book again. It warns; it never refuses.”</span></li>
+    <li>Tap <span class="ui">Blacklist</span>. The message says <span class="msg">“Blacklisted”</span>, and the guest carries the red <span class="msg">“Blacklisted”</span> mark.</li>
+    <li>To take it off: <span class="ui">Clear the blacklist</span>. The message says <span class="msg">“Blacklist cleared”</span>.</li>
+  </ol>
+  <p>From then on, typing this guest's phone or email on New booking or a walk-in shows a red line: <span class="msg">“Ravi Kumar is blacklisted. Reason: …. The booking is not refused - you decide.”</span> A booking site's guest whose phone or email is a blacklisted guest's is named on Arrivals and in the check-in the same way (chapter A1).</p>
+
+  <h3>Offers</h3>
+  <p>The <span class="ui">Offers</span> card says either <span class="msg">“Agreed to offers. They may be sent to this guest's phone and email, at every hotel.”</span> or <span class="msg">“No offers are sent: this guest has not said yes.”</span></p>
+  <ul>
+    <li><span class="ui">Record their yes</span>: the guest has said yes to offers.</li>
+    <li><span class="ui">Record "no offers"</span>: the guest does not want them. It is listed as <span class="msg">“No offers to phone 98765 43210”</span> (or email) with <span class="ui">Clear</span>.</li>
+    <li>Both buttons show only when the guest's record has a phone or an email. Rekha Gaikwad's has neither, so Figure A10-08 shows none.</li>
+    <li>The desk asks too, with <span class="ui">Guest agreed to offers</span> on New booking (the walk-in too) and at check-in. A later answer replaces an earlier one.</li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>An ID document is never shown here</b> - only <span class="msg">“an ID is on file”</span> or <span class="msg">“no ID on file”</span>.</li>
+      <li><b>The blacklist warns; it never stops a booking or a check-in.</b> A person decides.</li>
+      <li>“Offers” and “no offers” are kept against the phone number and the email themselves, for every hotel of the group - not against one booking.</li>
+      <li><span class="ui">Visits</span> counts the times they checked in, at any hotel; several rooms booked together count once; cancelled, no-show and future bookings do not count. <span class="ui">Charged</span> is worked out as Total spend on Guests is, over every hotel.</li>
+      <li>A guest who was joined from two records shows <span class="msg">“Joined into this record: …”</span> with <span class="ui">Undo a join</span> (A10.6).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Guest 360 now, on the PMS's own data: <span class="d">D21-3</span>; for the owner, an Admin and the GM: <span class="d">D21-4</span>. The blacklist is set with a reason by those three and warns the clerk, never blocks: <span class="d">D21-21</span>; a booking site's guest who matches is warned of on Arrivals and at check-in: <span class="d">D22-8</span>. “No offers” is recorded against the phone and email for the whole group: <span class="d">D21-22</span>. Offers only to a guest who said yes: <span class="d">D25-39</span>, <span class="d">D26-6</span>; asked at booking, the walk-in, check-in, the guest's own page and on Guest 360: <span class="d">D26-7</span>.</p>
+  </div>
+
+  <!-- A10.6 -->
+  <h2 id="a10-6"><span class="n">A10.6</span>The same person twice</h2>
+  <p>A guest is one record for the whole group. The system recognises a returning guest by an <b>exact phone number or email</b>, never by a name, and never joins anyone by itself: a person always confirms.</p>
+
+  <h3>At booking: “same person?”</h3>
+  <p>On New booking (and the walk-in), as soon as a phone or email matches a guest on file, a grey box appears under them: <span class="msg">“A10 Test Ravi Kumar · Has not stayed with the group yet - same person?”</span> (or <span class="msg">“Stayed with the group 3 times”</span>). Nothing is offered when something typed disagrees with the guest on file - a different email, say; the two then wait on Possible same person for a manager.</p>
+  <ol class="steps">
+    <li>Ask the guest. If it is them, tap <span class="ui">Same person</span>. The box then says <span class="msg">“- this booking is theirs.”</span> and the booking goes on their record.</li>
+    <li>Not them? Do nothing, or tap <span class="ui">Not them</span> to undo your choice: the booking makes a new guest record, as before.</li>
+    <li>Typing the phone or email again clears the choice.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A10-09">
+    <img src="img/A10-09.png" alt="New booking: the phone 9000000010 typed, two suggestions with Same person, and the Guest agreed to WhatsApp switch">
+    <figcaption><b>Figure A10-09.</b> New booking: a phone on file, “same person?”.</figcaption>
+    <ol class="callouts">
+      <li>The phone typed</li>
+      <li>Same person: this booking is that guest's</li>
+      <li>Guest agreed to WhatsApp: ask them (A10.7)</li>
+    </ol>
+  </figure>
+
+  <p>The desk sees a name and how many stays, nothing more. A blacklisted match also shows the red line of A10.5.</p>
+
+  <h3>Possible same person: the old duplicates</h3>
+  <p>Bookings made before this existed made a new record each time, so a returning guest may be two or ten records. <span class="ui">Possible same person</span> (owner, Admin, GM) lists every two records that share a phone number or an email, across every hotel. The pill says how many are <span class="msg">“to look at”</span>.</p>
+
+  <figure class="shot" id="fig-A10-10">
+    <img src="img/A10-10.png" alt="Possible same person: a pair sharing a phone, one record marked This record stands, the Join into one strip, Not the same person, and the Joined list below">
+    <figcaption><b>Figure A10-10.</b> Possible same person: a pair, one record chosen to stand.</figcaption>
+    <ol class="callouts">
+      <li>What the two share: <span class="msg">“Same phone.”</span>, <span class="msg">“Same email.”</span> or both</li>
+      <li>The record that stands, ringed in orange</li>
+      <li>Join into one</li>
+      <li>Not the same person: two people who share a phone</li>
+      <li>Joined: the joins that stand, each with Undo; Not the same person is listed under it the same way</li>
+    </ol>
+  </figure>
+
+  <h3>To join two records</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">Possible same person</span>. Each card is two records: the name (it opens their Guest 360), VIP or Blacklisted, phone and email, how many stays, the last stay, and <span class="msg">“ID on file”</span> or <span class="msg">“no ID on file”</span>.</li>
+    <li>Decide whether they are one person. A family on one mobile, or an agent's number, is two people: see below.</li>
+    <li>On the record whose name, phone and email should stand, tap <span class="ui">Keep this record</span>. It now reads <span class="ui">This record stands</span>. If only one of the two has an ID on file, it is chosen already: <span class="msg">“Only … has an ID on file, so that record stands and the ID stays with the guest.”</span></li>
+    <li>Read the strip: <span class="msg">“A10 Test R. Kumar's stays move to A10 Test Ravi Kumar. Nothing is deleted, and it can be undone.”</span> Tap <span class="ui">Join into one</span>.</li>
+    <li>The message says <span class="msg">“Joined”</span>, <span class="msg">“A10 Test R. Kumar's stays are now A10 Test Ravi Kumar's. It can be undone below.”</span> The join is listed under <span class="ui">Joined</span>: <span class="msg">“A10 Test R. Kumar joined into A10 Test Ravi Kumar · 1 stay moved · by … · 9 Oct 2026”</span>.</li>
+  </ol>
+
+  <h3>Two people, not one</h3>
+  <ol class="steps">
+    <li>On the card, tap <span class="ui">Not the same person</span>.</li>
+    <li>The message says <span class="msg">“Kept apart”</span>, <span class="msg">“… will not be listed again. It can be undone below.”</span> The pair is listed under <span class="ui">Not the same person</span>: <span class="msg">“A10 Test Ravi Kumar and A10 Test R. Kumar are two people · by … · 9 Oct 2026”</span>.</li>
+  </ol>
+
+  <h3>To undo</h3>
+  <p>Under <span class="ui">Joined</span> or <span class="ui">Not the same person</span>, tap <span class="ui">Undo</span> on the line. The message says <span class="msg">“Undone”</span> with <span class="msg">“Every stay is back on the record it came from.”</span> or <span class="msg">“The two records are listed again.”</span></p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Nothing reads a name.</b> Two records with the same name and different phones are never listed; two different names on one phone are.</li>
+      <li>A join moves the <b>stays</b>; nothing is deleted. A blacklist or VIP on either record stays on the joined guest, and comes off again on undo.</li>
+      <li>An ID document never moves. When both records have one, the one on the record that does not stand stays where it is, for an undo.</li>
+      <li>When unsure, do not join. A wrong join is worse than a missed one.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Suggested on an exact phone or exact email, a person confirms, every join can be undone, never automatic: <span class="d">D21-2</span>. The same rule at booking - “stayed 3 times - same person?” - and a list of the old duplicates for a manager: <span class="d">D21-20</span>. “Not the same person”, undoable like a join: <span class="d">D22-8</span>.</p>
+  </div>
+
+  <!-- A10.7 -->
+  <h2 id="a10-7"><span class="n">A10.7</span>What goes out to guests</h2>
+  <p>The system sends a guest only a few messages, each through one sending service. Today: </p>
+  <table>
+    <thead><tr><th style="width:20%">Message</th><th style="width:30%">When</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td><b>Booking voucher</b></td><td>Once, when a booking is confirmed. A booking waiting for the hotel sends nothing until it is confirmed.</td><td>By <b>email</b> where the guest has an email, with the voucher PDF; and on <b>WhatsApp</b> where the booking is ticked <span class="ui">Agreed to WhatsApp</span> and has a phone, with the same PDF. Each way is its own message.</td></tr>
+      <tr><td><b>The sign-in code</b></td><td>When the guest opens their own check-in page</td><td>On WhatsApp to the booking's own phone, or by email to the booking's email: the guest chooses. No switch: it is how a guest gets in.</td></tr>
+      <tr><td><b>Tax invoice</b></td><td>When an invoice is issued, if the hotel's switch is on; a company's invoice only with <span class="ui">Send invoice</span> (chapter A4)</td><td>By email only, with the invoice PDF. Never a credit note.</td></tr>
+      <tr><td><b>Review request</b></td><td>When a clerk asks, after check-out (A10.10), if the hotel's switch is on</td><td>WhatsApp or email, as the clerk chooses.</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>The voucher</b> is the booking's confirmation. Its PDF shows the guest and who booked, each room with its guests, nights and rate, the room charges, GST and the total (a dash where no GST rule is set), what was paid in advance and what is left to pay at the hotel (or <span class="msg">“Pay at the hotel”</span>, or <span class="msg">“Bill to company”</span>), the booking's cancellation terms, the check-in and check-out times, the hotel's house policies, the bank details where they are set, and <span class="msg">“Confirmed by the hotel”</span> with the reference and the clerk. While online check-in is on, it also prints the guest's own check-in link and a QR code, <span class="msg">“Check in online”</span>.</p>
+  <ul>
+    <li><b>A group</b> of rooms gets one voucher, about its lead room, to that room's guest. It covers every room of the group.</li>
+    <li><b>Bookings made before sending was first switched on</b> are confirmed only between 09:00 and 21:00, the hotel's time. A booking made after that goes at once, any hour.</li>
+    <li>There is no day-before reminder and no separate confirmation.</li>
+  </ul>
+
+  <h3>The desk's buttons</h3>
+  <p>After a booking is made, its <span class="ui">Booked</span> card (chapter A2) has:</p>
+  <ul>
+    <li><span class="ui">Send voucher</span>: sends the voucher now, instead of waiting for it to go by itself. Once the voucher has gone by email, the button is replaced by <span class="msg">“Voucher sent 9 Oct 2026, 14:05 by …”</span>. It goes once: <span class="msg">“The voucher for this booking has gone already, or three tries to send it failed. It is sent once, and not again from here.”</span></li>
+    <li><span class="ui">View voucher</span>: opens the PDF to look at, print or save. It sends nothing. It is also under <span class="ui">More options</span> on a booking's panel, for a confirmed booking still to arrive.</li>
+    <li><span class="ui">Send check-in link</span>: sends the voucher again, with the guest's check-in link, every way the guest can be reached: <span class="msg">“Voucher sent again, with the check-in link”</span>. Hidden where the hotel has switched online check-in off.</li>
+  </ul>
+  <p>While sending is not set up, both send buttons are grey and the sentence under them says why (A10.8). Other refusals: <span class="msg">“This booking is waiting for the hotel, so nothing is sent to the guest. Confirm it first.”</span>; <span class="msg">“There is nowhere to send it: no email address, and no telephone number the guest agreed to WhatsApp on.”</span>; <span class="msg">“No voucher could be made for this booking, so nothing went on WhatsApp.”</span> (tell the manager).</p>
+
+  <h3>Which messages are switched on</h3>
+  <p>Settings, <span class="ui">Messages</span>, <span class="ui">Guest messages on/off</span> (the owner, an Admin and the GM). One switch per message, for this hotel only. Nothing here sends anything.</p>
+
+  <figure class="shot" id="fig-A10-11">
+    <img src="img/A10-11.png" alt="Settings, Guest messages on/off: Booking voucher on, Online check-in on, Tax invoice off, Review request off, and the catch-up hours line">
+    <figcaption><b>Figure A10-11.</b> Guest messages on/off.</figcaption>
+    <ol class="callouts">
+      <li>Booking voucher: on unless switched off</li>
+      <li>Online check-in: the link and QR code in the voucher, and Send check-in link</li>
+      <li>Tax invoice: off until switched on; only invoices issued after that</li>
+      <li>Review request: off until switched on</li>
+      <li>The catch-up hours for bookings made before sending began: fixed</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>The voucher goes on WhatsApp only with the guest's yes.</b> New booking says it: <span class="msg">“Ask them. Unticked, messages go by email if there is one, else not at all.”</span> Bookings from the central reservation system arrive ticked; bookings from booking sites do not.</li>
+      <li><b>Nothing goes until sending is set up</b> on the server: the sending workflow's address, its secret and the WhatsApp number. The vouchers that go by themselves also wait for the owner's pace, how many a minute. Until then, every screen that could send says so, and nothing is recorded.</li>
+      <li>The wording a guest reads is kept in the sending workflow, not in the PMS. Messages are in English.</li>
+      <li>A message goes to the phone and email on the guest's record when it is sent. Correct them first (Edit guest, A10.3).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Fewer messages: the voucher is the confirmation, sent once, with the check-in link printed in its PDF; no day-before reminder; the desk's button stays to send it again: <span class="d">D27-264</span>. The voucher both ways, email and WhatsApp: <span class="d">D27-235</span>. WhatsApp through the central system's already-approved voucher template for now: <span class="d">D27-266</span>; online check-in on for every hotel, a hotel may switch it off: <span class="d">D27-281</span>. The tax invoice by email only: <span class="d">D27-284</span>. One voucher per group, to its lead guest: <span class="d">D22-41</span>, <span class="d">D22-52</span>. Every future booking confirmed on switch-on day, soonest arrival first, at the owner's pace: <span class="d">D21-33</span>, <span class="d">D21-34</span>; the catch-up only from 09:00 to 21:00: <span class="d">D22-42</span>. English only: <span class="d">D21-73</span>.</p>
+  </div>
+
+  <!-- A10.8 -->
+  <h2 id="a10-8"><span class="n">A10.8</span>The Guest messages screen</h2>
+  <p><span class="ui">Guest messages</span> answers “did the guest get their voucher?”. It is a record: <b>nothing on it sends</b>. It shows, from the top:</p>
+  <ol>
+    <li><b>Messages from guests</b>, when there are any (see below).</li>
+    <li>A yellow notice while sending is not set up.</li>
+    <li><b>The bookings no message can reach</b>, with what to add to each.</li>
+    <li><b>The record</b> of every message sent at this hotel, newest first (the last 200).</li>
+  </ol>
+
+  <figure class="shot" id="fig-A10-12">
+    <img src="img/A10-12.png" alt="Guest messages as Reception sees it: the Nothing is sent yet notice, 16 bookings no message can reach, each with its reason">
+    <figcaption><b>Figure A10-12.</b> Guest messages: the hotel's list, as Reception sees it on the test computer.</figcaption>
+    <ol class="callouts">
+      <li>Guest messages, in Reception's menu</li>
+      <li><span class="msg">“Nothing is sent yet”</span>: sending is not set up, and why</li>
+      <li>The bookings no message can reach</li>
+      <li>Why: what to add to the booking</li>
+    </ol>
+  </figure>
+
+  <h3>The record</h3>
+  <table>
+    <thead><tr><th style="width:22%">Column</th><th>What it shows</th></tr></thead>
+    <tbody>
+      <tr><td>When</td><td>The day it was sent, the hotel's own clock.</td></tr>
+      <tr><td>What</td><td><span class="msg">“Booking confirmation”</span> is the voucher by email; <span class="msg">“booking-voucher”</span> is the voucher on WhatsApp; <span class="msg">“Their sign-in code”</span>; <span class="msg">“invoice”</span>; <span class="msg">“review”</span>. Older records may read <span class="msg">“Before arrival”</span> or <span class="msg">“Check-in link”</span>.</td></tr>
+      <tr><td>Booking</td><td>The booking's reference; a dash where it was not about a booking.</td></tr>
+      <tr><td>To</td><td>The phone or email it went to, as it was then.</td></tr>
+      <tr><td>State</td><td><span class="msg">“Delivered to the sender”</span> (green): the sending service took it. <span class="msg">“Did not go”</span> (red): see A10.9.</td></tr>
+      <tr><td>Sent by</td><td>The person who pressed the button; <span class="msg">“A member of staff”</span> when it was a colleague you may not see; <span class="msg">“The system”</span> when it went by itself.</td></tr>
+      <tr><td>What came back</td><td>The sending service's answer, in a sentence (A10.9).</td></tr>
+    </tbody>
+  </table>
+  <p>When the list is empty it says which of two things is true: <span class="msg">“Nothing has been sent yet”</span> (sending works, nothing has gone), or <span class="msg">“Nothing has been sent, because nothing can be yet”</span> with <span class="msg">“This is not a fault and nothing has failed. No message has been attempted, so there is nothing to show.”</span></p>
+
+  <h3>One booking's messages</h3>
+  <p>The same screen for one booking reads <span class="msg">“What this system sent about this booking”</span>. For a room of a group it shows the group's messages, because the group's one voucher covers every room. It is opened from <span class="ui">Reply</span> on a guest's message (below).</p>
+
+  <figure class="shot" id="fig-A10-13">
+    <img src="img/A10-13.png" alt="Guest messages for booking FH-5EL-2610-5032: 1 booking no message can reach, Not agreed to WhatsApp and no email address, and Nothing has been sent, because nothing can be yet">
+    <figcaption><b>Figure A10-13.</b> Guest messages for one booking.</figcaption>
+    <ol class="callouts">
+      <li>About this booking only</li>
+      <li>Why this booking cannot be reached</li>
+      <li>Nothing has been sent, because nothing can be yet</li>
+    </ol>
+  </figure>
+
+  <h3>Messages from guests</h3>
+  <p>A guest can write to the desk from their own page (<span class="ui">Message the front desk</span>). For the owner, an Admin, the GM, the Hotel Manager and Reception, Guest messages then starts with a card, <span class="ui">Messages from guests</span>, and a yellow <span class="msg">“2 unread”</span>.</p>
+  <ol class="steps">
+    <li>Read the message: the guest's words, their name, the booking and when.</li>
+    <li>To answer, tap <span class="ui">Reply</span>. The booking's own Guest messages opens, with <span class="ui">Reply to the guest</span>: <span class="msg">“They see it on their own page as “Front desk”. It is not sent on WhatsApp.”</span> Type and tap <span class="ui">Send reply</span>. A reply marks the booking's unread messages handled.</li>
+    <li>Done with it without a reply? Tap <span class="ui">Mark handled</span>. It then reads <span class="msg">“Handled by …”</span> with the time.</li>
+  </ol>
+  <p>Once the guest has checked out: <span class="msg">“This guest has checked out. Replies stop at check-out.”</span></p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>“Delivered to the sender” is not “read by the guest”.</b> It means the sending service accepted the message for WhatsApp or email.</li>
+      <li>A booking listed as one no message can reach is not recorded anywhere else: nothing was attempted, so nothing failed. Fix it on the booking (A10.9).</li>
+      <li>The booking panel has no button for one booking's messages. Look for its reference in the Booking column.</li>
+      <li>The Revenue Manager, Housekeeping, the kitchen and the till do not see Guest messages: <span class="msg">“What was sent to a guest is part of their guest record, and your role cannot open guests at this property.”</span></li>
+      <li>No connection: <span class="msg">“This device is offline, so what was sent cannot load. It loads by itself as soon as the connection is back.”</span></li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The system sends the voucher by itself, and the screen records every attempt so the desk can answer the guest's question the next day: <span class="d">D18-12</span>, as changed by <span class="d">D27-264</span>. Guest messages follow the Guests permission, so the Revenue Manager, Housekeeping, the kitchen manager and the till no longer read them: <span class="d">D27-144</span>. One “Message the front desk” box on the guest's page, landing here with an unread count: <span class="d">D23-14</span>; the desk replies, the guest sees “Front desk”, no WhatsApp, no replies after check-out: <span class="d">D27-224</span>.</p>
+  </div>
+
+  <!-- A10.9 -->
+  <h2 id="a10-9"><span class="n">A10.9</span>When a message did not go</h2>
+  <p>A message that did not go shows <span class="msg">“Did not go”</span> in red, with the reason under <span class="ui">What came back</span>. The system tries the voucher - and a tax invoice - again by itself, a minute later, <b>up to three tries for each way</b> (email and WhatsApp count apart). After three, it stops.</p>
+  <table>
+    <thead><tr><th style="width:36%">What came back</th><th style="width:26%">Means</th><th>What to do</th></tr></thead>
+    <tbody>
+      <tr><td><span class="msg">“The receiver took it (200).”</span></td><td>Gone to the sending service.</td><td>Nothing.</td></tr>
+      <tr><td><span class="msg">“Could not reach the receiver. …”</span></td><td>The sending service could not be reached.</td><td>Nothing at once: it tries again. If it says this three times, tell the manager - the sending service needs looking at. Give the guest the voucher yourself meanwhile (<span class="ui">View voucher</span>, print or save it).</td></tr>
+      <tr><td><span class="msg">“The receiver did not answer within twenty seconds.”</span></td><td>It was slow. It may in fact have gone.</td><td>As above. A try again after a slow answer is never sent twice: the sending service remembers what it sent.</td></tr>
+      <tr><td><span class="msg">“The receiver refused it (400). …”</span> (or another number), with its own words</td><td>The sending service said no.</td><td>Check the guest's phone and email (Edit guest, A10.3). Tell the manager, with the words shown.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>A booking no message can reach</h3>
+  <table>
+    <thead><tr><th style="width:42%">The reason says</th><th>What to do</th></tr></thead>
+    <tbody>
+      <tr><td><span class="msg">“No telephone number and no email address”</span></td><td>Ask the guest. Add their email with <span class="ui">Edit guest</span>; or add their phone and, if they agree, tick <span class="ui">Agreed to WhatsApp</span> on the booking's panel.</td></tr>
+      <tr><td><span class="msg">“Not agreed to WhatsApp, and no email address”</span></td><td>Ask the guest whether WhatsApp is all right. If yes, tick <span class="ui">Agreed to WhatsApp</span>; if not, add an email.</td></tr>
+    </tbody>
+  </table>
+  <p>Once the booking can be reached, the voucher goes by itself and the booking leaves the list. The list does not depend on whether sending is set up: a booking fixed now is a guest reached on the day sending begins.</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>After three failed tries, <span class="ui">Send voucher</span> refuses too. Hand the guest the PDF from <span class="ui">View voucher</span>, and tell the manager.</li>
+      <li>Never tick Agreed to WhatsApp to “make it go”. The tick is the guest's yes.</li>
+    </ul>
+  </div>
+
+  <!-- A10.10 -->
+  <h2 id="a10-10"><span class="n">A10.10</span>Reviews</h2>
+  <p><span class="ui">Reviews</span> asks a guest who has left for a review, and shows who was asked. Nothing is read in from Google, TripAdvisor or the booking sites: <span class="msg">“Open the site itself to read them.”</span></p>
+
+  <figure class="shot" id="fig-A10-14">
+    <img src="img/A10-14.png" alt="Reviews: the sending notice, The review link showing a dash, Paste the link and Save the link, and Departures">
+    <figcaption><b>Figure A10-14.</b> Reviews, on the test computer: no link set and sending not set up, so no row offers to send.</figcaption>
+    <ol class="callouts">
+      <li>Sending is not set up: nothing can be sent yet</li>
+      <li>The link this hotel sends: a dash, none yet</li>
+      <li>Paste the link and Save the link (owner or Admin)</li>
+      <li>Departures: guests who left in the last 30 days, and whether each was asked</li>
+    </ol>
+  </figure>
+
+  <h3>To set the hotel's review link (owner or Admin)</h3>
+  <ol class="steps">
+    <li>Under <span class="ui">The review link</span>, paste the hotel's own Google review link in <span class="ui">Paste the link</span>. It must start with https://.</li>
+    <li>Tap <span class="ui">Save the link</span>. The message says <span class="msg">“The review link is saved.”</span>, and under it: <span class="msg">“Set by … on …”</span>.</li>
+    <li>A wrong link: correct it, or tap <span class="ui">Clear it</span>: <span class="msg">“The review link is cleared. Nothing will be sent until there is one.”</span></li>
+  </ol>
+  <p>Not a web address: <span class="msg">“A review link has to be a full web address beginning with https://. Paste the one the guest should open.”</span> Anyone else reads <span class="msg">“Setting this is for the owner or an administrator. Ask one of them.”</span></p>
+
+  <h3>To ask a guest</h3>
+  <ol class="steps">
+    <li>Find the guest under <span class="ui">Departures</span>: <b>Guest</b> (with the reference), <b>Left</b>, <b>Stay</b>, <b>Review asked</b>.</li>
+    <li>Tap <span class="ui">WhatsApp</span> or <span class="ui">Email</span> on their row. WhatsApp is grey when the guest has no phone, Email when there is no email address.</li>
+    <li>The message says <span class="msg">“Ravi Kumar has been asked for a review.”</span> The row then reads <span class="msg">“Asked”</span> with the time; or <span class="msg">“Did not go”</span> with the reason.</li>
+  </ol>
+  <p>The buttons appear only when the hotel has a review link, sending is set up, and your role may ask (the owner, an Admin, the GM, the Hotel Manager, Reception). A dash under Review asked means not asked yet.</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>After check-out only:</b> <span class="msg">“A guest is asked for a review after they have left, never before. This stay has not been checked out.”</span></li>
+      <li><b>A group is asked once</b>, at its lead guest's room. The other rooms read <span class="msg">“The group is asked once, at FH-….”</span></li>
+      <li>The hotel's <span class="ui">Review request</span> switch (A10.7) is off until switched on. While it is off, asking is refused: <span class="msg">“Review requests are switched off for this hotel (Settings, Messages).”</span></li>
+      <li>No link: <span class="msg">“This property has no review link yet, so there is nowhere to send the guest. The owner or an administrator can add it on this screen. The group's own review link has not been given yet.”</span></li>
+      <li>The Accountant and a Viewer read the list and send nothing.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Ask after check-out and record who was asked; reviews are not pulled in from anywhere: <span class="d">D18-14</span>. Each hotel's own Google link: <span class="d">D21-30</span>. A group asked once, at its lead guest's room: <span class="d">D22-10</span>. The review request was left for later, so its switch starts off: <span class="d">D27-266</span>. No link is invented: a link nobody has set is a dash, and nothing is sent without one.</p>
+  </div>
+
+  <!-- A10.11 -->
+  <h2 id="a10-11"><span class="n">A10.11</span>In short</h2>
+  <table>
+    <thead><tr><th style="width:32%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>Taking a booking</td><td>Type the phone and email; if “same person?” appears, ask, and tap Same person if so. Ask about WhatsApp and offers.</td><td>A10.6</td></tr>
+      <tr><td>A guest's name, phone or email is wrong</td><td>The booking's panel, Edit guest, Save.</td><td>A10.3</td></tr>
+      <tr><td>“Did my voucher come?”</td><td>Guest messages: find the booking's reference; read State and What came back.</td><td>A10.8</td></tr>
+      <tr><td>A booking no message can reach</td><td>Add an email, or tick WhatsApp with the guest's yes.</td><td>A10.9</td></tr>
+      <tr><td>A message from a guest</td><td>Guest messages, Messages from guests: Reply, or Mark handled.</td><td>A10.8</td></tr>
+      <tr><td>A new company at the desk</td><td>Companies and agents, Add company.</td><td>A10.4</td></tr>
+      <tr><td>A guest has left</td><td>Reviews: WhatsApp or Email on their row.</td><td>A10.10</td></tr>
+      <tr><td>Managers, now and then</td><td>Possible same person: join or keep apart. Guest 360: blacklist, offers.</td><td>A10.5, A10.6</td></tr>
+    </tbody>
+  </table>
+</section>

@@ -1,0 +1,717 @@
+<!-- ══════════════════════════════ CHAPTER A2 ══════════════════════════════ -->
+<section class="chapter" id="a2">
+  <div class="chapter-head">
+    <span class="num">Chapter A2</span>
+    <h1>Bookings</h1>
+    <p>For reception and whoever takes bookings. How to find a booking, take one on the phone, book and check in a walk-in, book several rooms as a group, hold a booking while it waits for the hotel, change the dates or the room, and cancel or void a booking. The last sections are for the owner: the cancellation terms, the booking sources and CRS bookings.</p>
+  </div>
+
+  <!-- A2.1 -->
+  <h2 id="a2-1"><span class="n">A2.1</span>The bookings screens</h2>
+  <p>The <span class="ui">Bookings</span> part of the menu holds these screens. The owner, an Admin, the GM, the hotel manager and reception may make, change, cancel and void bookings; other roles may only look.</p>
+  <table>
+    <thead><tr><th style="width:22%">Screen</th><th style="width:26%">Who uses it</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td>All bookings</td><td>Reception</td><td>Every booking on the file, in any state: find one and open it.</td></tr>
+      <tr><td>Groups</td><td>Reception, managers</td><td>The bookings of more than one room: their rooms, who pays, the lead guest (A2.6). Not in reception's menu: open it with Find a screen (A0.6).</td></tr>
+      <tr><td>CRS bookings</td><td>Reception; the owner and an Admin for its connection</td><td>Bookings the CRS sold for this hotel, and what became of each (A2.11).</td></tr>
+      <tr><td>New booking</td><td>Whoever may make a booking</td><td>One page to take a booking, give it a room, or check the guest in (A2.2 to A2.5).</td></tr>
+    </tbody>
+  </table>
+
+  <h3>To find a booking</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">All bookings</span>. It says <span class="msg">“Every booking on the file, in any state.”</span> with the business date, and how many are <span class="ui">on file</span>.</li>
+    <li>Type in <span class="ui">Guest, reference or room</span>: part of the guest's name, the reference, a room number, or three or more digits of the phone.</li>
+    <li>Or tap a tile to see one state only: <span class="ui">All</span>, <span class="ui">Due in</span>, <span class="ui">In house</span> (guests due out today too), <span class="ui">Checked out</span>, <span class="ui">Cancelled, void &amp; no-show</span>. Each tile shows its count; the one chosen is dark.</li>
+    <li>Click a row. The booking opens in the stay panel (A1.4), where <span class="ui">More options</span> holds the changes in A2.8 and A2.9.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-01">
+    <img src="img/A2-01.png" alt="All bookings: the search box, the state tiles with their counts, and the list with each booking's status">
+    <figcaption><b>Figure A2-01.</b> All bookings.</figcaption>
+    <ol class="callouts">
+      <li>Search: a guest, a reference, a room, or a phone number</li>
+      <li>Due in: confirmed bookings still to arrive, on any date</li>
+      <li>Cancelled, void &amp; no-show: the bookings that did not happen are kept, and found here</li>
+      <li>Each booking's state</li>
+    </ol>
+  </figure>
+
+  <p>The list runs from the latest arrival down. Its columns: Room, Guest (with the reference under the name), Type, Plan, Source, Arrival, Departure, Nights, Status, Rate. The states are <span class="ui">Due in</span> (orange), <span class="ui">In house</span> (blue), <span class="ui">Due out</span>, <span class="ui">Checked out</span>, <span class="ui">Cancelled</span>, <span class="ui">No show</span>, <span class="ui">Void</span>, and <span class="ui">Waiting for the hotel</span> (A2.7).</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Nothing is ever deleted. A cancelled, voided or no-show booking stays on the file under its own tile.</li>
+      <li>A booking waiting for the hotel is under <span class="ui">All</span>, not under <span class="ui">Due in</span>: it is not confirmed yet.</li>
+      <li>Nothing found? Try a shorter search: a surname, or the last few digits of a reference.</li>
+    </ul>
+  </div>
+
+  <!-- A2.2 -->
+  <h2 id="a2-2"><span class="n">A2.2</span>A booking on the phone: the guest and the stay</h2>
+  <p><span class="ui">New booking</span> is one page: <span class="msg">“One guest, one set of nights. Save it, give it a room, or check them in.”</span> The guest, the dates, the room and its price, the ID and an advance are on the page; the rest folds away. On the right, <span class="ui">The booking</span> adds it up as you type.</p>
+
+  <h3>To take a booking</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">New booking</span>. It opens on today's business date, one night, one room.</li>
+    <li>Type the name in <span class="ui">Guest or company</span>. It is the only guest detail that must be typed.</li>
+    <li>Type the <span class="ui">Phone</span>, and the <span class="ui">Email</span> if the guest gives one. If the system knows that phone or email, a line under them names the guest and how often they have stayed with the group, and asks <span class="msg">“same person?”</span>. Press <span class="ui">Same person</span> only if it is them (A10.6); nothing is joined until you do.</li>
+    <li>Ask the guest if they agree to WhatsApp, and switch on <span class="ui">Guest agreed to WhatsApp</span> if they do.</li>
+    <li>Set <span class="ui">Arrival</span> and <span class="ui">Departure</span>. The number of nights shows under Departure. The night of departure is not charged.</li>
+    <li>Choose the <span class="ui">Booking source</span>: how the booking reached us. Nothing is chosen for you (except Walk-in for a walk-in, A2.5).</li>
+    <li>Choose the <span class="ui">Room type</span> and the <span class="ui">Meal plan</span>, and set <span class="ui">Rooms</span>, <span class="ui">Adults</span> and <span class="ui">Children</span>.</li>
+    <li>Leave <span class="ui">Rate</span> empty to use the price on the rate calendar, or type the rate agreed with the guest.</li>
+    <li>Pick a <span class="ui">Room</span> now if you want to; <span class="ui">Assign later</span> is fine.</li>
+    <li>Read the price under the line and the total on the right, and tell the guest.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-02">
+    <img src="img/A2-02.png" alt="New booking: Guest or company, Phone and Email, the returning-guest line, the WhatsApp switch, Arrival and Departure, and The booking on the right">
+    <figcaption><b>Figure A2-02.</b> New booking: the guest and the nights.</figcaption>
+    <ol class="callouts">
+      <li>Guest or company: the one detail that must be typed</li>
+      <li>The phone: needed for online check-in and WhatsApp</li>
+      <li>Guest agreed to WhatsApp: ask them</li>
+      <li>The nights, counted from the two dates</li>
+      <li>The booking: nights, rooms, room charges, GST and what is due, as the bill will carry it</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-03">
+    <img src="img/A2-03.png" alt="The room line: Booking source, Room type, Meal plan, Rooms, Adults, Children, Rate, Rate includes GST, Room, how many are left and the price">
+    <figcaption><b>Figure A2-03.</b> The room line and its price.</figcaption>
+    <ol class="callouts">
+      <li>Booking source: how it reached us. It cannot be filled in later</li>
+      <li>Room type</li>
+      <li>Meal plan</li>
+      <li>Rate: empty uses the calendar; a number typed is a rate agreed</li>
+      <li>Rate includes GST: tick it when the rate typed already has the tax in it</li>
+      <li>Room: optional. A room picked is kept</li>
+      <li>How many rooms of this type are free on every night of the stay</li>
+      <li>The price: a night, its tax and the tax rate, and the nights</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:38%">Meal plan, as the list says it</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td>EP · Room only</td><td>The room, no meals.</td></tr>
+      <tr><td>CP · Room + breakfast</td><td>The room and breakfast.</td></tr>
+      <tr><td>MAP · Room + breakfast + one meal</td><td>The room, breakfast and one more meal.</td></tr>
+      <tr><td>AP · Room + all meals</td><td>The room and every meal.</td></tr>
+      <tr><td>AI · Everything charged to the room</td><td>All inclusive.</td></tr>
+    </tbody>
+  </table>
+
+  <ul>
+    <li><b>The price line</b> reads, for example, <span class="msg">“₹3,699.00 a night + ₹184.95 tax (5%) · 2 nights”</span>. A rate you typed adds <span class="msg">“, agreed”</span>.</li>
+    <li><b>“7 left”</b> is how many rooms of that type are free on every night of the stay. <span class="ui">All 7 left</span> books all of them. Booking more than are left is allowed: the count then adds <span class="msg">“this books more than that”</span>. You decide.</li>
+    <li><b>Another room</b> (top of the Stay card) adds a second line, for a second room type. The bin takes a line away. More than one room in all makes a group (A2.6).</li>
+    <li><b>Complimentary</b>: no charge, nothing posted. Only the owner, an Admin or the GM can tick it; for others it reads <span class="ui">Complimentary (owner, admin or GM only)</span> and cannot be ticked.</li>
+    <li><b>Departure the same day as Arrival</b> is a day use: type the day's price on the line. It is charged at check-in.</li>
+    <li><b>A booking site's source</b> shows <span class="ui">Prepaid on the booking site</span>, ticked. Untick it when the guest pays at the hotel: the advance is then asked before check-in.</li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>No price, no total.</b> If the rate calendar has no price for this party, the line says <span class="msg">“No price for …”</span> and the total stays a dash: <span class="msg">“Set it on the rate calendar, or type a rate on the line.”</span> The system never guesses a price.</li>
+      <li><b>The first night's price is kept for every night.</b> If the calendar's price changes later in the stay, the line says so: <span class="msg">“The first night's price is kept for every night; the calendar differs later.”</span></li>
+      <li>The booking source cannot be filled in later. Ask how the guest found you before you save.</li>
+      <li>WhatsApp unticked: messages go by email if there is one, else not at all.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>One page with three buttons, for booking, giving a room and checking in: <span class="d">D27-158</span>. The WhatsApp tick stays in sight because the voucher and the check-in code need it; offers and “woman travelling alone” fold away: <span class="d">D27-176</span>. Rate includes GST, a tick per line, off unless ticked: <span class="d">D27-187</span>, <span class="d">D27-199</span>. A day use's price is typed every time: <span class="d">D27-229</span>. Prepaid on the booking site: <span class="d">D27-246</span>. A returning guest is only suggested; a person confirms: <span class="d">D21-2</span>.</p>
+  </div>
+
+  <!-- A2.3 -->
+  <h2 id="a2-3"><span class="n">A2.3</span>The ID, the advance, the folds and the three buttons</h2>
+  <p>Under the room line are the ID and the advance, then four folded sections, then the three buttons.</p>
+  <ul>
+    <li><b>ID.</b> For a booking still to come it says <span class="msg">“The document is taken when they check in.”</span>: only the <span class="ui">Nationality</span> is asked now. For an arrival today, <span class="ui">Document</span> and <span class="ui">Number</span> are asked too, for Check in now (A2.5). A nationality other than IN puts the stay on the Form III register (A3).</li>
+    <li><b>Advance.</b> Money the guest pays now: the <span class="ui">Amount</span> and how it was <span class="ui">Paid by</span>. It is held as the guest's credit until the nights are charged, and the total on the right takes it off.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A2-04">
+    <img src="img/A2-04.png" alt="The foot of New booking: Nationality, Advance, the four folds, the three buttons and the reasons under them">
+    <figcaption><b>Figure A2-04.</b> The ID, the advance, the folds and the three buttons.</figcaption>
+    <ol class="callouts">
+      <li>Nationality: two letters, IN for India</li>
+      <li>Advance: held as the guest's credit until the nights are charged</li>
+      <li>More about the guest: folded until you need it</li>
+      <li>Save booking: the one filled button for a booking on the phone</li>
+      <li>Why a button cannot be used yet</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:26%">Fold</th><th>What is in it</th></tr></thead>
+    <tbody>
+      <tr><td>More about the guest</td><td><span class="ui">Guest agreed to offers</span>, <span class="ui">Woman travelling alone</span> (placed away from stairwells and service corridors; not announced at the desk), Title, Address, City, State, PIN code, Country.</td></tr>
+      <tr><td>Booking details</td><td><span class="ui">The booking</span>: Confirmed or Waiting for the hotel (A2.7). Expected check-in and check-out, if they said. Business source (the account or agent behind it), Market segment, Sales person. Discount.</td></tr>
+      <tr><td>Company</td><td><span class="ui">Bill to</span>: Guest or Company. For a company, its GSTIN is shown from its record; the tax invoice prints it.</td></tr>
+      <tr><td>Notes</td><td><span class="ui">Notes on the booking</span>.</td></tr>
+    </tbody>
+  </table>
+  <p>Company and Notes can each be switched off for a hotel in Settings. A hotel can also make some fields required, such as the phone or the market segment; the reason under the buttons then names the missing one, for example <span class="msg">“The phone number is needed for a booking at this hotel.”</span></p>
+
+  <figure class="shot" id="fig-A2-05">
+    <img src="img/A2-05.png" alt="Booking details folded open: Confirmed or Waiting for the hotel, Expected check-in, Business source, Sales person and Discount">
+    <figcaption><b>Figure A2-05.</b> Booking details, folded open.</figcaption>
+    <ol class="callouts">
+      <li>Confirmed, or Waiting for the hotel</li>
+      <li>Expected check-in, if they said (the hotel's own time is under it)</li>
+      <li>Business source: the account or agent behind the booking</li>
+      <li>Sales person</li>
+      <li>Discount: None, Up to 10%, ₹ off, or Promotion</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>Discount.</b> <span class="ui">Up to 10%</span> by hand, with a reason. <span class="ui">₹ off</span> a night, with a reason. More than 10% only through a named <span class="ui">Promotion</span>.</li>
+  </ul>
+
+  <h3>The three buttons</h3>
+  <table>
+    <thead><tr><th style="width:26%">Button</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>Save booking</td><td>Saves the booking. A room picked on the line is given to it too.</td></tr>
+      <tr><td>Save and assign room</td><td>The same save, once a room is picked on the line. Until then it says <span class="msg">“Pick a room.”</span></td></tr>
+      <tr><td>Check in now</td><td>Saves the booking and checks the guest in, through the same check-in as Arrivals (A3). Only for an arrival today, one room, with a room picked.</td></tr>
+    </tbody>
+  </table>
+  <p>The filled (orange) button is the job the page was opened for: Save booking on the phone, Check in now for a walk-in. A button that cannot be used says why under the buttons, for example <span class="msg">“Check in now: Check in now is for an arrival today.”</span> or <span class="msg">“Type the guest's name.”</span></p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>“Not booked”</b> with a reason means nothing was written: fix what it names and save again.</li>
+      <li>If the booking is saved but a later step is refused (the room, the check-in or the advance), the booking stands, and the next screen says which step and why (A2.4).</li>
+      <li><b>Several rooms?</b> Check in now checks in one room at a time: <span class="msg">“save the booking, then check each room in from Arrivals.”</span></li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The three buttons, Company and Notes switchable in Settings: <span class="d">D27-158</span>, <span class="d">D27-163</span>. The advance held as the guest's credit: <span class="d">D27-4</span>. Discounts, 10% by hand with a reason, more only by a named promotion: <span class="d">D27-36</span>. The hotel's default guarantee and required fields: <span class="d">D27-260</span>.</p>
+  </div>
+
+  <!-- A2.4 -->
+  <h2 id="a2-4"><span class="n">A2.4</span>Booked: the reference, the guest's page and the voucher</h2>
+  <p>After Save booking the page shows <span class="ui">Booked</span> with the guest's name: the reference of each room and its room type, then what to do next, in the order you do it on the phone.</p>
+
+  <figure class="shot" id="fig-A2-06">
+    <img src="img/A2-06.png" alt="Booked: the reference FH-5EL-2610-5038, The guest's page link, Send voucher, View voucher, Send check-in link and Open the booking">
+    <figcaption><b>Figure A2-06.</b> Booked.</figcaption>
+    <ol class="callouts">
+      <li>The booking's reference: read it to the guest</li>
+      <li>The guest's page link: shown here to copy</li>
+      <li>Send voucher: the booking's one voucher (greyed here: sending is not set up on the demo)</li>
+      <li>View voucher: look at it, print it or save it. It sends nothing</li>
+      <li>Send check-in link: sends the voucher again, with the guest's check-in link</li>
+      <li>Open the booking</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>Send voucher</b> goes once. After that the button is replaced by <span class="msg">“Voucher sent”</span> with the day, the time and who sent it. It goes to the guest by WhatsApp or email, as the WhatsApp tick decides (A10.7).</li>
+    <li>Where nothing can be sent, the buttons are greyed and say why. On the demo hotel the sentence is <span class="msg">“Sending is not set up yet. Bills and vouchers print and download as usual; nothing goes by WhatsApp or email until …”</span>.</li>
+    <li><span class="ui">Check in now</span> shows here too for a guest arriving today, one room, not yet checked in.</li>
+    <li><span class="ui">Open the booking</span> opens it in All bookings (a group: the group's page, A2.6). <span class="ui">Another booking</span> clears the page for the next call.</li>
+    <li>A room picked but not given says <span class="msg">“No room given: … Assign one from Arrivals.”</span> An advance that did not go through says <span class="msg">“Advance not taken: … Take it on the bill.”</span></li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>One voucher, recorded so it never goes twice: <span class="d">D27-35</span>. View voucher sends nothing: <span class="d">D27-187</span>. The check-in link beside the voucher: <span class="d">D27-105</span>. Messages go to guests only as A10.7 describes.</p>
+  </div>
+
+  <!-- A2.5 -->
+  <h2 id="a2-5"><span class="n">A2.5</span>A walk-in: booked and checked in at once</h2>
+  <p>A guest at the desk with no booking. Start from the room, not from the menu.</p>
+  <ol class="steps">
+    <li>Open <span class="ui">Rooms</span> (A1.7) and tap a free room. New booking opens on that room: today, one night, source <span class="ui">Walk-in</span>. Its heading says <span class="msg">“A walk-in into room 301. Check them in, or save the booking.”</span></li>
+    <li>Type the guest's name and phone, as in A2.2. Check the room type, meal plan, adults and the price.</li>
+    <li>Under <span class="ui">ID</span>, choose the <span class="ui">Document</span> and type its <span class="ui">Number</span>. Check in now records them; Save booking keeps only the nationality.</li>
+    <li>If the room is being given before the hotel's check-in time, type <span class="ui">Why the room is being given early</span>.</li>
+    <li>Take an advance if the guest pays now.</li>
+    <li>Tap <span class="ui">Check in now</span>, the filled button.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-07">
+    <img src="img/A2-07.png" alt="Rooms: the Deluxe rooms, with room 301 free">
+    <figcaption><b>Figure A2-07.</b> Rooms: a free room opens New booking.</figcaption>
+    <ol class="callouts"><li>A free room: tap it for a walk-in into it</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-08">
+    <img src="img/A2-08.png" alt="New booking for a walk-in: source Walk-in, Room 301 clean, one night at ₹3,699 plus tax">
+    <figcaption><b>Figure A2-08.</b> A walk-in into room 301.</figcaption>
+    <ol class="callouts">
+      <li>Booking source: Walk-in, chosen already</li>
+      <li>The room tapped, with its state: “clean”</li>
+      <li>One night, with its tax</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-09">
+    <img src="img/A2-09.png" alt="The walk-in's ID: Document Aadhaar and its Number">
+    <figcaption><b>Figure A2-09.</b> The walk-in's ID.</figcaption>
+    <ol class="callouts"><li>Document</li><li>Number</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-31">
+    <img src="img/A2-31.png" alt="The three buttons on a walk-in: Check in now is the filled one">
+    <figcaption><b>Figure A2-31.</b> A walk-in's one filled button: Check in now.</figcaption>
+    <ol class="callouts">
+      <li>Check in now: books and checks in</li>
+      <li>Save booking: books without checking in</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-10">
+    <img src="img/A2-10.png" alt="Checked in: the reference, Deluxe, room 301, and In house, room 301">
+    <figcaption><b>Figure A2-10.</b> Checked in.</figcaption>
+    <ol class="callouts"><li>Checked in</li><li>In house, room 301.</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Check in now uses the same check-in as Arrivals, with all its checks: the room must be ready and free, the ID complete, a foreign guest's Form III filled (A3). If it refuses, the booking still stands, and the page says <span class="msg">“Not checked in: … Check them in from Arrivals.”</span></li>
+      <li>An empty room opened from the Calendar for a <b>later</b> night is an ordinary booking of that room, not a walk-in: no Walk-in source, and Save booking is the filled button.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The walk-in became this one page, opened from an empty room: room, today, one night, source Walk-in: <span class="d">D27-163</span>.</p>
+  </div>
+
+  <!-- A2.6 -->
+  <h2 id="a2-6"><span class="n">A2.6</span>A group: several rooms on one booking</h2>
+  <p>A wedding, a conference, a family: one guest, one set of dates, several rooms. Book it once; more than one room becomes a group by itself.</p>
+  <ol class="steps">
+    <li>On New booking, set <span class="ui">Rooms</span> to the number of rooms (or add lines with <span class="ui">Another room</span> for other room types).</li>
+    <li>Type a <span class="ui">Group name</span>, such as “Sharma Wedding, March”. Left empty, it is named after the guest.</li>
+    <li>The booking on the right says <span class="msg">“2 rooms are booked as one group.”</span> Save it.</li>
+    <li>Each room gets its own reference. <span class="ui">Open the booking</span> opens the group's page.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-11">
+    <img src="img/A2-11.png" alt="New booking with Rooms 2 and a Group name, and the note 2 rooms are booked as one group">
+    <figcaption><b>Figure A2-11.</b> Two rooms: a group.</figcaption>
+    <ol class="callouts">
+      <li>Group name</li>
+      <li>Rooms: more than one becomes a group</li>
+      <li>“2 rooms are booked as one group.”</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-12">
+    <img src="img/A2-12.png" alt="Booked: two references, one per room, and Open the booking">
+    <figcaption><b>Figure A2-12.</b> Booked: one reference per room.</figcaption>
+    <ol class="callouts">
+      <li>The first room's reference</li>
+      <li>The second room's reference</li>
+      <li>Open the booking: the group's page</li>
+    </ol>
+  </figure>
+
+  <h3>The Groups screen</h3>
+  <p><span class="ui">Groups</span> lists every group: its name, rooms, room-nights and dates, and two figures that are never added together: <span class="ui">Rooms owe</span> (the guests' own bills) and <span class="ui">Host owes</span> (the host's account; a dash when there is none). <span class="ui">Here and coming</span> shows the groups in the house or due; <span class="ui">All</span> adds the past ones. Tap a group to list its rooms, then <span class="ui">Open the group</span>.</p>
+
+  <figure class="shot" id="fig-A2-13">
+    <img src="img/A2-13.png" alt="Groups: A2 Test Mehta wedding, two rooms, Rooms owe and Host owes, and Open the group">
+    <figcaption><b>Figure A2-13.</b> Groups.</figcaption>
+    <ol class="callouts">
+      <li>Here and coming, or All</li>
+      <li>The group: tap it to see its rooms</li>
+      <li>Host owes: a dash, because this group has no host account</li>
+      <li>Open the group</li>
+    </ol>
+  </figure>
+
+  <h3>One group: the host, the guests, the rooms</h3>
+  <ul>
+    <li><b>The host.</b> <span class="msg">“No host account. Every room settles its own.”</span> until someone presses <span class="ui">Open a host account</span>. Then the rooms can be put on the host's account.</li>
+    <li><b>The guests.</b> What the rooms owe on their own bills, across all of them.</li>
+    <li><b>Host pays.</b> Tick a room to put its accommodation on the host's account; untick to give it back. It changes only the nights not yet charged.</li>
+    <li><b>Lead guest.</b> The flag marks the guest who gets the group's one confirmation and its review request. It starts on the room booked first; tap another room's box to change it.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A2-14">
+    <img src="img/A2-14.png" alt="One group's page: The host with Open a host account, The guests, and the Rooms table with Host pays and Lead guest">
+    <figcaption><b>Figure A2-14.</b> One group: the host, the guests, the rooms.</figcaption>
+    <ol class="callouts">
+      <li>Open a host account</li>
+      <li>The guests: what the rooms owe on their own bills</li>
+      <li>Host pays: tick a room to put its accommodation on the host's account</li>
+      <li>Lead guest: who gets the group's confirmation</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A group's rooms are given later, from Arrivals or the Calendar's Assign room: the Room box is not on the line when it books more than one room.</li>
+      <li>Ticking Host pays before the host account is open is refused: <span class="msg">“This group has no open master folio yet. Open one, and the room charges will go to it.”</span></li>
+      <li>Nights already charged stay on the bill they were posted to. Moving one is a correction on the bill, with a reason (A4).</li>
+      <li>Host pays moves the room's accommodation only. Food and drink stay on the bill of the guest who signed for them.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Two accounts, never one total: the host and the guests are different people asked for different money, and a sum would be a number nobody can be asked to pay. Who leads a group: the room booked first that still stands, unless the desk picks another: <span class="d">D22-52</span>.</p>
+  </div>
+
+  <!-- A2.7 -->
+  <h2 id="a2-7"><span class="n">A2.7</span>Waiting for the hotel</h2>
+  <p>A booking the hotel has not accepted yet: the room is held, and nothing goes to the guest. Bookings from the CRS arrive this way (A2.11). The desk can make one too.</p>
+  <ol class="steps">
+    <li>On New booking, open <span class="ui">Booking details</span> and choose <span class="ui">Waiting for the hotel</span> (Figure A2-05). It says <span class="msg">“Waiting holds the room and sends the guest nothing until it is confirmed.”</span></li>
+    <li>Save booking. The page says <span class="ui">Held, waiting for the hotel</span>.</li>
+    <li>When the hotel accepts it, tap <span class="ui">Confirm the booking</span>: here, or later in the booking's <span class="ui">More options</span>. The message says <span class="msg">“Confirmed”</span> and <span class="msg">“the voucher can go now.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-15">
+    <img src="img/A2-15.png" alt="Held, waiting for the hotel: The room is held. Nothing is sent to the guest until the booking is confirmed. Confirm the booking">
+    <figcaption><b>Figure A2-15.</b> Held, waiting for the hotel.</figcaption>
+    <ol class="callouts">
+      <li>Held, waiting for the hotel</li>
+      <li>The room is held; nothing is sent to the guest</li>
+      <li>Confirm the booking</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-20">
+    <img src="img/A2-20.png" alt="More options on a booking waiting for the hotel: Confirm the booking at the top, Cancel this booking at the foot">
+    <figcaption><b>Figure A2-20.</b> More options on a booking waiting for the hotel.</figcaption>
+    <ol class="callouts">
+      <li>Confirm the booking</li>
+      <li>Cancel this booking: no charge, nothing sent</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-21">
+    <img src="img/A2-21.png" alt="The message Confirmed: FH-5EL-2610-5044: the voucher can go now.">
+    <figcaption><b>Figure A2-21.</b> Confirmed.</figcaption>
+    <ol class="callouts"><li>Confirmed: the voucher can go now</li></ol>
+  </figure>
+
+  <ul>
+    <li>Confirming confirms every waiting room booked with it.</li>
+    <li>While it waits, New booking neither gives it a room nor checks it in: <span class="msg">“A booking waiting for the hotel gets its room once it is confirmed.”</span> There is no voucher for it either: <span class="msg">“Only a confirmed booking still to arrive has a voucher.”</span></li>
+    <li><b>Not accepted?</b> More options, <span class="ui">Cancel this booking</span>. The window says <span class="msg">“It was waiting for the hotel and was never confirmed: no charge, and nothing goes to the guest.”</span> Type <span class="ui">Why</span> and tap <span class="ui">Cancel the booking</span>. The room is free at once.</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A booking waits with its room held; the hotel confirms; then one voucher goes: <span class="d">D27-35</span>. A waiting booking is cancelled directly, by the same people who may cancel a confirmed one: <span class="d">D27-64</span>.</p>
+  </div>
+
+  <!-- A2.8 -->
+  <h2 id="a2-8"><span class="n">A2.8</span>Changing a booking: More options</h2>
+  <p>Open the booking (All bookings, Arrivals, a room tile) and tap <span class="ui">More options</span>. The choices are listed by when they happen; an option you cannot use is grey and says why.</p>
+
+  <figure class="shot" id="fig-A2-16">
+    <img src="img/A2-16.png" alt="More options on a booking still to arrive: The booking, The room, The rate, and in red Cancel this booking and Void this booking">
+    <figcaption><b>Figure A2-16.</b> More options on a booking still to arrive.</figcaption>
+    <ol class="callouts">
+      <li>Change dates or guests</li>
+      <li>View voucher</li>
+      <li>Move to another room: grey until the guest has arrived, and it says why</li>
+      <li>What this booking includes</li>
+      <li>Cancel this booking: the guest cancelled (A2.9)</li>
+      <li>Void this booking: it should never have existed (A2.9)</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:30%">Option</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>Confirm the booking</td><td>Only on a booking waiting for the hotel (A2.7).</td></tr>
+      <tr><td>Change dates or guests</td><td>New arrival or departure, adults, children. Not on a stay that is over.</td></tr>
+      <tr><td>View voucher</td><td>The voucher to look at, print or save. Sends nothing. Only for a confirmed booking still to arrive.</td></tr>
+      <tr><td>Move to another room</td><td>Once the guest is in the house. Before that, change the room with Assign room on the Calendar.</td></tr>
+      <tr><td>Exchange with another guest</td><td>Two guests in the house swap rooms.</td></tr>
+      <tr><td>What this booking includes</td><td>The extras on the booking.</td></tr>
+      <tr><td>Change rate</td><td>The owner, an Admin or the GM, on a confirmed booking before check-in.</td></tr>
+      <tr><td>Cancel this booking, Void this booking</td><td>In red, at the end (A2.9).</td></tr>
+    </tbody>
+  </table>
+
+  <h3>To change the dates or the number of guests</h3>
+  <ol class="steps">
+    <li>More options, <span class="ui">Change dates or guests</span>. The window is called <span class="msg">“Amend A2 Test Sharma”</span> and says the stay as it is.</li>
+    <li>Change <span class="ui">Arrival</span>, <span class="ui">Departure</span>, <span class="ui">Adults</span> or <span class="ui">Children</span>. Once the guest has arrived, the arrival cannot change.</li>
+    <li>Read the line under them: <span class="msg">“2 → 3 nights · ₹11,097 of room charges at ₹3,699 a night”</span>.</li>
+    <li>Tap <span class="ui">Save</span>. The message says <span class="msg">“Stay amended”</span> and the change: <span class="msg">“A2 Test Sharma: 2 nights becomes 3.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-17">
+    <img src="img/A2-17.png" alt="Amend A2 Test Sharma: Arrival, Departure moved a day later, the line 2 → 3 nights and Save">
+    <figcaption><b>Figure A2-17.</b> Change dates or guests.</figcaption>
+    <ol class="callouts">
+      <li>Arrival</li>
+      <li>Departure</li>
+      <li>The change, said in words: the nights, and the room charges at the rate agreed</li>
+      <li>Save</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-18">
+    <img src="img/A2-18.png" alt="The message Stay amended: A2 Test Sharma: 2 nights becomes 3.">
+    <figcaption><b>Figure A2-18.</b> Stay amended.</figcaption>
+    <ol class="callouts"><li>Stay amended, and what changed</li></ol>
+  </figure>
+
+  <ul>
+    <li>The room held for the booking moves with it. If the room is taken for a night being added, nothing changes at all, and the message says which.</li>
+    <li>Added nights are charged at the rate already agreed. Changing the rate is separate (Change rate, or the bill).</li>
+    <li>A night already charged cannot be dropped here: correct it on the bill first (A4). A stay is at most 90 nights.</li>
+  </ul>
+
+  <h3>To move a guest in the house to another room</h3>
+  <ol class="steps">
+    <li>More options, <span class="ui">Move to another room</span>. The window says where they are now: <span class="msg">“Currently in 209.”</span></li>
+    <li>Type <span class="ui">To which room</span>.</li>
+    <li>Set <span class="ui">From which night</span>: the first night in the new room. It starts on the business date.</li>
+    <li>Choose <span class="ui">Why</span>: Guest asked to move, Upgrade, Downgrade, Something wrong with the room, or Putting a group together.</li>
+    <li>Type a <span class="ui">New rate per night</span> only if the price changes. Left empty, nothing about the money changes.</li>
+    <li>Tap <span class="ui">Move</span>. The message names the new room and how the nights are split between the two.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-19">
+    <img src="img/A2-19.png" alt="Move A2 Test Kumar, currently in 209: To which room 302, From which night, Why, New rate per night, Cancel and Move">
+    <figcaption><b>Figure A2-19.</b> Move to another room.</figcaption>
+    <ol class="callouts">
+      <li>To which room</li>
+      <li>From which night</li>
+      <li>Why</li>
+      <li>New rate per night: optional</li>
+      <li>Take them out of the room without assigning another (further down the window, below what this picture shows)</li>
+      <li>Move</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>Moving changes no charge on its own. Nights before tonight stay with the old room. A new rate applies from tonight; to change a night already billed, correct it on the bill, with its reason (A4).</li>
+    <li><span class="ui">Take them out of the room without assigning another</span> leaves the booking standing with no room: <span class="msg">“Out of the room”</span>.</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Why a guest moved is kept, because “something wrong with the room” is the question asked when a complaint arrives a week later. A move is a change of room, not of price: the rate is a separate decision.</p>
+  </div>
+
+  <!-- A2.9 -->
+  <h2 id="a2-9"><span class="n">A2.9</span>Cancel, void and no-show</h2>
+  <p>Three ways a booking does not happen. None of them deletes it.</p>
+  <table>
+    <thead><tr><th style="width:18%">Word</th><th style="width:40%">Means</th><th>What it costs</th></tr></thead>
+    <tbody>
+      <tr><td>Cancelled</td><td>The guest booked, then cancelled.</td><td>What the booking's cancellation terms keep, on the guest's bill.</td></tr>
+      <tr><td>Void</td><td>It should never have existed: entered twice, wrong property, a test.</td><td>Nothing. Left out of revenue and out of cancellation figures.</td></tr>
+      <tr><td>No show</td><td>A confirmed guest never came.</td><td>Marked by the night audit (A7); the terms decide what is kept.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>To cancel a confirmed booking</h3>
+  <ol class="steps">
+    <li>Open the booking. More options, <span class="ui">Cancel this booking</span>. The window says <span class="msg">“The guest cancelled. This room only; the terms it was booked under decide the charge.”</span></li>
+    <li>Read the first line: what the terms charge, before you cancel. For example <span class="msg">“This booking carries no cancellation terms, so nothing is charged.”</span></li>
+    <li>Type <span class="ui">Why</span>, such as “Guest changed plans”.</li>
+    <li>Tap <span class="ui">Cancel the booking</span>. <span class="ui">Keep it</span> closes the window and changes nothing.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A2-22">
+    <img src="img/A2-22.png" alt="Cancel this booking: This booking carries no cancellation terms, so nothing is charged. Why: Guest changed plans. Keep it, Cancel the booking">
+    <figcaption><b>Figure A2-22.</b> Cancel this booking: the terms decide the charge.</figcaption>
+    <ol class="callouts">
+      <li>What the booking's terms charge, said before you cancel</li>
+      <li>Why: it must be filled in</li>
+      <li>Keep it</li>
+      <li>Cancel the booking</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-23">
+    <img src="img/A2-23.png" alt="The message Cancelled: FH-5EL-2610-5044: the room is free again. No charge.">
+    <figcaption><b>Figure A2-23.</b> Cancelled.</figcaption>
+    <ol class="callouts"><li>Cancelled: the room is free again, and the charge, if any</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-24">
+    <img src="img/A2-24.png" alt="All bookings filtered to Cancelled, void and no-show, with A2 Test Joshi Cancelled">
+    <figcaption><b>Figure A2-24.</b> All bookings: cancelled, void and no-show.</figcaption>
+    <ol class="callouts">
+      <li>Cancelled, void &amp; no-show</li>
+      <li>The cancelled booking, still on the file</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>Inside the terms' free window: <span class="msg">“nothing is charged.”</span> Otherwise the window says how much is kept and that it goes on the guest's bill; an advance already paid stays on the bill.</li>
+    <li>The owner, an Admin or the GM may switch on <span class="ui">Waive the charge</span>. Nothing then goes on the bill; the reason is kept with it.</li>
+    <li>It cancels this room only. For a group, cancel each room that is cancelled.</li>
+  </ul>
+
+  <h3>To void a booking</h3>
+  <ol class="steps">
+    <li>More options, <span class="ui">Void this booking</span>. The window says <span class="msg">“For one that never happened. Use Cancel if the guest cancelled.”</span></li>
+    <li>Type <span class="ui">Why</span>: “Entered twice”, “wrong property”, “test booking”.</li>
+    <li>Tap <span class="ui">Void</span>. The message says it <span class="msg">“is on the record as never having happened.”</span> It holds no room from then on.</li>
+  </ol>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Cancel and Void are only for a booking that has not arrived. A guest in the house is checked out instead (A5): <span class="msg">“They have arrived. Check them out instead.”</span></li>
+      <li>A booking with money on its bill cannot be voided: the system refuses and says why. Cancel it, so the terms apply.</li>
+      <li>A guest who has not arrived by the night audit becomes a no-show. Check in or cancel your arrivals before it runs.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Cancelled and void mean opposite things to a report: a cancellation happened and measures demand; a void never happened, and counting it would inflate the figures the hotel sets its policy from. The terms are copied onto each booking when it is made, so a booking keeps the terms it was sold under even if the hotel changes them later. A waiting booking is cancelled with no charge: <span class="d">D27-64</span>.</p>
+  </div>
+
+  <!-- A2.10 -->
+  <h2 id="a2-10"><span class="n">A2.10</span>For the owner: cancellation terms and booking sources</h2>
+  <p>Two screens in <span class="ui">Property setup</span> decide what a booking carries.</p>
+
+  <h3>Cancellation terms</h3>
+  <p><span class="ui">Cancellation terms</span>: <span class="msg">“What a cancellation or a no-show costs at this property.”</span> A hotel starts with none: <span class="msg">“Until a policy exists, the night audit charges nothing on a no-show.”</span> The owner, an Admin, the GM or the revenue manager writes them.</p>
+  <ol class="steps">
+    <li>Tap <span class="ui">New policy</span>.</li>
+    <li>Type its <span class="ui">Name</span>, what the front desk will call it (“Flexible”).</li>
+    <li>Type <span class="ui">Free cancellation until</span>: hours before arrival. Empty means no free window.</li>
+    <li>Choose what <span class="ui">A cancellation retains</span> and what <span class="ui">A no-show retains</span>: Nothing, The first night, The whole stay, A percentage of the booking, or A fixed amount.</li>
+    <li>Tap <span class="ui">Save policy</span>. <span class="ui">Use for new bookings</span> makes it the one new bookings carry.</li>
+  </ol>
+  <p>Bookings already taken keep the terms they were made under.</p>
+
+  <figure class="shot" id="fig-A2-25">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A2-25 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/cancellation-terms</code></dd>
+        <dt>Sign in as</dt><dd>Owner</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → New policy; 2 → “Until a policy exists …”</dd>
+        <dt>File</dt><dd><code>img/A2-25.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A2-25.</b> Cancellation terms, none written yet.</figcaption>
+    <ol class="callouts"><li>New policy</li><li>With no terms, a no-show costs nothing</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-26">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A2-26 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/cancellation-terms</code>, New policy, Name “Flexible”, 24 hours (not saved)</dd>
+        <dt>Sign in as</dt><dd>Owner</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → Name; 2 → Free cancellation until; 3 → A cancellation retains; 4 → A no-show retains; 5 → Save policy</dd>
+        <dt>File</dt><dd><code>img/A2-26.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A2-26.</b> A new policy.</figcaption>
+    <ol class="callouts"><li>Name</li><li>Free cancellation until: hours before arrival</li><li>A cancellation retains</li><li>A no-show retains</li><li>Save policy</li></ol>
+  </figure>
+
+  <h3>Booking sources</h3>
+  <p><span class="ui">Booking sources</span> is the list New booking's Booking source is chosen from. <span class="msg">“The list is the group's”</span>: a source added here appears at every hotel. <span class="msg">“The commission is this property's”</span>: what this hotel agreed, copied onto each booking as it is taken. <span class="ui">Add a source</span> adds one. <span class="ui">Commission</span> on a source sets this hotel's per cent; blank means no rate has been agreed, which is not the same as 0. The owner, an Admin or the GM sets it.</p>
+
+  <figure class="shot" id="fig-A2-27">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A2-27 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/booking-sources</code></dd>
+        <dt>Sign in as</dt><dd>Owner</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → Add a source; 2 → The list is the group's; 3 → The commission is this property's; 4 → the COMMISSION HERE column; 5 → a source's Commission button</dd>
+        <dt>File</dt><dd><code>img/A2-27.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A2-27.</b> Booking sources.</figcaption>
+    <ol class="callouts"><li>Add a source</li><li>The list is the group's</li><li>The commission is this property's</li><li>This hotel's commission for each source</li><li>Commission: set it</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-28">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A2-28 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/booking-sources</code>, Commission on Agoda (not saved)</dd>
+        <dt>Sign in as</dt><dd>Owner</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the Commission box; 2 → “Blank means no rate has been agreed.”</dd>
+        <dt>File</dt><dd><code>img/A2-28.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A2-28.</b> A source's commission here.</figcaption>
+    <ol class="callouts"><li>Commission, per cent of the booking</li><li>Blank means no rate has been agreed</li></ol>
+  </figure>
+
+  <!-- A2.11 -->
+  <h2 id="a2-11"><span class="n">A2.11</span>CRS bookings</h2>
+  <p><span class="ui">CRS bookings</span>: <span class="msg">“Bookings the CRS sold for this hotel, and what became of each”</span>. A booking a salesperson makes in the CRS for this hotel arrives within five minutes as a booking waiting for the hotel, with the room held (A2.7). The desk confirms it. A change made in the CRS afterwards shows here as a note for the desk, with <span class="ui">Done</span>; nothing is changed by itself.</p>
+  <p>The owner and an Admin also see <span class="ui">Connection to the CRS</span>: the source CRS bookings are filed under, each CRS room type's match here, and <span class="ui">Read bookings from the CRS</span>. On the demo hotel it says <span class="msg">“The CRS login is not in the server's settings yet, so nothing is read.”</span></p>
+
+  <figure class="shot" id="fig-A2-29">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A2-29 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/crs-bookings</code></dd>
+        <dt>Sign in as</dt><dd>Owner</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → Connection to the CRS; 2 → File CRS bookings under; 3 → Read bookings from the CRS; 4 → “The CRS login is not in the server's settings yet”</dd>
+        <dt>File</dt><dd><code>img/A2-29.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A2-29.</b> CRS bookings.</figcaption>
+    <ol class="callouts"><li>Connection to the CRS</li><li>File CRS bookings under</li><li>Read bookings from the CRS</li><li>Why nothing arrives yet</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A2-30">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A2-30 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/crs-bookings</code></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → “The CRS login is not in the server's settings yet”; 2 → “No CRS booking has arrived yet”</dd>
+        <dt>File</dt><dd><code>img/A2-30.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A2-30.</b> CRS bookings, as reception sees it.</figcaption>
+    <ol class="callouts"><li>Why nothing arrives yet</li><li>No CRS booking has arrived yet</li></ol>
+  </figure>
+
+  <!-- A2.12 -->
+  <h2 id="a2-12"><span class="n">A2.12</span>In short</h2>
+  <table>
+    <thead><tr><th style="width:30%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>Where is a booking?</td><td>All bookings: type a name, reference, room or phone.</td><td>A2.1</td></tr>
+      <tr><td>A booking on the phone</td><td>New booking: name, phone, WhatsApp tick, dates, source, room type, read the price, Save booking. Read the reference.</td><td>A2.2</td></tr>
+      <tr><td>The voucher</td><td>Booked: Send voucher, once.</td><td>A2.4</td></tr>
+      <tr><td>A walk-in</td><td>Rooms: tap a free room, name, phone, ID, Check in now.</td><td>A2.5</td></tr>
+      <tr><td>Several rooms</td><td>Rooms more than 1, a Group name. Groups for the host's account and the lead guest.</td><td>A2.6</td></tr>
+      <tr><td>Not accepted yet</td><td>Booking details: Waiting for the hotel. Then Confirm the booking.</td><td>A2.7</td></tr>
+      <tr><td>New dates, more guests</td><td>More options: Change dates or guests.</td><td>A2.8</td></tr>
+      <tr><td>A guest in the house changes room</td><td>More options: Move to another room.</td><td>A2.8</td></tr>
+      <tr><td>The guest cancelled</td><td>More options: Cancel this booking, with why.</td><td>A2.9</td></tr>
+      <tr><td>Entered by mistake</td><td>More options: Void this booking, with why.</td><td>A2.9</td></tr>
+    </tbody>
+  </table>
+</section>

@@ -1,0 +1,532 @@
+<!-- ══════════════════════════════ CHAPTER A15 ══════════════════════════════ -->
+<section class="chapter" id="a15">
+  <div class="chapter-head">
+    <span class="num">Chapter A15</span>
+    <h1>Rates, revenue and distribution</h1>
+    <p>For the owner, the GM, the Revenue Manager and whoever reads prices. How to read the Rates calendar, change a price for a day or a run of days, set the add-ons every price is built from, close a date or set a minimum stay, read the Revenue outlook, set up the Channel manager to the booking sites through SU, and keep the companies and agents with their contracts.</p>
+  </div>
+
+  <!-- A15.1 -->
+  <h2 id="a15-1"><span class="n">A15.1</span>The screens</h2>
+  <p>Two parts of the Front office menu hold this chapter: <span class="ui">Rooms and rates</span> (what this hotel is selling) and <span class="ui">Distribution</span> (who sells it). You see the screens your role uses.</p>
+  <table>
+    <thead><tr><th style="width:20%">Screen</th><th style="width:32%">Who sees it</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td>Rates</td><td>Everyone who reads prices: Owner, Admin, General Manager, Revenue Manager, Hotel Manager, Reception, Viewer. Only the Owner, an Admin, the GM and the Revenue Manager change anything on it.</td><td>Each day's price for every room type, and how the day sold; Rooms left and the restrictions; how rates are built; prices set before (A15.2 to A15.5).</td></tr>
+      <tr><td>Revenue outlook</td><td>Owner, Admin, General Manager, Revenue Manager</td><td>The coming ninety nights: this month on the books, what to consider, the dates worth a look. It never changes a price (A15.6).</td></tr>
+      <tr><td>Channel manager</td><td>Owner, Admin, General Manager. The SU setup: the Owner and an Admin only.</td><td>The connection to the booking sites through SU: what it sends and takes, what it still needs, the bookings the sites sent (A15.7, A15.8).</td></tr>
+      <tr><td>Contracts</td><td>Owner, Admin, General Manager, Hotel Manager, Reception, Accountant, Viewer. Contracts are kept by the Owner, an Admin and the GM.</td><td>The group's companies and travel agents, and the rates each has agreed with this hotel (A15.9).</td></tr>
+    </tbody>
+  </table>
+  <p>Reception's menu is its working menu, which leaves out Rates and Contracts: Reception opens them with <span class="ui">Find a screen</span> (Ctrl K, A0).</p>
+  <p>Two screens these depend on sit under <span class="ui">Property setup</span>: <span class="ui">Booking sources</span>, where each booking site gets its SU code, and <span class="ui">Cancellation terms</span>. The same company records also open from <span class="ui">Companies and agents</span> in Guests &amp; CRM.</p>
+
+  <!-- A15.2 -->
+  <h2 id="a15-2"><span class="n">A15.2</span>Reading the Rates calendar</h2>
+  <p>Open <span class="ui">Rates</span>. It says <span class="msg">“Each day's price, and how the day sold. The add-ons follow the base.”</span> It opens on two weeks from the hotel's own business date.</p>
+
+  <figure class="shot" id="fig-A15-01">
+    <img src="img/A15-01.png" alt="Rates: two weeks of each room type's base with rooms left, and under each the price for two guests on each meal plan">
+    <figcaption><b>Figure A15-01.</b> Rates: each room type's base and its break-up.</figcaption>
+    <ol class="callouts">
+      <li>Prices: the calendar of prices (<span class="ui">Rooms left</span> beside it is A15.5)</li>
+      <li>Set prices: a room type, from a day through a day (A15.3)</li>
+      <li>The next two weeks; the arrow beside it goes back two weeks</li>
+      <li>The hotel's business date, in dark blue</li>
+      <li>A room type's base that day, and under it how many rooms of the type are left. In grey italics: a price set before (here the old rack rate)</li>
+      <li>What the room sells for on a plan, for two guests: here CP, with breakfast</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>The base</b> is the grey line of each room type: what one guest pays for the room alone (room only, EP) that day. Under the price, <span class="msg">“3 left”</span> is the rooms of that type still to sell that day.</li>
+    <li><b>The rows under it</b> are what the room really sells for that day: for two guests on room only, then <span class="ui">CP</span>, <span class="ui">MAP</span>, <span class="ui">AP</span> and <span class="ui">AI</span>. Where the room sleeps more, <span class="ui">+ per extra adult</span> and <span class="ui">+ per extra child</span> say what one more guest adds; where it sleeps no more, those rows are left out.</li>
+    <li>The arrows move two weeks at a time. Away from the business date, <span class="ui">Today</span> brings you back. Weekends and the hotel's holidays are shaded grey.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A15-02">
+    <img src="img/A15-02.png" alt="The foot of the Rates calendar: the extra-person rows, Paying rooms sold with occupancy, ADR, Revenue, and the key">
+    <figcaption><b>Figure A15-02.</b> How each day sold, and the key.</figcaption>
+    <ol class="callouts">
+      <li>What one more adult adds: a dash, not set</li>
+      <li>Paying rooms sold, and the occupancy under it</li>
+      <li>ADR: the average rate of the paying rooms</li>
+      <li>Revenue: the paying rooms' revenue that night</li>
+      <li>In bold: a base</li>
+      <li>In grey italics: a price set before, covering two guests</li>
+    </ol>
+  </figure>
+
+  <h3>The key</h3>
+  <table>
+    <thead><tr><th style="width:38%">On the calendar</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td><b>4,000</b> (bold)</td><td>A base typed for this room type.</td></tr>
+      <tr><td>4,000 (grey)</td><td>From the base room type: the base room type's base plus this type's difference (A15.4).</td></tr>
+      <tr><td><i>4,000</i> (grey italics)</td><td>A price set before, covering two guests (A15.4).</td></tr>
+      <tr><td>-</td><td>Not priced. Nothing that needs it is sold. Never read a dash as zero.</td></tr>
+      <tr><td>3 left</td><td>Rooms of the type still to sell that day.</td></tr>
+    </tbody>
+  </table>
+  <p><span class="ui">Paying rooms sold</span>, <span class="ui">ADR</span> and <span class="ui">Revenue</span> are the paying rooms only, at the booked rate before tax: complimentary rooms and day use are left out. The occupancy under Paying rooms sold counts complimentary rooms, as the reports do, so it can be a little higher than the paying rooms alone. ADR is a dash on a day nothing was sold.</p>
+  <p>Under the calendar, links open the reports: <span class="ui">Manager report</span>, <span class="ui">Monthly occupancy</span>, <span class="ui">Monthly statistics</span> and <span class="ui">Revenue outlook</span> (Figure A15-05).</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>On the demo hotel every price is still the old rack rate</b>, so every base shows in grey italics and every meal plan shows the room-only figure. A hotel priced only by its old rack keeps selling every plan at that figure until a base and the add-ons are set (A15.4).</li>
+      <li>Everyone who reads prices sees the calendar; only the Owner, an Admin, the GM and the Revenue Manager can tap a price. The server asks the same question on every price it is sent.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>One screen for the price and how the day sold, in place of the old Pricing, Rate plans, Rate calendar and Rate performance: <span class="d">D27-188</span>. The break-up rows under each room type and Set prices: <span class="d">D27-206</span>; every room type always open: <span class="d">D27-237</span>. Paying rooms sold beside one occupancy rule everywhere: <span class="d">D27-151</span>.</p>
+  </div>
+
+  <!-- A15.3 -->
+  <h2 id="a15-3"><span class="n">A15.3</span>Changing a price</h2>
+  <p>Only the base is typed: what one guest pays for the room alone. Every plan and guest count on that day follows it, through the add-ons (A15.4). The line under the calendar says so: <span class="msg">“Tap any price to change it, for that day or through a later day.”</span></p>
+
+  <h3>One day, or from that day: tap the price</h3>
+  <ol class="steps">
+    <li>Tap the room type's base on the day. The window is named after it: <span class="msg">“Deluxe · base”</span>.</li>
+    <li>Type the <span class="ui">Base per night</span> in rupees. Or tick <span class="ui">Free</span> if it really is free.</li>
+    <li>Leave <span class="ui">Through</span> on the same day for that day only, or choose a later day. The line under it says what it covers: <span class="msg">“12 Oct 2026 only.”</span> or <span class="msg">“5 days, 12 Oct 2026 through 16 Oct 2026.”</span></li>
+    <li>Tap <span class="ui">Set base</span>. The message says <span class="msg">“Base set”</span> with the room type and the days.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A15-03">
+    <img src="img/A15-03.png" alt="The Deluxe · base window: Base per night 3500, Free, Through 12-10-2026, 12 Oct 2026 only, Set base">
+    <figcaption><b>Figure A15-03.</b> A tapped price: the base for that day, or through a later day. (Left unsaved.)</figcaption>
+    <ol class="callouts">
+      <li>The room type</li>
+      <li>Base per night: one guest, room only</li>
+      <li>Free, instead of a price</li>
+      <li>Through: the last day this base applies to</li>
+      <li>The days it covers</li>
+      <li>Set base</li>
+    </ol>
+  </figure>
+
+  <h3>A run of days: Set prices</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">Set prices</span> at the top of Rates.</li>
+    <li>Choose the <span class="ui">Room type</span>.</li>
+    <li>Choose <span class="ui">From</span>, the first day, and <span class="ui">Through</span>, the last day.</li>
+    <li>Type the <span class="ui">Base per night</span>, or tick <span class="ui">Free</span>.</li>
+    <li>Tap <span class="ui">Set base</span>. It stays grey until a price is typed or Free is ticked.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A15-04">
+    <img src="img/A15-04.png" alt="The Set prices window: Room type, From, Base per night, Free, Through, and Set base greyed">
+    <figcaption><b>Figure A15-04.</b> Set prices: a room type, a first day, the base, a last day.</figcaption>
+    <ol class="callouts">
+      <li>Room type</li>
+      <li>From: the first day</li>
+      <li>Base per night</li>
+      <li>Through: the last day</li>
+      <li>Set base: grey until there is a price, or Free</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>No default price.</b> A blank is not priced, and 0 is kept only when it is ticked Free: <span class="msg">“0 is kept only when it is ticked Free. Leave it blank if nobody has priced it yet.”</span></li>
+      <li>A day that already has a base of its own also offers <span class="ui">Clear</span>, which takes that base away (<span class="msg">“Base cleared”</span>).</li>
+      <li><b>On a date that has a base, the old rack rate is no longer used there.</b> Each plan is then the base plus its add-on, and a plan or a second guest whose add-on is a dash is not sold that day. Set the add-ons (A15.4) before the first base.</li>
+      <li>Where the rooms are derived from one base room type (A15.4), only that room type's base can be tapped; the others follow it.</li>
+    </ul>
+  </div>
+
+  <!-- A15.4 -->
+  <h2 id="a15-4"><span class="n">A15.4</span>How rates are built, and prices set before</h2>
+  <p>Under the calendar, <span class="ui">How rates are built</span> shows the add-ons that ride on every base. Each is set once for the hotel, in rupees, with no dates:</p>
+  <ul>
+    <li><span class="ui">Breakfast (CP), per guest</span>, <span class="ui">MAP, per guest</span>, <span class="ui">AP, per guest</span>, <span class="ui">All inclusive (AI), per guest</span>: every guest pays the meal plan's add-on, children too.</li>
+    <li><span class="ui">Double occupancy (the second guest)</span>: what the second guest adds, adult or child.</li>
+    <li><span class="ui">Extra adult (from the third guest)</span> and <span class="ui">Extra child (from the third guest)</span>.</li>
+  </ul>
+  <p>The card says: <span class="msg">“A base covers one guest, room only. A dash is not set: nothing that needs it is sold.”</span></p>
+
+  <figure class="shot" id="fig-A15-05">
+    <img src="img/A15-05.png" alt="How rates are built with every add-on a dash, Prices set before with the two old rack rates and Remove, and the report links">
+    <figcaption><b>Figure A15-05.</b> How rates are built, prices set before, the reports.</figcaption>
+    <ol class="callouts">
+      <li>How rates are built: here each room type has its own base</li>
+      <li>Edit: the Owner, an Admin, the GM and the Revenue Manager</li>
+      <li>An add-on: a dash, not set</li>
+      <li>Prices set before</li>
+      <li>Remove a price set before</li>
+      <li>The Revenue outlook, one tap away (A15.6)</li>
+    </ol>
+  </figure>
+
+  <h3>To set the add-ons, or derive the room types from one</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">Edit</span> on How rates are built.</li>
+    <li>Under <span class="ui">Room types</span>, choose <span class="ui">Each room type has its own base</span>, or <span class="ui">Derived from</span> one room type: <span class="msg">“Derived: the others are the base room type plus a difference.”</span></li>
+    <li>Derived: for each other room type, type how much it is <span class="ui">more than the base</span>, and choose <span class="ui">₹</span> or <span class="ui">%</span>. A percentage is rounded to the whole rupee.</li>
+    <li>Type each add-on in rupees, or tick <span class="ui">Free</span>. Leave it blank where nobody has priced it.</li>
+    <li>Tap <span class="ui">Save</span>. The message says <span class="msg">“Every price follows the base and the add-ons.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A15-06">
+    <img src="img/A15-06.png" alt="The How rates are built window: Room types Derived from Superior, Deluxe more than the base with rupees or percent, and each add-on with Free">
+    <figcaption><b>Figure A15-06.</b> How rates are built: derived from one room type, and the add-ons. (Left unsaved.)</figcaption>
+    <ol class="callouts">
+      <li>Room types: each its own base, or derived from one</li>
+      <li>How much more than the base this room type is</li>
+      <li>In rupees or a percentage</li>
+      <li>An add-on, per guest</li>
+      <li>Free, instead of a figure</li>
+    </ol>
+  </figure>
+
+  <h3>Prices set before</h3>
+  <p>Prices typed before this way of pricing began are kept, under <span class="ui">Prices set before</span>: <span class="msg">“Kept exactly as they were: each covers the guests it always did, and wins over the base on its dates.”</span> A room type's <b>old rack rate</b> is listed there too, <span class="msg">“Used only on dates no base covers.”</span></p>
+  <ol class="steps">
+    <li>Tap <span class="ui">Remove</span> beside the price.</li>
+    <li>It asks first, naming the price. Tap <span class="ui">Remove</span>, or <span class="ui">Cancel</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A15-07">
+    <img src="img/A15-07.png" alt="Remove this price? Superior old rack rate 4,099, covers 2; its dates then take the base and the add-ons; bookings already made keep their rate">
+    <figcaption><b>Figure A15-07.</b> Remove a price set before: it asks first. (Left unremoved.)</figcaption>
+    <ol class="callouts">
+      <li>Remove this price?</li>
+      <li>What then happens to its dates. Bookings already made keep their rate</li>
+    </ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A base plus add-ons set once, each room type its own base or derived from one by rupees or a percentage, and the calendar changing only the base: <span class="d">D27-188</span>. The base covers one guest; the second guest is double occupancy; from the third, extra adult or child; meals per guest, children too; a percentage rounded to the rupee; a part nobody set is a dash and is not sold: <span class="d">D27-194</span>. A hotel still on its old rack sells every plan at the room-only rack until a base and the meal add-on are set: <span class="d">D27-196</span>. Zero only when ticked Free: <span class="d">D27-120</span>.</p>
+  </div>
+
+  <!-- A15.5 -->
+  <h2 id="a15-5"><span class="n">A15.5</span>Rooms left and the restrictions</h2>
+  <p>Tap <span class="ui">Rooms left</span> at the top of Rates. Each room type, each day: the rooms still to sell in large figures, and under them <span class="msg">“paying rooms sold / sellable”</span>.</p>
+
+  <figure class="shot" id="fig-A15-08">
+    <img src="img/A15-08.png" alt="Rooms left: Deluxe and Superior over two weeks, each day the rooms left and paying rooms sold over sellable, and the key">
+    <figcaption><b>Figure A15-08.</b> Rooms left: what is left to sell, and the restrictions.</figcaption>
+    <ol class="callouts">
+      <li>Rooms left</li>
+      <li>A day: 6 Deluxe rooms left; 1 of 7 sold to paying guests. Tap it for its restrictions</li>
+      <li>Stop sell: the day shows red</li>
+      <li>Closed to arrival (and closed to departure beside it): a small mark on the day</li>
+      <li>The small figures: paying rooms sold over the rooms that can be sold</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>A day with <b>nothing left</b> shows yellow; a day on <b>stop sell</b>, red.</li>
+    <li>Complimentary and tentative rooms hold a room but are left out of the small figure; occupancy on the reports counts complimentary rooms.</li>
+    <li>A minimum or maximum stay shows on the day as its figures, such as <span class="msg">“2–5”</span>.</li>
+  </ul>
+
+  <h3>To close a date or set a minimum stay</h3>
+  <ol class="steps">
+    <li>On Rooms left, tap the room type's day. The window is named <span class="msg">“Deluxe · 17 Oct 2026”</span>.</li>
+    <li>Tap what applies: <span class="ui">Stop sell</span> (<span class="msg">“Nothing may be booked at all”</span>), <span class="ui">Closed to arrival</span> (<span class="msg">“A stay may not begin here - protects a long weekend”</span>), <span class="ui">Closed to departure</span> (<span class="msg">“A stay may not end here”</span>).</li>
+    <li>Type <span class="ui">Minimum nights</span> or <span class="ui">Maximum nights</span> if needed.</li>
+    <li>For a run of days, choose <span class="ui">Through</span>: <span class="msg">“Apply the same rules to every day up to here.”</span></li>
+    <li>Tap <span class="ui">Apply</span>. The message says <span class="msg">“Applied”</span> with the room type and the days.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A15-09">
+    <img src="img/A15-09.png" alt="The Deluxe · 17 Oct 2026 window: Stop sell, Closed to arrival, Closed to departure, Minimum and Maximum nights, Through, Apply">
+    <figcaption><b>Figure A15-09.</b> A restriction on one room type and day. (Left unsaved.)</figcaption>
+    <ol class="callouts">
+      <li>Stop sell</li>
+      <li>Closed to arrival</li>
+      <li>Closed to departure</li>
+      <li>Minimum nights (Maximum nights beside it)</li>
+      <li>Through: the same rules up to this day</li>
+      <li>Apply</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>To take a rule off, clear everything and tap Apply: <span class="msg">“Clearing everything removes the rule rather than storing a row that says nothing.”</span></li>
+      <li>Apply with Through sets the same rules on every day of the run, in place of what each day had.</li>
+      <li>A minimum above the maximum is refused: <span class="msg">“A minimum of 3 nights and a maximum of 2 accepts no booking at all.”</span></li>
+      <li>A restriction is per room type, not per plan: a room not for sale is not for sale on any plan.</li>
+      <li>Restrictions go to the booking sites through SU (A15.8). A booking made at the desk is not checked against them: the desk decides.</li>
+      <li>Only the Owner, an Admin, the GM and the Revenue Manager can tap a day.</li>
+    </ul>
+  </div>
+
+  <!-- A15.6 -->
+  <h2 id="a15-6"><span class="n">A15.6</span>The Revenue outlook</h2>
+  <p>Open <span class="ui">Revenue outlook</span> (under Rooms and rates, or the link under the Rates calendar). <span class="msg">“What the coming ninety nights look like, and what they suggest. Nothing here changes a price - the Rate calendar does that.”</span> The Rate calendar is the Rates screen.</p>
+
+  <figure class="shot" id="fig-A15-10">
+    <img src="img/A15-10.png" alt="Revenue outlook: This month on the books with occupancy, rooms sold, room nights, against last year and a week ago; What to consider with lower-rate suggestions">
+    <figcaption><b>Figure A15-10.</b> This month on the books, and what to consider.</figcaption>
+    <ol class="callouts">
+      <li>This month, on the books: occupancy, rooms sold, and the room nights the hotel can sell this month</li>
+      <li>Against last year: a dash when the property was not selling then</li>
+      <li>A week ago: where the month stood seven days back; a dash when the records do not reach back a week</li>
+      <li>What to consider: up to five nights</li>
+      <li>A suggestion, and under it its reason</li>
+      <li>Nearby: the hotels nearby that night; a dash when nothing was checked</li>
+    </ol>
+  </figure>
+
+  <h3>What it suggests, and when</h3>
+  <table>
+    <thead><tr><th style="width:36%">A night that is</th><th>Reads</th></tr></thead>
+    <tbody>
+      <tr><td>14 days out or nearer, and 50% sold or less: <b>Soft</b></td><td><span class="msg">“Consider a lower rate for Sunday, 11 October 2026.”</span></td></tr>
+      <tr><td>85% sold or more: <b>Filling well</b></td><td><span class="msg">“Consider holding or raising the rate for …”</span></td></tr>
+      <tr><td>Anything else: <b>On track</b></td><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+  <p>Each suggestion's reason gives the figures, for example <span class="msg">“2 days out, 47.06% sold, 9 of 17 rooms left.”</span> The sold figures are the reports' own: complimentary rooms count, over the rooms that can be sold.</p>
+  <p><span class="ui">Nearby</span> shows the lowest and middle price of the hotels nearby that night, and when they were checked, where <span class="ui">Rivals' prices</span> is switched on in Settings (Modules and connections). Tap it for the list. They are other hotels' public prices, never a price this hotel sells at.</p>
+
+  <figure class="shot" id="fig-A15-11">
+    <img src="img/A15-11.png" alt="Dates worth a look: each soft night with days out, rooms left, of, sold, new 1 day, 7 days and 30 days, and Soft">
+    <figcaption><b>Figure A15-11.</b> Dates worth a look.</figcaption>
+    <ol class="callouts">
+      <li>A suggestion never names a price</li>
+      <li>Dates worth a look: the soft nights, the emptiest and nearest first</li>
+      <li>Rooms left, of the rooms that can be sold</li>
+      <li>New 7 days: of the rooms sold for that night, how many were booked in the last 7 days</li>
+      <li>Soft</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>Dates worth a look</b> lists the soft nights, emptiest first, then the nearest. With none soft, it lists the coming nights.</li>
+    <li><span class="ui">New 1 day</span>, <span class="ui">New 7 days</span>, <span class="ui">New 30 days</span>: how many of the rooms sold for that night were booked in that long, counted back from the property's own day. A dash where the records do not reach back that far, as on the demo.</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>It shows and it suggests; a person sets every price: <span class="d">D17-56</span>, <span class="d">D18-15</span>. Soft is 14 days out and 50% sold or less, filling well 85% or more, as built, to be reviewed after a month of real bookings: <span class="d">D22-14</span>. The nearby hotels' lowest public price per night, 30 nights ahead, checked twice a week: <span class="d">D27-270</span>.</p>
+  </div>
+
+  <!-- A15.7 -->
+  <h2 id="a15-7"><span class="n">A15.7</span>The Channel manager</h2>
+  <p>Open <span class="ui">Channel manager</span>, under Distribution. <span class="msg">“The connection between this system and the booking sites, through SU. Nothing is sent or taken until SU is set up and this hotel is switched on.”</span> The GM sees what it does, what it still needs, and the bookings the sites sent; the Owner and an Admin also see the SU setup (A15.8).</p>
+
+  <figure class="shot" id="fig-A15-15">
+    <img src="img/A15-15.png" alt="The Channel manager as the GM sees it: Bookings from the booking sites, what it does, What it still needs before it goes live, Booking sites and their SU codes">
+    <figcaption><b>Figure A15-15.</b> The Channel manager as the GM sees it.</figcaption>
+    <ol class="callouts">
+      <li>What it does: rooms left and prices sent out, bookings taken in</li>
+      <li>What it still needs before it goes live</li>
+      <li>Booking sites and their SU codes</li>
+      <li>A code that is not one of SU's: that site's bookings wait for a person</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:30%">What it does</th><th>In the screen's words</th></tr></thead>
+    <tbody>
+      <tr><td>Rooms left, sent out</td><td>Sell a room here and SU tells the booking sites, so the same room is not sold twice.</td></tr>
+      <tr><td>Prices and closures, sent out</td><td>The rate calendar's prices and closures go to SU as they change. A date with no price goes to SU closed.</td></tr>
+      <tr><td>Bookings, taken in</td><td>A booking site's booking arrives as a booking, and its cancellation cancels it. Anything it cannot read waits for a person, with the reason.</td></tr>
+    </tbody>
+  </table>
+
+  <ul>
+    <li><b>What it still needs before it goes live</b>, as the screen lists it: SU's test account and its keys in the server's settings; SU's certification; the room types and meal plans matched to SU's ids; each booking site's SU code, picked on Booking sources; this hotel switched on in Settings; and one rate everywhere or a rate per channel, still to be decided.</li>
+    <li><b>Booking sites and their SU codes</b>: each booking site recorded on <span class="ui">Booking sources</span>, with its code. <span class="msg">“No SU code: its bookings wait for a person”</span> or <span class="msg">“…not one of SU's codes: its bookings wait for a person”</span> means the code is to be picked on Booking sources.</li>
+  </ul>
+
+  <h3>Bookings from the booking sites</h3>
+  <p>Every booking SU has sent is listed as it arrived, with the guest, the site, the dates, the rooms, the total and what became of it: <span class="ui">Booked</span>, <span class="ui">Changed</span>, <span class="ui">Cancelled</span>, <span class="ui">Refused: no room free</span>, <span class="ui">Needs somebody</span>. Until the first arrives it says <span class="msg">“SU has not sent a booking yet.”</span></p>
+  <ol class="steps">
+    <li>A booking <b>Refused: no room free</b> was for a room no longer free: it was not made here, and the site was told there is nothing left. Settle it with the site and the guest.</li>
+    <li>A booking that <b>Needs somebody</b> says why underneath. Deal with it.</li>
+    <li>Tap <span class="ui">I have dealt with this</span>. It is marked <span class="ui">Dealt with</span>.</li>
+  </ol>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The channel manager is SU: <span class="d">D17-66</span>, built <span class="d">D27-178</span>. A booking for a room no longer free is not made, and listed for the GM to settle: <span class="d">D17-80</span>. Each booking site's SU code is chosen on Booking sources, nothing hard-wired: <span class="d">D27-183</span>. A date with no price goes to SU closed: <span class="d">D17-81</span>.</p>
+  </div>
+
+  <!-- A15.8 -->
+  <h2 id="a15-8"><span class="n">A15.8</span>Setting up SU (the Owner and an Admin)</h2>
+  <p>The SU setup is on the Channel manager, in the order it is needed. Nothing is suggested or filled in from a name: each id is typed, each SU type is picked. <b>Saving sends nothing</b>: sending is its own button.</p>
+
+  <figure class="shot" id="fig-A15-12">
+    <img src="img/A15-12.png" alt="The SU login, Not set up, with Check the login; This hotel on SU with the hotel record and the SU hotel id">
+    <figcaption><b>Figure A15-12.</b> The SU login, and this hotel on SU.</figcaption>
+    <ol class="callouts">
+      <li>The SU login: Not set up on this server yet</li>
+      <li>Check the login: asks SU whether the keys work</li>
+      <li>The PIN code and map point are set in Settings, on the Property tab</li>
+      <li>SU hotel id: it cannot change once SU has it</li>
+    </ol>
+  </figure>
+
+  <ol class="steps">
+    <li><b>SU login.</b> Until the owner adds SU's keys to the server's settings, it reads <span class="ui">Not set up</span>. Then tap <span class="ui">Check the login</span>: <span class="msg">“SU accepted the login.”</span></li>
+    <li><b>This hotel on SU.</b> The address, phone and email come from the hotel record (the Properties screen); the PIN code and map point from Settings, on the Property tab. Type the <span class="ui">SU hotel id</span> (up to 20 letters, digits and hyphens), the <span class="ui">Country</span> (its two-letter code), the contact's first and last name and the <span class="ui">Description</span>. Tap <span class="ui">Save hotel details</span>.</li>
+    <li><b>Room types.</b> For each room type, type its <span class="ui">SU room id</span>, pick its <span class="ui">SU room type</span>, type <span class="ui">Children, at most</span>, tick <span class="ui">Send to SU</span>, and tap <span class="ui">Save</span> with its name.</li>
+    <li><b>Meal plans.</b> The same for each meal plan: <span class="ui">SU rate plan id</span>, <span class="ui">SU meal plan</span>, <span class="ui">Send to SU</span>, Save.</li>
+    <li><b>Send to SU.</b> It lists what SU still needs first. When nothing is missing, tap <span class="ui">Send to SU</span>: it sends the hotel, its room types and meal plans marked Send to SU, and no prices or rooms left.</li>
+    <li><b>Rooms left, prices and closures.</b> Tap <span class="ui">Send a year</span> when the hotel first goes on SU. After that only what changed is sent, on its own every minute once the hotel is switched on; <span class="ui">Send what changed</span> sends it now.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A15-13">
+    <img src="img/A15-13.png" alt="Room types on SU: Superior sleeps 2, 10 rooms, rack rate 4,099, with SU room id, SU room type Pick one, Children at most, Send to SU and Save Superior">
+    <figcaption><b>Figure A15-13.</b> A room type matched to SU.</figcaption>
+    <ol class="callouts">
+      <li>Room types: each goes to SU under the id you give it, with its rack rate and its rooms</li>
+      <li>SU room id</li>
+      <li>SU room type: picked, never guessed</li>
+      <li>Children, at most: fewer than the room sleeps</li>
+      <li>Send to SU</li>
+      <li>Save Superior. It says Not sent yet until it is sent</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A15-14">
+    <img src="img/A15-14.png" alt="Send to SU with SU needs these first, Rooms left prices and closures with Send a year and Send what changed, Bookings from the booking sites">
+    <figcaption><b>Figure A15-14.</b> Send to SU, rooms and prices, bookings in.</figcaption>
+    <ol class="callouts">
+      <li>SU needs these first: what is missing, in words</li>
+      <li>Send a year: when the hotel first goes on SU</li>
+      <li>Send what changed</li>
+      <li>Bookings from the booking sites (A15.7)</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A room type with no rack rate cannot be listed on SU.</li>
+      <li>A wrong match oversells the wrong room type: check each SU id against SU's own.</li>
+      <li>Where a meal plan has no price of its own, the room type's rack rate goes to SU, so the room keeps selling; where there is no price at all, the date goes to SU closed. The card then says how many nights are selling at the rack rate, and from when.</li>
+      <li>On a server using SU's live account, nothing is sent for a hotel that is not switched on.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The Owner and an Admin set SU up; the GM sees the status page: <span class="d">D17-85</span>. The rack rate goes where a meal plan has no price of its own, instead of closing the date: <span class="d">D17-92</span>; a date with no price at all goes closed: <span class="d">D17-81</span>.</p>
+  </div>
+
+  <!-- A15.9 -->
+  <h2 id="a15-9"><span class="n">A15.9</span>Contracts: companies and their rates</h2>
+  <p>Open <span class="ui">Contracts</span>, under Distribution: <span class="msg">“Companies and agents, and the rates each has agreed with this hotel.”</span> Each row is a company: its GSTIN, city, credit, and its contract here. A travel agent shows <span class="ui">Travel agent</span> beside its name. Tap a row to open the company.</p>
+
+  <figure class="shot" id="fig-A15-16">
+    <img src="img/A15-16.png" alt="Contracts: the companies with GSTIN, City, Credit and Contract here, and Add company">
+    <figcaption><b>Figure A15-16.</b> Contracts: the companies and agents.</figcaption>
+    <ol class="callouts">
+      <li>Add company</li>
+      <li>Credit: No, or Allowed with its days and limit (a dash where not set)</li>
+      <li>Contract here: the contract at this hotel today and when it ends; a dash for none</li>
+      <li>A company: tap it to open it</li>
+    </ol>
+  </figure>
+
+  <h3>To add a company</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">Add company</span>. <span class="msg">“One record for the group: the same company at every hotel.”</span></li>
+    <li>Type the <span class="ui">Name</span>, choose the <span class="ui">Kind</span>: <span class="ui">Corporate</span> or <span class="ui">Travel agent</span>.</li>
+    <li>Type the <span class="ui">GSTIN</span> from the company's GST certificate (it prints on the company's tax invoices), the <span class="ui">Billing address</span>, <span class="ui">City</span>, <span class="ui">State</span> and <span class="ui">PIN code</span>.</li>
+    <li>Type the <span class="ui">Contact person</span>, <span class="ui">Phone</span> and <span class="ui">Email</span>.</li>
+    <li>Switch on <span class="ui">Credit allowed</span> only if the company may pay later: <span class="msg">“A bill may be sent to the company to pay later (Bill to company).”</span> Then type <span class="ui">Credit days</span> and <span class="ui">Credit limit (₹)</span>, or leave them blank.</li>
+    <li>Tap <span class="ui">Add company</span>. The company opens.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A15-19">
+    <img src="img/A15-19.png" alt="The Add company window: Name, Kind Corporate or Travel agent, GSTIN, billing address, contact, Credit allowed, Add company">
+    <figcaption><b>Figure A15-19.</b> Add company.</figcaption>
+    <ol class="callouts">
+      <li>Kind: Corporate or Travel agent</li>
+      <li>GSTIN: printed on the company's tax invoices</li>
+      <li>Contact person, phone, email</li>
+      <li>Credit allowed: Bill to company</li>
+      <li>Add company</li>
+    </ol>
+  </figure>
+
+  <p><b>Reception</b> adds a company with its name, GSTIN and address only, for the tax invoice: <span class="msg">“Credit and contracts are set by the owner, an administrator or the GM.”</span></p>
+
+  <figure class="shot" id="fig-A15-17">
+    <img src="img/A15-17.png" alt="The company Fidato Hotels: Corporate, the Company card with GSTIN, billing address, contact and Credit No, Edit company, No contract at this hotel, Add contract">
+    <figcaption><b>Figure A15-17.</b> A company: its record and its contracts here.</figcaption>
+    <ol class="callouts">
+      <li>Its kind</li>
+      <li>Edit company</li>
+      <li>Credit</li>
+      <li>No contract at this hotel: its bookings take the rate calendar's price</li>
+      <li>Add contract</li>
+    </ol>
+  </figure>
+
+  <h3>To add a contract (the Owner, an Admin or the GM)</h3>
+  <ol class="steps">
+    <li>Open the company and tap <span class="ui">Add contract</span>. <span class="msg">“The contract in force on the arrival date prices the booking.”</span></li>
+    <li>Type a <span class="ui">Name</span> (the company and the year), and choose <span class="ui">Valid from</span> and <span class="ui">Valid to</span>.</li>
+    <li>Under <span class="ui">Priced by</span>, choose:
+      <ul>
+        <li><span class="ui">Fixed rates</span>: for each room type and meal plan, the <span class="ui">Single (₹)</span> and <span class="ui">Double (₹)</span> rate. <span class="msg">“Per room per night, before tax. Single is one guest, double two; a third guest pays the rate calendar's extra-person price. Blank is not agreed: the booking takes the day's price.”</span></li>
+        <li>Or <span class="ui">Discount off the day's rate</span>: the <span class="ui">Discount (%)</span>, taken off the rate calendar's price for the arrival date.</li>
+      </ul>
+    </li>
+    <li>For a travel agent, type the <span class="ui">Commission (%)</span>. Add <span class="ui">Notes</span> if needed.</li>
+    <li>Tap <span class="ui">Add contract</span>. <span class="msg">“The next booking for this company is priced by it. Bookings already made keep their rate.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A15-18">
+    <img src="img/A15-18.png" alt="The Add contract window: Name, Valid from, Valid to, Priced by Fixed rates or Discount off the day's rate, Single and Double per room type and meal plan, Add contract">
+    <figcaption><b>Figure A15-18.</b> Add contract: fixed rates or a discount. (Left unsaved.)</figcaption>
+    <ol class="callouts">
+      <li>Valid from</li>
+      <li>Valid to</li>
+      <li>Fixed rates</li>
+      <li>Discount off the day's rate</li>
+      <li>A rate: Superior, EP, single. A dash is not agreed</li>
+      <li>Add contract: grey until the contract is complete</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>A contract shows on the company with its dates, <span class="ui">In force</span> while it runs, and <span class="ui">Edit</span>.</li>
+    <li>When a booking names the company, its contract in force on the arrival date prices every night; the booking line says <span class="msg">“Contract: …”</span>. A rate typed on the booking stays as typed.</li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A contract rate is an amount above 0: <span class="msg">“A contract rate is an amount above 0. Leave it blank where none is agreed.”</span> A discount is above 0 and at most 100.</li>
+      <li>A contract rate is always before GST: the booking's “Rate includes GST” tick does not apply to it (<span class="msg">“Contract rates are before GST”</span>).</li>
+      <li>Credit days and the credit limit are shown, not enforced, until the company's payments are recorded.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Fixed rates per room type and meal plan, single and double, or a percentage off the day's rate; the contract in force on arrival prices every night; no contract figure is the day's price; the Owner, an Admin and the GM keep contracts: <span class="d">D27-184</span>. A contract rate is never split for GST: <span class="d">D27-233</span>.</p>
+  </div>
+
+  <!-- A15.10 -->
+  <h2 id="a15-10"><span class="n">A15.10</span>Rate work in short</h2>
+  <table>
+    <thead><tr><th style="width:32%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>Checking the fortnight</td><td>Rates: each day's price, rooms left, how it sold.</td><td>A15.2</td></tr>
+      <tr><td>A price changes</td><td>Tap the base on the day; Set prices for a run of days.</td><td>A15.3</td></tr>
+      <tr><td>A plan or a second guest shows a dash</td><td>How rates are built, Edit: set its add-on.</td><td>A15.4</td></tr>
+      <tr><td>A date to close, or a minimum stay</td><td>Rates, Rooms left, tap the day, Apply.</td><td>A15.5</td></tr>
+      <tr><td>Which nights are soft</td><td>Revenue outlook: What to consider, Dates worth a look. Change the price on Rates.</td><td>A15.6</td></tr>
+      <tr><td>A booking site's booking refused or waiting</td><td>Channel manager: settle it, then I have dealt with this.</td><td>A15.7</td></tr>
+      <tr><td>A booking site's bookings wait for a person</td><td>Booking sources: pick its SU code.</td><td>A15.7</td></tr>
+      <tr><td>A company agrees a rate</td><td>Contracts: open the company, Add contract.</td><td>A15.9</td></tr>
+    </tbody>
+  </table>
+</section>

@@ -1,0 +1,467 @@
+<!-- ══════════════════════════════ CHAPTER A16 ══════════════════════════════ -->
+<section class="chapter" id="a16">
+  <div class="chapter-head">
+    <span class="num">Chapter A16</span>
+    <h1>Across properties</h1>
+    <p>For the owner, an Admin and the general manager. How to see every property on one page, read and edit a property's details, add a property, and run the people who work in each one: adding them, giving them a property and a role, setting their password, and switching them off.</p>
+  </div>
+
+  <!-- A16.1 -->
+  <h2 id="a16-1"><span class="n">A16.1</span>The screens across properties</h2>
+  <p>The <span class="ui">Across properties</span> section of the menu holds the screens that sit above any one hotel. The property switcher at the top does not change them. You see the ones your role uses.</p>
+  <table>
+    <thead><tr><th style="width:22%">Screen</th><th style="width:30%">Who uses it</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td>All properties</td><td>The owner, Admin</td><td>The group today: every property added up, what needs you at each one, and a row per property.</td></tr>
+      <tr><td>Properties</td><td>The owner and Admin; the GM, hotel manager, revenue manager, Reception, accountant and viewer see their own</td><td>A card per property: its rooms and tax. For the owner also Edit, Close, adding a property, and each hotel's test hotel.</td></tr>
+      <tr><td>People</td><td>The owner, Admin, the GM; the hotel manager can look</td><td>Everybody who can sign in, where they work and as what. Add somebody, give a property, set a password, switch somebody off.</td></tr>
+    </tbody>
+  </table>
+  <p>One more screen is not in the menu: <b>one property's page</b>, <code>/properties/5EL</code>, with its figures and the people who work there (A16.5). It opens from <span class="ui">Open</span> on the owner's card.</p>
+
+  <!-- A16.2 -->
+  <h2 id="a16-2"><span class="n">A16.2</span>All properties: the group today</h2>
+  <p>Open <span class="ui">All properties</span>. The line under the title says how many properties there are, <span class="msg">“each on its own business date”</span>: a property that has run its night audit and one that has not are each shown on their own day.</p>
+
+  <figure class="shot" id="fig-A16-01">
+    <img src="img/A16-01.png" alt="All properties: The group today with Occupancy, Average rate, RevPAR and Room revenue, and the Needs you list">
+    <figcaption><b>Figure A16-01.</b> The group today, and what needs you.</figcaption>
+    <ol class="callouts">
+      <li>The group today: every property added up</li>
+      <li>Month so far, under each of today's figures</li>
+      <li>Last year: how many properties had one</li>
+      <li>Needs you: what to act on, at every property</li>
+      <li>One thing to act on: the property, what it is, and who. Click it to open the screen that does it</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>The group today</b> shows <span class="ui">Occupancy</span>, <span class="ui">Average rate (ARR)</span>, <span class="ui">RevPAR</span> and <span class="ui">Room revenue</span> for today, with the <span class="ui">Month so far</span> under each, and the same month last year (<span class="ui">Month last year</span>; for room revenue, <span class="ui">vs last year</span>, the change in percent).</li>
+    <li>The rates are worked out from the group's totals, never averaged from each property's rate.</li>
+    <li><b>Last year</b> counts only the properties that sold a room in that month a year back. <span class="msg">“Last year: 0 of 1 properties”</span> means none did yet, so the last-year figures are a dash. A new property never pulls the comparison down.</li>
+    <li>The (i) beside it says the same in one line.</li>
+  </ul>
+
+  <h3>Needs you</h3>
+  <p>A property whose business date is behind comes first: <span class="msg">“business date 9 Oct, 1 day behind today (10 Oct)”</span>, with <span class="msg">“Close the days in Night audit”</span>. Then everything each property's bell asks somebody to act on: an arrival not yet checked in, money outstanding on a room due out, money to refund, a store never counted. Each line starts with the property's name. A line with <b>›</b> opens the screen that deals with it. When there is nothing, it says <span class="msg">“Nothing waiting at any property”</span>.</p>
+
+  <h3>A row per property</h3>
+  <figure class="shot" id="fig-A16-02">
+    <img src="img/A16-02.png" alt="All properties: the row for 5 Elements Akkalkot, with today's figures over the month so far, and No last year yet">
+    <figcaption><b>Figure A16-02.</b> A row per property (a card on a phone).</figcaption>
+    <ol class="callouts">
+      <li>The property, and its business date under it. Click the name to open its Rooms</li>
+      <li>Each figure: today on top, the month so far under it</li>
+      <li>vs last year: this month's room revenue so far against the same month last year</li>
+      <li>No last year yet: the property sold no room in that month a year back</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A figure that did not come back is a dash, never a zero. If the figures fail to load, the page says so and offers to try again.</li>
+      <li>Test hotels are never counted or shown here, and never in Needs you.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>All properties replaced the table at the foot of the Dashboard; last year compares only the properties that had one, and says how many: <span class="d">D27-243</span>. Test hotels kept out of everything real: <span class="d">D27-296</span>.</p>
+  </div>
+
+  <!-- A16.3 -->
+  <h2 id="a16-3"><span class="n">A16.3</span>Properties: a card per property</h2>
+  <p>Open <span class="ui">Properties</span>. What you see depends on who you are.</p>
+
+  <h3>The owner and a group administrator</h3>
+  <p>The line under the title counts them: <span class="msg">“1 open”</span>, or <span class="msg">“2 open · 1 closed”</span>. Each open property has a card; closed ones are under <span class="ui">Closed</span>, faded.</p>
+
+  <figure class="shot" id="fig-A16-03">
+    <img src="img/A16-03.png" alt="Properties as the owner sees them: the 5 Elements Akkalkot card with its code, GSTIN, GST lines, Open, Calendar, Edit and Close">
+    <figcaption><b>Figure A16-03.</b> The owner's card.</figcaption>
+    <ol class="callouts">
+      <li>The property's code</li>
+      <li>GSTIN: it prints on every invoice the property issues</li>
+      <li>Why Close is off: guests are checked in</li>
+      <li>Open: the property's own page (A16.5)</li>
+      <li>Calendar: into the property's own screens</li>
+      <li>Edit: its details (A16.4)</li>
+      <li>Close</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>The card shows <span class="ui">Rooms</span>, room <span class="ui">Types</span>, the <span class="ui">GSTIN</span>, and the GST in use: <span class="ui">GST on rooms</span>, <span class="ui">GST on restaurant</span>, bar, banquet, spa, laundry and everything else. A dash means none is set.</li>
+    <li><span class="ui">Calendar</span> switches to that property and opens its <b>Rooms</b> screen.</li>
+    <li><span class="ui">Close</span> takes the property out of every picker. Nothing is deleted: its bookings, bills and invoices stay. It is off while guests are checked in, and the card says why: <span class="msg">“15 bookings checked in - it cannot be closed until they check out.”</span> <span class="ui">Reopen</span>, on a closed card, brings it back.</li>
+  </ul>
+
+  <h3>The test hotel</h3>
+  <p>Under each open property's card, the owner and a group administrator see <span class="ui">Test hotel</span>: <span class="msg">“A practice copy of this hotel's whole setup, with no guests or money.”</span></p>
+  <ul>
+    <li><span class="ui">Make a test hotel</span> makes it, once per hotel. Then the card shows its name with <b>TEST</b>, and three buttons.</li>
+    <li><span class="ui">Open</span> switches to the test hotel and opens its Rooms. Every screen there carries an orange stripe: <span class="msg">“TEST HOTEL · practice only · nothing here is real”</span>.</li>
+    <li><span class="ui">Reset</span> deletes every booking, bill, invoice, restaurant order, guest, company, cash entry, stock move and night audit made in the test hotel. Its setup and the people testing in it stay. Type <b>RESET</b> to confirm.</li>
+    <li><span class="ui">Re-copy setup</span> deletes the test activity, then brings the real hotel's rooms, rates, menu and settings again. Type <b>RE-COPY</b> to confirm.</li>
+  </ul>
+
+  <h3>Everyone else</h3>
+  <figure class="shot" id="fig-A16-06">
+    <img src="img/A16-06.png" alt="Properties as the GM sees them: The properties you can reach, a card with Check in / out, the GST lines and Open the Calendar">
+    <figcaption><b>Figure A16-06.</b> Properties, as everyone else sees them.</figcaption>
+    <ol class="callouts">
+      <li>The properties you can reach</li>
+      <li>Check in / out times</li>
+      <li>The GST in use, one line per kind</li>
+      <li>Open the Calendar: the property's Rooms</li>
+    </ol>
+  </figure>
+  <p>A GM, Reception or an accountant sees only the properties they work at, and cannot change anything here. A test hotel they also work in shows <b>TEST</b> beside its name.</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Close does not ask first.</b> The property leaves the pickers at once. Reopen undoes it.</li>
+      <li>Reset and Re-copy setup cannot be undone. They touch the test hotel only, never the real one.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A property that has taken a booking must never disappear: its folios and invoices may have to be produced years later, so it is closed, not deleted, and never with a guest still in it. “Stay view” became “Calendar”: <span class="d">D27-82</span>. Test hotels, one per real hotel, made, reset and re-copied by the owner and group administrators only: <span class="d">D27-296</span>.</p>
+  </div>
+
+  <!-- A16.4 -->
+  <h2 id="a16-4"><span class="n">A16.4</span>Editing and adding a property</h2>
+
+  <h3>To edit a property's details</h3>
+  <ol class="steps">
+    <li>On the property's card, click <span class="ui">Edit</span>. The window says <span class="msg">“These print on this property's invoices.”</span></li>
+    <li>Change the <span class="ui">Name</span>, <span class="ui">City</span>, <span class="ui">State</span>, <span class="ui">Address</span>, <span class="ui">GSTIN</span>, <span class="ui">Phone</span> or <span class="ui">Email</span>.</li>
+    <li>Click <span class="ui">Save</span>. If something is wrong (a GSTIN that is not fifteen characters, for example), it says <span class="msg">“Not saved”</span> and why.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A16-04">
+    <img src="img/A16-04.png" alt="Edit 5 Elements Akkalkot: the greyed Code, Name, City, State, Address, GSTIN, Phone, Email and Save">
+    <figcaption><b>Figure A16-04.</b> Edit a property.</figcaption>
+    <ol class="callouts">
+      <li>Code: shown, greyed</li>
+      <li>It is in every URL and every invoice number, so it cannot be changed</li>
+      <li>GSTIN: fifteen characters, the two-digit state code first</li>
+      <li>Save</li>
+    </ol>
+  </figure>
+  <p>The rest of a property's profile (PIN code, PAN, website, property type, stars, the map point) is in <span class="ui">Settings</span>. There a GM or Admin edits their own hotel's details; the name stays the owner's.</p>
+
+  <h3>To add a property</h3>
+  <ol class="steps">
+    <li>Under the cards, find <span class="ui">Add a property</span>.</li>
+    <li>Type its <span class="ui">Code</span>: 2 to 8 letters or digits, such as NSK. Think twice: <span class="msg">“It appears in every URL and every invoice number, and it cannot be changed later.”</span></li>
+    <li>Type its <span class="ui">Name</span> and <span class="ui">City</span>; its <span class="ui">State</span> and <span class="ui">GSTIN</span> if you have them.</li>
+    <li>Type the <span class="ui">Provisioning key</span>, the key for this system. Being signed in as the owner is not enough on its own.</li>
+    <li>Click <span class="ui">Create the property</span>. It stays off until the code, name, city and key are typed.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A16-05">
+    <img src="img/A16-05.png" alt="Add a property: Code, Name, City, State, GSTIN, the Provisioning key and Create the property">
+    <figcaption><b>Figure A16-05.</b> Add a property.</figcaption>
+    <ol class="callouts">
+      <li>Add a property</li>
+      <li>Code: it can never be changed</li>
+      <li>Provisioning key</li>
+      <li>Create the property</li>
+    </ol>
+  </figure>
+  <p>The message names the new code and says what comes next: <span class="msg">“Add its rooms - the property has its type catalogue but no rooms yet.”</span> The new property starts with its room types from the template and its own invoice series, but no rooms. The key box is emptied after each property.</p>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Creating a property makes a whole new hotel in the system, so it takes the provisioning key as well as the owner's sign-in. The code is in every address and every invoice number ever issued, so it is fixed. The hotel's name, code, currency and time zone are the group owner's: <span class="d">D27-214</span>.</p>
+  </div>
+
+  <!-- A16.5 -->
+  <h2 id="a16-5"><span class="n">A16.5</span>One property and its team</h2>
+  <p>On the owner's card, click <span class="ui">Open</span>. The page shows that property's own figures, on its own business date, and the people who work there. A group administrator can open it for any property, and a GM or Admin for their own; anybody else reads <span class="msg">“This property is not yours to manage”</span>.</p>
+
+  <figure class="shot" id="fig-A16-07">
+    <img src="img/A16-07.png" alt="5 Elements Akkalkot's page: Add somebody here, today's figures, the month's figures, the FSSAI licence number, and Who works here">
+    <figcaption><b>Figure A16-07.</b> One property: its figures and who works there.</figcaption>
+    <ol class="callouts">
+      <li>Add somebody here</li>
+      <li>Today: rooms sold, occupancy, empty, in house now</li>
+      <li>The month to date: room revenue, average rate, RevPAR, and the rooms it has</li>
+      <li>The FSSAI licence number, with Change</li>
+      <li>Who works here</li>
+      <li>Starts on: the first screen after they sign in</li>
+      <li>The key: set a password for them</li>
+      <li>Remove: they no longer work here</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>A figure not measured yet is a dash. A property in its first week often has no month figures yet.</li>
+    <li><b>FSSAI licence number:</b> the owner, an Admin or the GM clicks <span class="ui">Change</span>, types the 14 digits from the licence (blank for none) and clicks <span class="ui">Save</span>. It prints on food bills from then on.</li>
+    <li><b>Starts on</b> is <span class="ui">Dashboard</span>, <span class="ui">Rooms</span> or <span class="ui">Calendar</span>. Choosing one saves it at once, from the person's next sign-in. They can change it themselves.</li>
+    <li>A person with no password yet shows <span class="msg">“No password yet”</span> in red: they cannot sign in until one is set (the key).</li>
+    <li><span class="ui">Remove</span> asks first, as on People (A16.6).</li>
+  </ul>
+
+  <h3>To add somebody at this property</h3>
+  <ol class="steps">
+    <li>Click <span class="ui">Add somebody here</span>. The window says <span class="msg">“They can sign in straight away, and they see this property only.”</span></li>
+    <li>Type <span class="ui">Their name</span> and <span class="ui">The email they sign in with</span>. <span class="msg">“A typo here means they cannot sign in at all.”</span></li>
+    <li>Type <span class="ui">A password for them</span>: at least 8 characters (10 for an Owner, Admin or GM). It shows as you type, so you can read it back to them.</li>
+    <li>Choose <span class="ui">What they do here</span>.</li>
+    <li>Click <span class="ui">Add</span>. Tell them the password and the address yourself: nothing is emailed.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A16-08">
+    <img src="img/A16-08.png" alt="Add somebody at 5EL: Their name, The email they sign in with, A password for them, What they do here, Add">
+    <figcaption><b>Figure A16-08.</b> Add somebody at one property.</figcaption>
+    <ol class="callouts">
+      <li>Their name</li>
+      <li>The email they sign in with</li>
+      <li>A password for them</li>
+      <li>What they do here</li>
+      <li>Add</li>
+    </ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The person, their password and their role are one act: split into three, somebody stopped halfway can sign in and see nothing. The page answers only a property you run, because it carries the property's GSTIN and contact details.</p>
+  </div>
+
+  <!-- A16.6 -->
+  <h2 id="a16-6"><span class="n">A16.6</span>People: everyone, where they work, and as what</h2>
+  <p>Open <span class="ui">People</span>. The line under the title counts them: <span class="msg">“14 active · 3 can reach every property”</span>. The owner and the other group administrators see everybody; anybody else sees themselves and the people they share a property with.</p>
+
+  <figure class="shot" id="fig-A16-10">
+    <img src="img/A16-10.png" alt="People: Add somebody, the yellow note One person can sign in and see nothing, and the Group Owner's card with Password and Edit">
+    <figcaption><b>Figure A16-10.</b> The top of People.</figcaption>
+    <ol class="callouts">
+      <li>Add somebody (A16.7)</li>
+      <li>Somebody who can sign in and see nothing: give them a property</li>
+      <li>Password (A16.8)</li>
+      <li>Edit (A16.8)</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A16-09">
+    <img src="img/A16-09.png" alt="People: group administrators marked Every property, Agra Clerk with 5EL · Reception and its ✕, Pune Clerk with no property yet and Give a property">
+    <figcaption><b>Figure A16-09.</b> Each person, and what they can reach.</figcaption>
+    <ol class="callouts">
+      <li>Every property: a group administrator</li>
+      <li>A property, and their role there</li>
+      <li>✕ takes that property away (it asks first)</li>
+      <li>No property yet, so this account opens empty</li>
+      <li>Give a property (A16.7)</li>
+      <li>Deactivate: they can no longer sign in</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>Every property</b>: <span class="msg">“A group administrator reaches every property, including ones added later. Property grants do not apply to them.”</span> This screen cannot make one.</li>
+    <li>Each property chip reads the code and the role there: <span class="msg">“5EL · Reception”</span>. A test hotel's chip carries <b>TEST</b>.</li>
+    <li><span class="msg">“No password yet”</span> in red: <span class="msg">“No sign-in account yet - they cannot get in at all. Set a password and they can.”</span></li>
+    <li>You see a button only where you may use it. A GM leaves the hotel's Owner and Admin alone, and nobody takes away their own access or switches themselves off.</li>
+  </ul>
+
+  <h3>To take a property away from somebody</h3>
+  <ol class="steps">
+    <li>Click the <span class="ui">✕</span> on the chip.</li>
+    <li>It asks <span class="msg">“Remove Agra Clerk from 5EL?”</span>: <span class="msg">“They can no longer work at 5EL. Their account stays, and their name stays on everything they did there.”</span></li>
+    <li>Click <span class="ui">Remove</span>, or <span class="ui">Cancel</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A16-13">
+    <img src="img/A16-13.png" alt="The question Remove Agra Clerk from 5EL? with Cancel and Remove">
+    <figcaption><b>Figure A16-13.</b> Taking a property away asks first.</figcaption>
+    <ol class="callouts">
+      <li>Who, and from where</li>
+      <li>What it means</li>
+      <li>Remove</li>
+    </ol>
+  </figure>
+
+  <h3>To switch somebody off</h3>
+  <p>Click <span class="ui">Deactivate</span> on their card. They can no longer sign in, and their name stays on everything they did. Their card fades and reads <b>Switched off</b>; <span class="ui">Bring them back</span> lets them sign in again. Once somebody is switched off, <span class="ui">Everybody</span> / <span class="ui">Switched off</span> at the top shows them on their own.</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Deactivate does not ask first.</b> It works at once. Bring them back undoes it.</li>
+      <li>Nobody is ever deleted. A person who has left is switched off.</li>
+      <li>Somebody added with no property signs in to an empty system. The yellow note at the top names them until they have one.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The activity log names people, so deleting one would leave entries nobody can read: they are switched off instead. Removing a person's access asks first: <span class="d">D27-117</span>. Nobody switches their own access off: <span class="d">D24-19</span>. Nobody runs somebody above them: the owner, 24 September. The Switched off filter: <span class="d">D27-243</span>.</p>
+  </div>
+
+  <!-- A16.7 -->
+  <h2 id="a16-7"><span class="n">A16.7</span>Adding somebody, and giving them a property</h2>
+  <p>Access is per property. That is what stops one hotel seeing another's guests.</p>
+
+  <h3>The owner: add, then give a property</h3>
+  <ol class="steps">
+    <li>On People, click <span class="ui">Add somebody</span>.</li>
+    <li>Type <span class="ui">Their name</span> and <span class="ui">The email they will sign in with</span>. <span class="msg">“This is the link between the person and the account. A typo here means they cannot sign in at all.”</span></li>
+    <li>Type <span class="ui">A password for them</span>, at least 8 characters. It is hidden; <span class="ui">Show</span> lets you read it back to them.</li>
+    <li>Click <span class="ui">Add</span>. The message says <span class="msg">“They can sign in now. Give them a property next - until then the app opens empty for them.”</span></li>
+    <li>On their card, click <span class="ui">Give a property</span>. Choose <span class="ui">Which property</span> and <span class="ui">Doing what</span>. The line under it says what that role does.</li>
+    <li>Click <span class="ui">Give access</span>. The message says <span class="msg">“Pune Clerk can now work at 5EL”</span>, and as what.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A16-11">
+    <img src="img/A16-11.png" alt="Add somebody, as the owner: Their name, The email they will sign in with, A password for them with Show, the note about group administrators, and Add">
+    <figcaption><b>Figure A16-11.</b> Add somebody, as the owner.</figcaption>
+    <ol class="callouts">
+      <li>Their name</li>
+      <li>The email they will sign in with</li>
+      <li>A password for them</li>
+      <li>Show: read it back to them</li>
+      <li>This adds an ordinary member of staff</li>
+      <li>Add</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A16-12">
+    <img src="img/A16-12.png" alt="Give Pune Clerk a property: Which property 5EL, Doing what Reception, its sentence, and Give access">
+    <figcaption><b>Figure A16-12.</b> Give somebody a property, and their role there.</figcaption>
+    <ol class="callouts">
+      <li>Which property</li>
+      <li>Doing what</li>
+      <li>What that role does</li>
+      <li>Give access</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>Only properties they do not already have are offered. Somebody can work at more than one property, with a role at each.</li>
+    <li><b>Test</b> (the owner and a group administrator): in Add somebody, switch on <span class="ui">Test</span>, <span class="msg">“For practising in a test hotel, never a real one.”</span> The window then asks where they work, from the test hotels only, and as what. They work only in the test hotel, never the real one. With no test hotel yet, it says <span class="msg">“There is no test hotel yet. Make one on Properties first.”</span> (A16.3).</li>
+  </ul>
+
+  <h3>The GM, or a hotel's Admin: add somebody at your hotel</h3>
+  <ol class="steps">
+    <li>On People, click <span class="ui">Add somebody</span>.</li>
+    <li>Type their name, email and password, as above.</li>
+    <li>Choose <span class="ui">Where they work</span> (your own hotel) and <span class="ui">Doing what</span>.</li>
+    <li>Click <span class="ui">Add</span>. They can sign in at once, at that property, in that role.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A16-16">
+    <img src="img/A16-16.png" alt="Add somebody, as the GM: Where they work 5EL, Doing what Reception, and the note They see this property only">
+    <figcaption><b>Figure A16-16.</b> Add somebody, as the GM: at their own property, in one step.</figcaption>
+    <ol class="callouts">
+      <li>Where they work: your own property</li>
+      <li>Doing what</li>
+      <li>They see this property only. Only the owner can make somebody an Admin</li>
+    </ol>
+  </figure>
+
+  <h3>The roles, as the picker describes them</h3>
+  <table>
+    <thead><tr><th style="width:26%">Role</th><th>What the screen says it does</th></tr></thead>
+    <tbody>
+      <tr><td>Owner</td><td>Every property, and the settings that govern them</td></tr>
+      <tr><td>Admin</td><td>Runs the system day to day, including accounts</td></tr>
+      <tr><td>General Manager</td><td>Everything at this property, and the night audit</td></tr>
+      <tr><td>Hotel Manager</td><td>The property day to day, without the money decisions</td></tr>
+      <tr><td>Revenue Manager</td><td>The picker has no sentence for it yet. Its job: prices, restrictions and what the booking sites sell; no bills, guests or staff.</td></tr>
+      <tr><td>Reception</td><td>Bookings, check-in, bills, the cash drawer</td></tr>
+      <tr><td>Housekeeping</td><td>Room status and work orders</td></tr>
+      <tr><td>Kitchen Manager</td><td>The pass and the menu</td></tr>
+      <tr><td>Chef</td><td>The pass - moves dishes along, touches no money</td></tr>
+      <tr><td>Till Operator</td><td>The till, orders and the day end</td></tr>
+      <tr><td>Inventory Manager</td><td>Stock, receiving and issues. Raises purchases</td></tr>
+      <tr><td>Accountant</td><td>Invoices, the city ledger and the reports</td></tr>
+      <tr><td>Viewer</td><td>Can look, cannot change anything</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>The email is the whole sign-in.</b> Type the address they actually use. It cannot be changed afterwards on this screen.</li>
+      <li>Nothing is emailed. Tell them the password and the address yourself.</li>
+      <li>A password for an Owner, Admin or GM role is at least 10 characters; for anybody else, 8.</li>
+      <li>A GM's picker never holds Owner or Admin. Only the owner makes somebody an Admin.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>People works for the GM, for their own hotel only: <span class="d">D22-3</span>. Only the owner makes an Admin; the GM and a hotel's Admin make none: <span class="d">D22-2</span>, <span class="d">D27-140</span>. Somebody who reaches every property is a group administrator, and making one takes the provisioning key. The Test switch: <span class="d">D27-296</span>. Password lengths: <span class="d">D27-243</span>.</p>
+  </div>
+
+  <!-- A16.8 -->
+  <h2 id="a16-8"><span class="n">A16.8</span>A new password, and a person's details</h2>
+
+  <h3>To set somebody's password</h3>
+  <ol class="steps">
+    <li>On their card, click <span class="ui">Password</span> (<span class="ui">Set a password</span> if they have none yet).</li>
+    <li>The window is <span class="msg">“New password for Agra Clerk”</span>: <span class="msg">“Their old one stops working immediately.”</span></li>
+    <li>Type the <span class="ui">Password</span>: at least 8 characters, 10 for the owner, an Admin or a GM. They type it at a terminal in front of guests, so choose something they can remember. <span class="ui">Show</span> lets you read it back.</li>
+    <li>Click <span class="ui">Set it</span>. Then tell them: <span class="msg">“Nothing is emailed - tell them yourself.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A16-14">
+    <img src="img/A16-14.png" alt="New password for Agra Clerk: the Password box with Show, the line Nothing is emailed - tell them yourself, and Set it">
+    <figcaption><b>Figure A16-14.</b> A new password: typed, told, never emailed.</figcaption>
+    <ol class="callouts">
+      <li>New password for Agra Clerk</li>
+      <li>Show</li>
+      <li>The address they sign in with. Nothing is emailed</li>
+      <li>Set it</li>
+    </ol>
+  </figure>
+  <p>The owner and a group administrator can set anybody's password; a GM or a hotel's Admin, the people at their hotel, never a group administrator's. If it is refused, the message says why.</p>
+
+  <h3>To change a person's name, phone or first screen</h3>
+  <ol class="steps">
+    <li>On their card, click <span class="ui">Edit</span>.</li>
+    <li>Change the <span class="ui">Name</span> or <span class="ui">Phone</span>.</li>
+    <li>Choose where they <span class="ui">Starts on</span>: <span class="ui">Dashboard</span>, <span class="ui">Rooms</span> or <span class="ui">Calendar</span>, the first screen after they sign in. They can change it themselves.</li>
+    <li>Click <span class="ui">Save</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A16-15">
+    <img src="img/A16-15.png" alt="Edit Agra Clerk: Name, Phone, Starts on Dashboard, Signs in as agra@fidato.in, Save">
+    <figcaption><b>Figure A16-15.</b> Edit a person.</figcaption>
+    <ol class="callouts">
+      <li>Name</li>
+      <li>Phone</li>
+      <li>Starts on</li>
+      <li>Save</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><span class="msg">“Their name is on everything they have done. The email is how they sign in and cannot be changed here.”</span> The window shows it as <span class="msg">“Signs in as agra@fidato.in.”</span></li>
+    <li>A group administrator's Edit has no Starts on: they set their own from their account menu.</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The password is typed, not emailed, because many of a hotel's staff have no address they read. A misspelt name is on every folio and every line of the activity log, so it is corrected here, not left.</p>
+  </div>
+
+  <!-- A16.9 -->
+  <h2 id="a16-9"><span class="n">A16.9</span>In short</h2>
+  <table>
+    <thead><tr><th style="width:32%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>The group at a glance</td><td>All properties: the group today, Needs you, a row per property.</td><td>A16.2</td></tr>
+      <tr><td>A property's GSTIN or address changes</td><td>Properties, Edit, Save.</td><td>A16.4</td></tr>
+      <tr><td>A new hotel joins</td><td>Properties, Add a property, with the provisioning key. Then add its rooms.</td><td>A16.4</td></tr>
+      <tr><td>Somebody joins one hotel</td><td>That property's page: Add somebody here. Or People, Add somebody (and Give a property).</td><td>A16.5, A16.7</td></tr>
+      <tr><td>Somebody forgot their password</td><td>People, Password, Set it. Tell them.</td><td>A16.8</td></tr>
+      <tr><td>Somebody moves to another hotel</td><td>People: Give a property for the new one, ✕ on the old one.</td><td>A16.6, A16.7</td></tr>
+      <tr><td>Somebody leaves</td><td>People, Deactivate.</td><td>A16.6</td></tr>
+    </tbody>
+  </table>
+</section>

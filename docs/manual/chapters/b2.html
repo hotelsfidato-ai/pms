@@ -1,0 +1,267 @@
+<!-- ══════════════════════════════ CHAPTER B2 ══════════════════════════════ -->
+<section class="chapter" id="b2">
+  <div class="chapter-head">
+    <span class="num">Chapter B2</span>
+    <h1>People and security</h1>
+    <p>For the owner. The roles and who sees what, how a person signs in and on which devices, the three locks every request passes, how each hotel's data is kept apart, the record of who did what, and why the test sign-ins can never reach the live system.</p>
+  </div>
+
+  <!-- B2.1 -->
+  <h2 id="b2-1"><span class="n">B2.1</span>The roles</h2>
+  <p>Every person has a role at each hotel they work at. The list of roles is one list for the whole group, not one per hotel <span class="d">D22-24</span>. A person can hold different roles at two hotels, for example GM at one and Reception at another; the screens and the server both use the role at the hotel in the address <span class="d">D26-13</span>. A <b>group administrator</b> is the owner at every hotel.</p>
+  <table>
+    <thead><tr><th style="width:20%">Role</th><th>What it is for</th><th style="width:26%">Decided</th></tr></thead>
+    <tbody>
+      <tr><td>Owner</td><td>Everything, everywhere.</td><td>-</td></tr>
+      <tr><td>Admin</td><td>Runs the system day to day, including people's accounts. An Admin at one hotel runs that hotel's people.</td><td>Only the owner makes an Admin <span class="d">D27-140</span>; a hotel's Admin <span class="d">D23-2</span></td></tr>
+      <tr><td>General Manager</td><td>The whole book of their hotel. Sets the hotel up, sets prices, approves overrides and purchases, runs the hotel's people.</td><td><span class="d">D21-47</span> <span class="d">D22-30</span> <span class="d">D22-3</span> <span class="d">D17-35</span>; gives every role but Admin <span class="d">D22-2</span></td></tr>
+      <tr><td>Hotel Manager</td><td>One property, day to day. Below the GM on money: does not waive a charge, move a rate or issue a credit note.</td><td><span class="d">D22-31</span> <span class="d">D22-33</span></td></tr>
+      <tr><td>Revenue Manager</td><td>Prices and restrictions, and what the booking sites sell, when the owner, Admin and GM are away. No bills, guests' details, staff or setup.</td><td>The owner, 16 September; not the menu <span class="d">D22-35</span></td></tr>
+      <tr><td>Reception</td><td>Arrivals, check-in, charges, payments, check-out.</td><td>-</td></tr>
+      <tr><td>Housekeeping</td><td>Room status, work orders, laundry; sees the spa diary.</td><td><span class="d">D18-8</span> <span class="d">D18-21</span></td></tr>
+      <tr><td>Kitchen Manager</td><td>The kitchen screen and the menu. No money.</td><td><span class="d">D24-10</span></td></tr>
+      <tr><td>Chef</td><td>The kitchen screen. Moves dishes along; changes nothing about money.</td><td>-</td></tr>
+      <tr><td>Till Operator</td><td>The waiter's role: tables, the Till, the Terminal, the cash drawer's day. (Restaurant setup's checklist calls it "the Waiter role".)</td><td>-</td></tr>
+      <tr><td>Inventory Manager</td><td>The Store and the equipment register. Raises purchases; approves equipment leaving the store.</td><td>The owner, 16 September</td></tr>
+      <tr><td>Accountant</td><td>Bills, invoices and credit notes, payments, company accounts, reports, the GST and VAT rates.</td><td><span class="d">D22-32</span> <span class="d">D22-33</span></td></tr>
+      <tr><td>Viewer</td><td>Reads; changes nothing.</td><td><span class="d">D27-146</span></td></tr>
+    </tbody>
+  </table>
+  <p>A fourteenth role, <b>Automation</b>, is for machines and is never offered when a person is added. The CRS reader and an outside till each work as such an account, at one hotel only (B2.4).</p>
+
+  <figure class="shot" id="fig-B2-01">
+    <img src="img/B2-01.png" alt="Settings, People and security, Roles and permissions: the matrix of every role against every kind of thing">
+    <figcaption><b>Figure B2-01.</b> Roles and permissions: the one matrix the menus, the buttons and the server all read.</figcaption>
+    <ol class="callouts">
+      <li>The roles, Automation included</li>
+      <li>One role's column: what it may do with each kind of thing</li>
+      <li>One kind of thing: here, prices (rate plans). View only, for a Hotel Manager</li>
+    </ol>
+  </figure>
+
+  <!-- B2.2 -->
+  <h2 id="b2-2"><span class="n">B2.2</span>Who sees what</h2>
+  <p>The system has three spaces, Front office, Restaurant and Settings (A0.4) <span class="d">D27-249</span>. The owner, an Admin and a GM have all three. The roles that work in one place have a short <b>working menu</b> of their own, chosen by the owner on 15 September; everything else they may open is still reached with Find a screen (A0.6).</p>
+  <table>
+    <thead><tr><th style="width:18%">Role</th><th style="width:16%">Spaces</th><th>What their menu holds</th></tr></thead>
+    <tbody>
+      <tr><td>Owner, Admin</td><td>All three</td><td>Every section. Only these two see System health, Roles and permissions, Sign-ins and devices, Modules and Integrations.</td></tr>
+      <tr><td>General Manager</td><td>All three</td><td>Every section of the Front office and the Restaurant. In Settings, everything except the five pages just named.</td></tr>
+      <tr><td>Hotel Manager</td><td>Front office, Restaurant</td><td>The front desk, bookings, guests, the Store, Finance, Banquet, reports and the restaurant (not Restaurant setup); Rates to read; no Settings, no Marketing, no Channel manager.</td></tr>
+      <tr><td>Accountant</td><td>Front office, Restaurant</td><td>Finance (Folios, Invoices, Payments, Cashiering, Cash deposits, Company accounts), reports, bookings and guests to read, the Store to read, the restaurant's bills. Not the Form III register <span class="d">D27-122</span>.</td></tr>
+      <tr><td>Viewer</td><td>Front office, Restaurant</td><td>Most screens, to read.</td></tr>
+      <tr><td>Revenue Manager</td><td>Front office</td><td>Dashboard, Rooms, Calendar, the bookings, Rates and Revenue outlook, Cancellation terms, Booking sources, the reports. The banquet Diary and Halls to read <span class="d">D27-174</span>.</td></tr>
+      <tr><td>Reception</td><td>Front office (and Restaurant where allowed)</td><td>Dashboard, Rooms, Calendar; Arrivals, In house, Walk-ins, Online check-in, Guest requests, Wake-up calls, Lost property; All bookings, CRS bookings, New booking; Guests, Guest messages; Cashiering; laundry Dockets; Notifications. In the Restaurant: Tables, Till, Terminal, Close restaurant day, only where "Reception can use the POS" is on.</td></tr>
+      <tr><td>Housekeeping</td><td>Front office</td><td>Rooms; Housekeeping, Work orders, Guest requests, Lost property; Store, Equipment, Purchasing; laundry Dockets; Notifications. Starts on Housekeeping.</td></tr>
+      <tr><td>Kitchen Manager</td><td>Restaurant only</td><td>Kitchen, Menu, Close restaurant day, Guest requests, the Store, Notifications. Starts on Kitchen.</td></tr>
+      <tr><td>Chef</td><td>Restaurant only</td><td>Kitchen, Guest requests, Notifications.</td></tr>
+      <tr><td>Till Operator</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day, Guest requests. Starts on Tables.</td></tr>
+      <tr><td>Inventory Manager</td><td>Front office</td><td>Store, Equipment, Purchasing, Notifications.</td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li>Restaurant, Banquet, Laundry and Spa are there only at a hotel that has them switched on; a section a hotel does not have is simply absent.</li>
+    <li>No Dashboard for housekeeping, the kitchen, the Inventory Manager or the till, because it carries revenue <span class="d">D27-141</span>. The roles that read bookings but not bills see no balances, and a guest's phone and email come back blank to them <span class="d">D27-143</span>.</li>
+    <li>Guests' ID and Form III details: the owner, Admin, GM, Hotel Manager and Reception only, the people who check guests in <span class="d">D25-38</span>.</li>
+    <li>Where each person starts: the GM sets it per person (Dashboard, Rooms or Calendar) and the person can change their own (the owner, 14 September).</li>
+  </ul>
+
+  <h3>Who may do the acts that matter</h3>
+  <table>
+    <thead><tr><th style="width:40%">Act</th><th>Who</th><th style="width:16%">Decided</th></tr></thead>
+    <tbody>
+      <tr><td>Make, change and cancel bookings</td><td>Owner, Admin, GM, Hotel Manager, Reception</td><td>-</td></tr>
+      <tr><td>Waive a charge (the override)</td><td>Owner, Admin, GM</td><td>-</td></tr>
+      <tr><td>Tick a booking complimentary</td><td>Owner, Admin, GM</td><td><span class="d">D27-59</span></td></tr>
+      <tr><td>Take a payment</td><td>Owner, Admin, GM, Hotel Manager, Reception, Accountant</td><td>-</td></tr>
+      <tr><td>Reverse a payment</td><td>Owner, Admin, GM, Accountant</td><td><span class="d">D27-125</span></td></tr>
+      <tr><td>Edit a charge; change a stay's rate</td><td>Owner, Admin, GM</td><td><span class="d">D27-157</span></td></tr>
+      <tr><td>Correct a closed day</td><td>Owner, Admin, GM</td><td><span class="d">D24-3</span></td></tr>
+      <tr><td>Issue a credit note; cancel a VAT bill</td><td>Owner, Admin, GM, Accountant</td><td><span class="d">D22-33</span> <span class="d">D22-44</span></td></tr>
+      <tr><td>Set the GST and VAT rates</td><td>Owner, Admin, GM, Accountant</td><td><span class="d">D22-32</span></td></tr>
+      <tr><td>Set prices and restrictions</td><td>Owner, Admin, GM, Revenue Manager</td><td>The owner, 16 September</td></tr>
+      <tr><td>Set up room types and rooms</td><td>Owner, Admin, GM</td><td><span class="d">D22-30</span></td></tr>
+      <tr><td>Change the menu</td><td>Owner, Admin, GM, Kitchen Manager</td><td><span class="d">D24-10</span></td></tr>
+      <tr><td>Take off a dish the kitchen already has</td><td>Owner, Admin, GM, Hotel Manager, Kitchen Manager</td><td><span class="d">D27-128</span></td></tr>
+      <tr><td>Run the night audit</td><td>Owner, Admin, GM, Hotel Manager, Reception, Accountant</td><td><span class="d">D22-36</span></td></tr>
+      <tr><td>Say yes to a cash expense</td><td>GM or owner, never one's own</td><td><span class="d">D27-242</span></td></tr>
+      <tr><td>Verify a cash deposit</td><td>Owner or Accountant</td><td><span class="d">D27-191</span></td></tr>
+      <tr><td>Approve a purchase</td><td>The GM approves every purchase</td><td><span class="d">D17-35</span> <span class="d">D18-4</span></td></tr>
+      <tr><td>Add people at a hotel</td><td>Owner; an Admin there; the GM at their own hotel</td><td><span class="d">D22-3</span> <span class="d">D23-2</span></td></tr>
+      <tr><td>Make an Admin</td><td>Only the owner</td><td><span class="d">D27-140</span></td></tr>
+      <tr><td>Switch a hotel's modules on or off</td><td>Owner, Admin</td><td><span class="d">D17-36</span></td></tr>
+      <tr><td>Change a hotel's bank details</td><td>Owner; that hotel's GM or Admin. The owner's bell says so each time</td><td><span class="d">D27-215</span> <span class="d">D27-216</span></td></tr>
+      <tr><td>Change the group's name and logo</td><td>Owner, Admin, GM</td><td><span class="d">D27-67</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <ul>
+      <li><b>A shorter menu, nothing lost</b> (the owner, 15 September): a new receptionist faced 47 menu entries and asked what to do. Their own work is in their menu; the rest is one search away.</li>
+      <li><b>One matrix, read by the screens and the server</b> (Figure B2-01). Until 22 September it lived only in the website, and the server let any rostered person write anything at their hotel; the owner had it fixed before the first real day <span class="d">D21-88</span>. Since then a menu and the server cannot disagree.</li>
+      <li><b>A control the server would refuse is hidden</b>, not left as a button that fails <span class="d">D24-18</span> <span class="d">D24-27</span>. And a screen the role cannot open names its menu entry: <span class="msg">“You are signed in as Reception, which does not include Guest 360.”</span> <span class="d">D27-5</span></li>
+      <li><b>Nobody runs somebody above them</b>: a GM cannot change, switch off or reset the password of the hotel's Admin or the owner, and nobody can switch off or change their own access <span class="d">D24-19</span> <span class="d">D24-28</span>.</li>
+    </ul>
+  </div>
+
+  <!-- B2.3 -->
+  <h2 id="b2-3"><span class="n">B2.3</span>Three locks on every request</h2>
+  <figure class="shot" id="fig-B2-05">
+    <div style="overflow-x:auto">
+    <svg viewBox="0 0 760 170" role="img" aria-label="Three locks: sign-in answers who, the role gate answers may this role do this here, row security answers which hotel's rows" style="width:100%;min-width:600px;height:auto;display:block;font-family:Inter, 'Segoe UI', Arial, sans-serif">
+      <defs><marker id="b2h" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#3d5566"/></marker></defs>
+      <rect x="10" y="40" width="110" height="80" rx="8" fill="#f3f6f8" stroke="#3d5566"/>
+      <text x="65" y="74" font-size="12" font-weight="700" text-anchor="middle" fill="#142B3A">A screen</text>
+      <text x="65" y="92" font-size="10" text-anchor="middle" fill="#3d5566">asks or changes</text>
+      <text x="65" y="105" font-size="10" text-anchor="middle" fill="#3d5566">something</text>
+      <rect x="160" y="30" width="170" height="100" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.4"/>
+      <text x="245" y="54" font-size="12" font-weight="700" text-anchor="middle" fill="#142B3A">1 · Sign-in</text>
+      <text x="245" y="74" font-size="10.5" text-anchor="middle" fill="#3d5566">Who are you?</text>
+      <text x="245" y="92" font-size="10" text-anchor="middle" fill="#3d5566">Firebase's pass, checked</text>
+      <text x="245" y="106" font-size="10" text-anchor="middle" fill="#3d5566">on every request; switched</text>
+      <text x="245" y="120" font-size="10" text-anchor="middle" fill="#3d5566">off people refused</text>
+      <rect x="370" y="30" width="170" height="100" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.4"/>
+      <text x="455" y="54" font-size="12" font-weight="700" text-anchor="middle" fill="#142B3A">2 · The role gate</text>
+      <text x="455" y="74" font-size="10.5" text-anchor="middle" fill="#3d5566">May your role do this here?</text>
+      <text x="455" y="92" font-size="10" text-anchor="middle" fill="#3d5566">the API, before anything</text>
+      <text x="455" y="106" font-size="10" text-anchor="middle" fill="#3d5566">is read or written; a new</text>
+      <text x="455" y="120" font-size="10" text-anchor="middle" fill="#3d5566">route is refused by default</text>
+      <rect x="580" y="30" width="170" height="100" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.4"/>
+      <text x="665" y="54" font-size="12" font-weight="700" text-anchor="middle" fill="#142B3A">3 · Row security</text>
+      <text x="665" y="74" font-size="10.5" text-anchor="middle" fill="#3d5566">Which hotels' rows?</text>
+      <text x="665" y="92" font-size="10" text-anchor="middle" fill="#3d5566">the database itself: only</text>
+      <text x="665" y="106" font-size="10" text-anchor="middle" fill="#3d5566">the hotels you work at,</text>
+      <text x="665" y="120" font-size="10" text-anchor="middle" fill="#3d5566">whatever the query asks</text>
+      <path d="M120 80 L158 80" stroke="#3d5566" stroke-width="1.5" marker-end="url(#b2h)"/>
+      <path d="M330 80 L368 80" stroke="#3d5566" stroke-width="1.5" marker-end="url(#b2h)"/>
+      <path d="M540 80 L578 80" stroke="#3d5566" stroke-width="1.5" marker-end="url(#b2h)"/>
+      <text x="10" y="160" font-size="10" fill="#66798a">A refusal at lock 2 is one sentence naming who may; nothing is written. Lock 3 holds even where the code forgets to ask.</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure B2-05.</b> Every request from a screen passes all three, in this order.</figcaption>
+  </figure>
+  <ul>
+    <li><b>Sign-in</b> is Firebase's: it gives the browser a pass, and the API checks the pass on every request. Firebase knows nothing about roles or hotels.</li>
+    <li><b>The role gate</b> is the API's. Every write, and since 28 September every read, finds its rule and asks the person's role at the hotel in the address. A route with no rule is refused for everybody, and a test lists every route the server has and fails on one without a rule.</li>
+    <li><b>Row security</b> is the database's. Every table that belongs to a hotel carries the hotel, and the database itself shows a person only the rows of hotels they work at (B2.4).</li>
+  </ul>
+  <p>Three doors have no person behind them and do not use the role gate: the guest's page (its link is the credential, B2.7), an outside till (its outlet key, B5.7) and SU (its own key, B5.6). Each of them still works inside row security, as an account at one hotel.</p>
+
+  <!-- B2.4 -->
+  <h2 id="b2-4"><span class="n">B2.4</span>Each hotel's data kept apart</h2>
+  <ul>
+    <li><b>Every hotel's table carries the hotel</b>, and the database applies the rule to every question asked of it, by anyone. The API connects as an account (<code>pms_app</code>) that can read and write rows and nothing else; it cannot switch the rule off. So a forgotten filter in the code still returns only the asker's hotels.</li>
+    <li><b>Guests are kept once for the whole group</b>, on purpose: one person across seven hotels keeps their history, and a blacklist cannot be walked round by booking elsewhere. Their name and phone are shared. Their <b>ID documents are not</b>: they live in a table of their own, readable only at a hotel that holds a booking for that guest (migration 013), and only by the roles that check guests in <span class="d">D25-38</span>.</li>
+    <li><b>Machines are scoped like people.</b> An outside till, SU and the CRS reader each work as a service account at one hotel, so a misconfigured till cannot even see another hotel's guests. The CRS reader works as a Viewer at its one hotel, with no sign-in <span class="d">D27-286</span> (4).</li>
+    <li><b>When the system is sold</b>, each customer gets its own database on the shared server <span class="d">D27-278</span>, so no customer's rows ever sit beside another's.</li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Customers' databases share one login</b> (<code>pms_app</code>), by the owner's choice, with a check at start-up that the database belongs to the customer the API is set for <span class="d">D27-279</span> (1). The owner chose this knowing that a break-in at one customer's API could reach every customer's data (<code>deploy/README.md</code>, Add a customer).</li>
+      <li><b>A test of who sees what must run as <code>pms_app</code></b>: the database's superuser skips row security entirely and would pass any check. The isolation tests run as <code>pms_app</code> for that reason (MEMORY 47).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>One database, one set of tables, the hotel on every row and the rule in the database was chosen at the start over a database or a set of tables per hotel: those make the group's own reports hard and multiply every change by seven (<code>docs/MASTER-ARCHITECTURE.md</code> § 5). Adding a hotel is then a matter of data, never of building anything. One gap was found by use rather than by a test: the list of hotels itself was not scoped, so any member of staff could list every property and its GSTIN. It was closed, and no guest data or money had crossed between hotels (MEMORY 59).</p>
+  </div>
+
+  <!-- B2.5 -->
+  <h2 id="b2-5"><span class="n">B2.5</span>Signing in, passwords and devices</h2>
+  <ul>
+    <li><b>An email and a password</b>, kept by Firebase. The GM (or an Admin) adds the person on People, types their first password and tells them; nothing is emailed (<code>src/modules/admin/MODULE.md</code>). A forgotten password is reset by the GM on People (A0.1).</li>
+    <li><b>At least 10 characters for the owner, an Admin and a GM, 8 for everybody else</b> <span class="d">D27-243</span>. Somebody given one of those three roles while their password is shorter sets a longer one at their next sign-in <span class="d">D27-245</span>.</li>
+    <li><b>Every sign-in is kept 90 days</b>: when, and on what device. The owner sees everybody's; an Admin sees the people at their own hotel <span class="d">D27-245</span>.</li>
+    <li><b>Sign out this device</b>: the owner or an Admin can make the server refuse one device's sign-in from its next request <span class="d">D27-255</span>.</li>
+    <li><b>Switching a person off</b> on People also switches off their Firebase sign-in; switching them back on turns it back on <span class="d">D27-275</span> (4). A GM removes a person who also works at another hotel from their own hotel only; only the group administrator switches them off everywhere <span class="d">D23-4</span>.</li>
+  </ul>
+
+  <figure class="shot" id="fig-B2-03">
+    <img src="img/B2-03.png" alt="Settings, People and security, Signing in: the four rules">
+    <figcaption><b>Figure B2-03.</b> Signing in: the rules, as the system states them.</figcaption>
+    <ol class="callouts">
+      <li>Password lengths</li>
+      <li>A longer password at the next sign-in</li>
+      <li>Every sign-in kept 90 days</li>
+      <li>Two-step sign-in: later</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-B2-02">
+    <img src="img/B2-02.png" alt="Sign-ins and devices: kept 90 days, and the picker for whose sign-ins to see">
+    <figcaption><b>Figure B2-02.</b> Sign-ins and devices. Pick a person to see each sign-in, its device, and <span class="ui">Sign out this device</span>.</figcaption>
+    <ol class="callouts"><li>Kept 90 days</li><li>Whose sign-ins</li></ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <ul>
+      <li><b>No "sign out everywhere" and no "block a device"</b>: switching the person off already does both <span class="d">D27-255</span>.</li>
+      <li><b>Adding somebody can never take over an existing account.</b> From 9 to 15 September a GM could "add" the owner's email with a password of their choosing, and the sign-in service changed the owner's password before the database refused; the GM could then sign in as the owner. Closed on 15 September (migration 088): the address is checked before the sign-in service is touched. The lesson kept: something that cannot be undone happens after every check, never between them (MEMORY 263).</li>
+    </ul>
+  </div>
+
+  <!-- B2.6 -->
+  <h2 id="b2-6"><span class="n">B2.6</span>Who did what: the audit trail</h2>
+  <table>
+    <thead><tr><th style="width:22%">Where</th><th>What it shows</th><th style="width:24%">Who sees it</th></tr></thead>
+    <tbody>
+      <tr><td>Audit log</td><td>The money: every line ever posted to a bill and every reversal, with who posted it, by name <span class="d">D17-14</span>. Nothing on a bill is overwritten, so this is the whole record.</td><td>Owner, Admin, GM</td></tr>
+      <tr><td>Activity</td><td>Every change to every record: who, when, which record, what changed, before and after. A guest's own details read only "changed" <span class="d">D27-243</span>.</td><td>Owner, Admin, GM for their hotel; changes that belong to no hotel (a guest, a person, a company, the group's settings) under <span class="ui">Across the group</span>, for the owner and an Admin <span class="d">D27-245</span></td></tr>
+      <tr><td>Sign-ins and devices</td><td>B2.5.</td><td>Owner; an Admin for their hotel's people</td></tr>
+      <tr><td>The server's logs</td><td>Every request, the database's sign-ins, kept a year <span class="d">D27-21</span>.</td><td>Read on the server</td></tr>
+    </tbody>
+  </table>
+
+  <figure class="shot" id="fig-B2-04">
+    <img src="img/B2-04.png" alt="Settings, People and security, Activity: changes with who, when, which record and what changed">
+    <figcaption><b>Figure B2-04.</b> Activity: every change, and who made it.</figcaption>
+    <ol class="callouts">
+      <li>This hotel, or across the group</li>
+      <li>Only one person's changes</li>
+      <li>Who made it, by name</li>
+      <li>What changed, from what to what</li>
+    </ol>
+  </figure>
+
+  <!-- B2.7 -->
+  <h2 id="b2-7"><span class="n">B2.7</span>The guest's own doors</h2>
+  <ul>
+    <li><b>The guest's link</b> is the only credential their page has. The server keeps only a fingerprint of it, and it stops working at 11:00 the morning after check-out (<code>src/modules/guest-messaging/MODULE.md</code>).</li>
+    <li><b>Before a code, the page shows only what a clerk would say across a counter</b>, never the bill. The code goes to the booking's own phone or email, or the guest uses Google with the booking's email <span class="d">D18-13</span> <span class="d">D27-207</span>. A phone that answered it stays unlocked for a day <span class="d">D27-169</span>; a forwarded link asks again <span class="d">D21-6</span>.</li>
+    <li><b>The QR card in a room</b> shows the hotel and the room number only <span class="d">D21-14</span>; reprinting a card stops the old one at once <span class="d">D21-16</span>.</li>
+    <li><b>ID photos</b> are encrypted with the hotel's own password and kept in Google Drive; the server keeps none <span class="d">D27-208</span> <span class="d">D27-209</span>. Online, an Aadhaar photo must be masked <span class="d">D27-207</span>. Once confirmed, a kept photo is seen only by the owner, Admin and GM, every view is recorded, and only they delete one, with a reason <span class="d">D27-210</span>.</li>
+    <li><b>A typed Aadhaar number</b> is accepted in full <span class="d">D21-17</span>; screens show its last four digits and only the printed registration card shows it all <span class="d">D21-18</span>. Whether the hotel may keep the full number is with the lawyer <span class="d">D25-37</span>.</li>
+  </ul>
+
+  <!-- B2.8 -->
+  <h2 id="b2-8"><span class="n">B2.8</span>The test sign-ins never reach the live system</h2>
+  <p>On the development computer the sign-in page has buttons that sign in as a test owner, GM or receptionist with no password. They exist for testing only (the owner, 14 September: "keep it simple for the local system; for production remove it"). Three separate locks keep them off the live system:</p>
+  <ol class="steps">
+    <li><b>The build refuses.</b> Building the website for release fails if any trace of the test sign-ins is in the result.</li>
+    <li><b>The live API refuses to start</b> if the test sign-in is switched on with the production setting. It does not warn; it stops.</li>
+    <li><b>The tests cannot reach the live sign-in service.</b> The test runs blank the Firebase key, and a test fails if it ever comes back. On 15 September a proof run reached the live sign-in service and created two junk accounts before this lock existed (MEMORY 264).</li>
+  </ol>
+  <p>The developers' Console, which can create properties and people, exists only in development builds.</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>The server's secrets live only in its settings file</b>: the Firebase Admin key, the sending workflow's secret, the CRS login, the ID photo passwords. Never in the code, a screen, a chat or this book. The Firebase Admin key passed through a chat once and is on the owner's list to replace (<code>HANDOVER.md</code> § 8).</li>
+      <li><b>n8n's encryption key is a master password</b> for every login n8n holds: never pasted anywhere (<code>HANDOVER.md</code> § 5). n8n is open to the internet behind its own sign-in, so two-step sign-in there matters <span class="d">D21-96</span>.</li>
+      <li><b>The two spare database logins</b> (for migrations and read-only use) could still sign in on 4 October; they lose their sign-in with migration 202, in the next release <span class="d">D27-279</span> (4).</li>
+    </ul>
+  </div>
+
+  <h3>Left out, and why</h3>
+  <ul>
+    <li><b>Two-step sign-in</b> for the owner, Admins and GMs: after this release, once the owner upgrades Firebase <span class="d">D27-243</span>.</li>
+    <li><b>Roles per hotel</b>: one list for the group <span class="d">D22-24</span>.</li>
+    <li><b>A person's own "my devices"</b>: later <span class="d">D27-255</span>.</li>
+    <li><b>The address a sign-in came from</b> is kept, not shown <span class="d">D27-243</span>.</li>
+  </ul>
+</section>

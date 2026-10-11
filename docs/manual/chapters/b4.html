@@ -1,0 +1,177 @@
+<!-- ══════════════════════════════ CHAPTER B4 ══════════════════════════════ -->
+<section class="chapter" id="b4">
+  <div class="chapter-head">
+    <span class="num">Chapter B4</span>
+    <h1>Rooms and rates</h1>
+    <p>For the owner. What a hotel sells and how its price is built: room types and rooms, the base price and its add-ons, rate plans and meal plans, the restrictions, and how the CRS's and the booking sites' room types are matched to the hotel's own. Why it was built this way, and what was left out.</p>
+  </div>
+
+  <!-- B4.1 -->
+  <h2 id="b4-1"><span class="n">B4.1</span>Room types and rooms</h2>
+  <p>A <b>room type</b> is what is sold: Deluxe, Superior. A <b>room</b> is where the guest sleeps: 201, 202. A booking is for a room type; the room is given at check-in or before.</p>
+  <ul>
+    <li><b>A room type says who it sleeps</b>: the adults and children its price covers, the most it sleeps, and the most adults and children; and its beds, view, size, colour on the Calendar, amenities and photos (Settings, Rooms, Room types). New bookings are held to its limits <span class="d">D27-258</span>.</li>
+    <li><b>A new hotel starts with no room types</b>: the owner or GM adds their own, as with prices. A type nothing has used can be removed; one that has been used is switched Off, hidden from new bookings, its history kept <span class="d">D27-263</span>.</li>
+    <li><b>The GM sets up their own hotel</b>: room types, rooms, their imports <span class="d">D21-47</span> <span class="d">D22-30</span>.</li>
+    <li><b>Out of service is a dated block</b>, from a date with a reason; the Rooms screen, the room count and every occupancy figure follow it <span class="d">D17-11</span>. A room lived in by staff is blocked with the reason house use and no end date, which the owner calls "NC": at 5 Elements the GM's room, so 18 rooms, 17 sellable (the owner, 16 September; <span class="d">D21-64</span>).</li>
+    <li><b>Occupancy has one rule everywhere</b>, the Manager report's: rooms sold on the night (complimentary in; no-shows, waiting bookings and day use out) over the sellable rooms <span class="d">D27-151</span>.</li>
+    <li><b>The desk may overbook</b> where the hotel allows it (a switch, on by default) <span class="d">D27-243</span>; a machine never may: a booking from the CRS or a booking site for a room no longer free is refused <span class="d">D17-43</span> <span class="d">D17-80</span>.</li>
+  </ul>
+
+  <!-- B4.2 -->
+  <h2 id="b4-2"><span class="n">B4.2</span>How a price is built: a base and add-ons</h2>
+  <p>Since 30 September a room's price is <b>a base plus add-ons</b> <span class="d">D27-188</span> <span class="d">D27-194</span>. The base is what one guest pays for the room alone (room only, EP) on a date. Everything else is added to it, and the add-ons are set once for the hotel. So the daily work is only the base: change it on a date, and every plan on that date moves with it.</p>
+
+  <figure class="shot" id="fig-B4-03">
+    <div style="overflow-x:auto">
+    <svg viewBox="0 0 760 210" role="img" aria-label="A night's price: the base for one guest on room only, plus the room type's difference, plus double occupancy for the second guest, plus extra adult or child from the third, plus the meal add-on for every guest" style="width:100%;min-width:620px;height:auto;display:block;font-family:Inter, 'Segoe UI', Arial, sans-serif">
+      <rect x="10" y="30" width="150" height="96" rx="8" fill="#eef3f7" stroke="#142B3A" stroke-width="1.6"/>
+      <text x="85" y="52" font-size="12" font-weight="700" text-anchor="middle" fill="#142B3A">The base</text>
+      <text x="85" y="70" font-size="10" text-anchor="middle" fill="#3d5566">one guest, room only,</text>
+      <text x="85" y="84" font-size="10" text-anchor="middle" fill="#3d5566">on this date</text>
+      <text x="85" y="104" font-size="10" font-weight="700" text-anchor="middle" fill="#c4470f">set day by day</text>
+      <text x="85" y="117" font-size="10" font-weight="700" text-anchor="middle" fill="#c4470f">on Rates</text>
+      <text x="175" y="84" font-size="20" font-weight="700" text-anchor="middle" fill="#3d5566">+</text>
+      <rect x="190" y="30" width="130" height="96" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <text x="255" y="52" font-size="11.5" font-weight="700" text-anchor="middle" fill="#142B3A">Room type's</text>
+      <text x="255" y="66" font-size="11.5" font-weight="700" text-anchor="middle" fill="#142B3A">difference</text>
+      <text x="255" y="84" font-size="10" text-anchor="middle" fill="#3d5566">+₹ or +% from the</text>
+      <text x="255" y="98" font-size="10" text-anchor="middle" fill="#3d5566">base room type,</text>
+      <text x="255" y="112" font-size="10" text-anchor="middle" fill="#3d5566">if derived</text>
+      <text x="335" y="84" font-size="20" font-weight="700" text-anchor="middle" fill="#3d5566">+</text>
+      <rect x="350" y="30" width="120" height="96" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.2"/>
+      <text x="410" y="52" font-size="11.5" font-weight="700" text-anchor="middle" fill="#142B3A">2nd guest</text>
+      <text x="410" y="70" font-size="10" text-anchor="middle" fill="#3d5566">double occupancy,</text>
+      <text x="410" y="84" font-size="10" text-anchor="middle" fill="#3d5566">adult or child</text>
+      <text x="485" y="84" font-size="20" font-weight="700" text-anchor="middle" fill="#3d5566">+</text>
+      <rect x="500" y="30" width="120" height="96" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.2"/>
+      <text x="560" y="52" font-size="11.5" font-weight="700" text-anchor="middle" fill="#142B3A">3rd guest on</text>
+      <text x="560" y="70" font-size="10" text-anchor="middle" fill="#3d5566">extra adult or</text>
+      <text x="560" y="84" font-size="10" text-anchor="middle" fill="#3d5566">extra child, each</text>
+      <text x="635" y="84" font-size="20" font-weight="700" text-anchor="middle" fill="#3d5566">+</text>
+      <rect x="650" y="30" width="100" height="96" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.2"/>
+      <text x="700" y="52" font-size="11.5" font-weight="700" text-anchor="middle" fill="#142B3A">Meals</text>
+      <text x="700" y="70" font-size="10" text-anchor="middle" fill="#3d5566">CP, MAP, AP, AI</text>
+      <text x="700" y="84" font-size="10" text-anchor="middle" fill="#3d5566">per guest,</text>
+      <text x="700" y="98" font-size="10" text-anchor="middle" fill="#3d5566">children too</text>
+      <rect x="190" y="140" width="560" height="26" rx="6" fill="#f3f6f8" stroke="#d6dee4"/>
+      <text x="470" y="157" font-size="10.5" text-anchor="middle" fill="#3d5566">The add-ons: set once for the hotel, in rupees, undated. 0 only when ticked Free.</text>
+      <text x="10" y="195" font-size="10.5" fill="#142B3A"><tspan font-weight="700">= the night's price.</tspan> Any part not set: the price is a dash, and that night or plan is not sold.</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure B4-03.</b> A night's price, built from the base.</figcaption>
+  </figure>
+
+  <ul>
+    <li><b>Two ways per hotel</b>: each room type carries its own base; or one room type is the base and the others are derived from it by a difference, in rupees or a percentage (rounded to the whole rupee) <span class="d">D27-188</span> <span class="d">D27-194</span>.</li>
+    <li><b>Counting guests</b>: the base covers one guest; two guests (adult or child) add the double occupancy figure; from the third, each adds the extra adult or extra child figure, adults first. Every guest, children too, pays the meal plan's add-on <span class="d">D27-194</span>.</li>
+    <li><b>A part nobody set is a dash</b>, and anything that needs it is not sold, and goes to the booking sites as closed <span class="d">D27-194</span>.</li>
+    <li><b>Nothing already typed moved.</b> A price typed before 30 September is kept exactly as it was, and prices exactly as it did, with a Remove beside it <span class="d">D27-194</span>. A hotel still priced only by the older rack rate keeps selling every meal plan at its room-only rack until a base and the meal add-on are set on Rates <span class="d">D27-196</span>. (The local demo is priced that older way, which is why every meal plan in Figure B4-01 shows the room-only figure.)</li>
+    <li><b>Prices are typed as rupees, never invented</b>: everything on Rates starts as a dash (B3.1).</li>
+  </ul>
+
+  <h3>The Rates screen</h3>
+  <figure class="shot" id="fig-B4-01">
+    <img src="img/B4-01.png" alt="Rates: a fortnight of each room type's base with rooms left, and under it the two-guest price on each meal plan and the extra-person figures">
+    <figcaption><b>Figure B4-01.</b> Rates: each day's base, and what every plan costs that day.</figcaption>
+    <ol class="callouts">
+      <li>The base: one guest, room only</li>
+      <li>A room type: its base each day, the rooms left under it</li>
+      <li>A plan's price for two guests, worked out from the base and the add-ons</li>
+      <li>What one more adult adds: a dash, not set</li>
+      <li>Rooms left and the restrictions</li>
+      <li>Set prices: a room type, from a date, through a date, a price</li>
+    </ol>
+  </figure>
+  <ul>
+    <li>Everyone who may read prices sees Rates; only the owner, an Admin, the GM and the Revenue Manager can change anything on it, and the server asks the same question on every price it is sent (B2.2).</li>
+    <li>Each day's price sits above how that day sold: rooms sold, occupancy, average rate, revenue <span class="d">D27-188</span> <span class="d">D27-151</span>. Every room type is always open with all its rows <span class="d">D27-237</span> (5.1).</li>
+    <li>The Calendar shows each night's base price, else the standard price, else a dash <span class="d">D27-274</span>.</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <ul>
+      <li><b>One figure moves everything</b>: the owner, 16 September, wanted the cheapest room to be the base and everything else "connected by a difference", so a change reflects all through the system. The first build (16 September, migration 090) took that literally: one base for the hotel and dated differences in rupees. On 30 September the owner simplified it to a base per day and add-ons set once: the calendar changes only the base <span class="d">D27-188</span>.</li>
+      <li><b>Rupees, not percentages</b>, was the owner's rule of 16 September for every difference. Since 30 September a room type derived from the base may also be a percentage; the add-ons stay rupees (migration 162) <span class="d">D27-188</span>.</li>
+      <li><b>The base is not the default.</b> The base is priced for one guest; how many guests a room is sold for by default is a separate setting on the room type, which the pricing does not change (the owner, 16 September, <code>HANDOVER.md</code> § 4).</li>
+    </ul>
+  </div>
+
+  <!-- B4.3 -->
+  <h2 id="b4-3"><span class="n">B4.3</span>Rate plans and meal plans</h2>
+  <p>A <b>rate plan</b> is a room type on a meal plan, named by itself: "Deluxe · Room only (EP)". It is not a second price list: it is a view over the one pricing, drawn as a tree <span class="d">D27-251</span>.</p>
+  <figure class="shot" id="fig-B4-02">
+    <img src="img/B4-02.png" alt="Settings, Rates and tax, Rate plans: Master, Derived and Independent explained, and each room type's plan with its switch, kind, price and Edit">
+    <figcaption><b>Figure B4-02.</b> Rate plans: each room type on each meal plan, following the one pricing.</figcaption>
+    <ol class="callouts">
+      <li>Master: the base room on room only</li>
+      <li>Independent: its own base, typed on Rates</li>
+      <li>This plan's kind</li>
+      <li>On or Off: Off is not offered for new bookings; prices and bookings stay</li>
+      <li>Edit: what it is, its price, who sells it</li>
+      <li>Prices shown for two guests on the business date</li>
+    </ol>
+  </figure>
+  <ul>
+    <li><b>Master, Derived, Independent</b>: the master is the base room type on room only; a derived plan follows it by a difference or a meal add-on; an independent room type has its own base <span class="d">D27-258</span>.</li>
+    <li><b>Who sells a plan</b>: each plan names the booking sources that sell it, none named meaning all; New booking offers only the plans the chosen source sells. The booking sites keep their own mapping in SU <span class="d">D27-258</span>.</li>
+    <li><b>Meal plans</b>: EP (room only), CP (with breakfast), MAP (one more meal), AP (all meals) and AI (all inclusive, everything charged to the room) <span class="d">D17-50</span> <span class="d">D17-68</span>. RO is no longer offered; every picker shows the code with its words, "CP · Room + breakfast" <span class="d">D27-164</span>. Each plan says on which days of the stay its meals are served, and the voucher says so too <span class="d">D27-258</span>.</li>
+    <li><b>On reports</b>, the "Rate Type" is the booking's meal plan; no separate plan names to keep up <span class="d">D17-95</span>.</li>
+  </ul>
+
+  <h3>Prices that are not the day's rate</h3>
+  <ul>
+    <li><b>A typed rate</b> on a booking stays as typed; the 10% discount rule binds only the Discount box <span class="d">D27-62</span>. A rate may be typed "Includes GST" and is split exactly (B3.6) <span class="d">D27-187</span>.</li>
+    <li><b>Company contracts</b>: fixed rates per room type and meal plan, or a percentage off the day's rate; the contract in force on the day of arrival prices every night; a contract rate is always before GST <span class="d">D27-184</span> <span class="d">D27-233</span>.</li>
+    <li><b>Day use</b>: its price is typed on every day-use booking, never taken from the night's price, and a day use never turns into a night stay or back <span class="d">D27-229</span> <span class="d">D27-230</span>.</li>
+    <li><b>Changing a confirmed booking's rate</b> before check-in: the owner, an Admin or the GM, with a reason kept in the booking's notes <span class="d">D27-187</span> <span class="d">D27-195</span>.</li>
+  </ul>
+
+  <!-- B4.4 -->
+  <h2 id="b4-4"><span class="n">B4.4</span>Restrictions</h2>
+  <p>Beside the price, a rate setter can say a room type may not be sold, or not sold that way, on a date: <b>stop sell</b>, <b>closed to arrival</b>, <b>closed to departure</b>, and <b>minimum</b> and <b>maximum nights</b> (migration 044). They are set per room type per date, not per plan: a room not for sale is not for sale on any plan. They show on Rates' <span class="ui">Rooms left</span>, and go to the booking sites through SU.</p>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The owner's answer of 16 September: bookings from SU and every outside system are held to stop sell and minimum nights, and a price of 0 is refused unless complimentary; the desk keeps its own judgement, because a person at the desk can see the whole picture (<code>HANDOVER.md</code> § 4, "D10").</p>
+  </div>
+  <div class="box open">
+    <h4>Not found in the code</h4>
+    <p>The booking sites are held to the restrictions by SU, which receives them. The CRS bridge, the other outside system, refuses a booking at ₹0 as that answer says, but the code reviewed for this chapter does not check a CRS booking against stop sell or minimum nights. Worth confirming before the CRS sells into a restricted date.</p>
+  </div>
+
+  <!-- B4.5 -->
+  <h2 id="b4-5"><span class="n">B4.5</span>Matching the CRS's and the booking sites' room types</h2>
+  <p>The CRS and SU each have their own names and ids for the hotel's rooms. Nothing is matched by guessing: a person matches each one, once.</p>
+  <h3>The CRS</h3>
+  <ul>
+    <li>On <span class="ui">CRS bookings</span>, the card <b>Connection to the CRS</b> (owner and Admin): the hotel's id in the CRS, the source CRS bookings are filed under ("Fidato CRS", made once in Settings <span class="d">D27-286</span>), and each CRS room type's id with the room type it is here (Figure B5-02). The CRS room type ids come from the CRS's Firebase console <span class="d">D27-275</span> (1).</li>
+    <li><b>A CRS room type with no match is never booked by itself</b>: the booking waits under "Needs attention" with the reason, as does one with no rate, or whose price per room does not split exactly <span class="d">D27-171</span>.</li>
+    <li><b>The price is the CRS's quote</b>, before tax, per room per night <span class="d">D27-171</span>; the PMS adds the tax and bills it <span class="d">D17-46</span>.</li>
+  </ul>
+  <h3>The booking sites, through SU</h3>
+  <ul>
+    <li>In the channel manager's SU setup (owner and Admin) <span class="d">D17-85</span>: the hotel's SU id, each room type's SU room id and type, each meal plan's SU rate plan id. Nothing is suggested or filled in from a name.</li>
+    <li>On Booking sources, each booking site carries its SU channel code, picked from SU's list; nothing is hard-wired <span class="d">D27-183</span>.</li>
+    <li>What goes to SU: rooms left, each price for each number of guests, and the restrictions, for a year ahead, then only what changed. A date with no price goes closed <span class="d">D17-81</span>.</li>
+  </ul>
+  <div class="box open">
+    <h4>Two answers, depending on how the hotel is priced</h4>
+    <p>A meal plan with no price of its own: on 18 September the owner chose to send the room-only rack rate rather than close the date <span class="d">D17-92</span>; on 30 September, for a hotel priced the new way, an unset plan is not sold and is closed on SU <span class="d">D27-194</span>, while a hotel priced only by the old rack keeps selling every plan at the room-only rack <span class="d">D27-196</span>. The SU setup page says how many nights are selling at the rack rate, and from when.</p>
+  </div>
+
+  <!-- B4.6 -->
+  <h2 id="b4-6"><span class="n">B4.6</span>Revenue management: suggestions only</h2>
+  <ul>
+    <li><b>Revenue outlook shows and suggests; it never changes a price by itself</b> <span class="d">D17-56</span> <span class="d">D18-15</span>. A night 14 or fewer days out and 50% sold or less is "Soft"; 85% or more is "Filling well" <span class="d">D22-14</span>.</li>
+    <li><b>Rivals' prices</b>: where the hotel switches it on, each nearby hotel's lowest public price per night, 30 nights ahead, checked twice a week, beside each suggestion <span class="d">D27-269</span> <span class="d">D27-270</span> <span class="d">D27-272</span>. It needs the owner's data key in the server's settings.</li>
+  </ul>
+
+  <h3>Left out, and why</h3>
+  <ul>
+    <li><b>A price that changes by itself</b>: never; a person sets every price <span class="d">D18-15</span>.</li>
+    <li><b>Room categories</b> (Deluxe and Deluxe valley view grouped under Deluxe), asked for on 16 September: a field for it exists in the database (migration 090), but no screen sets it.</li>
+    <li><b>Contract allotments</b>: later <span class="d">D27-184</span>.</li>
+    <li><b>Our own booking engine</b>: SU's is used instead <span class="d">D27-180</span>.</li>
+  </ul>
+</section>

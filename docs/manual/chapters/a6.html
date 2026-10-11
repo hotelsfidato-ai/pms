@@ -1,0 +1,720 @@
+<!-- ══════════════════════════════ CHAPTER A6 ══════════════════════════════ -->
+<section class="chapter" id="a6">
+  <div class="chapter-head">
+    <span class="num">Chapter A6</span>
+    <h1>Housekeeping</h1>
+    <p>For housekeepers, their supervisors and the desk. How to read the Housekeeping board, give rooms out, mark a room clean and then inspected (with or without a signal), report a repair, take a room out of service and put it back, follow work orders and what they cost, and look after guests' requests, wake-up calls and lost property.</p>
+  </div>
+
+  <!-- A6.1 -->
+  <h2 id="a6-1"><span class="n">A6.1</span>The housekeeping screens</h2>
+  <p>A housekeeper signs in and lands on the <span class="ui">Housekeeping</span> board. Their menu is short: the screens they work on. Every other screen they may use is still one search away (<span class="ui">Find a screen</span>, A0.6).</p>
+  <table>
+    <thead><tr><th style="width:20%">Screen</th><th style="width:30%">Who uses it</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td>Housekeeping</td><td>Housekeeping; reception and the managers see it too</td><td>The board: every room, what it needs, and who is cleaning it. Clean, Inspected, Repair; Put back for a room out of service.</td></tr>
+      <tr><td>Work orders</td><td>Housekeeping, reception, the managers</td><td>What needs fixing, who is fixing it, what it cost.</td></tr>
+      <tr><td>Guest requests</td><td>The desk sees every request; housekeeping, the Inventory Manager, the kitchen manager, the chef and the waiter see their own team's</td><td>What guests in house have asked for: towels, a broken tap, a pot of tea.</td></tr>
+      <tr><td>Wake-up calls</td><td>The desk: the owner, an Admin, the GM, the hotel manager, reception</td><td>Calls to make, on the hotel's clock.</td></tr>
+      <tr><td>Lost property</td><td>The desk and housekeeping log items; only the desk returns or disposes of them</td><td>What was found, kept until it goes back to its owner or is disposed of.</td></tr>
+    </tbody>
+  </table>
+  <p>The housekeeper's menu also has <span class="ui">Rooms</span>, the house today (A1.7), and <span class="ui">Store</span>, <span class="ui">Equipment</span> and <span class="ui">Purchasing</span> (A9). Laundry is in A13.</p>
+
+  <figure class="shot" id="fig-A6-01">
+    <img src="img/A6-01.png" alt="The housekeeper's menu and the Start here card on the Housekeeping board">
+    <figcaption><b>Figure A6-01.</b> A housekeeper's first screen.</figcaption>
+    <ol class="callouts">
+      <li>Rooms: the house today (A1.7)</li>
+      <li>Housekeeping: the board</li>
+      <li>Work orders: what needs fixing</li>
+      <li>Guest requests</li>
+      <li>Lost property</li>
+      <li>Store (A9)</li>
+      <li>Start here: your three jobs, each opening the screen it happens on</li>
+    </ol>
+  </figure>
+  <p>The <span class="ui">Start here</span> card lists the housekeeper's three jobs: <span class="ui">See what needs cleaning</span>, <span class="ui">Mark a room clean</span>, <span class="ui">Report something broken</span>. Tap <span class="ui">Got it</span> to put it away; the account menu's <span class="ui">Show Start here again</span> brings it back (A0.2).</p>
+
+  <!-- A6.2 -->
+  <h2 id="a6-2"><span class="n">A6.2</span>The Housekeeping board</h2>
+  <p>The board says what it is for under its title: <span class="msg">“Tap a room to move it on. Clean, then inspected.”</span></p>
+
+  <figure class="shot" id="fig-A6-02">
+    <img src="img/A6-02.png" alt="The Housekeeping board: Empty rooms, six counts, the names along the top and the room cards">
+    <figcaption><b>Figure A6-02.</b> The Housekeeping board.</figcaption>
+    <ol class="callouts">
+      <li>Empty rooms: how many rooms with no guest are clean, and how many inspected</li>
+      <li>A count: tap it to jump to its rooms</li>
+      <li>Whose rooms: All rooms, then each person</li>
+      <li>A room: its number, type and floor, who is cleaning it, and its three buttons</li>
+      <li>Online, or Offline</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>Empty rooms</b>: the big figure is the rooms with no guest that are clean or inspected, of all rooms with no guest (<span class="msg">“4/6 clean”</span>). The two bars split it: <span class="ui">Clean</span> and <span class="ui">Inspected</span>. A room out of service is not counted.</li>
+    <li><b>The six counts</b>: <span class="ui">Needs cleaning</span>, <span class="ui">Clean</span>, <span class="ui">Inspected</span>, <span class="ui">In house</span>, <span class="ui">Due out</span>, <span class="ui">Out of service</span>. A count with an arrow jumps to its group below. <span class="ui">Due out</span> has no group of its own, and a zero has nothing to jump to, so they stay flat.</li>
+    <li><b>Online</b> means the board is connected. It refreshes by itself: it is told the moment a room changes anywhere, and reads again every 30 seconds (60 while it is live). Nobody needs to reload it.</li>
+  </ul>
+
+  <p>The rooms are in groups, in this order:</p>
+  <table>
+    <thead><tr><th style="width:26%">Group</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td>Needs cleaning</td><td>No guest, and not clean yet. <span class="ui">Clean</span> is ready.</td></tr>
+      <tr><td>Clean</td><td>Cleaned, not yet checked. <span class="ui">Inspected</span> is ready.</td></tr>
+      <tr><td>Inspected</td><td>Cleaned and checked: ready for the next guest.</td></tr>
+      <tr><td>In house</td><td>Every room with a guest in it. The card shows the guest's name and a bed; a guest leaving today makes the card yellow, with <span class="msg">“Due out”</span>.</td></tr>
+      <tr><td>Out of service</td><td>Not for sale (A6.7). The card has one button, <span class="ui">Put back</span>.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>No button sends a room for cleaning.</b> A check-out does it by itself: the room the guest leaves goes to <span class="ui">Needs cleaning</span>. A room nobody slept in (a booking cancelled or a no-show) stays as housekeeping left it.</li>
+      <li>A room out of service cannot be marked clean: put it back first (A6.7).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The words under the buttons, and a grey one saying why: <span class="d">D17-8</span>. Each count jumps to its group, with an arrow; Due out and a zero stay flat: <span class="d">D27-95</span>. The board refreshes itself: <span class="d">D17-39</span>. The board uses the same words for a room as Rooms does, so the desk and housekeeping name a room the same way.</p>
+  </div>
+
+  <!-- A6.3 -->
+  <h2 id="a6-3"><span class="n">A6.3</span>Giving rooms to a housekeeper</h2>
+  <p>A supervisor gives each room to somebody before the shift. Everyone working at the hotel is in the list, housekeepers first.</p>
+  <ol class="steps">
+    <li>On the room's card, open the list that says <span class="ui">Unassigned</span>.</li>
+    <li>Choose the person. It is saved at once; there is no Save button.</li>
+    <li>The names along the top count the rooms on each person's sheet: <span class="ui">Test Housekeeper 2</span>. <span class="ui">Unassigned</span>, at the end, shows the rooms nobody has yet.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-06">
+    <img src="img/A6-06.png" alt="Room 210 given to Test Housekeeper, whose name at the top now counts 2 rooms">
+    <figcaption><b>Figure A6-06.</b> Two rooms given to one housekeeper.</figcaption>
+    <ol class="callouts">
+      <li>Who is cleaning room 210</li>
+      <li>Their sheet: two rooms</li>
+    </ol>
+  </figure>
+
+  <p>On a phone, a housekeeper taps their own name and sees only their rooms. <span class="ui">All rooms</span> shows every room again.</p>
+
+  <figure class="shot phone" id="fig-A6-07">
+    <img src="img/A6-07.png" alt="The housekeeper's own sheet on a phone: room 209 to clean, room 210 inspected">
+    <figcaption><b>Figure A6-07.</b> The housekeeper's own sheet, on a phone.</figcaption>
+    <ol class="callouts">
+      <li>Your own name: only your rooms</li>
+      <li>Clean, on a room waiting for cleaning</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>Rooms are given for the business day. When the night audit moves the date on (A7), the new day starts with every room unassigned.</li>
+    <li>Giving rooms out works with no signal too: it waits on the device and is sent when the line is back (A6.5).</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Everyone sees their own hotel's staff, names and roles only, so a hotel manager can give rooms out: <span class="d">D27-96</span>. The list on each card stays as it is: <span class="d">D17-40</span>.</p>
+  </div>
+
+  <!-- A6.4 -->
+  <h2 id="a6-4"><span class="n">A6.4</span>Clean, then inspected</h2>
+  <p>A room is cleaned, then inspected, in that order.</p>
+  <ol class="steps">
+    <li>When the room is clean, tap <span class="ui">Clean</span> on its card. The message <span class="msg">“Room 210 is clean.”</span> appears at once, and the room moves to the <span class="ui">Clean</span> group.</li>
+    <li>When the room has been checked, tap <span class="ui">Inspected</span>. The message says <span class="msg">“Room 210 is inspected.”</span>, and the room moves to <span class="ui">Inspected</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-04">
+    <img src="img/A6-04.png" alt="The message Room 210 is clean, and room 210 under Clean with Inspected ready">
+    <figcaption><b>Figure A6-04.</b> Clean: the room moves on at once.</figcaption>
+    <ol class="callouts">
+      <li>The message: “Room 210 is clean.”</li>
+      <li>Inspected is ready now</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A6-05">
+    <img src="img/A6-05.png" alt="The message Room 210 is inspected, and room 210 under Inspected">
+    <figcaption><b>Figure A6-05.</b> Inspected: ready for the next guest.</figcaption>
+    <ol class="callouts">
+      <li>The message: “Room 210 is inspected.”</li>
+      <li>The room, under Inspected</li>
+    </ol>
+  </figure>
+
+  <h3>A grey button says why</h3>
+  <p>A button that cannot be used yet is grey. Tap it anyway, and the card says why in one line, for example <span class="msg">“Room 210 needs cleaning first.”</span> or <span class="msg">“Room 202 is already inspected.”</span>. The line goes when the room moves on.</p>
+
+  <figure class="shot" id="fig-A6-03">
+    <img src="img/A6-03.png" alt="Inspected tapped on room 210 while it needs cleaning: the line Room 210 needs cleaning first">
+    <figcaption><b>Figure A6-03.</b> A grey button, tapped.</figcaption>
+    <ol class="callouts">
+      <li>Inspected, grey: the room is not clean yet</li>
+      <li>Why: “Room 210 needs cleaning first.”</li>
+    </ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The message at once, and the card moving straight away: <span class="d">D27-94</span>. A grey button that says why when tapped: <span class="d">D17-8</span>. The server refuses the same order: <span class="msg">“A dirty room is cleaned before it is inspected.”</span></p>
+  </div>
+
+  <!-- A6.5 -->
+  <h2 id="a6-5"><span class="n">A6.5</span>With no signal</h2>
+  <p>The board is made for a phone on a stairwell. With no signal, carry on: each tap is kept on the phone and sent by itself when the connection is back.</p>
+  <ol class="steps">
+    <li>The pill at the top says <span class="ui">Offline</span>.</li>
+    <li>Tap <span class="ui">Clean</span> as usual. The message says <span class="msg">“Saved on this phone - Housekeeping is held and will be sent when the connection is back.”</span></li>
+    <li>Under the title: <span class="msg">“1 change waiting to sync”</span>. The bar at the top of the page says the same (A0.8).</li>
+    <li>The room's card turns yellow and says <span class="msg">“Queued: mark clean”</span>. The next button, <span class="ui">Inspected</span>, can be tapped too; it waits the same way.</li>
+    <li>When the signal is back, the held taps are sent by themselves, and the lines go away.</li>
+  </ol>
+
+  <figure class="shot phone" id="fig-A6-08">
+    <img src="img/A6-08.png" alt="The board on a phone with no signal: Offline, 1 change waiting to sync, and Saved on this phone">
+    <figcaption><b>Figure A6-08.</b> No signal: the tap is kept on the phone.</figcaption>
+    <ol class="callouts">
+      <li>Offline</li>
+      <li>“1 change waiting to sync”</li>
+      <li>“Saved on this phone”</li>
+    </ol>
+  </figure>
+
+  <figure class="shot phone" id="fig-A6-09">
+    <img src="img/A6-09.png" alt="Room 209's card with Queued: mark clean">
+    <figcaption><b>Figure A6-09.</b> The held tap, on the room's card.</figcaption>
+    <ol class="callouts"><li>“Queued: mark clean”</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>What waits on the phone: Clean and Inspected, giving rooms out, and a repair (A6.6). Taking a room out of service, putting it back, and a repair's cost need the connection.</li>
+      <li>The held taps stay on the phone even if it is locked or the page is reloaded. A private window cannot keep them: the bar says so (A0.8).</li>
+      <li>A grey button on a held room says so: <span class="msg">“Room 209 is already marked clean on this phone, waiting to sync.”</span></li>
+    </ul>
+  </div>
+
+  <!-- A6.6 -->
+  <h2 id="a6-6"><span class="n">A6.6</span>Something broken: Report a repair</h2>
+  <p>A dripping tap, a fused bulb, a broken chair. Most repairs do not stop a room being sold, so reporting one does not take the room out unless you say so.</p>
+  <ol class="steps">
+    <li>On the room's card, tap <span class="ui">Repair</span>. <span class="ui">Report a repair · Room 209</span> opens.</li>
+    <li>Type <span class="ui">What needs fixing</span>, in a few words.</li>
+    <li>If it is a tagged piece of equipment, choose it under <span class="ui">Equipment</span>; the things in this room are listed first. Otherwise leave <span class="ui">Not a piece of equipment</span>.</li>
+    <li>Choose the <span class="ui">Kind</span> (maintenance, housekeeping, electrical, plumbing, furniture, it, other) and the <span class="ui">Priority</span> (Urgent, High, Normal, Low). Add <span class="ui">Anything else</span> if it helps.</li>
+    <li>Tap <span class="ui">Raise it</span>. The message says <span class="msg">“Repair raised”</span>, and it is on <span class="ui">Work orders</span> (A6.8).</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-10">
+    <img src="img/A6-10.png" alt="Report a repair for room 209: What needs fixing, Equipment, Kind and Priority">
+    <figcaption><b>Figure A6-10.</b> Report a repair, from the room.</figcaption>
+    <ol class="callouts">
+      <li>What needs fixing</li>
+      <li>Equipment: a tagged item, or not a piece of equipment</li>
+      <li>Kind</li>
+      <li>Priority</li>
+    </ol>
+  </figure>
+
+  <h3>When the room must come out too</h3>
+  <ol class="steps">
+    <li>Tick <span class="ui">Take room 209 out of service too</span>.</li>
+    <li>Choose <span class="ui">Why is it coming out?</span>, the <span class="ui">From</span> date (today to start) and, if known, <span class="ui">Until</span>. Leave Until empty if nobody knows.</li>
+    <li>Tap <span class="ui">Raise it</span>. The message says the repair is raised and the room is out: <span class="msg">“Room 209 is out of service, no return date set.”</span> On Work orders the repair says <span class="msg">“Room is out”</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-11">
+    <img src="img/A6-11.png" alt="Take room 209 out of service too, ticked: Why is it coming out, From, Until, Raise it, Out of service without a repair">
+    <figcaption><b>Figure A6-11.</b> Taking the room out too.</figcaption>
+    <ol class="callouts">
+      <li>Take room 209 out of service too</li>
+      <li>Why it is coming out, from when, until when</li>
+      <li>Raise it</li>
+      <li>Out of service without a repair (A6.7)</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A room with a guest in it cannot be taken out: the window says <span class="msg">“Somebody is in room 209, so it cannot be taken out of service now.”</span> Report the repair; take the room out after the guest leaves.</li>
+      <li>A piece of equipment chosen here shows as <b>Under repair</b> until its last open repair is closed. Only a tagged item can be chosen; one waiting in the approvals inbox is listed, but cannot be.</li>
+      <li>With no signal, the repair waits on the phone (<span class="msg">“Saved on this phone”</span>), but taking the room out does not: the message says to do it when you are back online.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Repair reports a repair for the room, and taking the room out is a second choice inside it, because a dripping tap does not cost a night's sale: <span class="d">D17-8</span>. Opening a repair on an item makes it Under repair, closing it makes it In use: <span class="d">D17-7</span>.</p>
+  </div>
+
+  <!-- A6.7 -->
+  <h2 id="a6-7"><span class="n">A6.7</span>A room out of service, and back</h2>
+  <p>A room that cannot be sold is taken out for a period: a refurbishment, a broken shower, a room kept for house use. A room out of service is not offered for sale anywhere.</p>
+
+  <h3>To take a room out with no repair</h3>
+  <ol class="steps">
+    <li>On the room's card, tap <span class="ui">Repair</span>, then <span class="ui">Out of service without a repair</span> at the foot of the window.</li>
+    <li>Choose <span class="ui">Why is it coming out?</span>:
+      <ul>
+        <li>Out of order - something is broken</li>
+        <li>Out of service - held back deliberately</li>
+        <li>Refurbishment</li>
+        <li>NC - not for sale (house use: staff, storage, an office)</li>
+        <li>Owner occupied</li>
+      </ul></li>
+    <li>Set <span class="ui">From</span>, and <span class="ui">Until</span> if it is known. The grey pill says the period, or <span class="msg">“No end date”</span>.</li>
+    <li>Write in <span class="ui">Note</span> what is actually wrong.</li>
+    <li>Tap <span class="ui">Take out of service</span>. The message says <span class="msg">“Room 209 is out”</span>, with <span class="msg">“No return date set.”</span> or the date it is back on sale.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-12">
+    <img src="img/A6-12.png" alt="Room 209, Out of service and for how long: Refurbishment, From, Until, Note, Take out of service">
+    <figcaption><b>Figure A6-12.</b> Out of service without a repair.</figcaption>
+    <ol class="callouts">
+      <li>Why it is coming out</li>
+      <li>From</li>
+      <li>Until: leave empty if unknown</li>
+      <li>Note: what is actually wrong</li>
+      <li>Take out of service</li>
+    </ol>
+  </figure>
+
+  <h3>To put a room back</h3>
+  <ol class="steps">
+    <li>Find the room under <span class="ui">Out of service</span> (or tap that count at the top) and tap <span class="ui">Put back</span>.</li>
+    <li>Under <span class="ui">ALREADY OUT</span>, each period the room is out is listed with its dates. Tap <span class="ui">Put back</span> beside the one that is over.</li>
+    <li>The message says <span class="msg">“Room 308 is back”</span>. The room returns under <span class="ui">Needs cleaning</span>, so somebody looks at it before a guest sleeps in it.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-13">
+    <img src="img/A6-13.png" alt="The Out of service group with room 308 and its Put back button">
+    <figcaption><b>Figure A6-13.</b> A room out of service.</figcaption>
+    <ol class="callouts">
+      <li>Out of service</li>
+      <li>Put back</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A6-14">
+    <img src="img/A6-14.png" alt="Room 308: Already out, two periods each with Put back, and the form for another period">
+    <figcaption><b>Figure A6-14.</b> Put back: what is out, and for how long.</figcaption>
+    <ol class="callouts">
+      <li>ALREADY OUT: each period, with its dates</li>
+      <li>Put back, for that period</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A room with a guest in it cannot be taken out: <span class="msg">“Somebody is in this room. Move them out before taking it off sale.”</span></li>
+      <li>Closing the repair that took a room out does not put the room back. Put it back on the room itself, so somebody decides.</li>
+      <li>Taking a room out and putting it back need the connection.</li>
+      <li>A hotel can choose that a room back from a block returns as it was before, not as Needs cleaning: Settings, <span class="ui">Front desk rules</span>, <span class="ui">Housekeeping</span>, <span class="ui">A room back from a block is sent for cleaning</span> (on to start).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Out of service is a period with dates, not a switch: a room can be out from Thursday for the plumber, and the hotel can still say what was for sale last Tuesday. Until is empty unless somebody knows it, so the room never comes back on sale on a day nobody chose. The housekeeping switches in Front desk rules: <span class="d">D27-260</span>.</p>
+  </div>
+
+  <!-- A6.8 -->
+  <h2 id="a6-8"><span class="n">A6.8</span>Work orders</h2>
+  <p><span class="ui">Work orders</span> is the list of what needs fixing: <span class="msg">“What needs fixing. Most of it does not take a room out of service.”</span> <span class="ui">Open</span> lists what is still to fix, most urgent first and the oldest first within that; <span class="ui">Closed</span> keeps what was done.</p>
+
+  <figure class="shot" id="fig-A6-15">
+    <img src="img/A6-15.png" alt="Work orders: Raise one, Open and Closed, a repair with its line, Costs, Start and Close">
+    <figcaption><b>Figure A6-15.</b> Work orders: what needs fixing.</figcaption>
+    <ol class="callouts">
+      <li>Raise one</li>
+      <li>Open and Closed</li>
+      <li>What needs fixing, and its priority</li>
+      <li>The room, the kind, who raised it and when, how long it has been open, who has it</li>
+      <li>Start</li>
+      <li>Close</li>
+      <li>Costs</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>A repair that is not about a room (a lift, the lobby) shows a dash where the room would be.</li>
+    <li>The days open stand out once a repair has been open a week.</li>
+    <li><span class="msg">“Room is out”</span> marks the few repairs that took their room out of service.</li>
+    <li><span class="ui">Cost</span> is shown only to those who may see money (below). No cost recorded is a dash, never ₹0.</li>
+  </ul>
+
+  <h3>To raise one from Work orders</h3>
+  <p><span class="ui">Raise one</span> opens the same form as the room's Repair button (A6.6), called <span class="ui">Raise a work order</span>, with a <span class="ui">Room</span> box: <span class="msg">“Leave empty for anything that is not a room - a lift, the lobby.”</span> <span class="ui">Raise it</span> stays grey until What needs fixing is typed.</p>
+
+  <figure class="shot" id="fig-A6-16">
+    <img src="img/A6-16.png" alt="Raise a work order: What needs fixing, Room, Equipment, Kind, Priority">
+    <figcaption><b>Figure A6-16.</b> Raise a work order.</figcaption>
+    <ol class="callouts">
+      <li>Room: empty for anything that is not a room</li>
+      <li>Equipment</li>
+    </ol>
+  </figure>
+
+  <h3>To start, and to close</h3>
+  <ol class="steps">
+    <li>When somebody begins the work, tap <span class="ui">Start</span>. The repair says <span class="msg">“Being fixed”</span>. <span class="ui">Put back</span> makes it wait again.</li>
+    <li>When the work is finished, tap <span class="ui">Close</span>.</li>
+    <li>Write <span class="ui">What was done</span>: <span class="msg">“The line somebody reads the next time this breaks.”</span></li>
+    <li>Tap <span class="ui">Fixed</span>; or <span class="ui">Not needed</span> if it needed no fixing after all. Both need What was done.</li>
+    <li>It moves to <span class="ui">Closed</span>, marked <span class="msg">“Fixed”</span> or <span class="msg">“Not needed”</span>, with who closed it and when, and what was done.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-17">
+    <img src="img/A6-17.png" alt="The repair after Start: Being fixed, and Put back in place of Start">
+    <figcaption><b>Figure A6-17.</b> Start: being fixed.</figcaption>
+    <ol class="callouts">
+      <li>Being fixed</li>
+      <li>Put back: it waits again</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A6-19">
+    <img src="img/A6-19.png" alt="Closing the repair: What was done, Not needed, Fixed">
+    <figcaption><b>Figure A6-19.</b> Close: what was done.</figcaption>
+    <ol class="callouts">
+      <li>What was done</li>
+      <li>Not needed</li>
+      <li>Fixed</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A6-20">
+    <img src="img/A6-20.png" alt="Closed: the repair marked Fixed, with who closed it and what was done">
+    <figcaption><b>Figure A6-20.</b> Closed: the record stays.</figcaption>
+    <ol class="callouts">
+      <li>Closed</li>
+      <li>Fixed</li>
+      <li>What was done</li>
+    </ol>
+  </figure>
+
+  <h3>What it cost</h3>
+  <p>A repair's cost is recorded with its proof. Tap <span class="ui">Costs</span> on the repair, open or closed.</p>
+  <ol class="steps">
+    <li>Under <span class="ui">Record a cost</span>, type the <span class="ui">Amount, in rupees</span>. The box is empty: the grey 1800 is only an example.</li>
+    <li>Under <span class="ui">Proof</span>, choose the photo or screenshot of the bill, the payment or the transaction. <span class="msg">“A cost is not recorded without it.”</span></li>
+    <li>Add a <span class="ui">Note</span> if it helps: who was paid, for what.</li>
+    <li>Tap <span class="ui">Record the cost</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-18">
+    <img src="img/A6-18.png" alt="Costs for the repair: Nothing recorded yet, Amount in rupees, Proof, Note, Record the cost">
+    <figcaption><b>Figure A6-18.</b> Costs: recorded with proof.</figcaption>
+    <ol class="callouts">
+      <li>What is recorded so far</li>
+      <li>Amount, in rupees</li>
+      <li>Proof: a photo of the bill, the payment or the transaction</li>
+      <li>Record the cost</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>A repair may have several costs, each with its own proof. One bill proves one cost.</li>
+    <li>Each cost has <span class="ui">See the proof</span>. A wrong one is cancelled with <span class="ui">Cancel this cost</span> and a reason: it stays on the record, out of the total. Nothing is deleted.</li>
+    <li>A bill that arrives after the repair is closed is recorded under <span class="ui">Closed</span>, on the same Costs button.</li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Start and Close</b> are for the owner, an Admin, the GM, the hotel manager, the Inventory Manager and housekeeping. Anybody else sees one sentence saying so.</li>
+      <li><b>Costs</b> are recorded by the owner, an Admin, the GM, the hotel manager or the Inventory Manager, with no approval but never without proof. The accountant sees them too. Everybody else sees the repair without the money.</li>
+      <li>A cost needs the connection: a photo cannot wait on the phone.</li>
+      <li>A repair already closed cannot be closed again: <span class="msg">“This repair is already closed.”</span></li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Who updates a repair: <span class="d">D22-34</span>. Who records a cost: <span class="d">D17-5</span>; no approval, but never without proof: <span class="d">D17-6</span>. Closing the last repair on a piece of equipment puts it back in use: <span class="d">D17-7</span>. Closed repairs are kept, because “how many times have we fixed this room” needs them.</p>
+  </div>
+
+  <!-- A6.9 -->
+  <h2 id="a6-9"><span class="n">A6.9</span>Guest requests</h2>
+  <p>A guest in house wants two more towels, or says the tap is broken. A request goes to the team it is for:</p>
+  <table>
+    <thead><tr><th style="width:24%">Team</th><th>Who receives it</th></tr></thead>
+    <tbody>
+      <tr><td>Housekeeping</td><td>Housekeeping</td></tr>
+      <tr><td>Something broken</td><td>Whoever updates a repair: the owner, an Admin, the GM, the hotel manager, the Inventory Manager, housekeeping. It is also a repair on Work orders.</td></tr>
+      <tr><td>Food and drink</td><td>The kitchen manager, the chef, the waiter</td></tr>
+    </tbody>
+  </table>
+  <p>The desk (the owner, an Admin, the GM, the hotel manager, reception) sees every team's requests and may take, close or cancel any. Anybody who sees the screen may raise one.</p>
+
+  <h3>To raise a request</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">New request</span>.</li>
+    <li>Choose the <span class="ui">Room</span>. Only guests in house now are listed.</li>
+    <li>Choose the team: <span class="ui">Housekeeping</span>, <span class="ui">Something broken</span> or <span class="ui">Food and drink</span>.</li>
+    <li>Type <span class="ui">What is wanted</span>, and <span class="ui">When</span> only if the guest said.</li>
+    <li>Tap <span class="ui">Raise it</span>. The message says <span class="msg">“Raised”</span>, with the team and the words.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-21">
+    <img src="img/A6-21.png" alt="New request: Room 203, the three teams, What is wanted, When, Raise it">
+    <figcaption><b>Figure A6-21.</b> New request.</figcaption>
+    <ol class="callouts">
+      <li>Room: a guest in house now</li>
+      <li>The team it is for</li>
+      <li>What is wanted</li>
+      <li>When, only if the guest said</li>
+      <li>Raise it</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A6-22">
+    <img src="img/A6-22.png" alt="The request waiting under Open: room, guest, raised by, waiting, nobody has taken it; Take it, Done, Cancel it">
+    <figcaption><b>Figure A6-22.</b> The request, waiting.</figcaption>
+    <ol class="callouts">
+      <li>The request: what, which team, and when</li>
+      <li>The room, the guest, who raised it, how long it has waited, who has it</li>
+      <li>Take it</li>
+      <li>Done</li>
+      <li>Cancel it</li>
+    </ol>
+  </figure>
+
+  <h3>To do a request</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">Guest requests</span>. If you receive more than one team, they are listed beside <span class="ui">All</span>; tap one to see only its requests.</li>
+    <li>Tap <span class="ui">Take it</span>. It says <span class="msg">“Being done”</span> and, for everyone to see, <span class="msg">“Test Housekeeper has it”</span>.</li>
+    <li>When it is done, tap <span class="ui">Done</span>. A Housekeeping or Food and drink request closes with that one tap. <b>Something broken</b> asks <span class="ui">What was done</span> first, like a repair.</li>
+    <li><span class="ui">Done, last 24 h</span> lists what was finished, with how long each took and who did it.</li>
+  </ol>
+  <p>You may also tap <span class="ui">Done</span> straight away, without Take it. <span class="ui">Cancel it</span> asks <span class="ui">Why it is cancelled</span>, then <span class="ui">Cancel the request</span>.</p>
+
+  <figure class="shot phone" id="fig-A6-23">
+    <img src="img/A6-23.png" alt="Guest requests on the housekeeper's phone: All, Housekeeping, Something broken, and Take it">
+    <figcaption><b>Figure A6-23.</b> The housekeeper's requests, on a phone.</figcaption>
+    <ol class="callouts">
+      <li>The teams you receive</li>
+      <li>Take it</li>
+    </ol>
+  </figure>
+
+  <figure class="shot phone" id="fig-A6-24">
+    <img src="img/A6-24.png" alt="The request taken: Being done, Test Housekeeper has it, and Done">
+    <figcaption><b>Figure A6-24.</b> Taken: being done.</figcaption>
+    <ol class="callouts">
+      <li>Being done</li>
+      <li>Who has it</li>
+      <li>Done</li>
+    </ol>
+  </figure>
+
+  <figure class="shot phone" id="fig-A6-25">
+    <img src="img/A6-25.png" alt="Done, last 24 h: the request done, took 0 min, done by Test Housekeeper">
+    <figcaption><b>Figure A6-25.</b> Done, in the last 24 hours.</figcaption>
+    <ol class="callouts">
+      <li>Done, last 24 h</li>
+      <li>How long it took, and who did it</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Somebody else has it:</b> Take it on a request already taken is refused, naming who: <span class="msg">“… has already taken it.”</span></li>
+      <li>Guests ask from their own page too, while they are checked in. Their requests arrive here saying <span class="msg">“from the guest's page”</span>, and the guest sees them as Open, Being done, Done or Declined.</li>
+      <li>The guest's name is shown only to those who may read guests' details: a housekeeper sees the room, not the name.</li>
+      <li>Food and drink carries no price. Anything to be paid for is still rung on the Till and charged to the room (A8).</li>
+      <li>A request needs the connection: it is not held on the phone.</li>
+      <li>While nobody has taken a request, the bell says so: <span class="msg">“1 guest request waiting”</span>.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A request is a work order that carries the stay; three kinds, one per team; the desk sees and handles any; Something broken is also on Work orders and asks what was done; no time targets, so nothing turns red: <span class="d">D27-181</span>.</p>
+  </div>
+
+  <!-- A6.10 -->
+  <h2 id="a6-10"><span class="n">A6.10</span>Wake-up calls</h2>
+  <p><span class="ui">Wake-up calls</span> is for the desk: <span class="msg">“Calls to make, on the hotel's clock. Due from fifteen minutes before.”</span></p>
+  <ol class="steps">
+    <li>Tap <span class="ui">Set a call</span>.</li>
+    <li>Choose the <span class="ui">Room</span> (guests in house now), the <span class="ui">Day</span> (today to start) and the <span class="ui">Time</span>.</li>
+    <li>Add a <span class="ui">Note</span> only if there is something to say on the call.</li>
+    <li>Tap <span class="ui">Set the call</span>. It is listed under <span class="ui">To make</span>.</li>
+    <li>From fifteen minutes before, it says <span class="msg">“Due”</span>, and the bell reminds the desk. Make the call, then tap <span class="ui">Done</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-26">
+    <img src="img/A6-26.png" alt="Set a wake-up call: Room, Day, Time, Note, Set the call">
+    <figcaption><b>Figure A6-26.</b> Set a wake-up call.</figcaption>
+    <ol class="callouts">
+      <li>Room</li>
+      <li>Day</li>
+      <li>Time, on the hotel's clock</li>
+      <li>Note</li>
+      <li>Set the call</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A6-27">
+    <img src="img/A6-27.png" alt="A call due: the time, Due, the room and guest, the note, Done and Cancel it">
+    <figcaption><b>Figure A6-27.</b> Due: call the room.</figcaption>
+    <ol class="callouts">
+      <li>Due</li>
+      <li>The note</li>
+      <li>Done: the call is made</li>
+      <li>Cancel it</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A6-28">
+    <img src="img/A6-28.png" alt="Done, last 24 h: calls marked Done, set by and called by">
+    <figcaption><b>Figure A6-28.</b> Called: done.</figcaption>
+    <ol class="callouts">
+      <li>Done, last 24 h</li>
+      <li>Who set it, and who called</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>A call stays Due until it is marked done: there is no “missed”.</li>
+    <li><span class="ui">Cancel it</span> asks <span class="ui">Why it is cancelled</span>, then <span class="ui">Cancel the call</span>. The reason is kept.</li>
+    <li>A guest can ask for a call from their own page. It shows <span class="msg">“Asked”</span> and <span class="msg">“asked from the guest's page”</span>, with <span class="ui">Confirm</span>; once confirmed it is a call like any other.</li>
+    <li>A time already past is refused: <span class="msg">“That time has passed.”</span></li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Set by the desk and asked for from the guest's page; the bell from fifteen minutes before until done, with no missed state; in reception's menu: <span class="d">D27-241</span>.</p>
+  </div>
+
+  <!-- A6.11 -->
+  <h2 id="a6-11"><span class="n">A6.11</span>Lost property</h2>
+  <p><span class="ui">Lost property</span> is <span class="msg">“What was found, kept until it goes back to its owner or is disposed of.”</span> The desk and housekeeping log what they find; only the desk marks an item returned or disposed of.</p>
+
+  <h3>To log an item</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">Log an item</span>.</li>
+    <li>Type <span class="ui">What it is</span> and <span class="ui">Where it was found</span>.</li>
+    <li>Type the <span class="ui">Room</span> if it was in one, and <span class="ui">Where it is kept</span> now.</li>
+    <li>Tap <span class="ui">Log it</span>. It is listed under <span class="ui">Kept</span>, with how many days it has been kept.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-29">
+    <img src="img/A6-29.png" alt="Log an item: What it is, Where it was found, Room, Where it is kept, Log it">
+    <figcaption><b>Figure A6-29.</b> Log an item.</figcaption>
+    <ol class="callouts">
+      <li>What it is</li>
+      <li>Where it was found</li>
+      <li>Room, if it was in one</li>
+      <li>Where it is kept</li>
+      <li>Log it</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A6-30">
+    <img src="img/A6-30.png" alt="The item under Kept: found in room 208, days kept, Kept: Front desk cupboard, Returned and Disposed">
+    <figcaption><b>Figure A6-30.</b> Kept: found, and how long.</figcaption>
+    <ol class="callouts">
+      <li>The item</li>
+      <li>Where, when and by whom it was found, and days kept</li>
+      <li>Where it is kept</li>
+      <li>Returned</li>
+      <li>Disposed</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A6-31">
+    <img src="img/A6-31.png" alt="Lost property for housekeeping: Log an item, and the item without Returned or Disposed">
+    <figcaption><b>Figure A6-31.</b> Housekeeping logs and sees; the desk returns.</figcaption>
+    <ol class="callouts">
+      <li>Log an item</li>
+      <li>The item: no Returned or Disposed for housekeeping</li>
+    </ol>
+  </figure>
+
+  <h3>When it goes back to its owner (the desk)</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">Returned</span> on the item.</li>
+    <li>Type <span class="ui">Who it went to</span>.</li>
+    <li>Tap <span class="ui">Mark returned</span>. It moves to <span class="ui">Returned or disposed</span>, saying to whom, by whom, and when.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-32">
+    <img src="img/A6-32.png" alt="Returned: Who it went to, and Mark returned">
+    <figcaption><b>Figure A6-32.</b> Returned: to whom.</figcaption>
+    <ol class="callouts">
+      <li>Who it went to</li>
+      <li>Mark returned</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A6-33">
+    <img src="img/A6-33.png" alt="Returned or disposed: the umbrella marked Returned, To A6 Test Kumar, by Test GM, with the date">
+    <figcaption><b>Figure A6-33.</b> Returned or disposed.</figcaption>
+    <ol class="callouts">
+      <li>Returned or disposed</li>
+      <li>Returned</li>
+      <li>To whom, by whom, when</li>
+    </ol>
+  </figure>
+
+  <h3>When nobody claims it (the desk)</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">Disposed</span> on the item.</li>
+    <li>Type <span class="ui">Why it was disposed of</span>.</li>
+    <li>Tap <span class="ui">Mark disposed</span>. It moves to <span class="ui">Returned or disposed</span>, marked <span class="msg">“Disposed of”</span>, with the reason, who and when.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A6-34">
+    <img src="img/A6-34.png" alt="Disposed: Why it was disposed of, and Mark disposed">
+    <figcaption><b>Figure A6-34.</b> Disposed: why.</figcaption>
+    <ol class="callouts">
+      <li>Why it was disposed of</li>
+      <li>Mark disposed</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Nothing is disposed of by itself. The days kept are shown so the desk can decide.</li>
+      <li>A room number must be one of this hotel's rooms: <span class="msg">“There is no room 999 here.”</span></li>
+      <li>There is no photo of the item for now: describe it well in What it is.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The desk and housekeeping log; only the desk returns (to whom) or disposes (with a reason); days kept shown; no automatic disposal; no photo for now; in reception's and housekeeping's menus: <span class="d">D27-241</span>.</p>
+  </div>
+
+  <!-- A6.12 -->
+  <h2 id="a6-12"><span class="n">A6.12</span>Your day in short</h2>
+  <table>
+    <thead><tr><th style="width:28%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>The start of the shift</td><td>Housekeeping. A supervisor gives each room to somebody on its card.</td><td>A6.3</td></tr>
+      <tr><td>Your rooms</td><td>Tap your own name at the top.</td><td>A6.3</td></tr>
+      <tr><td>A room is clean</td><td>Clean.</td><td>A6.4</td></tr>
+      <tr><td>A room is checked</td><td>Inspected.</td><td>A6.4</td></tr>
+      <tr><td>No signal</td><td>Carry on: the taps wait on the phone.</td><td>A6.5</td></tr>
+      <tr><td>Something broken</td><td>Repair, on the room's card.</td><td>A6.6</td></tr>
+      <tr><td>A room cannot be sold</td><td>Take it out of service with a reason; Put back when it is ready.</td><td>A6.7</td></tr>
+      <tr><td>A repair begins, and ends</td><td>Work orders: Start, then Close with what was done. Managers record the cost with its proof.</td><td>A6.8</td></tr>
+      <tr><td>A guest asks for something</td><td>Guest requests: Take it, then Done.</td><td>A6.9</td></tr>
+      <tr><td>A guest wants a wake-up call</td><td>Wake-up calls (the desk): Set a call; Done once it is made.</td><td>A6.10</td></tr>
+      <tr><td>Something left behind</td><td>Lost property: Log an item. The desk returns it or disposes of it.</td><td>A6.11</td></tr>
+    </tbody>
+  </table>
+</section>
