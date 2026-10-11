@@ -1,61 +1,77 @@
-# Laptop handover: the move from the PC to the laptop (12 October 2026)
+# Laptop handover: back to the original desktop, `D:\fidato pms` (12 October 2026)
 
-**If you are the new Claude chat on the owner's laptop, start here.** The owner
-moved from the PC (`C:\Users\rozar.ROZARIO\pms`) to a laptop on 12 October.
-They should not have to explain any of this again. Read in this order:
+**If you are the Claude chat on the owner's original desktop, start here.**
 
-1. `CLAUDE.md`: the standing rules. They still apply in full.
-2. **This file**: what moved, how the laptop is set up, what is done, what is
-   next, and the questions waiting for the owner.
+This is the machine where the PMS was first pulled and developed, in
+`D:\fidato pms`. It was shipped away. From 9 to 12 October the work went on on a
+borrowed PC (`C:\Users\rozar.ROZARIO\pms`). Now this machine is back, and
+development continues **here**, the PMS and the tutorial videos both.
+
+**Do not clone.** This machine already has its checkout. § 3 brings it up to
+date. The owner should not have to explain any of this again.
+
+Read in this order:
+1. `CLAUDE.md`: the standing rules. They apply in full.
+2. **This file.**
 3. `HANDOVER.md` § 2: the "12 October" block and the "10 October, 4 pm" block.
 4. `MEMORY.md` 395 to 406, then the top three entries of `CHANGELOG.md`.
-5. `docs/briefs/decisions-2026-09-27.md`, decisions D27-293 to D27-302.
+5. `docs/briefs/decisions-2026-09-27.md`, decisions D27-293 to D27-303.
+6. For the videos: `C:\videos\RESUME.md` (branch `videos`), after § 3's step D10.
 
-The owner, 12 October: *"Create the handover file, mention it as the laptop
-thing, and then continue."*
-
----
-
-## 1 · The one rule that changed for this move (D27-302)
-
-The 19 September rule (CLAUDE.md: **nothing leaves this machine, no push, no
-deploy**) was lifted **once** on 12 October, in the owner's own words, so this
-handover could reach the laptop. Two branches were pushed: `cp6` and
-`manual-rest`. That push also ran the gates Action (`ci.yml`) on GitHub; the
-gates do not deploy anything, because `deploy.yml` only runs when somebody
-presses its button.
-
-**From here the rule is back.** Commit on the laptop, run the gates there, and
-do not push or deploy unless the owner says so again. Before the first push from
-the laptop, ask the owner whether the laptop's commits should go back to GitHub
-the same way. Recommendation: yes, `cp6` only, after a green local gate run.
+The owner, 12 October: *"The desktop I'm going to send this data to is the one
+where you pulled the PMS and started the development. So it's not going to
+clone. That is the initial system; it was being shipped, and now it has come
+back to me. We need to continue development here. Include the development of
+the videos too."* They named this file "the laptop thing", so it keeps the
+name `LAPTOP-HANDOVER.md`.
 
 ---
 
-## 2 · What is on GitHub, and what is not
+## 1 · What changed in the rules for this move
+
+- **D27-302:** the 19 September rule (CLAUDE.md: **nothing leaves this
+  machine, no push, no deploy**) was lifted **once** on 12 October, in the
+  owner's own words, so this handover could reach the desktop. Branches pushed:
+  - `cp6`;
+  - `manual-rest`;
+  - `videos`.
+
+  The `cp6` and `manual-rest` pushes also ran the gates Action (`ci.yml`). It
+  deploys nothing; `deploy.yml` only runs when somebody presses its button.
+  `videos` has no workflow files, so nothing ran for it.
+- **D27-303:** the video series' **code and scripts** are now on GitHub, on
+  their own branch `videos`, apart from the PMS code. Its large generated files
+  (voices, pictures, recordings, finished videos, the Piper voice) travel by
+  hand in a zip. The folder stays at **`C:\videos`**, as on the PC. This
+  replaces D27-294's "never committed" for the code only.
+- **From here the 19 September rule is back.** Commit on this machine and run
+  the gates here. Do not push or deploy unless the owner says so again. Before
+  the first push from here, ask the owner whether this machine's commits should
+  go back to GitHub the same way. Recommendation: yes, `cp6` and `videos`,
+  after a green local gate run.
+
+---
+
+## 2 · What is on GitHub, and what comes by hand
 
 ### On GitHub (github.com/hotelsfidato-ai/pms, private)
 
 | Branch | What it holds |
 |---|---|
-| `cp6` | **All the work**, including this file. Work here. |
-| `manual-rest` | The book's other chapters, **unreviewed drafts** (319d0fa6): Part A and B chapter texts, picture plans, 246 pictures. Branched from cp6's A8 commit. Do not merge it until it has been reviewed (§ 5, step 7). |
+| `cp6` | **All the PMS work**, including this file. Work here. |
+| `manual-rest` | The book's other chapters as **unreviewed drafts** (319d0fa6): Part A and B chapter texts, picture plans, 246 pictures. Branched from cp6's A8 commit. Merge only after review (§ 5, step 7). |
+| `videos` | **The video series' code and scripts** (6c8ee47): narration scripts, the Remotion compositions, the tools, the day check, `RESUME.md`. No PMS code. Belongs in `C:\videos`. |
 | `main` | **What is live**: e2fe4cab, the 10 October KOT release. Do not touch it. |
 
-Not pushed, and not needed:
-- `release/all-9oct` (fe07c3fd) and `release/kot-10oct` (e2fe4cab) are both
-  already inside cp6 and main.
-- `test-hotels-core` and `test-hotels-web` were merged into cp6 at 42ed4247.
+### By hand: the owner copies these from the PC to a USB stick or their own drive
 
-### Not on GitHub: the owner carries these by hand (USB stick or their own drive)
+| What | On the PC | On the desktop |
+|---|---|---|
+| `pms-local-carry.zip` (5 MB) | `C:\Users\rozar.ROZARIO\pms\.local\laptop\` | unzip into `D:\fidato pms` |
+| `videos-generated.zip` (663 MB) | the same folder | unzip into `C:\` (it holds `videos\…`) |
+| `api\.env` and `.env` from the PC | `C:\Users\rozar.ROZARIO\pms\` | **only if** the desktop's own are missing settings (step D5) |
 
-| What | On the PC | On the laptop | Why it is not on GitHub |
-|---|---|---|---|
-| `api/.env` | `pms\api\.env` | the same place | Secrets. **Never commit, print or echo it.** |
-| `.env` (the website's Firebase settings) | `pms\.env` | the same place | Needed only to build a release website. |
-| The server key | `C:\Users\rozar.ROZARIO\.ssh\fidato_server` (and `.pub`) | see step L12 | A key that opens the live server. |
-| `pms-local-carry.zip` (9 MB) | `pms\.local\laptop\` | unzip into the project folder | Local-only files (contents below). |
-| `videos-folder.zip` (about 1 GB) | `pms\.local\laptop\` | unzip to `C:\videos` | The video series is never committed (the owner's choice, D27-294). |
+Never put any `.env` on GitHub, and never open, print or echo `api\.env`.
 
 What `pms-local-carry.zip` holds (it unzips to `.local\…`):
 - `.local\virtual-printer\`: the virtual KOT printers ("Virtual Kitchen" and
@@ -65,95 +81,115 @@ What `pms-local-carry.zip` holds (it unzips to `.local\…`):
 - `.local\release-9oct\`:
   - the staff PDFs: `KOT-printer-quick-setup.pdf` (the one-click way) and
     `Amrapali-KOT-printer-setup.pdf`;
-  - their sources (`kot-*.html`, `build-kot-*.cjs`);
+  - their sources;
   - the release and tracker pages;
   - `fill-firebase-env.mjs`, the helper that fills in `.env`'s Firebase
     settings.
-
-  The file that held `.env`'s old values (`env-before-firebase`) was left out
-  on purpose.
-- `.local\backups\`: two dumps of the LOCAL demo database, practice data only:
+- `.local\backups\`: two dumps of the PC's LOCAL demo database, practice data
+  only:
   - `fidato-before-day-check-10oct.dump`: the demo ready for the day check;
   - `fidato-before-fresh-start-10oct.dump`: the demo with all its practice
     history.
-- `.local\videos-d27-301-findings.md`: the chapter helpers' findings, also
-  written into § 6 below.
+- `.local\videos-d27-301-findings.md`: the chapter helpers' findings (§ 6).
 
-These are **not carried, because the laptop rebuilds them**:
-- `.local\pg` and `.local\pg16`: the Postgres programs and the PC's own
-  database;
-- `node_modules`;
-- `.local\gates` logs, browser profiles and caches.
+What `videos-generated.zip` holds:
+- `videos\public\`: the voices, the arrow pictures, A8's screen recordings;
+- `videos\out\`: the finished A8 videos;
+- `videos\tools\piper\`: the Piper voice program and its model;
+- `videos\day\`: the day check's pictures, log and state.
 
 ---
 
-## 3 · Setting up the laptop, step by step
+## 3 · Bringing the desktop up to date, step by step
 
-Each step says where it runs. "Claude" means the new Claude chat on the laptop,
-which can do most of this itself.
+Each step says where it runs. "Claude" means the Claude chat on the desktop.
 
-**On the PC, before leaving it**
-- P1. Done by Claude on 12 Oct: committed and pushed `cp6` and `manual-rest`;
-  made the two zips in `pms\.local\laptop\`.
-- P2. **The owner** copies these to a USB stick or their own drive:
-  - the two zips;
-  - `pms\api\.env` and `pms\.env`;
-  - optionally the server key (see L12).
+**On the PC, before it goes**
+- P1. **Done by Claude on 12 Oct:**
+  - committed and pushed `cp6`, `manual-rest` and `videos`;
+  - made the two zips in `C:\Users\rozar.ROZARIO\pms\.local\laptop\`.
+- P2. **The owner** copies the two zips to a USB stick or their own drive.
+  Copy the PC's `api\.env` and `.env` too, in case the desktop's are older.
 
-**On the laptop**
-- L1. **The owner or Claude** installs:
-  - Git for Windows;
-  - Node 24 (the PC runs v24.21.0);
-  - Chrome, needed for the book's pictures and the videos;
-  - the Claude desktop app.
-- L2. **Claude, in Git Bash.** Clone the repository, pick the branch and set
-  who commits:
+**On the desktop**
+- D1. **Claude: Postgres first.** It does not start by itself after a reboot.
+  START-HERE § 1 runs `pg_ctl` in `D:\fidato pms\.local\pg`. From PowerShell,
+  start it through WMI (MEMORY 325) and check it with `pg_isready` on port
+  55432.
+- D2. **Claude, in Git Bash, in `D:\fidato pms`: first find any work that was
+  never pushed. Do not lose it.**
+  1. Run these:
+     ```bash
+     git status
+     git stash list
+     git worktree list
+     git fetch origin
+     git log --oneline origin/cp6..cp6
+     ```
+  2. If `git status` or any worktree under `.claude\worktrees\` has
+     uncommitted work, or if `origin/cp6..cp6` lists commits (work done here
+     after 5 Oct and never pushed), **stop and show the owner**. Recommend
+     committing it on a side branch and merging it into the new cp6. Never
+     reset, delete or overwrite it.
+  3. Only when everything is clean and has no commits of its own:
+     ```bash
+     git checkout cp6
+     git merge --ff-only origin/cp6
+     git fetch origin manual-rest:manual-rest
+     ```
+- D3. **Claude:** run `npm ci` in `D:\fidato pms` and in `api\`. Many
+  packages changed after 5 Oct.
+- D4. **Claude:** check that the Git identity is Jaison Rozario
+  <rozariojaison@gmail.com>. To check, run:
   ```bash
-  git clone https://github.com/hotelsfidato-ai/pms.git
-  git checkout cp6
-  git fetch origin manual-rest:manual-rest
-  git config user.name "Jaison Rozario"
-  git config user.email rozariojaison@gmail.com
+  git config user.name
+  git config user.email
   ```
-  The two `git config` lines set who commits, for this repository only.
-- L3. **Claude:** `npm ci` in the project folder and in `api\`.
-- L4. **The owner** puts `api\.env` and `.env` in place. Claude must not open,
-  print or echo `api\.env`.
-- L5. **The owner** unzips `pms-local-carry.zip` into the project folder, so
-  that `.local\virtual-printer\` and the rest land there.
-- L6. **Claude** sets up Postgres the way the PC had it:
-  - Postgres 17 portable (the EnterpriseDB zip of the binaries) goes in
-    `.local\pg\pgsql`.
-  - `initdb` makes a cluster in `.local\pg\data`: user `postgres`, password
-    `pw`, UTF8, locale C.
-  - In `postgresql.conf`, set `port = 55432` and `synchronous_commit = off`
-    (test machine only).
-  - Do the same for PostgreSQL 16 in `.local\pg16` on port 55433; the pg16
-    gate needs it.
-  - If Postgres will not start, install the Microsoft VC++ runtime.
-  - Never put any of it under `%TEMP%` (START-HERE § 1).
-  - Scripts run by hand need
-    `PGBIN=<project>/.local/pg/pgsql/bin`. The gates set it themselves.
-- L7. **Claude:** the database `fidato`. Either option works:
-  - (a) The fresh recipe in `docs/briefs/README.md`: `db/migrate.sh`, the
-    three staff rows, `npm run demo`, `dev-identities.sql`, `dev-testers.sql`.
-    Never run `suite.sql` into fidato (MEMORY 388).
-  - (b) Restore the demo as the PC had it:
-    1. Run `db/migrate.sh --with-dev-identities` once, which makes the
-       cluster's roles.
-    2. Drop and recreate `fidato`.
-    3. `pg_restore -d fidato .local/backups/fidato-before-day-check-10oct.dump`.
-    4. `db/migrate.sh` again.
+- D5. **Owner and Claude: the settings files.**
+  - The desktop has its own `api\.env`. Claude compares **only the names** of
+    its settings with `api\.env.example`; it never shows any values. The owner
+    adds any missing setting from the PC's copy.
+  - The same goes for `.env`'s `VITE_FIREBASE_*` settings, which are needed
+    only to build a release website. `fill-firebase-env.mjs` in the carry zip
+    fills them in.
+- D6. **The owner** unzips `pms-local-carry.zip` into `D:\fidato pms`.
+- D7. **Claude: the database `fidato`.** This machine's database is still at
+  the migration it had when it left, before the work since 5 Oct. First save
+  it, then pick one of two options.
+  - Save it first:
+    `pg_dump -Fc fidato > .local/backups/fidato-desktop-before-12oct.dump`.
+  - Then (a) bring it up to 212:
+    1. `db/migrate.sh --with-dev-identities` (it never drops anything).
+    2. `db/dev/dev-testers.sql`.
+  - Or (b), **recommended, because the videos and the day check expect the
+    PC's demo**: restore the PC's demo.
+    1. Drop and recreate `fidato`.
+    2. `pg_restore -d fidato .local/backups/fidato-before-day-check-10oct.dump`.
+    3. `db/migrate.sh` again.
 
-  Use (b) to carry on with the day check (§ 5, step 5).
-- L8. **Claude** starts everything:
-  - the servers, from `.claude/launch.json`: in the Claude app, `preview_start`
-    `api` and then `web`;
-  - the virtual printers.
-  - Sign in with the Owner, General Manager or Reception buttons under
-    "Development only".
-- L9. **Claude, in Git Bash:** `bash scripts/gates.sh laptop-first`. On the PC
-  the last full run was all green on e2fe4cab:
+  Never run `suite.sql` into fidato (MEMORY 388).
+- D8. **Claude:** PostgreSQL 16 for the pg16 gate goes in
+  `D:\fidato pms\.local\pg16` on port 55433. If it is not on this machine yet,
+  install it the way HANDOVER § 7 describes.
+- D9. **Claude:** start everything.
+  - The servers, from `.claude/launch.json`: in the Claude app,
+    `preview_start` `api` and then `web`.
+  - The virtual printers.
+  - Sign in with Owner, General Manager or Reception under "Development only".
+- D10. **The videos: owner and Claude.**
+  1. Clone the code (Git Bash):
+     ```bash
+     git clone -b videos --single-branch https://github.com/hotelsfidato-ai/pms.git /c/videos
+     ```
+  2. **The owner** unzips `videos-generated.zip` into `C:\`.
+  3. In `C:\videos`, run `npm ci`. The first render also fetches Remotion's
+     own Chrome, about 120 MB.
+  4. Read `C:\videos\RESUME.md`.
+  5. The tools find `D:/fidato pms` themselves (`PMS=` overrides). The
+     chapter drafts' pictures are on `manual-rest`, so point `PMS=` and `IMG=`
+     at a worktree of that branch.
+- D11. **Claude, in Git Bash:** `bash scripts/gates.sh desktop-back`. The
+  last full run on the PC was all green on e2fe4cab:
   - web 1,223;
   - api 2,615;
   - database 1,665 over 212 migrations;
@@ -161,54 +197,46 @@ which can do most of this itself.
   - PostgreSQL 16;
   - types.
 
-  The laptop should match. A difference is a finding, not noise.
-- L10. **The owner** unzips `videos-folder.zip` to `C:\videos`, then **Claude**
-  runs `npm ci` in `C:\videos` and reads `C:\videos\RESUME.md`. Piper (the
-  voice) is inside, in `tools\piper\`.
-- L11. **Claude:** the paths in the docs. They name `D:\fidato pms` (older) and
-  `C:\Users\rozar.ROZARIO\pms` (the PC); read them with the laptop's folder in
-  their place. `C:\videos\tools\marks.mjs` takes the book's folder from `PMS=`
-  and `IMG=`.
-- L12. **The owner:** getting into the live server (`opc@130.210.49.220`). The
-  PC's key `fidato_server` is the one in the server's `authorized_keys`.
-  Recommended: make a **new** key on the laptop
-  (`ssh-keygen -t rsa -b 4096 -f ~/.ssh/fidato_server_laptop`) and add its
-  `.pub` line to `authorized_keys`. That is a write on the live server, so it
-  needs the owner's yes. Either the owner does it from the PC while the PC
-  still has the key, or uses the Oracle Bastion way they used on 10 Oct.
-  Copying the PC's private key over by USB also works but is less safe.
-  Afterwards, delete the bastion `fidatorelease` and its 0.0.0.0/0 allowlist
-  (§ 7).
+  This machine should match. A difference is a finding, not noise.
+- D12. **Claude:** the live server, read-only. This machine has the original
+  key, `ssh-key-2026-09-01.key` in the owner's Downloads (HANDOVER § 7). It
+  should still be in opc's `authorized_keys`, next to the PC's `fidato_server`.
+  Test it read-only: `ssh -i <key> opc@130.210.49.220 "echo ok"`. If it is
+  refused, ask the owner. Getting in again goes through Oracle Bastion, as on
+  10 Oct.
+
+**The paths in the docs are right again.** They name `D:\fidato pms`. Notes
+dated 9 to 12 Oct name `C:\Users\rozar.ROZARIO\pms`, the PC; read those with
+`D:\fidato pms` in its place.
 
 ---
 
-## 4 · What is done (9 to 12 October), in short
+## 4 · What is done (9 to 12 October, on the PC), in short
 
 Everything below is on cp6, with its gates green, unless it says otherwise.
 
 | When | What | Where to read |
 |---|---|---|
-| 9 Oct | The project set up on the PC; POS-33 (Close unpaid → Clear); numbered add-ons (D27-289); custom add-ons (D27-291); the KOT section of Restaurant setup (D27-292). Migrations 207-211 | CHANGELOG 9 Oct |
+| 9 Oct | POS-33 (Close unpaid → Clear); numbered add-ons (D27-289); custom add-ons (D27-291); the KOT section of Restaurant setup (D27-292). Migrations 207-211 | CHANGELOG 9 Oct |
 | 10 Oct, 13:03 | **The launch went live** (D27-295): the server runs fe07c3fd (migrations up to 212) | HANDOVER § 2 |
 | 10 Oct | **Test hotels** (D27-296/297): one test hotel per real hotel inside live (the orange stripe, TEST · NOT VALID, Make / Reset / Re-copy, the Test switch on People, nothing leaves); migration 212 | CHANGELOG 10 Oct |
 | 10 Oct | Four replay-unsafe migrations guarded (MEMORY 403); the property reset fixed (MEMORY 404) | MEMORY |
-| 10 Oct | **One-click KOT computer setup** (D27-299): "Download the setup file" in Restaurant setup → KOT section. Sign-in returns to the page asked for. **Live** as a website-only release (e2fe4cab, index-DEVsbHgU.js); the server was not touched | `src/modules/pos/KOT-STATION-SETUP.md` |
-| 10 Oct, 16:35 | **Fresh start on live** (D27-298): AMR emptied of all guest activity (155 rows); 16 rooms vacant and clean; business date 10 Oct; the setup kept. The test hotel AMRT keeps its 7 practice orders | HANDOVER § 2 |
-| 10 Oct | **Video series, chapter A8 Restaurant, DONE**: 12 task videos plus the full chapter (14:29), every arrow found, in `C:\videos\out\a8\` | `C:\videos\RESUME.md` |
-| 10 Oct | The book: chapter A8 merged; the other chapters drafted (now on `manual-rest`) | § 5 |
-| 12 Oct | This handover; `cp6` and `manual-rest` pushed (D27-302) | this file |
+| 10 Oct | **One-click KOT computer setup** (D27-299): "Download the setup file" in Restaurant setup → KOT section. Sign-in returns to the page asked for. **Live** as a website-only release (e2fe4cab, index-DEVsbHgU.js) | `src/modules/pos/KOT-STATION-SETUP.md` |
+| 10 Oct, 16:35 | **Fresh start on live** (D27-298): AMR emptied of all guest activity; 16 rooms vacant and clean; business date 10 Oct; the setup kept. The test hotel AMRT keeps its 7 practice orders | HANDOVER § 2 |
+| 10 Oct | **Videos, chapter A8 Restaurant, DONE**: 12 task videos plus the full chapter (14:29), every arrow found | `C:\videos\RESUME.md` |
+| 10 Oct | The book: chapter A8 merged; the other chapters drafted (on `manual-rest`) | § 5 |
+| 12 Oct | This handover; `cp6`, `manual-rest` and `videos` pushed (D27-302/303) | this file |
 
 ---
 
 ## 5 · What is next, in order (recommended; ask the owner before changing the order)
 
-1. **Set the laptop up** (§ 3) and get a green gate run there.
+1. **Bring the desktop up to date** (§ 3) and get a green gate run here.
 2. **The owner's own steps** (§ 7).
 3. **Put the open questions to the owner** (§ 6). Ask them all, each with a
    recommendation, and wait for the answers. Nothing in § 6 is fixed yet.
 4. **Finish the video chapters (D27-301).** On 10 Oct, 15 helpers ran at once
-   and **the usage limit cut all of them off** (MEMORY 406). Where each chapter
-   stands in `C:\videos`:
+   and **the usage limit cut all of them off** (MEMORY 406).
 
    | Chapter | Script | Voice | Arrows | State |
    |---|---|---|---|---|
@@ -221,16 +249,16 @@ Everything below is on cp6, with its gates green, unless it says otherwise.
    | A0, A2, A4, A6, A9, A10, A11, A12, A15 | yes | yes | **no** | cut off: check each script against its pictures and the code, then arrows |
    | A1, A3, A5 | no | no | no | no pictures yet (A1 has its text) |
 
-   - **The engine** (rendering any chapter, not just A8) was half done:
-     - `src\` was changed to register any chapter's data. Its helper said A8's
-       lengths were unchanged.
-     - `tools\lib.mjs` and `tools\render-all.mjs` were being written when the
-       helper was cut off.
-     - Before rendering anything, re-render one A8 video and check that it
-       matches the old one to the frame.
+   - **The engine** (rendering any chapter, not just A8) was changed but not
+     proven.
+     - On 12 Oct `tsc` was clean and every tool parsed. Nothing has been
+       rendered with it yet.
+     - **First** re-render A8-06 and check that it matches the old one to the
+       frame.
+     - Then run `node tools/render-all.mjs`.
 
-   **Run at most 3 to 4 helpers at a time**, and fewer if the usage left is
-   low. A cut-off helper leaves half-written files and no report.
+   **Run at most 3 to 4 helpers at a time.** A cut-off helper leaves
+   half-written files and no report.
 5. **The day check (D27-300), "A day at the hotel".** The owner's words: *"if
    something does not work, stop, show the owner and ask before fixing."*
    - It ran live on the local demo up to about step 46:
@@ -240,12 +268,13 @@ Everything below is on cp6, with its gates green, unless it says otherwise.
      - check-ins.
    - Then it was cut off.
    - One step showed ✗ and has not been judged yet: 46h, Vikram Desai's
-     check-in ("is in house" was not seen on the page). It may be the tool's
-     timing, as an earlier blank picture was.
-   - Its script, log and pictures are in `C:\videos\day\`.
-   - Start again from `fidato-before-day-check-10oct.dump`, finish the run,
-     report each problem to the owner, then record, voice and render the day
-     video (about 20-25 minutes, in chapters).
+     check-in. It may be the tool's timing.
+   - What is next:
+     1. Restore `fidato-before-day-check-10oct.dump`.
+     2. Run `C:\videos\day\check.mjs` again.
+     3. Report each problem to the owner.
+     4. Then record, voice and render the day video (about 20-25 minutes, in
+        chapters).
 6. **Pictures to take on the demo:**
    - A1 Front desk, A3 and A5 (the chapters have no pictures);
    - A13 with Banquet hall, Spa and Laundry switched on (local demo only);
@@ -326,25 +355,53 @@ Read both in the drafts on `manual-rest` (`docs/manual/chapters/b6.html` to
 
 ---
 
-## 8 · Facts the new chat would otherwise have to ask for
+## 8 · The video series, in short (the details are in `C:\videos\RESUME.md`)
+
+- **What it is:** narrated staff tutorials made from the book. These were the
+  owner's choices (D27-294):
+  - the voice is Piper (`en_US-lessac-medium`), free and running on this
+    machine;
+  - short per-task videos first, then one video per chapter;
+  - the book's pictures with the camera zooming to each numbered arrow as the
+    voice names it, plus live screen recordings ("Watch it done") on the LOCAL
+    demo.
+- **How a chapter is made:**
+  1. `script\<ch>.json`: the narration, scene by scene (picture, arrow, words).
+  2. `node tools/voice.mjs <ch>`: the voice, re-speaking only the lines that
+     changed.
+  3. `node tools/marks.mjs <ch>`: where each arrow is in the book's pictures.
+  4. `node tools/record.mjs <ch>`: the screen recordings. It needs the local
+     web, API and virtual printers. Each A8 run places and pays one practice
+     order on N4 of 5EL.
+  5. `node tools/render.mjs <ch> [ids] [--join]`, or `node tools/render-all.mjs`.
+  6. `node tools/stills.mjs <ch>` and `tools/audiocheck.mjs`: the checks.
+- **Rules:**
+  - the narration is checked against the pictures and the real code (truth
+    first, the screen's own words);
+  - local demo only, never live;
+  - the owner is asked before anything found is fixed.
+
+---
+
+## 9 · Facts the new chat would otherwise have to ask for
 
 - **Live:**
   - the website is https://pms.fidatohotels.com (Firebase project
     `poms-fad05`), serving `index-DEVsbHgU.js`;
   - the API is https://api.fidatohotels.com, on Oracle Linux 9 at
     130.210.49.220, in `/opt/fidato`, user `opc`.
-  - The server runs fe07c3fd; its checkout is at e2fe4cab (only
-    `api/scripts/reset-property.ts` and notes differ).
+  - The server runs fe07c3fd; its checkout is at e2fe4cab.
   - The hotels are AMR, plus its test hotel AMRT.
-- **Next free numbers:** migration 213, decision D27-303, MEMORY 407.
-- **The local demo:** hotel 5EL (5 Elements Akkalkot, 18 rooms) with practice
-  data; the test hotel 5ELT.
+- **Next free numbers:** migration 213, decision D27-304, MEMORY 407.
+- **The local demo** (the PC's, in the backup): hotel 5EL (5 Elements
+  Akkalkot, 18 rooms) with practice data; the test hotel 5ELT.
 - **Desktop app traps** (HANDOVER § 7):
   - preview servers run from the main checkout, not from a worktree;
   - an emulated viewport in the Browser pane spoils screenshots;
   - in PowerShell, write a commit message to a file (MEMORY 255);
   - write file edits with the Write tool, not through shell heredocs
     (MEMORY 391/402).
-- **The owner's way of working:** ask EVERY design question (with a
-  recommendation) before building; update the tracker, and notify them when
-  long work finishes.
+- **The owner's way of working:**
+  - ask EVERY design question, with a recommendation, before building;
+  - update the tracker;
+  - notify them when long work finishes.

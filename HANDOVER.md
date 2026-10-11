@@ -1,7 +1,7 @@
 # Handover — current state
 
-**Last updated: 12 October 2026** (§ 2; the move to the laptop — read
-`LAPTOP-HANDOVER.md` first), branch `cp6`. **This top section is
+**Last updated: 12 October 2026** (§ 2; back to the original desktop,
+`D:\fidato pms` — read `LAPTOP-HANDOVER.md` first), branch `cp6`. **This top section is
 current.** Everything under "Archive" at the bottom is the 28 August state,
 kept for the record and superseded.
 
@@ -48,20 +48,24 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
-### 12 October — THE LAPTOP. Read `LAPTOP-HANDOVER.md` first
+### 12 October — BACK ON THE ORIGINAL DESKTOP (`D:\fidato pms`). Read `LAPTOP-HANDOVER.md` first
 
 ```
-the move             The owner moved from the PC to a laptop. LAPTOP-HANDOVER.md has the
-                     set-up step by step, what is done, what is next and the questions
-                     waiting for the owner. D27-302: cp6 and manual-rest pushed to GitHub,
-                     once; the 19 September rule is back afterwards. main (live) untouched.
+the move             9-12 Oct the work went on on a borrowed PC (C:\Users\rozar.ROZARIO\pms)
+                     while the original desktop was shipped; it is back and development
+                     continues there. LAPTOP-HANDOVER.md (the owner's name for it): bring its
+                     own checkout up to date (look for unpushed work first; never clone),
+                     the database to 212, the videos into C:\videos. D27-302: cp6, manual-rest
+                     and videos pushed once; the 19 September rule is back afterwards. D27-303:
+                     the video code on its own branch `videos`, the big files by zip.
+                     main (live) untouched.
 in flight, stopped   10 Oct: 15 helpers (D27-301 video chapters + engine) and the day check
                      (D27-300) were all stopped mid-work by the usage limit (MEMORY 406).
-                     A7, A13, A14 finished; the rest left part-done in C:\videos and on
-                     manual-rest (unreviewed drafts, 246 pictures). Nothing on live changed.
+                     A7, A13, A14 finished; the rest left part-done (branch videos, and
+                     manual-rest: unreviewed drafts, 246 pictures). Nothing on live changed.
 live                 unchanged since 10 Oct 16:35 (the fresh start; § the 4 pm block below).
-next                 LAPTOP-HANDOVER.md § 5: laptop set-up and gates, the owner's steps,
-                     the open questions, then the videos 3-4 helpers at a time.
+next                 LAPTOP-HANDOVER.md § 5: the desktop up to date and its gates, the owner's
+                     steps, the open questions, then the videos 3-4 helpers at a time.
 ```
 
 ### 10 October, 4 pm — read this first (supersedes the 5 am block below)

@@ -3,9 +3,13 @@
 This is a live hotel system (pms.fidatohotels.com). The owner does not want to
 re-explain it, and they should not have to.
 
-**12 OCTOBER: THE OWNER MOVED TO A LAPTOP. Read `LAPTOP-HANDOVER.md` first**:
-how the laptop is set up, what is done, what is next, the questions waiting
-for the owner (D27-302).
+**12 OCTOBER: DEVELOPMENT IS BACK ON THE ORIGINAL DESKTOP (`D:\fidato pms`).
+Read `LAPTOP-HANDOVER.md` first.** It covers:
+- bringing this machine's own checkout up to date (do not clone; look for
+  unpushed work first);
+- the videos in `C:\videos`, from the GitHub branch `videos`;
+- what is done and what is next;
+- the questions waiting for the owner (D27-302, D27-303).
 
 1. **Read the top section of `HANDOVER.md` to the end before your first
    write.** It is the current brief: where things stand, what to do next and

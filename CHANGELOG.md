@@ -50,7 +50,7 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
-## 2026-10-12 · the move to the laptop (D27-302); before it, 10 Oct afternoon: the fresh start on live, the one-click KOT setup, the videos (D27-298 to D27-301)
+## 2026-10-12 · back to the original desktop, `D:\fidato pms` (D27-302, D27-303); before it, 10 Oct afternoon: the fresh start on live, the one-click KOT setup, the videos (D27-298 to D27-301)
 
 **Asked for:**
 - 10 Oct:
@@ -59,7 +59,7 @@ Write it **as you go**, not at the end from memory. Copy this shape:
   - "fix the missing arrows and re-render";
   - "cover end to end, from the start of the day to the end of the day, and check if all are proper";
   - "start all the videos and run in parallel".
-- 12 Oct: "my system has come - an updated roadmap of what was completed and what needs to be done, commit and push the relevant stuff to GitHub, the handover file as the laptop thing, so I can continue there".
+- 12 Oct: "my system has come - an updated roadmap of what was completed and what needs to be done, commit and push the relevant stuff to GitHub, the handover file as the laptop thing, so I can continue there". Then: "the desktop I'm sending this to is the one where you pulled the PMS and started the development - it was shipped, now it's back; continue development here; include the development of the videos".
 
 **Shipped**
 - **The one-click KOT computer setup** (D27-299, e2fe4cab): `src/modules/pos/lib/kotSetupFile.ts`, the KOT section's "Download the setup file", sign-in back to the page asked for (`src/App.tsx`). It is **live** as a website-only release, index-DEVsbHgU.js. The staff PDF is `KOT-printer-quick-setup.pdf`.
@@ -67,10 +67,11 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 - **The video series:**
   - A8 Restaurant complete, with every arrow found (`C:\videos\out\a8\`, not committed, D27-294). The book's Figure A8-17 was retaken, and `docs/manual/shots/a8.mjs` scrolls the paid bill into view (d7db7a86, d9d5df18).
   - D27-300 (the day check) and D27-301 (all chapters at once) were decided and started.
-- **The laptop handover** (12 Oct): `LAPTOP-HANDOVER.md`. The CLAUDE.md pointer, HANDOVER § 2 and decision D27-302 were added.
+- **The handover to the original desktop** (12 Oct): `LAPTOP-HANDOVER.md` (the owner's name for it). It brings `D:\fidato pms`'s own checkout up to date: look for unpushed work first, never clone, the database to 212, the videos into `C:\videos`. The CLAUDE.md pointer, HANDOVER § 2 and decisions D27-302/303 were added.
   - The book drafts were committed on `manual-rest` (319d0fa6): chapters A0-A17 and B1-B9, picture plans, 246 pictures. They are unreviewed.
-  - Two zips for the owner to carry by hand are in `.local\laptop\`: the local-only files, and C:\videos without node_modules.
-  - `cp6` and `manual-rest` were pushed to GitHub, once (D27-302).
+  - **The video code on GitHub, on its own branch `videos`** (6c8ee47, D27-303): scripts, compositions, tools, the day check, RESUME.md brought up to 12 Oct. `C:\videos` is now a checkout of that branch. `tools\marks.mjs` and `tools\record.mjs` find `D:/fidato pms` themselves.
+  - Two zips for the owner to carry by hand are in `.local\laptop\`: `pms-local-carry.zip` (5 MB: virtual printers, staff PDFs, release pages, the demo's backups) and `videos-generated.zip` (663 MB: voices, pictures, recordings, finished videos, Piper).
+  - `cp6`, `manual-rest` and `videos` were pushed to GitHub, once (D27-302).
 
 **Found**
 - MEMORY 405: the KOT setup file looped for ever once its input ran out. Fixed before commit.
@@ -79,7 +80,8 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 **Proved**
 - e2fe4cab, full gates all green: web 1,223, api 2,615, database 1,665 / 212, replay, pg16, types.
-- Nothing after it changed code: notes, the book's shots file and drafts only, so no gates were run for this handover.
+- Nothing after it changed PMS code: notes, the book's shots file and drafts only, so no PMS gates were run for this handover.
+- The video branch: `tsc --noEmit` clean, every tool passes `node --check`. Nothing was rendered with the changed engine; A8's frame check is the first step on the desktop.
 
 **Left open** (LAPTOP-HANDOVER.md § 5)
 - Set up the laptop and run the gates there.
