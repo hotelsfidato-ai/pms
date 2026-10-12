@@ -1,12 +1,13 @@
 # Spa
 
-Treatments, a day diary, and a bill settled at the spa or put on the room —
+Treatments, a day diary, and each treatment charged to the guest's room —
 behind a per-hotel switch (D17-54).
 
-**BUILT, 19 September, EXCEPT CLOSING A TREATMENT.** A treatment is entered,
-priced, booked by the desk and cancelled, all on screen. It is **not yet
-settled at the spa or charged to the room** — that route does not exist on the
-server, and nothing here pretends it does (see the requests at the foot).
+**BUILT, 19 September.** A treatment is entered, priced, booked by the desk,
+cancelled, and closed onto the room bill with **Charge to room**
+(`POST .../appointments/:id/close`, through `postCharge`). **Settling at the
+spa is not built**: the owner set it aside (D18-22). Corrected 12 October
+(D27-305); this paragraph had said closing did not exist.
 
 ```
 db/migrations/119_the_spa.sql      the tables and the guards
@@ -92,6 +93,7 @@ POST   /api/hotels/:code/spa/therapists
 PATCH  /api/hotels/:code/spa/therapists/:id
 POST   /api/hotels/:code/spa/appointments             take a booking
 POST   /api/hotels/:code/spa/appointments/:id/cancel  with a reason
+POST   /api/hotels/:code/spa/appointments/:id/close   Charge to room (D18-22)
 ```
 
 **403 is "you may not"; 409 is "that cannot be done."** The two are kept apart
@@ -137,11 +139,13 @@ whatever zone the browser happens to be in. `clockTime`, `clockDate` and
 2. ~~**A `spa` section in `navigation.ts`**~~ **Answered:** the master wrote it
    on 18 September, gated `module: "spa"`. The screens use it.
 3. ~~**A front door for posting a charge.**~~ **Answered:** `postCharge` is
-   exported from `api/src/modules/finance/index.ts` since 18 September. **It is
-   not called yet** — see 5.
-4. **Which existing door records money taken AT the spa** — the brief says ask
-   before inventing a second way of taking a payment. Still unanswered.
-5. **A ROUTE FOR CLOSING A TREATMENT.** Raised 19 September by the chat that
+   exported from `api/src/modules/finance/index.ts` since 18 September, and
+   the close route calls it (5).
+4. ~~**Which existing door records money taken AT the spa**~~ **Answered,
+   D18-22:** none; a treatment goes on the room bill, and "settled at the spa"
+   is set aside for later.
+5. ~~**A ROUTE FOR CLOSING A TREATMENT.**~~ **Built** (`.../close`, Charge to
+   room on the diary). The request as it was raised: Raised 19 September by the chat that
    built the screens. `api/src/modules/spa/spa.ts` has nine routes and none of
    them closes an appointment: nothing writes `settlement`, `closed_by`,
    `closed_at` or `posting_id`, and nothing calls `postCharge`. So D18-6's

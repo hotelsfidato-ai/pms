@@ -650,8 +650,8 @@ spa.post("/:code/spa/appointments/:id/close", async (c) => {
       return refuse("That treatment is already closed and on the bill.");
     }
     if (a.agreed_amount === null) {
-      return refuse("This treatment has no price, so it cannot go on a bill. "
-        + "Price it under Treatments first.");
+      return refuse("This booking was taken with no price, so it cannot go on a bill. "
+        + "A price added later applies to new bookings only: cancel this one and book it again.");
     }
     /* BQ-2 (D27-136): Charge to room once the guest is checked in. */
     if (!["checked_in", "checked_out", "cancelled"].includes(a.stay_status)) {

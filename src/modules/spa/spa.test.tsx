@@ -166,6 +166,8 @@ describe("the spa diary", () => {
     expect(within(row).getByText("-")).toBeTruthy();
     expect(within(row).queryByText(/₹/)).toBeNull();
     expect(within(row).getByText(/cannot be closed for money/)).toBeTruthy();
+    /* D27-305: pricing the treatment later does not price this booking. */
+    expect(within(row).getByText(/applies to new bookings only/)).toBeTruthy();
   });
 
   it("says a read that failed did not load - never 'nothing booked'", async () => {

@@ -254,8 +254,9 @@ export default function LaundryDocketPage() {
                 ? "One thing in this bag has no price yet. "
                 : `${d.unpricedLines} things in this bag have no price yet. `}
               It reads "-", never 0, so the bag has no total at all rather than
-              a part of one - and it cannot go on the room's bill until it is
-              priced on the price list.
+              a part of one - and it cannot go on the room's bill. A price
+              added to the price list later applies to new bags only: cancel
+              this one and take it again.
             </CardBody>
           </Card>
         )}

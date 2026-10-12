@@ -108,7 +108,7 @@ checklist.get("/:code/night-audit", async (c) => {
         {
           id: "arrivals",
           label: "Arrivals still outstanding",
-          detail: "An arrival left unchecked at roll-over becomes a no-show, and the retention posts against it.",
+          detail: "An arrival left unchecked at roll-over becomes a no-show. A retention posts against it only if the booking has cancellation terms.",
           state: n(r.outstanding) ? "attention" : "ok",
           count: n(r.outstanding),
           link: `/h/${c.req.param("code")}/arrivals`,

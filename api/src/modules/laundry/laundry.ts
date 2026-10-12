@@ -612,7 +612,8 @@ laundry.post("/:code/laundry/dockets/:id/charge", async (c) => {
     if (docket.status === "cancelled") return refuse("That docket was cancelled.");
     if (docket.charged) return refuse("That docket is already on the bill.");
     if (docket.total === null) {
-      return refuse("Something in this bag has no price yet. Price it first.");
+      return refuse("Something in this bag has no price yet, so it cannot go on a bill. "
+        + "A price added later applies to new bags only: cancel this one and take it again.");
     }
     /* BQ-2: onto the bill of a guest in the house only. A checked-out stay
        keeps finance's own sentence (postCharge). */

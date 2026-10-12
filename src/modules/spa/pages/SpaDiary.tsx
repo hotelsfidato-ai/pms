@@ -275,8 +275,9 @@ function TherapistDay({
                 )}
                 {a.amount === null && (
                   <span className="text-xs text-grey-500">
-                    Unpriced — it cannot be closed for money until the
-                    treatment has a price.
+                    Unpriced - it cannot be closed for money. A price added
+                    to the treatment later applies to new bookings only:
+                    cancel this one and book it again.
                   </span>
                 )}
                 {mayBook && a.status === "booked" && (
@@ -460,9 +461,10 @@ function BookDialog({
               but it cannot be closed for money, so somebody has to know. */}
           {chosen?.price === null && (
             <p className="text-sm text-ink-700">
-              {chosen.name} has no price. The booking can be taken, and it
-              cannot be closed for money until somebody prices it on
-              Treatments and therapists.
+              {chosen.name} has no price. The booking can be taken, but it
+              shows a dash and cannot be closed for money. A price added
+              later on Treatments and therapists applies to new bookings
+              only, so this one would be cancelled and booked again.
             </p>
           )}
 

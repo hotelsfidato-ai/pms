@@ -11,6 +11,12 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-12 · The Modules page: the spa is charged to the room (D27-305 (6))
+
+**Asked for:** the owner's D27-305 (6): settling at the spa is not built (D18-22), so the spa's switch note says it is charged to the room.
+**Shipped:** `pages/Admin.tsx`, the spa note: "Treatments, the day's diary, and each one charged to the guest's room. Off means the screens go and the API refuses them."
+**Proved:** opened Settings › Modules and connections › Modules as the Owner on the local demo; the note reads as above. No test asserts the note.
+
 ## 2026-10-10 · Test hotels: the database and the API (D27-296)
 
 **Asked for:** the master's brief for the DATABASE and API half of the owner's twelve

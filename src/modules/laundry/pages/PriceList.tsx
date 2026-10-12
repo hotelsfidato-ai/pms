@@ -178,8 +178,9 @@ export default function LaundryPriceListPage() {
               ? "One item has no price yet. It reads \"-\", never 0, "
               : `${unpriced} items have no price yet. They read "-", never 0, `}
             and a guest's bag holding one has no total and cannot be charged to
-            a room until somebody prices it. Leave it blank for the hotel's own
-            linen, which is counted and never charged.
+            a room. A price added later applies to new bags only; a bag already
+            taken keeps the dash and is taken again. Leave it blank for the
+            hotel's own linen, which is counted and never charged.
           </p>
         </div>
       )}

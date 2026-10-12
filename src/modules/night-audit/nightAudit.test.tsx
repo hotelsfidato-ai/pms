@@ -189,6 +189,22 @@ describe("the Night audit screen", TEST_LIMIT, () => {
     renderScreen();
     expect(await screen.findByText("No day closed yet", {}, SLOW)).toBeTruthy();
   });
+
+  /* D27-305: the server refuses them (roleGate CLOSE_DAY, `invoice` create),
+     so the screen does not offer it. Reception, the default here, does. */
+  it.each(["revenue_manager", "read_only"] as const)("does not offer Run night audit to %s", async (role) => {
+    signedIn({
+      scope: {
+        staffId: "44444444-4444-4444-4444-444444444444", email: "x@fidato.in",
+        fullName: "Test", isGroupAdmin: false, hotels: [{ hotelId: AGRA_HOTEL, role }],
+      },
+    });
+    server({ closedDays: [] });
+    renderScreen();
+
+    expect(await screen.findByText(/Run the audit and roll to/, {}, SLOW)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Run night audit" })).toBeNull();
+  });
 });
 
 /* ══════════════════════════════════════════════════════════════════

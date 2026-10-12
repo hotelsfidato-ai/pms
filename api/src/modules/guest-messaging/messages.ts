@@ -92,7 +92,9 @@ export const KIND_WORDS: Record<string, string> = {
   "checkin-link": "Check-in link",
   bill: "Bill",
   voucher: "Voucher",
+  "booking-voucher": "Booking voucher",
   "daily-report": "Daily report",
+  "health-alert": "Health alert",
 };
 
 export const kindWords = (kind: string): string => KIND_WORDS[kind] ?? kind;
@@ -257,11 +259,12 @@ guestMessages.get("/:code/guest-messages", async (c) => {
             order by m.sent_at desc limit 200`,
           [hotelId, party])
       : await client.query<SentRow>(
-          /* Guests' messages only (the owner, 5 Oct): a daily report email
-             is about the hotel's figures, not a guest, and reception reads
-             this list. Its sends stay in messages_sent for the managers. */
+          /* Guests' messages only (the owner, 5 Oct; D27-305): a daily
+             report email is about the hotel's figures and a health alert
+             about a connection, not a guest, and reception reads this list.
+             Their sends stay in messages_sent for the managers. */
           `${SENT_SELECT}
-            where m.hotel_id = $1 and m.kind <> 'daily-report'
+            where m.hotel_id = $1 and m.kind not in ('daily-report', 'health-alert')
             order by m.sent_at desc limit 200`,
           [hotelId]);
 

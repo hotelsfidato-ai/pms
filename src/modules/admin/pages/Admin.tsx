@@ -465,8 +465,8 @@ const MODULE_COPY: Record<string, { label: string; note: string }> = {
   },
   spa: {
     label: "Spa",
-    note: "Treatments, the day's diary, and a bill settled at the spa or put on " +
-      "the room. Off means the screens go and the API refuses them.",
+    note: "Treatments, the day's diary, and each one charged to the guest's " +
+      "room. Off means the screens go and the API refuses them.",
   },
   /* D21-90, 22 September: "some do and many do not". Off at every property
      until the owner or an administrator turns it on. */
