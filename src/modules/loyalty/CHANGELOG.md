@@ -11,6 +11,42 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-12 · Redeeming points gets its own right (the owner's D27-305 (1))
+
+**Asked for:** the master, 12 October: the A14 chapter helper's question
+(LAPTOP-HANDOVER § 6, 1) answered - redeeming is its own right, Reception and
+above; the Accountant no longer redeems.
+
+**Shipped:** migration 213 - `app.redeems_loyalty_points(hotel)` (the owner,
+an Administrator, the GM, the Hotel Manager, Reception, or a group
+administrator, written out), and `app.loyalty_redeem` asking it right after
+the stay is found ("Points are used by reception, the hotel manager, the
+general manager, an administrator or the owner."); the body otherwise word for
+word. The gate's `LOYALTY_POINTS` asks `reservation` edit (the same five)
+instead of `invoice` create. `GET /loyalty` carries `mayRedeem`; the screen
+hides Use points without it and says who uses points on the In house card.
+LOY-3 in `DEFECTS.md`.
+
+**Proved (12 October, copy `.claude\worktrees\agent-ae37723ee392e7e37`):**
+`db/tests/run.sh` all 1,666 assertions, loyalty 23 of 23 - and without 213,
+21 of 23: the accountant's 1,500 points went through ("used").
+`db/tests/rerun.sh`: "all 213 migrations are re-runnable". API
+(`with-test-db.sh`): `test/modules/loyalty` 2 of 2, `test/roleGate.test.ts`
+79 of 79 - and with cp6's three server files, the accountant got 200 where
+403 is expected and the door's list held six roles, not five. Web:
+`src/modules/loyalty` 3 of 3 - the new check failed on cp6's screen. On the
+demo (my own database `fidato_d305`, API 8811, web 5311): the Accountant's
+In house card reads "Points are used by reception, the hotel manager, the
+general manager, an administrator or the owner." and Rekha Gaikwad (1,200
+points) has no Use points; the server answered the accountant's redeem with
+403 and that sentence; Reception used 500 ("₹500 off the room charges"),
+1,200 to 700.
+
+**Left open:** the Accountant and the Viewer still see Join and Leave, which
+the server refuses them (`customer` edit) - as before, not touched.
+
+---
+
 ## 2026-10-02 · resumed: cp6 taken in, proved again on the merged tree
 
 **Asked for:** the master, 2 October (the owner's word to resume): merge cp6

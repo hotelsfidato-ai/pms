@@ -61,6 +61,27 @@ misses the history.
 
 ---
 
+### LOY-3 · The Accountant could take a guest's points off a bill
+
+**Found** 10 October by the A14 chapter helper, reading the code against the
+book: the redeem route asked `invoice` create, which the Accountant holds,
+and `app.loyalty_redeem` asked no role at all; L6 says "Reception enrols and
+redeems". Asked (LAPTOP-HANDOVER § 6, 1); the owner's D27-305 (1), 12 October:
+its own right, Reception and above.
+
+**Done:** `app.redeems_loyalty_points(hotel)` (migration 213) - the owner, an
+Administrator, the GM, the Hotel Manager, Reception, or a group administrator
+- asked inside `app.loyalty_redeem` after the stay is found; the gate asks
+`reservation` edit, the same five; the screen hides Use points and says who
+uses them. Pinned at the database (`loyalty.sql`) and the API (the accountant
+403, reception 200, and the two lists compared role by role).
+
+**The rule:** a right borrowed from another grant drifts with that grant. A
+right the owner names is written out where the database asks it, and the
+gate's grant is compared with it by a test.
+
+---
+
 ## Adding one
 
 Newest last, in the shape above: **Found** (when, and how — reading, a test, a

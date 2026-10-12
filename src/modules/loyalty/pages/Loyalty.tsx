@@ -74,7 +74,7 @@ function InHouseCard({ hotelId, screen: s }: { hotelId: string; screen: LoyaltyS
       <div className="flex flex-wrap justify-end gap-2">
         {r.member ? (
           <>
-            {r.direct && <Button size="sm" onClick={() => setSpending(r)}>Use points</Button>}
+            {r.direct && s.mayRedeem && <Button size="sm" onClick={() => setSpending(r)}>Use points</Button>}
             <Button size="sm" variant="ghost" onClick={() => setLeaving(r)}>Leave</Button>
           </>
         ) : (
@@ -86,7 +86,9 @@ function InHouseCard({ hotelId, screen: s }: { hotelId: string; screen: LoyaltyS
 
   return (
     <Card>
-      <CardHeader title="In house" />
+      {/* D27-305: redeeming is its own right; whoever lacks it is told who has it. */}
+      <CardHeader title="In house" description={s.mayRedeem ? undefined
+        : "Points are used by reception, the hotel manager, the general manager, an administrator or the owner."} />
       <DataTable<LoyaltyStay> rows={s.stays} columns={columns} rowKey={(r) => r.id}
         className="border-0 rounded-t-none"
         empty={<EmptyState compact icon={<Award />} title="Nobody is checked in"

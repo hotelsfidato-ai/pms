@@ -11,6 +11,39 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-12 · A package can be switched off, never changed (the owner's D27-305 (8))
+
+**Asked for:** the master, 12 October: the A13 chapter helper's question
+(LAPTOP-HANDOVER § 6, 8) answered - a package can be retired (an Off switch)
+but not changed; past and existing functions keep it as sold.
+
+**Shipped:** `PATCH /:code/banquet/packages/:id`, `{isActive}` and nothing
+else (HALLS: owner, admin, GM); any other field, or none, is 409 "A package is
+not changed once added. Switch it off, and add a new one for a new price or
+menu." The catering route refuses a switched-off package for any function
+("That package is switched off, so it is not offered for functions now.") and
+an unknown one ("No such package here.", was Postgres's own words). Halls and
+packages: an "Off" pill and a switch per package, disabled with "The owner, an
+administrator or the GM switches them." for everyone else; the card says
+"Never changed once added...". Add a course already offered only the packages
+that are on. No migration: `is_active` is 061's.
+
+**Proved (12 October, copy `.claude\worktrees\agent-ae37723ee392e7e37`):** API
+`test/modules/banquet` 6 files, 42 of 42 (`banquet.test.ts` 15 of 15) - "a
+package is retired, never changed" failed with cp6's server files (the PATCH
+answered 404); `test/roleGate.test.ts` 79 of 79. Web
+`src/modules/banquet` 19 of 19 - the two Halls and packages checks failed on
+cp6's screen; the picker check passes on both (a guard, not a change). On the
+demo (`fidato_d305`): as Reception the two switches are greyed with the
+sentence; as the GM, Dinner buffet switched off showed "Off"; the Kulkarni
+wedding reception kept "Dinner buffet, 120 plates · ₹900 each, ₹1,08,000";
+its Add a course offered only "Off-menu" and "Veg thali · ₹450 a head".
+
+**Left open:** the other setup buttons (Add a hall, Edit, Add a package) are
+still pressable for reception and refused by the server - as before.
+
+---
+
 ## 2026-10-03 · A function's bill offers the hotel's own payment methods (the owner's D27-259) - the cash lane's
 
 **Shipped:** `FunctionBill.tsx` lists the hotel's ways of paying that are On (`payingWays`, migration 191) instead of the fixed five; the payment door takes only those.

@@ -61,6 +61,16 @@ function renderAt(path: string, route: string, element: ReactElement) {
 
 const DIARY = `/api/hotels/${HOTEL}/banquet`;
 const EVENT = `/api/hotels/${HOTEL}/banquet/events/e-1`;
+const SETUP = `/api/hotels/${HOTEL}/banquet/setup`;
+
+/** One package on, one switched off (D27-305). */
+const twoPackages = () => ({
+  venues: [],
+  packages: [
+    { id: "p-1", name: "Veg thali", description: null, ratePerHead: 450, mealType: null, isActive: true },
+    { id: "p-2", name: "Old buffet", description: null, ratePerHead: 900, mealType: null, isActive: false },
+  ],
+});
 
 const OFF = "This property has no banquet hall. Turn it on in the property's settings if that is wrong.";
 const refuse = (status: number, sentence: string) => () => {
@@ -162,6 +172,36 @@ describe("Halls and packages", () => {
     expect(await screen.findByText("Halls and packages did not load")).toBeTruthy();
     expect(screen.queryByText(/no banquet hall/i)).toBeNull();
   });
+
+  it("shows reception the switches disabled, and who switches them (D27-305)", async () => {
+    server({ [SETUP]: twoPackages });
+    setupPage();
+    const sw = await screen.findByRole("switch", { name: "Offer Veg thali" });
+    expect((sw as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/The owner, an administrator or the GM switches them\./)).toBeTruthy();
+  });
+
+  it("switches a package off and sends nothing else; it is never edited (D27-305)", async () => {
+    signedIn({ scope: {
+      staffId: "33333333-3333-3333-3333-333333333333", email: "owner@fidato.in",
+      fullName: "Group Owner", isGroupAdmin: true, hotels: [],
+    } });
+    const calls: Array<{ url: string; body: unknown }> = [];
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") {
+        calls.push({ url, body: JSON.parse(String(init.body)) });
+        return { ok: true } as never;
+      }
+      return twoPackages() as never;
+    });
+    setupPage();
+
+    fireEvent.click(await screen.findByRole("switch", { name: "Offer Veg thali" }));
+    await vi.waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ url: `/api/hotels/${HOTEL}/banquet/packages/p-1`, body: { isActive: false } });
+    expect(screen.getByText("Off")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /edit/i })).toBeNull();
+  });
 });
 
 /* ── One function ───────────────────────────────────────────────── */
@@ -209,6 +249,14 @@ describe("one function", () => {
     expect(screen.getByText("Open")).toBeTruthy();
     expect(screen.getByText("An open order is not in the total until it is settled.")).toBeTruthy();
     expect(screen.getByText("Restaurant orders", { selector: "dt" })).toBeTruthy();
+  });
+
+  it("offers only the packages that are on when a course is added (D27-305)", async () => {
+    server({ [EVENT]: () => aFunction(), [SETUP]: twoPackages });
+    eventPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Add a course" }));
+    expect(await screen.findByRole("option", { name: /Veg thali/ })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: /Old buffet/ })).toBeNull();
   });
 
   it("warns while the banquet tax is not set (D27-124)", async () => {

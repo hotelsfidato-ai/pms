@@ -353,6 +353,14 @@ export async function addBanquetPackage(
   return call(`/api/hotels/${hotelCode}/banquet/packages`, "POST", input);
 }
 
+/** Off takes a package out of what new catering is offered; functions that
+    have it keep it as sold. Nothing else about a package changes (D27-305). */
+export async function switchBanquetPackage(
+  hotelCode: string, id: string, isActive: boolean,
+): Promise<Result> {
+  return call(`/api/hotels/${hotelCode}/banquet/packages/${id}`, "PATCH", { isActive });
+}
+
 /* ── The function's bill (BQ-1, D27-132 to D27-138) ────────────────
    Owner, Admin and GM take money and bill it; the tax invoice as well by
    the Accountant. Finance does the sums, the payment and the invoice. */

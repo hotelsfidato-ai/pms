@@ -65,7 +65,7 @@ date" line. The words are the restaurant's (POS-4), from
 
 ---
 
-## Server endpoints — 16
+## Server endpoints — 17
 
 The code is in `api/src/modules/banquet/banquet.ts` and `attach.ts`; the door
 `index.ts` mounts it at `/api/hotels`. Every route passes the module gate first
@@ -90,11 +90,21 @@ setup      GET    /:code/banquet/setup                        halls and packages
            POST   /:code/banquet/venues
            PATCH  /:code/banquet/venues/:id
            POST   /:code/banquet/packages
+           PATCH  /:code/banquet/packages/:id                 {isActive} only: switched off or on, never changed (D27-305)
 till       GET    /:code/banquet/attachable                   the functions an order may be attached to now
 ```
 
-Every endpoint has a caller in `data/banquet.ts`. There is no endpoint to
-amend or retire a package.
+Every endpoint has a caller in `data/banquet.ts`.
+
+**A package is retired, never changed (the owner's D27-305 (8), 12 October).**
+The switch on each package's row (Halls and packages) takes it off what
+"Add a course" offers, and back on; the catering route refuses a switched-off
+package for any function. A function that already has it keeps its line
+exactly as sold: name, plates and rate are copied onto the function (061).
+The PATCH takes `isActive` and nothing else: a name, price or contents is
+refused with "A package is not changed once added. Switch it off, and add a
+new one for a new price or menu." No migration: `banquet_packages.is_active`
+has been there since 061.
 
 **Names are labels, never joins** (BQ-7). "Registered by", "Confirmed by" and a
 course's "Added by" come from `app.colleague_name` (096), not from a join to
@@ -116,8 +126,8 @@ carries `taxWarning` (D27-124), `bill` and `invoice`. Once billed (status
 ```
 data/banquet.ts   The diary, one function, the setup; register, confirm, cancel,
                   amend; add and remove catering; add and amend a hall; add a
-                  package; the functions an order may be attached to.
-                  Thirteen functions, one per endpoint. The three reads THROW
+                  package, switch one off or on; the functions an order may
+                  be attached to. One function per endpoint. The three reads THROW
                   on failure (BQ-3) — never null.
 components/ReadProblem.tsx   refused / unreachable / failed, and the two
                   components that draw them. A named copy of the till's; see

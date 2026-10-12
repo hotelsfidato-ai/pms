@@ -855,8 +855,9 @@ describe("the reads, as every role (RO-1, D27-140 to D27-147)", () => {
   it("loyalty: the desk joins and takes points off a bill, whoever sees guests opens the screen (D27-179)", async () => {
     expect(whoMay(WRITE_RULES[`POST ${H}/loyalty/guests/:id/join`]!))
       .toEqual(["owner", "admin", "gm", "hotel_manager", "front_desk"]);
+    /* Its own right since D27-305: no longer the accountant. */
     expect(whoMay(WRITE_RULES[`POST ${H}/loyalty/stays/:id/redeem`]!))
-      .toEqual(["owner", "admin", "gm", "hotel_manager", "front_desk", "finance"]);
+      .toEqual(["owner", "admin", "gm", "hotel_manager", "front_desk"]);
     const join = await send(as("housekeeping"), "POST", "/loyalty/guests/00000000-0000-0000-0000-000000000000/join", { agreed: true });
     expect(join.status).toBe(403);
     expect((await send(as("housekeeping"), "GET", "/loyalty")).status).toBe(403);

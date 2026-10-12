@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
+import { PACKAGE_FIXED } from "../../../src/modules/banquet/banquet.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BANQUET HALL
@@ -379,6 +380,55 @@ describe("the money", () => {
     expect(res.status).toBe(409);
     const body = await res.json() as { reason: string };
     expect(body.reason).toMatch(/head count is not a price/i);
+  });
+});
+
+/* D27-305 (8): a package can be switched off, never changed; a function
+   that has it keeps it exactly as sold. */
+describe("a package is retired, never changed", () => {
+  const PACKAGE = `Package ${TAG}`;
+  type Setup = { packages: Array<{ id: string; name: string; ratePerHead: number | null; isActive: boolean }> };
+  const mine = async () =>
+    ((await (await as("/5EL/banquet/setup")).json()) as Setup).packages.find((p) => p.name === PACKAGE)!;
+  const patch = (id: string, body: unknown) =>
+    as(`/5EL/banquet/packages/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+
+  it("refuses any change but the switch, and switching off keeps what a function was sold", async () => {
+    expect((await post("/5EL/banquet/packages", { name: PACKAGE, ratePerHead: 500 })).status).toBe(200);
+    const pkg = await mine();
+    const sharma = await findEvent(SANGEET);
+    expect((await post(`/5EL/banquet/events/${sharma.id}/catering`, {
+      packageId: pkg.id, name: PACKAGE, pax: 100, ratePerHead: 500 })).status).toBe(200);
+
+    for (const body of [{ ratePerHead: 600 }, { name: "Renamed" }, { description: "New menu" },
+      { isActive: false, ratePerHead: 600 }, {}]) {
+      const res = await patch(pkg.id, body);
+      expect(res.status, JSON.stringify(body)).toBe(409);
+      expect(((await res.json()) as { reason: string }).reason).toBe(PACKAGE_FIXED);
+    }
+    expect(await mine()).toEqual({ ...pkg, isActive: true });
+
+    expect((await patch(pkg.id, { isActive: false })).status).toBe(200);
+    expect((await mine()).isActive).toBe(false);
+
+    /* The function keeps its line as sold. */
+    const e = (await (await as(`/5EL/banquet/events/${sharma.id}`)).json()) as {
+      catering: Array<{ name: string; pax: number; ratePerHead: number | null }>;
+    };
+    expect(e.catering.find((l) => l.name === PACKAGE)).toMatchObject({ pax: 100, ratePerHead: 500 });
+
+    /* Not sold again, to this function or another. */
+    const verma = await findEvent(RECEPTION);
+    for (const id of [sharma.id, verma.id]) {
+      const res = await post(`/5EL/banquet/events/${id}/catering`, {
+        packageId: pkg.id, name: PACKAGE, pax: 50, ratePerHead: 500 });
+      expect(res.status).toBe(409);
+      expect(((await res.json()) as { reason: string }).reason).toMatch(/switched off/);
+    }
+
+    /* A switch: it comes back on. */
+    expect((await patch(pkg.id, { isActive: true })).status).toBe(200);
+    expect((await mine()).isActive).toBe(true);
   });
 });
 

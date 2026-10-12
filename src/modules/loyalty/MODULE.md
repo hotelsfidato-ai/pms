@@ -133,7 +133,8 @@ db/tests/modules/loyalty.sql       one check per rule (L3-L16)
 
 The Loyalty screen: who is in house with their points; **Join** (the
 programme's own words read to the guest, and their tick, L4), **Use points**
-(from 500, one key per press), **Leave** (what is left lapses, L5); **The
+(from 500, one key per press; Reception and above only, D27-305), **Leave**
+(what is left lapses, L5); **The
 rules** (name, points per ₹100; whoever sets the group's name); **Points by
 hotel** in a month, in rupees (managers, L18). The member card: points,
 the statement at every hotel, an adjustment with a reason, Leave.
@@ -145,7 +146,7 @@ GET    /:code/loyalty                     the screen                      custom
 PUT    /:code/loyalty/rules               name, points per ₹100            app.sets_group_settings
 POST   /:code/loyalty/guests/:id/join     {agreed: true}                   customer edit
 POST   /:code/loyalty/guests/:id/leave                                     customer edit
-POST   /:code/loyalty/stays/:id/redeem    {points}, idempotency-key        invoice create
+POST   /:code/loyalty/stays/:id/redeem    {points}, idempotency-key        its own right (D27-305): reservation edit
 GET    /:code/loyalty/guests/:id          the card                         app.loyalty_card: managers
 POST   /:code/loyalty/guests/:id/adjust   {points, reason}                 app.is_crm_manager
 GET    /:code/loyalty/by-hotel?month=     earned and used by hotel         app.is_crm_manager
@@ -153,6 +154,15 @@ GET    /:code/loyalty/by-hotel?month=     earned and used by hotel         app.i
 
 `earnAtCheckOut(client, stayId)` is the front door the check-out calls, once,
 after the stay is checked out (`front-desk/operations.ts`).
+
+**Redeeming is its own right (the owner's D27-305, 12 October):** Reception
+and above - the owner, an administrator, the GM, the hotel manager and
+reception. The Accountant no longer redeems (it rode on `invoice` create
+until then). The database asks `app.redeems_loyalty_points(hotel)`
+(migration "redeeming points right", 213) inside `app.loyalty_redeem`; the
+server's gate asks `reservation` edit, which is exactly those five; the
+loyalty API test fails if the two ever differ. The screen gets `mayRedeem`
+and, without it, hides Use points and says who uses points.
 
 ### The database (migration "loyalty")
 
