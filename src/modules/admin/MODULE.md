@@ -231,6 +231,37 @@ POST   /:code/modules/:module     pos · banquet · reception_pos — owner or a
 GET    /:code/commissioning       CommissioningCard
 ```
 
+`setup.ts` (13 October, the owner's D27-311) — 2, at `/api/hotels`. **Set up
+this hotel**: 18 steps in the owner's order (`STEP_IDS`; the types `StepId`,
+`SetupStep`, `Setup`, `SetupChoice` and `STEP_TITLES` are exported from this
+file and from the door):
+
+```
+GET    /:code/setup               { steps: [{ id, state: done|todo|later|remind, automatic,
+                                    detail, remindOn, by, at }], ready } - the hotel's owner,
+                                  GM or Admin, or a group administrator (`setting` view in the
+                                  gate; app.manages_hotel here); 403 for anybody else there
+PUT    /:code/setup/:step         { choice: completed|later|remind|clear, remindOn? } -> { ok }
+                                  the same people (room setup edit in the gate); refused:
+                                  an unknown step 404, go-live 409, "completed" on an
+                                  automatic step 409, remind without a real day 400, a day
+                                  before the hotel's today 400
+```
+
+DONE IS DERIVED, never stored: profile, taxes, room types, rooms, prices,
+cancellation and people ask `commissioningChecks` (commissioning.ts - asked,
+not copied); payments asks for the bank details and a way of paying switched
+on. Those are `automatic` (a hand Completed is refused). The rest are by hand,
+but tick themselves where the rows show it: charges (an extra charge, a
+discount, a commission or an early/late fee), messages (a daily report email
+on with an address), branding (the hotel's own logo, a photo and a highlight),
+connections (SU, the CRS or rivals' prices). Front desk, booking sources,
+modules, policies and lists only by hand (their rows start filled in, or are
+the group's). Go-live: done when 1-5 are; never stored. "done" wins over a
+stored later/remind. The bell asks `setupReminders` (routes/notifications.ts):
+a "remind" step whose day (the hotel's own date) has come and is not done -
+"Setup: <title>", linking `/h/<code>/setup?step=<id>`, for owner, Admin, GM.
+
 `groupSettings.ts` (27 September, D27-53 and D27-65) — 4, at `/api/hotels`.
 ONE setting for the whole group (the hotel in the address is only where the
 person stands): the group's name, printed "by <name>" under the property's
@@ -463,6 +494,11 @@ audit_log                               011_model_additions.sql; triggers from
                                         cannot (ADM-18); the profile's columns (pin, pan,
                                         website, reservations_phone, property_type,
                                         star_rating, latitude/longitude) and hotel_logos
+hotel_setup_steps                       215_setting_up_a_hotel.sql (D27-311): per hotel and
+                                        step, completed by hand / later / remind on a day, who
+                                        (chosen_by defaults to the signed-in person) and when;
+                                        FORCE RLS on app.manages_hotel for reads AND writes;
+                                        audited; test-hotel class 'never'. Done-ness is never here.
 ```
 
 Isolation is checked as the application role in `db/tests/rls.sql`, never in

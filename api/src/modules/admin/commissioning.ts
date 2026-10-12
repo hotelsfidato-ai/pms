@@ -55,7 +55,30 @@ inventorySetup.get("/:code/commissioning", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
+    const { hotel, checks } = await commissioningChecks(client, hotelId);
 
+    const blocking = checks.filter((x) => x.blocking && !x.done);
+
+    return {
+      property: hotel.name,
+      checks,
+      done: checks.filter((x) => x.done).length,
+      total: checks.length,
+      /* Not a percentage. "80% ready" invites somebody to open for
+         business on the strength of a number that says nothing about
+         WHICH fifth is missing — and here the missing fifth is usually
+         the tax number that prints on every bill. */
+      canTakeABooking: blocking.length === 0,
+      blockedBy: blocking.map((x) => x.label),
+    };
+  });
+
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+/** The checks themselves, for this route and for Set up this hotel
+    (setup.ts, D27-311), which asks the same questions rather than a copy. */
+export async function commissioningChecks(client: Client, hotelId: string) {
     const { rows: h } = await client.query<{
       gstin: string | null; address: string | null; phone: string | null;
       email: string | null; name: string;
@@ -205,21 +228,5 @@ inventorySetup.get("/:code/commissioning", async (c) => {
       } as Check] : []),
     ];
 
-    const blocking = checks.filter((x) => x.blocking && !x.done);
-
-    return {
-      property: hotel.name,
-      checks,
-      done: checks.filter((x) => x.done).length,
-      total: checks.length,
-      /* Not a percentage. "80% ready" invites somebody to open for
-         business on the strength of a number that says nothing about
-         WHICH fifth is missing — and here the missing fifth is usually
-         the tax number that prints on every bill. */
-      canTakeABooking: blocking.length === 0,
-      blockedBy: blocking.map((x) => x.label),
-    };
-  });
-
-  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
-});
+    return { hotel, checks, figures: { types, unpriced, rooms, placeholderGstin } };
+}

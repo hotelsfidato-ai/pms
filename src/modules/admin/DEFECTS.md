@@ -14,6 +14,18 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### ADM-22 · A GM's bank details say "Last changed on ..." with no name when the group owner changed them - OPEN
+
+**Found** - 13 October, building D27-311's API (the same fault in the new
+code was caught by its own test first). `bankDetails.ts`'s GET names who
+changed them with `left join staff s on s.id = b.changed_by`; under the GM's
+session the `staff` policy shows only the hotel's own people, so a change by a
+group administrator (rostered nowhere) comes back `changedBy: null` and
+`VoucherSettings.tsx` drops the "by" (MEMORY 283). Seen on the scratch copy:
+the owner set WIZ's bank details; the owner read "Group Owner", the Test GM
+`null`. **The fix** (one line, not made - outside D27-311): read the name with
+`app.colleague_name(b.changed_by, b.hotel_id)`, as `setup.ts` does.
+
 ### ADM-19 · A PIN or map point emptied in Settings comes back from SU's old row - OPEN, accepted (numbered for now)
 
 **Found** - 30 September, building D27-214's phase 2. The postcode and the map

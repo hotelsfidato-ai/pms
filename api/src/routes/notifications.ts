@@ -4,6 +4,7 @@ import type { Client } from "../db.ts";
 import { businessDateFor } from "../businessDate.ts";
 import { can, type Role } from "../permissions.ts";
 import { teamsFor } from "../modules/guest-services/index.ts";
+import { setupReminders, STEP_TITLES } from "../modules/admin/index.ts";
 import { allows, WRITE_RULES } from "../roleGate.ts";
 
 /* Split out of billing.ts on 15 September in the service-folder move
@@ -320,6 +321,22 @@ notifications.get("/:code/notifications", async (c) => {
             + "Open Settings to see them, and ask if you did not expect this.",
           isRead: false, at: b.at.toISOString(),
           link: `/h/${b.code}/settings/taxes-and-billing`, actionRequired: true,
+        });
+      }
+    }
+
+    /* SET UP THIS HOTEL (the owner's D27-311): a step somebody asked to be
+       reminded of, from its day on (the hotel's own date), until it is done or
+       the choice is cleared - the hotel's owner, Admin and GM, `setting`. */
+    if (role !== null && can(role, "view", "setting")) {
+      for (const s of await setupReminders(client, hotelId)) {
+        out.push({
+          id: `setup-reminder-${s.id}`, hotelId: code, category: "system",
+          title: `Setup: ${STEP_TITLES[s.id]}`, body: "You asked to be reminded today.",
+          /* From the start of its day: at 09:00 a reminder read at 2 am said
+             "in about 7 hours" (seen on screen, 13 October). */
+          isRead: false, at: `${s.remindOn}T00:00:00+05:30`,
+          link: `/h/${code}/setup?step=${s.id}`, actionRequired: true,
         });
       }
     }

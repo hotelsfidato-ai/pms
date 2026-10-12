@@ -124,6 +124,9 @@ green "  all migrations applied to an empty database"
 # with a promotion in RUPEES (146's discount rule without 191's discount_amount)
 # and a hotel whose default payment method is ITS OWN (187's four-word check,
 # which 191 took away). Each would have stopped the next release at that file.
+#
+# AND A SET-UP STEP WITH A REMINDER (D27-311), so the choice and day rules of
+# hotel_setup_steps are replayed over a row that has them.
 if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 \
      -c "insert into hotels (code, name, city) values ('RRN','Rerun Property','Nowhere')" \
      -c "insert into hotel_modules (hotel_id, module, is_enabled)
@@ -193,7 +196,9 @@ if ! out=$("$PSQL" $S -d "$DB" -q -v ON_ERROR_STOP=1 \
            from promo, g, room_types rt where rt.code = 'RRT' and rt.hotel_id = promo.hotel_id" \
      -c "insert into payment_methods (hotel_id, label, kind)
          select id, 'Rerun Wallet', 'wallet' from hotels where code = 'RRN'" \
-     -c "update hotels set default_payment_method = 'Rerun Wallet' where code = 'RRN'" 2>&1); then
+     -c "update hotels set default_payment_method = 'Rerun Wallet' where code = 'RRN'" \
+     -c "insert into hotel_setup_steps (hotel_id, step, choice, remind_on)
+         select id, 'modules', 'remind', current_date + 1 from hotels where code = 'RRN'" 2>&1); then
   red "  x could not create a property between the passes"
   echo "$out" | grep -m1 "ERROR" | sed 's/^/      /'
   exit 1

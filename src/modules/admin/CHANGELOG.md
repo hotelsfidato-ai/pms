@@ -11,6 +11,52 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-13 · Set up this hotel: the data and the API (the owner's D27-311)
+
+**Asked for:** D27-311, split by the master: this side owns the table, the
+routes, every step's derived state and the bell's reminder; a second helper
+builds the screens to the master's contract at the same time.
+**Shipped:**
+- Migration 215 (`215_setting_up_a_hotel.sql`): `hotel_setup_steps` - per
+  hotel and step, `completed` (by hand) / `later` / `remind` + `remind_on`,
+  `chosen_by` (defaults to the signed-in person) and `chosen_at`. A reminder
+  has its day and nothing else has one. FORCE RLS, reads AND writes on
+  `app.manages_hotel`; audited (`app.write_audit`); test-hotel class `never`
+  (`app.test_hotel_classes()` replaced with 212's list plus this one).
+- `api/src/modules/admin/setup.ts`: `GET /api/hotels/:code/setup` and
+  `PUT /api/hotels/:code/setup/:step` (`completed | later | remind | clear`),
+  the types (`StepId`, `SetupStep`, `Setup`, `SetupChoice`, `STEP_TITLES`).
+  Done is derived: steps 1-5, cancellation and people ask
+  `commissioningChecks` (commissioning.ts, its body now a function both use);
+  payments asks for bank details and a way of paying switched on; charges,
+  messages, branding and connections tick themselves when their rows show it
+  and are otherwise by hand; front desk, booking sources, modules, policies
+  and lists by hand only; go-live when 1-5 are done. "done" wins over a
+  stored later/remind.
+- `roleGate.ts`: GET `setting` view, PUT room setup edit (owner, Admin, GM).
+- `routes/notifications.ts` (the core's, by the master's exception): for
+  owner, Admin and GM, each "remind" step whose day has come at the hotel
+  (its own date) and is not done: "Setup: <title>", "You asked to be reminded
+  today.", `/h/<code>/setup?step=<id>` - computed in the read, never stored.
+- `db/tests/rerun.sh` seeds a reminder between its passes.
+**Found:** the GM read `by: null` for a choice the group owner made - a join
+to `staff` hides the owner from a GM (MEMORY 283); the name now comes through
+`app.colleague_name`. The bell said "in about 7 hours" at 2 am for a
+reminder dated 09:00; it is dated from the start of its day. A new hotel's
+business date stays where it was made (WIZ: 9 Oct on 13 Oct), so a reminder
+counts the hotel's calendar date, not its business date.
+**Proved:** database checks "setup steps" 14, seen failing on a scratch copy
+with the guards broken (read policy widened, FORCE off, the day rule and the
+who-default dropped: 5 failed), all 14 after. API `setupWizard.test.ts` 20:
+the first run failed one for a real reason (the GM's `by`, above); then each
+guard broken in turn and put back byte for byte (`.local/mutate.mjs`): the
+bell block (3 failed), Completed on an automatic step (2), done wins (3), not
+before its day (4), the route's and the gate's who together (2). On screen
+(API 8836, web 5336, scratch copy `fidato_wiz` with a new empty property WIZ
+and the Test GM as its GM): the reminder in the GM's bell, "Setup: Modules -
+You asked to be reminded today", and gone after Completed.
+**Left open:** the screens (the other helper); questions in the report.
+
 ## 2026-10-12 · The provisioning key boxes are not filled by the browser (the owner's D27-307 (2))
 
 **Shipped:** `flows/StaffAdmin.tsx`: both provisioning key boxes (a new group
