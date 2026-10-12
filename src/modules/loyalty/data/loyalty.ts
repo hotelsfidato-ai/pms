@@ -28,6 +28,8 @@ export interface LoyaltyScreen {
   maySetRules: boolean;
   isOn: boolean;
   isManager: boolean;
+  /** Reception and above may take points off a bill; not the Accountant (D27-305). */
+  mayRedeem: boolean;
   stays: LoyaltyStay[];
 }
 

@@ -12,7 +12,10 @@ import LoyaltyPage from "@/modules/loyalty/pages/Loyalty";
 
 const posted: Array<{ path: string; body: unknown }> = [];
 
-function open() {
+const MEMBER = { id: "s3", reference: "R-3", room: "103", guestId: "g3", name: "Direct Member",
+  hasPhone: true, member: true, points: 900, direct: true };
+
+function open(over: Record<string, unknown> = {}) {
   posted.length = 0;
   vi.spyOn(apiModule, "api").mockImplementation(async (path: string, init?: RequestInit) => {
     if (init?.method && init.method !== "GET") {
@@ -22,13 +25,14 @@ function open() {
     return {
       name: "Test Rewards", pointsPer100: null,
       words: "Join Test Rewards: we keep your stays and points to give you rewards. I am 18 or over.",
-      maySetRules: false, isOn: true, isManager: false,
+      maySetRules: false, isOn: true, isManager: false, mayRedeem: true,
       stays: [
         { id: "s1", reference: "R-1", room: "101", guestId: "g1", name: "Asha Rao", hasPhone: true,
           member: false, points: null, direct: true },
         { id: "s2", reference: "R-2", room: "102", guestId: "g2", name: "Ota Guest", hasPhone: true,
           member: true, points: 900, direct: false },
       ],
+      ...over,
     } as never;
   });
   render(
@@ -57,5 +61,17 @@ describe("the Loyalty screen", () => {
     fireEvent.click(join);
     await waitFor(() => expect(posted).toEqual([
       { path: "/api/hotels/5EL/loyalty/guests/g1/join", body: { agreed: true } }]));
+  });
+
+  it("offers Use points only to whoever holds the right, and tells the rest who does (D27-305)", async () => {
+    open({ stays: [MEMBER] });
+    expect((await screen.findAllByRole("button", { name: "Use points" })).length).toBeGreaterThan(0);
+    cleanup(); vi.restoreAllMocks();
+
+    open({ stays: [MEMBER], mayRedeem: false });
+    expect(await screen.findByText(
+      "Points are used by reception, the hotel manager, the general manager, an administrator or the owner.")).toBeDefined();
+    expect(screen.getAllByText("Direct Member").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Use points" })).toBeNull();
   });
 });

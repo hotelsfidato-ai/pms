@@ -4,12 +4,17 @@ import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, Plus, Building2, UtensilsCrossed } from "lucide-react";
 import { money } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { can } from "@/lib/permissions";
+import { useRole } from "@/lib/session";
 import {
   Page, PageHeader, Card, CardHeader, Button, Skeleton, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input, Textarea,
-  StatusPill, IconChip,
+  StatusPill, IconChip, Switch,
 } from "@/components/ui";
-import { getBanquetSetup, addBanquetVenue, amendBanquetVenue, addBanquetPackage, type BanquetVenue } from "@/modules/banquet/data/banquet";
+import {
+  getBanquetSetup, addBanquetVenue, amendBanquetVenue, addBanquetPackage, switchBanquetPackage,
+  type BanquetVenue, type BanquetPackage,
+} from "@/modules/banquet/data/banquet";
 import { Checkbox, ReadFailed, ReadStale, readError } from "@/components/ui";
 import { queryKeys } from "@/data/repositories";
 
@@ -50,6 +55,16 @@ export default function BanquetSetupPage() {
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: queryKeys.banquetSetup(hotelId) });
     void qc.invalidateQueries({ queryKey: ["banquet-diary"] });
+  };
+
+  /* D27-305 (8): a package is switched off, never changed - by whoever
+     sets the hotel up (the server's HALLS rule), disabled for the rest. */
+  const maySwitch = can(useRole(), "edit", "room_config");
+  const switchPackage = async (p: BanquetPackage, on: boolean) => {
+    const res = await switchBanquetPackage(hotelId, p.id, on);
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    toast.success(on ? `${p.name} is offered again` : `${p.name} is off: not offered for functions now`);
+    refresh();
   };
 
   if (q.isLoading) {
@@ -153,9 +168,15 @@ export default function BanquetSetupPage() {
               </Button>
             }
           >
-            <h2 className="flex items-center gap-2.5 min-w-0 text-md font-semibold text-ink-900">
-              <IconChip><UtensilsCrossed /></IconChip> Packages
-            </h2>
+            <div className="min-w-0">
+              <h2 className="flex items-center gap-2.5 min-w-0 text-md font-semibold text-ink-900">
+                <IconChip><UtensilsCrossed /></IconChip> Packages
+              </h2>
+              <p className="mt-0.5 text-sm text-grey-500">
+                Never changed once added. Switch one off to stop offering it; functions keep what they were sold.
+                {!maySwitch && " The owner, an administrator or the GM switches them."}
+              </p>
+            </div>
           </CardHeader>
 
           {packages.length === 0 ? (
@@ -166,17 +187,23 @@ export default function BanquetSetupPage() {
           ) : (
             <ul className="divide-y divide-grey-100">
               {packages.map((p) => (
-                <li key={p.id} className="px-4 py-3 min-h-14">
-                  <p className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium text-ink-900">{p.name}</span>
-                    {p.mealType && <StatusPill tone="neutral">{p.mealType}</StatusPill>}
-                  </p>
-                  <p className="mt-0.5 text-sm text-grey-500">
-                    {p.ratePerHead === null
-                      ? <span className="text-grey-500">no rate - agreed per function</span>
-                      : `${money(p.ratePerHead)} a head`}
-                    {p.description ? ` · ${p.description}` : ""}
-                  </p>
+                <li key={p.id} className="flex items-center gap-3 px-4 py-3 min-h-14">
+                  <div className="min-w-0 flex-1">
+                    <p className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-ink-900">{p.name}</span>
+                      {p.mealType && <StatusPill tone="neutral">{p.mealType}</StatusPill>}
+                      {!p.isActive && <StatusPill tone="neutral">Off</StatusPill>}
+                    </p>
+                    <p className="mt-0.5 text-sm text-grey-500">
+                      {p.ratePerHead === null
+                        ? <span className="text-grey-500">no rate - agreed per function</span>
+                        : `${money(p.ratePerHead)} a head`}
+                      {p.description ? ` · ${p.description}` : ""}
+                    </p>
+                  </div>
+                  <Switch checked={p.isActive} disabled={!maySwitch}
+                          onCheckedChange={(on) => void switchPackage(p, on)}
+                          label={<span className="sr-only">Offer {p.name}</span>} />
                 </li>
               ))}
             </ul>

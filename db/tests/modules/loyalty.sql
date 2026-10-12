@@ -13,7 +13,7 @@ select set_config('app.user_id',
 
 do $$
 declare
-  h uuid; rt uuid; clerk uuid; gm uuid; g uuid; nophone uuid; twin uuid;
+  h uuid; rt uuid; clerk uuid; gm uuid; accountant uuid; g uuid; nophone uuid; twin uuid;
   res uuid; ota_res uuid; ota uuid; fol uuid; ota_fol uuid; bd date;
   n int; v text; line record; disc bigint;
   old_name text; old_rate numeric;
@@ -25,8 +25,11 @@ begin
   on conflict (email) do update set is_active = true returning id into clerk;
   insert into staff (email, full_name) values ('loy-gm@fidato.in', 'Loyalty GM')
   on conflict (email) do update set is_active = true returning id into gm;
-  delete from staff_hotels where staff_id in (clerk, gm);
-  insert into staff_hotels (staff_id, hotel_id, role) values (clerk, h, 'front_desk'), (gm, h, 'gm');
+  insert into staff (email, full_name) values ('loy-accountant@fidato.in', 'Loyalty Accountant')
+  on conflict (email) do update set is_active = true returning id into accountant;
+  delete from staff_hotels where staff_id in (clerk, gm, accountant);
+  insert into staff_hotels (staff_id, hotel_id, role)
+  values (clerk, h, 'front_desk'), (gm, h, 'gm'), (accountant, h, 'finance');
 
   insert into guests (full_name, phone) values ('Loyalty Guest', '+91 70000 55501') returning id into g;
   insert into guests (full_name) values ('No Phone Guest') returning id into nophone;
@@ -101,13 +104,25 @@ begin
   reset role;
   perform test.ok('loyalty', 'never more than the balance', v = 'The guest has 2000 points.', coalesce(v, 'used'));
 
+  -- D27-305: redeeming is its own right - Reception and above, not the Accountant.
+  perform set_config('app.user_id', accountant::text, true);
+  set local role pms_app;
+  v := app.loyalty_redeem(res, 1500);
+  reset role;
+  perform set_config('app.user_id', clerk::text, true);
+  perform test.ok('loyalty', 'the accountant may not use a guest''s points (D27-305)',
+    v = 'Points are used by reception, the hotel manager, the general manager, an administrator or the owner.'
+      and not exists (select 1 from folio_postings where folio_id = fol and source_type = 'loyalty')
+      and app.loyalty_balance(g) = 2000,
+    coalesce(v, 'used'));
+
   set local role pms_app;
   v := app.loyalty_redeem(res, 1500);
   reset role;
   select fp.id, fp.amount, fp.tax_rate, fp.tax_amount, fp.category into line
     from folio_postings fp where fp.folio_id = fol and fp.source_type = 'loyalty';
   disc := line.id;
-  perform test.ok('loyalty', 'points go under the nights as a discount line, taxed at the nights'' rate (L13, CA-L1)',
+  perform test.ok('loyalty', 'reception uses points (D27-305): they go under the nights as a discount line, taxed at the nights'' rate (L13, CA-L1)',
     v is null and line.category = 'discount' and line.amount = -1500 and line.tax_rate = 5 and line.tax_amount = -75
       and (select count(*) from folio_postings where folio_id = fol and category = 'room') = 2,
     coalesce(v, '') || ' ' || coalesce(line::text, 'no line'));
@@ -218,8 +233,8 @@ begin
   alter table guests disable trigger guests_no_delete;
   delete from guests where id in (g, nophone, twin);
   alter table guests enable trigger guests_no_delete;
-  delete from staff_hotels where staff_id in (clerk, gm);
-  update staff set is_active = false where id in (clerk, gm);
+  delete from staff_hotels where staff_id in (clerk, gm, accountant);
+  update staff set is_active = false where id in (clerk, gm, accountant);
 
   select count(*) into n from hotels where code = 'LOY';
   perform test.ok('loyalty', 'the fixtures do not outlive the test', n = 0, n || ' left behind');

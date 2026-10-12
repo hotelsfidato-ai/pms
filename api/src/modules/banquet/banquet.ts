@@ -40,6 +40,11 @@ const refuse = (reason: string) => ({ ok: false as const, reason });
 const BILLED =
   "This function is on its bill, so its price, courses and times are fixed.";
 
+/* A package switched off is not sold again (D27-305 (8)); one already on a
+   function stays there as sold. */
+const PACKAGE_OFF =
+  "That package is switched off, so it is not offered for functions now.";
+
 /* THE OWNER'S D27-124: a function may be set up while the property has no
    banquet GST rule, and it is told so; its bill is refused until the rule
    is set (the bill's own check). Asked with finance's own question,
@@ -657,6 +662,13 @@ banquet.post("/:code/banquet/events/:id/catering", async (c) => {
     if (owned[0].status === "completed") return refuse(BILLED);
 
     try {
+      if (input.packageId) {
+        const { rows: pkg } = await client.query<{ is_active: boolean }>(
+          "select is_active from banquet_packages where id = $1 and hotel_id = $2",
+          [input.packageId, hotelId]);
+        if (!pkg[0]) return refuse("No such package here.");
+        if (!pkg[0].is_active) return refuse(PACKAGE_OFF);
+      }
       await client.query(
         `insert into banquet_event_packages
            (hotel_id, event_id, package_id, name, pax, rate_per_head, notes,
@@ -1112,4 +1124,33 @@ banquet.post("/:code/banquet/packages", async (c) => {
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* A PACKAGE IS RETIRED, NEVER CHANGED (the owner's D27-305 (8)). The switch
+   takes it off what new catering is offered, or puts it back; a function
+   that has it keeps its line exactly as sold (name and rate are copied onto
+   the function, 061). Its name, price and contents are not changed here or
+   anywhere: a new price or a new menu is a new package. */
+export const PACKAGE_FIXED =
+  "A package is not changed once added. Switch it off, and add a new one for a new price or menu.";
+
+banquet.patch("/:code/banquet/packages/:id", async (c) => {
+  const input = await c.req.json<Record<string, unknown> | null>().catch(() => null) ?? {};
+  if (typeof input["isActive"] !== "boolean" || Object.keys(input).some((k) => k !== "isActive")) {
+    return c.json(refuse(PACKAGE_FIXED), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{ id: string }>(
+      `update banquet_packages set is_active = $3, updated_at = now()
+        where id = $1 and hotel_id = $2 returning id::text`,
+      [c.req.param("id"), hotelId, input["isActive"]]);
+    return rows[0] ? { ok: true as const } : "missing" as const;
+  });
+
+  if (result === null) return c.json({ error: "No such property." }, 404);
+  if (result === "missing") return c.json({ error: "No such package." }, 404);
+  return c.json(result);
 });

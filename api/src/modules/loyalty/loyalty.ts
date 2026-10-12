@@ -57,11 +57,12 @@ loyalty.get("/:code/loyalty", async (c) => {
     if (!hotelId) return noProperty;
     const { rows: rules } = await client.query<{
       name: string | null; rate: string | null; words: string | null;
-      may_set: boolean; is_on: boolean; manager: boolean;
+      may_set: boolean; is_on: boolean; manager: boolean; may_redeem: boolean;
     }>(
       `select g.loyalty_name as name, g.loyalty_points_per_100::text as rate,
               app.loyalty_consent_words() as words, app.sets_group_settings() as may_set,
-              app.module_enabled($1, 'loyalty') as is_on, app.is_crm_manager() as manager
+              app.module_enabled($1, 'loyalty') as is_on, app.is_crm_manager() as manager,
+              app.redeems_loyalty_points($1) as may_redeem
          from (select 1) one left join group_settings g on g.id = 1`, [hotelId]);
     const { rows: stays } = await client.query<{
       id: string; reference: string; room: string | null; guest_id: string; name: string;
@@ -83,7 +84,7 @@ loyalty.get("/:code/loyalty", async (c) => {
       status: 200,
       body: {
         name: r.name, pointsPer100: r.rate === null ? null : Number(r.rate), words: r.words,
-        maySetRules: r.may_set, isOn: r.is_on, isManager: r.manager,
+        maySetRules: r.may_set, isOn: r.is_on, isManager: r.manager, mayRedeem: r.may_redeem,
         stays: stays.map((s) => ({
           id: s.id, reference: s.reference, room: s.room, guestId: s.guest_id, name: s.name,
           hasPhone: s.has_phone, member: s.member, points: s.points, direct: s.direct,

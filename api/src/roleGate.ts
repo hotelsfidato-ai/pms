@@ -113,7 +113,13 @@ const SYSTEM_HEALTH = grant("role", "view", "Reading the system's health");
 const CHARGE = grant("invoice", "create", "Adding to a bill");
 /* Loyalty (D27-179): the desk joins a guest and takes points off a bill (L6). */
 const LOYALTY_MEMBER = grant("customer", "edit", "Joining a guest to loyalty, or taking them out");
-const LOYALTY_POINTS = grant("invoice", "create", "Taking loyalty points off a bill");
+/* Redeeming is its own right (the owner's D27-305), no longer the invoice's,
+   which let the accountant in: Reception and above - the owner, an
+   administrator, the GM, the hotel manager and reception, exactly who checks
+   a guest in (`reservation` edit) today. The database asks the same five
+   (app.redeems_loyalty_points, 213); api/test/modules/loyalty/loyalty.test.ts
+   fails if the two ever differ. */
+const LOYALTY_POINTS = grant("reservation", "edit", "Using a guest's loyalty points");
 const CHANGE_BILL = grant("invoice", "edit", "Changing a bill");
 const TAX_INVOICE = grant("invoice", "create", "Issuing a tax invoice");
 /* The owner's D22-33: the owner, an administrator, the GM and the accountant -
@@ -567,6 +573,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/banquet/venues`]: HALLS,
   [`PATCH ${H}/banquet/venues/:id`]: HALLS,
   [`POST ${H}/banquet/packages`]: HALLS,
+  /* D27-305 (8): switched off or on, never changed - whoever adds packages. */
+  [`PATCH ${H}/banquet/packages/:id`]: HALLS,
 
   /* stores */
   [`POST ${H}/stores/items`]: own("stores/stockGrants.ts"),
