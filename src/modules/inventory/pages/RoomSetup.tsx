@@ -7,7 +7,7 @@ import { useUi } from "@/lib/ui";
 import {
   Page, PageHeader, Card, Button, Skeleton, EmptyState, toast,
   Dialog, DialogContent, DialogClose, Field, fieldProps, Input,
-  NativeSelect, StatusPill, Segmented,
+  NativeSelect, StatusPill, Segmented, Switch,
 } from "@/components/ui";
 import { shrinkPhoto } from "@/modules/online-checkin";
 import {
@@ -253,6 +253,7 @@ export default function RoomSetupPage() {
       )}
       {addingRoom && (
         <RoomDialog hotelId={hotelId} room={null} types={types}
+          existing={rooms.map((r) => r.number)}
           onClose={() => setAddingRoom(false)}
           onDone={() => { setAddingRoom(false); refresh(); }} />
       )}
@@ -619,12 +620,25 @@ function TypePhotoImage({ hotelId, typeId, photoId }: { hotelId: string; typeId:
     : <div className="w-full aspect-[4/3] bg-grey-100" />;
 }
 
+/* SEVERAL ROOMS (the owner's D27-309): From and To, digits only, To not
+   below From. Each number goes through the same one-room create, so the
+   server keeps every check it has - a number it already has is refused
+   there, and only named here. The floor typed is every room's floor,
+   never worked out from the number. Zeros typed in From are kept (01 to
+   12 adds 01 ... 12). */
+const DIGITS = /^\d{1,10}$/;
+const plural = (n: number) => `${n} room${n === 1 ? "" : "s"}`;
+
 function RoomDialog({
-  hotelId, room, types, onClose, onDone,
+  hotelId, room, types, existing = [], onClose, onDone,
 }: {
-  hotelId: string; room: Room | null; types: RoomTypeSetup[];
+  hotelId: string; room: Room | null; types: RoomTypeSetup[]; existing?: string[];
   onClose: () => void; onDone: () => void;
 }) {
+  const [several, setSeveral] = useState(false);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [result, setResult] = useState<{ added: string[]; skipped: string[]; refused: string[] } | null>(null);
   const [number, setNumber] = useState(room?.number ?? "");
   const [typeId, setTypeId] = useState(
     room?.roomTypeId ?? types.find((t) => t.isActive)?.id ?? "");
@@ -634,7 +648,31 @@ function RoomDialog({
   const [active, setActive] = useState(room?.isActive ?? true);
   const [busy, setBusy] = useState(false);
 
+  const fromBad = from !== "" && !DIGITS.test(from) ? "Digits only, e.g. 101." : undefined;
+  const toBad = to !== "" && !DIGITS.test(to) ? "Digits only, e.g. 109."
+    : !fromBad && from && to && Number(to) < Number(from) ? "To is below From." : undefined;
+  const count = from && to && !fromBad && !toBad ? Number(to) - Number(from) + 1 : 0;
+
+  const addSeveral = async () => {
+    setBusy(true);
+    const done = { added: [] as string[], skipped: [] as string[], refused: [] as string[] };
+    for (let i = 0; i < count; i++) {
+      const n = String(Number(from) + i).padStart(from.length, "0");
+      const res = await addRoom(hotelId, {
+        number: n, roomTypeId: typeId,
+        floor: floor.trim() === "" ? null : Number(floor),
+        smoking,
+      });
+      if (res.ok) done.added.push(n);
+      else if (existing.includes(n)) done.skipped.push(n);
+      else done.refused.push(`${n} not added: ${res.reason}`);
+    }
+    setBusy(false);
+    setResult(done);
+  };
+
   const submit = async () => {
+    if (several) return addSeveral();
     setBusy(true);
     const res = room
       ? await amendRoom(hotelId, room.number, {
@@ -653,33 +691,67 @@ function RoomDialog({
     onDone();
   };
 
-  const ready = (room || number.trim()) && typeId;
+  const ready = (several ? count > 0 : room || number.trim()) && typeId;
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
+    /* Once rooms were added, closing the window shows them on the page. */
+    <Dialog open onOpenChange={(o) => !o && (result ? onDone() : onClose())}>
       <DialogContent
         title={room ? `Room ${room.number}` : "Add a room"}
-        footer={
+        footer={result ? (
+          <Button variant="primary" onClick={onDone}>Done</Button>
+        ) : (
           <>
             <DialogClose asChild>
               <Button variant="secondary">Cancel</Button>
             </DialogClose>
             <Button variant="primary" disabled={!ready || busy}
                     onClick={() => void submit()}>
-              {busy ? "Saving…" : "Save"}
+              {busy ? "Saving…" : !several ? "Save" : count ? `Add ${plural(count)}` : "Add rooms"}
             </Button>
           </>
-        }
+        )}
       >
+        {result ? (
+          <div role="status" className="space-y-1.5 text-sm">
+            <p className="text-ink-900">
+              {result.added.length
+                ? `Added ${plural(result.added.length)}: ${result.added.join(", ")}`
+                : "No room was added."}
+            </p>
+            {result.skipped.length > 0 && (
+              <p className="text-grey-600">
+                {`${result.skipped.join(", ")} already ${result.skipped.length === 1 ? "exists" : "exist"}, skipped`}
+              </p>
+            )}
+            {result.refused.map((line) => <p key={line} className="text-brand-red">{line}</p>)}
+          </div>
+        ) : (
         <div className="space-y-3">
-          {!room && (
+          {!room && <Switch checked={several} onCheckedChange={setSeveral} label="Several rooms" />}
+          {!room && (several ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="From" required hint="Digits only." error={fromBad}>
+                {(f) => (
+                  <Input {...fieldProps(f)} value={from} placeholder="101" maxLength={10}
+                         inputMode="numeric" onChange={(e) => setFrom(e.target.value.trim())} />
+                )}
+              </Field>
+              <Field label="To" required error={toBad}>
+                {(f) => (
+                  <Input {...fieldProps(f)} value={to} placeholder="109" maxLength={10}
+                         inputMode="numeric" onChange={(e) => setTo(e.target.value.trim())} />
+                )}
+              </Field>
+            </div>
+          ) : (
             <Field label="Number" required hint="At most 10 letters and digits.">
               {(f) => (
                 <Input {...fieldProps(f)} value={number} placeholder="308" maxLength={10}
                        onChange={(e) => setNumber(e.target.value)} />
               )}
             </Field>
-          )}
+          ))}
           <Field label="Type" required>
             {(f) => (
               <NativeSelect {...fieldProps(f)} value={typeId}
@@ -724,6 +796,7 @@ function RoomDialog({
             </label>
           )}
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );
