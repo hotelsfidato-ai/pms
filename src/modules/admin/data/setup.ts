@@ -47,12 +47,17 @@ export const getSetup = (code: string) => api<SetupView>(at(code));
 export const chooseStep = (code: string, id: StepId, choice: StepChoice): Promise<AdminResult<object>> =>
   put(at(code, `/${id}`), choice);
 
-/** The view, for whoever may see it. A failed read is the caller's to show. */
+/** The view, for whoever may see it. A failed read is the caller's to show.
+    ⚠ ASKED AGAIN EACH TIME A SCREEN OPENS (staleTime 0): the app keeps every
+    read forever (App.tsx), and a step ticks itself when the PMS sees it done,
+    so the page a person comes BACK to from the real screen must not show the
+    answer from before they did the work. */
 export function useSetup(code: string, enabled = true) {
   return useQuery({
     queryKey: SETUP_KEY(code),
     queryFn: () => getSetup(code),
     enabled: enabled && Boolean(code),
+    staleTime: 0,
   });
 }
 

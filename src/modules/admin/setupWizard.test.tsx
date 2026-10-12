@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Routes, Route, useLocation } from "react-router";
+import { MemoryRouter, Routes, useLocation } from "react-router";
 import type { ReactElement } from "react";
 import * as apiModule from "@/lib/api";
 import { useUi } from "@/lib/ui";
@@ -201,6 +201,23 @@ describe("the setup page", () => {
     expect(screen.getByRole("region", { name: "Ready to go live" })).toBeTruthy();
     expect([...document.querySelectorAll("[data-step]")].map((e) => e.getAttribute("data-step"))).toEqual([...STEP_IDS]);
     expect(screen.getByText("2 of 5 done")).toBeTruthy();
+  });
+
+  it("asks the server again each time it opens, so work done on the real screen shows", async () => {
+    const { asked } = serve();
+    /* The app keeps every read forever (App.tsx): the same default here. */
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    const open = () => render(
+      <QueryClientProvider client={client}>
+        <TooltipProvider><MemoryRouter initialEntries={["/x?step=profile"]}><SetupPage /></MemoryRouter></TooltipProvider>
+      </QueryClientProvider>,
+    );
+    const first = open();
+    await loaded();
+    first.unmount();
+    open();
+    await loaded();
+    await waitFor(() => expect(asked.filter((p) => p === "/api/hotels/AGR/setup")).toHaveLength(2));
   });
 
   it("shows each step's state, with the date for Remind me, and what is missing when not done", async () => {
