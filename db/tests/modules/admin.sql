@@ -996,3 +996,112 @@ end $$;
 
 select set_config('app.user_id',
        (select id::text from staff where email = 'owner@fidato.in'), false);
+
+
+-- =============================================================================
+-- SET UP THIS HOTEL (the owner's D27-311): what a person chose on a step
+-- =============================================================================
+-- Whether a step is done is derived by the API, never stored. The table keeps
+-- only a choice the data cannot show (completed by hand, later, remind on a
+-- day), with who and when - read and written by whoever manages THAT hotel
+-- (its owner, GM or Admin, or a group administrator) and by nobody else.
+-- =============================================================================
+do $$
+declare
+  v_h uuid; v_other uuid; v_gm uuid; v_clerk uuid; v_elsewhere uuid; v_owner uuid;
+  v_n int; v_m int;
+begin
+  v_h     := app.provision_property_unchecked('ASW', 'Setup Wizard Test', 'Nowhere');
+  v_other := app.provision_property_unchecked('ASX', 'Setup Wizard Other', 'Nowhere');
+  select id into v_owner from staff where email = 'owner@fidato.in';
+
+  insert into staff (email, full_name) values ('asw-gm@fidato.in', 'Setup Test GM')
+  on conflict (email) do update set is_active = true returning id into v_gm;
+  insert into staff (email, full_name) values ('asw-clerk@fidato.in', 'Setup Test Clerk')
+  on conflict (email) do update set is_active = true returning id into v_clerk;
+  insert into staff (email, full_name) values ('asw-elsewhere@fidato.in', 'Setup Test Elsewhere')
+  on conflict (email) do update set is_active = true returning id into v_elsewhere;
+  delete from staff_hotels where staff_id in (v_gm, v_clerk, v_elsewhere);
+  insert into staff_hotels (staff_id, hotel_id, role) values
+    (v_gm, v_h, 'gm'), (v_clerk, v_h, 'front_desk'), (v_elsewhere, v_other, 'gm');
+
+  perform test.ok('setup steps', 'row security is forced on the table, as on every hotel table',
+    (select relrowsecurity and relforcerowsecurity from pg_class where relname = 'hotel_setup_steps'));
+
+  -- ---------- the hotel's GM chooses, and the database names them ----------
+  perform set_config('app.user_id', v_gm::text, true);
+  set local role pms_app;
+  insert into hotel_setup_steps (hotel_id, step, choice) values (v_h, 'modules', 'later');
+  insert into hotel_setup_steps (hotel_id, step, choice, remind_on) values (v_h, 'lists', 'remind', date '2027-01-05');
+  get diagnostics v_n = row_count;
+  reset role;
+  perform test.ok('setup steps', 'the hotel''s GM puts a step off for later, and asks for a reminder', v_n = 1);
+  perform test.ok('setup steps', 'the row names who chose it, without the route saying so',
+    (select chosen_by from hotel_setup_steps where hotel_id = v_h and step = 'modules') = v_gm);
+  perform test.ok('setup steps', 'and the change is in the audit log under their name',
+    exists (select 1 from audit_log where table_name = 'hotel_setup_steps'
+             and hotel_id = v_h and actor = v_gm and action = 'INSERT'));
+
+  -- ---------- reception at the same hotel: neither reads nor writes ----------
+  perform set_config('app.user_id', v_clerk::text, true);
+  set local role pms_app;
+  select count(*) into v_n from hotel_setup_steps where hotel_id = v_h;
+  update hotel_setup_steps set choice = 'completed' where hotel_id = v_h;
+  get diagnostics v_m = row_count;
+  reset role;
+  perform test.ok('setup steps', 'reception neither reads the choices nor changes them',
+    v_n = 0 and v_m = 0, v_n || ' read, ' || v_m || ' changed');
+  perform test.raises('setup steps', 'and cannot add one',
+    format($q$set local role pms_app; insert into hotel_setup_steps (hotel_id, step, choice)
+              values (%L, 'policies', 'completed')$q$, v_h), '42501');
+  reset role;
+
+  -- ---------- a GM of another hotel: not theirs ----------
+  perform set_config('app.user_id', v_elsewhere::text, true);
+  set local role pms_app;
+  select count(*) into v_n from hotel_setup_steps where hotel_id = v_h;
+  delete from hotel_setup_steps where hotel_id = v_h;
+  get diagnostics v_m = row_count;
+  reset role;
+  perform test.ok('setup steps', 'a GM of another hotel neither reads nor clears them',
+    v_n = 0 and v_m = 0, v_n || ' read, ' || v_m || ' cleared');
+  perform test.raises('setup steps', 'nor adds one there',
+    format($q$set local role pms_app; insert into hotel_setup_steps (hotel_id, step, choice)
+              values (%L, 'policies', 'completed')$q$, v_h), '42501');
+  reset role;
+
+  -- ---------- a group administrator: every hotel ----------
+  perform set_config('app.user_id', v_owner::text, true);
+  set local role pms_app;
+  update hotel_setup_steps set choice = 'completed', remind_on = null where hotel_id = v_h and step = 'lists';
+  get diagnostics v_n = row_count;
+  reset role;
+  perform test.ok('setup steps', 'a group administrator changes a choice at any hotel', v_n = 1);
+  perform set_config('app.user_id', '', true);
+
+  -- ---------- the choices themselves ----------
+  perform test.raises('setup steps', 'a reminder has its day',
+    format($q$insert into hotel_setup_steps (hotel_id, step, choice) values (%L, 'branding', 'remind')$q$, v_h),
+    '23514');
+  perform test.raises('setup steps', 'and nothing else has one',
+    format($q$insert into hotel_setup_steps (hotel_id, step, choice, remind_on)
+              values (%L, 'branding', 'later', date '2027-01-05')$q$, v_h), '23514');
+  perform test.raises('setup steps', 'a choice is completed, later or remind',
+    format($q$insert into hotel_setup_steps (hotel_id, step, choice) values (%L, 'branding', 'skipped')$q$, v_h),
+    '23514');
+  perform test.raises('setup steps', 'one choice a step',
+    format($q$insert into hotel_setup_steps (hotel_id, step, choice) values (%L, 'modules', 'completed')$q$, v_h),
+    '23505');
+
+  -- ---------- and the fixtures go, the choices with their hotel ----------
+  delete from staff_hotels where staff_id in (v_gm, v_clerk, v_elsewhere);
+  update staff set is_active = false where id in (v_gm, v_clerk, v_elsewhere);
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id in (v_h, v_other);
+  alter table hotels enable trigger hotels_no_delete;
+  perform test.ok('setup steps', 'a hotel''s choices go with it',
+    not exists (select 1 from hotel_setup_steps where hotel_id in (v_h, v_other)));
+end $$;
+
+select set_config('app.user_id',
+       (select id::text from staff where email = 'owner@fidato.in'), false);
