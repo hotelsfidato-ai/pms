@@ -18,3 +18,9 @@ export { listBillingCompanies, type BillingCompany } from "./data/folios";
 /* D27-163 (delegated by the master): the one page takes an advance through
    the bill's own payment door, held as the guest's credit (D27-4). */
 export { settle } from "./data/postings";
+/* D27-305 (10): a group's master bill is settled and invoiced on the group's
+   page with the bill's own Settle and Invoices' own "are you sure". */
+export { SettleDialog } from "./flows/FolioPanel";
+export { IssueInvoiceDialog } from "./flows/IssueInvoiceDialog";
+export { settleGroupBill } from "./data/postings";
+export { issueGroupInvoice } from "./data/billing";

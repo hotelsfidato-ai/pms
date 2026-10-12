@@ -20,9 +20,9 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuLabel,
 } from "@/components/ui";
-import { getFolioPostings, getFolioBalance, postCharge, reverseCharge, settle, reverseChargeAllowed, editCharge, changeRate, type BillLine } from "@/modules/finance/data/postings";
+import { getFolioPostings, getFolioBalance, postCharge, reverseCharge, settle, reverseChargeAllowed, editCharge, changeRate, type BillLine, type SettleInput } from "@/modules/finance/data/postings";
 import { checkOut, checkOutAllowed, earlyArrival } from "@/modules/front-desk";
-import { type Posting, type Stay } from "@/data/repositories";
+import { type OperationResult, type Posting, type Stay } from "@/data/repositories";
 import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type StayFolio } from "@/modules/finance/data/folios";
 import { LateCheckOutFlow } from "@/modules/front-desk";
 import { getStayBill } from "@/modules/finance/data/bill";
@@ -148,12 +148,13 @@ export function FolioPanel({
         )}
         {mayPay && (
           <SettleDialog
-            hotelId={hotelId}
-            stay={stay}
+            payer={stay.guest}
+            primary={due > 0 && stay.status !== "due-in"}
             balance={due}
             folios={folios}
             active={only}
             businessDate={businessDate}
+            pay={(input, key) => settle(hotelId, stay.id, input, key)}
             onDone={refresh}
           />
         )}
@@ -1082,19 +1083,32 @@ function AddChargeDialog({
   );
 }
 
-function SettleDialog({
-  hotelId, stay, balance, folios, active, businessDate, onDone,
+/** SETTLE: a stay's bill, and a group's master bill on the group's page
+    (D27-305 (10)) - one dialog, one payment door; `pay` names the bill. */
+export function SettleDialog({
+  payer, primary, balance, folios = [], active = null, businessDate, credit = "guest", pay, onDone,
 }: {
-  hotelId: string;
-  stay: Stay;
+  /** Who is paying, for the dialog's line: the guest, or the group. */
+  payer: string;
+  /** The bill's one main action while money is owed. */
+  primary: boolean;
   balance: number;
   /** The stay's bills, and the one whose tab is open (null: Everything). */
-  folios: StayFolio[];
-  active: string | null;
+  folios?: StayFolio[];
+  active?: string | null;
   businessDate: string;
+  /** Whose credit more than the bill is held as (D27-4). */
+  credit?: "guest" | "host";
+  pay: (input: SettleInput, key: string) => Promise<OperationResult>;
   onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  /* OVER THE COMPANY'S CREDIT LIMIT (D27-275, D27-305): "Bill to company" on
+     a group's master bill; the owner, an administrator or the GM may allow
+     it with a reason, as Add charge does. */
+  const [overLimit, setOverLimit] = useState<string | null>(null);
+  const [allowReason, setAllowReason] = useState("");
+  const mayAllow = (["owner", "admin", "gm"] as string[]).includes(useRole());
   /* A SPLIT BILL IS SETTLED ONE BILL AT A TIME (QA FI-2, FI-3): the dialog
      asked for the whole stay and the payment landed on the guest's bill
      whichever tab was open. Now it works on the bill whose tab is open -
@@ -1138,7 +1152,7 @@ function SettleDialog({
             orange at once. Not before arrival: then checking in, in the
             panel's header, is the act. */}
         <Button
-          variant={balance > 0 && stay.status !== "due-in" ? "primary" : "secondary"}
+          variant={primary ? "primary" : "secondary"}
           size="sm"
           disabled={split ? !folios.some((f) => f.balance > 0) : balance <= 0}
         >
@@ -1149,7 +1163,7 @@ function SettleDialog({
       <DialogContent
         title="Settle bill"
         description={`${money(outstanding)} outstanding · ${
-          split ? billName(folios.find((f) => f.id === folioId)) : stay.guest}`}
+          split ? billName(folios.find((f) => f.id === folioId)) : payer}`}
       >
         <div className="space-y-4">
           {split && (
@@ -1176,7 +1190,7 @@ function SettleDialog({
               <NativeSelect
                 id={id}
                 value={method}
-                onChange={(e) => setMethod(e.target.value)}
+                onChange={(e) => { setMethod(e.target.value); setOverLimit(null); }}
               >
                 {payingWays(desk).map((m) => <option key={m}>{m}</option>)}
               </NativeSelect>
@@ -1192,7 +1206,7 @@ function SettleDialog({
                 id={id}
                 numeric
                 value={amount}
-                onChange={(e) => { setAmount(e.target.value); setAsCredit(false); }}
+                onChange={(e) => { setAmount(e.target.value); setAsCredit(false); setOverLimit(null); }}
                 inputMode="decimal"
               />
             )}
@@ -1220,14 +1234,28 @@ function SettleDialog({
           {extra > 0 && (
             <div className="rounded-lg bg-brand-yellow-50 border border-brand-yellow-100 p-3 space-y-2">
               <p className="text-sm text-brand-yellow-800" data-credit-warning>
-                This is {moneyPrecise(extra)} more than the bill; it will be held as the guest's credit.
+                This is {moneyPrecise(extra)} more than the bill; it will be held as the {credit}'s credit.
               </p>
               <label className="flex items-center gap-2.5 cursor-pointer select-none">
                 <input type="checkbox" checked={asCredit}
                   onChange={(e) => setAsCredit(e.target.checked)}
                   className="size-4 rounded-xs accent-brand-orange" />
-                <span className="text-base text-ink-900">Hold it as the guest's credit</span>
+                <span className="text-base text-ink-900">Hold it as the {credit}'s credit</span>
               </label>
+            </div>
+          )}
+
+          {overLimit && (
+            <div className="rounded-lg border border-grey-200 bg-grey-50 p-3 space-y-2" data-over-limit>
+              <p className="text-base text-ink-900">{overLimit}</p>
+              {mayAllow ? (
+                <Input aria-label="Why it is allowed" placeholder="Why it is allowed"
+                  value={allowReason} onChange={(e) => setAllowReason(e.target.value)} />
+              ) : (
+                <p className="text-sm text-grey-600">
+                  The owner, an administrator or the general manager can allow it.
+                </p>
+              )}
             </div>
           )}
 
@@ -1251,11 +1279,12 @@ function SettleDialog({
               onClick={async () => {
                 setSaving(true);
                 try {
-                  const res = await settle(hotelId, stay.id, {
+                  const res = await pay({
                     method, amount: value, businessDate,
                     ...(asksPan ? (form97 ? { form97 } : { pan }) : {}),
                     ...(extra > 0 ? { heldAsCredit: true } : {}),
                     ...(split && folioId ? { folioId } : {}),
+                    ...(overLimit && allowReason.trim() ? { overLimitReason: allowReason.trim() } : {}),
                   }, pressKey);
                   if (res.ok) {
                     setPressKey(crypto.randomUUID());
@@ -1265,9 +1294,11 @@ function SettleDialog({
                        and with the amount still typed it offered the same
                        money "as the guest's credit" - a tick and a press
                        from taking it twice. */
-                    setAmount(""); setAsCredit(false);
+                    setAmount(""); setAsCredit(false); setOverLimit(null); setAllowReason("");
                     setOpen(false);
                     onDone();
+                  } else if (res.needs === "credit-limit") {
+                    setOverLimit(res.reason ?? null);
                   } else {
                     toast.error("Could not settle", res.reason);
                     /* The bill may have moved under the dialog (another
@@ -1279,7 +1310,7 @@ function SettleDialog({
                 }
               }}
             >
-              Take payment
+              {overLimit && mayAllow ? "Allow, with reason" : "Take payment"}
             </Button>
           </div>
         </div>

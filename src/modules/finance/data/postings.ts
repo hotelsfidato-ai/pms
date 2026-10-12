@@ -170,18 +170,48 @@ export async function changeRate(
   }
 }
 
+/** What Settle hands the server: a stay's bill, or a group's master bill. */
+export interface SettleInput {
+  method: string; amount: number; businessDate: string;
+  /** D25-40: more than ₹1,00,000 in cash at once needs one of these. */
+  pan?: string; form97?: boolean;
+  /** D27-4: the desk confirmed a payment larger than the bill. */
+  heldAsCredit?: boolean;
+  /** Which bill, when the stay's is split (QA FI-2). */
+  folioId?: string;
+  /** A GM's allow over the company's credit limit, with why (D27-305: a
+      group's master bill sent to the city ledger). */
+  overLimitReason?: string;
+}
+
+/** SETTLE A GROUP'S MASTER BILL (the owner's D27-305 (10)): the stay's own
+    payment door, on the group's host account. "Bill to company" sends it to
+    the company's City ledger; over its credit limit the answer names
+    `needs: "credit-limit"`, for the GM's allow. */
+export async function settleGroupBill(
+  hotelId: string, groupId: string, input: SettleInput, idempotencyKey?: string,
+): Promise<OperationResult> {
+  try {
+    await api(`/api/hotels/${hotelId}/groups/${groupId}/payments`, {
+      method: "POST",
+      body: JSON.stringify(input),
+      ...(idempotencyKey ? { headers: { "idempotency-key": idempotencyKey } } : {}),
+    });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const body = error.body as { needs?: "credit-limit" } | undefined;
+      return body?.needs === "credit-limit"
+        ? { ok: false, reason: error.message, needs: "credit-limit" } : refuse(error.message);
+    }
+    throw error;
+  }
+}
+
 export async function settle(
   hotelId: string,
   stayId: string,
-  input: {
-    method: string; amount: number; businessDate: string;
-    /** D25-40: more than ₹1,00,000 in cash at once needs one of these. */
-    pan?: string; form97?: boolean;
-    /** D27-4: the desk confirmed a payment larger than the bill. */
-    heldAsCredit?: boolean;
-    /** Which bill, when the stay's is split (QA FI-2). */
-    folioId?: string;
-  },
+  input: SettleInput,
   /** One per press of Take payment, kept until it lands. */
   idempotencyKey?: string,
 ): Promise<OperationResult> {

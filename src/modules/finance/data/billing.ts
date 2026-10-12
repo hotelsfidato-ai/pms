@@ -275,6 +275,14 @@ export async function issueInvoice(
   });
 }
 
+/** Issue the tax invoice for a group's master bill (D27-305 (10)), from the
+    same series. */
+export async function issueGroupInvoice(
+  hotelId: string, groupId: string,
+): Promise<{ ok: boolean; number?: string; vatBill?: string | null; reason?: string; duplicate?: boolean }> {
+  return api(`/api/hotels/${hotelId}/groups/${groupId}/invoice`, { method: "POST" });
+}
+
 /**
  * Cancels an issued invoice by issuing a credit note against it.
  *

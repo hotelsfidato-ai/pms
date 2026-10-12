@@ -47,6 +47,11 @@ New booking 50.
 
 - `flows/GroupRoomsPanel.tsx` — a group's rooms as cards, grouped by room
   type. Shown inside front desk's stay panel (exported as `GroupRoomsList`).
+- `pages/GroupPanel.tsx` — the host's account says who it is billed to and
+  carries finance's own Settle and "Issue tax invoice" (D27-305 (10); the
+  routes are finance's, `POST /groups/:id/payments` and `/invoice`). The
+  invoice is offered once every room has left and nothing is owed, as a
+  departed stay's is on Invoices.
 - The list screen is before the `/:id` route on purpose, so the word
   "groups" is not swallowed as an id (`routes.tsx`).
 
@@ -60,9 +65,9 @@ of 15 September (`3424882`).
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/groups/:id` | one group: its rooms (`app.group_rooms`), its lead room (`leadId`, `app.group_lead`), the host's balance and the guests' balance |
+| GET | `/:code/groups/:id` | one group: its rooms (`app.group_rooms`), its lead room (`leadId`, `app.group_lead`), the host's balance and the guests' balance; the master's `company` (who it is addressed to) and `invoice` (its tax invoice while one stands, D27-305 (10)) |
 | POST | `/:code/groups/:id/lead` | make a room that still stands the group's lead (D22-52): its guest gets the group's one confirmation and its one review request. `reservation: edit` |
-| POST | `/:code/groups/:id/master` | open the host's master bill for the group (056); a second press returns the one already open |
+| POST | `/:code/groups/:id/master` | open the host's master bill for the group (056); a second press returns the one already open. Since D27-305 (10) it is addressed to the company the group is billed to - the group's own, else its lead room's (one booking made every room) - as a function's bill is (060), so "Bill to company" reaches that company's City ledger |
 | POST | `/:code/stays/:id/routing` | send a room's charges to the group's master bill, or back (`reservations.route_room_to_group`, 056) |
 | POST | `/:code/bookings` | New booking: the guest, a group when there is more than one room, one reservation per room with its channel and commission, the rate from `app.tariff_for` (057) - except a DAY USE (departure = arrival, D27-227), whose price must be typed and is never looked up (D27-229) - and a folio for each booking. A sender's `externalRef` makes it safe to send twice (091) |
 

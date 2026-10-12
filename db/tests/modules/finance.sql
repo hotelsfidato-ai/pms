@@ -484,3 +484,49 @@ begin
   perform test.ok('finance group owes', 'reception at one hotel is answered for the whole group',
     owes = 3000, owes::text);
 end $$;
+
+
+-- =============================================================================
+-- A GROUP'S MASTER BILL, SETTLED (the owner's D27-305 (10))
+-- =============================================================================
+-- The group's page sends its master bill "Bill to company" to the City ledger
+-- of the company the master is addressed to (folios.company_id, written when
+-- the host account opens). The ledger reads the BILL's company, so a master's
+-- transfer counts for that company and one addressed to nobody for nobody. Its
+-- tax invoice is never sent by itself (D27-284) - not even with the hotel's
+-- invoice switch on, and not by the desk's button either.
+-- =============================================================================
+do $$
+declare
+  h uuid; co uuid; g1 uuid; g2 uuid; m1 uuid; m2 uuid; p bigint; inv uuid; fy text; n int;
+begin
+  h := app.provision_property_unchecked('FMB', 'Master Bill Test', 'Nowhere');
+  insert into companies (name, credit_allowed) values ('D305 Master Co', true) returning id into co;
+  insert into reservation_groups (name) values ('D305 Wedding') returning id into g1;
+  insert into reservation_groups (name) values ('D305 Family') returning id into g2;
+  insert into folios (hotel_id, group_id, bill_to, company_id) values (h, g1, 'company', co) returning id into m1;
+  insert into folios (hotel_id, group_id) values (h, g2) returning id into m2;
+
+  -- ₹2,000 from each master sent to the city ledger.
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+  values (h, m1, app.business_date(h), 'payment', 'Transferred to city ledger', -2000, 0, 0) returning id into p;
+  insert into payments (hotel_id, posting_id, method, method_label, amount)
+  values (h, p, 'city_ledger', 'Bill to company', 2000);
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+  values (h, m2, app.business_date(h), 'payment', 'Transferred to city ledger', -2000, 0, 0) returning id into p;
+  insert into payments (hotel_id, posting_id, method, method_label, amount)
+  values (h, p, 'city_ledger', 'Bill to company', 2000);
+
+  perform test.ok('finance master bill', 'a master bill sent to the city ledger is owed by the company it is addressed to',
+    app.company_owes(co) = 2000, app.company_owes(co)::text);
+
+  insert into guest_message_settings (hotel_id, kind, is_on, switched_on_at)
+  values (h, 'invoice', true, now() - interval '1 hour');
+  fy := app.current_fin_year(h);
+  insert into invoices (hotel_id, folio_id, fin_year, number, recipient_name, total, tax_total)
+  values (h, m1, fy, app.next_invoice_number(h, fy), 'D305 Master Co', 6300, 300) returning id into inv;
+  select count(*) into n from app.guest_invoices_owed(3, h, null) o where o.invoice_id = inv;
+  perform test.ok('finance master bill', 'its tax invoice is not sent by itself, with the invoice switch on', n = 0, n || ' rows');
+  select count(*) into n from app.guest_invoices_owed(3, h, inv);
+  perform test.ok('finance master bill', 'nor by the desk''s Send invoice', n = 0, n || ' rows');
+end $$;

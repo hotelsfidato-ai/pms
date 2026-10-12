@@ -716,6 +716,10 @@ export interface Payer {
   /** Only where `folioId` is null: open the bill the payment goes on. It is a
       write, so it runs after every refusal (MEMORY 243, FIN-7). */
   openFolio?: () => Promise<string | null>;
+  /** The caller's own last refusal, by the method's kind and the amount -
+      after every other, so it may write (a credit-limit allowance). A
+      group's master bill: "Bill to company" (D27-305). */
+  check?: (method: string, amount: number) => Promise<{ reason: string; needs?: Needs } | null>;
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -806,6 +810,9 @@ export async function takeFolioPayment(
       reason: `This is ₹${inr(extra)} more than the bill; it will be held as the guest's credit.`,
     };
   }
+
+  const last = await payer.check?.(method, amount);
+  if (last) return { ok: false, ...last };
 
   const folio = folioId ?? (await payer.openFolio?.()) ?? null;
   if (!folio) return { ok: false, reason: "There is no bill to take this payment on." };
@@ -899,6 +906,69 @@ postings.post("/:code/stays/:id/payments", async (c) => {
         },
       }),
       openFolio: () => folioFor(client, hotelId, stayId),
+    });
+    return taken.ok ? { ok: true, data: { id: taken.id } } : refuse(taken.reason, taken.needs);
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
+});
+
+/* ── Settle a group's master bill (the owner's D27-305 (10)) ─────────────
+   The group's page takes a payment on its open master bill ("Host pays",
+   056) through the stay's own door, in any of the hotel's ways of paying.
+   "Bill to company" sends it to the City ledger of the company the master
+   is addressed to (its company since D27-305; none - refused, there is no
+   account to send it to), counted against that company's credit limit
+   across the group (D27-279); the owner, an administrator or the GM may
+   allow it with a reason, as a charge on a stay is (D27-275). The group's
+   payments take the group's turn, as its rooms' do. Cash counts the
+   group's bills, the master's and its rooms' (D25-40, "its group"). */
+postings.post("/:code/groups/:id/payments", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as PaymentToTake & { overLimitReason?: string };
+
+  const result = await withSession(c.get("subject"), async (client): Promise<Outcome | null> => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const groupId = c.req.param("id");
+    if (!UUID.test(groupId)) return refuse("No such group.");
+
+    const { rows: [master] } = await client.query<{
+      id: string; company_id: string | null; name: string; foreign: boolean;
+    }>(
+      `select f.id::text, f.company_id::text, g.name,
+              coalesce((select gu.nationality <> 'IN' from reservations r
+                          join guests gu on gu.id = r.guest_id
+                         where r.id = app.group_lead(g.id)), false) as foreign
+         from folios f join reservation_groups g on g.id = f.group_id
+        where f.hotel_id = $1 and f.group_id = $2 and f.status = 'open'`,
+      [hotelId, groupId]);
+    if (!master) return refuse("This group has no host account to settle.");
+
+    const taken = await takeFolioPayment(client, hotelId, master.id, {
+      ...body, idempotencyKey: c.req.header("idempotency-key") ?? null,
+    }, {
+      locks: [`payment-group:${groupId}`],
+      cashTaken: async () => Number((await client.query<{ n: string }>(
+        `select coalesce(sum(p.amount), 0)::text as n
+           from payments p
+           join folio_postings fp on fp.id = p.posting_id
+           join folios f on f.id = fp.folio_id
+          where p.method = 'cash'
+            and not exists (select 1 from folio_postings x where x.reverses_id = fp.id)
+            and (f.group_id = $1
+                 or f.reservation_id in (select r.id from reservations r where r.group_id = $1))`,
+        [groupId])).rows[0]!.n),
+      foreign: master.foreign,
+      check: async (method, amount) => {
+        if (method !== "city_ledger") return null;
+        if (!master.company_id) {
+          return { reason: `${master.name} is not billed to a company, so its bill cannot go to `
+            + "the city ledger. Take the payment another way." };
+        }
+        return overCreditLimit(client, hotelId, master.company_id, amount,
+          { reason: body.overLimitReason, title: `${master.name}, the host's bill` });
+      },
     });
     return taken.ok ? { ok: true, data: { id: taken.id } } : refuse(taken.reason, taken.needs);
   });
