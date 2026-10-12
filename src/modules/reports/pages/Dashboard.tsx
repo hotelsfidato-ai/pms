@@ -18,6 +18,7 @@ import {
   InfoButton, IconChip, Rings, AnchorGauge, ReadFailed, readError,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
+import { SetupStillToDo } from "@/modules/admin";
 import type { TermKey } from "@/lib/glossary";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { getStayView, fetchStays, type ChartRoom } from "@/modules/front-desk";
@@ -258,6 +259,8 @@ export default function DashboardPage() {
       />
 
       <StartHere className="mb-5" />
+      {/* D27-311: the setup steps put off, for the owner, an Admin and the GM; nothing while none waits. */}
+      <SetupStillToDo code={code} className="mb-5" />
 
       {failed ? (
         <ReadFailed

@@ -157,6 +157,30 @@ properties and people.
   test hotels to somebody who works only in them; a person's test-hotel
   place carries TEST. Anybody else is never offered a test hotel. Tests:
   `testHotels.test.tsx`.
+- **Set up this hotel (the owner's D27-311, 13 October; the screens' half).**
+  The 18 steps from a bare hotel to its first booking, in `setup/steps.ts`
+  (id, number, group, plain "what it is" and "why it matters", and the REAL
+  screens each opens; the one list). The page is a Settings page,
+  `/settings/property/set-up-this-hotel` (`setup.settings.ts`, second in
+  Property, so the console still opens on Profile; owner, Admin and GM);
+  `/h/:code/setup` redirects to it keeping `?step=` (the bell's reminder and
+  "Back to setup" use that address; `routes.tsx`). `setup/SetupPage.tsx`: the
+  open step is the address's `?step=` (default: the first still to do); each
+  step shows its state (Done, To do, Later, Remind me <date>), what is missing
+  (the server's `detail`), "Open <screen>" for each of its screens with
+  `?setup=<step>` (a screen the role cannot open is disabled, with the reason),
+  and the choices: Completed only where `automatic` is false, Next (a move, no
+  request), Later, Remind me (tomorrow, in 3 days, in a week, or a date after
+  the hotel's today), Undo (`clear`). Step 18 is the summary: what is done,
+  what is still to do, "Ready to go live" when the server says `ready`, and no
+  button that changes anything. `setup/SetupBar.tsx`, mounted once in the top
+  bar: any address with `?setup=<step>` shows "Setting up this hotel: step N of
+  18, <title>" and "Back to setup". `setup/StillToDo.tsx` on the Dashboard: the
+  Later and Remind me steps, only while one waits, only for the roles that hold
+  `setting`. A link from "What this property still needs"
+  (`flows/CommissioningCard.tsx`). The two calls are in `data/setup.ts`
+  (`GET /api/hotels/:code/setup`, `PUT /api/hotels/:code/setup/:stepId`); the
+  server decides every state. Tests: `setupWizard.test.tsx`.
 
 ---
 

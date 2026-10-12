@@ -5,6 +5,7 @@ import { AlertCircle, Circle, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Card, CardBody, StatusPill } from "@/components/ui";
 import { getCommissioning, type CommissioningCheck } from "@/modules/admin/data/commissioning";
+import { setupAddress } from "@/modules/admin/setup/steps";
 
 /* ══════════════════════════════════════════════════════════════════
    WHAT THIS PROPERTY STILL NEEDS
@@ -86,6 +87,13 @@ export function CommissioningCard({ hotelId }: { hotelId: string }) {
               + "must be settled first - until then a booking, a bill or the "
               + "night audit will refuse and say so."}
         </p>
+
+        {/* D27-311: the same list as a walk-through, one step at a time. */}
+        <Link to={setupAddress(hotelId)}
+          className="inline-flex items-center gap-1 text-sm font-medium text-brand-orange-700 hover:underline underline-offset-4 min-h-11 sm:min-h-0">
+          Set up this hotel, step by step
+          <ChevronRight className="size-4" aria-hidden />
+        </Link>
 
         {/* List rows under a hairline, not boxes inside the card. */}
         <ul className={cn("-mx-4 border-y divide-y",

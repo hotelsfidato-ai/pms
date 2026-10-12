@@ -12,3 +12,9 @@ export { useGroupSettings, type GroupSettings } from "./data/groupSettings";
 /* D27-245: the signed-in person's "set a longer password" prompt, mounted
    once by the app shell. */
 export { PasswordDue } from "./components/PasswordDue";
+/* D27-311, "Set up this hotel": the top bar's "Back to setup" bar (any
+   screen opened with ?setup=<step>), the Dashboard's "Still to do" list, and
+   the address of the setup (the bell's reminders link to it). */
+export { SetupBar } from "./setup/SetupBar";
+export { SetupStillToDo } from "./setup/StillToDo";
+export { setupAddress } from "./setup/steps";

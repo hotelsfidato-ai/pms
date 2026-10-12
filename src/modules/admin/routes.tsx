@@ -1,4 +1,4 @@
-import { Navigate, Route } from "react-router";
+import { Navigate, Route, useLocation } from "react-router";
 import { RequireAccess } from "@/components/app/RequireAccess";
 import { PropertyScope } from "@/components/app/PropertyScope";
 import { IS_DEV } from "@/components/app/navigation";
@@ -11,6 +11,15 @@ import { PropertiesPage } from "@/modules/admin/pages/Properties";
 import {
   UsersPage, IntegrationsPage,
 } from "@/modules/admin/pages/Admin";
+import { SETUP_PAGE } from "@/modules/admin/setup/steps";
+
+/* /h/:code/setup is the setup's address with the hotel in it (the bell's
+   reminder and "Back to setup" use it). The page itself is a Settings page,
+   so the hotel is taken from the address (PropertyScope) and ?step= goes
+   with it. */
+function SetupForHotel() {
+  return <Navigate to={{ pathname: SETUP_PAGE, search: useLocation().search }} replace />;
+}
 
 /* Administration's screen addresses. Mounted by App.tsx inside the
    signed-in shell. */
@@ -125,6 +134,14 @@ export const routes = (
       element={
         <RequireAccess path="/settings" resource="setting">
           <PropertyScope /><SettingsForHotel />
+        </RequireAccess>
+      }
+    />
+    <Route
+      path="/h/:code/setup"
+      element={
+        <RequireAccess path="/settings" resource="setting">
+          <PropertyScope /><SetupForHotel />
         </RequireAccess>
       }
     />

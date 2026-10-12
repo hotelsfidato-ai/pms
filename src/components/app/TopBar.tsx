@@ -5,6 +5,7 @@ import { NotificationBell } from "./NotificationBell";
 import { AccountMenu } from "./AccountMenu";
 import { BusinessDateBehind } from "./BusinessDateBehind";
 import { SpaceSwitcher } from "./SpaceSwitcher";
+import { SetupBar } from "@/modules/admin";
 
 /* ══════════════════════════════════════════════════════════════════
    TOP BAR
@@ -88,6 +89,8 @@ export function TopBar() {
     </header>
     {/* D27-237: one line while the business date is behind today. */}
     <BusinessDateBehind />
+    {/* D27-311: a screen opened from "Set up this hotel" says so, and the way back. */}
+    <SetupBar />
     </>
   );
 }
