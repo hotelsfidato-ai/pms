@@ -8,6 +8,35 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-12 · No Send invoice on a group's master bill; its two writes say why offline (the owner's D27-307 (4))
+
+**Asked for:** the master: Send invoice on a master bill's tax invoice could
+only answer "It has gone to the guest by email already, or the guest has no
+email address" - nothing sends it (`app.guest_invoices_owed` reads a stay's
+bills only). Hide it. And POST /groups/:id/payments and /groups/:id/invoice
+got the generic offline refusal.
+
+**Shipped:** `invoiceFacts` (`api/.../invoices.ts`) answers `masterBill`
+(the invoice's folio has a `group_id`); `InvoiceDetail.masterBill?`; the
+Invoice page draws no Send invoice when it is true. `src/lib/offline.ts` (the
+core, the master's exception): the Payment and Invoice rules match
+`/groups/:id/payments` and `/groups/:id/invoice`, so each gets that rule's
+sentence. MODULE.md's invoice row says so.
+
+**Proved:** web `testHotel.test.tsx` "and is not offered on a group's master
+bill" and `src/lib/offline.test.ts` "refuses a group's payment and its
+invoice" failed on cp6 (Send invoice drawn; "This change"), pass on the fix.
+API `masterBill.test.ts` (the master's invoice says `masterBill: true`) and
+`invoices.test.ts` (a stay's says `false`) both failed with cp6's
+`invoices.ts` (undefined), pass with the fix. Opened the demo's master invoice
+5EL/2026-27/00001 as the GM on a scratch copy: Cancel this invoice and Print,
+no Send invoice.
+
+**Left open:** a banquet function's tax invoice has the same fault (its
+folio has no stay either) - asked, not changed.
+
+---
+
 ## 2026-10-12 · Settle the master bill (the owner's D27-305 (10))
 
 **Asked for:** on the group's page, settle a group's master bill ("Host pays") the way a stay's bill works - a payment in any of the hotel's ways, its tax invoice from the same series (a company's not sent by itself, D27-284), and "Bill to company" to the company's City ledger with its credit limit counted across the group (D27-279) and the GM's "Allow, with reason" - through the stay's own paths, not a second money path.

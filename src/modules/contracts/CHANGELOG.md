@@ -11,6 +11,19 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-12 · "Rates", not "the rate calendar" (the owner's D27-307 (4))
+
+**Shipped:** the contract window (`components/ContractDialog.tsx`): "Taken off
+the price on Rates for the arrival date." and "... a third guest pays the
+extra-person price on Rates."; a company with no contract
+(`pages/CompanyContracts.tsx`): "Bookings for this company take the price on
+Rates until a contract is added." **Proved:** no test asserted the old words;
+opened as the GM on a scratch copy of the demo (D305 Demo Travels, Add
+contract, both pricing modes) - all three read as above. MODULE.md's C-2 is
+the owner's decision as worded then, left as it is.
+
+---
+
 ## 2026-10-02 · cp6 merged in (the launch), the migration renumbered 177, a day use kept typed, CON-4, the screens seen
 
 Same branch and copy; `fidato_s41` migrated to 177.

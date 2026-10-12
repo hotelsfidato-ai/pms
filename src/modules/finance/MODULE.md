@@ -152,7 +152,7 @@ Its front door also exports `companyReceipts` (the day book's receipts, D27-242 
 |---|---|---|
 | POST | `/:code/stays/:id/invoice` | issue the tax invoice for one BILL of a stay (`folioId`; a split stay without one is refused - QA FI-1) (`app.next_invoice_number`) — and, in the same transaction, the VAT bill for its alcohol (`app.issue_vat_bill`, D22-44) |
 | POST | `/:code/groups/:id/invoice` | the tax invoice for a group's open master bill (D27-305 (10)), through `issueFolioInvoice`: to the company the master is addressed to, else the guest who leads the group (`app.group_lead`), else the group's name. Never sent by itself (D27-284): `app.guest_invoices_owed` reads a stay's bills only. `invoice` create |
-| GET | `/:code/invoices/:number{.+}` | one invoice or credit note, with the lines it was made from |
+| GET | `/:code/invoices/:number{.+}` | one invoice or credit note, with the lines it was made from; `masterBill` true on a group's master bill's, where the Invoice page offers no Send invoice - nothing sends it (D27-307 (4)) |
 | GET | `/:code/invoices` | every number issued here |
 | GET | `/:code/invoice-series` | the series itself |
 | POST | `/:code/invoices/:number{.+}/credit-note` | correct an invoice with a credit note of its own number |

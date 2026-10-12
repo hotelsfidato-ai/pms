@@ -136,7 +136,7 @@ export function ContractDialog({ hotelId, data, contract, open, onOpenChange }: 
           </Field>
 
           {form.pricing === "discount" ? (
-            <Field label="Discount (%)" hint="Taken off the rate calendar's price for the arrival date.">
+            <Field label="Discount (%)" hint="Taken off the price on Rates for the arrival date.">
               {(f) => <Input {...fieldProps(f)} type="number" inputMode="decimal" className="w-32 tabular"
                 value={form.discountPercent} onChange={(e) => set("discountPercent")(e.target.value)} />}
             </Field>
@@ -144,7 +144,7 @@ export function ContractDialog({ hotelId, data, contract, open, onOpenChange }: 
             <div className="space-y-4">
               <p className="text-sm text-grey-600">
                 Per room per night, before tax. Single is one guest, double two; a third guest pays
-                the rate calendar's extra-person price. Blank is not agreed: the booking takes the day's price.
+                the extra-person price on Rates. Blank is not agreed: the booking takes the day's price.
               </p>
               {data.roomTypes.map((t) => (
                 <div key={t.id}>

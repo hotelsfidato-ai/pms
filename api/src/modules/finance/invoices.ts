@@ -461,6 +461,8 @@ export async function invoiceFacts(client: Client, hotelId: string, number: stri
                   and not exists (select 1 from vat_bills c where c.cancels_id = v.id)))
               as vat_bill,
             i.folio_id::text,
+            -- D27-307 (4): a group's master bill's, which nothing sends.
+            (select f.group_id is not null from folios f where f.id = i.folio_id) as master_bill,
             h.name as hotel_name, h.address_line as hotel_address,
             h.city as hotel_city, h.state as hotel_state,
             i.fssai_number,
@@ -566,6 +568,9 @@ export async function invoiceFacts(client: Client, hotelId: string, number: stri
     reason: i["reason"],
     creditedBy: credit[0]?.number ?? null,
     vatBill: i["vat_bill"],
+    /* A group's master bill's invoice: the screen offers no Send invoice,
+       which reads a stay's bills only (D27-307 (4)). */
+    masterBill: (i["master_bill"] as unknown) === true,
   };
 }
 

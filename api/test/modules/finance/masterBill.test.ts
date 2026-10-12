@@ -227,6 +227,11 @@ describe("a group's master bill (D27-305 (10))", () => {
 
     const page = (await (await call("front_desk", `/groups/${corporate}`)).json()) as { master: { invoice: string } };
     expect(page.master.invoice).toBe(first.number);
+
+    /* D27-307 (4): the invoice says it is a master bill's, so the screen
+       offers no Send invoice - nothing could send it. */
+    const printed = (await (await call("front_desk", `/invoices/${first.number}`)).json()) as { masterBill?: boolean };
+    expect(printed.masterBill).toBe(true);
   });
 
   it("invoices a group billed to nobody to the guest who leads it", async () => {

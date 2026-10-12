@@ -48,7 +48,7 @@ export default function ApprovalsPage() {
     <Page>
       <PageHeader
         title="Approvals"
-        description="Everything waiting on you, from every part of the system."
+        description="Everything waiting at this hotel, from every part of the system."
         /* Waiting or everything: a switch in the title row, the same words
            the tabs had, full width on a phone (the owner, D27-82, as on
            Arrivals). Only the chosen list is drawn. */

@@ -11,6 +11,17 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-12 · The provisioning key boxes are not filled by the browser (the owner's D27-307 (2))
+
+**Shipped:** `flows/StaffAdmin.tsx`: both provisioning key boxes (a new group
+administrator on the Admin console, and Add a property) carry
+`autoComplete="new-password"`, so a browser does not put a saved password in
+them. Nothing else. **Proved:** opened as the owner on a scratch copy of the
+demo: both boxes empty, `autocomplete="new-password"`. No test: an attribute,
+nothing hidden or disabled.
+
+---
+
 ## 2026-10-12 · The Modules page: the spa is charged to the room (D27-305 (6))
 
 **Asked for:** the owner's D27-305 (6): settling at the spa is not built (D18-22), so the spa's switch note says it is charged to the room.

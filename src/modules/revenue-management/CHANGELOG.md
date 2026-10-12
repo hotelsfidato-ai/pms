@@ -12,6 +12,15 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-12 · "Rates", not "the Rate calendar" (the owner's D27-307 (4))
+
+**Shipped:** `pages/Outlook.tsx`: "Nothing here changes a price - Rates does
+that." and "Rates is where a rate is changed." (the screen has been Rates
+since D27-188). **Proved:** no test asserted the old words; opened as the GM
+on a scratch copy of the demo - both lines read as above.
+
+---
+
 ## 2026-10-04 · rivals' prices beside each suggestion (D27-269, D27-270)
 
 **Asked for:** beside each night's suggestion, the nearby hotels' lowest

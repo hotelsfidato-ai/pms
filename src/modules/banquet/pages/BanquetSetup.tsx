@@ -57,9 +57,10 @@ export default function BanquetSetupPage() {
     void qc.invalidateQueries({ queryKey: ["banquet-diary"] });
   };
 
-  /* D27-305 (8): a package is switched off, never changed - by whoever
-     sets the hotel up (the server's HALLS rule), disabled for the rest. */
-  const maySwitch = can(useRole(), "edit", "room_config");
+  /* D27-305 (8), D27-307 (4): halls are added and edited, packages added and
+     switched, by whoever sets the hotel up (the server's HALLS rule);
+     every control is disabled for the rest, with who may. */
+  const maySetUp = can(useRole(), "edit", "room_config");
   const switchPackage = async (p: BanquetPackage, on: boolean) => {
     const res = await switchBanquetPackage(hotelId, p.id, on);
     if (!res.ok) return toast.error("Not changed", res.reason);
@@ -114,14 +115,21 @@ export default function BanquetSetupPage() {
           <CardHeader
             className="items-center"
             actions={
-              <Button onClick={() => setAddingVenue(true)}>
+              <Button disabled={!maySetUp} onClick={() => setAddingVenue(true)}>
                 <Plus className="size-4" /> Add a hall
               </Button>
             }
           >
-            <h2 className="flex items-center gap-2.5 min-w-0 text-md font-semibold text-ink-900">
-              <IconChip><Building2 /></IconChip> Halls
-            </h2>
+            <div className="min-w-0">
+              <h2 className="flex items-center gap-2.5 min-w-0 text-md font-semibold text-ink-900">
+                <IconChip><Building2 /></IconChip> Halls
+              </h2>
+              {!maySetUp && (
+                <p className="mt-0.5 text-sm text-grey-500">
+                  The owner, an administrator or the GM adds and edits them.
+                </p>
+              )}
+            </div>
           </CardHeader>
 
           {venues.length === 0 ? (
@@ -148,7 +156,7 @@ export default function BanquetSetupPage() {
                     </p>
                   </div>
                   <Button variant="secondary" size="sm" className="shrink-0"
-                          onClick={() => setEditing(v)}>
+                          disabled={!maySetUp} onClick={() => setEditing(v)}>
                     Edit
                   </Button>
                 </li>
@@ -162,7 +170,7 @@ export default function BanquetSetupPage() {
           <CardHeader
             className="items-center"
             actions={
-              <Button variant="secondary"
+              <Button variant="secondary" disabled={!maySetUp}
                       onClick={() => setAddingPackage(true)}>
                 <Plus className="size-4" /> Add a package
               </Button>
@@ -174,7 +182,7 @@ export default function BanquetSetupPage() {
               </h2>
               <p className="mt-0.5 text-sm text-grey-500">
                 Never changed once added. Switch one off to stop offering it; functions keep what they were sold.
-                {!maySwitch && " The owner, an administrator or the GM switches them."}
+                {!maySetUp && " The owner, an administrator or the GM adds and switches them."}
               </p>
             </div>
           </CardHeader>
@@ -201,7 +209,7 @@ export default function BanquetSetupPage() {
                       {p.description ? ` · ${p.description}` : ""}
                     </p>
                   </div>
-                  <Switch checked={p.isActive} disabled={!maySwitch}
+                  <Switch checked={p.isActive} disabled={!maySetUp}
                           onCheckedChange={(on) => void switchPackage(p, on)}
                           label={<span className="sr-only">Offer {p.name}</span>} />
                 </li>

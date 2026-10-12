@@ -1,8 +1,9 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import * as apiModule from "@/lib/api";
+import { AGRA_HOTEL, signedIn } from "@/test/app";
 import LoyaltyPage from "@/modules/loyalty/pages/Loyalty";
 
 /* THE LOYALTY SCREEN (D27-179). No earn rate is a sentence, never a zero
@@ -42,6 +43,8 @@ function open(over: Record<string, unknown> = {}) {
   );
 }
 
+/* Reception, who may join, leave and use points, unless a test says otherwise. */
+beforeEach(() => { signedIn(); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("the Loyalty screen", () => {
@@ -73,5 +76,20 @@ describe("the Loyalty screen", () => {
       "Points are used by reception, the hotel manager, the general manager, an administrator or the owner.")).toBeDefined();
     expect(screen.getAllByText("Direct Member").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Use points" })).toBeNull();
+  });
+
+  /* D27-307 (4): the server refuses them Join and Leave (roleGate
+     LOYALTY_MEMBER, `customer` edit), so the screen does not offer them. */
+  it.each(["finance", "read_only"] as const)("offers %s no Join or Leave, and says who does (D27-307)", async (role) => {
+    signedIn({ scope: {
+      staffId: "44444444-4444-4444-4444-444444444444", email: "x@fidato.in",
+      fullName: "Test", isGroupAdmin: false, hotels: [{ hotelId: AGRA_HOTEL, role }],
+    } });
+    open({ mayRedeem: false });
+    expect(await screen.findByText(
+      /Guests join and leave through reception, the hotel manager, the general manager, an administrator or the owner\./)).toBeDefined();
+    expect(screen.getAllByText("Asha Rao").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Join" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Leave" })).toBeNull();
   });
 });

@@ -60,7 +60,8 @@ interface Rule {
 const RULES: Rule[] = [
   /* ── refuse ─────────────────────────────────────────────────── */
   {
-    test: /\/invoices(\/|$)|\/stays\/[^/]+\/invoice$/,
+    /* A group's master bill too (D27-305 (10), D27-307 (4)). */
+    test: /\/invoices(\/|$)|\/(stays|groups)\/[^/]+\/invoice$/,
     tier: "refuse",
     label: "Invoice",
     reason:
@@ -78,7 +79,7 @@ const RULES: Rule[] = [
       + "the business date. It needs the server.",
   },
   {
-    test: /\/stays\/[^/]+\/payments$|^\/api\/hotels\/[^/]+\/payments$|\/cashier-shift(\/|$)/,
+    test: /\/(stays|groups)\/[^/]+\/payments$|^\/api\/hotels\/[^/]+\/payments$|\/cashier-shift(\/|$)/,
     tier: "refuse",
     label: "Payment",
     reason:

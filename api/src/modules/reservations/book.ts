@@ -618,7 +618,7 @@ export async function makeBooking(
           return {
             ok: false, kind: "unpriced",
             reason: `${rt[0].name} has no price for ${t[0]?.unpriced ?? "this party"}. `
-              + "Set it on the rate calendar, or enter a rate for this booking.",
+              + "Set it on Rates, or enter a rate for this booking.",
           };
         }
         rate = Number(t[0].total);
