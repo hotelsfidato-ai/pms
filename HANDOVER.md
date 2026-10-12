@@ -48,6 +48,22 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+### 12 October, 18:45 — read this first (stopped at 95% of the 5-hour limit)
+
+```
+cp6                  D27-305 built and merged (3 helpers; migration 213 = next free 214).
+                     Full gates green but 3 web timeouts under render load (pass alone).
+                     Their copies recycled, branches kept. Nothing pushed or deployed.
+videos               final in D:\fidato\final videos: A0 A2 A4 A7 A8 A14. Rendering in the
+                     background: A6 A9 A10, then A11 A12 A15 (each copies nothing by itself:
+                     copy each chapter's out\<ch>\*.mp4 after its audio log is all ✓).
+live                 the owner reset the provisioning keys (one left) and made SHI, Hotel
+                     Majestic Grand, Shimla; setting it up now (Settings -> Property card).
+waiting on owner     ~20 questions with recommendations: .local/videos-d27-301-findings.md.
+next                 copy finished renders; owner questions; release copy + release.mjs when
+                     the machine is quiet; day check (D27-300); A16/A17/A13/A1/A3/A5.
+```
+
 ### 12 October — BACK ON THE ORIGINAL DESKTOP (`D:\fidato pms`). Read `LAPTOP-HANDOVER.md` first
 
 ```

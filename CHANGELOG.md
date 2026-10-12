@@ -50,6 +50,49 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-12, evening · D27-305 built and merged, six video chapters final, the owner's second property
+
+**Asked for:** answer the §6 questions and build them; start the videos and the
+builds in parallel, every finished video also in `D:\fidato\final videos`;
+explain the provisioning key and how to add another property.
+
+**Shipped**
+- D27-305 on cp6, three helpers merged locally: wording (Run night audit hidden
+  from roles without the right, Arrivals retention, spa/laundry pricing, Guest
+  messages labels, loyalty Join, notes); redeeming points is its own right,
+  Reception and above (migration 213) and banquet packages can be switched off;
+  settle the master bill on the group page (no migration).
+- Videos: A0, A2, A4 rendered, sound-checked, stills looked at, copied to
+  `D:\fidato\final videos` (six chapters there now with A7, A8, A14). A11, A12,
+  A15 checked and committed on `videos` (341f181b). A6/A9/A10 then A11/A12/A15
+  rendering in the background.
+- Live, by the owner: provisioning keys reset to one ("owner, 12 October,
+  reset") with `.local/new-provisioning-key.ps1` (one command: key, server,
+  check, box); property **SHI**, Hotel Majestic Grand, Shimla, created 18:10.
+
+**Found**
+- The Add a property key box is `type="password"` with no autocomplete hint: the
+  browser can fill the sign-in password into it. Likely why five tries failed.
+  Recommend `autoComplete="new-password"` - for the owner.
+- The first 3 Oct key row held the word FINGERPRINT (deleted in the reset).
+- Monthly/yearly statistics ignore the complimentary and day-use switches (A11
+  helper). For the owner, with ~20 helper questions in
+  `.local/videos-d27-301-findings.md`.
+
+**Proved**
+- Full gates on the merged cp6 (`.local/gates-d27-305-merged.txt`): types,
+  strip, api 2625/2625, database 1669 at 213, replay, pg16 green; web 1232 + 3
+  timeouts under render load, the 3 files then 10/10 alone.
+
+**Left open**
+- Release copy + `release.mjs` once renders stop (load timeouts); no push, no
+  deploy (19 Sep rule). Re-check live master bills without a company just
+  before any deploy (0 today).
+- The owner's question batch; A16/A17/A13/A1/A3/A5 video work; the day check.
+- Stopped at 95% of the 5-hour limit (resets 19:40).
+
+**Commits:** `9b238823`, `9945a6a8`, the redeem merge; videos `341f181b`
+
 ## 2026-10-12 · back to the original desktop, `D:\fidato pms` (D27-302, D27-303); before it, 10 Oct afternoon: the fresh start on live, the one-click KOT setup, the videos (D27-298 to D27-301)
 
 **Asked for:**
