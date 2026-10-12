@@ -698,7 +698,11 @@ function AddPersonDialog({ open, places: realPlaces, placeRequired, testPlaces, 
            and saving wrote a Postgres row and nothing else, so there
            was no account and no password anywhere in the world. It is
            true now because the password below is required. */
-        description="Set them a password and they can sign in straight away. What they can SEE comes next."
+        /* D27-308: a GM (or a hotel's Admin) places the person here, in
+           this one act, so nothing "comes next" for them. */
+        description={placeRequired
+          ? "Set them a password, where they work and what they do, and they can sign in straight away."
+          : "Set them a password and they can sign in straight away. What they can SEE comes next."}
         footer={
           <>
             <Button variant="secondary" size="lg"
@@ -913,8 +917,9 @@ function GrantDialog({ person, open, places, testCodes, onOpenChange, onGranted 
 
 /* A password typed FOR somebody else (QA AD-6): masked, with Show, so the
    manager can read it back to them without it sitting in plain view of
-   whoever is at the desk. It was a plain text box. */
-function PasswordBox(props: React.ComponentProps<typeof Input>) {
+   whoever is at the desk. It was a plain text box. A property's page uses
+   it too (D27-308). */
+export function PasswordBox(props: React.ComponentProps<typeof Input>) {
   const [show, setShow] = useState(false);
   return (
     <div className="flex gap-2">

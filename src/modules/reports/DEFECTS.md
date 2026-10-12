@@ -16,6 +16,26 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Fixed
 
+### REP-17 · Another property's page read its figures for the SELECTED property's day - FIXED 12 October (D27-308 (1a))
+
+**Found** - the A16 video check, by reading the code; confirmed on screen 12 October on a scratch copy of the demo: 5 Elements selected (business date 9 October), Hotel Majestic Grand's page (its own date 12 October, one of its four rooms booked that night) asked `/statistics/snapshot?date=2026-10-09` and `/statistics/period?from=2026-10-01&to=2026-10-09`, and showed "Rooms sold today 0", "Occupancy 0%". `getTodaySnapshot` and `getPeriodStatistics` defaulted to the seam's `BUSINESS_DATE`/`PTD_FROM`/`PTD_TO`, which follow the property chosen at the top; the property page passed no date, believing the server's default would apply.
+
+**Done** - `data/statistics.ts`: both send no date unless given one, so the route uses the property's own business date and month. After: the same page asked `/statistics/snapshot` and `/statistics/period` and showed 1 sold, 25%, ₹5,000 month to date.
+
+**Proved** - `src/modules/admin/propertiesD27308.test.tsx` "asks for that property's own day" failed first (`?date=2026-08-25` asked) and passes.
+
+**The rule** - a default that reads the seam's date is the SELECTED property's date. A call about another property sends its own date or none.
+
+### REP-18 · Month RevPAR ₹559 in All properties' panel and ₹560 in the property's row - FIXED 12 October (D27-308 (1c))
+
+**Found** - the A16 video check. `/statistics/period` rounded `adr` and `revpar` to the paisa (`ratio()`), and the screens then rounded to the rupee: 559.497 → 559.50 → ₹560 in the row, while the panel worked from the totals and printed ₹559.
+
+**Done** - `api/src/modules/reports/statistics.ts`: the period's rates come back exact (`room / sold`, `room / available`); every screen rounds once, when it prints.
+
+**Proved** - `api/test/modules/reports/periodRates.test.ts` failed against the old route ("expected 3884.54 to be 3884.5426114649676") and passes against the new.
+
+**The rule** - round once, where the figure is printed.
+
 ### REP-16 · Between 1280 and 1439 wide the Dashboard's three figure tiles broke "Month so far" and "Year so far" onto two lines - FIXED 3 October
 
 **Found** - 30 September, measuring the Dashboard-charts render against the running app (numbered for now by that work). At 1280 wide each tile was 178px: "Month so far ₹4,17,293" and "Year so far ₹57,10,112" did not fit beside their labels, the rows measured 42px against 21px, and the three amounts sat at different heights (the Level Rule). The same at 1366; at 1440 they fitted with about 4px to spare.

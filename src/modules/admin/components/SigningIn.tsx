@@ -27,7 +27,7 @@ export function SigningIn() {
           </li>
           <li>
             Each sign-in is kept for 90 days: when, and on what device. The owner and an
-            Admin see it under Sign-ins.
+            Admin see it under Sign-ins and devices.
           </li>
           <li className="text-grey-600">
             Two-step sign-in, for the owner, Admins and GMs, comes after this release.

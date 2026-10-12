@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { api, ApiError } from "@/lib/api";
-import { BUSINESS_DATE, PTD_FROM, PTD_TO } from "@/data/repositories/businessDate";
+import { PTD_FROM, PTD_TO } from "@/data/repositories/businessDate";
 import type { DayStatistics, PeriodStatistics } from "@/data/repositories/types";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -98,20 +98,26 @@ export async function listDailyStatistics(
   );
 }
 
+/* NO WINDOW, NO DATE: THE PROPERTY'S OWN (D27-308 (1a), 12 October).
+   These two defaulted to the seam's PTD_FROM/PTD_TO and BUSINESS_DATE -
+   the property SELECTED at the top - so another property's page asked
+   Shimla's figures for 5 Elements' day (seen on screen: SHI on 12 October
+   read 9 October's, "Rooms sold today 0" with a room sold). Sent without
+   them, the route uses the property's own business date and month. */
 export async function getPeriodStatistics(
   hotelId: string,
-  from = PTD_FROM,
-  to = PTD_TO,
+  from?: string,
+  to?: string,
 ): Promise<PeriodStatistics | null> {
   if (!hotelId) return null;
   return fetchOr<PeriodStatistics | null>(
-    `/api/hotels/${hotelId}/statistics/period?${range(from, to)}`,
+    `/api/hotels/${hotelId}/statistics/period${from && to ? `?${range(from, to)}` : ""}`,
     null,
   );
 }
 
 /** Headline numbers for the top of the Stay View. */
-export async function getTodaySnapshot(hotelId: string, date = BUSINESS_DATE) {
+export async function getTodaySnapshot(hotelId: string, date?: string) {
   if (!hotelId) return null;
   return fetchOr<{
     date: string;
@@ -120,7 +126,7 @@ export async function getTodaySnapshot(hotelId: string, date = BUSINESS_DATE) {
     vacant: number;
     occupancyPct: number;
   } | null>(
-    `/api/hotels/${hotelId}/statistics/snapshot?date=${encodeURIComponent(date)}`,
+    `/api/hotels/${hotelId}/statistics/snapshot${date ? `?date=${encodeURIComponent(date)}` : ""}`,
     null,
   );
 }

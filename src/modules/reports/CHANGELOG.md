@@ -22,6 +22,13 @@ Branch `worktree-agent-a47b6fc0afff69b37` (from cp6 9c55050e), copy `.claude\wor
 
 ---
 
+## 2026-10-12 · The figures of another property, and one rounding (D27-308 (1a), (1c)) - the admin helper's
+
+**Asked for:** the owner's D27-308: another property's page reads its own business date, not the selected property's; month RevPAR worked out one way everywhere (₹559 in All properties' panel, ₹560 in the row).
+**Shipped:** `data/statistics.ts`: `getPeriodStatistics(code)` and `getTodaySnapshot(code)` send no date unless given one, so the route answers on that property's own day and month (REP-17); callers that pass dates (All properties, revenue management's pace) are unchanged. `api/src/modules/reports/statistics.ts`: `/statistics/period` returns `adr` and `revpar` exact, not rounded to the paisa, so a screen rounds once (REP-18).
+**Proved:** the web half in admin's `propertiesD27308.test.tsx` (failed first: `?date=2026-08-25` asked). `api/test/modules/reports/periodRates.test.ts` (new): against the old route it failed, "expected 3884.54 to be 3884.5426114649676" (run on the helper's scratch copy of the demo), and passes against the new one. On screen: 5EL's month on All properties came back `revpar: 598.712…`, printed ₹599.
+**Left open:** All properties shows ₹0 RevPAR (row and panel) for a property with rooms and nothing sold, where the property page now shows a dash - a question for the owner (the master's report).
+
 ## 2026-10-05 · The City ledger's moves are the report's own again (D27-279 (6))
 
 The credit limit counts the whole group now, through `app.company_owes` (migration 203), so `cityLedgerMoves` left the front door and is the report's own. Its comment names 203 as its twin: one meaning written twice, kept together.

@@ -15,6 +15,7 @@ import { getTodaySnapshot, getPeriodStatistics } from "@/modules/reports";
 import { getHouseNow } from "@/modules/front-desk";
 import { HOME_SCREENS, homeScreenLabel } from "@/lib/homeScreen";
 import { ConfirmRemoveAccess } from "@/modules/admin/flows/ConfirmRemoveAccess";
+import { PasswordBox } from "@/modules/admin/pages/People";
 import { placeLine } from "@/modules/finance";
 
 /* The GM setting where somebody starts after sign-in (087). */
@@ -71,7 +72,8 @@ export default function PropertyPage() {
   /* The property's OWN business date — two hotels are routinely on
      different days, one having run its night audit and the other not.
      The endpoint defaults to that property's, which is why no date is
-     passed here. */
+     passed here. (Until D27-308 the reports door filled in the SELECTED
+     property's date when none was passed; it sends none now.) */
   const today = useQuery({
     queryKey: ["property-today", code],
     queryFn: () => getTodaySnapshot(code),
@@ -175,10 +177,12 @@ export default function PropertyPage() {
               than a confident zero. */}
           <Figure label="Room revenue, month to date"
                   value={period.data ? money(period.data.roomRevenue) : null} />
+          {/* D27-308 (1b): nothing sold is a dash, as All properties
+              shows it - the server's 0 is "nothing to divide", not a rate. */}
           <Figure label="Average rate"
-                  value={period.data ? money(period.data.adr) : null} />
+                  value={period.data?.roomsSold ? money(period.data.adr) : null} />
           <Figure label="RevPAR"
-                  value={period.data ? money(period.data.revpar) : null} />
+                  value={period.data?.roomsSold ? money(period.data.revpar) : null} />
           <Figure label="Rooms" value={
             property.rooms === 0 ? null : String(property.rooms)} />
         </CardBody>
@@ -392,7 +396,8 @@ function AddHereDialog({ code, roles, onClose, onSaved }: {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState(roles[0] ?? "");
+  /* Reception first, as People's Add does (D27-308). */
+  const [role, setRole] = useState(roles.includes("front_desk") ? "front_desk" : roles[0] ?? "");
   const [busy, setBusy] = useState(false);
   /* D27-243 (5.3): 10 for the owner, an Admin or a GM; 8 for anybody else. */
   const min = minFor([role]);
@@ -454,12 +459,11 @@ function AddHereDialog({ code, roles, onClose, onSaved }: {
             error={password.length > 0 && password.length < min
               ? `At least ${min} characters.` : undefined}
           >
-            {/* Not masked: you are setting it FOR them and have to read
-                it back. A masked box gets written on a sticky note. */}
+            {/* Hidden, with Show, as People's (D27-308). */}
             {(f) => (
-              <Input {...fieldProps(f)} value={password}
-                     placeholder="something they will remember"
-                     onChange={(e) => setPassword(e.target.value)} />
+              <PasswordBox {...fieldProps(f)} value={password}
+                           placeholder="something they will remember"
+                           onChange={(e) => setPassword(e.target.value)} />
             )}
           </Field>
           <Field label="What they do here" required>
@@ -524,9 +528,9 @@ function SetPasswordDialog({ person, onClose, onSaved }: {
           hint={`At least ${min} characters.`}
         >
           {(f) => (
-            <Input {...fieldProps(f)} value={value} autoFocus
-                   placeholder="something they will remember"
-                   onChange={(e) => setValue(e.target.value)} />
+            <PasswordBox {...fieldProps(f)} value={value} autoFocus
+                         placeholder="something they will remember"
+                         onChange={(e) => setValue(e.target.value)} />
           )}
         </Field>
       </DialogContent>

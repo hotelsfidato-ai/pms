@@ -21,16 +21,17 @@ import { createStaff, grantAccess, revokeAccess, deactivateStaff, createProperty
    without SQL on the server, and it went unnoticed because the property
    has one staff member. The owner found it trying to set up testers.
 
-   The panels live here now and both screens import them: the console
-   keeps them for development, and `/admin/users` ships them.
+   The panels live here. `NewProperty` ships, on Properties; `NewPerson`
+   and `People` are the development Console's only - People
+   (`pages/People.tsx`) is where a person is added in a real build.
 
-   ⚠ THE GROUP-ADMIN OPTION SHIPS TOO, deliberately. Without it a
-   production deployment could never mint a second group admin — a trap
-   that surfaces the day the first one leaves. It is safe because the
-   refusal is not this checkbox: `POST /admin/staff` calls
-   `app.require_provisioning_key()` and refuses the act itself. The
-   31 August commit said as much — *"the two guards that matter are not
-   here anyway. They are in Postgres."*
+   ⚠ THE GROUP-ADMIN OPTION DOES NOT SHIP (corrected 12 October, D27-308
+   (4)). It is on `NewPerson`, so only in a development build; no screen
+   in a real build makes a group administrator, and the owner keeps it a
+   server job. Either way the refusal is not this checkbox:
+   `POST /admin/staff` calls `app.require_provisioning_key()` and refuses
+   the act itself. The 31 August commit said as much — *"the two guards
+   that matter are not here anyway. They are in Postgres."*
    ══════════════════════════════════════════════════════════════════ */
 
 /* Travelled with the panels rather than being duplicated. The shared
@@ -415,9 +416,9 @@ export function NewProperty({ onDone }: { onDone: () => void }) {
                   Provisioning key
                 </p>
                 <p className="text-xs text-grey-600 mt-0.5 leading-relaxed mb-2">
-                  Creating a property manufactures a whole tenant - rooms, an
-                  invoice series, a folio namespace. Being signed in as an
-                  administrator is not enough on its own.
+                  Creating a property makes its room types and invoice series;
+                  add its rooms next. Being signed in as an administrator is
+                  not enough on its own.
                 </p>
                 <Input
                   type="password"

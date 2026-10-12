@@ -40,6 +40,16 @@ day it goes.
 
 ## Fixed — the solution is here; do not work it out again
 
+### ADM-21 · A property's page showed ₹0 average rate and RevPAR when nothing was sold - FIXED 12 October (D27-308 (1b))
+
+**Found** - the A16 video check: All properties shows a dash for a rate over no rooms sold; the property's page printed the server's 0 as "₹0".
+
+**Done** - `pages/Property.tsx`: Average rate and RevPAR are a dash unless `roomsSold` is above 0. Room revenue stays a figure (₹0 is a real total).
+
+**Proved** - `propertiesD27308.test.tsx` "shows a dash, not ₹0" failed first ("expected '₹0' to be '-'") and passes.
+
+**The rule** - a rate with nothing to divide by is a dash, never a zero.
+
 ### ADM-20 · Migration 195 (190 at the merge) made the next deploy fail on its own replay - FIXED 3 October (numbered for now)
 
 **Found** - 3 October, migrating my copy's database (fidato_s48) a second time after
