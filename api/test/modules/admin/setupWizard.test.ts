@@ -60,10 +60,13 @@ beforeAll(async () => {
 afterAll(async () => {
   await sql("delete from staff_hotels where staff_id = any($1::uuid[])", [Object.values(people)]);
   await sql("update staff set is_active = false where id = any($1::uuid[])", [Object.values(people)]);
-  await sql("alter table hotels disable trigger hotels_no_delete");
-  await sql("delete from hotels where id = $1", [hotelId]);
-  await sql("alter table hotels enable trigger hotels_no_delete");
   await closePool();
+  /* ONE statement list, one transaction: a teardown cut off by a timeout
+     must never leave the hotels' no-delete guard switched off for the files
+     after this one. The id is the database's own uuid, never typed. */
+  await sql(`alter table hotels disable trigger hotels_no_delete;
+             delete from hotels where id = '${hotelId}';
+             alter table hotels enable trigger hotels_no_delete;`);
 });
 
 const roster = async () => {
@@ -265,8 +268,9 @@ describe("D27-311 - the reminder in the bell, on its day, derived", () => {
   });
 
   it("gone when the PMS sees the step done, or the choice is cleared", async () => {
-    expect((await choose("connections", { choice: "remind", remindOn: await today() })).status).toBe(200);
-    expect((await choose("branding", { choice: "remind", remindOn: await today() })).status).toBe(200);
+    const day = await today();
+    expect((await choose("connections", { choice: "remind", remindOn: day })).status).toBe(200);
+    expect((await choose("branding", { choice: "remind", remindOn: day })).status).toBe(200);
     expect((await reminders(owner)).map((n) => n["id"]).sort())
       .toEqual(["setup-reminder-branding", "setup-reminder-connections"]);
     await sql("insert into market_rate_settings (hotel_id, is_on) values ($1, true)", [hotelId]);
