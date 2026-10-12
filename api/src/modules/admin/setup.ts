@@ -179,9 +179,12 @@ type Stored = { step: string; choice: "completed" | "later" | "remind"; remind_o
                 by: string | null; at: Date };
 
 async function stored(client: Client, hotelId: string): Promise<Map<string, Stored>> {
+  /* The name through app.colleague_name, not a join to staff: a GM cannot
+     read the group owner's staff row, and the join gave them null (MEMORY 283). */
   const { rows } = await client.query<Stored>(
-    `select st.step, st.choice, st.remind_on::text, s.full_name as by, st.chosen_at as at
-       from hotel_setup_steps st left join staff s on s.id = st.chosen_by
+    `select st.step, st.choice, st.remind_on::text, app.colleague_name(st.chosen_by, st.hotel_id) as by,
+            st.chosen_at as at
+       from hotel_setup_steps st
       where st.hotel_id = $1`, [hotelId]);
   return new Map(rows.map((r) => [r.step, r]));
 }

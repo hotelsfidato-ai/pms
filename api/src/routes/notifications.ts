@@ -333,7 +333,9 @@ notifications.get("/:code/notifications", async (c) => {
         out.push({
           id: `setup-reminder-${s.id}`, hotelId: code, category: "system",
           title: `Setup: ${STEP_TITLES[s.id]}`, body: "You asked to be reminded today.",
-          isRead: false, at: `${s.remindOn}T09:00:00+05:30`,
+          /* From the start of its day: at 09:00 a reminder read at 2 am said
+             "in about 7 hours" (seen on screen, 13 October). */
+          isRead: false, at: `${s.remindOn}T00:00:00+05:30`,
           link: `/h/${code}/setup?step=${s.id}`, actionRequired: true,
         });
       }
