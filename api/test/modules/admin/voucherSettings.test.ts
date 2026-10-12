@@ -166,6 +166,20 @@ describe("a hotel's bank details", () => {
     expect(log.map((l) => [l.action, l.actor])).toEqual([["INSERT", people.gm], ["UPDATE", people.gm]]);
   });
 
+  /* ADM-22: the name came from a join to staff, which a GM's session cannot
+     read for a group administrator (rostered nowhere): "changedBy" was null. */
+  it("name the group owner to the hotel's GM, when the group owner changed them", async () => {
+    const res = await bank(owner, "PUT", { ...BANK, accountName: "Changed By The Owner" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const name = (await sql<{ full_name: string }>("select full_name from staff where id = $1", [owner]))[0]!.full_name;
+    expect(name).toBeTruthy();
+    for (const who of [people.gm, people.admin, owner]) {
+      const read = (await (await bank(who, "GET")).json()) as { bank: { accountName: string; changedBy: string | null } };
+      expect(read.bank.accountName).toBe("Changed By The Owner");
+      expect(read.bank.changedBy).toBe(name);
+    }
+  });
+
   it("are removed by the hotel's Admin", async () => {
     expect((await bank(people.admin, "DELETE")).status).toBe(200);
     expect(await storedBank()).toBeNull();
