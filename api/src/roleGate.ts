@@ -542,6 +542,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PUT ${H}/room-types/:id/amenities`]: SETUP_CHANGE,
   /* The front desk's hours and its early and late charges: setup. */
   [`PATCH ${H}/front-desk`]: SETUP_CHANGE,
+  /* D27-311: Set up this hotel - the owner, an administrator or the GM, exactly
+     room setup's edit; admin/setup.ts and the table's policy ask app.manages_hotel. */
+  [`PUT ${H}/setup/:step`]: SETUP_CHANGE,
   /* Phase 5 of the settings plan (D27-260): the lists, holidays, the group's
      VIP levels (row security also asks app.sets_group_settings) and the front
      desk's settings - changed from the Settings console. */
@@ -889,6 +892,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/room-types/:id/photos/:photoId`]: SETUP,
   [`GET ${H}/room-types/:id/amenities`]: SETUP,
   [`GET ${H}/commissioning`]: SETUP,
+  /* D27-311: the wizard is the owner's, an administrator's and the GM's - `setting`. */
+  [`GET ${H}/setup`]: see("setting", "the hotel's setup steps"),
   [`GET ${H}/till/setup`]: SETUP,
   [`GET ${H}/table-bookings/hours`]: SETUP,
   [`GET ${H}/housekeepers`]: see("inventory", "who cleans which room"),
