@@ -51,13 +51,15 @@ bankDetails.get("/:code/bank-details", async (c) => {
   const found = await withSession(c.get("subject"), async (client) => {
     const hotelId = await managed(client, c.req.param("code"));
     if (hotelId === null || hotelId === "refused") return hotelId;
+    /* The name through app.colleague_name, not a join to staff: a GM cannot read
+       the group owner's staff row, and the join gave them null (ADM-22, MEMORY 283). */
     const { rows } = await client.query<{
       account_name: string; account_number: string; bank_name: string; branch: string | null;
       ifsc: string; upi_id: string | null; changed_at: string; changed_by: string | null;
     }>(
       `select b.account_name, b.account_number, b.bank_name, b.branch, b.ifsc, b.upi_id,
-              b.changed_at::text, s.full_name as changed_by
-         from hotel_bank_details b left join staff s on s.id = b.changed_by
+              b.changed_at::text, app.colleague_name(b.changed_by, b.hotel_id) as changed_by
+         from hotel_bank_details b
         where b.hotel_id = $1`, [hotelId]);
     const b = rows[0];
     return {

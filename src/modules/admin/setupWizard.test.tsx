@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Routes, useLocation } from "react-router";
+import { Link, MemoryRouter, Routes, useLocation } from "react-router";
 import type { ReactElement } from "react";
 import * as apiModule from "@/lib/api";
 import { useUi } from "@/lib/ui";
@@ -120,8 +120,8 @@ const where = () => screen.getByTestId("where").textContent;
 /** The page has the steps (the heading comes first, with the skeleton). */
 const loaded = () => screen.findByRole("heading", { level: 2, name: "Optional" }, { timeout: 5000 });
 
-beforeEach(() => { as("gm"); useToastStore.setState({ toasts: [] }); });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+beforeEach(() => { as("gm"); useToastStore.setState({ toasts: [] }); sessionStorage.clear(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("the 18 steps", () => {
   it("are in the owner's order, in three groups and a summary", () => {
@@ -432,8 +432,14 @@ describe("Back to setup", () => {
   const bar = (at: string, hotel = "AGR") => {
     useUi.setState({ hotelId: hotel });
     vi.spyOn(apiModule, "api").mockImplementation(() => new Promise(() => {}) as never);
-    return show(<TopBar />, at);
+    return show(<>
+      <TopBar />
+      <Link to="/h/AGR/reports">Elsewhere</Link>
+      <Link to="/h/AGR/rates?setup=taxes">Taxes screen</Link>
+    </>, at);
   };
+  const barText = () => document.querySelector("[data-setup-bar]")?.textContent;
+  const go = (name: string) => fireEvent.click(screen.getByRole("link", { name }));
 
   it("says which step of 18 this is on any screen opened with ?setup=<step>, and links back to it", () => {
     bar("/h/AGR/rates?setup=prices");
@@ -459,6 +465,79 @@ describe("Back to setup", () => {
   it("is not offered to somebody who could not open the setup", () => {
     as("front_desk");
     bar("/h/AGR/rates?setup=prices");
+    expect(document.querySelector("[data-setup-bar]")).toBeNull();
+  });
+
+  /* D27-312: it stays on every screen visited, in this tab, until the person
+     presses Back to setup or closes it. */
+  it("stays on the next screens, in the same step, though their address has no ?setup", () => {
+    bar("/h/AGR/rates?setup=prices");
+    go("Elsewhere");
+    expect(where()).toBe("/h/AGR/reports");
+    expect(barText()).toBe("Setting up this hotel: step 5 of 18, PricesBack to setup");
+    expect(screen.getByRole("link", { name: "Back to setup" }).getAttribute("href")).toBe("/h/AGR/setup?step=prices");
+  });
+
+  it("keeps the last step seen", () => {
+    bar("/h/AGR/rates?setup=prices");
+    go("Taxes screen");
+    go("Elsewhere");
+    expect(barText()).toContain("step 2 of 18, Taxes");
+  });
+
+  it("is gone after Back to setup, and does not come back on the next screens", () => {
+    bar("/h/AGR/rates?setup=prices");
+    go("Elsewhere");
+    go("Back to setup");
+    expect(where()).toBe("/h/AGR/setup?step=prices");
+    expect(document.querySelector("[data-setup-bar]")).toBeNull();
+    go("Elsewhere");
+    expect(document.querySelector("[data-setup-bar]")).toBeNull();
+  });
+
+  it("is gone after the close button, on the screen that carries ?setup and on the next ones", () => {
+    bar("/h/AGR/rates?setup=prices");
+    fireEvent.click(screen.getByRole("button", { name: "Close the setup bar" }));
+    expect(document.querySelector("[data-setup-bar]")).toBeNull();
+    expect(where()).toBe("/h/AGR/rates");
+    go("Elsewhere");
+    expect(document.querySelector("[data-setup-bar]")).toBeNull();
+  });
+
+  it("closes from a screen that was reached without ?setup too", () => {
+    bar("/h/AGR/rates?setup=prices");
+    go("Elsewhere");
+    fireEvent.click(screen.getByRole("button", { name: "Close the setup bar" }));
+    expect(document.querySelector("[data-setup-bar]")).toBeNull();
+    expect(where()).toBe("/h/AGR/reports");
+  });
+
+  it("comes back when a screen is opened from the setup again after it was closed", () => {
+    bar("/h/AGR/rates?setup=prices");
+    fireEvent.click(screen.getByRole("button", { name: "Close the setup bar" }));
+    go("Taxes screen");
+    expect(barText()).toContain("step 2 of 18, Taxes");
+  });
+
+  it("is remembered for the hotel it was opened from, not for another", () => {
+    bar("/h/AGR/rates?setup=prices");
+    cleanup();
+    bar("/h/PUN/reports", "PUN");
+    expect(document.querySelector("[data-setup-bar]")).toBeNull();
+    cleanup();
+    bar("/h/AGR/reports");
+    expect(barText()).toContain("step 5 of 18, Prices");
+  });
+
+  it("is as before where the browser blocks its storage: only while the address says so", () => {
+    const blocked = () => { throw new Error("blocked"); };
+    vi.stubGlobal("sessionStorage", { getItem: blocked, setItem: blocked, removeItem: blocked });
+    bar("/h/AGR/rates?setup=prices");
+    expect(barText()).toContain("step 5 of 18, Prices");
+    go("Elsewhere");
+    expect(document.querySelector("[data-setup-bar]")).toBeNull();
+    go("Taxes screen");
+    fireEvent.click(screen.getByRole("button", { name: "Close the setup bar" }));
     expect(document.querySelector("[data-setup-bar]")).toBeNull();
   });
 });

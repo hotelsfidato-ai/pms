@@ -11,6 +11,57 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-13 · The setup bar stays; ADM-22 fixed; the first group's note (the owner's D27-312)
+
+**Asked for:** D27-312's two small jobs, plus one line from the master.
+**Shipped:**
+- `setup/SetupBar.tsx`: "Back to setup" now STAYS on every screen visited in
+  that browser tab, with the last `?setup=<id>` seen for that hotel, until the
+  person presses "Back to setup" or closes it (a new close button, "Close the
+  setup bar" for a screen reader, which also takes `?setup` out of the address
+  it is pressed on). The step is kept in `sessionStorage`
+  (`fidato.setup-bar.<code>`), every read and write in try/catch: where the
+  browser blocks it the bar is as it was, only while the address carries
+  `?setup`. Nothing else about the bar changed.
+- ADM-22: `api/src/modules/admin/bankDetails.ts` GET names who changed the bank
+  details with `app.colleague_name(b.changed_by, b.hotel_id)`, not a join to
+  `staff`, so a GM sees the group owner's name. `DEFECTS.md`: ADM-22 FIXED.
+- `setup/steps.ts`: the first group's note now reads "These five are what the
+  hotel needs before it can sell a room and bill it correctly." (the old
+  sentence said a booking, a bill or the night audit would refuse; with the
+  dummy GSTIN nothing refuses and the invoice prints the made-up number). No
+  test asserted the old words.
+**Found:** a person who was on the hotel's roster and has since been taken off
+it, and is not a group administrator, now shows no name on the bank details
+(the function's rule; the same as the setup steps' "chosen by"). Arriving at the
+setup page by the Settings menu while the bar is remembered shows the bar on the
+setup page itself until "Back to setup" is pressed (see the report's question).
+**Proved:** `setupWizard.test.tsx` 44 of 44 (36 before; 8 new for the bar:
+stays on the next screens in the same step; keeps the last step seen; gone
+after Back to setup and not back on the next screens; gone after the close
+button, on the screen that carries `?setup` and on the next ones; closes from a
+screen reached without `?setup`; comes back when a screen is opened from the
+setup again; remembered per hotel; as before with storage blocked). All eight
+failed on the old bar first, each for its own reason ("expected undefined to be
+'Setting up this hotel: step 5 of 18...'", no "Close the setup bar" button).
+Then the bar broken three ways at once (Back to setup not forgetting the step,
+the close not redrawing, one key for every hotel) failed exactly the three tests
+named for them and the file was restored. `voucherSettings.test.ts` 37 of 37
+(36 before; "name the group owner to the hotel's GM, when the group owner changed
+them" failed first, "expected null to be 'Group Owner'") and the API
+`setupWizard.test.ts` 20 of 20, through `dbq.sh`.
+`bash scripts/gates.sh d27-312-bar-adm22 quick` on the committed tree (2eb10dbc,
+clean): web types, API types and the stripping check exit 0; web tests 1,295 of
+1,296 in a 1,428 s run - one timed out under load (`connectionHealth.test.tsx`,
+a 15 s find), and that file passes alone, 2 of 2. The API suite as a whole, the
+database, the replay and pg16 were not run (quick); the two API files above were.
+Not opened in a browser (no database or sign-in was started for it); the bar is
+proved in the DOM tests only.
+**Left open:** nothing of mine. Not in the manual: no chapter describes the bar.
+**Commits:** on the branch `worktree-agent-ad83434967ac4d714`, local only.
+
+---
+
 ## 2026-10-13 · Set up this hotel: the data and the API (the owner's D27-311)
 
 **Asked for:** D27-311, split by the master: this side owns the table, the

@@ -175,7 +175,12 @@ properties and people.
   what is still to do, "Ready to go live" when the server says `ready`, and no
   button that changes anything. `setup/SetupBar.tsx`, mounted once in the top
   bar: any address with `?setup=<step>` shows "Setting up this hotel: step N of
-  18, <title>" and "Back to setup". `setup/StillToDo.tsx` on the Dashboard: the
+  18, <title>" and "Back to setup", and (D27-312) it then STAYS on every screen
+  visited in that browser tab, with the last step seen for that hotel
+  (`sessionStorage`, `fidato.setup-bar.<code>`; blocked storage = only while the
+  address carries `?setup`), until "Back to setup" is pressed or its close
+  button ("Close the setup bar", which also takes `?setup` out of the address).
+  `setup/StillToDo.tsx` on the Dashboard: the
   Later and Remind me steps, only while one waits, only for the roles that hold
   `setting`. A link from "What this property still needs"
   (`flows/CommissioningCard.tsx`). The two calls are in `data/setup.ts`

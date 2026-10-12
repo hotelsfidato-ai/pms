@@ -40,7 +40,7 @@ export interface SetupStepInfo {
 
 export const GROUPS: ReadonlyArray<{ key: GroupKey; title: string; note: string }> = [
   { key: "must", title: "Must be done before the first booking",
-    note: "Until these five are done a booking, a bill or the night audit will refuse and say why." },
+    note: "These five are what the hotel needs before it can sell a room and bill it correctly." },
   { key: "opening", title: "Before opening",
     note: "The hotel can take a booking without these, but should not open its doors until they are done." },
   { key: "optional", title: "Optional",
