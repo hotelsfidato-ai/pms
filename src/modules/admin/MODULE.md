@@ -88,10 +88,22 @@ properties and people.
   value, four across where the card is 512px wide, two below, `wide` for a
   long value); link rows at least 56px with the menu's glyph in a 28px chip.
   All three are in `pages/Admin.tsx`.
-- **The hotel's name is the group owner's** (D27-214): the profile's Edit
-  locks Name for anybody but a group administrator, and the server refuses a
-  changed name from them. Everything else is the hotel's owner's, GM's and
+- **The hotel's name is a group administrator's** (D27-214, D27-308 (3)): the
+  profile's Edit locks Name for anybody but a group administrator ("A group
+  administrator changes the name."), and the server refuses a changed name
+  from them. Everything else is the hotel's owner's, GM's and
   Admin's (`app.manages_hotel`), audited by `hotels_audit`.
+- **Properties' cards (D27-308):** the group administrator's card counts
+  "All rooms" (every active room, `GET /admin/hotels`); everybody else's
+  counts "Rooms sellable today" (`app.sellable_rooms`, `GET /api/hotels/:code`).
+  "Calendar" and "Open the Calendar" open `/h/:code/calendar`. Somebody who is
+  owner, GM or Admin AT a property (`app.manages_hotel`'s roles, read from
+  the session's scope) gets "Open" to its page on the ordinary card too.
+- **One property's page (D27-308):** its figures ask the reports door with
+  no date, so the server answers on that property's own business date and
+  month, not the selected one's; average rate and RevPAR are a dash when
+  nothing is sold. Add somebody here starts on Reception; its password and
+  the password window use People's `PasswordBox` (hidden, with Show).
 - No working menu lists any of them. Owner, admin, GM, hotel manager, finance
   and read-only see what their grants allow: Properties needs `hotel`, People
   and Users `user`, Roles `role`, Integrations `integration`, Audit log
@@ -478,7 +490,8 @@ The server's door, `api/src/modules/admin/index.ts`, exports only `mounts`
 ## Leans on
 
 - **reports** — `getTodaySnapshot` and `getPeriodStatistics` through
-  `@/modules/reports`, on one property's page.
+  `@/modules/reports`, on one property's page, called with no date: the
+  server then uses that property's own business date (D27-308 (1a)).
 - **finance**, over HTTP, not by import: every Properties card reads
   `GET /:code/tax` (finance's `tax.ts`) for the GST in use. Settings mounts
   finance's `TaxRulesCard` and inventory's `FrontDeskCard` through their doors.

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import { monthStart } from "../../businessDate.ts";
 import { dailyFigures, sumDays, propertyFor, isoDateParam } from "./figures.ts";
-import { pct, ratio } from "./document.ts";
+import { pct } from "./document.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    STATISTICS — occupancy, ADR, RevPAR, for the Dashboard and the
@@ -59,15 +59,19 @@ statistics.get("/:code/statistics/period", async (c) => {
 
     const t = sumDays(await dailyFigures(client, property.id, from, to));
 
-    /* Rates from the TOTALS, never averaged from daily averages. */
+    /* Rates from the TOTALS, never averaged from daily averages - and
+       NOT rounded here (D27-308 (1c)): the screens print whole rupees, so
+       a rate rounded to the paisa first was rounded twice. ₹559.497 came
+       back as 559.50 and printed ₹560 on a property's row, while All
+       properties' panel, working from the same totals, printed ₹559. */
     return {
       from,
       to,
       availableRoomNights: t.available,
       roomsSold: t.sold,
       occupancyPct: pct(t.sold, t.available),
-      adr: ratio(t.room, t.sold),
-      revpar: ratio(t.room, t.available),
+      adr: t.sold ? t.room / t.sold : 0,
+      revpar: t.available ? t.room / t.available : 0,
       roomRevenue: t.room,
     };
   });

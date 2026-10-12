@@ -140,9 +140,9 @@ admin.post("/admin/hotels", async (c) => {
   const digest = keyDigest(c.req.header("x-provisioning-key"));
   if (!digest) {
     return c.json(refuse(
-      "This action needs the provisioning key. Creating a property " +
-      "manufactures a whole tenant - rooms, an invoice series, a folio " +
-      "namespace - so a signed-in session is not enough on its own.",
+      "This action needs the provisioning key. Creating a property makes " +
+      "its room types and invoice series, so being signed in is not " +
+      "enough on its own.",
     ), 403);
   }
 

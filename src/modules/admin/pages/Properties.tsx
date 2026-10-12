@@ -75,6 +75,13 @@ export function PropertiesPage() {
      administrator. Which hotels are test ones, and whose: GET /api/hotels's
      `testOf` (the session), or the admin list's where it says. */
   const sessionHotels = useSession((s) => s.hotels);
+  const scope = useSession((s) => s.scope);
+  /* Runs this property: owner, GM or Admin AT it - who the server lets
+     open its page (app.manages_hotel, migration 133). */
+  const runs = (code: string) => {
+    const id = sessionHotels.find((h) => h.code === code)?.id;
+    return !!scope?.hotels.some((g) => g.hotelId === id && ["owner", "gm", "admin"].includes(g.role));
+  };
   const all = admin.data;
   const testOf = useMemo(() => {
     const byReal = new Map<string, TestHotelOf>();
@@ -162,7 +169,9 @@ export function PropertiesPage() {
                 )}
                 <p className="text-sm text-grey-500 mt-0.5">{p.address}</p>
                 <dl className="mt-3 border-t border-grey-100 pt-1.5">
-                  <Line label="Rooms" value={String(p.rooms)} />
+                  {/* GET /api/hotels/:code counts app.sellable_rooms today:
+                      the rooms less the blocked ones (D27-308). */}
+                  <Line label="Rooms sellable today" value={String(p.rooms)} />
                   <Line label="Types" value={p.roomTypes.join(" · ")} />
                   <Line label="Check in / out" value={`${p.checkInTime} / ${p.checkOutTime}`} />
                   {/* ADM-2, D17-37. This printed `p.tax` — the flat CGST +
@@ -172,14 +181,21 @@ export function PropertiesPage() {
                     <Line key={key} label={label} value={value} wrap />
                   )} />
                 </dl>
-                <Link
-                  to={`/h/${p.id}/stay`}
-                  className="inline-flex items-center gap-1.5 min-h-9 pointer-coarse:min-h-11 text-sm font-medium text-brand-orange-700 hover:underline underline-offset-4 mt-2"
-                >
-                  {/* The screen is the Calendar now (the owner, D27-82). */}
-                  Open the Calendar
-                  <ArrowRight className="size-3.5" />
-                </Link>
+                <div className="flex items-center gap-x-3 flex-wrap mt-2">
+                  {/* D27-308 (1e): the property's own page, for whoever runs
+                      it - the server's app.manages_hotel. */}
+                  {runs(p.id) && (
+                    <Link to={`/properties/${p.id}`} className={LINK}>
+                      Open
+                      <ArrowRight className="size-3.5" />
+                    </Link>
+                  )}
+                  {/* The Calendar (D27-82), not Rooms (D27-308). */}
+                  <Link to={`/h/${p.id}/calendar`} className={LINK}>
+                    Open the Calendar
+                    <ArrowRight className="size-3.5" />
+                  </Link>
+                </div>
               </CardBody>
             </Card>
           ))}
@@ -195,9 +211,9 @@ export function PropertiesPage() {
           <p className="flex items-start gap-2 text-xs text-grey-500 mt-3 leading-relaxed">
             <Info className="size-3.5 shrink-0 mt-0.5" />
             <span>
-              Creating a property mints its rooms, its invoice series and its
-              folio namespace - <strong>the code appears in every URL and
-              every invoice number and cannot be changed afterwards.</strong>
+              Creating a property makes its room types and invoice series; add
+              its rooms next. <strong>The code appears in every URL and every
+              invoice number and cannot be changed afterwards.</strong>
             </span>
           </p>
         </>
@@ -232,7 +248,9 @@ function AdminPropertyCard({ hotel, onEdit, onToggle, test }: {
         </p>
 
         <dl className="mt-3 border-t border-grey-100 pt-1.5">
-          <Line label="Rooms" value={hotel.rooms === 0 ? "-" : String(hotel.rooms)} />
+          {/* Every active room, blocked or not (D27-308): the other card
+              counts today's sellable ones. */}
+          <Line label="All rooms" value={hotel.rooms === 0 ? "-" : String(hotel.rooms)} />
           <Line label="Types"
                 value={hotel.roomTypes.length ? hotel.roomTypes.join(" · ") : "-"} />
           {/* The GSTIN prints on every invoice this property issues, so
@@ -264,18 +282,12 @@ function AdminPropertyCard({ hotel, onEdit, onToggle, test }: {
               away, which is what the owner asked for on 9 September —
               "the property view will show data and statistics about the
               property and will be used to add property staff". */}
-          <Link
-            to={`/properties/${hotel.code}`}
-            className="inline-flex items-center gap-1.5 min-h-9 pointer-coarse:min-h-11 text-sm font-medium text-brand-orange-700 hover:underline underline-offset-4"
-          >
+          <Link to={`/properties/${hotel.code}`} className={LINK}>
             Open
             <ArrowRight className="size-3.5" />
           </Link>
           {hotel.isActive && (
-            <Link
-              to={`/h/${hotel.code}/stay`}
-              className="inline-flex items-center gap-1.5 min-h-9 pointer-coarse:min-h-11 text-sm font-medium text-brand-orange-700 hover:underline underline-offset-4"
-            >
+            <Link to={`/h/${hotel.code}/calendar`} className={LINK}>
               Calendar
             </Link>
           )}
@@ -309,7 +321,8 @@ export function EditPropertyDialog({ hotel, nameLocked = false, onClose, onSaved
       shown nor sent, so they stay as they are. */
   hotel: Pick<AdminProperty, "code" | "name" | "city" | "state" | "gstin" | "phone" | "email" | "addressLine">
     & Partial<PropertyProfile>;
-  /** The name stays the group owner's (D27-214): a GM or Admin sees it, locked. */
+  /** The name is a group administrator's to change (D27-214, D27-308): a GM
+      or Admin sees it, locked. */
   nameLocked?: boolean;
   onClose: () => void; onSaved: () => void;
 }) {
@@ -376,7 +389,7 @@ export function EditPropertyDialog({ hotel, nameLocked = false, onClose, onSaved
             )}
           </Field>
           <Field label="Name" required
-                 {...(nameLocked ? { hint: "The group's owner changes the name." } : {})}>
+                 {...(nameLocked ? { hint: "A group administrator changes the name." } : {})}>
             {(f) => (
               <Input {...fieldProps(f)} value={name} autoFocus={!nameLocked} disabled={nameLocked}
                      onChange={(e) => setName(e.target.value)} />
@@ -501,6 +514,9 @@ export function EditPropertyDialog({ hotel, nameLocked = false, onClose, onSaved
     </Dialog>
   );
 }
+
+/* A card's links: orange text (the Tappable Rule). */
+const LINK = "inline-flex items-center gap-1.5 min-h-9 pointer-coarse:min-h-11 text-sm font-medium text-brand-orange-700 hover:underline underline-offset-4";
 
 /* `wrap` for a value that must be read whole. A tax line cut to
    "5% up to ₹7,500 · 18% abo…" hides the rate a room above ₹7,500 is

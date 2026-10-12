@@ -116,7 +116,10 @@ nothing sent, every report is as on the property's own business date.
 
 ```
 GET /:code/statistics/daily      no screen (KNOWN_UNREACHABLE)
-GET /:code/statistics/period     the Dashboard; the property page (admin)
+GET /:code/statistics/period     the Dashboard; the property page (admin); All
+                                 properties. adr and revpar come back exact
+                                 (not rounded to the paisa): a screen rounds
+                                 once, when it prints (D27-308 (1c))
 GET /:code/statistics/snapshot   the property page (admin)
 GET /:code/reports/guest-ledger · /cashier-shift · /gst-sales · /c-form
 GET /:code/reports/balances-by-source   finance's "Company accounts" screen
@@ -166,7 +169,10 @@ data/reportData.ts      getGuestLedger, getCashierShift, getGstSales, getCForm,
                         getCityLedger (balances by booking source, finance's)
 data/statistics.ts      listDailyStatistics, getPeriodStatistics,
                         getTodaySnapshot; monthOf(date) - the month the monthly
-                        and yearly pages report, from the business date (REP-1)
+                        and yearly pages report, from the business date (REP-1).
+                        getPeriodStatistics and getTodaySnapshot send no date
+                        unless given one: the route then answers on THAT
+                        property's business date and month (D27-308 (1a))
 components/ReportView.tsx      draws any ReportDoc: bands, spanning headings,
                         totals ruled off, negatives in red, "-" for a figure not
                         held, and the bar chart. Dates print 25/08/2026 (D17-77).
