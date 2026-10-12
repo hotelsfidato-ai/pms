@@ -19,6 +19,38 @@ The old name stays among Find a screen's words for Rates (`nav.ts`), which no
 person reads. **Proved:** no test asserted the old words; opened as the GM on
 a scratch copy of the demo - the window reads as above.
 
+## 2026-10-12 · Add a room: several at once (D27-309)
+
+Helper copy `agent-a376b6135e95e393a`, from cp6 12551b7f. No migration, no server change.
+
+**Asked for:** the owner's D27-309. Add a room gets a "Several rooms" switch: From and To, the typed Type, Floor and Smoking for every room, the count on the button before saving, existing numbers skipped and named, one room exactly as before with the switch off.
+
+**Shipped:** `pages/RoomSetup.tsx` (RoomDialog only):
+- The switch, at the top of Add a room (not on a room's own window).
+- On: From and To (digits only, at most 10, To not below From, each said under its box), then "Add 9 rooms" / "Add 1 room" on the button.
+- Each number goes through the one-room create, `addRoom` -> `POST /:code/rooms`, one after another. So the server keeps every check it has, and refuses a number it already has.
+- The floor typed is every room's floor (blank stays blank). Zeros typed in From are kept (01 to 12 adds 01 ... 12).
+- The window then says "Added 3 rooms: 211, 212, 213" and "210 already exists, skipped" (several: "301, 302 ... already exist, skipped"). Any other refusal is "<number> not added: <the server's reason>". Done, or closing it, refreshes the page.
+
+**Found:** the rooms Import (`POST /:code/rooms/import`) was not reused. It UPDATES a room it already has: type, floor and smoking are overwritten and the room is switched back on. That is the opposite of "skipped". The one-room create refuses instead, so that is the path.
+
+**Proved:**
+- `severalRooms.test.tsx` 5/5: the count on the button, From/To validation, the existing number named and the rest added, the floor blank for all, and the switch off sending today's one room.
+- All 5 failed against cp6's screen (no switch).
+- Each guard was then broken in turn, and each refused:
+  - without the To-below-From check: the validation test;
+  - without naming the skipped number: the skipped test;
+  - with the floor worked out from the number: the blank-floor test;
+  - with the count off by one: the count test and the two range tests;
+  - with the one room's floor dropped: the switch-off test.
+- Inventory web 25/25.
+- On a scratch copy of the demo (`fidato_d309`, dropped after), in the browser pane:
+  - 1280 px: 210 to 213, Superior, floor 2 gave "Added 3 rooms: 211, 212, 213" and "210 already exists, skipped". 210 was unchanged in the database; the page showed 21 rooms.
+  - 390 px: 301 to 310, Deluxe, floor 3 gave "Added 2 rooms: 309, 310" and "301 ... 308 already exist, skipped". No sideways scroll (scroll width 390 = 390). Closing with the X refreshed the page to 23 rooms.
+  - Switch off: room 214 added, with the toast as before.
+
+**Left open:** whether one range should have a most (101 to 1009 would add 909 rooms, and a room is never deleted). Asked of the master and the owner, with a recommendation. Nothing was built for it.
+
 ---
 
 ## 2026-10-04 · Settings phase 3: rooms, rates and tax (D27-251, D27-258, D27-263)
