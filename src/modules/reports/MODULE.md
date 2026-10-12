@@ -147,10 +147,16 @@ document.ts   the contract: ReportDoc, sections, columns, rows, facts, chart.
 figures.ts    ONE derivation for every report. NIGHTS is the shared SQL:
               a posting saying "· N nights" split evenly over those nights (the
               paise to the last), a night not posted yet from the business date
-              on at the booking's rate, a complimentary room counted as sold
-              (the owner, D17-71 and D17-72). dailyFigures() adds them up by
-              date; stayNights() reads them room by room; propertyFor() heads
-              every report from the database, never a literal.
+              on at the booking's rate (the owner, D17-71). dailyFigures() adds
+              them up by date; its `sold` is the one "rooms sold": paying, plus
+              complimentary and half of each day use as the hotel's two
+              switches say (Settings, Front desk rules; soldRule(), migration
+              192). The Manager report, the Rates calendar, Monthly occupancy,
+              Monthly statistics and Yearly statistics divide by it (D27-307);
+              the three statistics reports' first footnote says how the
+              switches stand. stayNights() reads the nights room by room;
+              propertyFor() heads every report from the database, never a
+              literal.
 build.ts      buildReport(), BUILT_KEYS, and what each key is built from.
 builders/     manager.ts · nightAudit.ts · statistics.ts · cityLedger.ts ·
               noShow.ts · lodgingTax.ts
@@ -319,7 +325,8 @@ Where the checks are today: `api/test/modules/reports/reports.test.ts` (the
 Manager report and the guest ledger agree, the GST sales register, the
 cashier shift, the C-Form report, the city ledger, and — since 16 September —
 the reports' dates in another month and financial year, and the Statistics
-units). Web: `src/modules/reports/reports.test.tsx` ("the dashboard at /"),
+units); `statisticsSwitches.test.ts` (Monthly occupancy, Monthly and Yearly
+statistics follow the two switches and say how they stand, D27-307). Web: `src/modules/reports/reports.test.tsx` ("the dashboard at /"),
 `src/modules/reports/data/statistics.test.ts` (`monthOf`), `src/App.test.tsx`
 ("start here", "trade words explain themselves"),
 `src/components/app/navigation.test.ts`. The database
