@@ -50,6 +50,13 @@ named for them and the file was restored. `voucherSettings.test.ts` 37 of 37
 (36 before; "name the group owner to the hotel's GM, when the group owner changed
 them" failed first, "expected null to be 'Group Owner'") and the API
 `setupWizard.test.ts` 20 of 20, through `dbq.sh`.
+`bash scripts/gates.sh d27-312-bar-adm22 quick` on the committed tree (2eb10dbc,
+clean): web types, API types and the stripping check exit 0; web tests 1,295 of
+1,296 in a 1,428 s run - one timed out under load (`connectionHealth.test.tsx`,
+a 15 s find), and that file passes alone, 2 of 2. The API suite as a whole, the
+database, the replay and pg16 were not run (quick); the two API files above were.
+Not opened in a browser (no database or sign-in was started for it); the bar is
+proved in the DOM tests only.
 **Left open:** nothing of mine. Not in the manual: no chapter describes the bar.
 **Commits:** on the branch `worktree-agent-ad83434967ac4d714`, local only.
 
