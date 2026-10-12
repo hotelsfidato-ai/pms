@@ -11,6 +11,30 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-12 · Join and Leave only for those the server lets (the owner's D27-307 (4))
+
+**Asked for:** the master: the Accountant and the Viewer saw Join and Leave,
+which the server refuses them; hide them and say who may, the way Use points
+was done (D27-305).
+
+**Shipped:** `pages/Loyalty.tsx` asks `can(useRole(), "edit", "customer")` -
+the one matrix the server's gate reads (`LOYALTY_MEMBER`, `customer` edit:
+owner, Admin, GM, Hotel Manager, Reception). Without it Join and Leave are not
+drawn and the In house card adds "Guests join and leave through reception, the
+hotel manager, the general manager, an administrator or the owner." No server
+change. MODULE.md says so.
+
+**Proved:** `loyalty.test.tsx` "offers finance / read_only no Join or Leave,
+and says who does" - both failed on cp6's screen (no sentence found), pass on
+the fix; the file signs in as Reception now, so the Join test still joins.
+Opened on a scratch copy of the demo (API 8832, web 5332): the Accountant and
+a Viewer see both sentences and no button on a member's or a non-member's
+line; Reception sees Join, Use points and Leave and no sentence.
+
+**Left open:** nothing.
+
+---
+
 ## 2026-10-12 · Redeeming points gets its own right (the owner's D27-305 (1))
 
 **Asked for:** the master, 12 October: the A14 chapter helper's question

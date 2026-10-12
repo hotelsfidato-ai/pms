@@ -34,7 +34,7 @@ const WHAT_IT_DOES = [
   {
     icon: IndianRupee,
     title: "Prices and closures, sent out",
-    body: "The rate calendar's prices and closures go to SU as they change. "
+    body: "The prices and closures on Rates go to SU as they change. "
         + "A date with no price goes to SU closed.",
   },
   {
@@ -57,7 +57,7 @@ const NEEDS = [
     + "site with no code waits for a person.",
   "This hotel switched on in Settings, with the account the connection works as.",
   "One rate everywhere, or a rate per channel. Still to be decided, and it "
-    + "shapes the rate calendar.",
+    + "shapes Rates.",
 ];
 
 export default function ChannelManagerPage() {

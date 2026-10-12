@@ -11,6 +11,16 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-12 · "Rates", not "the rate calendar" (the owner's D27-307 (4))
+
+**Shipped:** Add a room type (`pages/RoomSetup.tsx`): "What the property
+sells. The rate is set separately, on Rates." (found by the A17 video check).
+The old name stays among Find a screen's words for Rates (`nav.ts`), which no
+person reads. **Proved:** no test asserted the old words; opened as the GM on
+a scratch copy of the demo - the window reads as above.
+
+---
+
 ## 2026-10-04 · Settings phase 3: rooms, rates and tax (D27-251, D27-258, D27-263)
 
 Branch `settings/rates-3oct` from cp6 8181f452, cp6 85d2bb7a merged in; migration **195** for now (the master renumbers); `fidato_s45` migrated twice.

@@ -11,6 +11,29 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-12 · Halls and packages: every control disabled for those the server refuses (the owner's D27-307 (4))
+
+**Asked for:** the master: Reception could press Add a hall, Edit and Add a
+package, which the server refuses (HALLS, `room_config` edit); disable them
+with the reason, as the package switch already was.
+
+**Shipped:** `pages/BanquetSetup.tsx`: one `maySetUp` (was `maySwitch`,
+`can(role, "edit", "room_config")`) disables Add a hall, each hall's Edit, Add
+a package and the switches. The Halls card says "The owner, an administrator
+or the GM adds and edits them."; the Packages line now ends "... adds and
+switches them." MODULE.md says who.
+
+**Proved:** `banquet.test.tsx` "shows reception the switches, Add a hall, Edit
+and Add a package disabled, and who may" - failed on cp6's screen (Add a hall
+enabled), passes on the fix; the same test as the GM finds all three enabled
+and no sentence. Opened on a scratch copy of the demo with one hall and one
+package: Reception, all four disabled with both sentences; the GM, all
+enabled, no sentence.
+
+**Left open:** nothing.
+
+---
+
 ## 2026-10-12 · A package can be switched off, never changed (the owner's D27-305 (8))
 
 **Asked for:** the master, 12 October: the A13 chapter helper's question

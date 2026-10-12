@@ -159,6 +159,7 @@ export function NewPerson({ onDone }: { onDone: () => void }) {
           {isAdmin && (
             <Input
               type="password"
+              autoComplete="new-password"
               value={key}
               onChange={(e) => setKey(e.target.value)}
               placeholder="provisioning key"
@@ -420,6 +421,7 @@ export function NewProperty({ onDone }: { onDone: () => void }) {
                 </p>
                 <Input
                   type="password"
+                  autoComplete="new-password"
                   value={key}
                   onChange={(e) => setKey(e.target.value)}
                   placeholder="the key for this deployment"

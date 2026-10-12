@@ -13,6 +13,15 @@ the server's settings and the hotel is switched on.**
 
 ---
 
+## 2026-10-12 · "Rates", not "the rate calendar" (the owner's D27-307 (4))
+
+**Shipped:** `pages/ChannelManager.tsx`: "The prices and closures on Rates go
+to SU as they change." and "... Still to be decided, and it shapes Rates."
+**Proved:** no test asserted the old words; opened as the GM on a scratch copy
+of the demo - both read as above.
+
+---
+
 ## 2026-09-30 · The postcode and the map point are the hotel's, set in Settings (D27-214; the settings lane)
 
 Branch `settings/one-place-30sep`, copy `.claude\worktrees\mystifying-napier-d2f754`.

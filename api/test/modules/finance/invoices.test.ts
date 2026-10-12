@@ -222,9 +222,11 @@ describe("issuing a tax invoice", () => {
     )).json()) as {
       lines: Array<{ category: string; amount: number }>;
       taxableValue: number; taxTotal: number; total: number;
-      cgst: { amount: number }; sgst: { amount: number };
+      cgst: { amount: number }; sgst: { amount: number }; masterBill: boolean;
     };
 
+    /* A stay's invoice is not a group's master bill's (D27-307 (4)). */
+    expect(detail.masterBill).toBe(false);
     /* No tax line among the supplies... */
     expect(detail.lines.every((l) => l.category !== "tax")).toBe(true);
     /* ...and the lines shown sum to the taxable value printed. A page

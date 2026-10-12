@@ -106,6 +106,13 @@ refused with "A package is not changed once added. Switch it off, and add a
 new one for a new price or menu." No migration: `banquet_packages.is_active`
 has been there since 061.
 
+**Who sets them up (D27-307 (4), 12 October).** Every write on Halls and
+packages is the server's HALLS rule, `room_config` edit: the owner, an
+administrator, the GM. For anyone else (Reception, the hotel manager...) the
+screen disables Add a hall, Edit, Add a package and the switches, and says
+"The owner, an administrator or the GM adds and edits them." (Halls) and
+"... adds and switches them." (Packages).
+
 **Names are labels, never joins** (BQ-7). "Registered by", "Confirmed by" and a
 course's "Added by" come from `app.colleague_name` (096), not from a join to
 the row-secured `staff` table — the join made a function the owner registered

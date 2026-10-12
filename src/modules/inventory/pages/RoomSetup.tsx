@@ -365,7 +365,7 @@ function TypeDialog({
         description={
           type
             ? undefined
-            : "What the property sells. The rate is set separately, on the rate calendar."
+            : "What the property sells. The rate is set separately, on Rates."
         }
         footer={removing ? (
           <>

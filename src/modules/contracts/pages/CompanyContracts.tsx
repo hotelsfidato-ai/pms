@@ -76,7 +76,7 @@ export default function CompanyContractsPage() {
           {data.contracts.length === 0 ? (
             <Card>
               <EmptyState compact title="No contract at this hotel"
-                description="Bookings for this company take the rate calendar's price until a contract is added." />
+                description="Bookings for this company take the price on Rates until a contract is added." />
             </Card>
           ) : data.contracts.map((k) => (
             <ContractCard key={k.id} k={k} data={data} keeper={keeper} onEdit={() => setContract(k)} />

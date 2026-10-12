@@ -184,7 +184,8 @@ export default function InvoicePage() {
                 total={moneyPrecise(data.total)}
               />
             )}
-            {!isCreditNote && !data.creditedBy && <SendInvoice hotelId={hotelId} number={data.number} />}
+            {/* Not on a group's master bill: nothing sends it (D27-307 (4)). */}
+            {!isCreditNote && !data.creditedBy && !data.masterBill && <SendInvoice hotelId={hotelId} number={data.number} />}
             <Button onClick={() => window.print()}>
               <Printer className="size-4" />
               Print

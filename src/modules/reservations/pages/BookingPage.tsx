@@ -1456,7 +1456,7 @@ function Summary({ nights, dayUse, lines, quotes, types, advance }: {
         </dl>
         {unpriced.length > 0 ? (
           <p className="text-sm text-warning-dark">
-            No price for {unpriced.join(", ")}. Set it on the rate calendar, or type a rate on the line.
+            No price for {unpriced.join(", ")}. Set it on Rates, or type a rate on the line.
           </p>
         ) : noRule ? (
           <p className="text-sm text-warning-dark">

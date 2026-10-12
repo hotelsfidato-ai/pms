@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-12 · "Rates", not "the rate calendar" (the owner's D27-307 (4))
+
+New booking with no price for a line: "No price for …. Set it on Rates, or type a rate on the line." (`pages/BookingPage.tsx`, found by the A17 video check); the server's own refusal (`api/.../book.ts`) "… has no price for …. Set it on Rates, or enter a rate for this booking." **Proved:** no test asserted the old words; on a scratch copy of the demo with the room types' prices taken off, the New booking page showed the line, and my API answered a booking with no rate with that sentence (nothing written).
+
 ## 2026-10-12 · Settle the master bill on the group's page (the owner's D27-305 (10))
 
 The host's account on the group's page now says who it is billed to and carries finance's own Settle and "Issue tax invoice" (the routes and the dialogs are finance's; see its CHANGELOG). Opening the host account (`POST /groups/:id/master`) addresses it to the company the group is billed to - the group's own, else its lead room's, one booking having made every room - with `bill_to = 'company'`, as a function's bill is; GET `/groups/:id` adds the master's `company` and its standing `invoice`. The invoice is offered once every room has left and nothing is owed. **Proved:** `groupMasterBill.test.tsx` (6) and `api/test/modules/finance/masterBill.test.ts`; opened on the local demo (finance's entry of the same day).

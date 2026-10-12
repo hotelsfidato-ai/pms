@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Award } from "lucide-react";
 import { isoDate, money, number } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { can } from "@/lib/permissions";
+import { useRole } from "@/lib/session";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Field, Input, Checkbox,
   Dialog, DialogContent, EmptyState, ErrorState, Skeleton, DataTable, toast, type Column,
@@ -63,6 +65,9 @@ function InHouseCard({ hotelId, screen: s }: { hotelId: string; screen: LoyaltyS
   const [joining, setJoining] = useState<LoyaltyStay | null>(null);
   const [spending, setSpending] = useState<LoyaltyStay | null>(null);
   const [leaving, setLeaving] = useState<LoyaltyStay | null>(null);
+  /* D27-307 (4): Join and Leave are the server's `customer` edit (roleGate
+     LOYALTY_MEMBER); whoever lacks it is not offered them, and is told who. */
+  const mayJoin = can(useRole(), "edit", "customer");
 
   const columns: Column<LoyaltyStay>[] = [
     { key: "room", header: "Room", cell: (r) => <span className="tabular">{r.room ?? DASH}</span> },
@@ -75,9 +80,9 @@ function InHouseCard({ hotelId, screen: s }: { hotelId: string; screen: LoyaltyS
         {r.member ? (
           <>
             {r.direct && s.mayRedeem && <Button size="sm" onClick={() => setSpending(r)}>Use points</Button>}
-            <Button size="sm" variant="ghost" onClick={() => setLeaving(r)}>Leave</Button>
+            {mayJoin && <Button size="sm" variant="ghost" onClick={() => setLeaving(r)}>Leave</Button>}
           </>
-        ) : (
+        ) : mayJoin && (
           <Button size="sm" variant="secondary" onClick={() => setJoining(r)}>Join</Button>
         )}
       </div>
@@ -86,9 +91,11 @@ function InHouseCard({ hotelId, screen: s }: { hotelId: string; screen: LoyaltyS
 
   return (
     <Card>
-      {/* D27-305: redeeming is its own right; whoever lacks it is told who has it. */}
-      <CardHeader title="In house" description={s.mayRedeem ? undefined
-        : "Points are used by reception, the hotel manager, the general manager, an administrator or the owner."} />
+      {/* D27-305, D27-307: whoever lacks a right is told who has it. */}
+      <CardHeader title="In house" description={[
+        !s.mayRedeem && "Points are used by reception, the hotel manager, the general manager, an administrator or the owner.",
+        !mayJoin && "Guests join and leave through reception, the hotel manager, the general manager, an administrator or the owner.",
+      ].filter(Boolean).join(" ") || undefined} />
       <DataTable<LoyaltyStay> rows={s.stays} columns={columns} rowKey={(r) => r.id}
         className="border-0 rounded-t-none"
         empty={<EmptyState compact icon={<Award />} title="Nobody is checked in"

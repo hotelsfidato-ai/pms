@@ -41,6 +41,13 @@ describe("what must never happen offline", () => {
     expect(r.reason).toMatch(/drawer/i);
   });
 
+  /* D27-307 (4): a group's master bill takes money and is invoiced too;
+     each says why, in the stay's words, not "cannot be done offline yet". */
+  it("refuses a group's payment and its invoice, with the Payment and Invoice reasons", () => {
+    expect(ruleFor(`${P}/groups/abc/payments`, "POST").label).toBe("Payment");
+    expect(ruleFor(`${P}/groups/abc/invoice`, "POST").label).toBe("Invoice");
+  });
+
   it("refuses every cashier shift action", () => {
     for (const path of ["open", "count", "close", "movements"]) {
       expect(ruleFor(`${P}/cashier-shift/${path}`, "POST").tier).toBe("refuse");

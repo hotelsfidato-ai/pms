@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { ReactElement } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
-import { HOTEL, signedIn, startSignedIn } from "@/test/app";
+import { AGRA_HOTEL, HOTEL, signedIn, startSignedIn } from "@/test/app";
 import { getBanquetDiary, getBanquetEvent, getBanquetSetup, type BanquetEvent } from "@/modules/banquet/data/banquet";
 import * as frontDoor from "@/modules/banquet";
 import BanquetPage from "@/modules/banquet/pages/Banquet";
@@ -173,12 +173,32 @@ describe("Halls and packages", () => {
     expect(screen.queryByText(/no banquet hall/i)).toBeNull();
   });
 
-  it("shows reception the switches disabled, and who switches them (D27-305)", async () => {
-    server({ [SETUP]: twoPackages });
+  /* D27-305, D27-307 (4): the server's HALLS rule (`room_config` edit) refuses
+     reception every write here, so each control is disabled, with who may. */
+  it("shows reception the switches, Add a hall, Edit and Add a package disabled, and who may (D27-305, D27-307)", async () => {
+    const withHall = () => ({ ...twoPackages(), venues: [
+      { id: "v-1", name: "Emerald Hall", seated: 80, floating: null, defaultRate: null, isActive: true, notes: null }] });
+    server({ [SETUP]: withHall });
     setupPage();
     const sw = await screen.findByRole("switch", { name: "Offer Veg thali" });
     expect((sw as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText(/The owner, an administrator or the GM switches them\./)).toBeTruthy();
+    for (const name of [/Add a hall/, "Edit", /Add a package/]) {
+      expect((screen.getByRole("button", { name }) as HTMLButtonElement).disabled).toBe(true);
+    }
+    expect(screen.getByText(/The owner, an administrator or the GM adds and edits them\./)).toBeTruthy();
+    expect(screen.getByText(/The owner, an administrator or the GM adds and switches them\./)).toBeTruthy();
+    cleanup();
+
+    signedIn({ scope: {
+      staffId: "33333333-3333-3333-3333-333333333333", email: "gm@fidato.in",
+      fullName: "Test GM", isGroupAdmin: false, hotels: [{ hotelId: AGRA_HOTEL, role: "gm" }],
+    } });
+    setupPage();
+    await screen.findByRole("switch", { name: "Offer Veg thali" });
+    for (const name of [/Add a hall/, "Edit", /Add a package/]) {
+      expect((screen.getByRole("button", { name }) as HTMLButtonElement).disabled).toBe(false);
+    }
+    expect(screen.queryByText(/The owner, an administrator or the GM adds/)).toBeNull();
   });
 
   it("switches a package off and sends nothing else; it is never edited (D27-305)", async () => {

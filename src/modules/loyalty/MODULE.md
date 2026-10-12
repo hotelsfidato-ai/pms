@@ -134,7 +134,7 @@ db/tests/modules/loyalty.sql       one check per rule (L3-L16)
 The Loyalty screen: who is in house with their points; **Join** (the
 programme's own words read to the guest, and their tick, L4), **Use points**
 (from 500, one key per press; Reception and above only, D27-305), **Leave**
-(what is left lapses, L5); **The
+(what is left lapses, L5; Join and Leave for `customer` edit only, D27-307); **The
 rules** (name, points per ₹100; whoever sets the group's name); **Points by
 hotel** in a month, in rupees (managers, L18). The member card: points,
 the statement at every hotel, an adjustment with a reason, Leave.
@@ -163,6 +163,12 @@ until then). The database asks `app.redeems_loyalty_points(hotel)`
 server's gate asks `reservation` edit, which is exactly those five; the
 loyalty API test fails if the two ever differ. The screen gets `mayRedeem`
 and, without it, hides Use points and says who uses points.
+
+**Join and Leave, the same way (D27-307 (4), 12 October):** the server's gate
+asks `customer` edit (`LOYALTY_MEMBER`); the screen asks the same matrix,
+`can(role, "edit", "customer")`, and without it - the Accountant, the Viewer -
+hides Join and Leave and says "Guests join and leave through reception, the
+hotel manager, the general manager, an administrator or the owner."
 
 ### The database (migration "loyalty")
 

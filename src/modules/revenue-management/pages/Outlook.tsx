@@ -139,7 +139,7 @@ export default function OutlookPage() {
         title="Revenue outlook"
         description={
           "What the coming ninety nights look like, and what they suggest. "
-          + "Nothing here changes a price - the Rate calendar does that."
+          + "Nothing here changes a price - Rates does that."
         }
       />
 
@@ -195,7 +195,7 @@ export default function OutlookPage() {
 
           <p className="text-2xs text-grey-500 mt-3">
             A suggestion never names a price, and nothing here sets one.
-            The Rate calendar is where a rate is changed.
+            Rates is where a rate is changed.
           </p>
         </CardBody>
       </Card>

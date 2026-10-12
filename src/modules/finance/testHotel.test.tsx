@@ -171,4 +171,14 @@ describe("a test hotel's finance paper", () => {
       expect((screen.getByRole("button", { name: "Send invoice" }) as HTMLButtonElement).disabled).toBe(false));
     expect(screen.queryByText(NOTHING_SENT)).toBeNull();
   });
+
+  /* D27-307 (4): nothing can send a group's master bill's invoice (the
+     sender reads only a stay's bills), so the button is not offered. */
+  it("and is not offered on a group's master bill", async () => {
+    withDemoHotel();
+    open(`/h/${HOTEL}/invoices/doc/5EL/2026-27/00013`, { invoice: { ...invoice("5EL/2026-27/00013"), masterBill: true } });
+    await paper();
+    expect(screen.getByRole("button", { name: "Print" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Send invoice" })).toBeNull();
+  });
 });

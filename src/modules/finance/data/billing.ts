@@ -201,6 +201,8 @@ export interface InvoiceDetail {
   creditedBy: string | null;
   /** D22-44: the VAT bill issued with it for the alcohol, if any. */
   vatBill?: string | null;
+  /** A group's master bill's invoice, which nothing sends (D27-307 (4)). */
+  masterBill?: boolean;
 }
 
 /* ── VAT bills for alcohol (D22-44) ─────────────────────────────────
