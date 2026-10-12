@@ -262,6 +262,13 @@ imported from housekeeping — the database sets it when a room is vacated
   which reads every `insert into reservations` under `api/src`.
 - **A refusal goes above the first write** — `withSession` commits a refusal
   like any other return (MEMORY 243).
+- **Cash of ₹2,00,000 or more from one guest is refused** (Income-tax Act
+  s.186, D25-40), counted by `app.cash_taken` over the stay, its group - its
+  rooms and, since D27-307 (5), its master bill - and the guest's other stays
+  that day (migrations "cash limit and PAN", "cash with the master bill").
+  Proved in `db/tests/modules/front-desk.sql` and
+  `api/test/modules/front-desk/cashLimit.test.ts`; the check itself is
+  finance's (`cashLimit.ts`, `postings.ts`).
 - **At check-in, "IN" typed never replaces a foreign nationality on file**
   (D27-197, FD-23): the ID block opens on IN, and Form III is asked of the
   nationality on the guest's record. A wrong nationality is corrected on the

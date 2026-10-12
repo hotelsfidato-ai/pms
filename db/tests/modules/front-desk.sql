@@ -259,11 +259,13 @@ end $$;
 -- owner, 26 September) - this stay, its group's stays whoever the guest, and
 -- this guest's other stays on the same business day - and leaves out card,
 -- another day, a payment reversed as a mistake, and never subtracts a refund.
+-- Since the owner's D27-307 (5), "its group" includes the group's master bill
+-- (migration "cash with the master bill").
 -- The routes' half is api/test/modules/front-desk/cashLimit.test.ts.
 -- =============================================================================
 do $$
 declare
-  h uuid; t uuid; g1 uuid; g2 uuid; grp uuid;
+  h uuid; t uuid; g1 uuid; g2 uuid; grp uuid; mf uuid;
   a uuid; b uuid; c uuid; d uuid; e uuid; pid bigint; n int;
 begin
   h := app.provision_property_unchecked('FDC','Cash Limit Test','Nowhere');
@@ -334,11 +336,31 @@ begin
   perform test.raises('cash limit', 'a PAN is kept only in its own shape',
     format($q$update payments set pan = 'abcde1234f' where posting_id = %s$q$, pid), '23514');
 
+  -- THE GROUP'S MASTER BILL (the owner's D27-307 (5)): the host's cash is the
+  -- same event, so every room of the group counts it, on any day, as it
+  -- counts the group's rooms. The master's own count already counted the
+  -- rooms (D27-305); now it is both ways. A stay in no group is unchanged.
+  insert into folios (hotel_id, group_id) values (h, grp) returning id into mf;
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount)
+  values (h, mf, '2027-01-20', 'payment', 'Cash fixture master bill', -25000) returning id into pid;
+  insert into payments (hotel_id, posting_id, method, amount) values (h, pid, 'cash', 25000);
+  perform test.ok('cash limit', 'a room counts the cash taken on its group''s master bill',
+    app.cash_taken(a, '2027-02-01') = 125000, app.cash_taken(a, '2027-02-01')::text);
+  perform test.ok('cash limit', 'so does the group''s room in another guest''s name',
+    app.cash_taken(b, '2027-02-01') = 105000, app.cash_taken(b, '2027-02-01')::text);
+  perform test.ok('cash limit', 'a stay in no group counts no master bill, its figures unchanged',
+    app.cash_taken(c, '2027-02-01') = 70000 and app.cash_taken(e, '2027-02-01') = 30000
+      and app.cash_taken(d, '2027-01-15') = 40000,
+    app.cash_taken(c, '2027-02-01') || ' / ' || app.cash_taken(e, '2027-02-01')
+      || ' / ' || app.cash_taken(d, '2027-01-15'));
+
+  -- The master bill holds the group until the hotel's delete takes the bill.
   update reservations set group_id = null where group_id = grp;
-  delete from reservation_groups where id = grp;
+  update reservation_groups set lead_hotel_id = null where id = grp;
   alter table folio_postings disable trigger folio_postings_append_only;
   alter table hotels disable trigger hotels_no_delete;
   delete from hotels where id = h;
+  delete from reservation_groups where id = grp;
   alter table hotels enable trigger hotels_no_delete;
   alter table folio_postings enable trigger folio_postings_append_only;
   alter table guests disable trigger guests_no_delete;
