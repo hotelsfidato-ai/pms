@@ -11,6 +11,17 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-12 · The statistics follow the hotel's two switches (D27-307 (1))
+
+Branch `worktree-agent-a47b6fc0afff69b37` (from cp6 9c55050e), copy `.claude\worktrees\agent-a47b6fc0afff69b37`.
+**Asked for:** the owner's D27-307 (1): Monthly occupancy, Monthly statistics and Yearly statistics follow "A complimentary room counts as sold" and "A day use counts as half a room sold" through the shared figure, as the Manager report does; Night Sold and Complimentary stay separate columns; the footnote follows the switches.
+**Shipped:** `figures.ts`: the switches are read by `soldRule()` (moved out of `dailyFigures()`, which still makes `sold` from it; no second definition). `builders/statistics.ts`: Occ %, ADR and the occupancy chart divide by `dailyFigures().sold` instead of adding paying and complimentary themselves; Night Sold (paying) and Complimentary print as before; the first footnote of all three reports now says how the switches stand, e.g. "Occupancy and ADR count rooms sold as this hotel's switches say (Settings, Front desk rules): a complimentary room counts as sold; a day use is not counted." Rev Par is unchanged (room charges over available rooms).
+**Proved:** `api/test/modules/reports/statisticsSwitches.test.ts` (2 tests: the figures, the footnote), seen failing on the old code first: switch off read occupancy 50 and ADR 1,500 where 25 and 3,000 were due, and the footnote was fixed text; the defaults' figures passed on the old code too (the numbers do not move at the defaults). New code, through `.local/dbq.sh` + with-test-db.sh on 213 migrations: `test/modules/reports` + `test/reportFiles` 7 files, 64 tests, all pass. `bash scripts/gates.sh d27-307-stats quick`: web types 0, api types 0, strip 0; web tests 7 failed of 1,235, every one a 10-23 s timeout in another service's screen (accounting, connections health, CRS, finance bill controls, leads, reputation, new booking) - those 7 files alone: 47 of 47 pass. No web file changed.
+**On screen** (a scratch copy of the demo, `fidato_sws`, dropped after; API 8831, web 5331; owner): 5EL, 9 Oct 2026 (13 paying, 1 complimentary, 2 day uses, 17 rooms). Defaults: Monthly statistics 9 Fri Occ 82.35%, ADR ₹3,473.49, the bar 82.35 - as before. Complimentary switched off on Front desk rules: 76.47%, ₹3,740.68, both bars 76.47, October 13.47% on Monthly and Yearly, every footnote "does not count as sold". Complimentary on and day use half on: 88.24%, ₹3,241.93, both bars 88.24, October 13.85%; the Manager report as on 9 Oct read the same (Sold Room 15, 88.24%, ₹3,241.93). Night Sold stayed 13 and Complimentary 1 throughout.
+**Left open:** `src/lib/glossary.ts` (core) still says "A complimentary room counts as sold" for occupancy and ADR whatever the switch says; the switch's own description on Front desk rules says "On, as the owner's eZee reports count it." while it is off (front desk's). The manual's lines (chapters A11, A17, B3 on `manual-rest`) are listed for the master.
+
+---
+
 ## 2026-10-05 · The City ledger's moves are the report's own again (D27-279 (6))
 
 The credit limit counts the whole group now, through `app.company_owes` (migration 203), so `cityLedgerMoves` left the front door and is the report's own. Its comment names 203 as its twin: one meaning written twice, kept together.

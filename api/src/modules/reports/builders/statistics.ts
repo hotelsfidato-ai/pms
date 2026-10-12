@@ -4,7 +4,7 @@ import {
   type ReportDoc, type ReportColumn, type ReportRow,
 } from "../document.ts";
 import {
-  dailyFigures, sumDays, heading, firstTradingDay,
+  dailyFigures, sumDays, heading, firstTradingDay, soldRule,
   type Property, type DayFigures,
 } from "../figures.ts";
 
@@ -18,8 +18,12 @@ import {
 
      Night Sold      paying room-nights
      Complimentary   complimentary room-nights
-     Occ             (sold + complimentary) ÷ available rooms
-     ADR             room charges ÷ (sold + complimentary)
+     Occ             rooms sold ÷ available rooms
+     ADR             room charges ÷ rooms sold
+                     "Rooms sold" is dailyFigures().sold, the Manager
+                     report's Sold Room: paying, plus complimentary and
+                     half of each day use as the hotel's switches say
+                     (D27-307). The footnote says how they stand.
      Rev Par         room charges ÷ available rooms
      Pax             adults and children in those rooms
      Tax             on the room and on everything else posted that day
@@ -69,14 +73,13 @@ const GRID = (first: ReportColumn): ReportColumn[] => [
 
 /** One line of the grid, from any run of days. */
 function figuresRow(first: string, f: Omit<DayFigures, "date">) {
-  const occupied = f.paying + f.complimentary;
   return {
     label: first,
     available: f.available,
     sold: f.paying,
     complimentary: f.complimentary,
-    occupancy: pct(occupied, f.available),
-    adr: ratio(f.room, occupied),
+    occupancy: pct(f.sold, f.available),
+    adr: ratio(f.room, f.sold),
     revpar: ratio(f.room, f.available),
     pax: f.adults + f.children,
     room: f.room,
@@ -88,8 +91,13 @@ function figuresRow(first: string, f: Omit<DayFigures, "date">) {
   };
 }
 
+/** How this hotel counts a room sold, as its switches stand now (D27-307). */
+const soldNote = (r: Awaited<ReturnType<typeof soldRule>>) =>
+  "Occupancy and ADR count rooms sold as this hotel's switches say (Settings, Front desk rules): "
+  + (r.compSold ? "a complimentary room counts as sold" : "a complimentary room does not count as sold")
+  + (r.dayUseHalf ? "; a day use counts as half a room sold." : "; a day use is not counted.");
+
 const FOOTNOTES = [
-  "Occ % and ADR count complimentary rooms with the rooms sold, as the owner's eZee reports do.",
   "A night's room charge is shown on that night. Nights not yet posted, from the business date on, are at the booking's rate.",
   "Expense is not recorded in this system and shows \"-\".",
 ];
@@ -107,6 +115,7 @@ export async function monthlyStatistics(
   const w = monthWindow(month);
   const days = await dailyFigures(client, property.id, w.from, w.to);
   const opened = await firstTradingDay(client, property.id);
+  const rule = await soldRule(client, property.id);
 
   const rows: ReportRow[] = days.map((d) => row(figuresRow(dayLabel(d.date), d)));
   rows.push(total(figuresRow("Total", sumDays(days))));
@@ -126,11 +135,11 @@ export async function monthlyStatistics(
     /* The month's occupancy as bars, above the grid (the owner's D27-243:
        it left the Dashboard, which shows the nights ahead instead). */
     chart: occupancyChart(w.name, days),
-    footnotes: [...FOOTNOTES, countedFrom(opened)],
+    footnotes: [soldNote(rule), ...FOOTNOTES, countedFrom(opened)],
   };
 }
 
-/** One bar per night: rooms sold, complimentary ones included, of the rooms
+/** One bar per night: rooms sold, as the hotel counts them, of the rooms
     to sell. Monthly occupancy and Monthly statistics draw the same one. */
 const occupancyChart = (name: string, days: Awaited<ReturnType<typeof dailyFigures>>): NonNullable<ReportDoc["chart"]> => ({
   kind: "bar",
@@ -139,7 +148,7 @@ const occupancyChart = (name: string, days: Awaited<ReturnType<typeof dailyFigur
   unit: "percent",
   series: [{
     label: "Occupancy %",
-    values: days.map((d) => pct(d.paying + d.complimentary, d.available)),
+    values: days.map((d) => pct(d.sold, d.available)),
   }],
 });
 
@@ -149,6 +158,7 @@ export async function monthlyOccupancy(
   const w = monthWindow(month);
   const days = await dailyFigures(client, property.id, w.from, w.to);
   const opened = await firstTradingDay(client, property.id);
+  const rule = await soldRule(client, property.id);
 
   return {
     report: "monthly-occupancy",
@@ -158,7 +168,7 @@ export async function monthlyOccupancy(
     facts: [{ label: "Month", value: w.name, kind: "text" }],
     sections: [],
     chart: occupancyChart(w.name, days),
-    footnotes: [FOOTNOTES[0]!, countedFrom(opened)],
+    footnotes: [soldNote(rule), countedFrom(opened)],
   };
 }
 
@@ -169,6 +179,7 @@ export async function yearlyStatistics(
      same answer twelve times slower. */
   const days = await dailyFigures(client, property.id, `${year}-01-01`, `${year}-12-31`);
   const opened = await firstTradingDay(client, property.id);
+  const rule = await soldRule(client, property.id);
 
   const rows: ReportRow[] = MONTHS.map((name, i) => {
     const prefix = `${year}-${String(i + 1).padStart(2, "0")}`;
@@ -188,6 +199,6 @@ export async function yearlyStatistics(
       columns: GRID(col("label", "Month", "text")),
       rows,
     }],
-    footnotes: [...FOOTNOTES, countedFrom(opened)],
+    footnotes: [soldNote(rule), ...FOOTNOTES, countedFrom(opened)],
   };
 }
