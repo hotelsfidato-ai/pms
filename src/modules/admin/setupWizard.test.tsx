@@ -192,12 +192,13 @@ describe("Set up this hotel in the Settings menu", () => {
 });
 
 describe("the setup page", () => {
-  it("shows the three groups and the summary, and every step in order", async () => {
+  it("shows the three groups, then the summary, and every step in order", async () => {
     serve();
     wizard();
     await loaded();
     const heads = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-    expect(heads).toEqual(["Must be done before the first booking", "Before opening", "Optional", "Ready to go live"]);
+    expect(heads).toEqual(["Must be done before the first booking", "Before opening", "Optional"]);
+    expect(screen.getByRole("region", { name: "Ready to go live" })).toBeTruthy();
     expect([...document.querySelectorAll("[data-step]")].map((e) => e.getAttribute("data-step"))).toEqual([...STEP_IDS]);
     expect(screen.getByText("2 of 5 done")).toBeTruthy();
   });

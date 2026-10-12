@@ -121,13 +121,14 @@ export default function SetupPage() {
           {GROUPS.map((group) => {
             const steps = STEPS.filter((s) => s.group === group.key);
             return (
-              <section key={group.key} aria-labelledby={`setup-group-${group.key}`}>
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mb-3">
-                  <h2 id={`setup-group-${group.key}`} className="text-md font-semibold text-ink-900">{group.title}</h2>
-                  {group.key !== "summary" && (
+              <section key={group.key} aria-label={group.title}>
+                {/* The summary has no heading: its one row is called the same. */}
+                {group.key !== "summary" && (
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mb-3">
+                    <h2 className="text-md font-semibold text-ink-900">{group.title}</h2>
                     <span className="text-sm text-grey-500 tabular">{doneCount(group.key)} of {steps.length} done</span>
-                  )}
-                </div>
+                  </div>
+                )}
                 {group.note && <p className="text-sm text-grey-600 -mt-2 mb-3 max-w-prose">{group.note}</p>}
                 <Card className="divide-y divide-grey-100 overflow-hidden">
                   {steps.map((step) => (
@@ -187,8 +188,9 @@ function StepRow({ step, state, code, open, busy, locked, ready, all, onOpen, on
 
       <div id={`setup-panel-${step.id}`} hidden={!open}>
         {open && (
-          <div className="grid gap-4 px-4 pb-4 pt-1 sm:pl-14 lg:grid-cols-2 lg:gap-8">
-            <dl className="flex flex-col gap-3 min-w-0">
+          <div className={cn("px-4 pb-4 pt-1 sm:pl-14", summary
+            ? "flex flex-col gap-4" : "grid gap-4 lg:grid-cols-2 lg:gap-8")}>
+            <dl className={cn("min-w-0 gap-3", summary ? "grid lg:grid-cols-2 lg:gap-8" : "flex flex-col")}>
               <Fact label="What it is">{step.what}</Fact>
               <Fact label="Why it matters">{step.why}</Fact>
               {!summary && !done && shown.detail && <Fact label="What is missing">{shown.detail}</Fact>}
@@ -344,42 +346,44 @@ function Summary({ ready, all }: { ready: boolean; all: SetupStepState[] }) {
         </p>
       )}
 
-      <div>
-        <h3 className="text-base font-semibold text-ink-900 mb-1">Still to do ({left.length})</h3>
-        {left.length === 0 ? (
-          <p className="text-sm text-grey-600">Every step is done.</p>
-        ) : (
-          <ul className="divide-y divide-grey-100">
-            {left.map((s) => {
-              const st = byId.get(s.id) ?? { ...UNKNOWN, id: s.id };
-              return (
-                <li key={s.id}>
-                  <button type="button" onClick={() => setParams({ step: s.id }, { replace: true })}
-                    className="w-full min-h-11 flex items-center gap-3 py-2 text-left cursor-pointer hover:text-brand-orange-700">
-                    <Circle aria-hidden className="size-4 text-grey-400 shrink-0" />
-                    <span className="min-w-0 flex-1 text-base">Step {s.number}, {s.title}</span>
-                    <span className="text-sm text-grey-500 shrink-0">{stateText(st)}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-8 items-start">
+        <div>
+          <h3 className="text-base font-semibold text-ink-900 mb-1">Still to do ({left.length})</h3>
+          {left.length === 0 ? (
+            <p className="text-sm text-grey-600">Every step is done.</p>
+          ) : (
+            <ul className="divide-y divide-grey-100">
+              {left.map((s) => {
+                const st = byId.get(s.id) ?? { ...UNKNOWN, id: s.id };
+                return (
+                  <li key={s.id}>
+                    <button type="button" onClick={() => setParams({ step: s.id }, { replace: true })}
+                      className="w-full min-h-11 flex items-center gap-3 py-2 text-left cursor-pointer hover:text-brand-orange-700">
+                      <Circle aria-hidden className="size-4 text-grey-400 shrink-0" />
+                      <span className="min-w-0 flex-1 text-base">Step {s.number}, {s.title}</span>
+                      <span className="text-sm text-grey-500 shrink-0">{stateText(st)}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
 
-      <div>
-        <h3 className="text-base font-semibold text-ink-900 mb-1">Done ({done.length})</h3>
-        {done.length === 0 ? (
-          <p className="text-sm text-grey-600">Nothing is done yet.</p>
-        ) : (
-          <ul className="grid gap-x-4 sm:grid-cols-2">
-            {done.map((s) => (
-              <li key={s.id} className="flex items-center gap-2 py-1 text-sm text-grey-600">
-                <Check aria-hidden className="size-4 text-success-600 shrink-0" />{s.title}
-              </li>
-            ))}
-          </ul>
-        )}
+        <div>
+          <h3 className="text-base font-semibold text-ink-900 mb-1">Done ({done.length})</h3>
+          {done.length === 0 ? (
+            <p className="text-sm text-grey-600">Nothing is done yet.</p>
+          ) : (
+            <ul>
+              {done.map((s) => (
+                <li key={s.id} className="flex items-center gap-2 py-1 text-sm text-grey-600">
+                  <Check aria-hidden className="size-4 text-success-600 shrink-0" />{s.title}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );

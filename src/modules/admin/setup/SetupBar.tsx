@@ -25,7 +25,7 @@ export function SetupBar() {
         Setting up this hotel: step {step.number} of {TOTAL_STEPS}, {step.title}
       </span>
       <Link to={setupAddress(code, step.id)}
-        className="shrink-0 font-medium text-brand-orange-700 underline underline-offset-2 hover:text-brand-orange-800">
+        className="shrink-0 font-medium text-brand-orange-700 underline underline-offset-2 hover:text-brand-orange-800 pointer-coarse:min-h-11 pointer-coarse:inline-flex pointer-coarse:items-center">
         Back to setup
       </Link>
     </p>
