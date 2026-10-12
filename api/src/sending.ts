@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { Client } from "./db.ts";
+import { NOTHING_SENT } from "./testHotels.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE ONE DOOR OUT OF THE PMS
@@ -184,6 +185,24 @@ async function post(
 const MARK_TIMEOUT_MS = 10_000;
 
 export async function send(client: Client, message: Message): Promise<SendResult> {
+  /* ⚠ D27-296: NOTHING LEAVES A TEST HOTEL - asked first, whatever is set up.
+     Written down as the attempt's outcome (failed, in these words), so a
+     sweep that counts its tries stops at its limit and the desk reads why. */
+  const { rows: test } = await client.query<{ test: boolean }>(
+    "select app.is_test_hotel($1::uuid) as test", [message.hotel.id]);
+  if (test[0]?.test) {
+    await client.query(
+      `select app.record_message_sent(
+         $1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10::integer, $11, $12, $13::uuid
+       )`,
+      [message.hotel.id, message.channel, message.kind,
+       message.to.name ?? null, message.to.phone ?? null, message.to.email ?? null,
+       message.about?.kind ?? null, message.about?.id ?? null,
+       message.file?.name ?? null, message.file?.bytes.byteLength ?? null,
+       "failed", NOTHING_SENT, message.sentBy?.id ?? null]);
+    return { ok: false, reason: NOTHING_SENT };
+  }
+
   if (!canSend()) return { ok: false, reason: NOT_CONNECTED };
   const crs = crsTarget()!;
 

@@ -73,10 +73,26 @@ const menu = (...items: ReturnType<typeof dish>[]): { categories: MenuCategory[]
 });
 
 describe("who may set the restaurant up", () => {
-  it("is the owner, an administrator and the GM - nobody else sees the menu entry", () => {
+  it("is the owner, an administrator and the GM - and the kitchen manager, for its KOT section (D27-292)", () => {
     const may = (["owner", "admin", "gm", "hotel_manager", "kitchen_manager", "front_desk", "pos"] as Role[])
       .filter((r) => mayReach(r, "/pos/:code/setup"));
-    expect(may).toEqual(["owner", "admin", "gm"]);
+    expect(may).toEqual(["owner", "admin", "gm", "kitchen_manager"]);
+  });
+
+  it("shows the kitchen manager the KOT section only, and reads nothing else", async () => {
+    as("kitchen_manager");
+    const asked: string[] = [];
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string) => {
+      asked.push(url.split("?")[0]!);
+      if (url.startsWith(`/api/hotels/${HOTEL}/till/kot-setup`)) {
+        return { kinds: [], stations: [], sections: [], billPrinter: null, me: null } as never;
+      }
+      throw new ApiError(500, "Request failed (500).");
+    });
+    renderAt(`/pos/${HOTEL}/setup`, "/pos/:code/setup", <SetupPage />);
+    expect(await screen.findByText("KOT section")).toBeTruthy();
+    expect(screen.queryByText("Sections and tables")).toBeNull();
+    expect(asked.filter((u) => u.endsWith("/till/setup") || u.endsWith("/till/menu"))).toEqual([]);
   });
 });
 

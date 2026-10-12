@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link2 } from "lucide-react";
 import { Button, toast } from "@/components/ui";
 import { getGuestMessages, sendCheckInLink } from "./data/guestMessages";
+import { NOTHING_SENT, useIsTestHotel } from "@/lib/testHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    SEND CHECK-IN LINK (D27-105) - one button, for whichever screen shows
@@ -27,6 +28,9 @@ export function SendCheckInLink({ hotelId, stayId }: { hotelId: string; stayId: 
     queryFn: () => getGuestMessages(hotelId, stayId),
   });
   const connected = sent.data?.connected ?? false;
+  /* NOTHING LEAVES A TEST HOTEL (the owner's D27-296 (4)): off, with the
+     sentence the server refuses a send with (409). */
+  const test = useIsTestHotel(hotelId);
   if (!sent.data?.onlineCheckIn) return null;
 
   const send = async () => {
@@ -44,10 +48,12 @@ export function SendCheckInLink({ hotelId, stayId }: { hotelId: string; stayId: 
 
   return (
     <div className="space-y-1">
-      <Button variant="secondary" loading={busy} disabled={!connected} onClick={() => void send()}>
+      <Button variant="secondary" loading={busy} disabled={!connected || test} onClick={() => void send()}>
         <Link2 className="size-4" /> Send check-in link
       </Button>
-      {sent.data && !connected && (
+      {test ? (
+        <p className="text-sm text-grey-500">{NOTHING_SENT}</p>
+      ) : sent.data && !connected && (
         <p className="text-sm text-grey-500">{sent.data.notConnected}</p>
       )}
     </div>

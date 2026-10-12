@@ -3,7 +3,8 @@ import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-li
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
-import { HOTEL, startSignedIn } from "@/test/app";
+import { HOTEL, TEST_HOTEL, startSignedIn, withTestHotel } from "@/test/app";
+import { TEST_DOCUMENT } from "@/lib/testHotel";
 import FormCPage from "@/modules/guests/pages/FormC";
 import { formIIIMissing, particularsPayload } from "@/modules/guests";
 
@@ -81,11 +82,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function renderRegister() {
+function renderRegister(code = HOTEL) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[`/h/${HOTEL}/form-c`]}>
+      <MemoryRouter initialEntries={[`/h/${code}/form-c`]}>
         <Routes><Route path="/h/:code/form-c" element={<FormCPage />} /></Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -128,5 +129,26 @@ describe("the Form III register", () => {
        cannot read as a second arrival date beside the real clock above. */
     expect(card.getByText("Length of stay").nextSibling?.textContent)
       .toBe("2 nights (booked), expected to leave 27 Sep 2026");
+  });
+});
+
+/* A TEST HOTEL'S CARD (the owner's D27-296 (8)): TEST · NOT VALID across
+   its head, so a practice guest's form is never filed; a real hotel's card
+   carries no such line. */
+describe("the Form III card in a test hotel", () => {
+  const card = async () => {
+    fireEvent.click((await screen.findAllByRole("button", { name: /Print the Form III card/ }))[0]!);
+    return document.querySelector("[data-form-iii-card]") as HTMLElement;
+  };
+
+  it("says TEST · NOT VALID across its head", async () => {
+    withTestHotel();
+    renderRegister(TEST_HOTEL);
+    expect((await card()).querySelector("[data-test-document]")?.textContent).toBe(TEST_DOCUMENT);
+  });
+
+  it("and a real hotel's does not", async () => {
+    renderRegister();
+    expect((await card()).textContent).not.toContain(TEST_DOCUMENT);
   });
 });

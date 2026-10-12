@@ -1,5 +1,20 @@
 import pg from "pg";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { env } from "./env.ts";
+
+/* ══════════════════════════════════════════════════════════════════
+   THE HOTEL IN THE ADDRESS (D27-296, test hotels)
+
+   The group's guests, companies and booking groups have no hotel, and a
+   test hotel's must never be read on a real screen, nor a real one's in a
+   test hotel. The database decides which side a person reads from the hotel
+   they are working in - and the one thing that knows that is the address,
+   /api/hotels/:code/... server.ts puts the code here for the life of the
+   request; withUser hands it to Postgres as `app.hotel_code`, transaction-
+   local like `app.user_id`. No code (the administration routes, the jobs):
+   the real side.
+   ══════════════════════════════════════════════════════════════════ */
+export const hotelInView = new AsyncLocalStorage<string>();
 
 /* ══════════════════════════════════════════════════════════════════
    THE POOL, AND THE ONE FUNCTION THAT MATTERS
@@ -68,7 +83,9 @@ export async function withUser<T>(
        setting, so handing it the staff id is the same answer, faster. An
        unknown uid resolves to null and stays as given: still nobody. */
     await client.query(
-      "select set_config('app.user_id', coalesce(app.current_user_id()::text, $1), true)", [staffId]);
+      `select set_config('app.user_id', coalesce(app.current_user_id()::text, $1), true),
+              set_config('app.hotel_code', $2, true)`,
+      [staffId, hotelInView.getStore() ?? ""]);
     const result = await fn(client);
     await client.query("commit");
     return result;

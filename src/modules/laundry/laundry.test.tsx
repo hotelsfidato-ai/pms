@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
 import App from "@/App";
-import { go, startSignedIn, signedIn, AGRA_HOTEL } from "@/test/app";
+import { go, startSignedIn, signedIn, AGRA_HOTEL, withTestHotel } from "@/test/app";
+import { TEST_DOCUMENT } from "@/lib/testHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    LAUNDRY — the owner's D17-54, D18-5, D18-7 and D18-8
@@ -293,5 +294,26 @@ describe("laundry", () => {
     const first = await screen.findByRole("button", { name: "Collect a bag" });
     expect(screen.queryByText("The dockets did not load")).toBeNull();
     expect(first.getAttribute("data-variant")).toBe("primary");
+  });
+});
+
+/* A TEST HOTEL'S DOCKET (the owner's D27-296 (8)): TEST · NOT VALID across
+   its head; a real hotel's carries no such line. */
+describe("a laundry docket in a test hotel", () => {
+  it("says TEST · NOT VALID across its head", async () => {
+    as("front_desk");
+    withTestHotel({ code: "LA9", of: "AGR" });
+    go("/h/LA9/laundry/guest-priced");
+    render(<App />);
+    await screen.findByRole("button", { name: "Charge to the room" });
+    expect(document.querySelector("section [data-test-document]")?.textContent).toBe(TEST_DOCUMENT);
+  });
+
+  it("and a real hotel's does not", async () => {
+    as("front_desk");
+    go("/h/LA10/laundry/guest-priced");
+    render(<App />);
+    await screen.findByRole("button", { name: "Charge to the room" });
+    expect(document.querySelector("[data-test-document]")).toBeNull();
   });
 });

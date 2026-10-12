@@ -20,6 +20,19 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 S="$ROOT/.local/gates"
 mkdir -p "$S"
 cd "$ROOT" || exit 9
+# THE MAIN CHECKOUT, found through git rather than written down. A helper's
+# copy under .claude/worktrees shares the main checkout's Postgres, its
+# PostgreSQL 16 and its database queue, so those are found from git's common
+# directory, not from this copy. They were "/d/fidato pms/..." until the
+# project moved to another machine on 9 October, where every database step
+# failed on a folder that was not there. `pwd -W` is the Windows spelling
+# (C:/...) a node test is handed; elsewhere plain pwd.
+MAIN="$(cd "$(git rev-parse --git-common-dir)/.." && { pwd -W 2>/dev/null || pwd; })"
+# The local Postgres every database script defaults to, unless told otherwise.
+[ -n "${PGBIN:-}" ] || export PGBIN="$MAIN/.local/pg/pgsql/bin"
+# The database queue: `.local/dbq.sh`, the machine's own and not in git. With
+# none - one chat on the machine - a step simply runs.
+q() { if [ -f "$MAIN/.local/dbq.sh" ]; then bash "$MAIN/.local/dbq.sh" "$@"; else "$@"; fi; }
 label="${1:-gates}"
 mode="${2:-full}"
 P="$S/progress.txt"
@@ -63,12 +76,12 @@ else
   # Every step that builds a database waits its turn in the queue: roles are
   # shared by the whole cluster, and a replay beside a helper's migrate failed
   # with "tuple concurrently updated" on one (4 Oct).
-  step "api tests" "$S/g-api.log"   "Test Files +[0-9]+ passed" -- bash "/d/fidato pms/.local/dbq.sh" bash -c 'cd api && npm test'; a=$?
-  step "database"  "$S/g-db.log"    "all [0-9]+ assertions passed" -- bash "/d/fidato pms/.local/dbq.sh" bash db/tests/run.sh; d=$?
-  step "replay"    "$S/g-rerun.log" "all [0-9]+ migrations are re-runnable" -- bash "/d/fidato pms/.local/dbq.sh" bash db/tests/rerun.sh; r=$?
+  step "api tests" "$S/g-api.log"   "Test Files +[0-9]+ passed" -- q bash -c 'cd api && npm test'; a=$?
+  step "database"  "$S/g-db.log"    "all [0-9]+ assertions passed" -- q bash db/tests/run.sh; d=$?
+  step "replay"    "$S/g-rerun.log" "all [0-9]+ migrations are re-runnable" -- q bash db/tests/rerun.sh; r=$?
   # The live server's PostgreSQL 16 (the owner, 4 Oct). Its own cluster, shared
   # by every copy, so it waits its turn in the database queue.
-  step "pg16"      "$S/g-pg16.log"  "all [0-9]+ migrations are re-runnable" -- bash "/d/fidato pms/.local/dbq.sh" bash db/tests/pg16.sh; p=$?
+  step "pg16"      "$S/g-pg16.log"  "all [0-9]+ migrations are re-runnable" -- q bash db/tests/pg16.sh; p=$?
 fi
 
 vline() {                      # vitest's own counts, the failed ones included

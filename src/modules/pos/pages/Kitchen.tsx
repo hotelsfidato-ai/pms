@@ -8,10 +8,11 @@ import { useLiveOrders } from "@/lib/useLiveOrders";
 import { useDocumentTitle } from "@/lib/documentTitle";
 import { toast } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { getKitchen, moveKitchenLine, type KitchenLine } from "@/modules/pos/data/till";
+import { TestHotelStripe } from "@/components/app/TestHotel";
+import { getKitchen, moveKitchenLine, type KitchenLine, type KotKind } from "@/modules/pos/data/till";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { useRole } from "@/lib/session";
-import { KotPrinterPanel, KotStatus } from "@/modules/pos/components/KotStation";
+import { KotStatus, useKotSetup } from "@/modules/pos/components/KotStation";
 import { mayRingUp } from "@/modules/pos/nav";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -70,6 +71,38 @@ const EMPTY_COLUMN: Record<(typeof COLUMNS)[number]["key"], string> = {
    meanings, in each colour's readable step (yellow itself is 1.7:1 on
    white, the kit's warning ink is its text). The edges stay full colour. */
 const WAIT_INK = { late: "text-brand-red-700", warm: "text-brand-yellow-800" } as const;
+
+/** This computer's choice of the board's filter (D27-292). */
+const KIND_KEY = "pms.kitchen-kind";
+
+/* All, or one KOT kind: "Kitchen", "Bar" (the owner's D27-292). The kit's
+   segmented look at a wall screen's height, as By stage / By table. */
+function KindFilter({ kinds, value, onChange }: {
+  kinds: KotKind[]; value: string; onChange: (v: string) => void;
+}) {
+  if (kinds.length < 2) return null;
+  return (
+    <div className="flex items-center gap-0.5 p-[3px] rounded-md bg-grey-100 shrink-0"
+         role="group" aria-label="Which KOTs">
+      {[{ id: "", name: "All" }, ...kinds].map((k) => (
+        <button
+          key={k.id || "all"}
+          type="button"
+          onClick={() => onChange(k.id)}
+          aria-pressed={value === k.id}
+          className={cn(
+            "press-tile h-10 pointer-coarse:min-h-11 px-3.5 rounded-[7px] text-base font-medium whitespace-nowrap cursor-pointer",
+            value === k.id
+              ? "bg-white text-ink-900 shadow-[0_1px_2px_rgb(3_23_40/0.08)]"
+              : "text-grey-600 hover:text-ink-900",
+          )}
+        >
+          {k.name}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /** Minutes and seconds, because a kitchen counts in both. */
 function waited(seconds: number): string {
@@ -147,7 +180,20 @@ export default function KitchenPage() {
     void qc.invalidateQueries({ queryKey: ["kitchen"] });
   };
 
-  const lines = board.data ?? [];
+  /* ALL / KITCHEN / BAR (the owner's D27-292): the bar's screen shows the
+     bar's lines, remembered on this computer. A kind that is gone reads as
+     All. */
+  const setupRead = useKotSetup(hotelId);
+  const kinds = setupRead.data?.kinds ?? [];
+  const [chosen, setChosen] = useState<string>(() => {
+    try { return localStorage.getItem(KIND_KEY) ?? ""; } catch { return ""; }
+  });
+  const kind = kinds.some((k) => k.id === chosen) ? chosen : "";
+  const chooseKind = (v: string) => {
+    setChosen(v);
+    try { localStorage.setItem(KIND_KEY, v); } catch { /* this device keeps none */ }
+  };
+  const lines = (board.data ?? []).filter((l) => !kind || l.kindId === kind);
 
   /* POS-3. The one screen of 89 with no heading and no tab of its own:
      the board drew "The pass" in a paragraph, so a screen reader found no
@@ -158,13 +204,20 @@ export default function KitchenPage() {
 
   return (
     <div className="fixed inset-0 z-50 bg-grey-100 flex flex-col">
-      <header className="flex items-center gap-4 px-5 h-16 border-b border-grey-300 bg-white shrink-0">
+      {/* A TEST HOTEL'S STRIPE (D27-296 (9)): this screen covers the
+          shell's, so it draws its own, above everything. */}
+      <TestHotelStripe code={hotelId} />
+      {/* TWO ROWS ON A PHONE (the owner's D27-293): the name, the count and
+          Console, then the two choices under them. A wall screen keeps its
+          one row of 64px. At phone width the choices ran off the right edge
+          and "22 dishes working" broke over three lines. */}
+      <header className="flex flex-wrap md:flex-nowrap items-center gap-x-4 gap-y-2 px-5 py-2 md:py-0 md:h-16 border-b border-grey-300 bg-white shrink-0">
         <Flame className="size-5 text-brand-orange shrink-0" />
         <div className="min-w-0 flex-1">
           <h1 className="text-lg font-semibold text-ink-900 leading-tight">
             Kitchen
           </h1>
-          <p className="text-2xs text-grey-500 tabular flex items-center gap-2">
+          <p className="text-2xs text-grey-500 tabular flex items-center gap-2 whitespace-nowrap">
             {/* A dash until the board has loaded — "0 dishes working" over
                 a board that never arrived is the empty-list lie again. */}
             {board.data ? lines.filter((l) => !l.cancelled).length : "-"} dishes working
@@ -191,6 +244,8 @@ export default function KitchenPage() {
         {/* The kit's segmented control, at a wall screen's height: a
             grey-100 track, the pressed option white with the one small
             lift the look allows. */}
+        <div data-kitchen-choices
+             className="order-last md:order-none w-full md:w-auto flex items-center gap-2 overflow-x-auto scrollbar-quiet">
         <div className="flex items-center gap-0.5 p-[3px] rounded-md bg-grey-100 shrink-0">
           {([["stage", "By stage"], ["table", "By table"]] as const).map(
             ([v, label]) => (
@@ -210,11 +265,12 @@ export default function KitchenPage() {
               </button>
             ))}
         </div>
-        <KotPrinterPanel hotelId={hotelId} />
+        <KindFilter kinds={kinds} value={kind} onChange={chooseKind} />
+        </div>
         {toTill && (
           <Link
             to={`/pos/${hotelId}/till`}
-            className="press inline-flex items-center gap-2 h-12 px-4 rounded-full border border-grey-300 bg-white text-base font-medium text-ink-900 hover:bg-grey-50 hover:border-grey-400"
+            className="press inline-flex items-center gap-2 h-12 px-4 rounded-full border border-grey-300 bg-white text-base font-medium text-ink-900 hover:bg-grey-50 hover:border-grey-400 shrink-0"
           >
             <ArrowLeft className="size-4" />
             Console
@@ -439,8 +495,18 @@ function Ticket({ line, action, busy, onMove }: {
           <p className="text-md font-semibold text-brand-red-700">CANCELLED</p>
         </div>
         <p className="text-lg text-ink-900 mt-1.5 line-through">
-          {line.qty} × {line.name}
+          {line.qty} × {line.forDish ? `+ ${line.name}` : line.name}
         </p>
+        {line.forDish && (
+          <p className="text-base text-ink-900 line-through">for {line.forDish}</p>
+        )}
+        {/* The numbered add-ons ON this dish (D27-289): "+ Kebab", each on its
+           own line, as the docket prints them. */}
+        {(line.plus ?? []).map((p, i) => (
+          <p key={i} className="text-base text-ink-900 line-through">
+            + {p.name}{p.qty > 1 ? ` ×${p.qty}` : ""}
+          </p>
+        ))}
         {/* Said loudly, because the food may already be in a pan. */}
         <p className="text-base text-grey-600 mt-1">
           {line.orderNo} · stop cooking this
@@ -466,8 +532,19 @@ function Ticket({ line, action, busy, onMove }: {
             {line.table ?? line.orderType.replace(/_/g, " ")} · {line.orderNo}
           </p>
           <p className="text-xl font-semibold text-ink-900 mt-0.5 leading-tight">
-            {line.qty} × {line.name}
+            {line.qty} × {line.forDish ? `+ ${line.name}` : line.name}
           </p>
+          {/* An add-on line of its own (D27-291): which dish it goes with. */}
+          {line.forDish && (
+            <p className="text-md text-grey-700 mt-0.5">for {line.forDish}</p>
+          )}
+          {/* The numbered add-ons ON this dish (D27-289): "+ Kebab", each on its
+             own line, as the docket prints them. */}
+          {(line.plus ?? []).map((p, i) => (
+            <p key={i} className="text-md font-semibold text-ink-900 mt-0.5">
+              + {p.name}{p.qty > 1 ? ` ×${p.qty}` : ""}
+            </p>
+          ))}
           {line.note && (
             /* A modifier the kitchen must not miss. Same weight as the
                dish, because "no chilli" sent back is a whole plate. */

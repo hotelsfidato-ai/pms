@@ -1,31 +1,72 @@
-# The KOT station - one-time setup
+# The KOT and bill printers - one-time setup
 
-One PC per restaurant prints every KOT, by itself, with no print window
-(the owner's D27-159, 29 September). No other device prints a KOT. This is
-done once, on the PC next to the KOT printer - the kitchen PC or the POS PC.
+Each place that prints - the kitchen, the bar, the cashier - has a computer
+next to its printer, and that computer prints its own slips by itself, with no
+print window (the owner's D27-159, 29 September; several by place, D27-292,
+9 October). One computer may print several kinds, or everything.
 
-You need: that PC (Windows), Google Chrome on it, the KOT printer connected
-and installed, and a sign-in that can open the Kitchen screen and switch the
-KOT printer (the owner, an administrator, the GM or the kitchen manager).
+What prints where is chosen in **Restaurant setup → KOT section**:
+
+- **KOT kinds** - Kitchen and Bar to start (rename them at will), and any you
+  add (Tandoor, Desserts). Each slip says what it is, in big letters at the
+  top: **KITCHEN KOT 14**, **BAR KOT 14**. One Send keeps one number.
+- **Which section prints where** - each menu section, filled in from its tax
+  heading: Bar and Alcohol to the Bar, the rest to the Kitchen. Change the odd
+  one (Mocktails to the Bar). Add-ons go with their dish.
+- **This computer** - on each computer with a printer: its name, and what it
+  prints. **One computer per kind**: ticking a kind on another computer moves
+  it there.
+- **The bills** - one computer may print them too, silently: **INTERIM BILL**
+  before payment, **BILL** after, **BILL · DUPLICATE** when printed again.
+  With none chosen, Print bill opens the bill on the device that pressed it,
+  as before.
+
+The website cannot reach a printer by its address on your network, so a
+printer is always reached through the computer it is connected to.
+
+You need, for each printing computer: the computer (Windows), Google Chrome
+on it, its printer connected and installed, and a sign-in that can open
+Restaurant setup's KOT section (the owner, an administrator, the GM or the
+kitchen manager).
+
+## The quick way: one setup file (D27-299, 10 October)
+
+**Where: that computer.** Sign in, open **Restaurant setup → KOT section**,
+and under **Set up this computer for printing** press **Download the setup
+file** (Chrome may ask whether to keep it: **Keep**). Open the file,
+`KOT-station-setup-<CODE>.cmd`; if Windows says "Windows protected your PC",
+press **More info**, then **Run anyway**. It lists the computer's printers:
+type the receipt printer's number. It then does steps 1, 2 and 5 below for
+you - the default printer (and stops Windows changing it), the **KOT
+station** shortcut on the desktop and in Startup, no sleep while plugged in -
+and opens the KOT station window on the KOT section. Sign in (you come back
+to the KOT section), then do step 3: name the computer, tick what it prints,
+**Save**. Paper size is the one thing it cannot set for every printer: if
+slips come out too wide, set 80 mm once (step 1, point 4).
+
+`KOT-station-setup-<CODE>.cmd /check` changes nothing and says what it would
+do. Made by `src/modules/pos/lib/kotSetupFile.ts`.
+
+The steps below do the same by hand.
 
 ---
 
-## 1 · Make the KOT printer the PC's default printer
+## 1 · Make its printer the computer's default printer
 
-**Where: the kitchen PC, Windows Settings.**
+**Where: that computer (the kitchen PC, the bar PC), Windows Settings.**
 
 1. Start → Settings → Bluetooth & devices → Printers & scanners.
 2. Turn **off** "Let Windows manage my default printer".
-3. Click the KOT printer → **Set as default**.
+3. Click the printer → **Set as default**.
 4. Still there: **Printing preferences** → choose the **80 mm** roll as the
    paper size (the name depends on the printer, e.g. "80mm x 297mm" or
    "Roll paper 80 x 297 mm").
 
-The KOT is laid out for an 80 mm roll (D27-161).
+The KOT and the bill are laid out for an 80 mm roll (D27-161).
 
 ## 2 · Make a Chrome shortcut that prints without asking
 
-**Where: the kitchen PC, the desktop.**
+**Where: that computer, the desktop.**
 
 1. Right-click the desktop → New → Shortcut.
 2. In "Type the location of the item", paste this, all on one line:
@@ -36,7 +77,7 @@ The KOT is laid out for an 80 mm roll (D27-161).
 
 3. Next → name it **KOT station** → Finish.
 
-If Chrome is somewhere else on this PC (some have
+If Chrome is somewhere else on this computer (some have
 `C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`), use that
 path instead: right-click your usual Chrome icon → Properties shows it.
 
@@ -45,63 +86,74 @@ What the three parts do:
 - `--kiosk-printing` - Chrome prints straight to the default printer, with
   no print window.
 - `--user-data-dir="C:\KOT-Chrome"` - a Chrome of its own, used only for
-  KOTs. Chrome reads `--kiosk-printing` only when it starts, so a Chrome
+  printing. Chrome reads `--kiosk-printing` only when it starts, so a Chrome
   that is already open (your everyday one) would ignore it; a separate one
   always starts fresh with it. And Chrome prints to the printer used **last**
-  unless told otherwise, so a Chrome that has only ever printed KOTs always
-  picks the KOT printer.
+  unless told otherwise, so a Chrome that has only ever printed slips always
+  picks this printer.
 - `--app=…/pos/5EL/kitchen` - opens the Kitchen screen in its own window,
-  without tabs.
+  without tabs. At the bar, the Kitchen screen's **Bar** button shows only the
+  bar's orders, and this computer remembers it.
 
-## 3 · Sign in and switch it on
+## 3 · Sign in and tick what it prints
 
-**Where: the kitchen PC, the KOT station window.**
+**Where: that computer, the KOT station window.**
 
-1. Double-click **KOT station** and sign in. The Kitchen screen opens.
-2. Top right: **KOT printer**.
-3. Type this PC's name, e.g. **Kitchen PC**, and tick **This device prints
-   KOTs**.
+1. Double-click **KOT station** and sign in.
+2. Open **Restaurant setup → KOT section** (the menu, or the **Set up** link
+   on the red line).
+3. Under **This computer**: type its name, e.g. **Bar PC**, tick **Prints Bar
+   KOTs** (and **Prints the bills** if this one prints them) → **Save**.
+4. Go back to the Kitchen screen and leave it open.
 
-The line under the Kitchen screen's header now reads
-**"KOT printer: Kitchen PC - online"**, and so does the top of Tables, the
-Till and the Terminal on every other device.
+Tables, the Till, the Terminal and the Kitchen now read
+**"Bar KOTs: Bar PC - online"**.
 
 ## 4 · Test it once
 
 **Where: any other device - a phone, the POS, reception.**
 
-Send one dish to the kitchen from Tables (or the Till, or the Terminal).
-Within a few seconds the KOT prints on the KOT printer, with no window.
+Send a dish and a drink to the kitchen from Tables (or the Till, or the
+Terminal). Within a few seconds **KITCHEN KOT n** prints at the kitchen and
+**BAR KOT n** at the bar, with no window. Print a table's bill from Tables:
+**INTERIM BILL** prints at the bill printer.
 
 - **A print window appears instead:** that Chrome was started without the
   setting. Close every KOT station window, then start it again from the
   **KOT station** shortcut only.
 - **It prints on the wrong paper or printer:** step 1, then close and reopen
   the KOT station window.
-- **Nothing prints, and the POS says "not seen since …":** the KOT station
-  window is closed, or the PC is asleep or off the network.
+- **Nothing prints, and the POS says "… not seen since …":** the KOT station
+  window is closed, or the computer is asleep or off the network.
 
 ## 5 · Every day
 
 - **Leave the KOT station window open**, on the Kitchen screen (any
   restaurant screen prints; other screens do not). Do not minimise it.
-- The PC should not go to sleep during service: Settings → System → Power →
-  Screen and sleep → "When plugged in, put my device to sleep after":
+- The computer should not go to sleep during service: Settings → System →
+  Power → Screen and sleep → "When plugged in, put my device to sleep after":
   **Never**.
 - To start it with Windows: press Windows + R, type `shell:startup`, Enter,
   and copy the **KOT station** shortcut into the folder that opens.
 
 ## What happens when…
 
-- **The PC was off or asleep for a while:** when it is back, it prints every
+- **A computer was off or asleep for a while:** its KOTs wait for it, with a
+  red line naming it on every till screen. When it is back, it prints every
   KOT it missed, oldest first - only today's (the business date's, D27-167).
-- **A KOT is lost, torn or unreadable:** on the KOT station, Kitchen screen →
-  **KOT printer** → the last 20 KOTs → **Reprint**.
-- **The station moves to another PC:** do steps 1-3 on the new PC. Ticking
-  "This device prints KOTs" there moves it; the old PC stops by itself.
-- **Nobody set a station, or it is off:** Tables, the Till, the Terminal and
-  the Kitchen say in red **"KOTs are not printing"**. The Kitchen screen
-  still shows every dish.
+- **The bill printer is offline:** Print bill says so and offers **Print
+  here**, which opens the bill on that device. A bill printed here does not
+  print again at the bill printer.
+- **A KOT is lost, torn or unreadable:** on that computer, Restaurant setup →
+  KOT section → **This computer's last 20 KOTs** → **Reprint**. The slip says
+  REPRINT.
+- **A printer moves to another computer:** do steps 1-3 on the new one.
+  Ticking its kinds there moves them; the old computer stops printing them by
+  itself. A computer that prints nothing any more can be **Removed** from the
+  list.
+- **No computer prints a kind something is sent to:** Tables, the Till, the
+  Terminal and the Kitchen say in red **"No computer prints Bar KOTs - they
+  are not printing"**. The Kitchen screen still shows every dish.
 
 ---
 
@@ -114,4 +166,4 @@ Sources, read 29 September 2026:
   versions the print window flashes for a moment first - Chromium issue
   40959316, <https://issues.chromium.org/issues/40959316>. Chromium's own
   list of switches (chrome_switches.cc) could not be reached that day; the
-  test in step 4 is the proof on this PC.
+  test in step 4 is the proof on this computer.

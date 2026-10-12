@@ -54,10 +54,10 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 | Menu | `/pos/:code/menu` | `pages/Menu.tsx` | kitchen manager |
 | Close restaurant day | `/pos/:code/day-end` | `pages/DayEnd.tsx` | waiter, kitchen manager, Reception |
 | Charges to rooms | `/pos/:code/room-charges` | `pages/Pos.tsx` | none |
-| Restaurant setup | `/pos/:code/setup` | `pages/Setup.tsx` | none - the owner, an administrator and the GM see it (`room_config` edit; D22-6, D25-20 to D25-26, 25 Sep) |
-| — (not in the menu) kitchen docket | none since 29 Sep | `components/DocketSlip.tsx` | printed by the outlet's KOT station alone (D27-159, D27-161); the page every send opened in a new tab (D17-18) is retired; never shows prices |
-| — KOT printer panel | on the Kitchen screen | `components/KotStation.tsx` | "This device prints KOTs" with a typed name, for the owner, an administrator, the GM and the kitchen manager; on the station, the last 20 KOTs with Reprint |
-| — (not in the menu) printed bill | `/pos/:code/bill/:id` | `pages/Bill.tsx` | opened from an order |
+| Restaurant setup | `/pos/:code/setup` | `pages/Setup.tsx` | none - the owner, an administrator and the GM see it (`room_config` edit; D22-6, D25-20 to D25-26, 25 Sep); the kitchen manager too, for its **KOT section** only (D27-292) |
+| — KOT section | in Restaurant setup | `components/KotSection.tsx` | this computer's name and what it prints (KOT kinds, the bills); the KOT kinds (Kitchen, Bar, any added); the computers; which menu section prints where; this computer's last 20 KOTs with Reprint (D27-292). Replaced the Kitchen screen's "KOT printer" panel |
+| — (not in the menu) kitchen docket | none since 29 Sep | `components/DocketSlip.tsx` | printed by the computer that prints its kind (D27-159, D27-292), headed "BAR KOT 14", REPRINT when reprinted; never shows prices |
+| — (not in the menu) printed bill | `/pos/:code/bill/:id` | `pages/Bill.tsx`, `components/BillSlip.tsx` | opened from an order with no bill printer, or Print here; INTERIM BILL / BILL / BILL · DUPLICATE (D27-292) |
 
 - Reception's four entries show only while the hotel's "Reception can use the
   POS" switch is on.
@@ -85,12 +85,37 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
   are the dish's, a further type's add to it; each choice is priced or ticked
   Free; removing every type asks for the dish's own price. Under the dish, one
   line per type ("Size: Small ₹200 · Large ₹400", "Crust: Cheese burst +₹80 ·
-  Thin Free"); a dish with variations shows "-" for its own price. An
-  **Add-on groups** section - each group's rule, its options with Change and
+  Thin Free"); a dish with variations shows "-" for its own price. A
+  **Sides** section (045's add-on groups; labelled "Add-on groups" until
+  D27-289, the label only) - each group's rule, its options with Change and
   Remove, "Add option" (a price or Free), "Dishes" to choose which dishes
-  offer it; **Import add-ons** and **Import the menu**, two files, add-ons
-  first. A blank price is refused, and a 0 unless ticked Free (D27-120; a file
+  offer it; **Import sides** and **Import the menu**, two files, sides
+  first (the file's own "Add-on groups" column keeps its name).
+  Since D27-289 the Menu has two tabs, **Dishes** (all of the above) and
+  **Add-ons** (`components/NumberedAddonsTab.tsx`): the numbered list any dish
+  can take - number, name, what it is, price or Free; Change (never the
+  number), Off for a while, Switch off / Bring back; a number is not given to
+  a second add-on while the first is in use. A blank price is refused, and a 0 unless ticked Free (D27-120; a file
   cannot tick Free, so a file's 0 is refused).
+- **Customise (`flows/CustomiseDialog.tsx`, D27-289)**: beside every dish not
+  yet sent - on Tables' pad, the Till and the Terminal - the numbered Add-ons as
+  64px buttons, number first; a tap adds one, another makes it ×2, × takes one
+  off; an add-on off today shows but cannot be tapped. The dish stays ONE line,
+  "Veg Biryani with add-on Kebab", its price the dish's and the add-ons'
+  (`lib/pricing.ts`, held to the server by padTotal.test.ts). The FOLD is only
+  before Send (208's trigger refuses it after). Since D27-291 Customise is on
+  every dish: a **Custom add-on** (a typed name, a price or Free, its own
+  number) is a line of its own under the dish, before or after Send; on a dish
+  the kitchen has, the window is "Add to …" and numbered add-ons too go on as
+  lines of their own, for the next Send; the Tables pad lists the table's
+  dishes "Already sent" with Customise. Since D27-290: after each tap the pad shows "<dish> added"
+  with its own Customise beside the footer, staying until the next dish, and on
+  a narrow screen scrolls the new line into view; a line of several asks "All
+  N" or "Just 1" (Just 1 splits one off with the add-ons); Customise offline is
+  refused, never held; the add-on list and the menu are asked again whenever an
+  order screen opens or comes back into view. The bill, Till and Terminal print "Veg Biryani 310 · Kebab
+  +120" under the line; the KOT and the Kitchen read the dish with "+ Kebab"
+  under it. Taxed at the dish's own rate. Not on the guest's page yet.
 - **The dish pop-up (`DishDialog`)**: one row per variation type under its
   heading ("Variation" for a type carried over from before 30 September, until
   the manager picks one); a later type reads "+₹80" or "Free"; Add waits for
@@ -179,6 +204,14 @@ add-ons     GET    /:code/till/menu/addon-groups           every group, its opti
             PATCH  /:code/till/menu/addons/:id             rename and reprice, both sent
             POST   /:code/till/menu/addons/:id/remove      switched off, never deleted
             POST   /:code/till/menu/addon-groups/import    the add-ons file (D21-43), dry run first
+numbered    GET    /:code/till/numbered-addons              D27-289: the ones in use; ?all=1 for the Menu tab
+add-ons     POST   /:code/till/numbered-addons              number, name, description, a TYPED price or free
+            PATCH  /:code/till/numbered-addons/:id          name, description, price, free, active - never the number
+            POST   /:code/till/numbered-addons/:id/off      for a while, the dish's choices
+            POST   /:code/till/numbered-addons/:id/on
+            POST   /:code/till/orders/:id/lines/:lineId/numbered-addons
+                                                           Customise a dish not yet sent: the whole set;
+                                                           just: 1 splits one off a line of several (D27-290)
 outlet      POST   /:code/till/outlet/:outlet/closed        "we are closed" for a while
 rooms       GET    /:code/till/rooms                        rooms a bill may be charged to
 orders      GET    /:code/till/orders
@@ -199,16 +232,31 @@ orders      GET    /:code/till/orders
                                                             out; served. Ready ones only, said why otherwise
                                                             (D27-222; roleGate TILL)
             GET    /:code/till/orders/:id/kot/:no           one docket (the kitchen reads it too: KOT_READ)
-            POST   /:code/till/orders/:id/kot/:no/printed   {device}: the KOT station's claim before the paper;
-                                                            refused unless the device is the station; claimed
-                                                            false when another tab has it (D27-159)
-kot station GET    /:code/till/kot-station?device=          each own outlet's station: name, mine, last seen, online
-                                                            (seen within 90 s, KOT_STATION_ONLINE)
-            POST   /:code/till/kot-station/:outlet          {device,name,on}: on moves it here (a name is typed);
-                                                            off only from the station (KOT_SWITCH: menu edit)
-            POST   /:code/till/kot-station/:outlet/poll     {device}: last seen; to the station only, the due
-                                                            dockets (since switched on, unprinted, the business
-                                                            date only: CATCH_UP_FROM, D27-167) and the last 20
+            GET    …/kot/:no?kind=                          one kind's slip, with the kind named (D27-292)
+            POST   /:code/till/orders/:id/kot/:no/printed   {device,kind}: the claim before the paper, per kind;
+                                                            refused unless this computer prints that kind;
+                                                            claimed false when another tab has it (D27-159)
+            POST   /:code/till/orders/:id/lines/:lineId/extras  {extras}: add-ons as lines of their own under a
+                                                            dish on the bill, sent or not (D27-291; TILL;
+                                                            refused offline); the batch takes extraFor too
+            GET    /:code/till/custom-addons-used           the custom add-ons typed in 30 days (MENU_READ)
+kot section (kotSection.ts, D27-292)
+            GET    /:code/till/kot-setup?device=            kinds (station, sections printing there), computers,
+                                                            sections (own kind, kind), the bill printer, me
+                                                            (KOT_READ: every till and kitchen screen, the red line)
+            POST   /:code/till/kot-setup/kinds              {name}; PATCH …/kinds/:id {name}; POST …/kinds/:id/off
+                                                            (Kitchen and Bar never) - KOT_SWITCH: menu edit
+            POST   /:code/till/kot-setup/sections/:id       {kindId|null}: a section's KOT, or back to its heading
+            POST   /:code/till/kot-setup/this-computer      {device,name,kindIds,bills}: ticked here, moved here and
+                                                            started afresh; nothing ticked, it stops
+            POST   /:code/till/kot-setup/stations/:id/remove  a computer that prints nothing
+            POST   /:code/till/kot-stations/poll            {device}: last seen; its kinds' due slips (since the kind
+                                                            came here, unprinted, the business date only, D27-167),
+                                                            its last 20, the bills asked of it (KOT_PRINT)
+            POST   /:code/till/orders/:id/bill-print        asked of the bill printer: heading, sentTo (null: none
+                                                            chosen, open it here); an unpaid one is "Bill printed"
+            POST   /:code/till/orders/:id/bill-print/here   printed on this device: a waiting one comes off the list
+            POST   /:code/till/bill-prints/:id/printed      {device}: the bill printer's claim (KOT_PRINT)
             POST   /:code/till/orders/:id/printed
             POST   /:code/till/orders/:id/clear
             POST   /:code/till/orders/:id/settle            cash · card · UPI · split · room · function (D17-21)
@@ -300,13 +348,17 @@ components/PosGate.tsx   see Screens.
 components/FunctionPicker.tsx   "Banquet function" (D17-21): banquet's list of
                     functions an order may go on, through its front door; nothing
                     drawn where there is nothing to choose and nothing chosen.
-components/KotStation.tsx   the KOT station (D27-159, D27-161): kotDevice() (this
-                    browser's id, localStorage `pms.kot-device`); KotStationPrinter,
-                    mounted by PosGate, prints every due docket on the station through
-                    window.print() (claim first, one at a time); KotStatus, the line
-                    on Tables, the Till, the Terminal and the Kitchen; KotPrinterPanel,
-                    the Kitchen's switch and Reprint. Setup: KOT-STATION-SETUP.md.
-components/DocketSlip.tsx   the 80 mm docket, as the station prints it.
+components/KotStation.tsx   the printing computers (D27-159; D27-292): kotDevice() (this
+                    browser's id, localStorage `pms.kot-device`); useKotSetup; KotStationPrinter,
+                    mounted by PosGate, prints this computer's kinds' slips and the bills
+                    asked of it through window.print() (claim first, one at a time, KOTs
+                    first); KotStatus, the red line per kind something prints to, with
+                    "Set up" for those who may; Reprints. Setup: KOT-STATION-SETUP.md.
+components/KotSection.tsx   Restaurant setup's KOT section (D27-292).
+components/DocketSlip.tsx   the 80 mm docket, as the computer prints it: "<KIND> KOT n",
+                    REPRINT; add-on lines under their dish, or "for: <dish> (KOT n)".
+components/BillSlip.tsx     the 80 mm bill, as the bill page and the bill printer print it.
+flows/printBill.tsx         Print bill on Tables, the Till and the Terminal (D27-292).
    (SlipNotice.tsx and pages/Docket.tsx went on 29 September: D27-161.)
 ```
 
@@ -341,6 +393,20 @@ pos_orders, pos_order_lines
   discount, round off; pos_order_tenders       038_pos_discount_and_tenders.sql
   percent or fixed discount                    039_discount_percent_or_fixed.sql
   app.pos_order_by_rate — tax split, once      040_pos_by_rate.sql
+pos_kot_kinds, pos_kot_stations,               "the KOT section" (211, D27-292): kinds
+  pos_bill_prints; pos_menu_categories          (Kitchen and Bar for every hotel, by trigger),
+  .kot_kind_id; pos_order_lines.kot_kind_id     computers (one per kind, one bill printer),
+  (stamped when sent); pos_kot_prints per kind  bills asked and printed;
+                                                app.pos_kot_kind_for, app.pos_line_kot_kind
+pos_order_lines.extra_kind, .numbered_addon_id "custom add-ons" (210, D27-291): an add-on line
+                                               of its own under its dish; a sent one struck
+                                               says why; the day's struck list names it
+pos_numbered_addons;                           "numbered add-ons" (208, D27-289)
+  pos_order_lines.numbered_addons (what the dish
+  was sent with: dish, base, each add-on)
+  Free is 0; the kept add-ons' list; a line     "three guards from the audit" (209)
+  struck as it is written stands aside from
+  today's variation types (POS-34)
 pos_item_variations, pos_addon_groups,         045_variations_and_addons.sql
 pos_addons, pos_item_addon_groups
   an item or add-on off until a time           045, 046
@@ -512,13 +578,21 @@ One other service's door is imported by this folder (17 September):
   `pos_tickets` like an outside till (028, `till.ts` header). A posting carries
   one tax rate, so a mixed bill posts one row per rate (MEMORY 55). The
   business date is the hotel's, not the till's clock (024's header; MEMORY 19).
-- **One KOT printer per outlet** (D27-159, D27-161, D27-167, 29 September):
-  the device switched on as the outlet's KOT station prints every KOT, and no
-  other device opens or offers one. Switching it on elsewhere moves it; only
-  the station switches itself off. It prints while a restaurant screen is
-  open on it (PosGate); missed KOTs print when it is back, oldest first, the
-  business date's only. Tables, the Till, the Terminal and the Kitchen say
-  whether KOTs are printing. The Till sends to the kitchen like the Terminal
+- **KOTs print by kind, one computer per kind** (D27-159, D27-167; the KOT
+  section, D27-292, 9 October): a Send keeps one number and makes one slip
+  per KOT kind, "BAR KOT 14", each printed by the computer that prints that
+  kind and no other; ticking a kind on another computer moves it there and
+  starts afresh. A line takes its kind when it is sent (its section's own,
+  else Bar/Alcohol heading to the Bar, the rest to the Kitchen; an add-on its
+  dish's). It prints while a restaurant screen is open on it (PosGate);
+  missed slips print when it is back, oldest first, the business date's only.
+  Tables, the Till, the Terminal and the Kitchen say per kind something prints
+  to whether it is printing. One computer may print the bills: INTERIM BILL,
+  BILL, BILL · DUPLICATE; none chosen, the bill opens where it was asked.
+- **Add-ons on a dish** (D27-289, D27-291): numbered ones fold into a dish
+  before Send; a custom one (typed name, a price or Free) and any add-on on a
+  dish already sent are lines of their own under it, with their own number,
+  at the dish's tax, waiting for the next Send. The Till sends to the kitchen like the Terminal
   (D27-166, POS-24).
 - **The kitchen hears from the database**: a trigger raises the live
   notification (075). Do not publish from routes (MEMORY 181).

@@ -400,6 +400,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/menu/items/:id/on`]: MENU,
   [`POST ${H}/till/addons/:id/off`]: MENU,
   [`POST ${H}/till/addons/:id/on`]: MENU,
+  /* The numbered Add-ons list (D27-289): whoever edits the menu. */
+  [`POST ${H}/till/numbered-addons`]: MENU,
+  [`PATCH ${H}/till/numbered-addons/:id`]: MENU,
+  [`POST ${H}/till/numbered-addons/:id/off`]: MENU,
+  [`POST ${H}/till/numbered-addons/:id/on`]: MENU,
   /* pos: service */
   [`POST ${H}/till/orders`]: TILL,
   [`POST ${H}/till/orders/:id/lines`]: TILL,
@@ -415,13 +420,28 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders/:id/settle`]: TILL,
   [`POST ${H}/till/orders/:id/abandon`]: TILL,
   [`POST ${H}/till/orders/:id/lines/:lineId/qty`]: TILL,
+  /* Customise: the numbered add-ons on a dish not yet sent (D27-289). */
+  [`POST ${H}/till/orders/:id/lines/:lineId/numbered-addons`]: TILL,
+  /* Anyone who takes orders adds a custom add-on (the owner's D27-291). */
+  [`POST ${H}/till/orders/:id/lines/:lineId/extras`]: TILL,
   [`POST ${H}/till/orders/batch`]: TILL,
   [`POST ${H}/till/orders/:id/kot`]: TILL,
   [`POST ${H}/till/orders/:id/taken`]: TILL,  // the waiter's Taken, D27-222
   [`POST ${H}/till/guest-orders/:id/decline`]: TILL,  // in-room dining, D27-224
   [`POST ${H}/till/orders/:id/kot/:no/printed`]: KOT_PRINT,
-  [`POST ${H}/till/kot-station/:outlet/poll`]: KOT_PRINT,
-  [`POST ${H}/till/kot-station/:outlet`]: KOT_SWITCH,
+  /* The KOT section (D27-292): set up by Restaurant setup's people and the
+     kitchen manager; the station's asks and claims are the printing's. */
+  [`POST ${H}/till/kot-stations/poll`]: KOT_PRINT,
+  [`POST ${H}/till/bill-prints/:id/printed`]: KOT_PRINT,
+  [`POST ${H}/till/kot-setup/kinds`]: KOT_SWITCH,
+  [`PATCH ${H}/till/kot-setup/kinds/:id`]: KOT_SWITCH,
+  [`POST ${H}/till/kot-setup/kinds/:id/off`]: KOT_SWITCH,
+  [`POST ${H}/till/kot-setup/sections/:id`]: KOT_SWITCH,
+  [`POST ${H}/till/kot-setup/this-computer`]: KOT_SWITCH,
+  [`POST ${H}/till/kot-setup/stations/:id/remove`]: KOT_SWITCH,
+  /* A bill asked of the bill printer, or printed here: whoever prints one. */
+  [`POST ${H}/till/orders/:id/bill-print`]: TILL,
+  [`POST ${H}/till/orders/:id/bill-print/here`]: TILL,
   /* Open the day, the float counted (D27-190): whoever closes it. */
   [`POST ${H}/till/day-end/open`]: DAY_END,
   [`POST ${H}/till/day-end/movements`]: DAY_END,
@@ -466,6 +486,11 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`DELETE ${H}/bank-details`]: BANK_DETAILS,
   [`PUT ${H}/group/office`]: GROUP_OFFICE,
   [`POST /api/admin/hotels/:code/:state`]: own("admin/admin.ts: a group administrator"),
+  /* D27-296: test hotels - the owner or a group administrator (testHotels.ts, and the
+     database: app.create_test_hotel, app.reset_test_hotel, app.recopy_test_hotel). */
+  [`POST /api/admin/hotels/:code/test-hotel`]: own("admin/testHotelRoutes.ts: a group administrator (D27-296)"),
+  [`POST /api/admin/hotels/:code/test-reset`]: own("admin/testHotelRoutes.ts: a group administrator, typed RESET (D27-296)"),
+  [`POST /api/admin/hotels/:code/test-recopy`]: own("admin/testHotelRoutes.ts: a group administrator, typed RE-COPY (D27-296)"),
   [`PATCH /api/admin/staff/:id`]: own("admin/admin.ts: app.manages_person (D22-3)"),
   [`PUT /api/admin/staff/:id/home-screen`]: own("admin/admin.ts: app.set_home_screen asks app.may_manage_person"),
   [`PUT /api/me/preferences`]: SELF,
@@ -866,13 +891,15 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   /* ── The restaurant ── */
   [`GET ${H}/till/menu`]: MENU_READ,
   [`GET ${H}/till/menu/addon-groups`]: MENU_READ,
+  [`GET ${H}/till/numbered-addons`]: MENU_READ,
+  [`GET ${H}/till/custom-addons-used`]: MENU_READ,
   [`GET ${H}/till/promotions`]: MENU_READ,
   [`GET ${H}/till/orders`]: TILL_READ,
   [`GET ${H}/till/guest-orders`]: TILL_READ,  // in-room dining, D27-224
   [`GET ${H}/till/orders/:id`]: TILL_READ,
   /* The docket and the KOT printer: the kitchen too, which prints them. */
   [`GET ${H}/till/orders/:id/kot/:no`]: KOT_READ,
-  [`GET ${H}/till/kot-station`]: KOT_READ,
+  [`GET ${H}/till/kot-setup`]: KOT_READ,
   [`GET ${H}/till/floor`]: TILL_READ,
   [`GET ${H}/table-bookings`]: TILL_READ,
   [`GET ${H}/till/rooms`]: TILL_READ,

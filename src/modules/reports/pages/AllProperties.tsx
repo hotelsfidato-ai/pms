@@ -3,7 +3,8 @@ import { Link } from "react-router";
 import { ArrowDown, ArrowRight, ArrowUp, Check, ChevronRight, Hotel, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort, dateCompact } from "@/lib/format";
-import { useRole, useSession } from "@/lib/session";
+import { useRole } from "@/lib/session";
+import { useRealHotels } from "@/lib/testHotel";
 import { daysBehind } from "@/components/app/BusinessDateBehind";
 import { mayReach } from "@/components/app/navigation";
 import {
@@ -82,7 +83,9 @@ const change = (now: number | null | undefined, then: number | null | undefined)
   now == null || !then ? null : Math.round(((now - then) / then) * 100);
 
 export default function AllPropertiesPage() {
-  const hotels = useSession((s) => s.hotels);
+  /* THE REAL HOTELS ONLY (the owner's D27-296 (11)): a test hotel is never
+     counted, shown or asked for here, nor in "Needs you". */
+  const hotels = useRealHotels();
   const query = useQuery({
     queryKey: ["all-properties", hotels.map((h) => `${h.code}@${h.businessDate}`).join()],
     queryFn: () => readAll(hotels),

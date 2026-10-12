@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import App from "@/App";
-import { go, startSignedIn, signedIn, AGRA_HOTEL } from "@/test/app";
+import { go, startSignedIn, signedIn, AGRA_HOTEL, withTestHotel } from "@/test/app";
+import { NOTHING_SENT } from "@/lib/testHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    REVIEWS — the owner's D18-14
@@ -279,5 +280,33 @@ describe("an empty list", () => {
     open("RVF");
     expect(await screen.findByText(/Nobody has left in the last 30 days/i))
       .toBeTruthy();
+  });
+});
+
+/* NOTHING LEAVES A TEST HOTEL (the owner's D27-296 (4)): connected and with
+   a link, a test hotel's asks are drawn off, with the sentence, and pressing
+   them sends nothing. */
+describe("Reviews in a test hotel", () => {
+  beforeEach(() => {
+    control.link = "https://g.page/r/whatever/review";
+    control.canSend = true;
+  });
+
+  it("offers each ask off, and says nothing is sent from it", async () => {
+    withTestHotel({ code: "RVT", of: "AGR" });
+    open("RVT");
+    expect(await screen.findByText(NOTHING_SENT)).toBeTruthy();
+    const asks = screen.getAllByRole("button", { name: /WhatsApp|^Email$/i });
+    expect(asks.length).toBeGreaterThan(0);
+    for (const b of asks) expect((b as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(asks[0]!);
+    expect(control.asked).toEqual([]);
+  });
+
+  it("and a real hotel's are on, without the sentence", async () => {
+    open("RVR");
+    const asks = await screen.findAllByRole("button", { name: /WhatsApp/i });
+    expect((asks[0] as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByText(NOTHING_SENT)).toBeNull();
   });
 });

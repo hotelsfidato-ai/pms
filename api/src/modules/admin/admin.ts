@@ -3,7 +3,10 @@ import { createHash, randomUUID } from "node:crypto";
 import { withSession } from "../../auth.ts";
 import {
   ensureAccount, setAccountPassword, setSignIn, passwordProblem, minPasswordFor, MIN_MANAGER_PASSWORD,
+  AccountExists,
 } from "../../identity.ts";
+import { TEST_PEOPLE } from "./testHotelRoutes.ts";
+import { isTestHotelCodeIn } from "../../testHotels.ts";
 import type { PoolClient as Client } from "pg";
 import { env } from "../../env.ts";
 import { markSignedOut } from "../../signIns.ts";
@@ -43,6 +46,10 @@ const NO_SIGN_IN =
 export const admin = new Hono<{ Variables: { subject: string } }>();
 
 const refuse = (reason: string) => ({ ok: false as const, reason });
+
+/** D27-296 (8): what a test hotel's profile says to a GSTIN, a PAN or an FSSAI number. */
+const TEST_TAX_IDS =
+  "A test hotel carries no GSTIN, PAN or FSSAI number: its documents are not valid ones.";
 
 /* SIGN-IN FOLLOWS ACTIVE (the owner's D27-275 part 4). Asked AFTER the
    database has committed: Firebase is not in the transaction, so a failure
@@ -287,10 +294,14 @@ admin.get("/admin/hotels", async (c) => {
       city: string | null; state: string | null; gstin: string | null;
       phone: string | null; email: string | null; address_line: string | null;
       is_active: boolean; rooms: string; room_types: string | null;
-      checked_in: string;
+      checked_in: string; test_of: string | null; test_hotel: string | null;
     }>(
       `select h.id::text, h.code, h.name, h.city, h.state, h.gstin,
               h.phone, h.email::text, h.address_line, h.is_active,
+              /* D27-296: the real hotel a test hotel copies, and a real
+                 hotel's test hotel - both by code. */
+              (select r.code from hotels r where r.id = h.test_of) as test_of,
+              (select t.code from hotels t where t.test_of = h.id) as test_hotel,
               (select count(*) from rooms r
                 where r.hotel_id = h.id and r.is_active)::text as rooms,
               (select string_agg(rt.name, ', ' order by rt.sort_order)
@@ -315,6 +326,8 @@ admin.get("/admin/hotels", async (c) => {
            property nobody has set up yet, and the screen says so. */
         roomTypes: (r.room_types ?? "").split(", ").filter(Boolean),
         checkedIn: Number(r.checked_in),
+        testOf: r.test_of,
+        testHotel: r.test_hotel,
       })),
     };
   });
@@ -449,11 +462,14 @@ admin.put("/hotels/:code/fssai", async (c) => {
     return c.json(refuse("An FSSAI licence number is 14 digits."), 409);
   }
   const done = await withSession(c.get("subject"), async (client) => {
+    /* D27-296 (8): a test hotel takes no licence number to print. */
+    if (digits && await isTestHotelCodeIn(client, c.req.param("code"))) return "test" as const;
     const { rowCount } = await client.query(
       "update hotels set fssai_number = $2 where code = upper($1)",
       [c.req.param("code"), digits || null]);
     return rowCount === 1;
   });
+  if (done === "test") return c.json(refuse(TEST_TAX_IDS), 409);
   return done ? c.json({ ok: true, fssaiNumber: digits || null })
     : c.json({ error: "No such property." }, 404);
 });
@@ -637,6 +653,12 @@ admin.patch("/admin/hotels/:code", async (c) => {
     if ("reason" in profile) return refuse(profile.reason);
     /* The column names are this file's own (profileFields), never the caller's. */
     const columns = Object.keys(profile.set);
+
+    /* D27-296 (8): a test hotel's documents are not valid ones, so it takes no
+       tax number (the database refuses one too; this says so in a sentence). */
+    if ((gstin || profile.set["pan"]) && await isTestHotelCodeIn(client, c.req.param("code"))) {
+      return refuse(TEST_TAX_IDS);
+    }
 
     const updated = await client.query(
       `update hotels set
@@ -924,7 +946,7 @@ admin.get("/admin/staff", async (c) => {
     const { rows } = await client.query<{
       id: string; email: string; full_name: string; phone: string | null;
       is_group_admin: boolean; is_active: boolean; hotels: string | null;
-      can_sign_in: boolean; home_screen: string;
+      can_sign_in: boolean; home_screen: string; test_only: boolean;
       may_edit: boolean; may_switch: boolean; may_password: boolean;
     }>(
       /* RLS decides what comes back. A group admin sees everyone; a
@@ -936,6 +958,8 @@ admin.get("/admin/staff", async (c) => {
          was there. Half a round trip is worse than none. */
       `select s.id::text, s.email::text, s.full_name, s.phone,
               s.is_group_admin, s.is_active,
+              /* D27-296 (6): added with Test on - test hotels only. */
+              s.test_only,
               /* ⚠ THE THING NOBODY COULD SEE. A staff row with no
                  firebase_uid is a person who appears on this list,
                  with a role and a property, and cannot sign in at all.
@@ -944,7 +968,10 @@ admin.get("/admin/staff", async (c) => {
                  was to walk to a terminal and try. */
               (s.firebase_uid is not null) as can_sign_in,
               coalesce(s.home_screen, 'dashboard') as home_screen,
-              (select string_agg(h.code || ':' || sh.role, ',' order by h.code)
+              /* code:role:testOf - testOf the real hotel's code for a test
+                 hotel (D27-296), empty for a real one. */
+              (select string_agg(h.code || ':' || sh.role || ':'
+                                 || coalesce(app.real_hotel_code(h.id), ''), ',' order by h.code)
                  from staff_hotels sh join hotels h on h.id = sh.hotel_id
                 where sh.staff_id = s.id) as hotels,
               /* What THIS caller may do to them (D22-3): the same three
@@ -963,9 +990,11 @@ admin.get("/admin/staff", async (c) => {
        app.grantable_roles is the one list (084, 127), so a GM's picker never
        holds Owner or Admin (D22-2). */
     const { rows: places } = await client.query<{
-      code: string; name: string; roles: string[];
+      code: string; name: string; roles: string[]; testOf: string | null;
     }>(
-      `select h.code, h.name, app.grantable_roles(h.id) as roles
+      /* D27-296: a test hotel names the real one it copies; null for a real one. */
+      `select h.code, h.name, app.grantable_roles(h.id) as roles,
+              app.real_hotel_code(h.id) as "testOf"
          from hotels h
         where h.is_active and cardinality(app.grantable_roles(h.id)) > 0
         order by h.code`);
@@ -980,13 +1009,14 @@ admin.get("/admin/staff", async (c) => {
         canSignIn: r.can_sign_in,
         isGroupAdmin: r.is_group_admin,
         isActive: r.is_active,
+        testOnly: r.test_only,
         homeScreen: r.home_screen,
         mayEdit: r.may_edit,
         maySwitch: r.may_switch,
         maySetPassword: r.may_password,
         access: (r.hotels ?? "").split(",").filter(Boolean).map((pair) => {
-          const [code, role] = pair.split(":");
-          return { code: code!, role: role! };
+          const [code, role, testOf] = pair.split(":");
+          return { code: code!, role: role!, testOf: testOf || null };
         }),
       })),
     };
@@ -1056,7 +1086,14 @@ admin.post("/admin/staff", async (c) => {
   try {
     const result = await withSession(c.get("subject"), async (client, session) => {
       let hotelId: string | null = null;
+      /* D27-296: added at a test hotel - a tester, who works only in test hotels. */
+      let testHotel = false;
       if (hotelCode) {
+        /* (10) the owner and the group administrators add people to a test
+           hotel: anybody else is refused before anything is read or written.
+           By its code: a GM cannot read a test hotel's row to look it up. */
+        testHotel = await isTestHotelCodeIn(client, hotelCode);
+        if (testHotel && !session.isGroupAdmin) return { ...refuse(TEST_PEOPLE), forbidden: true as const };
         hotelId = await hotelFor(client, hotelCode);
         if (!hotelId) return refuse(`No property with code ${hotelCode}.`);
         /* A GM's route in. Raises for a hotel they do not run, and a
@@ -1100,6 +1137,20 @@ admin.post("/admin/staff", async (c) => {
          own row policies a manager cannot even see the owner's row. */
       await client.query("select app.require_claimable_address($1)", [email]);
 
+      /* ⚠ D27-296: A TESTER IS NEVER MADE OUT OF SOMEBODY ELSE'S SIGN-IN.
+         `ensureAccount` adopts an account and SETS ITS PASSWORD; a person
+         already here keeps theirs, and is given a test hotel by Give access,
+         which touches no account at all. Asked before Firebase is touched. */
+      if (testHotel) {
+        if (wantsAdmin) return refuse("A tester is never a group administrator.");
+        const { rows: had } = await client.query(
+          "select 1 from staff where email = $1::citext", [email]);
+        if (had[0]) {
+          return refuse(
+            `${email} already has a sign-in. To give them this test hotel as a second place, `
+            + "use Give access: their password and their account stay as they are.");
+        }
+      }
       /* ⚠ THE ACCOUNT FIRST, THE ROW SECOND. Firebase is not in the
          transaction — nothing can roll it back — so the order is chosen
          so the survivable failure is the one that happens.
@@ -1114,8 +1165,14 @@ admin.post("/admin/staff", async (c) => {
          who cannot sign in. */
       let account;
       try {
-        account = await ensureAccount(email, name, password);
+        /* A tester's account is made new, never adopted (D27-296). */
+        account = await ensureAccount(email, name, password, { adopt: !testHotel });
       } catch (e) {
+        if (e instanceof AccountExists) {
+          return refuse(
+            `${email} already has a sign-in account, and a tester is never made by changing `
+            + "its password. Use another address.");
+        }
         if (!env.firebaseServiceAccount) return refuse(NO_SIGN_IN);
         throw e;
       }
@@ -1141,9 +1198,11 @@ admin.post("/admin/staff", async (c) => {
       const id = known[0]?.id ?? randomUUID();
       if (!known[0]) {
         await client.query(
-          `insert into staff (id, email, full_name, is_group_admin, firebase_uid, long_password)
-           values ($1, $2, $3, $4, $5, $6)`,
-          [id, email, name, wantsAdmin, account.uid, password.length >= MIN_MANAGER_PASSWORD]);
+          `insert into staff (id, email, full_name, is_group_admin, firebase_uid, long_password,
+                              test_only)
+           values ($1, $2, $3, $4, $5, $6, $7)`,
+          [id, email, name, wantsAdmin, account.uid, password.length >= MIN_MANAGER_PASSWORD,
+           testHotel]);
       }
 
       if (hotelId) {
@@ -1163,6 +1222,7 @@ admin.post("/admin/staff", async (c) => {
            An adopted account keeps whatever password it already had
            unless this call set one — and this call always sets one. */
         accountExisted: account.existed,
+        testOnly: testHotel,
         ...(hotelCode ? { hotelCode, role } : {}),
       };
     });
@@ -1171,8 +1231,10 @@ admin.post("/admin/staff", async (c) => {
        PUN", "You may give: …" — went back as 200 OK carrying
        `ok: false`. The browser's helper reads the body and coped, which
        is why nobody noticed; anything reading the status code saw a
-       success. Every other route in this file answers 409. */
-    return c.json(result, "ok" in result && result.ok ? 200 : 409);
+       success. Every other route in this file answers 409 - and 403 for
+       somebody who may not add people to a test hotel at all (D27-296). */
+    const { forbidden, ...answer } = result as typeof result & { forbidden?: true };
+    return c.json(answer, "ok" in answer && answer.ok ? 200 : forbidden ? 403 : 409);
   } catch (error) {
     const reason = reasonFor(error);
     if (reason) return c.json(refuse(reason), 403);
@@ -1292,6 +1354,13 @@ admin.post("/admin/staff/:id/access", async (c) => {
          access off (D24-19). Before anything is read or written. */
       if (c.req.param("id") === session.staffId) return refuse(OWN_ROLE);
 
+      /* D27-296 (10): the owner and the group administrators give somebody a
+         test hotel. It touches no sign-in account: their password stays. By
+         its code: a GM cannot read a test hotel's row to look it up. */
+      if (await isTestHotelCodeIn(client, code) && !session.isGroupAdmin) {
+        return { ...refuse(TEST_PEOPLE), forbidden: true as const };
+      }
+
       const hotelId = await hotelFor(client, code);
       if (!hotelId) return refuse(`No property with code ${code}.`);
 
@@ -1346,7 +1415,8 @@ admin.post("/admin/staff/:id/access", async (c) => {
 
       return { ok: true as const, code, role };
     });
-    return c.json(result, "ok" in result && result.ok ? 200 : 409);
+    const { forbidden, ...answer } = result as typeof result & { forbidden?: true };
+    return c.json(answer, "ok" in answer && answer.ok ? 200 : forbidden ? 403 : 409);
   } catch (error) {
     const reason = reasonFor(error);
     if (reason) return c.json(refuse(reason), 403);

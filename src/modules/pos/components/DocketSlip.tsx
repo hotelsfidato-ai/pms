@@ -1,4 +1,6 @@
 import type { Docket } from "@/modules/pos/data/till";
+import { useIsTestHotel } from "@/lib/testHotel";
+import { TestDocumentMark } from "@/components/app/TestHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    THE KITCHEN DOCKET — what the chef is handed
@@ -26,14 +28,26 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 export function DocketSlip({ d }: { d: Docket }) {
+  /* A TEST HOTEL'S KOT (the owner's D27-296 (8)): TEST · NOT VALID at its
+     head and foot, so a practice docket on a real rail is never cooked.
+     Nothing else changes, in a test hotel or a real one. */
+  const test = useIsTestHotel();
   return (
     <div className="mx-auto px-3 py-4 w-[80mm] font-mono text-[13px] leading-snug bg-white text-ink-900">
+      {test && <TestDocumentMark slip />}
       <p className="text-center tabular">{d.sentAt}</p>
       {/* The number, biggest thing on the paper. A chef finds a docket
           on a rail of twenty by its number and nothing else. */}
-      <p className="text-center text-[19px] font-bold tracking-wide mt-1">
-        KOT - {d.kotNo}
+      {/* WHAT IT IS, BIG, between two rules (the owner's D27-292): one
+          printer may take every kind, so the slip says which - "BAR KOT 14"
+          - and a reprint says so too. A docket from before kinds is "KOT". */}
+      <p className="mt-1 border-y-2 border-ink-900 py-1 text-center text-[22px] font-bold tracking-wide"
+         data-kot-heading>
+        {d.kind ? `${d.kind.name.toUpperCase()} KOT ${d.kotNo}` : `KOT - ${d.kotNo}`}
       </p>
+      {d.reprint && (
+        <p className="text-center font-bold tracking-wide mt-0.5">REPRINT</p>
+      )}
       <p className="text-center font-bold mt-1">
         {TYPE_LABEL[d.orderType] ?? d.orderType}
       </p>
@@ -52,8 +66,24 @@ export function DocketSlip({ d }: { d: Docket }) {
       </div>
 
       <ul className="mt-1.5">
-        {d.lines.filter((l) => !l.isAddon).map((dish) => {
-          const sides = d.lines.filter((l) => l.parentId === dish.id);
+        {/* Each dish with what hangs under it. An add-on line whose dish
+            went on an earlier KOT (D27-291) stands on its own, naming it. */}
+        {d.lines.filter((l) => l.parentId === null || l.for).map((dish) => {
+          if (dish.for) {
+            return (
+              <li key={dish.id} className="mb-2">
+                <div className="flex">
+                  <span className="flex-1 font-bold">+ {dish.name}</span>
+                  <span className="w-10 text-right font-bold tabular">{dish.qty}</span>
+                </div>
+                <div className="pl-4">
+                  for: {dish.for.name}{dish.for.kotNo !== null ? ` (KOT ${dish.for.kotNo})` : ""}
+                </div>
+              </li>
+            );
+          }
+          const sides = d.lines.filter((l) => l.parentId === dish.id && !l.extra);
+          const extras = d.lines.filter((l) => l.parentId === dish.id && l.extra);
           return (
             <li key={dish.id} className="mb-2">
               <div className="flex">
@@ -62,12 +92,27 @@ export function DocketSlip({ d }: { d: Docket }) {
                   {dish.qty}
                 </span>
               </div>
+              {/* The numbered add-ons ON this dish (D27-289), each on a line
+                  of its own and bold - the owner: "+ Kebab" under the dish,
+                  so a cook does not read past it. Per one of the dish. */}
+              {(dish.plus ?? []).map((p, i) => (
+                <div key={i} className="pl-4 font-bold">
+                  + {p.name}{p.qty > 1 ? ` ×${p.qty}` : ""}
+                </div>
+              ))}
               {/* Indented, which is the whole reason this is printed
                   rather than listed. Flat, a chef plates the sides as
                   separate dishes. */}
               {sides.map((s) => (
                 <div key={s.id} className="pl-4 italic">
                   {s.name} - {s.qty}
+                </div>
+              ))}
+              {/* Its add-on lines (D27-291), bold, each with its own number. */}
+              {extras.map((x) => (
+                <div key={x.id} className="flex pl-4 font-bold">
+                  <span className="flex-1">+ {x.name}</span>
+                  <span className="w-10 text-right tabular">{x.qty}</span>
                 </div>
               ))}
               {dish.note && (
@@ -107,6 +152,7 @@ export function DocketSlip({ d }: { d: Docket }) {
       <p className="mt-3 text-center text-[11px]">
         {d.outlet} · {d.orderNo}
       </p>
+      {test && <TestDocumentMark slip />}
     </div>
   );
 }

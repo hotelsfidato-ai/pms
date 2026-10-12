@@ -140,3 +140,29 @@ describe("ringing it: one of each type, priced first + added", () => {
     ]);
   });
 });
+
+/* POS-34: ONE FEWER OF A SENT DISH WITH SEVERAL TYPES. The struck copy that
+   says "one came off" was written without the dish's further choices, and
+   164's trigger refuses a Pizza line with no crust - the manager taking one
+   off got "Something went wrong" and nothing changed. */
+describe("one fewer of a sent dish with several types (POS-34)", () => {
+  it("takes one off: two stay as sent, and the struck one keeps its crust", async () => {
+    const { dish, large, burst } = await pizza();
+    const o = await open();
+    await ring(o, { itemId: dish, variationId: large, moreChoiceIds: [burst], qty: 3 });
+    expect((await call("POST", `/orders/${o}/kot`)).status).toBe(200);
+    const sent = ((await (await call("GET", `/orders/${o}`)).json()) as {
+      lines: { id: string }[] }).lines[0]!;
+
+    const res = await call("POST", `/orders/${o}/lines/${sent.id}/qty`,
+      { qty: 2, reason: "guest changed their mind - types test" });
+    expect(res.status, await res.clone().text()).toBe(200);
+
+    const lines = ((await res.json()) as { lines: (Line & { kotStatus: string })[] }).lines;
+    const name = `VTYPES Pizza ${orders.length - 1} (Large, Cheese burst)`;
+    expect(lines.filter((l) => !l.voided).map((l) => [l.name, l.qty, l.unitPrice]))
+      .toEqual([[name, 2, 480]]);
+    expect(lines.filter((l) => l.voided).map((l) => [l.name, l.qty, l.unitPrice]),
+      "the one that came off, as what it was").toEqual([[name, 1, 480]]);
+  });
+});

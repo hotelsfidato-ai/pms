@@ -53,6 +53,16 @@ describe("what must never happen offline", () => {
     expect(ruleFor(`${P}/till/orders/abc/settle`, "POST").tier).toBe("refuse");
     expect(ruleFor(`${P}/till/orders`, "POST").tier).toBe("queue");
     expect(ruleFor(`${P}/till/orders/abc/lines`, "POST").tier).toBe("queue");
+    /* Customise is refused, never held: a held change could reach the dish
+       after the kitchen has it (D27-289; the audit of 9 October). Ordering
+       again: found before \`/till/orders\`. */
+    const customise = ruleFor(`${P}/till/orders/abc/lines/42/numbered-addons`, "POST");
+    expect(customise.tier).toBe("refuse");
+    expect(customise.reason).toMatch(/Customise again when the connection is back/);
+    /* An add-on on a dish from the Till (D27-291): held, a retry adds it
+       twice. The pad's go with its round, through the batch, and queue. */
+    expect(ruleFor(`${P}/till/orders/abc/lines/42/extras`, "POST").tier).toBe("refuse");
+    expect(ruleFor(`${P}/till/orders/batch`, "POST").tier).toBe("queue");
   });
 
   it("refuses confirming a banquet function, but not the enquiry", () => {

@@ -10,6 +10,7 @@ import {
 import {
   getReviews, setReviewLink, askForReview, type Departure,
 } from "@/modules/reputation/data/reputation";
+import { NOTHING_SENT, useIsTestHotel } from "@/lib/testHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    REVIEWS — who was asked, who has not been, and what came back
@@ -49,6 +50,9 @@ export default function ReviewsPage() {
   const qc = useQueryClient();
   const [typed, setTyped] = useState<string | null>(null);
   const [sending, setSending] = useState<string | null>(null);
+  /* NOTHING LEAVES A TEST HOTEL (the owner's D27-296 (4)): the asks are
+     shown off, with the sentence the server refuses a send with (409). */
+  const test = useIsTestHotel(code);
 
   const q = useQuery({
     queryKey: ["reviews", code],
@@ -141,7 +145,9 @@ export default function ReviewsPage() {
               </p>
             );
           }
-          if (!mayActuallySend) return null;
+          /* In a test hotel, drawn off for whoever may ask, rather than
+             hidden: the reason is the card above (Rule 6). */
+          if (!mayActuallySend && !(test && page.mayAsk)) return null;
           return (
             <div className="flex flex-wrap gap-2 sm:justify-end">
               {/* A way is offered only where the booking carries an address
@@ -150,7 +156,7 @@ export default function ReviewsPage() {
                   before it. */}
               <Button
                 size="sm" variant="secondary"
-                disabled={!r.phone || sending !== null}
+                disabled={test || !r.phone || sending !== null}
                 loading={sending === `${r.id}:whatsapp`}
                 onClick={() => void ask(r, "whatsapp")}
               >
@@ -159,7 +165,7 @@ export default function ReviewsPage() {
               </Button>
               <Button
                 size="sm" variant="secondary"
-                disabled={!r.email || sending !== null}
+                disabled={test || !r.email || sending !== null}
                 loading={sending === `${r.id}:email`}
                 onClick={() => void ask(r, "email")}
               >
@@ -176,7 +182,11 @@ export default function ReviewsPage() {
       /* Cards 12px apart (the Rhythm Rule). */
       <div className="space-y-3">
         {/* ── nothing sends at all yet ───────────────────────────── */}
-        {!page.canSend && page.notConnected && (
+        {test ? (
+          <Card>
+            <CardBody className="text-sm text-grey-700">{NOTHING_SENT}</CardBody>
+          </Card>
+        ) : !page.canSend && page.notConnected && (
           <Card>
             <CardBody className="text-sm text-grey-700">{page.notConnected}</CardBody>
           </Card>

@@ -15,11 +15,16 @@
 # =============================================================================
 set -uo pipefail
 
-PG16="D:/fidato pms/.local/pg16"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# The MAIN checkout's .local/pg16, shared by every copy under
+# .claude/worktrees, found through git's common directory. It was
+# "D:/fidato pms/.local/pg16" until the project moved to another machine on
+# 9 October (scripts/gates.sh finds its Postgres the same way).
+MAIN="$(cd "$ROOT" && cd "$(git rev-parse --git-common-dir)/.." && { pwd -W 2>/dev/null || pwd; })"
+PG16="${PG16:-$MAIN/.local/pg16}"
 BIN="$PG16/pgsql/bin"
 DATA="$PG16/data"
 PORT=55433
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 [ -x "$BIN/pg_ctl.exe" ] || { echo "  x no PostgreSQL 16 in $BIN: unzip the 16.15 binaries there"; exit 1; }
 

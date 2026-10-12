@@ -46,9 +46,19 @@ comment on constraint guest_links_names_one_thing on guest_links is
   'A booking''s own link, or a room''s fixed card - never both, never neither. '
   'A card that also named a booking would open that booking for the next guest.';
 
-alter table guest_links drop constraint if exists guest_links_origin_check;
-alter table guest_links add constraint guest_links_origin_check
-  check (origin in ('desk', 'confirmation', 'qr', 'room'));
+-- Guarded by what it adds (MEMORY 284, 403): 181 added 'room-phone'. On a
+-- replay this shorter list refused every room-phone link and the whole replay
+-- rolled back, so it is written only while the list does not know 'room'.
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'guest_links_origin_check'
+                    and pg_get_constraintdef(oid) like '%''room''%') then
+    alter table guest_links drop constraint if exists guest_links_origin_check;
+    alter table guest_links add constraint guest_links_origin_check
+      check (origin in ('desk', 'confirmation', 'qr', 'room'));
+  end if;
+end $$;
 
 -- ONE live card per room. Printing a new one kills the old one (D21-16), and
 -- this index is what makes "the old one" a single row.

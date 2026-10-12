@@ -3,6 +3,14 @@
 This is a live hotel system (pms.fidatohotels.com). The owner does not want to
 re-explain it, and they should not have to.
 
+**12 OCTOBER: DEVELOPMENT IS BACK ON THE ORIGINAL DESKTOP (`D:\fidato pms`).
+Read `LAPTOP-HANDOVER.md` first.** It covers:
+- bringing this machine's own checkout up to date (do not clone; look for
+  unpushed work first);
+- the videos in `C:\videos`, from the GitHub branch `videos`;
+- what is done and what is next;
+- the questions waiting for the owner (D27-302, D27-303).
+
 1. **Read the top section of `HANDOVER.md` to the end before your first
    write.** It is the current brief: where things stand, what to do next and
    in what order, every decision the owner has made, and their standing rules.
@@ -30,7 +38,7 @@ NOTHING LEAVES THIS MACHINE.**
 - A service chat's own push is refused the same way. They commit; the master
   merges locally.
 
-This lifts only when the owner says so in their own words. **5 October (D27-287): the owner chose to push cp6 to the private GitHub project (hotelsfidato-ai/pms) to work from a laptop for five days; the owner types the push. Releases, deploys and server writes still need the owner's yes and are typed by the owner.** Until then, a green
+This lifts only when the owner says so in their own words. Until then, a green
 local gate run is the whole of the bar, and the standing rule that a push is
 not finished until its Action is green (MEMORY 300) is suspended because there
 are no pushes.
@@ -51,6 +59,9 @@ The rules that are never negotiable, in short — the full list is
 - Never commit, print or echo `api/.env`.
 - No default prices; a missing figure is a dash, never a zero.
 - Open the screen before claiming it works; run the gates you quote.
+- The manual moves with the screen (D27-293): a screen changed updates its
+  chapter in `docs/manual/chapters/`, its pictures and the build, in the same
+  commit (AGENTS.md, "Definition of done").
 - Every mistake goes into `MEMORY.md`, numbered.
 - Production deploys and writes on the server need the owner's explicit yes.
 - Every command given to the owner is labelled with where it runs.

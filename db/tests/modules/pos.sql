@@ -437,3 +437,391 @@ begin
   select count(*) into n from hotels where code = 'GDN';
   perform test.ok('room dining', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- A BILL CLOSED UNPAID IS FINISHED ON THE FLOOR (POS-33, the owner, 9 October)
+-- =============================================================================
+-- Close unpaid leaves the bill on its table, as a paid one is left, until
+-- somebody clears it. The floor called it `running` or `kot`, with the bill's
+-- total, and Tables offers Clear only on a finished tile, so the table could
+-- never be freed. Refers to its migration by what it does, "a bill closed
+-- unpaid shows as closed unpaid", never by its number.
+--
+-- Uses the suite's AGR property and its clerk; makes its own outlet, section,
+-- table and order, and removes them.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_section uuid; v_table uuid;
+  v_order uuid; bd date; st text; amt numeric; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'FLCLS', 'Floor Closed Test', 'food', v_staff)
+  returning id into v_outlet;
+  insert into pos_sections (hotel_id, outlet_id, name)
+  values (a, v_outlet, 'Closed test') returning id into v_section;
+  insert into pos_tables (hotel_id, section_id, label)
+  values (a, v_section, 'CT1') returning id into v_table;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by, table_id, table_ref)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff, v_table, 'CT1')
+  returning id into v_order;
+
+  select f.state into st from app.pos_floor(v_outlet) f where f.label = 'CT1';
+  perform test.ok('pos floor', 'an open bill with nothing sent is running', st = 'running', st);
+
+  -- ---------- closed unpaid -------------------------------------------------------
+  update pos_orders set status = 'abandoned', abandoned_reason = 'walked out - test'
+   where id = v_order;
+  select f.state, f.payable into st, amt from app.pos_floor(v_outlet) f where f.label = 'CT1';
+  perform test.ok('pos floor', 'a bill closed unpaid is closed, not running', st = 'closed', st);
+  perform test.ok('pos floor', 'and its tile shows no amount', amt is null, coalesce(amt::text, ''));
+
+  update pos_orders set printed_at = now() where id = v_order;
+  select f.state into st from app.pos_floor(v_outlet) f where f.label = 'CT1';
+  perform test.ok('pos floor', 'printed afterwards, it is still closed - not green', st = 'closed', st);
+
+  update pos_orders set cleared_at = now() where id = v_order;
+  select f.state into st from app.pos_floor(v_outlet) f where f.label = 'CT1';
+  perform test.ok('pos floor', 'cleared, the table is free', st = 'blank', st);
+
+  -- ---------- and the fixtures go ----------------------------------------------
+  delete from pos_orders where id = v_order;
+  delete from pos_tables where id = v_table;
+  delete from pos_sections where id = v_section;
+  delete from pos_outlets where id = v_outlet;
+  select count(*) into n from pos_outlets where code = 'FLCLS';
+  perform test.ok('pos floor', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;
+
+
+-- =============================================================================
+-- NUMBERED ADD-ONS (the owner's D27-289, 9 October)
+-- =============================================================================
+-- A numbered list any dish can take, folded into the dish's own line. What
+-- the database itself holds to: a price is typed (0 only when Free), one
+-- add-on per number while it is in use, the kept add-ons sit on a dish and
+-- never on a side, and a dish the kitchen has keeps what it was sent with.
+-- Refers to its migration by what it does, "numbered add-ons", never by its
+-- number. Uses the suite's AGR property and its clerk; removes what it makes.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_order uuid; bd date;
+  v_dish bigint; v_side bigint; v_group uuid; v_option uuid; n int;
+  kept text := '{"dish":"Dal","base":200,"addons":[{"id":"00000000-0000-0000-0000-000000000001","number":2,"name":"Kebab","price":120,"qty":1}]}';
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  -- ---------- the list ------------------------------------------------------------
+  perform test.raises('pos numbered addons', 'a 0 nobody ticked Free is refused',
+    format($q$insert into pos_numbered_addons (hotel_id, number, name, price)
+              values (%L, 2, 'Kebab', 0)$q$, a));
+  perform test.allows('pos numbered addons', 'a 0 ticked Free is kept',
+    format($q$insert into pos_numbered_addons (hotel_id, number, name, price, is_free)
+              values (%L, 3, 'Onions', 0, true)$q$, a));
+  perform test.allows('pos numbered addons', 'a typed price is kept',
+    format($q$insert into pos_numbered_addons (hotel_id, number, name, price)
+              values (%L, 2, 'Kebab', 120)$q$, a));
+  perform test.raises('pos numbered addons', 'one add-on per number while it is in use',
+    format($q$insert into pos_numbered_addons (hotel_id, number, name, price)
+              values (%L, 2, 'Paneer', 90)$q$, a), '23505');
+  update pos_numbered_addons set is_active = false where hotel_id = a and number = 2;
+  perform test.allows('pos numbered addons', 'switched off, its number is free for another',
+    format($q$insert into pos_numbered_addons (hotel_id, number, name, price)
+              values (%L, 2, 'Paneer', 90)$q$, a));
+
+  -- ---------- on a line -------------------------------------------------------------
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'NUMAD', 'Numbered Add-on Test', 'food', v_staff) returning id into v_outlet;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff) returning id into v_order;
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, 'Dal', 1, 200, 5, v_staff) returning id into v_dish;
+  -- A real side, as the app makes one: a group and its option.
+  insert into pos_addon_groups (hotel_id, label) values (a, 'Numbered test sides')
+  returning id into v_group;
+  insert into pos_addons (hotel_id, group_id, label, price) values (a, v_group, 'Onions', 25)
+  returning id into v_option;
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by, parent_line_id, addon_id)
+  values (v_order, a, 'Sides: Onions', 1, 25, 5, v_staff, v_dish, v_option) returning id into v_side;
+
+  perform test.allows('pos numbered addons', 'a dish not yet sent takes them',
+    format($q$update pos_order_lines set numbered_addons = %L::jsonb where id = %s$q$, kept, v_dish));
+  perform test.raises('pos numbered addons', 'a side never carries them',
+    format($q$update pos_order_lines set numbered_addons = %L::jsonb where id = %s$q$, kept, v_side), '23514');
+  perform test.raises('pos numbered addons', 'an empty set is not a set: none is null',
+    format($q$update pos_order_lines set numbered_addons = '{"dish":"Dal","base":200,"addons":[]}'::jsonb where id = %s$q$, v_dish), '23514');
+
+  update pos_order_lines set kot_status = 'sent', kot_sent_at = now(), kot_no = 1 where id = v_dish;
+  perform test.raises('pos numbered addons', 'a dish the kitchen has keeps what it was sent with',
+    format($q$update pos_order_lines set numbered_addons = null where id = %s$q$, v_dish), '23514');
+  perform test.allows('pos numbered addons', 'and anything else about it still moves along',
+    format($q$update pos_order_lines set kot_status = 'preparing' where id = %s$q$, v_dish));
+
+  -- ---------- and the fixtures go ----------------------------------------------
+  delete from pos_order_lines where order_id = v_order;
+  delete from pos_orders where id = v_order;
+  delete from pos_outlets where id = v_outlet;
+  delete from pos_addons where id = v_option;
+  delete from pos_addon_groups where id = v_group;
+  delete from pos_numbered_addons where hotel_id = a;
+  select count(*) into n from pos_outlets where code = 'NUMAD';
+  perform test.ok('pos numbered addons', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;
+
+
+-- =============================================================================
+-- THREE GUARDS FROM THE AUDIT OF 9 OCTOBER (POS-34, D27-289)
+-- =============================================================================
+-- A struck copy is what the dish WAS, so the variation rule stands aside for a
+-- line struck as it is written and holds for everything sold; Free is 0; the
+-- kept add-ons must be a list. Refers to its migration by what it does, "three
+-- guards from the audit", never by its number. Uses the suite's AGR property and
+-- its clerk; removes what it makes.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_order uuid; bd date;
+  v_cat uuid; v_item uuid; v_large uuid; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  -- ---------- Free is 0 ------------------------------------------------------------
+  perform test.raises('pos audit guards', 'an add-on ticked Free carries no price',
+    format($q$insert into pos_numbered_addons (hotel_id, number, name, price, is_free)
+              values (%L, 41, 'Onions', 50, true)$q$, a), '23514');
+
+  -- ---------- the kept add-ons are a list ------------------------------------------
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'AUDGD', 'Audit Guards Test', 'food', v_staff) returning id into v_outlet;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff) returning id into v_order;
+  perform test.raises('pos audit guards', 'kept add-ons with no list are refused',
+    format($q$insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by, numbered_addons)
+              values (%L, %L, 'Dal', 1, 200, 5, %L, '{"dish":"Dal","base":200}'::jsonb)$q$, v_order, a, v_staff), '23514');
+
+  -- ---------- a struck copy is what the dish was -------------------------------------
+  -- A Pizza that has a Crust type now, rung before it had one: its struck copy
+  -- carries no crust, and goes in; a SOLD line with no crust is still refused.
+  insert into pos_menu_categories (hotel_id, name) values (a, 'Audit guards') returning id into v_cat;
+  insert into pos_menu_items (hotel_id, category_id, name, price)
+  values (a, v_cat, 'Audit Pizza', 1) returning id into v_item;
+  insert into pos_item_variations (hotel_id, item_id, label, price, type_no)
+  values (a, v_item, 'Large', 400, 1) returning id into v_large;
+  insert into pos_item_variations (hotel_id, item_id, label, price, type_no)
+  values (a, v_item, 'Cheese burst', 80, 2);
+
+  perform test.allows('pos audit guards', 'a struck copy with no crust goes in: it is what the dish was',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, variation_id, name, qty, unit_price,
+                                          tax_rate, added_by, voided, voided_by, voided_at, void_reason)
+              values (%L, %L, %L, %L, 'Audit Pizza (Large)', 1, 400, 5, %L, true, %L, now(), 'audit test')$q$,
+           v_order, a, v_item, v_large, v_staff, v_staff));
+  perform test.raises('pos audit guards', 'but a sold line with no crust is still refused',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, variation_id, name, qty, unit_price,
+                                          tax_rate, added_by)
+              values (%L, %L, %L, %L, 'Audit Pizza (Large)', 1, 400, 5, %L)$q$,
+           v_order, a, v_item, v_large, v_staff));
+
+  -- ---------- and the fixtures go ----------------------------------------------
+  alter table pos_order_lines disable trigger pos_order_lines_frozen;
+  delete from pos_order_lines where order_id = v_order;
+  alter table pos_order_lines enable trigger pos_order_lines_frozen;
+  delete from pos_orders where id = v_order;
+  delete from pos_outlets where id = v_outlet;
+  delete from pos_item_variations where item_id = v_item;
+  delete from pos_menu_items where id = v_item;
+  delete from pos_menu_categories where id = v_cat;
+  delete from pos_numbered_addons where hotel_id = a and number = 41;
+  select count(*) into n from pos_outlets where code = 'AUDGD';
+  perform test.ok('pos audit guards', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;
+
+
+-- =============================================================================
+-- CUSTOM ADD-ONS, AND ADD-ONS ON A DISH ALREADY SENT (D27-291)
+-- =============================================================================
+-- An add-on line of its own hangs under a dish, names no menu item and is no
+-- side; a numbered one says which. A sent one struck says why, and a dish
+-- struck carries its reason to them. Refers to its migration by what it does,
+-- never by its number. Uses the suite's AGR property and its clerk; removes
+-- what it makes.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_order uuid; v_dish bigint; v_extra bigint;
+  v_numbered uuid; bd date; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'CUSAD', 'Custom Add-on Test', 'food', v_staff) returning id into v_outlet;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff) returning id into v_order;
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, 'Veg Thali', 2, 300, 5, v_staff) returning id into v_dish;
+  insert into pos_numbered_addons (hotel_id, number, name, price)
+  values (a, 42, 'Kebab', 120) returning id into v_numbered;
+
+  -- ---------- its shape ----------------------------------------------------------
+  perform test.allows('pos custom addons', 'a typed add-on under a dish, with its own number',
+    format($q$insert into pos_order_lines (order_id, hotel_id, parent_line_id, extra_kind, name, qty,
+                                          unit_price, tax_rate, added_by)
+              values (%L, %L, %s, 'custom', 'Extra papad', 1, 40, 5, %L)$q$, v_order, a, v_dish, v_staff));
+  perform test.raises('pos custom addons', 'a child line that is neither a side nor an add-on is refused',
+    format($q$insert into pos_order_lines (order_id, hotel_id, parent_line_id, name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %s, 'Stray', 1, 40, 5, %L)$q$, v_order, a, v_dish, v_staff), '23514');
+  perform test.raises('pos custom addons', 'an add-on line hangs under a dish',
+    format($q$insert into pos_order_lines (order_id, hotel_id, extra_kind, name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, 'custom', 'Extra papad', 1, 40, 5, %L)$q$, v_order, a, v_staff), '23514');
+  perform test.raises('pos custom addons', 'a numbered one says which',
+    format($q$insert into pos_order_lines (order_id, hotel_id, parent_line_id, extra_kind, name, qty,
+                                          unit_price, tax_rate, added_by)
+              values (%L, %L, %s, 'numbered', 'Kebab', 1, 120, 5, %L)$q$, v_order, a, v_dish, v_staff), '23514');
+  perform test.allows('pos custom addons', 'and with it, goes in',
+    format($q$insert into pos_order_lines (order_id, hotel_id, parent_line_id, extra_kind, numbered_addon_id,
+                                          name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %s, 'numbered', %L, 'Kebab', 1, 120, 5, %L)$q$, v_order, a, v_dish, v_numbered, v_staff));
+  perform test.raises('pos custom addons', 'a kind nobody named is refused',
+    format($q$insert into pos_order_lines (order_id, hotel_id, parent_line_id, extra_kind, name, qty,
+                                          unit_price, tax_rate, added_by)
+              values (%L, %L, %s, 'other', 'Ghee', 1, 20, 5, %L)$q$, v_order, a, v_dish, v_staff), '23514');
+
+  -- ---------- sent, struck -------------------------------------------------------
+  update pos_order_lines set kot_status = 'sent', kot_sent_at = now(), kot_no = 1
+   where order_id = v_order;
+  select id into v_extra from pos_order_lines where parent_line_id = v_dish and extra_kind = 'custom';
+  perform test.raises('pos custom addons', 'a sent add-on struck with no reason is refused',
+    format($q$update pos_order_lines set voided = true, voided_by = %L, voided_at = now() where id = %s$q$,
+           v_staff, v_extra), '23514');
+  perform test.allows('pos custom addons', 'a sent dish struck with a reason strikes its add-ons with it',
+    format($q$update pos_order_lines set voided = true, voided_by = %L, voided_at = now(),
+                                         void_reason = 'wrong table' where id = %s$q$, v_staff, v_dish));
+  select count(*) into n from pos_order_lines
+   where parent_line_id = v_dish and voided and void_reason = 'wrong table';
+  perform test.ok('pos custom addons', 'its add-ons carry the reason', n = 2, n || ' carry it');
+  select count(*) into n from app.pos_struck_after_kitchen(a, bd)
+   where name = '+ Extra papad (for Veg Thali)';
+  perform test.ok('pos custom addons', 'the day''s struck list names the dish', n = 1, n || ' listed');
+
+  -- ---------- and the fixtures go ----------------------------------------------
+  delete from pos_order_lines where order_id = v_order;
+  delete from pos_orders where id = v_order;
+  delete from pos_outlets where id = v_outlet;
+  delete from pos_numbered_addons where id = v_numbered;
+  select count(*) into n from pos_outlets where code = 'CUSAD';
+  perform test.ok('pos custom addons', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;
+
+
+-- =============================================================================
+-- THE KOT SECTION OF RESTAURANT SETUP (D27-292)
+-- =============================================================================
+-- Every hotel starts with Kitchen and Bar, never switched off; one computer
+-- prints the bills; a line takes its kind when it is sent - its section's own,
+-- else by its heading, and an add-on its dish's; a slip is claimed once per
+-- kind. Refers to its migration by what it does, never by its number. Uses the
+-- suite's AGR property and its clerk; removes what it makes.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_staff uuid; v_outlet uuid; v_order uuid; v_cat uuid; v_drinks uuid;
+  v_item uuid; v_drink uuid; v_dish bigint; v_lime bigint; v_extra bigint;
+  v_kitchen uuid; v_bar uuid; v_tandoor uuid; v_s1 uuid; v_s2 uuid; bd date; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_staff from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  -- ---------- the kinds every hotel starts with -----------------------------------
+  select id into v_kitchen from pos_kot_kinds where hotel_id = a and role = 'food';
+  select id into v_bar from pos_kot_kinds where hotel_id = a and role = 'bar';
+  perform test.ok('pos kot section', 'a hotel starts with Kitchen and Bar',
+    v_kitchen is not null and v_bar is not null, 'missing');
+  perform test.raises('pos kot section', 'Kitchen is never switched off',
+    format($q$update pos_kot_kinds set is_active = false where id = %L$q$, v_kitchen), '23514');
+  perform test.raises('pos kot section', 'two KOTs of one name are refused',
+    format($q$insert into pos_kot_kinds (hotel_id, name) values (%L, ' kitchen ')$q$, a), '23505');
+  insert into pos_kot_kinds (hotel_id, name, sort) values (a, 'Tandoor', 3) returning id into v_tandoor;
+
+  -- ---------- one bill printer -------------------------------------------------
+  insert into pos_kot_stations (hotel_id, device, name, prints_bills, bills_since)
+  values (a, 'device-dbtest-0001', 'Bar PC', true, now()) returning id into v_s1;
+  perform test.raises('pos kot section', 'one computer prints the bills',
+    format($q$insert into pos_kot_stations (hotel_id, device, name, prints_bills, bills_since)
+              values (%L, 'device-dbtest-0002', 'Till PC', true, now())$q$, a), '23505');
+  insert into pos_kot_stations (hotel_id, device, name) values (a, 'device-dbtest-0002', 'Kitchen PC')
+  returning id into v_s2;
+  perform test.raises('pos kot section', 'a kind on a computer says since when',
+    format($q$update pos_kot_kinds set station_id = %L where id = %L$q$, v_s2, v_kitchen), '23514');
+
+  -- ---------- stamped when sent ------------------------------------------------
+  insert into pos_menu_categories (hotel_id, name, tax_kind) values (a, 'KOT test food', 'restaurant')
+  returning id into v_cat;
+  insert into pos_menu_categories (hotel_id, name, tax_kind, kot_kind_id)
+  values (a, 'KOT test tandoor', 'restaurant', v_tandoor) returning id into v_drinks;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_cat, 'KOT test dal', 200, 5) returning id into v_item;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_drinks, 'KOT test naan', 50, 5) returning id into v_drink;
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'KOTSC', 'KOT Section Test', 'food', v_staff) returning id into v_outlet;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_staff) returning id into v_order;
+  insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, v_item, 'KOT test dal', 1, 200, 5, v_staff) returning id into v_dish;
+  insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, v_drink, 'KOT test naan', 2, 50, 5, v_staff) returning id into v_lime;
+  insert into pos_order_lines (order_id, hotel_id, parent_line_id, extra_kind, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, v_dish, 'custom', 'Extra papad', 1, 40, 5, v_staff) returning id into v_extra;
+
+  update pos_order_lines set kot_status = 'sent', kot_sent_at = now(), kot_no = 1 where order_id = v_order;
+  select count(*) into n from pos_order_lines where id = v_dish and kot_kind_id = v_kitchen;
+  perform test.ok('pos kot section', 'a dish takes its heading''s kind when sent', n = 1, 'not the Kitchen');
+  select count(*) into n from pos_order_lines where id = v_lime and kot_kind_id = v_tandoor;
+  perform test.ok('pos kot section', 'a section''s own kind wins over its heading', n = 1, 'not the Tandoor');
+  select count(*) into n from pos_order_lines where id = v_extra and kot_kind_id = v_kitchen;
+  perform test.ok('pos kot section', 'an add-on goes with its dish', n = 1, 'not with its dish');
+
+  update pos_menu_categories set kot_kind_id = null where id = v_drinks;
+  perform test.ok('pos kot section', 'a sent line keeps its kind when the section moves',
+    app.pos_line_kot_kind(v_lime) = v_tandoor, 'it moved');
+
+  -- ---------- one claim per kind -----------------------------------------------
+  perform test.allows('pos kot section', 'the kitchen''s slip is claimed',
+    format($q$insert into pos_kot_prints (hotel_id, order_id, kot_no, kind_id) values (%L, %L, 1, %L)$q$,
+           a, v_order, v_kitchen));
+  perform test.allows('pos kot section', 'and the tandoor''s, apart',
+    format($q$insert into pos_kot_prints (hotel_id, order_id, kot_no, kind_id) values (%L, %L, 1, %L)$q$,
+           a, v_order, v_tandoor));
+  perform test.raises('pos kot section', 'never the same slip twice',
+    format($q$insert into pos_kot_prints (hotel_id, order_id, kot_no, kind_id) values (%L, %L, 1, %L)$q$,
+           a, v_order, v_kitchen), '23505');
+
+  -- ---------- a new hotel -------------------------------------------------------
+  select count(*) into n from information_schema.triggers where trigger_name = 'hotels_kot_kinds';
+  perform test.ok('pos kot section', 'a hotel made later starts with them too', n = 1, 'no trigger');
+
+  -- ---------- and the fixtures go ----------------------------------------------
+  delete from pos_kot_prints where order_id = v_order;
+  delete from pos_order_lines where order_id = v_order;
+  delete from pos_orders where id = v_order;
+  delete from pos_outlets where id = v_outlet;
+  delete from pos_menu_items where id in (v_item, v_drink);
+  delete from pos_menu_categories where id in (v_cat, v_drinks);
+  update pos_kot_kinds set station_id = null, station_since = null where hotel_id = a;
+  delete from pos_kot_kinds where id = v_tandoor;
+  delete from pos_kot_stations where id in (v_s1, v_s2);
+  select count(*) into n from pos_outlets where code = 'KOTSC';
+  perform test.ok('pos kot section', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;

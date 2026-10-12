@@ -50,6 +50,254 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-12 · back to the original desktop, `D:\fidato pms` (D27-302, D27-303); before it, 10 Oct afternoon: the fresh start on live, the one-click KOT setup, the videos (D27-298 to D27-301)
+
+**Asked for:**
+- 10 Oct:
+  - "do the fresh start on live step by step";
+  - "make it simple - the team just connects the KOT device";
+  - "fix the missing arrows and re-render";
+  - "cover end to end, from the start of the day to the end of the day, and check if all are proper";
+  - "start all the videos and run in parallel".
+- 12 Oct: "my system has come - an updated roadmap of what was completed and what needs to be done, commit and push the relevant stuff to GitHub, the handover file as the laptop thing, so I can continue there". Then: "the desktop I'm sending this to is the one where you pulled the PMS and started the development - it was shipped, now it's back; continue development here; include the development of the videos".
+
+**Shipped**
+- **The one-click KOT computer setup** (D27-299, e2fe4cab): `src/modules/pos/lib/kotSetupFile.ts`, the KOT section's "Download the setup file", sign-in back to the page asked for (`src/App.tsx`). It is **live** as a website-only release, index-DEVsbHgU.js. The staff PDF is `KOT-printer-quick-setup.pdf`.
+- **The fresh start on live** (D27-298): `api/scripts/reset-property.ts` was fixed (MEMORY 404) and rehearsed. Then the owner ran it on live: 155 rows removed from AMR.
+- **The video series:**
+  - A8 Restaurant complete, with every arrow found (`C:\videos\out\a8\`, not committed, D27-294). The book's Figure A8-17 was retaken, and `docs/manual/shots/a8.mjs` scrolls the paid bill into view (d7db7a86, d9d5df18).
+  - D27-300 (the day check) and D27-301 (all chapters at once) were decided and started.
+- **The handover to the original desktop** (12 Oct): `LAPTOP-HANDOVER.md` (the owner's name for it). It brings `D:\fidato pms`'s own checkout up to date: look for unpushed work first, never clone, the database to 212, the videos into `C:\videos`. The CLAUDE.md pointer, HANDOVER § 2 and decisions D27-302/303 were added.
+  - The book drafts were committed on `manual-rest` (319d0fa6): chapters A0-A17 and B1-B9, picture plans, 246 pictures. They are unreviewed.
+  - **The video code on GitHub, on its own branch `videos`** (6c8ee47, D27-303): scripts, compositions, tools, the day check, RESUME.md brought up to 12 Oct. `C:\videos` is now a checkout of that branch. `tools\marks.mjs` and `tools\record.mjs` find `D:/fidato pms` themselves.
+  - Two zips for the owner to carry by hand are in `.local\laptop\`: `pms-local-carry.zip` (5 MB: virtual printers, staff PDFs, release pages, the demo's backups) and `videos-generated.zip` (663 MB: voices, pictures, recordings, finished videos, Piper).
+  - `cp6`, `manual-rest` and `videos` were pushed to GitHub, once (D27-302).
+
+**Found**
+- MEMORY 405: the KOT setup file looped for ever once its input ran out. Fixed before commit.
+- MEMORY 406: fifteen helpers at once, and the usage limit stopped them all mid-work. That included the day check.
+- The chapter helpers' questions for the owner are in LAPTOP-HANDOVER.md § 6. There are eleven, and none of them is fixed.
+
+**Proved**
+- e2fe4cab, full gates all green: web 1,223, api 2,615, database 1,665 / 212, replay, pg16, types.
+- Nothing after it changed PMS code: notes, the book's shots file and drafts only, so no PMS gates were run for this handover.
+- The video branch: `tsc --noEmit` clean, every tool passes `node --check`. Nothing was rendered with the changed engine; A8's frame check is the first step on the desktop.
+
+**Left open** (LAPTOP-HANDOVER.md § 5)
+- Set up the laptop and run the gates there.
+- The owner's steps: delete the bastion, make the release page private, set up Amrapali's KOT computer, the test hotel and the testers.
+- The eleven questions.
+- Finish D27-301: twelve chapters part-done, and the engine half-changed.
+- Rerun the D27-300 day check from its backup. Step 46h is not yet judged.
+- Pictures for A1, A3, A5 and A13, and the A8-27 retake.
+- Review and merge `manual-rest`.
+
+**Commits:**
+- 4b3f4618 (D27-301);
+- manual-rest 319d0fa6;
+- this handover's commit.
+
+---
+
+## 2026-10-10 · the launch (D27-295), test hotels built into it (D27-296/297), and the book and videos paused
+
+**Asked for:** "a graceful stop" of the video series, then deploy the system; "make me an artifact to do this step by step" (new PC, no Firebase keys); then "a testing mode - the same system, a test toggle when I add people, reset or delete all the test data - build it now so the full launch includes it"; a tracker of what is done and how long is left; a notification when ready.
+
+**Shipped**
+- The release, D27-295: branch `release/all-9oct`, now at `fe07c3fd`, in its clean copy `.claude\worktrees\release-all-9oct` (website built there, `index-DWU1f94S.js`). Steps: `docs/go-live/RELEASE-9OCT.md` and the owner's page https://claude.ai/artifact/31rmDP8fBcNoFwAmvdfmCE (Firebase sign-in, the settings helper `.local\release-9oct\fill-firebase-env.mjs`, the server with or without the old key - Oracle Bastion - A1-A7, after it). Tracker: https://claude.ai/artifact/RwsmvofDrUWqCAAHnDsxzg.
+- Test hotels, D27-296 (twelve answers) and D27-297 (four more): migration `212_test_hotels.sql`; `api/src/testHotels.ts`, `api/src/modules/admin/testHotelRoutes.ts`; the screens (stripe, TEST labels, Make/Reset/Re-copy, the Test switch, TEST · NOT VALID documents). Two helpers in `test-hotels-core` (c46c6e31) and `test-hotels-web` (1b1323af), merged at 42ed4247.
+- Four replay-unsafe migrations guarded (112, 121, 146, 187) and `db/tests/rerun.sh` seeded with the rows that catch them (fe07c3fd, MEMORY 403).
+- The SU door test's clock held still (bd2eb560, MEMORY 395); decisions D27-294..297; the manual's A0.5 "A test hotel" and A8.1 paragraph (rebuilt, a8d6a2f2).
+
+**Found**
+- MEMORY 395: "refuses a flood" failed 1 run in ~50 (the per-minute limit's boundary). Fixed in the test.
+- MEMORY 396: I told the owner no Firebase keys were needed from the names in `.env`; every value was empty. release.mjs refused; the helper fills them.
+- MEMORY 403: 112, 121, 146 and 187 re-added rules later migrations widened; a replay on live with one breakage, room-phone link, rupee-promotion booking or own payment default would have rolled step A5 back. Found bringing the demo to 212. Fixed and proven.
+- MEMORY 397-402: the helpers' own (shell edits, PL/pgSQL traps).
+
+**Proved**
+- Full gates on `fe07c3fd` in the release copy (1,811 s): web types, api types, strip (218 files), web 177 files / 1,215 tests, api 191 files / 2,615 tests, database 212 migrations / 1,665 assertions, replay 212, pg16 16.15 - all exit 0. `node scripts/release.mjs release/all-9oct`: READY (fast-forward from 0c5e51cd; build with the live API, the Firebase settings, no test sign-in).
+- Fails first: the flood test (clock let run across a minute: 409); the replay (the four old files: fails on exactly 112, 121, 146, 187; guarded: all 212 re-runnable); the helpers' 55 web and 69 api/database guards (their reports).
+- Opened on the local demo: Make a test hotel (all 131 hotel tables equal to 5EL's, no GSTIN), the stripe, guests 0 in test / 445 in real, a practice order on N4, Reset ("Removed 3 records", 5EL untouched), Re-copy ("Removed 108, copied 109", every table equal), the Test switch on Add somebody; audit entries TEST_CREATE and TEST_RESET by the Group Owner.
+
+**Left open**
+- The release itself: the owner types Part 2 (into the server) and A1-A7, one at a time (D21-50). The 19 September rule returns after it.
+- The book's pictures of test hotels (the stripe, TEST in the switcher, the Test switch, a TEST bill) - text is in A0.5/A8.1; pictures after the launch. The book's other chapters (manual-rest copy) stopped mid-way at the usage limit; B1-B9 written; review, build, merge.
+- The video series (C:\videos\RESUME.md): paused.
+- Not opened on screen: a printed TEST · NOT VALID bill (covered by the screens helper's snapshot tests).
+
+**Commits:** `d76a5e1a … fe07c3fd` (and the notes after it)
+
+---
+
+## 2026-10-09 (evening) · custom add-ons (D27-291) and the KOT section of Restaurant setup (D27-292)
+
+**Asked for:** the owner: "a guest wants a custom thing - type its name and price and add it to
+the dish, even a dish already placed"; and "one KOT machine prints everything - bar, restaurant,
+bills. Remove the KOT toggle; put a KOT section in Restaurant setup where I configure several,
+by place; in a single machine, each slip says what it is - bill, bar KOT, restaurant KOT,
+interim." "Ask me all the questions before building": 26 questions in seven rounds, every answer
+in D27-291 and D27-292.
+
+**Shipped** (worktree `pos-custom-kot`, merged into cp6 locally; nothing pushed or deployed)
+- D27-291, custom add-ons (`ea150bfb`, migration 210): in Customise, **Custom add-on** - a name,
+  a price or Free (never a default), its own number - its own line under the dish ("+ Extra
+  papad"), at the dish's tax. On a dish already sent, Customise adds custom AND numbered add-ons as
+  lines of their own, waiting for the next Send; that KOT and the Kitchen screen name the dish
+  ("for: Veg Thali (KOT 12)"). The Tables pad lists the table's dishes already sent, each with
+  Customise. A sent add-on struck asks who and why; a struck dish carries its reason to its
+  add-ons; the day's struck list names them. The Add-ons tab lists "Custom add-ons used" (30 days)
+  with Number it. `api/src/modules/pos/extras.ts`, `flows/CustomiseDialog.tsx`,
+  `flows/OrderPad.tsx`.
+- D27-292, the KOT section (migration 211): KOT kinds (Kitchen and Bar for every hotel, renamed,
+  never switched off; more added); computers that print them, one computer per kind, ticked on
+  the computer itself ("This computer"), moving and starting afresh; routing per menu section,
+  pre-filled from the tax heading and stamped on each line when sent; one Send = one number = one
+  slip per kind, headed in big letters "BAR KOT 14", REPRINT on a reprint; the bill printer:
+  INTERIM BILL / BILL / BILL · DUPLICATE, Print here when it is offline, the bill page as before
+  when none is chosen; the red line per kind something prints to, with Set up; the Kitchen
+  screen's "KOT printer" button gone and an All / Kitchen / Bar filter in its place; the kitchen
+  manager opens Restaurant setup for its KOT section only. `api/src/modules/pos/kotSection.ts`,
+  `components/KotSection.tsx`, `components/KotStation.tsx`, `components/BillSlip.tsx`,
+  `flows/printBill.tsx`, `KOT-STATION-SETUP.md`.
+
+**Found**
+- The lane script (`scripts/lane.mjs`) compares with `origin/cp6`, which is the stale 18 Sep
+  branch on this PC (D27-287): it lists ~1,280 files. Compared with local cp6 instead, by hand.
+- The Till scrolls sideways in a phone-width window: its menu panel's dish grid is wider than
+  the pane. Not from this work; not fixed.
+- MEMORY 393, 394: two test mistakes of mine (a settled bill's tenders in a cleanup, again; an
+  order moved to yesterday kept today's number).
+
+**Proved**
+- Full gates `cp6-9oct-kot` on 74cf0ee4: web types, api types, strip (216 files) clean; api 190
+  files, 2,546 of 2,546; database 211 migrations, all 1,578 assertions (+11 "pos custom addons",
+  +14 "pos kot section"); replay all 211 re-runnable; pg16 (16.15) the same; `npm run build`
+  passes, no test sign-in in dist. Web: 1 of 1,158 failed - Rule 2b, `markPrinted` on the seam was
+  no longer called (Tables asks bill-print now). Deleted; the whole web suite again: 169 of 169
+  files, exit 0; web types clean.
+- Each guard failed first (prove.cjs: mutate, run, restore the bytes): custom add-ons 6 server
+  (merge, a dish's number moving its add-ons, the bill's order, the cascade's reason, the struck
+  list, the KOT's "for") and 5 screen; the KOT section 7 server (starting afresh, the claim per
+  kind, the kind's slip, DUPLICATE, Print here, the stamp, the business date) and 6 screen. One
+  mutation first PASSED: Print here cleared the waiting bills twice, so removing one proved
+  nothing - folded into one statement, then proven.
+- Opened on the demo: the pad's "Already sent" → Customise → Custom add-on → Send ("+ Extra papad"
+  on KOT 7, "for: Veg Biryani (KOT 4)", the Kitchen's "for Veg Biryani", the Add-ons tab's list);
+  the KOT section (sections routed, "This computer" ticked), BAR KOT 9 and an INTERIM BILL printed
+  by the preview browser, the Kitchen's filter.
+
+**Then, the owner:** "I don't have a KOT machine - a virtual printer for testing, a separate file
+that does not go to production, in the ignore file." Asked three questions (two printers: Kitchen,
+and Bar + bills; the slips on a page; in `.local\virtual-printer`). Built there - never committed:
+a Node program that registers "Virtual Kitchen" and "Virtual Bar" in the KOT section through the
+LOCAL API's test sign-in, asks every 3 seconds, claims and "prints" onto
+http://localhost:5199. `.gitignore` names the folder. Tried from Tables on B3: KITCHEN KOT 11 and
+BAR KOT 11 from one Send, then INTERIM BILL ₹399.00 NOT PAID on Virtual Bar.
+
+**Left open**
+- Printing by printer IP through an installed helper (D27-292 said: a later phase, if ever asked).
+- Any release: nothing leaves this PC until the owner says.
+
+**Commits:** `ea150bfb`, `74cf0ee4`, and the notes after them
+
+---
+
+## 2026-10-09 · the project set up on a new machine, the gates made to find their own folder, and Close unpaid fixed (POS-33)
+
+**Asked for:** the owner, 8-9 October: clone the repository into the folder they assigned
+(`C:\Users\rozar.ROZARIO\pms`), read the handover, install what it needs and start it locally;
+"add the dev fix and run the tests"; "tell me if you are aligned with all the handover"; after a
+restart, "start this in local for testing"; "go with your recommendations" (keep C:, a local `cp6`
+made from `main`, the gates made to find their own folder, commits as Jaison Rozario); "run the
+tests now and tell me if there is any pending issue"; then the POS: list its issues, fix "closing
+without payment leaves the table blue with its amount" (their answer: a Clear button), and plan
+numbered add-ons; then "ask me all the questions before going with the recommendations" - twelve
+answers (D27-289) - and build them, with POS-32's test fix.
+
+**Shipped**
+- The new PC: Git for Windows, the VC++ 2015+ x64 runtime (EnterpriseDB's Postgres will not start
+  without it), PostgreSQL 17.11 portable in `.local\pg` (port 55432, UTF8, C collation, postgres/pw,
+  `synchronous_commit = off`), PostgreSQL 16.15 in `.local\pg16`, both npm installs, `.env` and
+  `api/.env` from their examples (development settings only; no Firebase key on this machine).
+- `fidato` by the documented recipe (`docs/briefs/README.md`): the migrations, the three staff,
+  `npm run demo` (5EL on 9 October, calibration ✓), `dev-identities.sql`, `dev-testers.sql`.
+- 29fd6465: `db/dev/dev-testers.sql` clears `must_change_password` on `dev-*` sign-ins (MEMORY 389).
+- 13460f7e: `scripts/gates.sh` and `db/tests/pg16.sh` find the main checkout through git instead of
+  `/d/fidato pms` (MEMORY 390).
+- 82a173b3: POS-33, a bill closed unpaid shows "Closed unpaid - clear it" with Clear (migration 207;
+  `src/modules/pos/DEFECTS.md` and its `CHANGELOG.md`).
+- 6f377522: decisions D27-287 (the new PC), D27-288 (POS-33) and D27-289 (numbered add-ons).
+- e7a0a184 POS-32's test fix; 8d01590a numbered add-ons (migration 208: a numbered list any dish
+  can take, folded into the dish's ONE line, Customise on the Tables pad, the Till and the Terminal,
+  "+ Kebab" on the KOT, the breakdown on the bill, the Menu's Add-ons tab, the old groups shown as
+  Sides); 9664dfd5 the same at phone width. Detail in the POS `CHANGELOG.md`.
+- Local branch `cp6`, made from `main` (0c5e51cd, the 5 October tip GitHub had); `origin/cp6` is
+  the stale 18 September one. Commit identity set in this repository only.
+
+**Found** (numbered in `MEMORY.md` and the POS `DEFECTS.md`)
+- 388 (mine): I first built `fidato` from `db/tests/suite.sql`, on an `en-US` cluster. Rebuilt by
+  the recipe, C collation, before any commit.
+- 389: on a database built from nothing, the General Manager test sign-in opens behind "Set a
+  longer password", which cannot be answered locally. Fixed.
+- 390: the gates could not run their database steps anywhere but `D:\fidato pms`. Fixed for the
+  gates; the other scripts still default `PGBIN` to D: (listed in 390).
+- POS-33 (the owner's report): Close unpaid left the table stuck. Fixed. POS-32: a KOT-station test
+  loses a race under load. Open.
+
+**Proved**
+- Opened: Owner's Dashboard (9 October, ARR ₹2,939, RevPAR ₹1,037) and Rooms; General Manager by
+  View as, no dialog; Tables after 207 (AC3 and N2 "Closed unpaid", AC3 cleared to free). No
+  console or API error after a reload.
+- 29fd6465: HEAD's `dev-testers.sql` left `gm@fidato.in` flagged; the fixed file leaves none; a
+  second run changes nothing (13 dev sign-ins, 0 flagged).
+- 13460f7e: the main checkout resolves to `C:/Users/rozar.ROZARIO/pms` from the main folder and
+  from a throwaway worktree.
+- Full gates `cp6-9oct` on 13460f7e, clean (1,865 s): web types, api types and strip (213 files)
+  green; web 1,121 of 1,122 - the one is POS-32, and that file alone passed 5 runs of 5; api 188
+  files, 2,507 of 2,507; database 206 migrations, all 1,531 assertions; replay all 206 re-runnable;
+  pg16 (16.15) all 1,531 assertions and 206 re-runnable - run on its own, same commit, once its
+  binaries were unzipped (the gates' own pg16 step found none). `npm run build` passes, no test
+  sign-in in dist.
+- 82a173b3: the guards and their failures first are in the POS `CHANGELOG.md`.
+- Full gates `cp6-9oct-pos33` on 876bc94b (POS-33 and its notes), clean (1,812 s): ALL GREEN, the
+  first on this PC - web 1,123 of 1,123; api 188 files, 2,509 of 2,509; database 207 migrations, all
+  1,537 assertions; replay all 207 re-runnable; pg16 (16.15) the same; build passes, no test sign-in.
+- The add-ons (8d01590a, 9664dfd5): API 189 of 189 on the files they touch, database 1,548, web
+  1,129 of 1,129, five guards each seen failing first, and the whole flow opened on the demo - all
+  in the POS `CHANGELOG.md`. The full gates on the commit carrying these notes: HANDOVER § 2.
+
+**Left open**
+- Numbered add-ons on the guest's own page (the owner: not yet); a report of add-ons sold (not
+  asked). The `extra_choice_ids` suspicion (the POS `CHANGELOG.md`), unproved.
+- Releasing anything (207 included) is the owner's: nothing is pushed or deployed (19 September).
+- The rest of the scripts' `PGBIN` default (MEMORY 390); Postgres here does not restart after a
+  reboot (start command: HANDOVER § 7).
+- The impeccable and taste skills are not on this PC: their source was never written down.
+
+**Later the same day** - the owner: "check the extra_choice_ids bug and fix it; the options are
+not coming for me in the table view; audit the new code", then D27-290, then after a restart
+"make this live in local".
+- POS-34 proved (a 500 lowering a sent multi-type dish) and fixed; 209 (three guards).
+- The add-ons "not coming": a new read inherited the app's trust-forever cache (MEMORY 392); the
+  list and, on D27-290, the menu are asked again on open.
+- An audit by two read-only reviewers, every finding checked, about a dozen fixed (POS
+  `CHANGELOG.md`, 9 October later).
+- D27-290: the pad's "added · Customise" note, "All N / Just 1".
+- FIN-29: a finance test that picked an invoiced stay, met by the full gates on bda47784 (that run
+  was cut off by a restart after its database step).
+- Proved: API 230 of 230 on the files touched; database 1,553; POS web 130 of 130; every new guard
+  seen failing first.
+- Live on the demo at 209: the note, "All 3 | Just 1", the split.
+- Full gates `cp6-9oct-audit` on 4648f5d6, clean (1,990 s): ALL GREEN - web types, api types,
+  strip (214 files); web 168 files, 1,137 of 1,137; api 189 files, 2,528 of 2,528; database 209
+  migrations, all 1,553 assertions; replay all 209 re-runnable; pg16 (16.15) the same. `npm run
+  build` passes, no test sign-in in dist.
+
+**Commits:** `29fd6465`, `13460f7e`, `82a173b3`, `876bc94b` (notes), `6f377522` (decisions),
+`e7a0a184`, `8d01590a`, `9664dfd5`, `bda47784` (notes), `49155d4a`, `544cc6d2`, `c841a7bb`,
+`c169fcb5`, `07eea56d`, and these notes.
+
 ## 2026-10-05 · the morning's fixes, five merges, the WhatsApp voucher on the owner's template, and the release ready to cut
 
 **Asked for:** the owner, 4 October at night: "graceful stop, continue from morning". The goal is

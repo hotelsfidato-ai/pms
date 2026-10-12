@@ -5,7 +5,26 @@ arrows, every part of the system, why each decision was taken, what was left out
 why, the edge cases, and what the tests prove. Answers (3 Oct): **two parts**, a
 **printable PDF**, **planned now, written after the weekly reset (7:30 pm IST)**.
 
-## How it is made
+## How it is made since 9 October (D27-293)
+
+The owner, 9 October: finish this book, restaurant chapter first, with real
+screenshots and numbered arrows, kept current by a rule and a check.
+
+- **One file per chapter**: `chapters/a0.html` … `chapters/b9.html`, the shape
+  of A0. `node docs/manual/tools/build.mjs` joins the written ones, in the
+  plan's order, behind a cover and contents worked out from them, into
+  `manual.html` (never edited by hand; `parts/head.html` is the style).
+- **Pictures**: `shots/<chapter>.mjs` lists each picture - who signs in (a test
+  sign-in), the address, the steps, the numbered arrows - and
+  `node docs/manual/tools/shoot.mjs <chapter>` takes them into `img/` with a
+  Chrome of its own. A picture not taken yet stays a dashed `shot-plan` box.
+- **Kept current**: AGENTS.md's definition of done and CLAUDE.md; and
+  `src/test/manual.test.ts` - every menu screen of a written chapter's part is
+  named in it (`COVERS`), `manual.html` is built from the chapters as they are,
+  every picture shown exists.
+- The book stays on this machine (19 Sep): it is not published anywhere.
+
+## How it was first planned
 
 - One print-ready HTML book in `docs/manual/` (A4 pages, chapter numbers, a contents
   page, page breaks per chapter), saved as PDF from the browser (Ctrl+P, Save as PDF).

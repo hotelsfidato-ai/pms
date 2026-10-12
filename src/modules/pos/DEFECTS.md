@@ -29,6 +29,84 @@ fails "expected 'front_desk' to be 'pos'".
 
 ## Fixed
 
+### POS-34 · One fewer of a sent dish with several variation types failed: "Something went wrong" - FIXED 9 October (the owner's "check it and fix it")
+
+**Found** — suspected on 9 October while mapping the add-ons (the struck copy named its columns and
+left out `extra_choice_ids`), confirmed by reading 164's trigger, then proved: a Pizza (Large,
+Cheese burst) ×3 sent, a manager lowering it to 2 with a reason got `500 {"error":"Something went
+wrong. Nothing was changed."}`. 164's `app.pos_line_names_its_variation` fires on every INSERT
+(its column list limits only UPDATE) and requires one choice of each further type; the struck copy
+carried `'{}'`. Striking the whole line still worked (`voided` is not in the trigger's list), so a
+manager could only take all three off and ring two again - a new docket for food already cooking.
+Reachable since 30 September (164).
+
+**What was done** — the struck copy carries `extra_choice_ids` (and `numbered_addons`, D27-289), so
+it is what the dish was. And 209: a line STRUCK AS IT IS WRITTEN is not checked against today's
+menu - a dish that gained a Crust after it was rung would otherwise still refuse its own struck copy
+- while every line that sells is checked as before. Guarded: `variationTypes.test.ts` "one fewer of
+a sent dish with several types (POS-34)" (failed with the 500 first); the database's "pos audit
+guards" (a struck copy with no crust goes in; a sold one is still refused).
+
+---
+
+### POS-32 · The KOT station's print test lost a race on a busy machine - FIXED 9 October (the owner's yes, D27-289)
+
+**Found** — the first full gates on the new PC (`cp6-9oct`, 13460f7e): web 1 failed of 1,122,
+`KotStation.test.tsx` › "prints a new KOT once, with the slip in the page while it prints",
+`expected <div class="kot-print">… to be null`. Alone the file passed 5 runs of 5. `KotStation.tsx`
+draws the slip with `flushSync(() => setSlip(d))`, calls `window.print()`, then `setSlip(null)`
+WITHOUT `flushSync`, so the slip leaves the page on React's next render. The test waited for
+`print` and then asserted at once that the slip was gone, outside any wait: under the full suite's
+load the render had not happened yet. On the desk nothing was wrong (`print()` blocks the page; the
+slip goes as soon as it returns).
+
+**What was done** — the test waits for the slip to leave (`vi.waitFor`) instead of asserting at
+once; the component is unchanged. It passes 6 of 6, and with the slip never removed (`finally {}` in
+`KotStation.tsx`) it still fails "expected <div class="kot-print">… to be null": it guards what it
+guarded, minus the race. (The full gates on 876bc94b, race and all, happened to pass it - a race
+shows when it likes, which is why it is gone rather than waited out.)
+
+---
+
+### POS-33 · "Close unpaid" never freed the table: it stayed blue (or orange, or green) with its amount, and nothing on Tables cleared it - FIXED 9 October (82a173b3, the owner's answer: a Clear button)
+
+**Found** — the owner, 9 October: "when we are closing without payment, it still remains in the blue
+screen, I'm not able to get rid of the table, and the amount still stays". Reproduced on the local
+demo the same night: AC3, Veg Biryani sent (₹326), Till → Close unpaid with a reason. The order became
+`abandoned` with its reason and `cleared_at` NULL, and `GET /till/floor` still returned AC3 with that
+order, `state: "kot"`, `payable: 325.5`. Not sent, the same order shows `running` - blue. Seen again by
+the owner: N2, DH-005 (₹1,061, 5 covers) closed unpaid, the Till showing it "Closed unpaid", while
+Tables showed N2 green - its bill had been printed - with no way to clear it "for the next guests to
+come".
+
+**Why** — `app.pos_floor` (047) took each table's newest order with `cleared_at is null`, whatever its
+status, and its CASE had no branch for `abandoned`: it fell through to `running`, `kot` or `printed`,
+and `payable` was the bill's total. The abandon route sets only the status; the Clear route would have
+accepted it (it refuses only an `open` order), but `Floor.tsx` offered Clear only on a `paid` tile. So
+tapping the tile opened a pad whose Send was refused, Restaurant setup refused to switch the table off
+(`TABLE_BUSY`), and with no date filter it outlived the day. And the trap in the way round it: a new
+order typed for the same table, once cleared, brought the abandoned one back as the newest uncleared
+order, amount and all. Untested until now: `till.test.ts`'s floor test covered the paid path only.
+Reachable since 28 September (before that Close unpaid did nothing, QA POS-2).
+
+**What was done** — 82a173b3, the owner's choice of 9 October (a Clear button, as a paid table has,
+rather than freeing the table at once):
+- 207 replaces `app.pos_floor` with a sixth state, `closed`, ahead of every other but blank, and no
+  amount for it. Printing a closed bill no longer turns it green, so the print route needed no change.
+- `Floor.tsx`: a `closed` tile reads "Closed unpaid" on grey, takes no round, has no arrow and has
+  Clear; the legend has "Closed unpaid - clear it".
+- The Clear route frees the table of EVERY finished bill on it, so one closed unpaid under a later
+  one cannot come back.
+- Tables stuck today show Clear the moment 207 runs (on the local demo: AC3 and N2 did at once).
+
+Guarded, each seen failing first: `db/tests/modules/pos.sql` "pos floor" (6; on 047, 3 fail -
+`running`, `0.00`, `printed`), `api/test/modules/pos/till.test.ts` "a bill closed unpaid, on the floor"
+(2; on 047 "expected 'kot' to be 'closed'", with the one-order Clear "expected 'closed' to be
+'blank'"), `src/modules/pos/closedUnpaid.test.tsx` (1; on the old tile "expected '38 minN2-' to contain
+'Closed unpaid'"). Opened on the demo: AC3 cleared to free from its tile.
+
+---
+
 ### POS-27 · "It just keeps adding new dishes": the same dish tapped again made a new line - FIXED 30 September (D27-189)
 
 **Found** - the owner's report of 30 September, reproduced that morning on `fidato_s46` as the GM:

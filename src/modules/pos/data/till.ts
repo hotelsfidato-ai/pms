@@ -147,7 +147,71 @@ export interface OrderLine {
   parentLineId: string | null;
   isAddon: boolean;
   variationId: string | null;
+  /** The numbered Add-ons folded into this dish (D27-289), as chosen: the
+      bill prints "Veg Biryani 310 · Kebab +120" under the line, and
+      Customise opens on them. Null or absent when it has none. */
+  numberedAddons?: LineAddons | null;
+  /** An add-on as a line of its own under parentLineId (D27-291): custom
+      (typed by staff) or numbered (put on a dish already sent). Its own
+      quantity; the bill reads "+ Extra papad". Null or absent otherwise. */
+  extra?: "custom" | "numbered" | null;
 }
+
+/** A custom add-on as Customise and the pad hold it (D27-291): typed by
+    staff, its own quantity. A price of 0 is one somebody ticked Free -
+    there is no default. */
+export interface CustomAddon { name: string; price: number; qty: number }
+
+/** What a screen sends for one add-on line (D27-291): one of the numbered
+    list, or a typed one. */
+export interface ExtraInput {
+  numberedId?: string;
+  name?: string;
+  price?: number;
+  free?: boolean;
+  qty: number;
+}
+
+/** Typed add-ons as the server takes them: a 0 goes as Free, never as a price. */
+export const customInputs = (customs: readonly CustomAddon[]): ExtraInput[] =>
+  customs.map((c) => (c.price === 0
+    ? { name: c.name, free: true, qty: c.qty }
+    : { name: c.name, price: c.price, qty: c.qty }));
+
+/** One numbered Add-on (D27-289): "2 · Kebab · ₹120". The number is what
+    staff remember; it never changes. */
+export interface NumberedAddon {
+  id: string;
+  number: number;
+  name: string;
+  /** A line on what it is - "two pieces of seekh kebab". */
+  description: string | null;
+  price: number;
+  /** A 0 that somebody chose (D27-120); a blank is never a 0. */
+  free: boolean;
+  isActive: boolean;
+  offUntil: string | null;
+  offReason: string | null;
+}
+
+/** One add-on as a dish's line keeps it - copied when chosen. */
+export interface LineAddon {
+  id: string; number: number; name: string; price: number;
+  /** How many on ONE of the dish: "Kebab ×2". */
+  qty: number;
+}
+
+/** What a dish's line keeps of its numbered add-ons (208). */
+export interface LineAddons {
+  /** The dish as named before them: "Veg Biryani". */
+  dish: string;
+  /** One of it before them, in rupees. */
+  base: number;
+  addons: LineAddon[];
+}
+
+/** What a screen sends: which add-on, how many on one of the dish. */
+export interface NumberedChoice { id: string; qty: number }
 
 export interface KitchenLine {
   id: string;
@@ -170,6 +234,12 @@ export interface KitchenLine {
   course: number | null;
   /** Struck after the kitchen already had it — stop cooking. */
   cancelled: boolean;
+  /** The dish's numbered add-ons, read under it: "+ Kebab" (D27-289). */
+  plus?: { name: string; qty: number }[];
+  /** On an add-on line of its own (D27-291): the dish it goes with. */
+  forDish?: string | null;
+  /** The KOT kind it printed on (D27-292): the board's filter. */
+  kindId?: string | null;
   /** Why, in the manager's words (D27-119). */
   cancelReason?: string | null;
 }
@@ -205,6 +275,8 @@ export interface Order {
   /** The VAT bill issued for the alcohol when it was paid here (D22-44).
       Optional: an answer from before it existed has no such key. */
   vatBill?: string | null;
+  /** Bills printed after payment (D27-292): the next one is BILL · DUPLICATE. */
+  billsPrinted?: number;
   lines: OrderLine[];
 
   net: number;
@@ -502,6 +574,115 @@ export function setLineQty(
     `/api/hotels/${hotelId}/till/orders/${orderId}/lines/${lineId}/qty`,
     { qty, ...(reason ? { reason } : {}) },
   );
+}
+
+/** Customise (D27-289): the numbered add-ons on a dish the kitchen does not
+    have yet. The whole set each time; empty takes them all off. */
+export function setNumberedAddons(
+  hotelId: string, orderId: string, lineId: string, choices: NumberedChoice[],
+  /** On a line of several, only ONE of them (D27-290): split off. */
+  just?: 1,
+  /** Typed add-ons chosen in the same Customise (D27-291): lines of their
+      own under the dish, or under the one split off. */
+  extras?: ExtraInput[],
+): Promise<TillResult> {
+  return write(
+    `/api/hotels/${hotelId}/till/orders/${orderId}/lines/${lineId}/numbered-addons`,
+    { numberedAddons: choices, ...(just ? { just } : {}),
+      ...(extras?.length ? { extras } : {}) },
+  );
+}
+
+/** Add-ons as lines of their own under a dish already on the bill, sent or
+    not (D27-291). They wait for the next Send like any new dish. */
+export function addExtras(
+  hotelId: string, orderId: string, lineId: string, extras: ExtraInput[],
+): Promise<TillResult> {
+  return write(
+    `/api/hotels/${hotelId}/till/orders/${orderId}/lines/${lineId}/extras`, { extras });
+}
+
+/** What staff typed as custom add-ons lately (D27-291): the Add-ons tab
+    lists it, so the common ones can be numbered. */
+export interface CustomAddonUsed {
+  name: string; price: number; times: number; qty: number;
+  lastAt: string; by: string | null;
+}
+
+export async function getCustomAddonsUsed(
+  hotelId: string,
+): Promise<{ days: number; used: CustomAddonUsed[] }> {
+  return api(`/api/hotels/${hotelId}/till/custom-addons-used`);
+}
+
+/** The order screens' read of the menu: asked again whenever a screen opens
+    or comes back into view (the owner's D27-290), as the add-ons are - a
+    dish added or repriced on another device reached a device's pad only
+    when its saved copy was replaced, up to a week later. The saved copy
+    still answers with no signal. */
+export const tillMenuQuery = (hotelId: string) => ({
+  queryKey: ["till-menu", hotelId],
+  queryFn: () => getMenu(hotelId),
+  enabled: Boolean(hotelId),
+  staleTime: 0,
+  refetchOnWindowFocus: true,
+});
+
+/** The numbered Add-ons: the ones in use, or every one for the Menu tab. */
+export async function getNumberedAddons(hotelId: string, all = false): Promise<NumberedAddon[]> {
+  if (!hotelId) return [];
+  return (await api<{ addons: NumberedAddon[] }>(
+    `/api/hotels/${hotelId}/till/numbered-addons${all ? "?all=1" : ""}`)).addons;
+}
+
+/** The order screens' read of the Add-ons, ONE definition for the pad, the
+    Till and the Terminal. ASKED AGAIN whenever a screen opens or comes back
+    into view: the app's default trusts a read forever and keeps it a week,
+    so a device that read the list before an add-on was made - on another
+    device - offered none, and Customise said "No add-ons yet" (the owner, 9
+    October: "the options are not coming for me"). The saved copy
+    (App.tsx PERSISTED) still answers when there is no signal; a refusal for
+    an add-on taken off since comes from the server, with its reason. */
+export const numberedAddonsQuery = (hotelId: string) => ({
+  queryKey: ["till-addons", hotelId],
+  queryFn: () => getNumberedAddons(hotelId),
+  enabled: Boolean(hotelId),
+  staleTime: 0,
+  refetchOnWindowFocus: true,
+});
+
+export interface NumberedAddonInput {
+  number?: number;
+  name?: string;
+  description?: string | null;
+  price?: number | null;
+  free?: boolean;
+  active?: boolean;
+}
+
+export function addNumberedAddon(
+  hotelId: string, input: NumberedAddonInput,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/numbered-addons`, input);
+}
+
+export function changeNumberedAddon(
+  hotelId: string, id: string, input: NumberedAddonInput,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/numbered-addons/${id}`, input, "PATCH");
+}
+
+export function numberedAddonOff(
+  hotelId: string, id: string, until: OffFor, reason?: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/numbered-addons/${id}/off`,
+    { until, ...(reason ? { reason } : {}) });
+}
+
+export function numberedAddonOn(
+  hotelId: string, id: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  return simplePost(`/api/hotels/${hotelId}/till/numbered-addons/${id}/on`);
 }
 
 /**
@@ -977,10 +1158,11 @@ async function simplePost(
    that fetched a tile at a time would flicker as it filled, and a
    waiter reads the whole room at once or not at all. */
 
-/** blank · running · kot · printed · paid — DERIVED from the order,
-    never stored. A stored colour is a sixth thing to keep in step, and
-    the one that will be wrong on the night a manager is watching. */
-export type TableState = "blank" | "running" | "kot" | "printed" | "paid";
+/** blank · running · kot · printed · paid · closed — DERIVED from the
+    order, never stored. A stored colour is a sixth thing to keep in step,
+    and the one that will be wrong on the night a manager is watching.
+    `closed` is a bill closed unpaid whose table is not yet cleared (POS-33). */
+export type TableState = "blank" | "running" | "kot" | "printed" | "paid" | "closed";
 
 export interface FloorTable {
   id: string;
@@ -1105,7 +1287,8 @@ export function takeTableAway(hotelId: string, id: string): Done {
    ══════════════════════════════════════════════════════════════════ */
 
 export interface SendLine {
-  itemId: string;
+  /** The dish. Absent on add-ons for a dish already on the bill (extraFor). */
+  itemId?: string;
   qty: number;
   note?: string;
   /* A dish WITH variations requires one and the server refuses without
@@ -1114,6 +1297,12 @@ export interface SendLine {
   /** The choice of each further type (D27-192). */
   moreChoiceIds?: string[];
   addonIds?: string[];
+  /** The numbered Add-ons on this dish (D27-289). */
+  numberedAddons?: NumberedChoice[];
+  /** Add-ons as lines of their own (D27-291): under this dish, or with
+      extraFor under a dish already on the bill. */
+  extras?: ExtraInput[];
+  extraFor?: string;
 }
 
 /**
@@ -1175,12 +1364,6 @@ export async function sendOrder(
     }
     throw error;
   }
-}
-
-export function markPrinted(
-  hotelId: string, orderId: string,
-): Promise<TillResult> {
-  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/printed`);
 }
 
 /** Frees the table. Refused while the bill is unsettled — clearing one
@@ -1252,6 +1435,11 @@ export async function listWaiters(
    on a rail above a hotplate. */
 export interface Docket {
   kotNo: number;
+  /** Which slip of the docket (D27-292): its name heads the paper, "BAR KOT
+      14". Null or absent: the whole docket, headed "KOT". */
+  kind?: { id: string; name: string } | null;
+  /** Printed again from the list: the paper says REPRINT (D27-292). */
+  reprint?: boolean;
   orderNo: string;
   table: string | null;
   orderType: string;
@@ -1266,6 +1454,12 @@ export interface Docket {
     qty: number;
     note: string | null;
     isAddon: boolean;
+    /** "+ Kebab" under the dish (D27-289). Absent on an older docket. */
+    plus?: { name: string; qty: number }[];
+    /** An add-on as a line of its own, with its own number (D27-291). */
+    extra?: boolean;
+    /** Its dish, when that went on an earlier KOT (D27-291). */
+    for?: { name: string; kotNo: number | null };
   }[];
   /** Taken off this docket after it was sent, and why (D27-119). */
   struck?: { name: string; qty: number; reason: string | null }[];
@@ -1273,32 +1467,55 @@ export interface Docket {
 
 export async function getDocket(
   hotelId: string, orderId: string, kotNo: number,
+  /** One kind's slip (D27-292). */
+  kindId?: string,
 ): Promise<Docket | null> {
   if (!hotelId || !orderId || !Number.isInteger(kotNo)) return null;
   return api<Docket>(
-    `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}`);
+    `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}${kindId ? `?kind=${kindId}` : ""}`);
 }
 
-/* ── The KOT station (D27-159) ────────────────────────────────────
-   One device per outlet prints every KOT. `device` is this browser's own
-   id (components/KotStation.tsx); the server says whether it is the one. */
-export interface KotStationOutlet {
-  code: string;
+/* ── The KOT section of Restaurant setup (D27-292) ────────────────
+   KOT kinds (Kitchen, Bar, and any added), the computers that print them -
+   one computer per kind - which menu section prints on which, and the bill
+   printer. `device` is this browser's own id (components/KotStation.tsx). */
+export interface KotStationRef {
+  id: string; name: string; mine: boolean; online: boolean; seenAt: string | null;
+}
+
+export interface KotKind {
+  id: string;
   name: string;
-  station: { name: string; mine: boolean; seenAt: string | null; online: boolean } | null;
+  role: "food" | "bar" | null;
+  /** Kitchen and Bar: renamed, never switched off. */
+  fixed: boolean;
+  station: KotStationRef | null;
+  /** Sections with a dish on sale that print on it: the red line shows only
+      for a kind something prints to (the owner). */
+  sections: number;
 }
 
-export async function getKotStations(
-  hotelId: string, device: string,
-): Promise<KotStationOutlet[]> {
-  if (!hotelId) return [];
-  return (await api<{ outlets: KotStationOutlet[] }>(
-    `/api/hotels/${hotelId}/till/kot-station?device=${encodeURIComponent(device)}`)).outlets;
+export interface KotSetup {
+  kinds: KotKind[];
+  stations: (KotStationRef & { printsBills: boolean; kinds: string[] })[];
+  /** Each menu section: the kind it names (`own`, or null to follow its
+      heading) and the kind it prints on. */
+  sections: { id: string; name: string; heading: SectionHeading | null; own: string | null; kind: string | null }[];
+  billPrinter: KotStationRef | null;
+  /** This computer's station, when it is one. */
+  me: string | null;
 }
 
-async function plainPost<T>(path: string, body: unknown): Promise<T | { ok: false; reason: string }> {
+export async function getKotSetup(hotelId: string, device: string): Promise<KotSetup> {
+  return api<KotSetup>(
+    `/api/hotels/${hotelId}/till/kot-setup?device=${encodeURIComponent(device)}`);
+}
+
+async function plainPost<T>(
+  path: string, body: unknown, method = "POST",
+): Promise<T | { ok: false; reason: string }> {
   try {
-    return await api<T>(path, { method: "POST", body: JSON.stringify(body) });
+    return await api<T>(path, { method, body: JSON.stringify(body) });
   } catch (error) {
     if (error instanceof ApiError) {
       const p = error.body as { reason?: string } | undefined;
@@ -1308,37 +1525,96 @@ async function plainPost<T>(path: string, body: unknown): Promise<T | { ok: fals
   }
 }
 
-/** On: this device prints the outlet's KOTs, moved from wherever it was.
-    Off: only from the station itself. */
-export function setKotStation(
-  hotelId: string, outlet: string, device: string, on: boolean, name = "",
-): Promise<{ ok: true } | { ok: false; reason: string }> {
-  return plainPost(`/api/hotels/${hotelId}/till/kot-station/${outlet}`, { device, name, on });
-}
+type Plain = Promise<{ ok: true } | { ok: false; reason: string }>;
+const KOT = (hotelId: string) => `/api/hotels/${hotelId}/till/kot-setup`;
 
-export interface KotDocketRef {
+export const addKotKind = (hotelId: string, name: string): Plain =>
+  plainPost(`${KOT(hotelId)}/kinds`, { name });
+export const renameKotKind = (hotelId: string, id: string, name: string): Plain =>
+  plainPost(`${KOT(hotelId)}/kinds/${id}`, { name }, "PATCH");
+export const kotKindOff = (hotelId: string, id: string): Plain =>
+  plainPost(`${KOT(hotelId)}/kinds/${id}/off`, {});
+/** Null sends the section back to its heading. */
+export const setSectionKot = (hotelId: string, sectionId: string, kindId: string | null): Plain =>
+  plainPost(`${KOT(hotelId)}/sections/${sectionId}`, { kindId });
+/** The kinds and the bills this computer prints, under its name. Ticked
+    here, they move here from any other computer. Nothing ticked: it stops. */
+export const setThisComputer = (
+  hotelId: string, device: string, name: string, kindIds: string[], bills: boolean,
+): Plain => plainPost(`${KOT(hotelId)}/this-computer`, { device, name, kindIds, bills });
+export const removeKotStation = (hotelId: string, id: string): Plain =>
+  plainPost(`${KOT(hotelId)}/stations/${id}/remove`, {});
+
+/** One kind's slip of a docket, as the station's list carries it. */
+export interface KotSlipRef {
   orderId: string;
   kotNo: number;
+  kindId: string;
+  kind: string;
   table: string | null;
   sentAt: string;
   printedAt: string | null;
 }
 
+export interface BillJob {
+  id: string;
+  orderId: string;
+  heading: BillHeading;
+  table: string | null;
+}
+
 /** The station's ask: it is also its "last seen". `due` oldest first. */
 export async function pollKotStation(
-  hotelId: string, outlet: string, device: string,
-): Promise<{ station: false } | { station: true; due: KotDocketRef[]; recent: KotDocketRef[] }> {
-  return api(`/api/hotels/${hotelId}/till/kot-station/${outlet}/poll`,
+  hotelId: string, device: string,
+): Promise<
+  | { station: false }
+  | { station: { id: string; name: string; kinds: { id: string; name: string }[]; printsBills: boolean };
+      due: KotSlipRef[]; recent: KotSlipRef[]; bills: BillJob[] }
+> {
+  return api(`/api/hotels/${hotelId}/till/kot-stations/poll`,
     { method: "POST", body: JSON.stringify({ device }) });
 }
 
 /** The claim before the paper: true means print it; false, another tab
-    has, or this device is no longer the station. */
+    has, or this computer no longer prints that kind. */
 export async function claimKot(
-  hotelId: string, orderId: string, kotNo: number, device: string,
+  hotelId: string, orderId: string, kotNo: number, kindId: string, device: string,
 ): Promise<boolean> {
   const res = await plainPost<{ ok: true; claimed: boolean }>(
-    `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}/printed`, { device });
+    `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}/printed`, { device, kind: kindId });
+  return res.ok && res.claimed;
+}
+
+/** What a printed bill says it is (D27-292). */
+export type BillHeading = "interim" | "bill" | "duplicate";
+
+/** The words at the top of the paper. */
+export const BILL_TITLE: Record<BillHeading, string> = {
+  interim: "Interim bill", bill: "Bill", duplicate: "Bill · duplicate",
+};
+
+/** The heading the next print of this order would carry, before asking. */
+export const nextBillHeading = (o: Pick<Order, "status" | "billsPrinted">): BillHeading =>
+  o.status !== "settled" ? "interim" : (o.billsPrinted ?? 0) > 0 ? "duplicate" : "bill";
+
+/** Print bill (D27-292): asked of the bill printer. `sentTo` null - none is
+    chosen - and the screen opens the bill as it always did. */
+export const askBillPrint = (hotelId: string, orderId: string) =>
+  plainPost<{
+    ok: true; heading: BillHeading; jobId?: string;
+    sentTo: { name: string; online: boolean } | null;
+  }>(`/api/hotels/${hotelId}/till/orders/${orderId}/bill-print`, {});
+
+/** Printed on this device - the bill page's Print here. A bill waiting at
+    the bill printer comes off its list, and this is that print. */
+export const printBillHere = (hotelId: string, orderId: string) =>
+  plainPost<{ ok: true; heading: BillHeading }>(
+    `/api/hotels/${hotelId}/till/orders/${orderId}/bill-print/here`, {});
+
+/** The bill printer's claim before the paper. */
+export async function claimBill(hotelId: string, jobId: string, device: string): Promise<boolean> {
+  const res = await plainPost<{ ok: true; claimed: boolean }>(
+    `/api/hotels/${hotelId}/till/bill-prints/${jobId}/printed`, { device });
   return res.ok && res.claimed;
 }
 

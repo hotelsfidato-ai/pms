@@ -15,6 +15,8 @@ import {
   addTables, changeTable, takeTableAway, type TillSetup, type SetupTable, type MenuCategory,
 } from "@/modules/pos/data/till";
 import { getTableHours, setTableHours, type TableHours } from "@/modules/pos/data/tableBookings";
+import { can } from "@/lib/permissions";
+import { KotSection } from "@/modules/pos/components/KotSection";
 
 /* ══════════════════════════════════════════════════════════════════
    RESTAURANT SETUP (D22-6, the owner's answers of 25 September)
@@ -39,6 +41,10 @@ type Done = { ok: boolean; reason?: string };
 export default function SetupPage() {
   const hotelId = useHotel();
   const qc = useQueryClient();
+  /* The kitchen manager opens this page for its KOT section only (the
+     owner's D27-292); the rest is the owner's, an administrator's and the
+     GM's, and is not even read for anybody else. */
+  const whole = can(useRole(), "edit", "room_config");
   /* ASKED AGAIN EVERY TIME THE PAGE OPENS. The app keeps a read until told
      otherwise (staleTime Infinity) and keeps the menu on the device, so a
      dish added on another screen or device left "Dishes on the menu" at
@@ -47,12 +53,13 @@ export default function SetupPage() {
   const setup = useQuery({
     queryKey: ["till-setup", hotelId],
     queryFn: () => getTillSetup(hotelId),
-    enabled: Boolean(hotelId),
+    enabled: Boolean(hotelId) && whole,
     staleTime: 0,
   });
   const menu = useQuery({
     queryKey: ["till-menu", hotelId],
     queryFn: () => getMenu(hotelId),
+    enabled: whole,
     staleTime: 0,
   });
 
@@ -70,11 +77,23 @@ export default function SetupPage() {
     return true;
   };
 
+  if (!whole) {
+    return (
+      <Page>
+        <PageHeader
+          title="Restaurant setup"
+          description="Which computer prints which KOT, and where each menu section's dishes go."
+        />
+        <KotSection hotelId={hotelId} />
+      </Page>
+    );
+  }
+
   return (
     <Page>
       <PageHeader
         title="Restaurant setup"
-        description="Name the restaurant, lay out its sections and tables, and see what is left before its first order."
+        description="Name the restaurant, lay out its sections and tables, choose which computer prints which KOT, and see what is left before its first order."
       />
 
       {setup.isLoading ? (
@@ -89,6 +108,7 @@ export default function SetupPage() {
           <ReadyToOpen hotelId={hotelId} setup={setup.data} menu={menu} />
           <Restaurant hotelId={hotelId} setup={setup.data} run={run} />
           <Sections hotelId={hotelId} setup={setup.data} run={run} />
+          <KotSection hotelId={hotelId} />
           <TableBookingHours hotelId={hotelId} />
         </>
       )}

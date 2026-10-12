@@ -1621,6 +1621,157 @@ describe("the floor", () => {
   });
 });
 
+/* ── A bill closed unpaid, on the floor (POS-33) ───────────────────────
+   The owner, 9 October: closed unpaid, the table stayed blue (or orange,
+   or green once printed) with the old amount on it, and nothing on Tables
+   could clear it. Its own section and tables, so "the floor" above keeps
+   counting exactly its two. */
+describe("a bill closed unpaid, on the floor (POS-33)", () => {
+  let sectionId: string;
+  let walked: string;
+  let under: string;
+  let stale: string;
+
+  beforeAll(async () => {
+    const db = await admin();
+    try {
+      const { rows: o } = await db.query<{ id: string; hotel: string }>(
+        `select po.id::text, po.hotel_id::text as hotel from pos_outlets po
+           join hotels h on h.id = po.hotel_id
+          where h.code = '5EL' and po.code = 'REST'`);
+      const { rows: s } = await db.query<{ id: string }>(
+        `insert into pos_sections (hotel_id, outlet_id, name, sort_order)
+         values ($1,$2,'FLOORTEST closed',2) returning id::text`,
+        [o[0]!.hotel, o[0]!.id]);
+      sectionId = s[0]!.id;
+      const { rows: t } = await db.query<{ id: string; label: string }>(
+        `insert into pos_tables (hotel_id, section_id, label, seats, row_no, col_no)
+         values ($1,$2,'FC1',4,1,1),($1,$2,'FC2',4,1,2),($1,$2,'FC3',4,1,3)
+         returning id::text, label`, [o[0]!.hotel, sectionId]);
+      walked = t.find((r) => r.label === "FC1")!.id;
+      under = t.find((r) => r.label === "FC2")!.id;
+      stale = t.find((r) => r.label === "FC3")!.id;
+    } finally {
+      await db.end();
+    }
+  });
+
+  afterAll(async () => {
+    const db = await admin();
+    try {
+      await db.query(
+        "alter table pos_order_lines disable trigger pos_order_lines_frozen");
+      try {
+        await db.query(
+          `delete from pos_order_lines where order_id in
+             (select id from pos_orders where table_id in ($1,$2,$3))`, [walked, under, stale]);
+      } finally {
+        await db.query(
+          "alter table pos_order_lines enable trigger pos_order_lines_frozen");
+      }
+      /* The orders only, as "the floor" above does: a settled bill's
+         payments refuse to be removed on their own, and go with it. */
+      await db.query(`delete from pos_orders where table_id in ($1,$2,$3)`, [walked, under, stale]);
+      await db.query(`delete from pos_tables where section_id = $1`, [sectionId]);
+      await db.query(`delete from pos_sections where id = $1`, [sectionId]);
+    } finally {
+      await db.end();
+    }
+  });
+
+  const tile = async (label: string) => {
+    const res = await as("/api/hotels/5EL/till/floor?outlet=REST");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      sections: { name: string; tables: FloorTable[] }[];
+    };
+    return body.sections.find((s) => s.name === "FLOORTEST closed")!
+      .tables.find((t) => t.label === label)!;
+  };
+
+  it("shows a bill closed unpaid as closed, with no amount, and Clear frees the table", async () => {
+    const opened = await post("/api/hotels/5EL/till/orders",
+      { outlet: "REST", tableId: walked });
+    expect(opened.status, await opened.clone().text()).toBe(200);
+    const order = (await opened.json()) as { id: string };
+    const item = await menuItem("Veg Biryani");
+    await post(`/api/hotels/5EL/till/orders/${order.id}/lines`,
+      { itemId: item.id, qty: 1 });
+    await post(`/api/hotels/5EL/till/orders/${order.id}/kot`);
+    let t = await tile("FC1");
+    expect(t.state).toBe("kot");
+    expect(t.payable).toBeGreaterThan(0);
+
+    const closed = await post(`/api/hotels/5EL/till/orders/${order.id}/abandon`,
+      { reason: "walked out - till test" });
+    expect(closed.status, await closed.clone().text()).toBe(200);
+
+    /* 047's floor said "kot" here, with the bill's total on it, and the
+       screen offers Clear only on a finished tile. */
+    t = await tile("FC1");
+    expect(t.state, "a bill closed unpaid is finished").toBe("closed");
+    expect(t.payable, "nobody is collecting an amount").toBeNull();
+    expect(t.orderId).toBe(order.id);
+
+    /* Printing it again changes nothing: it is over. */
+    await post(`/api/hotels/5EL/till/orders/${order.id}/printed`);
+    expect((await tile("FC1")).state).toBe("closed");
+
+    const cleared = await post(`/api/hotels/5EL/till/orders/${order.id}/clear`);
+    expect(cleared.status, await cleared.clone().text()).toBe(200);
+    t = await tile("FC1");
+    expect(t.state).toBe("blank");
+    expect(t.payable).toBeNull();
+  });
+
+  it("clears every finished bill on the table, so one closed unpaid underneath does not come back", async () => {
+    /* The owner's way round it: the stuck table typed into a new order.
+       Before this, clearing that new one brought the old bill back as the
+       table's own, amount and all. */
+    const first = await post("/api/hotels/5EL/till/orders",
+      { outlet: "REST", tableId: under });
+    const stuck = (await first.json()) as { id: string };
+    expect((await post(`/api/hotels/5EL/till/orders/${stuck.id}/abandon`,
+      { reason: "duplicate - till test" })).status).toBe(200);
+
+    const second = await post("/api/hotels/5EL/till/orders",
+      { outlet: "REST", tableId: under });
+    expect(second.status, await second.clone().text()).toBe(200);
+    const next = (await second.json()) as { id: string };
+    const item = await menuItem("Masala Chai");
+    await post(`/api/hotels/5EL/till/orders/${next.id}/lines`,
+      { itemId: item.id, qty: 1 });
+    const settled = await post(`/api/hotels/5EL/till/orders/${next.id}/settle`,
+      { method: "cash" });
+    expect(settled.status, await settled.clone().text()).toBe(200);
+    expect((await tile("FC2")).state, "the later bill is the table's").toBe("paid");
+
+    expect((await post(`/api/hotels/5EL/till/orders/${next.id}/clear`)).status).toBe(200);
+    const t = await tile("FC2");
+    expect(t.state, "the closed-unpaid one underneath went too").toBe("blank");
+    expect(t.orderId).toBeNull();
+  });
+
+  it("Clear from an old tile never clears a NEWER bill on the table (the audit of 9 October)", async () => {
+    /* A tablet still showing the closed-unpaid tile; meanwhile another bill
+       was opened and paid on the same table, guests still seated. */
+    const first = await post("/api/hotels/5EL/till/orders", { outlet: "REST", tableId: stale });
+    const old = (await first.json()) as { id: string };
+    expect((await post(`/api/hotels/5EL/till/orders/${old.id}/abandon`,
+      { reason: "walked out - till test" })).status).toBe(200);
+    const second = await post("/api/hotels/5EL/till/orders", { outlet: "REST", tableId: stale });
+    expect(second.status, await second.clone().text()).toBe(200);
+    const newer = (await second.json()) as { id: string };
+    const item = await menuItem("Masala Chai");
+    await post(`/api/hotels/5EL/till/orders/${newer.id}/lines`, { itemId: item.id, qty: 1 });
+    expect((await post(`/api/hotels/5EL/till/orders/${newer.id}/settle`, { method: "cash" })).status).toBe(200);
+
+    expect((await post(`/api/hotels/5EL/till/orders/${old.id}/clear`)).status).toBe(200);
+    const t = await tile("FC3");
+    expect([t.state, t.orderId], "the newer, paid bill still sits on the table").toEqual(["paid", newer.id]);
+  });
+});
+
 /* ══════════════════════════════════════════════════════════════════
    THE ORDER HEADER
 

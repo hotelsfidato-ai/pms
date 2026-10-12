@@ -57,8 +57,23 @@ export interface DraftLine {
 
   /** What one of this dish costs, sides included, AT THE MOMENT IT WENT
       ON. Display only — the server prices the bill from its own menu
-      and its figure wins. */
+      and its figure wins. Numbered add-ons included too, once chosen. */
   unitPrice: number;
+
+  /** The numbered Add-ons chosen with Customise (D27-289), and what one of
+      the dish cost before them. Optional: a pad saved on this device before
+      them reads as a dish with none, as it was. */
+  numberedAddons?: { id: string; number: number; name: string; price: number; qty: number }[];
+  baseUnitPrice?: number;
+
+  /** Custom add-ons typed in Customise (D27-291): lines of their own under
+      this dish once sent, each with its own number. 0 is a ticked Free. */
+  customAddons?: { name: string; price: number; qty: number }[];
+
+  /** This pad line is an ADD-ON for a dish already on the bill (D27-291),
+      not a dish: `name`, `unitPrice` and `qty` are the add-on's, `itemId`
+      is empty. `numberedId` when it is one of the numbered list. */
+  extraFor?: { lineId: string; dish: string; numberedId?: string };
 }
 
 export interface Draft {
@@ -172,7 +187,9 @@ export async function draftedTables(hotelId: string): Promise<Set<string>> {
    service charge. Those are the server's and the pad never guesses at
    them. */
 export function draftTotal(lines: DraftLine[]): number {
-  return lines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
+  return lines.reduce((sum, l) => sum + l.unitPrice * l.qty
+    /* Its typed add-ons, each its own number (D27-291). */
+    + (l.customAddons ?? []).reduce((s, c) => s + c.price * c.qty, 0), 0);
 }
 
 export function draftCount(lines: DraftLine[]): number {

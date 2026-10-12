@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
-import { unitPriceOf } from "@/modules/pos/lib/pricing";
+import { unitPriceOf, priceWithAddons, nameWithAddons } from "@/modules/pos/lib/pricing";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PAD'S ARITHMETIC AND THE SERVER'S MUST AGREE
@@ -104,6 +104,11 @@ afterAll(async () => {
       await db.query("delete from pos_order_lines where order_id = $1", [id]);
       await db.query("delete from pos_orders where id = $1", [id]);
     }
+    /* The numbered add-ons the D27-289 case made. */
+    await db.query(
+      `delete from pos_numbered_addons
+        where number in (801, 802)
+          and hotel_id = (select id from hotels where code = '5EL')`);
   } finally {
     await db.end();
   }
@@ -304,5 +309,53 @@ describe("the running total the waiter sees", () => {
 
     expect(unit * 3, "the pad and the bill disagree once sides are on")
       .toBe(serverTotal(order.lines));
+  });
+});
+
+/* ── THE NUMBERED ADD-ONS (D27-289): THE SAME FIGURE, AND THE SAME NAME ──
+   The pad shows "Veg Biryani with add-ons Kebab ×2, Raita" and its price
+   before Send; the server writes the line. Both come from rules written
+   twice (pricing.ts and api/src/modules/pos/numberedAddons.ts), so both
+   are compared - the figure AND the words on the bill. */
+describe("the numbered add-ons on a dish", () => {
+  it("prices and names the dish the same on the pad and on the bill", async () => {
+    const plain = items.find((i) => i.variations.length === 0 && i.addonGroups.length === 0);
+    if (!outlet || !plain) {
+      expect(outlet, "5EL needs an outlet and a plain dish").toBeTruthy();
+      return;
+    }
+    const make = async (number: number, name: string, price: number) => {
+      const res = await call("/5EL/till/numbered-addons", {
+        method: "POST", body: JSON.stringify({ number, name, price }),
+      });
+      expect(res.status, await res.clone().text()).toBe(200);
+      return ((await res.json()) as { addon: { id: string; number: number; name: string; price: number } }).addon;
+    };
+    const kebab = await make(801, "Kebab", 120.5);
+    const raita = await make(802, "Raita", 35);
+
+    const chosen = [{ ...kebab, qty: 2 }, { ...raita, qty: 1 }];
+    const base = unitPriceOf(plain, undefined, undefined);
+    const unit = priceWithAddons(base, chosen);
+    const name = nameWithAddons(plain.name, chosen);
+
+    const res = await call("/5EL/till/orders/batch", {
+      method: "POST",
+      body: JSON.stringify({
+        outlet, table: "PADSUM-ADDONS",
+        lines: [{ itemId: plain.id, qty: 3,
+                  numberedAddons: chosen.map((a) => ({ id: a.id, qty: a.qty })) }],
+      }),
+    });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const order = (await res.json()) as {
+      id: string; lines: { name: string; qty: number; unitPrice: number; voided: boolean }[];
+    };
+    made.push(order.id);
+
+    expect(order.lines.filter((l) => !l.voided), "one line, not one per add-on").toHaveLength(1);
+    expect(unit * 3, "the pad and the bill disagree once numbered add-ons are on")
+      .toBe(serverTotal(order.lines));
+    expect(order.lines[0]!.name, "the pad and the bill name the dish differently").toBe(name);
   });
 });

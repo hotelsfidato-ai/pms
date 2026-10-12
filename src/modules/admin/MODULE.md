@@ -126,6 +126,25 @@ properties and people.
   On a phone (under 640px, read with `matchMedia`) each row is one line,
   a button with `aria-expanded`; a tap shows the reason, which links to the
   fix (D27-223). Wider screens show the reasons, the row a link, as before.
+- **Test hotels (the owner's D27-296, 10 October; the screens' half).** A
+  test hotel is the hotel GET /api/hotels gives a `testOf` (its real hotel's
+  code); `src/lib/testHotel.ts` reads it, the shell draws the stripe
+  (`src/components/app/TestHotel.tsx`). Here: **Properties** puts a real
+  hotel's test hotel on that hotel's card, never a card of its own, and only
+  for a group administrator (`components/TestHotelControls.tsx`): "Make a
+  test hotel" with its one sentence, then its name with TEST, Open (switches
+  to it and opens its Rooms), Reset (typed RESET) and Re-copy setup (typed
+  RE-COPY), each saying what is deleted and what stays and, after, the
+  server's figures ("Removed N records"); a refusal is the server's
+  sentence. The calls are `makeTestHotel`, `resetTestHotel`,
+  `recopyTestHotel` (`data/admin.ts`, `POST /api/admin/hotels/:code/test-hotel
+  | test-reset | test-recopy`). **People**: Add somebody has a Test switch
+  for a group administrator (on: only test hotels, "Works only in the test
+  hotel, never the real one"; off: only real hotels, as before); Give a
+  property lists test hotels with TEST for a group administrator, and only
+  test hotels to somebody who works only in them; a person's test-hotel
+  place carries TEST. Anybody else is never offered a test hotel. Tests:
+  `testHotels.test.tsx`.
 
 ---
 
@@ -611,6 +630,89 @@ service") — moving to `api/test/modules/admin/`. Web: `src/App.test.tsx`
 which since 17 September holds "audit log names the person").
 `api/test/modules/admin/grants.test.ts` (who may read the audit log and
 Settings, every role) and `auditLog.test.ts` (the person recorded and named).
+
+---
+
+## Test hotels (D27-296, 10 October) - the server and the database
+
+The owner's twelve answers are row D27-296 of `docs/briefs/decisions-2026-09-27.md`.
+One test hotel per real hotel, inside the live system: "Hotel Amrapali · TEST",
+code `<CODE>T` (or the first free variant), a copy of the real hotel's whole setup.
+Migration "test hotels" (`212_test_hotels.sql`); its checks are
+`db/tests/modules/test-hotels.sql` and `api/test/modules/admin/testHotels.test.ts`.
+
+**The mark.** `hotels.test_of` names the real hotel (null for a real one); it never
+changes, a test hotel has no test hotel, one per real hotel (a unique index), and a
+test hotel carries no GSTIN, PAN or FSSAI number. `app.is_test_hotel(id)` is the one
+question everything asks (`app.is_test_hotel_code(code)` where only a code is known).
+`staff.test_only`: a person added at a test hotel works only in test hotels, is never
+a group administrator, and is never given a real hotel. Only the owner or a group
+administrator gives anybody a test hotel or takes it away (`staff_hotels_test_rules`).
+
+**Routes** (`testHotelRoutes.ts`, mounted at `/api` before `admin.ts` so its
+`/admin/hotels/:code/:state` does not take them; roleGate `own`):
+
+```
+POST /api/admin/hotels/:code/test-hotel    a REAL hotel: 201 { code, name }; 409 if it has one
+POST /api/admin/hotels/:code/test-reset    a TEST hotel, { confirm: "RESET" }: 200 { removed }
+POST /api/admin/hotels/:code/test-recopy   a TEST hotel, { confirm: "RE-COPY" }: 200 { removed, copied }
+```
+
+Group administrators only (403); a wrong word is 400, a real hotel 409; every refusal
+carries its sentence as both `reason` and `error`. `GET /api/hotels` gives every
+hotel `testOf` (the real hotel's code, null for a real one) and the scope `testOnly`;
+`GET /api/admin/hotels` gives `testOf` and `testHotel`; `GET /api/admin/staff` gives
+each person `testOnly`, each place in `access` and `rosterAt` its `testOf`.
+`POST /api/admin/staff` at a test hotel: group administrators only (403), the person is
+made `test_only`, their sign-in account is CREATED and never adopted (an address that
+already has one is refused, so nobody's password changes), and an address already on
+People is refused with "use Give access". `POST /api/admin/staff/:id/access` to a test
+hotel: group administrators only; it never touches a sign-in account.
+
+**Two sides of the group's guests.** guests, companies, booking groups and the offer
+answers carry `test_hotel_id`, filled by default from the hotel in the address: the API
+puts `/api/hotels/:code`'s code in `app.hotel_code` on every transaction (`db.ts`,
+`server.ts`). A row is read on its side only: a test hotel in view shows its own rows
+to the people who have it; anything else shows real rows to people with a real hotel
+or a group administrator. ID documents, joins, loyalty and the audit of group rows
+follow their guest. A trigger on every table with a hotel and a key to a guest, a
+company or a group (attached from the catalog) refuses a row on the other side - so a
+test bill never counts on a real company's credit. The definer doors (guest search,
+Guest 360, the booking suggestions, the same-person pairs, joins, the offer answers,
+the loyalty card) answer on the side in view. A test-only person reads the group's
+lists and never writes them.
+
+**Nothing leaves** (`api/src/testHotels.ts`). SU, the CRS, rivals' prices and the daily
+report emails cannot be set up for a test hotel, and loyalty and the channel manager
+cannot be switched on there (database triggers), so their sweeps never meet one.
+`sending.ts` refuses a test hotel's message and writes the refusal down as the attempt.
+`OUTSIDE` lists every desk button that sends or reaches outside (vouchers, check-in
+links, invoices, review requests, report emails, SU and CRS pushes and setup, rivals'
+prices, ID photos and the bills' mirror to Drive, door-lock key cards, the accounting
+export): a test hotel's request is 409 "This is a test hotel: nothing is sent from it."
+before its route runs. The guest's page answers `hotel.test` and never offers DigiLocker
+or the ID photo upload for a test hotel. Health alerts look at real hotels only.
+
+**Kept apart.** System health, the bank-details bell and the group activity leave test
+hotels out; loyalty's group figures too. The screens' All properties is the web's.
+
+**Documents.** The report PDF, .xlsx and CSV, the View voucher, the tax invoice PDF and
+the purchase order say TEST · NOT VALID for a test hotel, and print neither its GSTIN
+(it has none) nor the group office's nor the company's.
+
+**Copy, reset, re-copy.** Every table is in one class of `app.test_hotel_classes()`:
+setup (copied, new ids, every key remapped - to the copied parent, to the test hotel,
+or, for a device, a key or a person, to nothing), trading (cleared by a reset),
+never (SU and CRS mappings and traffic, the series, devices, report addresses, bank
+details, rivals' prices, what was sent, the audit, who works there) or group. The
+property's own columns are classed by `app.test_hotel_hotels_columns()`. A reset clears
+the trading tables children first (worked out from the keys each time, every key still
+enforced), then the test guests, companies, groups and their documents; rooms empty and
+clean, today's business date, the invoice and VAT series from 1; one audit entry
+(`TEST_RESET`, `TEST_RECOPY`, `TEST_CREATE`) naming who. The append-only guards let the
+deletes through only for a test hotel during its own reset (`app.test_reset_allows`:
+a transaction-local setting AND `test_of is not null`) - never a table-wide trigger
+switch, never `session_replication_role`. A real hotel's row is never let through.
 
 ---
 

@@ -48,9 +48,20 @@ comment on column stock_movements.transfer_id is
   'Pairs the two halves of a move between stores: one out of a store, one into '
   'another. Set on a transfer and on nothing else.';
 
-alter table stock_movements drop constraint if exists stock_movements_kind_known;
-alter table stock_movements add constraint stock_movements_kind_known check (
-  kind in ('receipt', 'issue', 'wastage', 'adjustment', 'return', 'transfer'));
+-- Guarded by what it adds (MEMORY 284, 403): on a replay the list already
+-- knows 'transfer' - and 180's 'breakage' with it - so it is left alone;
+-- re-added blindly, this shorter list refused every breakage row and the
+-- whole replay rolled back (found 10 October on the demo, before a release).
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'stock_movements_kind_known'
+                    and pg_get_constraintdef(oid) like '%transfer%') then
+    alter table stock_movements drop constraint if exists stock_movements_kind_known;
+    alter table stock_movements add constraint stock_movements_kind_known check (
+      kind in ('receipt', 'issue', 'wastage', 'adjustment', 'return', 'transfer'));
+  end if;
+end $$;
 
 -- The sign constraint (069) already lets a transfer go either way: its `else
 -- true` branch covers every kind it does not name.

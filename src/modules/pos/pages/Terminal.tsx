@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 import { dateLong, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { toast, Button, StatusPill } from "@/components/ui";
-import { getMenu, listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, isBarDish, type MenuItem, type CashId } from "@/modules/pos/data/till";
+import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type MenuItem, type OrderLine, type LineAddon, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
@@ -18,9 +18,13 @@ import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { KotStatus } from "@/modules/pos/components/KotStation";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
+import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
+import { useBillPrint } from "@/modules/pos/flows/printBill";
+import { addonBreakdown } from "@/modules/pos/lib/pricing";
 import { GuestOrders } from "@/modules/pos/components/GuestOrders";
 import { AskDialog, SENT_STRIKE, roomAsk, type Ask } from "@/modules/pos/components/AskDialog";
 import { useDocumentTitle } from "@/lib/documentTitle";
+import { TestHotelStripe } from "@/components/app/TestHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TERMINAL
@@ -107,10 +111,12 @@ export default function TerminalPage() {
     queryKey: ["pos-outlets", hotelId],
     queryFn: () => listPosOutlets(hotelId),
   });
-  const menu = useQuery({
-    queryKey: ["till-menu", hotelId],
-    queryFn: () => getMenu(hotelId),
-  });
+  const menu = useQuery(tillMenuQuery(hotelId));
+  /* The numbered Add-ons (D27-289) for Customise. */
+  const numbered = useQuery(numberedAddonsQuery(hotelId));
+  /* To the bill printer, or here when none is chosen (D27-292). */
+  const bill = useBillPrint(hotelId);
+  const [customising, setCustomising] = useState<OrderLine | null>(null);
   const orders = useQuery({
     queryKey: ["till-orders", hotelId, BUSINESS_DATE],
     queryFn: () => listOrders(hotelId),
@@ -193,6 +199,31 @@ export default function TerminalPage() {
     setBusy(false);
     if (!res.ok) return toast.error("Not added", res.reason);
     setAsking(null);
+    refresh();
+  };
+
+  /* Customise (D27-289): the numbered add-ons on a dish the kitchen does not
+     have yet, folded in; typed ones as lines of their own (D27-291). On a
+     dish the kitchen HAS, every add-on is a line of its own under it, for
+     the next Send (D27-291). */
+  const customise = async (chosen: LineAddon[], scope: "all" | "one", customs: CustomAddon[]) => {
+    if (!orderId || !customising) return;
+    setBusy(true);
+    let res: Awaited<ReturnType<typeof setNumberedAddons>>;
+    try {
+      res = customising.kotStatus !== "pending"
+        ? await addExtras(hotelId, orderId, customising.id, [
+          ...chosen.map((a) => ({ numberedId: a.id, qty: a.qty })), ...customInputs(customs)])
+        : await setNumberedAddons(hotelId, orderId, customising.id,
+          chosen.map((a) => ({ id: a.id, qty: a.qty })), scope === "one" ? 1 : undefined,
+          customInputs(customs));
+    } catch {
+      return toast.error("Not changed", "Try Customise again when the connection is back.");
+    } finally {
+      setBusy(false);
+    }
+    if (!res.ok) return toast.error("Not changed", res.reason);
+    setCustomising(null);
     refresh();
   };
 
@@ -751,20 +782,27 @@ export default function TerminalPage() {
                   <li key={l.id} className={cn(
                     "py-1", l.voided && "opacity-45",
                     /* A side sits under its dish and follows its quantity
-                       (D27-192, Q8), as on the Till. */
-                    l.isAddon && "pl-5",
+                       (D27-192, Q8), as on the Till; an add-on line too
+                       (D27-291), with its own. */
+                    l.parentLineId !== null && "pl-5",
                   )}>
                     <div className="flex items-center gap-2">
                       <span className={cn(
                         "flex-1 min-w-0 text-base text-ink-900 truncate",
                         l.voided && "line-through",
                       )}>
-                        {l.name}
+                        {l.extra ? `+ ${l.name}` : l.name}
                       </span>
                       <span className="tabular text-base text-ink-900">
                         {moneyPrecise(l.qty * l.unitPrice)}
                       </span>
                     </div>
+                    {/* The owner's breakdown (D27-289), under the one line. */}
+                    {l.numberedAddons && (
+                      <p className="text-2xs text-grey-600 tabular mt-0.5 pl-0.5 truncate">
+                        {addonBreakdown(l.numberedAddons)}
+                      </p>
+                    )}
 
                     {/* The note, under the dish it belongs to. It reaches
                         the kitchen copy, so it has to be visible to the
@@ -798,7 +836,7 @@ export default function TerminalPage() {
                       </p>
                     )}
 
-                    {!l.voided && order.status === "open" && !l.isAddon ? (
+                    {!l.voided && order.status === "open" && l.parentLineId === null ? (
                       /* A STEPPER, not a strike-and-retype. "Make that two
                          rather than three" used to mean cancelling the line
                          and adding it again, which left a struck row on the
@@ -824,6 +862,16 @@ export default function TerminalPage() {
                         >
                           <Plus className="size-4" />
                         </button>
+                        {/* Customise on any dish (D27-289); once the kitchen
+                            has it, add-ons are lines of their own (D27-291). */}
+                        <button
+                          type="button"
+                          onClick={() => { setCustomising(l); void numbered.refetch(); }}
+                          aria-label={`Customise ${l.name}`}
+                          className="press h-11 px-4 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer"
+                        >
+                          Customise
+                        </button>
                         <button
                           type="button"
                           onClick={() => takeOff(l, 0)}
@@ -834,9 +882,22 @@ export default function TerminalPage() {
                         </button>
                       </div>
                     ) : (
-                      <p className="text-2xs text-grey-500 tabular mt-0.5">
-                        {l.qty} × {moneyPrecise(l.unitPrice)}
-                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-2xs text-grey-500 tabular">
+                          {l.qty} × {l.extra && l.unitPrice === 0 ? "Free" : moneyPrecise(l.unitPrice)}
+                        </p>
+                        {/* An add-on line comes off by itself (D27-291). */}
+                        {l.extra && !l.voided && order.status === "open" && (
+                          <button
+                            type="button"
+                            onClick={() => takeOff(l, 0)}
+                            aria-label={`Strike ${l.name}`}
+                            className="press size-11 grid place-items-center rounded-full text-grey-500 hover:text-brand-red-700 hover:bg-brand-red-50 ml-auto cursor-pointer"
+                          >
+                            <X className="size-4" />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </li>
                 ))}
@@ -867,15 +928,14 @@ export default function TerminalPage() {
                     {order.status === "settled" && (
                       <button
                         type="button"
-                        onClick={() => window.open(
-                          `/pos/${hotelId}/bill/${order.id}`, "_blank",
-                        )}
+                        onClick={() => void bill.print(order.id)}
                         className={cn(OUTLINE, "w-full h-14 text-base font-medium inline-flex items-center justify-center gap-2")}
                       >
                         <Printer className="size-4" />
                         Print the bill
                       </button>
                     )}
+                    {bill.dialog}
                     <button
                       type="button"
                       onClick={() => setOrderId(null)}
@@ -1046,6 +1106,23 @@ export default function TerminalPage() {
           Change outlet
         </button>
       </footer>
+      <CustomiseDialog
+        key={customising?.id ?? "none"}
+        qty={customising?.qty ?? 1}
+        loading={numbered.isFetching}
+        failed={numbered.isError}
+        onRetry={() => void numbered.refetch()}
+        open={customising !== null}
+        onOpenChange={(o) => { if (!o) setCustomising(null); }}
+        dish={customising?.numberedAddons?.dish ?? customising?.name ?? ""}
+        base={customising ? customising.numberedAddons?.base ?? customising.unitPrice : 0}
+        addons={numbered.data ?? []}
+        chosen={customising?.numberedAddons?.addons ?? []}
+        sent={Boolean(customising && customising.kotStatus !== "pending")}
+        busy={busy}
+        onDone={(chosen, scope, customs) => void customise(chosen, scope, customs)}
+      />
+
       <DishDialog
         item={asking}
         bar={isBarDish(menu.data, asking?.id)}
@@ -1059,10 +1136,13 @@ export default function TerminalPage() {
   );
 }
 
-/** Full screen, no console chrome. A terminal has one job. */
+/** Full screen, no console chrome. A terminal has one job. In a test hotel
+    the orange stripe is above it (D27-296 (9)): this covers the shell's. */
 function Shell({ children }: { children: React.ReactNode }) {
+  const hotelId = useHotel();
   return (
     <div className="fixed inset-0 z-50 bg-grey-50 flex flex-col">
+      <TestHotelStripe code={hotelId} />
       {children}
     </div>
   );

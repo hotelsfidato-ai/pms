@@ -4,7 +4,7 @@ import { join } from "node:path";
 import {
   render, screen, within, fireEvent, waitFor,
 } from "@testing-library/react";
-import App from "./App";
+import App, { returnPath } from "./App";
 import { useSession } from "@/lib/session";
 import { navigationFor, flatNavigationFor, navItemFor, entryFor } from "@/components/app/navigation";
 import { HOTEL, go, AGRA_HOTEL, signedIn, startSignedIn, withDemoHotel } from "@/test/app";
@@ -64,6 +64,26 @@ describe("the session guard", () => {
       await screen.findByRole("heading", { level: 1, name: /^sign in$/i }),
     ).toBeDefined();
     expect(screen.queryByRole("navigation")).toBeNull();
+  });
+
+  it("after signing in, goes back to the page asked for (D27-299's KOT window)", async () => {
+    useSession.setState({ status: "signed-out", scope: null, hotels: [], hotelId: null });
+    go(`/pos/${HOTEL}/setup#kot`);
+    render(<App />);
+    await screen.findByRole("heading", { level: 1, name: /^sign in$/i });
+    expect(window.location.pathname).toBe("/signin");
+
+    startSignedIn(); withDemoHotel();
+    await waitFor(() => expect(window.location.pathname).toBe(`/pos/${HOTEL}/setup`));
+    expect(window.location.hash).toBe("#kot");
+  });
+
+  it("follows only a path inside this app after signing in", () => {
+    expect(returnPath({ from: `/pos/${HOTEL}/setup#kot` })).toBe(`/pos/${HOTEL}/setup#kot`);
+    expect(returnPath({ from: "//evil.example/x" })).toBe("/");
+    expect(returnPath({ from: "https://evil.example" })).toBe("/");
+    expect(returnPath({ from: "/signin" })).toBe("/");
+    expect(returnPath(null)).toBe("/");
   });
 
   it("lets a signed-out guest open their own page, and shows them no menu", async () => {

@@ -1,0 +1,572 @@
+<!-- ══════════════════════════════ CHAPTER A1 ══════════════════════════════ -->
+<section class="chapter" id="a1">
+  <div class="chapter-head">
+    <span class="num">Chapter A1</span>
+    <h1>The front desk day</h1>
+    <p>The screens reception lives in: the Dashboard to see the day, Arrivals to receive guests, In house and Due out to look after them and send them off, Rooms and Calendar to see the whole house.</p>
+  </div>
+
+  <!-- A1.1 -->
+  <h2 id="a1-1"><span class="n">A1.1</span>The business date</h2>
+  <p>The <b>business date</b> is the hotel's working day. It is not always today's calendar date: it moves on only when the night audit closes the day (chapter A7).
+     Every “today” in the system means the business date: today's arrivals, who is due out today, the Dashboard's Today figures.</p>
+  <p>The Dashboard, Rooms and Calendar show it above the heading: <span class="msg">“Business date · Sunday, 4 October 2026”</span>.</p>
+  <p>When the business date falls behind the real date, a yellow line appears under the top bar of <b>every</b> screen, for example:
+     <span class="msg">“Business date 11 Sep, 21 days behind today (2 Oct). Close the days in Night audit.”</span>
+     If you may run the night audit, <span class="ui">Night audit</span> in the line is a link to it.</p>
+
+  <figure class="shot" id="fig-A1-1">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-1 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/arrivals</code> (any screen will do)</dd>
+        <dt>Sign in as</dt><dd>General Manager</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Set up</dt><dd>Only shows while the test hotel's business date is behind the real date. If it is not behind, leave this figure out.</dd>
+        <dt>Arrows</dt><dd>1 → the yellow line under the top bar; 2 → the “Night audit” link in it</dd>
+        <dt>File</dt><dd><code>img/A1-1.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-1.</b> The business date is behind: one line on every screen.</figcaption>
+    <ol class="callouts"><li>How many days behind</li><li>Where to close the days</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>“Today” for this line is the real date at the hotel, from the server. It never comes from your computer's clock.</li>
+      <li>When the night audit is run on another desk, your screens pick up the new business date the next time you open a screen. Open any screen before you start the new day's work.</li>
+    </ul>
+  </div>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>One warning line on every screen while the date is behind: <span class="d">D27-237</span> (4.2), against the recommendation of showing it on the calendar only. Other devices kept yesterday's date after an audit until this was fixed: <span class="d">D27-89</span>.</p>
+  </div>
+
+  <!-- A1.2 -->
+  <h2 id="a1-2"><span class="n">A1.2</span>The Dashboard</h2>
+  <p>The Dashboard shows the day at one look. Open it with <span class="ui">Dashboard</span> at the top of the menu. Read it from the top.</p>
+
+  <h3>Today's work: four tiles</h3>
+  <p>Each tile counts one job and opens its list. Its colour says what to do: <b>orange</b>, act now; <b>yellow</b>, due today; <b>white with a green tick</b>, done; <b>white</b>, nothing to do.</p>
+  <table>
+    <thead><tr><th style="width:18%">Tile</th><th style="width:32%">The big number</th><th style="width:30%">The line under it</th><th>Opens</th></tr></thead>
+    <tbody>
+      <tr><td>Arrivals</td><td>Today's arrivals, and <span class="msg">“· 3 left”</span> while some have not come</td><td><span class="msg">“3 still to arrive · 2 checked in”</span>, <span class="msg">“All 5 checked in”</span> or <span class="msg">“None today”</span></td><td>Arrivals (A1.3)</td></tr>
+      <tr><td>Due out</td><td>Today's departures, and how many are left</td><td>For those who see money: <span class="msg">“2 owe ₹… · 1 checked out”</span>, which turns the tile orange. For others: <span class="msg">“2 still to leave · 1 checked out”</span>. <span class="msg">“All 3 checked out”</span> when done.</td><td>Due out (A1.6)</td></tr>
+      <tr><td>In house</td><td>Rooms with a guest in them now</td><td><span class="msg">“9 staying on · 2 leave today”</span></td><td>In house (A1.5)</td></tr>
+      <tr><td>Needs cleaning</td><td>Rooms waiting for housekeeping</td><td><span class="msg">“Free rooms ready · 4 of 6”</span>: empty rooms that are clean, of all empty rooms</td><td>Housekeeping (A6)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The figures</h3>
+  <ul>
+    <li><span class="ui">Occupancy</span> (the dark card): today's share of rooms sold, then <span class="ui">Month so far</span> and <span class="ui">Year so far</span>. The year runs from 1 April.</li>
+    <li><span class="ui">Average rate (ARR)</span>, <span class="ui">RevPAR</span> and <span class="ui">Room revenue</span>: today in large figures, the month so far and the year so far under each.</li>
+    <li>A word with a dotted underline explains itself: click or tap it. The small (i) beside a heading explains the whole card.</li>
+  </ul>
+
+  <h3>Nights ahead</h3>
+  <p>Tonight and the 13 nights after it. Under each date: a bar, the share of rooms sold and “sold / rooms to sell”. Tonight is dark; Saturdays and Sundays are shaded. A night with no figures shows a dash. Click any night to open the Calendar.</p>
+
+  <h3>Money</h3>
+  <ul>
+    <li><span class="ui">Collected today</span>: payments taken today, by method. <span class="msg">“Nothing taken yet today”</span> before the first.</li>
+    <li><span class="ui">Owed by guests, less refunds</span>: what every open guest bill still owes.</li>
+    <li><span class="ui">City ledger</span>: what companies and booking sites owe on their accounts, with <span class="msg">“Paid today ₹…”</span>.</li>
+    <li><span class="ui">No-shows</span>: today's, with the month so far. Click it for the No show report.</li>
+  </ul>
+
+  <h3>The house now, and quick reports</h3>
+  <p><span class="ui">The house now</span> draws every room as a small square in the Rooms colours: In house, Due out, Arriving, Free, Out of service. The line beside the heading gives the rooms, how many are empty and how many are out of service.
+     Under it, <span class="ui">Quick reports</span>: <span class="ui">Manager report</span>, <span class="ui">Monthly statistics</span>, <span class="ui">Lodging tax</span>, <span class="ui">City ledger</span>, <span class="ui">No show</span>.</p>
+
+  <figure class="shot" id="fig-A1-2">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-2 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/</code></dd>
+        <dt>Sign in as</dt><dd>General Manager</dd>
+        <dt>Window</dt><dd>1280 × 800, desk; the top of the page</dd>
+        <dt>Arrows</dt><dd>1 → “Business date · …” above the heading; 2 → the line under the heading (hotel name · month so far from …); 3 → the four tiles Arrivals, Due out, In house, Needs cleaning; 4 → a “· n left” beside a tile's number; 5 → the dark Occupancy card; 6 → Average rate (ARR), RevPAR, Room revenue; 7 → one (i) button</dd>
+        <dt>Before taking it</dt><dd>Best with at least one arrival still to come and one departure owing money, so the tiles show yellow and orange.</dd>
+        <dt>File</dt><dd><code>img/A1-2.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-2.</b> The top of the Dashboard: today's work, then the figures.</figcaption>
+    <ol class="callouts"><li>Business date</li><li>Which hotel, which month</li><li>Today's work</li><li>Still to do</li><li>Occupancy</li><li>Rate and revenue</li><li>What a card means</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A1-3">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-3 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/</code>, scrolled down</dd>
+        <dt>Sign in as</dt><dd>General Manager</dd>
+        <dt>Window</dt><dd>1280 × 800, desk; the lower half of the page</dd>
+        <dt>Arrows</dt><dd>1 → Nights ahead, on the dark “Tonight”; 2 → the Money card; 3 → the arrow beside No-shows; 4 → The house now, its squares and the key under them; 5 → the Quick reports buttons</dd>
+        <dt>File</dt><dd><code>img/A1-3.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-3.</b> The lower half: the nights ahead, money, the house and quick reports.</figcaption>
+    <ol class="callouts"><li>Nights ahead</li><li>Money</li><li>Opens the No show report</li><li>Every room, now</li><li>Quick reports</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A1-4">
+    <div class="shot-plan phone">
+      <p class="shot-id">Screenshot A1-4 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/</code></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>375 × 812, phone</dd>
+        <dt>Arrows</dt><dd>1 → the tiles, two across; 2 → the Occupancy card</dd>
+        <dt>Before taking it</dt><dd>Put the Start here card away first (Got it), then bring it back afterwards.</dd>
+        <dt>File</dt><dd><code>img/A1-4.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-4.</b> The Dashboard on a phone.</figcaption>
+    <ol class="callouts"><li>Today's work, two across</li><li>Occupancy</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A dash (<b>-</b>) in a money figure means the system does not hold that figure yet. It is never a zero. A count, such as arrivals, can be a real 0.</li>
+      <li>If the figures could not be read, a red box says <span class="msg">“Today's figures did not load”</span> with <span class="ui">Try again</span>. The dashes under it then mean “not loaded”, not “nothing”.</li>
+      <li>Housekeeping, the kitchen manager, the chef, the Inventory Manager and the waiter have no Dashboard. The Revenue Manager sees it, but not what departing guests owe.</li>
+      <li>A brand-new system with no property shows <span class="msg">“No property yet”</span> and an <span class="ui">Add a property</span> button.</li>
+      <li>The Dashboard's figures come from the same place as the Manager report, for the same business date, so the two always agree.</li>
+    </ul>
+  </div>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The page is called Dashboard and carries quick reports: the owner, 14 September. Built as sketched, with today's four tiles first, colours by what staff must do, “ARR” on screens, Nights ahead and the Due out tile showing what departing guests owe: <span class="d">D27-243</span>.
+       No Dashboard for the working roles: <span class="d">D27-141</span>. Money hidden from roles that do not handle bills: <span class="d">D27-143</span>, <span class="d">D27-147</span>. A fresh system asks for a property first: <span class="d">D27-248</span>.</p>
+  </div>
+
+  <!-- A1.3 -->
+  <h2 id="a1-3"><span class="n">A1.3</span>Arrivals</h2>
+  <p>Who is coming today. Check-in starts here.</p>
+  <ol class="steps">
+    <li>In the menu, under <span class="ui">Front desk</span>, click <span class="ui">Arrivals</span>. It opens on <span class="ui">Today</span>.</li>
+    <li>The line under the heading says <span class="msg">“Expected on Sunday, 4 October 2026. Check in from the row - the panel opens over this list.”</span> The pill beside the heading says how many are expected.</li>
+    <li>To find one guest, type part of the name, the booking reference or the room number in <span class="ui">Guest, reference or room…</span>. The count on the right shows how many rows are left, for example <span class="msg">“1 of 6”</span>. <span class="ui">Clear</span> empties the box.</li>
+    <li>Click the guest's row. The stay panel opens over the list (A1.4).</li>
+    <li>Click <span class="ui">Check in</span>, the orange button at the top of the panel. Chapter A3 goes on from here.</li>
+  </ol>
+
+  <h3>The next fortnight</h3>
+  <p>Click <span class="ui">Upcoming</span> beside <span class="ui">Today</span> (the same word as in the menu, under Arrivals). It lists bookings arriving from tomorrow to 14 days ahead, without cancelled ones.
+     It is for planning: a row opens the panel, but this list does not offer <span class="ui">Check in</span>.</p>
+
+  <h3>The columns</h3>
+  <p><b>Room</b>, <b>Guest</b> (with the booking reference under the name), <b>Type</b>, <b>Plan</b>, <b>Source</b>, <b>Departure</b>, <b>Nights</b> (<span class="msg">“Day use”</span> for a room used within one day), <b>Status</b> and <b>Rate</b> per night (<span class="msg">“Comp”</span> when complimentary).
+     On a narrower screen Plan and Source are hidden, then Type. A source the system does not know shows a dash; it is never guessed.</p>
+
+  <table>
+    <thead><tr><th style="width:30%">Status</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td><span class="sw" style="background:var(--s-orange-wash)"></span>Due in</td><td>Expected, not yet checked in</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-blue-wash)"></span>In house</td><td>Checked in</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-yellow-wash)"></span>Due out</td><td>Checked in and leaving today</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-grey)"></span>Checked out</td><td>Gone</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-red-wash)"></span>No show · Cancelled</td><td>Never came · cancelled</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-grey)"></span>Void · Waiting for the hotel</td><td>Voided · held until the hotel confirms it (chapter A2)</td></tr>
+    </tbody>
+  </table>
+
+  <figure class="shot" id="fig-A1-5">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-5 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/arrivals</code></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk; the table view</dd>
+        <dt>Arrows</dt><dd>1 → the Today / Upcoming switch; 2 → the “n expected” pill; 3 → the search box “Guest, reference or room…”; 4 → the “n of m” count; 5 → the two table / cards buttons; 6 → a row's guest name with the reference under it; 7 → a “Due in” status</dd>
+        <dt>Before taking it</dt><dd>Needs a few arrivals on the test hotel's business date, at least one still due in.</dd>
+        <dt>File</dt><dd><code>img/A1-5.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-5.</b> Today's arrivals.</figcaption>
+    <ol class="callouts"><li>Today or the next fortnight</li><li>How many are expected</li><li>Find one guest</li><li>Rows shown</li><li>Table or cards</li><li>Guest and booking reference</li><li>Status</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A red line above the list such as <span class="msg">“… has the phone or email of …, who is blacklisted. Reason: …. Check-in is not refused - you decide.”</span> means a booking site's guest matches a blacklisted guest. The system warns; it does not stop you.</li>
+      <li>An empty Room means no room is given yet. You give one at check-in (A3).</li>
+      <li><span class="ui">Check in</span> is shown only to people who may check guests in. Housekeeping and the Revenue Manager see the list without it.</li>
+      <li>Nobody expected? <span class="msg">“No arrivals today. Nobody is expected. A walk-in can be taken from any empty cell on the Calendar.”</span></li>
+    </ul>
+  </div>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The blacklist warns and shows the reason, a person decides: <span class="d">D21-21</span>, and the warning on Arrivals and at check-in: <span class="d">D22-8</span>. A control is shown only to a role the server lets use it: <span class="d">D24-27</span>.</p>
+  </div>
+
+  <!-- A1.4 -->
+  <h2 id="a1-4"><span class="n">A1.4</span>The stay panel</h2>
+  <p>Every booking opens in the same panel, from Arrivals, In house, Due out and All bookings, and from a tile on Rooms or a bar on the Calendar. Learn it once.</p>
+  <table>
+    <thead><tr><th style="width:26%">Part</th><th>What it shows</th></tr></thead>
+    <tbody>
+      <tr><td>The top</td><td>The guest's name; the booking reference; the phone (tap it on a phone to call) and the email when the booking has them. For a foreign guest, their nationality: they need Form III (A3).</td></tr>
+      <tr><td>The marks</td><td>The status, and the guest's marks such as VIP.</td></tr>
+      <tr><td>The one main button</td><td><span class="ui">Check in</span> for a guest still to arrive (not on the Upcoming list); <span class="ui">Settle and check out</span> for a guest in the house (it opens the Bill tab).</td></tr>
+      <tr><td><span class="ui">More options</span></td><td>The rarer acts: <span class="ui">Change dates or guests</span>, <span class="ui">View voucher</span>, <span class="ui">Move to another room</span>, <span class="ui">Exchange with another guest</span>, <span class="ui">What this booking includes</span>, <span class="ui">Change rate</span> (owner, Admin and GM), and at the end, in red, <span class="ui">Cancel this booking</span> and <span class="ui">Void this booking</span>. An option you cannot use says why, for example <span class="msg">“This stay is over.”</span> Chapter A2 covers each one.</td></tr>
+      <tr><td><span class="ui">Stay</span> tab</td><td><b>Stay</b>: Arrival, Departure, Nights, Room (or <span class="msg">“Deluxe · no room yet”</span>), Guests. <b>Rate</b>: Rate plan, Per night, Rack rate. <b>Booked through</b>: Source, Business source, Segment, Sold by.</td></tr>
+      <tr><td><span class="ui">Bill</span> tab</td><td>The guest's bill (chapter A4).</td></tr>
+      <tr><td>The foot</td><td>Always in view: <span class="ui">Charged</span>, <span class="ui">Paid</span> and the <span class="ui">Balance</span>. The last one reads <span class="ui">Due</span> while tonight's room charge is still to be added, with that charge and its GST counted in; <span class="ui">In advance</span> when the guest has paid ahead; <span class="ui">Overpaid</span> after they leave with credit.</td></tr>
+    </tbody>
+  </table>
+  <p>For a group booking, the group's other rooms are listed on the right. Close the panel with the ✕ at its top, or <kbd>Esc</kbd>.</p>
+
+  <figure class="shot" id="fig-A1-6">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-6 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/arrivals</code>, click a “Due in” row</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the guest's name, reference and phone at the top; 2 → the orange Check in button; 3 → More options; 4 → the Stay and Bill tabs; 5 → the Room line; 6 → Charged / Paid / Balance at the foot</dd>
+        <dt>File</dt><dd><code>img/A1-6.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-6.</b> The stay panel for an arrival.</figcaption>
+    <ol class="callouts"><li>Who, and how to reach them</li><li>Check in</li><li>More options</li><li>Stay and Bill</li><li>The room, or “no room yet”</li><li>What is owed, always in view</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A1-7">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-7 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/in-house</code>, click a guest, then click More options</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the list under “The booking”; 2 → a greyed option with its reason (e.g. Cancel this booking: “They have arrived. Check them out instead.”)</dd>
+        <dt>File</dt><dd><code>img/A1-7.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-7.</b> More options for a guest in the house.</figcaption>
+    <ol class="callouts"><li>The rarer acts</li><li>Not possible now, and why</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>People who do not handle bills (the Revenue Manager, housekeeping, the kitchen manager, the till) see no Bill tab and no totals at the foot, and the guest's phone and email are blank for them.</li>
+      <li>No More options at all? Your role may not change bookings.</li>
+      <li><span class="ui">Charged</span> is what is on the bill so far. Room nights are added at the night audit, so a guest who has not slept here yet may show little or nothing charged. That is not a free stay.</li>
+    </ul>
+  </div>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>One panel instead of two copies that drifted apart, rebuilt to the owner's reference layout on 14 September: the act at the top, what is owed always in view. The amount due counts the night's room charge before the night audit posts it: <span class="d">D27-199</span>. Bills and guest contacts hidden from roles that read bookings only: <span class="d">D27-143</span>. Each act offered only to a role the server allows: <span class="d">D24-27</span>.</p>
+  </div>
+
+  <!-- A1.5 -->
+  <h2 id="a1-5"><span class="n">A1.5</span>In house</h2>
+  <p>Every guest checked in now.</p>
+  <ol class="steps">
+    <li>In the menu, under <span class="ui">Front desk</span>, click <span class="ui">In house</span>. The heading says <span class="msg">“Guests checked in now, on Sunday, 4 October 2026.”</span> The pill counts the rooms, for example <span class="msg">“11 rooms”</span>.</li>
+    <li>The switch at the top right has <span class="ui">In house now</span> (this list) and <span class="ui">Due out</span> (A1.6), each with its count.</li>
+    <li>Click a guest to open the panel. For a guest who is leaving, <span class="ui">Settle and check out</span> takes you to their bill.</li>
+  </ol>
+  <p>The columns are <b>Room</b>, <b>Guest</b>, <b>Type</b>, <b>Plan</b>, <b>Arrival</b>, <b>Departure</b>, <b>Status</b> and <b>Balance</b>. The balance is coloured:</p>
+  <table>
+    <thead><tr><th style="width:30%">Balance</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td style="color:var(--s-red)">₹… in red</td><td>The guest owes this</td></tr>
+      <tr><td style="color:var(--s-blue)">₹… over, in blue</td><td>The guest has paid more than the charges so far</td></tr>
+      <tr><td style="color:#1a5f4f">₹0 in green</td><td>Settled</td></tr>
+      <tr><td>-</td><td>No bill yet, or you do not see bills</td></tr>
+    </tbody>
+  </table>
+
+  <figure class="shot" id="fig-A1-8">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-8 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/in-house</code></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk; the table view</dd>
+        <dt>Arrows</dt><dd>1 → the In house now / Due out switch with its counts; 2 → the “n rooms” pill; 3 → the Balance column, on one red and one green figure</dd>
+        <dt>File</dt><dd><code>img/A1-8.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-8.</b> In house, with each guest's balance.</figcaption>
+    <ol class="callouts"><li>In house now or Due out</li><li>Rooms in house</li><li>Balance</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>The pill counts <b>rooms</b>. The list can have more rows than rooms: a guest due out who has not left yet and the guest arriving into the same room are two rows for one room.</li>
+      <li>A guest stays “in house” until they are checked out, even after their departure date has passed. A late check-out still counts.</li>
+      <li>Empty list: <span class="msg">“Nobody in house. The house is empty tonight.”</span></li>
+    </ul>
+  </div>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>“In house” means checked in and not yet checked out, the same on every screen: <span class="d">D17-10</span>, <span class="d">D21-36</span>. A stay with no bill shows a dash, never ₹0: <span class="d">D17-16</span>.</p>
+  </div>
+
+  <!-- A1.6 -->
+  <h2 id="a1-6"><span class="n">A1.6</span>Departures (Due out)</h2>
+  <p>The guests leaving today, and what they still owe.</p>
+  <ol class="steps">
+    <li>Open it from the menu (<span class="ui">In house</span>, then <span class="ui">Due out</span>), from the Dashboard's <span class="ui">Due out</span> tile, or with the switch on In house.</li>
+    <li>The heading says <span class="msg">“Departing Sunday, 4 October 2026. Check-out unlocks when the bill reaches zero.”</span></li>
+    <li>If anyone still owes money, a red box at the top says so, for example <span class="msg">“2 departures still owing ₹…”</span>, with <span class="msg">“Settle from the Bill tab. Check-out stays disabled with its reason until each balance clears.”</span></li>
+    <li>Click a guest. On this list the panel opens straight on the <span class="ui">Bill</span> tab.</li>
+    <li>Take the payment, then check the guest out. Chapters A4 and A5 go on from here.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A1-9">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-9 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/in-house/due-out</code></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the line under the heading “… Check-out unlocks when the bill reaches zero.”; 2 → the red “still owing” box; 3 → a row with a red balance</dd>
+        <dt>Before taking it</dt><dd>Needs at least one departure today with money still owed.</dd>
+        <dt>File</dt><dd><code>img/A1-9.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-9.</b> Due out: who is leaving and who still owes.</figcaption>
+    <ol class="callouts"><li>The rule: check-out after the bill is zero</li><li>Total still owed</li><li>A guest who owes</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A1-10">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-10 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/in-house</code>, click a guest due out, stay on the Stay tab</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the orange Settle and check out button; 2 → the Bill tab; 3 → the amount at the foot (Due or Balance)</dd>
+        <dt>File</dt><dd><code>img/A1-10.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-10.</b> The panel for a guest who is leaving.</figcaption>
+    <ol class="callouts"><li>Settle and check out</li><li>The bill</li><li>What is still owed</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Check-out stays greyed out, with its reason, until the balance is zero. This is on purpose.</li>
+      <li>A late check-out or an early departure: chapter A5.</li>
+      <li>Nobody leaving: <span class="msg">“Nobody departing today. Every room stays another night.”</span></li>
+    </ul>
+  </div>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The Due out tile and list show what departing guests still owe, to the people who see money: <span class="d">D27-243</span>, <span class="d">D27-143</span>. Reception's card puts it in one line: “Open the guest, go to Bill - Check out opens once nothing is owed.” (Start here, the owner, 15 September.)</p>
+  </div>
+
+  <!-- A1.7 -->
+  <h2 id="a1-7"><span class="n">A1.7</span>Rooms: the house today</h2>
+  <p>Every room as a tile, for today. It answers three questions at a glance: is it free, who is in it, and what happens today.</p>
+  <ol class="steps">
+    <li>Click <span class="ui">Rooms</span> near the top of the menu. The heading shows the business date and the hotel's name.</li>
+    <li>Read the row of count tiles. Click one to show only those rooms; the chosen tile turns dark. Click <span class="ui">Sellable</span> to see every room again.</li>
+    <li>Click a tile with a guest's name to open their panel (A1.4).</li>
+    <li>Click a tile with no guest on it, such as a <b>Free</b> one, to start a booking for that room, today: <span class="ui">New booking</span> opens with the room and the date filled in. This is how a walk-in is taken (chapter A2).</li>
+  </ol>
+
+  <h3>The count tiles</h3>
+  <table>
+    <thead><tr><th style="width:24%">Tile</th><th>Counts</th></tr></thead>
+    <tbody>
+      <tr><td>Sellable</td><td>Every room that can be sold. Out-of-service rooms are left out, so it can be smaller than the number of rooms.</td></tr>
+      <tr><td>Empty</td><td>Sellable rooms with nobody in them: the free ones, those still to be cleaned, and those someone arrives into today.</td></tr>
+      <tr><td>In house</td><td>Rooms with a checked-in guest.</td></tr>
+      <tr><td>Arriving</td><td>Rooms given to a guest who arrives today. The tile is orange while there are some.</td></tr>
+      <tr><td>Reserved</td><td>Rooms already given to a booking that arrives on a <b>later</b> day. Not today's arrivals.</td></tr>
+      <tr><td>Out of service</td><td>Rooms that cannot be sold.</td></tr>
+      <tr><td>Due out</td><td>Rooms whose guest leaves today. Yellow while there are some.</td></tr>
+      <tr><td>Needs cleaning</td><td>Rooms waiting for housekeeping. A green tick at 0.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>A room tile</h3>
+  <p>The first line is the room number and its state. The second is the guest's name (or, for an empty room, its room type). The third says <span class="msg">“to 6 Oct 2026”</span>, or <span class="msg">“out today”</span> for a departure. An arrow at the end means the tile opens something. A small red <span class="msg">dirty</span> beside the state means the room also needs cleaning.</p>
+  <table>
+    <thead><tr><th style="width:30%">State</th><th>Tile</th></tr></thead>
+    <tbody>
+      <tr><td><span class="sw" style="background:#fff"></span>Free</td><td>White: clean, empty, nobody expected</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-blue-wash)"></span>In house</td><td>Blue</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-orange-wash)"></span>Arriving</td><td>Orange</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-yellow-wash)"></span>Due out</td><td>Yellow</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-red-wash)"></span>Needs cleaning</td><td>Red</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-grey)"></span>Out of service</td><td>Grey; it cannot be clicked</td></tr>
+    </tbody>
+  </table>
+  <p>A room that is both in house and leaving today shows <b>Due out</b>: the job to act on comes first.</p>
+
+  <h3>The controls at the top right</h3>
+  <ul>
+    <li><span class="ui">Calendar</span> | <span class="ui">Rooms</span>: switch to the Calendar (A1.8). An open booking stays open.</li>
+    <li><span class="ui">Room type</span> | <span class="ui">Floor</span>: group the tiles by room type or by floor (<span class="msg">“Ground floor”</span>, <span class="msg">“Floor 1”</span>…). The system remembers your choice on every device.</li>
+    <li><span class="ui">Assign room</span>: give rooms to bookings that do not have one yet (chapter A3).</li>
+  </ul>
+
+  <figure class="shot" id="fig-A1-11">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-11 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/stay</code></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the Calendar | Rooms switch; 2 → the Room type | Floor switch; 3 → Assign room; 4 → the row of count tiles; 5 → an In house tile (name, “to …”); 6 → a Due out tile (“out today”); 7 → a Free tile and its arrow; 8 → a room type heading and its count</dd>
+        <dt>Before taking it</dt><dd>Put Start here away so the tiles sit higher; bring it back afterwards.</dd>
+        <dt>File</dt><dd><code>img/A1-11.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-11.</b> Rooms: the whole house, today.</figcaption>
+    <ol class="callouts"><li>Calendar or Rooms</li><li>Group by room type or floor</li><li>Assign room</li><li>Count tiles: they also filter</li><li>A guest in the house</li><li>Leaving today</li><li>Free: click to book it</li><li>A room type and how many rooms</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A1-12">
+    <div class="shot-plan phone">
+      <p class="shot-id">Screenshot A1-12 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/stay</code></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>375 × 812, phone; scrolled past Start here</dd>
+        <dt>Arrows</dt><dd>1 → the count tiles, which scroll sideways; 2 → the tiles, two across</dd>
+        <dt>File</dt><dd><code>img/A1-12.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-12.</b> Rooms on a phone.</figcaption>
+    <ol class="callouts"><li>Count tiles: swipe sideways</li><li>Two rooms across</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>With no connection, the last copy stays on screen with its time: <span class="msg">“No connection - these rooms are as they were at 4:10 pm.”</span> Check before you sell a room shown as Free (A0.8). If there is no copy at all: <span class="msg">“No connection. This device is offline, so the rooms cannot load.”</span></li>
+      <li>Housekeeping sees Rooms but no <span class="ui">Assign room</span>, and a Free tile does not open a booking for them. The chef and the Inventory Manager have no Rooms.</li>
+      <li>A hotel with no rooms yet shows <span class="msg">“No rooms set up yet. Add them in Room types.”</span></li>
+    </ul>
+  </div>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Rooms and Calendar are two screens with their own menu entries; Room type or Floor remembered per person: the owner, 14 September. “Sellable” counts sellable rooms, as the Manager report does: <span class="d">D27-164</span>. “Empty” means nobody in it and sellable tonight: <span class="d">D21-37</span>. A free room opens the one-page New booking: <span class="d">D27-163</span>.
+       Controls a role cannot use are hidden: <span class="d">D24-18</span>, <span class="d">D24-27</span>. Rooms needs bookings access: <span class="d">D27-142</span>. Rooms kept for a reload with the server down: <span class="d">D22-23</span>.</p>
+  </div>
+
+  <!-- A1.8 -->
+  <h2 id="a1-8"><span class="n">A1.8</span>Calendar: the fortnight chart</h2>
+  <p>Fourteen nights across, every room down. It is for planning: who is where, and what is free on which night.</p>
+  <ol class="steps">
+    <li>Click <span class="ui">Calendar</span> near the top of the menu. It starts on the business date.</li>
+    <li>Move a week at a time with the arrows ‹ and › (<span class="ui">Previous week</span>, <span class="ui">Next week</span>). <span class="ui">Today</span> brings you back.</li>
+    <li>Point at a booking's bar to see the guest, the dates and nights, the price per night (or <span class="msg">“Complimentary”</span>) and, if you see bills, the balance.</li>
+    <li>Click a bar to open the stay panel (A1.4).</li>
+    <li>Click an empty cell to start a booking for that room on that night: <span class="ui">New booking</span> opens with both filled in (chapter A2).</li>
+  </ol>
+
+  <h3>Reading the chart</h3>
+  <ul>
+    <li><b>The dates</b> run across the top. The business date's column is dark. Weekends and the hotel's holidays are shaded; point at a holiday's date to see its name.</li>
+    <li><b>Each room type</b> has a grey row. Under each night: how many of its rooms are still free (red at 0), and the room type's rack rate in thousands (for example <span class="msg">“4.5k”</span>), or a dash when none is set. It is the same rack rate on every night. Grouped by floor, the rate is always a dash: a floor has no one rate.</li>
+    <li><b>Each room</b> has a row: its number, then two small marks: a sparkle (yellow = dirty, grey = clean) and a spanner (red = out of service).</li>
+    <li><b>The foot</b> of the chart: <span class="ui">Available</span> rooms and <span class="ui">Occupancy</span> for each night, with a small orange bar.</li>
+    <li>The same count tiles as Rooms sit above the chart and filter it the same way.</li>
+  </ul>
+
+  <h3>The bars</h3>
+  <p>Each bar starts with a small mark for where the booking came from: a person for a walk-in, a building for Fidato Hotels, a globe for anything else or not known.</p>
+  <table>
+    <thead><tr><th style="width:34%">Bar</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td><span class="sw" style="background:var(--s-blue)"></span>Solid blue</td><td>In house</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-yellow)"></span>Yellow</td><td>Due out</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-blue-wash)"></span>Pale blue</td><td>Confirmed, still to arrive</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-grey)"></span>Grey</td><td>Checked out</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-rose)"></span>Dark rose</td><td>No show</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-red-wash)"></span>Pale red, struck through</td><td>Void</td></tr>
+      <tr><td><span class="sw" style="background:var(--s-grey);border-style:dashed"></span>Grey, dashed edge</td><td>Waiting for the hotel</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">A hotel can choose its own colour for each of these in Settings. If yours looks different, that is why.</p>
+
+  <figure class="shot" id="fig-A1-13">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-13 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/calendar</code></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the ‹ › week arrows; 2 → the date range (and Today, if shown); 3 → the bar key at the toolbar's right; 4 → the dark business-date column; 5 → a room type row (free rooms over the rate); 6 → a booking bar; 7 → an empty cell; 8 → a room's sparkle and spanner; 9 → Available and Occupancy at the foot</dd>
+        <dt>Before taking it</dt><dd>Put Start here away so the chart has the room; bring it back afterwards.</dd>
+        <dt>File</dt><dd><code>img/A1-13.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-13.</b> The Calendar: a fortnight of the house.</figcaption>
+    <ol class="callouts"><li>A week back or forward</li><li>The fortnight shown</li><li>What the colours mean</li><li>The business date</li><li>Free rooms and rate, per room type</li><li>A booking: click it</li><li>An empty night: click to book</li><li>Dirty, out of service</li><li>Available and occupancy</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A1-14">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-14 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/calendar</code>; rest the mouse on an In house bar</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk; crop to the bar and its tip</dd>
+        <dt>Arrows</dt><dd>1 → the guest's name; 2 → the dates and nights; 3 → the price per night and the balance</dd>
+        <dt>File</dt><dd><code>img/A1-14.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-14.</b> Pointing at a booking.</figcaption>
+    <ol class="callouts"><li>Guest</li><li>Dates and nights</li><li>Price and balance</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A1-15">
+    <div class="shot-plan phone">
+      <p class="shot-id">Screenshot A1-15 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/calendar</code></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>375 × 812, phone</dd>
+        <dt>Arrows</dt><dd>1 → three nights and the edge of the fourth; 2 → the room column, which stays when you swipe</dd>
+        <dt>File</dt><dd><code>img/A1-15.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-15.</b> The Calendar on a phone: swipe night by night.</figcaption>
+    <ol class="callouts"><li>Swipe for more nights</li><li>Room numbers stay put</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>While the next week loads, or with no connection, the last fortnight loaded stays on screen, with a line such as <span class="msg">“The fortnight from 11 Oct 2026 has not loaded.”</span></li>
+      <li>Someone who may not take bookings, such as housekeeping, can read the chart, but an empty cell does not open a booking for them.</li>
+      <li>Room types never fold away on the Calendar, on a desk or a phone.</li>
+    </ul>
+  </div>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Room type groups always open: <span class="d">D27-237</span> (4.1). Each hotel picks its weekend days, for shading only: <span class="d">D27-243</span>. Holidays shaded with their name, with no effect on price, and the hotel's own colours for each state: <span class="d">D27-260</span>.
+       The foot's occupancy is the Manager report's rule (complimentary in; no-shows, waiting bookings and day use out): <span class="d">D27-151</span>. Out of service follows the dated block: <span class="d">D17-11</span>.</p>
+  </div>
+
+  <!-- A1.9 -->
+  <h2 id="a1-9"><span class="n">A1.9</span>Your day in five jobs</h2>
+  <p>Reception's Start here card names the five jobs done most. Here they are with the chapter that covers each.</p>
+  <table>
+    <thead><tr><th style="width:24%">Job</th><th style="width:20%">Opens</th><th>How, in the card's words</th><th style="width:12%">Chapter</th></tr></thead>
+    <tbody>
+      <tr><td>Take a booking</td><td>New booking</td><td>“Fill in the guest and the nights, then Confirm the booking.”</td><td>A2</td></tr>
+      <tr><td>Check a guest in</td><td>Arrivals</td><td>“Pick the guest from today's arrivals, then Check in.”</td><td>A3</td></tr>
+      <tr><td>Take a payment</td><td>In house</td><td>“Open the guest, go to Bill, Settle, then Take payment.”</td><td>A4</td></tr>
+      <tr><td>Check a guest out</td><td>Due out</td><td>“Open the guest, go to Bill - Check out opens once nothing is owed.”</td><td>A5</td></tr>
+      <tr><td>Count and close the cash drawer</td><td>Cashiering</td><td>“Your drawer opens by itself with your first cash. At hand over, count it, type the float kept and who takes it.”</td><td>A later chapter</td></tr>
+    </tbody>
+  </table>
+  <p>Before you start, look at the Dashboard (A1.2): the four tiles tell you what is waiting. If the yellow business-date line is showing (A1.1), the days before have not been closed yet; the line says where they are closed.</p>
+</section>

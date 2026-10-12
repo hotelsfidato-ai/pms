@@ -11,6 +11,221 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-10 · the one-click KOT computer setup (D27-299)
+
+**Asked for:** "make it simple - the team just connects the KOT device, instead of the extra work."
+
+**Shipped**
+- Restaurant setup → KOT section → This computer: **Set up this computer for printing** with **Download the setup file** (`components/KotSection.tsx`, `OneClickSetup`).
+- `lib/kotSetupFile.ts` writes `KOT-station-setup-<CODE>.cmd` for the hotel in view. It finds Chrome, lists the printers, and makes the typed one the default (Windows stops changing it). It puts the **KOT station** shortcut (`--kiosk-printing`, its own profile, that hotel's Kitchen screen) on the desktop and in Startup, stops sleep while plugged in, and opens the KOT station window on `/pos/<CODE>/setup#kot`. The file is ASCII and CRLF; an odd code or address is refused; `/check` changes nothing; the printer is asked for at most five times.
+- The KOT section scrolls into view when opened at `#kot`. Signing in now returns to the page asked for (`App.tsx`, `returnPath`), not the Dashboard.
+- KOT-STATION-SETUP.md has "The quick way"; the manual's A8.10 has the one-click steps, and Figure A8-20 is retaken.
+
+**Found**
+- A wrong printer number asked again forever once input ran out (MEMORY 405). Capped at five before it was committed.
+- Signing in always went to the Dashboard, so the file's last step would have ended there.
+
+**Proved**
+- 6 file and button tests, and 2 return-to tests. Each guard was seen failing first: no button, no cap, LF line ends, any code accepted, sleep left on, Windows managing the default printer, sign-in forgetting the page, and following `//` addresses.
+- Ran on this PC: `/check` with a right answer, and with wrong answers through closed input (stops after five). The shortcut command ran into a temporary folder, with the right target and arguments.
+- Opened on the demo: signed out → `/pos/5EL/setup#kot` → sign in → back on the KOT section with the block.
+- Related suites 60/60; web types clean.
+
+**Left open:** not run for real on a hotel computer (it would change this PC's printer and power settings); the paper size stays a by-hand step; the release needs the owner's yes.
+
+---
+
+## 2026-10-09 (evening) · custom add-ons (D27-291) and the KOT section (D27-292)
+
+**Asked for:** the owner: a "custom add-on" in Customise - type a name and a price and add it to
+a dish, even one already placed (a thali at the table, one more thing it does not offer); and a
+KOT section in Restaurant setup instead of the KOT toggle - several KOT machines by place (bar,
+restaurant), and on one machine each slip saying what it is (bill, bar KOT, restaurant KOT,
+interim). Every question asked first: 26, in seven rounds (D27-291, D27-292).
+
+**Shipped**
+- Custom add-ons (`ea150bfb`, 210): its own line under the dish, its own number, the dish's tax,
+  a price or Free; on a sent dish custom and numbered add-ons go on as lines of their own for the
+  next Send, and that KOT names the dish; the pad's "Already sent"; the Till's and the Terminal's
+  Customise on every dish; strike with a reason; the struck list; "Custom add-ons used" with
+  Number it.
+- The KOT section (211): kinds; computers, one per kind, ticked on the computer; routing per
+  section, stamped when sent; a slip per kind, "BAR KOT 14", REPRINT; the bill printer (INTERIM
+  BILL / BILL / BILL · DUPLICATE; Print here; none chosen = the bill page as before); the red line
+  per kind; the Kitchen's filter in place of its KOT printer button; the kitchen manager's way
+  into Restaurant setup. D27-159's one-device-per-outlet routes and their test are gone.
+
+**Found**
+- Nothing broken in the service. The Till's menu panel is wider than a phone-width pane (it
+  scrolls sideways); left. The lane script compares with the stale origin/cp6.
+
+**Proved** - see the root CHANGELOG's entry of the same evening.
+
+**Left open**
+- Printing by IP through an installed helper: a later phase only if the owner asks.
+
+---
+
+## 2026-10-09 (later) · POS-34, an audit of the new code, and the owner's D27-290
+
+**Asked for:** the owner: "check the extra_choice_ids bug and fix it; the options are not coming
+for me in the table view, so fix this; and audit the new code for any issues and errors." Then
+three answers (D27-290): Customise found after each tap; "All N / Just 1" on a line of several; the
+menu asked again like the add-ons. After a restart: "make this live in local".
+
+**Shipped** (`49155d4a … 07eea56d`)
+- POS-34: one fewer of a sent dish with several variation types answered 500. The struck copy
+  carries `extra_choice_ids`; 209 lets a line struck as it is written stand aside from today's menu.
+- "The options are not coming": the add-on list (and, D27-290, the menu) inherited the app's
+  trust-forever read; a device that read an empty list kept it for a week. Asked again on open, on
+  focus and when Customise opens (root MEMORY 392).
+- The audit (two read-only reviewers, each finding checked before it was fixed):
+  - Free stores 0, and 209 holds it;
+  - a same-moment duplicate number is a sentence, not a 500;
+  - a Customise with no set is refused;
+  - Clear never clears a newer bill;
+  - 209 closes the kept add-ons' shape gap;
+  - Customise says "Reading" or "could not be read", never "No add-ons yet";
+  - a fresh panel per line;
+  - a customised pad line joins its twin;
+  - Customise offline is refused, not held;
+  - finished tiles and Clear name their table;
+  - kitchen keys by place;
+  - the Add-ons tab wraps on a phone and wants rupees and paise.
+- D27-290: the "<dish> added · Customise" note beside the pad's footer, staying until the next
+  dish (an 8-second version was gone before it could be pressed on the demo); the new line scrolled
+  into view on a narrow screen; "All N / Just 1", Just 1 split off on the pad and by the server
+  (`just: 1`).
+
+**Found**
+- POS-34 (above). FIN-29 (finance): `editCharge.test` picked a stay another file had just invoiced,
+  met by the full gates on bda47784; test only.
+- Not taken: Customise does not fold into an identical line on the Till (cosmetic, both sides of the
+  bill agree); a lowered sent dish's sides still get no struck copy of their own (as before).
+
+**Proved**
+- API 230 of 230 on the files touched, through 209; database all 1,553 assertions ("pos audit
+  guards" 5, "pos numbered addons" 11, "pos floor" 6); the POS web files and the offline rules, 130
+  of 130; web and api types clean.
+- Each guard failed first:
+  - P1 Free (a 500 without the API fix - 209's own check refuses);
+  - P2 no set "expected 200 to be 409";
+  - P3 Clear "expected ['blank', null] to deeply equal ['paid', …]";
+  - P4–P6 the three 209 guards, one failure each;
+  - P7 Just 1;
+  - POS-34 the 500 itself;
+  - the stale list "Unable to find … Add-on 2, Kebab";
+  - the menu, the note, the pad's split and the Till's `just`, one failure each;
+  - the note's 8 seconds "gone after 9 seconds".
+  - A first version of that last test passed with the timer put back - the clock was faked after
+    the tap - and was rewritten before it counted.
+- Live on the demo after `migrate.sh` to 209:
+  - AC9: a tap gave "Veg Biryani added · Customise", Kebab listed;
+  - three on a line gave "All 3 | Just 1", and Just 1 left "Veg Biryani ×2" and "… with add-on
+    Kebab ×1";
+  - AC10: the note still there after 10 seconds;
+  - test lines taken off again; no server error.
+
+**Left open**
+- Customise folding into an identical Till line (cosmetic). Live has none of this until the owner
+  releases 207-209.
+
+**Commits:** `49155d4a`, `544cc6d2`, `c841a7bb` (FIN-29), `c169fcb5` (D27-290, MEMORY 392), `07eea56d`,
+and these notes.
+
+## 2026-10-09 · Numbered add-ons (D27-289), and POS-32's test fix
+
+**Asked for:** the owner, 9 October: "a new section called add-ons, separate from the current
+system - don't change anything in the variations - where I can add add-on one or add-on five or
+add-on nine; it automatically calculates the price and adds it to the dish: biryani with add-on
+kebab, one dish." Asked question by question (D27-289): Add-ons, the old groups relabelled Sides;
+a Customise button; every dish; before Send only; ×2 allowed; one bill line plus a breakdown; the
+KOT shows "+ Kebab" under the dish; the dish's GST rate; numbers typed, never reused; whoever edits
+the menu; the Tables pad, the Till and the Terminal; not on the guest's page yet. POS-32's fix: yes.
+
+**Shipped**
+- e7a0a184: POS-32 - the KOT station's print test waits for the slip to leave.
+- 8d01590a: numbered add-ons.
+  - Migration 208: `pos_numbered_addons` and `pos_order_lines.numbered_addons`; a trigger
+    refuses changing them once the kitchen has the dish.
+  - `api/src/modules/pos/numberedAddons.ts` holds the rules. `addOneLine` folds the add-ons in,
+    and the same-dish merge compares them.
+  - Customise on a dish not yet sent; the list's routes; the KOT and the Kitchen read "+ Kebab".
+  - More or fewer of a sent dish keep its add-ons.
+  - `flows/CustomiseDialog.tsx` on the pad, the Till and the Terminal; the breakdown on the bill,
+    the Till and the Terminal; "+ Kebab" on the slip and the Kitchen.
+  - The Menu's Dishes and Add-ons tabs (`components/NumberedAddonsTab.tsx`); "Sides" for the old
+    groups (labels only); `till-addons` kept offline beside the menu.
+- 9664dfd5: phone width, seen at 300px on the demo. The tab's heading stacks over its button,
+  Customise's footer wraps, and the add-ons sit in one column with ×n beside the price.
+
+**Found**
+- On the way: lowering a sent dish's quantity copies the line without `extra_choice_ids` (the
+  suspicion of the morning). Not proved either way yet.
+
+**Proved**
+- API on a scratch database at 208: numberedAddons 12, padTotal 5 (the pad and the bill, price
+  and name), roleGate, till, sameDish and kotStation - 189 of 189. Database: all 1,548 assertions
+  ("pos numbered addons" 11 of 11, "pos floor" 6 of 6). Web: the whole suite, 1,129 of 1,129.
+- Each guard failed first:
+  - the merge ignoring them: "… to deeply equal … ['Veg Biryani', 1]";
+  - no trigger: "pos numbered addons" 1 failed;
+  - the pad's price ignoring ×2: "expected 1546.5 to be 1908";
+  - the slip without "+ Kebab": "Unable to find … + Kebab ×2";
+  - Send dropping them: "expected { … } to match object { lines: [ … ] }".
+- Opened on the local demo after `migrate.sh`:
+  - Menu → Add-ons: added 2 = Kebab ₹120.
+  - Tables: AC7, Veg Biryani, Customise, 2, Done read "Veg Biryani with add-on Kebab" ₹430; Send.
+  - Kitchen: "1 × Veg Biryani + Kebab", one ticket. Floor: AC7 ₹451.50 (5% on ₹430).
+  - Till: the breakdown, and no Customise on the sent dish. Bill: "Veg Biryani with add-on Kebab /
+    Veg Biryani 310 · Kebab +120 / ₹430.00".
+  - No console error after a reload.
+
+**Left open**
+- The guest's in-room dining page (the owner: not yet). A report of add-ons sold (not asked).
+- The `extra_choice_ids` suspicion above. Live has none of this until the owner releases it.
+
+**Commits:** `e7a0a184`, `8d01590a`, `9664dfd5`, and these notes.
+
+## 2026-10-09 · Close unpaid frees its table through Clear (POS-33), and the restaurant's open issues listed
+
+**Asked for:** the owner, 9 October: "list out all the issues present right now with POS"; "when we
+are closing without payment it still remains in the blue screen, I'm not able to get rid of the table,
+and the amount still stays" (and again with N2's screenshots: "I want it to close fully"); and a plan
+for numbered add-ons. Their answer on the fix: a Clear button, as a paid table has.
+
+**Shipped**
+- 82a173b3: migration 207 (`app.pos_floor`'s sixth state, `closed`, with no amount); `Floor.tsx`'s
+  "Closed unpaid" tile with Clear and its legend entry; the Clear route frees the table of every
+  finished bill on it. POS-33 in `DEFECTS.md`.
+- POS-32 recorded: `KotStation.test.tsx`'s print test loses a race under the full suite's load.
+
+**Found**
+- POS-33, the owner's report, reproduced on AC3 and seen on their N2 (DH-005). Fixed.
+- POS-32, from the first full gates on the new PC. Open: the one-line test fix waits for the owner.
+- Not yet run, from reading `till.ts` while mapping options for the add-ons plan: lowering the
+  quantity of a sent dish copies the line without `extra_choice_ids`, which 164's trigger may refuse
+  for a dish with two or more variation types. To prove or clear before it is numbered.
+- The Manager report puts side ("Add-on groups") revenue under "Other": side lines carry no
+  `item_id`.
+
+**Proved**
+- In the copy: web types and api types clean; `closedUnpaid.test.tsx`, `kitchenTwo.test.tsx`,
+  `tillSetup.test.tsx` 10 of 10; `till.test.ts` 86 of 86 on a scratch database at 207; the database
+  suite with 207, all 1,537 assertions (pos floor 6 of 6).
+- Each guard failed first: without 207, "pos floor" 3 of 6 fail (`running`, `0.00`, `printed`) and
+  `till.test.ts` "expected 'kot' to be 'closed'"; with the one-order Clear, "expected 'closed' to be
+  'blank'"; on the old tile, "expected '38 minN2-' to contain 'Closed unpaid'".
+- Opened on the local demo after `migrate.sh`: AC3 and N2 read "Closed unpaid" with Clear; AC3's
+  Clear freed it; no console error after a reload.
+- The full gates on the merged cp6: in the root `CHANGELOG.md` (9 October).
+
+**Left open**
+- POS-32's fix (the owner's yes). The add-ons plan: built after the owner's answers to its eight
+  questions (the root `CHANGELOG.md`, 9 October). Live has POS-33 until the owner releases 207.
+
+**Commits:** `82a173b3`, and these notes.
+
 ## 2026-10-05 · The restaurant bill page is guarded (the owner's D27-279 (8))
 
 `routes.tsx`: `/pos/:code/bill/:id` is in `RequireAccess`, which takes the Till's rule (D27-275's `entryFor`); the Till, Tables and Terminal that open it have the same roles. **Proved:** `src/components/app/RequireAccess.test.tsx` (housekeeping refused by the Till's name, failing before the guard); in the browser, housekeeping saw "which does not include Till" and the GM the bill.

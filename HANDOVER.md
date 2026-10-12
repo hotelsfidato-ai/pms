@@ -1,6 +1,7 @@
 # Handover — current state
 
-**Last updated: 15 September 2026**, branch `cp6`. **This top section is
+**Last updated: 12 October 2026** (§ 2; back to the original desktop,
+`D:\fidato pms` — read `LAPTOP-HANDOVER.md` first), branch `cp6`. **This top section is
 current.** Everything under "Archive" at the bottom is the 28 August state,
 kept for the record and superseded.
 
@@ -47,7 +48,136 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
-### 5 October, 18:00 — read this first (the owner is away 5 days, working from a laptop)
+### 12 October — BACK ON THE ORIGINAL DESKTOP (`D:\fidato pms`). Read `LAPTOP-HANDOVER.md` first
+
+```
+the move             9-12 Oct the work went on on a borrowed PC (C:\Users\rozar.ROZARIO\pms)
+                     while the original desktop was shipped; it is back and development
+                     continues there. LAPTOP-HANDOVER.md (the owner's name for it): bring its
+                     own checkout up to date (look for unpushed work first; never clone),
+                     the database to 212, the videos into C:\videos. D27-302: cp6, manual-rest
+                     and videos pushed once; the 19 September rule is back afterwards. D27-303:
+                     the video code on its own branch `videos`, the big files by zip.
+                     main (live) untouched.
+in flight, stopped   10 Oct: 15 helpers (D27-301 video chapters + engine) and the day check
+                     (D27-300) were all stopped mid-work by the usage limit (MEMORY 406).
+                     A7, A13, A14 finished; the rest left part-done (branch videos, and
+                     manual-rest: unreviewed drafts, 246 pictures). Nothing on live changed.
+live                 unchanged since 10 Oct 16:35 (the fresh start; § the 4 pm block below).
+next                 LAPTOP-HANDOVER.md § 5: the desktop up to date and its gates, the owner's
+                     steps, the open questions, then the videos 3-4 helpers at a time.
+```
+
+### 10 October, 4 pm — read this first (supersedes the 5 am block below)
+
+```
+live                 THE LAUNCH IS LIVE (13:03 IST): GitHub main e2fe4cab. The SERVER runs
+                     fe07c3fd (API restarted 07:33 UTC, migrations to 212); the WEBSITE runs
+                     e2fe4cab's build, index-DEVsbHgU.js (the owner's choice: the KOT release
+                     was website-only, D27-299; the server's checkout is one commit behind -
+                     only api/scripts/reset-property.ts and notes differ, nothing the API runs).
+since 5 am           D27-298 the fresh start (reset-property.ts fixed, MEMORY 404, rehearsed;
+                     run on the LOCAL demo - its old data is in .local/backups/
+                     fidato-before-fresh-start-10oct.dump); D27-299 the one-click KOT computer
+                     setup + sign-in returns to the page asked for (e2fe4cab, gates green:
+                     web 1,223, api 2,615, db 1,665/212, replay, pg16).
+fresh start (live)   DONE 10 Oct ~16:35 by the owner (D27-298): the server pulled e2fe4cab (its
+                     checkout now matches GitHub; the API not restarted - it runs the same code),
+                     a backup, the dry run (AMR: 6 bookings, 6 guests, 12 postings, 13 orders, 26
+                     messages), then --fresh-start --yes: 155 rows removed, 16 rooms vacant and
+                     clean, business date 2026-10-10. Checked: 0 bookings, 0 guests; 7 orders
+                     left, all the test hotel AMRT's (made by the owner; its own Reset clears
+                     them). The restaurant's drawer starts afresh: Open the day before the first
+                     cash bill.
+owner's next         (2) Amrapali's KOT computer with Download the setup file (the PDF
+                     .local/release-9oct/KOT-printer-quick-setup.pdf; the online guide
+                     https://claude.ai/artifact/At8tQLKr8RMUCXNonMd235). (3) The test hotel and
+                     testers. (4) Make the release page private. The 19 September rule is back.
+server access        This PC's own key ~/.ssh/fidato_server is in opc's authorized_keys
+                     (added through Oracle Bastion; the old ssh-key-2026-09-01.key is not here).
+                     The bastion `fidatorelease` and its 0.0.0.0/0 allowlist can be deleted.
+```
+
+### 10 October, about 5 am — read this first
+
+```
+cp6 now              fe07c3fd + notes. Since 9 Oct evening: D27-294 (videos, C:\videos, paused),
+                     D27-295 (the release), bd2eb560 (SU flood test's clock, MEMORY 395),
+                     D27-296/297 TEST HOTELS (1b1323af screens, c46c6e31 database+API, merged
+                     42ed4247; migration 212: hotels.test_of, staff.test_only, guests/companies/
+                     groups split by test_hotel_id with RLS, the mixing guard, nothing leaves,
+                     app.create/reset/recopy_test_hotel with the guards' test-reset bypass),
+                     fe07c3fd (112/121/146/187 guarded, rerun.sh seeded - MEMORY 403).
+gates                fe07c3fd, full, clean, in the release copy: ALL GREEN - web 1,215, api 2,615,
+                     database 1,665 / 212, replay 212, pg16 (16.15), types, strip (1,811 s).
+release              READY, not pushed: release/all-9oct = fe07c3fd; website built in the
+                     release copy (index-DWU1f94S.js); the owner types Part 2 and A1-A7 (§ 3).
+local demo           fidato at 212; a test hotel 5ELT ("5 Elements Akkalkot · TEST") made from
+                     5EL, reset and re-copied on screen; fidato_replay = a scratch copy of the
+                     demo for replay tests (drop it when done).
+paused               the book's other chapters (.claude\worktrees\manual-rest, B1-B9 written, the
+                     rest part-written, nothing committed); the videos (C:\videos\RESUME.md).
+```
+
+### 9 October — read this first: A NEW PC
+
+```
+the folder           C:\Users\rozar.ROZARIO\pms (the owner's, 9 Oct; D: on this PC has no
+                     space). Cloned from GitHub's main (0c5e51cd, the 5 Oct tip). Local branch
+                     cp6 made from it; origin/cp6 is the stale 18 Sep one. Nothing is pushed.
+cp6 now              + 29fd6465 (dev-testers: the GM test sign-in no longer meets "Set a longer
+                     password"), 13460f7e (gates.sh and pg16.sh find the main checkout through
+                     git), 82a173b3 (POS-33: a bill closed unpaid shows "Closed unpaid - clear
+                     it" with Clear; migration 207), 6f377522 (decisions D27-287..289),
+                     e7a0a184 (POS-32), 8d01590a + 9664dfd5 (NUMBERED ADD-ONS, D27-289,
+                     migration 208: Customise on the Tables pad, Till and Terminal; "Veg
+                     Biryani with add-on Kebab" as one line; the Menu's Add-ons tab),
+                     then the audit of the new code: 49155d4a..07eea56d (POS-34, 209's three
+                     guards, the add-on list and menu asked again on open, D27-290's
+                     "added - Customise" note and "All N / Just 1", FIN-29's test).
+                     Then, asked question by question (26 questions, D27-291 and D27-292):
+                     ea150bfb CUSTOM ADD-ONS (migration 210: a typed name and a price or
+                     Free, its own line under the dish; on a dish already sent, custom and
+                     numbered add-ons as lines of their own for the next Send, that KOT naming
+                     the dish; the Tables pad's "Already sent"; "Custom add-ons used" on the
+                     Add-ons tab) and 74cf0ee4 THE KOT SECTION of Restaurant setup (migration
+                     211: KOT kinds Kitchen/Bar/added, one computer per kind ticked on the
+                     computer, routing per menu section, "BAR KOT 14" slips, REPRINT, the bill
+                     printer with INTERIM BILL / BILL / BILL · DUPLICATE and Print here, the
+                     red line per kind, the Kitchen's All/Kitchen/Bar filter, the kitchen
+                     manager into Restaurant setup for its KOT section).
+                     Migrations up to 211.
+gates                876bc94b (POS-33 + notes): ALL GREEN, the first full run on this PC -
+                     web 1,123, api 2,509, database 1,537, replay 207, pg16 (16.15) 1,537/207,
+                     build passes. bda47784's run met FIN-29 (a finance test's luck, fixed)
+                     and was cut off by a restart. 4648f5d6 (everything, with its notes):
+                     ALL GREEN, clean (1,990 s) - web 1,137, api 2,528, database 209
+                     migrations and 1,553 assertions, replay 209, pg16 (16.15) 1,553/209,
+                     build passes with no test sign-in. 74cf0ee4 (custom add-ons + the KOT
+                     section): green but web - 1 of 1,158, `markPrinted` no longer called
+                     (Rule 2b); deleted in the notes commit, the whole web suite again 169 of
+                     169 files, exit 0. api 2,546, database 1,578 / 211, replay 211, pg16,
+                     build passes.
+virtual printers     `.local\virtual-printer` (ignored, never committed): "Virtual Kitchen"
+                     and "Virtual Bar" (+ bills) for testing without a KOT machine; slips at
+                     http://localhost:5199. Start: start-virtual-printers.cmd there, or
+                     `node .local/virtual-printer/printer.mjs`. Running on the demo now: the
+                     red line reads "online" while it runs.
+local demo           `fidato` at 211, 5EL on 9 Oct, built by docs/briefs/README.md's recipe;
+                     add-on 2 = Kebab ₹120 made on it, AC7 has a Biryani with Kebab sent and an
+                     "Extra papad" on KOT 7; Beverages prints on the Bar KOT; B2 has a Paneer
+                     Tikka and 2 Masala Chai (BAR KOT 9 and an interim bill printed by the
+                     preview browser as "Bar PC", which was then taken off: no computer prints
+                     KOTs on the demo now, so the red line shows).
+                     Postgres 17.11 in .local\pg, PostgreSQL 16.15 in .local\pg16 (§ 7).
+waiting on the owner any release (207 to 211 included): nothing leaves this PC until they say.
+                     On live, the KOT printer that exists today becomes a computer printing
+                     every kind (211 moves it), so nothing stops printing on the day.
+live                 Unchecked from this PC. RELEASE-5OCT was withdrawn on 5 Oct; POS-33 is on
+                     live until 207 is released.
+```
+
+### 5 October, 18:00 — history: the desktop's last note before the laptop (merged 12 Oct; its D27-287 is now D27-304)
 
 - **LIVE since 5 Oct ~17:45: the full release** `release/full-5oct` at `0c5e51cd` (D27-285: one
   deployment). Server code 0c5e51cd, database changes up to **206**, website `index-CbA5sped.js`,
@@ -64,7 +194,7 @@ seam); a test enforces it.
   night audit must run for 3 and 4 Oct.
 - **The owner's checklist page:** https://claude.ai/artifact/HKWCtFL6TvFzv4xk27a2Lq ; the release
   page: https://claude.ai/artifact/P65CNgj7foFRaF7ihNBKMb (docs/go-live/RELEASE-5OCT-FULL.md).
-- **The laptop (D27-287):** cp6 pushed to the PRIVATE GitHub (hotelsfidato-ai/pms) by the owner;
+- **The laptop (D27-304, was D27-287 here):** cp6 pushed to the PRIVATE GitHub (hotelsfidato-ai/pms) by the owner;
   secrets (server key, `.env`, `api\.env`) on the owner's USB only; `.local\travel-kit\` holds the
   n8n paste files, the design chat's uncommitted notes and the memory notes. This PC is off; its
   local Postgres was stopped cleanly.
@@ -462,20 +592,44 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
-> **5 October, 18:00: to launch, all the owner's steps (no building).** (9) the n8n paste
-> (`.local\n8n\paste-5oct\`, deploy/n8n/IMPORT.md "The 5 October paste"); (10) Guest messages:
-> voucher, online check-in, tax invoice ON, review off; (11) night audit for 3 Oct and 4 Oct;
-> (12-17) connect the CRS — the card OFF first, the reading login and ids, the four CRS_* settings
-> (CRS_API_KEY, CRS_PROJECT_ID, CRS_AUTOMATION_EMAIL, CRS_AUTOMATION_PASSWORD) then restart, the
-> "Fidato CRS" source, a backup, `deploy/crs-run-as.sql`, the card ON, one test booking (voucher
-> unticked, "PMS" as Confirmed by, D27-286); (18) tell staff and sales; (19) remove
-> `/opt/fidato/api/.env.save*`. The master checks each read-only.
-> **After the launch (owner):** other hotels; daily report addresses; drinks headings. **On hold:**
-> booking_confirmation (then OWN_TEMPLATE_READY = true), the authentication template (Meta's
-> messaging limit), the off-site backup bucket. **Oracle stays Always Free** (D27-285, risk noted).
-> **To build, small:** Guest messages hides health-alert and labels "booking-voucher"/"health-alert";
-> the manual (A2-B9); the CRS n8n parts 2-3 (later); Money owed per guest (if wanted); before a first
-> customer, a per-customer backup log (health.ts/systemHealth.ts read one fixed log).
+> **10 October, about 5 am: THE RELEASE IS READY (D27-295), the owner's to type.** Release
+> `release/all-9oct` at **fe07c3fd** (cp6's tip): everything to 211, **test hotels** (D27-296/297,
+> migration 212) and the four replay-unsafe migrations guarded (MEMORY 403). Full gates green on
+> exactly it in `.claude\worktrees\release-all-9oct` (web 1,215, api 2,615, database 1,665 / 212,
+> replay, pg16); `node scripts/release.mjs release/all-9oct` READY - website built there,
+> `index-DWU1f94S.js`. The owner's page: https://claude.ai/artifact/31rmDP8fBcNoFwAmvdfmCE (now
+> shared by link - no secrets on it; tell them to make it private after); tracker
+> https://claude.ai/artifact/RwsmvofDrUWqCAAHnDsxzg (its db rows: update them as steps finish).
+> The owner did Part 1 (Firebase settings filled: 7 of 7). Next: (1) Part 2, into the server - the
+> old key file `ssh-key-2026-09-01.key` is NOT on this PC; the page has the Oracle Bastion way in
+> and adds this PC's own key `~/.ssh/fidato_server`; (2) A1-A7 one at a time, reading each output
+> (A1 expects 0c5e51cd..fe07c3fd; A5's launch.sh replays all 212; A6 a fresh startedAt; A7 from the
+> release copy with `firebase.cmd`, then check live loads index-DWU1f94S.js); (3) after: the owner
+> makes the test hotel and testers (B2-T), ticks KOT computers if wanted; the 19 September rule is
+> back. Live before (read only): API up since 5 Oct 17:46 IST; website `index-CbA5sped.js`.
+> THEN: the book's test-hotel pictures (A0.5, A8.1 have the words); the book's other chapters in
+> `.claude\worktrees\manual-rest` (stopped mid-way; B1-B9 written); the videos (C:\videos\RESUME.md).
+> Release the admin claim (`npm run release -- admin`) when the launch is done.
+
+> **9 October, evening: the queue.** Done since: CUSTOM ADD-ONS (D27-291, 210) and THE KOT
+> SECTION (D27-292, 211), on cp6, each guard proven to fail first, both opened on the demo (see
+> § 2). Next: (1) a release with 207-211 when the owner says - nothing leaves this machine until
+> then; on the day, each printing computer is ticked in Restaurant setup → KOT section on that
+> computer (KOT-STATION-SETUP.md, rewritten). (2) The owner tries both on the demo. (3) Open,
+> not asked for: printing by printer IP through an installed helper (D27-292: a later phase if
+> ever); the Kitchen header is crowded at phone width (wall screen, fine wide); the Till's menu
+> panel scrolls sideways at phone width (older); `scripts/lane.mjs` compares with the stale
+> origin/cp6 on this PC; the rest of the scripts' `PGBIN` default (MEMORY 390).
+
+> **9 October: the queue (the new PC).** Done today, all on cp6, checked and opened on the demo:
+> POS-33 (Close unpaid, Clear), POS-32, NUMBERED ADD-ONS (D27-289), POS-34, the audit of the new
+> code, D27-290 (the "added - Customise" note, "All N / Just 1", the menu asked again), FIN-29.
+> Next: (1) a release with 207, 208 and 209, when the owner says - nothing leaves this machine
+> until then; live still has POS-33's stuck tables. (2) The owner tries Customise on the demo
+> (Tables: tap a dish, then Customise on the note). (3) The rest of the scripts' `PGBIN` default
+> (MEMORY 390). Not yet asked for: add-ons on the guest's page, a report of add-ons sold,
+> Customise folding into an identical Till line. The 5 October release (release/all-5oct) was
+> withdrawn; what replaced it and what live runs now are unchecked from this PC.
 
 > **3 October, later: the fresh start (D27-248).** RELEASE-3OCT.md now has Part F: 5 Elements
 > and all its test data go during the release; only influvateseo@gmail.com and
@@ -1379,11 +1533,17 @@ hold `const USER = "front desk"`** (MEMORY 256) — named, not yet fixed.
 ## 7 · Working on this machine — the traps
 
 ```
-Postgres        D:\fidato pms\.local\pg (since 22 Sep, D22-1; was D:\fidato-pg), port
-                55432, password pw. Does NOT restart after a reboot. Start (PowerShell
-                on this PC):
-                & "D:\fidato pms\.local\pg\pgsql\bin\pg_ctl.exe" -D "D:\fidato pms\.local\pg\data" -l "D:\fidato pms\.local\pg\pg.log" start
+this PC         Since 9 Oct the project is C:\Users\rozar.ROZARIO\pms (was D:\fidato pms).
+                Docs still say D:; read them with this folder in its place. The database
+                scripts default PGBIN to D: (MEMORY 390): by hand, run them with
+                PGBIN=C:/Users/rozar.ROZARIO/pms/.local/pg/pgsql/bin; the gates set it.
+                git is C:\Program Files\Git (not on PowerShell's PATH; Git Bash has it).
+Postgres        .local\pg, 17.11, port 55432, password pw, UTF8, C collation. Does NOT
+                restart after a reboot. Start it through WMI (MEMORY 325), PowerShell on
+                this PC, then pg_isready -h 127.0.0.1 -p 55432:
+                Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = '"C:\Users\rozar.ROZARIO\pms\.local\pg\pgsql\bin\pg_ctl.exe" -D "C:\Users\rozar.ROZARIO\pms\.local\pg\data" -l "C:\Users\rozar.ROZARIO\pms\.local\pg\pg.log" -w -t 120 start' }
                 From Git Bash pg_ctl never returns — the server IS up; check with psql.
+                PostgreSQL 16.15 for the pg16 gate: .local\pg16 (its own cluster, 55433).
 servers         In the Claude desktop app, start them with the Browser pane's
                 preview_start: "api" (8787) then "web" (5173, or the next free
                 port). Never `npm run dev` in a shell there.

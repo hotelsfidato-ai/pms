@@ -11,6 +11,62 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-10 · Test hotels: the database and the API (D27-296)
+
+**Asked for:** the master's brief for the DATABASE and API half of the owner's twelve
+answers (D27-296): a test hotel per real hotel, inside the live system; test-only
+people; reset and re-copy; nothing leaves; test guests kept apart; the whole setup
+copied; TEST documents without a GSTIN; kept out of everything real; group admins
+only. The screens are the other helper's (`test-hotels-web`).
+
+**Shipped:**
+- Migration "test hotels" (`212_test_hotels.sql`): `hotels.test_of`, `staff.test_only`,
+  `test_hotel_id` on guests, companies, booking groups and the offer answers; the side in
+  view (`app.hotel_code`, set by the API from the address) and every row policy and
+  definer door on the group's guests rebuilt on it; the mixing guard attached from the
+  catalog; the setup, trading, never and group classes; `app.copy_hotel_setup`,
+  `app.create_test_hotel`, `app.reset_test_hotel`, `app.recopy_test_hotel`; the
+  append-only guards' way past for a test hotel's own reset only; SU, the CRS, rivals'
+  prices, report emails and loyalty refused for a test hotel.
+- API: `testHotelRoutes.ts` (make, reset, re-copy), the people rules in `admin.ts`,
+  `testOf`/`testOnly`/`testHotel` on the hotel, property and people answers,
+  `api/src/testHotels.ts` (the desk buttons that would send or reach outside, 409 for a
+  test hotel), `sending.ts`'s refusal, the guest's page (`hotel.test`, no DigiLocker, no
+  ID photo), health alerts and System health and the bank-details bell without test
+  hotels, and TEST · NOT VALID on the report files, the voucher, the tax invoice PDF
+  and the purchase order. Shared core touched, the master's to see: `db.ts` (the
+  hotel in the address), `server.ts` (two middlewares), `identity.ts` (`adopt: false`),
+  `sending.ts`, `reportRender.ts`, `roleGate.ts`, `routes/hotels.ts`,
+  `routes/guestDoor.ts`, `routes/guestDigilocker.ts`, `routes/notifications.ts`.
+
+**Proved:** `db/tests/modules/test-hotels.sql`, 87 assertions (classes complete, the
+mixing guard on every table, the two sides for ten people-and-place pairs, the copy row
+for row with every key pointing at the test hotel's own copy, a reset of a test hotel
+holding a settled bill with a struck KOT line, a closed day, an issued invoice, key cards
+and stock, the re-copy); `api/test/modules/admin/testHotels.test.ts`, 69 tests. Every
+guard put back the old way and seen to fail: 41 in the database (a scratch database
+built from the migrations each time), 28 in the API (`prove.cjs`). The database suite
+(1,665), the replay (212 migrations), PostgreSQL 16, and 114 API test files around what
+was touched, all run here, all green.
+
+**Left open:** see `MODULE.md` → Test hotels, and the report's questions for the owner
+(the provisioning key for a test hotel, equipment, contracts, online check-in's code).
+
+## 2026-10-10 · Test hotels, the screens' half (the owner's D27-296)
+
+**Asked for:** the master's brief for the screens of D27-296 (the owner's twelve answers): a test hotel inside the live system, one per real hotel, made, reset and re-copied by the owner and group administrators; the people in it; and everything a person sees in one. The database and API are the other helper's (test-hotels-core), built against one contract: `testOf` on GET /api/hotels, and `POST /api/admin/hotels/:code/test-hotel | test-reset | test-recopy`.
+
+**Shipped (this service):**
+- `components/TestHotelControls.tsx` on each real hotel's card on Properties, for a group administrator only: "Make a test hotel" with "A practice copy of this hotel's whole setup, with no guests or money."; once made, its name with TEST, Open (switches to it, opens its Rooms), Reset (says what is deleted and what stays; the button is off until RESET is typed; "Removed N records" after) and Re-copy setup ("Brings <hotel>'s rooms, rates, menu and settings again; test activity is deleted first.", RE-COPY). A refusal shows the server's sentence. A test hotel is never a card of its own and is not counted.
+- `data/admin.ts`: `makeTestHotel`, `resetTestHotel`, `recopyTestHotel` (through `call`: these answer with figures and no `ok`); `AdminProperty.testOf` read where the admin list carries it.
+- `pages/People.tsx`: Add somebody's Test switch (a group administrator's; on: only test hotels, with "Works only in the test hotel, never the real one."; off: only real hotels, as before); Give a property lists test hotels with TEST for a group administrator, and only test hotels to somebody who works only in them; TEST on a person's test-hotel place. Nobody else is offered a test hotel, whatever the roster says.
+
+**Shipped elsewhere (the core and other services; the master's brief):** the stripe in the shell and on the Kitchen and Terminal; TEST in the account menu and the Dashboard's picker; All properties without test hotels; TEST · NOT VALID and no GSTIN on the bill, KOT, folio bill, tax invoice, credit note, VAT bill, reports, Form III and the laundry docket; the four sending buttons off with "This is a test hotel: nothing is sent from it." Listed in the commit.
+
+**Proved:** `testHotels.test.tsx` (15), and the tests beside each service; every guard seen failing first with `prove.cjs` (the commit lists them).
+
+**Left open:** whether GET /api/admin/hotels and `rosterAt` carry test hotels (and `testOf`) is the API helper's; the screens read the session's `testOf` and work either way. The pictures of Properties and People are not taken (no written chapter has them yet).
+
 ## 2026-10-05 · System health reads the backup status line (D27-279 (5), D27-284 (5))
 
 **Asked for:** System health reads the nightly check's new `backup-status` line, with the same meaning, so there is one reader and one format.

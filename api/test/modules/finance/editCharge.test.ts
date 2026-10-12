@@ -36,9 +36,16 @@ const attempt = <T>(fn: (client: Client) => Promise<T>) =>
 
 async function aStayInHouse() {
   const { rows } = await sql(
+    /* ONE NOBODY HAS INVOICED (FIN-29). The first stay in house by reference
+       was whichever one another test file had just issued a tax invoice on,
+       when the files ran in that order - and Edit then refused it ("Only a
+       credit note corrects it now"), as it must. The full gates of 9 October
+       met it once the POS gained two test files. */
     `select r.id::text as stay, h.id::text as hotel
        from reservations r join hotels h on h.id = r.hotel_id
       where h.code = '5EL' and r.status = 'checked_in'
+        and not exists (select 1 from invoices i join folios f on f.id = i.folio_id
+                         where f.reservation_id = r.id)
       order by r.reference limit 1`);
   return rows[0] as { stay: string; hotel: string };
 }

@@ -78,6 +78,28 @@ export const withDemoHotel = (code: string = HOTEL) => useSession.setState((s) =
   }],
 }));
 
+/* A TEST HOTEL (the owner's D27-296): the practice copy of a real hotel,
+   among the person's hotels. `testOf` names the real hotel's CODE - the
+   one thing GET /api/hotels says about it. `inView` puts it in the
+   address's place, as a screen opened at /h/<code>/... would. */
+export const TEST_HOTEL = "5ELT";
+export const TEST_HOTEL_ID = "44444444-4444-4444-4444-444444444444";
+export const withTestHotel = ({ code = TEST_HOTEL, of = HOTEL, inView = true }:
+  { code?: string; of?: string; inView?: boolean } = {}) => {
+  useSession.setState((s) => ({
+    ...(s.scope ? { scope: { ...s.scope, hotels: [
+      ...s.scope.hotels.filter((h) => h.hotelId !== TEST_HOTEL_ID),
+      { hotelId: TEST_HOTEL_ID, role: s.scope.hotels[0]?.role ?? "front_desk" },
+    ] } } : {}),
+    hotels: [...s.hotels.filter((h) => h.code !== code), {
+      id: TEST_HOTEL_ID, code, name: "5 Elements Akkalkot · TEST",
+      city: "Akkalkot", state: "MH", gstin: null, timezone: "Asia/Kolkata", currency: "INR",
+      checkInTime: "14:00", checkOutTime: "11:00", businessDate: "2026-08-25", testOf: of,
+    }],
+  }));
+  if (inView) useUi.setState({ hotelId: code });
+};
+
 export const startSignedIn = () => {
   go("/");
   useUi.setState({ hotelId: HOTEL, sidebarCollapsed: false });

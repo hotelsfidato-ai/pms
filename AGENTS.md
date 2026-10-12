@@ -326,6 +326,20 @@ Library touched  MUST be "none"
 
 **Open every screen you build.** Not the tests — the screen.
 
+**The book moves with the screen (the owner's D27-293).** A screen you add or
+change is described in its chapter of the manual in the same commit:
+
+```bash
+# Where: this PC, with the local web (5173) and API (8787) running
+node docs/manual/tools/shoot.mjs a8     # retake the chapter's pictures (docs/manual/shots/a8.mjs)
+node docs/manual/tools/build.mjs        # join the chapters into docs/manual/manual.html
+```
+
+Edit `docs/manual/chapters/<chapter>.html`, never `manual.html` (it is built).
+`src/test/manual.test.ts` fails when a menu screen of a written chapter's part
+is not named in it, when `manual.html` is not the chapters as they are, or when
+a chapter shows a picture that is not in `docs/manual/img`.
+
 Gates, all three, pasted real:
 
 ```bash

@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { moneyPrecise, dateShort } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { DocMasthead, DocFacts, DocTotals, DOC_TH, DOC_TD } from "@/components/ui";
+import { useIsTestHotel } from "@/lib/testHotel";
+import { TestDocumentMark } from "@/components/app/TestHotel";
 import type { GroupSettings } from "@/modules/admin";
 import type { StayBill } from "../data/bill";
 import { placeLine } from "../place";
@@ -39,16 +41,25 @@ export function BillPrint({ bill, title, group }: { bill: StayBill; title: strin
   const toPost = tonight ? Math.round(tonight.amount * 100) + Math.round(tonight.tax * 100) : 0;
   /* The place once (QA FI-16): it printed "…413216, Akkalkot, MH". */
   const place = placeLine(hotel.address, hotel.city, hotel.state);
+  /* A TEST HOTEL'S BILL (the owner's D27-296 (8)): TEST · NOT VALID across
+     its head, and the place without a GSTIN. The hotel in view: the desk's
+     address. The guest's own page has no session, so it is never one. */
+  const test = useIsTestHotel();
 
   /* The CRS voucher's look (the owner, 27 September): the masthead, a
      strip of the stay's facts, the lines on hairlines, the totals under a
      2px rule. */
   return (
     <div className="bg-white text-ink-700 border border-grey-200 rounded-lg p-5 sm:p-6 [print-color-adjust:exact]" data-bill-print>
+      {test && <TestDocumentMark />}
       <DocMasthead name={hotel.name} group={group?.name} logo={group?.logo} title={title} number={stay.reference} />
-      <p className="-mt-2 mb-4 text-xs text-grey-500">
-        {place && <>{place} · </>}GSTIN <span data-bill-gstin>{hotel.gstin ?? "-"}</span>
-      </p>
+      {test ? (
+        <p className="-mt-2 mb-4 text-xs text-grey-500">{place}</p>
+      ) : (
+        <p className="-mt-2 mb-4 text-xs text-grey-500">
+          {place && <>{place} · </>}GSTIN <span data-bill-gstin>{hotel.gstin ?? "-"}</span>
+        </p>
+      )}
 
       <DocFacts
         items={[

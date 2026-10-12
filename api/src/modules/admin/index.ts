@@ -9,6 +9,7 @@ import { property } from "./property.ts";
 import { bankDetails } from "./bankDetails.ts";
 import { systemHealth } from "./systemHealth.ts";
 import { activity } from "./activity.ts";
+import { testHotels } from "./testHotelRoutes.ts";
 
 /* The front door of the administration service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -18,6 +19,9 @@ export { readPhoto } from "./gallery.ts";
 export const mounts: readonly Mount[] = [
   ["/api/hotels", moduleSwitches],
   ["/api/hotels", adminLists],
+  /* D27-296: before admin's own /admin/hotels/:code/:state, which would
+     otherwise take "test-reset" for a state it does not know. */
+  ["/api", testHotels],
   ["/api", admin],
   ["/api/hotels", commissioning],
   ["/api/hotels", groupSettings],

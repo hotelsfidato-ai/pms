@@ -14,6 +14,8 @@ import { CreditNoteFlow } from "@/modules/finance/flows/CreditNoteFlow";
 import { getInvoice } from "@/modules/finance/data/billing";
 import { placeAfter } from "@/modules/finance/place";
 import { SendInvoice } from "@/modules/guest-messaging";
+import { useIsTestHotel } from "@/lib/testHotel";
+import { TestDocumentMark } from "@/components/app/TestHotel";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PRINTED TAX INVOICE
@@ -115,6 +117,10 @@ export default function InvoicePage() {
   /* The group's name and logo from Settings (D27-53): "by <group>" under
      the property's name, the logo as a picture; nothing while unset. */
   const group = useGroupSettings(hotelId);
+  /* A TEST HOTEL'S INVOICE (the owner's D27-296 (8)): TEST · NOT VALID
+     across its head, and NO GSTIN on it - the hotel's or the company's - so
+     it can never pass for a tax invoice. A real hotel's is unchanged. */
+  const test = useIsTestHotel(hotelId);
 
   if (isLoading) {
     return (
@@ -189,6 +195,7 @@ export default function InvoicePage() {
     >
       {/* ── The masthead: the group's logo when one is set in Settings,
           the property's name until then; the document and its number ── */}
+      {test && <TestDocumentMark />}
       <DocMasthead
         name={data.supplier.name}
         group={group.name}
@@ -271,10 +278,12 @@ export default function InvoicePage() {
           {supplierPlace && <p className="text-xs text-grey-500">{supplierPlace}</p>}
           <table className="mt-2">
             <tbody>
-              <tr>
-                <td className="py-0.5 pr-4 text-xs text-grey-500">GSTIN</td>
-                <td className="py-0.5 text-xs font-semibold tabular">{data.supplier.gstin ?? "-"}</td>
-              </tr>
+              {!test && (
+                <tr>
+                  <td className="py-0.5 pr-4 text-xs text-grey-500">GSTIN</td>
+                  <td className="py-0.5 text-xs font-semibold tabular">{data.supplier.gstin ?? "-"}</td>
+                </tr>
+              )}
               {/* A16 (the owner, 26 September): on an invoice that carries
                   food - restaurant, drinks or minibar - a dash until typed. */}
               {data.lines.some((l) => FOOD.includes(l.category)) && (
@@ -292,22 +301,24 @@ export default function InvoicePage() {
           {data.recipient.address && (
             <p className="text-xs leading-[1.5] text-grey-500 mt-0.5">{data.recipient.address}</p>
           )}
-          <table className="mt-2">
-            <tbody>
-              <tr>
-                <td className="py-0.5 pr-4 text-xs text-grey-500">GSTIN</td>
-                <td className="py-0.5 text-xs font-semibold">
-                  {data.recipient.gstin ? (
-                    <span className="tabular">{data.recipient.gstin}</span>
-                  ) : (
-                    /* Not blank, and not "N/A" dressed up as a value. An
-                       unregistered recipient is a fact the invoice states. */
-                    <span className="font-normal text-grey-500">not registered</span>
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          {!test && (
+            <table className="mt-2">
+              <tbody>
+                <tr>
+                  <td className="py-0.5 pr-4 text-xs text-grey-500">GSTIN</td>
+                  <td className="py-0.5 text-xs font-semibold">
+                    {data.recipient.gstin ? (
+                      <span className="tabular">{data.recipient.gstin}</span>
+                    ) : (
+                      /* Not blank, and not "N/A" dressed up as a value. An
+                         unregistered recipient is a fact the invoice states. */
+                      <span className="font-normal text-grey-500">not registered</span>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          )}
         </div>
       </DocParties>
 
@@ -415,7 +426,7 @@ export default function InvoicePage() {
       <DocFooter
         name={data.supplier.name}
         left={data.supplier.address}
-        right={<>GSTIN {data.supplier.gstin ?? "-"}</>}
+        right={test ? undefined : <>GSTIN {data.supplier.gstin ?? "-"}</>}
         note={
           <>
             This is a computer-generated document. Issued
