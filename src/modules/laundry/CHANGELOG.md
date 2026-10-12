@@ -12,6 +12,13 @@ yet** (`MODULE.md`).
 
 ---
 
+## 2026-10-12 · A price added later is for new bags only (D27-305 (7))
+
+**Asked for:** the owner's D27-305 (7): the screens stop saying a bag can be charged once its item is priced - the price is copied when the bag is collected, so a price added later applies to new bags only, and a bag already taken keeps its dash and is taken again.
+**Shipped:** `Docket.tsx` (the unpriced notice), `Dockets.tsx` (Collect a bag's note), `PriceList.tsx` (the yellow tile) and `laundry.ts`'s charge refusal now say so.
+**Proved:** `api/test/modules/laundry/laundry.test.ts` 27/27 (its refusal case matches "no price yet", kept). Opened on a scratch copy of the demo (`fidato_test_15178`, laundry switched on there, not on the master's `fidato`): the price list's tile, Collect a bag's note for a guest's bag, and docket LD-0001's notice, each with the new words.
+**Left open:** nothing in the book: A13.6 (on `manual-rest`) already says pricing later does not change a bag already collected.
+
 ## 2026-09-30 · Laundry has its own GST heading (D27-194, by the rooms-and-rates lane)
 
 Branch `rates/base-addons-30sep`, copy `.claude\worktrees\mystifying-napier-d2f754`.

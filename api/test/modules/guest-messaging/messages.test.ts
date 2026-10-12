@@ -225,13 +225,18 @@ describe("what was sent", () => {
      `sent_by` itself is on `messages_sent`, which this reader can already
      see, so the fact that A person sent it is not a widening - only the
      name is withheld, exactly as it was before. */
-  it("lists guests' messages only, never a daily report email (the owner, 5 Oct)", async () => {
+  it("lists guests' messages only, never a daily report email or a health alert (the owner, 5 Oct; D27-305)", async () => {
     await recordOne({ kind: "daily-report", aboutKind: "hotel", aboutId: hotelId });
+    await recordOne({ kind: "health-alert", aboutKind: "hotel", aboutId: hotelId });
+    await recordOne({ kind: "booking-voucher" });
     const res = await call(staffByRole.get("front_desk")!, "/guest-messages");
-    const body = await res.json() as { messages: Array<{ kind: string }> };
+    const body = await res.json() as { messages: Array<{ kind: string; kindLabel: string }> };
 
     expect(res.status).toBe(200);
     expect(body.messages.some((m) => m.kind === "daily-report")).toBe(false);
+    expect(body.messages.some((m) => m.kind === "health-alert")).toBe(false);
+    /* The voucher on WhatsApp reads as words, not as the sender's file name. */
+    expect(body.messages.find((m) => m.kind === "booking-voucher")?.kindLabel).toBe("Booking voucher");
   });
 
   it("says a person sent it even where it cannot say which person", async () => {

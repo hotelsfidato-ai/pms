@@ -130,7 +130,7 @@ function JoinDialog({ hotelId, stay, words, onClose }: {
             onClick={() => void act(joinLoyalty(hotelId, stay.guestId), `${stay.name} joined`)}>Join</Button>
         </>}>
         <div className="space-y-3">
-          <p className="text-ink-900">{words ?? "The programme has no name yet, so there is nothing to agree to. Set it below first."}</p>
+          <p className="text-ink-900">{words ?? "The programme has no name yet, so there is nothing to agree to. The owner, an administrator or the GM names it on this Loyalty screen, under The rules."}</p>
           {!stay.hasPhone && <p className="text-sm text-grey-600">This guest has no mobile number on file; a member needs one.</p>}
           <Checkbox checked={agreed} onCheckedChange={setAgreed} label="The guest agrees" disabled={!words} />
         </div>

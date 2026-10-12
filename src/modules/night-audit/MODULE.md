@@ -216,7 +216,9 @@ room line by its date and do not move.
 - **With the line down** the night audit is refused — it closes the day for
   the whole property and needs the server (`src/lib/offline.ts`, core).
 - **One main action per screen**: "Run night audit" is the one primary; it is
-  shown disabled with its reason, never hidden (`MASTER.md` § 2, Rule 6).
+  shown disabled with its reason, never hidden (`MASTER.md` § 2, Rule 6) -
+  except from a role that may never run it: the Revenue Manager and the Viewer,
+  who lack `invoice` create (roleGate `CLOSE_DAY`), are not shown it (D27-305).
   Any new dialog must pass `src/components/ui/primaryAction.test.ts`.
 - **A shorter menu keeps everything reachable by search** (owner,
   15 September).

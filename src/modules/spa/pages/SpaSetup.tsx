@@ -103,7 +103,7 @@ export default function SpaSetupPage() {
                 <IconChip><Sparkles /></IconChip> Treatments
               </h2>
               <InfoButton>
-                {"Leave the price empty where none has been set. It reads \"-\", never ₹0, and the treatment cannot be closed for money until it has one."}
+                {"Leave the price empty where none has been set. It reads \"-\", never ₹0, and a booking taken while it has none cannot be closed for money. A price added later applies to new bookings only."}
               </InfoButton>
             </div>
           </CardHeader>

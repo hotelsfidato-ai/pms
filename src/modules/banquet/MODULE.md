@@ -214,8 +214,8 @@ with the sentence.
   names the function in the way; the exclusion constraint stands behind it.
 - **Offline**: an enquiry is queued; confirming is refused, because two desks
   offline could both take the hall (`src/lib/offline.ts`).
-- **The switch belongs to the GM**: only the property's GM or a group
-  administrator may turn banquet on or off (084; MEMORY 250).
+- **The switch belongs to the owner and an Administrator (D17-36)**: only they
+  may turn banquet on or off (admin/moduleSwitches.ts); the GM is refused.
 - **"Cancel the function" is a `danger` button.** A new dialog must declare
   its main action — `src/components/ui/primaryAction.test.ts`.
 - **The heading is the menu name** (D17-22). The Diary is headed "Diary".

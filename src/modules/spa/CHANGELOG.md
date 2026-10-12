@@ -12,6 +12,13 @@ are done, the screens are not** (`MODULE.md`).
 
 ---
 
+## 2026-10-12 · A price added later is for new bookings only; MODULE.md corrected (D27-305 (7), (9))
+
+**Asked for:** the owner's D27-305 (7): the screens stop saying a booking can be closed once the treatment is priced - the price is copied when the booking is taken, so a price added later applies to new bookings only, and one already taken keeps its dash and is booked again. (9): MODULE.md said a treatment could not be closed.
+**Shipped:** `SpaDiary.tsx` (the unpriced row; the booking window's note), `SpaSetup.tsx` (Treatments' (i)), and `spa.ts`'s close refusal now say so ("This booking was taken with no price, ... cancel this one and book it again"). `MODULE.md`: Charge to room exists (D18-22), the close route listed, requests 4 and 5 answered.
+**Proved:** `spa.test.tsx` 14/14, its unpriced-row case now asserts "applies to new bookings only" - seen failing with the sentence taken out; `api/test/modules/spa/spa.test.ts` 28/28. Opened on a scratch copy of the demo (`fidato_test_15178`, spa switched on there, not on the master's `fidato`): the unpriced row, the booking window with an unpriced treatment chosen, Treatments' (i).
+**Left open:** the manual's A13 (on `manual-rest`) quotes the old Modules note; its A13.5 "Watch out" already says pricing later does not change the booking.
+
 ## 2026-09-28 · Fix round F (QA leftovers, D27-149): the screens with the module off (QA X-5)
 
 **Asked for:** QA X-5. Branch `fix/leftovers-28sep`, copy `.claude\worktrees\great-villani-44a38c`, database `fidato_s30`, API 8867, web 5267.

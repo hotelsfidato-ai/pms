@@ -67,6 +67,10 @@ export default function NightAuditPage() {
      corrections, not the form. */
   const canCorrect = can(useRole(), "approve", "reservation");
   const [correcting, setCorrecting] = useState<string | null>(null);
+  /* Closing the day is the right the server's gate asks (roleGate CLOSE_DAY:
+     `invoice` create). A role without it - the Revenue Manager, the Viewer -
+     is not shown Run at all (the owner's D27-305). */
+  const mayClose = can(useRole(), "create", "invoice");
 
   const run = useMutation({
     /* A day already closed comes back refused WITH its record (D17-12).
@@ -197,8 +201,10 @@ export default function NightAuditPage() {
                   Last run: {data.lastRun ?? "never - this property has not closed a date in this system"}
                 </p>
               </div>
+              {mayClose && (
               <Tooltip content={data.canRun.reason ?? ""}>
-                {/* Rule 6: refused, visible, and explained — not removed. */}
+                {/* Rule 6: refused, visible, and explained — not removed.
+                    Removed only for a role that may never run it (D27-305). */}
                 <span className="shrink-0">
                   <Button variant="primary"
                     disabled={!data.canRun.allowed || run.isPending}
@@ -208,6 +214,7 @@ export default function NightAuditPage() {
                   </Button>
                 </span>
               </Tooltip>
+              )}
               <Dialog open={confirming} onOpenChange={setConfirming}>
                 <DialogContent title={`Close ${dateLong(data.businessDate)}?`} size="sm">
                   <div className="space-y-4">

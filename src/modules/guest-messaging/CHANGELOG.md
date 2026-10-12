@@ -11,6 +11,13 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-12 · Guest messages lists guests' messages only; two kinds in words (D27-305)
+
+**Asked for:** the master, with D27-305: hide kind `health-alert` from the Guest messages list as `daily-report` already is; words for `booking-voucher` and `health-alert`.
+**Shipped:** `messages.ts`: the list's query leaves out `daily-report` and `health-alert` (their sends stay in `messages_sent`); `KIND_WORDS` gains "Booking voucher" and "Health alert".
+**Proved:** `api/test/modules/guest-messaging/messages.test.ts` 19/19; its D27-305 case records a health alert and a WhatsApp voucher and asserts the first is not listed and the second reads "Booking voucher" - seen failing ("expected true to be false") with the query put back to `<> 'daily-report'`.
+**Left open:** the manual's A10 (on `manual-rest`) quotes "booking-voucher" as the WhatsApp voucher's name in the list - "Booking voucher" at the book merge.
+
 ## 2026-10-05 · The tax invoice by email only; its n8n email back; report_emails dropped (the owner's D27-284 (1), (5); helper copy on cp6 bdb6937b)
 
 **Asked for:** the tax invoice to the guest BY EMAIL ONLY - by itself when issued with the "Tax invoice" switch on, and by Send invoice; never WhatsApp, no Meta template; a company's still not by itself. The n8n `invoice` email back in the 5 October paste. Drop the unused `report_emails` and its function (D27-282 (1)).

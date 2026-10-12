@@ -491,7 +491,8 @@ function CollectDialog({
                     The description and the price are copied onto the docket as
                     they are now, so re-pricing next month does not rewrite a
                     bag somebody was handed. Anything marked "not priced" leaves
-                    this docket with no total until it is priced.
+                    this docket with no total, and a price added later applies
+                    to new bags only.
                   </p>
                 </>
               )}

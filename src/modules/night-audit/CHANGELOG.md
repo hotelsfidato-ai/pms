@@ -8,6 +8,13 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-12 · Run hidden from roles that may not run it; the Arrivals check reworded (D27-305 (3), (4))
+
+**Asked for:** the owner's D27-305, through the master: hide "Run night audit" from the Revenue Manager and the Viewer with the right the server checks; say a retention posts only if the booking has cancellation terms.
+**Shipped:** `pages/NightAudit.tsx`: Run is drawn only for `can(role, "create", "invoice")`, roleGate's `CLOSE_DAY`; the card and its reasons stay for everybody. `api/.../checklist.ts`: "An arrival left unchecked at roll-over becomes a no-show. A retention posts against it only if the booking has cancellation terms."
+**Proved:** `nightAudit.test.tsx` 8/8; its two new cases (revenue_manager, read_only) seen failing with the check forced true. Opened on the local demo (this copy's API on the master's `fidato`): the Revenue Manager sees the card and no Run; Reception sees Run; the new Arrivals words.
+**Left open:** the manual's A7 (on `manual-rest`) says Run "is never hidden" - to change at the book merge.
+
 ## 2026-10-01 · A day use is charged at check-in, never by the run (D27-225); ORIGIN on the front door
 
 The booking and bill lane, `fix/fees-dayuse-1oct`, the master's approved plan. `roomNight.ts`: `POSTS_TONIGHT` is `CHARGEABLE` plus "never a day use" - the run's SQL is the same; a NAMED stay (the check-in) is read by `CHARGEABLE`, so a day-use stay's day is charged at its check-in. `RoomNight.day_use`; `roomNightWords` says "Room N · day use"; the room join also matches a hold that starts and ends the same day (015's day-use hold), which only a day use has. `nightAudit.ts`: `ORIGIN` exported through `index.ts` for finance's postings route (a corrected fee keeps its section, D27-223).
