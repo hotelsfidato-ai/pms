@@ -1,18 +1,23 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
-import { Users, Wallet, Check, Flag } from "lucide-react";
+import { Users, Wallet, Check, Flag, FileText } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { useRole } from "@/lib/session";
+import { can } from "@/lib/permissions";
 import { BUSINESS_DATE } from "@/data/repositories";
 import {
   Page, PageHeader, Card, CardBody, CardHeader, Button, Skeleton,
-  EmptyState, StatusPill, FigureRow, FigureTile, toast, type Tone,
+  EmptyState, StatusPill, FigureRow, FigureTile, Tooltip, toast, type Tone,
 } from "@/components/ui";
 import {
   getGroup, openMasterFolio, routeRoomToGroup, setGroupLead, type GroupRoom,
 } from "@/modules/reservations/data/groups";
+import {
+  SettleDialog, IssueInvoiceDialog, settleGroupBill, issueGroupInvoice,
+} from "@/modules/finance";
 
 /* ══════════════════════════════════════════════════════════════════
    THE GROUP PANEL
@@ -89,6 +94,22 @@ export default function GroupPanelPage() {
   const refresh = () =>
     void qc.invalidateQueries({ queryKey: ["group", hotelId, id] });
 
+  /* SETTLE THE MASTER BILL (the owner's D27-305 (10)): the bill's own Settle
+     and Invoices' own "are you sure", on the host's account. Money moved, so
+     every read is asked again, as the Bill tab does. */
+  const role = useRole();
+  const mayPay = can(role, "create", "payment");
+  const mayInvoice = can(role, "create", "invoice");
+  const [confirming, setConfirming] = useState(false);
+  const issue = useMutation({
+    mutationFn: () => issueGroupInvoice(hotelId, id ?? ""),
+    onSuccess: (r) => {
+      setConfirming(false);
+      toast.success("Tax invoice issued", r.number);
+      void qc.invalidateQueries();
+    },
+  });
+
   if (group.isLoading) {
     return (
       <Page>
@@ -109,6 +130,20 @@ export default function GroupPanelPage() {
 
   const g = group.data;
   const routedCount = g.rooms.filter((r) => r.routed).length;
+  /* Who the master bill is addressed to - the server's own order: its
+     company, else the guest who leads the group, else the group. */
+  const billTo = g.master?.company
+    ?? g.rooms.find((r) => r.reservationId === g.leadId)?.guest ?? g.name;
+  /* Invoiced as a departed stay is (Invoices): every room gone, and nothing
+     owed either way. */
+  const notYet = !g.master ? ""
+    : g.master.lines.length === 0 ? "Nothing has been charged to the host yet."
+    : g.rooms.some((r) => ["confirmed", "checked_in", "tentative"].includes(r.status))
+      ? "Every room checks out first: a night still to come would land on this bill."
+    : g.master.balance > 0.5
+      ? "The bill still carries a balance. Settle it, or send it to the city ledger, before invoicing."
+    : g.master.balance < -0.5 ? "The bill is overpaid. Refund the difference before invoicing."
+    : "";
 
   const openMaster = async () => {
     setBusy("master");
@@ -330,7 +365,7 @@ export default function GroupPanelPage() {
         <Card className="mt-5">
           <CardHeader
             title="The host's account"
-            description="Every line says which room it is for."
+            description={`Billed to ${billTo}. Every line says which room it is for.`}
           />
           {g.master.lines.length === 0 ? (
             <CardBody>
@@ -361,8 +396,56 @@ export default function GroupPanelPage() {
               ))}
             </ul>
           )}
+          {(mayPay || mayInvoice || g.master.invoice) && (
+            <CardBody className="flex flex-wrap items-center gap-2 border-t border-grey-100">
+              {mayPay && (
+                <SettleDialog
+                  payer={billTo}
+                  primary={g.master.balance > 0}
+                  balance={g.master.balance}
+                  businessDate={BUSINESS_DATE}
+                  credit="host"
+                  pay={(input, key) => settleGroupBill(hotelId, g.id, input, key)}
+                  onDone={() => void qc.invalidateQueries()}
+                />
+              )}
+              {g.master.invoice ? (
+                <Link
+                  to={`/h/${hotelId}/invoices/doc/${g.master.invoice}`}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-orange-700 hover:underline underline-offset-4"
+                >
+                  <FileText className="size-4" />
+                  Tax invoice <span className="tabular">{g.master.invoice}</span>
+                </Link>
+              ) : mayInvoice && (
+                <Tooltip content={notYet}>
+                  <span>
+                    <Button
+                      size="sm"
+                      variant={notYet ? "secondary" : "primary"}
+                      disabled={notYet !== "" || issue.isPending}
+                      onClick={() => { issue.reset(); setConfirming(true); }}
+                    >
+                      <FileText className="size-4" />
+                      Issue tax invoice
+                    </Button>
+                  </span>
+                </Tooltip>
+              )}
+            </CardBody>
+          )}
         </Card>
       )}
+
+      <IssueInvoiceDialog
+        hotelId={hotelId}
+        about={confirming ? `${g.name} · the host's account` : null}
+        billTo={billTo}
+        pending={issue.isPending}
+        error={issue.isError ? issue.error : null}
+        onKeep={() => setConfirming(false)}
+        onIssue={() => issue.mutate()}
+      />
 
       <p className="mt-5 text-sm text-grey-600">
         Changing who pays affects nights <b>not yet charged</b>. The audit

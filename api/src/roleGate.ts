@@ -300,6 +300,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/stays/:id/charges/:postingId/edit`]: EDIT_BILL,
   [`POST ${H}/stays/:id/rate`]: EDIT_BILL,
   [`POST ${H}/stays/:id/payments`]: PAYMENT,
+  /* D27-305 (10): a group's master bill is settled and invoiced as a stay's. */
+  [`POST ${H}/groups/:id/payments`]: PAYMENT,
+  [`POST ${H}/groups/:id/invoice`]: TAX_INVOICE,
   [`POST ${H}/cashier-shift/open`]: DRAWER,
   [`POST ${H}/cashier-shift/movements`]: DRAWER,
   [`POST ${H}/cashier-shift/count`]: DRAWER,

@@ -9,11 +9,12 @@ import { useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import {
   Page, PageHeader, Card, CardBody, DataTable, StatusPill,
-  Button, Tooltip, IconChip, Dialog, DialogContent, type Column,
+  Button, Tooltip, IconChip, type Column,
 } from "@/components/ui";
 import { describeError } from "@/components/ui/States";
 import { listBillable, getInvoiceSeries, listInvoices, issueInvoice, listVatBills, type BillableRow, type IssuedInvoice, type IssuedVatBill } from "@/modules/finance/data/billing";
 import { TaxRulesCard } from "@/modules/finance/flows/TaxRulesCard";
+import { IssueInvoiceDialog } from "@/modules/finance/flows/IssueInvoiceDialog";
 
 /* ══════════════════════════════════════════════════════════════════
    INVOICES
@@ -406,36 +407,15 @@ export default function InvoicesPage() {
         />
       </Card>
 
-      <Dialog open={confirming !== null} onOpenChange={(o) => { if (!o) setConfirming(null); }}>
-        {confirming && (
-          <DialogContent
-            title="Issue this tax invoice?"
-            description={`${confirming.guest} · room ${confirming.roomNumber} · ${confirming.reference}`}
-            size="sm"
-            footer={
-              <div className="flex gap-2 w-full justify-end">
-                <Button variant="secondary" onClick={() => setConfirming(null)}>Keep it</Button>
-                <Button variant="primary" loading={issue.isPending}
-                  onClick={() => issue.mutate(confirming)} data-issue-confirm>
-                  Issue the invoice
-                </Button>
-              </div>
-            }
-          >
-            <p className="text-sm text-grey-700 leading-relaxed" data-issue-to>
-              Billed to <span className="font-medium text-ink-900">{confirming.billTo}</span>.
-              It takes the next number in the GST series
-              {series.data?.[0] ? <> - <span className="tabular font-medium text-ink-900">{series.data[0].next}</span></> : null}.
-              An issued invoice is never edited: a wrong one needs a credit note.
-            </p>
-            {issue.isError && (
-              <p className="text-sm text-brand-red-700 mt-3">
-                {describeError(issue.error).message ?? "The invoice was not issued. Nothing was changed."}
-              </p>
-            )}
-          </DialogContent>
-        )}
-      </Dialog>
+      <IssueInvoiceDialog
+        hotelId={hotelId}
+        about={confirming && `${confirming.guest} · room ${confirming.roomNumber} · ${confirming.reference}`}
+        billTo={confirming?.billTo ?? ""}
+        pending={issue.isPending}
+        error={issue.isError ? issue.error : null}
+        onKeep={() => setConfirming(null)}
+        onIssue={() => { if (confirming) issue.mutate(confirming); }}
+      />
 
       {/* A section, not a second page title: a PageHeader here named the
           browser tab "Issued" (the owner, 27 September: each tab its

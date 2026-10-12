@@ -362,6 +362,46 @@ invoices.post("/:code/stays/:id/invoice", async (c) => {
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
+/* A GROUP'S MASTER BILL (the owner's D27-305 (10)): its tax invoice through
+   the same door and series. Addressed as a stay's: the company the master is
+   billed to, else the person who leads the group (D22-52), else the group's
+   own name. Not sent by itself (D27-284): app.guest_invoices_owed reads only
+   a stay's bills. */
+invoices.post("/:code/groups/:id/invoice", async (c) => {
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const groupId = c.req.param("id");
+    if (!UUID.test(groupId)) return refuse("No such group.");
+
+    const { rows: [master] } = await client.query<{
+      id: string; name: string; gstin: string | null; address: string | null;
+    }>(
+      `select f.id::text,
+              coalesce(co.name, gu.full_name, g.name) as name,
+              nullif(co.gstin, '') as gstin,
+              case when co.id is not null
+                   then nullif(concat_ws(', ', nullif(co.address_line, ''),
+                                               nullif(co.city, '')), '')
+                   else gd.address_line end as address
+         from folios f
+         join reservation_groups g on g.id = f.group_id
+         left join companies co on co.id = f.company_id
+         left join reservations r on r.id = app.group_lead(g.id)
+         left join guests gu on gu.id = r.guest_id
+         left join guest_documents gd on gd.guest_id = gu.id
+        where f.hotel_id = $1 and f.group_id = $2 and f.status = 'open'`,
+      [hotelId, groupId]);
+    if (!master) return refuse("This group has no host account to invoice.");
+
+    const { id, ...recipient } = master;
+    return issueFolioInvoice(client, hotelId, id, recipient);
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
 /** A line's SAC: its kind's, frozen on the invoice; a room line falls back to
     the invoice's own code; anything else unsaid is null (a dash). */
 export function sacOf(kind: string | null, byKind: Record<string, string> | null, invoiceSac: string): string | null {

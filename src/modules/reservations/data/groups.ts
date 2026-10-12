@@ -69,7 +69,14 @@ export interface GroupDetail {
   /** Null until somebody opens one. Most groups never need one —
       a block where everybody settles their own room has no host
       account to keep. */
-  master: { id: string; balance: number; lines: GroupMasterLine[] } | null;
+  master: {
+    id: string; balance: number; lines: GroupMasterLine[];
+    /** The company the bill is addressed to (D27-305 (10)); null: the
+        person who leads the group. */
+    company: string | null;
+    /** Its tax invoice, while one stands. */
+    invoice: string | null;
+  } | null;
   /** The sum of the rooms' own folios. Kept apart from the master's
       balance on purpose. */
   guestBalance: number;

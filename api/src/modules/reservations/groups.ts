@@ -81,12 +81,22 @@ groups.get("/:code/groups/:id", async (c) => {
 
     const { rows: master } = await client.query<{
       id: string; status: string; balance: string;
+      company: string | null; invoice: string | null;
     }>(
+      /* Who the bill is addressed to, and its tax invoice while one stands
+         (issued and not credited, as finance asks it): the page's Settle and
+         Issue tax invoice (D27-305 (10)). */
       `select f.id::text, f.status,
               coalesce((select sum(fp.amount + fp.tax_amount)
                           from folio_postings fp where fp.folio_id = f.id), 0)::text
-                as balance
+                as balance,
+              co.name as company,
+              (select i.number from invoices i
+                where i.folio_id = f.id and i.credits_id is null
+                  and not exists (select 1 from invoices cn where cn.credits_id = i.id)
+                order by i.issued_at desc limit 1) as invoice
          from folios f
+         left join companies co on co.id = f.company_id
         where f.group_id = $1 and f.hotel_id = $2 and f.status = 'open'`,
       [groupId, hotelId],
     );
@@ -137,6 +147,7 @@ groups.get("/:code/groups/:id", async (c) => {
          people; one combined number tells nobody what to collect. */
       master: master[0]
         ? { id: master[0].id, balance: Number(master[0].balance),
+            company: master[0].company, invoice: master[0].invoice,
             lines: lines.map((l) => ({
               date: l.date, description: l.description,
               category: l.category, amount: Number(l.amount), room: l.room,
@@ -168,16 +179,27 @@ groups.post("/:code/groups/:id/master", async (c) => {
       return { ok: true as const, id: existing[0].id, created: false };
     }
 
+    /* ADDRESSED TO THE COMPANY THE GROUP IS BILLED TO (D27-305 (10)), as a
+       function's bill is (060): the group's own, else its lead room's - one
+       booking made every room, with one company. "Bill to company" then
+       sends it to that company's City ledger, which reads the bill's own
+       company (cityLedgerMoves, app.company_owes). */
     const { rows } = await client.query<{ id: string }>(
-      `insert into folios (hotel_id, group_id) values ($1,$2)
+      `insert into folios (hotel_id, group_id, bill_to, company_id)
+       select $1, g.id, case when x.co is null then 'guest' else 'company' end, x.co
+         from reservation_groups g
+        cross join lateral (select coalesce(g.company_id,
+                   (select r.company_id from reservations r where r.id = app.group_lead(g.id))) as co) x
+        where g.id = $2
        returning id::text`,
       [hotelId, groupId]);
+    if (!rows[0]) return refuse("No such group.");
 
-    return { ok: true as const, id: rows[0]!.id, created: true };
+    return { ok: true as const, id: rows[0].id, created: true };
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);
-  return c.json(result);
+  return c.json(result, result.ok ? 200 : 409);
 });
 
 /* ── Who leads the group (D22-52) ──────────────────────────────────

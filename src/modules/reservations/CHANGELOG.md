@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-12 · Settle the master bill on the group's page (the owner's D27-305 (10))
+
+The host's account on the group's page now says who it is billed to and carries finance's own Settle and "Issue tax invoice" (the routes and the dialogs are finance's; see its CHANGELOG). Opening the host account (`POST /groups/:id/master`) addresses it to the company the group is billed to - the group's own, else its lead room's, one booking having made every room - with `bill_to = 'company'`, as a function's bill is; GET `/groups/:id` adds the master's `company` and its standing `invoice`. The invoice is offered once every room has left and nothing is owed. **Proved:** `groupMasterBill.test.tsx` (6) and `api/test/modules/finance/masterBill.test.ts`; opened on the local demo (finance's entry of the same day).
+
 ## 2026-10-04 · A booking over its company's credit limit (the owner's D27-275 part 5)
 
 `makeBooking` asks finance's `overCreditLimit` as its last refusal, for a booking naming a company: every room's nights at its rate with the room's GST, plus what the company owes now, against its limit. Refused with `needs: "credit-limit"`; `overLimitReason` from the owner, an administrator or the GM books it and records the allowance. Only the desk's booking names a company, so a channel's is never asked. New booking shows the sentence under the buttons, with "Allow, with reason" for the three (`keeper`). **Proved:** `api/test/modules/finance/creditLimit.test.ts` (refused, writing no guest; the GM's allow books); `overCreditLimit.test.tsx` (reception told who can; the GM's reason is sent), both failing with the page's branch broken.

@@ -8,6 +8,21 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-12 · Settle the master bill (the owner's D27-305 (10))
+
+**Asked for:** on the group's page, settle a group's master bill ("Host pays") the way a stay's bill works - a payment in any of the hotel's ways, its tax invoice from the same series (a company's not sent by itself, D27-284), and "Bill to company" to the company's City ledger with its credit limit counted across the group (D27-279) and the GM's "Allow, with reason" - through the stay's own paths, not a second money path.
+
+**Shipped:**
+- `POST /:code/groups/:id/payments` (`postings.ts`): the group's open master through `takeFolioPayment`, in the group's turn (`payment-group:<id>`, as its rooms' payments), cash counted over the group's bills (the master's and its rooms'), a foreign lead guest not asked for a PAN. The door gains `Payer.check(method, amount)`, the caller's own last refusal (it may write): for the master, "Bill to company" refused when the master names no company, else `overCreditLimit` with `overLimitReason`. A stay's payment is unchanged.
+- `POST /:code/groups/:id/invoice` (`invoices.ts`): `issueFolioInvoice` on the master, to the company it is addressed to, else the guest who leads the group, else the group's name. `app.guest_invoices_owed` reads a stay's bills only, so it is never sent by itself.
+- The master is addressed to the company when the host account opens (reservations' `groups.ts`), so the City ledger and `app.company_owes`, which read the bill's own company, count it unchanged. No migration.
+- `roleGate.ts` (core, two lines): payments `PAYMENT`, the invoice `TAX_INVOICE`, as a stay's.
+- Web: `SettleDialog` takes `pay`, `payer`, `primary` and `credit` and shows the over-limit sentence and the GM's reason box (Add charge's); exported with `IssueInvoiceDialog` (Invoices' "Issue this tax invoice?", moved to `flows/`, Invoices uses it), `settleGroupBill`, `issueGroupInvoice`.
+
+**Proved:** `api/test/modules/finance/masterBill.test.ts` 8/8 (addressed to the company; a Viewer and housekeeping refused 403 for a real group and a made-up id alike, nothing posted; UPI ₹1,300 taken, a method the hotel does not take refused; no amount refused; over the limit refused with `needs`, reception's reason refused and no allowance written, the GM's allowed and audited, the company owes ₹5,000; a group billed to nobody refused; the invoice 00001 to the company with its GSTIN and address, a second press the same number, not owed to any guest; a family group's to its lead guest). With `Payer.check` switched off 3 of 8 failed. `roleGate.test.ts` 79/79. The finance, banquet and reservations API folders: 35 files, 242/242. `groupMasterBill.test.tsx` 6/6; with the over-limit branch broken 2 failed, with "still staying" dropped 1 failed. `db/tests/modules/finance.sql`: three checks (a master's transfer owed by its company; its invoice not owed by itself with the switch on, nor by Send invoice); `db/tests/run.sh` all 1,668 passed. Quick gates: types and strip 0; web 1,227 of 1,229 - the two (`App.test.tsx` module switches, `newBookingFields`) timed out under other helpers' load and passed alone (33/33, 1/1). Opened on the local demo: a two-room company group, host account opened and both rooms ticked on the page, checked in (two nights, ₹6,300, on the master), ₹1,300 by UPI on Settle, ₹5,000 "Bill to company" refused over the ₹2,000 limit and allowed by the GM with a reason, both rooms checked out, the master left open (₹0), Issue tax invoice took 5EL/2026-27/00001 to the company; City ledger debit ₹5,000. At 390 px no sideways scroll.
+
+**Left open (questions for the owner):** in the master chat's report of 12 October.
+
 ## 2026-10-05 · The credit limit counts the whole group; the interim bill is guarded (the owner's D27-279 (6), (8))
 
 **Shipped:**

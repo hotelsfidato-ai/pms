@@ -104,6 +104,7 @@ of the old `inventorySetup.ts` (`3ca215d`).
 | POST | `/:code/stays/:id/rate` | change the stay's rate a night with a `reason` (D27-162): every charged night corrected to it (a closed day's through night-audit's `correctClosedCharge`), all or nothing; owner, administrator, GM. Before check-in it only changes the agreed rate, and with no night charged the reason goes into the booking's notes (D27-187, D27-195; the panel's menu opens `ChangeRateDialog`). `includesGst: true`: the rate is all-in and is split by `roomRateBeforeGst` first (D27-199) |
 | GET | `/:code/tax/room/before-gst?gross=` | a room rate that includes GST, split as the booking keeps it (D27-195): `{ok, pre, rate, total}` - the slab on the pre-tax value, the nearest total not above the figure; the slab gap and no room rule refused in words (`roomRateBeforeGst`, also used by reservations' `book.ts`); anyone |
 | POST | `/:code/stays/:id/payments` | take a payment: a posting and its receipt; one guest's (and group's) payments take turns (D27-2); more than the bill only with `heldAsCredit: true`, else refused with `needs: "credit"` (D27-4); `folioId` names the bill of a split stay (QA FI-2); cash opens the taker's own drawer by itself, after every refusal (`openOwnDrawer`, D27-200; every rupee still belongs to a shift, D27-118) |
+| POST | `/:code/groups/:id/payments` | settle a group's open master bill (the owner's D27-305 (10)), the group's page's Settle: the same door (`takeFolioPayment`) in the group's turn; cash counted over the group's bills; "Bill to company" goes to the City ledger of the company the master is addressed to - refused when it is addressed to none - and over that company's credit limit (D27-279) only with `overLimitReason` from the owner, an administrator or the GM (`needs: "credit-limit"`; `Payer.check`, the door's last refusal). `payment` create |
 
 **`api/src/modules/finance/cashier.ts`** (cut from the old `api/src/routes/operations.ts`)
 
@@ -150,6 +151,7 @@ Its front door also exports `companyReceipts` (the day book's receipts, D27-242 
 | Method | Path | What it does |
 |---|---|---|
 | POST | `/:code/stays/:id/invoice` | issue the tax invoice for one BILL of a stay (`folioId`; a split stay without one is refused - QA FI-1) (`app.next_invoice_number`) — and, in the same transaction, the VAT bill for its alcohol (`app.issue_vat_bill`, D22-44) |
+| POST | `/:code/groups/:id/invoice` | the tax invoice for a group's open master bill (D27-305 (10)), through `issueFolioInvoice`: to the company the master is addressed to, else the guest who leads the group (`app.group_lead`), else the group's name. Never sent by itself (D27-284): `app.guest_invoices_owed` reads a stay's bills only. `invoice` create |
 | GET | `/:code/invoices/:number{.+}` | one invoice or credit note, with the lines it was made from |
 | GET | `/:code/invoices` | every number issued here |
 | GET | `/:code/invoice-series` | the series itself |
@@ -225,6 +227,7 @@ What `index.ts` exports, and who uses each (grep of `@/modules/finance`,
 | Export | Used by |
 |---|---|
 | `getFolio` | front desk (`flows/StayDrawer.tsx`); the core test `repositories.test.ts` |
+| `SettleDialog`, `IssueInvoiceDialog`, `settleGroupBill`, `issueGroupInvoice` | reservations (`pages/GroupPanel.tsx`): the host's account is settled and invoiced with the Bill tab's own Settle and Invoices' own "are you sure" (D27-305 (10)) |
 | `listOpenFolios` | front desk (`data/stayview.ts`); the core test |
 | `getFolioBalance` | front desk (`data/operations.ts`, `pages/InHouse.tsx`) |
 | `FolioPanel` | front desk (`flows/StayDrawer.tsx`) — the Bill tab |
