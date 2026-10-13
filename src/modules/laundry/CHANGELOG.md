@@ -12,6 +12,16 @@ yet** (`MODULE.md`).
 
 ---
 
+## 2026-10-13 · The docket's cards in plain words, no decision codes (the owner's D27-316 (4))
+
+**Asked for:** the hotel's-own-linen card read "(D18-5). The table refuses a charge on it, so there is no button here that would ask." and the "Already on the bill" card showed "(D18-7)".
+**Shipped:** `pages/Docket.tsx`: the first card now says "Counted out and back, never charged to anybody."; the second reads "It is its own line on the room's folio. A charge is reversed on the folio, never by cancelling the docket under it." `MODULE.md` says so. Nothing else changed; the codes that stay are in code comments.
+**Found:** no other decision code is shown to staff anywhere in the laundry pages (a scan of every non-comment line of `src` and `api/src` for `Dnn-n` found only these two and the ones listed in the report, none in this service).
+**Proved:** `laundry.test.tsx` 11 of 11 (10 before; one new case with a charged docket, `guest-charged`). Seen failing first: the hotel-linen case (the exact new sentence, no `Dnn-n` anywhere on the page, no "The table refuses") and the new charged-docket case.
+**Left open:** nothing. The manual's A13 (on `manual-rest`) line "The hotel's own linen has no charge button: it is never charged to anybody" is still true.
+
+---
+
 ## 2026-10-12 · A price added later is for new bags only (D27-305 (7))
 
 **Asked for:** the owner's D27-305 (7): the screens stop saying a bag can be charged once its item is priced - the price is copied when the bag is collected, so a price added later applies to new bags only, and a bag already taken keeps its dash and is taken again.
