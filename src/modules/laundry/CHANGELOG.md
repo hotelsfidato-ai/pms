@@ -18,6 +18,7 @@ yet** (`MODULE.md`).
 **Shipped:** `pages/Docket.tsx`: the first card now says "Counted out and back, never charged to anybody."; the second reads "It is its own line on the room's folio. A charge is reversed on the folio, never by cancelling the docket under it." `MODULE.md` says so. Nothing else changed; the codes that stay are in code comments.
 **Found:** no other decision code is shown to staff anywhere in the laundry pages (a scan of every non-comment line of `src` and `api/src` for `Dnn-n` found only these two and the ones listed in the report, none in this service).
 **Proved:** `laundry.test.tsx` 11 of 11 (10 before; one new case with a charged docket, `guest-charged`). Seen failing first: the hotel-linen case (the exact new sentence, no `Dnn-n` anywhere on the page, no "The table refuses") and the new charged-docket case.
+**On screen** (my own API on 8845 and web on 5345, a kept scratch copy of the demo with laundry switched on, dropped after): docket LD-0001 (the hotel's linen) shows "The hotel's own linen - Counted out and back, never charged to anybody."; LD-0002 (a guest's bag charged to room 204) shows "Already on the bill - It is its own line on the room's folio. A charge is reversed on the folio, never by cancelling the docket under it."
 **Left open:** nothing. The manual's A13 (on `manual-rest`) line "The hotel's own linen has no charge button: it is never charged to anybody" is still true.
 
 ---
