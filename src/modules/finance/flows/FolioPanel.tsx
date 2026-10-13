@@ -10,7 +10,7 @@ import { useCurrentHotel, useRole } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { money, moneyPrecise, dateShort } from "@/lib/format";
 import {
-  CHARGE_CATEGORIES, payingWays,
+  CHARGE_CATEGORIES, payingWays, canCheckOut,
   type ChargeCategory,
 } from "@/lib/rules";
 import { getRateBeforeGst, getTaxRate } from "@/modules/finance/data/tax";
@@ -21,7 +21,7 @@ import {
   DropdownMenuItem, DropdownMenuLabel,
 } from "@/components/ui";
 import { getFolioPostings, getFolioBalance, postCharge, reverseCharge, settle, reverseChargeAllowed, editCharge, changeRate, type BillLine, type SettleInput } from "@/modules/finance/data/postings";
-import { checkOut, checkOutAllowed, earlyArrival } from "@/modules/front-desk";
+import { checkOut, earlyArrival } from "@/modules/front-desk";
 import { type OperationResult, type Posting, type Stay } from "@/data/repositories";
 import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type StayFolio } from "@/modules/finance/data/folios";
 import { LateCheckOutFlow } from "@/modules/front-desk";
@@ -96,11 +96,13 @@ export function FolioPanel({
     enabled: !!hotelId,
   });
 
-  const checkoutPermitted = useQuery({
-    queryKey: ["checkout-allowed", hotelId, stay.id, balance.data],
-    queryFn: () => checkOutAllowed(hotelId, stay.id),
-    enabled: mayCheckOut,
-  });
+  /* CHECK OUT FOLLOWS THE BALANCE ON SCREEN (D27-313): the one rule on the
+     balance above. It was a second question asked under a key holding the
+     balance, so each payment began a new question with no answer, and the
+     button greyed with no reason for ~4 s. Now it keeps its answer while the
+     balance refetches and refuses the moment money is owed. No bill owes
+     nothing (D17-16); no answer until the balance has loaded. */
+  const checkoutPermitted = balance.isSuccess ? canCheckOut(stay, balance.data ?? 0, money) : undefined;
   const stayFolios = useQuery({
     queryKey: ["stay-folios", hotelId, stay.id],
     queryFn: () => listStayFolios(hotelId, stay.id),
@@ -188,9 +190,9 @@ export function FolioPanel({
           </Field>
         )}
         <CheckOutButton
-          allowed={(checkoutPermitted.data?.allowed ?? false)
+          allowed={(checkoutPermitted?.allowed ?? false)
                    && (!foreign || Boolean(nextDestination.trim()))}
-          reason={checkoutPermitted.data?.reason}
+          reason={checkoutPermitted?.reason}
           guest={stay.guest}
           room={stay.roomNumber}
           onCheckOut={async () => {

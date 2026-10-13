@@ -6,12 +6,10 @@ import type { Posting } from "@/data/repositories/types";
 import { listAllRooms } from "@/data/repositories/rooms";
 import { getStay, listStays } from "./stays";
 import { api, ApiError } from "@/lib/api";
-import { canCheckIn, canCheckOut } from "@/lib/rules";
-import { money } from "@/lib/format";
+import { canCheckIn } from "@/lib/rules";
 import type { Stay, Permitted } from "@/data/repositories/types";
 import type { OperationResult } from "@/data/repositories/result";
 import { refuse } from "@/data/repositories/result";
-import { getFolioBalance } from "@/modules/finance";
 
 
 /* ══════════════════════════════════════════════════════════════════
@@ -219,14 +217,6 @@ export async function checkIn(
 }
 
 /* ── C · Departure → settle → check out ───────────────────────────── */
-
-export async function checkOutAllowed(hotelId: string, stayId: string): Promise<Permitted> {
-  const stay = await getStay(hotelId, stayId);
-  if (!stay) return { allowed: false, reason: "Reservation not found." };
-  /* A stay with no bill owes nothing, so it may check out (D17-16 changes
-     what is SHOWN, not what is owed). */
-  return canCheckOut(stay, (await getFolioBalance(hotelId, stayId)) ?? 0, money);
-}
 
 export async function checkOut(
   hotelId: string, stayId: string,

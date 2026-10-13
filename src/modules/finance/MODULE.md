@@ -240,7 +240,7 @@ On the server (`api/src/modules/finance/index.ts`): `postCharge` (laundry, spa),
 Other services, through their doors only:
 
 - **front desk** — `fetchStays` (`data/folios.ts`), `getStay` and type
-  `Posting` (`data/postings.ts`), `checkOut`, `checkOutAllowed`,
+  `Posting` (`data/postings.ts`), `checkOut`,
   `earlyArrival` and `LateCheckOutFlow` (`flows/FolioPanel.tsx`), `StayTable`
   (`pages/Folios.tsx`).
 - **reports** — `getReport` (`pages/Billing.tsx`): Company accounts shows the
