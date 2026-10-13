@@ -1,7 +1,6 @@
 # Lane A · Early check-out, Part A: "Leaving early" (D27-315) · Opus
 
-Start only when the master has told the owner that D27-314 (the late-charge fix) is merged
-into cp6 - it changes the same check-out route.
+D27-314 (the late-charge fix) is merged into cp6 (13 Oct) - start now.
 
 **Your copy:** from D:\fidato pms, in Git Bash:
 `git worktree add ".claude/worktrees/lane-a" -b lane/early-checkout-a cp6`, then work only
@@ -43,3 +42,5 @@ Update front-desk CHANGELOG.md/MODULE.md; list manual lines (the book is branch
 manual-rest - do not edit it). Commit in small steps ("Co-Authored-By: Claude Opus 5.5
 <noreply@anthropic.com>"). Take the junctions out at the end. Decide nothing new: questions
 go in your report with a recommendation. Report to `.local/lanes/a-report.md`.
+
+**Progress log:** append a line to `D:\fidato pms\.local\lanes\progress.log` at the start, after each finished piece, at least every 30 minutes, and at the end ("DONE"; "BLOCKED: why" if stuck) - the format is in README.md.

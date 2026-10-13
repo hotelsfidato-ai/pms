@@ -21,10 +21,13 @@ frames of A16-16 do not show the real owner account. After each chapter: look at
 frames, then render it with `node tools/render.mjs <ch> --stale`, check
 `node tools/audiocheck.mjs out/<ch>/*.mp4`, and copy `out/<ch>/*.mp4` into
 `D:\fidato\final videos\<the chapter's existing folder>` (replace). Renders are heavy: one
-at a time, never two.
+at a time, never two - before each render check no other `render.mjs` is running on this PC
+(the master and Lane E render too); wait until it has finished.
 
 Never start Microsoft Edge; no npm install, no downloads; never touch any .env; never
 write in D:\fidato pms except the final videos copy; nothing leaves this machine. Another
 lane (Film 1) uses the demo at the same time on a NEW hotel - leave that hotel alone.
 Report to `D:\fidato pms\.local\lanes\d-report.md`: each chapter recorded (clips,
 seconds), rendered and copied, anything skipped and why, anything wrong in the PMS seen.
+
+**Progress log:** append a line to `D:\fidato pms\.local\lanes\progress.log` at the start, after each finished piece, at least every 30 minutes, and at the end ("DONE"; "BLOCKED: why" if stuck) - the format is in README.md.
