@@ -34,7 +34,6 @@ beforeEach(() => {
   args = null;
   vi.spyOn(apiModule, "api").mockImplementation(() => new Promise(() => {}) as never);
   vi.spyOn(postings, "getFolioBalance").mockResolvedValue(0 as never);
-  vi.spyOn(frontDesk, "checkOutAllowed").mockResolvedValue({ allowed: true });
   vi.spyOn(frontDesk, "checkOut").mockImplementation(async (...a) => {
     args = a;
     return { ok: true, data: STAY };

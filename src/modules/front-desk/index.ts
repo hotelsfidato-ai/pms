@@ -8,7 +8,7 @@ export { FrontDeskRulesCard } from "./components/FrontDeskRules";
 export { ReadyReasons } from "./components/ReadyReasons";
 export { listOf, holidaysOf, vipLevels, type ListItem, type Holiday } from "./data/lists";
 export type { StayColumn, StayRow } from "./components/StayTable";
-export { assignRoom, checkOut, checkOutAllowed, earlyArrival } from "./data/operations";
+export { assignRoom, checkOut, earlyArrival } from "./data/operations";
 export type { Posting } from "./data/operations";
 export { fetchStays, getHouseNow, getStay, listArrivals, listDepartures, listInHouse, listStays } from "./data/stays";
 export type { HouseNow, HouseNowRoom } from "./data/stays";

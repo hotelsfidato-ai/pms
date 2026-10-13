@@ -16,6 +16,12 @@ import type { Stay } from "@/data/repositories/types";
    which is exactly what the in-memory store did, so the swap changes
    the transport and nothing else.
 
+   ⚠ EIGHTY-THREE BECAME 793 (the day check, 13 October): every booking
+   ever made, ~3.5 s, read on every check-in and every payment's refresh.
+   The three desk lists now ask the same endpoint for `from`/`to` - only
+   who is checked in and who arrives that day (D27-313) - and still slice
+   here; the full list is `listStays`, for the screens that need it.
+
    Folios moved WITH stays rather than after. A folio is keyed by its
    reservation id; swapping stays alone would have left the interface
    asking for postings under a uuid the store has never seen, and
@@ -27,11 +33,14 @@ export { BUSINESS_DATE } from "@/data/repositories/businessDate";
 
 const clone = <T,>(rows: T[]): T[] => rows.map((r) => ({ ...r }));
 
-/** A property the caller cannot see is empty, not an error. */
-export async function fetchStays(hotelId: string): Promise<Stay[]> {
+/** A property the caller cannot see is empty, not an error. With `from`
+    (D27-313): only the bookings checked in now and those arriving from..to,
+    `to` defaulting to `from` - the desk's lists, not every booking ever made
+    (793 and ~3.5 s on the demo, read on every check-in). */
+export async function fetchStays(hotelId: string, from?: string, to = from): Promise<Stay[]> {
   if (!hotelId) return [];
   try {
-    return await api<Stay[]>(`/api/hotels/${hotelId}/stays`);
+    return await api<Stay[]>(`/api/hotels/${hotelId}/stays${from ? `?from=${from}&to=${to}` : ""}`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return [];
     throw error;
@@ -124,7 +133,7 @@ export async function getStay(hotelId: string, id: string): Promise<Stay | null>
    Named for what a clerk is doing, not for a status value.        ═══ */
 
 export async function listArrivals(hotelId: string, date = BUSINESS_DATE) {
-  const rows = (await fetchStays(hotelId)).filter(
+  const rows = (await fetchStays(hotelId, date)).filter(
     (s) => s.arrival === date && s.status !== "cancelled",
   );
   return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
@@ -136,17 +145,18 @@ export async function listArrivals(hotelId: string, date = BUSINESS_DATE) {
    arrived and even void bookings, 8 rows while the Dashboard, the housekeeping
    board and All bookings (which read status) said 1. One definition now, and
    Due out is the part of it leaving today. The date is kept in the signature
-   so every caller still names the day it asks about. */
-export async function listInHouse(hotelId: string, _date = BUSINESS_DATE) {
-  const rows = (await fetchStays(hotelId)).filter(
+   so every caller still names the day it asks about; it asks the server for
+   the desk's rows only (D27-313), which hold everyone checked in. */
+export async function listInHouse(hotelId: string, date = BUSINESS_DATE) {
+  const rows = (await fetchStays(hotelId, date)).filter(
     (s) => s.status === "in-house" || s.status === "due-out",
   );
   return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
 }
 
 /** Checked-in guests leaving today (D17-10: a part of In house). */
-export async function listDepartures(hotelId: string, _date = BUSINESS_DATE) {
-  const rows = (await fetchStays(hotelId)).filter((s) => s.status === "due-out");
+export async function listDepartures(hotelId: string, date = BUSINESS_DATE) {
+  const rows = (await fetchStays(hotelId, date)).filter((s) => s.status === "due-out");
   return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
 }
 

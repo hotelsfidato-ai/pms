@@ -4,7 +4,7 @@ import { dateLong } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { Page, PageHeader, Segmented, StatusPill } from "@/components/ui";
 import { StayTable, type StayColumn } from "@/modules/front-desk/components/StayTable";
-import { listArrivals, listStays } from "@/modules/front-desk/data/stays";
+import { fetchStays, listArrivals } from "@/modules/front-desk/data/stays";
 import { queryKeys, BUSINESS_DATE } from "@/data/repositories";
 import { addDays } from "@/modules/front-desk/data/stayview";
 import { BookingSiteBlacklist } from "@/modules/guests";
@@ -41,7 +41,9 @@ export default function ArrivalsPage() {
     queryFn: async () => {
       const from = addDays(BUSINESS_DATE, 1);
       const to = addDays(BUSINESS_DATE, 14);
-      const all = await listStays(hotelId, { from, to });
+      /* Only who arrives in the fortnight (and who is checked in), not
+         every booking ever made (D27-313). */
+      const all = await fetchStays(hotelId, from, to);
       return all.filter(
         (s) => s.arrival > BUSINESS_DATE && s.arrival <= to && s.status !== "cancelled",
       );

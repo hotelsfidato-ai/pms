@@ -18,6 +18,25 @@ Nothing open.
 
 ## Fixed
 
+### FIN-30 · Check out greyed for ~4 s after each payment, with no reason - FIXED 13 October (D27-313 (1), front desk's lane)
+
+**Found** — 13 October, the day check: after a payment the Bill tab's Check
+out went grey with no reason under it for ~4 s, then came back. Its answer was
+a query keyed on `balance.data` (`checkOutAllowed`, which re-read the stay and
+the balance): a new balance was a new key with no answer yet, and that answer
+waited behind every other read the payment's `refresh()` had started -
+among them the desk lists' 3.5 s read of every booking (front desk's FD-27).
+
+**What was done** — `flows/FolioPanel.tsx` works the answer out from the
+balance it already shows, with the one rule (`canCheckOut`, `src/lib/rules.ts`;
+no bill is nothing owed, as before). It keeps its answer while the balance
+refetches, changes when the balance does, and refuses with the amount the
+moment money is owed. `checkOutAllowed` had no other caller and went from
+front desk's door. Proved by `checkOutFollowsBalance.test.tsx` (both tests
+failed on the old panel: greyed with the bill settled; refused with no reason).
+
+---
+
 ### FIN-29 · editCharge.test picked a stay another test file had just invoiced - FIXED 9 October (the master, the new PC's gates)
 
 **Found** — the full gates on bda47784 (9 October): `editCharge.test.ts` 2 failed, "This bill has
