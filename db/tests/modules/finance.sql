@@ -550,9 +550,11 @@ begin
   insert into cashier_shifts (hotel_id, staff_id, business_date, opening_cash, opened_at, opened_by)
   values (h, desk, app.business_date(h), 500, now() - interval '1 hour', desk) returning id into sh;
 
+  -- Before now(): the drawer counts what was taken up to the moment it is asked.
   insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount,
-                              tax_rate, tax_amount, posted_by)
-  values (h, f, app.business_date(h), 'payment', 'Received - Cash', -1234.63, 0, 0, desk)
+                              tax_rate, tax_amount, posted_by, created_at)
+  values (h, f, app.business_date(h), 'payment', 'Received - Cash', -1234.63, 0, 0, desk,
+          now() - interval '30 minutes')
   returning id into p;
   insert into payments (hotel_id, posting_id, method, amount, round_off)
   values (h, p, 'cash', 1234.63, 0.37);
