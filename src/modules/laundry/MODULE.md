@@ -113,7 +113,9 @@ Dockets page links to it.
 - **One docket** offers Charge to the room only when the server would take it:
   a guest's bag, not cancelled, not already on a bill, and with a total. The
   hotel's own linen gets a card saying why there is no button, rather than a
-  button that answers with a refusal.
+  button that answers with a refusal: "Counted out and back, never charged to
+  anybody." (D27-316 (4): no decision code on a staff screen, here or on the
+  "Already on the bill" card).
 
 ---
 

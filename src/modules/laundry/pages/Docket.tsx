@@ -239,11 +239,7 @@ export default function LaundryDocketPage() {
           <Card className="no-print">
             <CardBody className="text-sm text-grey-600">
               <p className="font-medium text-ink-900">The hotel's own linen</p>
-              <p className="mt-0.5">
-                It is counted out and counted back and it is never charged to
-                anybody (D18-5). The table refuses a charge on it, so there is
-                no button here that would ask.
-              </p>
+              <p className="mt-0.5">Counted out and back, never charged to anybody.</p>
             </CardBody>
           </Card>
         )}
@@ -265,8 +261,8 @@ export default function LaundryDocketPage() {
             <CardBody className="text-sm text-grey-600">
               <p className="font-medium text-ink-900">Already on the bill</p>
               <p className="mt-0.5">
-                It is its own line on the room's folio (D18-7). A charge is
-                reversed on the folio, never by cancelling the docket under it.
+                It is its own line on the room's folio. A charge is reversed
+                on the folio, never by cancelling the docket under it.
               </p>
             </CardBody>
           </Card>
