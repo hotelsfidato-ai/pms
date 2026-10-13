@@ -39,3 +39,8 @@ only; never print it into a report or a log line). The local API on 8787 already
 route (GET /api/hotels/5EL/setup answers 200). The GST figures and the film hotel's GSTIN come
 from the owner - see the line below once the master adds it; until then record every scene that
 does not need them.
+
+**The owner's figures (14 Oct 01:45):** GST on rooms the same as the demo hotel - 5% on a room up
+to ₹7,500 a night, 18% above ₹7,500. The film hotel keeps the standard DUMMY GSTIN: the film
+shows the wizard catching it ("a real GSTIN" still missing), and ends with step 1 still to do -
+say so plainly in the script (the owner chose this; do not invent a real-looking GSTIN).
