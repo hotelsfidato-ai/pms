@@ -53,7 +53,11 @@ screenshots and numbered arrows, kept current by a rule and a check.
 | A10 | Guest messages | What goes out (the voucher on WhatsApp and email, D27-264/266), the Guest messages screen, what a failure means |
 | A11 | Reports | Which report answers which question |
 | A12 | Approvals, cash expenses, notifications | Who approves what |
-| A13 | Spa, laundry, loyalty | Only where the hotel has them switched on |
+| A13 | Banquets, spa and laundry | Only where the hotel has them switched on |
+| A14 | Sales, marketing and loyalty | Leads and WhatsApp, Marketing, Loyalty (added 9 October, D27-293: every menu section a chapter) |
+| A15 | Rates, revenue and distribution | Rates, Revenue outlook, the channel manager, contracts |
+| A16 | Across properties | All properties, Properties, People |
+| A17 | Settings | The Settings space: the walk-through "Set up this hotel", and every page under it |
 
 ## Part B - the owner's book (how and why)
 
