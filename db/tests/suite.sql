@@ -4501,10 +4501,11 @@ begin
   perform test.ok('early late','14:30 local is not', not b,
     'against a UTC clock this reads 09:00 and bills an early arrival');
 
-  b := app.departure_is_late(v_hotel, timestamptz '2026-08-25 16:00+05:30');
+  -- On the departure day (D27-314 (2) added the date: db/tests/modules/front-desk.sql).
+  b := app.departure_is_late(v_hotel, timestamptz '2026-08-25 16:00+05:30', date '2026-08-25');
   perform test.ok('early late','16:00 local is a late departure', b);
 
-  b := app.departure_is_late(v_hotel, timestamptz '2026-08-25 10:30+05:30');
+  b := app.departure_is_late(v_hotel, timestamptz '2026-08-25 10:30+05:30', date '2026-08-25');
   perform test.ok('early late','10:30 local is not', not b);
 
   -- ---------- the exact boundary belongs to the guest ----------
