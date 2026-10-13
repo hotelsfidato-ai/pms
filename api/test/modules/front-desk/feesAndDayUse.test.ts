@@ -128,20 +128,9 @@ describe("D27-223 · the room's own fees are the room's on the bill", () => {
     expect(bill.lines.find((l) => l.description === "Early check-in")?.source).toBe("early_checkin");
   });
 
-  it("posts a late check-out fee with its own source", async () => {
-    /* Out by 00:00: any hour of the test is late. The bill is unpaid, so the
-       check-out itself is refused - after the late charge, as it says. */
-    await sql("update hotels set check_out_time = '00:00' where id = $1", [hotelId]);
-    try {
-      const res = await call(`/stays/${stay}/check-out`, "POST", { lateReason: "Slept in" });
-      expect(res.status).toBe(409);
-    } finally {
-      await sql("update hotels set check_out_time = '23:59' where id = $1", [hotelId]);
-    }
-    expect((await lines(stay)).filter((l) => l.description === "Late check-out")).toEqual([
-      expect.objectContaining({ amount: "400.00", source: "late_checkout" }),
-    ]);
-  });
+  /* The late check-out fee's own source ('late_checkout') is proved where
+     a departure can be late: a stay checked in on the business date leaves
+     early (D27-314 (2)) - lateDeparture.test.ts. */
 });
 
 describe("D27-225 · a day-use stay is charged its day at check-in", () => {

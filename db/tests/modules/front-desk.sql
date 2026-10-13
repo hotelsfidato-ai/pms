@@ -370,3 +370,48 @@ begin
   select count(*) into n from hotels where code = 'FDC';
   perform test.ok('cash limit', 'the fixture does not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+-- =============================================================================
+-- LEAVING AFTER CHECK-OUT TIME: ONLY ON OR AFTER THE DEPARTURE DATE (D27-314 (2))
+-- =============================================================================
+-- app.departure_is_late is the one rule the check-out route asks. A guest
+-- leaving BEFORE their departure date is leaving early, whatever the hour:
+-- never asked for a late departure, never charged one. On the date or after
+-- it, the property's check-out time decides, on the property's clock. The
+-- date is the hotel's BUSINESS date, never the clock's (MEMORY 19).
+-- The route's half (asked once, charged once, D27-314 (1)) is
+-- api/test/modules/front-desk/lateDeparture.test.ts.
+-- =============================================================================
+do $$
+declare
+  h uuid; n int;
+begin
+  insert into hotels (code, name, city, timezone, check_in_time, check_out_time, business_date)
+  values ('FDL', 'Late departure fixture', 'Akkalkot', 'Asia/Kolkata', '13:00', '11:00',
+          date '2026-08-25')
+  returning id into h;
+
+  perform test.ok('late departure', 'before the departure date, 16:00 is not late',
+    not app.departure_is_late(h, timestamptz '2026-08-25 16:00+05:30', date '2026-08-27'));
+  perform test.ok('late departure', 'on the departure date, 16:00 is late',
+    app.departure_is_late(h, timestamptz '2026-08-25 16:00+05:30', date '2026-08-25'));
+  perform test.ok('late departure', 'on the departure date, 10:30 is not',
+    not app.departure_is_late(h, timestamptz '2026-08-25 10:30+05:30', date '2026-08-25'));
+  perform test.ok('late departure', 'after the departure date, 16:00 is late',
+    app.departure_is_late(h, timestamptz '2026-08-25 16:00+05:30', date '2026-08-23'));
+
+  -- The hotel's day, not the calendar's: the clock is on the 26th, but the
+  -- 25th is not closed, so a guest due on the 26th is still leaving early.
+  perform test.ok('late departure', 'the date is the business date, not the clock''s',
+    not app.departure_is_late(h, timestamptz '2026-08-26 16:00+05:30', date '2026-08-26'));
+
+  select count(*) into n
+    from pg_proc p join pg_namespace s on s.oid = p.pronamespace
+   where s.nspname = 'app' and p.proname = 'departure_is_late';
+  perform test.ok('late departure', 'one rule: no version without the date is left', n = 1,
+    n || ' versions');
+
+  alter table hotels disable trigger hotels_no_delete;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+end $$;
