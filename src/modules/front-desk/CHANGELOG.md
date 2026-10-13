@@ -8,6 +8,19 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-13 · The desk's lists load only the stays they show; Check out keeps its answer (the owner's D27-313 (1))
+
+**Asked for:** through the master, from the day check (D27-300). Branch `worktree-agent-adc16c45a8c6b2a39` from cp6 d8dc8d2c; scratch database `fidato_d313` (the 13 October demo dump, migrated to 215), API 8841, web 5341. Finance claimed too, for the Bill tab's Check out (FIN-30 there).
+**Shipped:**
+- `GET /:code/stays?from&to` (`api/.../stays.ts`): only the bookings checked in now and those arriving from..to (`to` defaults to `from`; a day not YYYY-MM-DD is 400), each row as the full list has it. Without `from`, every booking, as before.
+- `data/stays.ts`: `fetchStays(hotel, from?, to?)`; `listArrivals`, `listInHouse`, `listDepartures` ask for the business date's rows and filter as before. `data/operations.ts`: the check-in's room list (`assignableRooms`, also New booking's) reads `listInHouse`, not every booking; `checkOutAllowed` went (no caller left). `pages/Arrivals.tsx`: Upcoming asks for the fortnight's arrivals.
+- Finance's `flows/FolioPanel.tsx`: Check out is `canCheckOut` on the balance the panel shows - no second query, so no reasonless grey after a payment, and refused with the amount as soon as money is owed (FIN-30).
+**Measured** (`fidato_d313`, 5EL on 9 October, curl against 8841): every booking 793 rows, 3.29-4.03 s before (6 runs) and 2.76-6.65 s after (the same read, 4 runs, a busy disk); the desk's day 18 rows, 0.08-0.12 s (6 runs); Upcoming's fortnight 31 rows, 0.12-0.14 s (4 runs).
+**Proved:** `api/test/modules/front-desk/deskStays.test.ts` 5 tests - on the old route 3 failed (83 rows for 9, 83 for 22, 200 for 400), all 5 pass. `deskRead.test.ts` - on the old data files failed ("a desk list read every booking": 5 reads of `/stays`), passes. Finance's `checkOutFollowsBalance.test.tsx` 2 tests - on the old panel both failed ("greyed with the bill settled"; "expected '' to match /800 is still owed/"), both pass.
+**Callers of the stays read checked:** desk rows now - Arrivals (Today, Upcoming), In house, Due out, the check-in's room list. Still every booking, by need - All bookings (reservations), Walk-ins (every walk-in ever), Assign room (every unplaced future booking), Rooms' names and the Calendar's fortnight (`stayview.ts`, any window), Find (core `CommandPalette`), the Dashboard, housekeeping's board, Folios (`listOpenFolios`: a checked-out guest can still owe), a group's rooms, laundry (HTTP), the spa diary (every future arrival).
+**Left open:** Rooms and the Calendar still read every booking twice (the floor's names and the chart's window) - a question for the owner in the master's report. The manual: no line changes (A1's "Check-out stays greyed out, with its reason, until the balance is zero" is truer now).
+**Files outside front desk:** finance `flows/FolioPanel.tsx`, `nextDestination.test.tsx` (its mock of the removed `checkOutAllowed`), new `checkOutFollowsBalance.test.tsx`, `MODULE.md`, `DEFECTS.md`, `CHANGELOG.md`.
+
 ## 2026-10-12 · A room's cash count includes its group's master bill (the owner's D27-307 (5))
 
 **Asked for:** through the master. The ₹2 lakh cash count (Income-tax Act s.186, was 269ST; D25-40) was one-sided for groups: the master bill's Settle (D27-305) counted its rooms' cash, but a room's own count did not see cash taken on its group's master bill. Each room's count is to include it, changed in the one place every caller goes through, by a migration that is replay-safe and changes no figure for a stay in no group. Branch `worktree-agent-a18a6aa96d834cf94` from cp6 9c55050e. Claimed here, not in finance: finance was held by another helper (D27-307 (2)(4)), and the count's database and API tests have lived in front desk since D25-40.

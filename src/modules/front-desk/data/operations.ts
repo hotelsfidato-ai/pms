@@ -4,7 +4,7 @@
    there: a type, not data. */
 import type { Posting } from "@/data/repositories/types";
 import { listAllRooms } from "@/data/repositories/rooms";
-import { getStay, listStays } from "./stays";
+import { getStay, listInHouse } from "./stays";
 import { api, ApiError } from "@/lib/api";
 import { canCheckIn } from "@/lib/rules";
 import type { Stay, Permitted } from "@/data/repositories/types";
@@ -57,9 +57,11 @@ export async function assignableRooms(
      not, for the ones they cannot. Both lists come from the API now —
      the room inventory and who is in it — because a picker built from
      the store would have offered rooms the server then refused. */
-  const [rooms, stays] = await Promise.all([
+  const [rooms, inHouse] = await Promise.all([
     listAllRooms(hotelId),
-    listStays(hotelId),
+    /* The desk's read, not every booking ever made (D27-313): the Check
+       in button waited ~3.5 s for 793 rows on every open. */
+    listInHouse(hotelId, businessDate),
   ]);
 
   /* Occupied means somebody has CHECKED IN and not left. Not "a
@@ -68,13 +70,7 @@ export async function assignableRooms(
      did: the guest's own pre-assigned room came back disabled.
 
      Status, not dates. Third time this has bitten (MEMORY.md 3). */
-  const takenBy = new Map<string, string>();
-  for (const s of stays) {
-    if (s.status === "in-house" || s.status === "due-out") {
-      takenBy.set(s.roomNumber, s.guest);
-    }
-  }
-  void businessDate;
+  const takenBy = new Map(inHouse.map((s) => [s.roomNumber, s.guest]));
 
   return rooms
     /* THE ROOM THEY ARE ALREADY ON IS ALWAYS OFFERED. Filtering to the

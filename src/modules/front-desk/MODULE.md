@@ -77,7 +77,7 @@ They moved there in the server split of 15 September (`3424882`, `b772047`).
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/stays` | every stay with the room it is in; "due out" is worked out here, stored nowhere |
+| GET | `/:code/stays` | every stay with the room it is in; "due out" is worked out here, stored nowhere. **With `from` (and `to`, else the same day; YYYY-MM-DD, else 400): only the bookings checked in now and those arriving from..to** (D27-313) - what Arrivals (Today and Upcoming), In house, Due out and the check-in's room list read: 18 rows and ~0.1 s on the 13 October demo, against 793 and ~3.5 s for every booking. Without it, every booking - All bookings, Walk-ins, Find, Rooms and the Calendar, the Dashboard, housekeeping, Folios, groups, laundry and spa still read that |
 | GET | `/:code/stays/:id` | one stay |
 | GET | `/:code/stays/:id/express-check-in` | `{ express, document: { type, number } }`: whether THIS stay's own online check-in was confirmed with an ID type and number, for a guest who is not foreign - the number masked to its last four (D27-242). A document kept from an earlier visit never counts. Also `advance` (the amount still owed before check-in, in the refusal's words, or null), `bookingSite` and `prepaidOnSite`; `?prepaid=false` asks as if the desk had unticked it (D27-243 3.3, D27-246) |
 | GET | `/:code/house-now` | every room on the business date - in house, out of order or Empty - and the In house and Empty counts (rooms), from `app.house_now` (the one in-house rule, D21-36 and D21-37). Rooms, the Dashboard, In house, the property page and the housekeeping board read this and nothing else for either number |
@@ -130,7 +130,7 @@ refinement).
 
 | File | What it does |
 |---|---|
-| `stays.ts` | reads stays over HTTP and slices one list three ways — arrivals, in house, departures — plus `fetchStays` (the raw read other services reuse) |
+| `stays.ts` | reads stays over HTTP and slices one list three ways — arrivals, in house, departures — plus `fetchStays` (the raw read other services reuse). Arrivals, in house and departures ask the server for the desk's rows only (`fetchStays(hotel, from, to)`, D27-313); `listStays` and a bare `fetchStays` are still every booking |
 | `operations.ts` | the writes behind the desk's flows: check in and out, assign, move, unassign, amend, void, and the early-arrival read; check-in and check-out ask `src/lib/rules.ts` first |
 | `stayExtras.ts` | exchanging two rooms, and inclusions |
 | `stayview.ts` | the Calendar's data — a fourteen-day window, bars and their tones, room rates from the room type (null when unpriced) — and the counts the Dashboard shows |
@@ -175,7 +175,7 @@ What `index.ts` exports, and who uses each (grep of `@/modules/front-desk`,
 | Export | Used by |
 |---|---|
 | `StayTable`, types `StayColumn`, `StayRow` | finance (`pages/Folios.tsx`), reservations (`pages/Reservations.tsx`) |
-| `checkOut`, `checkOutAllowed`, `earlyArrival` | finance (`flows/FolioPanel.tsx`) |
+| `checkOut`, `earlyArrival` | finance (`flows/FolioPanel.tsx`). `checkOutAllowed` went 13 October (D27-313): the Bill tab asks `canCheckOut` of the balance it shows |
 | type `Posting` | finance (`data/postings.ts`) |
 | `fetchStays` | finance (`data/folios.ts`), reservations (`data/groups.ts`) |
 | `getStay` | finance (`data/postings.ts`); the core test `repositories.test.ts` |
@@ -202,7 +202,7 @@ the GM. It leans on **guests** (`ReturningGuest`, `ConsentTicks`,
 Other services, through their doors only:
 
 - **finance** — `getFolio` and `FolioPanel` (the stay panel's Bill tab),
-  `getFolioBalance` (`data/operations.ts`, `pages/InHouse.tsx`),
+  `getFolioBalance` (`pages/InHouse.tsx`),
   `listOpenFolios` (`data/stayview.ts`).
 - **guests** — `setGuestVip` (the VIP mark in the stay panel).
 - **reservations** — `GroupRoomsList`, `GROUP_ROOMS_ID` (a group stay's rooms).

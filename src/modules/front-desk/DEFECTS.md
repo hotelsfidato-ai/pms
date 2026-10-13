@@ -28,6 +28,24 @@ the file is inventory's (on `MODULE.md`'s Requests).
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-27 · Every desk list read every booking ever made, and the Check in button waited for it - FIXED 13 October (D27-313 (1))
+
+**Found** - 13 October, the day check (D27-300): `GET /:code/stays` sent all
+793 bookings on the demo in ~3.5 s, and Arrivals, In house, Due out and the
+check-in's room list (`assignableRooms`) each read it - In house twice, once
+per list. The Check in button stayed grey ~3.5 s on every open, waiting for
+the room list, and every payment's refresh read it again. `data/stays.ts`
+had said "eighty-three rows is not a dataset worth three endpoints"; it grew.
+**Fixed** - the same endpoint takes `from` (and `to`): only the bookings
+checked in now and those arriving from..to, each row exactly as the full list
+has it. `listArrivals`, `listInHouse`, `listDepartures`, `assignableRooms`
+(through `listInHouse`) and Arrivals' Upcoming ask for it and still filter as
+before. 18 rows and ~0.1 s on the same demo. Every other reader still gets
+every booking. Proved by `api/test/modules/front-desk/deskStays.test.ts` and
+`deskRead.test.ts`.
+**The rule:** a list that shows a day reads that day from the server, not the
+hotel's whole history.
+
 ### FD-25 · With the wifi up and the line down, In house lost its rows to the read's error - FIXED 4 October (D27-271)
 
 **Found** - 4 October, building the owner's D27-271 (4): "offline, In house
