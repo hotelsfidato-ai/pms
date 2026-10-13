@@ -13,8 +13,8 @@ import type { Role } from "@/lib/permissions";
 
    Each line is a JOB in the person's words, the screen it opens, and how
    to finish it there, naming the real button. Those names are checked
-   against the screens — "Check in", "Take payment", "Confirm the
-   booking", "Open the drawer", the sparkle and the tick, "Send",
+   against the screens — "Check in", "Take payment", "Save booking"
+   (D27-314), "Open the drawer", the sparkle and the tick, "Send",
    "Charge to room", "Start" and "Ready" — so the card cannot promise a button
    that is not there. If a label changes, this is the other place to
    change it.
@@ -35,7 +35,7 @@ export const START_HERE: Partial<Record<Role, { intro: string; tasks: StartTask[
     intro: "The five things you will do most. Each one opens the screen it happens on.",
     tasks: [
       { job: "Take a booking", to: "/h/:code/book", icon: BookPlus,
-        how: "Fill in the guest and the nights, then Confirm the booking." },
+        how: "Fill in the guest and the nights, then Save booking." },
       { job: "Check a guest in", to: "/h/:code/arrivals", icon: LogIn,
         how: "Pick the guest from today's arrivals, then Check in." },
       { job: "Take a payment", to: "/h/:code/in-house", icon: Wallet,
