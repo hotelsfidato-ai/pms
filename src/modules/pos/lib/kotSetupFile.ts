@@ -32,7 +32,7 @@ export function kotSetupScript(origin: string, code: string): string {
 
   const lines = [
     "@echo off",
-    `rem Fidato PMS - KOT station setup for ${hotel} (D27-299), made by Restaurant setup - KOT section.`,
+    `rem Fidato PMS - KOT station setup for ${hotel}, made by Restaurant setup - KOT section.`,
     "rem It changes this Windows user's default printer, startup and sleep settings,",
     "rem and makes one shortcut. Nothing else. Run it with /check to change nothing.",
     "setlocal",
