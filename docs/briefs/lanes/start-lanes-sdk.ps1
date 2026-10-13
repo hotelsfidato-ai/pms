@@ -16,6 +16,8 @@ param([string[]]$Lanes = @("A", "B", "D", "E"), [switch]$Test)
 
 $root = "D:\fidato pms"
 $runner = "$root\.local\lanes-runner\runner.mjs"
+# "-Lanes D,E" through -File arrives as one string "D,E": split it.
+$Lanes = @($Lanes | ForEach-Object { $_ -split "[,\s]+" } | Where-Object { $_ })
 if (-not (Test-Path $runner)) { Write-Host "The runner is missing: $runner"; return }
 
 $secure = Read-Host "Your Anthropic API key (typed hidden; it stays in memory only)" -AsSecureString
