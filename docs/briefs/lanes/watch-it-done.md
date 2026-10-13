@@ -21,7 +21,8 @@ frames of A16-16 do not show the real owner account. After each chapter: look at
 frames, then render it with `node tools/render.mjs <ch> --stale`, check
 `node tools/audiocheck.mjs out/<ch>/*.mp4`, and copy `out/<ch>/*.mp4` into
 `D:\fidato\final videos\<the chapter's existing folder>` (replace). Renders are heavy: one
-at a time, never two.
+at a time, never two - before each render check no other `render.mjs` is running on this PC
+(the master and Lane E render too); wait until it has finished.
 
 Never start Microsoft Edge; no npm install, no downloads; never touch any .env; never
 write in D:\fidato pms except the final videos copy; nothing leaves this machine. Another
