@@ -131,14 +131,14 @@
   <table>
     <thead><tr><th style="width:5%">#</th><th style="width:24%">Step</th><th style="width:31%">It opens</th><th>It ticks itself when</th></tr></thead>
     <tbody>
-      <tr><td>1</td><td><span class="ui">Hotel profile</span></td><td>Profile</td><td>the GSTIN is a real one (not the dummy number), and the address, phone and email are set</td></tr>
+      <tr><td>1</td><td><span class="ui">Hotel profile</span></td><td>Profile</td><td>the GSTIN is a real one (not the dummy number), and the address, phone and email are set. A test hotel needs no GSTIN, because its paper carries none (A0.5): only the address, phone and email count</td></tr>
       <tr><td>2</td><td><span class="ui">Taxes</span></td><td>Taxes</td><td>there is a GST rule for rooms</td></tr>
       <tr><td>3</td><td><span class="ui">Room types</span></td><td>Room types</td><td>there is a room type</td></tr>
       <tr><td>4</td><td><span class="ui">Rooms</span></td><td>Room types: Add a room, which can add several at once (A17.5)</td><td>there is a room</td></tr>
       <tr><td>5</td><td><span class="ui">Prices</span></td><td>Rates, a Front office screen (A15)</td><td>every room type has a price</td></tr>
       <tr><td>6</td><td><span class="ui">Payment methods and bank details</span></td><td>Payment methods, Bank details</td><td>a way of paying is switched on and the bank details are set</td></tr>
       <tr><td>7</td><td><span class="ui">Front desk times and rules</span></td><td>Times and rules, Front desk rules</td><td>never: the times start filled in, so only a person can say they are right</td></tr>
-      <tr><td>8</td><td><span class="ui">Cancellation terms</span></td><td>Cancellation terms (A2)</td><td>the hotel has cancellation terms</td></tr>
+      <tr><td>8</td><td><span class="ui">Cancellation terms</span></td><td>Cancellation terms (A2)</td><td>the hotel has cancellation terms; or you mark it <span class="ui">Completed</span> yourself, because charging nothing for a cancellation is a valid choice</td></tr>
       <tr><td>9</td><td><span class="ui">Charges, discounts and commission</span></td><td>Extra charges, Discounts, Commission</td><td>something is set: an extra charge, a discount, a booking source's commission, or an early or late fee. A hotel may rightly have none</td></tr>
       <tr><td>10</td><td><span class="ui">Booking sources</span></td><td>Booking sources (A2)</td><td>never</td></tr>
       <tr><td>11</td><td><span class="ui">People and roles</span></td><td>People (A16)</td><td>somebody works at the hotel</td></tr>
@@ -157,7 +157,7 @@
     <li><span class="ui">Completed</span>: shown only on a step the system cannot see for itself. The row then reads <span class="ui">Marked done by</span> your name and the day. On a step the system can see it is not offered, and the system's word wins over anything chosen.</li>
     <li><span class="ui">Next</span>: goes to the next step. It changes nothing.</li>
     <li><span class="ui">Later</span>: puts the step aside. It waits on this page, and on the Dashboard: for the owner, an Admin and the GM, a card <span class="ui">Still to do</span> (<span class="msg">“Steps of setting up this hotel that you put off.”</span>) lists up to four, then <span class="msg">“and 3 more”</span>, and links back here. It shows only while something waits.</li>
-    <li><span class="ui">Remind me</span>: <span class="ui">Tomorrow</span>, <span class="ui">In 3 days</span>, <span class="ui">In a week</span>, or a date after today (<span class="msg">“Pick a day after today.”</span>). On that day the bell shows <span class="msg">“Setup: Taxes”</span> and <span class="msg">“You asked to be reminded today.”</span> to every owner, Admin and GM of the hotel, and opens that step.</li>
+    <li><span class="ui">Remind me</span>: <span class="ui">Tomorrow</span>, <span class="ui">In 3 days</span>, <span class="ui">In a week</span>, or a date after today (<span class="msg">“Pick a day after today.”</span>). On that day the bell shows <span class="msg">“Setup: Taxes”</span> and <span class="msg">“You asked to be reminded today.”</span> to every owner, Admin and GM of the hotel, and opens that step. The bell and the Ready to go live lines name a step as this page does: step 5 is <span class="ui">Prices</span> in all three.</li>
     <li><span class="ui">Undo</span>: takes back a Later, a Remind me or a tick by hand.</li>
   </ul>
 
@@ -180,7 +180,7 @@
     </ol>
   </figure>
 
-  <p><b>Back to setup.</b> A screen opened from a step carries a slim orange bar under the top bar: <span class="msg">“Setting up this hotel: step 2 of 18, Taxes”</span>, with <span class="ui">Back to setup</span> and a ✕. It stays on every screen you visit in that browser tab until you press <span class="ui">Back to setup</span>, which returns to that step, or close it with the ✕.</p>
+  <p><b>Back to setup.</b> A screen opened from a step carries a slim orange bar under the top bar: <span class="msg">“Setting up this hotel: step 2 of 18, Taxes”</span>, with <span class="ui">Back to setup</span> and a ✕. It stays on every screen you visit in that browser tab until you press <span class="ui">Back to setup</span>, which returns to that step, or close it with the ✕. It is not drawn on the <span class="ui">Set up this hotel</span> page itself, where you can already see the step, and opening that page makes the bar forget its step: the next screen you open by hand has no bar until you open one from a step again.</p>
 
   <p><b>Ready to go live</b> changes nothing. Once steps 1 to 5 are done it says <span class="msg">“Ready to go live. The five things a first booking needs are done. Nothing is locked: change anything, at any time.”</span> Until then, <span class="msg">“Not ready yet. Still needed before the first booking: Taxes, Rooms.”</span> Under it are two lists: <span class="ui">Still to do</span>, with the steps you put off first, each opening its step, and <span class="ui">Done</span>.</p>
 
@@ -255,7 +255,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The checklist derives itself and is a yes or a no with the reasons, never a percentage: a hotel opening on “80% ready” is usually missing the tax number that prints on every bill. The name is a group administrator's to change: <span class="d">D27-214</span>, <span class="d">D27-308</span>. The walk-through, 18 steps in the owner's order, each ticking itself where the system can see it done, with Completed, Next, Later and Remind me and a summary that locks nothing: <span class="d">D27-311</span>. Back to setup stays until pressed or closed, a reminder shows to every owner, Admin and GM of the hotel, and step 15 opens both Group and Policies: <span class="d">D27-312</span>. More registration numbers in Settings only, never printed: <span class="d">D27-257</span>.</p>
+    <p>The checklist derives itself and is a yes or a no with the reasons, never a percentage: a hotel opening on “80% ready” is usually missing the tax number that prints on every bill. The name is a group administrator's to change: <span class="d">D27-214</span>, <span class="d">D27-308</span>. The walk-through, 18 steps in the owner's order, each ticking itself where the system can see it done, with Completed, Next, Later and Remind me and a summary that locks nothing: <span class="d">D27-311</span>. Back to setup stays until pressed or closed, a reminder shows to every owner, Admin and GM of the hotel, and step 15 opens both Group and Policies: <span class="d">D27-312</span>. A test hotel's Profile step needs no GSTIN, Cancellation terms may be marked Completed by hand, the bar is not drawn on the setup page, and the bell and the summary use the page's step names: <span class="d">D27-316</span>. More registration numbers in Settings only, never printed: <span class="d">D27-257</span>.</p>
   </div>
 
   <!-- A17.3 -->
@@ -832,7 +832,7 @@
       <li>The fees are set on Settings › Money › Extra charges (A17.9)</li>
     </ol>
   </figure>
-  <p>A guest arriving before the first time, or leaving after the second, needs a reason and somebody to allow it. The charge reaches their folio unless it is waived, and the reason is kept either way.</p>
+  <p>A guest arriving before the first time, or leaving after the second, needs a reason. The charge reaches their folio unless the owner, the GM or a group administrator waives it, and the reason is kept either way. A late departure counts only on or after the departure date, and is recorded once (A1.6).</p>
 
   <figure class="shot" id="fig-A17-37">
     <img src="img/A17-37.png" alt="Front desk rules window: Advance before check-in, The desk may overbook, Weekend days, ID starts on, Nationality, Title">
@@ -889,13 +889,14 @@
   <h2 id="a17-12"><span class="n">A17.12</span>Guest messages and daily report emails</h2>
   <p><span class="ui">Guest messages</span> ↗, <span class="ui">Reviews</span> ↗ and <span class="ui">Online check-in</span> ↗ open their Front office screens (A10). The two pages here say what goes out by itself.</p>
 
+  <!-- A17-40 shows the Tax invoice row as it read before D27-316 (5): "When the invoice is issued, by email. Only invoices issued after it is switched on." The picture is to be retaken. -->
   <figure class="shot" id="fig-A17-40">
     <img src="img/A17-40.png" alt="Guest messages on/off: Booking voucher on, Online check-in on, Tax invoice off, Review request off, and the catch-up line">
     <figcaption><b>Figure A17-40.</b> Which messages guests get by themselves.</figcaption>
     <ol class="callouts">
       <li>A message: Booking voucher</li>
       <li>Its switch</li>
-      <li>When it goes: the tax invoice, only for invoices issued after it is switched on</li>
+      <li>When it goes: the tax invoice, only for invoices issued after it is switched on and made out to the guest</li>
     </ol>
   </figure>
   <table>
@@ -903,7 +904,7 @@
     <tbody>
       <tr><td>Booking voucher</td><td>Once, when a booking is confirmed: the voucher PDF, on WhatsApp and by email. It carries the check-in link only while Online check-in is on.</td></tr>
       <tr><td>Online check-in</td><td>The guest's own check-in page: its link and QR code in the voucher, and the desk's Send check-in link.</td></tr>
-      <tr><td>Tax invoice</td><td>When the invoice is issued, by email. By itself only when it is made out to the guest.</td></tr>
+      <tr><td>Tax invoice</td><td>When the invoice is issued, by email, if it is made out to the guest. Only invoices issued after it is switched on; one made out to a company, an agent or a booking site goes by Send invoice.</td></tr>
       <tr><td>Review request</td><td>When a clerk presses Ask for a review, after check-out.</td></tr>
     </tbody>
   </table>
@@ -926,7 +927,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Fewer guest messages, the voucher being the confirmation: <span class="d">D27-264</span>; the switches: <span class="d">D27-261</span>. The tax invoice by itself only to the guest it is made out to: <span class="d">D27-313</span>. Each report its own switch and addresses, no address filled in for you: <span class="d">D27-280</span>.</p>
+    <p>Fewer guest messages, the voucher being the confirmation: <span class="d">D27-264</span>; the switches: <span class="d">D27-261</span>. The tax invoice by itself only to the guest it is made out to: <span class="d">D27-313</span>; the switch says so in its own words: <span class="d">D27-316</span>. Each report its own switch and addresses, no address filled in for you: <span class="d">D27-280</span>.</p>
   </div>
 
   <!-- A17.13 -->

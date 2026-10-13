@@ -354,17 +354,44 @@
     <ol class="callouts"><li>Settle and check out</li><li>The bill</li><li>What is still owed</li></ol>
   </figure>
 
+  <h3>If the guest leaves after check-out time</h3>
+  <p>The hotel's check-out time is set on Times and rules (A17.11), for example 11:00. A guest who leaves on their departure date, or after it, later than that is a late departure, and it is written down. The window comes up when you click <span class="ui">Check out</span>, not before.</p>
+  <ol class="steps">
+    <li>Click <span class="ui">Check out</span> on the guest's Bill tab. If it is a late departure, the window <span class="ui">Leaving after check-out time</span> opens, with the guest and the room. Its yellow note starts <span class="msg">“Check-out here is 11:00.”</span></li>
+    <li>Type <span class="ui">Why</span>. It cannot be left empty: a flight time, a manager's say-so, a room not ready on arrival.</li>
+    <li>Read the line under it. Where the hotel charges for a late departure: <span class="msg">“₹1,000 will be added to the folio. A manager can waive it - that is a decision about money and it is theirs to make.”</span> Where it does not: <span class="msg">“This property does not charge for a late departure, so nothing will be added. It is still recorded.”</span> The owner, the GM and a group administrator instead have a tick, <span class="ui">Waive the ₹1,000 charge</span>: their decision, recorded against their name, and the late departure is still written down.</li>
+    <li>Click <span class="ui">Check out</span>. The late check-out charge, with its GST, goes on the bill under Room before the balance is looked at. If that leaves something owed, the window closes with <span class="msg">“Recorded - now settle the bill”</span> and the amount. Settle it on the Bill tab (A4.7), then click <span class="ui">Check out</span> again.</li>
+  </ol>
+  <p>The second click does not ask again and charges nothing more. A late departure is recorded once for a stay: its reason, its charge or its waiver.</p>
+  <p>A guest who leaves <b>before</b> the departure date is leaving early, whatever the hour: the window never comes up and no late fee is charged. The date that counts is the hotel's business date (A1.1), not the clock's.</p>
+
+  <figure class="shot" id="fig-A1-16">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-16 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/in-house/due-out</code>, click a guest leaving on the business date whose bill is settled, then click <span class="ui">Check out</span></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Set up</dt><dd>A made-up guest (“A1 Test …”) due out today, nothing owed; a late check-out fee set on Settings › Money › Extra charges; the computer's clock past the check-out time.</dd>
+        <dt>Arrows</dt><dd>1 → the yellow note “Check-out here is …”; 2 → the Why box; 3 → the line about the charge (“… will be added to the folio. A manager can waive it …”); 4 → the Check out button of the window</dd>
+        <dt>File</dt><dd><code>img/A1-16.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-16.</b> Leaving after check-out time: the reason, and what it costs.</figcaption>
+    <ol class="callouts"><li>The hotel's check-out time</li><li>Why: required</li><li>The charge, and who may waive it</li><li>Check out</li></ol>
+  </figure>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
       <li>Check-out stays greyed out, with its reason, until the balance is zero. This is on purpose.</li>
-      <li>A late check-out or an early departure: chapter A5.</li>
+      <li>An early departure: chapter A5.</li>
       <li>Nobody leaving: <span class="msg">“Nobody departing today. Every room stays another night.”</span></li>
     </ul>
   </div>
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The Due out tile and list show what departing guests still owe, to the people who see money: <span class="d">D27-243</span>, <span class="d">D27-143</span>. Reception's card puts it in one line: “Open the guest, go to Bill - Check out opens once nothing is owed.” (Start here, the owner, 15 September.)</p>
+    <p>The Due out tile and list show what departing guests still owe, to the people who see money: <span class="d">D27-243</span>, <span class="d">D27-143</span>. Reception's card puts it in one line: “Open the guest, go to Bill - Check out opens once nothing is owed.” (Start here, the owner, 15 September.) A late departure is asked only on or after the departure date and recorded once, so a guest who paid after it is not asked or charged again: <span class="d">D27-314</span>.</p>
   </div>
 
   <!-- A1.7 -->
