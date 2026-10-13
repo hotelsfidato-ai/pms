@@ -99,7 +99,7 @@ and `cashier.ts`)
 |---|---|---|
 | POST | `/:code/stays/:id/check-in` | check in; refuses, last of all and before any write, an advance the hotel asks before check-in and the stay still owes, with the amount (187, D27-243 3.3; never a company's booking, a room the group's host pays for, a complimentary room, or a booking-site booking prepaid there - `prepaidOnSite` false unticks it, saved with the check-in); records the ID document - or, with none sent and no reason to skip, takes the ID THIS stay's confirmed online check-in gave, for a guest who is not foreign (express, D27-242; decided here, never by the screen); the release of the stay's other advance room comes before it is marked checked in, so that room is not dirtied (FD-10, 185); posts an early-arrival charge; refuses a room somebody is still in by `app.in_house` (FD-11), and a waive of the early charge by somebody who may not give it (FD-14) - both before the first write; a move of the arrival by more than a day only with `confirmMove: true` (FD-22, D27-193). A moved arrival is checked against the room's other holds FROM TODAY and the hold is written (or stretched back) from today (FD-24). An early arrival's fee is posted with source `early_checkin` (D27-223). **Its last write posts the first night's room charge and GST** (D27-204) - or a day-use stay's day, "Room N · day use" (D27-225), dated the business date, through the night audit's own `roomNightsDue` and `postRoomNight` (source `check_in`, in the clerk's name): nothing for a complimentary room, and nothing where the property has no GST rule for rooms - the guest is still checked in and the audit posts that night (D27-205) |
 | GET | `/:code/early-arrival` | is arriving now early, with the hotel's times and charges (063) — null, never 0; and `mayWaive`, whether the server takes a waive of either charge from this person (the screens draw the tick from it, D24-16) |
-| POST | `/:code/stays/:id/check-out` | check out; posts a late check-out charge; closes the folio |
+| POST | `/:code/stays/:id/check-out` | check out; closes the folio. A late departure - the business date on or after the departure date AND past the check-out time on the property's clock (`app.departure_is_late`, migration "late departure on the day") - needs a reason and posts the late charge (or a manager's waiver) ONCE: a stay whose late departure is already recorded (`late_checkout_at`) is not asked again and not charged again, whatever the body sends (D27-314, FD-27, FD-28). A guest leaving before the departure date is never asked or charged |
 | POST | `/:code/stays/:id/assign` | give a booking a room; for a guest already checked in, refuses a room somebody is still in (`stillIn`, D24-15) - a booking not yet here is only held |
 | POST | `/:code/stays/:id/move` | move a guest to another room (`app.move_room`, 054); a checked-in guest moved from tonight or earlier is refused a room somebody is still in (`stillIn`, D24-15). With a new rate (`agreedRate`) on the arrival day, tonight's night - posted at check-in - is put right to it by finance's `editFolioCharge`, reason "Room move: …", before `app.move_room` writes (D27-205). **The desk may do this through the move**, though it edits no other charge; the corrected line keeps the first room's number in its words |
 | PATCH | `/:code/stays/:id` | amend the dates and number of guests (`app.amend_stay`, 055; 176: a day use is a stay too). A day use stays a day use and a stay stays a stay (D27-229): the rate is a day's or a night's, so turning one into the other is refused in words |
@@ -256,7 +256,12 @@ imported from housekeeping — the database sets it when a room is vacated
   disabled with its reason** (`MASTER.md` § 2, Rules 3 and 6). When an action
   moves, its gate moves in the same commit (MEMORY 14).
 - **The hotel's business date, never the clock** — for a move date and for an
-  early or late charge (MEMORY 19, 98, 158).
+  early or late charge (MEMORY 19, 98, 158), and for whether a departure is
+  late at all: before the departure date it is an early departure, whatever
+  the hour (D27-314 (2)); the hour is the property's clock.
+- **A late departure is recorded once** (D27-314 (1)): the second Check out
+  reuses the reason recorded and posts nothing again - decided in the route,
+  under the stay's row lock, not on the screen.
 - **Every booking records its channel, walk-ins included** (MEMORY 242,
   085). Guarded by `api/test/modules/reservations/reservationInserts.test.ts`,
   which reads every `insert into reservations` under `api/src`.

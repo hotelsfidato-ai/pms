@@ -28,6 +28,45 @@ the file is inventory's (on `MODULE.md`'s Requests).
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-27 · A late departure was charged again at every Check out after the guest paid - FIXED 13 October (D27-314 (1))
+
+**Found** - 13 October, by the A1/A3/A5 script writer reading the code; the
+owner asked for it reproduced first. **Reproduced** on a scratch copy of the
+demo (`fidato_d314`, from `fidato-before-day-check-13oct.dump`, a ₹1,000 late
+fee set on 5EL), as Reception, in the app's own pane: Kapil Ganjoo, room 206,
+nothing owed. Check out → "Leaving after check-out time" → "Late flight,
+first time" → Late check-out ₹1,000 + GST ₹50 posted, "₹1,050 is still
+outstanding". Settle ₹1,050 cash → Settled ₹0. Check out again → the same
+dialog, empty → "Late flight, second time" → a SECOND Late check-out ₹1,000 +
+₹50, ₹1,050 owed again, the first reason overwritten. It loops: every payment
+and Check out adds another. The route asked `app.departure_is_late` and never
+looked at `late_checkout_at`.
+**Fixed** - the check-out route (`operations.ts`) asks the rule AND
+`late_checkout_at is null`, read after the stay's row lock: a late departure
+already recorded (reason, charge or waiver) is not asked again and not
+charged again, whatever the body sends.
+**Proved** - `api/test/modules/front-desk/lateDeparture.test.ts`, "(1)": the
+second check-out (no reason, as the screen sends) is not asked, checks out,
+one late line, the first reason kept; a reason sent again changes nothing.
+**Rule** - a charge that is posted before a refusal will be posted again on
+the retry unless the route remembers it posted it (MEMORY 243's other half).
+
+### FD-28 · A guest leaving a day early was asked "Leaving after check-out time" and charged the late fee - FIXED 13 October (D27-314 (2), migration "late departure on the day")
+
+**Found** - 13 October, the A5 script: a guest leaving early (departure date
+after the business date), bill settled, Check out after 11:00 opened the late
+dialog. `app.departure_is_late` (063) compared only the hour, on any day.
+**Fixed** - the one rule, `app.departure_is_late(hotel, at, departure)`: the
+hotel's business date on or after the departure date AND the hour, on the
+property's clock, past check-out time. The two-argument version is dropped.
+The screens have no rule of their own (the Bill tab opens the dialog only on
+the route's `needs`; `src/lib/rules.ts` has no late rule).
+**Proved** - `db/tests/modules/front-desk.sql` "late departure" (before,
+on, after the date; the business date, not the clock's; one version left)
+and `lateDeparture.test.ts` "(2)". `nightAudit.test.ts`'s late fixtures now
+leave on the business date (they left the next day, an early departure).
+**Rule** - "late" is a date and an hour; the date is the business date.
+
 ### FD-25 · With the wifi up and the line down, In house lost its rows to the read's error - FIXED 4 October (D27-271)
 
 **Found** - 4 October, building the owner's D27-271 (4): "offline, In house
