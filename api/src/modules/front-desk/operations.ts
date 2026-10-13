@@ -3,7 +3,7 @@ import { withSession, type Session } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { resolveDate, businessDateFor } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
-import { roomNightsDue, postRoomNight } from "../night-audit/index.ts";
+import { roomNightsDue, postRoomNight, leavingEarly } from "../night-audit/index.ts";
 import { editFolioCharge } from "../finance/index.ts";
 import {
   formIIIRefusal, identityProblem, isForeign, saveIdentity, saveVisit, type Identity, type Visit,
@@ -61,7 +61,7 @@ type Outcome<T = unknown> =
      day, at which point the way through silently disappears. Most
      refusals have no `needs`: "the room is occupied" is not a form to
      fill in. */
-  | { ok: false; reason: string; needs?: "late-reason" | "early-reason" };
+  | { ok: false; reason: string; needs?: "late-reason" | "early-reason" | "leaving-early" };
 
 
 /** Rupees, grouped, in a sentence somebody reads. The Indian grouping
@@ -111,7 +111,7 @@ const WAIVE_REFUSED =
   + "it charge, or ask a manager to waive it.";
 
 const refuse = (
-  reason: string, needs?: "late-reason" | "early-reason",
+  reason: string, needs?: "late-reason" | "early-reason" | "leaving-early",
 ): Outcome => (needs ? { ok: false, reason, needs } : { ok: false, reason });
 
 /** Is somebody still IN this room - app.in_house (129), the one rule - other
@@ -763,6 +763,19 @@ operations.get("/:code/early-arrival", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
+/* ── Is this check-out leaving early? (D27-315) ────────────────────
+   What the Check out step shows: the booked departure, today, the nights
+   not stayed and whether a booking site must be told. Null when no night is
+   freed. The check-out route asks the same function and decides. */
+operations.get("/:code/stays/:id/leaving-early", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    return { leavingEarly: await leavingEarly(client, hotelId, c.req.param("id")) };
+  });
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
 /* ── Check out ───────────────────────────────────────────────────── */
 
 operations.post("/:code/stays/:id/check-out", async (c) => {
@@ -773,6 +786,8 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
     waiveLate?: boolean;
     /* Form III: where a foreign guest goes next (D27-25). */
     nextDestination?: string;
+    /* Why a guest leaves before the booked departure (D27-315). */
+    earlyReason?: string;
   };
   const body = (await c.req.json().catch(() => ({}))) as CheckOutBody;
 
@@ -962,6 +977,42 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
         `The guest has overpaid by ${money(Math.abs(balance))}. ` +
           `Refund it before checking out.`,
       );
+    }
+
+    /* ── LEAVING EARLY (the owner's D27-315, Part A) ──────────────────
+       Before the booked departure, the nights not stayed are not charged
+       and go back on sale: the departure becomes the later of today and the
+       day after the last night posted (leavingEarly, the audit's own rule),
+       and the room hold is trimmed with it (app.amend_stay). Inventory, the
+       push to booking sites, Due out and the reports read the booking's
+       dates, so they follow. Nights posted are never removed.
+
+       AFTER LATENESS WAS DECIDED, above, on the booked date: moved first,
+       an early leaver would be "on the date" and charged a late fee
+       (D27-314). After every refusal, before the status flips (MEMORY 243).
+       A typed reason, kept on the booking as a rate change keeps its own. */
+    const early = await leavingEarly(client, hotelId, stayId);
+    if (early) {
+      const why = body.earlyReason?.trim();
+      if (!why) {
+        return refuse(
+          `Booked to leave on ${early.departure}. ${early.nightsFreed} `
+          + `${early.nightsFreed === 1 ? "night is" : "nights are"} not stayed: `
+          + "say why the guest is leaving early.",
+          "leaving-early",
+        );
+      }
+      await client.query(
+        `select 1 from reservations r,
+                app.amend_stay(r.hotel_id, r.id, r.check_in, $3::date,
+                               r.adults, r.children, $4)
+          where r.hotel_id = $1 and r.id = $2`,
+        [hotelId, stayId, early.newDeparture, session.staffId]);
+      await client.query(
+        `update reservations
+            set notes = concat_ws(' · ', nullif(notes, ''), $2::text)
+          where id = $1`,
+        [stayId, `Left early on ${early.today}, booked to ${early.departure}: ${why}`]);
     }
 
     const { rows: room } = await client.query<{ id: string; number: string }>(
