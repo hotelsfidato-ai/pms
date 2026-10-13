@@ -22,6 +22,10 @@ NEVER npm install; never copy api\.env. Claim: `npm run claim -- front-desk "D27
 - A booking-site (OTA) stay shows "Tell the booking site the guest left early."
 - Inventory, the channel push, Due out and the reports then correct themselves because
   they read the booking's dates - prove it (the inventory grid shows the freed nights).
+- D27-314 (merged, migration 217 `app.departure_is_late`) asks "Leaving after check-out time"
+  only on or after the departure date, and only once. Leaving early must decide lateness
+  BEFORE it moves the departure to today - otherwise an early leaver becomes "on the date"
+  and is charged a late fee. Prove that with a test. Next free migration number: 218.
 - Credit on the bill is NOT handled here (that is Lane B's refund); a guest with credit
   stays blocked as today.
 
