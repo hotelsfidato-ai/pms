@@ -22,7 +22,9 @@ frames, then render it with `node tools/render.mjs <ch> --stale`, check
 `node tools/audiocheck.mjs out/<ch>/*.mp4`, and copy `out/<ch>/*.mp4` into
 `D:\fidato\final videos\<the chapter's existing folder>` (replace). Renders are heavy: one
 at a time, never two - before each render check no other `render.mjs` is running on this PC
-(the master and Lane E render too); wait until it has finished.
+(the master and Lane E render too); WAIT until it has finished (poll every minute). NEVER stop,
+kill or restart a process you did not start yourself - not a render, not Chrome, not a server
+(on 14 Oct 01:31 a lane killed the master's A3 render).
 
 Never start Microsoft Edge; no npm install, no downloads; never touch any .env; never
 write in D:\fidato pms except the final videos copy; nothing leaves this machine. Another
