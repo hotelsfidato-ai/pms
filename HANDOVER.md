@@ -48,7 +48,45 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
-### 12 October, 18:45 — read this first (stopped at 95% of the 5-hour limit)
+### 14 October, 02:00 — read this first (final launch 15 Oct, D27-318)
+
+```
+launch               15 Oct (owner's Max plan ends then). New ideas after it go to a future list.
+live                 RELEASE 1 server part LIVE since 13 Oct 04:00 (548db9b8, migrations 213-214,
+                     owner ran A1-A6); its website never published (A7 failed: no dist).
+                     RELEASE 2 READY 14 Oct 00:30: branch release/r2-13oct = d080ed7c, copy
+                     .claude/worktrees/release-r2-13oct, full gates green, dist built and checked
+                     (index-Cf_2WH8h.js). Owner's steps A1-A7 printed by release.mjs (push
+                     release/r2-13oct:main from 548db9b8, server backup, pull, launch.sh = migrations
+                     215-217, health, firebase deploy FROM the r2 copy). It supersedes release 1's A7.
+cp6 after r2         merged, gated in quick only: D27-316 (1)(2) speed (Rooms/Calendar/Dashboard
+                     date-bounded reads, narrow refresh) and (3)-(6) small fixes = RELEASE 3; needs a
+                     full gate run in a clean copy when the PC is quiet (renders/lanes load it -> web
+                     test timeouts; every such failure so far passed alone).
+lanes (API key)      docs/briefs/lanes/: A leaving early (D27-315 A), B cash round-off (built) then
+                     refunds (D27-315 B), D Watch it done every chapter, E Film 1. They run through
+                     the Claude Agent SDK on the owner's FREE $100 promo credit (Claude Code itself is
+                     not covered): .local/lanes-runner/runner.mjs (caps A25 B35 D15 E15), started by
+                     docs/briefs/lanes/start-lanes-sdk.ps1 (owner types the key, hidden). Live log:
+                     .local/lanes/progress.log (+ <lane>-sdk.log). The runner was improved at 01:52 to
+                     resume a session after the agent pauses; running lanes still use the old one -
+                     when a lane stops without DONE/BLOCKED, owner reruns the starter with -Lanes X.
+                     Lanes never merge/push; the master merges lane/early-checkout-a, lane/money,
+                     and commits C:\videos work. Local test provisioning key for the demo:
+                     .local/lanes/local-provisioning-key.txt (local DB only).
+videos               final folder: A0 A1 A2 A4 A6 A7 A8 A9 A10 A11 A12 A13 A14 A15 A16 A17 (A0 retake
+                     by lane D). A3, A5: job bo38fgxy8 renders them after lane D's render (never two at
+                     once). Then Watch it done (lane D) re-renders chapters; Film 1 (lane E); Film 2
+                     (script written, not recorded).
+decisions today      D27-307..D27-318 in docs/briefs/decisions-2026-09-27.md (all as recommended
+                     except: D27-317 round only cash; D27-318 launch 15 Oct).
+open for the owner   .local/videos-d27-301-findings.md (batched questions); day-use late question;
+                     Calendar key colours; test-hotel GSTIN on the Profile checklist; staff-facing
+                     decision codes in channel.ts, stock report, KOT file.
+local servers        api 8787 (stand-in env), web 5173, printers 5199, stand-in 5299, Postgres 55432.
+```
+
+### 12 October, 18:45 — history (stopped at 95% of the 5-hour limit)
 
 ```
 cp6                  D27-305 built and merged (3 helpers; migration 213 = next free 214).
