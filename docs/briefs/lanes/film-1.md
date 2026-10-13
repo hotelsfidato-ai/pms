@@ -31,4 +31,4 @@ other `render.mjs` is running (wait if one is). No npm install, no downloads; ne
 recordings made, voice, videos rendered and copied, script lines changed, anything wrong in
 the PMS seen.
 
-**Progress log:** append a line to `D:idato pms\.local\lanes\progress.log` at the start, after each finished piece, at least every 30 minutes, and at the end ("DONE"; "BLOCKED: why" if stuck) - the format is in README.md.
+**Progress log:** append a line to `D:\fidato pms\.local\lanes\progress.log` at the start, after each finished piece, at least every 30 minutes, and at the end ("DONE"; "BLOCKED: why" if stuck) - the format is in README.md.

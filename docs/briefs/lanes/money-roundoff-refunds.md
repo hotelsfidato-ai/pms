@@ -47,4 +47,4 @@ Claude Opus 5.5 <noreply@anthropic.com>"). Take the junctions out at the end. De
 nothing new: questions go in your report with a recommendation. Report to
 `.local/lanes/b-report.md`.
 
-**Progress log:** append a line to `D:idato pms\.local\lanes\progress.log` at the start, after each finished piece, at least every 30 minutes, and at the end ("DONE"; "BLOCKED: why" if stuck) - the format is in README.md.
+**Progress log:** append a line to `D:\fidato pms\.local\lanes\progress.log` at the start, after each finished piece, at least every 30 minutes, and at the end ("DONE"; "BLOCKED: why" if stuck) - the format is in README.md.

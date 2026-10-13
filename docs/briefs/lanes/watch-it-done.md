@@ -29,4 +29,4 @@ lane (Film 1) uses the demo at the same time on a NEW hotel - leave that hotel a
 Report to `D:\fidato pms\.local\lanes\d-report.md`: each chapter recorded (clips,
 seconds), rendered and copied, anything skipped and why, anything wrong in the PMS seen.
 
-**Progress log:** append a line to `D:idato pms\.local\lanes\progress.log` at the start, after each finished piece, at least every 30 minutes, and at the end ("DONE"; "BLOCKED: why" if stuck) - the format is in README.md.
+**Progress log:** append a line to `D:\fidato pms\.local\lanes\progress.log` at the start, after each finished piece, at least every 30 minutes, and at the end ("DONE"; "BLOCKED: why" if stuck) - the format is in README.md.
