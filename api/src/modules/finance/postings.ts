@@ -720,6 +720,9 @@ export interface Payer {
       after every other, so it may write (a credit-limit allowance). A
       group's master bill: "Bill to company" (D27-305). */
   check?: (method: string, amount: number) => Promise<{ reason: string; needs?: Needs } | null>;
+  /** A room bill (D27-317): cash is taken to the nearest rupee and the
+      difference, at most ±0.50, is kept with the payment as its round-off. */
+  roundCash?: boolean;
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -735,7 +738,7 @@ export interface Payer {
 export async function takeFolioPayment(
   client: Client, hotelId: string, folioId: string | null,
   input: PaymentToTake, payer: Payer,
-): Promise<{ ok: true; id: string } | { ok: false; reason: string; needs?: Needs }> {
+): Promise<{ ok: true; id: string; roundOff: number } | { ok: false; reason: string; needs?: Needs }> {
   if (!input.amount || input.amount <= 0) {
     return { ok: false, reason: "A payment must be greater than zero." };
   }
@@ -785,7 +788,7 @@ export async function takeFolioPayment(
      presses cannot both miss it, and before the cash counts, which would
      otherwise count the first press against the repeat. */
   const done = await postedWith(client, hotelId, input.idempotencyKey ?? null);
-  if (done) return { ok: true, id: done };
+  if (done) return { ok: true, id: done, roundOff: 0 };
 
   /* D25-40 - asked BEFORE any folio is opened (MEMORY 243). */
   let pan: string | null = null;
@@ -823,6 +826,13 @@ export async function takeFolioPayment(
      refusal (MEMORY 243). */
   if (method === "cash") await openOwnDrawer(client, hotelId, businessDate);
 
+  /* CASH TO THE RUPEE ON A ROOM BILL (the owner's D27-317, 218): the bill is
+     credited with its exact amount, so it settles to ₹0 and the tax invoice
+     keeps its paise; the drawer gets the nearest rupee, and the difference
+     is the round-off. Every other way pays the exact amount. */
+  const roundOff = method === "cash" && payer.roundCash
+    ? Math.round((Math.round(amount) - amount) * 100) / 100 : 0;
+
   /* A payment is a NEGATIVE posting. The balance is the sum of the
      ledger, so money received reduces it by being part of the sum —
      there is no separate "paid" column to keep in step. */
@@ -833,19 +843,21 @@ export async function takeFolioPayment(
      values ($1,$2,$3,'payment',$4,$5,0,0,$6)
      returning id::text`,
     [hotelId, folio, businessDate,
-     method !== "city_ledger" ? `Received - ${way.label}`
+     roundOff ? `Received - ${way.label} (₹${inr(amount + roundOff)} taken, round-off `
+       + `${roundOff > 0 ? "+" : "-"}₹${inr(Math.abs(roundOff))})`
+       : method !== "city_ledger" ? `Received - ${way.label}`
        : way.label === "Bill to company" ? "Transferred to city ledger"
        : `Transferred to city ledger - ${way.label}`,
      -amount, input.idempotencyKey ?? null],
   );
 
   await client.query(
-    `insert into payments (hotel_id, posting_id, method, method_label, amount, pan, form_97)
-     values ($1, $2::bigint, $3, $4, $5, $6, $7)`,
-    [hotelId, made[0]!.id, method, way.label, amount, pan, form97],
+    `insert into payments (hotel_id, posting_id, method, method_label, amount, pan, form_97, round_off)
+     values ($1, $2::bigint, $3, $4, $5, $6, $7, $8)`,
+    [hotelId, made[0]!.id, method, way.label, amount, pan, form97, roundOff],
   );
 
-  return { ok: true, id: made[0]!.id };
+  return { ok: true, id: made[0]!.id, roundOff };
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -906,8 +918,10 @@ postings.post("/:code/stays/:id/payments", async (c) => {
         },
       }),
       openFolio: () => folioFor(client, hotelId, stayId),
+      roundCash: true,
     });
-    return taken.ok ? { ok: true, data: { id: taken.id } } : refuse(taken.reason, taken.needs);
+    return taken.ok ? { ok: true, data: { id: taken.id, roundOff: taken.roundOff } }
+      : refuse(taken.reason, taken.needs);
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

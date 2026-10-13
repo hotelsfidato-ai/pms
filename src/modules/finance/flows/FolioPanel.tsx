@@ -181,6 +181,7 @@ export function FolioPanel({
             folios={folios}
             active={only}
             businessDate={businessDate}
+            roundCash
             pay={(input, key) => settle(hotelId, stay.id, input, key)}
             onDone={refresh}
           />
@@ -1113,7 +1114,8 @@ function AddChargeDialog({
 /** SETTLE: a stay's bill, and a group's master bill on the group's page
     (D27-305 (10)) - one dialog, one payment door; `pay` names the bill. */
 export function SettleDialog({
-  payer, primary, balance, folios = [], active = null, businessDate, credit = "guest", pay, onDone,
+  payer, primary, balance, folios = [], active = null, businessDate, credit = "guest", roundCash = false,
+  pay, onDone,
 }: {
   /** Who is paying, for the dialog's line: the guest, or the group. */
   payer: string;
@@ -1126,6 +1128,9 @@ export function SettleDialog({
   businessDate: string;
   /** Whose credit more than the bill is held as (D27-4). */
   credit?: "guest" | "host";
+  /** A room bill (D27-317): cash is taken to the nearest rupee; the server
+      keeps the difference with the payment as its round-off. */
+  roundCash?: boolean;
   pay: (input: SettleInput, key: string) => Promise<OperationResult>;
   onDone: () => void;
 }) {
@@ -1164,6 +1169,12 @@ export function SettleDialog({
   /* D25-40 (Rule 159): more than ₹1,00,000 in cash at once needs the PAN or
      Form 97. The server decides, and refuses cash of ₹2,00,000 or more. */
   const asksPan = method === "Cash" && value > 100000;
+  /* CASH TO THE RUPEE (D27-317): the bill is credited with `value`, the
+     drawer takes the nearest rupee. The server works it out the same way. */
+  const isCash = (desk?.paymentMethods ?? [{ label: "Cash", kind: "cash" }])
+    .find((m) => m.label === method)?.kind === "cash";
+  const roundOff = roundCash && isCash
+    ? Math.round((Math.round(value) - value) * 100) / 100 : 0;
 
   return (
     <Dialog
@@ -1287,8 +1298,14 @@ export function SettleDialog({
           )}
 
           <div className="rounded-lg bg-grey-50 border border-grey-200 p-3 space-y-1">
-            <Row label="Outstanding" value={money(outstanding)} />
-            <Row label="Paying" value={money(value)} muted />
+            <Row label="Outstanding" value={roundOff ? moneyPrecise(outstanding) : money(outstanding)} />
+            <Row label="Paying" value={roundOff ? moneyPrecise(value) : money(value)} muted />
+            {roundOff !== 0 && (
+              <div data-round-off>
+                <Row label="Cash to take" value={moneyPrecise(value + roundOff)} bold />
+                <Row label="Round-off" value={`${roundOff > 0 ? "+" : "-"}${moneyPrecise(Math.abs(roundOff))}`} muted />
+              </div>
+            )}
             <div className="pt-1 border-t border-grey-200">
               <Row
                 label="Remaining"
@@ -1315,7 +1332,8 @@ export function SettleDialog({
                   }, pressKey);
                   if (res.ok) {
                     setPressKey(crypto.randomUUID());
-                    toast.success(`${money(value)} received`, method);
+                    toast.success(roundOff
+                      ? `${moneyPrecise(value + roundOff)} cash taken` : `${money(value)} received`, method);
                     /* NOTHING LEFT TO TAKE AGAIN (speed finding 7): the
                        dialog animates out while the bill refreshes to ₹0,
                        and with the amount still typed it offered the same

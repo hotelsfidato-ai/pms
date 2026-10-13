@@ -530,3 +530,45 @@ begin
   select count(*) into n from app.guest_invoices_owed(3, h, inv);
   perform test.ok('finance master bill', 'nor by the desk''s Send invoice', n = 0, n || ' rows');
 end $$;
+
+
+-- =============================================================================
+-- CASH ON A ROOM BILL, TO THE RUPEE (the owner's D27-317)
+-- =============================================================================
+-- The bill is credited with its exact amount; the round-off (at most ±0.50)
+-- rides on the cash payment and the drawer expects the rupees really taken.
+-- Only cash is rounded: a round-off on any other way is refused.
+-- =============================================================================
+do $$
+declare h uuid; desk uuid; g uuid; f uuid; sh uuid; p bigint; e numeric;
+begin
+  h := app.provision_property_unchecked('FRO', 'Round-off Test', 'Nowhere');
+  select id into desk from staff where email = 'agra@fidato.in';
+  insert into staff_hotels (staff_id, hotel_id, role) values (desk, h, 'front_desk') on conflict do nothing;
+  insert into reservation_groups (name) values ('D317 Round-off') returning id into g;
+  insert into folios (hotel_id, group_id) values (h, g) returning id into f;
+  insert into cashier_shifts (hotel_id, staff_id, business_date, opening_cash, opened_at, opened_by)
+  values (h, desk, app.business_date(h), 500, now() - interval '1 hour', desk) returning id into sh;
+
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount,
+                              tax_rate, tax_amount, posted_by)
+  values (h, f, app.business_date(h), 'payment', 'Received - Cash', -1234.63, 0, 0, desk)
+  returning id into p;
+  insert into payments (hotel_id, posting_id, method, amount, round_off)
+  values (h, p, 'cash', 1234.63, 0.37);
+  e := app.cashier_expected_cash(sh);
+  perform test.ok('finance round-off', 'the drawer expects the rupees taken (500 + 1,234.63 + 0.37)',
+    e = 1735, e::text);
+
+  perform test.raises('finance round-off', 'a round-off of more than 50 paise is refused',
+    format($q$insert into payments (hotel_id, posting_id, method, amount, round_off)
+              values (%L, %s, 'cash', 1, 0.51)$q$, h, p), '23514');
+
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount,
+                              tax_rate, tax_amount, posted_by)
+  values (h, f, app.business_date(h), 'payment', 'Received - UPI', -50.63, 0, 0, desk)
+  returning id into p;
+  perform test.raises('finance round-off', 'UPI is never rounded: a round-off on it is refused',
+    format($q$insert into payments (hotel_id, posting_id, method, amount, round_off)
+              values (%L, %s, 'upi', 50.63, 0.37)$q$, h, p), '23514');
+end $$;

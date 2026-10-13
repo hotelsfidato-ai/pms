@@ -174,7 +174,9 @@ cashier.get("/:code/cashier-shift", async (c) => {
       method: string; n: number; amount: string;
     }>(
       `select coalesce(p.method,'unrecorded') as method,
-              count(*)::int as n, (-sum(fp.amount))::text as amount
+              /* With the round-off a cash room bill was taken to the
+                 rupee with (D27-317): what is in the drawer. */
+              count(*)::int as n, (-sum(fp.amount) + coalesce(sum(p.round_off), 0))::text as amount
          from folio_postings fp
          left join payments p on p.posting_id = fp.id
          join cashier_shifts cs on cs.id = $1
