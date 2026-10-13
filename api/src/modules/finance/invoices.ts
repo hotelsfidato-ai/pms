@@ -142,7 +142,9 @@ export interface InvoiceRecipient {
    whichever bill it met first, so a split stay's invoice went to Agoda
    carrying the guest's coffee.
    Aliases: f (folios), r (reservations). The Invoices list reads the same
-   expression, so the row and the document name the same party. */
+   expression, so the row and the document name the same party.
+   Written again in SQL in app.guest_invoices_owed (migration 216, D27-313):
+   change both together; messagesAndReports.test.ts fails if they drift. */
 export const RECIPIENT_COMPANY = `
   case when f.bill_to = 'company' then f.company_id
        when not exists (select 1 from folios o
