@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router";
 import * as apiModule from "@/lib/api";
 import * as postings from "@/modules/finance/data/postings";
 import { startSignedIn } from "@/test/app";
+import { TooltipProvider } from "@/components/ui";
 import type { Stay } from "@/data/repositories";
 import { FolioPanel } from "./flows/FolioPanel";
 
@@ -47,9 +48,9 @@ async function openSettle(amount: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
+      <TooltipProvider><MemoryRouter>
         <FolioPanel hotelId="5EL" stay={STAY} businessDate="2026-09-22" />
-      </MemoryRouter>
+      </MemoryRouter></TooltipProvider>
     </QueryClientProvider>,
   );
   const button = await screen.findByRole("button", { name: /Settle/ });

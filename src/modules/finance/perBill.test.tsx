@@ -7,6 +7,7 @@ import * as postings from "@/modules/finance/data/postings";
 import * as folios from "@/modules/finance/data/folios";
 import * as billing from "@/modules/finance/data/billing";
 import { startSignedIn } from "@/test/app";
+import { TooltipProvider } from "@/components/ui";
 import type { Stay } from "@/data/repositories";
 import { FolioPanel } from "./flows/FolioPanel";
 import InvoicesPage from "./pages/Invoices";
@@ -63,9 +64,9 @@ describe("Settle on a split bill (FI-2, FI-3)", () => {
     const paid = vi.spyOn(postings, "settle").mockImplementation(() => new Promise(() => {}));
     render(
       <QueryClientProvider client={client()}>
-        <MemoryRouter>
+        <TooltipProvider><MemoryRouter>
           <FolioPanel hotelId="5EL" stay={STAY} businessDate="2026-09-22" />
-        </MemoryRouter>
+        </MemoryRouter></TooltipProvider>
       </QueryClientProvider>,
     );
     fireEvent.click(await screen.findByRole("button", { name: /Agoda/ }));

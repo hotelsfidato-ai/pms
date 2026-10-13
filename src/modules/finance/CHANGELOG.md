@@ -11,7 +11,7 @@ project, still goes in the root `CHANGELOG.md`.
 ## 2026-10-13 · Check out follows the balance on screen (the owner's D27-313 (1); front desk's lane)
 
 **Asked for:** through the master, from the day check: the Bill tab's Check out greyed ~4 s after each payment with no reason. Done in front desk's lane (D27-313 (1)), finance claimed for it.
-**Shipped:** `flows/FolioPanel.tsx` - the answer is `canCheckOut(stay, balance, money)` on the balance the panel already reads, not a query keyed on that balance (FIN-30). No bill is nothing owed, as before; no answer until the balance has loaded. `nextDestination.test.tsx` lost its mock of front desk's `checkOutAllowed`, which went.
+**Shipped:** `flows/FolioPanel.tsx` - the answer is `canCheckOut(stay, balance, money)` on the balance the panel already reads, not a query keyed on that balance (FIN-30). No bill is nothing owed, as before; no answer until the balance has loaded. `nextDestination.test.tsx` lost its mock of front desk's `checkOutAllowed`, which went. Six tests that draw the panel (`cashPan`, `onePress`, `overCreditLimit`, `overpayment`, `perBill`, `settleOnce`) now wrap it in `TooltipProvider`, as `AppShell` does: their API stub never answered, so Check out's reason - drawn in a tooltip - never appeared there before; it does now that the reason comes from the balance they stub, and a tooltip with no provider throws.
 **Proved:** `checkOutFollowsBalance.test.tsx` - the stay read held open as a busy server held it; on the old panel both tests failed ("greyed with the bill settled"; "expected '' to match /800 is still owed/"), both pass.
 **Left open:** nothing here. Front desk's CHANGELOG has the measurements.
 
