@@ -31,7 +31,9 @@ export const SWITCHES = [
   { kind: "online-checkin", label: "Online check-in", on: true,
     when: "The guest's own check-in page: its link and QR code in the voucher, and the desk's Send check-in link." },
   { kind: "invoice", label: "Tax invoice", on: false,
-    when: "When the invoice is issued, by email. Only invoices issued after it is switched on." },
+    when: "When the invoice is issued, by email, if it is made out to the guest. "
+      + "Only invoices issued after it is switched on; one made out to a company, "
+      + "an agent or a booking site goes by Send invoice." },
   { kind: "review", label: "Review request", on: false,
     when: "When a clerk presses Ask for a review, after check-out." },
 ] as const;

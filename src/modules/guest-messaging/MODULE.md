@@ -167,8 +167,9 @@ booking's Booked card, the booking panel) - one line each.
   stay booked through an OTA, an agent or a company is made out to them while
   the stay has no company bill) issued after the hotel's switch
   was last turned on (Q3, Q4); one made out to an OTA, an agent or a company
-  only by the desk's **Send invoice**
-  (`SendInvoice`, on finance's Invoice page; `POST /:code/invoices/:number/send`,
+  only by the desk's **Send invoice** (the switch's own sentence on
+  Guest messages on/off says so, D27-316 (5): "...by email, if it is made out
+  to the guest. ... goes by Send invoice."; `SendInvoice`, on finance's Invoice page; `POST /:code/invoices/:number/send`,
   whoever may issue one); never a credit note (Q6). ⚠ The recipient rule is
   in two places, finance's TypeScript and the function: change both
   (`messagesAndReports.test.ts` issues through finance's route and fails on a
