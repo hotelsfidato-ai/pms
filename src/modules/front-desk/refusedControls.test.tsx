@@ -24,6 +24,7 @@ import type { Stay } from "@/data/repositories";
    ══════════════════════════════════════════════════════════════════ */
 
 const realListStays = staysData.listStays;
+const realFetchStays = staysData.fetchStays;
 
 beforeEach(() => {
   startSignedIn();
@@ -35,6 +36,9 @@ beforeEach(() => {
   /* The fixtures' stays carry no guest id, and the VIP mark needs one. */
   vi.spyOn(staysData, "listStays").mockImplementation(async (h) =>
     (await realListStays(h)).map((s) => ({ ...s, guestId: `guest-${s.id}` })));
+  /* The board reads its window since D27-316, not the whole list. */
+  vi.spyOn(staysData, "fetchStays").mockImplementation(async (...args) =>
+    (await realFetchStays(...args)).map((s) => ({ ...s, guestId: `guest-${s.id}` })));
 });
 
 afterEach(() => {

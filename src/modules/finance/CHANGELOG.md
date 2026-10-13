@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-14 · After a payment only that stay's bill and the open list refresh (the owner's D27-316 (2); front desk's entry has the whole session)
+
+**Shipped:** `flows/FolioPanel.tsx` - `refresh` was `invalidateQueries()`; a write that changes only the bill now marks every read out of date (`refetchType: "none"`), asks again now this stay's reads, the bell, the Rooms board and Folios if shown, and writes this stay's balance into the In house and Due out rows from its own read (FIN-31). `refreshAll` (everything, as before) for Change rate, the late check-out and Check out. `data/folios.ts`: `listOpenFolios(hotel, stays?)` matches the folios to the stays a screen passes (the Calendar's window, D27-316 (1)); without them every booking, as Folios needs.
+**Measured** (`fidato_d316`, a payment over In house): 36-37 reads, 21 a bill per row, settled 1.5-5.2 s after the payment → 9-11, 0.32-0.60 s.
+**Proved:** `billRefresh.test.tsx` failed on the old panel ("another row's bill read again: stay-2") and passes; `checkOutFollowsBalance`, `settleOnce` pass.
+
 ## 2026-10-13 · Check out follows the balance on screen (the owner's D27-313 (1); front desk's lane)
 
 **Asked for:** through the master, from the day check: the Bill tab's Check out greyed ~4 s after each payment with no reason. Done in front desk's lane (D27-313 (1)), finance claimed for it.

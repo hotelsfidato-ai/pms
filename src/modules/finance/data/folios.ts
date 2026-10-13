@@ -113,20 +113,24 @@ export async function listGroupBills(
   return folios.flatMap((f) => (f.groupId ? [{ groupId: f.groupId, group: f.group ?? null, balance: f.balance }] : []));
 }
 
+/** The open bills of `stays` - every booking unless a screen passes the
+    ones it shows (the Calendar's window, D27-316 (1)): the Folios page needs
+    every one, as a guest who has left can still owe. */
 export async function listOpenFolios(
   hotelId: string,
+  stays: Stay[] | Promise<Stay[]> = fetchStays(hotelId),
 ): Promise<Array<Folio & { stay: Stay }>> {
   if (!hotelId) return [];
 
-  const [folios, stays] = await Promise.all([
+  const [folios, ofStays] = await Promise.all([
     api<Folio[]>(`/api/hotels/${hotelId}/folios`).catch((error) => {
       if (error instanceof ApiError && error.status === 404) return [];
       throw error;
     }),
-    fetchStays(hotelId),
+    stays,
   ]);
 
-  const byId = new Map(stays.map((s) => [s.id, s]));
+  const byId = new Map(ofStays.map((s) => [s.id, s]));
 
   return folios
     .filter((f) => byId.has(f.stayId))

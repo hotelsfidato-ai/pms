@@ -21,7 +21,7 @@ import {
   DropdownMenuItem, DropdownMenuLabel,
 } from "@/components/ui";
 import { getFolioPostings, getFolioBalance, postCharge, reverseCharge, settle, reverseChargeAllowed, editCharge, changeRate, type BillLine, type SettleInput } from "@/modules/finance/data/postings";
-import { checkOut, earlyArrival } from "@/modules/front-desk";
+import { checkOut, earlyArrival, type StayRow } from "@/modules/front-desk";
 import { type OperationResult, type Posting, type Stay } from "@/data/repositories";
 import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type StayFolio } from "@/modules/finance/data/folios";
 import { LateCheckOutFlow } from "@/modules/front-desk";
@@ -61,7 +61,32 @@ export function FolioPanel({
      they are at the desk (D27-25). The server refuses without it. */
   const foreign = (stay.nationality ?? "IN").toUpperCase() !== "IN";
   const [nextDestination, setNextDestination] = useState("");
-  const refresh = () => qc.invalidateQueries();
+  /* A WRITE THAT CHANGES ONLY THE BILL ASKS AGAIN ONLY WHAT SHOWS IT (the
+     owner's D27-316 (2)). It was `invalidateQueries()`: every read on screen
+     asked again - 36 after one payment over In house on the 13 October copy,
+     21 of them a bill per row. Now every read is marked out of date, to be
+     asked again when next shown; this stay's own reads (their keys name it),
+     the bell (who owes), the Rooms board and Folios are asked now, if shown;
+     and In house and Due out take this stay's balance from its own read. A
+     change of rate or a check-out changes the stay itself, and still asks
+     everything again (`refreshAll`). */
+  const refreshAll = () => qc.invalidateQueries();
+  const refresh = async () => {
+    void qc.invalidateQueries({ refetchType: "none" });
+    void qc.invalidateQueries({ predicate: (q) => q.queryKey.includes(stay.id)
+      || ["notifications", "stay-view", "open-folios"].includes(String(q.queryKey[0])) });
+    const now = await qc.fetchQuery({
+      queryKey: ["folio-balance", hotelId, stay.id],
+      queryFn: () => getFolioBalance(hotelId, stay.id),
+    }).catch(() => undefined);
+    if (now === undefined) return;
+    for (const list of ["in-house", "departures"]) {
+      qc.setQueriesData<StayRow[]>({ queryKey: [list, hotelId] }, (rows) =>
+        rows?.some((s) => s.id === stay.id && "balance" in s)
+          ? rows.map((s) => (s.id === stay.id ? { ...s, balance: now ?? undefined } : s))
+          : undefined);
+    }
+  };
 
   /* D24-18: each act only for a role the server's gate lets do it (roleGate,
      from the one matrix): a charge or a second bill is invoice create, a
@@ -162,7 +187,7 @@ export function FolioPanel({
         )}
         {mayPrint && <InvoiceDialog hotelId={hotelId} stayId={stay.id} />}
         {mayCharge && <SplitBillButton hotelId={hotelId} stayId={stay.id} onDone={refresh} />}
-        {mayEdit && <ChangeRateButton hotelId={hotelId} stay={stay} onDone={refresh} />}
+        {mayEdit && <ChangeRateButton hotelId={hotelId} stay={stay} onDone={refreshAll} />}
       </div>
 
       {lateOut && (
@@ -174,7 +199,7 @@ export function FolioPanel({
           nextDestination={nextDestination}
           open
           onOpenChange={(o) => { if (!o) setLateOut(false); }}
-          onDone={refresh}
+          onDone={refreshAll}
         />
       )}
 
@@ -199,7 +224,7 @@ export function FolioPanel({
             const res = await checkOut(hotelId, stay.id, undefined, nextDestination.trim());
             if (res.ok) {
               toast.success(`${stay.guest} checked out`, `Room ${stay.roomNumber} is now dirty and on housekeeping's board.`);
-              refresh();
+              void refreshAll();
               return;
             }
             /* THE WAY THROUGH, not another toast.

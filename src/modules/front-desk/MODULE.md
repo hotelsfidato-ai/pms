@@ -77,7 +77,7 @@ They moved there in the server split of 15 September (`3424882`, `b772047`).
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/stays` | every stay with the room it is in; "due out" is worked out here, stored nowhere. **With `from` (and `to`, else the same day; YYYY-MM-DD, else 400): only the bookings checked in now and those arriving from..to** (D27-313) - what Arrivals (Today and Upcoming), In house, Due out and the check-in's room list read: 18 rows and ~0.1 s on the 13 October demo, against 793 and ~3.5 s for every booking. Without it, every booking - All bookings, Walk-ins, Find, Rooms and the Calendar, the Dashboard, housekeeping, Folios, groups, laundry and spa still read that |
+| GET | `/:code/stays` | every stay with the room it is in; "due out" is worked out here, stored nowhere. **With `from` (and `to`, else the same day; YYYY-MM-DD, else 400): only the bookings checked in now and those arriving from..to** (D27-313) - what Arrivals (Today and Upcoming), In house, Due out and the check-in's room list read: 18 rows and ~0.1 s on the 13 October demo, against 793 and ~3.5 s for every booking. **With `board=1` as well: every booking with a day in from..to (arriving by `to`, leaving on or after `from`), whoever is checked in, and the bookings still to arrive that hold a room** (D27-316 (1)) - what Rooms, the Calendar (each fortnight it shows) and the Dashboard draw: 35 rows and ~0.13 s for the fortnight on the 13 October copy. Ties ordered by id, so two bookings of one room on one day stack the same way on every read. Without `from`, every booking - All bookings, Walk-ins, Find, housekeeping, Folios, groups, laundry and spa still read that |
 | GET | `/:code/stays/:id` | one stay |
 | GET | `/:code/stays/:id/express-check-in` | `{ express, document: { type, number } }`: whether THIS stay's own online check-in was confirmed with an ID type and number, for a guest who is not foreign - the number masked to its last four (D27-242). A document kept from an earlier visit never counts. Also `advance` (the amount still owed before check-in, in the refusal's words, or null), `bookingSite` and `prepaidOnSite`; `?prepaid=false` asks as if the desk had unticked it (D27-243 3.3, D27-246) |
 | GET | `/:code/house-now` | every room on the business date - in house, out of order or Empty - and the In house and Empty counts (rooms), from `app.house_now` (the one in-house rule, D21-36 and D21-37). Rooms, the Dashboard, In house, the property page and the housekeeping board read this and nothing else for either number |
@@ -130,10 +130,10 @@ refinement).
 
 | File | What it does |
 |---|---|
-| `stays.ts` | reads stays over HTTP and slices one list three ways — arrivals, in house, departures — plus `fetchStays` (the raw read other services reuse). Arrivals, in house and departures ask the server for the desk's rows only (`fetchStays(hotel, from, to)`, D27-313); `listStays` and a bare `fetchStays` are still every booking |
+| `stays.ts` | reads stays over HTTP and slices one list three ways — arrivals, in house, departures — plus `fetchStays` (the raw read other services reuse). Arrivals, in house and departures ask the server for the desk's rows only (`fetchStays(hotel, from, to)`, D27-313); Rooms, the Calendar and the Dashboard ask for the board's rows (`fetchStays(hotel, from, to, true)`, D27-316); `listStays` and a bare `fetchStays` are still every booking |
 | `operations.ts` | the writes behind the desk's flows: check in and out, assign, move, unassign, amend, void, and the early-arrival read; check-in and check-out ask `src/lib/rules.ts` first |
 | `stayExtras.ts` | exchanging two rooms, and inclusions |
-| `stayview.ts` | the Calendar's data — a fourteen-day window, bars and their tones, room rates from the room type (null when unpriced) — and the counts the Dashboard shows |
+| `stayview.ts` | the Calendar's data — a fourteen-day window, bars and their tones, room rates from the room type (null when unpriced) — and the counts the Dashboard shows. One read of the window's bookings (the board's, D27-316), handed to `listOpenFolios` for the bars' balances too |
 | `stayview.test.ts` | the Calendar's data: the window, rooms and bars, counts that agree with their filters, the footer, and rates (a dash, never a zero) |
 
 The screen tests sit at the folder's root: `front-desk.test.tsx` — the tape
@@ -181,7 +181,7 @@ What `index.ts` exports, and who uses each (grep of `@/modules/front-desk`,
 | `getStay` | finance (`data/postings.ts`); the core test `repositories.test.ts` |
 | `listStays` | housekeeping (`data/housekeeping.ts`), reservations (`pages/Reservations.tsx`); the core test |
 | `listArrivals`, `listInHouse`, `listDepartures` | the core test `repositories.test.ts` only |
-| `getStayView`, `fetchStays`, type `ChartRoom` | reports (`pages/Dashboard.tsx`, 3 October) |
+| `getStayView`, `fetchStays` (the day's board, D27-316), type `ChartRoom` | reports (`pages/Dashboard.tsx`, 3 October) |
 | `getHouseNow`, types `HouseNow`, `HouseNowRoom` | admin (`pages/Property.tsx`), housekeeping (`data/housekeeping.ts`) - 22 September |
 | `LateCheckOutFlow` | finance (`flows/FolioPanel.tsx`) |
 
@@ -203,7 +203,7 @@ Other services, through their doors only:
 
 - **finance** — `getFolio` and `FolioPanel` (the stay panel's Bill tab),
   `getFolioBalance` (`pages/InHouse.tsx`),
-  `listOpenFolios` (`data/stayview.ts`).
+  `listOpenFolios` (`data/stayview.ts`, given the window's stays: D27-316).
 - **guests** — `setGuestVip` (the VIP mark in the stay panel).
 - **reservations** — `GroupRoomsList`, `GROUP_ROOMS_ID` (a group stay's rooms).
 

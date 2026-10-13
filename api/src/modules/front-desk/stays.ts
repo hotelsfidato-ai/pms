@@ -268,8 +268,15 @@ async function hotelIdFor(client: Client, code: string) {
    the bookings checked in now and those arriving from..to - what Arrivals,
    In house, Due out and the check-in's room list show. Every booking ever
    made was 793 rows and ~3.5 s on the demo, read on every check-in. Without
-   `from` it is still every booking: All bookings, Find, the Calendar, the
-   group and laundry screens read that. */
+   `from` it is still every booking: All bookings, Find, the group and laundry
+   screens read that.
+
+   THE BOARD'S READ (D27-316 (1)): with `board=1` as well, every booking with
+   a day in from..to (arriving by `to`, leaving on or after `from`), whoever is
+   checked in now, and the bookings still to arrive that already hold a room
+   (a tile's Arriving and Reserved, whatever the dates on screen). What Rooms,
+   the Calendar's fortnight and the Dashboard draw - not every booking ever
+   made, which they each read once or twice. */
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 stays.get("/:code/stays", async (c) => {
@@ -277,6 +284,7 @@ stays.get("/:code/stays", async (c) => {
   const asOn = c.req.query("asOn");
   const from = c.req.query("from");
   const to = c.req.query("to") ?? from;
+  const board = c.req.query("board") === "1";
   if (from !== undefined && !(DAY.test(from) && DAY.test(to!))) {
     return c.json({ error: "from and to are days, YYYY-MM-DD." }, 400);
   }
@@ -286,13 +294,25 @@ stays.get("/:code/stays", async (c) => {
     if (!hotelId) return null;
     const businessDate = asOn ?? (await businessDateFor(client, hotelId));
 
+    const [only, params] =
+      from === undefined ? ["", [hotelId]]
+      /* Holding a room is asked of the booking's own assignments, not of the
+         room join: a condition on the join is tried on every booking ever
+         made, under row security, and took ~2.7 s instead of ~0.1 s. */
+      : board ? [`and (r.status = 'checked_in'
+                   or (r.check_in <= $3::date and r.check_out >= $2::date)
+                   or (r.status = 'confirmed' and r.check_in >= $4::date
+                       and exists (select 1 from room_assignments ra
+                                    where ra.reservation_id = r.id and ra.released_at is null)))`,
+                 [hotelId, from, to, businessDate]]
+      : [`and (r.status = 'checked_in' or r.check_in between $2::date and $3::date)`,
+         [hotelId, from, to]];
+    /* `r.id` last: two bookings of one room on one day came back in whatever
+       order the plan gave, so the Calendar stacked their bars differently
+       from one read to the next (seen comparing the board's read with every
+       booking, D27-316). */
     const { rows } = await client.query<StayRow>(
-      from === undefined
-        ? `${SELECT} order by r.check_in, rm.number nulls last`
-        : `${SELECT} and (r.status = 'checked_in' or r.check_in between $2::date and $3::date)
-           order by r.check_in, rm.number nulls last`,
-      from === undefined ? [hotelId] : [hotelId, from, to],
-    );
+      `${SELECT} ${only} order by r.check_in, rm.number nulls last, r.id`, params);
     return rows.map((r) => toStay(r, code.toUpperCase(), businessDate));
   });
 

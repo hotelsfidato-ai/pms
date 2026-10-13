@@ -105,6 +105,21 @@ describe("D27-243 - what departing guests still owe, on the Due out tile", () =>
   });
 });
 
+/* It read every booking ever made three times (its board, the board's open
+   bills, today's work) - 793 rows and ~3.5 s each on the demo. */
+describe("D27-316 (1) - the Dashboard reads only its day's bookings", () => {
+  it("asks for the day's board, never every booking", async () => {
+    const { asked, spy } = spyApi();
+    try {
+      renderDashboard();
+      const stays = () => asked.filter((u) => u.split("?")[0]!.endsWith("/stays"));
+      await waitFor(() => expect(stays().length).toBeGreaterThanOrEqual(2));
+      expect(stays().filter((u) => !u.includes("?from=")), "a read of every booking").toEqual([]);
+      expect(stays()).toContain(`/api/hotels/${HOTEL}/stays?from=2026-08-25&to=2026-08-25&board=1`);
+    } finally { spy.mockRestore(); }
+  });
+});
+
 /* The City ledger has real company payments since migration 189 (the cash
    lane, D27-239): the tile reads the Manager report's Closing Balance and
    Payment Received, and no longer says it "shows a dash". */

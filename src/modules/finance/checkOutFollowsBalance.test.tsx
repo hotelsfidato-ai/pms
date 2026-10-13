@@ -76,7 +76,8 @@ describe("the Check out button after a payment", () => {
     await waitFor(() => expect(reason()).toMatch(/500 is still owed/));
     expect(out().disabled).toBe(true);
 
-    /* The payment: the panel refreshes everything (FolioPanel's `refresh`). */
+    /* The payment: everything read again (as `refresh` did before D27-316;
+       it now reads this stay's bill, which the balance is). */
     balance = 0;
     stayHeld = true;
     void qc.invalidateQueries();

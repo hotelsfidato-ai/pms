@@ -233,7 +233,9 @@ The server's door, `api/src/modules/reports/index.ts`, exports only `mounts`
 ## Leans on
 
 - **front desk** — `getStayView`, `fetchStays` and type `ChartRoom`
-  through `@/modules/front-desk`, on the Dashboard.
+  through `@/modules/front-desk`, on the Dashboard: the board of its day and
+  that day's bookings for today's work (`fetchStays(code, date, date, true)`,
+  the board's read, D27-316 (1)) - never every booking.
 - Everything else, read only, at the database: the tables listed above belong
   to finance, the front desk, reservations, guests and inventory.
 - The core: `listProperties` and the business date (`@/data/repositories`),

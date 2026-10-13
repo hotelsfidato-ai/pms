@@ -22,7 +22,7 @@ import {
 import { StartHere } from "@/components/app/StartHere";
 import { StayDrawer } from "@/modules/front-desk/flows/StayDrawer";
 import { getStayView, addDays, isWeekend, type ChartBar, type ChartRoom, type BarTone } from "@/modules/front-desk/data/stayview";
-import { getStay, listStays } from "@/modules/front-desk/data/stays";
+import { getStay, fetchStays } from "@/modules/front-desk/data/stays";
 import { queryKeys, BUSINESS_DATE, setMyPreferences, type Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -263,10 +263,13 @@ export default function StayViewPage({ view }: {
      "DUE OUT" over an empty tile while they were still in the room.
 
      Only fetched in the floor view, because the chart does not need it
-     and a query nobody reads is a query that goes wrong unnoticed. */
+     and a query nobody reads is a query that goes wrong unnoticed.
+
+     The desk's read of the day (D27-316 (1)): who is checked in and who
+     arrives today - the three statuses below - not every booking ever made. */
   const stayList = useQuery({
-    queryKey: queryKeys.stays(hotelId),
-    queryFn: () => listStays(hotelId),
+    queryKey: queryKeys.stays(hotelId, BUSINESS_DATE),
+    queryFn: () => fetchStays(hotelId, BUSINESS_DATE),
     enabled: view === "floor",
   });
   const todaysStayList = stayList.data;

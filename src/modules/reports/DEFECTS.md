@@ -16,6 +16,16 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Fixed
 
+### REP-19 · The Dashboard read every booking ever made three times to count today's - FIXED 14 October (D27-316 (1))
+
+**Found** - with front desk's FD-31: its one-day board read every booking twice
+(front desk's `getStayView`) and today's work read it again (`fetchStays(code)`)
+to count today's arrivals and departures - 793 rows each, ~12 s for the three
+on a loaded PC. **Fixed** - both read the day's board (`board=1`), 32 rows,
+0.4-0.6 s; the figures compared equal with every booking's on four days of the
+13 October copy. The query key now carries the date it counts.
+**The rule:** a tile about today reads today.
+
 ### REP-17 · Another property's page read its figures for the SELECTED property's day - FIXED 12 October (D27-308 (1a))
 
 **Found** - the A16 video check, by reading the code; confirmed on screen 12 October on a scratch copy of the demo: 5 Elements selected (business date 9 October), Hotel Majestic Grand's page (its own date 12 October, one of its four rooms booked that night) asked `/statistics/snapshot?date=2026-10-09` and `/statistics/period?from=2026-10-01&to=2026-10-09`, and showed "Rooms sold today 0", "Occupancy 0%". `getTodaySnapshot` and `getPeriodStatistics` defaulted to the seam's `BUSINESS_DATE`/`PTD_FROM`/`PTD_TO`, which follow the property chosen at the top; the property page passed no date, believing the server's default would apply.
