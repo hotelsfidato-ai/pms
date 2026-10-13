@@ -143,6 +143,26 @@ not the code the database keeps.**
 
 ---
 
+### MSG-7 · An invoice made out to Expedia was emailed to the guest by itself
+
+**Found** 13 October, by the day check (D27-300): Harsha Kamat's
+5EL/2026-27/00001 reads "Billed to Expedia" and went to him by itself. His bill
+is the guest's (`bill_to = 'guest'`), but finance's recipient rule
+(`RECIPIENT_COMPANY`) makes a guest's bill out to the booking's company while
+the stay has no company bill. `app.guest_invoices_owed` asked `bill_to`, a
+different question from "who is it made out to".
+
+**What was done:** the owner's D27-313 (2) - migration 216 "the invoice made
+out to the guest": the by-itself branch asks finance's recipient expression
+(copied in SQL). Tested in the database (GMI) and through finance's own issuing
+route (`messagesAndReports.test.ts`), each seen failing first.
+
+**The rule: decide who a document goes to by the party printed on it, not by a
+column that usually agrees with it.** The recipient rule is now in two places
+(finance's TypeScript and the function): change both.
+
+---
+
 ## Open — not fixed
 
 ### MSG-4 · The date is formatted twice in this repository

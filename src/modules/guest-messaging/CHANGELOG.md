@@ -11,6 +11,25 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-13 · The tax invoice goes by itself only when it is made out to the guest (the owner's D27-313 (2); helper copy on cp6 d8dc8d2c)
+
+**Asked for:** the day check's finding - Harsha Kamat's 5EL/2026-27/00001 reads "Billed to Expedia" (finance's `RECIPIENT_COMPANY`: a guest's bill carries the booking's company while the stay has no company bill), but his bill is `bill_to = 'guest'`, and the sweep emailed it to him. Rule now: by itself only when the invoice is made out to the guest; one made out to an OTA, an agent or a company only by the desk's Send invoice (D27-284 kept).
+
+**Shipped:**
+- Migration 216 "the invoice made out to the guest": `app.guest_invoices_owed`, same signature and columns; its by-itself branch tests finance's recipient expression (copied in SQL, `is null`) instead of `f.bill_to = 'guest'`. The desk's branch (`p_invoice` given) unchanged. It is the one place every automatic send reads: `runInvoices` lists through `invoicesOwed`, and `sendOne`'s re-check asks it again before each send.
+- `invoices.ts`: header comment only. No screen changed.
+
+**Found:** the recipient rule now lives twice - finance's TypeScript constant and the function. Both named in the migration and in `MODULE.md`; the API test issues through finance's route, so a drift between the two fails it.
+
+**Proved:**
+- Database (`db/tests/run.sh`, through `.local/dbq.sh`): "invoice made out to the guest", 3 assertions. Seen failing first on cp6 (215 migrations): 1 failed, owed "GMI-1 email, GMI-2 email, GMI-3 email" - GMI-2, made out to the site, owed by itself. With 216: 216 migrations, all 1689 assertions passed.
+- API (through `dbq.sh`): `messagesAndReports.test.ts` "is not sent by itself when it is made out to a booking site, though the bill is the guest's (D27-313)" - issued through `POST /stays/:id/invoice`, recipient "P6MSG Expedia"; seen failing first ("expected [ '5EL/2026-27/00001', ...(1) ] to deeply equal [ '5EL/2026-27/00002' ]": the site's invoice sent by itself). With 216: guest-messaging (8 files) + finance invoices, invoiceRecipient, masterBill, perBill - 12 files, 194 of 194.
+- On screen (API 8842 on the kept test database with the demo, a local n8n stand-in on 8851, web 5342, as the Owner): Guest messages on/off - Tax invoice switched on. Invoices: Vivek Thorat's stay (billed to Vivek Thorat) issued 5EL/2026-27/00014; Harsha Kamat's FH-2608-4840 (one bill, the guest's, "Billed to Expedia") issued 00015. The sweep emailed 00014 to the stand-in by itself (10:20:39 UTC); 00015 not, two sweeps later. Send invoice on 00015: "Invoice sent to the guest", the stand-in got it. Guest messages: 00014 sent by "The system", 00015 by "Group Owner". Servers stopped by pid; the kept test database dropped.
+- Replay (`db/tests/rerun.sh`, through `dbq.sh`): all 216 migrations re-runnable.
+- Quick gates `d27-313-2-quick` (on dbac1901): web types, API types, strip exit 0; website 1293 of 1296 - the 3 (accounting export, front-desk refused controls, POS test-hotel bill) timed out under load, no web file changed here, and pass alone (3 files, 33 of 33). Not run: the full API suite, PostgreSQL 16.
+
+**Left open:** the switch's sentence on Guest messages on/off still reads "When the invoice is issued, by email. Only invoices issued after it is switched on." - true, but silent on who it goes to; new words are the owner's (question in the report). Manual lines on `manual-rest` that change are listed in the report (A10, B5, B6; A17 only if the switch's words change).
+
 ## 2026-10-12 · Guest messages lists guests' messages only; two kinds in words (D27-305)
 
 **Asked for:** the master, with D27-305: hide kind `health-alert` from the Guest messages list as `daily-report` already is; words for `booking-voucher` and `health-alert`.

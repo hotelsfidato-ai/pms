@@ -14,9 +14,10 @@ import { claimTurn, MOST_ATTEMPTS, perSweep, NOT_OWED } from "./jobs.ts";
    By itself: once a hotel switches "Invoice" on (Settings → Messages), every
    tax invoice issued after that - made out to the GUEST, for a stay - goes to
    that guest BY EMAIL ONLY, where there is an address (D27-284: no WhatsApp,
-   no Meta template; `invoicesOwed` keeps only the function's email rows). A
-   company's invoice is not sent by itself (Q5), and a credit note never
-   (Q6). One message, sent once, three tries (app.guest_invoices_owed,
+   no Meta template; `invoicesOwed` keeps only the function's email rows). One
+   made out to an OTA, an agent or a company is not sent by itself (Q5;
+   D27-313 (2): the function asks who the invoice is made out to, not the
+   bill's bill_to alone), and a credit note never (Q6). One message, sent once, three tries (app.guest_invoices_owed,
    migration "messages and reports").
 
    POST /api/hotels/:code/invoices/:number/send - the desk's "Send invoice":
