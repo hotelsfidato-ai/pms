@@ -187,7 +187,7 @@
   <p>What stops the rules: <span class="msg">“The name is 40 letters at most.”</span>; <span class="msg">“Points per ₹100 is a number above 0 and at most 100, or empty for none.”</span></p>
 
   <h3>To join a guest</h3>
-  <p><span class="ui">In house</span> lists every guest checked in: <b>Room</b>, <b>Guest</b>, <b>Points</b> (or <span class="msg">“Not a member”</span>).</p>
+  <p><span class="ui">In house</span> lists every guest checked in: <b>Room</b>, <b>Guest</b>, <b>Points</b> (or <span class="msg">“Not a member”</span>). <span class="ui">Join</span>, <span class="ui">Use points</span> and <span class="ui">Leave</span> are shown only to a role that may use them, and the heading of the list says who may: <span class="msg">“Guests join and leave through reception, the hotel manager, the general manager, an administrator or the owner.”</span> and <span class="msg">“Points are used by reception, the hotel manager, the general manager, an administrator or the owner.”</span></p>
   <ol class="steps">
     <li>Ask the guest. Tap <span class="ui">Join</span> on their line.</li>
     <li>The window says <span class="msg">“Read this to the guest. Joining is not a yes to offers.”</span> Read them the words shown: <span class="msg">“Join <i>programme name</i>: we keep your stays and points to give you rewards. I am 18 or over.”</span></li>
@@ -207,14 +207,14 @@
     </ol>
   </figure>
 
-  <p>What stops a join: <span class="msg">“Loyalty is off at this hotel. The owner or an administrator turns it on in Settings.”</span>; <span class="msg">“The programme has no name yet. Set it on the Loyalty screen first.”</span>; <span class="msg">“A member needs a mobile number. Add it to the guest first.”</span> (Edit guest, A10.3); <span class="msg">“This guest is already a member.”</span>; <span class="msg">“Tick that the guest agrees, in their own words, before they join.”</span></p>
+  <p>What stops a join: <span class="msg">“Loyalty is off at this hotel. The owner or an administrator turns it on in Settings.”</span>; with no programme name, the window itself says <span class="msg">“The programme has no name yet, so there is nothing to agree to. The owner, an administrator or the GM names it on this Loyalty screen, under The rules.”</span> and <span class="ui">The guest agrees</span> and <span class="ui">Join</span> stay grey; <span class="msg">“A member needs a mobile number. Add it to the guest first.”</span> (Edit guest, A10.3); <span class="msg">“This guest is already a member.”</span>; <span class="msg">“Tick that the guest agrees, in their own words, before they join.”</span></p>
 
   <h3>Earning: by itself, at check-out</h3>
   <p>When a member checks out, the stay earns points by itself, usable at once, at the earn rate: everything on the stay's bills before GST and after discounts - room, restaurant charged to the room, and the rest - except GST, alcohol, refunds and payments. On a booking from a booking site or an agent, the room earns nothing; the extras do. Whole points, rounded down, once per stay.</p>
 
   <h3>To use points</h3>
   <ol class="steps">
-    <li>On the member's line, tap <span class="ui">Use points</span> (shown on direct bookings only).</li>
+    <li>On the member's line, tap <span class="ui">Use points</span> (shown on direct bookings only, and only to Reception, the Hotel Manager, the General Manager, an Admin and the owner).</li>
     <li>The window, <span class="ui">Use points for …</span>, says their balance: <span class="msg">“They come off the room charges as a discount line, from 500 at a time.”</span></li>
     <li>Type the <span class="ui">Points</span> - <span class="msg">“1 point is ₹1 off. The guest signs the bill.”</span> The button reads <span class="ui">Use ₹500</span>.</li>
     <li>Tap it. The message says <span class="msg">“₹500 off the room charges”</span>. The bill shows a discount line under the nights; each night keeps its price.</li>
@@ -246,13 +246,13 @@
       <li>A member is one person across the group. Two guest records joined as one (A10.6) share one balance; an undo splits it back.</li>
       <li>A discount line of points taken off the bill again (reversed) gives the points back by themselves.</li>
       <li>No tiers. Points do not lapse yet: the 24-month expiry is not built, and no point could lapse before October 2028.</li>
-      <li>Reception, the Hotel Manager, the GM, an Admin and the owner join, use points and take guests out. The Accountant may use points, but not join a guest or take one out; a Viewer only looks.</li>
+      <li>Reception, the Hotel Manager, the GM, an Admin and the owner join a guest, use points and take guests out. The Accountant and a Viewer only look: they are shown no Join, no Leave and no Use points.</li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Build loyalty now: <span class="d">D27-178</span>. The earn rate is a setting with no default - unset, nothing earns; no tiers at the start; a per-hotel switch; 18 or over with a mobile; its own consent tick; one membership per person; booking-site and agent rooms earn on extras only; points used from 500 on the member's own room charges as a discount line; the giving hotel carries the discount: <span class="d">D27-179</span>, with the rules L1 to L18 in the loyalty service's notes.</p>
+    <p>Build loyalty now: <span class="d">D27-178</span>. The earn rate is a setting with no default - unset, nothing earns; no tiers at the start; a per-hotel switch; 18 or over with a mobile; its own consent tick; one membership per person; booking-site and agent rooms earn on extras only; points used from 500 on the member's own room charges as a discount line; the giving hotel carries the discount: <span class="d">D27-179</span>, with the rules L1 to L18 in the loyalty service's notes. Using points is a right of its own, held by Reception and above (the owner, an Admin, the GM, the Hotel Manager, Reception) and not by the Accountant, who looks: <span class="d">D27-305</span>. Join and Leave follow the right to change a guest, and are not shown to anybody without it: <span class="d">D27-307</span>.</p>
   </div>
 
   <!-- A14.5 -->

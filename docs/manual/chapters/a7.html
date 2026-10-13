@@ -22,7 +22,7 @@
     <tbody>
       <tr><td>Owner, Admin, General Manager</td><td>Read the screen, run the audit, correct a closed day (A7.5), set the report emails (A7.6).</td></tr>
       <tr><td>Hotel Manager, Accountant, Reception</td><td>Read the screen and run the audit.</td></tr>
-      <tr><td>Revenue Manager, Viewer</td><td>Read the screen only.</td></tr>
+      <tr><td>Revenue Manager, Viewer</td><td>Read the screen only. The Run card is shown to them without the <span class="ui">Run night audit</span> button.</td></tr>
     </tbody>
   </table>
   <p><span class="ui">Night audit</span> is the first screen under <span class="ui">Reports</span> in the menu. If your menu does not show it, type “night audit” in <span class="ui">Find a screen</span> (A0.6). Its address is <code>/h/5EL/night-audit</code>.</p>
@@ -47,7 +47,7 @@
   <table>
     <thead><tr><th style="width:28%">Check</th><th>What it counts</th><th style="width:22%">Open leads to</th></tr></thead>
     <tbody>
-      <tr><td>Arrivals still outstanding</td><td>Bookings due today, not checked in. When the day closes, each becomes a no-show. Check in the guests who came; the rest are the audit's job.</td><td>Arrivals (A1.3)</td></tr>
+      <tr><td>Arrivals still outstanding</td><td>Bookings due today, not checked in. When the day closes, each becomes a no-show. Check in the guests who came; the rest are the audit's job. The check says <span class="msg">“An arrival left unchecked at roll-over becomes a no-show. A retention posts against it only if the booking has cancellation terms.”</span></td><td>Arrivals (A1.3)</td></tr>
       <tr><td>Departures not yet checked out</td><td>Guests due out today, still checked in. <b>This one stops the audit</b> (A7.3).</td><td>Due out (A1.6)</td></tr>
       <tr><td>In-house folios carrying a balance</td><td>Guests in house whose bills are not at zero. <span class="msg">“These roll forward. Nothing is wrong with that”</span>.</td><td>Folios</td></tr>
       <tr><td>Room charges to post</td><td>The rooms the audit will charge tonight. A stay already charged for tonight (the first night is charged at check-in), a day-use stay and a complimentary room are not counted.</td><td>-</td></tr>
@@ -67,7 +67,7 @@
 
   <!-- A7.3 -->
   <h2 id="a7-3"><span class="n">A7.3</span>What stops the audit, and how to clear it</h2>
-  <p>Below the checks, the <b>Run card</b>: <span class="ui">Run the audit and roll to</span> the next day. While anything stops the audit, the reason is written on the card and <span class="ui">Run night audit</span> stays grey. It is never hidden.</p>
+  <p>Below the checks, the <b>Run card</b>: <span class="ui">Run the audit and roll to</span> the next day. While anything stops the audit, the reason is written on the card and <span class="ui">Run night audit</span> stays grey. The Revenue Manager and the Viewer see the card and its reasons and no button: they may not run the audit (A7.1).</p>
 
   <figure class="shot" id="fig-A7-02">
     <img src="img/A7-02.png" alt="The Run card with its reasons: rooms still showing due out and the till not closed; Run night audit grey; Closed days below, with no day closed yet">
@@ -112,7 +112,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A guest still due out at night either left and nobody checked them out, or is staying another night. The two lead to opposite charges, and only a person at the desk knows which, so the audit refuses and names the rooms. The two drawers are counted first because the audit states the day's takings, and money not yet counted is not final. The button is shown grey with its reason, never hidden, and the screen and the server ask the same question, so they cannot disagree.</p>
+    <p>A guest still due out at night either left and nobody checked them out, or is staying another night. The two lead to opposite charges, and only a person at the desk knows which, so the audit refuses and names the rooms. The two drawers are counted first because the audit states the day's takings, and money not yet counted is not final. The button is shown grey, with its reason, to everybody who may run the audit, and not shown at all to the two roles who may never run it. The screen and the server ask the same question, so they cannot disagree: <span class="d">D27-305</span>.</p>
   </div>
 
   <!-- A7.4 -->

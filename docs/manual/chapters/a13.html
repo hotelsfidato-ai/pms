@@ -38,7 +38,7 @@
   <ul>
     <li><b>Banquet hall:</b> <span class="msg">“The diary, the halls and their packages. A hall cannot be sold twice for the same session.”</span></li>
     <li><b>Laundry:</b> <span class="msg">“A guest's laundry, charged to their room, and the hotel's own linen going out and coming back.”</span></li>
-    <li><b>Spa:</b> <span class="msg">“Treatments, the day's diary, and a bill settled at the spa or put on the room.”</span> Today a treatment is always put on the room bill; settling at the spa is not built yet (A13.5).</li>
+    <li><b>Spa:</b> <span class="msg">“Treatments, the day's diary, and each one charged to the guest's room.”</span> Settling at the spa is not built: a treatment is always put on the room bill (A13.5).</li>
   </ul>
 
   <h3>What staff see while one is off</h3>
@@ -64,7 +64,7 @@
 
   <!-- A13.2 -->
   <h2 id="a13-2"><span class="n">A13.2</span>Banquets: halls and packages</h2>
-  <p>Before the first function, enter the hotel's halls. Open <span class="ui">Halls and packages</span> (or the button of that name on the Diary). The screen says <span class="msg">“Nothing here is created for you, and no price is ever assumed.”</span></p>
+  <p>Before the first function, enter the hotel's halls. Open <span class="ui">Halls and packages</span> (or the button of that name on the Diary). The screen says <span class="msg">“Nothing here is created for you, and no price is ever assumed.”</span> Only the owner, an Admin or the GM can add or change anything on it. For anybody else, Reception for one, <span class="ui">Add a hall</span>, <span class="ui">Edit</span>, <span class="ui">Add a package</span> and the packages' switches are grey, and each card says who may: <span class="msg">“The owner, an administrator or the GM adds and edits them.”</span></p>
 
   <figure class="shot" id="fig-A13-x5">
     <img src="img/A13-x5.png" alt="Halls and packages with the banquet hall switched off: Halls and packages is not available">
@@ -87,12 +87,25 @@
     <li>Tap <span class="ui">Add</span>. A package with no rate reads <span class="msg">“no rate - agreed per function”</span>.</li>
   </ol>
 
+  <h3>To take a package off offer</h3>
+  <p>A package is never changed once it is added: <span class="msg">“Never changed once added. Switch one off to stop offering it; functions keep what they were sold.”</span> For a new rate or a new menu, switch it off and add another.</p>
+  <ol class="steps">
+    <li>Under <span class="ui">Packages</span>, tap the switch at the right of the package's line. The line shows <span class="ui">Off</span>, and the message says <span class="msg">“Dinner buffet is off: not offered for functions now”</span>.</li>
+    <li>Tap it again to offer it again: <span class="msg">“Dinner buffet is offered again”</span>.</li>
+  </ol>
+  <p>A package that is off is not in the list when a course is added (A13.4), and the server refuses it for any function. A function that already has it keeps its line as it was sold: its name, plates and rate.</p>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
-      <li>A package cannot be changed or taken off once it is added. Name it carefully.</li>
-      <li>Changing a hall's usual rate, or a package's, never changes a function already booked: each function keeps the figures agreed for it.</li>
+      <li>A package is never changed once it is added, only switched off. Name it carefully, and add a new one for a new rate or menu.</li>
+      <li>Changing a hall's usual rate never changes a function already booked: each function keeps the figures agreed for it. A package is never changed at all.</li>
     </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A package can be taken off offer but not changed, so a function sold on it, and its bill, never move: <span class="d">D27-305</span>. Halls and packages are set up by the owner, an Admin and the GM; every button is grey, with a sentence saying who may, for anybody else: <span class="d">D27-307</span>.</p>
   </div>
 
   <!-- A13.3 -->
@@ -152,7 +165,7 @@
   <h3>To add a course</h3>
   <ol class="steps">
     <li>On the function, under <span class="ui">Catering</span>, tap <span class="ui">Add a course</span>.</li>
-    <li>Choose a <span class="ui">Package</span>, or <span class="ui">Off-menu</span>. A package fills in its name and offers its rate.</li>
+    <li>Choose a <span class="ui">Package</span>, or <span class="ui">Off-menu</span>. A package fills in its name and offers its rate. Only packages that are on are listed (A13.2).</li>
     <li>Check <span class="ui">What is being served?</span>, type <span class="ui">Plates</span> (at least one) and <span class="ui">Rate a head</span>. Leave the rate blank if it is not agreed yet; the total says so until it is.</li>
     <li>Tap <span class="ui">Add</span>. The bin beside a course takes it off.</li>
   </ol>
@@ -190,7 +203,7 @@
 
   <h3>Setting it up (owner, Admin, GM)</h3>
   <ul>
-    <li><b>Treatments:</b> <span class="ui">Add a treatment</span> with its <span class="ui">Name</span>, <span class="ui">How long, in minutes</span>, and <span class="ui">Price</span>. Leave the price empty if none is set; it reads a dash. <span class="ui">Change</span> it later; <span class="ui">Take off the list</span> and <span class="ui">Put back on the list</span>.</li>
+    <li><b>Treatments:</b> <span class="ui">Add a treatment</span> with its <span class="ui">Name</span>, <span class="ui">How long, in minutes</span>, and <span class="ui">Price</span>. Leave the price empty if none is set; it reads a dash, and a price added later applies to new bookings only. <span class="ui">Change</span> it later; <span class="ui">Take off the list</span> and <span class="ui">Put back on the list</span>.</li>
     <li><b>Therapists:</b> <span class="ui">Add a therapist</span> with a <span class="ui">Name</span>. It is a name, not an account: nobody signs in as a therapist. <span class="ui">Take off the list</span> when someone leaves; past bookings stay as they were.</li>
   </ul>
 
@@ -227,7 +240,7 @@
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
-      <li><b>Price the treatment before you book it.</b> The price is copied onto the booking when it is taken. A booking taken while the treatment had no price shows a dash and <span class="msg">“Unpriced”</span>, has no Charge to room, and pricing the treatment afterwards does not change that booking.</li>
+      <li><b>Price the treatment before you book it.</b> The price is copied onto the booking when it is taken. A booking taken while the treatment had no price shows a dash and <span class="msg">“Unpriced”</span>, has no Charge to room, and pricing the treatment afterwards does not change that booking: <span class="msg">“Unpriced - it cannot be closed for money. A price added to the treatment later applies to new bookings only: cancel this one and book it again.”</span> Cancel it and book it again.</li>
       <li>Settling at the spa (cash at the spa) is not built yet: every treatment goes on the room bill.</li>
     </ul>
   </div>
@@ -250,7 +263,7 @@
   <p>Open <span class="ui">Price list</span> (or the button on Dockets). Its heading is <span class="ui">Laundry price list</span>. One line is one thing and one service: a shirt washed, a saree dry-cleaned.</p>
   <ol class="steps">
     <li>Tap <span class="ui">Add an item</span>. Type <span class="ui">What is it</span>, choose <span class="ui">What is done to it</span> (<span class="ui">Wash</span>, <span class="ui">Press</span> or <span class="ui">Dry-clean</span>), and the <span class="ui">Price</span> if the hotel has decided one.</li>
-    <li>A price can be typed later in the list itself; it is saved when you leave the box. <span class="ui">Free</span> means free. <span class="ui">Retire</span> takes a line off the list; dockets already written keep their own copy.</li>
+    <li>A price can be typed later in the list itself; it is saved when you leave the box, and it applies to new bags only: a bag already collected keeps its dash. <span class="ui">Free</span> means free. <span class="ui">Retire</span> takes a line off the list; dockets already written keep their own copy.</li>
   </ol>
   <p>The hotel's own linen goes on the list with no price: it is counted, never charged.</p>
 
@@ -277,7 +290,7 @@
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
-      <li><b>Price the list before you collect.</b> The description and price are copied onto the docket when the bag is collected. A bag holding an item with no price has no total and cannot be charged, and pricing the item afterwards does not change a bag already collected.</li>
+      <li><b>Price the list before you collect.</b> The description and price are copied onto the docket when the bag is collected. A bag holding an item with no price has no total and cannot be charged, and pricing the item afterwards does not change a bag already collected: <span class="msg">“A price added to the price list later applies to new bags only: cancel this one and take it again.”</span> Cancel the bag and take it again.</li>
       <li>If the hotel has not set its laundry GST rule, the charge is refused: <span class="msg">“This property has no GST rule for laundry.”</span></li>
       <li>Not in this version: linen par levels per room type, an outside laundry's bills, express surcharges, and a guest sending a bag from their own page.</li>
     </ul>

@@ -62,7 +62,7 @@
     <li>Set <span class="ui">Arrival</span> and <span class="ui">Departure</span>. The number of nights shows under Departure. The night of departure is not charged.</li>
     <li>Choose the <span class="ui">Booking source</span>: how the booking reached us. Nothing is chosen for you (except Walk-in for a walk-in, A2.5).</li>
     <li>Choose the <span class="ui">Room type</span> and the <span class="ui">Meal plan</span>, and set <span class="ui">Rooms</span>, <span class="ui">Adults</span> and <span class="ui">Children</span>.</li>
-    <li>Leave <span class="ui">Rate</span> empty to use the price on the rate calendar, or type the rate agreed with the guest.</li>
+    <li>Leave <span class="ui">Rate</span> empty to use the price on Rates, or type the rate agreed with the guest.</li>
     <li>Pick a <span class="ui">Room</span> now if you want to; <span class="ui">Assign later</span> is fine.</li>
     <li>Read the price under the line and the total on the right, and tell the guest.</li>
   </ol>
@@ -117,7 +117,7 @@
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
-      <li><b>No price, no total.</b> If the rate calendar has no price for this party, the line says <span class="msg">“No price for …”</span> and the total stays a dash: <span class="msg">“Set it on the rate calendar, or type a rate on the line.”</span> The system never guesses a price.</li>
+      <li><b>No price, no total.</b> If Rates has no price for this party, the line says <span class="msg">“No price for …”</span> and the total stays a dash: <span class="msg">“Set it on Rates, or type a rate on the line.”</span> The system never guesses a price.</li>
       <li><b>The first night's price is kept for every night.</b> If the calendar's price changes later in the stay, the line says so: <span class="msg">“The first night's price is kept for every night; the calendar differs later.”</span></li>
       <li>The booking source cannot be filled in later. Ask how the guest found you before you save.</li>
       <li>WhatsApp unticked: messages go by email if there is one, else not at all.</li>
@@ -339,7 +339,7 @@
 
   <h3>One group: the host, the guests, the rooms</h3>
   <ul>
-    <li><b>The host.</b> <span class="msg">“No host account. Every room settles its own.”</span> until someone presses <span class="ui">Open a host account</span>. Then the rooms can be put on the host's account.</li>
+    <li><b>The host.</b> <span class="msg">“No host account. Every room settles its own.”</span> until someone presses <span class="ui">Open a host account</span>. Then the rooms can be put on the host's account, and the page gets the card <span class="ui">The host's account</span> (below).</li>
     <li><b>The guests.</b> What the rooms owe on their own bills, across all of them.</li>
     <li><b>Host pays.</b> Tick a room to put its accommodation on the host's account; untick to give it back. It changes only the nights not yet charged.</li>
     <li><b>Lead guest.</b> The flag marks the guest who gets the group's one confirmation and its review request. It starts on the room booked first; tap another room's box to change it.</li>
@@ -356,6 +356,35 @@
     </ol>
   </figure>
 
+  <h3>The host's account: taking the money, and the invoice</h3>
+  <p>Once a host account is open, a card <span class="ui">The host's account</span> comes under the rooms. It says who the bill is made out to: <span class="msg">“Billed to Sharma Wedding. Every line says which room it is for.”</span> That is the company the group is booked for; with none, the guest who leads the group; with neither, the group's name. Each night routed to the host is a line, with its date and its room. Until there is one: <span class="msg">“Nothing has been charged to the host yet. Route a room above, and tonight’s audit will post it here.”</span></p>
+  <ol class="steps">
+    <li><b>To take money:</b> tap <span class="ui">Settle</span> on the card; it is grey while nothing is owed. The window is the one a guest's bill has: <span class="msg">“Settle bill”</span>, <span class="ui">Method</span>, <span class="ui">Amount</span>, <span class="ui">Take payment</span>, and any of the hotel's ways of paying will do. <span class="ui">Bill to company</span> moves the amount to the company's city ledger (A4). It is refused when the group is billed to no company: <span class="msg">“… is not billed to a company, so its bill cannot go to the city ledger. Take the payment another way.”</span> Over the company's credit limit it needs a reason from the owner, an Admin or the GM. More than the host owes is kept only if you tick <span class="ui">Hold it as the host's credit</span>.</li>
+    <li><b>To invoice:</b> tap <span class="ui">Issue tax invoice</span>. It stays grey, and its reason shows when you point at it, until every room has left and nothing is owed: <span class="msg">“Every room checks out first: a night still to come would land on this bill.”</span>, <span class="msg">“The bill still carries a balance. Settle it, or send it to the city ledger, before invoicing.”</span> or <span class="msg">“The bill is overpaid. Refund the difference before invoicing.”</span> The window asks <span class="msg">“Issue this tax invoice?”</span>, says who it is billed to and the number it will take. Tap <span class="ui">Issue the invoice</span>, or <span class="ui">Keep it</span>. The card then shows <span class="ui">Tax invoice</span> with its number, which opens it.</li>
+  </ol>
+  <p>Both buttons are shown only to a role that may take payments or issue invoices. Nothing sends the host's invoice by itself, and its page has no <span class="ui">Send invoice</span>.</p>
+
+  <figure class="shot" id="fig-A2-31">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A2-31 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>A group's page, <code>/h/5EL/groups/…</code>, from Groups, Open the group</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk, scrolled to the card <span class="ui">The host's account</span></dd>
+        <dt>Set up</dt><dd>A made-up group, “A2 Test Mehta wedding”, with a host account open and one room routed to the host and posted by a night audit on the demo's copy; the guest's rooms not yet left, so Issue tax invoice is grey.</dd>
+        <dt>Arrows</dt><dd>1 → the heading and “Billed to …”; 2 → a line with its room; 3 → Settle; 4 → Issue tax invoice (grey)</dd>
+        <dt>File</dt><dd><code>img/A2-31.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A2-31.</b> The host's account: who it is billed to, Settle, Issue tax invoice.</figcaption>
+    <ol class="callouts">
+      <li>Who the bill is made out to</li>
+      <li>A night on the host's account, with its room</li>
+      <li>Settle</li>
+      <li>Issue tax invoice: grey until every room has left and nothing is owed</li>
+    </ol>
+  </figure>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
@@ -368,7 +397,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Two accounts, never one total: the host and the guests are different people asked for different money, and a sum would be a number nobody can be asked to pay. Who leads a group: the room booked first that still stands, unless the desk picks another: <span class="d">D22-52</span>.</p>
+    <p>Two accounts, never one total: the host and the guests are different people asked for different money, and a sum would be a number nobody can be asked to pay. Who leads a group: the room booked first that still stands, unless the desk picks another: <span class="d">D22-52</span>. The host's account is settled and invoiced on the group's page, with the same Settle and the same question before an invoice number is taken as a guest's bill: <span class="d">D27-305</span>.</p>
   </div>
 
   <!-- A2.7 -->

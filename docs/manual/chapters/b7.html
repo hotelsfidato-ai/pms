@@ -54,11 +54,11 @@
     <li><b>Check-out is per room.</b> There is no group check-out: each room leaves against its own bill, and the master bill never holds a guest back.</li>
     <li><b>One voucher per group, to the lead guest</b>: the room booked first that still stands, unless the desk picks another; a changed lead says <span class="msg">“The group's confirmation and its review request go to them.”</span> (<span class="d">D22-41</span>, <span class="d">D22-52</span>).</li>
     <li><b>A company's credit limit</b> counts what the company owes across the whole group of hotels (<span class="d">D27-279</span>).</li>
+    <li><b>Settling the master bill</b> is done on the group's own page (Group bills on Folios opens it). The card <span class="ui">The host's account</span> says who it is billed to, the group's company, else the guest who leads the group, and carries the Bill tab's own <span class="ui">Settle</span>: any of the hotel's ways of paying, or <span class="ui">Bill to company</span>, which moves it to that company's City ledger. That is refused when the group is billed to no company, and over the company's credit limit it needs the reason of the owner, an Admin or the GM. <span class="ui">Issue tax invoice</span> comes only when every room has left and nothing is owed, after the same question as any invoice before a number is taken; it is made out to the company or else the lead guest, and nothing sends it by itself. The ₹2 lakh cash count takes the host's account together with the rooms' own bills (<span class="d">D27-305</span>, <span class="d">D27-307</span>; A2.6).</li>
   </ul>
   <div class="box watch">
     <h4>Watch out: found while writing this book</h4>
     <ul>
-      <li>Reading the code, no screen was found that takes a payment on the master bill itself, issues its invoice, or moves it to the city ledger: Group bills on Folios opens the group's page, which has none of these, and the bill's payment routes accept only a stay's own bills. This has been reported for checking; until it is answered, settle a host's account with the master chat's help.</li>
       <li>If the lead room is still a waiting booking (from the CRS), the whole group's voucher waits too (RES-6).</li>
     </ul>
   </div>
@@ -170,7 +170,7 @@
     <tbody>
       <tr><td>No menu</td><td>The Till: <span class="msg">“There is no menu yet”</span>, <span class="msg">“Nothing can be sold until the hotel enters what it sells. The prices are yours - this system ships none.”</span> The Tables pad says the same; the Terminal, <span class="msg">“Nothing on the menu”</span>.</td></tr>
       <tr><td>No tables</td><td><span class="msg">“No tables have been laid out yet.”</span> The owner, an admin or the GM get a button to set them up (<span class="d">D25-25</span>).</td></tr>
-      <tr><td>No price for a night</td><td>New booking shows the charges, GST and Due as a dash and says <span class="msg">“No price for …. Set it on the rate calendar, or type a rate on the line.”</span> Saving without a typed rate is refused. A date with no price is sent to the channel manager as <b>closed</b>, so no booking site sells it (<span class="d">D17-81</span>, <span class="d">D27-194</span>).</td></tr>
+      <tr><td>No price for a night</td><td>New booking shows the charges, GST and Due as a dash and says <span class="msg">“No price for …. Set it on Rates, or type a rate on the line.”</span> Saving without a typed rate is refused. A date with no price is sent to the channel manager as <b>closed</b>, so no booking site sells it (<span class="d">D17-81</span>, <span class="d">D27-194</span>).</td></tr>
       <tr><td>No rooms</td><td><span class="msg">“No rooms set up yet”</span>, <span class="msg">“Add them in Room types.”</span> (<span class="d">D17-23</span>). A hotel with no rooms reports nothing, because occupancy divides by rooms.</td></tr>
       <tr><td>No GST rule for rooms</td><td>The guest is still checked in, but no room charge is posted, and the night audit refuses until the rule is set (<span class="d">D27-205</span>, B7.4).</td></tr>
       <tr><td>No banquet tax heading</td><td>A function is warned when it is set up, and its bill is refused until the heading is set (<span class="d">D27-124</span>).</td></tr>

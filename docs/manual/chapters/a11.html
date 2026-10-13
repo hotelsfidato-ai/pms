@@ -174,7 +174,7 @@
   <table>
     <thead><tr><th style="width:32%">Line</th><th>Means</th></tr></thead>
     <tbody>
-      <tr><td>Sold Room</td><td>Rooms sold. A complimentary room counts as sold.</td></tr>
+      <tr><td>Sold Room</td><td>Rooms sold. Two switches on Front desk rules (A17.11) decide what counts: <span class="ui">A complimentary room counts as sold</span> (on to begin with) and <span class="ui">A day use counts as half a room sold</span> (off to begin with). The note under the report says how this hotel counts: <span class="msg">“Sold Room, occupancy and the average rate count rooms as this hotel says (Settings, Front desk: complimentary rooms, day use).”</span></td></tr>
       <tr><td>Occupancy Rate (%)</td><td>Rooms sold, as a share of the rooms that could be sold.</td></tr>
       <tr><td>Average Daily Rate (ADR)</td><td>Room charges divided by rooms sold: what a sold room earned, on average. Extras, food and tax are not in it.</td></tr>
       <tr><td>Revenue Per Available Room</td><td>Room charges divided by every room that could be sold. Unlike ADR, it falls when rooms stay empty.</td></tr>
@@ -184,7 +184,7 @@
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
-      <li>A complimentary room lifts the occupancy and lowers the average rate, because it is sold and earns nothing.</li>
+      <li>While <span class="ui">A complimentary room counts as sold</span> is on, a complimentary room lifts the occupancy and lowers the average rate, because it is sold and earns nothing. Switch it off and it does neither.</li>
       <li>Tonight's room charge is in Today even before it is posted, at the booking's rate.</li>
       <li>Some City Ledger and Guest Ledger lines show “-”: the system does not hold them yet. The notes under the report say which.</li>
     </ul>
@@ -192,7 +192,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The owner's eZee Manager report, line for line: <span class="d">D17-62</span>. A complimentary room counts as sold, as in eZee: <span class="d">D17-72</span>. One rule for occupancy on every screen, this report's, and the report read afresh when opened: <span class="d">D27-151</span>.</p>
+    <p>The owner's eZee Manager report, line for line: <span class="d">D17-62</span>. A complimentary room counts as sold, as in eZee: <span class="d">D17-72</span>. One rule for occupancy on every screen, this report's, and the report read afresh when opened: <span class="d">D27-151</span>. What counts as sold follows the hotel's two switches, in this report and in the statistics (A11.5): <span class="d">D27-307</span>.</p>
   </div>
 
   <!-- A11.4 -->
@@ -263,6 +263,7 @@
     <li><span class="ui">Monthly occupancy</span> (<code>/reports/monthly-occupancy</code>): the business date's month as a chart, one bar per day. Full houses and empty days both stand out.</li>
     <li><span class="ui">Monthly statistics</span> (<code>/reports/monthly-stats</code>): the same month as a grid, one row per day.</li>
     <li><span class="ui">Yearly statistics</span> (<code>/reports/yearly-stats</code>): the same columns, one row per month from January to December, then a <b>Grand Total</b> worked out again from the year's figures, not an average of the months.</li>
+    <li>All three count rooms sold the way the Manager report does, by the hotel's two switches (A11.3, A17.11): <span class="ui">Occ %</span>, <span class="ui">ADR</span> and the bars follow them. <span class="ui">Night Sold</span> (the paying rooms) and <span class="ui">Complimentary</span> stay columns of their own.</li>
   </ul>
 
   <figure class="shot" id="fig-A11-09">
@@ -289,14 +290,14 @@
     <h4>Watch out</h4>
     <ul>
       <li><b>Days after today have figures too.</b> Nights already booked are counted at the booking's rate. They change if the booking changes.</li>
-      <li>Occ % and ADR count complimentary rooms with the rooms sold.</li>
+      <li>Occ % and ADR count rooms sold as the hotel's two switches say: with <span class="ui">A complimentary room counts as sold</span> on, complimentary rooms are counted with the rooms sold; with <span class="ui">A day use counts as half a room sold</span> on, each day use is half a room. The first note under the report says which: <span class="msg">“Occupancy and ADR count rooms sold as this hotel's switches say (Settings, Front desk rules): a complimentary room counts as sold; a day use is not counted.”</span></li>
       <li>Rooms are counted from the day the hotel first traded (the note under the report gives the date). Days before it show nothing.</li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A stay's room charge is spread over its nights, and nights booked ahead show at the booking's rate, as in eZee: <span class="d">D17-71</span>. Complimentary rooms count as sold: <span class="d">D17-72</span>. Available rooms start on the first trading day: <span class="d">D17-93</span>.</p>
+    <p>A stay's room charge is spread over its nights, and nights booked ahead show at the booking's rate, as in eZee: <span class="d">D17-71</span>. Complimentary rooms count as sold unless the hotel switches that off: <span class="d">D17-72</span>, <span class="d">D27-307</span>. Available rooms start on the first trading day: <span class="d">D17-93</span>.</p>
   </div>
 
   <!-- A11.6 -->
