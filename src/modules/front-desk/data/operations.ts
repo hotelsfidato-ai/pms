@@ -140,6 +140,21 @@ export async function earlyArrival(
   }
 }
 
+/** A check-out before the booked departure (the owner's D27-315): the server's
+    answer, by the night audit's own rule. Null when no night is freed. */
+export interface LeavingEarly {
+  departure: string; today: string; newDeparture: string;
+  nightsFreed: number; bookingSite: boolean;
+}
+
+export async function leavingEarly(
+  hotelId: string, stayId: string,
+): Promise<LeavingEarly | null> {
+  const r = await api<{ leavingEarly: LeavingEarly | null }>(
+    `/api/hotels/${hotelId}/stays/${stayId}/leaving-early`);
+  return r.leavingEarly;
+}
+
 export async function checkIn(
   hotelId: string,
   stayId: string,
@@ -224,7 +239,9 @@ export async function checkOut(
      the owner's screenshot, which is exactly what that loop looks like.
 
      A guard that cannot be satisfied is not a guard, it is a wall. */
-  late?: { lateReason?: string; waiveLate?: boolean },
+  late?: { lateReason?: string; waiveLate?: boolean;
+           /** Why a guest leaves before the booked departure (D27-315). */
+           earlyReason?: string },
   /** Form III: where a foreign guest goes next (D27-25). */
   nextDestination?: string,
 ): Promise<OperationResult<Stay>> {
