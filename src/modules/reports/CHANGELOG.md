@@ -11,6 +11,12 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-14 · The Dashboard reads only its day's bookings (the owner's D27-316 (1); front desk's entry has the whole session)
+
+**Shipped:** `pages/Dashboard.tsx` - today's work reads the day's board (`fetchStays(code, date, date, true)`), keyed by the date, instead of every booking; the one-day board (front desk's `getStayView`) reads its day too (REP-19).
+**Measured** (`fidato_d316`): the board and today's work 11.7-12.4 s → 0.40-0.58 s; the figures equal from both reads on 8, 9, 10 October and 20 September.
+**Proved:** `dashboard.test.tsx` "asks for the day's board, never every booking" failed on the old page (3 reads of every booking) and passes. On screen: 16 arrivals (1 to come), Due out 5 · 3 left · ₹11,705, In house 13.
+
 ## 2026-10-12 · The statistics follow the hotel's two switches (D27-307 (1))
 
 Branch `worktree-agent-a47b6fc0afff69b37` (from cp6 9c55050e), copy `.claude\worktrees\agent-a47b6fc0afff69b37`.
