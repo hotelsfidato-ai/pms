@@ -17,6 +17,7 @@ merges into cp6, never pushes, never deploys.
 | B | money-roundoff-refunds.md | Opus | now |
 | D | watch-it-done.md | Sonnet | now |
 | E | film-1.md | Sonnet | now |
+| F | film-2.md | Sonnet | when the master says (after lanes A and B finish, ~03:45) |
 
 **Starting them (the owner, once):** your PC, PowerShell:
 `powershell -ExecutionPolicy Bypass -File "D:\fidato pms\docs\briefs\lanes\start-lanes.ps1"`
