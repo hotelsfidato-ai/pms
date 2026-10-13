@@ -1254,18 +1254,20 @@ describe("leaving after check-out time", () => {
          run collided on the unique key — which is the function working
          and this fixture asking it the wrong question. */
       lateSeq += 1;
+      /* LEAVING TODAY, arrived yesterday: a late departure is one on or after
+         the departure date (D27-314 (2)); leaving before it is leaving early. */
       const { rows: res } = await db.query<{ id: string }>(
         `insert into reservations
            (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
             agreed_rate, status, adults)
-         values ($1, $5, $2, $3, $4::date, $4::date + 1,
+         values ($1, $5, $2, $3, $4::date - 1, $4::date,
                  2000, 'checked_in', 1)
          returning id::text`,
         [puneId, g[0]!.id, rt[0]!.id, bd, `${tag}-L${lateSeq}`]);
       await db.query(
         `insert into room_assignments
            (hotel_id, reservation_id, room_id, from_date, to_date, reason)
-         values ($1,$2,$3,$4::date,$4::date + 1,'arrival')`,
+         values ($1,$2,$3,$4::date - 1,$4::date,'arrival')`,
         [puneId, res[0]!.id, rm[0]!.id, bd]);
       await db.query(
         "insert into folios (hotel_id, reservation_id, status) values ($1,$2,'open')",
@@ -1321,6 +1323,15 @@ describe("leaving after check-out time", () => {
         `update hotels set check_out_time = $2, late_checkout_charge = $3
           where id = $1`,
         [puneId, wasCheckOut, wasLateCharge]);
+      /* PUNE HAS TEN ROOMS (MEMORY 334). These stays leave today, so the next
+         freshStay's clearDueOuts releases them, and a release dirties the room
+         (070) - nobody slept in it. Back clean, as they were found: formIII
+         ran out of rooms without this. */
+      await db.query(
+        `update rooms set housekeeping_status = 'clean'
+          where id in (select ra.room_id from room_assignments ra
+                         join reservations r on r.id = ra.reservation_id
+                        where r.reference like $1)`, [`${tag}-L%`]);
       await db.query("delete from staff_hotels where staff_id = $1", [clerkId]);
       await db.query("update staff set is_active = false where id = $1", [clerkId]);
     } finally {
