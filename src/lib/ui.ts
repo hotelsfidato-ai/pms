@@ -19,7 +19,11 @@ interface UiState {
      per person because it is a fact about them and not about the
      hotel. */
   foldedSections: Record<string, boolean>;
-  toggleSection: (key: string) => void;
+  /* `shownFolded` is what the person SEES (the sidebar works it out: stored,
+     else as it comes, never folded while it holds the open page). The click
+     shows the other; flipping the stored value left a section that came
+     folded folded on the first click (D27-316 (3)). */
+  toggleSection: (key: string, shownFolded: boolean) => void;
   mobileNavOpen: boolean;
   setMobileNavOpen: (open: boolean) => void;
   commandOpen: boolean;
@@ -54,8 +58,8 @@ export const useUi = create<UiState>()(
       sidebarCollapsed: false,
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       foldedSections: {},
-      toggleSection: (key) => set((s) => ({
-        foldedSections: { ...s.foldedSections, [key]: !s.foldedSections[key] },
+      toggleSection: (key, shownFolded) => set((s) => ({
+        foldedSections: { ...s.foldedSections, [key]: !shownFolded },
       })),
       mobileNavOpen: false,
       setMobileNavOpen: (open) => set({ mobileNavOpen: open }),
