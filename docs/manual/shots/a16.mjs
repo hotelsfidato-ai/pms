@@ -31,6 +31,14 @@ const onCard = (email, words) => ({ eval: `(() => {
   [...card.querySelectorAll("button")].find((b) => b.innerText.trim() === ${JSON.stringify(words)}).click();
 })()` });
 
+/* Scroll the page just far enough that a button's foot is on the picture (the card's Test hotel
+   section is at its foot). */
+const footOn = (words, bottom) => ({ eval: `(() => {
+  const b = [...document.querySelectorAll("button")].find((x) => x.innerText.trim() === ${JSON.stringify(words)});
+  let p = b.parentElement; while (p && p.scrollHeight <= p.clientHeight) p = p.parentElement;
+  const over = b.getBoundingClientRect().bottom - ${bottom}; if (p && over > 0) p.scrollTop += over;
+})()` });
+
 export const SHOTS = [
   /* ── All properties ──────────────────────────────────────────────── */
   {
@@ -60,7 +68,8 @@ export const SHOTS = [
   /* ── Properties ──────────────────────────────────────────────────── */
   {
     id: "A16-03", title: "Properties, as the owner sees them: a card per property", as: "Owner",
-    path: "/properties", steps: [{ waitFor: "text:Add a property", ms: 15000 }, { waitFor: "text:GST on rooms", ms: 20000 }, { wait: 1000 }],
+    path: "/properties", steps: [{ waitFor: "text:Add a property", ms: 15000 }, { waitFor: "text:GST on rooms", ms: 20000 },
+      { waitFor: "text:Re-copy setup", ms: 20000 }, { wait: 1000 }, footOn("Re-copy setup", 770), { wait: 400 }],
     marks: [
       { n: 1, at: "text:5EL", side: "right" },
       { n: 2, at: "text:GSTIN", side: "left" },
@@ -84,7 +93,8 @@ export const SHOTS = [
   {
     id: "A16-05", title: "Add a property", as: "Owner",
     path: "/properties",
-    steps: [{ waitFor: "text:Add a property", ms: 15000 }, { wait: 1000 }, { scroll: "text:Provisioning key" }, { wait: 400 }],
+    steps: [{ waitFor: "text:Add a property", ms: 15000 }, { waitFor: "text:GST on rooms", ms: 20000 }, { waitFor: "text:Re-copy setup", ms: 20000 },
+      { wait: 1000 }, { scroll: "text:Provisioning key" }, { wait: 400 }],
     marks: [
       { n: 1, at: "text:Add a property", side: "right" },
       { n: 2, at: "css:input[placeholder='NSK']", side: "right" },

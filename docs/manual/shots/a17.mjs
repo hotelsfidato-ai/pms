@@ -10,6 +10,11 @@
 // Taken by: CDP_PORT=9348 node docs/manual/tools/shoot.mjs a17 [ids...]
 
 const DIALOG = "css:[role=dialog]";
+/* Wait until nothing on the page is still drawing as a grey block: a list that has not come back yet. */
+const LOADED = { eval: `new Promise((done) => {
+  const t = setInterval(() => { if (!document.querySelector('.animate-pulse, [aria-busy="true"]')) { clearInterval(t); done(); } }, 200);
+  setTimeout(() => { clearInterval(t); done(); }, 30000);
+})` };
 
 export const SHOTS = [
   /* ── The space and its menu ──────────────────────────────────────── */
@@ -400,7 +405,7 @@ export const SHOTS = [
   {
     id: "A17-34", title: "VIP levels", as: "Owner",
     path: "/settings/lists/vip",
-    steps: [{ waitFor: "label:New level" }],
+    steps: [{ waitFor: "label:New level" }, LOADED, { wait: 600 }],
     marks: [
       { n: 1, at: "text:Only the owner or an administrator changes it.", side: "right" },
       { n: 2, at: "label:New level", side: "bottom" },
@@ -416,7 +421,8 @@ export const SHOTS = [
       { n: 1, at: "text:Rooms ready from", side: "bottom" },
       { n: 2, at: "text:Early arrival", side: "bottom" },
       { n: 3, at: "text:Edit", side: "left" },
-      { n: 4, at: "text:Way of paying", side: "top" },
+      /* 4 below its label, not above it: above, it sat on top of arrow 1, which hangs under the first card's label. */
+      { n: 4, at: "text:Way of paying", side: "bottom" },
       { n: 5, at: "text:Edit", nth: 1, side: "left" },
     ],
   },
@@ -519,9 +525,15 @@ export const SHOTS = [
     id: "A17-45", title: "Sign-ins and devices: one person's sign-ins", as: "Owner",
     path: "/settings/people/devices",
     steps: [
-      { waitFor: "css:main select" }, { wait: 800 },
-      { eval: "(() => { const s = document.querySelector('main select'); const o = [...s.options].find((x) => x.text === 'Test Reception'); const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set; set.call(s, o.value); s.dispatchEvent(new Event('change', { bubbles: true })); })()" },
-      { wait: 1500 },
+      /* Test Reception has two sign-ins on the demo (put there with the app's own app.note_sign_in:
+         the dev sign-in never writes the history), so "Sign out this device" shows. */
+      { waitFor: "css:main select" },
+      { eval: `new Promise((done, fail) => { const t0 = Date.now(); const t = setInterval(() => {
+          const s = document.querySelector('main select'); const o = s && [...s.options].find((x) => x.text === 'Test Reception');
+          if (o) { clearInterval(t); const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set;
+            set.call(s, o.value); s.dispatchEvent(new Event('change', { bubbles: true })); done(); }
+          else if (Date.now() - t0 > 30000) { clearInterval(t); fail(new Error('Test Reception is not in the list')); } }, 200); })` },
+      { waitFor: "text:Sign out this device", ms: 30000 }, { wait: 600 },
     ],
     marks: [
       { n: 1, at: "css:main select", side: "right" },
