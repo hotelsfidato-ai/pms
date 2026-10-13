@@ -110,7 +110,7 @@
       <tr><th>Holds</th><td>One record per closed day, and every correction to a closed day.</td></tr>
       <tr><th>Decided</th><td>
         <ul>
-          <li><b>Run by a person, never by a clock</b> (HANDOVER § 4): a hotel that forgets stays on yesterday, which is safe and visible. The GM runs it at 5 Elements (<span class="d">D21-77</span>); the roles that may are unchanged (<span class="d">D22-36</span>). It asks before running (<span class="d">D27-117</span>).</li>
+          <li><b>Run by a person, never by a clock</b> (HANDOVER § 4): a hotel that forgets stays on yesterday, which is safe and visible. The GM runs it at 5 Elements (<span class="d">D21-77</span>); the roles that may are unchanged, and the Revenue Manager and the Viewer, who may not, are not shown the button (<span class="d">D22-36</span>, <span class="d">D27-305</span>). It asks before running (<span class="d">D27-117</span>).</li>
           <li><b>A second press changes nothing</b> and shows the record already made (<span class="d">D17-12</span>). A history of closed days (<span class="d">D17-13</span>).</li>
           <li><b>Correcting a closed day</b>: the owner, an admin or the GM, this month and last, with a reason; the old and new figures are both kept, and the audit's own record is never rewritten (<span class="d">D22-18</span>, <span class="d">D24-1</span> to <span class="d">D24-6</span>). Every charge may be corrected; payments, refunds and discounts never are (<span class="d">D25-5</span>, <span class="d">D25-11</span>). A bill with a tax invoice is refused: issue a credit note (<span class="d">D24-4</span>).</li>
           <li><b>No night is charged twice</b>: the first is posted at check-in (<span class="d">D27-204</span>), and a night already covered by a room line is skipped (<span class="d">D24-14</span>).</li>
@@ -174,7 +174,7 @@
           <li><b>One door out</b>: every message leaves through one place in the server and goes to n8n as data; n8n writes the words, so wording changes without a release (<span class="d">D17-87</span>). Since 30 September every guest message goes through the CRS's n8n, from one Fidato number (<span class="d">D27-186</span>, <span class="d">D27-101</span>).</li>
           <li><b>Fewer messages</b>: the voucher <b>is</b> the confirmation, sent once when the booking is made; no separate confirmation and no day-before reminder (<span class="d">D27-264</span>). By email with the PDF, and on WhatsApp too where the guest agreed (<span class="d">D27-235</span>, <span class="d">D21-72</span>). The voucher email carries the check-in link (<span class="d">D27-283</span>).</li>
           <li><b>The WhatsApp template</b>: for now the CRS's approved voucher template (<span class="d">D27-266</span>); your own <code>booking_confirmation</code> takes over once Meta shows it Active again (<span class="d">D27-281</span>).</li>
-          <li><b>The tax invoice</b> goes by email only, when issued, where the hotel switches it on (<span class="d">D27-261</span>, <span class="d">D27-284</span>).</li>
+          <li><b>The tax invoice</b> goes by email only, when issued, where the hotel switches it on and only when it is made out to the guest; one made out to a company, an agent or a booking site goes by the desk's Send invoice (<span class="d">D27-261</span>, <span class="d">D27-284</span>, <span class="d">D27-313</span>).</li>
           <li><b>One message per group</b>, to the lead (<span class="d">D22-41</span>, <span class="d">D22-52</span>). On switch-on day every future booking is owed, soonest arrival first, at your pace; catching up only 09:00 to 21:00 hotel time (<span class="d">D21-33</span>, <span class="d">D21-34</span>, <span class="d">D22-42</span>; B7.8).</li>
           <li><b>Daily report emails</b> after each night audit, per hotel, the night audit report on by default, nothing sent until an address is typed (<span class="d">D27-280</span>, <span class="d">D27-282</span>). They are kept out of the Guest messages list.</li>
           <li>English only (<span class="d">D21-73</span>).</li>
@@ -415,6 +415,7 @@
           <li><b>Restaurant orders</b> settled to a function post onto its bill like a room charge (<span class="d">D17-21</span>, <span class="d">D27-133</span>).</li>
           <li><b>Reopening a billed function</b> only while no tax invoice stands, with a reason, and never on a closed day (<span class="d">D27-150</span>, <span class="d">D27-154</span>). A function with an advance may be cancelled, the advance kept as the host's credit; a billed one may not (<span class="d">D27-135</span>).</li>
           <li>SAC 996334 with food, 997212 for a hall alone, for the CA to confirm (<span class="d">D27-134</span>).</li>
+          <li><b>A package is never changed, only switched off</b>; a function keeps what it was sold, a switched-off package is refused for any function and can go back on. Halls and packages are set up by the owner, an Admin and the GM; for anybody else every button is grey and says who may (<span class="d">D27-305</span>, <span class="d">D27-307</span>).</li>
         </ul></td></tr>
       <tr><th>Left out</th><td>Function bills on the Folios screen (<span class="d">D27-137</span>). Refunding a cancelled function's advance, and a GST receipt voucher for an advance, wait for the CA (<span class="d">D27-135</span>, <span class="d">D27-138</span>). Confirming is refused offline, because two desks offline could both take the hall.</td></tr>
       <tr><th>Open</th><td>Nothing.</td></tr>
@@ -493,6 +494,7 @@
           <li>Booked from the guest's page or by phone (<span class="d">D18-6</span>); run by reception, housekeeping only sees the diary; no therapist logins and no new roles (<span class="d">D18-8</span>, <span class="d">D18-21</span>).</li>
           <li><b>Closing a treatment puts it on the room bill</b>, under the spa's own GST rule per hotel; no second way of taking money is built (<span class="d">D18-7</span>, <span class="d">D18-21</span>, <span class="d">D18-22</span>).</li>
           <li>Booked only on a day of the stay; Charge to room only once checked in (<span class="d">D27-136</span>). A price of 0 only when ticked Free (<span class="d">D27-120</span>).</li>
+          <li>The price is copied onto the booking when it is taken: a price added later applies to new bookings only, and one taken with none is cancelled and booked again (<span class="d">D27-305</span>).</li>
         </ul></td></tr>
       <tr><th>Left out</th><td>"Settled at the spa", set aside for later (<span class="d">D18-22</span>). Guests who are not staying: every appointment needs a stay.</td></tr>
       <tr><th>Open</th><td>Nothing.</td></tr>
@@ -510,6 +512,7 @@
           <li>One place for both, every docket saying whose it is (<span class="d">D18-5</span>); run by reception and housekeeping (<span class="d">D18-8</span>, <span class="d">D22-22</span>).</li>
           <li>A charge goes straight onto the room bill (<span class="d">D18-7</span>), under laundry's own GST heading, refused until it is set (<span class="d">D27-194</span>).</li>
           <li>Collected only from a checked-in guest (<span class="d">D27-136</span>). A price of 0 only when ticked Free, and the unpriced items listed on the page (<span class="d">D27-120</span>, <span class="d">D27-84</span>).</li>
+          <li>The price is copied onto the docket when the bag is collected: a price added later applies to new bags only, and a bag taken with none is cancelled and taken again (<span class="d">D27-305</span>).</li>
         </ul></td></tr>
       <tr><th>Left out</th><td>Linen par levels per room type, an outside laundry's bills, express surcharges.</td></tr>
       <tr><th>Open</th><td>Nothing.</td></tr>
@@ -616,6 +619,7 @@
           <li><b>The earn rate is a setting, not code</b>, and unset means nothing earns: no default rate. No tiers at the start (<span class="d">D27-179</span>).</li>
           <li>As the loyalty plan proposed: 18 and over with a mobile, its own consent tick, one membership per person; booking-site and agent rooms earn on extras only; redeem from 500 points on the member's own room charges as a discount line; the giving hotel carries it; until the CA answers, points reduce the taxable value like a discount (<span class="d">D27-179</span>).</li>
           <li>Joining is not consent to offers (<span class="d">D25-39</span>).</li>
+          <li><b>Using points is a right of its own</b>: the owner, an Admin, the GM, the Hotel Manager and Reception; the Accountant and a Viewer only look. Join and Leave are not shown to anybody who may not change a guest, and the card says who may (<span class="d">D27-305</span>, <span class="d">D27-307</span>).</li>
         </ul></td></tr>
       <tr><th>Left out</th><td>Points lapsing after 24 months: not built yet, needed before October 2028. A code to the member's phone, which waits on sending. The CA's six answers.</td></tr>
       <tr><th>Open</th><td>Nothing.</td></tr>
@@ -654,7 +658,8 @@
           <li><b>Three spaces</b>, Front office, Restaurant and Settings, each with its own menu; the owner, admins and GMs switch freely (<span class="d">D27-249</span>, <span class="d">D27-256</span>). Settings shows only what someone can change (<span class="d">D27-220</span>).</li>
           <li><b>Who makes whom</b>: only the owner makes an Admin (<span class="d">D27-140</span>, correcting <span class="d">D27-121</span>); a GM gives every other role, at their own hotel (<span class="d">D22-2</span>, <span class="d">D22-3</span>); nobody switches off or re-roles themselves (<span class="d">D24-19</span>, <span class="d">D24-28</span>). One list of roles for the whole group (<span class="d">D22-24</span>).</li>
           <li><b>The server refuses what the screen hides</b>, for every role without the right (<span class="d">D17-15</span>). The audit log names the real person (<span class="d">D17-14</span>).</li>
-          <li>Module switches are the owner's and admins' (<span class="d">D17-36</span>). A hotel's GM and Admin edit their own hotel's details; its name, code, currency and time zone stay the group owner's (<span class="d">D27-213</span>, <span class="d">D27-214</span>).</li>
+          <li>Module switches are the owner's and admins' (<span class="d">D17-36</span>). A hotel's GM and Admin edit their own hotel's details; its code, currency and time zone stay the group owner's, and its name is a group administrator's to change (<span class="d">D27-213</span>, <span class="d">D27-214</span>, <span class="d">D27-308</span>).</li>
+          <li><b>Set up this hotel</b>: 18 steps from a new hotel to its first booking, in the owner's order, each ticking itself where the system can see it done and each with Completed, Next, Later and Remind me; the last is a summary that switches nothing on and locks nothing (<span class="d">D27-311</span>, <span class="d">D27-312</span>).</li>
           <li><b>Nothing new is hard-wired to Fidato</b> (<span class="d">D21-27</span>): one group logo and name, a setting, printed as "5 Elements Akkalkot / by Fidato Hotels" (<span class="d">D27-53</span>, <span class="d">D27-65</span>); changed by the owner, an admin or a GM, against the recommendation, every change audited (<span class="d">D27-67</span>).</li>
           <li>Bank details per hotel on the voucher; your bell shows every change to them (<span class="d">D27-215</span>, <span class="d">D27-216</span>).</li>
           <li><b>Security</b>: passwords of at least 10 characters for the owner, admins and GMs, 8 for others; 90 days of sign-in history; the full activity log for the owner and admins (<span class="d">D27-243</span>, <span class="d">D27-245</span>); a device can be signed out (<span class="d">D27-255</span>). Switching a person off also switches off their sign-in (<span class="d">D27-275</span>).</li>

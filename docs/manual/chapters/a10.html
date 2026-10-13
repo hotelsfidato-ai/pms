@@ -343,7 +343,7 @@
     <tbody>
       <tr><td><b>Booking voucher</b></td><td>Once, when a booking is confirmed. A booking waiting for the hotel sends nothing until it is confirmed.</td><td>By <b>email</b> where the guest has an email, with the voucher PDF; and on <b>WhatsApp</b> where the booking is ticked <span class="ui">Agreed to WhatsApp</span> and has a phone, with the same PDF. Each way is its own message.</td></tr>
       <tr><td><b>The sign-in code</b></td><td>When the guest opens their own check-in page</td><td>On WhatsApp to the booking's own phone, or by email to the booking's email: the guest chooses. No switch: it is how a guest gets in.</td></tr>
-      <tr><td><b>Tax invoice</b></td><td>When an invoice is issued, if the hotel's switch is on; a company's invoice only with <span class="ui">Send invoice</span> (chapter A4)</td><td>By email only, with the invoice PDF. Never a credit note.</td></tr>
+      <tr><td><b>Tax invoice</b></td><td>When an invoice is issued, if the hotel's switch is on and the invoice is made out to the guest. One made out to a company, an agent or a booking site goes only with <span class="ui">Send invoice</span> (chapter A4)</td><td>By email only, with the invoice PDF. Never a credit note.</td></tr>
       <tr><td><b>Review request</b></td><td>When a clerk asks, after check-out (A10.10), if the hotel's switch is on</td><td>WhatsApp or email, as the clerk chooses.</td></tr>
     </tbody>
   </table>
@@ -391,7 +391,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Fewer messages: the voucher is the confirmation, sent once, with the check-in link printed in its PDF; no day-before reminder; the desk's button stays to send it again: <span class="d">D27-264</span>. The voucher both ways, email and WhatsApp: <span class="d">D27-235</span>. WhatsApp through the central system's already-approved voucher template for now: <span class="d">D27-266</span>; online check-in on for every hotel, a hotel may switch it off: <span class="d">D27-281</span>. The tax invoice by email only: <span class="d">D27-284</span>. One voucher per group, to its lead guest: <span class="d">D22-41</span>, <span class="d">D22-52</span>. Every future booking confirmed on switch-on day, soonest arrival first, at the owner's pace: <span class="d">D21-33</span>, <span class="d">D21-34</span>; the catch-up only from 09:00 to 21:00: <span class="d">D22-42</span>. English only: <span class="d">D21-73</span>.</p>
+    <p>Fewer messages: the voucher is the confirmation, sent once, with the check-in link printed in its PDF; no day-before reminder; the desk's button stays to send it again: <span class="d">D27-264</span>. The voucher both ways, email and WhatsApp: <span class="d">D27-235</span>. WhatsApp through the central system's already-approved voucher template for now: <span class="d">D27-266</span>; online check-in on for every hotel, a hotel may switch it off: <span class="d">D27-281</span>. The tax invoice by email only: <span class="d">D27-284</span>; by itself only when it is made out to the guest, never when it is made out to a booking site, an agent or a company: <span class="d">D27-313</span>. One voucher per group, to its lead guest: <span class="d">D22-41</span>, <span class="d">D22-52</span>. Every future booking confirmed on switch-on day, soonest arrival first, at the owner's pace: <span class="d">D21-33</span>, <span class="d">D21-34</span>; the catch-up only from 09:00 to 21:00: <span class="d">D22-42</span>. English only: <span class="d">D21-73</span>.</p>
   </div>
 
   <!-- A10.8 -->
@@ -420,7 +420,7 @@
     <thead><tr><th style="width:22%">Column</th><th>What it shows</th></tr></thead>
     <tbody>
       <tr><td>When</td><td>The day it was sent, the hotel's own clock.</td></tr>
-      <tr><td>What</td><td><span class="msg">“Booking confirmation”</span> is the voucher by email; <span class="msg">“booking-voucher”</span> is the voucher on WhatsApp; <span class="msg">“Their sign-in code”</span>; <span class="msg">“invoice”</span>; <span class="msg">“review”</span>. Older records may read <span class="msg">“Before arrival”</span> or <span class="msg">“Check-in link”</span>.</td></tr>
+      <tr><td>What</td><td><span class="msg">“Booking confirmation”</span> is the voucher by email; <span class="msg">“Booking voucher”</span> is the voucher on WhatsApp; <span class="msg">“Their sign-in code”</span>; <span class="msg">“invoice”</span>; <span class="msg">“review”</span>. Older records may read <span class="msg">“Before arrival”</span> or <span class="msg">“Check-in link”</span>. The list is of messages to guests: the daily report emails and the system's health alerts go to the hotel's own people and are not listed here (A17.12).</td></tr>
       <tr><td>Booking</td><td>The booking's reference; a dash where it was not about a booking.</td></tr>
       <tr><td>To</td><td>The phone or email it went to, as it was then.</td></tr>
       <tr><td>State</td><td><span class="msg">“Delivered to the sender”</span> (green): the sending service took it. <span class="msg">“Did not go”</span> (red): see A10.9.</td></tr>
