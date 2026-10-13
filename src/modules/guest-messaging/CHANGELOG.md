@@ -11,6 +11,16 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-13 · The Tax invoice switch says who it sends to (the owner's D27-316 (5))
+
+**Asked for:** the switch's sentence on Guest messages on/off was silent on who the invoice goes to (the open point of the D27-313 (2) entry below).
+**Shipped:** `api/src/modules/guest-messaging/settings.ts`: "When the invoice is issued, by email, if it is made out to the guest. Only invoices issued after it is switched on; one made out to a company, an agent or a booking site goes by Send invoice." The page draws the server's sentence, so no website file changed. `MODULE.md` says so.
+**Proved:** `api/test/modules/guest-messaging/messagesAndReports.test.ts` 16 of 16 (15 before), through `dbq.sh`. Seen failing first: "says the Tax invoice switch sends only an invoice made out to the guest" (received the old sentence).
+**On screen** (my own API on 8845 and web on 5345, a kept scratch copy of the demo, dropped after; as the Owner): Settings > Guest messages on/off shows the Tax invoice row with the new sentence in full.
+**Left open:** the manual on `manual-rest` quotes the old sentence: A17 line 759 (the table row "Tax invoice | When the invoice is issued, by email."), and A17 line 751 and A10 line 376 (the short "only invoices issued after it is switched on") may add "made out to the guest".
+
+---
+
 ## 2026-10-13 · The tax invoice goes by itself only when it is made out to the guest (the owner's D27-313 (2); helper copy on cp6 d8dc8d2c)
 
 **Asked for:** the day check's finding - Harsha Kamat's 5EL/2026-27/00001 reads "Billed to Expedia" (finance's `RECIPIENT_COMPANY`: a guest's bill carries the booking's company while the stay has no company bill), but his bill is `bill_to = 'guest'`, and the sweep emailed it to him. Rule now: by itself only when the invoice is made out to the guest; one made out to an OTA, an agent or a company only by the desk's Send invoice (D27-284 kept).

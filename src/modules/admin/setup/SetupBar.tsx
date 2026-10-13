@@ -1,5 +1,5 @@
 import { useEffect, useReducer } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, useLocation, useSearchParams } from "react-router";
 import { ListChecks, X } from "lucide-react";
 import { useUi } from "@/lib/ui";
 import { useRole } from "@/lib/session";
@@ -13,7 +13,8 @@ import { SETUP_PAGE, TOTAL_STEPS, setupAddress, stepInfo } from "./steps";
    kept in sessionStorage (this tab's visit); where the browser blocks it, the
    bar is as it was: only while the address carries ?setup. Mounted once, by
    the top bar, so no screen has to know. It makes no request, and is not
-   drawn for somebody who could not open the setup. */
+   drawn for somebody who could not open the setup, nor on the setup page
+   itself, where it also forgets the step (D27-316 (6c)). */
 const KEY = (code: string) => `fidato.setup-bar.${code}`;
 const recall = (code: string): string | null => {
   try { return sessionStorage.getItem(KEY(code)); } catch { return null; }
@@ -29,10 +30,18 @@ export function SetupBar() {
   const code = useUi((s) => s.hotelId);
   const role = useRole();
   const [, redraw] = useReducer((n: number) => n + 1, 0);
+  /* On the setup page itself (or its hotel address, which lands there) the bar
+     would point at the page you are on, and a step still remembered would show
+     on the next screen. So it is hidden there and forgotten there (D27-316 (6c)). */
+  const { pathname } = useLocation();
+  const onSetup = pathname === SETUP_PAGE || pathname === setupAddress(code);
   const seen = stepInfo(params.get("setup"))?.id;
-  useEffect(() => { if (seen && code) keep(code, seen); }, [seen, code]);
+  useEffect(() => {
+    if (!code) return;
+    if (onSetup) keep(code, null); else if (seen) keep(code, seen);
+  }, [seen, code, onSetup]);
   const step = stepInfo(seen ?? (code ? recall(code) : null));
-  if (!step || !code || !mayReach(role, SETUP_PAGE)) return null;
+  if (onSetup || !step || !code || !mayReach(role, SETUP_PAGE)) return null;
 
   /* Closing also takes ?setup out of this address, or the bar would stay. */
   const close = () => {

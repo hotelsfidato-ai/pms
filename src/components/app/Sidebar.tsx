@@ -179,7 +179,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               {section.label && !collapsed && (
                 <button
                   type="button"
-                  onClick={() => toggleSection(key)}
+                  onClick={() => toggleSection(key, isFolded)}
                   aria-expanded={!isFolded}
                   className="w-full flex items-center gap-1 px-2.5 mb-1.5 text-2xs
                              font-semibold uppercase tracking-wider text-white/35

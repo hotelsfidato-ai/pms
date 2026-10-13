@@ -180,6 +180,8 @@ properties and people.
   (`sessionStorage`, `fidato.setup-bar.<code>`; blocked storage = only while the
   address carries `?setup`), until "Back to setup" is pressed or its close
   button ("Close the setup bar", which also takes `?setup` out of the address).
+  On the setup page itself (and `/h/:code/setup`, which lands there) the bar is
+  not drawn and the remembered step is forgotten (D27-316 (6c)).
   `setup/StillToDo.tsx` on the Dashboard: the
   Later and Remind me steps, only while one waits, only for the roles that hold
   `setting`. A link from "What this property still needs"
@@ -277,11 +279,16 @@ PUT    /:code/setup/:step         { choice: completed|later|remind|clear, remind
                                   before the hotel's today 400
 ```
 
-DONE IS DERIVED, never stored: profile, taxes, room types, rooms, prices,
-cancellation and people ask `commissioningChecks` (commissioning.ts - asked,
-not copied); payments asks for the bank details and a way of paying switched
-on. Those are `automatic` (a hand Completed is refused). The rest are by hand,
-but tick themselves where the rows show it: charges (an extra charge, a
+DONE IS DERIVED, never stored: profile, taxes, room types, rooms, prices
+and people ask `commissioningChecks` (commissioning.ts - asked, not copied);
+payments asks for the bank details and a way of paying switched on. Those are
+`automatic` (a hand Completed is refused). **A test hotel's profile does not
+ask for the GSTIN** (a test hotel carries none by design, D27-296 (8)): only
+the address, phone and email (D27-316 (6a)); the Profile checklist
+(`GET /:code/commissioning`) is unchanged and still lists the GSTIN. The rest
+are by hand, but tick themselves where the rows show it: cancellation terms
+(a cancellation policy exists; charging nothing is a valid choice, so a hand
+Completed is allowed, D27-316 (6b)), charges (an extra charge, a
 discount, a commission or an early/late fee), messages (a daily report email
 on with an address), branding (the hotel's own logo, a photo and a highlight),
 connections (SU, the CRS or rivals' prices). Front desk, booking sources,
@@ -290,6 +297,9 @@ the group's). Go-live: done when 1-5 are; never stored. "done" wins over a
 stored later/remind. The bell asks `setupReminders` (routes/notifications.ts):
 a "remind" step whose day (the hotel's own date) has come and is not done -
 "Setup: <title>", linking `/h/<code>/setup?step=<id>`, for owner, Admin, GM.
+The titles (`STEP_TITLES`, also in the summary's "Before the first booking:
+...") are the page's (`setup/steps.ts`; step 5 is "Prices"); `setupWizard.test.tsx`
+fails when the two lists differ (D27-316 (6d)).
 
 `groupSettings.ts` (27 September, D27-53 and D27-65) — 4, at `/api/hotels`.
 ONE setting for the whole group (the hotel in the address is only where the

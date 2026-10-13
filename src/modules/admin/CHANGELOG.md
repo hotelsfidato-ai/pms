@@ -11,6 +11,26 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-13 · The setup wizard's details; the provisioning key's words (the owner's D27-316 (6); the master's addition)
+
+**Asked for:** D27-316 (6a)-(6d) and one line from the master. (6e) was left as it is on purpose: a bank-details change by someone since taken off the roster still shows no name.
+**Shipped:**
+- (6a) `api/src/modules/admin/setup.ts`: the profile step asks `isTestHotelId` and, for a test hotel only, skips the GSTIN (both the "done" test and the "Still missing" list); address, phone and email are still asked. A real hotel is as before. The Profile checklist (`commissioning.ts`, `GET /:code/commissioning`) is NOT changed and still lists the GSTIN for a test hotel.
+- (6b) the same file: step 8 is by hand (`byHand(ok("cancellation"), "No cancellation terms yet.")`): a hand Completed is accepted, it ticks itself once a cancellation policy exists, and it still says what is missing while it is not done. `byHand` takes an optional detail.
+- (6c) `setup/SetupBar.tsx`: on the setup page (`/settings/property/set-up-this-hotel`) and its hotel address (`/h/:code/setup`) the bar is not drawn and the remembered step is forgotten. The Restaurant's own `/pos/:code/setup` is another screen and keeps the bar.
+- (6d) `STEP_TITLES` says "Prices" for step 5, so the bell ("Setup: Prices") and the summary ("Before the first booking: ... Prices.") name it as the page does. `STEP_TITLES` stays the API's one list (the API cannot import the website's `setup/steps.ts`); `setupWizard.test.tsx` reads both and fails when they differ.
+- Master's addition: `flows/StaffAdmin.tsx` Add-a-property form, the provisioning key's placeholder "the key for this deployment" now reads "the provisioning key" (the input's `autoComplete` untouched).
+- `MODULE.md`: the setup paragraphs.
+- Core, with the master's exception (one line beyond `ui.ts`): `src/lib/ui.ts` `toggleSection(key, shownFolded)` and `src/components/app/Sidebar.tsx` passing `isFolded` - a menu section now opens or folds on the first click (see root report; test `src/components/app/sidebarFold.test.tsx`).
+**Found:** a step the person ticked by hand because its rows could not show it done (step 8 now, like Charges before it) offers Undo even when it ticked itself from the rows; Undo then clears nothing. Left as is (not new).
+**Proved:**
+- Web, `setupWizard.test.tsx` 48 of 48 (44 before; 4 new). Seen failing first on the old code: "is not drawn on the setup page itself, and forgets its step there" and "is not drawn on the setup's hotel address either, though a step is remembered" (both: bar still drawn); "have the same title on the page as the server's bell and summary give them" (with the API's old "A price on every room type": expected "Prices"); a guard that the Restaurant's setup keeps the bar passed before and after. 
+- API (through `dbq.sh`), `test/modules/admin/setupWizard.test.ts` 25 of 25 with `guest-messaging/messagesAndReports.test.ts` (41 of 41 together). Seen failing first: 7 - the go-live sentence (words updated to "Prices."), "Cancellation terms may be marked Completed by hand, and tick themselves once terms exist" (expected `automatic: false`), the two test-hotel profile cases (the GSTIN was named / the step stayed todo), and "names step 5 as the page does" (received "Setup: A price on every room type"); two later bell cases failed only because that one left its reminder behind.
+- On screen: the Rates screen opened with `?setup=prices` showed "Setting up this hotel: step 5 of 18, Prices"; Settings > Set up this hotel (from the menu, not through Back to setup) showed no bar, and the Dashboard after it none, with `sessionStorage` empty. A test hotel made there (5ELT) read step 1 Hotel profile Done with no GSTIN, while the real hotel still read "Still missing: a real GSTIN (the one set is a dummy)"; its step 8 offered Completed, and pressing it read "Done - Marked done by Group Owner". Properties > Add a property: the key box reads "the provisioning key", `autocomplete` still "new-password". The bell's reminder title for step 5 was proved by the API test only (step 5 was done in the demo).
+**Left open:** (1) the Profile checklist on the Profile page (`GET /:code/commissioning`) still asks a test hotel for a real GSTIN and calls it blocking; the owner's call whether it should skip it as the wizard now does. (2) The manual: no chapter on `manual-rest` describes the wizard yet, so no line to change; cp6's A0 line 141 ("Click a section's name to fold or open it") is now true as written.
+
+---
+
 ## 2026-10-13 · The setup bar stays; ADM-22 fixed; the first group's note (the owner's D27-312)
 
 **Asked for:** D27-312's two small jobs, plus one line from the master.

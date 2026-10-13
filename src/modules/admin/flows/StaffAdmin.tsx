@@ -425,7 +425,7 @@ export function NewProperty({ onDone }: { onDone: () => void }) {
                   autoComplete="new-password"
                   value={key}
                   onChange={(e) => setKey(e.target.value)}
-                  placeholder="the key for this deployment"
+                  placeholder="the provisioning key"
                 />
               </div>
             </div>

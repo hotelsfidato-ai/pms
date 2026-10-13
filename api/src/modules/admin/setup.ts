@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { commissioningChecks } from "./commissioning.ts";
+import { isTestHotelId } from "../../testHotels.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    SET UP THIS HOTEL (the owner's D27-311, 13 October)
@@ -19,8 +20,9 @@ import { commissioningChecks } from "./commissioning.ts";
    for the rest. A step whose done-ness the PMS can always see is
    `automatic`: a hand "Completed" is refused there. A step it cannot always
    see (the front desk's times start filled in; a hotel may rightly have no
-   discounts) is marked Completed by hand - and where its data DOES show it
-   done (a discount set, a report going out), it is done without the hand.
+   discounts or cancellation terms: charging nothing is a valid choice) is
+   marked Completed by hand - and where its data DOES show it done (a discount
+   set, terms made, a report going out), it is done without the hand.
    "Done" wins over any stored later or remind.
 
    WHAT IS STORED (hotel_setup_steps, migration "setting up a hotel"): only
@@ -76,13 +78,15 @@ export interface SetupChoice {
   remindOn?: string;
 }
 
-/** The owner's words for each step: the bell's title says "Setup: <title>". */
+/** The words for each step: the bell's title says "Setup: <title>" and the
+    summary names what is missing. THE PAGE'S OWN LIST is the website's
+    setup/steps.ts; setupWizard.test.tsx holds the two to the same words. */
 export const STEP_TITLES: Record<StepId, string> = {
   "profile": "Hotel profile",
   "taxes": "Taxes",
   "room-types": "Room types",
   "rooms": "Rooms",
-  "prices": "A price on every room type",
+  "prices": "Prices",
   "payments": "Payment methods and bank details",
   "front-desk": "Front desk times and rules",
   "cancellation": "Cancellation terms",
@@ -136,16 +140,22 @@ async function seen(client: Client, hotelId: string): Promise<Record<StepId, See
   const auto = (done: boolean, detail: string | null): Seen =>
     ({ done, automatic: true, detail: done ? null : detail });
   /* Ticks itself when its rows show it; otherwise only a hand can say. */
-  const byHand = (done = false): Seen => ({ done, automatic: false, detail: null });
+  const byHand = (done = false, detail: string | null = null): Seen =>
+    ({ done, automatic: false, detail: done ? null : detail });
+
+  /* A test hotel carries no GSTIN by design (its documents are TEST, NOT VALID:
+     D27-296 (8)), so its profile does not ask for one. A real hotel does. */
+  const test = await isTestHotelId(client, hotelId);
 
   const profile = [
-    ...(!hotel.gstin ? ["the GSTIN"] : figures.placeholderGstin ? ["a real GSTIN (the one set is a dummy)"] : []),
+    ...(test ? [] : !hotel.gstin ? ["the GSTIN"]
+      : figures.placeholderGstin ? ["a real GSTIN (the one set is a dummy)"] : []),
     ...(!hotel.address ? ["the address"] : []),
     ...(!hotel.phone ? ["the phone"] : []),
     ...(!hotel.email ? ["the email"] : []),
   ];
   const s: Omit<Record<StepId, Seen>, "go-live"> = {
-    "profile": auto(ok("gstin") && ok("contact"), missing(profile)),
+    "profile": auto((test || ok("gstin")) && ok("contact"), missing(profile)),
     "taxes": auto(ok("tax-rules"), "No GST rule for rooms yet."),
     "room-types": auto(ok("room-types"), "No room types yet."),
     "rooms": auto(ok("rooms"), "No rooms yet."),
@@ -156,7 +166,7 @@ async function seen(client: Client, hotelId: string): Promise<Record<StepId, See
       ...(!x!.bank ? ["the bank details"] : []),
     ])),
     "front-desk": byHand(),
-    "cancellation": auto(ok("cancellation"), "No cancellation terms yet."),
+    "cancellation": byHand(ok("cancellation"), "No cancellation terms yet."),
     "charges": byHand(x!.charges),
     "booking-sources": byHand(),
     "people": auto(ok("staff"), "Nobody has been given this hotel yet."),

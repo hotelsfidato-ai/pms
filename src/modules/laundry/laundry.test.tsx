@@ -67,6 +67,11 @@ vi.mock("@/modules/laundry/data/laundry", async (importOriginal) => {
       lines: [shirt(), shirt({ id: "l2", description: "Saree", service: "dry_clean",
         unitPrice: null })],
     },
+    "guest-charged": {
+      ...docket({ id: "guest-charged", number: "LD-5EL-2609-0005", status: "returned",
+        charged: true, stillOut: 0 }),
+      lines: [shirt({ returnedQuantity: 2, stillOut: 0 })],
+    },
     /* ⚠ PRICED ON PURPOSE. A hotel docket CAN have a total — its lines
        came off the same price list, and `app.laundry_docket_total` works
        one out the moment they are all priced. So whose it is has to be
@@ -186,6 +191,24 @@ describe("laundry", () => {
     expect(screen.queryByRole("button", { name: "Charge to the room" })).toBeNull();
     expect(screen.getByText(/never charged to anybody/)).toBeTruthy();
     expect(control.charged).toEqual([]);
+
+    /* D27-316 (4): plain words for staff - no developer code, no talk of a
+       table or of a button that is not there. */
+    expect(screen.getByText("Counted out and back, never charged to anybody.")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/\bD\d+-\d+\b/);
+    expect(document.body.textContent).not.toContain("The table refuses");
+  });
+
+  it("says a charged docket is its own line on the folio, without a developer code (D27-316 (4))", async () => {
+    as("front_desk");
+    go("/h/LA6/laundry/guest-charged");
+    render(<App />);
+
+    expect(await screen.findByText("Already on the bill")).toBeTruthy();
+    expect(screen.getByText(
+      "It is its own line on the room's folio. A charge is reversed on the folio, never by cancelling the docket under it.",
+    )).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/\bD\d+-\d+\b/);
   });
 
   it("does not offer a bill to a bag with anything unpriced in it", async () => {

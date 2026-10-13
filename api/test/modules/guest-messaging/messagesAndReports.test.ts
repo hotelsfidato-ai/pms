@@ -152,6 +152,17 @@ describe("each guest message, switched per hotel (D27-261, D27-264)", () => {
     expect(body.catchUp, "shown, not changed").toEqual({ from: "09:00", until: "21:00" });
   });
 
+  /* D27-316 (5): the switch says WHO the invoice goes to by itself (the rule of
+     D27-313 (2), migration 216) and what goes by Send invoice instead. */
+  it("says the Tax invoice switch sends only an invoice made out to the guest", async () => {
+    const res = await call(gmId, "GET", "/guest-message-settings");
+    const { messages } = (await res.json()) as { messages: { kind: string; when: string }[] };
+    expect(messages.find((m) => m.kind === "invoice")!.when).toBe(
+      "When the invoice is issued, by email, if it is made out to the guest. "
+      + "Only invoices issued after it is switched on; one made out to a company, "
+      + "an agent or a booking site goes by Send invoice.");
+  });
+
   it("is switched by the people who set the hotel up, and not by reception", async () => {
     expect((await call(deskId, "PUT", "/guest-message-settings/booking-voucher", { isOn: false })).status).toBe(403);
     const res = await call(gmId, "PUT", "/guest-message-settings/booking-voucher", { isOn: false });
