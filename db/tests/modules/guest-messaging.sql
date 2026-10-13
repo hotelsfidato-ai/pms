@@ -556,3 +556,75 @@ begin
   select count(*) into n from hotels where code = 'GMR';
   perform test.ok('daily report emails', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- THE TAX INVOICE GOES BY ITSELF ONLY WHEN IT IS MADE OUT TO THE GUEST
+-- (the owner's D27-313 (2), 13 October; D27-284 before it)
+-- =============================================================================
+-- The day check's 5EL/2026-27/00001: a guest's bill on a stay booked through
+-- Expedia is made out to Expedia (finance's recipient rule, RECIPIENT_COMPANY:
+-- a guest's bill carries the booking's company while the stay has no company
+-- bill of its own), and app.guest_invoices_owed asked only the bill's bill_to,
+-- so the invoice went to the guest by itself. Each invoice below is recorded
+-- with the recipient that rule prints on it.
+-- =============================================================================
+do $$
+declare
+  h uuid; t uuid; g uuid; ota uuid; fy text; d date := (now() at time zone 'Asia/Kolkata')::date;
+  r_own uuid; r_ota uuid; r_split uuid; f uuid; i_ota uuid; v text; n int;
+begin
+  h := app.provision_property_unchecked('GMI', 'Invoice Owed Test', 'Nowhere');
+  select id into t from room_types where hotel_id = h order by sort_order limit 1;
+  insert into guests (full_name, email) values ('GMI Guest', 'gmi.guest@example.com') returning id into g;
+  insert into companies (name) values ('GMI Expedia') returning id into ota;
+  insert into guest_message_settings (hotel_id, kind, is_on, switched_on_at)
+  values (h, 'invoice', true, now() - interval '1 hour');
+  fy := app.current_fin_year(h);
+
+  insert into reservations (hotel_id, guest_id, room_type_id, reference, check_in, check_out,
+                            adults, status, source, agreed_rate, company_id)
+  values (h, g, t, 'GMI-OWN', d - 1, d, 1, 'confirmed', 'direct', 1000, null) returning id into r_own;
+  insert into reservations (hotel_id, guest_id, room_type_id, reference, check_in, check_out,
+                            adults, status, source, agreed_rate, company_id)
+  values (h, g, t, 'GMI-OTA', d - 1, d, 1, 'confirmed', 'direct', 1000, ota) returning id into r_ota;
+  insert into reservations (hotel_id, guest_id, room_type_id, reference, check_in, check_out,
+                            adults, status, source, agreed_rate, company_id)
+  values (h, g, t, 'GMI-SPLIT', d - 1, d, 1, 'confirmed', 'direct', 1000, ota) returning id into r_split;
+
+  -- No company: the guest's own.
+  insert into folios (hotel_id, reservation_id) values (h, r_own) returning id into f;
+  insert into invoices (hotel_id, folio_id, fin_year, number, recipient_name, total, tax_total)
+  values (h, f, fy, 'GMI-1', 'GMI Guest', 1050, 50);
+  -- Booked through the site, one bill, the guest's: made out to the site.
+  insert into folios (hotel_id, reservation_id) values (h, r_ota) returning id into f;
+  insert into invoices (hotel_id, folio_id, fin_year, number, recipient_name, total, tax_total)
+  values (h, f, fy, 'GMI-2', 'GMI Expedia', 1050, 50) returning id into i_ota;
+  -- Split: the guest's bill to the guest, the company bill to the site.
+  insert into folios (hotel_id, reservation_id) values (h, r_split) returning id into f;
+  insert into invoices (hotel_id, folio_id, fin_year, number, recipient_name, total, tax_total)
+  values (h, f, fy, 'GMI-3', 'GMI Guest', 1050, 50);
+  insert into folios (hotel_id, reservation_id, bill_to, company_id) values (h, r_split, 'company', ota) returning id into f;
+  insert into invoices (hotel_id, folio_id, fin_year, number, recipient_name, total, tax_total)
+  values (h, f, fy, 'GMI-4', 'GMI Expedia', 1050, 50);
+
+  select string_agg(o.number || ' ' || o.channel, ', ' order by o.number) into v
+    from app.guest_invoices_owed(3, h, null) o;
+  perform test.ok('invoice made out to the guest',
+    'by itself: the guest''s own and a split stay''s guest bill - not one made out to the booking site though its bill is the guest''s, nor the company bill',
+    v = 'GMI-1 email, GMI-3 email', coalesce(v, 'nothing'));
+  select count(*) into n from app.guest_invoices_owed(3, h, i_ota) o where o.channel = 'email';
+  perform test.ok('invoice made out to the guest', 'the desk''s Send invoice still sends the booking site''s',
+    n = 1, n || ' rows');
+
+  -- ---------- clean up: an issued invoice is never deleted, but for this ----------
+  alter table invoices disable trigger invoices_immutable;
+  alter table hotels disable trigger hotels_no_delete;
+  delete from invoices where hotel_id = h;
+  delete from hotels where id = h;
+  alter table hotels enable trigger hotels_no_delete;
+  alter table invoices enable trigger invoices_immutable;
+  delete from companies where id = ota;
+  select count(*) into n from hotels where code = 'GMI';
+  perform test.ok('invoice made out to the guest', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;

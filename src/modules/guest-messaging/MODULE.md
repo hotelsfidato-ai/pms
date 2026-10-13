@@ -160,11 +160,19 @@ booking's Booked card, the booking panel) - one line each.
   `pages/MessageSwitches.tsx` (`/settings/messages/switches`).
 - **The tax invoice with its PDF** (`invoices.ts`, `invoiceDocument.ts`):
   **by email only** (D27-284: no WhatsApp, no Meta template; `invoicesOwed`
-  keeps only `app.guest_invoices_owed`'s email rows), by itself for a guest's
-  invoice issued after the hotel's switch
-  was last turned on (Q3, Q4); a company's only by the desk's **Send invoice**
+  keeps only `app.guest_invoices_owed`'s email rows), by itself **only for an
+  invoice made out to the guest** (D27-313 (2): the function asks finance's
+  recipient rule, `RECIPIENT_COMPANY`, copied in SQL by migration "the invoice
+  made out to the guest" - not the bill's `bill_to` alone; a guest's bill on a
+  stay booked through an OTA, an agent or a company is made out to them while
+  the stay has no company bill) issued after the hotel's switch
+  was last turned on (Q3, Q4); one made out to an OTA, an agent or a company
+  only by the desk's **Send invoice**
   (`SendInvoice`, on finance's Invoice page; `POST /:code/invoices/:number/send`,
-  whoever may issue one); never a credit note (Q6). The PDF is drawn from
+  whoever may issue one); never a credit note (Q6). ⚠ The recipient rule is
+  in two places, finance's TypeScript and the function: change both
+  (`messagesAndReports.test.ts` issues through finance's route and fails on a
+  drift). The PDF is drawn from
   finance's `invoiceFacts` - the screen's own query. The sweep sends each as
   the clerk who issued it. The words are the workflow's `invoice` email.
 - **Daily report emails** (D27-280, 5 October; `reportEmails.ts`,

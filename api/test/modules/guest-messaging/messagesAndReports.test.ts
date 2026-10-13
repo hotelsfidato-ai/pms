@@ -228,6 +228,44 @@ describe("the tax invoice to the guest, with its PDF", () => {
     expect(((await note.json()) as { reason: string }).reason).toBe("A credit note is not sent to the guest.");
   });
 
+  /* D27-313 (2): the day check's 5EL/2026-27/00001 - a guest's bill on a stay
+     booked through Expedia is made out to Expedia, and it went to the guest by
+     itself. Issued here through the desk's own route, so the recipient on the
+     document and the sending rule are tested as one. */
+  it("is not sent by itself when it is made out to a booking site, though the bill is the guest's (D27-313)", async () => {
+    await call(gmId, "PUT", "/guest-message-settings/invoice", { isOn: true });
+    const site = (await sql("insert into companies (name) values ($1) returning id::text as id", [`${TAG} Expedia`]))[0]!.id;
+    const issue = async (reference: string, company: string | null) => {
+      const [stay] = await sql(
+        `insert into reservations (hotel_id, guest_id, room_type_id, reference, check_in, check_out, adults,
+                                   status, source, agreed_rate, company_id)
+         select $1, $2, (select id from room_types where hotel_id = $1 limit 1), $3,
+                app.business_date($1), app.business_date($1) + 1, 1, 'confirmed', 'direct', 1000, $4
+         returning id::text as id`, [hotelId, guestId, reference, company]);
+      const [bill] = await sql("insert into folios (hotel_id, reservation_id) values ($1, $2) returning id::text as id",
+        [hotelId, stay!.id]);
+      await sql(
+        `insert into folio_postings (hotel_id, folio_id, reservation_id, business_date, category, description,
+                                     amount, tax_rate, tax_amount)
+         values ($1, $2, $3, app.business_date($1), 'room', 'Room night', 1000, 5, 50)`, [hotelId, bill!.id, stay!.id]);
+      const res = await call(deskId, "POST", `/stays/${stay!.id}/invoice`, {});
+      expect(res.status, await res.clone().text()).toBe(200);
+      return (await res.json()) as { number: string; recipient: string };
+    };
+    const theSites = await issue("P6MSG-OTA", site);
+    expect(theSites.recipient, "made out to the booking site").toBe(`${TAG} Expedia`);
+    const theGuests = await issue("P6MSG-OWN", null);
+    expect(theGuests.recipient).toBe(`${TAG} Guest`);
+
+    await runInvoices();
+    expect(sent().map((m) => m.data["invoiceNumber"]), "only the one made out to the guest").toEqual([theGuests.number]);
+
+    received = [];
+    const res = await call(deskId, "POST", `/invoices/${theSites.number}/send`, {});
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(sent().map((m) => m.data["invoiceNumber"]), "the desk's Send invoice still sends it").toEqual([theSites.number]);
+  });
+
   it("is sent by the desk's button, a company's too, by email once, under the clerk's name", async () => {
     await anInvoice(companyFolioId, "P6MSG-BTN");
     const res = await call(deskId, "POST", "/invoices/P6MSG-BTN/send", {});
