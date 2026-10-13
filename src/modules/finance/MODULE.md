@@ -62,7 +62,11 @@ holds guests' Form C (order 60).
   rate" for the stay (D27-157, D27-162). Each line names who posted it ("Night audit" for
   the audit's room charge); its print, and the button that opens it, say
   "Interim bill", before check-out and after (D22-7, D24-25) - the numbered
-  tax invoice is issued on Invoices.
+  tax invoice is issued on Invoices. After a write that changes only the
+  bill it asks again only what shows it - this stay's reads, the bell, the
+  Rooms board, Folios - and gives In house and Due out this stay's balance;
+  everything else is marked out of date (D27-316 (2), FIN-31). A change of
+  rate and a check-out still refresh everything.
 - `flows/CreditNoteFlow.tsx` — correct an issued invoice, from the invoice
   page; with `vat`, cancel a VAT bill the same way, from the VAT bill page.
 - `flows/TaxRulesCard.tsx` — the GST (and VAT) rules card, shown on
@@ -184,7 +188,7 @@ be reversed once") is still in `api/test/`.
 |---|---|
 | `postings.ts` | a stay's lines and balance (`getFolioPostings`, `getFolioBalance`), post a charge, reverse one, settle; asks `src/lib/rules.ts` (`canPostCharge`, `canReverse`) first |
 | `../sections.ts` | THE BILL IN SECTIONS (D27-200): `sectionOf` (a line's section by its category and tax scheme) and `billSections` (each section's lines, subtotal and tax rows). The Bill tab and `BillPrint` both read it; `useStayDue` (FolioPanel) is the one due figure for the headline, the closing row and the stay panel's foot |
-| `folios.ts` | one stay's folio (`getFolio`), the open folios (`listOpenFolios`), split billing (`listStayFolios`, `openFolio`, `transferPosting`, `listBillingCompanies`) |
+| `folios.ts` | one stay's folio (`getFolio`), the open folios (`listOpenFolios`: of every booking, or of the stays a screen passes, D27-316), split billing (`listStayFolios`, `openFolio`, `transferPosting`, `listBillingCompanies`) |
 | `billing.ts` | payments and payments by method, billable stays, the invoice series, invoices, issuing one, a credit note |
 | `cashier.ts` | the drawer: read, open, money in or out, count, close |
 | `tax.ts` | the GST (and alcohol's VAT) rules: read, set for a kind, a menu category's kind, and the rate one charge would carry (`getTaxRate`, the Add charge preview) |
@@ -228,7 +232,7 @@ What `index.ts` exports, and who uses each (grep of `@/modules/finance`,
 |---|---|
 | `getFolio` | front desk (`flows/StayDrawer.tsx`); the core test `repositories.test.ts` |
 | `SettleDialog`, `IssueInvoiceDialog`, `settleGroupBill`, `issueGroupInvoice` | reservations (`pages/GroupPanel.tsx`): the host's account is settled and invoiced with the Bill tab's own Settle and Invoices' own "are you sure" (D27-305 (10)) |
-| `listOpenFolios` | front desk (`data/stayview.ts`); the core test |
+| `listOpenFolios` | front desk (`data/stayview.ts`, with the window's stays); the core test |
 | `getFolioBalance` | front desk (`data/operations.ts`, `pages/InHouse.tsx`) |
 | `FolioPanel` | front desk (`flows/StayDrawer.tsx`) — the Bill tab |
 | `TaxRulesCard` | inventory (`pages/RoomSetup.tsx`) |

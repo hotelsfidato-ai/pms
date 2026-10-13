@@ -18,6 +18,25 @@ Nothing open.
 
 ## Fixed
 
+### FIN-31 · A payment on the Bill tab asked every read on screen again - FIXED 14 October (D27-316 (2))
+
+**Found** - the day check (D27-300): `FolioPanel`'s `refresh` was
+`invalidateQueries()`. Over In house one ₹100 payment was followed by 36-37
+reads (21 of them a bill per In house and Due out row, the lists, the house,
+the menu, the session) settling 1.5-5 s after the payment was taken.
+**What was done** - a write that changes only the bill (a charge, a payment, a
+reversal, an edit, a move between bills, a second bill) marks every read out
+of date without asking it (`refetchType: "none"`: asked again when next shown,
+so no screen opened later shows the bill from before), asks again now, if on
+screen, this stay's reads (their keys hold its id), the bell (who owes), the
+Rooms board and Folios, and writes this stay's balance from its own read into
+the In house and Due out rows. 9-11 reads, settled in 0.3-0.6 s. A change of
+rate and a check-out change the stay itself and still ask everything
+(`refreshAll`). Proved by `billRefresh.test.tsx` (failed on the old panel:
+another row's bill read again).
+**The rule:** a write refreshes what it changed. A list that holds a figure per
+row takes the new figure from the one read that changed, not a read per row.
+
 ### FIN-30 · Check out greyed for ~4 s after each payment, with no reason - FIXED 13 October (D27-313 (1), front desk's lane)
 
 **Found** — 13 October, the day check: after a payment the Bill tab's Check

@@ -28,6 +28,30 @@ the file is inventory's (on `MODULE.md`'s Requests).
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-31 · Rooms, the Calendar and the Dashboard read every booking ever made, two or three times each - FIXED 14 October (D27-316 (1))
+
+**Found** - FD-27 left it open: the board (`getStayView`) read every booking
+for its bars and again inside finance's `listOpenFolios` for the bars'
+balances; Rooms read it a third time for the names under its tiles; the
+Dashboard read it for today's work beside its one-day board. 793 rows and
+~3 s each on the 13 October copy: Rooms' data 10-15 s, the Calendar's 8-9 s,
+the Dashboard's 12 s, on a loaded PC.
+**Fixed** - `GET /:code/stays?from&to&board=1`: every booking with a day in the
+window, whoever is checked in, and the bookings still to arrive that hold a
+room (a tile's Arriving and Reserved are about any later date). The board
+reads it once and hands it to `listOpenFolios`; Rooms' names read the desk's
+day; the Dashboard the day's board. 0.3-0.6 s each. Comparing every fortnight
+from May to December, a week either side of today and the Dashboard's day,
+the board drew the same from both reads - except the order of two bookings of
+one room arriving on one day, which Postgres gave in whatever order the plan
+chose; the read now ends its order with the booking's id.
+**Also found** - the first version asked "holds a room" of the room join
+(`rm.number is not null`), which can only be tried after the join, on every
+booking, under row security: 2.7 s for 35 rows. Asked of the booking's own
+assignments (`exists`), the filter runs before the joins: 0.13 s.
+**The rule:** a screen that shows dates reads those dates. A condition in the
+stays read goes on the booking, not on a join, or it costs the whole history.
+
 ### FD-27 · Every desk list read every booking ever made, and the Check in button waited for it - FIXED 13 October (D27-313 (1))
 
 **Found** - 13 October, the day check (D27-300): `GET /:code/stays` sent all
