@@ -229,6 +229,14 @@ for (const shot of wanted) {
         await sleep(400);
         if (await js(`${FIND}; !!window.__find(${JSON.stringify(step.clickIf)})`)) await click(step.clickIf, step.nth);
       }
+      /* No connection for THIS browser only (the offline bar), so nobody has
+         to stop the API others are using. { offline: false } brings it back. */
+      if (step.offline !== undefined) {
+        await cdp("Network.enable");
+        await cdp("Network.emulateNetworkConditions", {
+          offline: step.offline, latency: 0, downloadThroughput: -1, uploadThroughput: -1,
+        });
+      }
       if (step.click) await click(step.click, step.nth);
       if (step.type) await type(step.type[0], step.type[1]);
       if (step.key) await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: step.key });

@@ -1,0 +1,181 @@
+<!-- ══════════════════════════════ CHAPTER B3 ══════════════════════════════ -->
+<section class="chapter" id="b3">
+  <div class="chapter-head">
+    <span class="num">Chapter B3</span>
+    <h1>Money rules</h1>
+    <p>For the owner. The rules every rupee follows: no price the hotel did not type, the business date, the taxes, the documents and their numbers, why an issued invoice never changes, rounding, discounts, and cash. What each rule protects, and what was deliberately left for later.</p>
+  </div>
+
+  <!-- B3.1 -->
+  <h2 id="b3-1"><span class="n">B3.1</span>No default prices: a dash, never a zero</h2>
+  <p>The system ships with no prices at all: no room rate, no dish, no add-on, no hall, no laundry item, and no tax rate. Every figure is typed by somebody at the hotel. Where nothing has been typed, every screen shows a dash (<b>-</b>), never ₹0 <span class="d">D17-16</span> <span class="d">D17-49</span>.</p>
+  <ul>
+    <li><b>A zero must be said.</b> A price of 0 is refused unless somebody ticks <b>Free</b>; a blank is "not priced yet" <span class="d">D27-120</span> <span class="d">D27-192</span>. A booking at ₹0 must be ticked complimentary, by the owner, an Admin or the GM <span class="d">D27-59</span>.</li>
+    <li><b>No tax rate is invented either.</b> A new hotel has no GST rate until somebody sets one (migration 136); asked for a rate that has not been set, the database refuses rather than charging 0% (migration 067). So a dish in a section with no tax rate cannot be sold, and the till says why.</li>
+    <li><b>Unpriced means not sold.</b> A night or a meal plan with no price is not sold, and is sent to the booking sites as closed <span class="d">D17-81</span> <span class="d">D27-194</span>. A new hotel starts with no room types at all <span class="d">D27-263</span>.</li>
+    <li><b>Never a figure the database has not agreed to</b> (<code>HANDOVER.md</code> § 5): the screens show what the server worked out, not a sum of their own.</li>
+  </ul>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A zero is a claim that something is free; a dash is an honest "nobody has set this". A missing tax rate that quietly became 0% would not look like a fault, it would look like a bill (the comment in migration 067). The system once shipped prices nobody at the hotel had chosen, from its templates; they were taken out (migration 032; MEMORY 63, 65), and a "Rack rate ₹0" for an unpriced room type was found and removed later (MEMORY 246). The owner's rule since: prices are the hotel's, never the system's.</p>
+  </div>
+
+  <!-- B3.2 -->
+  <h2 id="b3-2"><span class="n">B3.2</span>The business date</h2>
+  <p>Every line on every bill, every payment and every invoice carries the hotel's <b>business date</b>: the day the hotel is still trading in, which ends when the night audit closes it, not at midnight (A1.1).</p>
+  <ul>
+    <li><b>Everything before the night audit belongs to that business date</b>: a check-in, a charge, a payment, even at 5 a.m. the next morning <span class="d">D27-200</span>. A guest who arrives after the audit is on the next date.</li>
+    <li><b>A person runs the night audit</b>; it is not scheduled. At 5 Elements the GM runs it every night <span class="d">D21-77</span>. A hotel that forgets stays on yesterday, which is safe and visible: every screen shows one warning line while the date is behind <span class="d">D27-237</span> (4.2). Pressing it twice changes nothing <span class="d">D17-12</span>.</li>
+    <li><b>Each hotel has its own date</b>, and two hotels are often on different days.</li>
+    <li><b>A booking's reference takes the business date's month</b>, not the clock's <span class="d">D27-123</span>.</li>
+    <li><b>A time belongs to its hotel.</b> The server runs on GMT; a time a person types is stored and read in the hotel's own zone (migration 113; MEMORY 297).</li>
+    <li>Dates print as 25/08/2026 on screens, PDFs and spreadsheets <span class="d">D17-77</span>.</li>
+  </ul>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A bill settled at 00:40, before the night audit, filed under the clock's date would land on a day the hotel has not reached; the night audit would close the day without it, and the day's cash would never balance (MEMORY 19). With one date for all money, the night audit, the Manager report and the bank deposit always agree.</p>
+  </div>
+
+  <!-- B3.3 -->
+  <h2 id="b3-3"><span class="n">B3.3</span>Taxes</h2>
+  <p>Tax is a set of <b>rules per hotel</b>, typed in Settings, one set for the front desk and the restaurant alike (migration 067). Each kind of sale has its own rule, and a rule may have bands by value.</p>
+  <table>
+    <thead><tr><th style="width:18%">Kind</th><th>Rule</th><th style="width:22%">Decided</th></tr></thead>
+    <tbody>
+      <tr><td>Room</td><td>GST by the value of each night: 5 Elements' rules are 5% up to ₹7,500 a night and 18% above. Worked out night by night, on each night's own price <span class="d">D27-162</span>.</td><td>The accountant confirms before the first real bill <span class="d">D21-65</span></td></tr>
+      <tr><td>Restaurant</td><td>GST, 5% at 5 Elements. A dish shows the rate its section charges, or a dash where none is set <span class="d">D21-94</span>.</td><td><span class="d">D21-65</span></td></tr>
+      <tr><td>Bar</td><td>GST at a rate the hotel sets; soft drinks and snacks at a bar are GST by their menu section <span class="d">D22-43</span>.</td><td>-</td></tr>
+      <tr><td>Alcohol</td><td><b>VAT, not GST</b>: one "VAT 10%" line, never split into CGST and SGST, kept out of the GST sales register, on a VAT bill of its own. Only at a hotel switched on for alcohol, off by default.</td><td><span class="d">D21-90</span> <span class="d">D21-91</span> <span class="d">D22-44</span></td></tr>
+      <tr><td>Banquet, spa, laundry</td><td>Each its own GST rule; the spa's per hotel <span class="d">D18-21</span>; laundry's refused until set, the CA to give the rate <span class="d">D27-194</span>. A banquet function cannot be billed while its tax is not set <span class="d">D27-124</span>.</td><td></td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li><b>Who sets the rates</b>: the owner, an Admin, the GM and the accountant <span class="d">D22-32</span>, in Settings or on the accountant's Invoices screen <span class="d">D23-1</span>.</li>
+    <li><b>A rate change has a start date</b>: a rule applies by the charge's business date, so a GST change on a date in the future is typed ahead <span class="d">D27-258</span>.</li>
+    <li><b>The tax on a line is fixed when the line is made.</b> A rate changed today never reaches a bill already printed (migration 067). One line carries one tax rate (migration 015).</li>
+    <li><b>Always CGST and SGST, never IGST</b>: a hotel's supply happens at the hotel, whoever the guest is and wherever they come from (migration 025).</li>
+    <li><b>SAC codes</b> print per kind of line: rooms 996311; the others a dash until the CA gives them <span class="d">D27-258</span>; a banquet function 996334 with food, 997212 for the hall only, the CA to confirm <span class="d">D27-134</span>.</li>
+    <li><b>The FSSAI licence number</b> is a per-hotel setting printed on every restaurant bill and on a tax invoice carrying food, and frozen on the invoice when it is issued <span class="d">D26-11</span> <span class="d">D27-3</span>.</li>
+  </ul>
+
+  <div class="box open">
+    <h4>Said differently in the documents</h4>
+    <p>A room at exactly ₹7,500 a night: the decision list and the go-live plan say "5% below ₹7,500, 18% from ₹7,500" <span class="d">D21-65</span>; the tax-rules migration (067), its tests and the "includes GST" split (<span class="d">D27-195</span>) treat ₹7,500 itself as 5% and ₹7,500.01 as 18%. The system charges what the hotel's rule says, so the accountant's confirmation of the rule settles it.</p>
+  </div>
+
+  <!-- B3.4 -->
+  <h2 id="b3-4"><span class="n">B3.4</span>The documents and their numbers</h2>
+  <figure class="shot" id="fig-B3-01">
+    <div style="overflow-x:auto">
+    <svg viewBox="0 0 760 190" role="img" aria-label="A stay's bill: interim bill, settled, the tax invoice with its number, and if it was wrong a credit note and a corrected invoice" style="width:100%;min-width:600px;height:auto;display:block;font-family:Inter, 'Segoe UI', Arial, sans-serif">
+      <defs><marker id="b3h" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#3d5566"/></marker></defs>
+      <rect x="10" y="30" width="140" height="78" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.3"/>
+      <text x="80" y="54" font-size="12" font-weight="700" text-anchor="middle" fill="#142B3A">Interim bill</text>
+      <text x="80" y="72" font-size="10" text-anchor="middle" fill="#3d5566">any time before check-out;</text>
+      <text x="80" y="86" font-size="10" text-anchor="middle" fill="#3d5566">no number, exact total</text>
+      <rect x="190" y="30" width="140" height="78" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.3"/>
+      <text x="260" y="54" font-size="12" font-weight="700" text-anchor="middle" fill="#142B3A">Settled</text>
+      <text x="260" y="72" font-size="10" text-anchor="middle" fill="#3d5566">paid, or sent to</text>
+      <text x="260" y="86" font-size="10" text-anchor="middle" fill="#3d5566">a company; checked out</text>
+      <rect x="370" y="20" width="180" height="98" rx="8" fill="#eef3f7" stroke="#142B3A" stroke-width="1.6"/>
+      <text x="460" y="44" font-size="12" font-weight="700" text-anchor="middle" fill="#142B3A">Tax invoice</text>
+      <text x="460" y="62" font-size="10" text-anchor="middle" fill="#3d5566">5EL/2026-27/00001</text>
+      <text x="460" y="78" font-size="10" text-anchor="middle" fill="#3d5566">and, with drinks, its VAT bill</text>
+      <text x="460" y="92" font-size="10" text-anchor="middle" fill="#3d5566">VAT/5EL/2026-27/0001</text>
+      <text x="460" y="108" font-size="10" font-weight="700" text-anchor="middle" fill="#c4470f">never changed again</text>
+      <rect x="590" y="20" width="160" height="44" rx="8" fill="#ffffff" stroke="#c4470f" stroke-width="1.3"/>
+      <text x="670" y="38" font-size="11.5" font-weight="700" text-anchor="middle" fill="#142B3A">Credit note</text>
+      <text x="670" y="54" font-size="10" text-anchor="middle" fill="#3d5566">its own number, a reason</text>
+      <rect x="590" y="80" width="160" height="44" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.3"/>
+      <text x="670" y="98" font-size="11.5" font-weight="700" text-anchor="middle" fill="#142B3A">Corrected invoice</text>
+      <text x="670" y="114" font-size="10" text-anchor="middle" fill="#3d5566">a new number</text>
+      <path d="M150 69 L188 69" stroke="#3d5566" stroke-width="1.5" marker-end="url(#b3h)"/>
+      <path d="M330 69 L368 69" stroke="#3d5566" stroke-width="1.5" marker-end="url(#b3h)"/>
+      <path d="M550 42 L588 42" stroke="#c4470f" stroke-width="1.5" marker-end="url(#b3h)"/>
+      <path d="M670 64 L670 78" stroke="#3d5566" stroke-width="1.5" marker-end="url(#b3h)"/>
+      <text x="460" y="140" font-size="10" text-anchor="middle" fill="#66798a">Issue, on Invoices</text>
+      <text x="670" y="140" font-size="10" text-anchor="middle" fill="#66798a">only if the invoice was wrong</text>
+      <text x="10" y="175" font-size="10" fill="#66798a">Every line on the bill was dated and taxed when it was posted; the invoice states what was charged and never works the tax out again.</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure B3-01.</b> A stay's bill, from the desk's print to the numbered invoice, and how a wrong invoice is put right.</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th style="width:22%">Document</th><th>What it is</th><th style="width:20%">Decided</th></tr></thead>
+    <tbody>
+      <tr><td>Interim bill</td><td>What the desk prints, and what the guest's own page shows, before the tax invoice: every line in sections (Room with GST, Restaurant with GST, Bar with VAT), its exact total with no round-off, and any night still to be posted marked "to be posted tonight".</td><td><span class="d">D22-7</span> <span class="d">D24-25</span> <span class="d">D27-126</span> <span class="d">D27-200</span> <span class="d">D27-204</span></td></tr>
+      <tr><td>Tax invoice</td><td>Issued on Invoices with <span class="ui">Issue</span>, for one bill of a departed, settled stay. Numbered from the hotel's series for the financial year: <code>5EL/2026-27/00001</code>. The year's series opens itself with its first invoice. A company's invoice carries its name and GSTIN.</td><td><span class="d">D24-22</span></td></tr>
+      <tr><td>VAT bill</td><td>For alcohol, issued in the same moment as the tax invoice (or the restaurant's settlement), from its own series restarting each 1 April: <code>VAT/5EL/2026-27/0001</code>. Each names the other.</td><td><span class="d">D22-44</span></td></tr>
+      <tr><td>Credit note</td><td>The only way to correct an issued invoice: its own number from the same series, a reason, one per invoice. Then a corrected invoice can be issued. A VAT bill is cancelled the same way, from the VAT series.</td><td><span class="d">D22-33</span> <span class="d">D22-44</span></td></tr>
+      <tr><td>Restaurant bill</td><td>INTERIM BILL before payment, BILL after, BILL · DUPLICATE when printed again (A8.6). It carries the GST lines but says it is not a tax invoice; the GST invoice is issued against the guest's room bill.</td><td><span class="d">D27-292</span></td></tr>
+      <tr><td>Booking voucher</td><td>The booking's confirmation, with its figures: each night's price, GST by the night's band, a dash where no GST rule is set, and the advance and balance <span class="d">D27-172</span> <span class="d">D27-215</span>.</td><td></td></tr>
+    </tbody>
+  </table>
+
+  <div class="box why">
+    <h4>Why an issued invoice never changes</h4>
+    <p>An invoice is a legal document the guest and the tax office both hold. The database itself refuses to change or delete one, whoever asks, even its most powerful account (migration 025: a trigger, because a permission could be bypassed). A wrong invoice is answered by a credit note with its own number, so both stay on record, exactly as a wrong charge on a bill is answered by a reversal line and never rubbed out. The invoice also states the tax that was charged; it never works it out again from today's rules (MEMORY 31). The place of supply, the hotel's state and its GSTIN are stored on each invoice, so a later correction to the hotel's details never alters an invoice already issued.</p>
+  </div>
+
+  <div class="box open">
+    <h4>Not answered in the documents</h4>
+    <p>A diner who is not staying at the hotel gets the restaurant bill, which says it is not a tax invoice, and has no room bill for a GST invoice to be issued against. The documents do not say how such a guest gets a numbered GST invoice if they ask for one. Worth putting to the CA.</p>
+  </div>
+
+  <!-- B3.5 -->
+  <h2 id="b3-5"><span class="n">B3.5</span>Correcting money: nothing is rubbed out</h2>
+  <p>A line on a bill is never edited or deleted. Every correction is a new line, with who made it and why.</p>
+  <table>
+    <thead><tr><th style="width:30%">The mistake</th><th>How it is put right</th><th style="width:18%">Decided</th></tr></thead>
+    <tbody>
+      <tr><td>A wrong charge, today</td><td>Reversed, once, with a reason that stays on the reversal line. A payment is reversed only by the owner, an Admin, the GM or the accountant.</td><td><span class="d">D27-117</span> <span class="d">D27-125</span></td></tr>
+      <tr><td>A charge at the wrong price or words</td><td><span class="ui">Edit</span> (owner, Admin, GM): the old line reversed and the right one posted in one step, with a reason. <span class="ui">Change rate</span> for the whole stay corrects every night already charged.</td><td><span class="d">D27-157</span> <span class="d">D27-162</span></td></tr>
+      <tr><td>A charge on a day the night audit has closed</td><td>On the Night audit screen's <b>Closed days</b>: the owner, an Admin or the GM, this month and last month only, with a reason; the old and new figures are both kept, and the day's reports show the corrected figure.</td><td><span class="d">D22-18</span> <span class="d">D24-1</span> to <span class="d">D24-5</span> <span class="d">D25-5</span> <span class="d">D25-8</span></td></tr>
+      <tr><td>Anything on a bill that has its tax invoice</td><td>Refused: <span class="msg">“This bill has tax invoice X. Issue a credit note instead.”</span> Drinks with a VAT bill: cancel the VAT bill instead.</td><td><span class="d">D24-4</span> <span class="d">D25-7</span></td></tr>
+      <tr><td>A payment, refund or discount on a closed day</td><td>Not changed: <span class="msg">“Its payments, refunds and discounts are not changed - put the difference right today.”</span></td><td><span class="d">D25-11</span></td></tr>
+    </tbody>
+  </table>
+
+  <!-- B3.6 -->
+  <h2 id="b3-6"><span class="n">B3.6</span>Rounding</h2>
+  <ul>
+    <li><b>Money is kept to the paisa</b>, and the tax on each line is worked out on that line. Room bills, interim bills and invoices are exact, with no round-off <span class="d">D27-126</span> <span class="d">D27-260</span>.</li>
+    <li><b>The restaurant</b>: a bill paid wholly in cash is always rounded to the rupee, with a "Round off" line, so the drawer never expects paise nobody took <span class="d">D27-129</span>. Otherwise each hotel chooses its restaurant round-off: Off, Manual (the Till's button) or Automatic <span class="d">D27-260</span>. A restaurant bill charged to a room or to a function stays exact.</li>
+    <li><b>A room type priced as a percentage of the base</b> is rounded to the whole rupee <span class="d">D27-194</span>.</li>
+    <li><b>A rate typed "Includes GST"</b> is split into the price before tax and the GST, so the bill and the voucher add up exactly to the typed figure. A figure that cannot split exactly to the paisa splits to the nearest total not above it, and the line says so; a typed rate the bands cannot split (₹7,875.01 to ₹8,850) is refused, in words <span class="d">D27-187</span> <span class="d">D27-195</span> <span class="d">D27-199</span>. A company's contract rate is always before GST <span class="d">D27-233</span>.</li>
+  </ul>
+
+  <!-- B3.7 -->
+  <h2 id="b3-7"><span class="n">B3.7</span>Discounts, promotions and complimentary</h2>
+  <ul>
+    <li><b>One rule for rooms and the restaurant</b>: up to 10% by hand, always with a reason; more only by a named promotion <span class="d">D27-36</span>. On a room it is rupees off each night, or a percentage <span class="d">D27-259</span>. A typed room rate is not a discount and stays as it is <span class="d">D27-62</span>.</li>
+    <li><b>Promotions start empty</b>; the hotel names its own <span class="d">D27-57</span>.</li>
+    <li><b>Complimentary</b>: ticked by the owner, an Admin or the GM only <span class="d">D27-59</span>. A complimentary room counts as sold on every report, as eZee counted it <span class="d">D17-72</span>.</li>
+    <li><b>Loyalty points</b>, where the hotel has loyalty on, come off the member's own room charges as a discount line; the earn rate is a setting with no default <span class="d">D27-179</span>.</li>
+  </ul>
+
+  <!-- B3.8 -->
+  <h2 id="b3-8"><span class="n">B3.8</span>Cash</h2>
+  <ul>
+    <li><b>Every rupee belongs to a drawer</b> <span class="d">D27-118</span>. A receptionist's drawer opens by itself with their first cash after the night audit; the restaurant's opens on the float the last close kept, and only its very first day counts a float once <span class="d">D27-200</span> <span class="d">D27-201</span>.</li>
+    <li><b>Every close is counted</b>: expected against counted, a sentence for any difference, the float kept typed (above ₹0, with the next person's name), the rest to deposit. "What comes is what goes" <span class="d">D27-202</span>.</li>
+    <li><b>Deposits</b>: the GM records each day's bank deposit with the slip's photo; the owner or the accountant verifies it; a difference stays red until explained <span class="d">D27-190</span> <span class="d">D27-191</span>.</li>
+    <li><b>Cash paid out</b> (an expense from the drawer) needs a yes from the GM or the owner, never one's own; until then it is not taken off what the drawer should hold <span class="d">D27-242</span>.</li>
+    <li><b>The legal limits</b>: ₹2 lakh or more in cash from one guest for one stay or event is refused, counting the whole stay, a group as one event, and the guest's cash that day; above ₹1 lakh at one time the desk records the PAN or ticks <span class="ui">No PAN: Form 97 taken</span>; a foreign guest is not asked <span class="d">D25-40</span> <span class="d">D26-8</span> <span class="d">D26-9</span> <span class="d">D26-10</span>.</li>
+    <li><b>Company payments are never cash</b>: bank transfer, cheque, UPI or card <span class="d">D27-242</span>.</li>
+    <li><b>More than the bill</b> is taken only with the tick <span class="ui">Hold it as the guest's credit</span>, and is refunded at check-out; no money is held for a guest who has left <span class="d">D27-4</span> <span class="d">D27-11</span> <span class="d">D27-12</span>.</li>
+  </ul>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A drawer that opens by itself means nobody types a float every morning and nobody can take cash outside a shift. A difference never blocks a close, but it must have a sentence, because a manager needs the sentence, not the number. The cash limits are the law's (the Income-tax Act 2025, s.186, and Rule 159 for the PAN), applied the way the owner chose: by stay, group and day, so one large payment cannot be split to slip under them.</p>
+  </div>
+
+  <h3>Left out, and why</h3>
+  <ul>
+    <li><b>GST on advances</b>: an advance is a payment on the booking, with no receipt voucher and no tax on it, until the CA answers (<code>docs/SELLING-IN-INDIA.md</code> C2) <span class="d">D27-138</span>.</li>
+    <li><b>Online payments</b>: guests pay at the desk <span class="d">D25-36</span>.</li>
+    <li><b>Other currencies</b>: every figure is in rupees. A booking-site booking not in rupees waits for a person and is never converted <span class="d">D27-183</span>.</li>
+    <li><b>Electronic invoicing (IRN)</b>: needed only above ₹5 crore turnover; the group is under it.</li>
+    <li><b>The accountant's ledger names</b> for the Tally files: from the accountant; the day-book CSV until then <span class="d">D21-46</span>.</li>
+  </ul>
+</section>

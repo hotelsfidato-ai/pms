@@ -1,0 +1,827 @@
+<!-- ══════════════════════════════ CHAPTER A9 ══════════════════════════════ -->
+<section class="chapter" id="a9">
+  <div class="chapter-head">
+    <span class="num">Chapter A9</span>
+    <h1>Stores and purchasing</h1>
+    <p>For the Inventory Manager, the kitchen manager and the managers who approve. How the stores and suppliers are set up, how a thing is added to the Store, received, issued, moved and counted, how something is asked for, approved, ordered and delivered, and how equipment is registered and taken out of the store.</p>
+  </div>
+
+  <!-- A9.1 -->
+  <h2 id="a9-1"><span class="n">A9.1</span>The Store and equipment screens</h2>
+  <p>These screens sit in the menu's <span class="ui">Store and equipment</span> section. You see the ones your role uses.</p>
+  <table>
+    <thead><tr><th style="width:22%">Screen</th><th style="width:26%">Who uses it</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td>Store</td><td>The Inventory Manager, the kitchen manager; managers; others look only</td><td>What the property keeps (rice, gas, linen, soap) and where it is: deliveries, issues, moves, counts. Two views: <span class="ui">Shelf</span> and <span class="ui">Days</span>.</td></tr>
+      <tr><td>Equipment</td><td>The Inventory Manager; anybody who can see it may ask</td><td>The register of durable things: an AC, a TV, a fridge, a kettle. Where each one is, its repairs, and taking it out of the store.</td></tr>
+      <tr><td>Places and suppliers</td><td>The Inventory Manager and managers</td><td>The stores and the other places things stand, and who the property buys from.</td></tr>
+      <tr><td>Purchasing</td><td>Whoever may ask to buy; the GM approves</td><td>Ask for something, get it approved, order it, record the delivery into a store. <span class="ui">Who may ask to buy</span> is its setting.</td></tr>
+    </tbody>
+  </table>
+  <p>The Inventory Manager's menu is <span class="ui">Store</span>, <span class="ui">Equipment</span> and <span class="ui">Purchasing</span>, and they land on the Store after signing in. <span class="ui">Places and suppliers</span> is not on that short menu: type “supplier” or “places” in <span class="ui">Find a screen</span> (A0).</p>
+
+  <h3>Who may do what in the Store</h3>
+  <table>
+    <thead><tr><th style="width:42%">To</th><th>Who</th></tr></thead>
+    <tbody>
+      <tr><td>See the Store</td><td>The owner, an Admin, the GM, the hotel manager, the Inventory Manager, the kitchen manager, the chef, housekeeping, the accountant, a viewer.</td></tr>
+      <tr><td>Add an item, receive, issue, record waste or a return, move to another store</td><td>The owner, an Admin, the GM, the hotel manager, the Inventory Manager, the kitchen manager.</td></tr>
+      <tr><td>Correct the count, count a store, set levels, undo</td><td>The owner, an Admin, the GM, the hotel manager, the Inventory Manager.</td></tr>
+    </tbody>
+  </table>
+  <p>Somebody who may only look sees one line, <span class="msg">“You can see the store. Receiving, issuing and adding items is for the Inventory Manager, hotel manager or GM.”</span>, and a <span class="ui">History</span> button on each item.</p>
+
+  <!-- A9.2 -->
+  <h2 id="a9-2"><span class="n">A9.2</span>Places and suppliers</h2>
+  <p>Before anything can be received, the property needs its stores; before anything can be ordered, a supplier. Both are set up once, here.</p>
+
+  <figure class="shot" id="fig-A9-01">
+    <img src="img/A9-01.png" alt="Places and suppliers: the Main, Kitchen and Bar stores, all In use, and No suppliers yet">
+    <figcaption><b>Figure A9-01.</b> Places and suppliers.</figcaption>
+    <ol class="callouts">
+      <li>Add a place</li>
+      <li>Its kind: a Store is where stock is kept</li>
+      <li>In use. A place no longer used is switched off, never deleted</li>
+      <li>Add a supplier</li>
+    </ol>
+  </figure>
+
+  <h3>To add a place</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">Add a place</span>.</li>
+    <li>Type its <span class="ui">Name</span> (“Main store”) and choose its <span class="ui">Kind</span>: <b>Store - stock is kept here</b>, Kitchen, Bar, Restaurant, Public area, Office or Other.</li>
+    <li>Tap <span class="ui">Add</span>.</li>
+  </ol>
+  <p>Rooms are already known; they are not added here. Tap a place to rename it, or to <span class="ui">Switch off</span> one no longer used.</p>
+
+  <h3>To add a supplier</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">Add a supplier</span>. <span class="msg">“Only the name is needed now.”</span></li>
+    <li>Type the <span class="ui">Name</span>. Add the <span class="ui">Person to call</span>, <span class="ui">Phone</span>, <span class="ui">Email</span>, <span class="ui">GSTIN</span>, <span class="ui">Address</span> and a <span class="ui">Note</span> if you have them.</li>
+    <li>Tap <span class="ui">Add</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-02">
+    <img src="img/A9-02.png" alt="The Add a supplier window: Name, Person to call, Phone, Email, GSTIN, Address, Note and Add">
+    <figcaption><b>Figure A9-02.</b> Adding a supplier.</figcaption>
+    <ol class="callouts">
+      <li>Name: the only thing needed now</li>
+      <li>GSTIN: 15 characters, as printed on their invoice. Blank if you do not have it</li>
+      <li>Add</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Adding and changing places and suppliers is for the owner, an Admin, the GM, the hotel manager and the Inventory Manager. Everybody else reads them.</li>
+      <li>Two suppliers, or two places, cannot have the same name: <span class="msg">“There is already a supplier called … here.”</span></li>
+      <li>Nothing is deleted. Switch it off: stock was kept there, and deliveries came from them.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Who may add places and suppliers: <span class="d">D17-1</span>. The Store, Equipment and Purchasing all read the same places and suppliers, so a supplier is typed once.</p>
+  </div>
+
+  <!-- A9.3 -->
+  <h2 id="a9-3"><span class="n">A9.3</span>Adding something to the Store</h2>
+  <p>An item is a thing the property keeps and counts. It has no price: a delivery has a price (A9.4).</p>
+  <ol class="steps">
+    <li>On the Store, tap <span class="ui">Add an item</span>.</li>
+    <li>Type <span class="ui">What is it</span> (“Basmati rice”) and what it is <span class="ui">Counted in</span>: kg, litre, piece, cylinder.</li>
+    <li>Choose <span class="ui">Where it belongs</span>: Kitchen, Bar, Housekeeping, Maintenance or Everything else. Nothing is chosen for you.</li>
+    <li>For cups, plates and cutlery, tick <span class="ui">Crockery or cutlery - in use at an outlet until it breaks</span> (A9.8).</li>
+    <li>If you want a warning when it runs low, type <span class="ui">Warn me below, in the Main store</span>. Leave it blank for no warning.</li>
+    <li>Tap <span class="ui">Add</span>. The message says <span class="msg">“Receiving a delivery is what gives it a quantity and a value.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-03">
+    <img src="img/A9-03.png" alt="The Add an item window filled in: Basmati rice, kg, Kitchen, warn below 20, and the note No price here">
+    <figcaption><b>Figure A9-03.</b> Adding an item.</figcaption>
+    <ol class="callouts">
+      <li>What is it</li>
+      <li>Counted in: without a unit, a number means nothing</li>
+      <li>Where it belongs</li>
+      <li>Crockery or cutlery</li>
+      <li>Warn me below, in the Main store. Blank is no warning, not zero</li>
+      <li>Add</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>A name already in the Store is not added twice.</b> Adding it again changes that item: its unit, where it belongs and its Main store level. Only those who may correct counts can do that.</li>
+      <li>Zero is not “no warning”. Zero means warn me when it has run out, which is too late.</li>
+      <li>The kitchen manager adds items without a level. Levels are set by those who correct counts (A9.7).</li>
+      <li><span class="ui">Import</span> adds a list of items from a file.</li>
+    </ul>
+  </div>
+
+  <!-- A9.4 -->
+  <h2 id="a9-4"><span class="n">A9.4</span>Receiving a delivery</h2>
+  <p>A delivery is where the quantity and the cost come from. Record it when the goods arrive, with the bill in your hand.</p>
+  <ol class="steps">
+    <li>On the item, tap <span class="ui">Receive</span>.</li>
+    <li>Choose <span class="ui">Which store</span> it went into, and type <span class="ui">How many</span>.</li>
+    <li>Type <span class="ui">What it cost, per kg, before GST</span>. If it was free, tick <span class="ui">Free - it cost nothing</span>. If the bill has not come, leave the cost blank.</li>
+    <li>From the bill, choose the <span class="ui">GST rate, %</span>. The <span class="ui">GST amount</span> is worked out for you; change it to what the bill says. Say whether <span class="ui">Can this GST be claimed?</span> is Yes or No.</li>
+    <li>Add the <span class="ui">Use by</span> date if it has one, <span class="ui">Who from</span>, and the <span class="ui">Delivery note or bill number</span>.</li>
+    <li>Tap <span class="ui">Receive</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-04">
+    <img src="img/A9-04.png" alt="Receive window: Which store Main store, How many kg 50, cost per kg 80, Free unticked, GST rate 5, GST amount 200.00">
+    <figcaption><b>Figure A9-04.</b> Receiving: the store, how many, the cost and the GST.</figcaption>
+    <ol class="callouts">
+      <li>Which store</li>
+      <li>How many</li>
+      <li>What it cost, per kg, before GST. Blank if the bill has not arrived</li>
+      <li>Free - it cost nothing</li>
+      <li>GST rate, %: 0, 5, 18 or 40; 12 or 28 on an older bill</li>
+      <li>GST amount: filled from the rate. Type what the bill says</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A9-05">
+    <img src="img/A9-05.png" alt="Receive window scrolled down: Can this GST be claimed Yes, Use by, Who from, Delivery note or bill number, and Receive">
+    <figcaption><b>Figure A9-05.</b> Receiving: claimable, use by, who from, the bill.</figcaption>
+    <ol class="callouts">
+      <li>Can this GST be claimed?</li>
+      <li>Use by. Optional</li>
+      <li>Who from</li>
+      <li>Delivery note or bill number: what somebody holds when they ask why the count is what it is</li>
+      <li>Receive</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>A cost cannot be added later.</b> A delivery received with no cost can only be priced by undoing it (A9.7) and receiving it again. A blank is better than a guess.</li>
+      <li>The GST is all three or none: the rate, the amount and claimable. With only one or two, Receive stays grey.</li>
+      <li>Only a store that is switched on takes a delivery.</li>
+      <li>An item held with no cost at all is counted on the <span class="ui">Not valued</span> tile (A9.5).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>An item has no price because the same rice costs differently in June and October; what the shelf is worth is the running average of what was actually paid, and a blank cost is a dash, never a zero. The cost before GST, then the bill's rate, amount and claimable: <span class="d">D27-238</span>, <span class="d">D27-242</span>.</p>
+  </div>
+
+  <!-- A9.5 -->
+  <h2 id="a9-5"><span class="n">A9.5</span>Reading the Shelf</h2>
+  <p><span class="ui">Shelf</span> is the Store as it stands: each item, what is on hand, and what it is worth. Under the heading, the number of items and what the shelf is worth in all.</p>
+
+  <figure class="shot" id="fig-A9-06">
+    <img src="img/A9-06.png" alt="The Store: Shelf, Days, Reports, Import, Count a store, Add an item, the Store picker, eight tiles and three items under Kitchen">
+    <figcaption><b>Figure A9-06.</b> The Store.</figcaption>
+    <ol class="callouts">
+      <li>Shelf. Days is the other view (A9.10)</li>
+      <li>Reports: the stock and equipment reports (A11)</li>
+      <li>Count a store (A9.9)</li>
+      <li>Add an item (A9.3)</li>
+      <li>Store: All stores, or one store</li>
+      <li>The tiles. Tap one to see only those items; tap it again to see all</li>
+    </ol>
+  </figure>
+
+  <h3>The tiles</h3>
+  <table>
+    <thead><tr><th style="width:30%">Tile</th><th>Counts the items that</th></tr></thead>
+    <tbody>
+      <tr><td>Below level</td><td>Are at or below their level in a store (A9.7).</td></tr>
+      <tr><td>Run out</td><td>Had some, and hold none now.</td></tr>
+      <tr><td>Received today, Issued today</td><td>Came in, or went out, today.</td></tr>
+      <tr><td>Wasted today</td><td>Were wasted, or broken (crockery), today.</td></tr>
+      <tr><td>Awaiting delivery</td><td>Are on an order sent to a supplier and not delivered (A9.11).</td></tr>
+      <tr><td>Not valued</td><td>Are held, but no delivery of them had a cost.</td></tr>
+      <tr><td>Not counted in 30 days</td><td>Are held in a place where they were never counted, or not for 30 days (A9.9).</td></tr>
+    </tbody>
+  </table>
+  <p>A tile with a job in it (Below level, Run out, Not valued, Not counted) turns yellow.</p>
+
+  <figure class="shot" id="fig-A9-07">
+    <img src="img/A9-07.png" alt="An item card: Basmati rice, On hand 50 kg, Worth ₹4,000 at ₹80/kg average, Receive, Issue, More, and Main 50 · Kitchen - · Bar -">
+    <figcaption><b>Figure A9-07.</b> One item on the shelf.</figcaption>
+    <ol class="callouts">
+      <li>The item, its level and when it last moved</li>
+      <li>On hand</li>
+      <li>Worth, at the average of what was paid</li>
+      <li>More: the rarer acts (A9.7)</li>
+      <li>What each store holds. A dash is none</li>
+    </ol>
+  </figure>
+
+  <p>Choose one store in the <span class="ui">Store</span> picker and each card shows only what is in that store.</p>
+
+  <figure class="shot phone" id="fig-A9-20">
+    <img src="img/A9-20.png" alt="The Store on a phone: the buttons in two rows, the tiles, and the rice card marked Low with Receive, Issue and More">
+    <figcaption><b>Figure A9-20.</b> On a phone the tiles slide sideways, and Receive, Issue and More fit one row.</figcaption>
+    <ol class="callouts"><li>The tiles</li><li>More</li></ol>
+  </figure>
+
+  <!-- A9.6 -->
+  <h2 id="a9-6"><span class="n">A9.6</span>Issuing</h2>
+  <p>Stock given out of a store, to the kitchen, the bar or a floor, is an issue. It needs nobody's approval.</p>
+  <ol class="steps">
+    <li>On the item, tap <span class="ui">Issue</span>.</li>
+    <li>Check <span class="ui">Which store</span> it comes from. Each store shows what it holds.</li>
+    <li>Type <span class="ui">How many</span>.</li>
+    <li>Choose <span class="ui">Which outlet</span> it went to, or <span class="ui">Not an outlet</span> for housekeeping or a floor.</li>
+    <li>Type the <span class="ui">Department</span> if you use one (“Kitchen”, “Banquets”), and <span class="ui">Why</span>: where it went.</li>
+    <li>Tap <span class="ui">Issue</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-08">
+    <img src="img/A9-08.png" alt="The Issue window: Main store (50 kg), 10, Fidato Restaurant, Department Kitchen, Why lunch service, and Issue">
+    <figcaption><b>Figure A9-08.</b> Issuing to the restaurant.</figcaption>
+    <ol class="callouts">
+      <li>Which store</li>
+      <li>How many</li>
+      <li>Which outlet, or Not an outlet</li>
+      <li>Department. Optional, in your own words</li>
+      <li>Why</li>
+      <li>Issue</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>The outlet is chosen every time. Issue stays grey until you choose one, or Not an outlet.</li>
+      <li>An issue cannot take more than that store holds. With nothing on hand, Issue is grey: <span class="msg">“Nothing on hand to issue - receive a delivery first.”</span></li>
+      <li>The Store needs the connection. With none, it says so and records nothing.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Every issue says which outlet it went to: <span class="d">D22-20</span>. That is what the Days view adds up per outlet (A9.10). The department is free text: <span class="d">D27-242</span>. Stock going out of a store needs no approval; equipment does (A9.13): <span class="d">S12</span>.</p>
+  </div>
+
+  <!-- A9.7 -->
+  <h2 id="a9-7"><span class="n">A9.7</span>More: waste, returns, moves, levels and history</h2>
+  <figure class="shot" id="fig-A9-09">
+    <img src="img/A9-09.png" alt="The More menu open on the rice: Waste, Return to supplier, Move to another store, Correct the count, Set levels, History">
+    <figcaption><b>Figure A9-09.</b> More.</figcaption>
+    <ol class="callouts">
+      <li>Waste: spoiled, broken, past its date</li>
+      <li>Return to supplier</li>
+      <li>Move to another store</li>
+      <li>Correct the count</li>
+      <li>Set levels</li>
+      <li>History</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:28%">In More</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>Waste</td><td>Takes spoiled stock off a store, with why. Somebody will ask at the end of the month.</td></tr>
+      <tr><td>Return to supplier</td><td>Takes stock off that went back: <span class="ui">Who it goes back to</span> and why (damaged, the wrong thing, more than was ordered).</td></tr>
+      <tr><td>Move to another store</td><td>From one store to another, such as the Main store to the Kitchen store. Needs nobody's approval.</td></tr>
+      <tr><td>Correct the count</td><td>For one store: type what the shelf holds now. The difference is recorded. To count a whole store, use Count a store (A9.9).</td></tr>
+      <tr><td>Set levels</td><td>The level for each store at which to warn.</td></tr>
+      <tr><td>History</td><td>Every movement of the item, newest first, with Undo.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>To move stock to another store</h3>
+  <ol class="steps">
+    <li>In <span class="ui">More</span>, tap <span class="ui">Move to another store</span>.</li>
+    <li>Choose <span class="ui">From</span> and <span class="ui">To</span>, type <span class="ui">How many</span> and, if you like, <span class="ui">Why</span>.</li>
+    <li>Tap <span class="ui">Move</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-10">
+    <img src="img/A9-10.png" alt="Move to another store: From Main store (40 kg), To Kitchen store, How many 5, Why, and Move">
+    <figcaption><b>Figure A9-10.</b> Moving 5 kg to the Kitchen store.</figcaption>
+    <ol class="callouts"><li>From</li><li>To</li><li>How many</li><li>Move</li></ol>
+  </figure>
+
+  <h3>History, and undoing a mistake</h3>
+  <p>Nothing in the Store is edited. A wrong entry is <b>undone</b>: a new row takes it back, and both rows stay on the history.</p>
+  <ol class="steps">
+    <li>In <span class="ui">More</span>, tap <span class="ui">History</span>.</li>
+    <li>Find the wrong row and tap its undo arrow.</li>
+    <li>It asks first, for example <span class="msg">“Undo this issue of 10 kg?”</span>. Tap <span class="ui">Undo issue</span>, or <span class="ui">Cancel</span>.</li>
+    <li>Then record it again, correctly.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-11">
+    <img src="img/A9-11.png" alt="History of the rice: Moved from Main store to Kitchen store 5 kg, Issued -10 kg to Fidato Restaurant, Received +50 kg at ₹80/kg with GST 5% ₹200, claimable">
+    <figcaption><b>Figure A9-11.</b> Every movement, newest first.</figcaption>
+    <ol class="callouts">
+      <li>Received: how many, at what cost, the day, who, the store, the supplier and the bill</li>
+      <li>The GST, and whether it can be claimed</li>
+      <li>Issued: the outlet, why, and the department</li>
+      <li>A move: one line naming both stores</li>
+      <li>Undo</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A9-12">
+    <img src="img/A9-12.png" alt="Undo this issue of 10 kg? It cannot be taken back - to put it right afterwards, record it again. Cancel, Undo issue">
+    <figcaption><b>Figure A9-12.</b> Undo asks first.</figcaption>
+    <ol class="callouts"><li>It cannot be taken back</li><li>Undo issue</li></ol>
+  </figure>
+
+  <h3>To set the levels</h3>
+  <ol class="steps">
+    <li>In <span class="ui">More</span>, tap <span class="ui">Set levels</span>.</li>
+    <li>For each store, type the figure at which to warn. <span class="msg">“Warn when a store holds this many kg or fewer. Blank is no warning, not zero.”</span></li>
+    <li>Tap <span class="ui">Save</span>. The card then reads <span class="msg">“Warn at Main 20 · Kitchen 4”</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-13">
+    <img src="img/A9-13.png" alt="Levels - Basmati rice: Main store 20, Kitchen store 4, Bar store blank, and Save">
+    <figcaption><b>Figure A9-13.</b> A level for each store.</figcaption>
+    <ol class="callouts"><li>Main store</li><li>Kitchen store</li><li>Bar store: blank, no warning</li><li>Save</li></ol>
+  </figure>
+  <p>When a store is at or below its level, the item is on the <span class="ui">Below level</span> tile and its card says so in yellow, for example <span class="msg">“Kitchen store: 4 kg, level 4”</span> (Figure A9-20). It only warns: buying is done in Purchasing (A9.11).</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Correct the count, Set levels and Undo are for the owner, an Admin, the GM, the hotel manager and the Inventory Manager. Others see who may.</li>
+      <li>An undo that would leave less than nothing in that store is refused: some of it has already gone out. Correct the count instead.</li>
+      <li>Undoing a move takes back both halves, in both stores.</li>
+      <li>A delivery's Use by date shows in History.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>On hand is added up from the movements every time, so nobody can type over it; a mistake is undone by its own row, and the store's past stays as it was. Levels per store, set by those who correct counts; the warning only shows: <span class="d">D25-12</span>, <span class="d">D25-13</span>, <span class="d">D25-14</span>.</p>
+  </div>
+
+  <!-- A9.8 -->
+  <h2 id="a9-8"><span class="n">A9.8</span>Gas cylinders, crockery and cutlery</h2>
+  <h3>Gas cylinders</h3>
+  <p>An item counted in “cylinder” is kept as <b>Full</b> and <b>Empty</b>, because the supplier swaps empties for full ones and holds a deposit on each.</p>
+  <ul>
+    <li><b>Receive</b> also asks <span class="ui">Empties the supplier took back</span>.</li>
+    <li><b>Issue</b> also asks <span class="ui">Empties back from the kitchen</span>.</li>
+    <li>Both are typed every time. 0 is an answer: <span class="msg">“0 if none came back.”</span></li>
+    <li>In <span class="ui">More</span>, <span class="ui">Set levels and deposit</span> also holds <span class="ui">Cylinders on deposit with the supplier</span> and the <span class="ui">Deposit per cylinder</span>, as on the supplier's receipt. A dash until typed.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A9-14">
+    <img src="img/A9-14.png" alt="Issue - LPG cylinder 19 kg: How many cylinder 1, Fidato Restaurant, Empties back from the kitchen 0">
+    <figcaption><b>Figure A9-14.</b> Issuing a cylinder.</figcaption>
+    <ol class="callouts"><li>How many full cylinders</li><li>Empties back from the kitchen</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A9-15">
+    <img src="img/A9-15.png" alt="The cylinder card: Full 3, Empty 0, and On deposit 4 · ₹1,700 each · ₹6,800 held · 1 in use at the kitchen">
+    <figcaption><b>Figure A9-15.</b> A cylinder's card.</figcaption>
+    <ol class="callouts">
+      <li>Full</li>
+      <li>Empty</li>
+      <li>The deposit: cylinders on deposit, each, held, and in use at the kitchen</li>
+    </ol>
+  </figure>
+  <p>In use at the kitchen is the cylinders on deposit less the full and empty ones in the stores. If the stores hold more than is on deposit, the line says to check the count or the deposit.</p>
+
+  <h3>Crockery and cutlery</h3>
+  <p>An item ticked <span class="ui">Crockery or cutlery</span> can be moved into use at a restaurant, bar or kitchen place (set up in Places and suppliers): its More menu says <span class="ui">Move into use, or to another store</span>. It has a level there, and it is counted there. When it breaks, record it:</p>
+  <ol class="steps">
+    <li>In <span class="ui">More</span>, tap <span class="ui">Broken</span>.</li>
+    <li>Choose <span class="ui">Where it broke</span>, type <span class="ui">How many</span>.</li>
+    <li>Choose <span class="ui">Who broke it</span>: a person working here, or <span class="ui">Not known</span>. Nothing is chosen for you.</li>
+    <li>Type <span class="ui">Why</span> (dropped, chipped, cracked in the wash) and tap <span class="ui">Record breakage</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-16">
+    <img src="img/A9-16.png" alt="Record breakage - Tea cup: Where it broke Main store, How many 2, Who broke it Not known, Why, Record breakage">
+    <figcaption><b>Figure A9-16.</b> Recording breakage.</figcaption>
+    <ol class="callouts">
+      <li>Where it broke</li>
+      <li>How many</li>
+      <li>Who broke it</li>
+      <li>Why</li>
+      <li>Record breakage</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Breakage is for crockery and cutlery only. Anything else that is lost is Waste.</li>
+      <li>Undoing an issue of cylinders does not undo the empties that came back with it: each is undone on its own line in History.</li>
+      <li>Empties stay in the store the full cylinder left from. The count corrects them (A9.9).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Full and empty, empties typed each time, the deposit typed on the item: <span class="d">D17-4</span>, <span class="d">D25-18</span>, <span class="d">D25-19</span>. Crockery in use at an outlet, breakage with who or Not known, and a reminder when a place goes 30 days uncounted: <span class="d">D27-238</span>, <span class="d">D27-242</span>.</p>
+  </div>
+
+  <!-- A9.9 -->
+  <h2 id="a9-9"><span class="n">A9.9</span>Counting a store</h2>
+  <p>A count compares what is really on the shelves with what the system says (the <b>book</b>), store by store.</p>
+  <ol class="steps">
+    <li>On the Store, tap <span class="ui">Count a store</span>, and choose the <span class="ui">Store</span>.</li>
+    <li>Tap <span class="ui">Print the sheet</span>. The paper has each item, its unit and an empty box. It has no book figure: you write what is there.</li>
+    <li>Count the shelves. Then type the counts in straight away.</li>
+    <li>When you type a count, the line shows the book and the difference, such as <span class="msg">“Book 4 kg · 1 fewer”</span>. Where it differs, type <span class="ui">Why, if known</span>.</li>
+    <li>Tap <span class="ui">Save the count</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-17">
+    <img src="img/A9-17.png" alt="Count a store: Kitchen store, the rice counted 3 with Book 4 kg · 1 fewer and a reason, the other lines blank; Print the sheet, Save the count">
+    <figcaption><b>Figure A9-17.</b> Counting the Kitchen store.</figcaption>
+    <ol class="callouts">
+      <li>The store being counted</li>
+      <li>What is on the shelf</li>
+      <li>The book, and the difference</li>
+      <li>Why, if known</li>
+      <li>Print the sheet</li>
+      <li>Save the count</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>Each difference is saved as a correction with your name and <span class="msg">“Count of Kitchen store”</span>, plus the reason typed on its line.</li>
+    <li><b>A line left blank is not counted.</b> It is never taken as zero.</li>
+    <li>A cylinder item has a second line, “- empty”, for its empties.</li>
+    <li>At a place where crockery is in use, the sheet lists the crockery only.</li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>The store is not locked while you count. If an item moved in that store after the sheet opened, the save is refused and names it. That line takes the new book with its count cleared: count it again and save.</li>
+      <li>Count a store is for the owner, an Admin, the GM, the hotel manager and the Inventory Manager.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>No lock, a blank sheet, the book shown only after the count is typed, whoever saves it, a blank line never zero: <span class="d">D25-15</span>, <span class="d">D25-16</span>, <span class="d">D25-17</span>. A blank sheet makes the counter look at the shelf, not at the figure the system expects.</p>
+  </div>
+
+  <!-- A9.10 -->
+  <h2 id="a9-10"><span class="n">A9.10</span>The Days view</h2>
+  <p><span class="ui">Days</span> shows fourteen business days of the Store, ending today: one row per item, one column per day.</p>
+
+  <figure class="shot" id="fig-A9-18">
+    <img src="img/A9-18.png" alt="Store Days: items by day from 27 September to 9 October, today highlighted, cells +50 over -11, and the footer Received ₹, Issued ₹, Wasted ₹, Occupied rooms">
+    <figcaption><b>Figure A9-18.</b> Days.</figcaption>
+    <ol class="callouts">
+      <li>Days</li>
+      <li>Category, or Outlet</li>
+      <li>Fourteen days earlier. Later, and Today, bring you back</li>
+      <li>Today</li>
+      <li>The day in rupees: Received, Issued, Wasted; and Occupied rooms</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>A cell is what came in (green, +) over what went out, in the item's unit. Blank: nothing moved.</li>
+    <li>With <span class="ui">All stores</span>, a move between stores is left out: it is not in or out of the property.</li>
+    <li>The footer's rupees are at the running average. <span class="ui">Wasted ₹</span> is waste only, not breakage.</li>
+    <li>Tap an item's cell in today's column to <span class="ui">Receive</span> or <span class="ui">Issue</span> it.</li>
+    <li>The tiles and the Store picker work as on the Shelf.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A9-19">
+    <img src="img/A9-19.png" alt="Days grouped by Outlet: Fidato Restaurant with 2.6k issued today, and Not an outlet; Issued to each outlet. What it sold is for those who read reports">
+    <figcaption><b>Figure A9-19.</b> Days, by outlet.</figcaption>
+    <ol class="callouts">
+      <li>Outlet</li>
+      <li>What this view shows you</li>
+      <li>An outlet: what was issued to it each day</li>
+      <li>Not an outlet: housekeeping, a floor</li>
+    </ol>
+  </figure>
+  <p>By <span class="ui">Outlet</span>, each outlet's cell shows what was issued to it; for those who may read reports, also what the outlet sold and the food cost %, both before GST. For anybody else those two are a dash: <span class="msg">“Issued to each outlet. What it sold is for those who read reports.”</span></p>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The tiles, the fourteen days, Receive and Issue from today, the outlet view: <span class="d">D27-238</span>. Sales only for those who read reports, and the food cost % as costs before GST over sales before GST: <span class="d">D27-242</span>.</p>
+  </div>
+
+  <!-- A9.11 -->
+  <h2 id="a9-11"><span class="n">A9.11</span>Buying something: Purchasing</h2>
+  <p>A purchase goes through five stages, each shown on the order as its state:</p>
+  <table>
+    <thead><tr><th style="width:26%">State</th><th>What happens next</th></tr></thead>
+    <tbody>
+      <tr><td>Waiting for approval</td><td>The general manager approves, refuses or sends it back.</td></tr>
+      <tr><td>Ready to order</td><td>Approved. Every line needs an agreed price, then <span class="ui">Send the order</span>.</td></tr>
+      <tr><td>Ordered</td><td>Sent to the supplier. When the goods come, <span class="ui">Record the delivery</span>.</td></tr>
+      <tr><td>Delivered</td><td>Received into the store. Done.</td></tr>
+      <tr><td>Refused, Sent back, Cancelled</td><td>It stops here, on the record. To go ahead, raise a new request.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>To ask to buy something</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">Purchasing</span> and tap <span class="ui">Ask to buy</span>.</li>
+    <li>Choose <span class="ui">Which store is it for</span>: where the goods will go.</li>
+    <li>Type <span class="ui">What is it for</span>. The general manager reads this before approving.</li>
+    <li>Under <span class="ui">What is needed</span>, pick the item and type how much. Type the price only if one has been agreed; tick <span class="ui">Free</span> if it costs nothing. <span class="ui">Add another item</span> for more lines.</li>
+    <li>Tap <span class="ui">Send for approval</span>. The message says it is with the general manager to approve.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-21">
+    <img src="img/A9-21.png" alt="Ask to buy something: Which store is it for Main store, What is it for, Basmati rice (kg), 25, Price if agreed blank, Free, Send for approval">
+    <figcaption><b>Figure A9-21.</b> Asking to buy.</figcaption>
+    <ol class="callouts">
+      <li>Which store is it for</li>
+      <li>What is it for</li>
+      <li>The item, from the Store</li>
+      <li>How much</li>
+      <li>Price, if agreed. Blank where nothing has been agreed</li>
+      <li>Send for approval</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A9-22">
+    <img src="img/A9-22.png" alt="The Purchasing list: PO-5EL-2610-0001, Waiting for approval, What for, Main store, Items 1, Total -, asked by Test Inventory Manager">
+    <figcaption><b>Figure A9-22.</b> The list of purchases.</figcaption>
+    <ol class="callouts"><li>Ask to buy</li><li>Its state</li><li>What it is for. Tap a row to open the order</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A9-23">
+    <img src="img/A9-23.png" alt="The order waiting for the general manager: You asked for this one, so you cannot be the person who approves it; the agreed price box; One line has no agreed price; Cancel">
+    <figcaption><b>Figure A9-23.</b> Waiting for the general manager.</figcaption>
+    <ol class="callouts">
+      <li>Waiting for the general manager</li>
+      <li>Nobody approves what they asked for themselves</li>
+      <li>The agreed price, typed on the line when it is agreed</li>
+      <li>What is still missing before it can be sent</li>
+      <li>Cancel</li>
+    </ol>
+  </figure>
+
+  <h3>The general manager decides</h3>
+  <ol class="steps">
+    <li>Open the order (from Purchasing, or the Approvals inbox, A12).</li>
+    <li>Read what it is for, the lines and the <span class="ui">Total</span>.</li>
+    <li>Tap <span class="ui">Approve this purchase</span>. Or <span class="ui">Refuse</span>, or <span class="ui">Send back</span> for something to be cleared up: both ask you to say why, for the person who asked.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-24">
+    <img src="img/A9-24.png" alt="The GM's view of the order: Approve this purchase, Refuse, Send back, and Total ₹2,050">
+    <figcaption><b>Figure A9-24.</b> The general manager's buttons.</figcaption>
+    <ol class="callouts"><li>Approve this purchase</li><li>Refuse</li><li>Send back</li><li>Total</li></ol>
+  </figure>
+
+  <h3>Sending the order</h3>
+  <ol class="steps">
+    <li>Open the approved order. It says <span class="ui">Ready to order</span>.</li>
+    <li>If a line has no agreed price, type it on the line. <span class="ui">Send the order</span> appears only when every line has one.</li>
+    <li>Tap <span class="ui">Send the order</span>, choose <span class="ui">Order it from</span>, and tap <span class="ui">Send the order</span>.</li>
+    <li>Tap <span class="ui">Download the order</span>: a PDF. Print it, or attach it to a message to the supplier. <b>Nothing is sent automatically.</b></li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-25">
+    <img src="img/A9-25.png" alt="The order Ready to order, Decided by Test GM, with Download the order and Send the order">
+    <figcaption><b>Figure A9-25.</b> Ready to order.</figcaption>
+    <ol class="callouts"><li>Ready to order</li><li>Decided by</li><li>Download the order</li><li>Send the order</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A9-26">
+    <img src="img/A9-26.png" alt="The Send the order window: Order it from Kirana Bros, the note that it is sent by hand, and Send the order">
+    <figcaption><b>Figure A9-26.</b> Who it is ordered from.</figcaption>
+    <ol class="callouts">
+      <li>Order it from: the suppliers in Places and suppliers</li>
+      <li>It is sent by hand: printed, or attached to a message</li>
+      <li>Send the order</li>
+    </ol>
+  </figure>
+
+  <h3>When the goods come</h3>
+  <ol class="steps">
+    <li>Open the order. It says <span class="ui">Ordered</span>. Tap <span class="ui">Record the delivery</span>.</li>
+    <li>For each line, type what <span class="ui">Came</span> and what it cost each, before GST. Then the bill's <span class="ui">GST %</span>, the GST amount, <span class="ui">Claimable</span>, and the <span class="ui">Use by</span> date if it has one.</li>
+    <li>Type <span class="ui">Anything to note</span>: a short delivery, a damaged case, a different brand.</li>
+    <li>Tap <span class="ui">Record the delivery</span>. The goods land in the order's store, as a delivery in the Store (A9.4).</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-27">
+    <img src="img/A9-27.png" alt="The order Ordered, supplier Kirana Bros, with Download the order and Record the delivery">
+    <figcaption><b>Figure A9-27.</b> Ordered.</figcaption>
+    <ol class="callouts"><li>Ordered</li><li>The supplier</li><li>Download the order</li><li>Record the delivery</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A9-28">
+    <img src="img/A9-28.png" alt="Record the delivery: Came 25, Cost each 82.00, GST % 5, GST amount 102.50, Claimable Yes, Use by, Anything to note, Record the delivery">
+    <figcaption><b>Figure A9-28.</b> Recording the delivery.</figcaption>
+    <ol class="callouts">
+      <li>Came</li>
+      <li>Cost each, before GST</li>
+      <li>GST %</li>
+      <li>Claimable</li>
+      <li>Anything to note</li>
+      <li>Record the delivery</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A9-29">
+    <img src="img/A9-29.png" alt="The order Delivered - received by Test Inventory Manager, with the note, and Came 25 at ₹82">
+    <figcaption><b>Figure A9-29.</b> Delivered.</figcaption>
+    <ol class="callouts"><li>Delivered</li><li>Who received it, and when, with the note</li><li>Came</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>No price is invented.</b> A line with no agreed price reads “-”, never 0, and the order cannot be sent to a supplier until every line has one. An order with an unpriced line has no total.</li>
+      <li>Only items already in the Store can be asked for. Add the item first (A9.3).</li>
+      <li>The price can be typed until the order is sent; after that it is fixed.</li>
+      <li>One delivery per order. If less came, type what came: both the order and what came stay on the record.</li>
+      <li>A gas cylinder's delivery here does not ask for empties. Correct them on the Store's count.</li>
+      <li><span class="ui">Cancel</span> works until it is delivered, and asks why.</li>
+      <li>Supplier bills and paying them are not part of Purchasing.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The GM approves every purchase, at any amount: <span class="d">D18-4</span>, <span class="d">D17-35</span>. The order is a PDF sent by hand: <span class="d">D18-3</span>. One Approvals inbox, with the screens keeping their own buttons: <span class="d">D18-19</span>. GST and use-by at delivery: <span class="d">D27-238</span>.</p>
+  </div>
+
+  <!-- A9.12 -->
+  <h2 id="a9-12"><span class="n">A9.12</span>Who may ask to buy</h2>
+  <p>Who may ask to buy is a setting for each property, by role. The owner or an Admin changes it: <span class="ui">Who may ask</span> on Purchasing. It takes effect at once. Everybody else who opens it can read it.</p>
+
+  <figure class="shot" id="fig-A9-30">
+    <img src="img/A9-30.png" alt="Who may ask to buy: each role with Can raise a request or Cannot raise a request, and Switch on or Switch off">
+    <figcaption><b>Figure A9-30.</b> Who may ask to buy.</figcaption>
+    <ol class="callouts"><li>A role, and whether it can raise a request</li><li>Switch off</li><li>Switch on</li><li>Back to purchasing</li></ol>
+  </figure>
+  <p>It starts as the Inventory Manager, the general manager, the owner and an Admin. The general manager still approves every purchase, whoever asked.</p>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A setting per property, changed without a developer, with the kitchen or housekeeping switched on when the owner wants them: <span class="d">D18-2</span>, <span class="d">D22-11</span>. A role, not a person, because staff leave; switched off, never deleted.</p>
+  </div>
+
+  <!-- A9.13 -->
+  <h2 id="a9-13"><span class="n">A9.13</span>Equipment</h2>
+  <p><span class="ui">Equipment</span> is the register of everything durable in the hotel, the restaurant and the rooms. Things used up (rice, gas, soap) are the Store's.</p>
+
+  <h3>To add a piece of equipment</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">Equipment</span> and tap <span class="ui">Add an item</span>.</li>
+    <li>Type <span class="ui">What is it</span> (“Split AC 1.5 ton”) and its <span class="ui">Category</span>: pick one this property already uses, or type a new one.</li>
+    <li>Choose <span class="ui">How is it kept track of</span>: <span class="ui">One by one, with a tag</span>, or <span class="ui">A count in one place</span> (twelve kettles in one room is one line of 12).</li>
+    <li>For a tagged item, the next free <span class="ui">Tag</span> is offered. If it already carries a printed label, type that instead.</li>
+    <li>Choose <span class="ui">Where is it</span>: <span class="ui">A room</span>, or <span class="ui">Another place</span> such as the Main store.</li>
+    <li>Add the <span class="ui">Status</span>, <span class="ui">Supplier</span>, <span class="ui">Bought on</span>, <span class="ui">Cost, in rupees</span>, <span class="ui">Warranty ends</span> and <span class="ui">Service contract (AMC) ends</span> if you know them. Blank if nobody knows.</li>
+    <li>Tap <span class="ui">Add</span>. Its page opens.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-31">
+    <img src="img/A9-31.png" alt="Equipment Add an item, scrolled: Category Appliance, One by one with a tag, Tag EQ-0001, Where is it Another place, Main store">
+    <figcaption><b>Figure A9-31.</b> Adding equipment: what, and where.</figcaption>
+    <ol class="callouts">
+      <li>What is it: its name (the box is just above, scrolled out of this picture)</li>
+      <li>Category</li>
+      <li>One by one, with a tag; or A count in one place</li>
+      <li>Tag: the next free number is offered</li>
+      <li>Where is it: A room, or Another place</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A9-32">
+    <img src="img/A9-32.png" alt="Equipment Add an item, scrolled further: Status In use, Supplier Not known, Bought on, Cost 38000, Warranty ends, Service contract (AMC) ends, Add">
+    <figcaption><b>Figure A9-32.</b> Adding equipment: status, supplier, cost, warranty.</figcaption>
+    <ol class="callouts">
+      <li>Status: In use, or Under repair</li>
+      <li>Supplier, or Not known</li>
+      <li>Cost, in rupees. Blank if nobody knows: it shows a dash, never zero</li>
+      <li>Warranty ends</li>
+      <li>Service contract (AMC) ends</li>
+      <li>Add</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A9-33">
+    <img src="img/A9-33.png" alt="The equipment page: Split AC 1.5 ton, In use, EQ-0001 · Main store (a store) · Appliance; Change details, Move, Under repair, Retire; Details; What has happened to it">
+    <figcaption><b>Figure A9-33.</b> One piece of equipment.</figcaption>
+    <ol class="callouts">
+      <li>The item: its tag, where it is, its category</li>
+      <li>Change details</li>
+      <li>Move</li>
+      <li>Under repair (Back in use, once it is)</li>
+      <li>Retire</li>
+      <li>What has happened to it, newest first</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A9-34">
+    <img src="img/A9-34.png" alt="The Repairs card: Every repair on it, open and closed. No repair has been recorded on it. Report a repair">
+    <figcaption><b>Figure A9-34.</b> Its repairs.</figcaption>
+    <ol class="callouts"><li>Repairs: every repair on it, open and closed</li><li>Report a repair</li></ol>
+  </figure>
+  <p><span class="ui">Report a repair</span> raises a repair, as Work orders does (A6): the item shows as under repair until the repair is closed. <span class="ui">Under repair</span>, at the top, marks it by hand. Only a tagged item is repaired; a counted line is retired or replaced.</p>
+
+  <h3>Taking equipment out of the store</h3>
+  <p>A piece of equipment that leaves a store waits for the Inventory Manager's yes. <b>Anybody who can see it may ask.</b></p>
+  <ol class="steps">
+    <li>Open the item. Somebody who may not move equipment sees <span class="ui">Ask to take out</span>; tap it. (The Inventory Manager and managers tap <span class="ui">Move</span>: out of a store, it is asked for in the same way.)</li>
+    <li>Choose <span class="ui">To a room</span> and the room, or <span class="ui">To another place</span>.</li>
+    <li>Type <span class="ui">Why</span>. The person deciding reads it.</li>
+    <li>Tap <span class="ui">Ask</span>. The message says <span class="msg">“Asked - it moves when the Inventory Manager approves it”</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-35">
+    <img src="img/A9-35.png" alt="Reception's view of the AC: Change details, Under repair and Retire greyed, Ask to take out, and who may change equipment">
+    <figcaption><b>Figure A9-35.</b> Reception's view: Ask to take out.</figcaption>
+    <ol class="callouts"><li>Ask to take out</li><li>Who may change, move and retire equipment; and that anybody may ask</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A9-36">
+    <img src="img/A9-36.png" alt="Ask to take it out of the store: To a room, Room 205, the note that it stays in the store until approved, Why, Ask">
+    <figcaption><b>Figure A9-36.</b> Asking for it to leave the store.</figcaption>
+    <ol class="callouts">
+      <li>To a room, or To another place</li>
+      <li>Which room</li>
+      <li>It stays in the store until the Inventory Manager approves it, or the owner, an Admin or the GM when they are away</li>
+      <li>Why</li>
+      <li>Ask</li>
+    </ol>
+  </figure>
+
+  <h3>The Inventory Manager decides</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">Equipment</span>. At the top: <span class="msg">“One request waits in the approvals inbox”</span>, with the item, where it is going, who asked and why. In the list it says <span class="ui">Waiting to leave the store</span>.</li>
+    <li>Tap <span class="ui">Approve</span>; or <span class="ui">Refuse</span>, which asks why. (The item's own page has the same buttons.)</li>
+    <li>Approved, it is in its new place. Refused, it stays in the store, with the reason beside it.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-37">
+    <img src="img/A9-37.png" alt="The Equipment register: One request waits in the approvals inbox with Approve and Refuse; Where and Status filters; the AC Waiting to leave the store; Export">
+    <figcaption><b>Figure A9-37.</b> One request waits.</figcaption>
+    <ol class="callouts">
+      <li>What waits in the approvals inbox</li>
+      <li>Approve</li>
+      <li>Refuse</li>
+      <li>Where, and Status: the list's filters</li>
+      <li>Waiting to leave the store</li>
+      <li>Export: for the owner, an Admin, the GM or the accountant</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A9-38">
+    <img src="img/A9-38.png" alt="The AC after approval: EQ-0001 · Room 205 · Appliance; Asked to take out of Main store to Room 205; Approved, with the date and Test Inventory Manager">
+    <figcaption><b>Figure A9-38.</b> Approved: in room 205.</figcaption>
+    <ol class="callouts"><li>Where it is now</li><li>The request: from where to where, why, who asked</li><li>Approved: when, and by whom</li></ol>
+  </figure>
+
+  <h3>Under repair, and retiring</h3>
+  <ul>
+    <li><span class="ui">Under repair</span> asks <span class="ui">What is wrong, or what was done</span> (optional). <span class="ui">Back in use</span> undoes it later.</li>
+    <li><span class="ui">Retire</span> asks why (broken beyond repair, lost, sold, given away). It stays in the register as retired, with who, when and why. A tagged item retired by somebody who may not approve, such as the hotel manager, waits in the approvals inbox for the Inventory Manager.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A9-39">
+    <img src="img/A9-39.png" alt="Mark it under repair: What is wrong, or what was done, and Under repair">
+    <figcaption><b>Figure A9-39.</b> Marking it under repair.</figcaption>
+    <ol class="callouts"><li>What is wrong, or what was done. Optional</li><li>Under repair</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Changing, moving and retiring equipment is for the owner, an Admin, the GM, the hotel manager and the Inventory Manager. Anybody else sees those buttons grey, and may only ask for something to leave the store.</li>
+      <li>While a request waits, the item cannot be changed, moved or retired: it is decided first.</li>
+      <li>A move between rooms, or back into a store, needs nobody's yes.</li>
+      <li>Who did what in an item's history is shown to the owner, an Admin, the GM and the Inventory Manager. Others see a dash, except their own name.</li>
+      <li>A retired item is kept exactly as it was retired. Nothing is deleted.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Equipment leaving the store waits for the Inventory Manager, with the owner, an Admin or the GM as backup; anybody who can see it may ask; stock goes out with no approval: <span class="d">S12</span>, <span class="d">S15</span>. Retiring a tagged item, in the same inbox: <span class="d">S16</span>. Where a thing is comes from its approved moves, so a refused request leaves it where it was and nothing has to be undone.</p>
+  </div>
+
+  <!-- A9.14 -->
+  <h2 id="a9-14"><span class="n">A9.14</span>Your week in short</h2>
+  <table>
+    <thead><tr><th style="width:28%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>Once</td><td>Places and suppliers: the stores, the other places, the suppliers.</td><td>A9.2</td></tr>
+      <tr><td>Something new to keep</td><td>Store, Add an item. A level if you want a warning.</td><td>A9.3</td></tr>
+      <tr><td>A delivery arrives</td><td>Receive: the store, how many, the cost before GST, the bill's GST, the bill number. Through an order: Record the delivery.</td><td>A9.4, A9.11</td></tr>
+      <tr><td>The kitchen or a floor needs stock</td><td>Issue: the store, how many, the outlet or Not an outlet.</td><td>A9.6</td></tr>
+      <tr><td>From the main store to the kitchen's</td><td>More, Move to another store.</td><td>A9.7</td></tr>
+      <tr><td>Something spoiled, sent back, broken</td><td>More: Waste, Return to supplier, Broken.</td><td>A9.7, A9.8</td></tr>
+      <tr><td>A mistake</td><td>More, History, undo it; then record it again.</td><td>A9.7</td></tr>
+      <tr><td>Running low</td><td>The Below level tile. Purchasing, Ask to buy.</td><td>A9.5, A9.11</td></tr>
+      <tr><td>Approved</td><td>Agreed prices, Send the order, Download the order, send it by hand.</td><td>A9.11</td></tr>
+      <tr><td>Every store, regularly</td><td>Count a store: print, count, type, Save the count. Watch the Not counted in 30 days tile.</td><td>A9.9</td></tr>
+      <tr><td>Equipment asked out of the store</td><td>Equipment: Approve or Refuse.</td><td>A9.13</td></tr>
+    </tbody>
+  </table>
+</section>

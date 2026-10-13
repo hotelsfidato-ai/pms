@@ -1,0 +1,241 @@
+<!-- ══════════════════════════════ CHAPTER B5 ══════════════════════════════ -->
+<section class="chapter" id="b5">
+  <div class="chapter-head">
+    <span class="num">Chapter B5</span>
+    <h1>Connections</h1>
+    <p>For the owner. Every way the PMS talks to something outside it: the sending workflow in n8n, WhatsApp and its templates, email, the CRS bridge, the booking sites through SU, outside tills, the guest's ways of proving who they are, the leads app, and the provisioning key. What each does, what it needs from you, and what happens when it fails.</p>
+  </div>
+
+  <!-- B5.1 -->
+  <h2 id="b5-1"><span class="n">B5.1</span>The connections at a glance</h2>
+  <p>A connection is switched on by its settings on the server, which only the owner types in (they are secrets, and never go in the code, a screen or a chat). Until they are there, the connection does nothing, and the screens say so in plain words rather than offering a button that would fail.</p>
+  <table>
+    <thead><tr><th style="width:19%">Connection</th><th>What it does</th><th style="width:20%">State</th><th style="width:27%">If it fails</th></tr></thead>
+    <tbody>
+      <tr><td>Sending (n8n)</td><td>Every email and WhatsApp to a guest, and the alert and report emails</td><td>Built; on once its three settings and the pace are in</td><td>Nothing is sent; nothing else stops. Each message is tried again, up to three times</td></tr>
+      <tr><td>WhatsApp (Meta)</td><td>The voucher and the check-in code, from one Fidato number</td><td>Through the CRS's Meta account and its approved templates</td><td>Meta's refusal is shown on Guest messages; the email still goes</td></tr>
+      <tr><td>The CRS bridge</td><td>The CRS's bookings for the group's own hotels, read every five minutes</td><td>Built; per hotel, on its card</td><td>Nothing is booked; Connection health turns red after 30 minutes</td></tr>
+      <tr><td>SU channel manager</td><td>Rooms, prices and restrictions out to the booking sites; their bookings in</td><td>Built, not connected</td><td>-</td></tr>
+      <tr><td>Outside tills</td><td>A till that is not ours charges a meal to a guest's room</td><td>Built; a key per outlet</td><td>The till asks whether its bill landed, and never charges twice</td></tr>
+      <tr><td>Google sign-in, for guests</td><td>A guest proves who they are with the Google account of the booking's email</td><td>Built; on with its setting</td><td>The guest uses a code instead</td></tr>
+      <tr><td>ID photos (Google Drive)</td><td>Guests' ID photos, encrypted, kept in Drive</td><td>Built; per hotel, with the hotel's password</td><td>No password: the upload is not offered</td></tr>
+      <tr><td>DigiLocker</td><td>A guest proves their ID through DigiLocker</td><td>Prepared, switched off</td><td>-</td></tr>
+      <tr><td>The leads app</td><td>Its enquiries shown in the PMS, read only</td><td>Built; on with its settings</td><td>The screen says why; nothing is lost</td></tr>
+      <tr><td>Rivals' prices</td><td>Nearby hotels' public prices, beside revenue suggestions</td><td>Built; off until switched on, with the owner's data key</td><td>The prices already checked stay, with their date</td></tr>
+      <tr><td>Key cards</td><td>Cutting room keys from the PMS</td><td>Built against a stand-in; waits for the lock vendor's kit <span class="d">D27-182</span></td><td>-</td></tr>
+      <tr><td>The provisioning key</td><td>The lock on creating a hotel or a group administrator</td><td>Made once by the owner</td><td>Without it, no hotel can be created</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B5.2 -->
+  <h2 id="b5-2"><span class="n">B5.2</span>The one door out: the sending workflow</h2>
+  <p>Every message the hotel sends a guest leaves through one part of the API, and from there through one workflow in n8n, <b>PMS send · email and WhatsApp (CRS)</b>. The PMS decides what goes, to whom and when; it sends the figures as data with the exact PDF the desk prints, and n8n writes the message and sends it <span class="d">D17-87</span> <span class="d">D17-91</span> <span class="d">D18-20</span>. Since 30 September that one workflow sends everything; the PMS runs no n8n workflow of its own for guests <span class="d">D27-186</span>.</p>
+  <h3>What it needs</h3>
+  <ul>
+    <li><b>Three settings on the server</b>: the workflow's address, its secret, and the WhatsApp number's Meta id. All three, or nothing sends (<code>deploy/n8n/IMPORT.md</code>, part C).</li>
+    <li><b>The pace</b>: how many messages a minute. It is the owner's number, from what the WhatsApp account allows; until it is given, the job that sends vouchers sends nothing at all, rather than everything at once <span class="d">D21-34</span>.</li>
+    <li><b>In n8n</b>: the mailbox the guest sees (until it is filled, every email is refused with a sentence the desk sees), and the template names (B5.3).</li>
+  </ul>
+  <h3>What goes</h3>
+  <table>
+    <thead><tr><th style="width:26%">Message</th><th>When, and how</th><th style="width:20%">Decided</th></tr></thead>
+    <tbody>
+      <tr><td>The booking voucher</td><td>Once, when a booking is confirmed: by email with the PDF, and on WhatsApp with the PDF where the guest agreed. It is the confirmation; there is no separate one and no day-before reminder. Its PDF prints the guest's check-in link and QR code where the hotel has online check-in on. One per group, to the lead guest.</td><td><span class="d">D27-264</span> <span class="d">D27-235</span> <span class="d">D27-281</span> <span class="d">D22-41</span></td></tr>
+      <tr><td>The check-in code</td><td>When the guest asks for it on their page: on WhatsApp or by email</td><td><span class="d">D27-207</span></td></tr>
+      <tr><td>The tax invoice</td><td>By email only, when issued, where the hotel has switched it on and the invoice is made out to the guest; one made out to a company, an agent or a booking site only by the desk's Send invoice; never a credit note</td><td><span class="d">D27-261</span> <span class="d">D27-284</span> <span class="d">D27-313</span></td></tr>
+      <tr><td>Daily report emails</td><td>After each night audit, each report switched on, to the addresses the hotel typed; nobody gets anything until an address is typed</td><td><span class="d">D27-280</span></td></tr>
+      <tr><td>The health alert</td><td>When a connection turns red (B5.10)</td><td><span class="d">D27-276</span></td></tr>
+      <tr><td>The review request</td><td>Later</td><td><span class="d">D27-266</span></td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li><b>Bookings made before sending was first switched on</b> get their voucher too, soonest arrival first, but only between 09:00 and 21:00 hotel time; a new booking's goes at once, any hour <span class="d">D21-33</span> <span class="d">D22-42</span>.</li>
+    <li><b>The desk's Send check-in link</b> sends the voucher again <span class="d">D27-264</span>.</li>
+  </ul>
+
+  <figure class="shot" id="fig-B5-03">
+    <img src="img/B5-03.png" alt="Guest messages: Nothing is sent yet, and the bookings no message can reach">
+    <figcaption><b>Figure B5-03.</b> Guest messages on the local demo, where sending is not set up: what the desk sees before the settings are in.</figcaption>
+    <ol class="callouts">
+      <li>Why nothing is sent, in words</li>
+      <li>Bookings no message can reach</li>
+      <li>What each needs: a number or an email</li>
+    </ol>
+  </figure>
+
+  <h3>When it fails</h3>
+  <ul>
+    <li><b>A message that fails is written down with the reason</b> ("The receiver did not answer within twenty seconds", or the refusal itself) and shown on Guest messages, which the desk reads. A message never attempted is not written down at all.</li>
+    <li><b>It is tried again, the next minute, up to three times.</b> Each try carries the same message id, and the workflow remembers what it has sent for 30 days, so a try after a lost answer never reaches the guest twice.</li>
+    <li><b>A booking never fails because of a message</b>: the message is sent by a separate job, after the booking is saved.</li>
+    <li><b>n8n down, or the server's n8n unreachable</b>: every message fails the same way and Connection health turns Emails red after three failures in a row. On 16 September it was found that every deploy had been cutting n8n off from the network without anybody noticing; the service that puts its network back after a deploy was switched on then (MEMORY 279).</li>
+  </ul>
+
+  <!-- B5.3 -->
+  <h2 id="b5-3"><span class="n">B5.3</span>WhatsApp and its templates</h2>
+  <ul>
+    <li><b>One real Fidato number</b> on Meta's Cloud API talks to guests <span class="d">D27-101</span>. For now it sends through the CRS's Meta account and its already approved templates; nothing new is submitted to Meta <span class="d">D27-266</span>.</li>
+    <li><b>Only to a guest who agreed.</b> WhatsApp lets a business start a conversation only with somebody who said yes, so each booking has the tick "guest agreed to WhatsApp"; without it the guest gets email if there is an address <span class="d">D21-72</span>. A CRS booking arrives ticked (its guest agreed when booking); a booking site's does not <span class="d">D27-235</span> (2.3). The code a guest asks for goes to the booking's own phone, tick or not: asking is their own request <span class="d">D21-75</span>.</li>
+    <li><b>A guest's reply</b> is not read by the PMS: it arrives in the leads app's inbox, where the number is routed <span class="d">D27-186</span>. The step that would tell that inbox the guest is already booked is built and not used for now, so a reply can be taken there as a new enquiry (<code>deploy/n8n/IMPORT.md</code>).</li>
+  </ul>
+  <table>
+    <thead><tr><th style="width:32%">Template</th><th>For</th><th style="width:28%">State</th></tr></thead>
+    <tbody>
+      <tr><td>The CRS's <code>reservation_confirmation</code></td><td>The voucher, with its PDF</td><td>Approved; in use <span class="d">D27-266</span></td></tr>
+      <tr><td>The owner's <code>booking_confirmation</code></td><td>The voucher with a "Check in online" button</td><td>With Meta for review; switched on in n8n once Meta shows it Active <span class="d">D27-281</span></td></tr>
+      <tr><td><code>guest_page_code</code></td><td>The six-digit check-in code (Meta writes its words)</td><td>With Meta for review <span class="d">D27-285</span> (5)</td></tr>
+      <tr><td><code>review_request</code></td><td>Asking for a review after check-out</td><td>Later <span class="d">D27-266</span></td></tr>
+      <tr><td><code>booking_voucher</code></td><td>Our own voucher template</td><td>On hold <span class="d">D27-265</span> <span class="d">D27-266</span></td></tr>
+      <tr><td><code>stay_reminder</code>, <code>checkin_link</code>, <code>tax_invoice</code></td><td>-</td><td>Not used <span class="d">D27-264</span> <span class="d">D27-284</span></td></tr>
+    </tbody>
+  </table>
+  <p><b>When it fails</b>: a template Meta has not approved is refused by WhatsApp; the refusal is shown on Guest messages, and the other messages still go. Connection health judges WhatsApp apart from email, so a Meta fault turns WhatsApp red while the alert email about it still goes.</p>
+
+  <!-- B5.4 -->
+  <h2 id="b5-4"><span class="n">B5.4</span>Email</h2>
+  <p>Email goes from the mailbox the sending workflow names, the CRS's <code>crs@fidatohotels.com</code>, through the mail login already in n8n <span class="d">D27-266</span>. The PMS sends only the guest's address and the figures; the wording of each email is in the workflow, changed there without a release <span class="d">D17-88</span> <span class="d">D17-87</span>. An email kind the workflow has no wording for is refused with a sentence on Guest messages ("No email for … in this workflow"): the alert, report and invoice emails needed the workflow updated on 5 October (<code>deploy/n8n/IMPORT.md</code>, part C).</p>
+
+  <!-- B5.5 -->
+  <h2 id="b5-5"><span class="n">B5.5</span>The CRS bridge</h2>
+  <p>The CRS is the sales team's app, for the partner hotels Fidato does not own. When a salesperson books one of the group's own hotels there, the PMS must hold the room and the hotel must confirm <span class="d">D27-35</span>.</p>
+  <ol class="steps">
+    <li>Every five minutes the PMS signs in to the CRS with a read-only login of its own and reads the bookings changed since its last read. The CRS's document id is the key, so a booking read twice is one booking.</li>
+    <li>A new confirmed CRS booking for a connected hotel becomes a booking <b>Waiting for the hotel</b>, its room held, the salesperson as its sales person, its rate the CRS's quote before tax <span class="d">D27-171</span>. If the hotel is full, nothing is booked.</li>
+    <li>A booking that cannot be made by itself waits under <b>Needs attention</b> with the reason: a CRS room type with no match, no rate, a price that does not split exactly, a date before the hotel's business date.</li>
+    <li>The hotel confirms; then the one voucher goes, in the PMS's own design, sent once <span class="d">D27-171</span>.</li>
+    <li>A later change in the CRS, a cancellation included, is a note for the desk with <b>Done</b>; nothing is changed by itself <span class="d">D27-171</span>.</li>
+    <li>Later, with a workflow in the CRS's n8n: the hotel's answer (Confirmed with the PMS reference, Cancelled, or "Partly confirmed: N of M rooms") is written into the CRS's booking register, where the salesperson sees it <span class="d">D27-106</span> <span class="d">D27-174</span>. Until then, answers wait.</li>
+  </ol>
+
+  <figure class="shot" id="fig-B5-02">
+    <img src="img/B5-02.png" alt="CRS bookings: the Connection to the CRS card with the property's id, the source, the room types, the switch, and the two messages saying why nothing is read yet">
+    <figcaption><b>Figure B5-02.</b> CRS bookings on the local demo, with no CRS login: the connection card, owner and Admin only.</figcaption>
+    <ol class="callouts">
+      <li>The hotel's id in the CRS</li>
+      <li>The source CRS bookings are filed under</li>
+      <li>Match each CRS room type to one here</li>
+      <li>Read bookings from the CRS: on from the moment it is switched on</li>
+      <li>The account the reader works as at this hotel: made on the server</li>
+      <li>The CRS login is not in the server's settings</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>Setting it up</b>, once per hotel, is the owner's (<code>deploy/README.md</code>, "Connect the CRS"): a read-only login in the CRS's Firebase, its four settings on the server, the card filled and saved switched off, a script run on the server that makes the account the reader works as (a Viewer at that one hotel, with no sign-in), then the switch on, then one test booking. Only bookings made after the switch is on are read; earlier ones are typed by hand.</li>
+    <li><b>Until the CRS's n8n is changed</b>, the CRS still sends its own voucher at once when "Send the confirmation to the guest" is ticked, before the hotel confirms. So the sales team unticks it for the group's hotels, and types "PMS" as "Confirmed by" <span class="d">D27-286</span>.</li>
+  </ul>
+  <h3>When it fails</h3>
+  <ul>
+    <li>The card says why in words: the login not in the settings, a wrong password, a missing permission in the CRS, the CRS's key refusing the server.</li>
+    <li>Nothing is booked while the read fails; the salesperson must phone the hotel. Connection health turns the CRS bridge red when a read fails or nothing has been read for 30 minutes.</li>
+    <li>Switching the card off stops the reading at the next turn; bookings already made stay.</li>
+  </ul>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <ul>
+      <li><b>The PMS reads; it never trusts a push from the CRS.</b> The plan of 27 September had the CRS's webhook call n8n. But the CRS is a browser app with no server, and its webhook key is readable by every CRS user, so a call could not prove it came from the CRS. Reading with the PMS's own read-only login proves it (<code>src/modules/crs/MODULE.md</code>).</li>
+      <li><b>Waiting, not confirmed</b>: the CRS has no availability of its own, so the hotel's yes is what makes it real; the room is held meanwhile so nobody else sells it <span class="d">D27-35</span>.</li>
+      <li><b>One voucher, once</b>, whoever made the booking, so a guest is never sent two <span class="d">D27-35</span> <span class="d">D27-99</span>.</li>
+    </ul>
+  </div>
+
+  <!-- B5.6 -->
+  <h2 id="b5-6"><span class="n">B5.6</span>The booking sites, through SU</h2>
+  <p>SU (Su channel manager) is the wire to Agoda, Booking.com, Expedia, Goibibo and the rest <span class="d">D17-30</span> <span class="d">D17-66</span>. Built in four parts, all done: SU's login, the hotel's content, rooms left and prices out, bookings in <span class="d">D27-178</span>. It is not connected: nothing reaches SU or any site until the owner has SU's keys in the server's settings, the hotel is switched on, and the owner says yes to the first live send.</p>
+  <ul>
+    <li><b>Bookings come in by push</b>: SU sends each one to the API's own door the moment the site takes it <span class="d">D17-79</span>.</li>
+    <li><b>No room free</b>: the booking is not made, SU is told it was received, 0 rooms left goes at once for that night, and the GM sees it as "Refused: no room free" to cancel on the site and call the guest <span class="d">D17-80</span>.</li>
+    <li><b>Waits for a person</b>: nights at different prices, a change to a booking, a request to book, a booking not in rupees <span class="d">D27-183</span>. A cancellation cancels by itself under the site's policy, unless the guest has arrived <span class="d">D27-183</span> <span class="d">D17-44</span>.</li>
+    <li><b>Card numbers are never kept</b>: dropped on arrival, never stored, logged or shown <span class="d">D17-83</span>.</li>
+    <li><b>Commission</b>: SU's figure when it sends one, else the source's percentage, else a dash <span class="d">D17-84</span>.</li>
+    <li><b>Who</b>: the SU setup is the owner's and an Admin's; the GM sees the bookings and deals with the refused ones <span class="d">D17-85</span> <span class="d">D27-183</span>. Each hotel is switched on separately <span class="d">D17-45</span>.</li>
+  </ul>
+
+  <!-- B5.7 -->
+  <h2 id="b5-7"><span class="n">B5.7</span>Outside tills</h2>
+  <p>A restaurant that runs its own till can charge a guest's meal to their room through four calls to the API (<code>docs/POS-INTEGRATION.md</code>): which rooms may be charged, charge this bill, did my bill land, and void it. The hotel's own restaurant does not need this: it is part of the PMS (A8).</p>
+  <ul>
+    <li><b>A key per outlet</b>, made on the server (<code>npm run pos:outlet</code>) and shown once. Only its fingerprint is kept, so it cannot be read back from the database or a backup; a lost key is replaced and the old one stops at once. The key belongs to one outlet at one hotel, and is refused where the hotel's restaurant module is off.</li>
+    <li><b>The till's own bill number makes a retry safe</b>: the same number sent again returns the first charge, never a second.</li>
+    <li><b>The PMS dates every charge</b> with the hotel's business date; the till never sends a date.</li>
+    <li><b>A void is a cancelling line</b>, never a deletion; refusals are recorded with their reason. Charges to rooms (A8.1) shows everything an outside till sent, refusals included.</li>
+    <li><b>Two guests in one room</b> on a changeover day: the PMS will not guess; it asks the till which guest.</li>
+  </ul>
+  <p><b>When it fails</b>: a till that timed out asks "did my last request land?" instead of sending again; the answer "not received" means send it, "posted" means it is on the bill.</p>
+  <div class="box open">
+    <h4>Said differently in the documents</h4>
+    <p>The worked example in <code>docs/POS-INTEGRATION.md</code> sends the till's calls to <code>https://pms.fidatohotels.com/api/pos</code>. That address is the website, which answers every path with its own page; the API, and the till's door, is <code>api.fidatohotels.com</code>. A till set up from the example would get a web page back.</p>
+  </div>
+
+  <!-- B5.8 -->
+  <h2 id="b5-8"><span class="n">B5.8</span>The guest's ways in: codes, Google, DigiLocker, ID photos</h2>
+  <ul>
+    <li><b>A code</b> to the booking's phone on WhatsApp or to its email, or <b>Continue with Google</b>, where the Google account's verified email must be the booking's <span class="d">D27-207</span>. Nothing is sent until the guest presses a button <span class="d">D27-210</span>. During the stay a guest may type the room and phone number; the code goes only to the booking's own number, and only when both match <span class="d">D27-235</span> (2.4).</li>
+    <li><b>DigiLocker</b>, through API Setu as a DigiLocker partner: prepared and switched off until the partner keys and the lawyer's answers arrive <span class="d">D27-235</span> (2.5). When on, the DigiLocker account's mobile must be the booking's own number; only the masked Aadhaar number and the name are kept; the ID waits for the desk like any other submission. A fuller ID number already on file is kept <span class="d">D27-247</span>.</li>
+    <li><b>ID photos</b> go through a second workflow in n8n, with its own secret, into Google Drive: one encrypted file per upload, opened only with that hotel's password; the server keeps nothing <span class="d">D27-208</span> <span class="d">D27-209</span> <span class="d">D27-211</span>. A hotel with no password set is not offered the upload. A failed delete is shown to the owner, Admin and GM with "Try again".</li>
+  </ul>
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>A hotel's ID photo password cannot be recovered.</b> A changed password does not open earlier files, and a lost one means those photos can never be opened. The owner accepted this: no master password, no rotation <span class="d">D27-211</span>. Keep each hotel's password in the password manager.</li>
+    </ul>
+  </div>
+
+  <!-- B5.9 -->
+  <h2 id="b5-9"><span class="n">B5.9</span>What the PMS only reads: the leads app and rivals' prices</h2>
+  <ul>
+    <li><b>The leads app</b> (the market-to-revenue app) keeps running on its own; the PMS shows its enquiries, conversations and spend, read live every time and never copied, with a link to reply there <span class="d">D27-100</span> <span class="d">D27-170</span>. It reads with the server's own Google credential, borrowing a short-lived token, because the organisation allows no keys <span class="d">D27-186</span>. At most 5,000 reads a day, since the app's free plan is shared with the app itself; at the cap the screen says so and reads nothing. A guest erased in the app disappears from the PMS's view too; their stays and bills stay <span class="d">D27-108</span>.</li>
+    <li><b>Rivals' prices</b>: a search service (SerpApi) reads Google Hotels' lowest public price per night for nearby hotels, 30 nights ahead, twice a week, for a hotel switched on <span class="d">D27-270</span>. With the switch off, the prices already checked stay visible with their date <span class="d">D27-272</span>.</li>
+  </ul>
+
+  <!-- B5.10 -->
+  <h2 id="b5-10"><span class="n">B5.10</span>Watching the connections</h2>
+  <figure class="shot" id="fig-B5-01">
+    <img src="img/B5-01.png" alt="Connection health on the local demo: Emails, WhatsApp, CRS bridge, Firebase sign-in, Backups and Rivals' prices, each Not set up">
+    <figcaption><b>Figure B5-01.</b> Connection health (Settings, Modules and connections). On the local demo nothing is set up.</figcaption>
+    <ol class="callouts">
+      <li>Emails: the sending workflow</li>
+      <li>WhatsApp, judged apart from email</li>
+      <li>The CRS bridge</li>
+      <li>Firebase sign-in: the server's own</li>
+      <li>Backups: the server's own</li>
+      <li>Each one's state: green, amber, red, or Not set up</li>
+    </ol>
+  </figure>
+  <table>
+    <thead><tr><th style="width:22%">Connection</th><th>Red when</th></tr></thead>
+    <tbody>
+      <tr><td>Emails, WhatsApp</td><td>The last three tries all failed.</td></tr>
+      <tr><td>CRS bridge</td><td>The last read failed, or nothing has been read for 30 minutes (the reader runs every five).</td></tr>
+      <tr><td>Firebase sign-in</td><td>It did not answer.</td></tr>
+      <tr><td>Backups</td><td>The last backup failed, or there has been none for 26 hours. Amber when backed up but on the server's disk only.</td></tr>
+      <tr><td>Rivals' prices</td><td>Never red; amber when switched on and nothing kept yet.</td></tr>
+    </tbody>
+  </table>
+  <p>When a connection turns red, one email goes to the address in the server's settings, at most once an hour per connection; none while Emails itself is red, because that email could not go <span class="d">D27-276</span> (3). The owner, an Admin and the GM see the page. The thresholds (three failures, 30 minutes, 26 hours) are the ones built; the owner has been asked to confirm them (<code>src/modules/connections-health/MODULE.md</code>).</p>
+
+  <!-- B5.11 -->
+  <h2 id="b5-11"><span class="n">B5.11</span>The provisioning key</h2>
+  <p>Creating a hotel makes its invoice series and the home of all its bills, and its code appears in every address and every invoice number it will ever issue; the code cannot be changed afterwards (<code>deploy/README.md</code>). So it needs more than an owner's sign-in: it needs the <b>provisioning key</b>, and so does making somebody a group administrator.</p>
+  <ul>
+    <li><b>The key is never in the database.</b> Only its fingerprint is, so a copy of the database or a backup cannot be used to create anything (migration 029). It is not in the server's settings either: the person creating the hotel types it on the screen, so no ordinary session can create a hotel.</li>
+    <li><b>The owner makes it once</b> on their own computer and stores its fingerprint on the server; the key itself goes straight into the owner's password manager and is never sent to anyone (<code>docs/go-live/RELEASE-3OCT.md</code>, steps F5 and F6) <span class="d">D21-54</span>.</li>
+    <li><b>Without it</b>, the database refuses to create a hotel, whatever the screen shows. A server with no key at all cannot have a hotel created on it by anyone.</li>
+  </ul>
+
+  <h3>Risks, and what was left out</h3>
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>n8n carries every message</b>, the mailbox login and the WhatsApp login. It is open to the internet behind its own sign-in <span class="d">D21-96</span>; two-step sign-in there matters, and its encryption key is a master password (<code>HANDOVER.md</code> § 5).</li>
+      <li><b>Selling the system with n8n inside</b>: n8n's licence allows "your own internal business purposes"; a copy Influvate sells may need n8n's commercial licence. A question for the lawyer (<code>docs/PLATFORM-PLAN.md</code>, R8).</li>
+      <li><b>A guest's WhatsApp reply</b> reaches the leads app's inbox as a new enquiry until the "booked guest" step is used (B5.3).</li>
+    </ul>
+  </div>
+  <ul>
+    <li><b>Our own WhatsApp templates</b>: on hold while the CRS's approved ones are used <span class="d">D27-266</span>.</li>
+    <li><b>Online check-in</b> is on for every hotel by default; a hotel can switch it off <span class="d">D27-281</span>.</li>
+    <li><b>The leads app moved into the PMS</b>: withdrawn; it keeps running on its own <span class="d">D27-100</span>.</li>
+    <li><b>A payment gateway</b>: excluded for now <span class="d">D17-57</span> <span class="d">D25-36</span>.</li>
+  </ul>
+</section>

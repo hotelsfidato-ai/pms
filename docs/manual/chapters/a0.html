@@ -16,38 +16,18 @@
     <li>Open the browser and go to <code>pms.fidatohotels.com</code>.</li>
     <li>Type your email in <span class="ui">Email</span>.</li>
     <li>Type your password in <span class="ui">Password</span>. To see what you typed, click the eye at the end of the box (<span class="ui">Show password</span>). Click it again to hide it. It starts hidden because the desk screen faces the lobby.</li>
-    <li>Click <span class="ui">Sign in</span>.</li>
-    <li>For a moment the screen says <span class="msg">“Checking your session…”</span>. Then your first screen opens (A0.2).</li>
+    <li>Click <span class="ui">Sign in</span>. A small spinner turns on the button while it works. Then your first screen opens (A0.2).</li>
   </ol>
+  <p>When you open the system on a device where you are already signed in, the screen says <span class="msg">“Checking your session…”</span> for a moment, then opens where you were.</p>
 
   <figure class="shot" id="fig-A0-1">
-    <div class="shot-plan">
-      <p class="shot-id">Screenshot A0-1 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/signin</code>, signed out (account menu, <span class="ui">Sign out</span> first)</dd>
-        <dt>Sign in as</dt><dd>nobody</dd>
-        <dt>Window</dt><dd>1280 × 800, desk</dd>
-        <dt>Arrows</dt><dd>1 → the Email box (right half); 2 → the eye at the right end of the Password box; 3 → the orange Sign in button; 4 → the line “Trouble signing in?” at the foot of the dark left panel</dd>
-        <dt>Before taking it</dt><dd>The local build shows a “Development only” block of test sign-in buttons under the form. Crop it out or cover it: the live system does not have it.</dd>
-        <dt>File</dt><dd><code>img/A0-1.png</code></dd>
-      </dl>
-    </div>
+    <img src="img/A0-1.png" alt="The sign-in page at a desk: the dark Fidato Hotels panel on the left, the Sign in form on the right">
     <figcaption><b>Figure A0-1.</b> The sign-in page at a desk.</figcaption>
     <ol class="callouts"><li>Email</li><li>Show password (the eye)</li><li>Sign in</li><li>Who to ask when you cannot get in</li></ol>
   </figure>
 
-  <figure class="shot" id="fig-A0-2">
-    <div class="shot-plan phone">
-      <p class="shot-id">Screenshot A0-2 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/signin</code>, signed out</dd>
-        <dt>Sign in as</dt><dd>nobody</dd>
-        <dt>Window</dt><dd>375 × 812, phone</dd>
-        <dt>Arrows</dt><dd>1 → the dark “Fidato Hotels” band at the top; 2 → Email and Password; 3 → Sign in; 4 → the “Trouble signing in?” line under the form</dd>
-        <dt>Before taking it</dt><dd>Crop the “Development only” block, as in A0-1.</dd>
-        <dt>File</dt><dd><code>img/A0-2.png</code></dd>
-      </dl>
-    </div>
+  <figure class="shot phone" id="fig-A0-2">
+    <img src="img/A0-2.png" alt="The sign-in page on a phone: the Fidato Hotels band at the top, then Email, Password and Sign in">
     <figcaption><b>Figure A0-2.</b> The same page on a phone. The form comes first.</figcaption>
     <ol class="callouts"><li>The group's band</li><li>Email and password</li><li>Sign in</li><li>Who to ask</li></ol>
   </figure>
@@ -57,7 +37,7 @@
     <ul>
       <li><span class="msg">“That email and password do not match.”</span> The message is the same whether the email or the password is wrong, so check both. (A different message for each would tell a stranger which emails belong to staff.)</li>
       <li><span class="msg">“No active staff record for this account.”</span> Your password was right, but your account is switched off or not set up at any property. Ask your general manager.</li>
-      <li><b>Forgot your password?</b> The page says it: <span class="msg">“Your general manager can reset your password from the People screen.”</span></li>
+      <li><b>Forgot your password?</b> The page says it: <span class="msg">“Trouble signing in? Your general manager can reset your password from the People screen.”</span> (On a phone the line is under the form and stops at “reset your password”.)</li>
       <li><b>“Set a longer password”.</b> If your role was raised to owner, Admin or General Manager and your password is shorter than 10 characters, this box appears right after you sign in. It cannot be closed. Type a new password and click <span class="ui">Set it</span>. Everybody else needs at least 8 characters.</li>
       <li>The first sign-in on a device needs the internet. After that, if the line drops, a reload keeps you signed in (A0.8).</li>
     </ul>
@@ -97,7 +77,7 @@
     <li>The message <span class="msg">“You will start on Rooms. From your next sign-in, on any device.”</span> confirms it.</li>
   </ol>
   <p>Some people have no Dashboard, because it shows the hotel's revenue and their day starts at their own work.
-     They land on the top of their own menu: housekeeping on <span class="ui">Housekeeping</span>, the chef and the kitchen manager on <span class="ui">Kitchen</span>,
+     Unless they chose Rooms or Calendar themselves, they land on their own work: housekeeping on <span class="ui">Housekeeping</span>, the chef and the kitchen manager on <span class="ui">Kitchen</span>,
      the waiter (Till Operator) on <span class="ui">Tables</span>, the Inventory Manager on the <span class="ui">Store</span>.</p>
 
   <h3>The Start here card</h3>
@@ -110,17 +90,7 @@
   </ol>
 
   <figure class="shot" id="fig-A0-3">
-    <div class="shot-plan">
-      <p class="shot-id">Screenshot A0-3 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/</code> (the Dashboard)</dd>
-        <dt>Sign in as</dt><dd>Reception (test sign-in button)</dd>
-        <dt>Window</dt><dd>1280 × 800, desk</dd>
-        <dt>Arrows</dt><dd>1 → the “Start here” heading; 2 → the line “Check a guest in”; 3 → the Got it button at the card's top right</dd>
-        <dt>Before taking it</dt><dd>If the card was put away, bring it back from the account menu first.</dd>
-        <dt>File</dt><dd><code>img/A0-3.png</code></dd>
-      </dl>
-    </div>
+    <img src="img/A0-3.png" alt="Reception's Dashboard with the Start here card: five jobs, from Take a booking to Count and close the cash drawer, and Got it">
     <figcaption><b>Figure A0-3.</b> Reception's Start here card on the Dashboard.</figcaption>
     <ol class="callouts"><li>Start here</li><li>One job: where it opens and how it ends</li><li>Got it</li></ol>
   </figure>
@@ -138,13 +108,14 @@
   <table>
     <thead><tr><th style="width:32%">Part</th><th>What it does</th></tr></thead>
     <tbody>
-      <tr><td>The menu (dark, on the left)</td><td>Your working menu, in sections such as <span class="ui">Front desk</span> and <span class="ui">Bookings</span>. Click a section's name to fold or open it; the computer remembers. The section holding the screen you are on never folds. <span class="ui">Collapse</span> at the foot shrinks the menu to icons.</td></tr>
+      <tr><td>The menu (dark, on the left)</td><td>Your working menu, in sections such as <span class="ui">Front desk</span> and <span class="ui">Bookings</span>. Click a section's name to fold or open it; the computer remembers. A folded section shows how many screens it holds. The section holding the screen you are on never folds. <span class="ui">Collapse</span> at the foot shrinks the menu to icons.</td></tr>
       <tr><td><span class="ui">Find a screen…</span> (top)</td><td>Finds any screen you may open, and guests and bookings (A0.6). <kbd>Ctrl</kbd> <kbd>K</kbd> opens it from anywhere.</td></tr>
       <tr><td>The space switcher (top right)</td><td><span class="ui">Front office</span> · <span class="ui">Restaurant</span> · <span class="ui">Settings</span>. Only shown to people who have two or more (A0.4).</td></tr>
       <tr><td>The bell</td><td>Your notifications: things the system or a colleague wants you to know.</td></tr>
       <tr><td>Your name and role</td><td>The account menu: your property, where you start, Start here, and <span class="ui">Sign out</span>.</td></tr>
-      <tr><td>A yellow line under the top bar</td><td>Only when the hotel's business date is behind the real date (A1.1).</td></tr>
-      <tr><td>The page</td><td>The heading says which screen this is. Many pages show <span class="msg">“Business date · Sunday, 4 October 2026”</span> just above the heading.</td></tr>
+      <tr><td>A yellow line under the top bar</td><td>Only when the hotel's business date is behind the real date, on every screen, with a link to <span class="ui">Night audit</span> for those who may open it (A1.1).</td></tr>
+      <tr><td>An orange line under the top bar</td><td>Only for the owner, an Admin or the GM, while they walk through <span class="ui">Set up this hotel</span>: it names the step and has <span class="ui">Back to setup</span> (A17.2).</td></tr>
+      <tr><td>The page</td><td>The heading says which screen this is. The Dashboard, Rooms and Calendar show the business date just above it, for example <span class="msg">“Business date · Friday, 9 October 2026”</span>, and the property's name just under it.</td></tr>
     </tbody>
   </table>
 
@@ -155,26 +126,16 @@
         <dt>Open</dt><dd><code>/</code> (the Dashboard)</dd>
         <dt>Sign in as</dt><dd>General Manager</dd>
         <dt>Window</dt><dd>1280 × 800, desk</dd>
-        <dt>Arrows</dt><dd>1 → the dark menu, left; 2 → the “Find a screen…” box with its Ctrl K mark, top; 3 → the Front office · Restaurant · Settings switcher, top right; 4 → the bell; 5 → the name and role, far right; 6 → “Business date · …” above the Dashboard heading; 7 → Collapse at the foot of the menu; 8 → the yellow business-date line under the top bar, only if it shows</dd>
-        <dt>File</dt><dd><code>img/A0-4.png</code></dd>
+        <dt>Arrows</dt><dd>1 → the dark menu, left (its FRONT DESK section); 2 → the “Find a screen…” box with its Ctrl K mark, top; 3 → the Front office · Restaurant · Settings switcher, top right; 4 → the bell; 5 → the name and role, far right; 6 → “Business date · …” above the Dashboard heading; 7 → Collapse at the foot of the menu (as in <code>shots/a0.mjs</code>)</dd>
+        <dt>File</dt><dd><code>img/A0-4.png</code> - not in <code>img/</code> yet: the other A0 pictures were taken, this one was not</dd>
       </dl>
     </div>
     <figcaption><b>Figure A0-4.</b> The frame every screen shares.</figcaption>
-    <ol class="callouts"><li>Menu</li><li>Find a screen</li><li>Space switcher</li><li>Notifications</li><li>Account menu</li><li>Business date and heading</li><li>Collapse the menu</li><li>Business date behind (only sometimes)</li></ol>
+    <ol class="callouts"><li>Menu</li><li>Find a screen</li><li>Space switcher</li><li>Notifications</li><li>Account menu</li><li>Business date and heading</li><li>Collapse the menu</li></ol>
   </figure>
 
   <figure class="shot" id="fig-A0-5">
-    <div class="shot-plan">
-      <p class="shot-id">Screenshot A0-5 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/</code>, then click the name at the top right</dd>
-        <dt>Sign in as</dt><dd>General Manager</dd>
-        <dt>Window</dt><dd>1280 × 800, desk</dd>
-        <dt>Arrows</dt><dd>1 → name and email at the top of the menu; 2 → Property; 3 → Start on, with its tick; 4 → Sign out at the foot</dd>
-        <dt>Before taking it</dt><dd>Crop or cover the “Development only · view as” part of the menu; the live system does not have it.</dd>
-        <dt>File</dt><dd><code>img/A0-5.png</code></dd>
-      </dl>
-    </div>
+    <img src="img/A0-5.png" alt="The General Manager's account menu open over the Dashboard: name and email, Property, Start on with Dashboard ticked, Sign out">
     <figcaption><b>Figure A0-5.</b> The account menu.</figcaption>
     <ol class="callouts"><li>Who is signed in</li><li>Property</li><li>Start on</li><li>Sign out</li></ol>
   </figure>
@@ -208,37 +169,19 @@
     <li>Click the space's name. The highlighted name is the space you are in.</li>
     <li>In Settings, <span class="ui">Back to front office</span> at the top of the menu also takes you back.</li>
   </ol>
-  <p>In Settings, an entry with a small arrow (↗) opens a Front office screen, for example <span class="ui">Room types</span>. It takes you out of Settings.</p>
+  <p>In Settings, an entry with a small arrow (↗) opens a Front office screen, for example <span class="ui">Rates</span> or <span class="ui">Cancellation terms</span>. It takes you out of Settings.</p>
+  <p>The Restaurant's own menu section is <span class="ui">Point of sale</span>. The waiter, the chef and the kitchen manager have the Restaurant only, so their whole working menu is there: <span class="ui">Guest requests</span> as well, and for the kitchen manager the <span class="ui">Store</span>.</p>
 
   <figure class="shot" id="fig-A0-6">
-    <div class="shot-plan">
-      <p class="shot-id">Screenshot A0-6 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/settings/property/profile</code> (click Settings in the switcher)</dd>
-        <dt>Sign in as</dt><dd>Owner</dd>
-        <dt>Window</dt><dd>1280 × 800, desk</dd>
-        <dt>Arrows</dt><dd>1 → the switcher with Settings highlighted; 2 → “Back to front office” at the top of the menu; 3 → the group names (Property, Rooms, Rates and tax …); 4 → an entry with the ↗ mark, under Rooms</dd>
-        <dt>File</dt><dd><code>img/A0-6.png</code></dd>
-      </dl>
-    </div>
+    <img src="img/A0-6.png" alt="The Settings space for the owner: Settings highlighted in the switcher, Back to front office, the Property group, and the arrow mark beside Rates">
     <figcaption><b>Figure A0-6.</b> The Settings space and its own menu.</figcaption>
-    <ol class="callouts"><li>The switcher</li><li>Back to front office</li><li>Settings' groups</li><li>A link that leaves Settings (↗)</li></ol>
+    <ol class="callouts"><li>The switcher</li><li>Back to front office</li><li>Settings' groups</li><li>A link that leaves Settings (↗), here beside Rates</li></ol>
   </figure>
 
   <figure class="shot" id="fig-A0-7">
-    <div class="shot-plan">
-      <p class="shot-id">Screenshot A0-7 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/pos/5EL/tables</code> (click Restaurant in the switcher)</dd>
-        <dt>Sign in as</dt><dd>General Manager</dd>
-        <dt>Window</dt><dd>1280 × 800, desk</dd>
-        <dt>Arrows</dt><dd>1 → the switcher with Restaurant highlighted; 2 → the Restaurant menu (Tables, Table bookings, Till …)</dd>
-        <dt>Before taking it</dt><dd>If Restaurant is missing from the switcher, the test hotel's POS module is off.</dd>
-        <dt>File</dt><dd><code>img/A0-7.png</code></dd>
-      </dl>
-    </div>
+    <img src="img/A0-7.png" alt="The Restaurant space for the General Manager: Restaurant highlighted in the switcher, the Point of sale menu, and Tables">
     <figcaption><b>Figure A0-7.</b> The Restaurant space. Its addresses start with <code>/pos/</code>.</figcaption>
-    <ol class="callouts"><li>The switcher</li><li>The Restaurant's menu</li></ol>
+    <ol class="callouts"><li>The switcher</li><li>The Restaurant's menu, Point of sale</li></ol>
   </figure>
 
   <div class="box watch">
@@ -262,7 +205,7 @@
 
   <h3>If you work at more than one property</h3>
   <ul>
-    <li><b>Account menu.</b> Under <span class="ui">Property</span>, each property you may work in is listed; a tick marks the chosen one.</li>
+    <li><b>Account menu.</b> Under <span class="ui">Property</span>, each property you may work in is listed; a tick marks the chosen one. Click another and <b>the same screen opens for that hotel</b>: the address, the lists and the business date change together. On one record (a guest's bill, one equipment item) you land on that hotel's matching list instead (In house, Equipment). If you may not open that screen at the other hotel, its first screen opens. On the Dashboard and in Settings, the screen stays and the property changes.</li>
     <li><b>Dashboard.</b> A <span class="ui">Property</span> box at the top right picks which hotel the Dashboard's figures are for. It changes the Dashboard only; the rest of the system stays on the property it was on. The four tiles at the top then open that hotel's lists (A1.2).</li>
     <li><b>The owner and Admin.</b> <span class="ui">All properties</span>, in the <span class="ui">Across properties</span> section of the menu, shows every property on one page. Click a property's name to open its Rooms.</li>
   </ul>
@@ -278,11 +221,6 @@
   </ul>
   <p>The owner and group administrators make a test hotel on <span class="ui">Properties</span>, under the real hotel: <span class="ui">Make a test hotel</span>. Once it is made, the same place has <span class="ui">Open</span> (go to it), <span class="ui">Reset</span> (deletes everything done in it, keeping its setup and its people; type <b>RESET</b> to go on) and <span class="ui">Re-copy setup</span> (brings the real hotel's rooms, rates, menu and settings again, deleting the test activity first; type <b>RE-COPY</b>).</p>
 
-  <div class="box open">
-    <h4>Being checked before this page is final</h4>
-    <p>What picking a property in the account menu changes on the screens is being confirmed with the owner. Until then, use the Dashboard's tiles or All properties to move to another property.</p>
-  </div>
-
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
@@ -292,7 +230,9 @@
   </div>
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The property is in the address so a booking can be linked to and a task survives switching. The role read for the property in the address: <span class="d">D26-13</span>. All properties on one page for the owner, in place of the table that was at the Dashboard's foot: <span class="d">D27-243</span>. Test hotels inside the live system, one per real hotel, kept apart from everything real: <span class="d">D27-296</span>.</p>
+    <p>The property is in the address so a booking can be linked to and a task survives switching. The role read for the property in the address: <span class="d">D26-13</span>. All properties on one page for the owner, in place of the table that was at the Dashboard's foot: <span class="d">D27-243</span>.
+       Picking a property opens the same screen for it, address, lists and date together: <span class="d">D27-271</span>; from a record, that hotel's matching list: <span class="d">D27-273</span>.
+       Test hotels inside the live system, one per real hotel, kept apart from everything real: <span class="d">D27-296</span>.</p>
   </div>
 
   <!-- A0.6 -->
@@ -303,45 +243,27 @@
     <li>Type a word: the screen's name, or the word you would say. Old and trade words work too: <span class="msg">folio</span> finds <span class="ui">Folios</span>, <span class="msg">day end</span> finds <span class="ui">Close restaurant day</span>, <span class="msg">floor</span> finds <span class="ui">Tables</span>.</li>
     <li>Move with the arrow keys <kbd>↑</kbd> <kbd>↓</kbd> and press <kbd>Enter</kbd>, or click the line.</li>
   </ol>
-  <p>Each line shows the screen's section on the right. A screen that is yours to open but not in your menu says <span class="msg">“Not in your menu”</span>. A service not built yet says <span class="msg">“Not built yet”</span>.</p>
+  <p>Each line shows the screen's section on the right (not on a phone). A screen that is yours to open but not in your menu says <span class="msg">“Not in your menu”</span>. A service not built yet says <span class="msg">“Not built yet”</span>.</p>
 
   <h3>To find a guest or a booking</h3>
   <ol class="steps">
     <li>Open Find a screen. If you work with bookings, the box says <span class="msg">“Find a screen, a guest or a booking”</span>.</li>
     <li>Type at least <b>three letters</b> of the guest's name or of the booking reference, or at least <b>four digits</b> of their phone number.</li>
-    <li>Up to eight bookings appear under <span class="ui">Bookings</span>, below the screens: guests in the house first, then those coming, then those gone. Each line shows the reference, the dates and the room.</li>
+    <li>Up to eight bookings appear under <span class="ui">Bookings</span>, below the screens: guests in the house first, then those coming, then those gone. Each line shows the guest, the reference, the dates and the room, and its status on the right (<span class="ui">Due in</span>, <span class="ui">In house</span> …).</li>
     <li>Click one. It opens in <span class="ui">All bookings</span> with its panel open.</li>
   </ol>
-  <p>If nothing matches: <span class="msg">“Nothing called that. Try a shorter word, or what a guest would call it.”</span></p>
+  <p>If nothing matches: <span class="msg">“Nothing called that. Try a shorter word, or what a guest would call it.”</span> (For somebody who does not work with bookings it says <span class="msg">“No screen called that”</span>.)</p>
 
   <figure class="shot" id="fig-A0-8">
-    <div class="shot-plan">
-      <p class="shot-id">Screenshot A0-8 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd>any page, e.g. <code>/</code>; press Ctrl K and type <code>audit</code></dd>
-        <dt>Sign in as</dt><dd>Reception</dd>
-        <dt>Window</dt><dd>1280 × 800, desk</dd>
-        <dt>Arrows</dt><dd>1 → the search box; 2 → a result marked “Not in your menu”; 3 → its section name at the right of the line; 4 → the Enter mark on the highlighted line</dd>
-        <dt>File</dt><dd><code>img/A0-8.png</code></dd>
-      </dl>
-    </div>
+    <img src="img/A0-8.png" alt="Find a screen open over Reception's Dashboard with audit typed: Night audit and Night audit report, each Not in your menu, under Reports">
     <figcaption><b>Figure A0-8.</b> Find a screen, finding a screen that is not in the menu.</figcaption>
     <ol class="callouts"><li>Type here</li><li>Not in your menu, still yours to open</li><li>The section it belongs to</li><li>Enter opens the highlighted line</li></ol>
   </figure>
 
   <figure class="shot" id="fig-A0-9">
-    <div class="shot-plan">
-      <p class="shot-id">Screenshot A0-9 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd>any page; press Ctrl K and type the first three letters of a test guest on today's Arrivals</dd>
-        <dt>Sign in as</dt><dd>Reception</dd>
-        <dt>Window</dt><dd>1280 × 800, desk</dd>
-        <dt>Arrows</dt><dd>1 → the “Bookings” heading in the list; 2 → one booking line (name, reference, dates, room); 3 → its status word at the right</dd>
-        <dt>File</dt><dd><code>img/A0-9.png</code></dd>
-      </dl>
-    </div>
+    <img src="img/A0-9.png" alt="Find a screen with Bho typed: under Bookings, Lata Bhosale, her reference, 9 Oct 2026 to 11 Oct 2026, Room 204, Due in">
     <figcaption><b>Figure A0-9.</b> Find a screen, finding a guest's booking.</figcaption>
-    <ol class="callouts"><li>Bookings found</li><li>The booking: reference, dates, room</li><li>Its status</li></ol>
+    <ol class="callouts"><li>Bookings found</li><li>The booking: guest, reference, dates, room</li><li>Its status</li></ol>
   </figure>
 
   <div class="box watch">
@@ -373,50 +295,22 @@
   <p class="muted">A tablet turned sideways is often 1024 px or wider, and then looks like the desk.</p>
   <p>Two things follow you to every device, because they are saved on the server: where you start (A0.2), and whether Rooms and Calendar are grouped by <span class="ui">Room type</span> or <span class="ui">Floor</span> (A1.7).</p>
 
-  <figure class="shot" id="fig-A0-10">
-    <div class="shot-plan phone">
-      <p class="shot-id">Screenshot A0-10 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/</code> (the Dashboard)</dd>
-        <dt>Sign in as</dt><dd>General Manager</dd>
-        <dt>Window</dt><dd>375 × 812, phone</dd>
-        <dt>Arrows</dt><dd>1 → the menu button (☰), top left; 2 → the magnifying glass; 3 → the bell; 4 → the round avatar, top right</dd>
-        <dt>File</dt><dd><code>img/A0-10.png</code></dd>
-      </dl>
-    </div>
+  <figure class="shot phone" id="fig-A0-10">
+    <img src="img/A0-10.png" alt="The Dashboard on a phone: the menu button, the magnifying glass, the bell and the round avatar across the top">
     <figcaption><b>Figure A0-10.</b> The top bar on a phone.</figcaption>
     <ol class="callouts"><li>Open the menu</li><li>Find a screen</li><li>Notifications</li><li>Account menu</li></ol>
   </figure>
 
-  <figure class="shot" id="fig-A0-11">
-    <div class="shot-plan phone">
-      <p class="shot-id">Screenshot A0-11 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/</code>, then tap the menu button (☰)</dd>
-        <dt>Sign in as</dt><dd>General Manager</dd>
-        <dt>Window</dt><dd>375 × 812, phone</dd>
-        <dt>Arrows</dt><dd>1 → the Front office · Restaurant · Settings switcher at the top of the drawer; 2 → the menu; 3 → Find a screen at the foot of the drawer</dd>
-        <dt>File</dt><dd><code>img/A0-11.png</code></dd>
-      </dl>
-    </div>
+  <figure class="shot phone" id="fig-A0-11">
+    <img src="img/A0-11.png" alt="The menu drawer open on a phone: Front office, Restaurant and Settings at the top, the menu, Find a screen at the foot">
     <figcaption><b>Figure A0-11.</b> The menu drawer on a phone.</figcaption>
     <ol class="callouts"><li>The space switcher</li><li>The menu</li><li>Find a screen</li></ol>
   </figure>
 
-  <figure class="shot" id="fig-A0-12">
-    <div class="shot-plan phone">
-      <p class="shot-id">Screenshot A0-12 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/h/5EL/arrivals</code></dd>
-        <dt>Sign in as</dt><dd>Reception</dd>
-        <dt>Window</dt><dd>375 × 812, phone</dd>
-        <dt>Arrows</dt><dd>1 → the Today / Upcoming switch; 2 → a card's room number and status; 3 → the guest and the reference; 4 → the labelled rows under them</dd>
-        <dt>Before taking it</dt><dd>Needs at least one arrival on the test hotel's business date.</dd>
-        <dt>File</dt><dd><code>img/A0-12.png</code></dd>
-      </dl>
-    </div>
+  <figure class="shot phone" id="fig-A0-12">
+    <img src="img/A0-12.png" alt="Arrivals on a phone as cards: Today and Upcoming, then room 201 In house, Tanvi Bhide, and the rows Type, Plan, Source, Departure, Nights, Rate">
     <figcaption><b>Figure A0-12.</b> A list on a phone is always cards.</figcaption>
-    <ol class="callouts"><li>Today or the next fortnight</li><li>Room and status</li><li>Guest and reference</li><li>The rest, one per line</li></ol>
+    <ol class="callouts"><li>Today or the next fortnight (Upcoming)</li><li>Room and status</li><li>Guest and reference</li><li>The rest, one per line</li></ol>
   </figure>
 
   <div class="box watch">
@@ -454,46 +348,29 @@
     <tbody>
       <tr><td>Held, sent later</td><td>Marking rooms clean or inspected, housekeeping assignments, work orders, marking a guest VIP, restaurant orders and the kitchen, a dish on or off the menu, a function enquiry.</td></tr>
       <tr><td>Held, with a warning</td><td>A check-in or a room given to a booking. You are told: <span class="msg">“Check-in is held and will be sent when the connection is back. It is not confirmed until then - the room could be taken by another desk in the meantime.”</span> A restaurant bill charged to a room is held the same way.</td></tr>
-      <tr><td>Refused, with a reason</td><td>An invoice, a payment, the cash drawer, settling a restaurant bill in cash, card or UPI, closing the restaurant day, the night audit, a charge or a correction on a bill, check-out, moving a guest, Form III, confirming a banquet function. Anything not named above is refused too. Each refusal says why and what to do instead, for example: <span class="msg">“Take it on paper and enter it when the connection is back.”</span></td></tr>
+      <tr><td>Refused, with a reason</td><td>An invoice, a payment, the cash drawer, settling a restaurant bill in cash, card or UPI, printing a restaurant bill, adding or changing add-ons on a dish (<span class="ui">Customise</span>), closing the restaurant day, the night audit, a charge or a correction on a bill, check-out, moving a guest, Form III, confirming a banquet function. Anything not named above is refused too. Each refusal says why and what to do instead, for example: <span class="msg">“Take it on paper and enter it when the connection is back.”</span></td></tr>
     </tbody>
   </table>
 
   <h3>What you can still see</h3>
-  <p>The screens below keep a copy on the device for a week, so they open with no connection: the properties and rooms, Arrivals, In house, Due out, Rooms and Calendar, Housekeeping, Work orders, the banquet diary, the restaurant menu and the rooms a bill can be charged to.
+  <p>The screens below keep a copy on the device for a week, so they open with no connection: the properties and rooms, Arrivals, In house, Due out, Rooms and Calendar, Housekeeping, Work orders, the banquet diary, the restaurant's Tables, its menu and numbered add-ons, and the rooms a bill can be charged to.
      Guests' documents, bills and reports are <b>not</b> kept: a shared desk computer is no place for a passport scan.
      A reload with no connection keeps you signed in, for up to a week.</p>
 
+  <p>Rooms says how old its copy is, in a yellow line above the rooms: <span class="msg">“No connection - these rooms are as they were at 6:38 PM. They refresh by themselves when the connection is back.”</span></p>
+
   <figure class="shot" id="fig-A0-13">
-    <div class="shot-plan">
-      <p class="shot-id">Screenshot A0-13 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/h/5EL/stay</code> (Rooms)</dd>
-        <dt>Sign in as</dt><dd>Reception</dd>
-        <dt>Window</dt><dd>1280 × 800, desk</dd>
-        <dt>Set up</dt><dd>Load Rooms. Stop the local “api” server. Open Arrivals and come back to Rooms, so a request fails. Start the api again afterwards.</dd>
-        <dt>Arrows</dt><dd>1 → the yellow bar at the top of the page “No connection. Working offline…”; 2 → the line above the tiles “No connection - these rooms are as they were at …”</dd>
-        <dt>File</dt><dd><code>img/A0-13.png</code></dd>
-      </dl>
-    </div>
+    <img src="img/A0-13.png" alt="Rooms with no connection: the yellow bar No connection. Working offline, and the line No connection - these rooms are as they were at 6:38 PM above the room tiles">
     <figcaption><b>Figure A0-13.</b> No connection: the bar, and Rooms showing its last copy with its time.</figcaption>
     <ol class="callouts"><li>The offline bar</li><li>How old the rooms on screen are</li></ol>
   </figure>
 
   <figure class="shot" id="fig-A0-14">
-    <div class="shot-plan">
-      <p class="shot-id">Screenshot A0-14 · to be taken</p>
-      <dl>
-        <dt>Open</dt><dd><code>/h/5EL/housekeeping</code></dd>
-        <dt>Sign in as</dt><dd>Housekeeping</dd>
-        <dt>Window</dt><dd>1280 × 800, desk</dd>
-        <dt>Set up</dt><dd>Stop the “api” server, then tap the sparkle on a room that needs cleaning. Start the api again afterwards; the change sends by itself.</dd>
-        <dt>Arrows</dt><dd>1 → the bar “No connection. 1 change held: Housekeeping. They go when the line is back.”</dd>
-        <dt>File</dt><dd><code>img/A0-14.png</code></dd>
-      </dl>
-    </div>
-    <figcaption><b>Figure A0-14.</b> A change held while offline.</figcaption>
+    <img src="img/A0-14.png" alt="Housekeeping with no connection after room 208 was marked inspected: the bar No connection. 1 change held: Housekeeping. They go when the line is back">
+    <figcaption><b>Figure A0-14.</b> A change held while offline: room 208 marked inspected with no connection.</figcaption>
     <ol class="callouts"><li>One change held, sent when the line is back</li></ol>
   </figure>
+  <p>The screen you were on says it too: Housekeeping shows <span class="msg">“1 change waiting to sync”</span> under its heading and <span class="ui">Offline</span> at the top right, and the room's card says <span class="msg">“Queued: mark inspected”</span>.</p>
 
   <div class="box watch">
     <h4>Watch out</h4>

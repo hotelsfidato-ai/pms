@@ -1,0 +1,321 @@
+<!-- ══════════════════════════════ CHAPTER A13 ══════════════════════════════ -->
+<section class="chapter" id="a13">
+  <div class="chapter-head">
+    <span class="num">Chapter A13</span>
+    <h1>Banquets, spa and laundry</h1>
+    <p>For the general manager, reception and housekeeping, at a hotel that runs a banquet hall, a spa or a laundry. How each is switched on, how a function is booked, fed and billed, how a spa treatment is booked and put on the room bill, and how a laundry bag goes out, comes back and is charged.</p>
+  </div>
+
+  <!-- A13.1 -->
+  <h2 id="a13-1"><span class="n">A13.1</span>The three parts, and their switches</h2>
+  <p>Not every hotel has a banquet hall, a spa or a laundry. Each is switched on hotel by hotel. Where it is on, the Front office menu has a part for it: <span class="ui">Banquet</span>, <span class="ui">Laundry</span> and <span class="ui">Spa</span>. Where it is off, that part of the menu is not there at all.</p>
+  <table>
+    <thead><tr><th style="width:20%">Screen</th><th style="width:30%">Who uses it</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td>Diary</td><td>The GM; the owner, an Admin, the hotel manager. Reception may also register and confirm a function (open it with <span class="ui">Find a screen</span>)</td><td>Each hall and the functions in it: register, confirm, feed, bill (A13.3, A13.4).</td></tr>
+      <tr><td>Halls and packages</td><td>Owner, Admin, GM</td><td>The hotel's halls, and its catering packages (A13.2).</td></tr>
+      <tr><td>Spa diary</td><td>Reception; the owner, an Admin, the GM, the hotel manager. Housekeeping sees it and does not book</td><td>One day, therapist by therapist: book, charge to the room, cancel (A13.5).</td></tr>
+      <tr><td>Treatments</td><td>Owner, Admin, GM</td><td>What the spa sells, how long each takes, its price, and the therapists (A13.5).</td></tr>
+      <tr><td>Dockets</td><td>Reception and housekeeping (in their menus); the owner, an Admin, the GM, the hotel manager</td><td>Every laundry bag, a guest's and the hotel's own: collect, record what came back, charge to the room (A13.6).</td></tr>
+      <tr><td>Price list</td><td>The same people, one search away</td><td>What the hotel charges for each thing it launders (A13.6).</td></tr>
+    </tbody>
+  </table>
+
+  <h3>To switch one on</h3>
+  <p>Only the owner or an Admin can. Other roles do not see the page.</p>
+  <ol class="steps">
+    <li>Choose the hotel. Click <span class="ui">Settings</span> in the switcher at the top (A0.4).</li>
+    <li>In the menu, under <span class="ui">Modules and connections</span>, open <span class="ui">Modules</span> (<code>/settings/connections/modules</code>). The card <span class="ui">Modules</span> says <span class="msg">“What this property runs.”</span></li>
+    <li>Tap the switch beside <span class="ui">Banquet hall</span>, <span class="ui">Laundry</span> or <span class="ui">Spa</span>. The message <span class="msg">“Turned on”</span> names it, and the menu shows its part at once.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A13-x1">
+    <img src="img/A13-x1.png" alt="Settings, Modules at 5 Elements Akkalkot: Point of sale on, Banquet hall off, Reception can use the POS on, Channel manager off, Laundry off, Spa off, Serves alcohol off">
+    <figcaption><b>Figure A13-x1.</b> Modules at the demo hotel: Banquet hall, Laundry and Spa are off.</figcaption>
+  </figure>
+
+  <p>Each switch says what it runs, in the screen's words:</p>
+  <ul>
+    <li><b>Banquet hall:</b> <span class="msg">“The diary, the halls and their packages. A hall cannot be sold twice for the same session.”</span></li>
+    <li><b>Laundry:</b> <span class="msg">“A guest's laundry, charged to their room, and the hotel's own linen going out and coming back.”</span></li>
+    <li><b>Spa:</b> <span class="msg">“Treatments, the day's diary, and each one charged to the guest's room.”</span> Settling at the spa is not built: a treatment is always put on the room bill (A13.5).</li>
+  </ul>
+
+  <h3>What staff see while one is off</h3>
+  <p>The menu has no part for it. A screen opened by its address, or from an old link, says it is not available, with the reason (Figure A13-x2). Nothing can be booked or changed, even by typing the address: the server refuses it as well.</p>
+
+  <figure class="shot" id="fig-A13-x2">
+    <img src="img/A13-x2.png" alt="The Diary with the banquet hall switched off: The diary is not available. This property has no banquet hall. Turn it on in the property's settings if that is wrong.">
+    <figcaption><b>Figure A13-x2.</b> The Diary at a hotel with Banquet hall off.</figcaption>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>The message says <span class="msg">“Turn it on in the property's settings if that is wrong.”</span> Only the owner or an Admin can. Anyone else: ask one of them. The server's answer to anyone else is <span class="msg">“Switching a module on or off is for the owner or an administrator. Ask one of them.”</span></li>
+      <li>Each part starts off at a hotel until somebody turns it on. Nothing is set up for you when it is: no hall, no treatment, no price (A13.2, A13.5, A13.6).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The module switches are the owner's and an Admin's; the GM may open Settings: <span class="d">D17-36</span>. Laundry and the spa, each behind its own switch, shown only where it is on: <span class="d">D17-54</span>. A part of the menu that is off is absent, not greyed out, and the server refuses its work on its own, because a hidden screen is still an address anybody can type.</p>
+  </div>
+
+  <!-- A13.2 -->
+  <h2 id="a13-2"><span class="n">A13.2</span>Banquets: halls and packages</h2>
+  <p>Before the first function, enter the hotel's halls. Open <span class="ui">Halls and packages</span> (or the button of that name on the Diary). The screen says <span class="msg">“Nothing here is created for you, and no price is ever assumed.”</span> Only the owner, an Admin or the GM can add or change anything on it. For anybody else, Reception for one, <span class="ui">Add a hall</span>, <span class="ui">Edit</span>, <span class="ui">Add a package</span> and the packages' switches are grey, and each card says who may: <span class="msg">“The owner, an administrator or the GM adds and edits them.”</span></p>
+
+  <figure class="shot" id="fig-A13-x5">
+    <img src="img/A13-x5.png" alt="Halls and packages with the banquet hall switched off: Halls and packages is not available">
+    <figcaption><b>Figure A13-x5.</b> Halls and packages at a hotel with Banquet hall off. Where it is on, it shows two cards: Halls and Packages.</figcaption>
+  </figure>
+
+  <h3>To add a hall</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">Add a hall</span>.</li>
+    <li>Type its <span class="ui">Name</span> (“Emerald Hall”). <span class="ui">Seated capacity</span> and <span class="ui">Standing capacity</span> are optional: leave them blank if they have not been measured.</li>
+    <li><span class="ui">Usual rate</span> is optional too. It is only ever offered on the booking form; what is billed is what is agreed for each function. Tick <span class="ui">Free</span> only if the hall really is free.</li>
+    <li>Tap <span class="ui">Save</span>. Change a hall later with <span class="ui">Edit</span>.</li>
+  </ol>
+
+  <h3>To add a package</h3>
+  <p>A package is food sold by the head, such as a dinner buffet. Packages are optional: a function can be fed off-menu, from the restaurant, or not at all.</p>
+  <ol class="steps">
+    <li>Tap <span class="ui">Add a package</span>.</li>
+    <li>Type its <span class="ui">Name</span>, and if you wish its <span class="ui">Rate a head</span> (or <span class="ui">Free</span>), its <span class="ui">Kind</span> (“Veg, non-veg, jain…”) and <span class="ui">What is in it</span>.</li>
+    <li>Tap <span class="ui">Add</span>. A package with no rate reads <span class="msg">“no rate - agreed per function”</span>.</li>
+  </ol>
+
+  <h3>To take a package off offer</h3>
+  <p>A package is never changed once it is added: <span class="msg">“Never changed once added. Switch one off to stop offering it; functions keep what they were sold.”</span> For a new rate or a new menu, switch it off and add another.</p>
+  <ol class="steps">
+    <li>Under <span class="ui">Packages</span>, tap the switch at the right of the package's line. The line shows <span class="ui">Off</span>, and the message says <span class="msg">“Dinner buffet is off: not offered for functions now”</span>.</li>
+    <li>Tap it again to offer it again: <span class="msg">“Dinner buffet is offered again”</span>.</li>
+  </ol>
+  <p>A package that is off is not in the list when a course is added (A13.4), and the server refuses it for any function. A function that already has it keeps its line as it was sold: its name, plates and rate.</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A package is never changed once it is added, only switched off. Name it carefully, and add a new one for a new rate or menu.</li>
+      <li>Changing a hall's usual rate never changes a function already booked: each function keeps the figures agreed for it. A package is never changed at all.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A package can be taken off offer but not changed, so a function sold on it, and its bill, never move: <span class="d">D27-305</span>. Halls and packages are set up by the owner, an Admin and the GM; every button is grey, with a sentence saying who may, for anybody else: <span class="d">D27-307</span>.</p>
+  </div>
+
+  <!-- A13.3 -->
+  <h2 id="a13-3"><span class="n">A13.3</span>Banquets: the Diary, and booking a function</h2>
+  <p>The <span class="ui">Diary</span> answers one question: is the hall free on that day? Each hall is a row, with its functions under it, over 30 days from the hotel's business date. <span class="ui">← Earlier</span> and <span class="ui">Later →</span> move 30 days; <span class="ui">From today</span> comes back. A hall with nothing booked says <span class="msg">“Free for the whole window.”</span></p>
+  <p>Each function shows its name, its state, its reference, when it runs, the host, the guests expected, who registered it, and the agreed amount, or a dash if none is agreed yet. Tap it to open it.</p>
+  <table>
+    <thead><tr><th style="width:24%">State</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td>Enquiry</td><td>Written down. It holds nothing: two families may ask about the same Saturday.</td></tr>
+      <tr><td>Confirmed</td><td>It holds the hall for that time, and its bill is open.</td></tr>
+      <tr><td>Completed</td><td>Billed: the hall and food are on its bill (A13.4).</td></tr>
+      <tr><td>Cancelled</td><td>Cancelled, with the reason. The hall is free again.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>To register a function</h3>
+  <ol class="steps">
+    <li>On the Diary, tap <span class="ui">Register a function</span>. The window says <span class="msg">“This holds nothing yet. Confirming it takes the hall.”</span></li>
+    <li>Choose the <span class="ui">Hall</span>. Type <span class="ui">What is the function?</span> (“Sharma sangeet”), <span class="ui">From</span> and <span class="ui">Until</span> (a date and a time each), and the <span class="ui">Host</span>. <span class="ui">Telephone</span>, <span class="ui">Expected guests</span> and <span class="ui">Notes</span> are optional.</li>
+    <li><span class="ui">Agreed amount</span> is the hall's price. Leave it blank if it is not agreed yet: it stays unpriced, not free. <span class="ui">Use usual</span> fills in the hall's usual rate; <span class="ui">Free</span> means no charge.</li>
+    <li>Tap <span class="ui">Register</span>. The message gives its reference and says it is <span class="msg">“an enquiry until it is confirmed.”</span> The function opens.</li>
+  </ol>
+  <p>If the guests expected are more than the hall holds, the form warns <span class="msg">“More than this hall holds”</span>; it is a warning, not a refusal.</p>
+
+  <h3>To confirm it</h3>
+  <ol class="steps">
+    <li>Open the function and tap <span class="ui">Confirm and hold the hall</span>.</li>
+    <li>The message <span class="msg">“The hall is held, and a bill is open.”</span> means it is done.</li>
+    <li>If another confirmed function has the hall at that time, it is refused, and the message names it: <span class="msg">“The hall is taken: …”</span> with its name, reference and times.</li>
+  </ol>
+
+  <h3>The function's page</h3>
+  <ul>
+    <li><b>What and when:</b> from, until, the host and telephone, guests expected and guaranteed, the hall, who registered it.</li>
+    <li><b>The money:</b> Hall, Catering, Restaurant orders and the Total. If anything is unpriced the total is a dash, and a line says what is missing. <span class="ui">Set the hall price</span> (or <span class="ui">Change the hall price</span>) sets the agreed amount; an empty box makes it unpriced again.</li>
+    <li><b>Catering:</b> the courses (A13.4). With none, it says <span class="msg">“Nothing is being served. That is a complete booking - add a course only if food is part of it.”</span></li>
+    <li><b>Restaurant orders:</b> what the restaurant charged to this function (A13.4).</li>
+    <li><b>The bill:</b> once confirmed (A13.4).</li>
+  </ul>
+
+  <h3>To cancel a function</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">Cancel</span>. Type <span class="ui">Why?</span>: it is required, and it stays on the record.</li>
+    <li>Tap <span class="ui">Cancel the function</span> (or <span class="ui">Keep it</span>). The message says <span class="msg">“The hall is free again.”</span></li>
+  </ol>
+  <p>A function with an advance may be cancelled; the advance stays as the host's credit. A billed (Completed) function cannot be cancelled.</p>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A hall is booked from a time until a time, and only a confirmed function holds it, so it cannot be sold twice; an enquiry holds nothing. No default prices: a blank amount is unpriced and shows a dash, and a price of 0 is kept only when ticked Free: <span class="d">D27-120</span>. Cancelling a function with an advance, and never a billed one: <span class="d">D27-135</span>.</p>
+  </div>
+
+  <!-- A13.4 -->
+  <h2 id="a13-4"><span class="n">A13.4</span>Banquets: food, and the function's bill</h2>
+
+  <h3>To add a course</h3>
+  <ol class="steps">
+    <li>On the function, under <span class="ui">Catering</span>, tap <span class="ui">Add a course</span>.</li>
+    <li>Choose a <span class="ui">Package</span>, or <span class="ui">Off-menu</span>. A package fills in its name and offers its rate. Only packages that are on are listed (A13.2).</li>
+    <li>Check <span class="ui">What is being served?</span>, type <span class="ui">Plates</span> (at least one) and <span class="ui">Rate a head</span>. Leave the rate blank if it is not agreed yet; the total says so until it is.</li>
+    <li>Tap <span class="ui">Add</span>. The bin beside a course takes it off.</li>
+  </ol>
+
+  <h3>Food from the restaurant</h3>
+  <p>A confirmed function running today can take food from the restaurant. When taking the order on Tables, the Till or the Terminal (A8), choose it under <span class="ui">Banquet function</span>. That order is then paid on the function's bill, not at the till. It shows under <span class="ui">Restaurant orders</span>; an open order is not in the total until it is settled.</p>
+
+  <h3>The bill</h3>
+  <p>Confirming opens the function's bill. Its card, <span class="ui">The bill</span>, shows what is charged, the GST, what is paid and the balance. Only the owner, an Admin and the GM take money and bill; the Accountant may also issue the tax invoice.</p>
+  <ol class="steps">
+    <li><b>An advance:</b> tap <span class="ui">Take an advance</span>, choose the <span class="ui">Method</span>, type the <span class="ui">Amount</span>, tap <span class="ui">Take payment</span>. No GST receipt voucher is issued for an advance yet.</li>
+    <li><b>Bill it:</b> tap <span class="ui">Bill the function</span>. The hall and every course go on the bill under the Banquet GST rate. After this the price, the courses and the restaurant orders are fixed, and the function is Completed.</li>
+    <li><b>Settle:</b> tap <span class="ui">Settle</span> and take the balance the same way.</li>
+    <li><b>Invoice:</b> tap <span class="ui">Issue tax invoice</span>. It takes the next number of the series, and a number once taken cannot be taken back. The invoice then shows on the card.</li>
+  </ol>
+  <p><span class="ui">Bill the function</span> is refused while anything is unpriced, while a restaurant order on the function is still open, or while the hotel's banquet tax is not set: <span class="msg">“Banquet tax is not set: ask the GM to set it before the bill.”</span> While it is not set, the function's page says so at the top.</p>
+  <p>More than ₹1,00,000 in cash at once asks for the payer's PAN, or Form 97. Paying more than the balance after the bill is kept only if you tick <span class="ui">Hold it as the host's credit</span>.</p>
+
+  <h3>To correct a billed function</h3>
+  <p>Before the tax invoice: <span class="ui">Reopen the bill</span>, type <span class="ui">Why</span>, and tap <span class="ui">Reopen the bill</span>. The hall and every course come off the bill, with the reason on each line; advances, payments and restaurant orders stay. Change what is wrong, then bill the function again. A bill posted on a day the night audit has closed is refused: <span class="msg">“correct it on Closed days.”</span> After the tax invoice, only a credit note corrects it.</p>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Restaurant food on a function's bill: <span class="d">D17-21</span>, posted like a room charge so it is on the invoice: <span class="d">D27-133</span>. Who takes the money, and the Accountant's invoice: <span class="d">D27-132</span>. The warning while banquet tax is unset: <span class="d">D27-124</span>. Billing any time after Confirm, its refusals, and the advance with no receipt voucher: <span class="d">D27-138</span>. The invoice's SAC, 996334 with food and 997212 for a hall alone, for the CA to confirm: <span class="d">D27-134</span>. Reopening: <span class="d">D27-154</span>. A function's bill lives on its own page, not on Folios: <span class="d">D27-137</span>.</p>
+  </div>
+
+  <!-- A13.5 -->
+  <h2 id="a13-5"><span class="n">A13.5</span>The spa</h2>
+  <p>The spa has two screens: the <span class="ui">Spa diary</span>, and <span class="ui">Treatments</span> (its heading is <span class="ui">Treatments and therapists</span>). Reception books, charges and cancels. Housekeeping sees the diary and does not book; the diary tells them so.</p>
+
+  <figure class="shot" id="fig-A13-x3">
+    <img src="img/A13-x3.png" alt="The Spa diary with the spa switched off: The spa diary is not available. This property has no spa.">
+    <figcaption><b>Figure A13-x3.</b> The Spa diary at a hotel with Spa off.</figcaption>
+  </figure>
+
+  <h3>Setting it up (owner, Admin, GM)</h3>
+  <ul>
+    <li><b>Treatments:</b> <span class="ui">Add a treatment</span> with its <span class="ui">Name</span>, <span class="ui">How long, in minutes</span>, and <span class="ui">Price</span>. Leave the price empty if none is set; it reads a dash, and a price added later applies to new bookings only. <span class="ui">Change</span> it later; <span class="ui">Take off the list</span> and <span class="ui">Put back on the list</span>.</li>
+    <li><b>Therapists:</b> <span class="ui">Add a therapist</span> with a <span class="ui">Name</span>. It is a name, not an account: nobody signs in as a therapist. <span class="ui">Take off the list</span> when someone leaves; past bookings stay as they were.</li>
+  </ul>
+
+  <h3>The diary</h3>
+  <p>One day at a time, opening on the hotel's business date: <span class="ui">← Day before</span>, <span class="ui">Today</span>, <span class="ui">Day after →</span>. Each therapist is a row with their treatments: the time, the treatment, the guest and room, and the price, or a dash. A therapist with nothing booked says <span class="msg">“Free all day.”</span></p>
+
+  <h3>To book a treatment</h3>
+  <ol class="steps">
+    <li>Move the diary to the day of the treatment. Tap <span class="ui">Book a treatment</span>.</li>
+    <li>Choose <span class="ui">Which guest</span>: guests in the house, or arriving (with their arrival date).</li>
+    <li>Choose <span class="ui">Which treatment</span>. Its length places it in the day, so nothing asks when it ends.</li>
+    <li>Choose <span class="ui">Which therapist</span>, type <span class="ui">What time</span>, and tap <span class="ui">Book it</span>. The message says <span class="msg">“The treatment is in the diary.”</span></li>
+  </ol>
+  <ul>
+    <li>Every treatment is for a guest's stay, on a day from their arrival to their departure. Otherwise: <span class="msg">“The guest is not staying on that day.”</span> A guest who is not staying cannot be booked.</li>
+    <li>One therapist is never in two places at once. If the time is taken, the message names who is in the way: the therapist, the guest, the treatment and the time.</li>
+  </ul>
+
+  <h3>When the treatment is given: Charge to room</h3>
+  <ol class="steps">
+    <li>On the treatment, tap <span class="ui">Charge to room</span>.</li>
+    <li>The window says the price <span class="msg">“goes on their bill as its own line, taxed at this property's spa rate.”</span> Tap <span class="ui">Charge to room</span> (or <span class="ui">Not yet</span>).</li>
+    <li>The message names the room. The treatment now shows <span class="ui">On the room</span>.</li>
+  </ol>
+  <ul>
+    <li>The guest must be checked in: <span class="msg">“The guest has not checked in yet, so it cannot go on their room bill.”</span></li>
+    <li>If the hotel has not set its spa GST rule, the charge is refused, and the message says where GST is set.</li>
+    <li>To undo a charge, reverse the line on the guest's bill (A4). A charged treatment can no longer be cancelled.</li>
+  </ul>
+
+  <h3>To cancel a treatment</h3>
+  <p>Tap <span class="ui">Cancel</span>, type <span class="ui">Why</span>, and tap <span class="ui">Cancel the treatment</span> (or <span class="ui">Keep it</span>). The message says <span class="msg">“The hour is free again.”</span></p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Price the treatment before you book it.</b> The price is copied onto the booking when it is taken. A booking taken while the treatment had no price shows a dash and <span class="msg">“Unpriced”</span>, has no Charge to room, and pricing the treatment afterwards does not change that booking: <span class="msg">“Unpriced - it cannot be closed for money. A price added to the treatment later applies to new bookings only: cancel this one and book it again.”</span> Cancel it and book it again.</li>
+      <li>Settling at the spa (cash at the spa) is not built yet: every treatment goes on the room bill.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Booked by telephone to the desk: <span class="d">D18-6</span>. Run by reception and housekeeping, with no new roles and no therapist sign-ins: <span class="d">D18-8</span>. Reception books and closes, housekeeping only sees, and the spa's own GST rule per hotel: <span class="d">D18-21</span>. On the room bill as its own line: <span class="d">D18-7</span>; settling at the spa set aside for later: <span class="d">D18-22</span>. Booked only on a day of the stay, charged only once checked in: <span class="d">D27-136</span>.</p>
+  </div>
+
+  <!-- A13.6 -->
+  <h2 id="a13-6"><span class="n">A13.6</span>The laundry</h2>
+  <p>One place for everything that goes to the laundry: a guest's bag, and the hotel's own linen. A <b>docket</b> is one bag: whose it is, what is in it, and what has come back. Reception and housekeeping run it; <span class="ui">Dockets</span> is in their menus.</p>
+
+  <figure class="shot" id="fig-A13-x4">
+    <img src="img/A13-x4.png" alt="Dockets with the laundry switched off: The laundry is not available. This property does not run a laundry.">
+    <figcaption><b>Figure A13-x4.</b> Dockets at a hotel with Laundry off.</figcaption>
+  </figure>
+
+  <h3>The price list</h3>
+  <p>Open <span class="ui">Price list</span> (or the button on Dockets). Its heading is <span class="ui">Laundry price list</span>. One line is one thing and one service: a shirt washed, a saree dry-cleaned.</p>
+  <ol class="steps">
+    <li>Tap <span class="ui">Add an item</span>. Type <span class="ui">What is it</span>, choose <span class="ui">What is done to it</span> (<span class="ui">Wash</span>, <span class="ui">Press</span> or <span class="ui">Dry-clean</span>), and the <span class="ui">Price</span> if the hotel has decided one.</li>
+    <li>A price can be typed later in the list itself; it is saved when you leave the box, and it applies to new bags only: a bag already collected keeps its dash. <span class="ui">Free</span> means free. <span class="ui">Retire</span> takes a line off the list; dockets already written keep their own copy.</li>
+  </ol>
+  <p>The hotel's own linen goes on the list with no price: it is counted, never charged.</p>
+
+  <h3>To collect a bag</h3>
+  <ol class="steps">
+    <li>On Dockets, tap <span class="ui">Collect a bag</span>.</li>
+    <li>Answer <span class="ui">Whose is this</span> first: <span class="ui">A guest's bag</span> or <span class="ui">The hotel's own linen</span>. Nothing is filled in for you.</li>
+    <li>For a guest, choose <span class="ui">Which stay</span>. Only guests in the house are listed: a bag is collected only from a checked-in guest.</li>
+    <li>Under <span class="ui">What is in the bag</span>, pick each thing from the price list and type <span class="ui">How many</span>. <span class="ui">Add another thing</span> for the next.</li>
+    <li><span class="ui">Anything to note</span> is optional (“Ink on the left cuff”). Tap <span class="ui">Collect it</span>. The message gives the docket's number, and the docket opens.</li>
+  </ol>
+
+  <h3>The list of dockets</h3>
+  <p><span class="ui">Everything</span>, <span class="ui">Guests' bags</span> or <span class="ui">The hotel's linen</span>. Every row says whose it is, its state (<span class="ui">Out</span>, <span class="ui">Back</span> or <span class="ui">Cancelled</span>), the pieces, how many are still out, the total, and when it was collected. What is still out is listed first.</p>
+
+  <h3>One docket</h3>
+  <ul>
+    <li><b>When it comes back:</b> tap <span class="ui">Record what came back</span> and type how many of each have come back <i>in total</i>, not how many arrived this time. Tap <span class="ui">Record it</span>. When nothing is still out, the docket marks itself Back.</li>
+    <li><b>A guest's bag:</b> tap <span class="ui">Charge to the room</span>. It goes on the guest's bill as its own line, with the docket number and what was in the bag, under the hotel's laundry GST rate. The message says it <span class="msg">“is on the room's bill as its own line.”</span></li>
+    <li><b>The hotel's own linen</b> has no charge button: it is never charged to anybody.</li>
+    <li><span class="ui">Print</span> prints the docket. <span class="ui">Cancel</span> works until it is on a bill; after that the charge is reversed on the bill instead.</li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Price the list before you collect.</b> The description and price are copied onto the docket when the bag is collected. A bag holding an item with no price has no total and cannot be charged, and pricing the item afterwards does not change a bag already collected: <span class="msg">“A price added to the price list later applies to new bags only: cancel this one and take it again.”</span> Cancel the bag and take it again.</li>
+      <li>If the hotel has not set its laundry GST rule, the charge is refused: <span class="msg">“This property has no GST rule for laundry.”</span></li>
+      <li>Not in this version: linen par levels per room type, an outside laundry's bills, express surcharges, and a guest sending a bag from their own page.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A guest's laundry and the hotel's own linen in one place, every docket saying whose it is: <span class="d">D18-5</span>. Straight onto the room bill as its own line: <span class="d">D18-7</span>. Run by reception and housekeeping: <span class="d">D18-8</span>; Dockets in their menus where the hotel has laundry on: <span class="d">D22-22</span>. Collected only from a checked-in guest: <span class="d">D27-136</span>. Laundry's own GST heading, refused until set: <span class="d">D27-194</span>.</p>
+  </div>
+
+  <!-- A13.7 -->
+  <h2 id="a13-7"><span class="n">A13.7</span>In short</h2>
+  <table>
+    <thead><tr><th style="width:30%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>The hotel starts a hall, spa or laundry</td><td>The owner or an Admin: Settings, Modules, the switch. Then enter the halls, treatments or price list.</td><td>A13.1</td></tr>
+      <tr><td>A call about a function</td><td>Diary, Register a function. It is an enquiry.</td><td>A13.3</td></tr>
+      <tr><td>The host says yes</td><td>The function, Confirm and hold the hall. Take an advance.</td><td>A13.3, A13.4</td></tr>
+      <tr><td>The food is agreed</td><td>Catering, Add a course. Restaurant food: choose the function under Banquet function.</td><td>A13.4</td></tr>
+      <tr><td>After the function</td><td>Bill the function, Settle, Issue tax invoice.</td><td>A13.4</td></tr>
+      <tr><td>A guest wants a treatment</td><td>Spa diary, the day, Book a treatment.</td><td>A13.5</td></tr>
+      <tr><td>The treatment is given</td><td>Charge to room.</td><td>A13.5</td></tr>
+      <tr><td>A guest hands in laundry</td><td>Dockets, Collect a bag, A guest's bag.</td><td>A13.6</td></tr>
+      <tr><td>Linen goes out</td><td>Dockets, Collect a bag, The hotel's own linen.</td><td>A13.6</td></tr>
+      <tr><td>A bag comes back</td><td>The docket, Record what came back. A guest's: Charge to the room.</td><td>A13.6</td></tr>
+    </tbody>
+  </table>
+</section>

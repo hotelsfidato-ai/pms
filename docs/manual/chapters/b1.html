@@ -1,0 +1,283 @@
+<!-- ══════════════════════════════ CHAPTER B1 ══════════════════════════════ -->
+<section class="chapter" id="b1">
+  <div class="chapter-head">
+    <span class="num">Chapter B1</span>
+    <h1>The system at a glance</h1>
+    <p>For the owner. What runs where, what talks to what and why it was built that way, one booking's journey through all of it, what watches it, and the risks that come with the shape it has. The rest of Part B goes into each part.</p>
+  </div>
+
+  <!-- B1.1 -->
+  <h2 id="b1-1"><span class="n">B1.1</span>The parts, in one picture</h2>
+  <p>Fidato PMS is three things you own and run, and a handful of outside services it talks to. Staff use it in a web browser; nothing is installed on their computers. The website is only the screens. Every figure, every rule and every check lives on one server, in the API and the database behind it.</p>
+
+  <figure class="shot" id="fig-B1-01">
+    <div style="overflow-x:auto">
+    <svg viewBox="0 0 760 600" role="img" aria-label="The system map: staff, guests and outside tills on the left; Google's Firebase at the top; the Oracle server in the middle with the API, the database, n8n and the nightly backup; outside services on the right" style="width:100%;min-width:640px;height:auto;display:block;font-family:Inter, 'Segoe UI', Arial, sans-serif">
+      <defs>
+        <marker id="b1h" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#3d5566"/></marker>
+        <marker id="b1o" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#c4470f"/></marker>
+      </defs>
+
+      <!-- Column A: people and machines -->
+      <text x="10" y="30" font-size="10" font-weight="700" fill="#66798a" letter-spacing="1">WHO USES IT</text>
+      <rect x="10" y="40" width="160" height="72" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.2"/>
+      <text x="22" y="62" font-size="12.5" font-weight="700" fill="#142B3A">Staff</text>
+      <text x="22" y="79" font-size="10.5" fill="#3d5566">desk computer, tablet, phone</text>
+      <text x="22" y="94" font-size="10.5" fill="#3d5566">in a web browser</text>
+      <rect x="10" y="300" width="160" height="72" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.2"/>
+      <text x="22" y="322" font-size="12.5" font-weight="700" fill="#142B3A">Guests</text>
+      <text x="22" y="339" font-size="10.5" fill="#3d5566">their own page, by the link</text>
+      <text x="22" y="354" font-size="10.5" fill="#3d5566">in the voucher or a room card</text>
+      <rect x="10" y="440" width="160" height="72" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.2"/>
+      <text x="22" y="462" font-size="12.5" font-weight="700" fill="#142B3A">Outside tills</text>
+      <text x="22" y="479" font-size="10.5" fill="#3d5566">a restaurant's own till,</text>
+      <text x="22" y="494" font-size="10.5" fill="#3d5566">with a key per outlet</text>
+
+      <!-- Column B top: Firebase -->
+      <rect x="200" y="20" width="320" height="140" rx="10" fill="#f3f6f8" stroke="#d6dee4" stroke-width="1.2"/>
+      <text x="212" y="38" font-size="10" font-weight="700" fill="#66798a" letter-spacing="1">GOOGLE'S FIREBASE</text>
+      <rect x="215" y="48" width="140" height="62" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.2"/>
+      <text x="226" y="68" font-size="12" font-weight="700" fill="#142B3A">Hosting</text>
+      <text x="226" y="84" font-size="10" fill="#3d5566">pms.fidatohotels.com</text>
+      <text x="226" y="98" font-size="10" fill="#3d5566">the screens, no data</text>
+      <rect x="375" y="48" width="130" height="62" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.2"/>
+      <text x="386" y="68" font-size="12" font-weight="700" fill="#142B3A">Sign-in</text>
+      <text x="386" y="84" font-size="10" fill="#3d5566">emails and passwords</text>
+      <text x="386" y="98" font-size="10" fill="#3d5566">nothing else</text>
+
+      <!-- Center: the Oracle server -->
+      <rect x="200" y="190" width="320" height="360" rx="10" fill="#eef3f7" stroke="#142B3A" stroke-width="1.5"/>
+      <text x="212" y="208" font-size="10" font-weight="700" fill="#142B3A" letter-spacing="1">THE ORACLE SERVER (ORACLE CLOUD)</text>
+      <rect x="215" y="220" width="290" height="70" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.5"/>
+      <text x="228" y="241" font-size="12.5" font-weight="700" fill="#142B3A">The API</text>
+      <text x="228" y="258" font-size="10.5" fill="#3d5566">api.fidatohotels.com</text>
+      <text x="228" y="274" font-size="10.5" fill="#3d5566">every rule and every check; the only way to the data</text>
+      <rect x="215" y="325" width="140" height="80" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.5"/>
+      <text x="226" y="346" font-size="12" font-weight="700" fill="#142B3A">The database</text>
+      <text x="226" y="362" font-size="10" fill="#3d5566">PostgreSQL: the record</text>
+      <text x="226" y="377" font-size="10" fill="#3d5566">each hotel's rows kept</text>
+      <text x="226" y="391" font-size="10" fill="#3d5566">apart (row security)</text>
+      <rect x="375" y="325" width="130" height="80" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.5"/>
+      <text x="386" y="346" font-size="12" font-weight="700" fill="#142B3A">n8n</text>
+      <text x="386" y="362" font-size="10" fill="#3d5566">n8n.fidatohotels.com</text>
+      <text x="386" y="377" font-size="10" fill="#3d5566">writes and sends</text>
+      <text x="386" y="391" font-size="10" fill="#3d5566">the messages</text>
+      <rect x="215" y="435" width="140" height="70" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.2"/>
+      <text x="226" y="456" font-size="12" font-weight="700" fill="#142B3A">Nightly backup</text>
+      <text x="226" y="472" font-size="10" fill="#3d5566">03:00, restored into a</text>
+      <text x="226" y="486" font-size="10" fill="#3d5566">scratch copy and checked</text>
+      <rect x="375" y="435" width="130" height="70" rx="8" fill="#ffffff" stroke="#142B3A" stroke-width="1.2"/>
+      <text x="386" y="456" font-size="12" font-weight="700" fill="#142B3A">Watching</text>
+      <text x="386" y="472" font-size="10" fill="#3d5566">System health,</text>
+      <text x="386" y="486" font-size="10" fill="#3d5566">Connection health</text>
+
+      <!-- Column C: outside services -->
+      <text x="560" y="30" font-size="10" font-weight="700" fill="#66798a" letter-spacing="1">OUTSIDE SERVICES</text>
+      <rect x="560" y="40" width="190" height="36" rx="7" fill="#ffffff" stroke="#3d5566" stroke-width="1"/>
+      <text x="570" y="56" font-size="10.5" font-weight="700" fill="#142B3A">The CRS</text>
+      <text x="570" y="69" font-size="9.5" fill="#3d5566">the sales team's app; read every 5 min</text>
+      <rect x="560" y="84" width="190" height="36" rx="7" fill="#ffffff" stroke="#3d5566" stroke-width="1"/>
+      <text x="570" y="100" font-size="10.5" font-weight="700" fill="#142B3A">The leads app</text>
+      <text x="570" y="113" font-size="9.5" fill="#3d5566">enquiries, read only, never copied</text>
+      <rect x="560" y="128" width="190" height="36" rx="7" fill="#ffffff" stroke="#3d5566" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="570" y="144" font-size="10.5" font-weight="700" fill="#142B3A">SU channel manager</text>
+      <text x="570" y="157" font-size="9.5" fill="#3d5566">booking sites; built, not connected</text>
+      <rect x="560" y="172" width="190" height="36" rx="7" fill="#ffffff" stroke="#3d5566" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="570" y="188" font-size="10.5" font-weight="700" fill="#142B3A">Rivals' prices (SerpApi)</text>
+      <text x="570" y="201" font-size="9.5" fill="#3d5566">off until switched on, with a key</text>
+      <rect x="560" y="216" width="190" height="36" rx="7" fill="#ffffff" stroke="#3d5566" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="570" y="232" font-size="10.5" font-weight="700" fill="#142B3A">DigiLocker</text>
+      <text x="570" y="245" font-size="9.5" fill="#3d5566">prepared, switched off</text>
+      <rect x="560" y="300" width="190" height="36" rx="7" fill="#ffffff" stroke="#3d5566" stroke-width="1"/>
+      <text x="570" y="316" font-size="10.5" font-weight="700" fill="#142B3A">Meta, WhatsApp</text>
+      <text x="570" y="329" font-size="9.5" fill="#3d5566">one Fidato number</text>
+      <rect x="560" y="344" width="190" height="36" rx="7" fill="#ffffff" stroke="#3d5566" stroke-width="1"/>
+      <text x="570" y="360" font-size="10.5" font-weight="700" fill="#142B3A">The mailbox (email)</text>
+      <text x="570" y="373" font-size="9.5" fill="#3d5566">crs@fidatohotels.com</text>
+      <rect x="560" y="388" width="190" height="36" rx="7" fill="#ffffff" stroke="#3d5566" stroke-width="1"/>
+      <text x="570" y="404" font-size="10.5" font-weight="700" fill="#142B3A">Google Drive</text>
+      <text x="570" y="417" font-size="9.5" fill="#3d5566">guests' ID photos, encrypted</text>
+      <rect x="560" y="470" width="190" height="36" rx="7" fill="#ffffff" stroke="#3d5566" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="570" y="486" font-size="10.5" font-weight="700" fill="#142B3A">Oracle Object Storage</text>
+      <text x="570" y="499" font-size="9.5" fill="#3d5566">backup copies; not set up yet</text>
+      <rect x="560" y="520" width="190" height="36" rx="7" fill="#ffffff" stroke="#3d5566" stroke-width="1"/>
+      <text x="570" y="536" font-size="10.5" font-weight="700" fill="#142B3A">UptimeRobot</text>
+      <text x="570" y="549" font-size="9.5" fill="#3d5566">an outside check that it answers</text>
+
+      <!-- Arrows: people -->
+      <path d="M170 62 L213 70" stroke="#3d5566" stroke-width="1.4" fill="none" marker-end="url(#b1h)"/>
+      <path d="M170 98 L186 98 L186 132 L420 132 L420 112" stroke="#3d5566" stroke-width="1.4" fill="none" marker-end="url(#b1h)"/>
+      <path d="M90 112 L90 240 L213 240" stroke="#c4470f" stroke-width="2" fill="none" marker-end="url(#b1o)"/>
+      <path d="M170 330 L192 330 L192 262 L213 262" stroke="#3d5566" stroke-width="1.4" fill="none" marker-end="url(#b1h)"/>
+      <path d="M170 476 L180 476 L180 280 L213 280" stroke="#3d5566" stroke-width="1.4" fill="none" marker-end="url(#b1h)"/>
+      <!-- API to sign-in, database, n8n -->
+      <path d="M470 220 L470 112" stroke="#3d5566" stroke-width="1.4" fill="none" marker-end="url(#b1h)"/>
+      <path d="M285 290 L285 323" stroke="#c4470f" stroke-width="2" fill="none" marker-end="url(#b1o)"/>
+      <path d="M440 290 L440 323" stroke="#3d5566" stroke-width="1.4" fill="none" marker-end="url(#b1h)"/>
+      <path d="M285 405 L285 433" stroke="#3d5566" stroke-width="1.4" fill="none" marker-end="url(#b1h)"/>
+      <!-- API to outside reads -->
+      <path d="M505 232 L530 232 L530 58 L558 58" stroke="#3d5566" stroke-width="1.4" fill="none" marker-end="url(#b1h)"/>
+      <path d="M530 102 L558 102" stroke="#3d5566" stroke-width="1.4" fill="none" marker-end="url(#b1h)"/>
+      <path d="M558 146 L530 146" stroke="#3d5566" stroke-width="1.4" fill="none" stroke-dasharray="4 3"/>
+      <path d="M530 190 L558 190" stroke="#3d5566" stroke-width="1.4" fill="none" stroke-dasharray="4 3" marker-end="url(#b1h)"/>
+      <path d="M530 234 L558 234" stroke="#3d5566" stroke-width="1.4" fill="none" stroke-dasharray="4 3" marker-end="url(#b1h)"/>
+      <!-- n8n to the senders -->
+      <path d="M505 345 L535 345 L535 318 L558 318" stroke="#3d5566" stroke-width="1.4" fill="none" marker-end="url(#b1h)"/>
+      <path d="M535 345 L535 362 L558 362" stroke="#3d5566" stroke-width="1.4" fill="none" marker-end="url(#b1h)"/>
+      <path d="M535 362 L535 406 L558 406" stroke="#3d5566" stroke-width="1.4" fill="none" marker-end="url(#b1h)"/>
+      <!-- backup out, outside watch in -->
+      <path d="M285 505 L285 522 L545 522 L545 488 L558 488" stroke="#3d5566" stroke-width="1.4" fill="none" stroke-dasharray="4 3" marker-end="url(#b1h)"/>
+      <path d="M560 538 L522 538" stroke="#3d5566" stroke-width="1.4" fill="none" marker-end="url(#b1h)"/>
+
+      <!-- Numbered markers -->
+      <g font-size="11" font-weight="700" text-anchor="middle" fill="#ffffff">
+        <circle cx="160" cy="40" r="10" fill="#FE611F"/><text x="160" y="44">1</text>
+        <circle cx="345" cy="48" r="10" fill="#FE611F"/><text x="345" y="52">2</text>
+        <circle cx="495" cy="48" r="10" fill="#FE611F"/><text x="495" y="52">3</text>
+        <circle cx="495" cy="220" r="10" fill="#FE611F"/><text x="495" y="224">4</text>
+        <circle cx="345" cy="325" r="10" fill="#FE611F"/><text x="345" y="329">5</text>
+        <circle cx="495" cy="325" r="10" fill="#FE611F"/><text x="495" y="329">6</text>
+        <circle cx="345" cy="435" r="10" fill="#FE611F"/><text x="345" y="439">7</text>
+        <circle cx="740" cy="40" r="10" fill="#FE611F"/><text x="740" y="44">8</text>
+        <circle cx="740" cy="300" r="10" fill="#FE611F"/><text x="740" y="304">9</text>
+        <circle cx="160" cy="300" r="10" fill="#FE611F"/><text x="160" y="304">10</text>
+        <circle cx="160" cy="440" r="10" fill="#FE611F"/><text x="160" y="444">11</text>
+        <circle cx="740" cy="470" r="10" fill="#FE611F"/><text x="740" y="474">12</text>
+      </g>
+      <text x="10" y="590" font-size="9.5" fill="#66798a">Solid: in use. Dashed: built but not switched on, or not set up yet. The thick orange line is the one every screen uses.</text>
+    </svg>
+    </div>
+    <figcaption><b>Figure B1-01.</b> What runs where, and what talks to what.</figcaption>
+    <ol class="callouts">
+      <li>Staff open <code>pms.fidatohotels.com</code>, sign in, and from then on the screens talk only to the API</li>
+      <li>The website: the screens' files, served by Google's Firebase. It holds no data</li>
+      <li>Sign-in: Firebase keeps each person's email and password, and nothing else</li>
+      <li>The API: every screen's question and every change goes through it, and it checks the person, the role and the hotel each time</li>
+      <li>The database: every booking, bill, price and setting. Each hotel's rows are kept apart inside it</li>
+      <li>n8n: the PMS hands it each message as data with its PDF; n8n writes the email or the WhatsApp and sends it</li>
+      <li>Every night at 03:00 the database is copied, the copy is restored and checked against the real one</li>
+      <li>Other systems the PMS reads (the CRS, the leads app) or will connect to (SU, DigiLocker)</li>
+      <li>Where messages leave: Meta for WhatsApp, the mailbox for email; Google Drive keeps guests' ID photos, encrypted</li>
+      <li>A guest's own page is on the same website, and talks to the API through a door of its own</li>
+      <li>An outside till can charge a meal to a guest's room, with its own key</li>
+      <li>Copies of the backup off the server: chosen, not set up yet (B1.6)</li>
+    </ol>
+  </figure>
+
+  <!-- B1.2 -->
+  <h2 id="b1-2"><span class="n">B1.2</span>What each part is, and why it is there</h2>
+  <table>
+    <thead><tr><th style="width:20%">Part</th><th style="width:26%">Where it runs</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>The website</td><td>Google's Firebase Hosting, <code>pms.fidatohotels.com</code></td><td>The screens only. It reads the API's address from a small file beside it when it opens, so the server can move without rebuilding the website.</td></tr>
+      <tr><td>Sign-in</td><td>Google's Firebase Authentication</td><td>Answers "who are you": an email and a password. It does not know anybody's role or hotel.</td></tr>
+      <tr><td>The API</td><td>The Oracle server, <code>api.fidatohotels.com</code>, behind nginx with its certificate</td><td>Answers "what may you do": every write and every read asks your role at the hotel in the address (B2.3). It is the only thing that talks to the database. It also has three doors with no person behind them: the guest's page, outside tills and SU.</td></tr>
+      <tr><td>The database</td><td>PostgreSQL 16 on the same server</td><td>The record: bookings, guests, bills, payments, prices, the menu, the stock, every setting. Money is kept to the paisa; nothing on a bill is ever overwritten (B3).</td></tr>
+      <tr><td>n8n</td><td>The same server, in a container of its own, <code>n8n.fidatohotels.com</code></td><td>The messages. The PMS decides what goes and when; n8n holds the wording, the mailbox login and the WhatsApp login, and sends. It also holds the workflow that keeps guests' ID photos in Google Drive, encrypted.</td></tr>
+      <tr><td>Backups</td><td>The same server</td><td>At 03:00 the database is backed up, restored into a scratch copy and compared figure by figure. The last 14 are kept on the server's disk.</td></tr>
+    </tbody>
+  </table>
+  <p>Whose accounts they are: the Oracle server, the Firebase project, the code's repository on GitHub and the domain <code>fidatohotels.com</code> are all Fidato Hotels' own <span class="d">D26-4</span>. When the system is sold, Influvate hosts each buyer on its own accounts, and Fidato's copy stays where it is <span class="d">D25-30</span> <span class="d">D26-1</span>.</p>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <ul>
+      <li><b>The PMS is the record</b> for rooms, availability, prices and bookings; the CRS and the other apps show copies <span class="d">D17-28</span>. One record means one answer to "is the room free?".</li>
+      <li><b>A real database, not Firestore.</b> Chosen at the start (<code>docs/MASTER-ARCHITECTURE.md</code>, 26 August): a hotel's day needs changes that succeed or fail together (a check-in touches the room, the booking and the bill), and sums over thousands of rows. Firestore, which the CRS uses, can do neither well and charges for every row a report reads.</li>
+      <li><b>Sign-in kept apart from permission.</b> Firebase only says who you are; your role and your hotels live in the database, where the rules are. Roles never live in Firebase, so nothing kept there can make anybody an owner.</li>
+      <li><b>The website apart from the API.</b> Several clients talk to the same API (the screens, the guest's page, outside tills, SU), so the API is the contract. The website needs no server of its own and is the same for every hotel.</li>
+      <li><b>n8n on the PMS's server, holding the words</b> <span class="d">D17-29</span> <span class="d">D17-87</span>: a message's wording, the mailbox and the WhatsApp login are changed in n8n, without a new release. The PMS sends the figures and the exact A4 PDF the desk prints <span class="d">D17-91</span> <span class="d">D18-20</span>. Since 30 September every guest message goes through one workflow <span class="d">D27-98</span> <span class="d">D27-186</span>.</li>
+      <li><b>Separate apps, joined by bridges, for good</b>: the CRS stays the sales team's app and the leads app stays separate; the PMS reads them <span class="d">D27-27</span> <span class="d">D27-276</span> (7). That replaced the plan of 15 September for one combined system.</li>
+      <li><b>One server, for now</b> <span class="d">D27-276</span> (1): the backups must reach storage off the server and a full restore is rehearsed monthly; a standby server comes once five or more hotels pay.</li>
+      <li><b>What the server records about itself stays on it</b>: each request's time and result, errors and slow queries, kept 180 days, shown on System health; no guest data leaves India for it <span class="d">D27-91</span> <span class="d">D27-92</span>.</li>
+      <li><b>When it is sold</b>, each customer gets its own database on one shared server <span class="d">D27-278</span>: there is never a "which customer" column, so one customer's rows cannot show up in another's screens <span class="d">D21-12</span>.</li>
+    </ul>
+  </div>
+
+  <div class="box open">
+    <h4>Said differently in the documents</h4>
+    <p>The documents call the n8n that sends guest messages "the CRS's n8n", because the CRS's own voucher workflow and its mailbox and WhatsApp logins live there (<code>deploy/n8n/IMPORT.md</code>). The release steps of 5 October open that workflow at <code>n8n.fidatohotels.com</code>, the n8n on this server (<code>docs/go-live/RELEASE-5OCT.md</code>, step A9). This book takes them to be the same n8n; no single document says so in one sentence.</p>
+  </div>
+
+  <!-- B1.3 -->
+  <h2 id="b1-3"><span class="n">B1.3</span>The addresses</h2>
+  <table>
+    <thead><tr><th style="width:34%">Address</th><th>What answers there</th></tr></thead>
+    <tbody>
+      <tr><td><code>pms.fidatohotels.com</code></td><td>The website, for staff. A guest's own page is <code>pms.fidatohotels.com/g/…</code>, the same website <span class="d">D21-60</span>.</td></tr>
+      <tr><td><code>api.fidatohotels.com</code></td><td>The API. <code>/health</code> says whether it is up. <code>/api/guest</code> is the guest's door, <code>/api/pos</code> an outside till's, <code>/api/channel</code> SU's.</td></tr>
+      <tr><td><code>n8n.fidatohotels.com</code></td><td>n8n's own screen, open to the internet and protected by n8n's own sign-in; two-step sign-in is recommended for everybody who uses it <span class="d">D21-96</span>.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B1.4 -->
+  <h2 id="b1-4"><span class="n">B1.4</span>One booking's journey</h2>
+  <p>A guest phones the hotel, books two nights, stays, eats in the restaurant and leaves. This is everything that happens, and where.</p>
+  <table>
+    <thead><tr><th style="width:5%">#</th><th style="width:22%">When</th><th style="width:22%">Where it happens</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>The desk takes the booking</td><td>Website → API → database</td><td>New booking saves the guest, the booking, its bill and the room held, in one step that succeeds or fails whole. The booking gets its reference, such as <code>FH-5EL-2610-5033</code>: the hotel, the year and month of the hotel's business date, a number <span class="d">D27-123</span>. The desk ticks "guest agreed to WhatsApp" if the guest says yes <span class="d">D21-72</span>.</td></tr>
+      <tr><td>2</td><td>Within about a minute</td><td>The server, then n8n, Meta and the mailbox</td><td>A job on the server that looks every minute finds a confirmed booking owed its voucher. It draws the voucher PDF and hands it, with the figures, to n8n. n8n emails it, and sends it on WhatsApp if the guest agreed. The voucher is the confirmation, sent once <span class="d">D27-264</span>. What was sent, or why it failed, is on the Guest messages screen (B5.2).</td></tr>
+      <tr><td>3</td><td>Before arrival, if the guest wants</td><td>The guest's phone → the website → the API's guest door</td><td>The voucher carries the guest's own link and a QR code. The guest proves who they are with a code to the booking's phone or email, or with Google <span class="d">D27-207</span>, fills in their details and may add a photo of their ID. The photo is encrypted and kept in Google Drive through n8n; the server keeps none <span class="d">D27-209</span>. All of it waits for the desk <span class="d">D21-8</span>.</td></tr>
+      <tr><td>4</td><td>Arrival</td><td>Website → API → database</td><td>The desk checks the guest in, confirming the online details against the real ID. The first night's room charge and its GST go on the bill at check-in, on that business date <span class="d">D27-204</span>.</td></tr>
+      <tr><td>5</td><td>During the stay</td><td>The restaurant's Till, or an outside till</td><td>Dinner is charged to the room from the Till (A8.7), or by an outside till through its own door. Laundry and spa charges go straight onto the room bill <span class="d">D18-7</span>. Every line carries the hotel's business date, not the clock's.</td></tr>
+      <tr><td>6</td><td>Each night</td><td>Website → API → database</td><td>A person runs the night audit; at 5 Elements the GM, every night <span class="d">D21-77</span>. It posts the next night's room charge, closes the day and moves the hotel to the next business date. The daily report emails go to the addresses the hotel typed <span class="d">D27-280</span>.</td></tr>
+      <tr><td>7</td><td>Check-out</td><td>Website → API → database; n8n for the email</td><td>The desk takes payment (the money rules are B3), and checks the guest out. On Invoices, the departed stay's bill is given its tax invoice number with <span class="ui">Issue</span>, with a VAT bill beside it if there were drinks <span class="d">D22-44</span>. Where the hotel has switched it on, the tax invoice is emailed to the guest <span class="d">D27-284</span>.</td></tr>
+      <tr><td>8</td><td>03:00</td><td>The server</td><td>The night's backup is taken, restored into a scratch copy and checked.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Two other ways a booking arrives</h3>
+  <ul>
+    <li><b>From the CRS.</b> A salesperson books one of the group's own hotels in the CRS. Every five minutes the PMS reads the CRS's new bookings with a read-only login of its own, and each becomes a booking <b>Waiting for the hotel</b>, its room held. The hotel confirms it; then the one voucher goes <span class="d">D27-35</span> <span class="d">D27-171</span>. Details in B5.5.</li>
+    <li><b>From a booking site, through SU.</b> SU will push each booking to the API's own door the moment the site takes it <span class="d">D17-79</span>; a booking for a room no longer free is not made, and SU is told at once <span class="d">D17-80</span>. Built, not connected yet (B5.6).</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <ul>
+      <li><b>The message follows the booking, it is not part of it.</b> A job sends it within a minute, outside the booking itself, so a slow or broken WhatsApp can never stop a clerk saving a booking. The cost: the voucher leaves up to a minute after Save, not the instant it is pressed (<code>src/modules/guest-messaging/MODULE.md</code>).</li>
+      <li><b>One door for every booking.</b> The desk, the CRS and the booking sites all end at the same place on the server, so every rule (the room held, the reference, the voucher) applies to all of them, including a way in added next year.</li>
+      <li><b>The business date, not the clock</b>, dates every line (B3.2): a bill settled at 00:40 belongs to the day the hotel has not yet closed.</li>
+    </ul>
+  </div>
+
+  <!-- B1.5 -->
+  <h2 id="b1-5"><span class="n">B1.5</span>What watches it</h2>
+  <table>
+    <thead><tr><th style="width:24%">What</th><th style="width:22%">Who sees it</th><th>What it shows or does</th></tr></thead>
+    <tbody>
+      <tr><td>System health</td><td>The owner and Admins</td><td>The server itself: its version, how long it has run, the database's size, the disk, each hour's traffic, the slowest requests, errors, each hotel's business date (amber a day behind, red two or more) and the last backup <span class="d">D27-91</span> <span class="d">D27-113</span> <span class="d">D27-114</span>.</td></tr>
+      <tr><td>Connection health</td><td>The owner, Admins and GMs</td><td>Every outside connection green, amber, red or "Not set up", with its last success and last error <span class="d">D27-276</span> (3). Figure B5-01.</td></tr>
+      <tr><td>The alert email</td><td>One address in the server's settings</td><td>When a connection turns red, one email, at most once an hour per connection, by email only <span class="d">D27-276</span> (3).</td></tr>
+      <tr><td>n8n's alerts workflow</td><td>The owner, on WhatsApp</td><td>A failed or missing nightly backup, and the API not answering <span class="d">D27-20</span>.</td></tr>
+      <tr><td>UptimeRobot</td><td>The owner, by email</td><td>A free outside check that the API and n8n answer, for the one case n8n cannot report: the server itself down <span class="d">D27-20</span>.</td></tr>
+      <tr><td>The logs</td><td>Kept on the server</td><td>A year of the API's, the web server's and the database's logs <span class="d">D27-21</span>.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B1.6 -->
+  <h2 id="b1-6"><span class="n">B1.6</span>The risks that come with this shape</h2>
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>One server holds everything</b>: the API, the database, n8n and the backups. If it is lost, everything stops until it is rebuilt. There is no standby yet <span class="d">D27-276</span> (1).</li>
+      <li><b>The backups are on that same server.</b> Copies off it, to Oracle Object Storage in Fidato's own account, were chosen <span class="d">D27-18</span> <span class="d">D27-19</span>, then put on hold <span class="d">D27-285</span> (5). A read-only check of the live server on 4 October found the upload setting empty: every night's backup says "this copy is on this disk only" (MEMORY 385). Until the copies go off the server, losing the server loses the backups with it.</li>
+      <li><b>The Oracle account stays on its free tier</b> <span class="d">D27-285</span> (4). Oracle may take back a free server that looks idle; the owner chose this knowing it.</li>
+      <li><b>n8n watches the box it runs on.</b> If the server goes down, n8n cannot say so; UptimeRobot is the outside backstop <span class="d">D27-20</span>. Whether it has been set up is not recorded in the documents. And the same check of 4 October found the backup's alert address empty too, so a failed backup on live tells nobody until it is filled in (MEMORY 385; <code>deploy/README.md</code>, Backups).</li>
+      <li><b>If n8n stops</b>, nothing is sent, but nothing else stops: bookings, bills and check-ins go on, and each message is tried again, up to three times (B5.2).</li>
+      <li><b>If Firebase sign-in stops answering</b>, nobody can sign in. Connection health shows it red.</li>
+    </ul>
+  </div>
+
+  <h3>Left out, and why</h3>
+  <ul>
+    <li><b>A standby server</b>: once five or more hotels pay <span class="d">D27-276</span> (1).</li>
+    <li><b>Online payments</b>: guests pay at the desk for now <span class="d">D17-57</span> <span class="d">D25-36</span>; planned for after the release of early October <span class="d">D27-239</span>.</li>
+    <li><b>Our own booking engine</b>: SU's booking engine is used instead <span class="d">D27-180</span>.</li>
+    <li><b>Desktop and phone apps</b>: the web version first; the apps later <span class="d">D21-98</span>.</li>
+    <li><b>Electronic invoicing (IRN)</b>: required only above ₹5 crore turnover; the group is under it (<code>deploy/README.md</code>).</li>
+    <li><b>One merged system</b> with the CRS and the leads app: they stay separate apps <span class="d">D27-276</span> (7).</li>
+  </ul>
+  <p class="muted">This book describes the system as it is on the development computer (branch <code>cp6</code>). What is on the live server, and how a release gets there, is chapter B9.</p>
+</section>
