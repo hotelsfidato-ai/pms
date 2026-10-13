@@ -14,6 +14,7 @@ import InvoicesPage from "@/modules/finance/pages/Invoices";
 import InvoicePage from "@/modules/finance/pages/Invoice";
 import VatBillPage from "@/modules/finance/pages/VatBill";
 import InterimBillPage from "@/modules/finance/pages/InterimBill";
+import RefundReceiptPage from "@/modules/finance/pages/RefundReceipt";
 
 /* Finance's screen addresses. Mounted by App.tsx inside the signed-in
    shell. */
@@ -60,6 +61,12 @@ export const routes = (
     <Route
       path="/h/:code/stays/:id/bill"
       element={<RequireAccess path="/h/:code/stays/:id/bill" resource="invoice"><PropertyScope /><InterimBillPage /></RequireAccess>}
+    />
+    {/* A refund's plain receipt (D27-315 B): opened from the bill's Refund.
+        Guarded as the interim bill is. */}
+    <Route
+      path="/h/:code/stays/:id/refunds/:postingId"
+      element={<RequireAccess path="/h/:code/stays/:id/bill" resource="invoice"><PropertyScope /><RefundReceiptPage /></RequireAccess>}
     />
     <Route
       path="/h/:code/city-ledger"

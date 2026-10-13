@@ -79,13 +79,14 @@ export const FOLIO_SELECT = `
             is a change of TRANSPORT: a figure that moves here cannot
             be told apart from a query that is wrong. Splitting them
             properly is a separate, visible change. */
-         coalesce(sum(l.amount) filter (where l.category <> 'payment'
+         /* A refund is money out, with the payments (D27-315 B, 219). */
+         coalesce(sum(l.amount) filter (where l.category not in ('payment', 'refund')
                                           and l.amount > 0), 0)::text as room_charges,
          '0'::text                                          as extra_charges,
          coalesce(sum(l.tax_amount), 0)::text               as tax,
-         coalesce(-sum(l.amount) filter (where l.category <> 'payment'
+         coalesce(-sum(l.amount) filter (where l.category not in ('payment', 'refund')
                                            and l.amount < 0), 0)::text as discount,
-         coalesce(-sum(l.amount) filter (where l.category = 'payment'), 0)::text as payments,
+         coalesce(-sum(l.amount) filter (where l.category in ('payment', 'refund')), 0)::text as payments,
          coalesce(sum(l.amount + l.tax_amount), 0)::text     as balance
     from live l
    group by l.bill_stay, l.bill_group
@@ -111,9 +112,10 @@ export async function folioBalance(client: Client, folioId: string): Promise<{
     n: string; charges: string; tax: string; paid: string; balance: string;
   }>(
     `select count(*)::text as n,
-            coalesce(sum(amount) filter (where category <> 'payment'), 0)::text as charges,
+            coalesce(sum(amount) filter (where category not in ('payment', 'refund')), 0)::text as charges,
             coalesce(sum(tax_amount), 0)::text                                 as tax,
-            coalesce(-sum(amount) filter (where category = 'payment'), 0)::text as paid,
+            /* Net of refunds: money given back is money out (219). */
+            coalesce(-sum(amount) filter (where category in ('payment', 'refund')), 0)::text as paid,
             coalesce(sum(amount + tax_amount), 0)::text                        as balance
        from folio_postings fp
       where fp.folio_id = $1
@@ -505,10 +507,12 @@ folios.post("/:code/postings/:id/transfer", async (c) => {
 
     /* Already reversed, or itself a reversal. Transferring either would
        put a charge on the new folio that no longer exists on the old. */
-    if (line.category === "payment") {
+    if (line.category === "payment" || line.category === "refund") {
       return {
         ok: false,
-        reason: "A payment stays where it was taken. Refund it instead.",
+        reason: line.category === "payment"
+          ? "A payment stays where it was taken. Refund it instead."
+          : "A refund stays on the bill it was given from.",
       };
     }
     const { rows: dead } = await client.query(

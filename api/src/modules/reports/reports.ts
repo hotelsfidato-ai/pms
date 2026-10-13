@@ -96,10 +96,10 @@ reports.get("/:code/reports/balances-by-source", async (c) => {
               max(contact_name)  filter (where company = account) as contact,
               max(company_phone) filter (where company = account) as phone,
               coalesce(sum(amount + tax_amount) filter (
-                where category <> 'payment'
+                where category not in ('payment', 'refund')
                   and business_date between $2::date and $3::date), 0)::text as debit,
               coalesce(-sum(amount) filter (
-                where category = 'payment'
+                where category in ('payment', 'refund')
                   and business_date between $2::date and $3::date), 0)::text as credit,
               coalesce(sum(amount + tax_amount), 0)::text                    as closing
          from by_account
@@ -265,18 +265,21 @@ reports.get("/:code/reports/cashier-shift", async (c) => {
     }>(
       `select fp.posted_by::text as staff_id,
               coalesce(s.full_name, hp.full_name) as cashier,
-              coalesce(p.method, 'unrecorded') as method,
+              coalesce(p.method, rf.method, 'unrecorded') as method,
               count(*)::text as n,
               (-sum(fp.amount))::text as amount
          from folio_postings fp
          left join payments p on p.posting_id = fp.id
+         /* A refund given is money out of the hand that gave it (D27-315 B):
+            negative, by the way it went back. */
+         left join refunds rf on rf.posting_id = fp.id
          left join staff s on s.id = fp.posted_by
          /* A colleague's name comes through app.hotel_people (149): staff
             shows a clerk only their own row, so the Accountant read
             Reception's cash as "not on record" (QA RP-4). */
          left join app.hotel_people($1) hp on hp.id = fp.posted_by
         where fp.hotel_id = $1
-          and fp.category = 'payment'
+          and fp.category in ('payment', 'refund')
           /* Money in the drawer. A bill transferred to the city ledger is
              posted as a payment, and nobody handed over any money for it
              (the owner, 17 September). */
@@ -286,7 +289,7 @@ reports.get("/:code/reports/cashier-shift", async (c) => {
           and not exists (
             select 1 from folio_postings rev where rev.reverses_id = fp.id
           )
-        group by fp.posted_by, 2, coalesce(p.method, 'unrecorded')
+        group by fp.posted_by, 2, coalesce(p.method, rf.method, 'unrecorded')
         order by 2 nulls last, method`,
       [hotelId, from, to],
     );

@@ -157,11 +157,11 @@ billing.get("/:code/billable", async (c) => {
               coalesce(rc.name, g.full_name) as bill_to,
               (select count(*)::int from folios o where o.reservation_id = r.id) as bills,
               coalesce((select sum(amount) from live
-                         where folio_id = f.id and category <> 'payment'), 0)::text as charges,
+                         where folio_id = f.id and category not in ('payment', 'refund')), 0)::text as charges,
               coalesce((select sum(tax_amount) from live
                          where folio_id = f.id), 0)::text                            as tax,
               coalesce((select -sum(amount) from live
-                         where folio_id = f.id and category = 'payment'), 0)::text   as paid,
+                         where folio_id = f.id and category in ('payment', 'refund')), 0)::text as paid,
               coalesce((select sum(amount + tax_amount) from live
                          where folio_id = f.id), 0)::text                            as balance,
               -- The invoice standing against this bill, if any: not one a

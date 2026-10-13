@@ -258,10 +258,12 @@ export async function dailyFigures(
                     and fp.category <> 'room')                               as vat,
               -sum(fp.amount) filter (where fp.category = 'discount')        as discount,
               /* Money received. A bill transferred to the city ledger is
-                 posted as a payment, but nobody has paid it yet. */
-              -sum(fp.amount) filter (where fp.category = 'payment'
+                 posted as a payment, but nobody has paid it yet. Net of
+                 refunds: money given back is money out (D27-315 B). */
+              -sum(fp.amount) filter (where (fp.category = 'payment'
                  and not exists (select 1 from payments p
-                                  where p.posting_id = fp.id and p.method = 'city_ledger')) as receipt
+                                  where p.posting_id = fp.id and p.method = 'city_ledger'))
+                 or fp.category = 'refund')                                  as receipt
          from folio_postings fp
         where fp.hotel_id = $1
           and ${LIVE}

@@ -204,7 +204,7 @@ async function chargeRefused(
      "Refund" one with GST on it. No screen sends either; a direct call did. */
   const category = CATEGORY[input.category ?? "Miscellaneous"];
   if (category === "payment") return "Take a payment through Payments.";
-  if (category === "refund") return "A refund is not a charge. Reverse the payment it gives back.";
+  if (category === "refund") return "A refund is not a charge. Give it with Refund on the bill.";
   const description = input.description?.trim();
   if (!description) return "A charge needs a description.";
   if (!input.amount) return "A charge of zero is not a charge.";
@@ -410,8 +410,9 @@ export async function reverseFolioCharge(
   /* A PAYMENT IS UNDONE BY A MANAGER (the owner's D27-125, QA FI-5): a
      clerk could take cash and reverse the receipt. The owner, an
      administrator, the GM or the accountant - `approve` on an invoice,
-     the four who cancel an invoice. A charge stays reception's. */
-  if (p.category === "payment") {
+     the four who cancel an invoice. A charge stays reception's. A refund
+     is taken back by the same four who give one (D27-315 B; 219 asks too). */
+  if (p.category === "payment" || p.category === "refund") {
     const { rows: me } = await client.query<{ role: string | null }>(
       `select case when exists (select 1 from staff s
                                  where s.id = app.current_user_id() and s.is_group_admin)

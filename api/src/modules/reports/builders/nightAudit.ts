@@ -169,6 +169,8 @@ export async function nightAuditReport(
             coalesce((select sum(l.tax_amount) + coalesce(sum(l.amount) filter (where l.category = 'tax'), 0)
                         from live l join folios f on f.id = l.folio_id
                        where f.reservation_id = r.id), 0)::text                              as tax,
+            /* Money given back to the guest (D27-315 B): positive, money out.
+               Room + extra - discount + tax - payment + refund = balance. */
             coalesce((select sum(l.amount) from live l join folios f on f.id = l.folio_id
                        where f.reservation_id = r.id and l.category = 'refund'), 0)::text    as adjust,
             coalesce((select -sum(l.amount) from live l join folios f on f.id = l.folio_id
@@ -217,8 +219,9 @@ export async function nightAuditReport(
               when fp.description like 'Retention%no-show'             then 'no_show'
               when r.check_out = r.check_in                            then 'day_use'
               else 'room' end                                          as kind,
-            /* Discounts and refunds keep their own signs; the columns
-               below split them out by category. */
+            /* Discounts keep their own sign; the columns below split them
+               out by category. A refund is money out, never a sale
+               (D27-315 B): it is with the receipts, below. */
             sum(fp.amount)::text                                       as amount,
             sum(fp.tax_amount)::text                                   as tax,
             sum(fp.amount) filter (where fp.category = 'room')::text   as room,
@@ -230,7 +233,7 @@ export async function nightAuditReport(
        join folios f on f.id = fp.folio_id
        left join reservations r on r.id = coalesce(fp.reservation_id, f.reservation_id)
       where fp.hotel_id = $1 and ${LIVE}
-        and fp.category <> 'payment'
+        and fp.category not in ('payment', 'refund')
         and fp.business_date = $2::date
       group by 1`,
     [hotelId, asOn],
@@ -319,21 +322,26 @@ export async function nightAuditReport(
     room: string | null; booking: string | null; user_name: string | null;
     entered_on: string; remark: string | null;
   }>(
-    `select fp.id::text, coalesce(p.method, 'unrecorded') as method,
+    /* A refund given today is here too, negative, under the way it went
+       back (D27-315 B): each way's total is the money the hotel kept. */
+    `select fp.id::text, coalesce(p.method, rf.method, 'unrecorded') as method,
             (-fp.amount)::text as amount,
             r.reference as booking, app.stay_room(r.id) as room,
             app.posted_by_name(fp.id) as user_name,
             to_char(fp.created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') as entered_on,
-            p.reference as remark
+            case when rf.id is not null then 'Refund: ' || rf.reason
+                   || coalesce(' (' || rf.reference || ')', '')
+                 else p.reference end as remark
        from folio_postings fp
        join folios f on f.id = fp.folio_id
        left join reservations r on r.id = coalesce(fp.reservation_id, f.reservation_id)
        left join payments p on p.posting_id = fp.id
+       left join refunds rf on rf.posting_id = fp.id
       where fp.hotel_id = $1 and ${LIVE}
-        and fp.category = 'payment'
+        and fp.category in ('payment', 'refund')
         and coalesce(p.method, '') <> 'city_ledger'
         and fp.business_date = $2::date
-      order by coalesce(p.method, 'unrecorded'), fp.id`,
+      order by coalesce(p.method, rf.method, 'unrecorded'), fp.id`,
     [hotelId, asOn],
   );
 
@@ -517,7 +525,7 @@ export async function nightAuditReport(
         col("nights", "Nights", "count"),
         col("roomCharges", "Room Charges", "money"), col("extra", "Extra Charges", "money"),
         col("discount", "Discount", "money"), col("tax", "Tax", "money"),
-        col("adjust", "Adjust", "money"), col("payment", "Payment", "money"),
+        col("adjust", "Refund", "money"), col("payment", "Payment", "money"),
         col("balance", "Balance", "money"),
       ],
       rows: outRows,
