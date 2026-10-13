@@ -264,9 +264,22 @@ async function hotelIdFor(client: Client, code: string) {
   return rows[0]?.id ?? null;
 }
 
+/* THE DESK'S READ (D27-313). With `from` (and `to`, else the same day) only
+   the bookings checked in now and those arriving from..to - what Arrivals,
+   In house, Due out and the check-in's room list show. Every booking ever
+   made was 793 rows and ~3.5 s on the demo, read on every check-in. Without
+   `from` it is still every booking: All bookings, Find, the Calendar, the
+   group and laundry screens read that. */
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
 stays.get("/:code/stays", async (c) => {
   const code = c.req.param("code");
   const asOn = c.req.query("asOn");
+  const from = c.req.query("from");
+  const to = c.req.query("to") ?? from;
+  if (from !== undefined && !(DAY.test(from) && DAY.test(to!))) {
+    return c.json({ error: "from and to are days, YYYY-MM-DD." }, 400);
+  }
 
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, code);
@@ -274,8 +287,11 @@ stays.get("/:code/stays", async (c) => {
     const businessDate = asOn ?? (await businessDateFor(client, hotelId));
 
     const { rows } = await client.query<StayRow>(
-      `${SELECT} order by r.check_in, rm.number nulls last`,
-      [hotelId],
+      from === undefined
+        ? `${SELECT} order by r.check_in, rm.number nulls last`
+        : `${SELECT} and (r.status = 'checked_in' or r.check_in between $2::date and $3::date)
+           order by r.check_in, rm.number nulls last`,
+      from === undefined ? [hotelId] : [hotelId, from, to],
     );
     return rows.map((r) => toStay(r, code.toUpperCase(), businessDate));
   });
