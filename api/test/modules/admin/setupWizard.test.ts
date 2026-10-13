@@ -65,7 +65,7 @@ afterAll(async () => {
      must never leave the hotels' no-delete guard switched off for the files
      after this one. The id is the database's own uuid, never typed. */
   await sql(`alter table hotels disable trigger hotels_no_delete;
-             delete from hotels where id = '${hotelId}';
+             delete from hotels where id = '${hotelId}' or code in ('SWT', 'SWR');
              alter table hotels enable trigger hotels_no_delete;`);
 });
 
@@ -110,7 +110,7 @@ describe("D27-311 - a new, empty hotel: what the PMS sees", () => {
     expect(by("cancellation")).toMatchObject({ state: "todo", detail: "No cancellation terms yet." });
     expect(by("people")).toMatchObject({ state: "todo", detail: "Nobody has been given this hotel yet." });
     expect(by("go-live")).toMatchObject({ state: "todo", automatic: true,
-      detail: "Before the first booking: Hotel profile, Taxes, Room types, Rooms, A price on every room type." });
+      detail: "Before the first booking: Hotel profile, Taxes, Room types, Rooms, Prices." });
   });
 
   it("the steps it cannot always see are by hand, todo, with nothing invented as missing", async () => {
@@ -202,11 +202,67 @@ describe("D27-311 - the four choices", () => {
     expect(await step("modules")).toMatchObject({ state: "todo", by: null, at: null });
   });
 
+  /* D27-316 (6b): charging nothing for a cancellation is a valid choice, so the
+     PMS cannot call the step undone for want of terms - and it still ticks itself
+     when terms exist. */
+  it("Cancellation terms may be marked Completed by hand, and tick themselves once terms exist", async () => {
+    expect(await step("cancellation")).toMatchObject({
+      state: "todo", automatic: false, detail: "No cancellation terms yet." });
+    const res = await choose("cancellation", { choice: "completed" }, people.gm);
+    expect(res.status, JSON.stringify(await res.clone().json())).toBe(200);
+    expect(await step("cancellation")).toMatchObject({
+      state: "done", automatic: false, detail: null, by: "Setup gm" });
+    expect((await choose("cancellation", { choice: "clear" })).status).toBe(200);
+    expect(await step("cancellation")).toMatchObject({ state: "todo", by: null });
+
+    await sql(`insert into cancellation_policies (hotel_id, name, cancel_basis, no_show_basis)
+               values ($1, 'Setup test terms', 'nothing', 'nothing')`, [hotelId]);
+    expect(await step("cancellation")).toMatchObject({ state: "done", automatic: false, detail: null, by: null });
+    await sql("delete from cancellation_policies where hotel_id = $1", [hotelId]);
+  });
+
   it("done wins over a stored choice: a discount set ticks charges, however it was left", async () => {
     expect((await choose("charges", { choice: "later" })).status).toBe(200);
     expect((await step("charges")).state).toBe("later");
     await sql("insert into room_promotions (hotel_id, name, percent) values ($1, 'Setup test 10%', 10)", [hotelId]);
     expect((await step("charges")).state).toBe("done");
+  });
+});
+
+/* D27-316 (6a): a test hotel carries no GSTIN, PAN or FSSAI by design (D27-296 (8):
+   its documents are TEST, NOT VALID), so its profile step cannot ask for one. */
+describe("D27-316 - a test hotel's profile needs no GSTIN", () => {
+  const TEST = "SWT";
+  const readTest = async () => {
+    const res = await call(owner, "GET", `/api/hotels/${TEST}/setup`);
+    expect(res.status).toBe(200);
+    return ((await res.json()) as Setup).steps.find((s) => s.id === "profile")!;
+  };
+
+  beforeAll(async () => {
+    await sql("delete from hotels where code in ('SWT', 'SWR')").catch(() => undefined);
+    const [real] = await sql<{ id: string }>(
+      "insert into hotels (code, name, city) values ('SWR', 'Setup Real Hotel', 'Nowhere') returning id::text");
+    await sql("insert into hotels (code, name, city, test_of) values ($1, 'Setup Test Hotel', 'Nowhere', $2)",
+      [TEST, real!.id]);
+  });
+
+  it("asks a test hotel for its address, phone and email, and never names the GSTIN", async () => {
+    expect(await readTest()).toMatchObject({
+      state: "todo", automatic: true, detail: "Still missing: the address, the phone, the email." });
+  });
+
+  it("is done in a test hotel once the address, phone and email are set, with no GSTIN", async () => {
+    await sql(`update hotels set address_line = '1 Test Road', phone = '9000000000', email = 'swt@example.com'
+                where code = $1`, [TEST]);
+    expect(await readTest()).toMatchObject({ state: "done", detail: null });
+  });
+
+  it("still asks a real hotel for its GSTIN, whatever else is set", async () => {
+    await sql(`update hotels set address_line = '1 Test Road', phone = '9000000000', email = 'swz@example.com',
+                 gstin = null where id = $1`, [hotelId]);
+    expect(await step("profile")).toMatchObject({ state: "todo", detail: "Still missing: the GSTIN." });
+    await sql("update hotels set address_line = null, phone = null, email = null where id = $1", [hotelId]);
   });
 });
 
@@ -252,6 +308,18 @@ describe("D27-311 - the reminder in the bell, on its day, derived", () => {
       }]);
     }
     expect(await reminders(people.desk)).toEqual([]);
+  });
+
+  /* D27-316 (6d): the bell and the page name a step alike. The page says
+     "Prices"; the bell said "A price on every room type". */
+  it("names step 5 as the page does", async () => {
+    await sql("update room_types set base_rate = null where hotel_id = $1", [hotelId]);
+    expect((await step("prices")).state).toBe("todo");
+    expect((await choose("prices", { choice: "remind", remindOn: await today() })).status).toBe(200);
+    expect((await reminders(owner)).filter((n) => n["id"] === "setup-reminder-prices").map((n) => n["title"]))
+      .toEqual(["Setup: Prices"]);
+    expect((await choose("prices", { choice: "clear" })).status).toBe(200);
+    await sql("update room_types set base_rate = 3000 where hotel_id = $1", [hotelId]);
   });
 
   it("not before its day", async () => {

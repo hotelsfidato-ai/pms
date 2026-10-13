@@ -3,6 +3,8 @@ import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-li
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Link, MemoryRouter, Routes, useLocation } from "react-router";
 import type { ReactElement } from "react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import * as apiModule from "@/lib/api";
 import { useUi } from "@/lib/ui";
 import { useToastStore } from "@/components/ui";
@@ -160,6 +162,17 @@ describe("the 18 steps", () => {
   it("use plain words: no tenant, commissioning, provisioning or folio, and no long dash", () => {
     const words = STEPS.flatMap((s) => [s.title, s.what, s.why, ...s.screens.map((x) => x.label)]).join("\n");
     expect(words).not.toMatch(/tenant|commissioning|provisioning|folio|—/i);
+  });
+
+  /* D27-316 (6d): the server names a step in the bell ("Setup: <title>") and in
+     the summary's "Before the first booking: ..." from its own list, and the page
+     from this one. Two lists drifted ("A price on every room type" for "Prices");
+     this holds them to one set of words. */
+  it("have the same title on the page as the server's bell and summary give them", () => {
+    const server = readFileSync(join(__dirname, "..", "..", "..", "api", "src", "modules", "admin", "setup.ts"), "utf8");
+    const block = server.match(/export const STEP_TITLES[\s\S]*?\n\};/)![0];
+    const theirs = Object.fromEntries([...block.matchAll(/"([a-z-]+)":\s*"([^"]+)"/g)].map((m) => [m[1], m[2]]));
+    expect(theirs).toEqual(Object.fromEntries(STEPS.map((s) => [s.id, s.title])));
   });
 
   it("open each screen with ?setup=<step>", () => {
@@ -436,6 +449,7 @@ describe("Back to setup", () => {
       <TopBar />
       <Link to="/h/AGR/reports">Elsewhere</Link>
       <Link to="/h/AGR/rates?setup=taxes">Taxes screen</Link>
+      <Link to="/settings/property/set-up-this-hotel?step=prices">The setup page</Link>
     </>, at);
   };
   const barText = () => document.querySelector("[data-setup-bar]")?.textContent;
@@ -517,6 +531,33 @@ describe("Back to setup", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close the setup bar" }));
     go("Taxes screen");
     expect(barText()).toContain("step 2 of 18, Taxes");
+  });
+
+  /* D27-316 (6c): on the setup page the bar points at the page you are on, and
+     a step still remembered from before would pop up on the next screen. */
+  it("is not drawn on the setup page itself, and forgets its step there", () => {
+    bar("/h/AGR/rates?setup=prices");
+    expect(barText()).toContain("step 5 of 18, Prices");
+    go("The setup page");
+    expect(where()).toBe("/settings/property/set-up-this-hotel?step=prices");
+    expect(document.querySelector("[data-setup-bar]")).toBeNull();
+    expect(sessionStorage.getItem("fidato.setup-bar.AGR")).toBeNull();
+    go("Elsewhere");
+    expect(where()).toBe("/h/AGR/reports");
+    expect(document.querySelector("[data-setup-bar]")).toBeNull();
+  });
+
+  it("is not drawn on the setup's hotel address either, though a step is remembered", () => {
+    sessionStorage.setItem("fidato.setup-bar.AGR", "prices");
+    bar("/h/AGR/setup?step=prices");
+    expect(document.querySelector("[data-setup-bar]")).toBeNull();
+    expect(sessionStorage.getItem("fidato.setup-bar.AGR")).toBeNull();
+  });
+
+  it("is still drawn on the restaurant's own setup, which is another screen", () => {
+    sessionStorage.setItem("fidato.setup-bar.AGR", "prices");
+    bar("/pos/AGR/setup");
+    expect(barText()).toContain("step 5 of 18, Prices");
   });
 
   it("is remembered for the hotel it was opened from, not for another", () => {
