@@ -134,9 +134,11 @@ export default function DashboardPage() {
     queryFn: () => getStayView(code, date, date, 1),
     enabled: Boolean(code),
   });
+  /* Today's arrivals and departures, from the board's read of the day
+     (D27-316 (1)): not every booking ever made. */
   const stays = useQuery({
-    queryKey: ["dashboard-stays", code],
-    queryFn: () => fetchStays(code),
+    queryKey: ["dashboard-stays", code, date],
+    queryFn: () => fetchStays(code, date, date, true),
     enabled: Boolean(code),
   });
 

@@ -16,7 +16,7 @@ import { closePool } from "../../../src/db.ts";
 const SUPER =
   process.env["SUPER_DATABASE_URL"] ?? "postgres://postgres:pw@127.0.0.1:55432/fidato";
 
-interface Stay { id: string; status: string; arrival: string; departure: string }
+interface Stay { id: string; status: string; arrival: string; departure: string; roomNumber: string }
 
 const get = async (path: string) => {
   const res = await app.request(`/api/hotels/5EL${path}`, { headers: { "x-dev-staff-id": "dev-owner" } });
@@ -82,5 +82,44 @@ describe("GET /:code/stays?from&to - only what the desk shows", () => {
   it("refuses a day that is not one", async () => {
     expect((await get("/stays?from=today")).status).toBe(400);
     expect((await get(`/stays?from=${today}&to=soon`)).status).toBe(400);
+  });
+});
+
+/* THE BOARD'S READ (D27-316 (1), the owner): Rooms, the Calendar and the
+   Dashboard read every booking ever made, once or twice each. With `board=1`
+   they get every booking with a day in the window (arriving by `to`, leaving
+   on or after `from`: a bar, a night sold, a departure today), whoever is
+   checked in, and the bookings still to arrive that hold a room (a tile's
+   Arriving and Reserved, whatever the window). That the screens draw the same
+   from it as from every booking was compared on the 13 October copy. */
+describe("GET /:code/stays?from&to&board=1 - only what the board draws", () => {
+  const board = (from: string, to: string) =>
+    all.filter((s) => checkedIn(s)
+      || (s.arrival <= to && s.departure >= from)
+      || (s.status === "due-in" && s.arrival >= today && s.roomNumber !== ""));
+
+  it("the Calendar's fortnight: the window, who is in, and the rooms booked ahead", async () => {
+    const to = addDays(today, 13);
+    const { status, body } = await get(`/stays?from=${today}&to=${to}&board=1`);
+    expect(status).toBe(200);
+    expect(byId(body)).toEqual(byId(board(today, to)));
+    /* More than the desk's read (a guest gone today, a booking over the
+       window that arrived before it), less than every booking. */
+    const desk = (await get(`/stays?from=${today}&to=${to}`)).body;
+    expect(body.length).toBeGreaterThan(desk.length);
+    expect(body.length).toBeLessThan(all.length);
+  });
+
+  it("a fortnight already past (the Calendar paged back) and one day (the Dashboard)", async () => {
+    const from = addDays(today, -21), to = addDays(today, -8);
+    expect(byId((await get(`/stays?from=${from}&to=${to}&board=1`)).body)).toEqual(byId(board(from, to)));
+    const day = (await get(`/stays?from=${today}&to=${today}&board=1`)).body;
+    expect(byId(day)).toEqual(byId(board(today, today)));
+    /* Today's work: everybody arriving and everybody leaving today, the
+       ones who have gone included. */
+    const ids = new Set(day.map((s) => s.id));
+    const leftToday = all.filter((s) => s.departure === today && s.status === "checked-out");
+    expect(leftToday.length, "a guest who left today, in the demo").toBeGreaterThan(0);
+    expect(all.filter((s) => s.arrival === today || s.departure === today).every((s) => ids.has(s.id))).toBe(true);
   });
 });

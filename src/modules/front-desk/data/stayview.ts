@@ -1,5 +1,5 @@
 import { listAllRooms } from "@/data/repositories/rooms";
-import { listStays, getHouseNow } from "./stays";
+import { fetchStays, getHouseNow } from "./stays";
 import type { Stay } from "@/data/repositories/types";
 import { listOpenFolios } from "@/modules/finance";
 import { api, ApiError } from "@/lib/api";
@@ -164,13 +164,20 @@ export async function getStayView(
   /* Fetched ONCE, then everything below is pure computation. Reaching
      for the transport inside the per-room loop would have made this
      eighteen requests, and eighteen chances for the chart to disagree
-     with itself halfway down. */
+     with itself halfway down.
+
+     ONLY THE WINDOW'S BOOKINGS (D27-316 (1), the owner): the board's read,
+     not every booking ever made - read twice here (once more for the open
+     bills' stays), 793 rows and ~3.5 s each on the 13 October demo. Every
+     stay below is in it: a bar or a night sold in the window, whoever is in,
+     and the rooms booked ahead (Arriving, Reserved). */
+  const stays = fetchStays(hotelId, first, last, true);
   const [allRooms, allStays, openFolios, houseNow, prices] = await Promise.all([
     listAllRooms(hotelId),
-    listStays(hotelId),
+    stays,
     /* Refused to a role that reads bookings but not bills (D27-143): the
        board still draws, with no balance at all rather than ₹0. */
-    listOpenFolios(hotelId).catch((error) => {
+    listOpenFolios(hotelId, stays).catch((error) => {
       if (error instanceof ApiError && error.status === 403) return null;
       throw error;
     }),

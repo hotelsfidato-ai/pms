@@ -36,11 +36,14 @@ const clone = <T,>(rows: T[]): T[] => rows.map((r) => ({ ...r }));
 /** A property the caller cannot see is empty, not an error. With `from`
     (D27-313): only the bookings checked in now and those arriving from..to,
     `to` defaulting to `from` - the desk's lists, not every booking ever made
-    (793 and ~3.5 s on the demo, read on every check-in). */
-export async function fetchStays(hotelId: string, from?: string, to = from): Promise<Stay[]> {
+    (793 and ~3.5 s on the demo, read on every check-in). With `board` too
+    (D27-316): every booking with a day in from..to, whoever is checked in, and
+    the bookings still to arrive that hold a room - what Rooms, the Calendar and
+    the Dashboard draw. */
+export async function fetchStays(hotelId: string, from?: string, to = from, board = false): Promise<Stay[]> {
   if (!hotelId) return [];
   try {
-    return await api<Stay[]>(`/api/hotels/${hotelId}/stays${from ? `?from=${from}&to=${to}` : ""}`);
+    return await api<Stay[]>(`/api/hotels/${hotelId}/stays${from ? `?from=${from}&to=${to}${board ? "&board=1" : ""}` : ""}`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return [];
     throw error;
