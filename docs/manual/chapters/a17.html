@@ -3,7 +3,7 @@
   <div class="chapter-head">
     <span class="num">Chapter A17</span>
     <h1>Settings</h1>
-    <p>For the owner, an Admin and the GM. How the hotel is set up: its profile, logo and pictures, policies, rooms, rate plans and taxes, the money lists, the lists the desk picks from, the front desk's times and rules, guest messages and report emails, people and security, and the modules and outside connections. Every other screen reads what is set here.</p>
+    <p>For the owner, an Admin and the GM. How the hotel is set up: its profile, the step-by-step walk-through that takes a new hotel to its first booking, logo and pictures, policies, rooms, rate plans and taxes, the money lists, the lists the desk picks from, the front desk's times and rules, guest messages and report emails, people and security, and the modules and outside connections. Every other screen reads what is set here.</p>
   </div>
 
   <!-- A17.1 -->
@@ -25,7 +25,7 @@
   <table>
     <thead><tr><th style="width:20%">Group</th><th>Pages (↗ opens a Front office screen)</th><th style="width:12%">Section</th></tr></thead>
     <tbody>
-      <tr><td>Property</td><td><span class="ui">Profile</span>, <span class="ui">Logo and photos</span>, <span class="ui">Highlights</span>, <span class="ui">Cancellation terms</span> ↗ (A2), <span class="ui">Amenities</span>, <span class="ui">Group</span>, <span class="ui">Policies</span></td><td>A17.2 to A17.4</td></tr>
+      <tr><td>Property</td><td><span class="ui">Profile</span>, <span class="ui">Set up this hotel</span>, <span class="ui">Logo and photos</span>, <span class="ui">Highlights</span>, <span class="ui">Cancellation terms</span> ↗ (A2), <span class="ui">Amenities</span>, <span class="ui">Group</span>, <span class="ui">Policies</span></td><td>A17.2 to A17.4</td></tr>
       <tr><td>Rooms</td><td><span class="ui">Room types</span></td><td>A17.5</td></tr>
       <tr><td>Rates and tax</td><td><span class="ui">Rates</span> ↗ (A15), <span class="ui">Rate plans</span>, <span class="ui">Meal plans</span>, <span class="ui">Taxes</span></td><td>A17.6, A17.7</td></tr>
       <tr><td>Money</td><td><span class="ui">Bank details</span>, <span class="ui">Payment methods</span>, <span class="ui">Extra charges</span>, <span class="ui">Discounts</span>, <span class="ui">Commission</span>, <span class="ui">Pickup and drop</span></td><td>A17.8, A17.9</td></tr>
@@ -82,7 +82,7 @@
   </figure>
 
   <h3>The checklist</h3>
-  <p>The yellow card <span class="msg">“Before 5 Elements Akkalkot can take a guest”</span> lists only what is still missing, each line with why it matters. Tap a line to open the screen that settles it. Nothing on it is ticked by hand: each line asks the system the same question the work it guards asks. When everything is settled, the card goes; it comes back by itself if something stops being true.</p>
+  <p>The yellow card <span class="msg">“Before 5 Elements Akkalkot can take a guest”</span> lists only what is still missing, each line with why it matters. Tap a line to open the screen that settles it. Nothing on it is ticked by hand: each line asks the system the same question the work it guards asks. When everything is settled, the card goes; it comes back by itself if something stops being true. Above the list, a link, <span class="ui">Set up this hotel, step by step</span>, opens the walk-through below.</p>
   <p>A line that blocks means <span class="msg">“until then a booking, a bill or the night audit will refuse and say so.”</span></p>
   <table>
     <thead><tr><th style="width:52%">The check</th><th>Blocks?</th></tr></thead>
@@ -99,6 +99,119 @@
       <tr><td>A tax heading on every menu section</td><td>No</td></tr>
     </tbody>
   </table>
+
+  <h3>Set up this hotel, step by step</h3>
+  <p>The checklist says what is missing. <span class="ui">Set up this hotel</span> walks a new hotel from nothing to its first booking in 18 steps. It is second in the Property group of the Settings menu, under <span class="ui">Profile</span>; the checklist links to it, and so does the Dashboard's <span class="ui">Still to do</span> card (below). It is one page for the hotel chosen in the top bar. The owner, an Admin and the GM have it; for anybody else the server says <span class="msg">“A hotel is set up by its owner, general manager or Admin, or by a group administrator. Ask one of them.”</span></p>
+
+  <figure class="shot" id="fig-A17-51">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A17-51 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/settings/property/set-up-this-hotel</code></dd>
+        <dt>Sign in as</dt><dd>Owner</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Set up</dt><dd>A test hotel with nothing set up yet, so the first steps read To do; one step put on Later and one on Remind me; the first step open.</dd>
+        <dt>Arrows</dt><dd>1 → a group's heading with its count; 2 → one step's row: number, name, state; 3 → What it is, Why it matters, What is missing; 4 → Open …; 5 → Completed, Next, Later, Remind me</dd>
+        <dt>File</dt><dd><code>img/A17-51.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A17-51.</b> Set up this hotel: the steps, and one of them open.</figcaption>
+    <ol class="callouts">
+      <li>A group of steps, with how many are done</li>
+      <li>A step: its number, its name, its state</li>
+      <li>What it is, why it matters, and what is missing</li>
+      <li>The real screen it opens</li>
+      <li>The four choices</li>
+    </ol>
+  </figure>
+
+  <p>The steps come in three groups, each with a count such as <span class="msg">“2 of 5 done”</span>: <span class="ui">Must be done before the first booking</span>, steps 1 to 5 (<span class="msg">“These five are what the hotel needs before it can sell a room and bill it correctly.”</span>); <span class="ui">Before opening</span>, steps 6 to 13 (<span class="msg">“The hotel can take a booking without these, but should not open its doors until they are done.”</span>); and <span class="ui">Optional</span>, steps 14 to 17 (<span class="msg">“Worth doing, and nothing waits on them.”</span>). Step 18, <span class="ui">Ready to go live</span>, is the summary.</p>
+  <p>Each step is a row: its number (a tick once it is done), its name, one line on what it is, and its state: <span class="ui">Done</span>, <span class="ui">To do</span>, <span class="ui">Later</span> or <span class="ui">Remind me</span> with the day. Tap a row to open it. It says <span class="ui">What it is</span> and <span class="ui">Why it matters</span>, and, while the step is not done and the system can tell, <span class="ui">What is missing</span>: <span class="msg">“Still missing: the GSTIN, the phone.”</span> Under them is one button for each real screen the step needs (<span class="ui">Open Taxes</span>, <span class="ui">Open Room types</span>) and the choices. A screen your role cannot open is grey, and a line says so: <span class="msg">“Your role cannot open … Ask the owner or an Admin.”</span></p>
+
+  <table>
+    <thead><tr><th style="width:5%">#</th><th style="width:24%">Step</th><th style="width:31%">It opens</th><th>It ticks itself when</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><span class="ui">Hotel profile</span></td><td>Profile</td><td>the GSTIN is a real one (not the dummy number), and the address, phone and email are set</td></tr>
+      <tr><td>2</td><td><span class="ui">Taxes</span></td><td>Taxes</td><td>there is a GST rule for rooms</td></tr>
+      <tr><td>3</td><td><span class="ui">Room types</span></td><td>Room types</td><td>there is a room type</td></tr>
+      <tr><td>4</td><td><span class="ui">Rooms</span></td><td>Room types: Add a room, which can add several at once (A17.5)</td><td>there is a room</td></tr>
+      <tr><td>5</td><td><span class="ui">Prices</span></td><td>Rates, a Front office screen (A15)</td><td>every room type has a price</td></tr>
+      <tr><td>6</td><td><span class="ui">Payment methods and bank details</span></td><td>Payment methods, Bank details</td><td>a way of paying is switched on and the bank details are set</td></tr>
+      <tr><td>7</td><td><span class="ui">Front desk times and rules</span></td><td>Times and rules, Front desk rules</td><td>never: the times start filled in, so only a person can say they are right</td></tr>
+      <tr><td>8</td><td><span class="ui">Cancellation terms</span></td><td>Cancellation terms (A2)</td><td>the hotel has cancellation terms</td></tr>
+      <tr><td>9</td><td><span class="ui">Charges, discounts and commission</span></td><td>Extra charges, Discounts, Commission</td><td>something is set: an extra charge, a discount, a booking source's commission, or an early or late fee. A hotel may rightly have none</td></tr>
+      <tr><td>10</td><td><span class="ui">Booking sources</span></td><td>Booking sources (A2)</td><td>never</td></tr>
+      <tr><td>11</td><td><span class="ui">People and roles</span></td><td>People (A16)</td><td>somebody works at the hotel</td></tr>
+      <tr><td>12</td><td><span class="ui">Guest messages and daily reports</span></td><td>Guest messages on/off, Daily report emails, Guest messages</td><td>a daily report is switched on, with an address</td></tr>
+      <tr><td>13</td><td><span class="ui">Modules</span></td><td>Modules</td><td>never</td></tr>
+      <tr><td>14</td><td><span class="ui">Logo, photos and highlights</span></td><td>Logo and photos, Highlights</td><td>a logo, a photo and a highlight are all there</td></tr>
+      <tr><td>15</td><td><span class="ui">Group and house policies</span></td><td>Policies, Group</td><td>never</td></tr>
+      <tr><td>16</td><td><span class="ui">The lists</span></td><td>Market segments, Reservation types, Ready reasons, Holidays, ID types, VIP levels</td><td>never</td></tr>
+      <tr><td>17</td><td><span class="ui">Connections</span></td><td>Channel manager, CRS bookings, Integrations, Connection health</td><td>the hotel is connected to the channel manager or the CRS, or Rivals' prices is on</td></tr>
+      <tr><td>18</td><td><span class="ui">Ready to go live</span></td><td>no screen: a summary</td><td>steps 1 to 5 are done</td></tr>
+    </tbody>
+  </table>
+
+  <p>Where a step never ticks itself, or the hotel has nothing to set, you say so yourself. The four choices:</p>
+  <ul>
+    <li><span class="ui">Completed</span>: shown only on a step the system cannot see for itself. The row then reads <span class="ui">Marked done by</span> your name and the day. On a step the system can see it is not offered, and the system's word wins over anything chosen.</li>
+    <li><span class="ui">Next</span>: goes to the next step. It changes nothing.</li>
+    <li><span class="ui">Later</span>: puts the step aside. It waits on this page, and on the Dashboard: for the owner, an Admin and the GM, a card <span class="ui">Still to do</span> (<span class="msg">“Steps of setting up this hotel that you put off.”</span>) lists up to four, then <span class="msg">“and 3 more”</span>, and links back here. It shows only while something waits.</li>
+    <li><span class="ui">Remind me</span>: <span class="ui">Tomorrow</span>, <span class="ui">In 3 days</span>, <span class="ui">In a week</span>, or a date after today (<span class="msg">“Pick a day after today.”</span>). On that day the bell shows <span class="msg">“Setup: Taxes”</span> and <span class="msg">“You asked to be reminded today.”</span> to every owner, Admin and GM of the hotel, and opens that step.</li>
+    <li><span class="ui">Undo</span>: takes back a Later, a Remind me or a tick by hand.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A17-52">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A17-52 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>From a step's <span class="ui">Open Taxes</span> button, so the address carries the step</dd>
+        <dt>Sign in as</dt><dd>Owner</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the orange line under the top bar; 2 → Back to setup; 3 → the ✕ that closes it</dd>
+        <dt>File</dt><dd><code>img/A17-52.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A17-52.</b> A screen opened from a step, with the way back.</figcaption>
+    <ol class="callouts">
+      <li>Which step this screen belongs to</li>
+      <li>Back to setup: to that step</li>
+      <li>Close the bar</li>
+    </ol>
+  </figure>
+
+  <p><b>Back to setup.</b> A screen opened from a step carries a slim orange bar under the top bar: <span class="msg">“Setting up this hotel: step 2 of 18, Taxes”</span>, with <span class="ui">Back to setup</span> and a ✕. It stays on every screen you visit in that browser tab until you press <span class="ui">Back to setup</span>, which returns to that step, or close it with the ✕.</p>
+
+  <p><b>Ready to go live</b> changes nothing. Once steps 1 to 5 are done it says <span class="msg">“Ready to go live. The five things a first booking needs are done. Nothing is locked: change anything, at any time.”</span> Until then, <span class="msg">“Not ready yet. Still needed before the first booking: Taxes, Rooms.”</span> Under it are two lists: <span class="ui">Still to do</span>, with the steps you put off first, each opening its step, and <span class="ui">Done</span>.</p>
+
+  <figure class="shot" id="fig-A17-53">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A17-53 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/settings/property/set-up-this-hotel?step=go-live</code></dd>
+        <dt>Sign in as</dt><dd>Owner</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Set up</dt><dd>A test hotel with steps 1 to 5 done and some of the others still to do.</dd>
+        <dt>Arrows</dt><dd>1 → the green “Ready to go live” line; 2 → Still to do, with a count; 3 → Done, with a count</dd>
+        <dt>File</dt><dd><code>img/A17-53.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A17-53.</b> Ready to go live: a summary that changes nothing.</figcaption>
+    <ol class="callouts">
+      <li>Ready, or not ready yet, and why</li>
+      <li>Still to do: each opens its step</li>
+      <li>Done</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>A step's state is worked out each time the page opens.</b> It is never stored, so it can go back: delete the last room type and step 3 is to do again.</li>
+      <li><b>Ready to go live switches nothing on and locks nothing.</b> It is a summary. Every setting can be changed at any time.</li>
+      <li>The invoice series is not a step. It stays on the Profile checklist, above.</li>
+    </ul>
+  </div>
 
   <h3>To change the hotel's details</h3>
   <ol class="steps">
@@ -119,7 +232,7 @@
   </figure>
 
   <ul>
-    <li><b>The hotel's name is the group owner's.</b> For anybody else the <span class="ui">Name</span> box is locked and says <span class="msg">“The group's owner changes the name.”</span></li>
+    <li><b>The hotel's name is a group administrator's to change</b> (the owner, or another person who reaches every property). For anybody else the <span class="ui">Name</span> box is locked and says <span class="msg">“A group administrator changes the name.”</span></li>
     <li><span class="ui">Reservations contact</span> prints on the booking voucher as “Contact”. <span class="ui">Reservations phone</span>, <span class="ui">Website</span> and <span class="ui">PAN</span> are kept here and print on no document.</li>
   </ul>
 
@@ -141,7 +254,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The checklist derives itself and is a yes or a no with the reasons, never a percentage: a hotel opening on “80% ready” is usually missing the tax number that prints on every bill. The name is the group owner's: <span class="d">D27-214</span>. More registration numbers in Settings only, never printed: <span class="d">D27-257</span>.</p>
+    <p>The checklist derives itself and is a yes or a no with the reasons, never a percentage: a hotel opening on “80% ready” is usually missing the tax number that prints on every bill. The name is a group administrator's to change: <span class="d">D27-214</span>, <span class="d">D27-308</span>. The walk-through, 18 steps in the owner's order, each ticking itself where the system can see it done, with Completed, Next, Later and Remind me and a summary that locks nothing: <span class="d">D27-311</span>. Back to setup stays until pressed or closed, a reminder shows to every owner, Admin and GM of the hotel, and step 15 opens both Group and Policies: <span class="d">D27-312</span>. More registration numbers in Settings only, never printed: <span class="d">D27-257</span>.</p>
   </div>
 
   <!-- A17.3 -->
@@ -265,7 +378,7 @@
 
   <h3>To add a room type</h3>
   <ol class="steps">
-    <li>Tap <span class="ui">Add a room type</span>.</li>
+    <li>Tap <span class="ui">Add a room type</span>. The window says <span class="msg">“What the property sells. The rate is set separately, on Rates.”</span></li>
     <li>Type its <span class="ui">Code</span> (two to ten letters or digits; it prints on the tape chart) and its <span class="ui">Name</span>.</li>
     <li>Type <span class="ui">Adults the rate covers</span> (before an extra-person charge), <span class="ui">Children it covers</span> and <span class="ui">Sleeps at most</span>. If you need them: <span class="ui">Adults at most</span> (empty: only the total), <span class="ui">Children at most</span> (fewer than the total), <span class="ui">Size (sq ft)</span>, <span class="ui">Beds</span>, <span class="ui">View</span>, <span class="ui">Colour</span> (on the Calendar and the rate plans).</li>
     <li>Tap <span class="ui">Save</span>.</li>
@@ -314,9 +427,42 @@
   </figure>
   <p>Tap a room's tile to change it. Unticking <span class="ui">Sellable</span> takes it out of the sellable house; for a fault with an end date, use a block instead. A room with somebody in it cannot be retired.</p>
 
+  <h3>To add several rooms at once</h3>
+  <ol class="steps">
+    <li>Tap <span class="ui">Add a room</span> and switch on <span class="ui">Several rooms</span>. <span class="ui">Number</span> becomes <span class="ui">From</span> and <span class="ui">To</span>.</li>
+    <li>Type the first and the last number, digits only: <span class="ui">From</span> 101, <span class="ui">To</span> 109. A <span class="ui">To</span> below <span class="ui">From</span> is refused: <span class="msg">“To is below From.”</span> Zeros typed in <span class="ui">From</span> are kept: 01 to 12 adds 01, 02 and on to 12.</li>
+    <li>Choose the <span class="ui">Type</span>, type the <span class="ui">Floor</span> if there is one, and tick <span class="ui">Smoking room</span> if they are. These are the same for every room.</li>
+    <li>The button counts them: <span class="ui">Add 9 rooms</span>. Tap it. The window then says what was added: <span class="msg">“Added 8 rooms: 101, 102, 103, 104, 106, 107, 108, 109”</span>. A number the hotel already has is skipped and named, <span class="msg">“105 already exists, skipped”</span>, and the rest are added. Tap <span class="ui">Done</span>.</li>
+  </ol>
+  <ul>
+    <li>The floor is the one you type, for all the rooms: it is never worked out from the number, and left blank it stays blank. For rooms on several floors, add one range for each floor.</li>
+    <li>With <span class="ui">Several rooms</span> off, <span class="ui">Add a room</span> adds one room exactly as above.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A17-54">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A17-54 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/settings/rooms/room-types</code>, then Add a room, with Several rooms switched on</dd>
+        <dt>Sign in as</dt><dd>Owner</dd>
+        <dt>Window</dt><dd>1280 × 800, desk. Nothing is saved.</dd>
+        <dt>Set up</dt><dd>From 401, To 409, a Type, Floor 4: the button reads Add 9 rooms.</dd>
+        <dt>Arrows</dt><dd>1 → Several rooms; 2 → From and To; 3 → Floor; 4 → Add 9 rooms</dd>
+        <dt>File</dt><dd><code>img/A17-54.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A17-54.</b> Several rooms: From, To, and the count on the button (not saved).</figcaption>
+    <ol class="callouts">
+      <li>Several rooms</li>
+      <li>From and To</li>
+      <li>Floor: the same for every room</li>
+      <li>Add 9 rooms</li>
+    </ol>
+  </figure>
+
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Nothing in use is deleted: reservations, rates and a year of bills point at a room type, and every stay at its room. A new hotel starts with no room types, and a room type nothing uses can be removed: <span class="d">D27-263</span>. Room types in Settings, with their amenities, photos and the rooms in order: <span class="d">D27-258</span>.</p>
+    <p>Nothing in use is deleted: reservations, rates and a year of bills point at a room type, and every stay at its room. A new hotel starts with no room types, and a room type nothing uses can be removed: <span class="d">D27-263</span>. Room types in Settings, with their amenities, photos and the rooms in order: <span class="d">D27-258</span>. Several rooms at once: one range, one floor typed for all, a number that exists skipped and named, the rest added: <span class="d">D27-309</span>.</p>
   </div>
 
   <!-- A17.6 -->
@@ -730,7 +876,7 @@
   </figure>
   <ul>
     <li><b>The restaurant's round-off</b>: <span class="ui">Manual: the Round off button</span>, <span class="ui">Automatic: every bill paid there, to ₹1</span>, or <span class="ui">Off: no Round off button</span>. A restaurant bill paid in cash is always taken to the rupee. Room bills and invoices are never rounded.</li>
-    <li><b>How the figures count</b>: occupancy = rooms sold ÷ rooms available; ADR = room revenue ÷ rooms sold; RevPAR = room revenue ÷ rooms available. Rooms blocked that night are not available. Two switches: <span class="ui">A complimentary room counts as sold</span> and <span class="ui">A day use counts as half a room sold</span>.</li>
+    <li><b>How the figures count</b>: occupancy = rooms sold ÷ rooms available; ADR = room revenue ÷ rooms sold; RevPAR = room revenue ÷ rooms available. Rooms blocked that night are not available. Two switches: <span class="ui">A complimentary room counts as sold</span> and <span class="ui">A day use counts as half a room sold</span>. The Manager report and the statistics reports (Monthly occupancy, Monthly statistics, Yearly statistics) follow them (A11).</li>
   </ul>
 
   <div class="box why">
@@ -756,12 +902,13 @@
     <tbody>
       <tr><td>Booking voucher</td><td>Once, when a booking is confirmed: the voucher PDF, on WhatsApp and by email. It carries the check-in link only while Online check-in is on.</td></tr>
       <tr><td>Online check-in</td><td>The guest's own check-in page: its link and QR code in the voucher, and the desk's Send check-in link.</td></tr>
-      <tr><td>Tax invoice</td><td>When the invoice is issued, by email.</td></tr>
+      <tr><td>Tax invoice</td><td>When the invoice is issued, by email. By itself only when it is made out to the guest.</td></tr>
       <tr><td>Review request</td><td>When a clerk presses Ask for a review, after check-out.</td></tr>
     </tbody>
   </table>
   <ul>
     <li>A switch saves at once and changes only this hotel. The wording stays in the sending workflow.</li>
+    <li>The tax invoice goes by itself only for an invoice made out to the guest, and only for invoices issued after the switch is turned on. One made out to a company, an agent or a booking site is not sent by itself: the desk sends it with <span class="ui">Send invoice</span> (A10).</li>
     <li>Nothing here sends anything by itself: sending needs the server's connection settings (Connection health, A17.14).</li>
   </ul>
 
@@ -778,7 +925,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Fewer guest messages, the voucher being the confirmation: <span class="d">D27-264</span>; the switches: <span class="d">D27-261</span>. Each report its own switch and addresses, no address filled in for you: <span class="d">D27-280</span>.</p>
+    <p>Fewer guest messages, the voucher being the confirmation: <span class="d">D27-264</span>; the switches: <span class="d">D27-261</span>. The tax invoice by itself only to the guest it is made out to: <span class="d">D27-313</span>. Each report its own switch and addresses, no address filled in for you: <span class="d">D27-280</span>.</p>
   </div>
 
   <!-- A17.13 -->
@@ -836,12 +983,13 @@
   <ul>
     <li>A password is at least 10 characters for the owner, an Admin and a GM, and at least 8 for everybody else.</li>
     <li>Somebody given the owner's, an Admin's or a GM's role with a shorter password sets a new one at their next sign-in.</li>
+    <li>Each sign-in is kept for 90 days: when, and on what device. The owner and an Admin see it under <span class="ui">Sign-ins and devices</span>.</li>
     <li>Two-step sign-in, for the owner, Admins and GMs, comes after this release.</li>
   </ul>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Across the group for the owner and Admin only; who sees whose sign-ins: <span class="d">D27-245</span>. One page, Sign-ins and devices, with Sign out this device: <span class="d">D27-255</span>. Test hotels, and the Test switch on Add somebody: <span class="d">D27-296</span>.</p>
+    <p>Across the group for the owner and Admin only; who sees whose sign-ins: <span class="d">D27-245</span>. One page, Sign-ins and devices, with Sign out this device: <span class="d">D27-255</span>; the Signing in page names it so: <span class="d">D27-308</span>. Test hotels, and the Test switch on Add somebody: <span class="d">D27-296</span>.</p>
   </div>
 
   <!-- A17.14 -->
@@ -896,6 +1044,7 @@
     <thead><tr><th style="width:38%">To</th><th>Open</th><th style="width:12%">Section</th></tr></thead>
     <tbody>
       <tr><td>See what a new hotel still needs</td><td>Property › Profile: the yellow checklist</td><td>A17.2</td></tr>
+      <tr><td>Take a new hotel to its first booking</td><td>Property › Set up this hotel</td><td>A17.2</td></tr>
       <tr><td>Fix the address, GSTIN or phone</td><td>Property › Profile, Edit</td><td>A17.2</td></tr>
       <tr><td>Put the logo on the bills</td><td>Property › Logo and photos, Upload</td><td>A17.3</td></tr>
       <tr><td>Say what the hotel has</td><td>Property › Amenities: switch it on</td><td>A17.3</td></tr>
