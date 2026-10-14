@@ -8,6 +8,13 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-15 · Stays and Nights leave voided bookings out (the owner's D27-330 (5))
+
+**Asked for:** the guest directory's Stays and Nights leave voided bookings out, cancelled and no-show as the "possible duplicate" mark already does.
+**Shipped:** `directory.ts` `GET /:code/guests`: Stays and Nights count only live bookings - not `cancelled`, `void` or `no_show`, the mark's own three - and the list is ordered by that count. A name whose every booking is voided stays listed with 0 stays and 0 nights. Manual A10.2's Stays, Nights row; `MODULE.md`. The website only shows the server's figures: nothing changed there.
+**Proved:** `directoryNextStay.test.ts` "the directory's Stays and Nights": on the old code "voided twice" read 2 stays ("expected { ... } to match object { stays: 1, nights: 2 }"); after, 6 of 6 in the file (with `kotReprint`, `kotSection`: 3 files, 20 of 20, on a scratch database through the queue).
+**Left open (the owner's):** Last stay (`last_stay`) still takes a cancelled or voided booking's check-out; the Companies list's Bookings and Room nights still count every status. Not in D27-330 (5): left as they were.
+
 ## 2026-10-15 · The possible duplicate leaves voided bookings out (the owner's D27-329 (6))
 
 **Asked for:** the guest directory's "possible duplicate" mark leaves voided (and cancelled) bookings out.

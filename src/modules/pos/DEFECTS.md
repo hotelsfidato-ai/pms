@@ -29,6 +29,22 @@ fails "expected 'front_desk' to be 'pos'".
 
 ## Fixed
 
+### POS-37 · A reprint waiting for an offline computer was dropped when its KOT kind moved to another computer - FIXED 15 October (the owner's D27-330 (6))
+
+**Found** - the owner's D27-330 (6), reading D27-329's reprint: the station's ask
+(`kot-stations/poll`) read reprints with `r.asked_at >= k.station_since`, the "start
+afresh" rule of new KOTs (D27-161). Ticking the kind on another computer sets
+`station_since` to now, so a reprint asked before the move printed nowhere: the old
+computer no longer prints the kind, the new one took the reprint for older than itself.
+
+**What was done** - that condition is gone from the reprints read (`kotSection.ts`): a
+computer gets every unprinted reprint of the kinds it prints now. New KOTs keep their
+"start afresh" (D27-161), as the owner decided only about reprints.
+
+**The rule it leaves** - a reprint belongs to its KOT kind, not to a computer.
+`api/test/modules/pos/kotReprint.test.ts` "it follows its kind when the kind is moved"
+fails with the condition back.
+
 ### POS-36 · A KOT reprinted from the order pad printed on the waiter's device, not at the kitchen or the bar - FIXED 15 October (the owner's D27-329 (2))
 
 **Found** — 14 October, building the pad's Reprint (D27-324 (4)): it used the KOT section's

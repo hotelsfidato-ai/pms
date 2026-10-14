@@ -11,6 +11,25 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-15 · A waiting reprint follows its KOT kind to the new computer (the owner's D27-330 (6))
+
+**Asked for:** a reprint waiting for a station follows its KOT kind to the new computer when a manager moves the kind there, and prints there marked REPRINT, instead of being dropped. Only reprints: waiting new KOTs are as before.
+
+**Found** - the station's ask (`kot-stations/poll`, `kotSection.ts`) gave a computer only the reprints asked since its kind came to it (`r.asked_at >= k.station_since`), the rule of new KOTs (D27-161, "start afresh"). Moving the kind sets `station_since` to now, so a reprint waiting for an offline computer belonged to neither: the old one no longer printed the kind, the new one read it as older than its arrival. The claim (`kot-reprints/:id/printed`) already went by the kind's computer now.
+
+**Shipped**
+- `kotSection.ts`: the reprints read drops that one condition - a computer gets every unprinted reprint of the kinds it prints now. New KOTs keep `kot_sent_at >= station_since` and the business date (D27-161, D27-167): a new KOT waiting at the old computer when the kind moves does not print at the new one. No migration: the table and its claim were right.
+- Notes: manual A8.4 (a lost KOT) and A8.10 (one computer per kind), rebuilt; `KOT-STATION-SETUP.md` ("A printer moves"); `MODULE.md`; DEFECTS POS-37.
+
+**Proved**
+- API: `kotReprint.test.ts` "waiting for an offline computer, it follows its kind when the kind is moved (D27-330 (6))" failed on the old code: "it waits at the new computer: expected [] to deeply equal [ [ 4, 'Bar' ] ]". After: `kotReprint` 7 of 7, `kotSection` 7 of 7, `directoryNextStay` 6 of 6 (20 of 20, a scratch database through the queue). The test also restores the Bar computer in a `finally`, so a failure there no longer fails the tests after it.
+- With my own virtual printers (my copy in this worktree's `.local/virtual-printer/`, port 5233; with a `<device>.off` file that switches one printer off) and my own API (8833) on `fidato_d330` (the 13 Oct dump, migrated to 225; dropped after): table D330, Paneer Tikka and Fresh Lime Soda sent as KOT 26 - "KITCHEN KOT 26" at Virtual Kitchen, "BAR KOT 26" at Virtual Bar. Virtual Bar switched off and last seen 2 hours back; Reprint of the Bar slip answered `{"ok":true,"station":{"name":"Virtual Bar","online":false}}` and nothing printed for 5 s. The Bar kind ticked on Virtual Kitchen (`this-computer`, as the KOT section does): 3 s later Virtual Kitchen printed "BAR KOT 26 · REPRINT · D330 · 1× Fresh Lime Soda"; `pos_kot_reprints` printed_at 02:18:25 for asked_at 02:18:16. Through the API, as the screens call it; no screen changed.
+- Gates, `bash scripts/gates.sh d27-330 quick` at ded1de32 (both fixes and MEMORY 411 committed): web types 0, api types 0, strip 0 (220 files); web tests exit 1, 1359 of 1360 - `src/App.test.tsx` "the module switches" ('Unable to find role="switch"' after 6.3 s under the load; no web file changed here), 33 of 33 run alone after. No database change, so no `db/tests/run.sh` or `rerun.sh`.
+
+**Left open**
+- The owner's, if wanted: a new KOT waiting for an offline computer is still not printed when its kind is moved (D27-161's "start afresh"); it shows on the Kitchen screen. D27-330 (6) was only about reprints.
+- The main `.local/virtual-printer/printer.mjs` already knows reprints; my copy's `.off` switch is mine only.
+
 ## 2026-10-15 · A reprinted KOT prints at the station; Reprint on the Till and the Terminal (the owner's D27-329 (2), (5))
 
 **Asked for:** (2) a reprinted KOT prints at the station's printer - the kitchen's or the bar's, where the KOT first went - not on the device where Reprint is pressed, through the station's own printing; offline, the screen says so. (5) Reprint also on the Till and the Terminal for an open order's KOTs, with the pad's rights (waiter, bar and above). Items (1), (3), (4), (6) were another helper's. Worked without the `pos` claim, so as not to refuse the other helper's.
