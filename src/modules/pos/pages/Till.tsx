@@ -24,7 +24,7 @@ import {
 import { StartHere } from "@/components/app/StartHere";
 import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
-import { KotStatus } from "@/modules/pos/components/KotStation";
+import { KotStatus, KotsSent } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { AskDialog, SENT_STRIKE, roomAsk, type Ask, type Reply } from "@/modules/pos/components/AskDialog";
@@ -1414,6 +1414,10 @@ function OrderPanel({
               Close unpaid
             </Button>
           </div>
+        )}
+        {/* An open order's KOTs, reprinted at their station (D27-329 (5)). */}
+        {order.status === "open" && (
+          <KotsSent hotelId={hotelId} orderId={order.id} lines={order.lines} className="mt-4" />
         )}
       </CardBody>
 

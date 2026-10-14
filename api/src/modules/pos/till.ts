@@ -1763,7 +1763,10 @@ async function readOrder(client: Client, orderId: string) {
             l.kot_no, k.id::text as kot_kind_id, k.name as kot_kind_name
        from pos_order_lines l
        left join staff s on s.id = l.added_by
-       left join pos_kot_kinds k on k.id = l.kot_kind_id
+       /* A sent line's kind; one sent before kinds were stamped (211) by its
+          dish, as the station reads it - so its KOT reprints per kind. */
+       left join pos_kot_kinds k on k.id = case when l.kot_no is not null
+                                           then coalesce(l.kot_kind_id, app.pos_line_kot_kind(l.id)) end
       where l.order_id = $1
       /* Each dish, then what hangs under it: an add-on put on a dish after
          three more dishes (D27-291) still reads under ITS dish. */

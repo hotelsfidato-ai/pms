@@ -4811,7 +4811,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li><b>What a KOT shows:</b> the time, what it is (<b>KITCHEN KOT 14</b>), dine in or take away, the table, each dish with its number, its add-ons and Sides under it, and the kitchen note. Never a price.</li>
     <li><b>Which kind a dish is</b> depends on its menu section: Bar and Alcohol sections print at the bar, the rest in the kitchen, unless the manager chose otherwise (A8.10). It is decided when the dish is sent, so a reprint goes where the first slip went.</li>
     <li><b>A dish taken off after it was sent</b> prints, on a reprint of its KOT, under <span class="msg">“STOP - TAKEN OFF”</span>, with the reason.</li>
-    <li><b>A lost or torn KOT:</b> on Tables, tap the table. Its pad lists the <span class="ui">KOTs sent</span>, one line for each KOT and kind (<span class="msg">“KOT 3 · Bar”</span>): tap <span class="ui">Reprint</span>. It prints on the printer of the device you are using. Or, on the computer that printed it, open <span class="ui">Restaurant setup</span>, the KOT section, <span class="ui">This computer's last 20 KOTs</span>, and tap <span class="ui">Reprint</span>. Either way the slip says <b>REPRINT</b>. Waiters and the bar reprint from the pad: <span class="d">D27-324</span>.</li>
+    <li><b>A lost or torn KOT:</b> the order's <span class="ui">KOTs sent</span> list one line for each KOT and kind (<span class="msg">“KOT 3 · Bar”</span>), each with <span class="ui">Reprint</span>: on Tables in the table's pad, and on the Till and the Terminal with the order open. Tap <span class="ui">Reprint</span>: it prints at the computer that printed that KOT, the kitchen's or the bar's, not on the device you are using, and the screen says where: <span class="msg">“KOT 3 · Bar sent to Bar PC”</span>. If that computer is off, the screen says <span class="msg">“Bar PC is offline”</span>: the reprint waits there and prints when it is back. If no computer prints that kind, it says so and nothing prints (a manager chooses one, A8.10). On the computer that printed it you can also open <span class="ui">Restaurant setup</span>, the KOT section, <span class="ui">This computer's last 20 KOTs</span>, and tap <span class="ui">Reprint</span>. Either way the slip says <b>REPRINT</b>. Waiters and the bar reprint: <span class="d">D27-324</span>; at the station, and from the Till and the Terminal: <span class="d">D27-329</span>.</li>
   </ul>
 
   <h3>The printing lines</h3>
@@ -4826,7 +4826,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>One computer prints each kind and no other device prints a KOT: <span class="d">D27-159</span>, <span class="d">D27-161</span>. A missed KOT prints when its computer is back, the same business day only: <span class="d">D27-167</span>. Kinds, one number with a slip per kind, the heading in big letters, REPRINT, the red line only for a kind something is sent to: <span class="d">D27-292</span>. The website cannot reach a printer by its address on the hotel's network, so a printer is always reached through the computer it is connected to.</p>
+    <p>One computer prints each kind and no other device prints a KOT: <span class="d">D27-159</span>, <span class="d">D27-161</span>. A missed KOT prints when its computer is back, the same business day only: <span class="d">D27-167</span>. Kinds, one number with a slip per kind, the heading in big letters, REPRINT, the red line only for a kind something is sent to: <span class="d">D27-292</span>. A reprint prints at its kind's computer too, wherever Reprint is pressed: <span class="d">D27-329</span>. The website cannot reach a printer by its address on the hotel's network, so a printer is always reached through the computer it is connected to.</p>
   </div>
 
   <!-- A8.5 -->
@@ -4955,6 +4955,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>−</td><td>One fewer. For a dish the kitchen has, a manager and a reason (below).</td></tr>
       <tr><td>×</td><td>Strike the line. It stays on the record, struck through.</td></tr>
       <tr><td>Send to the kitchen</td><td>Sends every dish not yet sent, as Send does on the pad.</td></tr>
+      <tr><td>KOTs sent: Reprint</td><td>At the foot of an open order: prints that KOT again at the computer that printed it, marked REPRINT (A8.4).</td></tr>
       <tr><td>Discount</td><td>A percentage or a fixed amount, always with a reason. Up to 10% freely; more is a named promotion.</td></tr>
       <tr><td>Round off</td><td>Rounds the total to the rupee. <span class="ui">Undo round off</span> takes it back.</td></tr>
       <tr><td>Room and Charge to room</td><td>Type the room number and tap <span class="ui">Charge to room</span>. It asks first, naming the guest: <span class="msg">“Charge ₹441 to room 201?”</span>. A room with two open bills asks whose.</td></tr>
@@ -5033,6 +5034,7 @@ figure.shot.phone img { max-width: 72mm; }
   <ul>
     <li>Open an order, tap dishes to add them (each with a <span class="ui">Customise</span>), and send them to the kitchen.</li>
     <li>A dish the kitchen made Ready shows <b>Ready</b> with <span class="ui">Taken</span>: tap it when you carry it out.</li>
+    <li>Under the dishes, the open order's <span class="ui">KOTs sent</span>, each with <span class="ui">Reprint</span>: it prints again at the computer that printed it (A8.4).</li>
     <li><b>Room-service orders waiting</b>: a checked-in guest's order from their own page. <span class="ui">Accept</span> makes it a room-service order for their room and sends it to the kitchen; <span class="ui">Decline</span> asks a reason, which the guest reads. It is charged to the room at delivery.</li>
     <li>Payment and printing work as on the Till.</li>
   </ul>

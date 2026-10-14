@@ -454,6 +454,10 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
      kitchen manager; the station's asks and claims are the printing's. */
   [`POST ${H}/till/kot-stations/poll`]: KOT_PRINT,
   [`POST ${H}/till/bill-prints/:id/printed`]: KOT_PRINT,
+  /* Reprint a KOT at its station (D27-329): asked by whoever takes orders,
+     as on the order pad; claimed by the computer that prints it. */
+  [`POST ${H}/till/orders/:id/kot/:no/reprint`]: TILL,
+  [`POST ${H}/till/kot-reprints/:id/printed`]: KOT_PRINT,
   [`POST ${H}/till/kot-setup/kinds`]: KOT_SWITCH,
   [`PATCH ${H}/till/kot-setup/kinds/:id`]: KOT_SWITCH,
   [`POST ${H}/till/kot-setup/kinds/:id/off`]: KOT_SWITCH,

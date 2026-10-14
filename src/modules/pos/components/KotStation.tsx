@@ -12,7 +12,8 @@ import { Button, toast } from "@/components/ui";
 import { useGroupSettings } from "@/modules/admin";
 import {
   getKotSetup, pollKotStation, claimKot, getDocket, claimBill, getOrder,
-  type KotKind, type KotSlipRef,
+  askKotReprint, claimKotReprint,
+  type KotKind, type KotSlipRef, type OrderLine,
 } from "@/modules/pos/data/till";
 import { DocketSlip } from "@/modules/pos/components/DocketSlip";
 import { BillSlip } from "@/modules/pos/components/BillSlip";
@@ -121,13 +122,16 @@ function StationPrinter({ hotelId }: { hotelId: string }) {
   const busy = useRef(false);
   const mine = queue.data?.station ? queue.data : null;
   const slip = mine?.due[0];
-  const bill = slip ? undefined : mine?.bills[0];
+  /* A reprint asked on the pad, the Till or the Terminal (D27-329 (2)). */
+  const again = slip ? undefined : mine?.reprints?.[0];
+  const bill = slip || again ? undefined : mine?.bills[0];
 
-  /* One at a time, KOTs first, oldest first: the paper's content, the
-     claim, the paper, then ask again. Anything else - a claim another tab
-     won, a failure - waits for the next ask rather than asking at once. */
+  /* One at a time - new KOTs, then reprints, then bills, oldest first: the
+     paper's content, the claim, the paper, then ask again. Anything else -
+     a claim another tab won, a failure - waits for the next ask rather
+     than asking at once. */
   useEffect(() => {
-    if ((!slip && !bill) || busy.current) return;
+    if ((!slip && !again && !bill) || busy.current) return;
     busy.current = true;
     void (async () => {
       try {
@@ -135,6 +139,12 @@ function StationPrinter({ hotelId }: { hotelId: string }) {
           const d = await getDocket(hotelId, slip.orderId, slip.kotNo, slip.kindId);
           if (d && await claimKot(hotelId, slip.orderId, slip.kotNo, slip.kindId, kotDevice())) {
             print(<DocketSlip d={d} />);
+            void qc.invalidateQueries({ queryKey: queueKey(hotelId) });
+          }
+        } else if (again) {
+          const d = await getDocket(hotelId, again.orderId, again.kotNo, again.kindId);
+          if (d && await claimKotReprint(hotelId, again.id, kotDevice())) {
+            print(<DocketSlip d={{ ...d, reprint: true }} />);
             void qc.invalidateQueries({ queryKey: queueKey(hotelId) });
           }
         } else if (bill) {
@@ -151,7 +161,7 @@ function StationPrinter({ hotelId }: { hotelId: string }) {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slip?.orderId, slip?.kotNo, slip?.kindId, bill?.id, queue.dataUpdatedAt]);
+  }, [slip?.orderId, slip?.kotNo, slip?.kindId, again?.id, bill?.id, queue.dataUpdatedAt]);
 
   return node;
 }
@@ -218,9 +228,62 @@ export function KotStatus({ hotelId, className }: { hotelId: string; className?:
   );
 }
 
+/** An order's KOTs, one per number and kind - "KOT 3 · Bar" is the Bar's
+    slip of KOT 3 - each with Reprint, on the order pad, the Till and the
+    Terminal (the owner's D27-324 (4), D27-329 (5)). The reprint goes to the
+    computer that prints that KOT's kind and prints there marked REPRINT,
+    never on this device (D27-329 (2)); the screen says where it went, or
+    that the computer is offline and the reprint waits for it. */
+export function KotsSent({ hotelId, orderId, lines, className }: {
+  hotelId: string; orderId: string; lines: OrderLine[]; className?: string;
+}) {
+  const [asking, setAsking] = useState<string | null>(null);
+  const kots = [...new Map(lines.flatMap((l) => l.kotNo == null ? [] : [[
+    `${l.kotNo}:${l.kotKind?.id ?? ""}`,
+    { no: l.kotNo, kindId: l.kotKind?.id ?? null,
+      label: `KOT ${l.kotNo}${l.kotKind ? ` · ${l.kotKind.name}` : ""}` },
+  ] as const])).values()];
+  if (kots.length === 0) return null;
+
+  const reprint = async (k: (typeof kots)[number]) => {
+    setAsking(k.label);
+    const res = await askKotReprint(hotelId, orderId, k.no, k.kindId)
+      .catch(() => ({ ok: false as const, reason: "The connection is down. Try again when it is back." }))
+      .finally(() => setAsking(null));
+    if (!res.ok) return void toast.error("Not reprinted", res.reason);
+    if (res.station.online) {
+      return void toast.success(`${k.label} sent to ${res.station.name}`, "It prints there, marked REPRINT.");
+    }
+    toast.error(`${res.station.name} is offline`,
+      `${k.label} waits there and prints when it is back. Not seen since ${since(res.station.seenAt)}.`);
+  };
+
+  return (
+    <div className={className}>
+      <p className="text-2xs uppercase tracking-wide text-grey-500 mb-1.5">KOTs sent</p>
+      <ul aria-label="KOTs sent" className="divide-y divide-grey-100 border-y border-grey-100">
+        {kots.map((k) => (
+          <li key={`${k.no}:${k.kindId ?? ""}`} className="flex items-center gap-2 py-1.5">
+            <span className="flex-1 min-w-0 truncate text-sm text-ink-900 tabular">{k.label}</span>
+            <button
+              type="button"
+              aria-label={`Reprint ${k.label}`}
+              disabled={asking === k.label}
+              onClick={() => void reprint(k)}
+              className="press h-11 px-3.5 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer shrink-0 disabled:opacity-50"
+            >
+              Reprint
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** One KOT printed again on THIS computer's printer, the paper saying
-    REPRINT: the KOT section's last 20, and the order screen's KOTs for the
-    waiter and the bar (the owner's D27-324 (4)). A reprint writes nothing. */
+    REPRINT: the KOT section's last 20, on the computer that prints them.
+    A reprint asked anywhere else goes to the station (`KotsSent`). */
 export function useKotReprint(hotelId: string) {
   const { print, node } = useSlipPrinter();
   const reprint = async (orderId: string, kotNo: number, kindId: string | null, label: string) => {

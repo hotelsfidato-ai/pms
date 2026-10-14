@@ -19,6 +19,9 @@ import { businessDateFor } from "../../businessDate.ts";
      kind is stamped on a line when it is sent (211).
    - One Send, one number, one slip per kind.
    - An offline computer's KOTs wait for it, with a red line naming it.
+   - A REPRINT (the pad, the Till, the Terminal) waits for the computer
+     that prints that KOT's kind and prints there, marked REPRINT
+     (D27-329; table pos_kot_reprints, 225).
    - THE BILL PRINTER: Print bill anywhere asks it here and it prints
      silently - INTERIM BILL, BILL, BILL · DUPLICATE. With none chosen,
      the bill opens on the device as before; offline, "Print here".
@@ -419,6 +422,23 @@ export function registerKotSection(till: App, hotelFor: HotelFor): void {
           order by b.asked_at`,
         [station.id, bd]) : { rows: [] };
 
+      /* Reprints asked of its kinds (D27-329 (2)), oldest first: Reprint on
+         the pad, the Till or the Terminal waits here, where the KOT first
+         went - from when the kind came here, as its KOTs do. */
+      const { rows: reprints } = await client.query<{
+        id: string; order_id: string; kot_no: number; kind_id: string; kind_name: string;
+        table_ref: string | null;
+      }>(
+        `select r.id::text, r.order_id::text, r.kot_no, k.id::text as kind_id, k.name as kind_name,
+                o.table_ref
+           from pos_kot_reprints r
+           join pos_kot_kinds k on k.id = r.kind_id
+           join pos_orders o on o.id = r.order_id
+          where r.hotel_id = $1 and k.station_id = $2 and k.is_active
+            and r.printed_at is null and r.asked_at >= k.station_since
+          order by r.asked_at`,
+        [hotelId, station.id]);
+
       const shape = (r: Row) => ({
         orderId: r.order_id, kotNo: r.kot_no, kindId: r.kind_id, kind: r.kind_name,
         table: r.table_ref, sentAt: r.sent_at, printedAt: r.printed_at,
@@ -428,9 +448,82 @@ export function registerKotSection(till: App, hotelFor: HotelFor): void {
         due: due.map(shape),
         recent: recent.map(shape),
         bills: bills.map((b) => ({ id: b.id, orderId: b.order_id, heading: b.heading, table: b.table_ref })),
+        reprints: reprints.map((r) => ({
+          id: r.id, orderId: r.order_id, kotNo: r.kot_no, kindId: r.kind_id, kind: r.kind_name,
+          table: r.table_ref,
+        })),
       };
     });
     return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+  });
+
+  /* ── A KOT printed again, at its station (the owner's D27-329) ──────
+     Reprint on the order pad, the Till and the Terminal. The slip waits
+     for the computer that prints its kind - where the KOT first went - and
+     prints there marked REPRINT, through that computer's own ask, the KOT
+     read and a claim: never on the device where Reprint was pressed.
+     Offline, it waits there and the answer says so; with no computer for
+     the kind it is refused. Who: whoever takes orders (roleGate TILL). */
+  till.post("/:code/till/orders/:id/kot/:no/reprint", async (c) => {
+    const input = await c.req.json().catch(() => ({})) as { kind?: unknown };
+    const kindId = typeof input.kind === "string" && UUID.test(input.kind) ? input.kind : null;
+    if (!kindId) return c.json(refuse("Which KOT?"), 409);
+    const kotNo = Number(c.req.param("no"));
+    const orderId = c.req.param("id");
+    if (!Number.isInteger(kotNo) || !UUID.test(orderId)) return c.json(refuse("No such KOT."), 409);
+    const result = await withSession(c.get("subject"), async (client, session) => {
+      const hotelId = await hotelFor(client, c.req.param("code"));
+      if (!hotelId) return null;
+      const { rows } = await client.query<{
+        kind: string; station: string | null; online: boolean; seen_at: string | null;
+      }>(
+        `select k.name as kind, s.name as station, s.seen_at::text,
+                coalesce(s.seen_at > now() - interval '${ONLINE}', false) as online
+           from pos_kot_kinds k
+           left join pos_kot_stations s on s.id = k.station_id and s.is_active
+          where k.id = $3 and k.hotel_id = $2
+            and exists (select 1 from pos_order_lines l
+                         where l.order_id = $1 and l.hotel_id = $2 and l.kot_no = $4
+                           and coalesce(l.kot_kind_id, app.pos_line_kot_kind(l.id)) = k.id)`,
+        [orderId, hotelId, kindId, kotNo]);
+      const slip = rows[0];
+      if (!slip) return refuse("No such KOT.");
+      if (!slip.station) {
+        return refuse(`No computer prints ${slip.kind} KOTs, so the reprint has nowhere to print. `
+          + "Choose one in Restaurant setup - KOT section.");
+      }
+      await client.query(
+        `insert into pos_kot_reprints (hotel_id, order_id, kot_no, kind_id, asked_by)
+         values ($1, $2, $3, $4, $5)`,
+        [hotelId, orderId, kotNo, kindId, session.staffId]);
+      return {
+        ok: true as const,
+        station: { name: slip.station, online: slip.online, seenAt: slip.seen_at },
+      };
+    });
+    if (!result) return c.json({ error: "No such property." }, 404);
+    return c.json(result, result.ok ? 200 : 409);
+  });
+
+  /* The station's claim of a reprint before the paper: the first asker
+     prints, and only the computer that prints its kind. */
+  till.post("/:code/till/kot-reprints/:id/printed", async (c) => {
+    const input = await c.req.json().catch(() => ({})) as { device?: unknown };
+    if (!/^\d+$/.test(c.req.param("id"))) return c.json(refuse("No such reprint."), 409);
+    const result = await withSession(c.get("subject"), async (client) => {
+      const hotelId = await hotelFor(client, c.req.param("code"));
+      if (!hotelId) return null;
+      const { rowCount } = await client.query(
+        `update pos_kot_reprints r set printed_at = now()
+          where r.id = $2 and r.hotel_id = $1 and r.printed_at is null
+            and r.kind_id in (select k.id from pos_kot_kinds k
+                                join pos_kot_stations s on s.id = k.station_id
+                               where k.hotel_id = $1 and k.is_active and s.device = $3 and s.is_active)`,
+        [hotelId, c.req.param("id"), deviceOf(input.device)]);
+      return { ok: true as const, claimed: rowCount === 1 };
+    });
+    if (!result) return c.json({ error: "No such property." }, 404);
+    return c.json(result);
   });
 
   /* ── A bill to print ─────────────────────────────────────────────────

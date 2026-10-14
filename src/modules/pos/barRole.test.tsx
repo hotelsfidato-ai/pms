@@ -3,6 +3,7 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
+import { toast } from "@/components/ui";
 import { AGRA_HOTEL, HOTEL, signedIn, startSignedIn } from "@/test/app";
 import type { Role } from "@/lib/permissions";
 import type { Docket, MenuCategory, MenuItem, Order } from "@/modules/pos/data/till";
@@ -14,9 +15,9 @@ import { OrderPad } from "@/modules/pos/flows/OrderPad";
 
    The server gives a Bar person only the bar's sections (those that print
    on the Bar KOT), so the pad opens on them - no Restaurant tab in front.
-   A waiter or a Bar person reprints the open order's own KOTs from the pad,
-   through the KOT read the printing computer uses, marked REPRINT. The
-   server's half is api/test/modules/pos/barRole.test.ts.
+   A waiter or a Bar person reprints the open order's own KOTs from the pad;
+   the reprint prints at the computer that prints that KOT, marked REPRINT
+   (D27-329 (2)). The server's half is api/test/modules/pos/barRole.test.ts.
    ══════════════════════════════════════════════════════════════════ */
 
 const { ApiError } = apiModule;
@@ -113,19 +114,22 @@ describe("reprinting a KOT from the order screen (D27-324 (4))", () => {
     lines: [{ id: "l-1", parentId: null, name: "Kingfisher 650", qty: 2, note: null, isAddon: false }],
   };
 
+  /* D27-329 (2): the reprint goes to the computer that prints that KOT's
+     kind - the bar's here - not to this device's printer. The station's
+     half is KotStation.test.tsx; offline and refused, kotReprint.test.tsx. */
   for (const role of ["pos", "bar"] as const) {
-    it(`offers ${role === "pos" ? "a waiter" : "a Bar person"} each KOT of the order, and prints it marked REPRINT`, async () => {
+    it(`offers ${role === "pos" ? "a waiter" : "a Bar person"} each KOT of the order, and sends the reprint to the bar's computer`, async () => {
       as(role);
       const asked = server({
         [`GET ${API}/menu`]: () => ({ categories: [] }),
         [`GET ${API}/numbered-addons`]: () => ({ addons: [] }),
         [`GET ${API}/orders/o-5`]: () => ORDER,
         [`GET ${API}/orders/o-5/kot/3`]: () => DOCKET,
+        [`POST ${API}/orders/o-5/kot/3/reprint`]: () =>
+          ({ ok: true, station: { name: "Bar PC", online: true, seenAt: null } }),
       });
-      const onPaper: string[] = [];
-      vi.spyOn(window, "print").mockImplementation(() => {
-        onPaper.push(document.querySelector(".kot-print")?.textContent ?? "");
-      });
+      const print = vi.spyOn(window, "print").mockImplementation(() => {});
+      const said = vi.spyOn(toast, "success");
       pad("o-5");
 
       const list = await screen.findByRole("list", { name: "KOTs sent" });
@@ -133,11 +137,10 @@ describe("reprinting a KOT from the order screen (D27-324 (4))", () => {
         .toEqual(["KOT 3 · Bar", "KOT 3 · Kitchen"]);
       fireEvent.click(within(list).getByRole("button", { name: "Reprint KOT 3 · Bar" }));
 
-      await vi.waitFor(() => expect(onPaper).toHaveLength(1));
-      expect(asked).toContain(`GET ${API}/orders/o-5/kot/3?kind=k-bar`);
-      expect(onPaper[0]).toContain("BAR KOT 3");
-      expect(onPaper[0]).toContain("REPRINT");
-      expect(onPaper[0]).toContain("Kingfisher 650");
+      await vi.waitFor(() => expect(said).toHaveBeenCalledWith(
+        "KOT 3 · Bar sent to Bar PC", "It prints there, marked REPRINT."));
+      expect(asked).toContain(`POST ${API}/orders/o-5/kot/3/reprint`);
+      expect(print, "not on this device").not.toHaveBeenCalled();
     });
   }
 });

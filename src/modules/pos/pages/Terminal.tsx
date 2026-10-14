@@ -16,7 +16,7 @@ import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
-import { KotStatus } from "@/modules/pos/components/KotStation";
+import { KotStatus, KotsSent } from "@/modules/pos/components/KotStation";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
 import { useBillPrint } from "@/modules/pos/flows/printBill";
@@ -901,6 +901,12 @@ export default function TerminalPage() {
                     )}
                   </li>
                 ))}
+                {/* An open order's KOTs, reprinted at their station (D27-329 (5)). */}
+                {order.status === "open" && order.lines.some((l) => l.kotNo != null) && (
+                  <li className="pt-3">
+                    <KotsSent hotelId={hotelId} orderId={order.id} lines={order.lines} />
+                  </li>
+                )}
                 {order.lines.length === 0 && (
                   <li className="text-base text-grey-500 text-center py-8">
                     Tap a dish to add it.

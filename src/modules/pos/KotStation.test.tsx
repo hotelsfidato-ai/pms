@@ -102,7 +102,7 @@ const ORDER = {
 } as unknown as Order;
 
 describe("a printing computer prints (D27-159, D27-292)", () => {
-  const station = (claimed: boolean, due: boolean, bills: boolean) => {
+  const station = (claimed: boolean, due: boolean, bills: boolean, reprints = false) => {
     let asks = 0;
     const calls = server({
       [`GET ${BASE}/kot-setup`]: () => setupOf({ me: "st-1" }),
@@ -113,10 +113,13 @@ describe("a printing computer prints (D27-159, D27-292)", () => {
           recent: [],
           due: first && due ? [{ orderId: "o-3", kotNo: 3, kindId: "k-bar", kind: "Bar", table: "AC4", sentAt: "", printedAt: null }] : [],
           bills: first && bills ? [{ id: "9", orderId: "o-3", heading: "interim", table: "AC4" }] : [],
+          reprints: first && reprints
+            ? [{ id: "r-1", orderId: "o-3", kotNo: 3, kindId: "k-bar", kind: "Bar", table: "AC4" }] : [],
         };
       },
       [`GET ${BASE}/orders/o-3/kot/3`]: () => DOCKET,
       [`POST ${BASE}/orders/o-3/kot/3/printed`]: () => ({ ok: true, claimed }),
+      [`POST ${BASE}/kot-reprints/r-1/printed`]: () => ({ ok: true, claimed }),
       [`GET ${BASE}/orders/o-3`]: () => ORDER,
       [`POST ${BASE}/bill-prints/9/printed`]: () => ({ ok: true, claimed }),
     });
@@ -149,8 +152,22 @@ describe("a printing computer prints (D27-159, D27-292)", () => {
     expect(onPaper[0]).toContain("NOT PAID");
   });
 
+  /* D27-329 (2): Reprint pressed on a waiter's tablet, the Till or the
+     Terminal waits here, at the computer that prints that KOT's kind. */
+  it("prints a reprint asked of it, marked REPRINT, claimed first", async () => {
+    const { calls, print, onPaper } = station(true, false, false, true);
+    await vi.waitFor(() => expect(print).toHaveBeenCalledTimes(1));
+    expect(onPaper[0]).toContain("BAR KOT 3");
+    expect(onPaper[0]).toContain("REPRINT");
+    expect(onPaper[0]).toContain("Kingfisher 650");
+    expect(calls.find((c) => c.key === `POST ${BASE}/kot-reprints/r-1/printed`)?.body)
+      .toMatchObject({ device: expect.any(String) });
+    expect(calls.some((c) => c.key === `POST ${BASE}/orders/o-3/kot/3/printed`), "not claimed as a new KOT")
+      .toBe(false);
+  });
+
   it("prints nothing when another tab claimed it first", async () => {
-    const { print } = station(false, true, true);
+    const { print } = station(false, true, true, true);
     await new Promise((r) => setTimeout(r, 300));
     expect(print).not.toHaveBeenCalled();
   });

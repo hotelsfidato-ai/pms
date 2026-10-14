@@ -1065,3 +1065,35 @@ begin
   select count(*) into n from pos_outlets where code = 'BARRL';
   perform test.ok('pos bar role', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+-- =============================================================================
+-- A REPRINTED KOT PRINTS AT THE STATION (the owner's D27-329 (2))
+-- =============================================================================
+-- Reprint asks for the slip again; it waits for the computer that prints that
+-- KOT's kind, which claims it before the paper, as it claims a new KOT. Which
+-- computer, and who may ask, are the API's (api/test/modules/pos/
+-- kotReprint.test.ts). What the database holds to: a reprint asked is kept
+-- until it is printed; the app may ask one and mark it printed, never change
+-- what was asked nor remove it; row security keeps it to its hotel; a test
+-- hotel counts it as trading.
+-- =============================================================================
+do $$
+declare
+  t boolean := to_regclass('public.pos_kot_reprints') is not null;
+begin
+  perform test.ok('pos kot reprint', 'a reprint asked is kept until the station prints it', t);
+  perform test.ok('pos kot reprint', 'the app may ask one',
+    case when t then has_table_privilege('pms_app', 'pos_kot_reprints', 'insert') else false end);
+  perform test.ok('pos kot reprint', 'and mark it printed',
+    case when t then has_column_privilege('pms_app', 'pos_kot_reprints', 'printed_at', 'update') else false end);
+  perform test.ok('pos kot reprint', 'but never change which KOT was asked',
+    case when t then not has_column_privilege('pms_app', 'pos_kot_reprints', 'kot_no', 'update')
+                 and not has_column_privilege('pms_app', 'pos_kot_reprints', 'kind_id', 'update') else false end);
+  perform test.ok('pos kot reprint', 'nor remove one',
+    case when t then not has_table_privilege('pms_app', 'pos_kot_reprints', 'delete') else false end);
+  perform test.ok('pos kot reprint', 'row security keeps it to its hotel',
+    coalesce((select relforcerowsecurity from pg_class where oid = to_regclass('public.pos_kot_reprints')), false));
+  perform test.ok('pos kot reprint', 'a test hotel counts it as trading',
+    exists (select 1 from app.test_hotel_classes() c
+             where c.table_name = 'pos_kot_reprints' and c.class = 'trading'));
+end $$;
