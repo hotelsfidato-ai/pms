@@ -194,6 +194,19 @@ describe("a reprint goes to the computer that prints the KOT's kind (D27-329 (2)
     expect((await thisComputer(BAR_PC, "Bar PC", [barKind])).status).toBe(200);
   });
 
+  it("a KOT sent before KOT kinds reads by its dishes' kinds, and reprints at each one's computer", async () => {
+    const d = await sentAndPrinted();
+    /* As a KOT sent before 211 stamped the kind on its lines (10 October). */
+    await sql("update pos_order_lines set kot_kind_id = null where order_id = $1", [d.orderId]);
+    const order = (await (await call(waiter, "GET", `/till/orders/${d.orderId}`)).json()) as {
+      lines: { kotKind: { name: string } | null }[];
+    };
+    expect(order.lines.map((l) => l.kotKind?.name).sort(), "the pad lists each kind's slip")
+      .toEqual(["Bar", "Kitchen"]);
+    expect(await (await reprint(waiter, d.orderId, d.kotNo, barKind)).json())
+      .toMatchObject({ ok: true, station: { name: "Bar PC" } });
+  });
+
   it("is for those who take orders: not the chef", async () => {
     const d = await sentAndPrinted();
     expect((await reprint(chef, d.orderId, d.kotNo, barKind)).status).toBe(403);
