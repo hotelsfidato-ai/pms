@@ -3,11 +3,11 @@ import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/re
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import * as apiModule from "@/lib/api";
-import * as postings from "@/modules/finance/data/postings";
+import * as postings from "./data/postings";
 import * as frontDesk from "@/modules/front-desk";
 import { startSignedIn } from "@/test/app";
 import type { Stay } from "@/data/repositories";
-import { FolioPanel } from "@/modules/finance/flows/FolioPanel";
+import { FolioPanel } from "./flows/FolioPanel";
 
 /* ══════════════════════════════════════════════════════════════════
    LEAVING EARLY (the owner's D27-315, Part A)
