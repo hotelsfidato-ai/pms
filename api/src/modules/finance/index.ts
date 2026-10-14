@@ -47,6 +47,11 @@ export const mounts: readonly Mount[] = [
 export { postCharge } from "./postings.ts";
 /* D25-40: the cash limit and the PAN, for the till's settle as for the desk. */
 export { overCashLimit, panFor } from "./cashLimit.ts";
+/* D27-324: a paid restaurant bill voided gives its cash back out of the
+   voider's own drawer, opened as a refund opens it, under the refunds' cash
+   ceiling (D27-315 B) - the till uses finance's, not a second copy. */
+export { openOwnDrawer } from "./cashier.ts";
+export { CASH_REFUND_CEILING } from "./refunds.ts";
 /* D27-195: a room rate that includes GST, split for the booking (reservations). */
 export { roomRateBeforeGst } from "./tax.ts";
 export type { ChargeToPost } from "./postings.ts";

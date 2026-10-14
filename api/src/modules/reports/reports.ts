@@ -263,34 +263,46 @@ reports.get("/:code/reports/cashier-shift", async (c) => {
       staff_id: string | null; cashier: string | null; method: string;
       n: string; amount: string;
     }>(
-      `select fp.posted_by::text as staff_id,
+      `with money as (
+         select fp.posted_by as staff_id,
+                coalesce(p.method, rf.method, 'unrecorded') as method,
+                -fp.amount as amount
+           from folio_postings fp
+           left join payments p on p.posting_id = fp.id
+           /* A refund given is money out of the hand that gave it (D27-315 B):
+              negative, by the way it went back. */
+           left join refunds rf on rf.posting_id = fp.id
+          where fp.hotel_id = $1
+            and fp.category in ('payment', 'refund')
+            /* Money in the drawer. A bill transferred to the city ledger is
+               posted as a payment, and nobody handed over any money for it
+               (the owner, 17 September). */
+            and coalesce(p.method, '') <> 'city_ledger'
+            and fp.business_date between $2::date and $3::date
+            and fp.reverses_id is null
+            and not exists (
+              select 1 from folio_postings rev where rev.reverses_id = fp.id
+            )
+         union all
+         /* A paid restaurant bill voided (D27-324, migration 223): its cash
+            went back out of the voider's own drawer, as a cash refund does. */
+         select o.voided_by, 'cash', -t.amount
+           from pos_orders o
+           join pos_order_tenders t on t.order_id = o.id and t.method = 'cash'
+          where o.hotel_id = $1 and o.status = 'void'
+            and o.business_date between $2::date and $3::date
+       )
+       select m.staff_id::text as staff_id,
               coalesce(s.full_name, hp.full_name) as cashier,
-              coalesce(p.method, rf.method, 'unrecorded') as method,
-              count(*)::text as n,
-              (-sum(fp.amount))::text as amount
-         from folio_postings fp
-         left join payments p on p.posting_id = fp.id
-         /* A refund given is money out of the hand that gave it (D27-315 B):
-            negative, by the way it went back. */
-         left join refunds rf on rf.posting_id = fp.id
-         left join staff s on s.id = fp.posted_by
+              m.method, count(*)::text as n, sum(m.amount)::text as amount
+         from money m
+         left join staff s on s.id = m.staff_id
          /* A colleague's name comes through app.hotel_people (149): staff
             shows a clerk only their own row, so the Accountant read
             Reception's cash as "not on record" (QA RP-4). */
-         left join app.hotel_people($1) hp on hp.id = fp.posted_by
-        where fp.hotel_id = $1
-          and fp.category in ('payment', 'refund')
-          /* Money in the drawer. A bill transferred to the city ledger is
-             posted as a payment, and nobody handed over any money for it
-             (the owner, 17 September). */
-          and coalesce(p.method, '') <> 'city_ledger'
-          and fp.business_date between $2::date and $3::date
-          and fp.reverses_id is null
-          and not exists (
-            select 1 from folio_postings rev where rev.reverses_id = fp.id
-          )
-        group by fp.posted_by, 2, coalesce(p.method, rf.method, 'unrecorded')
-        order by 2 nulls last, method`,
+         left join app.hotel_people($1) hp on hp.id = m.staff_id
+        group by m.staff_id, 2, m.method
+        order by 2 nulls last, m.method`,
       [hotelId, from, to],
     );
 

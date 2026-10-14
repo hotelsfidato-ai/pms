@@ -175,23 +175,34 @@ cashier.get("/:code/cashier-shift", async (c) => {
     }>(
       /* A cash refund given from this drawer (D27-315 B) is here as money
          out: negative, under the way it went back. */
-      `select coalesce(p.method, rf.method, 'unrecorded') as method,
-              /* With the round-off a cash room bill was taken to the
-                 rupee with (D27-317): what is in the drawer. */
-              count(*)::int as n, (-sum(fp.amount) + coalesce(sum(p.round_off), 0))::text as amount
-         from folio_postings fp
-         left join payments p on p.posting_id = fp.id
-         left join refunds rf on rf.posting_id = fp.id
-         join cashier_shifts cs on cs.id = $1
-        where fp.hotel_id = cs.hotel_id
-          and fp.category in ('payment', 'refund')
-          and fp.posted_by = cs.staff_id
-          and fp.created_at >= cs.opened_at
-          and fp.reverses_id is null
-          and not exists (
-            select 1 from folio_postings rev where rev.reverses_id = fp.id)
-        group by coalesce(p.method, rf.method, 'unrecorded')
-        order by 1`,
+      `with money as (
+         select coalesce(p.method, rf.method, 'unrecorded') as method,
+                /* With the round-off a cash room bill was taken to the
+                   rupee with (D27-317): what is in the drawer. */
+                -fp.amount + coalesce(p.round_off, 0) as amount
+           from folio_postings fp
+           left join payments p on p.posting_id = fp.id
+           left join refunds rf on rf.posting_id = fp.id
+           join cashier_shifts cs on cs.id = $1
+          where fp.hotel_id = cs.hotel_id
+            and fp.category in ('payment', 'refund')
+            and fp.posted_by = cs.staff_id
+            and fp.created_at >= cs.opened_at
+            and fp.reverses_id is null
+            and not exists (
+              select 1 from folio_postings rev where rev.reverses_id = fp.id)
+         union all
+         /* A paid restaurant bill this drawer's holder voided (D27-324,
+            migration 223): its cash went back to the guest from here, as a
+            cash refund does - money out, under cash. */
+         select 'cash', -t.amount
+           from pos_orders o
+           join pos_order_tenders t on t.order_id = o.id and t.method = 'cash'
+           join cashier_shifts cs on cs.id = $1
+          where o.hotel_id = cs.hotel_id and o.status = 'void'
+            and o.voided_by = cs.staff_id and o.voided_at >= cs.opened_at)
+       select method, count(*)::int as n, sum(amount)::text as amount
+         from money group by method order by 1`,
       [shiftId],
     );
 

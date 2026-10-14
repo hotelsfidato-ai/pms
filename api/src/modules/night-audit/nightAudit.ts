@@ -4,7 +4,7 @@ import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
 import { POSTING_NIGHTS } from "../reports/index.ts";
 import { roomNightsDue, postRoomNight } from "./roomNight.ts";
-import { struckAfterKitchen } from "../pos/index.ts";
+import { struckAfterKitchen, voidedBills } from "../pos/index.ts";
 
 /* Who is charged for a night, what the charge is and the insert that writes
    it are in roomNight.ts, which check-in calls too (D27-204). */
@@ -522,6 +522,9 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
          from pos_order_tenders t
          join pos_orders o on o.id = t.order_id
         where t.hotel_id = $1 and o.business_date = $2::date
+          /* Paid bills only: a bill voided (D27-324) took nothing, and is
+             listed below as voided. */
+          and o.status = 'settled'
         group by t.method
         order by t.method`,
       [hotelId, businessDate],
@@ -576,6 +579,9 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
         /* Dishes struck after the kitchen had them, and why (D27-119, the
            owner's answer of 28 September). */
         struck: await struckAfterKitchen(client, hotelId, businessDate),
+        /* Paid bills voided that day (D27-324): who, when, why, how much -
+           left out of every figure above. */
+        voided: await voidedBills(client, hotelId, businessDate),
       },
       /* Two drawers, side by side, never summed. */
       drawers: {

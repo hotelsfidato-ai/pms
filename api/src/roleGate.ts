@@ -225,6 +225,11 @@ const TABLE_HOURS = grant("room_config", "edit", "Setting the restaurant's table
    manager, or a `payment` holder. */
 const KOT_SWITCH = grant("menu", "edit", "Choosing the KOT printer");
 const KOT_PRINT = grant("payment", "create", "Printing the kitchen's KOTs", ["pos", "chef", "kitchen_manager"]);
+/* Voiding a PAID restaurant bill (the owner's D27-324): the owner, an
+   administrator or the GM - `approve` on a booking is exactly those three.
+   The database asks the same three (app.voids_paid_pos_bills, 223);
+   api/test/modules/pos/voidPaidBill.test.ts refuses a waiter. */
+const VOID_PAID_BILL = grant("reservation", "approve", "Voiding a paid restaurant bill");
 
 /* No screen calls these two yet. A bill photographed for a purchase (§15) is
    purchasing's; where n8n copied a file is an integration's. */
@@ -431,6 +436,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/till/orders/:id`]: TILL,
   [`POST ${H}/till/orders/:id/settle`]: TILL,
   [`POST ${H}/till/orders/:id/abandon`]: TILL,
+  [`POST ${H}/till/orders/:id/void`]: VOID_PAID_BILL,  // D27-324
   [`POST ${H}/till/orders/:id/lines/:lineId/qty`]: TILL,
   /* Customise: the numbered add-ons on a dish not yet sent (D27-289). */
   [`POST ${H}/till/orders/:id/lines/:lineId/numbered-addons`]: TILL,
