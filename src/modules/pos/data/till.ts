@@ -1610,13 +1610,25 @@ export interface BillJob {
   table: string | null;
 }
 
+/** A KOT slip asked to print again at this computer (D27-329 (2)). */
+export interface KotReprintJob {
+  id: string;
+  orderId: string;
+  kotNo: number;
+  kindId: string;
+  kind: string;
+  table: string | null;
+}
+
 /** The station's ask: it is also its "last seen". `due` oldest first. */
 export async function pollKotStation(
   hotelId: string, device: string,
 ): Promise<
   | { station: false }
   | { station: { id: string; name: string; kinds: { id: string; name: string }[]; printsBills: boolean };
-      due: KotSlipRef[]; recent: KotSlipRef[]; bills: BillJob[] }
+      due: KotSlipRef[]; recent: KotSlipRef[]; bills: BillJob[];
+      /** Absent from a server before 15 October. */
+      reprints?: KotReprintJob[] }
 > {
   return api(`/api/hotels/${hotelId}/till/kot-stations/poll`,
     { method: "POST", body: JSON.stringify({ device }) });
@@ -1629,6 +1641,20 @@ export async function claimKot(
 ): Promise<boolean> {
   const res = await plainPost<{ ok: true; claimed: boolean }>(
     `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}/printed`, { device, kind: kindId });
+  return res.ok && res.claimed;
+}
+
+/** Reprint a KOT's slip at the computer that prints its kind (the owner's
+    D27-329 (2)): it waits there and prints marked REPRINT - never on this
+    device. `station.online` false: it prints when that computer is back. */
+export const askKotReprint = (hotelId: string, orderId: string, kotNo: number, kindId: string | null) =>
+  plainPost<{ ok: true; station: { name: string; online: boolean; seenAt: string | null } }>(
+    `/api/hotels/${hotelId}/till/orders/${orderId}/kot/${kotNo}/reprint`, { kind: kindId });
+
+/** The station's claim of a reprint before the paper. */
+export async function claimKotReprint(hotelId: string, id: string, device: string): Promise<boolean> {
+  const res = await plainPost<{ ok: true; claimed: boolean }>(
+    `/api/hotels/${hotelId}/till/kot-reprints/${id}/printed`, { device });
   return res.ok && res.claimed;
 }
 
