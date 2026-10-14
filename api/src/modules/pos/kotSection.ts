@@ -249,7 +249,8 @@ export function registerKotSection(till: App, hotelFor: HotelFor): void {
   /* ── This computer ───────────────────────────────────────────────────
      The kinds it prints and whether it prints the bills, named. A kind or
      the bills ticked here MOVE here from any other computer, and start
-     afresh: what was sent before is not this computer's (D27-161).
+     afresh: what was sent before is not this computer's (D27-161) - but a
+     reprint still waiting moves with its kind (D27-330 (6)).
      Nothing ticked: this computer prints nothing and leaves the list. */
   till.post("/:code/till/kot-setup/this-computer", async (c) => {
     const input = await c.req.json().catch(() => ({})) as {
@@ -423,8 +424,9 @@ export function registerKotSection(till: App, hotelFor: HotelFor): void {
         [station.id, bd]) : { rows: [] };
 
       /* Reprints asked of its kinds (D27-329 (2)), oldest first: Reprint on
-         the pad, the Till or the Terminal waits here, where the KOT first
-         went - from when the kind came here, as its KOTs do. */
+         the pad, the Till or the Terminal waits for the computer that prints
+         the kind NOW. A kind moved here brings its waiting reprints with it
+         (the owner's D27-330 (6)); its waiting new KOTs start afresh (D27-161). */
       const { rows: reprints } = await client.query<{
         id: string; order_id: string; kot_no: number; kind_id: string; kind_name: string;
         table_ref: string | null;
@@ -435,7 +437,7 @@ export function registerKotSection(till: App, hotelFor: HotelFor): void {
            join pos_kot_kinds k on k.id = r.kind_id
            join pos_orders o on o.id = r.order_id
           where r.hotel_id = $1 and k.station_id = $2 and k.is_active
-            and r.printed_at is null and r.asked_at >= k.station_since
+            and r.printed_at is null
           order by r.asked_at`,
         [hotelId, station.id]);
 

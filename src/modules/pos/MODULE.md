@@ -258,7 +258,8 @@ kot section (kotSection.ts, D27-292)
             POST   /:code/till/kot-stations/poll            {device}: last seen; its kinds' due slips (since the kind
                                                             came here, unprinted, the business date only, D27-167),
                                                             its last 20, the bills asked of it, the reprints asked
-                                                            of its kinds (since the kind came here) (KOT_PRINT)
+                                                            of its kinds, unprinted - a moved kind brings them
+                                                            (D27-330 (6)) (KOT_PRINT)
             POST   /:code/till/kot-reprints/:id/printed     {device}: the station's claim of a reprint (KOT_PRINT)
             POST   /:code/till/orders/:id/bill-print        asked of the bill printer: heading, sentTo (null: none
                                                             chosen, open it here); an unpaid one is "Bill printed"

@@ -103,8 +103,11 @@ directory.get("/:code/guests", async (c) => {
        )
        select m.key                                             as id,
               min(m.full_name)                                  as name,
-              count(*)::text                                    as stays,
-              sum(greatest(m.check_out - m.check_in, 0))::text  as nights,
+              /* Stays and Nights are live bookings, as the mark above (the
+                 owner's D27-330 (5)): voided, cancelled or no-show is not a stay. */
+              count(*) filter (where m.status not in ('cancelled','void','no_show'))::text as stays,
+              coalesce(sum(greatest(m.check_out - m.check_in, 0))
+                filter (where m.status not in ('cancelled','void','no_show')), 0)::text   as nights,
               max(m.check_out) filter (where m.check_out <= $2::date)::text as last_stay,
               /* Void with cancelled (the owner's D27-326 (1)): a booking
                  entered twice and voided is not the guest coming back. */
@@ -121,7 +124,8 @@ directory.get("/:code/guests", async (c) => {
          left join spend   on spend.reservation_id   = m.id
          left join overlapping_names o on o.key = m.key
         group by m.key
-        order by count(*) desc, min(m.full_name)`,
+        order by count(*) filter (where m.status not in ('cancelled','void','no_show')) desc,
+                 min(m.full_name)`,
       [hotelId, asOn],
     );
 

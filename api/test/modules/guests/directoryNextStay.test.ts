@@ -13,6 +13,9 @@ import { closePool } from "../../../src/db.ts";
    The "possible duplicate" mark the same (the owner's D27-329 (6)): two
    bookings under one name that overlap, but only when both are happening.
    A booking entered twice and voided, or cancelled, is not a second person.
+
+   Its Stays and Nights the same (the owner's D27-330 (5)): a voided booking,
+   a cancelled one or a no-show is not a stay, and its nights were not slept.
    ══════════════════════════════════════════════════════════════════ */
 
 const SUPER =
@@ -47,7 +50,9 @@ async function guestWith(who: string, status: "confirmed" | "void" | "cancelled"
 const row = async (who: string) => {
   const res = await app.request("/api/hotels/5EL/guests", { headers: { "x-dev-staff-id": "dev-owner" } });
   expect(res.status).toBe(200);
-  const rows = (await res.json()) as Array<{ name: string; nextStay: string | null; possibleDuplicate: boolean }>;
+  const rows = (await res.json()) as Array<{
+    name: string; nextStay: string | null; possibleDuplicate: boolean; stays: number; nights: number;
+  }>;
   const found = rows.find((r) => r.name === `${tag} ${who}`);
   expect(found, `${who} is in the directory`).toBeTruthy();
   return found!;
@@ -99,5 +104,17 @@ describe("the directory's possible duplicate (D27-329 (6))", () => {
   it("leaves a voided or cancelled booking out", async () => {
     expect((await row("voided twice")).possibleDuplicate).toBe(false);
     expect((await row("cancelled twice")).possibleDuplicate).toBe(false);
+  });
+});
+
+describe("the directory's Stays and Nights (D27-330 (5))", () => {
+  it("count two live bookings", async () => {
+    expect(await row("twice")).toMatchObject({ stays: 2, nights: 4 });
+  });
+
+  it("leave a voided or cancelled booking out", async () => {
+    expect(await row("voided twice")).toMatchObject({ stays: 1, nights: 2 });
+    expect(await row("cancelled twice")).toMatchObject({ stays: 1, nights: 2 });
+    expect(await row("voided")).toMatchObject({ stays: 0, nights: 0 });
   });
 });
