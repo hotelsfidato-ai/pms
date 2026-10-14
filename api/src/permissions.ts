@@ -48,6 +48,10 @@ export const ROLES = [
   "kitchen_manager",
   "chef",
   "pos",
+  /* The Bar role (the owner's D27-324, migration "the bar role"): the
+     waiter's rights on the bar's dishes only - which dishes is the till's
+     and the database's (app.pos_bar_only), not this matrix's. */
+  "bar",
   "stores",
   "finance",
   "read_only",
@@ -125,6 +129,15 @@ type ResourceGrants = Partial<Record<Resource, readonly Action[]>>;
 const ALL: readonly Action[] = ACTIONS;
 const READ: readonly Action[] = ["view"];
 const READ_EXPORT: readonly Action[] = ["view", "export"];
+
+/* The waiter (`pos`, also an outside till's account) and the bar: the
+   restaurant's rights come by name in roleGate.ts; here, the rooms they may
+   charge to. One object, so the two cannot drift (D27-324). */
+const TILL_PERSON: ResourceGrants = {
+  /* No `dashboard` (D27-141): it carries revenue. */
+  reservation: READ,
+  inventory: READ,
+};
 
 /* ══════════════════════════════════════════════════════════════════
    THE MATRIX — PMS roles only
@@ -207,7 +220,12 @@ const MATRIX: Record<Role, ResourceGrants> = {
     commission: ["view", "edit", "export"],
     report: READ_EXPORT,
     notification: READ,
-    user: READ,
+    /* The GM runs their hotel's people (D22-3): adds them, gives access,
+       changes a role, switches off, resets a password - never an Admin or an
+       Owner (D22-2, 152). The database decides each act (app.manages_hotel,
+       app.grantable_roles); this said READ, so the Roles screen showed the
+       GM as "View" (the owner's D27-324 (5)). Nothing else reads it. */
+    user: ["view", "create", "edit"],
     audit_log: READ,
     /* The owner's D17-36, 17 September: the GM may open Settings. The module
        switches on that screen stay the owner's and an administrator's
@@ -341,13 +359,12 @@ const MATRIX: Record<Role, ResourceGrants> = {
     purchasing: ["view", "create"],
   },
 
-  /* A till, not a person. It opens orders and settles them, and it can
+  /* The Waiter (D27-324 (3); "Till Operator" until then) - and an outside
+     till's service account. It opens orders and settles them, and it can
      read the rooms it may charge to. Nothing else. */
-  pos: {
-    /* No `dashboard` (D27-141): it carries revenue. */
-    reservation: READ,
-    inventory: READ,
-  },
+  pos: TILL_PERSON,
+  /* The Bar (D27-324 (2)): exactly the waiter's. */
+  bar: TILL_PERSON,
 
   housekeeping: {
     laundry: ["view", "create", "edit", "cancel"],

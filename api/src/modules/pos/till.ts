@@ -213,6 +213,9 @@ till.get("/:code/till/menu", async (c) => {
          from pos_menu_categories c
          left join pos_menu_items i on i.category_id = c.id
         where c.hotel_id = $1 and c.is_active
+          /* A Bar person sees only the bar's dishes (D27-324): what prints
+             on the Bar KOT. Their empty sections go with the rest. */
+          and (not app.pos_bar_only($1) or app.pos_dish_at_bar($1, i.id))
         order by c.sort_order, c.name, i.sort_order, i.name`,
       [hotelId],
     );
@@ -1749,14 +1752,17 @@ async function readOrder(client: Client, orderId: string) {
     variation_id: string | null; addon_id: string | null;
     numbered_addons: LineAddons | null;
     extra_kind: "custom" | "numbered" | null;
+    kot_no: number | null; kot_kind_id: string | null; kot_kind_name: string | null;
   }>(
     `select l.id::text, l.name, l.qty::text, l.unit_price::text,
             l.tax_rate::text, l.tax_scheme, l.note, l.voided, l.kot_status,
             s.full_name as added_by_name,
             l.parent_line_id::text, l.variation_id::text, l.addon_id::text,
-            l.numbered_addons, l.extra_kind
+            l.numbered_addons, l.extra_kind,
+            l.kot_no, k.id::text as kot_kind_id, k.name as kot_kind_name
        from pos_order_lines l
        left join staff s on s.id = l.added_by
+       left join pos_kot_kinds k on k.id = l.kot_kind_id
       where l.order_id = $1
       /* Each dish, then what hangs under it: an add-on put on a dish after
          three more dishes (D27-291) still reads under ITS dish. */
@@ -1853,6 +1859,10 @@ async function readOrder(client: Client, orderId: string) {
       /* pending until a waiter sends it. The till shows which dishes the
          kitchen has, so a second KOT does not re-fire the starters. */
       kotStatus: l.kot_status,
+      /* The KOT it went on and that slip's kind, stamped when sent (211):
+         the order screen reprints them (the owner's D27-324 (4)). */
+      kotNo: l.kot_no,
+      kotKind: l.kot_kind_id ? { id: l.kot_kind_id, name: l.kot_kind_name! } : null,
       addedBy: l.added_by_name,
       /* An add-on names the dish it belongs to. The bill and the kitchen
          docket both indent on this: "Sides: Onions" under "Bhaaji Pau
@@ -2173,6 +2183,22 @@ export interface LineInput {
   extraFor?: string;
 }
 
+/* ── The bar orders from the bar (the owner's D27-324 (2)) ──────────
+   A Bar person puts on a bill only a dish that prints on the Bar KOT - its
+   section's kind, else its heading's (app.pos_dish_at_bar) - and raises the
+   count of no other. Asked before anything is written (root MEMORY 243); the
+   database refuses the rest behind it (the bar role's trigger). */
+async function barRefusal(
+  client: Client, hotelId: string, itemId: string,
+): Promise<{ ok: false; reason: string } | null> {
+  const { rows } = await client.query<{ ok: boolean; name: string | null }>(
+    `select not app.pos_bar_only($1) or app.pos_dish_at_bar($1, $2::uuid) as ok,
+            (select name from pos_menu_items where id = $2::uuid) as name`,
+    [hotelId, itemId]);
+  return rows[0]!.ok ? null
+    : refuse(`${rows[0]!.name ?? "That dish"} is not on the bar's menu. A waiter orders it.`);
+}
+
 async function addOneLine(
   client: Client,
   session: { staffId: string },
@@ -2258,6 +2284,8 @@ async function addOneLine(
       [input.itemId, hotelId],
     );
     if (!item[0]) return refuse("No such item on the menu.");
+    const notTheBars = await barRefusal(client, hotelId, input.itemId!);
+    if (notTheBars) return notTheBars;
     if (!item[0].is_active) {
       return refuse(`${item[0].name} is off the menu today.`);
     }
@@ -4957,6 +4985,11 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
        and add it again with the right number. */
     if (line[0].extra_kind && qty > 0) {
       return refuse("An add-on's number is set when it goes on. Strike it and add it again.");
+    }
+    /* More of a dish is ordering it (D27-324): the bar, the bar's dishes only. */
+    if (qty > Number(line[0].qty) && line[0].item_id) {
+      const notTheBars = await barRefusal(client, hotelId, line[0].item_id);
+      if (notTheBars) return notTheBars;
     }
     /* MORE of a dish the kitchen has is a new line, for the next docket -
        the same as tapping it again (the owner, 28 September), sides and

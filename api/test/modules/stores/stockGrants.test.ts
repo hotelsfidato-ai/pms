@@ -151,7 +151,7 @@ describe("the server's lists of who may do what in the Store", () => {
 
 describe("the Store, as every role a person can be given (STO-1)", () => {
   for (const role of ["owner", "admin", "gm", "hotel_manager", "revenue_manager",
-                      "front_desk", "housekeeping", "kitchen_manager", "chef", "pos",
+                      "front_desk", "housekeeping", "kitchen_manager", "chef", "pos", "bar",
                       "stores", "finance", "read_only"]) {
     const grants = grantsFor(role as never, "stock");
     const view = grants.includes("view");
@@ -353,7 +353,7 @@ describe("the Store, as every role a person can be given (STO-1)", () => {
        stops a new role slipping past it untested. */
     expect([...staffByRole.keys()].sort()).toEqual(
       ["owner", "admin", "gm", "hotel_manager", "revenue_manager", "front_desk",
-       "housekeeping", "kitchen_manager", "chef", "pos", "stores", "finance",
+       "housekeeping", "kitchen_manager", "chef", "pos", "bar", "stores", "finance",
        "read_only"].sort());
   });
 });

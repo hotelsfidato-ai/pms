@@ -401,7 +401,7 @@ figure.shot.phone img { max-width: 72mm; }
   </ol>
   <p>Some people have no Dashboard, because it shows the hotel's revenue and their day starts at their own work.
      Unless they chose Rooms or Calendar themselves, they land on their own work: housekeeping on <span class="ui">Housekeeping</span>, the chef and the kitchen manager on <span class="ui">Kitchen</span>,
-     the waiter (Till Operator) on <span class="ui">Tables</span>, the Inventory Manager on the <span class="ui">Store</span>.</p>
+     the waiter and the bar on <span class="ui">Tables</span>, the Inventory Manager on the <span class="ui">Store</span>.</p>
 
   <h3>The Start here card</h3>
   <p>Reception, housekeeping, the waiter and the chef see a card called <span class="ui">Start here</span> on their first screen. It lists the jobs they will do most.
@@ -4605,12 +4605,12 @@ figure.shot.phone img { max-width: 72mm; }
   <table>
     <thead><tr><th style="width:22%">Screen</th><th style="width:26%">Who uses it</th><th>What it is for</th></tr></thead>
     <tbody>
-      <tr><td>Tables</td><td>Waiters, Reception (if allowed)</td><td>The room as it stands. Tap a table to take an order on a pad; print a table's bill; clear a table.</td></tr>
-      <tr><td>Till</td><td>Waiters, the cashier</td><td>The cash register: the bill line by line, discounts, sending to the kitchen, payment, the day's paid bills.</td></tr>
-      <tr><td>Terminal</td><td>Waiters</td><td>The same work on a fixed tablet or screen, one outlet. Also where room-service orders from guests arrive.</td></tr>
+      <tr><td>Tables</td><td>Waiters, the bar, Reception (if allowed)</td><td>The room as it stands. Tap a table to take an order on a pad; print a table's bill; clear a table.</td></tr>
+      <tr><td>Till</td><td>Waiters, the bar, the cashier</td><td>The cash register: the bill line by line, discounts, sending to the kitchen, payment, the day's paid bills.</td></tr>
+      <tr><td>Terminal</td><td>Waiters, the bar</td><td>The same work on a fixed tablet or screen, one outlet. Also where room-service orders from guests arrive.</td></tr>
       <tr><td>Kitchen</td><td>Chef, kitchen manager</td><td>Every dish the kitchen holds, oldest first: <span class="ui">Start</span>, then <span class="ui">Ready</span>.</td></tr>
       <tr><td>Menu</td><td>Kitchen manager</td><td>Dishes, prices, variations, Sides, the numbered Add-ons, what is off today.</td></tr>
-      <tr><td>Close restaurant day</td><td>Cashier, waiters, kitchen manager</td><td>The cash drawer: open the day with a float, money in and out, the count, the close.</td></tr>
+      <tr><td>Close restaurant day</td><td>Cashier, waiters, the bar, kitchen manager</td><td>The cash drawer: open the day with a float, money in and out, the count, the close.</td></tr>
       <tr><td>Table bookings</td><td>Whoever takes orders</td><td>Hotel guests' requests for a table: confirm or decline.</td></tr>
       <tr><td>Charges to rooms</td><td>Accounts</td><td>Bills an outside till sent to guests' rooms.</td></tr>
       <tr><td>Restaurant setup</td><td>Owner, Admin, GM; the kitchen manager for the KOT section only</td><td>The restaurant's name, sections and tables, which computer prints which KOT, table-booking hours.</td></tr>
@@ -4678,7 +4678,10 @@ figure.shot.phone img { max-width: 72mm; }
     </ol>
   </figure>
 
-  <p>To add a round to a table that already has an order, tap the table again. The pad says <span class="msg">“Another round on this table's bill.”</span> and lists the dishes <span class="ui">Already sent</span> at the top (A8.3).</p>
+  <p>To add a round to a table that already has an order, tap the table again. The pad says <span class="msg">“Another round on this table's bill.”</span> and lists the dishes <span class="ui">Already sent</span> at the top (A8.3), and under them the <span class="ui">KOTs sent</span>, each with <span class="ui">Reprint</span> (A8.4).</p>
+
+  <h3>At the bar: the Bar role</h3>
+  <p>Somebody given the <b>Bar</b> role works as a waiter does, on the same screens: Tables, the Till, the Terminal and Close restaurant day. Their pad, Till and Terminal hold <b>only the bar's dishes</b>: the menu sections whose KOT prints at the bar (A8.4, A8.10), so everything they send prints at the bar, and the pad opens straight on them. A kitchen dish is refused even if somebody tries it another way, and the message names it: <span class="msg">“Paneer Tikka is not on the bar's menu. A waiter orders it.”</span> They take payment, give a discount of up to 10% with a reason, print the bill and close the restaurant day, as a waiter does. The Bar role: <span class="d">D27-324</span>.</p>
 
   <div class="box watch">
     <h4>Watch out</h4>
@@ -4811,7 +4814,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li><b>What a KOT shows:</b> the time, what it is (<b>KITCHEN KOT 14</b>), dine in or take away, the table, each dish with its number, its add-ons and Sides under it, and the kitchen note. Never a price.</li>
     <li><b>Which kind a dish is</b> depends on its menu section: Bar and Alcohol sections print at the bar, the rest in the kitchen, unless the manager chose otherwise (A8.10). It is decided when the dish is sent, so a reprint goes where the first slip went.</li>
     <li><b>A dish taken off after it was sent</b> prints, on a reprint of its KOT, under <span class="msg">“STOP - TAKEN OFF”</span>, with the reason.</li>
-    <li><b>A lost or torn KOT:</b> on the computer that printed it, open <span class="ui">Restaurant setup</span>, the KOT section, <span class="ui">This computer's last 20 KOTs</span>, and tap <span class="ui">Reprint</span>. The slip says <b>REPRINT</b>.</li>
+    <li><b>A lost or torn KOT:</b> on Tables, tap the table. Its pad lists the <span class="ui">KOTs sent</span>, one line for each KOT and kind (<span class="msg">“KOT 3 · Bar”</span>): tap <span class="ui">Reprint</span>. It prints on the printer of the device you are using. Or, on the computer that printed it, open <span class="ui">Restaurant setup</span>, the KOT section, <span class="ui">This computer's last 20 KOTs</span>, and tap <span class="ui">Reprint</span>. Either way the slip says <b>REPRINT</b>. Waiters and the bar reprint from the pad: <span class="d">D27-324</span>.</li>
   </ul>
 
   <h3>The printing lines</h3>
@@ -6660,7 +6663,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Store and equipment</td><td>Closing stock, Stock movement by day, Consumption, Wastage and breakage, Count differences, Dead stock, Days of cover, Supplier spend, Equipment report (A11.9)</td><td>Owner, Admin, General Manager, Hotel Manager, Inventory Manager, Accountant, Viewer</td></tr>
     </tbody>
   </table>
-  <p>One more screen sits in the Reports part of the menu: <span class="ui">Accounting export</span>, the month as a file for the accountant (A11.8). The Kitchen Manager, Chef, Till Operator, Housekeeping and the Inventory Manager do not open All reports; the Inventory Manager reaches the Store's reports from the Store (A11.9).</p>
+  <p>One more screen sits in the Reports part of the menu: <span class="ui">Accounting export</span>, the month as a file for the accountant (A11.8). The Kitchen Manager, Chef, Waiter, Bar, Housekeeping and the Inventory Manager do not open All reports; the Inventory Manager reaches the Store's reports from the Store (A11.9).</p>
 
   <h3>To keep a report at the top</h3>
   <ol class="steps">
@@ -8988,7 +8991,8 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Housekeeping</td><td>Room status and work orders</td></tr>
       <tr><td>Kitchen Manager</td><td>The pass and the menu</td></tr>
       <tr><td>Chef</td><td>The pass - moves dishes along, touches no money</td></tr>
-      <tr><td>Till Operator</td><td>The till, orders and the day end</td></tr>
+      <tr><td>Waiter</td><td>Orders, KOTs, bills and payment; the restaurant's day end</td></tr>
+      <tr><td>Bar</td><td>The waiter's work, on the bar's menu only</td></tr>
       <tr><td>Inventory Manager</td><td>Stock, receiving and issues. Raises purchases</td></tr>
       <tr><td>Accountant</td><td>Invoices, the city ledger and the reports</td></tr>
       <tr><td>Viewer</td><td>Can look, cannot change anything</td></tr>
@@ -10455,13 +10459,14 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Housekeeping</td><td>Room status, work orders, laundry; sees the spa diary.</td><td><span class="d">D18-8</span> <span class="d">D18-21</span></td></tr>
       <tr><td>Kitchen Manager</td><td>The kitchen screen and the menu. No money.</td><td><span class="d">D24-10</span></td></tr>
       <tr><td>Chef</td><td>The kitchen screen. Moves dishes along; changes nothing about money.</td><td>-</td></tr>
-      <tr><td>Till Operator</td><td>The waiter's role: tables, the Till, the Terminal, the cash drawer's day. (Restaurant setup's checklist calls it "the Waiter role".)</td><td>-</td></tr>
+      <tr><td>Waiter</td><td>Takes orders and sends the KOTs, prints bills, takes payment, gives a discount of up to 10% with a reason, closes the restaurant day; reprints a table's KOT from its pad. (It was called Till Operator until 14 October; an outside till's account holds the same role.)</td><td>Renamed, rights unchanged <span class="d">D27-324</span></td></tr>
+      <tr><td>Bar</td><td>The waiter's rights, on the bar's dishes only: the menu sections whose KOT prints at the bar. Its KOTs print at the bar.</td><td><span class="d">D27-324</span></td></tr>
       <tr><td>Inventory Manager</td><td>The Store and the equipment register. Raises purchases; approves equipment leaving the store.</td><td>The owner, 16 September</td></tr>
       <tr><td>Accountant</td><td>Bills, invoices and credit notes, payments, company accounts, reports, the GST and VAT rates.</td><td><span class="d">D22-32</span> <span class="d">D22-33</span></td></tr>
       <tr><td>Viewer</td><td>Reads; changes nothing.</td><td><span class="d">D27-146</span></td></tr>
     </tbody>
   </table>
-  <p>A fourteenth role, <b>Automation</b>, is for machines and is never offered when a person is added. The CRS reader and an outside till each work as such an account, at one hotel only (B2.4).</p>
+  <p>A fifteenth role, <b>Automation</b>, is for machines and is never offered when a person is added. The CRS reader and an outside till each work as such an account, at one hotel only (B2.4).</p>
 
   <figure class="shot" id="fig-B2-01">
     <img src="img/B2-01.png" alt="Settings, People and security, Roles and permissions: the matrix of every role against every kind of thing">
@@ -10489,13 +10494,14 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Housekeeping</td><td>Front office</td><td>Rooms; Housekeeping, Work orders, Guest requests, Lost property; Store, Equipment, Purchasing; laundry Dockets; Notifications. Starts on Housekeeping.</td></tr>
       <tr><td>Kitchen Manager</td><td>Restaurant only</td><td>Kitchen, Menu, Close restaurant day, Guest requests, the Store, Notifications. Starts on Kitchen.</td></tr>
       <tr><td>Chef</td><td>Restaurant only</td><td>Kitchen, Guest requests, Notifications.</td></tr>
-      <tr><td>Till Operator</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day, Guest requests. Starts on Tables.</td></tr>
+      <tr><td>Waiter</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day, Guest requests. Starts on Tables.</td></tr>
+      <tr><td>Bar</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day. Starts on Tables; sees only the bar's dishes.</td></tr>
       <tr><td>Inventory Manager</td><td>Front office</td><td>Store, Equipment, Purchasing, Notifications.</td></tr>
     </tbody>
   </table>
   <ul>
     <li>Restaurant, Banquet, Laundry and Spa are there only at a hotel that has them switched on; a section a hotel does not have is simply absent.</li>
-    <li>No Dashboard for housekeeping, the kitchen, the Inventory Manager or the till, because it carries revenue <span class="d">D27-141</span>. The roles that read bookings but not bills see no balances, and a guest's phone and email come back blank to them <span class="d">D27-143</span>.</li>
+    <li>No Dashboard for housekeeping, the kitchen, the Inventory Manager, the waiter or the bar, because it carries revenue <span class="d">D27-141</span>. The roles that read bookings but not bills see no balances, and a guest's phone and email come back blank to them <span class="d">D27-143</span>.</li>
     <li>Guests' ID and Form III details: the owner, Admin, GM, Hotel Manager and Reception only, the people who check guests in <span class="d">D25-38</span>.</li>
     <li>Where each person starts: the GM sets it per person (Dashboard, Rooms or Calendar) and the person can change their own (the owner, 14 September).</li>
   </ul>

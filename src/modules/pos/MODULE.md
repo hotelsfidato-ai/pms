@@ -46,13 +46,13 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 
 | Menu name | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
 |---|---|---|---|
-| Tables | `/pos/:code/tables` | `pages/Floor.tsx` | waiter (`pos`), Reception |
+| Tables | `/pos/:code/tables` | `pages/Floor.tsx` | waiter (`pos`), bar (`bar`, D27-324), Reception. Its order pad (`flows/OrderPad.tsx`) lists the open order's **KOTs sent** with Reprint (D27-324 (4)) and opens a Bar person on the bar's dishes |
 | Table bookings | `/pos/:code/table-bookings` | `pages/TableBookings.tsx` | none - whoever may ring an order (`mayRingUp`); hotel guests' table requests, Waiting / Today / Upcoming, Confirm (a table if known) or Decline with a reason (D27-221, D27-224) |
-| Till | `/pos/:code/till` | `pages/Till.tsx` | waiter, Reception |
-| Terminal | `/pos/:code/terminal` | `pages/Terminal.tsx` | waiter, Reception |
+| Till | `/pos/:code/till` | `pages/Till.tsx` | waiter, bar, Reception |
+| Terminal | `/pos/:code/terminal` | `pages/Terminal.tsx` | waiter, bar, Reception |
 | Kitchen | `/pos/:code/kitchen` | `pages/Kitchen.tsx` | chef, kitchen manager |
 | Menu | `/pos/:code/menu` | `pages/Menu.tsx` | kitchen manager |
-| Close restaurant day | `/pos/:code/day-end` | `pages/DayEnd.tsx` | waiter, kitchen manager, Reception |
+| Close restaurant day | `/pos/:code/day-end` | `pages/DayEnd.tsx` | waiter, bar, kitchen manager, Reception |
 | Charges to rooms | `/pos/:code/room-charges` | `pages/Pos.tsx` | none |
 | Restaurant setup | `/pos/:code/setup` | `pages/Setup.tsx` | none - the owner, an administrator and the GM see it (`room_config` edit; D22-6, D25-20 to D25-26, 25 Sep); the kitchen manager too, for its **KOT section** only (D27-292) |
 | — KOT section | in Restaurant setup | `components/KotSection.tsx` | this computer's name and what it prints (KOT kinds, the bills); the KOT kinds (Kitchen, Bar, any added); the computers; which menu section prints where; this computer's last 20 KOTs with Reprint (D27-292). Replaced the Kitchen screen's "KOT printer" panel |
@@ -172,7 +172,8 @@ access      GET    /:code/till/access                       answers ok only past
 menu        GET    /:code/till/menu                         a dish's taxRate is the rate it is RUNG at (own, else
                                                             its section's rule; DISH_TAX_RATE in till.ts), null when
                                                             none is set - a dash on screen (D21-94, POS-15); each
-                                                            section's taxKind, null when not set (D22-4)
+                                                            section's taxKind, null when not set (D22-4); to a Bar
+                                                            person, only the bar's dishes (D27-324)
             POST   /:code/till/menu/categories
             POST   /:code/till/menu/items
             POST   /:code/till/menu/import                  "alcohol" as a Tax heading only where the property
@@ -217,7 +218,8 @@ rooms       GET    /:code/till/rooms                        rooms a bill may be 
 orders      GET    /:code/till/orders
             POST   /:code/till/orders
             POST   /:code/till/orders/batch                 the pad's whole round in one request; eventId (D17-21)
-            GET    /:code/till/orders/:id
+            GET    /:code/till/orders/:id                   each line's kotNo and kotKind {id, name} (D27-324 (4):
+                                                            the pad's KOTs sent, reprinted through GET kot/:no?kind=)
             PATCH  /:code/till/orders/:id                   covers, waiter, customer, type, held, eventId (D17-21)
             POST   /:code/till/orders/:id/lines
             POST   /:code/till/orders/:id/lines/:lineId/void
@@ -408,6 +410,10 @@ pos_kot_kinds, pos_kot_stations,               "the KOT section" (211, D27-292):
   .kot_kind_id; pos_order_lines.kot_kind_id     computers (one per kind, one bill printer),
   (stamped when sent); pos_kot_prints per kind  bills asked and printed;
                                                 app.pos_kot_kind_for, app.pos_line_kot_kind
+  the Bar role: app.pos_dish_at_bar,           "the bar role" (223, D27-324): `bar` in
+  app.pos_bar_only, trigger                     app.assignable_roles(); a Bar person puts on a
+  pos_order_lines_bar_only                      bill, or raises the count of, only a dish that
+                                                prints on the Bar KOT (42501 otherwise)
 pos_order_lines.extra_kind, .numbered_addon_id "custom add-ons" (210, D27-291): an add-on line
                                                of its own under its dish; a sent one struck
                                                says why; the day's struck list names it
@@ -579,7 +585,21 @@ One other service's door is imported by this folder (17 September):
 - **Working menus**, owner's lists of 15 September (`HANDOVER.md` § 3.2):
   waiter — Tables, Till, Terminal, Close restaurant day; chef — Kitchen;
   kitchen manager — Kitchen, Menu, Close restaurant day; Reception adds the
-  four when the switch is on. The restaurant roles could not see their own
+  four when the switch is on. The bar (D27-324) has the waiter's four, starts
+  on Tables, and has the Restaurant space only.
+- **The Bar role and the Waiter** (the owner's D27-324 (2), (3)). `pos` is
+  shown as **Waiter** (it was "Till Operator"; the stored value and its rights
+  are unchanged, and an outside till's account still holds it). `bar` has
+  exactly the waiter's rights - the matrix (`TILL_PERSON` in
+  `api/src/permissions.ts`) and every roleGate rule name it beside `pos`, and
+  `api/test/modules/pos/barRole.test.ts` holds the two equal at every door -
+  but sees and orders only **the bar's dishes: those whose KOT is the Bar
+  kind** (the section's own kind, else its tax heading's: Bar and Alcohol;
+  `app.pos_dish_at_bar`, from 211's `app.pos_kot_kind_for`). The menu read
+  leaves the rest out for a Bar person; `addOneLine` and the quantity route
+  refuse a kitchen dish in a sentence (`barRefusal`); the database refuses it
+  behind them (trigger `pos_order_lines_bar_only`, migration "the bar role").
+  Its KOTs therefore print at the bar. The restaurant roles could not see their own
   screens until then (MEMORY 260). A new screen goes into the right working
   menus or it is search-only for those roles.
 - **Start here** (15 September). `src/components/app/startHereCards.ts` lines

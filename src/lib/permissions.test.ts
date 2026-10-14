@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   RATE_SETTER_ROLES, setsRates, grantsFor, canAccess, ASSIGNABLE_ROLES,
+  RESOURCES, ROLE_LABELS, ROLE_DESCRIPTIONS,
   type Resource,
 } from "./permissions";
 
@@ -133,6 +134,8 @@ describe("the Store, Equipment and Purchasing", () => {
     read_only:       { stock: ["view"], equipment: ["view"], purchasing: ["view"] },
     revenue_manager: { stock: [], equipment: [], purchasing: [] },
     pos:             { stock: [], equipment: [], purchasing: [] },
+    /* D27-324: the waiter's rights, on the bar's dishes. */
+    bar:             { stock: [], equipment: [], purchasing: [] },
   };
 
   for (const [role, want] of Object.entries(TABLE)) {
@@ -163,5 +166,30 @@ describe("the Store, Equipment and Purchasing", () => {
     for (const role of ASSIGNABLE_ROLES.filter((r) => r !== "owner")) {
       expect(grantsFor(role, "stock"), role).not.toContain("delete");
     }
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   THE OWNER'S D27-324 (14 October): the restaurant's roles and the GM
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("the restaurant's roles and the GM (D27-324)", () => {
+  it("(3) calls the till's role Waiter, and says what a waiter does", () => {
+    expect(ROLE_LABELS.pos).toBe("Waiter");
+    expect(ROLE_DESCRIPTIONS.pos).not.toMatch(/till, not a person/i);
+    expect(ROLE_DESCRIPTIONS.pos).toMatch(/order/i);
+  });
+
+  it("(2) adds Bar, a role a person can be given, with exactly the waiter's grants", () => {
+    expect(ASSIGNABLE_ROLES).toContain("bar");
+    expect(ROLE_LABELS.bar).toBe("Bar");
+    expect(ROLE_DESCRIPTIONS.bar).toMatch(/bar/i);
+    for (const r of RESOURCES) expect(grantsFor("bar", r), r).toEqual(grantsFor("pos", r));
+  });
+
+  it("(5) shows the GM managing people, as the server lets them", () => {
+    expect(grantsFor("gm", "user")).toEqual(["view", "create", "edit"]);
+    expect(holders("create", "user")).toEqual(["admin", "gm", "owner"]);
+    expect(holders("edit", "user")).toEqual(["admin", "gm", "owner"]);
   });
 });

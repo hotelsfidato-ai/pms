@@ -352,7 +352,7 @@ const CORE_ENTRIES: ServiceNavEntry[] = [
      roles who need it already hold it, and NO NEW RESOURCE was invented,
      because who may see a screen is the owner's to widen and not mine.
      `canSee` narrows the MENU to the roles that can decide anything at
-     all, so a till operator is not offered an inbox that is empty by
+     all, so a waiter is not offered an inbox that is empty by
      construction; the server still decides every row. */
   { section: "system", order: 5,
     label: "Approvals", to: "/h/:code/approvals", icon: CheckCircle2,
@@ -571,12 +571,12 @@ const WORKING_MENUS: Partial<Record<Role, readonly string[]>> = (() => {
    Restaurant, anything else the Front office. The owner, an Admin and the GM
    have all three; whoever may open a restaurant screen has the Restaurant
    (reception only where "Reception can use the POS" is on); the waiter, the
-   chef and the kitchen manager have the Restaurant ONLY, and their menu
+   bar (D27-324), the chef and the kitchen manager have the Restaurant ONLY, and their menu
    there is their whole working menu, as the owner chose it (Q3). Nothing
    here changes who may open a screen.
    ══════════════════════════════════════════════════════════════════ */
 
-const RESTAURANT_ONLY: readonly Role[] = ["pos", "chef", "kitchen_manager"];
+const RESTAURANT_ONLY: readonly Role[] = ["pos", "bar", "chef", "kitchen_manager"];
 
 export const spaceOf = (path: string): Space =>
   path === "/settings" || path.startsWith("/settings/") ? "settings"
@@ -639,6 +639,9 @@ const WORKING_HOME: Partial<Record<Role, string>> = {
      restaurant's (D27-181); they still land on their own work (GS-1). */
   chef: "/pos/:code/kitchen",
   pos: "/pos/:code/tables",
+  /* The Bar role (D27-324) starts where the waiter does; its pad opens on
+     the bar's dishes. */
+  bar: "/pos/:code/tables",
 };
 
 /**

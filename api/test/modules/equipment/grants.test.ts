@@ -49,7 +49,7 @@ const ACTIONS: EquipmentAction[] = ["view", "create", "edit", "approve", "export
 
 const EVERY_ROLE = [
   "owner", "admin", "gm", "hotel_manager", "revenue_manager", "front_desk",
-  "housekeeping", "kitchen_manager", "chef", "pos", "stores", "finance", "read_only",
+  "housekeeping", "kitchen_manager", "chef", "pos", "bar", "stores", "finance", "read_only",
 ];
 
 let hotelId: string;

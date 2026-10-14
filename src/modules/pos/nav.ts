@@ -6,9 +6,10 @@ import { can, canAccess, type Role } from "@/lib/permissions";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 
 /* Who may ring up an order: the server's own rule (roleGate.ts TILL, `payment`
-   create, and the till operator). A Viewer or an Accountant who may only READ
-   the restaurant's orders is not offered the till (QA RO-4). */
-export const mayRingUp = (role: Role): boolean => can(role, "create", "payment") || role === "pos";
+   create, and the waiter and the bar by name). A Viewer or an Accountant who
+   may only READ the restaurant's orders is not offered the till (QA RO-4). */
+export const mayRingUp = (role: Role): boolean =>
+  can(role, "create", "payment") || role === "pos" || role === "bar";
 
 /* The restaurant's menu entries — the Point of sale section, which is
    absent at a property without the POS module and, for reception, where
@@ -16,7 +17,7 @@ export const mayRingUp = (role: Role): boolean => can(role, "create", "payment")
 export const nav: ServiceNavEntry[] = [
   /* The FLOOR first, because that is where a shift starts: a waiter
      walks to a table before there is a bill to stand at. */
-  { section: "point-of-sale", order: 10, workingMenus: ["front_desk", "pos"],
+  { section: "point-of-sale", order: 10, workingMenus: ["front_desk", "pos", "bar"],
     label: "Tables", to: "/pos/:code/tables", icon: LayoutGrid, resource: "payment",
     keywords: ["floor", "restaurant"],
     canSee: (role) => mayRingUp(role) },
@@ -27,14 +28,14 @@ export const nav: ServiceNavEntry[] = [
     keywords: ["table booking", "reservation", "restaurant booking", "dinner", "lunch"],
     canSee: (role) => mayRingUp(role) },
   /* The till, the one somebody stands at. */
-  { section: "point-of-sale", order: 20, workingMenus: ["front_desk", "pos"],
+  { section: "point-of-sale", order: 20, workingMenus: ["front_desk", "pos", "bar"],
     label: "Till", to: "/pos/:code/till", icon: Receipt, resource: "payment",
     keywords: ["pos", "order", "restaurant bill"],
     canSee: (role) => mayRingUp(role) },
   /* A dedicated screen for a fixed terminal: no sidebar, no chrome,
      one outlet, targets sized for a thumb rather than a mouse. */
   {
-    section: "point-of-sale", order: 30, workingMenus: ["front_desk", "pos"],
+    section: "point-of-sale", order: 30, workingMenus: ["front_desk", "pos", "bar"],
     label: "Terminal", to: "/pos/:code/terminal",
     icon: MonitorSmartphone, resource: "payment",
     keywords: ["pos terminal"],
@@ -66,7 +67,7 @@ export const nav: ServiceNavEntry[] = [
      is here: a cashier counting a drawer at midnight is doing
      restaurant work, not the front office's. */
   {
-    section: "point-of-sale", order: 60, workingMenus: ["front_desk", "pos", "kitchen_manager"],
+    section: "point-of-sale", order: 60, workingMenus: ["front_desk", "pos", "bar", "kitchen_manager"],
     label: "Close restaurant day", to: "/pos/:code/day-end",
     icon: Banknote, resource: "payment",
     keywords: ["day end", "restaurant close"],

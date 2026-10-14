@@ -829,8 +829,7 @@ end $$;
 
 -- =============================================================================
 -- A PAID RESTAURANT BILL VOIDED (the owner's D27-324 (1), 14 October)
--- =============================================================================
--- The owner, an administrator or the GM may void a PAID bill, with a reason:
+-- ======================================================================-- The owner, an administrator or the GM may void a PAID bill, with a reason:
 -- the same business day, before that outlet's day is closed; never a bill
 -- that went to a room or a function (it is reversed on that bill); a card or
 -- UPI bill names the refund's reference. The bill keeps its number, is void
@@ -970,4 +969,88 @@ begin
     (select settled_orders || ' settled' from app.pos_day_summary(v_out, bd)));
 
   perform set_config('app.user_id', '', true);
+=======
+-- THE BAR ROLE (the owner's D27-324 (2))
+-- =============================================================================
+-- `bar` is a role a person may be given; a Bar person puts on a bill only a
+-- dish that prints on the Bar KOT - its section's kind, else its heading's -
+-- and cannot raise the count of any other; a waiter is unchanged. Refers to
+-- its migration by what it does, never by its number. Uses the suite's AGR
+-- property and its clerk; makes one Bar person, one waiter, two sections, one
+-- outlet and one order, and removes them. Each step through test.allows or
+-- test.raises, so a database without the role fails by name.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_clerk uuid; v_bar uuid; v_waiter uuid; v_outlet uuid; v_order uuid;
+  v_food uuid; v_drinks uuid; v_dal uuid; v_beer uuid; v_dal_line bigint; bd date; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_clerk from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  perform test.ok('pos bar role', 'bar is a role a person may be given',
+    'bar' = any (app.assignable_roles()), array_to_string(app.assignable_roles(), ','));
+
+  insert into staff (email, full_name) values ('bar-role@fidato.in', 'Bar Role Test')
+  on conflict (email) do update set is_active = true returning id into v_bar;
+  insert into staff (email, full_name) values ('waiter-role@fidato.in', 'Waiter Role Test')
+  on conflict (email) do update set is_active = true returning id into v_waiter;
+  delete from staff_hotels where staff_id in (v_bar, v_waiter);
+  perform test.allows('pos bar role', 'a person is rostered as Bar',
+    format($q$insert into staff_hotels (staff_id, hotel_id, role) values (%L, %L, 'bar')$q$, v_bar, a));
+  insert into staff_hotels (staff_id, hotel_id, role) values (v_waiter, a, 'pos');
+
+  -- A food section and a drinks section, each by its tax heading.
+  insert into pos_menu_categories (hotel_id, name, tax_kind) values (a, 'Bar role food', 'restaurant')
+  returning id into v_food;
+  insert into pos_menu_categories (hotel_id, name, tax_kind) values (a, 'Bar role drinks', 'bar')
+  returning id into v_drinks;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_food, 'Bar role dal', 200, 5) returning id into v_dal;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_drinks, 'Bar role beer', 300, 18) returning id into v_beer;
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'BARRL', 'Bar Role Test', 'food', v_clerk) returning id into v_outlet;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_clerk) returning id into v_order;
+  insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, v_dal, 'Bar role dal', 2, 200, 5, v_clerk) returning id into v_dal_line;
+
+  -- ---------- as the Bar person ------------------------------------------------
+  perform set_config('app.user_id', v_bar::text, true);
+  perform test.allows('pos bar role', 'a Bar person orders a dish that prints at the bar',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %L, 'Bar role beer', 2, 300, 18, %L)$q$, v_order, a, v_beer, v_bar));
+  perform test.raises('pos bar role', 'and is refused a dish that prints in the kitchen',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %L, 'Bar role dal', 1, 200, 5, %L)$q$, v_order, a, v_dal, v_bar), '42501');
+  perform test.raises('pos bar role', 'and more of one the waiter put on',
+    format($q$update pos_order_lines set qty = 3 where id = %s$q$, v_dal_line), '42501');
+  perform test.allows('pos bar role', 'but may take one off',
+    format($q$update pos_order_lines set qty = 1 where id = %s$q$, v_dal_line));
+  update pos_menu_categories set kot_kind_id = (select id from pos_kot_kinds where hotel_id = a and role = 'bar')
+   where id = v_food;
+  perform test.allows('pos bar role', 'a food section sent to the Bar KOT is the bar''s',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %L, 'Bar role dal', 1, 200, 5, %L)$q$, v_order, a, v_dal, v_bar));
+  update pos_menu_categories set kot_kind_id = null where id = v_food;
+
+  -- ---------- as the waiter: unchanged ----------------------------------------
+  perform set_config('app.user_id', v_waiter::text, true);
+  perform test.allows('pos bar role', 'a waiter still orders from the kitchen',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %L, 'Bar role dal', 1, 200, 5, %L)$q$, v_order, a, v_dal, v_waiter));
+  perform set_config('app.user_id', '', true);
+
+  -- ---------- and the fixtures go ----------------------------------------------
+  delete from pos_order_lines where order_id = v_order;
+  delete from pos_orders where id = v_order;
+  delete from pos_outlets where id = v_outlet;
+  delete from pos_menu_items where id in (v_dal, v_beer);
+  delete from pos_menu_categories where id in (v_food, v_drinks);
+  delete from staff_hotels where staff_id in (v_bar, v_waiter);
+  update staff set is_active = false where id in (v_bar, v_waiter);
+  select count(*) into n from pos_outlets where code = 'BARRL';
+  perform test.ok('pos bar role', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;

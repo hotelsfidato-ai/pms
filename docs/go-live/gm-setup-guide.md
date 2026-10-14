@@ -124,7 +124,7 @@ list**. Every price is yours to type.
 - On **Across properties → People** you can reset a password (**Password**),
   change a name, phone or first screen (**Edit**), and **Deactivate** somebody.
 - The roles for the jobs in a hotel: Reception, Housekeeping, Kitchen Manager,
-  Chef, Till Operator, Inventory Manager, Accountant, Hotel Manager, Revenue
+  Chef, Waiter, Bar, Inventory Manager, Accountant, Hotel Manager, Revenue
   Manager, Viewer. The list also offers General Manager and Admin. You cannot
   make anybody an Owner.
 - **[ OWNER TO DECIDE: may a GM give the Admin role? An Admin can use the

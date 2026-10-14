@@ -218,18 +218,27 @@ export function KotStatus({ hotelId, className }: { hotelId: string; className?:
   );
 }
 
+/** One KOT printed again on THIS computer's printer, the paper saying
+    REPRINT: the KOT section's last 20, and the order screen's KOTs for the
+    waiter and the bar (the owner's D27-324 (4)). A reprint writes nothing. */
+export function useKotReprint(hotelId: string) {
+  const { print, node } = useSlipPrinter();
+  const reprint = async (orderId: string, kotNo: number, kindId: string | null, label: string) => {
+    const d = await getDocket(hotelId, orderId, kotNo, kindId ?? undefined).catch(() => null);
+    if (!d) return toast.error("Not printed", `${label} did not load. Try again.`);
+    print(<DocketSlip d={{ ...d, reprint: true }} />);
+  };
+  return { reprint, node };
+}
+
 /** This computer's last 20 slips, newest first, each with Reprint - the
     paper says REPRINT. In the KOT section, on the computer that prints. */
 export function Reprints({ hotelId }: { hotelId: string }) {
   const queue = useStationQueue(hotelId);
-  const { print, node } = useSlipPrinter();
+  const { reprint: again, node } = useKotReprint(hotelId);
   const recent: KotSlipRef[] = queue.data?.station ? queue.data.recent : [];
 
-  const reprint = async (r: KotSlipRef) => {
-    const d = await getDocket(hotelId, r.orderId, r.kotNo, r.kindId).catch(() => null);
-    if (!d) return toast.error("Not printed", `${r.kind} KOT ${r.kotNo} did not load. Try again.`);
-    print(<DocketSlip d={{ ...d, reprint: true }} />);
-  };
+  const reprint = (r: KotSlipRef) => again(r.orderId, r.kotNo, r.kindId, `${r.kind} KOT ${r.kotNo}`);
 
   return (
     <div>
