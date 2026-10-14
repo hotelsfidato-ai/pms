@@ -98,7 +98,7 @@ describe("tape chart - rooms and bars", () => {
       .flatMap((t) => t.rooms)
       .flatMap((r) => r.bars)
       .find((b) => b.stay.id === "stay-cancelled");
-    expect(bar?.tone).toBe("void");
+    expect.soft(bar?.tone).toBe("void");
   });
 
   it("clips a stay that runs past the window rather than dropping it", async () => {
@@ -205,6 +205,44 @@ describe("tape chart - room type groups", () => {
 
   it("is reachable through the default property", async () => {
     expect(await defaultPropertyId()).toBe(HOTEL);
+  });
+});
+
+/* FD-32 (the owner's D27-323 (1)): a VOIDED booking arrives as status "void"
+   (the API's own word; not in StayStatus) and keeps the room it was given. It
+   was drawn as a Confirmed bar and took a free room off its type's count. */
+describe("tape chart - a voided booking (FD-32)", () => {
+  const STAYS = `/api/hotels/${HOTEL}/stays`;
+  let extra: unknown[] = [];
+
+  beforeEach(() => {
+    extra = [];
+    const stub = apiModule.api;
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
+      const rows = await stub(url, init);
+      return (url.split("?")[0] === STAYS ? [...(rows as unknown[]), ...extra] : rows) as never;
+    });
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it("is struck through and leaves its room free on the type's row and in the footer", async () => {
+    const before = await chart();
+    /* A room with nothing on the first night of the window. */
+    const type = before.roomTypes.find((t) => t.rooms.some((r) => !r.outOfService
+      && !r.bars.some((b) => b.startIndex === 0)))!;
+    const room = type.rooms.find((r) => !r.outOfService && !r.bars.some((b) => b.startIndex === 0))!;
+    const like = (await listStays(HOTEL))[0]!;
+    extra = [{ ...like, id: "stay-voided", roomNumber: room.number, roomType: type.type,
+      arrival: before.dates[0], departure: before.dates[1], nights: 1, isDayUse: false,
+      status: "void" }];
+
+    const after = await chart();
+    const bar = after.roomTypes.flatMap((t) => t.rooms).flatMap((r) => r.bars)
+      .find((b) => b.stay.id === "stay-voided");
+    expect.soft(bar?.tone).toBe("void");
+    expect.soft(after.roomTypes.find((t) => t.type === type.type)!.perDate[0]!.available)
+      .toBe(type.perDate[0]!.available);
+    expect.soft(after.footer[0]!.availableInventory).toBe(before.footer[0]!.availableInventory);
   });
 });
 

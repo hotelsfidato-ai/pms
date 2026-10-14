@@ -111,7 +111,10 @@ export function isWeekend(iso: string, days: readonly number[] = [0, 6]): boolea
  * change is what tells a clerk the work landed, so status leads.
  */
 function toneFor(stay: Stay, businessDate: string): BarTone {
-  if (stay.status === "cancelled") return "void";
+  /* A VOIDED booking too (FD-32, the owner's D27-323 (1)): the API says
+     "void", which StayStatus does not name, so it fell through to Confirmed
+     and its room left the free counts below, which skip only this tone. */
+  if (stay.status === "cancelled" || stay.status === ("void" as Stay["status"])) return "void";
   if (stay.status === "no-show") return "no-show";
   if (stay.status === "in-house") {
     /* Still in house, but leaving today — the clerk needs both facts. */

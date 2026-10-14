@@ -14,22 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### FD-32 · A voided booking that held a room is drawn on the Calendar as a confirmed one - OPEN (the owner's call)
-
-**Found** - 14 October, D27-319 (1), naming the Calendar's seven bar colours.
-`toneFor` (`data/stayview.ts`) gives the struck-through colour to status
-`cancelled` only. A VOIDED booking arrives as status `void` (stays.ts:
-`row.status.replace("_", "-")`; `void` is not in `StayStatus`, so the type
-cannot catch it), falls through to "confirmed", and keeps the room it was
-given (the board's room join keeps a released hold for every status but
-confirmed). So it is a pale blue Confirmed bar on that room, and the room
-type row's free count for those nights is one low (it counts every bar not
-struck through). **Seen** on a scratch copy (`fidato_d319`, 5ELT): a booking
-holding room 205 for 14-16 Oct, voided ("Entered twice"), drew `bg-info-50`,
-not struck through. **The fix waiting** (not made: what a person sees):
-`toneFor` gives `void` the struck-through colour too, and the key says
-"Cancelled or void".
-
 ### FD-26 · A price saved on Rates did not reach the Calendar until something else refreshed it - FIXED 4 October (Rates refreshes the Calendar)
 
 **Found** - 4 October, opening the Calendar after setting a night's price on
@@ -43,6 +27,43 @@ the file is inventory's (on `MODULE.md`'s Requests).
 ---
 
 ## Fixed — the solution is here; do not work it out again
+
+### FD-32 · A voided booking that held a room was drawn on the Calendar as a confirmed one, and took a free room off its type's count - FIXED 14 October (the owner's D27-323 (1))
+
+**Found** - 14 October, D27-319 (1), naming the Calendar's seven bar colours.
+`toneFor` (`data/stayview.ts`) gave the struck-through colour to status
+`cancelled` only. A VOIDED booking arrives as status `void` (stays.ts:
+`row.status.replace("_", "-")`; `void` is not in `StayStatus`, so the type
+cannot catch it), fell through to "confirmed", and keeps the room it was
+given (the board's room join keeps a released hold for every status but
+confirmed, so a cancelled or voided booking still sits on its room). So it
+was a pale blue Confirmed bar on that room, and the room type row's free
+count for those nights was one low.
+**The root** - the Calendar counts its free rooms itself, in the web app: the
+room type row and the footer (`getStayView`) and the floor row
+(`StayView.tsx`) each count every room with a bar NOT of the struck-through
+tone. All three read `toneFor`, so the one wrong line there was both the
+wrong colour and the wrong count. The server and the database were already
+right: voiding releases the room (`app.void_releases_rooms`, 042/073) and
+`app.inventory_grid` leaves out `void` - New booking, the channel manager's
+ARI and inbound, and Rates read that.
+**Fixed** - `toneFor` gives `void` the struck-through tone too; the key and
+the stay panel's pill (both `BAR_LABEL`) read "Cancelled or void".
+**Proved** - `data/stayview.test.ts` "a voided booking (FD-32)" and
+`calendarKey.test.tsx`, seen failing on the old code (the bar "confirmed",
+the type's free count 2 not 3, the footer 9 not 10, the key "Cancelled"),
+passing after. On screen (scratch `fidato_fd32`, 5EL, Calendar, General
+Manager): FH-2608-5020, room 307, 14-17 Oct, Deluxe free 6/6/6 on 14-16 Oct;
+voided ("Entered twice") - the bar struck through, pale red, Deluxe 7/7/7,
+Floor 3 7/7/7, Available 15/16/17 (was 14/15/16), `app.inventory_grid` 7/7/7.
+**Still letting a void through (a list count, not a free room; not changed -
+the owner's to say):** the desk's arrivals filter on `!== "cancelled"` too:
+Arrivals Today (`listArrivals`), Upcoming (`Arrivals.tsx`) and the
+Dashboard's Arrivals tile. Seen: Upcoming listed the voided FH-2608-5020 with
+a "Void" pill and counted it in "15 expected".
+**The rule** - a status the API sends and `StayStatus` does not name passes
+every `!== "cancelled"`. Ask which statuses a filter must let through, not
+which one it must keep out.
 
 ### FD-31 · Rooms, the Calendar and the Dashboard read every booking ever made, two or three times each - FIXED 14 October (D27-316 (1))
 

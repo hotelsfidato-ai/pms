@@ -63,9 +63,9 @@ const BAR_LABEL: Record<BarTone, string> = {
   departed: "Checked out",
   "due-out": "Due out",
   "no-show": "No show",
-  /* The struck-through bar is a CANCELLED booking (toneFor, stayview.ts):
-     the key and the panel said "Void" (D27-319 (1), plain words). */
-  void: "Cancelled",
+  /* The struck-through bar is a CANCELLED or a VOIDED booking (toneFor,
+     stayview.ts; FD-32, D27-323 (1)), in the key and the panel's pill. */
+  void: "Cancelled or void",
   waiting: "Waiting for the hotel",
 };
 
