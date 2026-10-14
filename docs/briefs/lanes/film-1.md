@@ -52,3 +52,8 @@ as advice (the voice says "your price", not the number).
 **14 Oct 14:58, the master:** 5EL is restored (your F1-02/03 saves are undone). Go: add a guard to every
 group (stop if the page does not show "Practice Hotel Nashik"), find why the hotel pick reset to 5EL after a
 page load (if it is a PMS fault, report it), then retake F1-02 onwards on PHN.
+
+**14 Oct 15:35, the master (D27-263, D27-322):** a new hotel has NO room types, by the owner's decision -
+not a fault. Step 3 of Set up this hotel is To do on PHN; the script's step-3 lines must say the hotel adds
+its room types there. After the final release the Add a property message reads "No room types yet - add
+them in Set up this hotel."
