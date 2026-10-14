@@ -296,6 +296,7 @@ export function CheckInFlow({
                 <>
                   <Explained title="Room">
                     Only a clean or inspected room can take a guest; the rest are shown with the reason.
+                    A room of a different type is an upgrade: the booked rate stays.
                   </Explained>
                   {/* One column on a phone: two cut "inspected" off at 390 px. */}
                   <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[240px] overflow-y-auto scrollbar-quiet">
@@ -307,7 +308,7 @@ export function CheckInFlow({
                           disabled={!room.allowed}
                           onClick={() => { setRoomNumber(room.number); setChanging((c) => ({ ...c, room: false })); }}
                           className={cn(
-                            "w-full flex items-center gap-2 px-3 h-11 rounded-lg border text-left transition-colors duration-150",
+                            "w-full flex flex-wrap items-center gap-x-2 gap-y-0.5 px-3 min-h-11 py-1.5 rounded-lg border text-left transition-colors duration-150",
                             selected
                               ? "border-brand-orange bg-brand-orange-50"
                               : room.allowed
@@ -318,9 +319,11 @@ export function CheckInFlow({
                           <BedDouble className="size-4 text-grey-400 shrink-0" />
                           <span className="tabular font-medium text-ink-900">{room.number}</span>
                           {room.type !== stay.roomType && (
-                            <span className="text-2xs text-warning-dark truncate">{room.type} (different type)</span>
+                            /* On its own line, not cut: every type is listed now (D27-330),
+                               and beside a status pill it read "Deluxe ...". */
+                            <span className="basis-full order-last pl-6 text-2xs text-warning-dark leading-tight">{room.type} (different type)</span>
                           )}
-                          <span className="ml-auto">
+                          <span className="ml-auto shrink-0">
                             <StatusPill
                               tone={
                                 room.label ? "warning"

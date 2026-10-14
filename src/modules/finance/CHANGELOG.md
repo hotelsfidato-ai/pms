@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-15 · A deposit before arrival with the advance rule off (the owner's D27-330 (2), FIN-37)
+
+**Asked for:** Settle opens before arrival for a deposit even when the hotel asks no advance; the amount typed by the desk, never filled in; held as the guest's credit. The whole session, with the screens and the tests, is front desk's CHANGELOG entry of the same date.
+**Shipped:** `flows/FolioPanel.tsx` - `SettleDialog`'s `advance` is 0 before arrival when the server asks none (null only when not before arrival, or while the read is pending); with nothing owed it opens as "A deposit before arrival", the amount empty, credit without the tick. FIN-36's filled-in advance unchanged. `settleAdvance.test.tsx`: the deposit case (seen failing) and an in-house guard.
+**Left open:** the refund banner "₹… is owed back to the guest." after money taken before arrival (a question for the owner).
+
 ## 2026-10-15 · A booking-site stay's refund for money paid at the hotel; Settle before arrival for the advance (the owner's D27-328 (2) and (3))
 
 **Asked for:** D27-328 (2): a booking-site guest who paid the HOTEL and left early could not be checked out - the refund refused every booking-site stay. (3): the check-in asked for an advance "on the Bill tab" while Settle was grey before arrival and when in credit. The whole session, with what was seen and the test runs, is front desk's CHANGELOG entry of the same date.

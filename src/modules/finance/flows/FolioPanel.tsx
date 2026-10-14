@@ -196,7 +196,7 @@ export function FolioPanel({
             active={only}
             businessDate={businessDate}
             roundCash
-            advance={stay.status === "due-in" ? advance.data?.advance?.owed ?? null : null}
+            advance={stay.status === "due-in" && advance.data ? advance.data.advance?.owed ?? 0 : null}
             pay={(input, key) => settle(hotelId, stay.id, input, key)}
             onDone={refresh}
           />
@@ -1150,9 +1150,11 @@ export function SettleDialog({
   payer, primary, balance, folios = [], active = null, businessDate, credit = "guest", roundCash = false,
   advance = null, pay, onDone,
 }: {
-  /** The advance still owed before check-in, by the server (D27-328 (3)):
-      above zero, Settle opens before arrival with it filled in, held as
-      the guest's credit. */
+  /** Before arrival, the advance still owed before check-in, by the server
+      (D27-328 (3)): above zero, Settle opens with it filled in, held as the
+      guest's credit; zero (none asked: the rule is off, or it is paid), it
+      opens EMPTY for a deposit the desk types, held the same way (D27-330
+      (2) - no default prices). Null: not before arrival. */
   advance?: number | null;
   /** Who is paying, for the dialog's line: the guest, or the group. */
   payer: string;
@@ -1202,6 +1204,11 @@ export function SettleDialog({
   const value = Number(amount) || 0;
   /* An advance before arrival is credit by what it is: no tick (D27-328). */
   const advanceDue = !split && (advance ?? 0) > 0 ? advance! : null;
+  /* A DEPOSIT BEFORE ARRIVAL (D27-330 (2)): no advance asked and nothing
+     owed - the amount is the desk's to type, never filled in; held as the
+     guest's credit as the advance is. */
+  const deposit = !split && advance === 0 && balance <= 0;
+  const beforeArrival = advanceDue !== null || deposit;
   const owedFigure = advanceDue ?? outstanding;
   /* D27-4: more than the bill is held as the guest's credit, once the desk
      ticks that it is. The server asks the same (needs "credit"). */
@@ -1221,7 +1228,7 @@ export function SettleDialog({
       open={open}
       onOpenChange={(o) => {
         setOpen(o);
-        if (o) { const id = pick(); setFolioId(id); setAmount(String(advanceDue ?? owedOn(id))); }
+        if (o) { const id = pick(); setFolioId(id); setAmount(deposit ? "" : String(advanceDue ?? owedOn(id))); }
       }}
     >
       <DialogTrigger asChild>
@@ -1232,7 +1239,7 @@ export function SettleDialog({
         <Button
           variant={primary ? "primary" : "secondary"}
           size="sm"
-          disabled={split ? !folios.some((f) => f.balance > 0) : balance <= 0 && advanceDue === null}
+          disabled={split ? !folios.some((f) => f.balance > 0) : balance <= 0 && !beforeArrival}
         >
           <Receipt className="size-4" />
           Settle
@@ -1242,6 +1249,7 @@ export function SettleDialog({
         title="Settle bill"
         description={advanceDue !== null
           ? `${moneyPrecise(advanceDue)} advance owed before check-in · ${payer}`
+          : deposit ? `A deposit before arrival · ${payer}`
           : `${money(outstanding)} outstanding · ${
             split ? billName(folios.find((f) => f.id === folioId)) : payer}`}
       >
@@ -1311,9 +1319,9 @@ export function SettleDialog({
             </div>
           )}
 
-          {extra > 0 && advanceDue !== null ? (
+          {extra > 0 && beforeArrival ? (
             <p className="text-sm text-grey-700" data-advance>
-              An advance before check-in: it is held as the guest's credit until the stay's charges are posted.
+              {deposit ? "A deposit before arrival" : "An advance before check-in"}: it is held as the guest's credit until the stay's charges are posted.
             </p>
           ) : extra > 0 && (
             <div className="rounded-lg bg-brand-yellow-50 border border-brand-yellow-100 p-3 space-y-2">
@@ -1365,7 +1373,7 @@ export function SettleDialog({
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
             <Button variant="primary"
-              disabled={value <= 0 || (extra > 0 && !asCredit && advanceDue === null)}
+              disabled={value <= 0 || (extra > 0 && !asCredit && !beforeArrival)}
               loading={saving}
               onClick={async () => {
                 setSaving(true);

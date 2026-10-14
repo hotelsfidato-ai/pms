@@ -18,6 +18,13 @@ Nothing open.
 
 ## Fixed
 
+### FIN-37 · A deposit before arrival could not be taken when the hotel asks no advance - FIXED 15 October (the owner's D27-330 (2))
+
+**What happened:** FIN-36 opened the Bill tab's Settle before arrival only for the advance the hotel's "Advance before check-in" rule asks. With the rule off (or the advance paid) Settle stayed grey before arrival, so a guest who wanted to leave a deposit could not.
+**Fixed:** before arrival, with no advance asked and nothing owed, Settle opens as "A deposit before arrival": the amount EMPTY for the desk to type (never filled in - no default prices), taken as the guest's credit without the tick, as the advance is. With an advance asked, FIN-36's filled-in amount owed is unchanged. Who may press Settle is unchanged. Web only: the server already took it (`takeFolioPayment`, `heldAsCredit`).
+**Proved:** `settleAdvance.test.tsx` "opens with no advance asked, the amount empty, and takes a deposit as the guest's credit" seen failing (Settle disabled); the guard "stays grey in house when nothing is owed".
+**Rule:** money a guest offers is taken; only a figure nobody set is left empty.
+
 ### FIN-36 · The check-in asked for an advance the Bill tab could not take - FIXED 15 October (the owner's D27-328 (3))
 
 **What happened:** with "Advance before check-in" on, the check-in refused "An advance of ₹X is owed before check-in ... Take it on the Bill tab." - and the Bill tab's Settle was grey before arrival (nothing posted, so nothing owed) and when in credit (a part paid), with no reason. The server took the payment ("held as credit"); only the button was shut. And New booking ran "Check in now" before taking the advance typed on it, so the check-in was refused and the booking left due in with the money paid.

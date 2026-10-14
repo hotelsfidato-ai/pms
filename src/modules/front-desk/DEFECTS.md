@@ -28,6 +28,21 @@ the file is inventory's (on `MODULE.md`'s Requests).
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-35 · The Check in window listed only the booked type - FIXED 15 October (the owner's D27-330 (1))
+
+**Found** - FD-34 left it open: the window's room list was the booked type
+plus the room the booking was already on, so an upgrade at the desk meant
+closing it and going through Assign room first.
+**Fixed** - `assignableRooms` (`data/operations.ts`) returns every room, the
+booked type's first (a stable sort, each type in the rooms' own order); a
+room of another type is marked "(different type)" as FD-34 marks it, and the
+window's note says "A room of a different type is an upgrade: the booked rate
+stays." Choosing one checks the guest in as FD-34's upgrade (the server took
+another type since FD-34; no server change). New booking's Check in now reads
+the same list by the room already picked, unchanged.
+**Proved** - `checkInEveryType.test.tsx` seen failing (only 204 and 205
+listed), then passing.
+
 ### FD-34 · The check-in refused the upgrade Assign room had just given - FIXED 15 October (the owner's D27-328 (1))
 
 **Found** - 14-15 October, the verifier, through the API and on screen:
