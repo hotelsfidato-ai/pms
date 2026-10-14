@@ -153,7 +153,9 @@ Terminal). Within a few seconds **KITCHEN KOT n** prints at the kitchen and
   → **Reprint**. The slip says REPRINT.
 - **A printer moves to another computer:** do steps 1-3 on the new one.
   Ticking its kinds there moves them; the old computer stops printing them by
-  itself. A computer that prints nothing any more can be **Removed** from the
+  itself. A reprint still waiting for the old computer moves with its kind
+  and prints on the new one, marked REPRINT (D27-330); a new KOT sent before
+  the move does not print there. A computer that prints nothing any more can be **Removed** from the
   list.
 - **No computer prints a kind something is sent to:** Tables, the Till, the
   Terminal and the Kitchen say in red **"No computer prints Bar KOTs - they

@@ -21,6 +21,7 @@ const SUPER =
   process.env["SUPER_DATABASE_URL"] ?? "postgres://postgres:pw@127.0.0.1:55432/fidato";
 const KITCHEN_PC = "device-reprint-kitchen";
 const BAR_PC = "device-reprint-bar";
+const NEW_BAR_PC = "device-reprint-bar-new";
 
 async function sql<T = Record<string, unknown>>(text: string, values: unknown[] = []): Promise<T[]> {
   const db = new (await import("pg")).default.Pool({ connectionString: SUPER });
@@ -181,6 +182,26 @@ describe("a reprint goes to the computer that prints the KOT's kind (D27-329 (2)
     expect(body.station).toMatchObject({ name: "Bar PC", online: false });
     expect(body.station.seenAt, "when it was last seen").toBeTruthy();
     expect((await reprintsOf(BAR_PC, d.orderId)).length, "printed when it is back").toBe(1);
+  });
+
+  it("waiting for an offline computer, it follows its kind when the kind is moved (D27-330 (6))", async () => {
+    const d = await sentAndPrinted();
+    await sql(`update pos_kot_stations set seen_at = now() - interval '2 hours' where device = $1`, [BAR_PC]);
+    expect(await (await reprint(waiter, d.orderId, d.kotNo, barKind)).json())
+      .toMatchObject({ ok: true, station: { name: "Bar PC", online: false } });
+
+    /* A manager ticks the Bar's KOTs on another computer: the kind moves. */
+    expect((await thisComputer(NEW_BAR_PC, "New Bar PC", [barKind])).status).toBe(200);
+    try {
+      const there = await reprintsOf(NEW_BAR_PC, d.orderId);
+      expect(there.map((r) => [r.kotNo, r.kind]), "it waits at the new computer").toEqual([[d.kotNo, "Bar"]]);
+      expect(await reprintsOf(BAR_PC, d.orderId), "not at the old one").toEqual([]);
+      expect(await (await claim(BAR_PC, there[0]!.id)).json()).toEqual({ ok: true, claimed: false });
+      expect(await (await claim(NEW_BAR_PC, there[0]!.id)).json(), "the new computer prints it")
+        .toEqual({ ok: true, claimed: true });
+    } finally {
+      expect((await thisComputer(BAR_PC, "Bar PC", [barKind])).status).toBe(200);
+    }
   });
 
   it("is refused with no computer for the kind, a slip the KOT does not have, or no kind", async () => {
