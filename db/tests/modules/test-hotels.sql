@@ -148,7 +148,7 @@ do $$
 declare
   res   jsonb := '[]';
   owner uuid; tester uuid; clerk uuid; gm uuid; mixed uuid;
-  r uuid; t uuid; t_code text; rt uuid; rt_t uuid; r101 uuid; r102 uuid; t101 uuid; t102 uuid;
+  r uuid; t uuid; t_new uuid; t_code text; rt uuid; rt_t uuid; r101 uuid; r102 uuid; t101 uuid; t102 uuid;
   g1 uuid; g2 uuid; c1 uuid; c2 uuid; real_res uuid;
   outlet uuid; sec uuid; kitchen uuid; cat uuid; item uuid; grp uuid; station uuid;
   loc uuid; si uuid;
@@ -203,8 +203,8 @@ begin
     t := app.create_test_hotel(r);
     select code into t_code from hotels where id = t;
     select * into j from (select to_jsonb(h) from hotels h where h.id = t) x;
-    res := res || jsonb_build_object('n', 'a test hotel is "<name> · TEST", "<CODE>T", the real one''s, with no tax numbers',
-      'ok', j ->> 'name' = 'Test Hotels Real · TEST' and t_code = 'THRT'
+    res := res || jsonb_build_object('n', 'a test hotel is "<name> · TEST", "T<CODE>" (D27-320), the real one''s, with no tax numbers',
+      'ok', j ->> 'name' = 'Test Hotels Real · TEST' and t_code = 'TTHR'
             and (j ->> 'test_of')::uuid = r and j ->> 'gstin' is null,
       'd', concat_ws(' ', j ->> 'name', t_code, j ->> 'gstin'));
     res := res || jsonb_build_object('n', 'it takes the real hotel''s house settings',
@@ -282,7 +282,7 @@ begin
       'ok', not app.module_enabled(t, 'loyalty') and app.module_enabled(r, 'loyalty')
             and app.module_enabled(t, 'banquet'));
     res := res || jsonb_build_object('n', 'it numbers its own documents, from one',
-      'ok', exists (select 1 from invoice_series where hotel_id = t and prefix = 'THRT' and next_number = 1));
+      'ok', exists (select 1 from invoice_series where hotel_id = t and prefix = 'TTHR' and next_number = 1));
     res := res || jsonb_build_object('n', 'the audit names who made it',
       'ok', exists (select 1 from audit_log where hotel_id = t and action = 'TEST_CREATE' and actor = owner));
 
@@ -592,7 +592,7 @@ begin
             and (select count(*) from audit_log where hotel_id = t and id > m) = 1,
       'd', (select string_agg(table_name || ' ' || action, ', ') from audit_log where hotel_id = t and id > m));
     res := res || jsonb_build_object('n', 'and its next tax invoice is number one of its own series',
-      'ok', app.next_invoice_number(t, fy) like 'THRT/%/00001');
+      'ok', app.next_invoice_number(t, fy) like 'TTHR/%/00001');
 
     -- ---------- re-copy ----------
     insert into room_types (hotel_id, code, name) values (r, 'THS', 'TH Suite');
@@ -622,6 +622,18 @@ begin
     perform set_config('app.user_id', clerk::text, true);
     v := test.th_err(format('select app.recopy_test_hotel(%L)', t));
     res := res || jsonb_build_object('n', 'only the owner or a group administrator re-copies', 'ok', v like '42501%', 'd', v);
+
+    -- ---------- its code: "T" + the real code, the first free one (D27-320) ----------
+    perform set_config('app.user_id', owner::text, true);
+    t_new := app.create_test_hotel(app.provision_property_unchecked('SHI', 'Test Hotels Shirdi', 'Nowhere'));
+    v := (select code from hotels where id = t_new);
+    res := res || jsonb_build_object('n', 'a test hotel''s code is "T" + the real code: SHI''s is TSHI, never SHIT',
+      'ok', v = 'TSHI', 'd', v);
+    perform app.provision_property_unchecked('TAMR', 'Test Hotels Taken', 'Nowhere');
+    t_new := app.create_test_hotel(app.provision_property_unchecked('AMR', 'Test Hotels Amr', 'Nowhere'));
+    v := (select code from hotels where id = t_new);
+    res := res || jsonb_build_object('n', 'a "T" + code already taken (a real TAMR) gives the first free number: TAMR2',
+      'ok', v = 'TAMR2', 'd', v);
 
     raise exception using errcode = 'TH001', message = 'undo';
   exception when sqlstate 'TH001' then

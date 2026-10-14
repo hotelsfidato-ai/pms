@@ -726,10 +726,16 @@ Settings, every role) and `auditLog.test.ts` (the person recorded and named).
 ## Test hotels (D27-296, 10 October) - the server and the database
 
 The owner's twelve answers are row D27-296 of `docs/briefs/decisions-2026-09-27.md`.
-One test hotel per real hotel, inside the live system: "Hotel Amrapali · TEST",
-code `<CODE>T` (or the first free variant), a copy of the real hotel's whole setup.
+One test hotel per real hotel, inside the live system: "Hotel Amrapali · TEST", a copy
+of the real hotel's whole setup. Its code is `T<CODE>` (TSHI, TAMR; the owner's D27-320,
+migration `221_test_hotel_code_starts_with_t.sql`) or, when that is taken, the first free
+`T<CODE>2` ... `T<CODE>99`, cut to fit ten characters; test hotels made before 220 keep
+their `<CODE>T` (AMRT).
 Migration "test hotels" (`212_test_hotels.sql`); its checks are
 `db/tests/modules/test-hotels.sql` and `api/test/modules/admin/testHotels.test.ts`.
+**No screen removes a test hotel** (D27-296 has make, reset and re-copy only); one is
+removed on the server by the steps in this service's CHANGELOG (14 October, D27-320),
+after which Properties offers Make a test hotel again.
 
 **The mark.** `hotels.test_of` names the real hotel (null for a real one); it never
 changes, a test hotel has no test hotel, one per real hotel (a unique index), and a

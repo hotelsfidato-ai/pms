@@ -40,6 +40,20 @@ day it goes.
 
 ## Fixed — the solution is here; do not work it out again
 
+### ADM-23 · A test hotel's code was the real code + "T": SHI's became "SHIT" on live - FIXED 14 October (D27-320)
+
+**Found** - by the owner, on live: `app.create_test_hotel` (212) made
+`left(code, 9) || 'T'`, and SHI's test hotel came out as SHIT.
+
+**Done** - migration 220 re-creates the function with only the code rule
+changed: "T" + the real code (TSHI), or the first free `T<CODE>2` ... 99, cut to
+ten characters. Test hotels already made keep their codes (AMRT stays); SHIT
+is removed and made again by the owner after the release (no screen removes a
+test hotel; the steps are in `CHANGELOG.md`, 14 October).
+
+**The rule** - A code made by gluing letters to a code a person typed is read
+as a word. Put the made-up letter in front, where it reads as a prefix.
+
 ### ADM-22 · A GM's bank details said "Last changed on ..." with no name when the group owner changed them - FIXED 13 October (D27-312)
 
 **Found** - 13 October, building D27-311's API (the same fault in the new

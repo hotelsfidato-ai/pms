@@ -117,7 +117,7 @@ describe("Properties: a real hotel's test hotel", () => {
   it("offers a real hotel without one Make a test hotel, and says what it is", async () => {
     const calls = server({
       "GET /api/admin/hotels": () => ADMIN_LIST,
-      "POST /api/admin/hotels/AGR/test-hotel": () => ({ code: "AGRT", name: "Fidato Agra · TEST" }),
+      "POST /api/admin/hotels/AGR/test-hotel": () => ({ code: "TAGR", name: "Fidato Agra · TEST" }),
     });
     /* The session's re-read, watched: the stub server has no new hotel to give. */
     const original = useSession.getState().refresh;
