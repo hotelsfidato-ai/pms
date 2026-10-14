@@ -342,8 +342,10 @@ Check in now          the booking call, then front desk's check-in (room, ID,
                       its room is kept
 ```
 
-Then the advance (finance's payment door, held as the guest's credit, D27-4)
-and the extras (the stay's inclusions, on the first room). A walk-in is this
+The advance (finance's payment door, held as the guest's credit, D27-4) is
+taken right after the booking call, BEFORE Check in now's check-in (D27-328:
+with "Advance before check-in" on, the check-in refused an advance not yet
+taken); then the extras (the stay's inclusions, on the first room). A walk-in is this
 page opened from an empty room: that room, tonight, one night and the Walk-in
 source; a later night's empty cell is a booking of that room. "Book this
 lead" (D27-170) opens it with `?lead=<token>`: name, phone, source and the
