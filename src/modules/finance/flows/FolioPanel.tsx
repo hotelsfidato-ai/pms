@@ -146,6 +146,11 @@ export function FolioPanel({
   const billed = balance.data ?? null;
   const due = billed ?? 0;
   const toCome = useStayDue(hotelId, stay);
+  /* Once overpaid, the refund step stays: the refund brings the bill to ₹0,
+     and its receipt link must outlive the credit. It hides itself when
+     nothing is owed back and nothing was given. */
+  const [wasOverpaid, setWasOverpaid] = useState(false);
+  if (due < 0 && !wasOverpaid) setWasOverpaid(true);
 
   return (
     <div className="space-y-5">
@@ -206,7 +211,7 @@ export function FolioPanel({
       )}
 
       {/* OVERPAID: the credit goes back before check-out (D27-315 B). */}
-      {due < 0 && mayPrint && (
+      {wasOverpaid && mayPrint && (
         <RefundStep hotelId={hotelId} stayId={stay.id} onDone={refreshAll} />
       )}
 
