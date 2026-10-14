@@ -8,6 +8,19 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-15 · The Check in window lists every room type; a deposit before arrival with the advance rule off (the owner's D27-330 (1), (2))
+
+**Asked for:** D27-330 (1) and (2), before launch. Helper copy `worktree-agent-aed37fbbf14267246`, fast-forwarded to cp6 3b355c7f. Web only: the server took another type since FD-34 and a payment before arrival since FIN-36. The guest directory and the restaurant were not touched. Finance's entry points here.
+**Shipped:**
+- **(1) FD-35.** `data/operations.ts` `assignableRooms`: every room, the booked type's first (a stable sort), in place of the booked type plus the room already held. `CheckInFlow.tsx`: "Deluxe (different type)" on its own line under the room number (beside the status pill it was cut to "Deluxe ..."); the Room note adds "A room of a different type is an upgrade: the booked rate stays." Choosing one checks in as FD-34's upgrade. New booking's Check in now reads the same list by its room number, unchanged.
+- **(2) finance's FIN-37.** `FolioPanel.tsx`: before arrival, with no advance asked and nothing owed, Settle opens as "A deposit before arrival", the amount EMPTY (no default prices), held as the guest's credit without the tick. With an advance asked, FIN-36 unchanged. Who may press Settle unchanged.
+- Manual: A3.2 (every room, the upgrade at the window), A3.6 (a deposit with no advance asked), A4.7 (Settle before arrival); rebuilt. Picture A3-T2 not retaken: it shows the booked type's rooms, which still come first, but not the other types below them.
+**Proved:**
+- Tests first, seen failing: `checkInEveryType.test.tsx` (new) listed `[204, 205]` for `[204, 205, 101, 302]`; `finance/settleAdvance.test.tsx` "opens with no advance asked, the amount empty ..." found Settle disabled. The in-house guard ("stays grey in house when nothing is owed") and FIN-36's two cases passed before and after. After: those two files plus `checkInChecks`, `deskRead`, `reservations/onePage`, `earlyCheckIn`, `formIIICheckIn`, `frontDeskRules` and `manual.test.ts` all pass. No API change, so no API run.
+- On screen (API 8863, web 5363, scratch `fidato_d330fd` from the 13 Oct dump migrated, 5EL on 9 Oct, rule "none", General Manager, 1280x720): Lata Bhosale (FH-2608-5005, Superior, 204 still occupied) - the list showed 201-210 Superior first, then 301-308 each "Deluxe (different type)"; 307 (made clean on Housekeeping) chosen, "Room 307 · Clean · Deluxe (different type)", checked in: the panel "307 · Deluxe · booked Superior", per night ₹2,857 (the booked rate). Shridhar Kamble (FH-2608-4864, arriving 10 Oct, nothing posted): Settle open, "A deposit before arrival · Shridhar Kamble", Amount empty, Take payment grey until typed; ₹2,000 cash typed: "A deposit before arrival: it is held as the guest's credit until the stay's charges are posted." - "₹2,000 received · Cash", Due ₹10,130.46 to ₹8,130.46.
+- Gate: see the report (`bash scripts/gates.sh last-desk quick`).
+**Left open (questions in the report):** after a deposit (or FIN-36's advance) before arrival the Bill tab shows refund's own banner "₹2,000.00 is owed back to the guest." with Refund - true for a cancelled stay, misleading for a deposit held against the stay.
+
 ## 2026-10-15 · Three check-in/out dead ends (the owner's D27-328): the upgrade at check-in, a booking-site refund, the advance before arrival
 
 **Asked for:** D27-328, before launch, each proved by a verifier through the API and on screen. Helper copy `worktree-agent-ac63a94c40745bcab`, fast-forwarded to cp6 5fed71f2 first. front-desk and finance are still claimed by lanes A and B (13 Oct, merged into cp6), so `claim` was not run; this copy only. The whole session is here; finance's and reservations' entries point to it.
