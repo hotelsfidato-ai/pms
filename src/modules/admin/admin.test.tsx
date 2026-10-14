@@ -832,3 +832,18 @@ describe("D27-324 (5) - the Roles screen shows the GM managing people", () => {
     expect(within(users).getAllByRole("cell")[gm]!.textContent).toBe("View, Create, Edit");
   });
 });
+
+describe("D27-329 (4) - the Roles screen names what the Waiter and the Bar do in the restaurant", () => {
+  it("in a line under the matrix, in the server's own words (POS-35)", async () => {
+    as("owner");
+    renderAt("/admin/roles", <TooltipProvider><RolesPage /></TooltipProvider>);
+    await screen.findByRole("table");
+    expect(screen.getByText(/^The restaurant is not in the matrix/).textContent).toBe(
+      "The restaurant is not in the matrix: the server lets the Waiter and the Bar in by name, "
+      + "for ringing up an order, printing the kitchen's KOTs, answering a table booking and "
+      + "closing the restaurant's day, and for reading the restaurant's orders, the menu, the "
+      + "kitchen's KOTs, the restaurant's outlets and the restaurant's day. Ringing up an order "
+      + "includes sending the KOT, giving a discount, printing the bill and taking payment. "
+      + "The Bar orders only the dishes on the menu's Bar tab.");
+  });
+});
