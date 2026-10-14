@@ -227,8 +227,12 @@ describe("cutting cards", () => {
 });
 
 describe("front desk's calls: check-out, move and exchange", () => {
+  /* The check-outs book ONE night: its first night is charged at check-in
+     (D27-204), so leaving today frees no night and the desk does not ask
+     why the guest leaves early (D27-315 A) - the check-out is about the
+     cards, not the dates. */
   it("check-out cancels the cards", async () => {
-    const stay = await arrive("103");
+    const stay = await arrive("103", true, 1);
     expect((await cut(stay, { cards: 1 })).status).toBe(200);
     await settle(stay);
     const res = await call(`/stays/${stay}/check-out`, "POST", {});
@@ -239,7 +243,7 @@ describe("front desk's calls: check-out, move and exchange", () => {
   });
 
   it("a lock that refuses at check-out is recorded, and the guest still checks out", async () => {
-    const stay = await arrive("104");
+    const stay = await arrive("104", true, 1);
     expect((await cut(stay, { cards: 1 })).status).toBe(200);
     await settle(stay);
     standIn.failNext = true;
