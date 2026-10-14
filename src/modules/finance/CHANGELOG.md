@@ -8,7 +8,6 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
-<<<<<<< HEAD
 ## 2026-10-15 · A booking-site stay's refund for money paid at the hotel; Settle before arrival for the advance (the owner's D27-328 (2) and (3))
 
 **Asked for:** D27-328 (2): a booking-site guest who paid the HOTEL and left early could not be checked out - the refund refused every booking-site stay. (3): the check-in asked for an advance "on the Bill tab" while Settle was grey before arrival and when in credit. The whole session, with what was seen and the test runs, is front desk's CHANGELOG entry of the same date.
@@ -17,7 +16,6 @@ project, still goes in the root `CHANGELOG.md`.
 - `flows/FolioPanel.tsx` (FIN-36): the Bill tab reads the advance still owed (front desk's `expressCheckIn`, the check-in's own read and cache key) for a booking not yet arrived; `SettleDialog`'s new `advance` opens Settle with it filled in ("₹… advance owed before check-in"), held as the guest's credit without the tick, "Advance owed" and "Remaining" against it; a part paid leaves the rest. With no advance owed it stays as it was.
 - Tests: `api/test/modules/finance/bookingSiteRefund.test.ts` (new, property OTR), `settleAdvance.test.tsx` (new).
 **Left open:** a company's credit to its City ledger at check-out (after launch; until then a manager reverses the payment the same day).
-=======
 ## 2026-10-14 · The release's API run: the reset clears refunds (FIN-34); the charge door's test reads lane B's refusal
 
 **Asked for:** the master's helper on the final release copy: of the 9 API failures, two were finance's - `resetOrder.test.ts` ("refunds points at folio_postings and is not cleared") and `chargeDoor.test.ts` ("refuses a payment or a refund as a charge"). Fix each at its root, code or test. Branch `worktree-agent-a5f7c1ecdbb604327`, fast-forwarded to cp6 9ad852aa (lanes A, B and FD-32 merged).
@@ -25,7 +23,6 @@ project, still goes in the root `CHANGELOG.md`.
 - **FIN-34 (code):** 219 added `refunds` and not to `api/scripts/reset-property.ts`'s `CLEAR`; a reset of a hotel with any refund would have stopped on the foreign key and rolled back. `refunds` goes before `payments`. Every other reset path checked: the test hotel's (`app.test_hotel_clear`) works from 219's class list - right; load-demo drops the hotel, which cascades; `forbid_hotel_delete` refuses a hotel with postings; `demo-history.ts` clears only bookings it made, which have no refunds. No migration.
 - **FIN-26's test (the test was wrong):** lane B changed the refusal to "A refund is not a charge. Give it with Refund on the bill." - right, a refund has its own step now and reversing the payment records no money going back. The test expected the old sentence; `DEFECTS.md` FIN-26 notes the change.
 **Proved:** each file alone, seen failing first (resetOrder 3/4, chargeDoor 7/8), then 4/4 and 8/8; and in the one full API run (`npm test` through `.local/dbq.sh`, 19:34): 200 of 201 files, 2,687 of 2,691 tests - the 4 all `channel-manager/suAvailability.test.ts`, three 20 s timeouts and one count after them, in a file that ran before every file changed here (the run took 49 min on the loaded PC, the release's 22).
->>>>>>> cp6
 
 ## 2026-10-14 · Cash to the rupee on a room bill (D27-317); a Refund line, and one sign for `refund` (D27-315 Part B) - Lane B
 
