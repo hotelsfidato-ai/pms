@@ -829,7 +829,8 @@ end $$;
 
 -- =============================================================================
 -- A PAID RESTAURANT BILL VOIDED (the owner's D27-324 (1), 14 October)
--- ======================================================================-- The owner, an administrator or the GM may void a PAID bill, with a reason:
+-- =============================================================================
+-- The owner, an administrator or the GM may void a PAID bill, with a reason:
 -- the same business day, before that outlet's day is closed; never a bill
 -- that went to a room or a function (it is reversed on that bill); a card or
 -- UPI bill names the refund's reference. The bill keeps its number, is void
@@ -969,7 +970,10 @@ begin
     (select settled_orders || ' settled' from app.pos_day_summary(v_out, bd)));
 
   perform set_config('app.user_id', '', true);
-=======
+end $$;
+
+
+-- =============================================================================
 -- THE BAR ROLE (the owner's D27-324 (2))
 -- =============================================================================
 -- `bar` is a role a person may be given; a Bar person puts on a bill only a
