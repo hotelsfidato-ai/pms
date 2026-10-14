@@ -42,3 +42,7 @@ or cost stop then loses nothing), and finish with a short plain-words report wri
 **Never stop a process you did not start** - the master's web server on 5173, the API on 8787, another
 lane's recording or render included (14 Oct 13:16 lane E stopped the master's Vite). If it hangs, the
 disk is usually the cause: wait and poll, or write a BLOCKED line; the master restarts its own servers.
+
+**Recording website (14 Oct 15:20):** the master serves a BUILT copy of the website on
+**http://localhost:5180** (test sign-in on, API 8787, the main demo). It loads at once and spares the disk:
+lanes D and E record with `APP=http://localhost:5180`. The master rebuilds it after merges; never stop it.
