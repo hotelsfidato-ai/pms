@@ -11,6 +11,63 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-14 · A test hotel's code is "T" + the real code (the owner's D27-320)
+
+**Asked for:** D27-320: a new test hotel's code is "T" + the real code (TSHI, TAMR), not the real code + "T" (SHI's became "SHIT" on live); existing test hotels keep theirs; and the steps for the owner to remove SHIT and make TSHI after the release.
+**Shipped:**
+- Migration `220_test_hotel_code_starts_with_t.sql` (218 and 219 are lane B's; the master renumbers at merge): `app.create_test_hotel` re-created, same signature, `security definer` and `search_path`, its body word for word but the code: `'T' || left(code, 9)`, or the first free `'T' || left(code, 9 - digits) || n` for n = 2 ... 99 (ten characters at most, `hotels_code_format`). Create or replace, so its grants and comment stay; re-runnable.
+- `db/tests/modules/test-hotels.sql`: THR's test hotel is TTHR (and its invoice series); SHI's is TSHI; with a real TAMR in the way, AMR's is TAMR2.
+- `api/test/modules/admin/testHotels.test.ts`: its test hotel is TTHA (was THAT) throughout; `src/modules/admin/testHotels.test.tsx`: the stubbed answer is TAGR. No screen or manual text names the code's shape, so no wording changed. `src/test/app.ts`'s `TEST_HOTEL = "5ELT"` (core, a fixture no rule reads) left alone.
+- `MODULE.md` (the rule, and that no screen removes a test hotel), `DEFECTS.md` ADM-23.
+**Found:** no screen removes a test hotel: D27-296 gave make, reset and re-copy only, and taking a property out of service keeps its code and its place as SHI's one test hotel, so Properties never offers Make a test hotel for SHI while SHIT is there. Removing SHIT is a database step on the server (below).
+**Proved:**
+- Database, `db/tests/run.sh` through `dbq.sh`: without 220, 5 failed, all in test hotels and all this change's (THR's made THRT and its series THRT; SHI's made SHIT; AMR's made AMRT); with 220, all 1697 assertions pass. `db/tests/rerun.sh`: all 218 files re-runnable.
+- API (`dbq.sh`, `with-test-db.sh`): `test/modules/admin/testHotels.test.ts` 69 of 69 (not run without 220).
+- Web: `src/modules/admin/testHotels.test.tsx` 15 of 15 (the stub's code is read by nothing, so it passes either way). `bash scripts/gates.sh d27-320 quick`: web types, API types and stripping exit 0; web tests 185 of 188 files: `migrationNumbers.test.ts` (the 218-219 gap, Left open (1)), and `admin.test.tsx` ("the group administrator sees the switches") and `reservations/newBookingFields.test.tsx` (20 s timeout), both under load only: run alone, 39 of 39.
+- The owner's steps 3 to 5 rehearsed on a kept scratch database (`fidato_gate_4327`, dropped after): SHI with SHIT made by 212's rule and two people on it, then 220; the look listed them and "Group Owner" as maker; the removal reset it (the audit's `TEST_RESET` by Group Owner), cleared 27 setup rows, took 2 people off and deleted it; then `app.create_test_hotel` (what Make a test hotel calls) made TSHI. With no SHIT the removal stopped at its first check, nothing changed. The keys to `hotels` that could stop the delete are all on group or trading tables, which the reset empties for a test hotel.
+- Not opened on screen: no screen changed.
+**The owner's steps, after the release that carries this migration** (rehearsed on a scratch copy of the database, never on `fidato`; nothing was run on the server):
+1. *The owner's PC, PowerShell:* `ssh -i "$HOME\Downloads\ssh-key-2026-09-01.key" opc@130.210.49.220`
+2. *The server, in that ssh session:* a backup first, `sudo -u postgres /usr/local/bin/fidato-backup /var/backups/fidato` (a green ✓ and today's file).
+3. *The server:* `sudo -u postgres psql -d fidato`, then paste the look (it changes nothing). Write down the people it lists; `made_by` must read `t` under both `is_group_admin` and `is_active`.
+   ```sql
+   select t.code, t.name, r.code as test_of, t.is_active,
+          (select count(*) from reservations where hotel_id = t.id) as bookings,
+          (select count(*) from invoices where hotel_id = t.id) as invoices
+     from hotels t join hotels r on r.id = t.test_of where t.code = 'SHIT';
+   select s.full_name, s.email, sh.role, s.test_only
+     from staff_hotels sh join staff s on s.id = sh.staff_id
+    where sh.hotel_id = (select id from hotels where code = 'SHIT') order by s.full_name;
+   select s.full_name as made_by, s.is_group_admin, s.is_active
+     from audit_log a join staff s on s.id = a.actor
+    where a.action = 'TEST_CREATE' and a.hotel_id = (select id from hotels where code = 'SHIT');
+   ```
+4. *The server, same psql:* paste the removal. It acts as the person who made SHIT (the audit names them), resets it (the audit gets its `TEST_RESET`), clears its copied setup, takes its people off it and deletes it. It ends with `COMMIT` and a list showing SHI only. If it stops on an ERROR, nothing changed: send the message to the master.
+   ```sql
+   \set ON_ERROR_STOP on
+   begin;
+   do $$ begin
+     if not exists (select 1 from hotels t join hotels r on r.id = t.test_of
+                     where t.code = 'SHIT' and r.code = 'SHI') then
+       raise exception 'SHIT is not SHI''s test hotel. Stopped; nothing changed.';
+     end if;
+   end $$;
+   select set_config('app.user_id', (select actor::text from audit_log
+     where action = 'TEST_CREATE' and hotel_id = (select id from hotels where code = 'SHIT')), true);
+   select app.reset_test_hotel(id) as removed from hotels where code = 'SHIT';
+   select set_config('app.test_reset', (select id::text from hotels where code = 'SHIT'), true);
+   select app.test_hotel_clear(id, 'setup') as setup_removed from hotels where code = 'SHIT';
+   delete from staff_hotels where hotel_id = (select id from hotels where code = 'SHIT');
+   select * from app.delete_property('SHIT');
+   commit;
+   select code, name from hotels where code in ('SHI', 'SHIT');
+   ```
+   Then `\q` and `exit`.
+5. *Browser, pms.fidatohotels.com, signed in as the owner:* Properties, SHI's card, **Make a test hotel**. It is made as TSHI, "<SHI's name> · TEST", with SHI's setup copied as it is that day.
+6. *Browser:* People, each person written down in step 3, **Give access**, TSHI, the same role. A person added for testing has no hotel between steps 4 and 6.
+**Left open:** (1) the migration's number is the master's at merge (220 leaves a gap after 217 in this copy, which `src/test/migrationNumbers.test.ts` reports until 218 and 219 are merged). (2) Removing a test hotel from a screen would need the owner's word; not built (D27-296 has no remove). (3) AMRT keeps its code unless the owner asks.
+**Commits:** `e26debe0` (migration and database checks), `8d21a47a` (API and web tests), and the notes.
+
 ## 2026-10-13 · The setup wizard's details; the provisioning key's words (the owner's D27-316 (6); the master's addition)
 
 **Asked for:** D27-316 (6a)-(6d) and one line from the master. (6e) was left as it is on purpose: a bank-details change by someone since taken off the roster still shows no name.
