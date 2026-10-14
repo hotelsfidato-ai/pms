@@ -50,7 +50,9 @@ let tikka = "";
 const orders: string[] = [];
 
 type Menu = { categories: { id: string; name: string; items: { id: string; name: string }[] }[] };
-type OrderRead = { id: string; lines: { id: string; name: string; qty: number; kotNo?: number | null; kotKindId?: string | null }[] };
+type OrderRead = { id: string; lines: {
+  id: string; name: string; qty: number; kotNo?: number | null; kotKind?: { id: string; name: string } | null;
+}[] };
 
 const open = async (who: string, table: string) => {
   const res = await call(who, "POST", "/till/orders", { outlet: "REST", table });
@@ -185,7 +187,7 @@ describe("a waiter and a Bar person reprint their order's KOT (D27-324 (4))", ()
       const barKind = (await sql<{ id: string }>(
         `select k.id::text from pos_kot_kinds k join hotels h on h.id = k.hotel_id
           where h.code = '5EL' and k.role = 'bar'`))[0]!.id;
-      expect(line.kotKindId).toBe(barKind);
+      expect(line.kotKind).toEqual({ id: barKind, name: "Bar" });
 
       const slip = await call(who, "GET", `/till/orders/${id}/kot/${kotNo}?kind=${barKind}`);
       expect(slip.status, await slip.clone().text()).toBe(200);

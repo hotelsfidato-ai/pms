@@ -138,6 +138,12 @@ export interface OrderLine {
    *  second KOT does not re-fire the starters while they are being
    *  eaten. */
   kotStatus: string;
+  /** The KOT it went on and that KOT's kind (D27-324 (4): the order screen
+      reprints them). Null until it is sent; the kind is null on a line sent
+      before KOT kinds, whose KOT prints whole. Absent on an order read
+      before 14 October. */
+  kotNo?: number | null;
+  kotKind?: { id: string; name: string } | null;
   /** Null when the reader may not see that person (staff is row-secured). */
   addedBy: string | null;
 
