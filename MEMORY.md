@@ -6539,6 +6539,19 @@ copy will see of theirs.**
 
 ---
 
+### 411 · MINE: the database queue run outside Git Bash's own PATH let two builds through at once (15 October)
+
+A helper (D27-330) started `.local/dbq.sh` from PowerShell as `C:\Program Files\Git\usr\bin\bash.exe dbq.sh ...`,
+a bash with only Windows' PATH, so `date`, `stat`, `basename` and `rm` were "command not found". The wait
+loop's age line failed (`-  : syntax error: operand expected`), bash left the loop, wrote its own pid over the
+master's in the lock and ran a restore and migrate of its own scratch database beside the master's API suite;
+at its end `rm` was missing, so the lock stayed with a dead pid, and the helper's own queued API run "took over
+a stale turn" while the master's suite was still running. **The rule:** run `dbq.sh` from the Bash tool, or
+from a script that first sets `export PATH="/usr/bin:/mingw64/bin:$PATH"`; never from a bare
+`usr\bin\bash.exe`. Its first line of output is a wait or the command's own, never "command not found".
+
+---
+
 ### 410 · MINE: a conflict resolved by a pattern that matched inside a comment banner (15 October)
 
 Merging the paid-bill void and the Bar role, both branches had appended a block to `db/tests/modules/pos.sql`.
