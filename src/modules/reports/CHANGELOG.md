@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-14 · No decision codes in the stock reports' cost note (the owner's D27-319 (1))
+
+`api/src/modules/reports/builders/stock.ts`, `COST_NOTE` (the footnote of the stock reports, on screen and in their files): "... at its running average at the moment (D27-238, D27-242)." ends at "the moment." **Proved:** no test asserted the old words; `test/modules/reports/stockReports.test.ts` re-run in the session's API run (front desk's entry).
+
 ## 2026-10-14 · The Dashboard reads only its day's bookings (the owner's D27-316 (1); front desk's entry has the whole session)
 
 **Shipped:** `pages/Dashboard.tsx` - today's work reads the day's board (`fetchStays(code, date, date, true)`), keyed by the date, instead of every booking; the one-day board (front desk's `getStayView`) reads its day too (REP-19).
