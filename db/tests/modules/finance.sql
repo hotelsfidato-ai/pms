@@ -657,5 +657,9 @@ begin
     app.stay_bill(r)->>'net' || ' / ' || (app.stay_bill(r)->>'paid') || ' / ' || (app.stay_bill(r)->>'balance'));
   perform test.ok('finance refund', 'a refund is not the guest''s spend', app.stay_charged(r) = 1000,
     app.stay_charged(r)::text);
+  -- The suite is one transaction: run the pending row checks here (both refunds
+  -- have their rows), or a later block's ALTER TABLE meets "pending trigger events".
+  set constraints folio_postings_refund_has_row immediate;
+  set constraints folio_postings_refund_has_row deferred;
   perform set_config('app.user_id', '', true);
 end $$;
