@@ -258,6 +258,22 @@ describe("D27-316 - a test hotel's profile needs no GSTIN", () => {
     expect(await readTest()).toMatchObject({ state: "done", detail: null });
   });
 
+  /* D27-319 (1): the Profile checklist ("What this property still needs") asks
+     the same way - no GSTIN for a test hotel, and so nothing blocking about it. */
+  it("the Profile checklist does not ask a test hotel for a GSTIN, or count one as blocking", async () => {
+    const list = async (code: string) => {
+      const res = await call(owner, "GET", `/api/hotels/${code}/commissioning`);
+      expect(res.status).toBe(200);
+      return (await res.json()) as { checks: Array<{ id: string }>; blockedBy: string[] };
+    };
+    const test = await list(TEST);
+    expect(test.checks.map((x) => x.id)).not.toContain("gstin");
+    expect(test.blockedBy).not.toContain("A real GSTIN");
+    const real = await list("SWR");
+    expect(real.checks.map((x) => x.id)).toContain("gstin");
+    expect(real.blockedBy).toContain("A real GSTIN");
+  });
+
   it("still asks a real hotel for its GSTIN, whatever else is set", async () => {
     await sql(`update hotels set address_line = '1 Test Road', phone = '9000000000', email = 'swz@example.com',
                  gstin = null where id = $1`, [hotelId]);
