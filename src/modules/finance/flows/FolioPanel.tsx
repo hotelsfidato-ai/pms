@@ -21,7 +21,7 @@ import {
   DropdownMenuItem, DropdownMenuLabel,
 } from "@/components/ui";
 import { getFolioPostings, getFolioBalance, postCharge, reverseCharge, settle, reverseChargeAllowed, editCharge, changeRate, type BillLine, type SettleInput } from "@/modules/finance/data/postings";
-import { checkOut, earlyArrival, leavingEarly, LeavingEarlyStep, type StayRow } from "@/modules/front-desk";
+import { checkOut, earlyArrival, expressCheckIn, leavingEarly, LeavingEarlyStep, type StayRow } from "@/modules/front-desk";
 import { type OperationResult, type Posting, type Stay } from "@/data/repositories";
 import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type StayFolio } from "@/modules/finance/data/folios";
 import { LateCheckOutFlow } from "@/modules/front-desk";
@@ -151,6 +151,14 @@ export function FolioPanel({
      nothing is owed back and nothing was given. */
   const [wasOverpaid, setWasOverpaid] = useState(false);
   if (due < 0 && !wasOverpaid) setWasOverpaid(true);
+  /* THE ADVANCE BEFORE CHECK-IN (the owner's D27-328 (3)): the check-in
+     sends the desk here for it, so Settle takes it before arrival - the
+     server's own figure, the check-in's read (same key, one cache). */
+  const advance = useQuery({
+    queryKey: ["express-check-in", hotelId, stay.id, undefined],
+    queryFn: () => expressCheckIn(hotelId, stay.id),
+    enabled: stay.status === "due-in",
+  });
 
   return (
     <div className="space-y-5">
@@ -188,6 +196,7 @@ export function FolioPanel({
             active={only}
             businessDate={businessDate}
             roundCash
+            advance={stay.status === "due-in" ? advance.data?.advance?.owed ?? null : null}
             pay={(input, key) => settle(hotelId, stay.id, input, key)}
             onDone={refresh}
           />
@@ -1139,8 +1148,12 @@ function AddChargeDialog({
     (D27-305 (10)) - one dialog, one payment door; `pay` names the bill. */
 export function SettleDialog({
   payer, primary, balance, folios = [], active = null, businessDate, credit = "guest", roundCash = false,
-  pay, onDone,
+  advance = null, pay, onDone,
 }: {
+  /** The advance still owed before check-in, by the server (D27-328 (3)):
+      above zero, Settle opens before arrival with it filled in, held as
+      the guest's credit. */
+  advance?: number | null;
   /** Who is paying, for the dialog's line: the guest, or the group. */
   payer: string;
   /** The bill's one main action while money is owed. */
@@ -1187,6 +1200,9 @@ export function SettleDialog({
 
   const outstanding = owedOn(folioId);
   const value = Number(amount) || 0;
+  /* An advance before arrival is credit by what it is: no tick (D27-328). */
+  const advanceDue = !split && (advance ?? 0) > 0 ? advance! : null;
+  const owedFigure = advanceDue ?? outstanding;
   /* D27-4: more than the bill is held as the guest's credit, once the desk
      ticks that it is. The server asks the same (needs "credit"). */
   const extra = Math.round((value - outstanding) * 100) / 100;
@@ -1205,7 +1221,7 @@ export function SettleDialog({
       open={open}
       onOpenChange={(o) => {
         setOpen(o);
-        if (o) { const id = pick(); setFolioId(id); setAmount(String(owedOn(id))); }
+        if (o) { const id = pick(); setFolioId(id); setAmount(String(advanceDue ?? owedOn(id))); }
       }}
     >
       <DialogTrigger asChild>
@@ -1216,7 +1232,7 @@ export function SettleDialog({
         <Button
           variant={primary ? "primary" : "secondary"}
           size="sm"
-          disabled={split ? !folios.some((f) => f.balance > 0) : balance <= 0}
+          disabled={split ? !folios.some((f) => f.balance > 0) : balance <= 0 && advanceDue === null}
         >
           <Receipt className="size-4" />
           Settle
@@ -1224,8 +1240,10 @@ export function SettleDialog({
       </DialogTrigger>
       <DialogContent
         title="Settle bill"
-        description={`${money(outstanding)} outstanding · ${
-          split ? billName(folios.find((f) => f.id === folioId)) : payer}`}
+        description={advanceDue !== null
+          ? `${moneyPrecise(advanceDue)} advance owed before check-in · ${payer}`
+          : `${money(outstanding)} outstanding · ${
+            split ? billName(folios.find((f) => f.id === folioId)) : payer}`}
       >
         <div className="space-y-4">
           {split && (
@@ -1293,7 +1311,11 @@ export function SettleDialog({
             </div>
           )}
 
-          {extra > 0 && (
+          {extra > 0 && advanceDue !== null ? (
+            <p className="text-sm text-grey-700" data-advance>
+              An advance before check-in: it is held as the guest's credit until the stay's charges are posted.
+            </p>
+          ) : extra > 0 && (
             <div className="rounded-lg bg-brand-yellow-50 border border-brand-yellow-100 p-3 space-y-2">
               <p className="text-sm text-brand-yellow-800" data-credit-warning>
                 This is {moneyPrecise(extra)} more than the bill; it will be held as the {credit}'s credit.
@@ -1322,7 +1344,8 @@ export function SettleDialog({
           )}
 
           <div className="rounded-lg bg-grey-50 border border-grey-200 p-3 space-y-1">
-            <Row label="Outstanding" value={roundOff ? moneyPrecise(outstanding) : money(outstanding)} />
+            <Row label={advanceDue !== null ? "Advance owed" : "Outstanding"}
+              value={roundOff ? moneyPrecise(owedFigure) : money(owedFigure)} />
             <Row label="Paying" value={roundOff ? moneyPrecise(value) : money(value)} muted />
             {roundOff !== 0 && (
               <div data-round-off>
@@ -1333,7 +1356,7 @@ export function SettleDialog({
             <div className="pt-1 border-t border-grey-200">
               <Row
                 label="Remaining"
-                value={money(Math.round((outstanding - value) * 100) / 100)}
+                value={money(Math.round((owedFigure - value) * 100) / 100)}
                 bold
               />
             </div>
@@ -1342,7 +1365,7 @@ export function SettleDialog({
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
             <Button variant="primary"
-              disabled={value <= 0 || (extra > 0 && !asCredit)}
+              disabled={value <= 0 || (extra > 0 && !asCredit && advanceDue === null)}
               loading={saving}
               onClick={async () => {
                 setSaving(true);

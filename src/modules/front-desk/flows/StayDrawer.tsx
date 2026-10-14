@@ -270,8 +270,10 @@ function StayFacts({ stay: s }: { stay: Stay }) {
         <Fact label="Room">
           {/* A reservation is for a room TYPE; the number arrives when a
               room is assigned. Said, not left blank. */}
+          {/* The room's own type; an upgrade names the type booked too (D27-328). */}
           {s.roomNumber
-            ? <><span className="tabular">{s.roomNumber}</span> · {s.roomType}</>
+            ? <><span className="tabular">{s.roomNumber}</span> · {s.givenRoomType ?? s.roomType}
+                {s.givenRoomType && <span className="font-normal text-grey-600"> · booked {s.roomType}</span>}</>
             : <>{s.roomType} <span className="font-normal text-grey-600">· no room yet</span></>}
         </Fact>
         <Fact label="Guests">{party}</Fact>

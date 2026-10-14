@@ -6,6 +6,7 @@ import * as apiModule from "@/lib/api";
 import * as operations from "@/modules/front-desk/data/operations";
 import { startSignedIn } from "@/test/app";
 import { CheckInFlow } from "@/modules/front-desk/flows/CheckInFlow";
+import { toast } from "@/components/ui";
 import { AmendStayFlow } from "@/modules/front-desk/flows/AmendStayFlow";
 import type { Stay } from "@/data/repositories";
 
@@ -182,5 +183,48 @@ describe("Change dates or guests", () => {
     fireEvent.change(screen.getByLabelText("Departure"), { target: { value: "2026-12-01" } });
     expect(said()).toMatch(/at most 90 nights/);
     expect(save().disabled).toBe(true);
+  });
+});
+
+/* THE OWNER'S D27-328 (1), 15 October: Assign room gave a Deluxe room to a
+   Superior booking, and the check-in pre-selected it without a word, then
+   the server refused it. The room list marks "(different type)" as Assign
+   room's does, the given room on its one line too, and the clerk is told
+   once it is done, in Assign room's sentence. */
+describe("an upgrade given by Assign room", () => {
+  const UPGRADED = { ...STAY, roomNumber: "302" } as Stay;
+  beforeEach(() => {
+    vi.spyOn(operations, "assignableRooms").mockResolvedValue([
+      { number: "302", type: "Deluxe", status: "clean", housekeeping: "clean", allowed: true },
+      { number: "204", type: "Superior", status: "clean", housekeeping: "clean", allowed: true },
+    ] as never);
+  });
+
+  it("marks the given room (different type), in the list too, and says so once checked in", async () => {
+    const said = vi.spyOn(toast, "success");
+    vi.spyOn(operations, "checkIn").mockResolvedValue(
+      { ok: true, data: { ...UPGRADED, givenRoomType: "Deluxe" } as Stay });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>
+          <CheckInFlow hotelId="5EL" stay={UPGRADED} businessDate="2026-08-25" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /Check in/ }));
+    const line = (await screen.findByText("Room 302")).closest("[data-checkin-room]")!;
+    expect(line.textContent).toContain("Deluxe (different type)");
+
+    fireEvent.click(screen.getByRole("button", { name: "Change room" }));
+    expect(screen.getByRole("button", { name: /^302/ }).textContent).toContain("(different type)");
+    expect(screen.getByRole("button", { name: /^204/ }).textContent).not.toContain("different type");
+    fireEvent.click(screen.getByRole("button", { name: /^302/ }));
+
+    fireEvent.change(screen.getByLabelText(/Reason for skipping/), { target: { value: "Scanner offline" } });
+    const buttons = screen.getAllByRole("button", { name: /Check in/ });
+    fireEvent.click(buttons[buttons.length - 1]!);
+    await waitFor(() => expect(said).toHaveBeenCalled());
+    expect(said.mock.calls[0]![1]).toContain("Note: Deluxe is not the room type they booked.");
   });
 });

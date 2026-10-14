@@ -9,6 +9,8 @@ export { ReadyReasons } from "./components/ReadyReasons";
 export { listOf, holidaysOf, vipLevels, type ListItem, type Holiday } from "./data/lists";
 export type { StayColumn, StayRow } from "./components/StayTable";
 export { assignRoom, checkOut, earlyArrival, leavingEarly, type LeavingEarly } from "./data/operations";
+/* D27-328 (3): the advance owed before check-in, for the Bill tab's Settle. */
+export { expressCheckIn } from "./data/operations";
 export type { Posting } from "./data/operations";
 export { fetchStays, getHouseNow, getStay, isCancelledOrVoid, listArrivals, listDepartures, listInHouse, listStays } from "./data/stays";
 export type { HouseNow, HouseNowRoom } from "./data/stays";

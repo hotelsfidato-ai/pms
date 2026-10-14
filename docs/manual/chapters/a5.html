@@ -305,8 +305,9 @@
   <ul>
     <li><b>The owner, an Admin, the GM and the accountant</b> see a <span class="ui">Refund</span> button.</li>
     <li><b>Anyone else</b> reads: <span class="msg">“Refunds are given by the owner, an administrator, the general manager or the accountant. Ask one of them.”</span></li>
-    <li><b>A notice</b>, where the money is not refunded here. A company's credit: <span class="msg">“This credit is the company's. It is settled with the company on the City ledger, not refunded to the guest here.”</span> A booking-site stay: <span class="msg">“A booking-site stay: the booking site refunds the guest. Tell the booking site; nothing is refunded here.”</span></li>
+    <li><b>A notice</b>, where the money is not refunded here. A company's credit: <span class="msg">“This credit is the company's. It is settled with the company on the City ledger, not refunded to the guest here.”</span> A booking-site stay with nothing paid at the hotel to give back (the booking site was paid): <span class="msg">“A booking-site stay: the booking site refunds the guest. Tell the booking site; nothing is refunded here.”</span></li>
   </ul>
+  <p><b>A booking-site guest who paid the hotel</b>, for example the whole stay by UPI at the desk and then left early, is refunded here like any guest, with the same people, the same ways and the same ₹20,000 cash rule. Only what was paid at the hotel goes back, and only by the ways it was paid there: <span class="ui">Bill to company</span> is never one. What the booking site was paid stays the booking site's to refund.</p>
 
   <h3>To give a refund</h3>
   <ol class="steps">
@@ -372,17 +373,13 @@
       <li>A cash refund comes out of the drawer of the person who gives it (A4.10).</li>
       <li>The server refuses a way the bill was not paid by: <span class="msg">“This bill was not paid by UPI. A refund goes back the way it was paid: …; never cash for a card or UPI payment.”</span> And more than the limit: <span class="msg">“At most ₹… goes back by UPI on this bill.”</span> And no reason: <span class="msg">“Say why it is being refunded. The reason stays on the refund.”</span></li>
       <li>It is <b>not the GST refund voucher</b>: <span class="msg">“This prints a plain refund receipt. The GST refund voucher (Rule 51) waits for the hotel's CA.”</span></li>
-      <li>For a company's credit and a booking-site stay the notice is all the screen offers. Check out stays grey while the bill as a whole is overpaid.</li>
+      <li>For a company's credit, and a booking-site stay with nothing paid at the hotel, the notice is all the screen offers, and Check out stays grey while the bill as a whole is overpaid. Until a company's credit can go to its City ledger at check-out, a manager reverses the payment the same day (A4.4).</li>
     </ul>
   </div>
-  <!-- WRITER'S NOTE (14 Oct, for the master; read in the code, not opened on screen): a booking-site stay that is overpaid (for example a full
-       prepayment recorded as a payment, and the guest leaves early) gets the notice "the booking site refunds the guest ... nothing is refunded
-       here", while Check out stays grey for an overpaid bill (rules.ts canCheckOut; the server's check-out refuses likewise). No way out was found
-       on the screens. Reported to the master. -->
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A refund is its own line on the bill, back the way the guest paid, with a reference, the reason and the name of who gave it, so nothing is edited and money is never given back untraceably. It is for the four who may reverse a payment: <span class="d">D27-125</span>, <span class="d">D27-315</span>. Cash stays below ₹20,000 until the hotel's CA confirms the limit; the plain receipt stands in for the GST refund voucher until the CA says what it must hold: <span class="d">D27-315</span>.</p>
+    <p>A refund is its own line on the bill, back the way the guest paid, with a reference, the reason and the name of who gave it, so nothing is edited and money is never given back untraceably. It is for the four who may reverse a payment: <span class="d">D27-125</span>, <span class="d">D27-315</span>. Cash stays below ₹20,000 until the hotel's CA confirms the limit; the plain receipt stands in for the GST refund voucher until the CA says what it must hold: <span class="d">D27-315</span>. A booking-site stay gives back what was paid at the hotel, like a guest's own bill; a company's credit to its City ledger comes after launch: <span class="d">D27-328</span>.</p>
   </div>
 
   <!-- A5.8 -->

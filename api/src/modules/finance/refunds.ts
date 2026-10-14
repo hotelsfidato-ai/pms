@@ -19,8 +19,12 @@ import { openOwnDrawer } from "./cashier.ts";
    - Back by the way it was paid: never cash for a card or UPI payment.
      Cash only below ₹20,000 on a bill (the rest by bank transfer) until
      the CA confirms the limit.
-   - Only on a guest's own bill. A company's credit and a booking-site stay
-     get a notice; a group's master bill is not a stay's bill at all.
+   - Only on a guest's own bill. A company's credit gets a notice; a group's
+     master bill is not a stay's bill at all. A booking-site stay gives back
+     what was paid AT THE HOTEL, exactly as a guest's own bill (the owner's
+     D27-328 (2)): only the ways it was paid there - never "Bill to company",
+     which is not a way money is given back - and the notice only when
+     nothing paid at the desk is there to give back.
    - Dated the hotel's business date. A cash refund comes out of the
      drawer of whoever gives it (app.cashier_expected_cash).
 
@@ -95,11 +99,9 @@ export async function refundBills(client: Client, hotelId: string, stayId: strin
   const out: RefundBill[] = [];
   for (const b of bills) {
     const credit = Math.max(two(-Number(b.balance)), 0);
-    const notice = b.company
+    const company = b.company
       ? "This credit is the company's. It is settled with the company on the City ledger, not refunded to the guest here."
-      : b.ota
-        ? "A booking-site stay: the booking site refunds the guest. Tell the booking site; nothing is refunded here."
-        : null;
+      : null;
 
     /* What each way paid in, and what has gone back by it, on this bill. */
     const { rows: moved } = await client.query<{ kind: string; paid: string; back: string }>(
@@ -130,9 +132,14 @@ export async function refundBills(client: Client, hotelId: string, stayId: strin
       }
       return paid(kind) - back(kind);
     };
-    const ways = notice ? [] : methods
+    const ways = company ? [] : methods
       .map((m) => ({ label: m.label, kind: m.kind, upTo: two(Math.min(Math.max(upTo(m.kind), 0), credit)) }))
       .filter((w) => w.upTo > 0);
+    /* A booking-site stay: the site's money is the site's to refund; what
+       was paid at the desk goes back here (D27-328, FIN-35). */
+    const notice = company ?? (b.ota && ways.length === 0
+      ? "A booking-site stay: the booking site refunds the guest. Tell the booking site; nothing is refunded here."
+      : null);
     out.push({ folioId: b.id, credit, notice, ways });
   }
   return out;

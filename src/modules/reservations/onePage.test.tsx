@@ -204,6 +204,27 @@ describe("Check in now", () => {
 });
 
 describe("the advance", () => {
+  /* THE OWNER'S D27-328 (3): Check in now ran before the advance was taken,
+     so with "Advance before check-in" on the check-in was refused and the
+     booking left due in with the money paid. The advance goes first. */
+  it("is taken before Check in now checks the guest in", async () => {
+    open();
+    await screen.findByRole("heading", { name: "Guest" });
+    type(/^Guest or company/, "Anna Smith");
+    pick(/^Booking source/, "src-1");
+    pick(/^Room$/, "101");
+    await waitFor(() => expect(reasons()).toContain("Record the ID document"));
+    type(/^Reason for skipping/, "Scanner offline");
+    type(/^Amount/, "3150");
+    pick(/^Paid by/, "UPI");
+    await waitFor(() => expect(button("Check in now").disabled).toBe(false));
+    fireEvent.click(button("Check in now"));
+
+    await screen.findByText(/Advance of ₹3,150.00 taken/);
+    expect(calls.map((c) => c.path.split("/").slice(-1)[0])).toEqual(["bookings", "payments", "check-in"]);
+    expect(calls[1]!.body).toMatchObject({ method: "UPI", amount: 3150, heldAsCredit: true });
+  });
+
   it("goes to the bill after the booking, held as the guest's credit", async () => {
     open();
     await screen.findByRole("heading", { name: "Guest" });

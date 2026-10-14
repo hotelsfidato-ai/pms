@@ -45,6 +45,9 @@ export interface Stay {
   guest: string;
   roomNumber: string;
   roomType: string;
+  /** The type of the room it is in, when that is not the type booked (an
+      upgrade at Assign room or check-in, D27-328). Absent otherwise. */
+  givenRoomType?: string;
   source: Source | null;
   ratePlan: string;
   arrival: string;          // ISO date

@@ -18,6 +18,18 @@ Nothing open.
 
 ## Fixed
 
+### FIN-36 · The check-in asked for an advance the Bill tab could not take - FIXED 15 October (the owner's D27-328 (3))
+
+**What happened:** with "Advance before check-in" on, the check-in refused "An advance of ₹X is owed before check-in ... Take it on the Bill tab." - and the Bill tab's Settle was grey before arrival (nothing posted, so nothing owed) and when in credit (a part paid), with no reason. The server took the payment ("held as credit"); only the button was shut. And New booking ran "Check in now" before taking the advance typed on it, so the check-in was refused and the booking left due in with the money paid.
+**Fixed:** Settle reads the advance still owed from the server (front desk's own read, the one the check-in asks) and, before arrival, opens with it filled in, held as the guest's credit without a tick; a part paid leaves the rest to take. New booking takes the advance first, then checks in (reservations' `BookingPage.tsx`).
+**Rule:** a refusal that names a place to go ("Take it on the Bill tab") is a promise; test that the place opens.
+
+### FIN-35 · A booking-site guest who paid the hotel could not be checked out - FIXED 15 October (the owner's D27-328 (2))
+
+**What happened:** a booking-site guest who paid the whole stay by UPI at the desk and left early: Check out asked for a refund ("The guest has overpaid ... Refund it before checking out."), and the refund refused every booking-site stay: "A booking-site stay: the booking site refunds the guest. Tell the booking site; nothing is refunded here." (`refunds.ts`). No way out, proved by the verifier.
+**Fixed:** a booking-site stay's bill gives back money paid AT THE HOTEL exactly as a guest's own bill does - the same four people, only the ways it was paid there (never "Bill to company", which is the booking site's or the company's money), the same ₹20,000 cash rule. The notice stays only where nothing paid at the desk is there to give back. A company's credit is unchanged (to its City ledger after launch).
+**Rule:** a notice that sends money elsewhere is right only for money that came from elsewhere; ask what was paid at the desk before refusing.
+
 ### FIN-34 · A hotel that had given a refund could not be reset - FIXED 14 October (the release's API run)
 
 **Found:** the final release's full API run, `resetOrder.test.ts` "leaves nothing behind that still points at what it clears": "refunds points at folio_postings and is not cleared".

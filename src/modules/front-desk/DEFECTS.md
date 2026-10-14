@@ -28,6 +28,31 @@ the file is inventory's (on `MODULE.md`'s Requests).
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-34 · The check-in refused the upgrade Assign room had just given - FIXED 15 October (the owner's D27-328 (1))
+
+**Found** - 14-15 October, the verifier, through the API and on screen:
+Assign room gives a Superior booking Deluxe room 302 ("Another type is
+allowed - it will be noted on the assignment"; the API answers `typeChanged:
+true`), the Check in window pre-selects 302 without a word, and the check-in
+refuses it: "That room is a different type from the one booked."
+(`operations.ts`). The stay panel called the room "302 · Superior". Two
+doors, two rules for one fact - Assign room and Move room allowed another
+type, the check-in did not.
+**Fixed** - the check-in takes a room of another type and notes it as Assign
+room does: it answers `typeChanged` and the room's `typeName`, and the
+window's message adds Assign room's sentence, "Note: Deluxe is not the room
+type they booked." The room list and the room's one line mark "(different
+type)" as Assign room's list does. The stay read gives `givenRoomType` (the
+room's own type, only when it is not the type booked), and the panel's Room
+reads "302 · Deluxe · booked Superior". **The price does not move**: the
+booking keeps its type and its agreed rate (an upgrade); the hotel changes
+the rate on the Bill tab if it charges for it.
+**Proved** - `api/test/modules/front-desk/upgradeCheckIn.test.ts` and
+`checkInChecks.test.tsx` "an upgrade given by Assign room", both seen failing
+on the old code.
+**Rule** - one fact, one rule on every door: when two routes allow
+something, the third that refuses it is the defect.
+
 ### FD-33 · A voided booking was listed and counted as an arrival, and as a guest's next stay - FIXED 14 October (the owner's D27-326 (1))
 
 **Found** - FD-32's note: Arrivals Upcoming listed the voided FH-2608-5020

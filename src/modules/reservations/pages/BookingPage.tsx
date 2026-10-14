@@ -49,7 +49,7 @@ import { assignRoom, assignableRooms, checkIn, earlyArrival } from "@/modules/fr
    front desk's assign, D27-163: a picked room is kept). Check in now =
    the booking call, then front desk's own check-in (the room, the ID, Form
    III, the early-arrival reason). The advance = the bill's payment door,
-   held as the guest's credit (D27-4). When
+   held as the guest's credit (D27-4), taken before the check-in (D27-328). When
    a later door refuses, the booking stands and the Booked card says which
    step and why.
 
@@ -585,6 +585,17 @@ export default function BookingPage() {
     const lead = res.bookings[0];
     const assigned: Booked["assigned"] = {};
 
+    /* The advance on the first room's bill, held as credit. FIRST (the
+       owner's D27-328 (3)): with "Advance before check-in" on, the check-in
+       below refused a guest whose advance was typed here and not yet taken. */
+    let advanceTaken: Booked["advance"];
+    if (advanceAmount !== null && lead?.id) {
+      const p = await settle(hotelId, lead.id, {
+        method: advanceBy, amount: advanceAmount, businessDate: today, heldAsCredit: true,
+      }, crypto.randomUUID());
+      advanceTaken = p.ok ? { amount: advanceAmount } : { failed: p.reason ?? "Not taken." };
+    }
+
     /* CHECK IN NOW goes through front desk's own check-in, which gives the
        room itself: the ID, Form III and the early arrival are asked there. */
     let checkedIn: Booked["checkedIn"];
@@ -608,15 +619,6 @@ export default function BookingPage() {
         assigned[made.reference] = a.ok ? { room: a.room } : { failed: a.reason };
       }
       at += l.rooms;
-    }
-
-    /* The advance on the first room's bill, held as credit. */
-    let advanceTaken: Booked["advance"];
-    if (advanceAmount !== null && lead?.id) {
-      const p = await settle(hotelId, lead.id, {
-        method: advanceBy, amount: advanceAmount, businessDate: today, heldAsCredit: true,
-      }, crypto.randomUUID());
-      advanceTaken = p.ok ? { amount: advanceAmount } : { failed: p.reason ?? "Not taken." };
     }
 
     setSaving(false);

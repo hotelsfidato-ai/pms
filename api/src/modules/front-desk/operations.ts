@@ -282,7 +282,9 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
 
   const result = await withSession(
     c.get("subject"),
-    async (client, session: Session): Promise<Outcome | null> => {
+    async (client, session: Session): Promise<
+      Outcome | { ok: true; typeChanged: boolean; typeName: string } | null
+    > => {
       const hotelId = await hotelIdFor(client, c.req.param("code"));
       if (!hotelId) return null;
 
@@ -430,11 +432,12 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       const { rows: roomRows } = await client.query<{
         id: string;
         room_type_id: string;
+        type_name: string;
         housekeeping_status: string;
       }>(
-        `select id, room_type_id, housekeeping_status
-           from rooms
-          where hotel_id = $1 and number = $2 and is_active`,
+        `select rm.id, rm.room_type_id, rt.name as type_name, rm.housekeeping_status
+           from rooms rm join room_types rt on rt.id = rm.room_type_id
+          where rm.hotel_id = $1 and rm.number = $2 and rm.is_active`,
         [hotelId, roomNumber],
       );
       const room = roomRows[0];
@@ -446,9 +449,14 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       if (room.housekeeping_status === "dirty") {
         return refuse("That room has not been cleaned yet.");
       }
-      if (room.room_type_id !== stay.room_type_id) {
-        return refuse("That room is a different type from the one booked.");
-      }
+      /* ANOTHER TYPE IS TAKEN AND SAID (the owner's D27-328 (1), FD-34).
+         This refused "That room is a different type from the one booked."
+         while Assign room and Move room allow it - so the upgrade Assign
+         room had just given could not be checked in. Noted as theirs are:
+         `typeChanged` and the room's type, answered to the clerk. The
+         booking keeps its type and its agreed rate: an upgrade does not
+         change the price. */
+      const typeChanged = room.room_type_id !== stay.room_type_id;
 
       /* FD-11 (D23-12): is somebody still IN the room - app.in_house, the
          one rule (129). A guest past their departure date who has not
@@ -716,7 +724,7 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       }
 
       void session;
-      return { ok: true };
+      return { ok: true as const, typeChanged, typeName: room.type_name };
     },
   );
 
