@@ -213,6 +213,11 @@ $(address_settings)
 GENERIC_TIMEZONE=Asia/Kolkata
 TZ=Asia/Kolkata
 N8N_DIAGNOSTICS_ENABLED=false
+# Run history: seven days, then the database file shrinks at each start
+# (15 Oct: 370 MB of history, the voucher PDFs inside, for ~1 MB of workflows).
+EXECUTIONS_DATA_PRUNE=true
+EXECUTIONS_DATA_MAX_AGE=168
+DB_SQLITE_VACUUM_ON_STARTUP=true
 N8N_ENCRYPTION_KEY=$(cat "$KEY_FILE")
 EOF
   )
@@ -265,7 +270,7 @@ EOF
   # Only when there is something to protect: a first install has no volume
   # yet and no backup tool, and there is nothing to lose.
   if podman volume exists n8n_data && [ -x /usr/local/bin/n8n-backup ]; then
-    /usr/local/bin/n8n-backup >/dev/null
+    /usr/local/bin/n8n-backup full >/dev/null
     ok "backed up the current data before switching to $N8N_VERSION"
   fi
 
@@ -289,14 +294,31 @@ install_backups() {
   install -d -m 700 "$BACKUP_DIR"
   cat > /usr/local/bin/n8n-backup <<'EOF'
 #!/usr/bin/env bash
+# Nightly: the workflows and the saved credentials (still encrypted) with the
+# key that opens them, about 1 MB. "full": the whole data volume, kept for the
+# step before an n8n upgrade (n8n does not migrate backwards). Until 15 Oct
+# every night was "full": ~410 MB, nearly all run history, 6.4 GB for 16 nights.
 set -euo pipefail
 D=/var/backups/n8n; T=$(date +%Y%m%d-%H%M%S)
-podman volume export n8n_data > "$D/n8n-data-$T.tar"
-cp /etc/n8n/encryption-key "$D/encryption-key-$T"
-chmod 600 "$D/n8n-data-$T.tar" "$D/encryption-key-$T"
-# Fourteen nights. The PMS keeps its own backups; these are workflows only.
-find "$D" -type f -mtime +14 -delete
-echo "n8n backed up: n8n-data-$T.tar"
+if [ "${1:-}" = full ]; then
+  podman volume export n8n_data > "$D/n8n-data-$T.tar"
+  cp /etc/n8n/encryption-key "$D/encryption-key-$T"
+  chmod 600 "$D/n8n-data-$T.tar" "$D/encryption-key-$T"
+  echo "n8n backed up (full): n8n-data-$T.tar"
+else
+  IN=/home/node/.n8n/nightly-$T
+  install -d -m 700 "$D/$T"
+  podman exec n8n mkdir -p "$IN"
+  podman exec n8n n8n export:workflow --all --output="$IN/workflows.json" >/dev/null
+  podman exec n8n n8n export:credentials --all --output="$IN/credentials.json" >/dev/null
+  podman cp "n8n:$IN/." "$D/$T/"
+  podman exec n8n rm -rf "$IN"
+  cp /etc/n8n/encryption-key "$D/$T/encryption-key"
+  chmod 600 "$D/$T"/*
+  echo "n8n backed up: $D/$T"
+fi
+# Fourteen nights. The PMS keeps its own backups.
+find "$D" -mindepth 1 -maxdepth 1 -mtime +14 -exec rm -rf {} +
 EOF
   chmod 700 /usr/local/bin/n8n-backup
   echo "30 3 * * * root /usr/local/bin/n8n-backup >> /var/log/n8n-backup.log 2>&1" \
