@@ -140,7 +140,10 @@ describe("the Till - voiding a paid bill", () => {
     fireEvent.change(await screen.findByLabelText("Why is it being voided?"),
       { target: { value: "Paid twice" } });
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    fireEvent.change(await screen.findByLabelText(/The refund's reference/), { target: { value: "UPI 77" } });
+    const reference = await screen.findByLabelText(/The refund's reference/) as HTMLTextAreaElement;
+    expect(reference.value, "the reason must not stand as the reference").toBe("");
+    expect((screen.getByRole("button", { name: "Void the bill" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(reference, { target: { value: "UPI 77" } });
     fireEvent.click(screen.getByRole("button", { name: "Void the bill" }));
     await vi.waitFor(() => expect(calls.find((c) => c.path.endsWith("/void")))
       .toMatchObject({ body: { reason: "Paid twice", reference: "UPI 77" } }));
