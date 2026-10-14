@@ -39,7 +39,7 @@ import { databaseForScript } from "./scriptDatabase.ts";
 
    This removes every TRANSACTION and keeps every SETTING:
 
-     GOES     bookings, guests, folios, postings, payments, invoices,
+     GOES     bookings, guests, folios, postings, payments, refunds, invoices,
               Form C filings, room assignments, blocks, work orders,
               restaurant orders, banquet events, night audit runs,
               cashier shifts, spa appointments, laundry dockets, the
@@ -162,6 +162,9 @@ export const CLEAR: [table: string, how: string][] = [
   /* A closed day's correction names the line it corrected (D22-18, 24 September). */
   ["closed_day_corrections", "hotel_id = $1"],
   ["invoices",          "hotel_id = $1"],
+  /* A refund's row points at its refund line with no cascade (219, D27-315 B):
+     missing, a hotel that had given one back could not be cleared. */
+  ["refunds",           "hotel_id = $1"],
   ["payments",          "hotel_id = $1"],
   /* Loyalty's points earned or used here point at the stay and its bill line
      (178); the member stays, as the guest does. */
