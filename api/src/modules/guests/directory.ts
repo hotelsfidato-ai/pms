@@ -84,7 +84,9 @@ directory.get("/:code/guests", async (c) => {
        ),
        /* One person cannot be in two rooms on the same night. Any pair
           of live stays under one name whose date ranges intersect is
-          worth a look before anyone merges them. */
+          worth a look before anyone merges them. Live: not cancelled,
+          voided (the owner's D27-329 (6): a booking entered twice and
+          voided is not a second person) or a no-show. */
        /* Named overlapping_names, not the obvious word: OVERLAPS is a
           reserved operator in Postgres and fails with a bare syntax
           error naming the word rather than the reason. */
@@ -94,8 +96,8 @@ directory.get("/:code/guests", async (c) => {
            join mine b
              on b.key = a.key
             and b.id <> a.id
-            and a.status not in ('cancelled','no_show')
-            and b.status not in ('cancelled','no_show')
+            and a.status not in ('cancelled','void','no_show')
+            and b.status not in ('cancelled','void','no_show')
             and a.check_in < greatest(b.check_out, b.check_in + 1)
             and b.check_in < greatest(a.check_out, a.check_in + 1)
        )

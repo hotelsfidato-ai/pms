@@ -213,8 +213,9 @@ till.get("/:code/till/menu", async (c) => {
          from pos_menu_categories c
          left join pos_menu_items i on i.category_id = c.id
         where c.hotel_id = $1 and c.is_active
-          /* A Bar person sees only the bar's dishes (D27-324): what prints
-             on the Bar KOT. Their empty sections go with the rest. */
+          /* A Bar person sees only the bar's dishes (D27-324): the menu's
+             Bar tab, whichever KOT it prints on (D27-329 (1), 225). Their
+             empty sections go with the rest. */
           and (not app.pos_bar_only($1) or app.pos_dish_at_bar($1, i.id))
         order by c.sort_order, c.name, i.sort_order, i.name`,
       [hotelId],
@@ -2184,9 +2185,10 @@ export interface LineInput {
 }
 
 /* ── The bar orders from the bar (the owner's D27-324 (2)) ──────────
-   A Bar person puts on a bill only a dish that prints on the Bar KOT - its
-   section's kind, else its heading's (app.pos_dish_at_bar) - and raises the
-   count of no other. Asked before anything is written (root MEMORY 243); the
+   A Bar person puts on a bill only a dish on the menu's Bar tab - its
+   section sells under Bar or Alcohol, whichever KOT it prints on
+   (app.pos_dish_at_bar, the owner's D27-329 (1)) - and raises the count of
+   no other. Asked before anything is written (root MEMORY 243); the
    database refuses the rest behind it (the bar role's trigger). */
 async function barRefusal(
   client: Client, hotelId: string, itemId: string,
