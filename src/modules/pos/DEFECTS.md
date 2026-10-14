@@ -14,6 +14,22 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### POS-35 · The Roles screen does not show what a waiter or the bar may do in the restaurant - OPEN, found 14 October (D27-324)
+
+**Found** — building the Bar role. The Roles and permissions screen draws the matrix
+(`api/src/permissions.ts`) and nothing else. The restaurant's rights are not in it: the
+waiter (`pos`), now the bar too, the chef and the kitchen manager get the till, the KOTs, the
+pass and the day end BY NAME in `api/src/roleGate.ts` (`TILL`, `DAY_END`, `KOT_PRINT`,
+`PASS` and their reads), because the matrix has no restaurant resource. So the screen shows
+the Waiter and the Bar with "View" on Reservations and Room availability and a dash on
+Payments - while both take payment. Same shape as the GM's Users cell the owner raised
+(D27-324 (5), fixed in the matrix), but here the fix is not one grant: giving `pos` and
+`bar` `payment` create would also open every other `payment` door (the desk's cashiering).
+
+**Fix waiting** — the owner's call (asked in the D27-324 report): a line under the matrix
+naming the restaurant roles' rights, or a restaurant resource in the matrix (a larger change
+across roleGate, the menus and the tests).
+
 ### POS-18 · A typed address kept the role of the property chosen at sign-in — FIXED 26 September (the shell's)
 
 **Found** — 25 September, proving Restaurant setup end to end. The Reception test sign-in was rostered as a Waiter (`pos`) at a second property and opened `/h/SEC/floor` by its address: the page was that property's (the tab read "Tables · Second Hotel (test)"), but the sidebar was Reception's and Restaurant setup refused them "signed in as Reception". `PropertyScope` sets the property in view (`useUi.hotelId`, the code), while `useRole` reads `useSession.hotelId`, the property chosen at sign-in or in the switcher (`src/lib/session.ts`, `roleFor`). The server asks the role at the property in the address (`roleGate.ts`), so it rang the order as a waiter - nothing wrong was written; the website showed another property's role.
@@ -28,6 +44,31 @@ fails "expected 'front_desk' to be 'pos'".
 ---
 
 ## Fixed
+
+### POS-35 · A paid restaurant bill could not be taken back by anybody - FIXED 14 October (the owner's D27-324 (1))
+
+**Found** — the permissions check of 14 October: an order was only open, paid or closed unpaid (028's
+`pos_orders_status_valid`), and nothing in `till.ts` changed a paid one. A bill paid at the wrong
+table, or paid twice, stayed in the day's sales and the GST figures for good.
+
+**What was done** — migration 222 and `POST /till/orders/:id/void`: the owner, an Admin or the GM
+(roleGate and `app.voids_paid_pos_bills`), with a reason, the same business day, before the outlet's
+day is closed; never a room or function bill; card or UPI with the refund's reference; cash back out of
+the restaurant's tin (D27-327). The bill keeps its number, lines, KOTs and payments, prints VOID, cancels its VAT
+bill, and is listed by Close restaurant day, the night audit and its report.
+
+**Found on the way, fixed** — the night audit's run read the restaurant's payments by method with no
+status at all (`night-audit/nightAudit.ts`, `byTender`): a voided bill would have stayed in "what we
+took". It reads paid bills only now, as its sales figures already did.
+And on screen, `components/AskDialog.tsx` carried the reason into the next question, so the
+reference box opened holding it; the next question starts empty now (`voidPaidBill.test.tsx`).
+
+**Proved** — `db/tests/modules/pos.sql` "pos void" (19), `api/test/modules/pos/voidPaidBill.test.ts`
+(8), `src/modules/pos/voidPaidBill.test.tsx` (6); each seen failing on the old code first.
+
+**The rule it leaves** — a new order status reaches every reader that filters on status. Every sales
+reader here asks `status = 'settled'`; one that asks `<> 'abandoned'` or nothing (banquet's list, the
+floor, the night audit's tenders) has to be read when a status is added.
 
 ### POS-34 · One fewer of a sent dish with several variation types failed: "Something went wrong" - FIXED 9 October (the owner's "check it and fix it")
 

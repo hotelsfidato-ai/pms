@@ -132,12 +132,19 @@ export async function getStay(hotelId: string, id: string): Promise<Stay | null>
   }
 }
 
+/** A booking that is not happening: cancelled, or voided (FD-32, the owner's
+    D27-326 (1)). The API says `void`, which StayStatus does not name, so a bare
+    `!== "cancelled"` let a voided booking through every list that used one:
+    Arrivals Today and Upcoming listed and counted it, and the Dashboard's tile. */
+export const isCancelledOrVoid = (s: Pick<Stay, "status">) =>
+  s.status === "cancelled" || (s.status as string) === "void";
+
 /* ── The front desk's three working lists ──────────────────────────
    Named for what a clerk is doing, not for a status value.        ═══ */
 
 export async function listArrivals(hotelId: string, date = BUSINESS_DATE) {
   const rows = (await fetchStays(hotelId, date)).filter(
-    (s) => s.arrival === date && s.status !== "cancelled",
+    (s) => s.arrival === date && !isCancelledOrVoid(s),
   );
   return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
 }
@@ -169,7 +176,7 @@ export async function listDepartures(hotelId: string, date = BUSINESS_DATE) {
 async function listSoldTonight(hotelId: string, date: string) {
   return (await fetchStays(hotelId)).filter(
     (s) =>
-      s.status !== "cancelled" &&
+      !isCancelledOrVoid(s) &&
       !s.isDayUse &&
       s.arrival <= date &&
       s.departure > date,

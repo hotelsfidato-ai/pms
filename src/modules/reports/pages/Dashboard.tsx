@@ -21,7 +21,7 @@ import { StartHere } from "@/components/app/StartHere";
 import { SetupStillToDo } from "@/modules/admin";
 import type { TermKey } from "@/lib/glossary";
 import { BUSINESS_DATE } from "@/data/repositories";
-import { getStayView, fetchStays, type ChartRoom } from "@/modules/front-desk";
+import { getStayView, fetchStays, isCancelledOrVoid, type ChartRoom } from "@/modules/front-desk";
 import type { DayStatistics } from "@/data/repositories";
 import { listDailyStatistics } from "@/modules/reports/data/statistics";
 import { getReport, type ReportDoc } from "@/modules/reports/data/document";
@@ -189,7 +189,8 @@ export default function DashboardPage() {
   const today = (() => {
     if (!stays.data || !view.data) return null;
     const all = stays.data;
-    const arriving = all.filter((s) => s.arrival === date && s.status !== "cancelled" && s.status !== "no-show");
+    /* Void with cancelled (the owner's D27-326 (1)): front desk's one rule. */
+    const arriving = all.filter((s) => s.arrival === date && !isCancelledOrVoid(s) && s.status !== "no-show");
     const leaving = all.filter((s) => s.departure === date
       && (s.status === "in-house" || s.status === "due-out" || s.status === "checked-out"));
     const empty = rooms.filter((x) => !x.outOfService && !x.state.occupied);

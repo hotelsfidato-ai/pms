@@ -275,7 +275,7 @@ describe("a repair on a piece of equipment (D17-7)", () => {
   });
 
   for (const role of ["owner", "admin", "gm", "hotel_manager", "revenue_manager", "front_desk",
-                      "housekeeping", "kitchen_manager", "chef", "pos", "stores", "finance",
+                      "housekeeping", "kitchen_manager", "chef", "pos", "bar", "stores", "finance",
                       "read_only"]) {
     const mayReport = (WEBSITE.REPAIR_REPORTERS as readonly string[]).includes(role);
     it(`${mayReport ? "lets" : "refuses"} ${role} ${mayReport ? "report" : "reporting"} a repair on equipment`, async () => {
@@ -305,7 +305,7 @@ describe("a repair on a piece of equipment (D17-7)", () => {
    ══════════════════════════════════════════════════════════════════ */
 describe("who updates a repair and reports a room repair (D22-34)", () => {
   const ROLES = ["owner", "admin", "gm", "hotel_manager", "revenue_manager", "front_desk",
-                 "housekeeping", "kitchen_manager", "chef", "pos", "stores", "finance",
+                 "housekeeping", "kitchen_manager", "chef", "pos", "bar", "stores", "finance",
                  "read_only"];
   const MAY = ["owner", "admin", "gm", "hotel_manager", "stores", "housekeeping"];
 
@@ -384,7 +384,7 @@ describe("a repair cost, with its proof (D17-5, D17-6)", () => {
   });
 
   for (const role of ["owner", "admin", "gm", "hotel_manager", "revenue_manager", "front_desk",
-                      "housekeeping", "kitchen_manager", "chef", "pos", "stores", "finance",
+                      "housekeeping", "kitchen_manager", "chef", "pos", "bar", "stores", "finance",
                       "read_only"]) {
     const may = (WEBSITE.COST_RECORDERS as readonly string[]).includes(role);
     it(`${may ? "lets" : "refuses"} ${role} ${may ? "record" : "recording"} a cost`, async () => {

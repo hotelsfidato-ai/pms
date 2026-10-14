@@ -136,7 +136,7 @@ export async function refundBills(client: Client, hotelId: string, stayId: strin
       .map((m) => ({ label: m.label, kind: m.kind, upTo: two(Math.min(Math.max(upTo(m.kind), 0), credit)) }))
       .filter((w) => w.upTo > 0);
     /* A booking-site stay: the site's money is the site's to refund; what
-       was paid at the desk goes back here (D27-328, FIN-34). */
+       was paid at the desk goes back here (D27-328, FIN-35). */
     const notice = company ?? (b.ota && ways.length === 0
       ? "A booking-site stay: the booking site refunds the guest. Tell the booking site; nothing is refunded here."
       : null);

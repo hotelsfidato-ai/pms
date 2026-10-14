@@ -60,7 +60,7 @@ holds guests' Form C (order 60).
   asks front desk to do). Before arrival Settle opens only for the advance
   the hotel asks before check-in - the server's figure (front desk's
   `expressCheckIn`), filled in, held as the guest's credit without a tick,
-  a part paid leaving the rest (`SettleDialog`'s `advance`, D27-328, FIN-35). For the owner, an administrator and the GM, a
+  a part paid leaving the rest (`SettleDialog`'s `advance`, D27-328, FIN-36). For the owner, an administrator and the GM, a
   pencil on each charge (Edit: price or words, with a reason) and "Change
   rate" for the stay (D27-157, D27-162). Each line names who posted it ("Night audit" for
   the audit's room charge); its print, and the button that opens it, say
@@ -150,7 +150,7 @@ Its front door also exports `companyReceipts` (the day book's receipts, D27-242 
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/stays/:id/refunds` | `may` (the four of D27-125), `ceiling` (₹20,000), and each of the stay's bills: its credit, a `notice` (a company-addressed bill; a booking-site stay only when nothing paid at the hotel is there to give back - its desk-paid money goes back like a guest's own bill, never by "Bill to company", D27-328, FIN-34) and the `ways` it may be given back by, each with `upTo` (back by the way paid; cash below the ceiling counting cash already given back; a transfer for a transfer or for the cash above the ceiling) |
+| GET | `/:code/stays/:id/refunds` | `may` (the four of D27-125), `ceiling` (₹20,000), and each of the stay's bills: its credit, a `notice` (a company-addressed bill; a booking-site stay only when nothing paid at the hotel is there to give back - its desk-paid money goes back like a guest's own bill, never by "Bill to company", D27-328, FIN-35) and the `ways` it may be given back by, each with `upTo` (back by the way paid; cash below the ceiling counting cash already given back; a transfer for a transfer or for the cash above the ceiling) |
 | POST | `/:code/stays/:id/refunds` | gives it back: `{folioId?, method, amount, reference, reason}`. 403 for anyone but the four; 409 with the reason otherwise. A positive `refund` line dated today plus its `refunds` row; cash opens the giver's drawer and comes out of it. Idempotency key honoured |
 | GET | `/:code/stays/:id/refunds/:postingId` | the plain refund receipt's facts (`pages/RefundReceipt.tsx`) |
 

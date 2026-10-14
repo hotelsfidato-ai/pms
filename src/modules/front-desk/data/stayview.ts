@@ -1,5 +1,5 @@
 import { listAllRooms } from "@/data/repositories/rooms";
-import { fetchStays, getHouseNow } from "./stays";
+import { fetchStays, getHouseNow, isCancelledOrVoid } from "./stays";
 import type { Stay } from "@/data/repositories/types";
 import { listOpenFolios } from "@/modules/finance";
 import { api, ApiError } from "@/lib/api";
@@ -114,7 +114,7 @@ function toneFor(stay: Stay, businessDate: string): BarTone {
   /* A VOIDED booking too (FD-32, the owner's D27-323 (1)): the API says
      "void", which StayStatus does not name, so it fell through to Confirmed
      and its room left the free counts below, which skip only this tone. */
-  if (stay.status === "cancelled" || stay.status === ("void" as Stay["status"])) return "void";
+  if (isCancelledOrVoid(stay)) return "void";
   if (stay.status === "no-show") return "no-show";
   if (stay.status === "in-house") {
     /* Still in house, but leaving today — the clerk needs both facts. */

@@ -77,14 +77,16 @@ describe("the charge door", () => {
 
   /* The review of 1 October: "Payment" and "Refund" were charge headings, so
      a direct call wrote a payment line with no payment record and no drawer,
-     and a refund with GST on it. */
+     and a refund with GST on it. Since D27-315 B a refund has its own step
+     on the bill (219), and the refusal sends the desk there: reversing the
+     payment records no money going back. */
   it("refuses a payment or a refund as a charge", async () => {
     const stay = await aStayInHouse();
     const as = (category: string) => attempt((client) =>
       postCharge(client, stay!.hotel, stay!.stay, { description: category, amount: 500, category }));
     expect(await as("Payment")).toEqual({ ok: false, reason: "Take a payment through Payments." });
     expect(await as("Refund"))
-      .toEqual({ ok: false, reason: "A refund is not a charge. Reverse the payment it gives back." });
+      .toEqual({ ok: false, reason: "A refund is not a charge. Give it with Refund on the bill." });
   });
 
   it("refuses a charge with no words on it", async () => {

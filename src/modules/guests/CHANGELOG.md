@@ -8,6 +8,12 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-14 · A voided booking is not a guest's next stay (the owner's D27-326 (1)); Form III's check-out follows leaving early
+
+**Asked for:** the master's helper on the final release copy. `directory.ts`: the guest directory's "back on ..." (next stay) left out `cancelled` and not `void`; it leaves out both now (front desk's FD-33 has the whole fault). `formIII.test.ts`: its foreign guest's two-night stay checked out on the first night with no reason, which lane A's rule (D27-315 A) now asks - the check-out carries an `earlyReason` with its other "not what this tests" answers; the test's own point (Form III's next destination and the departure filing) is unchanged.
+**Proved:** `directoryNextStay.test.ts` (new) seen failing on the old code ("2027-08-25" for the voided guest), then in the one full API run. `formIII.test.ts`: 3 failures before (the check-out, then the departure filing and the details that needed it), the departure cases passing after.
+**Left open (the owner's):** the directory's "possible duplicate" (`overlapping_names`) still counts a voided booking, and its stays and nights count every status (FD-33).
+
 ## 2026-10-04 · An Administrator adds and changes booking sources (the owner's D27-275 part 2)
 
 Migration `198_administrator_is_a_manager.sql` (the master's sequence): `app.is_manager()` now answers for the `admin` role too, so `booking_sources`' insert and update policies (082) let the Administrator in. Its other live readers already did (the staff insert policy through `manages_hotel`, `is_crm_manager`). **Proved:** `db/tests/modules/guests.sql`, five new checks (the Administrator is a manager, adds a source, changes it; reception is not, cannot add); three failed before 198, all 1508 pass after; `rerun.sh`: all 198 re-runnable.

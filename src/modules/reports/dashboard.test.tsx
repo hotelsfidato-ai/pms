@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, within, waitFor } from "@testing-library/react";
+import { render, screen, within, waitFor, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import App from "@/App";
@@ -8,6 +8,7 @@ import * as apiModule from "@/lib/api";
 import { AGRA_HOTEL, HOTEL, go, startSignedIn, signedIn, withDemoHotel } from "@/test/app";
 import { flatNavigationFor, sidebarFor } from "@/components/app/navigation";
 import type { Role } from "@/lib/permissions";
+import type { Stay } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
    THE DASHBOARD AS SKETCHED (the owner's D27-243, 2 October)
@@ -288,5 +289,32 @@ describe("a fresh system with no property", () => {
       render(<App />);
       expect(await screen.findByRole("button", { name: "Create the property" })).toBeTruthy();
     } finally { spy.mockRestore(); }
+  });
+});
+
+/* The owner's D27-326 (1), FD-32's note: the API says "void", which StayStatus
+   does not name, so the tile's `!== "cancelled"` counted a voided booking as
+   an arrival - checked in, as it was not "due-in". */
+describe("D27-326 (1) - a voided booking is not one of today's arrivals", () => {
+  it("is not counted on the Arrivals tile", async () => {
+    const tile = async (extra: Stay[]) => {
+      const real = apiModule.api;
+      const spy = vi.spyOn(apiModule, "api").mockImplementation((async (url: string, init?: RequestInit) => {
+        const answer = await real(url, init);
+        return url.split("?")[0]!.endsWith("/stays") ? [...(answer as Stay[]), ...extra] : answer;
+      }) as typeof real);
+      try {
+        renderDashboard();
+        const work = await screen.findByRole("region", { name: "Today's work" });
+        const link = within(work).getByRole("link", { name: /^Arrivals/ });
+        await waitFor(() => expect(link.textContent).toMatch(/still to arrive|checked in|None today/));
+        return link.textContent;
+      } finally { spy.mockRestore(); cleanup(); }
+    };
+    const without = await tile([]);
+    const [base] = await apiModule.api<Stay[]>(`/api/hotels/${HOTEL}/stays?from=2026-08-25&to=2026-08-25`);
+    const voided = { ...base!, id: "stay-voided", guest: "Voided Twice", roomNumber: "VOID",
+      arrival: "2026-08-25", departure: "2026-08-27", status: "void" as Stay["status"] };
+    expect(await tile([voided])).toBe(without);
   });
 });

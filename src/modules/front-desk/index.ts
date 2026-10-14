@@ -12,7 +12,7 @@ export { assignRoom, checkOut, earlyArrival, leavingEarly, type LeavingEarly } f
 /* D27-328 (3): the advance owed before check-in, for the Bill tab's Settle. */
 export { expressCheckIn } from "./data/operations";
 export type { Posting } from "./data/operations";
-export { fetchStays, getHouseNow, getStay, listArrivals, listDepartures, listInHouse, listStays } from "./data/stays";
+export { fetchStays, getHouseNow, getStay, isCancelledOrVoid, listArrivals, listDepartures, listInHouse, listStays } from "./data/stays";
 export type { HouseNow, HouseNowRoom } from "./data/stays";
 export { getStayView } from "./data/stayview";
 export type { ChartRoom } from "./data/stayview";

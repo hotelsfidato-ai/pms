@@ -449,7 +449,7 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
       if (room.housekeeping_status === "dirty") {
         return refuse("That room has not been cleaned yet.");
       }
-      /* ANOTHER TYPE IS TAKEN AND SAID (the owner's D27-328 (1), FD-33).
+      /* ANOTHER TYPE IS TAKEN AND SAID (the owner's D27-328 (1), FD-34).
          This refused "That room is a different type from the one booked."
          while Assign room and Move room allow it - so the upgrade Assign
          room had just given could not be checked in. Noted as theirs are:

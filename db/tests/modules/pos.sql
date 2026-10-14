@@ -825,3 +825,236 @@ begin
   select count(*) into n from pos_outlets where code = 'KOTSC';
   perform test.ok('pos kot section', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
 end $$;
+
+
+-- =============================================================================
+-- A PAID RESTAURANT BILL VOIDED (the owner's D27-324 (1), 14 October)
+-- =============================================================================
+-- The owner, an administrator or the GM may void a PAID bill, with a reason:
+-- the same business day, before that outlet's day is closed; never a bill
+-- that went to a room or a function (it is reversed on that bill); a card or
+-- UPI bill names the refund's reference. The bill keeps its number, is void
+-- for good, and keeps its payments and lines. Its cash goes back to the guest
+-- out of the restaurant's tin, where the notes still are the same day; the
+-- voiding person's own drawer is not touched (D27-327).
+-- =============================================================================
+do $$
+declare
+  h uuid; waiter uuid; gm uuid; v_out uuid; v_shut uuid; bd date;
+  cash_bill uuid; card_bill uuid; open_bill uuid; old_bill uuid; shut_bill uuid;
+  sh uuid; tin_before numeric; d text;
+begin
+  h := app.provision_property_unchecked('PVD', 'Void Rules Test', 'Nowhere');
+  select id into waiter from staff where email = 'agra@fidato.in';
+  select id into gm from staff where email = 'pune@fidato.in';
+  insert into staff_hotels (staff_id, hotel_id, role) values (waiter, h, 'pos'), (gm, h, 'gm')
+  on conflict (staff_id, hotel_id) do update set role = excluded.role;
+  bd := app.business_date(h);
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (h, 'VOID', 'Void Test', 'food', waiter) returning id into v_out;
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (h, 'SHUT', 'Closed Day Test', 'food', waiter) returning id into v_shut;
+  insert into pos_day_ends (hotel_id, outlet_id, business_date, opening_cash)
+  values (h, v_out, bd, 0);
+  insert into pos_day_ends (hotel_id, outlet_id, business_date, opening_cash,
+                            counted_cash, closed_by, closed_at)
+  values (h, v_shut, bd, 0, 0, gm, now());
+
+  -- Five bills of ₹500 + 5% GST: cash, card, still open, yesterday's, and one
+  -- at an outlet whose day is closed.
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_out, app.pos_next_order_no(h, bd), bd, waiter) returning id into cash_bill;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_out, app.pos_next_order_no(h, bd), bd, waiter) returning id into card_bill;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_out, app.pos_next_order_no(h, bd), bd, waiter) returning id into open_bill;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_out, app.pos_next_order_no(h, bd - 1), bd - 1, waiter) returning id into old_bill;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_shut, app.pos_next_order_no(h, bd), bd, waiter) returning id into shut_bill;
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+  select o, h, 'Thali', 1, 500, 5, waiter
+    from unnest(array[cash_bill, card_bill, open_bill, old_bill, shut_bill]) o;
+
+  update pos_orders set status = 'settled', settled_by = waiter, settled_at = now(),
+                        payment_method = 'cash'
+   where id in (cash_bill, old_bill, shut_bill);
+  update pos_orders set status = 'settled', settled_by = waiter, settled_at = now(),
+                        payment_method = 'card'
+   where id = card_bill;
+  insert into pos_order_tenders (order_id, hotel_id, method, amount, taken_by)
+  select o, h, 'cash', 525, waiter from unnest(array[cash_bill, old_bill, shut_bill]) o;
+  insert into pos_order_tenders (order_id, hotel_id, method, amount, taken_by)
+  values (card_bill, h, 'card', 525, waiter);
+
+  -- The cash bill's alcohol had its VAT bill when it was paid (135).
+  insert into vat_bills (hotel_id, fin_year, number, pos_order_id, taxable_value, vat_total,
+                         total, business_date)
+  values (h, app.current_fin_year(h), app.next_vat_bill_number(h, app.current_fin_year(h)),
+          cash_bill, 100, 10, 110, bd);
+
+  -- The GM's own drawer, open with ₹1,000 before the void.
+  insert into cashier_shifts (hotel_id, staff_id, business_date, opening_cash, opened_by, opened_at)
+  values (h, gm, bd, 1000, gm, now() - interval '1 minute') returning id into sh;
+  tin_before := app.pos_expected_cash(v_out, bd);
+
+  -- ---------- who --------------------------------------------------------------
+  perform set_config('app.user_id', waiter::text, true);
+  perform test.raises('pos void', 'a waiter cannot void a paid bill',
+    format($q$update pos_orders set status = 'void', voided_by = %L, voided_at = now(),
+                     void_reason = 'wrong table' where id = %L$q$, waiter, cash_bill), '42501');
+
+  -- ---------- which bills -------------------------------------------------------
+  perform set_config('app.user_id', gm::text, true);
+  perform test.raises('pos void', 'an open bill is not voided (it is closed unpaid)',
+    format($q$update pos_orders set status = 'void', voided_by = %L, voided_at = now(),
+                     void_reason = 'x' where id = %L$q$, gm, open_bill), '23514');
+  perform test.raises('pos void', 'a void says why',
+    format($q$update pos_orders set status = 'void', voided_by = %L, voided_at = now(),
+                     void_reason = '  ' where id = %L$q$, gm, cash_bill), '23514');
+  perform test.raises('pos void', 'only on the bill''s own business day',
+    format($q$update pos_orders set status = 'void', voided_by = %L, voided_at = now(),
+                     void_reason = 'late' where id = %L$q$, gm, old_bill), '23514');
+  perform test.raises('pos void', 'never after the outlet''s day is closed',
+    format($q$update pos_orders set status = 'void', voided_by = %L, voided_at = now(),
+                     void_reason = 'late' where id = %L$q$, gm, shut_bill), '23514');
+  perform test.raises('pos void', 'a card bill names the refund''s reference',
+    format($q$update pos_orders set status = 'void', voided_by = %L, voided_at = now(),
+                     void_reason = 'double charged' where id = %L$q$, gm, card_bill), '23514');
+  perform test.raises('pos void', 'never a bill that went to a room',
+    format($q$update pos_orders set status = 'void', payment_method = 'room', voided_by = %L,
+                     voided_at = now(), void_reason = 'x' where id = %L$q$, gm, cash_bill), '23514');
+
+  -- ---------- the GM voids the cash bill and the card bill ----------------------
+  -- The row names the waiter as the voider; the database records who it is.
+  perform test.allows('pos void', 'the GM voids a paid cash bill, with a reason',
+    format($q$update pos_orders set status = 'void', voided_by = %L, voided_at = now(),
+                     void_reason = 'Billed to the wrong table' where id = %L$q$, waiter, cash_bill));
+  perform test.allows('pos void', 'and a card bill, with the refund''s approval code',
+    format($q$update pos_orders set status = 'void', voided_by = %L, voided_at = now(),
+                     void_reason = 'Charged twice', void_reference = 'APPR 4471'
+               where id = %L$q$, gm, card_bill));
+  select status into d from pos_orders where id = cash_bill;
+  perform test.ok('pos void', 'the bill is void and keeps its number', d = 'void', d);
+  perform test.ok('pos void', 'the void records who: the GM, whoever the row named',
+    (select voided_by from pos_orders where id = cash_bill) = gm, 'someone else');
+  perform test.ok('pos void', 'its VAT bill is cancelled with it, the figures negated, with the reason',
+    exists (select 1 from vat_bills c join vat_bills v on v.id = c.cancels_id
+             where v.pos_order_id = cash_bill and c.total = -110
+               and c.reason like '%voided: Billed to the wrong table'),
+    'no cancellation');
+
+  perform test.raises('pos void', 'a void stays void',
+    format($q$update pos_orders set status = 'settled' where id = %L$q$, cash_bill), '23514');
+  perform test.raises('pos void', 'and its reason stays as written',
+    format($q$update pos_orders set void_reason = 'something else' where id = %L$q$, cash_bill), '23514');
+  perform test.raises('pos void', 'its payments are evidence: never removed',
+    format($q$delete from pos_order_tenders where order_id = %L$q$, cash_bill), 'P0001');
+  perform test.raises('pos void', 'its lines are history: never changed',
+    format($q$update pos_order_lines set qty = 2 where order_id = %L$q$, cash_bill), '23000');
+
+  -- ---------- the money ---------------------------------------------------------
+  perform test.ok('pos void', 'the cash goes back out of the restaurant''s tin: Expected less 525',
+    app.pos_expected_cash(v_out, bd) = tin_before - 525,
+    tin_before || ' -> ' || app.pos_expected_cash(v_out, bd));
+  -- The GM counts the drawer a moment later (one transaction here: now() is
+  -- the void's own instant, so the close is after it).
+  update cashier_shifts set closed_at = now() + interval '1 second', counted_cash = 1000,
+                            closed_by = gm
+   where id = sh;
+  perform test.ok('pos void', 'the GM''s own drawer is not touched (D27-327): it still expects 1,000',
+    app.cashier_expected_cash(sh) = 1000, app.cashier_expected_cash(sh)::text);
+  perform test.ok('pos void', 'the day''s sales leave both voided bills out',
+    (select settled_orders from app.pos_day_summary(v_out, bd)) = 0,
+    (select settled_orders || ' settled' from app.pos_day_summary(v_out, bd)));
+
+  perform set_config('app.user_id', '', true);
+end $$;
+
+
+-- =============================================================================
+-- THE BAR ROLE (the owner's D27-324 (2))
+-- =============================================================================
+-- `bar` is a role a person may be given; a Bar person puts on a bill only a
+-- dish that prints on the Bar KOT - its section's kind, else its heading's -
+-- and cannot raise the count of any other; a waiter is unchanged. Refers to
+-- its migration by what it does, never by its number. Uses the suite's AGR
+-- property and its clerk; makes one Bar person, one waiter, two sections, one
+-- outlet and one order, and removes them. Each step through test.allows or
+-- test.raises, so a database without the role fails by name.
+-- =============================================================================
+do $$
+declare
+  a uuid; v_clerk uuid; v_bar uuid; v_waiter uuid; v_outlet uuid; v_order uuid;
+  v_food uuid; v_drinks uuid; v_dal uuid; v_beer uuid; v_dal_line bigint; bd date; n int;
+begin
+  select id into a from hotels where code = 'AGR';
+  select id into v_clerk from staff where email = 'agra@fidato.in';
+  bd := app.business_date(a);
+
+  perform test.ok('pos bar role', 'bar is a role a person may be given',
+    'bar' = any (app.assignable_roles()), array_to_string(app.assignable_roles(), ','));
+
+  insert into staff (email, full_name) values ('bar-role@fidato.in', 'Bar Role Test')
+  on conflict (email) do update set is_active = true returning id into v_bar;
+  insert into staff (email, full_name) values ('waiter-role@fidato.in', 'Waiter Role Test')
+  on conflict (email) do update set is_active = true returning id into v_waiter;
+  delete from staff_hotels where staff_id in (v_bar, v_waiter);
+  perform test.allows('pos bar role', 'a person is rostered as Bar',
+    format($q$insert into staff_hotels (staff_id, hotel_id, role) values (%L, %L, 'bar')$q$, v_bar, a));
+  insert into staff_hotels (staff_id, hotel_id, role) values (v_waiter, a, 'pos');
+
+  -- A food section and a drinks section, each by its tax heading.
+  insert into pos_menu_categories (hotel_id, name, tax_kind) values (a, 'Bar role food', 'restaurant')
+  returning id into v_food;
+  insert into pos_menu_categories (hotel_id, name, tax_kind) values (a, 'Bar role drinks', 'bar')
+  returning id into v_drinks;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_food, 'Bar role dal', 200, 5) returning id into v_dal;
+  insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+  values (a, v_drinks, 'Bar role beer', 300, 18) returning id into v_beer;
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (a, 'BARRL', 'Bar Role Test', 'food', v_clerk) returning id into v_outlet;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (a, v_outlet, app.pos_next_order_no(a, bd), bd, v_clerk) returning id into v_order;
+  insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, a, v_dal, 'Bar role dal', 2, 200, 5, v_clerk) returning id into v_dal_line;
+
+  -- ---------- as the Bar person ------------------------------------------------
+  perform set_config('app.user_id', v_bar::text, true);
+  perform test.allows('pos bar role', 'a Bar person orders a dish that prints at the bar',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %L, 'Bar role beer', 2, 300, 18, %L)$q$, v_order, a, v_beer, v_bar));
+  perform test.raises('pos bar role', 'and is refused a dish that prints in the kitchen',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %L, 'Bar role dal', 1, 200, 5, %L)$q$, v_order, a, v_dal, v_bar), '42501');
+  perform test.raises('pos bar role', 'and more of one the waiter put on',
+    format($q$update pos_order_lines set qty = 3 where id = %s$q$, v_dal_line), '42501');
+  perform test.allows('pos bar role', 'but may take one off',
+    format($q$update pos_order_lines set qty = 1 where id = %s$q$, v_dal_line));
+  update pos_menu_categories set kot_kind_id = (select id from pos_kot_kinds where hotel_id = a and role = 'bar')
+   where id = v_food;
+  perform test.allows('pos bar role', 'a food section sent to the Bar KOT is the bar''s',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %L, 'Bar role dal', 1, 200, 5, %L)$q$, v_order, a, v_dal, v_bar));
+  update pos_menu_categories set kot_kind_id = null where id = v_food;
+
+  -- ---------- as the waiter: unchanged ----------------------------------------
+  perform set_config('app.user_id', v_waiter::text, true);
+  perform test.allows('pos bar role', 'a waiter still orders from the kitchen',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %L, 'Bar role dal', 1, 200, 5, %L)$q$, v_order, a, v_dal, v_waiter));
+  perform set_config('app.user_id', '', true);
+
+  -- ---------- and the fixtures go ----------------------------------------------
+  delete from pos_order_lines where order_id = v_order;
+  delete from pos_orders where id = v_order;
+  delete from pos_outlets where id = v_outlet;
+  delete from pos_menu_items where id in (v_dal, v_beer);
+  delete from pos_menu_categories where id in (v_food, v_drinks);
+  delete from staff_hotels where staff_id in (v_bar, v_waiter);
+  update staff set is_active = false where id in (v_bar, v_waiter);
+  select count(*) into n from pos_outlets where code = 'BARRL';
+  perform test.ok('pos bar role', 'the fixtures do not outlive the test', n = 0, n || ' left behind');
+end $$;

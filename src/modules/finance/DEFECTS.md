@@ -18,17 +18,26 @@ Nothing open.
 
 ## Fixed
 
-### FIN-34 · A booking-site guest who paid the hotel could not be checked out - FIXED 15 October (the owner's D27-328 (2))
+### FIN-36 · The check-in asked for an advance the Bill tab could not take - FIXED 15 October (the owner's D27-328 (3))
+
+**What happened:** with "Advance before check-in" on, the check-in refused "An advance of ₹X is owed before check-in ... Take it on the Bill tab." - and the Bill tab's Settle was grey before arrival (nothing posted, so nothing owed) and when in credit (a part paid), with no reason. The server took the payment ("held as credit"); only the button was shut. And New booking ran "Check in now" before taking the advance typed on it, so the check-in was refused and the booking left due in with the money paid.
+**Fixed:** Settle reads the advance still owed from the server (front desk's own read, the one the check-in asks) and, before arrival, opens with it filled in, held as the guest's credit without a tick; a part paid leaves the rest to take. New booking takes the advance first, then checks in (reservations' `BookingPage.tsx`).
+**Rule:** a refusal that names a place to go ("Take it on the Bill tab") is a promise; test that the place opens.
+
+### FIN-35 · A booking-site guest who paid the hotel could not be checked out - FIXED 15 October (the owner's D27-328 (2))
 
 **What happened:** a booking-site guest who paid the whole stay by UPI at the desk and left early: Check out asked for a refund ("The guest has overpaid ... Refund it before checking out."), and the refund refused every booking-site stay: "A booking-site stay: the booking site refunds the guest. Tell the booking site; nothing is refunded here." (`refunds.ts`). No way out, proved by the verifier.
 **Fixed:** a booking-site stay's bill gives back money paid AT THE HOTEL exactly as a guest's own bill does - the same four people, only the ways it was paid there (never "Bill to company", which is the booking site's or the company's money), the same ₹20,000 cash rule. The notice stays only where nothing paid at the desk is there to give back. A company's credit is unchanged (to its City ledger after launch).
 **Rule:** a notice that sends money elsewhere is right only for money that came from elsewhere; ask what was paid at the desk before refusing.
 
-### FIN-35 · The check-in asked for an advance the Bill tab could not take - FIXED 15 October (the owner's D27-328 (3))
+### FIN-34 · A hotel that had given a refund could not be reset - FIXED 14 October (the release's API run)
 
-**What happened:** with "Advance before check-in" on, the check-in refused "An advance of ₹X is owed before check-in ... Take it on the Bill tab." - and the Bill tab's Settle was grey before arrival (nothing posted, so nothing owed) and when in credit (a part paid), with no reason. The server took the payment ("held as credit"); only the button was shut. And New booking ran "Check in now" before taking the advance typed on it, so the check-in was refused and the booking left due in with the money paid.
-**Fixed:** Settle reads the advance still owed from the server (front desk's own read, the one the check-in asks) and, before arrival, opens with it filled in, held as the guest's credit without a tick; a part paid leaves the rest to take. New booking takes the advance first, then checks in (reservations' `BookingPage.tsx`).
-**Rule:** a refusal that names a place to go ("Take it on the Bill tab") is a promise; test that the place opens.
+**Found:** the final release's full API run, `resetOrder.test.ts` "leaves nothing behind that still points at what it clears": "refunds points at folio_postings and is not cleared".
+**What was wrong:** 219 (lane B, FIN-32) added `refunds`, whose `posting_id` points at its refund line with no cascade, and did not add it to the property reset's list (`api/scripts/reset-property.ts`, `CLEAR`). 219 did add it to the test hotel's classes (`app.test_hotel_classes`), so the test hotel's reset (`app.test_hotel_clear`, which works its order out from the foreign keys) was right; only the script was not.
+**How it would have shown on live:** `npm run reset -- <CODE> --yes` (or `--fresh-start`) on a property where anybody had recorded a refund would stop at `delete from folio_postings` - "reset failed: update or delete on table folio_postings violates foreign key constraint refunds_posting_id_fkey" - and roll back: nothing removed, the guards restored, the hotel left as it was. Safe, but the reset could not be done until the code was fixed.
+**Fixed:** `refunds` is in `CLEAR`, before `payments` and `folio_postings` (no guard to lift: refunds has no delete trigger). No migration. `resetOrder.test.ts` 4/4 after, 3/4 before.
+**Checked for the same gap:** load-demo (drops the hotel, which cascades refunds), `app.forbid_hotel_delete` (refuses a hotel with postings, so with any refund), `demo-history.ts` (clears only its own bookings, which it gives no refunds) - none needs it.
+**Rule:** a new table that points at a cleared one goes into `CLEAR` in the same commit; `resetOrder.test.ts` says so, but only in the full API run.
 
 ### FIN-32 · An overpaid bill had no way out, and `refund` meant two things - FIXED 14 October (D27-315 B, Lane B)
 
@@ -193,7 +202,11 @@ with GST on it. No screen sent either; a direct API call could.
 
 **The fix** - refused above the first write, for the stay's route and every
 service's door alike: "Take a payment through Payments." and "A refund is not
-a charge. Reverse the payment it gives back." (there is no refund route).
+a charge. Reverse the payment it gives back." (there was no refund route).
+Since D27-315 B (14 October) a refund has its own step on the bill, and the
+refusal reads "A refund is not a charge. Give it with Refund on the bill." -
+lane B changed the sentence and not this test; the test was brought into line
+the same day (the release's API run, 9 failures).
 
 **Proved** - `chargeDoor.test.ts`, "refuses a payment or a refund as a
 charge" (on the old code the payment was posted).

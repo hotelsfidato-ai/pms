@@ -28,7 +28,7 @@ the file is inventory's (on `MODULE.md`'s Requests).
 
 ## Fixed — the solution is here; do not work it out again
 
-### FD-33 · The check-in refused the upgrade Assign room had just given - FIXED 15 October (the owner's D27-328 (1))
+### FD-34 · The check-in refused the upgrade Assign room had just given - FIXED 15 October (the owner's D27-328 (1))
 
 **Found** - 14-15 October, the verifier, through the API and on screen:
 Assign room gives a Superior booking Deluxe room 302 ("Another type is
@@ -52,6 +52,33 @@ the rate on the Bill tab if it charges for it.
 on the old code.
 **Rule** - one fact, one rule on every door: when two routes allow
 something, the third that refuses it is the defect.
+
+### FD-33 · A voided booking was listed and counted as an arrival, and as a guest's next stay - FIXED 14 October (the owner's D27-326 (1))
+
+**Found** - FD-32's note: Arrivals Upcoming listed the voided FH-2608-5020
+with a "Void" pill and counted it in "15 expected".
+**The root** - the web had no one definition of "a booking that is not
+happening". Each list wrote `s.status !== "cancelled"`, and the API's `void`
+(not in `StayStatus`) passed every one: Arrivals Today (`listArrivals`) and
+Upcoming (`Arrivals.tsx`), their "N expected", the Dashboard's Arrivals tile
+(counted as checked in, not being `due-in`), and `listVacant` (no screen). On
+the server the guest directory's next stay (`guests/directory.ts`) said
+`status <> 'cancelled'` the same way.
+**Fixed** - `isCancelledOrVoid` (`data/stays.ts`, on the front door): the lists,
+the Dashboard tile and the Calendar's tone (`toneFor`, FD-32) all ask it; the
+directory's next stay leaves out `('cancelled', 'void')`. The other
+`!== "cancelled"` filters (the Calendar's room state, the housekeeping board)
+then keep only named statuses (`due-in`, `in-house`, `due-out`), so a void
+never reached what they show.
+**Proved** - `data/voidArrivals.test.tsx` (Today and Upcoming: the same "N
+expected" with a voided booking added, and it is not on the list; `listVacant`),
+reports' `dashboard.test.tsx` "D27-326 (1)" (the tile 8 for 7 before) and
+`api/test/modules/guests/directoryNextStay.test.ts` - each seen failing on the
+old code, passing after.
+**Left open (the owner's to say)** - the guest directory's "possible
+duplicate" (`overlapping_names`) leaves out `cancelled` and `no_show` but not
+`void`, so a booking voided as "Entered twice" still marks its guest as a
+possible duplicate; and its stays and nights count every status. Not changed.
 
 ### FD-32 · A voided booking that held a room was drawn on the Calendar as a confirmed one, and took a free room off its type's count - FIXED 14 October (the owner's D27-323 (1))
 
@@ -81,8 +108,8 @@ passing after. On screen (scratch `fidato_fd32`, 5EL, Calendar, General
 Manager): FH-2608-5020, room 307, 14-17 Oct, Deluxe free 6/6/6 on 14-16 Oct;
 voided ("Entered twice") - the bar struck through, pale red, Deluxe 7/7/7,
 Floor 3 7/7/7, Available 15/16/17 (was 14/15/16), `app.inventory_grid` 7/7/7.
-**Still letting a void through (a list count, not a free room; not changed -
-the owner's to say):** the desk's arrivals filter on `!== "cancelled"` too:
+**Still letting a void through (a list count, not a free room; fixed the same
+day as FD-33, the owner's D27-326 (1)):** the desk's arrivals filter on `!== "cancelled"` too:
 Arrivals Today (`listArrivals`), Upcoming (`Arrivals.tsx`) and the
 Dashboard's Arrivals tile. Seen: Upcoming listed the voided FH-2608-5020 with
 a "Void" pill and counted it in "15 expected".

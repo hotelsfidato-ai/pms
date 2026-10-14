@@ -15,7 +15,9 @@ import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
 import { getOrder, sendOrder, isBarSection, isBarDish, numberedAddonsQuery, tillMenuQuery, customInputs, type CustomAddon, type LineAddon, type MenuItem, type OrderLine } from "@/modules/pos/data/till";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
+import { useKotReprint } from "@/modules/pos/components/KotStation";
 import { ReadFailed } from "@/components/ui";
+import { useRole } from "@/lib/session";
 
 /* ══════════════════════════════════════════════════════════════════
    THE ORDER PAD
@@ -118,6 +120,14 @@ export function OrderPad({
      takes add-ons, which join this round. */
   const sentDishes = (existing.data?.lines ?? []).filter((l) =>
     !l.voided && l.parentLineId === null && l.kotStatus !== "pending");
+  /* The table's KOTs, one per number and kind, to print again here (the
+     owner's D27-324 (4)): "KOT 3 · Bar" is the Bar's slip of KOT 3. */
+  const kots = [...new Map((existing.data?.lines ?? []).flatMap((l) => l.kotNo == null ? [] : [[
+    `${l.kotNo}:${l.kotKind?.id ?? ""}`,
+    { no: l.kotNo, kindId: l.kotKind?.id ?? null,
+      label: `KOT ${l.kotNo}${l.kotKind ? ` · ${l.kotKind.name}` : ""}` },
+  ] as const])).values()];
+  const { reprint, node: reprinting } = useKotReprint(hotelId);
   const [eventChoice, setEventChoice] = useState<string | null | undefined>(undefined);
   useEffect(() => { if (!open) setEventChoice(undefined); }, [open]);
   const eventId = eventChoice !== undefined
@@ -162,8 +172,11 @@ export function OrderPad({
 
   const categories = menu.data ?? [];
 
-  /* Two tabs only when the menu has both sides: a hotel with no bar sees none. */
-  const split = categories.some(isBarSection) && categories.some((c) => !isBarSection(c));
+  /* Two tabs only when the menu has both sides: a hotel with no bar sees none.
+     Nor a Bar person (D27-324): the server gives them only what prints at the
+     bar, so the pad opens on all of it. */
+  const barOnly = useRole() === "bar";
+  const split = !barOnly && categories.some(isBarSection) && categories.some((c) => !isBarSection(c));
   const onSide = useMemo(() => split
     ? categories.filter((c) => isBarSection(c) === (side === "bar")) : categories,
   [categories, split, side]);
@@ -647,6 +660,34 @@ export function OrderPad({
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* THE TABLE'S KOTS, to print again on this device's printer
+                  when a slip is lost (the owner's D27-324 (4)). */}
+              {kots.length > 0 && orderId && (
+                <div className="mb-4">
+                  <p className="text-2xs uppercase tracking-wide text-grey-500 mb-1.5">
+                    KOTs sent
+                  </p>
+                  <ul aria-label="KOTs sent" className="divide-y divide-grey-100 border-y border-grey-100">
+                    {kots.map((k) => (
+                      <li key={`${k.no}:${k.kindId ?? ""}`} className="flex items-center gap-2 py-1.5">
+                        <span className="flex-1 min-w-0 truncate text-sm text-ink-900 tabular">
+                          {k.label}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Reprint ${k.label}`}
+                          onClick={() => void reprint(orderId, k.no, k.kindId, k.label)}
+                          className="press h-11 px-3.5 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer shrink-0"
+                        >
+                          Reprint
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {reprinting}
                 </div>
               )}
 

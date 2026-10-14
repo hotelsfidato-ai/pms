@@ -30,6 +30,7 @@ describe("who has which space", () => {
     ["finance", ["front", "pos"]],
     ["read_only", ["front", "pos"]],
     ["pos", ["pos"]],
+    ["bar", ["pos"]],
     ["chef", ["pos"]],
     ["kitchen_manager", ["pos"]],
     ["housekeeping", ["front"]],

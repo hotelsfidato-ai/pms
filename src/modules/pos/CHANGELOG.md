@@ -11,6 +11,63 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-14 · The Bar role, the Waiter, KOT reprint from the order pad, the GM on the Roles screen (the owner's D27-324 (2)-(5))
+
+**Asked for:** (2) a Bar role with the waiter's rights that opens on the bar and sees and orders only the bar's menu sections, its KOTs at the bar printer; (3) "Till Operator" shown as "Waiter" with a true description, rights unchanged; (4) a waiter or bar person reprints a KOT from the order screen; (5) the Roles screen shows the GM managing people, not "View". Worked without the `pos` claim: the void-a-paid-bill helper held it; settle, void and tender code untouched.
+
+**Shipped**
+- **The bar's dishes are the ones whose KOT is the Bar kind** - the section's own kind, else its tax heading's (Bar, Alcohol), exactly as 211's `app.pos_kot_kind_for` routes a dish. That is the one link; nothing new is stored. Migration 223 ("the bar role"; 224 until the master renumbered it): `bar` in `app.assignable_roles()` (so whoever gives the waiter's role gives it), `app.pos_dish_at_bar`, `app.pos_bar_only`, and the trigger `pos_order_lines_bar_only` (a Bar person cannot put on a bill, or raise the count of, any other dish: 42501).
+- Server: `bar` has exactly the waiter's grants (`TILL_PERSON`) and is named beside `pos` in every roleGate rule and the table-booking bell. `GET /till/menu` gives a Bar person only the bar's dishes; `addOneLine` (every way a dish goes on: a tap, the batch, more of a sent dish, Just 1) and the quantity route refuse a kitchen dish first: "Paneer Tikka is not on the bar's menu. A waiter orders it." `GET /till/orders/:id` carries each line's `kotNo` and `kotKind`.
+- Screens: Waiter and Bar on People, Give access and the Roles screen; the Bar's menu is the waiter's four, Restaurant only, landing on Tables; its pad shows no Restaurant / Bar tabs. The order pad lists the open order's **KOTs sent** ("KOT 3 · Bar") with **Reprint** - the KOT read and printing the KOT section's Reprint uses (`useKotReprint` in `components/KotStation.tsx`), the paper marked REPRINT. The GM's `user` grant is view, create, edit (what the server already allowed), so the Roles screen shows "View, Create, Edit".
+- The manual: A8 (who uses each screen, "At the bar: the Bar role", the pad's KOTs sent, a lost KOT), B2 (Waiter and Bar in both tables), A0, A11, A16; the GM setup guide. Rebuilt.
+
+**Proved** (every new test seen failing on the old code first)
+- Web: `src/lib/permissions.test.ts`, `navigation.test.ts`, `spaces.test.tsx`, `pos/barRole.test.tsx`, `admin/admin.test.tsx` (People, the Roles screen): 12 failures on the old code, then 9 files, 189 tests passing (with `KotStation`, `barSide`, `customAddons`, `ownerDecisions`).
+- API: `api/test/modules/pos/barRole.test.ts` failed on the old code at the roster ("staff_hotels_role_valid"), then 7 of 7. With it `roles`, `roleGate` (79), `till` (87), `tillBatch`, `kotSection`, `customAddons`, `tableBookings`, `waitersList`, `notifications`, and the files that list every role by hand, given `bar`: `equipmentApproval`, `stockGrants` (215), `rateSetters`, `repairs` (76), `equipment/grants` (123; its 30 s setup timed out twice under the gate's load, passed alone).
+- Database: "pos bar role" failed by name on the old schema (4 of 9); with 223 9 of 9; 223 applied twice. `db/tests/run.sh`: all 1721 assertions passed.
+- Gates, `bash scripts/gates.sh bar-role quick` at 30c16ae0: web types 0, api types 0, strip 0, web tests 1332 of 1335 - `migrationNumbers` (the 222 gap: 222 is the void helper's), and `accounting` and `purchasing` timeouts under load that pass alone (2 files, 2 passed).
+- On screen (own API 8813 and web 5313 on `fidato_barrole`, the 13 Oct dump migrated; Bar and Waiter testers added there only): the Bar person lands on Tables, menu Tables, Till, Terminal, Close restaurant day; a free table's pad holds only Beverages (the demo's section sent to the Bar KOT), no tabs; Cold Coffee sent as KOT 26, kind Bar; Paneer Tikka posted to the same order by the Bar's own session answered 409 "Paneer Tikka is not on the bar's menu. A waiter orders it."; the pad lists "KOT 26 · Bar" and Reprint printed "BAR KOT 26 / REPRINT / Cold Coffee 1". The Waiter ("Test Waiter, Waiter"): the whole menu, the same KOT reprinted. The Roles screen: Waiter and Bar columns, the GM's Users "View, Create, Edit". The GM's People: "5EL · Waiter", "5EL · Bar", Add somebody offering Waiter and Bar. Read from the page (the pane was hidden, so no pictures were taken).
+
+**Left open**
+- POS-35: the Roles screen does not show the restaurant roles' by-name rights (owner's question).
+- The reprint prints on the device where Reprint is pressed, as the KOT section's does; a waiter's tablet may not be the bar's or kitchen's printer (owner's question).
+- The Bar has no Start here card and no Guest requests (the waiter has both; not asked for).
+
+## 2026-10-14 · A voided bill's cash out of the restaurant tin; migration 222 (the owner's D27-327)
+
+**Asked for:** the owner's answers to the void's three questions: (1) a voided cash bill's cash goes back out of the RESTAURANT TIN, not the voider's front-desk drawer; (2) the refunds' ₹20,000 cash limit stays until the CA answers; (3) a banquet function's bill stays refused. And 222 turned out unused: the migration takes 222, so the numbers have no gap.
+
+**Shipped**
+- `222_void_a_paid_restaurant_bill.sql` (was 223): the two drawer functions are gone from it, so `app.pos_expected_cash` (189) and `app.cashier_expected_cash` (219) stand as they were. The tin counts paid bills' cash only, so a voided bill's cash leaves it by itself; no front-desk drawer is touched.
+- The void route opens no drawer (finance's `openOwnDrawer` is no longer exported for it; `CASH_REFUND_CEILING` still is). Finance's drawer screen (`cashier.ts`) and the Cashier shift report (`reports.ts`) are back as they were on cp6.
+- The Till's dialog: "₹756.00 in cash goes back to the guest out of the restaurant's tin."; the toast likewise. Close restaurant day: "Their cash went back to the guest out of this tin, so it is not in Expected either."; the sum's "Cash of voided bills, still in the tin" line is gone.
+- Manual A8.7 and A8.9 say the same; rebuilt. MODULE.md and DEFECTS.md (POS-35) too.
+
+**Proved:** each test changed first and seen failing on the drawer code: "pos void" 2 of 19 failed (the tin's Expected unchanged, the GM's drawer at 475); `voidPaidBill.test.ts` 1 of 8 failed on the drawer route ("a drawer opened for the GM"); `voidPaidBill.test.tsx` 2 of 6 failed (the sentence and the card). All pass after: 19/19, 8/8, 6/6; the manual and migration-number tests pass (no gap now).
+
+## 2026-10-14 · Voiding a paid bill (the owner's D27-324 (1))
+
+**Asked for:** a PAID restaurant bill voided by the owner, Admin or GM, with a reason: the same business day, before the restaurant day is closed; a room-charged bill refused ("reverse it on the guest's bill"); cash out of the voider's drawer as finance's refunds, card or UPI with the refund's reference; the bill keeps its number and prints VOID; its GST and VAT out of sales; the day's report shows who, when, why and how much; KOTs and consumed stock stay; the server and the database refuse everyone else.
+
+**Shipped**
+- Migration `222_void_a_paid_restaurant_bill.sql` (written as 223; renumbered, below): status `void`; `voided_by`, `voided_at`, `void_reason`, `void_reference`; `app.voids_paid_pos_bills` (owner, admin, GM, group admin); the guard trigger (who; a paid bill; the bill's own business day; the outlet's day not closed; never room or function; card or UPI names the reference; who and when are the database's; void for good, its record unchanged); its VAT bill's cancellation (a negated numbered row with the reason, as finance cancels one); a void's payments stay (`pos_tender_settled_immutable`); `pos_bill_prints` heading `void`; `app.pos_expected_cash` keeps a voided bill's cash (the notes are in the tin); `app.cashier_expected_cash` takes it out of the voider's drawer.
+- `POST /till/orders/:id/void` (`till.ts`, roleGate `VOID_PAID_BILL`): every refusal with its sentence, before the one write; cash through finance's `openOwnDrawer` and under its `CASH_REFUND_CEILING` (both now through finance's front door); the table freed as Clear frees one (`CLEAR_FINISHED`, shared with Clear). The order read carries `room`, `voidedBy`, `voidedAt`, `voidReason`, `voidReference`. A reprint is headed `void`. The kitchen keeps a voided bill's dishes until Ready.
+- `voidedBills` (front door): Close restaurant day's "Paid bills voided", the night audit's run (`restaurant.voided`) and the Night audit report's "POS Bills Voided".
+- Screens: the Till's "Void this paid bill" (owner, Admin, GM only; off with the sentence for a room or function bill; reason, then the reference for card or UPI); "VOID - reason. Voided by X at HH:MM"; struck in Settled today; the bill printed "Bill · VOID" with why, who, when; the Terminal says VOID; Close restaurant day lists the voids and adds "Cash of voided bills, still in the tin" to the sum.
+- Manual A8.7 "Voiding a paid bill", two Watch-out lines, A8.9's sum line; rebuilt.
+
+**What each report does with a voided bill** - every sales reader asks `status = 'settled'`, so it is left out of: the Manager report (F&B, tax, POS payments), the Night audit report's POS Summary and POS Payment Summary (listed in its own "POS Bills Voided"), the Day book and Tally export (`posSales`, GST and VAT), the Store's Days and the Stock consumption report (`outletSales`: sales drop, stock issued stays consumed - there are no recipes, so nothing is consumed by a sale), Close restaurant day's cards and "How the money arrived", the night audit's run (now also its tenders), the banquet function bill (a function bill is never voided). The GST sales register reads tax invoices only; a till bill was never on it, so nothing changes there. The VAT bills register shows the VAT bill and its cancellation.
+
+**Found**
+- The night audit's run counted the restaurant's payments with no status at all (POS-35); fixed.
+- On screen: `components/AskDialog.tsx` carried the text typed for the first question into the next one, so the void's reference box opened holding the reason; one tap would have recorded the reason as the UPI reference. The next question now starts empty (the web test fails without it: "expected 'Paid twice' to be ''").
+
+**Proved:** `db/tests/modules/pos.sql` "pos void" 19/19 on the scratch copy (13 of the first 16 failed on the old schema); `api/test/modules/pos/voidPaidBill.test.ts` 8/8 (8 failed on the old routes); `src/modules/pos/voidPaidBill.test.tsx` 6/6 (5 failed on the old screens; the reference check failed without the AskDialog fix).
+
+**Opened the screen** (own API 8811 and web 5811, a scratch copy of the 13 Oct dump, migrated; business date 9 Oct): as the GM, on the Till, voided a paid cash bill (the dialog said "₹756.00 in cash goes back to the guest from your own drawer"; then "VOID - Billed to the wrong table. Voided by Test GM at 17:52.") and a paid UPI bill (reason, then the reference box, empty, Void held until typed); a room-charged bill showed "Paid by room (room 201)" and the button off with "This bill went to room 201 - reverse it on the guest's bill."; the server gave that sentence too (409). The bill page printed "BILL · VOID" with the reason and who. Close restaurant day listed both voids, and the sum read Opening ₹3,000 + Cash taken ₹357 + Cash of voided bills ₹756 = Expected ₹4,113. The GM's drawer, opened by the void at ₹0, expected −₹756 with a cash line of −₹756. The Night audit report's POS Summary left both out and "POS Bills Voided" listed them. Signed in as a waiter (the Reception test sign-in made a Waiter on the scratch copy): Print the bill, no Void; the server answered 403. Not seen: the night audit's run screen (the scratch day has open bills, and running it was not needed).
+
+**Left open:** the owner's questions (the report to the master): the cash from the voider's drawer while the notes stay in the tin; the ₹20,000 refund ceiling applied to a void; a function bill refused like a room bill. Migration 222 is another helper's: `migrationNumbers.test.ts` sees the gap until it merges. Pictures to take: A8.7 (the void dialog, a voided bill), A8.9 (the voided card).
+
 ## 2026-10-14 · The KOT setup file without a decision code (the owner's D27-319 (1))
 
 `lib/kotSetupFile.ts`: the file's first `rem` line, "KOT station setup for AMR (D27-299), made by Restaurant setup - KOT section.", loses "(D27-299)". **Proved:** `kotSetup.test.tsx` 6 of 6 after the change (none asserts the `rem` line).

@@ -204,9 +204,12 @@ const LAUNDRY_PRICE = grant("laundry", "edit", "Changing the laundry price list"
 /* The restaurant. The matrix has no resource of its own for it, so the
    website's menu decides who sees each screen: a grant, plus the restaurant's
    roles by name (src/modules/pos/nav.ts). The write asks the same, with the
-   write's action - so a Viewer, who may look at the till, rings nothing up. */
-const TILL = grant("payment", "create", "Ringing up an order", ["pos"]);
-const DAY_END = grant("payment", "create", "Closing the restaurant's day", ["pos", "kitchen_manager"]);
+   write's action - so a Viewer, who may look at the till, rings nothing up.
+   The Bar role (D27-324) is named wherever the waiter is: the waiter's
+   rights, with the till and the database keeping it to the bar's dishes
+   (api/test/modules/pos/barRole.test.ts holds the two equal at every door). */
+const TILL = grant("payment", "create", "Ringing up an order", ["pos", "bar"]);
+const DAY_END = grant("payment", "create", "Closing the restaurant's day", ["pos", "bar", "kitchen_manager"]);
 const PASS = grant("payment", "create", "Moving a dish along at the pass", ["chef", "kitchen_manager"]);
 /* The menu has its own resource since D22-35 kept the revenue manager out of
    it: the owner, an administrator, the GM and the kitchen manager. */
@@ -217,14 +220,19 @@ const MENU = grant("menu", "edit", "Changing the menu");
 const TILL_SETUP = grant("room_config", "edit", "Setting up the restaurant's tables");
 /* Table booking (D27-224): a guest's request is answered by whoever may ring
    an order; the restaurant's booking hours are Restaurant setup's. */
-const TABLE_ANSWER = grant("payment", "create", "Answering a table booking", ["pos"]);
+const TABLE_ANSWER = grant("payment", "create", "Answering a table booking", ["pos", "bar"]);
 const TABLE_HOURS = grant("room_config", "edit", "Setting the restaurant's table-booking hours");
 /* The KOT station (D27-159, D27-161). Switching it: the menu's four - the
    owner, an administrator, the GM and the kitchen manager. Printing: whoever
    is signed in on the kitchen or POS PC - the till, the chef, the kitchen
    manager, or a `payment` holder. */
 const KOT_SWITCH = grant("menu", "edit", "Choosing the KOT printer");
-const KOT_PRINT = grant("payment", "create", "Printing the kitchen's KOTs", ["pos", "chef", "kitchen_manager"]);
+const KOT_PRINT = grant("payment", "create", "Printing the kitchen's KOTs", ["pos", "bar", "chef", "kitchen_manager"]);
+/* Voiding a PAID restaurant bill (the owner's D27-324): the owner, an
+   administrator or the GM - `approve` on a booking is exactly those three.
+   The database asks the same three (app.voids_paid_pos_bills, 222);
+   api/test/modules/pos/voidPaidBill.test.ts refuses a waiter. */
+const VOID_PAID_BILL = grant("reservation", "approve", "Voiding a paid restaurant bill");
 
 /* No screen calls these two yet. A bill photographed for a purchase (§15) is
    purchasing's; where n8n copied a file is an integration's. */
@@ -431,6 +439,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/till/orders/:id`]: TILL,
   [`POST ${H}/till/orders/:id/settle`]: TILL,
   [`POST ${H}/till/orders/:id/abandon`]: TILL,
+  [`POST ${H}/till/orders/:id/void`]: VOID_PAID_BILL,  // D27-324
   [`POST ${H}/till/orders/:id/lines/:lineId/qty`]: TILL,
   /* Customise: the numbered add-ons on a dish not yet sent (D27-289). */
   [`POST ${H}/till/orders/:id/lines/:lineId/numbered-addons`]: TILL,
@@ -718,9 +727,9 @@ const PRICES = see("rate", "prices");
 const SETUP = see("room_config", "the hotel's setup");
 const LAUNDRY = see("laundry", "laundry");
 /* The restaurant's screens are a grant plus the till by name (pos/nav.ts). */
-const TILL_READ = see("payment", "the restaurant's orders", ["pos"]);
-const MENU_READ = see(["menu", "payment"], "the menu", ["pos"]);
-const KOT_READ = see("payment", "the kitchen's KOTs", ["pos", "chef", "kitchen_manager"]);
+const TILL_READ = see("payment", "the restaurant's orders", ["pos", "bar"]);
+const MENU_READ = see(["menu", "payment"], "the menu", ["pos", "bar"]);
+const KOT_READ = see("payment", "the kitchen's KOTs", ["pos", "bar", "chef", "kitchen_manager"]);
 /* The Housekeeping board, Work orders and an item's page share these. */
 const REPAIRS = see(["room_config", "equipment", "inventory"], "repairs");
 
@@ -837,7 +846,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/vat-bills/:number{.+}`]: BILLS,
   [`GET ${H}/invoice-series`]: see(["invoice", "setting"], "the invoice numbers"),
   [`GET ${H}/pos/tickets`]: BILLS,
-  [`GET ${H}/pos/outlets`]: see(["payment", "invoice", "setting"], "the restaurant's outlets", ["pos"]),
+  [`GET ${H}/pos/outlets`]: see(["payment", "invoice", "setting"], "the restaurant's outlets", ["pos", "bar"]),
   [`GET ${H}/payments`]: MONEY,
   [`GET ${H}/cashier-shift`]: MONEY,
   /* D27-191: the owner, an administrator, the GM, the accountant and the Viewer. */
@@ -929,7 +938,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/till/rooms`]: TILL_READ,
   [`GET ${H}/till/waiters`]: TILL_READ,
   [`GET ${H}/banquet/attachable`]: TILL_READ,
-  [`GET ${H}/till/day-end`]: see("payment", "the restaurant's day", ["pos", "kitchen_manager"]),
+  [`GET ${H}/till/day-end`]: see("payment", "the restaurant's day", ["pos", "bar", "kitchen_manager"]),
   [`GET ${H}/kitchen`]: see("payment", "the kitchen's queue", ["chef", "kitchen_manager"]),
 
   /* ── Store, equipment, purchasing, places ── */
@@ -1045,7 +1054,8 @@ const WHO: Readonly<Record<Role, string>> = {
   housekeeping: "housekeeping",
   kitchen_manager: "the kitchen manager",
   chef: "a chef",
-  pos: "a till operator",
+  pos: "a waiter",
+  bar: "a bar person",
   stores: "the Inventory Manager",
   finance: "the accountant",
   read_only: "a viewer",

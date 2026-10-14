@@ -4,6 +4,8 @@ import {
   type ReportDoc, type ReportRow, type ReportSection,
 } from "../document.ts";
 import { heading, stayNights, LIVE, type Property } from "../figures.ts";
+/* Paid restaurant bills voided (D27-324): the restaurant's own list. */
+import { voidedBills } from "../../pos/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    NIGHT AUDIT — the printed report, in the owner's layout
@@ -509,6 +511,7 @@ export async function nightAuditReport(
 
   /* ── The restaurant, on the day ────────────────────────────────────── */
   const pos = await posDay(client, hotelId, asOn);
+  const voided = await voidedBills(client, hotelId, asOn);
 
   const sections: ReportSection[] = [
     { key: "room-charges", title: "Room Charges", columns: STAY_COLUMNS,
@@ -606,6 +609,20 @@ export async function nightAuditReport(
       ],
       rows: pos.payments,
       empty: "No restaurant bill was settled on this day." },
+    /* D27-324: a paid bill voided is out of the two sections above; here,
+       who voided it, when, why and how much. */
+    { key: "pos-voided", title: "POS Bills Voided",
+      columns: [
+        col("orderNo", "Bill", "text"), col("outlet", "Outlet", "text"),
+        col("method", "Paid By", "text"), col("amount", "Amount", "money"),
+        col("by", "Voided By", "text"), col("at", "At", "text"),
+        col("reason", "Reason", "text"), col("reference", "Refund Reference", "text"),
+      ],
+      rows: voided.map((v) => row({
+        orderNo: v.orderNo, outlet: v.outlet, method: v.method, amount: v.amount,
+        by: v.by, at: v.at, reason: v.reason, reference: v.reference,
+      })),
+      empty: "No restaurant bill was voided on this day." },
   ];
 
   return {

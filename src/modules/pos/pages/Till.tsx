@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router";
 import {
   UtensilsCrossed, Plus, Minus, X, Receipt, BedDouble, Banknote, ChevronRight,
-  CreditCard, Smartphone, Printer, Percent, Split, CalendarHeart, Flame,
+  CreditCard, Smartphone, Printer, Percent, Split, CalendarHeart, Flame, Ban,
 } from "lucide-react";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
@@ -12,7 +12,9 @@ import { addonBreakdown } from "@/modules/pos/lib/pricing";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { OrderHeaderPanel } from "@/modules/pos/flows/OrderHeaderPanel";
 import { cn } from "@/lib/cn";
-import { money } from "@/lib/format";
+import { money, moneyPrecise } from "@/lib/format";
+import { can } from "@/lib/permissions";
+import { useRole } from "@/lib/session";
 import { useUi } from "@/lib/ui";
 import { useLiveOrders } from "@/lib/useLiveOrders";
 import {
@@ -20,12 +22,12 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
 import { ReadFailed, ReadStale } from "@/components/ui";
-import { AskDialog, SENT_STRIKE, roomAsk, type Ask } from "@/modules/pos/components/AskDialog";
+import { AskDialog, SENT_STRIKE, roomAsk, type Ask, type Reply } from "@/modules/pos/components/AskDialog";
 
 /* ══════════════════════════════════════════════════════════════════
    THE TILL
@@ -503,9 +505,12 @@ function OrderRow({ order, active, onOpen }: {
           <p className="text-2xs text-grey-500">
             {order.lines} item{order.lines === 1 ? "" : "s"} · {order.openedAt}
             {order.paymentMethod && ` · ${order.paymentMethod}`}
+            {order.status === "void" && " · VOID"}
           </p>
         </div>
-        <span className="tabular text-base font-medium text-ink-900 shrink-0">
+        {/* A voided bill keeps its number and its total, struck (D27-324). */}
+        <span className={cn("tabular text-base font-medium shrink-0",
+          order.status === "void" ? "text-grey-500 line-through" : "text-ink-900")}>
           {money(order.gross)}
         </span>
         {/* It opens the order: the Tappable Rule's arrow. */}
@@ -1024,6 +1029,50 @@ function OrderPanel({
     },
   });
 
+  /* VOIDING A PAID BILL (D27-324): the owner, an administrator or the GM -
+     `approve` on a booking is exactly those three, as the server asks. A
+     bill that reached a room's or a function's bill is reversed there. */
+  const mayVoid = can(useRole(), "approve", "reservation");
+  const voidBlock = order.paymentMethod === "room"
+    ? `This bill went to room ${order.room ?? "-"} - reverse it on the guest's bill.`
+    : order.paymentMethod === "function"
+      ? `This bill went to ${order.eventTitle ?? "the function"}'s bill - reverse it on the function's bill.`
+      : null;
+  const voidBill = () => {
+    const cash = order.tenders.filter((t) => t.method === "cash").reduce((s, t) => s + t.amount, 0);
+    const needsReference = order.tenders.some((t) => t.method !== "cash");
+    const go = async (reason: string, reference?: string): Promise<Reply | undefined> => {
+      setBusy(true);
+      const res = await voidPaidBill(hotelId, order.id, reason, reference);
+      setBusy(false);
+      if (!res.ok) return { refused: res.reason };
+      toast.success(`Bill ${order.orderNo} is void`,
+        cash > 0 ? `Give ${moneyPrecise(cash)} back to the guest out of the restaurant's tin.` : undefined);
+      onChanged();
+      return undefined;
+    };
+    setAsk({
+      title: `Void bill ${order.orderNo}?`,
+      body: [
+        cash > 0 && `${moneyPrecise(cash)} in cash goes back to the guest out of the restaurant's tin.`,
+        needsReference && "Refund the card or UPI payment on its machine or app first: its reference is asked next.",
+        "The bill keeps its number and prints VOID. The kitchen's KOTs stay as they are.",
+      ].filter(Boolean).join(" "),
+      field: { label: "Why is it being voided?", required: true },
+      confirm: needsReference ? "Next" : "Void the bill",
+      onConfirm: (reason) => needsReference
+        ? {
+            next: {
+              title: `Void bill ${order.orderNo}?`,
+              field: { label: "The refund's reference: the UPI reference or the card approval", required: true },
+              confirm: "Void the bill",
+              onConfirm: (reference: string) => go(reason, reference),
+            },
+          }
+        : go(reason),
+    });
+  };
+
   const live = order.lines.filter((l) => !l.voided);
   const settled = order.status !== "open";
   const unsent = live.some((l) => l.kotStatus === "pending");
@@ -1203,13 +1252,17 @@ function OrderPanel({
         {settled ? (
           <div className="mt-3.5 space-y-2">
             <p className="text-sm text-grey-600">
-              {order.status === "settled"
+              {order.status === "void"
+                ? `VOID - ${order.voidReason ?? "-"}. Voided by ${order.voidedBy ?? "-"} at ${order.voidedAt ?? "-"}`
+                  + `${order.voidReference ? `; refund reference ${order.voidReference}` : ""}.`
+                : order.status === "settled"
                 ? order.paymentMethod === "function"
                   ? `On ${order.eventTitle ?? "the function"}'s bill${order.settledBy ? `, settled by ${order.settledBy}` : ""}.`
-                  : `Paid by ${order.paymentMethod}${order.settledBy ? `, taken by ${order.settledBy}` : ""}.`
+                  : `Paid by ${order.paymentMethod}${order.paymentMethod === "room" && order.room ? ` (room ${order.room})` : ""}`
+                    + `${order.settledBy ? `, taken by ${order.settledBy}` : ""}.`
                 : `Closed unpaid - ${order.abandonedReason}`}
             </p>
-            {order.status === "settled" && (
+            {(order.status === "settled" || order.status === "void") && (
               <Button
                 variant="secondary"
                 size="lg"
@@ -1219,6 +1272,17 @@ function OrderPanel({
                 <Printer className="size-4" />
                 Print the bill
               </Button>
+            )}
+            {/* D27-324: the owner, an administrator or the GM only. */}
+            {order.status === "settled" && mayVoid && (
+              <>
+                <Button variant="ghost" size="lg" className="w-full"
+                  disabled={voidBlock !== null} onClick={voidBill} loading={busy}>
+                  <Ban className="size-4" />
+                  Void this paid bill
+                </Button>
+                {voidBlock && <p className="text-sm text-grey-600">{voidBlock}</p>}
+              </>
             )}
             {bill.dialog}
           </div>

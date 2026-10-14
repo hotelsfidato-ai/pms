@@ -7,7 +7,7 @@ import type { PoolClient as Client } from "pg";
 /* The banquet service's rule for which functions an order may go on
    (D17-21) — through its front door, never its files. */
 import { whyNotAttachable } from "../banquet/index.ts";
-import { overCashLimit, panFor } from "../finance/index.ts";
+import { overCashLimit, panFor, CASH_REFUND_CEILING } from "../finance/index.ts";
 /* The one way an outlet row is made (Restaurant setup, D22-6). */
 import { addOutlet } from "./pos.ts";
 import {
@@ -213,6 +213,9 @@ till.get("/:code/till/menu", async (c) => {
          from pos_menu_categories c
          left join pos_menu_items i on i.category_id = c.id
         where c.hotel_id = $1 and c.is_active
+          /* A Bar person sees only the bar's dishes (D27-324): what prints
+             on the Bar KOT. Their empty sections go with the rest. */
+          and (not app.pos_bar_only($1) or app.pos_dish_at_bar($1, i.id))
         order by c.sort_order, c.name, i.sort_order, i.name`,
       [hotelId],
     );
@@ -1688,6 +1691,9 @@ async function readOrder(client: Client, orderId: string) {
     event_id: string | null; event_title: string | null;
     vat_bill: string | null;
     bills_printed: number;
+    room: string | null;
+    voided_by_name: string | null; voided_at: string | null;
+    void_reason: string | null; void_reference: string | null;
   }>(
     /* The hotel's details travel WITH the order, the way the invoice
        carries its own. A bill printed today should still read the same
@@ -1711,7 +1717,14 @@ async function readOrder(client: Client, orderId: string) {
             o.event_id::text, e.title as event_title,
             (select v.number from vat_bills v where v.pos_order_id = o.id) as vat_bill,
             (select count(*)::int from pos_bill_prints b
-              where b.order_id = o.id and b.heading in ('bill', 'duplicate')) as bills_printed
+              where b.order_id = o.id and b.heading in ('bill', 'duplicate')) as bills_printed,
+            /* The room a bill charged to a room went to (D27-324: a void
+               names it), through the ticket that carried it. */
+            (select app.stay_room(f.reservation_id) from pos_tickets t
+               join folios f on f.id = t.folio_id where t.id = o.ticket_id) as room,
+            s4.full_name as voided_by_name,
+            to_char(o.voided_at at time zone h.timezone, 'HH24:MI') as voided_at,
+            o.void_reason, o.void_reference
        from pos_orders o
        join pos_outlets ou on ou.id = o.outlet_id
        join hotels h on h.id = o.hotel_id
@@ -1723,6 +1736,7 @@ async function readOrder(client: Client, orderId: string) {
        left join staff s1 on s1.id = o.opened_by
        left join staff s2 on s2.id = o.settled_by
        left join staff s3 on s3.id = o.waiter_id
+       left join staff s4 on s4.id = o.voided_by
        left join banquet_events e on e.id = o.event_id
       where o.id = $1`,
     [orderId],
@@ -1738,14 +1752,17 @@ async function readOrder(client: Client, orderId: string) {
     variation_id: string | null; addon_id: string | null;
     numbered_addons: LineAddons | null;
     extra_kind: "custom" | "numbered" | null;
+    kot_no: number | null; kot_kind_id: string | null; kot_kind_name: string | null;
   }>(
     `select l.id::text, l.name, l.qty::text, l.unit_price::text,
             l.tax_rate::text, l.tax_scheme, l.note, l.voided, l.kot_status,
             s.full_name as added_by_name,
             l.parent_line_id::text, l.variation_id::text, l.addon_id::text,
-            l.numbered_addons, l.extra_kind
+            l.numbered_addons, l.extra_kind,
+            l.kot_no, k.id::text as kot_kind_id, k.name as kot_kind_name
        from pos_order_lines l
        left join staff s on s.id = l.added_by
+       left join pos_kot_kinds k on k.id = l.kot_kind_id
       where l.order_id = $1
       /* Each dish, then what hangs under it: an add-on put on a dish after
          three more dishes (D27-291) still reads under ITS dish. */
@@ -1809,6 +1826,13 @@ async function readOrder(client: Client, orderId: string) {
     vatBill: h.vat_bill,
     /* Bills printed after payment (D27-292): the next is BILL · DUPLICATE. */
     billsPrinted: h.bills_printed,
+    room: h.room,
+    /* A paid bill voided (D27-324): who, when (HH:MM), why, and the
+       refund's reference for card or UPI. Null on any other bill. */
+    voidedBy: h.voided_by_name,
+    voidedAt: h.voided_at,
+    voidReason: h.void_reason,
+    voidReference: h.void_reference,
 
     /* The header. `covers` is people eating, not seats — average per
        cover is the metric a restaurant runs on, and a table for two
@@ -1835,6 +1859,10 @@ async function readOrder(client: Client, orderId: string) {
       /* pending until a waiter sends it. The till shows which dishes the
          kitchen has, so a second KOT does not re-fire the starters. */
       kotStatus: l.kot_status,
+      /* The KOT it went on and that slip's kind, stamped when sent (211):
+         the order screen reprints them (the owner's D27-324 (4)). */
+      kotNo: l.kot_no,
+      kotKind: l.kot_kind_id ? { id: l.kot_kind_id, name: l.kot_kind_name! } : null,
       addedBy: l.added_by_name,
       /* An add-on names the dish it belongs to. The bill and the kitchen
          docket both indent on this: "Sides: Onions" under "Bhaaji Pau
@@ -2155,6 +2183,22 @@ export interface LineInput {
   extraFor?: string;
 }
 
+/* ── The bar orders from the bar (the owner's D27-324 (2)) ──────────
+   A Bar person puts on a bill only a dish that prints on the Bar KOT - its
+   section's kind, else its heading's (app.pos_dish_at_bar) - and raises the
+   count of no other. Asked before anything is written (root MEMORY 243); the
+   database refuses the rest behind it (the bar role's trigger). */
+async function barRefusal(
+  client: Client, hotelId: string, itemId: string,
+): Promise<{ ok: false; reason: string } | null> {
+  const { rows } = await client.query<{ ok: boolean; name: string | null }>(
+    `select not app.pos_bar_only($1) or app.pos_dish_at_bar($1, $2::uuid) as ok,
+            (select name from pos_menu_items where id = $2::uuid) as name`,
+    [hotelId, itemId]);
+  return rows[0]!.ok ? null
+    : refuse(`${rows[0]!.name ?? "That dish"} is not on the bar's menu. A waiter orders it.`);
+}
+
 async function addOneLine(
   client: Client,
   session: { staffId: string },
@@ -2240,6 +2284,8 @@ async function addOneLine(
       [input.itemId, hotelId],
     );
     if (!item[0]) return refuse("No such item on the menu.");
+    const notTheBars = await barRefusal(client, hotelId, input.itemId!);
+    if (notTheBars) return notTheBars;
     if (!item[0].is_active) {
       return refuse(`${item[0].name} is off the menu today.`);
     }
@@ -2627,6 +2673,45 @@ export async function struckAfterKitchen(
   return rows.map((r) => ({
     orderNo: r.order_no, table: r.table_ref, name: r.name, qty: Number(r.qty),
     value: Number(r.value), reason: r.reason, by: r.struck_by, at: r.struck_at,
+  }));
+}
+
+/** Paid bills voided on a business day (D27-324): who, when, why, how much
+    and how it had been paid. Close restaurant day, the night audit's run
+    and its report read this one list; every sales figure leaves them out
+    (they read `status = 'settled'`). */
+export async function voidedBills(
+  client: Client, hotelId: string, businessDate: string, outletId?: string,
+) {
+  const { rows } = await client.query<{
+    order_no: string; table_ref: string | null; outlet: string; amount: string;
+    method: string | null; cash: string; reason: string; reference: string | null;
+    by: string | null; at: string;
+  }>(
+    `select o.order_no, o.table_ref, ou.name as outlet,
+            (select payable from app.pos_order_total(o.id))::text as amount,
+            o.payment_method as method,
+            (select coalesce(sum(t.amount), 0) from pos_order_tenders t
+              where t.order_id = o.id and t.method = 'cash')::text as cash,
+            o.void_reason as reason, o.void_reference as reference,
+            -- A colleague's name through app.hotel_people (149), as the
+            -- reports read it: staff shows a clerk only their own row.
+            coalesce(s.full_name, hp.full_name) as by,
+            to_char(o.voided_at at time zone h.timezone, 'HH24:MI') as at
+       from pos_orders o
+       join pos_outlets ou on ou.id = o.outlet_id
+       join hotels h on h.id = o.hotel_id
+       left join staff s on s.id = o.voided_by
+       left join app.hotel_people($1) hp on hp.id = o.voided_by
+      where o.hotel_id = $1 and o.business_date = $2::date and o.status = 'void'
+        and ($3::uuid is null or o.outlet_id = $3::uuid)
+      order by o.voided_at`,
+    [hotelId, businessDate, outletId ?? null],
+  );
+  return rows.map((r) => ({
+    orderNo: r.order_no, table: r.table_ref, outlet: r.outlet, amount: Number(r.amount),
+    method: r.method, cash: Number(r.cash), reason: r.reason, reference: r.reference,
+    by: r.by, at: r.at,
   }));
 }
 
@@ -3638,6 +3723,16 @@ till.post("/:code/till/orders/:id/printed", async (c) => {
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
+/* A TABLE IS FREE OR IT IS NOT (POS-33): clearing a finished bill frees its
+   table of every finished bill on it opened no later - Clear, and a paid
+   bill voided (D27-324). $1 is the order. */
+const CLEAR_FINISHED =
+  `update pos_orders set cleared_at = now()
+    where cleared_at is null and status <> 'open'
+      and (id = $1
+           or (table_id = (select table_id from pos_orders where id = $1)
+               and opened_at <= (select opened_at from pos_orders where id = $1)))`;
+
 till.post("/:code/till/orders/:id/clear", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -3672,13 +3767,7 @@ till.post("/:code/till/orders/:id/clear", async (c) => {
     /* No NEWER bill than the one pressed (the audit of 9 October): a tablet
        showing an old tile must not clear a bill settled after it, whose
        guests may still be seated. Older ones are what POS-33 is about. */
-    await client.query(
-      `update pos_orders set cleared_at = now()
-        where cleared_at is null and status <> 'open'
-          and (id = $1
-               or (table_id = (select table_id from pos_orders where id = $1)
-                   and opened_at <= (select opened_at from pos_orders where id = $1)))`,
-      [orderId]);
+    await client.query(CLEAR_FINISHED, [orderId]);
 
     return { ok: true as const, orderNo: rows[0].order_no };
   });
@@ -3933,6 +4022,7 @@ till.get("/:code/till/day-end", async (c) => {
     );
 
     const struck = await struckAfterKitchen(client, hotelId, businessDate, outlet[0].id);
+    const voided = await voidedBills(client, hotelId, businessDate, outlet[0].id);
 
     const denominations = day[0]
       ? (await client.query<{ value: string; count: number }>(
@@ -3963,6 +4053,9 @@ till.get("/:code/till/day-end", async (c) => {
       blockers,
       /* Food struck after the kitchen had it, and why (D27-119). */
       struck,
+      /* Paid bills voided (D27-324): left out of `summary`; their cash is
+         still in the tin and in `cash.expected`. */
+      voided,
       movements: movements.map((m) => ({
         id: m.id, kind: m.kind, amount: Number(m.amount),
         reason: m.reason, recordedBy: m.recorded_by_name, at: m.recorded_at,
@@ -4746,6 +4839,101 @@ till.post("/:code/till/orders/:id/abandon", async (c) => {
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
+/* ── VOIDING A PAID BILL (the owner's D27-324 (1), 14 October) ────────
+   The owner, an administrator or the GM (roleGate VOID_PAID_BILL, and the
+   database's app.voids_paid_pos_bills behind it) voids a PAID bill, with a
+   reason. The same business day only, before the outlet's day is closed;
+   never a bill that went to a room or a function - it reached a folio and
+   is reversed there. A card or UPI bill names the refund's reference. The
+   bill keeps its number, its lines (the kitchen made the food) and its
+   payments; it reprints VOID. Its cash goes back to the guest out of the
+   RESTAURANT'S TIN, where the notes still are the same day (the owner's
+   D27-327): the tin's Expected counts paid bills' cash only, so nothing is
+   written for it, and nobody's front-desk drawer is touched. Its alcohol's
+   VAT bill is cancelled in the same transaction (migration 222's trigger).
+   Every refusal comes before the one write (MEMORY 243). */
+till.post("/:code/till/orders/:id/void", async (c) => {
+  const input = await c.req.json<{ reason?: string; reference?: string }>()
+    .catch(() => ({}) as { reason?: string; reference?: string });
+  const reason = input.reason?.trim();
+  if (!reason) {
+    return c.json(refuse("Say why this bill is being voided. The reason stays on the bill."), 409);
+  }
+  const reference = input.reference?.trim() || null;
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+
+    /* Locked, as a settle is: two presses void it once. */
+    const { rows: [o] } = await client.query<{
+      status: string; payment_method: string | null; outlet_id: string;
+      business_date: string; room: string | null; event_title: string | null;
+    }>(
+      `select o.status, o.payment_method, o.outlet_id::text,
+              to_char(o.business_date, 'YYYY-MM-DD') as business_date,
+              (select app.stay_room(f.reservation_id) from pos_tickets t
+                 join folios f on f.id = t.folio_id where t.id = o.ticket_id) as room,
+              (select e.title from banquet_events e where e.id = o.event_id) as event_title
+         from pos_orders o
+        where o.id = $1 and o.hotel_id = $2
+          for update of o`,
+      [orderId, hotelId],
+    );
+    if (!o) return refuse("No such order.");
+    if (o.status === "void") return refuse("This bill is already void.");
+    if (o.status === "open") return refuse("This bill is not paid. Close it unpaid instead, with a reason.");
+    if (o.status !== "settled") return refuse("This bill was closed unpaid. There is nothing to void.");
+    if (o.payment_method === "room") {
+      return refuse(o.room
+        ? `This bill went to room ${o.room} - reverse it on the guest's bill.`
+        : "This bill went to a guest's room bill - reverse it on the guest's bill.");
+    }
+    if (o.payment_method === "function") {
+      return refuse(`This bill went to ${o.event_title ?? "the function"}'s bill - reverse it on the function's bill.`);
+    }
+    const businessDate = await businessDateFor(client, hotelId);
+    if (o.business_date !== businessDate) {
+      return refuse(`Only a bill of today's business day can be voided. This one is of ${o.business_date}.`);
+    }
+    if (await dayClosed(client, o.outlet_id, o.business_date)) {
+      return refuse("The restaurant's day is closed and its drawer counted. A bill of a closed day cannot be voided.");
+    }
+
+    const { rows: [paid] } = await client.query<{ cash: string; other: boolean }>(
+      `select coalesce(sum(amount) filter (where method = 'cash'), 0)::text as cash,
+              bool_or(method <> 'cash') as other
+         from pos_order_tenders where order_id = $1`,
+      [orderId],
+    );
+    if (paid!.other && !reference) {
+      return refuse("Give the refund's reference: the UPI reference or the card approval.");
+    }
+    const cash = Number(paid!.cash);
+    /* The refunds' cash ceiling (D27-315 B), the same until the CA answers (D27-327). */
+    if (cash >= CASH_REFUND_CEILING) {
+      return refuse("Cash is given back only below ₹20,000 on a bill until the hotel's CA "
+        + "confirms that limit, so this bill cannot be voided here.");
+    }
+
+    await client.query(
+      `update pos_orders
+          set status = 'void', voided_by = $2, voided_at = now(),
+              void_reason = $3, void_reference = $4
+        where id = $1`,
+      [orderId, session.staffId, reason, reference],
+    );
+    /* Nothing is collected on it: its table is freed as Clear frees one
+       (POS-33), so the floor never shows a voided bill. */
+    await client.query(CLEAR_FINISHED, [orderId]);
+    return { ok: true as const, ...(await readOrder(client, orderId))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
 /* ── Changing a quantity ──────────────────────────────────────────────
    Every till in the trade puts +/- on a line. Without it, "make that two
    rather than three" means striking the line and re-adding — which leaves
@@ -4797,6 +4985,11 @@ till.post("/:code/till/orders/:id/lines/:lineId/qty", async (c) => {
        and add it again with the right number. */
     if (line[0].extra_kind && qty > 0) {
       return refuse("An add-on's number is set when it goes on. Strike it and add it again.");
+    }
+    /* More of a dish is ordering it (D27-324): the bar, the bar's dishes only. */
+    if (qty > Number(line[0].qty) && line[0].item_id) {
+      const notTheBars = await barRefusal(client, hotelId, line[0].item_id);
+      if (notTheBars) return notTheBars;
     }
     /* MORE of a dish the kitchen has is a new line, for the next docket -
        the same as tapping it again (the owner, 28 September), sides and
@@ -5697,9 +5890,10 @@ till.get("/:code/kitchen", async (c) => {
              reading open orders only took them off the board at once. A
              settled order's dishes stay until the kitchen says Ready -
              for the restaurant's day. A bill closed unpaid leaves, as
-             before. */
+             before; a paid bill voided keeps its KOTs, as the kitchen made
+             the food (D27-324). */
           and (o.status = 'open'
-               or (o.status = 'settled' and o.business_date = $2::date))
+               or (o.status in ('settled', 'void') and o.business_date = $2::date))
         order by l.kot_sent_at`,
       [hotelId, await businessDateFor(client, hotelId)],
     );

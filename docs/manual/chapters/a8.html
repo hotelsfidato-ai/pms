@@ -12,12 +12,12 @@
   <table>
     <thead><tr><th style="width:22%">Screen</th><th style="width:26%">Who uses it</th><th>What it is for</th></tr></thead>
     <tbody>
-      <tr><td>Tables</td><td>Waiters, Reception (if allowed)</td><td>The room as it stands. Tap a table to take an order on a pad; print a table's bill; clear a table.</td></tr>
-      <tr><td>Till</td><td>Waiters, the cashier</td><td>The cash register: the bill line by line, discounts, sending to the kitchen, payment, the day's paid bills.</td></tr>
-      <tr><td>Terminal</td><td>Waiters</td><td>The same work on a fixed tablet or screen, one outlet. Also where room-service orders from guests arrive.</td></tr>
+      <tr><td>Tables</td><td>Waiters, the bar, Reception (if allowed)</td><td>The room as it stands. Tap a table to take an order on a pad; print a table's bill; clear a table.</td></tr>
+      <tr><td>Till</td><td>Waiters, the bar, the cashier</td><td>The cash register: the bill line by line, discounts, sending to the kitchen, payment, the day's paid bills.</td></tr>
+      <tr><td>Terminal</td><td>Waiters, the bar</td><td>The same work on a fixed tablet or screen, one outlet. Also where room-service orders from guests arrive.</td></tr>
       <tr><td>Kitchen</td><td>Chef, kitchen manager</td><td>Every dish the kitchen holds, oldest first: <span class="ui">Start</span>, then <span class="ui">Ready</span>.</td></tr>
       <tr><td>Menu</td><td>Kitchen manager</td><td>Dishes, prices, variations, Sides, the numbered Add-ons, what is off today.</td></tr>
-      <tr><td>Close restaurant day</td><td>Cashier, waiters, kitchen manager</td><td>The cash drawer: open the day with a float, money in and out, the count, the close.</td></tr>
+      <tr><td>Close restaurant day</td><td>Cashier, waiters, the bar, kitchen manager</td><td>The cash drawer: open the day with a float, money in and out, the count, the close.</td></tr>
       <tr><td>Table bookings</td><td>Whoever takes orders</td><td>Hotel guests' requests for a table: confirm or decline.</td></tr>
       <tr><td>Charges to rooms</td><td>Accounts</td><td>Bills an outside till sent to guests' rooms.</td></tr>
       <tr><td>Restaurant setup</td><td>Owner, Admin, GM; the kitchen manager for the KOT section only</td><td>The restaurant's name, sections and tables, which computer prints which KOT, table-booking hours.</td></tr>
@@ -85,7 +85,10 @@
     </ol>
   </figure>
 
-  <p>To add a round to a table that already has an order, tap the table again. The pad says <span class="msg">“Another round on this table's bill.”</span> and lists the dishes <span class="ui">Already sent</span> at the top (A8.3).</p>
+  <p>To add a round to a table that already has an order, tap the table again. The pad says <span class="msg">“Another round on this table's bill.”</span> and lists the dishes <span class="ui">Already sent</span> at the top (A8.3), and under them the <span class="ui">KOTs sent</span>, each with <span class="ui">Reprint</span> (A8.4).</p>
+
+  <h3>At the bar: the Bar role</h3>
+  <p>Somebody given the <b>Bar</b> role works as a waiter does, on the same screens: Tables, the Till, the Terminal and Close restaurant day. Their pad, Till and Terminal hold <b>only the bar's dishes</b>: the menu sections whose KOT prints at the bar (A8.4, A8.10), so everything they send prints at the bar, and the pad opens straight on them. A kitchen dish is refused even if somebody tries it another way, and the message names it: <span class="msg">“Paneer Tikka is not on the bar's menu. A waiter orders it.”</span> They take payment, give a discount of up to 10% with a reason, print the bill and close the restaurant day, as a waiter does. The Bar role: <span class="d">D27-324</span>.</p>
 
   <div class="box watch">
     <h4>Watch out</h4>
@@ -218,7 +221,7 @@
     <li><b>What a KOT shows:</b> the time, what it is (<b>KITCHEN KOT 14</b>), dine in or take away, the table, each dish with its number, its add-ons and Sides under it, and the kitchen note. Never a price.</li>
     <li><b>Which kind a dish is</b> depends on its menu section: Bar and Alcohol sections print at the bar, the rest in the kitchen, unless the manager chose otherwise (A8.10). It is decided when the dish is sent, so a reprint goes where the first slip went.</li>
     <li><b>A dish taken off after it was sent</b> prints, on a reprint of its KOT, under <span class="msg">“STOP - TAKEN OFF”</span>, with the reason.</li>
-    <li><b>A lost or torn KOT:</b> on the computer that printed it, open <span class="ui">Restaurant setup</span>, the KOT section, <span class="ui">This computer's last 20 KOTs</span>, and tap <span class="ui">Reprint</span>. The slip says <b>REPRINT</b>.</li>
+    <li><b>A lost or torn KOT:</b> on Tables, tap the table. Its pad lists the <span class="ui">KOTs sent</span>, one line for each KOT and kind (<span class="msg">“KOT 3 · Bar”</span>): tap <span class="ui">Reprint</span>. It prints on the printer of the device you are using. Or, on the computer that printed it, open <span class="ui">Restaurant setup</span>, the KOT section, <span class="ui">This computer's last 20 KOTs</span>, and tap <span class="ui">Reprint</span>. Either way the slip says <b>REPRINT</b>. Waiters and the bar reprint from the pad: <span class="d">D27-324</span>.</li>
   </ul>
 
   <h3>The printing lines</h3>
@@ -397,6 +400,16 @@
     <ol class="callouts"><li>Paid by UPI</li><li>Print the bill (A8.6)</li></ol>
   </figure>
 
+  <h3>Voiding a paid bill</h3>
+  <p>A bill paid by mistake (the wrong table, paid twice) can be voided by the owner, an Admin or the GM, on the day it was paid and before <span class="ui">Close restaurant day</span>. Nobody else sees the button.</p>
+  <ol class="steps">
+    <li>On the Till, tap the bill under <span class="ui">Settled today</span>.</li>
+    <li>Tap <span class="ui">Void this paid bill</span> and type why.</li>
+    <li>Paid by card or UPI: refund it on the card machine or the UPI app first, tap <span class="ui">Next</span>, and type the refund's reference (the UPI reference or the card approval).</li>
+    <li>Tap <span class="ui">Void the bill</span>. Give the cash back to the guest out of the <b>restaurant's tin</b>.</li>
+  </ol>
+  <p>The bill keeps its number and reads <b>VOID</b>, with the reason, who and when; <span class="ui">Print the bill</span> prints it headed <b>Bill · VOID</b>. The kitchen's KOTs stay as they were: the food was made. The day's sales, the reports and the Day book leave a voided bill out, and its alcohol's VAT bill is cancelled with it. <span class="ui">Close restaurant day</span> and the night audit list it under <span class="ui">Paid bills voided</span>. Its cash comes out of the restaurant's tin, so the tin's Expected leaves it out (A8.9); nobody's front-desk drawer is touched.</p>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
@@ -407,12 +420,14 @@
       <li><b>No connection:</b> cash, card and UPI are refused until the line is back. A <b>room charge</b> can be made with no connection: it is held and sent when the line is back.</li>
       <li>Once the day is closed (A8.9), new bills and payments wait for the night audit.</li>
       <li>An order on a banquet function is paid on the function's bill only; cash, card, UPI and rooms are switched off for it, with the reason.</li>
+      <li><b>A bill charged to a room is never voided here</b>: <span class="msg">“This bill went to room 201 - reverse it on the guest's bill.”</span> A bill on a banquet function is reversed on the function's bill.</li>
+      <li><b>The same day only</b>: a void on a later day, or once the day is closed, is refused: <span class="msg">“The restaurant's day is closed and its drawer counted. A bill of a closed day cannot be voided.”</span></li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>.</p>
+    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>.</p>
   </div>
 
   <!-- A8.8 -->
@@ -475,7 +490,7 @@
   <h3>At the end of the shift: count the drawer</h3>
   <ol class="steps">
     <li>Open the <span class="ui">Cash</span> step. Under <span class="ui">Count the drawer</span>, type how many of each note and coin come out of the tin.</li>
-    <li>Look at <span class="ui">The sum</span>: the opening float, plus the cash taken, plus or minus the money in and out, is what the drawer is <span class="ui">Expected</span> to hold. Under it, <span class="ui">Counted</span>.</li>
+    <li>Look at <span class="ui">The sum</span>: the opening float, plus the cash taken, plus or minus the money in and out, is what the drawer is <span class="ui">Expected</span> to hold. Under it, <span class="ui">Counted</span>. A paid bill voided today is not in it: its cash went back to the guest out of the tin (A8.7).</li>
     <li>If they differ, a yellow box says <span class="msg">“Short by ₹217”</span> or over, and how much of it is a paid-out waiting for a yes.</li>
     <li>Tap <span class="ui">Save the count - ₹3,140</span>.</li>
   </ol>
