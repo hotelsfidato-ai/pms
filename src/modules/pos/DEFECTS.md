@@ -14,22 +14,6 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
-### POS-35 · The Roles screen does not show what a waiter or the bar may do in the restaurant - OPEN, found 14 October (D27-324)
-
-**Found** — building the Bar role. The Roles and permissions screen draws the matrix
-(`api/src/permissions.ts`) and nothing else. The restaurant's rights are not in it: the
-waiter (`pos`), now the bar too, the chef and the kitchen manager get the till, the KOTs, the
-pass and the day end BY NAME in `api/src/roleGate.ts` (`TILL`, `DAY_END`, `KOT_PRINT`,
-`PASS` and their reads), because the matrix has no restaurant resource. So the screen shows
-the Waiter and the Bar with "View" on Reservations and Room availability and a dash on
-Payments - while both take payment. Same shape as the GM's Users cell the owner raised
-(D27-324 (5), fixed in the matrix), but here the fix is not one grant: giving `pos` and
-`bar` `payment` create would also open every other `payment` door (the desk's cashiering).
-
-**Fix waiting** — the owner's call (asked in the D27-324 report): a line under the matrix
-naming the restaurant roles' rights, or a restaurant resource in the matrix (a larger change
-across roleGate, the menus and the tests).
-
 ### POS-18 · A typed address kept the role of the property chosen at sign-in — FIXED 26 September (the shell's)
 
 **Found** — 25 September, proving Restaurant setup end to end. The Reception test sign-in was rostered as a Waiter (`pos`) at a second property and opened `/h/SEC/floor` by its address: the page was that property's (the tab read "Tables · Second Hotel (test)"), but the sidebar was Reception's and Restaurant setup refused them "signed in as Reception". `PropertyScope` sets the property in view (`useUi.hotelId`, the code), while `useRole` reads `useSession.hotelId`, the property chosen at sign-in or in the switcher (`src/lib/session.ts`, `roleFor`). The server asks the role at the property in the address (`roleGate.ts`), so it rang the order as a waiter - nothing wrong was written; the website showed another property's role.
@@ -44,6 +28,28 @@ fails "expected 'front_desk' to be 'pos'".
 ---
 
 ## Fixed
+
+### POS-35 · The Roles screen does not show what a waiter or the bar may do in the restaurant - FIXED 15 October (the owner's D27-329 (4))
+
+**Found** — building the Bar role. The Roles and permissions screen draws the matrix
+(`api/src/permissions.ts`) and nothing else. The restaurant's rights are not in it: the
+waiter (`pos`), now the bar too, the chef and the kitchen manager get the till, the KOTs, the
+pass and the day end BY NAME in `api/src/roleGate.ts` (`TILL`, `DAY_END`, `KOT_PRINT`,
+`PASS` and their reads), because the matrix has no restaurant resource. So the screen shows
+the Waiter and the Bar with "View" on Reservations and Room availability and a dash on
+Payments - while both take payment. Same shape as the GM's Users cell the owner raised
+(D27-324 (5), fixed in the matrix), but here the fix is not one grant: giving `pos` and
+`bar` `payment` create would also open every other `payment` door (the desk's cashiering).
+
+**What was done** — the owner chose the line (D27-329 (4)). Under the matrix:
+"The restaurant is not in the matrix: the server lets the Waiter and the Bar in by name, for
+ringing up an order, printing the kitchen's KOTs, answering a table booking and closing the
+restaurant's day, and for reading ..." - roleGate's own words, from
+`src/modules/admin/restaurantRights.ts`. `api/test/modules/pos/barRole.test.ts` fails if that
+list and every roleGate rule naming `pos` or `bar` differ; `admin.test.tsx` "D27-329 (4)"
+failed on the old screen. The chef's and the kitchen manager's by-name rights (the pass, the
+day end) are not on the line: not asked for.
+(Numbered 35 twice on 14 October; the void's entry below is the other.)
 
 ### POS-35 · A paid restaurant bill could not be taken back by anybody - FIXED 14 October (the owner's D27-324 (1))
 

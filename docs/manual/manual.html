@@ -4681,7 +4681,7 @@ figure.shot.phone img { max-width: 72mm; }
   <p>To add a round to a table that already has an order, tap the table again. The pad says <span class="msg">“Another round on this table's bill.”</span> and lists the dishes <span class="ui">Already sent</span> at the top (A8.3), and under them the <span class="ui">KOTs sent</span>, each with <span class="ui">Reprint</span> (A8.4).</p>
 
   <h3>At the bar: the Bar role</h3>
-  <p>Somebody given the <b>Bar</b> role works as a waiter does, on the same screens: Tables, the Till, the Terminal and Close restaurant day. Their pad, Till and Terminal hold <b>only the bar's dishes</b>: the menu sections whose KOT prints at the bar (A8.4, A8.10), so everything they send prints at the bar, and the pad opens straight on them. A kitchen dish is refused even if somebody tries it another way, and the message names it: <span class="msg">“Paneer Tikka is not on the bar's menu. A waiter orders it.”</span> They take payment, give a discount of up to 10% with a reason, print the bill and close the restaurant day, as a waiter does. The Bar role: <span class="d">D27-324</span>.</p>
+  <p>Somebody given the <b>Bar</b> role works as a waiter does, on the same screens: Tables, the Till, the Terminal, Close restaurant day and Guest requests, with the waiter's Start here card. Their pad, Till and Terminal hold <b>only the bar's dishes</b>: the dishes on the menu's <b>Bar</b> tab, the sections sold under Bar or Alcohol (A8.11), and the pad opens straight on them. Their KOTs print at the bar; if a manager has sent a Bar section's KOT to the kitchen (A8.10), its dishes are still the bar's and print where the manager chose. A dish from any other section is refused even if somebody tries it another way, and the message names it: <span class="msg">“Paneer Tikka is not on the bar's menu. A waiter orders it.”</span> They take payment, give a discount of up to 10% with a reason, print the bill and close the restaurant day, as a waiter does. The Bar role: <span class="d">D27-324</span>; the Bar tab, Start here and Guest requests: <span class="d">D27-329</span>.</p>
 
   <div class="box watch">
     <h4>Watch out</h4>
@@ -5175,7 +5175,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li><b>One computer per kind.</b> Ticking a kind on another computer moves it there; the old one stops printing it by itself.</li>
     <li><b>One computer can print everything:</b> tick every kind and the bills on it. Each slip still says what it is.</li>
     <li><b>KOT kinds:</b> Kitchen and Bar can be renamed (“Restaurant”) but never switched off; add a kind (Tandoor, Desserts) with <span class="ui">Add a KOT</span>. Its name heads its slip: <b>TANDOOR KOT 14</b>.</li>
-    <li><b>Which section prints where:</b> each menu section starts with its tax heading's KOT (Bar and Alcohol to the Bar, the rest to the Kitchen); change the odd one, such as Mocktails to the Bar.</li>
+    <li><b>Which section prints where:</b> each menu section starts with its tax heading's KOT (Bar and Alcohol to the Bar, the rest to the Kitchen); change the odd one, such as Mocktails to the Bar. This moves only the printing: who may order a dish follows its tax heading, so the Bar role orders Mocktails only if the section is sold under Bar (A8.2, <span class="d">D27-329</span>).</li>
     <li><b>A computer replaced:</b> tick its kinds on the new one. The old one then prints nothing and can be <span class="ui">Removed</span> from the list.</li>
     <li>Every computer that prints keeps its last 20 KOTs here, with <span class="ui">Reprint</span>.</li>
   </ul>
@@ -6108,7 +6108,7 @@ figure.shot.phone img { max-width: 72mm; }
   <table>
     <thead><tr><th style="width:22%">Column</th><th>What it shows</th></tr></thead>
     <tbody>
-      <tr><td>Guest</td><td>The name. <span class="msg">“overlapping stays”</span> under it means two of its stays share a night (see Watch out).</td></tr>
+      <tr><td>Guest</td><td>The name. <span class="msg">“overlapping stays”</span> under it means two of its stays share a night (see Watch out). A cancelled, voided or no-show booking does not count: a booking entered twice and voided is not a second person: <span class="d">D27-329</span>.</td></tr>
       <tr><td>Stays, Nights</td><td>How many bookings under the name - cancelled and future ones count too - and how many nights they cover.</td></tr>
       <tr><td>Last stay</td><td>When the last stay ended; <span class="msg">“first visit”</span> when none has. <span class="msg">“back 14 Dec 2026”</span> under it: they are booked to come again.</td></tr>
       <tr><td>Booked via</td><td>Every source their stays came through: Agoda, Walk-in, the hotel's own site…</td></tr>
@@ -10460,7 +10460,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Kitchen Manager</td><td>The kitchen screen and the menu. No money.</td><td><span class="d">D24-10</span></td></tr>
       <tr><td>Chef</td><td>The kitchen screen. Moves dishes along; changes nothing about money.</td><td>-</td></tr>
       <tr><td>Waiter</td><td>Takes orders and sends the KOTs, prints bills, takes payment, gives a discount of up to 10% with a reason, closes the restaurant day; reprints a table's KOT from its pad. (It was called Till Operator until 14 October; an outside till's account holds the same role.)</td><td>Renamed, rights unchanged <span class="d">D27-324</span></td></tr>
-      <tr><td>Bar</td><td>The waiter's rights, on the bar's dishes only: the menu sections whose KOT prints at the bar. Its KOTs print at the bar.</td><td><span class="d">D27-324</span></td></tr>
+      <tr><td>Bar</td><td>The waiter's rights, on the bar's dishes only: the dishes on the menu's Bar tab, the sections sold under Bar or Alcohol, whichever printer their KOT goes to. Its KOTs print at the bar.</td><td><span class="d">D27-324</span> <span class="d">D27-329</span></td></tr>
       <tr><td>Inventory Manager</td><td>The Store and the equipment register. Raises purchases; approves equipment leaving the store.</td><td>The owner, 16 September</td></tr>
       <tr><td>Accountant</td><td>Bills, invoices and credit notes, payments, company accounts, reports, the GST and VAT rates.</td><td><span class="d">D22-32</span> <span class="d">D22-33</span></td></tr>
       <tr><td>Viewer</td><td>Reads; changes nothing.</td><td><span class="d">D27-146</span></td></tr>
@@ -10477,6 +10477,7 @@ figure.shot.phone img { max-width: 72mm; }
       <li>One kind of thing: here, prices (rate plans). View only, for a Hotel Manager</li>
     </ol>
   </figure>
+  <p>The restaurant has no row in the matrix, so the Waiter's and the Bar's columns show little more than View on bookings and rooms. A line under the matrix names the rest: <span class="msg">“The restaurant is not in the matrix: the server lets the Waiter and the Bar in by name, for ringing up an order, printing the kitchen's KOTs, answering a table booking and closing the restaurant's day, …”</span>, and that ringing up an order includes sending the KOT, giving a discount, printing the bill and taking payment <span class="d">D27-329</span>.</p>
 
   <!-- B2.2 -->
   <h2 id="b2-2"><span class="n">B2.2</span>Who sees what</h2>
@@ -10495,7 +10496,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Kitchen Manager</td><td>Restaurant only</td><td>Kitchen, Menu, Close restaurant day, Guest requests, the Store, Notifications. Starts on Kitchen.</td></tr>
       <tr><td>Chef</td><td>Restaurant only</td><td>Kitchen, Guest requests, Notifications.</td></tr>
       <tr><td>Waiter</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day, Guest requests. Starts on Tables.</td></tr>
-      <tr><td>Bar</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day. Starts on Tables; sees only the bar's dishes.</td></tr>
+      <tr><td>Bar</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day, Guest requests, as the waiter. Starts on Tables, with the waiter's Start here card; sees only the dishes on the menu's Bar tab <span class="d">D27-329</span>.</td></tr>
       <tr><td>Inventory Manager</td><td>Front office</td><td>Store, Equipment, Purchasing, Notifications.</td></tr>
     </tbody>
   </table>

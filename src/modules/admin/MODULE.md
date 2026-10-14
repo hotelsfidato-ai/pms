@@ -52,7 +52,7 @@ properties and people.
 | People | `/people` | `pages/People.tsx` | none |
 | Settings console | `/settings/<group>/<slug>`, its own space (D27-249) | `pages/Settings.tsx` opens the page registered at the address (`src/components/app/settingsConsole.ts`); phase 1's stand-ins are `console.settings.ts` + `pages/ConsolePages.tsx` (resource `setting`: owner, Admin, GM; then each page's own rule) | none: reached by the top bar's space switcher |
 | — (Find a screen) Users | `/admin/users` | `pages/Admin.tsx` (`UsersPage`) | none |
-| — (Find a screen, and Settings › People) Roles and permissions | `/admin/roles` | `pages/Admin.tsx` (`RolesPage`) | none |
+| — (Find a screen, and Settings › People) Roles and permissions | `/admin/roles` | `pages/Admin.tsx` (`RolesPage`): the matrix, and under it the Waiter's and the Bar's restaurant rights by name (`restaurantRights.ts`, held equal to roleGate by `api/test/modules/pos/barRole.test.ts`; D27-329 (4)) | none |
 | — (Find a screen) Integrations | `/admin/integrations` | `pages/Admin.tsx` (`IntegrationsPage`) | none |
 | — (Find a screen, and Settings › People) Audit log | `/admin/audit-log` | `pages/Admin.tsx` (`AuditLogPage`) | none |
 | — (Find a screen, and Settings › People) Activity | `/admin/activity` | `pages/Activity.tsx`: every change `audit_log` holds (D27-243 5.1); "Across the group" for the owner and an Admin (D27-245 Q-A); a guest's details read "changed", masked on the server | none |

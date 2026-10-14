@@ -11,6 +11,27 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-15 · The bar's dishes are the menu's Bar tab; the Bar's Start here and Guest requests; the Roles screen's restaurant line (the owner's D27-329 (1), (3), (4))
+
+**Asked for:** (1) a dish is the bar's by the menu's Bar tab - its section's tax heading, Bar or Alcohol - not by which KOT printer it uses; its KOT still prints at the bar. (3) The Bar gets the Start here card and Guest requests, as the waiter has. (4) The Roles and permissions screen names what the Waiter and the Bar do in the restaurant (POS-35). (2) and (5), the KOT reprint, were another helper's; the reprint code was not touched.
+
+**Shipped**
+- Migration 225 (`225_the_bars_dishes_by_the_bar_tab.sql`, re-runnable; 224 is another helper's): `app.pos_dish_at_bar` is now the dish's section's tax heading (`bar`, `alcohol`) - the order pad's `isBarSection`. It is the Bar role's one definition: the till's menu for a Bar person, `barRefusal` in `till.ts` and 223's trigger all ask it. Where a KOT prints (`app.pos_kot_kind_for`) is unchanged, so a Bar section whose KOT a manager sent to the kitchen is still the bar's and prints in the kitchen; a Restaurant section sent to the Bar KOT (the demo's Beverages) is no longer the bar's.
+- (3) `startHereCards.ts`: the waiter's card for the Bar (`atTheTables`; "Send an order to the bar"), on Tables and the Till. Guest requests in the Bar's menu and `REQUEST_ROLES`; the server's `RECEIVERS.fnb` names `bar`, so the Bar sees and answers food-and-drink requests and gets their bell.
+- (4) A line under the matrix (admin's CHANGELOG), from `src/modules/admin/restaurantRights.ts`; POS-35 fixed.
+- Found on the way: the D27-324 merge (2193c39a) left `=======` in `db/tests/modules/pos.sql` where the void block's `end $$;` and the bar block's rule line were - the file could not run. Put back.
+- The manual: A8 ("At the bar: the Bar role", A8.10's section routing line), B2 (both tables, the line under Figure B2-01); rebuilt.
+
+**Proved** (every new test seen failing on the old code first)
+- Web: `navigation.test.ts` (the Bar's menu equals the waiter's: "expected [ 'Tables', 'Till', 'Terminal', …(1) ] to deeply equal [ 'Guest requests', …"), `startHereCards.test.ts` (no Bar card), `admin.test.tsx` "D27-329 (4)" (no line): 3 failed, then 8 files, 145 of 145 (with `spaces`, `permissions`, `pos/barRole`, guest-services).
+- API, on the old code: `barRole.test.ts` and `directoryNextStay.test.ts` 3 failed, 11 passed - the Bar's teams `[]`, "BARROLE spirits" (Bar heading, kitchen KOT) missing from the Bar's menu, the voided twice marked. The roleGate list test passed before (a guard: the data already true). After: `till` 87, `roleGate` 79, `requests` 10, `roles` 5, `directoryNextStay` 4 passed; `barRole` failed once on its own fixture (an Alcohol section at 5EL, which is not switched on for alcohol: "BARROLE rum is in a section taxed as alcohol ..."), moved to the Bar heading, then 10 of 10.
+- Database: "pos bar role" now refuses a food section sent to the Bar KOT and allows a drinks section sent to the kitchen's (the final `db/tests/run.sh` and `rerun.sh`, in the report).
+- On screen (own API 8829 and web 5329 on `fidato_d329`, the 13 Oct dump migrated with 225; there only: a "Bar drinks" section under Bar with its KOT sent to the Kitchen, the Reception test sign-in made a Bar, the Chef's a Waiter): the Bar lands on Tables with Start here "Open a table / Send an order to the bar / Settle a bill"; menu Guest requests, Tables, Till, Terminal, Close restaurant day; Guest requests opens (server 200). N6's pad holds only Bar drinks (Fresh Lime Soda, Virgin Mojito); the Waiter's menu read has all five sections. As the Bar: Masala Chai (Beverages: Restaurant heading, Bar KOT) refused 409 "Masala Chai is not on the bar's menu. A waiter orders it."; Fresh Lime Soda sent as KOT 26, kind Kitchen. The owner's Roles screen shows the line under the matrix. Read from the page (the pane was hidden); the Roles line also seen in a screenshot, not saved to the manual.
+
+**Left open**
+- The owner's: at 5EL's demo menu no section is sold under Bar or Alcohol, so a Bar person there sees no dishes; drinks sold under Restaurant (the demo's Beverages) are the waiter's. Live: each hotel's bar sections need the Bar or Alcohol heading.
+- Picture to retake: B2-01 (the Roles screen) if the line should show in it.
+
 ## 2026-10-14 · The Bar role, the Waiter, KOT reprint from the order pad, the GM on the Roles screen (the owner's D27-324 (2)-(5))
 
 **Asked for:** (2) a Bar role with the waiter's rights that opens on the bar and sees and orders only the bar's menu sections, its KOTs at the bar printer; (3) "Till Operator" shown as "Waiter" with a true description, rights unchanged; (4) a waiter or bar person reprints a KOT from the order screen; (5) the Roles screen shows the GM managing people, not "View". Worked without the `pos` claim: the void-a-paid-bill helper held it; settle, void and tender code untouched.

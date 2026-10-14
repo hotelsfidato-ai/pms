@@ -412,8 +412,9 @@ pos_kot_kinds, pos_kot_stations,               "the KOT section" (211, D27-292):
                                                 app.pos_kot_kind_for, app.pos_line_kot_kind
   the Bar role: app.pos_dish_at_bar,           "the bar role" (223, D27-324): `bar` in
   app.pos_bar_only, trigger                     app.assignable_roles(); a Bar person puts on a
-  pos_order_lines_bar_only                      bill, or raises the count of, only a dish that
-                                                prints on the Bar KOT (42501 otherwise)
+  pos_order_lines_bar_only                      bill, or raises the count of, only a dish on
+                                                the menu's Bar tab (42501 otherwise); 225
+                                                (D27-329 (1)): the Bar tab, not the KOT
 pos_order_lines.extra_kind, .numbered_addon_id "custom add-ons" (210, D27-291): an add-on line
                                                of its own under its dish; a sent one struck
                                                says why; the day's struck list names it
@@ -593,19 +594,24 @@ One other service's door is imported by this folder (17 September):
   exactly the waiter's rights - the matrix (`TILL_PERSON` in
   `api/src/permissions.ts`) and every roleGate rule name it beside `pos`, and
   `api/test/modules/pos/barRole.test.ts` holds the two equal at every door -
-  but sees and orders only **the bar's dishes: those whose KOT is the Bar
-  kind** (the section's own kind, else its tax heading's: Bar and Alcohol;
-  `app.pos_dish_at_bar`, from 211's `app.pos_kot_kind_for`). The menu read
-  leaves the rest out for a Bar person; `addOneLine` and the quantity route
-  refuse a kitchen dish in a sentence (`barRefusal`); the database refuses it
-  behind them (trigger `pos_order_lines_bar_only`, migration "the bar role").
-  Its KOTs therefore print at the bar. The restaurant roles could not see their own
+  but sees and orders only **the bar's dishes: those on the menu's Bar tab**
+  - the section's tax heading is Bar or Alcohol, whichever KOT it prints on
+  (the owner's D27-329 (1); `app.pos_dish_at_bar`, migration 225, the order
+  pad's `isBarSection`). The menu read leaves the rest out for a Bar person;
+  `addOneLine` and the quantity route refuse any other dish in a sentence
+  (`barRefusal`); the database refuses it behind them (trigger
+  `pos_order_lines_bar_only`, migration "the bar role"). Its KOTs print at
+  the bar unless a manager sent a Bar section's KOT elsewhere (A8.10). The
+  Bar also has the waiter's Start here card and Guest requests (D27-329 (3)),
+  and the Roles screen names both roles' restaurant rights under the matrix
+  (POS-35, `src/modules/admin/restaurantRights.ts`). The restaurant roles could not see their own
   screens until then (MEMORY 260). A new screen goes into the right working
   menus or it is search-only for those roles.
-- **Start here** (15 September). `src/components/app/startHereCards.ts` lines
-  60–77 are the waiter's card (open a table, Send, settle — naming "Send" and
-  "Charge to room") and the chef's (naming "Start" and "Ready"). Lines 85–86
-  place the card on Tables, Till and Kitchen. Rename one of those buttons and
+- **Start here** (15 September). `src/components/app/startHereCards.ts`'s
+  `atTheTables` is the waiter's card and the Bar's (D27-329 (3); open a table,
+  Send, settle — naming "Send" and "Charge to room"), and the chef's names
+  "Start" and "Ready". `START_HERE_ON` places the card on Tables, Till and
+  Kitchen. Rename one of those buttons and
   change the card too (`HANDOVER.md` § 3.3).
 - **A room charge may be held with the line down; money may not.** The
   owner's decision of 8 September: a waiter can charge a room offline and it

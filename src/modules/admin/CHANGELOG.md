@@ -11,6 +11,13 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-15 · The Roles screen names what the Waiter and the Bar do in the restaurant (the owner's D27-329 (4), POS-35)
+
+**Asked for:** a line or rows under the matrix, in the screen's own style, naming the restaurant rights the Waiter and the Bar hold by name, true to roleGate.
+**Shipped:** `pages/Admin.tsx` (`RolesPage`): under the footnote, a second line with the restaurant glyph: "The restaurant is not in the matrix: the server lets the Waiter and the Bar in by name, for ringing up an order, printing the kitchen's KOTs, answering a table booking and closing the restaurant's day, and for reading the restaurant's orders, the menu, the kitchen's KOTs, the restaurant's outlets and the restaurant's day. Ringing up an order includes sending the KOT, giving a discount, printing the bill and taking payment. The Bar orders only the dishes on the menu's Bar tab." The phrases are roleGate's own (`doing`), kept in `restaurantRights.ts`; `api/test/modules/pos/barRole.test.ts` fails if they differ from every roleGate rule naming `pos` or `bar`. No second table: the matrix stays the screen's one table.
+**Proved:** `admin.test.tsx` "D27-329 (4)" failed on the old screen (no line), passes; the roleGate check passes for both roles. Opened as the owner on the scratch copy (`/settings/people/roles`): the line under the matrix.
+**Left open:** the chef's and the kitchen manager's by-name rights (the pass, the day end) are not on the line - not asked for. Figure B2-01 does not show the line yet.
+
 ## 2026-10-14 · Waiter and Bar on People and the Roles screen; the GM managing people (the owner's D27-324 (2), (3), (5))
 
 **Asked for:** "Till Operator" read as "Waiter" with a true description; a new Bar role, given on People like any role; the Roles and permissions screen to show the GM managing people, not "View".
