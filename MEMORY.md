@@ -6539,6 +6539,19 @@ copy will see of theirs.**
 
 ---
 
+### 410 · MINE: a conflict resolved by a pattern that matched inside a comment banner (15 October)
+
+Merging the paid-bill void and the Bar role, both branches had appended a block to `db/tests/modules/pos.sql`.
+I resolved the conflict with a regular expression that took "everything up to `=======`" as our side. The SQL
+file's comment banners are `-- =====...`: the pattern stopped INSIDE the first banner, cut the void's block in
+half and left the real divider line in the file. The web and API checks passed; the database suite died at
+line 985 ("syntax error at or near declare") in the full gate run, and was rebuilt from the two branches (the
+void's file plus the Bar role's appended block). **The rule:** resolve conflicts by line (`^=======$` alone on
+its line) or by rebuilding from each branch's version, and after any scripted resolution grep the WHOLE file for
+`^(<<<<<<<|=======|>>>>>>>)` - not only for `<<<<<<<` and `>>>>>>>`.
+
+---
+
 ### 409 · MINE: a browser click with no tab named went into another session's page (14 October)
 
 Checking the built website copy on 5180, I clicked "Owner" by reference without naming the tab. The click ran
