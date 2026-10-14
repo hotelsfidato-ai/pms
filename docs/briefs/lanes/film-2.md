@@ -37,3 +37,7 @@ Report to `D:\fidato pms\.local\lanes\f-report.md`: recordings, voice, videos re
 script lines changed, anything wrong in the PMS seen.
 
 **Progress log:** append a line to `D:\fidato pms\.local\lanes\progress.log` at the start, after each finished piece, at least every 30 minutes, and at the end ("DONE"; "BLOCKED: why" if stuck) - the format is in README.md.
+
+**14 Oct 17:35, the master:** your budget is per lane now, kept in `.local/lanes/flags/F.spent` ($3.51 of
+$15 used) - waiting is not a reason to stop. The database runs from the SSD (much faster). Your runner now
+uses FLAGS (README.md): raise `.blocked` only for something the owner or the master must give.

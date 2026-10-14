@@ -57,3 +57,8 @@ page load (if it is a PMS fault, report it), then retake F1-02 onwards on PHN.
 not a fault. Step 3 of Set up this hotel is To do on PHN; the script's step-3 lines must say the hotel adds
 its room types there. After the final release the Add a property message reads "No room types yet - add
 them in Set up this hotel."
+
+**14 Oct 17:35, the master:** record on **http://localhost:5180** (`APP=http://localhost:5180`), the BUILT
+website copy: it answers at once, where the development server on 5173 kept freezing on the hard disk. The
+database now runs from the SSD (much faster). Your runner now uses FLAGS (README.md): a wait that clears by
+itself is never a reason to stop - wait and poll.

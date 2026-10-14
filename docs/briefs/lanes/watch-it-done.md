@@ -33,3 +33,8 @@ Report to `D:\fidato pms\.local\lanes\d-report.md`: each chapter recorded (clips
 seconds), rendered and copied, anything skipped and why, anything wrong in the PMS seen.
 
 **Progress log:** append a line to `D:\fidato pms\.local\lanes\progress.log` at the start, after each finished piece, at least every 30 minutes, and at the end ("DONE"; "BLOCKED: why" if stuck) - the format is in README.md.
+
+**14 Oct 17:35, the master:** record on **http://localhost:5180** (`APP=http://localhost:5180`), the BUILT
+website copy: it answers at once, where the development server on 5173 kept freezing on the hard disk. The
+database now runs from the SSD (much faster). Your runner now uses FLAGS (README.md): a wait that clears by
+itself is never a reason to stop - wait and poll.
