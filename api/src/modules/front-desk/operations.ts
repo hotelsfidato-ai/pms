@@ -820,13 +820,15 @@ operations.post("/:code/stays/:id/check-out", async (c) => {
        ONLY ON OR AFTER THE DEPARTURE DATE (D27-314 (2)): before it - by
        the hotel's business date - the guest is leaving early, whatever
        the hour. The rule says so (migration "late departure on the day").
+       NEVER A DAY USE (D27-319 (2)): it has its own hours, so the rule is
+       given the arrival too (migration "a day use is never late").
        AND ONCE (D27-314 (1)): a late departure already recorded - the
        reason, the charge or its waiver - is not asked again or charged
        again. The next Check out came after the guest paid, asked for the
        reason again and posted the charge again. Read after the row lock
        above, so two presses cannot both record it. */
     const { rows: lateRows } = await client.query<{ late: boolean }>(
-      `select app.departure_is_late(hotel_id, now(), check_out)
+      `select app.departure_is_late(hotel_id, now(), check_in, check_out)
               and late_checkout_at is null as late
          from reservations where id = $1`, [stayId]);
     const isLate = lateRows[0]?.late ?? false;
