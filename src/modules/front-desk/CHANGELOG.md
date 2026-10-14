@@ -8,6 +8,23 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-14 · FD-32: a voided booking is struck through on the Calendar and leaves its room free (the owner's D27-323 (1))
+
+**Asked for:** D27-323 (1), before the final release: a VOIDED booking that held a room is drawn struck through like a cancelled one, the key reads "Cancelled or void", and it no longer takes a free room off its type's count. Fixed at the root, once; every other free-room count checked for the same mistake. Branch `worktree-agent-a109d3b679784cc82`, fast-forwarded to cp6 e112db14 first (it began at 548db9b8, behind D27-319). front-desk is still claimed by lane A (`lane/early-checkout-a`, 13 Oct, fully merged into cp6), so `claim` refused; worked in this copy only.
+**The root:** the Calendar counts its free rooms itself, in the web app - the room type row and the footer (`getStayView`) and the floor row (`StayView.tsx`) count every room with a bar not of the struck-through tone. All three read `toneFor`, which knew `cancelled` and not the API's `void` (not in `StayStatus`), so one line was both the wrong colour and the wrong count. The server and database were already right: voiding releases the room (042/073) and `app.inventory_grid` leaves out `void`.
+**Shipped:**
+- `data/stayview.ts`: `toneFor` gives `void` the struck-through tone too.
+- `pages/StayView.tsx`: `BAR_LABEL.void` "Cancelled or void" - the key and the stay panel's pill (they share it).
+- Tests: `data/stayview.test.ts` "a voided booking (FD-32)" (new); `calendarKey.test.tsx` expects "Cancelled or void".
+- The manual: A1's bar table, "Pale red, struck through - Cancelled or void" (it still said "Void"); rebuilt with `build.mjs`. **Picture A1-13 needs a retake** (the key), not taken.
+- `DEFECTS.md` FD-32 FIXED; `MODULE.md` (stayview.ts and its test).
+**Checked for the same mistake** (a status list that names `cancelled` and not `void`), every free-room count: New booking (`book.ts`), the channel manager's ARI and inbound, Rates' inventory all read `app.inventory_grid` - right. Rooms' Empty, the Dashboard's Free rooms ready and its strip read `app.house_now` - right. The check-in's room list (`assignableRooms`) and Assign room take in-house and due-out only - right. Night audit (`roomNight.ts`, its report) and the statistics name the statuses they count - right. `listVacant` (`stays.ts`) has the mistake but no screen. **Not a free room, but the same mistake, not changed:** Arrivals Today (`listArrivals`), Upcoming (`Arrivals.tsx`) and the Dashboard's Arrivals tile filter `!== "cancelled"`; seen, Upcoming listed the voided booking with a "Void" pill and counted it in "15 expected". Also guests' `directory.ts` (a guest's next stay). The owner's call.
+**Proved:**
+- Web, seen failing on the old code: the bar "confirmed" not "void", the Deluxe free count 2 not 3, the footer 9 not 10 (three soft checks, all three failed), the key "Cancelled". After: the two files, 29 of 29.
+- On screen (my copy: API 8863, web 5363, scratch `fidato_fd32` from the 13 Oct dump migrated to 219 files, 5EL, business date 9 Oct, General Manager, 1280x720): FH-2608-5020 (Farida Contractor, room 307, 14-17 Oct) a pale blue bar, Deluxe free 6/6/6 on 14-16 Oct, Available 14/15/16, the panel's pill "Confirmed". Voided ("Entered twice"; the panel's buttons pressed from the console, the pane hidden): toast "Voided", the pill "Cancelled or void"; on the Calendar the bar pale red and struck through (`bg-brand-red-50 ... line-through`), Deluxe 7/7/7, Floor 3 7/7/7, Available 15/16/17, Reserved 9 to 8; `app.inventory_grid` Deluxe 7/7/7; the key "Cancelled or void".
+- Gates (`bash scripts/gates.sh fd32 quick`, at 37838125): web types 0, API types 0, strip 0; web tests exit 1 - 1,316 of 1,317, the one `src/test/migrationNumbers.test.ts` "no gaps": cp6 has 217 then 220 (218 and 219 are lane B's). Nothing under `db/` changed here. The API suite, the database and the replay are not in the quick gate.
+**Left open:** A1-13's retake; the arrivals lists above (owner's call).
+
 ## 2026-10-14 · A day use is never late; the Calendar's key names all seven colours (the owner's D27-319 (1) and (2))
 
 **Asked for:** D27-319 (2): a day-use guest (arrival and departure the same date) is never asked "Leaving after check-out time" and never charged a late fee, changed once in the rule of migration 217. (1): the Calendar's colour key names all seven bar colours, in plain words. The whole session (admin, reservations, reports, POS and banquet had a line each) is here. front-desk was claimed by lane A (D27-315 A); this copy kept to one line of the check-out route.
