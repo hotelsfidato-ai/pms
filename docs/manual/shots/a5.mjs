@@ -1,6 +1,10 @@
 // Check-out (A5): the pictures the VIDEOS need that the day check did not take,
-// and the day check's misleading ones taken again. The book has no A5 chapter yet;
-// these are named A5-T<n> and are listed in C:\videos\script\a5.json ("pictures").
+// and the day check's misleading ones taken again. They are named A5-T<n> and are
+// listed in C:\videos\script\a5.json ("pictures"). chapters/a5.html (written
+// 14 Oct, D27-326 (3)) shows them under its own figure numbers, in reading order -
+// the <img src="img/A5-T<n>.png"> says which picture is which figure. Its A5-02,
+// A5-05, A5-08, A5-09, A5-10 and A5-11 (cash round-off, the Check out window, the
+// leaving-early step, the refund) are still "to be taken" boxes.
 // Local demo, business date 11 Oct 2026, made-up guests only.
 //
 // Set-up and demo changes (13 Oct 2026, the demo as the day check left it):
