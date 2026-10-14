@@ -1,7 +1,9 @@
 // Check-in (A3): the pictures the VIDEOS need that the day check did not take.
-// The book has no A3 chapter yet; these are named A3-T<n> and are listed in
-// C:\videos\script\a3.json ("pictures"). Local demo, business date 11 Oct 2026,
-// made-up guests only.
+// They are named A3-T<n> and are listed in C:\videos\script\a3.json ("pictures").
+// chapters/a3.html (written 14 Oct, D27-326 (3)) shows them under its own figure
+// numbers, in reading order - the <img src="img/A3-T<n>.png"> says which picture is
+// which figure; retake one here and the book follows. Its A3-02 and A3-12 are still
+// "to be taken" boxes. Local demo, business date 11 Oct 2026, made-up guests only.
 //
 // Set-up and demo changes (13 Oct 2026, the demo as the day check left it):
 //   - A3-S1 makes "A3 Test Desai" (Superior, phone, 2 nights from today, no room);

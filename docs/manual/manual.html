@@ -232,11 +232,11 @@ figure.shot.phone img { max-width: 72mm; }
   <h1>Fidato PMS</h1>
   <p class="sub">The manual</p>
   <p class="part"><span>Part A</span> · The staff manual, step by step<br><span>Part B</span> · The owner's book, how and why</p>
-  <p class="draft">In this edition: A0, A1, A2, A4, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, B1, B2, B3, B4, B5, B6, B7, B8, B9</p>
+  <p class="draft">In this edition: A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, B1, B2, B3, B4, B5, B6, B7, B8, B9</p>
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    312 pictures, 39 still to be taken. Built from the chapters in docs/manual/chapters.
+    333 pictures, 47 still to be taken. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -252,10 +252,12 @@ figure.shot.phone img { max-width: 72mm; }
       <span class="s">A1.1 The business date · A1.2 The Dashboard · A1.3 Arrivals · A1.4 The stay panel · A1.5 In house · A1.6 Departures (Due out) · A1.7 Rooms: the house today · A1.8 Calendar: the fortnight chart · A1.9 Your day in five jobs · A1.10 The Front desk part of the menu</span></li>
     <li class="here"><span class="c">A2</span><a class="t" href="#a2">Bookings</a><span class="state">In this book</span>
       <span class="s">A2.1 The bookings screens · A2.2 A booking on the phone: the guest and the stay · A2.3 The ID, the advance, the folds and the three buttons · A2.4 Booked: the reference, the guest's page and the voucher · A2.5 A walk-in: booked and checked in at once · A2.6 A group: several rooms on one booking · A2.7 Waiting for the hotel · A2.8 Changing a booking: More options · A2.9 Cancel, void and no-show · A2.10 For the owner: cancellation terms and booking sources · A2.11 CRS bookings · A2.12 In short</span></li>
-    <li><span class="c">A3</span><span class="t">Check-in</span><span class="state">To come</span></li>
+    <li class="here"><span class="c">A3</span><a class="t" href="#a3">Check-in</a><span class="state">In this book</span>
+      <span class="s">A3.1 Checking a guest in, from Arrivals · A3.2 The room · A3.3 The guest's ID · A3.4 A guest from abroad: Form III at check-in · A3.5 The Form III screen · A3.6 An advance before check-in · A3.7 An early arrival · A3.8 Express check-in: a guest who sent their ID online · A3.9 Check-in in short</span></li>
     <li class="here"><span class="c">A4</span><a class="t" href="#a4">The guest's bill</a><span class="state">In this book</span>
       <span class="s">A4.1 Where the money is: the Finance screens · A4.2 Reading the guest's bill · A4.3 Posting a charge · A4.4 Taking a wrong charge off: Reverse · A4.5 A manager corrects a charge · A4.6 Changing the rate · A4.7 Taking a payment: Settle · A4.8 Two bills: when a company pays · A4.9 The interim bill · A4.10 Your cash drawer: Cashiering · A4.11 After check-out: the tax invoice and the credit note · A4.12 The bill in short</span></li>
-    <li><span class="c">A5</span><span class="t">Check-out</span><span class="state">To come</span></li>
+    <li class="here"><span class="c">A5</span><a class="t" href="#a5">Check-out</a><span class="state">In this book</span>
+      <span class="s">A5.1 Checking a guest out · A5.2 Taking the last payment · A5.3 Printing the bill for the guest · A5.4 The Check out window · A5.5 After the check-out time: Leaving after check-out time · A5.6 Leaving early · A5.7 A guest who paid too much: Refund · A5.8 A guest from abroad: the next destination · A5.9 After check-out: the tax invoice · A5.10 Before the night audit · A5.11 Check-out in short</span></li>
     <li class="here"><span class="c">A6</span><a class="t" href="#a6">Housekeeping</a><span class="state">In this book</span>
       <span class="s">A6.1 The housekeeping screens · A6.2 The Housekeeping board · A6.3 Giving rooms to a housekeeper · A6.4 Clean, then inspected · A6.5 With no signal · A6.6 Something broken: Report a repair · A6.7 A room out of service, and back · A6.8 Work orders · A6.9 Guest requests · A6.10 Wake-up calls · A6.11 Lost property · A6.12 Your day in short</span></li>
     <li class="here"><span class="c">A7</span><a class="t" href="#a7">Night audit</a><span class="state">In this book</span>
@@ -2127,6 +2129,447 @@ figure.shot.phone img { max-width: 72mm; }
   </table>
 </section>
 
+<!-- ══════════════════════════════ CHAPTER A3 ══════════════════════════════ -->
+<section class="chapter" id="a3">
+  <div class="chapter-head">
+    <span class="num">Chapter A3</span>
+    <h1>Check-in</h1>
+    <p>For reception, the hotel manager, the general manager, an Admin and the owner: everyone who may check guests in. How to check a guest in from Arrivals, give a room ahead of arrival, take the guest's ID, check in a guest from abroad and keep the Form III register, ask for an advance, let a guest in early, and check in a guest who sent their ID from their own page.</p>
+  </div>
+
+  <!-- A3.1 -->
+  <h2 id="a3-1"><span class="n">A3.1</span>Checking a guest in, from Arrivals</h2>
+  <p>Check-in is one window. The room and the ID are on the left, the stay is on the right, and there is one button at the foot, <span class="ui">Check in</span>. A line under the button says what is still missing, so nobody has to guess why it is grey.</p>
+
+  <h3>To check a guest in</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">Arrivals</span> (A1.3) and click the guest's row. The stay panel opens over the list (A1.4).</li>
+    <li>Click <span class="ui">Check in</span>, the orange button at the top of the panel. The window <span class="ui">Check in</span> and the guest's name opens, with the booking's reference and room type under the name.</li>
+    <li><b>The room.</b> If the booking holds a room, it is shown on one line, for example <span class="msg">“Room 204 · Inspected”</span>, with <span class="ui">Change room</span> beside it. If it holds none, the rooms are listed for you to pick (A3.2).</li>
+    <li><b>The ID.</b> Choose the <span class="ui">Document</span> and type its <span class="ui">Number</span>, or give a reason for skipping it (A3.3). A guest from abroad has more to fill in (A3.4).</li>
+    <li><b>The stay</b>, in the box on the right: the dates and the nights (or <span class="msg">“day use”</span>), the adults and children, the meal plan, <span class="ui">Rack rate</span> and <span class="ui">Offered</span>. <span class="ui">Offered</span> is the rate this guest pays (<span class="msg">“Complimentary”</span> for a complimentary stay); <span class="ui">Rack rate</span> is the room type's listed rate, or a dash where it has none. If the guest turned up with more or fewer people, or a different meal plan, click <span class="ui">Change</span> beside it: the <span class="ui">Adults</span> and <span class="ui">Children</span> boxes, or the <span class="ui">Meal plan</span> list, open for editing.</li>
+    <li>Ask the guest about offers and set <span class="ui">Guest agreed to offers</span>. Its own words: <span class="msg">“Ask them. Unticked, no offers are sent. Kept against their phone and email at every hotel of the group.”</span></li>
+    <li>Click <span class="ui">Check in</span> at the foot of the window.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A3-01">
+    <img src="img/A1-T6.png" alt="The stay panel of a guest due in: the name, reference, phone and GB, the orange Check in, More options, the Stay and Bill tabs, the Room line saying Deluxe, no room yet, and Charged, Paid and Due at the foot">
+    <figcaption><b>Figure A3-01.</b> The stay panel of a guest still to arrive: Check in is the orange button.</figcaption>
+    <ol class="callouts">
+      <li>The guest, the booking reference, the phone and, for a foreign guest, the nationality</li>
+      <li>Check in</li>
+      <li>More options: the rarer acts (A1.4)</li>
+      <li>The Stay and Bill tabs</li>
+      <li>The Room line: this booking has no room yet</li>
+      <li>The foot: nothing is charged until check-in, and Due counts the nights to come</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A3-02">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A3-02 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/arrivals</code>, a made-up guest due today (“A3 Test …”) whose booking holds a clean room, then <span class="ui">Check in</span></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk; nothing typed, the window not saved</dd>
+        <dt>Arrows</dt><dd>1 → the room line (“Room … · Clean”) and Change room; 2 → the Document list; 3 → the Number box; 4 → the stay box on the right (dates, adults and children, meal plan, Rack rate, Offered); 5 → Check in at the foot, with the line under it</dd>
+        <dt>File</dt><dd><code>img/A3-02.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A3-02.</b> The Check in window: the room and ID on the left, the stay on the right.</figcaption>
+    <ol class="callouts"><li>The room, and Change room</li><li>Document</li><li>Number</li><li>The stay: its dates, the party, the meal plan and the rate</li><li>Check in, and the line under it that says what is missing</li></ol>
+  </figure>
+
+  <p>When it goes through, a message says <span class="msg">“A3 Test Iyer is in house”</span> (the guest's name) with <span class="msg">“Room 209 · the arrivals count has dropped.”</span> and the panel behind changes: its status reads <span class="ui">In house</span> and its orange button becomes <span class="ui">Settle and check out</span> (A5). <b>The first night's room charge and its GST are posted to the bill at that moment</b>, so <span class="ui">Charged</span> at the foot is already filled in. A complimentary room is charged nothing. A hotel with no GST rule for rooms still checks the guest in, but posts nothing: the night audit, which will not run until that rule is set, posts the night.</p>
+
+  <figure class="shot" id="fig-A3-03">
+    <img src="img/A3-T11.png" alt="The panel of a guest just checked in: In house, Settle and check out, room 209 Superior, and Charged ₹4,304, Paid ₹0, Due ₹8,607.90 at the foot">
+    <figcaption><b>Figure A3-03.</b> Checked in: the panel says In house, and the first night is charged.</figcaption>
+    <ol class="callouts">
+      <li>Settle and check out: the panel now offers the next step</li>
+      <li>The Room line: the room the guest is in</li>
+      <li>Charged, Paid and Due: the first night is on the bill</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Where Check in is offered:</b> on a booking opened from Arrivals (Today), All bookings or Walk-ins. The Upcoming list is for planning and does not offer it (A1.3). It is shown only to people who may change bookings: the owner, an Admin, the GM, the hotel manager and reception. Housekeeping and the Revenue Manager read the list without it.</li>
+      <li><b>A walk-in</b> goes through this same check-in, from New booking's <span class="ui">Check in now</span> (A2.5), with the same checks.</li>
+      <li><b>A group's rooms are checked in one at a time</b>, each from its own booking. The panel lists the group's other rooms on the right (A2.6).</li>
+      <li><b>If it is refused,</b> the window stays open and a message, <span class="msg">“Could not check in”</span>, says why. Nothing was saved: the guest is still due in.</li>
+      <li>A red line at the top of the window, <span class="msg">“… has the phone or email of …, who is blacklisted. Reason: …. Check-in is not refused - you decide.”</span>, means a booking site's guest matches a blacklisted guest. It warns; a person decides (A1.3).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Check-in was five steps and eight clicks; the owner's rule is two pages or three clicks, so the room, the ID and the stay are on one page under one button: <span class="d">D27-158</span>, <span class="d">D27-163</span>. It is laid out like New booking, with the room and the ID on the left and the stay on the right, each fact with its Change: <span class="d">D27-236</span>. The first night is charged at check-in and the night audit never charges it twice: <span class="d">D27-204</span>; with no GST rule for rooms the guest is still checked in: <span class="d">D27-205</span>. Offers only to a guest who said yes, asked face to face: <span class="d">D25-39</span>. A blacklisted guest is warned of, never refused: <span class="d">D22-8</span>.</p>
+  </div>
+
+  <!-- A3.2 -->
+  <h2 id="a3-2"><span class="n">A3.2</span>The room</h2>
+  <p>A guest can be given a room the night before, or choose one at check-in. Either way, only a room that is ready and free can take a guest.</p>
+
+  <h3>To give a room ahead of arrival</h3>
+  <ol class="steps">
+    <li>Click <span class="ui">Assign room</span>, at the top right of <span class="ui">Rooms</span> and of the <span class="ui">Calendar</span> (A1.7). It is offered only to people who may change bookings.</li>
+    <li>The window <span class="ui">Assign a room</span> says <span class="msg">“Give an arriving booking a room before they get here.”</span> and the business date. Under <span class="ui">Waiting for a room</span> are the bookings that are confirmed, have a room type and no room number yet: the guest, the room type, the dates and the reference. Click one.</li>
+    <li>Under <span class="ui">Room</span>, choose a room from <span class="ui">Choose a room…</span>. Each line is the room number, its type and its rack rate, and <span class="msg">“(different type)”</span> after a room of another type. The list leaves out rooms that are out of service and rooms with a guest in them now.</li>
+    <li>Click <span class="ui">Assign the room</span>. The message is <span class="msg">“A3 Test Desai is in room 204”</span> (the guest and the room). If the room is not the type booked, it adds <span class="msg">“Note: … is not the room type they booked.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A3-04">
+    <img src="img/A3-T1.png" alt="The Assign a room window: the Waiting for a room list with A3 Test Desai chosen, the Room list showing 204 Superior, and Assign the room">
+    <figcaption><b>Figure A3-04.</b> Assign a room: give an arriving booking a room.</figcaption>
+    <ol class="callouts">
+      <li>Waiting for a room: the bookings with no room yet</li>
+      <li>Room: the room chosen, 204</li>
+      <li>Assign the room</li>
+    </ol>
+  </figure>
+
+  <p>If the room is taken for part of the stay or is out of service, the message says so, for example <span class="msg">“Room 204 is out of service.”</span>, and you choose again. When every arrival has a room, the window says <span class="msg">“Every arrival has a room”</span>. A booking that already has a room is not listed. To change a room already given, choose another at check-in with <span class="ui">Change room</span>: the room you check the guest into replaces the one the booking held.</p>
+
+  <h3>The room at check-in</h3>
+  <p>If the booking holds no room, the Check in window lists the rooms of the room type booked, one to a button. Each shows its number and its state. A room that can take the guest is white, with <span class="ui">inspected</span> or <span class="ui">clean</span>. The others are greyed and cannot be chosen; point at one to read why:</p>
+  <table>
+    <thead><tr><th style="width:30%">A greyed room says</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td><span class="ui">dirty</span>: <span class="msg">“Not cleaned yet.”</span></td><td>Housekeeping has not cleaned it (A6). Only a clean or inspected room can take a guest.</td></tr>
+      <tr><td><span class="ui">out-of-service</span>: <span class="msg">“Held out of service.”</span></td><td>It is blocked for repair (A6.7).</td></tr>
+      <tr><td><span class="ui">Occupied</span>: <span class="msg">“… is in this room.”</span></td><td>A guest is in it now.</td></tr>
+    </tbody>
+  </table>
+  <p>Click a free room. The list folds into one line, <span class="msg">“Room 301 · Inspected”</span>, and <span class="ui">Change room</span> opens it again. Until a room is chosen, <span class="ui">Check in</span> is grey and the line under it says <span class="msg">“Pick a room.”</span> If the room the booking holds has turned dirty, the line says <span class="msg">“Room 304: Not cleaned yet.”</span> and the list opens for you to choose another.</p>
+
+  <figure class="shot" id="fig-A3-05">
+    <img src="img/A3-T2.png" alt="The Check in window of a booking with no room: rooms 301 inspected, 306 inspected and 307 clean can be chosen; 302, 303 and 305 Occupied, 304 dirty and 308 out-of-service are greyed; Check in is grey with Pick a room under it">
+    <figcaption><b>Figure A3-05.</b> A booking with no room: the rooms of its type, and which can take the guest.</figcaption>
+    <ol class="callouts">
+      <li>A room that can take the guest: 301, inspected</li>
+      <li>A room that cannot: 304, dirty. Point at it to read why</li>
+      <li>Check in stays grey and says <span class="msg">“Pick a room.”</span></li>
+    </ol>
+  </figure>
+
+  <p>A room whose last guest has not left yet shows a yellow line, <span class="msg">“Omkar Shinde has not left this room yet.”</span>, and <span class="msg">“Guest still in”</span> beside the room. Check in is not greyed for it, but the check-in is refused: <span class="msg">“… is still in room 203. Check them out first, or choose another room.”</span></p>
+
+  <figure class="shot" id="fig-A3-06">
+    <img src="img/A3-T13.png" alt="The Check in window: Room 203, Guest still in, and the yellow line Omkar Shinde has not left this room yet">
+    <figcaption><b>Figure A3-06.</b> The room's last guest has not left.</figcaption>
+    <ol class="callouts"><li>Who has not left this room yet</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>The list offers the rooms of the type booked, and the room the booking already holds, whatever its type.</li>
+      <li><b>Another room type:</b> Assign room accepts it, and says <span class="msg">“Another type is allowed - it will be noted on the assignment.”</span> But the check-in itself puts a guest only in a room of the type booked: the server refuses another with <span class="msg">“That room is a different type from the one booked.”</span></li>
+      <li>The server asks the same questions as the window, and refuses by itself: a dirty room, <span class="msg">“That room has not been cleaned yet.”</span>; a room out of service, <span class="msg">“That room is held out of service.”</span>; a room held by another booking for part of the stay, <span class="msg">“Room 301 is held by … for part of that stay.”</span></li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A dirty room is shown, greyed, with the reason, rather than hidden: hiding it would teach nobody why. The check-in refuses a room a late guest is still in: <span class="d">D23-12</span>. The booked room on one line, the grid only when it is needed: <span class="d">D27-236</span>. A button the person may not use is hidden, not greyed: <span class="d">D24-18</span>.</p>
+  </div>
+
+  <!-- A3.3 -->
+  <h2 id="a3-3"><span class="n">A3.3</span>The guest's ID</h2>
+  <p>The ID is asked on the same window, under the room. Indian properties must record a guest's identity document. It can be skipped, but then the reason is kept in the stay's note.</p>
+  <ul>
+    <li><b>Nationality.</b> Two letters, <span class="msg">“IN”</span> for India: <span class="msg">“Two letters, IN for India. Anything else puts the stay on the Form III register.”</span> It starts on the nationality on the guest's record, else the hotel's own (A17.11). A guest from abroad is A3.4.</li>
+    <li><b>Document.</b> <span class="ui">Not recorded</span>, <span class="ui">Passport</span>, <span class="ui">Aadhaar</span>, <span class="ui">Driving licence</span>, <span class="ui">Voter ID</span> or <span class="ui">Other</span>. A hotel can leave some out and choose which one starts (A17.10, A17.11). Choosing one opens <span class="ui">Number</span>.</li>
+    <li><b>Number.</b> The screen checks it by its type. An Aadhaar is 12 digits, never starting with 0 or 1, with UIDAI's check digit right: <span class="msg">“That Aadhaar number is not right - a digit is mistyped. Check it against the card.”</span> A passport is 6 to 15 letters and digits: <span class="msg">“A passport number is 6 to 15 letters and digits, e.g. A1234567.”</span> Any other document: <span class="msg">“A document number is 4 to 40 characters.”</span> The message is in red under the boxes and Check in stays grey.</li>
+    <li><b>A photo of the ID.</b> Where the hotel keeps ID photos, the desk can add one for a guest who sent none: the front of the ID, the back if it has one, then a tick, <span class="msg">“The guest agreed to the hotel keeping this photo”</span>, and <span class="ui">Add the photo</span>. Cover the first eight digits of an Aadhaar first: <span class="msg">“A photo showing the full number will be removed and we will ask you again.”</span> It is kept encrypted for the owner, an Admin and the GM. Where the hotel cannot keep ID photos, the window says why in the server's words.</li>
+  </ul>
+
+  <h3>If the ID cannot be taken now</h3>
+  <ol class="steps">
+    <li>Leave <span class="ui">Document</span> on <span class="ui">Not recorded</span>.</li>
+    <li>Type <span class="ui">Reason for skipping</span>. It is required, for example <span class="msg">“Scanner offline - to be captured at breakfast”</span>.</li>
+    <li>Until the ID is recorded, or a reason is given, Check in stays grey: <span class="msg">“Record the ID document - type and number - or give a reason for skipping it.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A3-07">
+    <img src="img/A3-T3.png" alt="The Check in window with the Document left on Not recorded, the Reason for skipping box, and the line under the grey Check in">
+    <figcaption><b>Figure A3-07.</b> The ID skipped: a reason is needed.</figcaption>
+    <ol class="callouts">
+      <li>Document: left on Not recorded</li>
+      <li>Reason for skipping: required, kept in the stay's note</li>
+      <li>What Check in is waiting for</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A nationality that is not a country, such as ZZ, is refused: <span class="msg">“"ZZ" is not a country code. Type the two letters, e.g. IN, GB or US.”</span></li>
+      <li>"IN" typed in the box never replaces a foreign nationality already on the guest's record. A wrong nationality is corrected on the guest's record (A10.3).</li>
+      <li>One ID per stay: the guest the booking is under. The other adults' IDs are not asked.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The ID and Form III's boxes are one set of fields shared by check-in and New booking, so they cannot ask different questions: <span class="d">D27-158</span>. The hotel's own starting nationality and ID: <span class="d">D27-243</span>; ID types the hotel does not take are left out: <span class="d">D27-260</span>. "IN" never overwrites a foreign guest's nationality: <span class="d">D27-197</span>. The desk adds the ID photo for a guest who sent none: <span class="d">D27-210</span>. One ID per stay: <span class="d">D27-212</span>.</p>
+  </div>
+
+  <!-- A3.4 -->
+  <h2 id="a3-4"><span class="n">A3.4</span>A guest from abroad: Form III at check-in</h2>
+  <p>A guest whose nationality is anything but IN goes on the <b>Form III register</b>. Form III is the report of a foreign guest to the government's FRRO portal. It was called Form C until the 2025 Act. The arrival is reported within 24 hours of arrival, and the departure within 24 hours of leaving. The hotel is responsible for it.</p>
+
+  <h3>To check in a guest from abroad</h3>
+  <ol class="steps">
+    <li>Type the two letters of the guest's country in <span class="ui">Nationality</span> (for example GB). The Form III boxes open under the document.</li>
+    <li>Choose the <span class="ui">Document</span> and type its <span class="ui">Number</span>, as in A3.3. A passport is the usual one.</li>
+    <li>Fill in the starred boxes, which are needed now: <span class="ui">Visa or OCI number</span>, <span class="ui">Visa type</span>, <span class="ui">Phone in India</span>, <span class="ui">Arrived from</span>, <span class="ui">Purpose of visit</span> and <span class="ui">Previous place of stay</span>.</li>
+    <li>The other boxes can be filled in later, from the Form III screen (A3.5): mobile numbers, gender, date of birth, the passport's and the visa's issue and expiry, the address abroad, the portal's arrival details and a reference address in India.</li>
+    <li>Click <span class="ui">Check in</span>. Until the starred boxes are filled in it is grey, and the line under it says <span class="msg">“Form III still needs: Arrived from, Purpose of visit, Previous place of stay.”</span> (the boxes still blank).</li>
+  </ol>
+
+  <figure class="shot" id="fig-A3-08">
+    <img src="img/A3-T4.png" alt="The Check in window of a guest from GB: Nationality GB, Passport and its number, the Form III block with its note, and the starred Visa, Phone in India boxes; Check in is grey and says what Form III still needs">
+    <figcaption><b>Figure A3-08.</b> A guest from abroad: the Form III boxes.</figcaption>
+    <ol class="callouts">
+      <li>Nationality: two letters; anything but IN opens Form III</li>
+      <li>The Form III block, with its yellow bar and its note: the starred boxes are needed now</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>Nepal and Bhutan.</b> A citizen of Nepal (NP) or Bhutan (BT) needs no visa, so the two visa boxes are not asked.</li>
+    <li><b>An ID skipped for a reason.</b> The visa boxes are not asked either. The visit's boxes still are: the guest answers those, no scanner needed.</li>
+    <li><b>An expired passport or visa</b> is warned of, not refused: <span class="ui">Check in anyway</span> appears with <span class="msg">“The passport expired on 2026-01-15. It is recorded as typed.”</span> Until you switch it on, Check in stays grey: <span class="msg">“The document has expired: say whether to check in anyway.”</span> The date typed is kept as typed.</li>
+    <li>A date that cannot be right, or a phone that is not one, is refused in words: <span class="msg">“The passport expires before it was issued.”</span>, <span class="msg">“"abc" is not a phone number. Type 10 to 15 digits, e.g. +91 98765 43210.”</span></li>
+    <li>A guest from abroad is never checked in by express (A3.8): the desk always fills in Form III.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A3-09">
+    <img src="img/A3-T12.png" alt="The same window scrolled down: Form III still needs Arrived from, Purpose of visit, Previous place of stay; and the switch Check in anyway with The passport expired on 2026-01-15">
+    <figcaption><b>Figure A3-09.</b> What Form III still needs, and an expired passport.</figcaption>
+    <ol class="callouts">
+      <li>Form III still needs: the boxes still blank</li>
+      <li>Check in anyway: an expired passport is warned of, and recorded as typed</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>The server refuses by itself if a starred box is blank: <span class="msg">“Form III needs a foreign guest's visa or OCI number, visa type, phone in India, ….”</span></li>
+      <li>Each foreigner in the room needs their own Form III. The booking knows only its lead guest, so the Form III screen warns when a room holds more than one person (A3.5).</li>
+      <li>A test hotel's Form III card carries <span class="msg">“TEST · NOT VALID”</span>, so a practice guest's card is never filed.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Form C was replaced by Form III under the Immigration and Foreigners Act 2025: arrival and departure each within 24 hours, with more details: <span class="d">D27-25</span>. The law's own boxes are asked before check-in finishes and the rest may wait; an expired passport is warned of and recorded as typed. Nepal and Bhutan need no visa; an ID skipped for a reason takes its visa with it. The same boxes serve check-in, New booking and Complete details, so the three cannot ask different questions: <span class="d">D27-25</span>.</p>
+  </div>
+
+  <!-- A3.5 -->
+  <h2 id="a3-5"><span class="n">A3.5</span>The Form III screen</h2>
+  <p>Open <span class="ui">Form III</span> (under <span class="ui">Finance</span> in the menu, A4.1; or Find a screen, Ctrl K). It shows passport numbers, so only people who check guests in see it: the owner, an Admin, the GM, the hotel manager and reception.</p>
+  <p><b>This system does not file with the FRRO.</b> The screen says so itself. Filing happens on the government portal, where the guest's photo is taken. This screen is a <b>register</b>: it names who owes a filing, by when, and records the number the portal gives back.</p>
+
+  <h3>To record a filing</h3>
+  <ol class="steps">
+    <li>Read the badge beside the heading: <span class="msg">“1 due”</span> in yellow, or <span class="msg">“1 overdue”</span> in red. The line under the heading says <span class="msg">“Foreign guests reported to the FRRO: arrival and departure, each within 24 hours (Form III, earlier called Form C).”</span></li>
+    <li>Find the guest. A row shows the guest, their nationality, the room and how many are in it, and <span class="ui">Passport</span> (<span class="msg">“not on record”</span> in red where none is kept).</li>
+    <li>In the <span class="ui">Arrival</span> cell, read the time of check-in and <span class="ui">due</span> or <span class="ui">overdue</span> with the time it is due by. File it on the portal.</li>
+    <li>Click <span class="ui">Record number</span>, type the number the portal gives back in <span class="ui">Portal number</span>, and click <span class="ui">Save</span>. The number is required: <span class="ui">Save</span> stays grey until one is typed. The cell then reads <span class="ui">filed</span> with the number. For another person in the room, click <span class="ui">Add a number</span>.</li>
+    <li>When the guest has checked out, the <span class="ui">Departure</span> cell works the same way. Before that it says <span class="msg">“In house”</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A3-10">
+    <img src="img/A3-T5.png" alt="The Form III screen: the 1 due badge, the note This system does not file with the FRRO, a row for A3 Test Smith with passport A1234567, the Portal number box with Save and Cancel, Complete details and the printer icon">
+    <figcaption><b>Figure A3-10.</b> The Form III register.</figcaption>
+    <ol class="callouts">
+      <li>How many filings are due, or overdue</li>
+      <li>This system does not file with the FRRO</li>
+      <li>The passport on record</li>
+      <li>Portal number: type the number the portal gives back</li>
+      <li>Complete details: the boxes left for later</li>
+      <li>The printer: the Form III card for the guest to sign</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><span class="ui">Complete details</span> opens the same boxes as check-in, with the guest's answers in them. After check-out it also asks <span class="ui">Next destination</span> (A5.8). Click <span class="ui">Save</span>.</li>
+    <li>The printer icon opens the <span class="ui">Form III</span> card: the premises, the foreigner, the arrival, the departure and the portal's other boxes, with two signature lines, one for arrival and one for departure. Click <span class="ui">Print</span>. A blank box prints as a dash, so the desk sees what is still to ask. The guest signs it on arrival and on departure; a guest who cannot write signs with a thumb impression. Keep the card.</li>
+    <li>When nobody is owed: <span class="msg">“Every foreign national on record has been filed.”</span> With no foreign guest at all: <span class="msg">“No foreign nationals have stayed”</span>.</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The portal has no upload and no way for a program to file, so the screen is a register and says so: a hotel that believed the PMS had filed would stop filing, and find out at an inspection. The number is required because a register with no evidence reads as compliance and is not: <span class="d">D27-25</span>. Only the people who check guests in see passport numbers: <span class="d">D25-38</span>.</p>
+  </div>
+
+  <!-- A3.6 -->
+  <h2 id="a3-6"><span class="n">A3.6</span>An advance before check-in</h2>
+  <p>A hotel may ask for money before it gives the room. Its rule is set in Settings (A17.11), under <span class="ui">Advance before check-in</span>: <span class="ui">None</span> (where every hotel starts), <span class="ui">The first night</span> or <span class="ui">The whole stay</span>. It asks the agreed rate with its GST. What is already paid counts: an advance taken on New booking (A2.3), or any payment on the guest's own bill.</p>
+  <p>When the guest still owes it, <span class="ui">Check in</span> is grey and the line under it says how much, for example <span class="msg">“An advance of ₹4,303.95 is owed before check-in (the first night ₹4,303.95, paid ₹0). Take it on the Bill tab.”</span> With the rule on <span class="ui">The whole stay</span> it reads <span class="msg">“(the whole stay …, paid …)”</span>.</p>
+
+  <figure class="shot" id="fig-A3-11">
+    <img src="img/A3-T7.png" alt="The Check in window of a booking-site guest: Prepaid on the booking site switched off, and under the grey Check in the line An advance of ₹4,303.95 is owed before check-in">
+    <figcaption><b>Figure A3-11.</b> A booking-site guest who pays at the hotel: the advance is owed.</figcaption>
+    <ol class="callouts">
+      <li>Prepaid on the booking site: unticked</li>
+      <li>The advance owed, and what is already paid</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>It is never asked of</b> a company's booking, a room the group's host pays for, a complimentary room, a stay with no agreed rate, or a booking prepaid on a booking site.</li>
+    <li><b>A booking-site guest</b> has the switch <span class="ui">Prepaid on the booking site</span>, ticked at first, with <span class="msg">“Untick when the guest pays at the hotel: the advance before check-in is then asked.”</span> Untick it and the line under Check in is asked again at once.</li>
+    <li><b>Taking it:</b> the line says to take it on the Bill tab (A4.7), where Settle takes the payment; or ask for it when the booking is made, in New booking's Advance (A2.3).</li>
+    <li><b>There is no way round it at the desk.</b> A hotel that does not want an advance sets the rule to None.</li>
+  </ul>
+  <!-- WRITER'S NOTE (14 Oct, for the master; read in the code, not opened on screen): FolioPanel's Settle button is disabled when the posted
+       balance is not above zero, and a booking still due in has nothing posted (finance's folioBalance answers null with no live posting), so
+       "Take it on the Bill tab" may have no button to press for a guest who has paid nothing. D27-246 says the desk takes it on the Bill tab.
+       The bullet above only repeats what the screen says; the master was told in the report. -->
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The advance is a per-hotel rule, none to start, asked of the first night or the whole stay and never of a company's booking or a booking prepaid on a booking site: <span class="d">D27-243</span>, <span class="d">D27-246</span>. There is no override: the refusal names the amount, and the desk takes it on the Bill tab, or the hotel sets None: <span class="d">D27-246</span>.</p>
+  </div>
+
+  <!-- A3.7 -->
+  <h2 id="a3-7"><span class="n">A3.7</span>An early arrival</h2>
+  <p>There are two kinds of early, and a yellow box on the Check in window says which. Both need a reason, and both are allowed: this is a hotel, and a guest off an overnight train is a normal day.</p>
+
+  <h3>Before the hotel's check-in time</h3>
+  <p>The booking is for today, but it is before the time rooms are ready (Settings, <span class="ui">Rooms ready from</span>, A17.11). The box says <span class="msg">“Rooms are ready from 14:00.”</span> and then whether the hotel charges: <span class="msg">“This property does not charge for an early arrival.”</span> or <span class="msg">“An early arrival is ₹….”</span> The question is asked of the server, so the answer is the hotel's clock, not the computer's.</p>
+  <ol class="steps">
+    <li>Type <span class="ui">Why the room is being given early</span>. It is required, for example <span class="msg">“Overnight train, room vacant and clean”</span>. Until then Check in is grey: <span class="msg">“Say why the room is being given early.”</span></li>
+    <li>Where there is a charge, the owner, the GM and a group administrator also have a tick, <span class="ui">Waive the charge.</span> It reads <span class="msg">“The reason is still recorded, and its absence from the bill is visible.”</span> Anybody else records the reason and the charge goes on.</li>
+    <li>Click <span class="ui">Check in</span>. The charge, with its GST, goes on the bill under Room, at the room's own GST rate.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A3-12">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A3-12 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>A made-up guest due today (“A3 Test …”), their <span class="ui">Check in</span> window, taken before the hotel's check-in time on the property's clock (or with <span class="ui">Rooms ready from</span> set later than now, put back after)</dd>
+        <dt>Sign in as</dt><dd>General Manager (so the Waive tick shows where there is a charge)</dd>
+        <dt>Window</dt><dd>1280 × 800, desk; scrolled to the yellow box; the window not saved</dd>
+        <dt>Arrows</dt><dd>1 → the yellow box (“Rooms are ready from … This property does not charge for an early arrival.”); 2 → Why the room is being given early; 3 → the line under the grey Check in</dd>
+        <dt>File</dt><dd><code>img/A3-12.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A3-12.</b> Arriving before the hotel's check-in time.</figcaption>
+    <ol class="callouts"><li>Rooms are ready from, and what an early arrival costs</li><li>Why the room is being given early: required</li><li>Check in waits for the reason</li></ol>
+  </figure>
+
+  <h3>Before the booked day</h3>
+  <p>The booking is for a later day and the guest is standing here now. The box says <span class="msg">“This booking is for 14 Oct 2026. Checking in now moves it to today, so tonight is charged.”</span> Type the reason, as above. Checking in moves the booking: the arrival becomes today, which is what happened, and the room is held from today.</p>
+  <p>More than a day early, the first press of <span class="ui">Check in</span> shows the move before anything happens: <span class="msg">“This moves the arrival from 14 Oct 2026 to 11 Oct 2026: 6 nights, ₹18,270.00 with GST.”</span> Nothing moves until you click <span class="ui">Confirm</span>. <span class="ui">Cancel</span> leaves the booking as it was. Where there is no GST rule for the rate, the figure is before GST, and a complimentary stay says <span class="msg">“complimentary.”</span></p>
+
+  <figure class="shot" id="fig-A3-13">
+    <img src="img/A3-T6.png" alt="The Check in window of a booking three days ahead: the yellow box This booking is for 14 Oct 2026, the reason typed, the footer This moves the arrival from 14 Oct 2026 to 11 Oct 2026, and Cancel and Confirm">
+    <figcaption><b>Figure A3-13.</b> A booking three days ahead: the move is shown before Confirm.</figcaption>
+    <ol class="callouts">
+      <li>This booking is for a later day, and checking in moves it to today</li>
+      <li>What the move does: the new dates, the nights and what the stay now costs</li>
+      <li>Confirm: only now does the booking move</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Both kinds can apply at once. The box then gives the date sentence, and after it what an early arrival costs.</li>
+      <li>The room is still checked for the <b>whole</b> stay. A room somebody else has tomorrow is refused, with the other booking's reference: <span class="msg">“Room 301 is held by … for part of that stay.”</span></li>
+      <li>Only the owner, the GM and a group administrator may waive. The server asks again: <span class="msg">“Setting that charge aside is a manager's decision. Record it and let it charge, or ask a manager to waive it.”</span></li>
+      <li>The fee is set on Settings, Money, Extra charges (A17.9). Where none is set, the box says the property does not charge.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A guest in a room that is not ready is a decision, not a formality, so it is allowed but never silent: somebody says why, their name goes with it, and any charge reaches the bill. More than a day early used to be refused; it is now allowed, warned of and confirmed: <span class="d">D27-193</span>. The early fee sits under Room on the bill: <span class="d">D27-223</span>. The booking moves with the guest, and its room hold with it: <span class="d">D27-205</span>.</p>
+  </div>
+
+  <!-- A3.8 -->
+  <h2 id="a3-8"><span class="n">A3.8</span>Express check-in: a guest who sent their ID online</h2>
+  <p>A guest can send their ID and address from their own page before they arrive. The page's link comes with the voucher, and the desk can send it again (A2.4, A10.7). Online check-in is on for every hotel unless the hotel switches it off. A guest cannot pay or choose a room from their page.</p>
+  <p>What the guest sends is not on their record until the desk has looked at the real ID and confirmed it. Then, at check-in, the ID is not typed again.</p>
+
+  <h3>To confirm what a guest sent</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">Online check-in</span> (under <span class="ui">Front desk</span>, A1.10). Under <span class="ui">Details waiting to be checked</span>, each card shows the guest, the booking's reference and when it was sent, then what they typed: the kind of ID and its number (an Aadhaar shows only its last four digits, a passport shows whole), a passport's expiry, a visa, the address, and the photo of the ID if they sent one, to look at beside what they typed.</li>
+    <li>Look at the guest's real ID. If it matches, click <span class="ui">Confirm against the ID</span>.</li>
+    <li>If it is not right, click <span class="ui">Not right - take them at the desk</span>. The desk then takes the ID at check-in as usual.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A3-14">
+    <img src="img/A3-T8.png" alt="Online check-in with A3 Test Desai's details waiting: Aadhaar ...3458 and his address, Confirm against the ID, and Not right - take them at the desk">
+    <figcaption><b>Figure A3-14.</b> Online check-in: details waiting for the desk.</figcaption>
+    <ol class="callouts">
+      <li>What the guest typed: the kind of ID with its last four digits, and the address</li>
+      <li>Confirm against the ID</li>
+      <li>Not right - take them at the desk</li>
+    </ol>
+  </figure>
+
+  <h3>At check-in</h3>
+  <p>While details are waiting that nobody has confirmed, the ID step of the Check in window says <span class="msg">“This guest sent their ID details online - check them on Online check-in”</span>. The link opens in a new tab, so the check-in in progress is not lost.</p>
+
+  <figure class="shot" id="fig-A3-15">
+    <img src="img/A3-T10.png" alt="The Check in window of a guest whose details are waiting: This guest sent their ID details online - check them on Online check-in, above the ordinary ID boxes">
+    <figcaption><b>Figure A3-15.</b> Details waiting: a line, with a link, in the ID step.</figcaption>
+    <ol class="callouts"><li>The line about details waiting, with its link to Online check-in</li></ol>
+  </figure>
+
+  <p>Once the desk has confirmed them, the ID step shows the confirmed ID in place of the boxes: <span class="msg">“ID confirmed from online check-in: Aadhaar ••••••••••3458”</span>, with only the last four digits. Nothing more is asked about the ID, and <span class="ui">Check in</span> is orange as soon as the room is chosen. <span class="ui">Use a different ID</span> opens the usual boxes again.</p>
+
+  <figure class="shot" id="fig-A3-16">
+    <img src="img/A3-T9.png" alt="The Check in window after the desk confirmed the ID: ID confirmed from online check-in, Aadhaar with the last four digits, Use a different ID, and the orange Check in">
+    <figcaption><b>Figure A3-16.</b> The ID confirmed from online check-in.</figcaption>
+    <ol class="callouts">
+      <li>The confirmed ID, with only its last four digits</li>
+      <li>Use a different ID</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Only this stay's own online check-in counts.</b> A document kept from an earlier visit never does.</li>
+      <li><b>A guest from abroad is never express.</b> The desk fills in their Form III (A3.4).</li>
+      <li>Only the people who run the desk see these screens and the link: the owner, an Admin, the GM, the hotel manager and reception.</li>
+      <li>Confirming is the clerk's act, under the clerk's name. Nothing the guest sends reaches their record or Form III unchecked.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Everything the guest sends is a submission that the desk confirms against the ID, under the clerk's name: <span class="d">D21-8</span>. An Aadhaar is shown as its last four digits on every screen: <span class="d">D21-18</span>. An Indian guest whose ID the desk confirmed just collects the key; a foreign guest still goes through the full check: <span class="d">D27-236</span>. Express counts only this stay's own confirmed submission: <span class="d">D27-242</span>. Online check-in is on for every hotel: <span class="d">D27-281</span>.</p>
+  </div>
+
+  <!-- A3.9 -->
+  <h2 id="a3-9"><span class="n">A3.9</span>Check-in in short</h2>
+  <table>
+    <thead><tr><th style="width:30%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>A guest has arrived</td><td>Arrivals, the guest's row, Check in. Fill the window, then Check in.</td><td>A3.1</td></tr>
+      <tr><td>The booking has no room</td><td>Give one the night before with Assign room, or pick a clean or inspected one in the window.</td><td>A3.2</td></tr>
+      <tr><td>Check in is grey</td><td>Read the line under it: it names the first thing missing.</td><td>A3.1</td></tr>
+      <tr><td>The ID</td><td>Document and Number, or Reason for skipping.</td><td>A3.3</td></tr>
+      <tr><td>A guest from abroad</td><td>Nationality as two letters, then the starred Form III boxes.</td><td>A3.4</td></tr>
+      <tr><td>The Form III filing</td><td>Form III screen: Record number, the portal's number, Save.</td><td>A3.5</td></tr>
+      <tr><td>An advance is owed</td><td>Take it before check-in. A booking-site guest who pays here: untick Prepaid on the booking site.</td><td>A3.6</td></tr>
+      <tr><td>A guest is early</td><td>Say why the room is given early. Before the booked day: Check in, then Confirm.</td><td>A3.7</td></tr>
+      <tr><td>The guest sent their ID online</td><td>Online check-in: Confirm against the ID. Check-in then asks nothing more.</td><td>A3.8</td></tr>
+      <tr><td>Done</td><td>The guest is In house and the first night is on the bill. Next: the bill (A4), and check-out (A5).</td><td>A3.1</td></tr>
+    </tbody>
+  </table>
+</section>
+
 <!-- ══════════════════════════════ CHAPTER A4 ══════════════════════════════ -->
 <section class="chapter" id="a4">
   <div class="chapter-head">
@@ -2719,6 +3162,480 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Money not a payment</td><td>Cashiering, In and out of the drawer, Record.</td><td>A4.10</td></tr>
       <tr><td>End of your shift</td><td>Cashiering: count, Save the count, Close and hand over.</td><td>A4.10</td></tr>
       <tr><td>After check-out</td><td>Invoices: Issue. A wrong invoice: a credit note.</td><td>A4.11</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════════════════════ CHAPTER A5 ══════════════════════════════ -->
+<section class="chapter" id="a5">
+  <div class="chapter-head">
+    <span class="num">Chapter A5</span>
+    <h1>Check-out</h1>
+    <p>For reception, the hotel manager, the general manager, an Admin and the owner: everyone who may check guests out. How to take the last payment, print the bill, check a guest out, what happens when a guest leaves after the check-out time or before the booked day, how to give back money a guest paid too much, a foreign guest's next destination, the tax invoice that follows, and why every departure is checked out before the night audit.</p>
+  </div>
+
+  <!-- A5.1 -->
+  <h2 id="a5-1"><span class="n">A5.1</span>Checking a guest out</h2>
+  <p>Check-out ends the stay: the bill closes, the room goes to housekeeping as dirty, and the guest leaves the In house list. It is done on the guest's <span class="ui">Bill</span> tab, with the last button on it, <span class="ui">Check out</span>. The button opens only when the bill owes nothing.</p>
+
+  <h3>To check a guest out</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">Due out</span> (A1.6), the guests leaving today, and click the guest. The panel opens on the <span class="ui">Bill</span> tab. For any other guest, one who leaves early or stays past the date, open <span class="ui">In house</span> (A1.5), click the guest and click <span class="ui">Settle and check out</span>, the orange button at the top of the panel. From <span class="ui">Folios</span> (A4.1) a guest also opens on the bill.</li>
+    <li>Read the bill (A4.2). <span class="ui">Total charges</span> is everything posted, with tax.</li>
+    <li>If money is owed, take the payment first (A5.2). If the guest asks to see the bill, print it (A5.3).</li>
+    <li>For a guest from abroad, type their <span class="ui">Next destination</span> (A5.8).</li>
+    <li>Click <span class="ui">Check out</span>, the full-width button at the foot of the bill. It turns orange once nothing is owed.</li>
+    <li>The window <span class="ui">Check … out?</span> asks you to be sure (A5.4). Click <span class="ui">Check out</span> again.</li>
+    <li>Depending on the date and the hour, the window may first ask why the guest is leaving late (A5.5) or early (A5.6).</li>
+  </ol>
+  <p>When it is done, a message says <span class="msg">“A5 Test Rane checked out”</span> (the guest's name) with <span class="msg">“Room 303 is now dirty and on housekeeping's board.”</span></p>
+
+  <figure class="shot" id="fig-A5-01">
+    <img src="img/A1-T16.png" alt="The stay panel of a guest in the house: the orange Settle and check out, the Room line 205 Superior, and Charged, Paid and Due at the foot">
+    <figcaption><b>Figure A5-01.</b> A guest in the house: Settle and check out opens the bill.</figcaption>
+    <ol class="callouts">
+      <li>Settle and check out: it opens the Bill tab</li>
+      <li>The Room line: the room the guest is in</li>
+      <li>Charged, Paid and Due: what is posted, what is paid, and what is owed (red while money is owed)</li>
+    </ol>
+  </figure>
+
+  <h3>When Check out is grey</h3>
+  <p>A button that cannot be used yet says why: the reason is written under it in red, and shows when you point at the button (Figure A4-04).</p>
+  <table>
+    <thead><tr><th style="width:42%">It says</th><th>What to do</th></tr></thead>
+    <tbody>
+      <tr><td><span class="msg">“₹3,884 is still owed on this bill.”</span> (the amount owed)</td><td>Take the payment: Settle (A5.2).</td></tr>
+      <tr><td><span class="msg">“This bill is overpaid. Refund the difference first.”</span></td><td>Give the money back (A5.7).</td></tr>
+      <tr><td>Nothing under it, and a <span class="ui">Next destination</span> box above it</td><td>A guest from abroad: type where they go next (A5.8).</td></tr>
+      <tr><td><span class="msg">“This guest is not in house.”</span></td><td>The guest has not been checked in (A3).</td></tr>
+      <tr><td><span class="msg">“Already checked out.”</span></td><td>Nothing to do.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Who may:</b> the owner, an Admin, the GM, the hotel manager and reception. A role that sees bills but may not change bookings, such as the accountant, sees the bill without the button.</li>
+      <li>A stay with no bill at all shows a dash, never ₹0, and can be checked out without settling.</li>
+      <li>A guest stays <span class="ui">In house</span> until checked out, even after the departure date has passed (A1.5).</li>
+      <li><b>A group's rooms</b> are checked out one at a time, each from its own booking. A room whose nights a group's company pays has those nights on the group's own bill, so the guest's Check out counts only the guest's own bill (A4.8). The group's bill is settled on the group's page (A2.6).</li>
+      <li><b>A guest who checks in and out on the same day</b> owes that night, charged at check-in (A3.1): Check out waits until it is paid, or the charge is reversed with a reason (A4.4).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Check-out is shown greyed with its reason, never hidden: a button that vanishes teaches nobody why. It asks "are you sure" first, because it closes the bill and sends the room to housekeeping: <span class="d">D27-117</span>. It follows the one balance on screen, so it opens when a payment brings the bill to zero, and no longer greys with no reason for a few seconds after a payment: <span class="d">D27-313</span>. A guest's own figures count only the guest's own bill: <span class="d">D27-226</span>. A stay with no bill shows a dash: <span class="d">D17-16</span>.</p>
+  </div>
+
+  <!-- A5.2 -->
+  <h2 id="a5-2"><span class="n">A5.2</span>Taking the last payment</h2>
+  <p>Check out needs the bill at zero. Take the payment with <span class="ui">Settle</span>: choose the <span class="ui">Method</span>, check the <span class="ui">Amount</span> (it is filled in with what is owed; change it only for a part payment) and click <span class="ui">Take payment</span>. A4.7 has every step and every warning; a stay with two bills settles each bill on its own (A4.8).</p>
+
+  <h3>Cash is taken to the rupee</h3>
+  <p>A room bill has paise in it, because GST is worked out on each night's rate, and nobody hands over paise. So when the method is cash, the cash taken is the <b>nearest rupee</b>, and the window shows how: under <span class="ui">Paying</span> it gives the exact amount, then <span class="ui">Cash to take</span> and <span class="ui">Round-off</span>, a plus or a minus, never more than 50 paise. For the demo's one night of ₹3,699 with its GST, for example, the bill is ₹3,883.95: <span class="ui">Cash to take</span> is ₹3,884.00 and <span class="ui">Round-off</span> is +₹0.05. The message afterwards reads <span class="msg">“₹3,884.00 cash taken”</span>.</p>
+  <ul>
+    <li>The bill is credited with the <b>exact</b> amount, so it settles to ₹0 and Check out opens. The GST invoice keeps its exact figures.</li>
+    <li>The drawer expects what was really put in it: the rupees taken (A4.10).</li>
+    <li>UPI, cards and every other way pay the exact amount, with no round-off.</li>
+    <li>The restaurant's own Round off is a different thing (A8).</li>
+  </ul>
+
+  <figure class="shot" id="fig-A5-02">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A5-02 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>The Bill tab of a made-up guest in house (“A5 Test …”) whose bill has paise, then <span class="ui">Settle</span>, Method <span class="ui">Cash</span>; not saved (Cancel)</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → Method; 2 → the Amount box; 3 → “Cash to take”; 4 → “Round-off”; 5 → Take payment</dd>
+        <dt>Before taking it</dt><dd>The drawer must be open (Cashiering), or the cash is refused.</dd>
+        <dt>File</dt><dd><code>img/A5-02.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A5-02.</b> Settle bill in cash: the cash to take, and the round-off.</figcaption>
+    <ol class="callouts"><li>Method: Cash</li><li>Amount: the exact bill</li><li>Cash to take: to the nearest rupee</li><li>Round-off: what the rupee adds or takes off</li><li>Take payment</li></ol>
+  </figure>
+
+  <p>The payment shows under <span class="ui">Payments received</span>, for example <span class="msg">“Received - UPI”</span>, and the bill's closing row reads <span class="ui">Settled</span>. <span class="ui">Check out</span> turns orange as soon as the bill reads zero.</p>
+
+  <figure class="shot" id="fig-A5-03">
+    <img src="img/A5-T6.png" alt="The Bill tab of a guest on the last night, paid by UPI: Balance ₹0 Settled, Received - UPI under Payments received, and the orange Check out">
+    <figcaption><b>Figure A5-03.</b> Paid, nothing to come: Check out is open.</figcaption>
+    <ol class="callouts">
+      <li>The payment, under Payments received</li>
+      <li>Check out: orange, because nothing is owed</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A payment is reversed only by the owner, an Admin, the GM or the accountant (A4.4). Reverse a payment taken by mistake before the guest leaves.</li>
+      <li>More than the bill is held as the guest's credit, once the desk ticks <span class="ui">Hold it as the guest's credit</span> (A4.7). The bill is then overpaid, and Check out waits for the refund (A5.7).</li>
+      <li>Cash above ₹1,00,000 at once asks for the guest's PAN, or Form 97 (A4.7).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Nobody hands over 37 paise, so the drawer was a few paise over at every count. Only cash is rounded, the bill is credited exactly and the invoice never changes: <span class="d">D27-317</span>. The rule is the room bill's: the restaurant keeps its own Round off. More than the bill is warned of, then held as the guest's credit: <span class="d">D27-4</span>, <span class="d">D27-11</span>.</p>
+  </div>
+
+  <!-- A5.3 -->
+  <h2 id="a5-3"><span class="n">A5.3</span>Printing the bill for the guest</h2>
+  <p>The guest asks to see the bill before paying. On the Bill tab click <span class="ui">Interim bill</span>. The window shows the print preview. Click <span class="ui">Print</span>: the bill opens on a page of its own, and you print it from there (A4.9).</p>
+  <ul>
+    <li>It says <span class="msg">“Interim bill”</span>, with the hotel's name, its address and GSTIN, the booking's reference, then the <span class="ui">Guest</span>, the <span class="ui">Room</span> and the <span class="ui">Stay</span>.</li>
+    <li>Every line is under its section (Room, Restaurant, Bar, Other charges), with its subtotal and its tax.</li>
+    <li>At the foot: <span class="ui">Net</span>, the tax in its two halves, <span class="ui">CGST</span> and <span class="ui">SGST</span> (and <span class="ui">VAT</span> on drinks, on its own line), the <span class="ui">Total</span> and <span class="ui">Paid</span>. Then <span class="ui">Outstanding</span>; or, while tonight's night is not posted yet, <span class="ui">To be posted tonight</span> and <span class="ui">Amount due</span>.</li>
+    <li>The total is the exact figure, with no round-off.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A5-04">
+    <img src="img/A5-T3.png" alt="The Interim bill print preview for A5 Test Rane: the INTERIM BILL heading, the hotel, the guest, room 303 and the stay, one night of ₹3,699, and the Net, CGST, SGST, Total and Paid block; the Print button above">
+    <figcaption><b>Figure A5-04.</b> The interim bill: the print preview.</figcaption>
+    <ol class="callouts">
+      <li>The heading: Interim bill, with the booking's reference under it</li>
+      <li>Print: the bill opens on a page of its own</li>
+      <li>Net, CGST, SGST, the total and what is paid</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>It is <b>not a tax invoice</b>. It carries the booking's reference and no invoice number; the numbered invoice is issued after check-out (A5.9).</li>
+      <li>Printing it closes nothing. If the guest is charged more, a new copy shows it.</li>
+      <li>A test hotel's bill is stamped <span class="msg">“TEST · NOT VALID”</span> and carries no GSTIN.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The desk's print says "Interim bill" before check-out and after, so nobody takes it for the numbered tax invoice: <span class="d">D22-7</span>; the button says the same: <span class="d">D24-25</span>. Its total is the exact figure, so the Total and the amount outstanding are the same number: <span class="d">D27-126</span>. The test hotel's mark: <span class="d">D27-296</span>.</p>
+  </div>
+
+  <!-- A5.4 -->
+  <h2 id="a5-4"><span class="n">A5.4</span>The Check out window</h2>
+  <p>Check out asks first. Click <span class="ui">Check out</span> on the bill and a small window opens: <span class="ui">Check A5 Test Rane out?</span> (the guest's name), the room under it, and the line <span class="msg">“The bill closes and the room goes to housekeeping as dirty.”</span> <span class="ui">Not yet</span> closes the window and changes nothing. <span class="ui">Check out</span> finishes it.</p>
+  <ul>
+    <li>The bill closes. Its lines stay as they are.</li>
+    <li>The room is released and goes to <span class="ui">Needs cleaning</span> on housekeeping's board (A6.2).</li>
+    <li>A loyalty member's points for the stay are added (A14.4).</li>
+    <li>The guest's last bill is ready to be invoiced (A5.9).</li>
+  </ul>
+
+  <figure class="shot" id="fig-A5-05">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A5-05 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>The Bill tab of a made-up guest due out today (“A5 Test …”), bill paid, <span class="ui">Check out</span> clicked; before the hotel's check-out time on the property's clock, so no question comes first; the window not confirmed (Not yet)</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the title “Check … out?”; 2 → “The bill closes and the room goes to housekeeping as dirty.”; 3 → Not yet; 4 → Check out</dd>
+        <dt>File</dt><dd><code>img/A5-05.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A5-05.</b> Check out asks first.</figcaption>
+    <ol class="callouts"><li>Who, and which room</li><li>What check-out does</li><li>Not yet: nothing changes</li><li>Check out</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>If the server refuses, a message, <span class="msg">“Could not check out”</span>, says why, and the guest stays in house.</li>
+      <li>The server asks the same questions as the screen and decides: <span class="msg">“₹… is still outstanding. Settle the folio, or transfer it to the city ledger, before checking out.”</span> and <span class="msg">“The guest has overpaid by ₹…. Refund it before checking out.”</span></li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A check-out closes the bill and sends the room to housekeeping, and it used to go on one click: <span class="d">D27-117</span>. A room is vacated and made dirty by the same step that releases it, so it reaches housekeeping's board the moment the guest walks out.</p>
+  </div>
+
+  <!-- A5.5 -->
+  <h2 id="a5-5"><span class="n">A5.5</span>After the check-out time: Leaving after check-out time</h2>
+  <p>A guest still in the room after the hotel's check-out time has kept it out of tonight's sale, and housekeeping cannot turn it round for an arrival already on the chart. So a late departure is written down. The hotel's check-out time is set on Settings, <span class="ui">Check-out by</span> (A17.11), for example 11:00.</p>
+  <p>The window <span class="ui">Leaving after check-out time</span> comes up when you confirm <span class="ui">Check out</span>, and only when <b>all three</b> are true:</p>
+  <ul>
+    <li>the hotel's business date is <b>on or after the departure date</b> (A1.1);</li>
+    <li>the hour, on the hotel's own clock, is past its check-out time;</li>
+    <li>the stay is <b>not a day use</b>, which has its own hours.</li>
+  </ul>
+  <p>It is asked <b>once</b> for a stay: a late departure already recorded, with its reason and its charge or its waiver, is not asked again or charged again.</p>
+
+  <h3>To record a late departure</h3>
+  <ol class="steps">
+    <li>Click <span class="ui">Check out</span> on the bill and confirm. The window <span class="ui">Leaving after check-out time</span> opens with the guest and the room. Its yellow note starts <span class="msg">“Check-out here is 11:00.”</span></li>
+    <li>Type <span class="ui">Why</span>. It is required: a flight time, a manager's say-so, a room not ready on arrival (<span class="msg">“Late flight, agreed at reception”</span>).</li>
+    <li>Read the line under it. Where the hotel does not charge: <span class="msg">“This property does not charge for a late departure, so nothing will be added. It is still recorded.”</span> Where it does: <span class="msg">“₹1,000 will be added to the folio. A manager can waive it - that is a decision about money and it is theirs to make.”</span> The owner, the GM and a group administrator have a tick instead, <span class="ui">Waive the ₹1,000 charge</span>: <span class="msg">“Your decision, recorded against your name. The late departure is still written down - waiving the money does not unwrite the fact.”</span></li>
+    <li>Click <span class="ui">Check out</span>. If a charge was added, it goes on the bill under Room, with its GST, before the balance is looked at.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A5-06">
+    <img src="img/A5-T1.png" alt="The Leaving after check-out time window for A4 Test Kulkarni, room 305: the yellow note, Why with a reason typed, the line This property does not charge for a late departure, and Cancel and Check out">
+    <figcaption><b>Figure A5-06.</b> Leaving after check-out time: the reason, and what it costs.</figcaption>
+    <ol class="callouts">
+      <li>The hotel's check-out time, and why this is written down</li>
+      <li>Why: required</li>
+      <li>What a late departure costs here, and who may waive it</li>
+      <li>Check out</li>
+    </ol>
+  </figure>
+
+  <p>If a charge was added, the bill is no longer zero, so the check-out cannot finish. The window closes with <span class="msg">“Recorded - now settle the bill”</span> and the amount. Take the payment (A5.2), then click <span class="ui">Check out</span> again: it does not ask again and charges nothing more. If nothing is owed after the late departure (no charge, or it was waived), the guest is checked out at once, and the message says so: <span class="msg">“The late departure is recorded. The property does not charge for one.”</span>, <span class="msg">“₹… added to the folio.”</span> or <span class="msg">“The late departure is recorded and the charge waived - both are on the stay.”</span></p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Anyone at the desk records a late departure; only a manager waives the charge.</b> The server asks again, and refuses a waiver from anybody else.</li>
+      <li>A guest who leaves <b>before</b> the departure date is not asked this at any hour and is never charged a late fee (A5.6). The date that counts is the business date, not the clock's.</li>
+      <li>A day use is never asked and never charged a late fee.</li>
+      <li>The check-out time and the late fee are the hotel's own settings (A17.9, A17.11). Where no fee is set, the window says so.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The server used to refuse a late check-out without a reason, and the screen had no way to give one: press, read, press again. Now the window is the way through. Recording is an observation, waiving is a decision about money, so the waiver is a manager's. The question is asked only on or after the departure date, and once, so a guest who paid after it is not asked or charged again: <span class="d">D27-314</span>. A day use is never late: <span class="d">D27-319</span>. The late fee sits under Room on the bill: <span class="d">D27-223</span>.</p>
+  </div>
+
+  <!-- A5.6 -->
+  <h2 id="a5-6"><span class="n">A5.6</span>Leaving early</h2>
+  <p>A guest who leaves <b>before</b> the booked departure date, by the hotel's business date, is leaving early, at any hour. They are never asked <span class="ui">Leaving after check-out time</span> and never charged a late fee. They are asked one other thing: why.</p>
+
+  <h3>To check out a guest who is leaving early</h3>
+  <ol class="steps">
+    <li>Find them on <span class="ui">In house now</span> (A1.5): a guest who leaves before the departure date is not on Due out. Click the guest and click <span class="ui">Settle and check out</span>.</li>
+    <li>On the bill, <span class="ui">Charges to come</span> are the nights the night audit has not posted yet (A4.2). They are only shown, and <span class="ui">Due</span> counts them. But <b>Check out needs only what is posted</b>: take the payment for that (A5.2).</li>
+    <li>When what is posted is paid, <span class="ui">Check out</span> opens, even with nights still to come.</li>
+    <li>Click <span class="ui">Check out</span>. The window shows the leaving-early step above its usual line: <span class="msg">“Booked to leave 13 Oct 2026. Today is 11 Oct 2026.”</span> and <span class="msg">“Nights not stayed: 1 - it is not charged and the room goes back on sale.”</span> (For more than one night: <span class="msg">“they are not charged”</span>.) For a stay from a booking site it adds <span class="msg">“Tell the booking site the guest left early.”</span></li>
+    <li>Type <span class="ui">Why are they leaving early?</span> It is required, and kept on the booking: <span class="msg">“Plans changed”</span>. <span class="ui">Check out</span> in the window stays grey until it is typed.</li>
+    <li>Click <span class="ui">Check out</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A5-07">
+    <img src="img/A5-T4.png" alt="The Bill tab of A5 Test Rane, leaving a day early: the dashed box Charges to come with one night, Received - UPI under Payments received, and the orange Check out; Due ₹3,883.95 at the foot">
+    <figcaption><b>Figure A5-07.</b> A guest leaving a day early: what is posted is paid, a night is still to come, and Check out is open.</figcaption>
+    <ol class="callouts">
+      <li>The payment: what is posted so far is paid</li>
+      <li>Check out: open, although a night is still to come</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A5-08">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A5-08 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>The Bill tab of a made-up guest in house whose booked departure is later than the business date (“A5 Test …”), what is posted paid, then <span class="ui">Check out</span>; the reason typed; the window not confirmed (Not yet)</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → “Booked to leave … Today is …”; 2 → “Nights not stayed: …”; 3 → Why are they leaving early?; 4 → Check out</dd>
+        <dt>File</dt><dd><code>img/A5-08.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A5-08.</b> Leaving early: the nights not stayed, and why.</figcaption>
+    <ol class="callouts"><li>The booked departure, and today</li><li>The nights not stayed: not charged, and back on sale</li><li>Why they are leaving early: required</li><li>Check out</li></ol>
+  </figure>
+
+  <h3>What it changes</h3>
+  <ul>
+    <li>The stay now ends on the <b>later of today and the day after the last night already posted</b>, so the nights not stayed are not charged and go back on sale. The room's hold is shortened with it.</li>
+    <li>Nights already posted are never taken off. The night audit posts no more nights for the guest.</li>
+    <li>The reason is kept in the booking's notes: <span class="msg">“Left early on 2026-10-11, booked to 2026-10-13: Plans changed”</span>.</li>
+    <li>A guest who leaves on the day they arrive keeps their first night charged: it was posted at check-in (A3.1).</li>
+    <li>There is no fee for leaving early.</li>
+  </ul>
+  <p>The step appears only when at least one night is freed. A day use never has it, and neither has a stay whose remaining nights are already charged.</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>If the guest paid ahead for more than is posted, the bill reads <b>overpaid</b> before check-out, and Check out stays grey: <span class="msg">“This bill is overpaid. Refund the difference first.”</span> Give the money back (A5.7), then check out.</li>
+      <li>The dates are shortened for every stay. Money is given back only on a guest's own bill: a company's credit and a booking-site stay get a notice instead (A5.7).</li>
+      <li>For a booking-site stay the system does not tell the site. The desk does.</li>
+      <li>If you click Check out in the window before the step has appeared, the server refuses with <span class="msg">“Booked to leave on …. 1 night is not stayed: say why the guest is leaving early.”</span> Click Check out on the bill again and type the reason.</li>
+      <li>The business date, not the computer's clock, decides what "early" is (A1.1).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Before this, an early leaver's dates were not shortened, so the nights not stayed stayed booked, and unused prepaid nights blocked the check-out with no way to refund them: <span class="d">D27-314</span>. The step follows the night audit's own rule for what is charged, so a night posted on a group's master bill counts; nights go back on sale; there is no fee for leaving early; and the refund is a step of its own: <span class="d">D27-315</span>. Leaving early is never a late departure: <span class="d">D27-314</span>.</p>
+  </div>
+
+  <!-- A5.7 -->
+  <h2 id="a5-7"><span class="n">A5.7</span>A guest who paid too much: Refund</h2>
+  <p>A bill can owe the guest money: paid ahead for nights not stayed, or more than the bill held as the guest's credit (A4.7). It shows as <span class="ui">Overpaid</span>, and Check out stays grey: <span class="msg">“This bill is overpaid. Refund the difference first.”</span> The server says the same: <span class="msg">“The guest has overpaid by ₹…. Refund it before checking out.”</span> On <span class="ui">Folios</span> such guests come first (A4.1).</p>
+  <p>Under the bill's buttons a yellow step appears: <span class="msg">“₹… is owed back to the guest.”</span> Then one of three things:</p>
+  <ul>
+    <li><b>The owner, an Admin, the GM and the accountant</b> see a <span class="ui">Refund</span> button.</li>
+    <li><b>Anyone else</b> reads: <span class="msg">“Refunds are given by the owner, an administrator, the general manager or the accountant. Ask one of them.”</span></li>
+    <li><b>A notice</b>, where the money is not refunded here. A company's credit: <span class="msg">“This credit is the company's. It is settled with the company on the City ledger, not refunded to the guest here.”</span> A booking-site stay: <span class="msg">“A booking-site stay: the booking site refunds the guest. Tell the booking site; nothing is refunded here.”</span></li>
+  </ul>
+
+  <h3>To give a refund</h3>
+  <ol class="steps">
+    <li>Click <span class="ui">Refund</span>. The window <span class="ui">Refund</span> says <span class="msg">“₹… is owed back on this bill”</span>.</li>
+    <li>Choose <span class="ui">Back by</span>: the way the guest paid, each with the most it may give back, for example <span class="msg">“UPI - up to ₹…”</span>. <span class="msg">“The way the guest paid. Never cash for a card or UPI payment.”</span> The <span class="ui">Amount</span> is filled in with the most it may be.</li>
+    <li>For any way but cash, type the <span class="ui">Reference</span>: the UPI reference, the card approval code, the cheque number, the transfer number (UTR) or the wallet reference.</li>
+    <li>Type <span class="ui">Why</span>. It is required, and stays on the refund.</li>
+    <li>Click <span class="ui">Give refund</span>. The message is <span class="msg">“₹… refunded”</span> with the way. On the bill the line reads <span class="msg">“Refunded - UPI (the reference)”</span> under <span class="ui">Payments and refunds</span>, with a <span class="ui">Refunded</span> total, and the bill is back to ₹0. <span class="ui">Check out</span> opens.</li>
+    <li>Click <span class="ui">Print the refund receipt</span>, under the step, for the guest to sign.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A5-09">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A5-09 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>The Bill tab of a made-up guest whose bill is overpaid (“A5 Test …”: paid for two nights by UPI, one night posted)</dd>
+        <dt>Sign in as</dt><dd>General Manager</dd>
+        <dt>Window</dt><dd>1280 × 800, desk; scrolled to the foot of the bill</dd>
+        <dt>Arrows</dt><dd>1 → the yellow step's line “… is owed back to the guest.”; 2 → Refund; 3 → the red reason under the grey Check out</dd>
+        <dt>File</dt><dd><code>img/A5-09.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A5-09.</b> An overpaid bill: the refund step, and Check out waiting.</figcaption>
+    <ol class="callouts"><li>What is owed back</li><li>Refund</li><li>Why Check out is grey</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A5-10">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A5-10 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>The same bill, <span class="ui">Refund</span> clicked, the reference and the reason typed; not saved (Cancel)</dd>
+        <dt>Sign in as</dt><dd>General Manager</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → Back by; 2 → Amount; 3 → Reference; 4 → Why; 5 → Give refund</dd>
+        <dt>File</dt><dd><code>img/A5-10.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A5-10.</b> Refund: the way, the amount, the reference and the reason.</figcaption>
+    <ol class="callouts"><li>Back by: the way the guest paid</li><li>Amount</li><li>Reference</li><li>Why</li><li>Give refund</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A5-11">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A5-11 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>The refund receipt page after a refund on the demo (<span class="ui">Print the refund receipt</span>)</dd>
+        <dt>Sign in as</dt><dd>General Manager</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the heading “Refund receipt”; 2 → Amount refunded; 3 → Back by and Reference; 4 → the line “A plain refund receipt. The GST refund voucher (Rule 51) waits for the hotel's CA.”</dd>
+        <dt>File</dt><dd><code>img/A5-11.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A5-11.</b> The refund receipt.</figcaption>
+    <ol class="callouts"><li>Refund receipt, with its number and date</li><li>The amount given back</li><li>The way and the reference</li><li>It is a plain receipt, not the GST refund voucher</li></ol>
+  </figure>
+
+  <p>The receipt is a page of its own, with a <span class="ui">Print</span> button. It shows the hotel, the receipt's number and date, the guest, the booking and room, <span class="ui">Amount refunded</span>, <span class="ui">Back by</span>, <span class="ui">Reference</span>, <span class="ui">Why</span> and <span class="ui">Given by</span>, and two signature lines, the guest's and the hotel's. A refund that is reversed afterwards prints <span class="msg">“This refund was taken back.”</span></p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Cash only below ₹20,000 on a bill</b>; above it, by bank transfer. The window says it: <span class="msg">“Cash is given back only below ₹20,000 on a bill; above it, by bank transfer. This limit stands until the hotel's CA confirms it.”</span> Two refunds of ₹15,000 count as ₹30,000. If bank transfer is not one of the hotel's ways of paying, the refusal says to add it in Settings first.</li>
+      <li>A cash refund comes out of the drawer of the person who gives it (A4.10).</li>
+      <li>The server refuses a way the bill was not paid by: <span class="msg">“This bill was not paid by UPI. A refund goes back the way it was paid: …; never cash for a card or UPI payment.”</span> And more than the limit: <span class="msg">“At most ₹… goes back by UPI on this bill.”</span> And no reason: <span class="msg">“Say why it is being refunded. The reason stays on the refund.”</span></li>
+      <li>It is <b>not the GST refund voucher</b>: <span class="msg">“This prints a plain refund receipt. The GST refund voucher (Rule 51) waits for the hotel's CA.”</span></li>
+      <li>For a company's credit and a booking-site stay the notice is all the screen offers. Check out stays grey while the bill as a whole is overpaid.</li>
+    </ul>
+  </div>
+  <!-- WRITER'S NOTE (14 Oct, for the master; read in the code, not opened on screen): a booking-site stay that is overpaid (for example a full
+       prepayment recorded as a payment, and the guest leaves early) gets the notice "the booking site refunds the guest ... nothing is refunded
+       here", while Check out stays grey for an overpaid bill (rules.ts canCheckOut; the server's check-out refuses likewise). No way out was found
+       on the screens. Reported to the master. -->
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A refund is its own line on the bill, back the way the guest paid, with a reference, the reason and the name of who gave it, so nothing is edited and money is never given back untraceably. It is for the four who may reverse a payment: <span class="d">D27-125</span>, <span class="d">D27-315</span>. Cash stays below ₹20,000 until the hotel's CA confirms the limit; the plain receipt stands in for the GST refund voucher until the CA says what it must hold: <span class="d">D27-315</span>.</p>
+  </div>
+
+  <!-- A5.8 -->
+  <h2 id="a5-8"><span class="n">A5.8</span>A guest from abroad: the next destination</h2>
+  <p>A foreign guest is reported when they leave too: Form III's departure goes to the portal within 24 hours of the guest leaving, and it carries where they are going next (A3.4). So on a foreign guest's bill, above <span class="ui">Check out</span>, is a box: <span class="ui">Next destination</span>, starred, with <span class="msg">“Form III reports where a foreign guest goes next.”</span> <span class="ui">Check out</span> stays grey until it is filled in. Type where they go, then check out as usual.</p>
+
+  <figure class="shot" id="fig-A5-12">
+    <img src="img/A5-T2.png" alt="The Bill tab of A3 Test Smith, a guest from GB: the Next destination box, starred and empty, above the grey Check out">
+    <figcaption><b>Figure A5-12.</b> A foreign guest's bill: Next destination, above the grey Check out.</figcaption>
+    <ol class="callouts">
+      <li>Next destination: required</li>
+      <li>Check out: grey until it is filled in</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>If it is missed, the server refuses: <span class="msg">“Form III asks where a foreign guest is going next. Enter the next destination to check them out.”</span></li>
+    <li>Afterwards, on the Form III screen (A3.5), the <span class="ui">Departure</span> cell takes the number the portal gives back for the departure. <span class="ui">Complete details</span> can add or change the next destination after check-out.</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Rule 17 asks the foreigner for the address they are going to at departure, so it is asked while they are still at the desk, and the check-out refuses without it: <span class="d">D27-25</span>.</p>
+  </div>
+
+  <!-- A5.9 -->
+  <h2 id="a5-9"><span class="n">A5.9</span>After check-out: the tax invoice</h2>
+  <p>The interim bill is not the tax invoice. After the guest has left and the bill is settled, the numbered GST invoice is issued on <span class="ui">Invoices</span> (Finance; or Find a screen). A4.11 has all of it, with the credit note. In short:</p>
+  <ol class="steps">
+    <li>Open <span class="ui">Invoices</span>. It lists the departed stays ready to bill, with how many.</li>
+    <li>Click <span class="ui">Issue</span> on the stay. It is grey while the bill still owes (<span class="msg">“The folio still carries a balance. Settle it, or transfer it to the city ledger, before invoicing.”</span>) or is overpaid (<span class="msg">“The folio is overpaid. Refund the difference before invoicing.”</span>).</li>
+    <li>The window <span class="ui">Issue this tax invoice?</span> says who it is billed to and the next number in the GST series. Click <span class="ui">Issue the invoice</span>. <span class="ui">Keep it</span> closes the window and changes nothing.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A5-13">
+    <img src="img/A5-T5.png" alt="Invoices with the window Issue this tax invoice? over the list: Billed to go-MMT, it takes the next number in the GST series, Keep it and Issue the invoice">
+    <figcaption><b>Figure A5-13.</b> Issue this tax invoice?</figcaption>
+    <ol class="callouts">
+      <li>Who is billed, and the number the invoice will take</li>
+      <li>Issue the invoice</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>An issued invoice is never edited: <span class="msg">“An issued invoice is never edited: a wrong one needs a credit note.”</span> Numbers come in sequence, so the series cannot gain a hole (A4.11).</li>
+      <li>The tax invoice goes by email by itself only when it is made out to the guest. One made out to a company, an agent or a booking site goes by the desk's <span class="ui">Send invoice</span> (A10.7).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Asking "are you sure" before a legal number is taken: <span class="d">D27-117</span>. A company's, an agent's or a booking site's invoice is not sent by itself: <span class="d">D27-284</span>, <span class="d">D27-313</span>.</p>
+  </div>
+
+  <!-- A5.10 -->
+  <h2 id="a5-10"><span class="n">A5.10</span>Before the night audit</h2>
+  <p>A guest who has left must still be checked out, or the day cannot close. At the end of the day, <span class="ui">Due out</span> should be empty, or hold only guests who are really still here. When everyone has gone it says <span class="msg">“Nobody departing today. Every room stays another night.”</span> (A1.6).</p>
+  <ul>
+    <li>In <span class="ui">Night audit</span>, the check <span class="ui">Departures not yet checked out</span> counts the guests due out today who are still checked in, and it <b>stops the audit</b> (A7.2).</li>
+    <li>The Run card then says <span class="msg">“4 rooms are still showing due out. Check them out, or extend the stay - the audit will not decide which.”</span> and <span class="ui">Run night audit</span> stays grey (A7.3).</li>
+    <li>For each guest: if they left, settle the bill and check them out. If they are staying on, use <span class="ui">Change dates or guests</span> (A2.8).</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A guest still due out at night either left and nobody checked them out, or is staying another night. The two lead to opposite charges, and only a person at the desk knows which, so the audit refuses and names the rooms: <span class="d">D27-305</span>.</p>
+  </div>
+
+  <!-- A5.11 -->
+  <h2 id="a5-11"><span class="n">A5.11</span>Check-out in short</h2>
+  <table>
+    <thead><tr><th style="width:30%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>A guest is leaving</td><td>Due out, the guest, the Bill tab. In house, Settle and check out, for any other guest.</td><td>A5.1</td></tr>
+      <tr><td>Money is owed</td><td>Settle, the method, Take payment. Cash is taken to the rupee, with a round-off.</td><td>A5.2</td></tr>
+      <tr><td>The guest asks for the bill</td><td>Interim bill, then Print.</td><td>A5.3</td></tr>
+      <tr><td>The bill owes nothing</td><td>Check out, then Check out again in the window.</td><td>A5.4</td></tr>
+      <tr><td>On the day, after the check-out time</td><td>Say why. A manager may waive a late charge. Settle it if there is one, then check out again.</td><td>A5.5</td></tr>
+      <tr><td>Before the departure date</td><td>Settle what is posted. Say why they are leaving early. The nights not stayed are not charged and go back on sale.</td><td>A5.6</td></tr>
+      <tr><td>The bill is overpaid</td><td>Refund (owner, Admin, GM, accountant): the way paid, reference, why, Give refund. Print the receipt.</td><td>A5.7</td></tr>
+      <tr><td>A guest from abroad</td><td>Type the Next destination first.</td><td>A5.8</td></tr>
+      <tr><td>Afterwards</td><td>Invoices: Issue, then Print or Send invoice.</td><td>A5.9</td></tr>
+      <tr><td>End of the day</td><td>Nobody left showing due out, or the night audit will not run.</td><td>A5.10</td></tr>
     </tbody>
   </table>
 </section>
