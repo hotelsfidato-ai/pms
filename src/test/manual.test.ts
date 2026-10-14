@@ -25,8 +25,9 @@ const MANUAL = join(__dirname, "..", "..", "docs", "manual");
 /** The menu's sections (navigation.ts keys) and the chapter that covers each. */
 const COVERS: Record<string, string> = {
   "home": "a1",
-  /* A1.10 names all nine and says which chapter holds each (A3, Check-in, is not
-     written yet; Walk-ins and Online check-in are described in A1.10 itself). */
+  /* A1.10 names all nine and says which chapter holds each (A3, Check-in, now holds
+     the Check in window and Online check-in's express check-in; Walk-ins and the
+     Online check-in screen are described in A1.10 itself). */
   "front-desk": "a1",
   "bookings": "a2",
   "guests-crm": "a10",

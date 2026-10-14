@@ -43,9 +43,9 @@ screenshots and numbered arrows, kept current by a rule and a check.
 | A0 | Getting started | Signing in, the three spaces (Front office, Restaurant, Settings), choosing the hotel, Find a screen (Ctrl K), desk vs phone, the offline bar |
 | A1 | The front desk day | Dashboard, arrivals, in-house, departures, the room grid (stay view) |
 | A2 | Bookings | New booking (walk-in, phone, group), price shown, the WhatsApp tick, the voucher; change dates, move room, cancel, no-show, cancellation terms |
-| A3 | Check-in | ID and Form C, assigning a room, deposit, express check-in; online check-in (on for every hotel, D27-281; it was marked "later" on 3 October, D27-266) |
+| A3 | Check-in | The Check in window, assigning a room, the ID, a foreign guest's Form III and its register, the advance before check-in, an early arrival, express check-in from online check-in (on for every hotel, D27-281; it was marked "later" on 3 October, D27-266). Written 14 October (D27-326 (3)) |
 | A4 | The guest's bill | Charges, payments, discounts, corrections, split bills, company billing, invoice and credit note |
-| A5 | Check-out | Normal, late, early departure; the bill printed and paid |
+| A5 | Check-out | Normal, late (D27-314) and early departure (D27-315 A); the bill printed and paid, cash to the rupee (D27-317); a refund when a bill is overpaid (D27-315 B); a foreign guest's next destination; the tax invoice; before the night audit. Written 14 October (D27-326 (3)) |
 | A6 | Housekeeping | Room status, assignments, work orders, laundry |
 | A7 | Night audit | Closing the day, what it checks and refuses, the reports it sends |
 | A8 | Restaurant | Tables, the order screen (Restaurant/Bar tabs, notes, D27-267), kitchen screen and KOT, till and terminal, the bill (GST, alcohol's own VAT bill), charge to room, settle, close the day; room dining; banquet functions |
