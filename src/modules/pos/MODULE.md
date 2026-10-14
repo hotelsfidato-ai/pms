@@ -400,7 +400,7 @@ pos_kot_kinds, pos_kot_stations,               "the KOT section" (211, D27-292):
   .kot_kind_id; pos_order_lines.kot_kind_id     computers (one per kind, one bill printer),
   (stamped when sent); pos_kot_prints per kind  bills asked and printed;
                                                 app.pos_kot_kind_for, app.pos_line_kot_kind
-  the Bar role: app.pos_dish_at_bar,           "the bar role" (224, D27-324): `bar` in
+  the Bar role: app.pos_dish_at_bar,           "the bar role" (223, D27-324): `bar` in
   app.pos_bar_only, trigger                     app.assignable_roles(); a Bar person puts on a
   pos_order_lines_bar_only                      bill, or raises the count of, only a dish that
                                                 prints on the Bar KOT (42501 otherwise)

@@ -1,5 +1,5 @@
 -- =============================================================================
--- 224 · The Bar role (the owner's D27-324 (2), 14 October)
+-- 223 · The Bar role (the owner's D27-324 (2), 14 October)
 -- =============================================================================
 -- "A separate Bar role: the waiter's rights (orders, KOT, bills, payment,
 -- discount up to 10% with a reason, closing the restaurant day), but it opens
@@ -55,7 +55,7 @@ as $fn$
     'kitchen_manager',
     'chef',
     'pos',              -- shown as Waiter (D27-324); also an outside till's account
-    'bar',              -- the waiter's rights on the bar's dishes only (224)
+    'bar',              -- the waiter's rights on the bar's dishes only (223)
     'stores',           -- shown as Inventory Manager
     'finance',          -- shown as Accountant
     'read_only'         -- shown as Viewer
@@ -66,7 +66,7 @@ comment on function app.assignable_roles() is
   'Every role a person may be given. The one authority: staff grants are '
   'checked against it (078) and the interface is held equal to it by '
   'api/test/roles.test.ts. revenue_manager added 16 September 2026 (093), '
-  'bar 14 October 2026 (224).';
+  'bar 14 October 2026 (223).';
 
 -- (2) ------------------------------------------------------------------------
 create or replace function app.pos_dish_at_bar(p_hotel uuid, p_item uuid)
