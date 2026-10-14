@@ -13,6 +13,8 @@ import { taxLine } from "@/modules/admin/components/TaxInUse";
 import PeoplePage from "@/modules/admin/pages/People";
 import { PasswordDue } from "@/modules/admin/components/PasswordDue";
 import SignInsPage from "@/modules/admin/pages/SignIns";
+import { RolesPage } from "@/modules/admin/pages/Admin";
+import { TooltipProvider } from "@/components/ui";
 import { settingsPages as peoplePages } from "@/modules/admin/people.settings";
 import { problems as consoleProblems } from "@/components/app/settingsConsole";
 import type { Role } from "@/lib/permissions";
@@ -425,7 +427,7 @@ describe("D22-3 and D22-2 - People, for a GM", () => {
   /* What the server hands a GM at 5EL: their hotel, and every role but
      Owner and Admin. */
   const GM_ROLES = ["gm", "hotel_manager", "revenue_manager", "front_desk", "housekeeping",
-                    "kitchen_manager", "chef", "pos", "stores", "finance", "read_only"];
+                    "kitchen_manager", "chef", "pos", "bar", "stores", "finance", "read_only"];
   const person = (over: Record<string, unknown>) => ({
     id: "p-1", email: "asha@fidato.in", name: "Asha", phone: null, canSignIn: true,
     isGroupAdmin: false, isActive: true, homeScreen: "dashboard",
@@ -446,6 +448,32 @@ describe("D22-3 and D22-2 - People, for a GM", () => {
       throw new ApiError(500, "Request failed (500).");
     });
   }
+
+  it("offers the restaurant's roles as Waiter and Bar, each saying what it does (D27-324)", async () => {
+    as("gm");
+    peopleServer([person({})]);
+    renderAt("/people", <PeoplePage />);
+
+    await screen.findByText("Asha");
+    fireEvent.click(await screen.findByRole("button", { name: /Add somebody/ }));
+    const dialog = await screen.findByRole("dialog");
+    const doing = within(dialog).getByLabelText(/Doing what/) as HTMLSelectElement;
+    const offered = [...doing.options].map((o) => o.textContent);
+    expect(offered).toEqual(expect.arrayContaining(["Waiter", "Bar"]));
+    expect(offered).not.toContain("Till Operator");
+    cleanup();
+
+    /* Give access says what the chosen role does. */
+    peopleServer([person({ access: [] })]);
+    renderAt("/people", <PeoplePage />);
+    fireEvent.click(await screen.findByRole("button", { name: /Give a property/ }));
+    const give = await screen.findByRole("dialog");
+    fireEvent.change(within(give).getByLabelText(/Which property/), { target: { value: "5EL" } });
+    fireEvent.change(within(give).getByLabelText(/Doing what/), { target: { value: "bar" } });
+    expect(give.textContent).toMatch(/bar's menu/i);
+    fireEvent.change(within(give).getByLabelText(/Doing what/), { target: { value: "pos" } });
+    expect(give.textContent).toMatch(/orders/i);
+  });
 
   it("adds somebody AT the GM's hotel, and offers no Owner or Admin", async () => {
     as("gm");
@@ -788,5 +816,19 @@ describe("D27-255 - People and security in the Settings console", () => {
     const devices = peoplePages.find((p) => p.slug === "devices")!;
     expect(["owner", "admin", "gm", "front_desk"].map((r) => devices.canSee!(r as Role)))
       .toEqual([true, true, false, false]);
+  });
+});
+
+describe("D27-324 (5) - the Roles screen shows the GM managing people", () => {
+  it("names what the GM does to Users, and the restaurant's roles as Waiter and Bar", async () => {
+    as("owner");
+    renderAt("/admin/roles", <TooltipProvider><RolesPage /></TooltipProvider>);
+    const table = await screen.findByRole("table");
+    const heads = within(table).getAllByRole("columnheader").map((h) => h.textContent);
+    expect(heads).toEqual(expect.arrayContaining(["Waiter", "Bar"]));
+    expect(heads).not.toContain("Till Operator");
+    const gm = heads.indexOf("General Manager");
+    const users = within(table).getByRole("cell", { name: "Users" }).closest("tr")!;
+    expect(within(users).getAllByRole("cell")[gm]!.textContent).toBe("View, Create, Edit");
   });
 });
