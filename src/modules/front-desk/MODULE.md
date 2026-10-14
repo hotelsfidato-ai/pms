@@ -134,8 +134,8 @@ refinement).
 | `stays.ts` | reads stays over HTTP and slices one list three ways — arrivals, in house, departures — plus `fetchStays` (the raw read other services reuse). Arrivals, in house and departures ask the server for the desk's rows only (`fetchStays(hotel, from, to)`, D27-313); Rooms, the Calendar and the Dashboard ask for the board's rows (`fetchStays(hotel, from, to, true)`, D27-316); `listStays` and a bare `fetchStays` are still every booking |
 | `operations.ts` | the writes behind the desk's flows: check in and out, assign, move, unassign, amend, void, and the early-arrival read; check-in and check-out ask `src/lib/rules.ts` first |
 | `stayExtras.ts` | exchanging two rooms, and inclusions |
-| `stayview.ts` | the Calendar's data — a fourteen-day window, bars and their tones, room rates from the room type (null when unpriced) — and the counts the Dashboard shows. One read of the window's bookings (the board's, D27-316), handed to `listOpenFolios` for the bars' balances too |
-| `stayview.test.ts` | the Calendar's data: the window, rooms and bars, counts that agree with their filters, the footer, and rates (a dash, never a zero) |
+| `stayview.ts` | the Calendar's data — a fourteen-day window, bars and their tones (a cancelled or voided booking struck through and not counted against the free rooms, FD-32), room rates from the room type (null when unpriced) — and the counts the Dashboard shows. One read of the window's bookings (the board's, D27-316), handed to `listOpenFolios` for the bars' balances too |
+| `stayview.test.ts` | the Calendar's data: the window, rooms and bars, counts that agree with their filters, the footer, a voided booking (FD-32), and rates (a dash, never a zero) |
 
 The screen tests sit at the folder's root: `front-desk.test.tsx` — the tape
 chart and the stay panel, split out of `src/App.test.tsx` on 15 September
