@@ -21,7 +21,7 @@ import {
   DropdownMenuItem, DropdownMenuLabel,
 } from "@/components/ui";
 import { getFolioPostings, getFolioBalance, postCharge, reverseCharge, settle, reverseChargeAllowed, editCharge, changeRate, type BillLine, type SettleInput } from "@/modules/finance/data/postings";
-import { checkOut, earlyArrival, type StayRow } from "@/modules/front-desk";
+import { checkOut, earlyArrival, leavingEarly, LeavingEarlyStep, type StayRow } from "@/modules/front-desk";
 import { type OperationResult, type Posting, type Stay } from "@/data/repositories";
 import { listStayFolios, openFolio, transferPosting, listBillingCompanies, type StayFolio } from "@/modules/finance/data/folios";
 import { LateCheckOutFlow } from "@/modules/front-desk";
@@ -220,8 +220,11 @@ export function FolioPanel({
           reason={checkoutPermitted?.reason}
           guest={stay.guest}
           room={stay.roomNumber}
-          onCheckOut={async () => {
-            const res = await checkOut(hotelId, stay.id, undefined, nextDestination.trim());
+          hotelId={hotelId}
+          stayId={stay.id}
+          onCheckOut={async (earlyReason) => {
+            const res = await checkOut(hotelId, stay.id,
+              earlyReason ? { earlyReason } : undefined, nextDestination.trim());
             if (res.ok) {
               toast.success(`${stay.guest} checked out`, `Room ${stay.roomNumber} is now dirty and on housekeeping's board.`);
               void refreshAll();
@@ -1398,18 +1401,30 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
 }
 
 function CheckOutButton({
-  allowed, reason, guest, room, onCheckOut,
+  allowed, reason, guest, room, hotelId, stayId, onCheckOut,
 }: {
   allowed: boolean;
   reason?: string;
   guest: string;
   room: string;
-  onCheckOut: () => Promise<void>;
+  hotelId: string;
+  stayId: string;
+  onCheckOut: (earlyReason?: string) => Promise<void>;
 }) {
   /* D27-117 (QA FD-16): "Are you sure?" first - a check-out closes the bill
      and sends the room to housekeeping, and it went on one click. */
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  /* LEAVING EARLY (D27-315): before the booked departure the same step shows
+     the nights not stayed and asks why - asked of the server when it opens. */
+  const early = useQuery({
+    queryKey: ["leaving-early", hotelId, stayId],
+    queryFn: () => leavingEarly(hotelId, stayId),
+    enabled: open,
+    staleTime: 0,
+  });
+  const [earlyReason, setEarlyReason] = useState("");
+  const leaving = early.data ?? null;
   const button = (
     <Button
       /* Primary only once it may happen — while it is blocked, Settle
@@ -1442,18 +1457,25 @@ function CheckOutButton({
             <div className="flex gap-2 w-full justify-end">
               <Button variant="secondary" onClick={() => setOpen(false)}>Not yet</Button>
               <Button variant="primary" loading={busy} data-checkout-confirm
+                disabled={leaving !== null && !earlyReason.trim()}
                 onClick={async () => {
                   setBusy(true);
-                  try { await onCheckOut(); } finally { setBusy(false); setOpen(false); }
+                  try { await onCheckOut(leaving ? earlyReason.trim() : undefined); }
+                  finally { setBusy(false); setOpen(false); setEarlyReason(""); }
                 }}>
                 Check out
               </Button>
             </div>
           }
         >
-          <p className="text-sm text-grey-700 leading-relaxed">
-            The bill closes and the room goes to housekeeping as dirty.
-          </p>
+          <div className="space-y-4">
+            {leaving && (
+              <LeavingEarlyStep early={leaving} reason={earlyReason} onReason={setEarlyReason} />
+            )}
+            <p className="text-sm text-grey-700 leading-relaxed">
+              The bill closes and the room goes to housekeeping as dirty.
+            </p>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

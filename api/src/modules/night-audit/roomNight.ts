@@ -169,6 +169,50 @@ export async function nightsToCome(client: Client, hotelId: string, stayId: stri
   return rows[0]?.n ?? 0;
 }
 
+/** A guest checking out before the booked departure (the owner's D27-315, Part A). */
+export interface LeavingEarly {
+  /** The booked departure, the business date, and the departure check-out writes. */
+  departure: string; today: string; newDeparture: string;
+  /** The nights from `newDeparture` to `departure`: not charged, back on sale. */
+  nightsFreed: number;
+  /** A booking-site stay: the desk tells the site the guest left early. */
+  bookingSite: boolean;
+}
+
+/** WHERE AN EARLY LEAVER'S STAY NOW ENDS (D27-315): the later of the business
+    date and the day after the last night a room line pays for, by the run's own
+    rule (CHARGED) - so a night on the group's master bill and a line covering
+    several nights count, and no night posted is ever left outside the stay. A
+    same-day leave keeps its first night (D27-204): never before the day after
+    arrival. Null when no night is freed: a stay not in house, a day use, or one
+    whose remaining nights are already charged. */
+export async function leavingEarly(
+  client: Client, hotelId: string, stayId: string,
+): Promise<LeavingEarly | null> {
+  const { rows } = await client.query<LeavingEarly>(
+    `select to_char(d.departure, 'YYYY-MM-DD') as departure,
+            to_char(d.today, 'YYYY-MM-DD') as "today",
+            to_char(d.new_departure, 'YYYY-MM-DD') as "newDeparture",
+            (d.departure - d.new_departure)::int as "nightsFreed",
+            d.booking_site as "bookingSite"
+       from (select r.check_out as departure,
+                    app.business_date(r.hotel_id) as today,
+                    greatest(app.business_date(r.hotel_id), r.check_in + 1,
+                             (select max(night)::date + 1
+                                from generate_series(r.check_in, r.check_out - 1,
+                                                     interval '1 day') as night
+                               where ${CHARGED("night::date")})) as new_departure,
+                    coalesce(bs.kind, r.source) = 'ota' as booking_site
+               from reservations r
+               left join booking_sources bs on bs.id = r.booking_source_id
+              where r.hotel_id = $1 and r.id = $2
+                and r.status = 'checked_in' and not r.is_day_use) d
+      where d.new_departure < d.departure`,
+    [hotelId, stayId],
+  );
+  return rows[0] ?? null;
+}
+
 /** The line's words. The room number is on every line, and it has to be: a
     master folio holding twelve of these is unreadable otherwise. */
 export const roomNightWords = (stay: RoomNight) =>

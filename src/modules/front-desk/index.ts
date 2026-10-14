@@ -8,13 +8,14 @@ export { FrontDeskRulesCard } from "./components/FrontDeskRules";
 export { ReadyReasons } from "./components/ReadyReasons";
 export { listOf, holidaysOf, vipLevels, type ListItem, type Holiday } from "./data/lists";
 export type { StayColumn, StayRow } from "./components/StayTable";
-export { assignRoom, checkOut, earlyArrival } from "./data/operations";
+export { assignRoom, checkOut, earlyArrival, leavingEarly, type LeavingEarly } from "./data/operations";
 export type { Posting } from "./data/operations";
 export { fetchStays, getHouseNow, getStay, listArrivals, listDepartures, listInHouse, listStays } from "./data/stays";
 export type { HouseNow, HouseNowRoom } from "./data/stays";
 export { getStayView } from "./data/stayview";
 export type { ChartRoom } from "./data/stayview";
 export { LateCheckOutFlow } from "./flows/LateCheckOutFlow";
+export { LeavingEarlyStep } from "./flows/LeavingEarlyStep";
 /* D27-163: the one page (reservations' New booking) checks a guest in and
    adds the stay's extras through front desk's own doors, not copies. */
 export { checkIn, assignableRooms } from "./data/operations";
