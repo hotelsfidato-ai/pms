@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-14 · The release's API run: the reset clears refunds (FIN-34); the charge door's test reads lane B's refusal
+
+**Asked for:** the master's helper on the final release copy: of the 9 API failures, two were finance's - `resetOrder.test.ts` ("refunds points at folio_postings and is not cleared") and `chargeDoor.test.ts` ("refuses a payment or a refund as a charge"). Fix each at its root, code or test. Branch `worktree-agent-a5f7c1ecdbb604327`, fast-forwarded to cp6 9ad852aa (lanes A, B and FD-32 merged).
+**Found and fixed:**
+- **FIN-34 (code):** 219 added `refunds` and not to `api/scripts/reset-property.ts`'s `CLEAR`; a reset of a hotel with any refund would have stopped on the foreign key and rolled back. `refunds` goes before `payments`. Every other reset path checked: the test hotel's (`app.test_hotel_clear`) works from 219's class list - right; load-demo drops the hotel, which cascades; `forbid_hotel_delete` refuses a hotel with postings; `demo-history.ts` clears only bookings it made, which have no refunds. No migration.
+- **FIN-26's test (the test was wrong):** lane B changed the refusal to "A refund is not a charge. Give it with Refund on the bill." - right, a refund has its own step now and reversing the payment records no money going back. The test expected the old sentence; `DEFECTS.md` FIN-26 notes the change.
+**Proved:** each file alone, seen failing first (resetOrder 3/4, chargeDoor 7/8), then 4/4 and 8/8; and in the one full API run (`npm test` through `.local/dbq.sh`, 19:34): 200 of 201 files, 2,687 of 2,691 tests - the 4 all `channel-manager/suAvailability.test.ts`, three 20 s timeouts and one count after them, in a file that ran before every file changed here (the run took 49 min on the loaded PC, the release's 22).
+
 ## 2026-10-14 · Cash to the rupee on a room bill (D27-317); a Refund line, and one sign for `refund` (D27-315 Part B) - Lane B
 
 **Asked for:** `docs/briefs/lanes/money-roundoff-refunds.md`. (1) A room bill settled in cash: the cash taken is the nearest rupee, the round-off (at most ±0.50) recorded with the payment so the drawer balances; UPI, card and the rest exact; the GST invoice exact; the restaurant's Round off unchanged; shown on Settle and the bill. (2) A Refund line on a stay's own overpaid bill: the four of D27-125 only (server and database); back by the way paid, never cash for card or UPI; cash only below ₹20,000, a transfer above, until the CA confirms; mode, reference, reason, who, dated today; a cash refund lowers the giver's drawer; a plain Refund receipt; every report agreeing on what `refund` means first.

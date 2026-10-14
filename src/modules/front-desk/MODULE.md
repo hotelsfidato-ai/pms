@@ -183,6 +183,7 @@ What `index.ts` exports, and who uses each (grep of `@/modules/front-desk`,
 | `listStays` | housekeeping (`data/housekeeping.ts`), reservations (`pages/Reservations.tsx`); the core test |
 | `listArrivals`, `listInHouse`, `listDepartures` | the core test `repositories.test.ts` only |
 | `getStayView`, `fetchStays` (the day's board, D27-316), type `ChartRoom` | reports (`pages/Dashboard.tsx`, 3 October) |
+| `isCancelledOrVoid` (a booking not happening: cancelled or void, FD-33) | reports (`pages/Dashboard.tsx`, the Arrivals tile, 14 October) |
 | `getHouseNow`, types `HouseNow`, `HouseNowRoom` | admin (`pages/Property.tsx`), housekeeping (`data/housekeeping.ts`) - 22 September |
 | `LateCheckOutFlow` | finance (`flows/FolioPanel.tsx`) |
 

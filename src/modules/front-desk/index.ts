@@ -10,7 +10,7 @@ export { listOf, holidaysOf, vipLevels, type ListItem, type Holiday } from "./da
 export type { StayColumn, StayRow } from "./components/StayTable";
 export { assignRoom, checkOut, earlyArrival, leavingEarly, type LeavingEarly } from "./data/operations";
 export type { Posting } from "./data/operations";
-export { fetchStays, getHouseNow, getStay, listArrivals, listDepartures, listInHouse, listStays } from "./data/stays";
+export { fetchStays, getHouseNow, getStay, isCancelledOrVoid, listArrivals, listDepartures, listInHouse, listStays } from "./data/stays";
 export type { HouseNow, HouseNowRoom } from "./data/stays";
 export { getStayView } from "./data/stayview";
 export type { ChartRoom } from "./data/stayview";

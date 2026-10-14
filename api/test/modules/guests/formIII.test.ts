@@ -375,8 +375,11 @@ describe("a foreign guest's departure", () => {
     expect(res.status, await res.text()).toBe(200);
   });
 
+  /* Nor is the date: the stay is booked for two nights and leaves on the
+     first, which the desk asks why (leaving early, D27-315 A). */
   const LATE = { lateReason: "Form III fixture - the hour is not what this tests",
-                 waiveLate: true };
+                 waiveLate: true,
+                 earlyReason: "Form III fixture - the date is not what this tests" };
 
   it("is not filed before the guest leaves", async () => {
     const res = await call(`/PUN/form-c/${stay}`, "POST",

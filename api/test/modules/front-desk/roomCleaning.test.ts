@@ -112,7 +112,10 @@ describe("FD-10 · a room nobody entered stays as it was", () => {
 
 describe("FD-12 · a room a guest left is dirty, even while a later booking holds it", () => {
   it("is sent to cleaning at check-out", async () => {
-    const now = await booking(`${CODE}-NOW`, "2026-08-26", "2026-08-28");
+    /* One night: leaving on the arrival day frees no night (the first is
+       kept, D27-204), so the desk does not ask why the guest leaves early
+       (D27-315 A) - the check-out is about the room, not the dates. */
+    const now = await booking(`${CODE}-NOW`, "2026-08-26", "2026-08-27");
     expect((await call(`/stays/${now}/check-in`, "POST",
       { roomNumber: "104", adults: 1, idSkipReason: "Test" })).status).toBe(200);
     const later = await booking(`${CODE}-LATER`, "2026-09-02", "2026-09-04");

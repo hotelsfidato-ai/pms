@@ -8,6 +8,10 @@ proved until it has refused something; "Left open" is the handover.
 
 ---
 
+## 2026-10-14 · The key-card check-outs follow leaving early (D27-315 A)
+
+**Asked for:** the master's helper on the final release copy: 3 of `keys.test.ts`'s cases failed. **Root:** the two check-out cases booked two nights and checked out on the first with no reason; lane A's rule (D27-315 A) now asks why a guest leaves early, so the check-out answered 409 `needs: "leaving-early"`. The third, "a move from tonight cancels the old room's cards", was the same cause: the refused check-out never reached the stand-in lock, so the `failNext` the second case set refused the third case's first card. **Fixed (the test, not the rule):** the two check-out cases book one night (`arrive(room, true, 1)`), so leaving today frees none - the check-out is about the cards, not the dates. **Proved:** 3 failed before, 13/13 after.
+
 ## 2026-09-30 to 10-02 · Key cards against a stand-in lock (D27-178, D27-182)
 
 **Asked for:** key cards issued at check-in (how many, valid to the check-out
