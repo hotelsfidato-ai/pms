@@ -5,8 +5,8 @@ import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
 import type { Stay } from "@/data/repositories";
 import { HOTEL, startSignedIn } from "@/test/app";
-import { listArrivals, listVacant } from "./data/stays";
-import ArrivalsPage from "./pages/Arrivals";
+import { listArrivals, listVacant } from "./stays";
+import ArrivalsPage from "../pages/Arrivals";
 
 /* ══════════════════════════════════════════════════════════════════
    A VOIDED BOOKING IS NOT EXPECTED (the owner's D27-326 (1), FD-32's note)
@@ -17,6 +17,10 @@ import ArrivalsPage from "./pages/Arrivals";
    Upcoming and the free-room read (`listVacant`) leave it out as they leave
    out a cancelled one. The Dashboard's tile is reports' dashboard.test.tsx;
    a guest's next stay is api/test/modules/guests/directoryNextStay.test.ts.
+
+   In data/, beside stays.ts: a test outside the seam that imports
+   `listVacant` counts as its caller in repositories.test.ts's Rule 2b, and
+   it still has no screen.
    ══════════════════════════════════════════════════════════════════ */
 
 const BD = "2026-08-25";
