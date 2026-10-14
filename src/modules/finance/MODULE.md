@@ -143,6 +143,14 @@ Its front door also exports `companyReceipts` (the day book's receipts, D27-242 
 | POST | `/:code/cash-deposits/days/:date/explain` | why a day's deposits differ; red until then. Owner, Admin, GM |
 | POST | `/:code/cash-deposits/:id/verify` | owner or accountant only; refused without the slip's photo or on a red day |
 
+**`api/src/modules/finance/refunds.ts`** (14 October, D27-315 Part B; migration 219)
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/:code/stays/:id/refunds` | `may` (the four of D27-125), `ceiling` (₹20,000), and each of the stay's bills: its credit, a `notice` (a company-addressed bill, a booking-site stay) and the `ways` it may be given back by, each with `upTo` (back by the way paid; cash below the ceiling counting cash already given back; a transfer for a transfer or for the cash above the ceiling) |
+| POST | `/:code/stays/:id/refunds` | gives it back: `{folioId?, method, amount, reference, reason}`. 403 for anyone but the four; 409 with the reason otherwise. A positive `refund` line dated today plus its `refunds` row; cash opens the giver's drawer and comes out of it. Idempotency key honoured |
+| GET | `/:code/stays/:id/refunds/:postingId` | the plain refund receipt's facts (`pages/RefundReceipt.tsx`) |
+
 **`api/src/modules/finance/billing.ts`** (finance's part of the old `api/src/routes/billing.ts`)
 
 | Method | Path | What it does |
@@ -202,7 +210,8 @@ migrations that made or changed them:
 |---|---|---|
 | `folios` | one running account; several per stay when the bill is split, or a group's master | created `006_folio.sql`; `056_group_billing.sql` (a group's master; a folio belongs to exactly one thing), `060_banquet.sql` (a function's folio) |
 | `folio_postings` | every charge, reversal and payment line | created `006_folio.sql` (money is `numeric(12,2)`; append-only; `business_date` is a real column); `011_model_additions.sql` (`idempotency_key`), `012_integrity.sql` (no posting onto a closed day), `014_simulation_fixes.sql` (UPDATE and DELETE revoked; same-hotel keys), `015_edge_cases.sql` (the tax must match the one rate on the line; no zero lines), `021_reversal_once.sql` (a line is reversed at most once), `056_group_billing.sql` (`reservation_id`, filled by a trigger) |
-| `payments` | the receipt behind a payment line | created `011_model_additions.sql`; `014_simulation_fixes.sql` (same hotel as its posting), `016_audit_coverage.sql` (never zero; audited) |
+| `payments` | the receipt behind a payment line | created `011_model_additions.sql`; `014_simulation_fixes.sql` (same hotel as its posting), `016_audit_coverage.sql` (never zero; audited); "cash round-off" (218: `round_off`, ±0.50, cash only - D27-317; the drawer expects it) |
+| `refunds` | money given back on a guest's own bill (D27-315 B): one row per positive `refund` line - way, reference (but for cash), reason, who; cash below ₹20,000 | "refunds" (219: `app.may_refund`; guards on the line - the four only, positive, a guest's own bill - and on the row - its own line, never more than the credit; every refund line has its row by commit; the drawer; `app.stay_bill`, `app.stay_charged`, `app.guest_voucher` count a refund as money out) |
 | `vat_bills`, `vat_bill_series` | VAT bills for alcohol and their credit notes (D22-44): their own series per hotel, `VAT/5EL/2026-27/0001`, opened by the year's first bill so it restarts each 1 April | "a separate VAT bill for alcohol" (135 in this branch: `app.next_vat_bill_number`, `app.issue_vat_bill`; 025's immutability trigger) |
 | `invoices`, `invoice_series` | tax invoices and credit notes, numbered from a statutory series | created `011_model_additions.sql` (`app.next_invoice_number`); `013_policies.sql` (numbering protected), `014_simulation_fixes.sql` (the first invoice at a property), `016_audit_coverage.sql` (a series only moves forward), `025_invoices_form_c.sql` (the GST fields, credit notes, never edited, a series opened for each new property); "the FSSAI number on the invoice" (145 in this branch: `fssai_number`, copied from the hotel at issue and printed from there, D27-3) |
 | `cashier_shifts`, `cashier_movements`, `cashier_denominations` | the desk's drawer | created `059_cashier_shift.sql` (`app.cashier_expected_cash`; a closed shift is final); "the cash deposits log" (163: `kept_cash`, the float kept at the close) |
@@ -236,6 +245,7 @@ What `index.ts` exports, and who uses each (grep of `@/modules/finance`,
 | `getFolioBalance` | front desk (`data/operations.ts`, `pages/InHouse.tsx`) |
 | `FolioPanel` | front desk (`flows/StayDrawer.tsx`) — the Bill tab |
 | `TaxRulesCard` | inventory (`pages/RoomSetup.tsx`) |
+| `RefundStep` | (D27-315 B) the Bill tab shows it when the bill is overpaid; exported for the check-out dialog (Lane A's "Leaving early") |
 
 On the server (`api/src/modules/finance/index.ts`): `postCharge` (laundry, spa), and since 28 September the per-bill door for a banquet function's bill - `takeFolioPayment`, `postFolioCharge`, `issueFolioInvoice`, `folioBalance` (round E). `editFolioCharge` since 30 September (D27-205): the front desk's room move puts tonight's posted night right to a new rate through it.
 

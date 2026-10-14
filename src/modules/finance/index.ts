@@ -24,3 +24,6 @@ export { SettleDialog } from "./flows/FolioPanel";
 export { IssueInvoiceDialog } from "./flows/IssueInvoiceDialog";
 export { settleGroupBill } from "./data/postings";
 export { issueGroupInvoice } from "./data/billing";
+/* D27-315 B: the Refund step, for the bill and for the check-out dialog to
+   show when the bill is overpaid. */
+export { RefundStep } from "./flows/RefundStep";

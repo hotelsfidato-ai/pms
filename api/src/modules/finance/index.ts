@@ -8,6 +8,7 @@ import { tax } from "./tax.ts";
 import { deposits } from "./deposits.ts";
 import { companyPayments } from "./companyPayments.ts";
 import { money } from "./money.ts";
+import { refunds } from "./refunds.ts";
 
 /* The front door of the finance service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
@@ -24,6 +25,8 @@ export const mounts: readonly Mount[] = [
   /* D27-239: a company pays what it owes on the City ledger. */
   ["/api/hotels", companyPayments],
   ["/api/hotels", money],
+  /* D27-315 B: money given back on a guest's own bill. */
+  ["/api/hotels", refunds],
 ];
 
 /* ⚠ THE DOOR A CHARGE REACHES A ROOM BILL THROUGH — opened 18 September

@@ -530,3 +530,136 @@ begin
   select count(*) into n from app.guest_invoices_owed(3, h, inv);
   perform test.ok('finance master bill', 'nor by the desk''s Send invoice', n = 0, n || ' rows');
 end $$;
+
+
+-- =============================================================================
+-- CASH ON A ROOM BILL, TO THE RUPEE (the owner's D27-317)
+-- =============================================================================
+-- The bill is credited with its exact amount; the round-off (at most ±0.50)
+-- rides on the cash payment and the drawer expects the rupees really taken.
+-- Only cash is rounded: a round-off on any other way is refused.
+-- =============================================================================
+do $$
+declare h uuid; desk uuid; g uuid; f uuid; sh uuid; p bigint; e numeric;
+begin
+  h := app.provision_property_unchecked('FRO', 'Round-off Test', 'Nowhere');
+  select id into desk from staff where email = 'agra@fidato.in';
+  insert into staff_hotels (staff_id, hotel_id, role) values (desk, h, 'front_desk') on conflict do nothing;
+  insert into reservation_groups (name) values ('D317 Round-off') returning id into g;
+  insert into folios (hotel_id, group_id) values (h, g) returning id into f;
+  insert into cashier_shifts (hotel_id, staff_id, business_date, opening_cash, opened_at, opened_by)
+  values (h, desk, app.business_date(h), 500, now() - interval '1 hour', desk) returning id into sh;
+
+  -- Before now(): the drawer counts what was taken up to the moment it is asked.
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount,
+                              tax_rate, tax_amount, posted_by, created_at)
+  values (h, f, app.business_date(h), 'payment', 'Received - Cash', -1234.63, 0, 0, desk,
+          now() - interval '30 minutes')
+  returning id into p;
+  insert into payments (hotel_id, posting_id, method, amount, round_off)
+  values (h, p, 'cash', 1234.63, 0.37);
+  e := app.cashier_expected_cash(sh);
+  perform test.ok('finance round-off', 'the drawer expects the rupees taken (500 + 1,234.63 + 0.37)',
+    e = 1735, e::text);
+
+  perform test.raises('finance round-off', 'a round-off of more than 50 paise is refused',
+    format($q$insert into payments (hotel_id, posting_id, method, amount, round_off)
+              values (%L, %s, 'cash', 1, 0.51)$q$, h, p), '23514');
+
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount,
+                              tax_rate, tax_amount, posted_by)
+  values (h, f, app.business_date(h), 'payment', 'Received - UPI', -50.63, 0, 0, desk)
+  returning id into p;
+  perform test.raises('finance round-off', 'UPI is never rounded: a round-off on it is refused',
+    format($q$insert into payments (hotel_id, posting_id, method, amount, round_off)
+              values (%L, %s, 'upi', 50.63, 0.37)$q$, h, p), '23514');
+end $$;
+
+
+-- =============================================================================
+-- A REFUND (the owner's D27-315 Part B)
+-- =============================================================================
+-- A refund line is positive (money out), only on a guest's own bill, only by
+-- the owner, an administrator, the GM or the accountant, with its row (way,
+-- reference, reason) by the end of the transaction, never more than the
+-- bill's credit, and cash only below ₹20,000.
+-- =============================================================================
+do $$
+declare h uuid; desk uuid; acct uuid; gst uuid; g uuid; r uuid; f uuid; gf uuid; p bigint; n int;
+begin
+  h := app.provision_property_unchecked('FRF', 'Refund Rules Test', 'Nowhere');
+  select id into desk from staff where email = 'agra@fidato.in';
+  select id into acct from staff where email = 'pune@fidato.in';
+  insert into staff_hotels (staff_id, hotel_id, role) values (desk, h, 'front_desk'), (acct, h, 'finance')
+  on conflict (staff_id, hotel_id) do update set role = excluded.role;
+  insert into guests (full_name) values ('D315 Guest') returning id into gst;
+  insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out, agreed_rate, status)
+  values (h, app.next_reference(h), gst, (select id from room_types where hotel_id = h and code = 'STD'),
+          app.business_date(h), app.business_date(h) + 1, 1000, 'checked_in') returning id into r;
+  insert into folios (hotel_id, reservation_id) values (h, r) returning id into f;
+  insert into reservation_groups (name) values ('D315 Group') returning id into g;
+  insert into folios (hotel_id, group_id) values (h, g) returning id into gf;
+  -- ₹1,000 charged, ₹30,000 paid: ₹29,000 owed back.
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+  values (h, f, app.business_date(h), 'room', 'Room', 1000, 0, 0),
+         (h, f, app.business_date(h), 'payment', 'Received - Cash', -30000, 0, 0);
+
+  perform set_config('app.user_id', desk::text, true);
+  perform test.raises('finance refund', 'reception cannot write a refund line',
+    format($q$set local role pms_app;
+             insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+             values (%L, %L, app.business_date(%L), 'refund', 'Refunded - Cash', 100, 0, 0)$q$, h, f, h), '42501');
+
+  perform set_config('app.user_id', acct::text, true);
+  perform test.raises('finance refund', 'a refund is positive: money out',
+    format($q$insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+             values (%L, %L, app.business_date(%L), 'refund', 'x', -100, 0, 0)$q$, h, f, h), '23514');
+  perform test.raises('finance refund', 'never on a group''s master bill',
+    format($q$insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+             values (%L, %L, app.business_date(%L), 'refund', 'x', 100, 0, 0)$q$, h, gf, h), '23514');
+
+  set constraints folio_postings_refund_has_row immediate;
+  perform test.raises('finance refund', 'a refund line needs its way, reference and reason',
+    format($q$insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+             values (%L, %L, app.business_date(%L), 'refund', 'x', 100, 0, 0)$q$, h, f, h), '23514');
+  set constraints folio_postings_refund_has_row deferred;
+
+  perform test.raises('finance refund', 'cash only below ₹20,000',
+    format($q$with l as (insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+                         values (%L, %L, app.business_date(%L), 'refund', 'x', 20000, 0, 0) returning id)
+             insert into refunds (hotel_id, posting_id, method, method_label, amount, reason)
+             select %L, l.id, 'cash', 'Cash', 20000, 'left early' from l$q$, h, f, h, h), '23514');
+  perform test.raises('finance refund', 'never more than the bill''s credit',
+    format($q$with l as (insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+                         values (%L, %L, app.business_date(%L), 'refund', 'x', 29000.01, 0, 0) returning id)
+             insert into refunds (hotel_id, posting_id, method, method_label, amount, reference, reason)
+             select %L, l.id, 'bank_transfer', 'Bank transfer', 29000.01, 'UTR 1', 'left early' from l$q$, h, f, h, h), '23514');
+  perform test.raises('finance refund', 'a transfer has a reference',
+    format($q$with l as (insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+                         values (%L, %L, app.business_date(%L), 'refund', 'x', 100, 0, 0) returning id)
+             insert into refunds (hotel_id, posting_id, method, method_label, amount, reason)
+             select %L, l.id, 'bank_transfer', 'Bank transfer', 100, 'left early' from l$q$, h, f, h, h), '23514');
+
+  -- The accountant gives ₹19,000 in cash and ₹10,000 by transfer: the bill owes nothing.
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+  values (h, f, app.business_date(h), 'refund', 'Refunded - Cash', 19000, 0, 0) returning id into p;
+  insert into refunds (hotel_id, posting_id, method, method_label, amount, reason)
+  values (h, p, 'cash', 'Cash', 19000, 'left early');
+  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
+  values (h, f, app.business_date(h), 'refund', 'Refunded - Bank transfer (UTR 7)', 10000, 0, 0) returning id into p;
+  insert into refunds (hotel_id, posting_id, method, method_label, amount, reference, reason)
+  values (h, p, 'bank_transfer', 'Bank transfer', 10000, 'UTR 7', 'left early');
+  select count(*) into n from refunds where hotel_id = h and refunded_by = acct;
+  perform test.ok('finance refund', 'the accountant gives it, and is recorded as who', n = 2, n || ' rows');
+  perform test.ok('finance refund', 'the bill then owes nothing: the bill''s own figures say so',
+    (app.stay_bill(r)->>'balance')::numeric = 0 and (app.stay_bill(r)->>'paid')::numeric = 1000
+      and (app.stay_bill(r)->>'net')::numeric = 1000,
+    app.stay_bill(r)->>'net' || ' / ' || (app.stay_bill(r)->>'paid') || ' / ' || (app.stay_bill(r)->>'balance'));
+  perform test.ok('finance refund', 'a refund is not the guest''s spend', app.stay_charged(r) = 1000,
+    app.stay_charged(r)::text);
+  -- The suite is one transaction: run the pending row checks here (both refunds
+  -- have their rows), or a later block's ALTER TABLE meets "pending trigger events".
+  set constraints folio_postings_refund_has_row immediate;
+  set constraints folio_postings_refund_has_row deferred;
+  perform set_config('app.user_id', '', true);
+end $$;

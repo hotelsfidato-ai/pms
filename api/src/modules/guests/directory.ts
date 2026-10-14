@@ -294,7 +294,7 @@ directory.get("/:code/companies", async (c) => {
          select f.reservation_id,
                 sum(fp.amount + fp.tax_amount) as balance,
                 sum(fp.amount + fp.tax_amount)
-                  filter (where fp.category <> 'payment') as charged
+                  filter (where fp.category not in ('payment', 'refund')) as charged
            from folio_postings fp
            join folios f on f.id = fp.folio_id
           where fp.hotel_id = $1 and ${LIVE}

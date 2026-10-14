@@ -29,6 +29,7 @@ import { getStayBill } from "@/modules/finance/data/bill";
 import { getChargeList } from "@/modules/finance/data/money";
 import { billSections, sectionsTotal } from "@/modules/finance/sections";
 import { BillPrint } from "./BillPrint";
+import { RefundStep } from "./RefundStep";
 import { useGroupSettings } from "@/modules/admin";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -145,6 +146,11 @@ export function FolioPanel({
   const billed = balance.data ?? null;
   const due = billed ?? 0;
   const toCome = useStayDue(hotelId, stay);
+  /* Once overpaid, the refund step stays: the refund brings the bill to ₹0,
+     and its receipt link must outlive the credit. It hides itself when
+     nothing is owed back and nothing was given. */
+  const [wasOverpaid, setWasOverpaid] = useState(false);
+  if (due < 0 && !wasOverpaid) setWasOverpaid(true);
 
   return (
     <div className="space-y-5">
@@ -181,6 +187,7 @@ export function FolioPanel({
             folios={folios}
             active={only}
             businessDate={businessDate}
+            roundCash
             pay={(input, key) => settle(hotelId, stay.id, input, key)}
             onDone={refresh}
           />
@@ -201,6 +208,11 @@ export function FolioPanel({
           onOpenChange={(o) => { if (!o) setLateOut(false); }}
           onDone={refreshAll}
         />
+      )}
+
+      {/* OVERPAID: the credit goes back before check-out (D27-315 B). */}
+      {wasOverpaid && mayPrint && (
+        <RefundStep hotelId={hotelId} stayId={stay.id} onDone={refreshAll} />
       )}
 
       {/* Rule 6 — blocked, visible, and it says why */}
@@ -379,7 +391,9 @@ function useChargesToCome(
     charges: charges / 100,
     tax: tax === null ? null : tax / 100,
     after: tax === null ? null : (paise(balance ?? 0) + charges + tax) / 100,
-    received: (-lines.filter((l) => l.category === "payment").reduce((n, l) => n + paise(l.amount), 0) / 100) || 0,
+    /* Net of refunds (D27-315 B): a refund is money out, with the payments. */
+    received: (-lines.filter((l) => l.category === "payment" || l.category === "refund")
+      .reduce((n, l) => n + paise(l.amount), 0) / 100) || 0,
   };
 }
 
@@ -471,10 +485,16 @@ function LedgerList({
       .flatMap((l) => [l, ...lines.filter((r) => r.reversalOf === l.id)]),
     ...lines.filter((r) => r.reversalOf && !ids.has(r.reversalOf)),
   ];
-  const payments = ordered.filter((l) => l.category === "payment");
-  const sections = billSections(ordered.filter((l) => l.category !== "payment"), toCome ? ["room"] : []);
+  /* A REFUND IS MONEY OUT (D27-315 B): listed with the payments, never a
+     charge; its line is positive, so it takes the credit back to ₹0. */
+  const isMoney = (l: BillLine) => l.category === "payment" || l.category === "refund";
+  const payments = ordered.filter(isMoney);
+  const sections = billSections(ordered.filter((l) => !isMoney(l)), toCome ? ["room"] : []);
   /* `|| 0`: a payment and its reversal come to minus zero, which prints "-₹0.00". */
-  const received = (-payments.reduce((n, l) => n + Math.round(l.amount * 100), 0) / 100) || 0;
+  const total = (c: string) =>
+    payments.filter((l) => l.category === c).reduce((n, l) => n + Math.round(l.amount * 100), 0) / 100;
+  const received = -total("payment") || 0;
+  const refunded = total("refund") || 0;
 
   const row = (p: BillLine) => {
     const isReversal = p.kind === "reversal";
@@ -575,10 +595,11 @@ function LedgerList({
 
       {payments.length > 0 && (
         <section className="border border-grey-200 rounded-lg overflow-hidden" data-bill-section="payments">
-          {heading("Payments received")}
+          {heading(refunded ? "Payments and refunds" : "Payments received")}
           <ul className="divide-y divide-grey-100">{payments.map(row)}</ul>
-          <dl className="border-t border-grey-200 px-3 py-2">
+          <dl className="border-t border-grey-200 px-3 py-2 space-y-1">
             {sum("Received", moneyPrecise(received))}
+            {refunded !== 0 && sum("Refunded", moneyPrecise(refunded))}
           </dl>
         </section>
       )}
@@ -819,9 +840,10 @@ function ReverseButton({
   /* D27-125: a payment is reversed by the owner, an administrator, the GM or
      the accountant - `approve` on an invoice, the server's own question. */
   const role = useRole();
-  const payment = posting.kind === "payment";
+  /* A refund is taken back by the same four who give one (D27-315 B). */
+  const payment = posting.kind === "payment" || posting.category === "refund";
   const managerOnly = payment && !can(role, "approve", "invoice")
-    ? "Reversing a payment is for the owner, an administrator, the general manager or the accountant."
+    ? `Reversing a ${posting.category === "refund" ? "refund" : "payment"} is for the owner, an administrator, the general manager or the accountant.`
     : null;
   const allowed = (permitted.data?.allowed ?? false) && !managerOnly;
   const why = managerOnly ?? permitted.data?.reason;
@@ -1116,7 +1138,8 @@ function AddChargeDialog({
 /** SETTLE: a stay's bill, and a group's master bill on the group's page
     (D27-305 (10)) - one dialog, one payment door; `pay` names the bill. */
 export function SettleDialog({
-  payer, primary, balance, folios = [], active = null, businessDate, credit = "guest", pay, onDone,
+  payer, primary, balance, folios = [], active = null, businessDate, credit = "guest", roundCash = false,
+  pay, onDone,
 }: {
   /** Who is paying, for the dialog's line: the guest, or the group. */
   payer: string;
@@ -1129,6 +1152,9 @@ export function SettleDialog({
   businessDate: string;
   /** Whose credit more than the bill is held as (D27-4). */
   credit?: "guest" | "host";
+  /** A room bill (D27-317): cash is taken to the nearest rupee; the server
+      keeps the difference with the payment as its round-off. */
+  roundCash?: boolean;
   pay: (input: SettleInput, key: string) => Promise<OperationResult>;
   onDone: () => void;
 }) {
@@ -1167,6 +1193,12 @@ export function SettleDialog({
   /* D25-40 (Rule 159): more than ₹1,00,000 in cash at once needs the PAN or
      Form 97. The server decides, and refuses cash of ₹2,00,000 or more. */
   const asksPan = method === "Cash" && value > 100000;
+  /* CASH TO THE RUPEE (D27-317): the bill is credited with `value`, the
+     drawer takes the nearest rupee. The server works it out the same way. */
+  const isCash = (desk?.paymentMethods ?? [{ label: "Cash", kind: "cash" }])
+    .find((m) => m.label === method)?.kind === "cash";
+  const roundOff = roundCash && isCash
+    ? Math.round((Math.round(value) - value) * 100) / 100 : 0;
 
   return (
     <Dialog
@@ -1290,8 +1322,14 @@ export function SettleDialog({
           )}
 
           <div className="rounded-lg bg-grey-50 border border-grey-200 p-3 space-y-1">
-            <Row label="Outstanding" value={money(outstanding)} />
-            <Row label="Paying" value={money(value)} muted />
+            <Row label="Outstanding" value={roundOff ? moneyPrecise(outstanding) : money(outstanding)} />
+            <Row label="Paying" value={roundOff ? moneyPrecise(value) : money(value)} muted />
+            {roundOff !== 0 && (
+              <div data-round-off>
+                <Row label="Cash to take" value={moneyPrecise(value + roundOff)} bold />
+                <Row label="Round-off" value={`${roundOff > 0 ? "+" : "-"}${moneyPrecise(Math.abs(roundOff))}`} muted />
+              </div>
+            )}
             <div className="pt-1 border-t border-grey-200">
               <Row
                 label="Remaining"
@@ -1318,7 +1356,8 @@ export function SettleDialog({
                   }, pressKey);
                   if (res.ok) {
                     setPressKey(crypto.randomUUID());
-                    toast.success(`${money(value)} received`, method);
+                    toast.success(roundOff
+                      ? `${moneyPrecise(value + roundOff)} cash taken` : `${money(value)} received`, method);
                     /* NOTHING LEFT TO TAKE AGAIN (speed finding 7): the
                        dialog animates out while the bill refreshes to ₹0,
                        and with the amount still typed it offered the same
@@ -1688,6 +1727,7 @@ function TransferButton({
     targets.length === 0
     || posting.reversed
     || posting.kind !== "charge"
+    || posting.category === "refund"
   ) return null;
 
   const move = async (toFolioId: string) => {

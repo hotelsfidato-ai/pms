@@ -18,6 +18,18 @@ Nothing open.
 
 ## Fixed
 
+### FIN-32 · An overpaid bill had no way out, and `refund` meant two things - FIXED 14 October (D27-315 B, Lane B)
+
+**What happened:** check-out refused an overpaid bill ("Refund it before checking out") and nothing could refund it; reversing the payment recorded no money going back and is refused on a closed day. The `refund` category (006) was read by about nine places with eZee's old meaning - an adjustment counted in sales and charges - while nothing posted it.
+**Fixed:** a refund line (219, `refunds.ts`), positive, money out, counted with the payments in every reader; the Manager report, Night audit report, cashier report and Folios move by the same money (`refunds.test.ts`).
+**Rule:** a refund is never a charge and never revenue. Any new reader of `folio_postings` that splits "charges" from "paid" puts `refund` with `payment`.
+
+### FIN-33 · A cash room bill left the drawer paise over or short - FIXED 14 October (D27-317, Lane B)
+
+**What happened:** a bill of ₹1,234.63 paid in cash put ₹1,235 in the drawer and ₹1,234.63 in its expectation.
+**Fixed:** `payments.round_off` (218), counted by `app.cashier_expected_cash`.
+**Rule:** the bill and the invoice keep their paise; only the cash taken is rounded, and only on a room bill (the stay route's `roundCash`).
+
 ### FIN-31 · A payment on the Bill tab asked every read on screen again - FIXED 14 October (D27-316 (2))
 
 **Found** - the day check (D27-300): `FolioPanel`'s `refresh` was

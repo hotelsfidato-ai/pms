@@ -148,7 +148,6 @@ export async function managerReport(
                                  and c.id = fp.source_id and c.origin = 'pos') then 'pos'
                  when fp.category = 'discount'                      then 'discount'
                  when fp.category = 'tax'                           then 'tax_line'
-                 when fp.category = 'refund'                        then 'refund'
                  when fp.description = 'Early check-in'             then 'early'
                  when fp.description = 'Late check-out'             then 'late'
                  when fp.description like 'Retention%no-show'       then 'no_show'
@@ -157,7 +156,7 @@ export async function managerReport(
             sum(fp.tax_amount)::text                                as tax
        from folio_postings fp
       where fp.hotel_id = $1
-        and fp.category not in ('room', 'payment')
+        and fp.category not in ('room', 'payment', 'refund')
         and ${LIVE}
         and fp.business_date between $2::date and $3::date
       group by 1, 2`,
@@ -174,14 +173,18 @@ export async function managerReport(
   const bucketTax = (k: string) => threeOf(w, taxBy.get(k) ?? new Map());
 
   /* ── Money received, and bills transferred to the city ledger ──────── */
+  /* NET OF REFUNDS (D27-315 B): a refund is money out by the way it went
+     back, so each way's row is what the hotel kept - the Night audit
+     report's receipts and the cashier report say the same. */
   const { rows: paid } = await client.query<{ date: string; method: string; amount: string }>(
     `select to_char(fp.business_date, 'YYYY-MM-DD') as date,
-            coalesce(p.method, 'unrecorded')         as method,
+            coalesce(p.method, rf.method, 'unrecorded') as method,
             (-sum(fp.amount))::text                  as amount
        from folio_postings fp
        left join payments p on p.posting_id = fp.id
+       left join refunds rf on rf.posting_id = fp.id
       where fp.hotel_id = $1
-        and fp.category = 'payment'
+        and fp.category in ('payment', 'refund')
         and ${LIVE}
         and fp.business_date between $2::date and $3::date
       group by 1, 2`,
@@ -241,6 +244,13 @@ export async function managerReport(
        select fp.business_date, fp.category, fp.amount + fp.tax_amount as movement
          from folio_postings fp
         where fp.hotel_id = $1 and ${LIVE} and fp.business_date <= $2::date
+     ),
+     -- Money given back (D27-315 B): it comes off what the guests settled.
+     refunded as (
+       select fp.business_date, fp.amount
+         from folio_postings fp
+        where fp.hotel_id = $1 and fp.category = 'refund' and ${LIVE}
+          and fp.business_date <= $2::date
      )
      select
        coalesce((select sum(amount) from deposit where business_date <  $2::date and check_in >= $2::date), 0)::text as adv_opening,
@@ -248,13 +258,14 @@ export async function managerReport(
        coalesce((select sum(amount) from deposit where business_date <  $2::date and check_in =  $2::date), 0)::text as adv_transfer,
        coalesce((select sum(amount) from deposit where business_date <= $2::date and check_in >  $2::date), 0)::text as adv_closing,
        coalesce((select sum(movement) from everything where business_date < $2::date), 0)::text                   as before,
-       coalesce((select sum(movement) from everything where business_date = $2::date and category <> 'payment'), 0)::text as charged,
-       coalesce((select sum(amount) from pay where business_date = $2::date), 0)::text                             as paid_today`,
+       coalesce((select sum(movement) from everything where business_date = $2::date and category not in ('payment', 'refund')), 0)::text as charged,
+       coalesce((select sum(amount) from pay where business_date = $2::date), 0)::text                             as paid_today,
+       coalesce((select sum(amount) from refunded where business_date = $2::date), 0)::text                        as refunded_today`,
     [hotelId, asOn],
   );
   const L = Object.fromEntries(Object.entries(ledgers!).map(([k, v]) => [k, round2(Number(v))]));
   const glOpening = round2(L["before"]! + L["adv_opening"]!);
-  const glSettlement = round2(L["paid_today"]! - L["adv_collected"]!);
+  const glSettlement = round2(L["paid_today"]! - L["refunded_today"]! - L["adv_collected"]!);
   const glClosing = round2(glOpening - L["adv_transfer"]! + L["charged"]! - glSettlement);
 
   /* ── Rooms that are not sold, and the bookings made ────────────────── */
@@ -443,7 +454,7 @@ export async function managerReport(
     footnotes: [
       "Guest Ledger Closing Balance = Opening Balance - Carry forwarded Advance Deposit + Charge Posted to Guest Ledger - Settlement by Guest",
       "Transfer From Advance Deposit = Balance Transfer To Guest Ledger",
-      "Transfer Charges to Guest Ledger is the day's revenue with tax: each night's room charge on its own night, tonight's at the booking's rate until it is posted. Charge Posted to Guest Ledger is what was posted to the bills that day: a stay posted on arrival counts all its nights that day, and a refund counts too. So the two differ whenever a room is posted for more than one night, or tonight's room is not posted yet.",
+      "Transfer Charges to Guest Ledger is the day's revenue with tax: each night's room charge on its own night, tonight's at the booking's rate until it is posted. Charge Posted to Guest Ledger is what was posted to the bills that day: a stay posted on arrival counts all its nights that day. A refund is money given back: it comes off Settlement by Guest and off its way of paying in Payment, never a charge. So the two differ whenever a room is posted for more than one night, or tonight's room is not posted yet.",
       "PMS Revenue = Total PMS Revenue without Tax",
       "POS Revenue = All Outlet's Total Revenue without Tax",
       "Total Revenue = PMS Revenue + POS Revenue",

@@ -321,10 +321,17 @@ begin
   insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, reverses_id)
   select h, f.id, '2027-02-01', 'payment', 'Cash fixture mistake reversed', 10000, pid
     from folios f where f.reservation_id = a;
-  -- A refund: money going back does not undo money received.
-  insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount)
-  select h, f.id, '2027-02-01', 'refund', 'Cash fixture refund', 5000
-    from folios f where f.reservation_id = a;
+  -- A refund: money going back does not undo money received. With its row,
+  -- as every refund line has by commit (219, D27-315 B).
+  with l as (
+    insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount)
+    select h, f.id, '2027-02-01', 'refund', 'Cash fixture refund', 5000
+      from folios f where f.reservation_id = a returning id)
+  insert into refunds (hotel_id, posting_id, method, method_label, amount, reason, refunded_by)
+  select h, l.id, 'cash', 'Cash', 5000, 'Cash fixture', (select id from staff order by created_at limit 1) from l;
+  -- Its row check now, not at commit: a queued check stops this block's ALTER TABLE.
+  set constraints folio_postings_refund_has_row immediate;
+  set constraints folio_postings_refund_has_row deferred;
 
   perform test.ok('cash limit', 'counts the stay, its group and the guest''s other stay that day',
     app.cash_taken(a, '2027-02-01') = 100000, app.cash_taken(a, '2027-02-01')::text);

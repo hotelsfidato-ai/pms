@@ -173,19 +173,24 @@ cashier.get("/:code/cashier-shift", async (c) => {
     const { rows: receipts } = await client.query<{
       method: string; n: number; amount: string;
     }>(
-      `select coalesce(p.method,'unrecorded') as method,
-              count(*)::int as n, (-sum(fp.amount))::text as amount
+      /* A cash refund given from this drawer (D27-315 B) is here as money
+         out: negative, under the way it went back. */
+      `select coalesce(p.method, rf.method, 'unrecorded') as method,
+              /* With the round-off a cash room bill was taken to the
+                 rupee with (D27-317): what is in the drawer. */
+              count(*)::int as n, (-sum(fp.amount) + coalesce(sum(p.round_off), 0))::text as amount
          from folio_postings fp
          left join payments p on p.posting_id = fp.id
+         left join refunds rf on rf.posting_id = fp.id
          join cashier_shifts cs on cs.id = $1
         where fp.hotel_id = cs.hotel_id
-          and fp.category = 'payment'
+          and fp.category in ('payment', 'refund')
           and fp.posted_by = cs.staff_id
           and fp.created_at >= cs.opened_at
           and fp.reverses_id is null
           and not exists (
             select 1 from folio_postings rev where rev.reverses_id = fp.id)
-        group by coalesce(p.method,'unrecorded')
+        group by coalesce(p.method, rf.method, 'unrecorded')
         order by 1`,
       [shiftId],
     );

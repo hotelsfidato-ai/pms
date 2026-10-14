@@ -306,6 +306,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/stays/:id/charges/:postingId/edit`]: EDIT_BILL,
   [`POST ${H}/stays/:id/rate`]: EDIT_BILL,
   [`POST ${H}/stays/:id/payments`]: PAYMENT,
+  /* D27-315 B: a refund - the owner, an administrator, the GM or the
+     accountant (D27-125's four), asked by the route and by the database. */
+  [`POST ${H}/stays/:id/refunds`]: own("finance/refunds.ts: the four of D27-125"),
   /* D27-305 (10): a group's master bill is settled and invoiced as a stay's. */
   [`POST ${H}/groups/:id/payments`]: PAYMENT,
   [`POST ${H}/groups/:id/invoice`]: TAX_INVOICE,
@@ -822,6 +825,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/stays/:id/bill`]: BILLS,
   [`GET ${H}/stays/:id/folio`]: BILLS,
   [`GET ${H}/stays/:id/folios`]: BILLS,
+  /* D27-315 B: what may be refunded, and a refund's receipt. */
+  [`GET ${H}/stays/:id/refunds`]: BILLS,
+  [`GET ${H}/stays/:id/refunds/:postingId`]: BILLS,
   [`GET ${H}/stays/:id/postings`]: BILLS,
   [`GET ${H}/billable`]: BILLS,
   [`GET ${H}/billing-companies`]: BILLS,
