@@ -211,8 +211,8 @@ export function PropertiesPage() {
           <p className="flex items-start gap-2 text-xs text-grey-500 mt-3 leading-relaxed">
             <Info className="size-3.5 shrink-0 mt-0.5" />
             <span>
-              Creating a property makes its room types and invoice series; add
-              its rooms next. <strong>The code appears in every URL and every
+              Creating a property makes the hotel and its invoice series; add
+              its room types and rooms in Set up this hotel. <strong>The code appears in every URL and every
               invoice number and cannot be changed afterwards.</strong>
             </span>
           </p>

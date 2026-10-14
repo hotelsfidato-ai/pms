@@ -11,6 +11,11 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-14 · Add a property says a new hotel has no room types yet (the owner's D27-322)
+
+**Asked for:** after Add a property the message read "0 room types from the template" - correct (a new hotel starts with none, D27-263) but it read like a failure.
+**Shipped:** the reply's `next` and the message after Add a property: "No room types yet - add them in Set up this hotel." (the count is no longer printed). The key panel, the grey line under the cards and the missing-key refusal no longer say a property is made with its room types: "Creating a property makes the hotel and its invoice series; its room types and rooms are added in Set up this hotel." The manual's A16 says the same (rebuilt). Wording only; what happens is unchanged.
+
 ## 2026-10-14 · A test hotel's code is "T" + the real code (the owner's D27-320)
 
 **Asked for:** D27-320: a new test hotel's code is "T" + the real code (TSHI, TAMR), not the real code + "T" (SHI's became "SHIT" on live); existing test hotels keep theirs; and the steps for the owner to remove SHIT and make TSHI after the release.

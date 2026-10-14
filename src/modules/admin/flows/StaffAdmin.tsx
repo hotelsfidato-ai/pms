@@ -372,7 +372,7 @@ export function NewProperty({ onDone }: { onDone: () => void }) {
 
     toast.success(
       `${res.code} created`,
-      `${res.roomTypes} room types from the template. ${res.next}`,
+      res.next,
     );
     setCode(""); setName(""); setCity(""); setState(""); setGstin("");
     /* The key is cleared too. It is not a form field somebody should
@@ -416,9 +416,9 @@ export function NewProperty({ onDone }: { onDone: () => void }) {
                   Provisioning key
                 </p>
                 <p className="text-xs text-grey-600 mt-0.5 leading-relaxed mb-2">
-                  Creating a property makes its room types and invoice series;
-                  add its rooms next. Being signed in as an administrator is
-                  not enough on its own.
+                  Creating a property makes the hotel and its invoice series;
+                  its room types and rooms are added in Set up this hotel.
+                  Being signed in as an administrator is not enough on its own.
                 </p>
                 <Input
                   type="password"

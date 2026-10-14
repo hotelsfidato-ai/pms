@@ -141,7 +141,7 @@ admin.post("/admin/hotels", async (c) => {
   if (!digest) {
     return c.json(refuse(
       "This action needs the provisioning key. Creating a property makes " +
-      "its room types and invoice series, so being signed in is not " +
+      "the hotel and its invoice series, so being signed in is not " +
       "enough on its own.",
     ), 403);
   }
@@ -157,11 +157,9 @@ admin.post("/admin/hotels", async (c) => {
          input.templateSet ?? "standard"],
       );
 
-      /* Room TYPES arrive from the template; ROOMS do not.
-         provision_property() clones the type catalogue and stops, and
-         app.bulk_create_rooms() is a separate act because a property's
-         numbering is the one thing a template cannot guess. Reporting a
-         room count here would have printed 0 and read like a failure. */
+      /* Neither room TYPES nor ROOMS arrive: provision_property() asks
+         for no template (D27-263), and both are added in Set up this
+         hotel. The count stays in the reply for callers that read it. */
       const { rows: made } = await client.query<{ types: string }>(
         `select count(*)::text as types from room_types where hotel_id = $1`,
         [rows[0]!.id],
@@ -173,7 +171,9 @@ admin.post("/admin/hotels", async (c) => {
         code, name,
         roomTypes: Number(made[0]!.types),
         rooms: 0,
-        next: "Add its rooms - the property has its type catalogue but no rooms yet.",
+        /* D27-322: a new hotel has no room types (D27-263), and the old
+           "0 room types from the template" read like a failure. */
+        next: "No room types yet - add them in Set up this hotel.",
       };
     });
     return c.json(result, "ok" in result && result.ok ? 200 : 409);
