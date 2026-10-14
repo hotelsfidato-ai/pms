@@ -33,11 +33,13 @@ beforeEach(() => { startSignedIn(); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 /** The bill before arrival: `balance` posted (null: no bill yet), and the
-    advance the server says is still owed. */
-function bill(balance: number | null, owed: number) {
+    advance the server says is still owed (null: none asked, as the server
+    answers when the rule is off or the advance is paid). */
+function bill(balance: number | null, owed: number | null, stay: Stay = STAY) {
   vi.spyOn(apiModule, "api").mockImplementation(async (path: string) => {
     if (String(path).includes("/express-check-in")) {
-      return { express: false, advance: { owed, words: `An advance of ₹${owed} is owed before check-in.` } } as never;
+      return { express: false, advance: owed === null ? null
+        : { owed, words: `An advance of ₹${owed} is owed before check-in.` } } as never;
     }
     return new Promise(() => {}) as never;
   });
@@ -45,7 +47,7 @@ function bill(balance: number | null, owed: number) {
   const paid = vi.spyOn(postings, "settle").mockResolvedValue({ ok: true });
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <TooltipProvider><MemoryRouter><FolioPanel hotelId="5EL" stay={STAY} businessDate="2026-09-22" /></MemoryRouter></TooltipProvider>
+      <TooltipProvider><MemoryRouter><FolioPanel hotelId="5EL" stay={stay} businessDate="2026-09-22" /></MemoryRouter></TooltipProvider>
     </QueryClientProvider>,
   );
   return paid;
@@ -74,8 +76,27 @@ describe("Settle before arrival", () => {
     expect((screen.getByLabelText("Amount") as HTMLInputElement).value).toBe("1100");
   });
 
-  it("stays grey when no advance is owed and nothing is", async () => {
-    bill(null, 0);
+  /* THE OWNER'S D27-330 (2): a deposit before arrival with the advance rule
+     off - Settle opens, the amount EMPTY for the desk to type (no default
+     prices), taken as the guest's credit. */
+  it("opens with no advance asked, the amount empty, and takes a deposit as the guest's credit", async () => {
+    const paid = bill(null, null);
+    const open = await screen.findByRole("button", { name: /Settle/ });
+    await waitFor(() => expect((open as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(open);
+    expect((screen.getByLabelText("Amount") as HTMLInputElement).value).toBe("");
+    const take = screen.getByRole("button", { name: "Take payment" }) as HTMLButtonElement;
+    expect(take.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "5000" } });
+    expect(document.querySelector("[data-advance]")?.textContent).toMatch(/held as the guest's credit/);
+    expect(take.disabled).toBe(false);
+    fireEvent.click(take);
+    await waitFor(() => expect(paid).toHaveBeenCalled());
+    expect(paid.mock.calls[0]![2]).toMatchObject({ amount: 5000, heldAsCredit: true });
+  });
+
+  it("stays grey in house when nothing is owed (a deposit is before arrival only)", async () => {
+    bill(null, null, { ...STAY, status: "in-house" } as Stay);
     const open = await screen.findByRole("button", { name: /Settle/ });
     await new Promise((r) => setTimeout(r, 50));
     expect((open as HTMLButtonElement).disabled).toBe(true);

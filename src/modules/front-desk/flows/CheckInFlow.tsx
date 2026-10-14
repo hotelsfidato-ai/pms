@@ -296,6 +296,7 @@ export function CheckInFlow({
                 <>
                   <Explained title="Room">
                     Only a clean or inspected room can take a guest; the rest are shown with the reason.
+                    A room of a different type is an upgrade: the booked rate stays.
                   </Explained>
                   {/* One column on a phone: two cut "inspected" off at 390 px. */}
                   <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[240px] overflow-y-auto scrollbar-quiet">

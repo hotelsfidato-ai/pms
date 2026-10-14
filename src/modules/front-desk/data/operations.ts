@@ -46,11 +46,11 @@ export async function checkInAllowed(
   return canCheckIn(stay, businessDate);
 }
 
-/** Rooms a guest of this type may actually be put in. */
+/** Every room, this type's first, and whether a guest may be put in it. */
 export async function assignableRooms(
   hotelId: string, roomType: string, businessDate: string,
-  /** The room this booking is ALREADY on, if any. Always offered,
-      whatever its type — see below. */
+  /** The room this booking is ALREADY on, if any: its own guest still
+      in it does not refuse it. */
   currentRoom?: string | null,
 ) {
   /* Which rooms a guest of this type can be put in tonight, and why
@@ -73,20 +73,14 @@ export async function assignableRooms(
   const takenBy = new Map(inHouse.map((s) => [s.roomNumber, s.guest]));
 
   return rooms
-    /* THE ROOM THEY ARE ALREADY ON IS ALWAYS OFFERED. Filtering to the
-       booked type alone hid it whenever the two disagreed — a Deluxe
-       booking pre-assigned to a Superior, which the desk does when it
-       upgrades somebody or works around a fault.
-
-       The flow seeds its selection from `stay.roomNumber`, so the room
-       was SELECTED AND ABSENT: the picker showed eight rooms, none of
-       them highlighted, and the one the desk had already chosen was
-       nowhere. Nothing said why.
-
-       A decision somebody already made is not a decision this screen
-       gets to hide. */
-    .filter((r) => r.type === roomType
-      || (currentRoom != null && r.number === currentRoom))
+    /* EVERY TYPE, THE BOOKED TYPE FIRST (the owner's D27-330 (1)). This
+       filtered to the booked type plus the room the booking was already on
+       (an upgrade Assign room gave), so an upgrade at the desk meant Assign
+       room first. Now the desk picks any room; the screen marks another
+       type "(different type)" and the server takes it as an upgrade, the
+       booked rate kept (D27-328, FD-34). A stable sort: each type keeps the
+       rooms' own order. */
+    .sort((a, b) => Number(b.type === roomType) - Number(a.type === roomType))
     .map((r) => {
       /* The seam keeps the name the screens already read. The API calls
          it `status`; the store called it `housekeeping`, and CheckInFlow
