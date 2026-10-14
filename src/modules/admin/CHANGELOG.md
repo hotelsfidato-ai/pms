@@ -11,6 +11,14 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-14 · The Profile checklist does not ask a test hotel for a GSTIN (the owner's D27-319 (1))
+
+**Asked for:** the item left open on 13 October: "What this property still needs" (`GET /:code/commissioning`) stops asking a test hotel (`hotels.test_of` set) for a real GSTIN and stops counting it as blocking, as the wizard already does (D27-316 (6a)).
+**Shipped:** `api/src/modules/admin/commissioning.ts`, `commissioningChecks`: for a test hotel the "A real GSTIN" check is left out (as "menu-tax" is left out of a hotel with no menu), so it neither shows nor blocks; a real hotel is asked as before. The test-hotel question is asked once there (`isTestHotelId`) and handed to `setup.ts` as `figures.test`, which no longer asks it itself. `MODULE.md` updated.
+**Proved:** API (through `dbq.sh`) `setupWizard.test.ts` 26 of 26 with the new case "the Profile checklist does not ask a test hotel for a GSTIN, or count one as blocking" (SWT: no `gstin` check, not in `blockedBy`; the real SWR: both); before, on a scratch copy of the old code, that case alone failed ("expected [ 'gstin', 'tax-rules', ... ] to not include 'gstin'"), the other 25 passed. On my copy's API (`fidato_d319`): 5EL "8 of 10", blocked by "A real GSTIN" (its dummy number); 5ELT "7 of 9", blocked by nothing, no GSTIN line; the Profile page of 5ELT showed "7 of 9 settled" and "Everything that stops a booking is settled". The wizard's profile step: 5EL "Still missing: a real GSTIN (the one set is a dummy).", 5ELT done.
+**Found, not changed:** the GSTIN line's own detail still says "It PRINTS on the tax invoice" in capitals (the same kind as D27-319's "OFFERED"; not in the decision).
+**Left open:** the manual's A17.2 (lines in the master's report).
+
 ## 2026-10-13 · The setup wizard's details; the provisioning key's words (the owner's D27-316 (6); the master's addition)
 
 **Asked for:** D27-316 (6a)-(6d) and one line from the master. (6e) was left as it is on purpose: a bank-details change by someone since taken off the roster still shows no name.

@@ -220,12 +220,12 @@ export async function cancelChannelBooking(
 ): Promise<ChannelCancelResult> {
   const reason = input.reason?.trim();
   if (!reason) {
-    return { ok: false, kind: "refused", reason: "A cancellation says why (111)." };
+    return { ok: false, kind: "refused", reason: "A cancellation says why." };
   }
   if (input.chargeFrom !== "channel") {
     return {
       ok: false, kind: "refused",
-      reason: "A booking from a site is cancelled under the site's policy (D17-44).",
+      reason: "A booking from a site is cancelled under the site's policy.",
     };
   }
 

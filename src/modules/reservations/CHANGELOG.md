@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-14 · No decision codes in the booking-site refusals (the owner's D27-319 (1))
+
+`api/src/modules/reservations/channel.ts`, `cancelChannelBooking`: "A cancellation says why (111)." and "A booking from a site is cancelled under the site's policy (D17-44)." lose their codes; the sentences are otherwise unchanged (the codes stay in the comments). **Proved:** no test asserted the old words; `channelDoor.test.ts` and `channel-manager/suInbound.test.ts` re-run in the session's API run (see the front desk's entry for the numbers).
+
 ## 2026-10-12 · "Rates", not "the rate calendar" (the owner's D27-307 (4))
 
 New booking with no price for a line: "No price for …. Set it on Rates, or type a rate on the line." (`pages/BookingPage.tsx`, found by the A17 video check); the server's own refusal (`api/.../book.ts`) "… has no price for …. Set it on Rates, or enter a rate for this booking." **Proved:** no test asserted the old words; on a scratch copy of the demo with the room types' prices taken off, the New booking page showed the line, and my API answered a booking with no rate with that sentence (nothing written).

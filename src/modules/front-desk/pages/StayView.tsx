@@ -63,7 +63,9 @@ const BAR_LABEL: Record<BarTone, string> = {
   departed: "Checked out",
   "due-out": "Due out",
   "no-show": "No show",
-  void: "Void",
+  /* The struck-through bar is a CANCELLED booking (toneFor, stayview.ts):
+     the key and the panel said "Void" (D27-319 (1), plain words). */
+  void: "Cancelled",
   waiting: "Waiting for the hotel",
 };
 
@@ -182,6 +184,7 @@ export default function StayViewPage({ view }: {
   /* The hotel's own weekend, shaded (D27-243 3.4), and its holidays (192). */
   const weekend = useCurrentHotel()?.deskRules?.weekendDays;
   const holiday = new Map((useCurrentHotel()?.deskRules?.holidays ?? []).map((h) => [h.day, h]));
+  const statusColours = useCurrentHotel()?.deskRules?.statusColours;
 
   /* Open on the business date so the chart shows today first. */
   const [start, setStart] = useState(BUSINESS_DATE);
@@ -596,10 +599,13 @@ export default function StayViewPage({ view }: {
               Today
             </Button>
           )}
+          {/* Every colour a bar can be, the hotel's own where it chose one
+              (D27-319 (1): it named three of the seven). */}
           <p className="flex flex-wrap gap-x-3.5 gap-y-1 text-xs text-grey-600 max-sm:w-full sm:ml-auto" aria-hidden>
-            {(["in-house", "due-out", "confirmed"] as const).map((t) => (
+            {(["in-house", "due-out", "confirmed", "waiting", "departed", "no-show", "void"] as const).map((t) => (
               <span key={t} className="inline-flex items-center gap-1.5">
-                <i className={cn("w-[18px] h-2.5 rounded-[3px]", BAR[t])} />
+                <i className={cn("w-[18px] h-2.5 rounded-[3px]", BAR[t])}
+                  style={statusColours?.[t] ? { backgroundColor: statusColours[t] } : undefined} />
                 {BAR_LABEL[t]}
               </span>
             ))}

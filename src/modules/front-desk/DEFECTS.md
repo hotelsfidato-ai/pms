@@ -14,6 +14,22 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+### FD-32 · A voided booking that held a room is drawn on the Calendar as a confirmed one - OPEN (the owner's call)
+
+**Found** - 14 October, D27-319 (1), naming the Calendar's seven bar colours.
+`toneFor` (`data/stayview.ts`) gives the struck-through colour to status
+`cancelled` only. A VOIDED booking arrives as status `void` (stays.ts:
+`row.status.replace("_", "-")`; `void` is not in `StayStatus`, so the type
+cannot catch it), falls through to "confirmed", and keeps the room it was
+given (the board's room join keeps a released hold for every status but
+confirmed). So it is a pale blue Confirmed bar on that room, and the room
+type row's free count for those nights is one low (it counts every bar not
+struck through). **Seen** on a scratch copy (`fidato_d319`, 5ELT): a booking
+holding room 205 for 14-16 Oct, voided ("Entered twice"), drew `bg-info-50`,
+not struck through. **The fix waiting** (not made: what a person sees):
+`toneFor` gives `void` the struck-through colour too, and the key says
+"Cancelled or void".
+
 ### FD-26 · A price saved on Rates did not reach the Calendar until something else refreshed it - FIXED 4 October (Rates refreshes the Calendar)
 
 **Found** - 4 October, opening the Calendar after setting a night's price on

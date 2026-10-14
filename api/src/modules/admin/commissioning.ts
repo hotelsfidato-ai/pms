@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { PoolClient as Client } from "pg";
+import { isTestHotelId } from "../../testHotels.ts";
 
 /* Split out of api/src/routes/inventorySetup.ts on 15 September in the
    service-folder move (docs/SERVICE-FOLDERS-PLAN.md). Service: admin.
@@ -114,8 +115,13 @@ export async function commissioningChecks(client: Client, hotelId: string) {
     const placeholderGstin =
       !!hotel.gstin && /AAAAA0000A|BBBBB0000B|ZZZZZ0000Z/i.test(hotel.gstin);
 
+    /* A test hotel carries no GSTIN by design (its documents are TEST, NOT
+       VALID: D27-296 (8)), so it is not asked for one here either, and so
+       nothing blocks on it (D27-319 (1); Set up this hotel, D27-316 (6a)). */
+    const test = await isTestHotelId(client, hotelId);
+
     const checks: Check[] = [
-      {
+      ...(test ? [] : [{
         id: "gstin",
         label: "A real GSTIN",
         done: !!hotel.gstin && !placeholderGstin,
@@ -128,7 +134,7 @@ export async function commissioningChecks(client: Client, hotelId: string) {
             : null,
         blocking: true,
         to: "/settings/property",
-      },
+      } as Check]),
       {
         id: "tax-rules",
         label: "A GST rule for rooms",
@@ -228,5 +234,5 @@ export async function commissioningChecks(client: Client, hotelId: string) {
       } as Check] : []),
     ];
 
-    return { hotel, checks, figures: { types, unpriced, rooms, placeholderGstin } };
+    return { hotel, checks, figures: { types, unpriced, rooms, placeholderGstin, test } };
 }

@@ -327,7 +327,7 @@ function VenueDialog({
           <Field
             label="Usual rate"
             hint={
-              "Optional, and only ever OFFERED on the booking form. What gets "
+              "Optional, and only ever offered on the booking form. What gets "
               + "billed is what somebody agrees for the function, so changing "
               + "this cannot reprice a booking already made."
             }

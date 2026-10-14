@@ -27,7 +27,7 @@ import { heading, type Property } from "../figures.ts";
    ══════════════════════════════════════════════════════════════════ */
 
 export const COST_NOTE =
-  "Costs as recorded: delivery prices before GST, each item at its running average at the moment (D27-238, D27-242).";
+  "Costs as recorded: delivery prices before GST, each item at its running average at the moment.";
 
 /** A movement nobody reversed and that reverses nothing: the ledger as it stands. */
 const LIVE = `m.reverses_id is null

@@ -15,6 +15,9 @@ import { closePool } from "../../../src/db.ts";
        hotel's business date (app.business_date), never the clock's - the A5
        script's early leaver departed after the business date.
 
+   And D27-319 (2), 14 October: a day use (out the day it comes) has its own
+   hours, so it is never asked and never charged a late fee.
+
    The rule itself is app.departure_is_late (db/tests/modules/front-desk.sql).
    No night audit has run here, so the business date is hotels.business_date
    and each test sets it.
@@ -88,7 +91,7 @@ beforeAll(async () => {
       `update hotels set business_date = date '2026-08-25', check_in_time = '00:00',
                          check_out_time = '00:00', late_checkout_charge = 400
         where id = $1`, [hotelId]);
-    await db.query("select app.bulk_create_rooms($1,'STD',1::smallint,101,104)", [hotelId]);
+    await db.query("select app.bulk_create_rooms($1,'STD',1::smallint,101,105)", [hotelId]);
     await db.query(
       `insert into tax_rules (hotel_id, kind, over_amount, rate, note)
        values ($1, 'room', 0, 5, 'Test')`, [hotelId]);
@@ -128,6 +131,17 @@ describe("D27-314 (2) · only on or after the departure date", () => {
     const id = await stay(`${CODE}-ONDAY`, "2026-08-26", "102");
     await businessDate("2026-08-26");
     expect((await checkOut(id)).needs).toBe("late-reason");
+  });
+});
+
+describe("D27-319 (2) · a day use is never late", () => {
+  it("out the day it came, after check-out time: not asked and not charged", async () => {
+    const id = await stay(`${CODE}-DAYUSE`, "2026-08-25", "105");
+    const res = await checkOut(id);
+    expect(res.needs, res.reason).toBeUndefined();
+    await checkOut(id, { lateReason: "Sent anyway" });
+    expect(await lateLines(id)).toEqual([]);
+    expect((await recorded(id)).at).toBeNull();
   });
 });
 

@@ -8,6 +8,22 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-14 · A day use is never late; the Calendar's key names all seven colours (the owner's D27-319 (1) and (2))
+
+**Asked for:** D27-319 (2): a day-use guest (arrival and departure the same date) is never asked "Leaving after check-out time" and never charged a late fee, changed once in the rule of migration 217. (1): the Calendar's colour key names all seven bar colours, in plain words. The whole session (admin, reservations, reports, POS and banquet had a line each) is here. front-desk was claimed by lane A (D27-315 A); this copy kept to one line of the check-out route.
+**Shipped:**
+- Migration `220_a_day_use_is_never_late.sql` (written as 218; renumbered at merge after lane B's 218 and 219): `app.departure_is_late(hotel, at, arrival, departure)` - false when arrival = departure (a day use), otherwise 217's rule (on or after the departure date by the business date, past check-out time on the property's clock). The three-argument version is dropped, so one rule is left; replay-safe as 217 is.
+- `api/src/modules/front-desk/operations.ts`, the check-out route: the one query passes `check_in` too. Nothing else in the route changed (lane A's "Leaving early" sits elsewhere in it, and decides lateness before it moves the departure).
+- `pages/StayView.tsx`: the key above the chart names In house, Due out, Confirmed, Waiting for the hotel, Checked out, No show and Cancelled (it named the first three), each in the hotel's own colour where it chose one (D27-260 Q6), as the bars are. The struck-through colour is given only to a CANCELLED booking (`toneFor`), so its name is "Cancelled" (was "Void"), in the key and the stay panel's pill.
+- `MODULE.md` (check-out row), `DEFECTS.md` FD-32 (open, below).
+**Found:** FD-32 - a VOIDED booking that held a room is drawn as a pale blue Confirmed bar and takes a free room off its type's count (`toneFor` knows `cancelled`, not `void`). Seen on screen. Not fixed: the owner's call (recommendation in FD-32).
+**Proved:**
+- Web: `calendarKey.test.tsx` 2 of 2 (new), both seen failing on the old key (3 names; no hotel colour). Quick gates (`bash scripts/gates.sh d27-319 quick`, run after the 04:05 restart cut the first): web types, API types, strip and web tests all exit 0 - 189 files, 1,314 tests.
+- API (through `dbq.sh`), after: lateDeparture, feesAndDayUse, setupWizard, inventory, channelDoor, channel-manager/suInbound, reports/stockReports, night-audit/nightAudit - 8 files, 126 of 126. Before (the same two files, on a scratch copy of the old code and old db tests): 29 of 31 - exactly the two new cases failed: the day use was answered "Check-out was 00:00. A late departure needs a reason ... and carries a ₹400 charge." (`needs: late-reason`), and the test hotel's checklist still listed `gstin`.
+- Database (through `dbq.sh`): `db/tests/run.sh` 1,697 of 1,697 on 218 migrations (late departure 8 of 8, two of them the day use); before, on a copy of the old migrations with the new tests, the suite stopped at `suite.sql` - "function app.departure_is_late(uuid, timestamp with time zone, date, date) does not exist". `db/tests/rerun.sh`: all 218 migrations re-runnable.
+- On screen (my copy, API 8846, web 5346, scratch `fidato_d319` from the 13 Oct dump, at 13:10 IST, check-out 11:00, late fee set to ₹500 on 5ELT): a day use (11 Oct, room 201), paid, Check out - checked out, no late dialog, no late line. An overnight stay leaving that day (room 202), paid, Check out - "Leaving after check-out time", "Waive the ₹500 charge"; cancelled. The Calendar's key read all seven, one line at 1280 wide. (The confirm buttons were pressed through `element.click()` from the console; the pane was hidden.)
+**Left open:** FD-32. The manual (lines in the master's report): A1 "Pale red, struck through - Void" becomes "Cancelled"; A5 (check-out) is not written yet - when it is, a day use is never asked the late question.
+
 ## 2026-10-14 · Leaving early: Check out before the booked departure frees the nights not stayed (the owner's D27-315, Part A)
 
 **Asked for:** lane A (`docs/briefs/lanes/early-checkout-a.md`). Branch `lane/early-checkout-a` from cp6 79062314 (D27-314's 217 in it); scratch copy `fidato_lane_a` (the 13 October dump, migrated to 217), API 8851, web 5351. Front desk claimed. No migration: nothing new in the database.

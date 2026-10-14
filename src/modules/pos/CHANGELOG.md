@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-14 · The KOT setup file without a decision code (the owner's D27-319 (1))
+
+`lib/kotSetupFile.ts`: the file's first `rem` line, "KOT station setup for AMR (D27-299), made by Restaurant setup - KOT section.", loses "(D27-299)". **Proved:** `kotSetup.test.tsx` 6 of 6 after the change (none asserts the `rem` line).
+
 ## 2026-10-10 · the one-click KOT computer setup (D27-299)
 
 **Asked for:** "make it simple - the team just connects the KOT device, instead of the extra work."

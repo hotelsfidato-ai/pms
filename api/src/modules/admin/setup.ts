@@ -2,7 +2,6 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
 import { commissioningChecks } from "./commissioning.ts";
-import { isTestHotelId } from "../../testHotels.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    SET UP THIS HOTEL (the owner's D27-311, 13 October)
@@ -144,8 +143,9 @@ async function seen(client: Client, hotelId: string): Promise<Record<StepId, See
     ({ done, automatic: false, detail: done ? null : detail });
 
   /* A test hotel carries no GSTIN by design (its documents are TEST, NOT VALID:
-     D27-296 (8)), so its profile does not ask for one. A real hotel does. */
-  const test = await isTestHotelId(client, hotelId);
+     D27-296 (8)), so its profile does not ask for one. A real hotel does.
+     Asked once, in commissioningChecks, whose list leaves it out too. */
+  const { test } = figures;
 
   const profile = [
     ...(test ? [] : !hotel.gstin ? ["the GSTIN"]

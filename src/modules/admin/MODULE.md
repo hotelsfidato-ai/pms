@@ -285,7 +285,9 @@ payments asks for the bank details and a way of paying switched on. Those are
 `automatic` (a hand Completed is refused). **A test hotel's profile does not
 ask for the GSTIN** (a test hotel carries none by design, D27-296 (8)): only
 the address, phone and email (D27-316 (6a)); the Profile checklist
-(`GET /:code/commissioning`) is unchanged and still lists the GSTIN. The rest
+(`GET /:code/commissioning`) leaves the GSTIN out for a test hotel too, so
+nothing blocks on it (D27-319 (1)): `commissioningChecks` asks
+`isTestHotelId` once and hands the answer to the wizard (`figures.test`). The rest
 are by hand, but tick themselves where the rows show it: cancellation terms
 (a cancellation policy exists; charging nothing is a valid choice, so a hand
 Completed is allowed, D27-316 (6b)), charges (an extra charge, a

@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-14 · "offered", not "OFFERED", on the Add a hall form (the owner's D27-319 (1))
+
+`pages/BanquetSetup.tsx`, the Usual rate's hint: "Optional, and only ever offered on the booking form. ..." (was capitals). **Proved:** `banquet.test.tsx` 19 of 19 after the change (none asserts the hint); Add a hall opened on my copy (5ELT, banquet switched on in the scratch `fidato_d319`) reads "Optional, and only ever offered on the booking form."
+
 ## 2026-10-12 · Halls and packages: every control disabled for those the server refuses (the owner's D27-307 (4))
 
 **Asked for:** the master: Reception could press Add a hall, Edit and Add a
