@@ -26,7 +26,7 @@ describe("the Calendar's colour key", () => {
   it("names all seven bar colours, in plain words", async () => {
     render(<App />);
     expect([...(await key()).children].map((c) => c.textContent)).toEqual([
-      "In house", "Due out", "Confirmed", "Waiting for the hotel", "Checked out", "No show", "Cancelled",
+      "In house", "Due out", "Confirmed", "Waiting for the hotel", "Checked out", "No show", "Cancelled or void",
     ]);
   });
 
