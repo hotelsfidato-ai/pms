@@ -57,10 +57,13 @@ holds guests' Form C (order 60).
 
 - `flows/FolioPanel.tsx` — the Bill tab inside front desk's stay panel:
   postings, charge, reverse, settle, split billing, and check out (which it
-  asks front desk to do). Before arrival Settle opens only for the advance
+  asks front desk to do). Before arrival Settle opens for the advance
   the hotel asks before check-in - the server's figure (front desk's
   `expressCheckIn`), filled in, held as the guest's credit without a tick,
-  a part paid leaving the rest (`SettleDialog`'s `advance`, D27-328, FIN-36). For the owner, an administrator and the GM, a
+  a part paid leaving the rest (`SettleDialog`'s `advance`, D27-328, FIN-36);
+  with no advance asked (the rule off, or paid) and nothing owed, it opens
+  for a **deposit**, the amount EMPTY for the desk to type (no default
+  prices), held as the guest's credit the same way (D27-330 (2), FIN-37). For the owner, an administrator and the GM, a
   pencil on each charge (Edit: price or words, with a reason) and "Change
   rate" for the stay (D27-157, D27-162). Each line names who posted it ("Night audit" for
   the audit's room charge); its print, and the button that opens it, say
