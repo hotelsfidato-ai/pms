@@ -48,3 +48,7 @@ say so plainly in the script (the owner chose this; do not invent a real-looking
 **14 Oct 12:50, the owner (D27-321):** the practice figures are approved - rooms 3,000 and 4,000,
 extra bed 600, discount 10%, commission 15% - typed into the practice hotel only, never read aloud
 as advice (the voice says "your price", not the number).
+
+**14 Oct 14:58, the master:** 5EL is restored (your F1-02/03 saves are undone). Go: add a guard to every
+group (stop if the page does not show "Practice Hotel Nashik"), find why the hotel pick reset to 5EL after a
+page load (if it is a PMS fault, report it), then retake F1-02 onwards on PHN.
