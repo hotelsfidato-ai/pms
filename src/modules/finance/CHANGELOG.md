@@ -8,6 +8,15 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-15 · A booking-site stay's refund for money paid at the hotel; Settle before arrival for the advance (the owner's D27-328 (2) and (3))
+
+**Asked for:** D27-328 (2): a booking-site guest who paid the HOTEL and left early could not be checked out - the refund refused every booking-site stay. (3): the check-in asked for an advance "on the Bill tab" while Settle was grey before arrival and when in credit. The whole session, with what was seen and the test runs, is front desk's CHANGELOG entry of the same date.
+**Shipped:**
+- `api/.../refunds.ts` `refundBills` (FIN-34): a booking-site stay's bill offers the ways it was paid AT THE HOTEL, as a guest's own bill - the same four people, never "Bill to company" (city ledger is not a way money is given back), the same ₹20,000 cash rule and its transfer. The notice "A booking-site stay: the booking site refunds the guest..." stays only where nothing paid at the desk is there to give back. A company's credit unchanged.
+- `flows/FolioPanel.tsx` (FIN-35): the Bill tab reads the advance still owed (front desk's `expressCheckIn`, the check-in's own read and cache key) for a booking not yet arrived; `SettleDialog`'s new `advance` opens Settle with it filled in ("₹… advance owed before check-in"), held as the guest's credit without the tick, "Advance owed" and "Remaining" against it; a part paid leaves the rest. With no advance owed it stays as it was.
+- Tests: `api/test/modules/finance/bookingSiteRefund.test.ts` (new, property OTR), `settleAdvance.test.tsx` (new).
+**Left open:** a company's credit to its City ledger at check-out (after launch; until then a manager reverses the payment the same day).
+
 ## 2026-10-14 · Cash to the rupee on a room bill (D27-317); a Refund line, and one sign for `refund` (D27-315 Part B) - Lane B
 
 **Asked for:** `docs/briefs/lanes/money-roundoff-refunds.md`. (1) A room bill settled in cash: the cash taken is the nearest rupee, the round-off (at most ±0.50) recorded with the payment so the drawer balances; UPI, card and the rest exact; the GST invoice exact; the restaurant's Round off unchanged; shown on Settle and the bill. (2) A Refund line on a stay's own overpaid bill: the four of D27-125 only (server and database); back by the way paid, never cash for card or UPI; cash only below ₹20,000, a transfer above, until the CA confirms; mode, reference, reason, who, dated today; a cash refund lowers the giver's drawer; a plain Refund receipt; every report agreeing on what `refund` means first.

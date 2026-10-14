@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-15 · New booking takes the advance before Check in now (the owner's D27-328 (3))
+
+`pages/BookingPage.tsx` `submit`: the advance (finance's payment door, held as the guest's credit) is taken right after the booking call and BEFORE front desk's check-in; it was taken after, so with "Advance before check-in" on the check-in was refused and the booking left due in with the money paid. Test: `onePage.test.tsx` "is taken before Check in now checks the guest in" - the calls in order bookings, payments, check-in; seen failing on the old code (bookings, check-in, payments). Seen on screen (helper copy, 5EL, advance rule "The first night"): New booking, room 208, an advance of ₹5,000 by UPI, Check in now - "Checked in · In house, room 208 · Advance of ₹5,000.00 taken". `MODULE.md` says the order. Part of front desk's and finance's D27-328 entries.
+
 ## 2026-10-14 · No decision codes in the booking-site refusals (the owner's D27-319 (1))
 
 `api/src/modules/reservations/channel.ts`, `cancelChannelBooking`: "A cancellation says why (111)." and "A booking from a site is cancelled under the site's policy (D17-44)." lose their codes; the sentences are otherwise unchanged (the codes stay in the comments). **Proved:** no test asserted the old words; `channelDoor.test.ts` and `channel-manager/suInbound.test.ts` re-run in the session's API run (see the front desk's entry for the numbers).

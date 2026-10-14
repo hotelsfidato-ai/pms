@@ -111,6 +111,7 @@
       <tr><td><span class="ui">Occupied</span>: <span class="msg">“… is in this room.”</span></td><td>A guest is in it now.</td></tr>
     </tbody>
   </table>
+  <p>The room the booking already holds is in the list too, whatever its type. A room of another type, an upgrade given with Assign room, says <span class="msg">“Deluxe (different type)”</span> (its own type) beside its number, and on its one line, for example <span class="msg">“Room 302 · Clean · Deluxe (different type)”</span>.</p>
   <p>Click a free room. The list folds into one line, <span class="msg">“Room 301 · Inspected”</span>, and <span class="ui">Change room</span> opens it again. Until a room is chosen, <span class="ui">Check in</span> is grey and the line under it says <span class="msg">“Pick a room.”</span> If the room the booking holds has turned dirty, the line says <span class="msg">“Room 304: Not cleaned yet.”</span> and the list opens for you to choose another.</p>
 
   <figure class="shot" id="fig-A3-05">
@@ -135,14 +136,15 @@
     <h4>Watch out</h4>
     <ul>
       <li>The list offers the rooms of the type booked, and the room the booking already holds, whatever its type.</li>
-      <li><b>Another room type:</b> Assign room accepts it, and says <span class="msg">“Another type is allowed - it will be noted on the assignment.”</span> But the check-in itself puts a guest only in a room of the type booked: the server refuses another with <span class="msg">“That room is a different type from the one booked.”</span></li>
+      <li><b>Another room type:</b> Assign room accepts it, and says <span class="msg">“Another type is allowed - it will be noted on the assignment.”</span> The check-in accepts it too, and its message adds <span class="msg">“Note: Deluxe is not the room type they booked.”</span> The stay panel's <span class="ui">Room</span> then shows the room's own type and the type booked: <span class="msg">“302 · Deluxe · booked Superior”</span>.</li>
+      <li><b>The guest keeps the booked rate.</b> A room of another type changes the room, not the price: the bill charges the rate agreed on the booking. To charge for the better room, change the rate on the Bill tab (A4.6).</li>
       <li>The server asks the same questions as the window, and refuses by itself: a dirty room, <span class="msg">“That room has not been cleaned yet.”</span>; a room out of service, <span class="msg">“That room is held out of service.”</span>; a room held by another booking for part of the stay, <span class="msg">“Room 301 is held by … for part of that stay.”</span></li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A dirty room is shown, greyed, with the reason, rather than hidden: hiding it would teach nobody why. The check-in refuses a room a late guest is still in: <span class="d">D23-12</span>. The booked room on one line, the grid only when it is needed: <span class="d">D27-236</span>. A button the person may not use is hidden, not greyed: <span class="d">D24-18</span>.</p>
+    <p>A dirty room is shown, greyed, with the reason, rather than hidden: hiding it would teach nobody why. The check-in refuses a room a late guest is still in: <span class="d">D23-12</span>. The booked room on one line, the grid only when it is needed: <span class="d">D27-236</span>. A button the person may not use is hidden, not greyed: <span class="d">D24-18</span>. An upgrade given with Assign room is checked in and noted, at the booked rate: <span class="d">D27-328</span>.</p>
   </div>
 
   <!-- A3.3 -->
@@ -294,17 +296,14 @@
   <ul>
     <li><b>It is never asked of</b> a company's booking, a room the group's host pays for, a complimentary room, a stay with no agreed rate, or a booking prepaid on a booking site.</li>
     <li><b>A booking-site guest</b> has the switch <span class="ui">Prepaid on the booking site</span>, ticked at first, with <span class="msg">“Untick when the guest pays at the hotel: the advance before check-in is then asked.”</span> Untick it and the line under Check in is asked again at once.</li>
-    <li><b>Taking it:</b> the line says to take it on the Bill tab (A4.7), where Settle takes the payment; or ask for it when the booking is made, in New booking's Advance (A2.3).</li>
+    <li><b>Taking it:</b> on the Bill tab (A4.7), click <span class="ui">Settle</span>. Before arrival it opens for the advance: the window says <span class="msg">“₹… advance owed before check-in”</span>, the <span class="ui">Amount</span> is the advance still owed, and <span class="msg">“An advance before check-in: it is held as the guest's credit until the stay's charges are posted.”</span> Click <span class="ui">Take payment</span>; no tick is asked. A part paid leaves the rest owed: Settle opens again for it, and the line under Check in shows what is left.</li>
+    <li><b>On New booking,</b> an advance typed in <span class="ui">Advance</span> (A2.3) is taken first, then <span class="ui">Check in now</span> checks the guest in, so the advance counts.</li>
     <li><b>There is no way round it at the desk.</b> A hotel that does not want an advance sets the rule to None.</li>
   </ul>
-  <!-- WRITER'S NOTE (14 Oct, for the master; read in the code, not opened on screen): FolioPanel's Settle button is disabled when the posted
-       balance is not above zero, and a booking still due in has nothing posted (finance's folioBalance answers null with no live posting), so
-       "Take it on the Bill tab" may have no button to press for a guest who has paid nothing. D27-246 says the desk takes it on the Bill tab.
-       The bullet above only repeats what the screen says; the master was told in the report. -->
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The advance is a per-hotel rule, none to start, asked of the first night or the whole stay and never of a company's booking or a booking prepaid on a booking site: <span class="d">D27-243</span>, <span class="d">D27-246</span>. There is no override: the refusal names the amount, and the desk takes it on the Bill tab, or the hotel sets None: <span class="d">D27-246</span>.</p>
+    <p>The advance is a per-hotel rule, none to start, asked of the first night or the whole stay and never of a company's booking or a booking prepaid on a booking site: <span class="d">D27-243</span>, <span class="d">D27-246</span>. There is no override: the refusal names the amount, and the desk takes it on the Bill tab, or the hotel sets None: <span class="d">D27-246</span>. Settle opens before arrival for it, and New booking takes it before checking in: <span class="d">D27-328</span>.</p>
   </div>
 
   <!-- A3.7 -->

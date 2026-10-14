@@ -57,7 +57,10 @@ holds guests' Form C (order 60).
 
 - `flows/FolioPanel.tsx` — the Bill tab inside front desk's stay panel:
   postings, charge, reverse, settle, split billing, and check out (which it
-  asks front desk to do). For the owner, an administrator and the GM, a
+  asks front desk to do). Before arrival Settle opens only for the advance
+  the hotel asks before check-in - the server's figure (front desk's
+  `expressCheckIn`), filled in, held as the guest's credit without a tick,
+  a part paid leaving the rest (`SettleDialog`'s `advance`, D27-328, FIN-35). For the owner, an administrator and the GM, a
   pencil on each charge (Edit: price or words, with a reason) and "Change
   rate" for the stay (D27-157, D27-162). Each line names who posted it ("Night audit" for
   the audit's room charge); its print, and the button that opens it, say
@@ -147,7 +150,7 @@ Its front door also exports `companyReceipts` (the day book's receipts, D27-242 
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/:code/stays/:id/refunds` | `may` (the four of D27-125), `ceiling` (₹20,000), and each of the stay's bills: its credit, a `notice` (a company-addressed bill, a booking-site stay) and the `ways` it may be given back by, each with `upTo` (back by the way paid; cash below the ceiling counting cash already given back; a transfer for a transfer or for the cash above the ceiling) |
+| GET | `/:code/stays/:id/refunds` | `may` (the four of D27-125), `ceiling` (₹20,000), and each of the stay's bills: its credit, a `notice` (a company-addressed bill; a booking-site stay only when nothing paid at the hotel is there to give back - its desk-paid money goes back like a guest's own bill, never by "Bill to company", D27-328, FIN-34) and the `ways` it may be given back by, each with `upTo` (back by the way paid; cash below the ceiling counting cash already given back; a transfer for a transfer or for the cash above the ceiling) |
 | POST | `/:code/stays/:id/refunds` | gives it back: `{folioId?, method, amount, reference, reason}`. 403 for anyone but the four; 409 with the reason otherwise. A positive `refund` line dated today plus its `refunds` row; cash opens the giver's drawer and comes out of it. Idempotency key honoured |
 | GET | `/:code/stays/:id/refunds/:postingId` | the plain refund receipt's facts (`pages/RefundReceipt.tsx`) |
 
@@ -211,7 +214,7 @@ migrations that made or changed them:
 | `folios` | one running account; several per stay when the bill is split, or a group's master | created `006_folio.sql`; `056_group_billing.sql` (a group's master; a folio belongs to exactly one thing), `060_banquet.sql` (a function's folio) |
 | `folio_postings` | every charge, reversal and payment line | created `006_folio.sql` (money is `numeric(12,2)`; append-only; `business_date` is a real column); `011_model_additions.sql` (`idempotency_key`), `012_integrity.sql` (no posting onto a closed day), `014_simulation_fixes.sql` (UPDATE and DELETE revoked; same-hotel keys), `015_edge_cases.sql` (the tax must match the one rate on the line; no zero lines), `021_reversal_once.sql` (a line is reversed at most once), `056_group_billing.sql` (`reservation_id`, filled by a trigger) |
 | `payments` | the receipt behind a payment line | created `011_model_additions.sql`; `014_simulation_fixes.sql` (same hotel as its posting), `016_audit_coverage.sql` (never zero; audited); "cash round-off" (218: `round_off`, ±0.50, cash only - D27-317; the drawer expects it) |
-| `refunds` | money given back on a guest's own bill (D27-315 B): one row per positive `refund` line - way, reference (but for cash), reason, who; cash below ₹20,000 | "refunds" (219: `app.may_refund`; guards on the line - the four only, positive, a guest's own bill - and on the row - its own line, never more than the credit; every refund line has its row by commit; the drawer; `app.stay_bill`, `app.stay_charged`, `app.guest_voucher` count a refund as money out) |
+| `refunds` | money given back on a guest's own bill (D27-315 B), and on a booking-site stay's for what was paid at the hotel (D27-328): one row per positive `refund` line - way, reference (but for cash), reason, who; cash below ₹20,000 | "refunds" (219: `app.may_refund`; guards on the line - the four only, positive, a guest's own bill - and on the row - its own line, never more than the credit; every refund line has its row by commit; the drawer; `app.stay_bill`, `app.stay_charged`, `app.guest_voucher` count a refund as money out) |
 | `vat_bills`, `vat_bill_series` | VAT bills for alcohol and their credit notes (D22-44): their own series per hotel, `VAT/5EL/2026-27/0001`, opened by the year's first bill so it restarts each 1 April | "a separate VAT bill for alcohol" (135 in this branch: `app.next_vat_bill_number`, `app.issue_vat_bill`; 025's immutability trigger) |
 | `invoices`, `invoice_series` | tax invoices and credit notes, numbered from a statutory series | created `011_model_additions.sql` (`app.next_invoice_number`); `013_policies.sql` (numbering protected), `014_simulation_fixes.sql` (the first invoice at a property), `016_audit_coverage.sql` (a series only moves forward), `025_invoices_form_c.sql` (the GST fields, credit notes, never edited, a series opened for each new property); "the FSSAI number on the invoice" (145 in this branch: `fssai_number`, copied from the hotel at issue and printed from there, D27-3) |
 | `cashier_shifts`, `cashier_movements`, `cashier_denominations` | the desk's drawer | created `059_cashier_shift.sql` (`app.cashier_expected_cash`; a closed shift is final); "the cash deposits log" (163: `kept_cash`, the float kept at the close) |
@@ -255,7 +258,8 @@ Other services, through their doors only:
 
 - **front desk** — `fetchStays` (`data/folios.ts`), `getStay` and type
   `Posting` (`data/postings.ts`), `checkOut`,
-  `earlyArrival` and `LateCheckOutFlow` (`flows/FolioPanel.tsx`), `StayTable`
+  `earlyArrival`, `expressCheckIn` (the advance owed before check-in, for Settle,
+  D27-328) and `LateCheckOutFlow` (`flows/FolioPanel.tsx`), `StayTable`
   (`pages/Folios.tsx`).
 - **reports** — `getReport` (`pages/Billing.tsx`): Company accounts shows the
   City ledger report's own figures (D27-127, 28 September).

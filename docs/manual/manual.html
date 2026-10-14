@@ -1566,7 +1566,7 @@ figure.shot.phone img { max-width: 72mm; }
     <tbody>
       <tr><td>Save booking</td><td>Saves the booking. A room picked on the line is given to it too.</td></tr>
       <tr><td>Save and assign room</td><td>The same save, once a room is picked on the line. Until then it says <span class="msg">“Pick a room.”</span></td></tr>
-      <tr><td>Check in now</td><td>Saves the booking and checks the guest in, through the same check-in as Arrivals (A3). Only for an arrival today, one room, with a room picked.</td></tr>
+      <tr><td>Check in now</td><td>Saves the booking, takes the advance if one is typed, then checks the guest in, through the same check-in as Arrivals (A3), so an advance the hotel asks before check-in (A3.6) is already paid. Only for an arrival today, one room, with a room picked.</td></tr>
     </tbody>
   </table>
   <p>The filled (orange) button is the job the page was opened for: Save booking on the phone, Check in now for a walk-in. A button that cannot be used says why under the buttons, for example <span class="msg">“Check in now: Check in now is for an arrival today.”</span> or <span class="msg">“Type the guest's name.”</span></p>
@@ -2242,6 +2242,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td><span class="ui">Occupied</span>: <span class="msg">“… is in this room.”</span></td><td>A guest is in it now.</td></tr>
     </tbody>
   </table>
+  <p>The room the booking already holds is in the list too, whatever its type. A room of another type, an upgrade given with Assign room, says <span class="msg">“Deluxe (different type)”</span> (its own type) beside its number, and on its one line, for example <span class="msg">“Room 302 · Clean · Deluxe (different type)”</span>.</p>
   <p>Click a free room. The list folds into one line, <span class="msg">“Room 301 · Inspected”</span>, and <span class="ui">Change room</span> opens it again. Until a room is chosen, <span class="ui">Check in</span> is grey and the line under it says <span class="msg">“Pick a room.”</span> If the room the booking holds has turned dirty, the line says <span class="msg">“Room 304: Not cleaned yet.”</span> and the list opens for you to choose another.</p>
 
   <figure class="shot" id="fig-A3-05">
@@ -2266,14 +2267,15 @@ figure.shot.phone img { max-width: 72mm; }
     <h4>Watch out</h4>
     <ul>
       <li>The list offers the rooms of the type booked, and the room the booking already holds, whatever its type.</li>
-      <li><b>Another room type:</b> Assign room accepts it, and says <span class="msg">“Another type is allowed - it will be noted on the assignment.”</span> But the check-in itself puts a guest only in a room of the type booked: the server refuses another with <span class="msg">“That room is a different type from the one booked.”</span></li>
+      <li><b>Another room type:</b> Assign room accepts it, and says <span class="msg">“Another type is allowed - it will be noted on the assignment.”</span> The check-in accepts it too, and its message adds <span class="msg">“Note: Deluxe is not the room type they booked.”</span> The stay panel's <span class="ui">Room</span> then shows the room's own type and the type booked: <span class="msg">“302 · Deluxe · booked Superior”</span>.</li>
+      <li><b>The guest keeps the booked rate.</b> A room of another type changes the room, not the price: the bill charges the rate agreed on the booking. To charge for the better room, change the rate on the Bill tab (A4.6).</li>
       <li>The server asks the same questions as the window, and refuses by itself: a dirty room, <span class="msg">“That room has not been cleaned yet.”</span>; a room out of service, <span class="msg">“That room is held out of service.”</span>; a room held by another booking for part of the stay, <span class="msg">“Room 301 is held by … for part of that stay.”</span></li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A dirty room is shown, greyed, with the reason, rather than hidden: hiding it would teach nobody why. The check-in refuses a room a late guest is still in: <span class="d">D23-12</span>. The booked room on one line, the grid only when it is needed: <span class="d">D27-236</span>. A button the person may not use is hidden, not greyed: <span class="d">D24-18</span>.</p>
+    <p>A dirty room is shown, greyed, with the reason, rather than hidden: hiding it would teach nobody why. The check-in refuses a room a late guest is still in: <span class="d">D23-12</span>. The booked room on one line, the grid only when it is needed: <span class="d">D27-236</span>. A button the person may not use is hidden, not greyed: <span class="d">D24-18</span>. An upgrade given with Assign room is checked in and noted, at the booked rate: <span class="d">D27-328</span>.</p>
   </div>
 
   <!-- A3.3 -->
@@ -2425,17 +2427,14 @@ figure.shot.phone img { max-width: 72mm; }
   <ul>
     <li><b>It is never asked of</b> a company's booking, a room the group's host pays for, a complimentary room, a stay with no agreed rate, or a booking prepaid on a booking site.</li>
     <li><b>A booking-site guest</b> has the switch <span class="ui">Prepaid on the booking site</span>, ticked at first, with <span class="msg">“Untick when the guest pays at the hotel: the advance before check-in is then asked.”</span> Untick it and the line under Check in is asked again at once.</li>
-    <li><b>Taking it:</b> the line says to take it on the Bill tab (A4.7), where Settle takes the payment; or ask for it when the booking is made, in New booking's Advance (A2.3).</li>
+    <li><b>Taking it:</b> on the Bill tab (A4.7), click <span class="ui">Settle</span>. Before arrival it opens for the advance: the window says <span class="msg">“₹… advance owed before check-in”</span>, the <span class="ui">Amount</span> is the advance still owed, and <span class="msg">“An advance before check-in: it is held as the guest's credit until the stay's charges are posted.”</span> Click <span class="ui">Take payment</span>; no tick is asked. A part paid leaves the rest owed: Settle opens again for it, and the line under Check in shows what is left.</li>
+    <li><b>On New booking,</b> an advance typed in <span class="ui">Advance</span> (A2.3) is taken first, then <span class="ui">Check in now</span> checks the guest in, so the advance counts.</li>
     <li><b>There is no way round it at the desk.</b> A hotel that does not want an advance sets the rule to None.</li>
   </ul>
-  <!-- WRITER'S NOTE (14 Oct, for the master; read in the code, not opened on screen): FolioPanel's Settle button is disabled when the posted
-       balance is not above zero, and a booking still due in has nothing posted (finance's folioBalance answers null with no live posting), so
-       "Take it on the Bill tab" may have no button to press for a guest who has paid nothing. D27-246 says the desk takes it on the Bill tab.
-       The bullet above only repeats what the screen says; the master was told in the report. -->
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The advance is a per-hotel rule, none to start, asked of the first night or the whole stay and never of a company's booking or a booking prepaid on a booking site: <span class="d">D27-243</span>, <span class="d">D27-246</span>. There is no override: the refusal names the amount, and the desk takes it on the Bill tab, or the hotel sets None: <span class="d">D27-246</span>.</p>
+    <p>The advance is a per-hotel rule, none to start, asked of the first night or the whole stay and never of a company's booking or a booking prepaid on a booking site: <span class="d">D27-243</span>, <span class="d">D27-246</span>. There is no override: the refusal names the amount, and the desk takes it on the Bill tab, or the hotel sets None: <span class="d">D27-246</span>. Settle opens before arrival for it, and New booking takes it before checking in: <span class="d">D27-328</span>.</p>
   </div>
 
   <!-- A3.7 -->
@@ -2923,6 +2922,7 @@ figure.shot.phone img { max-width: 72mm; }
     <h4>Watch out</h4>
     <ul>
       <li><b>More than the bill:</b> the window says <span class="msg">“This is ₹… more than the bill; it will be held as the guest's credit.”</span> <span class="ui">Take payment</span> stays off until you tick <span class="ui">Hold it as the guest's credit</span>.</li>
+      <li><b>Before arrival</b>, Settle opens only for an advance the hotel asks before check-in, filled in with what is still owed and held as the guest's credit without a tick (A3.6). With no advance owed and nothing posted, it stays grey.</li>
       <li><b>Cash above ₹1,00,000 at once</b> asks for the <span class="ui">Guest's PAN</span>, or the tick <span class="ui">No PAN: Form 97 taken</span>. Cash of ₹2,00,000 or more from one guest is refused; take the rest another way.</li>
       <li><b>A company's bill</b> (A4.8) goes <span class="ui">Bill to company</span> only if the company is allowed credit. Otherwise the message says it is not: take the payment another way, or ask the owner, an administrator or the GM to allow credit on its record.</li>
       <li>One press is one payment. A wrong payment is reversed only by the owner, an administrator, the GM or the accountant (A4.4).</li>
@@ -3473,8 +3473,9 @@ figure.shot.phone img { max-width: 72mm; }
   <ul>
     <li><b>The owner, an Admin, the GM and the accountant</b> see a <span class="ui">Refund</span> button.</li>
     <li><b>Anyone else</b> reads: <span class="msg">“Refunds are given by the owner, an administrator, the general manager or the accountant. Ask one of them.”</span></li>
-    <li><b>A notice</b>, where the money is not refunded here. A company's credit: <span class="msg">“This credit is the company's. It is settled with the company on the City ledger, not refunded to the guest here.”</span> A booking-site stay: <span class="msg">“A booking-site stay: the booking site refunds the guest. Tell the booking site; nothing is refunded here.”</span></li>
+    <li><b>A notice</b>, where the money is not refunded here. A company's credit: <span class="msg">“This credit is the company's. It is settled with the company on the City ledger, not refunded to the guest here.”</span> A booking-site stay with nothing paid at the hotel to give back (the booking site was paid): <span class="msg">“A booking-site stay: the booking site refunds the guest. Tell the booking site; nothing is refunded here.”</span></li>
   </ul>
+  <p><b>A booking-site guest who paid the hotel</b>, for example the whole stay by UPI at the desk and then left early, is refunded here like any guest, with the same people, the same ways and the same ₹20,000 cash rule. Only what was paid at the hotel goes back, and only by the ways it was paid there: <span class="ui">Bill to company</span> is never one. What the booking site was paid stays the booking site's to refund.</p>
 
   <h3>To give a refund</h3>
   <ol class="steps">
@@ -3540,17 +3541,13 @@ figure.shot.phone img { max-width: 72mm; }
       <li>A cash refund comes out of the drawer of the person who gives it (A4.10).</li>
       <li>The server refuses a way the bill was not paid by: <span class="msg">“This bill was not paid by UPI. A refund goes back the way it was paid: …; never cash for a card or UPI payment.”</span> And more than the limit: <span class="msg">“At most ₹… goes back by UPI on this bill.”</span> And no reason: <span class="msg">“Say why it is being refunded. The reason stays on the refund.”</span></li>
       <li>It is <b>not the GST refund voucher</b>: <span class="msg">“This prints a plain refund receipt. The GST refund voucher (Rule 51) waits for the hotel's CA.”</span></li>
-      <li>For a company's credit and a booking-site stay the notice is all the screen offers. Check out stays grey while the bill as a whole is overpaid.</li>
+      <li>For a company's credit, and a booking-site stay with nothing paid at the hotel, the notice is all the screen offers, and Check out stays grey while the bill as a whole is overpaid. Until a company's credit can go to its City ledger at check-out, a manager reverses the payment the same day (A4.4).</li>
     </ul>
   </div>
-  <!-- WRITER'S NOTE (14 Oct, for the master; read in the code, not opened on screen): a booking-site stay that is overpaid (for example a full
-       prepayment recorded as a payment, and the guest leaves early) gets the notice "the booking site refunds the guest ... nothing is refunded
-       here", while Check out stays grey for an overpaid bill (rules.ts canCheckOut; the server's check-out refuses likewise). No way out was found
-       on the screens. Reported to the master. -->
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A refund is its own line on the bill, back the way the guest paid, with a reference, the reason and the name of who gave it, so nothing is edited and money is never given back untraceably. It is for the four who may reverse a payment: <span class="d">D27-125</span>, <span class="d">D27-315</span>. Cash stays below ₹20,000 until the hotel's CA confirms the limit; the plain receipt stands in for the GST refund voucher until the CA says what it must hold: <span class="d">D27-315</span>.</p>
+    <p>A refund is its own line on the bill, back the way the guest paid, with a reference, the reason and the name of who gave it, so nothing is edited and money is never given back untraceably. It is for the four who may reverse a payment: <span class="d">D27-125</span>, <span class="d">D27-315</span>. Cash stays below ₹20,000 until the hotel's CA confirms the limit; the plain receipt stands in for the GST refund voucher until the CA says what it must hold: <span class="d">D27-315</span>. A booking-site stay gives back what was paid at the hotel, like a guest's own bill; a company's credit to its City ledger comes after launch: <span class="d">D27-328</span>.</p>
   </div>
 
   <!-- A5.8 -->
