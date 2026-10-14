@@ -11,6 +11,13 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-14 · A refund is money out, in every report (D27-315 Part B; finance's Lane B)
+
+**Asked for:** the lane brief: before a refund exists, every report agrees on what the `refund` category means - one sign, money out.
+**Shipped:** a refund line is positive (it takes a credit back to ₹0) and is counted with the payments. `builders/manager.ts`: Payment by way is net of refunds by the way they went back; Settlement by Guest is net of refunds; a refund is no longer a "posted" bucket nor in Charge Posted to Guest Ledger (the footnote says so). `builders/nightAudit.ts`: Receipt - Detail lists a refund negative under its way with "Refund: why (reference)"; the summaries by user and way are therefore net; Daily Sales never counts a refund (Adjustment stays 0); Checked Out's column is named "Refund". `figures.ts`: receipts net of refunds. `reports.ts`: the cashier report counts a refund negative for whoever gave it; the account ledger's credit includes refunds, its debit never.
+**Proved:** `api/test/modules/finance/refunds.test.ts` - after ₹19,000 cash, ₹2,000 UPI and ₹3,000 transfer given back, the Manager report, the Night audit report's summary by way and the cashier report each move by exactly -19,000 / -2,000 / -3,000; Settlement by Guest -24,000; Guest Ledger closing +24,000; the bill leaves the Folios list.
+**Left open:** no refund line existed anywhere before this (nothing posted the category), so no past figure changes - unless the live database holds `refund` lines from an import; not checked (a read on live is the master's to ask for).
+
 ## 2026-10-14 · The Dashboard reads only its day's bookings (the owner's D27-316 (1); front desk's entry has the whole session)
 
 **Shipped:** `pages/Dashboard.tsx` - today's work reads the day's board (`fetchStays(code, date, date, true)`), keyed by the date, instead of every booking; the one-day board (front desk's `getStayView`) reads its day too (REP-19).

@@ -622,6 +622,7 @@ begin
   perform test.raises('finance refund', 'a refund line needs its way, reference and reason',
     format($q$insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
              values (%L, %L, app.business_date(%L), 'refund', 'x', 100, 0, 0)$q$, h, f, h), '23514');
+  set constraints folio_postings_refund_has_row deferred;
 
   perform test.raises('finance refund', 'cash only below ₹20,000',
     format($q$with l as (insert into folio_postings (hotel_id, folio_id, business_date, category, description, amount, tax_rate, tax_amount)
@@ -656,6 +657,5 @@ begin
     app.stay_bill(r)->>'net' || ' / ' || (app.stay_bill(r)->>'paid') || ' / ' || (app.stay_bill(r)->>'balance'));
   perform test.ok('finance refund', 'a refund is not the guest''s spend', app.stay_charged(r) = 1000,
     app.stay_charged(r)::text);
-  set constraints folio_postings_refund_has_row deferred;
   perform set_config('app.user_id', '', true);
 end $$;
