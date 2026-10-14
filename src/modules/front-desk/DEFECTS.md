@@ -75,10 +75,10 @@ expected" with a voided booking added, and it is not on the list; `listVacant`),
 reports' `dashboard.test.tsx` "D27-326 (1)" (the tile 8 for 7 before) and
 `api/test/modules/guests/directoryNextStay.test.ts` - each seen failing on the
 old code, passing after.
-**Left open (the owner's to say)** - the guest directory's "possible
-duplicate" (`overlapping_names`) leaves out `cancelled` and `no_show` but not
-`void`, so a booking voided as "Entered twice" still marks its guest as a
-possible duplicate; and its stays and nights count every status. Not changed.
+**Left open (the owner's to say)** - the guest directory's stays and nights
+count every status. Its "possible duplicate" left out `cancelled` and
+`no_show` but not `void`; it leaves out `void` too since 15 October (the
+owner's D27-329 (6), guests' CHANGELOG).
 
 ### FD-32 · A voided booking that held a room was drawn on the Calendar as a confirmed one, and took a free room off its type's count - FIXED 14 October (the owner's D27-323 (1))
 

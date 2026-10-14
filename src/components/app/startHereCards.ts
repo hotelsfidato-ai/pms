@@ -9,7 +9,8 @@ import type { Role } from "@/lib/permissions";
 
    The owner's decisions, 15 September: a card per role — reception,
    housekeeping, the waiter, the chef; none for the general manager or
-   the owner — and it goes when they tap "Got it" (089).
+   the owner — and it goes when they tap "Got it" (089). The Bar has the
+   waiter's (D27-329 (3)).
 
    Each line is a JOB in the person's words, the screen it opens, and how
    to finish it there, naming the real button. Those names are checked
@@ -29,6 +30,20 @@ export interface StartTask {
   how: string;
   icon: LucideIcon;
 }
+
+/* The waiter's card; the Bar person's is the same, their orders going to the
+   bar (the owner's D27-329 (3)). */
+const atTheTables = (sendsTo: "kitchen" | "bar") => ({
+  intro: "Your three jobs. Each one opens the screen it happens on.",
+  tasks: [
+    { job: "Open a table", to: "/pos/:code/tables", icon: LayoutGrid,
+      how: "Tap the table - its order pad opens right there." },
+    { job: `Send an order to the ${sendsTo}`, to: "/pos/:code/tables", icon: Send,
+      how: "Add the dishes on the table's pad, then Send." },
+    { job: "Settle a bill", to: "/pos/:code/till", icon: Receipt,
+      how: "Open the order and tap how they pay: cash, card, UPI, or Charge to room." },
+  ],
+});
 
 export const START_HERE: Partial<Record<Role, { intro: string; tasks: StartTask[] }>> = {
   front_desk: {
@@ -57,17 +72,8 @@ export const START_HERE: Partial<Record<Role, { intro: string; tasks: StartTask[
         how: "Raise one, say which room and what is wrong." },
     ],
   },
-  pos: {
-    intro: "Your three jobs. Each one opens the screen it happens on.",
-    tasks: [
-      { job: "Open a table", to: "/pos/:code/tables", icon: LayoutGrid,
-        how: "Tap the table - its order pad opens right there." },
-      { job: "Send an order to the kitchen", to: "/pos/:code/tables", icon: Send,
-        how: "Add the dishes on the table's pad, then Send." },
-      { job: "Settle a bill", to: "/pos/:code/till", icon: Receipt,
-        how: "Open the order and tap how they pay: cash, card, UPI, or Charge to room." },
-    ],
-  },
+  pos: atTheTables("kitchen"),
+  bar: atTheTables("bar"),
   chef: {
     intro: "Your one screen. Everything waiting for the kitchen is on it.",
     tasks: [
@@ -83,5 +89,6 @@ export const START_HERE_ON: Partial<Record<Role, string[]>> = {
   front_desk: ["/", "/h/:code/stay", "/h/:code/calendar"],
   housekeeping: ["/h/:code/housekeeping"],
   pos: ["/pos/:code/tables", "/pos/:code/till"],
+  bar: ["/pos/:code/tables", "/pos/:code/till"],
   chef: ["/pos/:code/kitchen"],
 };

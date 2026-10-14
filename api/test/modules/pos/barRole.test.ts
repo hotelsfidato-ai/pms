@@ -1,19 +1,22 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { app } from "../../../src/server.ts";
 import { closePool } from "../../../src/db.ts";
-import { READ_RULES, WRITE_RULES, allows } from "../../../src/roleGate.ts";
-import { RESOURCES, grantsFor } from "../../../src/permissions.ts";
+import { READ_RULES, WRITE_RULES, allows, type Rule } from "../../../src/roleGate.ts";
+import { RESOURCES, grantsFor, type Role } from "../../../src/permissions.ts";
+import { teamsFor } from "../../../src/modules/guest-services/requests.ts";
+import { RESTAURANT_BY_NAME } from "../../../../src/modules/admin/restaurantRights.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    THE BAR ROLE, AND THE WAITER'S KOT REPRINT (the owner's D27-324 (2), (4))
 
    A Bar person has the waiter's rights, sees only the bar's menu sections
-   and orders only from them: a dish is the bar's when it prints on the Bar
-   KOT (its section's kind, else its tax heading's). The server refuses the
-   rest in a sentence, and the database behind it. A waiter and a Bar person
-   read their order's KOTs, to reprint one from the order screen.
+   and orders only from them: a dish is the bar's when its section sells
+   under the Bar or Alcohol heading - the menu's Bar tab - whichever KOT it
+   prints on (the owner's D27-329 (1)). The server refuses the rest in a
+   sentence, and the database behind it. A waiter and a Bar person read
+   their order's KOTs, to reprint one from the order screen.
 
-   Its own section, dish, people and orders, removed afterwards.
+   Its own sections, dishes, people and orders, removed afterwards.
    ══════════════════════════════════════════════════════════════════ */
 
 const SUPER =
@@ -47,6 +50,12 @@ let waiter = "";
 let drinks = "";
 let beer = "";
 let tikka = "";
+/* D27-329 (1): a Bar section whose KOT a manager moved to the kitchen, and a
+   food section moved to the Bar KOT. */
+let spirits = "";
+let rum = "";
+let food = "";
+let soup = "";
 const orders: string[] = [];
 
 type Menu = { categories: { id: string; name: string; items: { id: string; name: string }[] }[] };
@@ -74,6 +83,22 @@ beforeAll(async () => {
   tikka = (await sql<{ id: string }>(
     `select i.id::text from pos_menu_items i join hotels h on h.id = i.hotel_id
       where h.code = '5EL' and i.name = 'Paneer Tikka'`))[0]!.id;
+  const section = async (name: string, heading: string, kot: "food" | "bar", dish: string) => {
+    const id = (await sql<{ id: string }>(
+      `insert into pos_menu_categories (hotel_id, name, tax_kind, kot_kind_id)
+       select h.id, $1, $2, k.id from hotels h
+         join pos_kot_kinds k on k.hotel_id = h.id and k.role = $3
+        where h.code = '5EL' returning id::text`, [name, heading, kot]))[0]!.id;
+    const item = (await sql<{ id: string }>(
+      `insert into pos_menu_items (hotel_id, category_id, name, price, tax_rate)
+       select hotel_id, id, $2, 250, 18 from pos_menu_categories where id = $1
+       returning id::text`, [id, dish]))[0]!.id;
+    return [id, item] as const;
+  };
+  /* Under Bar: 5EL is not switched on for alcohol, so an Alcohol section's
+     dishes are refused to everybody there. */
+  [spirits, rum] = await section("BARROLE spirits", "bar", "food", "BARROLE rum");
+  [food, soup] = await section("BARROLE food", "restaurant", "bar", "BARROLE soup");
   waiter = await person("pos");
   bar = await person("bar");
 });
@@ -91,8 +116,8 @@ afterAll(async () => {
     await db.query("alter table pos_order_lines enable trigger pos_order_lines_frozen");
     await db.end();
   }
-  await sql("delete from pos_menu_items where id = $1", [beer]);
-  await sql("delete from pos_menu_categories where id = $1", [drinks]);
+  await sql("delete from pos_menu_items where id = any($1::uuid[])", [[beer, rum, soup].filter(Boolean)]);
+  await sql("delete from pos_menu_categories where id = any($1::uuid[])", [[drinks, spirits, food].filter(Boolean)]);
   for (const id of [bar, waiter].filter(Boolean)) {
     await sql("delete from staff_hotels where staff_id = $1", [id]);
     await sql("update staff set is_active = false where id = $1", [id]);
@@ -110,10 +135,57 @@ describe("the Bar role has exactly the waiter's rights (D27-324 (2))", () => {
       expect(allows(rule, "bar"), key).toBe(allows(rule, "pos"));
     }
   });
+
+  it("and the waiter's guest requests, so the bell and the screen too (D27-329 (3))", () => {
+    expect(teamsFor("pos")).toEqual(["fnb"]);
+    expect(teamsFor("bar")).toEqual(teamsFor("pos"));
+  });
+
+  it("the Roles screen's restaurant line is every right roleGate gives them by name (D27-329 (4))", () => {
+    const byName = (role: Role, rules: Readonly<Record<string, Rule>>) =>
+      [...new Set(Object.values(rules).flatMap((r) =>
+        r.kind === "grant" && r.also.includes(role) ? [r.doing] : []))].sort();
+    for (const role of ["pos", "bar"] as const) {
+      expect(byName(role, WRITE_RULES), role).toEqual([...RESTAURANT_BY_NAME.does].sort());
+      expect(byName(role, READ_RULES), role)
+        .toEqual(RESTAURANT_BY_NAME.reads.map((what) => `Reading ${what}`).sort());
+    }
+  });
+});
+
+describe("a dish is the bar's by the menu's Bar tab, not by its KOT (D27-329 (1))", () => {
+  it("a Bar section moved to the kitchen's KOT is still the bar's; a food section moved to the Bar KOT is not", async () => {
+    const names = ((await (await call(bar, "GET", "/till/menu")).json()) as Menu).categories.map((c) => c.name);
+    expect(names).toContain("BARROLE spirits");
+    expect(names).not.toContain("BARROLE food");
+
+    const id = await open(bar, "BARROLE5");
+    const drink = await call(bar, "POST", `/till/orders/${id}/lines`, { itemId: rum, qty: 1 });
+    expect(drink.status, await drink.clone().text()).toBe(200);
+    const dish = await call(bar, "POST", `/till/orders/${id}/lines`, { itemId: soup, qty: 1 });
+    expect(dish.status).toBe(409);
+    expect(await reason(dish)).toBe("BARROLE soup is not on the bar's menu. A waiter orders it.");
+
+    /* The database asks the same one question. */
+    const db = new (await import("pg")).default.Pool({ connectionString: SUPER });
+    const client = await db.connect();
+    try {
+      await client.query("begin");
+      await client.query("select set_config('app.user_id', $1, true)", [bar]);
+      await expect(client.query(
+        `insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+         select $1, hotel_id, id, name, 1, price, 18, $2::uuid from pos_menu_items where id = $3`,
+        [id, bar, soup])).rejects.toThrow(/bar's dishes/);
+    } finally {
+      await client.query("rollback");
+      client.release();
+      await db.end();
+    }
+  });
 });
 
 describe("a Bar person sees and orders only the bar's dishes", () => {
-  it("reads only the sections that print on the Bar KOT", async () => {
+  it("reads only the sections on the menu's Bar tab", async () => {
     const res = await call(bar, "GET", "/till/menu");
     expect(res.status, await res.clone().text()).toBe(200);
     const names = ((await res.json()) as Menu).categories.map((c) => c.name);

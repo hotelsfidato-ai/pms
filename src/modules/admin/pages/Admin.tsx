@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
-import { Check, Minus, Plug, ShieldCheck, Info, UserCog, ScrollText } from "lucide-react";
+import { Check, Minus, Plug, ShieldCheck, Info, UserCog, ScrollText, UtensilsCrossed } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, dateTime, dateShort } from "@/lib/format";
 import { useUi } from "@/lib/ui";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui";
 import { listStaff, listAuditLog, listIntegrations, roleDescription, type StaffRecord, type AuditEntry, type Integration } from "@/modules/admin/data/adminLists";
 import { getMatrix } from "@/modules/admin/data/admin";
+import { RESTAURANT_BY_NAME } from "@/modules/admin/restaurantRights";
 import { getModules, setModule } from "@/data/repositories";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -139,6 +140,12 @@ export function UsersPage() {
 
 /* ── Roles and permissions ───────────────────────────────────────── */
 
+/* "a, b and c", lower-cased: a list in a sentence. */
+const inWords = (xs: readonly string[]) => {
+  const low = xs.map((x) => x.charAt(0).toLowerCase() + x.slice(1));
+  return `${low.slice(0, -1).join(", ")} and ${low[low.length - 1]}`;
+};
+
 export function RolesPage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["permission-matrix"],
@@ -238,6 +245,20 @@ export function RolesPage() {
           A tick is every action; otherwise the actions granted are named. A
           blocked action is never hidden in the product: it is shown disabled,
           with the reason this matrix produces.
+        </span>
+      </p>
+
+      {/* POS-35, the owner's D27-329 (4): the restaurant's rights come by
+          name in the server (roleGate), not from the matrix, so the Waiter's
+          and the Bar's columns cannot show them. */}
+      <p className="flex items-start gap-2 text-xs text-grey-500 mt-2 leading-relaxed">
+        <UtensilsCrossed className="size-3.5 shrink-0 mt-0.5" />
+        <span>
+          The restaurant is not in the matrix: the server lets the Waiter and the Bar in by
+          name, for {inWords(RESTAURANT_BY_NAME.does)}, and for reading{" "}
+          {inWords(RESTAURANT_BY_NAME.reads)}. Ringing up an order includes sending the KOT,
+          giving a discount, printing the bill and taking payment. The Bar orders only the
+          dishes on the menu's Bar tab.
         </span>
       </p>
     </Page>

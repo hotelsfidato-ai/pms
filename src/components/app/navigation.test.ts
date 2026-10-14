@@ -194,9 +194,9 @@ describe("each person's menu", () => {
        drink is theirs. It sits in the Front desk section, so it comes first;
        where they land is unchanged (below). */
     expect(menu("pos")).toEqual(["Guest requests", "Tables", "Till", "Terminal", "Close restaurant day"]);
-    /* The Bar role (D27-324): the waiter's restaurant screens. Guest
-       requests are the waiter's team's (guest-services), not asked for. */
-    expect(menu("bar")).toEqual(["Tables", "Till", "Terminal", "Close restaurant day"]);
+    /* The Bar role (D27-324): the waiter's menu, Guest requests included
+       (the owner's D27-329 (3)). */
+    expect(menu("bar")).toEqual(menu("pos"));
     expect(menu("chef")).toEqual(["Guest requests", "Kitchen", "Notifications"]);
     /* The Store joined the kitchen manager's on 22 September (D22-19). */
     expect(menu("kitchen_manager")).toEqual(

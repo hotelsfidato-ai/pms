@@ -22,7 +22,7 @@ import { can, type Role } from "../../permissions.ts";
      maintenance   whoever updates a repair today (D22-34, the same list as
                    housekeeping/repairRoles.ts REPAIR_UPDATERS - held by the
                    API test)
-     fnb           kitchen manager, chef, waiter
+     fnb           kitchen manager, chef, waiter, Bar (D27-329 (3))
    No time targets (D27-181): how long each waited and took, nothing more.
    ══════════════════════════════════════════════════════════════════ */
 
@@ -33,7 +33,7 @@ export const DESK: readonly Role[] = ["owner", "admin", "gm", "hotel_manager", "
 export const RECEIVERS: Record<Team, readonly Role[]> = {
   housekeeping: ["housekeeping"],
   maintenance: ["owner", "admin", "gm", "hotel_manager", "stores", "housekeeping"],
-  fnb: ["kitchen_manager", "chef", "pos"],
+  fnb: ["kitchen_manager", "chef", "pos", "bar"],
 };
 
 /** The teams whose requests a role sees and acts on: all three for the desk. */

@@ -8,7 +8,11 @@ import { closePool } from "../../../src/db.ts";
    The guest directory's "back on ..." left out a cancelled booking and let a
    voided one through, so a booking entered twice and voided still said the
    guest was coming back. Void is left out as cancelled is. Run at 5EL, a
-   year ahead, with two guests of this file's own.
+   year ahead, with guests of this file's own.
+
+   The "possible duplicate" mark the same (the owner's D27-329 (6)): two
+   bookings under one name that overlap, but only when both are happening.
+   A booking entered twice and voided, or cancelled, is not a second person.
    ══════════════════════════════════════════════════════════════════ */
 
 const SUPER =
@@ -23,7 +27,7 @@ async function sql<T>(text: string, values: unknown[] = []): Promise<T[]> {
 let ahead = "";
 
 /** A guest of this file with one booking a year ahead, in `status`. */
-async function guestWith(who: string, status: "confirmed" | "void" | "cancelled") {
+async function guestWith(who: string, status: "confirmed" | "void" | "cancelled", n = 1) {
   await sql(
     `with g as (insert into guests (full_name) values ($1) returning id),
           h as (select id, app.business_date(id) + 365 as d from hotels where code = '5EL'),
@@ -37,17 +41,18 @@ async function guestWith(who: string, status: "confirmed" | "void" | "cancelled"
             case when $3 = 'void' then o.id end,
             case when $3 = 'void' then now() end
        from g, h, o`,
-    [`${tag} ${who}`, `${tag}-${who}`, status]);
+    [`${tag} ${who}`, `${tag}-${who}-${n}`, status]);
 }
 
-const nextStay = async (who: string) => {
+const row = async (who: string) => {
   const res = await app.request("/api/hotels/5EL/guests", { headers: { "x-dev-staff-id": "dev-owner" } });
   expect(res.status).toBe(200);
-  const rows = (await res.json()) as Array<{ name: string; nextStay: string | null }>;
-  const row = rows.find((r) => r.name === `${tag} ${who}`);
-  expect(row, `${who} is in the directory`).toBeTruthy();
-  return row!.nextStay;
+  const rows = (await res.json()) as Array<{ name: string; nextStay: string | null; possibleDuplicate: boolean }>;
+  const found = rows.find((r) => r.name === `${tag} ${who}`);
+  expect(found, `${who} is in the directory`).toBeTruthy();
+  return found!;
 };
+const nextStay = async (who: string) => (await row(who)).nextStay;
 
 beforeAll(async () => {
   ahead = (await sql<{ d: string }>(
@@ -55,6 +60,13 @@ beforeAll(async () => {
   await guestWith("coming", "confirmed");
   await guestWith("voided", "void");
   await guestWith("cancelled", "cancelled");
+  /* The same dates twice under one name: both live, then one voided, then one cancelled. */
+  await guestWith("twice", "confirmed");
+  await guestWith("twice", "confirmed", 2);
+  await guestWith("voided twice", "confirmed");
+  await guestWith("voided twice", "void", 2);
+  await guestWith("cancelled twice", "confirmed");
+  await guestWith("cancelled twice", "cancelled", 2);
 });
 
 afterAll(async () => {
@@ -76,5 +88,16 @@ describe("a guest's next stay in the directory", () => {
   it("is never a cancelled one, nor a voided one", async () => {
     expect(await nextStay("cancelled")).toBeNull();
     expect(await nextStay("voided")).toBeNull();
+  });
+});
+
+describe("the directory's possible duplicate (D27-329 (6))", () => {
+  it("marks two live bookings under one name on the same nights", async () => {
+    expect((await row("twice")).possibleDuplicate).toBe(true);
+  });
+
+  it("leaves a voided or cancelled booking out", async () => {
+    expect((await row("voided twice")).possibleDuplicate).toBe(false);
+    expect((await row("cancelled twice")).possibleDuplicate).toBe(false);
   });
 });

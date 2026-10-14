@@ -22,7 +22,7 @@
       <tr><td>Kitchen Manager</td><td>The kitchen screen and the menu. No money.</td><td><span class="d">D24-10</span></td></tr>
       <tr><td>Chef</td><td>The kitchen screen. Moves dishes along; changes nothing about money.</td><td>-</td></tr>
       <tr><td>Waiter</td><td>Takes orders and sends the KOTs, prints bills, takes payment, gives a discount of up to 10% with a reason, closes the restaurant day; reprints a table's KOT from its pad. (It was called Till Operator until 14 October; an outside till's account holds the same role.)</td><td>Renamed, rights unchanged <span class="d">D27-324</span></td></tr>
-      <tr><td>Bar</td><td>The waiter's rights, on the bar's dishes only: the menu sections whose KOT prints at the bar. Its KOTs print at the bar.</td><td><span class="d">D27-324</span></td></tr>
+      <tr><td>Bar</td><td>The waiter's rights, on the bar's dishes only: the dishes on the menu's Bar tab, the sections sold under Bar or Alcohol, whichever printer their KOT goes to. Its KOTs print at the bar.</td><td><span class="d">D27-324</span> <span class="d">D27-329</span></td></tr>
       <tr><td>Inventory Manager</td><td>The Store and the equipment register. Raises purchases; approves equipment leaving the store.</td><td>The owner, 16 September</td></tr>
       <tr><td>Accountant</td><td>Bills, invoices and credit notes, payments, company accounts, reports, the GST and VAT rates.</td><td><span class="d">D22-32</span> <span class="d">D22-33</span></td></tr>
       <tr><td>Viewer</td><td>Reads; changes nothing.</td><td><span class="d">D27-146</span></td></tr>
@@ -39,6 +39,7 @@
       <li>One kind of thing: here, prices (rate plans). View only, for a Hotel Manager</li>
     </ol>
   </figure>
+  <p>The restaurant has no row in the matrix, so the Waiter's and the Bar's columns show little more than View on bookings and rooms. A line under the matrix names the rest: <span class="msg">“The restaurant is not in the matrix: the server lets the Waiter and the Bar in by name, for ringing up an order, printing the kitchen's KOTs, answering a table booking and closing the restaurant's day, …”</span>, and that ringing up an order includes sending the KOT, giving a discount, printing the bill and taking payment <span class="d">D27-329</span>.</p>
 
   <!-- B2.2 -->
   <h2 id="b2-2"><span class="n">B2.2</span>Who sees what</h2>
@@ -57,7 +58,7 @@
       <tr><td>Kitchen Manager</td><td>Restaurant only</td><td>Kitchen, Menu, Close restaurant day, Guest requests, the Store, Notifications. Starts on Kitchen.</td></tr>
       <tr><td>Chef</td><td>Restaurant only</td><td>Kitchen, Guest requests, Notifications.</td></tr>
       <tr><td>Waiter</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day, Guest requests. Starts on Tables.</td></tr>
-      <tr><td>Bar</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day. Starts on Tables; sees only the bar's dishes.</td></tr>
+      <tr><td>Bar</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day, Guest requests, as the waiter. Starts on Tables, with the waiter's Start here card; sees only the dishes on the menu's Bar tab <span class="d">D27-329</span>.</td></tr>
       <tr><td>Inventory Manager</td><td>Front office</td><td>Store, Equipment, Purchasing, Notifications.</td></tr>
     </tbody>
   </table>

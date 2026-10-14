@@ -8,6 +8,13 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-15 · The possible duplicate leaves voided bookings out (the owner's D27-329 (6))
+
+**Asked for:** the guest directory's "possible duplicate" mark leaves voided (and cancelled) bookings out.
+**Shipped:** `directory.ts` `overlapping_names`: both stays of a pair must be live - not `cancelled`, `void` or `no_show` (void was the one missing). The website only shows the server's flag, so nothing changed there. Manual A10.2's Guest row says so.
+**Proved:** `directoryNextStay.test.ts` "the directory's possible duplicate": two live bookings on the same nights are marked; one of them voided, or cancelled, is not. The voided case failed on the old code ("expected true to be false"), 4 of 4 after. On screen as the owner (scratch copy): "Ravi Twice", booked twice for the same nights with the second voided as "Entered twice", is listed without "overlapping stays".
+**Left open:** the directory's Stays and Nights still count every status (FD-33's note): "Ravi Twice" reads 2 stays, 4 nights.
+
 ## 2026-10-14 · A voided booking is not a guest's next stay (the owner's D27-326 (1)); Form III's check-out follows leaving early
 
 **Asked for:** the master's helper on the final release copy. `directory.ts`: the guest directory's "back on ..." (next stay) left out `cancelled` and not `void`; it leaves out both now (front desk's FD-33 has the whole fault). `formIII.test.ts`: its foreign guest's two-night stay checked out on the first night with no reason, which lane A's rule (D27-315 A) now asks - the check-out carries an `earlyReason` with its other "not what this tests" answers; the test's own point (Form III's next destination and the departure filing) is unchanged.

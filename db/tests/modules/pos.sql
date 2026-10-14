@@ -977,8 +977,9 @@ end $$;
 -- THE BAR ROLE (the owner's D27-324 (2))
 -- =============================================================================
 -- `bar` is a role a person may be given; a Bar person puts on a bill only a
--- dish that prints on the Bar KOT - its section's kind, else its heading's -
--- and cannot raise the count of any other; a waiter is unchanged. Refers to
+-- dish on the menu's Bar tab - its section sells under Bar or Alcohol,
+-- whichever KOT it prints on (the owner's D27-329 (1)) - and cannot raise
+-- the count of any other; a waiter is unchanged. Refers to
 -- its migration by what it does, never by its number. Uses the suite's AGR
 -- property and its clerk; makes one Bar person, one waiter, two sections, one
 -- outlet and one order, and removes them. Each step through test.allows or
@@ -1023,10 +1024,10 @@ begin
 
   -- ---------- as the Bar person ------------------------------------------------
   perform set_config('app.user_id', v_bar::text, true);
-  perform test.allows('pos bar role', 'a Bar person orders a dish that prints at the bar',
+  perform test.allows('pos bar role', 'a Bar person orders a dish on the Bar tab',
     format($q$insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
               values (%L, %L, %L, 'Bar role beer', 2, 300, 18, %L)$q$, v_order, a, v_beer, v_bar));
-  perform test.raises('pos bar role', 'and is refused a dish that prints in the kitchen',
+  perform test.raises('pos bar role', 'and is refused a dish off it',
     format($q$insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
               values (%L, %L, %L, 'Bar role dal', 1, 200, 5, %L)$q$, v_order, a, v_dal, v_bar), '42501');
   perform test.raises('pos bar role', 'and more of one the waiter put on',
@@ -1035,10 +1036,16 @@ begin
     format($q$update pos_order_lines set qty = 1 where id = %s$q$, v_dal_line));
   update pos_menu_categories set kot_kind_id = (select id from pos_kot_kinds where hotel_id = a and role = 'bar')
    where id = v_food;
-  perform test.allows('pos bar role', 'a food section sent to the Bar KOT is the bar''s',
+  perform test.raises('pos bar role', 'a food section sent to the Bar KOT is still not the bar''s (D27-329)',
     format($q$insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
-              values (%L, %L, %L, 'Bar role dal', 1, 200, 5, %L)$q$, v_order, a, v_dal, v_bar));
+              values (%L, %L, %L, 'Bar role dal', 1, 200, 5, %L)$q$, v_order, a, v_dal, v_bar), '42501');
   update pos_menu_categories set kot_kind_id = null where id = v_food;
+  update pos_menu_categories set kot_kind_id = (select id from pos_kot_kinds where hotel_id = a and role = 'food')
+   where id = v_drinks;
+  perform test.allows('pos bar role', 'a drinks section sent to the kitchen''s KOT is still the bar''s (D27-329)',
+    format($q$insert into pos_order_lines (order_id, hotel_id, item_id, name, qty, unit_price, tax_rate, added_by)
+              values (%L, %L, %L, 'Bar role beer', 1, 300, 18, %L)$q$, v_order, a, v_beer, v_bar));
+  update pos_menu_categories set kot_kind_id = null where id = v_drinks;
 
   -- ---------- as the waiter: unchanged ----------------------------------------
   perform set_config('app.user_id', v_waiter::text, true);
