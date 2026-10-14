@@ -95,7 +95,9 @@ beforeAll(async () => {
        returning id::text`, [id, dish]))[0]!.id;
     return [id, item] as const;
   };
-  [spirits, rum] = await section("BARROLE spirits", "alcohol", "food", "BARROLE rum");
+  /* Under Bar: 5EL is not switched on for alcohol, so an Alcohol section's
+     dishes are refused to everybody there. */
+  [spirits, rum] = await section("BARROLE spirits", "bar", "food", "BARROLE rum");
   [food, soup] = await section("BARROLE food", "restaurant", "bar", "BARROLE soup");
   waiter = await person("pos");
   bar = await person("bar");
