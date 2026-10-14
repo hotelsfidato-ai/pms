@@ -184,7 +184,10 @@ export function CheckInFlow({
     });
     setBusy(false);
     if (res.ok) {
-      toast.success(`${stay.guest} is in house`, `Room ${roomNumber} · the arrivals count has dropped.`);
+      /* Another type is said out loud, in Assign room's words (D27-328). */
+      const given = res.data?.givenRoomType;
+      toast.success(`${stay.guest} is in house`, `Room ${roomNumber} · the arrivals count has dropped.`
+        + (given ? ` Note: ${given} is not the room type they booked.` : ""));
       setOpen(false);
       reset();
       qc.invalidateQueries();
@@ -274,6 +277,10 @@ export function CheckInFlow({
                     <p className="text-base text-ink-900">
                       <span className="font-medium">Room {chosen.number}</span>
                       <span className="text-grey-600"> · {chosen.label ?? cap(chosen.housekeeping)}</span>
+                      {/* An upgrade Assign room gave: marked as its list marks it (D27-328). */}
+                      {chosen.type !== stay.roomType && (
+                        <span className="text-warning-dark"> · {chosen.type} (different type)</span>
+                      )}
                     </p>
                     <Button variant="secondary" size="sm" className="ml-auto"
                       onClick={() => setChanging((c) => ({ ...c, room: true }))}>
@@ -310,6 +317,9 @@ export function CheckInFlow({
                         >
                           <BedDouble className="size-4 text-grey-400 shrink-0" />
                           <span className="tabular font-medium text-ink-900">{room.number}</span>
+                          {room.type !== stay.roomType && (
+                            <span className="text-2xs text-warning-dark truncate">{room.type} (different type)</span>
+                          )}
                           <span className="ml-auto">
                             <StatusPill
                               tone={

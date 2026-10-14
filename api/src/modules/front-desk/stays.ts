@@ -49,6 +49,8 @@ interface StayRow {
   guest: string;
   room_number: string | null;
   room_type: string;
+  /** The room's own type, only when it is not the type booked (D27-328). */
+  given_room_type: string | null;
   source: string | null;
   meal_plan: string | null;
   check_in: string;
@@ -94,6 +96,7 @@ const SELECT = `
          gu.full_name                              as guest,
          rm.number                                 as room_number,
          rt.name                                   as room_type,
+         rm.given_type                             as given_room_type,
          app.booking_source_label(bs.name, co.name, r.source) as source,
          r.meal_plan,
          r.check_in::text, r.check_out::text,
@@ -149,9 +152,12 @@ const SELECT = `
        (No backticks in here. This whole string is a JS template
        literal, and one would end it.) */
     left join lateral (
-      select rm2.number
+      select rm2.number,
+             /* An upgrade: the room's type, when it is not the booked one. */
+             case when rm2.room_type_id <> r.room_type_id then rt2.name end as given_type
         from room_assignments ra2
         join rooms rm2 on rm2.id = ra2.room_id
+        join room_types rt2 on rt2.id = rm2.room_type_id
        where ra2.reservation_id = r.id
          and (ra2.released_at is null or r.status <> 'confirmed')
        order by ra2.released_at desc nulls first, ra2.from_date desc
@@ -188,6 +194,9 @@ function toStay(row: StayRow, hotelCode: string, businessDate: string) {
        room TYPE and a stay is in a specific ROOM. */
     roomNumber: row.room_number ?? "",
     roomType: row.room_type,
+    /* The room's own type when it is not the type booked (D27-328): the
+       panel said "302 · Superior" for a Deluxe room. */
+    ...(row.given_room_type ? { givenRoomType: row.given_room_type } : {}),
     /* NULL when nothing on the booking says where it came from. The
        screen shows a dash; it does not guess a walk-in. */
     source: row.source,
