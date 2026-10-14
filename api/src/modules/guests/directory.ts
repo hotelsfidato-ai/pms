@@ -104,8 +104,10 @@ directory.get("/:code/guests", async (c) => {
               count(*)::text                                    as stays,
               sum(greatest(m.check_out - m.check_in, 0))::text  as nights,
               max(m.check_out) filter (where m.check_out <= $2::date)::text as last_stay,
+              /* Void with cancelled (the owner's D27-326 (1)): a booking
+                 entered twice and voided is not the guest coming back. */
               min(m.check_in)  filter (where m.check_in  >  $2::date
-                                         and m.status <> 'cancelled')::text as next_stay,
+                                         and m.status not in ('cancelled', 'void'))::text as next_stay,
               /* ONE DEFINITION OF WHAT A STAY WAS CHARGED, shared with Guest
                  360 (the owner, 21 September): app.stay_charged, migration
                  "one guest, one record". Its body is the CTE that stood here. */
