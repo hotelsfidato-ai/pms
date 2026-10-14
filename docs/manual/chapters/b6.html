@@ -1,0 +1,722 @@
+<!-- ══════════════════════════════ CHAPTER B6 ══════════════════════════════ -->
+<section class="chapter" id="b6">
+  <div class="chapter-head">
+    <span class="num">Chapter B6</span>
+    <h1>Each module in depth</h1>
+    <p>For the owner. The system is divided into services, one per job of the hotel. For each: what it is and holds, the decisions that shaped it and why, what was left out and why, and what is still open. Taken from each service's own brief (<code>src/modules/&lt;service&gt;/MODULE.md</code>), its list of faults (<code>DEFECTS.md</code>), the code and your decisions, as they stand on 9 October.</p>
+  </div>
+
+  <!-- B6.1 -->
+  <h2 id="b6-1"><span class="n">B6.1</span>How the system is divided</h2>
+  <p>Since 15 September the code is sorted by service, at your request, so that several helpers can work at once, each in one service, without breaking another. A service lives in three places: its screens in <code>src/modules/&lt;service&gt;/</code>, its server routes in <code>api/src/modules/&lt;service&gt;/</code>, and its database checks in <code>db/tests/modules/&lt;service&gt;.sql</code>. Each keeps three notes:</p>
+  <table>
+    <thead><tr><th style="width:24%">File</th><th>What it holds</th></tr></thead>
+    <tbody>
+      <tr><td><code>MODULE.md</code></td><td>The service's brief: its screens, routes and tables, the decisions that bind it, what is open, and requests to other services.</td></tr>
+      <tr><td><code>DEFECTS.md</code></td><td>Every fault found in it, numbered with the service's prefix (FD-1, POS-1, FIN-1 …), what was done about it, and the fix waiting for the open ones.</td></tr>
+      <tr><td><code>CHANGELOG.md</code></td><td>What each working session did in it, and what it proved.</td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li><b>One front door each.</b> A service uses another only through that service's <code>index.ts</code>. A test refuses any reach past it (B8.6), so a change inside the restaurant cannot quietly break finance.</li>
+    <li><b>The shared core</b> (the design system, the frame of every screen, the data seam, the server's wiring and the one sequence of migrations) is changed only by the main chat.</li>
+    <li><b>Switches per hotel.</b> Some services are switched on per hotel in Settings: the restaurant, banquets, laundry, spa, alcohol (VAT), the channel manager, loyalty and "Reception can use the POS", among others. A switched-off service is not in that hotel's menu.</li>
+    <li><b>Not built yet.</b> On 16 September every missing service got a folder and a "Coming soon" page; on 28 September each moved to where it will belong, marked "Not built yet", seen by the owner, admins and GMs only (<span class="d">D27-87</span>). On 30 September you asked for every one to be built (<span class="d">D27-178</span>), and the booking engine was dropped in favour of the channel manager's (<span class="d">D27-180</span>). Today only <b>Online payments</b> and <b>Room systems</b> still carry the mark.</li>
+    <li><b>Nothing is decided by a helper.</b> Each service's choices are your decisions, asked one by one with a recommendation (HANDOVER § 5). Where your answer went against the recommendation, the decision says so.</li>
+  </ul>
+  <p>In each section below, <b>Open</b> lists the faults still open in that service's <code>DEFECTS.md</code> on 9 October; a fault that is fixed is not listed.</p>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>On 27 August two helpers changed the same folder at the same time for two hours, and a day's work was lost beyond recovery (AGENTS.md). One service per helper, one front door per service, and a claim taken before the first change (<code>npm run claim</code>) are what stop that happening again.</p>
+  </div>
+
+  <!-- ═══════════ FRONT OFFICE ═══════════ -->
+
+  <!-- B6.2 -->
+  <h2 id="b6-2"><span class="n">B6.2</span>Front desk</h2>
+  <p>Check-in, check-out, and everything the desk does to a stay in between. Built, always on.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Rooms</span>, <span class="ui">Calendar</span>, <span class="ui">Arrivals</span> (Today, Upcoming), <span class="ui">In house</span> (In house now, Due out), <span class="ui">Walk-ins</span> (a record: a walk-in is now New booking opened from an empty room), the stay panel; in Settings: Front desk rules, Market segments, Reservation types, Ready reasons, Holidays, ID types, VIP levels.</td></tr>
+      <tr><th>Holds</th><td>Each stay's state (arriving, in house, checked out), which room it is in, its inclusions, the hotel's desk lists and holidays.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>One meaning for "In house" and "Empty" everywhere</b>: In house is checked in and not checked out, whatever the departure date says; Empty is nobody in it and sellable tonight (<span class="d">D21-36</span>, <span class="d">D21-37</span>, <span class="d">D23-9</span>). Two screens once disagreed about who was in a room.</li>
+          <li><b>Nobody is put into a room somebody is still in</b>; a room given ahead of time to a booking not yet here is allowed (<span class="d">D23-12</span>, <span class="d">D24-15</span>, <span class="d">D24-26</span>; B7.2).</li>
+          <li><b>One page, three buttons</b>: Save booking, Save and assign room, Check in now. Your standing rule: nothing takes more than two pages or three clicks (<span class="d">D27-158</span>, <span class="d">D27-163</span>, <span class="d">D27-236</span>).</li>
+          <li><b>The first night is charged at check-in</b>, with its GST, dated the business date; the night audit posts each later night and never the first one twice, so a bill printed after check-in never misses the room (<span class="d">D27-204</span>, <span class="d">D27-205</span>).</li>
+          <li><b>Express check-in</b> counts only this stay's own confirmed online ID, never a document from an earlier visit, and never applies to a foreign guest (<span class="d">D27-236</span>, <span class="d">D27-242</span>).</li>
+          <li><b>A late departure is asked only on or after the departure date, and once</b>: a guest leaving before it is leaving early, whatever the hour, and is never asked or charged a late fee; one already recorded is not asked or charged again (<span class="d">D27-314</span>; A1.6, B7.11). The date is the hotel's business date, not the clock's.</li>
+          <li><b>The desk's lists read only their own days</b>: Arrivals, In house, Due out and the check-in's room list ask the server for the day's bookings, not every booking ever made (793 on the demo hotel, about three seconds each time); Rooms, the Calendar and the Dashboard read only the dates on screen; after a payment only that stay's bill and the open list are read again. Nothing a person reads changed: <span class="d">D27-313</span>, <span class="d">D27-316</span>.</li>
+          <li>A check-in days early is allowed, warned and confirmed (<span class="d">D27-193</span>). A day use is charged at check-in and stays a day use (<span class="d">D27-225</span>, <span class="d">D27-230</span>). A returning foreign guest's nationality is never overwritten by "India" typed at check-in; a stay is capped at 90 nights (<span class="d">D27-197</span>).</li>
+          <li>Per-hotel desk rules: the desk may overbook (on), an advance before check-in (none to start), weekend days, the default ID type, nationality and title (<span class="d">D27-243</span>, <span class="d">D27-246</span>).</li>
+          <li>Controls a person cannot use are hidden (<span class="d">D24-18</span>, <span class="d">D24-27</span>). When a hotel's business date is behind the real day, one warning line in the top bar of every screen (<span class="d">D27-237</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Check-out, moves and other changes to a stay are refused offline; a check-in is held, with a warning (A0.8). The full list of bookings is deliberately not kept on a shared desk computer. The plan's own test, somebody new doing a stay alone, waits for you to arrange it (<span class="d">D21-48</span>, <span class="d">D21-57</span>).</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.3 -->
+  <h2 id="b6-3"><span class="n">B6.3</span>Reservations (bookings)</h2>
+  <p>Taking a booking, for one room or many, and groups with their master bill. Built, always on.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">All bookings</span>, <span class="ui">Groups</span>, <span class="ui">New booking</span> (one page), and one group's own page.</td></tr>
+      <tr><th>Holds</th><td>Bookings, groups, the sales people list. The same booking door serves the desk, the CRS and the channel manager.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>New booking takes every field of your Add Reservation screenshot</b>, in this system's layout (<span class="d">D27-33</span>).</li>
+          <li><b>Overbooking</b>: a machine (a booking site, the CRS) is never allowed to (<span class="d">D17-43</span>, <span class="d">D17-80</span>); the desk may, unless the hotel switches that off (<span class="d">D27-243</span>; B7.1).</li>
+          <li><b>"Rate includes GST"</b> is a tick per room line, off by default, and also covers the list price (<span class="d">D27-187</span>, <span class="d">D27-199</span>); a contract's rate is always before GST (<span class="d">D27-233</span>).</li>
+          <li><b>Discounts</b>: up to 10% by hand with a reason, more only by a named promotion, as in the restaurant (<span class="d">D27-36</span>, <span class="d">D27-62</span>); a ₹ discount comes off each night (<span class="d">D27-259</span>).</li>
+          <li><b>A waiting booking</b> (from the CRS) is confirmed with one button, or cancelled directly with a reason and no charge, freeing the room at once (<span class="d">D27-60</span>, <span class="d">D27-64</span>, <span class="d">D27-69</span>, <span class="d">D27-71</span>).</li>
+          <li><b>A day use</b> is booked from New booking with its price typed every time; nothing is filled in for it (<span class="d">D27-227</span>, <span class="d">D27-229</span>).</li>
+          <li><b>A booking reference's month</b> is the hotel's business date, not the wall clock (<span class="d">D27-123</span>); who made each booking is recorded (<span class="d">D27-239</span>).</li>
+          <li><b>A group's lead guest</b> is the room booked first that still stands, unless the desk picks another (<span class="d">D22-52</span>).</li>
+          <li><b>A company over its credit limit</b> is refused with the amount; a GM or above may allow it with a reason; the limit counts what the company owes across the whole group (<span class="d">D27-275</span>, <span class="d">D27-279</span>).</li>
+          <li>A booking from a booking site carries "Prepaid on the booking site", on by default, so the guest is not asked for an advance twice (<span class="d">D27-246</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Prices that differ night by night inside one booking (<span class="d">D17-82</span>): a stay has one agreed rate, and the channel manager makes such a booking wait for the desk (<span class="d">D27-183</span>). Changes to a channel's booking stay at the desk. Commission is stamped on each booking, but nothing totals it yet. New bookings are refused offline.</td></tr>
+      <tr><th>Open</th><td>RES-6: a group's lead can be a waiting room, which holds back the group's voucher. Not reachable from the desk today.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.4 -->
+  <h2 id="b6-4"><span class="n">B6.4</span>Housekeeping</h2>
+  <p>Which rooms need cleaning and whose they are, repairs, and rooms out of service. Built, always on, and works offline.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Housekeeping</span> (the board) and <span class="ui">Work orders</span>; Repairs on an equipment item's page.</td></tr>
+      <tr><th>Holds</th><td>Each room's cleaning state, who is assigned, out-of-service blocks, work orders and their costs.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li>A room card's three buttons have words, <span class="ui">Clean</span>, <span class="ui">Inspected</span>, <span class="ui">Repair</span>, and a greyed one says why when tapped (<span class="d">D17-8</span>). No separate "Needs cleaning" section (<span class="d">D17-9</span>).</li>
+          <li><b>The board refreshes itself</b> (<span class="d">D17-39</span>); after Clean or Inspected a message says so at once and the card moves (<span class="d">D27-94</span>).</li>
+          <li><b>A repair cost needs proof</b>, a photo of the bill or payment, but no approval (<span class="d">D17-5</span>, <span class="d">D17-6</span>). Opening a repair sets the item Under repair and closing it sets In use (<span class="d">D17-7</span>).</li>
+          <li><b>Out of service</b> is a dated block with a reason (<span class="d">D17-11</span>). The GM's own room at 5 Elements is "NC": not for sale, house use, never deleted (HANDOVER § 4).</li>
+          <li>Everyone sees their own hotel's staff, by name and role only (<span class="d">D27-96</span>). No Dashboard or reports for housekeeping (<span class="d">D27-141</span>).</li>
+          <li>Per-hotel switches: a room left by a move turns dirty (on), a room back from a block turns dirty (on), stay-over rooms turn dirty at the night audit (off) (<span class="d">D27-260</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Putting a room out of service is refused offline. A repair cost is never held offline, so a proof photo is never separated from its cost.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.5 -->
+  <h2 id="b6-5"><span class="n">B6.5</span>Night audit</h2>
+  <p>A person closes the hotel's day: later room nights are posted, no-shows marked, and the business date moves on. Built, always on, never scheduled.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Night audit</span>: its checklist, Run, Closed days, and the correction drawer.</td></tr>
+      <tr><th>Holds</th><td>One record per closed day, and every correction to a closed day.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>Run by a person, never by a clock</b> (HANDOVER § 4): a hotel that forgets stays on yesterday, which is safe and visible. The GM runs it at 5 Elements (<span class="d">D21-77</span>); the roles that may are unchanged, and the Revenue Manager and the Viewer, who may not, are not shown the button (<span class="d">D22-36</span>, <span class="d">D27-305</span>). It asks before running (<span class="d">D27-117</span>).</li>
+          <li><b>A second press changes nothing</b> and shows the record already made (<span class="d">D17-12</span>). A history of closed days (<span class="d">D17-13</span>).</li>
+          <li><b>Correcting a closed day</b>: the owner, an admin or the GM, this month and last, with a reason; the old and new figures are both kept, and the audit's own record is never rewritten (<span class="d">D22-18</span>, <span class="d">D24-1</span> to <span class="d">D24-6</span>). Every charge may be corrected; payments, refunds and discounts never are (<span class="d">D25-5</span>, <span class="d">D25-11</span>). A bill with a tax invoice is refused: issue a credit note (<span class="d">D24-4</span>).</li>
+          <li><b>No night is charged twice</b>: the first is posted at check-in (<span class="d">D27-204</span>), and a night already covered by a room line is skipped (<span class="d">D24-14</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>An automatic, scheduled night audit (decided against). Changing money taken on a closed day: the difference is put right today (<span class="d">D25-11</span>). What the audit refuses and why: B7.4.</td></tr>
+      <tr><th>Open</th><td>NA-4: a test helper loses the details of a refusal; the shared core's to fix.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.6 -->
+  <h2 id="b6-6"><span class="n">B6.6</span>Guests, companies and Form III</h2>
+  <p>The guest directory, companies and agents, booking sources with each hotel's commission, and the register of foreign guests. Built.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Guests</span>, <span class="ui">Companies and agents</span>, <span class="ui">Booking sources</span>, <span class="ui">Form III</span>.</td></tr>
+      <tr><th>Holds</th><td>Guests and their ID documents, companies, booking sources and their commission, Form III filings.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>Form III replaces Form C</b> (the Immigration and Foreigners Act 2025): arrival and departure each reported within 24 hours; every portal field recorded, the law's fields required at check-in; the guest signs a printed card on arrival and departure; the photo is taken on the portal, not kept here (<span class="d">D27-25</span>, <span class="d">D27-72</span> to <span class="d">D27-80</span>).</li>
+          <li><b>Who reads ID and Form III data</b>: the owner, an admin, the GM, the hotel manager and reception, the people who check guests in; not the accountant (<span class="d">D25-38</span>, <span class="d">D27-122</span>).</li>
+          <li><b>Aadhaar</b>: you chose to accept the full number, shown as the last four digits on every screen and in full only on the printed registration card (<span class="d">D21-17</span>, <span class="d">D21-18</span>); whether it may be kept waits for the lawyer, and nothing changes until then (<span class="d">D25-37</span>).</li>
+          <li>A returning guest is suggested by exact phone or email, and the clerk confirms (<span class="d">D21-20</span>; B6.27). A booking-site guest who is blacklisted warns the desk (<span class="d">D22-8</span>).</li>
+          <li>A heading is its menu name (<span class="d">D17-22</span>). An administrator counts as a manager for booking sources (<span class="d">D27-275</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>The system records Form III filings; it does not file them on the portal. A companion's own details are not registered (one portal number per person, <span class="d">D27-75</span>). Adding and editing a company came with contracts (<span class="d">D27-184</span>; B6.16).</td></tr>
+      <tr><th>Open</th><td>GUE-5: an ID skipped at check-in has nowhere to be recorded later. GUE-6: a companion in the room is not on the register.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.7 -->
+  <h2 id="b6-7"><span class="n">B6.7</span>Online check-in (the guest's own page)</h2>
+  <p>A private page per booking: the guest proves who they are, sends their ID details and a photo, sees their interim bill, messages the desk, and during the stay asks for things. Built. On for every hotel by default since 5 October (<span class="d">D27-281</span>); DigiLocker is built and switched off.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td>The guest's page (no menu; reached from the voucher's link and QR, a room's card, or the desk's link) and <span class="ui">Online check-in</span> at the desk.</td></tr>
+      <tr><th>Holds</th><td>Each booking's link, codes and unlocks, the guest's submitted details, ID photos (encrypted, in Google Drive), requests and messages.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>One private page per booking</b>, no public page (<span class="d">D18-9</span>). A stranger who scans a room's card sees nothing; a forwarded link asks for a code again (<span class="d">D18-13</span>, <span class="d">D21-6</span>, <span class="d">D21-14</span>).</li>
+          <li><b>Three ways to prove it is you</b>, nothing sent until the guest chooses: a code by WhatsApp, a code by email, or Continue with Google (<span class="d">D27-207</span>, <span class="d">D27-210</span>). A verified phone stays unlocked for a day (<span class="d">D27-169</span>).</li>
+          <li><b>Everything the guest sends is a submission</b>, confirmed by the desk against the real ID, under the clerk's name; nothing reaches the guest's record or Form III unchecked (<span class="d">D21-8</span>).</li>
+          <li><b>The ID photo</b>: any government photo ID, Aadhaar only masked; encrypted per hotel and stored in Google Drive, never kept on the server; optional online, the desk can add it; after confirming, only the owner, an admin and the GM see kept photos, and every view is recorded (<span class="d">D27-207</span> to <span class="d">D27-212</span>).</li>
+          <li><b>The bill the guest sees</b> is exactly the desk's interim bill, with "pay at the desk" (<span class="d">D21-10</span>).</li>
+          <li>One fixed card per room, against the recommendation of a card per stay; a reprinted card stops the old one at once (<span class="d">D21-7</span>, <span class="d">D21-16</span>).</li>
+          <li>During the stay: one-tap requests, in-room dining, table booking, wake-up calls, messages with the desk (<span class="d">D27-221</span>, <span class="d">D27-224</span>, <span class="d">D27-225</span>, <span class="d">D27-241</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Paying online and choosing a room. The other adults' IDs (one ID per stay, <span class="d">D27-212</span>). DigiLocker, until the partner keys and the lawyer's answers arrive (<span class="d">D27-235</span>). The WhatsApp template for the check-in code is waiting on Meta (<span class="d">D27-285</span>); until then the code goes by email.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.8 -->
+  <h2 id="b6-8"><span class="n">B6.8</span>Guest messages</h2>
+  <p>Everything the system sends a guest by itself, and the record of every attempt. Built; it sends nothing until the sending settings and your pace are set on the server.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Guest messages</span> (with the guest's messages to the desk, and Reply); in Settings, Messages: Guest messages on/off, and Daily report emails.</td></tr>
+      <tr><th>Holds</th><td>Every send and its result (one record per attempt), each hotel's switches, the daily report email lists.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>One door out</b>: every message leaves through one place in the server and goes to n8n as data; n8n writes the words, so wording changes without a release (<span class="d">D17-87</span>). Since 30 September every guest message goes through the CRS's n8n, from one Fidato number (<span class="d">D27-186</span>, <span class="d">D27-101</span>).</li>
+          <li><b>Fewer messages</b>: the voucher <b>is</b> the confirmation, sent once when the booking is made; no separate confirmation and no day-before reminder (<span class="d">D27-264</span>). By email with the PDF, and on WhatsApp too where the guest agreed (<span class="d">D27-235</span>, <span class="d">D21-72</span>). The voucher email carries the check-in link (<span class="d">D27-283</span>).</li>
+          <li><b>The WhatsApp template</b>: for now the CRS's approved voucher template (<span class="d">D27-266</span>); your own <code>booking_confirmation</code> takes over once Meta shows it Active again (<span class="d">D27-281</span>).</li>
+          <li><b>The tax invoice</b> goes by email only, when issued, where the hotel switches it on and only when it is made out to the guest; one made out to a company, an agent or a booking site goes by the desk's Send invoice (<span class="d">D27-261</span>, <span class="d">D27-284</span>, <span class="d">D27-313</span>).</li>
+          <li><b>One message per group</b>, to the lead (<span class="d">D22-41</span>, <span class="d">D22-52</span>). On switch-on day every future booking is owed, soonest arrival first, at your pace; catching up only 09:00 to 21:00 hotel time (<span class="d">D21-33</span>, <span class="d">D21-34</span>, <span class="d">D22-42</span>; B7.8).</li>
+          <li><b>Daily report emails</b> after each night audit, per hotel, the night audit report on by default, nothing sent until an address is typed (<span class="d">D27-280</span>, <span class="d">D27-282</span>). They are kept out of the Guest messages list.</li>
+          <li>English only (<span class="d">D21-73</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>The sending pace is still yours to give, and nothing guesses it (<span class="d">D21-34</span>). Your own <code>booking_voucher</code> template is on hold (<span class="d">D27-266</span>). The invoice on WhatsApp, and a separate check-in-link template (<span class="d">D27-284</span>). A "Rooms" line in the group's message, with the next template edit (<span class="d">D22-54</span>). A second language.</td></tr>
+      <tr><th>Open</th><td>MSG-4: dates are formatted in two places.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.9 -->
+  <h2 id="b6-9"><span class="n">B6.9</span>Guest services</h2>
+  <p>A guest's requests during the stay, wake-up calls and lost property. Built.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Guest requests</span>, <span class="ui">Wake-up calls</span>, <span class="ui">Lost property</span>; on the guest's own page, "Ask for something", the one-tap choices and a wake-up request.</td></tr>
+      <tr><th>Holds</th><td>Requests (as work orders carrying the stay), wake-up calls, lost items.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>A request is a work order that carries the stay</b>, no new kind of record; three kinds, one per team: housekeeping, something broken (whoever handles repairs), food and drink (kitchen manager, chef, waiter). The desk sees, raises, takes and closes any (<span class="d">D27-181</span>, <span class="d">D22-34</span>).</li>
+          <li><b>No time targets</b> for now. Guests may raise requests from their own page while checked in and see Open, Being done, Done. Food and drink carries no price: anything chargeable is rung on the Till (<span class="d">D27-181</span>).</li>
+          <li>One-tap choices: drinking water, fresh towels, toiletries, clean my room; AC, plumbing, power, TV and Wi-Fi; something else; free, and the list fixed (<span class="d">D27-224</span>).</li>
+          <li><b>Wake-up calls</b> set by the desk or asked for from the guest's page, against the recommendation of the desk only; the bell reminds the desk from 15 minutes before until done, with no "missed" state (<span class="d">D27-241</span>).</li>
+          <li><b>Lost property</b>: the desk and housekeeping log a found item; only the desk marks it returned (to whom) or disposed of (with a reason); no automatic disposal, no photo (<span class="d">D27-241</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Time targets. Holding a request offline. Photos of lost items.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════ MONEY ═══════════ -->
+
+  <!-- B6.10 -->
+  <h2 id="b6-10"><span class="n">B6.10</span>Finance</h2>
+  <p>The ledger: guests' bills, payments, tax invoices and credit notes, the VAT bill for alcohol, the cash drawers and deposits, company accounts and the tax rules. Built, always on; the alcohol (VAT) part is off by default per hotel.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Folios</span>, <span class="ui">Invoices</span>, <span class="ui">Payments</span>, <span class="ui">Cashiering</span>, <span class="ui">Cash deposits</span>, <span class="ui">Company accounts</span>; one invoice, one VAT bill, the interim bill; the Bill tab in the stay panel; in Settings, Money: Payment methods, Extra charges, Discounts, Commission, Pickup and drop.</td></tr>
+      <tr><th>Holds</th><td>Every line on every bill (append-only), payments, invoices, VAT bills, drawers and counts, deposits, company payments, payment methods, tax rules.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>The ledger only grows.</b> A wrong line is reversed by a line of its own, with a reason; only the owner, an admin, the GM or the accountant reverse a payment (<span class="d">D27-117</span>, <span class="d">D27-125</span>).</li>
+          <li><b>No bill is a dash, never ₹0</b> (<span class="d">D17-16</span>); money figures are read again every time a screen is opened (<span class="d">D17-58</span>).</li>
+          <li><b>Alcohol is VAT, not GST</b>: a per-hotel switch, one "VAT 10%" line, its own VAT bill and series per hotel each year, cancelled like a credit note (<span class="d">D21-90</span>, <span class="d">D21-91</span>, <span class="d">D22-44</span>).</li>
+          <li><b>Before check-out the print is an "Interim bill"</b>, its total exact with no round-off (<span class="d">D22-7</span>, <span class="d">D24-25</span>, <span class="d">D27-126</span>). The bill is in sections, Room, Restaurant, Bar (<span class="d">D27-200</span>); its headline is what is due, tonight's night shown "to be posted tonight" (<span class="d">D27-199</span>, <span class="d">D27-204</span>).</li>
+          <li><b>Edit and Change rate</b> for the owner, an admin and the GM, with a reason; refused once a tax invoice stands (a credit note then) or on a closed day (<span class="d">D27-157</span>, <span class="d">D27-162</span>).</li>
+          <li><b>Cash</b>: every drawer opens by itself after the night audit on the float kept at the last close; a float kept at the desk names the next person; the rest goes to deposit; the owner or the accountant verifies each deposit, never without its slip photo (<span class="d">D27-190</span>, <span class="d">D27-191</span>, <span class="d">D27-200</span> to <span class="d">D27-202</span>). A cash paid-out waits for the GM's or owner's yes (<span class="d">D27-242</span>).</li>
+          <li><b>Cash limits</b> (B7.10): ₹2 lakh or more refused, a PAN or Form 97 above ₹1 lakh (<span class="d">D25-40</span>, <span class="d">D26-8</span>, <span class="d">D26-9</span>). A payment larger than the bill is held as the guest's credit and refunded at check-out (<span class="d">D27-4</span>, <span class="d">D27-11</span>, <span class="d">D27-12</span>).</li>
+          <li>A guest's own figures count only their own bill, never nights the group's host pays (<span class="d">D27-226</span>). Company accounts shows the City ledger's figures; companies pay by bank transfer, cheque, UPI or card, never cash (<span class="d">D27-127</span>, <span class="d">D27-242</span>).</li>
+          <li>The GST series opens itself each financial year (<span class="d">D24-22</span>); tax rules apply by the charge's business date, with a SAC per line (<span class="d">D27-258</span>); the FSSAI number is frozen on an invoice when issued, like the GSTIN (<span class="d">D27-3</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Online payments (B6.12). E-invoicing (IRN): not required while the group is under ₹5 crore turnover (<code>deploy/README.md</code>). GST on advances (B6.35). Every money write is refused offline.</td></tr>
+      <tr><th>Open</th><td>Nothing (FIN-1 to FIN-29 are all fixed).</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.11 -->
+  <h2 id="b6-11"><span class="n">B6.11</span>Accounting export</h2>
+  <p>The hotel's month handed to its accountant as a day book. Built: the CSV and the Excel file work; the two Tally files are offered but produce no file yet.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Accounting export</span> (found by search).</td></tr>
+      <tr><th>Holds</th><td>Nothing of its own: it reads the reports and finance.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>Three formats offered</b>, Tally Prime XML, Tally ERP 9 XML and a day-book CSV, so whoever exports picks what their accountant wants (<span class="d">D18-16</span>); a real Excel file beside the CSV (<span class="d">D22-37</span>).</li>
+          <li><b>Tally ledger names come from your accountant</b> (<span class="d">D21-46</span>): a name invented here would be created inside their Tally on import.</li>
+          <li>Alcohol in its own VAT columns (<span class="d">D21-91</span>); Restaurant and Restaurant tax columns (<span class="d">D24-24</span>); company payments as receipts, kept apart from sales, against the recommendation (<span class="d">D27-242</span>). The accountant may export (<span class="d">D27-122</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Posting back into Tally, payroll and the bank. Food is not yet split from other extra charges.</td></tr>
+      <tr><th>Open</th><td>ACC-4: the Tally files produce no file until the ledger names arrive. ACC-3: food and the other extras are one figure.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.12 -->
+  <h2 id="b6-12"><span class="n">B6.12</span>Online payments</h2>
+  <p><b>Not built.</b> A menu entry under Finance marked "Not built yet", for the owner, admins and GMs, and nothing behind it.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Decided</th><td>
+        <ul>
+          <li>Excluded: guests pay at the desk (<span class="d">D17-57</span>, <span class="d">D25-36</span>). Asked for with the booking engine on 30 September (<span class="d">D27-178</span>); the booking engine was then dropped (<span class="d">D27-180</span>), and online payments were put after the release in hand (<span class="d">D27-239</span>).</li>
+        </ul></td></tr>
+      <tr><th>What it needs</th><td>Your go-ahead, a payment gateway with a merchant account, and its keys in the server's settings. If it ever comes, the company that hosts the system must never hold guests' money, and no card number may be stored (<code>docs/SELLING-IN-INDIA.md</code>); card numbers from booking sites are already dropped on arrival (<span class="d">D17-83</span>).</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════ ROOMS, RATES AND DISTRIBUTION ═══════════ -->
+
+  <!-- B6.13 -->
+  <h2 id="b6-13"><span class="n">B6.13</span>Rooms and rates</h2>
+  <p>Room types, rooms and prices (a base and its add-ons), restrictions and cancellation terms. Built, always on.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Rates</span>, <span class="ui">Cancellation terms</span>; in Settings: Room types, Rate plans, Meal plans, and the front desk's hours.</td></tr>
+      <tr><th>Holds</th><td>Room types and rooms, prices, add-ons and derivations, restrictions (stop sell, minimum nights, closed to arrival or departure), cancellation terms.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>One base, everything else a difference</b> (your instruction of 16 September), reworked on 30 September: each room type its own base, or derived from one base room type by ₹ or %; a base covers one guest, then double occupancy, then extra adults and children; meals per guest; an unset plan is not sold (<span class="d">D27-188</span>, <span class="d">D27-194</span>). Chapter B4 has the detail.</li>
+          <li><b>No default prices.</b> Every figure ships unset, a dash; a price of 0 only when ticked Free (<span class="d">D27-120</span>). New hotels start with no room types (<span class="d">D27-263</span>).</li>
+          <li><b>One Rates screen</b>: each room type always open with all its rows, rooms left under each base, and Set prices (<span class="d">D27-206</span>, <span class="d">D27-237</span>). Rate plans are a tree over the one pricing, not a second system (<span class="d">D27-251</span>).</li>
+          <li>EP stays; RO is no longer offered (<span class="d">D27-164</span>). Party limits are enforced; a plan switched Off is not offered; New booking offers only the plans the chosen source sells (<span class="d">D27-258</span>).</li>
+          <li>Owner, admin and GM set prices, and so does the <b>revenue manager</b>, a role made for when they are away, who never touches bills, guests or setup (HANDOVER § 4, 16 September).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Nothing is priced until somebody types it: the demo's rates are the demo's (<span class="d">D21-38</span>), and cancellation terms ship empty.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.14 -->
+  <h2 id="b6-14"><span class="n">B6.14</span>Revenue outlook</h2>
+  <p>Suggestions only: what the coming nights look like and which deserve a look. Built; it writes nothing.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Revenue outlook</span>: pace against last year and a week ago, what to consider, dates worth a look, pickup over 1, 7 and 30 days, and rivals' prices beside each suggestion.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>It never changes a price</b>; the GM or you make the change (<span class="d">D17-56</span>, <span class="d">D18-15</span>). A test holds it to that.</li>
+          <li>A date is "soft" 14 days out at 50% or less sold; 85% is "filling well"; to be reviewed after a month of real bookings (<span class="d">D22-14</span>). Its figures use the reports' own definitions.</li>
+          <li>Rivals' prices sit beside the suggestions (<span class="d">D27-269</span>, <span class="d">D27-270</span>; B6.15).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Automatic pricing rules and forecasting beyond the comparisons. The achieved rate on a soft date was decided (<span class="d">D22-15</span>) but is not shown yet.</td></tr>
+      <tr><th>Open</th><td>RM-2: every date past next week reads "Soft" at 0% on the demo, kept open for the review of <span class="d">D22-14</span>. RM-3: pickup is a dash on the demo, honestly, because the demo's records begin after its business date.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.15 -->
+  <h2 id="b6-15"><span class="n">B6.15</span>Rivals' prices</h2>
+  <p>Nearby hotels' lowest public prices, from Google Hotels. Built; off per hotel, and needs a paid search account's key on the server.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td>Settings, Modules and connections: <span class="ui">Rivals' prices</span>. The prices show on Revenue outlook.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li>Each nearby hotel's lowest public price per night is enough; 30 days ahead, checked twice a week; Fidato's own hotels first; who pays when outside hotels use it is decided when selling starts (<span class="d">D27-270</span>).</li>
+          <li>Hotels only, not holiday flats; switched off, the prices already checked stay visible with their date; only beside suggestions for now; everyone who can see rates can read them, because they are public prices (<span class="d">D27-272</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Retrying a failed search: every try is a paid search.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.16 -->
+  <h2 id="b6-16"><span class="n">B6.16</span>Contracts</h2>
+  <p>Companies and agents, a contract per company and hotel, and bookings priced by it. Built.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Contracts</span> and a company's page; Add company also from Companies and agents.</td></tr>
+      <tr><th>Holds</th><td>Companies, their contracts, credit terms.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>Your thirteen answers</b> (<span class="d">D27-184</span>): a contract is fixed rates per room type and meal plan, or a % off the day's price; the contract in force on arrival prices every night; with no contract figure, the day's price with a note; the owner, admins and GMs add and edit; reception may add a company at the desk (name, GSTIN, address only); agents at net rates with an optional commission; credit per company for the whole group.</li>
+          <li><b>A contract rate is always before GST</b>; the "Rate includes GST" tick is greyed on it (<span class="d">D27-233</span>). A day use is never priced by a contract (<span class="d">D27-229</span>).</li>
+          <li><b>Credit</b>: "Bill to company" is refused without credit allowed; the GM ticks credit on each booking site once at go-live (<span class="d">D27-185</span>); a company over its limit stops reception, and a GM may allow it with a reason (<span class="d">D27-275</span>, <span class="d">D27-279</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Allotments (rooms held for a company), later.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.17 -->
+  <h2 id="b6-17"><span class="n">B6.17</span>Channel manager (SU)</h2>
+  <p>The connection to SU, which carries rooms left, prices and closures out to the booking sites and brings their bookings in. Built; not connected: it waits on your SU account and keys, and each hotel's switch is off.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Channel manager</span>: the list of bookings from the booking sites for the GM; the SU setup for the owner and admins.</td></tr>
+      <tr><th>Holds</th><td>The hotel's SU mapping, what was sent and when, every booking message received.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>SU, not a direct connection to each site</b> (<span class="d">D17-30</span>, <span class="d">D17-66</span>). The PMS is the master record (<span class="d">D17-28</span>). SU pushes each booking to us the moment it happens (<span class="d">D17-79</span>).</li>
+          <li><b>Never overbook</b>: a booking with no room free is not created; SU is told at once there is nothing left, and the GM sees "Refused: no room free" to settle with the site and the guest (<span class="d">D17-43</span>, <span class="d">D17-80</span>; B7.1).</li>
+          <li><b>A date with no price goes out closed</b> (<span class="d">D17-81</span>); an unset meal plan is not sold and is closed on SU (<span class="d">D27-194</span>).</li>
+          <li><b>Card numbers are never kept</b>: dropped on arrival, never stored, logged or shown (<span class="d">D17-83</span>).</li>
+          <li>Which booking sites is configuration, each source carrying its SU code; nights priced differently, changes and requests-to-book wait for a person; a cancellation cancels by itself under the site's policy unless the guest has arrived; a booking not in rupees waits (<span class="d">D27-183</span>, <span class="d">D17-44</span>).</li>
+          <li>Each hotel switched on separately (<span class="d">D17-45</span>). SU's own booking engine replaces one of ours (<span class="d">D27-180</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Applying a changed booking automatically. Keeping each night's own price (<span class="d">D17-82</span>), which needs a place in the database that does not exist yet.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.18 -->
+  <h2 id="b6-18"><span class="n">B6.18</span>The CRS bridge</h2>
+  <p>Reads the CRS's bookings for the group's own hotels into the PMS, and writes the hotel's answer back to the CRS. Built; off until you connect it.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">CRS bookings</span> (in reception's menu), with the connection card for the owner and admins.</td></tr>
+      <tr><th>Holds</th><td>Which hotels are connected, the room-type mapping, every CRS booking read.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>The CRS stays a separate app</b> and the two talk through bridges, for good (<span class="d">D27-27</span>, <span class="d">D27-276</span>); nothing in the CRS's code or rules changes (<span class="d">D27-98</span>).</li>
+          <li><b>A CRS booking arrives waiting, with the room held</b>; the hotel confirms; then one voucher goes, the PMS's own, in the CRS's design (<span class="d">D27-35</span>, <span class="d">D27-99</span>, <span class="d">D27-171</span>).</li>
+          <li><b>The rate is the CRS's quoted rate</b>, before tax; a line that does not split exactly needs attention; a CRS cancellation after arrival is a note, and the desk cancels (<span class="d">D27-171</span>).</li>
+          <li><b>The salesperson sees the answer</b> on the CRS's Register screen; a mixed answer reads "Partly confirmed: N of M rooms" (<span class="d">D27-106</span>, <span class="d">D27-174</span>). CRS guests arrive with WhatsApp consent ticked (<span class="d">D27-235</span>).</li>
+          <li>CRS bookings are filed under a source "Fidato CRS"; until the CRS's own n8n changes, the sales team unticks the CRS's confirmation for Amrapali (<span class="d">D27-286</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Applying a CRS change automatically. The answer workflow in n8n and its later parts.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════ RESTAURANT AND EVENTS ═══════════ -->
+
+  <!-- B6.19 -->
+  <h2 id="b6-19"><span class="n">B6.19</span>Restaurant (POS)</h2>
+  <p>The hotel's own restaurant: tables, orders, the kitchen, the menu, the cash day, and the door an outside till uses to charge a room. Built, and on unless a hotel switches it off; it has its own space, Restaurant (<span class="d">D27-249</span>). Chapter A8 shows every screen.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Tables</span>, <span class="ui">Table bookings</span>, <span class="ui">Till</span>, <span class="ui">Terminal</span>, <span class="ui">Kitchen</span>, <span class="ui">Menu</span> (Dishes, Add-ons), <span class="ui">Close restaurant day</span>, <span class="ui">Charges to rooms</span>, <span class="ui">Restaurant setup</span> (with its KOT section).</td></tr>
+      <tr><th>Holds</th><td>The menu (sections, dishes, variations, Sides, numbered add-ons), tables, orders and their lines, KOT kinds and the computers that print them, the cash day, table bookings, guests' food orders.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>The menu and its prices are the hotel's</b>: nothing was shipped (<span class="d">D21-39</span>); the real menu arrives by import (<span class="d">D21-43</span>); a 0 only when ticked Free (<span class="d">D27-120</span>). Each section has a tax heading, "Alcohol" only where the hotel serves it (<span class="d">D22-4</span>, <span class="d">D22-46</span>); a dish shows the rate its section charges, or a dash (<span class="d">D21-94</span>).</li>
+          <li><b>Variations</b> as a simple form, several types per dish, the first type carrying the price (<span class="d">D27-189</span>, <span class="d">D27-192</span>, <span class="d">D27-195</span>). Restaurant and Bar tabs, with bar notes on drinks (<span class="d">D27-267</span>).</li>
+          <li><b>Add-ons</b>: a numbered list folded into the dish's one line (<span class="d">D27-289</span>); Customise found after every tap, "All N / Just 1" (<span class="d">D27-290</span>); custom add-ons typed with a price or Free, each its own line, also on a dish already sent (<span class="d">D27-291</span>).</li>
+          <li><b>Food the kitchen already has</b> comes off only for the owner, an admin, the GM, the hotel manager or the kitchen manager, with a reason that prints on the KOT and shows in the day's figures (<span class="d">D27-119</span>, <span class="d">D27-128</span>, <span class="d">D27-130</span>, <span class="d">D27-131</span>). More of a sent dish is a new line (<span class="d">D27-148</span>).</li>
+          <li><b>The kitchen has two buttons</b>, Start and Ready; the waiter's Taken marks a dish served (<span class="d">D27-221</span>, <span class="d">D27-222</span>).</li>
+          <li><b>KOTs</b> print through computers, one per kind, routed by menu section, one number and one slip per kind, each headed in big letters; bills INTERIM BILL, BILL, BILL · DUPLICATE (<span class="d">D27-292</span>; B7.6).</li>
+          <li><b>Charge to room</b> asks first, naming the guest; a room with two open bills offers one button each (<span class="d">D27-117</span>, <span class="d">D27-162</span>). The Till sends to the kitchen like the Terminal (<span class="d">D27-166</span>).</li>
+          <li><b>The cash day</b> opens by itself on the last float kept (<span class="d">D27-200</span>); a bill paid wholly in cash is rounded to the rupee (<span class="d">D27-129</span>); Close unpaid frees its table with Clear (<span class="d">D27-288</span>).</li>
+          <li><b>Restaurant setup without a developer</b> (<span class="d">D22-6</span>, <span class="d">D25-20</span> to <span class="d">D25-26</span>). Food can go on a banquet function's bill (<span class="d">D17-21</span>, <span class="d">D27-133</span>). In-room dining and table booking from the guest's page (<span class="d">D27-224</span>, <span class="d">D27-225</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Printing by a printer's network address through an installed helper: a later phase, only if asked (<span class="d">D27-292</span>). Add-ons on the guest's own page (<span class="d">D27-289</span>). A second outlet on the setup screen (<span class="d">D25-20</span>). A report of add-ons sold (not asked). A waiting clock on the waiter's side (<span class="d">D27-222</span>).</td></tr>
+      <tr><th>Open</th><td>Nothing open in its fault list. Small things noted: the Till's own lines do not show a strike's reason; the Till's menu panel scrolls sideways at phone width.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.20 -->
+  <h2 id="b6-20"><span class="n">B6.20</span>Banquet</h2>
+  <p>The hall diary: enquiries, confirmations, catering, and the function's bill. Built, and off unless a hotel switches it on; on at 5 Elements, which has a hall (<span class="d">D21-66</span>).</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Diary</span>, <span class="ui">Halls and packages</span>, and one function's page.</td></tr>
+      <tr><th>Holds</th><td>Halls, packages, functions (a hall cannot be sold twice for the same time), their bills.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>Who bills</b>: the owner, an admin and the GM take an advance, bill and settle; the accountant also issues the tax invoice (<span class="d">D27-132</span>).</li>
+          <li><b>"Bill the function"</b> any time after Confirm; refused while anything is unpriced, while the banquet tax heading is unset, or while a restaurant order on it is open (<span class="d">D27-138</span>, <span class="d">D27-124</span>). A hall price of 0 only when ticked Free (<span class="d">D27-120</span>).</li>
+          <li><b>Restaurant orders</b> settled to a function post onto its bill like a room charge (<span class="d">D17-21</span>, <span class="d">D27-133</span>).</li>
+          <li><b>Reopening a billed function</b> only while no tax invoice stands, with a reason, and never on a closed day (<span class="d">D27-150</span>, <span class="d">D27-154</span>). A function with an advance may be cancelled, the advance kept as the host's credit; a billed one may not (<span class="d">D27-135</span>).</li>
+          <li>SAC 996334 with food, 997212 for a hall alone, for the CA to confirm (<span class="d">D27-134</span>).</li>
+          <li><b>A package is never changed, only switched off</b>; a function keeps what it was sold, a switched-off package is refused for any function and can go back on. Halls and packages are set up by the owner, an Admin and the GM; for anybody else every button is grey and says who may (<span class="d">D27-305</span>, <span class="d">D27-307</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Function bills on the Folios screen (<span class="d">D27-137</span>). Refunding a cancelled function's advance, and a GST receipt voucher for an advance, wait for the CA (<span class="d">D27-135</span>, <span class="d">D27-138</span>). Confirming is refused offline, because two desks offline could both take the hall.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════ STOCK ═══════════ -->
+
+  <!-- B6.21 -->
+  <h2 id="b6-21"><span class="n">B6.21</span>Store</h2>
+  <p>What the hotel keeps on its shelves, and where each item went. Built.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Store</span>: Shelf and Days views, its tiles, and a Reports menu; Receive, Issue, Waste, Return to supplier, Correct the count, Move to another store, Set levels, Count a store, Broken.</td></tr>
+      <tr><th>Holds</th><td>Items, every movement (append-only), levels per store, counts.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>A Main, Kitchen and Bar store</b> at every hotel, made automatically (<span class="d">D17-3</span>); every issue records the outlet it went to (<span class="d">D22-20</span>), and a department as free text (<span class="d">D27-242</span>).</li>
+          <li><b>Gas</b>: priced per full cylinder, with the deposit on each cylinder tracked; Full and Empty counted (<span class="d">D17-4</span>, <span class="d">D25-18</span>, <span class="d">D25-19</span>).</li>
+          <li><b>Counting</b>: the printed sheet is blank; a count does not lock the store; a blank line is never taken as zero (<span class="d">D25-15</span> to <span class="d">D25-17</span>). Levels per store; the below-level list only shows, it raises no purchase (<span class="d">D25-12</span> to <span class="d">D25-14</span>).</li>
+          <li><b>Cost</b>: a running average, GST on purchases recorded (<span class="d">D27-238</span>); the food cost % is costs before GST over sales before GST, decided now against the recommendation to wait for the CA (<span class="d">D27-242</span>).</li>
+          <li>Stock going out needs no approval (the stock plan, S12).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>A price on an item (the price lives on the delivery). Store writes are refused offline.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.22 -->
+  <h2 id="b6-22"><span class="n">B6.22</span>Purchasing</h2>
+  <p>Ask to buy, the GM approves, a priced order goes to the supplier, the delivery comes into a store. Built.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Purchasing</span> (the list and Ask to buy), one order's page, and <span class="ui">Who may ask to buy</span>.</td></tr>
+      <tr><th>Holds</th><td>Requests and their lines, who may ask at each hotel.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>The GM approves every purchase</b>; no amount above which the owner must (<span class="d">D17-35</span>, <span class="d">D18-4</span>).</li>
+          <li><b>Who may ask</b> is a setting per hotel, so it changes without a release; it can only narrow the roles that hold the permission (<span class="d">D18-2</span>, <span class="d">D18-18</span>); housekeeping may ask (<span class="d">D22-11</span>).</li>
+          <li><b>The order is a printed or PDF document</b>, sent by hand; nothing waits on n8n (<span class="d">D18-3</span>).</li>
+          <li>One Approvals screen for everything waiting on a person (<span class="d">D18-19</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Supplier bills and payments; part deliveries; automatic reordering.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.23 -->
+  <h2 id="b6-23"><span class="n">B6.23</span>Equipment</h2>
+  <p>The register of durable things: an AC, a TV, a kettle. Built; run by the Inventory Manager.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Equipment</span> and an item's page.</td></tr>
+      <tr><th>Holds</th><td>Categories, items, their moves and history.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li>The owner, an admin, the GM, the hotel manager and the Inventory Manager add places and suppliers (<span class="d">D17-1</span>).</li>
+          <li>A repair sets an item Under repair and its close sets In use, by itself (<span class="d">D17-7</span>); its cost needs proof (<span class="d">D17-6</span>).</li>
+          <li>From the stock plan: costly items one by one with a tag, cheap ones by count; the Inventory Manager approves what leaves the store (S7, S12, S13).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Buying equipment (Purchasing's); door locks and room phones (Room systems').</td></tr>
+      <tr><th>Open</th><td>EQ-3: two database builds at once collide on shared logins (the shared core's, not this service's).</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════ HOTEL SERVICES ═══════════ -->
+
+  <!-- B6.24 -->
+  <h2 id="b6-24"><span class="n">B6.24</span>Spa</h2>
+  <p>Treatments, a day diary, and a charge to the room bill. Built; off per hotel (<span class="d">D17-54</span>), and off at 5 Elements, which has none (<span class="d">D21-63</span>).</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Spa diary</span>, <span class="ui">Treatments</span>.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li>Booked from the guest's page or by phone (<span class="d">D18-6</span>); run by reception, housekeeping only sees the diary; no therapist logins and no new roles (<span class="d">D18-8</span>, <span class="d">D18-21</span>).</li>
+          <li><b>Closing a treatment puts it on the room bill</b>, under the spa's own GST rule per hotel; no second way of taking money is built (<span class="d">D18-7</span>, <span class="d">D18-21</span>, <span class="d">D18-22</span>).</li>
+          <li>Booked only on a day of the stay; Charge to room only once checked in (<span class="d">D27-136</span>). A price of 0 only when ticked Free (<span class="d">D27-120</span>).</li>
+          <li>The price is copied onto the booking when it is taken: a price added later applies to new bookings only, and one taken with none is cancelled and booked again (<span class="d">D27-305</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>"Settled at the spa", set aside for later (<span class="d">D18-22</span>). Guests who are not staying: every appointment needs a stay.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.25 -->
+  <h2 id="b6-25"><span class="n">B6.25</span>Laundry</h2>
+  <p>Guests' laundry and the hotel's own linen in one place. Built; off per hotel (<span class="d">D17-54</span>), and off at 5 Elements (<span class="d">D21-63</span>).</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Dockets</span>, <span class="ui">Price list</span>, and one docket.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li>One place for both, every docket saying whose it is (<span class="d">D18-5</span>); run by reception and housekeeping (<span class="d">D18-8</span>, <span class="d">D22-22</span>).</li>
+          <li>A charge goes straight onto the room bill (<span class="d">D18-7</span>), under laundry's own GST heading, refused until it is set (<span class="d">D27-194</span>).</li>
+          <li>Collected only from a checked-in guest (<span class="d">D27-136</span>). A price of 0 only when ticked Free, and the unpriced items listed on the page (<span class="d">D27-120</span>, <span class="d">D27-84</span>).</li>
+          <li>The price is copied onto the docket when the bag is collected: a price added later applies to new bags only, and a bag taken with none is cancelled and taken again (<span class="d">D27-305</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Linen par levels per room type, an outside laundry's bills, express surcharges.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.26 -->
+  <h2 id="b6-26"><span class="n">B6.26</span>Room systems (key cards)</h2>
+  <p>Key cards for door locks, built against a stand-in lock. Switched off, and still marked "Not built yet": it waits for the lock vendor's software.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td>The Key cards panel in the stay panel: Cut cards, Cut new cards, Lost card.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>Not at the pilot</b>: the desk keeps cutting cards in the lock's own software; the PMS side is switched on per hotel once the vendor's licence is in hand. Whoever may check in may cut, re-cut and cancel, a lost card included; 1 to 4 cards; no room controls (<span class="d">D27-182</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>The real lock driver; room controls, phones, minibar and TV; cards for a day use, until you say when a day use ends.</td></tr>
+      <tr><th>Waiting on you</th><td>Photos of 5 Elements' lock face plate, encoder and the lock software's About screen (<span class="d">D27-182</span>).</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════ GUESTS AND SALES ═══════════ -->
+
+  <!-- B6.27 -->
+  <h2 id="b6-27"><span class="n">B6.27</span>CRM and Guest 360</h2>
+  <p>One record per guest across the group: the returning-guest suggestion, joins that can be undone, the blacklist warning, consent to offers, and Guest 360. Built.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Guest 360</span> and <span class="ui">Possible same person</span>, for the owner, admins and GMs.</td></tr>
+      <tr><th>Holds</th><td>Joins and their undo, "not the same person" answers, consent to offers kept against the phone or email.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>Never automatic</b>: a match on the exact phone or email is suggested, a person confirms, every join can be undone (<span class="d">D21-2</span>, <span class="d">D21-20</span>). "The same phone" is the same 10-digit number; anything doubtful suggests nobody (CRM-Q1, CRM-Q11).</li>
+          <li><b>Who sees what</b>: the whole history across the group for the owner, admins and GMs; reception sees only "stayed with the group before" (<span class="d">D21-4</span>, <span class="d">D21-13</span>, CRM-Q3).</li>
+          <li><b>The blacklist warns, never blocks</b>: a person decides (<span class="d">D21-21</span>, <span class="d">D22-8</span>).</li>
+          <li><b>Offers by opt-in only</b>: "May we send you offers?", asked at booking, walk-in, check-in, on the guest's page and on Guest 360; a guest never asked gets none (<span class="d">D25-39</span>, <span class="d">D26-6</span>, <span class="d">D26-7</span>), ahead of the data protection law's date.</li>
+          <li>One database per buying group, so no "tenant" column anywhere (<span class="d">D21-12</span>, kept by <span class="d">D27-278</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Identity documents never move between joined records and are never shown here.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.28 -->
+  <h2 id="b6-28"><span class="n">B6.28</span>Reviews</h2>
+  <p>Ask a guest who has left for a review, and record who was asked. Built; the review request is off per hotel until switched on.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Reviews</span>.</td></tr>
+      <tr><th>Holds</th><td>Each hotel's review link, and who was asked.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li>Ask after check-out and record it; nothing is pulled in from Google or the booking sites (<span class="d">D18-14</span>). Each hotel's own Google link (<span class="d">D21-30</span>), the direct "write a review" link from you (<span class="d">D23-15</span>).</li>
+          <li>Once per group, at the lead's room (<span class="d">D22-10</span>). Left for later, with no Meta template submitted (<span class="d">D27-266</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Pulling reviews in, replying, scoring, chasing. A second ask is not refused.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.29 -->
+  <h2 id="b6-29"><span class="n">B6.29</span>Marketing</h2>
+  <p>Partly built: the numbers screen works; the guest lists exist only as rules, with no screen yet.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Marketing</span>: campaign spend from the leads app, each campaign's bookings and booked revenue, every booking source.</td></tr>
+      <tr><th>Holds</th><td>Nothing of its own: it reads bookings and the leads app.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li>Guest lists that can be acted on, with an export and a send (<span class="d">D18-17</span>); only guests who said yes to offers (<span class="d">D25-39</span>, <span class="d">D26-6</span>); for the owner, admins and GMs, and no birthdays list, because no date of birth is kept (<span class="d">D22-17</span>).</li>
+          <li>Booked revenue is booked value before tax, cancelled and no-shows out, by arrival date (<span class="d">D27-173</span>); read live from the leads app (<span class="d">D27-170</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>The lists' screen and their send. Campaign stages, open tracking and discount codes.</td></tr>
+      <tr><th>Open</th><td>MKT-4: the lists' route returns no phone or email yet.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.30 -->
+  <h2 id="b6-30"><span class="n">B6.30</span>Leads and WhatsApp</h2>
+  <p>The leads app's enquiries, shown read only. Built; "Not connected" until its server settings are set.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Leads and WhatsApp</span>, and "Book this lead" on New booking.</td></tr>
+      <tr><th>Holds</th><td>No copy of any lead or message: a daily count of reads, and a booking's campaign.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>The leads app keeps running</b>; the PMS shows it and links to it, read only (<span class="d">D27-100</span>, withdrawing <span class="d">D27-28</span>). Read live every time, no copy kept, so an erased guest never lingers; at most 5,000 reads a day (<span class="d">D27-170</span>, <span class="d">D27-108</span>).</li>
+          <li>Read without a stored key, through the server's own Google credential; Amrapali and Grand Lucent only; 5 Elements stays out (<span class="d">D27-186</span>, <span class="d">D27-223</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Replying: that happens in the leads app.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.31 -->
+  <h2 id="b6-31"><span class="n">B6.31</span>Loyalty</h2>
+  <p>Points on stays at every hotel, taken off room charges. Built; off per hotel until switched on, and with no earn rate set nothing earns.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Loyalty</span>, and the member card on Guest 360.</td></tr>
+      <tr><th>Holds</th><td>Members and their points (append-only).</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>The earn rate is a setting, not code</b>, and unset means nothing earns: no default rate. No tiers at the start (<span class="d">D27-179</span>).</li>
+          <li>As the loyalty plan proposed: 18 and over with a mobile, its own consent tick, one membership per person; booking-site and agent rooms earn on extras only; redeem from 500 points on the member's own room charges as a discount line; the giving hotel carries it; until the CA answers, points reduce the taxable value like a discount (<span class="d">D27-179</span>).</li>
+          <li>Joining is not consent to offers (<span class="d">D25-39</span>).</li>
+          <li><b>Using points is a right of its own</b>: the owner, an Admin, the GM, the Hotel Manager and Reception; the Accountant and a Viewer only look. Join and Leave are not shown to anybody who may not change a guest, and the card says who may (<span class="d">D27-305</span>, <span class="d">D27-307</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Points lapsing after 24 months: not built yet, needed before October 2028. A code to the member's phone, which waits on sending. The CA's six answers.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════ SYSTEM ═══════════ -->
+
+  <!-- B6.32 -->
+  <h2 id="b6-32"><span class="n">B6.32</span>Reports</h2>
+  <p>The Dashboard, All properties, the Manager report, statistics, ledgers, the statutory registers and the stock reports. Built; read only, it owns no data.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Dashboard</span>, <span class="ui">All properties</span>, <span class="ui">All reports</span>, <span class="ui">Manager report</span>; by search: Night audit report, City ledger, No show, Monthly occupancy, Monthly statistics, Yearly statistics, Lodging tax, GST sales register, Form III register, Guest ledger, Cashier shift, Store reports and the stock and equipment reports.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>Every report in your eZee layout</b>, with the group's own branding (<span class="d">D17-62</span>, <span class="d">D17-70</span>); dates as 25/08/2026 (<span class="d">D17-77</span>); a real Excel file and a CSV on every report (<span class="d">D17-31</span>); PDFs made on the server (<span class="d">D17-32</span>).</li>
+          <li><b>Complimentary rooms count as sold</b>, as eZee does (<span class="d">D17-72</span>); one occupancy rule everywhere, the Manager report's (<span class="d">D27-151</span>).</li>
+          <li><b>A figure the system does not hold prints "-"</b>, never 0 (<span class="d">D17-49</span>): service charges, tips, OTA commission paid; the City ledger's opening and closing until company payments were recorded (<span class="d">D17-74</span>, <span class="d">D27-152</span>, then <span class="d">D27-242</span>).</li>
+          <li>Alcohol and its VAT stay out of the GST register and the Lodging tax sheet (<span class="d">D21-91</span>, <span class="d">D22-45</span>); the accountant confirms before anything is filed from here (<span class="d">D17-99</span>).</li>
+          <li>The Dashboard as sketched: today's four tiles lead, coloured by what staff must do; Nights ahead; All properties for the owner (<span class="d">D27-242</span>, <span class="d">D27-243</span>). No Dashboard for the working roles (<span class="d">D27-141</span>); the revenue manager loses the money reports (<span class="d">D27-147</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>A month chooser on some reports (REP-1). The demo matches your eZee exports in layout, not in figures.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.33 -->
+  <h2 id="b6-33"><span class="n">B6.33</span>Administration and Settings</h2>
+  <p>People and properties, roles, the Settings console, module switches, the group's name, logo and bank details, System health, and the activity and sign-in records. Built; part of the shared core.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td><span class="ui">Properties</span>, <span class="ui">People</span>, <span class="ui">System health</span>, and the Settings console (its own space, nine groups); by search or from Settings: Users, Roles and permissions, Integrations, Audit log, Activity, Sign-ins.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li><b>Three spaces</b>, Front office, Restaurant and Settings, each with its own menu; the owner, admins and GMs switch freely (<span class="d">D27-249</span>, <span class="d">D27-256</span>). Settings shows only what someone can change (<span class="d">D27-220</span>).</li>
+          <li><b>Who makes whom</b>: only the owner makes an Admin (<span class="d">D27-140</span>, correcting <span class="d">D27-121</span>); a GM gives every other role, at their own hotel (<span class="d">D22-2</span>, <span class="d">D22-3</span>); nobody switches off or re-roles themselves (<span class="d">D24-19</span>, <span class="d">D24-28</span>). One list of roles for the whole group (<span class="d">D22-24</span>).</li>
+          <li><b>The server refuses what the screen hides</b>, for every role without the right (<span class="d">D17-15</span>). The audit log names the real person (<span class="d">D17-14</span>).</li>
+          <li>Module switches are the owner's and admins' (<span class="d">D17-36</span>). A hotel's GM and Admin edit their own hotel's details; its code, currency and time zone stay the group owner's, and its name is a group administrator's to change (<span class="d">D27-213</span>, <span class="d">D27-214</span>, <span class="d">D27-308</span>).</li>
+          <li><b>Set up this hotel</b>: 18 steps from a new hotel to its first booking, in the owner's order, each ticking itself where the system can see it done and each with Completed, Next, Later and Remind me; the last is a summary that switches nothing on and locks nothing (<span class="d">D27-311</span>, <span class="d">D27-312</span>).</li>
+          <li><b>Nothing new is hard-wired to Fidato</b> (<span class="d">D21-27</span>): one group logo and name, a setting, printed as "5 Elements Akkalkot / by Fidato Hotels" (<span class="d">D27-53</span>, <span class="d">D27-65</span>); changed by the owner, an admin or a GM, against the recommendation, every change audited (<span class="d">D27-67</span>).</li>
+          <li>Bank details per hotel on the voucher; your bell shows every change to them (<span class="d">D27-215</span>, <span class="d">D27-216</span>).</li>
+          <li><b>Security</b>: passwords of at least 10 characters for the owner, admins and GMs, 8 for others; 90 days of sign-in history; the full activity log for the owner and admins (<span class="d">D27-243</span>, <span class="d">D27-245</span>); a device can be signed out (<span class="d">D27-255</span>). Switching a person off also switches off their sign-in (<span class="d">D27-275</span>).</li>
+          <li><b>System health</b> from our own data, nothing leaving the server (<span class="d">D27-91</span>, <span class="d">D27-92</span>; B9.8).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>Two-step sign-in, after the Firebase upgrade (<span class="d">D27-243</span>). Roles per hotel (<span class="d">D22-24</span>). The PAN, reservations phone and website are stored but not printed until asked (<span class="d">D27-214</span>).</td></tr>
+      <tr><th>Open</th><td>ADM-19: a PIN or map point emptied in Settings comes back from the channel manager's old record; accepted until those old columns are retired.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.34 -->
+  <h2 id="b6-34"><span class="n">B6.34</span>Connection health</h2>
+  <p>One page showing each outside connection green, amber, red or grey, and one email when one turns red. Built.</p>
+  <table>
+    <tbody>
+      <tr><th style="width:18%">Screens</th><td>Settings, Modules and connections: <span class="ui">Connection health</span> (owner, admins, GMs). Rows: Emails, WhatsApp, the CRS bridge, Firebase sign-in, Backups, Rivals' prices.</td></tr>
+      <tr><th>Decided</th><td>
+        <ul>
+          <li>One page for every connection, with the last success and the last error; alerts by email only (<span class="d">D27-276</span>), to the address you set (<span class="d">D27-285</span>).</li>
+          <li>Red after 3 failures; the CRS after 30 minutes; backups after 26 hours; emails and WhatsApp on separate rows (<span class="d">D27-279</span>).</li>
+        </ul></td></tr>
+      <tr><th>Left out</th><td>A row for the channel manager. Rivals' prices failures are not recorded, so that row never turns red.</td></tr>
+      <tr><th>Open</th><td>Nothing.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B6.35 -->
+  <h2 id="b6-35"><span class="n">B6.35</span>Left out across the system, and why</h2>
+  <p>What was deliberately not built, or is waiting on somebody, with the decision behind it.</p>
+  <table>
+    <thead><tr><th style="width:26%">Not built</th><th>Why, and what decides it</th></tr></thead>
+    <tbody>
+      <tr><td>GST on advances</td><td>An advance is a payment on the booking or function, with no receipt voucher and no tax of its own. The law asks for a receipt voucher (CGST Rule 50); the accountant is asked first (<code>docs/SELLING-IN-INDIA.md</code> C2; <span class="d">D27-135</span>, <span class="d">D27-138</span>).</td></tr>
+      <tr><td>Other currencies</td><td>Every hotel works in rupees. A hotel's currency is set when it is created and only the group owner can change it (<span class="d">D27-214</span>). A channel booking in another currency waits for a person (<span class="d">D27-183</span>).</td></tr>
+      <tr><td>An automatic night audit</td><td>A person presses the button. A hotel that forgets stays on yesterday, safe and visible (HANDOVER § 4; B9.7).</td></tr>
+      <tr><td>Two-step sign-in for staff</td><td>Planned for the owner, admins and GMs once you upgrade the Firebase plan (<span class="d">D27-243</span>). Two-step sign-in is recommended for every n8n user now (<span class="d">D21-96</span>).</td></tr>
+      <tr><td>Our own WhatsApp templates</td><td>Meta refused new templates in the account on 3 October, so the CRS's approved templates are used (<span class="d">D27-266</span>). <code>booking_confirmation</code> waits for Meta's review (<span class="d">D27-281</span>, <span class="d">D27-285</span>); <code>booking_voucher</code> is on hold (<span class="d">D27-266</span>).</td></tr>
+      <tr><td>Online check-in, "later"</td><td>Switched off on 3 October (<span class="d">D27-266</span>), then on for every hotel by default on 5 October (<span class="d">D27-281</span>).</td></tr>
+      <tr><td>The review request</td><td>Left for later, off per hotel (<span class="d">D27-266</span>).</td></tr>
+      <tr><td>Online payments</td><td>Excluded: guests pay at the desk (<span class="d">D17-57</span>, <span class="d">D25-36</span>); later, after the release in hand (<span class="d">D27-239</span>). Marked "Not built yet".</td></tr>
+      <tr><td>The booking engine</td><td>Dropped: the channel manager's own booking engine is used, its bookings arriving like any channel's (<span class="d">D27-180</span>).</td></tr>
+      <tr><td>Desktop, tablet and phone apps</td><td>The web version first (<span class="d">D21-98</span>); you are putting an app in the stores yourself (<span class="d">D27-269</span>).</td></tr>
+      <tr><td>Other languages</td><td>English only for now (<span class="d">D21-73</span>); kept as an option, with how it would work written down (<span class="d">D21-99</span>, <span class="d">D21-100</span>).</td></tr>
+      <tr><td>E-invoicing (IRN)</td><td>Required above ₹5 crore turnover; the group is under it (<code>deploy/README.md</code>). A buyer above it would need it.</td></tr>
+      <tr><td>Revenue management changing prices</td><td>It shows and suggests; a person sets the price (<span class="d">D17-56</span>, <span class="d">D18-15</span>, <span class="d">D27-269</span>).</td></tr>
+      <tr><td>Printing to a printer's network address</td><td>The website cannot reach one; a computer prints instead. An installed helper is a later phase, if ever asked (<span class="d">D27-292</span>).</td></tr>
+      <tr><td>Recipes that take stock off when a dish sells</td><td>After the channel manager is connected (<span class="d">D27-269</span>).</td></tr>
+      <tr><td>A screen across customers</td><td>None: each customer's database stands alone; a one-off total is exported per customer (<span class="d">D27-278</span>).</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box watch">
+    <h4>Watch out: briefs that are behind</h4>
+    <ul>
+      <li>Several services' <code>MODULE.md</code> files still carry old counts of routes and screens, the old way of claiming a service (a file in <code>.claims/</code> instead of <code>npm run claim</code>), and lines written before a later decision. Where a brief and the code or a later decision differ, this chapter follows the code and the latest decision.</li>
+    </ul>
+  </div>
+</section>

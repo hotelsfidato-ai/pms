@@ -43,7 +43,7 @@ screenshots and numbered arrows, kept current by a rule and a check.
 | A0 | Getting started | Signing in, the three spaces (Front office, Restaurant, Settings), choosing the hotel, Find a screen (Ctrl K), desk vs phone, the offline bar |
 | A1 | The front desk day | Dashboard, arrivals, in-house, departures, the room grid (stay view) |
 | A2 | Bookings | New booking (walk-in, phone, group), price shown, the WhatsApp tick, the voucher; change dates, move room, cancel, no-show, cancellation terms |
-| A3 | Check-in | ID and Form C, assigning a room, deposit, express check-in; online check-in (marked "later", D27-266) |
+| A3 | Check-in | ID and Form C, assigning a room, deposit, express check-in; online check-in (on for every hotel, D27-281; it was marked "later" on 3 October, D27-266) |
 | A4 | The guest's bill | Charges, payments, discounts, corrections, split bills, company billing, invoice and credit note |
 | A5 | Check-out | Normal, late, early departure; the bill printed and paid |
 | A6 | Housekeeping | Room status, assignments, work orders, laundry |
@@ -53,7 +53,11 @@ screenshots and numbered arrows, kept current by a rule and a check.
 | A10 | Guest messages | What goes out (the voucher on WhatsApp and email, D27-264/266), the Guest messages screen, what a failure means |
 | A11 | Reports | Which report answers which question |
 | A12 | Approvals, cash expenses, notifications | Who approves what |
-| A13 | Spa, laundry, loyalty | Only where the hotel has them switched on |
+| A13 | Banquets, spa and laundry | Only where the hotel has them switched on |
+| A14 | Sales, marketing and loyalty | Leads and WhatsApp, Marketing, Loyalty (added 9 October, D27-293: every menu section a chapter) |
+| A15 | Rates, revenue and distribution | Rates, Revenue outlook, the channel manager, contracts |
+| A16 | Across properties | All properties, Properties, People |
+| A17 | Settings | The Settings space: the walk-through "Set up this hotel", and every page under it |
 
 ## Part B - the owner's book (how and why)
 
@@ -64,7 +68,7 @@ screenshots and numbered arrows, kept current by a rule and a check.
 | B3 | Money rules | No default prices (a dash, never a zero), taxes (room 5%/18%, restaurant 5%, alcohol VAT 10% on its own bill series), invoice numbers, the business date, rounding, why an issued invoice never changes, credit notes |
 | B4 | Rooms and rates | Room types, the pricing basis and offsets, rate plans, restrictions, CRS room type mapping |
 | B5 | Connections | The CRS bridge, the n8n sending workflow, the WhatsApp template, email, DigiLocker (off), the provisioning key |
-| B6 | Each module in depth | What it owns, the decisions taken and why, what was left out and why (e.g. GST on advances, other currencies, automatic night audit, two-step sign-in, our own WhatsApp templates on hold, online check-in and review request later) |
+| B6 | Each module in depth | What it owns, the decisions taken and why, what was left out and why (e.g. GST on advances, other currencies, automatic night audit, two-step sign-in, our own WhatsApp templates on hold, the review request later; online check-in, first left for later, on for every hotel since D27-281) |
 | B7 | Edge cases | Per workflow: overbooking, room move mid-stay, group bills, night audit with open bills, the restaurant offline, message retries and the duplicate guard, catch-up hours, a hotel with no menu or no rates |
 | B8 | Tests and checks | What each gate is (website and server tests, migrations and replay, the strip check, "no test sign-in in the build"), the counts, what they prove and what they do not |
 | B9 | Running it | Releases (and the 3 October lesson: build only from the release copy, with the sign-in settings), server settings, backups and restore, what to do when something breaks |

@@ -1,0 +1,272 @@
+<!-- ══════════════════════════════ CHAPTER A14 ══════════════════════════════ -->
+<section class="chapter" id="a14">
+  <div class="chapter-head">
+    <span class="num">Chapter A14</span>
+    <h1>Sales, marketing and loyalty</h1>
+    <p>For the owner, managers and reception. The leads app's enquiries inside the PMS and how a lead becomes a booking, the month's marketing figures, and the loyalty programme: switching it on, its rules, joining a guest, points earned at check-out and taken off the room charges.</p>
+  </div>
+
+  <!-- A14.1 -->
+  <h2 id="a14-1"><span class="n">A14.1</span>The Sales and marketing screens</h2>
+  <p>In the Front office menu, the part called <span class="ui">Sales and marketing</span> sits under Guests &amp; CRM: both are about people. It holds three screens.</p>
+  <table>
+    <thead><tr><th style="width:22%">Screen</th><th style="width:30%">Who sees it</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td>Leads and WhatsApp</td><td>Everyone who sees guests: Owner, Admin, General Manager, Hotel Manager, Reception, Accountant, Viewer</td><td>The leads app's enquiries for this hotel, read as you open the page; <span class="ui">Book this lead</span> (A14.2).</td></tr>
+      <tr><td>Marketing</td><td>Owner, Admin, General Manager</td><td>One month: each campaign's spend beside the bookings and revenue it brought, and every booking source's (A14.3).</td></tr>
+      <tr><td>Loyalty</td><td>Everyone who sees guests (Points by hotel and The rules: owner, Admin, GM)</td><td>Who is in house and their points: join, use points, leave; the programme's rules; points by hotel (A14.4).</td></tr>
+    </tbody>
+  </table>
+
+  <figure class="shot" id="fig-A14-01">
+    <img src="img/A14-01.png" alt="The menu's Sales and marketing part: Leads and WhatsApp, Marketing, Loyalty; Leads and WhatsApp open, saying Not connected yet">
+    <figcaption><b>Figure A14-01.</b> Sales and marketing in the menu. On the test computer the leads app is not connected.</figcaption>
+    <ol class="callouts">
+      <li>Leads and WhatsApp</li>
+      <li>Marketing</li>
+      <li>Loyalty</li>
+      <li>Not connected yet: nothing is read until the owner sets up the leads app's login on the server</li>
+    </ol>
+  </figure>
+
+  <h3>Where each one works</h3>
+  <p>None of the three is hidden by a hotel's module switch: the menu shows them wherever your role allows. What each needs before it does its work:</p>
+  <ul>
+    <li><b>Leads and WhatsApp</b> and Marketing's <b>spend</b>: the leads app connected on the server (the owner's read-only login), and this hotel matched to one of the leads app's hotels. Without them the screen says so; Marketing still shows its bookings and revenue.</li>
+    <li><b>Loyalty</b>: the hotel's own <span class="ui">Loyalty</span> switch (A14.4), plus a programme name and an earn rate for the group. Without the switch the screen says <span class="msg">“Loyalty is off at this hotel: nobody joins, earns or uses points here. The owner or an administrator turns it on in Settings, under Modules.”</span></li>
+  </ul>
+  <p>Reception's own menu has none of the three. Reception opens Leads and WhatsApp and Loyalty with <span class="ui">Find a screen</span> (Ctrl K): type “loyalty” or “leads”, and tap the screen, marked <span class="msg">“Not in your menu”</span>.</p>
+
+  <figure class="shot" id="fig-A14-06">
+    <img src="img/A14-06.png" alt="Find a screen open over In house, loyalty typed, and Loyalty found, marked Not in your menu, Sales and marketing">
+    <figcaption><b>Figure A14-06.</b> Reception reaches Loyalty with Find a screen.</figcaption>
+    <ol class="callouts">
+      <li>Type what you are looking for</li>
+      <li>Not in your menu: yours to open, just not listed</li>
+    </ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A Sales and marketing part of the menu, for Leads and WhatsApp, Marketing and Loyalty: <span class="d">D27-87</span>. Everyone who sees guests sees leads; marketing's numbers only the owner, an Admin and the GM: <span class="d">D27-170</span>. A shorter menu for each role, with every other screen they may open one search away: the owner, 15 September.</p>
+  </div>
+
+  <!-- A14.2 -->
+  <h2 id="a14-2"><span class="n">A14.2</span>Leads and WhatsApp</h2>
+  <p>The hotel's enquiries - from WhatsApp, the website and ads - live in the <b>leads app</b>, where staff reply to them. <span class="ui">Leads and WhatsApp</span> shows them inside the PMS: <span class="msg">“Enquiries from the leads app, read as you open this page. Staff reply in the leads app.”</span> The PMS sends nothing to a guest from here and writes nothing into the leads app. The one thing done here is <span class="ui">Book this lead</span>.</p>
+
+  <h3>What the screen can say</h3>
+  <table>
+    <thead><tr><th style="width:36%">It says</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td><span class="msg">“Not connected yet”</span> (Figure A14-01)</td><td><span class="msg">“The leads app is read with a read-only login the owner sets up on the server. Until then nothing is read and nothing is shown here.”</span></td></tr>
+      <tr><td><span class="msg">“This property is not in the leads app”</span></td><td><span class="msg">“The leads app has no hotel matched to this property, so it has no enquiries to show here.”</span></td></tr>
+      <tr><td><span class="msg">“The leads app was not read”</span></td><td>With the reason: <span class="msg">“Today's reads of the leads app are used up. They come back after midnight Pacific time.”</span>, or <span class="msg">“The leads app could not be reached. Nothing was changed there. Try again in a few minutes.”</span></td></tr>
+      <tr><td><span class="msg">“No enquiries yet”</span></td><td><span class="msg">“Enquiries arrive in the leads app from WhatsApp, the website and ads, and show here.”</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>When it is connected</h3>
+  <ul>
+    <li><b>Along the top</b>, one button per status with its count: <span class="ui">All</span>, <span class="ui">Open</span> (New, Assigned, Claimed, Overdue, Contacted, Follow-up and Quoted together), then each status there is - <span class="ui">New</span>, <span class="ui">Assigned</span>, <span class="ui">Claimed</span>, <span class="ui">Contacted</span>, <span class="ui">Follow-up</span>, <span class="ui">Quoted</span>, <span class="ui">Booked</span>, <span class="ui">Lost</span>, <span class="ui">Long term</span>, <span class="ui">Dead</span>, <span class="ui">Overdue</span>, <span class="ui">Closed</span>. These are the leads app's own words.</li>
+    <li><b>Enquiries</b>, <span class="msg">“Newest message first”</span>: the name (or the phone), the status, the last message, the channel - <span class="msg">“Meta Ads”</span>, <span class="msg">“Google Ads”</span>, <span class="msg">“Website organic”</span>, <span class="msg">“Direct WhatsApp”</span>, <span class="msg">“Referral”</span>, <span class="msg">“Walk-in or phone”</span>, <span class="msg">“Manual entry”</span>, <span class="msg">“Other”</span> - and when. Fifty at a time; <span class="ui">Show older enquiries</span> for more.</li>
+    <li><b>Tap an enquiry</b> to read it beside the list: the name, phone, channel and status; <span class="ui">Came in</span>; for a booked one, <span class="ui">Booking in the leads app</span> and <span class="ui">Value typed there</span>; then the conversation, the guest's messages on the left and the hotel's on the right. On a phone the conversation takes the screen; <span class="ui">Back to the enquiries</span> returns.</li>
+    <li><span class="ui">Reply in the leads app</span> opens the enquiry in the leads app, where you answer.</li>
+  </ul>
+
+  <h3>To book a lead</h3>
+  <ol class="steps">
+    <li>Open the enquiry and tap <span class="ui">Book this lead</span>.</li>
+    <li>New booking opens with the guest's name and phone filled in, the booking source by the lead's channel - <b>Meta Ads</b>, <b>Google Ads</b>, <b>WhatsApp</b> or <b>Website</b>, when this hotel has a booking source by that name; any other channel, you choose - and the lead's campaign kept on the booking.</li>
+    <li>Finish the booking as usual (chapter A2). Its campaign is what Marketing counts (A14.3).</li>
+  </ol>
+  <p>An enquiry opened too long ago, or erased in the leads app: <span class="msg">“This enquiry is no longer in the leads app, or its link has expired. Open it again from Leads and WhatsApp.”</span></p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Every look costs.</b> The leads app is read live and its free allowance is shared with the app itself, so the PMS reads at most 5,000 times a day. The list comes 50 at a time; a conversation is read only when you open it; a screen opened twice within a minute is read once.</li>
+      <li><b>Nothing is copied into the PMS.</b> A guest erased in the leads app is gone from here the next time the list loads. Their stays and bills stay.</li>
+      <li>Staff's internal notes in the leads app are not shown here.</li>
+      <li><span class="msg">“The guest asked not to be messaged. The leads app refuses replies to them.”</span> on an enquiry means exactly that.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The leads app keeps running; the PMS shows its leads, conversations and spend read-only, with a link to reply there: <span class="d">D27-100</span>; its conversations are linked, never copied: <span class="d">D21-5</span>. Read live every time, no copy kept, a cap of 5,000 reads a day, staff notes not shown, a lead's booking taking its source by channel and keeping its campaign: <span class="d">D27-170</span>. A guest erased there is erased from this view too, and their stays and bills stay as tax law requires: <span class="d">D27-108</span>. The app is kept separate, and the PMS only shows its leads: <span class="d">D27-186</span>.</p>
+  </div>
+
+  <!-- A14.3 -->
+  <h2 id="a14-3"><span class="n">A14.3</span>Marketing</h2>
+  <p>For the owner, an Admin and the GM. <span class="ui">Marketing</span> shows one month, by the stays' arrival date: what each campaign cost, beside the bookings and revenue it brought here, and the same for every booking source.</p>
+
+  <figure class="shot" id="fig-A14-02">
+    <img src="img/A14-02.png" alt="Marketing for October 2026: the Month box, Campaigns with no campaigns this month and the not-connected line, and By booking source with Walk-in, No source recorded and Fidato Hotels">
+    <figcaption><b>Figure A14-02.</b> Marketing: one month.</figcaption>
+    <ol class="callouts">
+      <li>Month</li>
+      <li>Campaigns: each campaign's spend, bookings and revenue</li>
+      <li>Why spend shows nothing: here, the leads app is not connected</li>
+      <li>By booking source: every stay arriving this month</li>
+      <li>Stays whose booking recorded no source</li>
+    </ol>
+  </figure>
+
+  <h3>To read a month</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">Marketing</span>. It opens on this month.</li>
+    <li>Choose another in <span class="ui">Month</span>.</li>
+    <li>Read <span class="ui">Campaigns</span>: <b>Campaign</b>, <b>Where</b> (<span class="msg">“Meta Ads”</span>, <span class="msg">“Google Ads”</span>, <span class="msg">“Other ads”</span>), <b>Spend</b>, <b>Bookings</b>, <b>Revenue</b>.</li>
+    <li>Read <span class="ui">By booking source</span>: <b>Booking source</b>, <b>Bookings</b>, <b>Revenue</b>.</li>
+  </ol>
+  <ul>
+    <li><b>Spend</b> comes from the leads app; <b>bookings and revenue</b> from this system's own stays. A booking carries its campaign only when it was made with <span class="ui">Book this lead</span> (<span class="msg">“A booking carries its campaign when it is made from a lead.”</span>).</li>
+    <li><b>Revenue</b> is the stays' room charges before tax: the nights already charged, plus the nights still to come at the booking's rate. Cancelled and no-show stays are left out.</li>
+    <li>A dash under Spend means nobody has the figure - never a zero. The line under the campaigns says why: <span class="msg">“Spend is read from the leads app, which is not connected yet.”</span>, <span class="msg">“This property is not one of the leads app's hotels, so it has no spend.”</span>, or the leads app's own reason.</li>
+    <li>Nothing that month: <span class="msg">“No campaigns this month”</span>, <span class="msg">“No spend was recorded in the leads app, and no stay arriving this month came from a campaign.”</span>; <span class="msg">“No stays arrive this month”</span>.</li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>The month is by <b>arrival</b>: a stay booked in September for October counts in October.</li>
+      <li>Opening Marketing reads the leads app twice; it counts against the same daily allowance as Leads and WhatsApp.</li>
+      <li>The guest lists for sending offers (stayed twice, not back in a year, came from which site) have no screen yet. Offers will go only to guests who said yes (A10.5).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Spend beside the bookings and revenue of this system's own stays, never a figure typed in the leads app; marketing numbers for the owner, an Admin and the GM only: <span class="d">D27-170</span>. Revenue is booked value - nights charged plus nights to come at the booked rate, before tax, cancelled and no-shows out, by arrival date: <span class="d">D27-173</span>. The first version of marketing asked for guest lists that can be acted on: <span class="d">D18-17</span>, for the owner, an Admin and the GM: <span class="d">D22-17</span>; offers only to a guest who said yes: <span class="d">D25-39</span>.</p>
+  </div>
+
+  <!-- A14.4 -->
+  <h2 id="a14-4"><span class="n">A14.4</span>Loyalty</h2>
+  <p>A member earns points on their stays at every hotel of the group, and uses them on their room charges: <b>1 point is ₹1 off</b>. The heading line says the programme's name and its earn rate, for example <span class="msg">“… · 5 points per ₹100 before GST; 1 point is ₹1 off room charges”</span> - or, until they are set, <span class="msg">“No programme name yet · no earn rate set: stays earn nothing”</span>.</p>
+
+  <figure class="shot" id="fig-A14-03">
+    <img src="img/A14-03.png" alt="Loyalty: No programme name yet, Loyalty is off at this hotel, and In house with each guest Not a member and a Join button">
+    <figcaption><b>Figure A14-03.</b> Loyalty on the test computer: switched off, no name and no earn rate yet.</figcaption>
+    <ol class="callouts">
+      <li>The programme's name and earn rate - here, neither is set</li>
+      <li>Loyalty is off at this hotel</li>
+      <li>A guest in house who is not a member</li>
+      <li>Join</li>
+    </ol>
+  </figure>
+
+  <h3>Once: switch it on and set the rules</h3>
+  <ol class="steps">
+    <li><b>The owner or an Admin</b> opens Settings, <span class="ui">Modules and connections</span>, <span class="ui">Modules</span>, and switches on <span class="ui">Loyalty</span> for the hotel: <span class="msg">“Members earn points on their stays here and use them on their room charges. Off means nobody joins, earns or uses points at this property.”</span></li>
+    <li><b>The owner, an Admin or the GM</b> opens Loyalty. Under <span class="ui">The rules</span> (<span class="msg">“For every hotel of the group.”</span>) they type the <span class="ui">Programme name</span> - <span class="msg">“The words a guest agrees to use it.”</span> - and <span class="ui">Points per ₹100</span> - <span class="msg">“Before GST. Empty: stays earn nothing.”</span></li>
+    <li>Tap <span class="ui">Save the rules</span>. The message says <span class="msg">“Rules saved”</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A14-07">
+    <img src="img/A14-07.png" alt="Settings, Modules: the Loyalty switch, off, with its note">
+    <figcaption><b>Figure A14-07.</b> Settings, Modules: the Loyalty switch.</figcaption>
+    <ol class="callouts">
+      <li>Loyalty: the switch is on the right of the line</li>
+      <li>What it does, and what off means</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A14-05">
+    <img src="img/A14-05.png" alt="Loyalty: The rules with Programme name, Points per ₹100 and Save the rules; Points by hotel with its month">
+    <figcaption><b>Figure A14-05.</b> The rules, and points by hotel (owner, Admin, GM).</figcaption>
+    <ol class="callouts">
+      <li>Programme name: the words a guest agrees to</li>
+      <li>Points per ₹100, before GST; empty, nothing earns</li>
+      <li>Save the rules</li>
+      <li>Points by hotel: earned and used in a month, in rupees</li>
+      <li>The month</li>
+    </ol>
+  </figure>
+
+  <p>What stops the rules: <span class="msg">“The name is 40 letters at most.”</span>; <span class="msg">“Points per ₹100 is a number above 0 and at most 100, or empty for none.”</span></p>
+
+  <h3>To join a guest</h3>
+  <p><span class="ui">In house</span> lists every guest checked in: <b>Room</b>, <b>Guest</b>, <b>Points</b> (or <span class="msg">“Not a member”</span>). <span class="ui">Join</span>, <span class="ui">Use points</span> and <span class="ui">Leave</span> are shown only to a role that may use them, and the heading of the list says who may: <span class="msg">“Guests join and leave through reception, the hotel manager, the general manager, an administrator or the owner.”</span> and <span class="msg">“Points are used by reception, the hotel manager, the general manager, an administrator or the owner.”</span></p>
+  <ol class="steps">
+    <li>Ask the guest. Tap <span class="ui">Join</span> on their line.</li>
+    <li>The window says <span class="msg">“Read this to the guest. Joining is not a yes to offers.”</span> Read them the words shown: <span class="msg">“Join <i>programme name</i>: we keep your stays and points to give you rewards. I am 18 or over.”</span></li>
+    <li>If they agree, tick <span class="ui">The guest agrees</span>.</li>
+    <li>Tap <span class="ui">Join</span>. The message says <span class="msg">“… joined”</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A14-04">
+    <img src="img/A14-04.png" alt="The Join window for Rekha Gaikwad: Read this to the guest, the programme has no name yet, no mobile number on file, The guest agrees, Cancel and Join">
+    <figcaption><b>Figure A14-04.</b> Join, on the test computer: no name is set, so there is nothing to agree to yet.</figcaption>
+    <ol class="callouts">
+      <li>Read this to the guest; joining is not a yes to offers</li>
+      <li>Where the words to read appear; here, none yet</li>
+      <li>A member needs a mobile number</li>
+      <li>The guest agrees: their tick</li>
+      <li>Join: grey until the guest agrees</li>
+    </ol>
+  </figure>
+
+  <p>What stops a join: <span class="msg">“Loyalty is off at this hotel. The owner or an administrator turns it on in Settings.”</span>; with no programme name, the window itself says <span class="msg">“The programme has no name yet, so there is nothing to agree to. The owner, an administrator or the GM names it on this Loyalty screen, under The rules.”</span> and <span class="ui">The guest agrees</span> and <span class="ui">Join</span> stay grey; <span class="msg">“A member needs a mobile number. Add it to the guest first.”</span> (Edit guest, A10.3); <span class="msg">“This guest is already a member.”</span>; <span class="msg">“Tick that the guest agrees, in their own words, before they join.”</span></p>
+
+  <h3>Earning: by itself, at check-out</h3>
+  <p>When a member checks out, the stay earns points by itself, usable at once, at the earn rate: everything on the stay's bills before GST and after discounts - room, restaurant charged to the room, and the rest - except GST, alcohol, refunds and payments. On a booking from a booking site or an agent, the room earns nothing; the extras do. Whole points, rounded down, once per stay.</p>
+
+  <h3>To use points</h3>
+  <ol class="steps">
+    <li>On the member's line, tap <span class="ui">Use points</span> (shown on direct bookings only, and only to Reception, the Hotel Manager, the General Manager, an Admin and the owner).</li>
+    <li>The window, <span class="ui">Use points for …</span>, says their balance: <span class="msg">“They come off the room charges as a discount line, from 500 at a time.”</span></li>
+    <li>Type the <span class="ui">Points</span> - <span class="msg">“1 point is ₹1 off. The guest signs the bill.”</span> The button reads <span class="ui">Use ₹500</span>.</li>
+    <li>Tap it. The message says <span class="msg">“₹500 off the room charges”</span>. The bill shows a discount line under the nights; each night keeps its price.</li>
+  </ol>
+  <p>What stops it: <span class="msg">“Points are used while the guest is checked in.”</span>; <span class="msg">“Points are used on direct bookings only, not on a booking from a booking site or an agent.”</span>; <span class="msg">“Points are used from 500 at a time.”</span>; <span class="msg">“The guest has 320 points.”</span>; <span class="msg">“Points come off room charges only, and this bill has … of them left.”</span>; <span class="msg">“This stay has a tax invoice. Points cannot be taken off it now.”</span></p>
+
+  <h3>To leave</h3>
+  <ol class="steps">
+    <li>On the member's line, tap <span class="ui">Leave</span>.</li>
+    <li>The window asks <span class="ui">… leaves loyalty?</span>: <span class="msg">“Their 320 points lapse. Their history stays with the bills.”</span> and <span class="msg">“They can join again later, with no points.”</span></li>
+    <li>Tap <span class="ui">Leave</span>. The message says <span class="msg">“… left”</span>.</li>
+  </ol>
+
+  <h3>The member card on Guest 360 (owner, Admin, GM)</h3>
+  <p>Guest 360 (A10.5) shows a <span class="ui">Loyalty</span> card: <span class="msg">“Member since …, joined at …”</span>, the points, and every line of the statement at every hotel - <span class="msg">“Earned”</span>, <span class="msg">“Used”</span>, <span class="msg">“Adjusted”</span>, <span class="msg">“Lapsed”</span> - with the booking, the hotel and any reason. A guest who is not a member reads <span class="msg">“Not a member. The desk joins a guest on the Loyalty screen, with their yes.”</span> (Figure A10-08).</p>
+  <ol class="steps">
+    <li>To add or take points by hand: type <span class="ui">Points</span> (<span class="msg">“Minus to take”</span>) and the <span class="ui">Reason</span> (<span class="msg">“Stays on the statement”</span>); tap <span class="ui">Adjust</span>. The message says <span class="msg">“Points adjusted”</span>.</li>
+    <li>To take a member out: <span class="ui">Leave</span>, then <span class="ui">Leave loyalty</span>: <span class="msg">“Left the programme”</span>.</li>
+  </ol>
+  <p>What stops an adjustment: <span class="msg">“Say why. The reason stays on the statement.”</span>; <span class="msg">“The guest has 320 points; a balance cannot go below 0.”</span></p>
+
+  <h3>Points by hotel</h3>
+  <p>For the owner, an Admin and the GM (Figure A14-05): for the month chosen, each hotel's <b>Points earned</b> and <b>Points used</b>, in rupees, so the hotels can settle between themselves. Points earned at one hotel may be used at another; the hotel that gives the discount carries it on its own invoice.</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Joining is not a yes to offers.</b> Offers are a separate question (A10.5).</li>
+      <li>A member is one person across the group. Two guest records joined as one (A10.6) share one balance; an undo splits it back.</li>
+      <li>A discount line of points taken off the bill again (reversed) gives the points back by themselves.</li>
+      <li>No tiers. Points do not lapse yet: the 24-month expiry is not built, and no point could lapse before October 2028.</li>
+      <li>Reception, the Hotel Manager, the GM, an Admin and the owner join a guest, use points and take guests out. The Accountant and a Viewer only look: they are shown no Join, no Leave and no Use points.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Build loyalty now: <span class="d">D27-178</span>. The earn rate is a setting with no default - unset, nothing earns; no tiers at the start; a per-hotel switch; 18 or over with a mobile; its own consent tick; one membership per person; booking-site and agent rooms earn on extras only; points used from 500 on the member's own room charges as a discount line; the giving hotel carries the discount: <span class="d">D27-179</span>, with the rules L1 to L18 in the loyalty service's notes. Using points is a right of its own, held by Reception and above (the owner, an Admin, the GM, the Hotel Manager, Reception) and not by the Accountant, who looks: <span class="d">D27-305</span>. Join and Leave follow the right to change a guest, and are not shown to anybody without it: <span class="d">D27-307</span>.</p>
+  </div>
+
+  <!-- A14.5 -->
+  <h2 id="a14-5"><span class="n">A14.5</span>In short</h2>
+  <table>
+    <thead><tr><th style="width:32%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>An enquiry wants to book</td><td>Leads and WhatsApp, open it, Book this lead, finish New booking.</td><td>A14.2</td></tr>
+      <tr><td>Answering an enquiry</td><td>Reply in the leads app.</td><td>A14.2</td></tr>
+      <tr><td>The month's results</td><td>Marketing, choose the month.</td><td>A14.3</td></tr>
+      <tr><td>Starting loyalty at a hotel</td><td>Settings, Modules, Loyalty on; Loyalty, The rules, Save the rules.</td><td>A14.4</td></tr>
+      <tr><td>A guest in house wants to join</td><td>Loyalty, Join, read the words, The guest agrees, Join.</td><td>A14.4</td></tr>
+      <tr><td>A member wants points off</td><td>Loyalty, Use points, from 500.</td><td>A14.4</td></tr>
+      <tr><td>Points to correct</td><td>Guest 360, Loyalty card, Adjust with a reason.</td><td>A14.4</td></tr>
+    </tbody>
+  </table>
+</section>

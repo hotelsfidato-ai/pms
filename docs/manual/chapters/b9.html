@@ -1,0 +1,287 @@
+<!-- ══════════════════════════════ CHAPTER B9 ══════════════════════════════ -->
+<section class="chapter" id="b9">
+  <div class="chapter-head">
+    <span class="num">Chapter B9</span>
+    <h1>Running it</h1>
+    <p>For the owner. Where the system runs, the rule that nothing leaves this machine, how a release is made and what the releases so far taught, the server's settings, backups and how to get one back, what watches the system, what to do when something breaks, the computer the work is done on, and the virtual printers used for testing.</p>
+  </div>
+
+  <!-- B9.1 -->
+  <h2 id="b9-1"><span class="n">B9.1</span>Where it runs</h2>
+  <table>
+    <thead><tr><th style="width:26%">Part</th><th style="width:34%">Where</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>The screens (the website)</td><td><code>pms.fidatohotels.com</code>, Firebase Hosting</td><td>Static files. A new version is published from your PC; an old one can be brought back in one click (B9.9).</td></tr>
+      <tr><td>The API and the database</td><td><code>api.fidatohotels.com</code>, one Oracle Cloud server in Mumbai (Oracle Linux), PostgreSQL 16.15</td><td>The code lives in <code>/opt/fidato</code>; the service is <code>fidato-api</code>. Oracle's Always Free allowance, by your choice of 5 October, knowing an idle free server can be reclaimed (<span class="d">D27-285</span>).</td></tr>
+      <tr><td>n8n (the sending workflows)</td><td><code>n8n.fidatohotels.com</code>, on the same server</td><td>Open to everyone at its own sign-in page, by your choice (<span class="d">D21-96</span>); two-step sign-in is recommended for every n8n user, because n8n holds the WhatsApp key.</td></tr>
+      <tr><td>Staff sign-in</td><td>Firebase Authentication (Google)</td><td>Who a person is. What they may see is decided in the database.</td></tr>
+    </tbody>
+  </table>
+  <p>Fidato's copy runs on Fidato's own accounts: the Oracle server, the Firebase project, the GitHub repository and the domain (<span class="d">D26-1</span>, <span class="d">D26-4</span>). When the system is sold, each customer gets its own database on one shared server (<span class="d">D27-278</span>); <code>deploy/README.md</code>, "Add a customer", has the steps. None has been added yet.</p>
+  <div class="box watch">
+    <h4>Watch out: which hotel is on live</h4>
+    <ul>
+      <li>During the release of 3 October everything on live was test data and was deleted, 5 Elements included, and you added your hotel yourself (<span class="d">D27-248</span>). The release steps of 5 October say you land on Hotel Amrapali, and the CRS connection is set up for Amrapali (<span class="d">D27-286</span>). <code>HANDOVER.md</code> § 1 still says "one property is live: 5 Elements Akkalkot": that line is from before the fresh start. 5 Elements remains the demo hotel on this PC.</li>
+    </ul>
+  </div>
+
+  <!-- B9.2 -->
+  <h2 id="b9-2"><span class="n">B9.2</span>The rule of 19 September: nothing leaves this machine</h2>
+  <p>Your words of 19 September, which outrank every other working rule: <span class="msg">“all the things are committed locally and nothing is pushed to actions, also [not] deploy the site”</span>. In practice:</p>
+  <ul>
+    <li><b>No push</b> to GitHub: no branch, no shortcut around the checks, not even "just to run the check there".</li>
+    <li><b>No GitHub Action runs</b>, because nothing reaches GitHub (the check described in B8.1 sits idle).</li>
+    <li><b>No deploy</b>: not the API, not the website, not the deploy button.</li>
+    <li><b>Work is finished when it is committed on this machine with its gates run here.</b> A green <code>bash scripts/gates.sh &lt;label&gt;</code> is the proof (B8).</li>
+    <li>Helpers working on one service commit in their own copy; the main chat merges them on this machine. They do not push either.</li>
+    <li>The book itself stays on this machine: it is not published anywhere (<span class="d">D27-293</span>).</li>
+  </ul>
+  <p>It lifts only when you say so, in your own words. The times it has been lifted are on the record: a push on the day of a release, for that push only, typed by you (<span class="d">D21-49</span>, <span class="d">D21-50</span>); and the backup push of 29 September, when drive D: of the old laptop was failing, which sent every branch to GitHub under a backup name so that no check ran (<span class="d">D27-155</span>). On 4 October you confirmed the rule stands while releases go out whenever something is ready (<span class="d">D27-276</span>).</p>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Live is yours to change. A release reaches guests and the hotel's money, and it is easier to keep a change from leaving than to bring it back. Holding everything on this machine means every release is a deliberate act: you decide it, you type it, and you see each step answer.</p>
+  </div>
+
+  <!-- B9.3 -->
+  <h2 id="b9-3"><span class="n">B9.3</span>How a release is made</h2>
+  <p>A release is a branch named for the day, such as <code>release/all-5oct</code>, cut from <code>cp6</code> (the working line) when you ask for one.</p>
+  <h3>On this PC, before you are asked to type anything</h3>
+  <ol class="steps">
+    <li>Everything for the release is merged into <code>cp6</code> and the full gates are green on that exact commit (B8.2).</li>
+    <li><code>node scripts/release.mjs &lt;branch&gt;</code> checks the release and <b>refuses, with a sentence</b>, unless: the push to GitHub would be a plain fast-forward; a full, clean, green gates run exists for exactly this commit; the release has its own copy of the code with nothing uncommitted; the website builds <b>in that copy</b> with the sign-in settings; and the built website holds the live API address, the sign-in settings and no test sign-in.</li>
+    <li>Then it prints your steps, each labelled with where it runs. It never pushes, deploys or touches the server itself, and never prints a secret.</li>
+  </ol>
+  <h3>On the day: your steps (the shape every release follows)</h3>
+  <ol class="steps">
+    <li><b>Your PC:</b> push the release branch to GitHub (the one push the rule allows that day).</li>
+    <li><b>The server:</b> a backup <b>before</b> anything changes.</li>
+    <li><b>The server:</b> pull the new code.</li>
+    <li><b>The server:</b> <code>deploy/launch.sh</code>. It checks the server can load the code (the strip check) before restarting anything, applies the database changes as <b>one transaction</b>, restarts the API, and runs the readiness check. It ends in green, <span class="msg">“https://api.fidatohotels.com is live.”</span>, or stops with what is wrong.</li>
+    <li><b>Your PC:</b> ask the API's health address; it must answer with today's start time.</li>
+    <li><b>Your PC:</b> publish the website <b>from the release copy</b> (<code>firebase deploy --only hosting:app</code>).</li>
+    <li><b>Look at it:</b> open the site, reload, sign in, open the screens that changed. The master chat then looks at the live site and server read-only.</li>
+  </ol>
+  <ul>
+    <li>Server first, then the website: new screens need the new server.</li>
+    <li>At a quiet moment, never during a night audit. The API restarts for a few seconds; the offline queue on each device holds anything tapped meanwhile.</li>
+    <li>Screens already open elsewhere say <span class="msg">“A new version is ready”</span>: reload between guests.</li>
+  </ul>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>You type every command and the master guides and reads each output (<span class="d">D21-50</span>). The backup comes first because a database change cannot be undone, while the website can be rolled back at once (docs/GO-LIVE-PLAN.md). The release script exists because two releases went wrong in ways no gate could see (B9.4); since your decision of 4 October it checks itself rather than relying on anyone's memory (<span class="d">D27-276</span>, <span class="d">D27-277</span>).</p>
+  </div>
+
+  <!-- B9.4 -->
+  <h2 id="b9-4"><span class="n">B9.4</span>The releases so far, and what they taught</h2>
+  <table>
+    <thead><tr><th style="width:16%">When</th><th>What went live</th></tr></thead>
+    <tbody>
+      <tr><td>15-16 September</td><td>The security fix (migration 088: adding somebody could take over an existing account, MEMORY 263), the clarity work, then the service folders and the Coming soon pages.</td></tr>
+      <tr><td>18 September</td><td><code>79e358e</code>: 97 commits, 25 migrations.</td></tr>
+      <tr><td>21-22 September</td><td><code>0b4766e</code>: everything built so far in one release, the menu work included, with guest sending still off (<span class="d">D21-97</span>).</td></tr>
+      <tr><td>2 October</td><td>The launch set, <code>adc8e846</code>, from <code>release/launch-2oct</code> (<span class="d">D27-232</span>).</td></tr>
+      <tr><td>3 October</td><td><code>release/all-3oct</code> with the fresh start on live (<span class="d">D27-248</span>). Its website lacked two fixes made after the branch was cut, so it was rebuilt for you to publish again (MEMORY 381).</td></tr>
+      <tr><td>4 October</td><td>Withdrawn before it ran (<span class="d">D27-277</span>).</td></tr>
+      <tr><td>5 October</td><td><code>release/all-5oct</code> withdrawn at 14:20 for one full deployment that evening (<span class="d">D27-285</span>). What was then deployed is not recorded on this PC. GitHub's <code>main</code> stood at <code>0c5e51cd</code> (5 October, 15:24) when this PC copied it on 9 October.</td></tr>
+      <tr><td>Since then</td><td>Nothing. Migrations 207 to 211 (Close unpaid and Clear, numbered and custom add-ons, the KOT section) wait for you, and live has not been looked at from this PC.</td></tr>
+    </tbody>
+  </table>
+  <h3>The lessons, each written down with its number</h3>
+  <table>
+    <thead><tr><th style="width:15%">Lesson</th><th>What happened, and the rule it left</th></tr></thead>
+    <tbody>
+      <tr><td>MEMORY 209</td><td>8 September: one line of valid code took the live API down; every local check had passed. The strip check now runs on this PC and on the server before any restart.</td></tr>
+      <tr><td>MEMORY 187-193, 197</td><td>The first real deploy found eight faults no check on this PC could see. Everything a server runs is tried on a server-like path before it is relied on.</td></tr>
+      <tr><td>MEMORY 175</td><td>Migrations applied one file at a time left the API answering errors to 53 of 400 requests during an upgrade. Now the whole run is one transaction: all of it, or none.</td></tr>
+      <tr><td>MEMORY 271</td><td>A placeholder administrator, deleted, came back with the next update, because every update replays the migrations. Switch such a row off; never delete it.</td></tr>
+      <tr><td>MEMORY 279</td><td>Every deploy's firewall reload cut n8n off from the internet, silently. Fixed on the server; checked after updates.</td></tr>
+      <tr><td>MEMORY 380</td><td>A server command written for a release, never run, could not have worked. A command handed to you is first run there in its read-only form, as the user it names.</td></tr>
+      <tr><td>MEMORY 381</td><td>3 October: the plan changed and the release branch did not. You ran it at 03:30 and the website showed a blank page with no hotel. The moment a plan changes, the branch is moved or deleted in the same step.</td></tr>
+      <tr><td>MEMORY 383</td><td>3 October: a website-only release was built in a copy with no sign-in settings, and nobody could sign in to live until it was rebuilt. Both builds "succeeded". The release script now refuses a build without them (B9.3).</td></tr>
+      <tr><td>MEMORY 384</td><td>4 October: after the fresh start your browser still remembered the deleted hotel and drew a white Settings page. A remembered choice is now checked against what exists.</td></tr>
+      <tr><td>MEMORY 300</td><td>A push is not finished until its GitHub check is green. Suspended while nothing is pushed (B9.2).</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B9.5 -->
+  <h2 id="b9-5"><span class="n">B9.5</span>The server's settings</h2>
+  <p>The API reads its settings from one file on the server, <code>/opt/fidato/api/.env</code>. The backups read theirs from <code>/etc/fidato-backup.env</code>, readable by the database account alone. Neither is in the repository, and the values are never typed into a chat, a document or this book. The list of names is in <code>api/.env.example</code>.</p>
+  <table>
+    <thead><tr><th style="width:30%">Group</th><th>Settings (names only)</th><th style="width:28%">If it is empty</th></tr></thead>
+    <tbody>
+      <tr><td>The basics</td><td><code>DATABASE_URL</code>, <code>DB_POOL_MAX</code> (20 by default, <span class="d">D27-278</span>), <code>PORT</code>, <code>NODE_ENV</code>, <code>CORS_ORIGIN</code>; and <code>ADMIN_DATABASE_URL</code> and <code>UPLOAD_DIR</code>, which <code>deploy/launch.sh</code> writes itself</td><td>The API does not start, or every screen is empty.</td></tr>
+      <tr><td>Sign-in</td><td><code>FIREBASE_SERVICE_ACCOUNT</code> (a real secret), <code>ALLOW_DEV_AUTH</code> (must be off: the API refuses to start in production with it on)</td><td>Nobody can sign in.</td></tr>
+      <tr><td>Sending to guests (the CRS's n8n)</td><td><code>CRS_N8N_URL</code>, <code>CRS_N8N_SECRET</code>, <code>WHATSAPP_PHONE_NUMBER_ID</code>, <code>GUEST_MESSAGES_PER_MINUTE</code></td><td>Nothing is sent, and the screens say so.</td></tr>
+      <tr><td>The CRS bridge</td><td><code>CRS_PROJECT_ID</code>, <code>CRS_API_KEY</code>, <code>CRS_AUTOMATION_EMAIL</code>, <code>CRS_AUTOMATION_PASSWORD</code>, <code>CRS_ANSWER_N8N_URL</code>, <code>CRS_ANSWER_N8N_SECRET</code></td><td>No CRS bookings are read.</td></tr>
+      <tr><td>The channel manager (SU)</td><td><code>SU_ENVIRONMENT</code>, <code>SU_CLIENT_ID</code>, <code>SU_CLIENT_SECRET</code>, <code>SU_PUSH_KEY</code></td><td>Not connected.</td></tr>
+      <tr><td>The leads app (read only)</td><td><code>M2R_IMPERSONATE</code>, <code>M2R_SERVICE_ACCOUNT</code>, <code>M2R_HOTELS</code>, <code>M2R_DAILY_READS</code>, <code>M2R_APP_URL</code>, <code>M2R_N8N_URL</code>, <code>M2R_N8N_SECRET</code></td><td>No leads shown.</td></tr>
+      <tr><td>Online check-in</td><td><code>GOOGLE_CLIENT_ID</code>; <code>DIGILOCKER_CLIENT_ID</code>, <code>DIGILOCKER_CLIENT_SECRET</code>, <code>DIGILOCKER_REDIRECT_URI</code>; <code>ID_PHOTO_N8N_URL</code>, <code>ID_PHOTO_N8N_SECRET</code>, and one ID-photo password per hotel</td><td>That way in, or the photo upload, is not offered.</td></tr>
+      <tr><td>Other</td><td><code>SERPAPI_KEY</code> (rivals' prices), <code>HEALTH_ALERT_EMAIL</code> (connection alerts), <code>N8N_ATTACHMENT_WEBHOOK</code></td><td>That feature stays off.</td></tr>
+      <tr><td>Backups (<code>/etc/fidato-backup.env</code>)</td><td><code>BACKUP_UPLOAD_URL</code>, <code>ALERT_URL</code>, <code>ALERT_SECRET</code></td><td>The backup stays on the server's own disk, and nobody is told how the night went (B9.6).</td></tr>
+    </tbody>
+  </table>
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Read whether a setting is empty, not whether its line is there.</b> On 4 October the backup's upload line was reported as "set but not loaded"; it was empty (MEMORY 385).</li>
+      <li>The ID-photo passwords are chosen by you, typed into the server by you, and kept in your password manager; a lost one means those photos cannot be opened (<span class="d">D27-208</span>, <span class="d">D27-211</span>).</li>
+      <li>The Firebase key once passed through a chat and is still listed as owed to be replaced (HANDOVER § 8).</li>
+      <li>The release steps of 5 October named two leftover copies of the settings file on the server, <code>.env.save</code> and <code>.env.save.1</code>, made by the editor, to be removed once the API works. Whether they were is not recorded here.</li>
+    </ul>
+  </div>
+
+  <!-- B9.6 -->
+  <h2 id="b9-6"><span class="n">B9.6</span>Backups, and getting one back</h2>
+  <h3>Every night</h3>
+  <p>At 03:00, after any likely night audit and before anyone arrives, the server:</p>
+  <ol class="steps">
+    <li>Takes a backup of the database, in a form that can give back one table on its own. It keeps the last 14 on its own disk.</li>
+    <li>Copies it to a storage bucket off the server, when the bucket's upload link is set.</li>
+    <li><b>Restores it</b> into a scratch database and compares it with the live one, table by table and the money to the paisa. A backup is called sound only if restoring it gives back what was there.</li>
+    <li>Writes one status line to its log, which System health and Connection health read, and tells you, pass or fail, through n8n when the alert link is set.</li>
+  </ol>
+  <p>Each customer's database, when there are customers, is backed up at 03:30, one after another, each with its own log.</p>
+  <div class="box watch">
+    <h4>Watch out: today the backups do not leave the server</h4>
+    <ul>
+      <li>You chose an Oracle bucket in Fidato's own account, 30 days kept there, and a WhatsApp through n8n when a backup fails (<span class="d">D27-18</span>, <span class="d">D27-19</span>, <span class="d">D27-20</span>). The read-only check of 4 October found the upload link and the alert link both <b>empty</b>: every backup was on the same disk as the database it protects (MEMORY 385). On 5 October the bucket was put on hold (<span class="d">D27-285</span>). Until it is set up, losing the server loses the backups with it.</li>
+      <li>The steps to set it up are in <code>deploy/README.md</code>, "Backups", steps 1, 3 and 4: the bucket with a 30-day lock, an upload-only link, the server's settings file, then one run on purpose and one deliberate failure to see the alert arrive.</li>
+      <li>Your decision of 4 October also asks for <b>a full restore rehearsed every month</b>, and a standby server once five or more hotels pay (<span class="d">D27-276</span>). No rehearsal is recorded yet.</li>
+    </ul>
+  </div>
+  <h3>Getting a copy back</h3>
+  <ul>
+    <li><b>To check a backup without touching anything:</b> <code>db/verify-backup.sh &lt;file&gt;</code> restores it into a scratch database, compares it, and drops the scratch database.</li>
+    <li><b>To put a backup back:</b> <code>db/restore.sh &lt;file&gt;</code> or <code>db/restore.sh --latest</code>. It says what it is about to overwrite, waits for the database's name to be typed, and first takes a safety backup of what it replaces. There is no undo; that is why it asks. A backup does not carry the application's database rights, so they are put back before the API uses the restored database: <code>deploy/README.md</code> does it by running <code>deploy/launch.sh</code> again, which applies the migrations.</li>
+    <li><b>From the bucket</b> (once it exists): the Oracle console, the bucket, Objects, the file, Download.</li>
+    <li><b>From this PC's version of PostgreSQL (17) to the server's (16):</b> only with <code>db/backup.sh --portable</code>. A normal backup made on 17 cannot be read by 16 (MEMORY 190).</li>
+  </ul>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A backup that has never been restored is not a backup: the classic disaster is a nightly job that ran for years and produced an empty or wrong file. So the nightly job restores what it took and compares it. It used to compare against fixed demo figures, and once printed "would not give you your hotel back" over a perfectly sound backup; it now compares with the source, so it never needs editing when the data changes (MEMORY 30, 34, 151).</p>
+  </div>
+
+  <!-- B9.7 -->
+  <h2 id="b9-7"><span class="n">B9.7</span>The night audit is a person, not a clock</h2>
+  <p>The night audit is never scheduled: somebody presses the button (the GM at 5 Elements, <span class="d">D21-77</span>; the roles that may are listed in <span class="d">D22-36</span>). A hotel that forgets stays on yesterday, which is safe and visible: every screen shows one warning line in the top bar when a hotel's business date is behind the real day (<span class="d">D27-237</span>), and System health shows the date amber at one day behind and red at two (<span class="d">D27-113</span>). An automatic night audit was left out on purpose (HANDOVER § 4: "the night audit is run by a person").</p>
+
+  <!-- B9.8 -->
+  <h2 id="b9-8"><span class="n">B9.8</span>What watches the system</h2>
+  <table>
+    <thead><tr><th style="width:28%">Watcher</th><th>What it watches</th><th style="width:26%">Who is told, how</th></tr></thead>
+    <tbody>
+      <tr><td>System health (inside the PMS, owner and admins)</td><td>Each request's time and result, errors and slow queries, kept 180 days on our own server; each hotel's business date; the last backup (<span class="d">D27-91</span>, <span class="d">D27-92</span>, <span class="d">D27-113</span>, <span class="d">D27-114</span>).</td><td>Whoever opens it. Nothing leaves the server.</td></tr>
+      <tr><td>Connection health (Settings)</td><td>Email, WhatsApp, the CRS bridge, Firebase, backups and rivals' prices: green, amber or red, with the last success and the last error (<span class="d">D27-276</span>, <span class="d">D27-279</span>).</td><td>One email when one turns red, at most once an hour per connection, to the address in <code>HEALTH_ALERT_EMAIL</code> (yours, <span class="d">D27-285</span>).</td></tr>
+      <tr><td>The n8n workflow "PMS alerts"</td><td>The nightly backup's result, a night with no backup report, and whether the API answers (every 5 minutes).</td><td>A WhatsApp to you on a failure, and when the API goes down or comes back. Needs the alert link of B9.6.</td></tr>
+      <tr><td>UptimeRobot (free, outside)</td><td>Whether the API and n8n answer at all, from outside the server.</td><td>Email. It is the backstop for the one case n8n cannot report: the server itself down (<span class="d">D27-20</span>).</td></tr>
+    </tbody>
+  </table>
+  <p>Logs are kept a year on the server, in India (<span class="d">D27-21</span>): the API's, every request to it, every database sign-in, and the backups' log, which is never emptied.</p>
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Whether the n8n alert workflow, UptimeRobot and the alert email have been set up on live is not recorded on this PC. Each is a step in <code>deploy/README.md</code> ("Watching it") or in the release steps, for you to do.</li>
+    </ul>
+  </div>
+
+  <!-- B9.9 -->
+  <h2 id="b9-9"><span class="n">B9.9</span>When something breaks</h2>
+  <h3>The system is down, or slow</h3>
+  <ul>
+    <li><b>At the desk and in the restaurant:</b> carry on. Each device holds what can safely be held and sends it when the line is back; what cannot be held is refused with a sentence saying what to do instead, usually <span class="msg">“Take it on paper and enter it when the connection is back.”</span> (A0.8).</li>
+    <li><b>Tell the master chat</b> what you see. The first look at the server is read-only (<span class="d">D21-51</span>); any write on live waits for your yes.</li>
+  </ul>
+  <h3>A release went wrong</h3>
+  <ul>
+    <li><b>The website is wrong:</b> Firebase console, Hosting, Release history, the previous release, Roll back. Instant.</li>
+    <li><b>The server's update stopped with a red ✗:</b> stop there and send the output. The database changes are one transaction, so a failure leaves the database exactly as it was, and when the new code cannot load, nothing is restarted: the old API keeps running.</li>
+    <li><b>Do not roll the server's code back on your own.</b> Stop and send the output; the master names the commit that is safe to return to, if there is one, because an older version can reopen a security hole a newer one closed (HANDOVER § 9). Database changes cannot be undone: for the data, the backup taken before the update is the way back (B9.6).</li>
+    <li><b>The update finished but says "NOT READY TO SERVE":</b> the readiness check names what is wrong (a test sign-in switched on, a staff member with no sign-in, a placeholder that would print on invoices, a hotel with no rooms). Fix that, and run the check again.</li>
+  </ul>
+  <h3>Someone may have broken in, or guests' data may have leaked</h3>
+  <p><code>docs/INCIDENT-PLAN.md</code> is the plan, written from the CERT-In Directions. In short:</p>
+  <ol class="steps">
+    <li><b>Write down the time you noticed</b> or were told. CERT-In must have a first report within <b>6 hours</b> of that moment; a partial report is fine. Not reporting can cost up to ₹1 crore. When in doubt, report.</li>
+    <li><b>Hour 0 to 1: stop it spreading and keep the evidence.</b> Do not wipe or "clean up" the server: its logs are the evidence. If someone is inside now, stop the server in the Oracle console (the hotels work from paper meanwhile) and copy its disk first. Disable a misused staff account in Firebase. Change any leaked key or password.</li>
+    <li><b>Hour 1 to 5: report</b> to CERT-In by email or phone (the contacts are in the plan): who is reporting, what happened, when it happened and when it was noticed, which system, what has been done.</li>
+    <li><b>After:</b> send the rest as it is learned, save the logs, tell the hotels affected, and write down what happened and what changed.</li>
+  </ol>
+  <p>You are the Point of Contact for both Fidato Hotels and Influvate (<span class="d">D27-22</span>). <b>Filing the two Point of Contact forms is the first thing to do</b>: until then CERT-In has no name for either company. The forms are at the end of the plan.</p>
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Staff sign-in logs sit with Google (Firebase), not on the server. Whether that satisfies CERT-In is a question for the lawyer, listed in the plan as still open.</li>
+      <li>From 13 May 2027 a data breach must also be told to the guests affected and to the Data Protection Board (the DPDP Rules). The plan notes it as not yet in force.</li>
+    </ul>
+  </div>
+
+  <!-- B9.10 -->
+  <h2 id="b9-10"><span class="n">B9.10</span>The computer the work is done on</h2>
+  <p>Since 9 October the project lives on this PC at <code>C:\Users\rozar.ROZARIO\pms</code>, because drive D: had no room (<span class="d">D27-287</span>). Everything about the project stays inside that folder (<span class="d">D22-1</span>): its working copies under <code>.claude\worktrees\</code>, and what is not code (the local databases, gate logs, the virtual printers) under <code>.local\</code>, which git ignores. Older documents still say <code>D:\fidato pms</code>: read them with this folder in its place.</p>
+  <table>
+    <thead><tr><th style="width:28%">Thing</th><th>How it is set up</th></tr></thead>
+    <tbody>
+      <tr><td>The local database</td><td>PostgreSQL 17.11 in <code>.local\pg</code>, port 55432, holding the demo database <code>fidato</code> (5 Elements Akkalkot, up to migration 211). <b>It does not start by itself after a restart</b>: it is started by a command run through Windows' own process service and then checked with <code>pg_isready</code> (MEMORY 325, HANDOVER § 7). You chose to keep starting it by hand rather than install it as a Windows service (<span class="d">D27-109</span>).</td></tr>
+      <tr><td>PostgreSQL 16</td><td>16.15 in <code>.local\pg16</code>, its own database on port 55433, used only by the pg16 gate (B8.2).</td></tr>
+      <tr><td>The local servers</td><td>The API on port 8787 and the website on 5173, started from the Claude desktop app's Browser pane.</td></tr>
+      <tr><td>Test sign-ins</td><td>Owner, General Manager and Reception buttons on the sign-in page, and View as in the account menu. They exist on this PC only (B8.3).</td></tr>
+      <tr><td>Helpers' copies</td><td>Each helper works in its own copy under <code>.claude\worktrees\</code>, with its own database and ports, and claims its service first. A copy goes to the Recycle Bin once its work is merged, with its links to the shared packages taken out first (<span class="d">D24-21</span>).</td></tr>
+      <tr><td>Commits</td><td>Made as Jaison Rozario, in this repository only (<span class="d">D27-287</span>). The local <code>cp6</code> was made from GitHub's <code>main</code>; GitHub's own <code>cp6</code> is the old one of 18 September.</td></tr>
+    </tbody>
+  </table>
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>This PC's work exists only on this PC.</b> You chose no backup of the laptop's work on 21 September (<span class="d">D21-23</span>); the one exception was the GitHub backup push of 29 September (<span class="d">D27-155</span>). Nothing since has left this machine (B9.2).</li>
+      <li>Several database scripts still look for the old <code>D:</code> folder unless told otherwise; the gates find their own way (MEMORY 390).</li>
+      <li>Never keep the database under a temporary folder: Windows' Storage Sense once deleted the old one file by file (START-HERE.md).</li>
+      <li>On the old laptop, drive D: dropped out five times in one night, and each drop looked like a database fault (MEMORY 345).</li>
+    </ul>
+  </div>
+
+  <!-- B9.11 -->
+  <h2 id="b9-11"><span class="n">B9.11</span>The virtual printers (testing only)</h2>
+  <p>Your request of 9 October: you have no KOT machine, so a virtual printer for testing, kept apart and never sent to production. Two pretend printers live in <code>.local\virtual-printer</code> on this PC:</p>
+  <table>
+    <thead><tr><th style="width:30%">Printer</th><th>Prints</th></tr></thead>
+    <tbody>
+      <tr><td>Virtual Kitchen</td><td>Kitchen KOTs, and any KOT kind added later except Bar</td></tr>
+      <tr><td>Virtual Bar</td><td>Bar KOTs and the bills</td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li>Each is a "computer" in <span class="ui">Restaurant setup</span>'s KOT section, exactly as the bar's PC would be. It asks the local API every 3 seconds, takes the slips due for its kinds, and prints them onto a web page instead of paper, at <code>http://localhost:5199</code>, one roll per printer, newest slip on top.</li>
+    <li><b>Start:</b> double-click <code>start-virtual-printers.cmd</code> in that folder, with the local API running. <b>Stop:</b> Ctrl+C in its window; the red "not printing" line comes back on the restaurant's screens.</li>
+    <li>Starting it moves Kitchen and Bar to the virtual printers from any computer that had them: one computer per kind (<span class="d">D27-292</span>).</li>
+    <li>The slips in chapter A8 (Figures A8-09, A8-14, A8-19) were printed this way (A8.13).</li>
+  </ul>
+  <div class="box why">
+    <h4>Why it cannot reach live</h4>
+    <p>The folder is ignored by git and named in <code>.gitignore</code> as well, so it is never committed or released. It signs in to the local API with this PC's test sign-in, which the live API refuses to start with (B8.3). On live, on the day of the release with migration 211, the KOT printer that exists today becomes a computer printing every kind, so nothing stops printing (HANDOVER § 2); each real printing computer is then ticked in Restaurant setup on that computer (<code>src/modules/pos/KOT-STATION-SETUP.md</code>).</p>
+  </div>
+
+  <!-- B9.12 -->
+  <h2 id="b9-12"><span class="n">B9.12</span>What waits on you</h2>
+  <p>From the handover and the last changelog entries; none of it can be done from this PC:</p>
+  <ul>
+    <li><b>A release</b> with migrations 207 to 211, when you say (HANDOVER § 3).</li>
+    <li><b>The off-site backup bucket and the alert link</b> (B9.6), on hold since 5 October (<span class="d">D27-285</span>).</li>
+    <li><b>The connection alert address</b> on the server, if it was not typed during the 5 October deployment (B9.8).</li>
+    <li><b>Replacing the Firebase key</b> that passed through a chat (HANDOVER § 8).</li>
+    <li><b>The two CERT-In Point of Contact forms</b> (B9.9).</li>
+    <li><b>Meta's review</b> of the edited <code>booking_confirmation</code> template and of the check-in code template (<span class="d">D27-281</span>, <span class="d">D27-285</span>).</li>
+    <li><b>The accountant's and the lawyer's answers</b> that decisions wait on (for example whether a full Aadhaar number may be kept, <span class="d">D25-37</span>), and the figures only you can type after a release: the SAC codes and the drinks sections' tax headings (<span class="d">D27-285</span>).</li>
+    <li><b>Which Firebase project each future customer uses</b>, before selling starts (<span class="d">D27-278</span>).</li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out: documents that are behind</h4>
+    <ul>
+      <li><code>HANDOVER.md</code> § 1 says "push normally"; the rule of 19 September replaced that. <code>START-HERE.md</code> § 7 says "do not commit"; work is now committed locally, always.</li>
+      <li><code>deploy/README.md</code> ("What is deliberately not here") says there is no channel manager and no service worker; both exist now (the channel manager, <span class="d">D27-198</span>; the website works offline through a service worker).</li>
+      <li>The GitHub check (<code>.github/workflows/ci.yml</code>) says it tests on PostgreSQL 17, "the version the hotel runs"; the live server runs 16.15.</li>
+      <li><code>db/verify-backup.sh</code>'s opening comment still describes the old fixed demo figures; the script itself compares with the source.</li>
+      <li><code>docs/GO-LIVE-PLAN.md</code> is the plan of 21 September (three stages, the channel manager on hold); later decisions replaced much of it (<span class="d">D21-97</span>, <span class="d">D27-178</span>, <span class="d">D27-248</span>).</li>
+    </ul>
+  </div>
+</section>

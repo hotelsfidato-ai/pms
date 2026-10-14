@@ -1,0 +1,285 @@
+<!-- ══════════════════════════════ CHAPTER A12 ══════════════════════════════ -->
+<section class="chapter" id="a12">
+  <div class="chapter-head">
+    <span class="num">Chapter A12</span>
+    <h1>Approvals, cash expenses, notifications</h1>
+    <p>For the general manager and the owner, who decide; for the Inventory Manager and anyone who asks for something; and for everyone who reads the bell. Who approves what, how to approve or refuse, what a cash expense waits for, what the person who asked sees, and what the bell and the Notifications screen tell you. Also the other screens in the System part of the menu.</p>
+  </div>
+
+  <!-- A12.1 -->
+  <h2 id="a12-1"><span class="n">A12.1</span>The System part of the menu</h2>
+  <p><span class="ui">System</span> is the last section of the Front office menu. You see the screens your role uses.</p>
+
+  <figure class="shot" id="fig-A12-01">
+    <img src="img/A12-01.png" alt="The menu's System section as the owner sees it: Approvals, Notifications, System health, Design system, Room systems, and Settings at the top">
+    <figcaption><b>Figure A12-01.</b> The System part of the menu, as the owner sees it.</figcaption>
+    <ol class="callouts">
+      <li>Approvals: everything waiting at this hotel (A12.3)</li>
+      <li>Notifications: what needs attention, on a page of its own (A12.9)</li>
+      <li>System health: what the server is doing</li>
+      <li>Design system: on the test computer only</li>
+      <li>Room systems: not built yet</li>
+      <li>Settings: the third space (A0.4)</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:22%">Screen</th><th style="width:28%">Who sees it</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td>Approvals</td><td>Owner, Admin, GM, Hotel Manager in the menu; the Inventory Manager by Find a screen</td><td>Everything waiting at this hotel, from every part of the system: Approve or Refuse it there (A12.3).</td></tr>
+      <tr><td>Notifications</td><td>Most roles</td><td>The same list as the bell, on a page (A12.9).</td></tr>
+      <tr><td>System health</td><td>Owner, Admin</td><td>What the server is doing, from its own records: how long it has been up, the database, disk space, the last backup, requests, each hotel's business date and last night audit, the slowest routes, errors. No guest is named on it.</td></tr>
+      <tr><td>Room systems</td><td>Owner, Admin, GM</td><td>Marked <span class="msg">“Not built yet”</span>. Door locks, room phones, minibars and TVs. Key cards are built and switched off until the hotel's lock system is connected.</td></tr>
+      <tr><td>Design system, Console</td><td>Only on the test computer</td><td>Tools for the people who build the system. They are not in the live system.</td></tr>
+      <tr><td>Users, Integrations</td><td>Users: Owner, Admin, GM, Hotel Manager. Integrations: Owner, Admin</td><td>Not in the menu: open them with <span class="ui">Find a screen</span> (A0.6). Users: who can reach what. Integrations: what the server has set up (sign-in, the channel manager, WhatsApp and email). The owner's book explains them (B2, B5).</td></tr>
+      <tr><td>Settings</td><td>Owner, Admin, GM</td><td>The Settings space, from the switcher at the top (A0.4).</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>One Approvals screen for everything waiting on a person: <span class="d">D18-19</span>. System health inside the system, for the owner and administrators, from the server's own records: <span class="d">D27-91</span>. A service not built yet sits in its own section, marked “Not built yet”, for the owner, admins and GMs: <span class="d">D27-87</span>.</p>
+  </div>
+
+  <!-- A12.2 -->
+  <h2 id="a12-2"><span class="n">A12.2</span>Who approves what</h2>
+  <p>Some things wait for a second person's yes before they count. Each one is a <b>request</b>: somebody asks, with a reason, and somebody else decides. Every request, whatever it is, goes to the same Approvals screen.</p>
+  <table>
+    <thead><tr><th style="width:22%">Request</th><th style="width:36%">Raised when</th><th>Decided by</th></tr></thead>
+    <tbody>
+      <tr><td>Purchase request</td><td>Somebody asks to buy something on <span class="ui">Purchasing</span> (<span class="ui">Ask to buy</span>, A9). By default the Inventory Manager, the GM, the owner and an administrator may ask.</td><td>The general manager, every purchase, whatever the amount.</td></tr>
+      <tr><td>Cash expense</td><td>Money is paid out of a drawer: the front desk's (<span class="ui">Cashiering</span>) or a restaurant's tin (<span class="ui">Close restaurant day</span>). See A12.7.</td><td>The general manager or the owner. Never an administrator.</td></tr>
+      <tr><td>Equipment leaving the store</td><td>Equipment goes out of a store to a room, the kitchen or the restaurant.</td><td>The Inventory Manager; when they are away, the owner, an administrator or the GM.</td></tr>
+      <tr><td>Equipment being retired</td><td>A tagged item is retired by somebody who may not approve it, such as the Hotel Manager.</td><td>The same as above.</td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li><b>Nobody approves their own request.</b> A GM's own cash expense waits for the owner (Figure A12-04).</li>
+    <li>The group owner may decide any request.</li>
+    <li><b>A decision stays.</b> An approved or refused request cannot be decided again. To go ahead after a refusal, raise a new request.</li>
+    <li>A refusal always has a note, so the person who asked knows what to do next. Approving needs none.</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The GM approves every purchase, with no amount above which the owner must: <span class="d">D18-4</span>, confirming <span class="d">D17-35</span>. Who may ask is a setting per hotel, changed without a new release: <span class="d">D18-2</span>. Every cash expense needs a yes from the GM or the owner, never an administrator, never one's own: <span class="d">D27-239</span>, <span class="d">D27-242</span>. Equipment waits for the Inventory Manager, with the owner, an administrator or the GM instead: the owner, 16 September. Who decides is kept as a rule for each hotel, and a request keeps the rule it was raised under: a rule changed later never moves a request already waiting.</p>
+  </div>
+
+  <!-- A12.3 -->
+  <h2 id="a12-3"><span class="n">A12.3</span>Approving or refusing</h2>
+  <p>Open <span class="ui">Approvals</span>. The line under the title says <span class="msg">“Everything waiting at this hotel, from every part of the system.”</span> <span class="ui">Waiting</span> lists every request still waiting, newest first. Each card says what kind of request it is, what it is for in the asker's own words, the amount, who asked and when.</p>
+
+  <figure class="shot" id="fig-A12-02">
+    <img src="img/A12-02.png" alt="Approvals as the general manager: Waiting chosen, a purchase request for two gas cylinders, its amount, who asked, and the note box">
+    <figcaption><b>Figure A12-02.</b> Approvals: what waits on the general manager.</figcaption>
+    <ol class="callouts">
+      <li><span class="ui">Waiting</span>: what still needs a decision</li>
+      <li>What kind of request. In orange, it opens the request on its own screen</li>
+      <li>What it is for, in the words of the person who asked</li>
+      <li>Who asked, with the amount before it and the time after it</li>
+      <li>A note: required to refuse, not to approve</li>
+    </ol>
+  </figure>
+
+  <h3>To decide a request</h3>
+  <ol class="steps">
+    <li>Read the card. To see the whole request first (each line, the store it goes to), click its orange name, such as <span class="ui">Purchase request</span>.</li>
+    <li>To approve: tap <span class="ui">Approve</span>. The message <span class="msg">“Approved.”</span> shows and the card leaves the Waiting list.</li>
+    <li>To refuse: type why in <span class="ui">A note (required to refuse)</span>, in one sentence, then tap <span class="ui">Refuse</span>. The message is <span class="msg">“Refused, and they have been told why.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A12-03">
+    <img src="img/A12-03.png" alt="The note typed under the purchase request, with the Approve and Refuse buttons">
+    <figcaption><b>Figure A12-03.</b> Refusing, with a note.</figcaption>
+    <ol class="callouts">
+      <li>The note, typed: why it is refused</li>
+      <li><span class="ui">Approve</span></li>
+      <li><span class="ui">Refuse</span></li>
+    </ol>
+  </figure>
+
+  <p>What happens next belongs to the request. An approved purchase can be ordered from a supplier (A9). Approved equipment leaves the store. An approved cash expense is taken off what its drawer should hold (A12.7).</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Refuse with no note</b> is not accepted: <span class="msg">“Say why it is refused, so the person who asked knows what to do next.”</span></li>
+      <li><b>Approve and Refuse cannot be undone.</b> Read the card before you tap.</li>
+      <li>A purchase request can also be decided on its own page, which has a third button, <span class="ui">Send back</span>, to ask for something to be cleared up. Approvals shows such a request as <span class="ui">Asked for more</span>.</li>
+      <li><b>The bell does not tell you a request is waiting.</b> Open Approvals to see what waits on you.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A GM with a purchase, two equipment requests and a cash expense waiting had to know to open four screens; now one screen shows them all, decided in place, while each service's own screen keeps its buttons: <span class="d">D18-19</span>. Both make the same decision, so they never disagree. A refusal needs a reason because the person who asked has to know whether to buy it elsewhere, buy it cheaper, or not buy it.</p>
+  </div>
+
+  <!-- A12.4 -->
+  <h2 id="a12-4"><span class="n">A12.4</span>A request that is not yours to decide</h2>
+  <p>Approvals lists every request waiting at the hotel. Where you may not decide one, the card has no buttons, and a sentence says why.</p>
+
+  <figure class="shot" id="fig-A12-04">
+    <img src="img/A12-04.png" alt="A cash expense of 200 rupees from the restaurant tin, asked by the general manager, with no buttons and the sentence You asked for this one">
+    <figcaption><b>Figure A12-04.</b> You cannot approve your own.</figcaption>
+    <ol class="callouts">
+      <li>A cash expense: milk for the kitchen, paid out of the restaurant's tin</li>
+      <li><span class="msg">“You asked for this one, so you cannot be the person who approves it.”</span></li>
+    </ol>
+  </figure>
+
+  <p>A request that belongs to another role says whose it is instead, and waits for them. The GM's own cash expense in Figure A12-04 waits for the owner.</p>
+
+  <!-- A12.5 -->
+  <h2 id="a12-5"><span class="n">A12.5</span>What was decided, and by whom</h2>
+  <p>Tap <span class="ui">Everything</span> at the top right. Requests still waiting come first, then the decided ones, newest first. Each decided card says <span class="ui">Approved</span> or <span class="ui">Refused</span>, who decided it, and the note.</p>
+
+  <figure class="shot" id="fig-A12-05">
+    <img src="img/A12-05.png" alt="Approvals, Everything chosen: the cash expense still waiting, a purchase request Refused by Test GM with its note, one Approved, and an equipment request approved by the Inventory Manager">
+    <figcaption><b>Figure A12-05.</b> Everything: what was decided, and by whom.</figcaption>
+    <ol class="callouts">
+      <li><span class="ui">Everything</span>: decided requests too</li>
+      <li><span class="ui">Refused</span></li>
+      <li>Who refused it, and the note they wrote</li>
+      <li><span class="ui">Approved</span></li>
+    </ol>
+  </figure>
+
+  <p>The person who decides sees who asked, and the person who asked sees who decided. Where a name is not yours to see, it shows a dash.</p>
+
+  <!-- A12.6 -->
+  <h2 id="a12-6"><span class="n">A12.6</span>When you asked: reading the answer</h2>
+  <p>The person who asked finds the answer on the request itself. For a purchase: open <span class="ui">Purchasing</span> and click the request.</p>
+
+  <figure class="shot" id="fig-A12-06">
+    <img src="img/A12-06.png" alt="The refused purchase request as the Inventory Manager sees it: Refused at the top, Decided by Test GM, Refused by Test GM with the note, and the sentence to raise a new request">
+    <figcaption><b>Figure A12-06.</b> The person who asked reads the refusal.</figcaption>
+    <ol class="callouts">
+      <li><span class="ui">Refused</span>, beside the request's number</li>
+      <li>Who refused it; their note is under it</li>
+      <li><span class="msg">“A decision stays on the record. To go ahead after this, raise a new request.”</span></li>
+    </ol>
+  </figure>
+
+  <p>A request still waiting says <span class="ui">Waiting for the general manager</span>. A cash expense shows its answer on its drawer's line (A12.7).</p>
+  <p>The Inventory Manager may decide equipment requests, but their menu is short and leaves Approvals out. It is still theirs: press <span class="ui">Ctrl K</span> or click <span class="ui">Find a screen</span>, type <span class="ui">approv</span>, and press Enter.</p>
+
+  <figure class="shot" id="fig-A12-07">
+    <img src="img/A12-07.png" alt="Find a screen open on the Store, with approv typed and Approvals found, marked Not in your menu, in System">
+    <figcaption><b>Figure A12-07.</b> The Inventory Manager finds Approvals.</figcaption>
+    <ol class="callouts">
+      <li>Find a screen, with <span class="ui">approv</span> typed</li>
+      <li><span class="ui">Approvals</span>: <span class="msg">“Not in your menu”</span>, still yours to open</li>
+    </ol>
+  </figure>
+
+  <!-- A12.7 -->
+  <h2 id="a12-7"><span class="n">A12.7</span>Cash expenses</h2>
+  <p>A <b>cash expense</b> is hotel money paid out of a drawer for something the hotel needs: milk for the kitchen, a taxi, a courier, a repair. Every one waits for a yes.</p>
+
+  <h3>To record one</h3>
+  <ol class="steps">
+    <li>At the front desk, open <span class="ui">Cashiering</span>; in a restaurant, open <span class="ui">Close restaurant day</span> and its <span class="ui">Cash</span> step (A8.9).</li>
+    <li>Under <span class="ui">In and out of the drawer</span>, tap <span class="ui">Record</span>.</li>
+    <li>Choose <span class="ui">What happened</span>: <span class="ui">Paid out</span> at the desk, <span class="ui">Expense</span> in a restaurant.</li>
+    <li>Type <span class="ui">How much</span> and <span class="ui">What was it for</span>, then tap <span class="ui">Record</span>.</li>
+  </ol>
+  <p>The expense goes to Approvals as a <span class="ui">Cash expense</span>, named by its drawer and your words: <span class="msg">“Fidato Restaurant tin: Milk for the kitchen”</span>, or <span class="msg">“Front desk drawer: …”</span>. The GM or the owner decides it (A12.3). Not the person who paid it out.</p>
+
+  <table>
+    <thead><tr><th style="width:22%">While it is…</th><th>The drawer's line says</th><th style="width:36%">And the drawer</th></tr></thead>
+    <tbody>
+      <tr><td>Waiting</td><td><span class="msg">“Waiting for a yes - not taken off the drawer yet”</span> (in a restaurant, <span class="msg">“… the tin yet”</span>)</td><td>Is expected to hold that money still. At the count, <span class="ui">Paid out, waiting for a yes</span> shows how much; if the count is short, the yellow box says how much of it is paid out and waiting.</td></tr>
+      <tr><td>Approved</td><td>Nothing more: it is a paid-out like any other.</td><td>The money is taken off what the drawer should hold, even if the drawer has been closed since.</td></tr>
+      <tr><td>Refused</td><td><span class="msg">“Not approved: the note - not taken off the drawer”</span></td><td>The money is a shortage on that drawer, and nothing more.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Record an expense as soon as the money leaves the drawer, with plain words. <span class="ui">What was it for</span> is the line somebody asks about tomorrow.</li>
+      <li>A waiting expense does not stop the drawer closing. The part of a shortage it explains needs no reason at the close; only the rest does.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Every cash expense needs a yes, from the GM or the owner, never an administrator, never one's own; while waiting it is not counted and explains its part of a difference; both the desk's drawer and the restaurant tins; a refused expense is a shortage only: <span class="d">D27-242</span>, following <span class="d">D27-239</span>.</p>
+  </div>
+
+  <!-- A12.8 -->
+  <h2 id="a12-8"><span class="n">A12.8</span>The bell</h2>
+  <p>The bell at the top of every screen shows how many notices you have not read (<b>9+</b> when there are more than nine). Click it: the list opens on the right.</p>
+
+  <figure class="shot" id="fig-A12-08">
+    <img src="img/A12-08.png" alt="The bell's list open as the owner: 9 unread, an arrival not yet checked in, balances outstanding, a refund, and Mark all as read">
+    <figcaption><b>Figure A12-08.</b> The bell, as the owner sees it.</figcaption>
+    <ol class="callouts">
+      <li>How many are not read yet</li>
+      <li>A notice: what needs attention, where, its kind and when. Click it to open its screen</li>
+      <li><span class="ui">Mark all as read</span></li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li>Click a notice to go to its screen (Arrivals, Folios, the Store…). It is then marked read.</li>
+    <li><b>A notice goes by itself</b> when the thing is done: check the guest in and the arrival notice is gone. Nothing needs clearing by hand.</li>
+    <li>When every notice is read, the bell's list says <span class="msg">“You are all caught up”</span>.</li>
+  </ul>
+
+  <!-- A12.9 -->
+  <h2 id="a12-9"><span class="n">A12.9</span>The Notifications screen</h2>
+  <p><span class="ui">Notifications</span>, in the System part of the menu, is the same list on a page, each notice with <span class="ui">Open</span>. Its first line says why the list is always right: <span class="msg">“Derived, never stored - so nothing here can go stale while the thing it describes changes.”</span></p>
+
+  <figure class="shot" id="fig-A12-09">
+    <img src="img/A12-09.png" alt="The Notifications screen as the Inventory Manager: balances outstanding without amounts or names, a room out of service, a crockery count due marked approval, and Open on each">
+    <figcaption><b>Figure A12-09.</b> Notifications, as the Inventory Manager sees them.</figcaption>
+    <ol class="callouts">
+      <li>A notice: <span class="msg">“Crockery in Main store: never counted”</span>, and what to do</li>
+      <li>Its kind: <span class="ui">approval</span></li>
+      <li><span class="ui">Open</span>: the screen it is about</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:18%">Kind</th><th>Notices of this kind</th></tr></thead>
+    <tbody>
+      <tr><td>reservation</td><td>Arrivals not yet checked in; table bookings guests asked for, waiting for an answer.</td></tr>
+      <tr><td>payment</td><td>A balance outstanding on a room due out today; money to refund to a guest who paid more than their charges.</td></tr>
+      <tr><td>customer</td><td>Guest messages and guest requests waiting; room-service orders waiting; wake-up calls due, or asked for by guests.</td></tr>
+      <tr><td>approval</td><td>Something for a manager to look at: a store's crockery and cutlery not counted for 30 days, or never; postings reversed today. It is <b>not</b> a request in Approvals.</td></tr>
+      <tr><td>system</td><td>Rooms out of service. For the group owner: a hotel's bank details set, changed or removed.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>You see what your role may see.</b> A guest's name only if you may read guests; an amount only if you may read bills. The Inventory Manager in Figure A12-09 reads <span class="msg">“A balance is outstanding on room 204”</span> where the owner reads <span class="msg">“₹5,715 outstanding on room 204”</span> and the guest's name.</li>
+      <li><b>Mark all as read lasts until the page is reloaded.</b> It is kept in that browser window only; reload the page, or open the system on another computer, and the notices still standing are unread again.</li>
+      <li>The time on a notice is not when it arose. Most say nine in the morning of the hotel's business day.</li>
+      <li>Requests waiting in Approvals are not on the bell (A12.3).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Each notice is worked out afresh from the same records every other screen reads, so the bell never disagrees with the folio or the report, and never has to be tidied. The bell follows the screens' own rules: names only for roles that read guests, amounts only for roles that read bills, the alert for everyone: <span class="d">D27-153</span>.</p>
+  </div>
+
+  <!-- A12.10 -->
+  <h2 id="a12-10"><span class="n">A12.10</span>In short</h2>
+  <table>
+    <thead><tr><th style="width:30%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>You need something bought</td><td>Purchasing, Ask to buy, say what it is for, Send for approval.</td><td>A9</td></tr>
+      <tr><td>You pay cash out of a drawer</td><td>Record it: Paid out (desk) or Expense (restaurant), with what it was for.</td><td>A12.7</td></tr>
+      <tr><td>Something waits on you</td><td>Approvals, Waiting. Approve, or type a note and Refuse.</td><td>A12.3</td></tr>
+      <tr><td>You asked for it</td><td>You cannot decide it. Read the answer on the request, or on the drawer's line.</td><td>A12.6</td></tr>
+      <tr><td>Who decided that?</td><td>Approvals, Everything.</td><td>A12.5</td></tr>
+      <tr><td>Refused, and still needed</td><td>Raise a new request. The first decision stays.</td><td>A12.2</td></tr>
+      <tr><td>The bell shows a number</td><td>Click it, click a notice, do the work. The notice goes by itself.</td><td>A12.8</td></tr>
+    </tbody>
+  </table>
+</section>

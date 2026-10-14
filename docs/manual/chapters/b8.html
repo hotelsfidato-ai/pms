@@ -1,0 +1,186 @@
+<!-- ══════════════════════════════ CHAPTER B8 ══════════════════════════════ -->
+<section class="chapter" id="b8">
+  <div class="chapter-head">
+    <span class="num">Chapter B8</span>
+    <h1>Tests and checks</h1>
+    <p>For the owner. What is checked before any change is called finished: each of the automatic checks (the "gates"), what each one proves and what it cannot prove, the latest counts, the habit of making a test fail before trusting it, and the check that keeps this book current.</p>
+  </div>
+
+  <!-- B8.1 -->
+  <h2 id="b8-1"><span class="n">B8.1</span>Why there are gates at all</h2>
+  <p>A change to the system is three kinds of risk at once: it may not do what was asked, it may break something it never touched, and it may work on this computer and fail on the server. Nobody can check all of that by eye, across every screen and a database built up by 211 migrations. So every change is run past the same set of automatic checks, called <b>gates</b>, and is finished only when all of them pass.</p>
+  <p>Three habits sit around the gates, and they come from your own rules (HANDOVER § 5, AGENTS.md):</p>
+  <ul>
+    <li><b>Open the screen before saying it works.</b> Most of the faults in the project's list of mistakes (<code>MEMORY.md</code>) were found by using the system, not by a gate.</li>
+    <li><b>Run the checks you quote.</b> "2,546 tests pass" is only true if they were run on that exact code, in that session.</li>
+    <li><b>A guard is not a guard until it has refused something.</b> A new test is trusted only after it has been seen to fail with the fault put back (B8.6).</li>
+  </ul>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Since 19 September nothing leaves this machine (B9.2). Before that, the same checks also ran on a GitHub server on every push, and a push was not finished until that run was green (MEMORY 300). With no pushes, that second opinion is gone: a green run of <code>scripts/gates.sh</code> on this PC is the whole of the proof, so it is never skipped and never shortened before a merge or a release.</p>
+  </div>
+
+  <!-- B8.2 -->
+  <h2 id="b8-2"><span class="n">B8.2</span>The full run: <code>scripts/gates.sh</code></h2>
+  <p>One command runs every gate, one after another, on the copy of the code it sits in:</p>
+  <ol class="steps">
+    <li><code>bash scripts/gates.sh &lt;label&gt;</code> runs everything. This is the run that counts.</li>
+    <li><code>bash scripts/gates.sh &lt;label&gt; quick</code> runs only the type checks, the strip check and the website tests (about four minutes), for checking work in progress. It says on its last line that the rest were <b>not</b> run.</li>
+  </ol>
+  <p>The full run has eight steps. The website build (B8.3) is run straight after it, by hand and again by the release script.</p>
+  <table>
+    <thead><tr><th style="width:15%">Step</th><th style="width:35%">What it does</th><th style="width:25%">What it proves</th><th>What it cannot prove</th></tr></thead>
+    <tbody>
+      <tr><td>web types</td><td>Reads the whole website's code and checks every piece fits the next (TypeScript, <code>tsc</code>).</td><td>No screen passes the wrong kind of thing to another: a date where a price belongs, a missing field.</td><td>That anything does the right thing. It also cannot see a fault that only shows when the page runs.</td></tr>
+      <tr><td>api types</td><td>The same for the server's code.</td><td>The same, for the server.</td><td>The same.</td></tr>
+      <tr><td>strip</td><td>Reads every server file the way the live server loads it (Node's "strip types" mode) and names any line it cannot load. 216 files on 9 October.</td><td>The server can start with this code.</td><td>It is not a type check, and it proves nothing about behaviour.</td></tr>
+      <tr><td>web tests</td><td>Runs the website's automatic tests (Vitest): each screen drawn with stand-in data and clicked through, and the project's own guards (B8.6).</td><td>The screens behave as their tests describe; no service reaches into another; the menu, the migrations and this book follow their rules.</td><td>That the real server answers the same way. The website tests use stand-in data, not the database.</td></tr>
+      <tr><td>api tests</td><td>Runs the server's tests against a <b>fresh database made for the run</b>, migrated and filled with the demo hotel, and thrown away afterwards, pass or fail.</td><td>Each route does what it should and refuses what it should, against a real PostgreSQL with the real rules.</td><td>That WhatsApp, email, Google, Drive, the CRS or the channel manager really answer: those are stand-ins in the tests.</td></tr>
+      <tr><td>database</td><td>Builds an empty scratch database, applies every migration from the first, then runs the database's own assertions: the core suite, one file per service, and the isolation suite.</td><td>The constraints, triggers and money rules hold (for example, the ledger only grows: a wrong line is reversed by a line of its own, never edited or deleted). The isolation suite runs <b>as the application's own login</b> and proves one hotel cannot read another's rows.</td><td>That the screens use those rules well.</td></tr>
+      <tr><td>replay</td><td>Builds a scratch database, migrates it, adds a hotel as a real database would have, then applies every migration <b>again</b>.</td><td>An update can be installed on a database that already holds data. Every deploy does exactly this.</td><td>That a particular live database has no oddity the scratch one lacks.</td></tr>
+      <tr><td>pg16</td><td>The database suite and the replay once more, on PostgreSQL 16.15, in a database of its own on this PC.</td><td>Nothing in the code needs PostgreSQL 17 (this PC's version) when the live server runs 16.15.</td><td>Anything about the server other than its database version.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="box why">
+    <h4>Why each step is there</h4>
+    <ul>
+      <li><b>strip</b>: on 8 September one line of perfectly valid code took the live API down in a restart loop after three clean builds and every test had passed, because the live server loads code in a stricter way than any test did (MEMORY 209). The server's update script now runs the same check before it restarts anything.</li>
+      <li><b>api tests on a throw-away database</b>: the tests once shared the database people were using. Clean-ups that did too little filled the demo with phantom guests; one that did too much deleted a real banquet booking somebody had just made (MEMORY 120). Each run now builds its own database and drops it.</li>
+      <li><b>database, as the application's login</b>: a test run as the database's superuser passes every privacy rule, because a superuser ignores them. The isolation suite connects as the application does, so an open door shows.</li>
+      <li><b>replay</b>: an early attempt to answer "can the migrations run twice?" was made on a real database, half-applied, and the database had to be rebuilt (MEMORY 119). Later, older migrations quietly undid newer ones on a second run (MEMORY 284, 293, 299). The replay runs on a scratch database holding a hotel, so it catches both.</li>
+      <li><b>pg16</b>: the live server runs PostgreSQL 16.15 while this PC runs 17. A backup made on 17 could not be read by 16 (MEMORY 190); a migration using something only 17 knows would stop a live update half-way. Your yes, 4 October.</li>
+    </ul>
+  </div>
+
+  <!-- B8.3 -->
+  <h2 id="b8-3"><span class="n">B8.3</span>The build, and "no test sign-in in the build"</h2>
+  <p><code>npm run build</code> compiles the website into the files Firebase serves. Its last step reads every built file and fails the build if any trace of the <b>test sign-ins</b> is there: the Owner, General Manager and Reception buttons that sign in on this PC without a password, and the guest page's development-only code display. A good build ends with <span class="msg">“✓ no test sign-in in dist (40 files checked)”</span>.</p>
+  <p>There is a second lock on the server: the API refuses to start at all when the test sign-in is switched on and it is running as production.</p>
+  <p><code>npm run build:app</code>, used for a release, does the same and writes the live API's address into the website's settings file. It refuses an address that is missing or not <code>https</code>.</p>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Your instruction of 14 September: keep the test sign-ins simple on this PC and remove them from production. A passwordless owner sign-in on the live page would let a stranger in as you; it happened once, on the live login page, before the check existed (MEMORY 193). A build that succeeds says nothing about what it contains, so the check reads the output itself.</p>
+  </div>
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>The build is <b>not</b> one of the eight steps of <code>gates.sh</code>. It is run beside it, and the release script (B9.3) builds again in the release copy and checks the result. Twice the gates were green and the website would not build (MEMORY 337, 378).</li>
+    </ul>
+  </div>
+
+  <!-- B8.4 -->
+  <h2 id="b8-4"><span class="n">B8.4</span>The latest counts</h2>
+  <p>The full run of 9 October, evening, on commit <code>74cf0ee4</code> (custom add-ons and the KOT section), as recorded in <code>CHANGELOG.md</code> and in the run's own logs on this PC:</p>
+  <table>
+    <thead><tr><th style="width:24%">Step</th><th style="width:22%">Result</th><th>Counts</th></tr></thead>
+    <tbody>
+      <tr><td>web types</td><td>clean</td><td>-</td></tr>
+      <tr><td>api types</td><td>clean</td><td>-</td></tr>
+      <tr><td>strip</td><td>clean</td><td>216 files</td></tr>
+      <tr><td>web tests</td><td>1 failed, then fixed</td><td>169 files, 1,158 tests. The one failure was a guard doing its job: a data function in the website (<code>markPrinted</code>) that no screen called any more, once Tables asked the bill printer instead (B8.6). It was deleted, and the whole website suite was run again: 169 of 169 files, exit 0.</td></tr>
+      <tr><td>api tests</td><td>green</td><td>190 files, 2,546 of 2,546 tests</td></tr>
+      <tr><td>database</td><td>green</td><td>211 migrations, all 1,578 assertions</td></tr>
+      <tr><td>replay</td><td>green</td><td>all 211 migrations re-runnable</td></tr>
+      <tr><td>pg16</td><td>green</td><td>PostgreSQL 16.15: 1,578 assertions, 211 migrations re-runnable</td></tr>
+      <tr><td>build</td><td>passes</td><td>no test sign-in in the build</td></tr>
+    </tbody>
+  </table>
+  <p>How the checks grew with the system:</p>
+  <table>
+    <thead><tr><th style="width:22%">Measured</th><th>Website tests</th><th>Server tests</th><th>Database assertions</th><th>Migrations</th></tr></thead>
+    <tbody>
+      <tr><td>15 September</td><td>197</td><td>359</td><td>588</td><td>89</td></tr>
+      <tr><td>24 September</td><td>661</td><td>1,463</td><td>1,154</td><td>138</td></tr>
+      <tr><td>1 October</td><td>870</td><td>2,068</td><td>1,311</td><td>168</td></tr>
+      <tr><td>9 October</td><td>1,158</td><td>2,546</td><td>1,578</td><td>211</td></tr>
+    </tbody>
+  </table>
+  <p>A full run takes about half an hour on this PC (the full runs of 9 October took 1,812 to 1,990 seconds; the server tests alone about 18 minutes).</p>
+
+  <!-- B8.5 -->
+  <h2 id="b8-5"><span class="n">B8.5</span>A run is judged by what it did, not what it printed</h2>
+  <ul>
+    <li><b>Each step is judged by its exit code</b>, the yes-or-no a program hands back, never by its summary line (MEMORY 274). A summary can say "all tests passed" while a whole test file failed while tidying up (MEMORY 25, 361).</li>
+    <li><b>And by its last line.</b> A check killed from outside on Windows reports "success" with its log cut short; one database step "passed" in 22 seconds that way (MEMORY 333). Each test step now names the line a passing run ends with (<span class="msg">“all 1578 assertions passed”</span>), and a run without it is marked <span class="msg">“CUT SHORT”</span> and failed.</li>
+    <li><b>The run records what it judged.</b> The first line of its progress file names the exact commit, whether it was a full or quick run, and <b>dirty</b> if the copy had changes not yet committed. The release script refuses a release unless a full, clean, green run exists for exactly the release's commit (B9.3).</li>
+    <li><b>One run at a time.</b> Several at once exhausted the machine on 18 September and a whole round produced nothing. The steps that build databases also wait their turn in a queue shared by every working copy on the machine (MEMORY 341): two copies building at once collided on the shared database logins.</li>
+    <li><b>A step that writes as it goes.</b> Each step writes a line to <code>.local\gates\progress.txt</code> as it finishes, so a run in progress can be watched. You stopped a run on 18 September because twenty minutes passed with no sign of life.</li>
+  </ul>
+
+  <!-- B8.6 -->
+  <h2 id="b8-6"><span class="n">B8.6</span>"Fails first": making a test prove itself</h2>
+  <p>A test that passes proves nothing until it has been seen to fail. So every new guard is proven the same way:</p>
+  <ol class="steps">
+    <li>Write the test, and see it pass on the fixed code.</li>
+    <li>Put the fault back: change the code to what it was, or break the one line the test is about.</li>
+    <li>Run the test. It must <b>fail</b>, and fail for the right reason.</li>
+    <li>Put the code back exactly as it was, byte for byte, and see it pass again.</li>
+  </ol>
+  <p>The changelog says, for every change, which guards were proven this way. For the work of 9 October: custom add-ons, 6 server guards and 5 screen guards; the KOT section, 7 server and 6 screen guards. One of them <b>passed with its fault put back</b>: "Print here" cleared the waiting bills in two places, so removing one proved nothing. The two were folded into one, and then the test failed as it should.</p>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Eleven guards in this project once passed with the very fault they were written for put back (MEMORY 166, 195): a test compared a number with itself, a test that inserted nothing could never find anything, a check that quietly skipped when its subject was missing. Each looked like protection and was not. A test that has failed on purpose at least once is known to be looking at the right thing.</p>
+  </div>
+
+  <h3>The guards in the website suite</h3>
+  <p>Some tests check no screen at all: they keep the code in the shape your decisions gave it.</p>
+  <table>
+    <thead><tr><th style="width:34%">Guard</th><th>What it refuses</th></tr></thead>
+    <tbody>
+      <tr><td><code>boundaries.test.ts</code></td><td>A service reaching into another's insides. Each service is used only through its front door, so a change inside the restaurant cannot quietly break finance (the service folders, 15 September).</td></tr>
+      <tr><td><code>migrationNumbers.test.ts</code></td><td>Two database changes with the same number, or a gap. The database's history is one sequence, replayed from the first on every update.</td></tr>
+      <tr><td><code>navigation.test.ts</code></td><td>Menu entries that break the naming rules: two entries with one name, a word not in sentence case.</td></tr>
+      <tr><td><code>repositories.test.ts</code> ("Rule 2b")</td><td>A data function no screen calls: a capability nobody can reach. This is the guard that failed on 9 October (B8.4).</td></tr>
+      <tr><td><code>App.test.tsx</code></td><td>A guarded address the menu does not know, which would otherwise be open to every role.</td></tr>
+      <tr><td><code>manual.test.ts</code></td><td>This book falling behind the system (B8.7).</td></tr>
+    </tbody>
+  </table>
+
+  <!-- B8.7 -->
+  <h2 id="b8-7"><span class="n">B8.7</span>The book's own check</h2>
+  <p>Your rule of 9 October: a change to a screen updates its chapter in the same commit, and a test fails when the book falls behind (<span class="d">D27-293</span>). <code>src/test/manual.test.ts</code> runs with the website tests and checks three things:</p>
+  <ol>
+    <li><b>Every menu screen of a written chapter's part is named in it.</b> Each part of the menu that has its chapter is listed in the test; the restaurant's menu (Point of sale) is covered by A8 today. A new screen in that menu fails the test until A8 says what it is.</li>
+    <li><b><code>manual.html</code> is built from the chapters as they are.</b> The book is one file per chapter; <code>docs/manual/tools/build.mjs</code> joins them. Nobody edits the joined book by hand.</li>
+    <li><b>Every picture a chapter shows exists</b> in <code>docs/manual/img</code>.</li>
+  </ol>
+  <p>Each of the three was seen to fail before it was trusted (B8.6).</p>
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>When a chapter is added or changed, check 2 fails until the book is built again. When several people write at once, only the person merging runs the build (docs/manual/WRITING.md).</li>
+      <li>Part B chapters are not tied to a menu section, so check 1 does not cover them: keeping them true is a matter of writing, not of a test.</li>
+    </ul>
+  </div>
+
+  <!-- B8.8 -->
+  <h2 id="b8-8"><span class="n">B8.8</span>What no gate can see</h2>
+  <p>The gates are necessary and they are not enough. These are the known blind spots:</p>
+  <table>
+    <thead><tr><th style="width:30%">Blind spot</th><th>What covers it instead</th></tr></thead>
+    <tbody>
+      <tr><td><b>The screen as a person sees it.</b> Faults have passed the type checks, the tests and a clean build while the page was broken.</td><td>Opening the screen on the demo hotel, every time (AGENTS.md). The manual's live runs with pictures (<span class="d">D27-293</span>).</td></tr>
+      <tr><td><b>The server is not this PC.</b> Every gate runs on Windows here. Eight faults were found in one afternoon of the first deploy (scripts that were not marked runnable on Linux, Windows-only paths, the server's security layer, a backup the older database could not read), with every check green throughout (MEMORY 187 to 193, 197).</td><td>The strip and pg16 steps, which copy two of the server's differences; the server's own readiness check (<code>preflight</code>) at every update (B9.3); a read-only look at live after a release.</td></tr>
+      <tr><td><b>The outside services.</b> WhatsApp, email, Google sign-in, Google Drive, the CRS, the leads app, the channel manager (SU) and Firebase are stand-ins in the tests.</td><td>A stand-in sender on this PC, and the first real message sent to your own phone with you watching (<span class="d">D21-29</span>). Connection health on live (B9.8).</td></tr>
+      <tr><td><b>A server route no screen calls.</b> The website has a guard for its own unused functions (B8.6); the server has none yet.</td><td>Done once by hand on 16 September (13 such routes found). Making it a test is open work (PENDING.md § 5).</td></tr>
+      <tr><td><b>Tests that pass or fail by luck.</b> A few tests have depended on the time of day or on which row came first (MEMORY 149, 150, 372); some time out only when the whole suite runs at once (MEMORY 368). The latest, a restaurant printing test that lost a race on a busy machine, was fixed on 9 October (POS-32).</td><td>Each one is fixed when it is caught, and written down. A failure is never waved through as "flaky" without a reason.</td></tr>
+      <tr><td><b>Real use.</b></td><td>The receptionist test: somebody new, alone, books, checks in, takes a payment and checks out, on live, before a hotel's first real day (<span class="d">D21-48</span>, <span class="d">D21-57</span>).</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Testing by hand, on this PC</h3>
+  <ul>
+    <li><b>The demo hotel</b>, 5 Elements Akkalkot (<code>5EL</code>), in the local database, with made-up guests, loaded so that its business date is the real day (<span class="d">D27-193</span>).</li>
+    <li><b>Two virtual printers</b> stand in for the KOT and bill printers (B9.11), so every restaurant flow can be tried with no printer.</li>
+    <li><b>The test sign-ins</b> (Owner, General Manager, Reception, and View as) let one person see each role's screens. They exist on this PC only (B8.3).</li>
+  </ul>
+
+  <div class="box watch">
+    <h4>Watch out: older numbers in other files</h4>
+    <ul>
+      <li>Several files still quote older counts, such as "212" website tests and "622 assertions" in <code>docs/briefs/README.md</code>, or the August figures in <code>START-HERE.md</code>. The counts in B8.4 are the latest run's. A count is a claim until it is run again.</li>
+      <li><code>docs/briefs/README.md</code> still says "the proof is the Action" (the GitHub run). Since 19 September that is not so: the GitHub check never runs, and the local run is the proof (B9.2).</li>
+    </ul>
+  </div>
+</section>

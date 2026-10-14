@@ -24,7 +24,34 @@ const MANUAL = join(__dirname, "..", "..", "docs", "manual");
 
 /** The menu's sections (navigation.ts keys) and the chapter that covers each. */
 const COVERS: Record<string, string> = {
+  "home": "a1",
+  /* A1.10 names all nine and says which chapter holds each (A3, Check-in, is not
+     written yet; Walk-ins and Online check-in are described in A1.10 itself). */
+  "front-desk": "a1",
+  "bookings": "a2",
+  "guests-crm": "a10",
+  "sales-marketing": "a14",
+  "across-properties": "a16",
+  "configuration": "a2",
+  "inventory": "a15",
+  "distribution": "a15",
+  "store-and-equipment": "a9",
+  "finance": "a4",
   "point-of-sale": "a8",
+  "banquet": "a13",
+  "laundry": "a13",
+  "spa": "a13",
+  "reports": "a11",
+  "system": "a12",
+  "settings-property": "a17",
+  "settings-rooms": "a17",
+  "settings-rates": "a17",
+  "settings-money": "a17",
+  "settings-lists": "a17",
+  "settings-front-desk": "a17",
+  "settings-messages": "a17",
+  "settings-people": "a17",
+  "settings-connections": "a17",
 };
 
 const chapter = (file: string) => {

@@ -1,0 +1,229 @@
+<!-- ══════════════════════════════ CHAPTER A7 ══════════════════════════════ -->
+<section class="chapter" id="a7">
+  <div class="chapter-head">
+    <span class="num">Chapter A7</span>
+    <h1>Night audit</h1>
+    <p>For the manager or the desk who closes the hotel's day. What the night audit does, the checks it shows first, what stops it and how to clear it, running it, the closed days and how one is corrected, and the reports it can send by email.</p>
+  </div>
+
+  <!-- A7.1 -->
+  <h2 id="a7-1"><span class="n">A7.1</span>What the night audit does</h2>
+  <p>The night audit closes the hotel's day. Until it runs, the <b>business date</b> stays where it is, whatever the clock says (A1.1). A person runs it, late at night, from the <span class="ui">Night audit</span> screen. It is never run by itself: a hotel that forgets simply stays on yesterday, and every screen says so.</p>
+  <p>When it runs, in one go, it:</p>
+  <ul>
+    <li>charges one night's room, with its tax, to every guest in house (not a complimentary room, a day-use stay, or a night already charged at check-in);</li>
+    <li>marks every arrival who never came as a <b>no-show</b>, and gives the room back. A no-show is charged only the retention its booking's terms set; a booking with no terms is charged nothing;</li>
+    <li>moves the business date on to the next day.</li>
+  </ul>
+  <p>It never checks anybody out, and it never decides for a person. If something only a person can answer is still open, it refuses, and says what (A7.3).</p>
+
+  <table>
+    <thead><tr><th style="width:30%">Who</th><th>What they can do</th></tr></thead>
+    <tbody>
+      <tr><td>Owner, Admin, General Manager</td><td>Read the screen, run the audit, correct a closed day (A7.5), set the report emails (A7.6).</td></tr>
+      <tr><td>Hotel Manager, Accountant, Reception</td><td>Read the screen and run the audit.</td></tr>
+      <tr><td>Revenue Manager, Viewer</td><td>Read the screen only. The Run card is shown to them without the <span class="ui">Run night audit</span> button.</td></tr>
+    </tbody>
+  </table>
+  <p><span class="ui">Night audit</span> is the first screen under <span class="ui">Reports</span> in the menu. If your menu does not show it, type “night audit” in <span class="ui">Find a screen</span> (A0.6). Its address is <code>/h/5EL/night-audit</code>.</p>
+
+  <!-- A7.2 -->
+  <h2 id="a7-2"><span class="n">A7.2</span>The checks</h2>
+  <p>The line under the heading names the day the audit is closing and the day it will open: <span class="msg">“The night audit is closing Friday, 9 October 2026 and opening Saturday, 10 October 2026.”</span> Below it, six checks, each with its count.</p>
+
+  <figure class="shot" id="fig-A7-01">
+    <img src="img/A7-01.png" alt="The Night audit screen: the day being closed, 3 to look at, and the six checks with their counts and Open links">
+    <figcaption><b>Figure A7-01.</b> Night audit: the day being closed, and the checks.</figcaption>
+    <ol class="callouts">
+      <li>The day being closed, and the day that opens</li>
+      <li>How many checks have something to look at</li>
+      <li>A yellow sign: something to look at</li>
+      <li>How many</li>
+      <li>A green tick: nothing there</li>
+      <li>Open: the screen where it is dealt with</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:28%">Check</th><th>What it counts</th><th style="width:22%">Open leads to</th></tr></thead>
+    <tbody>
+      <tr><td>Arrivals still outstanding</td><td>Bookings due today, not checked in. When the day closes, each becomes a no-show. Check in the guests who came; the rest are the audit's job. The check says <span class="msg">“An arrival left unchecked at roll-over becomes a no-show. A retention posts against it only if the booking has cancellation terms.”</span></td><td>Arrivals (A1.3)</td></tr>
+      <tr><td>Departures not yet checked out</td><td>Guests due out today, still checked in. <b>This one stops the audit</b> (A7.3).</td><td>Due out (A1.6)</td></tr>
+      <tr><td>In-house folios carrying a balance</td><td>Guests in house whose bills are not at zero. <span class="msg">“These roll forward. Nothing is wrong with that”</span>.</td><td>Folios</td></tr>
+      <tr><td>Room charges to post</td><td>The rooms the audit will charge tonight. A stay already charged for tonight (the first night is charged at check-in), a day-use stay and a complimentary room are not counted.</td><td>-</td></tr>
+      <tr><td>Rooms still marked dirty</td><td>Rooms waiting for cleaning. <span class="msg">“Not a blocker.”</span> The morning shift inherits them.</td><td>Housekeeping (A6)</td></tr>
+      <tr><td>Postings reversed today</td><td>Charges and payments reversed today. Each one is somebody correcting something: worth reading before the day closes.</td><td>Audit log</td></tr>
+    </tbody>
+  </table>
+  <p>The badge beside the heading counts the checks with a yellow sign, for example <span class="msg">“3 to look at”</span>, or says <span class="msg">“Nothing outstanding”</span>. <span class="ui">Open</span> shows only on a check that has something in it.</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Yellow is not the same as stopped.</b> Of the six checks, only <span class="ui">Departures not yet checked out</span> stops the audit. The other things that stop it are not checks at all: they are written on the Run card (A7.3).</li>
+      <li>An arrival is counted here only on the day it was due. The audit marks as no-shows every booking still waiting whose arrival day is today or earlier.</li>
+    </ul>
+  </div>
+
+  <!-- A7.3 -->
+  <h2 id="a7-3"><span class="n">A7.3</span>What stops the audit, and how to clear it</h2>
+  <p>Below the checks, the <b>Run card</b>: <span class="ui">Run the audit and roll to</span> the next day. While anything stops the audit, the reason is written on the card and <span class="ui">Run night audit</span> stays grey. The Revenue Manager and the Viewer see the card and its reasons and no button: they may not run the audit (A7.1).</p>
+
+  <figure class="shot" id="fig-A7-02">
+    <img src="img/A7-02.png" alt="The Run card with its reasons: rooms still showing due out and the till not closed; Run night audit grey; Closed days below, with no day closed yet">
+    <figcaption><b>Figure A7-02.</b> The Run card: refused, with its reasons.</figcaption>
+    <ol class="callouts">
+      <li>The day the hotel moves to</li>
+      <li>Why it cannot run yet</li>
+      <li>Run night audit: grey until nothing stops it</li>
+      <li>Closed days: every day closed here (A7.5)</li>
+    </ol>
+  </figure>
+
+  <p>Four things stop it. Each has its own sentence on the card.</p>
+  <table>
+    <thead><tr><th style="width:26%">The card says</th><th>What to do</th></tr></thead>
+    <tbody>
+      <tr><td><span class="msg">“4 rooms are still showing due out. Check them out, or extend the stay - the audit will not decide which.”</span></td><td>Open the check <span class="ui">Departures not yet checked out</span>. For each guest: if they left, settle the bill and check them out (A1.6, A5); if they are staying on, open the guest and use <span class="ui">Change dates or guests</span>.</td></tr>
+      <tr><td><span class="msg">“A front-desk drawer is still open. Count the cash and close the shift …”</span></td><td>On <span class="ui">Cashiering</span>, count the desk's cash and tap <span class="ui">Close the shift</span>.</td></tr>
+      <tr><td><span class="msg">“The till has not been closed for today. Run the day end on it first …”</span></td><td>Close the restaurant's day: <span class="ui">Close restaurant day</span> (A8.9). Only a restaurant with orders today needs it.</td></tr>
+      <tr><td><span class="msg">“This property has no GST rule for rooms …”</span></td><td>The card goes on: <span class="msg">“Set it in the GST card, under Settings → Taxes and billing or Finance → Invoices. A missing rate is not zero - the audit will not invent one.”</span> Ask whoever sets the hotel's taxes.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>To clear the guests still due out</h3>
+  <ol class="steps">
+    <li>On Night audit, tap <span class="ui">Open</span> on <span class="ui">Departures not yet checked out</span>. <span class="ui">Due out</span> opens (Figure A7-03).</li>
+    <li>The red box says how many still owe, and how much in all. Tap a guest: the panel opens on the <span class="ui">Bill</span> tab.</li>
+    <li>If the guest has left: take the payment, then check them out. Check-out unlocks when the bill reaches zero.</li>
+    <li>If the guest is staying another night: <span class="ui">Change dates or guests</span>, and move the departure.</li>
+    <li>Go back to Night audit. When nobody is left due out, the sentence goes from the card.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A7-03">
+    <img src="img/A7-03.png" alt="Due out: three guests departing, the red box 3 departures still owing ₹11,495, each guest's balance in red">
+    <figcaption><b>Figure A7-03.</b> Open on a check: the guests still due out.</figcaption>
+    <ol class="callouts">
+      <li>The guests leaving today; check-out unlocks at zero</li>
+      <li>How many still owe, and how much</li>
+      <li>What one guest still owes</li>
+    </ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A guest still due out at night either left and nobody checked them out, or is staying another night. The two lead to opposite charges, and only a person at the desk knows which, so the audit refuses and names the rooms. The two drawers are counted first because the audit states the day's takings, and money not yet counted is not final. The button is shown grey, with its reason, to everybody who may run the audit, and not shown at all to the two roles who may never run it. The screen and the server ask the same question, so they cannot disagree: <span class="d">D27-305</span>.</p>
+  </div>
+
+  <!-- A7.4 -->
+  <h2 id="a7-4"><span class="n">A7.4</span>Running the audit</h2>
+  <ol class="steps">
+    <li>Read the checks (A7.2) and clear what stops it (A7.3).</li>
+    <li>When the card shows no reason, tap <span class="ui">Run night audit</span>.</li>
+    <li>It asks first: <span class="msg">“Close Friday, 9 October 2026?”</span> with <span class="msg">“The property moves to Saturday, 10 October 2026. Tonight's room charges are posted to every guest in house and arrivals who did not come become no-shows. A closed day cannot be edited, only corrected afterwards.”</span></li>
+    <li>Tap <span class="ui">Close 9 Oct 2026</span> (the day being closed), or <span class="ui">Cancel</span>. While it works, the button reads <span class="ui">Closing the day…</span>.</li>
+    <li>A green card says <span class="msg">“Friday, 9 October 2026 is closed. The property is now operating in Saturday, 10 October 2026.”</span>, with what it did: rooms posted and their revenue, rooms given free (<span class="msg">“complimentary, not charged”</span>), and no-shows.</li>
+  </ol>
+  <p>When the restaurant sold something that day, the card also shows its day: orders, covers, the total with its tax, and each way it was paid. Under it, the two drawers side by side, never added together: <span class="ui">Front desk</span> (its shifts) and <span class="ui">Till</span> (its outlets), each with what it opened on, what was counted, and how many differences were explained. These are read from what the till and the desk already wrote; the audit adds none of it to a bill.</p>
+  <p>If the hotel has switched it on (Settings, Front desk rules, <span class="ui">The night audit sends every room with a guest staying on for its daily clean</span>), the audit also marks those rooms dirty for the new day. It starts off.</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>A closed day cannot be opened again.</b> It can only be corrected, line by line (A7.5).</li>
+      <li><b>Pressed twice, on two desks, or on a screen left open after the day was closed elsewhere?</b> The day closes once. The second press changes nothing and says, for example, <span class="msg">“9 Oct was already closed. Reload to see today.”</span> and <span class="msg">“Nothing was run again.”</span>, with the record that was made: who ran it, when, rooms posted, room revenue, no-shows.</li>
+      <li><b>No connection, no audit.</b> It closes the day for the whole property and needs the server. Wait for the line.</li>
+      <li>After the audit, other desks see the new business date the next time they open a screen (A1.1).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The audit asks first, because a closed day cannot be edited: <span class="d">D27-117</span>. A second press changes nothing and shows the record that was made: <span class="d">D17-12</span>. The first night is charged at check-in, so the audit skips a night already charged: <span class="d">D27-204</span>. The daily clean at the audit, off unless the hotel says so: <span class="d">D27-260</span>. The audit is run by a person and never scheduled: the owner's rule.</p>
+  </div>
+
+  <!-- A7.5 -->
+  <h2 id="a7-5"><span class="n">A7.5</span>Closed days, and correcting one</h2>
+  <p>Under the Run card, <span class="ui">Closed days</span> lists every night audit run at this property, newest first: <span class="ui">Day</span>, <span class="ui">Ran by</span>, <span class="ui">Closed</span>, <span class="ui">Rooms posted</span>, <span class="ui">Room revenue</span> (the room charges the audit posted, before tax) and <span class="ui">No-shows</span>. A figure the record does not hold is a dash. Until the first audit, it says <span class="msg">“No day closed yet”</span> (Figure A7-02, arrow 4).</p>
+
+  <h3>To correct a closed day (owner, Admin, GM)</h3>
+  <ol class="steps">
+    <li>Under <span class="ui">Closed days</span>, tap <span class="ui">Correct</span> on the day. Days from the 1st of last month on can be corrected; older ones stay as they are, and their <span class="ui">Correct</span> is grey.</li>
+    <li>Under <span class="ui">Charge to correct</span>, choose the charge that was wrong: a room charge, a no-show charge, a restaurant bill charged to a room, or another charge of that day.</li>
+    <li>Type <span class="ui">The right figure, before tax</span>, or tick <span class="ui">Take the charge off entirely</span>.</li>
+    <li>Type <span class="ui">Why it was wrong</span>. It is kept with your name and the time.</li>
+    <li>Tap <span class="ui">Save correction</span>. <span class="msg">“Correction saved”</span>.</li>
+  </ol>
+  <ul>
+    <li>Nothing is rewritten: the wrong charge stays on the bill, and the reversal and the right charge sit beside it, on the same day. That day's reports show the corrected figure.</li>
+    <li>A corrected day is marked <span class="ui">Corrected</span>, and its <span class="ui">Room revenue</span> shows old → new. Anybody else who reads Closed days sees <span class="ui">Corrections</span> on that day: what was changed, why, by whom.</li>
+    <li>A payment, a refund or a discount is never corrected here. A bill with a tax invoice says <span class="msg">“Issue a credit note instead.”</span>; drinks with a VAT bill say <span class="msg">“Cancel the VAT bill instead.”</span></li>
+    <li>A room charge's tax is worked out again, as the audit does; any other charge keeps the rate it was charged at.</li>
+  </ul>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The history of closed days: <span class="d">D17-13</span>. A closed day is corrected with a reason, the old and new figures both kept: <span class="d">D22-18</span>. The owner, an Admin and the GM correct: <span class="d">D24-3</span>; this month and the month before: <span class="d">D24-5</span>. Every charge may be corrected, never money: <span class="d">D25-5</span>.</p>
+  </div>
+
+  <!-- A7.6 -->
+  <h2 id="a7-6"><span class="n">A7.6</span>The reports it sends by email</h2>
+  <p>Right after the night audit closes the day, reports can go by email: the key figures in the email, the whole report as a PDF. The owner, an Admin or the GM sets them, for each hotel, in <span class="ui">Settings</span>, <span class="ui">Messages</span>, <span class="ui">Daily report emails</span>.</p>
+
+  <figure class="shot" id="fig-A7-04">
+    <img src="img/A7-04.png" alt="Daily report emails: Nothing is sent yet; Night audit report on with an empty Send to box; Manager report and Money owed off">
+    <figcaption><b>Figure A7-04.</b> Settings, Messages: Daily report emails.</figcaption>
+    <ol class="callouts">
+      <li>The Night audit report, and what it holds</li>
+      <li>On or off</li>
+      <li>Who gets it: one address a line</li>
+      <li>Another report, off to start</li>
+    </ol>
+  </figure>
+
+  <table>
+    <thead><tr><th style="width:26%">Report</th><th>What it holds</th><th style="width:14%">To start</th></tr></thead>
+    <tbody>
+      <tr><td>Night audit report</td><td>The day the audit closed: rooms charged, check-outs, sales, receipts, room and guest counts, and the restaurant.</td><td>On</td></tr>
+      <tr><td>Manager report</td><td>Revenue, payments, the ledgers, occupancy, ADR and RevPAR: the day, the month so far and the year so far.</td><td>Off</td></tr>
+      <tr><td>Money owed</td><td>The guest ledger and the city ledger: what guests and companies owe at the end of the day.</td><td>Off</td></tr>
+      <tr><td>Restaurant and stock</td><td>The restaurant's day, the closing stock in each store, and the day's wastage and breakage.</td><td>Off</td></tr>
+    </tbody>
+  </table>
+
+  <h3>To send a report</h3>
+  <ol class="steps">
+    <li>Switch the report on.</li>
+    <li>Under <span class="ui">Send to</span>, type each address on its own line. At most 20 for one report.</li>
+    <li>Tap <span class="ui">Save</span> at the foot.</li>
+  </ol>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>Nobody gets anything until an address is typed.</b> A report switched on with no address says <span class="msg">“On, but nobody gets it until an address is typed.”</span></li>
+      <li>A yellow box <span class="msg">“Nothing is sent yet”</span> means sending is not set up on the server. Nothing goes by email until it is.</li>
+      <li>A report switched on after an audit starts from the next audit.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Daily report emails, each report on or off with its own addresses, the night audit report on to start, nobody sent anything until an address is typed: <span class="d">D27-280</span>. The key figures, at most 20 addresses, and a report switched on later starting from the next audit: <span class="d">D27-282</span>.</p>
+  </div>
+
+  <!-- A7.7 -->
+  <h2 id="a7-7"><span class="n">A7.7</span>Your night audit in short</h2>
+  <table>
+    <thead><tr><th style="width:28%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>Before the audit</td><td>Restaurant: close the restaurant day. Desk: count the cash and close the shift.</td><td>A7.3</td></tr>
+      <tr><td>Open Night audit</td><td>Read the day being closed, and the checks.</td><td>A7.2</td></tr>
+      <tr><td>A guest still due out</td><td>Left: settle and check out. Staying: change the dates.</td><td>A7.3</td></tr>
+      <tr><td>An arrival still outstanding</td><td>Check in the guest who came. Leave the rest: they become no-shows.</td><td>A7.2</td></tr>
+      <tr><td>The card shows no reason</td><td>Run night audit, then Close with the date.</td><td>A7.4</td></tr>
+      <tr><td>After it</td><td>Read the green card: rooms posted, no-shows, the restaurant, the two drawers.</td><td>A7.4</td></tr>
+      <tr><td>A charge was wrong on a closed day</td><td>The owner, an Admin or the GM: Closed days, Correct, with a reason.</td><td>A7.5</td></tr>
+    </tbody>
+  </table>
+</section>

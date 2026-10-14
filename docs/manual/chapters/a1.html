@@ -3,7 +3,7 @@
   <div class="chapter-head">
     <span class="num">Chapter A1</span>
     <h1>The front desk day</h1>
-    <p>The screens reception lives in: the Dashboard to see the day, Arrivals to receive guests, In house and Due out to look after them and send them off, Rooms and Calendar to see the whole house.</p>
+    <p>The screens reception lives in: the Dashboard to see the day, Arrivals to receive guests, In house and Due out to look after them and send them off, Rooms and Calendar to see the whole house, and a guide to the whole Front desk part of the menu (A1.10).</p>
   </div>
 
   <!-- A1.1 -->
@@ -257,12 +257,12 @@
     <ul>
       <li>People who do not handle bills (the Revenue Manager, housekeeping, the kitchen manager, the till) see no Bill tab and no totals at the foot, and the guest's phone and email are blank for them.</li>
       <li>No More options at all? Your role may not change bookings.</li>
-      <li><span class="ui">Charged</span> is what is on the bill so far. Room nights are added at the night audit, so a guest who has not slept here yet may show little or nothing charged. That is not a free stay.</li>
+      <li><span class="ui">Charged</span> is what is on the bill so far. The first night's room charge is posted when the guest is checked in, and the night audit adds each later night; a guest still waiting to arrive shows nothing charged yet. That is not a free stay.</li>
     </ul>
   </div>
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>One panel instead of two copies that drifted apart, rebuilt to the owner's reference layout on 14 September: the act at the top, what is owed always in view. The amount due counts the night's room charge before the night audit posts it: <span class="d">D27-199</span>. Bills and guest contacts hidden from roles that read bookings only: <span class="d">D27-143</span>. Each act offered only to a role the server allows: <span class="d">D24-27</span>.</p>
+    <p>One panel instead of two copies that drifted apart, rebuilt to the owner's reference layout on 14 September: the act at the top, what is owed always in view. The amount due counts tonight's room charge before the night audit posts it: <span class="d">D27-199</span>. The first night is posted at check-in, and the night audit never posts it twice: <span class="d">D27-204</span>. Bills and guest contacts hidden from roles that read bookings only: <span class="d">D27-143</span>. Each act offered only to a role the server allows: <span class="d">D24-27</span>.</p>
   </div>
 
   <!-- A1.5 -->
@@ -354,17 +354,44 @@
     <ol class="callouts"><li>Settle and check out</li><li>The bill</li><li>What is still owed</li></ol>
   </figure>
 
+  <h3>If the guest leaves after check-out time</h3>
+  <p>The hotel's check-out time is set on Times and rules (A17.11), for example 11:00. A guest who leaves on their departure date, or after it, later than that is a late departure, and it is written down. The window comes up when you click <span class="ui">Check out</span>, not before.</p>
+  <ol class="steps">
+    <li>Click <span class="ui">Check out</span> on the guest's Bill tab. If it is a late departure, the window <span class="ui">Leaving after check-out time</span> opens, with the guest and the room. Its yellow note starts <span class="msg">“Check-out here is 11:00.”</span></li>
+    <li>Type <span class="ui">Why</span>. It cannot be left empty: a flight time, a manager's say-so, a room not ready on arrival.</li>
+    <li>Read the line under it. Where the hotel charges for a late departure: <span class="msg">“₹1,000 will be added to the folio. A manager can waive it - that is a decision about money and it is theirs to make.”</span> Where it does not: <span class="msg">“This property does not charge for a late departure, so nothing will be added. It is still recorded.”</span> The owner, the GM and a group administrator instead have a tick, <span class="ui">Waive the ₹1,000 charge</span>: their decision, recorded against their name, and the late departure is still written down.</li>
+    <li>Click <span class="ui">Check out</span>. The late check-out charge, with its GST, goes on the bill under Room before the balance is looked at. If that leaves something owed, the window closes with <span class="msg">“Recorded - now settle the bill”</span> and the amount. Settle it on the Bill tab (A4.7), then click <span class="ui">Check out</span> again.</li>
+  </ol>
+  <p>The second click does not ask again and charges nothing more. A late departure is recorded once for a stay: its reason, its charge or its waiver.</p>
+  <p>A guest who leaves <b>before</b> the departure date is leaving early, whatever the hour: the window never comes up and no late fee is charged. The date that counts is the hotel's business date (A1.1), not the clock's.</p>
+
+  <figure class="shot" id="fig-A1-16">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-16 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/in-house/due-out</code>, click a guest leaving on the business date whose bill is settled, then click <span class="ui">Check out</span></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Set up</dt><dd>A made-up guest (“A1 Test …”) due out today, nothing owed; a late check-out fee set on Settings › Money › Extra charges; the computer's clock past the check-out time.</dd>
+        <dt>Arrows</dt><dd>1 → the yellow note “Check-out here is …”; 2 → the Why box; 3 → the line about the charge (“… will be added to the folio. A manager can waive it …”); 4 → the Check out button of the window</dd>
+        <dt>File</dt><dd><code>img/A1-16.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-16.</b> Leaving after check-out time: the reason, and what it costs.</figcaption>
+    <ol class="callouts"><li>The hotel's check-out time</li><li>Why: required</li><li>The charge, and who may waive it</li><li>Check out</li></ol>
+  </figure>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
       <li>Check-out stays greyed out, with its reason, until the balance is zero. This is on purpose.</li>
-      <li>A late check-out or an early departure: chapter A5.</li>
+      <li>An early departure: chapter A5.</li>
       <li>Nobody leaving: <span class="msg">“Nobody departing today. Every room stays another night.”</span></li>
     </ul>
   </div>
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The Due out tile and list show what departing guests still owe, to the people who see money: <span class="d">D27-243</span>, <span class="d">D27-143</span>. Reception's card puts it in one line: “Open the guest, go to Bill - Check out opens once nothing is owed.” (Start here, the owner, 15 September.)</p>
+    <p>The Due out tile and list show what departing guests still owe, to the people who see money: <span class="d">D27-243</span>, <span class="d">D27-143</span>. Reception's card puts it in one line: “Open the guest, go to Bill - Check out opens once nothing is owed.” (Start here, the owner, 15 September.) A late departure is asked only on or after the departure date and recorded once, so a guest who paid after it is not asked or charged again: <span class="d">D27-314</span>.</p>
   </div>
 
   <!-- A1.7 -->
@@ -569,4 +596,75 @@
     </tbody>
   </table>
   <p>Before you start, look at the Dashboard (A1.2): the four tiles tell you what is waiting. If the yellow business-date line is showing (A1.1), the days before have not been closed yet; the line says where they are closed.</p>
+
+  <!-- A1.10 -->
+  <h2 id="a1-10"><span class="n">A1.10</span>The Front desk part of the menu</h2>
+  <p>The <span class="ui">Front desk</span> section of the menu holds nine screens. Where each one is described:</p>
+  <table>
+    <thead><tr><th style="width:22%">Screen</th><th>What it is</th><th style="width:14%">Section</th></tr></thead>
+    <tbody>
+      <tr><td><span class="ui">Arrivals</span></td><td>Who is coming: <span class="ui">Today</span> and <span class="ui">Upcoming</span>, with Check in</td><td>A1.3</td></tr>
+      <tr><td><span class="ui">In house</span></td><td><span class="ui">In house now</span> and <span class="ui">Due out</span>, each guest's balance</td><td>A1.5, A1.6</td></tr>
+      <tr><td><span class="ui">Walk-ins</span></td><td>The record of guests taken at the desk without a booking</td><td>below, A2.5</td></tr>
+      <tr><td><span class="ui">Online check-in</span></td><td>What guests sent from their own page, waiting for the desk</td><td>below</td></tr>
+      <tr><td><span class="ui">Housekeeping</span></td><td>The room board, rooms given to a housekeeper, clean and inspected</td><td>A6.2 to A6.4</td></tr>
+      <tr><td><span class="ui">Work orders</span></td><td>What needs fixing, from report to done</td><td>A6.8</td></tr>
+      <tr><td><span class="ui">Guest requests</span></td><td>What a guest in house asks for, sent to the team it is for</td><td>A6.9</td></tr>
+      <tr><td><span class="ui">Wake-up calls</span></td><td>Calls to make, on the hotel's clock</td><td>A6.10</td></tr>
+      <tr><td><span class="ui">Lost property</span></td><td>What was found, kept until it goes back to its owner or is disposed of</td><td>A6.11</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Walk-ins</h3>
+  <p>A record, not a form. The heading says <span class="msg">“Guests taken at the desk without a booking.”</span> with how many came today, and a count of those on record. Each row is a stay with source <span class="ui">Walk-in</span>: room, guest, type, plan, arrival, departure, nights, status and rate, newest arrival first, with Check in where it is still to do. Nothing is entered here. The box <span class="ui">Take a walk-in from the Calendar</span> says how: <span class="msg">“Click any empty cell on the chart. The room and the night are already chosen by the time the form opens”</span>, with <span class="ui">Open Calendar</span> beside it. Taking a walk-in is A2.5. With none yet: <span class="msg">“No walk-ins on record”</span>.</p>
+
+  <figure class="shot" id="fig-A1-17">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-17 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/walk-ins</code></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the line under the heading (“Guests taken at the desk without a booking. …”); 2 → the box “Take a walk-in from the Calendar” with Open Calendar; 3 → a row of the list</dd>
+        <dt>File</dt><dd><code>img/A1-17.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-17.</b> Walk-ins: the record, and how one is taken.</figcaption>
+    <ol class="callouts"><li>How many today, and the rule</li><li>Take a walk-in from the Calendar</li><li>A walk-in on record</li></ol>
+  </figure>
+
+  <h3>Online check-in</h3>
+  <p>A guest checks in from their own page (A10.7 says how the link reaches them). What they send waits here for a person, in three parts.</p>
+  <ol class="steps">
+    <li><b>Details waiting to be checked.</b> Each entry shows the guest, the booking's reference and when it was sent, then what they typed: ID type and number, a passport's expiry, a visa, the address. Look at the ID in your hand, then click <span class="ui">Confirm against the ID</span>: only then does it reach the guest's record and Form C, and the entry leaves the list with <span class="msg">“Confirmed”</span>. If it is not right, click <span class="ui">Not right - take them at the desk</span> and take the guest's details at check-in as usual. Empty: <span class="msg">“Nothing waiting”</span>.</li>
+    <li><b>Requests.</b> A spa treatment or a laundry bag a guest asked for, where the hotel has them switched on. The (i) says <span class="msg">“Book them on the spa's or the laundry's own screen, then mark them done here.”</span> This screen books nothing; click <span class="ui">Done</span> or <span class="ui">Declined</span>. Empty: <span class="msg">“No requests”</span>.</li>
+    <li><b>Room cards.</b> One card for each room, with a QR code. The (i) says <span class="msg">“One card per room. A guest scans it and a code goes to the phone on their booking. Printing a new card stops the old one at once.”</span> Each room shows <span class="msg">“No card yet”</span> or <span class="msg">“Card printed”</span> with its date. Click <span class="ui">Print a card</span> (or <span class="ui">Print a new card</span>), or <span class="ui">Print cards for every room</span>, which asks <span class="msg">“Print cards for every room?”</span> and warns <span class="msg">“Every card already in a room stops working the moment this is pressed. Put the new ones out straight away.”</span> The sheet then opens: <span class="msg">“These cards are shown once. Print them now - they cannot be shown again, only replaced.”</span> Click <span class="ui">Print</span>, then <span class="ui">Done</span>. Four cards fit an A4 page, each with the hotel, the room, the QR code and <span class="msg">“Scan to check in.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A1-18">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A1-18 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd><code>/h/5EL/online-checkin</code></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → “Details waiting to be checked” (or “Nothing waiting”); 2 → Requests; 3 → Room cards, one room's row with Print a card; 4 → Print cards for every room</dd>
+        <dt>File</dt><dd><code>img/A1-18.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A1-18.</b> Online check-in at the desk.</figcaption>
+    <ol class="callouts"><li>Details waiting to be checked</li><li>Requests</li><li>A room's card</li><li>Print cards for every room</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Printing a card is making a card: the card is shown once, so the old one stops at the same moment. Print only when the card is to go into the room.</li>
+      <li>A guest's details are not on their record until somebody has confirmed them against the ID.</li>
+    </ul>
+  </div>
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Everything the guest sends is a submission that the desk confirms against the ID, under the clerk's name: <span class="d">D21-8</span>. A request is confirmed by the desk and booked on the spa's or laundry's own screen: <span class="d">D21-9</span>. One fixed card per room, finding whoever is checked in there now: <span class="d">D21-7</span>; a reprint stops the old card at once: <span class="d">D21-16</span>; the system prints a sheet and the owner chooses how it is printed: <span class="d">D21-62</span>.</p>
+  </div>
 </section>

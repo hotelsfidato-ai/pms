@@ -1,0 +1,595 @@
+<!-- ══════════════════════════════ CHAPTER A4 ══════════════════════════════ -->
+<section class="chapter" id="a4">
+  <div class="chapter-head">
+    <span class="num">Chapter A4</span>
+    <h1>The guest's bill</h1>
+    <p>For reception, the general manager and the accountant. How to read a guest's bill, post a charge, take a wrong one off, correct a charge or the rate, take a payment, split the bill with a company, print the interim bill, run your cash drawer, and what happens after check-out: the tax invoice and the credit note.</p>
+  </div>
+
+  <!-- A4.1 -->
+  <h2 id="a4-1"><span class="n">A4.1</span>Where the money is: the Finance screens</h2>
+  <p>At the desk, a guest's money is the <b>bill</b>: the <span class="ui">Bill</span> tab of the guest's panel (A4.2). In Finance the same thing is called a <b>folio</b>. The <span class="ui">Finance</span> part of the menu holds these screens. You see the ones your role uses; reception's menu shows <span class="ui">Cashiering</span>, and reaches the others with <span class="ui">Find a screen</span> (Ctrl K, A0).</p>
+  <table>
+    <thead><tr><th style="width:20%">Screen</th><th style="width:26%">Who uses it</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td>Folios</td><td>The GM, the accountant; reception by Find a screen</td><td>Every bill still owing, or owed back. Click a guest to open their bill.</td></tr>
+      <tr><td>Invoices</td><td>The accountant, the GM</td><td>Departed stays ready to bill: the numbered tax invoice, the credit note, the VAT bills for alcohol (A4.11).</td></tr>
+      <tr><td>Payments</td><td>The accountant, the GM</td><td>Every receipt against a bill, newest first. Reversed receipts stay on the list.</td></tr>
+      <tr><td>Cashiering</td><td>Reception, and whoever takes cash at the desk</td><td>Your own cash drawer: what you took, money in and out, the count, the hand-over (A4.10).</td></tr>
+      <tr><td>Cash deposits</td><td>The owner, an administrator, the GM, the accountant, the Viewer</td><td>Each closed day's cash to deposit, what was banked, and who verified it.</td></tr>
+      <tr><td>Company accounts</td><td>The desk and the accountant</td><td>What each company or booking site owes and paid. <span class="ui">Record payment</span> when a company pays (A4.8).</td></tr>
+      <tr><td>Form III</td><td>Whoever checks guests in</td><td>Foreign guests reported to the FRRO (chapter A3).</td></tr>
+      <tr><td>Online payments</td><td>The owner, administrators, the GM</td><td>Marked <span class="msg">“Not built yet”</span>: a page saying what it will do.</td></tr>
+    </tbody>
+  </table>
+
+  <figure class="shot" id="fig-A4-01">
+    <img src="img/A4-01.png" alt="The Folios screen: Outstanding, Overpaid and Net position, the overpaid line, and the list of open bills">
+    <figcaption><b>Figure A4-01.</b> Folios: every open bill.</figcaption>
+    <ol class="callouts">
+      <li>Folios, under Finance in the menu</li>
+      <li>Outstanding: what guests owe, and on how many bills</li>
+      <li>Overpaid: money owed back to guests</li>
+      <li>Overpaid guests come first: <span class="msg">“Nobody chases these, so they sort first.”</span></li>
+      <li>A guest. Click the row to open their bill</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A4-02">
+    <img src="img/A4-02.png" alt="The Finance part of the menu: Folios, Invoices, Payments, Cashiering, Cash deposits, Company accounts, Form III and Online payments">
+    <figcaption><b>Figure A4-02.</b> The Finance part of the menu, as the GM sees it.</figcaption>
+    <ol class="callouts">
+      <li>Cashiering: your cash drawer (A4.10)</li>
+      <li>Cash deposits: the cash banked each day</li>
+      <li>Company accounts: what companies and booking sites owe (A4.8)</li>
+      <li>Form III: foreign guests' reports (A3)</li>
+      <li>Online payments: not built yet</li>
+    </ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>“Bill” at the desk and “folio” in Finance are the owner's words (15 September). A balance in either direction is real: a guest overpaid is money the hotel owes, and it is shown, never as zero.</p>
+  </div>
+
+  <!-- A4.2 -->
+  <h2 id="a4-2"><span class="n">A4.2</span>Reading the guest's bill</h2>
+  <h3>To open a guest's bill</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">In house</span> and click the guest. Their panel opens on the right.</li>
+    <li>Click the <span class="ui">Bill</span> tab. (The orange <span class="ui">Settle and check out</span> at the top of the panel opens the same tab.) From Folios, a guest opens straight on the bill.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A4-03">
+    <img src="img/A4-03.png" alt="The Bill tab of a guest two nights in room 305: Due, the first night posted, Charges to come, and Charged, Paid and Due at the foot">
+    <figcaption><b>Figure A4-03.</b> The Bill tab just after check-in, for a stay of two nights.</figcaption>
+    <ol class="callouts">
+      <li>Due: what the guest owes, with the nights still to come counted</li>
+      <li>A posted line: the first night, with its date, what it is, and who posted it</li>
+      <li>Charges to come: the nights not posted yet, their GST, and what will be due once they are</li>
+      <li>The foot of the panel: Charged (posted so far, with tax), Paid, and Due</li>
+    </ol>
+  </figure>
+
+  <ul>
+    <li><b>The first night is posted at check-in, each later night by the night audit.</b> Until then, the nights to come are shown in the dashed box, at the agreed rate with their GST, and counted in <span class="ui">Due</span>. Any advance and anything paid are counted too.</li>
+    <li>If no GST rule covers the room's rate, the box shows a dash, never a figure the system guessed.</li>
+    <li>When no nights are to come, the top shows <span class="ui">Balance</span>, marked <span class="ui">Outstanding</span>, <span class="ui">Overpaid</span> or <span class="ui">Settled</span>.</li>
+    <li><b>The bill is in sections</b>: <span class="ui">Room</span>, <span class="ui">Restaurant</span>, <span class="ui">Bar</span> (alcohol, under VAT), then <span class="ui">Other charges</span>. Each line shows its amount before tax; each section has its subtotal and its tax. The early check-in and late check-out fees charged when the guest checks in early or leaves late sit under Room.</li>
+    <li>Under the sections: <span class="ui">Total charges</span>, then <span class="ui">Payments received</span>, then the last row: what is due.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A4-04">
+    <img src="img/A4-04.png" alt="The foot of the bill: Total charges, Due, the buttons Add charge, Settle, Interim bill and Split the bill, and Check out with its reason">
+    <figcaption><b>Figure A4-04.</b> The foot of the bill: its buttons, and Check out with the reason it is not open yet.</figcaption>
+    <ol class="callouts">
+      <li>Total charges: everything posted, with tax</li>
+      <li>Add charge (A4.3)</li>
+      <li>Settle: take a payment (A4.7). Orange while money is owed</li>
+      <li>Interim bill: print the bill as it stands (A4.9)</li>
+      <li>Split the bill: a second bill, for a company (A4.8)</li>
+      <li>Why Check out is not open yet: <span class="msg">“₹3,884 is still owed on this bill.”</span></li>
+    </ol>
+  </figure>
+
+  <p>The bill's one orange button is the next step: <span class="ui">Settle</span> while money is owed, then <span class="ui">Check out</span> once nothing is (chapter A5). A button you may not use is not offered; one that cannot be used yet is greyed, and says why when you point at it.</p>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The headline counts the nights still to come, so the desk sees what is owed from check-in: <span class="d">D27-187</span>, <span class="d">D27-199</span>. The bill in sections, the same on the screen and on paper: <span class="d">D27-200</span>; the early and late fees under Room: <span class="d">D27-223</span>. Roles that do not handle money do not see the Bill tab: <span class="d">D27-143</span>.</p>
+  </div>
+
+  <!-- A4.3 -->
+  <h2 id="a4-3"><span class="n">A4.3</span>Posting a charge</h2>
+  <h3>To post a charge</h3>
+  <ol class="steps">
+    <li>On the Bill tab, click <span class="ui">Add charge</span>. The window <span class="ui">Post a charge</span> names the room and the guest.</li>
+    <li>If the hotel keeps a priced list of extra charges, <span class="ui">From the hotel's list</span> comes first: choosing one fills the words, the price and the category. Each can still be changed.</li>
+    <li>Choose the <span class="ui">Category</span>: Room posting, Food, Beverages, Late check-out fee, Early check-in fee, Extra person fee, Laundry or Miscellaneous.</li>
+    <li>Type the <span class="ui">Description</span>: the words the guest reads on the bill (“Laundry, 3 shirts”).</li>
+    <li>Type the <span class="ui">Amount</span>, before tax.</li>
+    <li>Leave <span class="ui">Taxable</span> ticked. It shows the GST rate this amount carries, and the box under it the tax, split CGST and SGST, and the total. Untick it only for a charge that bears no GST.</li>
+    <li>Click <span class="ui">Post charge</span>. The message <span class="msg">“Charge posted”</span> gives the amount with tax and the room.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A4-05">
+    <img src="img/A4-05.png" alt="The Post a charge window: Category Laundry, Description, Amount 250, Taxable - GST 5%, the tax split CGST and SGST, and Post charge">
+    <figcaption><b>Figure A4-05.</b> Post a charge.</figcaption>
+    <ol class="callouts">
+      <li>Category</li>
+      <li>Description: the words on the bill</li>
+      <li>Amount, before tax</li>
+      <li>Taxable, with the GST rate this amount carries</li>
+      <li>The tax, split CGST and SGST</li>
+      <li>Post charge</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A4-06">
+    <img src="img/A4-06.png" alt="The bill with a Restaurant section (Two coffees, room service) and Other charges (Laundry, 3 shirts and Minibar - water), each line with its date, category and who posted it">
+    <figcaption><b>Figure A4-06.</b> The bill in sections, each line with who posted it.</figcaption>
+    <ol class="callouts">
+      <li>The new line: its words and its amount before tax; under it the date, the category and who posted it</li>
+      <li>Food and Beverages go under Restaurant</li>
+      <li>Laundry and the rest go under Other charges</li>
+      <li>Reverse: take a line off (A4.4)</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>No GST rule, no charge.</b> If the hotel has not set the GST rule, Taxable shows <span class="msg">“GST -”</span> and the charge is refused with the reason. A missing rate is not zero; somebody sets it first (Finance, Invoices, or Settings).</li>
+      <li><span class="ui">Post charge</span> stays off until there is a description and an amount above zero. To take money off a bill, reverse the charge it corrects (A4.4); a charge is never a minus figure.</li>
+      <li>One press is one charge: the button waits while the charge is sent.</li>
+      <li><b>A company over its credit limit:</b> the window says so in a sentence. The owner, an administrator or the GM can post it anyway with a reason (<span class="ui">Allow, with reason</span>); anybody else asks one of them.</li>
+      <li>The bill has no discount button. A lower room price is a manager's <span class="ui">Change rate</span> (A4.6).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Everything posted at the desk carries the room's GST rule for that amount, and the window shows that rate before you post, so the bill never has a rate nobody set. Each line names the person signed in when it was posted. Over a company's credit limit only with a manager's reason: <span class="d">D27-275</span>.</p>
+  </div>
+
+  <!-- A4.4 -->
+  <h2 id="a4-4"><span class="n">A4.4</span>Taking a wrong charge off: Reverse</h2>
+  <p>A charge is never edited or deleted at the desk. A wrong one is <b>reversed</b>: it stays on the bill, struck through, and the reversal is its own line.</p>
+  <h3>To reverse a charge</h3>
+  <ol class="steps">
+    <li>Click the curved arrow at the end of the line (Figure A4-06, arrow 4).</li>
+    <li>The window <span class="ui">Reverse this charge?</span> names the line and its amount with tax.</li>
+    <li>Type <span class="ui">Why</span>. It is required. If the hotel has set ready reasons, they show under the box: click one to use it.</li>
+    <li>Click <span class="ui">Reverse</span> (<span class="ui">Keep it</span> leaves the line as it is). The message: <span class="msg">“Posting reversed - The reversal is its own line - nothing was edited.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A4-07">
+    <img src="img/A4-07.png" alt="The Reverse this charge? window for Minibar - water, with the reason typed and the red Reverse button">
+    <figcaption><b>Figure A4-07.</b> Reverse this charge?</figcaption>
+    <ol class="callouts">
+      <li>Reverse this charge? with the line and its amount, tax included</li>
+      <li>Why: required. It is kept on the reversal's line; the guest's bill never shows it</li>
+      <li>Reverse</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A4-08">
+    <img src="img/A4-08.png" alt="Minibar - water struck through, and under it the red line Reversal - Minibar - water with the reason">
+    <figcaption><b>Figure A4-08.</b> Reversed: the line struck through, the reversal its own line.</figcaption>
+    <ol class="callouts">
+      <li>The wrong line stays, struck through</li>
+      <li>The reversal, in red, with the reason after “why:”. The subtotal and the tax come down by itself</li>
+    </ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A line is reversed <b>once</b>, and a reversal cannot itself be reversed. Post the charge again if it was right after all.</li>
+      <li>A line from a day the night audit has closed: <span class="msg">“This day is closed - correct it on Closed days.”</span> (chapter A7).</li>
+      <li>Once a tax invoice stands on the bill: <span class="msg">“This bill has tax invoice … Only a credit note corrects it now.”</span> (A4.11).</li>
+      <li><b>A payment</b> is reversed only by the owner, an administrator, the GM or the accountant. Its window, <span class="ui">Reverse this payment?</span>, says the receipt stays on the bill, struck through, and the money is owed again.</li>
+      <li>A greyed arrow cannot be used: point at it to read why.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The bill only ever grows: what was posted stays, so anyone can see what happened and who did it. Reversing asks first, with a reason: <span class="d">D27-117</span>. Reception reverses charges; a payment only the four above: <span class="d">D27-125</span>.</p>
+  </div>
+
+  <!-- A4.5 -->
+  <h2 id="a4-5"><span class="n">A4.5</span>A manager corrects a charge</h2>
+  <p>For the owner, an administrator and the GM. Their bill has a <b>pencil</b> on each charge: change its price, its words, or both, with a reason, in one step.</p>
+
+  <figure class="shot" id="fig-A4-09">
+    <img src="img/A4-09.png" alt="The GM's bill: a pencil and a reverse arrow on Laundry, 3 shirts and on Two coffees, room service; none on the reversed lines">
+    <figcaption><b>Figure A4-09.</b> A manager's bill: a pencil on each charge.</figcaption>
+    <ol class="callouts">
+      <li>The pencil: Edit (the owner, an administrator, the GM)</li>
+      <li>Reverse, as reception has it</li>
+    </ol>
+  </figure>
+
+  <h3>To correct a charge</h3>
+  <ol class="steps">
+    <li>Click the pencil on the line. The window <span class="ui">Edit this charge</span> names it and its amount with tax.</li>
+    <li>Change the <span class="ui">Words</span>, the <span class="ui">Price before tax</span>, or both. The tax stays at the rate it was charged.</li>
+    <li>Type <span class="ui">Why</span>. It is required, and kept on the reversed line; the guest's bill never shows it.</li>
+    <li>Click <span class="ui">Correct the charge</span>. The message: <span class="msg">“Charge corrected - The old line is reversed with the reason, and the corrected one posted.”</span></li>
+  </ol>
+
+  <figure class="shot" id="fig-A4-10">
+    <img src="img/A4-10.png" alt="The Edit this charge window for Laundry, 3 shirts: Words, Price before tax 200, Why, and Correct the charge">
+    <figcaption><b>Figure A4-10.</b> Edit this charge.</figcaption>
+    <ol class="callouts">
+      <li>Words: what the line says</li>
+      <li>Price before tax</li>
+      <li>Why: required</li>
+      <li>Correct the charge</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A4-10b">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A4-10b · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>The bill after <span class="ui">Correct the charge</span> in Figure A4-10, scrolled to the reversal</dd>
+        <dt>Sign in as</dt><dd>General Manager</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the line “Reversal - Laundry, 3 shirts”; 2 → the message “Charge corrected”</dd>
+        <dt>File</dt><dd><code>img/A4-10b.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A4-10b.</b> Corrected: the old line reversed with the reason, the new one posted.</figcaption>
+    <ol class="callouts"><li>The old line's reversal, with the reason</li><li>The message</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>No pencil on a payment, a reversal, or a line already reversed: there is nothing to edit.</li>
+      <li>The pencil is greyed on a day the night audit closed (<span class="msg">“This day is closed - correct it on Closed days.”</span>) and once a tax invoice stands on the bill (a credit note corrects it then).</li>
+      <li>A room night: only its price changes. <span class="msg">“A room night's words count its nights, so only its price changes.”</span> Its tax follows the room's slab on the new price.</li>
+      <li>Drinks that already have a VAT bill are refused until that VAT bill is cancelled.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The owner, an administrator and the GM may correct a charge; the old line stays, reversed with the reason, and the corrected one is posted in the same step: <span class="d">D27-157</span>, <span class="d">D27-162</span>.</p>
+  </div>
+
+  <!-- A4.6 -->
+  <h2 id="a4-6"><span class="n">A4.6</span>Changing the rate</h2>
+  <p>Also for the owner, an administrator and the GM: <span class="ui">Change rate</span>, after the other buttons, gives the whole stay a new rate a night.</p>
+
+  <figure class="shot" id="fig-A4-09b">
+    <img src="img/A4-09b.png" alt="Change rate, under Add charge, Settle, Interim bill and Split the bill">
+    <figcaption><b>Figure A4-09b.</b> Change rate, beside the other buttons.</figcaption>
+    <ol class="callouts"><li>Change rate (the owner, an administrator, the GM)</li></ol>
+  </figure>
+
+  <h3>To change the rate</h3>
+  <ol class="steps">
+    <li>Click <span class="ui">Change rate</span>. The window <span class="ui">Change the rate</span> names the guest and the rate now.</li>
+    <li>Type the <span class="ui">New rate a night</span>, before tax. The room's GST slab follows it.</li>
+    <li>If the figure you typed already includes GST, tick <span class="ui">Includes GST</span>. The window then shows how it splits, for example <span class="msg">“₹… a night + ₹… GST (5%).”</span></li>
+    <li>Type <span class="ui">Why</span>. It is kept with every night it corrects.</li>
+    <li>Click <span class="ui">Change the rate</span>. Nights already charged are corrected to it, with this reason (a closed day's on Closed days); nights still to come are charged at it. The message <span class="msg">“Rate changed”</span> says how many charged lines were corrected.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A4-11">
+    <img src="img/A4-11.png" alt="The Change the rate window: New rate a night 3500, Includes GST, the explanation, Why, Keep it and Change the rate">
+    <figcaption><b>Figure A4-11.</b> Change the rate (shown here, not saved: Keep it was clicked).</figcaption>
+    <ol class="callouts">
+      <li>New rate a night, before tax</li>
+      <li>Includes GST: tick it when the figure you typed includes GST</li>
+      <li>Why: kept with every night it corrects</li>
+      <li>Change the rate: the orange button at the foot of the window, beside Keep it (in this picture the arrow is drawn at the top right, off its target)</li>
+    </ol>
+  </figure>
+  <!-- A4-11 arrow 4 was drawn on the panel's corner, not on the button (shots/a4.mjs: "css:[role=dialog] button:last-of-type"); the picture is to be retaken. -->
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>All or nothing.</b> If one charged night cannot be corrected, nothing changes and the message names that night.</li>
+      <li>Only a booking still to come or a guest in the house changes rate. After check-out, a bill is corrected on Closed days or by a credit note.</li>
+      <li>Before check-in, the same window opens from the guest panel's <span class="ui">More options</span>, <span class="ui">Change rate</span>: it changes only the agreed rate, since nothing is charged yet.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Change rate for the same three, nights already posted corrected through the Closed days correction where the day is closed: <span class="d">D27-157</span>, <span class="d">D27-162</span>. A rate that includes GST is split by the room's slab before it is kept: <span class="d">D27-199</span>.</p>
+  </div>
+
+  <!-- A4.7 -->
+  <h2 id="a4-7"><span class="n">A4.7</span>Taking a payment: Settle</h2>
+  <h3>To take a payment</h3>
+  <ol class="steps">
+    <li>On the Bill tab, click <span class="ui">Settle</span>. The window <span class="ui">Settle bill</span> says what is outstanding, and whose bill it is.</li>
+    <li>On a stay with two bills, choose <span class="ui">Which bill</span> (A4.8). One bill is settled at a time.</li>
+    <li>Choose the <span class="ui">Method</span>. The list is the hotel's own ways of paying (Settings); the hotel's default is chosen first. Every hotel started with Cash, UPI, Credit Card, Debit Card and Bill to company.</li>
+    <li>The <span class="ui">Amount</span> is filled in with what is owed. Change it for a part payment.</li>
+    <li>Check <span class="ui">Outstanding</span>, <span class="ui">Paying</span> and <span class="ui">Remaining</span>, and click <span class="ui">Take payment</span>. The message names the amount received and the method.</li>
+  </ol>
+  <p>The payment shows under <span class="ui">Payments received</span>: <span class="msg">“Received - Cash”</span>, or for Bill to company <span class="msg">“Transferred to city ledger”</span>. Cash goes into <b>your</b> drawer, which opens by itself with your first cash (A4.10). When nothing is owed, <span class="ui">Check out</span> opens (chapter A5).</p>
+
+  <figure class="shot" id="fig-A4-16">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A4-16 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>A4 Test Kulkarni's Bill tab, the Guest bill, then <span class="ui">Settle</span>, Method Cash</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the title “Settle bill”; 2 → Method; 3 → the Amount box; 4 → Remaining; 5 → Take payment</dd>
+        <dt>File</dt><dd><code>img/A4-16.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A4-16.</b> Settle bill: the guest's own bill, in cash.</figcaption>
+    <ol class="callouts"><li>Settle bill</li><li>Method</li><li>Amount</li><li>Remaining after this payment</li><li>Take payment</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A4-17">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A4-17 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>The same bill after <span class="ui">Take payment</span>, on <span class="ui">Everything</span>, scrolled to Payments received</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → PAYMENTS RECEIVED; 2 → the line “Received - Cash”; 3 → the line “Transferred to city ledger”; 4 → the message</dd>
+        <dt>File</dt><dd><code>img/A4-17.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A4-17.</b> Paid: both bills settled.</figcaption>
+    <ol class="callouts"><li>Payments received</li><li>The cash payment</li><li>The company's bill, sent to its account</li><li>The message</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li><b>More than the bill:</b> the window says <span class="msg">“This is ₹… more than the bill; it will be held as the guest's credit.”</span> <span class="ui">Take payment</span> stays off until you tick <span class="ui">Hold it as the guest's credit</span>.</li>
+      <li><b>Cash above ₹1,00,000 at once</b> asks for the <span class="ui">Guest's PAN</span>, or the tick <span class="ui">No PAN: Form 97 taken</span>. Cash of ₹2,00,000 or more from one guest is refused; take the rest another way.</li>
+      <li><b>A company's bill</b> (A4.8) goes <span class="ui">Bill to company</span> only if the company is allowed credit. Otherwise the message says it is not: take the payment another way, or ask the owner, an administrator or the GM to allow credit on its record.</li>
+      <li>One press is one payment. A wrong payment is reversed only by the owner, an administrator, the GM or the accountant (A4.4).</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>More than the bill is held as the guest's credit, once the desk ticks it: <span class="d">D27-4</span>, <span class="d">D27-11</span>. The PAN or Form 97 above ₹1,00,000 in cash (Income-tax Rule 159): <span class="d">D25-40</span>. Cash opens your drawer by itself: <span class="d">D27-200</span>.</p>
+  </div>
+
+  <!-- A4.8 -->
+  <h2 id="a4-8"><span class="n">A4.8</span>Two bills: when a company pays</h2>
+  <p>A company pays the room; the guest pays their own extras. Split the bill: the stay gets a second bill in the company's name, and each line goes on the bill that pays it.</p>
+  <h3>To split the bill</h3>
+  <ol class="steps">
+    <li>On the Bill tab, click <span class="ui">Split the bill</span>.</li>
+    <li>Under <span class="ui">Who is paying the second bill?</span> choose the company, and click <span class="ui">Open the second bill</span>. The message: <span class="msg">“Second bill opened - Move charges onto it from the ledger above.”</span></li>
+    <li>Above the lines, the bills now show side by side: <span class="ui">Everything</span>, <span class="ui">Guest</span>, and the company, each with what it owes. Click one to see only its lines.</li>
+    <li>To move a line, click the two-arrow button at its end, then under <span class="ui">Move to</span> the bill it belongs on. The message: <span class="msg">“Moved - Reversed on one bill and posted on the other - nothing was edited.”</span></li>
+    <li>Settle each bill on its own (A4.7). For the company's, choose it under <span class="ui">Which bill</span> and the Method <span class="ui">Bill to company</span>: <span class="msg">“Transfers to the city ledger”</span>. The amount goes to the company's account.</li>
+  </ol>
+  <p>When the company pays, record it on <b>Company accounts</b>: <span class="ui">Record payment</span>, then <span class="ui">Who paid</span>, <span class="ui">Amount received</span>, <span class="ui">Received on</span>, <span class="ui">How</span> (bank transfer, cheque, UPI or card, never cash), <span class="ui">Reference</span> (the bank's UTR or the cheque's number), and an optional <span class="ui">Note</span>.</p>
+
+  <figure class="shot" id="fig-A4-12">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A4-12 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>A4 Test Kulkarni's Bill tab, then <span class="ui">Split the bill</span>, A4 Test Traders chosen</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → the company picker; 2 → Open the second bill</dd>
+        <dt>File</dt><dd><code>img/A4-12.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A4-12.</b> Split the bill.</figcaption>
+    <ol class="callouts"><li>Who is paying the second bill?</li><li>Open the second bill</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A4-13">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A4-13 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>The bill just after <span class="ui">Open the second bill</span></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → Everything; 2 → Guest; 3 → A4 Test Traders; 4 → the move button on “Room 305 · 1 night”</dd>
+        <dt>File</dt><dd><code>img/A4-13.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A4-13.</b> Two bills on the stay.</figcaption>
+    <ol class="callouts"><li>Everything: all the lines</li><li>The guest's own bill</li><li>The company's bill</li><li>Move a line to another bill</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A4-14">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A4-14 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>The move button on “Room 305 · 1 night”, clicked</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → “Move to”; 2 → the company's name under it</dd>
+        <dt>File</dt><dd><code>img/A4-14.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A4-14.</b> Move a line to the other bill.</figcaption>
+    <ol class="callouts"><li>Move to</li><li>The bill it goes on</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A4-15">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A4-15 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>The company's bill, then <span class="ui">Settle</span>, Which bill A4 Test Traders, Method Bill to company</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → Which bill; 2 → Method; 3 → “Transfers to the city ledger”; 4 → Take payment</dd>
+        <dt>File</dt><dd><code>img/A4-15.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A4-15.</b> The company's bill, settled Bill to company.</figcaption>
+    <ol class="callouts"><li>Which bill</li><li>Method: Bill to company</li><li>It goes to the company's account</li><li>Take payment</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>Only a company on file can be chosen. With none, the window says to add one under Companies first: a company's bill carries its GSTIN and address.</li>
+      <li>A payment stays on the bill it was taken on, and a reversed line cannot be moved: neither has the move button.</li>
+      <li>Nights a group's company pays for are on the group's own bill, not on the guest's.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>A move is a reversal on one bill and a posting on the other, so nothing is edited. A guest's figures count only the guest's own bill: <span class="d">D27-226</span>. A company's payment is never cash: <span class="d">D27-242</span>.</p>
+  </div>
+
+  <!-- A4.9 -->
+  <h2 id="a4-9"><span class="n">A4.9</span>The interim bill</h2>
+  <p>The guest asks to see the bill before paying, or a company wants a copy.</p>
+  <ol class="steps">
+    <li>On the Bill tab, click <span class="ui">Interim bill</span>. The window <span class="ui">Interim bill</span> is the print preview.</li>
+    <li>Click <span class="ui">Print</span>. The bill opens on a page of its own; print it from there.</li>
+  </ol>
+  <p>It shows the guest, the room and the stay, the same sections as the Bill tab, and at the foot what was paid and what is outstanding. A reversed line and its reversal are left off it. It is not a tax invoice and carries no invoice number: the numbered tax invoice is issued after check-out (A4.11).</p>
+
+  <figure class="shot" id="fig-A4-18">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A4-18 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>A4 Test Kulkarni's Bill tab, then <span class="ui">Interim bill</span></dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → Print; 2 → the bill's heading; 3 → Guest</dd>
+        <dt>File</dt><dd><code>img/A4-18.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A4-18.</b> Interim bill: the print preview.</figcaption>
+    <ol class="callouts"><li>Print</li><li>Interim bill</li><li>The guest, the room and the stay</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A4-19">
+    <div class="shot-plan">
+      <p class="shot-id">Screenshot A4-19 · to be taken</p>
+      <dl>
+        <dt>Open</dt><dd>The printed page, <code>/h/5EL/stays/…/bill</code>, scrolled to Outstanding</dd>
+        <dt>Sign in as</dt><dd>Reception</dd>
+        <dt>Window</dt><dd>1280 × 800, desk</dd>
+        <dt>Arrows</dt><dd>1 → ROOM; 2 → Net; 3 → Paid; 4 → Outstanding</dd>
+        <dt>File</dt><dd><code>img/A4-19.png</code></dd>
+      </dl>
+    </div>
+    <figcaption><b>Figure A4-19.</b> The interim bill, printed.</figcaption>
+    <ol class="callouts"><li>The Room section</li><li>Net</li><li>Paid</li><li>Outstanding</li></ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The desk's print says “Interim bill”, before check-out and after, so nobody takes it for the numbered tax invoice: <span class="d">D22-7</span>; the button says the same: <span class="d">D24-25</span>.</p>
+  </div>
+
+  <!-- A4.10 -->
+  <h2 id="a4-10"><span class="n">A4.10</span>Your cash drawer: Cashiering</h2>
+  <p>Every rupee of cash taken at the desk belongs to somebody's drawer. Open <span class="ui">Cashiering</span> (Finance, in reception's menu) to see yours.</p>
+
+  <figure class="shot" id="fig-A4-20">
+    <img src="img/A4-20.png" alt="Cashiering for reception with no drawer open: Nothing was handed to you: your drawer opens at ₹0, the note boxes, and Count a float to open by hand">
+    <figcaption><b>Figure A4-20.</b> Cashiering before the first cash.</figcaption>
+    <ol class="callouts">
+      <li><span class="msg">“Nothing was handed to you: your drawer opens at ₹0.”</span></li>
+      <li>How many of each note: only for a float given to you by hand</li>
+      <li>Count a float to open by hand</li>
+    </ol>
+  </figure>
+
+  <h3>Opening</h3>
+  <ul>
+    <li><b>There is no step to open.</b> Your drawer opens by itself the first time you take cash.</li>
+    <li>If the last person handed you a float by name, the line says so (<span class="msg">“₹… was handed to you: your drawer opens on it.”</span>) and your drawer opens on it. Otherwise it opens at ₹0.</li>
+    <li>Only when a float is given to you <b>by hand</b>, count it here: type how many of each note. The button becomes <span class="ui">Open the drawer - ₹…</span>; click it.</li>
+  </ul>
+
+  <h3>During the shift</h3>
+  <ul>
+    <li><span class="ui">Taken this shift</span> lists what you took, by method. Only cash reaches the drawer: a card payment, or a bill sent to a company, is not in the tin.</li>
+    <li>Money that was not a payment: under <span class="ui">In and out of the drawer</span>, click <span class="ui">Record</span>. Choose <span class="ui">What happened</span> (<span class="ui">Paid out</span>, <span class="ui">Cash in</span>, <span class="ui">To the safe</span>), type <span class="ui">How much</span> and <span class="ui">What was it for</span>, and click <span class="ui">Record</span>.</li>
+    <li>A <b>Paid out</b> waits for the GM's or the owner's yes. Until then it reads <span class="msg">“Waiting for a yes - not taken off the drawer yet”</span>.</li>
+    <li><span class="ui">The drawer</span>, on the right, adds it up: <span class="ui">Opening float</span>, <span class="ui">Cash taken</span>, money in and out, <span class="ui">Expected</span>, and <span class="ui">Counted</span>.</li>
+  </ul>
+
+  <h3>At the end of your shift</h3>
+  <ol class="steps">
+    <li>Under <span class="ui">Count the drawer</span>, type how many of each note and coin, and click <span class="ui">Save the count</span>.</li>
+    <li>The drawer says <span class="msg">“The drawer balances”</span>, or <span class="msg">“Over by …”</span> / <span class="msg">“Short by …”</span>. A difference does not stop the hand-over, but it has to be written down.</li>
+    <li>Click <span class="ui">Close and hand over</span>. If the count differs, type <span class="ui">Why</span>.</li>
+    <li><span class="ui">Hand the drawer to</span>: the next person, or <span class="ui">Nobody</span>.</li>
+    <li><span class="ui">Float kept for the next shift</span>: always typed, from ₹0 up to what you counted. Above ₹0 it needs the next person's name. The rest is to deposit.</li>
+    <li>Click <span class="ui">Close the shift</span>.</li>
+  </ol>
+  <p>The cash to deposit is banked from <b>Cash deposits</b>: the GM records each day's deposit (amount, date, bank, slip number and the slip's photo), and the owner or the accountant verifies it.</p>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>Each cash point counts in and counts out, and the deposits are logged and verified: <span class="d">D27-190</span>. The drawer opens by itself with the first cash: <span class="d">D27-200</span>. A float kept waits for the person named: <span class="d">D27-201</span>; it is always typed, and the rest goes to deposit: <span class="d">D27-202</span>. A paid-out counts only once the GM or the owner says yes: <span class="d">D27-242</span>.</p>
+  </div>
+
+  <!-- A4.11 -->
+  <h2 id="a4-11"><span class="n">A4.11</span>After check-out: the tax invoice and the credit note</h2>
+  <p>The interim bill is not a tax invoice. The numbered GST tax invoice is issued on <span class="ui">Invoices</span>, after the guest has checked out and the bill is settled.</p>
+  <h3>To issue a tax invoice</h3>
+  <ol class="steps">
+    <li>Open <span class="ui">Invoices</span>. Its list is the departed stays ready to bill.</li>
+    <li>Click <span class="ui">Issue</span> on the stay. It is greyed while the bill still owes or is overpaid; point at it to read why.</li>
+    <li>The window <span class="ui">Issue this tax invoice?</span> says who it is billed to and the next number in the GST series. Click <span class="ui">Issue the invoice</span>.</li>
+  </ol>
+  <ul>
+    <li>A stay with two bills gets an invoice for each bill.</li>
+    <li>Alcohol is under VAT: its own VAT bill is issued in the same step, from its own series.</li>
+    <li>The stay's row then shows the invoice's number. Click it to open the invoice on its own page, with <span class="ui">Print</span> and <span class="ui">Send invoice</span> (by email, with the PDF; the test hotel sends nothing).</li>
+    <li>The hotel's <span class="ui">Tax invoice</span> switch (A10.7, A17.12) sends an invoice by itself only when it is made out to the guest. One made out to a company, an agent or a booking site, for example Expedia, is not sent by itself: click <span class="ui">Send invoice</span> on its page.</li>
+  </ul>
+  <h3>To correct an issued invoice: the credit note</h3>
+  <ol class="steps">
+    <li>Open the invoice from the list under <span class="ui">Issued</span>, and click <span class="ui">Cancel this invoice</span>.</li>
+    <li>Type <span class="ui">Why the invoice was wrong</span>.</li>
+    <li>Click <span class="ui">Issue credit note</span>. The invoice is not edited and not deleted: a credit note with its own number is issued against it, and both stay on the record.</li>
+  </ol>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A credit note is for the owner, an administrator, the GM or the accountant. For anyone else the button is greyed, with that sentence.</li>
+      <li>Once a tax invoice stands on a bill, its charges cannot be reversed or edited at the desk: the credit note is the correction.</li>
+      <li>E-invoicing (an IRN and a signed QR) is not required: the group is under ₹5 crore of turnover. The Invoices screen says so.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>An issued GST document never changes, and its number is never lost from the series; a mistake is corrected by a document of its own. Who issues a credit note: <span class="d">D22-33</span>. Alcohol's own VAT bill: <span class="d">D22-44</span>.</p>
+  </div>
+
+  <!-- A4.12 -->
+  <h2 id="a4-12"><span class="n">A4.12</span>The bill in short</h2>
+  <table>
+    <thead><tr><th style="width:30%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
+    <tbody>
+      <tr><td>To see what a guest owes</td><td>In house, the guest, the Bill tab. Due counts the nights to come.</td><td>A4.2</td></tr>
+      <tr><td>Something to add</td><td>Add charge: category, words, amount before tax, Post charge.</td><td>A4.3</td></tr>
+      <tr><td>A charge is wrong</td><td>The curved arrow on its line, Why, Reverse.</td><td>A4.4</td></tr>
+      <tr><td>A price or words need correcting (managers)</td><td>The pencil, Why, Correct the charge.</td><td>A4.5</td></tr>
+      <tr><td>A new rate for the stay (managers)</td><td>Change rate, Why, Change the rate.</td><td>A4.6</td></tr>
+      <tr><td>The guest asks for the bill</td><td>Interim bill, Print.</td><td>A4.9</td></tr>
+      <tr><td>A company pays part</td><td>Split the bill, move the lines, settle each bill.</td><td>A4.8</td></tr>
+      <tr><td>The guest pays</td><td>Settle, the method, Take payment. Then Check out.</td><td>A4.7</td></tr>
+      <tr><td>Money not a payment</td><td>Cashiering, In and out of the drawer, Record.</td><td>A4.10</td></tr>
+      <tr><td>End of your shift</td><td>Cashiering: count, Save the count, Close and hand over.</td><td>A4.10</td></tr>
+      <tr><td>After check-out</td><td>Invoices: Issue. A wrong invoice: a credit note.</td><td>A4.11</td></tr>
+    </tbody>
+  </table>
+</section>

@@ -34,7 +34,12 @@ export const PLAN = [
   { c: "A10", file: "a10", title: "Guest messages" },
   { c: "A11", file: "a11", title: "Reports" },
   { c: "A12", file: "a12", title: "Approvals, cash expenses, notifications" },
-  { c: "A13", file: "a13", title: "Spa, laundry, loyalty" },
+  { c: "A13", file: "a13", title: "Banquets, spa and laundry" },
+  /* Added 9 October (D27-293, "all the functionality"): every menu section a chapter. */
+  { c: "A14", file: "a14", title: "Sales, marketing and loyalty" },
+  { c: "A15", file: "a15", title: "Rates, revenue and distribution" },
+  { c: "A16", file: "a16", title: "Across properties" },
+  { c: "A17", file: "a17", title: "Settings" },
   { c: "B1", file: "b1", title: "The system at a glance", part: "B" },
   { c: "B2", file: "b2", title: "People and security", part: "B" },
   { c: "B3", file: "b3", title: "Money rules", part: "B" },
