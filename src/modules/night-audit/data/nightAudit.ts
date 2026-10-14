@@ -143,6 +143,12 @@ export interface NightAuditResult {
       orderNo: string; table: string | null; name: string; qty: number;
       value: number; reason: string | null; by: string | null; at: string;
     }>;
+    /** Paid bills voided that day (D27-324), left out of the figures
+        above: who, when, why and how much. */
+    voided?: Array<{
+      orderNo: string; outlet: string; amount: number; method: string | null;
+      reason: string; reference: string | null; by: string | null; at: string;
+    }>;
   };
 
   /** TWO drawers, and they are never added together. The front desk

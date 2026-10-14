@@ -295,6 +295,31 @@ function Overview({ day }: { day: DayEnd }) {
         </CardBody>
       </Card>
 
+      {/* D27-324: paid bills voided today - who, when, why and how much.
+          Left out of every figure above; the kitchen's KOTs stand. */}
+      {(day.voided ?? []).length > 0 && (
+        <Card>
+          <CardHeader title="Paid bills voided"
+            description="Not in the sales above. Their cash is still in the tin: it went back to the guest from the drawer of whoever voided the bill." />
+          <CardBody>
+            <ul className="divide-y divide-grey-200">
+              {day.voided!.map((v) => (
+                <li key={v.orderNo} className="flex items-start gap-3 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base">{v.orderNo}{v.table ? ` · ${v.table}` : ""} - {v.reason}</p>
+                    <p className="text-sm text-grey-500">
+                      {v.by ?? "-"} · {v.at} · {METHOD_LABEL[v.method ?? ""] ?? v.method ?? "-"}
+                      {v.reference ? ` · refund reference ${v.reference}` : ""}
+                    </p>
+                  </div>
+                  <span className="text-base font-medium tabular shrink-0">{moneyPrecise(v.amount)}</span>
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
+
       {/* D27-119: food taken off after the kitchen had it - who, and why. */}
       {(day.struck ?? []).length > 0 && (
         <Card>
@@ -393,6 +418,11 @@ function CashStep({ hotelId, day, onDone }: {
               <Line label="Opening float" value={day.opened ? day.cash.opening : null} />
               <Line label="Cash taken"
                     value={day.summary.byMethod["cash"] ?? 0} />
+              {/* D27-324: still in the tin; given back from the voider's drawer. */}
+              {(day.voided ?? []).some((v) => v.cash > 0) && (
+                <Line label="Cash of voided bills, still in the tin"
+                      value={day.voided!.reduce((s, v) => s + v.cash, 0)} signed />
+              )}
               {MOVEMENTS.map((m) => {
                 const total = day.movements
                   .filter((x) => x.kind === m.kind && !waitsOrRefused(x))
