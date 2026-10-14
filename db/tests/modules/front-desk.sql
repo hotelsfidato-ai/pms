@@ -328,6 +328,9 @@ begin
     from folios f where f.reservation_id = a returning id into pid;
   insert into refunds (hotel_id, posting_id, method, method_label, amount, reason, refunded_by)
   values (h, pid, 'cash', 'Cash', 5000, 'Cash fixture', (select id from staff order by created_at limit 1));
+  -- Its row check now, not at commit: a queued check stops this block's ALTER TABLE.
+  set constraints folio_postings_refund_has_row immediate;
+  set constraints folio_postings_refund_has_row deferred;
 
   perform test.ok('cash limit', 'counts the stay, its group and the guest''s other stay that day',
     app.cash_taken(a, '2027-02-01') = 100000, app.cash_taken(a, '2027-02-01')::text);
