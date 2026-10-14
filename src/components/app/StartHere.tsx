@@ -16,7 +16,8 @@ import { START_HERE, START_HERE_ON } from "./startHereCards";
    and forgotten, a card they can come back to is used.
 
    On the person's own landing screens only (START_HERE_ON), for the four
-   roles the owner chose, until they tap "Got it" — remembered on the
+   roles the owner chose and the Bar (the waiter's card, D27-329 (3)),
+   until they tap "Got it" — remembered on the
    server (089) so it follows them to any terminal, and brought back from
    the account menu.
 

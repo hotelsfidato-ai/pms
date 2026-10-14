@@ -3,10 +3,11 @@ import type { ServiceNavEntry } from "@/components/app/navigation";
 import { LOST_ROLES, REQUEST_ROLES, WAKE_UP_ROLES } from "@/modules/guest-services/requestRoles";
 
 /* In the Front desk section, in the working menus of reception, housekeeping,
-   the kitchen and the restaurant (D27-181). Assembled by `navigation.ts`. */
+   the kitchen and the restaurant (D27-181), the Bar's with the waiter's
+   (D27-329 (3)). Assembled by `navigation.ts`. */
 export const nav: ServiceNavEntry[] = [
   { section: "front-desk", order: 90,
-    workingMenus: ["front_desk", "housekeeping", "kitchen_manager", "chef", "pos"],
+    workingMenus: ["front_desk", "housekeeping", "kitchen_manager", "chef", "pos", "bar"],
     label: "Guest requests", to: "/h/:code/requests", icon: ConciergeBell, resource: "reservation",
     canSee: (role) => REQUEST_ROLES.includes(role),
     keywords: ["requests", "towels", "room service", "something broken", "concierge", "tasks"] },

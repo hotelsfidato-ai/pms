@@ -341,7 +341,7 @@ const CORE_ENTRIES: ServiceNavEntry[] = [
     canSee: (role) => canAccess(role, "stock") || canAccess(role, "equipment"),
     keywords: ["location", "store", "kitchen store", "bar store", "supplier", "vendor", "gstin"] },
   { section: "system", order: 10,
-    workingMenus: ["front_desk", "pos", "chef", "kitchen_manager", "housekeeping", "stores"],
+    workingMenus: ["front_desk", "pos", "bar", "chef", "kitchen_manager", "housekeeping", "stores"],
     label: "Notifications", to: "/notifications", icon: Bell, resource: "notification", matchPrefix: true },
   /* ⚠ ONE PLACE TO SEE EVERYTHING WAITING ON YOU — the owner's D18-19.
      CORE, not a service's: the engine (076) spans every service, and
