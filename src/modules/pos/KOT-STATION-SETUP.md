@@ -144,9 +144,13 @@ Terminal). Within a few seconds **KITCHEN KOT n** prints at the kitchen and
 - **The bill printer is offline:** Print bill says so and offers **Print
   here**, which opens the bill on that device. A bill printed here does not
   print again at the bill printer.
-- **A KOT is lost, torn or unreadable:** on that computer, Restaurant setup →
-  KOT section → **This computer's last 20 KOTs** → **Reprint**. The slip says
-  REPRINT.
+- **A KOT is lost, torn or unreadable:** **Reprint** beside it under **KOTs
+  sent** - in the table's pad on Tables, or on the Till or the Terminal with
+  the order open. It prints at the computer that printed it (the kitchen's or
+  the bar's), not on the device where Reprint was pressed; if that computer is
+  off, the screen says so and the reprint waits for it (D27-329). Or, on that
+  computer, Restaurant setup → KOT section → **This computer's last 20 KOTs**
+  → **Reprint**. The slip says REPRINT.
 - **A printer moves to another computer:** do steps 1-3 on the new one.
   Ticking its kinds there moves them; the old computer stops printing them by
   itself. A computer that prints nothing any more can be **Removed** from the

@@ -46,10 +46,10 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 
 | Menu name | Address (`routes.tsx`) | Page file | Working menus (`nav.ts`) |
 |---|---|---|---|
-| Tables | `/pos/:code/tables` | `pages/Floor.tsx` | waiter (`pos`), bar (`bar`, D27-324), Reception. Its order pad (`flows/OrderPad.tsx`) lists the open order's **KOTs sent** with Reprint (D27-324 (4)) and opens a Bar person on the bar's dishes |
+| Tables | `/pos/:code/tables` | `pages/Floor.tsx` | waiter (`pos`), bar (`bar`, D27-324), Reception. Its order pad (`flows/OrderPad.tsx`) lists the open order's **KOTs sent** with Reprint (D27-324 (4); printed at the KOT's station, D27-329 (2)) and opens a Bar person on the bar's dishes |
 | Table bookings | `/pos/:code/table-bookings` | `pages/TableBookings.tsx` | none - whoever may ring an order (`mayRingUp`); hotel guests' table requests, Waiting / Today / Upcoming, Confirm (a table if known) or Decline with a reason (D27-221, D27-224) |
-| Till | `/pos/:code/till` | `pages/Till.tsx` | waiter, bar, Reception |
-| Terminal | `/pos/:code/terminal` | `pages/Terminal.tsx` | waiter, bar, Reception |
+| Till | `/pos/:code/till` | `pages/Till.tsx` | waiter, bar, Reception. An open order's **KOTs sent** with Reprint (D27-329 (5)) |
+| Terminal | `/pos/:code/terminal` | `pages/Terminal.tsx` | waiter, bar, Reception. An open order's **KOTs sent** with Reprint (D27-329 (5)) |
 | Kitchen | `/pos/:code/kitchen` | `pages/Kitchen.tsx` | chef, kitchen manager |
 | Menu | `/pos/:code/menu` | `pages/Menu.tsx` | kitchen manager |
 | Close restaurant day | `/pos/:code/day-end` | `pages/DayEnd.tsx` | waiter, bar, kitchen manager, Reception |
@@ -219,7 +219,10 @@ orders      GET    /:code/till/orders
             POST   /:code/till/orders
             POST   /:code/till/orders/batch                 the pad's whole round in one request; eventId (D17-21)
             GET    /:code/till/orders/:id                   each line's kotNo and kotKind {id, name} (D27-324 (4):
-                                                            the pad's KOTs sent, reprinted through GET kot/:no?kind=)
+                                                            the KOTs sent on the pad, the Till and the Terminal)
+            POST   /:code/till/orders/:id/kot/:no/reprint   {kind}: queued for the computer that prints that kind
+                                                            (D27-329 (2)); answers station {name, online, seenAt};
+                                                            no computer for the kind: 409 (TILL)
             PATCH  /:code/till/orders/:id                   covers, waiter, customer, type, held, eventId (D17-21)
             POST   /:code/till/orders/:id/lines
             POST   /:code/till/orders/:id/lines/:lineId/void
@@ -254,7 +257,9 @@ kot section (kotSection.ts, D27-292)
             POST   /:code/till/kot-setup/stations/:id/remove  a computer that prints nothing
             POST   /:code/till/kot-stations/poll            {device}: last seen; its kinds' due slips (since the kind
                                                             came here, unprinted, the business date only, D27-167),
-                                                            its last 20, the bills asked of it (KOT_PRINT)
+                                                            its last 20, the bills asked of it, the reprints asked
+                                                            of its kinds (since the kind came here) (KOT_PRINT)
+            POST   /:code/till/kot-reprints/:id/printed     {device}: the station's claim of a reprint (KOT_PRINT)
             POST   /:code/till/orders/:id/bill-print        asked of the bill printer: heading, sentTo (null: none
                                                             chosen, open it here); an unpaid one is "Bill printed"
             POST   /:code/till/orders/:id/bill-print/here   printed on this device: a waiting one comes off the list
@@ -364,8 +369,11 @@ components/KotStation.tsx   the printing computers (D27-159; D27-292): kotDevice
                     browser's id, localStorage `pms.kot-device`); useKotSetup; KotStationPrinter,
                     mounted by PosGate, prints this computer's kinds' slips and the bills
                     asked of it through window.print() (claim first, one at a time, KOTs
-                    first); KotStatus, the red line per kind something prints to, with
-                    "Set up" for those who may; Reprints. Setup: KOT-STATION-SETUP.md.
+                    first, then reprints, then bills); KotStatus, the red line per kind
+                    something prints to, with "Set up" for those who may; KotsSent, an
+                    order's KOTs with Reprint at their station (the pad, the Till, the
+                    Terminal; D27-329); Reprints, the station's own last 20, printed on
+                    it. Setup: KOT-STATION-SETUP.md.
 components/KotSection.tsx   Restaurant setup's KOT section (D27-292).
 components/DocketSlip.tsx   the 80 mm docket, as the computer prints it: "<KIND> KOT n",
                     REPRINT; add-on lines under their dish, or "for: <dish> (KOT n)".
@@ -414,6 +422,10 @@ pos_kot_kinds, pos_kot_stations,               "the KOT section" (211, D27-292):
   app.pos_bar_only, trigger                     app.assignable_roles(); a Bar person puts on a
   pos_order_lines_bar_only                      bill, or raises the count of, only a dish that
                                                 prints on the Bar KOT (42501 otherwise)
+  pos_kot_reprints                             "a reprinted KOT prints at the station" (226,
+                                                D27-329 (2)): a slip asked again, waiting for
+                                                its kind's computer, claimed by printed_at; the
+                                                app asks and marks printed only; trading
 pos_order_lines.extra_kind, .numbered_addon_id "custom add-ons" (210, D27-291): an add-on line
                                                of its own under its dish; a sent one struck
                                                says why; the day's struck list names it

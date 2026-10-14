@@ -45,6 +45,27 @@ fails "expected 'front_desk' to be 'pos'".
 
 ## Fixed
 
+### POS-36 · A KOT reprinted from the order pad printed on the waiter's device, not at the kitchen or the bar - FIXED 15 October (the owner's D27-329 (2))
+
+**Found** — 14 October, building the pad's Reprint (D27-324 (4)): it used the KOT section's
+`useKotReprint`, which prints through `window.print()` on the device where it is pressed. On
+the computer that prints the KOTs that is right; on a waiter's tablet the slip went to
+whatever printer the tablet had, or nowhere. Left open in that entry as a question; the owner
+answered "at the station's printer" (D27-329 (2)) and asked for Reprint on the Till and the
+Terminal too (5).
+
+**What was done** — a reprint is a row in `pos_kot_reprints` (226), asked by
+`POST till/orders/:id/kot/:no/reprint` for one kind's slip. The computer that prints that
+kind finds it in its own ask (`kot-stations/poll` → `reprints`), claims it
+(`kot-reprints/:id/printed`) and prints the KOT read marked REPRINT - the same path as a new
+KOT. The answer names the computer and whether it is online; offline, the screen says so and
+the reprint waits; with no computer for the kind it is refused with the sentence.
+`KotsSent` (`components/KotStation.tsx`) is the one list, on the pad, the Till and the
+Terminal. `useKotReprint` stays for the station's own last 20 only.
+
+**The rule it leaves** — a device that is not the station never prints a KOT, a reprint
+included. `src/modules/pos/kotReprint.test.tsx` fails if Reprint calls `window.print()`.
+
 ### POS-35 · A paid restaurant bill could not be taken back by anybody - FIXED 14 October (the owner's D27-324 (1))
 
 **Found** — the permissions check of 14 October: an order was only open, paid or closed unpaid (028's
