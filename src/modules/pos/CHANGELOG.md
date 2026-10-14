@@ -11,6 +11,26 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-14 · The Bar role, the Waiter, KOT reprint from the order pad, the GM on the Roles screen (the owner's D27-324 (2)-(5))
+
+**Asked for:** (2) a Bar role with the waiter's rights that opens on the bar and sees and orders only the bar's menu sections, its KOTs at the bar printer; (3) "Till Operator" shown as "Waiter" with a true description, rights unchanged; (4) a waiter or bar person reprints a KOT from the order screen; (5) the Roles screen shows the GM managing people, not "View". Worked without the `pos` claim: the void-a-paid-bill helper held it; settle, void and tender code untouched.
+
+**Shipped**
+- **The bar's dishes are the ones whose KOT is the Bar kind** - the section's own kind, else its tax heading's (Bar, Alcohol), exactly as 211's `app.pos_kot_kind_for` routes a dish. That is the one link; nothing new is stored. Migration 224 ("the bar role"): `bar` in `app.assignable_roles()` (so whoever gives the waiter's role gives it), `app.pos_dish_at_bar`, `app.pos_bar_only`, and the trigger `pos_order_lines_bar_only` (a Bar person cannot put on a bill, or raise the count of, any other dish: 42501).
+- Server: `bar` has exactly the waiter's grants (`TILL_PERSON`) and is named beside `pos` in every roleGate rule and the table-booking bell. `GET /till/menu` gives a Bar person only the bar's dishes; `addOneLine` (every way a dish goes on: a tap, the batch, more of a sent dish, Just 1) and the quantity route refuse a kitchen dish first: "Paneer Tikka is not on the bar's menu. A waiter orders it." `GET /till/orders/:id` carries each line's `kotNo` and `kotKind`.
+- Screens: Waiter and Bar on People, Give access and the Roles screen; the Bar's menu is the waiter's four, Restaurant only, landing on Tables; its pad shows no Restaurant / Bar tabs. The order pad lists the open order's **KOTs sent** ("KOT 3 · Bar") with **Reprint** - the KOT read and printing the KOT section's Reprint uses (`useKotReprint` in `components/KotStation.tsx`), the paper marked REPRINT. The GM's `user` grant is view, create, edit (what the server already allowed), so the Roles screen shows "View, Create, Edit".
+- The manual: A8 (who uses each screen, "At the bar: the Bar role", the pad's KOTs sent, a lost KOT), B2 (Waiter and Bar in both tables), A0, A11, A16; the GM setup guide. Rebuilt.
+
+**Proved** (see the report's counts; every new test was seen failing on the old code first)
+- Web: `src/lib/permissions.test.ts`, `navigation.test.ts`, `spaces.test.tsx`, `pos/barRole.test.tsx`, `admin/admin.test.tsx` (People, the Roles screen): 12 failures on the old code, then 9 files 189 tests passing with `KotStation`, `barSide`, `customAddons` and `ownerDecisions`.
+- API: `api/test/modules/pos/barRole.test.ts` (the Bar equal to the waiter at every door, the menu read, the refusals, the database, the KOT read for a reprint) failed on the old code at the roster ("staff_hotels_role_valid").
+- Database: `db/tests/modules/pos.sql` "pos bar role" failed by name on the old schema (4 of 9), passes with 224; 224 applied twice.
+
+**Left open**
+- POS-35: the Roles screen does not show the restaurant roles' by-name rights (owner's question).
+- The reprint prints on the device where Reprint is pressed, as the KOT section's does; a waiter's tablet may not be the bar's or kitchen's printer (owner's question).
+- The Bar has no Start here card and no Guest requests (the waiter has both; not asked for).
+
 ## 2026-10-14 · The KOT setup file without a decision code (the owner's D27-319 (1))
 
 `lib/kotSetupFile.ts`: the file's first `rem` line, "KOT station setup for AMR (D27-299), made by Restaurant setup - KOT section.", loses "(D27-299)". **Proved:** `kotSetup.test.tsx` 6 of 6 after the change (none asserts the `rem` line).

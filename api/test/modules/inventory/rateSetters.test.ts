@@ -123,7 +123,7 @@ describe("setting a price on the Rate calendar (INV-5)", () => {
   });
 
   for (const role of ["owner", "admin", "gm", "hotel_manager", "revenue_manager",
-                      "front_desk", "housekeeping", "kitchen_manager", "chef", "pos",
+                      "front_desk", "housekeeping", "kitchen_manager", "chef", "pos", "bar",
                       "stores", "finance", "read_only"]) {
     const may = (WEBSITE_LIST as readonly string[]).includes(role);
 
@@ -158,7 +158,7 @@ describe("setting a price on the Rate calendar (INV-5)", () => {
        stops a new role slipping past it untested. */
     expect([...staffByRole.keys()].sort()).toEqual(
       ["owner", "admin", "gm", "hotel_manager", "revenue_manager", "front_desk",
-       "housekeeping", "kitchen_manager", "chef", "pos", "stores", "finance",
+       "housekeeping", "kitchen_manager", "chef", "pos", "bar", "stores", "finance",
        "read_only"].sort());
   });
 });

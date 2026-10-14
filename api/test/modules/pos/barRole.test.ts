@@ -138,9 +138,9 @@ describe("a Bar person sees and orders only the bar's dishes", () => {
       orderId: id, lines: [{ itemId: beer, qty: 1 }, { itemId: tikka, qty: 1 }] });
     expect(batch.status).toBe(409);
 
-    const lines = (await sql<{ name: string; qty: string }>(
-      "select name, qty::text from pos_order_lines where order_id = $1 order by id", [id]));
-    expect(lines).toEqual([{ name: "BARROLE beer", qty: "2" }]);
+    const lines = (await sql<{ name: string; qty: number }>(
+      "select name, qty::int as qty from pos_order_lines where order_id = $1 order by id", [id]));
+    expect(lines).toEqual([{ name: "BARROLE beer", qty: 2 }]);
   });
 
   it("may not raise the count of a kitchen dish a waiter put on", async () => {

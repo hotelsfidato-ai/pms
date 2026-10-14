@@ -21,13 +21,14 @@
       <tr><td>Housekeeping</td><td>Room status, work orders, laundry; sees the spa diary.</td><td><span class="d">D18-8</span> <span class="d">D18-21</span></td></tr>
       <tr><td>Kitchen Manager</td><td>The kitchen screen and the menu. No money.</td><td><span class="d">D24-10</span></td></tr>
       <tr><td>Chef</td><td>The kitchen screen. Moves dishes along; changes nothing about money.</td><td>-</td></tr>
-      <tr><td>Till Operator</td><td>The waiter's role: tables, the Till, the Terminal, the cash drawer's day. (Restaurant setup's checklist calls it "the Waiter role".)</td><td>-</td></tr>
+      <tr><td>Waiter</td><td>Takes orders and sends the KOTs, prints bills, takes payment, gives a discount of up to 10% with a reason, closes the restaurant day; reprints a table's KOT from its pad. (It was called Till Operator until 14 October; an outside till's account holds the same role.)</td><td>Renamed, rights unchanged <span class="d">D27-324</span></td></tr>
+      <tr><td>Bar</td><td>The waiter's rights, on the bar's dishes only: the menu sections whose KOT prints at the bar. Its KOTs print at the bar.</td><td><span class="d">D27-324</span></td></tr>
       <tr><td>Inventory Manager</td><td>The Store and the equipment register. Raises purchases; approves equipment leaving the store.</td><td>The owner, 16 September</td></tr>
       <tr><td>Accountant</td><td>Bills, invoices and credit notes, payments, company accounts, reports, the GST and VAT rates.</td><td><span class="d">D22-32</span> <span class="d">D22-33</span></td></tr>
       <tr><td>Viewer</td><td>Reads; changes nothing.</td><td><span class="d">D27-146</span></td></tr>
     </tbody>
   </table>
-  <p>A fourteenth role, <b>Automation</b>, is for machines and is never offered when a person is added. The CRS reader and an outside till each work as such an account, at one hotel only (B2.4).</p>
+  <p>A fifteenth role, <b>Automation</b>, is for machines and is never offered when a person is added. The CRS reader and an outside till each work as such an account, at one hotel only (B2.4).</p>
 
   <figure class="shot" id="fig-B2-01">
     <img src="img/B2-01.png" alt="Settings, People and security, Roles and permissions: the matrix of every role against every kind of thing">
@@ -55,13 +56,14 @@
       <tr><td>Housekeeping</td><td>Front office</td><td>Rooms; Housekeeping, Work orders, Guest requests, Lost property; Store, Equipment, Purchasing; laundry Dockets; Notifications. Starts on Housekeeping.</td></tr>
       <tr><td>Kitchen Manager</td><td>Restaurant only</td><td>Kitchen, Menu, Close restaurant day, Guest requests, the Store, Notifications. Starts on Kitchen.</td></tr>
       <tr><td>Chef</td><td>Restaurant only</td><td>Kitchen, Guest requests, Notifications.</td></tr>
-      <tr><td>Till Operator</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day, Guest requests. Starts on Tables.</td></tr>
+      <tr><td>Waiter</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day, Guest requests. Starts on Tables.</td></tr>
+      <tr><td>Bar</td><td>Restaurant only</td><td>Tables, Till, Terminal, Close restaurant day. Starts on Tables; sees only the bar's dishes.</td></tr>
       <tr><td>Inventory Manager</td><td>Front office</td><td>Store, Equipment, Purchasing, Notifications.</td></tr>
     </tbody>
   </table>
   <ul>
     <li>Restaurant, Banquet, Laundry and Spa are there only at a hotel that has them switched on; a section a hotel does not have is simply absent.</li>
-    <li>No Dashboard for housekeeping, the kitchen, the Inventory Manager or the till, because it carries revenue <span class="d">D27-141</span>. The roles that read bookings but not bills see no balances, and a guest's phone and email come back blank to them <span class="d">D27-143</span>.</li>
+    <li>No Dashboard for housekeeping, the kitchen, the Inventory Manager, the waiter or the bar, because it carries revenue <span class="d">D27-141</span>. The roles that read bookings but not bills see no balances, and a guest's phone and email come back blank to them <span class="d">D27-143</span>.</li>
     <li>Guests' ID and Form III details: the owner, Admin, GM, Hotel Manager and Reception only, the people who check guests in <span class="d">D25-38</span>.</li>
     <li>Where each person starts: the GM sets it per person (Dashboard, Rooms or Calendar) and the person can change their own (the owner, 14 September).</li>
   </ul>

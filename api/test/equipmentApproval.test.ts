@@ -109,8 +109,9 @@ describe("equipment leaving the store (095)", () => {
       const id = await raise(asker);
 
       /* The till reads no approvals at all since 28 September: it holds no
-         grant the queue asks (roleGate READ_RULES). */
-      if (role === "pos") {
+         grant the queue asks (roleGate READ_RULES). Nor the bar, which holds
+         exactly the waiter's grants (D27-324). */
+      if (role === "pos" || role === "bar") {
         expect((await as(person.get(role)!.uid, "/5EL/approvals")).status).toBe(403);
       } else {
         const row = await seenBy(role, id);
