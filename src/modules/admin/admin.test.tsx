@@ -318,7 +318,7 @@ describe("D27-249 - the Settings console, only what can be changed", () => {
 /* D27-223 (the owner, 1 October): on a phone the checklist above the tabs
    folds its reasons behind a tap, so the tabs start on the first screen. */
 describe("D27-223 - the checklist folds its reasons on a phone", () => {
-  const REASON = "27AAAAA0000A1Z5 is the standard dummy number. It PRINTS on the tax invoice.";
+  const REASON = "27AAAAA0000A1Z5 is the standard dummy number. It prints on the tax invoice.";
   const phone = (matches: boolean) => vi.stubGlobal("matchMedia", (query: string) => ({
     matches: matches && query === "(max-width: 639px)", media: query,
     addEventListener: () => {}, removeEventListener: () => {},

@@ -128,7 +128,7 @@ export async function commissioningChecks(client: Client, hotelId: string) {
         detail: !hotel.gstin
           ? "Not set. Every invoice this property issues carries it."
           : placeholderGstin
-            ? `${hotel.gstin} is the standard dummy number. It PRINTS on the `
+            ? `${hotel.gstin} is the standard dummy number. It prints on the `
               + "tax invoice and the restaurant bill - a guest handed one has "
               + "a document with a made-up tax number on it."
             : null,
