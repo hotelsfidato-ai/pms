@@ -84,7 +84,12 @@ export function AskDialog({ ask, onClose }: { ask: Ask | null; onClose: () => vo
     let out: unknown;
     try { out = await act(); } finally { setBusy(false); }
     if (out && typeof out === "object" && "refused" in out) return setRefused((out as { refused: string }).refused);
-    if (out && typeof out === "object" && "next" in out) return setNext((out as { next: Ask }).next);
+    /* The next question starts empty: a reason typed for the first must
+       never stand as the answer to the second (D27-324's reference). */
+    if (out && typeof out === "object" && "next" in out) {
+      setText("");
+      return setNext((out as { next: Ask }).next);
+    }
     close();
   };
   const go = () => {

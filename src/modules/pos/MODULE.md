@@ -261,6 +261,16 @@ kot section (kotSection.ts, D27-292)
             POST   /:code/till/orders/:id/clear
             POST   /:code/till/orders/:id/settle            cash · card · UPI · split · room · function (D17-21)
             POST   /:code/till/orders/:id/abandon
+            POST   /:code/till/orders/:id/void              D27-324: a PAID bill voided, {reason, reference?}; the
+                                                            owner, an administrator or the GM (roleGate
+                                                            VOID_PAID_BILL = reservation approve; the database's
+                                                            app.voids_paid_pos_bills, 222). The same business day,
+                                                            before the outlet's day is closed; never a room or a
+                                                            function bill ("This bill went to room 201 - reverse it
+                                                            on the guest's bill."); card or UPI needs the refund's
+                                                            reference; cash below the refunds' ₹20,000 ceiling and
+                                                            out of the restaurant's tin (D27-327).
+                                                            Keeps its number, lines, KOTs and payments; frees its table
 money       POST   /:code/till/orders/:id/discount
             POST   /:code/till/orders/:id/discount/clear
             POST   /:code/till/orders/:id/promotion
@@ -425,6 +435,14 @@ pos_sections, pos_tables                       047_tables_and_floor.sql
 pos_day_ends, pos_cash_movements,              050_day_end.sql  (app.pos_day_end_blockers)
 pos_denominations
   pos_orders.event_id — a bill for a function  061_banquet_food.sql (see banquet BQ-1)
+  status 'void', voided_by/_at, void_reason,   "a paid restaurant bill voided" (222, D27-324):
+  void_reference; app.voids_paid_pos_bills;     the guard (who, a paid bill, same business day,
+  pos_bill_prints heading 'void'               day not closed, no room or function, card/UPI
+                                               reference; who and when are the database's; void
+                                               for good); its VAT bill's cancellation (a trigger);
+                                               a void's payments stay; its cash leaves the tin by
+                                               itself (pos_expected_cash counts paid bills only,
+                                               D27-327); no front-desk drawer is touched
   the kitchen's NOTIFY trigger                 075_live_orders.sql
   audit trigger on pos_menu_items              076_approvals.sql
   prep_minutes on dish and category            079_prep_times.sql
@@ -472,6 +490,9 @@ for its restaurant figures - the same list Close restaurant day shows - and
 `outletSales` (2 October, D27-238, added by the Store lane): each outlet's
 settled sales per business day before GST (`pos_order_total`'s `taxable`),
 room and function bills included, which the Store sets its issues against.
+And `voidedBills` (14 October, D27-324): the paid bills voided on a business
+day - who, when, why, how much, how paid - which Close restaurant day, the
+night audit's run and the Night audit report's "POS Bills Voided" all read.
 
 ---
 
@@ -489,6 +510,10 @@ One other service's door is imported by this folder (17 September):
 
 - **finance**, at the database: a room charge becomes a folio posting (through
   `pos_tickets`), and a category's tax kind comes from finance's tax rules (067).
+  Through its door (D27-324, D27-327): `CASH_REFUND_CEILING` - a paid bill
+  voided gives cash back only under the refunds' limit until the CA answers;
+  and a voided bill's VAT bill is cancelled the way finance cancels one
+  (migration 222's trigger).
 - **front desk**, at the database: which rooms can be charged is
   `app.pos_chargeable_rooms` — checked-in stays with an open folio.
 - **admin**: the `pos` and `reception_pos` switches live on Administration →
@@ -509,6 +534,12 @@ One other service's door is imported by this folder (17 September):
 - **Cash is whole rupees; a closed day is closed** (the owner, 28 September): a
   bill paid wholly in cash is rounded at the settle; once Close restaurant day
   has counted the drawer, new bills and payments wait for the night audit.
+- **A paid bill is voided by the owner, an Admin or the GM, the same day** (D27-324):
+  with a reason, before the outlet's day is closed; never one that went to a room or a
+  function. It keeps its number and prints VOID; its KOTs and payments stand; every
+  sales figure reads `settled` and leaves it out; Close restaurant day and the night
+  audit list it. Its cash goes back out of the restaurant's tin (D27-327), under the
+  refunds' ₹20,000 limit until the CA answers.
 - **The kitchen has two buttons, Start and Ready** (D27-221, D27-222). A Ready dish
   leaves the Kitchen screen and is the waiter's: "N ready" on the table's tile on
   Tables (one tap: Taken, all of them) and "Ready" with Taken on the Terminal's

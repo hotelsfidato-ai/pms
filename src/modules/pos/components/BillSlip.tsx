@@ -131,7 +131,17 @@ export function BillSlip({ order: o, group, heading }: {
       />
 
       <DocPanel className="mt-4">
-        {o.status === "settled" ? (
+        {/* D27-324: a paid bill voided by the owner, an administrator or the
+            GM. Its number stays; the paper says VOID, why, who and when. */}
+        {o.status === "void" ? (
+          <div data-bill-void>
+            <p className="font-semibold">VOID - {o.voidReason ?? "-"}</p>
+            <p className="mt-0.5">
+              Voided by {o.voidedBy ?? "-"} at {o.voidedAt ?? "-"}
+              {o.voidReference && <>; refund reference <span className="tabular">{o.voidReference}</span></>}
+            </p>
+          </div>
+        ) : o.status === "settled" ? (
           <p>
             {/* D17-21: nothing was paid at the till — it went on the
                 function's bill, and the host pays for it there. */}
@@ -148,6 +158,7 @@ export function BillSlip({ order: o, group, heading }: {
         {o.vatBill && (
           <p className="mt-0.5" data-bill-vat-bill>
             Alcohol billed under VAT: VAT bill <span className="tabular">{o.vatBill}</span>
+            {o.status === "void" && " - cancelled with this bill"}
           </p>
         )}
       </DocPanel>

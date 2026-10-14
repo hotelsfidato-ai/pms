@@ -919,13 +919,15 @@ export default function TerminalPage() {
                 {order.status !== "open" ? (
                   <div className="space-y-2">
                     <p className="text-base text-grey-600">
-                      {order.status === "settled"
+                      {order.status === "void"
+                        ? `VOID - ${order.voidReason ?? "-"}.`
+                        : order.status === "settled"
                         ? order.paymentMethod === "function"
                           ? `On ${order.eventTitle ?? "the function"}'s bill.`
                           : `Paid by ${order.paymentMethod}.`
                         : `Closed unpaid - ${order.abandonedReason}`}
                     </p>
-                    {order.status === "settled" && (
+                    {(order.status === "settled" || order.status === "void") && (
                       <button
                         type="button"
                         onClick={() => void bill.print(order.id)}

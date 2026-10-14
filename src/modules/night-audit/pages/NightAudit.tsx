@@ -297,7 +297,8 @@ export default function NightAuditPage() {
                     ledger from when the till settled the order; the
                     audit states the day rather than adding to it. A
                     second copy would double the takings. */}
-                {result.restaurant && result.restaurant.orders > 0 && (
+                {result.restaurant
+                  && (result.restaurant.orders > 0 || (result.restaurant.voided ?? []).length > 0) && (
                   <div className="pt-2 mt-2 border-t border-success-100">
                     <p className="text-2xs text-success-600">
                       Restaurant · {result.restaurant.orders} order
@@ -321,6 +322,13 @@ export default function NightAuditPage() {
                       <p key={i} className="text-2xs text-success-600 mt-0.5">
                         Struck after the kitchen: {x.qty} × {x.name} ({money(x.value)})
                         {" · "}{x.orderNo} · {x.by ?? "-"} · {x.reason ?? "-"}
+                      </p>
+                    ))}
+                    {/* D27-324: paid bills voided, not in the figures above. */}
+                    {(result.restaurant.voided ?? []).map((v) => (
+                      <p key={v.orderNo} className="text-2xs text-success-600 mt-0.5">
+                        Voided: {v.orderNo} ({money(v.amount)}, {v.method ?? "-"})
+                        {" · "}{v.by ?? "-"} at {v.at} · {v.reason}
                       </p>
                     ))}
                   </div>

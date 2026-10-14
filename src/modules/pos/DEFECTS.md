@@ -29,6 +29,31 @@ fails "expected 'front_desk' to be 'pos'".
 
 ## Fixed
 
+### POS-35 · A paid restaurant bill could not be taken back by anybody - FIXED 14 October (the owner's D27-324 (1))
+
+**Found** — the permissions check of 14 October: an order was only open, paid or closed unpaid (028's
+`pos_orders_status_valid`), and nothing in `till.ts` changed a paid one. A bill paid at the wrong
+table, or paid twice, stayed in the day's sales and the GST figures for good.
+
+**What was done** — migration 222 and `POST /till/orders/:id/void`: the owner, an Admin or the GM
+(roleGate and `app.voids_paid_pos_bills`), with a reason, the same business day, before the outlet's
+day is closed; never a room or function bill; card or UPI with the refund's reference; cash back out of
+the restaurant's tin (D27-327). The bill keeps its number, lines, KOTs and payments, prints VOID, cancels its VAT
+bill, and is listed by Close restaurant day, the night audit and its report.
+
+**Found on the way, fixed** — the night audit's run read the restaurant's payments by method with no
+status at all (`night-audit/nightAudit.ts`, `byTender`): a voided bill would have stayed in "what we
+took". It reads paid bills only now, as its sales figures already did.
+And on screen, `components/AskDialog.tsx` carried the reason into the next question, so the
+reference box opened holding it; the next question starts empty now (`voidPaidBill.test.tsx`).
+
+**Proved** — `db/tests/modules/pos.sql` "pos void" (19), `api/test/modules/pos/voidPaidBill.test.ts`
+(8), `src/modules/pos/voidPaidBill.test.tsx` (6); each seen failing on the old code first.
+
+**The rule it leaves** — a new order status reaches every reader that filters on status. Every sales
+reader here asks `status = 'settled'`; one that asks `<> 'abandoned'` or nothing (banquet's list, the
+floor, the night audit's tenders) has to be read when a status is added.
+
 ### POS-34 · One fewer of a sent dish with several variation types failed: "Something went wrong" - FIXED 9 October (the owner's "check it and fix it")
 
 **Found** — suspected on 9 October while mapping the add-ons (the struck copy named its columns and

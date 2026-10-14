@@ -257,9 +257,20 @@ export interface Order {
   /** The hotel's FSSAI licence number (A16), null until typed. */
   hotelFssai?: string | null;
   table: string | null;
-  status: "open" | "settled" | "abandoned";
+  /** `void`: a PAID bill voided by the owner, an administrator or the GM
+      (D27-324). It keeps its number and reprints VOID. */
+  status: "open" | "settled" | "abandoned" | "void";
   businessDate: string;
   paymentMethod: string | null;
+  /** The room a bill charged to a room went to; null otherwise. Optional:
+      an answer from before D27-324 has no such key. */
+  room?: string | null;
+  /** Who voided it, when (HH:MM), why, and the refund's reference for a
+      card or UPI bill (D27-324). Null on a bill that is not void. */
+  voidedBy?: string | null;
+  voidedAt?: string | null;
+  voidReason?: string | null;
+  voidReference?: string | null;
   /** Null when the reader may not see that person: a GM reading an order
       the group owner opened (D27-1). Printed as a dash. */
   openedBy: string | null;
@@ -554,6 +565,26 @@ export interface StruckDish {
   /** Before tax, what it was sold at. */
   value: number;
   reason: string | null;
+  by: string | null;
+  at: string;
+}
+
+/** A paid bill voided that day (D27-324): who, when, why and how much. */
+export interface VoidedBill {
+  orderNo: string;
+  table: string | null;
+  outlet: string;
+  /** The bill as paid, round-off included. */
+  amount: number;
+  /** How it had been paid: cash, card, upi or split. */
+  method: string | null;
+  /** The part paid in cash: given back to the guest out of the
+      restaurant's tin (D27-327). */
+  cash: number;
+  reason: string;
+  /** The refund's reference for card or UPI; null for cash. */
+  reference: string | null;
+  /** Null: a name the reader may not see. */
   by: string | null;
   at: string;
 }
@@ -893,6 +924,16 @@ export function abandonOrder(
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders/${orderId}/abandon`,
     { reason });
+}
+
+/** VOID A PAID BILL (D27-324): the owner, an administrator or the GM, the
+    same business day, with a reason; a card or UPI bill with the refund's
+    reference. The server refuses everyone else and says why. */
+export function voidPaidBill(
+  hotelId: string, orderId: string, reason: string, reference?: string,
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/void`,
+    { reason, ...(reference ? { reference } : {}) });
 }
 
 /* ── The menu, as the hotel maintains it ──────────────────────────── */
@@ -1586,16 +1627,17 @@ export async function claimKot(
 }
 
 /** What a printed bill says it is (D27-292). */
-export type BillHeading = "interim" | "bill" | "duplicate";
+export type BillHeading = "interim" | "bill" | "duplicate" | "void";
 
 /** The words at the top of the paper. */
 export const BILL_TITLE: Record<BillHeading, string> = {
-  interim: "Interim bill", bill: "Bill", duplicate: "Bill · duplicate",
+  interim: "Interim bill", bill: "Bill", duplicate: "Bill · duplicate", void: "Bill · VOID",
 };
 
 /** The heading the next print of this order would carry, before asking. */
 export const nextBillHeading = (o: Pick<Order, "status" | "billsPrinted">): BillHeading =>
-  o.status !== "settled" ? "interim" : (o.billsPrinted ?? 0) > 0 ? "duplicate" : "bill";
+  o.status === "void" ? "void"
+    : o.status !== "settled" ? "interim" : (o.billsPrinted ?? 0) > 0 ? "duplicate" : "bill";
 
 /** Print bill (D27-292): asked of the bill printer. `sentTo` null - none is
     chosen - and the screen opens the bill as it always did. */
@@ -1654,6 +1696,10 @@ export interface DayEnd {
   blockers: { id: string; reason: string; detail: string | null }[];
   /** Food struck after the kitchen had it, with who and why (D27-119). */
   struck?: StruckDish[];
+  /** Paid bills voided that day (D27-324). Left out of every figure in
+      `summary`; their cash went back out of the tin (D27-327), so it is
+      not in `cash.expected` either. */
+  voided?: VoidedBill[];
   movements: {
     id: string; kind: MovementKind; amount: number;
     /** null: a name the reader may not see (the owner's, to a GM; D27-9). */

@@ -397,6 +397,16 @@
     <ol class="callouts"><li>Paid by UPI</li><li>Print the bill (A8.6)</li></ol>
   </figure>
 
+  <h3>Voiding a paid bill</h3>
+  <p>A bill paid by mistake (the wrong table, paid twice) can be voided by the owner, an Admin or the GM, on the day it was paid and before <span class="ui">Close restaurant day</span>. Nobody else sees the button.</p>
+  <ol class="steps">
+    <li>On the Till, tap the bill under <span class="ui">Settled today</span>.</li>
+    <li>Tap <span class="ui">Void this paid bill</span> and type why.</li>
+    <li>Paid by card or UPI: refund it on the card machine or the UPI app first, tap <span class="ui">Next</span>, and type the refund's reference (the UPI reference or the card approval).</li>
+    <li>Tap <span class="ui">Void the bill</span>. Give the cash back to the guest out of the <b>restaurant's tin</b>.</li>
+  </ol>
+  <p>The bill keeps its number and reads <b>VOID</b>, with the reason, who and when; <span class="ui">Print the bill</span> prints it headed <b>Bill · VOID</b>. The kitchen's KOTs stay as they were: the food was made. The day's sales, the reports and the Day book leave a voided bill out, and its alcohol's VAT bill is cancelled with it. <span class="ui">Close restaurant day</span> and the night audit list it under <span class="ui">Paid bills voided</span>. Its cash comes out of the restaurant's tin, so the tin's Expected leaves it out (A8.9); nobody's front-desk drawer is touched.</p>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
@@ -407,12 +417,14 @@
       <li><b>No connection:</b> cash, card and UPI are refused until the line is back. A <b>room charge</b> can be made with no connection: it is held and sent when the line is back.</li>
       <li>Once the day is closed (A8.9), new bills and payments wait for the night audit.</li>
       <li>An order on a banquet function is paid on the function's bill only; cash, card, UPI and rooms are switched off for it, with the reason.</li>
+      <li><b>A bill charged to a room is never voided here</b>: <span class="msg">“This bill went to room 201 - reverse it on the guest's bill.”</span> A bill on a banquet function is reversed on the function's bill.</li>
+      <li><b>The same day only</b>: a void on a later day, or once the day is closed, is refused: <span class="msg">“The restaurant's day is closed and its drawer counted. A bill of a closed day cannot be voided.”</span></li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>.</p>
+    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>.</p>
   </div>
 
   <!-- A8.8 -->
@@ -475,7 +487,7 @@
   <h3>At the end of the shift: count the drawer</h3>
   <ol class="steps">
     <li>Open the <span class="ui">Cash</span> step. Under <span class="ui">Count the drawer</span>, type how many of each note and coin come out of the tin.</li>
-    <li>Look at <span class="ui">The sum</span>: the opening float, plus the cash taken, plus or minus the money in and out, is what the drawer is <span class="ui">Expected</span> to hold. Under it, <span class="ui">Counted</span>.</li>
+    <li>Look at <span class="ui">The sum</span>: the opening float, plus the cash taken, plus or minus the money in and out, is what the drawer is <span class="ui">Expected</span> to hold. Under it, <span class="ui">Counted</span>. A paid bill voided today is not in it: its cash went back to the guest out of the tin (A8.7).</li>
     <li>If they differ, a yellow box says <span class="msg">“Short by ₹217”</span> or over, and how much of it is a paid-out waiting for a yes.</li>
     <li>Tap <span class="ui">Save the count - ₹3,140</span>.</li>
   </ol>
