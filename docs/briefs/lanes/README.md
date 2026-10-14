@@ -30,8 +30,16 @@ when you start, after every finished piece of work, at least every 30 minutes, a
 
 (PowerShell: `Add-Content "D:\fidato pms\.local\lanes\progress.log" "<the line>"`; Git Bash:
 `echo "<the line>" >> "/d/fidato pms/.local/lanes/progress.log"`.) Never rewrite earlier lines.
-Say "BLOCKED: <why>" in the line if you are stuck, and "DONE" in your last line.
+Take the time from the clock (`date` / `Get-Date`), never type it (DEFECTS.md LANE-5).
 The master reads this log and puts it on the owner's tracker.
+
+**Flags, not words, tell your runner where you stand (14 Oct, DEFECTS.md LANE-1, LANE-2):**
+- the WHOLE brief done and the report written: create `.local/lanes/flags/<lane>.done` (one line). The runner ends.
+- stuck on something only the owner or the master can give: create `.local/lanes/flags/<lane>.blocked`
+  with the reason in one line, and end your turn. The runner WAITS and resumes you when the master
+  deletes the file; the answer is in the master's newest lines here and the last paragraph of your brief.
+- never raise a flag for a wait that clears by itself (a slow disk, a busy web server, another lane's
+  render, a queued database run): wait and poll. Say DONE / BLOCKED in your progress line as well, for the owner.
 
 Every lane: read CLAUDE.md (it loads by itself), AGENTS.md, docs/briefs/README.md and the
 decision rows it names in docs/briefs/decisions-2026-09-27.md before the first write.
@@ -41,7 +49,7 @@ or cost stop then loses nothing), and finish with a short plain-words report wri
 
 **Never stop a process you did not start** - the master's web server on 5173, the API on 8787, another
 lane's recording or render included (14 Oct 13:16 lane E stopped the master's Vite). If it hangs, the
-disk is usually the cause: wait and poll, or write a BLOCKED line; the master restarts its own servers.
+disk is usually the cause: wait and poll; the master restarts its own servers.
 
 **Recording website (14 Oct 15:20):** the master serves a BUILT copy of the website on
 **http://localhost:5180** (test sign-in on, API 8787, the main demo). It loads at once and spares the disk:

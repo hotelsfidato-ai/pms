@@ -6539,6 +6539,34 @@ copy will see of theirs.**
 
 ---
 
+### 409 · MINE: a browser click with no tab named went into another session's page (14 October)
+
+Checking the built website copy on 5180, I clicked "Owner" by reference without naming the tab. The click ran
+on the FRONT tab, a helper's preview on 5346, and opened its Arrivals screen. Only a page change, nothing
+saved - but it could have pressed a button on someone else's work. **The rule:** every browser call names its
+tabId when more than one tab is open.
+
+---
+
+### 408 · MINE: times typed into the progress log instead of read from the clock (14 October)
+
+I wrote progress lines stamped 15:20 and 15:35 at about 14:58, and a lane did the same. The owner reads that
+log as a timeline. **The rule:** take every time from `date` / `Get-Date`; never type one (lanes DEFECTS LANE-5).
+
+---
+
+### 407 · MINE: the lanes' runner ended a lane that was only waiting, and then ended one I had unblocked (14 October)
+
+The runner I wrote on 13 Oct ended a lane's whole process whenever its last progress line said BLOCKED. A lane
+waiting two minutes for a slow web server was gone until the owner typed the key again (lanes D and E, three
+times on 14 Oct). Then I "unblocked" lane E by writing a line that said UNBLOCKED, and the runner's `/BLOCKED/`
+matched inside it and ended the lane again. Found when the owner was about to restart it. Fixed with flag files
+(`.local/lanes/flags/<lane>.done|.blocked|.spent`): blocked WAITS and resumes, done ends, the spend survives
+restarts (lanes DEFECTS LANE-1, LANE-2, LANE-7). **The rule:** a process that needs an answer waits for it; and
+never steer a program with free text it pattern-matches - use a file or a value with one meaning.
+
+---
+
 ### 406 · MINE: fifteen helpers at once, and the usage limit stopped every one of them mid-work (10 October)
 
 For D27-301 the master chat started fifteen helpers together: fourteen video chapters and the engine. The day
