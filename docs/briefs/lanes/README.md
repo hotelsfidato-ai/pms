@@ -38,3 +38,7 @@ decision rows it names in docs/briefs/decisions-2026-09-27.md before the first w
 Work in your OWN copy (the lane file says where), commit there in small steps (a usage
 or cost stop then loses nothing), and finish with a short plain-words report written to
 `.local/lanes/<lane>-report.md` (the master reads it), then tell the owner "done".
+
+**Never stop a process you did not start** - the master's web server on 5173, the API on 8787, another
+lane's recording or render included (14 Oct 13:16 lane E stopped the master's Vite). If it hangs, the
+disk is usually the cause: wait and poll, or write a BLOCKED line; the master restarts its own servers.
