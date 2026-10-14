@@ -44,3 +44,7 @@ does not need them.
 to ₹7,500 a night, 18% above ₹7,500. The film hotel keeps the standard DUMMY GSTIN: the film
 shows the wizard catching it ("a real GSTIN" still missing), and ends with step 1 still to do -
 say so plainly in the script (the owner chose this; do not invent a real-looking GSTIN).
+
+**14 Oct 12:50, the owner (D27-321):** the practice figures are approved - rooms 3,000 and 4,000,
+extra bed 600, discount 10%, commission 15% - typed into the practice hotel only, never read aloud
+as advice (the voice says "your price", not the number).
