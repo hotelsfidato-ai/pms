@@ -1047,14 +1047,14 @@ function OrderPanel({
       setBusy(false);
       if (!res.ok) return { refused: res.reason };
       toast.success(`Bill ${order.orderNo} is void`,
-        cash > 0 ? `Give ${moneyPrecise(cash)} back to the guest from your drawer.` : undefined);
+        cash > 0 ? `Give ${moneyPrecise(cash)} back to the guest out of the restaurant's tin.` : undefined);
       onChanged();
       return undefined;
     };
     setAsk({
       title: `Void bill ${order.orderNo}?`,
       body: [
-        cash > 0 && `${moneyPrecise(cash)} in cash goes back to the guest from your own drawer.`,
+        cash > 0 && `${moneyPrecise(cash)} in cash goes back to the guest out of the restaurant's tin.`,
         needsReference && "Refund the card or UPI payment on its machine or app first: its reference is asked next.",
         "The bill keeps its number and prints VOID. The kitchen's KOTs stay as they are.",
       ].filter(Boolean).join(" "),

@@ -1,5 +1,6 @@
 -- =============================================================================
--- 223 · A paid restaurant bill voided (the owner's D27-324 (1), 14 October)
+-- 222 · A paid restaurant bill voided (the owner's D27-324 (1) and D27-327,
+--       14 October)
 -- =============================================================================
 -- Until now an order was only open, paid (`settled`) or closed unpaid
 -- (`abandoned`, 028): a bill paid by mistake - the wrong table, charged twice -
@@ -16,10 +17,11 @@
 --     payments (the kitchen made the food; how money was taken is evidence);
 --   * its alcohol's VAT bill (135) gets its cancellation, as finance cancels
 --     one: a numbered row with the figures negated and the reason;
---   * the cash: the notes went into the restaurant's tin and stay there, so
---     the tin still expects them; the cash goes back to the guest out of the
---     VOIDING PERSON'S OWN drawer, as a cash refund does (219, D27-315 B), so
---     that drawer expects that much less.
+--   * the cash goes back to the guest out of the RESTAURANT'S TIN, where the
+--     notes still are the same day (the owner's D27-327); nobody's front-desk
+--     drawer is touched. Nothing to write for it: the tin's Expected
+--     (app.pos_expected_cash, 189) counts paid bills' cash only, so a voided
+--     bill's cash leaves it by itself.
 --
 -- Every report that counts restaurant sales reads `status = 'settled'`, so a
 -- voided bill leaves them by itself; the routes say what each one does.
@@ -206,85 +208,3 @@ begin
   return old;
 end $$;
 
-
--- ── The restaurant's tin: a voided bill's notes are still in it ──────────
--- 189's sum with one change: the cash of a bill voided today is still in the
--- tin (it went back out of the voider's own drawer, below).
-create or replace function app.pos_expected_cash(p_outlet uuid, p_date date)
-returns numeric language sql stable as $$
-  select
-    coalesce(app.pos_opening_cash(p_outlet, p_date), 0)
-    + coalesce((select sum(t.amount)
-                  from pos_order_tenders t
-                  join pos_orders o on o.id = t.order_id
-                 where o.outlet_id = p_outlet and o.business_date = p_date
-                   and o.status in ('settled', 'void') and t.method = 'cash'), 0)
-    + coalesce((select sum(m.amount) from pos_cash_movements m
-                 where m.outlet_id = p_outlet and m.business_date = p_date
-                   and m.kind in ('top_up', 'due_collection')), 0)
-    - coalesce((select sum(m.amount) from pos_cash_movements m
-                 where m.outlet_id = p_outlet and m.business_date = p_date
-                   and (m.kind = 'withdrawal'
-                        or (m.kind = 'expense'
-                            and app.cash_expense_counts('pos_cash_movements', m.id)))), 0)
-$$;
-
-
--- ── The voider's own drawer: the cash goes back out of it ────────────────
--- 219's sum with one more line: the cash of a restaurant bill this person
--- voided while the drawer was open, given back from it as a cash refund is.
-create or replace function app.cashier_expected_cash(p_shift uuid)
-returns numeric
-language sql stable as $$
-  with s as (select * from cashier_shifts where id = p_shift)
-  select
-    (select opening_cash from s)
-    + coalesce((
-        select sum(-fp.amount + p.round_off)
-          from folio_postings fp
-          join payments p on p.posting_id = fp.id
-          cross join s
-         where fp.hotel_id = s.hotel_id
-           and fp.category = 'payment'
-           and p.method = 'cash'
-           and fp.posted_by = s.staff_id
-           and fp.created_at >= s.opened_at
-           and fp.created_at < coalesce(s.closed_at, now())
-           and fp.reverses_id is null
-           and not exists (
-             select 1 from folio_postings rev where rev.reverses_id = fp.id)
-      ), 0)
-    - coalesce((
-        select sum(fp.amount)
-          from folio_postings fp
-          join refunds rf on rf.posting_id = fp.id
-          cross join s
-         where fp.hotel_id = s.hotel_id
-           and fp.category = 'refund'
-           and rf.method = 'cash'
-           and fp.posted_by = s.staff_id
-           and fp.created_at >= s.opened_at
-           and fp.created_at < coalesce(s.closed_at, now())
-           and not exists (
-             select 1 from folio_postings rev where rev.reverses_id = fp.id)
-      ), 0)
-    - coalesce((
-        select sum(t.amount)
-          from pos_orders o
-          join pos_order_tenders t on t.order_id = o.id
-          cross join s
-         where o.hotel_id = s.hotel_id
-           and o.status = 'void'
-           and t.method = 'cash'
-           and o.voided_by = s.staff_id
-           and o.voided_at >= s.opened_at
-           and o.voided_at < coalesce(s.closed_at, now())
-      ), 0)
-    + coalesce((select sum(m.amount) from cashier_movements m
-                 where m.shift_id = p_shift and m.kind = 'top_up'), 0)
-    - coalesce((select sum(m.amount) from cashier_movements m
-                 where m.shift_id = p_shift
-                   and (m.kind = 'withdrawal'
-                        or (m.kind = 'expense'
-                            and app.cash_expense_counts('cashier_movements', m.id)))), 0)
-$$;

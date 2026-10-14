@@ -7,7 +7,7 @@ import type { PoolClient as Client } from "pg";
 /* The banquet service's rule for which functions an order may go on
    (D17-21) — through its front door, never its files. */
 import { whyNotAttachable } from "../banquet/index.ts";
-import { overCashLimit, panFor, openOwnDrawer, CASH_REFUND_CEILING } from "../finance/index.ts";
+import { overCashLimit, panFor, CASH_REFUND_CEILING } from "../finance/index.ts";
 /* The one way an outlet row is made (Restaurant setup, D22-6). */
 import { addOutlet } from "./pos.ts";
 import {
@@ -4818,10 +4818,11 @@ till.post("/:code/till/orders/:id/abandon", async (c) => {
    never a bill that went to a room or a function - it reached a folio and
    is reversed there. A card or UPI bill names the refund's reference. The
    bill keeps its number, its lines (the kitchen made the food) and its
-   payments; it reprints VOID. Its cash is still in the restaurant's tin and
-   goes back to the guest out of the voider's OWN drawer, opened as a refund
-   opens it (finance's openOwnDrawer; app.cashier_expected_cash, 223). Its
-   alcohol's VAT bill is cancelled in the same transaction (223's trigger).
+   payments; it reprints VOID. Its cash goes back to the guest out of the
+   RESTAURANT'S TIN, where the notes still are the same day (the owner's
+   D27-327): the tin's Expected counts paid bills' cash only, so nothing is
+   written for it, and nobody's front-desk drawer is touched. Its alcohol's
+   VAT bill is cancelled in the same transaction (migration 222's trigger).
    Every refusal comes before the one write (MEMORY 243). */
 till.post("/:code/till/orders/:id/void", async (c) => {
   const input = await c.req.json<{ reason?: string; reference?: string }>()
@@ -4882,12 +4883,11 @@ till.post("/:code/till/orders/:id/void", async (c) => {
       return refuse("Give the refund's reference: the UPI reference or the card approval.");
     }
     const cash = Number(paid!.cash);
-    /* The refunds' cash ceiling (D27-315 B), the same until the CA confirms it. */
+    /* The refunds' cash ceiling (D27-315 B), the same until the CA answers (D27-327). */
     if (cash >= CASH_REFUND_CEILING) {
       return refuse("Cash is given back only below ₹20,000 on a bill until the hotel's CA "
         + "confirms that limit, so this bill cannot be voided here.");
     }
-    if (cash > 0) await openOwnDrawer(client, hotelId, businessDate);
 
     await client.query(
       `update pos_orders

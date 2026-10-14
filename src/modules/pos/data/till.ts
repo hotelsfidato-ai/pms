@@ -578,8 +578,8 @@ export interface VoidedBill {
   amount: number;
   /** How it had been paid: cash, card, upi or split. */
   method: string | null;
-  /** The part paid in cash: still in the restaurant's tin, given back
-      from the voider's own drawer. */
+  /** The part paid in cash: given back to the guest out of the
+      restaurant's tin (D27-327). */
   cash: number;
   reason: string;
   /** The refund's reference for card or UPI; null for cash. */
@@ -1697,7 +1697,8 @@ export interface DayEnd {
   /** Food struck after the kitchen had it, with who and why (D27-119). */
   struck?: StruckDish[];
   /** Paid bills voided that day (D27-324). Left out of every figure in
-      `summary`; their cash is still in the tin and in `cash.expected`. */
+      `summary`; their cash went back out of the tin (D27-327), so it is
+      not in `cash.expected` either. */
   voided?: VoidedBill[];
   movements: {
     id: string; kind: MovementKind; amount: number;

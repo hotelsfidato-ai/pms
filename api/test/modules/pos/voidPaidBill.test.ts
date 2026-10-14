@@ -8,10 +8,11 @@ import { openTillDay } from "../../drawer.ts";
 
    The owner, an administrator or the GM voids a PAID bill, with a reason:
    the same business day, before the restaurant's day is closed; never a
-   bill charged to a room; card or UPI with the refund's reference; cash
-   out of the voider's own drawer. The bill keeps its number, reprints
-   VOID, and the day's report names who, when, why and how much. The
-   KOTs stay. Migration 223 is the database's half
+   bill charged to a room or a function; card or UPI with the refund's
+   reference; cash back out of the restaurant's tin, never the voider's
+   own drawer (D27-327). The bill keeps its number, reprints VOID, and the
+   day's report names who, when, why and how much. The KOTs stay.
+   Migration 222 is the database's half
    (db/tests/modules/pos.sql, "pos void").
    ══════════════════════════════════════════════════════════════════ */
 
@@ -115,8 +116,13 @@ describe("voiding a paid restaurant bill", () => {
       .toBe("Say why this bill is being voided. The reason stays on the bill.");
   });
 
-  it("the GM voids a cash bill: it keeps its number, its payment and its KOT, and the cash leaves the GM's drawer", async () => {
+  it("the GM voids a cash bill: it keeps its number, its payment and its KOT, and the cash leaves the restaurant's tin", async () => {
     const bill = await paidBill("cash", { method: "cash" });
+    const tin = async () => Number((await sql<{ n: string }>(
+      `select app.pos_expected_cash(o.id, app.business_date(h.id))::text as n
+         from pos_outlets o join hotels h on h.id = o.hotel_id
+        where h.code = '5EL' and o.code = 'REST'`))[0]!.n);
+    const before = await tin();
     const res = await voidIt(gm, bill.id, { reason: "Billed to the wrong table" });
     expect(res.status, await res.clone().text()).toBe(200);
     const after = (await res.json()) as Order;
@@ -133,11 +139,12 @@ describe("voiding a paid restaurant bill", () => {
       "select max(kot_no)::int as no from pos_order_lines where order_id = $1", [bill.id]);
     expect((await call(gm, `/till/orders/${bill.id}/kot/${k!.no}`)).status, "its KOT stands").toBe(200);
 
-    /* Out of the GM's own drawer, opened by the void as a refund opens it. */
-    const [d] = await sql<{ expected: string; opening: string }>(
-      `select app.cashier_expected_cash(id)::text as expected, opening_cash::text as opening
-         from cashier_shifts where staff_id = $1 and closed_at is null`, [gm]);
-    expect(Number(d!.expected)).toBe(Number(d!.opening) - bill.payable);
+    /* Back out of the restaurant's tin (D27-327); the GM's own drawer is
+       neither opened nor touched. */
+    expect(await tin()).toBeCloseTo(before - bill.payable, 2);
+    const [d] = await sql<{ n: number }>(
+      "select count(*)::int as n from cashier_shifts where staff_id = $1", [gm]);
+    expect(d!.n, "a drawer opened for the GM").toBe(0);
   });
 
   it("a UPI bill needs the refund's reference", async () => {

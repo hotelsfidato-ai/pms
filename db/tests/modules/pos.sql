@@ -834,9 +834,9 @@ end $$;
 -- the same business day, before that outlet's day is closed; never a bill
 -- that went to a room or a function (it is reversed on that bill); a card or
 -- UPI bill names the refund's reference. The bill keeps its number, is void
--- for good, and keeps its payments and lines. Its cash stays in the
--- restaurant's tin (the notes went in) and leaves the voiding person's own
--- drawer, as a cash refund does (D27-315 B).
+-- for good, and keeps its payments and lines. Its cash goes back to the guest
+-- out of the restaurant's tin, where the notes still are the same day; the
+-- voiding person's own drawer is not touched (D27-327).
 -- =============================================================================
 do $$
 declare
@@ -955,16 +955,16 @@ begin
     format($q$update pos_order_lines set qty = 2 where order_id = %L$q$, cash_bill), '23000');
 
   -- ---------- the money ---------------------------------------------------------
-  perform test.ok('pos void', 'the notes stay in the restaurant''s tin: its Expected is unchanged',
-    app.pos_expected_cash(v_out, bd) = tin_before,
+  perform test.ok('pos void', 'the cash goes back out of the restaurant''s tin: Expected less 525',
+    app.pos_expected_cash(v_out, bd) = tin_before - 525,
     tin_before || ' -> ' || app.pos_expected_cash(v_out, bd));
   -- The GM counts the drawer a moment later (one transaction here: now() is
   -- the void's own instant, so the close is after it).
-  update cashier_shifts set closed_at = now() + interval '1 second', counted_cash = 475,
+  update cashier_shifts set closed_at = now() + interval '1 second', counted_cash = 1000,
                             closed_by = gm
    where id = sh;
-  perform test.ok('pos void', 'the cash goes back out of the GM''s own drawer (1,000 - 525)',
-    app.cashier_expected_cash(sh) = 475, app.cashier_expected_cash(sh)::text);
+  perform test.ok('pos void', 'the GM''s own drawer is not touched (D27-327): it still expects 1,000',
+    app.cashier_expected_cash(sh) = 1000, app.cashier_expected_cash(sh)::text);
   perform test.ok('pos void', 'the day''s sales leave both voided bills out',
     (select settled_orders from app.pos_day_summary(v_out, bd)) = 0,
     (select settled_orders || ' settled' from app.pos_day_summary(v_out, bd)));

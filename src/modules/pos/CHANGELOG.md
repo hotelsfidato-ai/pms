@@ -11,12 +11,24 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-14 · A voided bill's cash out of the restaurant tin; migration 222 (the owner's D27-327)
+
+**Asked for:** the owner's answers to the void's three questions: (1) a voided cash bill's cash goes back out of the RESTAURANT TIN, not the voider's front-desk drawer; (2) the refunds' ₹20,000 cash limit stays until the CA answers; (3) a banquet function's bill stays refused. And 222 turned out unused: the migration takes 222, so the numbers have no gap.
+
+**Shipped**
+- `222_void_a_paid_restaurant_bill.sql` (was 223): the two drawer functions are gone from it, so `app.pos_expected_cash` (189) and `app.cashier_expected_cash` (219) stand as they were. The tin counts paid bills' cash only, so a voided bill's cash leaves it by itself; no front-desk drawer is touched.
+- The void route opens no drawer (finance's `openOwnDrawer` is no longer exported for it; `CASH_REFUND_CEILING` still is). Finance's drawer screen (`cashier.ts`) and the Cashier shift report (`reports.ts`) are back as they were on cp6.
+- The Till's dialog: "₹756.00 in cash goes back to the guest out of the restaurant's tin."; the toast likewise. Close restaurant day: "Their cash went back to the guest out of this tin, so it is not in Expected either."; the sum's "Cash of voided bills, still in the tin" line is gone.
+- Manual A8.7 and A8.9 say the same; rebuilt. MODULE.md and DEFECTS.md (POS-35) too.
+
+**Proved:** each test changed first and seen failing on the drawer code: "pos void" 2 of 19 failed (the tin's Expected unchanged, the GM's drawer at 475); `voidPaidBill.test.ts` 1 of 8 failed on the drawer route ("a drawer opened for the GM"); `voidPaidBill.test.tsx` 2 of 6 failed (the sentence and the card). All pass after: 19/19, 8/8, 6/6; the manual and migration-number tests pass (no gap now).
+
 ## 2026-10-14 · Voiding a paid bill (the owner's D27-324 (1))
 
 **Asked for:** a PAID restaurant bill voided by the owner, Admin or GM, with a reason: the same business day, before the restaurant day is closed; a room-charged bill refused ("reverse it on the guest's bill"); cash out of the voider's drawer as finance's refunds, card or UPI with the refund's reference; the bill keeps its number and prints VOID; its GST and VAT out of sales; the day's report shows who, when, why and how much; KOTs and consumed stock stay; the server and the database refuse everyone else.
 
 **Shipped**
-- Migration `223_void_a_paid_restaurant_bill.sql`: status `void`; `voided_by`, `voided_at`, `void_reason`, `void_reference`; `app.voids_paid_pos_bills` (owner, admin, GM, group admin); the guard trigger (who; a paid bill; the bill's own business day; the outlet's day not closed; never room or function; card or UPI names the reference; who and when are the database's; void for good, its record unchanged); its VAT bill's cancellation (a negated numbered row with the reason, as finance cancels one); a void's payments stay (`pos_tender_settled_immutable`); `pos_bill_prints` heading `void`; `app.pos_expected_cash` keeps a voided bill's cash (the notes are in the tin); `app.cashier_expected_cash` takes it out of the voider's drawer.
+- Migration `222_void_a_paid_restaurant_bill.sql` (written as 223; renumbered, below): status `void`; `voided_by`, `voided_at`, `void_reason`, `void_reference`; `app.voids_paid_pos_bills` (owner, admin, GM, group admin); the guard trigger (who; a paid bill; the bill's own business day; the outlet's day not closed; never room or function; card or UPI names the reference; who and when are the database's; void for good, its record unchanged); its VAT bill's cancellation (a negated numbered row with the reason, as finance cancels one); a void's payments stay (`pos_tender_settled_immutable`); `pos_bill_prints` heading `void`; `app.pos_expected_cash` keeps a voided bill's cash (the notes are in the tin); `app.cashier_expected_cash` takes it out of the voider's drawer.
 - `POST /till/orders/:id/void` (`till.ts`, roleGate `VOID_PAID_BILL`): every refusal with its sentence, before the one write; cash through finance's `openOwnDrawer` and under its `CASH_REFUND_CEILING` (both now through finance's front door); the table freed as Clear frees one (`CLEAR_FINISHED`, shared with Clear). The order read carries `room`, `voidedBy`, `voidedAt`, `voidReason`, `voidReference`. A reprint is headed `void`. The kitchen keeps a voided bill's dishes until Ready.
 - `voidedBills` (front door): Close restaurant day's "Paid bills voided", the night audit's run (`restaurant.voided`) and the Night audit report's "POS Bills Voided".
 - Screens: the Till's "Void this paid bill" (owner, Admin, GM only; off with the sentence for a room or function bill; reason, then the reference for card or UPI); "VOID - reason. Voided by X at HH:MM"; struck in Settled today; the bill printed "Bill · VOID" with why, who, when; the Terminal says VOID; Close restaurant day lists the voids and adds "Cash of voided bills, still in the tin" to the sum.

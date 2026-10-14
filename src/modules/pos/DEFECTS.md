@@ -35,10 +35,10 @@ fails "expected 'front_desk' to be 'pos'".
 `pos_orders_status_valid`), and nothing in `till.ts` changed a paid one. A bill paid at the wrong
 table, or paid twice, stayed in the day's sales and the GST figures for good.
 
-**What was done** — migration 223 and `POST /till/orders/:id/void`: the owner, an Admin or the GM
+**What was done** — migration 222 and `POST /till/orders/:id/void`: the owner, an Admin or the GM
 (roleGate and `app.voids_paid_pos_bills`), with a reason, the same business day, before the outlet's
-day is closed; never a room or function bill; card or UPI with the refund's reference; cash out of the
-voider's own drawer. The bill keeps its number, lines, KOTs and payments, prints VOID, cancels its VAT
+day is closed; never a room or function bill; card or UPI with the refund's reference; cash back out of
+the restaurant's tin (D27-327). The bill keeps its number, lines, KOTs and payments, prints VOID, cancels its VAT
 bill, and is listed by Close restaurant day, the night audit and its report.
 
 **Found on the way, fixed** — the night audit's run read the restaurant's payments by method with no

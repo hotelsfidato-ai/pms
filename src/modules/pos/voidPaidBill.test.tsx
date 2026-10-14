@@ -106,7 +106,7 @@ function tillWith(order: () => Order, extra: Record<string, (body: unknown) => u
 }
 
 describe("the Till - voiding a paid bill", () => {
-  it("the GM voids a cash bill with a reason: told the cash goes back from their own drawer", async () => {
+  it("the GM voids a cash bill with a reason: told the cash goes back out of the restaurant's tin", async () => {
     as("gm");
     let now = paid();
     const calls = tillWith(() => now, {
@@ -114,7 +114,7 @@ describe("the Till - voiding a paid bill", () => {
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "Void this paid bill" }));
-    expect(await screen.findByText(/₹336\.00 in cash goes back to the guest from your own drawer/))
+    expect(await screen.findByText(/₹336\.00 in cash goes back to the guest out of the restaurant's tin/))
       .toBeTruthy();
     expect(screen.getByText(/The kitchen's KOTs stay as they are/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Why is it being voided?"),
@@ -180,7 +180,7 @@ describe("the printed bill of a voided bill", () => {
 });
 
 describe("Close restaurant day - the voided bills", () => {
-  it("lists who, when, why and how much, and puts their cash in the sum", async () => {
+  it("lists who, when, why and how much; their cash went back out of the tin", async () => {
     as("gm");
     const day: DayEnd = {
       outlet: { code: "REST", name: "Fidato Restaurant" }, businessDate: "2026-08-25",
@@ -204,5 +204,6 @@ describe("Close restaurant day - the voided bills", () => {
     expect(await screen.findByText("Paid bills voided")).toBeTruthy();
     expect(screen.getByText("20260825-5 · 4 - Billed to the wrong table")).toBeTruthy();
     expect(screen.getByText(/Hotel Manager GM · 20:31 · Cash/)).toBeTruthy();
+    expect(screen.getByText(/Their cash went back to the guest out of this tin/)).toBeTruthy();
   });
 });

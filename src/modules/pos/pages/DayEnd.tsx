@@ -300,7 +300,7 @@ function Overview({ day }: { day: DayEnd }) {
       {(day.voided ?? []).length > 0 && (
         <Card>
           <CardHeader title="Paid bills voided"
-            description="Not in the sales above. Their cash is still in the tin: it went back to the guest from the drawer of whoever voided the bill." />
+            description="Not in the sales above. Their cash went back to the guest out of this tin, so it is not in Expected either." />
           <CardBody>
             <ul className="divide-y divide-grey-200">
               {day.voided!.map((v) => (
@@ -418,11 +418,6 @@ function CashStep({ hotelId, day, onDone }: {
               <Line label="Opening float" value={day.opened ? day.cash.opening : null} />
               <Line label="Cash taken"
                     value={day.summary.byMethod["cash"] ?? 0} />
-              {/* D27-324: still in the tin; given back from the voider's drawer. */}
-              {(day.voided ?? []).some((v) => v.cash > 0) && (
-                <Line label="Cash of voided bills, still in the tin"
-                      value={day.voided!.reduce((s, v) => s + v.cash, 0)} signed />
-              )}
               {MOVEMENTS.map((m) => {
                 const total = day.movements
                   .filter((x) => x.kind === m.kind && !waitsOrRefused(x))
