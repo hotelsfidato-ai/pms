@@ -18,6 +18,15 @@ Nothing open.
 
 ## Fixed
 
+### FIN-34 · A hotel that had given a refund could not be reset - FIXED 14 October (the release's API run)
+
+**Found:** the final release's full API run, `resetOrder.test.ts` "leaves nothing behind that still points at what it clears": "refunds points at folio_postings and is not cleared".
+**What was wrong:** 219 (lane B, FIN-32) added `refunds`, whose `posting_id` points at its refund line with no cascade, and did not add it to the property reset's list (`api/scripts/reset-property.ts`, `CLEAR`). 219 did add it to the test hotel's classes (`app.test_hotel_classes`), so the test hotel's reset (`app.test_hotel_clear`, which works its order out from the foreign keys) was right; only the script was not.
+**How it would have shown on live:** `npm run reset -- <CODE> --yes` (or `--fresh-start`) on a property where anybody had recorded a refund would stop at `delete from folio_postings` - "reset failed: update or delete on table folio_postings violates foreign key constraint refunds_posting_id_fkey" - and roll back: nothing removed, the guards restored, the hotel left as it was. Safe, but the reset could not be done until the code was fixed.
+**Fixed:** `refunds` is in `CLEAR`, before `payments` and `folio_postings` (no guard to lift: refunds has no delete trigger). No migration. `resetOrder.test.ts` 4/4 after, 3/4 before.
+**Checked for the same gap:** load-demo (drops the hotel, which cascades refunds), `app.forbid_hotel_delete` (refuses a hotel with postings, so with any refund), `demo-history.ts` (clears only its own bookings, which it gives no refunds) - none needs it.
+**Rule:** a new table that points at a cleared one goes into `CLEAR` in the same commit; `resetOrder.test.ts` says so, but only in the full API run.
+
 ### FIN-32 · An overpaid bill had no way out, and `refund` meant two things - FIXED 14 October (D27-315 B, Lane B)
 
 **What happened:** check-out refused an overpaid bill ("Refund it before checking out") and nothing could refund it; reversing the payment recorded no money going back and is refused on a closed day. The `refund` category (006) was read by about nine places with eZee's old meaning - an adjustment counted in sales and charges - while nothing posted it.
@@ -181,7 +190,11 @@ with GST on it. No screen sent either; a direct API call could.
 
 **The fix** - refused above the first write, for the stay's route and every
 service's door alike: "Take a payment through Payments." and "A refund is not
-a charge. Reverse the payment it gives back." (there is no refund route).
+a charge. Reverse the payment it gives back." (there was no refund route).
+Since D27-315 B (14 October) a refund has its own step on the bill, and the
+refusal reads "A refund is not a charge. Give it with Refund on the bill." -
+lane B changed the sentence and not this test; the test was brought into line
+the same day (the release's API run, 9 failures).
 
 **Proved** - `chargeDoor.test.ts`, "refuses a payment or a refund as a
 charge" (on the old code the payment was posted).

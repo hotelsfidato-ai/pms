@@ -8,6 +8,17 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-14 · FD-33: a voided booking is not an arrival nor a next stay (the owner's D27-326 (1)); FD-12's test follows leaving early
+
+**Asked for:** the master's helper on the final release copy. (1) D27-326 (1): a VOIDED booking out of Arrivals Today, Upcoming and the Dashboard's Arrivals tile (lists and "expected" counts) and out of a guest's next stay, exactly as a cancelled one; `listVacant` too. At the root, test first. (2) The release's API run: `roomCleaning.test.ts` FD-12 checked a guest out a night early with no reason, which lane A's rule (D27-315 A) now asks. Branch `worktree-agent-a5f7c1ecdbb604327`, fast-forwarded to cp6 9ad852aa. front-desk is still claimed by lane A's branch (merged); worked in this copy only.
+**Shipped:**
+- `data/stays.ts`: `isCancelledOrVoid`, on the front door; `listArrivals` and `listVacant`'s tonight list ask it. `pages/Arrivals.tsx` (Upcoming), `data/stayview.ts` (`toneFor`, FD-32's line) and reports' `Dashboard.tsx` (the Arrivals tile) ask it. Guests' `directory.ts`: the next stay leaves out `('cancelled', 'void')`.
+- The manual: A1.3 "without cancelled or void ones (neither list counts them)"; rebuilt. No picture changes (no void in the demo's lists).
+- `roomCleaning.test.ts` FD-12: the complimentary stay is one night, so leaving on the arrival day frees none - the test is about the room, not the dates. The rule is unchanged.
+- `DEFECTS.md` FD-33; FD-32's note points at it.
+**Proved:** web `data/voidArrivals.test.tsx` (3; in `data/` because a test outside the seam importing `listVacant` counted as its caller in `repositories.test.ts` Rule 2b - seen, and moved) and reports' `dashboard.test.tsx` "D27-326 (1)", all four seen failing on the old code (Today "8 expected" for 7 with the voided row shown; Upcoming shown and counted; `listVacant`; the tile 8 for 7), then 45 of 45 with `stayview.test.ts` and `deskRead.test.ts`. API `directoryNextStay.test.ts`, seen failing ("2027-08-25" for the voided guest), then in the one full API run. `roomCleaning.test.ts` 2/3 before, 3/3 after. `npx tsc -b --force` and the API types: exit 0. **Not opened in the browser** (no running copy with a voided booking; the screens were rendered in the tests with the demo data).
+**Left open (the owner's):** the guest directory's "possible duplicate" mark still counts a voided booking (FD-33).
+
 ## 2026-10-14 · FD-32: a voided booking is struck through on the Calendar and leaves its room free (the owner's D27-323 (1))
 
 **Asked for:** D27-323 (1), before the final release: a VOIDED booking that held a room is drawn struck through like a cancelled one, the key reads "Cancelled or void", and it no longer takes a free room off its type's count. Fixed at the root, once; every other free-room count checked for the same mistake. Branch `worktree-agent-a109d3b679784cc82`, fast-forwarded to cp6 e112db14 first (it began at 548db9b8, behind D27-319). front-desk is still claimed by lane A (`lane/early-checkout-a`, 13 Oct, fully merged into cp6), so `claim` refused; worked in this copy only.

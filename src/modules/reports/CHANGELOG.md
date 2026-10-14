@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-14 · The Dashboard's Arrivals tile leaves out a voided booking (the owner's D27-326 (1))
+
+`pages/Dashboard.tsx`: today's arrivals filtered `!== "cancelled"`, so a voided booking (the API's `void`, not in `StayStatus`) was counted - as checked in, not being `due-in`. It asks front desk's `isCancelledOrVoid` now (front desk's FD-33). `dashboard.test.tsx` "D27-326 (1)": the tile with a voided arrival added read "8" for 7 on the old code; the same as without it after (14 of 14 in the file).
+
 ## 2026-10-14 · No decision codes in the stock reports' cost note (the owner's D27-319 (1))
 
 `api/src/modules/reports/builders/stock.ts`, `COST_NOTE` (the footnote of the stock reports, on screen and in their files): "... at its running average at the moment (D27-238, D27-242)." ends at "the moment." **Proved:** no test asserted the old words; `test/modules/reports/stockReports.test.ts` re-run in the session's API run (front desk's entry).
