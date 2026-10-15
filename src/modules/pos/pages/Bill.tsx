@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { Printer } from "lucide-react";
 import { getOrder, nextBillHeading, printBillHere, type BillHeading } from "@/modules/pos/data/till";
-import { useGroupSettings } from "@/modules/admin";
 import { BillSlip } from "@/modules/pos/components/BillSlip";
 import { ReadFailed, Button, toast } from "@/components/ui";
 
@@ -19,14 +18,12 @@ import { ReadFailed, Button, toast } from "@/components/ui";
    sends the bill there; this page is where it is printed on the device
    instead - with none chosen, or with the bill printer offline. Printing
    here takes a bill waiting at the bill printer off its list, and the paper
-   says what it is: INTERIM BILL, BILL, or BILL · DUPLICATE.
+   says what it is: BILL, or BILL · DUPLICATE (D27-334).
    ══════════════════════════════════════════════════════════════════ */
 
 export default function BillPage() {
   const { code, id } = useParams();
   const hotelId = code ?? "";
-  /* The group's name and logo, as on every bill (D27-53). */
-  const group = useGroupSettings(hotelId);
   /* What the server said this print is, once it has been asked. */
   const [printed, setPrinted] = useState<BillHeading | null>(null);
   const [busy, setBusy] = useState(false);
@@ -97,7 +94,7 @@ export default function BillPage() {
         </Button>
       </div>
 
-      <BillSlip order={o} group={group} heading={heading} />
+      <BillSlip order={o} heading={heading} />
     </div>
   );
 }

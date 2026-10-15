@@ -1785,6 +1785,15 @@ async function readOrder(client: Client, orderId: string) {
         from app.pos_order_total($1)`,
     [orderId]);
 
+  /* The bill's tax lines (D27-334): the database's split by scheme and rate,
+     on the DISCOUNTED value, so the paper adds up to what the guest pays. */
+  const { rows: taxes } = await client.query<{ tax_scheme: "gst" | "vat"; tax_rate: string; tax: string }>(
+    `select t.tax_scheme, t.tax_rate::text, t.tax::text
+       from app.pos_order_by_tax($1) t
+      where t.tax <> 0
+      order by t.tax_scheme, t.tax_rate`,
+    [orderId]);
+
   /* What was actually taken, and how. One row for an ordinary bill,
      several when the guest paid part cash and part card. Empty while the
      order is open — nothing has been taken yet. */
@@ -1898,6 +1907,7 @@ async function readOrder(client: Client, orderId: string) {
     promotionName: h.promotion_name,
     taxable: Number(total[0]!.taxable),
     tax: Number(total[0]!.tax),
+    taxes: taxes.map((t) => ({ scheme: t.tax_scheme, rate: Number(t.tax_rate), tax: Number(t.tax) })),
     gross: Number(total[0]!.gross),
     roundOff: Number(total[0]!.round_off),
     payable: Number(total[0]!.payable),

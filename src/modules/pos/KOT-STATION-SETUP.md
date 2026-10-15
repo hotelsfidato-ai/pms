@@ -16,8 +16,8 @@ What prints where is chosen in **Restaurant setup → KOT section**:
 - **This computer** - on each computer with a printer: its name, and what it
   prints. **One computer per kind**: ticking a kind on another computer moves
   it there.
-- **The bills** - one computer may print them too, silently: **INTERIM BILL**
-  before payment, **BILL** after, **BILL · DUPLICATE** when printed again.
+- **The bills** - one computer may print them too, silently: **BILL**
+  before payment and after (D27-334), **BILL · DUPLICATE** when printed again.
   With none chosen, Print bill opens the bill on the device that pressed it,
   as before.
 
@@ -116,7 +116,7 @@ Tables, the Till, the Terminal and the Kitchen now read
 Send a dish and a drink to the kitchen from Tables (or the Till, or the
 Terminal). Within a few seconds **KITCHEN KOT n** prints at the kitchen and
 **BAR KOT n** at the bar, with no window. Print a table's bill from Tables:
-**INTERIM BILL** prints at the bill printer.
+**BILL** prints at the bill printer.
 
 - **A print window appears instead:** that Chrome was started without the
   setting. Close every KOT station window, then start it again from the

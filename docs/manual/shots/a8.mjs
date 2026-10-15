@@ -1,6 +1,6 @@
 // The restaurant chapter's pictures (A8), taken as ONE RUN through the
 // restaurant on the local demo: a table's order with a custom add-on, the KOTs
-// on the (virtual) printers, the kitchen, the interim bill, the till, payment,
+// on the (virtual) printers, the kitchen, the bill before payment, the till, payment,
 // the bill and its duplicate, the KOT section, the add-ons used, closing the day.
 // Each: id (docs/manual/img/<id>.png), who signs in (a test sign-in's label),
 // the address, the steps a person takes, and the numbered arrows - whose
@@ -140,20 +140,22 @@ export const SHOTS = [
 
   /* ── The bill ─────────────────────────────────────────────────────── */
   {
-    id: "A8-13", title: "Print the bill from Tables: an interim bill", as: "General Manager",
+    id: "A8-13", title: "Print the bill from Tables, before payment", as: "General Manager",
     path: "/pos/5EL/tables",
-    steps: [{ click: "label:Print the bill for N4" }, { waitFor: TOAST, ms: 10000 }],
+    /* 15 October: clicked while the cards were still moving into place, it
+       landed on the table and opened the pad - settle first. */
+    steps: [{ settle: true }, { wait: 1500 }, { click: "label:Print the bill for N4" }, { waitFor: TOAST, ms: 10000 }],
     marks: [
       { n: 1, at: "label:Print the bill for N4", side: "bottom" },
       { n: 2, at: TOAST, side: "left" },
     ],
   },
   {
-    id: "A8-14", title: "INTERIM BILL on the bill printer", path: PRINTERS,
-    steps: [{ waitFor: "text:INTERIM BILL", ms: 15000 }, { wait: 2500 }],
+    id: "A8-14", title: "The BILL on the bill printer, before payment (D27-334)", path: PRINTERS,
+    steps: [{ waitFor: "text:GRAND TOTAL", ms: 15000 }, { wait: 2500 }],
     marks: [
       { n: 1, at: "css:.printer:nth-of-type(2) .slip .head", side: "left" },
-      { n: 2, at: "text:NOT PAID", side: "left" },
+      { n: 2, at: "text:GRAND TOTAL", side: "left" },
     ],
   },
   {

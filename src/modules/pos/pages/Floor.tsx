@@ -149,8 +149,8 @@ export default function FloorPage() {
     setPad({ table, orderId: table.orderId });
   };
 
-  /* The interim bill: to the bill printer, or here when none is chosen
-     (D27-292). Asking marks the table "Bill printed", as before. */
+  /* The bill before payment: to the bill printer, or here when none is
+     chosen (D27-292, D27-334). Asking marks the table "Bill printed". */
   const bill = useBillPrint(hotelId);
   const print = async (table: FloorTable) => {
     if (!table.orderId) return;

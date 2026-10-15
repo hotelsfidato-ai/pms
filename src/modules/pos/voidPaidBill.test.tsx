@@ -79,7 +79,7 @@ const paid = (over: Partial<Order> = {}): Order => ({
   }],
   net: 320, discount: 0, discountType: null, discountValue: null,
   discountReason: null, promotionId: null, promotionName: null,
-  taxable: 320, tax: 16, gross: 336, roundOff: 0, payable: 336,
+  taxable: 320, tax: 16, taxes: [{ scheme: "gst", rate: 5, tax: 16 }], gross: 336, roundOff: 0, payable: 336,
   tenders: [{ id: "t-1", method: "cash", amount: 336, tendered: null, change: null,
               reference: null, takenBy: "Owner" }],
   covers: null, waiter: null, orderType: "dine_in", customerName: null,
@@ -171,7 +171,7 @@ describe("the Till - voiding a paid bill", () => {
 
 describe("the printed bill of a voided bill", () => {
   it("says VOID at its head and why, who and when", () => {
-    render(<BillSlip order={voided()} group={{ name: null, logo: null }} heading="void" />);
+    render(<BillSlip order={voided()} heading="void" />);
     expect(screen.getByText("Bill · VOID")).toBeTruthy();
     expect(screen.getByText("VOID - Billed to the wrong table")).toBeTruthy();
     expect(screen.getByText(/Voided by Hotel Manager GM at 20:31/)).toBeTruthy();

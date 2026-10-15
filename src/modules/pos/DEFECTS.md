@@ -29,6 +29,27 @@ fails "expected 'front_desk' to be 'pos'".
 
 ## Fixed
 
+### POS-38 · With a discount or a round off, the printed bill did not add up - FIXED 15 October (the owner's D27-334)
+
+**Found** - 15 October, by the master, reading `BillSlip.tsx` for the owner's "a normal
+restaurant bill". The paper worked its CGST/SGST out of the lines at their full price
+(`qty × unitPrice × rate`), but the database taxes the DISCOUNTED value
+(`app.pos_order_by_tax`). It printed no Discount line and no Round off line, and its TOTAL
+was `gross`, not `payable` - the amount the Till asks for. A 10% discount therefore gave a
+bill whose Net + taxes was not its TOTAL, and a rounded bill a TOTAL the guest was not asked
+to pay. A bill with neither was right.
+
+**What was done** - the order's read sends the database's own tax lines, `taxes` (by
+scheme and rate, on the discounted value, sorted by rate as a number: `till.ts`
+`readOrder`); the bill prints them with Sub total, Discount, Round off and GRAND TOTAL =
+`payable`. CGST takes half the rate's tax to the paisa and SGST the rest, so the pair is the
+tax exactly.
+
+**The rule it leaves** - a printed figure is read from the server's arithmetic, never
+worked out again on the page. `billPlain.test.tsx` "adds up" (Sub total - Discount + tax +
+Round off = GRAND TOTAL) and `api/test/modules/pos/till.test.ts` "takes the discount off
+the NET" (the tax lines sum to the order's tax, 5% before 18%).
+
 ### POS-37 · A reprint waiting for an offline computer was dropped when its KOT kind moved to another computer - FIXED 15 October (the owner's D27-330 (6))
 
 **Found** - the owner's D27-330 (6), reading D27-329's reprint: the station's ask

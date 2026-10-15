@@ -95,7 +95,7 @@ const ORDER = {
   table: "AC4", status: "open", businessDate: "2026-08-25", paymentMethod: null,
   openedBy: "Owner", settledBy: null, eventId: null, eventTitle: null, tenders: [],
   abandonedReason: null, discount: 0, roundOff: 0, net: 300, taxable: 300, tax: 15,
-  gross: 315, payable: 315, billsPrinted: 0,
+  taxes: [{ scheme: "gst", rate: 5, tax: 15 }], gross: 315, payable: 315, billsPrinted: 0,
   lines: [{ id: "l-1", name: "Veg Thali", qty: 1, unitPrice: 300, taxRate: 5, note: null,
             voided: false, kotStatus: "sent", addedBy: "Owner", parentLineId: null,
             isAddon: false, variationId: null, numberedAddons: null, extra: null }],
@@ -145,11 +145,13 @@ describe("a printing computer prints (D27-159, D27-292)", () => {
     expect(print).toHaveBeenCalledTimes(1);
   });
 
-  it("prints a bill asked of it, headed INTERIM BILL", async () => {
+  /* D27-334: the bill before payment is a plain BILL - never "interim",
+     never "not paid" - as a restaurant hands its guest. */
+  it("prints a bill asked of it, headed BILL", async () => {
     const { print, onPaper } = station(true, false, true);
     await vi.waitFor(() => expect(print).toHaveBeenCalledTimes(1));
-    expect(onPaper[0]).toContain("Interim bill");
-    expect(onPaper[0]).toContain("NOT PAID");
+    expect(onPaper[0]).toContain("Bill");
+    expect(onPaper[0]).not.toMatch(/interim|not paid/i);
   });
 
   /* D27-329 (2): Reprint pressed on a waiter's tablet, the Till or the
@@ -356,9 +358,10 @@ describe("the bill page says what it is, and Print here writes it down first", (
     return { calls, print };
   };
 
-  it("INTERIM BILL before payment", async () => {
+  it("BILL before payment, never Interim (D27-334)", async () => {
     page(ORDER, "interim");
-    expect((await screen.findByText("Interim bill")).textContent).toBe("Interim bill");
+    expect(await screen.findByText("Bill")).toBeTruthy();
+    expect(screen.queryByText(/interim/i)).toBeNull();
   });
 
   it("BILL after payment, and BILL · DUPLICATE once one was printed", async () => {

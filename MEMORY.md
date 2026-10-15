@@ -6539,6 +6539,37 @@ copy will see of theirs.**
 
 ---
 
+### 414 · MINE: a string replace on CRLF files matched nothing and left half an edit (15 October)
+
+Removing the group's logo from the restaurant bill's two callers, I replaced whole lines with `node -e`
+and `String.replace`, after a `python - <<'EOF'` whose heredoc never ended swallowed the rest of the
+command. `Bill.tsx` and `KotStation.tsx` are CRLF; my patterns had `\n`, so the import and `const group`
+lines silently did not match while the JSX lines did - the callers then passed a prop the bill no longer
+took. Seen only because `git diff` showed 2 lines changed where 4 were meant. **The rule:** in this repo
+edit existing files with the Edit tool (it matches CRLF), or check `file <path>` first and count every
+replacement (exactly one, or stop); never chain a fallback interpreter after a heredoc.
+
+---
+
+### 413 · MINE: psql waited 2 minutes for a password nobody would type (15 October)
+
+Looking for a restaurant order, I ran the local `psql.exe -U postgres` from the Bash tool with no password
+set: it sat at its hidden prompt until the tool's 2-minute limit, and I had to kill it by name. **The
+rule:** a local `psql` from the tools always gets `-w` (never prompt: fail at once) - or use the app's own
+API from the browser pane, as I then did; the project's scripts already pass the password themselves.
+
+---
+
+### 412 · MINE: a list sorted by a column I had just cast to text put 18% before 5% (15 October)
+
+The restaurant bill's new tax lines (`till.ts` `readOrder`, D27-334) were `select tax_rate::text ... order by
+tax_scheme, tax_rate`. In Postgres a bare name in ORDER BY means the OUTPUT column first - the text - so
+"18" sorted before "5", and the bill printed CGST 9% above CGST 2.5%. Seen on the local bill before any
+commit. **The rule:** when the select list casts a column, order by the input column qualified with its
+table's alias (`order by t.tax_rate`), never by the bare name; `till.test.ts` now checks 5% before 18%.
+
+---
+
 ### 411 · MINE: the database queue run outside Git Bash's own PATH let two builds through at once (15 October)
 
 A helper (D27-330) started `.local/dbq.sh` from PowerShell as `C:\Program Files\Git\usr\bin\bash.exe dbq.sh ...`,

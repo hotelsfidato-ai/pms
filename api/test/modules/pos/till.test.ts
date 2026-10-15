@@ -643,6 +643,7 @@ describe("cash", () => {
 type Order = {
   id: string; orderNo: string;
   net: number; discount: number; taxable: number; tax: number;
+  taxes: { scheme: string; rate: number; tax: number }[];
   gross: number; roundOff: number; payable: number;
   discountType: string | null; discountValue: number | null;
   discountReason: string | null;
@@ -715,6 +716,14 @@ describe("a discount has to say why", () => {
        this assertion exists to catch. */
     expect(after.tax).toBeLessThan(before.tax);
     expect(after.gross).toBeCloseTo(after.taxable + after.tax, 2);
+
+    /* D27-334: the printed bill's tax lines, one per rate, on the
+       discounted value - they add up to the order's tax, to the paisa. */
+    const read = (await (await as(`/api/hotels/5EL/till/orders/${order.id}`)).json()) as Order;
+    expect(read.taxes.length).toBe(2);
+    /* By rate as a number: 5% before 18%, never "18" before "5". */
+    expect(read.taxes[0]!.rate).toBeLessThan(read.taxes[1]!.rate);
+    expect(read.taxes.reduce((a, t) => a + t.tax, 0)).toBeCloseTo(read.tax, 2);
   });
 });
 

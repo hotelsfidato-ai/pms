@@ -44,7 +44,7 @@ const order: Order = {
   }],
   net: 320, discount: 0, discountType: null, discountValue: null,
   discountReason: null, promotionId: null, promotionName: null,
-  taxable: 320, tax: 16, gross: 336, roundOff: 0, payable: 336, tenders: [],
+  taxable: 320, tax: 16, taxes: [{ scheme: "gst", rate: 5, tax: 16 }], gross: 336, roundOff: 0, payable: 336, tenders: [],
   covers: null, waiter: null, orderType: "dine_in", customerName: null,
   customerPhone: null, customerAddress: null, customerLocality: null, heldAt: null,
 };

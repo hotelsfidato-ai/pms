@@ -9,7 +9,6 @@ import { useRole } from "@/lib/session";
 import { useLive } from "@/lib/useLiveOrders";
 import { dateTime, timeOnly } from "@/lib/format";
 import { Button, toast } from "@/components/ui";
-import { useGroupSettings } from "@/modules/admin";
 import {
   getKotSetup, pollKotStation, claimKot, getDocket, claimBill, getOrder,
   askKotReprint, claimKotReprint,
@@ -117,7 +116,6 @@ function StationPrinter({ hotelId }: { hotelId: string }) {
      computer's "last seen". */
   useLive(hotelId, "orders", [queueKey(hotelId)]);
   const queue = useStationQueue(hotelId);
-  const group = useGroupSettings(hotelId);
   const { print, node } = useSlipPrinter();
   const busy = useRef(false);
   const mine = queue.data?.station ? queue.data : null;
@@ -150,7 +148,7 @@ function StationPrinter({ hotelId }: { hotelId: string }) {
         } else if (bill) {
           const o = await getOrder(hotelId, bill.orderId);
           if (o && await claimBill(hotelId, bill.id, kotDevice())) {
-            print(<BillSlip order={o} group={group} heading={bill.heading} />);
+            print(<BillSlip order={o} heading={bill.heading} />);
             void qc.invalidateQueries({ queryKey: queueKey(hotelId) });
           }
         }

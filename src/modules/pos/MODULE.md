@@ -57,7 +57,7 @@ off (`navigation.ts`, section `point-of-sale`, `receptionNeeds: "reception_pos"`
 | Restaurant setup | `/pos/:code/setup` | `pages/Setup.tsx` | none - the owner, an administrator and the GM see it (`room_config` edit; D22-6, D25-20 to D25-26, 25 Sep); the kitchen manager too, for its **KOT section** only (D27-292) |
 | — KOT section | in Restaurant setup | `components/KotSection.tsx` | this computer's name and what it prints (KOT kinds, the bills); the KOT kinds (Kitchen, Bar, any added); the computers; which menu section prints where; this computer's last 20 KOTs with Reprint (D27-292). Replaced the Kitchen screen's "KOT printer" panel |
 | — (not in the menu) kitchen docket | none since 29 Sep | `components/DocketSlip.tsx` | printed by the computer that prints its kind (D27-159, D27-292), headed "BAR KOT 14", REPRINT when reprinted; never shows prices |
-| — (not in the menu) printed bill | `/pos/:code/bill/:id` | `pages/Bill.tsx`, `components/BillSlip.tsx` | opened from an order with no bill printer, or Print here; INTERIM BILL / BILL / BILL · DUPLICATE (D27-292) |
+| — (not in the menu) printed bill | `/pos/:code/bill/:id` | `pages/Bill.tsx`, `components/BillSlip.tsx` | opened from an order with no bill printer, or Print here; a plain restaurant bill: BILL (before and after payment) / BILL · DUPLICATE (D27-292, D27-334) |
 
 - Reception's four entries show only while the hotel's "Reception can use the
   POS" switch is on.
@@ -657,8 +657,8 @@ One other service's door is imported by this folder (17 September):
   dish's). It prints while a restaurant screen is open on it (PosGate);
   missed slips print when it is back, oldest first, the business date's only.
   Tables, the Till, the Terminal and the Kitchen say per kind something prints
-  to whether it is printing. One computer may print the bills: INTERIM BILL,
-  BILL, BILL · DUPLICATE; none chosen, the bill opens where it was asked.
+  to whether it is printing. One computer may print the bills: BILL
+  (D27-334: before payment too), BILL · DUPLICATE; none chosen, the bill opens where it was asked.
 - **Add-ons on a dish** (D27-289, D27-291): numbered ones fold into a dish
   before Send; a custom one (typed name, a price or Free) and any add-on on a
   dish already sent are lines of their own under it, with their own number,

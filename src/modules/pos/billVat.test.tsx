@@ -30,7 +30,10 @@ const ORDER = {
     line("l-2", "Whisky 30 ml", 500, 10, "vat"),
     line("l-3", "Something at ten per cent GST", 200, 10, "gst"),
   ],
-  net: 1700, gross: 1820,
+  /* The tax lines are the server's split (D27-334): the whisky's VAT apart
+     from the GST line at the same rate. */
+  net: 1700, discount: 0, gross: 1820, roundOff: 0, payable: 1820,
+  taxes: [{ scheme: "gst", rate: 5, tax: 50 }, { scheme: "gst", rate: 10, tax: 20 }, { scheme: "vat", rate: 10, tax: 50 }],
 };
 
 afterEach(() => { vi.restoreAllMocks(); });

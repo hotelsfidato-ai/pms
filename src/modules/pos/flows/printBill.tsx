@@ -8,7 +8,7 @@ import { askBillPrint, BILL_TITLE } from "@/modules/pos/data/till";
 
    With a bill printer chosen in Restaurant setup's KOT section, the bill
    goes there and prints silently, and the screen says where it went:
-   "Interim bill sent to Bar PC". Offline, the screen offers Print here
+   "Bill sent to Bar PC". Offline, the screen offers Print here
    - the bill still waits there unless it is printed here. With none
    chosen, the bill opens on this device, as it always did (the owner).
 

@@ -106,7 +106,9 @@ window.__find = (spec, nth = 0) => {
   return all.filter(visible)[nth] ?? null;
 };`;
 
-async function waitFor(spec, ms = 8000) {
+/* SHOOT_WAIT (ms): a busy D: drive can take longer than 8 s to draw a page
+   after a load (15 Oct: Tables at 9 s) - SHOOT_WAIT=30000 waits longer. */
+async function waitFor(spec, ms = Number(process.env.SHOOT_WAIT ?? 8000)) {
   for (let t = 0; t < ms; t += 200) {
     if (await js(`${FIND}; !!window.__find(${JSON.stringify(spec)})`)) return true;
     await sleep(200);
@@ -262,6 +264,9 @@ for (const shot of wanted) {
   } catch (error) {
     failed++;
     console.log(`  ✗ ${shot.id}  ${error.message}`);
+    /* What the page showed instead, for whoever reads the failure. */
+    await cdp("Page.captureScreenshot", { format: "png" }).then(({ data }) =>
+      writeFileSync(join(ROOT, ".local", `shoot-failed-${shot.id}.png`), Buffer.from(data, "base64"))).catch(() => {});
     if (shot.critical) break;
   }
 }

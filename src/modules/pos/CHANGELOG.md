@@ -11,6 +11,29 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-15 · A plain restaurant bill, BILL before payment, and a bill that adds up (the owner's D27-334)
+
+**Asked for:** "it needs to be just like a normal restaurant bill which is given to the guest; remove the interim bill from it, as this will be given to the guest before payment." Then three answers: build it as shown, remove the "not a tax invoice" sentence (the owner asks their CA about "Tax Invoice"), the hotel's name in text only.
+
+**Shipped**
+- `components/BillSlip.tsx` rewritten: the hotel's name, the restaurant, place, GSTIN and FSSAI, centred; **BILL** (also before payment); bill number and date, table, covers, steward; Item / Qty / Rate / Amount; Sub total, Discount, CGST/SGST per rate (VAT apart), Round off, **GRAND TOTAL** = `payable`; "Paid by …" only once paid (no NOT PAID); "Thank you. Visit again." No logo, no orange bar, no facts box, no tax-invoice sentence. The `group` prop is gone from it and its two callers (`pages/Bill.tsx`, `components/KotStation.tsx`).
+- `data/till.ts`: `BILL_TITLE.interim` is "Bill" (the server's heading key `interim` is unchanged, so no migration); `Order.taxes`. The Tables message reads "Bill sent to …".
+- API `till.ts` `readOrder`: `taxes`, the database's split by scheme and rate on the discounted value (`app.pos_order_by_tax`), sorted by rate as a number.
+- Manual A8.6 (text, Figures A8-13, A8-14, A8-19 retaken, the book rebuilt); `MODULE.md`, `KOT-STATION-SETUP.md`. The picture tool: `SHOOT_WAIT` (a longer wait on a busy disk), and a failed picture saves what the page showed to `.local/shoot-failed-<id>.png`; A8-13 settles before its click. The local virtual printer (`.local`, not in git) draws the same bill.
+
+**Found**
+- POS-38: with a discount or a round off the paper did not add up (tax worked out before the discount, no Discount or Round off line, TOTAL = gross, not payable).
+- MEMORY 412 (18% sorted before 5%: ORDER BY a text-cast column), 413, 414.
+
+**Proved**
+- Web: `npx vitest run src/modules/pos` 26 files, 164 of 164, the bill snapshot refreshed on purpose. `billPlain.test.tsx` "adds up" with the old arithmetic put back: "expected 316.66 to be 315"; restored.
+- API: `till.test.ts` 87 of 87 (through the queue), with the tax lines' sum and 5% before 18%.
+- On screen (local, 5EL, the Owner): an order of 2 Paneer Tikka and a water, 10% off - BILL, Sub total 680.00, Discount 10% -68.00, CGST/SGST 2.5% 14.40 each, CGST/SGST 9% 3.24 each, GRAND TOTAL ₹647.28 (= the order's payable). The bill printer's paper in Figures A8-14 and A8-19.
+
+**Left open**
+- The owner's CA: should the restaurant bill be headed "Tax Invoice"? (D27-334.)
+- The A8 picture script is behind today's order pad (it stays open after Send); only A8-13, A8-14 and A8-19 were retaken.
+
 ## 2026-10-15 · A waiting reprint follows its KOT kind to the new computer (the owner's D27-330 (6))
 
 **Asked for:** a reprint waiting for a station follows its KOT kind to the new computer when a manager moves the kind there, and prints there marked REPRINT, instead of being dropped. Only reprints: waiting new KOTs are as before.

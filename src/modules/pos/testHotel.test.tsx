@@ -42,7 +42,7 @@ const order = {
   hotelName: "5 Elements Akkalkot", hotelCity: "Akkalkot", hotelGstin: "27ABCDE1234F1Z5",
   hotelFssai: "12345678901234", table: "T1", status: "settled", businessDate: "2026-08-25",
   paymentMethod: "cash", openedBy: "Asha", settledBy: "Ravi", eventTitle: null,
-  net: 1000, gross: 1050,
+  net: 1000, discount: 0, taxes: [{ scheme: "gst", rate: 5, tax: 50 }], gross: 1050, roundOff: 0, payable: 1050,
   lines: [{ id: "l-1", name: "Paneer Tikka", qty: 1, unitPrice: 1000, taxRate: 5, taxScheme: "gst",
     note: null, voided: false, kotStatus: "served", addedBy: "Asha", parentLineId: null,
     isAddon: false, variationId: null }],
@@ -54,11 +54,9 @@ const docket: Docket = {
   lines: [{ id: "1", parentId: null, name: "Paneer Tikka", qty: 1, note: null, isAddon: false }],
 };
 
-const group = { name: "Fidato Hotels", logo: null };
-
 describe("a real hotel's restaurant paper is unchanged", () => {
   it("the bill, byte for byte", async () => {
-    const { container } = render(<BillSlip order={order} group={group} heading="bill" />);
+    const { container } = render(<BillSlip order={order} heading="bill" />);
     await expect(container.innerHTML).toMatchFileSnapshot("./__snapshots__/testHotel.real-bill.html");
     expect(container.textContent).toContain("GSTIN 27ABCDE1234F1Z5");
     expect(container.textContent).not.toContain(TEST_DOCUMENT);
@@ -76,7 +74,7 @@ describe("a test hotel's restaurant paper", () => {
 
   it.each(["interim", "bill", "duplicate"] as const)(
     "the %s bill says TEST · NOT VALID large, and carries no GSTIN", (heading) => {
-      const { container } = render(<BillSlip order={order} group={group} heading={heading} />);
+      const { container } = render(<BillSlip order={order} heading={heading} />);
       const marks = container.querySelectorAll("[data-test-document]");
       expect(marks.length).toBeGreaterThan(0);
       expect(marks[0]!.textContent).toBe(TEST_DOCUMENT);

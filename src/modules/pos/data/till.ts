@@ -313,6 +313,9 @@ export interface Order {
   promotionName: string | null;
   taxable: number;
   tax: number;
+  /** The bill's tax lines (D27-334): the database's split by scheme and
+      rate, on the discounted value. Zero lines are left out. */
+  taxes: Array<{ scheme: "gst" | "vat"; rate: number; tax: number }>;
   gross: number;
   /** Signed, and under a rupee. Its own line on the bill. */
   roundOff: number;
@@ -1658,12 +1661,13 @@ export async function claimKotReprint(hotelId: string, id: string, device: strin
   return res.ok && res.claimed;
 }
 
-/** What a printed bill says it is (D27-292). */
+/** What a printed bill says it is (D27-292). "interim" is the print before
+    payment; since D27-334 its paper says plain BILL, as a restaurant's does. */
 export type BillHeading = "interim" | "bill" | "duplicate" | "void";
 
 /** The words at the top of the paper. */
 export const BILL_TITLE: Record<BillHeading, string> = {
-  interim: "Interim bill", bill: "Bill", duplicate: "Bill · duplicate", void: "Bill · VOID",
+  interim: "Bill", bill: "Bill", duplicate: "Bill · duplicate", void: "Bill · VOID",
 };
 
 /** The heading the next print of this order would carry, before asking. */
