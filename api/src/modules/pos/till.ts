@@ -4649,7 +4649,8 @@ till.post("/:code/till/orders/:id/settle", async (c) => {
     } else {
 
       /* ── To a room: through the bridge, not around it ────────────── */
-      room = input.room?.trim();
+      /* Rooms are saved in capitals (D27-335), so 111a finds 111A (D27-336). */
+      room = input.room?.trim().toUpperCase();
       if (!room) return refuse("Which room is this bill for?");
 
       const { rows: chargeable } = await client.query<{

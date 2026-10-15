@@ -248,11 +248,13 @@ async function main() {
       }
 
       /* Rooms. A property with none sells nothing and divides by zero
-         in every occupancy figure. */
+         in every occupancy figure. A test hotel (test_of set) serves no
+         real guest, so it is left out (D27-336). */
       const { rows: empty } = await client.query<{ who: string }>(
         `select coalesce(string_agg(h.code, ', '), '') as who
            from hotels h
           where h.is_active
+            and h.test_of is null
             and not exists (select 1 from rooms r
                              where r.hotel_id = h.id and r.is_active)`,
       );
