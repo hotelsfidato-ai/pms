@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-15 · A room with a letter, in any case (the owner's D27-335) - GS-2
+
+Migration 226 ("room numbers in capitals"): `app.guest_room_phone_link` matches the room whatever its capitals; Lost property's Room box is a text keyboard and its lookup (`wakeAndLost.ts`) compares in capitals. `db/tests/modules/guest-services.sql` gains "a room with a letter, typed in small letters, finds the guest (D27-335)". The whole change: inventory's `CHANGELOG.md`, 15 October.
+
 ## 2026-10-02 · Room and phone, DigiLocker (off), wake-up calls and lost property (D27-235, D27-239, D27-241)
 
 **Asked for:** D27-235 2.4 (a guest types their room and phone; the code goes only to

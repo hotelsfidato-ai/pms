@@ -55,6 +55,27 @@ describe("RT-4 · a room's number and floor", () => {
     expect(await rooms()).toBe(before);
   });
 
+  /* D27-335: a room number is always saved in capitals, so 111a can never
+     be a second room beside 111A - by hand or from a file. */
+  it("saves 111a as 111A, then refuses 111A as already there, and a file's 111a is that room", async () => {
+    try {
+      const made = await call("POST", "/rooms", { number: " 111a ", roomTypeId: typeId });
+      expect(made.status).toBe(200);
+      expect(await sql<{ number: string }>(
+        "select number from rooms r join hotels h on h.id = r.hotel_id where h.code = '5EL' and upper(number) = '111A'"))
+        .toEqual([{ number: "111A" }]);
+      const again = await call("POST", "/rooms", { number: "111A", roomTypeId: typeId });
+      expect(again.status).toBe(409);
+      expect(await reasonOf(again)).toBe("This property already has a room 111A.");
+      const file = await call("POST", "/rooms/import", { dryRun: true, rows: [
+        { number: "111a", typeCode: "DLX" }] });
+      expect(((await file.json()) as { verdicts: { name: string; action: string }[] }).verdicts[0])
+        .toMatchObject({ name: "111A", action: "update" });
+    } finally {
+      await sql("delete from rooms where hotel_id = (select id from hotels where code = '5EL') and upper(number) = '111A'");
+    }
+  });
+
   it("refuses a floor below 0 when a room is changed, and in a rooms file", async () => {
     const edit = await call("PATCH", `/rooms/${roomNumber}`, { floor: -5 });
     expect(edit.status).toBe(409);

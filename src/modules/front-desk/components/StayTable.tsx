@@ -302,7 +302,7 @@ export function StayTable({
       (s) =>
         s.guest.toLowerCase().includes(q) ||
         s.reference.toLowerCase().includes(q) ||
-        s.roomNumber.includes(q),
+        s.roomNumber.toLowerCase().includes(q),
     );
   }, [rows, query]);
 

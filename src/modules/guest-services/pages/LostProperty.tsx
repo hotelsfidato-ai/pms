@@ -125,7 +125,7 @@ function LogDialog({ code, onClose, onDone }: { code: string; onClose: () => voi
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Room" hint="If it was in one.">
-              {(f) => <Input {...fieldProps(f)} inputMode="numeric" maxLength={10} value={roomNumber}
+              {(f) => <Input {...fieldProps(f)} autoCapitalize="characters" maxLength={10} value={roomNumber}
                              onChange={(e) => setRoomNumber(e.target.value)} />}
             </Field>
             <Field label="Where it is kept">

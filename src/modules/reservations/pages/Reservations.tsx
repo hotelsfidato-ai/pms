@@ -67,7 +67,7 @@ export default function ReservationsPage() {
         !q ||
         s.guest.toLowerCase().includes(q) ||
         s.reference.toLowerCase().includes(q) ||
-        s.roomNumber.includes(q) ||
+        s.roomNumber.toLowerCase().includes(q) ||
         (digits.length >= 3 && (s.phone ?? "").replace(/\D/g, "").includes(digits)),
     )
     .sort((a, b) => b.arrival.localeCompare(a.arrival));

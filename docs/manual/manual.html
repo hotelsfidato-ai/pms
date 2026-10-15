@@ -4329,7 +4329,7 @@ figure.shot.phone img { max-width: 72mm; }
     <h4>Watch out</h4>
     <ul>
       <li>Nothing is disposed of by itself. The days kept are shown so the desk can decide.</li>
-      <li>A room number must be one of this hotel's rooms: <span class="msg">“There is no room 999 here.”</span></li>
+      <li>A room number must be one of this hotel's rooms, in small letters or capitals (111a is room 111A): <span class="msg">“There is no room 999 here.”</span></li>
       <li>There is no photo of the item for now: describe it well in What it is.</li>
     </ul>
   </div>
@@ -9496,7 +9496,7 @@ figure.shot.phone img { max-width: 72mm; }
   <h3>To add a room</h3>
   <ol class="steps">
     <li>Tap <span class="ui">Add a room</span>.</li>
-    <li>Type its <span class="ui">Number</span> (at most 10 letters and digits) and choose its <span class="ui">Type</span>.</li>
+    <li>Type its <span class="ui">Number</span> (at most 10 letters and digits; a letter is saved as a capital, so 111a is room 111A) and choose its <span class="ui">Type</span>.</li>
     <li><span class="ui">Floor</span>: 0 (the ground floor) to 99; leave it blank if the property has one floor. Tick <span class="ui">Smoking room</span> if it is one.</li>
     <li>Tap <span class="ui">Save</span>.</li>
   </ol>
@@ -9515,7 +9515,7 @@ figure.shot.phone img { max-width: 72mm; }
   <h3>To add several rooms at once</h3>
   <ol class="steps">
     <li>Tap <span class="ui">Add a room</span> and switch on <span class="ui">Several rooms</span>. <span class="ui">Number</span> becomes <span class="ui">From</span> and <span class="ui">To</span>.</li>
-    <li>Type the first and the last number, digits only: <span class="ui">From</span> 101, <span class="ui">To</span> 109. A <span class="ui">To</span> below <span class="ui">From</span> is refused: <span class="msg">“To is below From.”</span> Zeros typed in <span class="ui">From</span> are kept: 01 to 12 adds 01, 02 and on to 12.</li>
+    <li>Type the first and the last number: digits, with at most one letter at the end, shown in capitals. The number changes or the letter does, not both: <span class="ui">From</span> 101, <span class="ui">To</span> 109 adds 101 to 109; <span class="ui">From</span> 111A, <span class="ui">To</span> 111D adds 111A, 111B, 111C and 111D; <span class="ui">From</span> 101A, <span class="ui">To</span> 109A adds 101A, 102A and on to 109A. A <span class="ui">To</span> below <span class="ui">From</span> is refused: <span class="msg">“To is below From.”</span> So is a range where both change, 101A to 109B: <span class="msg">“Change the number or the letter, not both.”</span> And a letter on one end only: <span class="msg">“Give both ends a letter, or neither.”</span> Zeros typed in <span class="ui">From</span> are kept: 01 to 12 adds 01, 02 and on to 12.</li>
     <li>Choose the <span class="ui">Type</span>, type the <span class="ui">Floor</span> if there is one, and tick <span class="ui">Smoking room</span> if they are. These are the same for every room.</li>
     <li>The button counts them: <span class="ui">Add 9 rooms</span>. Tap it. The window then says what was added: <span class="msg">“Added 8 rooms: 101, 102, 103, 104, 106, 107, 108, 109”</span>. A number the hotel already has is skipped and named, <span class="msg">“105 already exists, skipped”</span>, and the rest are added. Tap <span class="ui">Done</span>.</li>
   </ol>
@@ -9547,7 +9547,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Nothing in use is deleted: reservations, rates and a year of bills point at a room type, and every stay at its room. A new hotel starts with no room types, and a room type nothing uses can be removed: <span class="d">D27-263</span>. Room types in Settings, with their amenities, photos and the rooms in order: <span class="d">D27-258</span>. Several rooms at once: one range, one floor typed for all, a number that exists skipped and named, the rest added: <span class="d">D27-309</span>.</p>
+    <p>Nothing in use is deleted: reservations, rates and a year of bills point at a room type, and every stay at its room. A new hotel starts with no room types, and a room type nothing uses can be removed: <span class="d">D27-263</span>. Room types in Settings, with their amenities, photos and the rooms in order: <span class="d">D27-258</span>. Several rooms at once: one range, one floor typed for all, a number that exists skipped and named, the rest added: <span class="d">D27-309</span>. Room numbers with letters, both kinds of range, and always in capitals, so 111a can never be a second room beside 111A: <span class="d">D27-335</span>.</p>
   </div>
 
   <!-- A17.6 -->
@@ -11239,7 +11239,7 @@ figure.shot.phone img { max-width: 72mm; }
   <!-- B5.8 -->
   <h2 id="b5-8"><span class="n">B5.8</span>The guest's ways in: codes, Google, DigiLocker, ID photos</h2>
   <ul>
-    <li><b>A code</b> to the booking's phone on WhatsApp or to its email, or <b>Continue with Google</b>, where the Google account's verified email must be the booking's <span class="d">D27-207</span>. Nothing is sent until the guest presses a button <span class="d">D27-210</span>. During the stay a guest may type the room and phone number; the code goes only to the booking's own number, and only when both match <span class="d">D27-235</span> (2.4).</li>
+    <li><b>A code</b> to the booking's phone on WhatsApp or to its email, or <b>Continue with Google</b>, where the Google account's verified email must be the booking's <span class="d">D27-207</span>. Nothing is sent until the guest presses a button <span class="d">D27-210</span>. During the stay a guest may type the room and phone number (a room's letter in small letters or capitals, the keyboard a text one <span class="d">D27-335</span>); the code goes only to the booking's own number, and only when both match <span class="d">D27-235</span> (2.4).</li>
     <li><b>DigiLocker</b>, through API Setu as a DigiLocker partner: prepared and switched off until the partner keys and the lawyer's answers arrive <span class="d">D27-235</span> (2.5). When on, the DigiLocker account's mobile must be the booking's own number; only the masked Aadhaar number and the name are kept; the ID waits for the desk like any other submission. A fuller ID number already on file is kept <span class="d">D27-247</span>.</li>
     <li><b>ID photos</b> go through a second workflow in n8n, with its own secret, into Google Drive: one encrypted file per upload, opened only with that hotel's password; the server keeps nothing <span class="d">D27-208</span> <span class="d">D27-209</span> <span class="d">D27-211</span>. A hotel with no password set is not offered the upload. A failed delete is shown to the owner, Admin and GM with "Try again".</li>
   </ul>

@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-15 · The stay lists find a room with a letter (the owner's D27-335) - FD-36
+
+`components/StayTable.tsx` and `data/stays.ts` (line 118 only): the room is lowered like the guest and reference before the search compares it. The whole change: inventory's `CHANGELOG.md`, 15 October.
+
 ## 2026-10-15 · The Check in window lists every room type; a deposit before arrival with the advance rule off (the owner's D27-330 (1), (2))
 
 **Asked for:** D27-330 (1) and (2), before launch. Helper copy `worktree-agent-aed37fbbf14267246`, fast-forwarded to cp6 3b355c7f. Web only: the server took another type since FD-34 and a payment before arrival since FIN-36. The guest directory and the restaurant were not touched. Finance's entry points here.

@@ -177,7 +177,7 @@ wakeAndLost.post("/:code/lost-property", async (c) => {
     let roomId: string | null = null;
     if (b.roomNumber?.trim()) {
       const { rows } = await client.query<{ id: string }>(
-        "select id::text from rooms where hotel_id = $1 and number = $2", [at.hotelId, b.roomNumber.trim()]);
+        "select id::text from rooms where hotel_id = $1 and upper(number) = upper($2)", [at.hotelId, b.roomNumber.trim()]);
       if (!rows[0]) return { ok: false as const, reason: `There is no room ${b.roomNumber.trim()} here.` };
       roomId = rows[0].id;
     }

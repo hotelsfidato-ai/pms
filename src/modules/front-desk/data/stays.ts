@@ -115,7 +115,7 @@ export async function listStays(
       (s) =>
         s.guest.toLowerCase().includes(q) ||
         s.reference.toLowerCase().includes(q) ||
-        s.roomNumber.includes(q),
+        s.roomNumber.toLowerCase().includes(q),
     );
   }
 

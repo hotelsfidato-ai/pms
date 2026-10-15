@@ -28,6 +28,17 @@ the file is inventory's (on `MODULE.md`'s Requests).
 
 ## Fixed — the solution is here; do not work it out again
 
+### FD-36 · Searching a list for a room with a letter found nothing - FIXED 15 October (the owner's D27-335)
+
+**Found** 15 October, sweeping for D27-335 (room numbers with letters). The
+stay lists' search (`components/StayTable.tsx`, the five lists that use it,
+and `data/stays.ts`'s `listStays` filter) lower-cased what was typed and the
+guest and reference, but compared the room as it is: "111a" (or "111A",
+lowered to "111a") never matched room 111A. Reservations' All bookings had the
+same line (RES-15).
+**Fixed** - `s.roomNumber.toLowerCase().includes(q)` in both. One line each;
+no test (a one-liner, the same as the guest and reference beside it).
+
 ### FD-35 · The Check in window listed only the booked type - FIXED 15 October (the owner's D27-330 (1))
 
 **Found** - FD-34 left it open: the window's room list was the booked type
