@@ -48,6 +48,14 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **15 October: the mobile app is a SEPARATE system (D27-333).** Expo / React Native in its own copy
+> `D:\fidato pms moblie`, branch `mobile/app`, never merged into cp6; the main chat orchestrates it
+> from `docs/briefs/mobile-app-handover.md` on that branch. Slice 1 (the owner's figures) built; the
+> owner's look on the phone comes before slice 2 (housekeeping). It runs on API 8860 / Expo 8081 /
+> database `fidato_mobile`; warm both phone bundles before giving the link (`exp://192.168.1.33:8081`).
+> Its decisions are numbered M-1, M-2 ... on its branch. Also 15 Oct: D27-331 (n8n's backups and
+> history, done on the server), D27-332 (resilience design A, plan only: docs/plans/resilience-a.md).
+
 ### 14 October, 02:00 — read this first (final launch 15 Oct, D27-318)
 
 ```
