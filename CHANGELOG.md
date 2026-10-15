@@ -50,6 +50,30 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-15 · a plain restaurant bill (D27-334) and room numbers with letters (D27-335)
+
+**Asked for:** the restaurant bill handed to the guest before payment made "just like a normal restaurant bill", without "Interim bill"; then, after a restart, an audit of what was finished, and room numbers with letters ("some rooms have letters, as they are variants").
+
+**Shipped**
+- D27-334 (master, `1c7b42e7`): a plain restaurant bill - BILL before payment, Item/Qty/Rate/Amount, Discount, the database's own tax lines, Round off, GRAND TOTAL = what the Till asks for; no NOT PAID, no logo, no "not a tax invoice" sentence. POS CHANGELOG has the details; manual A8.6 and three pictures.
+- D27-335 (helper, `70cbc92e`, merged `0da5798e`): Several rooms takes 111A to 111D and 101A to 109A; room numbers saved in capitals; migration 226 (the guest's room-and-phone page matches any capitals); a letter keypad on that page and Lost property; the bookings search finds 111A. Inventory CHANGELOG has the details.
+
+**Found**
+- POS-38: with a discount or a round off the printed bill did not add up. GS-2, FD-36, RES-15 (a room with a letter not found). MEMORY 412-414 (mine).
+- The local Postgres stopped at 08:46 (0xC000013A, no disk event); restarted under the keeper. The local demo database was behind the code (migrations to 225, then 226 applied).
+- The manual's picture tool: an old cached floor in its own Chrome profile (set aside as `.local/manual-chrome-9333.old-15oct`) and 8 headless Chromes left over from earlier runs.
+
+**Proved**
+- `bash scripts/gates.sh d27-334-335` at `0da5798e` (full; "dirty" only for files not mine: `.claude/launch.json`, untracked folders): web types 0, api types 0, strip 220 files, web tests 1,366 passed / 1 skipped (201 files), api tests 2,762 passed (206 files), database 226 migrations / 1,749 assertions, replay 226 re-runnable, pg16 16.15 the same.
+- On screen (local): the bill with 10% off adds up to ₹647.28; the bill printer's BILL, BILL · DUPLICATE (Figures A8-14, A8-19); Several rooms 111a-111d shown as 111A-111D, "Add 4 rooms"; 101A-103C refused "Change the number or the letter, not both."; 101A-109A "Add 9 rooms" (nothing added).
+
+**Left open**
+- The owner's CA: should the restaurant bill be headed "Tax Invoice"?
+- The owner's: the POS charge-to-room box still matches a room's capitals exactly (recommended: ignore capitals, one word); a maximum number of rooms in one range (D27-309's open question).
+- Nothing deployed (the 19 September rule).
+
+**Commits:** `1c7b42e7`, `70cbc92e`, merge `0da5798e`, this note.
+
 ## 2026-10-12, evening · D27-305 built and merged, six video chapters final, the owner's second property
 
 **Asked for:** answer the §6 questions and build them; start the videos and the

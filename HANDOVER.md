@@ -48,6 +48,14 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **15 October, later: D27-334 and D27-335 on cp6, full gates green at `0da5798e`.** The restaurant
+> bill is a plain restaurant bill (BILL before payment, Discount and Round off lines, GRAND TOTAL =
+> payable; POS-38 fixed). Room numbers take letters (Several rooms 111A-111D / 101A-109A, saved in
+> capitals, migration 226). Not deployed. Waiting for the owner: their CA on "Tax Invoice" for the
+> restaurant bill; POS charge-to-room ignoring capitals (recommended yes); a cap on a room range.
+> Local: Postgres restarted 15 Oct under the keeper; the demo database at 226; the picture tool's old
+> Chrome profile set aside (`.local/manual-chrome-9333.old-15oct`).
+
 > **15 October: the mobile app is a SEPARATE system (D27-333).** Expo / React Native in its own copy
 > `D:\fidato pms moblie`, branch `mobile/app`, never merged into cp6; the main chat orchestrates it
 > from `docs/briefs/mobile-app-handover.md` on that branch. Slice 1 (the owner's figures) built; the
@@ -653,6 +661,13 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **15 October, later:** D27-334 (restaurant bill) and D27-335 (rooms with letters) are built and
+> gated; next, with the owner's answers: (1) POS charge-to-room in any capitals - one word in
+> `api/src/modules/pos/till.ts` (~4660); (2) a cap on a Several rooms range (D27-309); (3) "Tax
+> Invoice" on the restaurant bill if the CA says so - a bigger change (SAC, guest details), plan it
+> first; (4) the A8 picture script is behind the order pad (it stays open after Send) - the rest of
+> A8's pictures need a run of their own. Both go out with the next release, when the owner says.
 
 > **10 October, about 5 am: THE RELEASE IS READY (D27-295), the owner's to type.** Release
 > `release/all-9oct` at **fe07c3fd** (cp6's tip): everything to 211, **test hotels** (D27-296/297,
