@@ -5,13 +5,15 @@ import { MemoryRouter } from "react-router";
 import * as apiModule from "@/lib/api";
 import { useUi } from "@/lib/ui";
 import { HOTEL, startSignedIn } from "@/test/app";
-import RoomSetupPage from "@/modules/inventory/pages/RoomSetup";
+import RoomSetupPage, { roomRange } from "@/modules/inventory/pages/RoomSetup";
 
 /* ══════════════════════════════════════════════════════════════════
    ADD A ROOM -> SEVERAL ROOMS (the owner's D27-309, 12 October)
 
    The switch off is exactly today's one room. On: From and To (digits,
-   To not below From), the typed Type, Floor and Smoking for every room,
+   at most one letter at the end, in capitals - D27-335; To not below
+   From; the number or the letter changes, not both), the typed Type,
+   Floor and Smoking for every room,
    the count on the button before saving, each room sent through the
    one-room create (the server refuses a number it already has), and the
    window then says what was added and names what was skipped.
@@ -89,16 +91,50 @@ describe("Add a room, several at once (D27-309)", () => {
     expect(sent, "nothing is sent before the button").toEqual([]);
   });
 
-  it("takes digits only, and To not below From", async () => {
+  it("takes digits with at most one letter, To not below From, and one part changing (D27-335)", async () => {
     const dialog = await openAddRoom();
     fireEvent.click(within(dialog).getByRole("switch", { name: /Several rooms/ }));
     type(dialog, /^From/, "109");
     type(dialog, /^To/, "101");
     within(dialog).getByText("To is below From.");
     expect(pressable(dialog, "Add rooms")).toBe(false);
-    type(dialog, /^From/, "1A");
-    within(dialog).getByText("Digits only, e.g. 101.");
+    type(dialog, /^From/, "1AB");
+    within(dialog).getByText("Digits, and at most one letter at the end, e.g. 101 or 111A.");
     expect(pressable(dialog, "Add rooms")).toBe(false);
+    type(dialog, /^From/, "101a");
+    expect((within(dialog).getByLabelText(/^From/) as HTMLInputElement).value, "shown in capitals").toBe("101A");
+    type(dialog, /^To/, "109B");
+    within(dialog).getByText("Change the number or the letter, not both.");
+    expect(pressable(dialog, "Add rooms")).toBe(false);
+  });
+
+  it("adds a letter range, and the same letter on a number range (D27-335)", async () => {
+    const dialog = await openAddRoom();
+    fireEvent.click(within(dialog).getByRole("switch", { name: /Several rooms/ }));
+    type(dialog, /^From/, "101a");
+    type(dialog, /^To/, "109a");
+    expect(pressable(dialog, "Add 9 rooms")).toBe(true);
+    type(dialog, /^From/, "111a");
+    type(dialog, /^To/, "111d");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add 4 rooms" }));
+    await within(dialog).findByText("Added 4 rooms: 111A, 111B, 111C, 111D");
+    expect(sent.map((s) => (s.body as { number: string }).number)).toEqual(["111A", "111B", "111C", "111D"]);
+  });
+
+  it("the range: one part changes, the other is refused with its reason (D27-335)", () => {
+    const all = (from: string, to: string) => {
+      const r = roomRange(from, to);
+      return Array.from({ length: r.count }, (_, i) => r.nth(i));
+    };
+    expect(all("111A", "111D")).toEqual(["111A", "111B", "111C", "111D"]);
+    expect(all("101A", "103A")).toEqual(["101A", "102A", "103A"]);
+    expect(all("01", "03")).toEqual(["01", "02", "03"]);
+    expect(all("111A", "111A")).toEqual(["111A"]);
+    expect(roomRange("111D", "111A").toBad).toBe("To is below From.");
+    expect(roomRange("101A", "109B")).toMatchObject({ count: 0, toBad: "Change the number or the letter, not both." });
+    expect(roomRange("101", "109A")).toMatchObject({ count: 0, toBad: "Give both ends a letter, or neither." });
+    expect(roomRange("101A", "109")).toMatchObject({ count: 0, toBad: "Give both ends a letter, or neither." });
+    expect(roomRange("1", "9999999999").count, "counted, never listed").toBe(9999999999);
   });
 
   it("adds the rest with the typed floor for all, and names the number that exists", async () => {

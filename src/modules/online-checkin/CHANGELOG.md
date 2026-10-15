@@ -12,6 +12,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-15 · The guest's room-and-phone page takes a letter (the owner's D27-335)
+
+`pages/ByRoom.tsx`: "Your room number" is a text keyboard that starts in capitals (`autoCapitalize="characters"`), not a number keypad, so 111A can be typed. The match itself is guest services' function (GS-2, migration 226). The whole change: inventory's `CHANGELOG.md`, 15 October.
+
 ## 2026-10-02 · DigiLocker at the desk, and asked for before the code (D27-247, D27-210) - the master, at merges
 
 **Asked for:** the owner's D27-247 - a DigiLocker ID never replaces a fuller number on file.

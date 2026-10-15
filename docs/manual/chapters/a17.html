@@ -412,7 +412,7 @@
   <h3>To add a room</h3>
   <ol class="steps">
     <li>Tap <span class="ui">Add a room</span>.</li>
-    <li>Type its <span class="ui">Number</span> (at most 10 letters and digits) and choose its <span class="ui">Type</span>.</li>
+    <li>Type its <span class="ui">Number</span> (at most 10 letters and digits; a letter is saved as a capital, so 111a is room 111A) and choose its <span class="ui">Type</span>.</li>
     <li><span class="ui">Floor</span>: 0 (the ground floor) to 99; leave it blank if the property has one floor. Tick <span class="ui">Smoking room</span> if it is one.</li>
     <li>Tap <span class="ui">Save</span>.</li>
   </ol>
@@ -431,7 +431,7 @@
   <h3>To add several rooms at once</h3>
   <ol class="steps">
     <li>Tap <span class="ui">Add a room</span> and switch on <span class="ui">Several rooms</span>. <span class="ui">Number</span> becomes <span class="ui">From</span> and <span class="ui">To</span>.</li>
-    <li>Type the first and the last number, digits only: <span class="ui">From</span> 101, <span class="ui">To</span> 109. A <span class="ui">To</span> below <span class="ui">From</span> is refused: <span class="msg">“To is below From.”</span> Zeros typed in <span class="ui">From</span> are kept: 01 to 12 adds 01, 02 and on to 12.</li>
+    <li>Type the first and the last number: digits, with at most one letter at the end, shown in capitals. The number changes or the letter does, not both: <span class="ui">From</span> 101, <span class="ui">To</span> 109 adds 101 to 109; <span class="ui">From</span> 111A, <span class="ui">To</span> 111D adds 111A, 111B, 111C and 111D; <span class="ui">From</span> 101A, <span class="ui">To</span> 109A adds 101A, 102A and on to 109A. A <span class="ui">To</span> below <span class="ui">From</span> is refused: <span class="msg">“To is below From.”</span> So is a range where both change, 101A to 109B: <span class="msg">“Change the number or the letter, not both.”</span> And a letter on one end only: <span class="msg">“Give both ends a letter, or neither.”</span> Zeros typed in <span class="ui">From</span> are kept: 01 to 12 adds 01, 02 and on to 12.</li>
     <li>Choose the <span class="ui">Type</span>, type the <span class="ui">Floor</span> if there is one, and tick <span class="ui">Smoking room</span> if they are. These are the same for every room.</li>
     <li>The button counts them: <span class="ui">Add 9 rooms</span>. Tap it. The window then says what was added: <span class="msg">“Added 8 rooms: 101, 102, 103, 104, 106, 107, 108, 109”</span>. A number the hotel already has is skipped and named, <span class="msg">“105 already exists, skipped”</span>, and the rest are added. Tap <span class="ui">Done</span>.</li>
   </ol>
@@ -463,7 +463,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Nothing in use is deleted: reservations, rates and a year of bills point at a room type, and every stay at its room. A new hotel starts with no room types, and a room type nothing uses can be removed: <span class="d">D27-263</span>. Room types in Settings, with their amenities, photos and the rooms in order: <span class="d">D27-258</span>. Several rooms at once: one range, one floor typed for all, a number that exists skipped and named, the rest added: <span class="d">D27-309</span>.</p>
+    <p>Nothing in use is deleted: reservations, rates and a year of bills point at a room type, and every stay at its room. A new hotel starts with no room types, and a room type nothing uses can be removed: <span class="d">D27-263</span>. Room types in Settings, with their amenities, photos and the rooms in order: <span class="d">D27-258</span>. Several rooms at once: one range, one floor typed for all, a number that exists skipped and named, the rest added: <span class="d">D27-309</span>. Room numbers with letters, both kinds of range, and always in capitals, so 111a can never be a second room beside 111A: <span class="d">D27-335</span>.</p>
   </div>
 
   <!-- A17.6 -->

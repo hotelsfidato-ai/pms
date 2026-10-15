@@ -27,6 +27,14 @@ confirms the whole group, so it cannot happen from the desk today.
 
 ## Fixed
 
+### RES-15 · All bookings' search found no room with a letter - FIXED 15 October (the owner's D27-335)
+
+**Found** 15 October, sweeping for D27-335. `pages/Reservations.tsx` lowered
+what was typed but compared the room as it is, so a search for 111A (lowered
+to "111a") never found room 111A. The front desk's lists had the same line
+(FD-36). **Fixed** - `s.roomNumber.toLowerCase().includes(q)`. No test (a
+one-liner, the same as the guest and reference beside it).
+
 ### RES-14 · A booking's created_by is never written - FIXED 2 October (D27-239; numbered for now)
 
 Found 1 October building the voucher's "Booked by" (D27-215): `book.ts`

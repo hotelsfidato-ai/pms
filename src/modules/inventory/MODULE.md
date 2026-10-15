@@ -69,10 +69,16 @@ each booking.
   first day - the same `setBasePrice` call; with a base room type chosen only
   it is offered.
 - **Add a room** (D27-309): one room, or **Several rooms** - From and To
-  (digits, To not below From), the typed type, floor and smoking for every
+  (digits with at most one letter at the end, To not below From; D27-335:
+  101 to 109, 111A to 111D, or 101A to 109A - the number or the letter
+  changes, not both, and a letter on one end only is refused; `roomRange` in
+  `pages/RoomSetup.tsx`), the typed type, floor and smoking for every
   room, the count on the button ("Add 9 rooms"). Each goes through `POST
   /:code/rooms` (never the import, which overwrites a room it has); a number
   the server already has is named "105 already exists, skipped".
+- **A room number is always saved in capitals** (D27-335): `POST /rooms` and
+  the rooms import upper-case it before every check, so 111a is 111A and can
+  never be a second room. The screen shows what is typed in capitals.
 - Room types is the list of room types and their rooms (D27-194). What the
   property still needs, the front desk's hours and GST are on admin's
   Settings → Configuration; the front desk's form is this service's
@@ -89,7 +95,7 @@ Registered in `rooms.settings.ts` (P1's contract, rule 5):
 
 | Console address | Page | What |
 |---|---|---|
-| `/settings/rooms/room-types` | `pages/RoomSetup.tsx` | took P1's stand-in over; `/h/:code/room-types` redirects here. Adults the rate covers and children it covers, adults / children / total at most, beds, view, size, colour (the database keeps them fitting); tabs Amenities (P2's one catalogue) and Photos (ten a type, the gallery's check); Remove only a type nothing uses (no rooms, bookings, prices or difference - D27-263); rooms dragged into order; Add a room one at a time or Several rooms, From and To (D27-309) |
+| `/settings/rooms/room-types` | `pages/RoomSetup.tsx` | took P1's stand-in over; `/h/:code/room-types` redirects here. Adults the rate covers and children it covers, adults / children / total at most, beds, view, size, colour (the database keeps them fitting); tabs Amenities (P2's one catalogue) and Photos (ten a type, the gallery's check); Remove only a type nothing uses (no rooms, bookings, prices or difference - D27-263); rooms dragged into order; Add a room one at a time or Several rooms, From and To (D27-309; letters, D27-335) |
 | `/settings/rates/plans` | `pages/RatePlans.tsx` | the rate plans as a TREE over the one pricing (D27-251): every active room type on room only and on each meal plan sold, named "Room type · Meal plan"; Master (the base type, EP), Derived (a difference, or a meal add-on), Independent (no difference: its own base on Rates, Q2); the server's break-up for two guests on the business date and the green offset from the master; On/Off (Off: not offered for NEW bookings, Q3), drag to order; the 3-step editor (what it is, its price, who sells it) writes only today's pricing calls and the plan's sources (none chosen = every source, Q4) |
 | `/settings/rates/meal-plans` | `pages/MealPlans.tsx` | on which days each meal of a plan is served (check-in, stay-over, check-out; Q5) |
 
@@ -380,7 +386,7 @@ Database: `db/tests/suite.sql` groups `rates`, `set rate`, `rate grid`,
 prices` (frozen), and `db/tests/modules/inventory.sql` for everything new
 (090). Web: `src/modules/inventory/inventory.test.tsx` — who reaches Pricing
 and the Rate calendar, and the refusal on the page; `severalRooms.test.tsx` —
-Add a room's Several rooms (D27-309); `src/App.test.tsx` "find a
+Add a room's Several rooms (D27-309) and its letters (`roomRange`, D27-335); `src/App.test.tsx` "find a
 screen" reaches Rate plans.
 
 ---

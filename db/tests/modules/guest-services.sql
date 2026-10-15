@@ -152,7 +152,7 @@ declare
   r101 uuid; r102 uuid; o101 uuid; link uuid;
   n int; ok boolean; v text;
   t1 text := repeat('a', 64); t2 text := repeat('b', 64); t3 text := repeat('c', 64);
-  t4 text := repeat('d', 64); t5 text := repeat('e', 64);
+  t4 text := repeat('d', 64); t5 text := repeat('e', 64); t6 text := repeat('0', 64);
 begin
   h     := app.provision_property_unchecked('GRP','Room Phone Test','Nowhere');
   other := app.provision_property_unchecked('GRQ','Room Phone Other','Nowhere');
@@ -223,6 +223,13 @@ begin
 
   ok := app.guest_code_answer(t5, '123456', repeat('f', 64));
   perform test.ok('guest-services', 'a ticket that matched nothing opens nothing', not ok, 'opened');
+
+  -- D27-335: a room with a letter, typed in small letters, finds the guest (226).
+  update rooms set number = '101A' where id = o101;
+  ok := app.guest_room_phone_link('GRQ', ' 101a ', '98765 43210', t6);
+  select count(*) into n from guest_links where token_hash = t6 and reservation_id = stay_other;
+  perform test.ok('guest-services', 'a room with a letter, typed in small letters, finds the guest (D27-335)',
+    ok and n = 1, coalesce(ok::text, 'null') || ', ' || n || ' links');
 
   -- ---------- DigiLocker ------------------------------------------------------
   select id into link from guest_links where token_hash = t1;

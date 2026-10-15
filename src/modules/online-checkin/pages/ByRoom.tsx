@@ -41,7 +41,7 @@ export default function ByRoomPage() {
           <form className="flex flex-col gap-3"
                 onSubmit={(e) => { e.preventDefault(); asked.mutate(); }}>
             <Field label="Your room number">
-              {(f) => <Input {...fieldProps(f)} inputMode="numeric" autoComplete="off" maxLength={10}
+              {(f) => <Input {...fieldProps(f)} autoCapitalize="characters" autoComplete="off" maxLength={10}
                              value={room} onChange={(e) => setRoom(e.target.value)} />}
             </Field>
             <Field label="Your phone number">

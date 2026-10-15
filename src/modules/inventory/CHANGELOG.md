@@ -11,6 +11,40 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-15 · Room numbers with letters (the owner's D27-335)
+
+Helper copy `.claude/worktrees/room-letters`, branch `inventory/room-letters`, from cp6 0352e3ec. Migration **226** ("room numbers in capitals", the next free number on cp6; the master renumbers if another lane took it).
+
+**Asked for:** D27-335. Several rooms takes letters, both kinds: 111A to 111D (variants of one room) and 101A to 109A (the same letter on each); digits as before. Only one part may change; both changing, or a letter on one end only, is refused with its reason. Room numbers always saved in capitals. And the four places that tripped on a letter: the guest's room-and-phone page, the bookings search (two front-desk lists and All bookings), Lost property's Room box.
+
+**Shipped:**
+- `pages/RoomSetup.tsx`: `roomRange(from, to)`, a pure function, replaces the digits-only check. It gives each box's refusal, the count, and `nth(i)` - the numbers are made one at a time, never as a list, so a mistyped 10-digit To cannot build one on every key. From, To and Number are shown in capitals as typed (`autoCapitalize="characters"`; the number keypad is gone from From and To). Hints: "101 to 109, 111A to 111D, or 101A to 109A." and "At most 10 letters and digits, saved in capitals." Refusals: "Digits, and at most one letter at the end, e.g. 101 or 111A." (109 or 111D under To), "To is below From.", "Change the number or the letter, not both.", "Give both ends a letter, or neither." Everything else as D27-309 left it.
+- `api/src/modules/inventory/inventorySetup.ts`: `POST /:code/rooms` and `POST /:code/rooms/import` upper-case the number before every check, the duplicate check and the insert. `roomNumberProblem` unchanged. `PATCH /:code/rooms/:number` keys on the number already saved, so it needed nothing.
+- Elsewhere (each in its own service's CHANGELOG and DEFECTS): guest services' GS-2 (migration 226: `app.guest_room_phone_link` matches `upper(rm.number) = upper(btrim(p_room))`, everything else 181's; Lost property compares in capitals), online check-in's room box a text keyboard, front desk's FD-36 and reservations' RES-15 (the search lowers the room).
+- Manual: A17 (Several rooms' rules, Number saved in capitals, D27-335 in "Why"), A6 (Lost property, small letters or capitals), B5 (the room-and-phone line); rebuilt.
+
+**Found:** no later migration redefines 181's function. The only writers of `rooms.number` in the API are the two above (the demo loader and `bulk_create_rooms` write digits).
+
+**Proved** (run in this session):
+- Web types `tsc -p tsconfig.app.json --noEmit` exit 0; API types `tsc --noEmit` exit 0.
+- Web: severalRooms, inventory, roomTypesP3, wakeAndLost, guestWays, front-desk, refusedControls, stayview: 8 files, 75 tests passed. `severalRooms.test.tsx` 7/7 (three new: the refusals, a letter range and a same-letter range through the window, and `roomRange` itself).
+- Broken: the letter taken out of `roomRange` (digits only again) - 3 of 7 failed; the "not both" refusal removed - 2 of 7 failed. Restored.
+- API (scratch database, through the queue): roomLimits, inventory, guestDoorByRoom, wakeAndLost: 4 files, 42 tests passed. `roomLimits.test.ts` "saves 111a as 111A, then refuses 111A as already there, and a file's 111a is that room".
+- Broken: `.toUpperCase()` taken off the one-room create - that test failed ("expected 111a to equal 111A"), 1 failed, 2 passed. Restored.
+- Database (scratch databases, through the queue, dropped after): `db/tests/run.sh` "all 1749 assertions passed", exit 0; `db/tests/rerun.sh` "all 226 migrations are re-runnable", exit 0.
+- Broken: on a scratch database migrated from zero, `guest-services.sql` gave 42 passed, 0 failed with 226; with 181's exact match put back, 41 passed, 1 failed - "a room with a letter, typed in small letters, finds the guest (D27-335)".
+- `manual.test.ts` and `migrationNumbers.test.ts`: 2 files, 4 tests passed.
+
+**Left open:**
+- Not opened in a browser in this copy (it has no API, database or env files of its own); the dialog was exercised by the rendered-window tests only. The master to open Add a room, Several rooms, after the merge.
+- Picture A17-54 (Several rooms) is still "to be taken" and has no shot script; no picture in `docs/manual/img` shows the old "Digits only" words.
+- Out of scope, not changed: the POS charge-to-room box (`api/src/modules/pos/till.ts`, an exact match on the room), the equipment room list's order (`equipment.ts`, `order by length(number), number`), `bulk_create_rooms` (009, digits only, used by no screen). None trips while rooms are saved in capitals and typed so, except the POS box when a cashier types a small letter.
+- D27-309's open question (a most per range) is still open.
+
+**Commits:** one, on `inventory/room-letters` (the master merges).
+
+---
+
 ## 2026-10-12 · "Rates", not "the rate calendar" (the owner's D27-307 (4))
 
 **Shipped:** Add a room type (`pages/RoomSetup.tsx`): "What the property

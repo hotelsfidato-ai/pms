@@ -620,13 +620,39 @@ function TypePhotoImage({ hotelId, typeId, photoId }: { hotelId: string; typeId:
     : <div className="w-full aspect-[4/3] bg-grey-100" />;
 }
 
-/* SEVERAL ROOMS (the owner's D27-309): From and To, digits only, To not
-   below From. Each number goes through the same one-room create, so the
-   server keeps every check it has - a number it already has is refused
-   there, and only named here. The floor typed is every room's floor,
-   never worked out from the number. Zeros typed in From are kept (01 to
-   12 adds 01 ... 12). */
-const DIGITS = /^\d{1,10}$/;
+/* SEVERAL ROOMS (the owner's D27-309, D27-335): From and To, each digits
+   with at most one letter at the end, To not below From. One part changes:
+   the number (101 to 109; 101A to 109A, the letter on each) or the letter
+   (111A to 111D). Both changing, or a letter on one end only, is refused.
+   Each number goes through the same one-room create, so the server keeps
+   every check it has - a number it already has is refused there, and only
+   named here. The floor typed is every room's floor, never worked out from
+   the number. Zeros typed in From are kept (01 to 12 adds 01 ... 12).
+   The numbers are made one at a time (nth), never all at once: a mistyped
+   To of 10 digits must not build a list on every key. */
+const END = /^(?=.{1,10}$)(\d+)([A-Z]?)$/;
+const END_BAD = "Digits, and at most one letter at the end";
+export function roomRange(from: string, to: string) {
+  const f = END.exec(from), t = END.exec(to);
+  const fromBad = from && !f ? `${END_BAD}, e.g. 101 or 111A.` : undefined;
+  let toBad = to && !t ? `${END_BAD}, e.g. 109 or 111D.` : undefined;
+  let count = 0;
+  let nth = (_i: number) => "";
+  if (f && t) {
+    const [, fd = "", fl = ""] = f, [, td = "", tl = ""] = t;
+    if (!fl !== !tl) toBad = "Give both ends a letter, or neither.";
+    else if (fl !== tl && fd !== td) toBad = "Change the number or the letter, not both.";
+    else if (fl !== tl) {
+      count = tl.charCodeAt(0) - fl.charCodeAt(0) + 1;
+      nth = (i) => fd + String.fromCharCode(fl.charCodeAt(0) + i);
+    } else {
+      count = Number(td) - Number(fd) + 1;
+      nth = (i) => String(Number(fd) + i).padStart(fd.length, "0") + fl;
+    }
+    if (!toBad && count < 1) { count = 0; toBad = "To is below From."; }
+  }
+  return { fromBad, toBad, count, nth };
+}
 const plural = (n: number) => `${n} room${n === 1 ? "" : "s"}`;
 
 function RoomDialog({
@@ -648,16 +674,13 @@ function RoomDialog({
   const [active, setActive] = useState(room?.isActive ?? true);
   const [busy, setBusy] = useState(false);
 
-  const fromBad = from !== "" && !DIGITS.test(from) ? "Digits only, e.g. 101." : undefined;
-  const toBad = to !== "" && !DIGITS.test(to) ? "Digits only, e.g. 109."
-    : !fromBad && from && to && Number(to) < Number(from) ? "To is below From." : undefined;
-  const count = from && to && !fromBad && !toBad ? Number(to) - Number(from) + 1 : 0;
+  const { fromBad, toBad, count, nth } = roomRange(from, to);
 
   const addSeveral = async () => {
     setBusy(true);
     const done = { added: [] as string[], skipped: [] as string[], refused: [] as string[] };
     for (let i = 0; i < count; i++) {
-      const n = String(Number(from) + i).padStart(from.length, "0");
+      const n = nth(i);
       const res = await addRoom(hotelId, {
         number: n, roomTypeId: typeId,
         floor: floor.trim() === "" ? null : Number(floor),
@@ -731,24 +754,24 @@ function RoomDialog({
           {!room && <Switch checked={several} onCheckedChange={setSeveral} label="Several rooms" />}
           {!room && (several ? (
             <div className="grid grid-cols-2 gap-3">
-              <Field label="From" required hint="Digits only." error={fromBad}>
+              <Field label="From" required hint="101 to 109, 111A to 111D, or 101A to 109A." error={fromBad}>
                 {(f) => (
-                  <Input {...fieldProps(f)} value={from} placeholder="101" maxLength={10}
-                         inputMode="numeric" onChange={(e) => setFrom(e.target.value.trim())} />
+                  <Input {...fieldProps(f)} value={from} placeholder="101" maxLength={10} autoCapitalize="characters"
+                         onChange={(e) => setFrom(e.target.value.trim().toUpperCase())} />
                 )}
               </Field>
               <Field label="To" required error={toBad}>
                 {(f) => (
-                  <Input {...fieldProps(f)} value={to} placeholder="109" maxLength={10}
-                         inputMode="numeric" onChange={(e) => setTo(e.target.value.trim())} />
+                  <Input {...fieldProps(f)} value={to} placeholder="109" maxLength={10} autoCapitalize="characters"
+                         onChange={(e) => setTo(e.target.value.trim().toUpperCase())} />
                 )}
               </Field>
             </div>
           ) : (
-            <Field label="Number" required hint="At most 10 letters and digits.">
+            <Field label="Number" required hint="At most 10 letters and digits, saved in capitals.">
               {(f) => (
-                <Input {...fieldProps(f)} value={number} placeholder="308" maxLength={10}
-                       onChange={(e) => setNumber(e.target.value)} />
+                <Input {...fieldProps(f)} value={number} placeholder="308" maxLength={10} autoCapitalize="characters"
+                       onChange={(e) => setNumber(e.target.value.toUpperCase())} />
               )}
             </Field>
           ))}

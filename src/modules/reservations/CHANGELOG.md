@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-15 · All bookings finds a room with a letter (the owner's D27-335) - RES-15
+
+`pages/Reservations.tsx`: the room is lowered like the guest and reference before the search compares it. The whole change: inventory's `CHANGELOG.md`, 15 October.
+
 ## 2026-10-15 · New booking takes the advance before Check in now (the owner's D27-328 (3))
 
 `pages/BookingPage.tsx` `submit`: the advance (finance's payment door, held as the guest's credit) is taken right after the booking call and BEFORE front desk's check-in; it was taken after, so with "Advance before check-in" on the check-in was refused and the booking left due in with the money paid. Test: `onePage.test.tsx` "is taken before Check in now checks the guest in" - the calls in order bookings, payments, check-in; seen failing on the old code (bookings, check-in, payments). Seen on screen (helper copy, 5EL, advance rule "The first night"): New booking, room 208, an advance of ₹5,000 by UPI, Check in now - "Checked in · In house, room 208 · Advance of ₹5,000.00 taken". `MODULE.md` says the order. Part of front desk's and finance's D27-328 entries.

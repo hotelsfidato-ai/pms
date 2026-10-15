@@ -239,7 +239,9 @@ inventorySetup.post("/:code/rooms", async (c) => {
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
 
-  const number = input.number?.trim();
+  /* Always in capitals (D27-335): 111a is saved 111A, so it can never be a
+     second room beside 111A. */
+  const number = input.number?.trim().toUpperCase();
   if (!number) return c.json(refuse("What is the room number?"), 409);
   if (!input.roomTypeId) return c.json(refuse("Which type is it?"), 409);
   /* RT-4 (the owner, 28 September): a 60-character number and floor -5 were
@@ -673,7 +675,7 @@ inventorySetup.post("/:code/rooms/import", async (c) => {
 
     rows.forEach((raw, i) => {
       const line = i + 2;
-      const number = String(raw.number ?? "").trim();
+      const number = String(raw.number ?? "").trim().toUpperCase();   /* D27-335 */
       const typeCode = String(raw.typeCode ?? "").trim().toUpperCase();
       const reject = (detail: string) => {
         verdicts.push({ line, name: number || "(blank)", action: "rejected", detail });
