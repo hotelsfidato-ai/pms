@@ -160,6 +160,10 @@ export async function amendRoom(
     "PATCH", input);
 }
 
+/** Only a room nothing has used (D27-336); the server says what has. */
+export const removeRoom = (hotelId: string, number: string): Promise<Result> =>
+  call(`/api/hotels/${hotelId}/rooms/${encodeURIComponent(number)}`, "DELETE");
+
 
 /** The hours the property sells the night between, and what an
     exception costs. Sending null for a charge clears it. */

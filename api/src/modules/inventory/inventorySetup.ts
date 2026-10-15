@@ -338,6 +338,56 @@ inventorySetup.patch("/:code/rooms/:number", async (c) => {
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
+/* D27-336: a room nothing has used may be Removed - a mistake at creation.
+   EVERY table that points at a room is asked by name, the CASCADE ones too
+   (housekeeping assignments, key cards, blocks): left to the foreign key
+   they would be deleted with the room, silently. A used room is only
+   switched off, so old bills and Form C keep it. */
+inventorySetup.delete("/:code/rooms/:number", async (c) => {
+  const number = c.req.param("number");
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{ id: string; uses: string | null }>(
+      `select r.id::text,
+              case
+                when r.occupancy_status <> 'vacant' then 'somebody is in it'
+                when exists (select 1 from room_assignments where room_id = r.id) then 'a booking or stay'
+                when exists (select 1 from housekeeping_assignments where room_id = r.id)
+                  or exists (select 1 from room_status_log where room_id = r.id) then 'housekeeping'
+                when exists (select 1 from key_cards where room_id = r.id) then 'a key card'
+                when exists (select 1 from room_blocks where room_id = r.id) then 'a block'
+                when exists (select 1 from work_orders where room_id = r.id) then 'a work order'
+                when exists (select 1 from lost_items where room_id = r.id) then 'a lost item'
+                when exists (select 1 from wake_up_calls where room_id = r.id) then 'a wake-up call'
+                when exists (select 1 from equipment_history where room_id = r.id)
+                  or exists (select 1 from equipment_moves where r.id in (from_room_id, to_room_id)) then 'equipment'
+                when exists (select 1 from guest_links where room_id = r.id) then 'a guest link'
+                /* 043 keeps a connection mutual, so one side says it. */
+                when r.connected_room_id is not null then 'a connecting room'
+              end as uses
+         from rooms r where r.hotel_id = $1 and r.number = $2`, [hotelId, number]);
+    if (!rows[0]) return "missing" as const;
+    if (rows[0].uses) {
+      return refuse(`Room ${number} has been used (${rows[0].uses}), so it cannot be removed. `
+        + "Switch Sellable off instead.");
+    }
+    try {
+      await client.query("savepoint gone");
+      await client.query("delete from rooms where id = $1 and hotel_id = $2", [rows[0].id, hotelId]);
+    } catch (error) {
+      await client.query("rollback to savepoint gone");
+      if ((error as { code?: string }).code === "23503") {
+        return refuse(`Something still uses room ${number}, so it cannot be removed. Switch Sellable off instead.`);
+      }
+      throw error;
+    }
+    return { ok: true as const };
+  });
+  if (result === null) return c.json({ error: "No such property." }, 404);
+  if (result === "missing") return c.json({ error: "No such room." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
 
 /* Rooms in the order the owner drags them (D27-258). */
 inventorySetup.put("/:code/rooms/order", async (c) => {

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui";
 import { shrinkPhoto } from "@/modules/online-checkin";
 import {
-  getRoomSetup, addRoomType, amendRoomType, addRoom, amendRoom, importSetup, removeRoomType, orderRooms,
+  getRoomSetup, addRoomType, amendRoomType, addRoom, amendRoom, removeRoom, importSetup, removeRoomType, orderRooms,
   getTypePhotos, getTypePhoto, addTypePhoto, removeTypePhoto, orderTypePhotos,
   getAmenities, getTypeAmenities, setTypeAmenities,
   type RoomTypeSetup, type RoomSetup as Room,
@@ -37,7 +37,8 @@ import { ROOM_TYPE_SPEC, ROOM_SPEC } from "@/lib/importSpec";
    rates and a year of folio history; a room is pointed at by every stay
    that was ever in it. Both switch off instead, and refuse to while
    something real still depends on them. A room type nothing uses may be
-   Removed (the owner, D27-263: a new hotel starts empty). In the Settings
+   Removed (the owner, D27-263: a new hotel starts empty), and so may a room
+   nothing has used (D27-336: a mistake at creation). In the Settings
    console as Rooms → Room types (D27-258): adults and children, beds,
    view, size, colour, its amenities and photos, and the rooms in the order
    they are dragged.
@@ -620,36 +621,48 @@ function TypePhotoImage({ hotelId, typeId, photoId }: { hotelId: string; typeId:
     : <div className="w-full aspect-[4/3] bg-grey-100" />;
 }
 
-/* SEVERAL ROOMS (the owner's D27-309, D27-335): From and To, each digits
-   with at most one letter at the end, To not below From. One part changes:
-   the number (101 to 109; 101A to 109A, the letter on each) or the letter
-   (111A to 111D). Both changing, or a letter on one end only, is refused.
+/* SEVERAL ROOMS (the owner's D27-309, D27-335, D27-336 - loose, as it is
+   per hotel): From and To are any room numbers the server takes (letters,
+   digits and -, at most 10), the same except ONE number that counts up
+   (101 to 109, A101 to A110, G01 to G12, VIL1 to VIL8, A-101 to A-110,
+   101A to 109A) or the last letter (111A to 111D). Anything else is
+   refused with its reason; at most 100 rooms at a time.
    Each number goes through the same one-room create, so the server keeps
    every check it has - a number it already has is refused there, and only
    named here. The floor typed is every room's floor, never worked out from
    the number. Zeros typed in From are kept (01 to 12 adds 01 ... 12).
    The numbers are made one at a time (nth), never all at once: a mistyped
    To of 10 digits must not build a list on every key. */
-const END = /^(?=.{1,10}$)(\d+)([A-Z]?)$/;
-const END_BAD = "Digits, and at most one letter at the end";
+const ROOM_NO = /^[A-Za-z0-9-]{1,10}$/;   /* api/src/validate.ts roomNumberProblem */
+const ROOM_NO_BAD = "At most 10 letters, digits and -, e.g. A101 or G01.";
+const MOST = 100;
+const runs = (s: string) => s.match(/\d+|\D+/g) ?? [];
+const isDigits = (s = "") => /^\d+$/.test(s);
 export function roomRange(from: string, to: string) {
-  const f = END.exec(from), t = END.exec(to);
-  const fromBad = from && !f ? `${END_BAD}, e.g. 101 or 111A.` : undefined;
-  let toBad = to && !t ? `${END_BAD}, e.g. 109 or 111D.` : undefined;
+  const fromBad = from && !ROOM_NO.test(from) ? ROOM_NO_BAD : undefined;
+  let toBad = to && !ROOM_NO.test(to) ? ROOM_NO_BAD : undefined;
   let count = 0;
   let nth = (_i: number) => "";
-  if (f && t) {
-    const [, fd = "", fl = ""] = f, [, td = "", tl = ""] = t;
-    if (!fl !== !tl) toBad = "Give both ends a letter, or neither.";
-    else if (fl !== tl && fd !== td) toBad = "Change the number or the letter, not both.";
-    else if (fl !== tl) {
-      count = tl.charCodeAt(0) - fl.charCodeAt(0) + 1;
-      nth = (i) => fd + String.fromCharCode(fl.charCodeAt(0) + i);
+  if (from && to && !fromBad && !toBad) {
+    const f = runs(from), t = runs(to);
+    const differ = f.flatMap((r, i) => (r === t[i] ? [] : [i]));
+    const i = differ[0] ?? 0, fd = f[i] ?? "";
+    const head = from.slice(0, -1), fl = from.charCodeAt(from.length - 1);
+    if (from === to) {
+      count = 1; nth = () => from;
+    } else if (f.length === t.length && differ.length === 1 && isDigits(fd) && isDigits(t[i])) {
+      count = Number(t[i]) - Number(fd) + 1;
+      nth = (k) => [...f.slice(0, i), String(Number(fd) + k).padStart(fd.length, "0"), ...f.slice(i + 1)].join("");
+    } else if (head === to.slice(0, -1) && /[A-Z]$/.test(from) && /[A-Z]$/.test(to)) {
+      count = to.charCodeAt(to.length - 1) - fl + 1;
+      nth = (k) => head + String.fromCharCode(fl + k);
     } else {
-      count = Number(td) - Number(fd) + 1;
-      nth = (i) => String(Number(fd) + i).padStart(fd.length, "0") + fl;
+      toBad = "Only one number (or the last letter) may change between From and To.";
     }
-    if (!toBad && count < 1) { count = 0; toBad = "To is below From."; }
+    if (!toBad && count < 1) toBad = "To is below From.";
+    else if (!toBad && count > MOST) toBad = `At most ${MOST} rooms at a time.`;
+    else if (!toBad && nth(count - 1).length > 10) toBad = ROOM_NO_BAD;
+    if (toBad) count = 0;
   }
   return { fromBad, toBad, count, nth };
 }
@@ -672,9 +685,21 @@ function RoomDialog({
     room?.floor === null || room?.floor === undefined ? "" : String(room.floor));
   const [smoking, setSmoking] = useState(room?.smoking ?? false);
   const [active, setActive] = useState(room?.isActive ?? true);
+  const [removing, setRemoving] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const { fromBad, toBad, count, nth } = roomRange(from, to);
+
+  /* D27-336: a room nothing has used (a mistake at creation); the server
+     says what has used it, and a used room is switched off instead. */
+  const remove = async () => {
+    setBusy(true);
+    const res = await removeRoom(hotelId, room!.number);
+    setBusy(false);
+    if (!res.ok) { setRemoving(false); return toast.error("Not removed", res.reason); }
+    toast.success(`Room ${room!.number} removed`);
+    onDone();
+  };
 
   const addSeveral = async () => {
     setBusy(true);
@@ -723,8 +748,18 @@ function RoomDialog({
         title={room ? `Room ${room.number}` : "Add a room"}
         footer={result ? (
           <Button variant="primary" onClick={onDone}>Done</Button>
+        ) : removing ? (
+          <>
+            <Button variant="secondary" onClick={() => setRemoving(false)}>Keep it</Button>
+            <Button variant="danger" disabled={busy} onClick={() => void remove()}>
+              {busy ? "Removing…" : `Remove room ${room!.number}`}
+            </Button>
+          </>
         ) : (
           <>
+            {room && (
+              <Button variant="ghost" className="mr-auto" onClick={() => setRemoving(true)}>Remove</Button>
+            )}
             <DialogClose asChild>
               <Button variant="secondary">Cancel</Button>
             </DialogClose>
@@ -749,18 +784,24 @@ function RoomDialog({
             )}
             {result.refused.map((line) => <p key={line} className="text-brand-red">{line}</p>)}
           </div>
+        ) : removing ? (
+          <p className="text-sm text-grey-700">
+            Remove room {room!.number} for good? Only a room nothing has used can be removed - no
+            booking, stay, housekeeping, key card, block, work order, lost item, wake-up call,
+            equipment or guest link; otherwise switch Sellable off.
+          </p>
         ) : (
         <div className="space-y-3">
           {!room && <Switch checked={several} onCheckedChange={setSeveral} label="Several rooms" />}
           {!room && (several ? (
             <div className="grid grid-cols-2 gap-3">
-              <Field label="From" required hint="101 to 109, 111A to 111D, or 101A to 109A." error={fromBad}>
+              <Field label="From" required hint="e.g. 101 to 109, A101 to A110, G01 to G12, 111A to 111D." error={fromBad}>
                 {(f) => (
                   <Input {...fieldProps(f)} value={from} placeholder="101" maxLength={10} autoCapitalize="characters"
                          onChange={(e) => setFrom(e.target.value.trim().toUpperCase())} />
                 )}
               </Field>
-              <Field label="To" required error={toBad}>
+              <Field label="To" required hint="At most 100 rooms at a time." error={toBad}>
                 {(f) => (
                   <Input {...fieldProps(f)} value={to} placeholder="109" maxLength={10} autoCapitalize="characters"
                          onChange={(e) => setTo(e.target.value.trim().toUpperCase())} />
@@ -768,7 +809,7 @@ function RoomDialog({
               </Field>
             </div>
           ) : (
-            <Field label="Number" required hint="At most 10 letters and digits, saved in capitals.">
+            <Field label="Number" required hint="At most 10 letters, digits and -, saved in capitals.">
               {(f) => (
                 <Input {...fieldProps(f)} value={number} placeholder="308" maxLength={10} autoCapitalize="characters"
                        onChange={(e) => setNumber(e.target.value.toUpperCase())} />
