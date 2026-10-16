@@ -201,8 +201,11 @@ describe("D17-36 - the switches are the owner's and an administrator's", () => {
     as(role);
     settingsServer();
     renderSettings("connections/modules");
-    expect((await screen.findAllByRole("switch")).length).toBe(3);
-  });
+    /* 10 s, not the default: under a full gate run on a busy PC the page took
+       just over 5 s and the release run failed (16 Oct, twice before); alone
+       it is 1.3 s. */
+    expect((await screen.findAllByRole("switch", {}, { timeout: 10_000 })).length).toBe(3);
+  }, 15_000);
 
   /* D27-163: New booking's four sections have their own card, apart from
      the modules the API refuses when off. */
