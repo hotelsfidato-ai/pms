@@ -6539,6 +6539,17 @@ copy will see of theirs.**
 
 ---
 
+### 415 · MINE: a new column on `hotels` went to the release run undecided for test hotels (16 October)
+
+D27-338 added `hotels.night_audit_opens_at` (migration 228). I ran the API and web tests for it but not
+`db/tests/run.sh`, and started the full release gates; 50 minutes later the database step failed on the
+test-hotels guard "every column of a property is decided: copied to its test hotel or not - undecided:
+night_audit_opens_at". **The rule:** a new `hotels` column is decided in `app.test_hotel_hotels_columns()`
+(212's list - redefine it whole in the new migration, as 228 does), and any migration runs
+`db/tests/run.sh` through the queue BEFORE the full release gates are started.
+
+---
+
 ### 414 · MINE: a string replace on CRLF files matched nothing and left half an edit (15 October)
 
 Removing the group's logo from the restaurant bill's two callers, I replaced whole lines with `node -e`
