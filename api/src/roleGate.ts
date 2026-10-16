@@ -551,6 +551,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PATCH ${H}/rooms/:number`]: SETUP_CHANGE,
   /* D27-258, D27-263: Remove a room type nothing uses; rooms in order. */
   [`DELETE ${H}/room-types/:id`]: SETUP_CHANGE,
+  /* D27-336: Remove a room nothing has used - as a room is changed. */
+  [`DELETE ${H}/rooms/:number`]: SETUP_CHANGE,
   [`PUT ${H}/rooms/order`]: SETUP_CHANGE,
   [`POST ${H}/room-types/:id/photos`]: SETUP_CHANGE,
   [`PUT ${H}/room-types/:id/photos/order`]: SETUP_CHANGE,

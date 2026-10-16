@@ -11,6 +11,40 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-15 · A loose Several rooms range, and Remove a room nothing has used (the owner's D27-336)
+
+Helper copy `.claude/worktrees/rooms-remove`, branch `inventory/rooms-remove`, from cp6 df577ec1. No migration: `pms_app` already has DELETE on `rooms`, and its row policy (`hotel_isolation`) covers every command - the API tests ran on a scratch database migrated from zero.
+
+**Asked for:** D27-336. "Don't make it strict, as it is per hotel": Several rooms takes any room number at each end (letters, digits, -), the same except ONE number that counts up (A101 to A110, G01 to G12, VIL1 to VIL8, A-101 to A-110, 101A to 109A) or the last letter (111A to 111D); anything else refused with its reason; at most 100 rooms at a time. A room nothing has used (no booking, stay, housekeeping, key card, block, work order, lost item, wake-up call, equipment or guest link) can be Removed; a used room is only switched off; a type whose rooms are all removed can then be removed as before.
+
+**Shipped:**
+- `pages/RoomSetup.tsx`: `roomRange(from, to)` rewritten, same signature and shape (`fromBad`, `toBad`, `count`, `nth` one at a time). Each end must pass the server's room-number rule (`/^[A-Za-z0-9-]{1,10}$/`, `validate.ts`), else "At most 10 letters, digits and -, e.g. A101 or G01."; both are split into runs of digits and non-digits. One digit run differing counts up, padded to From's width; the last character, a letter at both ends, gives the letter range; From = To is one room. Refusals: "Only one number (or the last letter) may change between From and To.", "To is below From.", "At most 100 rooms at a time.". Hints: From "e.g. 101 to 109, A101 to A110, G01 to G12, 111A to 111D.", To "At most 100 rooms at a time.", Number "At most 10 letters, digits and -, saved in capitals.". D27-335's "Change the number or the letter, not both." and "Give both ends a letter, or neither." are now that one sentence.
+- A room's own window: **Remove** at the foot, then "Remove room 105 for good? Only a room nothing has used can be removed - ...; otherwise switch Sellable off." with Keep it / Remove room 105; then "Room 105 removed" and the page refreshes. A refusal is the server's sentence in a toast. `data/roomSetup.ts`: `removeRoom`.
+- `api/src/modules/inventory/inventorySetup.ts`: `DELETE /:code/rooms/:number`, addressed as `PATCH` addresses a room, mirroring the room type's Remove (a "uses" check, then the delete in a savepoint, 23503 refused). Refused with "Room X has been used (<what>), so it cannot be removed. Switch Sellable off instead." for: somebody is in it; a booking or stay (`room_assignments`); housekeeping (`housekeeping_assignments`, `room_status_log`); a key card; a block; a work order; a lost item; a wake-up call; equipment (`equipment_history`, both columns of `equipment_moves`); a guest link; a connecting room (`rooms.connected_room_id`, kept mutual by 043).
+- `api/src/roleGate.ts` (the shared gate, one line) and `api/test/roleGate.test.ts`: `DELETE /rooms/:number` is SETUP_CHANGE, as the room type's Remove and a room's change - the owner, an administrator, the GM.
+- Manual A17: the Number rule, "To remove a room added by mistake", the loose range with its three refusals, D27-336 in "Why"; rebuilt.
+
+**Found:**
+- The foreign keys to `rooms` on the local database (`pg_constraint`), the same as the migrations: equipment_history, equipment_moves (from and to), guest_links, housekeeping_assignments (two constraints, CASCADE), key_cards (CASCADE, and append-only: a cascade would raise, not 23503), lost_items, room_assignments, room_blocks (CASCADE), room_status_log, rooms.connected_room_id, wake_up_calls, work_orders. No other column holds a room's id; `reservations.room_id` (005) is gone.
+- A room created through `POST /rooms` writes no housekeeping or status-log row (the triggers on `rooms` only notify and audit), so a fresh room is removable; 066's note that creating a room makes them is about provisioning.
+- Every table asked has the hotel's own row policy, so the GM sees every row of the room; a foreign key check ignores row security in any case.
+
+**Proved** (run in this session):
+- Web types `tsc -p tsconfig.app.json --noEmit` exit 0; API types `tsc --noEmit -p tsconfig.json` exit 0.
+- Web `vitest run src/modules/inventory`: 5 files, 28 tests passed (severalRooms 8/8 then); after splitting the range test, `severalRooms.test.tsx` 10/10. New: the loose ranges (A101-A110, G01-G12, VIL1-VIL8, A-101, A101A-A101C), two numbers changing and a letter not last refused, the 100 cap (1 to 100 is 100; 1 to 101 and 1 to 9999999999 refused), Remove asks before it sends `DELETE /rooms/105`. `manual.test.ts` 3/3, `primaryAction.test.ts` 1/1.
+- Broken: D27-335's strict `roomRange` put back - 2 of 8 failed; the number allowed only at the front and the 100 cap taken out - 2 of 10 failed (the loose test and the cap test). Restored.
+- API (scratch database, through the queue): roomRemove, roomLimits, settingsP3, roleGate: 4 files, 96 tests passed, exit 0. `roomRemove.test.ts` 4/4: a fresh room removed (then 404); a room with a stay refused and kept; a room with only a block refused and the block kept, and an occupied room refused; a type removed once its only room is.
+- Broken: the block check taken out - "expected 200 to be 409": the room was deleted and its block with it, silently. 1 failed, 3 passed. Restored.
+
+**Left open:**
+- Not opened in a browser (this copy has no API, database or env files of its own; the main chat's servers were not touched). The master to open a room's window, Remove, and Several rooms G01 to G12, after the merge.
+- Picture A17-14 (Add a room) shows "At most 10 letters and digits." under Number and no Several rooms switch: wrong words since D27-335. A17-54 is still "to be taken". No picture shows a room's own window.
+- A connecting room is refused too, though not in the owner's list: its foreign key would refuse the delete anyway. Question for the owner: clear the connection first by hand (today), or have Remove clear it?
+
+**Commits:** one, on `inventory/rooms-remove` (the master merges).
+
+---
+
 ## 2026-10-15 · Room numbers with letters (the owner's D27-335)
 
 Helper copy `.claude/worktrees/room-letters`, branch `inventory/room-letters`, from cp6 0352e3ec. Migration **226** ("room numbers in capitals", the next free number on cp6; the master renumbers if another lane took it).
