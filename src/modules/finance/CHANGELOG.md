@@ -8,6 +8,23 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-16 · Refunds and cash after the owner's D27-337: the refund limit, a cash refund to the rupee, the master bill's cash
+
+**Asked for:** the owner, "all as recommended" on lane B's questions: (a) a refund offers at most the bill's "Overpaid"; (c) a group's master bill paid in cash is rounded to the rupee; (d) a cash refund is rounded to the rupee, the bill keeping the exact figure. (b), (e), (f) need no code.
+
+**Shipped**
+- (a) `refunds.ts` `refundBills`: the nights still to come are taken off the bill they post to (FIN-38), with a plain notice when nothing is left to refund before check-out.
+- (d) Migration 227: `refunds.round_off` (±0.50, cash only) and `app.cashier_expected_cash` taking `amount + round_off` out of the drawer; the refund route works out the round-off, the line reads "Refunded - Cash (₹1,235.00 given, round-off +₹0.37)"; `cashier.ts` (the shift's receipts) counts it; the refund window shows "Cash to give" and "Round-off" (`flows/RefundStep.tsx`), the receipt "Cash given". The day reports keep the exact figure, as for payments.
+- (c) `postings.ts`: the group's payment route passes `roundCash`; the group page's Settle shows the cash to take (`reservations/pages/GroupPanel.tsx`). Manual A2 (the host's account), rebuilt.
+
+**Proved**
+- Web types 0, API types 0. API (scratch database, through the queue): `refunds` 13, `masterBill` 9, `cashRoundOff` 4 - 26 of 26. Web: `refundStep` 5, `cashRoundOff` 4, `refundReceiptLink` 1 - 10 of 10.
+- The three old faults put back at once (the limit, the refund's round-off, the master bill's `roundCash`): 3 failed, 19 passed; restored.
+
+**Left open**
+- The manual has no refund or cash round-off section yet (lane B's lines wait for `manual-rest`).
+- (f) "Bank transfer" in each hotel's ways of paying: the owner or the GM, in Settings.
+
 ## 2026-10-15 · A deposit before arrival with the advance rule off (the owner's D27-330 (2), FIN-37)
 
 **Asked for:** Settle opens before arrival for a deposit even when the hotel asks no advance; the amount typed by the desk, never filled in; held as the guest's credit. The whole session, with the screens and the tests, is front desk's CHANGELOG entry of the same date.

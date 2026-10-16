@@ -18,6 +18,24 @@ Nothing open.
 
 ## Fixed
 
+### FIN-38 · A refund before the last night was posted could leave that night unpaid - FIXED 16 October (the owner's D27-337 (a))
+
+**Found** - 14 October, by lane B on screen (its report, question 0): A5 Test More, 2 nights, the
+second not yet posted, paid ₹30,000 - the bill said "Overpaid ₹22,232.10" (net of the night to
+come) while the refund box offered ₹26,116.05, the posted credit. Giving it all would have left the
+second night owed.
+
+**What was done** - `refundBills` (`api/src/modules/finance/refunds.ts`) takes the nights still to
+come off the bill they post to before offering anything: `nightsToCome` (the audit's own count) ×
+the agreed rate plus its GST by the slab, a night at a time, as the audit posts it. With no GST
+rule pricing the rate, that bill offers nothing until the nights are posted, and says so. Leaving
+early (D27-315 A) takes the nights off first, so an early leaver still gets everything back.
+
+**The rule it leaves** - a refund offers the bill's own "Overpaid", never the posted credit alone.
+`refunds.test.ts` "offers only what is left after the night still to come": with the old line back,
+it failed. Its first stay's fixture now posts its night as the audit does (with the booking named),
+or the night counted as still to come.
+
 ### FIN-37 · A deposit before arrival could not be taken when the hotel asks no advance - FIXED 15 October (the owner's D27-330 (2))
 
 **What happened:** FIN-36 opened the Bill tab's Settle before arrival only for the advance the hotel's "Advance before check-in" rule asks. With the rule off (or the advance paid) Settle stayed grey before arrival, so a guest who wanted to leave a deposit could not.

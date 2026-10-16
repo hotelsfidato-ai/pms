@@ -32,6 +32,8 @@ let company = "";
 /** Billed to the company, and a family's, billed to nobody. */
 let corporate = "";
 let family = "";
+/** A group whose host pays in cash (D27-337 (c)). */
+let cashGroup = "";
 const staff = new Map<string, string>();
 
 const call = (who: string, path: string, body?: unknown) =>
@@ -112,7 +114,7 @@ afterAll(async () => {
   try {
     await sql("delete from invoices where hotel_id = $1", [hotelId]);
     await sql("delete from hotels where id = $1", [hotelId]);
-    await sql("delete from reservation_groups where id = any($1::uuid[])", [[corporate, family]]);
+    await sql("delete from reservation_groups where id = any($1::uuid[])", [[corporate, family, cashGroup].filter(Boolean)]);
     await sql("delete from guests where full_name like 'MBL %'");
     await sql("delete from companies where id = $1", [company]);
   } finally {
@@ -238,5 +240,23 @@ describe("a group's master bill (D27-305 (10))", () => {
     expect((await call("front_desk", `/groups/${family}/payments`, { method: "UPI", amount: 6300 })).status).toBe(200);
     const res = await answer(await call("front_desk", `/groups/${family}/invoice`, {}));
     expect(res).toMatchObject({ ok: true, recipient: "MBL Family Host", total: 6300 });
+  });
+
+  /* D27-337 (c): a master bill carries room nights, so cash on it is taken to
+     the rupee as on a room bill - the bill credited the exact amount, the
+     drawer the rupee, the difference kept as the payment's round-off. */
+  it("takes cash on the master bill to the rupee, keeping the round-off", async () => {
+    cashGroup = await group("MBL Cash", null);
+    expect((await call("front_desk", `/groups/${cashGroup}/master`, {})).status).toBe(200);
+    await nights(cashGroup, (await masterOf(cashGroup)).id);
+    const res = await call("gm", `/groups/${cashGroup}/payments`, { method: "Cash", amount: 3000.4 });
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, data: { roundOff: -0.4 } });
+    const [paid] = await sql(
+      `select -fp.amount::float8 as amount, p.round_off::float8 as round_off, fp.description from payments p
+         join folio_postings fp on fp.id = p.posting_id where fp.folio_id = $1`, [(await masterOf(cashGroup)).id]);
+    expect(paid).toEqual({ amount: 3000.4, round_off: -0.4,
+                           description: "Received - Cash (₹3,000.00 taken, round-off -₹0.40)" });
+    expect((await masterOf(cashGroup)).balance).toBeCloseTo(3299.6, 2);
   });
 });

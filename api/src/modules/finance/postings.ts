@@ -984,8 +984,11 @@ postings.post("/:code/groups/:id/payments", async (c) => {
         return overCreditLimit(client, hotelId, master.company_id, amount,
           { reason: body.overLimitReason, title: `${master.name}, the host's bill` });
       },
+      /* It carries room nights: cash to the rupee, as a room bill (D27-337 (c)). */
+      roundCash: true,
     });
-    return taken.ok ? { ok: true, data: { id: taken.id } } : refuse(taken.reason, taken.needs);
+    return taken.ok ? { ok: true, data: { id: taken.id, roundOff: taken.roundOff } }
+      : refuse(taken.reason, taken.needs);
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

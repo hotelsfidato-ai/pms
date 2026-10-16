@@ -178,7 +178,9 @@ cashier.get("/:code/cashier-shift", async (c) => {
       `select coalesce(p.method, rf.method, 'unrecorded') as method,
               /* With the round-off a cash room bill was taken to the
                  rupee with (D27-317): what is in the drawer. */
-              count(*)::int as n, (-sum(fp.amount) + coalesce(sum(p.round_off), 0))::text as amount
+              count(*)::int as n,
+              /* ...and a cash refund handed over to the rupee (D27-337 (d)). */
+              (-sum(fp.amount) + coalesce(sum(p.round_off), 0) - coalesce(sum(rf.round_off), 0))::text as amount
          from folio_postings fp
          left join payments p on p.posting_id = fp.id
          left join refunds rf on rf.posting_id = fp.id

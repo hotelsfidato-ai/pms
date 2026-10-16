@@ -53,6 +53,15 @@ export default function RefundReceiptPage() {
             <dt className="text-grey-600">Booking</dt><dd>{r.booking}{r.room ? `, Room ${r.room}` : ""}</dd>
             <dt className="text-grey-600">Amount refunded</dt>
             <dd className="font-semibold tabular">{moneyPrecise(r.amount)}</dd>
+            {/* A cash refund handed over to the rupee (D27-337 (d)). */}
+            {r.roundOff ? (
+              <>
+                <dt className="text-grey-600">Cash given</dt>
+                <dd className="tabular">
+                  {moneyPrecise(r.amount + r.roundOff)} (round-off {r.roundOff > 0 ? "+" : "-"}{moneyPrecise(Math.abs(r.roundOff))})
+                </dd>
+              </>
+            ) : null}
             <dt className="text-grey-600">Back by</dt><dd>{r.method}</dd>
             <dt className="text-grey-600">Reference</dt><dd>{r.reference ?? "-"}</dd>
             <dt className="text-grey-600">Why</dt><dd>{r.reason}</dd>

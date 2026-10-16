@@ -114,10 +114,12 @@ beforeAll(async () => {
        returning id::text`, [hotelId, guest])).rows[0]!.id;
     folio = (await db.query<{ id: string }>(
       "insert into folios (hotel_id, reservation_id) values ($1, $2) returning id::text", [hotelId, stay])).rows[0]!.id;
+    /* Tonight's night, posted to the stay as the audit posts it (with the
+       booking named), so no night is still to come (D27-337 (a)). */
     await db.query(
-      `insert into folio_postings (hotel_id, folio_id, business_date, category, description,
+      `insert into folio_postings (hotel_id, folio_id, reservation_id, business_date, category, description,
                                    amount, tax_rate, tax_amount)
-       values ($1, $2, app.business_date($1), 'room', 'Room', 3000, 0, 0)`, [hotelId, folio]);
+       values ($1, $2, $3, app.business_date($1), 'room', 'Room', 3000, 0, 0)`, [hotelId, folio, stay]);
     for (const role of ["front_desk", "hotel_manager", "gm", "finance"]) {
       const [p] = (await db.query<{ id: string }>(
         `insert into staff (email, full_name, firebase_uid) values ($1, $2, $3)
@@ -272,7 +274,69 @@ describe("a refund on a guest's own bill", () => {
     expect(await res.json()).toMatchObject({
       number: p!.id, date: today, amount: 2000, method: "UPI", reference: "UPI 4471",
       reason: "Left a day early", givenBy: "RFD finance", guest: "RFD Guest",
-      hotel: { name: "Refund Test" }, takenBack: false,
+      hotel: { name: "Refund Test" }, takenBack: false, roundOff: 0,
     });
+  });
+});
+
+/* THE OWNER'S D27-337: (a) a refund offers at most the bill's own "Overpaid" -
+   the credit after the nights still to come; (d) a cash refund is handed over
+   to the rupee, the bill keeping the exact figure. A second stay in RFD, after
+   the reports above are compared. */
+describe("a refund, after the owner's D27-337", () => {
+  let two = "";
+  let twoFolio = "";
+  beforeAll(async () => {
+    const db = new (await import("pg")).default.Pool({ connectionString: SUPER, max: 1 });
+    try {
+      await db.query("select set_config('app.user_id', $1, false)", [people["owner"]]);
+      const guest = (await db.query<{ id: string }>(
+        "insert into guests (full_name, nationality) values ('RFD Second', 'IN') returning id::text")).rows[0]!.id;
+      two = (await db.query<{ id: string }>(
+        `insert into reservations (hotel_id, reference, guest_id, room_type_id, check_in, check_out,
+                                   agreed_rate, status, source)
+         values ($1, app.next_reference($1), $2, (select id from room_types where hotel_id = $1 and code = 'STD'),
+                 app.business_date($1), app.business_date($1) + 2, 3000, 'checked_in', 'walk_in')
+         returning id::text`, [hotelId, guest])).rows[0]!.id;
+      twoFolio = (await db.query<{ id: string }>(
+        "insert into folios (hotel_id, reservation_id) values ($1, $2) returning id::text", [hotelId, two])).rows[0]!.id;
+      /* Tonight posted; tomorrow's night (₹3,000, GST 0% here) still to come. */
+      await db.query(
+        `insert into folio_postings (hotel_id, folio_id, reservation_id, business_date, category, description,
+                                     amount, tax_rate, tax_amount)
+         values ($1, $2, $3, app.business_date($1), 'room', 'Room', 3000, 0, 0)`, [hotelId, twoFolio, two]);
+    } finally { await db.end(); }
+    const paid = await call(people["owner"]!, `/stays/${two}/payments`, "POST",
+      { method: "Cash", amount: 7234.63, heldAsCredit: true });
+    expect(paid.status, await paid.clone().text()).toBe(200);
+  }, 120_000);
+
+  it("offers only what is left after the night still to come", async () => {
+    const res = await call(people["gm"]!, `/stays/${two}/refunds`);
+    const body = (await res.json()) as { bills: { folioId: string; credit: number }[] };
+    /* Paid 7,234.63 on 3,000 posted: 4,234.63 over; tomorrow's 3,000 keeps its share. */
+    expect(body.bills.find((b) => b.folioId === twoFolio)?.credit).toBe(1234.63);
+    const over = await call(people["gm"]!, `/stays/${two}/refunds`, "POST",
+      { folioId: twoFolio, method: "Cash", amount: 2000, reason: "Asked for it" });
+    expect(over.status).toBe(409);
+    expect(((await over.json()) as { reason: string }).reason).toBe("That is more than the ₹1,234.63 owed back on this bill.");
+  });
+
+  it("hands cash over to the rupee: the bill keeps 1,234.63, the drawer gives 1,235", async () => {
+    const drawer = async () => Number((await sql<{ n: string }>(
+      `select app.cashier_expected_cash(id)::text as n from cashier_shifts
+        where hotel_id = $1 and staff_id = $2 and closed_at is null`, [hotelId, people["gm"]]))[0]!.n);
+    const before = await drawer();
+    const res = await call(people["gm"]!, `/stays/${two}/refunds`, "POST",
+      { folioId: twoFolio, method: "Cash", amount: 1234.63, reason: "Asked for it" });
+    expect(res.status, await res.clone().text()).toBe(200);
+    const [row] = await sql<{ amount: number; round_off: number; description: string; id: string }>(
+      `select fp.amount::float8 as amount, rf.round_off::float8 as round_off, fp.description, fp.id::text
+         from folio_postings fp join refunds rf on rf.posting_id = fp.id where fp.folio_id = $1`, [twoFolio]);
+    expect(row).toMatchObject({ amount: 1234.63, round_off: 0.37,
+                                description: "Refunded - Cash (₹1,235.00 given, round-off +₹0.37)" });
+    expect(Math.round((before - await drawer()) * 100) / 100).toBe(1235);
+    const receipt = await call(people["gm"]!, `/stays/${two}/refunds/${row!.id}`);
+    expect(await receipt.json()).toMatchObject({ amount: 1234.63, roundOff: 0.37 });
   });
 });

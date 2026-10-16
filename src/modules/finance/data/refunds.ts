@@ -41,6 +41,8 @@ export async function giveRefund(
 
 export interface RefundReceipt {
   number: string; date: string; at: string; amount: number;
+  /** A cash refund handed over to the rupee (D27-337 (d)); 0 otherwise. */
+  roundOff: number;
   method: string; reference: string | null; reason: string; givenBy: string | null;
   guest: string; booking: string; room: string | null; takenBack: boolean;
   hotel: { name: string; address: string | null; city: string | null; state: string | null;

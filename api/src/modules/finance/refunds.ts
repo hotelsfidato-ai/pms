@@ -5,6 +5,7 @@ import { resolveDate } from "../../businessDate.ts";
 import { inr } from "../../reportRender.ts";
 import { can, type Role } from "../../permissions.ts";
 import { openOwnDrawer } from "./cashier.ts";
+import { nightsToCome } from "../night-audit/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    A REFUND (the owner's D27-315 Part B, 13 October; migration 219)
@@ -72,9 +73,28 @@ export interface RefundBill {
   ways: RefundWay[];
 }
 
+/** What the stay's nights still to come will charge, and the bill they post
+    to (the owner's D27-337 (a)): the night audit's own price - the agreed
+    rate and its GST by the slab, a night at a time - so a refund never gives
+    back money a night is about to need. `amount` is null where no GST rule
+    prices the rate: then nothing on that bill is refunded until the nights
+    are posted. Null when no night is to come. */
+async function chargesToCome(client: Client, hotelId: string, stayId: string) {
+  const nights = await nightsToCome(client, hotelId, stayId);
+  if (nights === 0) return null;
+  const { rows: [r] } = await client.query<{ folio_id: string | null; night: string | null }>(
+    `select app.folio_for_room_charge(r.id)::text as folio_id,
+            (r.agreed_rate + round(r.agreed_rate * app.gst_rate_or_null(r.hotel_id, 'room', r.agreed_rate)
+                                   / 100.0, 2))::text as night
+       from reservations r where r.hotel_id = $1 and r.id = $2`, [hotelId, stayId]);
+  if (!r?.folio_id) return null;
+  return { folioId: r.folio_id, amount: r.night === null ? null : two(Number(r.night) * nights) };
+}
+
 /** Each of the stay's bills: its credit, and the ways and amounts it may be
     given back by. The one reading both the screen and the route use. */
 export async function refundBills(client: Client, hotelId: string, stayId: string): Promise<RefundBill[]> {
+  const toCome = await chargesToCome(client, hotelId, stayId);
   const { rows: bills } = await client.query<{
     id: string; balance: string; company: boolean; ota: boolean;
   }>(
@@ -98,7 +118,12 @@ export async function refundBills(client: Client, hotelId: string, stayId: strin
 
   const out: RefundBill[] = [];
   for (const b of bills) {
-    const credit = Math.max(two(-Number(b.balance)), 0);
+    /* The bill's own "Overpaid": its credit after the nights still to come
+       (D27-337 (a)). Leaving early takes those nights off first (D27-315 A),
+       so an early leaver still gets all of it back. */
+    const posted = Math.max(two(-Number(b.balance)), 0);
+    const nights = toCome?.folioId === b.id ? toCome : null;
+    const credit = nights ? Math.max(two(posted - (nights.amount ?? posted)), 0) : posted;
     const company = b.company
       ? "This credit is the company's. It is settled with the company on the City ledger, not refunded to the guest here."
       : null;
@@ -139,7 +164,11 @@ export async function refundBills(client: Client, hotelId: string, stayId: strin
        was paid at the desk goes back here (D27-328, FIN-35). */
     const notice = company ?? (b.ota && ways.length === 0
       ? "A booking-site stay: the booking site refunds the guest. Tell the booking site; nothing is refunded here."
-      : null);
+      : nights && posted > 0 && credit === 0
+        ? (nights.amount === null
+          ? "Nights are still to come and no GST rule prices them, so this credit stays for them. Refund it at check-out."
+          : "This credit pays for the nights still to come. Refund what is left at check-out, or after Leaving early.")
+        : null);
     out.push({ folioId: b.id, credit, notice, ways });
   }
   return out;
@@ -252,6 +281,10 @@ refunds.post("/:code/stays/:id/refunds", async (c) => {
     const businessDate = await resolveDate(client, hotelId, undefined);
     if (way.kind === "cash") await openOwnDrawer(client, hotelId, businessDate);
 
+    /* CASH TO THE RUPEE (D27-337 (d)), as a cash payment (D27-317): the bill
+       keeps the exact refund; the drawer hands over the nearest rupee, and
+       the difference is the round-off. Every other way gives the exact amount. */
+    const roundOff = way.kind === "cash" ? two(Math.round(amount) - amount) : 0;
     const { rows: [made] } = await client.query<{ id: string }>(
       `insert into folio_postings
          (hotel_id, folio_id, business_date, category, description,
@@ -259,11 +292,15 @@ refunds.post("/:code/stays/:id/refunds", async (c) => {
        values ($1, $2::uuid, $3, 'refund', $4, $5, 0, 0, $6)
        returning id::text`,
       [hotelId, bill.folioId, businessDate,
-       `Refunded - ${way.label}${reference ? ` (${reference})` : ""}`, amount, key]);
+       roundOff
+         ? `Refunded - ${way.label} (₹${inr(amount + roundOff)} given, round-off `
+           + `${roundOff > 0 ? "+" : "-"}₹${inr(Math.abs(roundOff))})`
+         : `Refunded - ${way.label}${reference ? ` (${reference})` : ""}`,
+       amount, key]);
     await client.query(
-      `insert into refunds (hotel_id, posting_id, method, method_label, amount, reference, reason)
-       values ($1, $2::bigint, $3, $4, $5, $6, $7)`,
-      [hotelId, made!.id, way.kind, way.label, amount, reference || null, reason]);
+      `insert into refunds (hotel_id, posting_id, method, method_label, amount, reference, reason, round_off)
+       values ($1, $2::bigint, $3, $4, $5, $6, $7, $8)`,
+      [hotelId, made!.id, way.kind, way.label, amount, reference || null, reason, roundOff]);
     return { status: 200, id: made!.id };
   });
 
@@ -282,7 +319,8 @@ refunds.get("/:code/stays/:id/refunds/:postingId", async (c) => {
     const { rows: [r] } = await client.query<Record<string, string | null>>(
       `select fp.id::text as number, fp.business_date::text as date,
               to_char(rf.created_at at time zone h.timezone, 'YYYY-MM-DD"T"HH24:MI') as at,
-              rf.amount::text as amount, rf.method_label as method, rf.reference, rf.reason,
+              rf.amount::text as amount, rf.round_off::text as round_off,
+              rf.method_label as method, rf.reference, rf.reason,
               app.posted_by_name(fp.id) as given_by,
               g.full_name as guest, res.reference as booking, app.stay_room(res.id) as room,
               h.name as hotel, h.address_line as address, h.city, h.state, h.phone, h.gstin,
@@ -299,6 +337,7 @@ refunds.get("/:code/stays/:id/refunds/:postingId", async (c) => {
     return {
       receipt: {
         number: r["number"], date: r["date"], at: r["at"], amount: Number(r["amount"]),
+        roundOff: Number(r["round_off"] ?? 0),
         method: r["method"], reference: r["reference"], reason: r["reason"], givenBy: r["given_by"],
         guest: r["guest"], booking: r["booking"], room: r["room"],
         takenBack: r["taken_back"] as unknown as boolean,

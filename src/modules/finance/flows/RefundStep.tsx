@@ -89,6 +89,9 @@ function RefundDialog({
   const [pressKey, setPressKey] = useState(() => crypto.randomUUID());
   const value = Number(amount) || 0;
   const needsReference = way !== undefined && way.kind !== "cash";
+  /* CASH TO THE RUPEE (D27-337 (d)): the bill keeps the exact refund, the
+     drawer hands over the nearest rupee. The server works it out the same way. */
+  const roundOff = way?.kind === "cash" ? Math.round((Math.round(value) - value) * 100) / 100 : 0;
 
   const pick = (label: string) => {
     setMethod(label);
@@ -122,6 +125,17 @@ function RefundDialog({
                 onChange={(e) => setAmount(e.target.value)} />
             )}
           </Field>
+          {roundOff !== 0 && (
+            <div data-round-off className="space-y-0.5 text-sm">
+              <p className="flex justify-between gap-4 font-semibold text-ink-900">
+                <span>Cash to give</span><span className="tabular">{moneyPrecise(value + roundOff)}</span>
+              </p>
+              <p className="flex justify-between gap-4 text-grey-600">
+                <span>Round-off</span>
+                <span className="tabular">{`${roundOff > 0 ? "+" : "-"}${moneyPrecise(Math.abs(roundOff))}`}</span>
+              </p>
+            </div>
+          )}
           {needsReference && (
             <Field label="Reference" hint={REFERENCE_HINT[way!.kind] ?? "Where the money can be traced"}>
               {({ id }) => (
@@ -155,7 +169,8 @@ function RefundDialog({
                   }, pressKey);
                   if (res.ok && res.data) {
                     setPressKey(crypto.randomUUID());
-                    toast.success(`${moneyPrecise(value)} refunded`, method);
+                    toast.success(roundOff ? `${moneyPrecise(value + roundOff)} cash given`
+                      : `${moneyPrecise(value)} refunded`, method);
                     setOpen(false);
                     onDone(res.data.id);
                   } else {

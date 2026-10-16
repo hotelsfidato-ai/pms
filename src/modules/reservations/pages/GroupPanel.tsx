@@ -405,6 +405,8 @@ export default function GroupPanelPage() {
                   balance={g.master.balance}
                   businessDate={BUSINESS_DATE}
                   credit="host"
+                  /* Cash to the rupee, as a room bill (D27-337 (c)). */
+                  roundCash
                   pay={(input, key) => settleGroupBill(hotelId, g.id, input, key)}
                   onDone={() => void qc.invalidateQueries()}
                 />

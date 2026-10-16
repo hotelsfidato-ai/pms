@@ -91,4 +91,15 @@ describe("the refund step on an overpaid bill", () => {
     fireEvent.change(screen.getByLabelText("Why"), { target: { value: "Left early" } });
     expect((screen.getByRole("button", { name: "Give refund" }) as HTMLButtonElement).disabled).toBe(true);
   });
+
+  /* D27-337 (d): cash is handed over to the rupee; the bill keeps the paise. */
+  it("says the cash to give to the rupee, and sends the exact refund", async () => {
+    show({ may: true, ceiling: 20000, bills: [BILL] });
+    fireEvent.click(await screen.findByRole("button", { name: /Refund/ }));
+    fireEvent.change(await screen.findByLabelText("Amount"), { target: { value: "1234.63" } });
+    const box = document.querySelector("[data-round-off]") as HTMLElement;
+    expect(box.textContent).toBe("Cash to give₹1,235.00Round-off+₹0.37");
+    fireEvent.change(screen.getByLabelText(/Back by/), { target: { value: "UPI" } });
+    expect(document.querySelector("[data-round-off]"), "UPI gives the exact amount").toBeNull();
+  });
 });
