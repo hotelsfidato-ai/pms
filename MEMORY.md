@@ -6539,6 +6539,17 @@ copy will see of theirs.**
 
 ---
 
+### 416 · MINE: two new tests that passed in the evening and failed after midnight (17 October)
+
+`blockedRoom.test.ts` and `opensAt.test.ts` (D27-339, D27-338) passed at 21:00 and failed in the release run at
+00:20: check-in first refused "Rooms are ready from 14:00" (the early-arrival rule, before the block check), and a
+new test hotel's business date was the database's UTC date - a day behind India from 00:00 to 05:30 - so "today"
+was false. The release slipped another hour. **The rule:** a test sets every clock premise it relies on (the
+hotel's check-in time, its business date, an opening time) instead of inheriting the hour it runs at; when a
+release run crosses midnight, a time-of-day failure is a test's premise first.
+
+---
+
 ### 415 · MINE: a new column on `hotels` went to the release run undecided for test hotels (16 October)
 
 D27-338 added `hotels.night_audit_opens_at` (migration 228). I ran the API and web tests for it but not

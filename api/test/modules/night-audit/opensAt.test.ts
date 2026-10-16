@@ -52,6 +52,10 @@ beforeAll(async () => {
     hotelId = (await db.query("select app.provision_property_unchecked($1, 'Night Audit Opens', 'Nowhere')::text as id",
       [CODE])).rows[0].id;
   } finally { await db.end(); }
+  /* The hotel's business date IS its today, whatever the hour: a new hotel's
+     date is the database's (UTC), a day behind India from 00:00 to 05:30 -
+     the release run of 17 Oct, 00:20, met it (MEMORY 416). */
+  await sql("update hotels set business_date = (now() at time zone timezone)::date where id = $1", [hotelId]);
   today = (await sql("select app.business_date($1)::text as d", [hotelId]))[0].d;
   for (const role of ["gm", "admin"]) {
     const id = (await sql(

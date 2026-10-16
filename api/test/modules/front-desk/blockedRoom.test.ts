@@ -44,8 +44,11 @@ beforeAll(async () => {
       `insert into rooms (hotel_id, room_type_id, number)
        select $1, (select id from room_types where hotel_id = $1 order by code limit 1), n
          from unnest(array['101', '102', '103']) as n`, [hotelId]);
-    /* A rate for rooms, so check-in can post its first night. */
+    /* A rate for rooms, so check-in can post its first night; and rooms ready
+       from midnight, so an early-arrival question never comes first - the
+       release run of 17 Oct, 00:20, met "Rooms are ready from 14:00" (MEMORY 416). */
     await db.query("insert into tax_rules (hotel_id, kind, over_amount, rate) values ($1, 'room', 0, 0)", [hotelId]);
+    await db.query("update hotels set check_in_time = '00:00' where id = $1", [hotelId]);
     bd = (await db.query("select app.business_date($1)::text as d", [hotelId])).rows[0].d;
     for (const [key, from, to, status] of [
       ["ahead", 3, 5, "confirmed"],     // arrives in 3 days, two nights
