@@ -8,6 +8,23 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-16 · A blocked room is never given to a guest (the owner's D27-339)
+
+**Asked for:** the hotel's list - GST picks company details, a maintenance block, out of order, and both "minus from inventory" - checked and tested. Found and shown by a test: a room blocked out of order three days ahead was given by Assign room to a booking on those exact days (the inventory already counted 0 sellable). The owner: refuse it everywhere; rename "Out of service" to "Maintenance / out of service"; add to release 6.
+
+**Shipped**
+- `operations.ts` `blockedFor`: Assign room (from the arrival, or today for a guest already in), Check-in (from the arrival to the departure) and Move room (from the move's night) refuse a room with a block on any night of the stay - a day use counts its one day - with "Room 101 is out of order from 19 Oct to 20 Oct, so it cannot take this stay. Choose another room, or end the block first."
+- The pickers say the same before anything is pressed: Check-in's room list marks such a room not allowed with the block's words; Assign room leaves it out for the chosen stay's dates (`blockedFor` in `src/data/repositories/rooms.ts`). Move room's room is typed; the server answers.
+- "Out of service - held back deliberately" reads "Maintenance / out of service - held back deliberately" (`BLOCK_REASONS`); manual A6.7, rebuilt.
+
+**Proved**
+- API: `blockedRoom.test.ts` 4/4 (the room still clean and already out of the inventory; Assign refused with the words and a free room given; Check-in refused for a later night; Move refused); the whole front desk folder with repairs and out-of-service: 19 files, 225 tests. With the check disabled: 3 failed; restored.
+- Web: front-desk, housekeeping, data - 27 files, 169 tests. Types 0 / 0.
+- Not seen on screen: the browser pane hung opening the out-of-service window; the label is one string in `BLOCK_REASONS`.
+
+**Left open**
+- On a block's first day the room's own status is not turned to out of service (only a block starting today or earlier does it at entry); every door now reads the block itself, so it no longer matters for selling - the Housekeeping board still shows it by status.
+
 ## 2026-10-15 · The stay lists find a room with a letter (the owner's D27-335) - FD-36
 
 `components/StayTable.tsx` and `data/stays.ts` (line 118 only): the room is lowered like the guest and reference before the search compares it. The whole change: inventory's `CHANGELOG.md`, 15 October.

@@ -83,7 +83,8 @@ export const listRooms = listSellableRooms;
 
 export const BLOCK_REASONS = [
   { value: "out_of_order", label: "Out of order - something is broken" },
-  { value: "out_of_service", label: "Out of service - held back deliberately" },
+  /* "Maintenance" is the hotel's word for it (the owner's D27-339). */
+  { value: "out_of_service", label: "Maintenance / out of service - held back deliberately" },
   { value: "refurbishment", label: "Refurbishment" },
   /* "NC" is the owner's word for it (16 September): the room the GM lives
      in at 5 Elements is NC. Same block, same reason in the database — the
@@ -93,6 +94,17 @@ export const BLOCK_REASONS = [
   { value: "house_use", label: "NC - not for sale (house use: staff, storage, an office)" },
   { value: "owner_occupied", label: "Owner occupied" },
 ] as const;
+
+/** Why a room cannot take a stay of nights [from, to) - a day use counts its
+    one day - because of a block, in words; null when no block touches it.
+    The server refuses the same (operations.ts `blockedFor`, D27-339). */
+export function blockedFor(room: Room, from: string, to: string): string | null {
+  const b = (room.blocks ?? []).find((x) =>
+    (to > from ? x.from < to : x.from <= from) && (x.to === null || x.to >= from));
+  if (!b) return null;
+  const what = BLOCK_REASONS.find((r) => r.value === b.reason)?.label.split(" - ")[0] ?? "Blocked";
+  return `${what} from ${b.from}${b.to ? ` to ${b.to}` : " until further notice"}.`;
+}
 
 export async function blockRoom(
   hotelId: string,

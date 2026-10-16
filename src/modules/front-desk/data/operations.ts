@@ -3,7 +3,7 @@
    and `Posting` is the only thing left that this module takes from
    there: a type, not data. */
 import type { Posting } from "@/data/repositories/types";
-import { listAllRooms } from "@/data/repositories/rooms";
+import { listAllRooms, blockedFor } from "@/data/repositories/rooms";
 import { getStay, listInHouse } from "./stays";
 import { api, ApiError } from "@/lib/api";
 import { canCheckIn } from "@/lib/rules";
@@ -52,6 +52,9 @@ export async function assignableRooms(
   /** The room this booking is ALREADY on, if any: its own guest still
       in it does not refuse it. */
   currentRoom?: string | null,
+  /** The stay's departure: a room blocked on any night from tonight to it
+      is not offered (D27-339). */
+  departure?: string,
 ) {
   /* Which rooms a guest of this type can be put in tonight, and why
      not, for the ones they cannot. Both lists come from the API now —
@@ -93,6 +96,8 @@ export async function assignableRooms(
       if (r.status === "out-of-service") {
         return { ...base, allowed: false, reason: "Held out of service." };
       }
+      const blocked = departure ? blockedFor(r, businessDate, departure) : null;
+      if (blocked) return { ...base, allowed: false, reason: blocked };
       if (r.status === "dirty") {
         return { ...base, allowed: false, reason: "Not cleaned yet." };
       }

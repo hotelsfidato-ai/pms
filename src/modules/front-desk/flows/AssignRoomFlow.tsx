@@ -8,7 +8,7 @@ import {
   StatusPill, toast,
 } from "@/components/ui";
 import { listStays } from "@/modules/front-desk/data/stays";
-import { listAllRooms, BUSINESS_DATE, type Stay, type Room } from "@/data/repositories";
+import { listAllRooms, blockedFor, BUSINESS_DATE, type Stay, type Room } from "@/data/repositories";
 import { assignRoom } from "@/modules/front-desk/data/operations";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -72,7 +72,9 @@ export function AssignRoomFlow({ hotelId }: { hotelId: string }) {
       .map((s) => s.roomNumber),
   );
   const available = (rooms.data ?? []).filter(
-    (r: Room) => r.status !== "out-of-service" && !taken.has(r.number),
+    (r: Room) => r.status !== "out-of-service" && !taken.has(r.number)
+      /* Not a room blocked on one of the chosen stay's nights (D27-339). */
+      && !(chosen && blockedFor(r, chosen.arrival, chosen.departure)),
   );
 
   const reset = () => { setStayId(""); setRoom(""); };

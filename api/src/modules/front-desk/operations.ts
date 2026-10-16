@@ -139,6 +139,34 @@ export async function stillIn(
     : null;
 }
 
+/* A BLOCKED ROOM IS NOT GIVEN (the owner's D27-339): a room out of order, in
+   maintenance or otherwise blocked on any night of [from, to) - a day use
+   counts its one day - cannot take the stay, whether the block was entered
+   today or ahead of time. The inventory already subtracts it (044); this is
+   the desk's doors saying the same. Blocks hold both their days (022). */
+const BLOCK_WORDS: Record<string, string> = {
+  out_of_order: "out of order", out_of_service: "in maintenance (out of service)",
+  refurbishment: "in refurbishment", house_use: "NC - not for sale", owner_occupied: "owner occupied",
+};
+export async function blockedFor(
+  client: Client, roomId: string, roomNumber: string, from: string, to: string,
+): Promise<string | null> {
+  const { rows: [b] } = await client.query<{ reason: string; from_date: string; to_date: string | null }>(
+    `select b.reason, to_char(b.from_date, 'DD Mon') as from_date, to_char(b.to_date, 'DD Mon') as to_date
+       from room_blocks b
+      where b.room_id = $1
+        and b.from_date < greatest($3::date, $2::date + 1)
+        and (b.to_date is null or b.to_date >= $2::date)
+      order by b.from_date
+      limit 1`,
+    [roomId, from, to],
+  );
+  if (!b) return null;
+  return `Room ${roomNumber} is ${BLOCK_WORDS[b.reason] ?? b.reason} from ${b.from_date}`
+    + `${b.to_date ? ` to ${b.to_date}` : " until further notice"}, so it cannot take this stay. `
+    + "Choose another room, or end the block first.";
+}
+
 interface CheckInBody {
   roomNumber?: string;
   /* Why the room was given before the property's check-in time, and
@@ -476,6 +504,9 @@ operations.post("/:code/stays/:id/check-in", async (c) => {
          neither checked nor held - somebody else's room tonight, and free
          to sell again tomorrow. */
       const arrival = earlyByDays ? businessDate : stay.check_in;
+      /* ...and no block on any of its nights (D27-339). */
+      const blocked = await blockedFor(client, room.id, roomNumber, arrival, stay.check_out);
+      if (blocked) return refuse(blocked);
       const { rows: clash } = await client.query<{ reference: string }>(
         `select r.reference
            from room_assignments ra
@@ -1146,6 +1177,11 @@ operations.post("/:code/stays/:id/assign", async (c) => {
     if (room[0].oos) {
       return refuse(`Room ${roomNumber} is out of service.`);
     }
+    /* No block on any night it would hold (D27-339): from today for a guest
+       already in, else from the arrival - a block entered ahead included. */
+    const holdFrom = stay[0].status === "checked_in" ? await businessDateFor(client, hotelId) : stay[0].check_in;
+    const blocked = await blockedFor(client, room[0].id, roomNumber, holdFrom, stay[0].check_out);
+    if (blocked) return refuse(blocked);
     /* A guest already checked in goes into the room now (rule A). A booking
        not yet arrived is only held: its check-in asks on the day. */
     if (stay[0].status === "checked_in") {
@@ -1247,9 +1283,10 @@ operations.post("/:code/stays/:id/move", async (c) => {
     const stayId = c.req.param("id");
 
     const { rows: stay } = await client.query<{
-      status: string; guest: string; room_type_id: string;
+      status: string; guest: string; room_type_id: string; check_out: string;
     }>(
-      `select r.status, g.full_name as guest, r.room_type_id::text
+      `select r.status, g.full_name as guest, r.room_type_id::text,
+              to_char(r.check_out,'YYYY-MM-DD') as check_out
          from reservations r join guests g on g.id = r.guest_id
         where r.id = $1 and r.hotel_id = $2`,
       [stayId, hotelId],
@@ -1271,6 +1308,9 @@ operations.post("/:code/stays/:id/move", async (c) => {
     );
     if (!room[0]) return refuse(`There is no room ${roomNumber} here.`);
     if (room[0].oos) return refuse(`Room ${roomNumber} is out of service.`);
+    /* No block on any night from the move to the departure (D27-339). */
+    const blocked = await blockedFor(client, room[0].id, roomNumber, from, stay[0].check_out);
+    if (blocked) return refuse(blocked);
 
     /* A checked-in guest moved from tonight (or earlier) goes in now (rule
        A). A move for a later night, or of a booking not yet arrived, is a
