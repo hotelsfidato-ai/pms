@@ -17,6 +17,8 @@ import { setup } from "./setup.ts";
    Its routers, and where each is mounted (see ../../mount.ts). */
 /* P3 (D27-258): the gallery's photo check, for a room type's photos (inventory). */
 export { readPhoto } from "./gallery.ts";
+/* D27-338: the night audit's opening time is the owner's and an admin's (inventory's setting). */
+export { maySwitchModules as isOwnerOrAdmin } from "./grants.ts";
 /* D27-311: Set up this hotel - the bell asks which reminders are due. */
 export { setupReminders, STEP_TITLES } from "./setup.ts";
 export type { StepId, StepState, SetupStep, Setup, SetupChoice } from "./setup.ts";

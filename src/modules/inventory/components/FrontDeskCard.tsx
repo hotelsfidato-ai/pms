@@ -27,9 +27,9 @@ export function FrontDeskCard({ hotelId }: { hotelId: string }) {
 
   return (
     <Card className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3.5">
-      {/* Four level columns (label over value), two by two until
-          there is room for four. */}
-      <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3 flex-1 min-w-0">
+      {/* Five level columns (label over value), two by two until
+          there is room for five. */}
+      <dl className="grid grid-cols-2 lg:grid-cols-5 gap-x-6 gap-y-3 flex-1 min-w-0">
         <DeskFigure label="Rooms ready from" value={frontDesk.checkInTime} />
         <DeskFigure label="Check-out by" value={frontDesk.checkOutTime} />
         {/* A DASH, not a zero. "We do not charge for this" is a
@@ -40,6 +40,7 @@ export function FrontDeskCard({ hotelId }: { hotelId: string }) {
         <DeskFigure label="Late departure" value={
           frontDesk.lateCheckoutCharge === null
             ? null : money(frontDesk.lateCheckoutCharge)} />
+        <DeskFigure label="Night audit opens" value={frontDesk.nightAuditOpensAt} />
       </dl>
       <Button variant="secondary" onClick={() => setEditing(true)}>
         Edit
@@ -77,12 +78,16 @@ function FrontDeskDialog({
 }) {
   const [cin, setCin] = useState(current.checkInTime);
   const [cout, setCout] = useState(current.checkOutTime);
+  const [audit, setAudit] = useState(current.nightAuditOpensAt);
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
     setBusy(true);
     const res = await amendFrontDesk(hotelId, {
       checkInTime: cin, checkOutTime: cout,
+      /* The owner's and an admin's (D27-338): only when changed, so the GM
+         can still save the hours. */
+      ...(audit !== current.nightAuditOpensAt ? { nightAuditOpensAt: audit } : {}),
     });
     setBusy(false);
     if (!res.ok) return toast.error("Not saved", res.reason);
@@ -122,6 +127,15 @@ function FrontDeskDialog({
               )}
             </Field>
           </div>
+          {/* D27-338: before this time nobody closes today's day; a day already
+              behind can always be closed. The owner's and an admin's to change. */}
+          <Field label="Night audit opens at" required
+                 hint="Before this time, today's night audit cannot be run. A day already behind can always be closed. The owner or an administrator may change it.">
+            {(f) => (
+              <Input {...fieldProps(f)} type="time" value={audit}
+                     onChange={(e) => setAudit(e.target.value)} />
+            )}
+          </Field>
           {/* The fees are set on Money › Extra charges (the owner's D27-259 Q3). */}
           <p className="text-sm text-grey-600">
             The early arrival and late departure fees are set on Settings › Money › Extra charges.

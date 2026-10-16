@@ -4445,6 +4445,7 @@ figure.shot.phone img { max-width: 72mm; }
   <table>
     <thead><tr><th style="width:26%">The card says</th><th>What to do</th></tr></thead>
     <tbody>
+      <tr><td><span class="msg">“The night audit for 16 Oct opens at 16:00, by the hotel's clock.”</span></td><td>Wait until that time. Before it, nobody can close today's day. A day already behind (the business date is earlier than today) is never locked. The time is set in Settings → Times and rules, <span class="ui">Night audit opens at</span>, by the owner or an administrator (A17).</td></tr>
       <tr><td><span class="msg">“4 rooms are still showing due out. Check them out, or extend the stay - the audit will not decide which.”</span></td><td>Open the check <span class="ui">Departures not yet checked out</span>. For each guest: if they left, settle the bill and check them out (A1.6, A5); if they are staying on, open the guest and use <span class="ui">Change dates or guests</span>.</td></tr>
       <tr><td><span class="msg">“A front-desk drawer is still open. Count the cash and close the shift …”</span></td><td>On <span class="ui">Cashiering</span>, count the desk's cash and tap <span class="ui">Close the shift</span>.</td></tr>
       <tr><td><span class="msg">“The till has not been closed for today. Run the day end on it first …”</span></td><td>Close the restaurant's day: <span class="ui">Close restaurant day</span> (A8.9). Only a restaurant with orders today needs it.</td></tr>
@@ -4473,7 +4474,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A guest still due out at night either left and nobody checked them out, or is staying another night. The two lead to opposite charges, and only a person at the desk knows which, so the audit refuses and names the rooms. The two drawers are counted first because the audit states the day's takings, and money not yet counted is not final. The button is shown grey, with its reason, to everybody who may run the audit, and not shown at all to the two roles who may never run it. The screen and the server ask the same question, so they cannot disagree: <span class="d">D27-305</span>.</p>
+    <p>Today's day closes only from the hotel's opening time, 16:00 to begin, so nobody closes it in the morning by mistake; catching up a day behind is never held back: <span class="d">D27-338</span>. A guest still due out at night either left and nobody checked them out, or is staying another night. The two lead to opposite charges, and only a person at the desk knows which, so the audit refuses and names the rooms. The two drawers are counted first because the audit states the day's takings, and money not yet counted is not final. The button is shown grey, with its reason, to everybody who may run the audit, and not shown at all to the two roles who may never run it. The screen and the server ask the same question, so they cannot disagree: <span class="d">D27-305</span>.</p>
   </div>
 
   <!-- A7.4 -->
@@ -9923,6 +9924,8 @@ figure.shot.phone img { max-width: 72mm; }
     </ol>
   </figure>
   <p>A guest arriving before the first time, or leaving after the second, needs a reason. The charge reaches their folio unless the owner, the GM or a group administrator waives it, and the reason is kept either way. A late departure counts only on or after the departure date, and is recorded once (A1.6).</p>
+
+  <p><span class="ui">Night audit opens at</span> (16:00 to begin) is the time, on the hotel's own clock, before which nobody can run today's night audit; a day already behind can always be closed (A7.3). Only the owner or an administrator can change it; the GM still saves the other hours.</p>
 
   <figure class="shot" id="fig-A17-37">
     <img src="img/A17-37.png" alt="Front desk rules window: Advance before check-in, The desk may overbook, Weekend days, ID starts on, Nationality, Title">

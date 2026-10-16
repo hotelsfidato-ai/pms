@@ -90,7 +90,7 @@ housekeeping.get("/:code/housekeeping/assignments", async (c) => {
          join rooms r on r.id = a.room_id
          join app.hotel_people($1) p on p.id = a.staff_id
         where a.hotel_id = $1 and a.work_date = $2::date
-        order by r.number`,
+        order by r.number collate app.room_order`,
       [hotel.id, date],
     );
 

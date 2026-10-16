@@ -62,7 +62,7 @@ wakeAndLost.get("/:code/wake-up-calls", async (c) => {
          join rooms rm            on rm.id = ra.room_id
          left join guests g       on g.id = r.guest_id
         where r.hotel_id = $1 and r.status = 'checked_in'
-        order by rm.number`, [at.hotelId]);
+        order by rm.number collate app.room_order`, [at.hotelId]);
     const { rows: [today] } = await client.query(
       "select app.hotel_clock($1, now(), 'YYYY-MM-DD') as day", [at.hotelId]);
     return { calls: rows, rooms, today: today.day as string };

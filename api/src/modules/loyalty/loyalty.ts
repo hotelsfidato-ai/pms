@@ -78,7 +78,7 @@ loyalty.get("/:code/loyalty", async (c) => {
          left join room_assignments ra on ra.reservation_id = r.id and ra.released_at is null
          left join rooms rm on rm.id = ra.room_id
         where r.hotel_id = $1 and r.status = 'checked_in'
-        order by rm.number nulls last, g.full_name`, [hotelId]);
+        order by rm.number collate app.room_order nulls last, g.full_name`, [hotelId]);
     const r = rules[0]!;
     return {
       status: 200,

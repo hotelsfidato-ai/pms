@@ -66,7 +66,7 @@ export async function itemsForRepair(client: Client, hotelId: string): Promise<R
       where i.hotel_id = $1
         and i.held_as = 'tagged'
         and not app.equipment_is_retired(i.id)
-      order by r.number nulls last, l.name nulls last, i.name, i.tag`,
+      order by r.number collate app.room_order nulls last, l.name nulls last, i.name, i.tag`,
     [hotelId],
   );
   return rows.map((r) => ({

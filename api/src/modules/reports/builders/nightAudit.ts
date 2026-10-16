@@ -183,7 +183,7 @@ export async function nightAuditReport(
        join guests g on g.id = r.guest_id
        join room_types rt on rt.id = r.room_type_id
       where r.hotel_id = $1 and r.status = 'checked_out' and r.check_out = $2::date
-      order by app.stay_room(r.id)`,
+      order by app.stay_room(r.id) collate app.room_order`,
     [hotelId, asOn],
   );
 

@@ -146,7 +146,7 @@ export async function listArrivals(hotelId: string, date = BUSINESS_DATE) {
   const rows = (await fetchStays(hotelId, date)).filter(
     (s) => s.arrival === date && !isCancelledOrVoid(s),
   );
-  return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
+  return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }));
 }
 
 /* ══ IN HOUSE IS WHO HAS CHECKED IN — the owner's D17-10, 17 September ══
@@ -161,13 +161,13 @@ export async function listInHouse(hotelId: string, date = BUSINESS_DATE) {
   const rows = (await fetchStays(hotelId, date)).filter(
     (s) => s.status === "in-house" || s.status === "due-out",
   );
-  return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
+  return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }));
 }
 
 /** Checked-in guests leaving today (D17-10: a part of In house). */
 export async function listDepartures(hotelId: string, date = BUSINESS_DATE) {
   const rows = (await fetchStays(hotelId, date)).filter((s) => s.status === "due-out");
-  return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber));
+  return clone(rows).sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true }));
 }
 
 /** Every booking holding a room tonight, arrived or not — what a walk-in may

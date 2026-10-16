@@ -140,7 +140,7 @@ export async function roomNightsDue(
           limit 1
        ) a on true
       where ${stayId ? `${CHARGEABLE}\n          and r.id = $3::uuid` : POSTS_TONIGHT}
-      order by a.number`,
+      order by a.number collate app.room_order`,
     stayId ? [hotelId, date, stayId] : [hotelId, date],
   );
   return rows;

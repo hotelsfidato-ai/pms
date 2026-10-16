@@ -67,6 +67,8 @@ export interface FrontDeskSettings {
       screens show a dash for the first. */
   earlyCheckinCharge: number | null;
   lateCheckoutCharge: number | null;
+  /** D27-338: today's night audit opens at this time (16:00 to begin). */
+  nightAuditOpensAt: string;
 }
 
 export interface RoomSetupView {
@@ -173,6 +175,8 @@ export async function amendFrontDesk(
     checkInTime?: string; checkOutTime?: string;
     earlyCheckinCharge?: number | null;
     lateCheckoutCharge?: number | null;
+    /** The owner's and an admin's (D27-338): sent only when changed. */
+    nightAuditOpensAt?: string;
   },
 ): Promise<Result> {
   return call(`/api/hotels/${hotelId}/front-desk`, "PATCH", input);

@@ -92,6 +92,26 @@ export async function blockersFor(
 ): Promise<Blocker[]> {
   const blockers: Blocker[] = [];
 
+  /* ── Not before its time (the owner's D27-338) ─────────────────────
+     Today's business date closes only from the hotel's "Night audit opens
+     at" (16:00 to begin), by the hotel's own clock - nobody runs it
+     earlier. A business date already behind the calendar is a day to catch
+     up, never locked. */
+  const { rows: [when] } = await client.query<{ locked: boolean; opens: string }>(
+    `select ($2::date >= (now() at time zone h.timezone)::date
+             and (now() at time zone h.timezone)::time < h.night_audit_opens_at) as locked,
+            to_char(h.night_audit_opens_at, 'HH24:MI') as opens
+       from hotels h where h.id = $1`,
+    [hotelId, businessDate],
+  );
+  if (when?.locked) {
+    blockers.push({
+      id: "not-yet",
+      reason: `The night audit for ${dayMonth(businessDate)} opens at ${when.opens}, by the hotel's clock.`,
+      rooms: [],
+    });
+  }
+
   /* Departures that never checked out.
 
      The only genuinely blocking condition. Everything else the audit
@@ -117,7 +137,7 @@ export async function blockersFor(
       where r.hotel_id = $1
         and r.status = 'checked_in'
         and r.check_out = $2::date
-      order by rm.number`,
+      order by rm.number collate app.room_order`,
     [hotelId, businessDate],
   );
 

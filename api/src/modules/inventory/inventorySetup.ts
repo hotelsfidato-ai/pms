@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { PoolClient as Client } from "pg";
 import { floorProblem, roomNumberProblem } from "../../validate.ts";
+import { isOwnerOrAdmin } from "../admin/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    SETTING UP WHAT THE PROPERTY SELLS
@@ -433,6 +434,8 @@ inventorySetup.patch("/:code/front-desk", async (c) => {
     defaultIdType?: string | null;
     defaultNationality?: string;
     defaultTitle?: string | null;
+    /** D27-338: the night audit opens at this time; the owner's and an admin's. */
+    nightAuditOpensAt?: string;
   };
   const input = await c.req.json<Body>().catch(() => ({}) as Body);
   const rule = rulesProblem(input);
@@ -442,6 +445,7 @@ inventorySetup.patch("/:code/front-desk", async (c) => {
   for (const [label, value] of [
     ["Check-in time", input.checkInTime],
     ["Check-out time", input.checkOutTime],
+    ["The night audit's opening time", input.nightAuditOpensAt],
   ] as const) {
     if (value !== undefined && !clock.test(value)) {
       return c.json(refuse(`${label} is a 24-hour time, like 13:00.`), 409);
@@ -460,6 +464,16 @@ inventorySetup.patch("/:code/front-desk", async (c) => {
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
+
+    /* The night audit's opening time is the owner's and an administrator's
+       (D27-338), asked before any write (MEMORY 243). */
+    if (input.nightAuditOpensAt !== undefined) {
+      if (!(await isOwnerOrAdmin(client, hotelId))) {
+        return refuse("The night audit's opening time is for the owner or an administrator. Ask one of them.");
+      }
+      await client.query("update hotels set night_audit_opens_at = $2::time where id = $1",
+        [hotelId, input.nightAuditOpensAt]);
+    }
 
     await client.query(
       `update hotels set
@@ -842,22 +856,25 @@ inventorySetup.get("/:code/room-setup", async (c) => {
               r.occupancy_status <> 'vacant' as occupied, r.position
          from rooms r join room_types rt on rt.id = r.room_type_id
         where r.hotel_id = $1
-        order by r.position, r.number`,
+        order by r.position, r.number collate app.room_order`,
       [hotelId]);
 
     const { rows: h } = await client.query<{
-      cin: string; cout: string; early: string | null; late: string | null;
+      cin: string; cout: string; early: string | null; late: string | null; audit: string;
     }>(
       `select to_char(check_in_time,'HH24:MI') as cin,
               to_char(check_out_time,'HH24:MI') as cout,
               early_checkin_charge::text as early,
-              late_checkout_charge::text as late
+              late_checkout_charge::text as late,
+              to_char(night_audit_opens_at,'HH24:MI') as audit
          from hotels where id = $1`, [hotelId]);
 
     return {
       frontDesk: {
         checkInTime: h[0]!.cin,
         checkOutTime: h[0]!.cout,
+        /* D27-338: today's night audit opens at this time. */
+        nightAuditOpensAt: h[0]!.audit,
         /* NULL, never 0. "We do not charge" is a decision; zero is a
            price, and the screens show a dash for the first. */
         earlyCheckinCharge: h[0]!.early === null ? null : Number(h[0]!.early),

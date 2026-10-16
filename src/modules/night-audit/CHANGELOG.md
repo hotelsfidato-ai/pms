@@ -8,6 +8,22 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-16 · The night audit opens at its time; rooms in number order (the owner's D27-338)
+
+**Asked for:** "the night audit needs to be locked till 16:00, so till this time no one can do the night audit for that day" - a per-hotel time, 16:00 to begin; nobody before it; a day already behind always closes. And, checked first: Mathura's rooms (1A ... 11B) listed 10A, 10B, 11A, 11B, 1A ... - number order in the lists.
+
+**Shipped**
+- Migration 228: `hotels.night_audit_opens_at` (16:00) and the collation `app.room_order` (ICU numeric).
+- `nightAudit.ts` `blockersFor`: a "not-yet" blocker when the business date is the hotel's today (or ahead) and its clock is before the time - so the checklist's Run is grey with "The night audit for 16 Oct opens at 16:00, by the hotel's clock." and the run refuses the same. A day behind is never locked.
+- The setting: Settings → Times and rules (`inventory/components/FrontDeskCard.tsx`, `PATCH /front-desk`), the owner's and an admin's (the GM still saves the hours; the time is sent only when changed); `isOwnerOrAdmin` through the admin service's front door.
+- Room order: 16 lists in the API order by `number collate app.room_order` (housekeeping, the rooms list, the night audit and its report, the till's charge-to-room list, guest requests, wake-up calls, key cards, loyalty, equipment, room setup's ties); the website's own sorts (`front-desk/data/stays.ts`, `StayView.tsx`) are number-aware.
+- Manual A7.3 (the new refusal, D27-338 in "Why") and A17 (the setting; Figures A17-35, A17-36 retaken), rebuilt.
+
+**Proved**
+- Web types 0, API types 0. API: `opensAt` 5 (locked at 23:59, the run refused and nothing written, a day behind not locked, open at 00:00, the GM refused the time but saves the hours, an admin sets 17:30, 25:00 refused), `roomOrder` 1 (1A, 2A, 9, 10, 10A, 11B), `nightAudit` 23, `roomRemove` 4, `roomLimits` 3. Web: inventory, night-audit, front-desk - 29 files, 146 tests.
+- The lock taken out and the rooms list back on text order: 2 failed; restored.
+- On screen: Times and rules shows "Night audit opens 16:00" and its field (the first picture showed a dash: the local API predated the change - restarted, 228 applied locally).
+
 ## 2026-10-12 · Run hidden from roles that may not run it; the Arrivals check reworded (D27-305 (3), (4))
 
 **Asked for:** the owner's D27-305, through the master: hide "Run night audit" from the Revenue Manager and the Viewer with the right the server checks; say a retention posts only if the booking has cancellation terms.

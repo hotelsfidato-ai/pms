@@ -419,7 +419,7 @@ export default function StayViewPage({ view }: {
           const rooms = roomTypes
             .flatMap((g) => g.rooms)
             .filter((r) => r.floor === floor)
-            .sort((a, b) => a.number.localeCompare(b.number));
+            .sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }));
           return {
             type: floor === 0 ? "Ground floor" : `Floor ${floor}`,
             rooms,

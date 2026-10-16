@@ -57,7 +57,7 @@ stayExtras.get("/:code/stays/:id/exchangeable", async (c) => {
         where r.hotel_id = $1
           and r.status = 'checked_in'
           and r.id <> $2
-        order by rm.number`,
+        order by rm.number collate app.room_order`,
       [hotelId, c.req.param("id")]);
 
     return { rooms: rows };

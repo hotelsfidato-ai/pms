@@ -106,7 +106,7 @@ requests.get("/:code/requests", async (c) => {
          join rooms rm            on rm.id = ra.room_id
          left join guests g       on g.id = r.guest_id
         where r.hotel_id = $1 and r.status = 'checked_in'
-        order by rm.number`,
+        order by rm.number collate app.room_order`,
       [at.hotelId]);
 
     return {

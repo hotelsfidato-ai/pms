@@ -313,7 +313,7 @@ equipment.get("/:code/equipment/options", async (c) => {
 
     const rooms = await client.query<{ id: string; number: string }>(
       `select id::text, number from rooms
-        where hotel_id = $1 and is_active order by length(number), number`, [o.hotelId]);
+        where hotel_id = $1 and is_active order by number collate app.room_order`, [o.hotelId]);
     const places = await client.query<{ id: string; name: string; kind: string }>(
       `select id::text, name, kind from locations
         where hotel_id = $1 and is_active order by name`, [o.hotelId]);

@@ -1656,7 +1656,7 @@ till.get("/:code/till/rooms", async (c) => {
     }>(
       `select c.room_number, c.guest_name, c.folio_id::text, ${BILL_COMPANY}
          from app.pos_chargeable_rooms($1) c ${BILL_JOIN}
-        order by c.room_number`,
+        order by c.room_number collate app.room_order`,
       [hotelId],
     );
 

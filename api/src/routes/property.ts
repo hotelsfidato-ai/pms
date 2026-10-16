@@ -177,7 +177,7 @@ property.get("/:code/rooms", async (c) => {
          from rooms r
          join room_types rt on rt.id = r.room_type_id
         where r.hotel_id = $1 and r.is_active
-        order by r.number`,
+        order by r.number collate app.room_order`,
       [hotel.id],
     );
 

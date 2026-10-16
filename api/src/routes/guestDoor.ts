@@ -764,7 +764,7 @@ guestLinks.get("/:code/online-checkin", async (c) => {
                 where l.room_id = rm.id and l.revoked_at is null) as card_since
          from rooms rm
         where rm.hotel_id = $1 and rm.is_active
-        order by rm.number`, [hotelId]);
+        order by rm.number collate app.room_order`, [hotelId]);
 
     return {
       waiting: waiting.map((d) => ({
@@ -1246,7 +1246,7 @@ async function newCards(client: Db, hotelId: string, staffId: string, roomId: st
   const { rows: rooms } = await client.query<{ id: string; number: string }>(
     `select id::text, number from rooms
       where hotel_id = $1 and is_active and ($2::uuid is null or id = $2::uuid)
-      order by number`, [hotelId, roomId]);
+      order by number collate app.room_order`, [hotelId, roomId]);
   const cards: { room: string; link: string }[] = [];
   for (const room of rooms) {
     const token = randomBytes(32).toString("base64url");

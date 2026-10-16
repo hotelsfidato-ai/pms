@@ -50,7 +50,7 @@ directory.get("/:code/room-types", async (c) => {
               ))::text                                  as sellable,
               rt.max_occupancy,
               rt.base_rate                              as rack_rate,
-              array_agg(rm.number order by rm.number)   as numbers
+              array_agg(rm.number order by rm.number collate app.room_order) as numbers
          from room_types rt
          join rooms rm on rm.room_type_id = rt.id and rm.is_active
         where rt.hotel_id = $1 and rt.is_active
