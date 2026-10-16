@@ -480,7 +480,15 @@ function xlsxValue(value: Cell | undefined, kind: CellKind, tz: string): string 
     25/08/2026 (D17-77); "-" where a figure nobody has. */
 export function renderCsv(doc: ReportDoc, by: PrintedBy): string {
   const tz = by.timezone;
-  const esc = (v: string) => (/[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  /* A value starting =, +, - or @ is a formula to a spreadsheet (D27-340): a
+     guest named "=HYPERLINK(...)" would run in the accountant's Excel. A tab in
+     front keeps it text, as the website's CSV does (src/lib/csv.ts); a figure
+     (-1,234.50, -12.50%) and the dash for none stay as they are. */
+  const defuse = (v: string) => (/^[=+\-@\t\r]/.test(v) && !/^(-|-?[\d,]+(\.\d+)?%?)$/.test(v) ? `\t${v}` : v);
+  const esc = (raw: string) => {
+    const v = defuse(raw);
+    return /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  };
   const lines: string[] = [esc(doc.property.name),
     /* D27-296: a test hotel's. */
     ...(doc.property.test ? [esc(TEST_MARK)] : []), esc(doc.title)];

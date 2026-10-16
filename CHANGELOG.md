@@ -50,6 +50,27 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-17 · the security audit and its four fixes, before release 6 (D27-340)
+
+**Asked for:** "do an audit, research the major cyber security probes like SQL injection, check the main ones, and check the tests"; then "do all the fixes before the launch; leave off-site backups for a new version".
+
+**Found (read-only, code and live)**
+- SQL injection: every typed value is a parameter; the ~10 places that build SQL text use code-fixed pieces only (the guest edit's columns, groupSettings' OFFICE list, equipment's set(), money's two tables, activity's scope); database-side dynamic SQL is migration loops over fixed lists and 212's fixed column list; `app.guest_search` is static.
+- Access: an unmapped route is refused for all (roleGate, tested); row-level security on every table (db suite). XSS: React escapes; the server builds no HTML; SVG logos refused. Sign-in: dev sign-in cannot start in production; the guest page limits attempts and answers alike. Secrets: none in git; only 22/80/443 open; uploads JPEG/PNG/PDF up to 20 MB.
+- Gaps: the server's report CSV did not defuse =, +, -, @ (the website's did); no test attacked with injection strings; the API sent no HSTS and named its nginx version; the website had no Content-Security-Policy. Backups only on the server's disk (left for a later version).
+
+**Shipped**
+- `api/src/reportRender.ts` `renderCsv`: a text cell starting =, +, -, @ gets a tab in front (figures and the dash untouched). `api/test/reportCsv.test.ts`.
+- `api/test/sqlInjection.test.ts`: seven classic attacks in the guest search (nobody found, under 4 s, no row lost), a guest named "Robert'); DROP TABLE guests;--" saved exactly, an attack in the address 400/404.
+- `deploy/nginx.conf`: `Strict-Transport-Security` (a year) and `server_tokens off` - applied by launch.sh at the owner's A5.
+- `firebase.json`: an enforced CSP of the parts that cannot break the app (object-src none, base-uri, frame-ancestors, form-action self) and the full allow-list as Content-Security-Policy-Report-Only, to switch to enforced after a clean week.
+
+**Proved**
+- `reportCsv` 2/2, with the defusing off: 1 failed. `sqlInjection` 3/3, with the search made injectable on purpose: 1 failed. firebase.json parses with both headers; no form on the site posts to another host.
+
+**Left open**
+- The CSP's report-only half: watch the browser console on live for a week, then enforce. `npm audit` (sends the package list to npm): not asked. Off-site backups: a later version.
+
 ## 2026-10-15/16 · after release 4: a loose room range, Remove a mistaken room, three small ones (D27-336)
 
 **Asked for:** the owner, testing release 4 live: a room starting with a letter could not be added in Several rooms; rooms, and so their types, could not be deleted. "Don't make it strict, it is per hotel"; "if there is a mistake at creation time, we can just remove it"; the three small ones; released today.
