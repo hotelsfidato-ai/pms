@@ -48,6 +48,12 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **16 October, 21:40: RELEASE 6 READY (supersedes release 5, never launched).** `release/r6-16oct` =
+> `ee3c3b7a`: release 5 plus D27-338 (the night audit opens at a per-hotel time, 16:00 to begin; rooms
+> in number order; migration 228). Full gates green in `.claude/worktrees/release-r6-16oct` (web 1,370,
+> api 2,775, db 1,749 / 228, replay, pg16); website `index-Bb1AoQdX.js`; steps A1-A7 in
+> `.local/release-r6-steps.txt`. The release 5 copy can go to the Recycle Bin once 6 is live.
+>
 > **16 October: RELEASE 5 READY, not yet launched.** `release/r5-16oct` = `dcbbac72` (D27-336 rooms:
 > loose range, Remove a never-used room, at most 100, POS charge-to-room capitals, readiness check
 > skips test hotels; D27-337 refunds: offer at most "Overpaid" (FIN-38), cash refund to the rupee
