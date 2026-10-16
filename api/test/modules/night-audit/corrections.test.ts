@@ -118,6 +118,8 @@ let vatBill: string;
 beforeAll(async () => {
   [{ id: ownerId }] = await sql<{ id: string }>("select id from staff where email = 'owner@fidato.in'") as [{ id: string }];
   [{ id: puneId }] = await sql<{ id: string }>("select id from hotels where code = 'PUN'") as [{ id: string }];
+  /* It closes days; the opening time (D27-338) is opensAt.test.ts's (MEMORY 416). */
+  await sql("update hotels set night_audit_opens_at = '00:00' where id = $1", [puneId]);
   [{ id: gmId }] = await sql<{ id: string }>(
     "insert into staff (email, full_name) values ($1, 'Correction GM') returning id",
     [`${tag.toLowerCase()}-gm@fidato.in`]) as [{ id: string }];
