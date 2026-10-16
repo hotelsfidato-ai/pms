@@ -6539,6 +6539,16 @@ copy will see of theirs.**
 
 ---
 
+### 417 · MINE: five release runs lost to a 5-second wait on a busy laptop (16-17 October)
+
+The screen tests wait 5 s (`asyncUtilTimeout`, `src/test/setup.ts`) for what they look for. Under a full gate run
+on this PC (the D: hard disk, Steam and the Epic launcher open) screens took 5.08 s, 5.7 s, 6.3 s and 13.8 s;
+every one passed alone in under 2 s. I raised one test's wait, then lost two more runs to others. **The rule:**
+fix the shared setting once (now 15 s, under the 20 s test limit) rather than test by test; and before a release
+run, close the owner's heavy apps or ask them to.
+
+---
+
 ### 416 · MINE: two new tests that passed in the evening and failed after midnight (17 October)
 
 `blockedRoom.test.ts` and `opensAt.test.ts` (D27-339, D27-338) passed at 21:00 and failed in the release run at

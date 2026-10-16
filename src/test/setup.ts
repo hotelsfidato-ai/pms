@@ -15,7 +15,11 @@ import { configure } from "@testing-library/dom";
    Five seconds is still short enough that a screen which never renders
    fails the test rather than hanging it.
    ══════════════════════════════════════════════════════════════════ */
-configure({ asyncUtilTimeout: 5000 });
+/* 15 s for a screen to show what a test waits for (MEMORY 417): 5 s failed
+   four times in the release 6 runs of 16-17 Oct (5.08 s, 5.7 s, 6.3 s,
+   13.8 s) with every test passing alone in under 2 s. Below the 20 s a test
+   may take, so a real failure still fails. */
+configure({ asyncUtilTimeout: 15000 });
 import {
   property, roomInventory, PROPERTY_CODE,
   dailyAvailableRooms, nightsSoldPerDay,
