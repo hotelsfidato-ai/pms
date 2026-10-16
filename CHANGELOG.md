@@ -50,6 +50,26 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-15/16 · after release 4: a loose room range, Remove a mistaken room, three small ones (D27-336)
+
+**Asked for:** the owner, testing release 4 live: a room starting with a letter could not be added in Several rooms; rooms, and so their types, could not be deleted. "Don't make it strict, it is per hotel"; "if there is a mistake at creation time, we can just remove it"; the three small ones; released today.
+
+**Shipped**
+- Helper (`ea797a6d`, merged `826d3441`): Several rooms takes any room number at each end, the same except one number that counts up (A101-A110, G01-G12, VIL1-VIL8, A-101-A-110) or the last letter (111A-111D), at most 100; **Remove** on a room nothing has used (`DELETE /:code/rooms/:number`, owner/admin/GM), every table that points at a room asked by name, the cascading ones too. Manual A17. Inventory CHANGELOG has the details.
+- Master (`48cb0658`): the restaurant's charge-to-room upper-cases the room typed; the launch's readiness check leaves test hotels out of "every property has rooms".
+
+**Found**
+- The helper's run was cut off by "Your organization has disabled Claude subscription access for Claude Code" (the Max plan's end, D27-318) after its commit; its report never arrived, its CHANGELOG entry has its proofs.
+- Live, read-only: HGLM (Mathura) now has 22 rooms, 1A to 11B, entered by the owner; THGLM (its test copy) none - the readiness check now names no hotel.
+
+**Proved**
+- Helper: web types 0, api types 0, inventory web 28 + severalRooms 10/10, API 96 (roomRemove 4/4, roomLimits, settingsP3, roleGate); guards: the strict range back - 2 failed; the block check out - "expected 200 to be 409". The merged manual equals a fresh build.
+- Full gates in the clean release copy: see release 5 below / HANDOVER.
+
+**Left open**
+- A connecting room is refused by Remove (its link would refuse the delete anyway): clear the link by hand, or have Remove clear it? (owner)
+- Picture A17-14 still shows the old Number hint.
+
 ## 2026-10-15 · a plain restaurant bill (D27-334) and room numbers with letters (D27-335)
 
 **Asked for:** the restaurant bill handed to the guest before payment made "just like a normal restaurant bill", without "Interim bill"; then, after a restart, an audit of what was finished, and room numbers with letters ("some rooms have letters, as they are variants").
