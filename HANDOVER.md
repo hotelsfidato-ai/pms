@@ -48,6 +48,16 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **16 October: RELEASE 5 READY, not yet launched.** `release/r5-16oct` = `dcbbac72` (D27-336 rooms:
+> loose range, Remove a never-used room, at most 100, POS charge-to-room capitals, readiness check
+> skips test hotels; D27-337 refunds: offer at most "Overpaid" (FIN-38), cash refund to the rupee
+> (migration 227), master bill cash to the rupee). Full gates green in the clean copy
+> `.claude/worktrees/release-r5-16oct` (web 1,370, api 2,769, db 1,749 / 227, replay, pg16); website
+> `index-BZYd5nWI.js`; the owner's steps A1-A7 in `.local/release-r5-steps.txt`. Live is release 4
+> (`df577ec1`, 226, `index-Cq8InoLy.js`). Helpers on the Max plan are refused since 15 Oct (D27-318):
+> the main chat works alone until helpers run on the owner's API key. The PC crashed at 16:33 on
+> 16 Oct; Postgres restarted under the keeper.
+
 > **15 October, later: D27-334 and D27-335 on cp6, full gates green at `0da5798e`.** The restaurant
 > bill is a plain restaurant bill (BILL before payment, Discount and Round off lines, GRAND TOTAL =
 > payable; POS-38 fixed). Room numbers take letters (Several rooms 111A-111D / 101A-109A, saved in
