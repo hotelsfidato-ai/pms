@@ -48,6 +48,11 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **17 October, 09:45: RELEASE 6 READY AT `5fc16054`** (release 5 + D27-336..D27-340: rooms, out of order and
+> maintenance refused on any night, the night audit opening time, refunds and cash, room order, the security
+> fixes). Full gates green (web 1,370, api 2,784, db 1,749 / 228, replay, pg16); website `index-DY0ZfJNy.js`;
+> steps in `.local/release-r6-steps.txt`. Not launched yet. The lines below about `ee3c3b7a` are history.
+>
 > **16 October, 21:40: RELEASE 6 READY (supersedes release 5, never launched).** `release/r6-16oct` =
 > `ee3c3b7a`: release 5 plus D27-338 (the night audit opens at a per-hotel time, 16:00 to begin; rooms
 > in number order; migration 228). Full gates green in `.claude/worktrees/release-r6-16oct` (web 1,370,
