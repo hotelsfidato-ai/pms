@@ -229,3 +229,46 @@ describe("the per-bill door (round E)", () => {
     } finally { client.release(); await db.end(); }
   });
 });
+
+/* THE BILL TAB'S TAX INVOICE AFTER CHECK-OUT (D27-341): `?stay=` keeps one
+   stay's bills, each with its invoice; a bad id finds none. */
+describe("one stay's bills (D27-341)", () => {
+  it("?stay= keeps that stay's bills only", async () => {
+    await sql("update reservations set status = 'checked_out' where hotel_id = $1", [hotelId]);
+    const all = await (await call(`/${CODE}/billable`)).json() as { stayId: string }[];
+    expect(new Set(all.map((b) => b.stayId)).size, "both stays unfiltered").toBe(2);
+
+    const res = await call(`/${CODE}/billable?stay=${stayId}`);
+    const mine = await res.json() as { stayId: string; folioId: string; invoice: string | null }[];
+    expect(res.status).toBe(200);
+    expect(mine.map((b) => b.folioId).sort()).toEqual([guestBill, companyBill].sort());
+    expect(mine.every((b) => b.stayId === stayId && b.invoice)).toBe(true);
+
+    const bad = await call(`/${CODE}/billable?stay=${encodeURIComponent("' or 1=1 --")}`);
+    expect(bad.status).toBe(200);
+    expect(await bad.json()).toEqual([]);
+  });
+});
+
+/* THE INVOICE AS THE HOTEL'S OLD FOLIO INVOICE PRINTED IT (D27-342): the
+   stay, the payments and the hotel's PAN (inside its GSTIN when none is
+   typed) come with the invoice. */
+describe("an invoice's stay, payments and PAN (D27-342)", () => {
+  it("reads them with the invoice", async () => {
+    const [inv] = await sql<{ number: string }>(
+      "select number from invoices where folio_id = $1 and credits_id is null order by issued_at desc limit 1",
+      [guestBill]);
+    const res = await call(`/${CODE}/invoices/${inv!.number}`);
+    const body = await res.json() as {
+      supplier: { pan: string | null };
+      stay: { reference: string; guest: string; roomType: string; nights: number; arrival: string } | null;
+      payments: unknown[];
+    };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(body.supplier.pan).toBe("AAAAA0000A");
+    const [stay] = await sql<{ reference: string }>("select reference from reservations where id = $1", [stayId]);
+    expect(body.stay).toMatchObject({ reference: stay!.reference, guest: "Per Bill Guest", nights: 1 });
+    expect(body.stay!.arrival).toMatch(/\d{2} \w{3} \d{4}/);
+    expect(Array.isArray(body.payments)).toBe(true);
+  });
+});

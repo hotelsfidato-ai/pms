@@ -553,7 +553,23 @@
     <li>Alcohol is under VAT: its own VAT bill is issued in the same step, from its own series.</li>
     <li>The stay's row then shows the invoice's number. Click it to open the invoice on its own page, with <span class="ui">Print</span> and <span class="ui">Send invoice</span> (by email, with the PDF; the test hotel sends nothing).</li>
     <li>The hotel's <span class="ui">Tax invoice</span> switch (A10.7, A17.12) sends an invoice by itself only when it is made out to the guest. One made out to a company, an agent or a booking site, for example Expedia, is not sent by itself: click <span class="ui">Send invoice</span> on its page.</li>
+    <li>It can also be issued on the guest's bill right after check-out (A5.9).</li>
   </ul>
+
+  <h3>What the printed invoice shows</h3>
+  <p><span class="ui">Print</span> prints it on the desk's own printer, on A4, without the menu. It is laid out as the hotel's old folio invoice:</p>
+  <ul>
+    <li><b>At the top</b>: Tax Invoice, the hotel's name, its GSTIN and PAN, address, phone, e-mail and website.</li>
+    <li><b>Two columns</b>: the booking reference, invoice number, guest, who it is billed to (with their GSTIN or "not registered"), the source, the place of supply; the date of the invoice, the business date, the room type and number, the persons (adults and children), the rate type, the nights, arrival and departure.</li>
+    <li><b>The lines</b>: each charge with its SAC, quantity, rate, total, discount, taxable value, SGST, CGST, IGST and CESS (IGST and CESS are always 0.00: a stay is supplied in the hotel's own state), and the totals under them.</li>
+    <li><b>Below</b>: the amount in words, the payments received, the tax by rate; on the right the totals, what was paid and the balance.</li>
+    <li><b>At the foot</b>: who checked the guest in (<span class="ui">Reception (C/I)</span>) and out (<span class="ui">Cashier (C/O)</span>), who issued it, the guest's signature and the hotel's authorised signatory.</li>
+  </ul>
+
+  <figure class="shot" id="fig-A4-21">
+    <img src="img/A5-P1.png" alt="A printed tax invoice for A5 Test Wagh, room 302, one night: the hotel centred with GSTIN and PAN, the booking and stay in two columns, the line table with SAC 996311, SGST 92.47 and CGST 92.48, the payment by UPI, the tax details, the totals with Balance 0.00, Reception and Cashier, and the two signatures">
+    <figcaption><b>Figure A4-21.</b> The printed tax invoice (made-up guest).</figcaption>
+  </figure>
   <h3>To correct an issued invoice: the credit note</h3>
   <ol class="steps">
     <li>Open the invoice from the list under <span class="ui">Issued</span>, and click <span class="ui">Cancel this invoice</span>.</li>
@@ -572,7 +588,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>An issued GST document never changes, and its number is never lost from the series; a mistake is corrected by a document of its own. Who issues a credit note: <span class="d">D22-33</span>. Alcohol's own VAT bill: <span class="d">D22-44</span>.</p>
+    <p>An issued GST document never changes, and its number is never lost from the series; a mistake is corrected by a document of its own. Who issues a credit note: <span class="d">D22-33</span>. Alcohol's own VAT bill: <span class="d">D22-44</span>. The printed invoice laid out as the hotel's old one, keeping "Tax Invoice" and both signatures, with no registration card number: <span class="d">D27-342</span>.</p>
   </div>
 
   <!-- A4.12 -->

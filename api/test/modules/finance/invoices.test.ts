@@ -303,12 +303,21 @@ describe("issuing a tax invoice", () => {
     const db = await admin();
     let empty: string | null = null;
     try {
+      /* NOTHING ON ANY OF ITS BILLS, AND NO INVOICE ON THEM (MEMORY 419).
+         With nothing posted, issuing answers 200 only with an invoice already
+         standing on the bill (four test files insert invoices directly); and
+         unnamed, it takes a stay's charged bill over an empty one. The full
+         gate runs of 17 October failed this; alone, it passed. */
       const { rows } = await db.query<{ id: string }>(
         `select r.id::text from reservations r
-           join folios f on f.reservation_id = r.id
           where r.hotel_id = $1
+            and exists (select 1 from folios f where f.reservation_id = r.id)
             and not exists (select 1 from folio_postings fp
-                             where fp.folio_id = f.id)
+                              join folios f on f.id = fp.folio_id
+                             where f.reservation_id = r.id)
+            and not exists (select 1 from invoices i
+                              join folios f on f.id = i.folio_id
+                             where f.reservation_id = r.id)
           limit 1`,
         [demoId],
       );

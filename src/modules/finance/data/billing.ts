@@ -102,9 +102,11 @@ export interface BillableRow {
   invoice: string | null;
 }
 
-export async function listBillable(hotelId: string): Promise<BillableRow[]> {
+/** Every departed stay's bills, or one stay's (D27-341). */
+export async function listBillable(hotelId: string, stayId?: string): Promise<BillableRow[]> {
   if (!hotelId) return [];
-  return fetchOr<BillableRow[]>(`/api/hotels/${hotelId}/billable`, []);
+  return fetchOr<BillableRow[]>(
+    `/api/hotels/${hotelId}/billable${stayId ? `?stay=${encodeURIComponent(stayId)}` : ""}`, []);
 }
 
 export interface InvoiceSeriesState {
@@ -179,7 +181,19 @@ export interface InvoiceDetail {
     state: string | null; gstin: string | null;
     /** The hotel's FSSAI licence number (A16), null until typed. */
     fssai?: string | null;
+    /** How to reach the hotel, and its PAN (D27-342). */
+    phone?: string | null; email?: string | null; website?: string | null; pan?: string | null;
   };
+  /** The stay the bill is for (D27-342); null on a group's or a function's bill. */
+  stay?: {
+    reference: string; guest: string; roomType: string; room: string | null;
+    adults: number; children: number; plan: string | null; nights: number;
+    /** "09 Oct 2026, 14:05", or the booked day where the trail has no time. */
+    arrival: string; departure: string; source: string | null;
+    checkedInBy: string | null; checkedOutBy: string | null;
+  } | null;
+  /** Money received on this bill, refunds as negatives (D27-342). */
+  payments?: { date: string; description: string; amount: number }[];
   recipient: { name: string | null; gstin: string | null; address: string | null };
   /** The PROPERTY's state, always — IGST Act s.12(3)(b). */
   placeOfSupply: string | null;

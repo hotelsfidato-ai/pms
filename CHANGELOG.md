@@ -50,6 +50,53 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-17 · the printed invoice like the hotel's old one; Amrapali to start today (D27-342)
+
+**Asked for:** "this is how the invoices need to be printed" (the old system's folio invoice, `Invoice Akkalkot.pdf`); "plan how to reset all the data of Amrapali … a full reset only for my ID … a future plan; for now just this invoice … and the reset of Amrapali data so that it starts today". Answers: keep "Tax Invoice", no G.R. card number, both signatures, AMR's data is all practice.
+
+**Shipped**
+- The tax invoice laid out as the sample, one A4 sheet: the hotel centred (GSTIN, PAN, address, phone, e-mail, website); the booking and the stay in two columns; every line with SAC, qty, rate, total, discount, taxable, SGST, CGST, IGST, CESS and a totals row; amount in words, payments, tax by rate; totals, payment, balance; Reception (C/I), Cashier (C/O), Issued by; guest and hotel signatures - `src/modules/finance/pages/Invoice.tsx`. Each line's CGST/SGST adds up to the stored totals to the paisa (`splitByLine`).
+- The invoice's facts carry the stay (booking, guest, room, persons, plan, nights, arrival and departure with who checked in and out, from the audit trail), the payments on the bill, and the hotel's phone, e-mail, website and PAN (typed, else the one inside the GSTIN) - `invoiceFacts`, `api/src/modules/finance/invoices.ts`.
+- The picture tool prints a page to PDF (`pdf: true`, `docs/manual/tools/shoot.mjs`); A5-P1 prints the demo invoice. Manual A4.11 "What the printed invoice shows", Figure A4-21 (`img/A5-P1.png`).
+- `docs/plans/owner-full-reset.md`: the owner-only reset button, planned, with four questions.
+- Amrapali (live, read-only check): AMR held 2 bookings, 1 invoice (16 Oct), 24 orders, business date 10 Oct. The owner's server steps given (backup, dry run); the clearing step after the dry run's counts.
+
+**Found**
+- MEMORY 419: `invoices.test.ts` "refuses a folio with nothing on it" failed both full gate runs (200, not 409): its search let in bookings that issuing rightly answers - an empty bill already carrying an invoice (four test files insert them directly), or an empty bill beside a charged one. Not reproduced alone or in a pair; the cause read from the route (with nothing posted, the only 200 is a standing invoice). Fixed to pick a booking with nothing on any bill and no invoice on any.
+
+**Proved**
+- The printed A4 (headless Chrome's PDF of 5EL/2026-27/00004) is one page, no menu, the sample's layout.
+- `invoiceLayout.test.tsx` 2/2 (with the paisa split taken out: 1 failed); `perBill.test.ts` + `invoices.test.ts` 26/26; the invoice page's other tests pass; the real-invoice snapshot updated on purpose (bill and VAT bill snapshots unchanged).
+- Gates `d27-341-342-b` (with D27-341), all green, 16:38: web 1,373, api 2,786, database 1,749 / 228, replay, pg16, types, strip. The run before (`d27-341-342`) failed only MEMORY 419's test.
+
+**Left open**
+- Amrapali's clearing: waits for the owner's dry run output. The e-mailed invoice (guest messaging's own document) keeps its old look: whether it should match is the owner's to say.
+
+## 2026-10-17 · the guest's tax invoice at check-out (D27-341)
+
+**Asked for:** how reception prints the guest's invoice, whether the desk printer needs setting up, how the GM is separated, and to see the invoice made at check-out. Then: "when check out the invoice print is shown as an option"; who may do what: "Keep as now".
+
+**Answered**
+- The invoice page's Print is the browser's print: the desk's own printer, A4, the menu hidden (`theme.css` print rules). Nothing to set up; only the restaurant's KOT and bill printers have stations. Shown: the demo invoice 5EL/2026-27/00002.
+- Issue and print: reception, hotel manager, accountant, GM, Admin, owner. Credit note: accountant, GM, Admin, owner. A GM sees the hotels they are given; the owner and Admin all.
+
+**Shipped**
+- The Bill tab, once the guest is checked out, offers the tax invoice where Check out was: Issue tax invoice (Invoices' own "are you sure"), then Print or send <number>, opening the invoice in a new tab. One per bill of a split stay. Never automatic; Invoices still issues - `src/modules/finance/flows/TaxInvoiceStep.tsx`, `FolioPanel.tsx`.
+- After a check-out the panel stays open: only the stay's own reads are asked again, the lists behind when the panel closes (MEMORY 418) - `FolioPanel.tsx` `checkedOut`; a late check-out too (`LateCheckOutFlow`'s `onDone(true)`).
+- `GET /:code/billable?stay=` keeps one stay's bills; a bad id finds none - `api/src/modules/finance/billing.ts`, `src/modules/finance/data/billing.ts`.
+- Manual A5.1, A5.4, A5.9 (at the desk / later on Invoices), A5.11; pictures A5-T7, A5-T8 (`shots/a5.mjs`); `manual.html` built.
+
+**Found**
+- MEMORY 418: the first version never showed - check-out refreshed the In house list, the guest left it, and the panel closed with them. Seen on the local screen.
+
+**Proved**
+- On the local screen: Tanvi Bhide (5EL, demo) paid by UPI, checked out, the panel stayed, Issue tax invoice → 5EL/2026-27/00003 → Print or send; closing the panel took her off In house.
+- `taxInvoiceAtCheckOut.test.tsx` 1/1; with the old refresh-everything put back it fails ("the list behind was asked again at check-out"). `perBill.test.ts` 12/12; with the stay filter removed the new test fails (3 bills, not 2). Type checks clean.
+- Gates: with D27-342, `d27-341-342-b` all green (that entry). The first run (`d27-341`) failed only MEMORY 419's test.
+
+**Left open**
+- Not on live: it goes with the next release, at the owner's word.
+
 ## 2026-10-17 · the security audit and its four fixes, before release 6 (D27-340)
 
 **Asked for:** "do an audit, research the major cyber security probes like SQL injection, check the main ones, and check the tests"; then "do all the fixes before the launch; leave off-site backups for a new version".

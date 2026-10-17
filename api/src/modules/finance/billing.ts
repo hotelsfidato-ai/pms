@@ -121,8 +121,13 @@ billing.get("/:code/payments", async (c) => {
    the party it will be addressed to (RECIPIENT_COMPANY, the issuing route's
    own rule). It was one row per stay, with the stay's figures and whichever
    invoice it met first. A folio shows once it carries a line, or when it is
-   the stay's only one. */
+   the stay's only one. `?stay=` keeps one stay's bills, for the Bill tab's
+   tax invoice after check-out (D27-341). */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 billing.get("/:code/billable", async (c) => {
+  const stay = c.req.query("stay") ?? null;
+  if (stay !== null && !UUID.test(stay)) return c.json([]);
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelIdFor(client, c.req.param("code"));
     if (!hotelId) return null;
@@ -182,11 +187,12 @@ billing.get("/:code/billable", async (c) => {
          left join companies co on co.id = r.company_id
          left join companies rc on rc.id = ${RECIPIENT_COMPANY}
         where r.hotel_id = $1 and r.status = 'checked_out'
+          and ($2::uuid is null or r.id = $2::uuid)
           and (exists (select 1 from live where folio_id = f.id)
                or not exists (select 1 from folios o
                                where o.reservation_id = r.id and o.id <> f.id))
         order by r.check_out desc, r.id, f.opened_at, f.id`,
-      [hotelId],
+      [hotelId, stay],
     );
 
     return rows.map((b) => {

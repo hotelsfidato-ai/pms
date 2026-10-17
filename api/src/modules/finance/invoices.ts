@@ -467,6 +467,8 @@ export async function invoiceFacts(client: Client, hotelId: string, number: stri
             (select f.group_id is not null from folios f where f.id = i.folio_id) as master_bill,
             h.name as hotel_name, h.address_line as hotel_address,
             h.city as hotel_city, h.state as hotel_state,
+            h.phone as hotel_phone, h.email::text as hotel_email, h.website as hotel_website,
+            h.pan as hotel_pan,
             i.fssai_number,
             s.full_name as issued_by
        from invoices i
@@ -507,6 +509,57 @@ export async function invoiceFacts(client: Client, hotelId: string, number: stri
     "select number from invoices where credits_id = $1::uuid", [i["id"]],
   );
 
+  /* THE STAY AND THE MONEY, AS THE HOTEL'S OLD FOLIO INVOICE PRINTED THEM
+     (the owner's D27-342, 17 October): the booking, the room, the guests, the
+     plan, the nights, arrival and departure with who checked the guest in and
+     out (the audit trail's status changes), and the payments on this bill.
+     None on a group's master bill or a function's, which have no one stay. */
+  const { rows: stays } = await client.query<Record<string, string | number | boolean | null>>(
+    `select r.reference, g.full_name as guest, rt.name as room_type,
+            (select rm.number from room_assignments ra join rooms rm on rm.id = ra.room_id
+              where ra.reservation_id = r.id
+              order by ra.released_at desc nulls first, ra.from_date desc limit 1) as room,
+            r.adults, r.children, r.meal_plan, r.is_day_use,
+            greatest(r.check_out - r.check_in, 0) as nights,
+            -- The moment of check-in and check-out where the trail has it,
+            -- else the booked day.
+            coalesce(to_char(cin.at, 'DD Mon YYYY, HH24:MI'), to_char(r.check_in, 'DD Mon YYYY')) as arrival,
+            coalesce(to_char(cout.at, 'DD Mon YYYY, HH24:MI'), to_char(r.check_out, 'DD Mon YYYY')) as departure,
+            app.booking_source_label(bs.name, co.name, r.source) as source,
+            cin.who as checked_in_by, cout.who as checked_out_by
+       from folios f
+       join reservations r on r.id = f.reservation_id
+       join guests g on g.id = r.guest_id
+       join room_types rt on rt.id = r.room_type_id
+       left join booking_sources bs on bs.id = r.booking_source_id
+       left join companies co on co.id = r.company_id
+       left join lateral (
+         select a.at, s.full_name as who from audit_log a left join staff s on s.id = a.actor
+          where a.table_name = 'reservations' and a.row_id = r.id::text
+            and a.after->>'status' = 'checked_in' and a.before->>'status' is distinct from 'checked_in'
+          order by a.at desc limit 1) cin on true
+       left join lateral (
+         select a.at, s.full_name as who from audit_log a left join staff s on s.id = a.actor
+          where a.table_name = 'reservations' and a.row_id = r.id::text
+            and a.after->>'status' = 'checked_out' and a.before->>'status' is distinct from 'checked_out'
+          order by a.at desc limit 1) cout on true
+      where f.id = $1 and f.group_id is null`,
+    [i["folio_id"]],
+  );
+  const st = stays[0];
+  /* Money in, net of refunds: every payment and refund on this bill not
+     reversed (a receipt is a negative line; shown as received). */
+  const { rows: paid } = await client.query<{ date: string; description: string; amount: string }>(
+    `select to_char(fp.business_date, 'YYYY-MM-DD') as date, fp.description, (-fp.amount)::text as amount
+       from folio_postings fp
+      where fp.folio_id = $1 and fp.category in ('payment', 'refund')
+        and fp.reverses_id is null
+        and not exists (select 1 from folio_postings rev where rev.reverses_id = fp.id)
+      order by fp.business_date, fp.created_at, fp.id`,
+    [i["folio_id"]],
+  );
+  const gstin = i["gstin"];
+
   return {
     number: i["number"],
     finYear: i["fin_year"],
@@ -519,7 +572,27 @@ export async function invoiceFacts(client: Client, hotelId: string, number: stri
       /* A16: printed when the invoice carries food - the number the
          invoice was issued with, frozen like the GSTIN (D27-3). */
       fssai: i["fssai_number"],
+      /* D27-342: how to reach the hotel, as it is now. The PAN typed in
+         Settings, else the one inside the invoice's GSTIN (its 3rd-12th
+         characters ARE the PAN). */
+      phone: i["hotel_phone"], email: i["hotel_email"], website: i["hotel_website"],
+      pan: i["hotel_pan"] ?? (gstin && gstin.length === 15 ? gstin.slice(2, 12) : null),
     },
+    stay: st ? {
+      reference: st["reference"] as string,
+      guest: st["guest"] as string,
+      roomType: st["room_type"] as string,
+      room: st["room"] as string | null,
+      adults: Number(st["adults"]), children: Number(st["children"]),
+      plan: st["meal_plan"] as string | null,
+      nights: st["is_day_use"] ? 0 : Number(st["nights"]),
+      arrival: st["arrival"] as string,
+      departure: st["departure"] as string,
+      source: st["source"] as string | null,
+      checkedInBy: st["checked_in_by"] as string | null,
+      checkedOutBy: st["checked_out_by"] as string | null,
+    } : null,
+    payments: paid.map((p) => ({ date: p.date, description: p.description, amount: Number(p.amount) })),
     recipient: {
       name: i["recipient_name"], gstin: i["recipient_gstin"],
       address: i["recipient_address"],

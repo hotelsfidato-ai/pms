@@ -20,7 +20,7 @@
     <li>The window <span class="ui">Check … out?</span> asks you to be sure (A5.4). Click <span class="ui">Check out</span> again.</li>
     <li>Depending on the date and the hour, the window may first ask why the guest is leaving late (A5.5) or early (A5.6).</li>
   </ol>
-  <p>When it is done, a message says <span class="msg">“A5 Test Rane checked out”</span> (the guest's name) with <span class="msg">“Room 303 is now dirty and on housekeeping's board.”</span></p>
+  <p>When it is done, a message says <span class="msg">“A5 Test Rane checked out”</span> (the guest's name) with <span class="msg">“Room 303 is now dirty and on housekeeping's board.”</span> The panel stays open, and where <span class="ui">Check out</span> was the bill now offers <span class="ui">Issue tax invoice</span> (A5.9).</p>
 
   <figure class="shot" id="fig-A5-01">
     <img src="img/A1-T16.png" alt="The stay panel of a guest in the house: the orange Settle and check out, the Room line 205 Superior, and Charged, Paid and Due at the foot">
@@ -156,7 +156,7 @@
     <li>The bill closes. Its lines stay as they are.</li>
     <li>The room is released and goes to <span class="ui">Needs cleaning</span> on housekeeping's board (A6.2).</li>
     <li>A loyalty member's points for the stay are added (A14.4).</li>
-    <li>The guest's last bill is ready to be invoiced (A5.9).</li>
+    <li>The guest's last bill is ready to be invoiced: the bill offers <span class="ui">Issue tax invoice</span> where Check out was (A5.9).</li>
   </ul>
 
   <figure class="shot" id="fig-A5-05">
@@ -407,7 +407,35 @@
 
   <!-- A5.9 -->
   <h2 id="a5-9"><span class="n">A5.9</span>After check-out: the tax invoice</h2>
-  <p>The interim bill is not the tax invoice. After the guest has left and the bill is settled, the numbered GST invoice is issued on <span class="ui">Invoices</span> (Finance; or Find a screen). A4.11 has all of it, with the credit note. In short:</p>
+  <p>The interim bill is not the tax invoice. After the guest has left and the bill is settled, the numbered GST invoice is issued, and it can be handed to the guest at the desk.</p>
+
+  <h3>At the desk, right after check-out</h3>
+  <ol class="steps">
+    <li>Check the guest out (A5.1). The panel stays open on the bill, and where <span class="ui">Check out</span> was it now says <span class="ui">Tax invoice</span> with the orange <span class="ui">Issue tax invoice</span>.</li>
+    <li>Click <span class="ui">Issue tax invoice</span>. The window <span class="ui">Issue this tax invoice?</span> says who it is billed to and the number it takes (Figure A5-13). Click <span class="ui">Issue the invoice</span>.</li>
+    <li>The button becomes <span class="ui">Print or send</span> with the invoice's number, for example <span class="ui">Print or send 5EL/2026-27/00004</span>. Click it: the tax invoice opens in a new tab.</li>
+    <li>Click <span class="ui">Print</span> on the invoice. It prints on the desk's own printer, the one the computer already uses, on A4, without the menu. Nothing is set up for it in the PMS. To give it as a file instead, choose <span class="ui">Save as PDF</span> in the print window, or click <span class="ui">Send invoice</span> (A10.7).</li>
+  </ol>
+  <p>It is an option, never automatic: closing the panel without issuing leaves the bill on <span class="ui">Invoices</span>, ready to bill. A stay with two bills shows each one with who it is billed to (A4.8). Issuing is for reception, the hotel manager, the accountant, the GM, an Admin and the owner; cancelling an invoice with a credit note is only for the accountant, the GM, an Admin and the owner (A4.11).</p>
+
+  <figure class="shot" id="fig-A5-14">
+    <img src="img/A5-T7.png" alt="The Bill tab of A5 Test Wagh just after check-out: Balance ₹0 Settled, the message A5 Test Wagh checked out, and under Tax invoice the orange Issue tax invoice where Check out was">
+    <figcaption><b>Figure A5-14.</b> Checked out: the tax invoice is offered where Check out was.</figcaption>
+    <ol class="callouts">
+      <li>Issue tax invoice</li>
+    </ol>
+  </figure>
+
+  <figure class="shot" id="fig-A5-15">
+    <img src="img/A5-T8.png" alt="The same bill after the invoice was issued: under Tax invoice the orange Print or send 5EL/2026-27/00004">
+    <figcaption><b>Figure A5-15.</b> Issued: Print or send opens the tax invoice to print or send.</figcaption>
+    <ol class="callouts">
+      <li>Print or send, with the invoice's number</li>
+    </ol>
+  </figure>
+
+  <h3>Later, on Invoices</h3>
+  <p>A bill not invoiced at the desk waits on <span class="ui">Invoices</span> (Finance; or Find a screen). A4.11 has all of it, with the credit note. In short:</p>
   <ol class="steps">
     <li>Open <span class="ui">Invoices</span>. It lists the departed stays ready to bill, with how many.</li>
     <li>Click <span class="ui">Issue</span> on the stay. It is grey while the bill still owes (<span class="msg">“The folio still carries a balance. Settle it, or transfer it to the city ledger, before invoicing.”</span>) or is overpaid (<span class="msg">“The folio is overpaid. Refund the difference before invoicing.”</span>).</li>
@@ -433,7 +461,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Asking "are you sure" before a legal number is taken: <span class="d">D27-117</span>. A company's, an agent's or a booking site's invoice is not sent by itself: <span class="d">D27-284</span>, <span class="d">D27-313</span>.</p>
+    <p>Asking "are you sure" before a legal number is taken: <span class="d">D27-117</span>. A company's, an agent's or a booking site's invoice is not sent by itself: <span class="d">D27-284</span>, <span class="d">D27-313</span>. The tax invoice offered on the bill after check-out, as an option, with who may issue it unchanged: <span class="d">D27-341</span>.</p>
   </div>
 
   <!-- A5.10 -->
@@ -463,7 +491,7 @@
       <tr><td>Before the departure date</td><td>Settle what is posted. Say why they are leaving early. The nights not stayed are not charged and go back on sale.</td><td>A5.6</td></tr>
       <tr><td>The bill is overpaid</td><td>Refund (owner, Admin, GM, accountant): the way paid, reference, why, Give refund. Print the receipt.</td><td>A5.7</td></tr>
       <tr><td>A guest from abroad</td><td>Type the Next destination first.</td><td>A5.8</td></tr>
-      <tr><td>Afterwards</td><td>Invoices: Issue, then Print or Send invoice.</td><td>A5.9</td></tr>
+      <tr><td>Checked out</td><td>On the same bill: Issue tax invoice, Issue the invoice, then Print or send. Later: Invoices, Issue.</td><td>A5.9</td></tr>
       <tr><td>End of the day</td><td>Nobody left showing due out, or the night audit will not run.</td><td>A5.10</td></tr>
     </tbody>
   </table>

@@ -6539,6 +6539,30 @@ copy will see of theirs.**
 
 ---
 
+### 419 · FOUND: a test asked a different question from the rule it tested (17 October)
+
+`invoices.test.ts` "refuses a folio with nothing on it" picked any 5EL booking with *a* bill that had no lines,
+in no order, and expected issuing to refuse. Issuing answers 200 in two other cases the search let in: a bill that
+already has an invoice gets that invoice back (four test files insert invoices directly, and invoices cannot be
+deleted), and an unnamed stay's charged bill is taken over an empty one. Both full gate runs of 17 Oct failed it;
+alone, and paired with guest messaging's test, it passed - not reproduced, the cause read from the route: with
+nothing posted, the only 200 is a standing invoice. My first fix covered only the second case and failed again.
+Fixed: a booking with nothing on any bill and no invoice on any. **The rule:** a test's search for its subject
+asks exactly the rule's question, every branch of it; `limit 1` with no order finds whatever other tests left.
+
+---
+
+### 418 · MINE: an option put on a panel that closes the moment it should appear (17 October)
+
+D27-341 put the tax invoice on the Bill tab, shown once the guest is checked out. The code and its types were
+right, and on the screen it never appeared: check-out refreshed every list, the guest left In house, the stay
+panel takes its guest from that list (`StayTable`'s `selected`), so the panel closed before the option could show.
+Caught by checking a demo guest out on the local screen before writing a test. Fixed: after a check-out the panel
+refreshes only its own stay's reads and the lists behind when it closes (`FolioPanel`'s `checkedOut`).
+**The rule:** a thing shown "after X" lives somewhere that survives X; check that first, on the screen.
+
+---
+
 ### 417 · MINE: five release runs lost to a 5-second wait on a busy laptop (16-17 October)
 
 The screen tests wait 5 s (`asyncUtilTimeout`, `src/test/setup.ts`) for what they look for. Under a full gate run

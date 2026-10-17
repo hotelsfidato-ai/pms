@@ -251,6 +251,14 @@ for (const shot of wanted) {
     await sleep(shot.pause ?? 300);
     /* A step of the run with no picture of its own. */
     if (shot.noShot) { console.log(`  · ${shot.id}  ${shot.title ?? ""}`); continue; }
+    /* A printed document as the printer gets it (D27-342): the page's own
+       print rules on A4, saved as .local/<id>.pdf; no arrows. */
+    if (shot.pdf) {
+      const { data } = await cdp("Page.printToPDF", { printBackground: true, preferCSSPageSize: true });
+      writeFileSync(join(ROOT, ".local", `${shot.id}.pdf`), Buffer.from(data, "base64"));
+      console.log(`  ✓ ${shot.id}  ${shot.title ?? ""} (.local/${shot.id}.pdf)`);
+      continue;
+    }
     /* Every arrow's target on the page first: a page still drawing is not a
        page without it. */
     for (const m of shot.marks ?? []) await waitFor(m.at).catch(() => {});

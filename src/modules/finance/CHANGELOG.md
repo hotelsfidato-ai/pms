@@ -8,6 +8,14 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-17 · The printed invoice like the hotel's old one (the owner's D27-342)
+
+**Shipped** `pages/Invoice.tsx` laid out as the owner's old folio invoice (stay facts, a 12-column line table, payments, tax by rate, totals, Reception/Cashier, two signatures; `splitByLine`); `invoiceFacts` adds `stay`, `payments` and the hotel's phone, e-mail, website and PAN. **Found** MEMORY 419 (a test's empty-bill search). **Proved** `invoiceLayout.test.tsx`, `api/test/modules/finance/perBill.test.ts`, `invoices.test.ts`. The root `CHANGELOG.md` has the whole entry.
+
+## 2026-10-17 · The tax invoice on the Bill tab after check-out (the owner's D27-341)
+
+**Shipped** `flows/TaxInvoiceStep.tsx` (Issue tax invoice, then Print or send, where Check out was; per bill; invoice create issues), `FolioPanel.tsx` (`checkedOut`: the panel stays open after a check-out, the lists asked again when it closes), `listBillable(hotelId, stayId?)` and `GET /:code/billable?stay=`. **Proved** `taxInvoiceAtCheckOut.test.tsx`, `api/test/modules/finance/perBill.test.ts`; each fails with its fix taken out. The root `CHANGELOG.md` has the whole entry.
+
 ## 2026-10-16 · Refunds and cash after the owner's D27-337: the refund limit, a cash refund to the rupee, the master bill's cash
 
 **Asked for:** the owner, "all as recommended" on lane B's questions: (a) a refund offers at most the bill's "Overpaid"; (c) a group's master bill paid in cash is rounded to the rupee; (d) a cash refund is rounded to the rupee, the bill keeping the exact figure. (b), (e), (f) need no code.

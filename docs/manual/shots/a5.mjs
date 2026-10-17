@@ -176,4 +176,35 @@ export const SHOTS = [
   },
   { id: "A5-S5", title: "set-up: Keep it - nothing is issued", as: "General Manager", noShot: true,
     steps: [{ click: "text:Keep it" }, { wait: 1000 }] },
+
+  /* ── A5.9 The tax invoice on the bill after check-out (D27-341, 17 Oct) ─
+     A5 Test Wagh (paid by A5-T6) IS checked out here, a day early by the
+     business date (the reason is typed if asked), and his invoice issued. */
+  {
+    id: "A5-T7", title: "Checked out: Issue tax invoice where Check out was", as: "Reception",
+    path: "/h/5EL/in-house", steps: [...OPEN_BILL("A5 Test Wagh"),
+      { click: "css:[data-checkout]" }, { waitFor: "text:Not yet", ms: 30000 }, { wait: 1500 },
+      { eval: `(() => { ${FIND} try { put(find('Why are they leaving early?'), 'Plans changed'); } catch {} })()` },
+      { wait: 600 }, DIALOG_BUTTON("Check out"),
+      { waitFor: "css:[data-tax-invoice-issue]", ms: SLOW }, { wait: 2500 },
+      { eval: "document.querySelector('[data-tax-invoice-issue]').scrollIntoView({ block: 'center' })" }, { wait: 600 }],
+    marks: [{ n: 1, at: "css:[data-tax-invoice-issue]", side: "top" }],
+  },
+  {
+    id: "A5-T8", title: "Issued: Print or send opens the tax invoice", as: "Reception",
+    steps: [{ click: "css:[data-tax-invoice-issue]" }, { waitFor: "text:Issue the invoice", ms: SLOW }, { wait: 1200 },
+      DIALOG_BUTTON("Issue the invoice"), { waitFor: "css:[data-tax-invoice-open]", ms: SLOW }, { wait: 2500 },
+      { eval: "document.querySelector('[data-tax-invoice-open]').scrollIntoView({ block: 'center' })" }, { wait: 600 }],
+    marks: [{ n: 1, at: "css:[data-tax-invoice-open]", side: "top" }],
+  },
+  /* The tax invoice as printed (D27-342, the hotel's old folio invoice's
+     layout): A5 Test Wagh's, issued by A5-T8. A PDF in .local; the book's
+     img/A5-P1.png (Figure A4-21) is its sheet, cut from the PDF at 130 dpi
+     (PyMuPDF: page 1, clip 30,36 to width-30,700). */
+  {
+    id: "A5-P1", title: "The printed tax invoice, A4", as: "Reception", pdf: true,
+    path: "/h/5EL/invoices", steps: [{ waitFor: "text:A5 Test Wagh", ms: SLOW }, { settle: true },
+      { eval: "[...document.querySelectorAll('tbody tr')].find((r) => r.textContent.includes('A5 Test Wagh')).querySelector('a').click()" },
+      { waitFor: "css:[data-invoice-sheet]", ms: SLOW }, { wait: 2500 }],
+  },
 ];

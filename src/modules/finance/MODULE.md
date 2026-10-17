@@ -162,7 +162,7 @@ Its front door also exports `companyReceipts` (the day book's receipts, D27-242 
 | Method | Path | What it does |
 |---|---|---|
 | GET | `/:code/payments` | every receipt, newest first; reversed ones stay on the list; "Taken by" is who took it (`app.posted_by_name`), a dash for nobody |
-| GET | `/:code/billable` | departed stays ready to invoice, with the number already issued against any |
+| GET | `/:code/billable` | departed stays ready to invoice, with the number already issued against any; `?stay=` one stay's bills (the Bill tab after check-out, D27-341) |
 
 **`api/src/modules/finance/invoices.ts`** (was `api/src/routes/invoices.ts`, less Form C)
 

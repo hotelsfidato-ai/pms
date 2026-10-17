@@ -1,5 +1,5 @@
 import { ReadyReasons } from "@/modules/front-desk";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Undo2, Plus, Receipt, LogOut, Printer, ArrowLeftRight, Pencil,
@@ -30,6 +30,7 @@ import { getChargeList } from "@/modules/finance/data/money";
 import { billSections, sectionsTotal } from "@/modules/finance/sections";
 import { BillPrint } from "./BillPrint";
 import { RefundStep } from "./RefundStep";
+import { TaxInvoiceStep } from "./TaxInvoiceStep";
 import { useGroupSettings } from "@/modules/admin";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -58,6 +59,21 @@ export function FolioPanel({
 }) {
   const qc = useQueryClient();
   const [lateOut, setLateOut] = useState(false);
+  /* CHECKED OUT HERE (D27-341): the bill offers the tax invoice where Check
+     out was. Every read is marked out of date but only this stay's are asked
+     again now; the lists behind are asked when this panel closes. Asked at
+     once, the guest left the list, and the panel with them, before the desk
+     saw the option. */
+  const [left, setLeft] = useState(false);
+  const gone = left || stay.status === "checked-out";
+  const leftRef = useRef(false);
+  useEffect(() => () => { if (leftRef.current) void qc.invalidateQueries(); }, [qc]);
+  const checkedOut = () => {
+    leftRef.current = true;
+    setLeft(true);
+    void qc.invalidateQueries({ refetchType: "none" });
+    void qc.invalidateQueries({ predicate: (q) => q.queryKey.includes(stay.id) });
+  };
   /* Form III: where a foreign guest goes next, asked at check-out while
      they are at the desk (D27-25). The server refuses without it. */
   const foreign = (stay.nationality ?? "IN").toUpperCase() !== "IN";
@@ -215,7 +231,7 @@ export function FolioPanel({
           nextDestination={nextDestination}
           open
           onOpenChange={(o) => { if (!o) setLateOut(false); }}
-          onDone={refreshAll}
+          onDone={(out) => (out ? checkedOut() : void refreshAll())}
         />
       )}
 
@@ -224,8 +240,15 @@ export function FolioPanel({
         <RefundStep hotelId={hotelId} stayId={stay.id} onDone={refreshAll} />
       )}
 
+      {/* Once the guest has left, the tax invoice where Check out was (D27-341). */}
+      {gone && mayPrint && (
+        <div className="pt-4 border-t border-grey-200">
+          <TaxInvoiceStep hotelId={hotelId} stayId={stay.id} mayIssue={mayCharge} />
+        </div>
+      )}
+
       {/* Rule 6 — blocked, visible, and it says why */}
-      {mayCheckOut && <div className="pt-4 border-t border-grey-200 space-y-3">
+      {mayCheckOut && !gone && <div className="pt-4 border-t border-grey-200 space-y-3">
         {foreign && (
           <Field label="Next destination" required
             hint="Form III reports where a foreign guest goes next.">
@@ -248,7 +271,7 @@ export function FolioPanel({
               earlyReason ? { earlyReason } : undefined, nextDestination.trim());
             if (res.ok) {
               toast.success(`${stay.guest} checked out`, `Room ${stay.roomNumber} is now dirty and on housekeeping's board.`);
-              void refreshAll();
+              checkedOut();
               return;
             }
             /* THE WAY THROUGH, not another toast.

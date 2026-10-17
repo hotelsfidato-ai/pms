@@ -55,7 +55,9 @@ export function LateCheckOutFlow({
   charge: number | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  onDone: () => void;
+  /** `true` once the guest is checked out (D27-341), not when the late
+      charge is only recorded and the bill must be settled first. */
+  onDone: (checkedOut?: boolean) => void;
 }) {
   /* The server's own answer (its mayWaive, for this person), as the
      check-in's tick reads it (D24-16, D24-27) - not the role's
@@ -110,7 +112,7 @@ export function LateCheckOutFlow({
     setReason("");
     setWaive(false);
     onOpenChange(false);
-    onDone();
+    onDone(true);
   };
 
   return (

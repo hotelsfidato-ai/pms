@@ -48,6 +48,17 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **17 October, afternoon: D27-341 and D27-342 on cp6 (local, not live), full gates green 16:38** (web
+> 1,373, api 2,786, db 1,749 / 228, replay, pg16). (1) After check-out the Bill tab
+> offers Issue tax invoice, then Print or send, where Check out was; the panel stays open until closed
+> (MEMORY 418). (2) The printed tax invoice is laid out as the hotel's old folio invoice (the owner's
+> `Invoice Akkalkot.pdf`): stay facts, a 12-column line table, payments, tax by rate, totals,
+> Reception/Cashier, two signatures; "Tax Invoice" kept. (3) A test's flaky search fixed (MEMORY 419).
+> **Waiting on the owner:** Amrapali (AMR) is to be cleared to start today (all practice, D27-342):
+> backup and dry run given to them; send the `--yes` step only after checking the dry run's counts
+> (expect ~2 bookings, 1 invoice, 24 orders). The owner-only full reset is a plan:
+> `docs/plans/owner-full-reset.md`. Local Postgres restarted 15:30 (it had stopped after 12:08).
+>
 > **17 October, 10:00: RELEASE 6 IS LIVE (`5fc16054`).** Checked read-only: website `index-DY0ZfJNy.js` with the
 > enforced CSP and the report-only one; API healthy (started 09:49 IST) with HSTS and no nginx version; server at
 > 5fc16054, migrations to 228 (`app.room_order`, `hotels.night_audit_opens_at` 16:00 for every hotel,
@@ -689,6 +700,13 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **17 October:** (1) Amrapali's clear: when the owner pastes the dry run, check the counts, then give
+> `… scripts/reset-property.ts AMR --fresh-start --yes` (server, the owner types), then check read-only
+> (0 bookings, business date today). (2) Ask the owner whether the e-mailed invoice (guest messaging's
+> own document, `api/src/modules/guest-messaging/invoiceDocument.ts`) should match the new printed
+> layout (recommended: yes). (3) D27-341/342 go out with the next release, at the owner's word.
+> (4) The owner-only full reset: build only when the owner asks, after the plan's four questions.
 
 > **15 October, later:** D27-334 (restaurant bill) and D27-335 (rooms with letters) are built and
 > gated; next, with the owner's answers: (1) POS charge-to-room in any capitals - one word in
