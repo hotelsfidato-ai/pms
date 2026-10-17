@@ -48,6 +48,16 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **17 October, 20:00: RELEASE 7 READY, the owner's to type.** `release/r7-17oct` = `27efb1eb` (D27-341,
+> D27-342, D27-343: the tax invoice at check-out, laid out as the old folio invoice, in Fidato's style with
+> both logos, the e-mailed PDF the same). Full gates green in `.claude/worktrees/release-r7-17oct` (web
+> 1,373, api 2,788, db 1,749 / 228, replay, pg16); website `index-Dy5szpPO.js`; steps A1-A7 and PART R
+> (Amrapali's reset, after A5) in `.local/release-r7-steps.txt`. No migration in this release (still 228).
+> The owner confirmed at 20:00 that Amrapali's data is all practice, including 33 restaurant bills of
+> ~₹29,900 settled by the GM 11-17 Oct: delete everything. After launch, check read-only: the live site
+> loads index-Dy5szpPO.js; AMR has 0 bookings and 0 orders on 2026-10-17. Then the release 6 and 7
+> copies can be recycled (junctions out first).
+
 > **17 October, evening: D27-343 on cp6 (local, not live), full gates green 18:00** (web 1,373, api
 > 2,788, db 1,749 / 228, replay, pg16): the tax invoice in Fidato's document style
 > with both logos and the group's office at the foot; the e-mailed PDF drawn as the same A4 document.
