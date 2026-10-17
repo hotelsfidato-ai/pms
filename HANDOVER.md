@@ -48,6 +48,13 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **17 October, ~20:10: RELEASE 7 IS LIVE (`27efb1eb`), and Amrapali starts today.** Checked read-only:
+> website `index-Dy5szpPO.js` (index no-store, CSP and HSTS present); API healthy, started 14:35:33 UTC;
+> server at 27efb1eb, fidato-api and nginx active; backups 14:34 and 14:35 UTC; AMR on 2026-10-17 with
+> 0 bookings, 0 invoices, 0 orders, 0 postings. AMRT (its test hotel) still holds 8 practice orders on
+> 10 Oct: its own Reset clears them. Staff pick the new version up by closing every PMS tab and opening
+> it again (the service worker waits; Ctrl+Shift+R, or clearing the site's data, if not).
+>
 > **17 October, 20:00: RELEASE 7 READY, the owner's to type.** `release/r7-17oct` = `27efb1eb` (D27-341,
 > D27-342, D27-343: the tax invoice at check-out, laid out as the old folio invoice, in Fidato's style with
 > both logos, the e-mailed PDF the same). Full gates green in `.claude/worktrees/release-r7-17oct` (web
