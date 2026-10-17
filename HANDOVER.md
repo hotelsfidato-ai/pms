@@ -48,6 +48,13 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **17 October, 10:00: RELEASE 6 IS LIVE (`5fc16054`).** Checked read-only: website `index-DY0ZfJNy.js` with the
+> enforced CSP and the report-only one; API healthy (started 09:49 IST) with HSTS and no nginx version; server at
+> 5fc16054, migrations to 228 (`app.room_order`, `hotels.night_audit_opens_at` 16:00 for every hotel,
+> `refunds.round_off`); Mathura lists 1A ... 11B in order. Staff pick it up with the app's "A new version is
+> ready" reload. Next: watch the CSP report-only for a week, then enforce; GSTIN directory and rivals' prices
+> parked; off-site backups for a later version.
+>
 > **17 October, 09:45: RELEASE 6 READY AT `5fc16054`** (release 5 + D27-336..D27-340: rooms, out of order and
 > maintenance refused on any night, the night audit opening time, refunds and cash, room order, the security
 > fixes). Full gates green (web 1,370, api 2,784, db 1,749 / 228, replay, pg16); website `index-DY0ZfJNy.js`;
