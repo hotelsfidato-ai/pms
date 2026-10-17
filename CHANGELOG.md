@@ -50,6 +50,23 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-17 · the invoice in Fidato's design, both logos, one A4 PDF (D27-343)
+
+**Asked for:** "also in this I need the logos and the [details] of the group … this needs to be one PDF … follow the design system of Fidato"; "combined PDFs, not separate, and for A4". Approved as one package (both logos; the group's office at the foot; Fidato's style with D27-342's content; the e-mailed invoice the same A4 document).
+
+**Shipped**
+- The printed invoice in Fidato's document style: `DocMasthead` with the hotel's and the group's logos side by side (`logos`, new), the hotel's contacts with GSTIN and PAN, the stay in `DocParties`, the 12-column line table in `DOC_TH`/`DOC_TD`, `DocTotals` with payment and balance, Reception/Cashier/Issued by in a `DocFacts` strip, two signatures, `DocFooter` with the group's office; one A4 page for an ordinary stay, the signatures and foot kept together - `src/modules/finance/pages/Invoice.tsx`, `src/components/ui/Document.tsx`. `useGroupSettings` also gives each logo and the office.
+- The e-mailed invoice PDF redrawn as the printed one, section for section, in the voucher's colours: both logos (PNG), the group's office, the stay, every line with SAC and taxes, payments, tax by rate, totals, the strip, signatures; the printed page's day format and place rule; a long bill's next page repeats the column names - `api/src/modules/guest-messaging/invoiceDocument.ts` (`invoiceBrand`, `splitByLine`), sent with it by `invoices.ts`.
+- Manual A4.11 and A17.4; Figure A4-21 retaken (with demo logos, removed again from the local demo).
+
+**Proved**
+- Headless Chrome's print of 5EL/2026-27/00004: one A4 page; the e-mailed PDF of the same invoice: one page, the same sections; a 25-line bill: two pages, headings repeated.
+- `invoicePdf.test.ts` 2/2 (logos taken out: 1 failed); `invoiceLayout.test.tsx` and the invoice page's tests pass; the real-invoice snapshot updated on purpose; guest-messaging, test-hotel and per-bill API tests 100/100.
+- Gates `d27-343`, all green, 18:00: web 1,373, api 2,788, database 1,749 / 228, replay, pg16, types, strip.
+
+**Left open**
+- On live, Settings → Group is empty: the Fidato logo and office print once the owner fills it (Amrapali has its own logo, an SVG: it prints on paper; the e-mailed PDF needs a PNG). Amrapali's clearing still waits for the owner's dry run.
+
 ## 2026-10-17 · the printed invoice like the hotel's old one; Amrapali to start today (D27-342)
 
 **Asked for:** "this is how the invoices need to be printed" (the old system's folio invoice, `Invoice Akkalkot.pdf`); "plan how to reset all the data of Amrapali … a full reset only for my ID … a future plan; for now just this invoice … and the reset of Amrapali data so that it starts today". Answers: keep "Tax Invoice", no G.R. card number, both signatures, AMR's data is all practice.

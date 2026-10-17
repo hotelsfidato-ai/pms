@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-17 · The e-mailed invoice is the printed one (the owner's D27-343)
+
+**Shipped** `invoiceDocument.ts`: `invoicePdf` redrawn as finance's printed invoice, section for section, in the voucher's colours, with both logos (PNG) and the group's office (`invoiceBrand`), `splitByLine`, CGST's odd paisa in `rateWise`, a long bill's headings repeated; `invoices.ts` passes the brand. **Proved** `api/test/modules/guest-messaging/invoicePdf.test.ts` (fails with the logos taken out). The root `CHANGELOG.md` has the whole entry.
+
 ## 2026-10-13 · The Tax invoice switch says who it sends to (the owner's D27-316 (5))
 
 **Asked for:** the switch's sentence on Guest messages on/off was silent on who the invoice goes to (the open point of the D27-313 (2) entry below).

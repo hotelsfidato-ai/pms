@@ -48,6 +48,12 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **17 October, evening: D27-343 on cp6 (local, not live), full gates green 18:00** (web 1,373, api
+> 2,788, db 1,749 / 228, replay, pg16): the tax invoice in Fidato's document style
+> with both logos and the group's office at the foot; the e-mailed PDF drawn as the same A4 document.
+> On live Settings → Group is EMPTY (no name, logo or office): the owner fills it for the Fidato logo
+> to print. Amrapali's own logo is an SVG: it prints on paper, the e-mailed PDF needs a PNG.
+>
 > **17 October, afternoon: D27-341 and D27-342 on cp6 (local, not live), full gates green 16:38** (web
 > 1,373, api 2,786, db 1,749 / 228, replay, pg16). (1) After check-out the Bill tab
 > offers Issue tax invoice, then Print or send, where Check out was; the panel stays open until closed
@@ -703,9 +709,9 @@ npx vitest run          197 passed, 13 files
 
 > **17 October:** (1) Amrapali's clear: when the owner pastes the dry run, check the counts, then give
 > `… scripts/reset-property.ts AMR --fresh-start --yes` (server, the owner types), then check read-only
-> (0 bookings, business date today). (2) Ask the owner whether the e-mailed invoice (guest messaging's
-> own document, `api/src/modules/guest-messaging/invoiceDocument.ts`) should match the new printed
-> layout (recommended: yes). (3) D27-341/342 go out with the next release, at the owner's word.
+> (0 bookings, business date today). (2) Done: the e-mailed invoice matches the printed one (D27-343).
+> The owner fills Settings → Group on live (name, logo as PNG, office). (3) D27-341/342/343 go out with
+> the next release, at the owner's word.
 > (4) The owner-only full reset: build only when the owner asks, after the plan's four questions.
 
 > **15 October, later:** D27-334 (restaurant bill) and D27-335 (rooms with letters) are built and

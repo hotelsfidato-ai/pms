@@ -54,11 +54,14 @@ export function DocLabel({ children, className }: { children: ReactNode; classNa
   );
 }
 
-export function DocMasthead({ logo, name, group, title, number, children }: {
+export function DocMasthead({ logo, logos, name, group, title, number, children }: {
   /** An image source for the group's logo, over the property's name (the
       owner, 28 September: logo, name, "by" line); null prints the name alone.
       Only ever an <img> (an SVG can carry script; the master, 27 Sep). */
   logo?: string | null;
+  /** Several, side by side, in place of `logo`: the tax invoice's hotel and
+      group logos (D27-343). Nulls are skipped. */
+  logos?: (string | null | undefined)[];
   name: string;
   /** The group's name from its setting, printed "by <group>" under the
       property's name (the owner, 27 September). Null prints nothing:
@@ -75,7 +78,15 @@ export function DocMasthead({ logo, name, group, title, number, children }: {
     <header>
       <div className="flex items-center justify-between gap-6 max-sm:flex-col max-sm:items-start max-sm:gap-3 print:flex-row print:items-center">
         <div className="min-w-0">
-          {logo && <img src={logo} alt={group ?? ""} className="h-12 w-auto max-w-[200px] object-contain mb-2" />}
+          {logos ? (
+            logos.some(Boolean) && (
+              <div className="flex items-center gap-4 mb-2">
+                {logos.filter(Boolean).map((src, i) => (
+                  <img key={i} src={src!} alt={i === 0 ? name : group ?? ""} className="h-12 w-auto max-w-[200px] object-contain" />
+                ))}
+              </div>
+            )
+          ) : logo && <img src={logo} alt={group ?? ""} className="h-12 w-auto max-w-[200px] object-contain mb-2" />}
           <p className="text-xl font-extrabold tracking-[-0.01em] text-ink-700">{name}</p>
           {group && <p className="text-xs font-semibold text-grey-500 mt-0.5">by {group}</p>}
         </div>

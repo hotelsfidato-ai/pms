@@ -45,8 +45,13 @@ const value = (label: string) =>
 
 describe("the printed tax invoice, the hotel's layout (D27-342)", () => {
   it("prints the stay, the lines, the payments and the totals", async () => {
+    /* Both logos, and the group's office at the foot (D27-343). */
+    const PNG = { type: "image/png", data: "iVBORw0KGgo=" };
     vi.spyOn(apiModule, "api").mockImplementation(async (url: string) =>
-      (url.includes("/invoices/") ? INVOICE : { name: null, logo: null, hotelLogo: null }) as never);
+      (url.includes("/invoices/") ? INVOICE : {
+        name: "Fidato Hotels", logo: PNG, hotelLogo: PNG,
+        office: { address: "1 Office Road", phone: null, email: null, website: "fidatohotels.com", gstin: null, instagram: null },
+      }) as never);
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <MemoryRouter initialEntries={["/h/5EL/invoices/doc/5EL/2026-27/00021"]}>
@@ -55,13 +60,18 @@ describe("the printed tax invoice, the hotel's layout (D27-342)", () => {
       </QueryClientProvider>,
     );
     await screen.findByText("Tax Invoice");
+    await screen.findByText("by Fidato Hotels");
+    expect(document.querySelectorAll("[data-invoice-sheet] header img").length, "the hotel's and the group's logos").toBe(2);
+    expect(document.querySelector("footer")!.textContent).toContain("1 Office Road");
 
     expect(screen.getByText(/PAN/).closest("p")!.textContent).toContain("ABCDE1234F");
-    expect(value("Booking ref")).toBe(": FH-0007");
-    expect(value("Room")).toBe(": Deluxe / 204");
-    expect(value("No of Persons")).toBe(": 2 (A) / 1 (C)");
-    expect(value("Reception (C/I)")).toBe(": Meera");
-    expect(value("Cashier (C/O)")).toBe(": Asha");
+    expect(value("Booking ref")).toBe("FH-0007");
+    expect(value("Room")).toBe("Deluxe / 204");
+    expect(value("Persons")).toBe("2 adults · 1 children");
+    /* Who checked in and out: the washed strip of facts (D27-343). */
+    const strip = (label: string) => screen.getByText(label).parentElement!.textContent;
+    expect(strip("Reception (C/I)")).toBe("Reception (C/I)Meera");
+    expect(strip("Cashier (C/O)")).toBe("Cashier (C/O)Asha");
 
     /* The discount's figure under Discount; the totals row is the invoice's own. */
     const cells = (tr: Element) => [...tr.querySelectorAll("td")].map((td) => td.textContent);
@@ -71,8 +81,8 @@ describe("the printed tax invoice, the hotel's layout (D27-342)", () => {
     expect(cells(total).slice(1)).toEqual(["4,000.00", "500.00", "3,500.00", "87.50", "87.50", "0.00", "0.00"]);
 
     const totals = document.querySelector("[data-invoice-totals]")!;
-    expect(within(totals as HTMLElement).getByText("Total (Rs) :").closest("tr")!.textContent).toContain("3,675.00");
-    expect(within(totals as HTMLElement).getByText("Balance (Rs) :").closest("tr")!.textContent).toContain("0.00");
+    expect(within(totals as HTMLElement).getByText("Total").closest("tr")!.textContent).toContain("3,675.00");
+    expect(within(totals as HTMLElement).getByText("Balance").closest("tr")!.textContent).toContain("0.00");
     expect(document.querySelector("[data-invoice-payments]")!.textContent).toContain("Received - UPI");
   });
 

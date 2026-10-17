@@ -197,10 +197,12 @@ export const SHOTS = [
       { eval: "document.querySelector('[data-tax-invoice-open]').scrollIntoView({ block: 'center' })" }, { wait: 600 }],
     marks: [{ n: 1, at: "css:[data-tax-invoice-open]", side: "top" }],
   },
-  /* The tax invoice as printed (D27-342, the hotel's old folio invoice's
-     layout): A5 Test Wagh's, issued by A5-T8. A PDF in .local; the book's
+  /* The tax invoice as printed (D27-342 content, D27-343 Fidato style):
+     A5 Test Wagh's, issued by A5-T8. Taken 17 Oct with two DEMO logos and a
+     demo office line put in the local demo's group_settings and hotel_logos
+     (.local/invoice-sample/*-logo.png), removed again after. A PDF in .local; the book's
      img/A5-P1.png (Figure A4-21) is its sheet, cut from the PDF at 130 dpi
-     (PyMuPDF: page 1, clip 30,36 to width-30,700). */
+     (PyMuPDF: page 1, clip 30,36 to width-30,780). */
   {
     id: "A5-P1", title: "The printed tax invoice, A4", as: "Reception", pdf: true,
     path: "/h/5EL/invoices", steps: [{ waitFor: "text:A5 Test Wagh", ms: SLOW }, { settle: true },

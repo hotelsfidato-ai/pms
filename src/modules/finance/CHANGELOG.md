@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-17 · The invoice in Fidato's design, both logos, one A4 PDF (the owner's D27-343)
+
+**Shipped** `pages/Invoice.tsx` in Fidato's document style (`DocMasthead` with both logos, `DocParties`, `DOC_TH`/`DOC_TD`, `DocTotals`, `DocFacts`, `DocFooter` with the group's office), one A4 page for an ordinary stay. The e-mailed PDF is guest messaging's (`invoiceDocument.ts`), drawn the same. **Proved** `invoiceLayout.test.tsx`; the root `CHANGELOG.md` has the whole entry.
+
 ## 2026-10-17 · The printed invoice like the hotel's old one (the owner's D27-342)
 
 **Shipped** `pages/Invoice.tsx` laid out as the owner's old folio invoice (stay facts, a 12-column line table, payments, tax by rate, totals, Reception/Cashier, two signatures; `splitByLine`); `invoiceFacts` adds `stay`, `payments` and the hotel's phone, e-mail, website and PAN. **Found** MEMORY 419 (a test's empty-bill search). **Proved** `invoiceLayout.test.tsx`, `api/test/modules/finance/perBill.test.ts`, `invoices.test.ts`. The root `CHANGELOG.md` has the whole entry.

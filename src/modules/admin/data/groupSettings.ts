@@ -49,6 +49,11 @@ export interface GroupSettings {
   name: string | null;
   /** An <img src>; null when there is none. */
   logo: string | null;
+  /** Each logo on its own, for the tax invoice's two (D27-343); null when none. */
+  hotelLogo?: string | null;
+  groupLogo?: string | null;
+  /** The group's office, for a document's footer (D27-215); null until read. */
+  office?: GroupOffice | null;
 }
 
 const TYPES = ["image/png", "image/svg+xml"];
@@ -102,8 +107,12 @@ export function useGroupSettings(hotelCode: string): GroupSettings {
     queryFn: () => getGroupSettings(hotelCode),
     enabled: Boolean(hotelCode),
   });
+  const hotelLogo = logoSrc(data?.hotelLogo ?? null);
+  const groupLogo = logoSrc(data?.logo ?? null);
   return {
     name: data?.name ?? null,
-    logo: logoSrc(data?.hotelLogo ?? null) ?? logoSrc(data?.logo ?? null),
+    logo: hotelLogo ?? groupLogo,
+    hotelLogo, groupLogo,
+    office: data?.office ?? null,
   };
 }

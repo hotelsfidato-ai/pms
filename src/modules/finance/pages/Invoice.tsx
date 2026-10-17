@@ -3,11 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
 import { Printer, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { amountInWords, dateLong, dateShort, moneyPrecise } from "@/lib/format";
+import { amountInWords, dateShort, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
 import { useDocumentTitle } from "@/lib/documentTitle";
-import { useGroupSettings } from "@/modules/admin";
-import { Button, Skeleton, ErrorState, DocPage, DocPanel } from "@/components/ui";
+import { useGroupSettings, type GroupSettings } from "@/modules/admin";
+import {
+  Button, Skeleton, ErrorState, DocPage, DocPanel, DocMasthead, DocParties, DocFacts, DocTotals,
+  DocFooter, DocLabel, DOC_TH,
+} from "@/components/ui";
 import { CreditNoteFlow } from "@/modules/finance/flows/CreditNoteFlow";
 import { getInvoice, type InvoiceDetail } from "@/modules/finance/data/billing";
 import { placeAfter } from "@/modules/finance/place";
@@ -22,10 +25,13 @@ import { TestDocumentMark } from "@/components/app/TestHotel";
    now an invoice existed as JSON and a row in a table, which is not
    an invoice — it is a record that one could be made.
 
-   LAID OUT AS THE HOTEL'S OLD FOLIO INVOICE (the owner's D27-342, 17
-   October: "this is how the invoices need to be printed", their old
-   system's PDF): a boxed sheet - the hotel centred with its GSTIN, PAN and
-   contacts; the booking and the stay in two columns; every line with its
+   THE HOTEL'S OLD FOLIO INVOICE'S CONTENT, IN FIDATO'S DOCUMENT STYLE (the
+   owner's D27-342 and D27-343, 17 October: their old system's PDF for what
+   it says; "follow the design system of Fidato" for how it looks; the
+   hotel's and the group's logos; the group's office at the foot; one A4
+   document, the same one e-mailed - guest-messaging's invoiceDocument.ts
+   draws it in the same order): the masthead; the hotel's contacts, GSTIN
+   and PAN; the booking and the stay in two columns; every line with its
    SAC, quantity, rate, discount, taxable value and each tax; the amount
    in words, the payments and the tax by rate on the left, the totals on
    the right; who checked the guest in and out, and two signatures. Kept
@@ -125,17 +131,18 @@ export function splitByLine(
   return out.map((x) => ({ cgst: x.cgst / 100, sgst: x.sgst / 100 }));
 }
 
-/* The sheet's parts: a label and its value, and a column cell. */
+/* The sheet's parts in Fidato's document style (D27-343): a fact is a grey
+   label beside its value; the tables are DOC_TH / DOC_TD, compact. */
 function Fact({ label, children, ...rest }: { label: string; children: ReactNode } & Record<`data-${string}`, boolean>) {
   return (
     <tr {...rest}>
-      <th scope="row" className="py-[3px] pr-2 text-left align-top font-bold whitespace-nowrap">{label}</th>
-      <td className="py-[3px] align-top">: <span>{children}</span></td>
+      <th scope="row" className="py-px pr-3 text-left align-top text-xs font-normal text-grey-500 whitespace-nowrap">{label}</th>
+      <td className="py-px align-top text-sm font-semibold text-ink-700">{children}</td>
     </tr>
   );
 }
-const TH = "border border-ink-700 px-1.5 py-1 font-bold text-[11px] align-bottom";
-const TD = "border border-ink-700 px-1.5 py-1 align-top tabular";
+const TH = cn(DOC_TH, "px-1 text-[10px] tracking-[0.04em] align-bottom");
+const TD = "py-1.5 px-1 border-b border-grey-200 text-xs align-top tabular";
 
 export default function InvoicePage() {
   const hotelId = useHotel();
@@ -224,8 +231,7 @@ export default function InvoicePage() {
 }
 
 function InvoiceSheet({ data, hotelId, test, group }: {
-  data: InvoiceDetail; hotelId: string; test: boolean;
-  group: { name: string | null; logo: string | null };
+  data: InvoiceDetail; hotelId: string; test: boolean; group: GroupSettings;
 }) {
   const isCreditNote = data.creditsInvoiceId !== null;
   const sign = (n: number) => (isCreditNote ? -n : n);
@@ -239,10 +245,10 @@ function InvoiceSheet({ data, hotelId, test, group }: {
      bill and the interim bill). */
   const supplierPlace = placeAfter(data.supplier.address, data.supplier.city, data.supplier.state);
   const contact = [
-    data.supplier.phone && `Phone: ${data.supplier.phone}`,
-    data.supplier.email && `E-mail: ${data.supplier.email}`,
-    data.supplier.website && `URL: ${data.supplier.website}`,
-  ].filter(Boolean).join("; ");
+    data.supplier.phone && `Phone ${data.supplier.phone}`,
+    data.supplier.email && `E-mail ${data.supplier.email}`,
+    data.supplier.website,
+  ].filter(Boolean).join(" · ");
 
   /* A discount is its own negative line: its figure goes under Discount,
      and it lowers the taxable value as it lowers the total. */
@@ -254,31 +260,46 @@ function InvoiceSheet({ data, hotelId, test, group }: {
   const payments = isCreditNote ? [] : data.payments ?? [];
   const received = Math.round(payments.reduce((n, p) => n + p.amount, 0) * 100) / 100;
   const hasFood = data.lines.some((l) => FOOD.includes(l.category));
+  /* The group's office at the foot (D27-215, the voucher's), where typed. */
+  const office = group.office;
+  const officeLines = office ? [
+    office.address,
+    [office.phone && `Phone ${office.phone}`, office.email].filter(Boolean).join(" · "),
+    [office.website, office.instagram && `Instagram ${office.instagram}`].filter(Boolean).join(" · "),
+  ].filter(Boolean) : [];
 
   return (
-    <div className="border border-ink-700 text-[12px] leading-snug text-ink-900" data-invoice-sheet>
-      {/* ── The hotel, centred ─────────────────────────────────── */}
-      <header className="text-center px-4 pt-3 pb-4 space-y-0.5">
-        <h1 className="text-[15px] font-bold">{isCreditNote ? "Credit Note" : "Tax Invoice"}</h1>
-        {group.logo && <img src={group.logo} alt="" className="mx-auto max-h-12 my-1" />}
-        <p className="text-[17px] font-bold">{data.supplier.name}</p>
-        {group.name && <p className="text-[11px] text-grey-600">by {group.name}</p>}
-        {!test && (
-          <p className="text-[11px]">
-            <b>GSTIN</b> : <span className="tabular">{data.supplier.gstin ?? "-"}</span>
-            {data.supplier.pan && <>, <b>PAN</b> : <span className="tabular">{data.supplier.pan}</span></>}
-          </p>
-        )}
+    <div className="text-ink-700" data-invoice-sheet>
+      {/* ── The masthead: the hotel's and the group's logos, the hotel, the
+          document and its number (Fidato's document style) ── */}
+      <DocMasthead
+        logos={[group.hotelLogo, group.groupLogo]}
+        name={data.supplier.name}
+        group={group.name}
+        title={isCreditNote ? "Credit Note" : "Tax Invoice"}
+        number={data.number}
+      >
+        <p>{data.issuedAt}</p>
+      </DocMasthead>
+
+      {/* The hotel: how to reach it, and its GSTIN and PAN. */}
+      <div className="text-xs leading-[1.5] text-grey-500 -mt-1 mb-3">
         {(data.supplier.address || supplierPlace) && (
           <p>{[data.supplier.address, supplierPlace].filter(Boolean).join(", ")}</p>
         )}
         {contact && <p>{contact}</p>}
-      </header>
+        {!test && (
+          <p className="text-ink-700">
+            GSTIN <span className="font-semibold tabular">{data.supplier.gstin ?? "-"}</span>
+            {data.supplier.pan && <> · PAN <span className="font-semibold tabular">{data.supplier.pan}</span></>}
+          </p>
+        )}
+      </div>
 
       {/* A credit note says, on its face, what it cancels and why; an invoice
           that has been credited must not read as live. */}
       {isCreditNote && (
-        <DocPanel className="mx-4 mb-3">
+        <DocPanel className="mb-4">
           <p>
             <span className="font-semibold">This is a credit note.</span>{" "}
             It cancels tax invoice{" "}
@@ -288,7 +309,7 @@ function InvoiceSheet({ data, hotelId, test, group }: {
         </DocPanel>
       )}
       {!isCreditNote && data.creditedBy && (
-        <DocPanel className="mx-4 mb-3">
+        <DocPanel className="mb-4">
           <p>
             <span className="font-semibold">Cancelled.</span> Credit note{" "}
             <span className="tabular">{data.creditedBy}</span> was issued
@@ -297,24 +318,23 @@ function InvoiceSheet({ data, hotelId, test, group }: {
         </DocPanel>
       )}
 
-      {/* ── The booking and the stay, two columns ─────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 px-4 pb-2">
-        <table className="w-full"><tbody>
+      {/* ── The bill and the stay, two columns (the hotel's old invoice's facts) ── */}
+      <DocParties className="mt-0">
+        <table className="w-full self-start"><tbody>
           {stay && <Fact label="Booking ref">{stay.reference}</Fact>}
-          <Fact label={isCreditNote ? "Credit note No" : "Invoice No"}><span className="tabular">{data.number}</span></Fact>
-          {stay && <Fact label="Guest Name">{stay.guest}</Fact>}
-          <Fact label="Bill To">{data.recipient.name ?? "-"}</Fact>
-          {data.recipient.address && <Fact label="Bill To Address">{data.recipient.address}</Fact>}
+          {stay && <Fact label="Guest name">{stay.guest}</Fact>}
+          <Fact label="Bill to">{data.recipient.name ?? "-"}</Fact>
+          {data.recipient.address && <Fact label="Bill to address">{data.recipient.address}</Fact>}
           {!test && (
-            <Fact label="Bill To GSTIN">
+            <Fact label="Bill to GSTIN">
               {data.recipient.gstin
                 ? <span className="tabular">{data.recipient.gstin}</span>
                 /* Not blank: an unregistered recipient is a fact the invoice states. */
-                : <span className="text-grey-600">not registered</span>}
+                : <span className="font-normal text-grey-500">not registered</span>}
             </Fact>
           )}
           {stay && <Fact label="Source">{stay.source ?? "-"}</Fact>}
-          <Fact label="Place of Supply">{data.placeOfSupply ?? "-"}</Fact>
+          <Fact label="Place of supply">{data.placeOfSupply ?? "-"}</Fact>
           {/* A16: on an invoice that carries food, a dash until typed. */}
           {hasFood && (
             <Fact label="FSSAI licence" data-invoice-fssai>
@@ -322,24 +342,23 @@ function InvoiceSheet({ data, hotelId, test, group }: {
             </Fact>
           )}
         </tbody></table>
-        <table className="w-full"><tbody>
-          <Fact label={isCreditNote ? "Date" : "Date of Invoice"}>{data.issuedAt}</Fact>
-          {data.businessDate && <Fact label="Business date">{dateLong(data.businessDate)}</Fact>}
+        <table className="w-full self-start"><tbody>
+          {data.businessDate && <Fact label="Business date">{dateShort(data.businessDate)}</Fact>}
           {stay && (
             <>
               <Fact label="Room">{stay.roomType} / {stay.room ?? "-"}</Fact>
-              <Fact label="No of Persons">{stay.adults} (A) / {stay.children} (C)</Fact>
-              <Fact label="Rate Type">{stay.plan ?? "-"}</Fact>
-              <Fact label="No of Nights">{stay.nights === 0 ? "Day use" : stay.nights}</Fact>
-              <Fact label="Date of Arrival">{stay.arrival}</Fact>
-              <Fact label="Date of Departure">{stay.departure}</Fact>
+              <Fact label="Persons">{stay.adults} adults · {stay.children} children</Fact>
+              <Fact label="Rate type">{stay.plan ?? "-"}</Fact>
+              <Fact label="Nights">{stay.nights === 0 ? "Day use" : stay.nights}</Fact>
+              <Fact label="Arrival">{stay.arrival}</Fact>
+              <Fact label="Departure">{stay.departure}</Fact>
             </>
           )}
         </tbody></table>
-      </div>
+      </DocParties>
 
       {/* Said on the page, because it is the line people query. */}
-      <p className="px-4 pb-2 text-[11px] text-grey-600" data-place-of-supply>
+      <p className="mt-3 text-xs text-grey-500" data-place-of-supply>
         {data.sacCode === "996311"
           ? <>Accommodation is supplied at the property's location - IGST Act s.12(3)(b) - so this supply is intra-state.</>
           : <>A function at the property is supplied at the property's location - IGST Act s.12(3)(c) - so this supply is intra-state.</>}
@@ -347,7 +366,7 @@ function InvoiceSheet({ data, hotelId, test, group }: {
 
       {/* D22-44: the same sale's alcohol is on its own VAT bill. */}
       {data.vatBill && (
-        <p className="px-4 pb-2 text-[11px]" data-invoice-vat-bill>
+        <p className="mt-2 text-sm" data-invoice-vat-bill>
           Alcohol on this stay is billed separately, under VAT: VAT bill{" "}
           <Link
             to={`/h/${hotelId}/invoices/vat/${data.vatBill}`}
@@ -359,15 +378,15 @@ function InvoiceSheet({ data, hotelId, test, group }: {
         </p>
       )}
 
-      {/* ── Every line ─────────────────────────────────────────── */}
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-[11px]">
+      {/* ── Every line, in rupees ──────────────────────────────── */}
+      <div className="overflow-x-auto mt-5">
+        <table className="w-full">
           <thead>
             <tr>
-              <th className={cn(TH, "text-left border-l-0")}>Sr No</th>
+              <th className={cn(TH, "text-left pl-0")}>Sr</th>
               <th className={cn(TH, "text-left")}>Particular</th>
               {/* Each line's own SAC (D27-258 Q6). */}
-              <th className={cn(TH, "text-left")}>HSN/SAC</th>
+              <th className={cn(TH, "text-left")}>SAC</th>
               <th className={cn(TH, "text-right")}>Qty</th>
               <th className={cn(TH, "text-right")}>Rate</th>
               <th className={cn(TH, "text-right")}>Total</th>
@@ -376,7 +395,7 @@ function InvoiceSheet({ data, hotelId, test, group }: {
               <th className={cn(TH, "text-right")}>SGST</th>
               <th className={cn(TH, "text-right")}>CGST</th>
               <th className={cn(TH, "text-right")}>IGST</th>
-              <th className={cn(TH, "text-right border-r-0")}>CESS</th>
+              <th className={cn(TH, "text-right pr-0")}>CESS</th>
             </tr>
           </thead>
           <tbody>
@@ -385,12 +404,12 @@ function InvoiceSheet({ data, hotelId, test, group }: {
               const half = l.taxRate / 2;
               return (
                 <tr key={`${l.description}-${i}`}>
-                  <td className={cn(TD, "border-l-0")}>{i + 1}</td>
-                  <td className={cn(TD, "font-sans")}>
-                    <span>{l.description}</span>
-                    <span className="block text-[10px] text-grey-600">{dateShort(l.date)}</span>
+                  <td className={cn(TD, "pl-0 text-grey-500")}>{i + 1}</td>
+                  <td className={TD}>
+                    <span className="font-semibold">{l.description}</span>
+                    <span className="block text-[10px] text-grey-500">{dateShort(l.date)}</span>
                   </td>
-                  <td className={TD}>{l.sac ?? "-"}</td>
+                  <td className={cn(TD, "text-grey-500")}>{l.sac ?? "-"}</td>
                   <td className={cn(TD, "text-right")}>1</td>
                   {/* The document's sign: a credit note's lines carry it, so
                       they sum to its own (negative) footer. */}
@@ -399,134 +418,145 @@ function InvoiceSheet({ data, hotelId, test, group }: {
                   <td className={cn(TD, "text-right")}>{fig(off ? sign(-l.amount) : 0)}</td>
                   <td className={cn(TD, "text-right font-semibold")}>{fig(sign(l.amount))}</td>
                   <td className={cn(TD, "text-right")}>
-                    {fig(sign(halves[i]!.sgst))}<span className="block text-[10px] whitespace-nowrap">{fig(half)} %</span>
+                    {fig(sign(halves[i]!.sgst))}<span className="block text-[10px] text-grey-500 whitespace-nowrap">{fig(half)} %</span>
                   </td>
                   <td className={cn(TD, "text-right")}>
-                    {fig(sign(halves[i]!.cgst))}<span className="block text-[10px] whitespace-nowrap">{fig(half)} %</span>
+                    {fig(sign(halves[i]!.cgst))}<span className="block text-[10px] text-grey-500 whitespace-nowrap">{fig(half)} %</span>
                   </td>
-                  <td className={cn(TD, "text-right")}>0.00<span className="block text-[10px] whitespace-nowrap">0.00 %</span></td>
-                  <td className={cn(TD, "text-right border-r-0")}>0.00</td>
+                  <td className={cn(TD, "text-right")}>0.00<span className="block text-[10px] text-grey-500 whitespace-nowrap">0.00 %</span></td>
+                  <td className={cn(TD, "text-right pr-0")}>0.00</td>
                 </tr>
               );
             })}
             {data.lines.length === 0 && (
               <tr>
-                <td colSpan={12} className={cn(TD, "border-x-0 text-grey-600")}>No chargeable lines.</td>
+                <td colSpan={12} className={cn(TD, "px-0 text-grey-500")}>No chargeable lines.</td>
               </tr>
             )}
             <tr className="font-bold" data-invoice-line-total>
-              <td colSpan={5} className={cn(TD, "border-l-0 text-right")}>Total</td>
-              <td className={cn(TD, "text-right")}>{fig(sign(charges))}</td>
-              <td className={cn(TD, "text-right")}>{fig(sign(discount))}</td>
-              <td className={cn(TD, "text-right")}>{fig(sign(data.taxableValue))}</td>
-              <td className={cn(TD, "text-right")}>{fig(sign(data.sgst.amount))}</td>
-              <td className={cn(TD, "text-right")}>{fig(sign(data.cgst.amount))}</td>
-              <td className={cn(TD, "text-right")}>0.00</td>
-              <td className={cn(TD, "text-right border-r-0")}>0.00</td>
+              <td colSpan={5} className={cn(TD, "pl-0 border-t-2 border-t-ink-700 border-b-0 text-right")}>Total</td>
+              {[charges, discount, data.taxableValue, data.sgst.amount, data.cgst.amount].map((n, i) => (
+                <td key={i} className={cn(TD, "border-t-2 border-t-ink-700 border-b-0 text-right")}>{fig(sign(n))}</td>
+              ))}
+              <td className={cn(TD, "border-t-2 border-t-ink-700 border-b-0 text-right")}>0.00</td>
+              <td className={cn(TD, "pr-0 border-t-2 border-t-ink-700 border-b-0 text-right")}>0.00</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       {/* ── Words, payments and tax by rate; the totals ─────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-6 gap-y-4 px-4 py-4">
+      <section className="mt-4 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] print:grid-cols-[minmax(0,1fr)_auto] gap-x-8 gap-y-5">
         <div className="space-y-4 min-w-0">
           <div>
-            <p className="font-bold">Total Payable Amount</p>
+            <DocLabel className="mb-1">Total payable, in words</DocLabel>
             {/* The words are the tie-breaker against a smudged figure. */}
-            <p className="mt-0.5">{amountInWords(data.total)}</p>
+            <p className="text-sm font-medium leading-[1.55]">{amountInWords(data.total)}</p>
           </div>
           {payments.length > 0 && (
-            <table className="w-full border-collapse" data-invoice-payments>
+            <table className="w-full" data-invoice-payments>
               <thead>
                 <tr>
-                  <th className={cn(TH, "text-left")}>Payment Date</th>
+                  <th className={cn(TH, "text-left pl-0")}>Payment date</th>
                   <th className={cn(TH, "text-left")}>Description</th>
-                  <th className={cn(TH, "text-right")}>Amount</th>
+                  <th className={cn(TH, "text-right pr-0")}>Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {payments.map((p, i) => (
                   <tr key={i}>
-                    <td className={cn(TD, "whitespace-nowrap")}>{dateShort(p.date)}</td>
-                    <td className={cn(TD, "font-sans")}>{p.description}</td>
-                    <td className={cn(TD, "text-right")}>{fig(p.amount)}</td>
+                    <td className={cn(TD, "pl-0 whitespace-nowrap")}>{dateShort(p.date)}</td>
+                    <td className={TD}>{p.description}</td>
+                    <td className={cn(TD, "pr-0 text-right")}>{fig(p.amount)}</td>
                   </tr>
                 ))}
                 <tr className="font-bold">
-                  <td colSpan={2} className={cn(TD, "text-right")}>Total</td>
-                  <td className={cn(TD, "text-right")}>{fig(received)}</td>
+                  <td colSpan={2} className={cn(TD, "pl-0 border-b-0 text-right")}>Total</td>
+                  <td className={cn(TD, "pr-0 border-b-0 text-right")}>{fig(received)}</td>
                 </tr>
               </tbody>
             </table>
           )}
-          <table className="w-full border-collapse" data-invoice-tax-details>
+          <table className="w-full" data-invoice-tax-details>
             <thead>
               <tr>
-                <th className={cn(TH, "text-left")}>Tax Details</th>
-                <th className={cn(TH, "text-right")}>Taxable Amount</th>
-                <th className={cn(TH, "text-right")}>Tax Amount</th>
+                <th className={cn(TH, "text-left pl-0")}>Tax details</th>
+                <th className={cn(TH, "text-right")}>Taxable amount</th>
+                <th className={cn(TH, "text-right pr-0")}>Tax amount</th>
               </tr>
             </thead>
             <tbody>
               {bands.flatMap((b) => [
                 <tr key={`s${b.rate}`}>
-                  <td className={TD}>SGST @ {fig(b.rate / 2)}%</td>
+                  <td className={cn(TD, "pl-0")}>SGST @ {fig(b.rate / 2)}%</td>
                   <td className={cn(TD, "text-right")}>{fig(sign(b.taxable))}</td>
-                  <td className={cn(TD, "text-right")}>{fig(sign(b.tax - b.half))}</td>
+                  <td className={cn(TD, "pr-0 text-right")}>{fig(sign(b.tax - b.half))}</td>
                 </tr>,
                 <tr key={`c${b.rate}`}>
-                  <td className={TD}>CGST @ {fig(b.rate / 2)}%</td>
+                  <td className={cn(TD, "pl-0")}>CGST @ {fig(b.rate / 2)}%</td>
                   <td className={cn(TD, "text-right")}>{fig(sign(b.taxable))}</td>
-                  <td className={cn(TD, "text-right")}>{fig(sign(b.half))}</td>
+                  <td className={cn(TD, "pr-0 text-right")}>{fig(sign(b.half))}</td>
                 </tr>,
               ])}
             </tbody>
           </table>
         </div>
 
-        <table className="w-full self-start border-collapse" data-invoice-totals>
-          <tbody>
-            {([
-              ["Total Charges (Rs)", fig(sign(charges))],
-              ["Total Discount (Rs)", fig(sign(discount))],
-              ["Total SGST (Rs)", fig(sign(data.sgst.amount))],
-              ["Total CGST (Rs)", fig(sign(data.cgst.amount))],
-              ["Total IGST (Rs)", "0.00"],
-              ["Total (Rs)", fig(sign(data.total))],
-              ...(isCreditNote ? [] : [
-                ["Total Payment (Rs)", fig(received)],
-                ["Balance (Rs)", fig(Math.round((data.total - received) * 100) / 100)],
-              ]),
-            ] as [string, string][]).map(([label, value]) => (
-              <tr key={label} className={label === "Total (Rs)" ? "font-bold" : undefined}>
-                <th scope="row" className={cn(TD, "text-right font-bold font-sans")}>{label} :</th>
-                <td className={cn(TD, "text-right w-28")}>{value}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        <div data-invoice-totals>
+          <DocTotals
+            rows={[
+              ["Total charges", moneyPrecise(sign(charges))],
+              ["Total discount", moneyPrecise(sign(discount) || 0)],
+              ["Total SGST", moneyPrecise(sign(data.sgst.amount))],
+              ["Total CGST", moneyPrecise(sign(data.cgst.amount))],
+              ["Total IGST", moneyPrecise(0)],
+            ]}
+            total={["Total", moneyPrecise(sign(data.total))]}
+            after={isCreditNote ? undefined : [
+              ["Total payment", moneyPrecise(received)],
+              ["Balance", moneyPrecise(Math.round((data.total - received) * 100) / 100 || 0)],
+            ]}
+          />
+        </div>
+      </section>
 
-      {/* ── Who, and the two signatures (the guest's; the hotel's, Rule 46) ── */}
-      <div className="border-t border-ink-700 grid grid-cols-1 sm:grid-cols-2 gap-x-6 px-4 pt-2 pb-3">
-        <table className="w-full self-start"><tbody>
-          <Fact label="This folio is in">Rs (INR)</Fact>
-          {stay && <Fact label="Reception (C/I)">{stay.checkedInBy ?? "-"}</Fact>}
-          {stay && <Fact label="Cashier (C/O)">{stay.checkedOutBy ?? "-"}</Fact>}
-          <Fact label="Issued by">{data.issuedBy ?? "-"}</Fact>
-        </tbody></table>
-        <p className="text-[10px] text-grey-600 sm:text-right self-start pt-1">
-          A computer-generated document, series {data.finYear}. An issued tax
-          invoice is not amended: a correction is a credit note with its own number.
-        </p>
-      </div>
-      <div className="border-t border-ink-700 flex justify-between gap-6 px-4 pt-12 pb-2 text-[11px]">
-        <p className="border-t border-ink-700 pt-1 px-6 font-bold">(Guest Signature)</p>
+      {/* ── Who checked the guest in and out, and who issued it ── */}
+      <DocFacts
+        className="mt-4"
+        items={[
+          ...(stay ? [
+            { label: "Reception (C/I)", value: stay.checkedInBy ?? "-" },
+            { label: "Cashier (C/O)", value: stay.checkedOutBy ?? "-" },
+          ] : []),
+          { label: "Issued by", value: data.issuedBy ?? "-" },
+          { label: "Currency", value: "INR (₹)" },
+        ]}
+      />
+
+      {/* ── The two signatures: the guest's, and the hotel's (Rule 46) ── */}
+      <div className="break-inside-avoid">
+      <div className="mt-9 flex justify-between gap-8 text-xs">
+        <div className="border-t border-ink-700 pt-1 px-6 text-center">
+          <p className="font-semibold">Guest signature</p>
+        </div>
         <div className="border-t border-ink-700 pt-1 px-6 text-center">
           <p>For {data.supplier.name}</p>
-          <p className="text-grey-600">Authorised signatory</p>
+          <p className="text-grey-500">Authorised signatory</p>
         </div>
+      </div>
+
+      {/* ── The group's office, as the voucher's foot (D27-215) ── */}
+      <DocFooter
+        name={group.name ?? data.supplier.name}
+        left={officeLines.length ? officeLines.map((l, i) => <p key={i}>{l}</p>) : data.supplier.address}
+        right={test ? undefined : <>GSTIN {data.supplier.gstin ?? "-"}</>}
+        note={
+          <>
+            A computer-generated document, series {data.finYear}. An issued tax
+            invoice is not amended: any correction is a credit note with its own number.
+          </>
+        }
+      />
       </div>
     </div>
   );

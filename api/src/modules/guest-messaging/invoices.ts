@@ -4,7 +4,7 @@ import { withUser, type Client } from "../../db.ts";
 import { canSend, messageIdFor, send, NOT_CONNECTED, type Message, type SendResult } from "../../sending.ts";
 import { inr } from "../../reportRender.ts";
 import { invoiceFacts } from "../finance/index.ts";
-import { invoiceFile } from "./invoiceDocument.ts";
+import { invoiceBrand, invoiceFile } from "./invoiceDocument.ts";
 import { isTestHotelId } from "../../testHotels.ts";
 import { claimTurn, MOST_ATTEMPTS, perSweep, NOT_OWED } from "./jobs.ts";
 
@@ -77,7 +77,7 @@ export async function invoiceMessage(client: Client, owed: OwedInvoice): Promise
     },
     /* D27-296: never sent from a test hotel (sending.ts refuses), and its
        PDF is marked even so. */
-    file: await invoiceFile(facts, await isTestHotelId(client, owed.hotel.id)),
+    file: await invoiceFile(facts, await isTestHotelId(client, owed.hotel.id), await invoiceBrand(client, owed.hotel.id)),
     about: { kind: "invoice", id: owed.invoiceId },
     sentBy: null,
   };
