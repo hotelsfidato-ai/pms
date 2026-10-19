@@ -48,6 +48,13 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **20 October, 02:55: RELEASE 8 READY, the owner's to type.** `release/r8-20oct` = `5fc8681c` (D27-341 to
+> D27-348: the guest documents; the earlier-day restaurant bill reprint). Full gates green in the clean copy
+> `.claude/worktrees/release-r8-20oct` (web 1,387, api 2,807, db 1,749 / 232, replay, pg16); website
+> `index-giGycAQK.js`; steps A1-A7 in `.local/release-r8-steps.txt` (A5 applies migrations 229-232). Live is
+> release 7 (`27efb1eb`). After launch check read-only: the bundle, health, server at 5fc8681c, migrations
+> to 232; then release 6 and 7 copies can be recycled (junctions out first).
+
 > **20 October, ~01:35: D27-344 to D27-348 on cp6 (local, not live), full gates green** (web 1,386,
 > api 2,806, db 1,749 / 232, replay, pg16). The guest documents like the old system's, in Fidato's
 > style: the **proforma bill** (was the interim bill); the **tax invoice issued and printed by itself at
