@@ -120,6 +120,22 @@ describe("the front desk's settings", () => {
     });
   });
 
+  /* D27-344 (229): what check-out does with the tax invoice, and its copies. */
+  it("the tax invoice at check-out: printed with 2 copies to begin, and changed", async () => {
+    const rules = async () => ((await (await app.request("/api/hotels", { headers: { "x-dev-staff-id": "dev-owner" } }))
+      .json()) as { hotels: Array<{ code: string; deskRules: Record<string, unknown> }> })
+      .hotels.find((h) => h.code === CODE)?.deskRules;
+    expect(await rules()).toMatchObject({ invoiceAtCheckout: "print", invoiceCopies: 2 });
+
+    const wrong = await call("/desk-settings", "PATCH", { invoiceAtCheckout: "email" });
+    expect(await reason(wrong)).toBe("At check-out the tax invoice is printed, offered as a button, or left to Invoices.");
+    expect(await reason(await call("/desk-settings", "PATCH", { invoiceCopies: 3 }))).toBe("A tax invoice prints 1 copy or 2.");
+
+    expect((await call("/desk-settings", "PATCH", { invoiceAtCheckout: "offer", invoiceCopies: 1 })).status).toBe(200);
+    expect(await rules()).toMatchObject({ invoiceAtCheckout: "offer", invoiceCopies: 1 });
+    expect((await call("/desk-settings", "PATCH", { invoiceAtCheckout: "print", invoiceCopies: 2 })).status).toBe(200);
+  });
+
   it("holds the desk's booking without a required field", async () => {
     const [d] = await sql<{ source: string; type: string }>(
       `select app.walk_in_source()::text as source,

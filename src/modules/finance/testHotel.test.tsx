@@ -96,7 +96,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("a real hotel's finance paper is unchanged", () => {
   it("the bill, byte for byte", async () => {
-    const { container } = render(<BillPrint bill={bill} title="Interim bill" group={{ name: "Fidato Hotels", logo: null }} />);
+    const { container } = render(<BillPrint bill={bill} group={{ name: "Fidato Hotels", logo: null }} />);
     await expect(container.innerHTML).toMatchFileSnapshot("./__snapshots__/testHotel.real-bill.html");
     expect(container.textContent).toContain(HOTEL_GSTIN);
   });
@@ -117,7 +117,7 @@ describe("a test hotel's finance paper", () => {
   beforeEach(() => withTestHotel());
 
   it("the bill says TEST · NOT VALID large, and carries no GSTIN", () => {
-    const { container } = render(<BillPrint bill={bill} title="Interim bill" />);
+    const { container } = render(<BillPrint bill={bill} />);
     expect(container.querySelector("[data-test-document]")?.textContent).toBe(TEST_DOCUMENT);
     expect(container.textContent).not.toContain("GSTIN");
     expect(container.textContent).not.toContain(HOTEL_GSTIN);

@@ -63,6 +63,8 @@ export type { ChargeToPost } from "./postings.ts";
 export { takeFolioPayment, postFolioCharge, reverseFolioCharge, editFolioCharge } from "./postings.ts";
 export type { PaymentToTake, Payer } from "./postings.ts";
 export { issueFolioInvoice, invoiceFacts } from "./invoices.ts";
+/* The stay as the documents print it (D27-344): the registration card too. */
+export { stayFacts } from "./invoices.ts";
 export type { InvoiceRecipient, InvoiceFacts } from "./invoices.ts";
 export { folioBalance } from "./folios.ts";
 /* D27-242 (Q4): what companies paid, for the accountant's day book. */

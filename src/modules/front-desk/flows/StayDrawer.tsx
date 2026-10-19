@@ -1,7 +1,8 @@
 import { vipLevels } from "@/modules/front-desk/data/lists";
 import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Phone, Mail, Globe, LogOut } from "lucide-react";
+import { Link } from "react-router";
+import { Phone, Mail, Globe, LogOut, Printer } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { money, moneyPrecise, dateShort } from "@/lib/format";
 import {
@@ -43,8 +44,8 @@ import { can } from "@/lib/permissions";
      the group's rooms beside the booking   a column, not a dialog
 
    Nothing is offered here that does not already work. The reference
-   carries "Print / Send" and "Edit Reservation"; this system has no
-   print for a stay, and editing is "Change dates or guests" inside
+   carries "Print / Send" and "Edit Reservation"; this system prints a
+   stay's registration card (D27-344), and editing is "Change dates or guests" inside
    More options, where the product put the rare acts deliberately.
    ══════════════════════════════════════════════════════════════════ */
 
@@ -204,6 +205,16 @@ function StayBody({
               onClick={() => setTab("folio")}
             >
               Settle and check out
+            </Button>
+          )}
+          {(arrived || stay.status === "checked-out") && can(role, "edit", "customer") && (
+            /* D27-344: the registration card, from this button, never by
+               itself. It carries the guest's ID: customer edit, as Form C. */
+            <Button asChild variant="secondary">
+              <Link to={`/h/${hotelId}/stays/${stay.id}/registration-card`} target="_blank" data-registration-card-open>
+                <Printer className="size-4" />
+                Print registration card
+              </Link>
             </Button>
           )}
           <StayActions hotelId={hotelId} stay={stay} businessDate={businessDate} />

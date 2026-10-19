@@ -216,7 +216,7 @@ export const SHOTS = [
     steps: [{ waitFor: "text:above ₹7,500" }],
     marks: [
       { n: 1, at: "text:above ₹7,500", side: "right" },
-      { n: 2, at: "text:SAC 996311", side: "left" },
+      { n: 2, at: "text:HSN/SAC 996311", side: "left" },
       { n: 3, at: "text:Edit", side: "left" },
       { n: 4, at: "text:Set it", side: "left" },
     ],
@@ -465,6 +465,28 @@ export const SHOTS = [
       { n: 1, at: "label:The restaurant's round-off", side: "right" },
       { n: 2, at: "text:How the figures count", side: "right" },
       { n: 3, at: "text:A complimentary room counts as sold", side: "right" },
+    ],
+  },
+  /* D27-344: the tax invoice at check-out. */
+  {
+    id: "A17-54", title: "Front desk rules: the tax invoice at check-out", as: "Owner",
+    path: "/settings/front-desk/front-desk",
+    steps: [{ waitFor: "text:The tax invoice at check-out" }, { scroll: "text:The tax invoice at check-out" }, { wait: 300 }],
+    marks: [
+      { n: 1, at: "label:The tax invoice at check-out", side: "bottom" },
+      { n: 2, at: "text:1 copy", side: "right" },
+    ],
+  },
+  /* D27-348: Settings › Documents - each document, its sample, Print a sample. */
+  {
+    id: "A17-55", title: "Documents: the tax invoice sample and Print a sample", as: "Owner",
+    path: "/settings/property/documents",
+    steps: [{ waitFor: "css:[data-documents-sample=invoice] [data-invoice-sheet]", ms: 60000 }, { wait: 800 }],
+    marks: [
+      { n: 1, at: "text:Registration card", side: "bottom" },
+      { n: 2, at: "css:[data-documents-print]", side: "bottom" },
+      { n: 3, at: "text:Change it on Front desk rules", side: "left" },
+      { n: 4, at: "css:[data-documents-sample] [data-test-document]", side: "left" },
     ],
   },
 

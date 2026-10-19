@@ -7,3 +7,6 @@ export { unitPriceOf } from "./lib/pricing";
    waiter's own pop-up (Q2), with `guest` hiding the per-dish note. */
 export { DishDialog } from "./flows/DishDialog";
 export type { MenuItem } from "./data/till";
+/* D27-348: Settings › Documents draws a sample restaurant bill. */
+export { BillSlip } from "./components/BillSlip";
+export type { Order } from "./data/till";

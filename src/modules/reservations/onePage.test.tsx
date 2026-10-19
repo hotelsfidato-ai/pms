@@ -293,7 +293,8 @@ describe("the Settings switches", () => {
     const folds = () => [...document.querySelectorAll("summary")].map((s) => s.textContent);
     await waitFor(() => expect(folds()).not.toContain("Notes"));
     /* GST folded into Company and Extras left the page (D27-187, D27-193). */
-    expect(folds()).toEqual(["More about the guest", "Booking details", "Company"]);
+    /* D27-347: the special request, a box of its own, never switched off. */
+    expect(folds()).toEqual(["More about the guest", "Booking details", "Company", "Special request"]);
   });
 
   it("show a company's GSTIN under the company picked, and call the tax GST", async () => {
@@ -344,10 +345,12 @@ describe("a rate that includes GST", () => {
   it("prices the line before GST and books the typed figure with the flag", async () => {
     await typeRate("4000");
     await screen.findByText(/₹3,809\.52 a night/);
+    /* D27-347: the guest's special request goes with it, for the voucher. */
+    fireEvent.change(document.querySelector("[data-special-request]")!, { target: { value: " A quiet room " } });
     await waitFor(() => expect(button("Save booking").disabled).toBe(false));
     fireEvent.click(button("Save booking"));
     await waitFor(() => expect(calls.find((c) => c.path.endsWith("/bookings"))?.body)
-      .toMatchObject({ lines: [expect.objectContaining({ agreedRate: 4000, rateIncludesGst: true })] }));
+      .toMatchObject({ specialRequest: "A quiet room", lines: [expect.objectContaining({ agreedRate: 4000, rateIncludesGst: true })] }));
   });
 
   it("says a figure cannot split exactly, and holds the buttons in the slab gap", async () => {

@@ -168,6 +168,9 @@ export interface InvoiceLine {
   date: string;
   /** Its kind's SAC as the invoice was issued (D27-258 Q6); null: a dash. */
   sac?: string | null;
+  /** Alcohol on a proforma bill (D21-91): its VAT, never CGST and SGST
+      (taxRate and taxAmount are then 0). A tax invoice never carries one. */
+  vat?: { rate: number; amount: number };
 }
 
 export interface InvoiceDetail {
@@ -187,6 +190,8 @@ export interface InvoiceDetail {
   /** The stay the bill is for (D27-342); null on a group's or a function's bill. */
   stay?: {
     reference: string; guest: string; roomType: string; room: string | null;
+    /** The registration card's number (D27-344); none for a stay checked in before it. */
+    grCardNo?: number | null;
     adults: number; children: number; plan: string | null; nights: number;
     /** "09 Oct 2026, 14:05", or the booked day where the trail has no time. */
     arrival: string; departure: string; source: string | null;

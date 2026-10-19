@@ -202,7 +202,7 @@ function KindTile({ rules, onEdit }: {
       <p className="text-sm text-grey-500 mt-1.5 leading-relaxed">
         {WHAT[rules.kind]}
       </p>
-      <p className="text-sm text-grey-600 mt-1 tabular">SAC {sacShown(rules)}</p>
+      <p className="text-sm text-grey-600 mt-1 tabular">HSN/SAC {sacShown(rules)}</p>
 
       <Button variant="secondary" className="h-11 w-full mt-2.5"
               onClick={onEdit}>
@@ -269,7 +269,7 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
     if (!res.ok) { setBusy(false); return toast.error("Not saved", res.reason); }
     if ((sac.trim() || null) !== rules.sac) {
       const said = await setTaxSac(hotelId, rules.kind, sac.trim() || null);
-      if (!said.ok) { setBusy(false); return toast.error("SAC not saved", said.reason); }
+      if (!said.ok) { setBusy(false); return toast.error("HSN/SAC not saved", said.reason); }
     }
     setBusy(false);
     toast.success(
@@ -390,12 +390,12 @@ function SlabsDialog({ hotelId, rules, open, onOpenChange, onSaved }: {
             </Button>
           )}
 
-          <Field label="SAC code"
+          <Field label="HSN/SAC code"
                  hint={rules.kind === "room"
-                   ? "Six digits, printed on each line of this kind. Empty: 996311, as before."
-                   : "Six digits, printed on each line of this kind - your CA's code. Empty: a dash."}>
+                   ? "A SAC is 6 digits; an HSN for goods 4, 6 or 8. Printed on each line of this kind. Empty: 996311, as before."
+                   : "A SAC is 6 digits; an HSN for goods 4, 6 or 8 - your CA's code. Printed on each line of this kind. Empty: a dash."}>
             {(f) => (
-              <Input {...fieldProps(f)} value={sac} inputMode="numeric" maxLength={6}
+              <Input {...fieldProps(f)} value={sac} inputMode="numeric" maxLength={8}
                      placeholder={rules.kind === "room" ? "996311" : "-"}
                      onChange={(e) => setSac(e.target.value.replace(/\D/g, ""))} />
             )}

@@ -141,7 +141,10 @@ export async function createChannelBooking(
             set commission_amount = case when ota_line = 1
                                          then coalesce($2::numeric, commission_amount)
                                          else commission_amount end,
-                notes = coalesce($3, notes)
+                notes = coalesce($3, notes),
+                /* The guest's own words, for the voucher too (D27-347); 231
+                   holds it to 500. */
+                special_request = coalesce(left($3, 500), special_request)
           where id = any($1::uuid[])`,
         [result.reservationIds, commission, note]);
     }

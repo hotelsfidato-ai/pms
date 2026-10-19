@@ -31,7 +31,7 @@ const INVOICE: InvoiceDetail = {
   taxableValue: 3500, cgst: { rate: 2.5, amount: 87.5 }, sgst: { rate: 2.5, amount: 87.5 },
   taxTotal: 175, total: 3675,
   creditsInvoiceId: null, creditsNumber: null, reason: null, creditedBy: null, vatBill: null,
-  stay: { reference: "FH-0007", guest: "Ravi Iyer", roomType: "Deluxe", room: "204", adults: 2, children: 1,
+  stay: { reference: "FH-0007", grCardNo: 421, guest: "Ravi Iyer", roomType: "Deluxe", room: "204", adults: 2, children: 1,
           plan: "CP", nights: 1, arrival: "11 Oct 2026, 14:05", departure: "12 Oct 2026, 10:30",
           source: "Walk-in", checkedInBy: "Meera", checkedOutBy: "Asha" },
   payments: [{ date: "2026-10-11", description: "Received - UPI", amount: 3675 }],
@@ -40,8 +40,10 @@ const INVOICE: InvoiceDetail = {
 beforeEach(startSignedIn);
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
+/* The first copy, the original: the duplicate repeats it for the paper. */
+const first = () => within(document.querySelector("[data-invoice-sheet]") as HTMLElement);
 const value = (label: string) =>
-  screen.getByText(label, { selector: "th" }).closest("tr")!.querySelector("td")!.textContent;
+  first().getByText(label, { selector: "th" }).closest("tr")!.querySelector("td")!.textContent;
 
 describe("the printed tax invoice, the hotel's layout (D27-342)", () => {
   it("prints the stay, the lines, the payments and the totals", async () => {
@@ -59,23 +61,35 @@ describe("the printed tax invoice, the hotel's layout (D27-342)", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    await screen.findByText("Tax Invoice");
-    await screen.findByText("by Fidato Hotels");
+    await screen.findAllByText("Tax Invoice");
+    await screen.findAllByText("by Fidato Hotels");
+    /* Two copies by default (D27-344): the original on screen; Print sends
+       the original and the duplicate, one print. */
+    expect([...document.querySelectorAll("[data-invoice-copy]")].map((e) => e.textContent))
+      .toEqual(["ORIGINAL FOR RECIPIENT"]);
     expect(document.querySelectorAll("[data-invoice-sheet] header img").length, "the hotel's and the group's logos").toBe(2);
+    const printed: string[][] = [];
+    vi.spyOn(window, "print").mockImplementation(() => {
+      printed.push([...document.querySelectorAll("[data-invoice-print] [data-invoice-copy]")].map((e) => e.textContent ?? ""));
+    });
+    (document.querySelector("[data-invoice-print-button]") as HTMLButtonElement).click();
+    expect(printed).toEqual([["ORIGINAL FOR RECIPIENT", "DUPLICATE FOR SUPPLIER"]]);
     expect(document.querySelector("footer")!.textContent).toContain("1 Office Road");
 
-    expect(screen.getByText(/PAN/).closest("p")!.textContent).toContain("ABCDE1234F");
+    expect(first().getByText(/PAN/).closest("p")!.textContent).toContain("ABCDE1234F");
     expect(value("Booking ref")).toBe("FH-0007");
+    /* The registration card's number (D27-344). */
+    expect(value("G.R. card no")).toBe("421");
     expect(value("Room")).toBe("Deluxe / 204");
-    expect(value("Persons")).toBe("2 adults · 1 children");
+    expect(value("Persons")).toBe("2 adults · 1 child");
     /* Who checked in and out: the washed strip of facts (D27-343). */
-    const strip = (label: string) => screen.getByText(label).parentElement!.textContent;
+    const strip = (label: string) => first().getByText(label).parentElement!.textContent;
     expect(strip("Reception (C/I)")).toBe("Reception (C/I)Meera");
     expect(strip("Cashier (C/O)")).toBe("Cashier (C/O)Asha");
 
     /* The discount's figure under Discount; the totals row is the invoice's own. */
     const cells = (tr: Element) => [...tr.querySelectorAll("td")].map((td) => td.textContent);
-    const discountRow = screen.getByText("Discount", { selector: "span" }).closest("tr")!;
+    const discountRow = first().getByText("Discount", { selector: "span" }).closest("tr")!;
     expect(cells(discountRow).slice(4, 8)).toEqual(["-", "-", "500.00", "-500.00"]);
     const total = document.querySelector("[data-invoice-line-total]")!;
     expect(cells(total).slice(1)).toEqual(["4,000.00", "500.00", "3,500.00", "87.50", "87.50", "0.00", "0.00"]);

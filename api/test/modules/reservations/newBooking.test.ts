@@ -97,7 +97,7 @@ const row = async (id: string) => (await sql(
   `select r.status, r.agreed_rate::text, r.is_complimentary, r.discount_percent::text,
           r.discount_reason, r.room_promotion_id::text, r.company_id::text,
           r.expected_departure::text, r.sales_person, r.market_segment,
-          r.notes, r.is_single_lady, r.campaign,
+          r.notes, r.special_request, r.is_single_lady, r.campaign,
           g.title, g.nationality, gd.address_line, gd.city, gd.state, gd.pincode, gd.country
      from reservations r join guests g on g.id = r.guest_id
      left join guest_documents gd on gd.guest_id = g.id
@@ -377,6 +377,8 @@ describe("what else New booking records", () => {
       salesPerson: `${TAG} Asha`, marketSegment: "Leisure",
       /* D27-163: the one page's Notes box and the walk-in's tick. */
       notes: "  Late train, keep the room  ", isSingleLady: true,
+      /* D27-347: the guest's own request, its own box, for the voucher. */
+      specialRequest: "  A quiet room, high floor  ",
       /* D27-170: "Book this lead" keeps the lead's campaign (leads' 161). */
       campaign: "meta_120211234567890",
       address: { addressLine: "12 High St", city: "Leeds", state: "West Yorkshire",
@@ -392,7 +394,14 @@ describe("what else New booking records", () => {
       address_line: "12 High St", city: "Leeds", state: "West Yorkshire",
       pincode: "LS1 4AP", country: "United Kingdom",
       notes: "Late train, keep the room", is_single_lady: true, campaign: "meta_120211234567890",
+      special_request: "A quiet room, high floor",
     });
+  });
+
+  it("refuses a special request over 500 characters in words", async () => {
+    const res = await call(ownerId, "POST", "/bookings", booking("Long request", { specialRequest: "x".repeat(501) }));
+    expect(res.status).toBe(409);
+    expect(await res.text()).toContain("A special request is at most 500 characters.");
   });
 
   it("refuses a campaign over 200 characters in words, and writes nothing", async () => {

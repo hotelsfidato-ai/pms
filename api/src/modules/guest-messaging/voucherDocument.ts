@@ -113,13 +113,31 @@ export interface VoucherFacts {
   checkInLink?: string | null;
   /** D27-296 (8): a test hotel's - TEST · NOT VALID, no GSTIN. */
   test?: boolean;
+  /** D27-348: Settings › Documents' sample - SAMPLE · NOT VALID, no GSTIN. */
+  sample?: boolean;
+  /* ── added by 231 (D27-344: the old confirmation's lines); each absent or
+     null prints nothing ── */
+  /** The hour the guest said they would arrive, "14:00". */
+  arrivalTime?: string | null;
+  /** The guest's special request, its own box (D27-347); never the notes. */
+  specialRequest?: string | null;
+  promotion?: { name: string; percent: number | null; amount: number | null } | null;
+  /** The booking's extras (reservation_inclusions): a null rate is included
+      at no charge; `gstRate` the room rule's at its rate, null where none. */
+  extras?: VoucherExtra[];
 }
+
+export interface VoucherExtra { name: string; quantity: number; rate: number | null; gstRate: number | null }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export interface VoucherFigures {
   lines: Array<VoucherRoom & { amount: number | null; tax: number | null }>;
   roomCharges: number | null;
+  /** Each extra's amount and GST; 0 and 0 where included at no charge. */
+  extras: Array<VoucherExtra & { amount: number; tax: number | null }>;
+  /** The extras with their GST; null when one has no GST rule. */
+  extrasTotal: number | null;
   /** One line per GST rate; null when any room's rate is not set. */
   bands: Array<{ rate: number; tax: number }> | null;
   gst: number | null;
@@ -129,7 +147,7 @@ export interface VoucherFigures {
 /** The voucher's arithmetic, and the only place it is done. A null is a
     figure this system does not hold, and a total that would need one is
     itself null (D27-172): no GST rule, no total. */
-export function voucherFigures(rooms: VoucherRoom[]): VoucherFigures {
+export function voucherFigures(rooms: VoucherRoom[], extraRows: VoucherExtra[] = []): VoucherFigures {
   /* A day use (no night) is one day at its rate, charged at check-in
      (D27-225, D27-227): its zero nights printed ₹0 and no GST. */
   const charged = (r: VoucherRoom) => Math.max(1, r.nights);
@@ -149,9 +167,16 @@ export function voucherFigures(rooms: VoucherRoom[]): VoucherFigures {
     .filter((l) => !l.complimentary && l.gstRate !== null)
     .reduce((m, l) => m.set(l.gstRate!, round2((m.get(l.gstRate!) ?? 0) + l.tax!)), new Map<number, number>())]
     .map(([rate, tax]) => ({ rate, tax }));
+  /* An extra as the desk posts it: its rate x how many, GST per item. */
+  const extras = extraRows.map((e) => ({
+    ...e,
+    amount: e.rate === null ? 0 : round2(e.rate * e.quantity),
+    tax: e.rate === null ? 0 : e.gstRate === null ? null : round2(round2((e.rate * e.gstRate) / 100) * e.quantity),
+  }));
+  const extrasTotal = every(extras.map((e) => (e.tax === null ? null : e.amount + e.tax)));
   return {
-    lines, roomCharges, bands, gst,
-    total: roomCharges === null || gst === null ? null : round2(roomCharges + gst),
+    lines, roomCharges, bands, gst, extras, extrasTotal,
+    total: roomCharges === null || gst === null || extrasTotal === null ? null : round2(roomCharges + gst + extrasTotal),
   };
 }
 
@@ -200,6 +225,11 @@ export function voucherPolicies(f: VoucherFacts): string[] {
 
 export interface VoucherBlocks {
   payment: { value: string; hint?: string };
+  /** Under the stay: the arrival time, the special request, the promotion
+      (D27-344), each only where there is one. */
+  details: [string, string][];
+  /** Under the total: what was paid, and what is due at check-in. */
+  due: [string, string][];
   hotelRows: [string, string][];
   guestRows: [string, string][];
   /** Per room, in order: "1 extra adult, 1 extra child", or "" for none. */
@@ -231,7 +261,7 @@ const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : 
 
 /** What each block of the voucher SAYS (D27-215) - the one place it is
     decided, so the PDF below only draws. */
-export function voucherBlocks(f: VoucherFacts, figures: VoucherFigures = voucherFigures(f.rooms)): VoucherBlocks {
+export function voucherBlocks(f: VoucherFacts, figures: VoucherFigures = voucherFigures(f.rooms, f.extras ?? [])): VoucherBlocks {
   /* The advance is the ledger's figure (app.guest_voucher); the balance is
      the voucher's own total less it - and is said only when there is a total
      and it is not negative. */
@@ -259,8 +289,19 @@ export function voucherBlocks(f: VoucherFacts, figures: VoucherFigures = voucher
   const rows = (pairs: [string, string | null | undefined][]) =>
     pairs.filter((pair): pair is [string, string] => Boolean(pair[1]));
 
+  const promo = f.promotion;
   return {
     payment,
+    details: rows([
+      ["Arrival time", f.arrivalTime],
+      ["Special request", f.specialRequest],
+      ["Promotion", promo ? `${promo.name}${promo.percent ? ` (${Number(promo.percent)}% off)`
+        : promo.amount ? ` (${money(Number(promo.amount))} off)` : ""}` : null],
+    ]),
+    /* The old confirmation's last two lines: paid, and due at check-in -
+       never from a total nobody agreed to, never for a company's bill. */
+    due: f.payment?.billTo === "company" ? [["Paid", money(received)], ["Due at check-in", "Bill to company"]]
+      : [["Paid", money(received)], ["Due at check-in", balance === null ? "-" : money(Math.max(0, balance))]],
     hotelRows: rows([
       ["Phone", f.hotel.phone], ["Email", f.hotel.email], ["Contact", f.contact],
       /* Printed only in the footer before: with the group's office there, it
@@ -331,7 +372,7 @@ export const voucherHeight = (f: VoucherFacts): number =>
 /** Draws the voucher and answers the height it needed, in millimetres.
     `scale` null only measures: nothing is ever moved to a second page. */
 function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: number | null): number {
-  const figures = voucherFigures(f.rooms);
+  const figures = voucherFigures(f.rooms, f.extras ?? []);
   const blocks = voucherBlocks(f, figures);
   const at = (v: number) => v * MM;
   /* The page's bottom, in the voucher's own millimetres. */
@@ -418,8 +459,8 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
     if (f.groupName) text(`by ${f.groupName}`, M, y + 11, { size: 8, color: GREY, width: 110 });
   }
   /* D27-296: a test hotel's voucher says so where the title is. */
-  text(f.test ? "TEST · NOT VALID" : "RESERVATION VOUCHER", RIGHT, y + 5.5,
-    { size: 11, bold: true, align: "right", ...(f.test ? { color: ORANGE } : {}) });
+  text(f.sample ? "SAMPLE · NOT VALID" : f.test ? "TEST · NOT VALID" : "RESERVATION VOUCHER", RIGHT, y + 5.5,
+    { size: 11, bold: true, align: "right", ...(f.test || f.sample ? { color: ORANGE } : {}) });
   text(f.reference, RIGHT, y + 10.5, { size: 9, color: GREY, align: "right" });
   y += 16;
   pdf.rect(at(M), at(y), at(CONTENT), at(1.1)).fill(ORANGE);
@@ -428,7 +469,7 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
   /* ── Status, and the payment (D27-215) ── */
   y = strip(y, [
     { label: "Booked on", value: dateReport(f.bookedOn) },
-    { label: "Status", value: f.test ? "TEST" : "CONFIRMED" },
+    { label: "Status", value: f.sample ? "SAMPLE" : f.test ? "TEST" : "CONFIRMED" },
     { label: "Payment", value: blocks.payment.value, hint: blocks.payment.hint },
     { label: "Total", value: money(figures.total), right: true },
   ]) + 6;
@@ -477,6 +518,17 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
     },
   ]) + 7;
 
+  /* ── The arrival time, the special request, the promotion (D27-344) ── */
+  if (blocks.details.length) {
+    y -= 2;
+    for (const [k, v] of blocks.details) {
+      room(5);
+      text(k, M, y, { size: 7.6, color: GREY, width: 28 });
+      y += Math.max(4, text(v, M + 30, y, { size: 7.6, bold: true, width: CONTENT - 30 }) + 1);
+    }
+    y += 4;
+  }
+
   /* ── Rooms and rates (V1) ── */
   const cNights = M + CONTENT - 62;
   const cRate = M + CONTENT - 30;
@@ -515,8 +567,34 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
   rule(y);
   y += 5;
 
+  /* ── Extras (D27-344): the booking's, priced or included ── */
+  const priced = figures.extras.some((e) => e.rate !== null);
+  if (figures.extras.length) {
+    room(10 + figures.extras.length * 7.4);
+    label("Extras", M, y);
+    y += 3;
+    rule(y, INK, 0.4);
+    y += 3.4;
+    label("Extra", M, y);
+    label("How many", cNights, y);
+    label("Each", cRate, y, "right");
+    label("Amount", RIGHT, y, "right");
+    y += 2.4;
+    for (const e of figures.extras) {
+      rule(y);
+      y += 4.4;
+      text(e.name, M, y, { size: 8.6, bold: true, width: cNights - M - 6 });
+      text(String(e.quantity), cNights, y, { size: 8.6, width: 15 });
+      text(e.rate === null ? "Included" : money(e.rate), cRate, y, { size: 8.6, align: "right", width: 40 });
+      text(e.rate === null ? "Included" : money(e.amount), RIGHT, y, { size: 8.6, bold: true, align: "right", width: 30 });
+      y += 3;
+    }
+    rule(y);
+    y += 5;
+  }
+
   /* ── Totals (V1: a dash where no GST rate is set, and then no total) ── */
-  room(16 + (figures.bands?.length ?? 1) * 4.2);
+  room(16 + ((figures.bands?.length ?? 1) + (priced ? 1 : 0) + blocks.due.length) * 4.2);
   const tl = M + CONTENT - 62;
   const row = (l: string, v: string, bold = false) => {
     text(l, tl, y, { size: bold ? 9 : 8, color: bold ? INK : GREY, bold, width: 30 });
@@ -526,9 +604,11 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
   row("Room charges", money(figures.roomCharges));
   if (figures.bands === null) row("GST", "-");
   else for (const b of figures.bands) row(`GST ${b.rate}%`, money(b.tax));
+  if (priced) row("Extras, with GST", money(figures.extrasTotal));
   rule(y - 1, INK, 0.4, tl, RIGHT);
   y += 3.4;
   row("Grand total", money(figures.total), true);
+  for (const [k, v] of blocks.due) row(k, v);
   y += 3;
 
   /* ── Confirmed by the hotel (V5) ── */
@@ -627,7 +707,8 @@ function draw(pdf: InstanceType<typeof PDFDocument>, f: VoucherFacts, scale: num
     fy += 3.4;
   }
   const last = Math.max(y + 12, fy + 4);
-  text(f.test
+  text(f.sample ? "A sample voucher, with a made-up guest: it confirms no booking and is not valid."
+    : f.test
     ? "A test hotel's practice voucher: it confirms no booking and is not valid."
     : "This voucher confirms the booking described above. Please present it at check in.",
     W / 2, last, { size: 6.6, color: GREY, align: "center", width: CONTENT });
@@ -671,7 +752,19 @@ export async function voucherFacts(client: Client, reservationId: string): Promi
     gstRate: r.gstRate === null ? null : Number(r.gstRate),
     mealDays: said.get((r.mealPlan ?? "").split(" ")[0] ?? "") ?? null,
   });
-  return { ...facts, rooms: (facts.rooms ?? []).map(numbers) };
+  /* What the old confirmation printed besides (231, D27-344). */
+  const { rows: more } = await client.query<{ more: Pick<VoucherFacts, "arrivalTime" | "specialRequest" | "promotion" | "extras"> | null }>(
+    "select app.voucher_more($1::uuid) as more", [reservationId]);
+  const m = more[0]?.more;
+  const extras = (m?.extras ?? []).map((e) => ({
+    name: e.name, quantity: Number(e.quantity),
+    rate: e.rate === null ? null : Number(e.rate), gstRate: e.gstRate === null ? null : Number(e.gstRate),
+  }));
+  return {
+    ...facts, rooms: (facts.rooms ?? []).map(numbers),
+    arrivalTime: m?.arrivalTime ?? null, specialRequest: m?.specialRequest ?? null,
+    promotion: m?.promotion ?? null, extras,
+  };
 }
 
 const DAY_WORDS: Record<string, string> = { arrival: "check-in", stay: "stay-over", departure: "check-out" };

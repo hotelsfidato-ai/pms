@@ -48,17 +48,17 @@ const card = () => render(
 describe("a SAC code per tax kind", () => {
   it("shows rooms' 996311 as before, a kind's own code, and a dash where none is said", async () => {
     card();
-    expect(await screen.findByText("SAC 996311")).toBeTruthy();
-    expect(screen.getByText("SAC 996331")).toBeTruthy();
-    expect(screen.getAllByText("SAC -").length).toBeGreaterThan(0);
+    expect(await screen.findByText("HSN/SAC 996311")).toBeTruthy();
+    expect(screen.getByText("HSN/SAC 996331")).toBeTruthy();
+    expect(screen.getAllByText("HSN/SAC -").length).toBeGreaterThan(0);
   });
 
   it("is saved with the kind's rates", async () => {
     card();
-    const tile = (await screen.findByText("SAC 996331")).closest("div.rounded-md")!;
+    const tile = (await screen.findByText("HSN/SAC 996331")).closest("div.rounded-md")!;
     fireEvent.click(within(tile as HTMLElement).getByRole("button", { name: "Edit" }));
     const dialog = await screen.findByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText(/^SAC code/), { target: { value: "996332" } });
+    fireEvent.change(within(dialog).getByLabelText(/^HSN\/SAC code/), { target: { value: "996332" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
     await waitFor(() => expect(sent.at(-1)).toEqual(
       { path: `/api/hotels/${HOTEL}/tax/restaurant/sac`, method: "PUT", body: { sacCode: "996332" } }));
@@ -90,5 +90,19 @@ describe("a tax rate that changes on a date (D27-258 Q7)", () => {
       { overAmount: 0, rate: 12, note: null, validFrom: null, validTo: "2026-09-22" },
       { overAmount: 0, rate: 5, note: null, validFrom: "2026-10-01", validTo: null },
     ] } }));
+  });
+});
+
+/* D27-344: a goods kind takes its HSN in the same box - up to 8 digits. */
+describe("an HSN in the same box", () => {
+  it("sends eight digits as typed", async () => {
+    card();
+    const tile = (await screen.findByText("HSN/SAC 996331")).closest("div.rounded-md")!;
+    fireEvent.click(within(tile as HTMLElement).getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/^HSN\/SAC code/), { target: { value: "22011010" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(sent.at(-1)).toEqual(
+      { path: `/api/hotels/${HOTEL}/tax/restaurant/sac`, method: "PUT", body: { sacCode: "22011010" } }));
   });
 });

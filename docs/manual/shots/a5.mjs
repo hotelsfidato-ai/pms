@@ -22,6 +22,10 @@
 //     by UPI first (A5-S2), and he is not checked out.
 //   - A5-T5 opens Invoices' "Issue this tax invoice" window and CLOSES it (Keep it).
 // A5-T1 must be taken after the hotel's check-out time (11:00, the property's clock).
+// Retaken 20 Oct after midnight for D27-344 (A5-S1 to A5-T7, A5-P1, A5-P2): the old
+// A5 Test Rane checked out first; the hotel's check-in time was set to 00:00 for the
+// run (else every walk-in is an early arrival asking a reason) and put back to 14:00.
+// A5-T1 was not retaken: it needs a guest due out on the demo's business date.
 // Taken by: node C:\videos\day\check.mjs run <this file> [ids]   (CDP_PORT=9385)
 
 const SLOW = 90000;
@@ -61,7 +65,7 @@ const TAG = (text, up, name, within = "[role=dialog] *") => ({
 const OPEN_BILL = (guest) => [
   { waitFor: `text:${guest}`, ms: SLOW }, FRESH,
   { click: `text:${guest}` }, { waitFor: "text:Settle and check out", ms: SLOW }, { wait: 1000 },
-  { click: "text:Settle and check out" }, { waitFor: "text:Interim bill", ms: SLOW }, { wait: 3500 },
+  { click: "text:Settle and check out" }, { waitFor: "text:Proforma bill", ms: SLOW }, { wait: 3500 },
 ];
 /* Settle: the whole posted bill by UPI. */
 const PAY_UPI = [
@@ -83,16 +87,16 @@ export const SHOTS = [
       { click: "text:Check in now" }, { waitFor: "text:Open the booking", ms: SLOW }, { wait: 1500 },
     ] },
 
-  /* ── A5.2 The interim bill (takes the day check's DAY-37 again) ───── */
+  /* ── A5.3 The proforma bill (D27-344; the interim bill until then) ─── */
   {
-    id: "A5-T3", title: "The interim bill: the preview with its INTERIM BILL, the totals and Print", as: "Reception",
+    id: "A5-T3", title: "The proforma bill: the preview with its Proforma Bill heading, the totals and Print", as: "Reception",
     path: "/h/5EL/in-house", steps: [...OPEN_BILL("A5 Test Rane"),
-      { click: "text:Interim bill" }, { waitFor: "text:INTERIM BILL", ms: SLOW }, { wait: 1500 },
-      TAG("CGST 2.5%", 3, "tax")],
+      { click: "text:Proforma bill" }, { waitFor: "css:[role=dialog] [data-invoice-sheet]", ms: SLOW }, { wait: 1500 },
+      { eval: "document.querySelector('[role=dialog] [data-invoice-totals]')?.scrollIntoView({ block: 'center' })" }, { wait: 600 }],
     marks: [
-      { n: 1, at: "text:INTERIM BILL", side: "left" },
+      { n: 1, at: "css:[role=dialog] header .border-l-4", side: "left" },
       { n: 2, at: "text:Print", side: "left" },
-      { n: 3, at: "css:[data-m=tax]", side: "left" },
+      { n: 3, at: "text:Balance due", side: "left" },
     ],
   },
   { id: "A5-S3", title: "set-up: A5 Test Rane pays what is posted, by UPI", as: "Reception", noShot: true,
@@ -181,32 +185,43 @@ export const SHOTS = [
      A5 Test Wagh (paid by A5-T6) IS checked out here, a day early by the
      business date (the reason is typed if asked), and his invoice issued. */
   {
-    id: "A5-T7", title: "Checked out: Issue tax invoice where Check out was", as: "Reception",
+    id: "A5-T7", title: "Checked out: the tax invoice issued and printed by itself, Print again", as: "Reception",
+    /* D27-344: the hotel's default prints at check-out; the print window
+       (window.print) is a no-op in headless Chrome, so the run goes on. */
     path: "/h/5EL/in-house", steps: [...OPEN_BILL("A5 Test Wagh"),
       { click: "css:[data-checkout]" }, { waitFor: "text:Not yet", ms: 30000 }, { wait: 1500 },
       { eval: `(() => { ${FIND} try { put(find('Why are they leaving early?'), 'Plans changed'); } catch {} })()` },
       { wait: 600 }, DIALOG_BUTTON("Check out"),
-      { waitFor: "css:[data-tax-invoice-issue]", ms: SLOW }, { wait: 2500 },
-      { eval: "document.querySelector('[data-tax-invoice-issue]').scrollIntoView({ block: 'center' })" }, { wait: 600 }],
-    marks: [{ n: 1, at: "css:[data-tax-invoice-issue]", side: "top" }],
-  },
-  {
-    id: "A5-T8", title: "Issued: Print or send opens the tax invoice", as: "Reception",
-    steps: [{ click: "css:[data-tax-invoice-issue]" }, { waitFor: "text:Issue the invoice", ms: SLOW }, { wait: 1200 },
-      DIALOG_BUTTON("Issue the invoice"), { waitFor: "css:[data-tax-invoice-open]", ms: SLOW }, { wait: 2500 },
-      { eval: "document.querySelector('[data-tax-invoice-open]').scrollIntoView({ block: 'center' })" }, { wait: 600 }],
-    marks: [{ n: 1, at: "css:[data-tax-invoice-open]", side: "top" }],
+      { waitFor: "css:[data-tax-invoice-print-again]", ms: SLOW }, { wait: 2500 },
+      { eval: "document.querySelector('[data-tax-invoice-print-again]').scrollIntoView({ block: 'center' })" }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "css:[data-tax-invoice-open]", side: "top" },
+      { n: 2, at: "css:[data-tax-invoice-print-again]", side: "bottom" },
+    ],
   },
   /* The tax invoice as printed (D27-342 content, D27-343 Fidato style):
-     A5 Test Wagh's, issued by A5-T8. Taken 17 Oct with two DEMO logos and a
+     A5 Test Wagh's, issued by A5-T7's check-out (A5-T8, issuing by hand, went
+     with D27-344's default). Taken 17 Oct with two DEMO logos and a
      demo office line put in the local demo's group_settings and hotel_logos
      (.local/invoice-sample/*-logo.png), removed again after. A PDF in .local; the book's
      img/A5-P1.png (Figure A4-21) is its sheet, cut from the PDF at 130 dpi
      (PyMuPDF: page 1, clip 30,36 to width-30,780). */
+  /* The proforma bill as printed (D27-344, the interim bill until then): a
+     guest in house, A4 Test Kulkarni, from the Bill tab's print page. */
+  {
+    id: "A5-P2", title: "The printed proforma bill, A4", as: "Reception", pdf: true,
+    path: "/h/5EL/in-house", steps: [{ waitFor: "text:A4 Test Kulkarni", ms: SLOW }, { settle: true },
+      { click: "text:A4 Test Kulkarni" }, { wait: 2500 },
+      { eval: "location.assign('/h/5EL/stays/' + new URLSearchParams(location.search).get('res') + '/bill')" },
+      { waitFor: "css:[data-bill-print] [data-invoice-sheet]", ms: SLOW }, { wait: 2500 }],
+  },
   {
     id: "A5-P1", title: "The printed tax invoice, A4", as: "Reception", pdf: true,
     path: "/h/5EL/invoices", steps: [{ waitFor: "text:A5 Test Wagh", ms: SLOW }, { settle: true },
-      { eval: "[...document.querySelectorAll('tbody tr')].find((r) => r.textContent.includes('A5 Test Wagh')).querySelector('a').click()" },
+      /* The newest of A5 Test Wagh's invoices: the one with a G.R. card no (D27-344). */
+      { eval: `[...document.querySelectorAll('tbody tr')].filter((r) => r.textContent.includes('A5 Test Wagh'))
+          .sort((a, b) => Number((b.textContent.match(/\\/(\\d{5})/) ?? [])[1] ?? 0) - Number((a.textContent.match(/\\/(\\d{5})/) ?? [])[1] ?? 0))[0]
+          .querySelector('a').click()` },
       { waitFor: "css:[data-invoice-sheet]", ms: SLOW }, { wait: 2500 }],
   },
 ];

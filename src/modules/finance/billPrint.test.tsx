@@ -11,8 +11,9 @@ import type { StayBill } from "./data/bill";
 
 /* The desk's printed bill, 21 September: it printed the demo's made-up
    GSTIN (27AAAAA0000A1Z5) at every hotel and "CGST 2.5% / SGST 2.5%" on
-   every bill. It now draws what app.stay_bill answers (migration 123) and
-   computes nothing; these pin that it prints what it is given. */
+   every bill. It draws what app.stay_bill answers (migration 123) and
+   computes nothing; these pin that it prints what it is given. Since the
+   owner's D27-344 it is the PROFORMA BILL, drawn by the tax invoice's sheet. */
 
 const bill = (over: Partial<StayBill> = {}): StayBill => ({
   hotel: { name: "Riverside Test Hotel", address: "1 Ghat Road", city: "Akkalkot",
@@ -21,7 +22,7 @@ const bill = (over: Partial<StayBill> = {}): StayBill => ({
           checkOut: "2026-09-22", room: "204" },
   lines: [
     { date: "2026-09-20", description: "Room 204", category: "room", amount: 8000,
-      tax: 1440, rate: 18, billTo: "guest", company: null },
+      tax: 1440, rate: 18, billTo: "guest", company: null, sac: "996311" },
     { date: "2026-09-20", description: "Laundry", category: "laundry", amount: 200,
       tax: 10, rate: 5, billTo: "guest", company: null },
   ],
@@ -33,32 +34,36 @@ const bill = (over: Partial<StayBill> = {}): StayBill => ({
   net: 8200, tax: 1450, total: 9650, rounded: 9650, roundOff: 0, paid: 0, balance: 9650,
   ...over,
 });
+const sheet = () => document.querySelector("[data-bill-print]")!.textContent!;
 
-describe("the printed bill", () => {
+describe("the printed proforma bill", () => {
   it("prints the hotel's own name and GSTIN, never the demo's", () => {
-    render(<BillPrint bill={bill()} title="Tax Invoice" />);
-    expect(screen.getByText("Riverside Test Hotel")).toBeDefined();
+    render(<BillPrint bill={bill()} />);
+    expect(screen.getAllByText("Riverside Test Hotel").length).toBeGreaterThan(0);
     expect(document.querySelector("[data-bill-gstin]")?.textContent).toBe("27TESTB1234F1Z5");
     expect(document.body.textContent).not.toContain("27AAAAA0000A1Z5");
     expect(document.body.textContent).not.toContain("Fidato");
   });
 
   it("prints a dash where the hotel has set no GSTIN", () => {
-    render(<BillPrint bill={bill({ hotel: { ...bill().hotel, gstin: null } })} title="Tax Invoice" />);
+    render(<BillPrint bill={bill({ hotel: { ...bill().hotel, gstin: null } })} />);
     expect(document.querySelector("[data-bill-gstin]")?.textContent).toBe("-");
   });
 
-  it("prints one CGST and SGST pair per rate, each half of it", () => {
-    render(<BillPrint bill={bill()} title="Tax Invoice" />);
-    expect(screen.getByText("CGST 9%")).toBeDefined();
-    expect(screen.getByText("SGST 9%")).toBeDefined();
-    expect(screen.getByText("CGST 2.5%")).toBeDefined();
+  it("prints one CGST and SGST pair per rate, each half of it, and each line's HSN/SAC", () => {
+    render(<BillPrint bill={bill()} />);
+    expect(screen.getByText("CGST @ 9.00%")).toBeDefined();
+    expect(screen.getByText("SGST @ 9.00%")).toBeDefined();
+    expect(screen.getByText("CGST @ 2.50%")).toBeDefined();
     expect(document.querySelectorAll("[data-bill-tax-rate]").length).toBe(2);
+    expect(screen.getByText("Room 204").closest("tr")!.textContent).toContain("996311");
   });
 
   it("prints no tax rows for a bill with no taxed line", () => {
-    render(<BillPrint bill={bill({ taxes: [] })} title="Tax Invoice" />);
-    expect(screen.queryByText(/CGST/)).toBeNull();
+    render(<BillPrint bill={bill({
+      lines: bill().lines.map((l) => ({ ...l, tax: 0, rate: null })), taxes: [], tax: 0, total: 8200, balance: 8200,
+    })} />);
+    expect(screen.queryByText(/CGST @/)).toBeNull();
   });
 
   /* D21-91: alcohol is "one 'VAT 10%' line on the bill, never split into
@@ -66,22 +71,24 @@ describe("the printed bill", () => {
      fixture's, not a figure the component knows. */
   it("prints VAT on alcohol as one line, never as a CGST and SGST pair", () => {
     render(<BillPrint bill={bill({
-      taxes: [],
-      vat: [{ rate: 10, taxable: 1500, vat: 150 }],
-    })} title="Tax Invoice" />);
-    expect(screen.getByText("VAT 10%")).toBeDefined();
+      lines: [{ date: "2026-09-20", description: "Bar - R-0012", category: "food", amount: 1500,
+                tax: 150, rate: 10, scheme: "vat", billTo: "guest", company: null }],
+      taxes: [], vat: [{ rate: 10, taxable: 1500, vat: 150 }],
+      net: 1500, tax: 150, total: 1650, balance: 1650,
+    })} />);
+    expect(screen.getByText("VAT @ 10.00%")).toBeDefined();
     expect(document.querySelectorAll("[data-bill-vat-rate]").length).toBe(1);
-    expect(screen.queryByText(/CGST/)).toBeNull();
-    expect(screen.queryByText(/SGST/)).toBeNull();
-    expect(screen.queryByText("CGST 5%")).toBeNull();
+    expect(screen.queryByText(/CGST @/)).toBeNull();
+    expect(screen.queryByText(/SGST @/)).toBeNull();
+    expect(sheet()).toContain("Total VAT₹150.00");
   });
 });
 
 /* D22-7, the owner: the desk's printed bill said "Tax Invoice" with no
-   number. It is the "Interim bill", as the guest's page says, before
-   check-out and after (24 September): the numbered tax invoice is issued on
-   Invoices. The panel's other reads are left unanswered, so only the print
-   is in play. */
+   number. It was the "Interim bill" (24 September); the owner's D27-344 made
+   it the "Proforma bill": still never "Tax Invoice" - the numbered tax
+   invoice is issued at check-out. The panel's other reads are left
+   unanswered, so only the print is in play. */
 describe("the desk's printed bill, from the Bill tab", () => {
   afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
@@ -98,28 +105,27 @@ describe("the desk's printed bill, from the Bill tab", () => {
       </QueryClientProvider>,
     );
     /* The button says what it opens (D24-25), not "Invoice". */
-    fireEvent.click(screen.getByRole("button", { name: "Interim bill" }));
-    await screen.findByText("Riverside Test Hotel");
-    return document.querySelector("[data-bill-print]")!.textContent!;
+    fireEvent.click(screen.getByRole("button", { name: "Proforma bill" }));
+    await screen.findAllByText("Riverside Test Hotel");
+    return sheet();
   };
 
   it.each(["in-house", "checked-out"] as const)(
-    "says Interim bill, never Tax Invoice, when the stay is %s", async (status) => {
+    "says Proforma Bill, never Tax Invoice, when the stay is %s", async (status) => {
       const text = await print(status);
-      expect(text).toContain("Interim bill");
-      expect(text).not.toMatch(/tax invoice/i);
+      expect(text).toContain("Proforma Bill");
+      expect(text).toContain("It is not a tax invoice");
+      expect(screen.queryByText("Tax Invoice")).toBeNull();
     });
 });
 
-/* D27-200 (the owner, 30 September): the printed bill in sections - Room with
-   GST, Restaurant with GST, Bar with VAT, other charges - each with its
-   subtotal and tax. The totals under them are the server's, unchanged, and
-   the sections come to the same Total. */
-describe("the printed bill's sections", () => {
+/* The proforma bill's lines, alcohol among them under VAT (D21-91), and the
+   server's totals unchanged: paid and the balance due under the total. */
+describe("the proforma bill's lines and totals", () => {
   const row = (description: string, category: string, amount: number, tax: number, rate: number,
     scheme: "gst" | "vat" = "gst") =>
     ({ date: "2026-09-20", description, category, amount, tax, rate, scheme, billTo: "guest", company: null });
-  const sectioned = bill({
+  const mixed = bill({
     lines: [
       row("Room 204", "room", 3522.86, 176.14, 5),
       row("Restaurant - R-0012 (5%)", "food", 850, 42.5, 5),
@@ -131,26 +137,22 @@ describe("the printed bill's sections", () => {
     net: 5272.86, tax: 332.64, total: 5605.5, rounded: 5606, roundOff: 0.5, paid: 1001, balance: 4604.5,
   });
 
-  it("groups the lines, each section with its subtotal and its tax, and keeps the server's totals", () => {
-    render(<BillPrint bill={sectioned} title="Interim bill" />);
-    const section = (key: string) => document.querySelector(`[data-bill-section="${key}"]`)!.textContent;
-    expect(section("room")).toBe("RoomRoom 204₹3,522.86Subtotal₹3,522.86GST 5%₹176.14");
-    expect(section("restaurant")).toBe("RestaurantRestaurant - R-0012 (5%)₹850.00Subtotal₹850.00GST 5%₹42.50");
-    /* Alcohol is under VAT, so it is the Bar's, though the restaurant sold it. */
-    expect(section("bar")).toBe("BarRestaurant - R-0012 (VAT 10%)₹600.00Subtotal₹600.00VAT 10%₹60.00");
-    expect(section("other")).toBe("Other chargesLaundry₹300.00Subtotal₹300.00GST 18%₹54.00");
-    /* 3,699.00 + 892.50 + 660.00 + 354.00: the sections come to the Total. */
-    expect(3699 + 892.5 + 660 + 354).toBe(sectioned.total);
-    expect(screen.getByText("₹5,605.50")).toBeDefined();
-    expect(screen.getByText("₹4,604.50")).toBeDefined();
+  it("lists every line, keeps alcohol under VAT, and keeps the server's totals", () => {
+    render(<BillPrint bill={mixed} />);
+    const line = (words: string) => screen.getByText(words).closest("tr")!.textContent!;
+    expect(line("Restaurant - R-0012 (VAT 10%)")).toContain("VAT 10.00% · 60.00");
+    expect(line("Laundry")).toContain("27.00");
+    /* 3,699.00 + 892.50 + 660.00 + 354.00: the lines come to the Total. */
+    expect(3699 + 892.5 + 660 + 354).toBe(mixed.total);
+    expect(sheet()).toContain("Total₹5,605.50Paid₹1,001.00Balance due₹4,604.50");
   });
 });
 
 /* D27-204 (the owner, 30 September): the first night is posted at check-in,
    the audit posts each later night - so a guest staying on, before tonight's
    audit, is shown tonight's night as "to be posted tonight", counted in the
-   amount due. The posted sections and totals do not change. */
-describe("the printed bill's night to be posted tonight", () => {
+   amount due. The posted lines and totals do not change. */
+describe("the proforma bill's night to be posted tonight", () => {
   const posted = { net: 3522.86, tax: 176.14, total: 3699, rounded: 3699, roundOff: 0, paid: 1001, balance: 2698 };
   const staying = bill({
     lines: [{ date: "2026-09-30", description: "Room 301 · 1 night", category: "room",
@@ -160,22 +162,16 @@ describe("the printed bill's night to be posted tonight", () => {
     tonight: { description: "Room 301 · 1 night", amount: 3522.86, tax: 176.14, rate: 5 },
   });
 
-  it("shows it under Paid and counts it in the amount due", () => {
-    render(<BillPrint bill={staying} title="Interim bill" />);
-    const text = document.querySelector("[data-bill-print]")!.textContent!;
-    expect(text).toContain("Total₹3,699.00Paid₹1,001.00"
-      + "To be posted tonight · Room 301 · 1 night, with GST 5%₹3,699.00Amount due₹6,397.00");
-    expect(text).not.toContain("Outstanding");
-    /* The posted section is the posted night alone. */
-    expect(document.querySelector('[data-bill-section="room"]')!.textContent)
-      .toBe("RoomRoom 301 · 1 night₹3,522.86Subtotal₹3,522.86GST 5%₹176.14");
+  it("shows it under Paid and counts it in the balance due", () => {
+    render(<BillPrint bill={staying} />);
+    expect(sheet()).toContain("Total₹3,699.00Paid₹1,001.00"
+      + "To be posted tonight · Room 301 · 1 night, with GST 5%₹3,699.00Balance due₹6,397.00");
   });
 
-  it("prints as before when no night is to be posted tonight", () => {
+  it("prints paid and the balance due when no night is to be posted tonight", () => {
     const { tonight: _none, ...settled } = staying;
-    render(<BillPrint bill={settled} title="Interim bill" />);
-    const text = document.querySelector("[data-bill-print]")!.textContent!;
-    expect(text).toContain("Total₹3,699.00Paid₹1,001.00Outstanding₹2,698.00");
-    expect(text).not.toContain("To be posted tonight");
+    render(<BillPrint bill={settled} />);
+    expect(sheet()).toContain("Total₹3,699.00Paid₹1,001.00Balance due₹2,698.00");
+    expect(sheet()).not.toContain("To be posted tonight");
   });
 });

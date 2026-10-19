@@ -54,7 +54,7 @@ const facts = {
   recipient: { name: "Ravi Iyer", address: null, gstin: null },
   lines: [{ description: "Room 204 - 1 night", category: "room", date: "2026-10-11", amount: 4000,
             taxRate: 5, taxAmount: 200, sac: "996311" }],
-  stay: { reference: "FH-0007", guest: "Ravi Iyer", roomType: "Deluxe", room: "204", adults: 2, children: 0,
+  stay: { reference: "FH-0007", grCardNo: 421, guest: "Ravi Iyer", roomType: "Deluxe", room: "204", adults: 2, children: 0,
           plan: "CP", nights: 1, arrival: "11 Oct 2026, 14:05", departure: "12 Oct 2026, 10:30",
           source: "Walk-in", checkedInBy: "Meera", checkedOutBy: "Asha" },
   payments: [{ date: "2026-10-12", description: "Received - UPI", amount: 4200 }],
@@ -69,7 +69,7 @@ describe("the e-mailed tax invoice, as printed (D27-343)", () => {
     const text = pdfText(pdf);
     expect(images(pdf), "the hotel's and the group's logos").toBe(2);
     expect(pages(pdf)).toBe(1);
-    for (const words of ["TAX INVOICE", "by Fidato Hotels", "PAN ABCDE1234F", "FH-0007", "Deluxe / 204",
+    for (const words of ["TAX INVOICE", "by Fidato Hotels", "PAN ABCDE1234F", "FH-0007", "G.R. card no", "421", "Deluxe / 204",
       "RECEPTION (C/I)", "Meera", "Guest signature", "Authorised signatory", "FIDATO HOTELS", "1 Office Road, Pune",
       "11 Oct 2026", "Received - UPI"]) {
       expect(text, words).toContain(words);

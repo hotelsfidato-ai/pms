@@ -52,7 +52,7 @@
   <p>When it goes through, a message says <span class="msg">“A3 Test Iyer is in house”</span> (the guest's name) with <span class="msg">“Room 209 · the arrivals count has dropped.”</span> and the panel behind changes: its status reads <span class="ui">In house</span> and its orange button becomes <span class="ui">Settle and check out</span> (A5). <b>The first night's room charge and its GST are posted to the bill at that moment</b>, so <span class="ui">Charged</span> at the foot is already filled in. A complimentary room is charged nothing. A hotel with no GST rule for rooms still checks the guest in, but posts nothing: the night audit, which will not run until that rule is set, posts the night.</p>
 
   <figure class="shot" id="fig-A3-03">
-    <img src="img/A3-T11.png" alt="The panel of a guest just checked in: In house, Settle and check out, room 209 Superior, and Charged ₹4,304, Paid ₹0, Due ₹8,607.90 at the foot">
+    <img src="img/A3-T11.png" alt="The panel of a guest just checked in: In house, Settle and check out, Print registration card, room 209 Superior, and Charged ₹4,304, Paid ₹0, Due ₹8,607.90 at the foot">
     <figcaption><b>Figure A3-03.</b> Checked in: the panel says In house, and the first night is charged.</figcaption>
     <ol class="callouts">
       <li>Settle and check out: the panel now offers the next step</li>
@@ -421,7 +421,51 @@
   </div>
 
   <!-- A3.9 -->
-  <h2 id="a3-9"><span class="n">A3.9</span>Check-in in short</h2>
+  <h2 id="a3-9"><span class="n">A3.9</span>The registration card</h2>
+  <p>The guest's registration card, the hotel's old card in Fidato's design, for the guest to sign. It is printed from a button, never by itself.</p>
+  <ol class="steps">
+    <li>Open the guest's stay panel: In house (A1.5), or the panel of a guest you have just checked in.</li>
+    <li>Click <span class="ui">Print registration card</span>, in the row of buttons at the top. The card opens in a new tab.</li>
+    <li>Click <span class="ui">Print</span>. Give it to the guest to sign, and to initial the box at the foot if they want no offers.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A3-17">
+    <img src="img/A3-T14.png" alt="The stay panel of A3 Test Gokhale, in house in room 307: Print registration card beside the orange Settle and check out">
+    <figcaption><b>Figure A3-17.</b> Print registration card, on the stay panel.</figcaption>
+    <ol class="callouts">
+      <li>Print registration card: the card opens in a new tab</li>
+    </ol>
+  </figure>
+
+  <p>It shows the hotel; the guest's name, address, e-mail and phone; the stay: arrival, departure, room, persons and the tariff a night before GST, with the meal plan; the company that pays, and the travel agent with its voucher number; the ID and the nationality; where a guest from abroad arrived from and goes next (Form III, A3.4); a <span class="ui">Remark</span> box to write in; the hotel's house policies; the signature box and the box for no offers. Anything not known prints a dash.</p>
+  <ul>
+    <li><b>G.R. card no</b>: the card's number, 1, 2, 3 and on for each hotel, given when the guest is checked in. The tax invoice prints it too (A4.11). A guest checked in before 19 October has none, and the card prints a dash.</li>
+    <li>An Aadhaar prints as its last four digits only, for example <span class="msg">“Aadhaar · XXXX XXXX 5674”</span>. A passport or any other ID prints whole.</li>
+    <li>The house policies are the hotel's own lines, the same ones the booking voucher prints (Settings › Policies, A17.4).</li>
+  </ul>
+
+  <figure class="shot" id="fig-A3-18">
+    <img src="img/A3-P1.png" alt="A printed registration card for A3 Test Gokhale: 5 Elements Akkalkot, REGISTRATION CARD with G.R. card no 1 and the booking's reference behind the orange bar, the hotel's address, phone, e-mail and GSTIN; boxes for the name, the G.R. card no and booking no, the address, e-mail and phone, the arrival, room 307 Deluxe, departure, 2 adults, the tariff ₹3,699.00 a night before GST (CP), the billing company and the travel agent with voucher no (dashes), Aadhaar XXXX XXXX 5674, nationality India, arriving from and next destination (dashes), an empty Remark box, four house policies, the guest signature box, the box to initial for no offers, and Printed on at the foot">
+    <figcaption><b>Figure A3-18.</b> The printed registration card (a made-up guest on the demo, whose business date is behind the calendar: the arrival is the moment of check-in).</figcaption>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>The <span class="ui">Remark</span> box is left blank, to write in. A booking's notes can be the hotel's own, so they are never printed on it.</li>
+      <li>Printing it changes nothing. Print it again whenever it is needed.</li>
+      <li>The button is for the people who may read guests' IDs: the owner, an Admin, the GM, the hotel manager and reception.</li>
+      <li>A test hotel's card is stamped <span class="msg">“TEST · NOT VALID”</span> and carries no GSTIN.</li>
+    </ul>
+  </div>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The card as the old system printed it, numbered, with Aadhaar as its last four digits until the lawyer answers (<span class="d">D25-37</span>), printed from a button: <span class="d">D27-344</span>. The numbers start at 1 and only a check-in from 19 October gets one; the house policies over the signature; the Remark left blank: <span class="d">D27-345</span>. An Aadhaar on every screen is its last four digits: <span class="d">D21-18</span>.</p>
+  </div>
+
+  <!-- A3.10 -->
+  <h2 id="a3-10"><span class="n">A3.10</span>Check-in in short</h2>
   <table>
     <thead><tr><th style="width:30%">When</th><th>Do</th><th style="width:12%">Section</th></tr></thead>
     <tbody>
@@ -434,6 +478,7 @@
       <tr><td>An advance is owed</td><td>Take it before check-in. A booking-site guest who pays here: untick Prepaid on the booking site.</td><td>A3.6</td></tr>
       <tr><td>A guest is early</td><td>Say why the room is given early. Before the booked day: Check in, then Confirm.</td><td>A3.7</td></tr>
       <tr><td>The guest sent their ID online</td><td>Online check-in: Confirm against the ID. Check-in then asks nothing more.</td><td>A3.8</td></tr>
+      <tr><td>The guest is to sign the card</td><td>The stay panel, Print registration card, then Print.</td><td>A3.9</td></tr>
       <tr><td>Done</td><td>The guest is In house and the first night is on the bill. Next: the bill (A4), and check-out (A5).</td><td>A3.1</td></tr>
     </tbody>
   </table>

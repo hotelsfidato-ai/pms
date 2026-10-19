@@ -1,4 +1,5 @@
 import { api, ApiError } from "@/lib/api";
+import type { InvoiceDetail } from "./billing";
 
 /* THE BILL AS IT STANDS (D21-10) — what the desk prints and the guest's page
    shows. ONE definition, on the server: `app.stay_bill` (migration 123). This
@@ -20,6 +21,8 @@ export interface StayBillLine {
   source?: string | null;
   billTo: string;
   company: string | null;
+  /** Its kind's SAC (D27-344); null: a dash. The desk's bill only. */
+  sac?: string | null;
 }
 
 export interface StayBill {
@@ -31,7 +34,13 @@ export interface StayBill {
     phone: string | null;
     /** Null when the hotel has not set one — printed as a dash, never made up. */
     gstin: string | null;
+    /** The desk's bill only (D27-344): how to reach the hotel, its PAN and FSSAI number. */
+    email?: string | null; website?: string | null; pan?: string | null; fssai?: string | null;
   };
+  /** The stay as the tax invoice shows it (D27-344); the desk's bill only. */
+  details?: InvoiceDetail["stay"];
+  /** Money received on the stay's bills (D27-344); the desk's bill only. */
+  payments?: InvoiceDetail["payments"];
   stay: {
     reference: string;
     guest: string;

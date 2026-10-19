@@ -5,7 +5,7 @@ import {
   channelFor, claimTurn, dueFromDatabase, linkFromDatabase, messageFor, withVoucher, KIND, LIMITS,
   NO_VOUCHER, type Due,
 } from "./jobs.ts";
-import { voucherFile } from "./voucherDocument.ts";
+import { voucherFile, voucherPdf } from "./voucherDocument.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    SEND VOUCHER - the booking confirmation, now, from the desk (D27-35)
@@ -200,5 +200,57 @@ voucher.get("/:code/stays/:id/voucher.pdf", async (c) => {
   return c.body(file.bytes, 200, {
     "content-type": file.contentType,
     "content-disposition": `inline; filename="${file.name}"`,
+  });
+});
+
+/* A SAMPLE VOUCHER (the owner's D27-344, D27-348): Settings › Documents
+   prints it to see the look and test the printer. The hotel's own name,
+   address, times, house policies and room type, its own GST rule on the
+   room; a made-up guest, stay and figures, marked SAMPLE · NOT VALID and
+   with no GSTIN. Nothing is booked, kept or sent. */
+voucher.get("/:code/documents/sample-voucher.pdf", async (c) => {
+  const bytes = await withSession(c.get("subject"), async (client) => {
+    const { rows } = await client.query<{
+      name: string; address: string | null; city: string | null; state: string | null;
+      phone: string | null; email: string | null; check_in: string | null; check_out: string | null;
+      policies: string[] | null; today: string; arrive: string; leave: string;
+      room_type: string | null; gst: string | null;
+    }>(
+      `select h.name, nullif(concat_ws(', ', h.address_line, h.address_line_2), '') as address,
+              h.city, h.state, h.phone, h.email,
+              to_char(h.check_in_time, 'HH24:MI') as check_in, to_char(h.check_out_time, 'HH24:MI') as check_out,
+              h.house_policies as policies,
+              to_char(h.business_date, 'YYYY-MM-DD') as today,
+              to_char(h.business_date + 7, 'YYYY-MM-DD') as arrive,
+              to_char(h.business_date + 9, 'YYYY-MM-DD') as leave,
+              (select rt.name from room_types rt where rt.hotel_id = h.id order by rt.name limit 1) as room_type,
+              app.gst_rate_or_null(h.id, 'room', 3000)::text as gst
+         from hotels h where h.code = $1`,
+      [c.req.param("code").toUpperCase()]);
+    const h = rows[0];
+    if (!h) return null;
+    return voucherPdf({
+      reference: "SAMPLE", bookedOn: h.today, checkIn: h.arrive, checkOut: h.leave, nights: 2,
+      hotel: { name: h.name, address: h.address, city: h.city, state: h.state, phone: h.phone, email: h.email,
+               gstin: null, checkInTime: h.check_in, checkOutTime: h.check_out },
+      groupName: null, logoPng: null,
+      guest: { name: "A. Sample Guest", email: "guest@example.com", phone: null },
+      company: null,
+      rooms: [{ roomType: h.room_type ?? "Room", adults: 2, children: 0, nights: 2, mealPlan: "CP · Room + breakfast",
+                rate: 3000, complimentary: false, gstRate: h.gst === null ? null : Number(h.gst) }],
+      terms: { name: null, freeUntilHours: null, cancelBasis: null, cancelPercent: null, cancelAmount: null,
+               noShowBasis: null, noShowPercent: null, noShowAmount: null },
+      confirmedBy: "Sample", confirmedAt: null,
+      payment: { received: 1000, billTo: "guest" },
+      housePolicies: h.policies ?? [],
+      arrivalTime: "14:00", specialRequest: "A quiet room, away from the lift",
+      extras: [{ name: "Airport pickup", quantity: 1, rate: null, gstRate: null }],
+      sample: true,
+    });
+  });
+  if (!bytes) return c.json({ error: "No such property." }, 404);
+  return c.body(bytes, 200, {
+    "content-type": "application/pdf",
+    "content-disposition": `inline; filename="Sample-voucher.pdf"`,
   });
 });

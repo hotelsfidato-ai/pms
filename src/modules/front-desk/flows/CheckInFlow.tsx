@@ -519,7 +519,7 @@ function Explained({ title, children }: { title: string; children: React.ReactNo
 }
 
 const cap = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
-const ID_WORDS: Record<string, string> = {
+export const ID_WORDS: Record<string, string> = {
   aadhaar: "Aadhaar", passport: "Passport", driving_licence: "Driving licence", voter: "Voter ID", other: "ID",
 };
 const idWord = (t: string) => ID_WORDS[t] ?? t;

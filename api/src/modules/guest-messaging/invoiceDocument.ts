@@ -207,6 +207,8 @@ export async function invoicePdf(given: InvoiceFacts, test = false, brand: Invoi
     { size: 11.5, bold: true, color: test ? ORANGE : INK, width: 141 });
   ty += text(f.number ?? "-", tx + 9, ty + 1, { size: 8, color: GREY, width: 141 }) + 1;
   ty += text(f.issuedAt ?? "-", tx + 9, ty, { size: 8, color: GREY, width: 141 });
+  /* The guest's copy (D27-344; CGST Rule 48). */
+  ty += text("ORIGINAL FOR RECIPIENT", tx + 9, ty + 2, { size: 6.2, color: GREY, bold: true, width: 141 }) + 2;
   pdf.rect(tx, titleTop, 3, ty - titleTop).fill(ORANGE);
   y = Math.max(ly, ty) + 8;
   pdf.rect(M, y, W, 2.2).fill(ORANGE);
@@ -242,7 +244,7 @@ export async function invoicePdf(given: InvoiceFacts, test = false, brand: Invoi
   const st = f.stay ?? null;
   const hasFood = f.lines.some((l) => FOOD.includes(l.category));
   const left: [string, string][] = [
-    ...(st ? [["Booking ref", st.reference], ["Guest name", st.guest]] as [string, string][] : []),
+    ...(st ? [["Booking ref", st.reference], ["G.R. card no", st.grCardNo == null ? "-" : String(st.grCardNo)], ["Guest name", st.guest]] as [string, string][] : []),
     ["Bill to", f.recipient.name ?? "-"],
     ...(f.recipient.address ? [["Bill to address", f.recipient.address]] as [string, string][] : []),
     ...(test ? [] : [["Bill to GSTIN", f.recipient.gstin ?? "not registered"]] as [string, string][]),

@@ -50,6 +50,8 @@ interface HotelRow {
   pos_round_off: "off" | "manual" | "automatic";
   kpi_day_use_half: boolean;
   kpi_comp_as_sold: boolean;
+  invoice_at_checkout: string;
+  invoice_copies: number;
   holidays: Array<{ day: string; name: string; colour: string | null }>;
 }
 
@@ -102,6 +104,8 @@ hotels.get("/", async (c) => {
               default_guarantee, default_bill_to, required_booking_fields,
               hk_dirty_after_move, hk_dirty_after_unblock, hk_stayover_dirty_at_audit,
               id_types_off, status_colours, pos_round_off, kpi_day_use_half, kpi_comp_as_sold,
+              /* The tax invoice at check-out (229, D27-344). */
+              invoice_at_checkout, invoice_copies,
               /* Shaded like a weekend on the Calendar and Rates (192). */
               (select coalesce(json_agg(json_build_object(
                         'day', to_char(hh.day, 'YYYY-MM-DD'), 'name', hh.name, 'colour', hh.colour)
@@ -152,6 +156,8 @@ hotels.get("/", async (c) => {
           posRoundOff: h.pos_round_off,
           kpiDayUseHalf: h.kpi_day_use_half,
           kpiCompAsSold: h.kpi_comp_as_sold,
+          invoiceAtCheckout: h.invoice_at_checkout,
+          invoiceCopies: h.invoice_copies,
           holidays: h.holidays,
         },
       })),

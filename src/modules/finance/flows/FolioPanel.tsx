@@ -108,7 +108,7 @@ export function FolioPanel({
   /* D24-18: each act only for a role the server's gate lets do it (roleGate,
      from the one matrix): a charge or a second bill is invoice create, a
      payment payment create, a reversal or a move invoice edit, the check-out
-     reservation edit. The interim bill is a read the server does not gate:
+     reservation edit. The proforma bill is a read the server does not gate:
      whoever may see bills, invoice view (the owner's D25-29). */
   const role = useRole();
   const mayCharge = can(role, "create", "invoice");
@@ -243,7 +243,7 @@ export function FolioPanel({
       {/* Once the guest has left, the tax invoice where Check out was (D27-341). */}
       {gone && mayPrint && (
         <div className="pt-4 border-t border-grey-200">
-          <TaxInvoiceStep hotelId={hotelId} stayId={stay.id} mayIssue={mayCharge} />
+          <TaxInvoiceStep hotelId={hotelId} stayId={stay.id} mayIssue={mayCharge} auto={left} />
         </div>
       )}
 
@@ -1448,7 +1448,8 @@ export function SettleDialog({
    made-up GSTIN and a fixed 2.5% printed on every bill, and counted a
    reversing line while leaving out the line it reversed (21 September).
 
-   D22-7: it is the "Interim bill", as on the guest's page, before check-out
+   D22-7: it was the "Interim bill"; the owner's D27-344 made it the "Proforma
+   bill", drawn as the tax invoice is, as on the guest's page, before check-out
    and after (the owner, 24 September): it carries no invoice number, and
    "Tax Invoice" read as the final one. The numbered tax invoice is issued
    on Invoices. The button says the same words (D24-25). */
@@ -1466,10 +1467,10 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm">
           <Printer className="size-4" />
-          Interim bill
+          Proforma bill
         </Button>
       </DialogTrigger>
-      <DialogContent title="Interim bill" description="Print preview">
+      <DialogContent title="Proforma bill" description="Print preview" size="xl">
         {/* QA FI-8: a Print, as the invoice and the restaurant bill have. The
             print is its own page, so the screen behind stays off the paper. */}
         <div className="flex justify-end mb-3">
@@ -1480,7 +1481,7 @@ function InvoiceDialog({ hotelId, stayId }: { hotelId: string; stayId: string })
           </Button>
         </div>
         {bill.data ? (
-          <BillPrint bill={bill.data} title="Interim bill" group={group} />
+          <BillPrint bill={bill.data} group={group} />
         ) : bill.isError ? (
           <p className="text-sm text-brand-red-700">The bill could not be read. Try again.</p>
         ) : bill.isFetched ? (

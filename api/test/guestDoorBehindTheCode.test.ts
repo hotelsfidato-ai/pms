@@ -760,9 +760,16 @@ describe("the guest's bill", () => {
     const guestBill = (await theirs.json()) as { stay: { reference: string }; balance: number };
     /* `nightsToCome` is the desk's Bill-tab count (FIN-24, 1 October), added
        by the staff route beside the bill; it is not part of the bill. */
-    const { nightsToCome, ...desksBill } = (await desks.json()) as { nightsToCome?: number };
+    const { nightsToCome, details, payments, ...desksBill } =
+      (await desks.json()) as { nightsToCome?: number; details?: unknown; payments?: unknown };
     expect(typeof nightsToCome).toBe("number");
-    expect(guestBill).toEqual(desksBill);
+    /* Since D27-344 the desk's proforma bill also prints the stay's facts,
+       the payments, the hotel's contacts and each line's HSN/SAC, read beside
+       the bill; every figure and line is still the one definition's. */
+    expect(details).toBeTruthy();
+    expect(Array.isArray(payments)).toBe(true);
+    expect(desksBill).toMatchObject(guestBill as object);
+    expect(Object.keys(desksBill).sort()).toEqual(Object.keys(guestBill).sort());
     expect(guestBill.stay.reference).toBeTruthy();
     expect(typeof guestBill.balance).toBe("number");
   });

@@ -1,4 +1,4 @@
-import { Building2, Images, ScrollText, Sparkles, Wifi } from "lucide-react";
+import { Building2, FileText, Images, ScrollText, Sparkles, Wifi } from "lucide-react";
 import type { SettingsPage } from "@/components/app/settingsConsole";
 
 /* The property's pages in the Settings console (phase 2; D27-249, D27-257).
@@ -19,4 +19,9 @@ export const settingsPages: SettingsPage[] = [
   { group: "property", slug: "policies", label: "Policies", icon: ScrollText, order: 50,
     keywords: ["house policies", "parking", "children", "child age", "terms"],
     load: () => import("./pages/property/Policies") },
+  /* D27-348: each document, a sample to print, and where it is set. */
+  { group: "property", slug: "documents", label: "Documents", icon: FileText, order: 60,
+    keywords: ["tax invoice", "proforma bill", "registration card", "voucher", "restaurant bill", "print a sample",
+               "printer", "copies"],
+    load: () => import("./pages/property/Documents") },
 ];

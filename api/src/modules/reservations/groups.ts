@@ -369,6 +369,8 @@ groups.post("/:code/bookings", async (c) => {
     title?: string; nationality?: string; address?: BookingAddress;
     /* D27-163: the one page's Notes box and the walk-in's tick. */
     notes?: string; isSingleLady?: boolean;
+    /* D27-347: the guest's special request, for the voucher. */
+    specialRequest?: string;
     /* D27-170: the lead's campaign, from "Book this lead". */
     campaign?: string;
   };
@@ -427,6 +429,7 @@ groups.post("/:code/bookings", async (c) => {
     ...(typeof input.nationality === "string" ? { nationality: input.nationality } : {}),
     ...(input.address && typeof input.address === "object" ? { address: input.address } : {}),
     ...(typeof input.notes === "string" ? { notes: input.notes } : {}),
+    ...(typeof input.specialRequest === "string" ? { specialRequest: input.specialRequest } : {}),
     isSingleLady: input.isSingleLady === true,
     ...(typeof input.campaign === "string" ? { campaign: input.campaign } : {}),
   });

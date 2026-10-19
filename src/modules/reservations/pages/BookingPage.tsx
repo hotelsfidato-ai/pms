@@ -194,6 +194,7 @@ export default function BookingPage() {
   const [discountReason, setDiscountReason] = useState("");
   const [promotionId, setPromotionId] = useState("");
   const [notes, setNotes] = useState("");
+  const [specialRequest, setSpecialRequest] = useState("");
   const [advance, setAdvance] = useState("");
   const [advanceBy, setAdvanceBy] = useState(rules?.defaultPaymentMethod ?? "Cash");
   const [earlyReason, setEarlyReason] = useState("");
@@ -562,6 +563,7 @@ export default function BookingPage() {
         pincode: pincode.trim(), country: country.trim(),
       },
       ...(show.notes && notes.trim() ? { notes: notes.trim() } : {}),
+      ...(specialRequest.trim() ? { specialRequest: specialRequest.trim() } : {}),
       ...(singleLady ? { isSingleLady: true } : {}),
       ...(campaign ? { campaign } : {}),
       lines: lines.map((l, i) => ({
@@ -1046,9 +1048,20 @@ export default function BookingPage() {
             </Fold>
           )}
 
+          {/* D27-347: the guest's own request, printed on the voucher; Notes
+              stay the hotel's own. */}
+          <Fold title="Special request">
+            <Field label="The guest's special request" hint="Printed on the booking voucher the guest receives.">
+              {(f) => (
+                <Textarea {...fieldProps(f)} value={specialRequest} rows={2} maxLength={500}
+                  onChange={(e) => setSpecialRequest(e.target.value)} className="text-base" data-special-request />
+              )}
+            </Field>
+          </Fold>
+
           {show.notes && (
             <Fold title="Notes">
-              <Field label="Notes on the booking">
+              <Field label="Notes on the booking" hint="The hotel's own. Never on the voucher.">
                 {(f) => (
                   <Textarea {...fieldProps(f)} value={notes} rows={3}
                     onChange={(e) => setNotes(e.target.value)} className="text-base" />

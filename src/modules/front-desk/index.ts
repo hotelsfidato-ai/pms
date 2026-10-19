@@ -14,6 +14,9 @@ export { expressCheckIn } from "./data/operations";
 export type { Posting } from "./data/operations";
 export { fetchStays, getHouseNow, getStay, isCancelledOrVoid, listArrivals, listDepartures, listInHouse, listStays } from "./data/stays";
 export type { HouseNow, HouseNowRoom } from "./data/stays";
+/* D27-348: Settings › Documents draws a sample registration card. */
+export { RegistrationCardSheet } from "./pages/RegistrationCard";
+export type { RegistrationCard } from "./data/stays";
 export { getStayView } from "./data/stayview";
 export type { ChartRoom } from "./data/stayview";
 export { LateCheckOutFlow } from "./flows/LateCheckOutFlow";

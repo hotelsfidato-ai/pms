@@ -50,6 +50,34 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-19/20 · Guest documents like the old system's (the owner's D27-344 to D27-348)
+
+**Asked for:** the owner's three samples from the old system (folio invoice, guest registration card, booking confirmation): "follow this … simple … use the Fidato design system"; HSN and SAC; at check-out the bill prints 2 copies, with an option in the software, by default when they check out; the interim bill becomes a proforma bill; a section in Settings to see each document's format and get a sample to test. Then: "start building the plan and ask me questions if you have problems in making a design". Answers on the way: D27-344 (automatic at check-out, numbered cards, Aadhaar last four, the card from a button), D27-345 (numbers from 1, house policies, a blank remark, only new check-ins), D27-346 (the card's button in the panel's top row, both tabs), D27-347 (a Special request box of its own), D27-348 (Print a sample).
+
+**Shipped**
+- **The proforma bill** (the interim bill until now): the tax invoice's own sheet with "Proforma Bill", the booking's reference, the stay's facts, every line with HSN/SAC and taxes, payments, Paid, any night to be posted tonight, Balance due; never "Tax Invoice" - `finance/flows/BillPrint.tsx`, `finance/pages/Invoice.tsx`, `api/src/modules/finance/folios.ts`.
+- **The tax invoice at check-out**, per hotel (229): issued and printed by itself in 2 copies, ORIGINAL FOR RECIPIENT and DUPLICATE FOR SUPPLIER (the default), or offered as a button, or left to Invoices; 1 or 2 copies - Front desk rules; `finance/flows/TaxInvoiceStep.tsx`. The e-mailed PDF says ORIGINAL FOR RECIPIENT.
+- **The guest registration card**: the old card's boxes in Fidato's style, Aadhaar as its last four, the house policies over the signature, a blank Remark, the no-offers box; a **G.R. card no** per hotel given at check-in (230), also on the tax invoice; **Print registration card** in the panel's top row - `front-desk/pages/RegistrationCard.tsx`, `api/src/modules/front-desk/operations.ts`.
+- **The booking voucher** gains the old confirmation's lines (231): arrival time, special request, promotion, the booking's extras (priced or Included, with GST), Paid and Due at check-in. **A Special request box** on New booking; a booking site's or the CRS's request copied in; Notes stay the hotel's own.
+- **HSN/SAC**: a kind's code may be an HSN of 4, 6 or 8 digits (232); the restaurant bill prints its HSN/SAC.
+- **Settings › Property › Documents**: each document's sample (the hotel's header, a made-up guest, SAMPLE · NOT VALID, no GSTIN) and **Print a sample**; the voucher's sample from the server.
+- **Manual**: A2.3, A3.9 (new), A4.9, A4.11, A5.3, A5.9, A8.6, A10, A17.4 (Documents), A17.7, A17.11, B3, B6; pictures retaken: A1-T16, A2-04, A3-T11, A3-T14 (new), A3-P1 (new), the A4 bill run A4-03 to A4-19 (A4-17/18/19 taken for the first time) on a fresh test guest, A5-T2/T3/T4/T6/T7, A5-P1, A17-18/38/39, A17-54 and A17-55 (new); book rebuilt.
+
+**Found**
+- MEMORY 420: a new picture given an id the chapter already used (A3-T11), the old one overwritten; restored from git at once.
+- The picture runs: the bill chips were picked by a CSS position that now meets the VIP toggle first (A4-16 opened the company's ₹0 bill) - picked by their words now; "Move to" is drawn in capitals; walk-ins after midnight are early arrivals (the demo's check-in time was 00:00 for the run, put back).
+
+**Proved**
+- Gates `d27-344-final`, all green, 20 Oct 01:30: web 1,386 (1 skipped), api 2,806, database 1,749 / 232, replay, pg16, types, strip. On the way: `registrationCard.test.ts` 4/4 (a housekeeper refused), the voucher 46/46, `sampleVoucher.test.ts` 2/2, `billSac.test.ts` 2/2, `newBooking.test.ts` 24/24, `documents.test.tsx` 5/5. The first full run (19 Oct) found 4 failing tests, fixed: the ID-reads list (the card added), the guest page's bill (it is the desk's less the print's extra parts), billSac's clean-up, and the book not yet rebuilt.
+- On the demo: check-out issued and printed invoice 5EL/2026-27/00005 by itself (Print again offered); every document one A4 page.
+
+**Left open**
+- The guest's own page shows the proforma bill without the stay's facts, payments and HSN/SAC (it reads through a no-session function); every figure is the desk's. To make it identical needs those reads as definer functions - the owner's call.
+- Two pictures keep the old "Interim bill" in a dimmed background: A5-T1 (needs a guest due out on the demo's date, i.e. night audits on the demo) and A8-14 (the virtual bill printer's slip, one new "HSN/SAC -" line; needs the restaurant run). Film 2 (C:\videos) still says "Interim bill".
+- Not deployed: goes out with the next release, at the owner's word. Migrations 229-232.
+
+**Commits:** this commit
+
 ## 2026-10-17 · the invoice in Fidato's design, both logos, one A4 PDF (D27-343)
 
 **Asked for:** "also in this I need the logos and the [details] of the group … this needs to be one PDF … follow the design system of Fidato"; "combined PDFs, not separate, and for A4". Approved as one package (both logos; the group's office at the foot; Fidato's style with D27-342's content; the e-mailed invoice the same A4 document).

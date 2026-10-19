@@ -189,3 +189,27 @@ export async function listVacant(hotelId: string, date = BUSINESS_DATE) {
   const arriving = new Set((await listArrivals(hotelId, date)).map((s) => s.roomNumber));
   return { taken, arriving };
 }
+
+/** The guest registration card (D27-344): what the server prints on it.
+    Aadhaar arrives as its last four only; `grCardNo` is null for a stay
+    checked in before the cards were numbered. */
+export interface RegistrationCard {
+  hotel: { name: string; address: string | null; city: string | null; state: string | null;
+           phone: string | null; email: string | null; website: string | null; gstin: string | null };
+  housePolicies: string[];
+  grCardNo: number | null;
+  stay: { reference: string; roomType: string; room: string | null; adults: number; children: number;
+          plan: string | null; nights: number; arrival: string; departure: string };
+  /** The agreed rate a night, before GST. */
+  rate: string | null;
+  guest: { title: string | null; name: string; email: string | null; phone: string | null; nationality: string | null;
+           address: { line: string | null; city: string | null; state: string | null; pincode: string | null; country: string | null };
+           idType: string | null; idNumber: string | null };
+  company: { name: string | null; email: string | null; phone: string | null } | null;
+  agent: { name: string | null; email: string | null; phone: string | null; voucher: string | null } | null;
+  arrivedFrom: string | null;
+  nextDestination: string | null;
+}
+
+export const getRegistrationCard = (hotelId: string, stayId: string) =>
+  api<RegistrationCard>(`/api/hotels/${hotelId}/stays/${stayId}/registration-card`);

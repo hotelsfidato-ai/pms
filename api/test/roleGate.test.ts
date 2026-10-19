@@ -737,7 +737,7 @@ describe("the reads that hand out a guest's passport or ID number (D25-38)", () 
       `GET ${H}/form-c`, `GET ${H}/online-checkin`,
       `GET ${H}/online-checkin/id-photos`, `GET ${H}/online-checkin/id-photos/:id`,
       `GET ${H}/online-checkin/messages`,
-      `GET ${H}/reports/c-form`,
+      `GET ${H}/reports/c-form`, `GET ${H}/stays/:id/registration-card`,
     ]);
   });
 

@@ -142,6 +142,9 @@ describe("the voucher's blocks (D27-215)", () => {
   it("prints today's voucher for a hotel with nothing new set, but for the Payment cell", () => {
     expect(voucherBlocks(facts([room()]))).toEqual({
       payment: { value: "Pay at the hotel" },
+      /* D27-344: nothing said, no line; paid and due under the total. */
+      details: [],
+      due: [["Paid", "INR 0.00"], ["Due at check-in", "INR 5,741.92"]],
       hotelRows: [["Phone", "+91 00000 00000"], ["Email", "desk@example.test"]],
       guestRows: [["Email", "asha@example.test"]],
       extras: [""],
@@ -311,10 +314,11 @@ describe("the PDF, with everything the reference has", () => {
     expect(voucherHeight(f)).toBeGreaterThan(297);
     expect(pages(await voucherPdf(f))).toBe(1);
 
-    /* The reference's own four lines, twice over: nine tenths of full size. */
+    /* The reference's own four lines, twice over: 0.88 of full size, 0.87 since
+       Paid and Due at check-in print under the total (D27-344). */
     const eight = { ...f, housePolicies: Array.from({ length: 8 }, () =>
       "Guests must present government photo identity at check in - driving licence, voter ID, Aadhaar or passport.") };
-    expect(297 / voucherHeight(eight)).toBeGreaterThan(0.88);
+    expect(297 / voucherHeight(eight)).toBeGreaterThan(0.87);
     expect(pages(await voucherPdf(eight))).toBe(1);
   });
 
@@ -362,5 +366,57 @@ describe("the hotel's phone in the WhatsApp voucher (D27-281)", () => {
     expect(voucherFields(withPhone("  ", office)).hotelPhone, "blank is none").toBe("+91 20 0000 0000");
     expect(voucherFields(withPhone(null, null)))
       .toMatchObject({ hotelPhone: "-", officePhone: "-" });
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   THE OLD CONFIRMATION'S LINES (the owner's D27-344, D27-347)
+
+   The arrival time, the guest's special request (its own box, never the
+   notes) and the promotion under the stay; the booking's extras, priced or
+   included, with their GST as the desk posts them; paid and due at check-in
+   under the total. No GST rule for an extra, no total.
+   ══════════════════════════════════════════════════════════════════ */
+describe("the old confirmation's lines (D27-344)", () => {
+  it("adds a priced extra with its GST to the total, and an included one as nothing", () => {
+    const f = voucherFigures([room()], [
+      { name: "Airport pickup", quantity: 2, rate: 1000, gstRate: 18 },
+      { name: "Welcome drink", quantity: 1, rate: null, gstRate: null },
+    ]);
+    expect(f.extras.map((e) => [e.amount, e.tax])).toEqual([[2000, 360], [0, 0]]);
+    expect(f.extrasTotal).toBe(2360);
+    expect(f.total).toBe(5741.92 + 2360);
+  });
+
+  it("prints no total where an extra has no GST rule", () => {
+    const f = voucherFigures([room()], [{ name: "Airport pickup", quantity: 1, rate: 1000, gstRate: null }]);
+    expect(f.extrasTotal).toBeNull();
+    expect(f.total, "no GST rule, no total").toBeNull();
+  });
+
+  it("says the arrival time, the special request and the promotion, each only where there is one", () => {
+    expect(voucherBlocks({ ...facts([room()]), arrivalTime: "14:00", specialRequest: "A quiet room, high floor",
+      promotion: { name: "Monsoon offer", percent: 10, amount: null } }).details).toEqual([
+      ["Arrival time", "14:00"], ["Special request", "A quiet room, high floor"], ["Promotion", "Monsoon offer (10% off)"]]);
+    expect(voucherBlocks({ ...facts([room()]), promotion: { name: "Long stay", percent: null, amount: 500 } }).details)
+      .toEqual([["Promotion", "Long stay (INR 500.00 off)"]]);
+    expect(voucherBlocks({ ...facts([room()]), arrivalTime: null, specialRequest: null, promotion: null }).details).toEqual([]);
+  });
+
+  it.each([
+    ["an advance", { received: 2000, billTo: "guest" }, [room()], [["Paid", "INR 2,000.00"], ["Due at check-in", "INR 3,741.92"]]],
+    ["paid more than the total: never a negative due", { received: 9000, billTo: "guest" }, [room()],
+      [["Paid", "INR 9,000.00"], ["Due at check-in", "INR 0.00"]]],
+    ["no total: a dash", { received: 0, billTo: "guest" }, [room({ gstRate: null })], [["Paid", "INR 0.00"], ["Due at check-in", "-"]]],
+    ["a company's booking", { received: 0, billTo: "company" }, [room()], [["Paid", "INR 0.00"], ["Due at check-in", "Bill to company"]]],
+  ])("paid and due at check-in - %s", (_, payment, rooms, due) => {
+    expect(voucherBlocks({ ...facts(rooms), payment }).due).toEqual(due);
+  });
+
+  it("draws them, and the voucher stays one page", async () => {
+    const bytes = await voucherPdf({ ...facts([room()]), arrivalTime: "14:00", specialRequest: "A quiet room",
+      promotion: { name: "Monsoon offer", percent: 10, amount: null },
+      extras: [{ name: "Airport pickup", quantity: 1, rate: 1000, gstRate: 18 }, { name: "Welcome drink", quantity: 1, rate: null, gstRate: null }] });
+    expect((Buffer.from(bytes).toString("latin1").match(/\/Type \/Page\b(?!s)/g) ?? []).length).toBe(1);
   });
 });

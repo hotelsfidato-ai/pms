@@ -200,6 +200,8 @@ export async function createBooking(
     };
     /** D27-163: the one page's Notes box, and the walk-in's tick. */
     notes?: string;
+    /** D27-347: the guest's special request, printed on the voucher. */
+    specialRequest?: string;
     isSingleLady?: boolean;
     /** The lead's campaign, when the booking came from "Book this lead" (D27-170). */
     campaign?: string;

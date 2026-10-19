@@ -1,139 +1,96 @@
-import type { ReactNode } from "react";
 import { moneyPrecise, dateShort } from "@/lib/format";
-import { cn } from "@/lib/cn";
-import { DocMasthead, DocFacts, DocTotals, DOC_TH, DOC_TD } from "@/components/ui";
 import { useIsTestHotel } from "@/lib/testHotel";
 import { TestDocumentMark } from "@/components/app/TestHotel";
 import type { GroupSettings } from "@/modules/admin";
 import type { StayBill } from "../data/bill";
-import { placeLine } from "../place";
-import { billSections } from "../sections";
+import type { InvoiceDetail } from "../data/billing";
+import { InvoiceSheet, type Proforma } from "../pages/Invoice";
 
 /* ══════════════════════════════════════════════════════════════════
-   THE PRINTED BILL — one layout, for the desk and the guest (D21-10)
+   THE PROFORMA BILL — one layout, for the desk and the guest (D21-10;
+   the owner's D27-344: "remove the interim bill, just add it as a proforma
+   bill")
 
-   It draws the bill `app.stay_bill` answers (migration 123) and computes
-   nothing: every figure, every tax row and the rounding arrive from the
-   server. The desk prints it from the Bill tab; the guest's page shows the
-   same component, so "exactly the bill the desk prints" is true by
-   construction, not by keeping two copies in step.
+   The stay's bill as it stands, drawn by the tax invoice's own sheet, so the
+   two read alike: the hotel, the stay, every line with its HSN/SAC and taxes,
+   the payments, the totals, then paid, anything still to be posted tonight,
+   and the balance due. Titled "Proforma Bill" and saying it is not a tax
+   invoice (D22-7's worry, kept). Alcohol keeps its VAT, one row per rate,
+   never CGST and SGST (D21-91).
 
-   ⚠ WHAT IT REPLACED, 21 September: the desk's print carried fixed text —
-   "5 Elements By Fidato Hotels · Akkalkot · GSTIN 27AAAAA0000A1Z5", the
-   demo's made-up number, at every hotel — and "CGST 2.5% / SGST 2.5%"
-   whatever the lines were taxed at. Now the hotel's own name and GSTIN are
-   printed, a dash where no GSTIN is set, and one CGST/SGST pair per rate -
-   and, since 22 September, VAT on alcohol as one line per rate (D21-91).
+   It draws the bill `app.stay_bill` answers and computes nothing but the
+   paise of tonight's night, as before: every figure, tax row and total
+   arrives from the server. The desk's bill also carries the stay, the
+   payments, the hotel's contacts and each line's SAC (D27-344); the guest's
+   own page reads the plain bill, and those parts are simply left out.
    ══════════════════════════════════════════════════════════════════ */
 
-/** "2.5" for 5, "9" for 18: half a GST rate, without trailing zeros. */
-const half = (rate: number) => String(Math.round((rate / 2) * 100) / 100);
+const NO_GROUP: GroupSettings = { name: null, logo: null };
+const cents = (n: number) => Math.round(n * 100);
 
-/** `group`: the group's name and logo from Settings (D27-53). The guest's
-    own page has no sign-in to ask for them, so it prints the hotel's name alone. */
-export function BillPrint({ bill, title, group }: { bill: StayBill; title: string; group?: GroupSettings }) {
+/** The stay's bill as the sheet reads it, and what makes it a proforma. */
+export function proformaOf(bill: StayBill): { data: InvoiceDetail; proforma: Proforma } {
   const { hotel, stay } = bill;
+  const gst = (k: "cgst" | "sgst") => bill.taxes.reduce((n, t) => n + cents(t[k]), 0) / 100;
+  const lines = bill.lines.filter((l) => l.category !== "tax").map((l) => {
+    const vat = (l.scheme ?? "gst") === "vat";
+    return {
+      description: l.description, category: l.category, amount: l.amount, date: l.date,
+      taxRate: vat ? 0 : l.rate ?? 0, taxAmount: vat ? 0 : l.tax, sac: l.sac ?? null,
+      ...(vat ? { vat: { rate: l.rate ?? 0, amount: l.tax } } : {}),
+    };
+  });
   /* TONIGHT'S NIGHT, NOT POSTED YET (the owner's D27-204): shown as "to be
-     posted tonight" and counted in the amount due. The posted sections and
-     totals above it do not change; the figures are the server's, added in
-     paise. */
+     posted tonight" and counted in the amount due; the server's figures,
+     added in paise. */
   const tonight = bill.tonight;
-  const toPost = tonight ? Math.round(tonight.amount * 100) + Math.round(tonight.tax * 100) : 0;
-  /* The place once (QA FI-16): it printed "…413216, Akkalkot, MH". */
-  const place = placeLine(hotel.address, hotel.city, hotel.state);
+  const toPost = tonight ? cents(tonight.amount) + cents(tonight.tax) : 0;
+  const due = (cents(bill.balance) + toPost) / 100;
+  return {
+    data: {
+      number: stay.reference, finYear: "", issuedAt: "", issuedBy: null, businessDate: null,
+      supplier: {
+        name: hotel.name, address: hotel.address, city: hotel.city, state: hotel.state, gstin: hotel.gstin,
+        fssai: hotel.fssai ?? null, phone: hotel.phone, email: hotel.email ?? null,
+        website: hotel.website ?? null, pan: hotel.pan ?? null,
+      },
+      recipient: { name: stay.guest, gstin: null, address: null },
+      placeOfSupply: hotel.state, sacCode: "996311",
+      lines,
+      taxableValue: bill.net,
+      cgst: { rate: null, amount: gst("cgst") }, sgst: { rate: null, amount: gst("sgst") },
+      taxTotal: bill.tax, total: bill.total,
+      creditsInvoiceId: null, creditsNumber: null, reason: null, creditedBy: null, vatBill: null,
+      stay: bill.details ?? null,
+      payments: bill.payments ?? [],
+    },
+    proforma: {
+      when: `${dateShort(stay.checkIn)} – ${dateShort(stay.checkOut)}${stay.room ? ` · room ${stay.room}` : ""}`,
+      vat: bill.vat ?? [],
+      after: [
+        ["Paid", moneyPrecise(bill.paid)],
+        ...(tonight ? [[
+          <span key="t" data-bill-tonight>{`To be posted tonight · ${tonight.description}, with GST ${tonight.rate}%`}</span>,
+          moneyPrecise(toPost / 100),
+        ] as Proforma["after"][number]] : []),
+        [due < 0 ? "Overpaid" : "Balance due", moneyPrecise(Math.abs(due))],
+      ],
+    },
+  };
+}
+
+/** `group`: the group's name and logos from Settings (D27-53). The guest's own
+    page has no sign-in to ask for them, so it prints the hotel's name alone.
+    `title` is kept for its callers; the sheet says "Proforma Bill". */
+export function BillPrint({ bill, group }: { bill: StayBill; title?: string; group?: GroupSettings }) {
   /* A TEST HOTEL'S BILL (the owner's D27-296 (8)): TEST · NOT VALID across
-     its head, and the place without a GSTIN. The hotel in view: the desk's
-     address. The guest's own page has no session, so it is never one. */
+     its head, and no GSTIN. The guest's own page has no session: never one. */
   const test = useIsTestHotel();
-
-  /* The CRS voucher's look (the owner, 27 September): the masthead, a
-     strip of the stay's facts, the lines on hairlines, the totals under a
-     2px rule. */
+  const { data, proforma } = proformaOf(bill);
   return (
-    <div className="bg-white text-ink-700 border border-grey-200 rounded-lg p-5 sm:p-6 [print-color-adjust:exact]" data-bill-print>
+    <div className="bg-white text-ink-700 border border-grey-200 rounded-lg p-5 sm:p-6 print:border-0 print:p-0 [print-color-adjust:exact]" data-bill-print>
       {test && <TestDocumentMark />}
-      <DocMasthead name={hotel.name} group={group?.name} logo={group?.logo} title={title} number={stay.reference} />
-      {test ? (
-        <p className="-mt-2 mb-4 text-xs text-grey-500">{place}</p>
-      ) : (
-        <p className="-mt-2 mb-4 text-xs text-grey-500">
-          {place && <>{place} · </>}GSTIN <span data-bill-gstin>{hotel.gstin ?? "-"}</span>
-        </p>
-      )}
-
-      <DocFacts
-        items={[
-          { label: "Guest", value: stay.guest },
-          { label: "Room", value: stay.room ?? "-" },
-          { label: "Stay", value: `${dateShort(stay.checkIn)} – ${dateShort(stay.checkOut)}` },
-        ]}
-      />
-
-      <table className="w-full mt-5">
-        <thead>
-          <tr>
-            <th className={cn(DOC_TH, "text-left pr-2")}>Description</th>
-            <th className={cn(DOC_TH, "text-right pl-2 w-32")}>Amount</th>
-          </tr>
-        </thead>
-        {/* IN SECTIONS (the owner's D27-200): Room, Restaurant, Bar, other
-            charges - each its lines, its subtotal and its tax, by finance's
-            one rule (sections.ts), the Bill tab's too. The totals below are
-            the server's, unchanged. */}
-        {billSections(bill.lines).map((s) => (
-          <tbody key={s.key} data-bill-section={s.key}>
-            <tr>
-              <th colSpan={2} className={cn(DOC_TH, "text-left pt-4")}>{s.title}</th>
-            </tr>
-            {s.lines.map((line, i) => (
-              <tr key={i}>
-                <td className={cn(DOC_TD, "pr-2")}>{line.description}</td>
-                <td className={cn(DOC_TD, "pl-2 text-right tabular font-semibold")}>{moneyPrecise(line.amount)}</td>
-              </tr>
-            ))}
-            {[{ label: "Subtotal", amount: s.subtotal }, ...s.taxes].map((r) => (
-              <tr key={r.label}>
-                <td className={cn(DOC_TD, "pr-2 text-grey-600")}>{r.label}</td>
-                <td className={cn(DOC_TD, "pl-2 text-right tabular text-grey-600")}>{moneyPrecise(r.amount)}</td>
-              </tr>
-            ))}
-          </tbody>
-        ))}
-      </table>
-
-      <div className="mt-4 flex justify-end">
-        <DocTotals
-          className="w-full sm:w-auto"
-          rows={[
-            ["Net", moneyPrecise(bill.net)],
-            ...bill.taxes.flatMap((t): Array<[ReactNode, string]> => [
-              [<span key="c" data-bill-tax-rate={t.rate}>{`CGST ${half(t.rate)}%`}</span>, moneyPrecise(t.cgst)],
-              [`SGST ${half(t.rate)}%`, moneyPrecise(t.sgst)],
-            ]),
-            /* VAT on alcohol (D21-91): ONE line per rate, never halved into
-               CGST and SGST. `?? []` because a bill drawn from an older
-               answer has no such key. */
-            ...(bill.vat ?? []).map((v): [ReactNode, string] => [
-              <span key="v" data-bill-vat-rate={v.rate}>{`VAT ${v.rate}%`}</span>, moneyPrecise(v.vat),
-            ]),
-          ]}
-          /* THE EXACT FIGURE, NO ROUND-OFF (the owner's D27-126, QA FI-9): it
-             printed Total ₹6,157.00 beside Outstanding ₹6,157.20, while the
-             ledger, the tax invoice and check-out all work to the paisa - a
-             guest who paid the Total still owed ₹0.20 and could not leave.
-             One figure, the one every other document uses. */
-          total={["Total", moneyPrecise(bill.total)]}
-          after={tonight ? [
-            ["Paid", moneyPrecise(bill.paid)],
-            [<span key="t" data-bill-tonight>{`To be posted tonight · ${tonight.description}, with GST ${tonight.rate}%`}</span>,
-              moneyPrecise(toPost / 100)],
-            ["Amount due", moneyPrecise((Math.round(bill.balance * 100) + toPost) / 100)],
-          ] : [
-            ["Paid", moneyPrecise(bill.paid)],
-            ["Outstanding", moneyPrecise(bill.balance)],
-          ]}
-        />
-      </div>
+      <InvoiceSheet data={data} hotelId="" test={test} group={group ?? NO_GROUP} proforma={proforma} />
     </div>
   );
 }

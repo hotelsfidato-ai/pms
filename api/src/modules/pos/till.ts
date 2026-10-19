@@ -1678,6 +1678,7 @@ async function readOrder(client: Client, orderId: string) {
     id: string; order_no: string; outlet: string; outlet_name: string;
     hotel_name: string; hotel_city: string | null; hotel_gstin: string | null;
     hotel_fssai: string | null;
+    sac_codes: string | null;
     table_ref: string | null; status: string; business_date: string;
     payment_method: string | null; opened_by_name: string | null;
     discount_type: string | null; discount_value: string | null;
@@ -1703,6 +1704,14 @@ async function readOrder(client: Client, orderId: string) {
     `select o.id::text, o.order_no, ou.code as outlet, ou.name as outlet_name,
             h.name as hotel_name, h.city as hotel_city, h.gstin as hotel_gstin,
             h.fssai_number as hotel_fssai,
+            /* D27-344: the HSN/SAC of each kind the bill's lines sell under
+               (Settings > Taxes), as the invoice's lines carry theirs. */
+            (select string_agg(distinct ts.sac_code, ', ' order by ts.sac_code)
+               from pos_order_lines l
+               join pos_menu_items i on i.id = l.item_id
+               join pos_menu_categories c on c.id = i.category_id
+               join tax_sac ts on ts.hotel_id = l.hotel_id and ts.kind = c.tax_kind
+              where l.order_id = o.id and not l.voided) as sac_codes,
             o.table_ref, o.status,
             to_char(o.business_date,'YYYY-MM-DD') as business_date,
             o.payment_method,
@@ -1821,6 +1830,8 @@ async function readOrder(client: Client, orderId: string) {
     hotelGstin: h.hotel_gstin,
     /* A16: printed on every restaurant bill; null prints a dash. */
     hotelFssai: h.hotel_fssai,
+    /* D27-344: its HSN/SAC codes; null prints a dash. */
+    hotelSac: h.sac_codes,
     table: h.table_ref,
     status: h.status,
     businessDate: h.business_date,

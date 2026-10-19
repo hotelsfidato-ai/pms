@@ -5,6 +5,7 @@ import StayViewPage from "@/modules/front-desk/pages/StayView";
 import ArrivalsPage from "@/modules/front-desk/pages/Arrivals";
 import InHousePage from "@/modules/front-desk/pages/InHouse";
 import WalkInsPage from "@/modules/front-desk/pages/WalkIns";
+import RegistrationCardPage from "@/modules/front-desk/pages/RegistrationCard";
 
 /* Front desk's screen addresses. Mounted by App.tsx inside the signed-in
    shell. */
@@ -30,6 +31,12 @@ export const routes = (
     <Route
       path="/h/:code/arrivals/upcoming"
       element={<><PropertyScope /><ArrivalsPage /></>}
+    />
+    {/* The guest registration card, printable (D27-344): opened from the
+        stay. It carries the guest's ID, so it asks what Form C asks. */}
+    <Route
+      path="/h/:code/stays/:id/registration-card"
+      element={<RequireAccess path="/h/:code/stays/:id/registration-card" resource="customer"><PropertyScope /><RegistrationCardPage /></RequireAccess>}
     />
     <Route
       path="/h/:code/in-house"

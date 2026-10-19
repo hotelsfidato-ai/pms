@@ -9,6 +9,10 @@ export { TaxRulesCard } from "./flows/TaxRulesCard";
    (app.stay_bill), one printed layout — the desk's and the guest's page's. */
 export { getStayBill, type StayBill, type StayBillLine } from "./data/bill";
 export { BillPrint } from "./flows/BillPrint";
+/* D27-348: Settings › Documents draws a sample tax invoice and proforma bill. */
+export { proformaOf } from "./flows/BillPrint";
+export { InvoiceSheet, useInvoiceCopies } from "./pages/Invoice";
+export type { InvoiceDetail } from "./data/billing";
 /* The address with its town once (QA FI-16), for any screen that prints it. */
 export { placeLine } from "./place";
 /* New booking (Phase 1): the tax a nightly rate will carry, from the tax

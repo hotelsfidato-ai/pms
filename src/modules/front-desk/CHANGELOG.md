@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-19 · Guest documents like the old system's (the owner's D27-344 to D27-348)
+
+**Shipped** **The guest registration card** (D27-344, D27-345, D27-346): `pages/RegistrationCard.tsx` at `/h/:code/stays/:id/registration-card`, the old card's boxes in Fidato's document style (Aadhaar its last four, the house policies over the signature, a blank Remark, the no-offers box); `GET /stays/:id/registration-card` in `api/src/modules/front-desk/operations.ts`, gated as Form C (customer edit); **Print registration card** in the panel's top row on both tabs for a guest in the house or checked out (`flows/StayDrawer.tsx`). Its **G.R. card no** is given at check-in, 1, 2, 3 per hotel, by migration 230's trigger; a stay checked in before has none. **Front desk rules** gains *The tax invoice at check-out* and its copies (229; `settings/FrontDeskPage.tsx`, `lists.ts`). Front door: `RegistrationCardSheet`. **Proved** `registrationCard.test.tsx` 4/4, `refusedControls.test.tsx` 8/8, `api/test/modules/front-desk/registrationCard.test.ts` 4/4, `deskSettings.test.ts`. The root `CHANGELOG.md` has the whole entry and the gate numbers.
+
 ## 2026-10-16 · A blocked room is never given to a guest (the owner's D27-339)
 
 **Asked for:** the hotel's list - GST picks company details, a maintenance block, out of order, and both "minus from inventory" - checked and tested. Found and shown by a test: a room blocked out of order three days ahead was given by Assign room to a booking on those exact days (the inventory already counted 0 sellable). The owner: refuse it everywhere; rename "Out of service" to "Maintenance / out of service"; add to release 6.

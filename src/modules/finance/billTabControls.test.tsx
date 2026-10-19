@@ -15,7 +15,7 @@ import { FolioPanel } from "./flows/FolioPanel";
    Each button asks roleGate's question of its write, from the one matrix:
    Add charge and Split the bill are invoice create, Settle payment create,
    a line's Reverse and Move invoice edit, Check out reservation edit. The
-   Interim bill is a read the server does not gate: whoever may see bills,
+   Proforma bill is a read the server does not gate: whoever may see bills,
    invoice view. Everything but the ledger is left unanswered.
    ══════════════════════════════════════════════════════════════════ */
 
@@ -56,7 +56,7 @@ async function offered(role: Role) {
   await screen.findAllByText("Acme");
   const has = (name: string) => !!screen.queryByRole("button", { name });
   const seen = {
-    charge: has("Add charge"), settle: has("Settle"), interim: has("Interim bill"),
+    charge: has("Add charge"), settle: has("Settle"), interim: has("Proforma bill"),
     split: has("Split the bill"), checkOut: has("Check out"),
     reverse: has("Reverse Two coffees"), move: has("Move Two coffees to another bill"),
   };

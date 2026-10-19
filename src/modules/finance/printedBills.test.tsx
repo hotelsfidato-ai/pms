@@ -16,8 +16,8 @@ import type { InvoiceDetail, VatBillDetail } from "./data/billing";
    THE PRINTED BILLS - QA FI-8, FI-9, FI-16, the print samples, round E
    (28 September)
 
-   The interim bill: one figure, no round-off (D27-126), and a Print. The
-   hotel's place once on the interim bill and the VAT bill, as the tax
+   The proforma bill (the interim bill until D27-344): one figure, no round-off (D27-126), and a Print. The
+   hotel's place once on the proforma bill and the VAT bill, as the tax
    invoice already did. A function's invoice names s.12(3)(c).
    ══════════════════════════════════════════════════════════════════ */
 
@@ -39,9 +39,9 @@ const BILL: StayBill = {
 beforeEach(startSignedIn);
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
-describe("the interim bill (FI-9, FI-16)", () => {
+describe("the proforma bill (FI-9, FI-16)", () => {
   it("prints the exact total, the outstanding's figure, and no round-off", () => {
-    render(<BillPrint bill={BILL} title="Interim bill" />);
+    render(<BillPrint bill={BILL} />);
     const page = document.querySelector("[data-bill-print]")!;
     expect(page.textContent).not.toMatch(/Round off/);
     expect(page.textContent).not.toMatch(/6,157\.00/);
@@ -49,14 +49,18 @@ describe("the interim bill (FI-9, FI-16)", () => {
   });
 
   it("names the town and state once", () => {
-    render(<BillPrint bill={BILL} title="Interim bill" />);
+    render(<BillPrint bill={BILL} />);
     const page = document.querySelector("[data-bill-print]")!;
-    expect(page.textContent).toMatch(/Maharashtra 413216 · GSTIN/);
+    /* The head's address line, as the tax invoice prints it (its foot repeats
+       the address where the group has typed no office: D27-343). */
+    const place = [...page.querySelectorAll("p")].find((p) => p.textContent!.includes("413216"))!.textContent!;
+    expect(place.match(/Akkalkot/g)).toHaveLength(1);
+    expect(place.match(/Maharashtra/g)).toHaveLength(1);
     expect(page.textContent).not.toMatch(/Akkalkot, MH/);
   });
 });
 
-describe("the interim bill's Print (FI-8)", () => {
+describe("the proforma bill's Print (FI-8)", () => {
   it("opens the bill's own page, which prints without the screen behind it", async () => {
     vi.spyOn(apiModule, "api").mockImplementation(async (url: string) =>
       (url.endsWith("/bill") ? BILL : url.endsWith("/postings") ? [] : new Promise(() => {})) as never);
@@ -68,7 +72,7 @@ describe("the interim bill's Print (FI-8)", () => {
         <MemoryRouter><FolioPanel hotelId="5EL" stay={stay} businessDate="2026-08-25" /></MemoryRouter>
       </QueryClientProvider>,
     );
-    fireEvent.click(await screen.findByRole("button", { name: /Interim bill/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Proforma bill/ }));
     const dialog = await screen.findByRole("dialog");
     await within(dialog).findAllByText("₹6,157.20");
     fireEvent.click(within(dialog).getByRole("button", { name: /Print/ }));

@@ -1,6 +1,6 @@
 # Guest documents like the old system's, in Fidato's design — plan (19 October)
 
-**Status: plan only, nothing built.** The owner sent three samples from the old system
+**Status: built 19-20 October** (D27-344 to D27-348; the root CHANGELOG has what shipped and what is left). The owner sent three samples from the old system
 (eZee / Yanolja), kept in `.local/kapil-samples/` (not in git; they hold a real guest's
 details, including an Aadhaar number). Wanted: follow them closely, keep it simple, Fidato's
 design. This takes in the 18 October team-feedback plan's items 4 (HSN/SAC), 6 (2 copies) and

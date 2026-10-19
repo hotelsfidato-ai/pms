@@ -116,6 +116,8 @@ export interface BookingRequest {
   address?: BookingAddress;
   /** The desk's note on the booking (D27-163), kept on reservations.notes. */
   notes?: string;
+  /** The guest's special request (D27-347), printed on the voucher. */
+  specialRequest?: string;
   /** "Woman travelling alone" (D27-163): the walk-in's tick, now the booking's. */
   isSingleLady?: boolean;
   /** The lead's campaign, from "Book this lead" (D27-170): reservations.campaign. */
@@ -440,6 +442,10 @@ export async function makeBooking(
      constraint thrown after the rooms are made (MEMORY 243). */
   if ((request.campaign?.trim().length ?? 0) > 200) {
     return refuse("A campaign is at most 200 characters.");
+  }
+  /* 231 holds it to 500. */
+  if ((request.specialRequest?.trim().length ?? 0) > 500) {
+    return refuse("A special request is at most 500 characters.");
   }
   if (externalRef !== null && (externalRef.trim() === "" || externalRef.length > 100)) {
     return refuse(
@@ -767,7 +773,7 @@ export async function makeBooking(
               ota_reference, ota_line, ota_fingerprint, whatsapp_agreed,
               is_complimentary, expected_departure, sales_person, company_id,
               discount_percent, discount_reason, room_promotion_id, discount_amount,
-              notes, is_single_lady, contract_id, prepaid_on_site,
+              notes, special_request, is_single_lady, contract_id, prepaid_on_site,
               -- WHO MADE IT (RES-14, the owner's D27-239): the person signed
               -- in, or null for a machine's booking. It was never written.
               created_by)
@@ -775,7 +781,7 @@ export async function makeBooking(
                    $12,$13,$14,$15,$16::time,$17,$18::numeric,
                    $19,$20,$21,$22,
                    $23,$24::time,$25,$26,$27::numeric,$28,$29,$35::numeric,
-                   $31,$32,$33::uuid, coalesce($34::boolean, true),
+                   $31,$36,$32,$33::uuid, coalesce($34::boolean, true),
                    app.current_user_id())
            returning id::text`,
           [hotelId, ref[0]!.reference, guestId, line.roomTypeId,
@@ -814,7 +820,8 @@ export async function makeBooking(
            request.tentative === true ? "tentative" : "confirmed",
            text(request.notes), request.isSingleLady === true, contract?.id ?? null,
            typeof request.prepaidOnSite === "boolean" ? request.prepaidOnSite : null,
-           line.complimentary === true || rate === 0 ? null : terms.discount?.amount ?? null],
+           line.complimentary === true || rate === 0 ? null : terms.discount?.amount ?? null,
+           text(request.specialRequest)],
         );
 
         /* A BOOKING NEEDS SOMEWHERE TO PUT MONEY, from the moment it

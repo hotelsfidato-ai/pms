@@ -229,6 +229,8 @@ export type DeskSettings = {
   hkDirtyAfterMove?: boolean; hkDirtyAfterUnblock?: boolean; hkStayoverDirtyAtAudit?: boolean;
   idTypesOff?: string[]; statusColours?: Record<string, string> | null;
   posRoundOff?: string; kpiDayUseHalf?: boolean; kpiCompAsSold?: boolean;
+  /** The tax invoice at check-out (229, D27-344). */
+  invoiceAtCheckout?: string; invoiceCopies?: number;
 };
 
 function settingsProblem(b: DeskSettings): string | null {
@@ -247,6 +249,12 @@ function settingsProblem(b: DeskSettings): string | null {
     return "A colour is like #DF6128, for a booking state.";
   }
   if (!one(b.posRoundOff, ["off", "manual", "automatic"])) return "The restaurant's round-off is Off, Manual or Automatic.";
+  if (!one(b.invoiceAtCheckout, ["print", "offer", "invoices"])) {
+    return "At check-out the tax invoice is printed, offered as a button, or left to Invoices.";
+  }
+  if (b.invoiceCopies !== undefined && b.invoiceCopies !== 1 && b.invoiceCopies !== 2) {
+    return "A tax invoice prints 1 copy or 2.";
+  }
   return null;
 }
 
@@ -269,13 +277,16 @@ lists.patch("/:code/desk-settings", async (c) => {
          status_colours = case when $9::boolean then $10::jsonb else status_colours end,
          pos_round_off              = coalesce($11, pos_round_off),
          kpi_day_use_half           = coalesce($12, kpi_day_use_half),
-         kpi_comp_as_sold           = coalesce($13, kpi_comp_as_sold)
+         kpi_comp_as_sold           = coalesce($13, kpi_comp_as_sold),
+         invoice_at_checkout        = coalesce($14, invoice_at_checkout),
+         invoice_copies             = coalesce($15::smallint, invoice_copies)
        where id = $1`,
       [hotelId, b.defaultGuarantee ?? null, b.defaultBillTo ?? null, b.requiredBookingFields ?? null,
        b.hkDirtyAfterMove ?? null, b.hkDirtyAfterUnblock ?? null, b.hkStayoverDirtyAtAudit ?? null,
        b.idTypesOff ?? null, Object.hasOwn(b, "statusColours"),
        b.statusColours ? JSON.stringify(b.statusColours) : null,
-       b.posRoundOff ?? null, b.kpiDayUseHalf ?? null, b.kpiCompAsSold ?? null]);
+       b.posRoundOff ?? null, b.kpiDayUseHalf ?? null, b.kpiCompAsSold ?? null,
+       b.invoiceAtCheckout ?? null, b.invoiceCopies ?? null]);
     return { ok: true as const };
   });
   if (!out) return c.json({ error: "No such property." }, 404);

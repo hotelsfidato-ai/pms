@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-19 · Guest documents like the old system's (the owner's D27-344 to D27-348)
+
+**Shipped** **A Special request box of its own** on New booking (D27-347), up to 500 characters, printed on the voucher; Notes say they are the hotel's own and never on the voucher (`pages/BookingPage.tsx`, `data/groups.ts`; `book.ts` and `groups.ts` on the server, migration 231). A booking site's or the CRS's request is copied into it as well as the notes (`channel.ts`). **Proved** `onePage.test.tsx` 17/17, `api/test/modules/reservations/newBooking.test.ts` 24/24. The root `CHANGELOG.md` has the whole entry and the gate numbers.
+
 ## 2026-10-15 · All bookings finds a room with a letter (the owner's D27-335) - RES-15
 
 `pages/Reservations.tsx`: the room is lowered like the guest and reference before the search compares it. The whole change: inventory's `CHANGELOG.md`, 15 October.

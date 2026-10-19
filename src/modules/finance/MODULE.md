@@ -43,7 +43,7 @@ a screen (Ctrl K).
 | Invoices (Finance) | `/h/:code/invoices` | `pages/Invoices.tsx` | none |
 | (no menu entry) one invoice or credit note | `/h/:code/invoices/doc/*` | `pages/Invoice.tsx` | — |
 | (no menu entry) one VAT bill for alcohol, or its credit note (D22-44) | `/h/:code/invoices/vat/*` | `pages/VatBill.tsx` | — |
-| (no menu entry) the interim bill, to print (QA FI-8) | `/h/:code/stays/:id/bill` | `pages/InterimBill.tsx` | — |
+| (no menu entry) the proforma bill, to print (QA FI-8; the interim bill until D27-344) | `/h/:code/stays/:id/bill` | `pages/InterimBill.tsx` | — |
 | Payments (Finance) | `/h/:code/payments` | `pages/Billing.tsx` (`PaymentsPage`) | none |
 | Cashiering (Finance) | `/h/:code/cashiering` | `pages/Cashiering.tsx` | Reception |
 | Cash deposits (Finance) | `/h/:code/cash-deposits` | `pages/CashDeposits.tsx` | none (owner, Admin, GM, accountant, Viewer; D27-191) |
@@ -67,8 +67,10 @@ holds guests' Form C (order 60).
   pencil on each charge (Edit: price or words, with a reason) and "Change
   rate" for the stay (D27-157, D27-162). Each line names who posted it ("Night audit" for
   the audit's room charge); its print, and the button that opens it, say
-  "Interim bill", before check-out and after (D22-7, D24-25) - the numbered
-  tax invoice is issued on Invoices. After a write that changes only the
+  "Proforma bill" (the interim bill until D27-344), laid out as the tax
+  invoice, never "Tax Invoice" (D22-7, D24-25) - the numbered tax invoice is
+  issued at check-out by the hotel's setting (D27-344: printed by itself in
+  two copies by default), or on Invoices. After a write that changes only the
   bill it asks again only what shows it - this stay's reads, the bell, the
   Rooms board, Folios - and gives In house and Due out this stay's balance;
   everything else is marked out of date (D27-316 (2), FIN-31). A change of

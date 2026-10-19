@@ -4,7 +4,7 @@ import type { Client } from "../../db.ts";
 import { resolveDate, businessDateFor } from "../../businessDate.ts";
 import { folioFor } from "../../folio.ts";
 import { roomNightsDue, postRoomNight, leavingEarly } from "../night-audit/index.ts";
-import { editFolioCharge } from "../finance/index.ts";
+import { editFolioCharge, stayFacts } from "../finance/index.ts";
 import {
   formIIIRefusal, identityProblem, isForeign, saveIdentity, saveVisit, type Identity, type Visit,
 } from "../guests/index.ts";
@@ -302,6 +302,79 @@ operations.get("/:code/stays/:id/express-check-in", async (c) => {
       : { express: false, advance, bookingSite, prepaidOnSite };
   });
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
+/* THE GUEST REGISTRATION CARD (the owner's D27-344, D27-345): the old
+   system's card in Fidato's design, printed from a button. Its number is
+   given at check-in (230); a stay checked in before then has none. Aadhaar
+   is printed as its last four only, until the lawyer answers (D25-37); any
+   other ID whole, as the clerk compares it with the card in their hand.
+   Above the signature, the hotel's house policies, the voucher's own. */
+const ID_MASK: Record<string, (n: string) => string> = {
+  aadhaar: (n) => `XXXX XXXX ${n.slice(-4)}`,
+};
+
+operations.get("/:code/stays/:id/registration-card", async (c) => {
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelIdFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const stayId = c.req.param("id");
+    const { rows } = await client.query<Record<string, string | number | string[] | null>>(
+      `select r.gr_card_no, r.agreed_rate::text as rate, r.ota_reference,
+              g.title, g.full_name, g.email, g.phone, g.nationality,
+              d.id_type, d.id_number, d.address_line, d.city, d.state, d.pincode, d.country,
+              co.name as company, co.kind as company_kind, co.email as company_email, co.phone as company_phone,
+              bs.name as source_name, bs.kind as source_kind,
+              f3.arrived_from, f3.next_destination,
+              h.name as hotel, concat_ws(', ', h.address_line, h.address_line_2) as hotel_address,
+              h.city as hotel_city, h.state as hotel_state, h.phone as hotel_phone,
+              h.email as hotel_email, h.website as hotel_website, h.gstin as hotel_gstin, h.house_policies
+         from reservations r
+         join guests g on g.id = r.guest_id
+         join hotels h on h.id = r.hotel_id
+         left join guest_documents d on d.guest_id = g.id
+         left join companies co on co.id = r.company_id
+         left join booking_sources bs on bs.id = r.booking_source_id
+         left join form_iii_stays f3 on f3.reservation_id = r.id
+        where r.hotel_id = $1 and r.id = $2`,
+      [hotelId, stayId],
+    );
+    const r = rows[0];
+    const stay = r ? await stayFacts(client, { reservationId: stayId }) : null;
+    if (!r || !stay) return { missing: true as const };
+    const s = (k: string) => (r[k] as string | null) ?? null;
+    const idNumber = s("id_number");
+    const agent = s("company_kind") === "travel_agent"
+      ? { name: s("company"), email: s("company_email"), phone: s("company_phone"), voucher: s("ota_reference") }
+      : s("source_kind") === "ota"
+        ? { name: s("source_name"), email: null, phone: null, voucher: s("ota_reference") }
+        : null;
+    return {
+      hotel: {
+        name: s("hotel")!, address: s("hotel_address") || null, city: s("hotel_city"), state: s("hotel_state"),
+        phone: s("hotel_phone"), email: s("hotel_email"), website: s("hotel_website"),
+        gstin: s("hotel_gstin"),
+      },
+      housePolicies: (r["house_policies"] as string[] | null) ?? [],
+      grCardNo: r["gr_card_no"] === null ? null : Number(r["gr_card_no"]),
+      stay,
+      rate: s("rate"),
+      guest: {
+        title: s("title"), name: s("full_name")!, email: s("email"), phone: s("phone"), nationality: s("nationality"),
+        address: { line: s("address_line"), city: s("city"), state: s("state"), pincode: s("pincode"), country: s("country") },
+        idType: s("id_type"),
+        idNumber: idNumber && (ID_MASK[s("id_type") ?? ""]?.(idNumber) ?? idNumber),
+      },
+      company: s("company_kind") === "corporate"
+        ? { name: s("company"), email: s("company_email"), phone: s("company_phone") } : null,
+      agent,
+      arrivedFrom: s("arrived_from"),
+      nextDestination: s("next_destination"),
+    };
+  });
+  if (body === null) return c.json({ error: "No such property." }, 404);
+  if ("missing" in body) return c.json({ error: "No such stay." }, 404);
+  return c.json(body);
 });
 
 operations.post("/:code/stays/:id/check-in", async (c) => {

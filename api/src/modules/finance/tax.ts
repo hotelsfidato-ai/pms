@@ -242,8 +242,9 @@ inventorySetup.put("/:code/tax/:kind", async (c) => {
   return c.json(result, "ok" in result && result.ok ? 200 : 409);
 });
 
-/** A tax kind's SAC code (D27-258 Q6): six digits, or null to clear it.
-    The codes are the CA's - nothing here suggests one. */
+/** A tax kind's HSN or SAC code (D27-258 Q6; D27-344, 232): 4, 6 or 8
+    digits, or null to clear it. The codes are the CA's - nothing here
+    suggests one. */
 inventorySetup.put("/:code/tax/:kind/sac", async (c) => {
   const kind = c.req.param("kind") as TaxKind;
   if (!TAX_KINDS.includes(kind)) {
@@ -251,8 +252,8 @@ inventorySetup.put("/:code/tax/:kind/sac", async (c) => {
   }
   const input = await c.req.json<{ sacCode?: unknown }>().catch(() => ({}) as { sacCode?: unknown });
   const sac = input.sacCode === null ? null : typeof input.sacCode === "string" ? input.sacCode.trim() : undefined;
-  if (sac === undefined || (sac !== null && !/^\d{6}$/.test(sac))) {
-    return c.json(refuse("A SAC code is six digits, like 996311."), 409);
+  if (sac === undefined || (sac !== null && !/^(\d{4}|\d{6}|\d{8})$/.test(sac))) {
+    return c.json(refuse("An HSN or SAC code is 4, 6 or 8 digits, like 996311."), 409);
   }
   const result = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));

@@ -286,4 +286,20 @@ export const SHOTS = [
       { n: 2, at: "text:Use a different ID", side: "bottom" },
     ],
   },
+
+  /* ── The registration card (D27-344, 19 Oct) ─────────────────────────
+     "A3 Test Gokhale" (made-up: a walk-in booked and checked in to room 307
+     through the local API on 19 Oct, the business date 11 Oct): G.R. card
+     no 1, the first stay checked in after the cards were numbered (230). */
+  {
+    id: "A3-T14", title: "The stay panel: Print registration card", as: "Reception",
+    path: "/h/5EL/in-house", steps: [{ clickIf: "text:Got it" }, { waitFor: "text:A3 Test Gokhale", ms: SLOW }, { settle: true },
+      { click: "text:A3 Test Gokhale" }, { waitFor: "css:[data-registration-card-open]", ms: SLOW }, { wait: 1500 }],
+    marks: [{ n: 1, at: "css:[data-registration-card-open]", side: "bottom" }],
+  },
+  {
+    id: "A3-P1", title: "The printed registration card, A4", as: "Reception", pdf: true,
+    path: "/h/5EL/stays/91745c52-001c-4308-a596-8eea37725f12/registration-card",
+    steps: [{ waitFor: "css:[data-registration-card]", ms: SLOW }, { wait: 2500 }],
+  },
 ];

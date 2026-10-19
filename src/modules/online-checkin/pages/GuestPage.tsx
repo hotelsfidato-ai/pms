@@ -659,7 +659,7 @@ function IdPhotoSection(
    finance's one definition of a bill (`app.stay_bill`, migration 123)
    through the door. Nothing here adds, taxes or rounds.
 
-   Titled "Interim bill", not "Tax Invoice": this is a bill with no invoice
+   Titled "Proforma Bill" (D27-344; "Interim bill" before), not "Tax Invoice": this is a bill with no invoice
    number, before check-out, and a guest reading "Tax Invoice" would take it
    for the final one. Paying online is not in this version (the brief), so
    it says where to pay. */
@@ -681,7 +681,7 @@ function BillSection({ token, onUnlockGone }: { token: string; onUnlockGone: () 
       {bill.data && (
         <>
           <p className={cn(LEAD, "mb-3")}>Pay at the desk before you leave.</p>
-          <BillPrint bill={bill.data} title="Interim bill" />
+          <BillPrint bill={bill.data} />
         </>
       )}
     </section>

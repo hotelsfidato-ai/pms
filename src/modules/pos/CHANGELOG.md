@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-19 · Guest documents like the old system's (the owner's D27-344 to D27-348)
+
+**Shipped** **The restaurant bill prints its HSN/SAC** under the FSSAI line: the code of each kind its lines sell under (Settings › Taxes), a dash until set (`components/BillSlip.tsx`; `hotelSac` from `api/src/modules/pos/till.ts`). `BillSlip`'s `sample` draws Settings › Documents' made-up bill (SAMPLE · NOT VALID, no GSTIN). Front door: `BillSlip`, `Order`. **Proved** the real-bill snapshot (one line added), `api/test/modules/pos/billSac.test.ts` 2/2. The root `CHANGELOG.md` has the whole entry and the gate numbers.
+
 ## 2026-10-15 · A plain restaurant bill, BILL before payment, and a bill that adds up (the owner's D27-334)
 
 **Asked for:** "it needs to be just like a normal restaurant bill which is given to the guest; remove the interim bill from it, as this will be given to the guest before payment." Then three answers: build it as shown, remove the "not a tax invoice" sentence (the owner asks their CA about "Tax Invoice"), the hotel's name in text only.

@@ -85,6 +85,21 @@ export default function FrontDeskPage() {
             label="The night audit sends every room with a guest staying on for its daily clean" />
         </Section>
 
+        {/* D27-344: the tax invoice at check-out, and its copies. */}
+        <Section title="The tax invoice at check-out"
+          why="What Check out does with the guest's tax invoice. Two copies print as ORIGINAL FOR RECIPIENT and DUPLICATE FOR SUPPLIER, as GST asks for a service's invoice.">
+          <div className="flex flex-wrap gap-4" data-invoice-at-checkout>
+            <NativeSelect value={r.invoiceAtCheckout ?? "print"} aria-label="The tax invoice at check-out"
+              className="max-w-sm" onChange={(e) => void save({ invoiceAtCheckout: e.target.value })}>
+              <option value="print">Issue it and print it, by itself</option>
+              <option value="offer">Offer an Issue tax invoice button</option>
+              <option value="invoices">Nothing at check-out: issue it on Invoices</option>
+            </NativeSelect>
+            <Segmented value={String(r.invoiceCopies ?? 2)} onChange={(v) => void save({ invoiceCopies: Number(v) })}
+              options={[{ value: "2", label: "2 copies" }, { value: "1", label: "1 copy" }]} />
+          </div>
+        </Section>
+
         <Section title="The restaurant's round-off"
           why="A restaurant bill paid in cash is always taken to the rupee, as the drawer counts rupees. Room bills and invoices are never rounded.">
           <NativeSelect value={r.posRoundOff} aria-label="The restaurant's round-off" className="max-w-xs"

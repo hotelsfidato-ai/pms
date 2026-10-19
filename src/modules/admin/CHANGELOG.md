@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-19 · Guest documents like the old system's (the owner's D27-344 to D27-348)
+
+**Shipped** **Settings › Property › Documents** (D27-348): one tab per document (tax invoice, proforma bill, registration card, booking voucher, restaurant bill), when it prints and a link to where that is set, and a sample - the real component with the hotel's header and a made-up guest, SAMPLE · NOT VALID, no GSTIN - with **Print a sample** (pick the printer, or Save as PDF); the voucher's sample is the server's PDF (`pages/property/Documents.tsx`, `property.settings.ts`). **Proved** `documents.test.tsx` 5/5. The root `CHANGELOG.md` has the whole entry and the gate numbers.
+
 ## 2026-10-15 · The Roles screen names what the Waiter and the Bar do in the restaurant (the owner's D27-329 (4), POS-35)
 
 **Asked for:** a line or rows under the matrix, in the screen's own style, naming the restaurant rights the Waiter and the Bar hold by name, true to roleGate.

@@ -27,11 +27,15 @@ import { TestDocumentMark } from "@/components/app/TestHotel";
 /** A figure in a column: paise, no rupee sign, as a restaurant bill prints. */
 const fig = (v: number) => moneyPrecise(v).replace("₹", "");
 
-export function BillSlip({ order: o, heading }: { order: Order; heading: BillHeading }) {
+export function BillSlip({ order: o, heading, sample }: {
+  order: Order; heading: BillHeading;
+  /** Settings › Documents' made-up bill: SAMPLE · NOT VALID, no GSTIN (D27-348). */
+  sample?: string;
+}) {
   const live = o.lines.filter((l) => !l.voided);
   /* A TEST HOTEL'S BILL (the owner's D27-296 (8)): TEST · NOT VALID at its
      head and foot, and no GSTIN. A real hotel's paper is unchanged. */
-  const test = useIsTestHotel();
+  const test = useIsTestHotel() || Boolean(sample);
 
   /* CGST and SGST each carry half; SGST takes the odd paisa, so the pair
      adds up to the tax. Supply within the state is never IGST. VAT on
@@ -56,7 +60,7 @@ export function BillSlip({ order: o, heading }: { order: Order; heading: BillHea
   return (
     <article className="mx-auto bg-white text-ink-700 px-3 py-4 text-sm" style={{ maxWidth: "80mm" }}
              data-bill-heading={heading}>
-      {test && <TestDocumentMark slip />}
+      {test && <TestDocumentMark slip {...(sample ? { label: sample } : {})} />}
 
       <header className="text-center">
         <p className="text-lg font-extrabold uppercase tracking-wide">{o.hotelName}</p>
@@ -66,6 +70,8 @@ export function BillSlip({ order: o, heading }: { order: Order; heading: BillHea
           {o.hotelGstin && !test && <span className="tabular">GSTIN {o.hotelGstin} · </span>}
           {/* A16: on every food bill since January 2022; a dash until typed. */}
           <span className="tabular" data-bill-fssai>FSSAI licence {o.hotelFssai ?? "-"}</span>
+          {/* D27-344: the HSN/SAC, as the invoice's lines carry it; a dash until set. */}
+          <span className="block tabular" data-bill-sac>HSN/SAC {o.hotelSac ?? "-"}</span>
         </p>
       </header>
 
@@ -155,7 +161,7 @@ export function BillSlip({ order: o, heading }: { order: Order; heading: BillHea
       </div>
 
       <p className="mt-3 text-center font-semibold">Thank you. Visit again.</p>
-      {test && <TestDocumentMark slip />}
+      {test && <TestDocumentMark slip {...(sample ? { label: sample } : {})} />}
     </article>
   );
 }

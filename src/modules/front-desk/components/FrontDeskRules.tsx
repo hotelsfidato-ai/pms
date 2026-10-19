@@ -35,6 +35,7 @@ const START: DeskRules = {
   hkDirtyAfterMove: true, hkDirtyAfterUnblock: true, hkStayoverDirtyAtAudit: false,
   idTypesOff: [], statusColours: null, posRoundOff: "manual",
   kpiDayUseHalf: false, kpiCompAsSold: true, holidays: [],
+  invoiceAtCheckout: "print", invoiceCopies: 2,
 };
 
 export function FrontDeskRulesCard({ hotelId }: { hotelId: string }) {

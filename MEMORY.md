@@ -6539,6 +6539,17 @@ copy will see of theirs.**
 
 ---
 
+### 420 · MINE: a new picture given an id the chapter already used, and the old picture overwritten (19 October)
+
+Adding the registration card's pictures (D27-344) to `docs/manual/shots/a3.mjs`, I named the panel picture
+A3-T11 by counting from A3-T10, the last entry in the file. The file is not in id order: A3-T11 (a guest just
+checked in, Figure A3-03) was 100 lines up. `shoot.mjs a3 A3-T11` took both, and mine overwrote
+`img/A3-T11.png`. Seen in the run's own output (two lines for one id); the picture was restored from git at once
+and mine renamed A3-T14. **The rule:** before adding a shot, `grep -o "id: \"A3-T[0-9]*" <file>` and take the
+next number free in the whole file and in `docs/manual/img`, never the last one listed.
+
+---
+
 ### 419 · FOUND: a test asked a different question from the rule it tested (17 October)
 
 `invoices.test.ts` "refuses a folio with nothing on it" picked any 5EL booking with *a* bill that had no lines,

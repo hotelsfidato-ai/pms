@@ -39,6 +39,7 @@ a screen (Ctrl K).
 | Calendar (top) | `/h/:code/calendar` | `pages/StayView.tsx` (`view="calendar"`) | Reception |
 | Arrivals → Today (Front desk) | `/h/:code/arrivals` | `pages/Arrivals.tsx` | Reception |
 | Arrivals → Upcoming | `/h/:code/arrivals/upcoming` | `pages/Arrivals.tsx` | Reception |
+| (no menu entry) a guest's registration card, to print (D27-344) | `/h/:code/stays/:id/registration-card` | `pages/RegistrationCard.tsx` | — |
 | In house → In house now | `/h/:code/in-house` | `pages/InHouse.tsx` | Reception |
 | In house → Due out | `/h/:code/in-house/due-out` | `pages/InHouse.tsx` | Reception |
 | Walk-ins | `/h/:code/walk-ins` | `pages/WalkIns.tsx` | Reception |

@@ -262,6 +262,8 @@ export interface Order {
   hotelGstin: string | null;
   /** The hotel's FSSAI licence number (A16), null until typed. */
   hotelFssai?: string | null;
+  /** The HSN/SAC codes of the kinds its lines sell under (D27-344), null until set. */
+  hotelSac?: string | null;
   table: string | null;
   /** `void`: a PAID bill voided by the owner, an administrator or the GM
       (D27-324). It keeps its number and reprints VOID. */

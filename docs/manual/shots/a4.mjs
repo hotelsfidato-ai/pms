@@ -20,7 +20,7 @@
 // for A4 Test Kulkarni. Nothing else is touched.
 // Taken by: CDP_PORT=9342 node docs/manual/tools/shoot.mjs a4 [ids...]
 
-const KULKARNI = "917cf93e-be62-411b-8800-c89f35e70ca8";   // A4 Test Kulkarni, room 305
+const KULKARNI = "a551c684-aaa9-4b75-8f4b-011ca36af514";   // A4 Test Kulkarni, room 305 (made again 20 Oct for D27-344)
 const MORE = "b454d1c4-74d9-49f8-9ec4-38e7491315ac";       // A5 Test More, room 304
 const STAY = `/h/5EL/in-house?res=${KULKARNI}`;
 const TOAST = "css:[role=region] [role=status]";
@@ -31,7 +31,7 @@ const pick = (css, value) => `(() => { const s = document.querySelector(${JSON.s
   s.dispatchEvent(new Event('change', { bubbles: true })); })()`;
 /* The stay panel, open on its Bill tab. */
 const openBill = [
-  { waitFor: "text:FH-5EL-2610-5033", ms: SLOW }, { clickIf: "text:Got it" },
+  { waitFor: "text:FH-5EL-2610-5057", ms: SLOW }, { clickIf: "text:Got it" },
   { click: "text:Settle and check out" }, { waitFor: "css:[data-bill-closing]", ms: SLOW }, { wait: 9000 },
 ];
 const DLG = "css:[role=dialog] [role=dialog], [role=alertdialog]";
@@ -94,7 +94,7 @@ export const SHOTS = [
       { n: 1, at: "text:Total charges", side: "left" },
       { n: 2, at: "text:Add charge", side: "top" },
       { n: 3, at: "text:Settle", side: "top" },
-      { n: 4, at: "text:Interim bill", side: "top" },
+      { n: 4, at: "text:Proforma bill", side: "top" },
       { n: 5, at: "text:Split the bill", side: "top" },
       { n: 6, at: "css:[data-checkout-reason]", side: "left" },
     ],
@@ -244,16 +244,17 @@ export const SHOTS = [
       { scroll: "text:Everything" }, { wait: 500 }],
     marks: [
       { n: 1, at: "text:Everything", side: "bottom" },
-      { n: 2, at: "css:button[aria-pressed]:nth-of-type(2)", side: "bottom" },
+      { n: 2, at: "text:Guest", side: "bottom" },
       { n: 3, at: "text:A4 Test Traders", side: "bottom" },
       { n: 4, at: "label:Move Room 305 · 1 night to another bill", side: "left" },
     ],
   },
   {
     id: "A4-14", title: "Move a line to the other bill", as: "Reception",
-    steps: [{ click: "label:Move Room 305 · 1 night to another bill" }, { waitFor: "text:Move to" }, { wait: 400 }],
+    /* "Move to" is drawn in capitals: the menu is waited for by its item. */
+    steps: [{ click: "label:Move Room 305 · 1 night to another bill" }, { waitFor: "css:[role=menuitem]" }, { wait: 400 }],
     marks: [
-      { n: 1, at: "text:Move to", side: "left" },
+      { n: 1, at: "css:[role=menu]", side: "left" },
       { n: 2, at: "css:[role=menuitem]", side: "left" },
     ],
   },
@@ -288,7 +289,7 @@ export const SHOTS = [
   {
     id: "A4-16", title: "Settle bill: the guest's own bill, in cash", as: "Reception",
     steps: [
-      { click: "css:button[aria-pressed]:nth-of-type(2)" }, { wait: 1500 },
+      { click: "text:Guest" }, { wait: 1500 },
       { click: "text:Settle" }, { waitFor: "text:Which bill", ms: 15000 },
       { eval: `(() => { const s = [...document.querySelectorAll('[role=dialog] select')][1];
           Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'Cash');
@@ -304,36 +305,39 @@ export const SHOTS = [
     ],
   },
   {
+    id: "A4-16b", title: "Take it: the guest pays their own bill in cash", as: "Reception", noShot: true,
+    steps: [{ click: "text:Take payment" }, { waitFor: TOAST, ms: 15000 }, { wait: 3000 }],
+  },
+  /* The stay opened again: the message after Take payment is gone before the
+     page is drawn (20 Oct), so the picture is the bill itself. */
+  {
     id: "A4-17", title: "Paid: both bills settled", as: "Reception",
-    steps: [{ click: "text:Take payment" }, { waitFor: TOAST, ms: 15000 }, { wait: 3000 },
-      { click: "text:Everything" }, { wait: 2000 }, { scroll: "text:PAYMENTS RECEIVED" }, { wait: 500 }],
+    path: STAY, steps: [...openBill, { click: "text:Everything" }, { wait: 2000 }, { scroll: "text:PAYMENTS RECEIVED" }, { wait: 500 }],
     marks: [
       { n: 1, at: "text:PAYMENTS RECEIVED", side: "left" },
       { n: 2, at: "text:Received - Cash", side: "left" },
       { n: 3, at: "text:Transferred to city ledger", side: "left" },
-      { n: 4, at: TOAST, side: "left" },
     ],
   },
 
-  /* ── The interim bill ───────────────────────────────────────────── */
+  /* ── The proforma bill (D27-344; the interim bill until then) ───────── */
   {
-    id: "A4-18", title: "Interim bill: the print preview", as: "Reception",
-    path: STAY, steps: [...openBill, { click: "text:Interim bill" }, { waitFor: "css:[data-bill-print]", ms: 20000 }, { wait: 1500 }],
+    id: "A4-18", title: "Proforma bill: the print preview", as: "Reception",
+    path: STAY, steps: [...openBill, { click: "text:Proforma bill" }, { waitFor: "css:[data-bill-print] [data-invoice-sheet]", ms: 20000 }, { wait: 1500 }],
     marks: [
       { n: 1, at: "text:Print", nth: 0, side: "left" },
-      { n: 2, at: "css:[data-bill-print] h1, [data-bill-print] h2", side: "bottom" },
-      { n: 3, at: "text:Guest", nth: 0, side: "bottom" },
+      { n: 2, at: "css:[data-bill-print] header .border-l-4", side: "bottom" },
+      { n: 3, at: "text:Booking ref", nth: 0, side: "left" },
     ],
   },
   {
-    id: "A4-19", title: "The interim bill, printed", as: "Reception",
-    path: `/h/5EL/stays/${KULKARNI}/bill`, steps: [{ waitFor: "css:[data-bill-print]", ms: SLOW }, { wait: 1500 },
-      { scroll: "text:Outstanding" }, { wait: 500 }],
+    id: "A4-19", title: "The proforma bill, printed", as: "Reception",
+    path: `/h/5EL/stays/${KULKARNI}/bill`, steps: [{ waitFor: "css:[data-bill-print] [data-invoice-sheet]", ms: SLOW }, { wait: 1500 },
+      { scroll: "text:Balance due" }, { wait: 500 }],
     marks: [
-      { n: 1, at: "text:ROOM", nth: 0, side: "left" },
-      { n: 2, at: "text:Net", side: "left" },
-      { n: 3, at: "text:Paid", side: "left" },
-      { n: 4, at: "text:Outstanding", side: "left" },
+      { n: 1, at: "text:Received - Cash", nth: 0, side: "left" },
+      { n: 2, at: "text:Paid", side: "left" },
+      { n: 3, at: "text:Balance due", side: "left" },
     ],
   },
 ];

@@ -8,7 +8,8 @@ import { getStayBill } from "../data/bill";
 import { BillPrint } from "../flows/BillPrint";
 
 /* ══════════════════════════════════════════════════════════════════
-   THE INTERIM BILL, ON PAPER (QA FI-8, 28 September)
+   THE PROFORMA BILL, ON PAPER (QA FI-8, 28 September; the interim bill
+   until the owner's D27-344)
 
    The Bill tab's "Interim bill" was a preview with only Close: the desk
    could not print it. A dialog prints the screen behind it too, so the
@@ -22,7 +23,7 @@ export default function InterimBillPage() {
   const { code = "", id = "" } = useParams();
   const bill = useQuery({ queryKey: ["stay-bill", code, id], queryFn: () => getStayBill(code, id) });
   const group = useGroupSettings(code);
-  useDocumentTitle("Interim bill");
+  useDocumentTitle("Proforma bill");
 
   return (
     <DocPage
@@ -34,7 +35,7 @@ export default function InterimBillPage() {
       }
     >
       {bill.data ? (
-        <BillPrint bill={bill.data} title="Interim bill" group={group} />
+        <BillPrint bill={bill.data} group={group} />
       ) : bill.isError ? (
         <p className="text-sm text-brand-red-700">The bill could not be read. Try again.</p>
       ) : bill.isFetched ? (

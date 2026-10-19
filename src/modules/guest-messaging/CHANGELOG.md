@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-19 · Guest documents like the old system's (the owner's D27-344 to D27-348)
+
+**Shipped** **The voucher prints what the old confirmation did** (231): the arrival time, the guest's special request (its own box, never the notes) and the room promotion under the stay; the booking's extras, priced or "Included", with the room rule's GST as the desk posts them; "Extras, with GST" in the totals; **Paid** and **Due at check-in** under the grand total (`voucherDocument.ts`: `voucherFigures`' extras, `voucherBlocks`' `details` and `due`, `app.voucher_more`). **A sample voucher** for Settings › Documents, SAMPLE · NOT VALID, nothing sent (`voucher.ts` GET `/documents/sample-voucher.pdf`, gated to the settings' people). The e-mailed invoice says ORIGINAL FOR RECIPIENT and prints the G.R. card no (`invoiceDocument.ts`). **Proved** `voucherDocument.test.ts` 46/46, `invoicePdf.test.ts` 2/2, `sampleVoucher.test.ts` 2/2. The root `CHANGELOG.md` has the whole entry and the gate numbers.
+
 ## 2026-10-17 · The e-mailed invoice is the printed one (the owner's D27-343)
 
 **Shipped** `invoiceDocument.ts`: `invoicePdf` redrawn as finance's printed invoice, section for section, in the voucher's colours, with both logos (PNG) and the group's office (`invoiceBrand`), `splitByLine`, CGST's odd paisa in `rateWise`, a long bill's headings repeated; `invoices.ts` passes the brand. **Proved** `api/test/modules/guest-messaging/invoicePdf.test.ts` (fails with the logos taken out). The root `CHANGELOG.md` has the whole entry.

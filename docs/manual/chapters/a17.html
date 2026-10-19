@@ -25,7 +25,7 @@
   <table>
     <thead><tr><th style="width:20%">Group</th><th>Pages (↗ opens a Front office screen)</th><th style="width:12%">Section</th></tr></thead>
     <tbody>
-      <tr><td>Property</td><td><span class="ui">Profile</span>, <span class="ui">Set up this hotel</span>, <span class="ui">Logo and photos</span>, <span class="ui">Highlights</span>, <span class="ui">Cancellation terms</span> ↗ (A2), <span class="ui">Amenities</span>, <span class="ui">Group</span>, <span class="ui">Policies</span></td><td>A17.2 to A17.4</td></tr>
+      <tr><td>Property</td><td><span class="ui">Profile</span>, <span class="ui">Set up this hotel</span>, <span class="ui">Logo and photos</span>, <span class="ui">Highlights</span>, <span class="ui">Cancellation terms</span> ↗ (A2), <span class="ui">Amenities</span>, <span class="ui">Group</span>, <span class="ui">Policies</span>, <span class="ui">Documents</span></td><td>A17.2 to A17.4</td></tr>
       <tr><td>Rooms</td><td><span class="ui">Room types</span></td><td>A17.5</td></tr>
       <tr><td>Rates and tax</td><td><span class="ui">Rates</span> ↗ (A15), <span class="ui">Rate plans</span>, <span class="ui">Meal plans</span>, <span class="ui">Taxes</span></td><td>A17.6, A17.7</td></tr>
       <tr><td>Money</td><td><span class="ui">Bank details</span>, <span class="ui">Payment methods</span>, <span class="ui">Extra charges</span>, <span class="ui">Discounts</span>, <span class="ui">Commission</span>, <span class="ui">Pickup and drop</span></td><td>A17.8, A17.9</td></tr>
@@ -332,12 +332,12 @@
     <img src="img/A17-09.png" alt="Policies: House policies with four numbered lines and Edit, and Policy texts with Parking and arrival">
     <figcaption><b>Figure A17-09.</b> Policies.</figcaption>
     <ol class="callouts">
-      <li>House policies: printed on this hotel's booking voucher</li>
+      <li>House policies: printed on this hotel's booking voucher and registration card</li>
       <li>Policy texts: parking, families and the terms of a reservation, in the hotel's words</li>
     </ol>
   </figure>
   <ul>
-    <li><b>House policies</b>: tap <span class="ui">Edit</span>. One policy a line, in the order they print; at most 8, each up to 200 characters. With none, the voucher prints the booking's terms and the times only.</li>
+    <li><b>House policies</b>: tap <span class="ui">Edit</span>. One policy a line, in the order they print; at most 8, each up to 200 characters. With none, the voucher prints the booking's terms and the times only. The registration card prints them over the guest's signature (A3.9).</li>
     <li><b>Policy texts</b>: <span class="ui">Parking and arrival</span>, <span class="ui">Family and extra guests</span>, <span class="ui">Reservation terms</span>. Each has its own box (2000 characters) and its own <span class="ui">Save</span>.</li>
   </ul>
 
@@ -359,6 +359,29 @@
   <div class="box why">
     <h4>Why it works this way</h4>
     <p>The group's office details on every voucher's footer, the bank details and the house policies per hotel: <span class="d">D27-215</span>. One Policies page; the child ages as words only, for now: <span class="d">D27-257</span>.</p>
+  </div>
+
+  <h3>Documents</h3>
+  <p><span class="ui">Documents</span>, last in the Property group, shows what the hotel prints and sends, one tab each: <span class="ui">Tax invoice</span>, <span class="ui">Proforma bill</span>, <span class="ui">Registration card</span>, <span class="ui">Booking voucher</span> and <span class="ui">Restaurant bill</span>. Each tab says when the document is printed, links to where that is set, and shows a sample: the real document with this hotel's name and address and a made-up guest, <span class="msg">“SAMPLE · NOT VALID”</span> across it and no GSTIN. Nothing on the page is saved or sent.</p>
+  <ol class="steps">
+    <li>Open <span class="ui">Settings</span> › <span class="ui">Documents</span> and pick the tab.</li>
+    <li>Click <span class="ui">Print a sample</span>. The print window opens: pick the printer to test it, or <span class="ui">Save as PDF</span> to keep a file. The tax invoice prints in the hotel's copies (A5.9). The booking voucher opens as its PDF in a new tab; print it from there.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A17-55">
+    <img src="img/A17-55.png" alt="Settings, Documents: the tabs Tax invoice, Proforma bill, Registration card, Booking voucher and Restaurant bill; Tax invoice: Issued and printed by itself when the guest checks out, two copies; Print a sample; Change it on Front desk rules; and the sample tax invoice with SAMPLE · NOT VALID across it">
+    <figcaption><b>Figure A17-55.</b> Documents: each one, when it prints, and a sample to print.</figcaption>
+    <ol class="callouts">
+      <li>One tab per document</li>
+      <li>Print a sample: test the printer, or Save as PDF</li>
+      <li>Where it is set</li>
+      <li>The sample says SAMPLE · NOT VALID</li>
+    </ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The documents as the hotel's old system printed them, in Fidato's design, with a page to see and test each: <span class="d">D27-344</span>. A sample is printed, or saved as a PDF from the print window: <span class="d">D27-348</span>. The sample's figures are a sample's; nothing reads them.</p>
   </div>
 
   <!-- A17.5 -->
@@ -536,14 +559,14 @@
 
   <!-- A17.7 -->
   <h2 id="a17-7"><span class="n">A17.7</span>Taxes</h2>
-  <p><span class="ui">Taxes</span> holds the GST rules, <span class="msg">“One set of rules, for the front desk and the till”</span>. Each heading (<b>Rooms</b>, <b>Restaurant</b>, <b>Bar</b>, <b>Banquet</b>, <b>Spa</b>, <b>Laundry</b>, <b>Everything else</b>, and <b>Alcohol</b> where the hotel serves it) has its rates and its SAC code.</p>
+  <p><span class="ui">Taxes</span> holds the GST rules, <span class="msg">“One set of rules, for the front desk and the till”</span>. Each heading (<b>Rooms</b>, <b>Restaurant</b>, <b>Bar</b>, <b>Banquet</b>, <b>Spa</b>, <b>Laundry</b>, <b>Everything else</b>, and <b>Alcohol</b> where the hotel serves it) has its rates and its HSN/SAC code.</p>
 
   <figure class="shot" id="fig-A17-18">
-    <img src="img/A17-18.png" alt="Taxes: Rooms with two rates and a band, SAC 996311, Edit; Restaurant; Bar Not set with Set it">
+    <img src="img/A17-18.png" alt="Taxes: Rooms with two rates and a band, HSN/SAC 996311, Edit; Restaurant; Bar Not set with Set it">
     <figcaption><b>Figure A17-18.</b> GST, heading by heading.</figcaption>
     <ol class="callouts">
       <li>A band: the higher rate applies above this figure</li>
-      <li>SAC: the code printed on each line of this kind</li>
+      <li>HSN/SAC: the code printed on each line of this kind</li>
       <li>Edit a heading's rates</li>
       <li>Set it: a heading with no rate yet</li>
     </ol>
@@ -555,7 +578,7 @@
     <li>One row is one rate. In the first row, leave <span class="ui">On everything from</span> at zero and type the <span class="ui">GST %</span>.</li>
     <li>To charge more above a figure, add a second row: <span class="ui">Above</span> the figure, and its <span class="ui">GST %</span>.</li>
     <li>If a rate starts or ends on a day, type <span class="ui">From</span> and <span class="ui">Last day</span> (empty: always, and current). Write a <span class="ui">Note</span>: why this band exists. It shows on the card.</li>
-    <li>Type the <span class="ui">SAC code</span> your accountant gives you (six digits).</li>
+    <li>Type the <span class="ui">HSN/SAC code</span> your accountant gives you: a SAC is six digits; for goods sold under the heading (bottled water in the minibar, say), its HSN, of 4, 6 or 8 digits.</li>
     <li>Tap <span class="ui">Save</span>.</li>
   </ol>
 
@@ -592,7 +615,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>One set of rules for the desk and the till, so a bar's whisky is never billed at the restaurant's rate by a default nobody chose. A SAC code for each heading: <span class="d">D27-258</span>. Alcohol as VAT: <span class="d">D21-91</span>.</p>
+    <p>One set of rules for the desk and the till, so a bar's whisky is never billed at the restaurant's rate by a default nobody chose. A SAC code for each heading: <span class="d">D27-258</span>; an HSN in the same box for goods, printed on the proforma bill and the restaurant bill too: <span class="d">D27-344</span>. Alcohol as VAT: <span class="d">D21-91</span>.</p>
   </div>
 
   <!-- A17.8 -->
@@ -875,6 +898,17 @@
     <li><b>A booking must carry</b>: <span class="ui">Phone</span>, <span class="ui">Email</span>, <span class="ui">Nationality</span>, <span class="ui">Address</span>, <span class="ui">Expected arrival time</span>, <span class="ui">Market segment</span>, <span class="ui">Business source</span>, <span class="ui">Sales person</span>. A booking from a booking site is never held for them.</li>
     <li><b>Housekeeping</b>: a room a guest leaves at check-out is always sent for cleaning. The switches decide the rest: a room a guest moved out of; a room back from a block (off: it comes back as it was before the block); and whether the night audit sends every room with a guest staying on for its daily clean.</li>
   </ul>
+  <figure class="shot" id="fig-A17-54">
+    <img src="img/A17-54.png" alt="Front desk rules: The tax invoice at check-out, set to Issue it and print it, by itself, with 2 copies chosen">
+    <figcaption><b>Figure A17-54.</b> The tax invoice at check-out.</figcaption>
+    <ol class="callouts">
+      <li>What Check out does with the tax invoice</li>
+      <li>How many copies print</li>
+    </ol>
+  </figure>
+  <ul>
+    <li><b>The tax invoice at check-out</b> (A5.9): <span class="ui">Issue it and print it, by itself</span> (the hotel starts on this), <span class="ui">Offer an Issue tax invoice button</span>, or <span class="ui">Nothing at check-out: issue it on Invoices</span>. And <span class="ui">2 copies</span> (the hotel starts on this) or <span class="ui">1 copy</span>: two print as <span class="msg">“ORIGINAL FOR RECIPIENT”</span> and <span class="msg">“DUPLICATE FOR SUPPLIER”</span>, wherever the invoice is printed. Who may issue an invoice does not change.</li>
+  </ul>
   <figure class="shot" id="fig-A17-39">
     <img src="img/A17-39.png" alt="Front desk rules, lower down: The restaurant's round-off set to Manual, and How the figures count with two switches">
     <figcaption><b>Figure A17-39.</b> The round-off, and how the figures count.</figcaption>
@@ -891,7 +925,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The default guarantee and bill-to, the fields a booking must carry (never refusing a channel's booking), the housekeeping switches, the round-off for restaurant bills only, and the figures in plain words: <span class="d">D27-260</span>. The fees live on Extra charges, and the way of paying on Payment methods: <span class="d">D27-259</span>.</p>
+    <p>The default guarantee and bill-to, the fields a booking must carry (never refusing a channel's booking), the housekeeping switches, the round-off for restaurant bills only, and the figures in plain words: <span class="d">D27-260</span>. The tax invoice issued and printed at check-out by default, in two copies, each hotel's choice: <span class="d">D27-344</span>. The fees live on Extra charges, and the way of paying on Payment methods: <span class="d">D27-259</span>.</p>
   </div>
 
   <!-- A17.12 -->

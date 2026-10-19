@@ -620,7 +620,7 @@ describe("behind the code", () => {
   /* D21-10: exactly the bill the desk prints. The page draws finance's own
      BillPrint from what the door sends, and asks for it with this tab's
      unlock like everything behind the code. */
-  it("shows the desk's own bill, as an interim bill, and says where to pay", async () => {
+  it("shows the desk's own bill, as a proforma bill, and says where to pay", async () => {
     const BILL = {
       hotel: { name: "5 Elements Akkalkot", address: null, city: "Akkalkot", state: "Maharashtra",
         phone: null, gstin: null },
@@ -644,10 +644,10 @@ describe("behind the code", () => {
       if (!el) throw new Error("no bill yet");
       return el as HTMLElement;
     });
-    expect(print.textContent).toContain("Interim bill");
+    expect(print.textContent).toContain("Proforma Bill");
     expect(print.textContent, "not the final invoice").not.toContain("Tax Invoice");
     expect(print.textContent).toContain("Room charge");
-    expect(print.textContent).toContain("Outstanding");
+    expect(print.textContent).toContain("Balance due");
     expect(screen.getByText("Pay at the desk before you leave.")).toBeTruthy();
     expect(unlockSent(billAsked), "asked for with this tab's unlock").toBe(UNLOCK);
   });

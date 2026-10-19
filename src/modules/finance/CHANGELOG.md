@@ -8,6 +8,10 @@ project, still goes in the root `CHANGELOG.md`.
 
 ---
 
+## 2026-10-19 · Guest documents like the old system's (the owner's D27-344 to D27-348)
+
+**Shipped** The interim bill is the **proforma bill**, drawn by the tax invoice's own sheet (`flows/BillPrint.tsx` `proformaOf`, `InvoiceSheet`'s `proforma` in `pages/Invoice.tsx`; the Bill tab's button and `pages/InterimBill.tsx`), with the hotel's contacts, each line's HSN/SAC, the stay and the payments (`folios.ts` GET bill, `stayFacts`/`paymentsOn` in `invoices.ts`). **The tax invoice at check-out** follows the hotel's setting (229): issued and printed by itself in two copies, ORIGINAL FOR RECIPIENT and DUPLICATE FOR SUPPLIER (`useInvoicePrinter`, `useInvoiceCopies`, `flows/TaxInvoiceStep.tsx`), or offered, or left to Invoices. The invoice prints the **G.R. card no** (230). A kind's code is **HSN/SAC**, 4, 6 or 8 digits (232; `tax.ts`, `TaxRulesCard`). Front door: `proformaOf`, `InvoiceSheet`, `useInvoiceCopies`; the server's `stayFacts`. **Proved** `billPrint`, `printedBills`, `billTabControls`, `invoiceLayout`, `taxInvoiceAtCheckOut`, `taxSacP3`, `testHotel` (snapshots updated on purpose). The root `CHANGELOG.md` has the whole entry and the gate numbers.
+
 ## 2026-10-17 · The invoice in Fidato's design, both logos, one A4 PDF (the owner's D27-343)
 
 **Shipped** `pages/Invoice.tsx` in Fidato's document style (`DocMasthead` with both logos, `DocParties`, `DOC_TH`/`DOC_TD`, `DocTotals`, `DocFacts`, `DocFooter` with the group's office), one A4 page for an ordinary stay. The e-mailed PDF is guest messaging's (`invoiceDocument.ts`), drawn the same. **Proved** `invoiceLayout.test.tsx`; the root `CHANGELOG.md` has the whole entry.

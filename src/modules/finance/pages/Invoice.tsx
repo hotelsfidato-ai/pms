@@ -1,10 +1,12 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { createPortal, flushSync } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "react-router";
 import { Printer, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { amountInWords, dateShort, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { useSession } from "@/lib/session";
 import { useDocumentTitle } from "@/lib/documentTitle";
 import { useGroupSettings, type GroupSettings } from "@/modules/admin";
 import {
@@ -142,7 +144,7 @@ function Fact({ label, children, ...rest }: { label: string; children: ReactNode
   );
 }
 const TH = cn(DOC_TH, "px-1 text-[10px] tracking-[0.04em] align-bottom");
-const TD = "py-1.5 px-1 border-b border-grey-200 text-xs align-top tabular";
+const TD = "py-1 px-1 border-b border-grey-200 text-xs align-top tabular";
 
 export default function InvoicePage() {
   const hotelId = useHotel();
@@ -166,6 +168,8 @@ export default function InvoicePage() {
      across its head, and NO GSTIN on it - the hotel's or the company's - so
      it can never pass for a tax invoice. A real hotel's is unchanged. */
   const test = useIsTestHotel(hotelId);
+  /* Print: the original, and the duplicate when the hotel prints 2 (D27-344). */
+  const printer = useInvoicePrinter(hotelId);
 
   if (isLoading) {
     return (
@@ -216,7 +220,7 @@ export default function InvoicePage() {
             )}
             {/* Not on a group's master bill: nothing sends it (D27-307 (4)). */}
             {data.creditsInvoiceId === null && !data.creditedBy && !data.masterBill && <SendInvoice hotelId={hotelId} number={data.number} />}
-            <Button onClick={() => window.print()}>
+            <Button onClick={() => printer.print([data])} data-invoice-print-button>
               <Printer className="size-4" />
               Print
             </Button>
@@ -224,20 +228,90 @@ export default function InvoicePage() {
         </>
       }
     >
+      {/* The screen shows the original; Print prints the hotel's copies
+          (useInvoicePrinter, as check-out does). */}
       {test && <TestDocumentMark />}
-      <InvoiceSheet data={data} hotelId={hotelId} test={test} group={group} />
+      <InvoiceSheet data={data} hotelId={hotelId} test={test} group={group} copy={INVOICE_COPIES[0]} />
+      {printer.node}
     </DocPage>
   );
 }
 
-function InvoiceSheet({ data, hotelId, test, group }: {
+/** What a printed tax invoice's copies say (D27-344; CGST Rule 48: a
+    service's invoice is made in duplicate). */
+export const INVOICE_COPIES = ["ORIGINAL FOR RECIPIENT", "DUPLICATE FOR SUPPLIER"] as const;
+
+/** This hotel's copies: both, or the original alone (Settings › Front desk rules). */
+export function useInvoiceCopies(hotelId: string): readonly string[] {
+  const n = useSession((s) => s.hotels.find((h) => h.code === hotelId || h.id === hotelId))
+    ?.deskRules?.invoiceCopies ?? 2;
+  return INVOICE_COPIES.slice(0, n);
+}
+
+/* ── PRINTING TAX INVOICES (the owner's D27-344) ───────────────────────
+   One print of every invoice given, each in the hotel's copies (the
+   original, then the duplicate on a page of its own). Used by Print here
+   and by check-out on the Bill tab (flows/TaxInvoiceStep.tsx). Drawn into
+   this page and printed through the browser - a new tab opened after
+   check-out's wait is one a browser may block. Only the invoices reach the
+   paper (the KOT station's way, pos/components/KotStation.tsx); theme.css's
+   @page and print rules make it the invoice page's A4. */
+const PRINT_CSS = `
+  @media screen { .invoice-print { display: none; } }
+  @media print { body > *:not(.invoice-print) { display: none !important; } }`;
+
+export function useInvoicePrinter(hotelId: string) {
+  const [docs, setDocs] = useState<InvoiceDetail[] | null>(null);
+  const group = useGroupSettings(hotelId);
+  const test = useIsTestHotel(hotelId);
+  const copies = useInvoiceCopies(hotelId);
+
+  const print = (list: InvoiceDetail[]) => {
+    if (list.length === 0) return;
+    flushSync(() => setDocs(list));
+    try { window.print(); } finally { setDocs(null); }
+  };
+
+  const node = docs && createPortal(
+    <div className="invoice-print" data-invoice-print>
+      <style>{PRINT_CSS}</style>
+      {docs.flatMap((d, n) => copies.map((copy, i) => (
+        <div key={`${d.number}-${copy}`} className={n === 0 && i === 0 ? undefined : "break-before-page"}>
+          {test && <TestDocumentMark />}
+          <InvoiceSheet data={d} hotelId={hotelId} test={test} group={group} copy={copy} />
+        </div>
+      )))}
+    </div>,
+    document.body,
+  );
+  return { print, node };
+}
+
+/** A PROFORMA BILL (the owner's D27-344, in place of the interim bill): the
+    stay's bill as it stands, drawn as its tax invoice will be. */
+export interface Proforma {
+  /** The stay's dates, under the title in place of a date of issue. */
+  when: string;
+  /** VAT on alcohol, one row per rate (D21-91). */
+  vat: { rate: number; taxable: number; vat: number }[];
+  /** Under the total: paid, anything still to be posted, the balance due. */
+  after: Array<[ReactNode, string]>;
+}
+
+export function InvoiceSheet({ data, hotelId, test, group, copy, proforma }: {
   data: InvoiceDetail; hotelId: string; test: boolean; group: GroupSettings;
+  /** "ORIGINAL FOR RECIPIENT" or "DUPLICATE FOR SUPPLIER", over the masthead. */
+  copy?: string;
+  /** Drawn as a proforma bill, not a tax invoice. */
+  proforma?: Proforma;
 }) {
   const isCreditNote = data.creditsInvoiceId !== null;
   const sign = (n: number) => (isCreditNote ? -n : n);
   /* Derived on every render from the lines themselves — nothing to
      keep in step, and nothing to be stale. */
-  const bands = rateWise(data.lines);
+  /* GST lines only (VAT has rows of its own), and no 0% row for a line with no tax. */
+  const bands = rateWise(data.lines.filter((l) => !l.vat)).filter((b) => b.rate > 0);
+  const vat = proforma?.vat ?? [];
   const halves = splitByLine(data.lines, data.cgst.amount, data.sgst.amount);
 
   /* The supplier's place, once: an address that already names its city is
@@ -270,16 +344,19 @@ function InvoiceSheet({ data, hotelId, test, group }: {
 
   return (
     <div className="text-ink-700" data-invoice-sheet>
+      {copy && (
+        <p className="text-right text-[10px] font-bold tracking-[0.12em] text-grey-500 mb-1" data-invoice-copy>{copy}</p>
+      )}
       {/* ── The masthead: the hotel's and the group's logos, the hotel, the
           document and its number (Fidato's document style) ── */}
       <DocMasthead
         logos={[group.hotelLogo, group.groupLogo]}
         name={data.supplier.name}
         group={group.name}
-        title={isCreditNote ? "Credit Note" : "Tax Invoice"}
+        title={proforma ? "Proforma Bill" : isCreditNote ? "Credit Note" : "Tax Invoice"}
         number={data.number}
       >
-        <p>{data.issuedAt}</p>
+        <p>{proforma ? proforma.when : data.issuedAt}</p>
       </DocMasthead>
 
       {/* The hotel: how to reach it, and its GSTIN and PAN. */}
@@ -290,11 +367,17 @@ function InvoiceSheet({ data, hotelId, test, group }: {
         {contact && <p>{contact}</p>}
         {!test && (
           <p className="text-ink-700">
-            GSTIN <span className="font-semibold tabular">{data.supplier.gstin ?? "-"}</span>
+            GSTIN <span className="font-semibold tabular" data-bill-gstin>{data.supplier.gstin ?? "-"}</span>
             {data.supplier.pan && <> · PAN <span className="font-semibold tabular">{data.supplier.pan}</span></>}
           </p>
         )}
       </div>
+
+      {proforma && (
+        <p className="mb-3 text-xs font-semibold text-ink-700" data-proforma-note>
+          A proforma bill: what the stay comes to so far. It is not a tax invoice; the tax invoice is issued at check-out.
+        </p>
+      )}
 
       {/* A credit note says, on its face, what it cancels and why; an invoice
           that has been credited must not read as live. */}
@@ -322,10 +405,11 @@ function InvoiceSheet({ data, hotelId, test, group }: {
       <DocParties className="mt-0">
         <table className="w-full self-start"><tbody>
           {stay && <Fact label="Booking ref">{stay.reference}</Fact>}
+          {stay && <Fact label="G.R. card no">{stay.grCardNo ?? "-"}</Fact>}
           {stay && <Fact label="Guest name">{stay.guest}</Fact>}
           <Fact label="Bill to">{data.recipient.name ?? "-"}</Fact>
           {data.recipient.address && <Fact label="Bill to address">{data.recipient.address}</Fact>}
-          {!test && (
+          {!test && !proforma && (
             <Fact label="Bill to GSTIN">
               {data.recipient.gstin
                 ? <span className="tabular">{data.recipient.gstin}</span>
@@ -347,7 +431,7 @@ function InvoiceSheet({ data, hotelId, test, group }: {
           {stay && (
             <>
               <Fact label="Room">{stay.roomType} / {stay.room ?? "-"}</Fact>
-              <Fact label="Persons">{stay.adults} adults · {stay.children} children</Fact>
+              <Fact label="Persons">{stay.adults} adult{stay.adults === 1 ? "" : "s"} · {stay.children} {stay.children === 1 ? "child" : "children"}</Fact>
               <Fact label="Rate type">{stay.plan ?? "-"}</Fact>
               <Fact label="Nights">{stay.nights === 0 ? "Day use" : stay.nights}</Fact>
               <Fact label="Arrival">{stay.arrival}</Fact>
@@ -385,8 +469,8 @@ function InvoiceSheet({ data, hotelId, test, group }: {
             <tr>
               <th className={cn(TH, "text-left pl-0")}>Sr</th>
               <th className={cn(TH, "text-left")}>Particular</th>
-              {/* Each line's own SAC (D27-258 Q6). */}
-              <th className={cn(TH, "text-left")}>SAC</th>
+              {/* Each line's own SAC (D27-258 Q6), headed as the old system's (D27-344). */}
+              <th className={cn(TH, "text-left")}>HSN/SAC</th>
               <th className={cn(TH, "text-right")}>Qty</th>
               <th className={cn(TH, "text-right")}>Rate</th>
               <th className={cn(TH, "text-right")}>Total</th>
@@ -408,6 +492,11 @@ function InvoiceSheet({ data, hotelId, test, group }: {
                   <td className={TD}>
                     <span className="font-semibold">{l.description}</span>
                     <span className="block text-[10px] text-grey-500">{dateShort(l.date)}</span>
+                    {l.vat && (
+                      <span className="block text-[10px] text-grey-600" data-bill-vat-rate={l.vat.rate}>
+                        VAT {fig(l.vat.rate)}% · {fig(l.vat.amount)}
+                      </span>
+                    )}
                   </td>
                   <td className={cn(TD, "text-grey-500")}>{l.sac ?? "-"}</td>
                   <td className={cn(TD, "text-right")}>1</td>
@@ -417,12 +506,21 @@ function InvoiceSheet({ data, hotelId, test, group }: {
                   <td className={cn(TD, "text-right")}>{off ? "-" : fig(sign(l.amount))}</td>
                   <td className={cn(TD, "text-right")}>{fig(off ? sign(-l.amount) : 0)}</td>
                   <td className={cn(TD, "text-right font-semibold")}>{fig(sign(l.amount))}</td>
-                  <td className={cn(TD, "text-right")}>
-                    {fig(sign(halves[i]!.sgst))}<span className="block text-[10px] text-grey-500 whitespace-nowrap">{fig(half)} %</span>
-                  </td>
-                  <td className={cn(TD, "text-right")}>
-                    {fig(sign(halves[i]!.cgst))}<span className="block text-[10px] text-grey-500 whitespace-nowrap">{fig(half)} %</span>
-                  </td>
+                  {l.vat ? (
+                    <>
+                      <td className={cn(TD, "text-right text-grey-500")}>-</td>
+                      <td className={cn(TD, "text-right text-grey-500")}>-</td>
+                    </>
+                  ) : (
+                    <>
+                      <td className={cn(TD, "text-right")}>
+                        {fig(sign(halves[i]!.sgst))}<span className="block text-[10px] text-grey-500 whitespace-nowrap">{fig(half)} %</span>
+                      </td>
+                      <td className={cn(TD, "text-right")}>
+                        {fig(sign(halves[i]!.cgst))}<span className="block text-[10px] text-grey-500 whitespace-nowrap">{fig(half)} %</span>
+                      </td>
+                    </>
+                  )}
                   <td className={cn(TD, "text-right")}>0.00<span className="block text-[10px] text-grey-500 whitespace-nowrap">0.00 %</span></td>
                   <td className={cn(TD, "text-right pr-0")}>0.00</td>
                 </tr>
@@ -487,7 +585,7 @@ function InvoiceSheet({ data, hotelId, test, group }: {
             </thead>
             <tbody>
               {bands.flatMap((b) => [
-                <tr key={`s${b.rate}`}>
+                <tr key={`s${b.rate}`} data-bill-tax-rate={b.rate}>
                   <td className={cn(TD, "pl-0")}>SGST @ {fig(b.rate / 2)}%</td>
                   <td className={cn(TD, "text-right")}>{fig(sign(b.taxable))}</td>
                   <td className={cn(TD, "pr-0 text-right")}>{fig(sign(b.tax - b.half))}</td>
@@ -498,6 +596,13 @@ function InvoiceSheet({ data, hotelId, test, group }: {
                   <td className={cn(TD, "pr-0 text-right")}>{fig(sign(b.half))}</td>
                 </tr>,
               ])}
+              {vat.map((v) => (
+                <tr key={`v${v.rate}`}>
+                  <td className={cn(TD, "pl-0")}>VAT @ {fig(v.rate)}%</td>
+                  <td className={cn(TD, "text-right")}>{fig(v.taxable)}</td>
+                  <td className={cn(TD, "pr-0 text-right")}>{fig(v.vat)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -510,9 +615,10 @@ function InvoiceSheet({ data, hotelId, test, group }: {
               ["Total SGST", moneyPrecise(sign(data.sgst.amount))],
               ["Total CGST", moneyPrecise(sign(data.cgst.amount))],
               ["Total IGST", moneyPrecise(0)],
+              ...(vat.length ? [["Total VAT", moneyPrecise(vat.reduce((n, v) => n + v.vat, 0))] as [string, string]] : []),
             ]}
             total={["Total", moneyPrecise(sign(data.total))]}
-            after={isCreditNote ? undefined : [
+            after={proforma ? proforma.after : isCreditNote ? undefined : [
               ["Total payment", moneyPrecise(received)],
               ["Balance", moneyPrecise(Math.round((data.total - received) * 100) / 100 || 0)],
             ]}
@@ -528,14 +634,14 @@ function InvoiceSheet({ data, hotelId, test, group }: {
             { label: "Reception (C/I)", value: stay.checkedInBy ?? "-" },
             { label: "Cashier (C/O)", value: stay.checkedOutBy ?? "-" },
           ] : []),
-          { label: "Issued by", value: data.issuedBy ?? "-" },
+          ...(proforma ? [] : [{ label: "Issued by", value: data.issuedBy ?? "-" }]),
           { label: "Currency", value: "INR (₹)" },
         ]}
       />
 
       {/* ── The two signatures: the guest's, and the hotel's (Rule 46) ── */}
       <div className="break-inside-avoid">
-      <div className="mt-9 flex justify-between gap-8 text-xs">
+      <div className="mt-7 flex justify-between gap-8 text-xs">
         <div className="border-t border-ink-700 pt-1 px-6 text-center">
           <p className="font-semibold">Guest signature</p>
         </div>
@@ -550,12 +656,14 @@ function InvoiceSheet({ data, hotelId, test, group }: {
         name={group.name ?? data.supplier.name}
         left={officeLines.length ? officeLines.map((l, i) => <p key={i}>{l}</p>) : data.supplier.address}
         right={test ? undefined : <>GSTIN {data.supplier.gstin ?? "-"}</>}
-        note={
+        note={proforma ? (
+          <>A proforma bill, as the stay stands. It is not a tax invoice.</>
+        ) : (
           <>
             A computer-generated document, series {data.finYear}. An issued tax
             invoice is not amended: any correction is a credit note with its own number.
           </>
-        }
+        )}
       />
       </div>
     </div>

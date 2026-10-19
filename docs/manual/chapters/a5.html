@@ -20,10 +20,10 @@
     <li>The window <span class="ui">Check … out?</span> asks you to be sure (A5.4). Click <span class="ui">Check out</span> again.</li>
     <li>Depending on the date and the hour, the window may first ask why the guest is leaving late (A5.5) or early (A5.6).</li>
   </ol>
-  <p>When it is done, a message says <span class="msg">“A5 Test Rane checked out”</span> (the guest's name) with <span class="msg">“Room 303 is now dirty and on housekeeping's board.”</span> The panel stays open, and where <span class="ui">Check out</span> was the bill now offers <span class="ui">Issue tax invoice</span> (A5.9).</p>
+  <p>When it is done, a message says <span class="msg">“A5 Test Rane checked out”</span> (the guest's name) with <span class="msg">“Room 303 is now dirty and on housekeeping's board.”</span> The panel stays open on the bill, and the guest's tax invoice is issued and printed by itself, two copies, unless the hotel has chosen otherwise (A5.9).</p>
 
   <figure class="shot" id="fig-A5-01">
-    <img src="img/A1-T16.png" alt="The stay panel of a guest in the house: the orange Settle and check out, the Room line 205 Superior, and Charged, Paid and Due at the foot">
+    <img src="img/A1-T16.png" alt="The stay panel of a guest in the house: the orange Settle and check out, Print registration card, the Room line 205 Superior, and Charged, Paid and Due at the foot">
     <figcaption><b>Figure A5-01.</b> A guest in the house: Settle and check out opens the bill.</figcaption>
     <ol class="callouts">
       <li>Settle and check out: it opens the Bill tab</li>
@@ -117,21 +117,21 @@
 
   <!-- A5.3 -->
   <h2 id="a5-3"><span class="n">A5.3</span>Printing the bill for the guest</h2>
-  <p>The guest asks to see the bill before paying. On the Bill tab click <span class="ui">Interim bill</span>. The window shows the print preview. Click <span class="ui">Print</span>: the bill opens on a page of its own, and you print it from there (A4.9).</p>
+  <p>The guest asks to see the bill before paying. On the Bill tab click <span class="ui">Proforma bill</span>. The window shows the print preview. Click <span class="ui">Print</span>: the bill opens on a page of its own, and you print it from there (A4.9).</p>
   <ul>
-    <li>It says <span class="msg">“Interim bill”</span>, with the hotel's name, its address and GSTIN, the booking's reference, then the <span class="ui">Guest</span>, the <span class="ui">Room</span> and the <span class="ui">Stay</span>.</li>
-    <li>Every line is under its section (Room, Restaurant, Bar, Other charges), with its subtotal and its tax.</li>
-    <li>At the foot: <span class="ui">Net</span>, the tax in its two halves, <span class="ui">CGST</span> and <span class="ui">SGST</span> (and <span class="ui">VAT</span> on drinks, on its own line), the <span class="ui">Total</span> and <span class="ui">Paid</span>. Then <span class="ui">Outstanding</span>; or, while tonight's night is not posted yet, <span class="ui">To be posted tonight</span> and <span class="ui">Amount due</span>.</li>
+    <li>It says <span class="msg">“Proforma Bill”</span>, with the booking's reference and the stay's dates and room under it, and the line <span class="msg">“A proforma bill: what the stay comes to so far. It is not a tax invoice; the tax invoice is issued at check-out.”</span></li>
+    <li>It is laid out as the tax invoice: the hotel's address, GSTIN and PAN, the stay in two columns, every line with its HSN/SAC, its taxable value and each tax (drinks with their <span class="ui">VAT</span>, never CGST and SGST), the payments and the tax by rate.</li>
+    <li>At the foot: the totals and the <span class="ui">Total</span>, then <span class="ui">Paid</span>, any night <span class="ui">To be posted tonight</span>, and <span class="ui">Balance due</span> (or <span class="ui">Overpaid</span>).</li>
     <li>The total is the exact figure, with no round-off.</li>
   </ul>
 
   <figure class="shot" id="fig-A5-04">
-    <img src="img/A5-T3.png" alt="The Interim bill print preview for A5 Test Rane: the INTERIM BILL heading, the hotel, the guest, room 303 and the stay, one night of ₹3,699, and the Net, CGST, SGST, Total and Paid block; the Print button above">
-    <figcaption><b>Figure A5-04.</b> The interim bill: the print preview.</figcaption>
+    <img src="img/A5-T3.png" alt="The Proforma bill print preview for A5 Test Rane: the PROFORMA BILL heading with the booking's reference, the hotel, the stay in two columns, one night of ₹3,699 with its SAC, SGST and CGST, the totals, Paid and Balance due; the Print button above">
+    <figcaption><b>Figure A5-04.</b> The proforma bill: the print preview.</figcaption>
     <ol class="callouts">
-      <li>The heading: Interim bill, with the booking's reference under it</li>
+      <li>The heading: Proforma Bill, with the booking's reference under it</li>
       <li>Print: the bill opens on a page of its own</li>
-      <li>Net, CGST, SGST, the total and what is paid</li>
+      <li>The totals, Paid and Balance due</li>
     </ol>
   </figure>
 
@@ -146,7 +146,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The desk's print says "Interim bill" before check-out and after, so nobody takes it for the numbered tax invoice: <span class="d">D22-7</span>; the button says the same: <span class="d">D24-25</span>. Its total is the exact figure, so the Total and the amount outstanding are the same number: <span class="d">D27-126</span>. The test hotel's mark: <span class="d">D27-296</span>.</p>
+    <p>The desk's print never says "Tax Invoice", so nobody takes it for the numbered tax invoice: <span class="d">D22-7</span>; the button says what it opens: <span class="d">D24-25</span>. Its total is the exact figure: <span class="d">D27-126</span>. The interim bill became the proforma bill, laid out as the tax invoice: <span class="d">D27-344</span>. The test hotel's mark: <span class="d">D27-296</span>.</p>
   </div>
 
   <!-- A5.4 -->
@@ -156,7 +156,7 @@
     <li>The bill closes. Its lines stay as they are.</li>
     <li>The room is released and goes to <span class="ui">Needs cleaning</span> on housekeeping's board (A6.2).</li>
     <li>A loyalty member's points for the stay are added (A14.4).</li>
-    <li>The guest's last bill is ready to be invoiced: the bill offers <span class="ui">Issue tax invoice</span> where Check out was (A5.9).</li>
+    <li>The guest's tax invoice is issued and printed by itself, or offered, or left to Invoices, as the hotel has chosen (A5.9).</li>
   </ul>
 
   <figure class="shot" id="fig-A5-05">
@@ -407,30 +407,35 @@
 
   <!-- A5.9 -->
   <h2 id="a5-9"><span class="n">A5.9</span>After check-out: the tax invoice</h2>
-  <p>The interim bill is not the tax invoice. After the guest has left and the bill is settled, the numbered GST invoice is issued, and it can be handed to the guest at the desk.</p>
+  <p>The proforma bill is not the tax invoice. Once the guest has left and the bill is settled, the numbered GST invoice is issued. What Check out does with it is the hotel's choice, on Settings › Front desk rules (A17.11):</p>
+  <ul>
+    <li><b>Issue it and print it, by itself</b> (the hotel starts on this). Check out issues the invoice and opens the print window with it, in two copies: <span class="msg">“ORIGINAL FOR RECIPIENT”</span> for the guest and <span class="msg">“DUPLICATE FOR SUPPLIER”</span> for the hotel's file. Choose the desk's printer and print. A hotel may choose one copy.</li>
+    <li><b>Offer an Issue tax invoice button</b>: the bill shows <span class="ui">Issue tax invoice</span> where Check out was, and nothing is issued until it is clicked.</li>
+    <li><b>Nothing at check-out</b>: the bill says <span class="msg">“Not issued yet: this hotel issues the tax invoice on Invoices.”</span></li>
+  </ul>
 
-  <h3>At the desk, right after check-out</h3>
+  <h3>At the desk, right after check-out (the hotel starts on this)</h3>
   <ol class="steps">
-    <li>Check the guest out (A5.1). The panel stays open on the bill, and where <span class="ui">Check out</span> was it now says <span class="ui">Tax invoice</span> with the orange <span class="ui">Issue tax invoice</span>.</li>
-    <li>Click <span class="ui">Issue tax invoice</span>. The window <span class="ui">Issue this tax invoice?</span> says who it is billed to and the number it takes (Figure A5-13). Click <span class="ui">Issue the invoice</span>.</li>
-    <li>The button becomes <span class="ui">Print or send</span> with the invoice's number, for example <span class="ui">Print or send 5EL/2026-27/00004</span>. Click it: the tax invoice opens in a new tab.</li>
-    <li>Click <span class="ui">Print</span> on the invoice. It prints on the desk's own printer, the one the computer already uses, on A4, without the menu. Nothing is set up for it in the PMS. To give it as a file instead, choose <span class="ui">Save as PDF</span> in the print window, or click <span class="ui">Send invoice</span> (A10.7).</li>
+    <li>Check the guest out (A5.1). The panel stays open on the bill and says <span class="msg">“Issuing and printing the tax invoice…”</span> for a moment.</li>
+    <li>The print window opens with the invoice: the original and the duplicate, one after the other. Choose the desk's printer and click <span class="ui">Print</span>. It prints on the printer the computer already uses, on A4; nothing is set up for it in the PMS.</li>
+    <li>Under <span class="ui">Tax invoice</span> the bill now shows <span class="ui">Print or send</span> with the invoice's number, for example <span class="ui">Print or send 5EL/2026-27/00004</span>, and the orange <span class="ui">Print again</span>. If the printer missed it, click <span class="ui">Print again</span>. To give it as a file, click <span class="ui">Print or send</span> and then <span class="ui">Send invoice</span> (A10.7), or choose <span class="ui">Save as PDF</span> in the print window.</li>
   </ol>
-  <p>It is an option, never automatic: closing the panel without issuing leaves the bill on <span class="ui">Invoices</span>, ready to bill. A stay with two bills shows each one with who it is billed to (A4.8). Issuing is for reception, the hotel manager, the accountant, the GM, an Admin and the owner; cancelling an invoice with a credit note is only for the accountant, the GM, an Admin and the owner (A4.11).</p>
+  <p>A bill that still owes, or is overpaid, is not issued: the bill says why under <span class="ui">Issue tax invoice</span>; settle it and issue it there or on <span class="ui">Invoices</span>. A stay with two bills issues and prints each one, with who it is billed to (A4.8). Issuing is for reception, the hotel manager, the accountant, the GM, an Admin and the owner; anyone else sees <span class="msg">“Not issued yet.”</span> and who can. Cancelling an invoice with a credit note is only for the accountant, the GM, an Admin and the owner (A4.11).</p>
+
+  <h3>Where the hotel offers the button</h3>
+  <ol class="steps">
+    <li>After check-out, where <span class="ui">Check out</span> was, the bill says <span class="ui">Tax invoice</span> with the orange <span class="ui">Issue tax invoice</span>.</li>
+    <li>Click it. The window <span class="ui">Issue this tax invoice?</span> says who it is billed to and the number it takes (Figure A5-13). Click <span class="ui">Issue the invoice</span>.</li>
+    <li>The button becomes <span class="ui">Print or send</span> with the invoice's number. Click it: the tax invoice opens in a new tab, and its <span class="ui">Print</span> prints both copies.</li>
+  </ol>
+  <p>Closing the panel without issuing leaves the bill on <span class="ui">Invoices</span>, ready to bill.</p>
 
   <figure class="shot" id="fig-A5-14">
-    <img src="img/A5-T7.png" alt="The Bill tab of A5 Test Wagh just after check-out: Balance ₹0 Settled, the message A5 Test Wagh checked out, and under Tax invoice the orange Issue tax invoice where Check out was">
-    <figcaption><b>Figure A5-14.</b> Checked out: the tax invoice is offered where Check out was.</figcaption>
-    <ol class="callouts">
-      <li>Issue tax invoice</li>
-    </ol>
-  </figure>
-
-  <figure class="shot" id="fig-A5-15">
-    <img src="img/A5-T8.png" alt="The same bill after the invoice was issued: under Tax invoice the orange Print or send 5EL/2026-27/00004">
-    <figcaption><b>Figure A5-15.</b> Issued: Print or send opens the tax invoice to print or send.</figcaption>
+    <img src="img/A5-T7.png" alt="The Bill tab of A5 Test Wagh just after check-out: Balance ₹0 Settled, and under Tax invoice Print or send with the invoice's number and the orange Print again">
+    <figcaption><b>Figure A5-14.</b> Checked out: the tax invoice is issued and printed by itself.</figcaption>
     <ol class="callouts">
       <li>Print or send, with the invoice's number</li>
+      <li>Print again, if the printer missed it</li>
     </ol>
   </figure>
 
@@ -461,7 +466,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Asking "are you sure" before a legal number is taken: <span class="d">D27-117</span>. A company's, an agent's or a booking site's invoice is not sent by itself: <span class="d">D27-284</span>, <span class="d">D27-313</span>. The tax invoice offered on the bill after check-out, as an option, with who may issue it unchanged: <span class="d">D27-341</span>.</p>
+    <p>Asking "are you sure" before a legal number is taken, when it is asked for by hand: <span class="d">D27-117</span>. A company's, an agent's or a booking site's invoice is not sent by itself: <span class="d">D27-284</span>, <span class="d">D27-313</span>. The tax invoice on the bill after check-out, with who may issue it unchanged: <span class="d">D27-341</span>. Issued and printed at check-out by default, two copies, each hotel's choice: <span class="d">D27-344</span>. GST's invoice for a service is in two copies, the original for the recipient and the duplicate for the supplier (CGST Rules, rule 48).</p>
   </div>
 
   <!-- A5.10 -->
@@ -485,13 +490,13 @@
     <tbody>
       <tr><td>A guest is leaving</td><td>Due out, the guest, the Bill tab. In house, Settle and check out, for any other guest.</td><td>A5.1</td></tr>
       <tr><td>Money is owed</td><td>Settle, the method, Take payment. Cash is taken to the rupee, with a round-off.</td><td>A5.2</td></tr>
-      <tr><td>The guest asks for the bill</td><td>Interim bill, then Print.</td><td>A5.3</td></tr>
+      <tr><td>The guest asks for the bill</td><td>Proforma bill, then Print.</td><td>A5.3</td></tr>
       <tr><td>The bill owes nothing</td><td>Check out, then Check out again in the window.</td><td>A5.4</td></tr>
       <tr><td>On the day, after the check-out time</td><td>Say why. A manager may waive a late charge. Settle it if there is one, then check out again.</td><td>A5.5</td></tr>
       <tr><td>Before the departure date</td><td>Settle what is posted. Say why they are leaving early. The nights not stayed are not charged and go back on sale.</td><td>A5.6</td></tr>
       <tr><td>The bill is overpaid</td><td>Refund (owner, Admin, GM, accountant): the way paid, reference, why, Give refund. Print the receipt.</td><td>A5.7</td></tr>
       <tr><td>A guest from abroad</td><td>Type the Next destination first.</td><td>A5.8</td></tr>
-      <tr><td>Checked out</td><td>On the same bill: Issue tax invoice, Issue the invoice, then Print or send. Later: Invoices, Issue.</td><td>A5.9</td></tr>
+      <tr><td>Checked out</td><td>The tax invoice prints by itself, two copies; Print again if the printer missed it. Where the hotel chose otherwise: Issue tax invoice, or Invoices, Issue.</td><td>A5.9</td></tr>
       <tr><td>End of the day</td><td>Nobody left showing due out, or the night audit will not run.</td><td>A5.10</td></tr>
     </tbody>
   </table>

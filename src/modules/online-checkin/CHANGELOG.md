@@ -12,6 +12,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-19 · Guest documents like the old system's (the owner's D27-344 to D27-348)
+
+**Shipped** The guest's own page shows the desk's **proforma bill** (the interim bill until D27-344), drawn by finance's `BillPrint` as before (`pages/GuestPage.tsx`). **Proved** `onlineCheckin.test.tsx`. The root `CHANGELOG.md` has the whole entry and the gate numbers.
+
 ## 2026-10-15 · The guest's room-and-phone page takes a letter (the owner's D27-335)
 
 `pages/ByRoom.tsx`: "Your room number" is a text keyboard that starts in capitals (`autoCapitalize="characters"`), not a number keypad, so 111A can be typed. The match itself is guest services' function (GS-2, migration 226). The whole change: inventory's `CHANGELOG.md`, 15 October.

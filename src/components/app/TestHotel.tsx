@@ -57,8 +57,11 @@ export function TestPrintWatermark() {
 }
 
 /** TEST · NOT VALID on a document, large. `slip`: the 80mm roll, black on
-    white, as a thermal printer prints; otherwise the A4 page's orange. */
-export function TestDocumentMark({ slip = false, className }: { slip?: boolean; className?: string }) {
+    white, as a thermal printer prints; otherwise the A4 page's orange.
+    `label`: Settings › Documents' samples say SAMPLE · NOT VALID (D27-348). */
+export function TestDocumentMark({ slip = false, className, label = TEST_DOCUMENT }: {
+  slip?: boolean; className?: string; label?: string;
+}) {
   return (
     <p
       data-test-document
@@ -70,7 +73,7 @@ export function TestDocumentMark({ slip = false, className }: { slip?: boolean; 
         className,
       )}
     >
-      {TEST_DOCUMENT}
+      {label}
     </p>
   );
 }

@@ -48,6 +48,20 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **20 October, ~01:35: D27-344 to D27-348 on cp6 (local, not live), full gates green** (web 1,386,
+> api 2,806, db 1,749 / 232, replay, pg16). The guest documents like the old system's, in Fidato's
+> style: the **proforma bill** (was the interim bill); the **tax invoice issued and printed by itself at
+> check-out, 2 copies** (ORIGINAL FOR RECIPIENT / DUPLICATE FOR SUPPLIER), a per-hotel setting on Front
+> desk rules (229); the **guest registration card** with its **G.R. card no** given at check-in (230),
+> Aadhaar its last four, from **Print registration card** in the panel's top row; the **voucher** with
+> arrival time, a **Special request** box of its own, promotion, extras, Paid and Due at check-in (231);
+> **HSN/SAC** 4, 6 or 8 digits, on the restaurant bill too (232); **Settings › Documents** with Print a
+> sample. The manual and its pictures moved with it (A4's bill run retaken on a fresh A4 Test Kulkarni,
+> FH-5EL-2610-5057). Migrations 229-232: they go out with the next release, at the owner's word.
+> Local demo: the old A4 Test Kulkarni and A5 Test Rane/Wagh checked out; new ones in 305, 303 (Rane);
+> A3 Test Gokhale in 307 has G.R. card no 1. Next: the earlier-day restaurant bill reprint (the owner,
+> 20 Oct), being built now.
+
 > **17 October, ~20:10: RELEASE 7 IS LIVE (`27efb1eb`), and Amrapali starts today.** Checked read-only:
 > website `index-Dy5szpPO.js` (index no-store, CSP and HSTS present); API healthy, started 14:35:33 UTC;
 > server at 27efb1eb, fidato-api and nginx active; backups 14:34 and 14:35 UTC; AMR on 2026-10-17 with
@@ -723,6 +737,13 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **20 October:** (1) The earlier-day restaurant bill reprint (team feedback item 7a): building. (2) The
+> next release carries D27-341 to D27-348 and migrations 229-232, at the owner's word. (3) Open for the
+> owner: the guest's own page shows the proforma bill without the stay's facts, payments and HSN/SAC
+> (identical would need definer reads); the CA on "Tax Invoice" for the restaurant bill. (4) Pictures
+> left: A5-T1 and A8-14 keep the old label in a dimmed background / one new line (see the root
+> CHANGELOG). (5) At Amrapali: the printing PC's one-time setup file, so slips print with no window.
 
 > **17 October:** (1) Amrapali's clear: when the owner pastes the dry run, check the counts, then give
 > `… scripts/reset-property.ts AMR --fresh-start --yes` (server, the owner types), then check read-only

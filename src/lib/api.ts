@@ -410,6 +410,10 @@ export interface DeskRules {
   posRoundOff: "off" | "manual" | "automatic";
   kpiDayUseHalf: boolean;
   kpiCompAsSold: boolean;
+  /** The tax invoice at check-out (229, D27-344): issued and printed (the
+      default), offered as a button, or left to Invoices; and its copies. */
+  invoiceAtCheckout?: "print" | "offer" | "invoices";
+  invoiceCopies?: 1 | 2;
   /** Shaded like a weekend on the Calendar and Rates; no price reads them. */
   holidays: Array<{ day: string; name: string; colour: string | null }>;
 }
