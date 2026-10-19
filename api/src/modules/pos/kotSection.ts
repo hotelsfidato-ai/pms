@@ -419,7 +419,10 @@ export function registerKotSection(till: App, hotelFor: HotelFor): void {
         `select b.id::text, b.order_id::text, b.heading, o.table_ref
            from pos_bill_prints b join pos_orders o on o.id = b.order_id
           where b.station_id = $1 and b.printed_at is null and not b.printed_here
-            and o.business_date = $2::date
+            /* Today's bills; and a finished bill of an earlier day asked
+               for again (its duplicate, 20 Oct) - within a day of asking. */
+            and (o.business_date = $2::date
+                 or (o.status <> 'open' and b.asked_at > now() - interval '1 day'))
           order by b.asked_at`,
         [station.id, bd]) : { rows: [] };
 

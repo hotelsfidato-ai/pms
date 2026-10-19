@@ -59,8 +59,9 @@ seam); a test enforces it.
 > sample. The manual and its pictures moved with it (A4's bill run retaken on a fresh A4 Test Kulkarni,
 > FH-5EL-2610-5057). Migrations 229-232: they go out with the next release, at the owner's word.
 > Local demo: the old A4 Test Kulkarni and A5 Test Rane/Wagh checked out; new ones in 305, 303 (Rane);
-> A3 Test Gokhale in 307 has G.R. card no 1. Next: the earlier-day restaurant bill reprint (the owner,
-> 20 Oct), being built now.
+> A3 Test Gokhale in 307 has G.R. card no 1. Then (20 Oct): the Till's **An earlier day's bill** - a
+> paid bill of any day found by its day or number and printed again as BILL · DUPLICATE; the bill
+> printer now also takes an earlier day's finished bill (it took today's only).
 
 > **17 October, ~20:10: RELEASE 7 IS LIVE (`27efb1eb`), and Amrapali starts today.** Checked read-only:
 > website `index-Dy5szpPO.js` (index no-store, CSP and HSTS present); API healthy, started 14:35:33 UTC;
@@ -738,7 +739,7 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
-> **20 October:** (1) The earlier-day restaurant bill reprint (team feedback item 7a): building. (2) The
+> **20 October:** (1) Done: the earlier-day restaurant bill reprint (team feedback item 7a), on cp6. (2) The
 > next release carries D27-341 to D27-348 and migrations 229-232, at the owner's word. (3) Open for the
 > owner: the guest's own page shows the proforma bill without the stay's facts, payments and HSN/SAC
 > (identical would need definer reads); the CA on "Tax Invoice" for the restaurant bill. (4) Pictures

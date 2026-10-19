@@ -12,7 +12,7 @@ import { addonBreakdown } from "@/modules/pos/lib/pricing";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { OrderHeaderPanel } from "@/modules/pos/flows/OrderHeaderPanel";
 import { cn } from "@/lib/cn";
-import { money, moneyPrecise } from "@/lib/format";
+import { money, moneyPrecise, dateShort } from "@/lib/format";
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
 import { useUi } from "@/lib/ui";
@@ -22,7 +22,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus, KotsSent } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -449,6 +449,9 @@ export default function TillPage() {
               </ul>
             </Card>
           )}
+
+          <EarlierBills hotelId={hotelId} today={orders.data?.businessDate ?? null}
+            openId={openId} onOpen={setOpenId} />
         </div>
       </div>
       <CustomiseDialog
@@ -481,8 +484,66 @@ export default function TillPage() {
   );
 }
 
-function OrderRow({ order, active, onOpen }: {
+/* ══════════════════════════════════════════════════════════════════
+   AN EARLIER DAY'S BILL (the team's feedback of 18 October, item 7a; the
+   owner, 20 October): pick the day, or type the bill's number, and open it;
+   its Print the bill prints BILL · DUPLICATE (D27-292), at the bill printer
+   or here. Nothing else changes on a finished bill from here.
+   ══════════════════════════════════════════════════════════════════ */
+function EarlierBills({ hotelId, today, openId, onOpen }: {
+  hotelId: string; today: string | null; openId: string | null; onOpen: (id: string) => void;
+}) {
+  const [date, setDate] = useState("");
+  const [no, setNo] = useState("");
+  const asked = date !== "" || no.trim().length >= 2;
+  const bills = useQuery({
+    queryKey: ["till-earlier-bills", hotelId, date, no.trim()],
+    queryFn: () => listEarlierBills(hotelId, { date, no }),
+    enabled: asked,
+  });
+  return (
+    <Card className="overflow-hidden" data-earlier-bills>
+      <CardHeader title="An earlier day's bill" />
+      <CardBody className="space-y-3">
+        <p className="text-sm text-grey-600">
+          To print a paid bill again: pick its day, or type its number. It prints as BILL · DUPLICATE.
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Day">
+            {(f) => (
+              <Input {...fieldProps(f)} type="date" value={date} max={today ?? undefined}
+                onChange={(e) => setDate(e.target.value)} />
+            )}
+          </Field>
+          <Field label="Bill number">
+            {(f) => (
+              <Input {...fieldProps(f)} value={no} placeholder="R-0012" maxLength={40}
+                onChange={(e) => setNo(e.target.value)} />
+            )}
+          </Field>
+        </div>
+        {asked && bills.isError && (
+          <p className="text-sm text-brand-red-700">The bills could not be read. Try again.</p>
+        )}
+        {asked && bills.data && bills.data.length === 0 && (
+          <p className="text-sm text-grey-600" data-earlier-none>No paid bill {date ? `on ${dateShort(date)}` : ""}{date && no.trim() ? " " : ""}{no.trim() ? `with "${no.trim()}" in its number` : ""}.</p>
+        )}
+      </CardBody>
+      {bills.data && bills.data.length > 0 && (
+        <ul className="divide-y divide-grey-100 border-t border-grey-100">
+          {bills.data.map((o) => (
+            <OrderRow key={o.id} order={o} withDate active={o.id === openId} onOpen={() => onOpen(o.id)} />
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+function OrderRow({ order, active, onOpen, withDate = false }: {
   order: OrderSummary; active: boolean; onOpen: () => void;
+  /** An earlier day's bill says its day (20 Oct). */
+  withDate?: boolean;
 }) {
   return (
     <li>
@@ -503,6 +564,7 @@ function OrderRow({ order, active, onOpen }: {
             )}
           </p>
           <p className="text-2xs text-grey-500">
+            {withDate && `${dateShort(order.businessDate)} · `}
             {order.lines} item{order.lines === 1 ? "" : "s"} · {order.openedAt}
             {order.paymentMethod && ` · ${order.paymentMethod}`}
             {order.status === "void" && " · VOID"}

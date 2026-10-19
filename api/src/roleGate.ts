@@ -940,6 +940,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/till/orders`]: TILL_READ,
   [`GET ${H}/till/guest-orders`]: TILL_READ,  // in-room dining, D27-224
   [`GET ${H}/till/orders/:id`]: TILL_READ,
+  /* An earlier day's bill, to print again (20 Oct). */
+  [`GET ${H}/till/bills`]: TILL_READ,
   /* The docket and the KOT printer: the kitchen too, which prints them. */
   [`GET ${H}/till/orders/:id/kot/:no`]: KOT_READ,
   [`GET ${H}/till/kot-setup`]: KOT_READ,

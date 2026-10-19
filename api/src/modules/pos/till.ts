@@ -1989,6 +1989,54 @@ till.get("/:code/till/orders", async (c) => {
   return body ? c.json(body) : c.json({ error: "No such property." }, 404);
 });
 
+/* AN EARLIER DAY'S BILL (the team's feedback of 18 October, item 7a; the
+   owner, 20 October): the finished bills of one business date, or those
+   whose number holds what was typed, on any day. Opened on the Till, its
+   Print the bill prints BILL · DUPLICATE (D27-292); who may print is as for
+   today's bills. Only paid and voided bills: an open order is on the Till
+   already, and a bill closed unpaid has nothing to print. */
+till.get("/:code/till/bills", async (c) => {
+  const date = c.req.query("date") ?? "";
+  const no = (c.req.query("no") ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) && !no) {
+    return c.json(refuse("Pick a day, or type the bill's number."), 409);
+  }
+  if (no.length > 40) return c.json(refuse("A bill number is at most 40 characters."), 409);
+  const body = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rows } = await client.query<{
+      id: string; order_no: string; outlet: string; table_ref: string | null;
+      status: string; business_date: string; gross: string;
+      payment_method: string | null; opened_at: string; lines: string;
+    }>(
+      `select o.id::text, o.order_no, ou.code as outlet, o.table_ref,
+              o.status, to_char(o.business_date,'YYYY-MM-DD') as business_date,
+              (select gross from app.pos_order_total(o.id))::text as gross,
+              o.payment_method,
+              to_char(o.opened_at,'HH24:MI') as opened_at,
+              (select count(*) from pos_order_lines l
+                where l.order_id = o.id and not l.voided)::text as lines
+         from pos_orders o
+         join pos_outlets ou on ou.id = o.outlet_id
+        where o.hotel_id = $1 and o.status in ('settled', 'void')
+          and ($2::date is null or o.business_date = $2::date)
+          and ($3 = '' or o.order_no ilike '%' || $3 || '%' escape '\\')
+        order by o.business_date desc, o.opened_at desc
+        limit 100`,
+      [hotelId, date || null, no.replace(/[\\%_]/g, (m) => "\\" + m)],
+    );
+    return {
+      bills: rows.map((r) => ({
+        id: r.id, orderNo: r.order_no, outlet: r.outlet, table: r.table_ref, status: r.status,
+        businessDate: r.business_date, gross: Number(r.gross), paymentMethod: r.payment_method,
+        openedAt: r.opened_at, lines: Number(r.lines),
+      })),
+    };
+  });
+  return body ? c.json(body) : c.json({ error: "No such property." }, 404);
+});
+
 /** The floor's table a TYPED name means, in this outlet (QA POS-3): "AC2"
     typed at the till is table AC2 on Tables, or the two screens disagree
     about which tables are taken and a second bill opens beside the first.

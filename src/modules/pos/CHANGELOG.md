@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-20 · A bill of an earlier day, printed again (the team's feedback of 18 Oct, item 7a)
+
+**Shipped** The Till's **An earlier day's bill** (pick the day or type a part of the number; paid and voided bills; Print the bill prints BILL · DUPLICATE) - `pages/Till.tsx`, `data/till.ts`; `GET /till/bills` in `api/src/modules/pos/till.ts`; the bill printer also takes an earlier day's finished bill asked for within a day (`kotSection.ts`; it took today's only). **Proved** `kotSection.test.ts` (fails with the old rule), `earlierBills.test.tsx`. The root `CHANGELOG.md` has the whole entry.
+
 ## 2026-10-19 · Guest documents like the old system's (the owner's D27-344 to D27-348)
 
 **Shipped** **The restaurant bill prints its HSN/SAC** under the FSSAI line: the code of each kind its lines sell under (Settings › Taxes), a dash until set (`components/BillSlip.tsx`; `hotelSac` from `api/src/modules/pos/till.ts`). `BillSlip`'s `sample` draws Settings › Documents' made-up bill (SAMPLE · NOT VALID, no GSTIN). Front door: `BillSlip`, `Order`. **Proved** the real-bill snapshot (one line added), `api/test/modules/pos/billSac.test.ts` 2/2. The root `CHANGELOG.md` has the whole entry and the gate numbers.

@@ -335,7 +335,7 @@
 
   <!-- A8.7 -->
   <h2 id="a8-7"><span class="n">A8.7</span>The Till: the cash register</h2>
-  <p>The Till is where a bill is checked and paid. The menu is on the left: tapping a dish adds it to the open order at once. The bill is on the right. Under it are <span class="ui">Open orders</span> and <span class="ui">Settled today</span>.</p>
+  <p>The Till is where a bill is checked and paid. The menu is on the left: tapping a dish adds it to the open order at once. The bill is on the right. Under it are <span class="ui">Open orders</span>, <span class="ui">Settled today</span> and <span class="ui">An earlier day's bill</span>.</p>
 
   <h3>To open an order on the Till</h3>
   <ol class="steps">
@@ -376,7 +376,7 @@
 
   <h3>To take payment</h3>
   <ol class="steps">
-    <li>Check the lines and the <span class="ui">Total</span> with the guest. Print the interim bill if they want to see it (A8.6).</li>
+    <li>Check the lines and the <span class="ui">Total</span> with the guest. Print the bill if they want to see it (A8.6).</li>
     <li>Tap <span class="ui">Cash</span>, <span class="ui">Card</span> or <span class="ui">UPI</span>; or type the room and tap <span class="ui">Charge to room</span>; or <span class="ui">Part - pay two ways</span>.</li>
     <li>The bill closes and moves under <span class="ui">Settled today</span>. To print it, tap it there, then <span class="ui">Print the bill</span>.</li>
     <li>When the guests leave, tap <span class="ui">Clear</span> on the table in Tables.</li>
@@ -399,6 +399,30 @@
     <figcaption><b>Figure A8-17.</b> A paid bill: Print the bill.</figcaption>
     <ol class="callouts"><li>Paid by UPI</li><li>Print the bill (A8.6)</li></ol>
   </figure>
+
+  <h3>Printing a bill from an earlier day</h3>
+  <p><span class="ui">Settled today</span> lists today's bills only. To print an earlier paid bill again, for a guest or for the accounts:</p>
+  <ol class="steps">
+    <li>On the Till, under <span class="ui">An earlier day's bill</span>, pick the <span class="ui">Day</span>, or type the <span class="ui">Bill number</span> (a part of it is enough).</li>
+    <li>Tap the bill in the list. Each says its day, its items and its total.</li>
+    <li>Tap <span class="ui">Print the bill</span>. It prints at the bill printer (or here, as in A8.6), headed <b>BILL · DUPLICATE</b>, so it cannot pass as a new sale.</li>
+  </ol>
+  <p>Only paid and voided bills are listed: a bill closed unpaid has nothing to print. An earlier day's bill can only be printed; it is voided only on the day it was paid.</p>
+
+  <figure class="shot" id="fig-A8-36">
+    <img src="img/A8-36.png" alt="The Till's card An earlier day's bill: the Day box, the Bill number box with 20261010 typed, and 10 October's paid bills listed with their day, items and totals">
+    <figcaption><b>Figure A8-36.</b> An earlier day's bill, found by its number.</figcaption>
+    <ol class="callouts">
+      <li>Day: every paid bill of that day</li>
+      <li>Bill number: a part is enough</li>
+      <li>Tap the bill, then Print the bill</li>
+    </ol>
+  </figure>
+
+  <div class="box why">
+    <h4>Why it works this way</h4>
+    <p>The team asked to reprint a bill of an earlier day (18 October); the owner asked for it on 20 October. A bill printed again says DUPLICATE: <span class="d">D27-292</span>. Who may print it is unchanged: whoever prints today's bills.</p>
+  </div>
 
   <h3>Voiding a paid bill</h3>
   <p>A bill paid by mistake (the wrong table, paid twice) can be voided by the owner, an Admin or the GM, on the day it was paid and before <span class="ui">Close restaurant day</span>. Nobody else sees the button.</p>

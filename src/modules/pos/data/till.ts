@@ -439,6 +439,17 @@ export async function listOrders(
   );
 }
 
+/** An earlier day's finished bills (20 Oct): one business date, or those
+    whose number holds what was typed, on any day; newest first, at most 100. */
+export async function listEarlierBills(
+  hotelId: string, ask: { date?: string; no?: string },
+): Promise<OrderSummary[]> {
+  const q = new URLSearchParams();
+  if (ask.date) q.set("date", ask.date);
+  if (ask.no?.trim()) q.set("no", ask.no.trim());
+  return (await api<{ bills: OrderSummary[] }>(`/api/hotels/${hotelId}/till/bills?${q}`)).bills;
+}
+
 export async function getOrder(
   hotelId: string, orderId: string,
 ): Promise<Order | null> {

@@ -50,6 +50,25 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-20 · A restaurant bill of an earlier day, printed again (the team's feedback of 18 Oct, item 7a)
+
+**Asked for:** the team, 18 Oct: "Reprint bill"; the plan (`docs/plans/team-feedback-18oct.md` item 7): today's bills reprint from the Till's Settled today, an earlier day's could not. The owner, 20 Oct: "build the bill reprint for earlier days".
+
+**Shipped**
+- The Till's **An earlier day's bill**: pick the day, or type a part of the bill number; the paid and voided bills listed with their day; tap one, then **Print the bill** - it prints as **BILL · DUPLICATE** (D27-292) - `src/modules/pos/pages/Till.tsx` (`EarlierBills`), `data/till.ts` (`listEarlierBills`).
+- `GET /till/bills?date=&no=` (newest first, at most 100; open and closed-unpaid bills left out; gated as the Till's reads) - `api/src/modules/pos/till.ts`, `roleGate.ts`.
+- **Found and fixed with it:** the bill printer took only bills whose order was from today, so an earlier day's bill sent to it would have waited for ever. It now also takes a finished bill asked for within the last day - `api/src/modules/pos/kotSection.ts`.
+- Who may print is unchanged (whoever prints today's bills). Manual A8.7 (and its stale "interim bill" line); Figure A8-36.
+
+**Proved**
+- `kotSection.test.ts`: found by its day and by a part of its number, refused with neither, printed again as a duplicate at the bill printer; with the old "today only" rule put back, that test failed ("expected undefined to be 'duplicate'"), then passed restored. `earlierBills.test.tsx` 1/1 (with `kotReprint.test.tsx`, 7/7).
+- Gates `reprint-earlier-bills`, all green, 20 Oct 02:14: web 1,387 (1 skipped), api 2,807, database 1,749 / 232, replay, pg16, types, strip.
+
+**Left open**
+- Not deployed: with the next release, at the owner's word. Item 7b (a REPRINT mark) is the existing BILL · DUPLICATE.
+
+**Commits:** this commit
+
 ## 2026-10-19/20 · Guest documents like the old system's (the owner's D27-344 to D27-348)
 
 **Asked for:** the owner's three samples from the old system (folio invoice, guest registration card, booking confirmation): "follow this … simple … use the Fidato design system"; HSN and SAC; at check-out the bill prints 2 copies, with an option in the software, by default when they check out; the interim bill becomes a proforma bill; a section in Settings to see each document's format and get a sample to test. Then: "start building the plan and ask me questions if you have problems in making a design". Answers on the way: D27-344 (automatic at check-out, numbered cards, Aadhaar last four, the card from a button), D27-345 (numbers from 1, house policies, a blank remark, only new check-ins), D27-346 (the card's button in the panel's top row, both tabs), D27-347 (a Special request box of its own), D27-348 (Print a sample).

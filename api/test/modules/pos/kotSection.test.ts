@@ -282,6 +282,35 @@ describe("the bill printer", () => {
     expect((await poll(A)).bills!.filter((x) => x.orderId === d.orderId)).toEqual([]);
   });
 
+  /* AN EARLIER DAY'S BILL (the team's feedback of 18 October, item 7a; the
+     owner, 20 October): found by its day or its number, and asked again it
+     prints at the bill printer as a DUPLICATE - not only today's bills. */
+  it("finds a paid bill of an earlier day, and prints it again at the bill printer", async () => {
+    expect((await thisComputer(A, "Kitchen PC", [(await kind("Kitchen")).id, (await kind("Bar")).id], true)).status).toBe(200);
+    const d = await sendBoth();
+    expect((await call(owner, "POST", `/till/orders/${d.orderId}/settle`, { method: "upi" })).status).toBe(200);
+    expect((await call(owner, "POST", `/till/orders/${d.orderId}/bill-print`)).status).toBe(200);
+    /* That bill printed on its day; the order is moved three days back. */
+    await sql("update pos_bill_prints set printed_at = now() where order_id = $1 and printed_at is null", [d.orderId]);
+    const [o] = await sql<{ day: string; no: string }>(
+      `update pos_orders set business_date = business_date - 3, order_no = order_no || '-E'
+        where id = $1 returning to_char(business_date, 'YYYY-MM-DD') as day, order_no as no`, [d.orderId]);
+
+    const found = async (q: string) =>
+      ((await (await call(owner, "GET", `/till/bills?${q}`)).json()) as { bills: { id: string; businessDate: string }[] })
+        .bills;
+    expect((await found(`date=${o!.day}`)).find((b) => b.id === d.orderId)?.businessDate).toBe(o!.day);
+    expect((await found(`no=${encodeURIComponent(o!.no.slice(-6))}`)).map((b) => b.id)).toContain(d.orderId);
+    const neither = await call(owner, "GET", "/till/bills");
+    expect(neither.status).toBe(409);
+    expect(await reason(neither)).toBe("Pick a day, or type the bill's number.");
+
+    const again = (await (await call(owner, "POST", `/till/orders/${d.orderId}/bill-print`)).json()) as { heading: string };
+    expect(again.heading).toBe("duplicate");
+    expect((await poll(A)).bills!.find((x) => x.orderId === d.orderId)?.heading, "an earlier day's duplicate prints too")
+      .toBe("duplicate");
+  });
+
   it("with no bill printer, the bill opens where it was asked (sentTo null)", async () => {
     expect((await thisComputer(A, "Kitchen PC", [(await kind("Kitchen")).id, (await kind("Bar")).id], false)).status).toBe(200);
     const d = await sendBoth();

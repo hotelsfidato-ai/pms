@@ -377,4 +377,20 @@ export const SHOTS = [
       { n: 4, at: "text:Sections and tables", side: "right" },
     ],
   },
+  /* An earlier day's bill, to print again (the team's feedback of 18 Oct,
+     item 7a; the owner, 20 Oct): 10 October's paid bills on the demo, found
+     by the start of their number. */
+  {
+    id: "A8-36", title: "The Till: an earlier day's bill, found by its number", as: "General Manager",
+    path: "/pos/5EL/till", steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-earlier-bills]", ms: 60000 },
+      { eval: "document.querySelector('[data-earlier-bills]').scrollIntoView({ block: 'start' })" }, { wait: 400 },
+      { type: ["css:[data-earlier-bills] input:not([type=date])", "20261010"] },
+      { waitFor: "css:[data-earlier-bills] li", ms: 30000 }, { wait: 800 },
+      { eval: "document.querySelector('[data-earlier-bills]').scrollIntoView({ block: 'end' })" }, { wait: 500 }],
+    marks: [
+      { n: 1, at: "css:[data-earlier-bills] input[type=date]", side: "left" },
+      { n: 2, at: "css:[data-earlier-bills] input:not([type=date])", side: "top" },
+      { n: 3, at: "css:[data-earlier-bills] li", side: "left" },
+    ],
+  },
 ];
