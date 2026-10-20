@@ -50,7 +50,7 @@ seam); a test enforces it.
 
 > **20 October, 16:20: RELEASE 9 LIVE, typed by the owner (D27-350).** Checked read-only: GitHub `main` and
 > the server at `4854a272`, API restarted 16:16 and healthy, website `index-Dv6Uhg03.js`, backup
-> `fidato-20261020-104520.dump`. Release copies r6, r7 and r8 recycled; r9's kept. The server's checkout
+> `fidato-20261020-104520.dump`. Every older release copy recycled (r2-r4, r6-r8, rooms, final, pos); r9's kept. The server's checkout
 > has two new untracked files, `api/.env.save` and `api/.env.save.1` (editor copies; not read, not touched).
 
 > **20 October, 15:40: RELEASE 9 READY, the owner's to type.** `release/r9-20oct` = `4854a272` (D27-349: the
