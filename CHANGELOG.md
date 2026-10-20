@@ -66,7 +66,7 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 **Left open**
 - First written as a new server route; found the line's quantity route already does it (D27-192), and removed it before it was committed.
-- Not deployed: with the next release, at the owner's word.
+- Live on 20 Oct with release 9 (4854a272), deployed by the owner.
 
 **Commits:** this commit
 
@@ -85,7 +85,7 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 - Gates `reprint-earlier-bills`, all green, 20 Oct 02:14: web 1,387 (1 skipped), api 2,807, database 1,749 / 232, replay, pg16, types, strip.
 
 **Left open**
-- Not deployed: with the next release, at the owner's word. Item 7b (a REPRINT mark) is the existing BILL · DUPLICATE.
+- Live on 20 Oct with release 8 (5fc8681c), deployed by the owner. Item 7b (a REPRINT mark) is the existing BILL · DUPLICATE.
 
 **Commits:** this commit
 
