@@ -48,6 +48,14 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
+> **20 October, 15:40: RELEASE 9 READY, the owner's to type.** `release/r9-20oct` = `4854a272` (D27-349: the
+> Till's and the Terminal's wider order pane, + on a dish on the Till and the waiter's pad). No migrations.
+> Full gates green in the clean copy `.claude/worktrees/release-r9-20oct` (web 1,389, api 2,807, db 1,749 /
+> 232, replay, pg16); website `index-Dv6Uhg03.js`; steps A1-A7 in `.local/release-r9-steps.txt`. **Release 8
+> is live** (server at 5fc8681c since 03:03, website `index-giGycAQK.js` seen live at 15:35). After launch
+> check read-only: the bundle, health, server at 4854a272; then the release 6, 7 and 8 copies can be recycled
+> (junctions out first).
+
 > **20 October, 02:55: RELEASE 8 READY, the owner's to type.** `release/r8-20oct` = `5fc8681c` (D27-341 to
 > D27-348: the guest documents; the earlier-day restaurant bill reprint). Full gates green in the clean copy
 > `.claude/worktrees/release-r8-20oct` (web 1,387, api 2,807, db 1,749 / 232, replay, pg16); website
@@ -746,9 +754,9 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
-> **20 October:** (1) Done: the earlier-day restaurant bill reprint (team feedback item 7a), and D27-349 (a wider
-> order pane, + on a dish: items 1 and 2), on cp6 after release 8; they go with the next release. (2) The
-> next release carries D27-341 to D27-348 and migrations 229-232, at the owner's word. (3) Open for the
+> **20 October:** (1) Done: the earlier-day restaurant bill reprint (team feedback item 7a) and D27-341 to
+> D27-348 are live (release 8); D27-349 (a wider order pane, + on a dish: items 1 and 2) is release 9, ready
+> (§ 2). (2) Item 5 (bill format) waits for the team's sample. (3) Open for the
 > owner: the guest's own page shows the proforma bill without the stay's facts, payments and HSN/SAC
 > (identical would need definer reads); the CA on "Tax Invoice" for the restaurant bill. (4) Pictures
 > left: A5-T1 and A8-14 keep the old label in a dimmed background / one new line (see the root
