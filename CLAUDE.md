@@ -37,6 +37,10 @@ NOTHING LEAVES THIS MACHINE.**
   proof now — the Action cannot be.
 - A service chat's own push is refused the same way. They commit; the master
   merges locally.
+- **20 October, the owner (D27-350): the push to GitHub and every deployment —
+  the server and the website — are done BY THE OWNER, always.** The master
+  prepares the release and hands over the steps A1–A7, each labelled with where
+  it runs; the owner types them. This stays even if the rule above lifts.
 
 This lifts only when the owner says so in their own words. Until then, a green
 local gate run is the whole of the bar, and the standing rule that a push is

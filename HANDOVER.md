@@ -1594,6 +1594,13 @@ earlier  channel manager and payment gateway excluded; attachments parked;
 These come from the owner, in their words where quoted, and override any
 habit of yours.
 
+- **THE OWNER PUSHES AND DEPLOYS — 20 October (D27-350).** Their words: *"add
+  this as a rule that deployment or code push to GitHub and server deployment
+  is done by me"*. The push to GitHub, the server's steps and the website's
+  deploy are the owner's, always; the master prepares the release
+  (`scripts/release.mjs`) and gives the steps A1–A7, each labelled with where
+  it runs. This stays even if the rule below lifts.
+
 - **NOTHING LEAVES THIS MACHINE — 19 September, and it outranks every other
   rule here.** Their words: *"add this rule where u dont push anything, all
   the things are committed locally and nothing is pushed to actions, also
