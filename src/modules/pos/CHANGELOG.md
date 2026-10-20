@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-20 · A wider order pane, and + on a dish (the owner's D27-349)
+
+**Shipped** The Till's and the Terminal's order pane wider on big screens (480 px at xl), names wrapping, Customise an icon; + on the Till's lines (the line's quantity, as the Terminal's +); + under "Already sent" on the waiter's pad, the sent dish with its choices on this round - `pages/Till.tsx`, `pages/Terminal.tsx`, `flows/OrderPad.tsx`; the order's lines say `itemId`, `addonId`, `moreChoiceIds` (`api/src/modules/pos/till.ts`). **Proved** `oneMore.test.tsx`, `api/test/modules/pos/sameDish.test.ts`. The root `CHANGELOG.md` has the whole entry.
+
 ## 2026-10-20 · A bill of an earlier day, printed again (the team's feedback of 18 Oct, item 7a)
 
 **Shipped** The Till's **An earlier day's bill** (pick the day or type a part of the number; paid and voided bills; Print the bill prints BILL · DUPLICATE) - `pages/Till.tsx`, `data/till.ts`; `GET /till/bills` in `api/src/modules/pos/till.ts`; the bill printer also takes an earlier day's finished bill asked for within a day (`kotSection.ts`; it took today's only). **Proved** `kotSection.test.ts` (fails with the old rule), `earlierBills.test.tsx`. The root `CHANGELOG.md` has the whole entry.

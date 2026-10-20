@@ -124,6 +124,14 @@ describe("D27-189: the same dish is one line", () => {
       ["Bhaaji Pau (Butter)", 1, "pending"],
       ["Sides: Onions", 1, "pending"],
     ]);
+    /* The order says each line's dish and choices, so the waiter's pad can
+       put one more of a sent dish on its round (the owner's D27-349). */
+    const read = (await res.json()) as {
+      lines: { id: string; itemId: string | null; variationId: string | null; addonId: string | null;
+               moreChoiceIds: string[]; parentLineId: string | null }[] };
+    const first = read.lines.find((l) => l.id === dish!.id)!;
+    expect([first.itemId, first.variationId, first.moreChoiceIds]).toEqual([pau, butter, []]);
+    expect(read.lines.find((l) => l.parentLineId === dish!.id)?.addonId).toBe(onions);
   });
 
   it("the quantity of an unsent dish takes its sides with it", async () => {

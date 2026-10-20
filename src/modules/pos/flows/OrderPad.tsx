@@ -243,6 +243,42 @@ export function OrderPad({
     setAsking(null);
   };
 
+  /* ONE MORE OF A DISH ALREADY SENT (the owner's D27-349): the same dish
+     with its choices - size, further choices, sides, note and its numbered
+     add-ons - joins this round, and goes with Send on a new KOT. The sent
+     one is untouched. On the pad, so it works with no connection too. */
+  const again = (d: OrderLine) => {
+    const item = categories.flatMap((c) => c.items).find((i) => i.id === d.itemId);
+    if (!item) { toast.error("Not added", `${d.name} is not on the menu now.`); return; }
+    const sides = (existing.data?.lines ?? [])
+      .filter((s) => s.parentLineId === d.id && s.isAddon && !s.voided && s.addonId)
+      .map((s) => s.addonId!);
+    const variationId = d.variationId ?? undefined;
+    const more = d.moreChoiceIds ?? [];
+    const chosen = d.numberedAddons?.addons ?? [];
+    if (chosen.length === 0) { put(item, 1, d.note ?? "", variationId, sides, more); return; }
+    const { variationLabel, addonLabels } = chosenLabels(item, variationId, sides, more);
+    const base = unitPriceOf(item, variationId, sides, more);
+    const line: DraftLine = {
+      uid: `${item.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      itemId: item.id, name: item.name, qty: 1, note: d.note ?? "",
+      ...(variationId ? { variationId } : {}),
+      ...(more.length ? { moreChoiceIds: more } : {}),
+      ...(variationLabel ? { variationLabel } : {}),
+      addonIds: sides, addonLabels,
+      numberedAddons: chosen, baseUnitPrice: base, unitPrice: priceWithAddons(base, chosen),
+    };
+    /* The same dish with the same add-ons already on the round: one more of
+       it, as the server joins them on Send. */
+    const key = (l: DraftLine) => JSON.stringify([l.itemId, l.variationId ?? null, l.note.trim(),
+      l.moreChoiceIds ?? [], [...l.addonIds].sort(), (l.numberedAddons ?? []).map((a) => [a.id, a.qty])]);
+    setLines((prev) => {
+      const twin = prev.find((l) => !l.customAddons?.length && !l.extraFor && key(l) === key(line));
+      return twin ? prev.map((l) => (l === twin ? { ...l, qty: l.qty + 1 } : l)) : [...prev, line];
+    });
+    setJustAdded({ uid: line.uid, name: item.name });
+  };
+
   const bump = (uid: string, by: number) => {
     setLines((prev) => prev.flatMap((l) => {
       if (l.uid !== uid) return [l];
@@ -641,6 +677,15 @@ export function OrderPad({
                         <span className="flex-1 min-w-0 truncate text-sm text-ink-900">
                           {d.qty}× {d.name}
                         </span>
+                        {/* One more of it, on this round (D27-349). */}
+                        <button
+                          type="button"
+                          aria-label={`One more ${d.name}`}
+                          onClick={() => again(d)}
+                          className={STEP}
+                        >
+                          <Plus className="size-4" />
+                        </button>
                         <button
                           type="button"
                           aria-label={`Customise ${d.name}`}

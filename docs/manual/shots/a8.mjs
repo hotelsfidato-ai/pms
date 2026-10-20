@@ -163,7 +163,7 @@ export const SHOTS = [
     path: "/pos/5EL/tables", steps: [{ click: "label:Open N4" }, { waitFor: "text:+ Extra papad" }],
     marks: [
       { n: 1, at: "text:+ Extra papad", side: "left" },
-      { n: 2, at: "label:Customise Paneer Tikka", side: "left" },
+      { n: 2, at: "label:Customise Paneer Tikka", side: "top" },
       { n: 3, at: "text:Kitchen has it all", side: "left" },
       { n: 4, at: "text:Cash", side: "left" },
       { n: 5, at: "text:Part - pay two ways", side: "left" },
@@ -351,7 +351,7 @@ export const SHOTS = [
     marks: [
       { n: 1, at: "css:input[placeholder='Table 4']", side: "right" },
       { n: 2, at: "text:Open the order", side: "right" },
-      { n: 3, at: "text:20261009-9", side: "left" },
+      { n: 3, at: "text:20261011-1", side: "left" },
       { n: 4, at: "text:Change outlet", side: "top" },
     ],
   },

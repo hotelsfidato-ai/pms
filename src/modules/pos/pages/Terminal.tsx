@@ -4,7 +4,7 @@ import { useParams, Link } from "react-router";
 import {
   UtensilsCrossed, X, BedDouble, Banknote, CreditCard, Smartphone,
   ArrowLeft, Printer, Lock, Search, Minus, Plus, MessageSquare, Flame,
-  CalendarHeart, ChevronRight,
+  CalendarHeart, ChevronRight, SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateLong, moneyPrecise } from "@/lib/format";
@@ -713,7 +713,8 @@ export default function TerminalPage() {
         )}
         <aside className={cn(
           "bg-white flex flex-col border-grey-200",
-          "lg:relative lg:w-[320px] xl:w-[380px] lg:shrink-0 lg:border-l lg:translate-x-0",
+          /* Wider on a big screen (the owner's D27-349). */
+          "lg:relative lg:w-[380px] xl:w-[480px] lg:shrink-0 lg:border-l lg:translate-x-0",
           /* Below lg it is a sheet: off-screen until asked for. Kept
              MOUNTED rather than unmounted so the order, its scroll
              position and any half-typed room number survive being
@@ -787,8 +788,9 @@ export default function TerminalPage() {
                     l.parentLineId !== null && "pl-5",
                   )}>
                     <div className="flex items-center gap-2">
+                      {/* The whole name, on two lines if need be (D27-349). */}
                       <span className={cn(
-                        "flex-1 min-w-0 text-base text-ink-900 truncate",
+                        "flex-1 min-w-0 text-base text-ink-900 break-words",
                         l.voided && "line-through",
                       )}>
                         {l.extra ? `+ ${l.name}` : l.name}
@@ -868,9 +870,10 @@ export default function TerminalPage() {
                           type="button"
                           onClick={() => { setCustomising(l); void numbered.refetch(); }}
                           aria-label={`Customise ${l.name}`}
-                          className="press h-11 px-4 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 cursor-pointer"
+                          title="Customise"
+                          className="press size-11 grid place-items-center rounded-full border border-grey-300 bg-white text-ink-900 hover:border-grey-400 hover:bg-grey-50 shrink-0 cursor-pointer"
                         >
-                          Customise
+                          <SlidersHorizontal className="size-4" />
                         </button>
                         <button
                           type="button"

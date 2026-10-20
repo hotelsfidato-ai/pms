@@ -152,6 +152,11 @@ export interface OrderLine {
       ticket does. */
   parentLineId: string | null;
   isAddon: boolean;
+  /** The dish and its choices (D27-349): the waiter's pad puts one more of a
+      sent dish on its round with them. Absent on an answer from before. */
+  itemId?: string | null;
+  addonId?: string | null;
+  moreChoiceIds?: string[];
   variationId: string | null;
   /** The numbered Add-ons folded into this dish (D27-289), as chosen: the
       bill prints "Veg Biryani 310 · Kebab +120" under the line, and

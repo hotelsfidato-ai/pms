@@ -1,6 +1,8 @@
 # The teams' feedback of 18 October — plan only
 
-Nothing here is built. Each item: what the team said, what is there today (checked in the code and,
+**Status, 20 October:** items 1 and 2 built (D27-349), 4, 6, 7 and 8 built with D27-344 and the earlier-day reprint, 3 is the BAR PC's setup (no code), 5 waits for the team's sample.
+
+At the time of writing, nothing here was built. Each item: what the team said, what is there today (checked in the code and,
 read-only, on live), what is reasonable, and the change.
 
 | # | Feedback | Today | Verdict | Change | Size |

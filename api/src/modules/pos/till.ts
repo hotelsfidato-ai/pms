@@ -1760,6 +1760,7 @@ async function readOrder(client: Client, orderId: string) {
     added_by_name: string | null;
     parent_line_id: string | null;
     variation_id: string | null; addon_id: string | null;
+    item_id: string | null; extra_choice_ids: string[] | null;
     numbered_addons: LineAddons | null;
     extra_kind: "custom" | "numbered" | null;
     kot_no: number | null; kot_kind_id: string | null; kot_kind_name: string | null;
@@ -1768,6 +1769,7 @@ async function readOrder(client: Client, orderId: string) {
             l.tax_rate::text, l.tax_scheme, l.note, l.voided, l.kot_status,
             s.full_name as added_by_name,
             l.parent_line_id::text, l.variation_id::text, l.addon_id::text,
+            l.item_id::text, l.extra_choice_ids::text[] as extra_choice_ids,
             l.numbered_addons, l.extra_kind,
             l.kot_no, k.id::text as kot_kind_id, k.name as kot_kind_name
        from pos_order_lines l
@@ -1893,6 +1895,11 @@ async function readOrder(client: Client, orderId: string) {
          (Butter)", exactly as the printed ticket does. */
       parentLineId: l.parent_line_id,
       isAddon: l.addon_id !== null,
+      /* The dish and its choices, so the waiter's pad can put one more of a
+         sent dish on its next round (the owner's D27-349). */
+      itemId: l.item_id,
+      addonId: l.addon_id,
+      moreChoiceIds: l.extra_choice_ids ?? [],
       variationId: l.variation_id,
       /* The numbered add-ons folded into this dish (D27-289), as chosen:
          the bill prints "Veg Biryani 310 · Kebab +120" under the line, and

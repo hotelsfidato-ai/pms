@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router";
 import {
   UtensilsCrossed, Plus, Minus, X, Receipt, BedDouble, Banknote, ChevronRight,
-  CreditCard, Smartphone, Printer, Percent, Split, CalendarHeart, Flame, Ban,
+  CreditCard, Smartphone, Printer, Percent, Split, CalendarHeart, Flame, Ban, SlidersHorizontal,
 } from "lucide-react";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
@@ -213,6 +213,17 @@ export default function TillPage() {
 
   /* One fewer (D27-189): the last one is a strike; once the kitchen has
      it, a manager's, with a reason (D27-119), as on the Terminal. */
+  /* One more (the owner's D27-349): not yet sent, the count goes up; with
+     the kitchen, the server puts one more of the same dish, same choices, on
+     a new line for the next Send - the Terminal's + does the same. */
+  const more = async (lineId: string) => {
+    const line = current.data?.lines.find((l) => l.id === lineId);
+    if (!line || !openId) return;
+    const res = await setLineQty(hotelId, openId, lineId, line.qty + 1);
+    if (!res.ok) return toast.error("Not added", res.reason);
+    applyOrder(res.order);
+  };
+
   const fewer = (lineId: string) => {
     const line = current.data?.lines.find((l) => l.id === lineId);
     if (!line || !openId) return;
@@ -301,7 +312,9 @@ export default function TillPage() {
         </Card>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
+      {/* The order wider on a big screen (the owner's D27-349): a dish's name
+          and its buttons both fit. */}
+      <div className="grid gap-5 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px]">
         {/* ── The menu ─────────────────────────────────────────── */}
         <div>
           {!openId ? (
@@ -415,6 +428,7 @@ export default function TillPage() {
               setBusy={setBusy}
               onStrike={askStrike}
               onFewer={fewer}
+              onMore={(id) => void more(id)}
               onCustomise={(line) => { setCustomising(line); void numbered.refetch(); }}
               /* Settling or abandoning FINISHES a bill, so the panel
                  closes. Discounting it does not — the biller is still
@@ -989,7 +1003,7 @@ function SplitPanel({
 }
 
 function OrderPanel({
-  order, hotelId, busy, setBusy, onStrike, onFewer, onCustomise, onDone, onChanged,
+  order, hotelId, busy, setBusy, onStrike, onFewer, onMore, onCustomise, onDone, onChanged,
 }: {
   order: Order;
   hotelId: string;
@@ -997,6 +1011,8 @@ function OrderPanel({
   setBusy: (b: boolean) => void;
   onStrike: (lineId: string) => void;
   onFewer: (lineId: string) => void;
+  /** One more of the dish (D27-349). */
+  onMore: (lineId: string) => void;
   /** Customise a dish: its add-ons (D27-289), or after Send lines of their own (D27-291). */
   onCustomise: (line: OrderLine) => void;
   /** The bill is finished — settled or closed unpaid. */
@@ -1219,9 +1235,11 @@ function OrderPanel({
                   {line.qty}×
                 </span>
                 <span className="flex-1 min-w-0">
+                  {/* The whole name, on two lines if it needs them (D27-349):
+                      "Tubor..." told nobody which beer. */}
                   <span
                     className={cn(
-                      "block truncate",
+                      "block break-words",
                       line.parentLineId !== null
                         ? "text-sm text-grey-600"
                         : "text-base text-ink-900",
@@ -1248,9 +1266,10 @@ function OrderPanel({
                     type="button"
                     onClick={() => onCustomise(line)}
                     aria-label={`Customise ${line.name}`}
-                    className="press h-11 px-3 rounded-full border border-grey-300 bg-white text-sm font-medium text-ink-900 hover:border-grey-400 hover:bg-grey-50 shrink-0 cursor-pointer"
+                    title="Customise"
+                    className="press size-11 grid place-items-center rounded-full border border-grey-300 bg-white text-ink-900 hover:border-grey-400 hover:bg-grey-50 shrink-0 cursor-pointer"
                   >
-                    Customise
+                    <SlidersHorizontal className="size-4" />
                   </button>
                 )}
                 {/* A side follows its dish (D27-192, Q8), and an add-on line's
@@ -1263,6 +1282,16 @@ function OrderPanel({
                     className="press size-11 grid place-items-center rounded-full text-grey-500 hover:text-ink-900 hover:bg-grey-100 shrink-0 cursor-pointer"
                   >
                     <Minus className="size-4" />
+                  </button>
+                )}
+                {!settled && !line.voided && line.parentLineId === null && (
+                  <button
+                    type="button"
+                    onClick={() => onMore(line.id)}
+                    aria-label={`One more ${line.name}`}
+                    className="press size-11 grid place-items-center rounded-full text-grey-500 hover:text-ink-900 hover:bg-grey-100 shrink-0 cursor-pointer"
+                  >
+                    <Plus className="size-4" />
                   </button>
                 )}
                 {!settled && !line.voided && (

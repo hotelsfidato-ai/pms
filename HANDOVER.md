@@ -746,7 +746,8 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
-> **20 October:** (1) Done: the earlier-day restaurant bill reprint (team feedback item 7a), on cp6. (2) The
+> **20 October:** (1) Done: the earlier-day restaurant bill reprint (team feedback item 7a), and D27-349 (a wider
+> order pane, + on a dish: items 1 and 2), on cp6 after release 8; they go with the next release. (2) The
 > next release carries D27-341 to D27-348 and migrations 229-232, at the owner's word. (3) Open for the
 > owner: the guest's own page shows the proforma bill without the stay's facts, payments and HSN/SAC
 > (identical would need definer reads); the CA on "Tax Invoice" for the restaurant bill. (4) Pictures

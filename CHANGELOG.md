@@ -50,6 +50,26 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-20 · The restaurant screen: a wider order pane, and + on a dish (D27-349; the teams' feedback of 18 Oct, items 1 and 2)
+
+**Asked for:** the team: "Make this pane wider"; "We need + sign to add another portion of same food component / dish / beverage". The owner, 20 Oct, all as recommended: wider on big screens with names wrapping and Customise as an icon; + on a dish already with the kitchen adds one more with the same choices on a new KOT; on the Till, the Terminal and the waiter's phone pad. Item 5 (bill format) waits for the team's sample.
+
+**Shipped**
+- The Till's order pane 380 -> 420 px (lg) / 480 px (xl), the Terminal's 320/380 -> 380/480; a dish's whole name, on two lines if it needs them; **Customise** an icon (sliders), still named for the dish - `src/modules/pos/pages/Till.tsx`, `Terminal.tsx`. Phones unchanged.
+- **+ on a dish on the Till** (the Terminal had one): through the line's quantity, whose server already puts one more of a dish the kitchen has on a new line with the same choices (D27-192, D27-289); nothing new on the server for it.
+- **+ under "Already sent" on the waiter's pad**: one more of the sent dish - size, further choices, sides, note and numbered add-ons - on this round, sent with Send on a new KOT; works with no connection, as the pad does - `src/modules/pos/flows/OrderPad.tsx`. For it, an order's lines now say their dish and choices (`itemId`, `addonId`, `moreChoiceIds`) - `api/src/modules/pos/till.ts` `readOrder`.
+- Manual A8.2, A8.7, A8.8; pictures A8-15, A8-16, A8-17, A8-26, A8-27, A8-33 retaken (an N4 order put on through the local API, as the run leaves it).
+
+**Proved**
+- `oneMore.test.tsx` 2/2 (the Till's + asks the line's quantity of 2; the pad's + sends the sent dish again with its note and numbered add-on); `sameDish.test.ts` 4/4 (the order's lines carry the dish and choices); the restaurant's web tests 165/165 unchanged.
+- `bash scripts/gates.sh plus-and-wider`, full, on 428acf66 with this work (2,335 s): web types, api types, strip (220 files), web tests 1,389 passed and 1 skipped (207 files), api tests 2,807 (216 files), database 1,749 assertions on 232 migrations, replay, pg16 - all exit 0.
+
+**Left open**
+- First written as a new server route; found the line's quantity route already does it (D27-192), and removed it before it was committed.
+- Not deployed: with the next release, at the owner's word.
+
+**Commits:** this commit
+
 ## 2026-10-20 · A restaurant bill of an earlier day, printed again (the team's feedback of 18 Oct, item 7a)
 
 **Asked for:** the team, 18 Oct: "Reprint bill"; the plan (`docs/plans/team-feedback-18oct.md` item 7): today's bills reprint from the Till's Settled today, an earlier day's could not. The owner, 20 Oct: "build the bill reprint for earlier days".
