@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    346 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
+    348 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -5375,7 +5375,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Store</td><td>The Inventory Manager, the kitchen manager; managers; others look only</td><td>What the property keeps (rice, gas, linen, soap) and where it is: deliveries, issues, moves, counts. Two views: <span class="ui">Shelf</span> and <span class="ui">Days</span>.</td></tr>
       <tr><td>Equipment</td><td>The Inventory Manager; anybody who can see it may ask</td><td>The register of durable things: an AC, a TV, a fridge, a kettle. Where each one is, its repairs, and taking it out of the store.</td></tr>
       <tr><td>Places and suppliers</td><td>The Inventory Manager and managers</td><td>The stores and the other places things stand, and who the property buys from.</td></tr>
-      <tr><td>Purchasing</td><td>Whoever may ask to buy; the GM approves</td><td>Ask for something, get it approved, order it, record the delivery into a store. <span class="ui">Who may ask to buy</span> is its setting.</td></tr>
+      <tr><td>Purchasing</td><td>Whoever may ask to buy; the GM approves. Bar bills: the owner, an Admin, the GM, the Inventory Manager</td><td><span class="ui">Restaurant and hotel</span>: ask for something, get it approved, order it, record the delivery into a store; <span class="ui">Who may ask to buy</span> is its setting. <span class="ui">Bar</span>: record a bar bill as it came, with its photo (A9.11).</td></tr>
     </tbody>
   </table>
   <p>The Inventory Manager's menu is <span class="ui">Store</span>, <span class="ui">Equipment</span> and <span class="ui">Purchasing</span>, and they land on the Store after signing in. <span class="ui">Places and suppliers</span> is not on that short menu: type “supplier” or “places” in <span class="ui">Find a screen</span> (A0).</p>
@@ -5869,7 +5869,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <!-- A9.11 -->
   <h2 id="a9-11"><span class="n">A9.11</span>Buying something: Purchasing</h2>
-  <p>A purchase goes through five stages, each shown on the order as its state:</p>
+  <p>Purchasing has two tabs: <span class="ui">Restaurant and hotel</span>, described first, and <span class="ui">Bar</span>, for the bar's bills (below). On Restaurant and hotel, a purchase goes through five stages, each shown on the order as its state:</p>
   <table>
     <thead><tr><th style="width:26%">State</th><th>What happens next</th></tr></thead>
     <tbody>
@@ -6004,9 +6004,44 @@ figure.shot.phone img { max-width: 72mm; }
     </ul>
   </div>
 
+  <h3>The bar's bills</h3>
+  <p>A bill for the bar is recorded as it came, with no approval: the bill has already come. Its drinks go into the <b>Bar store</b> at once, so the bar's stock is right from the moment the bill is saved. The owner, an Admin, the GM and the Inventory Manager record them; everybody who can open Purchasing can read them.</p>
+  <ol class="steps">
+    <li>Open <span class="ui">Purchasing</span>, tap <span class="ui">Bar</span>, then <span class="ui">Record a bar bill</span>.</li>
+    <li>Type the <span class="ui">Supplier</span>, the <span class="ui">Bill number</span> as printed and the <span class="ui">Bill date</span>.</li>
+    <li><span class="ui">Photo of the bill</span>: take it with the phone's camera, or pick a file.</li>
+    <li>For each drink on the bill, pick it from the bar's list. A drink the list does not have yet: <span class="ui">Add another drink…</span>, then its name as on the bill, its size in ml and what it is counted in (bottle, can, packet, piece). It joins the bar's list.</li>
+    <li>Type <span class="ui">How many</span> came and the <span class="ui">Cost of each</span>, as paid (liquor is not under GST, so the cost is what the bill says). <span class="ui">Add a drink</span> for the next line; the <span class="ui">Total</span> adds up as you go.</li>
+    <li>Tap <span class="ui">Save the bill</span>.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-40">
+    <img src="img/A9-40.png" alt="Record a bar bill: Supplier, Bill number and Bill date, Photo of the bill, two drinks added with their size, how many and the cost of each, and the Total">
+    <figcaption><b>Figure A9-40.</b> Record a bar bill.</figcaption>
+    <ol class="callouts"><li>The photo of the bill</li><li>A drink the bar's list did not have: its name and size</li><li>The total, as on the bill</li><li>Save the bill</li></ol>
+  </figure>
+
+  <p>The bill shows under <span class="ui">Bar</span> with its drinks, the cost of each, its total and who recorded it; <span class="ui">Photo of the bill</span> opens the photo. The drinks are in the Store, in the Bar store, each delivery's line naming the bill.</p>
+
+  <figure class="shot" id="fig-A9-41">
+    <img src="img/A9-41.png" alt="Purchasing, the Bar tab: a bar bill from Shah Wines with its drinks, total and who recorded it, and Record a bar bill">
+    <figcaption><b>Figure A9-41.</b> The bar's bills.</figcaption>
+    <ol class="callouts"><li>The Bar tab</li><li>A bill: who it is from and its number</li><li>Its drinks: how many, and the cost of each</li><li>Record a bar bill</li></ol>
+  </figure>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>The same bill twice is refused: <span class="msg">“Bill W-1021 from Shah Wines is already recorded.”</span></li>
+      <li>A drink already on the Store's list is picked, not added again: <span class="msg">“"Kingfisher Strong 650 ml" is already on the store's list. Pick it instead.”</span></li>
+      <li>Every drink needs its cost as on the bill; zero is an answer, a blank is not. A bill is not dated in the future.</li>
+      <li>A wrong line is undone in the Store, from the drink's History (A9.7), as any delivery is.</li>
+    </ul>
+  </div>
+
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The GM approves every purchase, at any amount: <span class="d">D18-4</span>, <span class="d">D17-35</span>. The order is a PDF sent by hand: <span class="d">D18-3</span>. One Approvals inbox, with the screens keeping their own buttons: <span class="d">D18-19</span>. GST and use-by at delivery: <span class="d">D27-238</span>.</p>
+    <p>The GM approves every purchase, at any amount: <span class="d">D18-4</span>, <span class="d">D17-35</span>. The order is a PDF sent by hand: <span class="d">D18-3</span>. One Approvals inbox, with the screens keeping their own buttons: <span class="d">D18-19</span>. The bar's bills, recorded directly with a photo, into the Bar store, by the owner, an Admin, the GM or the Inventory Manager: <span class="d">D27-354</span>. GST and use-by at delivery: <span class="d">D27-238</span>.</p>
   </div>
 
   <!-- A9.12 -->

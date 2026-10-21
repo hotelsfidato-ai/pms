@@ -538,6 +538,50 @@ export const SHOTS = [
     ],
   },
 
+  /* ── Purchasing's Bar tab: a bar bill recorded (the owner's D27-354) ── */
+  {
+    id: "A9-40", title: "Record a bar bill", as: IM,
+    path: "/h/5EL/purchasing?tab=bar",
+    steps: [
+      { clickIf: "text:Got it" }, { click: "text:Record a bar bill" }, { waitFor: "text:The drinks on the bill" },
+      { eval: "(() => { const d = document.querySelector('[role=dialog]'); const ins = d.querySelectorAll('.grid input'); const v = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; v.call(ins[0], 'Shah Wines'); ins[0].dispatchEvent(new Event('input', { bubbles: true })); v.call(ins[1], 'A9 Test 101'); ins[1].dispatchEvent(new Event('input', { bubbles: true })); })()" },
+      { eval: "(() => { const s = document.querySelector('[aria-label=\"Drink on line 1\"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'new'); s.dispatchEvent(new Event('change', { bubbles: true })); })()" },
+      /* The dialog grows and re-centres: settled before a box is clicked (21 Oct). */
+      { waitFor: "label:New drink's name on line 1" }, { wait: 800 },
+      { type: ["label:New drink's name on line 1", "A9 Kingfisher Strong 650 ml"] },
+      { type: ["label:Size in ml on line 1", "650"] },
+      { type: ["label:How many on line 1", "24"] },
+      { type: ["label:Cost of each on line 1", "140"] },
+      { click: "text:Add a drink" },
+      { eval: "(() => { const s = document.querySelector('[aria-label=\"Drink on line 2\"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'new'); s.dispatchEvent(new Event('change', { bubbles: true })); })()" },
+      /* The dialog grows and re-centres: settled before a box is clicked (21 Oct). */
+      { waitFor: "label:New drink's name on line 2" }, { wait: 800 },
+      { type: ["label:New drink's name on line 2", "A9 Imperial Blue 750 ml"] },
+      { type: ["label:Size in ml on line 2", "750"] },
+      { type: ["label:How many on line 2", "6"] },
+      { type: ["label:Cost of each on line 2", "520"] }, { wait: 400 },
+    ],
+    marks: [
+      { n: 1, at: "text:Photo of the bill", side: "left" },
+      { n: 2, at: "label:New drink's name on line 1", side: "left" },
+      { n: 3, at: "text:Total", side: "left" },
+      { n: 4, at: "text:Save the bill", side: "left" },
+    ],
+  },
+  { id: "A9-40b", title: "Save the bill", noShot: true, as: IM,
+    steps: [{ click: "text:Save the bill" }, { waitFor: "css:[data-bar-bills]", ms: 15000 }, { wait: 1500 }] },
+  {
+    id: "A9-41", title: "The bar's bills", as: IM,
+    path: "/h/5EL/purchasing?tab=bar",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-bar-bills]", ms: 15000 }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "css:[role=tab][aria-selected=true]", side: "right" },
+      { n: 2, at: "text:Shah Wines · Bill A9 Test 101", nth: 0, side: "left" },
+      { n: 3, at: "text:A9 Kingfisher Strong 650 ml", nth: 0, side: "left" },
+      { n: 4, at: "text:Record a bar bill", side: "left" },
+    ],
+  },
+
   /* ── Equipment: an AC added in the store, asked out of it, approved ─ */
   {
     id: "A9-31", title: "Equipment: Add an item, what and where", as: IM,

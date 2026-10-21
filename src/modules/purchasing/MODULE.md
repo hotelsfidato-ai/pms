@@ -39,10 +39,21 @@ onto the request: a status copied is a status that disagrees.
 ## The screens
 
 ```
-/h/:code/purchasing                 the list, and Ask to buy
+/h/:code/purchasing                 Restaurant and hotel: the list, and Ask to buy
+/h/:code/purchasing?tab=bar         Bar: the bar's bills, and Record a bar bill (D27-354)
 /h/:code/purchasing/:id             one order: price, send, receive, cancel
 /h/:code/purchasing/who-may-ask     the setting of D18-2
 ```
+
+**Bar bills (the owner's D27-354, 21 October):** a bill that has come is recorded
+directly - supplier, number, date, a photo (attachments, table `bar_purchases`),
+its drinks with the bottles and the cost per bottle as paid. No approval. The
+drinks go into the bar's store (`locations.is_bar_store`, 234) through the
+Store's own door (`receiveIntoStore`, with `barPurchaseId`); a drink the bar's
+list lacks is added through `addBarDrink`. `api/src/modules/purchasing/barBills.ts`:
+`GET /:code/bar/drinks`, `GET /:code/bar/purchases` (60 days), `POST /:code/bar/purchases`;
+who records is `BAR_RECORDERS` (owner, admin, GM, Inventory Manager), copied in
+`src/modules/purchasing/data/barBills.ts`. Screen: `components/BarBills.tsx`.
 
 The menu entry sits in **Store and equipment**, beside the Store and the
 Equipment register — and in the **Inventory Manager's working menu**, because

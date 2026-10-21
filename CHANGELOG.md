@@ -50,6 +50,30 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-21 · Bar bills, recorded with their photo (D27-354, part 2 of the owner's plan)
+
+**Asked for:** the owner, 21 Oct: purchasing with Restaurant and Bar; "in the bar, whatever purchasing is done needs to be recorded ... all the drinks ... in the inventory needs to be there in the purchasing ... an option to add other drinks ... an option to attach a photo". Their answers (D27-354): recorded directly, no approval; by the Inventory Manager, the GM, the owner or an administrator; the drinks in bottles and ml.
+
+**Shipped**
+- Migration 234: `locations.is_bar_store` (each hotel's "Bar store" marked, one per hotel, new hotels' too - `app.default_stores`), `stock_items.size_ml`, `bar_purchases` (supplier, bill number, date; the same bill twice refused; recorded, never changed), `stock_movements.bar_purchase_id`; bar bills are "trading" for a test hotel's reset.
+- `api/src/modules/purchasing/barBills.ts`: `GET /bar/drinks`, `GET /bar/purchases` (60 days, with the photo's id), `POST /bar/purchases` - every refusal before the first write; the bill date checked against the hotel's calendar, not its business day (Amrapali's audit is behind); the drinks into the bar's store through the Store's own `receiveIntoStore` (now carrying `barPurchaseId`), a new drink through `addBarDrink` - both lent by the Store's front door. Who records: `BAR_RECORDERS`.
+- Purchasing has two tabs, **Restaurant and hotel** (as before) and **Bar** (`?tab=bar`): the bills with their drinks, total, who recorded and **Photo of the bill**; **Record a bar bill** - supplier, number, date, a photo (camera or file, through the shared attachments route), each drink picked or added ("Add another drink…": name, size in ml, counted in), how many and the cost of each, the total as you go - `components/BarBills.tsx`, `data/barBills.ts`.
+- Manual A9.1 and A9.11 ("The bar's bills"); pictures A9-21 and A9-22 retaken (the tabs), A9-40 and A9-41 new; book rebuilt.
+
+**Found**
+- The first A9-40 showed the drink lines' boxes with placeholders only: "24" and "140" side by side said nothing once typed. Each box now keeps a small label.
+- The test's clean-up first failed on the Store's append-only ledger; it switches `stock_movements_append_only` off for the clean-up alone, and leaves nothing behind.
+
+**Proved**
+- `api/test/modules/purchasing/barBills.test.ts` 4/4 (a waiter refused 403 - with the waiter let into BAR_RECORDERS it failed; the Inventory Manager records two bills, a new drink added with its size, both lines into the Bar store pointing at the bill; the same bill twice, a drink already listed, a future date and no cost refused, nothing more written; a photo attaches). `db/tests/modules/purchasing.sql` "bar bill" 6 assertions (1,765 in all). `src/modules/purchasing/barBills.test.tsx` 2/2; the purchasing screen tests 17/17. Opened in the pictures as the Inventory Manager: the dialog, the save and the Bar tab.
+- `bash scripts/gates.sh bar-bills`, full, on bef5ee0f with this work (2,057 s): web types, api types, strip (221 files), web tests 1,400 passed and 1 skipped (210 files), api tests 2,818 (219 files), database 1,765 assertions on 234 migrations, replay, pg16 - all exit 0.
+
+**Left open**
+- Part 1 of the plan, bar stock: what each dish takes, the stock going down at the KOT, the daily count, the Bar stock report and its daily email - next.
+- Not deployed: release 11, at the owner's word.
+
+**Commits:** this commit
+
 ## 2026-10-21 · Discounts for the GM, the owner and an admin; one line per dish (D27-352, D27-353)
 
 **Asked for:** the owner, 21 Oct: "remove the option of discount from the waiter's view. Discounts can only be given by the GM"; and "beer one, after 15 minutes some food, then beer two. It appears twice ... consolidate this into one". Their answers: the GM, the owner and an administrator (D27-352); one line on the bill and the order screens, each round keeping its own KOT (D27-353).

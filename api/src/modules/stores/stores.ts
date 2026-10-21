@@ -130,6 +130,8 @@ async function writeMovement(
     department?: string | null;
     /** Who broke it; null is "Not known". */
     brokenBy?: string | null;
+    /** The bar bill this receipt is a line of (D27-354, 234). */
+    barPurchaseId?: string | null;
   },
 ): Promise<string> {
   const businessDate = await businessDateFor(client, hotelId);
@@ -137,17 +139,69 @@ async function writeMovement(
     `insert into stock_movements
        (hotel_id, item_id, location_id, business_date, kind, quantity, unit_cost,
         supplier, reference, note, to_outlet, moved_by, empty,
-        gst_rate, gst_amount, gst_claimable, expires_on, department, broken_by)
-     values ($1,$2,$3,$4::date,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::date,$18,$19)
+        gst_rate, gst_amount, gst_claimable, expires_on, department, broken_by, bar_purchase_id)
+     values ($1,$2,$3,$4::date,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::date,$18,$19,$20)
      returning id::text`,
     [hotelId, m.itemId, m.storeId, businessDate, m.kind, m.signed,
      m.unitCost ?? null, m.supplier?.trim() || null,
      m.reference?.trim() || null, m.note?.trim() || null,
      m.outletId || null, staffId, m.empty === true,
      m.gst?.rate ?? null, m.gst?.amount ?? null, m.gst?.claimable ?? null,
-     m.expiresOn || null, m.department?.trim() || null, m.brokenBy || null],
+     m.expiresOn || null, m.department?.trim() || null, m.brokenBy || null,
+     m.barPurchaseId || null],
   );
   return rows[0]!.id;
+}
+
+/* ── THE BAR'S STORE AND ITS DRINKS (the owner's D27-354) ─────────────
+   Lent to Purchasing's bar bills through the front door, as the receipt is:
+   which store is the bar's (locations.is_bar_store, 234), what it holds, and
+   a drink added to it - the Store's list, the Store's rules. A drink is an
+   item of category "Bar", counted in its unit (bottle, can, packet) with a
+   bottle's size in ml for what is poured. */
+
+/** The bar's store, or null when the hotel has none marked. */
+export async function barStore(
+  client: Client, hotelId: string,
+): Promise<{ id: string; name: string; isActive: boolean } | null> {
+  const { rows } = await client.query<{ id: string; name: string; is_active: boolean }>(
+    `select id::text, name, is_active from locations
+      where hotel_id = $1 and is_bar_store`, [hotelId]);
+  return rows[0] ? { id: rows[0].id, name: rows[0].name, isActive: rows[0].is_active } : null;
+}
+
+/** The bar's drinks, by name, with what the bar's store holds of each. */
+export async function barDrinks(client: Client, hotelId: string, storeId: string | null) {
+  const { rows } = await client.query<{
+    id: string; name: string; unit: string; size_ml: number | null; on_hand: string | null;
+  }>(
+    `select id::text, name, unit, size_ml,
+            case when $2::uuid is null then null else app.stock_on_hand(id, $2::uuid)::text end as on_hand
+       from stock_items
+      where hotel_id = $1 and is_active and category = 'Bar'
+      order by name`,
+    [hotelId, storeId]);
+  return rows.map((r) => ({
+    id: r.id, name: r.name, unit: r.unit, sizeMl: r.size_ml,
+    onHand: r.on_hand === null ? null : Number(r.on_hand),
+  }));
+}
+
+/** A drink the bar's list does not have yet, added to it. A name already on
+    the Store's list is refused: that one is picked instead. */
+export async function addBarDrink(
+  client: Client, hotelId: string, drink: { name: string; unit: string; sizeMl: number | null },
+): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  const { rows: existing } = await client.query(
+    "select 1 from stock_items where hotel_id = $1 and lower(name) = lower($2)", [hotelId, drink.name]);
+  if (existing.length) {
+    return { ok: false, reason: `"${drink.name}" is already on the store's list. Pick it instead.` };
+  }
+  const { rows } = await client.query<{ id: string }>(
+    `insert into stock_items (hotel_id, name, unit, category, size_ml)
+     values ($1, $2, $3, 'Bar', $4) returning id::text`,
+    [hotelId, drink.name, drink.unit, drink.sizeMl]);
+  return { ok: true, id: rows[0]!.id };
 }
 
 /** A delivery's GST as the supplier's bill says it (D27-238, D27-242 Q6). */
@@ -256,6 +310,8 @@ export async function receiveIntoStore(
     /** The bill's GST, all three or none, and the expiry (D27-238). */
     gstRate?: number | null; gstAmount?: number | null; gstClaimable?: boolean | null;
     expiresOn?: string | null;
+    /** A line of a bar bill (D27-354). */
+    barPurchaseId?: string | null;
   },
 ): Promise<
   | { ok: true; id: string; item: string; unit: string; store: string; onHandHere: number }
@@ -289,6 +345,7 @@ export async function receiveIntoStore(
     unitCost: input.unitCost ?? null, supplier: input.supplier ?? null,
     reference: input.reference ?? null, note: input.note ?? null,
     gst: gstOf(input), expiresOn: input.expiresOn ?? null,
+    barPurchaseId: input.barPurchaseId ?? null,
   });
 
   return {

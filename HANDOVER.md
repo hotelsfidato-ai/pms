@@ -759,6 +759,13 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **21 October, 13:30: RELEASE 10 READY, the owner's to type.** `release/r10-21oct` = `bef5ee0f` (D27-351 NC,
+> D27-352 discounts, D27-353 one line per dish; migration 233). Full gates green in
+> `.claude/worktrees/release-r10-21oct` (web 1,398, api 2,814, db 1,759 / 233, replay, pg16); website
+> `index-mJVIB4Vc.js`; steps in `.local/release-r10-steps.txt` (sent to the owner's phone). After launch check
+> read-only: bundle, health, server at bef5ee0f, migration 233 applied. Then bar bills (D27-354 part 2, migration
+> 234) on cp6 go with release 11, with bar stock.
+
 > **21 October, later:** Done on cp6, not live: D27-352 (discounts for the GM, owner and admin only) and D27-353
 > (one line per dish on the bill and screens). Next, the owner's plan of 21 Oct
 > (`docs/plans/bar-stock-purchasing-owner-rule-21oct.md`): bar purchasing with a photo, then bar stock (sales off

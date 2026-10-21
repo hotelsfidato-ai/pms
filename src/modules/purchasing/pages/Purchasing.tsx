@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router";
-import { Plus, ShieldCheck, ShoppingCart, Trash2 } from "lucide-react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { GlassWater, Plus, ShieldCheck, ShoppingCart, Trash2 } from "lucide-react";
 import { money, dateShort } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import {
   Page, PageHeader, Card, CardBody, Button, Skeleton, EmptyState, ErrorState,
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, DataTable,
-  StatusPill, Checkbox, toast, type Column, type Tone,
+  StatusPill, Checkbox, toast, Segmented, type Column, type Tone,
 } from "@/components/ui";
+import { useRole } from "@/lib/session";
+import { BarBills } from "@/modules/purchasing/components/BarBills";
+import { BAR_RECORDERS } from "@/modules/purchasing/data/barBills";
 import {
   getPurchasing, raiseRequest,
   type PurchaseRequest, type PurchaseState, type PurchasingList,
@@ -72,6 +75,12 @@ export default function PurchasingPage() {
   const { code = "" } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const [asking, setAsking] = useState(false);
+  /* Restaurant and hotel | Bar (the owner's D27-354): the tab lives in the
+     address, so a link or a refresh keeps it. */
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("tab") === "bar" ? "bar" : "hotel";
+  const mayRecordBar = BAR_RECORDERS.includes(useRole());
+  const [recordingBar, setRecordingBar] = useState(false);
 
   const q = useQuery({
     queryKey: ["purchasing", code],
@@ -204,11 +213,16 @@ export default function PurchasingPage() {
     <Page>
       <PageHeader
         title="Purchasing"
-        description={
-          "Ask for what is needed, get it approved, order it, and receive it "
-          + "into a store."
-        }
-        actions={
+        description={tab === "bar"
+          ? "The bar's bills as they come: the drinks go into the bar's store, with a photo of the bill."
+          : "Ask for what is needed, get it approved, order it, and receive it into a store."}
+        actions={tab === "bar" ? (
+          mayRecordBar && (
+            <Button variant="primary" leadingIcon={<GlassWater />} onClick={() => setRecordingBar(true)}>
+              Record a bar bill
+            </Button>
+          )
+        ) : (
           <div className="flex items-center gap-2">
             {data?.me.maySetRequesters && (
               <Button asChild variant="secondary" leadingIcon={<ShieldCheck />}>
@@ -221,8 +235,17 @@ export default function PurchasingPage() {
               </Button>
             )}
           </div>
-        }
+        )}
       />
+
+      <Segmented className="mb-4" value={tab}
+        onChange={(t) => setParams(t === "bar" ? { tab: "bar" } : {}, { replace: true })}
+        options={[{ value: "hotel", label: "Restaurant and hotel" }, { value: "bar", label: "Bar" }]} />
+
+      {tab === "bar" ? (
+        <BarBills hotelId={code} mayRecord={mayRecordBar}
+          recording={recordingBar} onRecording={setRecordingBar} />
+      ) : (<>
 
       {/* RULE 6: SOMEBODY REFUSED IS TOLD, AND TOLD WHOM TO ASK. Not a
           greyed button with no explanation, and not a hidden one. */}
@@ -263,6 +286,7 @@ export default function PurchasingPage() {
           onClose={() => setAsking(false)}
         />
       )}
+      </>)}
     </Page>
   );
 }

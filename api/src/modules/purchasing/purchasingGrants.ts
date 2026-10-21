@@ -49,6 +49,10 @@ export const VIEW_ROLES: readonly string[] = [
   "housekeeping", "finance", "read_only",
 ];
 
+/** Who records a bar bill (the owner's D27-354): the owner, an administrator,
+    the GM and the Inventory Manager. */
+export const BAR_RECORDERS: readonly string[] = ["owner", "admin", "gm", "stores"];
+
 /** The roles that may change who may raise a request. */
 export const SETTING_KEEPERS: readonly string[] = ["owner", "admin"];
 
@@ -64,6 +68,9 @@ export const PURCHASING_REFUSED = {
   setting:
     "Changing who may raise a purchase request is for the owner or an "
     + "administrator. Ask one of them.",
+  barBill:
+    "Recording a bar bill is for the owner, an administrator, the general "
+    + "manager or the Inventory Manager.",
 } as const;
 
 /** Does the signed-in person hold one of these roles at this property? A

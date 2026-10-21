@@ -8,6 +8,10 @@ proved until it has refused something; "Left open" is the handover.
 
 ---
 
+## 2026-10-21 · Bar bills, with their photo (the owner's D27-354)
+
+**Shipped** Purchasing's two tabs, Restaurant and hotel (as before) and Bar; Record a bar bill: supplier, number, date, photo, drinks picked or added ("Add another drink"), bottles and cost per bottle; into the bar's store at once - migration 234, `barBills.ts`, `components/BarBills.tsx`. **Proved** `api/test/modules/purchasing/barBills.test.ts`, `barBills.test.tsx`, "bar bill" in `db/tests/modules/purchasing.sql`. The root `CHANGELOG.md` has the whole entry.
+
 ## 2026-09-26 · PUR-2 held by a test; PUR-3 found
 
 **Asked for:** the owner's D25-27 (a test for each fix built but held by none, then close it; no behaviour changed), in the five-tests session, branch `tests/five-25sep`. **Shipped:** `purchasing.test.tsx`, "lists a waiting purchase on the Approvals screen and decides it through the core (PUR-2)". **Proved:** seen failing with the `/h/:code/approvals` route taken out of `App.tsx`; passes on the fix. PUR-2 moved to Fixed. **Found:** PUR-3 - the Approvals screen links a purchase to `/h/<code>/purchasing/requests/<id>`, which nothing mounts (the core's `approvals.ts`); not fixed, for the master and the owner. **Commits:** `689f837`.

@@ -277,3 +277,39 @@ end $$;
 
 select set_config('app.user_id',
        (select id::text from staff where email = 'owner@fidato.in'), false);
+
+
+-- =============================================================================
+-- A BAR BILL (the owner's D27-354, 21 October; migration 234)
+-- =============================================================================
+-- A bar bill is recorded with its drinks as receipts into the bar's store. A
+-- new hotel's Bar store is marked the bar's; one per hotel; the same bill
+-- twice is refused; a bottle's size is sane; a test hotel counts bills as
+-- trading.
+-- =============================================================================
+do $$
+declare h uuid; v_bar uuid; v_staff uuid;
+begin
+  h := app.provision_property_unchecked('PBR', 'Bar Bill Test', 'Nowhere');
+  select id into v_staff from staff where email = 'owner@fidato.in';
+  select id into v_bar from locations where hotel_id = h and is_bar_store;
+  perform test.ok('bar bill', 'a new hotel''s Bar store is marked the bar''s',
+    (select name from locations where id = v_bar) = 'Bar store', coalesce(v_bar::text, 'none'));
+  perform test.raises('bar bill', 'one bar store per hotel',
+    format($q$update locations set is_bar_store = true where hotel_id = %L and name = 'Main store'$q$, h), '23505');
+
+  insert into bar_purchases (hotel_id, supplier, bill_no, bill_date, business_date, recorded_by)
+  values (h, 'Shah Wines', 'W-1', current_date, current_date, v_staff);
+  perform test.raises('bar bill', 'the same bill twice is refused',
+    format($q$insert into bar_purchases (hotel_id, supplier, bill_no, bill_date, business_date, recorded_by)
+              values (%L, 'Shah Wines', 'W-1', current_date, current_date, %L)$q$, h, v_staff), '23505');
+  perform test.raises('bar bill', 'a bill says who it is from',
+    format($q$insert into bar_purchases (hotel_id, supplier, bill_no, bill_date, business_date, recorded_by)
+              values (%L, '  ', 'W-2', current_date, current_date, %L)$q$, h, v_staff), '23514');
+  perform test.raises('bar bill', 'a bottle''s size is from 1 to 20,000 ml',
+    format($q$insert into stock_items (hotel_id, name, unit, category, size_ml)
+              values (%L, 'Nothing', 'bottle', 'Bar', 0)$q$, h), '23514');
+  perform test.ok('bar bill', 'a test hotel counts a bar bill as trading',
+    exists (select 1 from app.test_hotel_classes() c
+             where c.table_name = 'bar_purchases' and c.class = 'trading'));
+end $$;

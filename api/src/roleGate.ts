@@ -673,6 +673,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/purchasing/requests/:id/order`]: own("purchasing/purchasingGrants.ts"),
   [`POST ${H}/purchasing/requests/:id/cancel`]: own("purchasing/purchasingGrants.ts"),
   [`POST ${H}/purchasing/requests/:id/delivery`]: own("purchasing/purchasingGrants.ts"),
+  [`POST ${H}/bar/purchases`]: own("purchasing/purchasingGrants.ts: BAR_RECORDERS"),  // D27-354
 
   /* laundry */
   [`POST ${H}/laundry/price-list`]: LAUNDRY_PRICE_ADD,
@@ -973,6 +974,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/purchasing`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
   [`GET ${H}/purchasing/requests/:id`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
   [`GET ${H}/purchasing/requesters`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
+  [`GET ${H}/bar/purchases`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
+  [`GET ${H}/bar/drinks`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
   [`GET ${H}/purchasing/orders/:file{[0-9a-f-]+\\.pdf}`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
   /* D17-1: anybody rostered may read them (api/test/places.test.ts); a
      place or a supplier is neither a guest nor money. */
