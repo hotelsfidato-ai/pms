@@ -50,6 +50,24 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-21 · Discounts for the GM, the owner and an admin; one line per dish (D27-352, D27-353)
+
+**Asked for:** the owner, 21 Oct: "remove the option of discount from the waiter's view. Discounts can only be given by the GM"; and "beer one, after 15 minutes some food, then beer two. It appears twice ... consolidate this into one". Their answers: the GM, the owner and an administrator (D27-352); one line on the bill and the order screens, each round keeping its own KOT (D27-353).
+
+**Shipped**
+- **Discounts**: `POST /till/orders/:id/discount`, `/discount/clear` and `/promotion` need roleGate DISCOUNT (reservation approve: the owner, an administrator, the GM), no longer TILL - `api/src/roleGate.ts`. The Till's **Discount** shows to those three only; Round off takes the row alone otherwise - `Till.tsx`. The roles screen's note no longer says ringing up includes a discount - `admin/pages/Admin.tsx`. The waiter's pad and the Terminal never had one.
+- **One line per dish**: `oneLinePerDish` (`src/modules/pos/lib/oneLinePerDish.ts`) merges the same dish, size, choices, sides, add-ons, note and price, display only, where first ordered, carrying the newest round's id; on the printed bill (`BillSlip.tsx`), the Till, the Terminal (its − and + work from the newest round's own line) and the pad's "Already sent". Nothing stored changes; KOTs stay one per round.
+- Manual: A8 (the Till's audience, the Discount row, the bill and + rows), B2 (the Waiter's row and the matrix note); no picture showed either.
+
+**Proved**
+- `api/test/modules/pos/discountWho.test.ts` 2/2 - a waiter and the bar refused a discount, a promotion and clearing one (403, nothing written), the GM allowed; with the routes back on TILL the refusal test failed (200). `noCharge.test.tsx` 5/5 with "the GM, the owner and an administrator see Discount; a waiter, the bar and the hotel manager do not". `oneLinePerDish.test.ts` 3/3 and `oneMore.test.tsx` 3/3 - two rounds of one beer show once, 2×, and + asks the newest round's line for 2; with the merge switched off all three failed. The restaurant's screen tests 175/175; `admin.test.tsx` 41/41.
+- `bash scripts/gates.sh discounts-oneline`, full, on 58e6de77 with this work (2,164 s): web types, api types, strip (220 files), web tests 1,398 passed and 1 skipped (209 files), api tests 2,814 (218 files), database 1,759 assertions on 233 migrations, replay, pg16 - all exit 0.
+
+**Left open**
+- Not deployed: with NC (D27-351), the next release, at the owner's word.
+
+**Commits:** this commit
+
 ## 2026-10-21 · NC: a restaurant bill given free (D27-351)
 
 **Asked for:** the owner, 21 Oct: "a no charge tick in the GM view and owner and admin where it prints the bill and no prices ... and in bill needs to be mentioned NC ... also the GM needs to give the approval for this and give a reason". Their answers: the GM, owner or admin marks it on their own sign-in with a reason (their name is the approval); a whole restaurant bill on the Till and the Terminal; the paper lists the dishes and quantities, no prices, "NC · No charge", the reason and who approved it; no value anywhere - valuing it at MRP in the stores is a later piece the GM sets up.

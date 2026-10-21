@@ -238,6 +238,9 @@ const VOID_PAID_BILL = grant("reservation", "approve", "Voiding a paid restauran
    another answer of theirs. The database asks them too (app.gives_pos_no_charge,
    233); api/test/modules/pos/noCharge.test.ts refuses a waiter. */
 const NO_CHARGE = grant("reservation", "approve", "Giving a restaurant bill free (NC)");
+/* A discount or a promotion on a restaurant bill (the owner's D27-352): the GM,
+   the owner and an administrator - no longer the till, the bar or a waiter. */
+const DISCOUNT = grant("reservation", "approve", "Giving a discount on a restaurant bill");
 
 /* No screen calls these two yet. A bill photographed for a purchase (§15) is
    purchasing's; where n8n copied a file is an integration's. */
@@ -434,9 +437,9 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders`]: TILL,
   [`POST ${H}/till/orders/:id/lines`]: TILL,
   [`POST ${H}/till/orders/:id/lines/:lineId/void`]: TILL,
-  [`POST ${H}/till/orders/:id/discount`]: TILL,
-  [`POST ${H}/till/orders/:id/promotion`]: TILL,
-  [`POST ${H}/till/orders/:id/discount/clear`]: TILL,
+  [`POST ${H}/till/orders/:id/discount`]: DISCOUNT,  // D27-352
+  [`POST ${H}/till/orders/:id/promotion`]: DISCOUNT,
+  [`POST ${H}/till/orders/:id/discount/clear`]: DISCOUNT,
   [`POST ${H}/till/orders/:id/round-off`]: TILL,
   [`POST ${H}/till/outlet/:outlet/closed`]: TILL,
   [`POST ${H}/till/orders/:id/printed`]: TILL,

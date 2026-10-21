@@ -9,6 +9,7 @@ import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
 import { useBillPrint } from "@/modules/pos/flows/printBill";
 import { addonBreakdown } from "@/modules/pos/lib/pricing";
+import { oneLinePerDish } from "@/modules/pos/lib/oneLinePerDish";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { OrderHeaderPanel } from "@/modules/pos/flows/OrderHeaderPanel";
 import { cn } from "@/lib/cn";
@@ -1134,6 +1135,8 @@ function OrderPanel({
      `approve` on a booking is exactly those three, as the server asks. A
      bill that reached a room's or a function's bill is reversed there. */
   const mayVoid = can(useRole(), "approve", "reservation");
+  /* A discount, too, is for those three only (the owner's D27-352). */
+  const mayDiscount = mayVoid;
   const voidBlock = order.paymentMethod === "room"
     ? `This bill went to room ${order.room ?? "-"} - reverse it on the guest's bill.`
     : order.paymentMethod === "function"
@@ -1239,7 +1242,9 @@ function OrderPanel({
           </div>
         ) : (
           <ul className="space-y-1.5 mb-3">
-            {order.lines.map((line) => (
+            {/* The same dish of two rounds is one line (D27-353); its buttons
+                act on the newest round's line, whose id it carries. */}
+            {oneLinePerDish(order.lines).map((line) => (
               <li
                 key={line.id}
                 className={cn(
@@ -1288,7 +1293,7 @@ function OrderPanel({
                 {!settled && !line.voided && line.parentLineId === null && (
                   <button
                     type="button"
-                    onClick={() => onCustomise(line)}
+                    onClick={() => onCustomise(order.lines.find((l) => l.id === line.id) ?? line)}
                     aria-label={`Customise ${line.name}`}
                     title="Customise"
                     className="press size-11 grid place-items-center rounded-full border border-grey-300 bg-white text-ink-900 hover:border-grey-400 hover:bg-grey-50 shrink-0 cursor-pointer"
@@ -1432,16 +1437,18 @@ function OrderPanel({
             </Button>
             {/* Before the payment buttons, because the bill has to be
                 right before it is taken. */}
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant="secondary"
-                size="lg"
-                disabled={live.length === 0}
-                onClick={() => setDiscounting(true)}
-              >
-                <Percent className="size-4" />
-                {order.discount > 0 ? "Change discount" : "Discount"}
-              </Button>
+            <div className={cn("grid gap-2", mayDiscount ? "grid-cols-2" : "grid-cols-1")}>
+              {mayDiscount && (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  disabled={live.length === 0}
+                  onClick={() => setDiscounting(true)}
+                >
+                  <Percent className="size-4" />
+                  {order.discount > 0 ? "Change discount" : "Discount"}
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="lg"

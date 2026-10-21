@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-21 · Discounts for the GM, the owner and an admin; one line per dish (D27-352, D27-353)
+
+**Shipped** The discount, its clearing and promotions need roleGate DISCOUNT (the owner, an administrator, the GM); the Till's Discount for those three only. `lib/oneLinePerDish.ts`: the same dish of two rounds is one line on the bill, the Till, the Terminal and the pad's "Already sent", carrying the newest round's id. **Proved** `api/test/modules/pos/discountWho.test.ts`, `noCharge.test.tsx`, `oneLinePerDish.test.ts`, `oneMore.test.tsx`. The root `CHANGELOG.md` has the whole entry.
+
 ## 2026-10-21 · NC, a bill given free (the owner's D27-351)
 
 **Shipped** Migration 233 (status 'no_charge', who/when/why, `app.gives_pos_no_charge`, the guard, heading 'nc'); `POST /till/orders/:id/no-charge`; **No charge (NC)** on the Till and the Terminal for the owner, an administrator or the GM, with a reason, printed at once with no prices; Close restaurant day and the night audit list it with no value - `pages/Till.tsx`, `pages/Terminal.tsx`, `components/BillSlip.tsx`, `pages/DayEnd.tsx`, `flows/printBill.tsx`. **Proved** `noCharge.test.tsx`, `api/test/modules/pos/noCharge.test.ts`, "pos nc" in `db/tests/modules/pos.sql`. The root `CHANGELOG.md` has the whole entry.

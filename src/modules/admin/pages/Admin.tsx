@@ -257,8 +257,8 @@ export function RolesPage() {
           The restaurant is not in the matrix: the server lets the Waiter and the Bar in by
           name, for {inWords(RESTAURANT_BY_NAME.does)}, and for reading{" "}
           {inWords(RESTAURANT_BY_NAME.reads)}. Ringing up an order includes sending the KOT,
-          giving a discount, printing the bill and taking payment. The Bar orders only the
-          dishes on the menu's Bar tab.
+          printing the bill and taking payment; a discount is the GM's, the owner's and an
+          administrator's (D27-352). The Bar orders only the dishes on the menu's Bar tab.
         </span>
       </p>
     </Page>

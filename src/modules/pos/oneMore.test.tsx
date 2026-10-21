@@ -56,7 +56,7 @@ const ORDER = {
   ],
 } as unknown as Order;
 
-function server() {
+function server(order: Order = ORDER) {
   const calls: Call[] = [];
   vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
     const path = url.split("?")[0]!;
@@ -70,10 +70,11 @@ function server() {
         id: "c-1", name: "Main course", prepMinutes: null, course: null, items: [thali] }] }),
       [`GET ${API}/till/numbered-addons`]: () => ({ addons: [] }),
       [`GET ${API}/till/orders`]: () => ({ businessDate: "2026-08-25", orders: [] }),
-      [`GET ${API}/till/orders/o-5`]: () => ORDER,
+      [`GET ${API}/till/orders/o-5`]: () => order,
       [`GET ${API}/till/rooms`]: () => ({ rooms: [] }),
       [`GET ${API}/till/promotions`]: () => ({ freehandCapPercent: 10, promotions: [] }),
       [`POST ${API}/till/orders/o-5/lines/l-2/qty`]: () => ({ ...ORDER, ok: true }),
+      [`POST ${API}/till/orders/o-5/lines/b-2/qty`]: () => ({ ...order, ok: true }),
       [`POST ${API}/till/orders/batch`]: () => ({ id: "o-5", orderNo: "12", lines: [], ok: true, opened: false, sent: 1, kotNo: 15 }),
     };
     const answer = routes[`${method} ${path}`];
@@ -95,6 +96,19 @@ function renderAt(path: string, route: string, element: ReactElement) {
 }
 
 describe("+ on a dish", () => {
+  it("two rounds of one beer show once, 2×, and + adds to the newest round's line (D27-353)", async () => {
+    const beer = (id: string, kotStatus: string) => ({ ...ORDER.lines[0]!, id, name: "Kingfisher Strong",
+      unitPrice: 270, note: null, numberedAddons: null, itemId: "i-kf", kotStatus });
+    const calls = server({ ...ORDER, lines: [beer("b-1", "sent"), beer("b-2", "sent")] } as unknown as Order);
+    renderAt(`/pos/${HOTEL}/till?order=o-5`, "/pos/:code/till", <TillPage />);
+    const more = await screen.findAllByRole("button", { name: "One more Kingfisher Strong" });
+    expect(more, "one line, not two").toHaveLength(1);
+    expect(screen.getByText("2×")).toBeTruthy();
+    fireEvent.click(more[0]!);
+    await vi.waitFor(() => expect(calls.find((c) => c.path.endsWith("/qty")))
+      .toMatchObject({ path: `${API}/till/orders/o-5/lines/b-2/qty`, body: { qty: 2 } }));
+  });
+
   it("on the Till: one more of a dish the kitchen has, asked of the server", async () => {
     const calls = server();
     renderAt(`/pos/${HOTEL}/till?order=o-5`, "/pos/:code/till", <TillPage />);

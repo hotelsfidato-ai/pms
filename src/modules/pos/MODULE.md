@@ -287,9 +287,9 @@ kot section (kotSection.ts, D27-292)
                                                             value anywhere (sales read status = 'settled'); frees its
                                                             table; Close restaurant day and the night audit list it
                                                             (noChargeBills)
-money       POST   /:code/till/orders/:id/discount
-            POST   /:code/till/orders/:id/discount/clear
-            POST   /:code/till/orders/:id/promotion
+money       POST   /:code/till/orders/:id/discount          these three: the GM, the owner and an administrator
+            POST   /:code/till/orders/:id/discount/clear    only (roleGate DISCOUNT, D27-352) - not the till,
+            POST   /:code/till/orders/:id/promotion         the bar or a waiter
             POST   /:code/till/orders/:id/round-off
             GET    /:code/till/promotions
             POST   /:code/till/promotions

@@ -846,7 +846,7 @@ describe("D27-329 (4) - the Roles screen names what the Waiter and the Bar do in
       + "for ringing up an order, printing the kitchen's KOTs, answering a table booking and "
       + "closing the restaurant's day, and for reading the restaurant's orders, the menu, the "
       + "kitchen's KOTs, the restaurant's outlets and the restaurant's day. Ringing up an order "
-      + "includes sending the KOT, giving a discount, printing the bill and taking payment. "
-      + "The Bar orders only the dishes on the menu's Bar tab.");
+      + "includes sending the KOT, printing the bill and taking payment; a discount is the GM's, "
+      + "the owner's and an administrator's (D27-352). The Bar orders only the dishes on the menu's Bar tab.");
   });
 });

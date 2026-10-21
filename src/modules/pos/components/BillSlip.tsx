@@ -1,6 +1,7 @@
 import { cn } from "@/lib/cn";
 import { moneyPrecise, dateShort } from "@/lib/format";
 import { addonBreakdown } from "@/modules/pos/lib/pricing";
+import { oneLinePerDish } from "@/modules/pos/lib/oneLinePerDish";
 import { BILL_TITLE, type BillHeading, type Order } from "@/modules/pos/data/till";
 import { useIsTestHotel } from "@/lib/testHotel";
 import { TestDocumentMark } from "@/components/app/TestHotel";
@@ -36,7 +37,8 @@ export function BillSlip({ order: o, heading, sample }: {
   /** Settings › Documents' made-up bill: SAMPLE · NOT VALID, no GSTIN (D27-348). */
   sample?: string;
 }) {
-  const live = o.lines.filter((l) => !l.voided);
+  /* The same dish of two rounds is one line (D27-353). */
+  const live = oneLinePerDish(o.lines.filter((l) => !l.voided));
   const nc = o.status === "no_charge";
   /* A TEST HOTEL'S BILL (the owner's D27-296 (8)): TEST · NOT VALID at its
      head and foot, and no GSTIN. A real hotel's paper is unchanged. */

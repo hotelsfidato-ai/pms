@@ -759,6 +759,12 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **21 October, later:** Done on cp6, not live: D27-352 (discounts for the GM, owner and admin only) and D27-353
+> (one line per dish on the bill and screens). Next, the owner's plan of 21 Oct
+> (`docs/plans/bar-stock-purchasing-owner-rule-21oct.md`): bar purchasing with a photo, then bar stock (sales off
+> it at the KOT, daily count, the Bar stock report and its daily email); the owner's allowance last - X%,
+> the contract on GST, and the setting's shape are the owner's to answer.
+
 > **21 October:** (1) Done on cp6, not live: D27-351, NC (a restaurant bill given free, the GM's, owner's or
 > admin's approval with a reason, printed with no prices, no value anywhere; migration 233); it goes with the
 > next release. (2) For the owner: the owner's item 2 of 21 Oct was cut off - ask for it; NC's screen still

@@ -23,6 +23,7 @@ import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
 import { useBillPrint } from "@/modules/pos/flows/printBill";
 import { addonBreakdown } from "@/modules/pos/lib/pricing";
+import { oneLinePerDish } from "@/modules/pos/lib/oneLinePerDish";
 import { GuestOrders } from "@/modules/pos/components/GuestOrders";
 import { AskDialog, SENT_STRIKE, roomAsk, type Ask } from "@/modules/pos/components/AskDialog";
 import { useDocumentTitle } from "@/lib/documentTitle";
@@ -804,7 +805,9 @@ export default function TerminalPage() {
               </div>
 
               <ul className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1.5">
-                {order.lines.map((l) => (
+                {/* The same dish of two rounds is one line (D27-353); its buttons
+                    act on the newest round's own line (`own`), whose id it carries. */}
+                {oneLinePerDish(order.lines).map((l) => (
                   <li key={l.id} className={cn(
                     "py-1", l.voided && "opacity-45",
                     /* A side sits under its dish and follows its quantity
@@ -872,7 +875,7 @@ export default function TerminalPage() {
                       <div className="flex items-center gap-1 mt-1">
                         <button
                           type="button"
-                          onClick={() => takeOff(l, l.qty - 1)}
+                          onClick={() => { const own = order.lines.find((x) => x.id === l.id) ?? l; takeOff(own, own.qty - 1); }}
                           aria-label={`One fewer ${l.name}`}
                           className={STEP}
                         >
@@ -883,7 +886,7 @@ export default function TerminalPage() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => void setQty(l.id, l.qty + 1)}
+                          onClick={() => void setQty(l.id, (order.lines.find((x) => x.id === l.id) ?? l).qty + 1)}
                           aria-label={`One more ${l.name}`}
                           className={STEP}
                         >
@@ -893,7 +896,7 @@ export default function TerminalPage() {
                             has it, add-ons are lines of their own (D27-291). */}
                         <button
                           type="button"
-                          onClick={() => { setCustomising(l); void numbered.refetch(); }}
+                          onClick={() => { setCustomising(order.lines.find((x) => x.id === l.id) ?? l); void numbered.refetch(); }}
                           aria-label={`Customise ${l.name}`}
                           title="Customise"
                           className="press size-11 grid place-items-center rounded-full border border-grey-300 bg-white text-ink-900 hover:border-grey-400 hover:bg-grey-50 shrink-0 cursor-pointer"

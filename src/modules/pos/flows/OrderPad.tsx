@@ -18,6 +18,7 @@ import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { KotsSent } from "@/modules/pos/components/KotStation";
 import { ReadFailed } from "@/components/ui";
 import { useRole } from "@/lib/session";
+import { oneLinePerDish } from "@/modules/pos/lib/oneLinePerDish";
 
 /* ══════════════════════════════════════════════════════════════════
    THE ORDER PAD
@@ -118,8 +119,9 @@ export function OrderPad({
   });
   /* The table's dishes the kitchen already has (the owner's D27-291): each
      takes add-ons, which join this round. */
-  const sentDishes = (existing.data?.lines ?? []).filter((l) =>
-    !l.voided && l.parentLineId === null && l.kotStatus !== "pending");
+  /* The same dish sent in two rounds is one line (D27-353). */
+  const sentDishes = oneLinePerDish((existing.data?.lines ?? []).filter((l) => l.kotStatus !== "pending"))
+    .filter((l) => !l.voided && l.parentLineId === null);
   const [eventChoice, setEventChoice] = useState<string | null | undefined>(undefined);
   useEffect(() => { if (!open) setEventChoice(undefined); }, [open]);
   const eventId = eventChoice !== undefined

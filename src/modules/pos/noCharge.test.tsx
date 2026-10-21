@@ -139,6 +139,20 @@ describe("the Till - NC, no charge", () => {
   });
 });
 
+describe("the Till - a discount is the GM's (D27-352)", () => {
+  it("the GM, the owner and an administrator see Discount; a waiter, the bar and the hotel manager do not", async () => {
+    for (const [role, sees] of [["gm", true], ["owner", true], ["admin", true],
+                                ["pos", false], ["bar", false], ["hotel_manager", false]] as [Role, boolean][]) {
+      as(role);
+      tillWith(() => open());
+      await screen.findByRole("button", { name: "Close unpaid" });
+      expect(Boolean(screen.queryByRole("button", { name: "Discount" })), role).toBe(sees);
+      document.body.innerHTML = "";
+      vi.restoreAllMocks();
+    }
+  });
+});
+
 describe("the printed NC bill", () => {
   it("lists the dishes with no prices, says NC at its head, and why and who approved it", () => {
     const { container } = render(<BillSlip order={given()} heading="nc" />);
