@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-21 · Bar stock, like the paper register (the owner's D27-356)
+
+**Shipped** `pages/BarStock.tsx` (`/pos/:code/bar-stock`, Restaurant menu; Inventory's Bar tab): today's sheet like the register or simple (`barSheet.ts`, `locations.bar_sheet`), its count through the Store's own (`saveCount`, `countLinesProblem`), bills (Purchasing's `BarBills`, through its front door), set up. `BAR_KEEPERS` and `holdsRoleAt` in `stockGrants.ts`. A bar bill's line goes into the bar's store on Purchasing's rule. **Proved** `api/test/modules/stores/barStock.test.ts`, `barStock.test.tsx`. The root `CHANGELOG.md` has the whole entry.
+
 ## 2026-10-21 · The bar's stock (the owner's D27-354)
 
 **Shipped** Inventory (Bar; Restaurant to come): what each bar dish and size takes (`barPours.ts`, `bar_pours`, migration 235), taken off the Bar store by a trigger when the line is sent; the count of a drink in full bottles and ml, opened from a link; drinks shown "5 + 630 ml"; the Store's door lends `barStore`, `barDrinks`, `addBarDrink` and a bar bill's id on a receipt. **Proved** `api/test/modules/stores/barStock.test.ts`, `barStock.test.tsx`, "bar stock" in `db/tests/modules/stores.sql`. The root `CHANGELOG.md` has the whole entry.

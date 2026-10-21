@@ -133,7 +133,8 @@ alter table daily_report_emails add constraint daily_report_emails_report_known
 
 
 -- ── A test hotel's classes: what each dish takes is setup ─────────────────
--- 234's list, copied with one change: ('bar_pours', 'setup').
+-- 234's list, copied with two changes: ('bar_pours', 'setup') and
+-- ('bar_purchase_lines', 'trading') - the bill's lines as printed (234).
 create or replace function app.test_hotel_classes()
 returns table (table_name text, class text)
 language sql
@@ -178,7 +179,7 @@ as $$
   ('approvals', 'trading'), ('pos_orders', 'trading'), ('pos_order_lines', 'trading'),
   ('pos_order_tenders', 'trading'), ('pos_line_events', 'trading'),
   ('pos_tickets', 'trading'), ('pos_kot_prints', 'trading'), ('pos_kot_reprints', 'trading'),
-  ('pos_bill_prints', 'trading'), ('bar_purchases', 'trading'),
+  ('pos_bill_prints', 'trading'), ('bar_purchases', 'trading'), ('bar_purchase_lines', 'trading'),
   ('pos_cash_movements', 'trading'), ('pos_day_ends', 'trading'),
   ('pos_denominations', 'trading'), ('cashier_shifts', 'trading'),
   ('cashier_movements', 'trading'), ('cashier_denominations', 'trading'),

@@ -5,12 +5,15 @@ import { closePool } from "../../../src/db.ts";
 /* ══════════════════════════════════════════════════════════════════
    A BAR BILL RECORDED (the owner's D27-354, 21 October)
 
-   The owner, an administrator, the GM or the Inventory Manager records a
-   bar bill as it came: supplier, number, date, its drinks with the bottles
-   and the cost per bottle. The drinks go into the bar's store at once, as
-   receipts pointing at the bill; a drink the bar lacks is added on the
-   way; the same bill twice is refused; a photo attaches to it. Migration
-   234 is the database's half (db/tests/modules/purchasing.sql, "bar bill").
+   The owner, an administrator, the GM, the Inventory Manager or the bar
+   manager (the Bar role) records a bar bill AS PRINTED: supplier, number,
+   date, T.P. number; each drink's MRP, cases and loose bottles, bottles to
+   a case and rate per case; handling, TCS and the printed total, which the
+   lines must make (within the bill's round-off). The bottles go into the
+   bar's store at once, as receipts pointing at the bill; a drink the bar
+   lacks is added on the way; the same bill twice is refused; a photo
+   attaches through the bill's own door. Migration 234 is the database's
+   half (db/tests/modules/purchasing.sql, "bar bill").
    ══════════════════════════════════════════════════════════════════ */
 
 const SUPER =
@@ -19,6 +22,7 @@ const TAG = "BARBILL";
 let gm = "";
 let waiter = "";
 let keeper = "";
+let barman = "";
 
 async function sql<T>(text: string, values: unknown[] = []): Promise<T[]> {
   const db = new (await import("pg")).default.Pool({ connectionString: SUPER });
@@ -48,6 +52,7 @@ beforeAll(async () => {
   gm = await person("barbill-gm@fidato.in", "BARBILL Manager", "gm");
   waiter = await person("barbill-waiter@fidato.in", "BARBILL Waiter", "pos");
   keeper = await person("barbill-keeper@fidato.in", "BARBILL Keeper", "stores");
+  barman = await person("barbill-bar@fidato.in", "BARBILL Bar Manager", "bar");
 });
 
 afterAll(async () => {
@@ -56,10 +61,11 @@ afterAll(async () => {
     await db.query("delete from attachments where subject_table = 'bar_purchases' and subject_id in (select id from bar_purchases where supplier like $1)", [`${TAG}%`]);
     /* The ledger is append-only (forbid_mutation): off for this clean-up only. */
     await db.query("alter table stock_movements disable trigger stock_movements_append_only");
+    await db.query("delete from bar_purchase_lines where purchase_id in (select id from bar_purchases where supplier like $1)", [`${TAG}%`]);
     await db.query("delete from stock_movements where bar_purchase_id in (select id from bar_purchases where supplier like $1)", [`${TAG}%`]);
     await db.query("delete from bar_purchases where supplier like $1", [`${TAG}%`]);
     await db.query("delete from stock_items where name like $1", [`${TAG}%`]);
-    await db.query("delete from staff_hotels where staff_id = any($1::uuid[])", [[gm, waiter, keeper]]);
+    await db.query("delete from staff_hotels where staff_id = any($1::uuid[])", [[gm, waiter, keeper, barman]]);
   } finally {
     await db.query("alter table stock_movements enable trigger stock_movements_append_only");
     await db.end();
@@ -67,86 +73,105 @@ afterAll(async () => {
   await closePool();
 });
 
-describe("a bar bill recorded (D27-354)", () => {
+/* A line as printed: the NIP case of 48 at a rate per case. */
+const nip = (extra: object) => ({ perCase: 48, cases: 0, bottles: 0, ratePerCase: 8000, mrp: 190, ...extra });
+
+describe("a bar bill recorded as printed (D27-354)", () => {
   it("a waiter is refused, by the server", async () => {
     const res = await call(waiter, "POST", "/bar/purchases", {
-      supplier: `${TAG} Shah Wines`, billNo: "W-1", billDate: today,
-      lines: [{ newDrink: { name: `${TAG} Kingfisher Strong 650 ml`, unit: "bottle", sizeMl: 650 }, bottles: 24, costPerBottle: 140 }],
+      supplier: `${TAG} Amit Traders`, billNo: "A-1", billDate: today, total: 8000,
+      lines: [nip({ newDrink: { name: `${TAG} Romanov Vodka 180 ml`, unit: "bottle", sizeMl: 180 }, cases: 1 })],
     });
     expect(res.status).toBe(403);
     expect(await reason(res)).toBe(
-      "Recording a bar bill is for the owner, an administrator, the general manager or the Inventory Manager.");
+      "Recording a bar bill is for the owner, an administrator, the general manager, the Inventory Manager or the bar manager.");
   });
 
-  it("the Inventory Manager records one: a new drink added, both lines into the bar's store, pointing at the bill", async () => {
+  it("the Inventory Manager and the bar manager record bills: cases and loose bottles in, at the line's amount over its bottles", async () => {
+    /* 1 case of 48 at Rs 8,000; printed 8,000.40 - inside the bill's round-off. */
     const first = await call(keeper, "POST", "/bar/purchases", {
-      supplier: `${TAG} Shah Wines`, billNo: "W-2", billDate: today,
-      lines: [{ newDrink: { name: `${TAG} Imperial Blue 750 ml`, unit: "bottle", sizeMl: 750 }, bottles: 6, costPerBottle: 520 }],
+      supplier: `${TAG} Amit Traders`, billNo: "A-2", billDate: today, total: 8000.4,
+      lines: [nip({ newDrink: { name: `${TAG} Romanov Vodka 180 ml`, unit: "bottle", sizeMl: 180 }, cases: 1 })],
     });
     expect(first.status, await first.clone().text()).toBe(200);
-    const drinks = (await (await call(keeper, "GET", "/bar/drinks")).json()) as {
-      store: { name: string }; drinks: { id: string; name: string; sizeMl: number | null; onHand: number }[] };
+    const drinks = (await (await call(barman, "GET", "/bar/drinks")).json()) as {
+      store: { name: string }; drinks: { id: string; name: string; sizeMl: number | null; onHand: number; perCase: number | null }[] };
     expect(drinks.store.name).toBe("Bar store");
-    const blue = drinks.drinks.find((d) => d.name === `${TAG} Imperial Blue 750 ml`)!;
-    expect([blue.sizeMl, blue.onHand]).toEqual([750, 6]);
+    const vodka = drinks.drinks.find((d) => d.name === `${TAG} Romanov Vodka 180 ml`)!;
+    expect([vodka.sizeMl, vodka.onHand, vodka.perCase]).toEqual([180, 48, 48]);
 
-    const second = await call(keeper, "POST", "/bar/purchases", {
-      supplier: `${TAG} Shah Wines`, billNo: "W-3", billDate: today,
-      lines: [{ itemId: blue.id, bottles: 4, costPerBottle: 520 },
-              { newDrink: { name: `${TAG} Bisleri 1 L`, unit: "bottle", sizeMl: null }, bottles: 12, costPerBottle: 15 }],
+    /* 24 loose NIPs at Rs 8,000 a case of 48 = 4,000; a case of 12 water at
+       180; handling 100, TCS 40.40: 4,320.40. */
+    const second = await call(barman, "POST", "/bar/purchases", {
+      supplier: `${TAG} Amit Traders`, billNo: "A-3", billDate: today, tpNo: "TP 4471",
+      handling: 100, tcs: 40.4, total: 4320.4,
+      lines: [nip({ itemId: vodka.id, bottles: 24 }),
+              { newDrink: { name: `${TAG} Bisleri 1 L`, unit: "bottle", sizeMl: null },
+                perCase: 12, cases: 1, bottles: 0, ratePerCase: 180, mrp: null }],
     });
     expect(second.status, await second.clone().text()).toBe(200);
     const { id } = (await second.json()) as { id: string };
-    const lines = await sql<{ name: string; quantity: string; unit_cost: string; store: string }>(
+    const moved = await sql<{ name: string; quantity: string; unit_cost: string; store: string }>(
       `select i.name, m.quantity::text, m.unit_cost::text, l.name as store
          from stock_movements m join stock_items i on i.id = m.item_id join locations l on l.id = m.location_id
         where m.bar_purchase_id = $1 and m.kind = 'receipt' order by i.name`, [id]);
-    expect(lines.map((l) => [l.name, Number(l.quantity), Number(l.unit_cost), l.store])).toEqual([
+    expect(moved.map((l) => [l.name, Number(l.quantity), Number(l.unit_cost), l.store])).toEqual([
       [`${TAG} Bisleri 1 L`, 12, 15, "Bar store"],
-      [`${TAG} Imperial Blue 750 ml`, 4, 520, "Bar store"],
+      [`${TAG} Romanov Vodka 180 ml`, 24, 166.67, "Bar store"],
     ]);
 
     const list = (await (await call(gm, "GET", "/bar/purchases")).json()) as {
-      purchases: { id: string; billNo: string; lines: { item: string; quantity: number }[] }[] };
-    expect(list.purchases.find((p) => p.id === id)?.lines).toHaveLength(2);
+      purchases: { id: string; tpNo: string | null; handling: number | null; tcs: number | null; total: number | null;
+                   lines: { item: string; mrp: number | null; perCase: number; cases: number; bottles: number;
+                            ratePerCase: number; amount: number }[] }[] };
+    const bill = list.purchases.find((p) => p.id === id)!;
+    expect([bill.tpNo, bill.handling, bill.tcs, bill.total]).toEqual(["TP 4471", 100, 40.4, 4320.4]);
+    expect(bill.lines.map((l) => [l.item, l.mrp, l.perCase, l.cases, l.bottles, l.ratePerCase, l.amount])).toEqual([
+      [`${TAG} Romanov Vodka 180 ml`, 190, 48, 0, 24, 8000, 4000],
+      [`${TAG} Bisleri 1 L`, null, 12, 1, 0, 180, 180],
+    ]);
   });
 
-  it("the same bill twice, a drink already on the list, a future date and no cost are refused", async () => {
-    const drink = { newDrink: { name: `${TAG} Old Monk 750 ml`, unit: "bottle", sizeMl: 750 }, bottles: 1, costPerBottle: 300 };
-    expect((await call(gm, "POST", "/bar/purchases", {
-      supplier: `${TAG} Shah Wines`, billNo: "W-2", billDate: today, lines: [drink] })).status).toBe(409);
+  it("a total the lines do not make, the same bill twice, a known drink, a future date and no rate are refused", async () => {
+    const drink = nip({ newDrink: { name: `${TAG} Old Monk 180 ml`, unit: "bottle", sizeMl: 180 }, cases: 1 });
+    const off = await call(gm, "POST", "/bar/purchases", {
+      supplier: `${TAG} Amit Traders`, billNo: "A-8", billDate: today, total: 9000, lines: [drink] });
+    expect(await reason(off)).toBe(
+      "The lines, handling and TCS make ₹8,000.00; the bill says ₹9,000.00. Check the cases, the rates and the charges against the bill.");
     const again = await call(gm, "POST", "/bar/purchases", {
-      supplier: `${TAG} Shah Wines`, billNo: "w-2", billDate: today, lines: [drink] });
-    expect(await reason(again)).toBe(`Bill w-2 from ${TAG} Shah Wines is already recorded.`);
+      supplier: `${TAG} Amit Traders`, billNo: "a-2", billDate: today, total: 8000, lines: [drink] });
+    expect(await reason(again)).toBe(`Bill a-2 from ${TAG} Amit Traders is already recorded.`);
     const known = await call(gm, "POST", "/bar/purchases", {
-      supplier: `${TAG} Shah Wines`, billNo: "W-9", billDate: today,
-      lines: [{ ...drink, newDrink: { ...drink.newDrink, name: `${TAG} imperial blue 750 ml` } }] });
-    expect(await reason(known)).toBe(`"${TAG} Imperial Blue 750 ml" is already on the store's list. Pick it instead.`);
+      supplier: `${TAG} Amit Traders`, billNo: "A-9", billDate: today, total: 8000,
+      lines: [{ ...drink, newDrink: { name: `${TAG} romanov vodka 180 ml`, unit: "bottle", sizeMl: 180 } }] });
+    expect(await reason(known)).toBe(`"${TAG} Romanov Vodka 180 ml" is already on the store's list. Pick it instead.`);
     const later = await call(gm, "POST", "/bar/purchases", {
-      supplier: `${TAG} Shah Wines`, billNo: "W-10", billDate: "2999-01-01", lines: [drink] });
+      supplier: `${TAG} Amit Traders`, billNo: "A-10", billDate: "2999-01-01", total: 8000, lines: [drink] });
     expect(await reason(later)).toBe("A bill is not dated in the future.");
     const free = await call(gm, "POST", "/bar/purchases", {
-      supplier: `${TAG} Shah Wines`, billNo: "W-11", billDate: today, lines: [{ ...drink, costPerBottle: undefined }] });
-    expect(await reason(free)).toBe("Type the cost of each drink as on the bill: zero or more.");
+      supplier: `${TAG} Amit Traders`, billNo: "A-11", billDate: today, total: 8000, lines: [{ ...drink, ratePerCase: undefined }] });
+    expect(await reason(free)).toBe("Type each line's rate per case as on the bill: zero or more.");
     const [n] = await sql<{ n: number }>(
       "select count(*)::int as n from bar_purchases where supplier like $1", [`${TAG}%`]);
     expect(n!.n, "nothing more was recorded").toBe(2);
   });
 
-  it("takes a photo of the bill", async () => {
+  it("the bar manager takes a photo of the bill and opens it; a waiter cannot", async () => {
     const [bill] = await sql<{ id: string }>(
-      "select id::text from bar_purchases where supplier like $1 and bill_no = 'W-3'", [`${TAG}%`]);
+      "select id::text from bar_purchases where supplier like $1 and bill_no = 'A-3'", [`${TAG}%`]);
     const form = new FormData();
-    form.set("table", "bar_purchases");
-    form.set("id", bill!.id);
     /* The smallest PNG there is: a 1x1 pixel. */
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64");
     form.set("file", new File([png], "bill.png", { type: "image/png" }));
-    const res = await app.request("/api/hotels/5EL/attachments", {
-      method: "POST", headers: { "x-dev-staff-id": keeper }, body: form });
+    const res = await app.request(`/api/hotels/5EL/bar/purchases/${bill!.id}/photo`, {
+      method: "POST", headers: { "x-dev-staff-id": barman }, body: form });
     expect(res.status, await res.clone().text()).toBe(200);
-    const list = (await (await call(keeper, "GET", "/bar/purchases")).json()) as {
+    const list = (await (await call(barman, "GET", "/bar/purchases")).json()) as {
       purchases: { id: string; photoId: string | null }[] };
     expect(list.purchases.find((p) => p.id === bill!.id)?.photoId).toBeTruthy();
+    const back = await app.request(`/api/hotels/5EL/bar/purchases/${bill!.id}/photo`, { headers: { "x-dev-staff-id": barman } });
+    expect([back.status, back.headers.get("content-type")]).toEqual([200, "image/png"]);
+    const refused = await app.request(`/api/hotels/5EL/bar/purchases/${bill!.id}/photo`, { headers: { "x-dev-staff-id": waiter } });
+    expect(refused.status).toBe(404);
   });
 });

@@ -1,29 +1,31 @@
 import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, GlassWater, Image as ImageIcon, Plus, Trash2 } from "lucide-react";
-import { money, dateShort, bottlesAndMl } from "@/lib/format";
+import { moneyPrecise as money, dateShort, bottlesAndMl } from "@/lib/format";
 import {
   Card, CardBody, Button, Skeleton, EmptyState, ErrorState, Dialog, DialogContent,
   Field, fieldProps, Input, NativeSelect, toast,
 } from "@/components/ui";
 import {
-  barBills, barDrinks, recordBarBill, attachBarBillPhoto, barBillPhoto,
+  barBills, barDrinks, recordBarBill, attachBarBillPhoto, barBillPhoto, lineAmount,
   type BarBill, type BarDrink, type NewBillLine,
 } from "@/modules/purchasing/data/barBills";
 
 /* ══════════════════════════════════════════════════════════════════
    PURCHASING · BAR (the owner's D27-354)
 
-   The bar's bills, newest first, each with its drinks, its total and its
-   photo; and Record a bar bill: the supplier, the bill's number and date, a
-   photo of it, and each drink - picked from the bar's list or added as
-   another drink - with the bottles and the cost per bottle as paid. Saving
-   puts the drinks in the bar's store at once. No approval: the bill has come.
+   The bar's bills, newest first, each as printed with its photo; and Record
+   a bar bill, typed as printed (the owner, 21 October evening): the
+   supplier, the bill's number, date and T.P. number, a photo, each drink -
+   picked from the bar's list or added - with its MRP, cases and loose
+   bottles, bottles to a case and rate per case; the handling, the TCS and
+   the total printed, which the lines must make. Saving puts the bottles in
+   the bar's store at once. No approval: the bill has come.
    ══════════════════════════════════════════════════════════════════ */
 
-const total = (b: BarBill) =>
-  b.lines.every((l) => l.unitCost !== null)
-    ? b.lines.reduce((s, l) => s + l.quantity * (l.unitCost ?? 0), 0) : null;
+const casesText = (l: { cases: number; bottles: number }) =>
+  [l.cases ? `${l.cases} case${l.cases === 1 ? "" : "s"}` : "", l.bottles ? `${l.bottles} loose` : ""]
+    .filter(Boolean).join(" + ");
 
 export function BarBills({ hotelId, mayRecord, recording, onRecording }: {
   hotelId: string; mayRecord: boolean; recording: boolean; onRecording: (open: boolean) => void;
@@ -33,7 +35,7 @@ export function BarBills({ hotelId, mayRecord, recording, onRecording }: {
   const [photo, setPhoto] = useState<{ url: string; title: string } | null>(null);
 
   const showPhoto = async (b: BarBill) => {
-    const got = await barBillPhoto(hotelId, b.photoId!);
+    const got = await barBillPhoto(hotelId, b.id);
     if (!got.ok) return void toast.error("Not opened", got.reason);
     setPhoto({ url: got.url, title: `Bill ${b.billNo} from ${b.supplier}` });
   };
@@ -51,7 +53,7 @@ export function BarBills({ hotelId, mayRecord, recording, onRecording }: {
         : bills.data.length === 0 ? (
           <EmptyState icon={<GlassWater />} title="No bar bill recorded in the last 60 days"
             description={mayRecord ? "Record a bar bill when one comes: its drinks go into the bar's store."
-              : "The owner, an administrator, the GM or the Inventory Manager records them."} />
+              : "The owner, an Admin, the GM, the Inventory Manager or the bar manager records them."} />
         ) : (
           <ul className="space-y-3" data-bar-bills>
             {bills.data.map((b) => (
@@ -62,21 +64,28 @@ export function BarBills({ hotelId, mayRecord, recording, onRecording }: {
                       <p className="text-base font-semibold text-ink-900 flex-1 min-w-0">
                         {b.supplier} · Bill {b.billNo}
                       </p>
-                      <span className="text-sm text-grey-600 tabular">{dateShort(b.billDate)}</span>
+                      <span className="text-sm text-grey-600 tabular">
+                        {dateShort(b.billDate)}{b.tpNo ? ` · T.P. ${b.tpNo}` : ""}
+                      </span>
                       <span className="text-base font-medium tabular text-ink-900">
-                        {total(b) === null ? "-" : money(total(b)!)}
+                        {b.total === null ? "-" : money(b.total)}
                       </span>
                     </div>
                     <ul className="text-sm text-grey-700 space-y-0.5">
                       {b.lines.map((l, i) => (
-                        <li key={i} className="flex justify-between gap-3">
-                          <span>{l.item}</span>
-                          <span className="tabular text-grey-600 shrink-0">
-                            {bottlesAndMl(l.quantity, l.unit, null)}
-                            {l.unitCost === null ? "" : ` × ${money(l.unitCost)}`}
+                        <li key={i} className="flex flex-wrap justify-between gap-x-3">
+                          <span>{l.item}{l.mrp === null ? "" : ` · MRP ${money(l.mrp)}`}</span>
+                          <span className="tabular text-grey-600">
+                            {casesText(l)} ({bottlesAndMl(l.cases * l.perCase + l.bottles, l.unit, null)})
+                            {` at ${money(l.ratePerCase)} a case of ${l.perCase} · ${money(l.amount)}`}
                           </span>
                         </li>
                       ))}
+                      {(b.handling !== null || b.tcs !== null) && (
+                        <li className="text-grey-600">
+                          Handling {b.handling === null ? "-" : money(b.handling)} · TCS {b.tcs === null ? "-" : money(b.tcs)}
+                        </li>
+                      )}
                     </ul>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-grey-500">
                       <span className="flex-1">Recorded by {b.recordedBy ?? "-"} · {b.recordedAt}</span>
@@ -117,10 +126,21 @@ function LineBox({ label, children }: { label: string; children: ReactNode }) {
 type Draft = {
   itemId: string;            /* "" not picked; "new" another drink */
   name: string; sizeMl: string; unit: string;
-  bottles: string; cost: string;
+  perCase: string; cases: string; bottles: string; mrp: string; rate: string;
 };
-const EMPTY: Draft = { itemId: "", name: "", sizeMl: "", unit: "bottle", bottles: "", cost: "" };
+const EMPTY: Draft = {
+  itemId: "", name: "", sizeMl: "", unit: "bottle", perCase: "", cases: "", bottles: "", mrp: "", rate: "",
+};
 const UNITS = ["bottle", "can", "packet", "piece"];
+
+const num = (v: string) => (v.trim() === "" ? null : Number(v));
+/** A typed line's figures, or null while one is missing or not a number. */
+function figures(l: Draft) {
+  const perCase = num(l.perCase), cases = num(l.cases) ?? 0, bottles = num(l.bottles) ?? 0, rate = num(l.rate);
+  if (perCase === null || rate === null || [perCase, cases, bottles, rate].some((n) => !Number.isFinite(n))) return null;
+  if (perCase < 1 || cases + bottles <= 0) return null;
+  return { perCase, cases, bottles, ratePerCase: rate };
+}
 
 function RecordDialog({ hotelId, drinks, onClose }: {
   hotelId: string; drinks: BarDrink[]; onClose: () => void;
@@ -129,6 +149,10 @@ function RecordDialog({ hotelId, drinks, onClose }: {
   const [supplier, setSupplier] = useState("");
   const [billNo, setBillNo] = useState("");
   const [billDate, setBillDate] = useState(new Date().toLocaleDateString("en-CA"));
+  const [tpNo, setTpNo] = useState("");
+  const [handling, setHandling] = useState("");
+  const [tcs, setTcs] = useState("");
+  const [printed, setPrinted] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [lines, setLines] = useState<Draft[]>([{ ...EMPTY }]);
   const [saving, setSaving] = useState(false);
@@ -136,30 +160,36 @@ function RecordDialog({ hotelId, drinks, onClose }: {
 
   const set = (i: number, patch: Partial<Draft>) =>
     setLines((all) => all.map((l, n) => (n === i ? { ...l, ...patch } : l)));
-  const sum = lines.reduce((s, l) => s + (Number(l.bottles) || 0) * (Number(l.cost) || 0), 0);
+  const amounts = lines.map((l) => { const f = figures(l); return f ? lineAmount(f) : null; });
+  const made = Math.round((amounts.reduce<number>((t, a) => t + (a ?? 0), 0)
+    + (Number(handling) || 0) + (Number(tcs) || 0)) * 100) / 100;
+  const off = printed.trim() === "" ? null : Math.round((made - Number(printed)) * 100) / 100;
 
   const submit = async () => {
     setProblem(null);
     const out: NewBillLine[] = [];
     for (const l of lines) {
       if (!l.itemId) return setProblem("Pick each drink, or choose Add another drink.");
-      if (l.bottles.trim() === "" || l.cost.trim() === "") {
-        return setProblem("Type how many came and the cost of each, as on the bill.");
-      }
-      const common = { bottles: Number(l.bottles), costPerBottle: Number(l.cost) };
+      const f = figures(l);
+      if (!f) return setProblem("Type each line's bottles to a case, the cases or loose bottles, and the rate per case.");
+      const common = { ...f, mrp: num(l.mrp) };
       out.push(l.itemId === "new"
-        ? { newDrink: { name: l.name.trim(), unit: l.unit, sizeMl: l.sizeMl.trim() === "" ? null : Number(l.sizeMl) }, ...common }
+        ? { newDrink: { name: l.name.trim(), unit: l.unit, sizeMl: num(l.sizeMl) }, ...common }
         : { itemId: l.itemId, ...common });
     }
+    if (printed.trim() === "") return setProblem("Type the bill's total, as printed on it.");
     setSaving(true);
-    const res = await recordBarBill(hotelId, { supplier, billNo, billDate, lines: out });
+    const res = await recordBarBill(hotelId, {
+      supplier, billNo, billDate, tpNo: tpNo.trim() || null,
+      handling: num(handling), tcs: num(tcs), total: Number(printed), lines: out });
     if (!res.ok) { setSaving(false); return setProblem(res.reason); }
     const photo = file ? await attachBarBillPhoto(hotelId, res.id, file) : { ok: true as const };
     setSaving(false);
     void qc.invalidateQueries({ queryKey: ["bar-bills", hotelId] });
     void qc.invalidateQueries({ queryKey: ["bar-drinks", hotelId] });
+    void qc.invalidateQueries({ queryKey: ["bar-sheet", hotelId] });
     onClose();
-    if (photo.ok) toast.success(`Bill ${billNo.trim()} recorded`, "Its drinks are in the bar's store.");
+    if (photo.ok) toast.success(`Bill ${billNo.trim()} recorded`, "Its bottles are in the bar's store.");
     else toast.error(`Bill ${billNo.trim()} recorded, without its photo`, photo.reason);
   };
 
@@ -167,7 +197,7 @@ function RecordDialog({ hotelId, drinks, onClose }: {
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent
         title="Record a bar bill"
-        className="max-w-2xl"
+        className="max-w-3xl"
         footer={
           <>
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
@@ -176,8 +206,9 @@ function RecordDialog({ hotelId, drinks, onClose }: {
         }
       >
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Field label="Supplier">
+          <p className="text-sm text-grey-600">Type it as printed. The lines, the handling and the TCS must make the bill's total.</p>
+          <div className="grid gap-3 sm:grid-cols-4">
+            <Field label="Supplier" className="sm:col-span-2">
               {(p) => <Input {...fieldProps(p)} value={supplier} onChange={(e) => setSupplier(e.target.value)} />}
             </Field>
             <Field label="Bill number">
@@ -186,17 +217,19 @@ function RecordDialog({ hotelId, drinks, onClose }: {
             <Field label="Bill date">
               {(p) => <Input {...fieldProps(p)} type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} />}
             </Field>
+            <Field label="T.P. number" hint="The transport permit, if printed.">
+              {(p) => <Input {...fieldProps(p)} value={tpNo} onChange={(e) => setTpNo(e.target.value)} />}
+            </Field>
+            <Field label="Photo of the bill" hint="Take it with the phone's camera, or pick a file." className="sm:col-span-3">
+              {(p) => (
+                <label className="flex items-center gap-2 text-sm text-ink-900 cursor-pointer">
+                  <Camera className="size-4 text-grey-500" />
+                  <input id={p.id} aria-describedby={p.describedBy} type="file" accept="image/*,application/pdf" capture="environment"
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-sm" />
+                </label>
+              )}
+            </Field>
           </div>
-
-          <Field label="Photo of the bill" hint="Take it with the phone's camera, or pick a file.">
-            {(p) => (
-              <label className="flex items-center gap-2 text-sm text-ink-900 cursor-pointer">
-                <Camera className="size-4 text-grey-500" />
-                <input id={p.id} aria-describedby={p.describedBy} type="file" accept="image/*,application/pdf" capture="environment"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-sm" />
-              </label>
-            )}
-          </Field>
 
           <div className="space-y-3">
             <p className="text-sm font-medium text-grey-700">The drinks on the bill</p>
@@ -205,7 +238,10 @@ function RecordDialog({ hotelId, drinks, onClose }: {
                 <div className="flex items-end gap-2">
                   <div className="flex-1 min-w-0">
                     <NativeSelect aria-label={`Drink on line ${i + 1}`} value={l.itemId}
-                      onChange={(e) => set(i, { itemId: e.target.value })}>
+                      onChange={(e) => {
+                        const d = drinks.find((x) => x.id === e.target.value);
+                        set(i, { itemId: e.target.value, ...(d?.perCase && l.perCase === "" ? { perCase: String(d.perCase) } : {}) });
+                      }}>
                       <option value="">Pick a drink</option>
                       {drinks.map((d) => (
                         <option key={d.id} value={d.id}>{d.name}{d.sizeMl ? ` (${d.sizeMl} ml)` : ""}</option>
@@ -220,15 +256,15 @@ function RecordDialog({ hotelId, drinks, onClose }: {
                     </Button>
                   )}
                 </div>
-                {/* Each box keeps its name in sight once it is filled: "24" and
-                    "140" side by side say nothing on their own. */}
+                {/* Each box keeps its name in sight once it is filled: "2" and
+                    "48" side by side say nothing on their own. */}
                 {l.itemId === "new" && (
-                  <div className="grid gap-2 sm:grid-cols-[1fr_110px_120px]">
-                    <LineBox label="Name, as on the bill">
+                  <div className="grid gap-2 sm:grid-cols-[1fr_130px_120px]">
+                    <LineBox label="Brand, as on the bill">
                       <Input aria-label={`New drink's name on line ${i + 1}`}
                         value={l.name} onChange={(e) => set(i, { name: e.target.value })} />
                     </LineBox>
-                    <LineBox label="Size, ml">
+                    <LineBox label="Size, ml (a NIP is 180)">
                       <Input aria-label={`Size in ml on line ${i + 1}`} inputMode="numeric"
                         value={l.sizeMl} onChange={(e) => set(i, { sizeMl: e.target.value })} />
                     </LineBox>
@@ -240,24 +276,57 @@ function RecordDialog({ hotelId, drinks, onClose }: {
                     </LineBox>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-2">
-                  <LineBox label="How many">
-                    <Input aria-label={`How many on line ${i + 1}`} inputMode="decimal"
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 items-end">
+                  <LineBox label="Bottles a case">
+                    <Input aria-label={`Bottles to a case on line ${i + 1}`} inputMode="numeric"
+                      value={l.perCase} onChange={(e) => set(i, { perCase: e.target.value })} />
+                  </LineBox>
+                  <LineBox label="Cases">
+                    <Input aria-label={`Cases on line ${i + 1}`} inputMode="numeric"
+                      value={l.cases} onChange={(e) => set(i, { cases: e.target.value })} />
+                  </LineBox>
+                  <LineBox label="Loose bottles">
+                    <Input aria-label={`Loose bottles on line ${i + 1}`} inputMode="numeric"
                       value={l.bottles} onChange={(e) => set(i, { bottles: e.target.value })} />
                   </LineBox>
-                  <LineBox label="Cost of each, ₹">
-                    <Input aria-label={`Cost of each on line ${i + 1}`} inputMode="decimal"
-                      value={l.cost} onChange={(e) => set(i, { cost: e.target.value })} />
+                  <LineBox label="MRP, ₹">
+                    <Input aria-label={`MRP on line ${i + 1}`} inputMode="decimal"
+                      value={l.mrp} onChange={(e) => set(i, { mrp: e.target.value })} />
+                  </LineBox>
+                  <LineBox label="Rate a case, ₹">
+                    <Input aria-label={`Rate per case on line ${i + 1}`} inputMode="decimal"
+                      value={l.rate} onChange={(e) => set(i, { rate: e.target.value })} />
+                  </LineBox>
+                  <LineBox label="Amount">
+                    <p className="h-10 flex items-center justify-end tabular text-base text-ink-900" data-line-amount>
+                      {amounts[i] === null ? "-" : money(amounts[i]!)}
+                    </p>
                   </LineBox>
                 </div>
               </div>
             ))}
-            <div className="flex items-center justify-between">
-              <Button variant="secondary" size="sm" leadingIcon={<Plus />}
-                onClick={() => setLines((all) => [...all, { ...EMPTY }])}>Add a drink</Button>
-              <span className="text-base font-medium tabular text-ink-900">Total {money(sum)}</span>
-            </div>
+            <Button variant="secondary" size="sm" leadingIcon={<Plus />}
+              onClick={() => setLines((all) => [...all, { ...EMPTY }])}>Add a drink</Button>
           </div>
+
+          <div className="grid gap-3 grid-cols-3">
+            <Field label="Handling charges, ₹">
+              {(p) => <Input {...fieldProps(p)} inputMode="decimal" value={handling} onChange={(e) => setHandling(e.target.value)} />}
+            </Field>
+            <Field label="TCS, ₹">
+              {(p) => <Input {...fieldProps(p)} inputMode="decimal" value={tcs} onChange={(e) => setTcs(e.target.value)} />}
+            </Field>
+            <Field label="Total, as printed, ₹">
+              {(p) => <Input {...fieldProps(p)} inputMode="decimal" value={printed} onChange={(e) => setPrinted(e.target.value)} />}
+            </Field>
+          </div>
+          <p className="text-sm tabular text-right" data-bill-check>
+            <span className="text-grey-600">The lines, handling and TCS make </span>
+            <span className="font-medium text-ink-900">{money(made)}</span>
+            {off === null ? null : Math.abs(off) <= 1
+              ? <span className="text-success"> · matches the bill</span>
+              : <span className="text-brand-red-700 font-medium"> · {money(Math.abs(off))} {off > 0 ? "more" : "less"} than the bill</span>}
+          </p>
 
           {problem && <p role="alert" className="text-sm text-brand-red-700">{problem}</p>}
         </div>

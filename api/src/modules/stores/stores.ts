@@ -317,7 +317,12 @@ export async function receiveIntoStore(
   | { ok: true; id: string; item: string; unit: string; store: string; onHandHere: number }
   | { ok: false; reason: string }
 > {
-  const refusal = await mayDeliverInto(client, hotelId, input.storeId);
+  /* A BAR BILL'S LINE (D27-354): who may record one - the bar manager among
+     them, who holds no Store grant - is Purchasing's BAR_RECORDERS, asked
+     before its first write (barBills.ts). It goes into the bar's store only. */
+  const refusal = input.barPurchaseId
+    ? ((await barStore(client, hotelId))?.id === input.storeId ? null : "A bar bill goes into the bar's store.")
+    : await mayDeliverInto(client, hotelId, input.storeId);
   if (refusal) return { ok: false, reason: refusal };
 
   const { rows: item } = await client.query<{ name: string; unit: string }>(
@@ -1241,84 +1246,94 @@ stores.patch("/:code/stores/items/:id", async (c) => {
    to count again - before anything is written (MEMORY 243).
    ponytail: the check and the writes are not locked against an issue in the
    same instant; lock the items if two people ever save into one store at once. */
+type CountLine = { itemId?: string; empty?: boolean; book?: number; counted?: number; reason?: string };
+
+/** What is wrong with a count sheet's lines, before the database is asked;
+    null when nothing is. The bar's daily sheet asks the same (barSheet.ts). */
+export function countLinesProblem(lines: CountLine[]): string | null {
+  if (lines.length === 0) return "Nothing was counted - type a count on at least one line.";
+  if (lines.some((l) => !l.itemId || typeof l.book !== "number" || !Number.isFinite(l.book))) {
+    return "Every line names its item and what the book said.";
+  }
+  if (lines.some((l) => !isCount(l.counted))) return "A count is zero or more.";
+  const keys = lines.map((l) => `${l.itemId}:${l.empty === true}`);
+  if (new Set(keys).size !== keys.length) return "An item is on the sheet twice.";
+  return null;
+}
+
+/** A store counted: lines already checked by countLinesProblem, the person
+    already allowed. Refuses, before writing, when the book has moved. */
+export async function saveCount(
+  client: Client, hotelId: string, staffId: string, locationId: unknown, lines: CountLine[],
+): Promise<{ ok: true; recorded: number; matched: number; store: string } | { ok: false; reason: string }> {
+  /* A restaurant, bar or kitchen is counted for its crockery (D27-242). */
+  const store = await storeAt(client, hotelId, locationId, true);
+  if (!store) return refuse("That is not a store at this property.");
+
+  const { rows: items } = await client.query<{
+    id: string; name: string; cylinder: boolean; crockery: boolean; full: string; empties: string;
+  }>(
+    `select id::text, name, app.counted_in_cylinders(unit) as cylinder, crockery,
+            app.stock_on_hand(id, $3)::text as full,
+            app.stock_empties(id, $3)::text as empties
+       from stock_items where hotel_id = $1 and id::text = any($2)`,
+    [hotelId, lines.map((l) => l.itemId), store.id]);
+  const byId = new Map(items.map((i) => [i.id, i]));
+
+  const moved: string[] = [];
+  for (const l of lines) {
+    const it = byId.get(l.itemId!);
+    if (!it) return refuse("An item on the sheet is not in this store.");
+    if (store.kind !== "store" && !it.crockery) {
+      return refuse(`Only crockery and cutlery is counted at ${store.name}.`);
+    }
+    if (l.empty && !it.cylinder) return refuse("Only an item counted in cylinders has empties.");
+    const now = Number(l.empty ? it.empties : it.full);
+    if (now !== l.book) moved.push(l.empty ? `${it.name} (empty)` : it.name);
+  }
+  if (moved.length > 0) {
+    return refuse(
+      `${moved.join(", ")} moved in ${store.name} since the count was opened - `
+      + `count ${moved.length === 1 ? "it" : "them"} again. Nothing was saved.`);
+  }
+
+  /* EVERY LINE IS KEPT (D27-238), matched or not: a count that matched
+     wrote nothing, so nothing said the shelf had been counted at all.
+     "Last counted" and the count-difference report read these. */
+  const businessDate = await businessDateFor(client, hotelId);
+  let recorded = 0;
+  for (const l of lines) {
+    const difference = Math.round((l.counted! - l.book!) * 1000) / 1000;
+    const movementId = difference === 0 ? null : await writeMovement(client, hotelId, staffId, {
+      itemId: l.itemId!, storeId: store.id, kind: "adjustment", signed: difference,
+      empty: l.empty === true,
+      note: `Count of ${store.name}` + (l.reason?.trim() ? ` - ${l.reason.trim()}` : ""),
+    });
+    await client.query(
+      `insert into stock_count_lines
+         (hotel_id, item_id, location_id, empty, book, counted, counted_by, business_date, movement_id)
+       values ($1, $2, $3, $4, $5, $6, $7, $8::date, $9)`,
+      [hotelId, l.itemId, store.id, l.empty === true, l.book, l.counted,
+       staffId, businessDate, movementId]);
+    if (movementId) recorded += 1;
+  }
+  return { ok: true as const, recorded, matched: lines.length - recorded, store: store.name };
+}
+
 stores.post("/:code/stores/counts", async (c) => {
-  type Line = { itemId?: string; empty?: boolean; book?: number; counted?: number; reason?: string };
-  const input = await c.req.json<{ locationId?: string; lines?: Line[] }>()
-    .catch(() => ({}) as { locationId?: string; lines?: Line[] });
+  const input = await c.req.json<{ locationId?: string; lines?: CountLine[] }>()
+    .catch(() => ({}) as { locationId?: string; lines?: CountLine[] });
   const lines = input.lines ?? [];
 
   if (!input.locationId) return c.json(refuse("Which store was counted?"), 409);
-  if (lines.length === 0) {
-    return c.json(refuse("Nothing was counted - type a count on at least one line."), 409);
-  }
-  if (lines.some((l) => !l.itemId || typeof l.book !== "number" || !Number.isFinite(l.book))) {
-    return c.json(refuse("Every line names its item and what the book said."), 409);
-  }
-  if (lines.some((l) => !isCount(l.counted))) {
-    return c.json(refuse("A count is zero or more."), 409);
-  }
-  const keys = lines.map((l) => `${l.itemId}:${l.empty === true}`);
-  if (new Set(keys).size !== keys.length) {
-    return c.json(refuse("An item is on the sheet twice."), 409);
-  }
+  const problem = countLinesProblem(lines);
+  if (problem) return c.json(refuse(problem), 409);
 
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
     if (!(await mayStock(client, hotelId, "edit"))) return forbid("edit");
-
-    /* A restaurant, bar or kitchen is counted for its crockery (D27-242). */
-    const store = await storeAt(client, hotelId, input.locationId, true);
-    if (!store) return refuse("That is not a store at this property.");
-
-    const { rows: items } = await client.query<{
-      id: string; name: string; cylinder: boolean; crockery: boolean; full: string; empties: string;
-    }>(
-      `select id::text, name, app.counted_in_cylinders(unit) as cylinder, crockery,
-              app.stock_on_hand(id, $3)::text as full,
-              app.stock_empties(id, $3)::text as empties
-         from stock_items where hotel_id = $1 and id::text = any($2)`,
-      [hotelId, lines.map((l) => l.itemId), store.id]);
-    const byId = new Map(items.map((i) => [i.id, i]));
-
-    const moved: string[] = [];
-    for (const l of lines) {
-      const it = byId.get(l.itemId!);
-      if (!it) return refuse("An item on the sheet is not in this store.");
-      if (store.kind !== "store" && !it.crockery) {
-        return refuse(`Only crockery and cutlery is counted at ${store.name}.`);
-      }
-      if (l.empty && !it.cylinder) return refuse("Only an item counted in cylinders has empties.");
-      const now = Number(l.empty ? it.empties : it.full);
-      if (now !== l.book) moved.push(l.empty ? `${it.name} (empty)` : it.name);
-    }
-    if (moved.length > 0) {
-      return refuse(
-        `${moved.join(", ")} moved in ${store.name} since the count was opened - `
-        + `count ${moved.length === 1 ? "it" : "them"} again. Nothing was saved.`);
-    }
-
-    /* EVERY LINE IS KEPT (D27-238), matched or not: a count that matched
-       wrote nothing, so nothing said the shelf had been counted at all.
-       "Last counted" and the count-difference report read these. */
-    const businessDate = await businessDateFor(client, hotelId);
-    let recorded = 0;
-    for (const l of lines) {
-      const difference = Math.round((l.counted! - l.book!) * 1000) / 1000;
-      const movementId = difference === 0 ? null : await writeMovement(client, hotelId, session.staffId, {
-        itemId: l.itemId!, storeId: store.id, kind: "adjustment", signed: difference,
-        empty: l.empty === true,
-        note: `Count of ${store.name}` + (l.reason?.trim() ? ` - ${l.reason.trim()}` : ""),
-      });
-      await client.query(
-        `insert into stock_count_lines
-           (hotel_id, item_id, location_id, empty, book, counted, counted_by, business_date, movement_id)
-         values ($1, $2, $3, $4, $5, $6, $7, $8::date, $9)`,
-        [hotelId, l.itemId, store.id, l.empty === true, l.book, l.counted,
-         session.staffId, businessDate, movementId]);
-      if (movementId) recorded += 1;
-    }
-    return { ok: true as const, recorded, matched: lines.length - recorded, store: store.name };
+    return saveCount(client, hotelId, session.staffId, input.locationId, lines);
   });
 
   if (!result) return c.json({ error: "No such property." }, 404);

@@ -64,7 +64,7 @@ describe("each space's menu", () => {
     }
     const pos = sidebarFor("owner", "5EL", ALL_ON, "pos").flatMap((s) => s.items);
     expect(pos.map((i) => i.label)).toEqual([
-      "Tables", "Table bookings", "Till", "Terminal", "Kitchen", "Menu",
+      "Tables", "Table bookings", "Till", "Terminal", "Kitchen", "Bar stock", "Menu",
       "Close restaurant day", "Charges to rooms", "Restaurant setup",
     ]);
     expect(pos.filter((i) => !i.to.startsWith("/pos/5EL/")).map((i) => i.to)).toEqual([]);

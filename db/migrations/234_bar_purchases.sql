@@ -13,6 +13,13 @@
 --   * stock_items.size_ml: a bottle's size, so the bar counts in bottles and
 --     ml (D27-354): a 60 ml peg is 0.08 of a 750 ml bottle.
 --   * bar_purchases: the bill. stock_movements.bar_purchase_id: its drinks.
+--   * AS PRINTED (the owner, 21 October evening, from the Amit Traders and
+--     Bharat Wines bills): the bill's T.P. (transport permit) number, its
+--     handling charges, its TCS and the total printed on it; each line's
+--     brand, MRP, cases and loose bottles, bottles to a case and rate per case
+--     (bar_purchase_lines). The lines, the handling and the TCS make the total.
+--   * locations.bar_sheet: the bar's daily sheet, "paper" (the bar register's
+--     columns) or "simple" - a setting, both kept (the owner).
 --
 -- Re-runnable.
 -- =============================================================================
@@ -90,6 +97,52 @@ revoke update, delete on bar_purchases from pms_app;
 alter table stock_movements add column if not exists bar_purchase_id uuid references bar_purchases(id);
 create index if not exists stock_movements_bar_purchase_idx
   on stock_movements (bar_purchase_id) where bar_purchase_id is not null;
+
+-- ── The bill as printed ──────────────────────────────────────────────────
+alter table bar_purchases add column if not exists tp_no text
+  check (tp_no is null or length(btrim(tp_no)) between 1 and 60);
+alter table bar_purchases add column if not exists handling numeric(12,2) check (handling >= 0);
+alter table bar_purchases add column if not exists tcs numeric(12,2) check (tcs >= 0);
+alter table bar_purchases add column if not exists bill_total numeric(12,2) check (bill_total >= 0);
+comment on column bar_purchases.bill_total is
+  'The total printed on the bill: its lines, handling and TCS make it (barBills.ts checks).';
+
+create table if not exists bar_purchase_lines (
+  id            uuid primary key default gen_random_uuid(),
+  hotel_id      uuid not null references hotels(id) on delete cascade,
+  purchase_id   uuid not null references bar_purchases(id),
+  item_id       uuid not null references stock_items(id),
+  -- The receipt into the bar's store this line made.
+  movement_id   bigint not null references stock_movements(id),
+  mrp           numeric(12,2) check (mrp >= 0),
+  per_case      int not null check (per_case between 1 and 1000),
+  cases         int not null check (cases >= 0),
+  bottles       int not null check (bottles >= 0),
+  rate_per_case numeric(12,2) not null check (rate_per_case >= 0),
+  amount        numeric(12,2) not null check (amount >= 0),
+  constraint bar_purchase_lines_something_came check (cases + bottles > 0)
+);
+create index if not exists bar_purchase_lines_purchase_idx on bar_purchase_lines (purchase_id);
+
+comment on table bar_purchase_lines is
+  'A bar bill''s line as printed (D27-354): cases and loose bottles at a rate per case. '
+  'Its bottles went into the bar''s store as movement_id.';
+
+alter table bar_purchase_lines enable row level security;
+alter table bar_purchase_lines force row level security;
+drop policy if exists hotel_isolation on bar_purchase_lines;
+create policy hotel_isolation on bar_purchase_lines
+  using (hotel_id in (select app.auth_hotel_ids()))
+  with check (hotel_id in (select app.auth_hotel_ids()));
+grant select, insert on bar_purchase_lines to pms_app;
+revoke update, delete on bar_purchase_lines from pms_app;
+
+-- ── The bar's daily sheet: like the paper register, or simple ───────────
+alter table locations add column if not exists bar_sheet text not null default 'paper'
+  check (bar_sheet in ('paper', 'simple'));
+comment on column locations.bar_sheet is
+  'The bar store''s daily sheet (D27-354): "paper" has the bar register''s columns '
+  '(NIP and ml, the 30/60/90 sells, rate, amount); "simple" opening, received, sold, closing, counted.';
 
 
 -- ── A test hotel's classes: a bar bill is trading ──────────────────────────

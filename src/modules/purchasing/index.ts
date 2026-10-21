@@ -1,5 +1,5 @@
-/* Purchasing — NOT BUILT. A Coming soon page only: `pages/Purchasing.tsx`,
-   its menu entry (`nav.ts`) and its address (`routes.tsx`). No other service
-   uses anything from here yet, so this front door exports nothing. What the
-   service will be is in MODULE.md beside this file. */
-export {};
+/* Purchasing's front door. The Bar stock page (the Store's, D27-354) shows
+   the bar's bills and records one, so their list and who records them are
+   lent here. What the service is: MODULE.md beside this file. */
+export { BarBills } from "./components/BarBills";
+export { BAR_RECORDERS } from "./data/barBills";

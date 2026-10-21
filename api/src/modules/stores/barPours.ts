@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { withSession } from "../../auth.ts";
 import type { Client } from "../../db.ts";
-import { mayStock, STOCK_REFUSED } from "./stockGrants.ts";
+import { BAR_KEEPERS, holdsRoleAt, mayStock, STOCK_REFUSED, STOCK_ROLES } from "./stockGrants.ts";
 import { barDrinks, barStore } from "./stores.ts";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -62,7 +62,10 @@ barPours.get("/:code/bar/pours", async (c) => {
   const body = await withSession(c.get("subject"), async (client) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
-    if (!(await mayStock(client, hotelId, "view"))) return { forbidden: STOCK_REFUSED.view };
+    /* Read by whoever sees the Store, and by the bar's sheet keepers. */
+    if (!(await holdsRoleAt(client, hotelId, [...STOCK_ROLES.view, ...BAR_KEEPERS]))) {
+      return { forbidden: STOCK_REFUSED.view };
+    }
     const store = await barStore(client, hotelId);
     const drinks = await barDrinks(client, hotelId, store?.id ?? null);
     const { rows } = await client.query<{

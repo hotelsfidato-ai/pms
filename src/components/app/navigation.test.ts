@@ -195,8 +195,9 @@ describe("each person's menu", () => {
        where they land is unchanged (below). */
     expect(menu("pos")).toEqual(["Guest requests", "Tables", "Till", "Terminal", "Close restaurant day"]);
     /* The Bar role (D27-324): the waiter's menu, Guest requests included
-       (the owner's D27-329 (3)). */
-    expect(menu("bar")).toEqual(menu("pos"));
+       (the owner's D27-329 (3)), and Bar stock beside it - the bar manager's
+       sheet, bills and set up (the owner, 21 October evening, D27-354). */
+    expect(menu("bar")).toEqual(["Guest requests", "Tables", "Till", "Terminal", "Bar stock", "Close restaurant day"]);
     expect(menu("chef")).toEqual(["Guest requests", "Kitchen", "Notifications"]);
     /* The Store joined the kitchen manager's on 22 September (D22-19). */
     expect(menu("kitchen_manager")).toEqual(

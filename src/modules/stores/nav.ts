@@ -1,5 +1,12 @@
 import { Package, Wine } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
+import type { Role } from "@/lib/permissions";
+
+/* Who opens Bar stock from the Restaurant menu: the owner, an Admin, the GM
+   and the Bar role, the bar manager (the owner, 21 October evening). The
+   Inventory Manager has it as Inventory's Bar tab. The server's list is
+   api/src/modules/stores/stockGrants.ts BAR_KEEPERS. */
+const BAR_STOCK: readonly Role[] = ["owner", "admin", "gm", "bar"];
 
 /* The store — what the property keeps on its shelves. Assembled by
    `navigation.ts`, in the Store and equipment section.
@@ -18,4 +25,10 @@ export const nav: ServiceNavEntry[] = [
     workingMenus: ["stores"],
     label: "Inventory", to: "/h/:code/inventory", icon: Wine, resource: "stock",
     keywords: ["bar", "liquor", "pegs", "drinks", "bar stock"], matchPrefix: true },
+  /* Bar stock, beside the Kitchen in the Restaurant menu (the owner's D27-354):
+     the bar's daily sheet, its bills, its set up. */
+  { section: "point-of-sale", order: 45, workingMenus: ["bar"],
+    label: "Bar stock", to: "/pos/:code/bar-stock", icon: Wine, resource: "stock",
+    keywords: ["bar register", "liquor", "nip", "pegs", "bar count", "bar bill"],
+    canSee: (role) => BAR_STOCK.includes(role) },
 ];

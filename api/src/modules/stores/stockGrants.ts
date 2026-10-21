@@ -92,6 +92,19 @@ export async function isInventoryManagerAt(
 export async function mayStock(
   client: Client, hotelId: string, action: StockAction,
 ): Promise<boolean> {
+  return holdsRoleAt(client, hotelId, STOCK_ROLES[action]);
+}
+
+/** Who keeps the bar's daily sheet and counts the bar (the owner's D27-354):
+    the owner, an administrator, the GM, the Bar role (the bar manager, the
+    owner, 21 October evening) and the Inventory Manager. */
+export const BAR_KEEPERS: readonly string[] = ["owner", "admin", "gm", "bar", "stores"];
+
+/** Does the signed-in person hold one of these roles here? A group
+    administrator holds every role everywhere. */
+export async function holdsRoleAt(
+  client: Client, hotelId: string, roles: readonly string[],
+): Promise<boolean> {
   const { rows } = await client.query<{ may: boolean }>(
     `select exists (
               select 1 from staff s
@@ -105,7 +118,7 @@ export async function mayStock(
                  and s.is_active
                  and sh.role = any($2::text[])
             ) as may`,
-    [hotelId, STOCK_ROLES[action]],
+    [hotelId, roles],
   );
   return rows[0]?.may === true;
 }

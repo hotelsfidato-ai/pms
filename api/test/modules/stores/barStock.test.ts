@@ -12,7 +12,10 @@ import type { ReportDoc } from "../../../src/modules/reports/index.ts";
    of it, a NIP one 180 ml bottle, a beer one bottle. A drink struck after
    the bar had it stays off, as poured; a dish with nothing set takes
    nothing and the Bar stock report says so. The waiter who sends it needs
-   no stock rights. The report: opened, bought, sold, closing.
+   no stock rights. The report: opened, bought, sold, closing. The daily
+   sheet (the bar register, 21 October evening): the sells split NIP / 30 /
+   60 / 90 ml, the rate and the amount billed; the bar manager counts from
+   it; its look is the GM's setting.
    ══════════════════════════════════════════════════════════════════ */
 
 const SUPER =
@@ -20,6 +23,7 @@ const SUPER =
 const TAG = "BARSTK";
 let gm = "";
 let waiter = "";
+let barman = "";
 let hotel = "";
 let blue = "";
 let lager = "";
@@ -57,6 +61,7 @@ beforeAll(async () => {
   };
   gm = await person("barstk-gm@fidato.in", "BARSTK Manager", "gm");
   waiter = await person("barstk-waiter@fidato.in", "BARSTK Waiter", "pos");
+  barman = await person("barstk-bar@fidato.in", "BARSTK Bar Manager", "bar");
 
   /* A whisky with three sizes, and a beer with none, in a bar section. */
   const [cat] = await sql<{ id: string }>(
@@ -74,13 +79,13 @@ beforeAll(async () => {
     `insert into pos_menu_items (hotel_id, category_id, name, price) values ($1, $2, $3, 270) returning id::text`,
     [hotel, cat!.id, `${TAG} Lager`]))[0]!.id;
 
-  /* The drinks, into the bar's store through a bar bill. */
+  /* The drinks, into the bar's store through a bar bill, as printed. */
   const bill = await call(gm, "POST", "/bar/purchases", {
-    supplier: `${TAG} Wines`, billNo: "S-1", billDate: businessDate,
+    supplier: `${TAG} Wines`, billNo: "S-1", billDate: businessDate, total: 6560,
     lines: [
-      { newDrink: { name: `${TAG} Blue 750 ml`, unit: "bottle", sizeMl: 750 }, bottles: 6, costPerBottle: 520 },
-      { newDrink: { name: `${TAG} Blue 180 ml`, unit: "bottle", sizeMl: 180 }, bottles: 4, costPerBottle: 140 },
-      { newDrink: { name: `${TAG} Lager`, unit: "bottle", sizeMl: 650 }, bottles: 24, costPerBottle: 120 },
+      { newDrink: { name: `${TAG} Blue 750 ml`, unit: "bottle", sizeMl: 750 }, perCase: 12, cases: 0, bottles: 6, ratePerCase: 6240 },
+      { newDrink: { name: `${TAG} Blue 180 ml`, unit: "bottle", sizeMl: 180 }, perCase: 48, cases: 0, bottles: 4, ratePerCase: 6720 },
+      { newDrink: { name: `${TAG} Lager`, unit: "bottle", sizeMl: 650 }, perCase: 12, cases: 2, bottles: 0, ratePerCase: 1440 },
     ],
   });
   expect(bill.status, await bill.clone().text()).toBe(200);
@@ -91,6 +96,9 @@ afterAll(async () => {
   try {
     await db.query("alter table stock_movements disable trigger stock_movements_append_only");
     await db.query("alter table pos_order_lines disable trigger pos_order_lines_frozen");
+    await db.query("alter table stock_count_lines disable trigger stock_count_lines_append_only");
+    await db.query("delete from stock_count_lines where item_id in (select id from stock_items where name like $1)", [`${TAG}%`]);
+    await db.query("delete from bar_purchase_lines where item_id in (select id from stock_items where name like $1)", [`${TAG}%`]);
     await db.query(`delete from stock_movements where item_id in (select id from stock_items where name like $1)`, [`${TAG}%`]);
     await db.query("delete from bar_pours where item_id in (select id from pos_menu_items where name like $1)", [`${TAG}%`]);
     await db.query("delete from pos_order_lines where order_id in (select id from pos_orders where table_ref like $1)", [`${TAG}%`]);
@@ -99,9 +107,10 @@ afterAll(async () => {
     await db.query("delete from stock_items where name like $1", [`${TAG}%`]);
     await db.query("delete from pos_menu_items where name like $1", [`${TAG}%`]);
     await db.query("delete from pos_menu_categories where name like $1", [`${TAG}%`]);
-    await db.query("delete from staff_hotels where staff_id = any($1::uuid[])", [[gm, waiter]]);
+    await db.query("delete from staff_hotels where staff_id = any($1::uuid[])", [[gm, waiter, barman]]);
   } finally {
     await db.query("alter table pos_order_lines enable trigger pos_order_lines_frozen");
+    await db.query("alter table stock_count_lines enable trigger stock_count_lines_append_only");
     await db.query("alter table stock_movements enable trigger stock_movements_append_only");
     await db.end();
   }
@@ -180,5 +189,45 @@ describe("bar stock (D27-354)", () => {
     expect(line("bar-not-set", `${TAG} Blue (30 ml)`)).toMatchObject({ qty: 1 });
     expect(line("bar-struck", `${TAG} Blue (60 ml)`)).toMatchObject({ reason: "spilt" });
     expect(line("bar-bills", `${TAG} Wines`)).toMatchObject({ bill: "S-1", drinks: 3 });
+  });
+
+  it("the daily sheet: grouped by section, the sells split by size, the rate and what was billed - not for a waiter", async () => {
+    expect((await call(waiter, "GET", "/bar/sheet")).status).toBe(403);
+    const res = await call(barman, "GET", "/bar/sheet");
+    expect(res.status, await res.clone().text()).toBe(200);
+    type Drink = { name: string; poured: boolean; received: number; sold: number; closing: number;
+      sell: { nip: number; p30: number; p60: number; p90: number; ml: number }; rate: number | null; amount: number | null };
+    const sheet = (await res.json()) as { date: string; businessDate: string; format: string; mayCount: boolean;
+      maySetFormat: boolean; groups: { section: string; drinks: Drink[] }[] };
+    expect([sheet.date, sheet.format, sheet.mayCount, sheet.maySetFormat]).toEqual([businessDate, "paper", true, false]);
+    const mine = sheet.groups.find((g) => g.section === `${TAG} Whisky`)!.drinks;
+    const at = (name: string) => mine.find((d) => d.name === name)!;
+    /* Two 60 ml pegs: 120 ml of the 750, struck after - off the stock, not billed. */
+    expect(at(`${TAG} Blue 750 ml`)).toMatchObject({
+      poured: true, received: 6, sold: 0.16, closing: 5.84, sell: { nip: 0, p30: 0, p60: 2, p90: 0, ml: 120 }, amount: null });
+    /* The NIP: one whole bottle, at the NIP's price. */
+    expect(at(`${TAG} Blue 180 ml`)).toMatchObject({ sell: { nip: 1, p30: 0, p60: 0, p90: 0, ml: 0 }, rate: 100, amount: 100 });
+    expect(at(`${TAG} Lager`)).toMatchObject({ poured: false, received: 24, sold: 3, closing: 21, rate: 270, amount: 300 });
+  });
+
+  it("the bar manager counts the bar from the sheet; a book that moved is refused", async () => {
+    const [beer] = await sql<{ id: string }>("select id::text from stock_items where name = $1", [`${TAG} Lager`]);
+    const stale = await call(barman, "POST", "/bar/count", { lines: [{ itemId: beer!.id, book: 25, counted: 20 }] });
+    expect(((await stale.json()) as { reason: string }).reason)
+      .toBe(`${TAG} Lager moved in Bar store since the count was opened - count it again. Nothing was saved.`);
+    const counted = await call(barman, "POST", "/bar/count", { lines: [{ itemId: beer!.id, book: 21, counted: 20 }] });
+    expect(counted.status, await counted.clone().text()).toBe(200);
+    expect(await onHand(`${TAG} Lager`)).toBeCloseTo(20, 3);
+    const sheet = (await (await call(barman, "GET", "/bar/sheet")).json()) as {
+      groups: { drinks: { name: string; counted: number | null; countBook: number | null }[] }[] };
+    expect(sheet.groups.flatMap((g) => g.drinks).find((d) => d.name === `${TAG} Lager`))
+      .toMatchObject({ counted: 20, countBook: 21 });
+  });
+
+  it("how the sheet looks is the GM's setting, not the bar manager's", async () => {
+    expect((await call(barman, "PUT", "/bar/sheet-format", { format: "simple" })).status).toBe(403);
+    expect((await call(gm, "PUT", "/bar/sheet-format", { format: "simple" })).status).toBe(200);
+    expect(((await (await call(barman, "GET", "/bar/sheet")).json()) as { format: string }).format).toBe("simple");
+    expect((await call(gm, "PUT", "/bar/sheet-format", { format: "paper" })).status).toBe(200);
   });
 });

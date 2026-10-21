@@ -6539,6 +6539,18 @@ copy will see of theirs.**
 
 ---
 
+### 422 · MINE: a new trading table left out of the property reset, twice (21 October)
+
+Migration 234 added `bar_purchases`; I never added it to `api/scripts/reset-property.ts` CLEAR, so a reset
+(the owner's "clear a hotel's practice data") would have left every bar bill behind with its receipts gone. No
+test saw it: `resetOrder.test.ts` only flags a table that POINTS AT something cleared, and nothing pointed at the
+bills. Bar v2's `bar_purchase_lines` points at `stock_movements`, so the gate caught that one - and reading why
+found the first. Fixed: lines, count lines, movements, then the bills. **The rule:** a new table with a
+`hotel_id` that holds trading rows goes into reset-property's CLEAR in the same commit as its migration, and
+into `app.test_hotel_classes()`; check both lists by name, not by whether a test fails.
+
+---
+
 ### 421 · MINE: `git add docs/manual` committed another chat's untracked file (21 October)
 
 Committing bar stock (D27-354), I staged `docs/manual` as a folder to catch the chapters, pictures and the

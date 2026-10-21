@@ -759,6 +759,11 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **21 October, late evening:** on cp6, not live - **Bar stock like the paper register** (D27-356): one "Bar stock"
+> page in the Restaurant menu (today's sheet like the register or simple, bills as printed with handling, TCS and
+> the total matched, set up), for the bar manager (the Bar role), the GM, the owner and an admin. **Waiting for the
+> owner's review; the manual is updated only after it.** Release 11 is then bar bills + bar stock + this.
+
 > **21 October, evening:** on cp6, not live - bar bills (D27-354 part 2, migration 234) and bar stock (part 1,
 > migration 235: off the bar when the KOT is sent, Inventory with Bar, the daily count in bottles and ml, the Bar
 > stock report and its daily email). They make release 11. Open for the owner: X% and the contract on GST for the

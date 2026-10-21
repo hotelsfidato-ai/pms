@@ -4,14 +4,15 @@ import type { Role } from "@/lib/permissions";
 /* ══════════════════════════════════════════════════════════════════
    BAR BILLS (the owner's D27-354) - the screen's calls
 
-   A bar bill that has come, recorded as it is: supplier, number, date, its
-   drinks (bottles, cost per bottle as paid), and a photo of it. The drinks go
-   into the bar's store at once. The server's half:
+   A bar bill that has come, recorded as printed: supplier, number, date, T.P.
+   number; each drink's MRP, cases and loose bottles, bottles to a case and
+   rate per case; handling, TCS and the printed total; and a photo of it. The
+   drinks go into the bar's store at once. The server's half:
    api/src/modules/purchasing/barBills.ts.
    ══════════════════════════════════════════════════════════════════ */
 
 /** Who records one: a COPY of the server's BAR_RECORDERS (purchasingGrants.ts). */
-export const BAR_RECORDERS: readonly Role[] = ["owner", "admin", "gm", "stores"];
+export const BAR_RECORDERS: readonly Role[] = ["owner", "admin", "gm", "stores", "bar"];
 
 export interface BarDrink {
   id: string; name: string; unit: string;
@@ -19,21 +20,30 @@ export interface BarDrink {
   sizeMl: number | null;
   /** What the bar's store holds now, in the unit; null with no bar store. */
   onHand: number | null;
+  /** Bottles to a case, from its last bill; null before one. */
+  perCase: number | null;
 }
 
 export interface BarBillLine {
-  item: string; unit: string; sizeMl: number | null; quantity: number; unitCost: number | null;
+  item: string; unit: string; sizeMl: number | null; mrp: number | null;
+  perCase: number; cases: number; bottles: number; ratePerCase: number; amount: number;
 }
 
 export interface BarBill {
-  id: string; supplier: string; billNo: string; billDate: string;
+  id: string; supplier: string; billNo: string; billDate: string; tpNo: string | null;
+  handling: number | null; tcs: number | null; total: number | null;
   recordedBy: string | null; recordedAt: string; photoId: string | null;
   lines: BarBillLine[];
 }
 
+type LineFigures = { mrp: number | null; perCase: number; cases: number; bottles: number; ratePerCase: number };
 export type NewBillLine =
-  | { itemId: string; bottles: number; costPerBottle: number }
-  | { newDrink: { name: string; unit: string; sizeMl: number | null }; bottles: number; costPerBottle: number };
+  | ({ itemId: string } & LineFigures)
+  | ({ newDrink: { name: string; unit: string; sizeMl: number | null } } & LineFigures);
+
+/** A line's amount as the bill works it - the server's lineAmount, copied. */
+export const lineAmount = (l: { perCase: number; cases: number; bottles: number; ratePerCase: number }) =>
+  Math.round(l.ratePerCase * (l.cases + l.bottles / l.perCase) * 100) / 100;
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; reason: string };
 
@@ -45,7 +55,8 @@ export const barBills = async (hotelId: string) =>
   (await api<{ purchases: BarBill[] }>(`/api/hotels/${hotelId}/bar/purchases`)).purchases;
 
 export async function recordBarBill(hotelId: string, bill: {
-  supplier: string; billNo: string; billDate: string; lines: NewBillLine[];
+  supplier: string; billNo: string; billDate: string; tpNo: string | null;
+  handling: number | null; tcs: number | null; total: number; lines: NewBillLine[];
 }): Promise<Result<{ id: string }>> {
   try {
     return await api<Result<{ id: string }>>(`/api/hotels/${hotelId}/bar/purchases`,
@@ -59,17 +70,15 @@ export async function recordBarBill(hotelId: string, bill: {
   }
 }
 
-/** The bill's photo, through the shared attachments route (as a deposit
-    slip's: a form, never JSON, and never held offline). */
+/** The bill's photo, through the bar bill's own door (the Bar role holds no
+    grant on the shared attachments): a form, never JSON, never held offline. */
 export async function attachBarBillPhoto(hotelId: string, billId: string, file: File): Promise<Result> {
   const form = new FormData();
-  form.set("table", "bar_purchases");
-  form.set("id", billId);
   form.set("file", file);
   const headers = new Headers(await authHeaders());
   headers.delete("content-type");
   try {
-    const res = await fetch(`${await apiBase()}/api/hotels/${hotelId}/attachments`,
+    const res = await fetch(`${await apiBase()}/api/hotels/${hotelId}/bar/purchases/${billId}/photo`,
       { method: "POST", headers, body: form });
     const body = (await res.json().catch(() => null)) as
       { ok?: boolean; reason?: string; error?: string } | null;
@@ -81,11 +90,11 @@ export async function attachBarBillPhoto(hotelId: string, billId: string, file: 
 }
 
 /** The photo, fetched with the person's own sign-in, as an address only this browser opens. */
-export async function barBillPhoto(hotelId: string, attachmentId: string): Promise<Result<{ url: string }>> {
+export async function barBillPhoto(hotelId: string, billId: string): Promise<Result<{ url: string }>> {
   const headers = new Headers(await authHeaders());
   headers.delete("content-type");
   try {
-    const res = await fetch(`${await apiBase()}/api/hotels/${hotelId}/attachments/${attachmentId}/file`, { headers });
+    const res = await fetch(`${await apiBase()}/api/hotels/${hotelId}/bar/purchases/${billId}/photo`, { headers });
     if (!res.ok) return { ok: false, reason: "The photo could not be opened." };
     return { ok: true, url: URL.createObjectURL(await res.blob()) };
   } catch {

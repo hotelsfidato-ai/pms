@@ -611,6 +611,8 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/stores/movements`]: own("stores/stockGrants.ts"),
   [`POST ${H}/stores/movements/:id/reverse`]: own("stores/stockGrants.ts"),
   [`PUT ${H}/bar/pours`]: own("stores/stockGrants.ts: mayStock edit"),  // D27-354
+  [`POST ${H}/bar/count`]: own("stores/stockGrants.ts: BAR_KEEPERS"),  // D27-354
+  [`PUT ${H}/bar/sheet-format`]: own("stores/barSheet.ts: FORMAT_SETTERS"),  // D27-354
   [`POST ${H}/stores/transfers`]: own("stores/stockGrants.ts"),
   [`POST ${H}/stores/import`]: own("stores/stockGrants.ts"),
   [`PATCH ${H}/stores/items/:id`]: own("stores/stockGrants.ts"),
@@ -675,6 +677,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/purchasing/requests/:id/cancel`]: own("purchasing/purchasingGrants.ts"),
   [`POST ${H}/purchasing/requests/:id/delivery`]: own("purchasing/purchasingGrants.ts"),
   [`POST ${H}/bar/purchases`]: own("purchasing/purchasingGrants.ts: BAR_RECORDERS"),  // D27-354
+  [`POST ${H}/bar/purchases/:id/photo`]: own("purchasing/purchasingGrants.ts: BAR_RECORDERS"),  // D27-354
 
   /* laundry */
   [`POST ${H}/laundry/price-list`]: LAUNDRY_PRICE_ADD,
@@ -967,7 +970,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
 
   /* ── Store, equipment, purchasing, places ── */
   [`GET ${H}/stores`]: own("stores/stockGrants.ts: mayStock"),
-  [`GET ${H}/bar/pours`]: own("stores/stockGrants.ts: mayStock"),
+  [`GET ${H}/bar/pours`]: own("stores/stockGrants.ts: STOCK_ROLES.view + BAR_KEEPERS"),
+  [`GET ${H}/bar/sheet`]: own("stores/stockGrants.ts: STOCK_ROLES.view + BAR_KEEPERS"),  // D27-354
   [`GET ${H}/stores/items/:id/movements`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/stores/days`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/equipment`]: own("equipment/grants.ts"),
@@ -977,8 +981,9 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/purchasing`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
   [`GET ${H}/purchasing/requests/:id`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
   [`GET ${H}/purchasing/requesters`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
-  [`GET ${H}/bar/purchases`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
-  [`GET ${H}/bar/drinks`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
+  [`GET ${H}/bar/purchases`]: own("purchasing/purchasingGrants.ts: BAR_VIEW"),
+  [`GET ${H}/bar/purchases/:id/photo`]: own("purchasing/purchasingGrants.ts: BAR_VIEW"),
+  [`GET ${H}/bar/drinks`]: own("purchasing/purchasingGrants.ts: BAR_VIEW"),
   [`GET ${H}/purchasing/orders/:file{[0-9a-f-]+\\.pdf}`]: own("purchasing/purchasingGrants.ts: VIEW_ROLES"),
   /* D17-1: anybody rostered may read them (api/test/places.test.ts); a
      place or a supplier is neither a guest nor money. */

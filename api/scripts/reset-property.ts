@@ -205,8 +205,12 @@ export const CLEAR: [table: string, how: string][] = [
      The items, their levels, the places and the suppliers stay, as setup. A
      count line points at the correction it wrote, so it goes first; a
      movement's undo points at the movement, and both go in one statement. */
+  /* A bar bill's lines point at the receipts they made, and the receipts at
+     their bill (D27-354, 234): lines, movements, then the bills. */
+  ["bar_purchase_lines", "hotel_id = $1"],
   ["stock_count_lines", "hotel_id = $1"],
   ["stock_movements",   "hotel_id = $1"],
+  ["bar_purchases",     "hotel_id = $1"],
 ];
 
 /* Lifted for these statements only and put back immediately, the way

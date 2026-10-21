@@ -50,8 +50,12 @@ export const VIEW_ROLES: readonly string[] = [
 ];
 
 /** Who records a bar bill (the owner's D27-354): the owner, an administrator,
-    the GM and the Inventory Manager. */
-export const BAR_RECORDERS: readonly string[] = ["owner", "admin", "gm", "stores"];
+    the GM, the Inventory Manager, and the bar's own people - the Bar role is
+    the bar manager (the owner, 21 October evening). */
+export const BAR_RECORDERS: readonly string[] = ["owner", "admin", "gm", "stores", "bar"];
+
+/** Who sees the bar's bills and drinks: whoever sees Purchasing, and the Bar role. */
+export const BAR_VIEW: readonly string[] = [...VIEW_ROLES, "bar"];
 
 /** The roles that may change who may raise a request. */
 export const SETTING_KEEPERS: readonly string[] = ["owner", "admin"];
@@ -70,7 +74,7 @@ export const PURCHASING_REFUSED = {
     + "administrator. Ask one of them.",
   barBill:
     "Recording a bar bill is for the owner, an administrator, the general "
-    + "manager or the Inventory Manager.",
+    + "manager, the Inventory Manager or the bar manager.",
 } as const;
 
 /** Does the signed-in person hold one of these roles at this property? A

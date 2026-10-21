@@ -285,7 +285,8 @@ select set_config('app.user_id',
 -- A bar bill is recorded with its drinks as receipts into the bar's store. A
 -- new hotel's Bar store is marked the bar's; one per hotel; the same bill
 -- twice is refused; a bottle's size is sane; a test hotel counts bills as
--- trading.
+-- trading. As printed (21 October evening): a line has something in it; the
+-- charges are not negative; the bar's sheet is "paper" unless set "simple".
 -- =============================================================================
 do $$
 declare h uuid; v_bar uuid; v_staff uuid;
@@ -312,4 +313,18 @@ begin
   perform test.ok('bar bill', 'a test hotel counts a bar bill as trading',
     exists (select 1 from app.test_hotel_classes() c
              where c.table_name = 'bar_purchases' and c.class = 'trading'));
+  perform test.ok('bar bill', 'a test hotel counts a bill''s lines as trading',
+    exists (select 1 from app.test_hotel_classes() c
+             where c.table_name = 'bar_purchase_lines' and c.class = 'trading'));
+  perform test.raises('bar bill', 'handling charges are not negative',
+    format($q$update bar_purchases set handling = -1 where hotel_id = %L$q$, h), '23514');
+  insert into stock_items (hotel_id, name, unit, category, size_ml) values (h, 'Romanov 180 ml', 'bottle', 'Bar', 180);
+  perform test.raises('bar bill', 'a line has cases or loose bottles in it',
+    format($q$insert into bar_purchase_lines (hotel_id, purchase_id, item_id, movement_id, per_case, cases, bottles, rate_per_case, amount)
+              select %L, p.id, i.id, 0, 48, 0, 0, 8000, 0 from bar_purchases p, stock_items i
+               where p.hotel_id = %L and i.hotel_id = %L limit 1$q$, h, h, h), '23514');
+  perform test.ok('bar bill', 'the bar''s daily sheet starts like the paper register',
+    (select bar_sheet from locations where id = v_bar) = 'paper');
+  perform test.raises('bar bill', 'the sheet is paper or simple',
+    format($q$update locations set bar_sheet = 'fancy' where id = %L$q$, v_bar), '23514');
 end $$;

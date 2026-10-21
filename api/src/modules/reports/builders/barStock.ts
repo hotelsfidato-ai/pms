@@ -102,8 +102,8 @@ export async function barStockReport(client: Client, property: Property, asOn: s
   const { rows: bills } = await client.query<{ supplier: string; bill_no: string; drinks: number; total: string | null }>(
     `select p.supplier, p.bill_no,
             (select count(*)::int from stock_movements m where m.bar_purchase_id = p.id) as drinks,
-            (select case when bool_and(m.unit_cost is not null) then sum(m.quantity * m.unit_cost) end::text
-               from stock_movements m where m.bar_purchase_id = p.id) as total
+            /* The total printed on the bill (its lines, handling and TCS). */
+            p.bill_total::text as total
        from bar_purchases p
       where p.hotel_id = $1 and p.business_date = $2::date
       order by p.recorded_at`,
