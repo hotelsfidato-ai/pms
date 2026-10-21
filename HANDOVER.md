@@ -759,6 +759,12 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **21 October, night:** the owner reviewed Bar stock (D27-357, kept as built) and answered the pending list (D27-358).
+> The manual is written. **Release 11 = releases 10 + 11 together** (NC, discounts, one line per dish, bar bills,
+> bar stock; migrations 233-235), for the owner to deploy. **Amrapali is cleared for a fresh start on 22 Oct** by
+> the owner (`.local/amr-fresh-start-steps.md`). Next release: Inventory's Restaurant tab, MRP for NC, plan A, the
+> owner's reset button, the excise format; the allowance (X% a setting, GST after the contract).
+
 > **21 October, late evening:** on cp6, not live - **Bar stock like the paper register** (D27-356): one "Bar stock"
 > page in the Restaurant menu (today's sheet like the register or simple, bills as printed with handling, TCS and
 > the total matched, set up), for the bar manager (the Bar role), the GM, the owner and an admin. **Waiting for the

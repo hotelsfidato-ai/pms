@@ -15,7 +15,8 @@
       <tr><td>Store</td><td>The Inventory Manager, the kitchen manager; managers; others look only</td><td>What the property keeps (rice, gas, linen, soap) and where it is: deliveries, issues, moves, counts. Two views: <span class="ui">Shelf</span> and <span class="ui">Days</span>.</td></tr>
       <tr><td>Equipment</td><td>The Inventory Manager; anybody who can see it may ask</td><td>The register of durable things: an AC, a TV, a fridge, a kettle. Where each one is, its repairs, and taking it out of the store.</td></tr>
       <tr><td>Places and suppliers</td><td>The Inventory Manager and managers</td><td>The stores and the other places things stand, and who the property buys from.</td></tr>
-      <tr><td>Purchasing</td><td>Whoever may ask to buy; the GM approves. Bar bills: the owner, an Admin, the GM, the Inventory Manager</td><td><span class="ui">Restaurant and hotel</span>: ask for something, get it approved, order it, record the delivery into a store; <span class="ui">Who may ask to buy</span> is its setting. <span class="ui">Bar</span>: record a bar bill as it came, with its photo (A9.11).</td></tr>
+      <tr><td>Purchasing</td><td>Whoever may ask to buy; the GM approves. Bar bills: the owner, an Admin, the GM, the Inventory Manager, the bar manager</td><td><span class="ui">Restaurant and hotel</span>: ask for something, get it approved, order it, record the delivery into a store; <span class="ui">Who may ask to buy</span> is its setting. <span class="ui">Bar</span>: record a bar bill as printed, with its photo (A9.11).</td></tr>
+      <tr><td>Inventory</td><td>The Inventory Manager; whoever sees the Store reads it</td><td><span class="ui">Bar</span>: the bar's day - today's sheet and its count, the bills, the set up; the same as Bar stock in the Restaurant menu (A9.11). <span class="ui">Restaurant</span> comes next.</td></tr>
     </tbody>
   </table>
   <p>The Inventory Manager's menu is <span class="ui">Store</span>, <span class="ui">Equipment</span> and <span class="ui">Purchasing</span>, and they land on the Store after signing in. <span class="ui">Places and suppliers</span> is not on that short menu: type “supplier” or “places” in <span class="ui">Find a screen</span> (A0).</p>
@@ -646,65 +647,92 @@
   </div>
 
   <h3>The bar's bills</h3>
-  <p>A bill for the bar is recorded as it came, with no approval: the bill has already come. Its drinks go into the <b>Bar store</b> at once, so the bar's stock is right from the moment the bill is saved. The owner, an Admin, the GM and the Inventory Manager record them; everybody who can open Purchasing can read them.</p>
+  <p>A bill for the bar is recorded <b>as printed</b>, with no approval: the bill has already come. Its bottles go into the <b>Bar store</b> at once, so the bar's stock is right from the moment the bill is saved. The owner, an Admin, the GM, the Inventory Manager and the bar manager (the Bar role) record them; whoever sees Purchasing or Bar stock can read them.</p>
   <ol class="steps">
-    <li>Open <span class="ui">Purchasing</span>, tap <span class="ui">Bar</span>, then <span class="ui">Record a bar bill</span>.</li>
-    <li>Type the <span class="ui">Supplier</span>, the <span class="ui">Bill number</span> as printed and the <span class="ui">Bill date</span>.</li>
+    <li>Open <span class="ui">Bar stock</span> in the Restaurant menu, tap <span class="ui">Bills</span>, then <span class="ui">Record a bar bill</span>. (Or <span class="ui">Purchasing</span>, <span class="ui">Bar</span>.)</li>
+    <li>Type the <span class="ui">Supplier</span>, the <span class="ui">Bill number</span> as printed, the <span class="ui">Bill date</span> and the <span class="ui">T.P. number</span> (the transport permit, if the bill has one).</li>
     <li><span class="ui">Photo of the bill</span>: take it with the phone's camera, or pick a file.</li>
-    <li>For each drink on the bill, pick it from the bar's list. A drink the list does not have yet: <span class="ui">Add another drink…</span>, then its name as on the bill, its size in ml and what it is counted in (bottle, can, packet, piece). It joins the bar's list.</li>
-    <li>Type <span class="ui">How many</span> came and the <span class="ui">Cost of each</span>, as paid (liquor is not under GST, so the cost is what the bill says). <span class="ui">Add a drink</span> for the next line; the <span class="ui">Total</span> adds up as you go.</li>
+    <li>For each line of the bill, pick the drink from the bar's list. A drink the list does not have yet: <span class="ui">Add another drink…</span>, then its brand as on the bill, its size in ml (a NIP is 180) and what it is counted in (bottle, can, packet, piece). It joins the bar's list.</li>
+    <li>Type the line as printed: <span class="ui">Bottles a case</span> (48 NIPs, 12 beers of 650 ml; filled in from the drink's last bill), the <span class="ui">Cases</span>, any <span class="ui">Loose bottles</span>, the <span class="ui">MRP</span> and the <span class="ui">Rate a case</span>. The <span class="ui">Amount</span> works itself out: the rate for each case, and a case's share of it for each loose bottle. <span class="ui">Add a drink</span> for the next line.</li>
+    <li>Type the <span class="ui">Handling charges</span>, the <span class="ui">TCS</span> and the <span class="ui">Total, as printed</span>. The line under them says what the lines, handling and TCS make, and <span class="msg">“matches the bill”</span>, or how much more or less it is.</li>
     <li>Tap <span class="ui">Save the bill</span>.</li>
   </ol>
 
   <figure class="shot" id="fig-A9-40">
-    <img src="img/A9-40.png" alt="Record a bar bill: Supplier, Bill number and Bill date, Photo of the bill, two drinks added with their size, how many and the cost of each, and the Total">
-    <figcaption><b>Figure A9-40.</b> Record a bar bill.</figcaption>
-    <ol class="callouts"><li>The photo of the bill</li><li>A drink the bar's list did not have: its name and size</li><li>The total, as on the bill</li><li>Save the bill</li></ol>
+    <img src="img/A9-40.png" alt="Record a bar bill: Supplier, Bill number, Bill date and T.P. number, Photo of the bill, a drink with bottles a case, cases, loose bottles, MRP, rate a case and its amount, handling charges, TCS and the total as printed, and the line saying it matches the bill">
+    <figcaption><b>Figure A9-40.</b> Record a bar bill, as printed.</figcaption>
+    <ol class="callouts"><li>The T.P. number</li><li>The cases, and any loose bottles</li><li>The rate a case, as printed; the amount works itself out</li><li>Handling, TCS and the printed total: the line says whether they match</li><li>Save the bill</li></ol>
   </figure>
 
-  <p>The bill shows under <span class="ui">Bar</span> with its drinks, the cost of each, its total and who recorded it; <span class="ui">Photo of the bill</span> opens the photo. The drinks are in the Store, in the Bar store, each delivery's line naming the bill.</p>
+  <p>The bill shows under <span class="ui">Bills</span> as printed: the supplier, its number, date and T.P. number, its total; each line's drink and MRP, cases and loose bottles at the rate a case, and the amount; the handling and the TCS; who recorded it. <span class="ui">Photo of the bill</span> opens the photo. The bottles are in the Store, in the Bar store, each at the line's amount over its bottles, each delivery's line naming the bill.</p>
 
   <figure class="shot" id="fig-A9-41">
-    <img src="img/A9-41.png" alt="Purchasing, the Bar tab: a bar bill from Shah Wines with its drinks, total and who recorded it, and Record a bar bill">
-    <figcaption><b>Figure A9-41.</b> The bar's bills.</figcaption>
-    <ol class="callouts"><li>The Bar tab</li><li>A bill: who it is from and its number</li><li>Its drinks: how many, and the cost of each</li><li>Record a bar bill</li></ol>
+    <img src="img/A9-41.png" alt="Bar stock, Bills: a bar bill with its T.P. number and total, each drink with its MRP, cases at the rate a case and the amount, and Record a bar bill">
+    <figcaption><b>Figure A9-41.</b> The bar's bills, as printed.</figcaption>
+    <ol class="callouts"><li>Bills</li><li>A bill: who it is from, its number, date, T.P. number and total</li><li>A line: the drink and its MRP, the cases at the rate a case, the amount</li><li>Record a bar bill</li></ol>
   </figure>
 
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
-      <li>The same bill twice is refused: <span class="msg">“Bill W-1021 from Shah Wines is already recorded.”</span></li>
-      <li>A drink already on the Store's list is picked, not added again: <span class="msg">“"Kingfisher Strong 650 ml" is already on the store's list. Pick it instead.”</span></li>
-      <li>Every drink needs its cost as on the bill; zero is an answer, a blank is not. A bill is not dated in the future.</li>
+      <li>A bill the lines do not make is refused, saying both figures: <span class="msg">“The lines, handling and TCS make ₹8,000.00; the bill says ₹9,000.00. Check the cases, the rates and the charges against the bill.”</span> Up to ₹1 apart is the bill's round-off, and saves.</li>
+      <li>The same bill twice is refused: <span class="msg">“Bill A-1021 from Amit Traders is already recorded.”</span></li>
+      <li>A drink already on the Store's list is picked, not added again: <span class="msg">“"Romanov Vodka 180 ml" is already on the store's list. Pick it instead.”</span></li>
+      <li>Every line needs its rate a case as on the bill; zero is an answer, a blank is not. A bill is not dated in the future.</li>
       <li>A wrong line is undone in the Store, from the drink's History (A9.7), as any delivery is.</li>
     </ul>
   </div>
 
-  <h3>The bar's stock: Inventory</h3>
-  <p><span class="ui">Inventory</span>, in Store and equipment, has two tabs: <span class="ui">Bar</span> and <span class="ui">Restaurant</span> (the restaurant's comes next). On <span class="ui">Bar</span>, each bar dish and each of its sizes says what it takes from the Bar store: so many ml of a bottle (Imperial Blue 60 ml takes 60 ml of “Imperial Blue 750 ml”), or whole ones (a NIP, one 180 ml bottle; a beer, one bottle). Once that is saved, <b>every KOT sent takes it off the bar's stock</b>, from whichever screen sent it: the Till, the Terminal, a waiter's phone, or a guest's order accepted.</p>
+  <h3>The bar's day: Bar stock</h3>
+  <p><span class="ui">Bar stock</span>, in the Restaurant menu after Kitchen, is the bar's one place. It has three parts: <span class="ui">Today's sheet</span>, <span class="ui">Bills</span> (above) and <span class="ui">Set up</span>. It is the bar manager's (the Bar role), the GM's, the owner's and an Admin's. The same three parts are the <span class="ui">Bar</span> tab of <span class="ui">Inventory</span>, in Store and equipment, for the Inventory Manager; whoever sees the Store can read them. Inventory's <span class="ui">Restaurant</span> tab comes next.</p>
+
+  <h3>Set up: what each drink takes</h3>
+  <p>All spirits are bought and counted as <b>NIPs</b> (180 ml). Each bar dish, and each of its sizes, says what it takes from the Bar store: a 30, 60 or 90 ml peg takes that many ml of the brand's NIP, a NIP one whole NIP, a beer one bottle. Once that is saved, <b>every KOT sent takes it off the bar's stock</b>, from whichever screen sent it: the Till, the Terminal, a waiter's phone, or a guest's order accepted. The GM, the Inventory Manager, the owner and an Admin set it; the bar manager reads it.</p>
   <ol class="steps">
-    <li>Open <span class="ui">Inventory</span>. Every dish in a section taxed as bar or alcohol is listed, with each size.</li>
+    <li>Open <span class="ui">Bar stock</span>, tap <span class="ui">Set up</span>. Every dish in a section taxed as bar or alcohol is listed, with each size.</li>
     <li>Where the names match, a suggestion is ready: tap <span class="ui">Use the … suggestions</span> to fill them all, and check them.</li>
-    <li>For the rest, pick the bottle each is poured from, type how much, and choose <span class="ui">ml of it</span> or <span class="ui">whole</span>.</li>
+    <li>For the rest, pick the NIP or bottle each is poured from, type how much, and choose <span class="ui">ml of it</span> or <span class="ui">whole</span>.</li>
     <li>Tap <span class="ui">Save</span>. A dish left on <span class="ui">Nothing set</span> takes nothing, and the Bar stock report lists it.</li>
   </ol>
+  <p><span class="ui">How the daily sheet looks</span>, at the top of Set up, is the owner's, an Admin's or the GM's choice: <span class="ui">Like the paper register</span> or <span class="ui">Simple</span>. Both are kept; it changes only how today's sheet is laid out.</p>
 
   <figure class="shot" id="fig-A9-42">
-    <img src="img/A9-42.png" alt="Inventory, the Bar tab: each bar dish and size with the bottle it is poured from, how much, ml of it or whole, Save 4, and Count the bar">
-    <figcaption><b>Figure A9-42.</b> What each drink takes from the bar.</figcaption>
-    <ol class="callouts"><li>Bar, and Restaurant to come</li><li>The bottle it is poured from, and what the bar holds</li><li>ml of it, or whole ones</li><li>Save</li><li>Count the bar</li></ol>
+    <img src="img/A9-42.png" alt="Bar stock, Set up: How the daily sheet looks with Like the paper register and Simple, and each bar dish and size with the NIP it is poured from, how much, ml of it or whole, and Set">
+    <figcaption><b>Figure A9-42.</b> Set up: how the sheet looks, and what each drink takes.</figcaption>
+    <ol class="callouts"><li>Set up</li><li>How the daily sheet looks</li><li>The NIP it is poured from, and what the bar holds</li><li>ml of it, or whole ones</li><li>Save</li></ol>
   </figure>
 
-  <h3>Every day: count the bar</h3>
-  <p>Before the night audit, the bar keeper or the Inventory Manager counts the bar: <span class="ui">Inventory</span>, <span class="ui">Count the bar</span> opens the count sheet on the Bar store (A9.9). Each drink takes the full bottles and the ml of the open one; a difference is saved with its reason.</p>
+  <h3>Every day: today's sheet and the count</h3>
+  <p><span class="ui">Today's sheet</span> is the bar register: one line for each drink, under its menu section, for the hotel's business day.</p>
+  <table>
+    <thead><tr><th style="width:24%">Column</th><th>What it says</th></tr></thead>
+    <tbody>
+      <tr><td>Opening (Nip, ML)</td><td>What the bar held when the day began: full NIPs, and the ml of the open one. A beer or a packet shows its count.</td></tr>
+      <tr><td>Recd</td><td>What came in on the day's bar bills.</td></tr>
+      <tr><td>Total (Nip, ML)</td><td>Opening and received together.</td></tr>
+      <tr><td>Sell (Nip, 30, 60, 90, ML)</td><td>What each KOT sent took: the NIPs sold whole, how many 30, 60 and 90 ml pegs, and the ml of all the pegs. A beer shows the bottles sold.</td></tr>
+      <tr><td>Closing (Nip, ML)</td><td>What the bar holds by the book at the end of the day.</td></tr>
+      <tr><td>Rate</td><td>The menu price of the dish that takes one whole bottle: the NIP's, the beer's. A dash when there is none.</td></tr>
+      <tr><td>Amount</td><td>What the day's lines of the drink were billed. A struck line, a voided bill and an NC bill are left out. The total of all drinks is under the sheet.</td></tr>
+      <tr><td>Counted, Difference</td><td>The closing count, and how far it is from the book.</td></tr>
+    </tbody>
+  </table>
+  <p>Before the night audit, the bar manager counts the bar:</p>
+  <ol class="steps">
+    <li>Open <span class="ui">Bar stock</span>. <span class="ui">Today's sheet</span> opens on the business day.</li>
+    <li>For each drink counted, type the <b>full NIPs</b> and the <b>ml in the open one</b> under <span class="ui">Counted</span>; a beer or a packet, its count. A line left blank is not counted, never taken as zero.</li>
+    <li>The <span class="ui">Difference</span> shows as you type, for example <span class="msg">“-30 ml”</span>, or <span class="msg">“matches”</span>.</li>
+    <li>Tap <span class="ui">Save the count</span>. A difference is saved as a count correction in the Store, against your name (A9.9).</li>
+  </ol>
 
   <figure class="shot" id="fig-A9-43">
-    <img src="img/A9-43.png" alt="Counting the Bar store: A9 Imperial Blue 750 ml with 5 full bottles and 400 ml in the open one, and the book line">
-    <figcaption><b>Figure A9-43.</b> Counting the bar: full bottles, and the open one's ml.</figcaption>
-    <ol class="callouts"><li>Full bottles</li><li>The ml in the open one</li><li>The book, and the difference</li></ol>
+    <img src="img/A9-43.png" alt="Bar stock, Today's sheet like the paper register: Opening, Recd, Total, Sell by NIP, 30, 60, 90 and ML, Closing, Rate, Amount, and the count typed with its difference">
+    <figcaption><b>Figure A9-43.</b> Today's sheet, like the paper register, with the count typed in.</figcaption>
+    <ol class="callouts"><li>The day</li><li>What was sold: NIPs, 30, 60 and 90 ml pegs, and their ml</li><li>Closing, by the book</li><li>The count: full NIPs, and the open one's ml</li><li>The difference</li><li>Save the count</li></ol>
   </figure>
 
-  <p>The day's figures are the <span class="ui">Bar stock</span> report (A11.9): each drink's opening, purchases, sales, count and closing, the dishes sold, and the day's bar bills. It can be emailed after each night audit (A17.12).</p>
+  <p>Pick another <span class="ui">Day</span> to read an earlier sheet: it shows what was counted that day and the difference, and takes no count. <span class="ui">Simple</span> has fewer columns: Opening, Received, Sold, Closing, Counted and Difference, each in NIPs and ml, such as <span class="msg">“54 + 60 ml”</span>. The Store's own count sheet counts the Bar store too (A9.9).</p>
+  <p>The day's figures are also the <span class="ui">Bar stock</span> report (A11.9): each drink's opening, purchases, sales, count and closing, the dishes sold, and the day's bar bills. It can be emailed after each night audit (A17.12).</p>
 
   <div class="box watch">
     <h4>Watch out</h4>
@@ -712,12 +740,14 @@
       <li>A drink is taken off when its KOT is <b>sent</b>, not when the bill is paid. Struck after the bar had it, it stays off, as poured, and the report lists it.</li>
       <li>A drink is taken off once: a reprinted KOT takes nothing more.</li>
       <li>A dish with nothing set takes nothing: the report's <span class="ui">Sold, but nothing set up for the dish</span> names it.</li>
+      <li>The open one's ml is under its size: <span class="msg">“Imperial Blue 180 ml: whole NIPs, and the open one's ml under 180.”</span></li>
+      <li>If a drink moved after the sheet was opened (a KOT sent), the count is refused and names it: count it again.</li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The GM approves every purchase, at any amount: <span class="d">D18-4</span>, <span class="d">D17-35</span>. The order is a PDF sent by hand: <span class="d">D18-3</span>. One Approvals inbox, with the screens keeping their own buttons: <span class="d">D18-19</span>. The bar's bills, recorded directly with a photo, into the Bar store, by the owner, an Admin, the GM or the Inventory Manager; the bar in bottles and ml, the stock off when the KOT is sent, a daily count, the Bar stock report and its email: <span class="d">D27-354</span>. GST and use-by at delivery: <span class="d">D27-238</span>.</p>
+    <p>The GM approves every purchase, at any amount: <span class="d">D18-4</span>, <span class="d">D17-35</span>. The order is a PDF sent by hand: <span class="d">D18-3</span>. One Approvals inbox, with the screens keeping their own buttons: <span class="d">D18-19</span>. The bar's bills, recorded directly with a photo, into the Bar store; the bar in bottles and ml, the stock off when the KOT is sent, a daily count, the Bar stock report and its email: <span class="d">D27-354</span>. The bar like the paper register: all spirits as NIPs, both sheet layouts as a setting, bills as printed, one Bar stock page in the Restaurant menu for the bar manager, the GM, the owner and an Admin: <span class="d">D27-356</span>. The Rate column, the ₹1 round-off, Set up read by the bar manager: <span class="d">D27-357</span>. GST and use-by at delivery: <span class="d">D27-238</span>.</p>
   </div>
 
   <!-- A9.12 -->

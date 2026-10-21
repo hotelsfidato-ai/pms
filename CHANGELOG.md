@@ -50,6 +50,25 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-21 · Bar stock in the manual, after the owner's review (D27-357, D27-358)
+
+**Asked for:** the owner reviewed Bar stock (D27-357: the Rate column, the ₹1 round-off, Set up read by the bar manager - all kept as built), then answered every pending question (D27-358): release 10 goes with 11; the allowance's X% a setting; the BAR PC as an installed app, set up by the owner; a PNG logo; each hotel's own house policies; the bill kept; Amrapali cleared for a fresh start tomorrow; the CA's and lawyer's questions written up; the next release's list.
+
+**Shipped**
+- Manual A9.11 rewritten for the bar: bills as printed (steps, the check against the printed total, the refusals), **The bar's day: Bar stock**, **Set up** (all spirits as NIPs; how the sheet looks), **today's sheet and the count** (each column of the register, counting NIPs and the open one's ml). A9.1's table has Inventory and the bar manager. A8.1 lists **Bar stock**; A8.2's Bar role has it, and no longer says the bar gives a discount (D27-352 had left that sentence behind). Pictures A9-40 to A9-43 retaken (the bill as printed, the bills, Set up, today's sheet with the count); book rebuilt.
+- For the owner, outside git (`.local/`): Amrapali's fresh-start steps (F1-F5, backup, dry run, clear; live read-only first: 0 bookings, 29 orders, business date 17 Oct); the questions for the CA and the lawyer; the Fidato Hotels logo as a 1200 x 339 PNG (75 KB) drawn from live's SVG.
+- Found read-only on live: the server's `api/.env.save` files are already gone - nothing to delete.
+
+**Proved**
+- `src/test/manual.test.ts` 3/3 (green again: Bar stock is in A8); `build.mjs --check` up to date. The full gate run is the release copy's (release 11), on this commit.
+
+**Left open**
+- Release 11 (releases 10 and 11 together, migrations 233-235), for the owner to deploy.
+- The BAR PC as an installed app with silent printing: the owner sets it up; the KOT station's steps to be checked for an installed app.
+- Next release (D27-358): Inventory's Restaurant tab, MRP for NC bills, the tougher database (plan A), the owner's full-reset button, the excise register's format after a sample. The allowance: X% a setting, GST after the contract.
+
+**Commits:** this commit
+
 ## 2026-10-21 · Bar stock like the paper register: today's sheet, bills as printed, one place for the bar (D27-356)
 
 **Asked for:** the owner, 21 Oct evening, with photos of the bar's paper register and two supplier bills: "this is how it's currently managed ... make this better also I want you to make the inventory simpler, it's overwhelming, and the bar easy to get to ... first build and let's review before updating the manual". Answers (D27-356): all spirits are NIPs; both sheet formats, a setting; bills as printed; the bar manager (the Bar role), the GM, the owner and an admin; "Bar stock" in the Restaurant menu.
