@@ -6539,6 +6539,16 @@ copy will see of theirs.**
 
 ---
 
+### 421 · MINE: `git add docs/manual` committed another chat's untracked file (21 October)
+
+Committing bar stock (D27-354), I staged `docs/manual` as a folder to catch the chapters, pictures and the
+built book. It also took `docs/manual/shots/film2.mjs` - untracked, another chat's, on the never-commit list.
+Seen in `git show --stat` straight after; the commit was local and minutes old, so the file came out with
+`git rm --cached` and an amend, left on disk. **The rule:** stage files by name, never a folder that holds
+somebody else's untracked work; read `git status --short` for `A` lines you did not write before committing.
+
+---
+
 ### 420 · MINE: a new picture given an id the chapter already used, and the old picture overwritten (19 October)
 
 Adding the registration card's pictures (D27-344) to `docs/manual/shots/a3.mjs`, I named the panel picture
