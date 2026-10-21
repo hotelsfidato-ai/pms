@@ -50,6 +50,23 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-22 · KOTs and bills print the size of the roll, with no header or footer
+
+**Asked for:** the owner's photo from the BAR PC: the KOT station's slip came out tiny in the middle of a long strip, with Chrome's date and title above and the web address and "1/1" below, while the same slip printed through the website's print window came out right. Why, and make it work.
+
+**Found:** the slips' paper rule, `@page { size: 80mm auto }`, is not valid CSS; the browser drops it and the app's A4 page applies. The KOT station's Chrome prints with no window, so it shrank an A4 page onto the roll and drew its default header and footer; through the print window a person had set the paper by hand (MEMORY 423).
+
+**Shipped**
+- `src/modules/pos/lib/printRoll.ts`: at print time the paper is set to **80 mm by the slip's own length, no margin** - nothing to shrink, no room for a header or footer, no long blank strip. Used by the KOT station (KOTs, reprints and bills, `KotStation.tsx`; the slip is now laid out off the screen instead of hidden, so it has a length) and the bill page's Print here (`pages/Bill.tsx`).
+
+**Proved**
+- Headless Chrome's PDF of a KOT: the old rule 595 x 842 pt (A4, the slip in its corner), the new 80 x 64 mm with the slip filling it (`.local/roll-check/`). In Chrome's CSSOM the old rule keeps only its margin; the new one keeps its size. `src/modules/pos/printRoll.test.ts` 1/1; `KotStation.test.tsx` 19/19, `kotReprint.test.tsx` 6/6. Not yet on a printer: the owner's first KOT after the deploy is the proof.
+
+**Left open**
+- Into release 11 or the next, at the owner's word.
+
+**Commits:** this commit
+
 ## 2026-10-21 · Bar stock in the manual, after the owner's review (D27-357, D27-358)
 
 **Asked for:** the owner reviewed Bar stock (D27-357: the Rate column, the ₹1 round-off, Set up read by the bar manager - all kept as built), then answered every pending question (D27-358): release 10 goes with 11; the allowance's X% a setting; the BAR PC as an installed app, set up by the owner; a PNG logo; each hotel's own house policies; the bill kept; Amrapali cleared for a fresh start tomorrow; the CA's and lawyer's questions written up; the next release's list.

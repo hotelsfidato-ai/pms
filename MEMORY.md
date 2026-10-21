@@ -6539,6 +6539,21 @@ copy will see of theirs.**
 
 ---
 
+### 423 · FOUND: the slips' paper size was not CSS, so every KOT printed as a shrunken A4 (22 October)
+
+The owner's photo from the BAR PC: BAR KOT 18 tiny in the middle of a long strip, Chrome's date and title on top,
+the web address and "1/1" below. The KOT and bill slips said `@page { size: 80mm auto }` - a length cannot pair
+with `auto`, so the browser drops the whole declaration (seen in Chrome's CSSOM: only `margin` survives), and
+theme.css's `@page { size: A4 }` applied. The KOT station's Chrome (`--kiosk-printing`, a fresh profile) printed that
+A4 page shrunk onto the roll, with its default header and footer in the margins; a person printing through the
+print window fixed paper and margins by hand, and their Chrome remembered - so "the website prints properly". No
+test could see it: jsdom does not know `size` at all. Proved with headless Chrome's PDF: the old rule gives
+595 x 842 pt (A4), the new 80 x 64 mm. Fixed: `printRoll` sets `size: 80mm <the slip's length>mm; margin: 0` at
+print time. **The rule:** a print rule is proved in a real Chrome (CSSOM, or a PDF) - an invalid CSS declaration is
+dropped without a word, and the page falls back to whatever else is in force.
+
+---
+
 ### 422 · MINE: a new trading table left out of the property reset, twice (21 October)
 
 Migration 234 added `bar_purchases`; I never added it to `api/scripts/reset-property.ts` CLEAR, so a reset

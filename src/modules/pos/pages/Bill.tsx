@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { Printer } from "lucide-react";
 import { getOrder, nextBillHeading, printBillHere, type BillHeading } from "@/modules/pos/data/till";
 import { BillSlip } from "@/modules/pos/components/BillSlip";
+import { printRoll } from "@/modules/pos/lib/printRoll";
 import { ReadFailed, Button, toast } from "@/components/ui";
 
 /* ══════════════════════════════════════════════════════════════════
@@ -27,6 +28,7 @@ export default function BillPage() {
   /* What the server said this print is, once it has been asked. */
   const [printed, setPrinted] = useState<BillHeading | null>(null);
   const [busy, setBusy] = useState(false);
+  const slipRef = useRef<HTMLDivElement>(null);
 
   const order = useQuery({
     queryKey: ["bill", hotelId, id],
@@ -72,7 +74,7 @@ export default function BillPage() {
     if (!res.ok) return void toast.error("Not printed", res.reason);
     const told = res.heading;
     flushSync(() => setPrinted(told));
-    window.print();
+    printRoll(slipRef.current);
   };
 
   return (
@@ -80,7 +82,6 @@ export default function BillPage() {
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          @page { margin: 4mm; size: 80mm auto; }
         }
       `}</style>
 
@@ -94,7 +95,7 @@ export default function BillPage() {
         </Button>
       </div>
 
-      <BillSlip order={o} heading={heading} />
+      <div ref={slipRef}><BillSlip order={o} heading={heading} /></div>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
 } from "@/modules/pos/data/till";
 import { DocketSlip } from "@/modules/pos/components/DocketSlip";
 import { BillSlip } from "@/modules/pos/components/BillSlip";
+import { printRoll } from "@/modules/pos/lib/printRoll";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PRINTING COMPUTERS (D27-159; the KOT section, D27-292)
@@ -79,13 +80,11 @@ function useStationQueue(hotelId: string) {
   });
 }
 
-/* Only the slip reaches the paper, at the roll's width. */
+/* Only the slip reaches the paper. Off the screen rather than hidden, so it
+   has a length to measure: the paper is set to it (printRoll). */
 const PRINT_CSS = `
-  @media screen { .kot-print { display: none; } }
-  @media print {
-    body > *:not(.kot-print) { display: none !important; }
-    @page { margin: 4mm; size: 80mm auto; }
-  }`;
+  @media screen { .kot-print { position: fixed; left: -10000px; top: 0; } }
+  @media print { body > *:not(.kot-print) { display: none !important; } }`;
 
 /** Prints one slip through the browser: drawn, printed, gone. `print()`
     holds the page until the browser has the paper (at once with
@@ -94,7 +93,7 @@ function useSlipPrinter() {
   const [slip, setSlip] = useState<ReactNode>(null);
   const print = (paper: ReactNode) => {
     flushSync(() => setSlip(paper));
-    try { window.print(); } finally { setSlip(null); }
+    try { printRoll(document.querySelector<HTMLElement>("body > .kot-print")); } finally { setSlip(null); }
   };
   const node = slip && createPortal(
     <div className="kot-print"><style>{PRINT_CSS}</style>{slip}</div>,
