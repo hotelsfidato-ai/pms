@@ -22,6 +22,10 @@ import { TestDocumentMark } from "@/components/app/TestHotel";
    IT ADDS UP. The tax lines are the database's own split (`taxes`, on the
    discounted value) and GRAND TOTAL is `payable`, what the till asks for:
    Sub total - Discount + tax + Round off = GRAND TOTAL, to the paisa.
+
+   A BILL GIVEN FREE, NC (the owner's D27-351): the dishes and their
+   quantities with no prices, no tax and no total - "NC · No charge" at the
+   head, the reason and who approved it at the foot.
    ══════════════════════════════════════════════════════════════════ */
 
 /** A figure in a column: paise, no rupee sign, as a restaurant bill prints. */
@@ -33,6 +37,7 @@ export function BillSlip({ order: o, heading, sample }: {
   sample?: string;
 }) {
   const live = o.lines.filter((l) => !l.voided);
+  const nc = o.status === "no_charge";
   /* A TEST HOTEL'S BILL (the owner's D27-296 (8)): TEST · NOT VALID at its
      head and foot, and no GSTIN. A real hotel's paper is unchanged. */
   const test = useIsTestHotel() || Boolean(sample);
@@ -93,8 +98,8 @@ export function BillSlip({ order: o, heading, sample }: {
           <tr className="text-xs font-semibold border-b border-dashed border-ink-700">
             <th className="py-1 text-left font-semibold">Item</th>
             <th className="py-1 px-1 text-right font-semibold">Qty</th>
-            <th className="py-1 px-1 text-right font-semibold">Rate</th>
-            <th className="py-1 text-right font-semibold">Amount</th>
+            {!nc && <th className="py-1 px-1 text-right font-semibold">Rate</th>}
+            {!nc && <th className="py-1 text-right font-semibold">Amount</th>}
           </tr>
         </thead>
         <tbody>
@@ -106,19 +111,23 @@ export function BillSlip({ order: o, heading, sample }: {
                 {/* The owner's breakdown (D27-289): what the dish and each
                     numbered add-on cost, under the one line. */}
                 {l.numberedAddons && (
-                  <span className="block text-xs">{addonBreakdown(l.numberedAddons)}</span>
+                  <span className="block text-xs">
+                    {nc
+                      ? l.numberedAddons.addons.map((a) => `+ ${a.name}${a.qty > 1 ? ` ×${a.qty}` : ""}`).join(" · ")
+                      : addonBreakdown(l.numberedAddons)}
+                  </span>
                 )}
                 {l.note && <span className="block text-xs">{l.note}</span>}
               </td>
               <td className="py-1 px-1 text-right">{l.qty}</td>
-              <td className="py-1 px-1 text-right whitespace-nowrap">{fig(l.unitPrice)}</td>
-              <td className="py-1 text-right whitespace-nowrap">{fig(l.qty * l.unitPrice)}</td>
+              {!nc && <td className="py-1 px-1 text-right whitespace-nowrap">{fig(l.unitPrice)}</td>}
+              {!nc && <td className="py-1 text-right whitespace-nowrap">{fig(l.qty * l.unitPrice)}</td>}
             </tr>
           ))}
         </tbody>
       </table>
 
-      <dl className={cn(rule, "mt-1 pt-1.5 tabular")}>
+      {!nc && <dl className={cn(rule, "mt-1 pt-1.5 tabular")}>
         {rows.map(([label, value]) => (
           <div key={label} className="flex justify-between gap-2">
             <dt>{label}</dt><dd>{value}</dd>
@@ -127,12 +136,17 @@ export function BillSlip({ order: o, heading, sample }: {
         <div className={cn(rule, "mt-1.5 border-b py-1.5 flex justify-between gap-2 text-md font-extrabold")}>
           <dt>GRAND TOTAL</dt><dd>{moneyPrecise(o.payable)}</dd>
         </div>
-      </dl>
+      </dl>}
 
       <div className="mt-2 text-xs">
         {/* D27-324: a paid bill voided by the owner, an administrator or the
             GM. Its number stays; the paper says VOID, why, who and when. */}
-        {o.status === "void" ? (
+        {nc ? (
+          <div data-bill-nc className="border-t border-dashed border-ink-700 pt-1.5">
+            <p className="font-semibold">NC · No charge - {o.ncReason ?? "-"}</p>
+            <p className="mt-0.5">Approved by {o.ncBy ?? "-"} at {o.ncAt ?? "-"}</p>
+          </div>
+        ) : o.status === "void" ? (
           <div data-bill-void>
             <p className="font-semibold">VOID - {o.voidReason ?? "-"}</p>
             <p className="mt-0.5">

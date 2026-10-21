@@ -149,6 +149,11 @@ export interface NightAuditResult {
       orderNo: string; outlet: string; amount: number; method: string | null;
       reason: string; reference: string | null; by: string | null; at: string;
     }>;
+    /** Bills given free, NC (D27-351): who, when and why - no value. */
+    noCharge?: Array<{
+      orderNo: string; table: string | null; outlet: string; reason: string;
+      by: string | null; at: string;
+    }>;
   };
 
   /** TWO drawers, and they are never added together. The front desk

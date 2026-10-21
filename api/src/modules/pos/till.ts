@@ -1696,6 +1696,7 @@ async function readOrder(client: Client, orderId: string) {
     room: string | null;
     voided_by_name: string | null; voided_at: string | null;
     void_reason: string | null; void_reference: string | null;
+    nc_by_name: string | null; nc_at: string | null; nc_reason: string | null;
   }>(
     /* The hotel's details travel WITH the order, the way the invoice
        carries its own. A bill printed today should still read the same
@@ -1734,7 +1735,10 @@ async function readOrder(client: Client, orderId: string) {
                join folios f on f.id = t.folio_id where t.id = o.ticket_id) as room,
             s4.full_name as voided_by_name,
             to_char(o.voided_at at time zone h.timezone, 'HH24:MI') as voided_at,
-            o.void_reason, o.void_reference
+            o.void_reason, o.void_reference,
+            s5.full_name as nc_by_name,
+            to_char(o.nc_at at time zone h.timezone, 'HH24:MI') as nc_at,
+            o.nc_reason
        from pos_orders o
        join pos_outlets ou on ou.id = o.outlet_id
        join hotels h on h.id = o.hotel_id
@@ -1747,6 +1751,7 @@ async function readOrder(client: Client, orderId: string) {
        left join staff s2 on s2.id = o.settled_by
        left join staff s3 on s3.id = o.waiter_id
        left join staff s4 on s4.id = o.voided_by
+       left join staff s5 on s5.id = o.nc_by
        left join banquet_events e on e.id = o.event_id
       where o.id = $1`,
     [orderId],
@@ -1859,6 +1864,11 @@ async function readOrder(client: Client, orderId: string) {
     voidedAt: h.voided_at,
     voidReason: h.void_reason,
     voidReference: h.void_reference,
+    /* A bill given free, NC (D27-351): who gave it (their name is the
+       approval), when (HH:MM) and why. Null on any other bill. */
+    ncBy: h.nc_by_name,
+    ncAt: h.nc_at,
+    ncReason: h.nc_reason,
 
     /* The header. `covers` is people eating, not seats — average per
        cover is the metric a restaurant runs on, and a table for two
@@ -2000,8 +2010,8 @@ till.get("/:code/till/orders", async (c) => {
    owner, 20 October): the finished bills of one business date, or those
    whose number holds what was typed, on any day. Opened on the Till, its
    Print the bill prints BILL · DUPLICATE (D27-292); who may print is as for
-   today's bills. Only paid and voided bills: an open order is on the Till
-   already, and a bill closed unpaid has nothing to print. */
+   today's bills. Only paid, voided and NC bills (D27-351): an open order is
+   on the Till already, and a bill closed unpaid has nothing to print. */
 till.get("/:code/till/bills", async (c) => {
   const date = c.req.query("date") ?? "";
   const no = (c.req.query("no") ?? "").trim();
@@ -2026,7 +2036,7 @@ till.get("/:code/till/bills", async (c) => {
                 where l.order_id = o.id and not l.voided)::text as lines
          from pos_orders o
          join pos_outlets ou on ou.id = o.outlet_id
-        where o.hotel_id = $1 and o.status in ('settled', 'void')
+        where o.hotel_id = $1 and o.status in ('settled', 'void', 'no_charge')
           and ($2::date is null or o.business_date = $2::date)
           and ($3 = '' or o.order_no ilike '%' || $3 || '%' escape '\\')
         order by o.business_date desc, o.opened_at desc
@@ -2792,6 +2802,36 @@ export async function voidedBills(
   return rows.map((r) => ({
     orderNo: r.order_no, table: r.table_ref, outlet: r.outlet, amount: Number(r.amount),
     method: r.method, cash: Number(r.cash), reason: r.reason, reference: r.reference,
+    by: r.by, at: r.at,
+  }));
+}
+
+/** Bills given free, NC, on a business day (D27-351): who gave it, when and
+    why - no value, as the owner asked. Close restaurant day, the night
+    audit's run and its report read this one list; every sales figure leaves
+    them out (they read `status = 'settled'`). */
+export async function noChargeBills(
+  client: Client, hotelId: string, businessDate: string, outletId?: string,
+) {
+  const { rows } = await client.query<{
+    order_no: string; table_ref: string | null; outlet: string; reason: string;
+    by: string | null; at: string;
+  }>(
+    `select o.order_no, o.table_ref, ou.name as outlet, o.nc_reason as reason,
+            coalesce(s.full_name, hp.full_name) as by,
+            to_char(o.nc_at at time zone h.timezone, 'HH24:MI') as at
+       from pos_orders o
+       join pos_outlets ou on ou.id = o.outlet_id
+       join hotels h on h.id = o.hotel_id
+       left join staff s on s.id = o.nc_by
+       left join app.hotel_people($1) hp on hp.id = o.nc_by
+      where o.hotel_id = $1 and o.business_date = $2::date and o.status = 'no_charge'
+        and ($3::uuid is null or o.outlet_id = $3::uuid)
+      order by o.nc_at`,
+    [hotelId, businessDate, outletId ?? null],
+  );
+  return rows.map((r) => ({
+    orderNo: r.order_no, table: r.table_ref, outlet: r.outlet, reason: r.reason,
     by: r.by, at: r.at,
   }));
 }
@@ -4104,6 +4144,7 @@ till.get("/:code/till/day-end", async (c) => {
 
     const struck = await struckAfterKitchen(client, hotelId, businessDate, outlet[0].id);
     const voided = await voidedBills(client, hotelId, businessDate, outlet[0].id);
+    const noCharge = await noChargeBills(client, hotelId, businessDate, outlet[0].id);
 
     const denominations = day[0]
       ? (await client.query<{ value: string; count: number }>(
@@ -4137,6 +4178,8 @@ till.get("/:code/till/day-end", async (c) => {
       /* Paid bills voided (D27-324): left out of `summary`; their cash is
          still in the tin and in `cash.expected`. */
       voided,
+      /* Bills given free, NC (D27-351): who, when and why, no value. */
+      noCharge,
       movements: movements.map((m) => ({
         id: m.id, kind: m.kind, amount: Number(m.amount),
         reason: m.reason, recordedBy: m.recorded_by_name, at: m.recorded_at,
@@ -5008,6 +5051,67 @@ till.post("/:code/till/orders/:id/void", async (c) => {
     );
     /* Nothing is collected on it: its table is freed as Clear frees one
        (POS-33), so the floor never shows a voided bill. */
+    await client.query(CLEAR_FINISHED, [orderId]);
+    return { ok: true as const, ...(await readOrder(client, orderId))! };
+  });
+
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, "ok" in result && result.ok ? 200 : 409);
+});
+
+/* ── A BILL GIVEN FREE: NC, NO CHARGE (the owner's D27-351, 21 October) ──
+   The owner, an administrator or the GM (roleGate NO_CHARGE, and the
+   database's app.gives_pos_no_charge behind it) closes an OPEN bill as NC,
+   with a reason; their name on it is the approval. It prints the dishes with
+   no prices, marked NC (heading 'nc'). No value anywhere: every sales figure
+   reads `status = 'settled'`. Never a bill on a function's bill - the host
+   pays it there. Every refusal comes before the one write (MEMORY 243). */
+till.post("/:code/till/orders/:id/no-charge", async (c) => {
+  const input = await c.req.json<{ reason?: string }>().catch(() => ({}) as { reason?: string });
+  const reason = input.reason?.trim();
+  if (!reason) {
+    return c.json(refuse("Say why this bill is no charge. The reason prints on the bill."), 409);
+  }
+
+  const result = await withSession(c.get("subject"), async (client, session) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const orderId = c.req.param("id");
+
+    /* Locked, as a settle is: an NC and a payment pressed together cannot
+       both close it. */
+    const { rows: [o] } = await client.query<{
+      status: string; outlet_id: string; business_date: string; event_title: string | null;
+      on_function: boolean; dishes: number;
+    }>(
+      `select o.status, o.outlet_id::text,
+              to_char(o.business_date, 'YYYY-MM-DD') as business_date,
+              e.title as event_title, o.event_id is not null as on_function,
+              (select count(*)::int from pos_order_lines l
+                where l.order_id = o.id and not l.voided) as dishes
+         from pos_orders o
+         left join banquet_events e on e.id = o.event_id
+        where o.id = $1 and o.hotel_id = $2
+          for update of o`,
+      [orderId, hotelId],
+    );
+    if (!o) return refuse("No such order.");
+    if (o.status === "no_charge") return refuse("This bill is already NC.");
+    if (o.status !== "open") return refuse(`This bill is already ${o.status}.`);
+    if (o.on_function) {
+      return refuse(`This order is on ${o.event_title ?? "a function"}'s bill: the host pays it there. `
+        + "Take it off the function first.");
+    }
+    if (o.dishes === 0) return refuse("There is nothing on this order. Add an item, or close it unpaid.");
+    if (await dayClosed(client, o.outlet_id, o.business_date)) return refuse(DAY_CLOSED);
+
+    await client.query(
+      `update pos_orders
+          set status = 'no_charge', nc_by = $2, nc_at = now(), nc_reason = $3
+        where id = $1`,
+      [orderId, session.staffId, reason],
+    );
+    /* Nothing is collected on it: its table is freed as a void's is. */
     await client.query(CLEAR_FINISHED, [orderId]);
     return { ok: true as const, ...(await readOrder(client, orderId))! };
   });
@@ -5975,7 +6079,7 @@ till.get("/:code/kitchen", async (c) => {
              before; a paid bill voided keeps its KOTs, as the kitchen made
              the food (D27-324). */
           and (o.status = 'open'
-               or (o.status in ('settled', 'void') and o.business_date = $2::date))
+               or (o.status in ('settled', 'void', 'no_charge') and o.business_date = $2::date))
         order by l.kot_sent_at`,
       [hotelId, await businessDateFor(client, hotelId)],
     );

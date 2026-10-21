@@ -320,6 +320,25 @@ function Overview({ day }: { day: DayEnd }) {
         </Card>
       )}
 
+      {/* D27-351: bills given free - who approved, when and why. No value
+          (the owner): not in any figure above. */}
+      {(day.noCharge ?? []).length > 0 && (
+        <Card>
+          <CardHeader title="No charge (NC)"
+            description="Bills given free. Not in the sales above, and no value is counted for them." />
+          <CardBody>
+            <ul className="divide-y divide-grey-200">
+              {day.noCharge!.map((v) => (
+                <li key={v.orderNo} className="py-3">
+                  <p className="text-base">{v.orderNo}{v.table ? ` · ${v.table}` : ""} - {v.reason}</p>
+                  <p className="text-sm text-grey-500">Approved by {v.by ?? "-"} · {v.at}</p>
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
+
       {/* D27-119: food taken off after the kitchen had it - who, and why. */}
       {(day.struck ?? []).length > 0 && (
         <Card>

@@ -279,6 +279,14 @@ kot section (kotSection.ts, D27-292)
                                                             reference; cash below the refunds' ₹20,000 ceiling and
                                                             out of the restaurant's tin (D27-327).
                                                             Keeps its number, lines, KOTs and payments; frees its table
+            POST   /:code/till/orders/:id/no-charge         D27-351: an OPEN bill given free, NC, {reason}; the owner,
+                                                            an administrator or the GM (roleGate NO_CHARGE =
+                                                            reservation approve; the database's
+                                                            app.gives_pos_no_charge, 233). Never on a function's bill;
+                                                            NC for good; prints heading 'nc' (dishes, no prices); no
+                                                            value anywhere (sales read status = 'settled'); frees its
+                                                            table; Close restaurant day and the night audit list it
+                                                            (noChargeBills)
 money       POST   /:code/till/orders/:id/discount
             POST   /:code/till/orders/:id/discount/clear
             POST   /:code/till/orders/:id/promotion
@@ -463,6 +471,9 @@ pos_denominations
                                                a void's payments stay; its cash leaves the tin by
                                                itself (pos_expected_cash counts paid bills only,
                                                D27-327); no front-desk drawer is touched
+  status 'no_charge', nc_by/_at, nc_reason;    "a restaurant bill given free: NC" (233, D27-351):
+  app.gives_pos_no_charge;                     the guard (who, an open bill, never on a function;
+  pos_bill_prints heading 'nc'                 who and when are the database's; NC for good)
   the kitchen's NOTIFY trigger                 075_live_orders.sql
   audit trigger on pos_menu_items              076_approvals.sql
   prep_minutes on dish and category            079_prep_times.sql

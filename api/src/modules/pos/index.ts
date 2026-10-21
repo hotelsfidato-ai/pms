@@ -24,6 +24,8 @@ export { struckAfterKitchen } from "./till.ts";
 /* And the paid bills voided that day (D27-324): who, when, why, how much -
    the same list Close restaurant day shows. */
 export { voidedBills } from "./till.ts";
+/* And the bills given free, NC (D27-351): who, when and why, no value. */
+export { noChargeBills } from "./till.ts";
 /* What each outlet sold per day, before GST: the Store's Days view sets the
    stock issued to an outlet against it (D27-238). */
 export { outletSales } from "./till.ts";

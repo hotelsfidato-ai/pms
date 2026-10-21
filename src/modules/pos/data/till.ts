@@ -271,8 +271,9 @@ export interface Order {
   hotelSac?: string | null;
   table: string | null;
   /** `void`: a PAID bill voided by the owner, an administrator or the GM
-      (D27-324). It keeps its number and reprints VOID. */
-  status: "open" | "settled" | "abandoned" | "void";
+      (D27-324). It keeps its number and reprints VOID. `no_charge`: an
+      open bill given free, NC, by the same three (D27-351). */
+  status: "open" | "settled" | "abandoned" | "void" | "no_charge";
   businessDate: string;
   paymentMethod: string | null;
   /** The room a bill charged to a room went to; null otherwise. Optional:
@@ -284,6 +285,11 @@ export interface Order {
   voidedAt?: string | null;
   voidReason?: string | null;
   voidReference?: string | null;
+  /** A bill given free, NC (D27-351): who gave it - their name is the
+      approval - when (HH:MM) and why. Null on any other bill. */
+  ncBy?: string | null;
+  ncAt?: string | null;
+  ncReason?: string | null;
   /** Null when the reader may not see that person: a GM reading an order
       the group owner opened (D27-1). Printed as a dash. */
   openedBy: string | null;
@@ -592,6 +598,17 @@ export interface StruckDish {
   /** Before tax, what it was sold at. */
   value: number;
   reason: string | null;
+  by: string | null;
+  at: string;
+}
+
+/** A bill given free, NC, that day (D27-351): who, when and why - no value. */
+export interface NoChargeBill {
+  orderNo: string;
+  table: string | null;
+  outlet: string;
+  reason: string;
+  /** null: a name the reader may not see (the owner's, to a GM; D27-9). */
   by: string | null;
   at: string;
 }
@@ -961,6 +978,15 @@ export function voidPaidBill(
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders/${orderId}/void`,
     { reason, ...(reference ? { reference } : {}) });
+}
+
+/** NC, NO CHARGE (D27-351): the owner, an administrator or the GM closes an
+    open bill as given free, with a reason. The server refuses everyone else
+    and says why. */
+export function giveNoCharge(
+  hotelId: string, orderId: string, reason: string,
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders/${orderId}/no-charge`, { reason });
 }
 
 /* ── The menu, as the hotel maintains it ──────────────────────────── */
@@ -1681,16 +1707,18 @@ export async function claimKotReprint(hotelId: string, id: string, device: strin
 
 /** What a printed bill says it is (D27-292). "interim" is the print before
     payment; since D27-334 its paper says plain BILL, as a restaurant's does. */
-export type BillHeading = "interim" | "bill" | "duplicate" | "void";
+export type BillHeading = "interim" | "bill" | "duplicate" | "void" | "nc";
 
 /** The words at the top of the paper. */
 export const BILL_TITLE: Record<BillHeading, string> = {
   interim: "Bill", bill: "Bill", duplicate: "Bill · duplicate", void: "Bill · VOID",
+  nc: "NC · No charge",
 };
 
 /** The heading the next print of this order would carry, before asking. */
 export const nextBillHeading = (o: Pick<Order, "status" | "billsPrinted">): BillHeading =>
   o.status === "void" ? "void"
+    : o.status === "no_charge" ? "nc"
     : o.status !== "settled" ? "interim" : (o.billsPrinted ?? 0) > 0 ? "duplicate" : "bill";
 
 /** Print bill (D27-292): asked of the bill printer. `sentTo` null - none is
@@ -1754,6 +1782,9 @@ export interface DayEnd {
       `summary`; their cash went back out of the tin (D27-327), so it is
       not in `cash.expected` either. */
   voided?: VoidedBill[];
+  /** Bills given free, NC, that day (D27-351): no value, left out of every
+      figure in `summary`. */
+  noCharge?: NoChargeBill[];
   movements: {
     id: string; kind: MovementKind; amount: number;
     /** null: a name the reader may not see (the owner's, to a GM; D27-9). */

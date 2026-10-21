@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-21 · NC, a bill given free (the owner's D27-351)
+
+**Shipped** Migration 233 (status 'no_charge', who/when/why, `app.gives_pos_no_charge`, the guard, heading 'nc'); `POST /till/orders/:id/no-charge`; **No charge (NC)** on the Till and the Terminal for the owner, an administrator or the GM, with a reason, printed at once with no prices; Close restaurant day and the night audit list it with no value - `pages/Till.tsx`, `pages/Terminal.tsx`, `components/BillSlip.tsx`, `pages/DayEnd.tsx`, `flows/printBill.tsx`. **Proved** `noCharge.test.tsx`, `api/test/modules/pos/noCharge.test.ts`, "pos nc" in `db/tests/modules/pos.sql`. The root `CHANGELOG.md` has the whole entry.
+
 ## 2026-10-20 · A wider order pane, and + on a dish (the owner's D27-349)
 
 **Shipped** The Till's and the Terminal's order pane wider on big screens (480 px at xl), names wrapping, Customise an icon; + on the Till's lines (the line's quantity, as the Terminal's +); + under "Already sent" on the waiter's pad, the sent dish with its choices on this round - `pages/Till.tsx`, `pages/Terminal.tsx`, `flows/OrderPad.tsx`; the order's lines say `itemId`, `addonId`, `moreChoiceIds` (`api/src/modules/pos/till.ts`). **Proved** `oneMore.test.tsx`, `api/test/modules/pos/sameDish.test.ts`. The root `CHANGELOG.md` has the whole entry.

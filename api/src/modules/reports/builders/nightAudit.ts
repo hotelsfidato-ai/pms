@@ -5,7 +5,7 @@ import {
 } from "../document.ts";
 import { heading, stayNights, LIVE, type Property } from "../figures.ts";
 /* Paid restaurant bills voided (D27-324): the restaurant's own list. */
-import { voidedBills } from "../../pos/index.ts";
+import { voidedBills, noChargeBills } from "../../pos/index.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    NIGHT AUDIT — the printed report, in the owner's layout
@@ -512,6 +512,7 @@ export async function nightAuditReport(
   /* ── The restaurant, on the day ────────────────────────────────────── */
   const pos = await posDay(client, hotelId, asOn);
   const voided = await voidedBills(client, hotelId, asOn);
+  const noCharge = await noChargeBills(client, hotelId, asOn);
 
   const sections: ReportSection[] = [
     { key: "room-charges", title: "Room Charges", columns: STAY_COLUMNS,
@@ -623,6 +624,19 @@ export async function nightAuditReport(
         by: v.by, at: v.at, reason: v.reason, reference: v.reference,
       })),
       empty: "No restaurant bill was voided on this day." },
+    /* D27-351: a bill given free, out of every figure above and with no
+       value of its own (the owner); here, who gave it, when and why. */
+    { key: "pos-no-charge", title: "POS Bills No Charge (NC)",
+      columns: [
+        col("orderNo", "Bill", "text"), col("outlet", "Outlet", "text"),
+        col("table", "Table", "text"), col("by", "Given By", "text"),
+        col("at", "At", "text"), col("reason", "Reason", "text"),
+      ],
+      rows: noCharge.map((v) => row({
+        orderNo: v.orderNo, outlet: v.outlet, table: v.table, by: v.by, at: v.at,
+        reason: v.reason,
+      })),
+      empty: "No restaurant bill was given free on this day." },
   ];
 
   return {

@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    343 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
+    346 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -5033,6 +5033,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Room and Charge to room</td><td>Type the room number and tap <span class="ui">Charge to room</span>. It asks first, naming the guest: <span class="msg">“Charge ₹441 to room 201?”</span>. A room with two open bills asks whose.</td></tr>
       <tr><td>Cash, Card, UPI</td><td>Paid that way, at once. The bill moves to <span class="ui">Settled today</span>.</td></tr>
       <tr><td>Part - pay two ways</td><td>Split the payment: each way with its amount. For cash, type the <span class="ui">Cash given</span> and the change is shown. <span class="ui">Settle</span> appears only when the parts add up.</td></tr>
+      <tr><td>No charge (NC)</td><td>The owner, an Admin or the GM only: the bill is given free, with a reason, and prints at once with the dishes and no prices (below; <span class="d">D27-351</span>).</td></tr>
       <tr><td>Close unpaid</td><td>Closes the bill without payment. It always asks why. The table then reads “Closed unpaid - clear it”.</td></tr>
     </tbody>
   </table>
@@ -5070,7 +5071,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>Tap the bill in the list. Each says its day, its items and its total.</li>
     <li>Tap <span class="ui">Print the bill</span>. It prints at the bill printer (or here, as in A8.6), headed <b>BILL · DUPLICATE</b>, so it cannot pass as a new sale.</li>
   </ol>
-  <p>Only paid and voided bills are listed: a bill closed unpaid has nothing to print. An earlier day's bill can only be printed; it is voided only on the day it was paid.</p>
+  <p>Only paid, voided and NC bills are listed: a bill closed unpaid has nothing to print. An earlier day's bill can only be printed; it is voided only on the day it was paid.</p>
 
   <figure class="shot" id="fig-A8-36">
     <img src="img/A8-36.png" alt="The Till's card An earlier day's bill: the Day box, the Bill number box with 20261010 typed, and 10 October's paid bills listed with their day, items and totals">
@@ -5097,6 +5098,34 @@ figure.shot.phone img { max-width: 72mm; }
   </ol>
   <p>The bill keeps its number and reads <b>VOID</b>, with the reason, who and when; <span class="ui">Print the bill</span> prints it headed <b>Bill · VOID</b>. The kitchen's KOTs stay as they were: the food was made. The day's sales, the reports and the Day book leave a voided bill out, and its alcohol's VAT bill is cancelled with it. <span class="ui">Close restaurant day</span> and the night audit list it under <span class="ui">Paid bills voided</span>. Its cash comes out of the restaurant's tin, so the tin's Expected leaves it out (A8.9); nobody's front-desk drawer is touched.</p>
 
+  <h3>Giving a bill free: No charge (NC)</h3>
+  <p>A bill the hotel gives free - the owner's guests, a staff meal - is closed as NC by the owner, an Admin or the GM. Their name on it is the approval. Nobody else sees the button.</p>
+  <ol class="steps">
+    <li>On the Till (or the Terminal), open the bill. It must still be open.</li>
+    <li>Tap <span class="ui">No charge (NC)</span> and type why.</li>
+    <li>Tap <span class="ui">Give NC</span>. The bill prints at once at the bill printer (or here, as in A8.6).</li>
+  </ol>
+
+  <figure class="shot" id="fig-A8-37">
+    <img src="img/A8-37.png" alt="The Till: No charge for bill 20261011-12? with the reason Owner's guests typed and Give NC">
+    <figcaption><b>Figure A8-37.</b> No charge: the reason, and your name as the approval.</figcaption>
+    <ol class="callouts"><li>Why it is free: it prints on the bill</li><li>Give NC</li></ol>
+  </figure>
+
+  <p>The bill reads <b>NC · No charge</b> in place of a total, with the reason, who approved it and when. The paper lists the dishes and how many, with no prices, no tax and no total, headed <b>NC · No charge</b>. The kitchen's KOTs stay as they were: the food was made. An NC bill is no sale and carries no value: the day's sales, the tax and the reports leave it out. <span class="ui">Close restaurant day</span> and the night audit list it under <span class="ui">No charge (NC)</span>, with who approved it, when and why. Its table is freed at once.</p>
+
+  <figure class="shot" id="fig-A8-38">
+    <img src="img/A8-38.png" alt="The NC bill on the Till: Total NC · No charge, the reason and Approved by Test GM, and Print the bill">
+    <figcaption><b>Figure A8-38.</b> Given NC.</figcaption>
+    <ol class="callouts"><li>The reason, who approved it and when</li><li>No total: NC</li></ol>
+  </figure>
+
+  <figure class="shot" id="fig-A8-39">
+    <img src="img/A8-39.png" alt="The NC bill printed on the bill printer: NC · NO CHARGE, the dishes with their quantities and no prices, the reason and Approved by">
+    <figcaption><b>Figure A8-39.</b> The NC bill on paper: no prices.</figcaption>
+    <ol class="callouts"><li>NC · No charge at its head</li><li>Who approved it, and when</li></ol>
+  </figure>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
@@ -5109,12 +5138,13 @@ figure.shot.phone img { max-width: 72mm; }
       <li>An order on a banquet function is paid on the function's bill only; cash, card, UPI and rooms are switched off for it, with the reason.</li>
       <li><b>A bill charged to a room is never voided here</b>: <span class="msg">“This bill went to room 201 - reverse it on the guest's bill.”</span> A bill on a banquet function is reversed on the function's bill.</li>
       <li><b>The same day only</b>: a void on a later day, or once the day is closed, is refused: <span class="msg">“The restaurant's day is closed and its drawer counted. A bill of a closed day cannot be voided.”</span></li>
+      <li><b>NC is for an open bill</b>, and cannot be undone. A paid bill is voided instead; a bill on a banquet function is paid on the function's bill and is never NC. An NC bill always says why: <span class="msg">“Say why this bill is no charge. The reason prints on the bill.”</span></li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>.</p>
+    <p>A manager and a reason for food the kitchen has: <span class="d">D27-119</span>. Charge to room asks first, naming the guest: <span class="d">D27-117</span>; two open bills in a room, one button each: <span class="d">D27-162</span>. The Till sends to the kitchen like the Terminal: <span class="d">D27-166</span>. Close unpaid frees its table with Clear: <span class="d">D27-288</span>. Orders on a banquet function: <span class="d">D17-21</span>. Voiding a paid bill: <span class="d">D27-324</span>; its cash out of the tin: <span class="d">D27-327</span>. No charge (NC), the GM's, owner's or Admin's approval with a reason, no prices on the paper and no value anywhere: <span class="d">D27-351</span>.</p>
   </div>
 
   <!-- A8.8 -->
@@ -5132,7 +5162,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>A dish the kitchen made Ready shows <b>Ready</b> with <span class="ui">Taken</span>: tap it when you carry it out.</li>
     <li>Under the dishes, the open order's <span class="ui">KOTs sent</span>, each with <span class="ui">Reprint</span>: it prints again at the computer that printed it (A8.4).</li>
     <li><b>Room-service orders waiting</b>: a checked-in guest's order from their own page. <span class="ui">Accept</span> makes it a room-service order for their room and sends it to the kitchen; <span class="ui">Decline</span> asks a reason, which the guest reads. It is charged to the room at delivery.</li>
-    <li>Payment and printing work as on the Till.</li>
+    <li>Payment and printing work as on the Till, <span class="ui">No charge (NC)</span> included.</li>
   </ul>
 
   <!-- A8.9 -->

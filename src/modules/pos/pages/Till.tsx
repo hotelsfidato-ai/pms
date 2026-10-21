@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router";
 import {
   UtensilsCrossed, Plus, Minus, X, Receipt, BedDouble, Banknote, ChevronRight,
-  CreditCard, Smartphone, Printer, Percent, Split, CalendarHeart, Flame, Ban, SlidersHorizontal,
+  CreditCard, Smartphone, Printer, Percent, Split, CalendarHeart, Flame, Ban, SlidersHorizontal, Gift,
 } from "lucide-react";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
 import { CustomiseDialog } from "@/modules/pos/flows/CustomiseDialog";
@@ -22,7 +22,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, NativeSelect, IconChip,
 } from "@/components/ui";
 import { StartHere } from "@/components/app/StartHere";
-import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
+import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, settleOrder, sendToKitchen, abandonOrder, voidPaidBill, giveNoCharge, applyDiscount, clearDiscount, setRoundOff, settleSplit, listPromotions, applyPromotion, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type Order, type OrderLine, type LineAddon, type MenuItem, type OrderSummary, type TenderInput, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus, KotsSent } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
@@ -584,10 +584,11 @@ function OrderRow({ order, active, onOpen, withDate = false }: {
             {order.status === "void" && " · VOID"}
           </p>
         </div>
-        {/* A voided bill keeps its number and its total, struck (D27-324). */}
+        {/* A voided bill keeps its number and its total, struck (D27-324);
+            a bill given free says NC and no value (D27-351). */}
         <span className={cn("tabular text-base font-medium shrink-0",
           order.status === "void" ? "text-grey-500 line-through" : "text-ink-900")}>
-          {money(order.gross)}
+          {order.status === "no_charge" ? "NC" : money(order.gross)}
         </span>
         {/* It opens the order: the Tappable Rule's arrow. */}
         <ChevronRight className="size-4 text-grey-400 shrink-0" aria-hidden />
@@ -1107,6 +1108,28 @@ function OrderPanel({
     },
   });
 
+  /* NC, NO CHARGE (the owner's D27-351): the owner, an administrator or the
+     GM - the same three as a void, as the server asks - gives an open bill
+     free, with a reason; their name on it is the approval. It prints at
+     once: the dishes, no prices, marked NC. */
+  const giveNc = () => setAsk({
+    title: `No charge for bill ${order.orderNo}?`,
+    body: "The bill prints the dishes with no prices, marked NC, with this reason and your "
+      + "name as the approval. It is no sale and carries no value, and it cannot be undone.",
+    field: { label: "Why is it no charge?", required: true },
+    confirm: "Give NC",
+    onConfirm: async (reason): Promise<Reply | undefined> => {
+      setBusy(true);
+      const res = await giveNoCharge(hotelId, order.id, reason);
+      setBusy(false);
+      if (!res.ok) return { refused: res.reason };
+      toast.success(`Bill ${order.orderNo} is NC`);
+      onChanged();
+      void bill.print(order.id);
+      return undefined;
+    },
+  });
+
   /* VOIDING A PAID BILL (D27-324): the owner, an administrator or the GM -
      `approve` on a booking is exactly those three, as the server asks. A
      bill that reached a room's or a function's bill is reversed there. */
@@ -1182,7 +1205,8 @@ function OrderPanel({
               : order.status === "settled" ? "success" : "neutral"
           }
         >
-          {order.status}
+          {/* D27-351: NC in its own words, not the stored "no_charge". */}
+          {order.status === "no_charge" ? "NC" : order.status}
         </StatusPill>
       </div>
 
@@ -1309,6 +1333,11 @@ function OrderPanel({
           </ul>
         )}
 
+        {order.status === "no_charge" ? (
+          <div className="border-t border-grey-200 pt-2.5">
+            <Row label="Total" value="NC · No charge" strong />
+          </div>
+        ) : (
         <div className="border-t border-grey-200 pt-2.5 space-y-1">
           <Row label="Net" value={money(order.net)} />
           {order.discount > 0 && (
@@ -1333,6 +1362,7 @@ function OrderPanel({
           )}
           <Row label="Total" value={money(order.payable)} strong />
         </div>
+        )}
 
         {order.discountReason && (
           <p className="text-sm text-grey-600 mt-1.5">
@@ -1343,7 +1373,9 @@ function OrderPanel({
         {settled ? (
           <div className="mt-3.5 space-y-2">
             <p className="text-sm text-grey-600">
-              {order.status === "void"
+              {order.status === "no_charge"
+                ? `NC · No charge - ${order.ncReason ?? "-"}. Approved by ${order.ncBy ?? "-"} at ${order.ncAt ?? "-"}.`
+                : order.status === "void"
                 ? `VOID - ${order.voidReason ?? "-"}. Voided by ${order.voidedBy ?? "-"} at ${order.voidedAt ?? "-"}`
                   + `${order.voidReference ? `; refund reference ${order.voidReference}` : ""}.`
                 : order.status === "settled"
@@ -1353,7 +1385,7 @@ function OrderPanel({
                     + `${order.settledBy ? `, taken by ${order.settledBy}` : ""}.`
                 : `Closed unpaid - ${order.abandonedReason}`}
             </p>
-            {(order.status === "settled" || order.status === "void") && (
+            {(order.status === "settled" || order.status === "void" || order.status === "no_charge") && (
               <Button
                 variant="secondary"
                 size="lg"
@@ -1499,6 +1531,15 @@ function OrderPanel({
               <Split className="size-4" />
               Part - pay two ways
             </Button>
+
+            {/* D27-351: the owner, an administrator or the GM only. */}
+            {mayVoid && (
+              <Button variant="secondary" size="lg" className="w-full"
+                disabled={onFunction || live.length === 0} onClick={giveNc} loading={busy}>
+                <Gift className="size-4" />
+                No charge (NC)
+              </Button>
+            )}
 
             <Button variant="ghost" size="lg" className="w-full"
               onClick={abandon} loading={busy}>

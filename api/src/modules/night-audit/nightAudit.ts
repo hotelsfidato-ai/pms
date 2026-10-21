@@ -4,7 +4,7 @@ import { businessDateFor } from "../../businessDate.ts";
 import type { Client } from "../../db.ts";
 import { POSTING_NIGHTS } from "../reports/index.ts";
 import { roomNightsDue, postRoomNight } from "./roomNight.ts";
-import { struckAfterKitchen, voidedBills } from "../pos/index.ts";
+import { struckAfterKitchen, voidedBills, noChargeBills } from "../pos/index.ts";
 
 /* Who is charged for a night, what the charge is and the insert that writes
    it are in roomNight.ts, which check-in calls too (D27-204). */
@@ -602,6 +602,8 @@ nightAudit.post("/:code/night-audit/run", async (c) => {
         /* Paid bills voided that day (D27-324): who, when, why, how much -
            left out of every figure above. */
         voided: await voidedBills(client, hotelId, businessDate),
+        /* Bills given free, NC (D27-351): who, when and why - no value. */
+        noCharge: await noChargeBills(client, hotelId, businessDate),
       },
       /* Two drawers, side by side, never summed. */
       drawers: {

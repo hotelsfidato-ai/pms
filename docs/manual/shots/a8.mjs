@@ -160,7 +160,10 @@ export const SHOTS = [
   },
   {
     id: "A8-15", title: "The Till: the bill, and how it is paid", as: "General Manager",
-    path: "/pos/5EL/tables", steps: [{ click: "label:Open N4" }, { waitFor: "text:+ Extra papad" }],
+    /* 21 Oct: the order's buttons scrolled into view - with the printers
+       online the page no longer sits low enough to show Cash and Part. */
+    path: "/pos/5EL/tables", steps: [{ click: "label:Open N4" }, { waitFor: "text:+ Extra papad" },
+      { scroll: "text:Kitchen has it all" }, { wait: 500 }],
     marks: [
       { n: 1, at: "text:+ Extra papad", side: "left" },
       { n: 2, at: "label:Customise Paneer Tikka", side: "top" },
@@ -391,6 +394,50 @@ export const SHOTS = [
       { n: 1, at: "css:[data-earlier-bills] input[type=date]", side: "left" },
       { n: 2, at: "css:[data-earlier-bills] input:not([type=date])", side: "top" },
       { n: 3, at: "css:[data-earlier-bills] li", side: "left" },
+    ],
+  },
+
+  /* ── NC, a bill given free (the owner's D27-351): the GM gives an open
+     bill no charge with a reason; it prints at once, no prices. ── */
+  { id: "A8-37a", title: "An order on N5 for the NC pictures", as: "General Manager", noShot: true,
+    path: "/pos/5EL/tables",
+    steps: [
+      { settle: true }, { wait: 1500 }, { clickIf: "label:Clear N5" }, { wait: 800 },
+      { click: "text:N5" }, { waitFor: "text:This round" },
+      /* Send only once the round holds both (21 Oct: pressed at once, it sent
+         nothing); then the tile itself, as an older toast may still show. */
+      { click: "text:Dal Tadka" }, { click: "text:Butter Roti" }, { wait: 1200 },
+      { click: "text:Send" }, { waitFor: "label:Open N5", ms: 15000 }, { wait: 800 },
+      { click: "label:Open N5" }, { waitFor: "text:No charge (NC)", ms: 10000 },
+    ] },
+  {
+    id: "A8-37", title: "No charge (NC): the reason, and your name as the approval", as: "General Manager",
+    steps: [
+      { click: "text:No charge (NC)" }, { waitFor: "text:Why is it no charge?" }, { wait: 600 },
+      { type: ["css:[role=dialog] textarea", "Owner's guests"] }, { wait: 400 },
+    ],
+    marks: [
+      { n: 1, at: "css:[role=dialog] textarea", side: "left" },
+      { n: 2, at: "text:Give NC", side: "top" },
+    ],
+  },
+  {
+    id: "A8-38", title: "Given NC: the reason, who approved it, and the bill printed", as: "General Manager",
+    steps: [
+      { click: "text:Give NC" }, { waitFor: "text:Approved by", ms: 10000 },
+      { scroll: "text:Approved by" }, { wait: 800 },
+    ],
+    marks: [
+      { n: 1, at: "text:Approved by", side: "left" },
+      { n: 2, at: "text:NC · No charge", side: "left", nth: 0 },
+    ],
+  },
+  {
+    id: "A8-39", title: "The NC bill on the bill printer: no prices", path: PRINTERS,
+    steps: [{ waitFor: "text:NC · NO CHARGE", ms: 20000 }, { wait: 2500 }],
+    marks: [
+      { n: 1, at: "css:.printer:nth-of-type(2) .slip .head", side: "left" },
+      { n: 2, at: "text:Approved by", side: "left", nth: 0 },
     ],
   },
 ];

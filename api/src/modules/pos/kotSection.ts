@@ -60,9 +60,10 @@ function kindName(raw: unknown): string | { reason: string } {
 }
 
 /** The bill a print is: before payment INTERIM, after it BILL, then DUPLICATE;
-    a paid bill voided, VOID (D27-324). */
+    a paid bill voided, VOID (D27-324); a bill given free, NC (D27-351). */
 async function headingFor(client: Client, orderId: string, status: string) {
   if (status === "void") return "void" as const;
+  if (status === "no_charge") return "nc" as const;
   if (status !== "settled") return "interim" as const;
   const { rows } = await client.query(
     `select 1 from pos_bill_prints where order_id = $1 and heading in ('bill', 'duplicate') limit 1`,

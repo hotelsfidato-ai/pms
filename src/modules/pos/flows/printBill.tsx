@@ -31,12 +31,14 @@ export function useBillPrint(hotelId: string) {
     if (!res.ok) return void toast.error("Not printed", res.reason);
     after?.();
     const what = BILL_TITLE[res.heading];
+    /* NC stays in capitals in a sentence (D27-351). */
+    const named = res.heading === "nc" ? "NC bill" : what.toLowerCase();
     if (!res.sentTo) return void here(orderId);
     if (res.sentTo.online) return void toast.success(`${what} sent to ${res.sentTo.name}`);
     const printer = res.sentTo.name;
     setAsk({
       title: `${printer} is offline`,
-      body: `The bill printer has not been seen for a while. The ${what.toLowerCase()} waits there and prints when it is back - or print it here now.`,
+      body: `The bill printer has not been seen for a while. The ${named} waits there and prints when it is back - or print it here now.`,
       confirm: "Print here",
       onConfirm: () => { here(orderId); },
     });

@@ -1097,3 +1097,81 @@ begin
     exists (select 1 from app.test_hotel_classes() c
              where c.table_name = 'pos_kot_reprints' and c.class = 'trading'));
 end $$;
+
+
+-- =============================================================================
+-- A RESTAURANT BILL GIVEN FREE: NC (the owner's D27-351, 21 October)
+-- =============================================================================
+-- The owner, an administrator or the GM may close an OPEN bill as NC, no
+-- charge, with a reason; their name is the approval. NC for good, its lines
+-- frozen with it, and no sale: the day's sales read `status = 'settled'`.
+-- =============================================================================
+do $$
+declare
+  h uuid; waiter uuid; gm uuid; v_out uuid; bd date;
+  open_bill uuid; paid_bill uuid; d text;
+begin
+  h := app.provision_property_unchecked('PNC', 'NC Rules Test', 'Nowhere');
+  select id into waiter from staff where email = 'agra@fidato.in';
+  select id into gm from staff where email = 'pune@fidato.in';
+  insert into staff_hotels (staff_id, hotel_id, role) values (waiter, h, 'pos'), (gm, h, 'gm')
+  on conflict (staff_id, hotel_id) do update set role = excluded.role;
+  bd := app.business_date(h);
+
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (h, 'NCT', 'NC Test', 'food', waiter) returning id into v_out;
+  insert into pos_day_ends (hotel_id, outlet_id, business_date, opening_cash)
+  values (h, v_out, bd, 0);
+
+  -- Two bills of ₹500 + 5% GST: one still open, one paid in cash.
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_out, app.pos_next_order_no(h, bd), bd, waiter) returning id into open_bill;
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_out, app.pos_next_order_no(h, bd), bd, waiter) returning id into paid_bill;
+  insert into pos_order_lines (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by)
+  select o, h, 'Thali', 1, 500, 5, waiter from unnest(array[open_bill, paid_bill]) o;
+  update pos_orders set status = 'settled', settled_by = waiter, settled_at = now(),
+                        payment_method = 'cash'
+   where id = paid_bill;
+  insert into pos_order_tenders (order_id, hotel_id, method, amount, taken_by)
+  values (paid_bill, h, 'cash', 525, waiter);
+
+  -- ---------- who --------------------------------------------------------------
+  perform set_config('app.user_id', waiter::text, true);
+  perform test.raises('pos nc', 'a waiter cannot give a bill NC',
+    format($q$update pos_orders set status = 'no_charge', nc_by = %L, nc_at = now(),
+                     nc_reason = 'staff meal' where id = %L$q$, waiter, open_bill), '42501');
+
+  -- ---------- which bills ------------------------------------------------------
+  perform set_config('app.user_id', gm::text, true);
+  perform test.raises('pos nc', 'a paid bill is not given NC (it is voided)',
+    format($q$update pos_orders set status = 'no_charge', nc_by = %L, nc_at = now(),
+                     nc_reason = 'x' where id = %L$q$, gm, paid_bill), '23514');
+  perform test.raises('pos nc', 'NC says why',
+    format($q$update pos_orders set status = 'no_charge', nc_by = %L, nc_at = now(),
+                     nc_reason = '  ' where id = %L$q$, gm, open_bill), '23514');
+
+  -- ---------- the GM gives the open bill NC -------------------------------------
+  -- The row names the waiter as the giver; the database records who it is.
+  perform test.allows('pos nc', 'the GM gives an open bill NC, with a reason',
+    format($q$update pos_orders set status = 'no_charge', nc_by = %L, nc_at = now(),
+                     nc_reason = 'Owner''s guests' where id = %L$q$, waiter, open_bill));
+  select status into d from pos_orders where id = open_bill;
+  perform test.ok('pos nc', 'the bill is NC', d = 'no_charge', d);
+  perform test.ok('pos nc', 'NC records who: the GM, whoever the row named',
+    (select nc_by from pos_orders where id = open_bill) = gm, 'someone else');
+
+  perform test.raises('pos nc', 'NC stays NC',
+    format($q$update pos_orders set status = 'open' where id = %L$q$, open_bill), '23514');
+  perform test.raises('pos nc', 'and its reason stays as written',
+    format($q$update pos_orders set nc_reason = 'something else' where id = %L$q$, open_bill), '23514');
+  perform test.raises('pos nc', 'its lines are history: never changed',
+    format($q$update pos_order_lines set qty = 2 where order_id = %L$q$, open_bill), '23000');
+
+  -- ---------- no value ---------------------------------------------------------
+  perform test.ok('pos nc', 'no sale: the day''s sales count the paid bill alone',
+    (select settled_orders = 1 and settled_value = 525 from app.pos_day_summary(v_out, bd)),
+    (select settled_orders || ' settled, ' || settled_value from app.pos_day_summary(v_out, bd)));
+
+  perform set_config('app.user_id', '', true);
+end $$;

@@ -759,6 +759,12 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **21 October:** (1) Done on cp6, not live: D27-351, NC (a restaurant bill given free, the GM's, owner's or
+> admin's approval with a reason, printed with no prices, no value anywhere; migration 233); it goes with the
+> next release. (2) For the owner: the owner's item 2 of 21 Oct was cut off - ask for it; NC's screen still
+> shows dish prices, and the "Complimentary" tile counts 100%-discount bills, not NC (their call); MRP for
+> the stores later, the GM's to set up.
+
 > **20 October:** (1) Done: the earlier-day restaurant bill reprint (team feedback item 7a) and D27-341 to
 > D27-348 are live (release 8); D27-349 (a wider order pane, + on a dish: items 1 and 2) is release 9, ready
 > (§ 2). (2) Item 5 (bill format) waits for the team's sample. (3) Open for the

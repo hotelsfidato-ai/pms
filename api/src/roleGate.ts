@@ -233,6 +233,11 @@ const KOT_PRINT = grant("payment", "create", "Printing the kitchen's KOTs", ["po
    The database asks the same three (app.voids_paid_pos_bills, 222);
    api/test/modules/pos/voidPaidBill.test.ts refuses a waiter. */
 const VOID_PAID_BILL = grant("reservation", "approve", "Voiding a paid restaurant bill");
+/* A restaurant bill given free, NC (the owner's D27-351): the owner, an
+   administrator or the GM - the same three, written out apart because it is
+   another answer of theirs. The database asks them too (app.gives_pos_no_charge,
+   233); api/test/modules/pos/noCharge.test.ts refuses a waiter. */
+const NO_CHARGE = grant("reservation", "approve", "Giving a restaurant bill free (NC)");
 
 /* No screen calls these two yet. A bill photographed for a purchase (§15) is
    purchasing's; where n8n copied a file is an integration's. */
@@ -440,6 +445,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/orders/:id/settle`]: TILL,
   [`POST ${H}/till/orders/:id/abandon`]: TILL,
   [`POST ${H}/till/orders/:id/void`]: VOID_PAID_BILL,  // D27-324
+  [`POST ${H}/till/orders/:id/no-charge`]: NO_CHARGE,  // D27-351
   [`POST ${H}/till/orders/:id/lines/:lineId/qty`]: TILL,
   /* Customise: the numbered add-ons on a dish not yet sent (D27-289). */
   [`POST ${H}/till/orders/:id/lines/:lineId/numbered-addons`]: TILL,

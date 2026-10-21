@@ -50,6 +50,30 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-21 · NC: a restaurant bill given free (D27-351)
+
+**Asked for:** the owner, 21 Oct: "a no charge tick in the GM view and owner and admin where it prints the bill and no prices ... and in bill needs to be mentioned NC ... also the GM needs to give the approval for this and give a reason". Their answers: the GM, owner or admin marks it on their own sign-in with a reason (their name is the approval); a whole restaurant bill on the Till and the Terminal; the paper lists the dishes and quantities, no prices, "NC · No charge", the reason and who approved it; no value anywhere - valuing it at MRP in the stores is a later piece the GM sets up.
+
+**Shipped**
+- Migration 233: `pos_orders.status` 'no_charge' with `nc_by`, `nc_at`, `nc_reason`; `app.gives_pos_no_charge` (owner, admin, GM, group admin); a guard trigger (an open bill only, never on a function's bill, NC for good, who and when the database's); `pos_bill_prints` heading 'nc'. Modelled on 222 (a void).
+- `POST /:code/till/orders/:id/no-charge` {reason} (roleGate NO_CHARGE) - `api/src/modules/pos/till.ts`; the order says `ncBy`, `ncAt`, `ncReason`; `noChargeBills` for Close restaurant day, the night audit's run and its report ("POS Bills No Charge (NC)"); NC bills in the earlier days' list and on the Kitchen screen; the bill printer heads it 'nc' (`kotSection.ts`).
+- The Till and the Terminal: **No charge (NC)** above Close unpaid, for the owner, an administrator or the GM; asks why; prints at once. The NC bill shows NC in place of a total, the chip says NC - `Till.tsx`, `Terminal.tsx`. The slip: Item and Qty only, "NC · No charge - reason", "Approved by ... at ..." - `BillSlip.tsx`. Close restaurant day's "No charge (NC)" card and the night audit's lines - `DayEnd.tsx`, `NightAudit.tsx`.
+- Manual A8.7 (the button, "Giving a bill free: No charge (NC)"), A8.8; pictures A8-15, A8-16, A8-26, A8-27 retaken, A8-37, A8-38, A8-39 new; book rebuilt. The local virtual printer prints the NC slip too (`.local`, not committed).
+
+**Found**
+- The bill printer's offline sentence lower-cased the heading ("The nc - no charge waits there"): NC keeps its capitals now (`printBill.tsx`).
+- A8-15's arrows 4 and 5 fell below the picture once the printers were online (the red lines gone): the run scrolls to the order's buttons now. A8-37a sent nothing when Send was pressed at once after the dishes: it waits now.
+
+**Proved**
+- `api/test/modules/pos/noCharge.test.ts` 5/5 (a waiter refused 403 - and with the route opened to the till, the database's guard still refused it and the bill stayed open; a reason needed; the GM gives it: who, when, why, table freed, KOT kept, no sale; prints 'nc', in the earlier days' list and Close restaurant day; a paid bill refused). `db/tests/modules/pos.sql` "pos nc" 10 assertions (1,759 in all). `src/modules/pos/noCharge.test.tsx` 4/4. Opened on the local demo as the GM: the Till and the Terminal gave NC, the slip printed with no prices on the virtual Bar printer, Close restaurant day listed it and left it out of Settled.
+- `bash scripts/gates.sh nc-bill`, full, on bf699982 with this work (2,150 s): web types, api types, strip (220 files), web tests 1,393 passed and 1 skipped (208 files), api tests 2,812 (217 files), database 1,759 assertions on 233 migrations, replay, pg16 - all exit 0.
+
+**Left open**
+- The screen still shows each dish's menu price on an NC bill (the paper shows none); the Close restaurant day "Complimentary" tile counts 100%-discounted bills, not NC ones. Both for the owner.
+- Not deployed: with the next release, at the owner's word.
+
+**Commits:** this commit
+
 ## 2026-10-20 · The restaurant screen: a wider order pane, and + on a dish (D27-349; the teams' feedback of 18 Oct, items 1 and 2)
 
 **Asked for:** the team: "Make this pane wider"; "We need + sign to add another portion of same food component / dish / beverage". The owner, 20 Oct, all as recommended: wider on big screens with names wrapping and Customise as an icon; + on a dish already with the kitchen adds one more with the same choices on a new KOT; on the Till, the Terminal and the waiter's phone pad. Item 5 (bill format) waits for the team's sample.

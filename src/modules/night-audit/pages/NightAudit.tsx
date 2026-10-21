@@ -298,7 +298,8 @@ export default function NightAuditPage() {
                     audit states the day rather than adding to it. A
                     second copy would double the takings. */}
                 {result.restaurant
-                  && (result.restaurant.orders > 0 || (result.restaurant.voided ?? []).length > 0) && (
+                  && (result.restaurant.orders > 0 || (result.restaurant.voided ?? []).length > 0
+                      || (result.restaurant.noCharge ?? []).length > 0) && (
                   <div className="pt-2 mt-2 border-t border-success-100">
                     <p className="text-2xs text-success-600">
                       Restaurant · {result.restaurant.orders} order
@@ -329,6 +330,13 @@ export default function NightAuditPage() {
                       <p key={v.orderNo} className="text-2xs text-success-600 mt-0.5">
                         Voided: {v.orderNo} ({money(v.amount)}, {v.method ?? "-"})
                         {" · "}{v.by ?? "-"} at {v.at} · {v.reason}
+                      </p>
+                    ))}
+                    {/* D27-351: bills given free, no value, not in the figures above. */}
+                    {(result.restaurant.noCharge ?? []).map((v) => (
+                      <p key={v.orderNo} className="text-2xs text-success-600 mt-0.5">
+                        NC: {v.orderNo}{v.table ? ` · ${v.table}` : ""}
+                        {" · "}approved by {v.by ?? "-"} at {v.at} · {v.reason}
                       </p>
                     ))}
                   </div>

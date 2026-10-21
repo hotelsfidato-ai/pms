@@ -4,13 +4,15 @@ import { useParams, Link } from "react-router";
 import {
   UtensilsCrossed, X, BedDouble, Banknote, CreditCard, Smartphone,
   ArrowLeft, Printer, Lock, Search, Minus, Plus, MessageSquare, Flame,
-  CalendarHeart, ChevronRight, SlidersHorizontal,
+  CalendarHeart, ChevronRight, SlidersHorizontal, Gift,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { dateLong, moneyPrecise } from "@/lib/format";
 import { useUi } from "@/lib/ui";
+import { can } from "@/lib/permissions";
+import { useRole } from "@/lib/session";
 import { toast, Button, StatusPill } from "@/components/ui";
-import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type MenuItem, type OrderLine, type LineAddon, type CashId } from "@/modules/pos/data/till";
+import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, giveNoCharge, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type MenuItem, type OrderLine, type LineAddon, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
@@ -349,6 +351,29 @@ export default function TerminalPage() {
         if (!res.ok) return void toast.error("Not closed", res.reason);
         setOrderId(null); setSettling(false);
         refresh();
+      },
+    });
+  };
+
+  /* NC, NO CHARGE (the owner's D27-351): the owner, an administrator or the
+     GM, as the server asks, with a reason; it prints at once. */
+  const mayNc = can(useRole(), "approve", "reservation");
+  const giveNc = () => {
+    if (!orderId) return;
+    setAsk({
+      title: "Give this bill no charge (NC)?",
+      body: "The bill prints the dishes with no prices, marked NC, with this reason and your "
+        + "name as the approval. It is no sale and carries no value, and it cannot be undone.",
+      field: { label: "Why is it no charge?", required: true },
+      confirm: "Give NC",
+      onConfirm: async (reason) => {
+        const res = await giveNoCharge(hotelId, orderId, reason);
+        if (!res.ok) return { refused: res.reason };
+        toast.success("The bill is NC");
+        setSettling(false);
+        refresh();
+        void bill.print(orderId);
+        return undefined;
       },
     });
   };
@@ -921,14 +946,16 @@ export default function TerminalPage() {
                 <div className="flex items-baseline justify-between">
                   <span className="text-base text-grey-600">Total</span>
                   <span className="text-xl font-semibold tabular text-ink-900">
-                    {moneyPrecise(order.gross)}
+                    {order.status === "no_charge" ? "NC" : moneyPrecise(order.gross)}
                   </span>
                 </div>
 
                 {order.status !== "open" ? (
                   <div className="space-y-2">
                     <p className="text-base text-grey-600">
-                      {order.status === "void"
+                      {order.status === "no_charge"
+                        ? `NC · No charge - ${order.ncReason ?? "-"}. Approved by ${order.ncBy ?? "-"}.`
+                        : order.status === "void"
                         ? `VOID - ${order.voidReason ?? "-"}.`
                         : order.status === "settled"
                         ? order.paymentMethod === "function"
@@ -936,7 +963,7 @@ export default function TerminalPage() {
                           : `Paid by ${order.paymentMethod}.`
                         : `Closed unpaid - ${order.abandonedReason}`}
                     </p>
-                    {(order.status === "settled" || order.status === "void") && (
+                    {(order.status === "settled" || order.status === "void" || order.status === "no_charge") && (
                       <button
                         type="button"
                         onClick={() => void bill.print(order.id)}
@@ -1060,6 +1087,16 @@ export default function TerminalPage() {
                         </button>
                       ))}
                     </div>
+                    {/* D27-351: the owner, an administrator or the GM only. */}
+                    {mayNc && (
+                      <button type="button" onClick={giveNc}
+                        disabled={busy || Boolean(order.eventId)
+                          || order.lines.filter((l) => !l.voided).length === 0}
+                        className={cn(OUTLINE, "w-full h-12 text-base font-medium inline-flex items-center justify-center gap-2 disabled:opacity-40")}>
+                        <Gift className="size-4" />
+                        No charge (NC)
+                      </button>
+                    )}
                     <button type="button" onClick={abandon}
                       className={cn(GHOST, "w-full h-12")}>
                       Close unpaid
