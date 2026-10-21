@@ -60,7 +60,7 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 - Found read-only on live: the server's `api/.env.save` files are already gone - nothing to delete.
 
 **Proved**
-- `src/test/manual.test.ts` 3/3 (green again: Bar stock is in A8); `build.mjs --check` up to date. The full gate run is the release copy's (release 11), on this commit.
+- `src/test/manual.test.ts` 3/3 (green again: Bar stock is in A8); `build.mjs --check` up to date. Full gates on this commit in release 11's clean copy (`bash scripts/gates.sh r11`, 2,864 s): web types, API types, strip, web tests (1,406), API tests (2,825), database (1,779 assertions), replay and Postgres 16 - all exit 0. `scripts/release.mjs` built the website there: `index-BdhmT0xm.js`.
 
 **Left open**
 - Release 11 (releases 10 and 11 together, migrations 233-235), for the owner to deploy.
