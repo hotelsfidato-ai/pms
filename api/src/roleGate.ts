@@ -610,6 +610,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/stores/items`]: own("stores/stockGrants.ts"),
   [`POST ${H}/stores/movements`]: own("stores/stockGrants.ts"),
   [`POST ${H}/stores/movements/:id/reverse`]: own("stores/stockGrants.ts"),
+  [`PUT ${H}/bar/pours`]: own("stores/stockGrants.ts: mayStock edit"),  // D27-354
   [`POST ${H}/stores/transfers`]: own("stores/stockGrants.ts"),
   [`POST ${H}/stores/import`]: own("stores/stockGrants.ts"),
   [`PATCH ${H}/stores/items/:id`]: own("stores/stockGrants.ts"),
@@ -890,6 +891,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/reports/yearly-statistics`]: REPORTS,
   [`GET ${H}/reports/lodging-tax`]: REPORTS,
   [`GET ${H}/reports/stock-on-hand`]: STORE_REPORTS,
+  [`GET ${H}/reports/bar-stock`]: STORE_REPORTS,  // D27-354
   [`GET ${H}/reports/stock-movements`]: STORE_REPORTS,
   [`GET ${H}/reports/stock-consumption`]: STORE_REPORTS,
   [`GET ${H}/reports/stock-wastage`]: STORE_REPORTS,
@@ -965,6 +967,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
 
   /* ── Store, equipment, purchasing, places ── */
   [`GET ${H}/stores`]: own("stores/stockGrants.ts: mayStock"),
+  [`GET ${H}/bar/pours`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/stores/items/:id/movements`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/stores/days`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/equipment`]: own("equipment/grants.ts"),

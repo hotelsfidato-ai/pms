@@ -19,6 +19,16 @@ const inrPrecise = new Intl.NumberFormat("en-IN", {
 });
 
 /** ₹1,20,000 — the default for tables, KPIs and totals. */
+/** "3 bottles + 420 ml" for what is poured, "12 cans" for what is not
+    (the bar's stock, D27-354): full ones, then the ml of the next. */
+export function bottlesAndMl(quantity: number, unit: string, sizeMl: number | null | undefined): string {
+  const plural = (n: number, u: string) => `${n} ${u}${n === 1 || u.endsWith("s") ? "" : "s"}`;
+  if (!sizeMl) return plural(Math.round(quantity * 1000) / 1000, unit);
+  const whole = Math.floor(quantity + 1e-9);
+  const ml = Math.round((quantity - whole) * sizeMl);
+  return ml > 0 ? `${plural(whole, unit)} + ${ml} ml` : plural(whole, unit);
+}
+
 export function money(value: number): string {
   return inr.format(value);
 }

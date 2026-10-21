@@ -1,13 +1,13 @@
 import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, GlassWater, Image as ImageIcon, Plus, Trash2 } from "lucide-react";
-import { money, dateShort } from "@/lib/format";
+import { money, dateShort, bottlesAndMl } from "@/lib/format";
 import {
   Card, CardBody, Button, Skeleton, EmptyState, ErrorState, Dialog, DialogContent,
   Field, fieldProps, Input, NativeSelect, toast,
 } from "@/components/ui";
 import {
-  barBills, barDrinks, recordBarBill, attachBarBillPhoto, barBillPhoto, bottlesAndMl,
+  barBills, barDrinks, recordBarBill, attachBarBillPhoto, barBillPhoto,
   type BarBill, type BarDrink, type NewBillLine,
 } from "@/modules/purchasing/data/barBills";
 

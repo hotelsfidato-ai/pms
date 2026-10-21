@@ -236,7 +236,7 @@ figure.shot.phone img { max-width: 72mm; }
   <div class="foot">
     The screens in this book are from the test hotel, 5 Elements Akkalkot. Every guest in it is made up.<br>
     Decision numbers such as D27-249 are the owner's decisions; the list is kept in <code style="background:none;color:inherit">docs/briefs/decisions-*.md</code>.<br>
-    348 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
+    351 pictures, 44 still to be taken. Built from the chapters in docs/manual/chapters.
   </div>
 </section>
 
@@ -4620,6 +4620,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Manager report</td><td>Revenue, payments, the ledgers, occupancy, ADR and RevPAR: the day, the month so far and the year so far.</td><td>Off</td></tr>
       <tr><td>Money owed</td><td>The guest ledger and the city ledger: what guests and companies owe at the end of the day.</td><td>Off</td></tr>
       <tr><td>Restaurant and stock</td><td>The restaurant's day, the closing stock in each store, and the day's wastage and breakage.</td><td>Off</td></tr>
+      <tr><td>Bar stock</td><td>The bar's day: each drink's opening, purchases, sales, count and closing, the dishes sold and the bar bills (A11.9).</td><td>Off</td></tr>
     </tbody>
   </table>
 
@@ -5792,6 +5793,7 @@ figure.shot.phone img { max-width: 72mm; }
     <li>When you type a count, the line shows the book and the difference, such as <span class="msg">“Book 4 kg · 1 fewer”</span>. Where it differs, type <span class="ui">Why, if known</span>.</li>
     <li>Tap <span class="ui">Save the count</span>.</li>
   </ol>
+  <p>A drink with a bottle size (the bar's, A9.11) has two boxes: the <b>full bottles</b>, and the <b>ml in the open one</b>. Five full and 400 ml of a 750 ml bottle is one figure; the book shows in the same words, such as “Book 5 bottles + 630 ml · 0 bottles + 230 ml fewer”. The Store's cards show a drink the same way: “Bar 5 + 630 ml”.</p>
 
   <figure class="shot" id="fig-A9-17">
     <img src="img/A9-17.png" alt="Count a store: Kitchen store, the rice counted 3 with Book 4 kg · 1 fewer and a reason, the other lines blank; Print the sheet, Save the count">
@@ -6039,9 +6041,44 @@ figure.shot.phone img { max-width: 72mm; }
     </ul>
   </div>
 
+  <h3>The bar's stock: Inventory</h3>
+  <p><span class="ui">Inventory</span>, in Store and equipment, has two tabs: <span class="ui">Bar</span> and <span class="ui">Restaurant</span> (the restaurant's comes next). On <span class="ui">Bar</span>, each bar dish and each of its sizes says what it takes from the Bar store: so many ml of a bottle (Imperial Blue 60 ml takes 60 ml of “Imperial Blue 750 ml”), or whole ones (a NIP, one 180 ml bottle; a beer, one bottle). Once that is saved, <b>every KOT sent takes it off the bar's stock</b>, from whichever screen sent it: the Till, the Terminal, a waiter's phone, or a guest's order accepted.</p>
+  <ol class="steps">
+    <li>Open <span class="ui">Inventory</span>. Every dish in a section taxed as bar or alcohol is listed, with each size.</li>
+    <li>Where the names match, a suggestion is ready: tap <span class="ui">Use the … suggestions</span> to fill them all, and check them.</li>
+    <li>For the rest, pick the bottle each is poured from, type how much, and choose <span class="ui">ml of it</span> or <span class="ui">whole</span>.</li>
+    <li>Tap <span class="ui">Save</span>. A dish left on <span class="ui">Nothing set</span> takes nothing, and the Bar stock report lists it.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-42">
+    <img src="img/A9-42.png" alt="Inventory, the Bar tab: each bar dish and size with the bottle it is poured from, how much, ml of it or whole, Save 4, and Count the bar">
+    <figcaption><b>Figure A9-42.</b> What each drink takes from the bar.</figcaption>
+    <ol class="callouts"><li>Bar, and Restaurant to come</li><li>The bottle it is poured from, and what the bar holds</li><li>ml of it, or whole ones</li><li>Save</li><li>Count the bar</li></ol>
+  </figure>
+
+  <h3>Every day: count the bar</h3>
+  <p>Before the night audit, the bar keeper or the Inventory Manager counts the bar: <span class="ui">Inventory</span>, <span class="ui">Count the bar</span> opens the count sheet on the Bar store (A9.9). Each drink takes the full bottles and the ml of the open one; a difference is saved with its reason.</p>
+
+  <figure class="shot" id="fig-A9-43">
+    <img src="img/A9-43.png" alt="Counting the Bar store: A9 Imperial Blue 750 ml with 5 full bottles and 400 ml in the open one, and the book line">
+    <figcaption><b>Figure A9-43.</b> Counting the bar: full bottles, and the open one's ml.</figcaption>
+    <ol class="callouts"><li>Full bottles</li><li>The ml in the open one</li><li>The book, and the difference</li></ol>
+  </figure>
+
+  <p>The day's figures are the <span class="ui">Bar stock</span> report (A11.9): each drink's opening, purchases, sales, count and closing, the dishes sold, and the day's bar bills. It can be emailed after each night audit (A17.12).</p>
+
+  <div class="box watch">
+    <h4>Watch out</h4>
+    <ul>
+      <li>A drink is taken off when its KOT is <b>sent</b>, not when the bill is paid. Struck after the bar had it, it stays off, as poured, and the report lists it.</li>
+      <li>A drink is taken off once: a reprinted KOT takes nothing more.</li>
+      <li>A dish with nothing set takes nothing: the report's <span class="ui">Sold, but nothing set up for the dish</span> names it.</li>
+    </ul>
+  </div>
+
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The GM approves every purchase, at any amount: <span class="d">D18-4</span>, <span class="d">D17-35</span>. The order is a PDF sent by hand: <span class="d">D18-3</span>. One Approvals inbox, with the screens keeping their own buttons: <span class="d">D18-19</span>. The bar's bills, recorded directly with a photo, into the Bar store, by the owner, an Admin, the GM or the Inventory Manager: <span class="d">D27-354</span>. GST and use-by at delivery: <span class="d">D27-238</span>.</p>
+    <p>The GM approves every purchase, at any amount: <span class="d">D18-4</span>, <span class="d">D17-35</span>. The order is a PDF sent by hand: <span class="d">D18-3</span>. One Approvals inbox, with the screens keeping their own buttons: <span class="d">D18-19</span>. The bar's bills, recorded directly with a photo, into the Bar store, by the owner, an Admin, the GM or the Inventory Manager; the bar in bottles and ml, the stock off when the KOT is sent, a daily count, the Bar stock report and its email: <span class="d">D27-354</span>. GST and use-by at delivery: <span class="d">D27-238</span>.</p>
   </div>
 
   <!-- A9.12 -->
@@ -6821,7 +6858,7 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>The day</td><td>Manager report, Night audit report, Monthly occupancy, Monthly statistics, Yearly statistics (A11.3 to A11.5)</td><td>Owner, Admin, General Manager, Hotel Manager, Revenue Manager, Reception, Accountant, Viewer</td></tr>
       <tr><td>Money owed</td><td>City ledger, No show, Guest ledger, Cashier shift (A11.6)</td><td>The same, except that the Revenue Manager does not open City ledger, Guest ledger or Cashier shift</td></tr>
       <tr><td>Statutory</td><td>Lodging tax, GST sales register, Form III register (A11.7)</td><td>The same as The day; the Form III register only for the Owner, Admin, General Manager, Hotel Manager and Reception</td></tr>
-      <tr><td>Store and equipment</td><td>Closing stock, Stock movement by day, Consumption, Wastage and breakage, Count differences, Dead stock, Days of cover, Supplier spend, Equipment report (A11.9)</td><td>Owner, Admin, General Manager, Hotel Manager, Inventory Manager, Accountant, Viewer</td></tr>
+      <tr><td>Store and equipment</td><td>Closing stock, Stock movement by day, Consumption, Wastage and breakage, Count differences, Dead stock, Days of cover, Supplier spend, Equipment report, Bar stock (A11.9)</td><td>Owner, Admin, General Manager, Hotel Manager, Inventory Manager, Accountant, Viewer</td></tr>
     </tbody>
   </table>
   <p>One more screen sits in the Reports part of the menu: <span class="ui">Accounting export</span>, the month as a file for the accountant (A11.8). The Kitchen Manager, Chef, Waiter, Bar, Housekeeping and the Inventory Manager do not open All reports; the Inventory Manager reaches the Store's reports from the Store (A11.9).</p>
@@ -7272,26 +7309,26 @@ figure.shot.phone img { max-width: 72mm; }
 
   <!-- A11.9 -->
   <h2 id="a11-9"><span class="n">A11.9</span>The Store and equipment reports</h2>
-  <p>Nine reports on what the stores hold and use, and where the equipment is. Costs are as recorded: delivery prices before GST, each item at its running average at the time.</p>
+  <p>Ten reports on what the stores hold and use, and where the equipment is. Costs are as recorded: delivery prices before GST, each item at its running average at the time.</p>
 
   <h3>To open one</h3>
   <ul>
     <li><b>From the Store</b> (A9): tap <span class="ui">Reports</span> at the top of the Store, and choose the report.</li>
-    <li><b>All nine on one page</b>: Find a screen, <span class="ui">Store reports</span> (<code>/reports/store</code>); or the Store and equipment group in All reports.</li>
+    <li><b>All ten on one page</b>: Find a screen, <span class="ui">Store reports</span> (<code>/reports/store</code>); or the Store and equipment group in All reports.</li>
   </ul>
 
   <figure class="shot" id="fig-A11-19">
-    <img src="img/A11-19.png" alt="The Store with its Reports menu open, listing the nine reports from Closing stock to Equipment report">
+    <img src="img/A11-19.png" alt="The Store with its Reports menu open, listing the ten reports from Closing stock to Bar stock">
     <figcaption><b>Figure A11-19.</b> The Store's Reports menu, signed in as the Inventory Manager.</figcaption>
     <ol class="callouts">
       <li>Reports, on the Store</li>
-      <li>Closing stock, the first of the nine</li>
+      <li>Closing stock, the first of the ten</li>
     </ol>
   </figure>
 
   <figure class="shot" id="fig-A11-20">
-    <img src="img/A11-20.png" alt="Store reports: nine report cards, each with a star and Open">
-    <figcaption><b>Figure A11-20.</b> Store reports: the nine on one page.</figcaption>
+    <img src="img/A11-20.png" alt="Store reports: ten report cards, each with a star and Open">
+    <figcaption><b>Figure A11-20.</b> Store reports: the ten on one page.</figcaption>
     <ol class="callouts">
       <li>Store reports</li>
       <li>Open the report</li>
@@ -7310,8 +7347,15 @@ figure.shot.phone img { max-width: 72mm; }
       <tr><td>Days of cover</td><td>How long each item lasts at the last 7 days' use.</td></tr>
       <tr><td>Supplier spend</td><td>Deliveries per supplier, and each item's first and last price.</td></tr>
       <tr><td>Equipment report</td><td>What is out of the store, under repair, and when warranties and AMCs end.</td></tr>
+      <tr><td>Bar stock</td><td>The bar's day, in full bottles and ml: each drink's opening, purchases, sales (what each KOT sent took), other moves, count corrections, closing and count; then each dish sold and what it took, dishes sold with nothing set up, drinks struck after the bar had them, and the day's bar bills (A9.11).</td></tr>
     </tbody>
   </table>
+
+  <figure class="shot" id="fig-A11-23">
+    <img src="img/A11-23.png" alt="Bar stock for 11 Oct 2026: each drink's opening, purchased, sold, other moves, count corrections, closing and counted, in full bottles and ml; then Sold, by dish, and Sold, but nothing set up for the dish">
+    <figcaption><b>Figure A11-23.</b> Bar stock.</figcaption>
+    <ol class="callouts"><li>A drink: opened, bought, sold, closing</li><li>Each dish sold, and what it took</li><li>Sold with nothing set up: it took nothing</li></ol>
+  </figure>
 
   <figure class="shot" id="fig-A11-21">
     <img src="img/A11-21.png" alt="Closing stock as on 09/10/2026: Main store with its items and Total, Kitchen store, and All stores">
@@ -10211,7 +10255,7 @@ figure.shot.phone img { max-width: 72mm; }
       <li>Send to: one email address a line</li>
     </ol>
   </figure>
-  <p>Right after the night audit closes the day, each report switched on goes to each address: the key figures in the email, the whole report as a PDF. There are four: <b>Night audit report</b> (on to start), <b>Manager report</b>, <b>Money owed</b> and <b>Restaurant and stock</b> (off to start). Type the addresses, set the switches, and tap <span class="ui">Save</span> at the foot. <b>Nobody gets anything until an address is typed.</b></p>
+  <p>Right after the night audit closes the day, each report switched on goes to each address: the key figures in the email, the whole report as a PDF. There are five: <b>Night audit report</b> (on to start), <b>Manager report</b>, <b>Money owed</b>, <b>Restaurant and stock</b> and <b>Bar stock</b> (off to start; <span class="d">D27-354</span>). Type the addresses, set the switches, and tap <span class="ui">Save</span> at the foot. <b>Nobody gets anything until an address is typed.</b></p>
 
   <div class="box why">
     <h4>Why it works this way</h4>

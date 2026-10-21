@@ -257,7 +257,7 @@ export const SHOTS = [
     ],
   },
   {
-    id: "A11-20", title: "Store reports: the nine on one page", as: "Inventory Manager",
+    id: "A11-20", title: "Store reports: the ten on one page", as: "Inventory Manager",
     path: "/reports/store", steps: [{ waitFor: "text:Equipment report" }],
     marks: [
       { n: 1, at: "css:main h1", side: "right" },
@@ -282,6 +282,16 @@ export const SHOTS = [
       { n: 2, at: "text:Nobody failed to arrive on this day.", side: "right" },
       { n: 3, at: "text:Printed", side: "right" },
       { n: 4, at: "css:main footer p", nth: 1, side: "left" },
+    ],
+  },
+  /* The bar's day (D27-354): opened, bought, sold, closing, by dish. */
+  {
+    id: "A11-23", title: "Bar stock", as: "General Manager",
+    path: "/reports/bar-stock", steps: [LOADED("Sold, by dish")],
+    marks: [
+      { n: 1, at: "text:A9 Imperial Blue 750 ml", nth: 0, side: "left" },
+      { n: 2, at: "text:Sold, by dish", side: "left" },
+      { n: 3, at: "text:Sold, but nothing set up for the dish", side: "left" },
     ],
   },
 ];

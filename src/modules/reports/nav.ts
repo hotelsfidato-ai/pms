@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, BarChart3, Building2, CalendarCheck, ScrollText, ShieldCheck,
   BookOpen, Banknote, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck, Hourglass,
-  Gauge, Truck, Refrigerator, Warehouse, Hotel,
+  Gauge, Truck, Refrigerator, Warehouse, Hotel, Wine,
 } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 import { can, type Role } from "@/lib/permissions";
@@ -110,9 +110,13 @@ export const nav: ServiceNavEntry[] = [
   { section: "reports", order: 230,
     label: "Equipment report", to: "/reports/equipment", icon: Refrigerator, resource: "stock",
     canSee: mayReadStockReports, keywords: ["warranty", "amc", "under repair", "out of store"], listed: false },
+  /* The bar's day (D27-354). */
+  { section: "reports", order: 240,
+    label: "Bar stock", to: "/reports/bar-stock", icon: Wine, resource: "stock",
+    canSee: mayReadStockReports, keywords: ["bar", "liquor", "drinks", "pegs", "inventory"], listed: false },
 ];
 
-/** The nine Store and equipment reports, by the menu's own words (one name
+/** The Store and equipment reports (ten with Bar stock, D27-354), by the menu's own words (one name
     everywhere, HANDOVER § 6): the Store's Reports menu lists these. */
 export const STOCK_REPORT_LINKS: { path: string; label: string }[] = nav
   .filter((e) => e.canSee === mayReadStockReports && e.to !== STOCK_REPORTS_PATH)

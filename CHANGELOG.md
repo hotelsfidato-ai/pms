@@ -50,6 +50,31 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-21 · Bar stock: off the bar when the KOT is sent, the daily count, the Bar stock report (D27-354, part 1)
+
+**Asked for:** the owner, 21 Oct: "in the inventory section, there's two different things, bar and restaurant ... Mainly keep the bar ... daily checks ... a new report, bar inventory report, which needs to be sent with the daily report ... when a sale is occurred at the bar, let's say the KOT is punched, that KOT, that sale needs to reduce the inventory ... purchasing also needs to be shown there". Their answers (D27-354): bottles and ml; off at the KOT; a daily count by the bar keeper or the Inventory Manager before the night audit; cigarettes and soft drinks counted too; our report first.
+
+**Shipped**
+- Migration 235: `bar_pours` - what a bar dish, or one of its sizes, takes from the bar's store (ml of a bottle, or whole ones; one row per size; setup for a test hotel); `app.pos_line_takes_from_bar`, a trigger on `pos_order_lines`: a line going from waiting to sent, not struck, takes it off the bar's store as an ISSUE to its outlet marked `stock_movements.pos_line_id` (60 ml of 750 ml = 0.08) - one place for the Till, the Terminal, a waiter's phone and a guest's order. An issue, not a new kind, because 180 rewrites the list of kinds on every replay (MEMORY 284). `daily_report_emails` may hold "bar-stock".
+- `api/src/modules/stores/barPours.ts`: `GET /bar/pours` (every bar dish and size, what it takes, and a proposal from the names: "<dish> <N> ml" whole, a peg as ml of the dish's biggest bottle, a NIP as one "<dish> 180 ml"), `PUT /bar/pours` (Store `edit`).
+- The **Bar stock** report (`reports/builders/barStock.ts`; key "bar-stock", one of the store reports, `/reports/bar-stock`): per drink opening, purchased, sold, other moves, count corrections, closing and counted, in full bottles + ml; sold by dish; sold with nothing set up; struck after the bar had them; the day's bar bills. In the daily report emails, off to start, with four key figures.
+- **Inventory** (Store and equipment; the Inventory Manager's menu too): Bar and Restaurant (Restaurant "being built next"); Bar - what each drink takes, "Use the … suggestions", Save; Bar stock report, Count the bar, Bar bills - `pages/Inventory.tsx`. The Store opens its count from a link (`?count=1`, `?store=`); a drink is counted in full bottles and the open one's ml, and its cards read "Bar 5 + 630 ml" - `pages/Stores.tsx`. The bottles-and-ml words moved to `src/lib/format.ts`.
+- Manual A9.9, A9.11 ("The bar's stock: Inventory", "Every day: count the bar"), A11.9, A7 and A17.12 (the fifth daily email); pictures A9-42, A9-43, A11-23 new, A11-19 and A11-20 retaken; book rebuilt. A17-41 kept: the new row is below its fold, and the local demo's daily-email addresses are a test's, not the book's.
+
+**Found**
+- The line link was first a uuid; order lines are numbered (bigint) - every send failed with "Something went wrong" until the column was bigint. Caught by the first test run, before any commit.
+- A picture step's Save clicked the sentence "Saved, every KOT ..." and saved nothing; it presses the button now.
+
+**Proved**
+- `api/test/modules/stores/barStock.test.ts` 4/4 (the proposals; saved by the GM, refused to a waiter; a waiter sends the round: two 60 ml pegs take 0.16 of a 750 ml bottle, a NIP one 180 ml, three beers three, the 30 ml with nothing set nothing, nothing twice; struck after, still off; the report's cells "0 + 120 ml", "5 + 630 ml" and its other sections) - with the trigger switched off, three failed. `db/tests/modules/stores.sql` "bar stock" 9 assertions (1,774 in all). `src/modules/stores/barStock.test.tsx` 3/3 (the suggestions used and saved; a reader cannot change them; 5 bottles and 630 ml match a book of 5.84, 600 ml is "0 bottles + 30 ml fewer" and saves 5.8). The store, purchasing, reports, navigation and daily-email screen tests pass. On the local demo: a round sent took 6 to 5.84 and 24 to 21.
+- `bash scripts/gates.sh bar-stock`, full, on 8316f939 with this work: web types, api types, strip (223 files), web tests 1,403 passed and 1 skipped, database 1,774 assertions on 235 migrations, replay, pg16 - exit 0; api tests 2,821 passed and ONE failed: `messagesAndReports.test.ts` still listed four daily reports. Its expectation now names Bar stock as the fifth; that file re-run 16/16. Nothing else changed after the run.
+
+**Left open**
+- The Restaurant tab of Inventory: next, when the owner says.
+- Not deployed: release 11 (bar bills and bar stock, migrations 234 and 235), at the owner's word. At Amrapali, the bar is then set up once: the drinks in the Bar store (a bar bill or an import), what each dish takes, the first count.
+
+**Commits:** this commit
+
 ## 2026-10-21 · Bar bills, recorded with their photo (D27-354, part 2 of the owner's plan)
 
 **Asked for:** the owner, 21 Oct: purchasing with Restaurant and Bar; "in the bar, whatever purchasing is done needs to be recorded ... all the drinks ... in the inventory needs to be there in the purchasing ... an option to add other drinks ... an option to attach a photo". Their answers (D27-354): recorded directly, no approval; by the Inventory Manager, the GM, the owner or an administrator; the drinks in bottles and ml.

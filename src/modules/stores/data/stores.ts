@@ -99,6 +99,8 @@ export interface StockItem {
   depositHeld: number | null;
   /** On deposit, less full and empty in the stores. Null with no deposit. */
   inUse: number | null;
+  /** A bottle's size in ml (D27-354): counted as full bottles and ml. */
+  sizeMl?: number | null;
   /** Null until something has been received. A dash, never a zero. */
   unitCost: number | null;
   value: number | null;

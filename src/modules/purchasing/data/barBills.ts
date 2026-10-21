@@ -93,11 +93,3 @@ export async function barBillPhoto(hotelId: string, attachmentId: string): Promi
   }
 }
 
-/** "3 bottles + 420 ml" for what is poured; "12 cans" for what is not. */
-export function bottlesAndMl(quantity: number, unit: string, sizeMl: number | null): string {
-  const plural = (n: number, u: string) => `${n} ${u}${n === 1 || u.endsWith("s") ? "" : "s"}`;
-  if (!sizeMl) return plural(Math.round(quantity * 1000) / 1000, unit);
-  const whole = Math.floor(quantity + 1e-9);
-  const ml = Math.round((quantity - whole) * sizeMl);
-  return ml > 0 ? `${plural(whole, unit)} + ${ml} ml` : plural(whole, unit);
-}

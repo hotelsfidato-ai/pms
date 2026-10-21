@@ -12,6 +12,7 @@ import {
   stockDead, stockCover, supplierSpend,
 } from "./builders/stock.ts";
 import { equipmentReport } from "./builders/equipment.ts";
+import { barStockReport } from "./builders/barStock.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    buildReport — the one door to every report's figures
@@ -50,6 +51,8 @@ const BUILDERS: Partial<Record<ReportKey, Builder>> = {
   "stock-cover": (c, h, p) => stockCover(c, h, p.asOn),
   "supplier-spend": (c, h, p) => supplierSpend(c, h, from(p), p.asOn),
   equipment: (c, h, p) => equipmentReport(c, h, p.asOn),
+  /* The bar's day: opened, bought, sold, counted (D27-354). */
+  "bar-stock": (c, h, p) => barStockReport(c, h, p.asOn),
 };
 
 /** The reports built so far, each with its route (documents.ts). */

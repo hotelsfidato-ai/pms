@@ -14,6 +14,7 @@ import ReportsIndexPage, { StoreReportsPage } from "@/modules/reports/pages/Inde
 import {
   StockOnHandPage, StockMovementsPage, StockConsumptionPage, StockWastagePage,
   StockCountDifferencesPage, StockDeadPage, StockCoverPage, SupplierSpendPage, EquipmentReportPage,
+  BarStockPage,
 } from "@/modules/reports/pages/Store";
 import {
   GuestLedgerPage, CashierShiftPage, GstSalesPage, CFormPage,
@@ -55,6 +56,7 @@ export const routes = (
     <Route path="/reports/stock-cover" element={<RequireAccess path="/reports/stock-cover" resource="stock"><StockCoverPage /></RequireAccess>} />
     <Route path="/reports/supplier-spend" element={<RequireAccess path="/reports/supplier-spend" resource="stock"><SupplierSpendPage /></RequireAccess>} />
     <Route path="/reports/equipment" element={<RequireAccess path="/reports/equipment" resource="stock"><EquipmentReportPage /></RequireAccess>} />
+    <Route path="/reports/bar-stock" element={<RequireAccess path="/reports/bar-stock" resource="stock"><BarStockPage /></RequireAccess>} />
     <Route path="/reports" element={<RequireAccess path="/reports" resource="report"><ReportsIndexPage /></RequireAccess>} />
   </>
 );

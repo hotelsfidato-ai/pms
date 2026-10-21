@@ -436,3 +436,71 @@ begin
   perform test.ok('stores average', 'and an undone row has no value of its own',
     not exists (select 1 from app.stock_movement_costs(sugar) where movement_id = late));
 end $$;
+
+
+-- =============================================================================
+-- BAR STOCK (the owner's D27-354, 21 October; migration 235)
+-- =============================================================================
+-- What a bar dish takes is ml of a bottle or whole ones, one row per size. A
+-- line SENT takes it off the bar's store as an issue marked with the line; a
+-- struck one, a line still waiting and a dish with nothing set take nothing;
+-- nothing is taken twice. The Bar stock report may be emailed.
+-- =============================================================================
+do $$
+declare
+  h uuid; v_staff uuid; v_out uuid; v_cat uuid; v_dish uuid; v_peg uuid; v_bottle uuid;
+  v_order uuid; v_line bigint; v_struck bigint; v_bar uuid; bd date; n numeric;
+begin
+  h := app.provision_property_unchecked('PBS', 'Bar Stock Test', 'Nowhere');
+  select id into v_staff from staff where email = 'owner@fidato.in';
+  select id into v_bar from locations where hotel_id = h and is_bar_store;
+  bd := app.business_date(h);
+  insert into pos_outlets (hotel_id, code, name, category, staff_id)
+  values (h, 'BSB', 'Bar Stock Bar', 'beverage', v_staff) returning id into v_out;
+  insert into pos_menu_categories (hotel_id, name, tax_kind) values (h, 'Whisky', 'bar') returning id into v_cat;
+  insert into pos_menu_items (hotel_id, category_id, name, price) values (h, v_cat, 'Blue', 300) returning id into v_dish;
+  insert into pos_item_variations (hotel_id, item_id, label, price) values (h, v_dish, '60 ml', 200) returning id into v_peg;
+  insert into stock_items (hotel_id, name, unit, category, size_ml)
+  values (h, 'Blue 750 ml', 'bottle', 'Bar', 750) returning id into v_bottle;
+  insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, moved_by)
+  values (h, v_bottle, v_bar, bd, 'receipt', 6, v_staff);
+
+  perform test.raises('bar stock', 'a dish takes ml or whole ones, not both',
+    format($q$insert into bar_pours (hotel_id, item_id, variation_id, stock_item_id, ml, units)
+              values (%L, %L, %L, %L, 60, 1)$q$, h, v_dish, v_peg, v_bottle), '23514');
+  insert into bar_pours (hotel_id, item_id, variation_id, stock_item_id, ml) values (h, v_dish, v_peg, v_bottle, 60);
+  perform test.raises('bar stock', 'one row per size',
+    format($q$insert into bar_pours (hotel_id, item_id, variation_id, stock_item_id, ml)
+              values (%L, %L, %L, %L, 30)$q$, h, v_dish, v_peg, v_bottle), '23505');
+
+  insert into pos_orders (hotel_id, outlet_id, order_no, business_date, opened_by)
+  values (h, v_out, app.pos_next_order_no(h, bd), bd, v_staff) returning id into v_order;
+  insert into pos_order_lines (order_id, hotel_id, item_id, variation_id, name, qty, unit_price, tax_rate, added_by)
+  values (v_order, h, v_dish, v_peg, 'Blue (60 ml)', 2, 200, 18, v_staff) returning id into v_line;
+  perform test.ok('bar stock', 'a line still waiting takes nothing',
+    app.stock_on_hand(v_bottle, v_bar) = 6, app.stock_on_hand(v_bottle, v_bar)::text);
+
+  update pos_order_lines set kot_status = 'sent', kot_sent_at = now(), kot_no = 1 where id = v_line;
+  n := app.stock_on_hand(v_bottle, v_bar);
+  perform test.ok('bar stock', 'sent, two 60 ml pegs take 0.16 of a 750 ml bottle', n = 5.84, n::text);
+  perform test.ok('bar stock', 'as an issue to the outlet, marked with the line',
+    exists (select 1 from stock_movements where pos_line_id = v_line and kind = 'issue'
+             and to_outlet = v_out and quantity = -0.16), 'not found');
+
+  update pos_order_lines set kot_status = 'ready' where id = v_line;
+  perform test.ok('bar stock', 'nothing is taken twice as it moves along',
+    app.stock_on_hand(v_bottle, v_bar) = 5.84, app.stock_on_hand(v_bottle, v_bar)::text);
+
+  insert into pos_order_lines (order_id, hotel_id, item_id, variation_id, name, qty, unit_price, tax_rate, added_by,
+                               kot_status, kot_sent_at, kot_no, voided, voided_by, voided_at, void_reason, was_sent_when_voided)
+  values (v_order, h, v_dish, v_peg, 'Blue (60 ml)', 1, 200, 18, v_staff, 'sent', now(), 1, true, v_staff, now(), 'x', true)
+  returning id into v_struck;
+  perform test.ok('bar stock', 'a struck line written as sent takes nothing more',
+    app.stock_on_hand(v_bottle, v_bar) = 5.84, app.stock_on_hand(v_bottle, v_bar)::text);
+
+  insert into daily_report_emails (hotel_id, report, is_on) values (h, 'bar-stock', false);
+  perform test.ok('bar stock', 'the Bar stock report may be emailed',
+    exists (select 1 from daily_report_emails where hotel_id = h and report = 'bar-stock'), 'not saved');
+  perform test.ok('bar stock', 'a test hotel copies what each dish takes as setup',
+    exists (select 1 from app.test_hotel_classes() c where c.table_name = 'bar_pours' and c.class = 'setup'));
+end $$;

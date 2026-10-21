@@ -3,6 +3,7 @@ import { PropertyScope } from "@/components/app/PropertyScope";
 import { RequireAccess } from "@/components/app/RequireAccess";
 import StoresPage from "@/modules/stores/pages/Stores";
 import StoreDaysPage from "@/modules/stores/pages/StoreDays";
+import InventoryPage from "@/modules/stores/pages/Inventory";
 
 /* The store's screen address. Mounted by App.tsx inside the signed-in
    shell. */
@@ -26,6 +27,15 @@ export const routes = (
       element={
         <RequireAccess path="/h/:code/stores" resource="stock">
           <PropertyScope /><StoreDaysPage />
+        </RequireAccess>
+      }
+    />
+    {/* Inventory: the bar's stock, the restaurant's to come (D27-354). */}
+    <Route
+      path="/h/:code/inventory"
+      element={
+        <RequireAccess path="/h/:code/inventory" resource="stock">
+          <PropertyScope /><InventoryPage />
         </RequireAccess>
       }
     />

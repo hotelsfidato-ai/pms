@@ -1,4 +1,4 @@
-import { Package } from "lucide-react";
+import { Package, Wine } from "lucide-react";
 import type { ServiceNavEntry } from "@/components/app/navigation";
 
 /* The store — what the property keeps on its shelves. Assembled by
@@ -13,4 +13,9 @@ export const nav: ServiceNavEntry[] = [
     workingMenus: ["housekeeping", "stores", "kitchen_manager"],
     label: "Store", to: "/h/:code/stores", icon: Package, resource: "stock",
     keywords: ["stock", "inventory", "stores"], matchPrefix: true },
+  /* Inventory: the bar's stock, the restaurant's to come (the owner's D27-354). */
+  { section: "store-and-equipment", order: 12,
+    workingMenus: ["stores"],
+    label: "Inventory", to: "/h/:code/inventory", icon: Wine, resource: "stock",
+    keywords: ["bar", "liquor", "pegs", "drinks", "bar stock"], matchPrefix: true },
 ];

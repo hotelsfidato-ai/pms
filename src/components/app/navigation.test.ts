@@ -225,7 +225,7 @@ describe("each person's menu", () => {
     expect(menu("housekeeping")).toEqual(
       ["Rooms", "Housekeeping", "Work orders", "Guest requests", "Lost property", "Store", "Equipment", "Purchasing", "Dockets",
        "Notifications"]);
-    expect(menu("stores")).toEqual(["Store", "Equipment", "Purchasing", "Notifications"]);
+    expect(menu("stores")).toEqual(["Store", "Inventory", "Equipment", "Purchasing", "Notifications"]);
     for (const role of ["housekeeping", "stores", "chef", "kitchen_manager", "pos"] as Role[]) {
       expect(menu(role)).not.toContain("Dashboard");
     }

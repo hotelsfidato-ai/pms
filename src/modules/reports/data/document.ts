@@ -62,7 +62,8 @@ export type ReportKey =
   | "lodging-tax"
   /* The Store and the equipment register (phase 3A, D27-238, D27-240). */
   | "stock-on-hand" | "stock-movements" | "stock-consumption" | "stock-wastage"
-  | "stock-count-differences" | "stock-dead" | "stock-cover" | "supplier-spend" | "equipment";
+  | "stock-count-differences" | "stock-dead" | "stock-cover" | "supplier-spend" | "equipment"
+  | "bar-stock";
 
 export interface ReportDoc {
   /* ⚠ Kept identical to the server's copy, as the note at the top of both

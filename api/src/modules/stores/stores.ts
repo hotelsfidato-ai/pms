@@ -368,7 +368,7 @@ stores.get("/:code/stores", async (c) => {
       on_deposit: number | null; per_cylinder: string | null;
       on_hand: string; unit_cost: string | null;
       last_movement: string | null; movements: string;
-      crockery: boolean; held_in: string[];
+      crockery: boolean; held_in: string[]; size_ml: number | null;
     }>(
       /* On hand and cost come from the FUNCTIONS, not from columns. That
          is the whole design: one definition, and it cannot disagree with
@@ -384,7 +384,7 @@ stores.get("/:code/stores", async (c) => {
                  from stock_movements m where m.item_id = i.id) as last_movement,
               (select count(*)::text
                  from stock_movements m where m.item_id = i.id) as movements,
-              i.crockery,
+              i.crockery, i.size_ml,
               /* Every place it ever came into, and not undone: "Run out" is
                  a place that had some and holds none (D27-242 Q3). */
               array(select distinct m.location_id::text from stock_movements m
@@ -560,6 +560,8 @@ stores.get("/:code/stores", async (c) => {
              moved today, by kind, as the places it moved in; the business date
              each place was last counted; what is on order, by store. */
           crockery: r.crockery,
+          /* A bottle's size, so the count takes full bottles and ml (D27-354). */
+          sizeMl: r.size_ml,
           heldIn: r.held_in,
           today: todayByItem.get(r.id) ?? {},
           lastCounted: countedByItem.get(r.id) ?? {},

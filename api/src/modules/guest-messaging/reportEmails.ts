@@ -38,6 +38,8 @@ export const DAILY_REPORTS = [
     contains: "The guest ledger and the city ledger: what guests and companies owe at the end of the day." },
   { key: "restaurant-stock", title: "Restaurant and stock", on: false,
     contains: "The restaurant's day, the closing stock in each store, and the day's wastage and breakage." },
+  { key: "bar-stock", title: "Bar stock", on: false,
+    contains: "The bar's day: each drink's opening, purchases, sales, count and closing, the dishes sold and the bar bills (D27-354)." },
 ] as const;
 
 export type DailyReport = (typeof DAILY_REPORTS)[number]["key"];
@@ -57,7 +59,9 @@ const todayOnly = (s: ReportSection): ReportSection =>
 export async function dailyReport(
   client: Client, hotelId: string, report: DailyReport, asOn: string,
 ): Promise<ReportDoc> {
-  if (report === "night-audit" || report === "manager") return buildReport(client, hotelId, report, { asOn });
+  if (report === "night-audit" || report === "manager" || report === "bar-stock") {
+    return buildReport(client, hotelId, report, { asOn });
+  }
   const facts: ReportDoc["facts"] = [{ label: "As On Date", value: asOn, kind: "date" }];
   if (report === "money-owed") {
     const manager = await buildReport(client, hotelId, "manager", { asOn });
@@ -142,6 +146,12 @@ const FIGURES: Record<DailyReport, (doc: ReportDoc) => Figure[]> = {
     { label: "Closing stock value", value: cell(d, "all", "value") },
     { label: "Wastage", value: cell(d, "wastage", "value") },
     { label: "Breakage", value: cell(d, "breakage", "value") },
+  ],
+  "bar-stock": (d) => [
+    { label: "Drinks on the bar's stock", value: counted(d, "bar-stock") },
+    { label: "Dishes sold", value: counted(d, "bar-sold") },
+    { label: "Sold with nothing set up", value: counted(d, "bar-not-set") },
+    { label: "Bar bills", value: cell(d, "bar-bills", "total") },
   ],
 };
 

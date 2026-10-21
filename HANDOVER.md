@@ -759,6 +759,11 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **21 October, evening:** on cp6, not live - bar bills (D27-354 part 2, migration 234) and bar stock (part 1,
+> migration 235: off the bar when the KOT is sent, Inventory with Bar, the daily count in bottles and ml, the Bar
+> stock report and its daily email). They make release 11. Open for the owner: X% and the contract on GST for the
+> owner's allowance (D27-355); the team's bill sample; the Restaurant tab of Inventory.
+
 > **21 October, 13:30: RELEASE 10 READY, the owner's to type.** `release/r10-21oct` = `bef5ee0f` (D27-351 NC,
 > D27-352 discounts, D27-353 one line per dish; migration 233). Full gates green in
 > `.claude/worktrees/release-r10-21oct` (web 1,398, api 2,814, db 1,759 / 233, replay, pg16); website

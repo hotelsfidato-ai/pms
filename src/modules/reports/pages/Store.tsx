@@ -36,3 +36,5 @@ export const StockDeadPage = asOn("stock-dead", "Dead stock", "the dead stock re
 export const StockCoverPage = asOn("stock-cover", "Days of cover", "the days of cover");
 export const SupplierSpendPage = over("supplier-spend", "Supplier spend", "the supplier spend");
 export const EquipmentReportPage = asOn("equipment", "Equipment report", "the equipment report");
+/* The bar's day: opened, bought, sold, counted (D27-354). */
+export const BarStockPage = asOn("bar-stock", "Bar stock", "the bar stock report");

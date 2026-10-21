@@ -1,11 +1,14 @@
 import type { Mount } from "../../mount.ts";
 import { stores } from "./stores.ts";
+import { barPours } from "./barPours.ts";
 
 /* The front door of the store service on the server — the only file
    the core or another service may import (src/test/boundaries.test.ts).
    Its routers, and where each is mounted (see ../../mount.ts). */
 export const mounts: readonly Mount[] = [
   ["/api/hotels", stores],
+  /* What each bar dish takes from the bar (D27-354). */
+  ["/api/hotels", barPours],
 ];
 
 /* ⚠ ADDED FOR PURCHASING (116), AND BY THAT CHAT — the master reviews it

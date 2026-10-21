@@ -7,7 +7,7 @@ import {
   ClipboardList, Printer, CircleOff, FileBarChart,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { money, dateShort, timeOnly } from "@/lib/format";
+import { money, dateShort, timeOnly, bottlesAndMl } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
@@ -129,7 +129,14 @@ const ALL_STORES = "__all-stores";
 const shortName = (name: string) => name.replace(/\s+store$/i, "") || name;
 
 /* A figure a person reads, where nothing is held: "-" (D17-49). */
-const heldText = (n: number | null | undefined) => (n === null || n === undefined ? "-" : String(n));
+/* A drink in full bottles and the next one's ml (D27-354): "5 + 630 ml". */
+const heldText = (n: number | null | undefined, sizeMl?: number | null) => {
+  if (n === null || n === undefined) return "-";
+  if (!sizeMl) return String(n);
+  const whole = Math.floor(n + 1e-9);
+  const ml = Math.round((n - whole) * sizeMl);
+  return ml > 0 ? `${whole} + ${ml} ml` : String(whole);
+};
 
 const unreachable = (error: unknown) =>
   error instanceof ApiError && error.status === 0;
@@ -202,13 +209,16 @@ export default function StoresPage() {
   const mayChange = can(role, "create", "stock");
   const mayCorrect = can(role, "edit", "stock");
   const { storeId, setStoreId, tile, setTile, search } = useStorePick();
+  const [params, setParams] = useSearchParams();
 
   const [adding, setAdding] = useState(false);
   const [moving, setMoving] = useState<{ item: StockItem; kind: StockKind } | null>(null);
   const [transferring, setTransferring] = useState<StockItem | null>(null);
   const [history, setHistory] = useState<StockItem | null>(null);
   const [levelling, setLevelling] = useState<StockItem | null>(null);
-  const [counting, setCounting] = useState(false);
+  /* ?count=1 opens the count straight away (Inventory's "Count the bar",
+     D27-354), on the store ?store= names. */
+  const [counting, setCounting] = useState(() => params.get("count") === "1");
   const [importing, setImporting] = useState(false);
 
   const q = useQuery({
@@ -353,7 +363,13 @@ export default function StoresPage() {
       <CountSheet code={code} stores={places} inUseIds={inUseIds} items={all}
                   startStoreId={picked?.id ?? null}
                   reload={async () => (await q.refetch()).data?.items ?? items}
-                  onDone={(saved) => { setCounting(false); if (saved) refresh(); }} />
+                  onDone={(saved) => {
+                    setCounting(false);
+                    if (params.has("count")) {
+                      setParams((p) => { const next = new URLSearchParams(p); next.delete("count"); return next; }, { replace: true });
+                    }
+                    if (saved) refresh();
+                  }} />
     );
   }
 
@@ -576,7 +592,7 @@ function ItemRow({
             </p>
             <p className={cn("text-xl leading-7 font-semibold tabular",
               onHand === null ? "text-grey-500" : "text-ink-900")}>
-              {heldText(onHand)}{" "}
+              {heldText(onHand, item.sizeMl)}{" "}
               {onHand !== null && <span className="text-sm font-normal text-grey-500">{item.unit}</span>}
             </p>
           </div>
@@ -696,7 +712,7 @@ function ItemRow({
                 "Main 30 · Kitchen 8 · Bar -". */}
             {!picked && stores.length > 1 && (
               <p className="text-sm text-grey-600 tabular" data-store-line="">
-                {stores.map((s) => `${shortName(s.name)} ${heldText(item.byStore[s.id])}`).join(" · ")}
+                {stores.map((s) => `${shortName(s.name)} ${heldText(item.byStore[s.id], item.sizeMl)}`).join(" · ")}
               </p>
             )}
 
@@ -1556,16 +1572,21 @@ function LevelsDialog({ code, item, stores, open, onOpenChange, onDone }: {
 
 /* ── A store, counted ─────────────────────────────────────────────── */
 
-interface SheetLine { key: string; itemId: string; empty: boolean; name: string; unit: string; book: number }
+interface SheetLine {
+  key: string; itemId: string; empty: boolean; name: string; unit: string; book: number;
+  /** A bottle's size (D27-354): counted as full bottles, and the ml of the open one. */
+  sizeMl: number | null;
+}
 
 /* The sheet's lines for one store, with the book AS IT STANDS NOW: every item,
    and a second line for a cylinder item's empties (D25-18). */
 const sheetFor = (items: StockItem[], storeId: string, crockeryOnly = false): SheetLine[] =>
   items.filter((i) => i.isActive && (!crockeryOnly || i.crockery)).flatMap((i) => [
-    { key: i.id, itemId: i.id, empty: false, name: i.name, unit: i.unit, book: i.byStore[storeId] ?? 0 },
+    { key: i.id, itemId: i.id, empty: false, name: i.name, unit: i.unit, book: i.byStore[storeId] ?? 0,
+      sizeMl: i.sizeMl ?? null },
     ...(i.cylinder
       ? [{ key: `${i.id}:empty`, itemId: i.id, empty: true, name: `${i.name} - empty`,
-           unit: i.unit, book: i.emptiesByStore[storeId] ?? 0 }]
+           unit: i.unit, book: i.emptiesByStore[storeId] ?? 0, sizeMl: null }]
       : []),
   ]);
 
@@ -1589,27 +1610,37 @@ function CountSheet({ code, stores, inUseIds, items, startStoreId, reload, onDon
   const linesOf = (list: StockItem[], id: string) => sheetFor(list, id, inUseIds.has(id));
   const [lines, setLines] = useState(() => linesOf(items, storeId));
   const [counts, setCounts] = useState<Record<string, string>>({});
+  /* The open bottle's ml, for a drink (D27-354). */
+  const [mls, setMls] = useState<Record<string, string>>({});
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const store = stores.find((s) => s.id === storeId) ?? null;
 
-  const counted = (key: string): number | null => {
-    const t = (counts[key] ?? "").trim();
-    return t === "" ? null : Number(t);
+  /* What was counted, in the item's unit: a drink's full bottles and the open
+     one's ml make one figure, to the thousandth of a bottle. */
+  const counted = (l: SheetLine): number | null => {
+    const t = (counts[l.key] ?? "").trim();
+    const m = l.sizeMl ? (mls[l.key] ?? "").trim() : "";
+    if (t === "" && m === "") return null;
+    const full = t === "" ? 0 : Number(t);
+    if (!l.sizeMl || m === "") return full;
+    const ml = Number(m);
+    if (!Number.isFinite(ml) || ml < 0 || ml >= l.sizeMl) return Number.NaN;
+    return Math.round((full + ml / l.sizeMl) * 1000) / 1000;
   };
-  const typed = lines.filter((l) => counted(l.key) !== null);
-  const bad = typed.filter((l) => { const n = counted(l.key)!; return !Number.isFinite(n) || n < 0; });
+  const typed = lines.filter((l) => counted(l) !== null);
+  const bad = typed.filter((l) => { const n = counted(l)!; return !Number.isFinite(n) || n < 0; });
   const ready = store !== null && typed.length > 0 && bad.length === 0;
 
   const pickStore = (id: string) => {
-    setStoreId(id); setLines(linesOf(items, id)); setCounts({}); setReasons({});
+    setStoreId(id); setLines(linesOf(items, id)); setCounts({}); setMls({}); setReasons({});
   };
 
   const save = async () => {
     if (busy || !ready || !store) return;
     setBusy(true);
     const sent: CountLine[] = typed.map((l) => ({
-      itemId: l.itemId, empty: l.empty, book: l.book, counted: counted(l.key)!,
+      itemId: l.itemId, empty: l.empty, book: l.book, counted: counted(l)!,
       ...(reasons[l.key]?.trim() ? { reason: reasons[l.key]!.trim() } : {}),
     }));
     const res = await saveStockCount(code, { locationId: store.id, lines: sent });
@@ -1620,6 +1651,7 @@ function CountSheet({ code, stores, inUseIds, items, startStoreId, reload, onDon
       if (moved.length > 0) {
         setLines(lines.map((l) => (moved.includes(l.key) ? { ...l, book: fresh.get(l.key)! } : l)));
         setCounts(Object.fromEntries(Object.entries(counts).filter(([k]) => !moved.includes(k))));
+        setMls(Object.fromEntries(Object.entries(mls).filter(([k]) => !moved.includes(k))));
       }
       setBusy(false);
       return toast.error("Not saved", res.reason);
@@ -1671,8 +1703,10 @@ function CountSheet({ code, stores, inUseIds, items, startStoreId, reload, onDon
 
       <ul className="bg-white rounded-lg border border-grey-200 divide-y divide-grey-100 print:border-0 print:rounded-none print:divide-grey-200" data-count-sheet="">
         {lines.map((l) => {
-          const n = counted(l.key);
+          const n = counted(l);
           const difference = n === null || !Number.isFinite(n) ? null : Math.round((n - l.book) * 1000) / 1000;
+          /* A drink's figures in full bottles and ml (D27-354). */
+          const shown = (q: number) => l.sizeMl ? bottlesAndMl(q, l.unit, l.sizeMl) : `${q} ${l.unit}`;
           return (
             <li key={l.key}
                 className="px-4 py-3 min-h-14 break-inside-avoid
@@ -1680,25 +1714,36 @@ function CountSheet({ code, stores, inUseIds, items, startStoreId, reload, onDon
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-ink-900">{l.name}</p>
-                  <p className="text-xs text-grey-500">{l.unit}</p>
+                  <p className="text-xs text-grey-500">
+                    {l.sizeMl ? `Full ${l.unit}s of ${l.sizeMl} ml, and the ml in the open one` : l.unit}
+                  </p>
                 </div>
                 <Input className="w-28 shrink-0 print:hidden tabular" inputMode="decimal"
                        aria-label={`Counted, ${l.name}, in ${l.unit}`}
+                       placeholder={l.sizeMl ? "Full" : undefined}
                        invalid={n !== null && (!Number.isFinite(n) || n < 0)}
                        value={counts[l.key] ?? ""}
                        onChange={(e) => setCounts({ ...counts, [l.key]: e.target.value })} />
-                {/* The paper's empty box. */}
+                {l.sizeMl && (
+                  <Input className="w-24 shrink-0 print:hidden tabular" inputMode="numeric"
+                         aria-label={`Open ${l.unit}, ${l.name}, in ml`} placeholder="ml"
+                         value={mls[l.key] ?? ""}
+                         onChange={(e) => setMls({ ...mls, [l.key]: e.target.value })} />
+                )}
+                {/* The paper's empty box (two for a drink: full, and ml). */}
                 <span aria-hidden className="hidden print:block w-28 h-8 shrink-0 border border-ink-900" />
+                {l.sizeMl && <span aria-hidden className="hidden print:block w-24 h-8 shrink-0 border border-ink-900" />}
               </div>
               {/* THE BOOK SHOWS ONCE A COUNT IS TYPED (D25-16). */}
               {n !== null && (
                 <div className="print:hidden mt-2 space-y-2">
                   <p className="text-sm text-grey-600 tabular" role="status">
                     {difference === null || difference + l.book < 0
-                      ? "Not a count - type what is on the shelf, zero or more."
-                      : `Book ${l.book} ${l.unit} · `
+                      ? (l.sizeMl ? `Not a count - full ones, and under ${l.sizeMl} ml in the open one.`
+                        : "Not a count - type what is on the shelf, zero or more.")
+                      : `Book ${shown(l.book)} · `
                         + (difference === 0 ? "matches"
-                          : `${Math.abs(difference)} ${difference > 0 ? "more" : "fewer"}`)}
+                          : `${l.sizeMl ? shown(Math.abs(difference)) : Math.abs(difference)} ${difference > 0 ? "more" : "fewer"}`)}
                   </p>
                   {difference !== null && difference !== 0 && difference + l.book >= 0 && (
                     <Input aria-label={`Why, ${l.name}`} placeholder="Why, if known"

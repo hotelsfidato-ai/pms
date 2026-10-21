@@ -307,7 +307,9 @@ describe("daily report emails after the night audit (D27-280)", () => {
     expect(res.status, await res.clone().text()).toBe(200);
     const got = (await res.json()) as Got;
     expect(got.reports.map((r) => [r.key, r.isOn, r.addresses])).toEqual([
-      ["night-audit", true, []], ["manager", false, []], ["money-owed", false, []], ["restaurant-stock", false, []]]);
+      ["night-audit", true, []], ["manager", false, []], ["money-owed", false, []], ["restaurant-stock", false, []],
+      /* The bar's day, off to start (D27-354). */
+      ["bar-stock", false, []]]);
     expect(got.notConnected, "connected in this test").toBeNull();
   });
 

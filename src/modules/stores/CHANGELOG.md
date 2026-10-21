@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-21 · The bar's stock (the owner's D27-354)
+
+**Shipped** Inventory (Bar; Restaurant to come): what each bar dish and size takes (`barPours.ts`, `bar_pours`, migration 235), taken off the Bar store by a trigger when the line is sent; the count of a drink in full bottles and ml, opened from a link; drinks shown "5 + 630 ml"; the Store's door lends `barStore`, `barDrinks`, `addBarDrink` and a bar bill's id on a receipt. **Proved** `api/test/modules/stores/barStock.test.ts`, `barStock.test.tsx`, "bar stock" in `db/tests/modules/stores.sql`. The root `CHANGELOG.md` has the whole entry.
+
 ## 2026-10-02 · The Store like the Calendar: tiles, Days, by outlet, GST, running average, crockery (D27-238, D27-242)
 
 **Asked for:** the master, 2 October (D27-238): tiles across the top; a Days

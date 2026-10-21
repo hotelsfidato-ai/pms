@@ -4,7 +4,7 @@ import {
   Star, Search, ArrowRight, ClipboardList, CalendarDays, ChartColumn,
   ChartNoAxesColumn, Building2, UserX, ReceiptText, Wallet, Landmark,
   FileSpreadsheet, Plane, ScrollText, Boxes, ArrowLeftRight, PackageOpen, Trash2, ClipboardCheck,
-  Hourglass, Gauge, Truck, Refrigerator, type LucideIcon,
+  Hourglass, Gauge, Truck, Refrigerator, Wine, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useUi } from "@/lib/ui";
@@ -157,6 +157,8 @@ const GROUPS: Group[] = [
         description: "Deliveries per supplier, and each item's first and last price." },
       { title: "Equipment report", icon: Refrigerator, path: "/reports/equipment",
         description: "What is out of the store, under repair, and when warranties and AMCs end." },
+      { title: "Bar stock", icon: Wine, path: "/reports/bar-stock",
+        description: "The bar's day: each drink's opening, purchases, sales, count and closing." },
     ],
   },
 ];

@@ -582,6 +582,41 @@ export const SHOTS = [
     ],
   },
 
+  /* ── Inventory, Bar: what each drink takes, and the bar counted (D27-354) ── */
+  {
+    id: "A9-42", title: "Inventory, Bar: what each drink takes", as: "General Manager",
+    path: "/h/5EL/inventory",
+    steps: [
+      { clickIf: "text:Got it" }, { waitFor: "text:What each drink takes from the bar", ms: 30000 },
+      { clickIf: "text:Use the" }, { wait: 600 },
+    ],
+    marks: [
+      { n: 1, at: "css:[role=tab][aria-selected=true]", side: "left" },
+      { n: 2, at: "label:Poured from, A9 Imperial Blue 60 ml", side: "left" },
+      { n: 3, at: "label:ml or whole, A9 Imperial Blue 60 ml", side: "right" },
+      { n: 4, at: "css:main button[data-variant=primary]", side: "left" },
+      { n: 5, at: "text:Count the bar", side: "bottom" },
+    ],
+  },
+  { id: "A9-42b", title: "Save what each drink takes", noShot: true, as: "General Manager",
+    /* The button, not the sentence "Saved, every KOT ..." (21 Oct). */
+    steps: [{ click: "css:main button[data-variant=primary]" }, { wait: 2000 }] },
+  {
+    id: "A9-43", title: "Counting the bar: full bottles and the open one's ml", as: "General Manager",
+    path: "/h/5EL/inventory",
+    steps: [
+      { clickIf: "text:Got it" }, { waitFor: "text:Count the bar", ms: 30000 }, { click: "text:Count the bar" },
+      { waitFor: "css:[data-count-sheet]", ms: 30000 }, { wait: 600 },
+      { type: ["label:Counted, A9 Imperial Blue 750 ml, in bottle", "5"] },
+      { type: ["label:Open bottle, A9 Imperial Blue 750 ml, in ml", "400"] }, { wait: 400 },
+    ],
+    marks: [
+      { n: 1, at: "label:Counted, A9 Imperial Blue 750 ml, in bottle", side: "top" },
+      { n: 2, at: "label:Open bottle, A9 Imperial Blue 750 ml, in ml", side: "top" },
+      { n: 3, at: "css:[data-count-sheet] [role=status]", side: "left" },
+    ],
+  },
+
   /* ── Equipment: an AC added in the store, asked out of it, approved ─ */
   {
     id: "A9-31", title: "Equipment: Add an item, what and where", as: IM,

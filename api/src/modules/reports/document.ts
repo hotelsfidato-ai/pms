@@ -95,7 +95,8 @@ export type ReportKey =
   | "stock-dead"
   | "stock-cover"
   | "supplier-spend"
-  | "equipment";
+  | "equipment"
+  | "bar-stock";
 
 export const REPORT_KEYS: readonly ReportKey[] = [
   "night-audit",
@@ -115,6 +116,7 @@ export const REPORT_KEYS: readonly ReportKey[] = [
   "stock-cover",
   "supplier-spend",
   "equipment",
+  "bar-stock",
 ];
 
 /** The Store and equipment reports (phase 3A): read by D27-240's readers,
@@ -122,6 +124,8 @@ export const REPORT_KEYS: readonly ReportKey[] = [
 export const STORE_REPORT_KEYS: readonly ReportKey[] = [
   "stock-on-hand", "stock-movements", "stock-consumption", "stock-wastage",
   "stock-count-differences", "stock-dead", "stock-cover", "supplier-spend", "equipment",
+  /* The bar's day (D27-354). */
+  "bar-stock",
 ];
 
 export interface ReportParams {
