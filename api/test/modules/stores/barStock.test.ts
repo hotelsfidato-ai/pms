@@ -183,7 +183,7 @@ describe("bar stock (D27-354)", () => {
     const section = (key: string) => doc.sections.find((s) => s.key === key)!;
     const line = (key: string, first: string) => section(key).rows.find((r) => Object.values(r.cells)[0] === first)!.cells;
     expect(line("bar-stock", `${TAG} Blue 750 ml`)).toMatchObject({
-      opening: "0", purchased: "6", sold: "0 + 120 ml", closing: "5 + 630 ml" });
+      opening: "0", purchased: "6", sold: "120 ml", closing: "5 + 630 ml" });
     expect(line("bar-stock", `${TAG} Lager`)).toMatchObject({ purchased: "24", sold: "3", closing: "21" });
     expect(line("bar-sold", `${TAG} Blue (NIP)`)).toMatchObject({ qty: 1, drink: `${TAG} Blue 180 ml`, took: "1" });
     expect(line("bar-not-set", `${TAG} Blue (30 ml)`)).toMatchObject({ qty: 1 });

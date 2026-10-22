@@ -20,7 +20,8 @@ import { heading, type Property } from "../figures.ts";
 const LIVE = `m.reverses_id is null
   and not exists (select 1 from stock_movements r where r.reverses_id = m.id)`;
 
-/** "3 + 420 ml" for what is poured, "12" for what is not; a dash for nothing. */
+/** "3 + 420 ml" or "120 ml" for what is poured, "12" for what is not; a dash
+    for nothing. Under a bottle it is the ml alone - "-30 ml", never "-0 + 30 ml". */
 export function inBottles(q: number | null, sizeMl: number | null): string | null {
   if (q === null) return null;
   const sign = q < 0 ? "-" : "";
@@ -28,7 +29,8 @@ export function inBottles(q: number | null, sizeMl: number | null): string | nul
   if (!sizeMl) return `${sign}${Math.round(a * 1000) / 1000}`;
   const whole = Math.floor(a + 1e-9);
   const ml = Math.round((a - whole) * sizeMl);
-  return `${sign}${whole}${ml > 0 ? ` + ${ml} ml` : ""}`;
+  if (ml === 0) return `${sign}${whole}`;
+  return whole === 0 ? `${sign}${ml} ml` : `${sign}${whole} + ${ml} ml`;
 }
 
 export async function barStockReport(client: Client, property: Property, asOn: string): Promise<ReportDoc> {
@@ -134,7 +136,7 @@ export async function barStockReport(client: Client, property: Property, asOn: s
       columns: [col("dish", "Dish", "text"), col("qty", "Sold", "count")],
       rows: notSet.map((d) => row({ dish: d.dish, qty: q(d.qty) })),
       empty: "Every bar dish sold took its drink off the stock.",
-      ...(notSet.length ? { note: "These took nothing off the stock: set what each takes on Inventory, Bar." } : {}) },
+      ...(notSet.length ? { note: "These took nothing off the stock: set what each takes in Bar stock, Set up." } : {}) },
     { key: "bar-struck", title: "Struck after the bar had them (they stay off the stock, as poured)",
       columns: [col("dish", "Dish", "text"), col("qty", "Quantity", "count"), col("reason", "Reason", "text")],
       rows: struck.map((d) => row({ dish: d.dish, qty: q(d.qty), reason: d.reason })),
@@ -156,7 +158,7 @@ export async function barStockReport(client: Client, property: Property, asOn: s
     facts: [{ label: "As On Date", value: asOn, kind: "date" }],
     sections,
     footnotes: [
-      "Sold is what the sending of each line took off the bar's store (Inventory, Bar: what each dish takes).",
+      "Sold is what the sending of each line took off the bar's store (Bar stock, Set up: what each dish takes).",
       "Full bottles + ml: \"3 + 420 ml\" is three full bottles and 420 ml of the next.",
     ],
   };
