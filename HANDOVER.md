@@ -759,10 +759,12 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
-> **22 October: RELEASE 11 READY, the owner's to type** - `release/r11-21oct` at 0eb2b87d, a full gate run green
-> in its clean copy (`.claude/worktrees/release-r11-21oct`), website `index-BdhmT0xm.js`, steps
+> **22 October: RELEASE 11 READY, the owner's to type** - `release/r11-21oct` at **4477d9af** (with the KOT print
+> fix, MEMORY 423), a full gate run green in its clean copy (`.claude/worktrees/release-r11-21oct`), website
+> `index-CN0ZuiZL.js`, steps
 > `.local/release-11-steps.md` (sent). It holds release 10 (never deployed; its copy recycled). After it: a read-only
-> check of the site, the API, the server's commit and migrations 233-235.
+> check of the site, the API, the server's commit and migrations 233-235. Open: the owner asked to rename the
+> "KOT station" shortcut - the new name not yet given.
 
 > **21 October, night:** the owner reviewed Bar stock (D27-357, kept as built) and answered the pending list (D27-358).
 > The manual is written. **Release 11 = releases 10 + 11 together** (NC, discounts, one line per dish, bar bills,

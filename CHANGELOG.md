@@ -63,7 +63,8 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 - Headless Chrome's PDF of a KOT: the old rule 595 x 842 pt (A4, the slip in its corner), the new 80 x 64 mm with the slip filling it (`.local/roll-check/`). In Chrome's CSSOM the old rule keeps only its margin; the new one keeps its size. `src/modules/pos/printRoll.test.ts` 1/1; `KotStation.test.tsx` 19/19, `kotReprint.test.tsx` 6/6. Not yet on a printer: the owner's first KOT after the deploy is the proof.
 
 **Left open**
-- Into release 11 or the next, at the owner's word.
+- In release 11, at the owner's word: the release moved to 4477d9af, a full gate run green again in its clean copy (2,028 s; 1,407 web, 2,825 API, 1,779 database assertions, replay, Postgres 16), website `index-CN0ZuiZL.js`, new steps sent.
+- The owner asked to rename the "KOT station" shortcut; the new name is not yet given.
 
 **Commits:** this commit
 
