@@ -6542,7 +6542,7 @@ copy will see of theirs.**
 ### 425 · MINE: release 12 was handed over on a mixture of two gate runs (22 October)
 
 I stopped release 12's first gate run with TaskStop and killed what I could find by command line ("left: 0") -
-but the gates.sh script itself kept going (MEMORY 371's TaskStop trap) and its vitest showed no copy path in its
+but the gates.sh script itself kept going (MEMORY 305's TaskStop trap) and its vitest showed no copy path in its
 command line. I fast-forwarded the copy and started a second run, which rewrote progress.txt's header; the first
 run then appended its last four steps (green, on code that changed under it) under that header. With the second
 run still in its API tests, `release.mjs` read four steps of each run as one full green run, and I sent the owner
