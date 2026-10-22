@@ -6539,6 +6539,20 @@ copy will see of theirs.**
 
 ---
 
+### 426 · MINE: the Fidato Printer installer was put in the website, which Firebase's free plan refuses (22 October)
+
+`release.mjs` copied `Fidato-Printer-Setup.exe` into the release copy's `dist/downloads/` so the website would
+serve it. The owner's A7 (`firebase deploy --only hosting:app`) failed: *"Executable files are forbidden on the
+Spark billing plan"* - the project is on the free plan. A1-A6 and Amrapali's fresh start had gone through, so the
+API was release 12 and the website release 11 until A7 ran again. I never checked the host's limits before choosing
+it; the gates and `release.mjs` test the build, not what the host accepts. **Fixed:** the installer taken out of the
+release copy's `dist` (the code unchanged, `index-BioGCyra.js`) and A7 run again; the owner chose (D27-362) to send
+the app to each printing computer by hand for now and to host it on our own server (api.fidatohotels.com) in
+release 13, where `release.mjs` stops copying it. **The rule:** before putting a new kind of file on a host, read
+that host's limits for the plan it is on - and say in the steps which file each step uploads.
+
+---
+
 ### 425 · MINE: release 12 was handed over on a mixture of two gate runs (22 October)
 
 I stopped release 12's first gate run with TaskStop and killed what I could find by command line ("left: 0") -
