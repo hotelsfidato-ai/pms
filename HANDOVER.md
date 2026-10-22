@@ -759,6 +759,13 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **22 October, 15:05: RELEASE 12 READY AGAIN, the owner's to type** - `release/r12-parcels` at **11acb6d3** (the Fidato
+> Printer app on top of b15a2f00): ONE complete gate run alone (run 23276-11074-1, finished; web 1,412, api 2,829, db
+> 1,779, replay, pg16), website `index-BioGCyra.js` with `/downloads/Fidato-Printer-Setup.exe`; steps
+> `.local/release-12-steps.md` (sent) hold A1-A7 AND Amrapali's fresh start F1-F4 (the owner: "deploy with data
+> deleting"; the dry run run read-only on live at 15:00: 1 booking, 1 guest, 1 posting, 32 orders). Install guide
+> `.local/printer-guide/Fidato-Printer-install-guide.pdf` (sent).
+
 > **22 October, evening: THE FIDATO PRINTER APP (D27-360), going out WITH release 12** - `printer/` (Electron;
 > `cd printer; npm run dist` builds `printer/dist/Fidato-Printer-Setup.exe`, never committed); `release.mjs` copies it
 > into the website's `/downloads/` and refuses without it. Release 12 is rebuilt on top of it (the b15a2f00 steps are

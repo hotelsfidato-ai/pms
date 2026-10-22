@@ -68,6 +68,7 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 **Left open**
 - Release 12 rebuilt with this, full gates alone, new steps for the owner; then the BAR PC: install, sign in, tick, pick the printer, remove the old "KOT station" shortcut.
 - A code-signing certificate, later (the owner's call), to drop Windows' warning.
+- **Release 12 rebuilt, 22 Oct 15:05:** `release/r12-parcels` fast-forwarded to 11acb6d3; ONE complete gate run alone in its clean copy (run 23276-11074-1, finished): web types, API types, strip, web tests 1,412, API tests 2,829, database 1,779, replay, Postgres 16 - all exit 0. `release.mjs`: installer in `dist/downloads`, website `index-BioGCyra.js`. Steps `.local/release-12-steps.md` with Amrapali's fresh start (F1-F4; the dry run, read-only on live: 1 booking, 32 orders). Install guide PDF sent.
 
 **Commits:** this commit
 
