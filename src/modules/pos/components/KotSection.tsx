@@ -98,10 +98,14 @@ export function KotSection({ hotelId }: { hotelId: string }) {
 
 type Run = (write: Promise<Done>, done: string) => Promise<boolean>;
 
-/* ── 1a. The one-click setup (D27-299) ────────────────────────────── */
-/* One Windows file, made for this hotel, does the computer's side: the KOT
-   station shortcut, the receipt printer as the default, Startup, no sleep -
-   then opens this section in the KOT station window. lib/kotSetupFile.ts. */
+/* ── 1a. Setting up the computer (D27-299, D27-360) ───────────────── */
+/* The Fidato Printer app (printer/, put into the website's /downloads/ by
+   scripts/release.mjs) prints with no window and no print screen. The one
+   Windows file, made for this hotel, stays as the other way: a Chrome
+   shortcut, the receipt printer as the default, Startup, no sleep - then
+   this section. lib/kotSetupFile.ts. */
+const PRINTER_APP = "/downloads/Fidato-Printer-Setup.exe";
+
 function OneClickSetup({ code }: { code: string }) {
   const get = () => {
     try {
@@ -115,18 +119,23 @@ function OneClickSetup({ code }: { code: string }) {
     <div className="rounded-lg border border-grey-200 bg-grey-50 p-3.5 space-y-2" aria-label="Set up this computer for printing" role="group">
       <p className="text-sm font-semibold text-ink-900">Set up this computer for printing</p>
       <p className="text-sm text-grey-600 leading-relaxed">
-        On the Windows computer the printer is plugged into, one file does it all: it makes the
-        KOT station shortcut for this hotel, makes your receipt printer the default (you pick it
-        from a list), starts it with Windows and keeps the computer awake. Then it opens this
-        section, where you name the computer and tick what it prints.
+        On the Windows computer the printer is plugged into, install Fidato Printer. It prints
+        each KOT and bill straight away, with no window and no print screen, starts with Windows
+        and keeps the computer awake. In its window, sign in, open this section, name the computer
+        and tick what it prints. Pick the receipt printer from its icon by the clock: Printer.
       </p>
-      <Button variant="secondary" onClick={get} className="w-full sm:w-auto">
-        <Download className="size-4" aria-hidden /> Download the setup file
+      <Button asChild className="w-full sm:w-auto">
+        <a href={PRINTER_APP} download>
+          <Download className="size-4" aria-hidden /> Download Fidato Printer for Windows
+        </a>
       </Button>
       <p className="text-2xs text-grey-600 leading-relaxed">
-        Chrome may ask whether to keep the file: choose Keep. When it runs, Windows may say
-        "Windows protected your PC": press More info, then Run anyway. It changes only this
-        computer's default printer, startup and sleep, and adds the shortcut.
+        When it runs, Windows may say "Windows protected your PC": press More info, then Run
+        anyway. The other way, with Chrome:{" "}
+        <button type="button" onClick={get} className="font-medium text-ink-900 underline underline-offset-2">
+          download the setup file
+        </button>{" "}
+        - it makes a Chrome shortcut that prints, and your receipt printer the default.
       </p>
     </div>
   );

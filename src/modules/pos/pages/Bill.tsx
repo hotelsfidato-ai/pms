@@ -74,7 +74,7 @@ export default function BillPage() {
     if (!res.ok) return void toast.error("Not printed", res.reason);
     const told = res.heading;
     flushSync(() => setPrinted(told));
-    printRoll(slipRef.current);
+    void printRoll(slipRef.current);
   };
 
   return (

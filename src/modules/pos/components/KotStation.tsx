@@ -86,14 +86,15 @@ const PRINT_CSS = `
   @media screen { .kot-print { position: fixed; left: -10000px; top: 0; } }
   @media print { body > *:not(.kot-print) { display: none !important; } }`;
 
-/** Prints one slip through the browser: drawn, printed, gone. `print()`
-    holds the page until the browser has the paper (at once with
-    --kiosk-printing), so the slip is in the page for exactly that long. */
+/** Prints one slip: drawn, printed, gone. The browser's `print()` holds the
+    page until it has the paper (at once with --kiosk-printing); the Fidato
+    Printer app answers when the printer has it. Either way the slip is in the
+    page for exactly that long. */
 function useSlipPrinter() {
   const [slip, setSlip] = useState<ReactNode>(null);
-  const print = (paper: ReactNode) => {
+  const print = async (paper: ReactNode) => {
     flushSync(() => setSlip(paper));
-    try { printRoll(document.querySelector<HTMLElement>("body > .kot-print")); } finally { setSlip(null); }
+    try { await printRoll(document.querySelector<HTMLElement>("body > .kot-print")); } finally { setSlip(null); }
   };
   const node = slip && createPortal(
     <div className="kot-print"><style>{PRINT_CSS}</style>{slip}</div>,
@@ -135,19 +136,19 @@ function StationPrinter({ hotelId }: { hotelId: string }) {
         if (slip) {
           const d = await getDocket(hotelId, slip.orderId, slip.kotNo, slip.kindId);
           if (d && await claimKot(hotelId, slip.orderId, slip.kotNo, slip.kindId, kotDevice())) {
-            print(<DocketSlip d={d} />);
+            await print(<DocketSlip d={d} />);
             void qc.invalidateQueries({ queryKey: queueKey(hotelId) });
           }
         } else if (again) {
           const d = await getDocket(hotelId, again.orderId, again.kotNo, again.kindId);
           if (d && await claimKotReprint(hotelId, again.id, kotDevice())) {
-            print(<DocketSlip d={{ ...d, reprint: true }} />);
+            await print(<DocketSlip d={{ ...d, reprint: true }} />);
             void qc.invalidateQueries({ queryKey: queueKey(hotelId) });
           }
         } else if (bill) {
           const o = await getOrder(hotelId, bill.orderId);
           if (o && await claimBill(hotelId, bill.id, kotDevice())) {
-            print(<BillSlip order={o} heading={bill.heading} />);
+            await print(<BillSlip order={o} heading={bill.heading} />);
             void qc.invalidateQueries({ queryKey: queueKey(hotelId) });
           }
         }

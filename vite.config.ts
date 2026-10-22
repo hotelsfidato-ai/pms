@@ -135,7 +135,7 @@ export default defineConfig(({ mode }) => {
         /* THE API IS NEVER SERVED FROM THE CACHE. Without this the
            fallback above answers a failed POST with the HTML shell,
            and the caller parses a page as JSON. */
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/downloads\//],
         cleanupOutdatedCaches: true,
       },
       devOptions: {

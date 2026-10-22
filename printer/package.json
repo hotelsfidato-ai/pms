@@ -1,0 +1,32 @@
+{
+  "name": "fidato-printer",
+  "productName": "Fidato Printer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Prints the Fidato PMS's KOTs and bills on this computer, with no window.",
+  "author": "Fidato Hotels",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.fidatohotels.printer",
+    "productName": "Fidato Printer",
+    "artifactName": "Fidato-Printer-Setup.exe",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "icon.png"],
+    "win": { "target": "nsis", "icon": "icon.png" },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "shortcutName": "Fidato Printer",
+      "createDesktopShortcut": true
+    }
+  }
+}

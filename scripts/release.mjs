@@ -25,7 +25,7 @@
    ══════════════════════════════════════════════════════════════════ */
 import { spawnSync } from "node:child_process";
 import {
-  closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync,
+  closeSync, copyFileSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -208,6 +208,14 @@ function main() {
     refuse(`the build failed (exit ${status}); its last lines are above, the whole log is ${log}.`);
   }
   ok("npm run build:app passed (.env.production.local removed again)");
+
+  // The Fidato Printer installer (D27-360), built in printer/ and never
+  // committed, goes out with the website at /downloads/.
+  const installer = join(root, "printer", "dist", "Fidato-Printer-Setup.exe");
+  if (!existsSync(installer)) refuse(`${installer} is missing; build it first: cd printer; npm run dist`);
+  mkdirSync(join(copy, "dist", "downloads"), { recursive: true });
+  copyFileSync(installer, join(copy, "dist", "downloads", "Fidato-Printer-Setup.exe"));
+  ok("the Fidato Printer installer is in dist/downloads");
 
   // 5 · what the build holds
   const dist = join(copy, "dist");

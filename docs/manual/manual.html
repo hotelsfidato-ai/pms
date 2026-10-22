@@ -5308,15 +5308,21 @@ figure.shot.phone img { max-width: 72mm; }
     <ol class="callouts"><li>KOT kinds: Kitchen and Bar to start; add more (Tandoor)</li><li>Computers that print, online or not</li><li>Which section prints where</li></ol>
   </figure>
 
-  <h3>To make a computer print: the one-click way</h3>
+  <h3>To make a computer print: the Fidato Printer app</h3>
+  <p>Fidato Printer is a small Windows app that runs this website and prints each KOT and bill by itself: no window opens, no print screen flashes up. It sits by the clock and starts with Windows.</p>
   <ol class="steps">
-    <li>On the Windows computer the printer is plugged into, sign in, open <span class="ui">Restaurant setup</span>, the KOT section, and under <span class="ui">Set up this computer for printing</span> tap <span class="ui">Download the setup file</span>. Chrome may ask whether to keep it: <span class="ui">Keep</span>.</li>
-    <li>Open the file (<code>KOT-station-setup-&lt;code&gt;.cmd</code>). If Windows says <span class="msg">“Windows protected your PC”</span>, tap <span class="ui">More info</span>, then <span class="ui">Run anyway</span>.</li>
-    <li>It lists the computer's printers: type the receipt printer's number and press Enter. It makes it the default printer, puts a <b>KOT station</b> shortcut on the desktop and in Startup, and stops the computer sleeping while plugged in.</li>
-    <li>It then opens the KOT station window on this section. Sign in: you come straight back here. Under <span class="ui">This computer</span>, type its name (“Bar PC”), tick what it prints, and tap <span class="ui">Save</span>.</li>
-    <li>Go to the Kitchen screen in that window and leave it open. The printing line on every till now reads <span class="msg">“Bar KOTs: Bar PC - online”</span>.</li>
+    <li>On the Windows computer the printer is plugged into, open the website, sign in, open <span class="ui">Restaurant setup</span>, the KOT section, and under <span class="ui">Set up this computer for printing</span> tap <span class="ui">Download Fidato Printer for Windows</span>.</li>
+    <li>Open the file (<code>Fidato-Printer-Setup.exe</code>). If Windows says <span class="msg">“Windows protected your PC”</span>, tap <span class="ui">More info</span>, then <span class="ui">Run anyway</span>. It installs and opens by itself, and puts <b>Fidato Printer</b> on the desktop.</li>
+    <li>In its window, sign in and open <span class="ui">Restaurant setup</span>, the KOT section. Under <span class="ui">This computer</span>, type its name (“Bar PC”), tick what it prints, and tap <span class="ui">Save</span>.</li>
+    <li>Click the Fidato Printer icon by the clock: <span class="ui">Printer</span>, then the receipt printer. (Left as <span class="ui">Windows' default printer</span>, it prints on whichever printer Windows uses.)</li>
+    <li>Go to the Kitchen screen in that window and close the window: it keeps printing from the clock. The printing line on every till now reads <span class="msg">“Bar KOTs: Bar PC - online”</span>.</li>
   </ol>
-  <p>By hand instead, step by step: <code>src/modules/pos/KOT-STATION-SETUP.md</code> (the default printer on 80 mm paper, the KOT station shortcut, then This computer). If slips come out too wide, set the printer's paper to 80 mm once in its Printing preferences.</p>
+  <ul>
+    <li><b>A slip the printer did not take</b> (paper out, printer off) shows a Windows message, <span class="msg">“Fidato Printer: not printed”</span>; print it again from <span class="ui">Reprint</span> below.</li>
+    <li><b>The icon's menu:</b> <span class="ui">Open Fidato Printer</span>, <span class="ui">Printer</span>, <span class="ui">Start with Windows</span>, and <span class="ui">Quit (stops printing)</span>.</li>
+    <li><b>The other way, with Chrome:</b> <span class="ui">download the setup file</span> (<code>KOT-station-setup-&lt;code&gt;.cmd</code>). It lists the printers (type the receipt printer's number), makes it the default printer, puts a <b>Fidato Printer</b> shortcut that opens Chrome on the desktop and in Startup, stops the computer sleeping, and opens this section. Chrome prints without asking but shows its print screen for a moment.</li>
+  </ul>
+  <p>By hand instead, step by step: <code>src/modules/pos/KOT-STATION-SETUP.md</code>. If slips come out too wide, set the printer's paper to 80 mm once in its Printing preferences.</p>
   <ul>
     <li><b>One computer per kind.</b> Ticking a kind on another computer moves it there; the old one stops printing it by itself. A reprint still waiting for the old one moves with the kind and prints on the new one, marked REPRINT (<span class="d">D27-330</span>); a new KOT sent before the move does not print there.</li>
     <li><b>One computer can print everything:</b> tick every kind and the bills on it. Each slip still says what it is.</li>
@@ -5328,7 +5334,7 @@ figure.shot.phone img { max-width: 72mm; }
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>Restaurant setup without a developer: <span class="d">D22-6</span>. The KOT section, its kinds, one computer per kind, the routing by section and the bill printer: <span class="d">D27-292</span>. The kitchen manager may open the KOT section: <span class="d">D27-292</span>. The one-click setup file, and signing in coming back to the page asked for: <span class="d">D27-299</span>.</p>
+    <p>Restaurant setup without a developer: <span class="d">D22-6</span>. The KOT section, its kinds, one computer per kind, the routing by section and the bill printer: <span class="d">D27-292</span>. The kitchen manager may open the KOT section: <span class="d">D27-292</span>. The one-click setup file, and signing in coming back to the page asked for: <span class="d">D27-299</span>. The Fidato Printer app, printing with no window, and the shortcut's new name: <span class="d">D27-360</span>.</p>
   </div>
 
   <!-- A8.11 -->

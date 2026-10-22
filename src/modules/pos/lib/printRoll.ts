@@ -21,14 +21,38 @@
    paper is at least 90 mm long - always portrait. */
 const MIN_MM = 90;
 
-/** The page rule for a slip `heightPx` CSS pixels tall (96 to the inch). */
-export const rollPage = (heightPx: number) =>
-  `@media print { @page { size: 80mm ${Math.max(MIN_MM, Math.ceil((heightPx * 25.4) / 96) + 4)}mm; margin: 0; } }`;
+/** The paper's length for a slip `heightPx` CSS pixels tall (96 to the inch). */
+export const rollMm = (heightPx: number) => Math.max(MIN_MM, Math.ceil((heightPx * 25.4) / 96) + 4);
 
-/** Prints the page with the paper set to the roll and the slip's length. */
-export function printRoll(slip: HTMLElement | null) {
+/** The page rule for a slip `heightPx` CSS pixels tall. */
+export const rollPage = (heightPx: number) =>
+  `@media print { @page { size: 80mm ${rollMm(heightPx)}mm; margin: 0; } }`;
+
+/* THE FIDATO PRINTER APP (the owner's D27-360): on a printing computer the
+   PMS runs inside a small app that prints straight to the printer - no
+   window, no print screen. It hands this page `window.fidatoPrinter`; anywhere
+   else the browser's own print is used, as before. */
+declare global {
+  interface Window {
+    fidatoPrinter?: { print: (heightMm: number) => Promise<{ ok: boolean; reason: string | null }> };
+  }
+}
+
+/** Prints the page with the paper set to the roll and the slip's length -
+    through the Fidato Printer app when the page runs in it. */
+export async function printRoll(slip: HTMLElement | null) {
+  const height = slip?.getBoundingClientRect().height ?? 0;
   const style = document.createElement("style");
-  style.textContent = rollPage(slip?.getBoundingClientRect().height ?? 0);
+  style.textContent = rollPage(height);
   document.head.appendChild(style);
-  try { window.print(); } finally { style.remove(); }
+  try {
+    if (window.fidatoPrinter) {
+      const done = await window.fidatoPrinter.print(rollMm(height));
+      if (!done.ok) throw new Error(done.reason ?? "The printer did not take it.");
+    } else {
+      window.print();
+    }
+  } finally {
+    style.remove();
+  }
 }

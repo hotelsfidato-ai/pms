@@ -759,6 +759,13 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **22 October, evening: THE FIDATO PRINTER APP (D27-360), going out WITH release 12** - `printer/` (Electron;
+> `cd printer; npm run dist` builds `printer/dist/Fidato-Printer-Setup.exe`, never committed); `release.mjs` copies it
+> into the website's `/downloads/` and refuses without it. Release 12 is rebuilt on top of it (the b15a2f00 steps are
+> replaced; release 12 was not deployed - live is still 4477d9af / `index-CN0ZuiZL.js`, checked read-only). At the BAR
+> PC after the deploy: install from Restaurant setup → KOT section, sign in, tick, pick the printer by the clock,
+> delete the old "KOT station" shortcut (desktop and Startup).
+
 > **22 October, afternoon: RELEASE 12 READY, the owner's to type** - `release/r12-parcels` at **b15a2f00** (KOTs
 > upright, MEMORY 424; Parcels, D27-359, migration 236; the Bar stock report's wording; the one-run guard, MEMORY 425),
 > ONE complete gate run green in its clean copy (run 18437-19381-1, finished), website `index-CTAj8Prz.js`, steps

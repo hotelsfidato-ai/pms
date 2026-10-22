@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-22 · The Fidato Printer app (D27-360)
+
+**Shipped** `printRoll` prints through `window.fidatoPrinter` when the page runs in the Fidato Printer app (`printer/` at the root): no window, no print screen; `KotStation` awaits each slip. Restaurant setup's KOT section offers the app's download first, the setup file second; the setup file's shortcut is called Fidato Printer. **Proved** `printRoll.test.ts`, `kotSetup.test.tsx`; the built app printed four slips by itself on this PC. The root `CHANGELOG.md` has the whole entry.
+
 ## 2026-10-22 · Parcels, and KOTs that print the size of the roll
 
 **Shipped** Parcels (D27-359, migration 236): New parcel on Tables, the Till and the Terminal (`components/NewParcel.tsx`), the Parcels section on Tables, "Parcel · <name>" on the KOT and bill, a packing charge once per parcel on the bill only (`addPacking`, `pos_order_lines.packing`), set in Restaurant setup. The roll's paper (`lib/printRoll.ts`, MEMORY 423, 424): 80 mm by the slip's length, at least 90 mm, no margin - for the KOT station and the bill page. **Proved** `api/test/modules/pos/parcels.test.ts`, `parcels.test.tsx`, `printRoll.test.ts`. The root `CHANGELOG.md` has the whole entries.

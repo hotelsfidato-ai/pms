@@ -50,6 +50,27 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-22 · The Fidato Printer app: KOTs and bills with no window (D27-360)
+
+**Asked for:** the owner: *"use the KOT as a native system ... don't want the windows to show up ... it needs to just print, but the Google print things come"* - the KOT station's Chrome (`--kiosk-printing`) prints by itself but flashes its print screen. Answers (D27-360): a Fidato Printer app, the unknown-publisher warning accepted for now, named "Fidato Printer" (the old shortcut too), out with release 12.
+
+**Shipped**
+- `printer/` (Electron 44.7.0, electron-builder 26.15.3): `main.js` runs the PMS's own pages in a hidden window in the tray, starting with Windows (`--hidden`), never throttled when hidden, the computer kept from sleeping; links outside the PMS open in the browser. The page's only door is `window.fidatoPrinter.print(heightMm)` (`preload.js`): silent, to the printer picked in the tray (Printer → a printer, else Windows' default), 80 mm by the slip's length, no margin; a refusal shows a Windows message, "Fidato Printer: not printed". Test switches: `FIDATO_SITE`, `FIDATO_PRINT_TO_PDF`, `FIDATO_USER_DATA`. `npm run dist` builds `printer/dist/Fidato-Printer-Setup.exe` (111 MB, per user, one click) - never committed.
+- `src/modules/pos/lib/printRoll.ts`: in the app, `printRoll` asks it (and awaits the printer) instead of `window.print()`; `KotStation.tsx` awaits each slip; `Bill.tsx` unchanged in effect.
+- Restaurant setup → KOT section: **Download Fidato Printer for Windows** (`/downloads/Fidato-Printer-Setup.exe`), the setup file kept as "the other way, with Chrome". The setup file's shortcut is now **Fidato Printer** (an old "KOT station" one removed) - `kotSetupFile.ts`.
+- `scripts/release.mjs`: copies the installer into the release copy's `dist/downloads/` after the build, and refuses without it. `vite.config.ts`: the service worker never answers `/downloads/` with the app.
+- Manual A8.10 rewritten ("the Fidato Printer app"), picture A8-20 retaken (its spec now waits for the section); `KOT-STATION-SETUP.md`; book rebuilt.
+
+**Proved**
+- On this PC, the built app itself (`dist/win-unpacked`), hidden, against the local PMS, slips saved as PDFs of exactly the page it prints: signed in, the bridge in the page, on the Kitchen screen; a 1-dish KOT (80 x 90 mm), a 1-drink KOT (80 x 90), a 6-dish KOT (80 x 97) and the bill (80 x 157, Rs 1,480.50) printed by themselves - all upright, full width, nothing else on the page. The test station taken off; Kitchen and Bar given back to the virtual printers.
+- `printRoll.test.ts` 4/4 (the app gets the length and no print screen opens; a refusal reaches the caller), `kotSetup.test.tsx` (the download link), `KotStation.test.tsx`, `kotReprint.test.tsx`, `manual.test.ts`: 38/38; `release.test.mjs` 5/5; web types clean.
+
+**Left open**
+- Release 12 rebuilt with this, full gates alone, new steps for the owner; then the BAR PC: install, sign in, tick, pick the printer, remove the old "KOT station" shortcut.
+- A code-signing certificate, later (the owner's call), to drop Windows' warning.
+
+**Commits:** this commit
+
 ## 2026-10-22 · Parcels: New parcel, the Parcels section, a packing charge (D27-359)
 
 **Asked for:** the owner, 22 Oct: *"a parcel option and there is a parcel section in the POS where it shows the new parcel ... a button ... it shows in the POS that this is the parcel"*. Answers (D27-359): New parcel on Tables, the Till and the Terminal, and a Parcels section on Tables; named by the customer (required), a phone optional; "Parcel" for "Take Away" everywhere; a packing charge set per hotel, once per parcel, taxed as the food; built now as release 12.

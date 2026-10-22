@@ -29,17 +29,33 @@ on it, its printer connected and installed, and a sign-in that can open
 Restaurant setup's KOT section (the owner, an administrator, the GM or the
 kitchen manager).
 
-## The quick way: one setup file (D27-299, 10 October)
+## The best way: the Fidato Printer app (D27-360, 22 October)
+
+**Where: that computer.** Open the website, sign in, open **Restaurant setup →
+KOT section**, and under **Set up this computer for printing** press
+**Download Fidato Printer for Windows**. Open `Fidato-Printer-Setup.exe`; if
+Windows says "Windows protected your PC", press **More info**, then **Run
+anyway**. It installs, opens, and starts with Windows from then on. In its
+window, sign in, open the KOT section and do step 3 below (name, ticks,
+**Save**). Then click its icon by the clock → **Printer** → the receipt
+printer. Go to the Kitchen screen and close the window: it prints from the
+clock, with no window and no print screen. A slip the printer refuses shows a
+Windows message, "Fidato Printer: not printed": reprint it from the KOT
+section. The app is `printer/` in the code; its installer is put on the
+website by `scripts/release.mjs`.
+
+## The other way: one setup file (D27-299, 10 October)
 
 **Where: that computer.** Sign in, open **Restaurant setup → KOT section**,
-and under **Set up this computer for printing** press **Download the setup
+and under **Set up this computer for printing** press **download the setup
 file** (Chrome may ask whether to keep it: **Keep**). Open the file,
 `KOT-station-setup-<CODE>.cmd`; if Windows says "Windows protected your PC",
 press **More info**, then **Run anyway**. It lists the computer's printers:
 type the receipt printer's number. It then does steps 1, 2 and 5 below for
-you - the default printer (and stops Windows changing it), the **KOT
-station** shortcut on the desktop and in Startup, no sleep while plugged in -
-and opens the KOT station window on the KOT section. Sign in (you come back
+you - the default printer (and stops Windows changing it), the **Fidato
+Printer** shortcut (Chrome; it was called KOT station, and an old one is
+removed) on the desktop and in Startup, no sleep while plugged in - and opens
+that Chrome window on the KOT section. Sign in (you come back
 to the KOT section), then do step 3: name the computer, tick what it prints,
 **Save**. Paper size is the one thing it cannot set for every printer: if
 slips come out too wide, set 80 mm once (step 1, point 4).

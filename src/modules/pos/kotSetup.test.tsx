@@ -92,7 +92,10 @@ describe("Restaurant setup's KOT section offers it (D27-299)", () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    fireEvent.click(await screen.findByRole("button", { name: /Download the setup file/ }));
+    /* The Fidato Printer app first (D27-360); the setup file is the other way. */
+    expect((await screen.findByRole("link", { name: /Download Fidato Printer for Windows/ })).getAttribute("href"))
+      .toBe("/downloads/Fidato-Printer-Setup.exe");
+    fireEvent.click(await screen.findByRole("button", { name: /download the setup file/i }));
 
     expect(click).toHaveBeenCalledTimes(1);
     expect(names).toEqual([`KOT-station-setup-${HOTEL.toUpperCase()}.cmd`]);

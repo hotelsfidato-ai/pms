@@ -329,7 +329,7 @@ export const SHOTS = [
   /* ── Setting it up, and the end of the day ────────────────────────── */
   {
     id: "A8-20", title: "Restaurant setup: the KOT section", as: "Owner",
-    path: "/pos/5EL/setup", steps: [{ scroll: "text:KOT section" }, { eval: "document.getElementById('kot').scrollIntoView({block:'start'})" }, { wait: 300 }],
+    path: "/pos/5EL/setup", steps: [{ waitFor: "css:#kot" }, { scroll: "text:KOT section" }, { eval: "document.getElementById('kot').scrollIntoView({block:'start'})" }, { wait: 300 }],
     marks: [
       { n: 1, at: "text:This computer", side: "left", nth: 0 },
       { n: 2, at: "text:This computer's name", side: "right" },
