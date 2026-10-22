@@ -6539,6 +6539,19 @@ copy will see of theirs.**
 
 ---
 
+### 424 · MINE: the roll fix turned short KOTs sideways (22 October)
+
+MEMORY 423's fix set the paper to 80 mm by the slip's own length. A one- or two-dish KOT is shorter than
+80 mm, and a page wider than tall is a LANDSCAPE page: the printer turned it 90 degrees, so the owner's
+KITCHEN KOT 42 and BAR KOT 43 came out sideways on the roll while the bill, longer than wide, was upright. I had
+proved the fix with a PDF of a short KOT - its MediaBox was 227 x 181 pt, wider than tall, and I read the size
+without reading the orientation. Fixed: the paper is never shorter than 90 mm (`printRoll.ts`, MIN_MM), shipped
+as its own small release. **The rule:** a page size is two answers, size and orientation; a receipt page must be
+taller than it is wide, whatever it holds. And running a service's API tests directly (not through gates.sh)
+writes on the local demo database - it closed the demo's open orders that day; use the gates' fresh database.
+
+---
+
 ### 423 · FOUND: the slips' paper size was not CSS, so every KOT printed as a shrunken A4 (22 October)
 
 The owner's photo from the BAR PC: BAR KOT 18 tiny in the middle of a long strip, Chrome's date and title on top,

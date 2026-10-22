@@ -15,7 +15,8 @@ import { mayReach } from "@/components/app/navigation";
 import { useRole } from "@/lib/session";
 import { OrderPad } from "@/modules/pos/flows/OrderPad";
 import { draftedTables } from "@/lib/draft";
-import { getFloor, clearTable, setOutletClosed, takeDishes, type FloorTable, type TableState, type OffFor } from "@/modules/pos/data/till";
+import { getFloor, clearTable, setOutletClosed, takeDishes, type FloorTable, type FloorParcel, type TableState, type OffFor } from "@/modules/pos/data/till";
+import { NewParcel } from "@/modules/pos/components/NewParcel";
 import { useBillPrint } from "@/modules/pos/flows/printBill";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { KotStatus } from "@/modules/pos/components/KotStation";
@@ -182,6 +183,7 @@ export default function FloorPage() {
   };
 
   const sections = floor.data?.sections ?? [];
+  const parcels = floor.data?.parcels ?? [];
   const outlet = floor.data?.outlet ?? null;
   const closed = outlet?.closedUntil
     && Date.parse(outlet.closedUntil) > Date.now();
@@ -201,8 +203,19 @@ export default function FloorPage() {
         title="Tables"
         description="The room as it stands. Tap any table to take an order on it - the pad opens here, and nothing reaches the kitchen until you send it."
         actions={outlet && (
-          <CloseOutlet outlet={outlet} closed={!!closed} hotelId={hotelId}
-                       onDone={refresh} />
+          <div className="flex flex-wrap gap-2">
+            {/* A parcel (D27-359): named by its customer, its pad opens at once. */}
+            {!closed && (
+              <NewParcel hotelId={hotelId} outlet="REST" onOpened={(o) => {
+                refresh();
+                setPad({ table: parcelTable({ orderId: o.id, orderNo: o.orderNo,
+                  name: (o.table ?? "Parcel").replace(/^Parcel · /, ""), phone: null,
+                  minutes: 0, payable: 0, ready: 0, readyIds: [] }), orderId: o.id });
+              }} />
+            )}
+            <CloseOutlet outlet={outlet} closed={!!closed} hotelId={hotelId}
+                         onDone={refresh} />
+          </div>
         )}
       />
 
@@ -249,6 +262,52 @@ export default function FloorPage() {
           loadedAt={floor.dataUpdatedAt}
           onRetry={() => void floor.refetch()}
         />
+      )}
+
+      {/* THE OPEN PARCELS (D27-359), above the room: each by its customer,
+          how long, how much; a tap adds to it, as on a table. */}
+      {parcels.length > 0 && (
+        <section className="mb-6" data-parcels>
+          <h2 className="text-md font-semibold text-ink-900 mb-3">Parcels</h2>
+          <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(9rem,1fr))]">
+            {parcels.map((p) => {
+              const t = parcelTable(p);
+              return (
+                <div key={p.orderId} className={cn(
+                  "relative rounded-lg ring-1 ring-inset px-3.5 py-3 min-h-24 flex flex-col", TILE.running)}>
+                  <button type="button" disabled={Boolean(closed)} onClick={() => addRound(t)}
+                    aria-label={`Add to the parcel for ${p.name}`}
+                    className={cn("flex-1 flex flex-col items-start text-left w-full",
+                      closed ? "cursor-not-allowed" : "cursor-pointer press-tile")}>
+                    <span className="tabular text-xs font-medium text-grey-600">{p.minutes} min</span>
+                    <span className="text-xl font-semibold text-ink-900 tracking-[-0.02em] break-words">{p.name}</span>
+                    <span className="mt-auto w-full flex items-center justify-between gap-2">
+                      <span className="tabular text-md font-semibold text-ink-900">{money(p.payable)}</span>
+                      {!closed && <ChevronRight className="size-4 shrink-0 text-grey-400" aria-hidden />}
+                    </span>
+                  </button>
+                  {p.ready > 0 && (
+                    <button type="button" disabled={busy === t.id} onClick={() => void take(t)}
+                      aria-label={`Taken: the ${p.ready} ready for ${p.name}`}
+                      className="press mt-2 w-full h-11 px-3 rounded-full ring-1 ring-inset ring-success-100 bg-success-50 text-success-600 text-sm font-semibold tabular whitespace-nowrap cursor-pointer hover:ring-success">
+                      {p.ready} ready
+                    </button>
+                  )}
+                  <div className="flex gap-2 mt-2">
+                    <button type="button" aria-label={`Print the bill for ${p.name}'s parcel`}
+                      disabled={busy === t.id} onClick={() => void print(t)} className={TILE_ACTION}>
+                      <Printer className="size-4" />
+                    </button>
+                    <button type="button" aria-label={`Open ${p.name}'s parcel`}
+                      onClick={() => navigate(`/pos/${hotelId}/till?order=${p.orderId}`)} className={TILE_ACTION}>
+                      <Eye className="size-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       {floor.isLoading ? (
@@ -464,6 +523,15 @@ export default function FloorPage() {
       )}
     </Page>
   );
+}
+
+/** A parcel as the pad and the tile buttons take a table (D27-359). */
+function parcelTable(p: FloorParcel): FloorTable {
+  return {
+    id: `parcel-${p.orderId}`, label: `Parcel · ${p.name}`, seats: null, row: 0, col: 0,
+    orderId: p.orderId, orderNo: p.orderNo, state: "running", minutes: p.minutes,
+    payable: p.payable, ready: p.ready, readyIds: p.readyIds,
+  };
 }
 
 /* ══════════════════════════════════════════════════════════════════

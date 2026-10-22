@@ -22,7 +22,7 @@ import { TestDocumentMark } from "@/components/app/TestHotel";
 
 const TYPE_LABEL: Record<string, string> = {
   dine_in: "Dine In",
-  takeaway: "Take Away",
+  takeaway: "Parcel",
   room_service: "Room Service",
   delivery: "Delivery",
 };
@@ -48,11 +48,18 @@ export function DocketSlip({ d }: { d: Docket }) {
       {d.reprint && (
         <p className="text-center font-bold tracking-wide mt-0.5">REPRINT</p>
       )}
-      <p className="text-center font-bold mt-1">
-        {TYPE_LABEL[d.orderType] ?? d.orderType}
-      </p>
-      {d.table && (
-        <p className="text-center font-bold">Table No: {d.table}</p>
+      {/* A parcel (D27-359) is "Parcel · <customer>", big, in place of a table. */}
+      {d.orderType === "takeaway" ? (
+        <p className="text-center font-bold text-[16px] mt-1">{d.table ?? "Parcel"}</p>
+      ) : (
+        <>
+          <p className="text-center font-bold mt-1">
+            {TYPE_LABEL[d.orderType] ?? d.orderType}
+          </p>
+          {d.table && (
+            <p className="text-center font-bold">Table No: {d.table}</p>
+          )}
+        </>
       )}
 
       {/* A border, not a row of dashes. Forty dashes is right at one

@@ -27,6 +27,7 @@ import { listOrders, listEarlierBills, getOrder, listChargeableRooms, openOrder,
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { KotStatus, KotsSent } from "@/modules/pos/components/KotStation";
 import { BUSINESS_DATE } from "@/data/repositories";
+import { NewParcel } from "@/modules/pos/components/NewParcel";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { AskDialog, SENT_STRIKE, roomAsk, type Ask, type Reply } from "@/modules/pos/components/AskDialog";
 
@@ -339,6 +340,9 @@ export default function TillPage() {
                     <Plus className="size-4" />
                     Open
                   </Button>
+                  {/* A parcel (D27-359): named by its customer, no table. */}
+                  <NewParcel hotelId={hotelId} outlet="REST"
+                    onOpened={(o) => { setOpenId(o.id); refresh(); }} />
                 </div>
               </CardBody>
             </Card>
@@ -1290,7 +1294,7 @@ function OrderPanel({
                 </span>
                 {/* Customise on any dish (D27-289); once the kitchen has it, its
                     add-ons are lines of their own for the next Send (D27-291). */}
-                {!settled && !line.voided && line.parentLineId === null && (
+                {!settled && !line.voided && line.parentLineId === null && !line.packing && (
                   <button
                     type="button"
                     onClick={() => onCustomise(order.lines.find((l) => l.id === line.id) ?? line)}
@@ -1303,7 +1307,7 @@ function OrderPanel({
                 )}
                 {/* A side follows its dish (D27-192, Q8), and an add-on line's
                     number is set when it goes on (D27-291): only the dish has a −. */}
-                {!settled && !line.voided && line.parentLineId === null && (
+                {!settled && !line.voided && line.parentLineId === null && !line.packing && (
                   <button
                     type="button"
                     onClick={() => onFewer(line.id)}
@@ -1313,7 +1317,7 @@ function OrderPanel({
                     <Minus className="size-4" />
                   </button>
                 )}
-                {!settled && !line.voided && line.parentLineId === null && (
+                {!settled && !line.voided && line.parentLineId === null && !line.packing && (
                   <button
                     type="button"
                     onClick={() => onMore(line.id)}

@@ -144,6 +144,8 @@ export interface OrderLine {
       before 14 October. */
   kotNo?: number | null;
   kotKind?: { id: string; name: string } | null;
+  /** A parcel's packing charge (D27-359): on the bill, never a dish. */
+  packing?: boolean;
   /** Null when the reader may not see that person (staff is row-secured). */
   addedBy: string | null;
 
@@ -528,6 +530,13 @@ export function openOrder(
   hotelId: string, outlet: string, table?: string,
 ): Promise<TillResult> {
   return write(`/api/hotels/${hotelId}/till/orders`, { outlet, table });
+}
+
+/** A parcel (the owner's D27-359): an order named by its customer, no table. */
+export function openParcel(
+  hotelId: string, outlet: string, name: string, phone: string,
+): Promise<TillResult> {
+  return write(`/api/hotels/${hotelId}/till/orders`, { outlet, parcel: { name, phone: phone.trim() || null } });
 }
 
 export function addLine(
@@ -1293,6 +1302,16 @@ export interface Floor {
     closedReason: string | null;
   } | null;
   sections: FloorSection[];
+  /** The open parcels (D27-359), oldest first. Absent on an older server: none. */
+  parcels?: FloorParcel[];
+}
+
+export interface FloorParcel {
+  orderId: string; orderNo: string;
+  /** The customer's name. */
+  name: string; phone: string | null;
+  minutes: number; payable: number;
+  ready: number; readyIds: string[];
 }
 
 export async function getFloor(
@@ -1319,7 +1338,7 @@ export interface SetupTable {
 
 export interface TillSetup {
   /** Null until somebody names it: there is no restaurant yet. */
-  restaurant: { name: string } | null;
+  restaurant: { name: string; packingCharge?: number | null } | null;
   /** Every section switched on, an empty one included. */
   sections: { id: string; name: string; tables: SetupTable[] }[];
   /** People with the Waiter role here. */
@@ -1335,6 +1354,11 @@ const setupPath = (hotelId: string, rest: string) =>
 
 export function nameRestaurant(hotelId: string, name: string): Done {
   return simplePost(setupPath(hotelId, "restaurant"), { name });
+}
+
+/** A parcel's packing charge (D27-359): once per parcel; null for none. */
+export function setPackingCharge(hotelId: string, amount: number | null): Done {
+  return simplePost(setupPath(hotelId, "packing"), { amount });
 }
 
 export function addSection(hotelId: string, name: string): Done {

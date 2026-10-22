@@ -483,6 +483,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/day-end/close`]: DAY_END,
   /* pos: restaurant setup */
   [`POST ${H}/till/setup/restaurant`]: TILL_SETUP,
+  [`POST ${H}/till/setup/packing`]: TILL_SETUP,  // D27-359
   [`POST ${H}/till/setup/sections`]: TILL_SETUP,
   [`PATCH ${H}/till/setup/sections/:id`]: TILL_SETUP,
   [`POST ${H}/till/setup/sections/:id/off`]: TILL_SETUP,

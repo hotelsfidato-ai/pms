@@ -89,7 +89,7 @@ export function BillSlip({ order: o, heading, sample }: {
       <div className="mt-2 text-xs tabular">
         <p className="flex justify-between gap-2"><span>Bill {o.orderNo}</span><span>{dateShort(o.businessDate)}</span></p>
         <p className="flex flex-wrap justify-between gap-x-3">
-          {o.table && <span>Table {o.table}</span>}
+          {o.table && <span>{o.orderType === "takeaway" ? o.table : `Table ${o.table}`}</span>}
           {o.covers ? <span>Covers {o.covers}</span> : null}
           {steward && <span>Steward {steward}</span>}
         </p>

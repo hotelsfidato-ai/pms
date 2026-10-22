@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-22 · Parcels, and KOTs that print the size of the roll
+
+**Shipped** Parcels (D27-359, migration 236): New parcel on Tables, the Till and the Terminal (`components/NewParcel.tsx`), the Parcels section on Tables, "Parcel · <name>" on the KOT and bill, a packing charge once per parcel on the bill only (`addPacking`, `pos_order_lines.packing`), set in Restaurant setup. The roll's paper (`lib/printRoll.ts`, MEMORY 423, 424): 80 mm by the slip's length, at least 90 mm, no margin - for the KOT station and the bill page. **Proved** `api/test/modules/pos/parcels.test.ts`, `parcels.test.tsx`, `printRoll.test.ts`. The root `CHANGELOG.md` has the whole entries.
+
 ## 2026-10-21 · Discounts for the GM, the owner and an admin; one line per dish (D27-352, D27-353)
 
 **Shipped** The discount, its clearing and promotions need roleGate DISCOUNT (the owner, an administrator, the GM); the Till's Discount for those three only. `lib/oneLinePerDish.ts`: the same dish of two rounds is one line on the bill, the Till, the Terminal and the pad's "Already sent", carrying the newest round's id. **Proved** `api/test/modules/pos/discountWho.test.ts`, `noCharge.test.tsx`, `oneLinePerDish.test.ts`, `oneMore.test.tsx`. The root `CHANGELOG.md` has the whole entry.

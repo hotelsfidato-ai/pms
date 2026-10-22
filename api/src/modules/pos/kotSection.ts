@@ -392,7 +392,8 @@ export function registerKotSection(till: App, hotelFor: HotelFor): void {
           from pos_order_lines l
           join pos_orders o on o.id = l.order_id
           join pos_kot_kinds k on k.id = coalesce(l.kot_kind_id, app.pos_line_kot_kind(l.id))
-         where l.hotel_id = $1 and k.station_id = $2 and k.is_active and l.kot_no is not null`;
+         where l.hotel_id = $1 and k.station_id = $2 and k.is_active and l.kot_no is not null
+           and not l.packing`;
       type Row = {
         order_id: string; kot_no: number; kind_id: string; kind_name: string;
         table_ref: string | null; sent_at: string; printed_at: string | null;

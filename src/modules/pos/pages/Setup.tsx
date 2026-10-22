@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, Field, fieldProps, Input, Segmented, ReadFailed,
 } from "@/components/ui";
 import {
-  getTillSetup, getMenu, nameRestaurant, addSection, renameSection, takeSectionAway,
+  getTillSetup, getMenu, nameRestaurant, setPackingCharge, addSection, renameSection, takeSectionAway,
   addTables, changeTable, takeTableAway, type TillSetup, type SetupTable, type MenuCategory,
 } from "@/modules/pos/data/till";
 import { getTableHours, setTableHours, type TableHours } from "@/modules/pos/data/tableBookings";
@@ -107,6 +107,7 @@ export default function SetupPage() {
         <>
           <ReadyToOpen hotelId={hotelId} setup={setup.data} menu={menu} />
           <Restaurant hotelId={hotelId} setup={setup.data} run={run} />
+          {setup.data.restaurant && <Packing hotelId={hotelId} setup={setup.data} run={run} />}
           <Sections hotelId={hotelId} setup={setup.data} run={run} />
           <KotSection hotelId={hotelId} />
           <TableBookingHours hotelId={hotelId} />
@@ -268,6 +269,40 @@ function Restaurant({ hotelId, setup, run }: { hotelId: string; setup: TillSetup
             <Button type="submit" loading={busy} disabled={!name.trim()}
                     variant={setup.restaurant ? "secondary" : "primary"}>
               {setup.restaurant ? "Save name" : "Name the restaurant"}
+            </Button>
+          </form>
+        </CardBody>
+      </Card>
+    </Section>
+  );
+}
+
+/* ── A parcel's packing charge (D27-359) ──────────────────────────── */
+
+function Packing({ hotelId, setup, run }: { hotelId: string; setup: TillSetup; run: Run }) {
+  const saved = setup.restaurant?.packingCharge ?? null;
+  const [amount, setAmount] = useState(saved === null ? "" : String(saved));
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    const typed = amount.trim();
+    setBusy(true);
+    await run(setPackingCharge(hotelId, typed === "" ? null : Number(typed)),
+      typed === "" ? "No packing charge" : "Packing charge saved");
+    setBusy(false);
+  };
+  return (
+    <Section title="Parcels" description="A packing charge added once to each parcel's bill, taxed as the food. Blank: none.">
+      <Card>
+        <CardBody>
+          <form className="flex flex-col sm:flex-row sm:items-end gap-3"
+                onSubmit={(e) => { e.preventDefault(); void save(); }}>
+            <Field label="Packing charge, ₹" className="max-w-xs">
+              {(f) => <Input {...fieldProps(f)} inputMode="decimal" value={amount}
+                             onChange={(e) => setAmount(e.target.value)} />}
+            </Field>
+            <Button type="submit" variant="secondary" loading={busy}
+                    disabled={(amount.trim() === "" ? null : Number(amount.trim())) === saved}>
+              Save
             </Button>
           </form>
         </CardBody>

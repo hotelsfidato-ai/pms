@@ -1769,6 +1769,7 @@ async function readOrder(client: Client, orderId: string) {
     numbered_addons: LineAddons | null;
     extra_kind: "custom" | "numbered" | null;
     kot_no: number | null; kot_kind_id: string | null; kot_kind_name: string | null;
+    packing: boolean;
   }>(
     `select l.id::text, l.name, l.qty::text, l.unit_price::text,
             l.tax_rate::text, l.tax_scheme, l.note, l.voided, l.kot_status,
@@ -1776,12 +1777,12 @@ async function readOrder(client: Client, orderId: string) {
             l.parent_line_id::text, l.variation_id::text, l.addon_id::text,
             l.item_id::text, l.extra_choice_ids::text[] as extra_choice_ids,
             l.numbered_addons, l.extra_kind,
-            l.kot_no, k.id::text as kot_kind_id, k.name as kot_kind_name
+            l.kot_no, k.id::text as kot_kind_id, k.name as kot_kind_name, l.packing
        from pos_order_lines l
        left join staff s on s.id = l.added_by
        /* A sent line's kind; one sent before kinds were stamped (211) by its
           dish, as the station reads it - so its KOT reprints per kind. */
-       left join pos_kot_kinds k on k.id = case when l.kot_no is not null
+       left join pos_kot_kinds k on k.id = case when l.kot_no is not null and not l.packing
                                            then coalesce(l.kot_kind_id, app.pos_line_kot_kind(l.id)) end
       where l.order_id = $1
       /* Each dish, then what hangs under it: an add-on put on a dish after
@@ -1899,6 +1900,8 @@ async function readOrder(client: Client, orderId: string) {
          the order screen reprints them (the owner's D27-324 (4)). */
       kotNo: l.kot_no,
       kotKind: l.kot_kind_id ? { id: l.kot_kind_id, name: l.kot_kind_name! } : null,
+      /* A parcel's packing charge (D27-359): a bill line, no dish. */
+      packing: l.packing,
       addedBy: l.added_by_name,
       /* An add-on names the dish it belongs to. The bill and the kitchen
          docket both indent on this: "Sides: Onions" under "Bhaaji Pau
@@ -2130,9 +2133,21 @@ async function openingCash(client: Client, outletId: string, date: string): Prom
 }
 
 till.post("/:code/till/orders", async (c) => {
-  type OpenBody = { outlet?: string; table?: string; tableId?: string };
+  /* A PARCEL (the owner's D27-359): the takeaway type, named by the customer
+     - required, so two parcels can be told apart - with a phone if given. */
+  type OpenBody = { outlet?: string; table?: string; tableId?: string;
+                    parcel?: { name?: string; phone?: string | null } };
   const input = await c.req.json<OpenBody>().catch(() => ({}) as OpenBody);
   if (!input.outlet) return c.json(refuse("Which outlet is this order for?"), 409);
+  const parcelName = input.parcel ? input.parcel.name?.trim() ?? "" : null;
+  const parcelPhone = input.parcel?.phone?.trim() || null;
+  if (parcelName !== null) {
+    if (!parcelName) return c.json(refuse("Whose parcel is it? Type the customer's name."), 409);
+    if (parcelName.length > 60) return c.json(refuse("A customer's name is at most 60 characters."), 409);
+    const badPhone = phoneProblem(parcelPhone);
+    if (badPhone) return c.json(refuse(badPhone), 409);
+    if (input.table || input.tableId) return c.json(refuse("A parcel has no table."), 409);
+  }
 
   const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
@@ -2209,11 +2224,13 @@ till.post("/:code/till/orders", async (c) => {
     const { rows } = await client.query<{ id: string }>(
       `insert into pos_orders
          (hotel_id, outlet_id, order_no, table_ref, business_date, opened_by,
-          table_id)
-       values ($1,$2,$3,$4,$5,$6,$7)
+          table_id, order_type, customer_name, customer_phone)
+       values ($1,$2,$3,$4,$5,$6,$7, coalesce($8, 'dine_in'), $9, $10)
        returning id::text`,
-      [hotelId, outlet[0].id, no[0]!.order_no, tableRef,
-       businessDate, session.staffId, tableId],
+      [hotelId, outlet[0].id, no[0]!.order_no,
+       parcelName !== null ? `Parcel · ${parcelName}` : tableRef,
+       businessDate, session.staffId, tableId,
+       parcelName !== null ? "takeaway" : null, parcelName, parcelPhone],
     );
 
     return { ok: true as const, ...(await readOrder(client, rows[0]!.id))! };
@@ -3803,6 +3820,27 @@ till.get("/:code/till/floor", async (c) => {
       });
     }
 
+    /* THE OPEN PARCELS (the owner's D27-359): each by its customer, how long
+       it has been open, what it comes to, and what the kitchen has ready. */
+    const { rows: parcelRows } = await client.query<{
+      id: string; order_no: string; name: string | null; phone: string | null;
+      minutes: number; payable: string; ready: string; ready_ids: string[];
+    }>(
+      `select o.id::text, o.order_no, o.customer_name as name, o.customer_phone as phone,
+              floor(extract(epoch from now() - o.opened_at) / 60)::int as minutes,
+              (select t.payable from app.pos_order_total(o.id) t)::text as payable,
+              (select coalesce(sum(l.qty), 0) from pos_order_lines l
+                where l.order_id = o.id and l.kot_status = 'ready' and not l.voided
+                  and (l.parent_line_id is null or l.extra_kind is not null))::text as ready,
+              array(select l.id::text from pos_order_lines l
+                     where l.order_id = o.id and l.kot_status = 'ready' and not l.voided
+                       and (l.parent_line_id is null or l.extra_kind is not null)) as ready_ids
+         from pos_orders o
+        where o.outlet_id = $1 and o.order_type = 'takeaway' and o.status = 'open'
+        order by o.opened_at`,
+      [outlet[0].id],
+    );
+
     return {
       outlet: {
         code, name: outlet[0].name,
@@ -3810,6 +3848,10 @@ till.get("/:code/till/floor", async (c) => {
         closedReason: outlet[0].closed_reason,
       },
       sections,
+      parcels: parcelRows.map((p) => ({
+        orderId: p.id, orderNo: p.order_no, name: p.name ?? p.order_no, phone: p.phone,
+        minutes: p.minutes, payable: Number(p.payable), ready: Number(p.ready), readyIds: p.ready_ids,
+      })),
     };
   });
 
@@ -3932,7 +3974,7 @@ till.patch("/:code/till/orders/:id", async (c) => {
 
   const TYPES = ["dine_in", "takeaway", "room_service", "delivery"];
   if (input.orderType !== undefined && !TYPES.includes(input.orderType)) {
-    return c.json(refuse("Dine in, takeaway, room service or delivery."), 409);
+    return c.json(refuse("Dine in, parcel, room service or delivery."), 409);
   }
   /* A phone the kitchen cannot call and the guest search cannot find is
      not kept (QA X-2): the one rule, api/src/validate.ts. */
@@ -5427,8 +5469,29 @@ till.post("/:code/till/orders/:id/lines/:lineId/extras", async (c) => {
    Taken inside the same statement that sends the lines, so two waiters
    sending at once cannot both read the same number and print it twice.
    ══════════════════════════════════════════════════════════════════ */
+/* A PARCEL'S PACKING CHARGE (the owner's D27-359): on its first KOT, once,
+   the GM's amount (pos_outlets.packing_charge), taxed as the food. A bill
+   line, not a dish: already 'served' and marked packing, so no KOT, kitchen
+   screen or reprint shows it, and the bill, its tax and the reports add it
+   up as any line. Once struck by a manager it is not put back. No charge
+   set, or no GST rule for the food: nothing. */
+async function addPacking(client: Client, orderId: string, kotNo: number, staffId: string) {
+  await client.query(
+    `insert into pos_order_lines
+       (order_id, hotel_id, name, qty, unit_price, tax_rate, added_by,
+        kot_status, kot_sent_at, kot_no, packing)
+     select o.id, o.hotel_id, 'Packing charge', 1, ou.packing_charge,
+            app.gst_rate_or_null(o.hotel_id, 'restaurant', ou.packing_charge),
+            $3, 'served', now(), $2, true
+       from pos_orders o join pos_outlets ou on ou.id = o.outlet_id
+      where o.id = $1 and o.order_type = 'takeaway' and ou.packing_charge is not null
+        and app.gst_rate_or_null(o.hotel_id, 'restaurant', ou.packing_charge) is not null
+        and not exists (select 1 from pos_order_lines l where l.order_id = o.id and l.packing)`,
+    [orderId, kotNo, staffId]);
+}
+
 async function fireKot(
-  client: Client, outletId: string, businessDate: string, orderId: string,
+  client: Client, outletId: string, businessDate: string, orderId: string, staffId: string,
 ): Promise<{ sent: number; kotNo: number }> {
   const { rows: next } = await client.query<{ no: number }>(
     `select app.pos_next_kot_no($1, $2::date) as no`,
@@ -5442,6 +5505,7 @@ async function fireKot(
       where order_id = $1 and not voided and kot_status = 'pending'`,
     [orderId, kotNo],
   );
+  if (rowCount) await addPacking(client, orderId, kotNo, staffId);
 
   return { sent: rowCount ?? 0, kotNo };
 }
@@ -5750,7 +5814,7 @@ till.post("/:code/till/orders/batch", async (c) => {
 
     let kot: { sent: number; kotNo: number } | null = null;
     if (input.send) {
-      kot = await fireKot(client, outletId, businessDate, orderId);
+      kot = await fireKot(client, outletId, businessDate, orderId, session.staffId);
     }
 
     /* Accepted only if it is still waiting: a second Accept, or a Decline
@@ -5791,7 +5855,7 @@ till.post("/:code/till/orders/batch", async (c) => {
 });
 
 till.post("/:code/till/orders/:id/kot", async (c) => {
-  const result = await withSession(c.get("subject"), async (client) => {
+  const result = await withSession(c.get("subject"), async (client, session) => {
     const hotelId = await hotelFor(client, c.req.param("code"));
     if (!hotelId) return null;
     const orderId = c.req.param("id");
@@ -5837,6 +5901,7 @@ till.post("/:code/till/orders/:id/kot", async (c) => {
         + "something first.",
       );
     }
+    await addPacking(client, orderId, kotNo, session.staffId);
 
     return {
       ok: true as const,
@@ -5888,7 +5953,7 @@ till.get("/:code/till/orders/:id/kot/:no", async (c) => {
          from pos_orders o
          join pos_outlets ou on ou.id = o.outlet_id
          join hotels h on h.id = o.hotel_id
-         join pos_order_lines l on l.order_id = o.id and l.kot_no = $3
+         join pos_order_lines l on l.order_id = o.id and l.kot_no = $3 and not l.packing
         where o.id = $1 and o.hotel_id = $2
         group by o.order_no, o.table_ref, o.order_type, ou.name, h.name`,
       [orderId, hotelId, kotNo],
@@ -5901,7 +5966,9 @@ till.get("/:code/till/orders/:id/kot/:no", async (c) => {
     }>(
       `select k.line_id::text, k.parent_id::text, k.name, k.qty::text, k.note, k.is_addon
          from app.pos_kot($1, $2) k
-        where $3::uuid is null or app.pos_line_kot_kind(k.line_id) = $3::uuid`,
+        where ($3::uuid is null or app.pos_line_kot_kind(k.line_id) = $3::uuid)
+          /* A parcel's packing charge is on the bill, never on a KOT (D27-359). */
+          and not (select l.packing from pos_order_lines l where l.id = k.line_id)`,
       [orderId, kotNo, kind?.id ?? null],
     );
 
@@ -6213,8 +6280,8 @@ const ACROSS = 4;
 const LONGEST_RUN = 100;
 
 async function restaurantFor(client: Client, hotelId: string) {
-  const { rows } = await client.query<{ id: string; name: string }>(
-    `select id::text, name from pos_outlets
+  const { rows } = await client.query<{ id: string; name: string; packing_charge: string | null }>(
+    `select id::text, name, packing_charge::text from pos_outlets
       where hotel_id = $1 and code = $2 and is_active`,
     [hotelId, RESTAURANT],
   );
@@ -6281,7 +6348,8 @@ till.get("/:code/till/setup", async (c) => {
     );
 
     return {
-      restaurant: restaurant ? { name: restaurant.name } : null,
+      restaurant: restaurant ? { name: restaurant.name, packingCharge: restaurant.packing_charge === null
+        ? null : Number(restaurant.packing_charge) } : null,
       sections,
       waiters: w[0]!.n,
     };
@@ -6318,6 +6386,26 @@ till.post("/:code/till/setup/restaurant", async (c) => {
 
   if (!result) return c.json({ error: "No such property." }, 404);
   return c.json(result);
+});
+
+/* A PARCEL'S PACKING CHARGE (the owner's D27-359): typed by the GM, once per
+   parcel, taxed as the food; blank is no charge - never a default. */
+till.post("/:code/till/setup/packing", async (c) => {
+  const input = await c.req.json<{ amount?: number | null }>().catch(() => ({} as { amount?: number | null }));
+  const amount = input.amount ?? null;
+  if (amount !== null && (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 || amount >= 100000)) {
+    return c.json(refuse("A packing charge is more than zero, or left blank for none."), 409);
+  }
+  const result = await withSession(c.get("subject"), async (client) => {
+    const hotelId = await hotelFor(client, c.req.param("code"));
+    if (!hotelId) return null;
+    const { rowCount } = await client.query(
+      "update pos_outlets set packing_charge = $3 where hotel_id = $1 and code = $2",
+      [hotelId, RESTAURANT, amount === null ? null : Math.round(amount * 100) / 100]);
+    return rowCount ? { ok: true as const } : refuse("Name the restaurant first.");
+  });
+  if (!result) return c.json({ error: "No such property." }, 404);
+  return c.json(result, result.ok ? 200 : 409);
 });
 
 till.post("/:code/till/setup/sections", async (c) => {

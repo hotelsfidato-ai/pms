@@ -121,7 +121,7 @@ export function OrderPad({
      takes add-ons, which join this round. */
   /* The same dish sent in two rounds is one line (D27-353). */
   const sentDishes = oneLinePerDish((existing.data?.lines ?? []).filter((l) => l.kotStatus !== "pending"))
-    .filter((l) => !l.voided && l.parentLineId === null);
+    .filter((l) => !l.voided && l.parentLineId === null && !l.packing);
   const [eventChoice, setEventChoice] = useState<string | null | undefined>(undefined);
   useEffect(() => { if (!open) setEventChoice(undefined); }, [open]);
   const eventId = eventChoice !== undefined

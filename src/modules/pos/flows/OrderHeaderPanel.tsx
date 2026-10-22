@@ -27,7 +27,7 @@ import { setOrderHeader, listWaiters, type Order } from "@/modules/pos/data/till
 
 const CHANNELS: { key: Order["orderType"]; label: string }[] = [
   { key: "dine_in", label: "Dine in" },
-  { key: "takeaway", label: "Take away" },
+  { key: "takeaway", label: "Parcel" },
   { key: "room_service", label: "Room service" },
   { key: "delivery", label: "Delivery" },
 ];

@@ -50,6 +50,29 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
+## 2026-10-22 · Parcels: New parcel, the Parcels section, a packing charge (D27-359)
+
+**Asked for:** the owner, 22 Oct: *"a parcel option and there is a parcel section in the POS where it shows the new parcel ... a button ... it shows in the POS that this is the parcel"*. Answers (D27-359): New parcel on Tables, the Till and the Terminal, and a Parcels section on Tables; named by the customer (required), a phone optional; "Parcel" for "Take Away" everywhere; a packing charge set per hotel, once per parcel, taxed as the food; built now as release 12.
+
+**Shipped**
+- Migration 236: `pos_outlets.packing_charge` (null: none; never a default), `pos_order_lines.packing` (one live per order).
+- `api/src/modules/pos/till.ts`: `POST /till/orders` takes `parcel: { name, phone }` - the takeaway type, `customer_name`/`customer_phone`, `table_ref` "Parcel · <name>", no table; a blank name refused. `addPacking`: with the parcel's first KOT (both doors that send), one line "Packing charge" at the GM's amount, taxed at the food's GST rule, already `served` and marked packing - the bill, its tax and every report add it up as a line; the KOT (`app.pos_kot` read), the KOT station's slips and reprints (`kotSection.ts`) and the kitchen leave it out; struck by a manager it is not put back. `GET /till/floor` lists the open parcels. `POST /till/setup/packing` (Restaurant setup's grant); the setup read carries `packingCharge`.
+- Screens: `components/NewParcel.tsx` (name required, phone optional); Tables' New parcel (the pad opens on it) and Parcels section (by customer, minutes, total, ready, print, open); the Till's and the Terminal's New parcel; "Parcel" on the order panel, the KOT (the parcel's name big, in place of "Table No:") and the bill; the packing line has no dish buttons (customise, fewer, more); Restaurant setup's Parcels card.
+- Manual A8.1, A8.2 ("A parcel", picture A8-40), A8.10 ("A parcel's packing charge"); book rebuilt.
+
+**Proved**
+- `api/test/modules/pos/parcels.test.ts` 4/4 (a blank name refused; Parcel · name, takeaway, the phone, no table; the setting refused to a waiter, zero refused, blank clears - and then no charge; the first KOT adds one packing line at the food's rate, served, no kind, the KOT holding only the dish; a second KOT adds none; the floor lists it; struck by the GM, not put back). `src/modules/pos/parcels.test.tsx` 2/2; every restaurant screen test 180/180. `tillSetup.test.ts`'s setup read now carries the packing charge. On the local demo: Parcel · Rahul, two Chicken 65 at Rs 360 and Rs 20 packing at 5%: Rs 777; the KOT printed only the dish.
+- Full gates: in release 12's clean copy.
+
+**Left open**
+- Release 12 for the owner to deploy, after release 11.1 (the KOT print fix).
+
+**Commits:** this commit
+
+## 2026-10-22 · A short KOT prints upright (MEMORY 424)
+
+**Asked for:** the owner's photos: KITCHEN KOT 42 and BAR KOT 43 printed sideways from the KOT station, the bill upright. **Found:** the roll fix (MEMORY 423) made a short KOT's page 80 x 64 mm - landscape - and the printer turned it. **Shipped:** the paper is never shorter than 90 mm (`printRoll.ts`); headless Chrome's PDF: 227 x 181 pt before, 227 x 255 pt after. `printRoll.test.ts` 2/2. Released on its own as release 11.1 (`release/r12-print`: live 4477d9af + this), full gates in its clean copy.
+
 ## 2026-10-22 · KOTs and bills print the size of the roll, with no header or footer
 
 **Asked for:** the owner's photo from the BAR PC: the KOT station's slip came out tiny in the middle of a long strip, with Chrome's date and title above and the web address and "1/1" below, while the same slip printed through the website's print window came out right. Why, and make it work.

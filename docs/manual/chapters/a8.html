@@ -12,7 +12,7 @@
   <table>
     <thead><tr><th style="width:22%">Screen</th><th style="width:26%">Who uses it</th><th>What it is for</th></tr></thead>
     <tbody>
-      <tr><td>Tables</td><td>Waiters, the bar, Reception (if allowed)</td><td>The room as it stands. Tap a table to take an order on a pad; print a table's bill; clear a table.</td></tr>
+      <tr><td>Tables</td><td>Waiters, the bar, Reception (if allowed)</td><td>The room as it stands. Tap a table to take an order on a pad; print a table's bill; clear a table. <span class="ui">New parcel</span>, and the open parcels above the room.</td></tr>
       <tr><td>Till</td><td>Waiters, the bar, the cashier</td><td>The cash register: the bill line by line, sending to the kitchen, payment, the day's paid bills; discounts for the GM, the owner and an Admin.</td></tr>
       <tr><td>Terminal</td><td>Waiters, the bar</td><td>The same work on a fixed tablet or screen, one outlet. Also where room-service orders from guests arrive.</td></tr>
       <tr><td>Kitchen</td><td>Chef, kitchen manager</td><td>Every dish the kitchen holds, oldest first: <span class="ui">Start</span>, then <span class="ui">Ready</span>.</td></tr>
@@ -21,7 +21,7 @@
       <tr><td>Close restaurant day</td><td>Cashier, waiters, the bar, kitchen manager</td><td>The cash drawer: open the day with a float, money in and out, the count, the close.</td></tr>
       <tr><td>Table bookings</td><td>Whoever takes orders</td><td>Hotel guests' requests for a table: confirm or decline.</td></tr>
       <tr><td>Charges to rooms</td><td>Accounts</td><td>Bills an outside till sent to guests' rooms.</td></tr>
-      <tr><td>Restaurant setup</td><td>Owner, Admin, GM; the kitchen manager for the KOT section only</td><td>The restaurant's name, sections and tables, which computer prints which KOT, table-booking hours.</td></tr>
+      <tr><td>Restaurant setup</td><td>Owner, Admin, GM; the kitchen manager for the KOT section only</td><td>The restaurant's name, a parcel's packing charge, sections and tables, which computer prints which KOT, table-booking hours.</td></tr>
     </tbody>
   </table>
   <p>At the top of Tables, the Till, the Terminal and the Kitchen, one line for each kind of KOT says whether it is printing, for example <span class="msg">“Kitchen KOTs: Kitchen PC - online”</span>. When it is not printing, the line is red and says why (A8.4).</p>
@@ -91,6 +91,22 @@
   <h3>At the bar: the Bar role</h3>
   <p>Somebody given the <b>Bar</b> role works as a waiter does, on the same screens: Tables, the Till, the Terminal, Close restaurant day and Guest requests, with the waiter's Start here card, and has <span class="ui">Bar stock</span> too: the bar's sheet, its count and its bills (A9.11). Their pad, Till and Terminal hold <b>only the bar's dishes</b>: the dishes on the menu's <b>Bar</b> tab, the sections sold under Bar or Alcohol (A8.11), and the pad opens straight on them. Their KOTs print at the bar; if a manager has sent a Bar section's KOT to the kitchen (A8.10), its dishes are still the bar's and print where the manager chose. A dish from any other section is refused even if somebody tries it another way, and the message names it: <span class="msg">“Paneer Tikka is not on the bar's menu. A waiter orders it.”</span> They take payment, print the bill and close the restaurant day, as a waiter does; a discount is the GM's, the owner's or an Admin's (<span class="d">D27-352</span>). The Bar role: <span class="d">D27-324</span>; the Bar tab, Start here and Guest requests: <span class="d">D27-329</span>; Bar stock: <span class="d">D27-356</span>.</p>
 
+  <h3>A parcel</h3>
+  <p>A parcel is an order with no table, named by its customer. <span class="ui">New parcel</span> is on Tables, the Till and the Terminal.</p>
+  <ol class="steps">
+    <li>Tap <span class="ui">New parcel</span>.</li>
+    <li>Type the <span class="ui">Customer's name</span> (it must be given, so two parcels can be told apart) and, if you like, a <span class="ui">Phone</span> to call when it is ready. Tap <span class="ui">Open the parcel</span>.</li>
+    <li>On Tables the pad opens on it, titled <span class="msg">“Parcel · Rahul”</span>: add the dishes and <span class="ui">Send</span>, as for a table. On the Till and the Terminal the parcel opens there.</li>
+  </ol>
+  <p>The KOT prints <b>Parcel · Rahul</b> in place of a table, and so does the bill. Tables shows each open parcel under <span class="ui">Parcels</span>, above the room: the customer's name, how long it has been open and what it comes to. Tap it to add a round; print its bill or open it on the Till from its buttons, as on a table. A parcel leaves the list once it is settled.</p>
+  <p>When the restaurant has a <b>packing charge</b> (Restaurant setup, A8.10), it goes on the parcel's bill once, with its first KOT, taxed as the food. It is on the bill, never on a KOT. Struck by a manager, with a reason, it does not come back.</p>
+
+  <figure class="shot" id="fig-A8-40">
+    <img src="img/A8-40.png" alt="Tables with New parcel at the top, and the Parcels section above the room with Rahul's parcel: how long it has been open, its total, print and open">
+    <figcaption><b>Figure A8-40.</b> A parcel on Tables.</figcaption>
+    <ol class="callouts"><li>New parcel</li><li>The open parcels</li><li>A parcel, by its customer: tap to add a round</li></ol>
+  </figure>
+
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
@@ -104,7 +120,7 @@
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The pad works with no network until Send, so a waiter at the table never waits on the internet; the whole round is sent at once, all of it or none, so the kitchen never cooks half an order. The same dish is one more of it: <span class="d">D27-189</span>. The note after each tap: <span class="d">D27-290</span>.</p>
+    <p>The pad works with no network until Send, so a waiter at the table never waits on the internet; the whole round is sent at once, all of it or none, so the kitchen never cooks half an order. The same dish is one more of it: <span class="d">D27-189</span>. The note after each tap: <span class="d">D27-290</span>. Parcels, named by the customer, with a packing charge once per parcel taxed as the food: <span class="d">D27-359</span>.</p>
   </div>
 
   <!-- A8.3 -->
@@ -612,6 +628,9 @@
     <li><b>Sections and tables:</b> add a section (A/C, Non A/C, the bar), then its tables, one or a numbered run, four to a row. Taking one away switches it off; it is refused while a bill sits on it. Nothing is deleted.</li>
     <li><b>Table booking hours:</b> when hotel guests may ask for a table from their own page.</li>
   </ul>
+
+  <h3>A parcel's packing charge</h3>
+  <p>Under <span class="ui">Parcels</span>, type the <span class="ui">Packing charge, ₹</span> and tap <span class="ui">Save</span>. It goes on each parcel's bill once, with its first KOT, taxed as the food (A8.2). Left blank, a parcel has no packing charge; nothing is put in for you. The owner, an Admin and the GM set it.</p>
 
   <h3>The KOT section</h3>
   <figure class="shot" id="fig-A8-20">

@@ -113,6 +113,16 @@ export const SHOTS = [
     ],
   },
   {
+    id: "A8-40", title: "A parcel on Tables", as: "General Manager",
+    path: "/pos/5EL/tables",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "css:[data-parcels]", ms: 30000 }, { wait: 600 }],
+    marks: [
+      { n: 1, at: "text:New parcel", side: "left" },
+      { n: 2, at: "css:[data-parcels] h2", side: "left" },
+      { n: 3, at: "label:Add to the parcel for Rahul", side: "right" },
+    ],
+  },
+  {
     id: "A8-10", title: "The Kitchen screen", as: "Chef", size: "wall",
     path: "/pos/5EL/kitchen", steps: [{ clickIf: "text:All" }, { clickIf: "text:Got it" }],
     marks: [

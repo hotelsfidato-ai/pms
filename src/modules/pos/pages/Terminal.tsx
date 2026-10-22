@@ -17,6 +17,7 @@ import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
 import { BUSINESS_DATE } from "@/data/repositories";
+import { NewParcel } from "@/modules/pos/components/NewParcel";
 import { ReadFailed, ReadStale } from "@/components/ui";
 import { KotStatus, KotsSent } from "@/modules/pos/components/KotStation";
 import { DishDialog } from "@/modules/pos/flows/DishDialog";
@@ -546,6 +547,13 @@ export default function TerminalPage() {
               >
                 Open the order
               </button>
+              {/* A parcel (D27-359): named by its customer, no table. */}
+              {outlet && (
+                <div className="mt-3">
+                  <NewParcel hotelId={hotelId} outlet={outlet} large
+                    onOpened={(o) => { setOrderId(o.id); refresh(); }} />
+                </div>
+              )}
 
               {orders.data === undefined && orders.error && (
                 <div className="mt-8 rounded-lg border border-grey-200 bg-white">
@@ -858,7 +866,7 @@ export default function TerminalPage() {
                           Taken
                         </button>
                       </div>
-                    ) : !l.voided && l.kotStatus !== "pending" && (
+                    ) : !l.voided && !l.packing && l.kotStatus !== "pending" && (
                       <p className="text-2xs text-grey-500 mt-0.5 pl-0.5">
                         {l.kotStatus === "sent" ? "with the kitchen"
                           : l.kotStatus === "preparing" ? "on the fire"
@@ -866,7 +874,7 @@ export default function TerminalPage() {
                       </p>
                     )}
 
-                    {!l.voided && order.status === "open" && l.parentLineId === null ? (
+                    {!l.voided && order.status === "open" && l.parentLineId === null && !l.packing ? (
                       /* A STEPPER, not a strike-and-retype. "Make that two
                          rather than three" used to mean cancelling the line
                          and adding it again, which left a struck row on the
