@@ -41,6 +41,12 @@ P="$S/progress.txt"
 # a release whose exact commit has no full, clean, green run here (D27-276).
 dirty=$(git status --porcelain | head -1)
 echo "commit $(git rev-parse HEAD) $mode${dirty:+ dirty}" > "$P"
+# THIS RUN'S NAME, and "finished" with it only once every step is done
+# (MEMORY 425): a run stopped from the outside kept going and appended its
+# last steps under the next run's header, and a release read that mixture -
+# half of one run, half of another - as green.
+RUN="$$-$RANDOM-$SECONDS"
+echo "  run $RUN" >> "$P"
 
 strip() { sed -e 's/\x1b\[[0-9;]*m//g' "$1"; }
 
@@ -83,6 +89,8 @@ else
   # by every copy, so it waits its turn in the database queue.
   step "pg16"      "$S/g-pg16.log"  "all [0-9]+ migrations are re-runnable" -- q bash db/tests/pg16.sh; p=$?
 fi
+
+echo "  finished $RUN" >> "$P"
 
 vline() {                      # vitest's own counts, the failed ones included
   strip "$1" | grep -E "^\s+(Test Files|Tests) |CUT SHORT" | tail -3 | tr '\n' ' ' | xargs

@@ -46,12 +46,19 @@ export function gatesRefusal(text, commit) {
   if (head[2] !== "full") return `is a ${head[2]} run, not a full one`;
   if (head[3]) return "ran with uncommitted changes in its copy, so it did not judge exactly this commit";
   const exits = new Map();
+  const twice = new Set();
   for (const l of lines) {
     const m = /^\s+(.+?)\s+exit (\d+)/.exec(l);
-    if (m) exits.set(m[1], Number(m[2]));
+    if (m) { if (exits.has(m[1])) twice.add(m[1]); exits.set(m[1], Number(m[2])); }
   }
+  /* ONE RUN, FINISHED (MEMORY 425): a stopped run that kept going appended its
+     last steps under the next run's header, and that mixture read as green. */
+  if (twice.size) return `holds two runs (${[...twice].join(", ")} twice): run the gates again, on their own`;
+  const run = lines.map((l) => /^\s+run (\S+)$/.exec(l)?.[1]).find(Boolean);
   const missing = FULL.filter((s) => !exits.has(s));
   if (missing.length) return `has not finished: no ${missing.join(", ")} yet`;
+  if (!run) return "names no run (written before gates.sh named its runs), so it cannot show that one run finished";
+  if (!lines.some((l) => l.trim() === `finished ${run}`)) return `has not finished: run ${run} has no "finished" line`;
   const red = FULL.filter((s) => exits.get(s) !== 0);
   if (red.length) return `is red: ${red.join(", ")}`;
   return null;

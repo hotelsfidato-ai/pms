@@ -16,19 +16,32 @@ it("names the release copy after the branch", () => {
   expect(copyName("release/x/y")).toBe("release-x-y");
 });
 
+/* A run's own name and its "finished" line (MEMORY 425). */
+const ran = (body, run = "123-45-0") => `  run ${run}\n${body}\n  finished ${run}`;
+
 it("accepts only a full, clean, green, finished run on exactly this commit", () => {
-  expect(gatesRefusal(`commit ${C} full\n${steps([])}\n`, C)).toBeNull();
-  expect(gatesRefusal(`commit ${C} full\r\n${steps([]).replaceAll("\n", "\r\n")}`, C)).toBeNull();
+  expect(gatesRefusal(`commit ${C} full\n${ran(steps([]))}\n`, C)).toBeNull();
+  expect(gatesRefusal(`commit ${C} full\r\n${ran(steps([])).replaceAll("\n", "\r\n")}`, C)).toBeNull();
 
   // progress.txt from before gates.sh recorded the commit (the 4 Oct file)
   expect(gatesRefusal(steps([]), C)).toMatch(/records no commit/);
   expect(gatesRefusal(`commit ${"b".repeat(40)} full\n${steps([])}`, C)).toMatch(/not on 6f12b0e4/);
   expect(gatesRefusal(`commit ${C} quick\n${steps([])}`, C)).toMatch(/quick run/);
   expect(gatesRefusal(`commit ${C} full dirty\n${steps([])}`, C)).toMatch(/uncommitted/);
-  expect(gatesRefusal(`commit ${C} full\n${steps([0, 0, 0, 0, 1])}`, C)).toBe("is red: api tests");
+  expect(gatesRefusal(`commit ${C} full\n${ran(steps([0, 0, 0, 0, 1]))}`, C)).toBe("is red: api tests");
   // a run still in flight has only its first steps
   expect(gatesRefusal(`commit ${C} full\n${steps([]).split("\n").slice(0, 4).join("\n")}`, C))
     .toBe("has not finished: no api tests, database, replay, pg16 yet");
+  // MEMORY 425: a stopped run's last steps appended under the next run's
+  // header - every step there, every one green, and still not one run
+  const [first4, last4] = [steps([]).split("\n").slice(0, 4), steps([]).split("\n").slice(4)];
+  expect(gatesRefusal(`commit ${C} full\n  run 9-9-0\n${first4.join("\n")}\n${last4.join("\n")}\n  finished 1-1-0`, C))
+    .toBe('has not finished: run 9-9-0 has no "finished" line');
+  // ... and once the second run ends too, its steps are there twice
+  expect(gatesRefusal(`commit ${C} full\n  run 9-9-0\n${steps([])}\n  finished 1-1-0\n${last4.join("\n")}\n  finished 9-9-0`, C))
+    .toBe("holds two runs (api tests, database, replay, pg16 twice): run the gates again, on their own");
+  // a file from before runs were named
+  expect(gatesRefusal(`commit ${C} full\n${steps([])}`, C)).toMatch(/names no run/);
 });
 
 it("takes only the VITE_FIREBASE_ lines of a .env, quotes off the values", () => {

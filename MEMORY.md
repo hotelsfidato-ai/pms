@@ -6539,6 +6539,22 @@ copy will see of theirs.**
 
 ---
 
+### 425 · MINE: release 12 was handed over on a mixture of two gate runs (22 October)
+
+I stopped release 12's first gate run with TaskStop and killed what I could find by command line ("left: 0") -
+but the gates.sh script itself kept going (MEMORY 371's TaskStop trap) and its vitest showed no copy path in its
+command line. I fast-forwarded the copy and started a second run, which rewrote progress.txt's header; the first
+run then appended its last four steps (green, on code that changed under it) under that header. With the second
+run still in its API tests, `release.mjs` read four steps of each run as one full green run, and I sent the owner
+the steps. Then I took the second run's live vitest for leftovers and killed it (exit 127). Caught when its own
+summary came in; the owner was told within minutes not to deploy. **Fixed:** gates.sh names each run and writes
+"finished <run>" only at the end; `release.mjs` refuses a file with no finished line for its run or a step twice
+(`release.test.mjs`, the exact mixture). **The rule:** never start a gate run in a copy until the previous one is
+proved dead (no gates.sh, no vitest); never call a process "lingering" before its run's own summary is in; and a
+release is judged only after its run has printed its own summary.
+
+---
+
 ### 424 · MINE: the roll fix turned short KOTs sideways (22 October)
 
 MEMORY 423's fix set the paper to 80 mm by the slip's own length. A one- or two-dish KOT is shorter than
