@@ -759,6 +759,13 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **22 October, evening: RELEASE 12 LIVE, typed by the owner (D27-350).** Checked read-only: GitHub `main` and the
+> server at `11acb6d3`, API restarted 15:59 IST and healthy, migration 236 applied, Amrapali fresh (business date 22 Oct,
+> 0 bookings, 0 orders), website `index-BioGCyra.js` (seen loading live after the service worker updated). The first A7
+> failed - Firebase's free plan refuses the `.exe` (MEMORY 426); the installer was taken out of `dist` and A7 run again
+> (D27-362). The installer goes to the BAR PC by hand (`printer/dist/Fidato-Printer-Setup.exe`); release 13 hosts it on
+> our server and points the button there. Release 13 (D27-361, `docs/briefs/bar-v3.md`) is in progress on cp6.
+
 > **22 October, 15:05: RELEASE 12 READY AGAIN, the owner's to type** - `release/r12-parcels` at **11acb6d3** (the Fidato
 > Printer app on top of b15a2f00): ONE complete gate run alone (run 23276-11074-1, finished; web 1,412, api 2,829, db
 > 1,779, replay, pg16), website `index-BioGCyra.js` with `/downloads/Fidato-Printer-Setup.exe`; steps
