@@ -759,6 +759,12 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **22 October, noon: RELEASE 12 READY, the owner's to type** - `release/r12-parcels` at **82b7d6a6** (KOTs upright,
+> MEMORY 424; Parcels, D27-359, migration 236; the Bar stock report's wording), full gates green in its clean copy,
+> website `index-ZQ8A9yls.js`, steps `.local/release-12-steps.md` (sent). Release 11 (4477d9af) is LIVE (checked
+> read-only 22 Oct). Release 11.1 was not released (its run timed out under load); 12 carries its fix. Amrapali's
+> fresh start not yet run, and it now has a booking - the owner decides. The shortcut's new name: not yet given.
+
 > **22 October: RELEASE 11 READY, the owner's to type** - `release/r11-21oct` at **4477d9af** (with the KOT print
 > fix, MEMORY 423), a full gate run green in its clean copy (`.claude/worktrees/release-r11-21oct`), website
 > `index-CN0ZuiZL.js`, steps

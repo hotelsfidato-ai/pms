@@ -62,10 +62,12 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 **Proved**
 - `api/test/modules/pos/parcels.test.ts` 4/4 (a blank name refused; Parcel · name, takeaway, the phone, no table; the setting refused to a waiter, zero refused, blank clears - and then no charge; the first KOT adds one packing line at the food's rate, served, no kind, the KOT holding only the dish; a second KOT adds none; the floor lists it; struck by the GM, not put back). `src/modules/pos/parcels.test.tsx` 2/2; every restaurant screen test 180/180. `tillSetup.test.ts`'s setup read now carries the packing charge. On the local demo: Parcel · Rahul, two Chicken 65 at Rs 360 and Rs 20 packing at 5%: Rs 777; the KOT printed only the dish.
-- Full gates: in release 12's clean copy.
+- Full gates on release 12 (`release/r12-parcels` at 82b7d6a6, this and the two fixes after it) in its clean copy, run alone: web types, API types, strip, web tests (1,410), API tests (2,825), database (1,779 assertions), replay, Postgres 16 - all exit 0. A first run beside release 11.1's timed out three Settings screen tests (48/48 alone) and was stopped; 11.1's own run timed out seven server tests (admin, night audit, key cards, the channel manager - none it touches) under the same load, so 11.1 was not released: release 12 carries its fix. `scripts/release.mjs`: website `index-ZQ8A9yls.js`; steps `.local/release-12-steps.md` sent.
+- **The KOT station end to end, on this PC:** a Chrome of its own with `--kiosk-printing` (as the shortcut) and "Save as PDF" as its printer, made the local station for both kinds and the bills, printed by itself, with no window: a 1-dish KOT 80 x 90 mm, a 7-dish KOT 80 x 104 mm, a bill 80 x 164 mm, a parcel KOT reading "Parcel · Rahul" - all upright, full width, no header or footer (`.local/kot-test/`, slips sent to the owner). The test station taken off again.
 
 **Left open**
-- Release 12 for the owner to deploy, after release 11.1 (the KOT print fix).
+- Release 12 for the owner to deploy (A1-A7, migration 236); then their five printing checks at the BAR PC.
+- For the team, sent: `Bar-stock-guide-and-sample-report.pdf` (how-to, a sample report, the KOT station setup and its test) and `Bar-stock-report-demo.pdf` (the real report's PDF from the demo data).
 
 **Commits:** this commit
 
