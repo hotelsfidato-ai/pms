@@ -93,7 +93,7 @@ async function loadDays(client: Client, hotelId: string, today: string): Promise
   }>(
     `select distinct on (n.business_date)
             n.business_date::text as d, n.reason, coalesce(s.full_name, hp.full_name) as by,
-            to_char(n.recorded_at, 'DD Mon, HH24:MI') as at,
+            app.hotel_clock(n.hotel_id, n.recorded_at, 'DD Mon, HH24:MI') as at,
             n.recorded_at > coalesce((select max(x.recorded_at) from cash_deposits x
                                        where x.hotel_id = n.hotel_id
                                          and x.business_date = n.business_date),
@@ -152,9 +152,9 @@ deposits.get("/:code/cash-deposits", async (c) => {
       `select d.id::text, d.business_date::text as d, d.amount::text,
               d.deposited_on::text, d.bank, d.slip_no, d.reverses_id::text, d.reason,
               coalesce(rs.full_name, rh.full_name) as recorded_by,
-              to_char(d.recorded_at, 'DD Mon, HH24:MI') as recorded_at,
+              app.hotel_clock(d.hotel_id, d.recorded_at, 'DD Mon, HH24:MI') as recorded_at,
               coalesce(vs.full_name, vh.full_name) as verified_by,
-              to_char(d.verified_at, 'DD Mon, HH24:MI') as verified_at,
+              app.hotel_clock(d.hotel_id, d.verified_at, 'DD Mon, HH24:MI') as verified_at,
               exists (select 1 from cash_deposits r where r.reverses_id = d.id) as reversed,
               (select a.id::text from attachments a
                 where a.hotel_id = d.hotel_id and a.subject_table = 'cash_deposits'

@@ -221,7 +221,7 @@ stayExtras.get("/:code/stays/:id/inclusions", async (c) => {
     }>(
       `select ri.id::text, ri.name, ri.quantity, ri.rate::text as rate,
               ri.notes, s.full_name as added_by,
-              to_char(ri.created_at,'DD Mon, HH24:MI') as at
+              app.hotel_clock(ri.hotel_id, ri.created_at, 'DD Mon, HH24:MI') as at
          from reservation_inclusions ri
          join staff s on s.id = ri.added_by
         where ri.hotel_id = $1 and ri.reservation_id = $2

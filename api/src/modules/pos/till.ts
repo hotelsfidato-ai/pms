@@ -1723,7 +1723,7 @@ async function readOrder(client: Client, orderId: string) {
             o.customer_locality, o.held_at::text,
             s1.full_name as opened_by_name,
             s2.full_name as settled_by_name,
-            to_char(o.settled_at,'DD Mon, HH24:MI') as settled_at,
+            app.hotel_clock(o.hotel_id, o.settled_at, 'DD Mon, HH24:MI') as settled_at,
             o.abandoned_reason, o.ticket_id::text,
             o.event_id::text, e.title as event_title,
             (select v.number from vat_bills v where v.pos_order_id = o.id) as vat_bill,
@@ -1977,7 +1977,7 @@ till.get("/:code/till/orders", async (c) => {
               o.status, to_char(o.business_date,'YYYY-MM-DD') as business_date,
               (select gross from app.pos_order_total(o.id))::text as gross,
               o.payment_method,
-              to_char(o.opened_at,'HH24:MI') as opened_at,
+              app.hotel_clock(o.hotel_id, o.opened_at, 'HH24:MI') as opened_at,
               (select count(*) from pos_order_lines l
                 where l.order_id = o.id and not l.voided)::text as lines
          from pos_orders o
@@ -2034,7 +2034,7 @@ till.get("/:code/till/bills", async (c) => {
               o.status, to_char(o.business_date,'YYYY-MM-DD') as business_date,
               (select gross from app.pos_order_total(o.id))::text as gross,
               o.payment_method,
-              to_char(o.opened_at,'HH24:MI') as opened_at,
+              app.hotel_clock(o.hotel_id, o.opened_at, 'HH24:MI') as opened_at,
               (select count(*) from pos_order_lines l
                 where l.order_id = o.id and not l.voided)::text as lines
          from pos_orders o
@@ -2773,7 +2773,7 @@ export async function struckAfterKitchen(
     value: string; reason: string | null; struck_by: string | null; struck_at: string;
   }>(
     `select order_no, table_ref, name, qty::text, value::text, reason, struck_by,
-            to_char(struck_at, 'HH24:MI') as struck_at
+            app.hotel_clock($1::uuid, struck_at, 'HH24:MI') as struck_at
        from app.pos_struck_after_kitchen($1, $2::date)
       where $3::uuid is null or outlet_id = $3::uuid`,
     [hotelId, businessDate, outletId ?? null],
@@ -4155,7 +4155,7 @@ till.get("/:code/till/day-end", async (c) => {
          owner's, to a GM (MEMORY 283) - is null, not the whole movement. */
       `select m.id::text, m.kind, m.amount::text, m.reason,
               s.full_name as recorded_by_name,
-              to_char(m.recorded_at, 'HH24:MI') as recorded_at,
+              app.hotel_clock(m.hotel_id, m.recorded_at, 'HH24:MI') as recorded_at,
               ${PAID_OUT_DECISION("status")} as approval,
               ${PAID_OUT_DECISION("decision_note")} as approval_note
          from pos_cash_movements m
@@ -4171,7 +4171,7 @@ till.get("/:code/till/day-end", async (c) => {
       closed_by_name: string | null;
     }>(
       `select d.id::text, d.opening_cash::text, d.counted_cash::text,
-              d.variance_reason, to_char(d.closed_at, 'DD Mon, HH24:MI') as closed_at,
+              d.variance_reason, app.hotel_clock(d.hotel_id, d.closed_at, 'DD Mon, HH24:MI') as closed_at,
               s.full_name as closed_by_name
          from pos_day_ends d
          left join staff s on s.id = d.closed_by
@@ -5949,7 +5949,7 @@ till.get("/:code/till/orders/:id/kot/:no", async (c) => {
     }>(
       `select o.order_no, o.table_ref, o.order_type,
               ou.name as outlet_name, h.name as hotel_name,
-              to_char(min(l.kot_sent_at), 'DD/MM/YY HH24:MI') as sent_at
+              app.hotel_clock($2::uuid, min(l.kot_sent_at), 'DD/MM/YY HH24:MI') as sent_at
          from pos_orders o
          join pos_outlets ou on ou.id = o.outlet_id
          join hotels h on h.id = o.hotel_id

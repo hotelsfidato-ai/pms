@@ -87,7 +87,7 @@ companyPayments.get("/:code/company-payments", async (c) => {
               cp.amount::text, cp.received_on::text, cp.method, cp.reference, cp.note,
               cp.reverses_id::text, cp.reason,
               coalesce(s.full_name, hp.full_name) as recorded_by,
-              to_char(cp.recorded_at, 'DD Mon, HH24:MI') as recorded_at,
+              app.hotel_clock(cp.hotel_id, cp.recorded_at, 'DD Mon, HH24:MI') as recorded_at,
               exists (select 1 from company_payments r where r.reverses_id = cp.id) as reversed
          from company_payments cp
          left join companies co on co.id = cp.company_id

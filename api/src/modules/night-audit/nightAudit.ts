@@ -197,7 +197,7 @@ export async function blockersFor(
     who: string; opened: string;
   }>(
     `select coalesce(s.full_name, 'somebody') as who,
-            to_char(cs.opened_at, 'HH24:MI') as opened
+            app.hotel_clock(cs.hotel_id, cs.opened_at, 'HH24:MI') as opened
        from cashier_shifts cs
        left join staff s on s.id = cs.staff_id
       where cs.hotel_id = $1
