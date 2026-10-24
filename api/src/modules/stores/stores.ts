@@ -170,12 +170,32 @@ export async function barStore(
   return rows[0] ? { id: rows[0].id, name: rows[0].name, isActive: rows[0].is_active } : null;
 }
 
-/** The bar's drinks, by name, with what the bar's store holds of each. */
+/** The bar's counter (D27-361), or null when the hotel has none: every KOT
+    takes from it, and it asks the bar's store for stock. */
+export async function barCounter(
+  client: Client, hotelId: string,
+): Promise<{ id: string; name: string; isActive: boolean } | null> {
+  const { rows } = await client.query<{ id: string; name: string; is_active: boolean }>(
+    `select id::text, name, is_active from locations
+      where hotel_id = $1 and is_bar_counter`, [hotelId]);
+  return rows[0] ? { id: rows[0].id, name: rows[0].name, isActive: rows[0].is_active } : null;
+}
+
+/** How the bar counts a drink (D27-361): NIPs/bottles and the open one's ml,
+    whole bottles, or packets and the open one's sticks. */
+export type CountAs = "poured" | "whole" | "packet";
+export const LIQUORS = ["whisky", "rum", "vodka", "gin", "brandy", "tequila", "liqueur", "wine",
+  "beer_strong", "beer_mild", "other"] as const;
+export type Liquor = typeof LIQUORS[number];
+
+/** The bar's drinks, by name, with what the given place holds of each. */
 export async function barDrinks(client: Client, hotelId: string, storeId: string | null) {
   const { rows } = await client.query<{
     id: string; name: string; unit: string; size_ml: number | null; on_hand: string | null;
+    count_as: CountAs | null; pack_size: number | null; brand: string | null; liquor: Liquor | null;
+    imported: boolean;
   }>(
-    `select id::text, name, unit, size_ml,
+    `select id::text, name, unit, size_ml, count_as, pack_size, brand, liquor, imported,
             case when $2::uuid is null then null else app.stock_on_hand(id, $2::uuid)::text end as on_hand
        from stock_items
       where hotel_id = $1 and is_active and category = 'Bar'
@@ -183,25 +203,81 @@ export async function barDrinks(client: Client, hotelId: string, storeId: string
     [hotelId, storeId]);
   return rows.map((r) => ({
     id: r.id, name: r.name, unit: r.unit, sizeMl: r.size_ml,
+    countAs: (r.count_as ?? (r.size_ml ? "poured" : "whole")) as CountAs,
+    packSize: r.pack_size, brand: r.brand, liquor: r.liquor, imported: r.imported,
     onHand: r.on_hand === null ? null : Number(r.on_hand),
   }));
+}
+
+/** A bar drink as typed on Set up or a bill. */
+export interface BarDrinkInput {
+  name: string; unit: string; sizeMl: number | null;
+  countAs?: CountAs | undefined; packSize?: number | null | undefined; brand?: string | null | undefined;
+  liquor?: Liquor | null | undefined; imported?: boolean | undefined;
+}
+
+/** What is wrong with a bar drink as typed, or null. */
+export function barDrinkProblem(d: BarDrinkInput): string | null {
+  const countAs = d.countAs ?? (d.sizeMl ? "poured" : "whole");
+  if (typeof d.name !== "string" || !d.name.trim() || d.name.trim().length > 120) return "A drink needs its name.";
+  if (d.sizeMl !== null && !(Number.isInteger(d.sizeMl) && d.sizeMl >= 1 && d.sizeMl <= 20000)) {
+    return `${d.name}: its size is whole ml.`;
+  }
+  if (!["poured", "whole", "packet"].includes(countAs)) return `${d.name}: counted as NIPs, bottles or packets.`;
+  if (countAs === "poured" && !d.sizeMl) return `${d.name}: poured needs the bottle's size in ml.`;
+  if (countAs === "packet" && !(Number.isInteger(d.packSize) && d.packSize! >= 1 && d.packSize! <= 1000)) {
+    return `${d.name}: how many in a packet.`;
+  }
+  if (d.liquor != null && !(LIQUORS as readonly string[]).includes(d.liquor)) return `${d.name}: not a kind of liquor.`;
+  if (d.liquor != null && !d.sizeMl) return `${d.name}: its bottle size in ml, for the excise registers.`;
+  if (d.brand != null && (typeof d.brand !== "string" || d.brand.trim().length > 120)) return `${d.name}: the brand is too long.`;
+  return null;
 }
 
 /** A drink the bar's list does not have yet, added to it. A name already on
     the Store's list is refused: that one is picked instead. */
 export async function addBarDrink(
-  client: Client, hotelId: string, drink: { name: string; unit: string; sizeMl: number | null },
+  client: Client, hotelId: string, drink: BarDrinkInput,
 ): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+  const problem = barDrinkProblem(drink);
+  if (problem) return { ok: false, reason: problem };
+  const name = drink.name.trim();
   const { rows: existing } = await client.query(
-    "select 1 from stock_items where hotel_id = $1 and lower(name) = lower($2)", [hotelId, drink.name]);
+    "select 1 from stock_items where hotel_id = $1 and lower(name) = lower($2)", [hotelId, name]);
   if (existing.length) {
-    return { ok: false, reason: `"${drink.name}" is already on the store's list. Pick it instead.` };
+    return { ok: false, reason: `"${name}" is already on the store's list. Pick it instead.` };
   }
+  const countAs = drink.countAs ?? (drink.sizeMl ? "poured" : "whole");
   const { rows } = await client.query<{ id: string }>(
-    `insert into stock_items (hotel_id, name, unit, category, size_ml)
-     values ($1, $2, $3, 'Bar', $4) returning id::text`,
-    [hotelId, drink.name, drink.unit, drink.sizeMl]);
+    `insert into stock_items (hotel_id, name, unit, category, size_ml, count_as, pack_size, brand, liquor, imported)
+     values ($1, $2, $3, 'Bar', $4, $5, $6, $7, $8, $9) returning id::text`,
+    [hotelId, name, drink.unit, drink.sizeMl, countAs,
+     countAs === "packet" ? drink.packSize : null, drink.brand?.trim() || null, drink.liquor ?? null,
+     drink.imported === true]);
   return { ok: true, id: rows[0]!.id };
+}
+
+/** One of the bar's drinks changed on Set up: its name, size, how it is
+    counted and where it sits in the registers. */
+export async function editBarDrink(
+  client: Client, hotelId: string, id: string, drink: BarDrinkInput,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const problem = barDrinkProblem(drink);
+  if (problem) return { ok: false, reason: problem };
+  const name = drink.name.trim();
+  const { rows: clash } = await client.query(
+    "select 1 from stock_items where hotel_id = $1 and lower(name) = lower($2) and id::text <> $3",
+    [hotelId, name, id]);
+  if (clash.length) return { ok: false, reason: `"${name}" is already on the store's list.` };
+  const countAs = drink.countAs ?? (drink.sizeMl ? "poured" : "whole");
+  const { rowCount } = await client.query(
+    `update stock_items
+        set name = $3, size_ml = $4, count_as = $5, pack_size = $6, brand = $7, liquor = $8, imported = $9,
+            updated_at = now()
+      where hotel_id = $1 and id::text = $2 and category = 'Bar'`,
+    [hotelId, id, name, drink.sizeMl, countAs, countAs === "packet" ? drink.packSize : null,
+     drink.brand?.trim() || null, drink.liquor ?? null, drink.imported === true]);
+  return rowCount ? { ok: true } : { ok: false, reason: "That is not one of the bar's drinks." };
 }
 
 /** A delivery's GST as the supplier's bill says it (D27-238, D27-242 Q6). */
@@ -1265,6 +1341,8 @@ export function countLinesProblem(lines: CountLine[]): string | null {
     already allowed. Refuses, before writing, when the book has moved. */
 export async function saveCount(
   client: Client, hotelId: string, staffId: string, locationId: unknown, lines: CountLine[],
+  /* The bar's closing count before the night audit, or its morning count (D27-361). */
+  moment: "closing" | "morning" = "closing",
 ): Promise<{ ok: true; recorded: number; matched: number; store: string } | { ok: false; reason: string }> {
   /* A restaurant, bar or kitchen is counted for its crockery (D27-242). */
   const store = await storeAt(client, hotelId, locationId, true);
@@ -1307,14 +1385,15 @@ export async function saveCount(
     const movementId = difference === 0 ? null : await writeMovement(client, hotelId, staffId, {
       itemId: l.itemId!, storeId: store.id, kind: "adjustment", signed: difference,
       empty: l.empty === true,
-      note: `Count of ${store.name}` + (l.reason?.trim() ? ` - ${l.reason.trim()}` : ""),
+      note: `${moment === "morning" ? "Morning count" : "Count"} of ${store.name}`
+        + (l.reason?.trim() ? ` - ${l.reason.trim()}` : ""),
     });
     await client.query(
       `insert into stock_count_lines
-         (hotel_id, item_id, location_id, empty, book, counted, counted_by, business_date, movement_id)
-       values ($1, $2, $3, $4, $5, $6, $7, $8::date, $9)`,
+         (hotel_id, item_id, location_id, empty, book, counted, counted_by, business_date, movement_id, moment)
+       values ($1, $2, $3, $4, $5, $6, $7, $8::date, $9, $10)`,
       [hotelId, l.itemId, store.id, l.empty === true, l.book, l.counted,
-       staffId, businessDate, movementId]);
+       staffId, businessDate, movementId, moment]);
     if (movementId) recorded += 1;
   }
   return { ok: true as const, recorded, matched: lines.length - recorded, store: store.name };

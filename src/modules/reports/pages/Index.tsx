@@ -159,6 +159,10 @@ const GROUPS: Group[] = [
         description: "What is out of the store, under repair, and when warranties and AMCs end." },
       { title: "Bar stock", icon: Wine, path: "/reports/bar-stock",
         description: "The bar's day: each drink's opening, purchases, sales, count and closing." },
+      { title: "FLR-1A/2A/3A register", icon: Wine, path: "/reports/flr-daily",
+        description: "The daily excise register: each brand's opening, receipts, sales and closing, by bottle size." },
+      { title: "FLR-3 register", icon: Wine, path: "/reports/flr-monthly",
+        description: "The monthly excise register: received, sold and closing, day by day, by class and size." },
     ],
   },
 ];

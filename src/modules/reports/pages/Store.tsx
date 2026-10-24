@@ -38,3 +38,14 @@ export const SupplierSpendPage = over("supplier-spend", "Supplier spend", "the s
 export const EquipmentReportPage = asOn("equipment", "Equipment report", "the equipment report");
 /* The bar's day: opened, bought, sold, counted (D27-354). */
 export const BarStockPage = asOn("bar-stock", "Bar stock", "the bar stock report");
+
+/* The excise registers (D27-361): FLR-1A/2A/3A for the business day, FLR-3
+   for its month. An earlier day's or month's: Bar stock, Today's sheet, its day. */
+export const FlrDailyPage = asOn("flr-daily", "FLR-1A/2A/3A (daily register)", "the daily excise register");
+export function FlrMonthlyPage() {
+  const month = monthOf(BUSINESS_DATE);
+  return (
+    <DocumentReport report="flr-monthly" title="FLR-3 (monthly register)" what="the monthly excise register"
+      period={`${month.name} ${month.year}`} query={{ month: month.from.slice(0, 7), asOn: BUSINESS_DATE }} />
+  );
+}

@@ -24,10 +24,11 @@ describe("the store reports' own address", () => {
     expect(mayReach("stores", "/reports"), "All reports stays closed to them").toBe(false);
   });
 
-  it("names the ten in the menu's own words, for the Store's Reports menu (Bar stock, D27-354)", () => {
+  it("names the twelve in the menu's own words, for the Store's Reports menu (Bar stock, D27-354; registers, D27-361)", () => {
     expect(STOCK_REPORT_LINKS.map((l) => l.label)).toEqual([
       "Closing stock", "Stock movement by day", "Consumption", "Wastage and breakage", "Count differences",
       "Dead stock", "Days of cover", "Supplier spend", "Equipment report", "Bar stock",
+      "FLR-1A/2A/3A register", "FLR-3 register",
     ]);
     for (const l of STOCK_REPORT_LINKS) expect(mayReach("stores", l.path), l.path).toBe(true);
   });

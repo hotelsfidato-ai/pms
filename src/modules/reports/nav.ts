@@ -114,6 +114,13 @@ export const nav: ServiceNavEntry[] = [
   { section: "reports", order: 240,
     label: "Bar stock", to: "/reports/bar-stock", icon: Wine, resource: "stock",
     canSee: mayReadStockReports, keywords: ["bar", "liquor", "drinks", "pegs", "inventory"], listed: false },
+  /* The excise registers (D27-361). */
+  { section: "reports", order: 241,
+    label: "FLR-1A/2A/3A register", to: "/reports/flr-daily", icon: Wine, resource: "stock",
+    canSee: mayReadStockReports, keywords: ["excise", "flr", "liquor register", "daily register", "bar"], listed: false },
+  { section: "reports", order: 242,
+    label: "FLR-3 register", to: "/reports/flr-monthly", icon: Wine, resource: "stock",
+    canSee: mayReadStockReports, keywords: ["excise", "flr", "liquor register", "monthly register", "bar"], listed: false },
 ];
 
 /** The Store and equipment reports (ten with Bar stock, D27-354), by the menu's own words (one name

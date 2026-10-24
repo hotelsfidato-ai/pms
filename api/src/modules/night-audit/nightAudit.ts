@@ -249,6 +249,50 @@ export async function blockersFor(
     });
   }
 
+  /* The bar's closing count (the owner's D27-361): the counter and the bar
+     store, each drink that holds stock there or moved there today, counted
+     after its last move of the day - unless the GM marked "Bar closed today"
+     with a reason. A hotel with no bar drinks is never asked. */
+  const { rows: uncounted } = await client.query<{ place: string; n: string; drinks: string }>(
+    `with place as (
+       select id, name from locations
+        where hotel_id = $1 and is_active and (is_bar_counter or is_bar_store)
+     ), last_move as (
+       select m.item_id, m.location_id, max(m.moved_at) as at
+         from stock_movements m
+        where m.hotel_id = $1 and m.business_date = $2::date and not m.empty
+        group by m.item_id, m.location_id
+     )
+     select p.name as place, count(*)::text as n,
+            string_agg(i.name, ', ' order by i.name) as drinks
+       from place p
+       cross join stock_items i
+       left join last_move lm on lm.item_id = i.id and lm.location_id = p.id
+      where i.hotel_id = $1 and i.category = 'Bar' and i.is_active
+        and not exists (select 1 from bar_closed_days d where d.hotel_id = $1 and d.business_date = $2::date)
+        and (lm.at is not null or app.stock_on_hand(i.id, p.id) <> 0)
+        and not exists (
+          select 1 from stock_count_lines cl
+           where cl.item_id = i.id and cl.location_id = p.id and cl.business_date = $2::date
+             and cl.moment = 'closing' and not cl.empty
+             and cl.counted_at >= coalesce(lm.at, '-infinity'::timestamptz))
+      group by p.name
+      order by p.name`,
+    [hotelId, businessDate],
+  );
+
+  if (uncounted.length > 0) {
+    blockers.push({
+      id: "bar-not-counted",
+      reason:
+        "The bar has not been counted tonight. Count the counter and the bar store on"
+        + " Bar stock, Today's sheet - or, if the bar did not open, the general manager"
+        + " marks it closed there with the reason.",
+      /* Every drink named: the list is what is left to count. */
+      rooms: uncounted.map((x) => `${x.place} · ${x.n} ${x.n === "1" ? "drink" : "drinks"}: ${x.drinks}`),
+    });
+  }
+
   return blockers;
 }
 

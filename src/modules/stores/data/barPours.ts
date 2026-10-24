@@ -18,7 +18,13 @@ export interface BarDish {
 
 export interface BarPours {
   store: { id: string; name: string; isActive: boolean } | null;
-  drinks: { id: string; name: string; unit: string; sizeMl: number | null; onHand: number | null }[];
+  /** The bar's drinks, what the bar store holds of each, how each is counted
+      and where it sits in the excise registers (D27-361). */
+  drinks: {
+    id: string; name: string; unit: string; sizeMl: number | null; onHand: number | null;
+    countAs: "poured" | "whole" | "packet"; packSize: number | null; brand: string | null;
+    liquor: string | null; imported: boolean;
+  }[];
   dishes: BarDish[];
 }
 
