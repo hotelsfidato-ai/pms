@@ -317,4 +317,16 @@ describe("the bill printer", () => {
     const res = await call(owner, "POST", `/till/orders/${d.orderId}/bill-print`);
     expect(await res.json()).toEqual({ ok: true, heading: "interim", sentTo: null });
   });
+
+  it("a computer's shortest slip: set by the kitchen manager, 60 to 400 mm, blank puts it back (D27-363)", async () => {
+    expect((await thisComputer(A, "Kitchen PC", [(await kind("Kitchen")).id], false)).status).toBe(200);
+    const me = (await setup(A)).stations.find((s) => s.mine) as unknown as { id: string; slipMm: number | null };
+    expect(me.slipMm).toBeNull();
+    const set = (slipMm: unknown, who = kitchen) => call(who, "POST", `/till/kot-setup/stations/${me.id}/print`, { slipMm });
+    expect(await reason(await set(50))).toBe("The shortest slip is whole mm, from 60 to 400.");
+    expect((await set(180)).status).toBe(200);
+    expect(((await setup(A)).stations.find((s) => s.mine) as unknown as { slipMm: number | null }).slipMm).toBe(180);
+    expect((await set(null)).status).toBe(200);
+    expect(((await setup(A)).stations.find((s) => s.mine) as unknown as { slipMm: number | null }).slipMm).toBeNull();
+  });
 });

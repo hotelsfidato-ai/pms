@@ -7,12 +7,15 @@ import { printRoll, rollPage } from "@/modules/pos/lib/printRoll";
 describe("printing on the 80 mm roll", () => {
   it("sets the paper to 80 mm by the slip's length, rounded up, with no margin", () => {
     /* 377.9 px is just under 100 mm at 96 to the inch; 4 mm more to feed past the tear bar. */
-    expect(rollPage(377.9)).toBe("@media print { @page { size: 80mm 104mm; margin: 0; } }");
+    expect(rollPage(377.9, 90)).toBe("@media print { @page { size: 80mm 104mm; margin: 0; } }");
+    expect(rollPage(700)).toBe("@media print { @page { size: 80mm 190mm; margin: 0; } }");
   });
 
-  it("is never shorter than wide, so a short KOT is not turned sideways", () => {
-    /* 200 px is about 53 mm: a one-dish KOT. 80 x 57 mm would be landscape. */
-    expect(rollPage(200)).toBe("@media print { @page { size: 80mm 90mm; margin: 0; } }");
+  it("is never shorter than the computer's shortest slip, 160 mm unless it says otherwise (D27-363)", () => {
+    /* 200 px is about 53 mm: a one-dish KOT. 80 x 57 mm would be landscape;
+       the BAR PC's printer turned 80 x 90 to 104 mm too (MEMORY 427). */
+    expect(rollPage(200)).toBe("@media print { @page { size: 80mm 160mm; margin: 0; } }");
+    expect(rollPage(200, 120)).toBe("@media print { @page { size: 80mm 120mm; margin: 0; } }");
   });
 });
 
@@ -27,8 +30,10 @@ describe("printing in the Fidato Printer app", () => {
     const screen = vi.spyOn(window, "print").mockImplementation(() => {});
     const slip = document.createElement("div");
     slip.getBoundingClientRect = () => ({ height: 377.9 }) as DOMRect;
-    await printRoll(slip);
+    await printRoll(slip, 90);
     expect(print).toHaveBeenCalledWith(104);
+    await printRoll(slip);
+    expect(print).toHaveBeenLastCalledWith(160);
     expect(screen).not.toHaveBeenCalled();
     expect(document.head.querySelector("style")?.textContent ?? "").not.toContain("80mm");
   });

@@ -16,7 +16,7 @@ import {
 } from "@/modules/pos/data/till";
 import { DocketSlip } from "@/modules/pos/components/DocketSlip";
 import { BillSlip } from "@/modules/pos/components/BillSlip";
-import { printRoll } from "@/modules/pos/lib/printRoll";
+import { DEFAULT_SLIP_MM, printRoll } from "@/modules/pos/lib/printRoll";
 
 /* ══════════════════════════════════════════════════════════════════
    THE PRINTING COMPUTERS (D27-159; the KOT section, D27-292)
@@ -90,11 +90,14 @@ const PRINT_CSS = `
     page until it has the paper (at once with --kiosk-printing); the Fidato
     Printer app answers when the printer has it. Either way the slip is in the
     page for exactly that long. */
-function useSlipPrinter() {
+export function useSlipPrinter(hotelId: string) {
   const [slip, setSlip] = useState<ReactNode>(null);
+  /* This computer's shortest slip (D27-363), else the system's. */
+  const setup = useKotSetup(hotelId);
+  const minMm = setup.data?.stations.find((s) => s.mine)?.slipMm ?? DEFAULT_SLIP_MM;
   const print = async (paper: ReactNode) => {
     flushSync(() => setSlip(paper));
-    try { await printRoll(document.querySelector<HTMLElement>("body > .kot-print")); } finally { setSlip(null); }
+    try { await printRoll(document.querySelector<HTMLElement>("body > .kot-print"), minMm); } finally { setSlip(null); }
   };
   const node = slip && createPortal(
     <div className="kot-print"><style>{PRINT_CSS}</style>{slip}</div>,
@@ -116,7 +119,7 @@ function StationPrinter({ hotelId }: { hotelId: string }) {
      computer's "last seen". */
   useLive(hotelId, "orders", [queueKey(hotelId)]);
   const queue = useStationQueue(hotelId);
-  const { print, node } = useSlipPrinter();
+  const { print, node } = useSlipPrinter(hotelId);
   const busy = useRef(false);
   const mine = queue.data?.station ? queue.data : null;
   const slip = mine?.due[0];
@@ -283,7 +286,7 @@ export function KotsSent({ hotelId, orderId, lines, className }: {
     REPRINT: the KOT section's last 20, on the computer that prints them.
     A reprint asked anywhere else goes to the station (`KotsSent`). */
 export function useKotReprint(hotelId: string) {
-  const { print, node } = useSlipPrinter();
+  const { print, node } = useSlipPrinter(hotelId);
   const reprint = async (orderId: string, kotNo: number, kindId: string | null, label: string) => {
     const d = await getDocket(hotelId, orderId, kotNo, kindId ?? undefined).catch(() => null);
     if (!d) return toast.error("Not printed", `${label} did not load. Try again.`);

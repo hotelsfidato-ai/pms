@@ -473,6 +473,7 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`POST ${H}/till/kot-setup/sections/:id`]: KOT_SWITCH,
   [`POST ${H}/till/kot-setup/this-computer`]: KOT_SWITCH,
   [`POST ${H}/till/kot-setup/stations/:id/remove`]: KOT_SWITCH,
+  [`POST ${H}/till/kot-setup/stations/:id/print`]: KOT_SWITCH,  // D27-363
   /* A bill asked of the bill printer, or printed here: whoever prints one. */
   [`POST ${H}/till/orders/:id/bill-print`]: TILL,
   [`POST ${H}/till/orders/:id/bill-print/here`]: TILL,

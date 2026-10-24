@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router";
 import * as apiModule from "@/lib/api";
@@ -102,5 +102,38 @@ describe("Restaurant setup's KOT section offers it (D27-299)", () => {
     const body = await blobs[0]!.text();
     expect(body).toContain(`/pos/${HOTEL.toUpperCase()}/kitchen`);
     expect(body).toContain("--kiosk-printing");
+  });
+
+  it("on a printing computer: its shortest slip saved, and a test KOT printed (D27-363)", async () => {
+    const setup: KotSetup = {
+      kinds: [], sections: [], billPrinter: null, me: "st-1",
+      stations: [{ id: "st-1", name: "Bar PC", mine: true, online: true, seenAt: null, printsBills: false, kinds: [], slipMm: null }],
+    };
+    const sent: { url: string; body: unknown }[] = [];
+    vi.spyOn(apiModule, "api").mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.split("?")[0] === `/api/hotels/${HOTEL}/till/kot-setup`) return setup as never;
+      sent.push({ url, body: init?.body ? JSON.parse(String(init.body)) : null });
+      return { ok: true } as never;
+    });
+    const printed: number[] = [];
+    window.fidatoPrinter = { print: async (mm: number) => { printed.push(mm); return { ok: true, reason: null }; } };
+
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={[`/pos/${HOTEL}/setup`]}>
+          <Routes><Route path="/pos/:code/setup" element={<KotSection hotelId={HOTEL} />} /></Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("Printing on Bar PC")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Print a test KOT/ }));
+    await vi.waitFor(() => expect(printed).toEqual([160]));
+    fireEvent.change(screen.getByLabelText("Shortest slip, mm"), { target: { value: "180" } });
+    const card = screen.getByText("Printing on Bar PC").closest(".space-y-3") as HTMLElement;
+    fireEvent.click(within(card).getByRole("button", { name: "Save" }));
+    await vi.waitFor(() => expect(sent).toContainEqual({
+      url: `/api/hotels/${HOTEL}/till/kot-setup/stations/st-1/print`, body: { slipMm: 180 } }));
+    delete window.fidatoPrinter;
   });
 });

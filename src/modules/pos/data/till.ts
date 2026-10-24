@@ -1615,7 +1615,8 @@ export interface KotKind {
 
 export interface KotSetup {
   kinds: KotKind[];
-  stations: (KotStationRef & { printsBills: boolean; kinds: string[] })[];
+  /** slipMm: the computer's shortest slip in mm (D27-363); null, the system's. */
+  stations: (KotStationRef & { printsBills: boolean; kinds: string[]; slipMm?: number | null })[];
   /** Each menu section: the kind it names (`own`, or null to follow its
       heading) and the kind it prints on. */
   sections: { id: string; name: string; heading: SectionHeading | null; own: string | null; kind: string | null }[];
@@ -1660,6 +1661,10 @@ export const setSectionKot = (hotelId: string, sectionId: string, kindId: string
 export const setThisComputer = (
   hotelId: string, device: string, name: string, kindIds: string[], bills: boolean,
 ): Plain => plainPost(`${KOT(hotelId)}/this-computer`, { device, name, kindIds, bills });
+/** A computer's shortest slip (D27-363); null puts back the system's. */
+export const setStationSlip = (hotelId: string, id: string, slipMm: number | null): Plain =>
+  plainPost(`/api/hotels/${hotelId}/till/kot-setup/stations/${id}/print`, { slipMm });
+
 export const removeKotStation = (hotelId: string, id: string): Plain =>
   plainPost(`${KOT(hotelId)}/stations/${id}/remove`, {});
 
