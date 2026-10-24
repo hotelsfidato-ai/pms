@@ -6539,6 +6539,35 @@ copy will see of theirs.**
 
 ---
 
+### 428 · FOUND: KOT times, and about 40 other clock times, printed in GMT - 5 h 30 min behind (25 October)
+
+The owner: *"the KOT times are not proper and accurate"*. Checked read-only on the live server: Amrapali's KOT 79 printed
+**18:21** when the hotel's clock said **23:51**. The KOT's time (`till.ts`, the docket: `to_char(min(l.kot_sent_at),
+'DD/MM/YY HH24:MI')`) is formatted with no zone, so it takes the database session's zone - **GMT on the hotel's server**
+(`show timezone`), Asia/Kolkata on this PC, where every KOT tested here looked right (the KOT test of 22 October included).
+The same bare `to_char(...HH24...)` is in about 40 places: when a bill was settled or opened, a struck line, the till's
+cash movements and day end, the front desk's drawer, deposits, company payments, a tax invoice's issue time, bar bills,
+banquet times. MEMORY 297 made this the rule a month ago (a time belongs to the PROPERTY; `app.hotel_clock`), and the API's
+test database runs in UTC to catch it - but no test ever read a printed time back. **The fix (25 Oct, in progress):** every one goes through
+`app.hotel_clock(hotel, moment, format)`, and a test reads the source and fails on any `to_char` of a clock time that does
+not convert to the hotel's zone. **The rule:** a clock time shown to a person is formatted in the hotel's zone, always
+through `app.hotel_clock`; and a feature that prints a time has a test that reads the printed time back in a UTC database.
+
+---
+
+### 427 · MINE: the Fidato Printer app was "tested" through a path the printer never takes (25 October)
+
+The owner, after installing the app at the BAR PC: the KOTs print **sideways**. On 22 October I reported the app printed
+"a 1-dish KOT, a 6-dish KOT and a bill, each 80 mm wide, upright" - but that test ran with `FIDATO_PRINT_TO_PDF`, which
+calls `webContents.printToPDF`. A real print goes through `webContents.print({ silent, pageSize })` and the printer's own
+driver: a different code path, with a page size in microns that the receipt printer's driver interprets for itself. The
+PDF proved the slip's layout, not what the printer does with it, and I said "tested end to end". The Chrome way (CSS
+`@page size`, no page size forced) had printed bills upright on that printer. **The rule:** a printing test is the real
+print path on the real kind of printer, or it is called what it is ("the slip's layout, as a PDF"); and the app forces
+nothing the proven Chrome way did not.
+
+---
+
 ### 426 · MINE: the Fidato Printer installer was put in the website, which Firebase's free plan refuses (22 October)
 
 `release.mjs` copied `Fidato-Printer-Setup.exe` into the release copy's `dist/downloads/` so the website would
