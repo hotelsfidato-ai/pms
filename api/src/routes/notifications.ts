@@ -292,6 +292,29 @@ notifications.get("/:code/notifications", async (c) => {
       }
     }
 
+    /* APPROVALS WAITING (the owner's D27-363): every request this person may
+       decide - a waiter's strike, discount, NC or void, a paid-out, a
+       purchase, equipment - counted, with a link to the inbox. Until now
+       nothing told the GM a request was there. Who decides each is the
+       request's own (approver_role, also_decided_by); the requester's own
+       are not theirs to decide. */
+    if (role !== null) {
+      const { rows: [waiting] } = await client.query<{ n: number }>(
+        `select count(*)::int as n from approvals a
+          where a.hotel_id = $1 and a.status = 'pending'
+            and a.requested_by <> app.current_user_id()
+            and (a.approver_role = $2 or $2 = any(a.also_decided_by) or app.is_group_admin())`,
+        [hotelId, role]);
+      if (waiting!.n) {
+        out.push({
+          id: "approvals-waiting", hotelId: code, category: "approval",
+          title: `${waiting!.n} request${waiting!.n === 1 ? "" : "s"} waiting for your approval`,
+          body: "A void, a discount, an NC, a paid-out or a purchase sent to you. Approve or reject each, with a reason.",
+          isRead: false, at, link: `/h/${code}/approvals`, actionRequired: true,
+        });
+      }
+    }
+
     /* A HOTEL'S BANK DETAILS WERE SET, CHANGED OR REMOVED (the owner's
        D27-216): they print on every booking voucher, so the group owner is
        told - which hotel, who, when; never the account. For group

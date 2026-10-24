@@ -42,6 +42,8 @@ export default function ApprovalsPage() {
     queryKey: ["approvals", code, tab],
     queryFn: () => listApprovals(code!, tab),
     enabled: Boolean(code),
+    /* A waiter waits at the table for the answer (D27-363): fresh every 15 seconds. */
+    refetchInterval: 15_000,
   });
 
   return (
@@ -110,7 +112,8 @@ function Row({ approval: a, code, onDone }: {
           </StatusPill>
         </div>
 
-        <p className="mt-1 text-sm text-grey-700">{a.reason}</p>
+        {a.detail && <p className="mt-1 text-base font-medium text-ink-900">{a.detail}</p>}
+        <p className="mt-1 text-sm text-grey-700">{a.detail ? a.reason.replace(`${a.detail}. `, "") : a.reason}</p>
 
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-grey-500">
           {/* NO INVENTED FIGURE. A stock adjustment has no amount, and a

@@ -115,6 +115,9 @@ export const CLEAR: [table: string, how: string][] = [
 
      Tickets still come before `folio_postings` and `folios`, which
      they reference in turn. */
+  /* A paid bill's payment mode changed, and the waiters' requests to the GM (D27-363, 237). */
+  ["pos_tender_changes", "hotel_id = $1"],
+  ["pos_requests",      "hotel_id = $1"],
   ["pos_orders",        "hotel_id = $1"],
   ["pos_tickets",       "hotel_id = $1"],
   ["pos_cash_movements", "hotel_id = $1"],

@@ -23,6 +23,8 @@ export interface Approval {
   kind: string;
   subject: { table: string; id: string };
   reason: string;
+  /** What a waiter's request is, in a line (D27-363); null on any other kind. */
+  detail?: string | null;
   /** A STRING from the database to the screen. A JS number cannot hold
       every numeric(12,2) without loss, and this is the column where that
       matters. Null is a real answer — a stock adjustment has no amount —
@@ -62,6 +64,8 @@ const KINDS: Record<string, { label: string; where?: (a: Approval, code: string)
     label: "Equipment being retired",
     where: (a, code) => `/h/${code}/equipment/${a.subject.id}`,
   },
+  /* A waiter's or cashier's request: strike, discount, NC, void (D27-363). */
+  pos_request: { label: "Restaurant: sent to you" },
 };
 
 export const labelFor = (kind: string): string =>

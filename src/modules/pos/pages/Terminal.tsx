@@ -12,7 +12,7 @@ import { useUi } from "@/lib/ui";
 import { can } from "@/lib/permissions";
 import { useRole } from "@/lib/session";
 import { toast, Button, StatusPill } from "@/components/ui";
-import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, giveNoCharge, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type MenuItem, type OrderLine, type LineAddon, type CashId } from "@/modules/pos/data/till";
+import { listOrders, getOrder, listChargeableRooms, openOrder, addLine, voidLine, setLineQty, takeDishes, sendToKitchen, settleOrder, abandonOrder, giveNoCharge, sendToGm, STRIKES_SENT, setOrderHeader, isBarDish, numberedAddonsQuery, tillMenuQuery, setNumberedAddons, addExtras, customInputs, type CustomAddon, type MenuItem, type OrderLine, type LineAddon, type CashId } from "@/modules/pos/data/till";
 import { CashIdFields } from "@/modules/pos/components/CashIdFields";
 import { FunctionPicker } from "@/modules/pos/components/FunctionPicker";
 import { listPosOutlets } from "@/modules/pos/data/posBridge";
@@ -277,10 +277,25 @@ export default function TerminalPage() {
   };
 
   /* Once the kitchen has a dish, fewer of it or none is a manager's, with a
-     reason (D27-119). Before, it is the waiter's as ever. */
+     reason (D27-119). Before, it is the waiter's as ever. A waiter SENDS the
+     GM a dish to take off, who approves it on their own screen (D27-363). */
   const takeOff = (l: { id: string; name: string; qty: number; kotStatus: string }, qty: number) => {
     const go = (why?: string) => (qty === 0 ? strike(l.id, why) : setQty(l.id, qty, why));
     if (l.kotStatus === "pending") return void go();
+    if (qty === 0 && !STRIKES_SENT.includes(role)) return setAsk({
+      title: `Send to the GM: take off ${l.name}?`,
+      body: "The kitchen already has it, so the GM decides. It comes off when they approve.",
+      field: { label: "Why is it coming off?", required: true },
+      confirm: "Send to the GM",
+      onConfirm: async (why) => {
+        if (!orderId) return undefined;
+        const res = await sendToGm(hotelId, orderId, { kind: "strike_line", lineId: l.id, reason: why });
+        if (!res.ok) return { refused: res.reason };
+        toast.success("Sent to the GM", `${l.name} comes off when they approve.`);
+        refresh();
+        return undefined;
+      },
+    });
     setAsk({
       title: qty === 0 ? `Take off ${l.name}?` : `${l.qty - qty} fewer ${l.name}?`,
       body: SENT_STRIKE,
@@ -359,9 +374,24 @@ export default function TerminalPage() {
 
   /* NC, NO CHARGE (the owner's D27-351): the owner, an administrator or the
      GM, as the server asks, with a reason; it prints at once. */
-  const mayNc = can(useRole(), "approve", "reservation");
+  const role = useRole();
+  const mayNc = can(role, "approve", "reservation");
   const giveNc = () => {
     if (!orderId) return;
+    /* Anyone else sends it to the GM (D27-363). */
+    if (!mayNc) return setAsk({
+      title: "Send to the GM: no charge (NC) for this bill?",
+      body: "The GM decides. When they approve, the bill is NC: it prints the dishes with no prices.",
+      field: { label: "Why is it no charge?", required: true },
+      confirm: "Send to the GM",
+      onConfirm: async (reason) => {
+        const res = await sendToGm(hotelId, orderId, { kind: "no_charge", reason });
+        if (!res.ok) return { refused: res.reason };
+        toast.success("Sent to the GM", "The bill is NC when they approve.");
+        refresh();
+        return undefined;
+      },
+    });
     setAsk({
       title: "Give this bill no charge (NC)?",
       body: "The bill prints the dishes with no prices, marked NC, with this reason and your "
@@ -1098,16 +1128,14 @@ export default function TerminalPage() {
                         </button>
                       ))}
                     </div>
-                    {/* D27-351: the owner, an administrator or the GM only. */}
-                    {mayNc && (
-                      <button type="button" onClick={giveNc}
-                        disabled={busy || Boolean(order.eventId)
-                          || order.lines.filter((l) => !l.voided).length === 0}
-                        className={cn(OUTLINE, "w-full h-12 text-base font-medium inline-flex items-center justify-center gap-2 disabled:opacity-40")}>
-                        <Gift className="size-4" />
-                        No charge (NC)
-                      </button>
-                    )}
+                    {/* D27-351: the owner, an administrator or the GM; anyone else sends it (D27-363). */}
+                    <button type="button" onClick={giveNc}
+                      disabled={busy || Boolean(order.eventId)
+                        || order.lines.filter((l) => !l.voided).length === 0}
+                      className={cn(OUTLINE, "w-full h-12 text-base font-medium inline-flex items-center justify-center gap-2 disabled:opacity-40")}>
+                      <Gift className="size-4" />
+                      {mayNc ? "No charge (NC)" : "Ask the GM for NC"}
+                    </button>
                     <button type="button" onClick={abandon}
                       className={cn(GHOST, "w-full h-12")}>
                       Close unpaid

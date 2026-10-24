@@ -354,7 +354,11 @@ const CORE_ENTRIES: ServiceNavEntry[] = [
      `canSee` narrows the MENU to the roles that can decide anything at
      all, so a waiter is not offered an inbox that is empty by
      construction; the server still decides every row. */
-  { section: "system", order: 5,
+  /* ⚠ AT THE TOP SINCE 25 OCTOBER (the owner's D27-363): "the GM is not
+     shown it to approve". It sat last, in the folded System section, and
+     nothing told anyone a request was waiting. Now it is in the home group,
+     after the Dashboard, and the bell counts what waits. */
+  { section: "home", order: 15,
     label: "Approvals", to: "/h/:code/approvals", icon: CheckCircle2,
     resource: "notification", canSee: decidesSomething,
     /* ⚠ IN NOBODY'S WORKING MENU, deliberately. The Inventory Manager
