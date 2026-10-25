@@ -53,18 +53,31 @@ export const SHOTS = [
   {
     id: "A12-01", title: "The System part of the menu", as: "Owner",
     path: "/h/5EL/approvals",
-    steps: [{ clickIf: "text:Got it" }, { scroll: "text:Room systems" }, { wait: 400 }],
+    /* Approvals left this section for the top of the menu (D27-363), so
+       it no longer opens with the page: unfold it. */
+    steps: [{ clickIf: "text:Got it" }, { click: "text:SYSTEM" }, { wait: 400 }, { scroll: "text:Room systems" }, { wait: 400 }],
     marks: [
-      { n: 1, at: "text:Approvals", nth: 0, side: "right" },
-      { n: 2, at: "text:Notifications", nth: 0, side: "right" },
-      { n: 3, at: "text:System health", side: "right" },
-      { n: 4, at: "text:Design system", side: "right" },
-      { n: 5, at: "text:Room systems", side: "right" },
-      { n: 6, at: "text:Settings", nth: 0, side: "bottom" },
+      { n: 1, at: "text:Notifications", nth: 0, side: "right" },
+      { n: 2, at: "text:System health", side: "right" },
+      { n: 3, at: "text:Design system", side: "right" },
+      { n: 4, at: "text:Room systems", side: "right" },
+      { n: 5, at: "text:Settings", nth: 0, side: "bottom" },
     ],
   },
 
   /* ── Approvals ────────────────────────────────────────────────────── */
+  /* D27-363: a waiter's NC sent to the GM (made through the API before the run). */
+  {
+    id: "A12-16", title: "A request from the restaurant", as: GM,
+    path: "/h/5EL/approvals",
+    steps: [{ clickIf: "text:Got it" }, { waitFor: "text:Restaurant: sent to you" }, { wait: 300 }],
+    marks: [
+      { n: 1, at: "text:Approvals", nth: 0, side: "right" },
+      { n: 2, at: "text:Restaurant: sent to you", nth: 0, side: "left" },
+      { n: 3, at: "text:NC, the bill free", nth: 0, side: "left" },
+      { n: 4, at: "text:Why: The owner's guests", nth: 0, side: "bottom" },
+    ],
+  },
   {
     id: "A12-02", title: "Approvals: what waits on the general manager", as: GM,
     path: "/h/5EL/approvals",

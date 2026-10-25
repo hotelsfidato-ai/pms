@@ -450,4 +450,39 @@ export const SHOTS = [
       { n: 2, at: "text:Approved by", side: "left", nth: 0 },
     ],
   },
+
+  /* ── Release 12.1 (D27-363) ─────────────────────────────────────────
+     A8-41 needs this browser to be a printing computer: the local station
+     "Bar PC" on device pane-test-device, printing an empty KOT kind (made
+     through the API before the run), so nothing waits to print. */
+  {
+    id: "A8-41", title: "Printing on this computer: the shortest slip, and the test prints", as: "General Manager",
+    path: "/pos/5EL/setup",
+    steps: [
+      { eval: "localStorage.setItem('pms.kot-device', 'pane-test-device'); location.href = '/pos/5EL/setup#kot'; true" },
+      { waitFor: "text:Printing on Bar PC", ms: 30000 },
+      { scroll: "text:Printing on Bar PC" },
+      { wait: 500 },
+    ],
+    marks: [
+      { n: 1, at: "text:Printing on Bar PC", side: "left" },
+      { n: 2, at: "text:Shortest slip, mm", side: "right" },
+      { n: 3, at: "text:Print a test KOT", side: "bottom" },
+      { n: 4, at: "text:Print a test bill", side: "bottom" },
+    ],
+  },
+  { id: "A8-41b", title: "This browser prints nothing again", noShot: true, as: "General Manager",
+    steps: [{ eval: "localStorage.setItem('pms.kot-device', 'manual-camera'); true" }] },
+  {
+    id: "A8-42", title: "Change how a paid bill was paid", as: "General Manager",
+    path: "/pos/5EL/till?order=1e835de5-94cc-46de-8517-f71213919c40",
+    steps: [
+      { click: "text:Change how it was paid" }, { waitFor: "text:Before the night audit only" }, { wait: 400 },
+    ],
+    marks: [
+      { n: 1, at: "css:[role=dialog] select", side: "left" },
+      { n: 2, at: "css:[role=dialog] input", side: "left" },
+      { n: 3, at: "text:Change it", side: "top" },
+    ],
+  },
 ];
