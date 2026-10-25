@@ -6561,6 +6561,19 @@ copy will see of theirs.**
 
 ---
 
+### 435 · MINE: release 13's database checks were first run in the full gates, and failed there (26 October)
+
+Release 13's work (3048dbe7) was proved with the API tests (bar stock 11/11, 27 files 516/516) and the web tests
+(9/9), not with the database suite. Two database tests still described the one-place bar: `db/tests/modules/shared.sql`
+(a new hotel gets exactly three stores) and `db/tests/modules/stores.sql` (a KOT takes from the Bar store). The full
+gate run 1510-19786-1 failed 7 assertions, on Postgres 17 and 16, about 40 minutes in; nothing had gone to the owner.
+**Fixed** (26 October): four stores for a new hotel; bar stock in both places, the KOT taking from the counter while
+the store keeps its 6 - `db/tests/run.sh` 1,780/1,780 before the gates ran again. **The rule:** a change to what a
+migration DOES runs `db/tests/run.sh` (3 minutes) before the full gates, and when a meaning changes (one bar became
+two places) the old word is searched in `db/tests` and `api/test` too, not only in the screens (429).
+
+---
+
 ### 434 · MINE: a running balance whose rows did not add up - the Bar store's sheet (25 October)
 
 Release 13 gave the Bar store a sheet: Opening, Received, To the counter, Closing. Its Closing is the book, so a
