@@ -14,6 +14,12 @@ the reason the fault does not come back.
 
 ## Open — not fixed
 
+Nothing open (25 October audit).
+
+---
+
+## Fixed — the solution is here; do not work it out again
+
 ### PUR-3 · The Approvals screen linked a purchase request to an address that does not exist — FIXED 26 September
 
 **Found** — 26 September, writing PUR-2's test (the five-tests session, D25-27).
@@ -32,10 +38,6 @@ the old path put back it fails "expected '/h/PUA/purchasing/requests/waiting'
 to be '/h/PUA/purchasing/waiting'".
 
 **The rule** — ADM-4's: a link is a claim about an address. Open it.
-
----
-
-## Fixed — the solution is here; do not work it out again
 
 ### PUR-2 · There is no approvals screen, and the brief said there was one - BUILT 19 September, held by a test 26 September
 

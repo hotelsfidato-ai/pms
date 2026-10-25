@@ -14,6 +14,12 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+Nothing open (25 October audit).
+
+---
+
+## Fixed — the solution is here; do not work it out again
+
 ### FD-26 · A price saved on Rates did not reach the Calendar until something else refreshed it - FIXED 4 October (Rates refreshes the Calendar)
 
 **Found** - 4 October, opening the Calendar after setting a night's price on
@@ -23,10 +29,6 @@ Rates (D27-271 item 3): the Calendar still showed the old figure. Its window
 too. **The fix** is one line in inventory's `pages/Rates.tsx` `refresh()`:
 `qc.invalidateQueries({ queryKey: ["stay-view", hotelId] })`. Not made here:
 the file is inventory's (on `MODULE.md`'s Requests).
-
----
-
-## Fixed — the solution is here; do not work it out again
 
 ### FD-36 · Searching a list for a room with a letter found nothing - FIXED 15 October (the owner's D27-335)
 

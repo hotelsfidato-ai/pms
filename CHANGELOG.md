@@ -75,7 +75,7 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 **Left open**
 - The CA's word on a NIP counted as sold the day it is opened (D27-361).
 
-**Commits:** 3048dbe7, c40ebdb4, 8179e629 on cp6; a62a8c3b (`release/r13`)
+**Commits:** 3048dbe7, c40ebdb4, 8179e629, 3816198f on cp6; a62a8c3b, 705d8e8c (`release/r13`)
 
 ## 2026-10-25 · Release 12.1: KOT times, the shortest slip, requests to the GM, a paid bill's payment mode (D27-363)
 

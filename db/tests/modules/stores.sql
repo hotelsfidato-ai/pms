@@ -449,11 +449,13 @@ end $$;
 do $$
 declare
   h uuid; v_staff uuid; v_out uuid; v_cat uuid; v_dish uuid; v_peg uuid; v_bottle uuid;
-  v_order uuid; v_line bigint; v_struck bigint; v_bar uuid; bd date; n numeric;
+  v_order uuid; v_line bigint; v_struck bigint; v_bar uuid; v_store uuid; bd date; n numeric;
 begin
   h := app.provision_property_unchecked('PBS', 'Bar Stock Test', 'Nowhere');
   select id into v_staff from staff where email = 'owner@fidato.in';
-  select id into v_bar from locations where hotel_id = h and is_bar_store;
+  /* Every KOT takes from the Bar counter (D27-361, 238), never the Bar store. */
+  select id into v_bar from locations where hotel_id = h and is_bar_counter;
+  select id into v_store from locations where hotel_id = h and is_bar_store;
   bd := app.business_date(h);
   insert into pos_outlets (hotel_id, code, name, category, staff_id)
   values (h, 'BSB', 'Bar Stock Bar', 'beverage', v_staff) returning id into v_out;
@@ -463,7 +465,7 @@ begin
   insert into stock_items (hotel_id, name, unit, category, size_ml)
   values (h, 'Blue 750 ml', 'bottle', 'Bar', 750) returning id into v_bottle;
   insert into stock_movements (hotel_id, item_id, location_id, business_date, kind, quantity, moved_by)
-  values (h, v_bottle, v_bar, bd, 'receipt', 6, v_staff);
+  values (h, v_bottle, v_bar, bd, 'receipt', 6, v_staff), (h, v_bottle, v_store, bd, 'receipt', 6, v_staff);
 
   perform test.raises('bar stock', 'a dish takes ml or whole ones, not both',
     format($q$insert into bar_pours (hotel_id, item_id, variation_id, stock_item_id, ml, units)
@@ -483,6 +485,8 @@ begin
   update pos_order_lines set kot_status = 'sent', kot_sent_at = now(), kot_no = 1 where id = v_line;
   n := app.stock_on_hand(v_bottle, v_bar);
   perform test.ok('bar stock', 'sent, two 60 ml pegs take 0.16 of a 750 ml bottle', n = 5.84, n::text);
+  perform test.ok('bar stock', 'from the Bar counter: the Bar store keeps its 6',
+    app.stock_on_hand(v_bottle, v_store) = 6, app.stock_on_hand(v_bottle, v_store)::text);
   perform test.ok('bar stock', 'as an issue to the outlet, marked with the line',
     exists (select 1 from stock_movements where pos_line_id = v_line and kind = 'issue'
              and to_outlet = v_out and quantity = -0.16), 'not found');

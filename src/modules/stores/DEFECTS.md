@@ -298,6 +298,30 @@ an undo of something that came in is a way stock leaves.
 
 ---
 
+### STO-12 · The pour picker said "in the bar" for what the store holds - FIXED on release 13 (not live yet)
+
+**Found** - 25 October, on the manual's picture A9-42: after release 13 split the bar into the Bar store and
+the Bar counter, Set up's "What each drink takes from the bar" still read "46 bottles in the bar", the
+store's figure, while the counter (which every KOT takes from) held 9 + 30 ml; the pours' Saved message
+said "off the bar's stock" (MEMORY 429).
+
+**What was done** - "in the store", and "off the Bar counter" (`BarStock.tsx`).
+
+**The rule it leaves** - when one place becomes two, search every screen for the old place's name and ask
+which place each now means.
+
+### STO-13 · The Bar store's sheet and the Simple sheet did not add up - FIXED on release 13 (not live yet), the owner's D27-364
+
+**Found** - 25 October, setting up the manual's test stock: the store's row (Opening, Received, To the
+counter, Closing) had no column for a breakage, wastage or count correction, so 60 - 10 did not make the
+closing 46 (MEMORY 434).
+
+**What was done** - "Other moves" on the store's sheet and the Simple one: other + corrections - (sold or
+sent). The paper layout unchanged. `barStock.test.tsx` reads a store row with a breakage, and a Simple row,
+cell by cell.
+
+**The rule it leaves** - a row that ends in a balance shows every move that makes it.
+
 ## Project-wide entries about this service
 
 Their bodies are in the root `MEMORY.md`; where the entry ends in a rule,
@@ -307,6 +331,8 @@ it is quoted here so the lesson is visible without opening the file.
 - **162** · A constraint that is dropped and re-added is not re-runnable
 - **184** · Three roles the screen offered and the database refused
 - **222** · The approvals engine has never had a caller, and still does not
+- **429** · The pour picker named the old place - The rule: when one place becomes two, search every screen for the old place's name.
+- **434** · A running balance whose rows did not add up - The rule: show every move that makes a balance; test with a breakage.
 
 ---
 

@@ -22,14 +22,15 @@ begin
   select count(*) into n from suppliers where hotel_id = h;
   perform test.ok('suppliers and locations','a new property has no suppliers', n = 0, n || ' arrived');
   /* Until 17 September a new property had no places at all. The owner's D17-3:
-     a Main, Kitchen and Bar store at every hotel (migration 104) — and nothing
-     else is invented. */
+     a Main, Kitchen and Bar store at every hotel (migration 104), and since
+     D27-361 the Bar counter beside the Bar store (238) - and nothing else is
+     invented. */
   select count(*) into n from locations where hotel_id = h;
   perform test.ok('suppliers and locations',
-    'a new property gets a Main, Kitchen and Bar store, and no other place', n = 3, n || ' arrived');
-  perform test.ok('suppliers and locations','all three are stores, by the owner''s names',
+    'a new property gets a Main, Kitchen and Bar store and a Bar counter, and no other place', n = 4, n || ' arrived');
+  perform test.ok('suppliers and locations','all four are stores, by the owner''s names',
     (select array_agg(name order by name) from locations where hotel_id = h and kind = 'store')
-      = array['Bar store', 'Kitchen store', 'Main store']);
+      = array['Bar counter', 'Bar store', 'Kitchen store', 'Main store']);
 
   -- ---------- a supplier ----------
   insert into suppliers (hotel_id, name, phone, gstin)
@@ -55,15 +56,15 @@ begin
   -- ---------- locations ----------
   insert into locations (hotel_id, name, kind) values
     (h, 'Back office', 'office'), (h, 'Lobby', 'public_area');
-  perform test.ok('suppliers and locations','places of each kind can be added beside the three stores',
-    (select count(*) from locations where hotel_id = h) = 5);
+  perform test.ok('suppliers and locations','places of each kind can be added beside the four stores',
+    (select count(*) from locations where hotel_id = h) = 6);
 
-  -- ---------- the three stores are never brought back (104, replayed) ----------
+  -- ---------- the stores are never brought back (104, 238, replayed) ----------
   update locations set name = 'Main godown' where hotel_id = h and name = 'Main store';
   update locations set is_active = false where hotel_id = h and name = 'Bar store';
   perform test.ok('suppliers and locations',
     'a replay adds nothing to a hotel that renamed one store and switched one off',
-    app.default_stores(h) = 0 and (select count(*) from locations where hotel_id = h) = 5);
+    app.default_stores(h) = 0 and (select count(*) from locations where hotel_id = h) = 6);
 
   perform test.raises('suppliers and locations','a kind the hotel does not have is refused',
     format($q$insert into locations (hotel_id, name, kind) values (%L, 'Garage', 'car_park')$q$, h),

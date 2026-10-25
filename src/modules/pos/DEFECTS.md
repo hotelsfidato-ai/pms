@@ -14,6 +14,12 @@ entries stay here: they are the reason the fault does not come back.
 
 ## Open — not fixed
 
+Nothing open (25 October audit).
+
+---
+
+## Fixed
+
 ### POS-18 · A typed address kept the role of the property chosen at sign-in — FIXED 26 September (the shell's)
 
 **Found** — 25 September, proving Restaurant setup end to end. The Reception test sign-in was rostered as a Waiter (`pos`) at a second property and opened `/h/SEC/floor` by its address: the page was that property's (the tab read "Tables · Second Hotel (test)"), but the sidebar was Reception's and Restaurant setup refused them "signed in as Reception". `PropertyScope` sets the property in view (`useUi.hotelId`, the code), while `useRole` reads `useSession.hotelId`, the property chosen at sign-in or in the switcher (`src/lib/session.ts`, `roleFor`). The server asks the role at the property in the address (`roleGate.ts`), so it rang the order as a waiter - nothing wrong was written; the website showed another property's role.
@@ -23,11 +29,20 @@ entries stay here: they are the reason the fault does not come back.
 falling back to the one chosen at sign-in. `src/lib/session.test.ts`: with the old line back it
 fails "expected 'front_desk' to be 'pos'".
 
----
+### POS-39 · The "Download Fidato Printer" button downloaded the app's web page - FIXED on release 13 (not live yet), the owner's D27-362
 
----
+**Found** - 25 October, by the master, hosting the installer for release 13: since release 12 took the
+installer out of the website (MEMORY 426), `KotSection.tsx`'s link `/downloads/Fidato-Printer-Setup.exe`
+reached Firebase's catch-all rewrite and got the app's `index.html`, 200 text/html, saved under the
+installer's name (MEMORY 430).
 
-## Fixed
+**What was done** - `deploy/nginx.conf` serves that one file from `/var/www/fidato-downloads/` on the API's
+server; the button reads the API's address from `config.json` (`apiBase()`). The owner copies each build
+of `printer/dist/Fidato-Printer-Setup.exe` there, as a step of the release.
+
+**The rule it leaves** - a download link is checked for what it returns, not for being there: behind a
+single-page rewrite a missing file answers 200. `kotSetup.test.tsx` reads the link's address from the
+API base.
 
 ### POS-38 · With a discount or a round off, the printed bill did not add up - FIXED 15 October (the owner's D27-334)
 
@@ -538,6 +553,10 @@ it is quoted here so the lesson is visible without opening the file.
 - **250** · Any clerk could switch a hotel's modules on or off
 - **251** · A refused receptionist was told "There is no menu yet"
 - **260** · The restaurant's own roles could not see the restaurant — The rule: a comment that says who a screen is for is a claim — test it against that role's actual menu.
+- **424, 427** · KOTs sideways from the roll fix, and a printer app "tested" through the PDF path — The rule: test printing through the path the printer takes; each printing computer has its shortest slip and a test KOT.
+- **428** · KOT times and about 40 other clock times printed in GMT — The rule: a clock time shown to a person goes through `app.hotel_clock`, and a test reads it back in a UTC database.
+- **430** · The live download button fetched the app's web page — The rule: when a file leaves the website, check what its old link returns.
+- **433** · New tables cleared after their parent in the property reset — The rule: place a new table above every table it references; run `resetOrder.test.ts`.
 
 ---
 

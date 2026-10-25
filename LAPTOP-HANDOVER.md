@@ -290,6 +290,9 @@ Everything below is on cp6, with its gates green, unless it says otherwise.
 
 ## 6 · Questions waiting for the owner (nothing changed yet)
 
+> **Answered 12 October (D27-305, `docs/briefs/decisions-2026-09-27.md`): all eleven, as recommended.** Kept
+> below as the record of what was asked.
+
 Found by the chapter helpers while checking the book against the code on
 10 Oct. Each is a question, not a fix. Recommend, then wait.
 

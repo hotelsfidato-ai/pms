@@ -1,5 +1,13 @@
 # What is left
 
+> **⚠ STALE SINCE 16 SEPTEMBER (audit of 25 October).** Much of what is listed below as not fixed was fixed
+> later: the approvals engine has callers, the housekeeping board refreshes, the role gate refuses unmapped
+> writes, the channel manager is built (not connected), RES-1 to 3, REP-1 and 2, ADM-1 and 2, BQ-1, INV-1 and 3,
+> FIN-1 are closed in their service logs. The current list is `HANDOVER.md` § 3, each service's
+> `src/modules/<service>/DEFECTS.md` ("Open"), and the decisions table. Still true here: no off-site backup
+> (MEMORY 385, the owner's plan A1), the junk sign-in accounts and the demo owner account the owner chose to
+> leave (MEMORY 264), and the routes not yet checked for MEMORY 243's shape.
+
 Written 9 September 2026, at the end of phase 2; brought up to date by
 the audit of 14 September. This file is the answer
 to "what is pending" — it replaces asking, and it is meant to be edited
