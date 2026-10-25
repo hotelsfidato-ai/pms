@@ -11,6 +11,10 @@ Work that touches the core or several services still goes in the root
 
 ---
 
+## 2026-10-25 · Release 13: the Bar store and the Bar counter (the owner's D27-361)
+
+**Shipped** Migration 238: the Bar counter beside every Bar store, each drink counted poured, whole or by packet with its register kind, brand and imported, the closing and morning counts, the counter's requests (`barRequests.ts`: the GM or the Inventory Manager approves, never their own; approving moves store to counter), "Bar closed today". Every KOT takes from the counter. `barSheet.ts` by place and moment; `BarStock.tsx`: Counter or Store, Closing or Morning count, Requests, the drinks on Set up, the FLR register buttons. The pour picker now says what the store holds "in the store" (MEMORY 429). **Proved** `api/test/modules/stores/barStock.test.ts`, `barStock.test.tsx`. The root `CHANGELOG.md` has the whole entry.
+
 ## 2026-10-21 · Bar stock, like the paper register (the owner's D27-356)
 
 **Shipped** `pages/BarStock.tsx` (`/pos/:code/bar-stock`, Restaurant menu; Inventory's Bar tab): today's sheet like the register or simple (`barSheet.ts`, `locations.bar_sheet`), its count through the Store's own (`saveCount`, `countLinesProblem`), bills (Purchasing's `BarBills`, through its front door), set up. `BAR_KEEPERS` and `holdsRoleAt` in `stockGrants.ts`. A bar bill's line goes into the bar's store on Purchasing's rule. **Proved** `api/test/modules/stores/barStock.test.ts`, `barStock.test.tsx`. The root `CHANGELOG.md` has the whole entry.
