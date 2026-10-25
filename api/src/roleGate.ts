@@ -617,6 +617,14 @@ export const WRITE_RULES: Readonly<Record<string, Rule>> = {
   [`PUT ${H}/bar/pours`]: own("stores/stockGrants.ts: mayStock edit"),  // D27-354
   [`POST ${H}/bar/count`]: own("stores/stockGrants.ts: BAR_KEEPERS"),  // D27-354
   [`PUT ${H}/bar/sheet-format`]: own("stores/barSheet.ts: FORMAT_SETTERS"),  // D27-354
+  /* D27-361: the bar's own drinks, "Bar closed today", the counter's asks. */
+  [`POST ${H}/bar/drinks`]: own("stores/stockGrants.ts: mayStock edit"),
+  [`PUT ${H}/bar/drinks/:id`]: own("stores/stockGrants.ts: mayStock edit"),
+  [`POST ${H}/bar/closed`]: own("stores/barSheet.ts: FORMAT_SETTERS"),
+  [`POST ${H}/bar/closed/undo`]: own("stores/barSheet.ts: FORMAT_SETTERS"),
+  [`POST ${H}/bar/requests`]: own("stores/stockGrants.ts: BAR_KEEPERS"),
+  [`POST ${H}/bar/requests/:id/approve`]: own("stores/barRequests.ts: BAR_APPROVERS, never one's own ask"),
+  [`POST ${H}/bar/requests/:id/reject`]: own("stores/barRequests.ts: BAR_APPROVERS, never one's own ask"),
   [`POST ${H}/stores/transfers`]: own("stores/stockGrants.ts"),
   [`POST ${H}/stores/import`]: own("stores/stockGrants.ts"),
   [`PATCH ${H}/stores/items/:id`]: own("stores/stockGrants.ts"),
@@ -899,6 +907,8 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/reports/lodging-tax`]: REPORTS,
   [`GET ${H}/reports/stock-on-hand`]: STORE_REPORTS,
   [`GET ${H}/reports/bar-stock`]: STORE_REPORTS,  // D27-354
+  [`GET ${H}/reports/flr-daily`]: STORE_REPORTS,  // D27-361
+  [`GET ${H}/reports/flr-monthly`]: STORE_REPORTS,  // D27-361
   [`GET ${H}/reports/stock-movements`]: STORE_REPORTS,
   [`GET ${H}/reports/stock-consumption`]: STORE_REPORTS,
   [`GET ${H}/reports/stock-wastage`]: STORE_REPORTS,
@@ -976,6 +986,7 @@ export const READ_RULES: Readonly<Record<string, Rule>> = {
   [`GET ${H}/stores`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/bar/pours`]: own("stores/stockGrants.ts: STOCK_ROLES.view + BAR_KEEPERS"),
   [`GET ${H}/bar/sheet`]: own("stores/stockGrants.ts: STOCK_ROLES.view + BAR_KEEPERS"),  // D27-354
+  [`GET ${H}/bar/requests`]: own("stores/stockGrants.ts: STOCK_ROLES.view + BAR_KEEPERS"),  // D27-361
   [`GET ${H}/stores/items/:id/movements`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/stores/days`]: own("stores/stockGrants.ts: mayStock"),
   [`GET ${H}/equipment`]: own("equipment/grants.ts"),

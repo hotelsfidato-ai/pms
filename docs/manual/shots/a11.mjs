@@ -284,14 +284,24 @@ export const SHOTS = [
       { n: 4, at: "css:main footer p", nth: 1, side: "left" },
     ],
   },
-  /* The bar's day (D27-354): opened, bought, sold, closing, by dish. */
+  /* The bar's day (D27-354), the counter and the store each (D27-361). */
   {
-    id: "A11-23", title: "Bar stock", as: "General Manager",
+    id: "A11-23", title: "Bar stock", as: "General Manager", size: "wall",
     path: "/reports/bar-stock", steps: [LOADED("Sold, by dish")],
     marks: [
-      { n: 1, at: "text:A9 Imperial Blue 750 ml", nth: 0, side: "left" },
-      { n: 2, at: "text:Sold, by dish", side: "left" },
-      { n: 3, at: "text:Sold, but nothing set up for the dish", side: "left" },
+      { n: 1, at: "text:A9 Imperial Blue 180 ml", nth: 0, side: "left" },
+      { n: 2, at: "text:Bar store, by drink (full bottles + ml)", side: "left" },
+      { n: 3, at: "text:The counter's asks of the store made on this day, decided", side: "left" },
+    ],
+  },
+  /* The excise department's daily register, like the paper (D27-361). */
+  {
+    id: "A11-24", title: "FLR-1A/2A/3A register", as: "General Manager", size: "wall",
+    path: "/reports/flr-daily", steps: [LOADED("CLOSING BALANCE")],
+    marks: [
+      { n: 1, at: "text:A9 Imperial Blue", nth: 0, side: "left" },
+      { n: 2, at: "text:T.P. NO.", nth: 0, side: "top" },
+      { n: 3, at: "text:OPENING BALANCE", nth: 0, side: "top" },
     ],
   },
 ];

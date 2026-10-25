@@ -13,6 +13,7 @@ import {
 } from "./builders/stock.ts";
 import { equipmentReport } from "./builders/equipment.ts";
 import { barStockReport } from "./builders/barStock.ts";
+import { flrDaily, flrMonthly } from "./builders/flr.ts";
 
 /* ══════════════════════════════════════════════════════════════════
    buildReport — the one door to every report's figures
@@ -53,6 +54,9 @@ const BUILDERS: Partial<Record<ReportKey, Builder>> = {
   equipment: (c, h, p) => equipmentReport(c, h, p.asOn),
   /* The bar's day: opened, bought, sold, counted (D27-354). */
   "bar-stock": (c, h, p) => barStockReport(c, h, p.asOn),
+  /* FORM F.L.R.-1A/2A/3A for a day, F.L.R.-3 for a month (D27-361). */
+  "flr-daily": (c, h, p) => flrDaily(c, h, p.asOn),
+  "flr-monthly": (c, h, p) => flrMonthly(c, h, month(p)),
 };
 
 /** The reports built so far, each with its route (documents.ts). */

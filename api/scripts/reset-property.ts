@@ -210,6 +210,10 @@ export const CLEAR: [table: string, how: string][] = [
      movement's undo points at the movement, and both go in one statement. */
   /* A bar bill's lines point at the receipts they made, and the receipts at
      their bill (D27-354, 234): lines, movements, then the bills. */
+  /* The counter's asks of the store and "Bar closed today" (D27-361, 237). */
+  ["bar_request_lines", "hotel_id = $1"],
+  ["bar_requests",      "hotel_id = $1"],
+  ["bar_closed_days",   "hotel_id = $1"],
   ["bar_purchase_lines", "hotel_id = $1"],
   ["stock_count_lines", "hotel_id = $1"],
   ["stock_movements",   "hotel_id = $1"],

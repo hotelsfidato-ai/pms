@@ -684,70 +684,114 @@
   </div>
 
   <h3>The bar's day: Bar stock</h3>
-  <p><span class="ui">Bar stock</span>, in the Restaurant menu after Kitchen, is the bar's one place. It has three parts: <span class="ui">Today's sheet</span>, <span class="ui">Bills</span> (above) and <span class="ui">Set up</span>. It is the bar manager's (the Bar role), the GM's, the owner's and an Admin's. The same three parts are the <span class="ui">Bar</span> tab of <span class="ui">Inventory</span>, in Store and equipment, for the Inventory Manager; whoever sees the Store can read them. Inventory's <span class="ui">Restaurant</span> tab comes next.</p>
+  <p><span class="ui">Bar stock</span>, in the Restaurant menu after Kitchen, is the bar's one place. It has four parts: <span class="ui">Today's sheet</span>, <span class="ui">Requests</span>, <span class="ui">Bills</span> (above) and <span class="ui">Set up</span>. It is the bar manager's (the Bar role), the GM's, the owner's and an Admin's. The same parts are the <span class="ui">Bar</span> tab of <span class="ui">Inventory</span>, in Store and equipment, for the Inventory Manager; whoever sees the Store can read them.</p>
+  <p>The bar has <b>two places</b>, as on paper:</p>
+  <ul>
+    <li>The <b>Bar store</b>, the godown: the supplier's bills go in here, and only sealed NIPs, bottles and packets are kept, counted whole.</li>
+    <li>The <b>Bar counter</b>: what is being sold. Every KOT sent takes from here, and the open bottle is counted in ml.</li>
+  </ul>
+  <p>The counter <b>asks the store</b> for stock, and the GM or the Inventory Manager approves; approving moves it.</p>
+
+  <h3>Set up: the bar's drinks</h3>
+  <p>Each drink is on the bar's list once for each bottle size: <i>Blenders Pride 180 ml</i> and <i>Blenders Pride 750 ml</i> are two. The GM, the Inventory Manager, the owner and an Admin keep the list; the bar manager reads it.</p>
+  <ol class="steps">
+    <li>Open <span class="ui">Bar stock</span>, tap <span class="ui">Set up</span>, then <span class="ui">Add a drink</span> (or <span class="ui">Change</span> on one).</li>
+    <li>Type its <span class="ui">Name</span>, and pick <span class="ui">Counted as</span>:
+      <ul>
+        <li><span class="ui">NIPs or bottles, poured in pegs</span>: hard liquor and wine. Whole in the store; at the counter, the sealed ones and the open one's ml.</li>
+        <li><span class="ui">Whole bottles (beer)</span>: counted in bottles everywhere.</li>
+        <li><span class="ui">Packets, and loose ones (cigarettes)</span>: whole packets in the store; at the counter, packets and the open packet's sticks. Type <span class="ui">How many in a packet</span>.</li>
+      </ul></li>
+    <li>For liquor: its <span class="ui">Bottle size, ml</span>, its <span class="ui">Kind of liquor</span> (Whisky, Rum, Vodka, Gin, Brandy, Wine, Beer strong or mild...), the <span class="ui">Brand, as the register names it</span>, and <span class="ui">Imported</span> if it is not Indian made. These place it in the excise registers. Cigarettes and soft drinks are <span class="ui">Not liquor</span>, and stay out of them.</li>
+    <li>Tap <span class="ui">Save</span>. A drink on a bar bill that is not on the list yet joins it the same way (above).</li>
+  </ol>
 
   <h3>Set up: what each drink takes</h3>
-  <p>All spirits are bought and counted as <b>NIPs</b> (180 ml). Each bar dish, and each of its sizes, says what it takes from the Bar store: a 30, 60 or 90 ml peg takes that many ml of the brand's NIP, a NIP one whole NIP, a beer one bottle. Once that is saved, <b>every KOT sent takes it off the bar's stock</b>, from whichever screen sent it: the Till, the Terminal, a waiter's phone, or a guest's order accepted. The GM, the Inventory Manager, the owner and an Admin set it; the bar manager reads it.</p>
+  <p>Each bar dish, and each of its sizes, says what it takes from the Bar counter: a 30, 60 or 90 ml peg takes that many ml of the brand's NIP, a NIP one whole NIP, a beer one bottle. Once that is saved, <b>every KOT sent takes it off the counter</b>, from whichever screen sent it: the Till, the Terminal, a waiter's phone, or a guest's order accepted.</p>
   <ol class="steps">
-    <li>Open <span class="ui">Bar stock</span>, tap <span class="ui">Set up</span>. Every dish in a section taxed as bar or alcohol is listed, with each size.</li>
+    <li>Under <span class="ui">What each drink takes from the bar</span>, every dish in a section taxed as bar or alcohol is listed, with each size.</li>
     <li>Where the names match, a suggestion is ready: tap <span class="ui">Use the … suggestions</span> to fill them all, and check them.</li>
     <li>For the rest, pick the NIP or bottle each is poured from, type how much, and choose <span class="ui">ml of it</span> or <span class="ui">whole</span>.</li>
     <li>Tap <span class="ui">Save</span>. A dish left on <span class="ui">Nothing set</span> takes nothing, and the Bar stock report lists it.</li>
   </ol>
-  <p><span class="ui">How the daily sheet looks</span>, at the top of Set up, is the owner's, an Admin's or the GM's choice: <span class="ui">Like the paper register</span> or <span class="ui">Simple</span>. Both are kept; it changes only how today's sheet is laid out.</p>
+  <p><span class="ui">How the daily sheet looks</span>, at the top of Set up, is the owner's, an Admin's or the GM's choice: <span class="ui">Like the paper register</span> or <span class="ui">Simple</span>. It changes only how the counter's sheet is laid out.</p>
 
   <figure class="shot" id="fig-A9-42">
-    <img src="img/A9-42.png" alt="Bar stock, Set up: How the daily sheet looks with Like the paper register and Simple, and each bar dish and size with the NIP it is poured from, how much, ml of it or whole, and Set">
-    <figcaption><b>Figure A9-42.</b> Set up: how the sheet looks, and what each drink takes.</figcaption>
-    <ol class="callouts"><li>Set up</li><li>How the daily sheet looks</li><li>The NIP it is poured from, and what the bar holds</li><li>ml of it, or whole ones</li><li>Save</li></ol>
+    <img src="img/A9-42.png" alt="Bar stock, Set up: How the daily sheet looks, the bar's drinks with how each is counted and its register group, and Add a drink">
+    <figcaption><b>Figure A9-42.</b> Set up: the bar's drinks.</figcaption>
+    <ol class="callouts"><li>Set up</li><li>How the daily sheet looks</li><li>Each drink: its size, how it is counted, its register group</li><li>Add a drink</li></ol>
   </figure>
 
-  <h3>Every day: today's sheet and the count</h3>
-  <p><span class="ui">Today's sheet</span> is the bar register: one line for each drink, under its menu section, for the hotel's business day.</p>
+  <h3>The counter asks the store: Requests</h3>
+  <p>When the counter runs low, the bar manager asks the store for whole NIPs, bottles or packets. The GM or the Inventory Manager (the owner or an Admin too) approves; approving moves them from the Bar store to the Bar counter. Nobody approves their own request.</p>
+  <ol class="steps">
+    <li>Open <span class="ui">Bar stock</span>, tap <span class="ui">Requests</span>.</li>
+    <li>Under <span class="ui">Ask the store</span>, pick a drink (the list says what the store has) and type how many; <span class="ui">Another drink</span> for the next. A note if you like.</li>
+    <li>Tap <span class="ui">Ask the store</span>. It waits, marked <span class="ui">Waiting</span>, with what the store holds of each.</li>
+    <li>The GM or the Inventory Manager taps <span class="ui">Approve and move</span>, or <span class="ui">Reject</span> with a reason the counter reads.</li>
+  </ol>
+
+  <figure class="shot" id="fig-A9-44">
+    <img src="img/A9-44.png" alt="Bar stock, Requests: Ask the store with a drink and how many, and a request waiting with what the store has, Approve and move and Reject">
+    <figcaption><b>Figure A9-44.</b> The counter asks the store.</figcaption>
+    <ol class="callouts"><li>Ask the store: a drink and how many</li><li>A request waiting, with what the store has</li><li>Approve and move</li></ol>
+  </figure>
+
+  <h3>Every day: the sheet, the closing count and the morning count</h3>
+  <p><span class="ui">Today's sheet</span> is the bar register: one line for each drink, under its menu section, for the hotel's business day. Pick the place at the top: <span class="ui">Bar counter</span> or <span class="ui">Bar store</span>.</p>
   <table>
     <thead><tr><th style="width:24%">Column</th><th>What it says</th></tr></thead>
     <tbody>
-      <tr><td>Opening (Nip, ML)</td><td>What the bar held when the day began: full NIPs, and the ml of the open one. A beer or a packet shows its count.</td></tr>
-      <tr><td>Recd</td><td>What came in on the day's bar bills.</td></tr>
+      <tr><td>Opening (Nip, ML)</td><td>What the place held when the day began: full NIPs, and the ml of the open one. A beer or a packet shows its count.</td></tr>
+      <tr><td>Recd</td><td>The counter: what came from the store. The store: what came on the day's bar bills.</td></tr>
       <tr><td>Total (Nip, ML)</td><td>Opening and received together.</td></tr>
-      <tr><td>Sell (Nip, 30, 60, 90, ML)</td><td>What each KOT sent took: the NIPs sold whole, how many 30, 60 and 90 ml pegs, and the ml of all the pegs. A beer shows the bottles sold.</td></tr>
-      <tr><td>Closing (Nip, ML)</td><td>What the bar holds by the book at the end of the day.</td></tr>
-      <tr><td>Rate</td><td>The menu price of the dish that takes one whole bottle: the NIP's, the beer's. A dash when there is none.</td></tr>
-      <tr><td>Amount</td><td>What the day's lines of the drink were billed. A struck line, a voided bill and an NC bill are left out. The total of all drinks is under the sheet.</td></tr>
+      <tr><td>Sell (Nip, 30, 60, 90, ML)</td><td>The counter: what each KOT sent took, the NIPs sold whole, how many 30, 60 and 90 ml pegs, and the ml of all the pegs. The store's sheet shows what it sent to the counter instead.</td></tr>
+      <tr><td>Closing (Nip, ML)</td><td>What the place holds by the book at the end of the day.</td></tr>
+      <tr><td>Rate, Amount</td><td>The counter: the menu price of the dish that takes one whole bottle, and what the day's lines of the drink were billed.</td></tr>
       <tr><td>Counted, Difference</td><td>The closing count, and how far it is from the book.</td></tr>
+      <tr><td>Morning</td><td>The morning count's difference from the book: anything but <span class="msg">“matches”</span> moved overnight, in red.</td></tr>
     </tbody>
   </table>
-  <p>Before the night audit, the bar manager counts the bar:</p>
+  <p><b>Before the night audit</b>, the bar manager counts both places:</p>
   <ol class="steps">
-    <li>Open <span class="ui">Bar stock</span>. <span class="ui">Today's sheet</span> opens on the business day.</li>
-    <li>For each drink counted, type the <b>full NIPs</b> and the <b>ml in the open one</b> under <span class="ui">Counted</span>; a beer or a packet, its count. A line left blank is not counted, never taken as zero.</li>
-    <li>The <span class="ui">Difference</span> shows as you type, for example <span class="msg">“-30 ml”</span>, or <span class="msg">“matches”</span>.</li>
-    <li>Tap <span class="ui">Save the count</span>. A difference is saved as a count correction in the Store, against your name (A9.9).</li>
+    <li>Open <span class="ui">Bar stock</span>. <span class="ui">Today's sheet</span> opens on the business day, on the <span class="ui">Bar counter</span>, with <span class="ui">Closing count</span> chosen.</li>
+    <li>For each drink counted, type the <b>full NIPs</b> and the <b>ml in the open one</b> under <span class="ui">Counted</span>; a beer, its bottles; cigarettes, the packets and the loose sticks. A line left blank is not counted, never taken as zero.</li>
+    <li>The <span class="ui">Difference</span> shows as you type. Tap <span class="ui">Save the closing count</span>; a difference is saved as a count correction against your name.</li>
+    <li>Tap <span class="ui">Bar store</span> and count it the same way, in whole NIPs, bottles and packets.</li>
   </ol>
+  <p><b>The night audit waits</b> for it: a day with bar drinks cannot be closed until the counter and the store are counted, each drink that holds stock or moved that day, after its last move. If the bar did not open, the GM taps <span class="ui">The bar did not open today</span> on the sheet, types why, and taps <span class="ui">Mark the bar closed today</span>; <span class="ui">The bar opened</span> takes it back.</p>
+  <p><b>In the morning</b>, before the first KOT, the bar manager taps <span class="ui">Morning count</span>, counts the counter (and the store, if its key is with them) and taps <span class="ui">Save the morning count</span>. Nothing should have moved since the night's count: a difference shows in red in <span class="ui">Morning</span>, and on the day's Bar stock report for the GM.</p>
 
   <figure class="shot" id="fig-A9-43">
-    <img src="img/A9-43.png" alt="Bar stock, Today's sheet like the paper register: Opening, Recd, Total, Sell by NIP, 30, 60, 90 and ML, Closing, Rate, Amount, and the count typed with its difference">
-    <figcaption><b>Figure A9-43.</b> Today's sheet, like the paper register, with the count typed in.</figcaption>
-    <ol class="callouts"><li>The day</li><li>What was sold: NIPs, 30, 60 and 90 ml pegs, and their ml</li><li>Closing, by the book</li><li>The count: full NIPs, and the open one's ml</li><li>The difference</li><li>Save the count</li></ol>
+    <img src="img/A9-43.png" alt="Bar stock, Today's sheet on the Bar counter like the paper register: the place, Closing count or Morning count, the sold pegs, closing, the count typed with its difference, and Save the closing count">
+    <figcaption><b>Figure A9-43.</b> The counter's sheet, with the closing count typed in.</figcaption>
+    <ol class="callouts"><li>The place: the counter or the store</li><li>The closing count, or the morning count</li><li>What was sold: NIPs, 30, 60 and 90 ml pegs, and their ml</li><li>The count: full NIPs, and the open one's ml</li><li>The difference</li><li>Save the count</li></ol>
   </figure>
 
-  <p>Pick another <span class="ui">Day</span> to read an earlier sheet: it shows what was counted that day and the difference, and takes no count. <span class="ui">Simple</span> has fewer columns: Opening, Received, Sold, Closing, Counted and Difference, each in NIPs and ml, such as <span class="msg">“54 + 60 ml”</span>. The Store's own count sheet counts the Bar store too (A9.9).</p>
-  <p>The day's figures are also the <span class="ui">Bar stock</span> report (A11.9): each drink's opening, purchases, sales, count and closing, the dishes sold, and the day's bar bills. It can be emailed after each night audit (A17.12).</p>
+  <h3>The excise registers</h3>
+  <p>The GM and the Inventory Manager print the registers the excise department asks for, laid out like the paper books, from the sheet's buttons for its day (<span class="ui">FLR-1A/2A/3A</span> for the day, <span class="ui">FLR-3</span> for its month), or from Reports (A11.9):</p>
+  <ul>
+    <li><b>FORM F.L.R.-1A / 2A / 3A</b>, the day: one row per brand under its kind, with Opening Balance, Receipts, Sales and Closing Balance for each bottle size, and the T.P. No. of the day's bills.</li>
+    <li><b>FORM F.L.R.-3</b>, the month: a row per day of Received (with the Permit No.), Sold and Closing Balance, by spirits imported and Indian made, wines, fermented and mild liquor, and each size; at the foot Opening, Received, Grand total, Less sold, Less breakages and Closing balance.</li>
+  </ul>
+  <p>Both count <b>whole bottles</b>, the store and the counter together. A NIP poured as pegs counts as <b>sold the day it is opened</b>: the counter's open bottle is not in the closing balance. Sales are what the paper writes: opening + receipts - breakages - closing.</p>
+  <p>The day's figures are also the <span class="ui">Bar stock</span> report (A11.9). It can be emailed after each night audit (A17.12).</p>
 
   <div class="box watch">
     <h4>Watch out</h4>
     <ul>
-      <li>A drink is taken off when its KOT is <b>sent</b>, not when the bill is paid. Struck after the bar had it, it stays off, as poured, and the report lists it.</li>
-      <li>A drink is taken off once: a reprinted KOT takes nothing more.</li>
-      <li>A dish with nothing set takes nothing: the report's <span class="ui">Sold, but nothing set up for the dish</span> names it.</li>
+      <li>A drink is taken off when its KOT is <b>sent</b>, not when the bill is paid, and from the <b>counter</b>. Struck after the bar had it, it stays off, as poured, and the report lists it.</li>
+      <li>A counter with nothing moved to it goes below zero as KOTs are sent: ask the store in time.</li>
+      <li>The store short of a drink: <span class="msg">“The store is short: Blenders Pride 180 ml (the store has 2, 5 asked). Nothing was moved.”</span> Reject it, and ask again for what is there.</li>
       <li>The open one's ml is under its size: <span class="msg">“Imperial Blue 180 ml: whole NIPs, and the open one's ml under 180.”</span></li>
       <li>If a drink moved after the sheet was opened (a KOT sent), the count is refused and names it: count it again.</li>
+      <li>A drink with no kind of liquor set is not in the registers; one with no bottle size goes under <span class="msg">“size not set”</span>.</li>
     </ul>
   </div>
 
   <div class="box why">
     <h4>Why it works this way</h4>
-    <p>The GM approves every purchase, at any amount: <span class="d">D18-4</span>, <span class="d">D17-35</span>. The order is a PDF sent by hand: <span class="d">D18-3</span>. One Approvals inbox, with the screens keeping their own buttons: <span class="d">D18-19</span>. The bar's bills, recorded directly with a photo, into the Bar store; the bar in bottles and ml, the stock off when the KOT is sent, a daily count, the Bar stock report and its email: <span class="d">D27-354</span>. The bar like the paper register: all spirits as NIPs, both sheet layouts as a setting, bills as printed, one Bar stock page in the Restaurant menu for the bar manager, the GM, the owner and an Admin: <span class="d">D27-356</span>. The Rate column, the ₹1 round-off, Set up read by the bar manager: <span class="d">D27-357</span>. GST and use-by at delivery: <span class="d">D27-238</span>.</p>
+    <p>The GM approves every purchase, at any amount: <span class="d">D18-4</span>, <span class="d">D17-35</span>. The order is a PDF sent by hand: <span class="d">D18-3</span>. One Approvals inbox, with the screens keeping their own buttons: <span class="d">D18-19</span>. The bar's bills, recorded directly with a photo; the bar in bottles and ml, the stock off when the KOT is sent, a daily count, the Bar stock report and its email: <span class="d">D27-354</span>. The bar like the paper register: all spirits as NIPs, both sheet layouts as a setting, bills as printed, one Bar stock page in the Restaurant menu for the bar manager, the GM, the owner and an Admin: <span class="d">D27-356</span>. The Rate column, the ₹1 round-off, Set up read by the bar manager: <span class="d">D27-357</span>. Two places, the store and the counter; the counter asks and the GM or the Inventory Manager approves; counted three ways; the night audit waits for the closing count, the GM may mark the bar closed; the morning count; FLR-1A/2A/3A and FLR-3 like the paper, a NIP sold the day it is opened: <span class="d">D27-361</span>. GST and use-by at delivery: <span class="d">D27-238</span>.</p>
   </div>
 
   <!-- A9.12 -->

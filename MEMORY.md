@@ -6539,6 +6539,61 @@ copy will see of theirs.**
 
 ---
 
+### 429 · MINE: the bar's pour picker said "in the bar" for what the store holds (25 October)
+
+Release 13 (D27-361) split the one Bar store into the Bar store and the Bar counter, and every KOT now takes from
+the counter. Bar stock, Set up, "What each drink takes from the bar" still labelled each drink
+"A9 Imperial Blue 180 ml - 46 bottles **in the bar**", but the 46 is the STORE's figure (the same `onHand` the
+drinks table shows under "In the store"); the counter held 9 + 30 ml. Not shipped: found on the A9-42 picture,
+taking the manual's pictures with real counter and store stock. Fixed in `BarStock.tsx`: "in the store"; and the search the rule below asks for found the pours' "Saved" message, "takes these off the bar's stock", now "off the Bar counter".
+**The rule:** when one place becomes two, search every screen for the old place's name ("the bar") and ask of
+each which place it now means.
+
+---
+
+### 428 · FOUND: KOT times, and about 40 other clock times, printed in GMT - 5 h 30 min behind (25 October)
+
+The owner: *"the KOT times are not proper and accurate"*. Checked read-only on the live server: Amrapali's KOT 79 printed
+**18:21** when the hotel's clock said **23:51**. The KOT's time (`till.ts`, the docket: `to_char(min(l.kot_sent_at),
+'DD/MM/YY HH24:MI')`) is formatted with no zone, so it takes the database session's zone - **GMT on the hotel's server**
+(`show timezone`), Asia/Kolkata on this PC, where every KOT tested here looked right (the KOT test of 22 October included).
+The same bare `to_char(...HH24...)` is in about 40 places: when a bill was settled or opened, a struck line, the till's
+cash movements and day end, the front desk's drawer, deposits, company payments, a tax invoice's issue time, bar bills,
+banquet times. MEMORY 297 made this the rule a month ago (a time belongs to the PROPERTY; `app.hotel_clock`), and the API's
+test database runs in UTC to catch it - but no test ever read a printed time back. **Fixed (25 Oct, release 12.1, 5b4ea3a8):** every one goes through
+`app.hotel_clock(hotel, moment, format)`, and a test reads the source and fails on any `to_char` of a clock time that does
+not convert to the hotel's zone. **The rule:** a clock time shown to a person is formatted in the hotel's zone, always
+through `app.hotel_clock`; and a feature that prints a time has a test that reads the printed time back in a UTC database.
+
+---
+
+### 427 · MINE: the Fidato Printer app was "tested" through a path the printer never takes (25 October)
+
+The owner, after installing the app at the BAR PC: the KOTs print **sideways**. On 22 October I reported the app printed
+"a 1-dish KOT, a 6-dish KOT and a bill, each 80 mm wide, upright" - but that test ran with `FIDATO_PRINT_TO_PDF`, which
+calls `webContents.printToPDF`. A real print goes through `webContents.print({ silent, pageSize })` and the printer's own
+driver: a different code path, with a page size in microns that the receipt printer's driver interprets for itself. The
+PDF proved the slip's layout, not what the printer does with it, and I said "tested end to end". The Chrome way (CSS
+`@page size`, no page size forced) had printed bills upright on that printer. **The rule:** a printing test is the real
+print path on the real kind of printer, or it is called what it is ("the slip's layout, as a PDF"); and the app forces
+nothing the proven Chrome way did not.
+
+---
+
+### 426 · MINE: the Fidato Printer installer was put in the website, which Firebase's free plan refuses (22 October)
+
+`release.mjs` copied `Fidato-Printer-Setup.exe` into the release copy's `dist/downloads/` so the website would
+serve it. The owner's A7 (`firebase deploy --only hosting:app`) failed: *"Executable files are forbidden on the
+Spark billing plan"* - the project is on the free plan. A1-A6 and Amrapali's fresh start had gone through, so the
+API was release 12 and the website release 11 until A7 ran again. I never checked the host's limits before choosing
+it; the gates and `release.mjs` test the build, not what the host accepts. **Fixed:** the installer taken out of the
+release copy's `dist` (the code unchanged, `index-BioGCyra.js`) and A7 run again; the owner chose (D27-362) to send
+the app to each printing computer by hand for now and to host it on our own server (api.fidatohotels.com) in
+release 13, where `release.mjs` stops copying it. **The rule:** before putting a new kind of file on a host, read
+that host's limits for the plan it is on - and say in the steps which file each step uploads.
+
+---
+
 ### 425 · MINE: release 12 was handed over on a mixture of two gate runs (22 October)
 
 I stopped release 12's first gate run with TaskStop and killed what I could find by command line ("left: 0") -

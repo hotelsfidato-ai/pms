@@ -96,7 +96,10 @@ export type ReportKey =
   | "stock-cover"
   | "supplier-spend"
   | "equipment"
-  | "bar-stock";
+  | "bar-stock"
+  /* The excise registers, as the bar keeps them on paper (D27-361). */
+  | "flr-daily"
+  | "flr-monthly";
 
 export const REPORT_KEYS: readonly ReportKey[] = [
   "night-audit",
@@ -117,6 +120,8 @@ export const REPORT_KEYS: readonly ReportKey[] = [
   "supplier-spend",
   "equipment",
   "bar-stock",
+  "flr-daily",
+  "flr-monthly",
 ];
 
 /** The Store and equipment reports (phase 3A): read by D27-240's readers,
@@ -124,8 +129,8 @@ export const REPORT_KEYS: readonly ReportKey[] = [
 export const STORE_REPORT_KEYS: readonly ReportKey[] = [
   "stock-on-hand", "stock-movements", "stock-consumption", "stock-wastage",
   "stock-count-differences", "stock-dead", "stock-cover", "supplier-spend", "equipment",
-  /* The bar's day (D27-354). */
-  "bar-stock",
+  /* The bar's day (D27-354), and its excise registers (D27-361). */
+  "bar-stock", "flr-daily", "flr-monthly",
 ];
 
 export interface ReportParams {

@@ -759,6 +759,28 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **25 October: RELEASE 12.1 READY, the owner's to type** - `release/r12-1` at **e754c8be** on live 11acb6d3 (D27-363:
+> KOT times on the hotel's clock, MEMORY 428; each printing computer's shortest slip, 160 mm, with a test KOT and bill;
+> a waiter sends the GM a strike, discount, NC or void, approving does it, the bell and Approvals at the top; a paid
+> bill's cash/card/UPI changed before the night audit; migration 237). ONE complete gate run green (run 1580-13754-1),
+> website `index-DB0xQJQz.js`, no executable in dist; steps `.local/release-12-1-steps.md` (sent). Release 13 (the
+> bar's store and counter) is joined into cp6 with its migration renumbered 238; its manual text is drafted, its
+> pictures and gates are next.
+
+> **22 October, evening: RELEASE 12 LIVE, typed by the owner (D27-350).** Checked read-only: GitHub `main` and the
+> server at `11acb6d3`, API restarted 15:59 IST and healthy, migration 236 applied, Amrapali fresh (business date 22 Oct,
+> 0 bookings, 0 orders), website `index-BioGCyra.js` (seen loading live after the service worker updated). The first A7
+> failed - Firebase's free plan refuses the `.exe` (MEMORY 426); the installer was taken out of `dist` and A7 run again
+> (D27-362). The installer goes to the BAR PC by hand (`printer/dist/Fidato-Printer-Setup.exe`); release 13 hosts it on
+> our server and points the button there. Release 13 (D27-361, `docs/briefs/bar-v3.md`) is in progress on cp6.
+
+> **22 October, 15:05: RELEASE 12 READY AGAIN, the owner's to type** - `release/r12-parcels` at **11acb6d3** (the Fidato
+> Printer app on top of b15a2f00): ONE complete gate run alone (run 23276-11074-1, finished; web 1,412, api 2,829, db
+> 1,779, replay, pg16), website `index-BioGCyra.js` with `/downloads/Fidato-Printer-Setup.exe`; steps
+> `.local/release-12-steps.md` (sent) hold A1-A7 AND Amrapali's fresh start F1-F4 (the owner: "deploy with data
+> deleting"; the dry run run read-only on live at 15:00: 1 booking, 1 guest, 1 posting, 32 orders). Install guide
+> `.local/printer-guide/Fidato-Printer-install-guide.pdf` (sent).
+
 > **22 October, evening: THE FIDATO PRINTER APP (D27-360), going out WITH release 12** - `printer/` (Electron;
 > `cd printer; npm run dist` builds `printer/dist/Fidato-Printer-Setup.exe`, never committed); `release.mjs` copies it
 > into the website's `/downloads/` and refuses without it. Release 12 is rebuilt on top of it (the b15a2f00 steps are

@@ -15,6 +15,8 @@ import {
   StockOnHandPage, StockMovementsPage, StockConsumptionPage, StockWastagePage,
   StockCountDifferencesPage, StockDeadPage, StockCoverPage, SupplierSpendPage, EquipmentReportPage,
   BarStockPage,
+  FlrDailyPage,
+  FlrMonthlyPage,
 } from "@/modules/reports/pages/Store";
 import {
   GuestLedgerPage, CashierShiftPage, GstSalesPage, CFormPage,
@@ -57,6 +59,8 @@ export const routes = (
     <Route path="/reports/supplier-spend" element={<RequireAccess path="/reports/supplier-spend" resource="stock"><SupplierSpendPage /></RequireAccess>} />
     <Route path="/reports/equipment" element={<RequireAccess path="/reports/equipment" resource="stock"><EquipmentReportPage /></RequireAccess>} />
     <Route path="/reports/bar-stock" element={<RequireAccess path="/reports/bar-stock" resource="stock"><BarStockPage /></RequireAccess>} />
+    <Route path="/reports/flr-daily" element={<RequireAccess path="/reports/flr-daily" resource="stock"><FlrDailyPage /></RequireAccess>} />
+    <Route path="/reports/flr-monthly" element={<RequireAccess path="/reports/flr-monthly" resource="stock"><FlrMonthlyPage /></RequireAccess>} />
     <Route path="/reports" element={<RequireAccess path="/reports" resource="report"><ReportsIndexPage /></RequireAccess>} />
   </>
 );
