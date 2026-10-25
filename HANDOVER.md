@@ -48,10 +48,9 @@ seam); a test enforces it.
 
 ## 2 · Where it stands
 
-> **25 October: RELEASE 12 IS LIVE** (11acb6d3, migration 236, website `index-BioGCyra.js`). **Release 12.1** is
-> with the owner to type (`release/r12-1`, e754c8be, migration 237, `.local/release-12-1-steps.md`). **Release 13**
-> (the bar's store and counter and the FLR registers, D27-361; the installer from our server, D27-362; Other moves,
-> D27-364) is `release/r13` (705d8e8c, migration 238), its full gates running. The notes below are older; § 3 is
+> **26 October: RELEASE 13 IS LIVE, with 12.1** (2e7a5b4a, migrations 237 and 238, website `index-o38e-K4q.js`): the
+> bar's store and counter and the FLR registers (D27-361), the installer from our server (D27-362), Other moves
+> (D27-364), and 12.1's KOT times, slip setting, requests to the GM and payment-mode change (D27-363). The notes below are older; § 3 is
 > the order of work. The records' audit of 25 October: open defects are in each service's `DEFECTS.md`; MEMORY's
 > "faults that repeat" table is current to 434; `PENDING.md` is stale and says so.
 
@@ -765,6 +764,14 @@ npx vitest run          197 passed, 13 files
 ---
 
 ## 3 · What to do next, in order
+
+> **26 October, about 01:00: RELEASE 13 LIVE (with 12.1), typed by the owner (D27-350).** Checked read-only:
+> GitHub `main` and the server at `2e7a5b4a`; API restarted 19:28 GMT (00:58 IST) and healthy; website
+> `index-o38e-K4q.js`; backups 19:27 and 19:28 GMT; migrations 237 and 238's tables and columns present; a Bar
+> store and a Bar counter at all six hotels; the `pos_request` approval rule at six; nginx serves
+> `https://api.fidatohotels.com/downloads/Fidato-Printer-Setup.exe` (200, application/octet-stream, 111,519,098
+> bytes, HSTS and nosniff kept). Amrapali's business date 26 Oct; its bar not set up yet (the owner's, A9). Release
+> copies r12-parcels and r12-1 recycled; r13's kept. Next: release 14 (D27-365).
 
 > **26 October, 01:00: RELEASE 13 READY, the owner's to type** - `release/r13` at **2e7a5b4a**, on release 12.1 (which
 > it includes: if 12.1 was not deployed, only these steps). The bar's store and counter, the counts, requests, FLR

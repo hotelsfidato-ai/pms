@@ -50,7 +50,7 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 
 ---
 
-## 2026-10-25 · Release 13: the bar's store and counter, as the excise registers keep it (D27-361); the printer installer from our server (D27-362)
+## 2026-10-25 · Release 13 (LIVE 26 Oct, with 12.1, at 2e7a5b4a): the bar's store and counter, as the excise registers keep it (D27-361); the printer installer from our server (D27-362)
 
 **Asked for:** the owner, 22 October, with photos of FORM FLR-1A/2A/3A and FLR-3: "2 places - the store where it's counted whole, and the counter ... the counter requested 5 bottles so the approval will be given to move ... closing count ... then the night audit, and the morning audit of stock". Answers (D27-361): a Bar store and a Bar counter, the counter asks and the GM or the Inventory Manager approves; counted three ways (poured, whole, packet); the night audit waits for the closing count, the GM may mark "Bar closed today"; a morning count by the bar manager; both registers like the paper; a NIP sold the day it is opened (to confirm with the CA); release 13, after 12. And D27-362: the Fidato Printer installer hosted on our server. Asked while the checks ran (D27-364): **"Other moves"** on the store's sheet and the Simple one, so every row adds up.
 
