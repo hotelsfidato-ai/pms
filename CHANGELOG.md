@@ -70,12 +70,13 @@ Write it **as you go**, not at the end from memory. Copy this shape:
 **Proved**
 - In the browser (local, 5EL): the drinks set as whisky and strong beer; the store counted to whole bottles; the Inventory Manager asked twice, the GM approved one (the store 56 to 46, the counter 10 and 12); KOT 54 took 150 ml and two beers off the counter; the counter's sheet, the Bar stock report and FLR-1A/2A/3A read back (Imperial Blue: received 60, sold 5, closing 55 = 46 + 9 sealed); the download link reads the API's address.
 - The local store sheet with Other moves: every row adds up (60 - 10 - 4 = 46; 72 - 12 - 8 = 52; 6 - 0 - 1 = 5).
-- API bar stock 11/11 and 27 related API files 516/516 (3048dbe7); web bar stock 9/9 with the store row and the Simple row read cell by cell; the manual test and the stores screens 35/35; `kotSetup.test.tsx` 7/7. Full gates: below.
+- API bar stock 11/11 and 27 related API files 516/516 (3048dbe7); web bar stock 9/9 with the store row and the Simple row read cell by cell; the manual test and the stores screens 35/35; `kotSetup.test.tsx` 7/7.
+- **Full gates** on `release/r13` at **2e7a5b4a** in its clean copy, ONE complete run alone (run 346-1559-1, finished): web types, API types, strip, web tests 1,417, API tests 2,842, database 1,780 assertions, replay (238 migrations), Postgres 16 - all exit 0. The run before (1510-19786-1, on 705d8e8c) failed 7 database assertions still written for the one-place bar (MEMORY 435), fixed in a758e526. `release.mjs` run once: website `index-o38e-K4q.js` (read from `dist/index.html`), no executable in `dist`. Steps `.local/release-13-steps.md` sent (A1-A9: the installer copied to the server in A2 and A7, checked in A8).
 
 **Left open**
 - The CA's word on a NIP counted as sold the day it is opened (D27-361).
 
-**Commits:** 3048dbe7, c40ebdb4, 8179e629, 3816198f on cp6; a62a8c3b, 705d8e8c (`release/r13`)
+**Commits:** 3048dbe7, c40ebdb4, 8179e629, 3816198f, a758e526 on cp6; a62a8c3b, 705d8e8c, 2e7a5b4a (`release/r13`)
 
 ## 2026-10-25 · Release 12.1: KOT times, the shortest slip, requests to the GM, a paid bill's payment mode (D27-363)
 

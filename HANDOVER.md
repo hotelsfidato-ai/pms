@@ -766,6 +766,18 @@ npx vitest run          197 passed, 13 files
 
 ## 3 · What to do next, in order
 
+> **26 October, 01:00: RELEASE 13 READY, the owner's to type** - `release/r13` at **2e7a5b4a**, on release 12.1 (which
+> it includes: if 12.1 was not deployed, only these steps). The bar's store and counter, the counts, requests, FLR
+> registers (D27-361), the installer from our server (D27-362), Other moves (D27-364); migration 238. ONE complete
+> gate run green (346-1559-1), website `index-o38e-K4q.js`, no executable in dist; steps `.local/release-13-steps.md`
+> (sent; A2 and A7 copy `printer/dist/Fidato-Printer-Setup.exe` to `/var/www/fidato-downloads/`). Keep both release
+> copies until the owner has run their A7/A9. **Next, by D27-365:** release 14 (NC bills on screen and the MRP value,
+> Remove clears a connecting link, the guest's proforma like the desk's, the owner's allowance as a setting, the
+> dashboard charts, the printer app updating itself), then 15 (off-site backups and alerts - the owner makes the
+> bucket - and the owner-only full reset), then 16 (Inventory's Restaurant tab, questions first). Waiting on the
+> owner's people: the CA (HSN/SAC, "Tax Invoice", the ₹20,000 refund limit, a NIP sold when opened, GST on the
+> allowance), the lawyer (Aadhaar), SU's keys, the door-lock vendor.
+
 > **25 October: RELEASE 12.1 READY, the owner's to type** - `release/r12-1` at **e754c8be** on live 11acb6d3 (D27-363:
 > KOT times on the hotel's clock, MEMORY 428; each printing computer's shortest slip, 160 mm, with a test KOT and bill;
 > a waiter sends the GM a strike, discount, NC or void, approving does it, the bell and Approvals at the top; a paid
